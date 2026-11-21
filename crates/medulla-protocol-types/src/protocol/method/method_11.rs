@@ -425,6 +425,23 @@ $($variants)*
         offset: u64,
     },
 
+    /// Merge the `source` branch into the `target` branch of `graph`
+    /// (MEDULLA-BRANCH-MERGE-R003). The merge base is the common ancestor of the
+    /// two heads with the highest generation. `up_to_date` writes nothing;
+    /// `fast_forward` moves the target head to the source head without an entity
+    /// scan. `merge_base`, when set, is the base commit the caller planned
+    /// against; a different computed base refuses `MERGE_TARGET_STALE`. Heads
+    /// with no common ancestor refuse `BRANCH_NO_COMMON_ANCESTOR`.
+    /// `tenant` must be the verified request tenant (`BRANCH_TENANT_DENIED`).
+    BranchMerge {
+        tenant: String,
+        graph: String,
+        source: String,
+        target: String,
+        #[serde(default)]
+        merge_base: Option<String>,
+    },
+
     /// Read a branch as of one engine version on its chain
     /// (MEDULLA-BRANCH-MERGE-R006). Refusals: `BRANCH_VERSION_NOT_ON_CHAIN`,
     /// `BRANCH_TENANT_DENIED`, `BRANCH_UNKNOWN`, `BRANCH_DELETED`. Reads only.

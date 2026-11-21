@@ -4037,6 +4037,7 @@ components:
       - "tests/test_branch_create.py"
       - "tests/test_branch_scoped_mutation.py"
       - "tests/test_branch_time_travel.py"
+      - "tests/test_branch_merge_base.py"
       - "tests/test_scm_changeset.py"
       - "tests/test_scm_tree.py"
       - "tests/test_create_graph_lifecycle_type_contract.py"

@@ -14,7 +14,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
   branch commit appends exactly one parent, the prior head, and round-trips through serde.
   `refusal_set_and_default_branch_are_closed` proves the typed refusal set is closed and the
   default trunk name is reserved. *(MEDULLA-BRANCH-MERGE-R002.1)*
-- `tests/test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward` (planned, L4). Four fixture
+- `tests/test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward` (L4). Four fixture
   topologies (contained, descendant, diverged, disjoint) return the declared outcomes from the
   closed set. Fast-forward produces a single-parent receipt. Up-to-date publishes nothing.
   *(MEDULLA-BRANCH-MERGE-R003)*

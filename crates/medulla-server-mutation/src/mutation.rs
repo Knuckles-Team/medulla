@@ -950,6 +950,7 @@ mod tests {
         ("CreateGraph", "native lifecycle MutationBatch commits graph identity before registry publication"),
         ("DeleteGraph", "native lifecycle MutationBatch commits purge before registry eviction"),
         ("MultiGraphBatchUpdate", "cluster placement fanout emits one typed graph command per child; standalone mode uses a durable parent saga"),
+        ("BranchMerge", "MEDULLA-BRANCH-MERGE-R003: a fast-forward moves the target head and copies the missing commit rows in branch_registry.redb in one registry transaction; an up-to-date merge writes nothing"),
         ("BranchWrite", "MEDULLA-BRANCH-MERGE-R002: the inner mutation commits through the ordinary graph path on the branch target graph; the BranchCommit and head advance commit in branch_registry.redb"),
         ("SubmitChangeset", "MEDULLA-SCM-R002: the changeset payload and the BranchCommit with the head advance commit in branch_registry.redb through the branch commit path; bytes were committed earlier through the blob methods"),
         ("ImportGitHistory", "MEDULLA-SCM-R010: each changeset payload and its BranchCommit with the head advance commit in branch_registry.redb through the branch commit path; the pack and blobs were committed earlier through the blob methods"),

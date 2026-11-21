@@ -798,6 +798,7 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     // The branch commit chain commits through the same process-local owner
     // (MEDULLA-BRANCH-MERGE-R002).
     "BranchWrite",
+    "BranchMerge",
     // A source changeset is the payload of a branch commit in the same owner
     // file (MEDULLA-SCM-R002).
     "SubmitChangeset",
@@ -884,6 +885,7 @@ fn branch_registry_method_name(m: &Method) -> Option<&'static str> {
     match m {
         Method::CreateBranch { .. } => Some("CreateBranch"),
         Method::BranchWrite { .. } => Some("BranchWrite"),
+        Method::BranchMerge { .. } => Some("BranchMerge"),
         Method::SubmitChangeset { .. } => Some("SubmitChangeset"),
         Method::ImportGitHistory { .. } => Some("ImportGitHistory"),
         Method::SetPathGrant { .. } => Some("SetPathGrant"),

@@ -494,6 +494,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::SetPathGrant { .. }
                 // MEDULLA-BRANCH-MERGE-R002: a branch-scoped mutation.
                 | Method::BranchWrite { .. }
+                // MEDULLA-BRANCH-MERGE-R003: a merge moves a branch head.
+                | Method::BranchMerge { .. }
                 // MEDULLA-SCM-R002: a source changeset on a branch.
                 | Method::SubmitChangeset { .. }
                 // MEDULLA-SCM-R010: the first-parent line of a git history on a branch.

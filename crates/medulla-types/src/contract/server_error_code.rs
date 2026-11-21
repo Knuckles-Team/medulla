@@ -62,6 +62,10 @@ closed_error_codes! {
         BranchExists => "BRANCH_EXISTS",
         BranchNameInvalid => "BRANCH_NAME_INVALID",
         BranchNameReserved => "BRANCH_NAME_RESERVED",
+        /// MEDULLA-BRANCH-MERGE-R003: two heads with no shared commit; the engine never invents a base.
+        BranchNoCommonAncestor => "BRANCH_NO_COMMON_ANCESTOR",
+        /// MEDULLA-BRANCH-MERGE-R003/R007: the target head is not the head the merge was planned against.
+        MergeTargetStale => "MERGE_TARGET_STALE",
         BranchTenantDenied => "BRANCH_TENANT_DENIED",
         BranchUnknown => "BRANCH_UNKNOWN",
         BranchVersionNotOnChain => "BRANCH_VERSION_NOT_ON_CHAIN",

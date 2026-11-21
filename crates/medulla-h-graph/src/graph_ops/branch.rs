@@ -15,12 +15,13 @@ pub mod time_travel;
 use std::sync::Arc;
 
 use medulla_mutation_types::branch::{
-    branch_target_graph, validate_branch_name, Branch, BranchMutationRefusal, BranchRef,
-    BranchWriteReceipt, RESERVED_BRANCH_NAME,
+    branch_target_graph, classify, merge_base, validate_branch_name, Branch,
+    BranchMergeReceipt, BranchMutationRefusal, BranchRef, BranchWriteReceipt, Head, MergeOutcome,
+    RESERVED_BRANCH_NAME,
 };
 use medulla_persistence::branch_registry_store::{
     shared_branch_registry, AppendError, AppendedCommit, BranchCommitInput, BranchCreateError,
-    BranchRegistry, CommitPlan, HistoryReader, PayloadReader,
+    BranchRegistry, CommitPlan, HeadMoveError, HistoryReader, MergeView, PayloadReader,
 };
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -137,6 +138,191 @@ pub async fn handle_create_branch(
     };
     let branch = new_branch(request, base, verified.principal());
     respond(req_id, commit(registry, branch).await)
+}
+
+/// The wire fields of `Method::BranchMerge` (MEDULLA-BRANCH-MERGE-R003).
+#[derive(Debug, Clone)]
+pub struct BranchMergeRequest {
+    pub tenant: String,
+    pub graph: String,
+    pub source: String,
+    pub target: String,
+    /// The base commit the caller planned against, if it pinned one.
+    pub merge_base: Option<String>,
+}
+
+/// The classified heads of one merge, before anything is written.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MergeClassification {
+    pub outcome: MergeOutcome,
+    pub merge_base: String,
+    pub source_head: String,
+    pub target_head: String,
+}
+
+/// Why a merge classification refused.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MergeClassifyError {
+    Refused(ServerErrorCode),
+    Store(String),
+}
+
+fn merge_error_response(req_id: u64, error: MergeClassifyError) -> Response {
+    match error {
+        MergeClassifyError::Refused(code) => {
+            Response::err(req_id, format!("{}: branch merge refused", code.as_str()))
+        }
+        MergeClassifyError::Store(detail) => Response::err(req_id, detail),
+    }
+}
+
+fn merge_dag(view: &MergeView) -> Vec<(String, u64, Vec<String>)> {
+    view.commits
+        .iter()
+        .map(|commit| (commit.id.clone(), commit.generation, commit.parents.clone()))
+        .collect()
+}
+
+/// The pure classification of two branch views (MEDULLA-BRANCH-MERGE-R003):
+/// the merge base on the union of both commit DAGs, then the closed outcome.
+/// No common ancestor refuses `BRANCH_NO_COMMON_ANCESTOR`; a caller-pinned
+/// base that differs from the computed one refuses `MERGE_TARGET_STALE`.
+pub fn classify_merge(
+    source: &MergeView,
+    target: &MergeView,
+    pinned_base: Option<&str>,
+) -> Result<MergeClassification, MergeClassifyError> {
+    let mut dag = merge_dag(source);
+    for entry in merge_dag(target) {
+        if !dag.iter().any(|(id, _, _)| *id == entry.0) {
+            dag.push(entry);
+        }
+    }
+    let source_head = Head {
+        id: source.head.clone(),
+        generation: source.generation,
+    };
+    let target_head = Head {
+        id: target.head.clone(),
+        generation: target.generation,
+    };
+    let base = merge_base(&dag, &source_head, &target_head);
+    let outcome = classify(&source_head, &target_head, base.clone()).ok_or(
+        MergeClassifyError::Refused(ServerErrorCode::BranchNoCommonAncestor),
+    )?;
+    // Equal heads need no base: the head is its own ancestor.
+    let base_id = base.map_or_else(|| source.head.clone(), |(id, _)| id);
+    if pinned_base.is_some_and(|pinned| pinned != base_id) {
+        return Err(MergeClassifyError::Refused(
+            ServerErrorCode::MergeTargetStale,
+        ));
+    }
+    Ok(MergeClassification {
+        outcome,
+        merge_base: base_id,
+        source_head: source.head.clone(),
+        target_head: target.head.clone(),
+    })
+}
+
+/// Read both views and classify them on a blocking thread.
+fn classify_branches(
+    registry: &BranchRegistry,
+    source: &BranchRef,
+    target: &BranchRef,
+    tenant: &str,
+    pinned_base: Option<&str>,
+) -> Result<MergeClassification, MergeClassifyError> {
+    let mut views = Vec::with_capacity(2);
+    for reference in [source, target] {
+        let view = registry
+            .merge_view(reference, tenant)
+            .map_err(MergeClassifyError::Store)?
+            .map_err(|refusal| MergeClassifyError::Refused(refusal.code()))?;
+        views.push(view);
+    }
+    let missing = || MergeClassifyError::Store("merge view missing".into());
+    let target_view = views.pop().ok_or_else(missing)?;
+    let source_view = views.pop().ok_or_else(missing)?;
+    classify_merge(&source_view, &target_view, pinned_base)
+}
+
+/// `Method::BranchMerge` (MEDULLA-BRANCH-MERGE-R003): resolve both branches,
+/// find the merge base by highest generation, classify the closed outcome.
+/// `up_to_date` writes nothing; `fast_forward` moves the target head to the
+/// source head in one registry transaction, without an entity scan.
+pub async fn handle_branch_merge(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &VerifiedRequestContext,
+    request: BranchMergeRequest,
+) -> Response {
+    if request.tenant != verified.tenant() {
+        return merge_error_response(
+            req_id,
+            MergeClassifyError::Refused(ServerErrorCode::BranchTenantDenied),
+        );
+    }
+    let registry = {
+        let s = state.read().await;
+        match shared_branch_registry(&s) {
+            Ok(registry) => registry,
+            Err(error) => return Response::err(req_id, error),
+        }
+    };
+    let reference = |name: &str| BranchRef {
+        tenant: request.tenant.clone(),
+        graph: request.graph.clone(),
+        name: name.to_string(),
+    };
+    let (source, target) = (reference(&request.source), reference(&request.target));
+    let tenant = verified.tenant().to_string();
+    let pinned = request.merge_base.clone();
+    let outcome = tokio::task::spawn_blocking(move || {
+        let classified =
+            classify_branches(&registry, &source, &target, &tenant, pinned.as_deref())?;
+        match classified.outcome {
+            MergeOutcome::FastForward => registry
+                .fast_forward(&target, &source, &tenant, &classified.target_head)
+                .map(|head| (classified.clone(), Some(head)))
+                .map_err(|error| match error {
+                    HeadMoveError::Branch(refusal) => MergeClassifyError::Refused(refusal.code()),
+                    HeadMoveError::Stale => {
+                        MergeClassifyError::Refused(ServerErrorCode::MergeTargetStale)
+                    }
+                    HeadMoveError::Store(detail) => MergeClassifyError::Store(detail),
+                }),
+            _ => Ok((classified, None)),
+        }
+    })
+    .await;
+    let (classified, moved) = match outcome {
+        Ok(Ok(done)) => done,
+        Ok(Err(error)) => return merge_error_response(req_id, error),
+        Err(error) => return Response::err(req_id, error.to_string()),
+    };
+    if classified.outcome == MergeOutcome::Merged {
+        return Response::err(
+            req_id,
+            format!(
+                "diverged heads (merge base {}) merge three-way through MEDULLA-BRANCH-MERGE-R007",
+                classified.merge_base
+            ),
+        );
+    }
+    let receipt = BranchMergeReceipt {
+        outcome: classified.outcome,
+        merge_base: classified.merge_base,
+        source_head: classified.source_head.clone(),
+        target_head: moved.clone().unwrap_or(classified.target_head),
+        merged_parent: moved.map(|_| classified.source_head),
+    };
+    match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::BranchMerge>(
+        receipt,
+    ) {
+        Ok(payload) => Response::ok(req_id, payload),
+        Err(error) => Response::err(req_id, error),
+    }
 }
 
 /// Where one branch-scoped mutation commits (MEDULLA-BRANCH-MERGE-R002).
@@ -393,6 +579,75 @@ mod tests {
         for (head, requested, expected) in cases {
             assert_eq!(&resolve_base(*head, *requested), expected);
         }
+    }
+
+    fn view(head: &str, generation: u64, commits: &[(&str, u64, &[&str])]) -> MergeView {
+        MergeView {
+            head: head.to_string(),
+            generation,
+            commits: commits
+                .iter()
+                .map(|(id, generation, parents)| {
+                    medulla_mutation_types::branch::BranchCommit::single_parent_commit(
+                        *id,
+                        "b",
+                        parents.first().copied().unwrap_or_default(),
+                        1,
+                        "m",
+                        "p",
+                        0,
+                    )
+                    .with_generation(*generation)
+                })
+                .map(|mut commit| {
+                    commit.parents = commits
+                        .iter()
+                        .find(|(id, _, _)| *id == commit.id)
+                        .map(|(_, _, parents)| parents.iter().map(|p| p.to_string()).collect())
+                        .unwrap_or_default();
+                    commit
+                })
+                .collect(),
+        }
+    }
+
+    // spec: MEDULLA-BRANCH-MERGE-R003
+    #[test]
+    fn merge_classification_covers_the_four_topologies() {
+        // Linear: the target extends the source, then the reverse.
+        let behind = view("g@7", 0, &[]);
+        let ahead = view("c2", 2, &[("c1", 1, &["g@7"]), ("c2", 2, &["c1"])]);
+        let forward = classify_merge(&ahead, &behind, None).unwrap();
+        assert_eq!(forward.outcome, MergeOutcome::FastForward);
+        assert_eq!(forward.merge_base, "g@7");
+        let behind_source = classify_merge(&behind, &ahead, None).unwrap();
+        assert_eq!(behind_source.outcome, MergeOutcome::UpToDate);
+
+        // Equal heads publish nothing.
+        let equal = classify_merge(&ahead, &ahead, None).unwrap();
+        assert_eq!(equal.outcome, MergeOutcome::UpToDate);
+
+        // Diamond: both moved from the shared base pointer.
+        let left = view("s1", 1, &[("s1", 1, &["g@7"])]);
+        let right = view("t1", 1, &[("t1", 1, &["g@7"])]);
+        let diamond = classify_merge(&left, &right, None).unwrap();
+        assert_eq!(diamond.outcome, MergeOutcome::Merged);
+        assert_eq!(diamond.merge_base, "g@7");
+
+        // A base the caller pinned that is not the computed one is stale.
+        assert_eq!(
+            classify_merge(&left, &right, Some("g@6")),
+            Err(MergeClassifyError::Refused(ServerErrorCode::MergeTargetStale))
+        );
+
+        // Disjoint chains never get an implicit base.
+        let other = view("u1", 1, &[("u1", 1, &["g@3"])]);
+        assert_eq!(
+            classify_merge(&left, &other, None),
+            Err(MergeClassifyError::Refused(
+                ServerErrorCode::BranchNoCommonAncestor
+            ))
+        );
     }
 
     // spec: MEDULLA-BRANCH-MERGE-R002

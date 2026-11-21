@@ -18,6 +18,7 @@ method_results! {
     DeleteGraph(DeleteGraph) => Json<GraphDeleted>;
     CreateBranch(CreateBranch) => Json<medulla_mutation_types::branch::Branch>;
     BranchWrite(BranchWrite) => Json<medulla_mutation_types::branch::BranchWriteReceipt>;
+    BranchMerge(BranchMerge) => Json<medulla_mutation_types::branch::BranchMergeReceipt>;
     BranchDiff(BranchDiff) => Json<medulla_mutation_types::versioning::KgDiff>;
     BranchReadAt(BranchReadAt) => Json<medulla_mutation_types::versioning::BranchSnapshot>;
     ReadTree(ReadTree) => Json<medulla_source_types::source_changeset::ReadTreeReceipt>;

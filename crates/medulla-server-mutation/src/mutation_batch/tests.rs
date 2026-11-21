@@ -430,6 +430,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     // record (branch_registry.redb), not graph data.
     ("CreateBranch", "ControlPlane"),
     ("BranchWrite", "ControlPlane"),
+    ("BranchMerge", "ControlPlane"),
     ("SubmitChangeset", "ControlPlane"),
     ("ImportGitHistory", "ControlPlane"),
     ("SetPathGrant", "ControlPlane"),

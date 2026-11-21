@@ -96,6 +96,11 @@ pub struct BranchCommit {
     pub manifest_digest: String,
     pub actor: String,
     pub created_at_ms: u64,
+    /// Chain depth on the commit DAG (MEDULLA-BRANCH-MERGE-R003): the highest
+    /// parent generation plus one; the first commit after a base pointer is 1.
+    /// The merge base is chosen by this number.
+    #[serde(default)]
+    pub generation: u64,
 }
 
 /// Typed refusals the branch-mutation path refuses before any graph change.
@@ -215,7 +220,14 @@ impl BranchCommit {
             manifest_digest: manifest_digest.into(),
             actor: actor.into(),
             created_at_ms,
+            generation: 1,
         }
+    }
+
+    /// The same commit at an explicit DAG generation (MEDULLA-BRANCH-MERGE-R003).
+    pub fn with_generation(mut self, generation: u64) -> Self {
+        self.generation = generation;
+        self
     }
 }
 
@@ -228,6 +240,7 @@ pub struct Head {
 
 /// The closed set of merge outcomes (MEDULLA-BRANCH-MERGE-R003).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum MergeOutcome {
     /// `up_to_date`: the source head is an ancestor of the target head.
@@ -250,6 +263,26 @@ impl MergeOutcome {
             Self::Conflict => "conflict",
         }
     }
+}
+
+/// The receipt of one served `BranchMerge` (MEDULLA-BRANCH-MERGE-R003).
+///
+/// `up_to_date` writes nothing and names no merged parent. `fast_forward`
+/// moves the target to the source head and names the source head as the
+/// merged parent.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct BranchMergeReceipt {
+    pub outcome: MergeOutcome,
+    /// The common ancestor the outcome was classified against.
+    pub merge_base: String,
+    /// The source head the merge read.
+    pub source_head: String,
+    /// The target head after the merge.
+    pub target_head: String,
+    /// The source head when the merge moved the target; `None` when nothing was written.
+    pub merged_parent: Option<String>,
 }
 
 /// MEDULLA-BRANCH-MERGE-R003 — the merge base is the common ancestor on the

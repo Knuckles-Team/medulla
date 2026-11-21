@@ -949,6 +949,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_VERSION_NOT_ON_CHAIN",
         ],
     ),
+    // MEDULLA-BRANCH-MERGE-R003: the merge refusals, all before any head moves.
+    (
+        "BranchMerge",
+        &[
+            "BRANCH_DELETED",
+            "BRANCH_NO_COMMON_ANCESTOR",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "MERGE_TARGET_STALE",
+        ],
+    ),
     // MEDULLA-BRANCH-MERGE-R002: the branch-scoped write refusals, all before any graph change.
     (
         "BranchWrite",

@@ -58,6 +58,7 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         Method::CreateBranch { .. }
         | Method::SetPathGrant { .. }
         | Method::BranchWrite { .. }
+        | Method::BranchMerge { .. }
         | Method::SubmitChangeset { .. }
         | Method::ImportGitHistory { .. } => DurabilityDomain::ControlPlane,
         Method::MultiGraphBatchUpdate { .. } => DurabilityDomain::MultiGraph,
@@ -891,6 +892,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::CreateBranch { .. }
         | Method::SetPathGrant { .. }
         | Method::BranchWrite { .. }
+        | Method::BranchMerge { .. }
         | Method::SubmitChangeset { .. }
         | Method::ImportGitHistory { .. }
         | Method::DeleteGraph { .. }

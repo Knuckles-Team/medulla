@@ -35,6 +35,7 @@ fn check_mutation(
     if matches!(
         mutation,
         Method::BranchWrite { .. }
+            | Method::BranchMerge { .. }
             | Method::CreateBranch { .. }
             | Method::CreateGraph { .. }
             | Method::DeleteGraph { .. }

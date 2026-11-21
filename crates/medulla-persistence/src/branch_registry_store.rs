@@ -227,6 +227,28 @@ pub enum AppendError {
     Rejected(String),
 }
 
+/// A branch head with every commit reachable from it (MEDULLA-BRANCH-MERGE-R003).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MergeView {
+    /// The head commit id; a base pointer when the branch has no commit.
+    pub head: String,
+    /// The head's generation; 0 for a base pointer.
+    pub generation: u64,
+    /// Every commit row reachable from the head, in this branch's namespace.
+    pub commits: Vec<BranchCommit>,
+}
+
+/// Why a head move wrote nothing.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum HeadMoveError {
+    /// A branch refusal decided before any write.
+    Branch(BranchMutationRefusal),
+    /// The target head moved past the head the merge was classified against.
+    Stale,
+    /// The store itself failed.
+    Store(String),
+}
+
 /// The commit a branch write produced and whether it already existed.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AppendedCommit {
@@ -335,6 +357,146 @@ impl BranchRegistry {
             Ok(done) => Ok(done),
             Err(AppendError::Branch(error)) => Err(error),
             Err(AppendError::Rejected(text)) => Err(BranchCreateError::Store(text)),
+        }
+    }
+
+    /// The head and every commit reachable from it through any parent, for the
+    /// merge-base walk (MEDULLA-BRANCH-MERGE-R003). Unlike [`Self::chain`] this
+    /// follows every parent of a merge commit. A parent with no row in this
+    /// branch's namespace is a base pointer and ends that walk.
+    pub fn merge_view(
+        &self,
+        branch: &BranchRef,
+        caller_tenant: &str,
+    ) -> Result<Result<MergeView, BranchMutationRefusal>, String> {
+        let row = match self.resolve_live(branch, caller_tenant)? {
+            Ok(row) => row,
+            Err(refusal) => return Ok(Err(refusal)),
+        };
+        let read = self.durable.read()?;
+        let table = read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?;
+        let mut commits: Vec<BranchCommit> = Vec::new();
+        let mut seen = std::collections::BTreeSet::new();
+        let mut stack = vec![row.head_commit.clone()];
+        while let Some(id) = stack.pop() {
+            if !seen.insert(id.clone()) {
+                continue;
+            }
+            let Some(commit) = table
+                .get(commit_row_key(branch, &id).as_str())
+                .map_err(|error| error.to_string())?
+                .map(|value| decode_commit(value.value()))
+                .transpose()?
+            else {
+                continue;
+            };
+            stack.extend(commit.parents.iter().cloned());
+            commits.push(commit);
+        }
+        let generation = commits
+            .iter()
+            .find(|commit| commit.id == row.head_commit)
+            .map_or(0, |commit| commit.generation);
+        Ok(Ok(MergeView {
+            head: row.head_commit,
+            generation,
+            commits,
+        }))
+    }
+
+    /// Move the head of `target` to the head of `source` without an entity scan
+    /// (MEDULLA-BRANCH-MERGE-R003 `fast_forward`): the commit rows and payloads
+    /// the target lacks are copied into its namespace so its chain walks to the
+    /// new head, and the head pointer moves, in ONE registry transaction.
+    /// `expected_target_head` is the head the merge was classified against; a
+    /// target that moved since refuses [`HeadMoveError::Stale`] and writes nothing.
+    pub fn fast_forward(
+        &self,
+        target: &BranchRef,
+        source: &BranchRef,
+        caller_tenant: &str,
+        expected_target_head: &str,
+    ) -> Result<String, HeadMoveError> {
+        let target_key = target.registry_key();
+        let source_key = source.registry_key();
+        let mut refused: Option<HeadMoveError> = None;
+        let mut moved: Option<String> = None;
+        let outcome = self.durable.maintain("branch_fast_forward", |owner| {
+            let mut table = owner.open_table(medulla_storage::BRANCH_REGISTRY)?;
+            let mut rows = Vec::with_capacity(2);
+            for key in [&target_key, &source_key] {
+                let existing = table
+                    .get(key.as_str())
+                    .map_err(|error| error.to_string())?
+                    .map(|value| decode(value.value()))
+                    .transpose()?;
+                let Some(row) = existing else {
+                    refused = Some(HeadMoveError::Branch(BranchMutationRefusal::BranchUnknown));
+                    return Err("BRANCH_UNKNOWN".to_string());
+                };
+                if let Some(refusal) = branch_refusal(&row, caller_tenant) {
+                    refused = Some(HeadMoveError::Branch(refusal.clone()));
+                    return Err(refusal.code().as_str().to_string());
+                }
+                rows.push(row);
+            }
+            let source_row = rows.pop().ok_or("source row missing")?;
+            let mut target_row = rows.pop().ok_or("target row missing")?;
+            if target_row.head_commit != expected_target_head {
+                refused = Some(HeadMoveError::Stale);
+                return Err("MERGE_TARGET_STALE".to_string());
+            }
+            let mut stack = vec![source_row.head_commit.clone()];
+            let mut seen = std::collections::BTreeSet::new();
+            while let Some(id) = stack.pop() {
+                if id == target_row.head_commit || !seen.insert(id.clone()) {
+                    continue;
+                }
+                let target_commit = commit_row_key(target, &id);
+                if table
+                    .get(target_commit.as_str())
+                    .map_err(|error| error.to_string())?
+                    .is_some()
+                {
+                    continue;
+                }
+                let Some(bytes) = table
+                    .get(commit_row_key(source, &id).as_str())
+                    .map_err(|error| error.to_string())?
+                    .map(|value| value.value().to_vec())
+                else {
+                    continue;
+                };
+                let commit = decode_commit(&bytes)?;
+                stack.extend(commit.parents.iter().cloned());
+                table
+                    .insert(target_commit.as_str(), bytes.as_slice())
+                    .map_err(|error| error.to_string())?;
+                let payload = table
+                    .get(payload_row_key(source, &id).as_str())
+                    .map_err(|error| error.to_string())?
+                    .map(|value| value.value().to_vec());
+                if let Some(payload) = payload {
+                    table
+                        .insert(payload_row_key(target, &id).as_str(), payload.as_slice())
+                        .map_err(|error| error.to_string())?;
+                }
+            }
+            target_row.head_commit = source_row.head_commit.clone();
+            let row_bytes = encode(&target_row)?;
+            table
+                .insert(target_key.as_str(), row_bytes.as_slice())
+                .map_err(|error| error.to_string())?;
+            moved = Some(source_row.head_commit);
+            Ok(())
+        });
+        match (outcome, refused, moved) {
+            (Ok(()), _, Some(head)) => Ok(head),
+            (_, Some(error), _) => Err(error),
+            (Ok(()), None, None) => Err(HeadMoveError::Store(
+                "branch fast-forward was not applied".to_string(),
+            )),
+            (Err(error), None, _) => Err(HeadMoveError::Store(error)),
         }
     }
 
@@ -551,6 +713,12 @@ impl BranchRegistry {
                     }
                 }
             };
+            let parent_generation = table
+                .get(commit_row_key(branch, &row.head_commit).as_str())
+                .map_err(|error| error.to_string())?
+                .map(|value| decode_commit(value.value()))
+                .transpose()?
+                .map_or(0, |parent| parent.generation);
             let commit = BranchCommit::single_parent_commit(
                 branch_commit_id(branch, &row.head_commit, batch_id, &plan.manifest_digest),
                 branch.name.clone(),
@@ -559,7 +727,8 @@ impl BranchRegistry {
                 plan.manifest_digest.clone(),
                 plan.actor.clone(),
                 plan.created_at_ms,
-            );
+            )
+            .with_generation(parent_generation + 1);
             let commit_bytes =
                 rmp_serde::to_vec_named(&commit).map_err(|error| error.to_string())?;
             table
