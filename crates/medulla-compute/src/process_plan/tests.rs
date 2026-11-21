@@ -450,3 +450,55 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
     assert_eq!(refused.code, PROCESS_PLAN_CALL_DEPTH);
     assert_eq!(refused.steps, vec!["s2".to_string()]);
 }
+
+// spec: MEDULLA-CQ-ORCH-R704.9
+#[test]
+fn plan_code_names_no_source_format() {
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let mut files = vec![
+        root.join("src/process_plan.rs"),
+        root.join("../medulla-h-decide/src/decide/family/process_plan.rs"),
+    ];
+    for entry in std::fs::read_dir(root.join("src/process_plan")).unwrap() {
+        let path = entry.unwrap().path();
+        if path.file_name().is_some_and(|name| name != "tests.rs") {
+            files.push(path);
+        }
+    }
+    assert!(files.len() >= 5, "{files:?}");
+    for file in files {
+        let source = std::fs::read_to_string(&file).unwrap();
+        for format in ["Bpmn", "Dmn", "Epc", "Aris"] {
+            assert!(
+                !source.contains(format),
+                "{} names the source format {format}",
+                file.display()
+            );
+        }
+    }
+}
+
+// spec: MEDULLA-CQ-ORCH-R704.9
+#[test]
+fn equal_canonical_digest_gives_equal_plan_digest() {
+    let (bpmn, bindings) = invoice();
+    // The same canonical steps, flows and digest from another source system, with another
+    // model id and an annex the digest does not cover.
+    let mut epc = bpmn.clone();
+    epc.source.system = ProcessSourceSystem::ArisEpc;
+    epc.source.model_id = "aris-model".to_string();
+    epc.annex = vec![medulla_types::process_import::AnnexEntry {
+        schema_version: 1,
+        after: Some("s2".to_string()),
+        before: None,
+        construct: "epc-attachment".to_string(),
+        element_id: "attachment-1".to_string(),
+        label: "Policy document".to_string(),
+        type_num: None,
+    }];
+    assert_eq!(bpmn.digest, epc.digest);
+    let first = super::plan::plan_from_workflow(&bpmn, &bindings, &no_callee, 4).unwrap();
+    let second = super::plan::plan_from_workflow(&epc, &bindings, &no_callee, 4).unwrap();
+    assert_eq!(first.plan_digest, second.plan_digest);
+    assert_eq!(first.input_digest, second.input_digest);
+}
