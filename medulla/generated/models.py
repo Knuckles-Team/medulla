@@ -14637,7 +14637,6 @@ class MethodMemoryRememberParams(BaseModel):
     request: MemoryRememberRequest
 
 
-
 class MethodMemoryRemember(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14645,12 +14644,10 @@ class MethodMemoryRemember(BaseModel):
     params: MethodMemoryRememberParams
 
 
-
 class MethodMemoryRecallParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     request: MemoryRecallRequest
-
 
 
 class MethodMemoryRecall(BaseModel):
@@ -14660,12 +14657,10 @@ class MethodMemoryRecall(BaseModel):
     params: MethodMemoryRecallParams
 
 
-
 class MethodMemoryExportParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     request: MemoryExportRequest
-
 
 
 class MethodMemoryExport(BaseModel):
@@ -14673,7 +14668,6 @@ class MethodMemoryExport(BaseModel):
 
     method: Literal["MemoryExport"]
     params: MethodMemoryExportParams
-
 
 
 Method = Annotated[

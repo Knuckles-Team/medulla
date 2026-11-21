@@ -78,9 +78,9 @@ def test_one_search_ranks_all_families_with_usage_and_endorsement_boost(catalog_
 
     # Every family is found through the one function.
     found = {asset for asset, _ in _ranked(admin, "orders")}
-    assert found == {f"<urn:medulla:asset:{family}:orders>" for family in FAMILIES} or found == {
-        f"urn:medulla:asset:{family}:orders" for family in FAMILIES
-    }
+    assert found == {
+        f"<urn:medulla:asset:{family}:orders>" for family in FAMILIES
+    } or found == {f"urn:medulla:asset:{family}:orders" for family in FAMILIES}
 
     # An asset that matches nothing is not a hit.
     assert _ranked(admin, "zzz-no-such-asset") == []

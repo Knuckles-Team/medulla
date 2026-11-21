@@ -30,7 +30,9 @@ PROJECTION_RS = (
     / "source_ingestion"
     / "spec_projection.rs"
 )
-REINGEST_TEST = "source_ingestion::spec_projection::tests::one_file_change_reingests_only_that_file"
+REINGEST_TEST = (
+    "source_ingestion::spec_projection::tests::one_file_change_reingests_only_that_file"
+)
 
 
 def _run_engine_test(name: str) -> str:

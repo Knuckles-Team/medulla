@@ -29,7 +29,9 @@ def _entry(path: str, op: str, blob: tuple[str, int] | None) -> dict:
     }
 
 
-def _submit(graph: str, branch: str, base: str | None, n: int, paths: list[dict]) -> dict:
+def _submit(
+    graph: str, branch: str, base: str | None, n: int, paths: list[dict]
+) -> dict:
     return {
         "request": {
             "repo": graph,
@@ -108,7 +110,9 @@ async def _scenario(graph: str) -> None:
             revs.append(head)
 
         # At the head, `a` lists changesets 3, 1, 0 newest first.
-        newest = await client._send("ReadPathHistory", _history(graph, branch, revs[4], "a"))
+        newest = await client._send(
+            "ReadPathHistory", _history(graph, branch, revs[4], "a")
+        )
         assert [e["commit"] for e in newest["entries"]] == [revs[3], revs[1], revs[0]]
         assert [e["op"] for e in newest["entries"]] == ["delete", "modify", "add"]
         assert [e["changeset_id"] for e in newest["entries"]] == [
@@ -118,7 +122,9 @@ async def _scenario(graph: str) -> None:
         ]
 
         # At revision 2 only the changesets at or below it are listed.
-        older = await client._send("ReadPathHistory", _history(graph, branch, revs[2], "a"))
+        older = await client._send(
+            "ReadPathHistory", _history(graph, branch, revs[2], "a")
+        )
         assert [e["commit"] for e in older["entries"]] == [revs[1], revs[0]]
 
         # The limit caps the list; 1000 is the maximum and 1001 refuses.
@@ -131,7 +137,9 @@ async def _scenario(graph: str) -> None:
                 "ReadPathHistory", _history(graph, branch, revs[4], "a", limit=1001)
             )
         with pytest.raises(Exception, match="REVISION_NOT_ON_CHAIN"):
-            await client._send("ReadPathHistory", _history(graph, branch, "e" * 64, "a"))
+            await client._send(
+                "ReadPathHistory", _history(graph, branch, "e" * 64, "a")
+            )
         await client.tenants.delete(graph)
     finally:
         await client.close()

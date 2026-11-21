@@ -31,7 +31,9 @@ PROJECTION_RS = (
     / "spec_projection.rs"
 )
 GRAPH_TEST = "source_ingestion::spec_projection::tests::bundle_plan_becomes_records_with_in_bundle_edges"
-REFUSAL_TEST = "source_ingestion::spec_projection::tests::bundle_plan_with_unknown_row_refuses"
+REFUSAL_TEST = (
+    "source_ingestion::spec_projection::tests::bundle_plan_with_unknown_row_refuses"
+)
 
 
 def _run_engine_test(name: str) -> str:

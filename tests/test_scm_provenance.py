@@ -20,7 +20,9 @@ from medulla.client import MedullaClient
 MODE = 0o100644
 
 
-def _request(graph: str, branch: str, base: str | None, blob: tuple[str, int], run: str | None) -> dict:
+def _request(
+    graph: str, branch: str, base: str | None, blob: tuple[str, int], run: str | None
+) -> dict:
     return {
         "request": {
             "repo": graph,
@@ -73,7 +75,10 @@ async def _scenario(graph: str) -> None:
             },
         )
         # The repository graph holds a run-trace node and a node of another kind.
-        for node_id, kind in ((f"run-{stem}", "run_trace"), (f"doc-{stem}", "document")):
+        for node_id, kind in (
+            (f"run-{stem}", "run_trace"),
+            (f"doc-{stem}", "document"),
+        ):
             await human._send(
                 "AddNode",
                 {

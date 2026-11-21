@@ -189,7 +189,9 @@ class _LoopbackRepositoryConnector:
         if approved_digest != payload_digest:
             raise PermissionError("write-back refused: approval does not bind payload")
         self.files[path] = payload
-        request_digest = hashlib.sha256(f"{path}\0{payload_digest}".encode()).hexdigest()
+        request_digest = hashlib.sha256(
+            f"{path}\0{payload_digest}".encode()
+        ).hexdigest()
         effect_revision = hashlib.sha256(payload + path.encode()).hexdigest()[:12]
         receipt_digest = hashlib.sha256(
             f"{request_digest}\0{effect_revision}\0{payload_digest}".encode()

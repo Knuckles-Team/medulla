@@ -7216,7 +7216,6 @@ class GraphOperationsClient:
             raise RuntimeError("SourceCoverage must answer with an object")
         return result
 
-
     async def code_context(
         self,
         anchor: str,
@@ -8111,9 +8110,7 @@ class ReasoningClient:
         "committed_version", "facts", "trace"}``.
         """
         return (
-            await _gen.reasoning.send_run_temporal_rules(
-                self._client, {"text": text}
-            )
+            await _gen.reasoning.send_run_temporal_rules(self._client, {"text": text})
         ).model_dump(mode="json")
 
 

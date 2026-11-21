@@ -255,7 +255,14 @@ class RevisionSubjectRerankCalibration(BaseModel):
 
 
 RevisionSubject = Annotated[
-    RevisionSubjectDecisionHead | RevisionSubjectProgram | RevisionSubjectKnobSet | RevisionSubjectModelPolicy | RevisionSubjectDefinition | RevisionSubjectGovernedSet | RevisionSubjectMeasuredFact | RevisionSubjectRerankCalibration,
+    RevisionSubjectDecisionHead
+    | RevisionSubjectProgram
+    | RevisionSubjectKnobSet
+    | RevisionSubjectModelPolicy
+    | RevisionSubjectDefinition
+    | RevisionSubjectGovernedSet
+    | RevisionSubjectMeasuredFact
+    | RevisionSubjectRerankCalibration,
     Field(discriminator="kind"),
 ]
 

@@ -32,8 +32,12 @@ PROJECTION_RS = (
     / "source_ingestion"
     / "spec_projection.rs"
 )
-GRAPH_TEST = "source_ingestion::spec_projection::tests::contract_files_form_the_seam_graph"
-REFUSAL_TEST = "source_ingestion::spec_projection::tests::contract_with_unknown_row_refuses"
+GRAPH_TEST = (
+    "source_ingestion::spec_projection::tests::contract_files_form_the_seam_graph"
+)
+REFUSAL_TEST = (
+    "source_ingestion::spec_projection::tests::contract_with_unknown_row_refuses"
+)
 
 
 def _run_engine_test(name: str) -> str:

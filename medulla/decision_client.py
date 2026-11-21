@@ -1255,7 +1255,12 @@ class DecisionClient:
         recalled by under the verified tenant."""
         result = await self.client._send(
             "MemoryRemember",
-            {"request": {"record": dict(record), "embedding": [float(v) for v in embedding]}},
+            {
+                "request": {
+                    "record": dict(record),
+                    "embedding": [float(v) for v in embedding],
+                }
+            },
             self.graph,
             idempotency_key=idempotency_key,
         )
