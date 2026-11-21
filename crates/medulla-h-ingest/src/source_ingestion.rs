@@ -1378,6 +1378,9 @@ struct AdmittedRecords {
     raw_admissions: Vec<RawAdmissionReceipt>,
     relationship_raw_admissions: Vec<RawRelationshipAdmissionReceipt>,
     blobs: BTreeMap<String, medulla_protocol_types::change_envelope::BlobReference>,
+    /// The raw blob each record node of the batch carries, keyed by node id: the real content
+    /// digest the blob ledger holds (MEDULLA-MEDIA-VOCAB-R650.3).
+    record_blobs: BTreeMap<String, medulla_protocol_types::change_envelope::BlobReference>,
     methods: Vec<Method>,
     lineage: Vec<medulla_protocol_types::change_envelope::LineageRecord>,
     policies: Vec<medulla_protocol_types::change_envelope::PolicyRecord>,
@@ -2048,6 +2051,7 @@ fn admit_records(
         raw_admissions: Vec::with_capacity(batch.records.len()),
         relationship_raw_admissions: Vec::with_capacity(batch.relationships.len()),
         blobs: BTreeMap::new(),
+        record_blobs: BTreeMap::new(),
         methods: Vec::with_capacity(batch.records.len() + 1),
         lineage: Vec::with_capacity(batch.records.len()),
         policies: Vec::with_capacity(batch.records.len() + 1),
@@ -2083,6 +2087,9 @@ fn admit_records(
             // not mutable terminal receipt content.
             deduplicated,
         });
+        admitted
+            .record_blobs
+            .insert(item.lineage.object_id.clone(), item.blob.clone());
         admitted
             .blobs
             .entry(item.raw_digest_hex)
@@ -4552,6 +4559,7 @@ mod tests {
             raw_admissions: Vec::new(),
             relationship_raw_admissions: Vec::new(),
             blobs: BTreeMap::new(),
+            record_blobs: BTreeMap::new(),
             methods: Vec::new(),
             lineage: Vec::new(),
             policies: Vec::new(),

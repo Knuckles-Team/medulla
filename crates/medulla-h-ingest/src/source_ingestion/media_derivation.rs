@@ -11,7 +11,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::{
     SourceIngestionBatch, MEDIA_DERIVATION_FEATURE_KIND,
 };
-use medulla_types::contract::Digest256;
+use medulla_protocol_types::change_envelope::BlobReference;
 use medulla_types::media_derivation::MediaDerivationValue;
 
 use super::{policy, AdmittedRecords, PrepareContext};
@@ -32,19 +32,20 @@ fn kind_of(value: &str) -> Option<DerivationKind> {
     }
 }
 
-/// The planned node of one feature: the id is the SHA-256 of the item's digest, the kind and the
-/// text, so a repeated feature is the same node.
+/// The planned node of one feature: the id is the SHA-256 of the item's real content digest (the
+/// raw blob the blob ledger holds for the item's record), the kind and the text, so a repeated feature is the same node.
 fn plan_feature(
     feature: &medulla_source_types::source_ingestion::SourceFeature,
+    blob: &BlobReference,
 ) -> Result<medulla_modality::media_memory::PlannedDerivation, String> {
     let value: MediaDerivationValue = rmp_serde::from_slice(&feature.value_msgpack)
         .map_err(|_| format!("{DERIVATION_KIND_INVALID}: feature {}", feature.feature_id))?;
     let kind = kind_of(&value.kind)
         .ok_or_else(|| format!("{DERIVATION_KIND_INVALID}: feature {}", feature.feature_id))?;
     let item = MediaBlobRef {
-        digest: Digest256::sha256(feature.object_id.as_bytes()).to_hex(),
-        mime: String::new(),
-        byte_len: 0,
+        digest: blob.digest.clone(),
+        mime: blob.media_type.clone(),
+        byte_len: blob.length,
     };
     let input = DerivationInput {
         kind,
@@ -82,7 +83,13 @@ pub(super) fn materialize_media_derivations(
         .iter()
         .filter(|feature| feature.kind == MEDIA_DERIVATION_FEATURE_KIND)
     {
-        let planned = plan_feature(feature)?;
+        let blob = admitted.record_blobs.get(&feature.object_id).ok_or_else(|| {
+            format!(
+                "PARAMETER_INVALID: feature {} names {}, which is not a record of this batch",
+                feature.feature_id, feature.object_id
+            )
+        })?;
+        let planned = plan_feature(feature, blob)?;
         let node_id = planned.id.clone();
         admitted.methods.push(Method::AddNode {
             node_id: node_id.clone(),
@@ -117,7 +124,19 @@ pub(super) fn materialize_media_derivations(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_protocol_types::change_envelope::MaterialOperation;
     use medulla_source_types::source_ingestion::SourceFeature;
+
+    fn blob(digest: &str) -> BlobReference {
+        BlobReference {
+            blob_id: format!("raw:{digest}"),
+            operation: MaterialOperation::Upsert,
+            digest_algorithm: "sha256".into(),
+            digest: digest.into(),
+            media_type: "image/png".into(),
+            length: 12,
+        }
+    }
 
     fn feature(text: &str, kind: &str) -> SourceFeature {
         SourceFeature {
@@ -137,18 +156,41 @@ mod tests {
     // spec: MEDULLA-MEDIA-VOCAB-R650.3
     #[test]
     fn derivation_feature_materializes() {
-        let first = plan_feature(&feature("a red bicycle", "caption")).unwrap();
-        let again = plan_feature(&feature("a red bicycle", "caption")).unwrap();
+        let first = plan_feature(&feature("a red bicycle", "caption"), &blob(&"a".repeat(64))).unwrap();
+        let again = plan_feature(&feature("a red bicycle", "caption"), &blob(&"a".repeat(64))).unwrap();
         assert_eq!(first.id, again.id);
         assert_eq!(first.derived_from, "source:item");
         assert_eq!(first.embedding, vec![1.0, 0.0]);
-        let other = plan_feature(&feature("a red bicycle", "transcript")).unwrap();
+        let other = plan_feature(&feature("a red bicycle", "transcript"), &blob(&"a".repeat(64))).unwrap();
         assert_ne!(first.id, other.id);
-        assert!(plan_feature(&feature("", "caption"))
+        assert!(plan_feature(&feature("", "caption"), &blob(&"a".repeat(64)))
             .unwrap_err()
             .starts_with(DERIVATION_EMPTY));
-        assert!(plan_feature(&feature("x", "poem"))
+        assert!(plan_feature(&feature("x", "poem"), &blob(&"a".repeat(64)))
             .unwrap_err()
             .starts_with(DERIVATION_KIND_INVALID));
+    }
+
+    // spec: MEDULLA-MEDIA-VOCAB-R650.3
+    #[test]
+    fn derivation_id_binds_the_ledger_digest_not_the_object_id() {
+        let one = plan_feature(&feature("a cat", "caption"), &blob(&"a".repeat(64))).unwrap();
+        let two = plan_feature(&feature("a cat", "caption"), &blob(&"b".repeat(64))).unwrap();
+        assert_ne!(one.id, two.id, "same object id, different content digest");
+        let expected = medulla_modality::media_memory::plan_media_write(
+            &MediaBlobRef {
+                digest: "a".repeat(64),
+                mime: "image/png".into(),
+                byte_len: 12,
+            },
+            true,
+            &[DerivationInput {
+                kind: DerivationKind::Caption,
+                text: "a cat".into(),
+                embedding: vec![1.0, 0.0],
+            }],
+        )
+        .unwrap();
+        assert_eq!(one.id, expected.derivations[0].id);
     }
 }
