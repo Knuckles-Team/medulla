@@ -281,6 +281,7 @@ class PolicyEvaluation(BaseModel):
     champion_revision_ref: str | None = None
     evaluation_set_digest: Digest256
     evaluator_digest: Digest256
+    evaluator_kind: GraderKind
     held_out_trajectory_ids: list[str] = Field(default_factory=list, max_length=4096)
     metrics: EvaluationMetrics
     report: HeldBlobRef | None = None
@@ -447,6 +448,14 @@ class RewardRecord(BaseModel):
     value_micros: int
     verifier_digest: Digest256
     verifier_id: str
+
+
+class GraderKind(str, Enum):
+    ANNOTATION = "annotation"
+    HUMAN = "human"
+    MODEL_JUDGE = "model_judge"
+    TRACE_METRIC = "trace_metric"
+    API = "api"
 
 
 class SafetyOutcome(str, Enum):

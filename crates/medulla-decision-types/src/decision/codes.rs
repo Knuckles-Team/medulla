@@ -235,6 +235,9 @@ pub const EVAL_SET_NOT_INDEPENDENT: RefusalCode = RefusalCode::new("EVAL_SET_NOT
 pub const PROMOTION_EVAL_TOO_SMALL: RefusalCode = RefusalCode::new("PROMOTION_EVAL_TOO_SMALL");
 /// The evidence names no champion score to compare with.
 pub const PROMOTION_NO_BASELINE: RefusalCode = RefusalCode::new("PROMOTION_NO_BASELINE");
+/// A held-out evaluation cannot qualify a challenger: no evaluation record
+/// exists for it, or its safety outcome failed (MEDULLA-DECISION-ENGINE-R811.8).
+pub const PROMOTION_UNEVALUATED: RefusalCode = RefusalCode::new("PROMOTION_UNEVALUATED");
 /// The only score is a model judge's; a judge never decides promotion.
 pub const PROMOTION_JUDGE_ONLY: RefusalCode = RefusalCode::new("PROMOTION_JUDGE_ONLY");
 /// A measured fact whose run is not newer than the champion's.
@@ -252,6 +255,7 @@ pub const ADOPTION_NOT_PROVEN: RefusalCode = RefusalCode::new("ADOPTION_NOT_PROV
 
 /// Every promotion and calibration code, in declaration order.
 pub const PROMOTION: &[RefusalCode] = &[
+    PROMOTION_UNEVALUATED,
     EVAL_SET_NOT_INDEPENDENT,
     PROMOTION_EVAL_TOO_SMALL,
     PROMOTION_NO_BASELINE,

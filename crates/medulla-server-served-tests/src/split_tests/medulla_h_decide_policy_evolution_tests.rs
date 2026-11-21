@@ -198,7 +198,7 @@ async fn capture_train_evaluate_and_promote() {
     let evaluation = json!({
         "subject": {"kind": "model_policy", "family_ref": "family:policy"},
         "revision_ref": trained_id, "champion_revision_ref": base_id,
-        "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+        "evaluation_set_digest": hex(20), "evaluator_digest": hex(21), "evaluator_kind": "annotation",
         "held_out_trajectory_ids": ["trajectory:0002"],
         "metrics": {"task_success_ppm": 800_000, "baseline_task_success_ppm": 600_000,
                     "cost_micros": 10, "latency_p50_ms": 5, "latency_p95_ms": 9, "gpu_seconds": 1,

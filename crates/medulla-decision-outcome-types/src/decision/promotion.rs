@@ -339,6 +339,46 @@ pub struct HeldOutEvidence {
     pub review: Option<ReviewApproval>,
 }
 
+impl TryFrom<&crate::policy_evolution::PolicyEvaluation> for HeldOutEvidence {
+    type Error = RefusalCode;
+
+    /// The held-out evidence a policy evaluation carries
+    /// (MEDULLA-DECISION-ENGINE-R811.8). A failed safety outcome is not
+    /// evidence: it refuses `PROMOTION_UNEVALUATED`.
+    fn try_from(evaluation: &crate::policy_evolution::PolicyEvaluation) -> Result<Self, RefusalCode> {
+        use crate::policy_evolution::SafetyOutcome;
+        if evaluation.safety == SafetyOutcome::Failed {
+            return Err(PROMOTION_UNEVALUATED);
+        }
+        let record = serde_json::to_value(evaluation).map_err(|_| PROMOTION_UNEVALUATED)?;
+        let compact = serde_json::to_string(&record).map_err(|_| PROMOTION_UNEVALUATED)?;
+        let receipt_digest =
+            medulla_types::contract::Digest256::sha256(compact.as_bytes()).to_hex();
+        let challenger = i64::from(evaluation.metrics.task_success_ppm);
+        let champion = evaluation
+            .champion_revision_ref
+            .as_ref()
+            .map(|_| i64::from(evaluation.metrics.baseline_task_success_ppm));
+        Ok(Self {
+            schema_version: HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+            subject: evaluation.subject.clone(),
+            challenger_ref: evaluation.revision_ref.to_string(),
+            champion_ref: evaluation.champion_revision_ref.as_ref().map(ToString::to_string),
+            receipt_kind: ReceiptKind::PolicyEvaluation,
+            receipt_digest,
+            evaluation_set_digest: evaluation.evaluation_set_digest.to_hex(),
+            challenger_score_ppm: challenger,
+            champion_score_ppm: champion,
+            delta_ppm: champion.map_or(0, |champion| challenger - champion),
+            case_count: evaluation.held_out_trajectory_ids.len() as u64,
+            independent: evaluation.evaluator_kind.decides_promotion(),
+            grader_kind: evaluation.evaluator_kind,
+            measurement: None,
+            review: None,
+        })
+    }
+}
+
 /// The active revision for one subject.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -430,6 +470,8 @@ pub const KNOBS: &[KnobSpec] = &[
         safety: KnobSafety::Fixed,
     },
 ];
+
+pub use medulla_decision_types::decision::codes::PROMOTION_UNEVALUATED;
 
 /// The promotion and calibration refusal codes.
 pub const REFUSALS: &[RefusalCode] = medulla_decision_types::decision::codes::PROMOTION;
@@ -585,6 +627,65 @@ mod tests {
             evidence_refs: vec![],
         };
         round_trip(&PromotionVerdict::Rollback(rollback));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R811.8
+    #[test]
+    fn policy_evaluation_maps_to_held_out_evidence() {
+        use crate::policy_evolution::{
+            EvaluationMetrics, EvaluationVerdict, PolicyEvaluation, SafetyOutcome,
+        };
+        use medulla_types::contract::{BoundedVec, Digest256};
+        let evaluation = PolicyEvaluation {
+            subject: RevisionSubject::ModelPolicy {
+                family_ref: "family:policy".to_owned(),
+            },
+            revision_ref: reference("polver", "v2"),
+            champion_revision_ref: Some(reference("polver", "v1")),
+            evaluation_set_digest: Digest256::from_bytes([7; 32]),
+            evaluator_digest: Digest256::from_bytes([8; 32]),
+            evaluator_kind: GraderKind::Human,
+            held_out_trajectory_ids: BoundedVec::new(vec![
+                reference("poltraj", "a"),
+                reference("poltraj", "b"),
+            ])
+            .expect("within bound"),
+            metrics: EvaluationMetrics {
+                task_success_ppm: 800_000,
+                baseline_task_success_ppm: 600_000,
+                ..EvaluationMetrics::default()
+            },
+            safety: SafetyOutcome::Passed,
+            verdict: EvaluationVerdict::Accepted,
+            report: None,
+        };
+        let held = HeldOutEvidence::try_from(&evaluation).expect("maps");
+        assert_eq!(held.schema_version, 1);
+        assert_eq!(held.challenger_ref, "polver:v2");
+        assert_eq!(held.champion_ref.as_deref(), Some("polver:v1"));
+        assert_eq!(held.receipt_kind, ReceiptKind::PolicyEvaluation);
+        assert_eq!(held.evaluation_set_digest, Digest256::from_bytes([7; 32]).to_hex());
+        assert_eq!(held.challenger_score_ppm, 800_000);
+        assert_eq!(held.champion_score_ppm, Some(600_000));
+        assert_eq!(held.delta_ppm, 200_000);
+        assert_eq!(held.case_count, 2);
+        assert!(held.independent);
+        assert_eq!(held.grader_kind, GraderKind::Human);
+        assert_eq!(held.receipt_digest.len(), 64);
+        let judged = PolicyEvaluation {
+            evaluator_kind: GraderKind::ModelJudge,
+            champion_revision_ref: None,
+            ..evaluation.clone()
+        };
+        let held = HeldOutEvidence::try_from(&judged).expect("maps");
+        assert!(!held.independent);
+        assert_eq!((held.champion_score_ppm, held.delta_ppm), (None, 0));
+        let failed = PolicyEvaluation {
+            safety: SafetyOutcome::Failed,
+            verdict: EvaluationVerdict::Rejected,
+            ..evaluation
+        };
+        assert_eq!(HeldOutEvidence::try_from(&failed), Err(PROMOTION_UNEVALUATED));
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R805.7

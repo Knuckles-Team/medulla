@@ -222,7 +222,7 @@ fn an_evaluation_names_existing_versions() {
     let version_id = base_version(&mut graph, 2);
     let evaluation = |version: &str| {
         let record = typed(json!({
-            "subject": model_subject(), "revision_ref": version, "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+            "subject": model_subject(), "revision_ref": version, "evaluation_set_digest": hex(20), "evaluator_digest": hex(21), "evaluator_kind": "annotation",
             "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
                         "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
                         "trace_completeness_ppm": 0, "unsupported_replay_mass_ppm": 0},
@@ -240,7 +240,7 @@ fn an_evaluation_names_existing_versions() {
 
 fn evaluation_of(version_id: &str, held_out: &[&str]) -> PolicyEvolutionRecord {
     let record = typed(json!({
-        "subject": model_subject(), "revision_ref": version_id, "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+        "subject": model_subject(), "revision_ref": version_id, "evaluation_set_digest": hex(20), "evaluator_digest": hex(21), "evaluator_kind": "annotation",
         "held_out_trajectory_ids": held_out,
         "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
                     "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
@@ -292,7 +292,7 @@ fn held_out_list_is_bounded_at_4096() {
         .map(|index| format!("trajectory:{index:05}"))
         .collect::<Vec<_>>();
     let body = json!({
-        "subject": model_subject(), "revision_ref": "polver:x", "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+        "subject": model_subject(), "revision_ref": "polver:x", "evaluation_set_digest": hex(20), "evaluator_digest": hex(21), "evaluator_kind": "annotation",
         "held_out_trajectory_ids": ids,
         "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
                     "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
@@ -309,7 +309,7 @@ fn knob_evaluation(policy_id: &str, revision: &str, champion: Option<&str>) -> P
     let record = typed(json!({
         "subject": {"kind": "knob_set", "policy_id": policy_id},
         "revision_ref": revision, "champion_revision_ref": champion,
-        "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+        "evaluation_set_digest": hex(20), "evaluator_digest": hex(21), "evaluator_kind": "annotation",
         "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
                     "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
                     "trace_completeness_ppm": 0, "unsupported_replay_mass_ppm": 0},
