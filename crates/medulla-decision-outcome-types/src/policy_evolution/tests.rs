@@ -1,4 +1,5 @@
 use super::*;
+use crate::decision::promotion::RevisionSubject;
 
 fn digest(byte: u8) -> Digest256 {
     Digest256::from_bytes([byte; 32])
@@ -266,8 +267,11 @@ fn every_policy_operation_and_receipt_round_trips() {
         log: None,
     };
     let evaluation = PolicyEvaluation {
-        version_id: id("polver:policy-v2"),
-        baseline_version_id: Some(id("polver:base")),
+        subject: RevisionSubject::ModelPolicy {
+            family_ref: "family:policy".into(),
+        },
+        revision_ref: id("polver:policy-v2"),
+        champion_revision_ref: Some(id("polver:base")),
         evaluation_set_digest: digest(16),
         evaluator_digest: digest(17),
         held_out_trajectory_ids: medulla_types::contract::BoundedVec::new(vec![id(

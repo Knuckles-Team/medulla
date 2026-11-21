@@ -5,7 +5,7 @@
 //! server. Structural checks on one body already ran in `medulla-types`.
 
 use medulla_decision_outcome_types::{
-    policy_evolution::CaptureEligibility, policy_evolution::ModelPolicyVersion,
+    decision::promotion::RevisionSubject, policy_evolution::CaptureEligibility, policy_evolution::ModelPolicyVersion,
     policy_evolution::OpenWeightPolicyCapability, policy_evolution::PolicyCapture,
     policy_evolution::PolicyEvaluation, policy_evolution::PolicyEvolutionRecord,
     policy_evolution::PolicyEvolutionRecordBody, policy_evolution::PolicyRefusal,
@@ -20,6 +20,10 @@ pub trait RecordLookup {
     fn record(&self, record_id: &str) -> Result<Option<PolicyEvolutionRecord>, PolicyRefusal>;
     /// The step count of a `:Trajectory` node, `None` when there is none.
     fn trajectory_steps(&self, trajectory_id: &str) -> Option<u64>;
+    /// The content digests of the published `DecisionPolicy` component
+    /// `policy_id`, one per retained revision; empty when it was never
+    /// published or is another kind of component.
+    fn policy_component_digests(&self, policy_id: &str) -> Result<Vec<String>, PolicyRefusal>;
 }
 
 /// Admit `record` against the stored graph, or answer the typed refusal.
@@ -147,19 +151,40 @@ fn admit_training_run(run: &TrainingRun, lookup: &dyn RecordLookup) -> Result<()
     Ok(())
 }
 
-/// An evaluation names versions that exist, and its held-out trajectories are
-/// disjoint from the captures the evaluated version's training run read: a
-/// version trained on a trajectory is never evaluated on it.
+/// An evaluation names a revision that exists, and its held-out trajectories
+/// are disjoint from the captures the evaluated version's training run read: a
+/// version trained on a trajectory is never evaluated on it. A `ModelPolicy`
+/// revision is a `ModelPolicyVersion` record; a `KnobSet` revision is a
+/// published `DecisionPolicy` component revision, read through [`RecordLookup`].
 fn admit_evaluation(
     evaluation: &PolicyEvaluation,
     lookup: &dyn RecordLookup,
 ) -> Result<(), PolicyRefusal> {
+    let revisions = std::iter::once(&evaluation.revision_ref).chain(&evaluation.champion_revision_ref);
     let mut evaluated: Option<ModelPolicyVersion> = None;
-    let versions = std::iter::once(&evaluation.version_id).chain(&evaluation.baseline_version_id);
-    for version_id in versions {
-        let version: ModelPolicyVersion = fetch(lookup, version_id.as_str(), record_missing)?;
-        if evaluated.is_none() {
-            evaluated = Some(version);
+    match &evaluation.subject {
+        RevisionSubject::ModelPolicy { .. } => {
+            for revision_ref in revisions {
+                let version: ModelPolicyVersion =
+                    fetch(lookup, revision_ref.as_str(), record_missing)?;
+                if evaluated.is_none() {
+                    evaluated = Some(version);
+                }
+            }
+        }
+        RevisionSubject::KnobSet { policy_id } => {
+            let published = lookup.policy_component_digests(policy_id)?;
+            for revision_ref in revisions {
+                if !published.iter().any(|digest| digest == revision_ref.as_str()) {
+                    return Err(record_missing(revision_ref.as_str()));
+                }
+            }
+        }
+        other => {
+            return Err(PolicyRefusal::InvalidRecord(format!(
+                "a policy evaluation cannot name a {} subject",
+                other.pointer_key().split(':').nth(1).unwrap_or("unknown")
+            )));
         }
     }
     if evaluation.held_out_trajectory_ids.is_empty() {

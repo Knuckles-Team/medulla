@@ -20,6 +20,8 @@ fn hex(byte: u8) -> String {
 struct Graph {
     records: BTreeMap<String, PolicyEvolutionRecord>,
     trajectories: BTreeMap<String, u64>,
+    /// Published `DecisionPolicy` component digests by component id.
+    policies: BTreeMap<String, Vec<String>>,
 }
 
 impl Graph {
@@ -37,6 +39,13 @@ impl RecordLookup for Graph {
     fn trajectory_steps(&self, trajectory_id: &str) -> Option<u64> {
         self.trajectories.get(trajectory_id).copied()
     }
+    fn policy_component_digests(&self, policy_id: &str) -> Result<Vec<String>, PolicyRefusal> {
+        Ok(self.policies.get(policy_id).cloned().unwrap_or_default())
+    }
+}
+
+fn model_subject() -> Value {
+    json!({"kind": "model_policy", "family_ref": "family:policy"})
 }
 
 fn typed<T: serde::de::DeserializeOwned>(value: Value) -> T {
@@ -213,7 +222,7 @@ fn an_evaluation_names_existing_versions() {
     let version_id = base_version(&mut graph, 2);
     let evaluation = |version: &str| {
         let record = typed(json!({
-            "version_id": version, "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+            "subject": model_subject(), "revision_ref": version, "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
             "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
                         "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
                         "trace_completeness_ppm": 0, "unsupported_replay_mass_ppm": 0},
@@ -231,7 +240,7 @@ fn an_evaluation_names_existing_versions() {
 
 fn evaluation_of(version_id: &str, held_out: &[&str]) -> PolicyEvolutionRecord {
     let record = typed(json!({
-        "version_id": version_id, "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+        "subject": model_subject(), "revision_ref": version_id, "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
         "held_out_trajectory_ids": held_out,
         "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
                     "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
@@ -283,7 +292,7 @@ fn held_out_list_is_bounded_at_4096() {
         .map(|index| format!("trajectory:{index:05}"))
         .collect::<Vec<_>>();
     let body = json!({
-        "version_id": "polver:x", "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+        "subject": model_subject(), "revision_ref": "polver:x", "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
         "held_out_trajectory_ids": ids,
         "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
                     "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
@@ -294,4 +303,51 @@ fn held_out_list_is_bounded_at_4096() {
         medulla_decision_outcome_types::policy_evolution::PolicyEvaluation,
     >(body)
     .is_err());
+}
+
+fn knob_evaluation(policy_id: &str, revision: &str, champion: Option<&str>) -> PolicyEvolutionRecord {
+    let record = typed(json!({
+        "subject": {"kind": "knob_set", "policy_id": policy_id},
+        "revision_ref": revision, "champion_revision_ref": champion,
+        "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+        "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
+                    "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
+                    "trace_completeness_ppm": 0, "unsupported_replay_mass_ppm": 0},
+        "safety": "passed", "verdict": "accepted",
+    }));
+    PolicyEvolutionRecord::PolicyEvaluation { record }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R811.7
+#[test]
+fn knob_set_evaluation_names_its_policy_revision() {
+    let mut graph = Graph::default();
+    let (new, old) = (hex(30), hex(31));
+    graph
+        .policies
+        .insert("policy:decide".into(), vec![old.clone(), new.clone()]);
+    // A published revision and a published champion are admitted.
+    assert_eq!(
+        admit(&knob_evaluation("policy:decide", &new, Some(&old)), &graph),
+        Ok(())
+    );
+    assert_eq!(
+        admit(&knob_evaluation("policy:decide", &new, None), &graph),
+        Ok(())
+    );
+    // A revision that was never published refuses, naming it.
+    let absent = hex(32);
+    assert_eq!(
+        admit(&knob_evaluation("policy:decide", &absent, None), &graph),
+        Err(PolicyRefusal::RecordMissing(absent.clone()))
+    );
+    assert_eq!(
+        admit(&knob_evaluation("policy:decide", &new, Some(&absent)), &graph),
+        Err(PolicyRefusal::RecordMissing(absent))
+    );
+    // A policy that was never published has no revision at all.
+    assert!(admit(&knob_evaluation("policy:other", &new, None), &graph).is_err());
+    // The model-policy subject still resolves a ModelPolicyVersion record.
+    let version_id = base_version(&mut graph, 2);
+    assert_eq!(admit(&evaluation_of(&version_id, &[]), &graph), Ok(()));
 }

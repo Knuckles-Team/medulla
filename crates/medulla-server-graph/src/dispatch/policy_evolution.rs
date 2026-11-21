@@ -36,6 +36,7 @@ mod store;
 #[cfg(test)]
 mod tests;
 
+use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use store::GraphRecords;
 
 /// Where one policy-evolution request lands: the request graph, and who asked.
@@ -112,6 +113,7 @@ async fn admit_against_graph(
     let records = GraphRecords {
         core: current.registry.get(graph).map(|entry| entry.core.as_ref()),
         tenant_id,
+        library: current.agent_library(),
     };
     if records.view(record_id).map_err(refuse)?.is_some() {
         return Ok(true);
@@ -222,6 +224,7 @@ async fn get(
             .get(target.graph)
             .map(|entry| entry.core.as_ref()),
         tenant_id: verified.tenant(),
+        library: None,
     };
     let view = records
         .view(request.record_id.as_str())

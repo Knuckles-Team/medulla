@@ -9,6 +9,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::capture::HeldBlobRef;
+use crate::decision::promotion::RevisionSubject;
 use super::{PolicyRefusal, MAX_HELD_OUT_TRAJECTORIES, MAX_TRAINING_INPUTS, PPM_SCALE};
 use medulla_types::{
     contract::BoundedVec, contract::Digest256, contract::OpaqueId, contract::ResourceId,
@@ -299,14 +300,22 @@ impl EvaluationMetrics {
     }
 }
 
-/// `PolicyEvaluation/v1`: an independent held-out evaluation of one version.
+/// `PolicyEvaluation/v1`: an independent held-out evaluation of one revision
+/// of a [`RevisionSubject`] (MEDULLA-DECISION-ENGINE-R811.7).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct PolicyEvaluation {
-    pub version_id: OpaqueId,
+    /// What the evaluated revision revises: a model policy family or a knob set.
+    pub subject: RevisionSubject,
+    /// The evaluated revision: a `ModelPolicyVersion` record id for a model
+    /// policy, the content digest of a published `DecisionPolicy` component
+    /// revision for a knob set.
+    pub revision_ref: OpaqueId,
+    /// The champion revision the evaluation compares against, in the same
+    /// namespace as `revision_ref`; absent when the subject has no champion.
     #[serde(default)]
-    pub baseline_version_id: Option<OpaqueId>,
+    pub champion_revision_ref: Option<OpaqueId>,
     pub evaluation_set_digest: Digest256,
     pub evaluator_digest: Digest256,
     /// The `:Trajectory` ids the evaluation holds out. None may be a trajectory

@@ -12,6 +12,10 @@ use medulla_decision_outcome_types::{
     policy_evolution::StoredPolicyRecord,
 };
 
+use std::sync::Arc;
+
+use medulla_persistence_records::agent_library::AgentLibraryStore;
+
 use super::gate::RecordLookup;
 use medulla_graph_core::graph::GraphCore;
 
@@ -56,6 +60,8 @@ pub fn decode_view(
 pub struct GraphRecords<'a> {
     pub core: Option<&'a GraphCore>,
     pub tenant_id: &'a str,
+    /// The Agent Library, where published `DecisionPolicy` components live.
+    pub library: Option<Arc<AgentLibraryStore>>,
 }
 
 impl GraphRecords<'_> {
@@ -82,6 +88,15 @@ impl RecordLookup for GraphRecords<'_> {
         (value.get("type")?.as_str()? == TRAJECTORY_NODE_TYPE)
             .then(|| value.get("step_count")?.as_u64())
             .flatten()
+    }
+
+    fn policy_component_digests(&self, policy_id: &str) -> Result<Vec<String>, PolicyRefusal> {
+        let Some(library) = &self.library else {
+            return Ok(Vec::new());
+        };
+        library
+            .decision_policy_digests(self.tenant_id, policy_id)
+            .map_err(|_| PolicyRefusal::RecordMissing(policy_id.to_string()))
     }
 }
 
