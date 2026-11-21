@@ -547,6 +547,66 @@ pub fn project_bundles(
     })
 }
 
+/// The node id of the document node of one artifact file.
+pub fn document_node_id(repo: &str, file: &str) -> String {
+    format!("specdoc:{repo}:{file}")
+}
+
+/// Project one spec document into graph nodes (MEDULLA-SDLC-R009): one `SpecDocument` with
+/// its digest and one `SpecSection` per heading with its source span (first and last line,
+/// 1-based) and the digest of the section's bytes, joined by `hasSection` edges. The nodes
+/// carry spans and digests only; the text stays in the repository blob, so there is no
+/// second document copy. Each op is an `upsert_node` or `upsert_edge`, nodes first.
+pub fn project(repo: &str, file: &str, text: &str) -> Vec<serde_json::Value> {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut fence = false;
+    let mut headings: Vec<(usize, usize, String)> = Vec::new();
+    for (index, line) in lines.iter().enumerate() {
+        if line.starts_with("```") {
+            fence = !fence;
+        }
+        let level = line.bytes().take_while(|b| *b == b'#').count();
+        if !fence && (1..=6).contains(&level) && line[level..].starts_with(' ') {
+            headings.push((index + 1, level, line[level..].trim().to_string()));
+        }
+    }
+    let document = document_node_id(repo, file);
+    let mut nodes = vec![node(
+        &document,
+        serde_json::json!({
+            "type": "SpecDocument",
+            "repo": repo,
+            "file": file,
+            "digest": digest_of(text),
+            "lines": lines.len().to_string(),
+        }),
+    )];
+    let mut links = Vec::new();
+    for (position, (start, level, title)) in headings.iter().enumerate() {
+        let end = headings
+            .get(position + 1)
+            .map_or(lines.len(), |(next, _, _)| next - 1);
+        let body = lines[start - 1..end].join("\n");
+        let id = format!("specsection:{repo}:{file}#L{start}");
+        nodes.push(node(
+            &id,
+            serde_json::json!({
+                "type": "SpecSection",
+                "repo": repo,
+                "file": file,
+                "title": title,
+                "level": level.to_string(),
+                "start_line": start.to_string(),
+                "end_line": end.to_string(),
+                "digest": digest_of(&body),
+            }),
+        ));
+        links.push(edge(&document, &id, "hasSection"));
+    }
+    nodes.extend(links);
+    nodes
+}
+
 /// What the engine already holds of one artifact file: the digest it was ingested
 /// under and the ids of the requirement records it produced.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -630,9 +690,16 @@ fn reingest_in(
         let triples = parse_spec_file(name, text).map_err(|refusal| refusal.to_string())?;
         let projection = project_requirements_in(repo, &triples, states, external, unresolved)?;
         let mut records = Vec::new();
-        for op in projection.operations {
+        for op in projection
+            .operations
+            .into_iter()
+            .chain(project(repo, name, text))
+        {
             if op["op"] == "upsert_node" {
-                if op["properties"]["type"] == "Requirement" {
+                if matches!(
+                    op["properties"]["type"].as_str(),
+                    Some("Requirement" | "SpecDocument" | "SpecSection")
+                ) {
                     records.push(op["id"].as_str().unwrap_or_default().to_string());
                 }
                 writes.push(op);
@@ -1174,5 +1241,51 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         let idle = project_spec_artifacts("demo", &files, &stored, &mut again).expect("idle");
         assert!(idle.reingested.is_empty());
         assert!(again.nodes.is_empty() && again.edges.is_empty());
+    }
+
+    // spec: MEDULLA-SDLC-R009
+    #[test]
+    fn spec_document_projects_sections_with_spans() {
+        let text =
+            "# Title\n\nintro\n\n## Rows\n\n```\n# not a heading\n```\nbody\n\n## Tasks\nlast\n";
+        let ops = project("demo", "specs/a/plan.md", text);
+        let doc = &ops[0];
+        assert_eq!(doc["id"], "specdoc:demo:specs/a/plan.md");
+        assert_eq!(doc["properties"]["type"], "SpecDocument");
+        assert_eq!(doc["properties"]["digest"], digest_of(text).as_str());
+        let sections: Vec<_> = ops
+            .iter()
+            .filter(|op| op["properties"]["type"] == "SpecSection")
+            .collect();
+        for section in &sections {
+            let p = &section["properties"];
+            println!(
+                "SECTION\t{}\t{}\t{}\t{}",
+                p["title"].as_str().unwrap().replace(' ', "_"),
+                p["level"].as_str().unwrap(),
+                p["start_line"].as_str().unwrap(),
+                p["end_line"].as_str().unwrap()
+            );
+        }
+        let spans: Vec<(String, String)> = sections
+            .iter()
+            .map(|s| {
+                (
+                    s["properties"]["start_line"].as_str().unwrap().to_string(),
+                    s["properties"]["end_line"].as_str().unwrap().to_string(),
+                )
+            })
+            .collect();
+        assert_eq!(
+            spans,
+            [("1", "4"), ("5", "11"), ("12", "13")].map(|(a, b)| (a.to_string(), b.to_string()))
+        );
+        let edges = ops.iter().filter(|op| op["op"] == "upsert_edge").count();
+        assert_eq!(edges, 3);
+        assert_eq!(
+            project("demo", "specs/a/plan.md", text),
+            ops,
+            "deterministic"
+        );
     }
 }
