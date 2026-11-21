@@ -11,7 +11,8 @@ use medulla_types::transition_refused::MachineState;
 pub const AUDIT_FIELDS_INVALID: &str = "invalid privacy-safe audit event fields";
 
 /// The closed state set of `AuditMachine`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum AuditStatus {
     /// The reservation, written before the effect runs.
     Reserved,

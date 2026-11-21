@@ -1,87 +1,53 @@
-"""Wire mirror field names that are not lifecycle states (organization constitution
-Article XXXI census).
+"""Wire mirrors carry a machine's state as the closed enum, never as free text.
 
-MEDULLA-FEDERATED-QUERY-R739.3: a `WITH PROOF` step names the kind of step by its
-variant (`Sparql`, `Reason`, `Unproved`) and carries the admitting stage's canonical UQL
-text as `clause`. Nothing moves a step, so no field is named `stage`.
-
-MEDULLA-TYPED-PACKS-R811.1: the Python mirror of connector pack conformance evidence
-types its state as the Rust enum and refuses any other word when decoded.
+The Rust machines own the state words (MEDULLA-DURABLE-KERNEL-R874); the hand-kept
+Python mirrors decode them and refuse a word outside the enum.
 """
 
 from __future__ import annotations
 
-import re
-from pathlib import Path
+import enum
 
-import pydantic
 import pytest
 from pydantic import ValidationError
 
 from medulla.generated import models
-from medulla.generated.connector_pack import (
-    ConformanceEvidence,
-    ConformanceEvidenceState,
+
+pytestmark = [pytest.mark.no_engine]
+
+STAGE_MIRRORS = (
+    "SemanticIndexErrorStageScopeMismatch",
+    "SemanticGenerationCheckpoint",
+    "SemanticGenerationDependencyCheckpoint",
 )
 
-REPO = Path(__file__).resolve().parents[1]
-RUST_OWNER = (
-    REPO / "crates/medulla-catalog-types/src/connector_pack/conformance_evidence.rs"
-)
+
+def _annotation(model: type, field: str) -> object:
+    return model.model_fields[field].annotation
 
 
-@pytest.mark.no_engine
-@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R739.3")
-def test_uql_proof_step_field_is_clause_not_stage() -> None:
-    for body in (
-        models.UqlProofStepReasonBody,
-        models.UqlProofStepSparqlBody,
-        models.UqlProofStepUnprovedBody,
-    ):
-        fields = set(body.model_fields)
-        assert "clause" in fields, body.__name__
-        assert "stage" not in fields, body.__name__
-
-    step = models.UqlProofStepUnproved.model_validate(
-        {"Unproved": {"clause": "MATCH (:Doc)"}}
-    )
-    assert step.Unproved.clause == "MATCH (:Doc)"
-    # The old key is refused: there is no alias.
-    with pytest.raises(pydantic.ValidationError):
-        models.UqlProofStepUnproved.model_validate(
-            {"Unproved": {"stage": "MATCH (:Doc)"}}
-        )
-
-
-def _rust_state_words() -> set[str]:
-    source = RUST_OWNER.read_text(encoding="utf-8")
-    body = re.search(r"pub enum ConformanceEvidenceState \{(.*?)\n\}", source, re.S)
-    assert body, "Rust enum ConformanceEvidenceState moved or missing"
-    variants = re.findall(r"^\s{4}([A-Z][A-Za-z0-9]*),", body.group(1), re.M)
-    assert variants, "Rust enum ConformanceEvidenceState has no variants"
-    return {re.sub(r"(?<!^)(?=[A-Z])", "_", v).lower() for v in variants}
-
-
-def _record(state: str) -> dict[str, object]:
-    return {
-        "connector": "c",
-        "expires_at": 2,
-        "issued_at": 1,
-        "pack_digest": "0" * 64,
-        "revision": 1,
-        "state": state,
-        "tenant_id": "t",
-        "tool_fingerprints": {},
+# spec: MEDULLA-DURABLE-KERNEL-R875.6
+@pytest.mark.spec("MEDULLA-DURABLE-KERNEL-R875.6")
+def test_semantic_and_audit_mirrors_type_state_as_the_rust_enum() -> None:
+    assert _annotation(models.MethodAuditAppendParams, "status") is models.AuditStatus
+    assert {m.value for m in models.AuditStatus} == {
+        "reserved",
+        "ok",
+        "error",
+        "denied",
     }
+    for name in STAGE_MIRRORS:
+        assert _annotation(getattr(models, name), "stage") is models.SemanticStage, name
+    status = _annotation(models.SemanticOutboxStatus, "status")
+    assert isinstance(status, type) and issubclass(status, enum.Enum)
 
-
-@pytest.mark.spec("MEDULLA-TYPED-PACKS-R811.1")
-def test_conformance_evidence_types_state_as_the_rust_enum() -> None:
-    # spec: MEDULLA-TYPED-PACKS-R811.1
-    assert (
-        ConformanceEvidence.model_fields["state"].annotation is ConformanceEvidenceState
-    )
-    assert {member.value for member in ConformanceEvidenceState} == _rust_state_words()
+    fields = {
+        "op": "graph.nodes.write",
+        "params_sha256": "a" * 64,
+        "request_id": "request-1",
+        "surface": "http",
+    }
+    accepted = models.MethodAuditAppendParams(status="reserved", **fields)
+    assert accepted.status is models.AuditStatus.RESERVED
     with pytest.raises(ValidationError):
-        ConformanceEvidence.model_validate(_record("expired"))
-    assert not hasattr(ConformanceEvidence, "apply")
+        models.MethodAuditAppendParams(status="closed", **fields)

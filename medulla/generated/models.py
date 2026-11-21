@@ -15337,6 +15337,13 @@ class MethodAsrParams(BaseModel):
     op: AsrOp
 
 
+class AuditStatus(str, Enum):
+    RESERVED = "reserved"
+    OK = "ok"
+    ERROR = "error"
+    DENIED = "denied"
+
+
 class MethodAuditAppendParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15345,7 +15352,7 @@ class MethodAuditAppendParams(BaseModel):
     params_sha256: str
     policy_iri: str | None = None
     request_id: str
-    status: str
+    status: AuditStatus
     subject_iri: str | None = None
     surface: str
 
@@ -34400,6 +34407,7 @@ __all__ = [
     "AuditDraw",
     "AuditEventProof",
     "AuditReport",
+    "AuditStatus",
     "AuthMode",
     "AuthenticateOutcome",
     "AuthenticateRequest",
