@@ -56,40 +56,69 @@ pub struct DowntimeJobType {
     pub window: WindowKind,
 }
 
+/// Why a downtime job type is refused (MEDULLA-DURABLE-KERNEL-R101.4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DowntimeTypeRefusal {
+    /// The type has no IRI.
+    NoIri,
+    /// The intent is not registered.
+    IntentNotRegistered,
+    /// The type sets no budget with both `cpu_ms` and `memory_bytes`.
+    BudgetRequired,
+    /// The type has more than [`MAX_PRECONDITIONS`] preconditions.
+    TooManyPreconditions,
+    /// A precondition is longer than [`MAX_PRECONDITION_BYTES`].
+    PreconditionTooLarge,
+}
+
+impl std::fmt::Display for DowntimeTypeRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::NoIri => write!(f, "downtime job type has no iri"),
+            Self::IntentNotRegistered => {
+                write!(f, "downtime job type names an unregistered intent")
+            }
+            Self::BudgetRequired => write!(
+                f,
+                "downtime job type must set a budget with cpu_ms and memory_bytes"
+            ),
+            Self::TooManyPreconditions => write!(
+                f,
+                "downtime job type has more than {MAX_PRECONDITIONS} preconditions"
+            ),
+            Self::PreconditionTooLarge => write!(
+                f,
+                "downtime job type has a precondition over {MAX_PRECONDITION_BYTES} bytes"
+            ),
+        }
+    }
+}
+
 impl DowntimeJobType {
     /// Check the type against the model rules; `is_registered` answers whether an
     /// intent name is registered.
-    pub fn validate(&self, is_registered: impl Fn(&str) -> bool) -> Result<(), String> {
+    pub fn validate(
+        &self,
+        is_registered: impl Fn(&str) -> bool,
+    ) -> Result<(), DowntimeTypeRefusal> {
         if self.iri.is_empty() {
-            return Err("downtime job type has no iri".into());
+            return Err(DowntimeTypeRefusal::NoIri);
         }
         if !is_registered(&self.intent) {
-            return Err(format!(
-                "downtime job type {} names unregistered intent {}",
-                self.iri, self.intent
-            ));
+            return Err(DowntimeTypeRefusal::IntentNotRegistered);
         }
         if self.budget.cpu_ms.is_none() || self.budget.memory_bytes.is_none() {
-            return Err(format!(
-                "downtime job type {} must set a budget with cpu_ms and memory_bytes",
-                self.iri
-            ));
+            return Err(DowntimeTypeRefusal::BudgetRequired);
         }
         if self.preconditions.len() > MAX_PRECONDITIONS {
-            return Err(format!(
-                "downtime job type {} has more than {MAX_PRECONDITIONS} preconditions",
-                self.iri
-            ));
+            return Err(DowntimeTypeRefusal::TooManyPreconditions);
         }
         if self
             .preconditions
             .iter()
             .any(|p| p.len() > MAX_PRECONDITION_BYTES)
         {
-            return Err(format!(
-                "downtime job type {} has a precondition over {MAX_PRECONDITION_BYTES} bytes",
-                self.iri
-            ));
+            return Err(DowntimeTypeRefusal::PreconditionTooLarge);
         }
         Ok(())
     }
@@ -287,7 +316,10 @@ mod tests {
         assert!(t.validate(|_| false).is_err());
         let mut no_budget = t.clone();
         no_budget.budget = ResourceBudget::default();
-        assert!(no_budget.validate(|_| true).is_err());
+        assert_eq!(
+            no_budget.validate(|_| true),
+            Err(DowntimeTypeRefusal::BudgetRequired)
+        );
         let mut many = t.clone();
         many.preconditions = vec!["x".into(); MAX_PRECONDITIONS + 1];
         assert!(many.validate(|_| true).is_err());

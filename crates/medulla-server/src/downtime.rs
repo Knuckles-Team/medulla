@@ -21,7 +21,7 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
 use medulla_jobs::downtime::{
-    select_for_window, DowntimeJobType, DowntimeWindow, ForegroundActivity, PreconditionEval,
+    select_for_window, DowntimeJobType, DowntimeTypeRefusal, DowntimeWindow, ForegroundActivity, PreconditionEval,
     WindowContext, WindowKind,
 };
 use medulla_jobs::ResourceBudget;
@@ -55,8 +55,8 @@ pub const LEASE_TTL_MS: u64 = 60_000;
 
 const TYPES_QUERY: &str = "PREFIX dw: <https://knuckles-team.github.io/ontology/downtime-work#> \
 SELECT ?t ?intent ?priority ?kind ?cpu ?mem ?start ?end WHERE { \
-?t a dw:JobType ; dw:intent ?intent ; dw:priority ?priority ; dw:windowKind ?kind ; \
-dw:hasBudget ?b . ?b dw:cpuMs ?cpu ; dw:memoryBytes ?mem . \
+?t a dw:JobType ; dw:intent ?intent ; dw:priority ?priority ; dw:windowKind ?kind . \
+OPTIONAL { ?t dw:hasBudget ?b . ?b dw:cpuMs ?cpu ; dw:memoryBytes ?mem } \
 OPTIONAL { ?t dw:windowStartMs ?start } OPTIONAL { ?t dw:windowEndMs ?end } }";
 
 const PRECONDITIONS_QUERY: &str =
@@ -130,6 +130,9 @@ pub struct TickPlan {
     pub skipped_precondition: Vec<String>,
     /// The job types skipped because the window's budget ran out.
     pub skipped_budget: Vec<String>,
+    /// The job types refused because they declare no budget (R101.4); no lease, capacity
+    /// read or submission happens for them.
+    pub budget_required: Vec<String>,
 }
 
 fn lexical(binding: &Binding) -> String {
@@ -154,7 +157,7 @@ fn number<T: std::str::FromStr>(row: &Row, name: &str) -> Option<T> {
 
 /// Build the job types from the two `SELECT` result tables. A row that misses a
 /// required column, or names a window kind other than `idle` or `declared`, is
-/// not a job type and is left out.
+/// not a job type and is left out. A type with no budget is kept with `None` budget values.
 pub fn types_from_rows(type_rows: &[Row], precondition_rows: &[Row]) -> Vec<DowntimeJobType> {
     let mut preconditions: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for row in precondition_rows {
@@ -171,12 +174,8 @@ pub fn types_from_rows(type_rows: &[Row], precondition_rows: &[Row]) -> Vec<Down
             Some("declared") => WindowKind::Declared,
             _ => continue,
         };
-        let (Some(intent), Some(priority), Some(cpu_ms), Some(memory_bytes)) = (
-            cell(row, "intent"),
-            number::<u16>(row, "priority"),
-            number::<u64>(row, "cpu"),
-            number::<u64>(row, "mem"),
-        ) else {
+        let (Some(intent), Some(priority)) = (cell(row, "intent"), number::<u16>(row, "priority"))
+        else {
             continue;
         };
         if !seen.insert(iri.clone()) {
@@ -188,9 +187,10 @@ pub fn types_from_rows(type_rows: &[Row], precondition_rows: &[Row]) -> Vec<Down
             iri,
             intent,
             priority,
+            // An absent budget stays `None`: `validate` refuses the type with `BudgetRequired`.
             budget: ResourceBudget {
-                cpu_ms: Some(cpu_ms),
-                memory_bytes: Some(memory_bytes),
+                cpu_ms: number::<u64>(row, "cpu"),
+                memory_bytes: number::<u64>(row, "mem"),
                 ..ResourceBudget::default()
             },
             preconditions: found,
@@ -198,6 +198,26 @@ pub fn types_from_rows(type_rows: &[Row], precondition_rows: &[Row]) -> Vec<Down
         });
     }
     types
+}
+
+/// Split `parsed` into the types that pass `DowntimeJobType::validate` and the IRIs of the
+/// types refused for lack of a budget. Any other refusal is logged and the type is left out.
+pub fn split_refused(
+    parsed: &[DowntimeJobType],
+    is_registered: &dyn Fn(&str) -> bool,
+) -> (Vec<DowntimeJobType>, Vec<String>) {
+    let mut types = Vec::new();
+    let mut budget_required = Vec::new();
+    for job_type in parsed {
+        match job_type.validate(is_registered) {
+            Ok(()) => types.push(job_type.clone()),
+            Err(DowntimeTypeRefusal::BudgetRequired) => budget_required.push(job_type.iri.clone()),
+            Err(refusal) => {
+                tracing::warn!(iri = %job_type.iri, %refusal, "downtime job type refused");
+            }
+        }
+    }
+    (types, budget_required)
 }
 
 /// The declared window of one type: its own start and end, or `None` when it
@@ -369,6 +389,7 @@ pub async fn apply_plan(
     now_ms: i64,
 ) -> DowntimeSelectionRecord {
     let skip = |iri: String, reason| DowntimeSkipped { iri, reason };
+    let budget_required = plan.budget_required;
     let mut decision = DowntimeSelectionRecord {
         selection_id: selection_id(now_ms),
         at_ms: now_ms,
@@ -417,6 +438,11 @@ pub async fn apply_plan(
             }
         }
     }
+    decision.skipped.extend(
+        budget_required
+            .into_iter()
+            .map(|iri| skip(iri, DowntimeSkipReason::BudgetRequired)),
+    );
     decision
 }
 
@@ -631,21 +657,13 @@ fn plan_from_graph(
     };
     let type_rows = table(TYPES_QUERY)?;
     let precondition_rows = table(PRECONDITIONS_QUERY)?;
-    let types: Vec<DowntimeJobType> = types_from_rows(&type_rows, &precondition_rows)
-        .into_iter()
-        .filter(|job_type| match job_type.validate(is_registered) {
-            Ok(()) => true,
-            Err(error) => {
-                tracing::warn!(%error, "downtime job type refused");
-                false
-            }
-        })
-        .collect();
+    let parsed = types_from_rows(&type_rows, &precondition_rows);
+    let (types, budget_required) = split_refused(&parsed, is_registered);
     let eval = ViewEval {
         dataset: &dataset,
         projection: &projection,
     };
-    let plan = plan_tick(
+    let mut plan = plan_tick(
         &types,
         &declared_windows(&type_rows),
         memory,
@@ -653,7 +671,8 @@ fn plan_from_graph(
         TickKnobs::installed(),
         now_ms,
     );
-    let catalog = types
+    plan.budget_required = budget_required;
+    let catalog = parsed
         .into_iter()
         .map(|job_type| (job_type.iri.clone(), job_type))
         .collect();
@@ -954,6 +973,49 @@ mod tests {
         assert_eq!(
             core.get_nodes_by_label_page("dw:Selection", None, 2_000).len(),
             SELECTIONS_KEPT
+        );
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R101.4
+    #[tokio::test]
+    async fn budgetless_type_is_skipped_with_budget_required() {
+        let mut no_budget = type_row("dw:nobudget", "plan_evolution", 5);
+        no_budget.remove("cpu");
+        no_budget.remove("mem");
+        let parsed = types_from_rows(&[no_budget], &[]);
+        assert_eq!(parsed.len(), 1);
+        assert_eq!(parsed[0].budget.cpu_ms, None);
+        let (types, budget_required) = split_refused(&parsed, &|_| true);
+        assert!(types.is_empty());
+        assert_eq!(budget_required, ["dw:nobudget"]);
+
+        let mut memory = TickMemory::default();
+        let mut plan = plan_tick(
+            &types,
+            &BTreeMap::new(),
+            &memory,
+            &Always(true),
+            knobs(),
+            1_000_000,
+        );
+        plan.budget_required = budget_required;
+        let effects = Recording {
+            denied: Vec::new(),
+            log: Mutex::default(),
+            leases: Mutex::default(),
+        };
+        let decision = apply_plan(&effects, &mut memory, plan, 1_000_000).await;
+        assert!(
+            effects.log.lock().unwrap().is_empty(),
+            "no lease request and no submission for a type without a budget"
+        );
+        assert!(decision.chosen.is_empty());
+        assert_eq!(
+            decision.skipped,
+            [DowntimeSkipped {
+                iri: "dw:nobudget".into(),
+                reason: DowntimeSkipReason::BudgetRequired
+            }]
         );
     }
 }

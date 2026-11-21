@@ -3997,6 +3997,39 @@ mod tests {
         assert_ne!(claim.job.job_id, low.job_id);
     }
 
+    // spec: MEDULLA-DURABLE-KERNEL-R101.4
+    #[test]
+    fn downtime_job_is_never_claimed_by_an_analytics_worker() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let mut downtime = spec("g1", 1);
+        downtime.policy.placement.required_capabilities = vec!["downtime".to_string()];
+        let downtime = store.submit(downtime).unwrap();
+        let analytics = vec!["mining.association".to_string(), "pool:default".to_string()];
+        let none = store
+            .claim_next(
+                "worker:analytics",
+                &analytics,
+                now_ms(),
+                30_000,
+                TenantJobQuota::default(),
+            )
+            .unwrap();
+        assert!(none.is_none(), "an analytics worker never leases downtime work");
+        let only = vec!["downtime".to_string()];
+        let claim = store
+            .claim_next(
+                "worker:downtime",
+                &only,
+                now_ms(),
+                30_000,
+                TenantJobQuota::default(),
+            )
+            .unwrap()
+            .expect("the downtime worker leases the job");
+        assert_eq!(claim.job.job_id, downtime.job_id);
+    }
+
     #[test]
     fn capability_anchor_skips_unsatisfied_ready_jobs_without_raw_labels() {
         let dir = tempfile::tempdir().unwrap();
