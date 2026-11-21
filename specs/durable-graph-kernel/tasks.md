@@ -57,7 +57,9 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T051 [US1] MEDULLA-DURABLE-KERNEL-R034.1 TransactionScope and CommitPath are typed, and a single-store scope structurally can never map to the cross-store commit path
 - [x] T052 MEDULLA-DURABLE-KERNEL-R035.1 PgOperationalSurface and a fail-closed PgCompatibilityMatrix are typed
 - [ ] T053 MEDULLA-DURABLE-KERNEL-R035.2 pg_dump and pg_restore round trip over the wire
-- [ ] T054 MEDULLA-DURABLE-KERNEL-R035.3 Session and lock catalog views are served read-only
+- [ ] T054 MEDULLA-DURABLE-KERNEL-R035.3 Session and lock catalog views are served read-only (L4 test over .1 and .2)
+- [ ] T299 MEDULLA-DURABLE-KERNEL-R035.3.1 `PgStatActivityRow`, `exec_sql_typed_with_tables_in_graph_sessions`, the three catalog views and `READ_ONLY_CATALOG_VIEW`
+- [ ] T300 MEDULLA-DURABLE-KERNEL-R035.3.2 `WireActivity` registry and guard, filtered rows into `run_read`, `42809` mapping, served-surface entries
 - [ ] T055 MEDULLA-DURABLE-KERNEL-R035.4 EXPLAIN returns the engine plan over the wire
 - [ ] T056 MEDULLA-DURABLE-KERNEL-R035.5 Query cancellation stops a running statement
 - [ ] T057 MEDULLA-DURABLE-KERNEL-R035.6 A transaction-mode pooler sees no session state across transactions
@@ -68,7 +70,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T063 [US6] MEDULLA-DURABLE-KERNEL-R039.2 Control-lease consumption checks expiry inside its transaction
 - [ ] T064 [US6] MEDULLA-DURABLE-KERNEL-R039.3 Call-envelope storage and consumption is atomic
 - [ ] T065 [US6] MEDULLA-DURABLE-KERNEL-R039.4.1 Plan-bound call storage works end to end
-- [ ] T066 [US6] MEDULLA-DURABLE-KERNEL-R039.4.2 Paired consumption meets its commit-phase budget
+- [ ] T066 [US6] MEDULLA-DURABLE-KERNEL-R039.4.2 Add `.github/workflows/nightly-work-item-budgets.yml` running `cargo bench --features full --bench redb_write_latency_bench` (shared with R028.4.2 and R028.5.4)
 - [x] T067 [US6] MEDULLA-DURABLE-KERNEL-R041.1 PlanCacheKey/PlanCacheLookup are a typed key and a pure lookup decision, refusing to reuse a plan whose schema version has gone stale
 - [x] T068 [US6] MEDULLA-DURABLE-KERNEL-R041.2 PlanCache::prepare is the one entry point a SQL statement handler calls at prepare time
 - [x] T069 [US6] MEDULLA-DURABLE-KERNEL-R040.1 PipelineBatch and BatchCommitDecision are typed, proving one admission maps to exactly one commit with order-preserving replies
@@ -105,7 +107,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T263 [US3] MEDULLA-DURABLE-KERNEL-R070.4 Release gate: a store of the last production release migrates and serves
 - [ ] T099 MEDULLA-DURABLE-KERNEL-R072 Served task-queue methods over the durable job store
 - [ ] T297 MEDULLA-DURABLE-KERNEL-R072.1 Served TaskQueueRenew over the shared task-lease ownership check (Depends: R072)
-- [ ] T100 MEDULLA-DURABLE-KERNEL-R073 Python client methods for the task queue
+- [ ] T100 MEDULLA-DURABLE-KERNEL-R073 After the compile lane regenerates the wire vectors (`MEDULLA_WRITE_VECTORS=1`), add the four task-queue method and result models, the `send_task_queue_*` helpers and `TaskQueueClient`; add the served L4 round-trip test
 - [ ] T101 MEDULLA-DURABLE-KERNEL-R074.1 Typed worker registry producer and pure lifecycle
 - [ ] T102 MEDULLA-DURABLE-KERNEL-R074.2 Worker registry is served with tenant ownership
 - [ ] T103 MEDULLA-DURABLE-KERNEL-R075 Reserved-worker admission returns a grant
@@ -124,7 +126,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T116 MEDULLA-DURABLE-KERNEL-R082.6 Rules are ordered and thresholded exactly as before
 - [ ] T117 MEDULLA-DURABLE-KERNEL-R082.7 A running mining job observes cancellation, deadline and CPU budget
 - [ ] T118 MEDULLA-DURABLE-KERNEL-R082.8 Failure codes are bounded and retry follows the durable retry policy
-- [ ] T119 MEDULLA-DURABLE-KERNEL-R082.9 The colocated pool lease and poll interval are configured through the scheduler config
+- [ ] T119 MEDULLA-DURABLE-KERNEL-R082.9 Add knobs `scheduler.analytics_lease_ms`/`scheduler.analytics_poll_ms` and `SchedulerConfig.analytics_lease_ms`/`analytics_poll_ms` with bounds and validate variants; `ensure_job_workers` takes the policy in force from `analytics_pool_config`; delete the `MEDULLA_ANALYTICS_*` environment reads and the `analytics_workers()` once-cell
 - [ ] T120 MEDULLA-DURABLE-KERNEL-R082.10 Remote workers run through the job coordinator operations
 - [ ] T121 MEDULLA-DURABLE-KERNEL-R083.1 KvBlockKey typed model
 - [ ] T122 MEDULLA-DURABLE-KERNEL-R083.2 Version-mismatch refusal
@@ -164,7 +166,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T156 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.2 Memory document existence and revision binding
 - [ ] T157 [US2] MEDULLA-DURABLE-KERNEL-R028.1.2.3 Fenced resume read
 - [x] T158 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.1 Hosted checkpoint exports and generated facade
-- [ ] T159 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.2 Python client parity for the checkpoint methods
+- [ ] T159 [US2] MEDULLA-DURABLE-KERNEL-R028.1.3.2 After the compile lane regenerates the wire vectors (`MEDULLA_WRITE_VECTORS=1`), add the served memory-reference round-trip test
 - [x] T160 [US6] MEDULLA-DURABLE-KERNEL-R038.100 Embedded and served profiles preserve durability classes
 - [ ] T161 [US1] MEDULLA-DURABLE-KERNEL-R043.7 Attested envelope text admits @ and \ and refuses only host identity
 - [ ] T162 [US1] MEDULLA-DURABLE-KERNEL-R043.8 Envelope admission refusals carry a declared code and a safe diagnostic
@@ -174,14 +176,15 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T166 MEDULLA-DURABLE-KERNEL-R099.4 Refusal
 - [x] T167 MEDULLA-DURABLE-KERNEL-R099.5 Evidence
 - [x] T168 MEDULLA-DURABLE-KERNEL-R099.6 Hot-path proof
-- [ ] T169 [US2] MEDULLA-DURABLE-KERNEL-R028.2.1 Served WorkItem transition history read
+- [ ] T169 [US2] MEDULLA-DURABLE-KERNEL-R028.2.1 Add the `work_item_transitions` ledger table with its GraphShard layout predecessor and offline upgrade, append in `write_work_item_props` on each status change, and serve `ListWorkItemTransitions` with the Python client method
 - [ ] T170 [US2] MEDULLA-DURABLE-KERNEL-R028.3 Fenced metadata CAS requires a live worker lease
 - [ ] T171 MEDULLA-DURABLE-KERNEL-R101.1 Model
 - [ ] T172 MEDULLA-DURABLE-KERNEL-R101.2 Behavior
 - [ ] T173 MEDULLA-DURABLE-KERNEL-R101.3 Wiring
-- [ ] T174 MEDULLA-DURABLE-KERNEL-R101.4 Refusal
-- [ ] T175 MEDULLA-DURABLE-KERNEL-R101.5 Evidence
-- [ ] T176 MEDULLA-DURABLE-KERNEL-R101.6 Hot-path proof
+- [ ] T174 MEDULLA-DURABLE-KERNEL-R101.4 Optional budget pattern in `TYPES_QUERY`, typed `DowntimeTypeRefusal`, `BudgetRequired` skip; claim-isolation test for the `downtime` capability
+- [ ] T175 MEDULLA-DURABLE-KERNEL-R101.5 `DowntimeSelectionRecord` and `DowntimeSkipReason` wire types; `dw:Selection` facts with prune to 1,000 in one internal graph commit; paged `DowntimeSelections { after, limit }` read from the commons graph; `ResultUsage.cpu_ms`/`peak_memory_bytes`; delete the in-memory selection slot
+- [ ] T176 MEDULLA-DURABLE-KERNEL-R101.6 Served L4 test of idle-window run order and foreground preemption
+- [ ] T298 MEDULLA-DURABLE-KERNEL-R101.7 `DowntimeBody` seam and registry; `preempt_requested`; `downtime_worker_loop` with step budget, `downtime_budget_exhausted` stop and `JobStore::yield_running_fenced`
 - [x] T177 MEDULLA-DURABLE-KERNEL-R102.1 Served contract
 - [x] T178 MEDULLA-DURABLE-KERNEL-R102.2 Scope and authorization
 - [x] T179 MEDULLA-DURABLE-KERNEL-R102.3 Versioned compare-and-swap and bounded paginated scan
@@ -210,7 +213,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T202 MEDULLA-DURABLE-KERNEL-R800.5 Evidence
 - [ ] T203 MEDULLA-DURABLE-KERNEL-R800.6 Hot-path proof
 - [ ] T204 [US2] MEDULLA-DURABLE-KERNEL-R028.4.1 Recover immutable run submission records
-- [ ] T205 [US2] MEDULLA-DURABLE-KERNEL-R028.4.2 Owner-bound recovery meets a 10 ms p99
+- [ ] T205 [US2] MEDULLA-DURABLE-KERNEL-R028.4.2 Run the `run_owner_recovery` group in the nightly work-item budget workflow (T066)
 - [x] T206 MEDULLA-DURABLE-KERNEL-R083.5 Tier ladder from accelerator memory to durable storage
 - [x] T207 MEDULLA-DURABLE-KERNEL-R083.6 Graph-guided paging policy
 - [ ] T208 MEDULLA-DURABLE-KERNEL-R083.7 Long-context coherence across tiers
@@ -228,7 +231,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T220 [US2] MEDULLA-DURABLE-KERNEL-R028.5.1 Typed executable plan attachment
 - [ ] T221 [US2] MEDULLA-DURABLE-KERNEL-R028.5.2 Attachment is immutable once bound
 - [ ] T222 [US2] MEDULLA-DURABLE-KERNEL-R028.5.3 Attachment replay and recovery
-- [ ] T223 [US2] MEDULLA-DURABLE-KERNEL-R028.5.4 Attachment publication meets its latency and memory budget
+- [ ] T223 [US2] MEDULLA-DURABLE-KERNEL-R028.5.4 Run the `current_plan_publication_readback` group in the nightly work-item budget workflow (T066)
 - [ ] T224 [US2] MEDULLA-DURABLE-KERNEL-R028.6 Commit ordinary run completion and observed usage atomically
 - [x] T225 MEDULLA-DURABLE-KERNEL-R861.1 Lifecycle replay compares the stored identity
 - [ ] T226 MEDULLA-DURABLE-KERNEL-R861.2 Graph listing survives a restart and a patch upgrade
@@ -243,7 +246,9 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T235 [US2] MEDULLA-DURABLE-KERNEL-R030.1.2 Durable native issuer provenance
 - [ ] T236 [US2] MEDULLA-DURABLE-KERNEL-R030.1.3 Signed dispatch for dedicated host-start issuance
 - [ ] T237 [US2] MEDULLA-DURABLE-KERNEL-R030.1.4 Host-start producer is proven through signed dispatch and the installed consumer
-- [ ] T238 MEDULLA-DURABLE-KERNEL-R035.7 Logical replication streams committed changes
+- [ ] T238 MEDULLA-DURABLE-KERNEL-R035.7 Logical replication streams committed changes (L4 test over .1 and .2)
+- [ ] T301 MEDULLA-DURABLE-KERNEL-R035.7.1 Scope `replication:read`, `ReplicationSlotRow` and the reserved slot namespace
+- [ ] T302 MEDULLA-DURABLE-KERNEL-R035.7.2 `serve_walsender`: slot creation, `pgoutput` mapping over `ReadGraphChanges`, cursor advance
 - [x] T240 [US6] MEDULLA-DURABLE-KERNEL-R042.7 The benchmark gate reads the engine parity records
 - [ ] T241 [US6] MEDULLA-DURABLE-KERNEL-R042.100.1 Measurement type and arithmetic
 - [ ] T242 [US6] MEDULLA-DURABLE-KERNEL-R042.100.2 Measurement admission refusals
@@ -251,13 +256,13 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T244 [US1] MEDULLA-DURABLE-KERNEL-R043.100.2 OpenGraphSnapshot returns the exact high-water cursor
 - [ ] T245 [US1] MEDULLA-DURABLE-KERNEL-R043.100.3 ReadGraphChanges pages events and revokes cursors
 - [x] T246 [US1] MEDULLA-DURABLE-KERNEL-R043.100.4 Python client methods for the feed
-- [ ] T247 [US1] MEDULLA-DURABLE-KERNEL-R043.101 Every store member commits through the envelope with an idempotent terminal outcome
+- [ ] T247 [US1] MEDULLA-DURABLE-KERNEL-R043.101 Every store member commits through the envelope with an idempotent terminal outcome; add `common::signed_request_with_key` and `tests/mutation_batch_sole_envelope.rs`
 - [ ] T248 [US1] MEDULLA-DURABLE-KERNEL-R043.102 No direct table write exists outside the transaction crate
 - [ ] T259 MEDULLA-DURABLE-KERNEL-R094.7.1 Known concept ids and the lineage edge store
 - [ ] T249 MEDULLA-DURABLE-KERNEL-R094.7 Concept lineage between superseded and successor concepts
 - [ ] T250 MEDULLA-DURABLE-KERNEL-R750.750.1 The signed agent-turn envelope carries the admitted tool subset and the harness decision reference
 - [ ] T252 MEDULLA-DURABLE-KERNEL-R865 Child message admission record
-- [ ] T253 MEDULLA-DURABLE-KERNEL-R866 One task queue store
+- [ ] T253 MEDULLA-DURABLE-KERNEL-R866 RETIRED: the R072 facade already keeps one queue store
 - [x] T254 MEDULLA-DURABLE-KERNEL-R867 Capacity cells and leases admit shared resources with fences
 - [x] T255 MEDULLA-DURABLE-KERNEL-R868 Delete the unwired topic-log and agent-peer record code
 - [ ] T256 MEDULLA-DURABLE-KERNEL-R869 Replayable append-only stream log with offset reads

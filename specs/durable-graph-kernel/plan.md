@@ -71,8 +71,8 @@ The unknowns below were open when the rows were written. Each is decided in [res
 - How S3 objects map onto the native blob methods (R860.6).
 - How concept ids and lineage edges are keyed per tenant (R094.7).
 - What the served `Batch` method is (R871) and which wire types the census renames (R875).
-- How the served task-queue methods and the one claim store fit together (R072, R866).
-- How the downtime tick chooses types, takes leases and refuses (R101.3, R101.4, R101.6).
+- How the served task-queue methods fit over the one job store (R072).
+- How the downtime tick chooses types, takes leases and records skips, and how the downtime worker runs, stops on budget and yields (R101.3 to R101.7).
 Five decisions were open when the rows were written; [research.md](research.md) records each: the RESP listener's entry to the served KV methods, the graph change feed over the one CDC feed, S3 objects as blobs, tenant-keyed concept ids and lineage edges, and the served `Batch` method.
 The unknowns the rows raised, and the decisions that closed them, are recorded in [research.md](research.md): how the RESP listener enters the served KV methods, the graph change feed, S3 objects as blobs, tenant-keyed concept and lineage rows, the served Batch method, copy graft and the read-only shard source, the benchmark gates, and the KV-cache tier ladder.
 
@@ -184,7 +184,7 @@ The engine already runs the same loop in-process (`ensure_job_workers`), so the 
 | rule identity, result shape | `results_association.rs` | exists, verify (R082.4, R082.5, R082.6) |
 | status polling, cancel, deadline, cpu budget | executor stop checks | exists, verify (R082.7) |
 | `_slot` retry and reconnect | durable `RetryPolicy` backoff | exists, verify (R082.8) |
-| slots, lease, poll environment settings | validated pool settings | to build (R082.9) |
+| pool size, lease, poll settings | `SchedulerConfig.analytics_workers`, `analytics_lease_ms`, `analytics_poll_ms` from the policy in force; knobs `scheduler.analytics_lease_ms`, `scheduler.analytics_poll_ms` | to build (R082.9) |
 | remote claim by capability | `JobsClient` worker operations | exists, verify (R082.10) |
 | multi-endpoint reconnect cursor, signal handling, Python Eclat kernel | none | intentionally dropped: in-process execution needs none |
 
@@ -618,6 +618,8 @@ Data structures: one sorted `Vec<DowntimeJobType>` of at most 256 types, rebuilt
 Seed job types: `plan_evolution` (`MEDULLA-FEDERATED-QUERY-R091`), `index_build`, `compaction`, `seed_reconcile` (`MEDULLA-TYPED-PACKS-R104`) and `embedding_generation` (`MEDULLA-DECISION-ENGINE-R174`).
 
 Budget: a default window budget of 25% CPU and 2 GiB memory; preemption within 250 ms. These are starting defaults. A measurement on this platform replaces them.
+
+Run and preempt (R101.7): one colocated downtime worker (`crates/medulla-h-jobs/src/jobs/downtime_worker.rs`) is the only claimant of the `downtime` capability. It runs a `DowntimeBody` (seam in `crates/medulla-server-api/src/downtime.rs`, bodies installed by `seams_install.rs`) in steps of at most `downtime.preempt_deadline_ms / 2`, checks the job's `ResourceBudget` after each step (`downtime_budget_exhausted`), and yields to foreground load with `JobStore::yield_running_fenced`, which keeps the checkpoint and refunds the attempt. Evidence (R101.5): the tick writes `dw:Selection` facts into the commons graph through `commit_internal_graph_methods`, pruned to 1,000; `DowntimeSelections` pages them. No in-memory copy of a selection exists.
 
 #### current-plan owner admission and replay contract
 
@@ -1161,7 +1163,6 @@ none
 - Task queue: `Method::TaskQueueEnqueue`, `TaskQueueClaim` and `TaskQueueAck` to `crates/medulla-h-jobs/src/task_queue.rs` over `crates/medulla-jobs` (`MEDULLA-DURABLE-KERNEL-R072`).
 - Host-start grant: `Method::IssueHostStartGrant` to `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start.rs` (`MEDULLA-DURABLE-KERNEL-R030.1`).
 - Supersession: `Method::SupersedeEdge` to `crates/medulla-h-graph/src/graph_ops/gateway_graph.rs::apply_supersede_edge` (`MEDULLA-DURABLE-KERNEL-R080`).
-- Obsolete paths to delete: the dispatch queue duplicates named by `MEDULLA-DURABLE-KERNEL-R866` once the task queue facade lands.
 
 ### Machine wiring
 
@@ -1229,7 +1230,7 @@ Build lanes stopped on open questions in these rows. Each entry states the decis
 - `MEDULLA-DURABLE-KERNEL-R043.101`: the bypass is a static property that R043.102 already refuses. No runtime `MUTATION_ENVELOPE_BYPASS` code exists.
 - `MEDULLA-DURABLE-KERNEL-R864` withdrawn. Reason: duplicates the served loop and schedule operations.
 - `MEDULLA-DURABLE-KERNEL-R870` withdrawn. Reason: duplicates the path-grant check of MEDULLA-SCM-R007.
-- `MEDULLA-DURABLE-KERNEL-R028.5.4` and `MEDULLA-DURABLE-KERNEL-R039.4.2`: the bench seam is `test_shard::apply` with `run_fixture::seed_claim` under the `test-support` feature.
+- `MEDULLA-DURABLE-KERNEL-R028.4.2`, `MEDULLA-DURABLE-KERNEL-R028.5.4` and `MEDULLA-DURABLE-KERNEL-R039.4.2`: the bench groups live in `benches/redb_write_latency_bench/work_items.rs` over `test_shard::apply` and `run_fixture::seed_claim` (feature `test-support`); the nightly workflow `nightly-work-item-budgets.yml` runs them.
 
 ### 2026-11-20 — task-queue lease renewal
 

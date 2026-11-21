@@ -328,11 +328,13 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R100`: `tests/mirror_graph_sinks_serv
 
 | Wiring | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-jobs/src/downtime.rs::tests::tick_enqueues_leased_jobs`: A served tick enqueues the selected jobs under background leases. |
 
-| Refusal | `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-jobs/src/downtime.rs::tests::downtime_refusals`: Each case returns its code, and no foreground lane runs downtime work. |
+| Refusal | `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-server/src/downtime.rs::tests::budgetless_type_is_skipped_with_budget_required` and `crates/medulla-jobs/src/store.rs` test `downtime_job_is_never_claimed_by_an_analytics_worker`: A budgetless type is skipped `budget_required` with no lease or job; an analytics worker never claims a downtime job. |
 
-| Evidence | `MEDULLA-DURABLE-KERNEL-R101.5` | `crates/medulla-jobs/src/downtime.rs::tests::selection_recorded`: A served read finds the selection and the budget use of each job. |
+| Evidence | `MEDULLA-DURABLE-KERNEL-R101.5` | `crates/medulla-server/src/downtime.rs::tests::selection_recorded`: One tick writes one `dw:Selection` with its entries, the paged read returns it, and 1,001 ticks leave 1,000 selections. |
 
-| Hot-path proof | `MEDULLA-DURABLE-KERNEL-R101.6` | `tests/scheduler/test_downtime_scheduler_served.py::test_idle_window_runs_priority_jobs_and_preempts` (planned): Jobs run in priority order, and the foreground query preempts them within 250 ms. |
+| Hot-path proof | `MEDULLA-DURABLE-KERNEL-R101.6` | `tests/scheduler/test_downtime_scheduler_served.py::test_idle_window_runs_priority_jobs_and_preempts` (planned): Jobs run in priority order, a burst above `downtime.idle_max_rps` makes them yield within 250 ms, and they resume to `Succeeded` with their usage recorded. |
+
+| Worker | `MEDULLA-DURABLE-KERNEL-R101.7` | `crates/medulla-h-jobs/src/jobs/downtime_worker.rs::tests::budget_stop_and_preempt_yield` and `crates/medulla-jobs/src/downtime.rs::tests::preempt_requested_above_the_idle_ceiling`: Over-budget fails `downtime_budget_exhausted`; a preempt yields without spending an attempt and resumes from the checkpoint. |
 
 
 Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime_scheduler_served.py::test_idle_window_runs_priority_jobs_and_preempts`.
@@ -356,7 +358,7 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 
 `MEDULLA-DURABLE-KERNEL-R039.4.1`: run the existing typed preimage tests, native three-row consumption and unchanged-row refusal tests, and paired served-entry refusal test. Preserve the original replay, tenant, lifetime and unpaired compatibility assertions. These tests do not prove performance or authorized served execution.
 
-`MEDULLA-DURABLE-KERNEL-R039.4.2`: pending benchmark coverage in `benches/redb_write_latency_bench.rs` must exercise paired consumption through `test_shard::apply`, which reaches `plan_pair::consume` through `apply_work_item_rows`. Retain workload configuration and commit-phase measurements with the source revision. Generic write results are not paired-call evidence.
+`MEDULLA-DURABLE-KERNEL-R039.4.2`: the group `benches/redb_write_latency_bench/work_items.rs::paired_pending_consumption` exercises paired consumption through `test_shard::apply`, which reaches `plan_pair::consume` through `apply_work_item_rows`, and writes its receipt (configuration, p50, p99, source revision) under `benches/receipts/`. The nightly workflow `nightly-work-item-budgets.yml` runs it; generic write results are not paired-call evidence.
 
 - **MEDULLA-DURABLE-KERNEL-R028.4:** Native admission tests cover immutable caller attribution, duplicate run refusal, and generic-write refusal. Native execution remains pending.
 
@@ -396,10 +398,10 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 - **MEDULLA-DURABLE-KERNEL-R028.5.1:** `current_plan_task_plan_validation_and_legacy_roundtrip` checks JSON and named MessagePack compatibility. `current_plan_task_plan_rejects_unpaired_or_changed_content` refuses unpaired fields, tampered executable fields, policy, digests and ordering. The original proposal must reproduce every TaskPlan field.
 - **MEDULLA-DURABLE-KERNEL-R028.5.2:** `current_plan_attachment_is_immutable_and_scaffold_updates_preserve_it` checks initial and later attachment. `current_plan_attachment_refusals_preserve_rows` checks conflicting plans, malformed digests, foreign owners, stale fences and expiry. Refusals leave both private snapshot and owner rows unchanged.
 - **MEDULLA-DURABLE-KERNEL-R028.5.3:** `publication_attachment_changes_content_not_retry_identity` checks stable identity and changed canonical content. `current_plan_native_publish_read_and_receipt_replay` exercises authenticated attachment, unchanged replay receipts, conflict and exact restart readback. Expired replay returns historical evidence only.
-- **MEDULLA-DURABLE-KERNEL-R028.5.4:** Planned benchmark `current_plan_publication_readback` must measure attached-plan latency and transient memory against the parent budgets. It seeds the claimed run with `test_shard::run_fixture::seed_claim` under the `test-support` feature. No benchmark implementation or measurement receipt is claimed by the functional attachment tests.
+- **MEDULLA-DURABLE-KERNEL-R028.5.4:** The group `benches/redb_write_latency_bench/work_items.rs::current_plan_publication_readback` measures attached-plan latency and transient memory against the 10 ms p99 and 8 MiB budgets, seeding the claimed run with `test_shard::run_fixture::seed_claim` under the `test-support` feature; the nightly workflow `nightly-work-item-budgets.yml` runs it. The functional attachment tests claim no measurement.
 
 - **MEDULLA-DURABLE-KERNEL-R028.4.1:** `run_admission_recovery_preserves_original_request`, `run_admission_recovery_checks_complete_owner`, `run_admission_recovery_refuses_missing_evidence` and `run_admission_snapshot_cannot_be_planted_or_removed` check durable records and refusal. Served and client tests check typed owner-only reads.
-- **MEDULLA-DURABLE-KERNEL-R028.4.2:** Record a dedicated native recovery benchmark; acceptance remains pending.
+- **MEDULLA-DURABLE-KERNEL-R028.4.2:** The group `benches/redb_write_latency_bench/work_items.rs::run_owner_recovery` times `run_owner::read_admission` over 10 000 WorkItems against a 10 ms p99; the nightly workflow `nightly-work-item-budgets.yml` runs it.
 ## Ordinary terminal completion acceptance (MEDULLA-DURABLE-KERNEL-R028.6)
 
 - Commit success with observed counters. Preserve the exact input and receipt.
@@ -419,7 +421,7 @@ Hot-path proof for `MEDULLA-DURABLE-KERNEL-R101`: `tests/scheduler/test_downtime
 - **`MEDULLA-DURABLE-KERNEL-R028.1.3`:** Record exact-source hosted native, migration, fresh layout/export and generated Python client results for the R028.1.1 fixtures. No local native build or test was run for this slice; no broad successful conversation continuation is claimed.
 
 - **`MEDULLA-DURABLE-KERNEL-R028.1.3.1`:** Validate the hosted source, recipe and artifact hashes against the import. Run `tests/test_run_checkpoint_client.py` and the neighboring read and retry facade suites from the plan.
-- **`MEDULLA-DURABLE-KERNEL-R028.1.3.2`:** Run the R028.1.1 native fixtures and predecessor migration against the final reviewed source. Regenerate the layout and public contracts. Attach full repository gate receipts. Pending, not satisfied by the export or Python facade checks.
+- **`MEDULLA-DURABLE-KERNEL-R028.1.3.2`:** After the compile lane regenerates the wire vectors with `MEDULLA_WRITE_VECTORS=1 cargo test -p medulla-capabilities --test wire_vectors`, `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` passes over the checkpoint rows, and the served test publishes and reads back both memory-reference lists.
 
 ## Admission retry replay (MEDULLA-DURABLE-KERNEL-R028.4.4)
 
@@ -521,7 +523,7 @@ checkpoint and admission runs do not qualify this new integration.
 | `tests/pgwire_roundtrip.rs::cancel_request_stops_a_long_query_and_wrong_secret_is_ignored` (L4) | `MEDULLA-DURABLE-KERNEL-R035.5` | A cancel with the matching secret stops a 5 s query and the client sees SQLSTATE 57014 under 500 ms. | A wrong secret matches no `ConnectionManager` entry, is logged, and the query completes. |
 | `tests/pgwire_roundtrip.rs::pooler_transaction_mode_isolates_clients` (L4) | `MEDULLA-DURABLE-KERNEL-R035.6` | Two clients alternate on one backend and no prepared statement, portal or graph binding leaks after `DISCARD ALL`. | `DISCARD ALL` inside a transaction refuses with SQLSTATE 25001; an advisory lock function refuses. |
 | `tests/adopt_workitem_authenticated_replay.rs::lease_consumption_expiry_through_signed_dispatch` (L3) | `MEDULLA-DURABLE-KERNEL-R039.2` | A signed dispatch consumes a live lease strictly before its expiry. | A consume at or after the expiry refuses and the row is unchanged. |
-| `benches/redb_write_latency_bench.rs::paired_pending_consumption` (L5) | `MEDULLA-DURABLE-KERNEL-R039.4.2` | The group records the configuration and p50 and p99 for 64 KiB preimages. | A commit-phase p99 over 10 ms fails the nightly job. |
+| `benches/redb_write_latency_bench/work_items.rs::paired_pending_consumption` (L5) | `MEDULLA-DURABLE-KERNEL-R039.4.2` | The group records the configuration and p50 and p99 for 64 KiB preimages. | A commit-phase p99 over 10 ms fails the nightly job. |
 | `tests/operator_command_store_upgrade_cli.rs::v2_store_opens_and_serves_reads` (L4) | `MEDULLA-DURABLE-KERNEL-R063.2` | A stored v2 fixture opens and serves reads through the lifted row. | A row with any other schema version refuses with GRAPH_META_VERSION_UNSUPPORTED. |
 | `tests/bench_claim_cli.rs::shape_receipt_requires_both_variants` (L2) | `MEDULLA-DURABLE-KERNEL-R064` | The nightly bench target `shape_validation` (benches/shape_validation.rs, run as a bench, not a test) writes a receipt holding both the memoized and the parse-per-write variants with hardware and profile. | A receipt missing either variant is refused by the claim bin. |
 | `tests/bench_claim_cli.rs::shape_receipt_requires_both_variants` (L2) | `MEDULLA-DURABLE-KERNEL-R064` | The bench writes a receipt holding both the memoized and the parse-per-write variants with hardware and profile. | A receipt missing either variant is refused by the claim bin. |
@@ -530,7 +532,7 @@ checkpoint and admission runs do not qualify this new integration.
 | `tests/task_queue_served.rs::unacked_claim_redelivers_after_lease_expiry_and_restart` (planned) (L3) | `MEDULLA-DURABLE-KERNEL-R072` | Enqueue, claim, let the lease lapse, reopen the store and claim the same task again. | A claim by another tenant returns none. |
 | `tests/task_queue_served.rs::renew_extends_lease_and_refuses_expired_or_foreign` (planned) (L3) | `MEDULLA-DURABLE-KERNEL-R072.1` | Claim, renew, read the new expiry; the attempt count is unchanged. | A renew by another worker or tenant refuses `TASK_ACK_NOT_CLAIMED`; after expiry it refuses `TASK_ACK_LEASE_EXPIRED`; `lease_ms` 0 refuses `TASK_LEASE_ZERO`. |
 | `tests/test_task_queue_client.py::test_enqueue_claim_ack_round_trip_against_a_served_engine` (planned) (L4) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
-| `tests/test_wire_vectors.py::test_task_queue_models_match_the_rust_vectors` (L2) | `MEDULLA-DURABLE-KERNEL-R073` | A client enqueues, claims and acks against a served engine. | An unknown field is rejected by the client and a model mismatch fails the vector test. |
+| `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` (L2) | `MEDULLA-DURABLE-KERNEL-R073` | The four regenerated task-queue vectors validate and re-emit byte-equal through the hand-written models. | A model field that differs from the Rust type fails; `test_unknown_field_is_rejected` refuses an unknown field. |
 | `crates/medulla-work-types/src/worker_registry.rs::tests::register_heartbeat_and_expiry_at_the_exact_deadline` (L1) | `MEDULLA-DURABLE-KERNEL-R074.1` | Register, heartbeat and expire at the exact deadline. | Every refusal leaves the registry unchanged. |
 | `tests/worker_registry_served.rs::unknown_expired_and_cross_owner_requests_refuse` (planned) (L3) | `MEDULLA-DURABLE-KERNEL-R074.2` | Advance the injected clock past the ttl and the worker disappears. | An unknown worker returns WORKER_UNKNOWN and another principal returns ACCESS_DENIED. |
 | `tests/worker_registry_served.rs::non_reserved_task_is_refused_when_only_reserved_capacity_remains` (L3) | `MEDULLA-DURABLE-KERNEL-R075` | A one-worker pool receives the general lane. | A non-reserved task is refused with ADMIT_HELD_FOR_RESERVE when only reserved capacity remains. |
@@ -568,7 +570,7 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R082.6`: Planned: `crates/medulla-mining/src/mining/association.rs::tests::six_transaction_rules_match_the_recorded_order` (L1).
 - `MEDULLA-DURABLE-KERNEL-R082.7`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::cancel_deadline_and_cpu_budget_each_stop_the_kernel_with_their_reason` (L3).
 - `MEDULLA-DURABLE-KERNEL-R082.8`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::kernel_failed_twice_obeys_backoff_attempt_count_and_leaks_no_payload` (L3).
-- `MEDULLA-DURABLE-KERNEL-R082.9`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::analytics_config_accepts_range_ends_and_refuses_values_beyond_them` (L2).
+- `MEDULLA-DURABLE-KERNEL-R082.9`: Planned: `crates/medulla-work-types/src/scheduler_config.rs::tests::analytics_lease_and_poll_accept_range_ends_and_refuse_beyond_them` (L2) and `crates/medulla-server-api/src/knob_config.rs::tests::analytics_lease_and_poll_knobs_reach_the_scheduler_policy` (L2).
 - `MEDULLA-DURABLE-KERNEL-R082.10`: Planned: `crates/medulla-h-jobs/src/jobs/graph_tests.rs::remote_worker_drives_the_full_sequence_and_scope_is_enforced` (L3).
 - `MEDULLA-DURABLE-KERNEL-R083`: Planned: `tests/kvcache_http_served.rs::two_consumers_share_one_block_and_a_version_mismatch_refuses` (L3).
 - `MEDULLA-DURABLE-KERNEL-R083.4`: Planned: `tests/test_kvcache_connector.py::test_put_from_one_client_is_read_by_another` (L4).
@@ -610,7 +612,7 @@ Planned test names do not claim passing results. Each path is the post-split loc
 - `MEDULLA-DURABLE-KERNEL-R028.1.3`: Planned: `crates/medulla-storage/src/owner/lineage_tests.rs::checkpoint_only_layout_digest_is_stable` (L1).
 - `MEDULLA-DURABLE-KERNEL-R028.1.3`: Planned: `tests/operator_command_store_upgrade_cli.rs::pre_checkpoint_store_migrates_and_reads_back_identical_heads` (L4).
 - `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Planned: `tests/test_run_checkpoint_client.py::test_memory_refs_round_trip_against_a_served_engine` (L4).
-- `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Planned: `tests/test_run_checkpoint_client.py::test_checkpoint_models_match_the_rust_vectors` (L2).
+- `MEDULLA-DURABLE-KERNEL-R028.1.3.2`: Existing: `tests/test_wire_vectors.py::test_models_round_trip_every_rust_vector` (L2) over the regenerated checkpoint vectors.
 - `MEDULLA-DURABLE-KERNEL-R038.100`: `src/embedded/tests.rs::embedded_profile_reads_and_writes_an_ephemeral_namespace` (L2).
 - `MEDULLA-DURABLE-KERNEL-R038.100`: `tests/adopt_workitem_authenticated_replay.rs::served_profile_keeps_declared_class_and_refuses_mismatch` (L3).
 - `MEDULLA-DURABLE-KERNEL-R043.100`: Planned: `tests/graph_change_feed_served.rs::two_clients_see_ordered_deduplicable_changes_and_recover` (L3).
@@ -633,7 +635,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | Requirements | Planned test |
 |---|---|
 | `MEDULLA-DURABLE-KERNEL-R042.3`, `MEDULLA-DURABLE-KERNEL-R042.5` | `benches/common/claim.rs::write_receipt` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R028.4.2` | `benches/redb_write_latency_bench.rs::run_owner_recovery` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.4.2` | `benches/redb_write_latency_bench/work_items.rs::run_owner_recovery` |
 | `MEDULLA-DURABLE-KERNEL-R094.7` | `crates/medulla-h-admin/src/admin/concept_lineage.rs::handle` |
 | `MEDULLA-DURABLE-KERNEL-R043.100.2` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::open_snapshot` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.3` | `crates/medulla-h-graph/src/graph_ops/graph_change_feed.rs::read_changes` (planned) |
@@ -653,14 +655,21 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R862.1` | `crates/medulla-persistence-tests/src/shard_migrate_tests/recovery.rs::existing_staging_directory_refuses` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4` | `crates/medulla-server-store-tests/src/split_tests/store_run_owner.rs::admission_binds_owner_and_refuses_duplicate_forged_and_generic_writes` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.4` | `tests/adopt_workitem_authenticated_replay.rs::run_admission_replay_returns_the_original_result_and_conflicts_on_change` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-server/src/downtime.rs::downtime_refusals` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-server/src/downtime.rs::budgetless_type_is_skipped_with_budget_required` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-jobs/src/store.rs::downtime_job_is_never_claimed_by_an_analytics_worker` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.7` | `crates/medulla-h-jobs/src/jobs/downtime_worker.rs::budget_stop_and_preempt_yield` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.7` | `crates/medulla-jobs/src/downtime.rs::preempt_requested_above_the_idle_ceiling` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::run_tick` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.5` | `crates/medulla-server/src/downtime.rs::selection_recorded` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::tick_enqueues_leased_jobs` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R042.100.1` | `crates/medulla-mutation-types/src/benchmark_claim.rs::throughput_and_cost_match_hand_computed_values` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.1` | `crates/medulla-mutation-types/src/graph_change_feed.rs::types_round_trip_and_cursor_binds_scope` |
 | `MEDULLA-DURABLE-KERNEL-R700.1` | `crates/medulla-mutation-types/src/retention_cleanup.rs::report_and_record_round_trip` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R035.7` | `crates/medulla-wire/src/pgwire/replication.rs::serve_walsender` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R035.7.1` | `crates/medulla-mutation-types/src/pg_replication.rs::slot_row_round_trips_and_names_are_bounded` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R035.7.1` | `crates/medulla-server-blob/src/kv/declaration.rs::served_writes_to_the_slot_namespace_refuse` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R035.7.2` | `crates/medulla-wire/src/pgwire/replication.rs::change_maps_to_pgoutput_messages_in_order` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R035.3.1` | `crates/medulla-sql/src/sql/catalog.rs::stat_views_answer_supplied_sessions_and_refuse_writes` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R035.3.2` | `crates/medulla-wire-core/src/wire/activity.rs::guard_drop_removes_the_row_and_filter_scopes_by_principal` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750.751` | `crates/medulla-work-store/src/redb_store/work_item/cancel.rs::in_flight_cancel_stamps_request_and_renew_reports_it` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1.2` | `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start/tests.rs::issuer_provenance_is_stamped_and_read_back_from_redb` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R865` | `crates/medulla-work-store/src/redb_store/work_item/conversation/tests.rs::child_input_states_replay_and_refusals` (planned) |
@@ -668,10 +677,9 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R028.3` | `crates/medulla-work-store/src/redb_store/work_item/lease/tests.rs::fenced_cas_before_exact_and_after_expiry` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1.1` | `crates/medulla-work-types/src/host_start/tests.rs::bounded_references_and_expiry_clamps_validate` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R750.750` | `crates/medulla-work-types/src/work_item_read/tests.rs::cancel_requested_round_trips` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R820.1` | `crates/medulla-work-types/src/work_item_read/tests.rs::effect_records_round_trip_with_golden_digest` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R028.5.4` | `benches/redb_write_latency_bench.rs::current_plan_publication_readback` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820.1` | `crates/medulla-work-types/src/work_item_read/tests.rs::effect_records_round_trip_with_golden_digest` |
+| `MEDULLA-DURABLE-KERNEL-R028.5.4` | `benches/redb_write_latency_bench/work_items.rs::current_plan_publication_readback` |
 | `MEDULLA-DURABLE-KERNEL-R028.5.1` | `current_plan.rs::validate_publication` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R028.4.2` | `run_owner.rs::read_admission` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R700` | `crates/medulla-h-graph/src/graph_ops/retention_cleanup.rs::cleanup_graph` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.4.3` | `tests/adopt_workitem_authenticated_replay.rs::conversation_turn_admission_replays_and_conflicts` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.3` | `tests/adopt_workitem_authenticated_replay.rs::fenced_cas_ignores_caller_clock` (planned) |
@@ -697,7 +705,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R820.5` | `tests/durable/test_uncertain_effect_served.py::test_audit_and_metrics_after_uncertain_run` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R820.3` | `tests/durable/test_uncertain_effect_served.py::test_methods_reachable_through_wire_contract` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R820.4` | `tests/durable/test_uncertain_effect_served.py::test_refusals_leave_state_unchanged` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R820.1` | `crates/medulla-persistence-ops/src/store_upgrade/tests.rs::pre_effect_receipts_shard_upgrades_offline_and_old_layout_refuses_open` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R820.1` | `crates/medulla-persistence-ops/src/store_upgrade/tests.rs::pre_effect_receipts_shard_upgrades_offline_and_old_layout_refuses_open` |
 | `MEDULLA-DURABLE-KERNEL-R820`, `MEDULLA-DURABLE-KERNEL-R820.6` | `tests/durable/test_uncertain_effect_served.py::test_started_item_never_dead_letters` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.3` | `tests/graph_change_feed_served.rs::expired_stale_and_revoked_cursors_return_typed_results_without_leaks` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R043.100.2` | `tests/graph_change_feed_served.rs::snapshot_cursor_leaves_no_gap_under_concurrent_commits` (planned) |
@@ -713,7 +721,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R860.3` | `tests/resp_roundtrip.rs::set_get_maps_to_kv_methods` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R860.4` | `tests/s3_roundtrip.rs::put_get_list_delete` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101`, `MEDULLA-DURABLE-KERNEL-R101.6` | `tests/scheduler/test_downtime_scheduler_served.py::test_idle_window_runs_priority_jobs_and_preempts` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R866` | `tests/task_queue_served.rs::only_one_work_claim_table_exists` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R866` | Retired; see MEDULLA-DURABLE-KERNEL-R072. |
 | `MEDULLA-DURABLE-KERNEL-R871` | `tests/test_agent_loop_batch_served.py::test_batch_commits_once_and_refuses_oversize`, `tests/test_agent_loop_batch_served.py::test_batch_with_a_denied_inner_operation_writes_nothing`, `crates/medulla-core/src/batch_apply.rs::tests::replay_applies_the_same_state_as_the_live_run`, `crates/medulla-core/src/batch_apply.rs::tests::size_and_blob_checks_refuse_before_anything_runs`, `crates/medulla-core/src/batch_apply.rs::tests::a_read_fault_on_replay_is_a_replay_divergence`, `crates/medulla-server-api/src/knob_config.rs::tests::batch_max_operations_knob_bounds`, bench group `decide/agent_loop` in `benches/decide_budgets.rs` |
 | `MEDULLA-DURABLE-KERNEL-R872` | `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::every_transition_and_refusal_is_covered` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R872.1` | `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::edge_x01_inspect_begin_install`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::edge_x02_installing_finish_install`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::every_illegal_pair_is_refused`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::refusal_carries_machine_from_event`, `crates/medulla-h-retrieve/src/semantic_index_runtime/upgrade.rs::tests::no_writer_sets_state_outside_apply` (planned) |
@@ -734,6 +742,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R030.1.1`, `MEDULLA-DURABLE-KERNEL-R030.1.4` | `tests/test_work_item_capability_client.py::test_host_start_grant_round_trip` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R860.5` | `tests/wire_listeners_one_store.rs::unauthenticated_sessions_refuse` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R860`, `MEDULLA-DURABLE-KERNEL-R860.6` | `tests/wire_listeners_one_store.rs::write_each_protocol_read_native` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R028.2.1` | `crates/medulla-work-store/src/redb_store/work_item/read/tests.rs::transition_ledger_appends_on_status_change_only` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R028.2.1` | `tests/work_items/test_transition_history_served.py::test_history_matches_ledger_in_commit_order` (planned) |
 
 ## Internal lifecycle residency
