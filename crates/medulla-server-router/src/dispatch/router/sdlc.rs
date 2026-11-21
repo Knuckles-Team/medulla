@@ -31,7 +31,7 @@ const GOAL_TYPE: &str = "Goal";
 /// The property holding the canonical JSON of the release record.
 const RELEASE_RECORD_PROPERTY: &str = "release_record";
 /// The node type of an indexed repository commit.
-const COMMIT_TYPE: &str = "RepositoryCommit";
+const COMMIT_TYPE: &str = "Changeset";
 const MAX_RELEASES_READ: usize = 100_000;
 const MAX_CHAIN: usize = 200_000;
 const MAX_BATCH_OPERATIONS: usize = 50_000;

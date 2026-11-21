@@ -1,7 +1,7 @@
 //! MEDULLA-REPO-INGEST-R601.3 / R602.3 — commit history, HTTP routes, IaC
 //! resources and service path prefixes as typed nodes of the scoped index.
 //!
-//! The scope's optional `commits` lower to one `RepositoryCommit` node each; a
+//! The scope's optional `commits` lower to one `Changeset` node each; a
 //! scope without commits carries no history. Routes and IaC resources are read
 //! from the batch's files by line, and every package of the batch (R801) owns
 //! the directory of its manifest as a service path prefix. All of them lower
@@ -18,7 +18,7 @@ use medulla_types::ingestion_wire::{IndexCommit, IndexRepositoryScope, IndexResu
 use super::ecosystem::{node, package_node_id, packages};
 
 /// Node type of one commit of the scope.
-pub const COMMIT_TYPE: &str = "RepositoryCommit";
+pub const COMMIT_TYPE: &str = "Changeset";
 /// Node type of one HTTP route found in the batch.
 pub const ROUTE_TYPE: &str = "HttpRoute";
 /// Node type of one infrastructure resource found in the batch.

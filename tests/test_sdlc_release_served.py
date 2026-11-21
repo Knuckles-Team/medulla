@@ -41,7 +41,7 @@ async def _index_chain(client, length: int) -> list[str]:
     digests = [_digest(uuid.uuid4().int % (1 << 150) + n) for n in range(length)]
     for index, digest in enumerate(digests):
         properties = {
-            "type": "RepositoryCommit",
+            "type": "Changeset",
             "author": "alice",
             "timestamp_ms": str(index),
             "parents": digests[index - 1] if index else "",
