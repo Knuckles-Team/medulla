@@ -588,8 +588,8 @@ fn product_violations(
         .collect()
 }
 
-/// Every broken promise of the tenant's data products whose datasets include the claim's
-/// dataset, read after the scores of this run are known (MEDULLA-TYPED-PACKS-R805.3).
+/// Every broken promise of the tenant's data products whose datasets name the claim's target
+/// (the dataset a quality rule is declared on), read after the scores of this run are known (MEDULLA-TYPED-PACKS-R805.3).
 async fn contract_violations(
     state: &Arc<RwLock<ServerState>>,
     graph: &str,
@@ -855,7 +855,7 @@ pub(super) async fn execute_quality_claim(
         &graph,
         &core,
         &target,
-        &job.input_snapshot.dataset_ref,
+        &target.target.clone(),
         &evaluations,
         at,
     )

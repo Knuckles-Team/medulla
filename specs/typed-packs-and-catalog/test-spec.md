@@ -457,7 +457,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 | `MEDULLA-TYPED-PACKS-R805.2` | `crates/medulla-core/tests/data_product.rs::breach_records_violation` |
 | `MEDULLA-TYPED-PACKS-R805.3` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/data_product.rs::request_grants_access_after_steward_approval` |
 | `MEDULLA-TYPED-PACKS-R805.4` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/data_product.rs::product_refusals` |
-| `MEDULLA-TYPED-PACKS-R805.5` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::violation_evidence_reads_back` |
+| `MEDULLA-TYPED-PACKS-R805.5` | `tests/data_plane/test_quality_served.py::test_violation_evidence_reads_back` |
 | `MEDULLA-TYPED-PACKS-R805.6` | `crates/medulla-core/src/data_product.rs::tests::contract_check_is_linear_in_promises`, `crates/medulla-core/benches/data_contract_check.rs` |
 
 ## Trust flags, critical data elements and model-proposed curation

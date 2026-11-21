@@ -496,3 +496,62 @@ async def test_outside_scores_open_incident(start_medulla_server) -> None:
     finally:
         await client.tenants.delete(graph)
         await client.close()
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R805.5")
+def test_violation_evidence_reads_back(start_medulla_server) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R805.5: a broken quality promise leaves a violation node."""
+    client = _client()
+    graph = f"quality-{uuid.uuid4().hex[:8]}"
+    table = f"orders_{uuid.uuid4().hex[:8]}"
+    client.tenants.create(graph)
+    try:
+        client.query.sql(f"CREATE TABLE {table} (id int primary key, status text)")
+        client.query.sql(f"INSERT INTO {table} VALUES (1, NULL), (2, NULL)")
+        rule = {
+            "id": "status-complete",
+            "target": table,
+            "dimension": "completeness",
+            "expression": "status IS NOT NULL",
+            "threshold": 0.9,
+            "severity": "critical",
+        }
+        _decode(client._send("QualityRulePut", {"rule": rule}, graph))
+        context = request_context()
+        product = {
+            "id": "orders-product",
+            "owner": context["agent_id"],
+            "version": "1.0.0",
+            "datasets": [table],
+            "terms": [],
+            "ports": [{"name": "sql", "kind": "query"}],
+        }
+        contract = {
+            "product": "orders-product",
+            "schema_digest": "sha256:" + "a" * 64,
+            "quality_rules": ["status-complete"],
+            "freshness_s": 3600,
+        }
+        _decode(
+            client._send(
+                "DataProductRegister",
+                {"tenant": TEST_TENANT, "product": product, "contract": contract},
+                graph,
+            )
+        )
+        _evaluate(client, graph, table)
+        nodes = _decode(
+            client._send(
+                "GetNodesByLabel", {"label": "ContractViolation", "limit": 10}, graph
+            )
+        )
+        violations = [_decode(properties) for _, properties in nodes]
+        [broken] = [v for v in violations if v["promise"] == "quality"]
+        assert broken["product"] == "orders-product"
+        assert broken["rule"] == "status-complete"
+        assert broken["evidence_class"] == "observation"
+        assert broken["observed"] == "0"
+        assert broken["at_ms"] > 0
+    finally:
+        client.tenants.delete(graph)
+        client.close()
