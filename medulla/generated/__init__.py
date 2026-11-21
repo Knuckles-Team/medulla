@@ -384,6 +384,7 @@ SEND_BY_METHOD = {
     "GetSubgraph": graph.send_get_subgraph,
     "GetSuccessors": graph.send_get_successors,
     "GetTelemetrySnapshot": ingestion.send_get_telemetry_snapshot,
+    "StandardsDrift": ingestion.send_standards_drift,
     "GetWorkItem": coordination.send_get_work_item,
     "GetWorkItemOutcome": coordination.send_get_work_item_outcome,
     "GovernedChange": security.send_governed_change,

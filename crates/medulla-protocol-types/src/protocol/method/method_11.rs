@@ -231,6 +231,20 @@ $($variants)*
     /// derives nothing. Gated `telemetry:read`.
     GetTelemetrySnapshot { tenant: String },
 
+    // ── Standards drift (MEDULLA-UNIFIED-DATA-PLANE-R701.3) ───────────────
+    /// Score the verified tenant's assets against its standards, group them into
+    /// capability cohorts and propose consolidations. `scope` is a capability class: when
+    /// set, only assets of that class and standards for it are read. `standard` is a
+    /// standard id: when set, only that standard scores, and an id with no node refuses
+    /// `STANDARD_NOT_FOUND`. Reads only, through the caller's graph view; every
+    /// recommendation is a proposal and nothing is written.
+    StandardsDrift {
+        #[serde(default)]
+        scope: Option<String>,
+        #[serde(default)]
+        standard: Option<String>,
+    },
+
     // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
     /// Record one anomaly in the caller's tenant (from the verified carrier)
     /// and correlate it into an open incident over `window_ms`.

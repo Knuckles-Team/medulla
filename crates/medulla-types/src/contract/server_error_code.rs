@@ -944,6 +944,11 @@ closed_error_codes! {
         WalkthroughArtifactUnresolved => "WALKTHROUGH_ARTIFACT_UNRESOLVED",
         WalkthroughNoteOrderInvalid => "WALKTHROUGH_NOTE_ORDER_INVALID",
         WalkthroughSpanOutsideRun => "WALKTHROUGH_SPAN_OUTSIDE_RUN",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R701.3: a standard or asset node does not decode, or an
+        /// asset names a tenant other than its node's.
+        StandardsNodeInvalid => "STANDARDS_NODE_INVALID",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R701.3: a `standard` id with no node in the caller's tenant.
+        StandardNotFound => "STANDARD_NOT_FOUND",
         /// MEDULLA-IDENTITY-R702: a policy bundle is bound to a scope that holds a different bundle.
         PolicyScopeBound => "POLICY_SCOPE_BOUND",
         /// MEDULLA-IDENTITY-R702: a policy bundle would raise its binding actor's own authority.

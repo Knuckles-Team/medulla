@@ -1018,6 +1018,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "REVISION_NOT_ON_CHAIN",
         ],
     ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R701.3: an unknown standard id, or a standard or asset node
+    // that does not decode.
+    (
+        "StandardsDrift",
+        &["STANDARD_NOT_FOUND", "STANDARDS_NODE_INVALID"],
+    ),
     // MEDULLA-IDENTITY-R701: no delegation record for the work item in the caller's tenant.
     ("GetDelegationRecord", &["DELEGATION_UNKNOWN"]),
     // MEDULLA-DECISION-ENGINE-R152.4: a zero budget, too many node ids or a fact with no source.

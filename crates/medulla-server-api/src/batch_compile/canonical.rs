@@ -604,6 +604,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceFactorRank { .. }
         | Method::WalletKeyTrustGet { .. }
         | Method::ContextFacts { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R701.3: a read; every recommendation is a proposal.
+        | Method::StandardsDrift { .. }
         | Method::ReadSpan { .. }
         | Method::AtomContext { .. }
         // MEDULLA-CQ-ORCH-R705.6: an import commits as one request-graph

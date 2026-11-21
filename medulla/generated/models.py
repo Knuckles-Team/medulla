@@ -14679,6 +14679,70 @@ class MethodCrossSourceQuestion(BaseModel):
     params: MethodCrossSourceQuestionParams
 
 
+class CapabilityCohort(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    assets: list[str]
+    capability_class: str
+
+
+class ConsolidationRecommendation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    assets: list[str]
+    capability_class: str
+    cost_saving: Annotated[int, Field(ge=0)]
+    overlap: float
+    proposal_only: bool
+    score: float
+    tenant: str
+
+
+class DriftValueScored(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    failed: list[str]
+    satisfied: list[str]
+    score: float
+    state: Literal["scored"]
+
+
+class DriftValueNotApplicable(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    state: Literal["not_applicable"]
+
+
+class DriftScore(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    asset: str
+    score: DriftValue
+    standard: str | None = None
+
+
+class StandardsDriftResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cohorts: list[CapabilityCohort]
+    recommendations: list[ConsolidationRecommendation]
+    scores: list[DriftScore]
+
+
+class MethodStandardsDriftParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    scope: str | None = None
+    standard: str | None = None
+
+
+class MethodStandardsDrift(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["StandardsDrift"]
+    params: MethodStandardsDriftParams
+
+
 class MethodCatalogUsage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15377,6 +15441,7 @@ Method = Annotated[
         MethodGetEffectReceipt,
         MethodGetShardWriterWidth,
         MethodGetTelemetrySnapshot,
+        MethodStandardsDrift,
         MethodGraphLearnPredictNary,
         MethodIncidentCorrelate,
         MethodIncidentEvidence,
@@ -30434,6 +30499,9 @@ ResolveCandidatesResult = list[MergeProposal]
 ResourceGrantSubject = ResourceGrantSubjectPrincipal | ResourceGrantSubjectRole
 
 
+DriftValue = DriftValueScored | DriftValueNotApplicable
+
+
 ResourceSelector = (
     Literal["All"]
     | ResourceSelectorPattern
@@ -37312,6 +37380,15 @@ __all__ = [
     "MethodGetSuccessorsParams",
     "MethodGetTelemetrySnapshot",
     "MethodGetTelemetrySnapshotParams",
+    "MethodStandardsDrift",
+    "MethodStandardsDriftParams",
+    "StandardsDriftResult",
+    "CapabilityCohort",
+    "ConsolidationRecommendation",
+    "DriftScore",
+    "DriftValue",
+    "DriftValueNotApplicable",
+    "DriftValueScored",
     "MethodGetWorkItem",
     "MethodGetWorkItemOutcome",
     "MethodGetWorkItemOutcomeParams",

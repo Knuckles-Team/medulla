@@ -177,6 +177,8 @@ mod corpus_retrieve;
 mod indexless;
 #[cfg(feature = "query")]
 mod schema_projections;
+#[cfg(feature = "query")]
+mod standards;
 #[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
 mod source_coverage;
 #[cfg(all(feature = "query", feature = "federation-sql"))]
@@ -211,6 +213,8 @@ pub(crate) use indexless::handle_indexless_retrieve;
 pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]
 pub(crate) use schema_projections::handle_schema_projections;
+#[cfg(feature = "query")]
+pub(crate) use standards::handle_standards_drift;
 #[cfg(feature = "query")]
 pub(crate) use search_task::handle_synthesize;
 #[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]

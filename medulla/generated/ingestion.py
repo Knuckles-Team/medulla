@@ -787,6 +787,8 @@ send_get_telemetry_snapshot = contract_sender(
 decode_get_telemetry_snapshot = contract_decoder(
     "GetTelemetrySnapshot", "GetTelemetrySnapshotResult"
 )
+send_standards_drift = contract_sender("StandardsDrift", "MethodStandardsDriftParams")
+decode_standards_drift = contract_decoder("StandardsDrift", "StandardsDriftResult")
 send_incident_correlate = contract_sender(
     "IncidentCorrelate", "MethodIncidentCorrelateParams"
 )

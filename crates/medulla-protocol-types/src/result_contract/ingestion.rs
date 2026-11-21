@@ -80,6 +80,8 @@ method_results! {
     TelemetryDerive(TelemetryDerive) => Raw<TelemetryDeriveReceipt>;
     // MEDULLA-ORCH-VOCAB-R804: the tenant's latest stored metric values by name.
     GetTelemetrySnapshot(GetTelemetrySnapshot) => Json<std::collections::BTreeMap<String, f64>>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R701.3: drift scores, capability cohorts and consolidation proposals.
+    StandardsDrift(StandardsDrift) => Raw<medulla_source_types::standards_drift::StandardsDriftResult>;
     // MEDULLA-UNIFIED-DATA-PLANE-R760.3: the served incident authority.
     IncidentRecordAnomaly(IncidentRecordAnomaly) => Raw<IncidentWriteReceipt>;
     IncidentCorrelate(IncidentCorrelate) => Raw<IncidentWriteReceipt>;

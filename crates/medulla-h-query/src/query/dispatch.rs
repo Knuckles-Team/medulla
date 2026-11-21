@@ -98,6 +98,10 @@ async fn dispatch_query_family(
         Method::CatalogUsage { asset, top_n } => {
             return Ok(super::catalog_search::handle_usage(hctx, asset, top_n).await)
         }
+        // MEDULLA-UNIFIED-DATA-PLANE-R701.3: scores the caller tenant's standard and asset nodes.
+        Method::StandardsDrift { scope, standard } => {
+            return Ok(handle_standards_drift(hctx, scope, standard))
+        }
         other => other,
     };
     // MEDULLA-FEDERATED-QUERY-R702.3: one search-task synthesis over the caller's projected evidence.

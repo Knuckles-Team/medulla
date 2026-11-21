@@ -86,6 +86,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ComputeSimilarityEdges",
     "ConnectedComponents",
     "ContextFacts",
+    // MEDULLA-UNIFIED-DATA-PLANE-R701.3: `handle_standards_drift` reads the standard and
+    // asset nodes of the core `read_authority.project_core` projected.
+    "StandardsDrift",
     "ReadSpan",
     // MEDULLA-INGEST-WORKER-R003.3: atoms listed from the core `read_authority` projected.
     "AtomContext",

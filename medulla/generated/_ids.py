@@ -523,6 +523,7 @@ METHOD_IDS = frozenset(
         "GetMatView",
         "GetShardWriterWidth",
         "GetTelemetrySnapshot",
+        "StandardsDrift",
         "GraphLearnPredictNary",
         "IncidentCorrelate",
         "IncidentEvidence",

@@ -39,6 +39,7 @@ pub struct StandardsAsset {
 
 /// The assets that share one capability class.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct CapabilityCohort {
     pub capability_class: String,
     pub assets: Vec<String>,
@@ -46,6 +47,7 @@ pub struct CapabilityCohort {
 
 /// A drift score, or `not_applicable` when no standard covers the asset.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case", tag = "state")]
 pub enum DriftValue {
     Scored {
@@ -58,6 +60,7 @@ pub enum DriftValue {
 
 /// One asset's drift against one standard.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DriftScore {
     pub asset: String,
     pub standard: Option<String>,
@@ -66,6 +69,7 @@ pub struct DriftScore {
 
 /// A proposal to consolidate assets of one cohort.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ConsolidationRecommendation {
     pub capability_class: String,
     pub tenant: String,
@@ -75,6 +79,103 @@ pub struct ConsolidationRecommendation {
     pub score: f64,
     pub proposal_only: bool,
 }
+
+/// The answer of `Method::StandardsDrift`: every asset's drift, the capability cohorts and the
+/// consolidation proposals (MEDULLA-UNIFIED-DATA-PLANE-R701.3).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StandardsDriftResult {
+    pub scores: Vec<DriftScore>,
+    pub cohorts: Vec<CapabilityCohort>,
+    pub recommendations: Vec<ConsolidationRecommendation>,
+}
+
+/// The label of a standard node (MEDULLA-UNIFIED-DATA-PLANE-R701.3).
+pub const STANDARD_LABEL: &str = "Standard";
+/// The label of an asset node scored against standards.
+pub const STANDARDS_ASSET_LABEL: &str = "StandardsAsset";
+/// The node key that names the tenant a standard or asset node belongs to.
+pub const STANDARDS_TENANT_KEY: &str = "tenant_id";
+/// The node key that holds a standard's JSON body.
+pub const STANDARD_BODY_KEY: &str = "standard";
+/// The node key that holds an asset's JSON body.
+pub const STANDARDS_ASSET_BODY_KEY: &str = "asset";
+/// The most standard nodes, and the most asset nodes, one call reads.
+pub const MAX_STANDARDS_NODES: usize = 65_536;
+/// Refusal code: a standard or asset node does not decode, or an asset names another tenant.
+pub const STANDARDS_NODE_INVALID: &str = "STANDARDS_NODE_INVALID";
+/// Refusal code: the named standard has no node in the caller's tenant.
+pub const STANDARD_NOT_FOUND: &str = "STANDARD_NOT_FOUND";
+
+impl Standard {
+    /// The node id of standard `id` of `tenant`: `standard:<tenant>:<id>`.
+    pub fn node_id(tenant: &str, id: &str) -> String {
+        format!("standard:{tenant}:{id}")
+    }
+}
+
+impl StandardsAsset {
+    /// The node id of asset `id` of `tenant`: `standards-asset:<tenant>:<id>`.
+    pub fn node_id(tenant: &str, id: &str) -> String {
+        format!("standards-asset:{tenant}:{id}")
+    }
+}
+
+/// An integer knob: name, default, inclusive bounds and environment override.
+#[derive(Clone, Copy, Debug)]
+pub struct StandardsCountKnob {
+    pub name: &'static str,
+    pub default: u64,
+    pub range: (u64, u64),
+    pub env: &'static str,
+}
+
+impl StandardsCountKnob {
+    /// The environment value when it lies inside the bounds, the default otherwise.
+    pub fn value(&self) -> u64 {
+        std::env::var(self.env)
+            .ok()
+            .and_then(|raw| raw.trim().parse::<u64>().ok())
+            .filter(|n| (self.range.0..=self.range.1).contains(n))
+            .unwrap_or(self.default)
+    }
+}
+
+/// A ratio knob: name, default, inclusive bounds and environment override.
+#[derive(Clone, Copy, Debug)]
+pub struct StandardsRatioKnob {
+    pub name: &'static str,
+    pub default: f64,
+    pub range: (f64, f64),
+    pub env: &'static str,
+}
+
+impl StandardsRatioKnob {
+    /// The environment value when it lies inside the bounds, the default otherwise.
+    pub fn value(&self) -> f64 {
+        std::env::var(self.env)
+            .ok()
+            .and_then(|raw| raw.trim().parse::<f64>().ok())
+            .filter(|n| n.is_finite() && (self.range.0..=self.range.1).contains(n))
+            .unwrap_or(self.default)
+    }
+}
+
+/// `knob standards.min_cohort_size`: the fewest assets a cohort needs to be proposed for
+/// consolidation.
+pub const STANDARDS_MIN_COHORT_SIZE: StandardsCountKnob = StandardsCountKnob {
+    name: "standards.min_cohort_size",
+    default: 2,
+    range: (2, 1000),
+    env: "MEDULLA_STANDARDS_MIN_COHORT_SIZE",
+};
+/// `knob standards.overlap_min`: the least fact overlap a consolidation proposal needs.
+pub const STANDARDS_OVERLAP_MIN: StandardsRatioKnob = StandardsRatioKnob {
+    name: "standards.overlap_min",
+    default: 0.6,
+    range: (0.0, 1.0),
+    env: "MEDULLA_STANDARDS_OVERLAP_MIN",
+};
 
 /// A refused recommendation.
 #[derive(Clone, Debug, PartialEq, Eq)]
