@@ -795,6 +795,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::RecordDeployment { .. }
         // MEDULLA-SDLC-R017.1: the goal record self-translates into a request-graph `BatchUpdate`.
         | Method::GoalPut { .. }
+        // MEDULLA-SDLC-R012.8: the project mode record self-translates likewise.
+        | Method::ProjectModeSet { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R700.3: self-translates into a request-graph `BatchUpdate`.
         | Method::ActionRegister { .. }
         | Method::ActionSubmit { .. }

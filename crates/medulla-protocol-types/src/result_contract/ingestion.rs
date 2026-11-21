@@ -113,6 +113,8 @@ method_results! {
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;
     // MEDULLA-SDLC-R017.1: the goal record.
     GoalPut(GoalPut) => Raw<medulla_source_types::lifecycle::GoalReceipt>;
+    // MEDULLA-SDLC-R012.8: the project mode record.
+    ProjectModeSet(ProjectModeSet) => Raw<medulla_source_types::lifecycle::ProjectModeReceipt>;
     // MEDULLA-UNIFIED-DATA-PLANE-R702.3: edge, quarantine and replay counts.
     LineageIngest(LineageIngest) => Raw<medulla_catalog_types::lineage::LineageIngestReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.

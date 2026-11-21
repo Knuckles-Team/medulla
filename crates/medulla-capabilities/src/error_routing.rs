@@ -1682,6 +1682,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-SDLC-R017.1: the served goal record's refusal.
     ("GoalPut", &["GOAL_TARGET_REQUIRED"]),
+    // MEDULLA-SDLC-R012.8: the project mode record's refusals.
+    (
+        "ProjectModeSet",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INVALID_ARGUMENT",
+            "MODE_APPROVAL_REQUIRED",
+        ],
+    ),
     (
         "IncidentSetStatus",
         &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],

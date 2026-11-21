@@ -125,6 +125,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("RELEASE_SEALED"),
     RefusalCode::new("GOAL_TARGET_REQUIRED"),
     RefusalCode::new("PROPOSAL_KIND_UNKNOWN"),
+    RefusalCode::new("MODE_APPROVAL_REQUIRED"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -148,6 +149,10 @@ pub enum LifecycleRefusal {
     GoalTargetRequired(String),
     #[error("PROPOSAL_KIND_UNKNOWN: {0}")]
     ProposalKindUnknown(String),
+    #[error("INVALID_ARGUMENT: {0}")]
+    InvalidArgument(String),
+    #[error("MODE_APPROVAL_REQUIRED: {0}")]
+    ModeApprovalRequired(String),
 }
 
 impl LifecycleRefusal {
@@ -163,6 +168,8 @@ impl LifecycleRefusal {
             Self::ReleaseSealed(_) => "RELEASE_SEALED",
             Self::GoalTargetRequired(_) => "GOAL_TARGET_REQUIRED",
             Self::ProposalKindUnknown(_) => "PROPOSAL_KIND_UNKNOWN",
+            Self::InvalidArgument(_) => "INVALID_ARGUMENT",
+            Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
         }
     }
 }
@@ -445,6 +452,113 @@ pub fn handle_goal_put(goal: Goal) -> Result<GoalWrite, LifecycleRefusal> {
         node_id: goal_node_id(&goal),
         goal,
         targets,
+    })
+}
+
+/// How a codebase takes part in the learning loop (MEDULLA-SDLC-R012.8). A
+/// project with no record reads as `reference`.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ProjectMode {
+    /// Queryable and used for research; it never receives a proposal.
+    #[default]
+    Reference,
+    /// Receives proposals for review.
+    Development,
+    /// Receives proposals unprompted toward its goals.
+    Evolving,
+}
+
+impl ProjectMode {
+    /// The snake case wire name.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Reference => "reference",
+            Self::Development => "development",
+            Self::Evolving => "evolving",
+        }
+    }
+}
+
+/// The operator approval behind a move to `evolving`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProjectModeApproval {
+    pub approver: String,
+    pub approved_at_ms: u64,
+    pub reason: String,
+}
+
+/// `ProjectModeSet` request: set the mode of one project.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProjectModeSet {
+    pub project: String,
+    pub mode: ProjectMode,
+    #[serde(default)]
+    pub approval: Option<ProjectModeApproval>,
+}
+
+/// What `ProjectModeSet` answers; `previous` is `Reference` when no record existed.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProjectModeReceipt {
+    pub node_id: String,
+    pub mode: ProjectMode,
+    pub previous: ProjectMode,
+}
+
+/// What `ProjectModeSet` writes (not on the wire).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ProjectModeWrite {
+    pub request: ProjectModeSet,
+    pub node_id: String,
+    pub previous: ProjectMode,
+}
+
+/// The graph node id of a project's mode record: the first 32 hex digits of the
+/// SHA-256 of the project name.
+pub fn project_mode_node_id(project: &str) -> String {
+    format!("projectmode:{}", &sha256_hex(project.as_bytes())[..32])
+}
+
+/// `ProjectModeSet` (MEDULLA-SDLC-R012.8): decide what one mode change writes,
+/// or refuse before anything is written. A blank project refuses
+/// `INVALID_ARGUMENT`; a move to `evolving` while `evolving_requires_approval`
+/// needs an approval with a named approver, a reason and a time above zero.
+pub fn handle_project_mode_set(
+    request: ProjectModeSet,
+    previous: ProjectMode,
+    evolving_requires_approval: bool,
+) -> Result<ProjectModeWrite, LifecycleRefusal> {
+    if request.project.trim().is_empty() {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a project mode names its project".to_owned(),
+        ));
+    }
+    if request.mode == ProjectMode::Evolving
+        && previous != ProjectMode::Evolving
+        && evolving_requires_approval
+    {
+        let approved = request.approval.as_ref().is_some_and(|approval| {
+            !approval.approver.trim().is_empty()
+                && !approval.reason.trim().is_empty()
+                && approval.approved_at_ms > 0
+        });
+        if !approved {
+            return Err(LifecycleRefusal::ModeApprovalRequired(
+                request.project.clone(),
+            ));
+        }
+    }
+    Ok(ProjectModeWrite {
+        node_id: project_mode_node_id(&request.project),
+        request,
+        previous,
     })
 }
 

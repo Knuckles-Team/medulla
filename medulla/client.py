@@ -18919,6 +18919,20 @@ class MedullaClient:
             raise TypeError("GoalPut returned a non-object result")
         return result
 
+    async def project_mode_set(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Set the mode of one project (MEDULLA-SDLC-R012.8).
+
+        ``request`` carries ``project``, ``mode`` (``reference``,
+        ``development`` or ``evolving``) and, for a move to ``evolving``, an
+        ``approval`` with ``approver``, ``approved_at_ms`` and ``reason``. The
+        receipt names ``node_id``, ``mode`` and ``previous``. Without a full
+        approval a move to ``evolving`` refuses ``MODE_APPROVAL_REQUIRED``.
+        """
+        result = await self._send("ProjectModeSet", {"request": request}, None)
+        if not isinstance(result, dict):
+            raise TypeError("ProjectModeSet returned a non-object result")
+        return result
+
     async def describe_contract(
         self,
         *,

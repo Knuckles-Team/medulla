@@ -476,6 +476,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::RecordRelease { .. }
                 | Method::RecordDeployment { .. }
                 | Method::GoalPut { .. }
+                | Method::ProjectModeSet { .. }
                 // MEDULLA-UNIFIED-DATA-PLANE-R700.3: action registration and submission.
                 | Method::ActionRegister { .. }
                 | Method::ActionSubmit { .. }

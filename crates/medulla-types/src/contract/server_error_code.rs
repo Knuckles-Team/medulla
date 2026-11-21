@@ -475,6 +475,8 @@ closed_error_codes! {
         ProposalNotAdmitted => "PROPOSAL_NOT_ADMITTED",
         /// MEDULLA-SDLC-R017.2: a proposal names a kind outside the closed set.
         ProposalKindUnknown => "PROPOSAL_KIND_UNKNOWN",
+        /// MEDULLA-SDLC-R012.8: a move to `evolving` without a full operator approval.
+        ModeApprovalRequired => "MODE_APPROVAL_REQUIRED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",

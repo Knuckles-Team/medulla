@@ -383,6 +383,12 @@ $($variants)*
     GoalPut {
         goal: medulla_source_types::lifecycle::Goal,
     },
+    /// Set the mode of one project (MEDULLA-SDLC-R012.8): `reference`,
+    /// `development` or `evolving`. A move to `evolving` needs an operator
+    /// approval (`MODE_APPROVAL_REQUIRED`).
+    ProjectModeSet {
+        request: medulla_source_types::lifecycle::ProjectModeSet,
+    },
     /// MEDULLA-SRC-AUTH-R004.6.1: which connected source is authoritative for each
     /// class (and facet) within the hop budget, with the premises behind every verdict
     /// and the authority audit built from them. A read; nothing is committed. Refuses

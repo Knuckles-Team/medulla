@@ -181,6 +181,12 @@ fn incident_audit_line(method: &Method) -> Option<String> {
         }
         // MEDULLA-SDLC-R017.1: the line names the project, never the statement.
         Method::GoalPut { goal } => Some(format!("GOAL_PUT|{}", goal.project)),
+        // MEDULLA-SDLC-R012.8: the line names the project and the mode, never the approval.
+        Method::ProjectModeSet { request } => Some(format!(
+            "PROJECT_MODE_SET|{}|{}",
+            request.project,
+            request.mode.name()
+        )),
         _ => record_write_audit_line(method),
     }
 }

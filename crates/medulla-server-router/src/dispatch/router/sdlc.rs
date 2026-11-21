@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::result_contract::ingestion::{
-    GoalPut as GoalPutResult, RecordDeployment as RecordDeploymentResult,
-    RecordRelease as RecordReleaseResult,
+    GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
+    RecordDeployment as RecordDeploymentResult, RecordRelease as RecordReleaseResult,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
@@ -16,8 +16,9 @@ use medulla_server_graph::dispatch::shared::{
 };
 use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
-    release_node_id, Deployment, DeploymentInput, DeploymentReceipt, Goal, GoalReceipt, GoalWrite,
-    Release, ReleaseReceipt,
+    handle_project_mode_set, project_mode_node_id, release_node_id, Deployment, DeploymentInput,
+    DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
+    ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
 };
 use serde_json::{json, Map, Value};
 use tokio::sync::RwLock;
@@ -28,6 +29,8 @@ const RELEASE_TYPE: &str = "Release";
 const DEPLOYMENT_TYPE: &str = "Deployment";
 /// The node type of a goal record.
 const GOAL_TYPE: &str = "Goal";
+/// The node type of a project mode record.
+const PROJECT_MODE_TYPE: &str = "ProjectMode";
 /// The property holding the canonical JSON of the release record.
 const RELEASE_RECORD_PROPERTY: &str = "release_record";
 /// The node type of an indexed repository commit.
@@ -63,6 +66,9 @@ pub async fn dispatch_sdlc_methods(
             dispatch_boxed(record_deployment(state, target, deployment)).await
         }
         Method::GoalPut { goal } => dispatch_boxed(goal_put(state, target, goal)).await,
+        Method::ProjectModeSet { request } => {
+            dispatch_boxed(project_mode_set(state, target, request)).await
+        }
         other => return ControlFlow::Continue(other),
     };
     ControlFlow::Break(response)
@@ -143,6 +149,95 @@ async fn goal_put(
     }
     .await;
     typed_response::<GoalPutResult>(target.req_id, result)
+}
+
+/// `ProjectModeSet` (MEDULLA-SDLC-R012.8): read the project's stored mode (none
+/// reads as `reference`), decide, then write the one `ProjectMode` node in one
+/// `BatchUpdate`. A refusal returns before anything is written.
+async fn project_mode_set(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: ProjectModeSet,
+) -> Response {
+    let result = async {
+        let tenant = target.verified.tenant();
+        if tenant.trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        let previous = stored_project_mode(state, &target, &request.project).await?;
+        let write = handle_project_mode_set(
+            request,
+            previous,
+            medulla_server_api::knob_config::knobs().sdlc_mode_evolving_requires_approval,
+        )
+        .map_err(|e| e.to_string())?;
+        let operations = project_mode_operations(&write, &target)?;
+        commit(state, &target, operations).await?;
+        Ok(ProjectModeReceipt {
+            node_id: write.node_id,
+            mode: write.request.mode,
+            previous: write.previous,
+        })
+    }
+    .await;
+    typed_response::<ProjectModeSetResult>(target.req_id, result)
+}
+
+/// The stored mode of `project` in the request graph, `reference` when no record
+/// of the verified tenant exists.
+async fn stored_project_mode(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    project: &str,
+) -> Result<ProjectMode, String> {
+    ensure_graph_resident(state, target.graph).await;
+    let (core, authority) = {
+        let current = timed_read(state).await;
+        authorized_graph_read(
+            &current,
+            target.graph,
+            target.verified,
+            &format!("GRAPH_NOT_FOUND: {}", target.graph),
+        )?
+    };
+    let node_id = project_mode_node_id(project);
+    let Some(properties) = core.get_node_properties(&node_id) else {
+        return Ok(ProjectMode::default());
+    };
+    if !authority.can_see_node(&properties, core.is_schema_node(&node_id)) {
+        return Ok(ProjectMode::default());
+    }
+    let Ok(node) = medulla_types::msgpack::decode_property_value(&properties) else {
+        return Ok(ProjectMode::default());
+    };
+    if node.get("tenant_id").and_then(Value::as_str) != Some(target.verified.tenant()) {
+        return Ok(ProjectMode::default());
+    }
+    Ok(node
+        .get("mode")
+        .and_then(Value::as_str)
+        .and_then(|name| serde_json::from_value(Value::String(name.to_owned())).ok())
+        .unwrap_or_default())
+}
+
+/// The one `ProjectMode` node; the approval properties only when one was given.
+fn project_mode_operations(
+    write: &ProjectModeWrite,
+    target: &SdlcTarget<'_>,
+) -> Result<Vec<Value>, String> {
+    let mut properties = Map::new();
+    properties.insert("type".into(), PROJECT_MODE_TYPE.into());
+    properties.insert("project".into(), write.request.project.clone().into());
+    properties.insert("mode".into(), write.request.mode.name().into());
+    if let Some(approval) = &write.request.approval {
+        properties.insert("approver".into(), approval.approver.clone().into());
+        properties.insert("reason".into(), approval.reason.clone().into());
+        properties.insert("approved_at_ms".into(), approval.approved_at_ms.into());
+    }
+    stamp(&mut properties, target);
+    bounded(vec![
+        json!({"op": "upsert_node", "id": write.node_id, "properties": properties}),
+    ])
 }
 
 /// The goal node, then one `targetsGoal` edge from each target to it.

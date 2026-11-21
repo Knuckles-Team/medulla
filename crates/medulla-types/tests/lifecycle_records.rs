@@ -334,3 +334,85 @@ fn proposal_kind_set_is_closed() {
     assert_eq!(proposal.kind, ProposalKind::ResolveClarification);
     assert_eq!(proposal.marker.as_deref(), Some("NEEDS CLARIFICATION: kinds"));
 }
+
+// spec: MEDULLA-SDLC-R012.8
+#[test]
+fn project_mode_needs_approval_only_for_evolving() {
+    use medulla_source_types::lifecycle::{
+        handle_project_mode_set, project_mode_node_id, ProjectMode, ProjectModeApproval,
+        ProjectModeSet, REFUSALS,
+    };
+
+    let request = |mode: ProjectMode, approval: Option<ProjectModeApproval>| ProjectModeSet {
+        project: "medulla".into(),
+        mode,
+        approval,
+    };
+    let approval = |approver: &str, at: u64, reason: &str| {
+        Some(ProjectModeApproval {
+            approver: approver.into(),
+            approved_at_ms: at,
+            reason: reason.into(),
+        })
+    };
+    assert_eq!(ProjectMode::default(), ProjectMode::Reference);
+    assert!(REFUSALS
+        .iter()
+        .any(|c| c.as_str() == "MODE_APPROVAL_REQUIRED"));
+
+    let write = handle_project_mode_set(
+        request(ProjectMode::Development, None),
+        ProjectMode::Reference,
+        true,
+    )
+    .unwrap();
+    assert_eq!(write.node_id, project_mode_node_id("medulla"));
+    assert!(write.node_id.starts_with("projectmode:"));
+    assert_eq!(write.node_id.len(), "projectmode:".len() + 32);
+    handle_project_mode_set(
+        request(ProjectMode::Reference, None),
+        ProjectMode::Evolving,
+        true,
+    )
+    .unwrap();
+    handle_project_mode_set(
+        request(ProjectMode::Evolving, None),
+        ProjectMode::Evolving,
+        true,
+    )
+    .unwrap();
+
+    for bad in [
+        None,
+        approval("", 1, "ok"),
+        approval("ops", 1, " "),
+        approval("ops", 0, "ok"),
+    ] {
+        let refusal = handle_project_mode_set(
+            request(ProjectMode::Evolving, bad),
+            ProjectMode::Development,
+            true,
+        )
+        .unwrap_err();
+        assert_eq!(refusal.code(), "MODE_APPROVAL_REQUIRED");
+        assert_eq!(refusal.to_string(), "MODE_APPROVAL_REQUIRED: medulla");
+    }
+    let write = handle_project_mode_set(
+        request(ProjectMode::Evolving, approval("ops", 5, "goal review")),
+        ProjectMode::Development,
+        true,
+    )
+    .unwrap();
+    assert_eq!(write.previous, ProjectMode::Development);
+    handle_project_mode_set(
+        request(ProjectMode::Evolving, None),
+        ProjectMode::Development,
+        false,
+    )
+    .unwrap();
+
+    let mut blank = request(ProjectMode::Development, None);
+    blank.project = " ".into();
+    let refusal = handle_project_mode_set(blank, ProjectMode::Reference, true).unwrap_err();
+    assert_eq!(refusal.code(), "INVALID_ARGUMENT");
+}

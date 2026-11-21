@@ -288,7 +288,8 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         // MEDULLA-SDLC-R002.3: like the incident writes.
         Method::RecordRelease { .. }
         | Method::RecordDeployment { .. }
-        | Method::GoalPut { .. } => Some("__lifecycle"),
+        | Method::GoalPut { .. }
+        | Method::ProjectModeSet { .. } => Some("__lifecycle"),
         // MEDULLA-UNIFIED-DATA-PLANE-R700.3: the action outbox topics.
         Method::ActionRegister { .. } => Some("__action_register"),
         Method::ActionSubmit { .. } => Some("__action_completed"),
