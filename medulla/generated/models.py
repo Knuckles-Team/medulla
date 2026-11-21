@@ -20563,6 +20563,7 @@ class OpValidateShape(BaseModel):
 class OpValidateShapeBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    fail_on_fatal: bool = False
     keep: ShapeKeep
     projection_base: str | None = None
     shape: str
@@ -33343,6 +33344,7 @@ class FeedbackStamp(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     at: int
+    idempotency_key: str
     principal: str
     tenant: str
 
@@ -34818,6 +34820,7 @@ class RetrievalFeedbackEvent(BaseModel):
 
     at: int
     document_ref: str
+    idempotency_key: str
     kind: FeedbackKind
     principal: str
     tenant: str
