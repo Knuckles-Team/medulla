@@ -133,7 +133,7 @@ pub(super) fn binding_draft(
     )
     .unwrap();
     SemanticBindingDraft {
-        binding_id: "binding:documents-body".to_string(),
+        binding_id: "binding:documents.body".to_string(),
         tenant_id: authority.tenant_scope().to_string(),
         actor_scope: authority.actor_scope().to_string(),
         effective_actor_scope: authority.agent_id().to_string(),

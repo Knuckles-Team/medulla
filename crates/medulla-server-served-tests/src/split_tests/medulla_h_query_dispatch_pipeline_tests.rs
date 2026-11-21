@@ -508,7 +508,7 @@ async fn dispatch_refuses_a_cross_tenant_semantic_operation() {
             920,
             SemanticIndexOp::Binding {
                 tenant_id: "tenant-somebody-else".to_string(),
-                binding_id: "binding:documents-body".to_string(),
+                binding_id: "binding:documents.body".to_string(),
             },
         ),
     )
@@ -571,7 +571,7 @@ async fn dispatch_refuses_an_unbounded_stage_claim_by_name() {
                 930,
                 SemanticIndexOp::ClaimStageLeases {
                     tenant_id: TENANT.to_string(),
-                    binding_id: "binding:documents-body".to_string(),
+                    binding_id: "binding:documents.body".to_string(),
                     consumer: WORKER.to_string(),
                     queue_class: SemanticQueueClass::Fast,
                     limit: medulla_index_types::semantic_index::MAX_SEMANTIC_STAGE_CLAIM_LIMIT + 1,
