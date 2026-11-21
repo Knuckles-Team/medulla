@@ -16,9 +16,6 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
-/// The shortest periodic refresh.
-pub const MIN_REFRESH_PERIOD_S: u64 = 60;
-
 pub const STORED_QUERY_INVALID: &str = "STORED_QUERY_INVALID";
 pub const STORED_QUERY_PARAM_MISSING: &str = "STORED_QUERY_PARAM_MISSING";
 pub const STORED_QUERY_IMMUTABLE: &str = "STORED_QUERY_IMMUTABLE";
@@ -71,7 +68,8 @@ pub enum StoredParamType {
 pub enum RefreshPolicy {
     /// When the input generation advanced past the one the result was computed from.
     OnChange,
-    /// Every `seconds`, at least [`MIN_REFRESH_PERIOD_S`].
+    /// Every `seconds`, at least the floor `knob stored_query.min_period_s` names
+    /// (MEDULLA-FEDERATED-QUERY-R708.11).
     Period { seconds: u64 },
 }
 
@@ -101,8 +99,10 @@ pub struct StoredQuery {
 }
 
 impl StoredQuery {
-    /// Refuse an empty name or text, version zero and a period under 60 s.
-    pub fn validate(&self) -> Result<(), StoredQueryRefusal> {
+    /// Refuse an empty name or text, version zero and a period under `min_period_s`, the
+    /// resolved `knob stored_query.min_period_s`. This crate sits below the knob registry, so
+    /// the floor is a parameter (MEDULLA-FEDERATED-QUERY-R708.11).
+    pub fn validate(&self, min_period_s: u64) -> Result<(), StoredQueryRefusal> {
         let fail = |detail: &str| Err(refuse(STORED_QUERY_INVALID, detail));
         if self.name.trim().is_empty() {
             return fail("name is required");
@@ -114,8 +114,8 @@ impl StoredQuery {
             return fail("version starts at 1");
         }
         match self.refresh {
-            RefreshPolicy::Period { seconds } if seconds < MIN_REFRESH_PERIOD_S => {
-                fail("refresh period is under 60 s")
+            RefreshPolicy::Period { seconds } if seconds < min_period_s => {
+                fail(&format!("refresh period is under {min_period_s} s"))
             }
             _ => Ok(()),
         }
@@ -492,17 +492,38 @@ mod tests {
             RefreshPolicy::Period { seconds: 60 },
         ] {
             let q = query(refresh);
-            q.validate().unwrap();
+            q.validate(60).unwrap();
             let json = serde_json::to_string(&q).unwrap();
             assert_eq!(serde_json::from_str::<StoredQuery>(&json).unwrap(), q);
         }
         assert!(query(RefreshPolicy::Period { seconds: 59 })
-            .validate()
+            .validate(60)
             .is_err());
         assert!(serde_json::from_str::<RefreshPolicy>(r#"{"kind":"hourly"}"#).is_err());
         let mut unnamed = query(RefreshPolicy::OnChange);
         unnamed.name = String::new();
-        assert_eq!(unnamed.validate().unwrap_err().code, STORED_QUERY_INVALID);
+        assert_eq!(
+            unnamed.validate(60).unwrap_err().code,
+            STORED_QUERY_INVALID
+        );
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R708.11
+    #[test]
+    fn period_floor_is_the_supplied_minimum() {
+        let period = |seconds| query(RefreshPolicy::Period { seconds });
+        // Under a floor of 300, 299 refuses and 300 passes; the detail names the floor.
+        let refused = period(299).validate(300).unwrap_err();
+        assert_eq!(refused.code, STORED_QUERY_INVALID);
+        assert!(refused.detail.contains("refresh period is under 300 s"));
+        period(300).validate(300).unwrap();
+        // Under a floor of 60, 60 passes.
+        period(60).validate(60).unwrap();
+        assert_eq!(period(59).validate(60).unwrap_err().code, STORED_QUERY_INVALID);
+        // OnChange has no period, so any floor passes.
+        for floor in [60, 300, 86_400] {
+            query(RefreshPolicy::OnChange).validate(floor).unwrap();
+        }
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R708.4

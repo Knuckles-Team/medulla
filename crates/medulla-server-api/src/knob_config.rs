@@ -336,6 +336,8 @@ knobs! {
     source_coverage_hop_budget: u64 = "source_coverage.hop_budget", U64(3), [0, 8], "hops", Tunable;
     /// Source coverage: most classes one request may name.
     source_coverage_max_classes: u64 = "source_coverage.max_classes", U64(64), [1, 512], "classes", Tunable;
+    /// Stored queries: shortest periodic refresh a put accepts (MEDULLA-FEDERATED-QUERY-R708.11).
+    stored_query_min_period_s: u64 = "stored_query.min_period_s", U64(300), [60, 86400], "seconds", Tunable;
     /// RESP listener: compare-and-swap attempts one `INCR` makes before it answers `INCR_CONFLICT` (MEDULLA-DURABLE-KERNEL-R860.3).
     resp_incr_retry_limit: u64 = "resp.incr_retry_limit", U64(8), [1, 64], "attempts", Tunable;
     /// Embedding provider: most items in one call (MEDULLA-FEDERATED-QUERY-R040.5.4).

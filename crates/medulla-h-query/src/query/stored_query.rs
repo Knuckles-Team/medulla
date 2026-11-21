@@ -206,7 +206,7 @@ pub(crate) fn handle_stored_put(
     ctx: &QueryHandlerCtx<'_>,
     mut query: StoredQuery,
 ) -> Result<StoredQuery, StoredQueryRefusal> {
-    query.validate()?;
+    query.validate(medulla_server_api::knob_config::knobs().stored_query_min_period_s)?;
     match query.language {
         StoredQueryLanguage::Uql => {
             medulla_uql::parse_statement(&query.text, &placeholder_params(&query))
