@@ -11,7 +11,9 @@ use super::*;
 use medulla_agent_types::agent_ontology::CAPABILITY_ROOT;
 use medulla_decision_types::decision::playbook::PARAM_EXECUTE;
 use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
-use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
+use medulla_decision_types::decision::{
+    AbstainReason, PremiseClass, PremiseProvenance, ResolutionKind,
+};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
 const OTHER_TENANT: &str = "tenant-other";
@@ -305,4 +307,79 @@ async fn proposal_records_playbook_id_and_revision() {
         .any(|p| p.fact.starts_with("event:e5:")));
     // The weakest class is the claim.
     assert_eq!(record.evidence_class, EvidenceClass::Claim);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R704.1
+// spec: MEDULLA-DECISION-ENGINE-R704.6
+#[tokio::test]
+async fn flapping_service_proposes_without_acting() {
+    let h = Harness::new().await;
+    let (schema, _) = publish_route_schema(&h);
+    publish_playbook(&h, TENANT, "playbook:flap", "service_flapping", None);
+    publish_playbook(&h, OTHER_TENANT, "playbook:other", "service_flapping", None);
+
+    // Three state changes of one service inside the window are a flapping
+    // service.
+    let burst = |schema: &ComponentDependency, tenant: &str| {
+        let mut request = triage_request(schema, tenant);
+        request.candidates = CandidateSource::Declared {
+            options: BoundedVec::new(vec![
+                event("e1", "svc-a", "state_change", &[], 0),
+                event("e2", "svc-a", "state_change", &[], 1_000),
+                event("e3", "svc-a", "state_change", &[], 2_000),
+            ])
+            .unwrap(),
+        };
+        request
+    };
+    let batch = decide(&h, burst(&schema, TENANT)).await.unwrap();
+    // The answer is an advisory list of proposed steps; nothing is run.
+    assert_eq!(
+        options(&batch),
+        ["step:playbook:flap:s1", "step:playbook:flap:s2"]
+            .map(|id| (id.to_string(), STEP_SCORE))
+            .to_vec()
+    );
+    let record = &batch.records.as_slice()[0];
+    assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
+    assert_eq!(record.evidence_class, EvidenceClass::Claim);
+    // The write step is only named, with the governed route and the typed
+    // reason that the engine evaluates and never acts.
+    assert!(record.premises.iter().any(|p| {
+        p.fact.starts_with("step:playbook:flap:s2:writes=true:route=connector_write_back")
+            && p.fact.contains(":reason=EvaluateOnly:")
+    }));
+    assert!(record
+        .premises
+        .iter()
+        .any(|p| p.fact.starts_with("trigger:service_flapping:service=svc-a")));
+    for id in ["e1", "e2", "e3"] {
+        assert!(record
+            .premises
+            .iter()
+            .any(|p| p.class == PremiseClass::Claim && p.fact.starts_with(&format!("event:{id}:"))));
+    }
+
+    // A request to execute is refused and nothing is sealed.
+    let mut execute = burst(&schema, TENANT);
+    execute.params = BoundedVec::new(execute_param(true)).unwrap();
+    let refused = decide(&h, execute).await.unwrap_err();
+    assert!(refused.contains("PLAYBOOK_EVALUATE_ONLY"), "{refused}");
+
+    // Another tenant's flapping playbook is never proposed to this tenant,
+    // and this tenant's is never proposed to the other.
+    let other_schema = publish_route_schema_in(&h, OTHER_TENANT);
+    let verified_other =
+        VerifiedRequestContext::verified_for_test_in_tenant("decider", OTHER_TENANT);
+    let other_burst = burst(&other_schema, OTHER_TENANT);
+    let other: DecisionBatch = decode(
+        super::super::statistical::handle_decide(&h.state, 1, &verified_other, other_burst).await,
+    )
+    .unwrap();
+    assert_eq!(
+        options(&other),
+        ["step:playbook:other:o1"]
+            .map(|id| (id.to_string(), STEP_SCORE))
+            .to_vec()
+    );
 }
