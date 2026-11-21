@@ -844,7 +844,7 @@ Each test below is planned: its path is the post-split location and its name is 
 
 Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATED-QUERY-R005.701`. Each path is where the test will live after the crate split; none is an execution receipt.
 
-- **MEDULLA-FEDERATED-QUERY-R058.4.2:** `crates/medulla-nlq/src/nl/context.rs::tests::linking_dialect_and_one_correction`. NL planning context: behavior. The fixture and expected result are stated in the row's Test cell.
+- **MEDULLA-FEDERATED-QUERY-R058.4.2:** `crates/medulla-nlq/src/nl/context_tests.rs::linking_dialect_and_one_correction`. NL planning context: behavior. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R058.4.3:** `tests/nl_query_bounded_steps.rs::one_schema_read_per_request`. NL planning context: wiring. A served NlQuery with a scripted planner asserts one schema read.
 - **MEDULLA-FEDERATED-QUERY-R058.4.4:** `tests/nl_query_bounded_steps.rs::refusals_return_code_and_no_rows` (planned). NL planning context: refusal. Each case returns its code and no rows.
 - **MEDULLA-FEDERATED-QUERY-R058.4.5:** `tests/nl_query_bounded_steps.rs::served_response_carries_steps_and_digest`. NL planning context: evidence. It reads the step list and digest from the served response.
