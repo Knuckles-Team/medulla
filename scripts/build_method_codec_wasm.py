@@ -27,8 +27,10 @@ the cargo target directory and refused unless its SHA-256 equals
 sidecar. Failed builds clear old exports and never advertise a completed export.
 ``--check`` asserts that the two independent builds are byte-identical and
 within ``MAX_BYTES`` (MEDULLA-CONTRACT-R006), writing nothing.
- ``--write-vectors`` writes ``tests/fixtures/method_body_vectors.json`` from
- the Rust codec for the Go and JavaScript vector tests (MEDULLA-CONTRACT-R004).
+Every run that writes or exports the codec then runs the Rust example
+``write_method_vectors`` once and writes ``method_body_vectors.json`` beside each
+client copy of the module, for the Go and JavaScript vector tests
+(MEDULLA-CONTRACT-R004, R061). The vectors are gitignored and never committed.
 """
 
 from __future__ import annotations
@@ -282,12 +284,12 @@ def export(root: Path, directory: Path, module: bytes) -> None:
             stream.write("fresh_export=true\n")
 
 
-VECTORS = "tests/fixtures/method_body_vectors.json"
+VECTORS = "method_body_vectors.json"
 METHOD_BODY_CODEC = "eg/method-body/v1"
 
 
 def write_vectors(root: Path, target_dir: Path) -> int:
-    """Write the committed method-body vectors from the Rust codec itself."""
+    """Write the method-body vectors from the Rust codec beside both codec copies."""
 
     env = {
         name: value
@@ -297,7 +299,7 @@ def write_vectors(root: Path, target_dir: Path) -> int:
     env.setdefault("CARGO_HOME", str(Path.home() / ".cargo"))
     env.setdefault("RUSTUP_HOME", str(Path.home() / ".rustup"))
     env["CARGO_TARGET_DIR"] = str(target_dir / "method-codec-vectors")
-    vectors = root / VECTORS
+    vectors = target_dir / "method-codec-vectors" / VECTORS
     subprocess.run(
         [
             "cargo",
@@ -324,9 +326,12 @@ def write_vectors(root: Path, target_dir: Path) -> int:
     if not data.get("vectors"):
         print("REFUSED: the Rust codec wrote no vectors", file=sys.stderr)
         return 1
+    payload = vectors.read_bytes()
+    for client in CLIENT_DIRS:
+        (root / client / VECTORS).write_bytes(payload)
     print(
         f"wrote {VECTORS}: {len(data['vectors'])} vectors "
-        f"sha256={_sha256(vectors.read_bytes())}"
+        f"sha256={_sha256(payload)} to {', '.join(CLIENT_DIRS)}"
     )
     return 0
 
@@ -352,20 +357,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "MAX_BYTES, writing nothing"
         ),
     )
-    parser.add_argument(
-        "--write-vectors",
-        action="store_true",
-        help=(
-            "write tests/fixtures/method_body_vectors.json from the Rust codec "
-            "for the client vector tests, building no WebAssembly"
-        ),
-    )
     args = parser.parse_args(argv)
-    if args.write_vectors:
-        target_dir = args.target_dir or Path(
-            os.environ.get("CARGO_TARGET_DIR", ROOT / "target")
-        )
-        return write_vectors(ROOT, target_dir.resolve())
     if args.export_dir and not args.check:
         # Clear only our two outputs, before attempting a new build.
         for name in (MODULE, PROVENANCE):
@@ -381,7 +373,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return check(module, rebuild)
     if args.export_dir:
         export(ROOT, args.export_dir, module)
-    return write(ROOT, module, rebuild)
+    status = write(ROOT, module, rebuild)
+    if status != 0:
+        return status
+    return write_vectors(ROOT, target_dir.resolve())
 
 
 if __name__ == "__main__":

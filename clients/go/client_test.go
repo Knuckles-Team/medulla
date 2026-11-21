@@ -12,13 +12,13 @@ import (
 )
 
 // spec: MEDULLA-CONTRACT-R004
-// TestMethodBodyVectors replays every committed vector through the embedded
+// TestMethodBodyVectors replays every generated vector through the embedded
 // engine codec: the exact request frame a connector sends, decoded and
 // re-encoded by medulla_method_codec.wasm, must byte-match the Rust body.
 func TestMethodBodyVectors(t *testing.T) {
-	data, err := os.ReadFile("../../tests/fixtures/method_body_vectors.json")
+	data, err := os.ReadFile("method_body_vectors.json")
 	if err != nil {
-		t.Fatalf("read the method-body vectors: %v", err)
+		t.Fatalf("run scripts/build_method_codec_wasm.py first: %v", err)
 	}
 	var file struct {
 		Codec   string `json:"codec"`

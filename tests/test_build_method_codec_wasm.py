@@ -350,3 +350,24 @@ def test_ci_builds_the_codec_before_client_tests_and_uploads_it():
     names = [step.get("name", "") for step in steps]
     first_client_test = min(i for i, name in enumerate(names) if "client tests" in name)
     assert steps.index(build) < first_client_test
+
+
+# spec: MEDULLA-CONTRACT-R061
+@pytest.mark.spec("MEDULLA-CONTRACT-R061")
+def test_vectors_are_written_beside_both_codec_copies(
+    codec, codec_repo, monkeypatch, tmp_path
+):
+    root, _ = codec_repo
+    document = {"codec": codec.METHOD_BODY_CODEC, "vectors": [{"name": "a"}]}
+
+    def fake_run(command, **kwargs):
+        output = Path(command[-1])
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(document), encoding="utf-8")
+
+    monkeypatch.setattr(codec.subprocess, "run", fake_run)
+    assert codec.write_vectors(root, tmp_path / "target") == 0
+    for client in codec.CLIENT_DIRS:
+        written = root / client / codec.VECTORS
+        assert json.loads(written.read_text(encoding="utf-8")) == document
+    assert not (ROOT / "tests" / "fixtures" / "method_body_vectors.json").exists()
