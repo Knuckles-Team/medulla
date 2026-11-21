@@ -56,5 +56,14 @@ closed_error_codes! {
         /// A write that would mutate a published lesson, adoption, contrast
         /// or probe run.
         RecordImmutable => "HarnessRecordImmutable",
+        /// A capability gap or desired enhancement written at a stale revision
+        /// (MEDULLA-ORCH-VOCAB-R004.6.2).
+        GapRevisionConflict => "GAP_REVISION_CONFLICT",
+        /// A capability gap or desired enhancement that names a capability,
+        /// task class or domain the graph does not hold; no term is created.
+        GapReferenceUnknown => "GAP_REFERENCE_UNKNOWN",
+        /// A capability gap or desired enhancement rewritten by a principal
+        /// that is not its owner.
+        GapOwnerDenied => "GAP_OWNER_DENIED",
     }
 }

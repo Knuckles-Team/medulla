@@ -42,6 +42,10 @@ use std::collections::BTreeMap;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::change_envelope::ChangeEnvelope;
 use medulla_protocol_types::protocol::Method;
+use medulla_work_types::orchestration::capability_gap::{
+    decode_enhancement_write, decode_gap_write, is_capability_gap_write,
+    is_desired_enhancement_write,
+};
 use medulla_work_types::orchestration::decode_component_write;
 use medulla_work_types::orchestration::improvement::decode_adopted_harness_write;
 use medulla_work_types::orchestration::improvement::decode_harness_contrast_write;
@@ -54,6 +58,7 @@ use medulla_work_types::orchestration::improvement::is_harness_probe_run_write;
 use medulla_work_types::orchestration::improvement::ImprovementLibraryRefusal;
 use medulla_work_types::orchestration::is_harness_component_write;
 use medulla_work_types::orchestration::HarnessComponentRefusal;
+use medulla_work_types::orchestration::HarnessVocabularyErrorCode;
 
 type Props = serde_json::Map<String, serde_json::Value>;
 
@@ -529,6 +534,90 @@ fn lesson_admission(
     Ok(Admission::New { head })
 }
 
+/// The decoded fields of one capability-gap or desired-enhancement write, as a
+/// JSON object (both kinds carry the same fields), or the refusal text.
+fn decode_gap_facts(props: &Props) -> Result<serde_json::Value, String> {
+    let decoded = if is_capability_gap_write(props) {
+        decode_gap_write(props)
+            .map_err(|_| ())
+            .and_then(|gap| serde_json::to_value(gap).map_err(|_| ()))
+    } else {
+        decode_enhancement_write(props)
+            .map_err(|_| ())
+            .and_then(|enhancement| serde_json::to_value(enhancement).map_err(|_| ()))
+    };
+    decoded.map_err(|()| {
+        refuse_improvement(
+            ImprovementLibraryRefusal::RecordMalformed,
+            "capability gap record".to_string(),
+        )
+    })
+}
+
+/// The graph-relative admission of one capability-gap or desired-enhancement
+/// write (MEDULLA-ORCH-VOCAB-R004.6.2). `None` when the write is neither.
+///
+/// * The record decodes strictly and its node id is its own `node_id`.
+/// * A stored record at the node: a different owner refuses
+///   `GAP_OWNER_DENIED`; an identical record is an idempotent replay; any
+///   other write must be the next revision, else `GAP_REVISION_CONFLICT`.
+/// * The capability, task class and domain it names must be nodes the graph
+///   (or this write) holds, else `GAP_REFERENCE_UNKNOWN`, and nothing is
+///   created.
+fn validate_capability_gap(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<Option<Admission>, String> {
+    if !is_capability_gap_write(props) && !is_desired_enhancement_write(props) {
+        return Ok(None);
+    }
+    let record = decode_gap_facts(props)?;
+    let text = |value: &serde_json::Value, key: &str| -> String {
+        value
+            .get(key)
+            .and_then(|field| field.as_str())
+            .unwrap_or_default()
+            .to_string()
+    };
+    if text(&record, "node_id") != node_id {
+        return Err(refuse_improvement(
+            ImprovementLibraryRefusal::RecordMalformed,
+            format!("node id '{node_id}' does not match the record's own node id"),
+        ));
+    }
+    if let Some(stored_props) = view.props(node_id) {
+        let stored = decode_gap_facts(&stored_props)?;
+        if text(&stored, "owner_principal") != text(&record, "owner_principal") {
+            return Err(format!(
+                "{}: node '{node_id}' belongs to another owner",
+                HarnessVocabularyErrorCode::GapOwnerDenied.as_str()
+            ));
+        }
+        if stored == record {
+            return Ok(Some(Admission::Replay));
+        }
+        let stored_revision = stored.get("revision").and_then(|v| v.as_u64()).unwrap_or(0);
+        let revision = record.get("revision").and_then(|v| v.as_u64()).unwrap_or(0);
+        if revision != stored_revision.saturating_add(1) {
+            return Err(format!(
+                "{}: node '{node_id}' is at revision {stored_revision}; revision {revision} is not the next",
+                HarnessVocabularyErrorCode::GapRevisionConflict.as_str()
+            ));
+        }
+    }
+    for key in ["capability_ref", "task_class_ref", "domain_ref"] {
+        let reference = text(&record, key);
+        if !view.has(&reference) {
+            return Err(format!(
+                "{}: {key} '{reference}' names nothing the graph holds",
+                HarnessVocabularyErrorCode::GapReferenceUnknown.as_str()
+            ));
+        }
+    }
+    Ok(Some(Admission::New { head: None }))
+}
+
 /// The graph-relative admission of one adopted-harness write (R802.4).
 fn adoption_admission(
     view: &HarnessView<'_>,
@@ -984,6 +1073,9 @@ fn harness_add_node_admission(
             engine_fills_pointer,
         )?));
     }
+    if let Some(admission) = validate_capability_gap(view, node_id, props)? {
+        return Ok(Some(admission));
+    }
     if is_adopted_harness_write(props) {
         return Ok(Some(adoption_admission(view, node_id, props)?));
     }
@@ -1117,6 +1209,8 @@ impl HarnessBoundaryState {
             || is_adopted_harness_write(props)
             || is_harness_contrast_write(props)
             || is_harness_probe_run_write(props)
+            || is_capability_gap_write(props)
+            || is_desired_enhancement_write(props)
     }
 
     /// The envelope `AddNode` op: a harness record must decode, validate,

@@ -57,6 +57,19 @@ pub enum CapabilityGapRefusal {
     RecordMalformed,
 }
 
+/// Whether `props` is a capability-gap write (its engine-owned marker).
+pub fn is_capability_gap_write(props: &serde_json::Map<String, serde_json::Value>) -> bool {
+    props.get("_capability_gap").and_then(|value| value.as_bool()) == Some(true)
+}
+
+/// Whether `props` is a desired-enhancement write (its engine-owned marker).
+pub fn is_desired_enhancement_write(props: &serde_json::Map<String, serde_json::Value>) -> bool {
+    props
+        .get("_desired_enhancement")
+        .and_then(|value| value.as_bool())
+        == Some(true)
+}
+
 /// Engine-owned keys stripped before the strict decode.
 const ENGINE_OWNED_GAP_KEYS: &[&str] = &[
     "_capability_gap",
