@@ -404,7 +404,7 @@ async fn commit(
             Some(topology) if capacity_backed => {
                 let txn_id = certified::Coordinator::transaction_id(&record, verified);
                 store
-                    .commit_topology_decision_with_approval(
+                    .commit_topology_decision(
                         context,
                         &record,
                         &expected_catalog_digest,
@@ -415,7 +415,7 @@ async fn commit(
                     .map(|parts| (parts.record, Some(parts.evidence_revision)))
             }
             _ => store
-                .commit_decision_record_with_approval(
+                .commit_decision_record(
                     context,
                     &record,
                     &expected_catalog_digest,

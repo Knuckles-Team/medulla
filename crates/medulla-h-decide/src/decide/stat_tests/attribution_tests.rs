@@ -52,6 +52,7 @@ fn commit_slate(
             v1::commit_context(&h.store, &format!("slate-{graph}"), nonce),
             &record,
             &digest,
+            None,
         )
         .unwrap();
 }

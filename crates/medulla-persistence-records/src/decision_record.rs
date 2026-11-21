@@ -262,21 +262,11 @@ impl AgentLibraryStore {
     }
 
     /// Commit `record` as a durable `DecisionRecord` component, snapshot
-    /// checked against the catalog it was decided over. The record itself
-    /// must already have passed the engine's re-derivation.
+    /// checked against the catalog it was decided over, storing the approval
+    /// receipt the commit carried (if any) as the component's `approval`
+    /// attribute (MEDULLA-DECISION-ENGINE-R019.100.2). The record itself must
+    /// already have passed the engine's re-derivation.
     pub fn commit_decision_record(
-        &self,
-        context: AgentLibraryMutationContext,
-        record: &DecisionRecord,
-        expected_catalog_digest: &str,
-    ) -> Result<AgentComponentWriteResult, String> {
-        self.commit_decision_record_with_approval(context, record, expected_catalog_digest, None)
-    }
-
-    /// [`Self::commit_decision_record`] storing the approval receipt the commit
-    /// carried as the component's `approval` attribute
-    /// (MEDULLA-DECISION-ENGINE-R019.100.2).
-    pub fn commit_decision_record_with_approval(
         &self,
         mut context: AgentLibraryMutationContext,
         record: &DecisionRecord,

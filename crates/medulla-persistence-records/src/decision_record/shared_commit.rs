@@ -56,28 +56,9 @@ impl AgentLibraryStore {
     /// `coordinator_txn` is the coordinator transaction id: an admission fence it holds itself
     /// does not block its own write, any other holder does (`ADMISSION_WRITE_BLOCKED`). A repeat
     /// of a stored record is a no-op replay that returns the stored evidence head.
-    pub fn commit_topology_decision(
-        &self,
-        context: AgentLibraryMutationContext,
-        record: &DecisionRecord,
-        expected_catalog_digest: &str,
-        evidence: AgentGraphPublishRequest,
-        coordinator_txn: &str,
-    ) -> Result<TopologyCommitParts, String> {
-        self.commit_topology_decision_with_approval(
-            context,
-            record,
-            expected_catalog_digest,
-            evidence,
-            coordinator_txn,
-            None,
-        )
-    }
-
-    /// [`Self::commit_topology_decision`] storing the approval receipt the commit
-    /// carried as the component's `approval` attribute
+    /// The commit's approval receipt, if any, is stored as the component's `approval` attribute
     /// (MEDULLA-DECISION-ENGINE-R019.100.2).
-    pub fn commit_topology_decision_with_approval(
+    pub fn commit_topology_decision(
         &self,
         mut context: AgentLibraryMutationContext,
         record: &DecisionRecord,

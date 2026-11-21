@@ -202,7 +202,7 @@ fn a_record_commits_once_serves_its_body_and_replays_idempotently() {
     let record = decided(&store).record;
     let digest = record.inputs.catalog_digest.clone();
     let first = store
-        .commit_decision_record(commit_context(&store, "commit-1", 1), &record, &digest)
+        .commit_decision_record(commit_context(&store, "commit-1", 1), &record, &digest, None)
         .expect("commits");
     assert!(!first.replayed);
     assert_eq!(
@@ -216,7 +216,7 @@ fn a_record_commits_once_serves_its_body_and_replays_idempotently() {
     let served: DecisionRecord = serde_json::from_slice(&content.body).expect("decodes");
     assert_eq!(served, record);
     let again = store
-        .commit_decision_record(commit_context(&store, "commit-2", 2), &record, &digest)
+        .commit_decision_record(commit_context(&store, "commit-2", 2), &record, &digest, None)
         .expect("a repeat commit is a replay");
     assert!(again.replayed);
     assert_eq!(again.result.component, first.result.component);
@@ -243,6 +243,7 @@ fn a_catalog_that_moved_since_the_decision_is_a_stale_refusal() {
             commit_context(&store, "commit-stale", 3),
             &record,
             &record.inputs.catalog_digest,
+            None,
         )
         .expect_err("stale");
     assert!(error.starts_with("STALE_CATALOG: "), "{error}");
@@ -263,6 +264,7 @@ fn a_fabricated_record_whose_facts_differ_from_the_published_revision_is_refused
             commit_context(&store, "commit-forged", 4),
             &record,
             &record.inputs.catalog_digest,
+            None,
         )
         .expect_err("forged");
     assert!(error.starts_with("CANDIDATE_FACTS_CHANGED: "), "{error}");
@@ -280,6 +282,7 @@ fn a_record_from_another_tenant_is_refused() {
             commit_context(&store, "commit-tenant", 5),
             &record,
             &record.inputs.catalog_digest,
+            None,
         )
         .expect_err("cross-tenant");
     assert!(error.starts_with("ACCESS_DENIED"), "{error}");
@@ -300,6 +303,7 @@ fn a_published_graph_resolves_to_its_decision_record_through_synthesis_evidence(
             commit_context(&store, "commit-link", 6),
             &record,
             &record.inputs.catalog_digest,
+            None,
         )
         .expect("commits")
         .result
@@ -397,6 +401,7 @@ fn a_pinned_policy_component_decides_and_commits() {
             commit_context(&store, "commit-pinned", 9),
             &record,
             &record.inputs.catalog_digest,
+            None,
         )
         .expect("the pinned policy re-checks inside the commit");
 }
@@ -498,6 +503,7 @@ fn shared_commit_writes_record_and_evidence_in_one_transaction() {
             &digest,
             evidence.clone(),
             "txn-mine",
+            None,
         )
         .unwrap_err();
     FAIL_AFTER_RECORD_ROWS.with(|flag| flag.set(false));
@@ -522,6 +528,7 @@ fn shared_commit_writes_record_and_evidence_in_one_transaction() {
             &digest,
             evidence.clone(),
             "txn-mine",
+            None,
         )
         .expect("commits");
     assert!(!parts.record.replayed);
@@ -548,6 +555,7 @@ fn shared_commit_writes_record_and_evidence_in_one_transaction() {
             &digest,
             evidence,
             "txn-mine",
+            None,
         )
         .expect("a repeat is a replay");
     assert!(again.record.replayed);
@@ -575,6 +583,7 @@ fn shared_commit_writes_record_and_evidence_in_one_transaction() {
             &assembly_b.record.inputs.catalog_digest,
             wrong,
             "txn-mine",
+            None,
         )
         .unwrap_err();
     assert!(error.starts_with("DERIVATION_REJECTED"), "{error}");
@@ -628,6 +637,7 @@ fn shared_commit_is_blocked_by_an_admission_fence() {
             &digest,
             evidence.clone(),
             "txn-mine",
+            None,
         )
         .unwrap_err();
     assert!(error.starts_with(ADMISSION_WRITE_BLOCKED), "{error}");
@@ -648,6 +658,7 @@ fn shared_commit_is_blocked_by_an_admission_fence() {
             &digest,
             evidence,
             "txn-other",
+            None,
         )
         .expect("the fence holder commits");
 }

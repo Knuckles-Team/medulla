@@ -545,6 +545,7 @@ async fn an_assembly_outcome_is_credited_to_its_slate() {
             v1::commit_context(&h.store, "slate-commit", 1),
             &record,
             &digest,
+            None,
         )
         .unwrap();
     let medulla_decision_types::decision::DecisionOutcome::Solved { graph_digest, .. } =
