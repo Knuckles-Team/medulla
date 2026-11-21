@@ -5381,6 +5381,8 @@ dependencies = [
 name = "medulla-enrich"
 version = "0.1.0"
 dependencies = [
+ "medulla-compute",
+ "medulla-source-types",
  "serde",
  "serde_json",
  "sha2 0.10.9",

@@ -23,6 +23,7 @@ pub mod fingerprint;
 pub mod history;
 pub mod links;
 pub mod semantic;
+pub mod symbol_edit_verify;
 
 /// The longest identifier any enrichment type accepts.
 pub const MAX_ID_BYTES: usize = 512;
