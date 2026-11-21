@@ -146,6 +146,11 @@ impl Read {
         self.trace.rows_kept = kept.len();
         self.trace.elapsed_ms =
             u64::try_from(self.started.elapsed().as_millis()).unwrap_or(u64::MAX);
+        // MEDULLA-FEDERATED-QUERY-R091.3: a served query's fragment is one observation of its
+        // shape, keyed by the verified owner. A standalone plan holds no owner and records nothing.
+        if let Some(scope) = session.cache_scope() {
+            super::plan_evolution::observe(scope.owner_salt(), &self.trace);
+        }
         session.record(self.trace);
         kept
     }

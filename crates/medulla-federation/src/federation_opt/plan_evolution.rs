@@ -17,8 +17,14 @@
 //! so one tenant's activity is never visible through another tenant's lookups.
 
 use std::collections::{HashMap, VecDeque};
+use std::sync::{Mutex, OnceLock};
 
+use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+
+use super::cache::FragmentCacheScope;
+use super::trace::FragmentTrace;
 
 /// A query with its literals removed, identified by the digest of its template.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -165,6 +171,424 @@ impl ObservationStore {
     }
 }
 
+
+impl ObservationStore {
+    /// The `limit` most frequently observed shapes of `tenant` with their observation
+    /// counts, most frequent first, ties by digest (MEDULLA-FEDERATED-QUERY-R091.2).
+    pub fn top_shapes(&self, tenant: &str, limit: usize) -> Vec<(String, usize)> {
+        let Some(state) = self.tenants.get(tenant) else {
+            return Vec::new();
+        };
+        let mut ranked: Vec<(String, usize)> = state
+            .shapes
+            .iter()
+            .map(|(digest, entry)| (digest.clone(), entry.observations.len()))
+            .collect();
+        ranked.sort_by(|a, b| b.1.cmp(&a.1).then_with(|| a.0.cmp(&b.0)));
+        ranked.truncate(limit);
+        ranked
+    }
+
+    /// The plan `tenant` ran most often for `shape_digest`, the baseline a candidate must
+    /// beat; ties go to the smaller digest.
+    pub fn baseline_plan(&self, tenant: &str, shape_digest: &str) -> Option<String> {
+        let mut counts: HashMap<&str, usize> = HashMap::new();
+        for observation in self.observations(tenant, shape_digest) {
+            *counts.entry(observation.plan_digest.as_str()).or_default() += 1;
+        }
+        counts
+            .into_iter()
+            .max_by(|a, b| a.1.cmp(&b.1).then_with(|| b.0.cmp(a.0)))
+            .map(|(digest, _)| digest.to_string())
+    }
+}
+
+/// The resolved evolution knobs. This leaf crate cannot see the registry, so the composition
+/// root passes `federation.evolution_top_shapes`, `federation.min_gain`,
+/// `federation.min_replays` and `federation.drift_revalidate` in.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct EvolutionPolicy {
+    pub top_shapes: usize,
+    /// Percent.
+    pub min_gain_percent: u64,
+    /// Runs.
+    pub min_replays: usize,
+    /// Percent.
+    pub drift_revalidate_percent: u64,
+}
+
+/// One replay of a plan under the captured `authority_ref`: what it cost and the rows it
+/// returned (row ids, in any order; compared as a multiset).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ReplayMeasure {
+    pub latency_us: u64,
+    pub bytes_fetched: u64,
+    pub results: Vec<String>,
+}
+
+/// Why a candidate was reverted.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum RevertReason {
+    /// Fewer than `min_replays` replays of the baseline or the candidate.
+    TooFewReplays,
+    /// A replay returned a different result multiset than the baseline.
+    ResultsDiffer,
+    /// Neither p50 latency nor bytes fetched improved by `min_gain`.
+    NoMeasuredGain,
+}
+
+/// The outcome of evaluating one candidate.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Decision {
+    Keep,
+    Revert(RevertReason),
+}
+
+fn p50(mut values: Vec<u64>) -> u64 {
+    values.sort_unstable();
+    values.get(values.len() / 2).copied().unwrap_or(0)
+}
+
+fn improves(baseline: u64, candidate: u64, min_gain_percent: u64) -> bool {
+    baseline > 0
+        && u128::from(candidate) * 100 <= u128::from(baseline) * u128::from(100 - min_gain_percent.min(100))
+}
+
+fn sorted(results: &[String]) -> Vec<&str> {
+    let mut rows: Vec<&str> = results.iter().map(String::as_str).collect();
+    rows.sort_unstable();
+    rows
+}
+
+/// The named default policy `keep_on_measured_gain`: keep a candidate when it was replayed
+/// at least `min_replays` times, every replay returned the baseline's result multiset
+/// (this check is fixed), and p50 latency or p50 bytes fetched improved by `min_gain`.
+pub fn keep_on_measured_gain(
+    policy: &EvolutionPolicy,
+    baseline: &[ReplayMeasure],
+    candidate: &[ReplayMeasure],
+) -> Decision {
+    if baseline.len() < policy.min_replays || candidate.len() < policy.min_replays {
+        return Decision::Revert(RevertReason::TooFewReplays);
+    }
+    let equal = baseline
+        .iter()
+        .zip(candidate)
+        .all(|(base, cand)| sorted(&base.results) == sorted(&cand.results));
+    if !equal {
+        return Decision::Revert(RevertReason::ResultsDiffer);
+    }
+    let latency = |runs: &[ReplayMeasure]| p50(runs.iter().map(|r| r.latency_us).collect());
+    let bytes = |runs: &[ReplayMeasure]| p50(runs.iter().map(|r| r.bytes_fetched).collect());
+    if improves(latency(baseline), latency(candidate), policy.min_gain_percent)
+        || improves(bytes(baseline), bytes(candidate), policy.min_gain_percent)
+    {
+        Decision::Keep
+    } else {
+        Decision::Revert(RevertReason::NoMeasuredGain)
+    }
+}
+
+/// Evaluate one shape's candidate against its baseline replays (MEDULLA-FEDERATED-QUERY-R091.2).
+pub fn evaluate_shape(
+    policy: &EvolutionPolicy,
+    baseline: &[ReplayMeasure],
+    candidate: &[ReplayMeasure],
+) -> Decision {
+    keep_on_measured_gain(policy, baseline, candidate)
+}
+
+/// Must a kept plan be re-validated: did the source statistic move by `drift_revalidate`
+/// percent or more since the plan was kept?
+pub fn drift_requires_revalidation(policy: &EvolutionPolicy, kept: f64, current: f64) -> bool {
+    if kept == 0.0 {
+        return current != 0.0;
+    }
+    ((current - kept).abs() / kept.abs()) * 100.0 >= policy.drift_revalidate_percent as f64
+}
+
+fn derived_digest(parts: &[&str]) -> String {
+    let mut digest = Sha256::new();
+    for part in parts {
+        digest.update((part.len() as u64).to_be_bytes());
+        digest.update(part.as_bytes());
+    }
+    format!("{:x}", digest.finalize())
+}
+
+/// The `rewrite` generator: one candidate per top shape, a rewritten form of the baseline
+/// plan named by the digest of the baseline and the shape's template.
+pub fn rewrite(
+    store: &ObservationStore,
+    tenant: &str,
+    policy: &EvolutionPolicy,
+) -> Vec<PlanCandidate> {
+    top_candidates(store, tenant, policy, CandidateKind::Rewrite, |shape, baseline| {
+        derived_digest(&["rewrite", baseline, &shape.query_template])
+    })
+}
+
+/// The `pushdown_choice` generator: for each top shape, the observed plan with the fewest
+/// bytes fetched whose pushdowns differ from the baseline's.
+pub fn pushdown_choice(
+    store: &ObservationStore,
+    tenant: &str,
+    policy: &EvolutionPolicy,
+) -> Vec<PlanCandidate> {
+    let mut out = Vec::new();
+    for (shape_digest, _) in store.top_shapes(tenant, policy.top_shapes) {
+        let Some(baseline) = store.baseline_plan(tenant, &shape_digest) else {
+            continue;
+        };
+        let baseline_pushdowns: Option<&Vec<String>> = store
+            .observations(tenant, &shape_digest)
+            .find(|o| o.plan_digest == baseline)
+            .map(|o| &o.pushdowns);
+        let best = store
+            .observations(tenant, &shape_digest)
+            .filter(|o| o.plan_digest != baseline && Some(&o.pushdowns) != baseline_pushdowns)
+            .min_by(|a, b| {
+                a.bytes_fetched
+                    .cmp(&b.bytes_fetched)
+                    .then_with(|| a.plan_digest.cmp(&b.plan_digest))
+            });
+        if let Some(best) = best {
+            out.push(PlanCandidate {
+                shape_digest,
+                kind: CandidateKind::PushdownChoice,
+                plan_digest: best.plan_digest.clone(),
+                baseline_digest: baseline,
+            });
+        }
+    }
+    out
+}
+
+fn top_candidates(
+    store: &ObservationStore,
+    tenant: &str,
+    policy: &EvolutionPolicy,
+    kind: CandidateKind,
+    plan_of: impl Fn(&PlanShape, &str) -> String,
+) -> Vec<PlanCandidate> {
+    let mut out = Vec::new();
+    for (shape_digest, _) in store.top_shapes(tenant, policy.top_shapes) {
+        let (Some(shape), Some(baseline)) = (
+            store.shape(tenant, &shape_digest),
+            store.baseline_plan(tenant, &shape_digest),
+        ) else {
+            continue;
+        };
+        out.push(PlanCandidate {
+            plan_digest: plan_of(shape, &baseline),
+            shape_digest,
+            kind,
+            baseline_digest: baseline,
+        });
+    }
+    out
+}
+
+/// The sources of a shape's latest observation.
+fn latest_sources(store: &ObservationStore, tenant: &str, shape_digest: &str) -> Vec<String> {
+    store
+        .observations(tenant, shape_digest)
+        .last()
+        .map(|o| o.sources.clone())
+        .unwrap_or_default()
+}
+
+/// Shapes seen at least `min_replays` times, best first.
+fn replayed_shapes(
+    store: &ObservationStore,
+    tenant: &str,
+    policy: &EvolutionPolicy,
+) -> Vec<String> {
+    store
+        .top_shapes(tenant, policy.top_shapes)
+        .into_iter()
+        .filter(|(_, seen)| *seen >= policy.min_replays)
+        .map(|(digest, _)| digest)
+        .collect()
+}
+
+/// `cache_subgraph` candidates (MEDULLA-FEDERATED-QUERY-R091.7): a shape seen at least
+/// `min_replays` times whose every source has a fresh checkpoint in `scope`, so the
+/// fragment result can be cached in the `FragmentCacheScope` with its existing time-to-live.
+pub fn generate_cache_candidates(
+    store: &ObservationStore,
+    tenant: &str,
+    policy: &EvolutionPolicy,
+    scope: &FragmentCacheScope,
+) -> Vec<PlanCandidate> {
+    let mut out = Vec::new();
+    for shape_digest in replayed_shapes(store, tenant, policy) {
+        let sources = latest_sources(store, tenant, &shape_digest);
+        if sources.is_empty() || sources.iter().any(|s| scope.watermark_of(s).is_none()) {
+            continue;
+        }
+        let Some(baseline) = store.baseline_plan(tenant, &shape_digest) else {
+            continue;
+        };
+        out.push(PlanCandidate {
+            plan_digest: derived_digest(&["cache_subgraph", &baseline]),
+            shape_digest,
+            kind: CandidateKind::CacheSubgraph,
+            baseline_digest: baseline,
+        });
+    }
+    out
+}
+
+/// `materialize_subgraph` candidates (MEDULLA-FEDERATED-QUERY-R091.7): the candidate and the
+/// [`AccelerationPolicy`] built from the shape's pushed predicate. It needs the source `copy`
+/// capability (`supports_copy`) and a fresh freshness watermark.
+pub fn generate_materialize_candidates(
+    store: &ObservationStore,
+    tenant: &str,
+    policy: &EvolutionPolicy,
+    scope: &FragmentCacheScope,
+    supports_copy: &dyn Fn(&str) -> bool,
+) -> Vec<(PlanCandidate, AccelerationPolicy)> {
+    let mut out = Vec::new();
+    for shape_digest in replayed_shapes(store, tenant, policy) {
+        let sources = latest_sources(store, tenant, &shape_digest);
+        let [source] = sources.as_slice() else {
+            continue;
+        };
+        let predicate = store
+            .observations(tenant, &shape_digest)
+            .last()
+            .map(|o| o.pushdowns.join(" AND "))
+            .unwrap_or_default();
+        let watermark = scope.watermark_of(source);
+        if !supports_copy(source) || predicate.is_empty() || watermark.is_none() {
+            continue;
+        }
+        let Some(baseline) = store.baseline_plan(tenant, &shape_digest) else {
+            continue;
+        };
+        out.push((
+            PlanCandidate {
+                plan_digest: derived_digest(&["materialize_subgraph", &baseline]),
+                shape_digest,
+                kind: CandidateKind::MaterializeSubgraph,
+                baseline_digest: baseline,
+            },
+            AccelerationPolicy {
+                source_supports_copy: true,
+                hot_subset_predicate: predicate,
+                freshness_watermark: watermark,
+            },
+        ));
+    }
+    out
+}
+
+/// A suggestion for the operator to index one source column. The engine sends nothing to
+/// the source (MEDULLA-FEDERATED-QUERY-R091.8).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct IndexSuggestion {
+    pub source: String,
+    pub column: String,
+    pub shape_digest: String,
+}
+
+/// The prefix of a pushdown entry that names a filtered column: `filter:<column>`.
+pub const FILTER_PUSHDOWN_PREFIX: &str = "filter:";
+
+/// One suggestion per shape seen at least `min_replays` times whose latest observation
+/// pushed a filter on a column to a single source.
+pub fn generate_index_suggestions(
+    store: &ObservationStore,
+    tenant: &str,
+    policy: &EvolutionPolicy,
+) -> Vec<IndexSuggestion> {
+    let mut out = Vec::new();
+    for shape_digest in replayed_shapes(store, tenant, policy) {
+        let sources = latest_sources(store, tenant, &shape_digest);
+        let [source] = sources.as_slice() else {
+            continue;
+        };
+        let column = store
+            .observations(tenant, &shape_digest)
+            .last()
+            .and_then(|o| {
+                o.pushdowns
+                    .iter()
+                    .find_map(|p| p.strip_prefix(FILTER_PUSHDOWN_PREFIX))
+            })
+            .map(str::to_string);
+        if let Some(column) = column {
+            out.push(IndexSuggestion {
+                source: source.clone(),
+                column,
+                shape_digest,
+            });
+        }
+    }
+    out
+}
+
+fn global_store() -> &'static Mutex<ObservationStore> {
+    static STORE: OnceLock<Mutex<ObservationStore>> = OnceLock::new();
+    STORE.get_or_init(|| {
+        let knobs = medulla_federation_limits();
+        Mutex::new(ObservationStore::new(knobs))
+    })
+}
+
+/// The store bounds when no composition root has resolved the knobs: the registry defaults.
+fn medulla_federation_limits() -> StoreLimits {
+    StoreLimits {
+        observations_per_shape: 4_096,
+        shapes_per_tenant: 1_024,
+    }
+}
+
+/// Record one finished fragment for `tenant` (MEDULLA-FEDERATED-QUERY-R091.3). The shape is the
+/// fragment's source label and the plan is the fetch strategy with its pushdowns.
+pub(super) fn observe(tenant: &str, trace: &FragmentTrace) {
+    let shape_digest = derived_digest(&["shape", &trace.source]);
+    let mut pushdowns = Vec::new();
+    if let Some(limit) = trace.limit_pushed {
+        pushdowns.push(format!("limit:{limit}"));
+    }
+    if trace.keys_pushed > 0 {
+        pushdowns.push("keys".to_string());
+    }
+    let plan_digest = derived_digest(&["plan", &format!("{:?}", trace.strategy), &pushdowns.join(",")]);
+    let shape = PlanShape {
+        shape_digest: shape_digest.clone(),
+        query_template: trace.source.clone(),
+        language: "federation".into(),
+        authority_ref: tenant.to_string(),
+    };
+    let observation = PlanObservation {
+        shape_digest,
+        plan_digest,
+        sources: vec![trace.source.clone()],
+        pushdowns,
+        latency_us: trace.elapsed_ms.saturating_mul(1_000),
+        rows_fetched: u64::try_from(trace.rows_fetched).unwrap_or(u64::MAX),
+        bytes_fetched: 0,
+        cache_hit: false,
+        graph_revision: 0,
+    };
+    if let Ok(mut store) = global_store().lock() {
+        store.observe(tenant, shape, observation);
+    }
+}
+
+/// How many times `tenant`'s fragments of `source_label` have been recorded.
+pub fn recorded_count(tenant: &str, source_label: &str) -> usize {
+    let shape_digest = derived_digest(&["shape", source_label]);
+    global_store()
+        .lock()
+        .map_or(0, |store| store.observations(tenant, &shape_digest).count())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -269,5 +693,146 @@ mod tests {
         store.observe("tenant-b", shape("s1"), observation("s1", "b1"));
         assert_eq!(plans(&store, "tenant-b", "s1"), ["b1"]);
         assert_eq!(plans(&store, "tenant-a", "s1"), ["p3", "p4", "p5"]);
+    }
+
+    fn policy() -> EvolutionPolicy {
+        EvolutionPolicy {
+            top_shapes: 2,
+            min_gain_percent: 10,
+            min_replays: 3,
+            drift_revalidate_percent: 25,
+        }
+    }
+
+    fn runs(latency_us: u64, bytes: u64, results: &[&str], n: usize) -> Vec<ReplayMeasure> {
+        (0..n)
+            .map(|_| ReplayMeasure {
+                latency_us,
+                bytes_fetched: bytes,
+                results: results.iter().map(|r| r.to_string()).collect(),
+            })
+            .collect()
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R091.2
+    #[test]
+    fn keep_or_revert_by_measurement() {
+        let p = policy();
+        let base = runs(1_000, 4_000, &["a", "b"], 3);
+        // A faster candidate with an equal multiset (order aside) is kept.
+        assert_eq!(
+            keep_on_measured_gain(&p, &base, &runs(800, 4_000, &["b", "a"], 3)),
+            Decision::Keep
+        );
+        // Fewer bytes alone is a gain.
+        assert_eq!(
+            evaluate_shape(&p, &base, &runs(1_000, 3_000, &["a", "b"], 3)),
+            Decision::Keep
+        );
+        // A gain below the floor, or a slower candidate, reverts.
+        assert_eq!(
+            keep_on_measured_gain(&p, &base, &runs(950, 4_000, &["a", "b"], 3)),
+            Decision::Revert(RevertReason::NoMeasuredGain)
+        );
+        assert_eq!(
+            keep_on_measured_gain(&p, &base, &runs(2_000, 8_000, &["a", "b"], 3)),
+            Decision::Revert(RevertReason::NoMeasuredGain)
+        );
+        // An unequal result multiset reverts even when it is much faster.
+        assert_eq!(
+            keep_on_measured_gain(&p, &base, &runs(100, 100, &["a"], 3)),
+            Decision::Revert(RevertReason::ResultsDiffer)
+        );
+        // Too few replays revert.
+        assert_eq!(
+            keep_on_measured_gain(&p, &base, &runs(100, 100, &["a", "b"], 2)),
+            Decision::Revert(RevertReason::TooFewReplays)
+        );
+        // Drift re-validates a kept plan at the knob.
+        assert!(drift_requires_revalidation(&p, 100.0, 125.0));
+        assert!(!drift_requires_revalidation(&p, 100.0, 120.0));
+    }
+
+    fn seeded(plans: &[(&str, &str, Vec<String>)], times: usize) -> ObservationStore {
+        let mut store = ObservationStore::new(StoreLimits {
+            observations_per_shape: 64,
+            shapes_per_tenant: 8,
+        });
+        for _ in 0..times {
+            for (plan, source, pushdowns) in plans {
+                let mut obs = observation("s1", plan);
+                obs.sources = vec![source.to_string()];
+                obs.pushdowns = pushdowns.clone();
+                store.observe("t", shape("s1"), obs);
+            }
+        }
+        store
+    }
+
+    fn scope(sources: &[&str]) -> FragmentCacheScope {
+        FragmentCacheScope::new(
+            "salt".into(),
+            sources
+                .iter()
+                .map(|name| {
+                    (
+                        name.to_string(),
+                        super::super::cache::SourceWatermark {
+                            watermark: "w1".into(),
+                            valid_through_ms: u64::MAX,
+                            entry_ttl_ms: None,
+                        },
+                    )
+                })
+                .collect(),
+        )
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R091.7
+    #[test]
+    fn cache_and_materialize_candidates_respect_capability() {
+        let p = policy();
+        let store = seeded(&[("p1", "src", vec!["filter:status".into()])], 3);
+        let fresh = scope(&["src"]);
+        let cache = generate_cache_candidates(&store, "t", &p, &fresh);
+        assert_eq!(cache.len(), 1);
+        assert_eq!(cache[0].kind, CandidateKind::CacheSubgraph);
+        assert_eq!(cache[0].baseline_digest, "p1");
+        // No checkpoint: no cache candidate. Too few sightings: none either.
+        assert!(generate_cache_candidates(&store, "t", &p, &scope(&[])).is_empty());
+        let rare = seeded(&[("p1", "src", vec!["filter:status".into()])], 2);
+        assert!(generate_cache_candidates(&rare, "t", &p, &fresh).is_empty());
+
+        let copy = |_: &str| true;
+        let nocopy = |_: &str| false;
+        let built = generate_materialize_candidates(&store, "t", &p, &fresh, &copy);
+        assert_eq!(built.len(), 1);
+        assert_eq!(built[0].0.kind, CandidateKind::MaterializeSubgraph);
+        assert_eq!(built[0].1.hot_subset_predicate, "filter:status");
+        assert_eq!(built[0].1.freshness_watermark.as_deref(), Some("w1"));
+        assert!(built[0].1.source_supports_copy);
+        // Without the copy capability or a watermark nothing materializes.
+        assert!(generate_materialize_candidates(&store, "t", &p, &fresh, &nocopy).is_empty());
+        assert!(generate_materialize_candidates(&store, "t", &p, &scope(&[]), &copy).is_empty());
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R091.8
+    #[test]
+    fn index_suggestion_threshold() {
+        let p = policy();
+        let pushed = vec!["limit:5".to_string(), "filter:status".to_string()];
+        let store = seeded(&[("p1", "src", pushed.clone())], 3);
+        assert_eq!(
+            generate_index_suggestions(&store, "t", &p),
+            vec![IndexSuggestion {
+                source: "src".into(),
+                column: "status".into(),
+                shape_digest: "s1".into(),
+            }]
+        );
+        // Below the replay threshold, or with no filtered column, nothing is suggested.
+        assert!(generate_index_suggestions(&seeded(&[("p1", "src", pushed)], 2), "t", &p).is_empty());
+        let bare = seeded(&[("p1", "src", vec!["limit:5".into()])], 3);
+        assert!(generate_index_suggestions(&bare, "t", &p).is_empty());
     }
 }
