@@ -10792,13 +10792,387 @@ class LearningWriteRecordRollouts(BaseModel):
     write: Literal["record_rollouts"]
 
 
+class AdapterVerdict(str, Enum):
+    WATCHING = "watching"
+    HEALTHY = "healthy"
+    ROLLED_BACK = "rolled_back"
+
+
+class AdapterMonitored(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    adapter_digest: str
+    losses: Annotated[int, Field(ge=0)]
+    min_outcomes: Annotated[int, Field(ge=0)]
+    outcomes: Annotated[int, Field(ge=0)]
+    scope: AdapterScope
+    state: AdapterVerdict
+    win_rate_upper_q16: int
+    window: RecordWindow
+    wins: Annotated[int, Field(ge=0)]
+
+
+class LearningRecordedMonitored(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    adapter_digest: str
+    losses: Annotated[int, Field(ge=0)]
+    min_outcomes: Annotated[int, Field(ge=0)]
+    outcomes: Annotated[int, Field(ge=0)]
+    scope: AdapterScope
+    state: AdapterVerdict
+    win_rate_upper_q16: int
+    window: RecordWindow
+    wins: Annotated[int, Field(ge=0)]
+    recorded: Literal["monitored"]
+
+
+class CalibrationFitRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    question_id: str | None = None
+    scorer_version: str
+    window: RecordWindow
+
+
+class LearningWriteFitCalibration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: CalibrationFitRequest
+    write: Literal["fit_calibration"]
+
+
+class CalibrationKnot(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    relevant_ppm: Annotated[int, Field(ge=0)]
+    score_ppm: Annotated[int, Field(ge=0)]
+
+
+BoundedVec_CalibrationKnot_64 = Annotated[
+    list[CalibrationKnot], Field(max_length=64)
+]
+
+
+class CalibrationCurve(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    knots: BoundedVec_CalibrationKnot_64
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    scorer_version: str
+
+
+class CalibrationReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    curve_digest: str
+    n_pairs: Annotated[int, Field(ge=0)]
+    n_relevant: Annotated[int, Field(ge=0)]
+    passed: bool
+    scorer_version: str
+
+
+class CalibrationFitted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    curve: CalibrationCurve
+    curve_digest: str
+    receipt: CalibrationReceipt
+    receipt_digest: str
+
+
+class LearningRecordedCalibration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    curve: CalibrationCurve
+    curve_digest: str
+    receipt: CalibrationReceipt
+    receipt_digest: str
+    recorded: Literal["calibration"]
+
+
+class GenerationCycleState(str, Enum):
+    PUBLISHED = "published"
+    REEMBEDDING = "reembedding"
+    EVALUATED = "evaluated"
+    ACTIVATED = "activated"
+    REJECTED = "rejected"
+
+
+class GenerationCycle(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    logical_graph: str
+    model_ref: ModelRef
+    receipt_digest: str | None = None
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    shadow_graph: str
+    state: GenerationCycleState
+
+
+class GenerationEvaluated(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    receipt: GenerationReceipt
+    receipt_digest: str
+
+
+class GenerationCycleReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evaluation: GenerationEvaluated
+    model_ref: ModelRef
+    pointer_after: str | None = None
+    pointer_before: str | None = None
+    reembedded_nodes: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+
+
+class GenerationCycleJob(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    batches: Annotated[int, Field(ge=0)]
+    cycle: GenerationCycle
+    job_id: str
+    lease_id: str | None = None
+    next_node: Annotated[int, Field(ge=0)]
+    receipt: GenerationCycleReceipt | None = None
+    rejection: str | None = None
+    reembedded_nodes: Annotated[int, Field(ge=0)]
+    request_digest: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+
+
+class LearningRecordedCycle(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    batches: Annotated[int, Field(ge=0)]
+    cycle: GenerationCycle
+    job_id: str
+    lease_id: str | None = None
+    next_node: Annotated[int, Field(ge=0)]
+    receipt: GenerationCycleReceipt | None = None
+    rejection: str | None = None
+    reembedded_nodes: Annotated[int, Field(ge=0)]
+    request_digest: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    recorded: Literal["cycle"]
+
+
+class FreshResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content_digest: str
+    query_digest: str
+    query_text: str
+    refresh_id: str
+    retrieved_at: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    source_connection_iri: str
+    url: str
+
+
+class StoredFreshRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    canonical_url: str
+    logical_graph: str
+    result: FreshResult
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    supersedes: str | None = None
+
+
+class RegionMark(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_type: str
+    revision: Annotated[int, Field(ge=0)]
+    shard_id: Annotated[int, Field(ge=0)]
+
+
+class FreshnessReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    completed_at_ms: Annotated[int, Field(ge=0)]
+    cost_units_spent: Annotated[int, Field(ge=0)]
+    logical_graph: str
+    new_count: Annotated[int, Field(ge=0)]
+    refresh_id: str
+    regions: list[RegionMark]
+    requests_spent: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    source_connection_iri: str
+    stored: list[FreshResult]
+    superseded_count: Annotated[int, Field(ge=0)]
+    trigger: RefreshTrigger
+    unchanged_count: Annotated[int, Field(ge=0)]
+
+
+class LearningRecordedRefreshed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    completed_at_ms: Annotated[int, Field(ge=0)]
+    cost_units_spent: Annotated[int, Field(ge=0)]
+    logical_graph: str
+    new_count: Annotated[int, Field(ge=0)]
+    refresh_id: str
+    regions: list[RegionMark]
+    requests_spent: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    source_connection_iri: str
+    stored: list[FreshResult]
+    superseded_count: Annotated[int, Field(ge=0)]
+    trigger: RefreshTrigger
+    unchanged_count: Annotated[int, Field(ge=0)]
+    recorded: Literal["refreshed"]
+
+
+class DistilledScorerManifest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    persisted_at_ms: Annotated[int, Field(ge=0)]
+    score_count: Annotated[int, Field(ge=0)]
+    score_digest: Digest256
+    scorer_id: str
+    scorer_revision: Annotated[int, Field(ge=0)]
+
+
+class LearningRecordedDistilledScores(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    persisted_at_ms: Annotated[int, Field(ge=0)]
+    score_count: Annotated[int, Field(ge=0)]
+    score_digest: Digest256
+    scorer_id: str
+    scorer_revision: Annotated[int, Field(ge=0)]
+    recorded: Literal["distilled_scores"]
+
+
+class DriftKind(str, Enum):
+    DISTRIBUTION_SHIFT = "distribution_shift"
+    VOCABULARY_GROWTH = "vocabulary_growth"
+    QUALITY_DECAY = "quality_decay"
+    STALENESS = "staleness"
+
+
+class RefreshPriority(str, Enum):
+    DOWNTIME = "downtime"
+    ON_DEMAND = "on_demand"
+
+
+class DriftSignal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: DriftKind
+    observed_at: Annotated[int, Field(ge=0)]
+    reference_generation: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    scope: str
+    threshold_q16: int
+    value_q16: int
+    window: Annotated[int, Field(ge=0)]
+
+
+class RegionRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_type: str
+    revision_from: Annotated[int, Field(ge=0)]
+    revision_to: Annotated[int, Field(ge=0)]
+    shard_id: Annotated[int, Field(ge=0)]
+
+
+BoundedVec_RegionRef_4096 = Annotated[list[RegionRef], Field(max_length=4096)]
+
+
+class RefreshPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    logical_graph: str
+    priority: RefreshPriority
+    reason: DriftKind
+    regions: BoundedVec_RegionRef_4096
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    target_generation: str
+
+
+class FiringShard(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kinds: list[DriftKind]
+    shard_id: Annotated[int, Field(ge=0)]
+
+
+class ScheduledRefresh(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    plan: RefreshPlan
+    plan_digest: str
+    scheduled_at_ms: Annotated[int, Field(ge=0)]
+
+
+class DriftEvaluated(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    firing: list[FiringShard]
+    logical_graph: str
+    monitored_shards: Annotated[int, Field(ge=0)]
+    scheduled: ScheduledRefresh | None = None
+
+
+class LearningRecordedDrift(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    firing: list[FiringShard]
+    logical_graph: str
+    monitored_shards: Annotated[int, Field(ge=0)]
+    scheduled: ScheduledRefresh | None = None
+    recorded: Literal["drift"]
+
+
+class StoredFeedback(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    event: FeedbackEvent
+    premises: list[str]
+    producer: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+
+
+class LearningRecordedFeedback(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    event: FeedbackEvent
+    premises: list[str]
+    producer: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+    recorded: Literal["feedback"]
+
+
+class LearningRecordedPackageRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    package_digest: Digest256
+    passed: bool
+    recorded: Literal["package_run"]
+    run_id: Annotated[str, Field(min_length=1)]
+
+
 LearningRecorded = Annotated[
     LearningRecordedOutcome
     | LearningRecordedFitted
     | LearningRecordedGeneration
     | LearningRecordedPointer
     | LearningRecordedRollouts
-    | LearningRecordedRun,
+    | LearningRecordedRun
+    | LearningRecordedMonitored
+    | LearningRecordedCalibration
+    | LearningRecordedCycle
+    | LearningRecordedRefreshed
+    | LearningRecordedDistilledScores
+    | LearningRecordedDrift
+    | LearningRecordedFeedback
+    | LearningRecordedPackageRun,
     Field(discriminator="recorded"),
 ]
 
@@ -11029,7 +11403,8 @@ LearningWrite = Annotated[
     | LearningWriteUploadDistilledScores
     | LearningWritePackageRun
     | LearningWriteRecordFeedback
-    | LearningWriteRecordRollouts,
+    | LearningWriteRecordRollouts
+    | LearningWriteFitCalibration,
     Field(discriminator="write"),
 ]
 
@@ -37825,8 +38200,10 @@ __all__ = [
     "AdapterDirection",
     "AdapterEvalReceipt",
     "AdapterFitRequest",
+    "AdapterMonitored",
     "AdapterSpec",
     "AdapterSpecLora",
+    "AdapterVerdict",
     "AdfResult",
     "AdmittedRequest",
     "AdmittedRequestRecord",
@@ -38013,6 +38390,8 @@ __all__ = [
     "BlobFetchBeginResult",
     "BlobGcResult",
     "BlobReference",
+    "BoundedVec_CalibrationKnot_64",
+    "BoundedVec_RegionRef_4096",
     "BoundProof",
     "BoundProofRoot",
     "BoundProofRootBody",
@@ -38134,7 +38513,12 @@ __all__ = [
     "BusParticipant",
     "BusRoster",
     "BusRosterEntry",
+    "CalibrationCurve",
+    "CalibrationFitRequest",
+    "CalibrationFitted",
+    "CalibrationKnot",
     "CalibrationMethod",
+    "CalibrationReceipt",
     "CalibrationStatement",
     "CalibrationWire",
     "CalibrationWireInterval",
@@ -38165,13 +38549,34 @@ __all__ = [
     "DecisionLogOpWhyNot",
     "DecisionProvenance",
     "DecisionWhyNot",
+    "DistilledScorerManifest",
+    "DriftEvaluated",
+    "DriftKind",
+    "DriftSignal",
     "ExecutionAnswer",
     "ExecutionAnswerPart",
     "ExecutionAnswerPartAbstain",
     "ExecutionAnswerPartAnswer",
     "ExecutionAnswerParts",
     "FactUseItem",
+    "FiringShard",
+    "FreshnessReceipt",
+    "FreshResult",
+    "GenerationCycle",
+    "GenerationCycleJob",
+    "GenerationCycleReceipt",
+    "GenerationCycleState",
+    "GenerationEvaluated",
     "InputsState",
+    "LearningRecordedCalibration",
+    "LearningRecordedCycle",
+    "LearningRecordedDistilledScores",
+    "LearningRecordedDrift",
+    "LearningRecordedFeedback",
+    "LearningRecordedMonitored",
+    "LearningRecordedPackageRun",
+    "LearningRecordedRefreshed",
+    "LearningWriteFitCalibration",
     "MediaAttachment",
     "Memento",
     "MemoryExportManifest",
@@ -38200,6 +38605,13 @@ __all__ = [
     "ProvenancePremise",
     "ProvenanceRule",
     "RecordKind",
+    "RefreshPlan",
+    "RefreshPriority",
+    "RegionMark",
+    "RegionRef",
+    "ScheduledRefresh",
+    "StoredFeedback",
+    "StoredFreshRow",
     "WhyNotReason",
     "WhyNotVerdict",
     "RevisionProposalListRequest",
