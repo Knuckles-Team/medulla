@@ -70,7 +70,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T062 [US2] MEDULLA-SDLC-R014 Spec artifacts are graph records .
 - [ ] T063 [P] [US2] MEDULLA-SDLC-R014.1 Deterministic parser for spec artifacts.
 - [ ] T064 [US2] MEDULLA-SDLC-R014.2 Incremental ingest by file digest.
-- [ ] T065 [US2] MEDULLA-SDLC-R014.3 Changesets cite the requirements they deliver.
+- [x] T065 [US2] MEDULLA-SDLC-R014.3 Changesets cite the requirements they deliver.
 - [ ] T066 [US2] MEDULLA-SDLC-R014.4 Contracts form the seam graph.
 - [x] T067 [P] [US2] MEDULLA-SDLC-R014.5 Spec-driven development ontology pack.
 - [ ] T068 [US2] MEDULLA-SDLC-R014.6 Competency questions over the artifact graph.

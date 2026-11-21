@@ -50,6 +50,7 @@ fn scope(versions: Vec<IndexFileVersion>, tombstones: Vec<IndexTombstone>) -> In
         file_versions: BoundedVec::new(versions).unwrap(),
         tombstones: BoundedVec::new(tombstones).unwrap(),
         commits: BoundedVec::default(),
+        branch: None,
     }
 }
 
@@ -351,6 +352,7 @@ async fn code_with_decorators_and_home_paths() {
         file_versions: BoundedVec::new(vec![member("main", "app/home/views.py", VIEWS)]).unwrap(),
         tombstones: BoundedVec::default(),
         commits: BoundedVec::default(),
+        branch: None,
     };
     let result = index(&state, 2, &[("app/home/views.py", VIEWS)], code).await;
     let main = node_id(&result, "Branch", "ref_name", "main");

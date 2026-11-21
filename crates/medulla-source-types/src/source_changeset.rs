@@ -236,6 +236,13 @@ pub struct GitOrigin {
     pub raw_headers: String,
 }
 
+/// Decode the changeset a branch commit carries as its payload (MEDULLA-SCM-R002).
+/// The one decoder: the submit path and the repository index both read the chain
+/// through it.
+pub fn decode_changeset(bytes: &[u8]) -> Result<Changeset, String> {
+    rmp_serde::from_slice(bytes).map_err(|error| error.to_string())
+}
+
 /// A changeset: the paths that changed against the first parent.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

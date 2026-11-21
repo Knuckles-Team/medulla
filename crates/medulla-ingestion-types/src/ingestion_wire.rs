@@ -304,6 +304,11 @@ pub struct IndexRepositoryScope {
     /// Commit history to enrich. Absent means no history.
     #[serde(default)]
     pub commits: BoundedVec<IndexCommit, MAX_INDEX_SCOPE_COMMITS>,
+    /// The branch of the branch registry whose changeset chain the index reads for
+    /// requirement citations (MEDULLA-SDLC-R014.3). Absent means the repository's
+    /// default branch, `main`. `refs` are git ref names and are not read here.
+    #[serde(default)]
+    pub branch: Option<String>,
 }
 
 /// Result of `Method::ObserveScreen`: one captured frame as session/frame/UI-element

@@ -104,6 +104,7 @@ class IndexRefPresence(str, Enum):
 class IndexRepositoryScope(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    branch: str | None = Field(default=None)
     commits: BoundedVec_IndexCommit_100000 = Field(default_factory=list)
     file_versions: BoundedVec_IndexFileVersion_262144 = Field(default_factory=list)
     refs: BoundedVec_IndexRef_4096

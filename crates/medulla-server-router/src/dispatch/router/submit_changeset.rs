@@ -32,6 +32,7 @@ mod served {
         accept, verify_submission, AcceptContext, AcceptError, ChainView, ChunkStoreBlobs,
     };
     use medulla_persistence::branch_registry_store::{AppendError, CommitPlan, PayloadReader};
+    use medulla_source_types::source_changeset::decode_changeset;
     use medulla_server_auth::access::path_grant;
     use medulla_source_types::source_path_grant::PathAccess;
     use medulla_server_blob::blob::BlobStateExt;
@@ -54,10 +55,6 @@ mod served {
                 .map(|bytes| decode_changeset(&bytes))
                 .transpose()
         }
-    }
-
-    fn decode_changeset(bytes: &[u8]) -> Result<Changeset, String> {
-        rmp_serde::from_slice(bytes).map_err(|error| error.to_string())
     }
 
     /// The caller's view of the repository graph (MEDULLA-SCM-R012): a node

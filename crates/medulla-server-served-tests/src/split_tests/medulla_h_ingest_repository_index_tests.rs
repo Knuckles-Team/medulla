@@ -277,6 +277,7 @@ fn one_parse_per_unique_blob_across_branches() {
         .expect("versions"),
         tombstones: BoundedVec::default(),
         commits: BoundedVec::default(),
+        branch: None,
     };
     // The caller ships each unique blob once.
     let files = vec![

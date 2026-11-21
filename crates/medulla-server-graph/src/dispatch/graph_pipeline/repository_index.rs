@@ -53,6 +53,67 @@ fn validate_scope_paths(
         .try_for_each(validate_ast_logical_path)
 }
 
+/// The changesets of the repository's branch chain that follow the last one cited
+/// (MEDULLA-SDLC-R014.3), oldest first. The last cited changeset id is the `digest` of the
+/// stored artifact entry named `changesets`. A branch with no chain gives no changesets and
+/// no error; a payload that is not a changeset (a branch write) is not one and is skipped.
+#[cfg(all(feature = "ast", feature = "redb"))]
+async fn branch_changesets(
+    ctx: &GraphOpRouting<'_>,
+    branch: &str,
+    stored: &std::collections::BTreeMap<
+        String,
+        medulla_h_ingest::source_ingestion::spec_projection::StoredArtifact,
+    >,
+) -> Result<Vec<medulla_source_types::source_changeset::Changeset>, String> {
+    use medulla_source_types::source_changeset::decode_changeset;
+    let registry = {
+        let guard = ctx.state.read().await;
+        medulla_persistence::branch_registry_store::shared_branch_registry(&guard)?
+    };
+    let reference = medulla_mutation_types::branch::BranchRef {
+        tenant: ctx.tenant_scope.to_string(),
+        graph: ctx.graph_name.to_string(),
+        name: branch.to_string(),
+    };
+    let last_cited = stored
+        .get(medulla_h_ingest::source_ingestion::spec_projection::CHANGESETS_ARTIFACT)
+        .map(|artifact| artifact.digest.clone());
+    tokio::task::spawn_blocking(move || {
+        let mut changesets = Vec::new();
+        // `chain` answers newest first: stop at the last changeset already cited.
+        for commit in registry.chain(&reference)? {
+            let Some(bytes) = registry.commit_payload(&reference, &commit.id)? else {
+                continue;
+            };
+            let Ok(changeset) = decode_changeset(&bytes) else {
+                continue;
+            };
+            if last_cited.as_deref() == Some(changeset.id.as_str()) {
+                break;
+            }
+            changesets.push(changeset);
+        }
+        changesets.reverse();
+        Ok::<_, String>(changesets)
+    })
+    .await
+    .map_err(|error| error.to_string())?
+}
+
+/// Without the branch registry there is no changeset chain to read.
+#[cfg(all(feature = "ast", not(feature = "redb")))]
+async fn branch_changesets(
+    _ctx: &GraphOpRouting<'_>,
+    _branch: &str,
+    _stored: &std::collections::BTreeMap<
+        String,
+        medulla_h_ingest::source_ingestion::spec_projection::StoredArtifact,
+    >,
+) -> Result<Vec<medulla_source_types::source_changeset::Changeset>, String> {
+    Ok(Vec::new())
+}
+
 /// Decode, validate and parse+project one scoped batch (off the reactor).
 #[cfg(feature = "ast")]
 async fn index_scoped(
@@ -71,6 +132,15 @@ async fn index_scoped(
         ctx.core,
         &scope.repository_id,
     );
+    // MEDULLA-SDLC-R014.3: the changeset chain of the repository's default branch (or the
+    // branch the scope names) cites the requirement rows it delivers.
+    let branch_name = scope
+        .branch
+        .clone()
+        .unwrap_or_else(|| medulla_mutation_types::branch::RESERVED_BRANCH_NAME.to_string());
+    let changesets = branch_changesets(&ctx, &branch_name, &stored_specs)
+        .await
+        .map_err(|error| Response::err(req_id, error))?;
     // Validate the complete scope and parse before acquiring CAS holders. A
     // malformed membership must never pin unreferenced source bytes forever.
     let (mut result, files, repository_id) =
@@ -89,6 +159,8 @@ async fn index_scoped(
                 &scope.repository_id,
                 &files,
                 &stored_specs,
+                &changesets,
+                &branch_name,
                 &mut result,
             )?;
             Ok::<_, String>((result, files, scope.repository_id.clone()))

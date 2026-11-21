@@ -73,3 +73,25 @@ def test_one_file_change_reingests_only_that_file_within_budget() -> None:
     assert re.search(r"^REINGEST\tmore/requirements.md$", out, flags=re.MULTILINE)
     assert re.search(r"^UNCHANGED\t1$", out, flags=re.MULTILINE)
     assert re.search(r"^REMOVED\tmore/requirements.md$", out, flags=re.MULTILINE)
+
+
+CITE_TEST = (
+    "source_ingestion::spec_projection::tests::"
+    "index_batch_cites_requirements_once_per_changeset"
+)
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R014.3")
+def test_trailers_become_citation_edges() -> None:
+    assert "pub fn cite_requirements" in PROJECTION_RS.read_text(encoding="utf-8")
+    out = _run_engine_test(CITE_TEST)
+
+    # spec: MEDULLA-SDLC-R014.3
+    assert re.search(
+        r"^CITE\tchangeset:demo:c1\trequirement:demo:DEMO-R001$", out, flags=re.MULTILINE
+    )
+    assert re.search(
+        r"^CITE_REFUSED\tREQUIREMENT_UNRESOLVED: DEMO-R999 \(cited by changeset c2\)",
+        out,
+        flags=re.MULTILINE,
+    )

@@ -36,6 +36,7 @@ fn scope(
         file_versions: BoundedVec::new(versions).expect("bounded versions"),
         tombstones: BoundedVec::new(tombstones).expect("bounded tombstones"),
         commits: BoundedVec::default(),
+        branch: None,
     }
 }
 

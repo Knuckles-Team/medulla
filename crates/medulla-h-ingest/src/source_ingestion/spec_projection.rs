@@ -14,6 +14,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_catalog_types::ontology_inspection::{RdfObject, RdfTriple};
 use medulla_compute::parser::spec_artifacts::{is_row_id, parse_spec_file, SDD_NS};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_source_types::source_changeset::Changeset;
 use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
 use medulla_types::contract::EngineErrorCode;
 
@@ -710,6 +711,59 @@ pub fn project_plans(
     })
 }
 
+/// The node id of one changeset of one repository.
+pub fn changeset_node_id(repo: &str, changeset_id: &str) -> String {
+    format!("changeset:{repo}:{changeset_id}")
+}
+
+/// The artifact entry (a [`StoredArtifact`] of the `stored` map) whose digest is the id
+/// of the last changeset cited and whose records are the changeset node ids written.
+pub const CHANGESETS_ARTIFACT: &str = "changesets";
+
+/// Link each changeset to the requirement rows it delivers (MEDULLA-SDLC-R014.3).
+///
+/// Per changeset: one `Changeset` node `changeset:{repo}:{id}` (`repo`, `changeset_id`,
+/// `created_at`) and one `citesRequirement` edge to the requirement node of every
+/// `Spec:` trailer id. `known` holds requirement node ids. An id that is not in `known`
+/// refuses the whole call with `REQUIREMENT_UNRESOLVED` and no operation is produced.
+pub fn cite_requirements(
+    repo: &str,
+    changesets: &[Changeset],
+    known: &BTreeSet<String>,
+) -> Result<RequirementProjection, String> {
+    let (mut nodes, mut links) = (Vec::new(), Vec::new());
+    for changeset in changesets {
+        let source = changeset_node_id(repo, &changeset.id);
+        nodes.push(node(
+            &source,
+            serde_json::json!({
+                "type": "Changeset",
+                "repo": repo,
+                "changeset_id": changeset.id,
+                "created_at": changeset.created_at.to_string(),
+            }),
+        ));
+        for row_id in &changeset.trailers.spec_ids {
+            let target = requirement_node_id(repo, row_id);
+            if !known.contains(&target) {
+                return Err(format!(
+                    "{}: {row_id} (cited by changeset {}) resolves to no row",
+                    EngineErrorCode::RequirementUnresolved.as_str(),
+                    changeset.id
+                ));
+            }
+            links.push(edge(&source, &target, "citesRequirement"));
+        }
+    }
+    let (count_nodes, count_edges) = (nodes.len() as u32, links.len() as u32);
+    nodes.extend(links);
+    Ok(RequirementProjection {
+        operations: nodes,
+        nodes: count_nodes,
+        edges: count_edges,
+    })
+}
+
 /// What the engine already holds of one artifact file: the digest it was ingested
 /// under and the ids of the requirement records it produced.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -921,6 +975,8 @@ pub fn project_spec_artifacts(
     repo: &str,
     files: &[(String, Vec<u8>)],
     stored: &BTreeMap<String, StoredArtifact>,
+    changesets: &[Changeset],
+    branch: &str,
     result: &mut medulla_ingestion_types::ingestion_wire::IndexResult,
 ) -> Result<ReingestPlan, String> {
     let mut seen = BTreeSet::new();
@@ -929,7 +985,7 @@ pub fn project_spec_artifacts(
         .filter(|(path, _)| is_spec_artifact(path) && seen.insert(path.as_str()))
         .filter_map(|(path, bytes)| Some((path.as_str(), std::str::from_utf8(bytes).ok()?)))
         .collect();
-    if texts.is_empty() {
+    if texts.is_empty() && changesets.is_empty() {
         return Ok(ReingestPlan {
             operations: Vec::new(),
             reingested: Vec::new(),
@@ -943,14 +999,79 @@ pub fn project_spec_artifacts(
         .filter(|(name, _)| seen.contains(name.as_str()))
         .map(|(name, old)| (name.clone(), old.clone()))
         .collect();
-    let plan = reingest_in(
-        repo,
-        &texts,
-        &carried,
-        &BTreeMap::new(),
-        &BTreeMap::new(),
-        Unresolved::Skip,
-    )?;
+    let mut plan = if texts.is_empty() {
+        ReingestPlan {
+            operations: Vec::new(),
+            reingested: Vec::new(),
+            removed: Vec::new(),
+            unchanged: 0,
+        }
+    } else {
+        reingest_in(
+            repo,
+            &texts,
+            &carried,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            Unresolved::Skip,
+        )?
+    };
+    if let Some(last) = changesets.last() {
+        // The requirement node ids of this plan plus the ones already stored.
+        let requirement_prefix = requirement_node_id(repo, "");
+        let mut known: BTreeSet<String> = stored
+            .values()
+            .flat_map(|artifact| artifact.records.iter())
+            .filter(|id| id.starts_with(&requirement_prefix))
+            .cloned()
+            .collect();
+        known.extend(
+            plan.operations
+                .iter()
+                .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "Requirement")
+                .filter_map(|op| op["id"].as_str().map(str::to_string)),
+        );
+        let cited = cite_requirements(repo, changesets, &known)?;
+        let mut records: Vec<String> = stored
+            .get(CHANGESETS_ARTIFACT)
+            .map(|old| old.records.clone())
+            .unwrap_or_default();
+        let mut writes = Vec::new();
+        let mut links = Vec::new();
+        for mut op in cited.operations {
+            if op["op"] == "upsert_node" {
+                op["properties"]["branch"] = branch.into();
+                let id = op["id"].as_str().unwrap_or_default().to_string();
+                if !records.contains(&id) {
+                    records.push(id);
+                }
+                writes.push(op);
+            } else {
+                links.push(op);
+            }
+        }
+        writes.push(node(
+            &artifact_node_id(repo, CHANGESETS_ARTIFACT),
+            serde_json::json!({
+                "type": "SpecArtifactFile",
+                "repo": repo,
+                "file": CHANGESETS_ARTIFACT,
+                "digest": last.id,
+                "records": records.join(","),
+            }),
+        ));
+        // Changeset nodes join the plan's nodes; their edges follow every node.
+        let mut ordered: Vec<serde_json::Value> = plan
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_node")
+            .cloned()
+            .collect();
+        ordered.extend(writes);
+        ordered.extend(plan.operations.iter().filter(|op| op["op"] != "upsert_node").cloned());
+        ordered.extend(links);
+        plan.operations = ordered;
+    }
     for op in &plan.operations {
         match op["op"].as_str() {
             Some("upsert_node") => result.nodes.push(index_node(op)),
@@ -1357,8 +1478,9 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             ("src/lib.rs".to_string(), b"fn main() {}".to_vec()),
         ];
         let mut first = IndexResult::default();
-        let plan = project_spec_artifacts("demo", &files, &BTreeMap::new(), &mut first)
-            .expect("first batch");
+        let plan =
+            project_spec_artifacts("demo", &files, &BTreeMap::new(), &[], "main", &mut first)
+                .expect("first batch");
         assert_eq!(plan.reingested, ["specs/a/requirements.md"]);
         // The DEMO-R002 `Depends: OTHER-R009` names another repository; it is skipped.
         assert!(first
@@ -1374,7 +1496,8 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         let mut stored = BTreeMap::new();
         stored_after(&plan, &mut stored);
         let mut again = IndexResult::default();
-        let idle = project_spec_artifacts("demo", &files, &stored, &mut again).expect("idle");
+        let idle = project_spec_artifacts("demo", &files, &stored, &[], "main", &mut again)
+            .expect("idle");
         assert!(idle.reingested.is_empty());
         assert!(again.nodes.is_empty() && again.edges.is_empty());
     }
@@ -1498,5 +1621,119 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             .unwrap()
             .split(',')
             .any(|id| id == section));
+    }
+
+    fn changeset(id: &str, created_at: u64, spec_ids: &[&str]) -> Changeset {
+        Changeset {
+            id: id.to_string(),
+            repo: "demo".to_string(),
+            parents: Vec::new(),
+            author_principal: "dev".to_string(),
+            message: "change".to_string(),
+            changed_paths: Vec::new(),
+            created_at,
+            trailers: medulla_source_types::source_changeset::Trailers {
+                spec_ids: spec_ids.iter().map(|id| id.to_string()).collect(),
+                ..Default::default()
+            },
+            agent_identity: None,
+            run_trace_id: None,
+            git: None,
+        }
+    }
+
+    // spec: MEDULLA-SDLC-R014.3
+    #[test]
+    fn cite_requirements_links_trailers_and_refuses_unknown_ids() {
+        let known = BTreeSet::from([
+            requirement_node_id("demo", "DEMO-R001"),
+            requirement_node_id("demo", "DEMO-R002"),
+        ]);
+        let changesets = [
+            changeset("c1", 1700, &["DEMO-R001", "DEMO-R002"]),
+            changeset("c2", 1800, &[]),
+        ];
+        let p = cite_requirements("demo", &changesets, &known).expect("cites");
+        let first = changeset_node_id("demo", "c1");
+        assert_eq!(first, "changeset:demo:c1");
+        let nodes: Vec<&serde_json::Value> = p
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_node")
+            .collect();
+        assert_eq!(nodes.len(), 2);
+        assert_eq!(nodes[0]["properties"]["type"], "Changeset");
+        assert_eq!(nodes[0]["properties"]["repo"], "demo");
+        assert_eq!(nodes[0]["properties"]["changeset_id"], "c1");
+        assert_eq!(nodes[0]["properties"]["created_at"], "1700");
+        assert_eq!(
+            edges_of(&p, &first, "citesRequirement"),
+            vec![
+                requirement_node_id("demo", "DEMO-R001"),
+                requirement_node_id("demo", "DEMO-R002")
+            ]
+        );
+        assert!(edges_of(&p, &changeset_node_id("demo", "c2"), "citesRequirement").is_empty());
+        assert_eq!((p.nodes, p.edges), (2, 2));
+
+        let unknown = [changeset("c3", 1900, &["DEMO-R001", "DEMO-R999"])];
+        let refusal = cite_requirements("demo", &unknown, &known).unwrap_err();
+        assert_eq!(
+            refusal,
+            "REQUIREMENT_UNRESOLVED: DEMO-R999 (cited by changeset c3) resolves to no row"
+        );
+    }
+
+    // spec: MEDULLA-SDLC-R014.3
+    #[test]
+    fn index_batch_cites_requirements_once_per_changeset() {
+        use medulla_ingestion_types::ingestion_wire::IndexResult;
+
+        let files = vec![(
+            "specs/a/requirements.md".to_string(),
+            REQUIREMENTS.as_bytes().to_vec(),
+        )];
+        let changesets = [changeset("c1", 1700, &["DEMO-R001"])];
+        let mut first = IndexResult::default();
+        let plan = project_spec_artifacts(
+            "demo",
+            &files,
+            &BTreeMap::new(),
+            &changesets,
+            "main",
+            &mut first,
+        )
+        .expect("first batch");
+        let cited = first
+            .edges
+            .iter()
+            .find(|e| e.edge_type == "citesRequirement")
+            .expect("one citation edge");
+        assert_eq!(cited.source, "changeset:demo:c1");
+        assert_eq!(cited.target, "requirement:demo:DEMO-R001");
+        println!("CITE\t{}\t{}", cited.source, cited.target);
+        let changeset_node = first
+            .nodes
+            .iter()
+            .find(|n| n.node_id == "changeset:demo:c1")
+            .expect("changeset node");
+        assert_eq!(changeset_node.properties.get("branch").map(String::as_str), Some("main"));
+
+        // The route hands over only the changesets after the last cited one.
+        let mut stored = BTreeMap::new();
+        stored_after(&plan, &mut stored);
+        assert_eq!(stored[CHANGESETS_ARTIFACT].digest, "c1");
+        let mut again = IndexResult::default();
+        project_spec_artifacts("demo", &files, &stored, &[], "main", &mut again).expect("idle");
+        assert!(again.nodes.is_empty() && again.edges.is_empty());
+
+        // An id that resolves to no row refuses and writes nothing.
+        let unknown = [changeset("c2", 1800, &["DEMO-R999"])];
+        let mut refused = IndexResult::default();
+        let error = project_spec_artifacts("demo", &files, &stored, &unknown, "main", &mut refused)
+            .unwrap_err();
+        assert!(error.starts_with("REQUIREMENT_UNRESOLVED: DEMO-R999"));
+        assert!(refused.nodes.is_empty() && refused.edges.is_empty());
+        println!("CITE_REFUSED\t{error}");
     }
 }
