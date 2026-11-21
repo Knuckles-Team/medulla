@@ -29,6 +29,11 @@ from medulla.generated import coordination, reasoning, security
 # crates/medulla-mutation-types/src/governed_change.rs).
 SOURCE_AUTHORITY_KIND = "governed.source-authority"
 
+# The exact governance scopes the proposer and the approver hold (the governed ledger reads
+# only exact `governance:*` scopes; `*` grants none). Both hold both, so the self-approval
+# refusal is the ledger's two-person rule rather than a missing scope.
+GOVERNANCE_SCOPES = ["governance:propose", "governance:approve-source-authority"]
+
 SOURCE_ID = "approved:drift-served"
 APPROVAL_LEASE_KIND = "action.approval"
 APPROVAL_ACTION = "schema_repair"
@@ -85,9 +90,13 @@ async def governed_graph() -> AsyncIterator[GovernedLedger]:
             registry.close()
         admin = await _connect(graph)
         clients.append(admin)
-        proposer = await _connect(graph, agent_id=proposer_id)
+        proposer = await _connect(
+            graph, agent_id=proposer_id, scopes=["*", *GOVERNANCE_SCOPES]
+        )
         clients.append(proposer)
-        approver = await _connect(graph, agent_id=approver_id)
+        approver = await _connect(
+            graph, agent_id=approver_id, scopes=["*", *GOVERNANCE_SCOPES]
+        )
         clients.append(approver)
         yield GovernedLedger(graph, admin, proposer, approver)
     finally:
@@ -102,16 +111,18 @@ async def governed_graph() -> AsyncIterator[GovernedLedger]:
 # --- the candidate and its digest ---------------------------------------------------
 
 
-def canonical_contract(contract: dict[str, Fields]) -> str:
+def canonical_contract(contract: dict[str, Any]) -> str:
     """The contract's canonical JSON: the sorted-key encoding the Rust side
     takes the approval digest over (BTreeMap field order, declaration-order
     field members)."""
-    return json.dumps(
-        {"fields": contract["fields"]}, sort_keys=True, separators=(",", ":")
-    )
+    body: dict[str, Any] = {"fields": contract["fields"]}
+    if contract.get("source_authority"):
+        # Omitted when false, so an ordinary candidate keeps its digest.
+        body["source_authority"] = True
+    return json.dumps(body, sort_keys=True, separators=(",", ":"))
 
 
-def candidate_digest(contract: dict[str, Fields], source_id: str = SOURCE_ID) -> str:
+def candidate_digest(contract: dict[str, Any], source_id: str = SOURCE_ID) -> str:
     """The digest an approval grant must bind: domain, key and canonical
     contract, each NUL-terminated (``approved_candidate_digest``)."""
     framed = (
@@ -135,7 +146,7 @@ BASELINE_FIELDS_CONTRACT: dict[str, Fields] = {
 
 
 async def propose_authority(
-    ledger: GovernedLedger, source_id: str, contract: dict[str, Fields]
+    ledger: GovernedLedger, source_id: str, contract: dict[str, Any]
 ) -> str:
     """Propose a source-authority change as the proposer; returns its change id."""
     change_id = f"srcauth-change-{uuid.uuid4().hex[:8]}"
@@ -228,12 +239,21 @@ async def consume_approval_lease(client: MedullaClient, lease_id: str) -> None:
     )
 
 
+def _contract(fields: Fields, source_authority: bool) -> dict[str, Any]:
+    """The wire contract; `source_authority` is sent only when set, as the Rust side omits it."""
+    contract: dict[str, Any] = {"fields": fields}
+    if source_authority:
+        contract["source_authority"] = True
+    return contract
+
+
 async def attach_approved(
     client: MedullaClient,
     lease_id: str,
     fields: dict[str, dict[str, object]],
     source_id: str = SOURCE_ID,
     expected_digest: str | None = None,
+    source_authority: bool = False,
 ) -> None:
     await reasoning.send_graph_schema(
         client,
@@ -241,7 +261,7 @@ async def attach_approved(
             "op": {
                 "op": "attach_approved",
                 "source_id": source_id,
-                "contract": {"fields": fields},
+                "contract": _contract(fields, source_authority),
                 "approval_lease_id": lease_id,
                 "expected_digest": expected_digest,
                 "if_composed_digest": None,
@@ -255,6 +275,7 @@ async def validate_repair(
     client: MedullaClient,
     fields: dict[str, dict[str, object]],
     source_id: str = SOURCE_ID,
+    source_authority: bool = False,
 ) -> bool:
     """Run the shadow-graph validation; returns the op's `changed` flag."""
     committed = await reasoning.send_graph_schema(
@@ -263,7 +284,7 @@ async def validate_repair(
             "op": {
                 "op": "validate_repair",
                 "source_id": source_id,
-                "contract": {"fields": fields},
+                "contract": _contract(fields, source_authority),
                 "if_composed_digest": None,
             }
         },
