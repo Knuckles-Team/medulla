@@ -6,6 +6,8 @@
 //! entry a publish admits: every component it pins resolved inside the
 //! admitting write.
 
+use redb::ReadableTable;
+
 use super::super::agent_library::validate_context;
 use super::super::agent_revision::{
     require_context_tenant, retire_revision, revision_scope, write_revision, RevisionWrite,
