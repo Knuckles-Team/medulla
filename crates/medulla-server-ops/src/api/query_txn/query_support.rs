@@ -25,6 +25,72 @@ pub struct TextEncoderIdentity {
     pub space_id: String,
     pub dimensions: usize,
     pub revision: String,
+    /// Content identity of the encoder's model: `sha256` over its registry id, space tuple and
+    /// recipe revision. Feeds [`pin_embedding_space`].
+    pub model_hash: String,
+    /// Content identity of the encoder's preprocessing: `sha256` over its registry id and
+    /// recipe revision. Feeds [`pin_embedding_space`].
+    pub preprocessing_hash: String,
+}
+
+#[cfg(feature = "query")]
+fn identity_hash(parts: &[&str]) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    for part in parts {
+        hasher.update((part.len() as u64).to_be_bytes());
+        hasher.update(part.as_bytes());
+    }
+    format!("sha256:{}", hex::encode(hasher.finalize()))
+}
+
+#[cfg(feature = "query")]
+impl TextEncoderIdentity {
+    /// The identity of an encoder registered as `encoder_id` for the space
+    /// `(space_id, dimensions, revision)`, with its model and preprocessing hashes derived from
+    /// that tuple.
+    pub fn new(
+        encoder_id: impl Into<String>,
+        space_id: impl Into<String>,
+        dimensions: usize,
+        revision: impl Into<String>,
+    ) -> Self {
+        let (encoder_id, space_id, revision) = (encoder_id.into(), space_id.into(), revision.into());
+        let model_hash = identity_hash(&[
+            "text-model",
+            &encoder_id,
+            &space_id,
+            &revision,
+            &dimensions.to_string(),
+        ]);
+        let preprocessing_hash = identity_hash(&["text-preprocess", &encoder_id, &revision]);
+        Self {
+            encoder_id,
+            space_id,
+            dimensions,
+            revision,
+            model_hash,
+            preprocessing_hash,
+        }
+    }
+}
+
+/// The one function that pins the embedding space of a text encoder: the bookmark binding's
+/// `model_digest` and the S6 image's space are both this space's `digest`, so
+/// `finalize_generation` matches the image to its binding (MEDULLA-MEDIA-VOCAB-R001.102.2).
+/// Vectors are L2-normalized.
+#[cfg(feature = "query")]
+pub fn pin_embedding_space(
+    identity: &TextEncoderIdentity,
+) -> Result<medulla_index_types::embedding::EmbeddingSpaceRef, String> {
+    medulla_index_types::embedding::EmbeddingSpaceRef::pinned(
+        identity.space_id.clone(),
+        identity.revision.clone(),
+        identity.model_hash.clone(),
+        identity.preprocessing_hash.clone(),
+        identity.dimensions,
+        true,
+    )
 }
 
 /// The revision both built-in text encoders report: the encoding recipe they implement.
@@ -58,12 +124,12 @@ pub fn bound_modality_encoders() -> Vec<(
             let config =
                 crate::api::ingest::embedder::EmbedderConfig::from_env_for_modality(modality)?;
             let encoder_id = format!("{REMOTE_ENCODER_ID}:{modality}");
-            let identity = TextEncoderIdentity {
-                space_id: config.model.clone().unwrap_or_else(|| encoder_id.clone()),
-                encoder_id,
-                dimensions: config.dims,
-                revision: TEXT_ENCODER_REVISION.to_string(),
-            };
+            let identity = TextEncoderIdentity::new(
+                encoder_id.clone(),
+                config.model.clone().unwrap_or_else(|| encoder_id.clone()),
+                config.dims,
+                TEXT_ENCODER_REVISION,
+            );
             Some((
                 identity,
                 Box::new(config) as Box<dyn medulla_exec::exec::TextEmbedder>,
@@ -97,15 +163,15 @@ fn bound_text_embedder() -> Option<(
             {
                 let config = crate::api::ingest::embedder::EmbedderConfig::from_env();
                 if config.name() == crate::api::ingest::embedder::REMOTE {
-                    let identity = TextEncoderIdentity {
-                        encoder_id: REMOTE_ENCODER_ID.to_string(),
-                        space_id: config
+                    let identity = TextEncoderIdentity::new(
+                        REMOTE_ENCODER_ID,
+                        config
                             .model
                             .clone()
                             .unwrap_or_else(|| crate::api::ingest::embedder::REMOTE.to_string()),
-                        dimensions: config.dims,
-                        revision: TEXT_ENCODER_REVISION.to_string(),
-                    };
+                        config.dims,
+                        TEXT_ENCODER_REVISION,
+                    );
                     return Some((
                         Box::new(config) as Box<dyn medulla_exec::exec::TextEmbedder>,
                         identity,
@@ -120,12 +186,12 @@ fn bound_text_embedder() -> Option<(
                         .unwrap_or_default();
                     Some((
                         Box::new(embedder) as Box<dyn medulla_exec::exec::TextEmbedder>,
-                        TextEncoderIdentity {
-                            encoder_id: HASH_ENCODER_ID.to_string(),
-                            space_id: HASH_ENCODER_ID.to_string(),
+                        TextEncoderIdentity::new(
+                            HASH_ENCODER_ID,
+                            HASH_ENCODER_ID,
                             dimensions,
-                            revision: TEXT_ENCODER_REVISION.to_string(),
-                        },
+                            TEXT_ENCODER_REVISION,
+                        ),
                     ))
                 }
                 _ => None,
@@ -436,4 +502,21 @@ pub fn canonical_plan_digest(
     let plan_bytes = rmp_serde::to_vec_named(plan)
         .map_err(|error| format!("INTERNAL: plan digest serialization failed: {error}"))?;
     Ok(medulla_types::contract::Digest256::sha256(&plan_bytes))
+}
+
+#[cfg(all(test, feature = "query"))]
+mod pin_embedding_space_tests {
+    use super::*;
+
+    #[test]
+    fn the_pinned_space_carries_the_identity_hashes_and_one_digest() {
+        let identity = TextEncoderIdentity::new(HASH_ENCODER_ID, HASH_ENCODER_ID, 16, "1");
+        let pinned = pin_embedding_space(&identity).unwrap();
+        assert_eq!(pinned.model_hash, identity.model_hash);
+        assert_eq!(pinned.preprocessing_hash, identity.preprocessing_hash);
+        assert_eq!(pinned.dimensions, 16);
+        assert_eq!(pinned, pin_embedding_space(&identity).unwrap());
+        let other = TextEncoderIdentity::new(HASH_ENCODER_ID, HASH_ENCODER_ID, 16, "2");
+        assert_ne!(pinned.digest, pin_embedding_space(&other).unwrap().digest);
+    }
 }

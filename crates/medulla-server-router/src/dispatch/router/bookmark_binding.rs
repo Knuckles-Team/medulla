@@ -13,7 +13,7 @@ use super::*;
 use std::sync::Arc;
 
 use medulla_h_retrieve::bookmark_binding::{
-    author_bookmark_binding, BookmarkBindingInputs, BookmarkEmbeddingSpace, BOOKMARK_NODE_TYPE,
+    author_bookmark_binding, BookmarkBindingInputs, BOOKMARK_NODE_TYPE,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::CarrierAuthority;
@@ -61,12 +61,7 @@ pub(super) async fn author_on_pack_activation(
     let authority = CarrierAuthority::from_verified(verified)?;
     let inputs = BookmarkBindingInputs {
         graph_id: graph.to_string(),
-        space: BookmarkEmbeddingSpace {
-            encoder_id: identity.encoder_id,
-            space_id: identity.space_id,
-            dimensions: identity.dimensions,
-            revision: identity.revision,
-        },
+        space: medulla_server_ops::api::query_txn::query_support::pin_embedding_space(&identity)?,
         policy_revision,
         now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     };

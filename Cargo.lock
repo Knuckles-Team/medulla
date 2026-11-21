@@ -8193,6 +8193,7 @@ dependencies = [
  "medulla-graph-core",
  "medulla-graphql",
  "medulla-identity-types",
+ "medulla-index-types",
  "medulla-isolation",
  "medulla-jobs",
  "medulla-kernel",

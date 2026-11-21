@@ -9,6 +9,7 @@
 
 use std::sync::Arc;
 
+use medulla_index_types::embedding::EmbeddingSpaceRef;
 use medulla_index_types::semantic_index::{
     GraphTextPropertyRef, SemanticAnnIndexMethod, SemanticAnnIndexSpec, SemanticBinding,
     SemanticBindingDraft, SemanticLexicalIndexSpec, SemanticModelIdentity,
@@ -27,21 +28,14 @@ pub const BOOKMARK_NODE_TYPE: &str = "Bookmark";
 /// The node property the bookmark index embeds.
 pub const BOOKMARK_TEXT_PROPERTY: &str = "text";
 
-/// The registered text space the binding embeds into: the bound text embedder's registry entry.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BookmarkEmbeddingSpace {
-    pub encoder_id: String,
-    pub space_id: String,
-    pub dimensions: usize,
-    pub revision: String,
-}
-
 /// What the router read at pack activation.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BookmarkBindingInputs {
     /// The graph of the activating request: the index reads `Bookmark` nodes of this graph.
     pub graph_id: String,
-    pub space: BookmarkEmbeddingSpace,
+    /// The bound text embedder's pinned space, from `pin_embedding_space`: its `digest` is the
+    /// binding's `model_digest`, which the S6 image's own space must equal.
+    pub space: EmbeddingSpaceRef,
     /// The isolation layer's policy revision at authoring time.
     pub policy_revision: u64,
     pub now_ms: u64,
@@ -77,7 +71,6 @@ pub fn bookmark_binding(
     let policy_revision = inputs.policy_revision.max(1);
     let revision_text = policy_revision.to_string();
     let space = &inputs.space;
-    let dimensions_text = space.dimensions.to_string();
     let draft = SemanticBindingDraft {
         binding_id: BOOKMARK_INDEX_BINDING_ID.to_string(),
         tenant_id: tenant.to_string(),
@@ -99,16 +92,10 @@ pub fn bookmark_binding(
         dimension,
         metric: SemanticVectorMetric::Cosine,
         model: SemanticModelIdentity {
-            model_id: space.space_id.clone(),
+            model_id: space.id.clone(),
             model_revision: space.revision.clone(),
-            preprocess_digest: sha256_label(&["text-preprocess", &space.encoder_id]),
-            model_digest: sha256_label(&[
-                "text-model",
-                &space.encoder_id,
-                &space.space_id,
-                &space.revision,
-                &dimensions_text,
-            ]),
+            preprocess_digest: space.preprocessing_hash.clone(),
+            model_digest: space.digest.clone(),
         },
         generation: 1,
         maintenance_policy_id: "semantic-maintenance".to_string(),
