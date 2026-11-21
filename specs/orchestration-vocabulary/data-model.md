@@ -21,10 +21,18 @@ This file names the records and graph terms that the rows add. Each entity has o
 - Owner: `crates/medulla-work-types/src/run_observation.rs` and `crates/medulla-types/src/durable_unit.rs`.
 - Relation: both link to a `:RunTrace`.
 
-### MeasuredModelFact
+### EvolutionProgress and the evolution answer
 
-- Fields: model reference, closed `:measuredProperty`, value, run evidence.
-- Relation: a newer fact links to the older one by `:measuredSupersedes`; currency is a champion pointer.
+- Node: `node_type = "EvolutionProgress"` with `:proposalId`, `:proposalRevision`, `:promptVersionId`, `:promptRevision`, `:metricWindowId`, `:metricWindowRevision`, `:sourceRunIds` (JSON array in run order) and `:observedAtMs`; written by the harness producer (MERISTEM-HARNESS-CYCLE-R064).
+- Records: `EvolutionTraceQuery`, `EvolutionProgress`, `EvolutionTraceAnswer`, `EvolutionMetric`, and the `Copy` classifications `AnswerState` and `MetricState`.
+- Owner: `crates/medulla-mutation-types/src/evolution_metrics.rs` (MEDULLA-ORCH-VOCAB-R010.100).
+- Relation: a source run id is the node id of a `:RunTrace`; the prompt identity is a `ProgramRevision` node (`program_ref`, `revision`, `content_digest`).
+
+### A2A card membership
+
+- Source: an `AgentComponentEntry` of kind `A2aAgentCard`, with the optional `agent_kind` attribute (an `:AgentKind` IRI).
+- Triples: `a :A2AAgentCard`, `:memberOfLibrary`, `:providesCapability` per declared capability, `:hasAgentKind`.
+- Owner: `crates/medulla-h-admin/src/agent_library_projection/map.rs` (`project_component`, MEDULLA-ORCH-VOCAB-R003.6).
 
 ### Definition records
 

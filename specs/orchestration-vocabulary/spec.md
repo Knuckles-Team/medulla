@@ -64,7 +64,7 @@ The user is an evaluator that tunes harness configuration. The outcome is that p
 
 1. **Given** fixture traces are ingested through `AddNode`, **When** a metric statement runs through `Method::Uql`, **Then** the success rate, cost per solved task and overflow rate come back per group, and an empty group abstains.
 
-Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R010.1` and `MEDULLA-ORCH-VOCAB-R011.9` run this story through a production entry point.
+Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R010.1` and `MEDULLA-ORCH-VOCAB-R011.11` run this story through a production entry point.
 
 ### User Story 6 - Index spec folders and policy as typed nodes (Priority: P2)
 
@@ -119,7 +119,7 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story 
 ## Requirements
 
 - **FR-001**: Every term, shape and import of the vocabulary exists in the named ontology file with its domain, range and constraint. Rows: `MEDULLA-ORCH-VOCAB-R001`, `MEDULLA-ORCH-VOCAB-R002`, `MEDULLA-ORCH-VOCAB-R003`, `MEDULLA-ORCH-VOCAB-R004`, `MEDULLA-ORCH-VOCAB-R005`, `MEDULLA-ORCH-VOCAB-R006`.
-- **FR-002**: Assembly reads steps, kinds and bindings and writes the committed result back through the commit path. Rows: `MEDULLA-ORCH-VOCAB-R007`, `MEDULLA-ORCH-VOCAB-R616`.
+- **FR-002**: Assembly reads steps, kinds and bindings; the committed result is the sealed decision record, never a second graph copy. Rows: `MEDULLA-ORCH-VOCAB-R007`, `MEDULLA-ORCH-VOCAB-R616`.
 - **FR-003**: The ontology sources are registered and the ledger stays in step. Rows: `MEDULLA-ORCH-VOCAB-R008`.
 - **FR-004**: Run traces, steps, windows and durable units are admitted by shape and digest and read back in order. Rows: `MEDULLA-ORCH-VOCAB-R009`, `MEDULLA-ORCH-VOCAB-R013`.
 - **FR-005**: Run-trace metrics and measured model facts are read and written through governed paths. Rows: `MEDULLA-ORCH-VOCAB-R010`, `MEDULLA-ORCH-VOCAB-R011`.
@@ -132,11 +132,11 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story 
 
 ## Success Criteria
 
-- **SC-001**: Every closed set of the vocabulary (agent kinds, termination reasons, measured properties) is declared once and enforced by a shape. Rows: `MEDULLA-ORCH-VOCAB-R002.1`, `MEDULLA-ORCH-VOCAB-R009.1`, `MEDULLA-ORCH-VOCAB-R011.6`.
+- **SC-001**: Every closed set of the vocabulary (agent kinds, termination reasons) is declared once and enforced by a shape. Rows: `MEDULLA-ORCH-VOCAB-R002.1`, `MEDULLA-ORCH-VOCAB-R009.1`.
 - **SC-002**: A planted `:precedes` or `swarm:feeds` cycle is rejected. Rows: `MEDULLA-ORCH-VOCAB-R001.3`, `MEDULLA-ORCH-VOCAB-R006.4`.
 - **SC-003**: A refused run-trace write leaves the stored graph unchanged. Rows: `MEDULLA-ORCH-VOCAB-R009.15`, `MEDULLA-ORCH-VOCAB-R013.4`.
 - **SC-004**: A metric group with no solved trace abstains and never reports zero cost. Rows: `MEDULLA-ORCH-VOCAB-R010.2`.
-- **SC-005**: A measured fact without run evidence is refused. Rows: `MEDULLA-ORCH-VOCAB-R011.8`.
+- **SC-005**: A measured fact without run evidence is refused at the `ModelProfile` publish. Rows: `MEDULLA-ORCH-VOCAB-R011`.
 - **SC-006**: A replay of a stored trace names the first differing step. Rows: `MEDULLA-ORCH-VOCAB-R013.6`.
 - **SC-007**: A policy rule that contradicts an invariant is never activated. Rows: `MEDULLA-ORCH-VOCAB-R012.7.3`.
 - **SC-008**: A published definition revision is never changed by an edit. Rows: `MEDULLA-ORCH-VOCAB-R800.3`, `MEDULLA-ORCH-VOCAB-R800.4`.

@@ -45,8 +45,9 @@ crates/medulla-h-decide/src/decide/                         existing: assemble.r
 crates/medulla-compute/src/assemble/                        existing: new topology_facts.rs and synthesis.rs
 crates/medulla-work-types/src/orchestration/                existing: mod.rs, improvement.rs; new definitions.rs, org.rs, teams.rs, capability_gap.rs, workflow_rdf.rs
 crates/medulla-result-types/src/outcome_bundle.rs           existing: StepRecord, step_digest, CodeWalkthrough
-crates/medulla-types/src/                                   new: harness_metrics.rs, harness_session.rs, run_observation.rs, durable_unit.rs, policy_document.rs, run_trace_export.rs, evolution_metrics.rs
-crates/medulla-protocol-types/src/change_envelope/          existing: new measured_fact.rs
+crates/medulla-types/src/                                   new: harness_metrics.rs, harness_session.rs, run_observation.rs, durable_unit.rs, policy_document.rs, run_trace_export.rs
+crates/medulla-mutation-types/src/                          existing: harness_metrics.rs; new evolution_metrics.rs (R010.100)
+crates/medulla-h-admin/src/agent_library_projection.rs     existing: entry worker; new component worker (R003.6)
 crates/medulla-rdf/tests/orchestration_vocabulary.rs        existing: reasoner and shape tests
 tests/orchestration/                                        existing: served Python tests
 ```
@@ -60,11 +61,11 @@ Unknowns and their resolution are in [research.md](research.md). They cover wher
 The rules below bind every row.
 
 1. **One order property.** Step order reuses the core `:precedes`; `:handsOffTo` is a sub-property of it. No second order property exists.
-2. **Terms are data.** Agent kinds, termination reasons and measured properties are closed sets in the ontology and the shapes. No solver or handler carries a term list.
+2. **Terms are data.** Agent kinds and termination reasons are closed sets in the ontology and the shapes. No solver or handler carries a term list.
 3. **One writer per term.** A term has exactly one writer: typed-pack projection, the Agent Library outbox worker, the topology projection or the assemble commit. Each term has a named reader.
 4. **Writes pass the admission path.** A node write enters `try_handle_gateway` and reaches `harness_admission`; an envelope write enters `dispatch_change_envelopes` and reaches the envelope boundary. A refusal writes nothing.
 5. **Reads are UQL statements.** Metric, usage, session and gap reads are statements of `HARNESS_QUERIES`, served by `Method::Uql`. Only reads with their own paging or write-side effects get a method (R804 to R807).
-6. **Revisions use the pointer path.** A definition, a harness component, a measured fact and a policy set become current only by a champion-pointer move of MEDULLA-DECISION-ENGINE-R805. A newer version never overwrites an older one.
+6. **Revisions use the pointer path.** A definition, a harness component and a policy set become current only by a champion-pointer move of MEDULLA-DECISION-ENGINE-R805. A measured model fact is the exception by design: it is a field of the `ModelProfile` component, and its head is current (MEDULLA-TYPED-PACKS-R048.2). A newer version never overwrites an older one.
 7. **Unknown stays unknown.** A missing measurement is `Unknown(reason)` or an abstention, never zero.
 8. **Assembly decides.** Synthesis proposes a draft; `AgentAssemble` decides (MEDULLA-DECISION-ENGINE-R036).
 
@@ -101,11 +102,11 @@ One abstraction over process sources (owner, 2026-11-06). R014.9 adds the annota
 The seven design answers that bind every row:
 
 - **Owner.** Medulla: the orchestration ontology files and shapes, `crates/medulla-work-types/src/orchestration/` and the served admission path. Each term has one writer and a named reader.
-- **Cohesion.** Step order reuses the one core `:precedes`. A definition, a harness component, a measured fact and a policy set each have one writer and become current only by a champion-pointer move.
+- **Cohesion.** Step order reuses the one core `:precedes`. A definition, a harness component and a policy set each have one writer and become current only by a champion-pointer move; a measured fact is current as the `ModelProfile` component head.
 - **Dependency direction.** Handlers return the record and the mapper adds the code to the method set. Nothing imports a handler. The knowledge-scope check runs in the served handler because `medulla-persistence-records` cannot depend on `medulla-retrieval`.
 - **Interface depth.** Reads are UQL statements of `HARNESS_QUERIES` served by `Method::Uql`. Only reads with their own paging or write-side effects get a method (R804 to R807).
 - **Special cases.** One: unknown stays unknown. A missing measurement is `Unknown(reason)` or an abstention, never zero.
-- **State.** Definitions and measured facts are versioned graph records. A newer version never overwrites an older one.
+- **State.** Definitions are versioned graph records, and a measured model fact is a `MeasuredFact` on a `ModelProfile` component revision (MEDULLA-TYPED-PACKS-R048.2). A newer version never overwrites an older one.
 - **Environment.** Terms are data in the ontology and the shapes; no solver or handler carries a term list. No generated artifact is committed (`MEDULLA-SDLC-R020.1`).
 
 ## Phase 2: Task approach
@@ -161,6 +162,7 @@ Order: after R811.5 and the three machine rows named in the dependency list.
 ## Cross-repo seams
 
 - Run-trace metric reads: `MEDULLA-ORCH-VOCAB-R010.1` provides, `ARBORA-OPS-R021.4.4` consumes. Contract: [arbora-run-metrics.md](contracts/arbora-run-metrics.md).
+- Evolution proposal metrics: `MEDULLA-ORCH-VOCAB-R010.100` provides the UQL statement `evolution_trace_metrics`, `ARBORA-OPS-R059` consumes it through the engine client `uql`; `MERISTEM-HARNESS-CYCLE-R064` writes the `EvolutionProgress` node it reads.
 - Run-trace producers: `MEDULLA-ORCH-VOCAB-R013.2` and `MEDULLA-ORCH-VOCAB-R009.18.2` provide, `MERISTEM-HARNESS-CYCLE-R072` and `MERISTEM-HARNESS-CYCLE-R071` consume. Contract: [meristem-run-trace-producer.md](contracts/meristem-run-trace-producer.md).
 - Harness session index: `MEDULLA-ORCH-VOCAB-R009.101.1` provides, `SCION-SOURCE-INGEST-R013` consumes. Contract: [scion-harness-session-ingest.md](contracts/scion-harness-session-ingest.md).
 - Policy activation: `MEDULLA-ORCH-VOCAB-R806` provides, `ARBORA-OPS-R050.2` consumes. Contract: [arbora-policy-activation.md](contracts/arbora-policy-activation.md).
@@ -181,12 +183,22 @@ Withdrawn rows, each with its reason:
 - `MEDULLA-ORCH-VOCAB-R815.1`: `ActionStatus` is a classification, not a lifecycle; an `ActionRun` is created in its final outcome, `Applied` or `Refused`, and never moves.
 - `MEDULLA-ORCH-VOCAB-R815.7`: `WorkItemDeferStatus` is the outcome classification of one `DeferWorkItem` answer, not a stored lifecycle; the work item lifecycle is `WorkItemMachine` (R812).
 - `MEDULLA-ORCH-VOCAB-R815.8`: `WorkOfferView.stage` is the version stamp of the pricing function (`WORK_OFFER_UTILITY_RATE_STAGE`), not a lifecycle state.
+- `MEDULLA-ORCH-VOCAB-R007.2`: the committed assembly is the sealed `DecisionRecord`, served by MEDULLA-CQ-ORCH-R008; a graph copy would need a sync path, and its `swarm:feeds` edges are the template facts R006.5 already projects.
+- `MEDULLA-ORCH-VOCAB-R011.7`: a measured model fact is stored once, as a `MeasuredFact` on the `ModelProfile` component (MEDULLA-TYPED-PACKS-R048.2), where `HarnessConfig` reads it (MEDULLA-DECISION-ENGINE-R128.8); a second graph node has no reader.
+- `MEDULLA-ORCH-VOCAB-R011.8`: `MeasuredFact::validate` already refuses a measured fact without its run at publish (MEDULLA-TYPED-PACKS-R048.2).
+- `MEDULLA-ORCH-VOCAB-R011.1` to `MEDULLA-ORCH-VOCAB-R011.6`: the `:EvaluationRun`, `:MeasuredModelFact`, `:factOfModel`, `:measuredProperty`, `:evidencedByRun` and `:measuredSupersedes` terms and `:MeasuredModelFactShape` have no writer or reader once the fact lives on the `ModelProfile` component; the declarations and their tests are removed.
+- `MEDULLA-ORCH-VOCAB-R011.9`: a measured-fact champion pointer would be a second notion of the current fact; `HarnessConfig` reads the `ModelProfile` head.
 
 Resolved rows:
 
 - `MEDULLA-ORCH-VOCAB-R007.1`: steps are recorded as `DecisionInputs.steps`; only the requirement derivation reads them; `STEP_ORDER_CYCLE` joins `DecisionErrorCode`.
 - `MEDULLA-ORCH-VOCAB-R811.9`: `Response.transition_refused` carries the four fields; `Response::err` fills it from the canonical detail; `IncidentSetStatus` is the proof path.
 - `MEDULLA-ORCH-VOCAB-R006.5`: the R003.6 projection is the one writer of template `swarm:` facts; `AgentGraphEdge.kind` marks a loop back; the publish rules refuse a feeds cycle.
-- `MEDULLA-ORCH-VOCAB-R011.7`: the builder returns a `ChangeEnvelopeDraft` of three operations; the engine mints the `MutationBatch`.
+- `MEDULLA-ORCH-VOCAB-R003.6`: the source is the `A2aAgentCard` component on `medulla.agent-component.revision.v1`, not `AgentLibraryEntry`; a second consumer `agent-component-projection` commits `project_component` triples through the R003.6.1 envelope; the kind is the `agent_kind` attribute, refused at publish with `MALFORMED_A2A_AGENT_CARD` when it is not an IRI.
+- `MEDULLA-ORCH-VOCAB-R002.2`: `:hasAgentKind` carries no domain, so a projected card is not inferred to be an `:Agent`.
+- `MEDULLA-ORCH-VOCAB-R010.100`: one UQL statement `evolution_trace_metrics` in `HARNESS_QUERIES`; the join reads `EvolutionProgress`, `ProgramRevision` and `RunTrace` nodes of one RLS snapshot; the window digest is `Digest256::framed(b"eg/evolution-metric-window/v1", ..)`; the three refusals join `ServerErrorCode` and the `Uql` entry of `EXACT_METHOD_ERRORS`.
+- `MEDULLA-ORCH-VOCAB-R011.10`: one `AgentComponent` `Publish` of the next `ModelProfile` revision per evaluation result; no promotion follows.
+- `MEDULLA-ORCH-VOCAB-R011.11`: `HarnessConfig` cites the measured fact of the `ModelProfile` head (MEDULLA-DECISION-ENGINE-R128.11).
+- `MEDULLA-ORCH-VOCAB-R007.4`: the slot kind is matched against the candidate component's `agent_kind` attribute (R003.6), read from `ReadCandidates.entries`.
 - `MEDULLA-ORCH-VOCAB-R014.3`: the exact triples are in `data-model.md`; the `dmn` core source is registered; each pin moves by a stated delta.
 - `MEDULLA-ORCH-VOCAB-R815.2`, `R815.4` to `R815.6` and `R815.9`: each names its initial state, events, edge table, writers and refusal.

@@ -19,6 +19,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T013 [P] [US2] MEDULLA-ORCH-VOCAB-R003.4 Add property `:instanceOfTemplate`
 - [ ] T014 [P] [US2] MEDULLA-ORCH-VOCAB-R003.5 Add library-member shape
 - [ ] T015 [US2] MEDULLA-ORCH-VOCAB-R003.6.1 Run the Agent Library projection worker
+- [ ] T192 [US2] MEDULLA-ORCH-VOCAB-R003.6 Project A2A agent cards into library membership facts
 - [ ] T016 [P] [US2] MEDULLA-ORCH-VOCAB-R003.7 Add Q3 query test
 - [ ] T017 [P] [US2] MEDULLA-ORCH-VOCAB-R004.1 Add class `:BestPractice`
 - [ ] T018 [P] [US2] MEDULLA-ORCH-VOCAB-R004.2 Add property `:appliesToTaskClass`
@@ -38,7 +39,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T032 [US1] MEDULLA-ORCH-VOCAB-R006.5 Project template topology to `swarm:` facts
 - [ ] T033 [P] [US1] MEDULLA-ORCH-VOCAB-R006.6 Add Q6 and Q7 query tests
 - [ ] T034 [US2] MEDULLA-ORCH-VOCAB-R007.1 Expand a task into assembly steps by `:hasStep`
-- [ ] T035 [US2] MEDULLA-ORCH-VOCAB-R007.2 Project the committed assembly back into the graph
 - [ ] T036 [US2] MEDULLA-ORCH-VOCAB-R007.4 Enforce slot agent-kind constraints before selection
 - [ ] T037 [P] [US3] MEDULLA-ORCH-VOCAB-R008.1 Register `orchestration-v1.shapes.ttl` with the shape loader
 - [ ] T039 [P] [US4] MEDULLA-ORCH-VOCAB-R009.1 Add property `:terminationReason`
@@ -64,16 +64,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T059 [P] [US5] MEDULLA-ORCH-VOCAB-R010.4 Query harness_mean_peak_ratio
 - [ ] T060 [P] [US5] MEDULLA-ORCH-VOCAB-R010.5 Query harness_mechanism_counts
 - [ ] T061 [P] [US5] MEDULLA-ORCH-VOCAB-R010.6 Evidence query for the best configuration per solved task
-- [ ] T062 [P] [US5] MEDULLA-ORCH-VOCAB-R011.1 Add class `:EvaluationRun`
-- [ ] T063 [P] [US5] MEDULLA-ORCH-VOCAB-R011.2 Add class `:MeasuredModelFact`
-- [ ] T064 [P] [US5] MEDULLA-ORCH-VOCAB-R011.3 Add properties `:factOfModel` and `:measuredProperty`
-- [ ] T065 [P] [US5] MEDULLA-ORCH-VOCAB-R011.4 Add property `:evidencedByRun`
-- [ ] T066 [P] [US5] MEDULLA-ORCH-VOCAB-R011.5 Add property `:measuredSupersedes`
-- [ ] T067 [P] [US5] MEDULLA-ORCH-VOCAB-R011.6 Add measured-fact shape
-- [ ] T068 [P] [US5] MEDULLA-ORCH-VOCAB-R011.7 Build the measured-fact change envelope draft
-- [ ] T069 [US5] MEDULLA-ORCH-VOCAB-R011.8 Refuse a measured fact without run evidence
-- [ ] T070 [US5] MEDULLA-ORCH-VOCAB-R011.9 Replace a measured fact through the champion pointer
-- [ ] T071 [US5] MEDULLA-ORCH-VOCAB-R011.10 Apply the evaluation result once through the governed path
+- [ ] T071 [US5] MEDULLA-ORCH-VOCAB-R011.10 Apply the evaluation result once through the `ModelProfile` publish
 - [ ] T072 [US5] MEDULLA-ORCH-VOCAB-R011.11 Prove the loop closes through `HarnessConfig`
 - [ ] T073 [P] [US6] MEDULLA-ORCH-VOCAB-R012.1 Model: spec node kinds
 - [ ] T074 [US6] MEDULLA-ORCH-VOCAB-R012.2 Behaviour: classify a spec file by named rule
@@ -94,7 +85,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T089 [US6] MEDULLA-ORCH-VOCAB-R012.9 Requirement rows become typed nodes
 - [ ] T090 [US2] MEDULLA-ORCH-VOCAB-R005.100 Declare the nested step-input shield schema
 - [ ] T091 [US4] MEDULLA-ORCH-VOCAB-R009.100 Correlated trace export read
-- [ ] T092 [US5] MEDULLA-ORCH-VOCAB-R010.100 Join evolution proposals to measured source traces as a read view
+- [ ] T092 [US5] MEDULLA-ORCH-VOCAB-R010.100 Join an evolution proposal to its measured source traces as a read view
 - [x] T093 [US5] MEDULLA-ORCH-VOCAB-R010.101 Index project and agent token and cost totals
 - [ ] T094 [US7] MEDULLA-ORCH-VOCAB-R616.3 Wiring: synthesis proposes and assemble decides
 - [ ] T095 [US7] MEDULLA-ORCH-VOCAB-R616.4 Refusal: a draft that fails its shape
