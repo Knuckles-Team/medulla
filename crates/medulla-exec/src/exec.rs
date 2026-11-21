@@ -273,6 +273,9 @@ pub struct PlanCtx<'a> {
     /// request named (`None`: no modality pair is bound). The rank step compares the
     /// pair's embedding-space bindings (R039.1.2).
     pub modality_pair: Option<medulla_index_types::retrieval_request::ModalityPair>,
+    /// MEDULLA-FEDERATED-QUERY-R039.1.5 — records each call the bound registry encoder
+    /// serves for this request (`None`: nothing is recorded).
+    pub encoding_recorder: Option<std::sync::Arc<EncodingRecorder>>,
     /// MEDULLA-FEDERATED-QUERY-R039 — how a top-`k` rank replenishes candidates the
     /// filter stranded (the registry knobs `retrieval.replenish_max_rounds` and
     /// `retrieval.oversample_factor`, resolved by the served planner).
@@ -356,6 +359,51 @@ pub trait SpatialSource: Send + Sync {
     /// Empty when `layer` is unknown to this index (never an error — degrades exactly
     /// like an absent index would).
     fn query_bbox(&self, layer: &str, bbox: [f64; 4]) -> Vec<String>;
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039.1.5: the record of the calls one registry encoder served
+/// for one request. The executor pushes one [`medulla_types::retrieval::EncodingCall`] per
+/// successful `embed`, so each model call appears once; `execute_ranked` reads the list into
+/// the receipt.
+#[derive(Debug)]
+pub struct EncodingRecorder {
+    model: String,
+    revision: String,
+    modality: String,
+    calls: std::sync::Mutex<Vec<medulla_types::retrieval::EncodingCall>>,
+}
+
+impl EncodingRecorder {
+    /// A recorder for the encoder `model` at `revision`, encoding `modality` (lowercase name).
+    pub fn new(model: String, revision: String, modality: String) -> Self {
+        Self {
+            model,
+            revision,
+            modality,
+            calls: std::sync::Mutex::new(Vec::new()),
+        }
+    }
+
+    /// Record one call that received exactly `input`.
+    pub fn record(&self, input: &str) {
+        if let Ok(mut calls) = self.calls.lock() {
+            calls.push(medulla_types::retrieval::EncodingCall {
+                model: self.model.clone(),
+                modality: self.modality.clone(),
+                input_digest: medulla_types::retrieval::sha256_hex(input.as_bytes()),
+            });
+        }
+    }
+
+    /// The recorded calls, in call order.
+    pub fn calls(&self) -> Vec<medulla_types::retrieval::EncodingCall> {
+        self.calls.lock().map(|calls| calls.clone()).unwrap_or_default()
+    }
+
+    /// The encoder revision, reported when at least one call was recorded.
+    pub fn revision(&self) -> &str {
+        &self.revision
+    }
 }
 
 /// A server-side text→vector embedder (CONCEPT:MEDULLA-KG.compute.no-embedder-bound-op) — the seam that resolves a UQL
@@ -515,6 +563,7 @@ impl<'a> PlanCtx<'a> {
             topic_fusion: None,
             constraints: None,
             modality_pair: None,
+            encoding_recorder: None,
             replenish: vector_rank::ReplenishPolicy::default(),
             plan_scope: None,
             snapshot_revision: None,
@@ -572,6 +621,13 @@ impl<'a> PlanCtx<'a> {
     /// (MEDULLA-FEDERATED-QUERY-R040.1.2).
     pub fn with_constraints(mut self, constraints: constraints::ConstraintSet) -> Self {
         self.constraints = Some(constraints);
+        self
+    }
+
+    /// Record the registry encoder's calls into `recorder` (MEDULLA-FEDERATED-QUERY-R039.1.5).
+    #[must_use]
+    pub fn with_encoding_recorder(mut self, recorder: std::sync::Arc<EncodingRecorder>) -> Self {
+        self.encoding_recorder = Some(recorder);
         self
     }
 
@@ -1088,6 +1144,9 @@ fn rank_embed_op(ctx: &PlanCtx, text: &str, input: RowSet) -> Result<RowSet, Str
         )
     })?;
     let query = embedder.embed(text)?;
+    if let Some(recorder) = &ctx.encoding_recorder {
+        recorder.record(text);
+    }
     rank_op(ctx, &query, input)
 }
 

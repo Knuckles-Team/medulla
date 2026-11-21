@@ -641,7 +641,24 @@ pub(crate) fn bind_modality_encoders<'a>(
         space.dimensions,
         &space.revision,
     )?;
-    Ok(ctx.with_embedder(encoder))
+    // MEDULLA-FEDERATED-QUERY-R039.1.5: each call the registry encoder serves is recorded once.
+    let recorder = std::sync::Arc::new(medulla_exec::exec::EncodingRecorder::new(
+        binding.encoder.clone(),
+        space.revision.clone(),
+        modality_name(pair.query).to_string(),
+    ));
+    Ok(ctx.with_embedder(encoder).with_encoding_recorder(recorder))
+}
+
+/// The lowercase name of a modality, as the receipt and the wire spell it.
+pub(crate) fn modality_name(modality: medulla_index_types::embedding::Modality) -> &'static str {
+    use medulla_index_types::embedding::Modality;
+    match modality {
+        Modality::Text => "text",
+        Modality::Image => "image",
+        Modality::Audio => "audio",
+        Modality::Video => "video",
+    }
 }
 
 /// The retrieval-request binding of [`run_unified_with`]

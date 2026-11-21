@@ -190,6 +190,42 @@ pub struct RetrievalReceipt {
     /// Present when the request declared hard constraints.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub constraint: Option<TraceConstraint>,
+    /// Present exactly when the request carried `retrieval.modality`
+    /// (MEDULLA-FEDERATED-QUERY-R039.1.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub modality: Option<TraceModality>,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039.1.5: the multimodal evidence of one ranked answer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TraceModality {
+    /// `<query>-><target>` over the lowercase modality names (`text->image`).
+    pub modality_direction: String,
+    /// `EmbeddingSpaceRef.id` of the pinned space.
+    pub space_id: String,
+    /// The distinct encoder revisions of the calls, in first-call order.
+    pub model_revisions: Vec<String>,
+    /// The generation counter of the vector index the ranking read.
+    pub index_generation: u64,
+    /// The caller-visible shortfall; `None` when the answer holds `k` rows.
+    pub authorized_shortfall_counts: Option<Shortfall>,
+    /// One entry per call a registry encoder served for this request, in call order.
+    pub encoding_calls: Vec<EncodingCall>,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R039.1.5: one encoder call.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EncodingCall {
+    /// The encoder's registry id.
+    pub model: String,
+    /// The lowercase modality name it encoded.
+    pub modality: String,
+    /// SHA-256 (64 lowercase hex) of the exact bytes the encoder received.
+    pub input_digest: String,
 }
 
 #[cfg(test)]

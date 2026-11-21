@@ -172,16 +172,57 @@ pub fn execute_ranked(
     ctx: &medulla_exec::exec::PlanCtx,
 ) -> Result<medulla_types::retrieval::RankedRows, String> {
     let result = medulla_exec::exec::execute(plan, ctx)?;
+    let shortfall = result.shortfall().copied();
+    let constraint = ctx
+        .constraints
+        .as_ref()
+        .map(|constraints| constraints.trace().clone());
+    // MEDULLA-FEDERATED-QUERY-R039.1.5: present exactly when the request named a modality pair.
+    let modality = ctx.modality_pair.as_ref().map(|pair| {
+        let calls = ctx
+            .encoding_recorder
+            .as_ref()
+            .map(|recorder| recorder.calls())
+            .unwrap_or_default();
+        let mut model_revisions = Vec::new();
+        if let (Some(recorder), false) = (&ctx.encoding_recorder, calls.is_empty()) {
+            model_revisions.push(recorder.revision().to_string());
+        }
+        medulla_types::retrieval::TraceModality {
+            modality_direction: format!(
+                "{}->{}",
+                modality_name(&pair.query),
+                modality_name(&pair.target)
+            ),
+            space_id: ctx
+                .semantic
+                .space()
+                .map(|space| space.id.clone())
+                .unwrap_or_default(),
+            model_revisions,
+            index_generation: ctx.semantic.generation(),
+            authorized_shortfall_counts: shortfall,
+            encoding_calls: calls,
+        }
+    });
+    let receipt = (constraint.is_some() || modality.is_some()).then_some(
+        medulla_types::retrieval::RetrievalReceipt {
+            constraint,
+            modality,
+        },
+    );
     Ok(medulla_types::retrieval::RankedRows {
         rows: unified_rows(&result),
-        receipt: ctx
-            .constraints
-            .as_ref()
-            .map(|constraints| medulla_types::retrieval::RetrievalReceipt {
-                constraint: Some(constraints.trace().clone()),
-            }),
-        shortfall: result.shortfall().copied(),
+        receipt,
+        shortfall,
     })
+}
+
+/// The lowercase name of a modality, as the receipt and the wire spell it (the variants of
+/// `Modality` are single words, so the lowercase of its name is its wire name).
+#[cfg(feature = "query")]
+fn modality_name(modality: &impl std::fmt::Debug) -> String {
+    format!("{modality:?}").to_lowercase()
 }
 
 #[cfg(feature = "query")]

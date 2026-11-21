@@ -31881,12 +31881,36 @@ class TraceConstraint(BaseModel):
     per_predicate: list[PredicateOutcome]
 
 
+class EncodingCall(BaseModel):
+    """One encoder call that served a request."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    input_digest: str
+    modality: str
+    model: str
+
+
+class TraceModality(BaseModel):
+    """The multimodal evidence of one ranked answer."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    authorized_shortfall_counts: Shortfall | None = None
+    encoding_calls: list[EncodingCall]
+    index_generation: Annotated[int, Field(ge=0)]
+    modality_direction: str
+    model_revisions: list[str]
+    space_id: str
+
+
 class RetrievalReceipt(BaseModel):
     """The evidence a ranked ``UnifiedQuery`` answer carries."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     constraint: TraceConstraint | None = None
+    modality: TraceModality | None = None
 
 
 class RankedRows(BaseModel):
