@@ -18986,7 +18986,10 @@ class MedullaClient:
         ``record_id`` and ``digest``. Without evidence the call refuses
         ``PROPOSAL_EVIDENCE_REQUIRED``; a record that is absent refuses
         ``PROPOSAL_EVIDENCE_UNRESOLVED`` and a wrong digest
-        ``PROPOSAL_EVIDENCE_DIGEST_MISMATCH``.
+        ``PROPOSAL_EVIDENCE_DIGEST_MISMATCH``. The project's mode gates the call
+        first (MEDULLA-SDLC-R017.5): a ``reference`` project (the default) refuses
+        ``MODE_REFERENCE_NO_PROPOSALS`` and a ``development`` project refuses an
+        ``unprompted`` proposal with ``MODE_ORIGIN_NOT_ADMITTED``.
         """
         result = await self._send("ProposalPut", {"proposal": proposal}, None)
         if not isinstance(result, dict):
