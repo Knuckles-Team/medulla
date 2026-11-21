@@ -647,6 +647,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     // REASON_BRANCH_CHAIN_TENANT_SCOPED (MEDULLA-BRANCH-MERGE-R006)
     ("BranchDiff", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     ("BranchReadAt", REASON_BRANCH_CHAIN_TENANT_SCOPED),
+    // MEDULLA-SCM-R004: the tree is folded from the tenant's own branch chain.
+    ("ReadTree", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     // REASON_TENANT_KEY_SCOPED_KV
     ("KvGet", REASON_TENANT_KEY_SCOPED_KV),
     ("KvScan", REASON_TENANT_KEY_SCOPED_KV),

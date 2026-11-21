@@ -88,6 +88,8 @@ pub mod screen;
 pub mod line_merge;
 // MEDULLA-SCM-R013.2 — projection of a graph-native symbol edit to file bytes and one changeset.
 pub mod source_symbol_edit;
+/// Tree materialization of the source-changeset chain (MEDULLA-SCM-R004).
+pub mod source_tree;
 /// Shared parser fixtures for this crate's unit tests and downstream test
 /// consumers. The feature is dev-only in the facade and absent from releases.
 #[cfg(all(any(test, feature = "test-support"), feature = "ast"))]

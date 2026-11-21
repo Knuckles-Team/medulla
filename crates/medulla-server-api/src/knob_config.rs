@@ -825,6 +825,8 @@ knobs! {
     scheduler_process_document_max_depth: u32 = "scheduler.process_document_max_depth", U64(64), [8, 256], "levels", Tunable;
     /// Scheduler: Largest submitted changeset blob. (MEDULLA-DURABLE-KERNEL-R076.2).
     scheduler_changeset_max_blob_bytes: u64 = "scheduler.changeset_max_blob_bytes", U64(134_217_728), [1_048_576, 4_294_967_296], "bytes", Tunable;
+    /// Scheduler: Changesets between two stored tree snapshots (MEDULLA-SCM-R004).
+    scheduler_tree_checkpoint_interval: u64 = "scheduler.tree_checkpoint_interval", U64(1000), [10, 100_000], "changesets", Tunable;
     /// Scheduler: Byte ceiling of one low-storage ANN artifact. (MEDULLA-DURABLE-KERNEL-R076.2).
     scheduler_ann_storage_ceiling_bytes: u64 = "scheduler.ann_storage_ceiling_bytes", U64(2_147_483_648), [1_048_576, 1_099_511_627_776], "bytes", Tunable;
     /// Scheduler: hub-preserving pruning of compact ANN artifacts (MEDULLA-FEDERATED-QUERY-R040.5.5).
@@ -1067,6 +1069,7 @@ pub fn scheduler_config_from(
         process_document_max_bytes: knobs.scheduler_process_document_max_bytes,
         process_document_max_depth: knobs.scheduler_process_document_max_depth,
         changeset_max_blob_bytes: knobs.scheduler_changeset_max_blob_bytes,
+        tree_checkpoint_interval: knobs.scheduler_tree_checkpoint_interval,
         ann_storage_ceiling_bytes: knobs.scheduler_ann_storage_ceiling_bytes,
         ann_hub_pruning: if knobs.scheduler_ann_hub_pruning {
             AnnHubPruning::Enabled

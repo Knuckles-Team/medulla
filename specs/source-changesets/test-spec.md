@@ -81,7 +81,8 @@ Each entry marked planned names a test or file that does not exist in the tree y
 | `MEDULLA-SCM-R002.1` | `tests/test_scm_changeset.py::test_trailers_round_trip_through_git` | L3 | planned |
 | `MEDULLA-SCM-R003` | `tests/test_scm_accept.py::test_disjoint_writers_land_and_overlap_rebases_or_conflicts` | L3 | planned |
 | `MEDULLA-SCM-R003.1` | `tests/test_scm_disjoint_served.py::test_disjoint_changesets_land_in_parallel` | L4 | planned |
-| `MEDULLA-SCM-R004` | `tests/test_scm_tree.py::test_tree_at_revision_matches_full_replay` | L3 | planned |
+| `MEDULLA-SCM-R004` | `tests/test_scm_tree.py::test_tree_at_revision_matches_full_replay` | L3 | existing |
+| `MEDULLA-SCM-R004` | `crates/medulla-compute/src/source_tree.rs::tests::tree_at_revision_matches_full_replay` | L2 | existing |
 | `MEDULLA-SCM-R005` | `tests/test_scm_history.py::test_incremental_indexes_equal_rebuild` | L3 | planned |
 | `MEDULLA-SCM-R005.1` | `tests/test_scm_history.py::test_path_history_lists_touching_changesets` | L3 | planned |
 | `MEDULLA-SCM-R005.2` | `tests/test_scm_history.py::test_blame_attributes_lines_across_rename` | L3 | planned |

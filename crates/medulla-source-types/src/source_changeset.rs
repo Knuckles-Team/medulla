@@ -63,6 +63,9 @@ pub enum ChangesetRefusal {
     /// A blob of an overlapping path could not be read for the merge
     /// (MEDULLA-BRANCH-MERGE-R010).
     MergeBlobUnreadable,
+    /// A tree read named a revision that is not a changeset of the branch
+    /// chain (MEDULLA-SCM-R004).
+    RevisionNotOnChain,
 }
 
 impl ChangesetRefusal {
@@ -77,6 +80,7 @@ impl ChangesetRefusal {
             Self::ChangesetParentNotOnBranch => "CHANGESET_PARENT_NOT_ON_BRANCH",
             Self::SourceConflict => "SOURCE_CONFLICT",
             Self::MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
+            Self::RevisionNotOnChain => "REVISION_NOT_ON_CHAIN",
         }
     }
 }
@@ -268,6 +272,71 @@ impl SubmitRefusal {
     /// The wire message: `CODE: detail`.
     pub fn message(&self) -> String {
         format!("{}: {}", self.refusal.code(), self.detail)
+    }
+}
+
+/// Deepest `depth` a `ReadTree` accepts (MEDULLA-SCM-R004, `Fixed`).
+pub const TREE_READ_MAX_DEPTH: u32 = 64;
+
+/// One file of a materialized tree (MEDULLA-SCM-R004).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TreeEntry {
+    pub path: String,
+    pub blob_digest: String,
+    pub mode: u32,
+}
+
+/// The closed request of `Method::ReadTree` (MEDULLA-SCM-R004): the tree of
+/// `repo` as of the changeset commit `rev` on `branch`, restricted to `prefix`
+/// and to `depth` path segments below it (`0` is unbounded).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReadTreeRequest {
+    pub repo: String,
+    pub branch: String,
+    pub rev: String,
+    #[serde(default)]
+    pub prefix: String,
+    #[serde(default)]
+    pub depth: u32,
+}
+
+/// The served answer of `ReadTree`: entries sorted by path.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReadTreeReceipt {
+    pub entries: Vec<TreeEntry>,
+}
+
+impl ReadTreeRequest {
+    /// Check every bound of the request; the first failure names its field.
+    /// Returns the prefix without a trailing separator. No store is read.
+    pub fn validate(&self) -> Result<String, SubmitRefusal> {
+        if !valid_name(&self.repo, 128) {
+            return Err(invalid("repo"));
+        }
+        if !valid_name(&self.branch, 255) {
+            return Err(invalid("branch"));
+        }
+        let hex64 = self.rev.len() == 64
+            && self
+                .rev
+                .chars()
+                .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
+        if !hex64 {
+            return Err(invalid("rev"));
+        }
+        if self.depth > TREE_READ_MAX_DEPTH {
+            return Err(invalid("depth"));
+        }
+        let prefix = self.prefix.strip_suffix('/').unwrap_or(&self.prefix);
+        if !prefix.is_empty() && !valid_path(prefix) {
+            return Err(invalid("prefix"));
+        }
+        Ok(prefix.to_string())
     }
 }
 

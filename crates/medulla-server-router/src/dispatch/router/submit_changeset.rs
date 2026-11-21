@@ -25,6 +25,7 @@ pub struct SubmitChangesetFields {
 mod served {
     use super::*;
     use medulla_h_graph::graph_ops::branch as ops;
+    use medulla_h_ingest::source_tree::checkpoint_after;
     use medulla_h_ingest::source_changeset::{
         accept, verify_submission, AcceptContext, AcceptError, ChainView, ChunkStoreBlobs,
     };
@@ -178,12 +179,20 @@ mod served {
                 };
                 let payload =
                     rmp_serde::to_vec_named(&changeset).map_err(|error| error.to_string())?;
+                // MEDULLA-SCM-R004: every `tree_checkpoint_interval`th changeset
+                // commits a full tree snapshot with it.
+                let checkpoint = checkpoint_after(
+                    &chain,
+                    &changeset,
+                    medulla_work_types::scheduler_config::DEFAULT_TREE_CHECKPOINT_INTERVAL,
+                )?;
                 Ok(CommitPlan {
                     engine_version: 0,
                     manifest_digest: changeset.id.clone(),
                     actor: author.clone(),
                     created_at_ms,
                     payload: Some(payload),
+                    checkpoint,
                 })
             })
             .await;

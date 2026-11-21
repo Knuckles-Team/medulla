@@ -100,6 +100,12 @@ pub const DEFAULT_CHANGESET_MAX_BLOB_BYTES: u64 = 134_217_728;
 /// Inclusive bounds of `changeset_max_blob_bytes`.
 pub const CHANGESET_MAX_BLOB_BYTES_BOUNDS: (u64, u64) = (1_048_576, 4_294_967_296);
 
+/// Default number of changesets between two stored tree checkpoints
+/// (MEDULLA-SCM-R004).
+pub const DEFAULT_TREE_CHECKPOINT_INTERVAL: u64 = 1000;
+/// Inclusive bounds of `tree_checkpoint_interval`.
+pub const TREE_CHECKPOINT_INTERVAL_BOUNDS: (u64, u64) = (10, 100_000);
+
 /// Default byte ceiling of one low-storage ANN artifact, peak included
 /// (MEDULLA-FEDERATED-QUERY-R040.5.1).
 pub const DEFAULT_ANN_STORAGE_CEILING_BYTES: u64 = 2_147_483_648;
@@ -160,6 +166,10 @@ pub fn index_max_working_bytes_from(
 
 fn default_changeset_max_blob_bytes() -> u64 {
     DEFAULT_CHANGESET_MAX_BLOB_BYTES
+}
+
+fn default_tree_checkpoint_interval() -> u64 {
+    DEFAULT_TREE_CHECKPOINT_INTERVAL
 }
 
 /// The startup value of `enrich_timeout_ms`: the default, or the
@@ -396,6 +406,9 @@ pub struct SchedulerConfig {
     /// Largest bytes of one submitted changeset blob (MEDULLA-SCM-R001).
     #[serde(default = "default_changeset_max_blob_bytes")]
     pub changeset_max_blob_bytes: u64,
+    /// Changesets between two stored full tree snapshots (MEDULLA-SCM-R004).
+    #[serde(default = "default_tree_checkpoint_interval")]
+    pub tree_checkpoint_interval: u64,
     /// Byte ceiling of one low-storage ANN artifact, persisted and peak
     /// (MEDULLA-FEDERATED-QUERY-R040.5.1).
     #[serde(default = "default_ann_storage_ceiling_bytes")]
@@ -426,6 +439,7 @@ pub enum InvalidSchedulerConfig {
     EnrichTimeoutOutOfRange,
     IndexMaxWorkingBytesOutOfRange,
     ChangesetMaxBlobBytesOutOfRange,
+    TreeCheckpointIntervalOutOfRange,
     AnnStorageCeilingBytesOutOfRange,
     HistoryKnobOutOfRange(&'static str),
     InvalidEnvValue(&'static str),
@@ -513,6 +527,11 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 "scheduler changeset_max_blob_bytes must be within [{}, {}]",
                 CHANGESET_MAX_BLOB_BYTES_BOUNDS.0, CHANGESET_MAX_BLOB_BYTES_BOUNDS.1
             ),
+            Self::TreeCheckpointIntervalOutOfRange => write!(
+                f,
+                "scheduler tree_checkpoint_interval must be within [{}, {}]",
+                TREE_CHECKPOINT_INTERVAL_BOUNDS.0, TREE_CHECKPOINT_INTERVAL_BOUNDS.1
+            ),
             Self::HistoryKnobOutOfRange(key) => {
                 write!(f, "{key} is outside its accepted range")
             }
@@ -590,6 +609,11 @@ impl SchedulerConfig {
             .contains(&self.changeset_max_blob_bytes)
         {
             return Err(InvalidSchedulerConfig::ChangesetMaxBlobBytesOutOfRange);
+        }
+        if !(TREE_CHECKPOINT_INTERVAL_BOUNDS.0..=TREE_CHECKPOINT_INTERVAL_BOUNDS.1)
+            .contains(&self.tree_checkpoint_interval)
+        {
+            return Err(InvalidSchedulerConfig::TreeCheckpointIntervalOutOfRange);
         }
         if !(ANN_STORAGE_CEILING_BYTES_BOUNDS.0..=ANN_STORAGE_CEILING_BYTES_BOUNDS.1)
             .contains(&self.ann_storage_ceiling_bytes)
@@ -894,6 +918,29 @@ mod tests {
         ] {
             let mut candidate = config();
             candidate.changeset_max_blob_bytes = value;
+            assert_eq!(candidate.validate(), expected, "bound {value}");
+        }
+    }
+
+    // spec: MEDULLA-SCM-R004
+    #[test]
+    fn tree_checkpoint_interval_defaults_and_bounds() {
+        assert_eq!(config().tree_checkpoint_interval, 1000);
+        assert_eq!(config().validate(), Ok(()));
+        for (value, expected) in [
+            (10u64, Ok(())),
+            (100_000u64, Ok(())),
+            (
+                9u64,
+                Err(InvalidSchedulerConfig::TreeCheckpointIntervalOutOfRange),
+            ),
+            (
+                100_001u64,
+                Err(InvalidSchedulerConfig::TreeCheckpointIntervalOutOfRange),
+            ),
+        ] {
+            let mut candidate = config();
+            candidate.tree_checkpoint_interval = value;
             assert_eq!(candidate.validate(), expected, "bound {value}");
         }
     }

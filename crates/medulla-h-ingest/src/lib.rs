@@ -61,6 +61,11 @@ pub mod source_batch;
 #[cfg(feature = "blob")]
 pub mod source_changeset;
 
+/// `ReadTree` handler and the tree checkpoint written with an accepted
+/// changeset (MEDULLA-SCM-R004).
+#[cfg(feature = "blob")]
+pub mod source_tree;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_ingestion;

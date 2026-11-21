@@ -119,6 +119,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R004: the tree of a repository at one changeset revision.
+        Method::ReadTree { request } => {
+            dispatch_boxed(super::read_tree::handle_read_tree(
+                state,
+                req,
+                verified_context,
+                super::read_tree::ReadTreeFields { request },
+            ))
+            .await
+        }
         other => return ControlFlow::Continue(other),
     })
 }

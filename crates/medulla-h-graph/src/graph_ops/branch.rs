@@ -249,6 +249,20 @@ impl BranchTarget {
             .map_err(|error| error.to_string())?
     }
 
+    /// Run `read` against the registry and this branch on a blocking thread
+    /// (MEDULLA-SCM-R004): a read that walks the chain does so with sync calls.
+    pub async fn read_blocking<R, F>(&self, read: F) -> Result<R, String>
+    where
+        R: Send + 'static,
+        F: FnOnce(&BranchRegistry, &BranchRef) -> R + Send + 'static,
+    {
+        let registry = Arc::clone(&self.registry);
+        let reference = self.reference.clone();
+        tokio::task::spawn_blocking(move || read(&registry, &reference))
+            .await
+            .map_err(|error| error.to_string())
+    }
+
     /// Append a commit built inside the registry write transaction from the
     /// head it extends, with its payload (MEDULLA-SCM-R002).
     pub async fn append_with<F>(

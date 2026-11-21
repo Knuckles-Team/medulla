@@ -880,6 +880,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "SOURCE_CONFLICT",
         ],
     ),
+    // MEDULLA-SCM-R004: the tree read refusals.
+    (
+        "ReadTree",
+        &[
+            "BRANCH_DELETED",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "CHANGESET_INVALID",
+            "REVISION_NOT_ON_CHAIN",
+        ],
+    ),
     // MEDULLA-IDENTITY-R701: no delegation record for the work item in the caller's tenant.
     ("GetDelegationRecord", &["DELEGATION_UNKNOWN"]),
     // MEDULLA-DECISION-ENGINE-R152.4: a zero budget, too many node ids or a fact with no source.

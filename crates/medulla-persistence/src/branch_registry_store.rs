@@ -156,6 +156,12 @@ fn payload_row_key(branch: &BranchRef, commit_id: &str) -> String {
     format!("payload:{}:{commit_id}", branch.registry_key())
 }
 
+/// Row key of the full tree snapshot stored at a commit (MEDULLA-SCM-R004):
+/// `tree:` cannot collide with `commit:`, `batch:` or `payload:`.
+fn checkpoint_row_key(branch: &BranchRef, commit_id: &str) -> String {
+    format!("tree:{}:{commit_id}", branch.registry_key())
+}
+
 /// What a commit builder returns: the commit facts plus the payload that
 /// commits atomically with the head advance.
 #[derive(Debug, Clone)]
@@ -170,6 +176,9 @@ pub struct CommitPlan {
     pub created_at_ms: u64,
     /// The payload committed atomically with the head advance, if any.
     pub payload: Option<Vec<u8>>,
+    /// The full tree snapshot committed with the commit, written every
+    /// `tree_checkpoint_interval` changesets (MEDULLA-SCM-R004).
+    pub checkpoint: Option<Vec<u8>>,
 }
 
 /// Reads the payload of an earlier commit inside the append transaction.
@@ -285,6 +294,7 @@ impl BranchRegistry {
             actor: input.actor.clone(),
             created_at_ms: input.created_at_ms,
             payload: input.payload.clone(),
+            checkpoint: None,
         };
         match self.append_with(branch, caller_tenant, &input.batch_id, |_, _| Ok(plan)) {
             Ok(done) => Ok(done),
@@ -303,6 +313,22 @@ impl BranchRegistry {
         let table = read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?;
         let found = table
             .get(payload_row_key(branch, commit_id).as_str())
+            .map_err(|error| error.to_string())?
+            .map(|value| value.value().to_vec());
+        Ok(found)
+    }
+
+    /// The tree snapshot stored at one commit (MEDULLA-SCM-R004), if one was
+    /// written there.
+    pub fn commit_checkpoint(
+        &self,
+        branch: &BranchRef,
+        commit_id: &str,
+    ) -> Result<Option<Vec<u8>>, String> {
+        let read = self.durable.read()?;
+        let table = read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?;
+        let found = table
+            .get(checkpoint_row_key(branch, commit_id).as_str())
             .map_err(|error| error.to_string())?
             .map(|value| value.value().to_vec());
         Ok(found)
@@ -402,6 +428,14 @@ impl BranchRegistry {
                     .insert(
                         payload_row_key(branch, &commit.id).as_str(),
                         payload.as_slice(),
+                    )
+                    .map_err(|error| error.to_string())?;
+            }
+            if let Some(checkpoint) = &plan.checkpoint {
+                table
+                    .insert(
+                        checkpoint_row_key(branch, &commit.id).as_str(),
+                        checkpoint.as_slice(),
                     )
                     .map_err(|error| error.to_string())?;
             }

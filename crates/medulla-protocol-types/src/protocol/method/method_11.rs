@@ -428,6 +428,16 @@ $($variants)*
         request: Box<medulla_source_types::source_changeset::SubmitChangesetRequest>,
     },
 
+    /// Read the tree of a repository as of one changeset commit
+    /// (MEDULLA-SCM-R004): the files `{path, blob_digest, mode}` under `prefix`
+    /// at `rev` on `branch`, at most `depth` path segments below the prefix
+    /// (`0` is unbounded, the maximum is 64). Replays the chain from the nearest
+    /// stored checkpoint. Refusals: `CHANGESET_INVALID`, `REVISION_NOT_ON_CHAIN`,
+    /// plus the branch refusals of `BranchReadAt`. Reads only.
+    ReadTree {
+        request: Box<medulla_source_types::source_changeset::ReadTreeRequest>,
+    },
+
     // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
     /// Cited facts of ranked nodes inside a token budget: for each node id in
     /// the caller's order, the visible literal properties and outgoing edges as
