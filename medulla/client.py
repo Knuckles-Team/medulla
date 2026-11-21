@@ -11746,17 +11746,23 @@ def _raise_send_error(resp: dict[str, Any]) -> NoReturn:
         raise ResultTooLargeError(code, error_detail)
     refused = resp.get("transition_refused")
     if code == "TRANSITION_REFUSED" and isinstance(refused, dict):
-        fields = {
-            key: refused.get(key) for key in ("machine", "from", "event", "reason")
-        }
-        if all(isinstance(value, str) for value in fields.values()):
+        machine = refused.get("machine")
+        from_state = refused.get("from")
+        event = refused.get("event")
+        reason = refused.get("reason")
+        if (
+            isinstance(machine, str)
+            and isinstance(from_state, str)
+            and isinstance(event, str)
+            and isinstance(reason, str)
+        ):
             raise TransitionRefusedError(
                 code,
                 error_detail,
-                machine=fields["machine"],
-                from_state=fields["from"],
-                event=fields["event"],
-                reason=fields["reason"],
+                machine=machine,
+                from_state=from_state,
+                event=event,
+                reason=reason,
             )
     raise EngineResponseError(code, error_detail)
 

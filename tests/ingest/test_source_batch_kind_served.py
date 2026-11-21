@@ -136,12 +136,14 @@ async def test_transcripts_batch_commits_thread_and_messages() -> None:
         assert len(threads) == 1
         thread_id = threads[0][0]
         thread = await client.nodes.properties(thread_id)
+        assert thread is not None
         assert thread["dialect"] == "claude"
         assert thread["message_count"] == 2
 
         segments = {}
         for node_id, _ in await client.nodes.list_by_label("TranscriptSegment", 0):
             props = await client.nodes.properties(node_id)
+            assert props is not None
             segments[props["sequence"]] = (node_id, props)
         assert sorted(segments) == [0, 1]
         first_id, first = segments[0]

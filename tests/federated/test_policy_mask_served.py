@@ -39,7 +39,7 @@ async def _people(client: MedullaClient, label: str, count: int) -> None:
 
 
 async def _ids(client: MedullaClient, label: str) -> list[str]:
-    result = await client.uql(f"MATCH (:{label})")
+    result = await client.query.uql(f"MATCH (:{label})")
     return sorted(row["id"] for row in result["rows"])
 
 

@@ -133,10 +133,12 @@ async def test_near_duplicates_link_and_distinct_pass() -> None:
             other = ids[f"other-{n}"]
             assert not await client.edges.has(other, base)
             props = await client.nodes.properties(other)
+            assert props is not None
             assert len(props["minhash_signature"]) == LSH_BANDS * LSH_ROWS
             assert props["minhash_first_version"] > 0
         # A near duplicate is never indexed: it carries no signature.
         near = await client.nodes.properties(ids["near-0"])
+        assert near is not None
         assert "minhash_signature" not in near
     finally:
         await _close(client, graph)

@@ -116,12 +116,18 @@ def test_transition_refused_is_a_core_refusal_class() -> None:
     facts = [(p, o) for s, p, o in _triples() if s == refused]
     assert (SUBCLASS, pyoxigraph.NamedNode(CORE + "RefusalCode")) in facts
     assert any(p == LABEL for p, _ in facts)
-    aliases = {o.value for p, o in facts if p == ALT_LABEL}
+    aliases = {
+        o.value
+        for p, o in facts
+        if p == ALT_LABEL and isinstance(o, pyoxigraph.Literal)
+    }
     assert {"Transition Refusal", "Lifecycle Refusal"} <= aliases
     guard_aliases = {
         o.value
         for s, p, o in _triples()
-        if s == CORE + "TransitionGuard" and p == ALT_LABEL
+        if s == CORE + "TransitionGuard"
+        and p == ALT_LABEL
+        and isinstance(o, pyoxigraph.Literal)
     }
     assert "Guard" in guard_aliases
     assert CORE + "Guard" not in _classes(), (

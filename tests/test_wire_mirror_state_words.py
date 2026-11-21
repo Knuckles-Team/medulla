@@ -9,7 +9,7 @@ from __future__ import annotations
 import enum
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 from medulla.generated import models
 
@@ -22,7 +22,7 @@ STAGE_MIRRORS = (
 )
 
 
-def _annotation(model: type, field: str) -> object:
+def _annotation(model: type[BaseModel], field: str) -> object:
     return model.model_fields[field].annotation
 
 
@@ -47,10 +47,12 @@ def test_semantic_and_audit_mirrors_type_state_as_the_rust_enum() -> None:
         "request_id": "request-1",
         "surface": "http",
     }
-    accepted = models.MethodAuditAppendParams(status="reserved", **fields)
+    accepted = models.MethodAuditAppendParams.model_validate(
+        {"status": "reserved", **fields}
+    )
     assert accepted.status is models.AuditStatus.RESERVED
     with pytest.raises(ValidationError):
-        models.MethodAuditAppendParams(status="closed", **fields)
+        models.MethodAuditAppendParams.model_validate({"status": "closed", **fields})
 
 
 # spec: MEDULLA-ORCH-VOCAB-R816.1
@@ -64,9 +66,11 @@ def test_incident_set_status_params_type_status_as_the_rust_enum() -> None:
     assert {"open", "acknowledged", "resolved"} <= {
         m.value for m in models.IncidentStatus
     }
-    accepted = models.MethodIncidentSetStatusParams(
-        incident_id="inc-1", status="acknowledged"
+    accepted = models.MethodIncidentSetStatusParams.model_validate(
+        {"incident_id": "inc-1", "status": "acknowledged"}
     )
     assert accepted.status is models.IncidentStatus.ACKNOWLEDGED
     with pytest.raises(ValidationError):
-        models.MethodIncidentSetStatusParams(incident_id="inc-1", status="skipped")
+        models.MethodIncidentSetStatusParams.model_validate(
+            {"incident_id": "inc-1", "status": "skipped"}
+        )

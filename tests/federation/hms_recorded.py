@@ -13,6 +13,7 @@ import socket
 import struct
 import threading
 from dataclasses import dataclass, field
+from typing import Any
 
 VERSION_1 = 0x80010000
 MSG_CALL, MSG_REPLY = 1, 2
@@ -67,7 +68,7 @@ class _Conn:
         if ty == T_STRING:
             return self.string()
         if ty == T_STRUCT:
-            fields = {}
+            fields: dict[int, Any] = {}
             while True:
                 field_type = self.exact(1)[0]
                 if field_type == T_STOP:

@@ -133,7 +133,7 @@ def test_seed_idempotent_and_partial_reimport(tmp_path: Path) -> None:
                 graph_name=graph,
             )
             try:
-                rows = await client.sparql(
+                rows = await client.rdf.sparql(
                     "SELECT ?subject WHERE { ?subject "
                     "<https://knuckles-team.github.io/ontology/"
                     "connector-seed#fromSeed> "

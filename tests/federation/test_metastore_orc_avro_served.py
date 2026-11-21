@@ -19,10 +19,7 @@ try:
     from conftest import request_context
 except ImportError:  # pragma: no cover - rootdir import layout
     from tests.conftest import request_context
-try:
-    from tests.federation.hms_recorded import HmsTable, RecordedMetastore
-except ImportError:  # pragma: no cover - sibling import layout
-    from hms_recorded import HmsTable, RecordedMetastore
+from .hms_recorded import HmsTable, RecordedMetastore
 
 pa = pytest.importorskip("pyarrow")
 orc = pytest.importorskip("pyarrow.orc")
