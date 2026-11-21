@@ -12,7 +12,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T006 [US1] MEDULLA-TYPED-PACKS-R001.6 Versioned prompt graph identity
 - [ ] T007 [US1] MEDULLA-TYPED-PACKS-R001.7 Prompt payload validation
 - [ ] T008 [US1] MEDULLA-TYPED-PACKS-R001.8 Deterministic runtime rendering
-- [ ] T009 [US1] MEDULLA-TYPED-PACKS-R001.9 Prompt operation wire types
+- [ ] T009 [US1] MEDULLA-TYPED-PACKS-R001.9 RETIRED: prompt operation wire types
 - [x] T010 [US1] MEDULLA-TYPED-PACKS-R001.100 Versioned nested prompt and tool schemas with incremental compatibility
 - [ ] T011 [US1] MEDULLA-TYPED-PACKS-R002.1 Body staging
 - [ ] T012 [US1] MEDULLA-TYPED-PACKS-R002.2 Unchanged holder transition
@@ -219,7 +219,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T206 [US4] MEDULLA-TYPED-PACKS-R107.2 Behavior
 - [x] T207 [US4] MEDULLA-TYPED-PACKS-R107.3 Wiring
 - [ ] T208 [US4] MEDULLA-TYPED-PACKS-R107.4 Refusal
-- [ ] T209 [US4] MEDULLA-TYPED-PACKS-R107.5 Evidence
+- [ ] T209 [US4] MEDULLA-TYPED-PACKS-R107.5 Release evidence on the import answer
 - [ ] T210 [US4] MEDULLA-TYPED-PACKS-R107.6 Hot-path proof
 - [ ] T211 [US4] MEDULLA-TYPED-PACKS-R108.1 Model
 - [ ] T212 [US4] MEDULLA-TYPED-PACKS-R108.2 Behavior
@@ -324,10 +324,10 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T310 [US8] MEDULLA-TYPED-PACKS-R110.3 Inbound open metadata mapping
 - [ ] T311 [US8] MEDULLA-TYPED-PACKS-R110.4 Outbound open metadata payload
 - [x] T312 [US8] MEDULLA-TYPED-PACKS-R110.5 Open metadata sync adapter wiring
-- [ ] T313 [US8] MEDULLA-TYPED-PACKS-R110.6 Open metadata refusal
-- [ ] T314 [US8] MEDULLA-TYPED-PACKS-R110.7 Open metadata evidence
-- [ ] T315 [US8] MEDULLA-TYPED-PACKS-R110.8 Open metadata conflict proof
-- [ ] T316 [US8] MEDULLA-TYPED-PACKS-R110.9 Open metadata hot-path proof
+- [ ] T313 [US8] MEDULLA-TYPED-PACKS-R110.6 Open metadata unmapped types and version conflicts in the sync report
+- [ ] T314 [US8] MEDULLA-TYPED-PACKS-R110.7 Open metadata evidence on every synced node
+- [ ] T315 [US8] MEDULLA-TYPED-PACKS-R110.8 Open metadata conflict proof: a store version raised under a catalog edit
+- [ ] T316 [US8] MEDULLA-TYPED-PACKS-R110.9 RETIRED: open metadata hot-path proof
 - [ ] T320 [US8] MEDULLA-TYPED-PACKS-R810 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T321 [US8] MEDULLA-TYPED-PACKS-R810.1 AdmissionRow/AdmissionState state machine: route 1 census findings through AdmissionState::apply
 - [ ] T322 [US8] MEDULLA-TYPED-PACKS-R810.2 AgentLibraryEntry/AgentLibraryLifecycle state machine: route 10 census findings through AgentLibraryLifecycle::apply

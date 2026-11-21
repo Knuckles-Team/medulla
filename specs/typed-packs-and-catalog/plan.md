@@ -403,7 +403,7 @@ Inspection base: `38cae80eb37eba97a273e2a6259e2eb0dfe46b02`.
 
 The inspected dispatch has Publish, Retire, Current, History, Status, Search and Content branches.
 It does not establish a prompt render or blueprint import/export method.
-R001.9 must declare and generate those operations before served acceptance.
+R002.9 declares the render operation and its wire types with its handler arm; R002.13 declares the receipt check.
 Native SystemPrompt bodies require R002.7; a connector-pack content pointer alone does not establish that capability.
 The intended renderer path in R001.8 is a work target, not an existing implementation.
 Do not copy prompt content into component metadata or introduce a second registry.
@@ -462,7 +462,7 @@ Reserved pack identities still use pack admission; native import cannot bypass i
 
 | Consumer obligation | Required producer or boundary | Evidence still required |
 |---|---|---|
-| R001.6-R001.9 | Existing component authority and generated contract; MEDULLA-CONTRACT-R005 remains a referenced producer. | New schema, supported rules, operations and rendered-result contract. |
+| R001.6-R001.8 | Existing component authority and generated contract; MEDULLA-CONTRACT-R005 remains a referenced producer. | New schema, supported rules, operations and rendered-result contract. |
 | R002.7-R002.9 | Existing owner write, body store and projection admission. | Native prompt holders, graph readiness and authenticated render dispatch. |
 | R002.10 | R002.9 render result and the actual Meristem model-dispatch consumer. | Name its owning requirement and production call site before delivery; observe zero invalid model requests. |
 | R094.7 | SCION-GOVERNED-WRITEBACK-R004.5 through R004.12 and ARBORA-FLEET-R003.4 through R003.10. | Actual served composition, approved conditional effect, independent readback and durable replay remain required. |
@@ -587,7 +587,15 @@ choice stay here.
 
 ### Open metadata federation (R110)
 
-The catalog of R106 is the system of record. An open-metadata store is a federated secondary through `MEDULLA-SRC-AUTH-R012`; nothing is copied outside the catalog's own nodes. The `cat:openMetadataType` annotation maps open metadata type names to catalog classes, so the ontology drives the mapping. `OpenMetadataRecord` mirrors the open metadata (OMRS) instance header: GUID, type name and version. Inbound sync writes `cat:externalGuid` and `cat:externalVersion`. Outbound proposals carry the last synced version as the expected version. The connector refuses a write over a concurrent store change. The next sync records the conflict. Call path: `Method::SourceSync` → `handle_source_sync` → `OpenMetadataSyncAdapter` (`crates/medulla-virtual-graph/src/open_metadata_sync.rs`). The open-metadata connector `egeria-mcp` owns the pack sources and the version-checked write sink; R110 names its rows.
+The catalog of R106 is the system of record. An open-metadata store is a federated secondary through `MEDULLA-SRC-AUTH-R012`; nothing is copied outside the catalog's own nodes. The `cat:openMetadataType` annotation maps open metadata type names to catalog classes, so the ontology drives the mapping. `OpenMetadataRecord` mirrors the open metadata (OMRS) instance header: GUID, type name and version. Inbound sync writes `cat:externalGuid` and `cat:externalVersion`. Outbound proposals carry the last synced version as the expected version. The connector refuses a write over a concurrent store change. The next sync records the conflict. Call path: `Method::SourceSync` → `handle_source_sync` → `OpenMetadataSyncAdapter` (`crates/medulla-virtual-graph/src/open_metadata_sync.rs`). The report extensions are generic (`SyncReport.skipped`, `SyncReport.by_type`, `SyncConflictEntry.reason`) and applied in `plan_sync`, the one place every adapter's records pass, through two defaulted `SyncAdapter` hooks (`screen`, `version_ahead`); `plan_sync` also stamps `syncedFrom` on every inbound write and strips it before the graph digest. A raised store version under a catalog edit is a `SourceVersionAhead` conflict whose outbound still carries the old expected version. All open-metadata served proofs live in `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs`, where the served harness is. The open-metadata connector `egeria-mcp` owns the pack sources and the version-checked write sink; R110 names its rows.
+
+### Crosswalk refusal and evidence decisions (R097.2.4, R097.2.5)
+
+A stale vocabulary revision is a crosswalk whose source class still resolves but whose `source_revision` is not the pinned one (`RevisionMismatch`); a forged origin or coverage is a record whose `content_digest` does not match its fields (`ContentDigestMismatch`, surfaced through `VocabularyCrosswalk::from_json`). Coverage evidence is bound at activation in `BoundCrosswalkCoverage`, because only the activation knows the graph and the composed schema; `CrosswalkCoverage` stays the pure import result.
+
+### Release evidence (R107.5)
+
+`PackReleaseEvidence` is one type for both outcomes: the committed receipt's `release` and the held `Rejected` answer's `held`. A change request is named by its target and proposed digest.
 
 ### Operational metadata views (R108.8)
 

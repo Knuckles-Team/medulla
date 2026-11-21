@@ -223,7 +223,7 @@ Retain all original PACK and TP acceptance above, including every original R001/
 | MEDULLA-TYPED-PACKS-R001.6 | A typed object round-trips all identity and revision fields. | Changing a schema or body pin cannot preserve the old definition identity. | `crates/medulla-agent-types/src/agent_component.rs::tests::prompt_blueprint_identity` |
 | MEDULLA-TYPED-PACKS-R001.7 | Nested valid objects retain every admitted field and extension value. | Missing task, wrong field types, nonfinite numbers and oversized objects refuse. | `crates/medulla-agent-types/src/agent_component/facts.rs::tests::prompt_blueprint_schema_refusals` |
 | MEDULLA-TYPED-PACKS-R001.8 | Repeated identical inputs produce the same bytes and render digest. | A changed variable changes the result; invalid input produces no render result. | `crates/medulla-compute/src/assemble/prompt.rs::tests::prompt_render_vectors` |
-| MEDULLA-TYPED-PACKS-R001.9 | Generated clients encode and decode every declared request, result and typed refusal. | Missing render provenance or an untyped fallback fails. | `tests/test_prompt_blueprint_contract.py::test_generated_prompt_contract` |
+| MEDULLA-TYPED-PACKS-R001.9 | Retired. | The render wire types are proven by R002.9 and R002.13. | none |
 | MEDULLA-TYPED-PACKS-R001.10 | Every comparable generated enum has the Rust wire values. | A Rust-only member, or a gate comparing fewer than 100 enums, fails. | `tests/test_generated_enum_parity.py::test_generated_enums_equal_the_rust_enums` |
 | MEDULLA-TYPED-PACKS-R001.11 | Drift is reported per enum. | A planted mismatch is reported as python-only and rust-only members. | `tests/test_generated_enum_parity.py::test_the_parity_gate_sees_planted_drift` |
 | MEDULLA-TYPED-PACKS-R001.12 | A rejection with an unknown code still decodes every violation. | The unknown code replaced by a pydantic error fails. | `tests/test_generated_enum_parity.py::test_unknown_violation_code_keeps_the_raw_code` |
@@ -488,7 +488,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 - `MEDULLA-TYPED-PACKS-R107.2`: `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::non_breaking_applies_breaking_waits_and_queries_use_active_version`; `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::every_legal_and_illegal_release_transition_is_typed`; `crates/medulla-h-admin/src/admin/connector_pack/contract_diff.rs::tests::the_ontology_describes_the_same_release_machine`.
 - `MEDULLA-TYPED-PACKS-R107.3`: `tests/typed_packs/test_pack_contract_served.py::test_diff_runs_in_import_before_commit`.
 - `MEDULLA-TYPED-PACKS-R107.4`: `tests/typed_packs/test_pack_contract_served.py::test_breaking_and_in_use_refuse`, `tests/typed_packs/test_pack_contract_served.py::test_other_tenant_data_never_blocks_a_withdrawal`.
-- `MEDULLA-TYPED-PACKS-R107.5`: `tests/typed_packs/test_pack_contract_served.py::test_receipt_carries_digests_break_count_and_request`.
+- `MEDULLA-TYPED-PACKS-R107.5`: `tests/typed_packs/test_pack_contract_served.py::test_receipt_carries_digests_break_count_and_request` (planned). Additive receipt: both contract digests and `break_count` 0; breaking answer: `held` with the break count and the change request.
 - `MEDULLA-TYPED-PACKS-R107.6`: `tests/typed_packs/test_pack_contract_served.py::test_breaking_release_waits_for_approval_then_serves`.
 
 - `MEDULLA-TYPED-PACKS-R108`: See each child.
@@ -581,7 +581,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R001.6`: `crates/medulla-agent-types/src/agent_component.rs::tests::prompt_blueprint_identity` (planned)
 - `MEDULLA-TYPED-PACKS-R001.7`: `crates/medulla-agent-types/src/agent_component/facts.rs::tests::prompt_blueprint_schema_refusals` (planned)
 - `MEDULLA-TYPED-PACKS-R001.8`: `crates/medulla-compute/src/assemble/prompt.rs::tests::prompt_render_vectors` (planned)
-- `MEDULLA-TYPED-PACKS-R001.9`: `tests/test_prompt_blueprint_contract.py::test_prompt_wire_round_trip` (planned)
+- `MEDULLA-TYPED-PACKS-R001.9`: retired; see R002.9 and R002.13.
 - `MEDULLA-TYPED-PACKS-R001.10`: `tests/test_generated_enum_parity.py::test_generated_enums_equal_the_rust_enums` (existing)
 - `MEDULLA-TYPED-PACKS-R001.11`: `tests/test_generated_enum_parity.py::test_the_parity_gate_sees_planted_drift` (existing)
 - `MEDULLA-TYPED-PACKS-R001.12`: `tests/test_generated_enum_parity.py::test_unknown_violation_code_keeps_the_raw_code` (existing)
@@ -716,8 +716,8 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - **MEDULLA-TYPED-PACKS-R097.2.1:** `crates/medulla-catalog-types/src/domain_pack.rs::tests::coverage_round_trips_three_domains` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R097.2.2:** `crates/medulla-catalog-types/src/domain_pack/crosswalk.rs::tests::coverage_is_order_independent_for_medical_technology_labor` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R097.2.3:** `crates/medulla-h-sparql/src/rdf/inspect_tests.rs::inspection_reports_pack_revision_coverage` (existing); `crates/medulla-h-admin/src/graph_schema/tests.rs::pack_activation_stores_the_revision_bound_crosswalk_coverage` (existing); `tests/typed_packs/test_ontology_crosswalk_served.py::test_core_metadata_crosswalks` (existing). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R097.2.4:** `tests/typed_packs/test_ontology_crosswalk_served.py::test_refused_domain_import_preserves_heads_and_digests` (planned). Proves the row at its served entry point; no receipt is asserted.
-- **MEDULLA-TYPED-PACKS-R097.2.5:** `tests/typed_packs/test_ontology_crosswalk_served.py::test_coverage_matches_pack_status_and_schema_reads` (planned). Proves the row at its served entry point; no receipt is asserted.
+- **MEDULLA-TYPED-PACKS-R097.2.4:** `tests/typed_packs/test_ontology_crosswalk_served.py::test_crosswalk_refusals_leave_state_unchanged` (existing; the stale-revision case expects `CROSSWALK_REVISION_MISMATCH`) and `tests/typed_packs/test_ontology_crosswalk_served.py::test_refused_domain_import_preserves_heads_and_digests` (planned; an edited `origin` answers `CROSSWALK_EVIDENCE_INVALID` and the head, status and schema digest are unchanged).
+- **MEDULLA-TYPED-PACKS-R097.2.5:** `tests/typed_packs/test_ontology_crosswalk_served.py::test_coverage_matches_pack_status_and_schema_reads` (planned). The inspected coverage names the tenant, graph, pack record id, target vocabulary revisions and composed schema digest of the activation.
 - **MEDULLA-TYPED-PACKS-R097.2.6:** `tests/typed_packs/test_ontology_crosswalk_served.py::test_domain_coverage_and_refusals` (planned). Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R100:** `crates/medulla-h-admin/src/admin/connector_pack/tests/skill_package_render.rs::list_after_reingest_returns_new_digest`. Proves the row at its served entry point; no receipt is asserted.
 - **MEDULLA-TYPED-PACKS-R100.2:** `crates/medulla-server-consensus/src/dispatch/consensus/fleet_catalog/rendered_tests.rs::render_reflects_latest_ingest`. Proves the row at its served entry point; no receipt is asserted.
@@ -816,16 +816,16 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R807`: `tests/packs/test_conformance_evidence_served.py::test_evidence_written_read_revoked_and_tenant_scoped`
 - `MEDULLA-TYPED-PACKS-R808`: `tests/graph_schema_digest_served.rs::mismatch_and_drift_are_refused_and_digest_reads_back` (planned)
 - `MEDULLA-TYPED-PACKS-R809`: `tests/ontology/test_canonical_hash_served.py::test_reordered_serializations_hash_equal`
-- `MEDULLA-TYPED-PACKS-R110`: `tests/open_metadata_sync_served.rs::metadata_sync_round_trips_terms_assets_and_lineage`
+- `MEDULLA-TYPED-PACKS-R110`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::metadata_sync_round_trips_terms_assets_and_lineage`
 - `MEDULLA-TYPED-PACKS-R110.1`: `crates/medulla-rdf/tests/open_metadata.rs::mapped_types_resolve_one_class`
 - `MEDULLA-TYPED-PACKS-R110.2`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::record_round_trips_and_refuses_unknown_fields`
 - `MEDULLA-TYPED-PACKS-R110.3`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::inbound_maps_term_asset_and_lineage`
 - `MEDULLA-TYPED-PACKS-R110.4`: `crates/medulla-catalog-types/src/open_metadata/tests.rs::outbound_carries_expected_version`
 - `MEDULLA-TYPED-PACKS-R110.5`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::sync_reads_terms_and_writes_catalog_nodes`
-- `MEDULLA-TYPED-PACKS-R110.6`: `tests/open_metadata_sync_served.rs::unmapped_types_are_listed_and_skipped`
-- `MEDULLA-TYPED-PACKS-R110.7`: `tests/open_metadata_sync_served.rs::nodes_keep_guid_version_and_source`
-- `MEDULLA-TYPED-PACKS-R110.8`: `tests/open_metadata_sync_served.rs::concurrent_term_edit_is_a_conflict_and_catalog_wins`
-- `MEDULLA-TYPED-PACKS-R110.9`: `tests/competency/test_open_metadata_sync_served.py::test_metadata_sync_then_write_back`
+- `MEDULLA-TYPED-PACKS-R110.6`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::unmapped_types_are_listed_and_skipped`
+- `MEDULLA-TYPED-PACKS-R110.7`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::nodes_keep_guid_version_and_source`
+- `MEDULLA-TYPED-PACKS-R110.8`: `crates/medulla-h-admin/src/admin/connector_pack/tests/open_metadata_sync.rs::concurrent_term_edit_is_a_conflict_and_catalog_wins`
+- `MEDULLA-TYPED-PACKS-R110.9`: retired; proven by R110.5 to R110.8.
 
 ## Explicit state machine rows (Article XXXI)
 
