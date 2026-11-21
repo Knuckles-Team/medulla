@@ -18,6 +18,9 @@ pub enum IngestJobKind {
     Codebase,
     SkillWorkflows,
     CapabilityHydration,
+    /// Fact extraction over one enriched chunk of a Document
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7). A kind of ingest work, not a lane.
+    Extraction,
 }
 
 /// The queue lane a job kind runs on.
@@ -51,7 +54,9 @@ impl IngestLane {
 pub fn lane_for(kind: IngestJobKind) -> IngestLane {
     match kind {
         IngestJobKind::SkillWorkflows | IngestJobKind::CapabilityHydration => IngestLane::Hydration,
-        IngestJobKind::Document | IngestJobKind::Codebase => IngestLane::General,
+        IngestJobKind::Document | IngestJobKind::Codebase | IngestJobKind::Extraction => {
+            IngestLane::General
+        }
     }
 }
 
@@ -155,6 +160,7 @@ pub fn partition_key(envelope: &IngestJobEnvelope) -> IngestPartitionKey {
         IngestJobKind::Codebase => "codebase",
         IngestJobKind::SkillWorkflows => "skill_workflows",
         IngestJobKind::CapabilityHydration => "capability_hydration",
+        IngestJobKind::Extraction => "extraction",
     };
     IngestPartitionKey {
         tenant: envelope.tenant.clone(),
@@ -478,6 +484,7 @@ mod tests {
             lane_for(IngestJobKind::CapabilityHydration),
             IngestLane::Hydration
         );
+        assert_eq!(lane_for(IngestJobKind::Extraction), IngestLane::General);
         assert_eq!(IngestLane::General.queue_name(), "ingest");
         assert_eq!(IngestLane::Hydration.queue_name(), "ingest-hydration");
     }

@@ -160,7 +160,16 @@ async fn enrich(
         links,
     };
     match web::lower(plan) {
-        Ok((write_set, receipt)) => commit(ctx, write_set, &web::LABELS, receipt).await,
+        Ok((write_set, receipt)) => {
+            commit(
+                ctx,
+                write_set,
+                &web::LABELS,
+                receipt,
+                Some(&document.digest_hex),
+            )
+            .await
+        }
         Err(error) => Response::err(req_id, error),
     }
 }
@@ -231,7 +240,7 @@ async fn enrich_alignment(
         .collect();
     match web::lower_alignment(doc_id, &document, &mapping, &local) {
         Ok((Some(write_set), receipt)) => {
-            commit(ctx, write_set, &web::ALIGNMENT_LABELS, receipt).await
+            commit(ctx, write_set, &web::ALIGNMENT_LABELS, receipt, None).await
         }
         Ok((None, receipt)) => respond(req_id, receipt),
         Err(error) => Response::err(req_id, error),
@@ -274,7 +283,8 @@ async fn commit(
     ctx: GraphOpRouting<'_>,
     write_set: medulla_h_ingest::repository_index::IndexWriteSet,
     labels: &medulla_h_ingest::repository_index::EnvelopeLabels,
-    receipt: medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt,
+    mut receipt: medulla_source_types::source_ingestion::web_document::EnrichDocumentReceipt,
+    extraction_digest: Option<&str>,
 ) -> Response {
     let (placement_epoch, fencing_token) = match source_ingestion_route_fence(&ctx).await {
         Ok(fence) => fence,
@@ -293,8 +303,111 @@ async fn commit(
         crate::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
     match committed.refusal_text() {
         Some(refusal) => Response::err(committed.id, refusal),
-        None => respond(committed.id, receipt),
+        None => {
+            if let Some(digest) = extraction_digest {
+                let chunks = receipt.chunk_ids.clone();
+                receipt.warnings =
+                    enqueue_extraction(ctx, &receipt.document_id, digest, &chunks).await;
+            }
+            respond(committed.id, receipt)
+        }
     }
+}
+
+/// Enqueue one extraction job per chunk of the enriched Document, after the enrich commit
+/// (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7). Every job goes through the one ingest enqueue path
+/// (`enqueue_ingest_job`) on the `ingest` queue; its id is
+/// `<document_id>:<digest_hex>:<chunk_ordinal>`, so a repeat of the same enrich enqueues
+/// nothing new. The caller is the verified caller of `EnrichDocument`. A refusal other than a
+/// duplicate comes back as a warning and never undoes the enrich.
+#[cfg(all(feature = "query", feature = "modality-serving", feature = "jobs"))]
+async fn enqueue_extraction(
+    ctx: GraphOpRouting<'_>,
+    document_id: &str,
+    digest_hex: &str,
+    chunks: &[String],
+) -> Vec<String> {
+    use medulla_source_types::ingest_job::{IngestJobEnvelope, IngestJobKind, IngestRetryPolicy};
+    if chunks.is_empty() {
+        return Vec::new();
+    }
+    let unavailable = |detail: String| vec![format!("EXTRACTION_ENQUEUE_FAILED: {detail}")];
+    let (persist_dir, config_store) = {
+        let guard = ctx.state.read().await;
+        let store = match medulla_persistence::scheduler_config_store::shared_scheduler_config_store(
+            &guard,
+        ) {
+            Ok(store) => store,
+            Err(error) => return unavailable(error.to_string()),
+        };
+        (guard.persist_dir.clone(), store)
+    };
+    let config = match medulla_h_jobs::scheduler_config::effective_config(&config_store) {
+        Ok(config) => config,
+        Err(error) => return unavailable(error),
+    };
+    let jobs = medulla_server_ops::api::ingest::jobs_seam(ctx.state).await;
+    let tenant = ctx.verified_context.tenant();
+    let queue = medulla_source_types::ingest_job::lane_for(IngestJobKind::Extraction).queue_name();
+    let mut depth = match jobs.as_ref() {
+        Some(jobs) => match jobs.task_queue_load(&persist_dir, tenant, queue) {
+            Ok((queued, running, _)) => queued.saturating_add(running),
+            Err(error) => return unavailable(error),
+        },
+        None => 0,
+    };
+    let caller = medulla_h_ingest::ingest_queue::IngestCaller {
+        persist_dir,
+        tenant: tenant.to_string(),
+        principal: ctx.verified_context.principal().to_string(),
+    };
+    let policy = IngestRetryPolicy::from_limits(&config.ingest_retry);
+    let mut warnings = Vec::new();
+    for (ordinal, chunk) in chunks.iter().enumerate() {
+        let envelope = IngestJobEnvelope {
+            job_id: format!("{document_id}:{digest_hex}:{ordinal}"),
+            tenant: tenant.to_string(),
+            corpus_key: document_id.to_string(),
+            kind: IngestJobKind::Extraction,
+            target: chunk.clone(),
+            attempt: 0,
+            page: None,
+        };
+        match medulla_h_ingest::ingest_queue::enqueue_ingest_job(
+            jobs.clone(),
+            &caller,
+            &envelope,
+            &policy,
+            depth,
+            config.max_queue_depth,
+        ) {
+            Ok(receipt) => {
+                if !receipt.deduplicated {
+                    depth = depth.saturating_add(1);
+                }
+            }
+            Err(error) => warnings.push(format!(
+                "EXTRACTION_ENQUEUE_REFUSED: chunk '{chunk}': {}: {}",
+                error.code.as_str(),
+                error.detail
+            )),
+        }
+    }
+    warnings
+}
+
+/// A build without the `jobs` feature has no ingest queue to enqueue on.
+#[cfg(all(feature = "query", feature = "modality-serving", not(feature = "jobs")))]
+async fn enqueue_extraction(
+    _ctx: GraphOpRouting<'_>,
+    _document_id: &str,
+    _digest_hex: &str,
+    chunks: &[String],
+) -> Vec<String> {
+    if chunks.is_empty() {
+        return Vec::new();
+    }
+    vec!["EXTRACTION_ENQUEUE_FAILED: UNAVAILABLE: ingest enqueue requires the `jobs` feature".to_string()]
 }
 
 #[cfg(all(feature = "query", feature = "modality-serving"))]

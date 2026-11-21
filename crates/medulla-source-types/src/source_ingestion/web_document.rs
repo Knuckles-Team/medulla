@@ -116,6 +116,11 @@ pub struct EnrichDocumentReceipt {
     /// (MEDULLA-DECISION-ENGINE-R099.2); empty for a text Document.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub alignment_claims: Vec<String>,
+    /// Refusals of the extraction enqueue that followed the enrich commit
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R651.7.7). The enrichment itself stands; empty when
+    /// every extraction job was enqueued or already held.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
 }
 
 /// What admission decided for one span before any embedding call.

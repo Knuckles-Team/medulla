@@ -301,6 +301,7 @@ pub fn replay_receipt(
         embedded_units: record["embedded_units"].as_u64().unwrap_or(0) as u32,
         demoted_classes: string_list(&record["demoted_classes"]),
         alignment_claims: Vec::new(),
+        warnings: Vec::new(),
     }
 }
 
@@ -545,6 +546,7 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
         embedded_units: plan.embedded_units,
         demoted_classes: plan.demoted_classes,
         alignment_claims: Vec::new(),
+        warnings: Vec::new(),
     };
     Ok((write_set, receipt))
 }
@@ -798,6 +800,7 @@ pub fn lower_alignment(
         embedded_units: 0,
         demoted_classes: Vec::new(),
         alignment_claims: Vec::new(),
+        warnings: Vec::new(),
     };
     let Some(entity) = candidates.iter().next().copied() else {
         return Ok((None, receipt));

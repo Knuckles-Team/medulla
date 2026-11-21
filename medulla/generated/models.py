@@ -5921,6 +5921,7 @@ class EnrichDocumentReceipt(BaseModel):
     replayed: bool
     superseded_chunks: Annotated[int, Field(ge=0)]
     vector_count: Annotated[int, Field(ge=0)]
+    warnings: list[str] = []
 
 
 class EnrichDocumentRequest(BaseModel):
@@ -36423,6 +36424,7 @@ class IngestJobKind(str, Enum):
     CODEBASE = "codebase"
     SKILL_WORKFLOWS = "skill_workflows"
     CAPABILITY_HYDRATION = "capability_hydration"
+    EXTRACTION = "extraction"
 
 
 class PageCheckpoint(BaseModel):

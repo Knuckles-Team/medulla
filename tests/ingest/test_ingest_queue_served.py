@@ -228,7 +228,13 @@ async def test_hydration_kinds_use_hydration_queue() -> None:
     client = await _client()
     try:
         queues: dict[str, str] = {}
-        for kind in ("document", "codebase", "skill_workflows", "capability_hydration"):
+        for kind in (
+            "document",
+            "codebase",
+            "skill_workflows",
+            "capability_hydration",
+            "extraction",
+        ):
             receipt = await client._send(
                 "IngestEnqueue",
                 {"envelope": _envelope(f"job-{uuid.uuid4().hex[:10]}", kind=kind)},
@@ -239,6 +245,7 @@ async def test_hydration_kinds_use_hydration_queue() -> None:
             "codebase": "ingest",
             "skill_workflows": "ingest-hydration",
             "capability_hydration": "ingest-hydration",
+            "extraction": "ingest",
         }
     finally:
         await client.close()

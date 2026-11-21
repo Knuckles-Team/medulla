@@ -58,6 +58,7 @@ fn kind_name(kind: IngestJobKind) -> &'static str {
         IngestJobKind::Codebase => "codebase",
         IngestJobKind::SkillWorkflows => "skill_workflows",
         IngestJobKind::CapabilityHydration => "capability_hydration",
+        IngestJobKind::Extraction => "extraction",
     }
 }
 
