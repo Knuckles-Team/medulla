@@ -51,7 +51,7 @@ The first slice is the unblocked frontier: rows whose dependencies are delivered
 - [ ] T032 [US3] MEDULLA-INCREMENTAL-VIEWS-R008 Sampled shadow verification in production (rollup). Check the root test.
 - [ ] T033 [P] [US3] MEDULLA-INCREMENTAL-VIEWS-R008.1 Model: the check schedule. Implement it with its tests.
 - [ ] T034 [US3] MEDULLA-INCREMENTAL-VIEWS-R008.2 Compare and demote. Implement it with its tests.
-- [ ] T035 [US3] MEDULLA-INCREMENTAL-VIEWS-R008.3 Wiring: the check task. Implement it with its tests.
+- [x] T035 [US3] MEDULLA-INCREMENTAL-VIEWS-R008.3 Wiring: the check task. Implement it with its tests.
 - [ ] T036 [US3] MEDULLA-INCREMENTAL-VIEWS-R008.4 Served proof of shadow verification. Implement it with its tests.
 
 ## SQL views
@@ -72,7 +72,7 @@ The first slice is the unblocked frontier: rows whose dependencies are delivered
 - [ ] T047 [US5] MEDULLA-INCREMENTAL-VIEWS-R010.1 Plan views publish their output delta. Implement it with its tests.
 - [ ] T048 [US5] MEDULLA-INCREMENTAL-VIEWS-R010.2 SQL views publish their output delta. Implement it with its tests.
 - [ ] T049 [US5] MEDULLA-INCREMENTAL-VIEWS-R010.3 Resume, expiry and snapshot. Implement it with its tests.
-- [ ] T050 [US5] MEDULLA-INCREMENTAL-VIEWS-R010.4 Served proof and arbora seam. Implement it with its tests.
+- [x] T050 [US5] MEDULLA-INCREMENTAL-VIEWS-R010.4 Served proof and arbora seam. Implement it with its tests.
 
 ## Ontology closure
 
@@ -106,5 +106,5 @@ The first slice is the unblocked frontier: rows whose dependencies are delivered
 - [x] T072 [US7] MEDULLA-INCREMENTAL-VIEWS-R015 Release gate. Implement it with its tests.
 - [ ] T073 [US7] MEDULLA-INCREMENTAL-VIEWS-R015 Evidence: reconcile every row against merged code, bound tests and the documentation page.
 - [ ] T74 [US7] MEDULLA-INCREMENTAL-VIEWS-R016 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T75 [US7] MEDULLA-INCREMENTAL-VIEWS-R016.1 Move MaterializationStatus to crates/medulla-types/src/materialization_status_machine.rs with MATERIALIZATION_STATUS_MACHINE (M01-M05), apply, absorbs and result_text; delete ProjectedMaterializationStatus; replace the three materialization sets of IncrementalReasoningIndex with one BTreeMap<String, MaterializationStatus> written only by fire; route the TruthMaintenance writers through its fire; bump REASONING_PROJECTION_VERSION to 5 with a versioned snapshot directory; render wire status with result_text and RECOMPUTE_QUEUED_STATUS; add the MaterializationStatusMachine Turtle block and vocabulary tests
+- [x] T75 [US7] MEDULLA-INCREMENTAL-VIEWS-R016.1 Move MaterializationStatus to crates/medulla-types/src/materialization_status_machine.rs with MATERIALIZATION_STATUS_MACHINE (M01-M05), apply, absorbs and result_text; delete ProjectedMaterializationStatus; replace the three materialization sets of IncrementalReasoningIndex with one BTreeMap<String, MaterializationStatus> written only by fire; route the TruthMaintenance writers through its fire; bump REASONING_PROJECTION_VERSION to 5 with a versioned snapshot directory; render wire status with result_text and RECOMPUTE_QUEUED_STATUS; add the MaterializationStatusMachine Turtle block and vocabulary tests
 - [ ] T76 [US7] MEDULLA-INCREMENTAL-VIEWS-R016.2 MaterializationManifest/MaterializationPhase state machine: route 4 census findings through MaterializationPhase::apply
