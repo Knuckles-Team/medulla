@@ -29,7 +29,16 @@ from ontology_pack_support import (
     ontology_entry,
     violation_codes,
 )
-from test_connector_pack_planted import _context, _pack_op
+from test_connector_pack_planted import (
+    IMPORTER as PLANTED_IMPORTER,
+)
+from test_connector_pack_planted import (
+    _bind,
+    _check,
+    _context,
+    _import,
+    _pack_op,
+)
 
 from medulla import ConnectorPackEntryContent
 from medulla.client import EngineResponseError, MedullaClient
@@ -42,6 +51,13 @@ from medulla.generated.connector_pack import (
     PackRef,
 )
 from medulla.generated import reasoning
+from medulla.testing.synthetic.packs import content as synthetic_content
+from medulla.testing.synthetic.packs.malformed import (
+    added,
+    base_spec,
+    case,
+    first,
+)
 from medulla.generated.fleet_catalog import (
     DiscoveryCounts,
     DiscoveryOutcomeReachable,
@@ -279,6 +295,53 @@ async def test_bad_hash_refused_and_conformant_pack_imports() -> None:
         assert good["result"] == "imported", good
         evidence = await _evidence(client, connector)
         assert evidence.pack_digest == good["receipt"]["pack_digest"]
+    finally:
+        await client.close()
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R700.8")
+@pytest.mark.asyncio
+async def test_graph_files_import_and_limit_refuses() -> None:
+    client = await connect()
+    try:
+        # A graph with index.json, sources.json and reference files imports.
+        graph = await import_entries(
+            client, f"graph-files-{uuid.uuid4().hex[:8]}", _graph_entries("catalog")
+        )
+        assert graph["result"] == "imported", graph
+
+        # A skill that is not a graph still carries a supporting file (D11).
+        plain = await import_entries(
+            client,
+            f"plain-files-{uuid.uuid4().hex[:8]}",
+            [_plain_skill("deploy"), _file("deploy", "scripts/run.sh", "echo ok\n")],
+        )
+        assert plain["result"] == "imported", plain
+
+        # A graph's files count toward the pack bounds: 8,193 skill_file entries
+        # exceed MAX_PACK_ENTRIES and are refused with the pack-entries code.
+        connector = f"graph-over-{uuid.uuid4().hex[:8]}"
+        spec = base_spec(0, connector)
+        skill = first(spec, "skill")
+        files = [
+            synthetic_content.skill_file(skill, f"reference/{i:05d}.md", b"x")
+            for i in range(8_193)
+        ]
+        oversized = case(
+            "G2",
+            "graph_files_over_8192",
+            "8,193 skill_file entries of one graph",
+            added(spec, *files),
+            ("PACK_TOO_LARGE",),
+        )
+        await _bind(client, connector, PLANTED_IMPORTER)
+        try:
+            outcome = await _import(client, oversized.pack, expected_head=None)
+        except (RuntimeError, ValueError) as error:
+            outcome = error
+        _check(oversized, outcome)
+        with pytest.raises(EngineResponseError, match=ABSENT):
+            await _evidence(client, connector)
     finally:
         await client.close()
 
