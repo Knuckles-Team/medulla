@@ -368,6 +368,37 @@ pub fn spec_proposal_statechart_def() -> StatechartDef {
     }
 }
 
+/// Build the agent-instance chart (MEDULLA-ORCH-VOCAB-R750.751): an
+/// `AgentInstance` starts `registered`, `activate` makes it `active`, `drain`
+/// moves it to `draining` and `terminate` ends it in `terminated`, which is
+/// final. Any other event from a state is refused by the statechart handler
+/// as `STATECHART_NO_TRANSITION`. Pure and deterministic.
+pub fn agent_instance_statechart_def() -> StatechartDef {
+    use medulla_work_types::orchestration::org::{
+        AGENT_INSTANCE_CHART, AGENT_INSTANCE_EVENTS, AGENT_INSTANCE_FINALS, AGENT_INSTANCE_STATES,
+        AGENT_INSTANCE_TRANSITIONS,
+    };
+    StatechartDef {
+        name: AGENT_INSTANCE_CHART.to_string(),
+        schema_version: 1,
+        states: AGENT_INSTANCE_STATES
+            .iter()
+            .map(|id| State::new(*id))
+            .collect(),
+        alphabet: AGENT_INSTANCE_EVENTS
+            .iter()
+            .map(|e| e.to_string())
+            .collect(),
+        transitions: AGENT_INSTANCE_TRANSITIONS
+            .iter()
+            .map(|(from, event, to)| Transition::new(*from, *event, *to).with_guard(Guard::Always))
+            .collect(),
+        initial: AGENT_INSTANCE_STATES[0].to_string(),
+        finals: AGENT_INSTANCE_FINALS.iter().map(|s| s.to_string()).collect(),
+        meta: Default::default(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

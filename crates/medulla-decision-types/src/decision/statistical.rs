@@ -322,6 +322,11 @@ pub enum QuestionKind {
     /// accounting, a conflict or a bad citation (MEDULLA-DECISION-ENGINE-R134.13).
     /// Evaluate-only. See `decision::analyst_synthesis`.
     AnalystSynthesis,
+    /// The employees best covering one role, and the top legal market offer
+    /// to allocate, by the deterministic market selection; a twin replays
+    /// against its pinned revisions (MEDULLA-ORCH-VOCAB-R750.751).
+    /// Evaluate-only. See `decision::recruit`.
+    Recruit,
 }
 
 /// What is at stake. Exploration is permitted only for

@@ -15,11 +15,15 @@
 
 use std::collections::BTreeSet;
 
+use serde::{Deserialize, Serialize};
+
 use super::gap::GapView;
 use super::offer::{work_offer_utility_rate, BlastRadius, WorkOfferView};
 
 /// The resource and policy facts one selection runs under.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct MarketFacts {
     pub now_ms: u64,
     /// Canonical ids of Gaps already resolved (dependency satisfaction).
@@ -33,8 +37,11 @@ pub struct MarketFacts {
     pub cost_floor_microunits: u64,
 }
 
-/// Why an offer is not a legal candidate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+/// Why an offer is not a legal candidate. The wire name is the code
+/// ([`OfferExclusion::code`]) an excluded Gap carries.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "SCREAMING_SNAKE_CASE")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum OfferExclusion {
     /// The Gap is resolved or deferred.
     NotLive,
@@ -50,8 +57,27 @@ pub enum OfferExclusion {
     RateOutOfRange,
 }
 
+impl OfferExclusion {
+    /// The closed code of the exclusion, equal to its wire name.
+    pub const fn code(self) -> &'static str {
+        match self {
+            Self::NotLive => "NOT_LIVE",
+            Self::Unpriced => "UNPRICED",
+            Self::DependencyOpen => "DEPENDENCY_OPEN",
+            Self::CoolingDown => "COOLING_DOWN",
+            Self::CapabilityUnavailable => "CAPABILITY_UNAVAILABLE",
+            Self::RepositoryOutOfScope => "REPOSITORY_OUT_OF_SCOPE",
+            Self::BlastRadiusExceeded => "BLAST_RADIUS_EXCEEDED",
+            Self::OverBudget => "OVER_BUDGET",
+            Self::RateOutOfRange => "RATE_OUT_OF_RANGE",
+        }
+    }
+}
+
 /// One legal offer, ranked.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RankedOffer {
     pub gap_id: String,
     pub work_item_id: String,
@@ -62,7 +88,9 @@ pub struct RankedOffer {
 
 /// A selection: the legal offers best first, and every excluded Gap with its
 /// reason.
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct OfferSelection {
     pub ranked: Vec<RankedOffer>,
     pub excluded: Vec<(String, OfferExclusion)>,
@@ -167,4 +195,22 @@ pub fn derive_legal_offers(gaps: &[GapView], facts: &MarketFacts) -> OfferSelect
             .then_with(|| a.work_item_id.cmp(&b.work_item_id))
     });
     selection
+}
+
+/// The market allocation (MEDULLA-ORCH-VOCAB-R750.751): the legal offers of
+/// [`derive_legal_offers`] in their [`RankedOffer`] order, cut to the top
+/// one. `ranked` holds at most that offer, with its `priority_bucket`;
+/// `excluded` keeps every excluded Gap with its [`OfferExclusion`], and no
+/// allocation is ever made from an excluded offer. Names no new ranker.
+pub fn allocate_offer(gaps: &[GapView], facts: &MarketFacts) -> OfferSelection {
+    let mut selection = derive_legal_offers(gaps, facts);
+    selection.ranked.truncate(1);
+    selection
+}
+
+impl OfferSelection {
+    /// The allocated offer, when one is legal.
+    pub fn top(&self) -> Option<&RankedOffer> {
+        self.ranked.first()
+    }
 }

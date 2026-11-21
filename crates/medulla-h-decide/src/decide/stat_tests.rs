@@ -1288,6 +1288,9 @@ mod autonomy_tests;
 mod curriculum_promotion_tests;
 #[cfg(feature = "statechart")]
 mod feature_match_tests;
+// MEDULLA-ORCH-VOCAB-R750.751: recruit, allocate, twin replay and the instance chart.
+#[cfg(feature = "statechart")]
+mod org_runtime_tests;
 mod kernel_family_support;
 // MEDULLA-DECISION-ENGINE-R100.100.2: served pinned ranking evaluation.
 mod retrieval_eval_tests;

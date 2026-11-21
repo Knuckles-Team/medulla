@@ -287,6 +287,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         // Need a ladder and a graph of cited records, so each has its own fixture.
         QuestionKind::TrajectoryLadder => "trajectory_ladder",
         QuestionKind::AnalystSynthesis => "analyst_synthesis",
+        // Needs a role, its candidates and a market, so it has its own fixture.
+        QuestionKind::Recruit => "recruit",
     }
 }
 

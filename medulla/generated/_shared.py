@@ -2187,6 +2187,7 @@ QuestionKind = (
     | Literal["usage_guidance"]
     | Literal["branch_outcome"]
     | Literal["edit_concentration"]
+    | Literal["recruit"]
 )
 
 
