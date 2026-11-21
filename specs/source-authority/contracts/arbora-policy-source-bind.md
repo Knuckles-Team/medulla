@@ -5,7 +5,7 @@ Consumer: arbora ARBORA-OPS-R050.2.1
 
 ## Wire shape
 
-After a human review, Arbora sends `PolicySourceBind` with `source_ref`, `source_revision` (40 hex), `source_digest` (64 lowercase hex), `policy_iri` and `approver`. Medulla stores the binding on the component revision and activates it only when the stored revision and digest equal the request.
+After a human review, Arbora sends `PolicySourceBind` with `source_ref`, `source_revision` (40 hex), `source_digest` (64 lowercase hex), `policy_iri`, `component_version` (the head version the reviewer saw) and `approver`. Medulla activates the binding, stored as the graph node `policy_source:<policy_iri>`, only when the head `DecisionPolicy` component's `version`, `content_digest` and `content_ref` (`<source_ref>@<source_revision>`) equal the request.
 
 ## Refusal codes
 

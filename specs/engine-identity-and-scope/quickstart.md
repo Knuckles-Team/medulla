@@ -7,7 +7,7 @@ The shortest served proofs of the identity, scope and metadata rows run against 
 1. Start a served engine in `local` mode with one admin and write a node.
 2. Transition the mode to `external` with no provider and check `IDENTITY_MODE_NO_IDP`; configure a provider, link the admin and transition; check that the older session refuses.
 3. Write a `:RunScopePolicy` node and assemble with a candidate beyond it; check `SCOPE_EXCEEDS_POLICY`.
-4. Share a node to `org`, revoke it, restart the engine and read as a second principal.
+4. Share a node to `tenant`, revoke it, restart the engine and read as a second principal.
 
 ## Commands
 

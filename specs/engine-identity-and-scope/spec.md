@@ -69,7 +69,7 @@ The user is an owner or a tenant admin. The outcome is that a share grant or rev
 
 **Acceptance scenarios**
 
-1. **Given** a node shared to `org` and then revoked, **When** the engine restarts, **Then** a second principal does not see the node.
+1. **Given** a node shared to `tenant` and then revoked, **When** the engine restarts, **Then** a second principal does not see the node.
 2. **Given** an applied ownership plan, **When** it is rolled back, **Then** the prior role set returns exactly.
 
 Independent test: `MEDULLA-IDENTITY-R023.13.6` and `MEDULLA-IDENTITY-R700.6`.

@@ -47,7 +47,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SRC-AUTH-R004.6.1`: `tests/federated/test_source_coverage_served.py::test_rank_one_wins_and_alternates_listed` (planned, L3).
 - `MEDULLA-SRC-AUTH-R007.4`: `tests/federated/test_source_coverage_served.py::test_report_sources_used_equal_audit` (planned, L3) and `crates/medulla-virtual-graph/src/supply_chain_impact.rs::tests::sources_used_equals_audit` (planned, L2).
 - `MEDULLA-SRC-AUTH-R009.4`: `tests/federated/test_source_coverage_served.py::test_swapping_authority_rank_changes_sources_used` (planned, L3).
-- `MEDULLA-SRC-AUTH-R801`: `tests/policy_source_served.rs::stale_review_leaves_policy_unchanged` (planned, L3).
+- `MEDULLA-SRC-AUTH-R801`: `crates/medulla-h-graph/src/graph_ops/policy_source.rs::tests::bind_refuses_in_order` (planned, L1) and `tests/policy_source_served.rs::stale_review_leaves_policy_unchanged` (planned, L3).
 
 ### MEDULLA-SRC-AUTH-R012 tests
 
@@ -61,6 +61,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SRC-AUTH-R012.7`: `crates/medulla-h-admin/src/admin/connector_pack/tests/source_sync.rs::sync_refusals_leave_state_unchanged` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SRC-AUTH-R012.8`: `crates/medulla-h-admin/src/admin/connector_pack/tests/source_sync.rs::report_lists_conflicts_with_both_digests` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SRC-AUTH-R012.9`: `crates/medulla-h-admin/src/admin/connector_pack/tests/source_sync.rs::two_way_sync_applies_proposes_and_records_conflicts` (L3): one sync after a source-only, a graph-only and a two-sided change gives one applied, two proposed and one conflict; the graph value stands.
+- `MEDULLA-SRC-AUTH-R012.10`: `benches/source_sync.rs` group `source_sync` (planned, nightly bench, never gates a PR).
 
 ### MEDULLA-SRC-AUTH-R013 tests
 

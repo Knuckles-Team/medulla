@@ -162,13 +162,16 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T157 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
 - [ ] T158 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
 - [x] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
-- [ ] T160 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark: register the policy and resolve the route per fragment
+- [ ] T160 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark (rollup of .1 to .4)
+- [ ] T160.1 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.1 Model derives and the `acceleration` field on `RegisterForeignSource` (wire, Python mirror)
+- [ ] T160.2 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.2 Register validates and stores the policy beside the quota
+- [ ] T160.3 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.3 `RemoteFetch::acceleration` and the `acceleration.watermark_ttl_ms` knob
+- [ ] T160.4 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4 The route resolves live or copy per fragment in `foreign_scan`
 - [ ] T155 [US5] MEDULLA-UNIFIED-DATA-PLANE-R710 Message-stream records normalize into a `ChangeEnvelope`: model and behavior
 - [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R711 Add `SourceBatchKind::Stream` with `StreamPage` and `StreamPageReceipt`, `admit_stream_page` in `crates/medulla-h-ingest/src/source_ingestion/stream_page.rs`, the `StreamOffsetRegressed` code, the `stream_page.json` fixture and the served tests
 - [ ] T157 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
 - [ ] T158 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
 - [x] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
-- [ ] T160 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 Call `AccelerationPolicy::resolve_mode` in `ForeignWatermarks::fragment_sources`, replace `MAX_ROWS_PER_ENTRY` with `copy_admitted` and `acceleration.max_copy_rows`, add `tests/federation/acceleration_fixtures.py` and `test_stale_watermark_reads_live`
 - [ ] T161 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
 - [ ] T162 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
 - [x] T163 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics
@@ -254,13 +257,11 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T155 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
 - [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
 - [x] T157 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
-- [ ] T158 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark: register the policy and resolve the route per fragment
 - [ ] T153 [US5] MEDULLA-UNIFIED-DATA-PLANE-R710 Message-stream records normalize into a `ChangeEnvelope`: model and behavior
 - [ ] T154 [US5] MEDULLA-UNIFIED-DATA-PLANE-R711 Add `SourceBatchKind::Stream` with `StreamPage` and `StreamPageReceipt`, `admit_stream_page` in `crates/medulla-h-ingest/src/source_ingestion/stream_page.rs`, the `StreamOffsetRegressed` code, the `stream_page.json` fixture and the served tests
 - [ ] T155 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
 - [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
 - [x] T157 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
-- [ ] T158 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 Call `AccelerationPolicy::resolve_mode` in `ForeignWatermarks::fragment_sources`, replace `MAX_ROWS_PER_ENTRY` with `copy_admitted` and `acceleration.max_copy_rows`, add `tests/federation/acceleration_fixtures.py` and `test_stale_watermark_reads_live`
 - [ ] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
 - [ ] T160 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
 - [x] T161 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics

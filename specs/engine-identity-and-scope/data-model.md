@@ -21,8 +21,8 @@ This spec adds identity, scope and metadata types to the engine. Types marked ne
 
 ### Knowledge unit and sharing
 
-- Fields: `KnowledgeUnit { id, owner, version, supersedes, access_labels, share_scope }`, `ShareScope { private, org, commons }`, `UnitPrincipal` (exist, `crates/medulla-identity-types/src/identity/segment.rs`); payload structs `ShareGrant { node_id, scope, grantees }` and `ShareRevoke { node_id }` (`MEDULLA-IDENTITY-R023.13.1`) carried by the variants `RbacAdminOp::ShareGrant(ShareGrant)` and `RbacAdminOp::ShareRevoke(ShareRevoke)` (`MEDULLA-IDENTITY-R023.13.3`), all in `crates/medulla-identity-types/src/acl.rs`.
-- Rule: `private` and `commons` take no grantees; `grantees` holds at most 64 ids; node keys are `_owner_id`, `_shared_scope`, `_grants`, `_commons_copy`.
+- Fields: `KnowledgeUnit { id, owner, version, supersedes, access_labels, share_scope }`, `ShareScope { private, placement, tenant }`, `UnitPrincipal` (exist, `crates/medulla-identity-types/src/identity/segment.rs`); payload structs `ShareGrant { node_id, scope, commons, grantees }` and `ShareRevoke { node_id }` (`MEDULLA-IDENTITY-R023.13.1`) carried by the variants `RbacAdminOp::ShareGrant(ShareGrant)` and `RbacAdminOp::ShareRevoke(ShareRevoke)` (`MEDULLA-IDENTITY-R023.13.3`), all in `crates/medulla-identity-types/src/acl.rs`.
+- Rule: `private` and `commons = true` take no grantees (`commons = true` requires `scope = tenant`); `placement` is refused; `grantees` holds at most 64 ids; node keys are `_owner_id`, `_shared_scope`, `_grants`, `_commons_copy`.
 
 ### Typed principal metadata
 

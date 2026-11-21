@@ -5,7 +5,7 @@ Consumer: arbora ARBORA-IDENTITY-R651
 
 ## Wire shape
 
-Arbora calls `Method::RbacAdmin` with `{"ShareGrant":{"node_id","scope","grantees"}}` or `{"ShareRevoke":{"node_id"}}` (`RbacAdminOp::ShareGrant(ShareGrant)` / `RbacAdminOp::ShareRevoke(ShareRevoke)`); `grantees` is at most 64 principal id strings and must be empty for `private` and `commons`. Medulla commits through the mutation gateway, appends one audit event and replies with the committed revision; the scope values are `private`, `org` and `commons`.
+Arbora calls `Method::RbacAdmin` with `{"ShareGrant":{"node_id","scope","commons","grantees"}}` or `{"ShareRevoke":{"node_id"}}` (`RbacAdminOp::ShareGrant(ShareGrant)` / `RbacAdminOp::ShareRevoke(ShareRevoke)`); `grantees` is at most 64 principal id strings and must be empty for `private` and when `commons` is true (`commons` defaults to false and requires scope `tenant`). Medulla commits through the mutation gateway, appends one audit event and replies with the committed revision; the scope values are `private` and `tenant` (`placement` is refused); `commons` promotes a copy to the `__commons__` graph.
 
 ## Refusal codes
 
