@@ -35433,6 +35433,7 @@ class DocumentEncodingPolicy(BaseModel):
     overlap: Annotated[int, Field(ge=0)]
     policy_revision: Annotated[int, Field(ge=0, le=65535)]
     position_mode: DocumentPositionMode
+    space: EmbeddingSpaceRef
     tokenizer: str
 
 

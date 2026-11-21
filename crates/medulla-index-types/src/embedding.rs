@@ -76,6 +76,12 @@ pub struct DocumentEncodingPolicy {
     pub aggregation: DocumentAggregation,
     /// The model revision that must encode every chunk in this policy.
     pub model_revision: String,
+    /// MEDULLA-FEDERATED-QUERY-R039.2.8: the embedding space the encoder produces. The
+    /// engine's encoder registry resolves the chunk encoder by this space (its text
+    /// binding when the space is multimodal, else the entry registered for its
+    /// `(id, dimensions, revision)` tuple); `model_revision` is only the label recorded
+    /// in the receipt.
+    pub space: EmbeddingSpaceRef,
 }
 
 impl DocumentEncodingPolicy {
@@ -87,6 +93,7 @@ impl DocumentEncodingPolicy {
         position_mode: DocumentPositionMode,
         aggregation: DocumentAggregation,
         model_revision: impl Into<String>,
+        space: EmbeddingSpaceRef,
     ) -> Result<Self, String> {
         let policy = Self {
             policy_revision: DOCUMENT_ENCODING_POLICY_REVISION,
@@ -96,6 +103,7 @@ impl DocumentEncodingPolicy {
             position_mode,
             aggregation,
             model_revision: model_revision.into(),
+            space,
         };
         policy.validate()?;
         Ok(policy)
@@ -116,6 +124,7 @@ impl DocumentEncodingPolicy {
         if self.model_revision.is_empty() {
             return Err("document encoding model revision must not be empty".to_string());
         }
+        self.space.validate()?;
         if self.chunk_size == 0 {
             return Err("document encoding chunk size must not be zero".to_string());
         }
@@ -420,6 +429,7 @@ mod tests {
             position_mode,
             DocumentAggregation::MeanChunks,
             "model-v7",
+            space(8),
         )
         .unwrap()
     }
@@ -449,6 +459,7 @@ mod tests {
             DocumentPositionMode::LocalReset,
             DocumentAggregation::MeanChunks,
             "model-v7",
+            space(8),
         )
         .is_err());
         assert!(DocumentEncodingPolicy::new(
@@ -458,6 +469,7 @@ mod tests {
             DocumentPositionMode::LocalReset,
             DocumentAggregation::MeanChunks,
             "model-v7",
+            space(8),
         )
         .is_err());
 
@@ -475,6 +487,7 @@ mod tests {
             DocumentPositionMode::LocalReset,
             DocumentAggregation::MeanChunks,
             "model-v7",
+            space(8),
         )
         .is_err());
         assert!(DocumentEncodingPolicy::new(
@@ -484,6 +497,7 @@ mod tests {
             DocumentPositionMode::LocalReset,
             DocumentAggregation::MeanChunks,
             "",
+            space(8),
         )
         .is_err());
     }

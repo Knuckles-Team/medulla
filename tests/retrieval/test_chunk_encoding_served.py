@@ -27,6 +27,35 @@ POISON_NON_FINITE = 2**32 - 1
 POISON_SHORT = 2**32 - 2
 
 
+def _space(
+    space_id: str, dimensions: int, modalities: list[dict] | None = None
+) -> dict:
+    """An embedding space as the policy names it; field order is the server's."""
+    return {
+        "id": space_id,
+        "revision": "1",
+        "model_hash": "model-hash",
+        "preprocessing_hash": "preprocessing-hash",
+        "dimensions": dimensions,
+        "normalize": True,
+        "digest": f"{space_id}-digest",
+        "modalities": modalities or [],
+    }
+
+
+# The default registered encoder's space, and the space of the pinned text encoder
+# (R039.1.6): a multimodal space whose text binding names `pinned-text`.
+BUILTIN_SPACE = _space("builtin-test-hashed-token", DIM)
+PINNED_SPACE = _space(
+    "pinned-test-space",
+    4,
+    [
+        {"modality": modality, "encoder": f"pinned-{modality}"}
+        for modality in ("text", "image", "audio", "video")
+    ],
+)
+
+
 async def _connect() -> MedullaClient:
     return await MedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
@@ -45,6 +74,7 @@ def _policy(
         "position_mode": mode,
         "aggregation": "mean_chunks",
         "model_revision": MODEL,
+        "space": BUILTIN_SPACE,
     }
     policy.update(over)
     return policy
@@ -134,7 +164,7 @@ async def test_ingest_and_query_share_policy_generation() -> None:
             await _search(client, first["vector"], _digest(_policy()))
         # A model revision other than the bound one never publishes.
         with pytest.raises(RuntimeError, match="ENCODE_POLICY_STALE"):
-            await _encode(client, "doc-c", TOKENS, _policy(model_revision="other/9"))
+            await _encode(client, "doc-c", TOKENS, _policy(space=_space("unbound-space", DIM)))
         # Another policy has its own generation counter and never mixes into this one.
         other = _policy(mode="absolute_offset")
         absolute = await _encode(client, "doc-a", TOKENS, other)
@@ -267,7 +297,7 @@ async def test_chunked_document_one_vector() -> None:
         # The pinned text encoder embeds each chunk of concept tokens: `alpha beta` and
         # `gamma delta` are two chunks, and the one document vector is the normalized
         # mean of the two normalized chunk vectors (basis vectors of the fixture).
-        policy = _policy(size=2, overlap=0, model_revision=PINNED)
+        policy = _policy(size=2, overlap=0, model_revision=PINNED, space=PINNED_SPACE)
         digest = _digest(policy)
         half = math.sqrt(0.5)
         chunk_a, chunk_b = [half, half, 0.0, 0.0], [0.0, 0.0, half, half]
@@ -295,13 +325,13 @@ async def test_chunked_document_one_vector() -> None:
         # Refusals: invalid overlap, a failed chunk and an unregistered model revision.
         with pytest.raises(RuntimeError, match="ENCODE_OVERLAP_INVALID"):
             await _encode_text(
-                client, "doc-x", "alpha beta", _policy(size=2, overlap=2, model_revision=PINNED)
+                client, "doc-x", "alpha beta", _policy(size=2, overlap=2, model_revision=PINNED, space=PINNED_SPACE)
             )
         with pytest.raises(RuntimeError, match="NO_EMBEDDING"):
             await _encode_text(client, "doc-x", "zeta omega", policy)
         with pytest.raises(RuntimeError, match="ENCODE_POLICY_STALE"):
             await _encode_text(
-                client, "doc-x", "alpha beta", _policy(model_revision="other/9")
+                client, "doc-x", "alpha beta", _policy(space=_space("unbound-space", DIM))
             )
         # The failures left the generation as it was.
         assert (await _search(client, expected, digest))["index_generation"] == 2
