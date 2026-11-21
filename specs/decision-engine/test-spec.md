@@ -961,9 +961,9 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R176`: `tests/decide/test_load_set_s
 
 | Wiring | `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance.rs::served_decide_reaches_guidance`: A served `Decide` with a guidance question reaches the new arm. |
 
-| Refusal | `MEDULLA-DECISION-ENGINE-R177.4` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance.rs::guidance_refusals`: Each case returns its code. |
+| Refusal | `MEDULLA-DECISION-ENGINE-R177.4` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::guidance_refusals`: Each case returns its code. |
 
-| Evidence | `MEDULLA-DECISION-ENGINE-R177.5` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance.rs::steps_cite_triples`: Each step lists its supporting triples. |
+| Evidence | `MEDULLA-DECISION-ENGINE-R177.5` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::steps_cite_triples`: Each step lists its supporting triples. |
 
 | Hot-path proof | `MEDULLA-DECISION-ENGINE-R177.6` | `tests/decide/test_usage_guidance_served.py::test_how_to_use_connector_answers_from_graph`: The answer lists the steps in the order with the higher success rate, with citations. |
 
@@ -1698,8 +1698,8 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R177.2` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::served_decide_reaches_guidance` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R177.3` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::other_tenant_outcomes_never_order_steps` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R177.4` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::guidance_refusals` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R177.5` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::steps_cite_triples` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R177.4` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::guidance_refusals` | |
+| `MEDULLA-DECISION-ENGINE-R177.5` | `crates/medulla-h-decide/src/decide/stat_tests/usage_guidance_tests.rs::steps_cite_triples` | |
 | `MEDULLA-DECISION-ENGINE-R177.6` | `tests/decide/test_usage_guidance_served.py::test_how_to_use_connector_answers_from_graph` | L4 (served Python) |
 | `MEDULLA-DECISION-ENGINE-R178.2` | `tools/xtask/src/decide_budgets.rs::tests::a_planted_regression_fails` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R178.3` | `tests/test_check_decide_budgets.py::test_workflow_invokes_the_check` | (planned) |
