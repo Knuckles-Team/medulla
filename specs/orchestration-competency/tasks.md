@@ -40,7 +40,7 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T034 [US1] MEDULLA-CQ-ORCH-R007.4 Q7 Query fixture
 - [ ] T035 [US1] MEDULLA-CQ-ORCH-R007.5 Q7 Acceptance test
 - [ ] T036 [US2] MEDULLA-CQ-ORCH-R008.1 Composed envelope type
-- [ ] T037 [US2] MEDULLA-CQ-ORCH-R008.2 Composed assemble wiring
+- [ ] T037 [US2] MEDULLA-CQ-ORCH-R008.2 Composed assemble wiring: `AgentExecutionAnswer` variant, request type, registration sites and `handle_agent_execution_answer`
 - [ ] T038 [US2] MEDULLA-CQ-ORCH-R008.3 Composed typed abstention per part
 - [ ] T039 [US2] MEDULLA-CQ-ORCH-R008.4 Composed ingest fixture
 - [ ] T040 [US2] MEDULLA-CQ-ORCH-R008.5 Composed acceptance test
@@ -70,7 +70,7 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T064 [US6] MEDULLA-CQ-ORCH-R701.1 Canonical workflow records
 - [ ] T065 [US6] MEDULLA-CQ-ORCH-R701.2 Canonical form rules, admission and export
 - [ ] T066 [US6] MEDULLA-CQ-ORCH-R701.3 Process model import and export wiring
-- [ ] T067 [US6] MEDULLA-CQ-ORCH-R701.4 Process model import and export refusal
+- [ ] T067 [US6] MEDULLA-CQ-ORCH-R701.4 Process model import and export refusal: list every unmapped type, move `PROCESS_EXPORT_LOSSY`, register `REFUSALS`
 - [ ] T068 [US6] MEDULLA-CQ-ORCH-R701.5 Process model import evidence
 - [ ] T069 [US6] MEDULLA-CQ-ORCH-R701.6 Process model import hot-path proof
 - [ ] T111 [US6] MEDULLA-CQ-ORCH-R701.7 BPMN maps onto the canonical form through class annotations
@@ -96,7 +96,7 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T084 [US7] MEDULLA-CQ-ORCH-R702.14 BPMN round-trip hot-path proof
 - [ ] T085 [US7] MEDULLA-CQ-ORCH-R702.15 DMN round-trip hot-path proof
 - [ ] T086 [US7] MEDULLA-CQ-ORCH-R703.1 Process engine data location
-- [ ] T087 [US7] MEDULLA-CQ-ORCH-R703.2 Process sync adapter
+- [ ] T087 [US7] MEDULLA-CQ-ORCH-R703.2 Process sync adapter in `crates/medulla-virtual-graph/src/process_sync.rs`
 - [ ] T088 [US7] MEDULLA-CQ-ORCH-R703.3 Process sync and deploy wiring
 - [ ] T089 [US7] MEDULLA-CQ-ORCH-R703.4 Process sync refusal
 - [ ] T090 [US7] MEDULLA-CQ-ORCH-R703.5 Process sync evidence
@@ -121,24 +121,24 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T107 [US4] MEDULLA-CQ-ORCH-R705.7 Architecture sync adapter
 - [ ] T108 [US4] MEDULLA-CQ-ORCH-R705.8 Architecture exchange refusal
 - [ ] T109 [US4] MEDULLA-CQ-ORCH-R705.9 Architecture exchange evidence
-- [ ] T110 [US4] MEDULLA-CQ-ORCH-R705.10 Architecture exchange hot-path proof
+- [ ] T110 [US4] MEDULLA-CQ-ORCH-R705.10 Architecture exchange hot-path proof: export and import round trip and the `architecture_exchange` bench
 - [ ] T117 [US2] MEDULLA-CQ-ORCH-R012.1 Steps come from imported tool-use contracts
 - [ ] T118 [US2] MEDULLA-CQ-ORCH-R012.2 The guiding skill and agent prompt come from imported links
 - [ ] T119 [US2] MEDULLA-CQ-ORCH-R810 Broker message is one explicit state machine
 - [ ] T120 [US2] MEDULLA-CQ-ORCH-R810.1 Broker message transition function
 - [x] T121 [US2] MEDULLA-CQ-ORCH-R810.2 Describe the broker message machine in the ontology
 - [ ] T122 [US2] MEDULLA-CQ-ORCH-R811 Analytics job is one explicit state machine
-- [ ] T123 [US2] MEDULLA-CQ-ORCH-R811.1 Analytics job transition function
+- [ ] T123 [US2] MEDULLA-CQ-ORCH-R811.1 Analytics job transition function: one `JobState` variant per `JobStage`, delete the three companion fields, `AnalyticsJob::transition` as the one writer
 - [ ] T124 [US2] MEDULLA-CQ-ORCH-R811.2 Route all job writers through step and describe the machine
 - [ ] T125 [US2] MEDULLA-CQ-ORCH-R811.3 Route the sixteen job writers through step, site by site. Size: M, 3 PRs, 6 hours.
-- [ ] T126 [US2] MEDULLA-CQ-ORCH-R811.4 Convert stored jobs to the machine shape and prove it served. Size: M, 2 PRs, 5 hours.
+- [ ] T126 [US2] MEDULLA-CQ-ORCH-R811.4 Convert stored jobs to the machine shape through the offline jobs upgrade (`analytics_jobs` to `analytics_job_records`) and prove it served. Size: M, 2 PRs, 5 hours.
 - [ ] T127 [US2] MEDULLA-CQ-ORCH-R810.3 Route the broker writers through apply, function by function. Size: M, 2 PRs, 5 hours.
-- [ ] T128 [US2] MEDULLA-CQ-ORCH-R810.4 Convert stored broker messages and prove the served path. Size: S, 1 PR, 4 hours.
+- [ ] T128 [US2] MEDULLA-CQ-ORCH-R810.4 Idempotent acks: keep Acked messages (B09, B10 purge), add `consumer` and `now_ms` to `BrokerAck`, delete `migrate_status.rs`, prove the served path. Size: M, 1 PR, 5 hours.
 - [x] T129 [US1] MEDULLA-CQ-ORCH-R820.1 Answer which harness sessions worked on this workspace and what each left
 - [x] T130 [US1] MEDULLA-CQ-ORCH-R820.2 Answer which skills and agents a coding harness receives
 - [ ] T131 [US1] MEDULLA-CQ-ORCH-R820 Coding harness competency questions
 - [ ] T132 [US1] MEDULLA-CQ-ORCH-R811.5 AnalyticsJob/JobState state machine: route 28 census findings through JobState::step
-- [x] T133 [US1] MEDULLA-CQ-ORCH-R810.5 Candidate/BrokerMessageStatus state machine: route 1 census findings through MessageState::apply
-- [ ] T134 [US1] MEDULLA-CQ-ORCH-R811.6 Checkpoint/CheckpointStage state machine: route 4 census findings through CheckpointStage::apply
+- [ ] T133 [US1] MEDULLA-CQ-ORCH-R810.5 Type `Candidate.status` as `MessageState`
+- [ ] T134 [US1] MEDULLA-CQ-ORCH-R811.6 Rename `Checkpoint.stage` to `label` and delete the store's stage literals (no machine)
 - [ ] T135 [US1] MEDULLA-CQ-ORCH-R821 Census debt of the job wire mirrors is closed (rollup)
 - [ ] T136 [US1] MEDULLA-CQ-ORCH-R821.1 Analytics job and worker checkpoint wire mirrors follow their Rust machines: Python mirror follows the Rust machine

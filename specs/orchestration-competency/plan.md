@@ -89,7 +89,7 @@ Each question has a fixture directory with `fixture.ttl`, `query.rq` and `expect
 
 ### Composed answer
 
-`AgentExecutionAnswer` returns `ExecutionAnswer{task_iri, parts{steps, staffing, coverage, guardrails, bindings, workflow, dag}, assembled_by, certificate_digest}`. Each part is an answer or a typed abstention with provenance and an evidence class. The handler runs `assemble_for` once, reads coverage and guardrails through their existing functions and runs the fixture queries of Q1, Q6 and Q7. It adds no planner. Rows R008 and R012.
+`AgentExecutionAnswer` returns `ExecutionAnswer{task_iri, parts{steps, staffing, coverage, guardrails, bindings, workflow, dag}, assembled_by, certificate_digest}`. Each part is an answer or a typed abstention with provenance and an evidence class. The handler `handle_agent_execution_answer` (`crates/medulla-h-decide/src/decide/execution_answer.rs`) runs `assemble_for` once, builds the `CapabilityCoverageRequest` from the assembly's `tenant_id`, `requirements` and `candidates`, reads coverage and guardrails through `coverage_for` and `entailment_for`, and runs the Q1 and Q6 selects with `VALUES ?task` through `medulla_rdf::sparql::execute` on the caller's filtered view (no dependency on `medulla-h-sparql`). `staffing`, `bindings` and `dag` come from the `AssemblyResult` (agents, their pinned components, the solved graph shape); the DAG is the solved graph, not a query. It adds no planner. Rows R008 and R012.
 
 ### Probes
 
@@ -97,7 +97,7 @@ Six probe questions are answered by existing engine paths (`NlQuery`, `Decide`, 
 
 ### Architecture views
 
-Data flow: `Method::ArchitectureView` → `crates/medulla-h-mining/src/mining.rs::try_handle` → `handle_architecture_view` (new) → `derive_architecture_view` (new, `crates/medulla-core/src/architecture_view.rs`) → `ArchitectureView` with containers, edges and support paths. `medulla-h-mining` depends on `medulla-core` for the derivation (a downward dependency; the layering holds). The view has its own read method; `handle_impact` serves risk propagation and is not the call site. Failure behaviour: a scope with no supporting source returns a typed refusal; a diagram element with no matching package stays a container with empty support. Decision: derive on read from the graph; a stored diagram per repository goes stale at the next ingest. Row R010.
+Data flow: `Method::ArchitectureView` → `crates/medulla-h-mining/src/mining.rs::try_handle` → `handle_architecture_view` (new) → `derive_architecture_view` (new, `crates/medulla-core/src/architecture_view.rs`) → `ArchitectureView` with containers, edges and support paths. `medulla-h-mining` depends on `medulla-core` for the derivation (a downward dependency; the layering holds). The view has its own read method; `handle_impact` serves risk propagation and is not the call site. Failure behaviour: a scope with no supporting source returns a typed refusal; a diagram element with no matching package stays a container with empty support. Decision: derive on read from the graph; a stored diagram per repository goes stale at the next ingest. The revision a caller pins is `repository_revision` over the repository's nodes in the same projected view (domain `eg/repository-snapshot/v1`), so the digest and the view come from one snapshot of the facts the engine holds. Row R010.
 
 ### Job and plan questions
 
@@ -130,7 +130,7 @@ flowchart LR
 
 Data flow, import: `Method::ProcessDocumentImport` → `handle_process_document_import` (`crates/medulla-h-graph/src/graph_ops/process_compile.rs`) → `parse_bpmn` or `parse_dmn` → `bpmn_mutations` or `dmn_mutations` → one `MutationBatch`. Export: `Method::ProcessDocumentExport` → `write_bpmn`, `workflow_to_bpmn` or `write_dmn`. The readers live in `crates/medulla-core/src/process_exchange/`. They refuse document type declarations and external entities. They keep every unknown element as `:bpmnPreservedXml`, so the writer emits it again. The classes come from `bpmn-v1.ttl` and `dmn-v1.ttl` (`MEDULLA-ORCH-VOCAB-R014`); each rolls up to a core process or decision term. EPC enters as the canonical form of R701; its file format stays with its connector.
 
-Sync: the graph is the system of record. Each process source is a federated secondary declared by one `vg:SourceAuthority` row: the process engine, also the execution location (R703.1), and the ARIS repository (R701.10). Records compare on the canonical digest, so a process changed in either format is detected the same way (R703.2). `ProcessModelSync` runs the two-way mechanism of `MEDULLA-SRC-AUTH-R012` with `ProcessSyncAdapter`. The connector's pack source serves the definition documents at sync time through the foreign read path. `ProcessModelDeploy` exports a model and queues one governed write-back proposal; arbora approves it and the connector sink deploys the released change set. Rows R702 and R703.
+Sync: the graph is the system of record. Each process source is a federated secondary declared by one `vg:SourceAuthority` row: the process engine, also the execution location (R703.1), and the ARIS repository (R701.10). Records compare on the canonical digest, so a process changed in either format is detected the same way (R703.2). `ProcessSyncAdapter` lives in `crates/medulla-virtual-graph/src/process_sync.rs` beside `ArchitectureSyncAdapter`, because the `SyncAdapter` trait is in `medulla-virtual-graph`, which depends on `medulla-core`. An inbound EPC record enters the graph as BPMN classes (`workflow_to_bpmn` then `bpmn_mutations`), so the graph holds one process vocabulary. `ProcessModelSync` runs the two-way mechanism of `MEDULLA-SRC-AUTH-R012` with `ProcessSyncAdapter`. The connector's pack source serves the definition documents at sync time through the foreign read path. `ProcessModelDeploy` exports a model and queues one governed write-back proposal; arbora approves it and the connector sink deploys the released change set. Rows R702 and R703.
 
 ### Process compilation stages (MEDULLA-CQ-ORCH-R701.11, R701.12)
 
@@ -190,7 +190,7 @@ Gates for any change under these rows: `cargo test -p medulla-rdf --test orchest
 
 ### Machine wiring
 
-- `BrokerMessageMachine`: entry point served broker publish, consume and ack methods → `consume_scan.rs` → `MessageState::apply` in `crates/medulla-core/src/broker/message_machine.rs` → stored state field. Attach points: `broker.rs:344,466` and `consume_scan.rs:86,110-132`. Wiring row: MEDULLA-CQ-ORCH-R810.1. Hot-path proof row: the cutover scan `no_writer_sets_state_outside_apply` of MEDULLA-CQ-ORCH-R810.1.
+- `BrokerMessageMachine`: an ack keeps the message in `Acked` (B02); a repeated ack by the claimant is the self-loop B09 and answers `true`; `sweep_expired` purges acked messages after `ACKED_RETENTION_MS` (B10). `Method::BrokerAck` carries `consumer` and `now_ms` so the claimant and lease guards hold on the by-id path. Entry point served broker publish, consume and ack methods → `consume_scan.rs` → `MessageState::apply` in `crates/medulla-core/src/broker/message_machine.rs` → stored state field. Attach points: `broker.rs:344,466` and `consume_scan.rs:86,110-132`. Wiring row: MEDULLA-CQ-ORCH-R810.1. Hot-path proof row: the cutover scan `no_writer_sets_state_outside_apply` of MEDULLA-CQ-ORCH-R810.1.
 - `AnalyticsJobMachine`: entry point served analytics job methods → the job store in `crates/medulla-jobs/src/store.rs` → `JobState::step` in `crates/medulla-jobs/src/job_machine.rs` → stored state field. Attach points: the 16 `job.state =` sites in `store.rs` (lines 810 to 2255) and the reclaim at `:1279`. Wiring row: MEDULLA-CQ-ORCH-R811.2. Hot-path proof row: `no_site_sets_state_outside_step` of MEDULLA-CQ-ORCH-R811.2.
 
 ### Writers and stored data of the job and broker machines (R811.3, R811.4, R810.3, R810.4)
@@ -205,7 +205,7 @@ Pre-untangled design, one line per answer.
 - State. The explicit machines of R810 and R811; this row family removes the dual truths (`cancel_requested`, `lease`, `not_before_ms`, `reclaimed`).
 - Environment. None.
 
-Order: R811.1, R811.3 (three PRs), R811.4; R810.1, R810.3, R810.4. The two families are independent and run in parallel. A stored-shape change runs its migration at store open and is recorded in the migration ledger, so a restart converts once.
+Order: R811.1, R811.3 (three PRs), R811.4; R810.1, R810.3, R810.4. The two families are independent and run in parallel. The stored job shape changes through the storage kernel's offline upgrade: the table `analytics_jobs` becomes `analytics_job_records`, so the `Jobs` layout digest changes and the predecessor `JOBS_BEFORE_JOB_MACHINE` is upgraded once by `upgrade_jobs_job_machine` at engine open (`migrate_on_open`). Broker messages need no conversion: no stored message holds a text the machine does not read. `Checkpoint.stage` is renamed `label` and is not a machine (R811.6).
 
 ## Cross-repo seams
 
