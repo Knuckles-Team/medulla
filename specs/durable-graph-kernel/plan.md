@@ -1192,3 +1192,23 @@ pack-write lifecycle into the tenant-keyed `concept_ids` and `concept_lineage_ed
 contract is `crates/medulla-agent-types/src/concept_lineage.rs`; five registered refusal codes route
 to this method only. Served proof: `tests/durable/test_concept_lineage_served.py` (L3) and the signed
 dispatch tests in `crates/medulla-h-admin/src/admin/connector_pack/tests/concept_lineage.rs`.
+
+### 2026-11-20 — R874 machines
+
+The build lanes found no edges or events in the R874 rows. Each row was re-derived from the writers on main.
+A field assigned only at construction, or computed from other facts, is not a lifecycle. Those rows are retired.
+
+- `MEDULLA-DURABLE-KERNEL-R874.1` retired: `CertificationFaultSpec.phase` is a fault-injection setting, not a lifecycle.
+- `MEDULLA-DURABLE-KERNEL-R874.2` retired: `CommitDescriptor.status` has no production writer, so no machine can be derived.
+- `MEDULLA-DURABLE-KERNEL-R874.3` retired: `CommitPhaseTimer.phase` is a metric label, not a lifecycle.
+- `MEDULLA-DURABLE-KERNEL-R874.5` retired: `EmbeddingBinding.state` is set only by its constructor.
+- `MEDULLA-DURABLE-KERNEL-R874.7` retired: `CoalescerState` is a struct of admission, config and counters, not a lifecycle.
+- `MEDULLA-DURABLE-KERNEL-R874.9` retired: `ManagedIndexState` is a classification derived at read time, not a lifecycle.
+- `MEDULLA-DURABLE-KERNEL-R874.16` retired: `ProjectionCursor.state` is derived from its watermarks and has no production holder.
+- `MEDULLA-DURABLE-KERNEL-R874.19` retired: `StoreReport.status` is an inspection outcome set only by its constructor.
+- `MEDULLA-DURABLE-KERNEL-R874.20` retired: `TransactionPhaseSubmission.phase` is a command argument, not a lifecycle.
+
+Resolved rows now list their edge table, single writer and proof tests: R874.4, R874.6, R874.10, R874.13, R874.14, R874.15, R874.17 and R874.18.
+Four of them reuse ontology blocks already on main; R874.10, R874.13 and R874.14 add new blocks.
+New row R874.21 deletes the orphan `:CommitMachine` and `:ProjectionMachine` blocks left by the retired rows.
+The rollup now states the shared budget and benchmark, and its root test is the landed audit machine (R874.12).
