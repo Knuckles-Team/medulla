@@ -225,7 +225,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T214 [US3] MEDULLA-DECISION-ENGINE-R132.1 Model
 - [ ] T215 [US3] MEDULLA-DECISION-ENGINE-R132.2 Behavior
 - [ ] T216 [US3] MEDULLA-DECISION-ENGINE-R132.3 Entry admission wired into Decide: entry_stage::apply, RetrievedEntry premises and provenance
-- [ ] T217 [US3] MEDULLA-DECISION-ENGINE-R132.4 Poisoned-entry abstention
+- [ ] T217 [US3] MEDULLA-DECISION-ENGINE-R132.4 Poisoned-entry abstention: `POISONED_ENTRY` as `AbstainReason::Family`, `entry_stage::apply` takes and returns `Executed`; test `entry_trust_tests.rs::poisoned_only_required_fact_abstains`
 - [ ] T218 [US3] MEDULLA-DECISION-ENGINE-R132.5 Refused entries and tiers in the sealed record
 - [ ] T219 [US3] MEDULLA-DECISION-ENGINE-R132.6 Hot-path proof for entry trust
 - [ ] T220 [US9] MEDULLA-DECISION-ENGINE-R133.1 Quota and run-trace records
@@ -401,7 +401,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T388 [US7] MEDULLA-DECISION-ENGINE-R141.102 Memory-change evaluation wiring
 - [ ] T389 [US7] MEDULLA-DECISION-ENGINE-R141.103 Memory-change served proof
 - [ ] T390 [US7] MEDULLA-DECISION-ENGINE-R141.104 Admission gate on memory mutations
-- [ ] T391 [US7] MEDULLA-DECISION-ENGINE-R142.100 Local-model certification attestation
+- [ ] T391 [US7] MEDULLA-DECISION-ENGINE-R142.100 Local-model certification attestation: types, `certify` and digest in `local_certification.rs` (BUILD, no wire; the wire is R142.101)
 - [ ] T392 [US7] MEDULLA-DECISION-ENGINE-R142.101 Wire certification into DecisionEval with refusals and evidence
 - [ ] T393 [US7] MEDULLA-DECISION-ENGINE-R142.102 Certification hot-path proof
 - [ ] T394 [US7] MEDULLA-DECISION-ENGINE-R143.1 Model
@@ -496,14 +496,14 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T483 [US7] MEDULLA-DECISION-ENGINE-R163.2 Graph reference resolution
 - [ ] T484 [US7] MEDULLA-DECISION-ENGINE-R163.3 Wire graph intake into Decide: `intake_view` and its `stat_decide.rs` arm, `conclude` over `resolve_sources(tenant, view, sources)`, option `resolved_set`, `ResolutionKind::Constraint`; test `graph_intake_tests.rs::graph_intake_routes`.
 - [ ] T485 [US7] MEDULLA-DECISION-ENGINE-R163.4 Graph intake refusals: move `GraphResolutionError` to `medulla-decision-types`, three `GRAPH_INTAKE_*` codes as abstentions, one `FAMILY_TABLES` row; test `graph_intake_tests.rs::missing_graph_data_refuses`.
-- [ ] T486 [US7] MEDULLA-DECISION-ENGINE-R163.5 Graph intake evidence
+- [ ] T486 [US7] MEDULLA-DECISION-ENGINE-R163.5 Graph intake evidence: pin the one-fact premise form, class Claim, GraphRow provenance; test `graph_intake_tests.rs::graph_intake_evidence_binds` (WRITE-TEST)
 - [ ] T487 [US7] MEDULLA-DECISION-ENGINE-R163.6 Graph intake hot-path proof
-- [ ] T488 [US7] MEDULLA-DECISION-ENGINE-R164.1 Model
-- [ ] T489 [US7] MEDULLA-DECISION-ENGINE-R164.2 Behavior
-- [ ] T490 [US7] MEDULLA-DECISION-ENGINE-R164.3 Wiring
-- [ ] T491 [US7] MEDULLA-DECISION-ENGINE-R164.4 Refusal
-- [ ] T492 [US7] MEDULLA-DECISION-ENGINE-R164.5 Evidence
-- [ ] T493 [US7] MEDULLA-DECISION-ENGINE-R164.6 Hot-path proof
+- [ ] T488 [US7] MEDULLA-DECISION-ENGINE-R164.1 RETIRED: model of the second breadth decision; breadth is R140.102.
+- [ ] T489 [US7] MEDULLA-DECISION-ENGINE-R164.2 RETIRED: behavior of the second breadth decision; breadth is R140.102.
+- [ ] T490 [US7] MEDULLA-DECISION-ENGINE-R164.3 RETIRED: wiring of the second breadth decision; breadth is R140.102.
+- [ ] T491 [US7] MEDULLA-DECISION-ENGINE-R164.4 RETIRED: refusals of the second breadth decision; breadth is R140.102.
+- [ ] T492 [US7] MEDULLA-DECISION-ENGINE-R164.5 RETIRED: evidence of the second breadth decision; breadth is R140.102.
+- [ ] T493 [US7] MEDULLA-DECISION-ENGINE-R164.6 RETIRED: hot-path proof of the second breadth decision; breadth is R140.102.
 - [ ] T494 [US7] MEDULLA-DECISION-ENGINE-R165.1 Tool necessity records
 - [ ] T495 [US7] MEDULLA-DECISION-ENGINE-R165.2 Necessity measure and comparison rule
 - [ ] T496 [US7] MEDULLA-DECISION-ENGINE-R165.3 Tool necessity family wiring
@@ -627,7 +627,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T614 [US8] MEDULLA-DECISION-ENGINE-R174.7.6 Hot-path proof
 - [ ] T615 [US8] MEDULLA-DECISION-ENGINE-R174.8.1 Model
 - [ ] T616 [US8] MEDULLA-DECISION-ENGINE-R174.8.2.1 Behavior: quality decay, staleness and region selection
-- [ ] T617 [US8] MEDULLA-DECISION-ENGINE-R174.8.3.1 Wiring: per-shard generation pin and swap
+- [ ] T617 [US8] MEDULLA-DECISION-ENGINE-R174.8.3.1 Wiring: one index generation per Discover response (stamp read before and after the gather in `semantic.rs::handle_discover`; test `discover_generation_tests.rs::concurrent_readers_see_one_generation`)
 - [ ] T618 [US8] MEDULLA-DECISION-ENGINE-R174.8.4 Refusal
 - [ ] T619 [US8] MEDULLA-DECISION-ENGINE-R174.8.5 Evidence
 - [ ] T620 [US8] MEDULLA-DECISION-ENGINE-R174.8.6 Hot-path proof
@@ -935,7 +935,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T913 [US7] MEDULLA-DECISION-ENGINE-R180.6 Process decision evidence
 - [ ] T914 [US7] MEDULLA-DECISION-ENGINE-R180.7 Process decision hot-path proof
 - [ ] T915 [US6] MEDULLA-DECISION-ENGINE-R829 Connector decision-point catalog and option heuristics in Decide
-- [ ] T916 [US6] MEDULLA-DECISION-ENGINE-R829.1 Rank catalog entries for skills, operations, catalog items and intent actions: four `DECISION_POINTS` entries, `RankFamily::conclude` abstains `QUESTION_UNPUBLISHED`. Size: M, 1 PR, 5 hours.
+- [ ] T916 [US6] MEDULLA-DECISION-ENGINE-R829.1 Rank catalog entries for skills, operations, catalog items and intent actions: four `DECISION_POINTS` entries, `RankFamily::conclude` abstains `QUESTION_UNPUBLISHED`. Size: M, 1 PR, 5 hours; the answer keeps the best 64 scores and adds `Advisory.ranked_total` (ladder truncation, `calibrated_scores` by id, matrix rows of the retained ids).
 - [ ] T917 [US6] MEDULLA-DECISION-ENGINE-R829.2 Option features for capability ranking are computed by medulla from candidate text. Size: M, 2 PRs, 6 hours.
 - [ ] T918 [US6] MEDULLA-DECISION-ENGINE-R829.3 Served proof: a large catalog ranks the named system and object first. Size: S, 1 PR, 3 hours.
 - [ ] T923 [US6] MEDULLA-DECISION-ENGINE-R830 Remaining lifecycles are explicit state machines (rollup)

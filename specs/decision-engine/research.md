@@ -597,7 +597,7 @@ The served Python engine admits one deployment tenant, so the "another tenant" c
 
 ## R134.14 branch outcome fusion (design calls)
 
-- The record, receipt and `fuse_branches` live in `medulla-decision-types` (`branch_fusion.rs`), not in the outcome-types crate: the `RunRecord` wire enum that stores them is in decision-types and cannot depend upward. The R164.1 breadth records stay in `branch_outcomes.rs`.
+- The record, receipt and `fuse_branches` live in `medulla-decision-types` (`branch_fusion.rs`), not in the outcome-types crate: the `RunRecord` wire enum that stores them is in decision-types and cannot depend upward.
 - Records are written through the existing `RunRecord` commit (two new variants), never by `Decide`. `fusion_position` is empty as written and assigned by the fusion, so a stored record never disagrees with a later fusion order; a pre-assigned position is refused.
 - Invalid input refuses (DE-REFUSE-VS-ABSTAIN): every code in the row is a typed refusal; a missing record, a twice-planned branch, a changed input and an absent policy all refuse and record nothing.
 - Another tenant's record is never read because the family reads only the caller's tenant artifact keys; it is therefore `BRANCH_MISSING` there.
