@@ -83,6 +83,7 @@ def _containers_batch(
     }
 
 
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R904.3")
 @pytest.mark.asyncio
 async def test_container_tree_ingests_and_links_records() -> None:
     connector = _connector()
@@ -141,6 +142,7 @@ async def _folder_client(connector: str) -> tuple[MedullaClient, str]:
     return client, graph
 
 
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R904.3")
 @pytest.mark.asyncio
 async def test_record_in_container_is_admitted_with_its_edge() -> None:
     connector = _connector()
