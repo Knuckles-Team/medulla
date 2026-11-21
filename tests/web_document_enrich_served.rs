@@ -203,6 +203,19 @@ fn graph_version(state: &test_support::SharedState) -> u64 {
         .version()
 }
 
+/// The test agent plus `root`, the separately authorized principal that reads
+/// processed documents back (MEDULLA-REPO-INGEST-R652.5).
+fn isolation_with_root() -> medulla_isolation::isolation::IsolationLayer {
+    let mut isolation = common::current_isolation();
+    isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+        agent_id: "root".to_string(),
+        role: medulla_identity_types::acl::AgentRole::System,
+        teams: Vec::new(),
+        roles: Vec::new(),
+    });
+    isolation
+}
+
 async fn durable_graph() -> (
     std::path::PathBuf,
     test_support::SharedPersistence,
@@ -212,7 +225,7 @@ async fn durable_graph() -> (
         SECRET,
         "web-document-enrich-encryption-key",
         "medulla-webenrich",
-        common::current_isolation(),
+        isolation_with_root(),
         GRAPH,
     )
     .await
