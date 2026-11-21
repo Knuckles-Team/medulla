@@ -213,6 +213,144 @@ pub(super) fn guard_article_versions(
     Ok(())
 }
 
+/// The stored property object of the node an IRI names, and the key it is stored under.
+fn stored_node(
+    core: &medulla_graph_core::graph::GraphCore,
+    iri: &str,
+) -> Option<(String, serde_json::Map<String, serde_json::Value>)> {
+    [format!("<{iri}>"), iri.to_string()].into_iter().find_map(|key| {
+        let bytes = core.get_node_properties(&key)?;
+        match medulla_types::msgpack::decode_property_value(&bytes).ok()? {
+            serde_json::Value::Object(map) => Some((key, map)),
+            _ => None,
+        }
+    })
+}
+
+/// The bare IRI of a stored node key.
+fn bare_iri(key: &str) -> &str {
+    key.strip_prefix('<').and_then(|k| k.strip_suffix('>')).unwrap_or(key)
+}
+
+/// Whether the stored edge `from -> to` carries the relationship local name `name`.
+fn has_relationship(
+    core: &medulla_graph_core::graph::GraphCore,
+    from: &str,
+    to: &str,
+    name: &str,
+) -> bool {
+    core.get_edge_properties(from, to).iter().any(|blob| {
+        medulla_types::msgpack::decode_property_value(blob)
+            .ok()
+            .and_then(|v| v.get("relationship").and_then(|r| r.as_str().map(str::to_string)))
+            .is_some_and(|rel| rel.trim_matches(['<', '>']).rsplit(['#', '/']).next() == Some(name))
+    })
+}
+
+/// Materialise `cat:describedBest` on every article the batch touches (MEDULLA-TYPED-PACKS-R108.16).
+/// An article is touched when the batch writes it with `cat:aboutAsset` edges, or writes an asset
+/// that a stored article describes. The value is the ranking text of the described assets, so the
+/// SQL `catalog_relevance` function and the SPARQL `cat:relevance` function read one stored value
+/// and score an article by the best of it for the query text. The property is the engine's to
+/// write: a writer's own value is dropped.
+pub(super) fn materialize_described_best(
+    triples: &mut Vec<oxrdf::Triple>,
+    core: &medulla_graph_core::graph::GraphCore,
+) {
+    use medulla_catalog_types::catalog_relevance as cr;
+    use serde_json::{Map, Value};
+    let about = format!("{CAT}aboutAsset");
+    let predicate = format!("{CAT}describedBest");
+    triples.retain(|triple| triple.predicate.as_str() != predicate);
+    let mut batch_text: BTreeMap<String, Map<String, Value>> = BTreeMap::new();
+    let mut batch_about: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    let mut written: BTreeSet<String> = BTreeSet::new();
+    for triple in triples.iter() {
+        let NamedOrBlankNode::NamedNode(subject) = &triple.subject else {
+            continue;
+        };
+        written.insert(subject.as_str().to_string());
+        match &triple.object {
+            Term::Literal(value) => {
+                let cell = batch_text
+                    .entry(subject.as_str().to_string())
+                    .or_default()
+                    .entry(triple.predicate.as_str().to_string())
+                    .or_insert_with(|| Value::Array(Vec::new()));
+                if let Value::Array(values) = cell {
+                    values.push(Value::String(value.value().to_string()));
+                }
+            }
+            Term::NamedNode(object) if triple.predicate.as_str() == about => {
+                batch_about
+                    .entry(subject.as_str().to_string())
+                    .or_default()
+                    .insert(object.as_str().to_string());
+            }
+            _ => {}
+        }
+    }
+    // Articles to refresh: those the batch writes with edges, and the stored articles that
+    // describe an asset the batch writes.
+    let mut articles: BTreeSet<String> = batch_about.keys().cloned().collect();
+    for iri in &written {
+        let Some((key, _)) = stored_node(core, iri) else {
+            continue;
+        };
+        for from in core.get_predecessors(&key).unwrap_or_default() {
+            if has_relationship(core, &from, &key, "aboutAsset") {
+                articles.insert(bare_iri(&from).to_string());
+            }
+        }
+    }
+    let asset_entry = |iri: &str| -> Option<Map<String, Value>> {
+        let stored = stored_node(core, iri);
+        let in_batch = batch_text.get(iri);
+        if stored.is_none() && in_batch.is_none() {
+            return None;
+        }
+        let mut merged = stored.as_ref().map(|(_, map)| map.clone()).unwrap_or_default();
+        for (key, value) in in_batch.into_iter().flatten() {
+            merged.insert(key.clone(), value.clone());
+        }
+        let mut term_labels = Vec::new();
+        if let Some((key, _)) = &stored {
+            for from in core.get_predecessors(key).unwrap_or_default() {
+                if !has_relationship(core, &from, key, "definesAsset") {
+                    continue;
+                }
+                if let Some((_, term)) = stored_node(core, bare_iri(&from)) {
+                    term_labels.extend(cr::term_labels(&term));
+                }
+            }
+        }
+        Some(cr::described_entry(&merged, &term_labels))
+    };
+    for article in articles {
+        let mut targets = batch_about.get(&article).cloned().unwrap_or_default();
+        if let Some((key, _)) = stored_node(core, &article) {
+            for to in core.get_successors(&key).unwrap_or_default() {
+                if has_relationship(core, &key, &to, "aboutAsset") {
+                    targets.insert(bare_iri(&to).to_string());
+                }
+            }
+        }
+        let entries: Vec<Map<String, Value>> =
+            targets.iter().filter_map(|target| asset_entry(target)).collect();
+        let (Ok(subject), Ok(predicate_node)) = (
+            oxrdf::NamedNode::new(article.clone()),
+            oxrdf::NamedNode::new(predicate.clone()),
+        ) else {
+            continue;
+        };
+        triples.push(oxrdf::Triple::new(
+            subject,
+            predicate_node,
+            oxrdf::Literal::new_simple_literal(cr::described_snapshot(&entries)),
+        ));
+    }
+}
+
 /// `cat:schemaDigest` for every `cat:DataResource` of the batch that names at least one field
 /// with a `cat:columnName`. A field's type defaults to the empty string and its nullability to
 /// `true` when the batch does not state them.

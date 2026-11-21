@@ -515,6 +515,12 @@ cat:articleStatus a owl:DatatypeProperty ;
     rdfs:domain cat:Article ;
     rdfs:range xsd:string .
 
+cat:describedBest a owl:DatatypeProperty ;
+    rdfs:label "described best" ;
+    rdfs:comment "The ranking text of the assets an article describes (a JSON list of their names, descriptions, flags and defining term labels), written by the engine when the article or one of those assets is written and never by the writer. Search scores the article by the best of these for the query text, so the SQL and SPARQL ranking functions read one stored value (MEDULLA-TYPED-PACKS-R108.16)." ;
+    rdfs:domain cat:Article ;
+    rdfs:range xsd:string .
+
 cat:aboutAsset a owl:ObjectProperty ;
     rdfs:label "about asset" ;
     rdfs:comment "An asset an article explains." ;

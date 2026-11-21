@@ -143,9 +143,10 @@ pub struct AssetDoc {
     pub flags: Vec<TrustFlag>,
     /// The review status of an article (`cat:articleStatus`); `None` for any other asset.
     pub article_status: Option<String>,
-    /// For an article: the best score, for the search text, among the assets its
-    /// `cat:aboutAsset` edges name, filled by the caller that can read the edges.
-    pub described_best: f64,
+    /// For an article: the ranking text of the assets its `cat:aboutAsset` edges name, read from
+    /// the `cat:describedBest` node property the write path materialises, so the SQL function
+    /// and the SPARQL function rank an article by the same stored value.
+    pub described: Vec<AssetDoc>,
 }
 
 /// Predicate keys, by IRI and by bare local name, that carry each text field.
@@ -176,6 +177,9 @@ fn concept_keys() -> [String; 3] {
 }
 fn article_status_keys() -> [String; 2] {
     [format!("{CAT_NS}articleStatus"), "articleStatus".into()]
+}
+fn described_keys() -> [String; 2] {
+    [format!("{CAT_NS}describedBest"), "describedBest".into()]
 }
 fn flag_keys() -> [String; 2] {
     [
@@ -235,9 +239,47 @@ impl AssetDoc {
                 )
                 .collect(),
             article_status: article_status.map(str::to_string),
-            described_best: 0.0,
+            described: collect(obj, &described_keys())
+                .into_iter()
+                .next()
+                .and_then(|raw| serde_json::from_str::<Vec<Map<String, Value>>>(&raw).ok())
+                .map(|entries| {
+                    entries
+                        .iter()
+                        .map(|entry| Self::from_props(entry))
+                        .collect()
+                })
+                .unwrap_or_default(),
         }
     }
+}
+
+/// The ranking text of one described asset, as stored in an article's `cat:describedBest`
+/// value: its names, descriptions, flags and the labels of the terms that define it.
+pub fn described_entry(obj: &Map<String, Value>, term_label_extras: &[String]) -> Map<String, Value> {
+    let strings = |values: Vec<String>| Value::Array(values.into_iter().map(Value::String).collect());
+    let mut terms = collect(obj, &term_keys());
+    terms.extend(term_label_extras.iter().cloned());
+    let mut entry = Map::new();
+    entry.insert("name".into(), strings(collect(obj, &name_keys())));
+    entry.insert("description".into(), strings(collect(obj, &description_keys())));
+    entry.insert("term_labels".into(), strings(terms));
+    entry.insert("flag".into(), strings(collect(obj, &flag_keys())));
+    entry
+}
+
+/// The `cat:describedBest` value of an article: the entries of the assets it describes.
+pub fn described_snapshot(entries: &[Map<String, Value>]) -> String {
+    serde_json::to_string(entries).unwrap_or_else(|_| "[]".into())
+}
+
+/// The best score, for `query`, among the assets an article describes: the value its
+/// `described_asset` component is half of.
+pub fn described_best(doc: &AssetDoc, query: &str) -> f64 {
+    doc.described
+        .iter()
+        .map(|described| relevance(described, query))
+        .fold(0.0, f64::max)
 }
 
 /// The labels of one glossary term node: preferred, alternative and plain labels in every
@@ -510,11 +552,11 @@ pub fn hidden_from_search(doc: &AssetDoc) -> bool {
 
 /// The `described_asset` component of an article: half the best score among the assets it
 /// describes. Zero for a hidden article or an asset that is no article.
-pub fn described_asset_component(doc: &AssetDoc) -> f64 {
+pub fn described_asset_component(doc: &AssetDoc, query: &str) -> f64 {
     if doc.article_status.is_none() || hidden_from_search(doc) {
         return 0.0;
     }
-    DESCRIBED_ASSET_FACTOR * doc.described_best
+    DESCRIBED_ASSET_FACTOR * described_best(doc, query)
 }
 
 /// The final score of one asset: the fused components plus the `described_asset` component,
@@ -523,7 +565,7 @@ pub fn relevance(doc: &AssetDoc, query: &str) -> f64 {
     if hidden_from_search(doc) {
         return 0.0;
     }
-    (rank_components(doc, query).total() + described_asset_component(doc))
+    (rank_components(doc, query).total() + described_asset_component(doc, query))
         * trust_multiplier(&doc.flags)
 }
 
@@ -566,20 +608,21 @@ mod tests {
     // spec: MEDULLA-TYPED-PACKS-R108.16
     #[test]
     fn draft_articles_are_hidden_and_approved_ones_gain_the_described_asset_component() {
-        let article = |status: &str, described: f64| AssetDoc {
+        let article = |status: &str, about: &[&str]| AssetDoc {
             names: vec!["unrelated guide".into()],
             article_status: Some(status.into()),
-            described_best: described,
+            described: about.iter().map(|name| doc(name)).collect(),
             ..AssetDoc::default()
         };
         for hidden in ["draft", "in_review"] {
-            assert_eq!(relevance(&article(hidden, 0.9), "orders"), 0.0);
+            assert_eq!(relevance(&article(hidden, &["orders"]), "orders"), 0.0);
         }
-        let approved = article("approved", 0.8);
-        assert_eq!(described_asset_component(&approved), 0.4);
-        assert_eq!(relevance(&approved, "orders"), 0.4);
-        assert_eq!(described_asset_component(&doc("orders")), 0.0);
-        let plain = relevance(&article("approved", 0.0), "guide");
+        let approved = article("approved", &["orders"]);
+        let best = relevance(&doc("orders"), "orders");
+        assert_eq!(described_asset_component(&approved, "orders"), 0.5 * best);
+        assert_eq!(relevance(&approved, "orders"), 0.5 * best);
+        assert_eq!(described_asset_component(&doc("orders"), "orders"), 0.0);
+        let plain = relevance(&article("approved", &[]), "guide");
         let props: Map<String, Value> = serde_json::from_value(serde_json::json!({
             "https://knuckles-team.github.io/ontology/catalog#articleStatus": "deprecated",
             "name": "guide"

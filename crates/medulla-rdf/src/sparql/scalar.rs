@@ -358,36 +358,15 @@ fn node_doc(ctx: &Ctx, key: &str) -> Option<medulla_catalog_types::catalog_relev
     Some(doc)
 }
 
-/// The ranking document of the asset a binding names. An article also carries the best score,
-/// for `text`, among the assets its `cat:aboutAsset` edges name (MEDULLA-TYPED-PACKS-R108.16).
+/// The ranking document of the asset a binding names. An article's described assets come from
+/// its stored `cat:describedBest` value, the same one the SQL function reads
+/// (MEDULLA-TYPED-PACKS-R108.16).
 fn catalog_doc(
     ctx: &Ctx,
     asset: &Binding,
-    text: &str,
 ) -> Option<medulla_catalog_types::catalog_relevance::AssetDoc> {
     let key = catalog_node_key(ctx, asset)?;
-    let mut doc = node_doc(ctx, &key)?;
-    if doc.article_status.is_some() {
-        doc.described_best = ctx
-            .active
-            .edge_properties
-            .iter()
-            .filter(|((from, _), blobs)| {
-                *from == key
-                    && blobs.iter().any(|blob| {
-                        medulla_types::msgpack::decode_property_value(blob.as_slice())
-                            .ok()
-                            .and_then(|v| {
-                                v.get("relationship").and_then(|r| r.as_str().map(str::to_string))
-                            })
-                            .is_some_and(|rel| local_name(&rel) == "aboutAsset")
-                    })
-            })
-            .filter_map(|((_, described), _)| node_doc(ctx, described))
-            .map(|described| medulla_catalog_types::catalog_relevance::relevance(&described, text))
-            .fold(0.0, f64::max);
-    }
-    Some(doc)
+    node_doc(ctx, &key)
 }
 
 /// `cat:relevance(?asset, "text")` and `cat:rankComponents(?asset, "text")`. A text over the
@@ -409,14 +388,14 @@ pub(super) fn eval_catalog_function(
         }
     };
     let asset = eval_term(ctx, args.first()?, sol)?;
-    let doc = catalog_doc(ctx, &asset, &text)?;
+    let doc = catalog_doc(ctx, &asset)?;
     if iri == cr::CAT_RANK_COMPONENTS_IRI {
         let c = cr::rank_components(&doc, &text);
         let multiplier = cr::trust_multiplier(&doc.flags);
         return Some(Binding::Literal(
             serde_json::json!({
                 "text": c.text, "vector": c.vector, "usage": c.usage,
-                "described_asset": cr::described_asset_component(&doc),
+                "described_asset": cr::described_asset_component(&doc, &text),
                 "trust": multiplier, "score": cr::relevance(&doc, &text),
             })
             .to_string(),

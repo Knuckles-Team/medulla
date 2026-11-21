@@ -44,6 +44,10 @@ pub(super) async fn handle_add_triples(
         return Response::err(req_id, refusal);
     }
 
+    // MEDULLA-TYPED-PACKS-R108.16: an article's described-asset ranking text is a node property
+    // written with the article or with the asset it describes.
+    super::catalog_guard::materialize_described_best(&mut triples, core);
+
     // X5-enforce (CONCEPT:MEDULLA-KG.ontology.rdf-update-guard): reject BEFORE the write
     // lands. Missing feature, policy, or invalid policy all fail closed.
     #[cfg(feature = "shacl")]
