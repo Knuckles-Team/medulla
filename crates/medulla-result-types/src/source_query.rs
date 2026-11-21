@@ -356,6 +356,114 @@ impl ApprovedSourceQuery {
     }
 }
 
+fn digest_of(domain: &[u8], fields: &[&[u8]]) -> Result<String, SourceQueryError> {
+    medulla_types::contract::Digest256::framed(domain, fields)
+        .map(|digest| digest.to_hex())
+        .map_err(|_| SourceQueryError::InvalidQuery)
+}
+
+impl SourceQueryDialect {
+    /// The serde snake_case name, used in digests.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Postgres => "postgres",
+            Self::Mysql => "mysql",
+            Self::Sqlite => "sqlite",
+            Self::Mssql => "mssql",
+            Self::Clickhouse => "clickhouse",
+        }
+    }
+}
+
+impl SourceQueryOperation {
+    /// The serde snake_case name, used in digests.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::ReadSql => "read_sql",
+        }
+    }
+}
+
+impl SourceQueryRequest {
+    /// MEDULLA-FEDERATED-QUERY-R085.2: the framed digest of the bound parameters, three
+    /// fields per parameter (position, kind name, value bytes).
+    pub fn parameter_digest(&self) -> Result<String, SourceQueryError> {
+        let mut owned: Vec<Vec<u8>> = Vec::with_capacity(self.parameters.len() * 3);
+        for parameter in &self.parameters {
+            owned.push(parameter.position.to_be_bytes().to_vec());
+            let (kind, value): (&str, Vec<u8>) = match &parameter.value {
+                SourceQueryValue::Null => ("null", Vec::new()),
+                SourceQueryValue::Bool(v) => ("bool", vec![u8::from(*v)]),
+                SourceQueryValue::Int64(v) => ("int64", v.to_be_bytes().to_vec()),
+                SourceQueryValue::Float64(v) => ("float64", v.to_bits().to_be_bytes().to_vec()),
+                SourceQueryValue::Text(v) => ("text", v.as_bytes().to_vec()),
+                SourceQueryValue::Bytes(v) => ("bytes", v.clone()),
+            };
+            owned.push(kind.as_bytes().to_vec());
+            owned.push(value);
+        }
+        let fields: Vec<&[u8]> = owned.iter().map(Vec::as_slice).collect();
+        digest_of(b"eg/source-query-parameters/v1", &fields)
+    }
+
+    /// MEDULLA-FEDERATED-QUERY-R085.2: the framed digest of every field but the idempotency
+    /// key, so one operation has one digest.
+    pub fn operation_digest(&self) -> Result<String, SourceQueryError> {
+        let parameter_digest = self.parameter_digest()?;
+        let version = self.schema_version.to_be_bytes();
+        let limits = [
+            self.limits.max_rows,
+            self.limits.max_bytes,
+            self.limits.chunk_rows,
+            self.limits.chunk_bytes,
+            self.limits.queue_depth,
+            self.limits.queue_bytes,
+            self.limits.deadline_ms,
+            self.limits.max_resident_bytes,
+            self.requested_expires_at_ms,
+        ]
+        .map(u64::to_be_bytes);
+        let mut fields: Vec<&[u8]> = vec![
+            &version[..],
+            self.source_ref.as_bytes(),
+            self.source_revision.as_bytes(),
+            self.schema_digest.as_bytes(),
+            self.snapshot_ref.as_bytes(),
+            self.dialect.name().as_bytes(),
+            self.sql.as_bytes(),
+            parameter_digest.as_bytes(),
+        ];
+        fields.extend(limits.iter().map(|bytes| bytes.as_slice()));
+        digest_of(b"eg/source-query-operation/v1", &fields)
+    }
+}
+
+impl ApprovedSourceQuery {
+    /// MEDULLA-FEDERATED-QUERY-R085.2: the framed digest that binds every field but
+    /// `query_digest`; the request is bound through `operation_digest`.
+    pub fn compute_query_digest(&self) -> Result<String, SourceQueryError> {
+        let version = self.schema_version.to_be_bytes();
+        let times = [self.issued_at_ms, self.expires_at_ms, self.hard_expires_at_ms]
+            .map(u64::to_be_bytes);
+        let mut fields: Vec<&[u8]> = vec![
+            &version[..],
+            self.approval_id.as_bytes(),
+            self.query_id.as_bytes(),
+            self.operation_digest.as_bytes(),
+            self.parameter_digest.as_bytes(),
+            self.tenant_ref.as_bytes(),
+            self.owner_ref.as_bytes(),
+            self.actor_ref.as_bytes(),
+            self.authority_digest.as_bytes(),
+            self.policy_digest.as_bytes(),
+            self.identity_digest.as_bytes(),
+        ];
+        fields.extend(self.allowed_operations.iter().map(|op| op.name().as_bytes()));
+        fields.extend(times.iter().map(|bytes| bytes.as_slice()));
+        digest_of(b"eg/source-query-approval/v1", &fields)
+    }
+}
+
 /// The execution boundary a verification happens at.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

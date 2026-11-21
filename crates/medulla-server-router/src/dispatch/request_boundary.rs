@@ -98,6 +98,7 @@ pub fn append_native_work_item_ops(ops: &mut Vec<&'static str>, available: bool)
             "TraceCritique",
             // graph-os MEDULLA-2: native control leases share the WorkItem kernel.
             "IssueHostStartGrant",
+            "ApproveSourceQuery",
             "IssueControlLease",
             "TransitionControlLease",
             "GetControlLease",
@@ -591,6 +592,7 @@ mod native_resource_capability_tests {
                 "ListWorkItems",
                 "GetWorkItemOutcome",
                 "IssueHostStartGrant",
+                "ApproveSourceQuery",
                 "IssueControlLease",
                 "TransitionControlLease",
                 "GetControlLease",

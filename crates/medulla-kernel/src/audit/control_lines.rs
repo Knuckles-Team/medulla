@@ -629,6 +629,14 @@ fn control_lease_audit_line(method: &Method) -> Option<String> {
             "ISSUE_HOST_START_GRANT|{}|{}",
             request.tenant, request.lease_id
         )),
+        Method::ApproveSourceQuery { request, .. } => Some(format!(
+            "APPROVE_SOURCE_QUERY|{}|{}",
+            request.tenant,
+            request
+                .admission
+                .as_ref()
+                .map_or("-", |admission| admission.approval_id.as_str())
+        )),
         Method::IssueControlLease { request } => Some(format!(
             "ISSUE_CONTROL_LEASE|{}|{}|{}",
             request.tenant, request.lease_id, request.kind

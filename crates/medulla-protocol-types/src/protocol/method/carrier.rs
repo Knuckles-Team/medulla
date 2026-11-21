@@ -168,6 +168,77 @@ pub(crate) mod tests {
         );
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R085.2
+    #[test]
+    fn approve_source_query_cannot_be_hidden_inside_a_generic_carrier() {
+        use medulla_catalog_types::connector_pack::{
+            ConnectorPackSourceApprovalResult, PackHeadRef, PackSourceApproval, PackSourceKind,
+            PackSourceRegistration, CONNECTOR_PACK_SCHEMA_VERSION,
+        };
+        use medulla_result_types::source_query::{
+            SourceQueryDialect, SourceQueryLimits, SourceQueryRequest,
+        };
+        use medulla_types::contract::{Digest256, ResourceId};
+        let connector = ResourceId::new("connector").expect("connector id");
+        let approval = ConnectorPackSourceApprovalResult {
+            schema_version: CONNECTOR_PACK_SCHEMA_VERSION,
+            tenant_id: "t".into(),
+            connector: connector.clone(),
+            head: PackHeadRef {
+                binding_revision: 1,
+                pack_digest: Digest256::sha256(b"head"),
+            },
+            registration: PackSourceRegistration {
+                connector,
+                contract_iri: "ac:contract".into(),
+                resource_uri: "mcp://connector/read".into(),
+                source_kind: PackSourceKind::McpTool,
+                approval: PackSourceApproval::Approved,
+                class_iri: "ac:Issue".into(),
+                source_id: "connector.issue.read".into(),
+                operation: "read".into(),
+                entity: "issue".into(),
+                key_field: "id".into(),
+            },
+            contract_digest: Digest256::sha256(b"contract"),
+            batch_id: "batch".into(),
+            committed_version: 1,
+        };
+        let query = SourceQueryRequest {
+            schema_version: 1,
+            source_ref: "src".into(),
+            source_revision: "1".into(),
+            schema_digest: "d".into(),
+            snapshot_ref: "s".into(),
+            dialect: SourceQueryDialect::Postgres,
+            sql: "SELECT 1".into(),
+            parameters: Vec::new(),
+            limits: SourceQueryLimits {
+                max_rows: 1,
+                max_bytes: 1_024,
+                chunk_rows: 1,
+                chunk_bytes: 1_024,
+                queue_depth: 1,
+                queue_bytes: 1_024,
+                deadline_ms: 1_000,
+                max_resident_bytes: 1_048_576,
+            },
+            requested_expires_at_ms: 2,
+            idempotency_key: "k".into(),
+        };
+        let method = from_json(serde_json::json!({
+            "method": "ApproveSourceQuery",
+            "params": {
+                "request": {"tenant": "t", "query": query},
+                "source_approval": approval,
+            }
+        }));
+        assert_eq!(
+            method.carrier_refusal(),
+            Some(CarrierRefusal::NativeAuthority)
+        );
+    }
+
     #[test]
     fn carriers_refuse_internal_and_native_kernel_methods_and_pass_graph_writes() {
         assert!(crate::error_registry::declared_error_code(

@@ -272,6 +272,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("semantic:stage-read", User, "engine"),
     entry("service:admin", Admin, "engine"),
     entry("service:control", User, "engine"),
+    // MEDULLA-FEDERATED-QUERY-R085.2: the native source-query approval issuer.
+    entry("source:approve-query", ServiceOnly, "engine"),
     entry("source:ingest", User, "engine"),
     entry("source:sync", User, "engine"),
     entry("sparql:read", User, "engine"),

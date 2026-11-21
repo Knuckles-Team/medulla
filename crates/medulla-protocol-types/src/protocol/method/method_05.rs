@@ -597,6 +597,15 @@ $($variants)*
         predicates: Vec<medulla_query_types::wire::ForeignColumnPredicate>,
     },
 
+    /// Issue one immutable source-query approval through the dedicated native issuer
+    /// (MEDULLA-FEDERATED-QUERY-R085.2). `source_approval` is the caller's connector-pack
+    /// source-approval receipt, a candidate reference that admission re-verifies; apply
+    /// ignores it. The lease grant holds digests only, never SQL text or parameters.
+    ApproveSourceQuery {
+        request: Box<medulla_work_types::source_query_approval::ApproveSourceQueryRequest>,
+        source_approval: Box<medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult>,
+    },
+
     /// Open one approved, host-driven bounded foreign read. The source driver
     /// stays in the authenticated host; the server rechecks this receipt.
     #[cfg(feature = "federation")]

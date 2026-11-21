@@ -51,6 +51,7 @@ pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Respon
         | Method::CasWorkItemMetadata { .. }
         | Method::PublishCurrentPlan { .. }
         | Method::IssueHostStartGrant { .. }
+        | Method::ApproveSourceQuery { .. }
         | Method::PublishRunCheckpoint { .. }
         | Method::MarkWorkItemEffectStarted { .. }
         | Method::RecordEffectReceipt { .. }
@@ -276,3 +277,6 @@ async fn prepare_checkpoint(
 
 #[cfg(all(test, feature = "redb"))]
 mod host_start_tests;
+
+#[cfg(all(test, feature = "redb", feature = "federation-sql"))]
+mod source_query_tests;

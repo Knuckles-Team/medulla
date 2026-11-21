@@ -72,6 +72,8 @@ pub mod work_item_machine;
 pub mod control_lease;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod host_start;
+#[allow(missing_docs)]
+pub mod source_query_approval;
 // EH-348 — the graph-driven work market: the canonical `:Gap` paired with its
 // one native WorkItem, the versioned derived `WorkOffer`, and the deterministic
 // legal-offer ranking stage the `Decide` layer runs.

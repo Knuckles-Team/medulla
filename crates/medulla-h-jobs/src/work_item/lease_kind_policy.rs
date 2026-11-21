@@ -51,6 +51,9 @@ fn lease_target(method: &Method) -> Option<LeaseTarget<'_>> {
         Method::IssueHostStartGrant { .. } => Some(LeaseTarget::Kind(
             medulla_work_types::host_start::HOST_START_KIND,
         )),
+        Method::ApproveSourceQuery { .. } => Some(LeaseTarget::Kind(
+            medulla_work_types::source_query_approval::SOURCE_QUERY_APPROVAL_KIND,
+        )),
         Method::IssueControlLease { request } => Some(LeaseTarget::Kind(&request.kind)),
         Method::TransitionControlLease { request } => Some(LeaseTarget::Stored {
             tenant: &request.tenant,

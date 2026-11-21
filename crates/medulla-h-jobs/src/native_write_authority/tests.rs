@@ -27,6 +27,69 @@ fn submit(tenant: &str) -> Value {
     })
 }
 
+/// The `ApproveSourceQuery` body naming `tenant`.
+fn approve_source_query_body(tenant: &str) -> Value {
+    use medulla_catalog_types::connector_pack::{
+        ConnectorPackSourceApprovalResult, PackHeadRef, PackSourceApproval, PackSourceKind,
+        PackSourceRegistration, CONNECTOR_PACK_SCHEMA_VERSION,
+    };
+    use medulla_result_types::source_query::{
+        SourceQueryDialect, SourceQueryLimits, SourceQueryRequest,
+    };
+    use medulla_types::contract::{Digest256, ResourceId};
+    let connector = ResourceId::new("connector").expect("connector id");
+    let approval = ConnectorPackSourceApprovalResult {
+        schema_version: CONNECTOR_PACK_SCHEMA_VERSION,
+        tenant_id: tenant.into(),
+        connector: connector.clone(),
+        head: PackHeadRef {
+            binding_revision: 1,
+            pack_digest: Digest256::sha256(b"head"),
+        },
+        registration: PackSourceRegistration {
+            connector,
+            contract_iri: "ac:contract".into(),
+            resource_uri: "mcp://connector/read".into(),
+            source_kind: PackSourceKind::McpTool,
+            approval: PackSourceApproval::Approved,
+            class_iri: "ac:Issue".into(),
+            source_id: "connector.issue.read".into(),
+            operation: "read".into(),
+            entity: "issue".into(),
+            key_field: "id".into(),
+        },
+        contract_digest: Digest256::sha256(b"contract"),
+        batch_id: "batch".into(),
+        committed_version: 1,
+    };
+    let query = SourceQueryRequest {
+        schema_version: 1,
+        source_ref: "src".into(),
+        source_revision: "1".into(),
+        schema_digest: "d".into(),
+        snapshot_ref: "s".into(),
+        dialect: SourceQueryDialect::Postgres,
+        sql: "SELECT 1".into(),
+        parameters: Vec::new(),
+        limits: SourceQueryLimits {
+            max_rows: 1,
+            max_bytes: 1_024,
+            chunk_rows: 1,
+            chunk_bytes: 1_024,
+            queue_depth: 1,
+            queue_bytes: 1_024,
+            deadline_ms: 1_000,
+            max_resident_bytes: 1_048_576,
+        },
+        requested_expires_at_ms: 2,
+        idempotency_key: "k".into(),
+    };
+    json!({
+        "request": {"tenant": tenant, "query": query},
+        "source_approval": approval,
+    })
+}
+
 /// One wire body per WorkItem-kernel write, naming `tenant` where its body does.
 fn writes(tenant: &str) -> Vec<(&'static str, Value)> {
     let fenced = json!({
@@ -83,6 +146,7 @@ fn writes(tenant: &str) -> Vec<(&'static str, Value)> {
             "IssueHostStartGrant",
             json!({"request": medulla_work_types::host_start::fixtures::host_start_request(tenant)}),
         ),
+        ("ApproveSourceQuery", approve_source_query_body(tenant)),
         (
             "IssueControlLease",
             json!({"request": {"tenant": tenant, "lease_id": "l",

@@ -67,6 +67,7 @@ macro_rules! native_method_catalog {
             record CasWorkItemMetadata => WorkItem,
             record PublishCurrentPlan => WorkItem,
             record IssueHostStartGrant => WorkItem,
+            record ApproveSourceQuery => WorkItem,
             record PublishRunCheckpoint => WorkItem,
             record MarkWorkItemEffectStarted => WorkItem,
             record RecordEffectReceipt => WorkItem,

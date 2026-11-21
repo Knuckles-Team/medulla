@@ -66,6 +66,7 @@ impl Method {
             | Self::CasWorkItemMetadata { .. }
             | Self::PublishCurrentPlan { .. }
             | Self::IssueHostStartGrant { .. }
+            | Self::ApproveSourceQuery { .. }
             | Self::PublishRunCheckpoint { .. }
             | Self::MarkWorkItemEffectStarted { .. }
             | Self::RecordEffectReceipt { .. }

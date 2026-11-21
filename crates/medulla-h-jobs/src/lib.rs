@@ -38,6 +38,10 @@ pub mod native_write_authority;
 /// `QualityRulePut`.
 pub mod quality_rule;
 
+/// MEDULLA-FEDERATED-QUERY-R085.2: the served `ApproveSourceQuery` admission.
+#[cfg(feature = "federation-sql")]
+pub mod source_query_approval;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "statechart")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

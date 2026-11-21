@@ -278,6 +278,7 @@ fn work_item_terminal_key(method: &Method) -> Result<Option<String>, String> {
 fn control_lease_idempotency_key(method: &Method) -> Result<String, String> {
     match method {
         Method::IssueHostStartGrant { request } => Ok(request.idempotency_key.clone()),
+        Method::ApproveSourceQuery { request, .. } => Ok(request.query.idempotency_key.clone()),
         Method::IssueControlLease { request } => Ok(request.idempotency_key.clone()),
         Method::TransitionControlLease { request } => Ok(request.idempotency_key.clone()),
         Method::RetireSealedRecord { request } => Ok(request.idempotency_key.clone()),

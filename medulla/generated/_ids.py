@@ -204,6 +204,7 @@ METHOD_IDS = frozenset(
         "ListWorkItems",
         "GetWorkItemOutcome",
         "IssueHostStartGrant",
+        "ApproveSourceQuery",
         "IssueControlLease",
         "TransitionControlLease",
         "ListControlLeases",

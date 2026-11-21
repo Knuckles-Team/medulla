@@ -374,6 +374,11 @@ impl IssueControlLeaseRequest {
         if self.kind == crate::host_start::HOST_START_KIND {
             return Err("ACCESS_DENIED: host.start is issued by IssueHostStartGrant only".into());
         }
+        if self.kind == crate::source_query_approval::SOURCE_QUERY_APPROVAL_KIND {
+            return Err(
+                "ACCESS_DENIED: source.query.approval is issued by ApproveSourceQuery only".into(),
+            );
+        }
         if self.kind == DECISION_EVALUATION_LEASE_KIND {
             return Err(format!(
                 "ACCESS_DENIED: control lease kind '{DECISION_EVALUATION_LEASE_KIND}' is issued by DecisionLog.commit only"

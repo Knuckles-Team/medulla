@@ -48,6 +48,7 @@ if TYPE_CHECKING:
     GetWorkItemRequest = _models.MethodGetWorkItemParams
     ListWorkItemsRequest = _models.MethodListWorkItemsParams
     GetWorkItemOutcomeRequest = _models.MethodGetWorkItemOutcomeParams
+    ApproveSourceQueryRequest = _models.MethodApproveSourceQueryParams
     IssueHostStartGrantRequest = _models.MethodIssueHostStartGrantParams
     IssueControlLeaseRequest = _models.MethodIssueControlLeaseParams
     TransitionControlLeaseRequest = _models.MethodTransitionControlLeaseParams
@@ -1432,6 +1433,51 @@ async def send_issue_host_start_grant(
 def decode_issue_host_start_grant(result: OpaqueResult) -> _models.ControlLeaseIssued:
     """Validate this method's result against its contract model."""
     return decode_result("IssueHostStartGrant", models().ControlLeaseIssued, result)
+
+
+async def send_approve_source_query(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        ApproveSourceQuery
+    Authorization:
+        source:approve-query
+    Durability:
+        GraphRedb
+    Replay:
+        OperationIdentity
+    Result:
+        ResultPayload::Json
+    Result schema:
+        contract/schemas/result.coordination.json
+        #/methods/ApproveSourceQuery
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - CONFLICT
+        - IDEMPOTENCY_CONFLICT
+        - REDIRECTED
+        - READ_ONLY
+    """
+    models().MethodApproveSourceQueryParams.model_validate(params or {})
+    payload = await client._send(
+        "ApproveSourceQuery",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("ApproveSourceQuery", payload)
+
+
+def decode_approve_source_query(result: OpaqueResult) -> _models.SourceQueryApprovalIssued:
+    """Validate this method's result against its contract model."""
+    return decode_result("ApproveSourceQuery", models().SourceQueryApprovalIssued, result)
 
 
 async def send_issue_control_lease(
@@ -2894,6 +2940,7 @@ _REQUEST_METHODS = frozenset(
         "ListWorkItems",
         "GetWorkItemOutcome",
         "IssueHostStartGrant",
+        "ApproveSourceQuery",
         "IssueControlLease",
         "TransitionControlLease",
         "ListControlLeases",

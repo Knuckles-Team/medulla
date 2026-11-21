@@ -568,6 +568,7 @@ def _check_mutation_applier_inventory(
         "SubmitAdmittedRequest",
         # graph-os MEDULLA-2: native control-lease writes in the same WorkItem kernel.
         "IssueHostStartGrant",
+        "ApproveSourceQuery",
         "IssueControlLease",
         "TransitionControlLease",
         "PolicyEvolutionStore",

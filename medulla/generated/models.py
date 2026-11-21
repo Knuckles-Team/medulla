@@ -9155,6 +9155,156 @@ class IssueControlLeaseRequest(BaseModel):
     tenant: str
 
 
+class SourceQueryDialect(str, Enum):
+    POSTGRES = "postgres"
+    MYSQL = "mysql"
+    SQLITE = "sqlite"
+    MSSQL = "mssql"
+    CLICKHOUSE = "clickhouse"
+
+
+class SourceQueryOperation(str, Enum):
+    READ_SQL = "read_sql"
+
+
+class SourceQueryLimits(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    chunk_bytes: Annotated[int, Field(ge=0)]
+    chunk_rows: Annotated[int, Field(ge=0)]
+    deadline_ms: Annotated[int, Field(ge=0)]
+    max_bytes: Annotated[int, Field(ge=0)]
+    max_resident_bytes: Annotated[int, Field(ge=0)]
+    max_rows: Annotated[int, Field(ge=0)]
+    queue_bytes: Annotated[int, Field(ge=0)]
+    queue_depth: Annotated[int, Field(ge=0)]
+
+
+class SourceQueryValueNull(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["null"]
+
+
+class SourceQueryValueBool(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["bool"]
+    value: bool
+
+
+class SourceQueryValueInt64(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["int64"]
+    value: int
+
+
+class SourceQueryValueFloat64(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["float64"]
+    value: float
+
+
+class SourceQueryValueText(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["text"]
+    value: str
+
+
+class SourceQueryValueBytes(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["bytes"]
+    value: list[Annotated[int, Field(ge=0, le=255)]]
+
+
+SourceQueryValue = (
+    SourceQueryValueNull
+    | SourceQueryValueBool
+    | SourceQueryValueInt64
+    | SourceQueryValueFloat64
+    | SourceQueryValueText
+    | SourceQueryValueBytes
+)
+
+
+class SourceQueryParameter(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    position: Annotated[int, Field(ge=0, le=4294967295)]
+    value: SourceQueryValue
+
+
+class SourceQueryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    dialect: SourceQueryDialect
+    idempotency_key: str
+    limits: SourceQueryLimits
+    parameters: list[SourceQueryParameter]
+    requested_expires_at_ms: Annotated[int, Field(ge=0)]
+    schema_digest: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    snapshot_ref: str
+    source_ref: str
+    source_revision: str
+    sql: str
+
+
+class ApprovedSourceQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor_ref: str
+    allowed_operations: list[SourceQueryOperation]
+    approval_id: str
+    authority_digest: str
+    expires_at_ms: Annotated[int, Field(ge=0)]
+    hard_expires_at_ms: Annotated[int, Field(ge=0)]
+    identity_digest: str
+    issued_at_ms: Annotated[int, Field(ge=0)]
+    operation_digest: str
+    owner_ref: str
+    parameter_digest: str
+    policy_digest: str
+    query_digest: str
+    query_id: str
+    request: SourceQueryRequest
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    tenant_ref: str
+
+
+class SourceQueryAdmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor_ref: str
+    approval_id: str
+    approval_ttl_ms: Annotated[int, Field(ge=0)]
+    authority_digest: str
+    identity_digest: str
+    owner_ref: str
+    policy_digest: str
+    tenant_ref: str
+
+
+class ApproveSourceQueryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    admission: SourceQueryAdmission | None = None
+    query: SourceQueryRequest
+    tenant: str
+
+
+class SourceQueryApprovalIssued(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approved: ApprovedSourceQuery | None = None
+    changed_work_item_ids: list[str]
+    outcome: ControlLeaseIssueOutcome
+
+
 class IssueHostStartGrantRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -13919,6 +14069,13 @@ class MethodGetWorkItemOutcome(BaseModel):
     params: MethodGetWorkItemOutcomeParams
 
 
+class MethodApproveSourceQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ApproveSourceQuery"]
+    params: MethodApproveSourceQueryParams
+
+
 class MethodIssueHostStartGrant(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15449,6 +15606,7 @@ Method = Annotated[
         MethodListWorkItems,
         MethodGetWorkItemOutcome,
         MethodIssueHostStartGrant,
+        MethodApproveSourceQuery,
         MethodIssueControlLease,
         MethodTransitionControlLease,
         MethodGetControlLease,
@@ -17497,6 +17655,13 @@ class MethodIssueControlLeaseParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     request: IssueControlLeaseRequest
+
+
+class MethodApproveSourceQueryParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: ApproveSourceQueryRequest
+    source_approval: ConnectorPackSourceApprovalResult
 
 
 class MethodIssueHostStartGrantParams(BaseModel):
@@ -36853,7 +37018,17 @@ __all__ = [
     "InvalidationEvent",
     "InvalidationScope",
     "IssueControlLeaseRequest",
+    "ApprovedSourceQuery",
+    "ApproveSourceQueryRequest",
     "IssueHostStartGrantRequest",
+    "SourceQueryAdmission",
+    "SourceQueryApprovalIssued",
+    "SourceQueryDialect",
+    "SourceQueryLimits",
+    "SourceQueryOperation",
+    "SourceQueryParameter",
+    "SourceQueryRequest",
+    "SourceQueryValue",
     "ItemLabel",
     "ItemLabelGold",
     "ItemLabelLogged",
@@ -37683,6 +37858,8 @@ __all__ = [
     "MethodIndexRepositoryParams",
     "MethodInvalidateEdge",
     "MethodInvalidateEdgeParams",
+    "MethodApproveSourceQuery",
+    "MethodApproveSourceQueryParams",
     "MethodIssueControlLease",
     "MethodIssueControlLeaseParams",
     "MethodIssueHostStartGrant",

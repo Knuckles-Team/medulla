@@ -984,6 +984,18 @@ pub const SOURCE_QUERY_KNOBS: [SourceQueryKnob; 8] = [
     },
 ];
 
+/// The lifetime of a source-query approval, in seconds (MEDULLA-FEDERATED-QUERY-R085.2).
+pub const SOURCE_QUERY_APPROVAL_TTL_KNOB: SourceQueryKnob = SourceQueryKnob {
+    knob: "source_query.approval_ttl_s",
+    env: "MEDULLA_SOURCE_QUERY_APPROVAL_TTL_S",
+    default: 300,
+    range: (10, 3_600),
+};
+
+fn default_approval_ttl_s() -> u64 {
+    SOURCE_QUERY_APPROVAL_TTL_KNOB.default
+}
+
 /// The tenant ceiling every caller-supplied [`SourceQueryLimits`] is clamped to,
 /// read from the `knob source_query.*` table and bounds-checked at startup.
 ///
@@ -993,12 +1005,16 @@ pub const SOURCE_QUERY_KNOBS: [SourceQueryKnob; 8] = [
 pub struct SourceQueryKnobs {
     /// Values in [`SOURCE_QUERY_KNOBS`] order.
     pub values: [u64; 8],
+    /// The approval lifetime in seconds ([`SOURCE_QUERY_APPROVAL_TTL_KNOB`]).
+    #[serde(default = "default_approval_ttl_s")]
+    pub approval_ttl_s: u64,
 }
 
 impl Default for SourceQueryKnobs {
     fn default() -> Self {
         Self {
             values: SOURCE_QUERY_KNOBS.map(|knob| knob.default),
+            approval_ttl_s: SOURCE_QUERY_APPROVAL_TTL_KNOB.default,
         }
     }
 }
@@ -1016,6 +1032,12 @@ impl SourceQueryKnobs {
                 })?;
             }
         }
+        if let Some(raw) = lookup(SOURCE_QUERY_APPROVAL_TTL_KNOB.env) {
+            knobs.approval_ttl_s = raw.trim().parse().map_err(|_| InvalidKnob {
+                knob: SOURCE_QUERY_APPROVAL_TTL_KNOB.knob,
+                value: raw.clone(),
+            })?;
+        }
         knobs.validate()?;
         Ok(knobs)
     }
@@ -1027,6 +1049,13 @@ impl SourceQueryKnobs {
 
     /// Check every knob against its range.
     pub fn validate(&self) -> Result<(), InvalidKnob> {
+        let (ttl_lo, ttl_hi) = SOURCE_QUERY_APPROVAL_TTL_KNOB.range;
+        if !(ttl_lo..=ttl_hi).contains(&self.approval_ttl_s) {
+            return Err(InvalidKnob {
+                knob: SOURCE_QUERY_APPROVAL_TTL_KNOB.knob,
+                value: self.approval_ttl_s.to_string(),
+            });
+        }
         for (value, knob) in self.values.iter().zip(SOURCE_QUERY_KNOBS.iter()) {
             let (lo, hi) = knob.range;
             if !(lo..=hi).contains(value) {

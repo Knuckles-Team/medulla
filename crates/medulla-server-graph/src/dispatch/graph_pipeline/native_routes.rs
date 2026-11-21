@@ -157,6 +157,38 @@ async fn route_native_lifecycle_ops(
         Err(method) => method,
     };
 
+    // MEDULLA-FEDERATED-QUERY-R085.2: a source-query approval is admitted against the
+    // registered source and the verified authority before its native commit. A build
+    // without `federation-sql` has no admission, so it refuses rather than commit a wire
+    // admission.
+    #[cfg(feature = "federation-sql")]
+    let method = match medulla_h_jobs::source_query_approval::try_handle(
+        medulla_h_jobs::source_query_approval::HandleContext {
+            state: ctx.state,
+            req_id,
+            graph_name,
+            caller,
+            verified_context,
+            core,
+            persistence,
+            #[cfg(feature = "raft")]
+            routed_raft,
+        },
+        method,
+    )
+    .await
+    {
+        Ok(response) => return Ok(response),
+        Err(method) => method,
+    };
+    #[cfg(not(feature = "federation-sql"))]
+    if matches!(&method, Method::ApproveSourceQuery { .. }) {
+        return Ok(Response::err(
+            req_id,
+            "ApproveSourceQuery requires a federation-sql build",
+        ));
+    }
+
     // The WorkItem handler owns its six lifecycle Methods explicitly and keeps
     // their authoritative MutationBatch effect. Submission and reservation
     // operations deliberately fall through to their existing native route.

@@ -411,6 +411,28 @@ fn apply_native_publication(
         *generated_result = Some(rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?);
         return Ok(true);
     }
+    if let Method::ApproveSourceQuery { request, .. } = method {
+        if generated_result.is_some() || batch.operations.len() != 1 {
+            return Err("source-query approval requires one operation".into());
+        }
+        let actor = batch
+            .envelope
+            .operation()
+            .map(|op| op.authority.actor.as_str());
+        let result = medulla_work_store::redb_store::work_item::control_lease::source_query::issue(
+            graph_fname,
+            request,
+            actor,
+            &mut tables.graph.nodes,
+            crypto,
+            committed_at_ms,
+        )?;
+        let payload = medulla_protocol_types::protocol::ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::ApproveSourceQuery,
+        >(result)?;
+        *generated_result = Some(rmp_serde::to_vec_named(&payload).map_err(|e| e.to_string())?);
+        return Ok(true);
+    }
     if let Method::PublishRunCheckpoint { request } = method {
         let actor = batch
             .envelope

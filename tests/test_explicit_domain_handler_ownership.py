@@ -21,6 +21,7 @@ WORK_ITEM_METHODS = {
     "CasWorkItemMetadata",
     # graph-os MEDULLA-2: native control-lease writes share the WorkItem kernel.
     "IssueHostStartGrant",
+    "ApproveSourceQuery",
     "IssueControlLease",
     "TransitionControlLease",
     # MEDULLA-DURABLE-KERNEL-R028.5: fenced snapshots use the WorkItem write family.

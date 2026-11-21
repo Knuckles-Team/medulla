@@ -132,6 +132,8 @@ method_results! {
     // graph-os MEDULLA-2 native control leases. `null` when no lease with this id
     // is visible to the verified tenant.
     IssueHostStartGrant(IssueHostStartGrant) => Json<ControlLeaseIssued>;
+    // MEDULLA-FEDERATED-QUERY-R085.2: the dedicated source-query approval issuer.
+    ApproveSourceQuery(ApproveSourceQuery) => Json<medulla_work_types::source_query_approval::SourceQueryApprovalIssued>;
     IssueControlLease(IssueControlLease) => Json<ControlLeaseIssued>;
     TransitionControlLease(TransitionControlLease) => Json<ControlLeaseTransition>;
     GetControlLease(GetControlLease) => Raw<Option<ControlLeaseView>>;

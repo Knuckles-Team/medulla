@@ -467,6 +467,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("CasWorkItemMetadata", "ControlPlane"),
     ("PublishCurrentPlan", "ControlPlane"),
     ("IssueHostStartGrant", "ControlPlane"),
+    ("ApproveSourceQuery", "ControlPlane"),
     ("PublishRunCheckpoint", "ControlPlane"),
     // MEDULLA-DURABLE-KERNEL-R820.3: the uncertain-effect writes commit through
     // the WorkItem kernel, like the other fenced WorkItem writes.

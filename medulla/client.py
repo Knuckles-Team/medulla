@@ -4903,6 +4903,37 @@ class ControlLeaseClient:
         ).payload
         return _control_lease_answer(value, {"issued", "collision"})
 
+    async def approve_source_query(
+        self, request: Mapping[str, Any], source_approval: Mapping[str, Any]
+    ) -> dict:
+        """Issue one source-query approval through the native issuer.
+
+        ``source_approval`` is the connector-pack source-approval receipt; the engine
+        re-verifies it and derives the authority from the verified request. The reply holds
+        the approved query; the stored grant holds digests only.
+        """
+        if not isinstance(request, Mapping):
+            raise TypeError("ApproveSourceQuery.request must be a mapping")
+        if not isinstance(source_approval, Mapping):
+            raise TypeError("ApproveSourceQuery.source_approval must be a mapping")
+        query = request.get("query")
+        if not isinstance(query, Mapping):
+            raise TypeError("ApproveSourceQuery.request.query must be a mapping")
+        idempotency_key = _string(
+            "ApproveSourceQuery.request.query.idempotency_key",
+            query.get("idempotency_key"),
+        )
+        value = (
+            await _gen.coordination.send_approve_source_query(
+                self._client,
+                {"request": dict(request), "source_approval": dict(source_approval)},
+                idempotency_key=idempotency_key,
+            )
+        ).payload
+        if not isinstance(value, dict):
+            raise TypeError("ApproveSourceQuery returned a non-object payload")
+        return value
+
     async def issue(
         self,
         *,

@@ -23,6 +23,7 @@ use medulla_work_types::{
 use super::*;
 
 pub mod host_start;
+pub mod source_query;
 mod pending_call;
 mod plan_pair;
 

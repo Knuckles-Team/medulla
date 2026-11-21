@@ -416,6 +416,7 @@ SEND_BY_METHOD = {
     "InvalidateEdge": graph.send_invalidate_edge,
     "IssueControlLease": coordination.send_issue_control_lease,
     "IssueHostStartGrant": coordination.send_issue_host_start_grant,
+    "ApproveSourceQuery": coordination.send_approve_source_query,
     "JoinChannel": messaging.send_join_channel,
     "KgDelegate": coordination.send_kg_delegate,
     "KnowledgeStream": query.send_knowledge_stream,
