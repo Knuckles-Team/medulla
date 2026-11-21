@@ -69,7 +69,7 @@ impl<'a> GraphTxn<'a> {
 
     /// Deterministic id for a consolidated semantic node over its `(sorted episodic
     /// ids)` cluster (CONCEPT:MEDULLA-KG.compute.consolidate-cluster). No RNG.
-    pub(super) fn derive_semantic_id(sorted_cluster: &[String]) -> String {
+    pub fn derive_semantic_id(sorted_cluster: &[String]) -> String {
         use std::hash::{Hash, Hasher};
         let mut h = std::collections::hash_map::DefaultHasher::new();
         for c in sorted_cluster {

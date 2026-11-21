@@ -21,9 +21,7 @@ use medulla_decision_types::decision::memory_rewrite::{
     MemoryRewriteEvaluation, MemoryRewriteKnobs, MemoryRewriteProposal, RewriteVerdict,
     MEMORY_REVISION_STALE,
 };
-use medulla_persistence_records::decision_jobs::{
-    decode_artifact, encode_artifact, memory_receipt_key,
-};
+use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::DecisionJobOutput;
 use medulla_mutation_types::memory_sync::DocId;
@@ -171,28 +169,80 @@ enum StoredMemoryReceipt {
     Rewrite(MemoryRewriteEvaluation),
 }
 
+/// The one key under which the R141.102 handlers store a memory-change receipt by
+/// its digest, read by the admission gate (MEDULLA-DECISION-ENGINE-R141.104).
+pub(crate) fn memory_receipt_key(digest: &str) -> String {
+    format!("memory-receipt:{digest}")
+}
+
 /// The change a memory mutation makes, as the gate checks it.
-pub struct MemoryChange<'a> {
-    pub record_id: &'a str,
-    pub kind: ChangeKind,
+pub struct MemoryChangeCandidate {
+    pub record_id: String,
     /// The content digest of the candidate the mutation writes.
-    pub candidate_digest: &'a str,
-    /// The head revision the mutation was planned at.
+    pub candidate_digest: String,
+    /// The stored head revision of the record: 0 while it does not exist.
     pub head_revision: u64,
+}
+
+/// The candidate a `Consolidate` makes: the semantic node id it will create (the
+/// props' `id`, else the one `derive_semantic_id` derives from the sorted,
+/// deduplicated cluster), the digest of the cluster with its props, and the
+/// stored head revision of that node in `graph` (0 when the node is absent).
+pub async fn consolidate_candidate(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    graph: &str,
+    episodic_ids: &[String],
+    props: &serde_json::Map<String, serde_json::Value>,
+) -> Result<MemoryChangeCandidate, String> {
+    use sha2::{Digest as _, Sha256};
+    let mut cluster = episodic_ids.to_vec();
+    cluster.sort();
+    cluster.dedup();
+    let record_id = match props.get("id").and_then(|id| id.as_str()) {
+        Some(id) => id.to_string(),
+        None => medulla_graph_core::graph::GraphTxn::derive_semantic_id(&cluster),
+    };
+    // `serde_json::Map` keeps keys sorted, so the compact form is canonical.
+    let canonical = serde_json::json!({"episodic_ids": cluster, "semantic_props": props});
+    let bytes = serde_json::to_vec(&canonical).map_err(|error| error.to_string())?;
+    let candidate_digest = format!("sha256:{}", hex::encode(Sha256::digest(bytes)));
+    let core = super::topology_read::graph_core(state, graph, verified).await?;
+    let head_revision = DocId::new(record_id.clone())
+        .ok()
+        .and_then(|doc| medulla_core::memory_snapshot_store::load_head(&core, &doc))
+        .map_or(0, |head| head.revision);
+    Ok(MemoryChangeCandidate {
+        record_id,
+        candidate_digest,
+        head_revision,
+    })
 }
 
 /// The admission gate of the memory mutation routes
 /// (MEDULLA-DECISION-ENGINE-R141.104). A `Rewrite` needs one `Admit` rewrite
 /// receipt and one `Admit` benchmark receipt; every other kind needs one
 /// `Admit` benchmark receipt. Each is read in the caller's tenant only, so
-/// another tenant's digest reads as absent, and must bind the change's record
-/// id and kind, its candidate digest and its head revision. Answers the
-/// premises `memory:receipt=<digest>` of the receipts that admitted the change;
-/// a refusal writes nothing.
-pub fn require_admit_receipts(
+/// another tenant's digest reads as absent, and must bind the candidate's record
+/// id, its candidate digest and its head revision. Answers the premises
+/// `memory:receipt=<digest>` of the receipts that admitted the change; a refusal
+/// writes nothing.
+pub async fn require_admit_receipts(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    kind: ChangeKind,
+    candidate: &MemoryChangeCandidate,
+    digests: &[String],
+) -> Result<Vec<String>, String> {
+    let store = state.write().await.ensure_agent_library()?;
+    check_receipts(&store, verified.tenant(), kind, candidate, digests)
+}
+
+fn check_receipts(
     store: &AgentLibraryStore,
     tenant_id: &str,
-    change: &MemoryChange<'_>,
+    kind: ChangeKind,
+    candidate: &MemoryChangeCandidate,
     digests: &[String],
 ) -> Result<Vec<String>, String> {
     let (mut benchmark, mut rewrite) = (None, None);
@@ -207,12 +257,12 @@ pub fn require_admit_receipts(
         };
         match decode_artifact::<StoredMemoryReceipt>(&bytes, "memory receipt")? {
             StoredMemoryReceipt::Benchmark(receipt)
-                if receipt.record_id == change.record_id && receipt.change_kind == change.kind =>
+                if receipt.record_id == candidate.record_id && receipt.change_kind == kind =>
             {
                 benchmark = benchmark.or(Some(receipt));
             }
             StoredMemoryReceipt::Rewrite(evaluation)
-                if evaluation.proposal.record_id == change.record_id =>
+                if evaluation.proposal.record_id == candidate.record_id =>
             {
                 rewrite = rewrite.or(Some(evaluation));
             }
@@ -220,7 +270,6 @@ pub fn require_admit_receipts(
             _ => {}
         }
     }
-    let mut premises = Vec::new();
     let Some(benchmark) = benchmark else {
         return Err(coded(
             MEMORY_RECEIPT_REQUIRED,
@@ -230,16 +279,16 @@ pub fn require_admit_receipts(
     if benchmark.verdict != BenchmarkVerdictKind::Admit {
         return Err(coded(MEMORY_RECEIPT_NOT_ADMIT, "the benchmark receipt discards the change"));
     }
-    if hex_digest(&benchmark.candidate.digest) != hex_digest(change.candidate_digest)
-        || benchmark.baseline.revision != change.head_revision
+    if hex_digest(&benchmark.candidate.digest) != hex_digest(&candidate.candidate_digest)
+        || benchmark.baseline.revision != candidate.head_revision
     {
         return Err(coded(
             MEMORY_RECEIPT_STALE,
             "the benchmark receipt is bound to another candidate or head revision",
         ));
     }
-    premises.push(format!("memory:receipt={}", benchmark.receipt_digest));
-    if change.kind == ChangeKind::Rewrite {
+    let mut premises = vec![format!("memory:receipt={}", benchmark.receipt_digest)];
+    if kind == ChangeKind::Rewrite {
         let Some(evaluation) = rewrite else {
             return Err(coded(
                 MEMORY_RECEIPT_REQUIRED,
@@ -249,8 +298,8 @@ pub fn require_admit_receipts(
         if evaluation.verdict != RewriteVerdict::Admit {
             return Err(coded(MEMORY_RECEIPT_NOT_ADMIT, "the rewrite receipt discards the change"));
         }
-        if hex_digest(&evaluation.proposal.candidate.digest) != hex_digest(change.candidate_digest)
-            || evaluation.proposal.active.revision != change.head_revision
+        if hex_digest(&evaluation.proposal.candidate.digest) != hex_digest(&candidate.candidate_digest)
+            || evaluation.proposal.active.revision != candidate.head_revision
         {
             return Err(coded(
                 MEMORY_RECEIPT_STALE,
@@ -260,17 +309,4 @@ pub fn require_admit_receipts(
         premises.push(format!("memory:receipt={}", evaluation.receipt_digest));
     }
     Ok(premises)
-}
-
-/// The head revision a mutation on `graph` is planned at: the graph's version,
-/// read behind the caller's read access. The mutation applies only while the
-/// version is unchanged.
-pub async fn planned_head_revision(
-    state: &SharedState,
-    verified: &VerifiedRequestContext,
-    graph: &str,
-) -> Result<u64, String> {
-    super::topology_read::graph_core(state, graph, verified)
-        .await
-        .map(|core| core.version())
 }

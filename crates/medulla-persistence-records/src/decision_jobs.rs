@@ -26,12 +26,6 @@ pub fn receipt_key(receipt_digest: &str) -> String {
     format!("receipt:{receipt_digest}")
 }
 
-/// Key of a memory-change receipt (benchmark or rewrite), read by the admission
-/// gate of the memory mutation routes (MEDULLA-DECISION-ENGINE-R141.104).
-pub fn memory_receipt_key(receipt_digest: &str) -> String {
-    format!("memory-receipt:{receipt_digest}")
-}
-
 /// Key of the immutable policy assessment committed with a full-label receipt.
 pub fn receipt_threshold_key(receipt_digest: &str) -> String {
     format!("receipt-threshold:{receipt_digest}")
