@@ -126,3 +126,72 @@ def test_denied_hit_never_enters_bundle(
     assert sorted(call["record_refs"]) == sorted([allowed, denied])
     assert call["principal"]
     assert call["timeout_ms"] == 2000
+
+
+def _orphan(client: Any, suffix: str) -> str:
+    """A `checked_at_read` record whose source has no registered connector."""
+    orphan = f"ac-{suffix}-orphan"
+    _node(
+        client,
+        orphan,
+        {
+            "type": "document",
+            "name": f"lighthouse logbook {orphan}",
+            "description": TEXT,
+            "source": f"unregistered-{suffix}",
+            "access_mode": "checked_at_read",
+        },
+    )
+    return orphan
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R703.4")
+def test_missing_port_fails_closed(
+    clean_graph: Any,
+    web_gateway: WebGateway,  # noqa: F811
+) -> None:
+    suffix = uuid.uuid4().hex[:8]
+    allowed, denied, synced = _checked_fixture(clean_graph, suffix)
+    orphan = _orphan(clean_graph, suffix)
+    web_gateway.denied_refs = set()
+    web_gateway.access_calls.clear()
+
+    bundle = _compile(clean_graph)
+
+    selected = {item["item_id"] for item in bundle["items"]}
+    # The source with no port loses every hit; other sources are unaffected.
+    assert orphan not in selected
+    assert {allowed, denied, synced} <= selected
+    assert {"record_id": orphan, "reason": "unavailable"} in bundle["evidence"][
+        "unchecked_dropped"
+    ]
+    # The unregistered source never reached a connector.
+    sent = [ref for call in web_gateway.access_calls for ref in call["record_refs"]]
+    assert orphan not in sent
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R703.5")
+def test_drop_reasons_read_back(
+    clean_graph: Any,
+    web_gateway: WebGateway,  # noqa: F811
+) -> None:
+    suffix = uuid.uuid4().hex[:8]
+    allowed, denied, synced = _checked_fixture(clean_graph, suffix)
+    orphan = _orphan(clean_graph, suffix)
+    web_gateway.denied_refs = {denied}
+    web_gateway.access_calls.clear()
+    try:
+        dropped = _compile(clean_graph)["evidence"]["unchecked_dropped"]
+        assert {"record_id": denied, "reason": "denied"} in dropped
+        assert {"record_id": orphan, "reason": "unavailable"} in dropped
+        assert not any(d["record_id"] in {allowed, synced} for d in dropped)
+
+        # A source slower than the check timeout drops its hits as `timeout`.
+        web_gateway.denied_refs = set()
+        web_gateway.access_delay_s = 2.5
+        dropped = _compile(clean_graph)["evidence"]["unchecked_dropped"]
+        assert {"record_id": allowed, "reason": "timeout"} in dropped
+        assert {"record_id": denied, "reason": "timeout"} in dropped
+        assert {d["reason"] for d in dropped} == {"timeout", "unavailable"}
+    finally:
+        web_gateway.access_delay_s = 0.0

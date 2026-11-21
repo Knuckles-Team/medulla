@@ -186,6 +186,8 @@ class WebGateway:
     # posted, and the record refs this gateway answers as denied.
     access_calls: list[dict] = field(default_factory=list)
     denied_refs: set[str] = field(default_factory=set)
+    # Seconds each access check waits before answering (zero: answer at once).
+    access_delay_s: float = 0.0
 
     @property
     def row_calls(self) -> int:
@@ -213,6 +215,8 @@ def web_gateway() -> Iterator[WebGateway]:
                 }
             elif op == "access_check":
                 gateway.access_calls.append(body)
+                if gateway.access_delay_s:
+                    time.sleep(gateway.access_delay_s)
                 refs = body["record_refs"]
                 reply = {
                     "allowed": [r for r in refs if r not in gateway.denied_refs],
