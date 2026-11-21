@@ -17,7 +17,7 @@ One row per leaf requirement. A planned test names the exact path that the row a
 
 | ID | Test | Level | Required observation |
 |---|---|---|---|
-| `MEDULLA-CONTRACT-R001.1` | `tests/test_wire_vectors.py::test_manifest_lists_every_exported_type_and_digest` (planned) | L2 | (L2). The cross-repo journey is `tests/harness/test_consumer_agent_lifecycle.py::test_agent_advances_through_lifecycle_types` (L3) in meristem. A stale `contract_revision` is refused before the next step. |
+| `MEDULLA-CONTRACT-R001.1` | `tests/test_wire_vectors.py::test_manifest_lists_every_exported_type` (planned) | L2 | (L2). The cross-repo journey is `tests/harness/test_consumer_agent_lifecycle.py::test_agent_advances_through_lifecycle_types` (L3) in meristem. A stale `contract_revision` is refused before the next step. |
 | `MEDULLA-CONTRACT-R001.2` | `tests/typed_packs/test_blueprint_roundtrip_served.py::test_blueprint_canonical_disk_roundtrip_has_no_difference` (planned) | L4 | with nested defaults, nulls, ordered arrays, Unicode and boundary numbers, and an exact byte compare after restart. |
 | `MEDULLA-CONTRACT-R001.3` | `crates/medulla-capabilities/tests/wire_vectors.rs::vectors_cover_every_wire_method_and_round_trip` (planned) | L1 | (L1). `crates/medulla-capabilities/tests/wire_vectors/sample_builder.rs::tests::builder_emits_minimal_values_and_refuses_unsatisfiable_schemas` (planned) (L1). |
 | `MEDULLA-CONTRACT-R001.3.1` | `crates/medulla-capabilities/tests/wire_vectors.rs::domain_cluster_vectors_round_trip` (planned) | L1 | (L1). |

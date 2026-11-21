@@ -104,7 +104,7 @@ Independent test: `tests/test_server_split_rollup.py::test_backbone_crates_exist
 
 ### Success criteria
 
-- SC-001 The Go and JS clients produce byte-identical signed bodies for every committed vector (`MEDULLA-CONTRACT-R004`).
+- SC-001 The Go and JS clients produce byte-identical signed bodies for every generated vector (`MEDULLA-CONTRACT-R004`).
 - SC-002 Two canonical codec builds are identical and at most `MAX_BYTES` (`MEDULLA-CONTRACT-R006`).
 - SC-003 Every platform wheel holds exactly one executable server member (`MEDULLA-CONTRACT-R053.9`).
 - SC-004 The privacy and secret-history scans report zero findings on the tracked tree (`MEDULLA-CONTRACT-R040`, `MEDULLA-CONTRACT-R043`).
