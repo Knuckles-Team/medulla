@@ -35,6 +35,9 @@ pub struct TypedColumn {
 pub struct TypedQueryResult {
     pub columns: Vec<TypedColumn>,
     pub rows: Vec<Vec<serde_json::Value>>,
+    /// Materialized views this read touched that are stale (MEDULLA-ENGINE-PARITY-R014.2); empty
+    /// when none, and skipped from any serialized form when empty.
+    pub stale_matviews: Vec<String>,
 }
 
 impl PgColType {

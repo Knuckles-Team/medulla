@@ -1141,7 +1141,11 @@ pub(crate) fn returning_result(
         }
         rows.push(row);
     }
-    TypedQueryResult { columns, rows }
+    TypedQueryResult {
+        columns,
+        rows,
+        stale_matviews: Vec::new(),
+    }
 }
 
 /// A single-column, single-row text result (CONCEPT:MEDULLA-KG.query.continuous-aggregate-lowering) — the shape a scalar
@@ -1153,6 +1157,7 @@ pub(crate) fn single_text_result(col: &str, val: &str) -> TypedQueryResult {
             ty: PgColType::Text,
         }],
         rows: vec![vec![serde_json::Value::String(val.to_string())]],
+        stale_matviews: Vec::new(),
     }
 }
 
@@ -2105,7 +2110,8 @@ impl WireSession {
         // MEDULLA-DURABLE-KERNEL-R035.5: the running statement's token, so a wire
         // cancel request stops this read at its next batch boundary.
         let cancel = self.statement_cancel_token();
-        tokio::task::spawn_blocking(move || {
+        let read_sql = sql.clone();
+        let mut result = tokio::task::spawn_blocking(move || {
             medulla_sql::sql::exec_sql_typed_with_tables_in_graph(
                 &snap,
                 projection.store(),
@@ -2116,7 +2122,10 @@ impl WireSession {
         })
         .await
         .map_err(|e| user_err(format!("query task failed: {e}")))?
-        .map_err(|msg| user_err(format!("SQL error: {msg}")))
+        .map_err(|msg| user_err(format!("SQL error: {msg}")))?;
+        // MEDULLA-ENGINE-PARITY-R014.2: a read over a stale materialized view names it.
+        result.stale_matviews = self.stale_matviews_read(&read_sql).await;
+        Ok(result)
     }
 
     /// Replay this connection's buffered graph-node ops onto `view` (CONCEPT:MEDULLA-KG.compute.kg-transaction-is-pinned),
@@ -5511,7 +5520,11 @@ fn uql_rows_to_result(rows: Vec<medulla_types::unified_row::UnifiedRow>) -> Type
             ]
         })
         .collect();
-    TypedQueryResult { columns, rows }
+    TypedQueryResult {
+        columns,
+        rows,
+        stale_matviews: Vec::new(),
+    }
 }
 
 /// Parse `SET EMBEDDING FOR <id> = <vector>` (CONCEPT:MEDULLA-KG.txn.isolation-ryow-begin-set) into `(node_id, embedding)`.

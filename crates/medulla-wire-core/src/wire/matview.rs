@@ -53,6 +53,37 @@ fn matview_inputs(store: &TableStore, select_sql: &str) -> WireResult<Vec<String
 }
 
 impl WireSession {
+    /// The materialized views `sql` reads that are stale (MEDULLA-ENGINE-PARITY-R014.2),
+    /// sorted by name. A statement that does not parse as a read, or a store that cannot
+    /// be opened, reports none: the read itself already succeeded or refused on its own.
+    pub(super) async fn stale_matviews_read(&self, sql: &str) -> Vec<String> {
+        let Ok(referenced) =
+            referenced_tables(sql, medulla_exec::sql_text::SqlDialect::Postgres)
+        else {
+            return Vec::new();
+        };
+        let Ok(store) = self.user_table_store().await else {
+            return Vec::new();
+        };
+        let mut stale: Vec<String> = Vec::new();
+        for qualified in referenced {
+            let leaf = qualified
+                .rsplit('.')
+                .next()
+                .unwrap_or(qualified.as_str())
+                .trim_matches('"')
+                .to_string();
+            if stale.contains(&leaf) {
+                continue;
+            }
+            if matches!(store.get_matview(&leaf), Ok(Some(spec)) if spec.stale) {
+                stale.push(leaf);
+            }
+        }
+        stale.sort();
+        stale
+    }
+
     /// Refuse materialized-view DDL inside an explicit transaction block: the
     /// result table is built from one read and committed in one transaction.
     fn refuse_matview_in_txn(&self) -> WireResult<()> {

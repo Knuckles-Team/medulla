@@ -1237,6 +1237,7 @@ pub fn try_exec_call(
         return Ok(Some(TypedQueryResult {
             columns: Vec::new(),
             rows: Vec::new(),
+            stale_matviews: Vec::new(),
         }));
     }
     let col_name = alias.unwrap_or_else(|| f.name.clone());
@@ -1246,6 +1247,7 @@ pub fn try_exec_call(
             ty: ret.col_type(),
         }],
         rows: vec![vec![ret.to_json()]],
+        stale_matviews: Vec::new(),
     }))
 }
 

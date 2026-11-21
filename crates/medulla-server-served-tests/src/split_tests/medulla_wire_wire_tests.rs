@@ -1538,6 +1538,56 @@ pub mod wired_catalog_tests {
         assert_eq!(rows.rows.len(), 1, "owner sees the row they just inserted");
     }
 
+    /// A commit to an input table marks the materialized view stale, a read over it names
+    /// it in `stale_matviews`, and a refresh clears it.
+    // spec: MEDULLA-ENGINE-PARITY-R014.2
+    #[tokio::test]
+    async fn stale_matview_is_reported_on_read_until_refreshed() {
+        let _env_read_lock = medulla_kernel::crypto::provisioned_test_env_read_lock().await;
+        let tenant = "wired-catalog-tenant-stale-matview";
+        let state = test_state(&[CREATOR, "owner-1"]);
+        let graph = "wired-catalog-stale-matview-graph";
+        create_test_graph(&state, graph, 1).await;
+
+        let owner = session_for(state.clone(), graph, "owner-1", tenant);
+        owner
+            .execute("CREATE TABLE parts (id TEXT PRIMARY KEY, sku TEXT)")
+            .await
+            .expect("create the input table");
+        owner
+            .execute("INSERT INTO parts (id, sku) VALUES ('1', 'a')")
+            .await
+            .expect("seed row");
+        owner
+            .execute("CREATE MATERIALIZED VIEW parts_mv AS SELECT id, sku FROM parts")
+            .await
+            .expect("create the matview");
+        let fresh = read_rows(&owner, "SELECT id FROM parts_mv")
+            .await
+            .expect("read the fresh matview");
+        assert!(fresh.stale_matviews.is_empty(), "a fresh view is not reported");
+
+        owner
+            .execute("INSERT INTO parts (id, sku) VALUES ('2', 'b')")
+            .await
+            .expect("change the input");
+        let stale = read_rows(&owner, "SELECT id FROM parts_mv")
+            .await
+            .expect("read the stale matview");
+        assert_eq!(stale.rows.len(), 1, "the view keeps its stored rows");
+        assert_eq!(stale.stale_matviews, vec!["parts_mv".to_string()]);
+
+        owner
+            .execute("REFRESH MATERIALIZED VIEW parts_mv")
+            .await
+            .expect("refresh");
+        let refreshed = read_rows(&owner, "SELECT id FROM parts_mv")
+            .await
+            .expect("read the refreshed matview");
+        assert_eq!(refreshed.rows.len(), 2);
+        assert!(refreshed.stale_matviews.is_empty(), "a refresh clears the flag");
+    }
+
     #[tokio::test]
     async fn wired_catalog_granted_same_tenant_actor_can_use_table() {
         // Provisions the ONE shared test at-rest key (this module's `ensure_env` no

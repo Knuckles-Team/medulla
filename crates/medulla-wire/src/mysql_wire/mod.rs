@@ -503,6 +503,7 @@ mod tests {
                 vec![serde_json::json!("n1"), serde_json::json!(1)],
                 vec![serde_json::json!("n2"), serde_json::json!(2)],
             ],
+            stale_matviews: Vec::new(),
         };
         let packets = encode_outcome(WireOutcome::Rows(result), SERVER_STATUS_AUTOCOMMIT);
         // column-count + 2 defs + 2 rows + current OK terminator = 6 packets.

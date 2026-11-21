@@ -1367,7 +1367,11 @@ pub(super) fn batches_to_typed(
     };
 
     let rows = decode_rows(batches, Ok)?;
-    Ok(TypedQueryResult { columns, rows })
+    Ok(TypedQueryResult {
+        columns,
+        rows,
+        stale_matviews: Vec::new(),
+    })
 }
 
 /// Convert the result RecordBatches into column names + msgpack-per-row, applying
