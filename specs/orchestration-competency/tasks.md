@@ -124,8 +124,8 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T110 [US4] MEDULLA-CQ-ORCH-R705.10 Architecture exchange hot-path proof: export and import round trip and the `architecture_exchange` bench
 - [ ] T117 [US2] MEDULLA-CQ-ORCH-R012.1 Steps come from imported tool-use contracts
 - [ ] T118 [US2] MEDULLA-CQ-ORCH-R012.2 The guiding skill and agent prompt come from imported links
-- [ ] T119 [US2] MEDULLA-CQ-ORCH-R810 Broker message is one explicit state machine
-- [ ] T120 [US2] MEDULLA-CQ-ORCH-R810.1 Broker message transition function
+- [ ] T137 [US2] MEDULLA-CQ-ORCH-R810 Broker message is one explicit state machine
+- [ ] T138 [US2] MEDULLA-CQ-ORCH-R810.1 Broker message transition function
 - [x] T121 [US2] MEDULLA-CQ-ORCH-R810.2 Describe the broker message machine in the ontology
 - [ ] T122 [US2] MEDULLA-CQ-ORCH-R811 Analytics job is one explicit state machine
 - [ ] T123 [US2] MEDULLA-CQ-ORCH-R811.1 Analytics job transition function: one `JobState` variant per `JobStage`, delete the three companion fields, `AnalyticsJob::transition` as the one writer (lands with R811.3, then R811.4 in the same train)
@@ -137,7 +137,6 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [x] T129 [US1] MEDULLA-CQ-ORCH-R820.1 Answer which harness sessions worked on this workspace and what each left
 - [x] T130 [US1] MEDULLA-CQ-ORCH-R820.2 Answer which skills and agents a coding harness receives
 - [ ] T131 [US1] MEDULLA-CQ-ORCH-R820 Coding harness competency questions
-- [ ] T132 [US1] MEDULLA-CQ-ORCH-R811.5 AnalyticsJob/JobState state machine: route 28 census findings through JobState::step
 - [ ] T133 [US1] MEDULLA-CQ-ORCH-R810.5 Type `Candidate.status` as `MessageState`
 - [ ] T134 [US1] MEDULLA-CQ-ORCH-R811.6 Rename `Checkpoint.stage` to `label` and delete the store's stage literals (no machine)
 - [ ] T135 [US1] MEDULLA-CQ-ORCH-R821 Census debt of the job wire mirrors is closed (rollup)
