@@ -32,8 +32,6 @@ from medulla.generated.graph_schema import SchemaSourceOriginViewApproved
 @pytest.mark.spec("MEDULLA-SRC-AUTH-R003.3")
 @pytest.mark.asyncio
 async def test_authority_attach_needs_distinct_approver() -> None:
-
-
     tag = uuid.uuid4().hex[:8]
     source_id = f"approved:srcauth-{tag}"
     lease_id = f"approval:srcauth-{tag}"
