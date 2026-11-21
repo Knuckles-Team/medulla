@@ -54,6 +54,12 @@ The engine already maintains plan views from change deltas. The kernel lives in 
 
 ```text
 crates/medulla-types/src/delta.rs                         new (R002.1)
+crates/medulla-types/src/materialization_status_machine.rs new (R016.1)
+crates/medulla-epistemic/src/incremental/                 existing (R016.1: one status map, written by fire)
+crates/medulla-epistemic/src/recompute.rs                 existing (R016.1: TruthMaintenance writes through fire)
+crates/medulla-h-retrieve/src/reasoning_projection.rs     existing (R016.1: versioned snapshot directory)
+crates/medulla-h-query/src/query/explain_handlers.rs      existing (R016.1: status rendered by result_text)
+crates/medulla-core/ontology/state-machines-v1.ttl        existing (R016.1: MaterializationStatusMachine)
 crates/medulla-types/src/contract/server_error_code.rs    existing, new codes
 crates/medulla-exec/src/incremental/zset.rs               existing, deleted (R002.1)
 crates/medulla-exec/src/incremental/circuit.rs            existing (R002.3, R007.1, R010.1)
