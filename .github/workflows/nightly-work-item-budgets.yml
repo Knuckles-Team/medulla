@@ -46,7 +46,7 @@ jobs:
       - id: rust-toolchain
         uses: ./.github/actions/pinned-rust-toolchain
 
-      # Graph sizes 0 skips the graph-size groups; only the three work-item groups run.
+      # One empty graph size keeps the graph-size groups short; the three work-item groups run in full.
       - name: Run the work-item budget groups
         env:
           MEDULLA_WRITE_LATENCY_SIZES: "0"
