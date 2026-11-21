@@ -275,6 +275,7 @@ fn plan_acknowledge(
         .is_some_and(|held| held.observation_generation > *observation_generation);
     let standing = match (unresolved, stale, standing) {
         (true, _, _) => SyncStanding::Conflict,
+        (false, _, SyncStanding::Unavailable) => SyncStanding::Unavailable,
         (false, true, _) => SyncStanding::Pending,
         (false, false, standing) => standing,
     };
@@ -293,14 +294,34 @@ fn plan_acknowledge(
 /// Decide `request` against the stored rows and return the outcome with the rows
 /// it writes, bound to the pre-image it was decided against. A reply or refusal
 /// plans no row.
+/// `head_content_held` is the router's pre-commit CAS answer for the head's
+/// content: when it is false a standing reading is `Unavailable`
+/// (MEDULLA-DURABLE-KERNEL-R085.4, R875.1).
 pub fn decide_sync(
     core: &GraphCore,
     request: &SyncRequest,
     stamp: &SyncStamp,
+    head_content_held: bool,
 ) -> (SyncOutcome, SnapshotPlan) {
     let head = store::load_head(core, &request.doc_id);
     let candidate_rows = store::candidates(core, &request.doc_id);
     let (outcome, writes) = match decide(head.as_ref(), request) {
+        Decision::Reply(SyncOutcome::Observed {
+            head_revision,
+            head_digest,
+            standing,
+        }) => (
+            SyncOutcome::Observed {
+                head_revision,
+                head_digest,
+                standing: if head_content_held {
+                    standing
+                } else {
+                    SyncStanding::Unavailable
+                },
+            },
+            Vec::new(),
+        ),
         Decision::Reply(outcome) => (outcome, Vec::new()),
         Decision::Accept {
             revision,
@@ -353,7 +374,15 @@ pub fn decide_sync(
             resolution,
             new_revision,
         ),
-        Decision::Acknowledge { standing } => plan_acknowledge(core, request, standing),
+        Decision::Acknowledge { standing } => plan_acknowledge(
+            core,
+            request,
+            if head_content_held {
+                standing
+            } else {
+                SyncStanding::Unavailable
+            },
+        ),
     };
     (
         outcome,
@@ -363,6 +392,12 @@ pub fn decide_sync(
             writes,
         },
     )
+}
+
+/// The hex digest of the accepted head's content, the CAS key the router checks
+/// before it decides a standing reading. `None` for an absent document.
+pub fn head_content_digest(core: &GraphCore, doc: &DocId) -> Option<String> {
+    store::load_head(core, doc).map(|head| head.content_digest.to_hex())
 }
 
 /// The change a planned sync makes to existing content, as the admission gate

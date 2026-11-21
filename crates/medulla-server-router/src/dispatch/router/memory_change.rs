@@ -149,7 +149,16 @@ async fn handle_sync_memory(
                 }
             }
         };
-        let (outcome, snapshot) = decide_sync(&core, &request, &stamp);
+        // The pre-commit CAS step: a head whose content the CAS cannot serve reads
+        // as the `Unavailable` standing.
+        let head_content_held = match medulla_h_graph::graph_ops::memory_snapshot::head_content_digest(
+            &core,
+            &request.doc_id,
+        ) {
+            Some(digest) => holder::content_held(state, &digest).await,
+            None => true,
+        };
+        let (outcome, snapshot) = decide_sync(&core, &request, &stamp, head_content_held);
         if snapshot.writes.is_empty() {
             return outcome_response(req.id, outcome);
         }

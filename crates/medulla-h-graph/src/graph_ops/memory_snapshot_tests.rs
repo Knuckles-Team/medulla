@@ -39,7 +39,7 @@ fn planned_content_is_read_from_the_plan_before_the_commit() {
     let core = GraphCore::new();
     let doc = DocId::new(DOC).unwrap();
     let first = submit("p1", None, "one");
-    let (outcome, plan) = decide_sync(&core, &first, &stamp());
+    let (outcome, plan) = decide_sync(&core, &first, &stamp(), true);
     // Nothing is committed yet: the content comes from the plan alone.
     assert!(store::load_head(&core, &doc).is_none());
     assert_eq!(
@@ -50,7 +50,7 @@ fn planned_content_is_read_from_the_plan_before_the_commit() {
 
     // A competing save is retained as a candidate and its bytes are staged.
     let competing = submit("p2", None, "two");
-    let (outcome, plan) = decide_sync(&core, &competing, &stamp());
+    let (outcome, plan) = decide_sync(&core, &competing, &stamp(), true);
     let SyncOutcome::ConflictRetained {
         candidate_revision, ..
     } = outcome
@@ -67,4 +67,26 @@ fn planned_content_is_read_from_the_plan_before_the_commit() {
         code: medulla_mutation_types::memory_sync::MemorySyncRefusal::NotAvailable,
     };
     assert_eq!(planned_content(&plan, &doc, &refused), None);
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R085.4
+#[test]
+fn a_head_the_cas_cannot_serve_reads_as_the_unavailable_standing() {
+    use medulla_mutation_types::memory_sync::SyncStanding;
+    let core = GraphCore::new();
+    let (_, plan) = decide_sync(&core, &submit("u1", None, "one"), &stamp(), true);
+    store::apply_plan(&core, &plan);
+    let observe = SyncRequest {
+        request_id: RequestId::new("u2").unwrap(),
+        doc_id: DocId::new(DOC).unwrap(),
+        action: SyncAction::ObserveFile {
+            observed_digest: Digest256::sha256(b"one"),
+        },
+        admit_receipt_digests: Vec::new(),
+    };
+    let (held, _) = decide_sync(&core, &observe, &stamp(), true);
+    assert!(matches!(held, SyncOutcome::Observed { standing: SyncStanding::InSync, .. }));
+    let (lost, plan) = decide_sync(&core, &observe, &stamp(), false);
+    assert!(matches!(lost, SyncOutcome::Observed { standing: SyncStanding::Unavailable, .. }));
+    assert!(plan.writes.is_empty());
 }

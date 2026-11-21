@@ -26,6 +26,34 @@ pub(super) struct StagedContent {
     revision: u64,
 }
 
+/// Whether the CAS serves the content at `digest`. A build or server without the
+/// blob substrate has nothing to check, so it counts as held; a store that fails
+/// to answer or lacks the content does not.
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub(super) async fn content_held(
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+    digest: &str,
+) -> bool {
+    use medulla_server_blob::blob::BlobStateExt;
+
+    let store = {
+        let s = state.read().await;
+        match s.blob_cursors() {
+            Some(cursors) => Arc::clone(&cursors.store),
+            None => return true,
+        }
+    };
+    matches!(store.get_chunk(digest), Ok(Some(_)))
+}
+
+#[cfg(not(all(feature = "redb", feature = "blob")))]
+pub(super) async fn content_held(
+    _: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+    _: &str,
+) -> bool {
+    true
+}
+
 /// Put the content a planned sync stores into the CAS. A sync that stores none,
 /// or a build without the blob substrate, stages nothing.
 #[cfg(all(feature = "redb", feature = "blob"))]
