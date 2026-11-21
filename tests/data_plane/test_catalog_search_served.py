@@ -379,3 +379,72 @@ def test_frequent_users_and_join_suggestions(
     finally:
         client.tenants.delete(graph)
         client.close()
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R805.7")
+def test_usage_cluster_yields_product_proposal(
+    start_medulla_server, pg_log_source
+) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R805.7.
+
+    Three roles each read the orders and customers tables, so a UsageCluster job
+    proposes one data product over both, names the glossary terms the caller
+    bound, offers the principal with the most reads as owner candidate and holds
+    the proposal in an open change request. A graph with no usage proposes
+    nothing.
+    """
+    dsn, run_as = pg_log_source
+    graph = f"qclu-{uuid.uuid4().hex[:8]}"
+    client = _client()
+    client.tenants.create(graph)
+    try:
+        log = _Log(client, graph, dsn, run_as)
+        carol = f"qc_{uuid.uuid4().hex[:8]}"
+        run_as(None, [f'CREATE ROLE "{carol}" LOGIN SUPERUSER'])
+        sql = (
+            f"SELECT o.id FROM {log.orders} o JOIN {log.customers} c "
+            "ON c.id = o.customer_id"
+        )
+        for _ in range(3):
+            run_as(log.alice, [sql])
+        for _ in range(2):
+            run_as(log.bob, [sql])
+        run_as(carol, [sql])
+
+        def cluster(bindings: list[dict]) -> dict:
+            job = client.jobs.submit(
+                graph, {"UsageCluster": {"term_bindings": bindings}}
+            )
+            return _wait_job(client, job["job_id"])
+
+        _ingest(client, graph, log.source)
+        status = cluster(
+            [
+                {"asset": log.orders, "term": "term:sale"},
+                {"asset": log.customers, "term": "term:party"},
+            ]
+        )
+        rows = status["output"]["rows"]
+        assert len(rows) == 1, rows
+        row = rows[0]
+        assert row["datasets"] == sorted([log.orders, log.customers])
+        assert row["terms"] == ["term:party", "term:sale"]
+        principals = sorted(
+            f"source:{log.source}:{u}" for u in (log.alice, log.bob, carol)
+        )
+        assert row["principals"] == principals
+        assert row["owner_candidate"] == f"source:{log.source}:{log.alice}"
+        assert row["change_request_state"] == "open"
+        assert row["change_request_reviewers"] == [row["owner_candidate"]]
+
+        # A graph with no usage proposes nothing.
+        empty = f"qclu-{uuid.uuid4().hex[:8]}"
+        client.tenants.create(empty)
+        try:
+            job = client.jobs.submit(empty, {"UsageCluster": {"term_bindings": []}})
+            assert _wait_job(client, job["job_id"])["output"]["rows"] == []
+        finally:
+            client.tenants.delete(empty)
+    finally:
+        client.tenants.delete(graph)
+        client.close()

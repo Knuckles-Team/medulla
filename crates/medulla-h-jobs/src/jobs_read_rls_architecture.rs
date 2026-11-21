@@ -84,6 +84,11 @@ const NON_ROW_SCOPED_JOB_KINDS: &[(&str, &str)] = &[
          read from `core`",
     ),
     (
+        "UsageCluster",
+        "clusters the usage series of the caller's own tenant and graph and the glossary \
+         bindings the CALLER supplied inline; no node/edge property is read from `core`",
+    ),
+    (
         "ProgramOptimize",
         "submits an OptimizationRequest; the actual optimization work \
          is claimed and executed later by a REMOTE worker under its OWN \
@@ -116,6 +121,7 @@ fn every_job_kind_is_classified_and_matches_the_live_guard() {
         "ProgramOptimize",
         "QualityEvaluate",
         "SourceQueryLogIngest",
+        "UsageCluster",
     ];
     let undocumented: Vec<&str> = shipped
         .iter()

@@ -102,6 +102,27 @@ pub(super) async fn execute_claim(
                 )
                 .await;
             }
+            JobKind::UsageCluster {
+                term_bindings,
+                tenant_scope,
+                ..
+            } => {
+                return execute_usage_cluster_claim(
+                    state,
+                    store,
+                    &claim.job,
+                    &worker_ref,
+                    epoch,
+                    UsageClusterTarget {
+                        term_bindings: term_bindings
+                            .into_iter()
+                            .map(|binding| (binding.asset, binding.term))
+                            .collect(),
+                        tenant_scope,
+                    },
+                )
+                .await;
+            }
             #[cfg(feature = "program-optimization")]
             JobKind::ProgramOptimize { request_msgpack } => {
                 return execute_program_claim(

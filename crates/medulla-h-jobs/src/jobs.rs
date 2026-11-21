@@ -89,6 +89,7 @@ mod core;
 mod data_plane_write;
 mod executor_claim;
 mod executor_loop;
+mod executor_usage_cluster;
 mod executor_profile;
 #[cfg(feature = "program-optimization")]
 mod executor_program;
@@ -243,6 +244,7 @@ use executor_profile::{execute_profile_claim, ProfileTarget};
 use executor_program::*;
 use executor_quality::{execute_quality_claim, QualityTarget};
 use executor_query_log::*;
+use executor_usage_cluster::*;
 use helpers::*;
 #[cfg(feature = "knowledge-batch")]
 use native_validation::*;
@@ -656,6 +658,9 @@ fn reads_graph_rows_server_side(kind: &JobKind) -> bool {
         JobKind::QualityEvaluate { .. } => false,
         // The log is read from the attached source by the worker, never from graph rows.
         JobKind::SourceQueryLogIngest { .. } => false,
+        // Reads the usage series of the caller's tenant and graph and the bindings the caller
+        // supplied; never graph rows.
+        JobKind::UsageCluster { .. } => false,
     }
 }
 
@@ -850,6 +855,9 @@ pub fn govern_job_kind(
         JobKind::QualityEvaluate { target, .. } => submit_job_quality(authority, req_id, target),
         JobKind::SourceQueryLogIngest { source, .. } => {
             submit_job_source_query_log(authority, req_id, source)
+        }
+        JobKind::UsageCluster { term_bindings, .. } => {
+            submit_job_usage_cluster(authority, req_id, term_bindings)
         }
         #[cfg(feature = "program-optimization")]
         JobKind::ProgramOptimize { request_msgpack } => submit_job_program_optimize(

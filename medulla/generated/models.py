@@ -29367,12 +29367,34 @@ class JobKindSourceQueryLogIngestBody(BaseModel):
     tenant_scope: str = Field(default="")
 
 
+class JobKindUsageCluster(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    UsageCluster: JobKindUsageClusterBody
+
+
+class JobKindUsageClusterBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    owner_scope: str = Field(default="")
+    tenant_scope: str = Field(default="")
+    term_bindings: list[UsageTermBinding] = Field(default_factory=list)
+
+
+class UsageTermBinding(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    asset: str
+    term: str
+
+
 JobKind = (
     JobKindMineAssociate
     | JobKindDatasetProfile
     | JobKindQualityEvaluate
     | JobKindProgramOptimize
     | JobKindSourceQueryLogIngest
+    | JobKindUsageCluster
 )
 
 JobOp = (
@@ -38904,6 +38926,9 @@ __all__ = [
     "IdentityOpSessionLiveness",
     "JobKindSourceQueryLogIngest",
     "JobKindSourceQueryLogIngestBody",
+    "JobKindUsageCluster",
+    "JobKindUsageClusterBody",
+    "UsageTermBinding",
     "AdapterScope",
     "AdapterScopeCapability",
     "AdapterScopeCorpus",

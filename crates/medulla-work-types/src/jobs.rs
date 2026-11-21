@@ -314,6 +314,18 @@ pub enum JobKind {
         #[serde(default)]
         agent: String,
     },
+    /// Cluster the recorded asset usage into data product proposals
+    /// (MEDULLA-TYPED-PACKS-R805.7). The caller supplies the glossary bindings it can read
+    /// (`term_bindings`: asset and term); the job reads no graph rows. The verified owner and
+    /// tenant scopes are stamped by the server at submit and a client value is replaced.
+    UsageCluster {
+        #[serde(default)]
+        term_bindings: Vec<UsageTermBinding>,
+        #[serde(default)]
+        owner_scope: String,
+        #[serde(default)]
+        tenant_scope: String,
+    },
     /// Governed graph-native program compilation. The nested MessagePack is a
     /// versioned `medulla_program::OptimizationRequest`; `medulla-types` remains the bottom
     /// of the crate DAG and the server decodes/rebinds it at the verified boundary.
@@ -323,6 +335,14 @@ pub enum JobKind {
         #[serde(with = "serde_bytes")]
         request_msgpack: Vec<u8>,
     },
+}
+
+/// One glossary term bound to one asset, as the caller of a `UsageCluster` job read it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct UsageTermBinding {
+    pub asset: String,
+    pub term: String,
 }
 
 fn default_min_support() -> f64 {

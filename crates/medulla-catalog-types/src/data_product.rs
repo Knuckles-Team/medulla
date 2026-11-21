@@ -106,6 +106,24 @@ pub struct ContractViolation {
     pub at_ms: u64,
 }
 
+/// A data product the usage suggests (MEDULLA-TYPED-PACKS-R805.7): datasets that several
+/// principals queried together in one period.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProductProposal {
+    /// The clustered datasets, sorted.
+    pub datasets: Vec<String>,
+    /// Glossary terms linked to the datasets, sorted and without repeats.
+    pub terms: Vec<String>,
+    /// The principal with the most queries over the datasets (lowest id on a tie).
+    pub owner_candidate: String,
+    /// The principals that each queried every dataset, sorted.
+    pub principals: Vec<String>,
+    /// The usage period the queries fall in.
+    pub period: String,
+}
+
 /// The receipt of a registered data product.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

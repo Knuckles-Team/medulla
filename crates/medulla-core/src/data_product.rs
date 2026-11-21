@@ -3,8 +3,11 @@
 //! One pure function compares a product's contract with live catalog,
 //! quality and change-capture state and returns every broken promise.
 
+use std::collections::{BTreeMap, BTreeSet};
+
+use medulla_catalog_types::asset_usage::AssetUsage;
 use medulla_catalog_types::data_product::{
-    ContractPromise, ContractViolation, DataContract, DataProduct,
+    ContractPromise, ContractViolation, DataContract, DataProduct, ProductProposal,
 };
 use medulla_catalog_types::quality::QualityScore;
 
@@ -53,6 +56,89 @@ pub fn check_contract(
             ContractPromise::Freshness,
             live.watermark_age_s.to_string(),
         ));
+    }
+    out
+}
+
+/// Data products the usage suggests (MEDULLA-TYPED-PACKS-R805.7).
+///
+/// Within one period, assets form a cluster when at least `min_principals` principals each
+/// queried every asset of it and it holds two or more assets. Clusters are built greedily over
+/// the sorted asset names: an asset joins the open cluster while the principals that queried all
+/// its members still number `min_principals`. An asset sits in at most one cluster per period.
+/// The owner candidate is the common principal with the most queries over the cluster, the
+/// lowest principal id on a tie. `terms` maps an asset to the glossary terms linked to it.
+pub fn propose_products(
+    usage: &[AssetUsage],
+    terms: &BTreeMap<String, Vec<String>>,
+    min_principals: usize,
+) -> Vec<ProductProposal> {
+    let min_principals = min_principals.max(1);
+    // period -> asset -> principal -> queries
+    let mut by_period: BTreeMap<&str, BTreeMap<&str, BTreeMap<&str, u64>>> = BTreeMap::new();
+    for point in usage.iter().filter(|point| point.queries > 0) {
+        *by_period
+            .entry(point.period.as_str())
+            .or_default()
+            .entry(point.asset.as_str())
+            .or_default()
+            .entry(point.principal.as_str())
+            .or_default() += point.queries;
+    }
+    let mut out = Vec::new();
+    for (period, assets) in &by_period {
+        let names: Vec<&str> = assets.keys().copied().collect();
+        let mut used: BTreeSet<&str> = BTreeSet::new();
+        for (index, seed) in names.iter().enumerate() {
+            if used.contains(seed) {
+                continue;
+            }
+            let mut common: BTreeSet<&str> = assets[seed].keys().copied().collect();
+            if common.len() < min_principals {
+                continue;
+            }
+            let mut members = vec![*seed];
+            for next in &names[index + 1..] {
+                if used.contains(next) {
+                    continue;
+                }
+                let both: BTreeSet<&str> = common
+                    .iter()
+                    .copied()
+                    .filter(|principal| assets[next].contains_key(principal))
+                    .collect();
+                if both.len() >= min_principals {
+                    common = both;
+                    members.push(*next);
+                }
+            }
+            if members.len() < 2 {
+                continue;
+            }
+            let queries = |principal: &str| -> u64 {
+                members.iter().map(|asset| assets[asset][principal]).sum()
+            };
+            let owner = common
+                .iter()
+                .copied()
+                .max_by(|a, b| queries(a).cmp(&queries(b)).then_with(|| b.cmp(a)))
+                .map(str::to_string)
+                .unwrap_or_default();
+            let linked: BTreeSet<String> = members
+                .iter()
+                .filter_map(|asset| terms.get(*asset))
+                .flatten()
+                .cloned()
+                .collect();
+            used.extend(members.iter().copied());
+            out.push(ProductProposal {
+                datasets: members.iter().map(|asset| asset.to_string()).collect(),
+                terms: linked.into_iter().collect(),
+                owner_candidate: owner,
+                principals: common.iter().map(|p| p.to_string()).collect(),
+                period: period.to_string(),
+            });
+        }
     }
     out
 }

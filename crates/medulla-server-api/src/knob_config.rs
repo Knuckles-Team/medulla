@@ -267,6 +267,8 @@ knobs! {
     pgwire_startup_timeout_ms: u64 = "pgwire.startup_timeout_ms", U64(60000), [1000, 600000], "ms", Tunable;
     /// Graph node history: how many replaced node images each graph keeps so a row recorded at a graph version can be re-read at that version (MEDULLA-DECISION-ENGINE-R121.2). 0 keeps none.
     graph_node_history_revisions: u64 = "graph.node_history_revisions", U64(200_000), [0, 100_000_000], "revisions", Tunable;
+    /// Data product proposals: principals that must each have queried every asset of a cluster.
+    data_product_cluster_min_principals: u64 = "data_product.cluster_min_principals", U64(3), [2, 50], "principals", Tunable;
     /// Retrieval: how many candidates the reranker scores.
     retrieval_rerank_k: u64 = "retrieval.rerank_k", U64(64), [8, 256], "candidates", Tunable;
     /// Rerank calibration: fewest judged (score, relevant) pairs a fit accepts (MEDULLA-DECISION-ENGINE-R822).

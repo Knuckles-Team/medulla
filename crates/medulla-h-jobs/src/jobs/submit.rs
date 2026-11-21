@@ -543,6 +543,39 @@ fn fill_corpus_from_scores(
     Ok(())
 }
 
+/// The most term bindings one `UsageCluster` job carries.
+const MAX_USAGE_TERM_BINDINGS: usize = 10_000;
+
+/// The `JobKind::UsageCluster` arm of [`handle_submit`]'s kind-governance match: the caller
+/// supplies the glossary bindings it can read; the owner and tenant scopes are the verified
+/// caller's, replacing anything the request carried.
+pub(super) fn submit_job_usage_cluster(
+    authority: &CarrierAuthority,
+    req_id: u64,
+    term_bindings: Vec<medulla_work_types::jobs::UsageTermBinding>,
+) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+    if term_bindings.len() > MAX_USAGE_TERM_BINDINGS
+        || term_bindings.iter().any(|b| {
+            b.asset.is_empty() || b.asset.len() > 256 || b.term.is_empty() || b.term.len() > 256
+        })
+    {
+        return Err(Response::err(
+            req_id,
+            "INVALID_ARGUMENT: term bindings must name an asset and a term of 1 to 256 characters, at most 10000 of them",
+        ));
+    }
+    let params = serde_json::json!({ "term_bindings": term_bindings.len() });
+    Ok((
+        JobKind::UsageCluster {
+            term_bindings,
+            owner_scope: authority.owner_scope().to_string(),
+            tenant_scope: authority.tenant_scope().to_string(),
+        },
+        "usage.cluster".to_string(),
+        "usage_cluster".to_string(),
+        params,
+    ))
+}
 /// The `JobKind::ProgramOptimize` arm of [`handle_submit`]'s kind-governance
 /// match: bounded-decode the request, rebind its policy to the verified
 /// caller, re-encode it, and ensure the native capability is required.
