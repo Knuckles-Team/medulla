@@ -7,6 +7,9 @@
   },
   "regression_tolerance": 0.1,
   "group_budgets": {
+    "decide/process_plan": {
+      "p99_ms": 30.0
+    },
     "decide/tool_relevance_cap": {
       "p50_ms": 40.0,
       "p99_ms": 150.0,

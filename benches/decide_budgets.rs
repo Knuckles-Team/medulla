@@ -2784,6 +2784,94 @@ fn report_entry(samples: usize, mut work: impl FnMut()) -> serde_json::Value {
     })
 }
 
+/// Steps of the workflow the `decide/process_plan` group plans: the most a task plan holds
+/// (`MAX_TASKS`, 64) less the start and end anchors.
+const PROCESS_PLAN_STEPS: usize = 60;
+
+// spec: MEDULLA-CQ-ORCH-R704.8
+/// The `decide/process_plan` group (MEDULLA-CQ-ORCH-R704.8): the largest workflow a plan can
+/// hold, a chain of tool steps, is planned by `plan_from_workflow` and sealed by
+/// `plan_explicit_tasks`. Budget in `group_budgets`: p99 at most 30 ms.
+fn bench_process_plan(c: &mut Criterion, report: &mut BTreeMap<String, serde_json::Value>) {
+    use medulla_compute::process_plan::plan::plan_from_workflow;
+    use medulla_decision_types::decision::process_plan::{
+        BindingSource, BindingTarget, StepBinding,
+    };
+    use medulla_decision_types::decision::task_plan::plan_explicit_tasks;
+    use medulla_types::process_import::{
+        CanonicalFlow, CanonicalStep, CanonicalWorkflow, ProcessSourceSystem, SourceTrace,
+        StepKind as ProcessStepKind,
+    };
+    let step = |id: String, kind: ProcessStepKind| CanonicalStep {
+        id: id.clone(),
+        kind,
+        gate: None,
+        label: id,
+        role: None,
+        reference: None,
+    };
+    let mut steps = vec![step("s0".to_string(), ProcessStepKind::Start)];
+    let mut flows = Vec::new();
+    let mut bindings = Vec::new();
+    for n in 1..=PROCESS_PLAN_STEPS {
+        steps.push(step(format!("s{n}"), ProcessStepKind::Agent));
+        flows.push(CanonicalFlow {
+            source: format!("s{}", n - 1),
+            target: format!("s{n}"),
+            condition: None,
+            default: false,
+        });
+        bindings.push(StepBinding {
+            step_id: format!("s{n}"),
+            target: BindingTarget::Tool {
+                server: "bench-server".to_string(),
+                tool: format!("tool-{n}"),
+                contract_iri: format!("urn:contract:{n}"),
+            },
+            source: BindingSource::Explicit,
+        });
+    }
+    steps.push(step("end".to_string(), ProcessStepKind::End));
+    flows.push(CanonicalFlow {
+        source: format!("s{PROCESS_PLAN_STEPS}"),
+        target: "end".to_string(),
+        condition: None,
+        default: false,
+    });
+    let workflow = CanonicalWorkflow {
+        schema_version: 1,
+        schema: "medulla.process.canonical/v1".to_string(),
+        name: "bench".to_string(),
+        steps,
+        flows,
+        digest: "bench".to_string(),
+        source: SourceTrace {
+            schema_version: 1,
+            system: ProcessSourceSystem::Bpmn20,
+            model_id: "bench".to_string(),
+            elements: Default::default(),
+        },
+        annex: Vec::new(),
+        losses: Vec::new(),
+    };
+    let no_callee =
+        |_: &str| -> Option<medulla_compute::process_plan::plan::Callee> { None };
+    let plan = || {
+        let drafted =
+            plan_from_workflow(black_box(&workflow), &bindings, &no_callee, 4, 86_400)
+                .expect("the bench workflow plans");
+        black_box(plan_explicit_tasks(&drafted.proposal).expect("the proposal seals"));
+    };
+    plan();
+    let mut group = c.benchmark_group("decide/process_plan");
+    group.bench_function("plan", |b| b.iter(plan));
+    group.finish();
+    report.insert(
+        "decide/process_plan".to_string(),
+        report_entry(REPORT_SAMPLES, plan),
+    );
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R128.13.1.2
 /// The `decide/harness_evidence_codec` group (MEDULLA-DECISION-ENGINE-R128.13.1.2):
 /// encode plus digest of the widest admitted evidence, and the refusal path of
@@ -2944,6 +3032,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_trajectory_served(c, &rt, &mut report);
     bench_trajectory_join_kernel(c, &mut report);
     bench_harness_evidence_codec(c, &mut report);
+    bench_process_plan(c, &mut report);
     bench_harness_config_replay(c, &rt, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();
