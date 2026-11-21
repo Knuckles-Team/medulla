@@ -7,8 +7,8 @@ use medulla_catalog_types::fleet_catalog::rendered::{
     RenderedSkillPackage, RENDERED_SKILL_PACKAGE_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::package_validation::{
-    package_publication_key, package_run_key, PublicationReceipt, PublishSkillPackageRequest,
-    RunHistoryEntry,
+    package_publication_key, package_run_key, package_run_prefix, PublicationReceipt,
+    PublishSkillPackageRequest, RunHistoryEntry, RUN_HISTORY_DIGEST_DOMAIN,
 };
 use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::retrieval::{LearningRecorded, LearningWrite};
@@ -168,4 +168,63 @@ async fn package_validation_routes() {
         .error
         .expect("another tenant's runs do not count");
     assert!(refused.starts_with("PACKAGE_RUN_HISTORY_MISSING"), "{refused}");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R160.5: the stored receipt binds the
+/// package id, the content digest, the run history digest, a passing
+/// validation and a publish time, and the run history digest is recomputable
+/// from the stored run rows.
+// spec: MEDULLA-DECISION-ENGINE-R160.5
+#[tokio::test]
+async fn validation_evidence_binds() {
+    let served = Served::new();
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    let content = b"package evidence";
+    // Recorded out of order: the history is read back in ascending run id order.
+    for (key, id) in [("run:c", "run-c"), ("run:a", "run-a"), ("run:b", "run-b")] {
+        record(&served, key, run(content, id, true)).await;
+    }
+
+    let receipt: PublicationReceipt = ok(
+        "publish",
+        publish(&served, "publish:evidence", "package-evidence", package(content)).await,
+    );
+    assert_eq!(receipt.package_id.as_str(), "package-evidence");
+    assert_eq!(
+        receipt.validation_result.rendered_digest,
+        Digest256::sha256(content)
+    );
+    assert!(receipt.validation_result.validation_passed);
+    assert!(receipt.publish_timestamp_ms > 0);
+
+    // The receipt is stored at `package_publication/<content digest hex>`.
+    let digest = Digest256::sha256(content);
+    let stored = store
+        .decision_artifact(TENANT, &package_publication_key(&digest))
+        .unwrap()
+        .expect("the receipt is stored under the content digest");
+    let stored: PublicationReceipt =
+        medulla_persistence_records::decision_jobs::decode_artifact(&stored, "receipt").unwrap();
+    assert_eq!(stored, receipt);
+
+    // The run history digest recomputes from the stored `package_run/<digest>/` rows.
+    let rows = store
+        .decision_artifacts_with_prefix(TENANT, &package_run_prefix(&digest), 100)
+        .unwrap();
+    let history: Vec<RunHistoryEntry> = rows
+        .iter()
+        .map(|(_, bytes)| {
+            medulla_persistence_records::decision_jobs::decode_artifact(bytes, "package run")
+                .unwrap()
+        })
+        .collect();
+    let ids: Vec<&str> = history.iter().map(|entry| entry.run_id.as_str()).collect();
+    assert_eq!(ids, ["run-a", "run-b", "run-c"]);
+    let mut fields: Vec<&[u8]> = Vec::new();
+    for entry in &history {
+        fields.push(entry.run_id.as_str().as_bytes());
+        fields.push(entry.package_digest.as_bytes());
+    }
+    let recomputed = Digest256::framed(RUN_HISTORY_DIGEST_DOMAIN, &fields).unwrap();
+    assert_eq!(receipt.validation_result.run_history_digest, recomputed);
 }
