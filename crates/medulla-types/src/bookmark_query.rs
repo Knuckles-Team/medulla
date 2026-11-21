@@ -44,6 +44,7 @@ pub const REFUSALS: &[RefusalCode] = &[
 
 /// The three caps of one bookmark query. Each is positive and at most its ceiling.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct BookmarkQueryLimitPolicy {
     pub max_hits: u32,
@@ -68,6 +69,7 @@ impl BookmarkQueryLimitPolicy {
 
 /// One semantic search over the caller's bookmarks.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct BookmarkSemanticSearchRequest {
     /// Non-empty and finite.
@@ -92,6 +94,7 @@ impl BookmarkSemanticSearchRequest {
 
 /// One read of the authorized relations among bookmark nodes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct BookmarkRelationsRequest {
     /// Bookmark node ids, normally the hit ids of a search; non-empty, at most `max_hits`.
@@ -116,6 +119,7 @@ impl BookmarkRelationsRequest {
 
 /// One search hit.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct BookmarkHit {
     pub id: String,
@@ -130,6 +134,7 @@ pub struct BookmarkHit {
 
 /// One authorized relation between two bookmark nodes.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct BookmarkEdge {
     pub source_node_id: String,
@@ -143,6 +148,7 @@ pub struct BookmarkEdge {
 
 /// The evidence every response carries: what it read and under which revisions.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct BookmarkBinding {
     pub source_ids: Vec<String>,
@@ -161,6 +167,7 @@ pub struct BookmarkBinding {
 
 /// The answer of `Method::BookmarkSemanticSearch`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct BookmarkSearchResult {
     pub hits: Vec<BookmarkHit>,
@@ -169,6 +176,7 @@ pub struct BookmarkSearchResult {
 
 /// The answer of `Method::BookmarkRelations`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct BookmarkRelationsResult {
     pub edges: Vec<BookmarkEdge>,
