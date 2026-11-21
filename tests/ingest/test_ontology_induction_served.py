@@ -175,3 +175,47 @@ async def test_draft_proposal_takes_no_instances() -> None:
         assert list(await client.nodes.list_by_label("Thing", 0)) == []
     finally:
         await _close(client, graph)
+
+
+# spec: MEDULLA-INGEST-WORKER-R002.6
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R002.6")
+@pytest.mark.asyncio
+async def test_passing_proposal_admitted_failing_stays_draft() -> None:
+    connector = _connector()
+    suffix = uuid.uuid4().hex[:8]
+    passing, failing = f"p-pass-{suffix}", f"p-fail-{suffix}"
+    # The fixture is two fixed proposals with fixed observed terms; no model call is involved.
+    client, graph = await _proposal_client(connector, failing)
+    try:
+        batch = _batch(
+            connector,
+            [
+                _submission(passing, ["name", "age"], ["name", "age"]),
+                _submission(failing, ["name"], ["name", "age", "city", "zip"]),
+            ],
+        )
+        receipt = await _submit(client, batch, "fixture")
+        assert receipt.disposition is SourceIngestionDisposition.COMMITTED
+
+        # The receipt scores and states: the passing proposal is admitted, the failing one stays
+        # a draft with the coverage check named.
+        receipt_node = await client.nodes.properties(receipt.receipt_id)
+        assert receipt_node is not None
+        items = _proposals_of(receipt_node)
+        assert items[passing]["state"] == "admitted"
+        assert items[passing]["coverage"] == 1.0
+        assert items[failing]["state"] == "draft"
+        assert items[failing]["failing_check"] == "coverage"
+        assert items[failing]["coverage"] < 0.8
+
+        # The stored proposal nodes carry the same scores.
+        stored = await client.nodes.properties(f"ontology_proposal:{failing}")
+        assert stored is not None
+        assert stored["coverage"] == items[failing]["coverage"]
+
+        # An instance batch against the draft is refused, so no instance is written.
+        with pytest.raises(Exception, match="PROPOSAL_NOT_ADMITTED"):
+            await _submit(client, _records_batch(connector, 2, None, "first"), "draft-instances")
+        assert list(await client.nodes.list_by_label("Thing", 0)) == []
+    finally:
+        await _close(client, graph)
