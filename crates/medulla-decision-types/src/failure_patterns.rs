@@ -19,6 +19,7 @@ pub const MAX_PATTERN_MEMBERS: usize = 1024;
 
 /// One failed run, read from a `RunTrace` node (or a `HealthAnomaly` node).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct FailureRecord {
     /// Stable id of this record.
@@ -41,6 +42,7 @@ pub struct FailureRecord {
 
 /// A normalised failure signature: `error_class|tool|step_kind`.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(transparent)]
 pub struct Signature(pub String);
 
@@ -54,6 +56,7 @@ impl Signature {
 
 /// Records that share one signature.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct FailurePattern {
     /// The shared signature.
@@ -72,6 +75,7 @@ pub struct FailurePattern {
 
 /// Whether a gap is still open.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case", tag = "state", deny_unknown_fields)]
 pub enum GapStatus {
     /// Nothing addresses the gap yet.
@@ -119,6 +123,7 @@ impl GapStatus {
 
 /// The gap a recurring pattern files.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct GapTopic {
     /// SHA-256 of `signature`, 64 lowercase hex characters.
@@ -143,6 +148,7 @@ impl GapTopic {
 /// The body of `Method::FailureIngest`. Every op names the caller `graph`
 /// that holds the runs and receives the gaps.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case", tag = "op", deny_unknown_fields)]
 pub enum FailureOp {
     /// Read failed runs, cluster them and file gaps for recurring patterns.
@@ -189,6 +195,7 @@ impl FailureOp {
 
 /// What `FailureOp::Ingest` answers.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct FailureIngestResult {
     /// Every pattern the failed runs cluster into, ordered by signature.
