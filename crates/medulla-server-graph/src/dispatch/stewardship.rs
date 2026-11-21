@@ -742,51 +742,35 @@ async fn has_active_quality_rule(
 
 /// Seed the registered catalog stored queries into the graph when it holds none of that name
 /// (MEDULLA-TYPED-PACKS-R802.8): the first marking of a critical element in a graph registers
-/// `catalog.critical_gaps`, written in the stored-query node shape `StoredQueryPut` publishes,
-/// authored by the marking principal and shared with the tenant.
+/// them, written in the stored-query node shape `StoredQueryPut` publishes, authored by the
+/// marking principal and shared with the tenant. What is seeded is defined once, by
+/// `medulla_h_query::query::catalog_query_seed_nodes`, which the first-catalog-write hook
+/// (`seed_catalog_queries`) shares.
 async fn seed_catalog_queries(
     state: &Arc<RwLock<ServerState>>,
     target: &GraphTarget<'_>,
     author: &str,
     tenant: &str,
 ) -> Result<(), String> {
-    for mut query in medulla_source_types::catalog_queries::catalog_queries() {
-        let head_id = format!("stored_query_head:{}", query.name);
-        if read_node(state, target, &head_id).await?.is_some() {
-            continue;
+    let mut existing = std::collections::BTreeSet::new();
+    for head in medulla_h_query::query::catalog_query_head_nodes() {
+        if read_node(state, target, &head).await?.is_some() {
+            existing.insert(head);
         }
-        query.author = author.to_string();
-        let mut stored = Properties::new();
-        stored.insert("type".into(), "StoredQuery".into());
-        stored.insert("name".into(), query.name.clone().into());
-        stored.insert("version".into(), query.version.into());
-        stored.insert("author".into(), author.into());
-        stored.insert("author_tenant".into(), tenant.into());
-        stored.insert(
-            "query".into(),
-            serde_json::to_value(&query).map_err(|error| error.to_string())?,
-        );
+    }
+    for (node_id, value) in
+        medulla_h_query::query::catalog_query_seed_nodes(author, tenant, &existing)?
+    {
+        let mut properties = Properties::new();
+        if let serde_json::Value::Object(map) = value {
+            for (key, field) in map {
+                properties.insert(key, field);
+            }
+        }
         write(
             state,
             target,
-            Method::AddNode {
-                node_id: format!("stored_query:{}:{}", query.name, query.version),
-                properties_msgpack: encode(&stored)?,
-            },
-        )
-        .await?;
-        let mut head = Properties::new();
-        head.insert("type".into(), "StoredQueryHead".into());
-        head.insert("name".into(), query.name.clone().into());
-        head.insert("author".into(), author.into());
-        head.insert("latest".into(), query.version.into());
-        write(
-            state,
-            target,
-            Method::AddNode {
-                node_id: head_id,
-                properties_msgpack: encode(&head)?,
-            },
+            Method::AddNode { node_id, properties_msgpack: encode(&properties)? },
         )
         .await?;
     }

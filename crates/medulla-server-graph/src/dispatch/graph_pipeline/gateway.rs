@@ -194,7 +194,7 @@ async fn commit_rdf_gateway(ctx: GatewayRouteCtx<'_>, method: Method) -> Respons
                 .and_then(medulla_h_graph::graph_ops::gateway_response_result);
                 #[cfg(feature = "query")]
                 if let (Ok(_), Some(core)) = (&response, seed_core) {
-                    medulla_h_query::query::seed_registered_queries(
+                    medulla_h_query::query::seed_catalog_queries(
                         &core,
                         rdf_read_authority.as_ref(),
                         graph_name,

@@ -291,7 +291,9 @@ mod live_artifact;
 #[cfg(feature = "query")]
 mod stored_query;
 #[cfg(feature = "query")]
-pub use stored_query::seed_registered_queries;
+pub use stored_query::{
+    catalog_query_head_nodes, catalog_query_seed_nodes, seed_catalog_queries,
+};
 #[cfg(feature = "query")]
 mod uql_statement;
 

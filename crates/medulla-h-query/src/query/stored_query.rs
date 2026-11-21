@@ -141,12 +141,54 @@ fn reader_of(ctx: &QueryHandlerCtx<'_>) -> UnitPrincipal {
     principal
 }
 
-/// Register the catalog stored queries in the graph of `core` when it holds none of that name
-/// (MEDULLA-TYPED-PACKS-R108.17): the first catalog write of a graph seeds them, like the first
-/// `Stewardship.MarkCritical` seeds `catalog.critical_gaps`. Each is written in the node shape
-/// `StoredQueryPut` publishes, authored by the verified writer and shared with the tenant.
-/// `core` is the staged graph of the write, so the queries commit with the asset or not at all.
-pub fn seed_registered_queries(
+/// The nodes that register the catalog stored queries (MEDULLA-TYPED-PACKS-R108.17,
+/// MEDULLA-TYPED-PACKS-R802.8): for each registered query whose head node is not in
+/// `existing_heads`, its version node and head node, in the shape `StoredQueryPut` publishes,
+/// authored by `author` and shared with `tenant`. The one definition of what is seeded.
+pub fn catalog_query_seed_nodes(
+    author: &str,
+    tenant: &str,
+    existing_heads: &std::collections::BTreeSet<String>,
+) -> Result<Vec<(String, Value)>, String> {
+    let mut nodes = Vec::new();
+    for mut query in medulla_source_types::catalog_queries::catalog_queries() {
+        if existing_heads.contains(&head_node(&query.name)) {
+            continue;
+        }
+        query.author = author.to_string();
+        let stored = json!({
+            "type": QUERY_LABEL,
+            "name": query.name,
+            "version": query.version,
+            "author": author,
+            "author_tenant": tenant,
+            "query": serde_json::to_value(&query).map_err(|e| e.to_string())?,
+        });
+        nodes.push((query_node(&query.name, query.version), stored));
+        let head = json!({
+            "type": HEAD_LABEL,
+            "name": query.name,
+            "author": author,
+            "latest": query.version,
+        });
+        nodes.push((head_node(&query.name), head));
+    }
+    Ok(nodes)
+}
+
+/// Head node ids of the catalog stored queries, for an existence probe.
+pub fn catalog_query_head_nodes() -> Vec<String> {
+    medulla_source_types::catalog_queries::catalog_queries()
+        .iter()
+        .map(|query| head_node(&query.name))
+        .collect()
+}
+
+/// Seed the catalog stored queries into the staged graph `core` of a catalog write: the one
+/// seeding function. `core` is the staged graph of the write, so the queries commit with the
+/// asset or not at all. `Stewardship.MarkCritical` writes the same nodes
+/// (`catalog_query_seed_nodes`) through its own batch.
+pub fn seed_catalog_queries(
     core: &GraphCore,
     authority: Option<&medulla_server_api::carrier::GraphReadAuthority>,
     graph_name: &str,
@@ -156,28 +198,12 @@ pub fn seed_registered_queries(
         .unwrap_or_default()
         .to_string();
     let tenant = ReadCaller::from_authority(authority, graph_name).principal.tenant;
-    for mut query in medulla_source_types::catalog_queries::catalog_queries() {
-        if core.has_node(&head_node(&query.name)) {
-            continue;
-        }
-        query.author = author.clone();
-        let stored = json!({
-            "type": QUERY_LABEL,
-            "name": query.name,
-            "version": query.version,
-            "author": author,
-            "author_tenant": tenant,
-            "query": serde_json::to_value(&query).map_err(|e| e.to_string())?,
-        });
-        write_node(core, query_node(&query.name, query.version), &stored)
-            .map_err(|refusal| refusal.to_string())?;
-        let head = json!({
-            "type": HEAD_LABEL,
-            "name": query.name,
-            "author": author,
-            "latest": query.version,
-        });
-        write_node(core, head_node(&query.name), &head).map_err(|refusal| refusal.to_string())?;
+    let existing = catalog_query_head_nodes()
+        .into_iter()
+        .filter(|head| core.has_node(head))
+        .collect();
+    for (node, props) in catalog_query_seed_nodes(&author, &tenant, &existing)? {
+        write_node(core, node, &props).map_err(|refusal| refusal.to_string())?;
     }
     Ok(())
 }
