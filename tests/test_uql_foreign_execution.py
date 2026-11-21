@@ -132,3 +132,26 @@ async def test_unified_forwards_a_bounded_group_and_rejects_conflicting_forms() 
             plan, foreign_execution=executions[0], foreign_executions=executions
         )
     assert len(fake.sent) == 1
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R722.11")
+@pytest.mark.asyncio
+async def test_uql_forwards_many_server_issued_foreign_executions() -> None:
+    fake = _FakeClient()
+    executions = [
+        {"execution_id": 17, "query_digest": "0" * 64},
+        {"execution_id": 18, "query_digest": "0" * 64},
+    ]
+
+    await QueryClient(fake).uql("MATCH (:Issue)", foreign_executions=executions)
+
+    assert fake.sent == [
+        (
+            "Uql",
+            {
+                "text": "MATCH (:Issue)",
+                "params": {},
+                "foreign_executions": executions,
+            },
+        )
+    ]

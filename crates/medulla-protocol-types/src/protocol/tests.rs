@@ -895,3 +895,45 @@ fn register_foreign_source_acceleration_round_trips() {
         assert_eq!(json["params"].get("acceleration").is_some(), acceleration.is_some());
     }
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R722.11
+#[cfg(feature = "query")]
+#[test]
+fn uql_decodes_foreign_executions_and_refuses_the_singular_field() {
+    let execution = |id: u64| serde_json::json!({"execution_id": id, "query_digest": "0".repeat(64)});
+    let uql = |extra: serde_json::Value| {
+        let mut params = serde_json::json!({"text": "MATCH () |> LIMIT 1"});
+        params
+            .as_object_mut()
+            .expect("params object")
+            .extend(extra.as_object().expect("extra object").clone());
+        serde_json::json!({"method": "Uql", "params": params})
+    };
+
+    let two = uql(serde_json::json!({"foreign_executions": [execution(1), execution(2)]}));
+    let Method::Uql {
+        foreign_executions, ..
+    } = serde_json::from_value::<Method>(two.clone()).expect("a list of two decodes")
+    else {
+        panic!("Uql expected")
+    };
+    assert_eq!(foreign_executions.as_slice().len(), 2);
+    let encoded = serde_json::to_value(&Method::Uql {
+        text: "MATCH () |> LIMIT 1".into(),
+        params: Default::default(),
+        prepare: false,
+        foreign_executions,
+    })
+    .expect("encodes");
+    assert_eq!(encoded["params"]["foreign_executions"], two["params"]["foreign_executions"]);
+
+    let seventeen: Vec<_> = (0..17).map(execution).collect();
+    assert!(serde_json::from_value::<Method>(uql(
+        serde_json::json!({ "foreign_executions": seventeen })
+    ))
+    .is_err());
+    assert!(serde_json::from_value::<Method>(uql(
+        serde_json::json!({"foreign_execution": execution(1)})
+    ))
+    .is_err());
+}

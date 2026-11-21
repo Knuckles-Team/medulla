@@ -397,6 +397,7 @@ closed_error_codes! {
         FinanceRecordVersionUnknown => "FINANCE_RECORD_VERSION_UNKNOWN",
         BatchTooLarge => "BATCH_TOO_LARGE",
         ForeignReadColumnCollision => "FOREIGN_READ_COLUMN_COLLISION",
+        ForeignReadExecutionDuplicate => "FOREIGN_READ_EXECUTION_DUPLICATE",
         ForeignReadExpired => "FOREIGN_READ_EXPIRED",
         ForeignReadNotComplete => "FOREIGN_READ_NOT_COMPLETE",
         ForeignReadNotFound => "FOREIGN_READ_NOT_FOUND",

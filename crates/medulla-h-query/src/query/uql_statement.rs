@@ -61,15 +61,8 @@ pub(crate) async fn handle_uql(
         Ok(digest) => digest,
         Err(error) => return Ok(Response::err(req_id, error)),
     };
-    if foreign_executions
-        .as_slice()
-        .iter()
-        .any(|execution| execution.query_digest != query_digest)
-    {
-        return Ok(Response::err(
-            req_id,
-            "FOREIGN_READ_QUERY_MISMATCH: query digest differs",
-        ));
+    if let Err(error) = check_foreign_executions(foreign_executions.as_slice(), &query_digest) {
+        return Ok(Response::err(req_id, error));
     }
     let (mut stmt, mut binding) = match bind_served_statement(req_id, &text, &params) {
         Ok(bound) => bound,
@@ -585,5 +578,70 @@ mod served_tests {
                 Some(&serde_json::json!(if row.id == "d1" { 2020 } else { 2024 }))
             );
         }
+    }
+}
+
+/// MEDULLA-FEDERATED-QUERY-R722.11: every foreign execution a `Uql` request names carries
+/// the server-computed query digest, and no two share an `execution_id`.
+fn check_foreign_executions(
+    executions: &[medulla_catalog_types::foreign_read::ForeignReadExecutionRef],
+    query_digest: &medulla_types::contract::Digest256,
+) -> Result<(), String> {
+    if executions
+        .iter()
+        .any(|execution| execution.query_digest != *query_digest)
+    {
+        return Err(format!(
+            "{}: query digest differs",
+            medulla_types::contract::ServerErrorCode::ForeignReadQueryMismatch
+        ));
+    }
+    let mut seen = std::collections::BTreeSet::new();
+    if executions
+        .iter()
+        .any(|execution| !seen.insert(execution.execution_id))
+    {
+        return Err(format!(
+            "{}: two executions carry the same execution_id",
+            medulla_types::contract::ServerErrorCode::ForeignReadExecutionDuplicate
+        ));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_catalog_types::foreign_read::ForeignReadExecutionRef;
+    use medulla_types::contract::Digest256;
+
+    fn execution(execution_id: u64, digest: Digest256) -> ForeignReadExecutionRef {
+        ForeignReadExecutionRef {
+            execution_id,
+            query_digest: digest,
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R722.11
+    #[test]
+    fn foreign_executions_check_every_digest_and_refuse_duplicates() {
+        let digest = Digest256::from_bytes([7; 32]);
+        let other = Digest256::from_bytes([8; 32]);
+        assert!(check_foreign_executions(&[], &digest).is_ok());
+        assert!(
+            check_foreign_executions(&[execution(1, digest), execution(2, digest)], &digest)
+                .is_ok()
+        );
+        let mismatch =
+            check_foreign_executions(&[execution(1, digest), execution(2, other)], &digest)
+                .unwrap_err();
+        assert!(mismatch.starts_with("FOREIGN_READ_QUERY_MISMATCH"), "{mismatch}");
+        let duplicate =
+            check_foreign_executions(&[execution(1, digest), execution(1, digest)], &digest)
+                .unwrap_err();
+        assert!(
+            duplicate.starts_with("FOREIGN_READ_EXECUTION_DUPLICATE"),
+            "{duplicate}"
+        );
     }
 }
