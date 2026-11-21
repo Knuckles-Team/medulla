@@ -49,5 +49,5 @@ This file describes the entities that the rows of `requirements.md` add or rely 
 ### ClassificationClaim
 
 - Fields: asset, categories, provenance, state and evidence.
-- Owner: `crates/medulla-types/src/classification.rs` (new, `MEDULLA-TYPED-PACKS-R652.1`).
+- Owner: `crates/medulla-identity-types/src/classification.rs` (new, `MEDULLA-TYPED-PACKS-R652.1`).
 - Rule: a claim moves only from proposed to promoted or rejected; a promoted marking propagates along lineage edges as proposed claims.
