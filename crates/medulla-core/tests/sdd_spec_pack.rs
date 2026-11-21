@@ -1,5 +1,5 @@
 //! The spec-driven development ontology pack (MEDULLA-SDLC-R014.5): twelve
-//! classes that each extend a core class, six properties, no `owl:imports` of
+//! classes that each extend a core class, seven properties, no `owl:imports` of
 //! the core document, and the `PACK_CLASS_UNROOTED` refusal.
 
 mod sdd_pack_support;
@@ -24,13 +24,14 @@ const CLASSES: [&str; 12] = [
     "ReleaseBundle",
     "ProjectMode",
 ];
-const PROPERTIES: [&str; 6] = [
+const PROPERTIES: [&str; 7] = [
     "dependsOn",
     "crossesSeam",
     "servesPhase",
     "governedBy",
     "inBundle",
     "targetsGoal",
+    "covers",
 ];
 
 // spec: MEDULLA-SDLC-R014.5

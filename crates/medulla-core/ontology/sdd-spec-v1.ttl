@@ -99,3 +99,9 @@ sddspec:inBundle a owl:ObjectProperty ;
 sddspec:targetsGoal a owl:ObjectProperty ;
     rdfs:label "targets goal" ;
     rdfs:range sddspec:DeliveryGoal .
+
+sddspec:covers a owl:ObjectProperty ;
+    rdfs:label "covers" ;
+    rdfs:comment "Links a plan section to a requirement row its text names." ;
+    rdfs:domain sddspec:PlanSection ;
+    rdfs:range sddspec:RequirementRow .

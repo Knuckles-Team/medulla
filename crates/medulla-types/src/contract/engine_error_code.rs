@@ -32,6 +32,9 @@ closed_error_codes! {
         EngineDeadlineExceeded => "ENGINE_DEADLINE_EXCEEDED",
         /// A spec artifact line matched no known form (MEDULLA-SDLC-R014.1).
         SpecArtifactUnparseable => "SPEC_ARTIFACT_UNPARSEABLE",
+        /// A plan heading `Phase <N>` names a phase outside the plan template's `0`, `1`
+        /// and `2` (MEDULLA-SDLC-R014.7).
+        PlanPhaseUnknown => "PLAN_PHASE_UNKNOWN",
         /// A requirement row names an ID that resolves to no row (MEDULLA-SDLC-R012.2).
         RequirementUnresolved => "REQUIREMENT_UNRESOLVED",
         /// A contract names a row that no spec holds (MEDULLA-SDLC-R014.4).

@@ -607,6 +607,109 @@ pub fn project(repo: &str, file: &str, text: &str) -> Vec<serde_json::Value> {
     nodes
 }
 
+/// Refusal code of a `Phase <N>` plan heading whose `N` is not a template phase.
+pub const PLAN_PHASE_UNKNOWN: &str = "PLAN_PHASE_UNKNOWN";
+
+/// The phases of the plan template: `Phase 0: Research`, `Phase 1: Design` and
+/// `Phase 2: Task approach`.
+const PLAN_PHASES: [&str; 3] = ["0", "1", "2"];
+
+/// The node id of one section of a plan document.
+pub fn plan_section_node_id(repo: &str, file: &str, start_line: usize) -> String {
+    format!("plansection:{repo}:{file}#L{start_line}")
+}
+
+/// Whether `file` names a plan document (`plan.md` or `<dir>/plan.md`).
+fn is_plan_file(file: &str) -> bool {
+    file == "plan.md" || file.ends_with("/plan.md")
+}
+
+/// The phase a plan heading title names: `Ok(Some(N))` for `Phase <N>: <name>`, `Ok(None)`
+/// for any other title, and the refusal code for a `Phase <N>` title with an unknown `N`.
+fn plan_phase(title: &str) -> Result<Option<&'static str>, ()> {
+    let Some(rest) = title.strip_prefix("Phase ") else {
+        return Ok(None);
+    };
+    let digits: String = rest.chars().take_while(char::is_ascii_digit).collect();
+    if digits.is_empty() {
+        return Ok(None);
+    }
+    let Some(phase) = PLAN_PHASES.iter().find(|phase| **phase == digits) else {
+        return Err(());
+    };
+    Ok(rest[digits.len()..].starts_with(':').then_some(*phase))
+}
+
+/// Project one plan document into section records (MEDULLA-SDLC-R014.7): one `PlanSection`
+/// per level-2 heading (outside code fences) with its span, the digest of its bytes and its
+/// `phase`, and one `covers` edge to each requirement of `known_rows` that the section body
+/// names in backticks. A `Phase <N>` heading with an unknown `N` refuses the whole call with
+/// `PLAN_PHASE_UNKNOWN: <file>:<line>` and no operation. An ID outside `known_rows` (a row
+/// of another repository) writes no edge. Nodes come before edges.
+pub fn project_plans(
+    repo: &str,
+    file: &str,
+    text: &str,
+    known_rows: &BTreeSet<String>,
+) -> Result<RequirementProjection, String> {
+    let lines: Vec<&str> = text.lines().collect();
+    let mut fence = false;
+    let mut starts: Vec<(usize, &str)> = Vec::new();
+    for (index, line) in lines.iter().enumerate() {
+        if line.starts_with("```") {
+            fence = !fence;
+        }
+        if !fence {
+            if let Some(title) = line.strip_prefix("## ") {
+                starts.push((index + 1, title.trim()));
+            }
+        }
+    }
+    let (mut nodes, mut links) = (Vec::new(), Vec::new());
+    for (position, (start, title)) in starts.iter().enumerate() {
+        let phase = plan_phase(title).map_err(|()| {
+            format!(
+                "{}: {file}:{start}",
+                EngineErrorCode::PlanPhaseUnknown.as_str()
+            )
+        })?;
+        let end = starts
+            .get(position + 1)
+            .map_or(lines.len(), |(next, _)| next - 1);
+        let body = lines[start - 1..end].join("\n");
+        let id = plan_section_node_id(repo, file, *start);
+        let mut properties = serde_json::json!({
+            "type": "PlanSection",
+            "repo": repo,
+            "file": file,
+            "title": title,
+            "start_line": start.to_string(),
+            "end_line": end.to_string(),
+            "digest": digest_of(&body),
+        });
+        if let Some(phase) = phase {
+            properties["phase"] = phase.into();
+        }
+        nodes.push(node(&id, properties));
+        let covered: BTreeSet<String> = ticked(&body)
+            .into_iter()
+            .filter(|span| is_row_id(span))
+            .map(|span| requirement_node_id(repo, span))
+            .filter(|target| known_rows.contains(target))
+            .collect();
+        for target in covered {
+            links.push(edge(&id, &target, "covers"));
+        }
+    }
+    let (count_nodes, count_edges) = (nodes.len() as u32, links.len() as u32);
+    nodes.extend(links);
+    Ok(RequirementProjection {
+        operations: nodes,
+        nodes: count_nodes,
+        edges: count_edges,
+    })
+}
+
 /// What the engine already holds of one artifact file: the digest it was ingested
 /// under and the ids of the requirement records it produced.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -680,25 +783,58 @@ fn reingest_in(
                 .push(serde_json::json!({"op": "remove_node", "id": artifact_node_id(repo, name)}));
         }
     }
+    // First pass: parse and project every changed file, so a plan document can see the
+    // requirement records of the whole changed tree (MEDULLA-SDLC-R014.7).
+    let mut changed: Vec<(&str, &str, String, RequirementProjection)> = Vec::new();
     for (name, text) in files {
         let digest = digest_of(text);
-        let old = stored.get(*name);
-        if old.is_some_and(|old| old.digest == digest) {
+        if stored.get(*name).is_some_and(|old| old.digest == digest) {
             unchanged += 1;
             continue;
         }
         let triples = parse_spec_file(name, text).map_err(|refusal| refusal.to_string())?;
         let projection = project_requirements_in(repo, &triples, states, external, unresolved)?;
+        changed.push((name, text, digest, projection));
+    }
+    let mut known_rows: BTreeSet<String> = external.values().cloned().collect();
+    let requirement_prefix = requirement_node_id(repo, "");
+    for (name, old) in stored {
+        if !changed.iter().any(|(changed_name, ..)| *changed_name == name.as_str()) {
+            known_rows.extend(
+                old.records
+                    .iter()
+                    .filter(|id| id.starts_with(&requirement_prefix))
+                    .cloned(),
+            );
+        }
+    }
+    for (_, _, _, projection) in &changed {
+        known_rows.extend(
+            projection
+                .operations
+                .iter()
+                .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "Requirement")
+                .filter_map(|op| op["id"].as_str().map(str::to_string)),
+        );
+    }
+    for (name, text, digest, projection) in changed {
+        let old = stored.get(name);
+        let plan_operations = if is_plan_file(name) {
+            project_plans(repo, name, text, &known_rows)?.operations
+        } else {
+            Vec::new()
+        };
         let mut records = Vec::new();
         for op in projection
             .operations
             .into_iter()
             .chain(project(repo, name, text))
+            .chain(plan_operations)
         {
             if op["op"] == "upsert_node" {
                 if matches!(
                     op["properties"]["type"].as_str(),
-                    Some("Requirement" | "SpecDocument" | "SpecSection")
+                    Some("Requirement" | "SpecDocument" | "SpecSection" | "PlanSection")
                 ) {
                     records.push(op["id"].as_str().unwrap_or_default().to_string());
                 }
@@ -1287,5 +1423,80 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             ops,
             "deterministic"
         );
+    }
+
+    // spec: MEDULLA-SDLC-R014.7
+    #[test]
+    fn plan_sections_carry_phase_and_cover_rows_and_unknown_phase_refuses() {
+        let plan = "# Plan\n\n## Technical context\nUses `DEMO-R001`.\n\n\
+## Phase 1: Design\nCovers `DEMO-R002` and `OTHER-R009` and `DEMO-R002` again.\n\
+```\n## Phase 9: in a fence\n```\n";
+        let known = BTreeSet::from([
+            requirement_node_id("demo", "DEMO-R001"),
+            requirement_node_id("demo", "DEMO-R002"),
+        ]);
+        let p = project_plans("demo", "specs/x/plan.md", plan, &known).expect("projects");
+        let sections: Vec<&serde_json::Value> = p
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_node")
+            .collect();
+        assert_eq!(sections.len(), 2);
+        assert_eq!(sections[0]["id"], "plansection:demo:specs/x/plan.md#L3");
+        assert_eq!(sections[0]["properties"]["type"], "PlanSection");
+        assert_eq!(sections[0]["properties"]["title"], "Technical context");
+        assert!(sections[0]["properties"].get("phase").is_none());
+        assert_eq!(sections[1]["properties"]["phase"], "1");
+        assert_eq!(sections[1]["properties"]["start_line"], "6");
+        assert_eq!(
+            edges_of(&p, "plansection:demo:specs/x/plan.md#L3", "covers"),
+            vec![requirement_node_id("demo", "DEMO-R001")]
+        );
+        assert_eq!(
+            edges_of(&p, "plansection:demo:specs/x/plan.md#L6", "covers"),
+            vec![requirement_node_id("demo", "DEMO-R002")]
+        );
+        assert_eq!((p.nodes, p.edges), (2, 2));
+
+        let bad = "## Phase 7: Nope\n";
+        let refusal = project_plans("demo", "specs/x/plan.md", bad, &known).unwrap_err();
+        assert_eq!(refusal, "PLAN_PHASE_UNKNOWN: specs/x/plan.md:1");
+    }
+
+    // spec: MEDULLA-SDLC-R014.7
+    #[test]
+    fn a_changed_plan_file_reingests_its_sections_with_covers_edges() {
+        let plan = "## Phase 0: Research\nSee `DEMO-R001`.\n";
+        let files = [
+            ("specs/a/requirements.md", REQUIREMENTS),
+            ("specs/a/plan.md", plan),
+        ];
+        let first = reingest_changed_artifacts(
+            "demo",
+            &files,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            &external(),
+        )
+        .expect("reingests");
+        let section = "plansection:demo:specs/a/plan.md#L1";
+        assert!(first
+            .operations
+            .iter()
+            .any(|op| op["op"] == "upsert_node" && op["id"] == section));
+        assert!(first.operations.iter().any(|op| op["op"] == "upsert_edge"
+            && op["source"] == section
+            && op["target"] == requirement_node_id("demo", "DEMO-R001").as_str()
+            && op["properties"]["relationship"] == "covers"));
+        let file_node = first
+            .operations
+            .iter()
+            .find(|op| op["id"] == artifact_node_id("demo", "specs/a/plan.md").as_str())
+            .expect("plan file node");
+        assert!(file_node["properties"]["records"]
+            .as_str()
+            .unwrap()
+            .split(',')
+            .any(|id| id == section));
     }
 }
