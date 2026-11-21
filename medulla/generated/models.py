@@ -31835,11 +31835,40 @@ class Shortfall(BaseModel):
     requested: Annotated[int, Field(ge=0)]
 
 
+class PredicateOutcome(BaseModel):
+    """The outcome of one declared retrieval constraint predicate."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    outcome: Annotated[int, Field(ge=0)]
+    predicate_id: str
+
+
+class TraceConstraint(BaseModel):
+    """What one request's hard constraints did."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    authorized_exclusion_count: Annotated[int, Field(ge=0)]
+    constraint_digest: str
+    graph_revision: Annotated[int, Field(ge=0)]
+    per_predicate: list[PredicateOutcome]
+
+
+class RetrievalReceipt(BaseModel):
+    """The evidence a ranked ``UnifiedQuery`` answer carries."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    constraint: TraceConstraint | None = None
+
+
 class RankedRows(BaseModel):
     """The rows of a plan that sets ``report_shortfall``, with the typed shortfall."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    receipt: RetrievalReceipt | None = None
     rows: list[UnifiedQueryResultValueItem]
     shortfall: Shortfall | None = None
 
@@ -40379,9 +40408,12 @@ __all__ = [
     "PlanScopeLeaf",
     "AppliedPolicy",
     "PolicyKind",
+    "PredicateOutcome",
     "RankedRows",
+    "RetrievalReceipt",
     "Shortfall",
     "ShortfallReason",
+    "TraceConstraint",
     "PlanStatus",
     "PointerEvent",
     "PointerMovement",

@@ -106,6 +106,12 @@ pub fn execute_ranked(
     let result = medulla_exec::exec::execute(plan, ctx)?;
     Ok(medulla_types::retrieval::RankedRows {
         rows: unified_rows(&result),
+        receipt: ctx
+            .constraints
+            .as_ref()
+            .map(|constraints| medulla_types::retrieval::RetrievalReceipt {
+                constraint: Some(constraints.trace().clone()),
+            }),
         shortfall: result.shortfall().copied(),
     })
 }

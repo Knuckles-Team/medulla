@@ -17,7 +17,8 @@ use medulla_query_types::wire::{
     RetrievalConstraints,
 };
 
-use medulla_types::contract::ServerErrorCode;
+use medulla_types::contract::{Digest256, ServerErrorCode};
+use medulla_types::retrieval::{PredicateOutcome, TraceConstraint};
 
 use crate::exec::expand::{admitted_edges, EdgeFilter};
 
@@ -27,12 +28,20 @@ use crate::exec::expand::{admitted_edges, EdgeFilter};
 pub struct ConstraintSet {
     graph_revision: u64,
     eligible: Arc<BTreeSet<String>>,
+    /// MEDULLA-FEDERATED-QUERY-R040.1.5: the evidence of the compile, fixed once.
+    trace: Arc<TraceConstraint>,
 }
 
 impl ConstraintSet {
     /// The graph revision the constraints named.
     pub fn graph_revision(&self) -> u64 {
         self.graph_revision
+    }
+
+    /// The evidence of this compile (MEDULLA-FEDERATED-QUERY-R040.1.5): the same binding
+    /// for every ranking leg that reads the set.
+    pub fn trace(&self) -> &TraceConstraint {
+        &self.trace
     }
 
     /// Is `id` eligible to be ranked?
@@ -153,14 +162,22 @@ pub fn compile_constraints(
         .map(|predicate| (predicate, entity_pred(&predicate.target)))
         .collect();
     let mut eligible = BTreeSet::new();
+    let mut authorized = 0u64;
+    let mut admitted = vec![0u64; entity.len() + relationships.len()];
     for (id, &index) in &view.node_map {
         let Some(props) = view.node_row_object(id) else {
             continue;
         };
-        if !crate::pred_eval::all_hold(&props, &entity) {
-            continue;
+        authorized += 1;
+        let mut holds = true;
+        for (slot, predicate) in entity.iter().enumerate() {
+            if crate::pred_eval::all_hold(&props, std::slice::from_ref(predicate)) {
+                admitted[slot] += 1;
+            } else {
+                holds = false;
+            }
         }
-        let holds = relationships.iter().all(|(predicate, target)| {
+        for (slot, (predicate, target)) in relationships.iter().enumerate() {
             let filter = EdgeFilter {
                 rel: Some(predicate.edge_kind.as_str()),
                 preds: &[],
@@ -174,18 +191,44 @@ pub fn compile_constraints(
                             crate::pred_eval::all_hold(&neighbour, &[target.clone()])
                         })
                 });
-            match predicate.quantifier {
+            let passes = match predicate.quantifier {
                 RelationshipQuantifier::Exists => reached,
                 RelationshipQuantifier::NotExists => !reached,
+            };
+            if passes {
+                admitted[entity.len() + slot] += 1;
+            } else {
+                holds = false;
             }
-        });
+        }
         if holds {
             eligible.insert(id.clone());
         }
     }
+    let per_predicate = admitted
+        .iter()
+        .enumerate()
+        .map(|(position, outcome)| PredicateOutcome {
+            predicate_id: if position < entity.len() {
+                format!("entity[{position}]")
+            } else {
+                format!("relationship[{}]", position - entity.len())
+            },
+            outcome: *outcome,
+        })
+        .collect();
+    let canonical = serde_json::to_vec(constraints)
+        .map_err(|error| ConstraintError::Invalid(format!("constraints do not encode: {error}")))?;
+    let trace = TraceConstraint {
+        constraint_digest: Digest256::sha256(&canonical).to_hex(),
+        graph_revision: constraints.graph_revision,
+        authorized_exclusion_count: authorized - eligible.len() as u64,
+        per_predicate,
+    };
     Ok(ConstraintSet {
         graph_revision: constraints.graph_revision,
         eligible: Arc::new(eligible),
+        trace: Arc::new(trace),
     })
 }
 
@@ -327,6 +370,36 @@ mod tests {
             },
             quantifier,
         }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.1.5
+    #[test]
+    fn trace_binds_digest_revision_exclusions_and_per_predicate_outcomes() {
+        let fixture = fixture();
+        let core = graph(&fixture);
+        let view = core.analysis_snapshot();
+        let declared = constraints(vec![cites_banned(RelationshipQuantifier::NotExists)]);
+        let set = compile_constraints(&view, &declared, Some(4)).unwrap();
+        let trace = set.trace();
+        assert_eq!(trace.graph_revision, 4);
+        // Six nodes are visible; the two eligible documents are `good` and `fair`.
+        assert_eq!(set.len(), 2);
+        assert_eq!(trace.authorized_exclusion_count, 4);
+        // Four documents match the entity predicate; every node but `best` and `poor`
+        // (the citers of the banned source) passes the forbidden-edge predicate.
+        assert_eq!(
+            trace.per_predicate,
+            vec![
+                PredicateOutcome { predicate_id: "entity[0]".into(), outcome: 4 },
+                PredicateOutcome { predicate_id: "relationship[0]".into(), outcome: 4 },
+            ]
+        );
+        // The binding is a function of the declared constraints alone.
+        let again = compile_constraints(&view, &declared, Some(4)).unwrap();
+        assert_eq!(again.trace().constraint_digest, trace.constraint_digest);
+        assert_eq!(trace.constraint_digest.len(), 64);
+        let other = compile_constraints(&view, &constraints(Vec::new()), Some(4)).unwrap();
+        assert_ne!(other.trace().constraint_digest, trace.constraint_digest);
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R040.1.2

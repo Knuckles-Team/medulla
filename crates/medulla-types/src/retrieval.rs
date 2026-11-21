@@ -142,9 +142,51 @@ pub struct Shortfall {
 pub struct RankedRows {
     /// The ranked rows, in the plan's final order.
     pub rows: Vec<crate::unified_row::UnifiedRow>,
+    /// The retrieval evidence of the request (MEDULLA-FEDERATED-QUERY-R040.1.5); absent
+    /// when the request declared nothing the receipt reports.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub receipt: Option<RetrievalReceipt>,
     /// Present when the answer holds fewer rows than the plan asked for.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub shortfall: Option<Shortfall>,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.1.5: what one request's hard constraints did. The binding
+/// (digest and revision) is fixed when the constraints compile and stays identical across
+/// replenishment and fusion; it holds ids and numbers only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TraceConstraint {
+    /// SHA-256 of the canonical JSON of the declared constraints.
+    pub constraint_digest: String,
+    /// The pinned graph revision the constraints declared (`0`: no pin).
+    pub graph_revision: u64,
+    /// How many candidates the caller was authorized to see and the constraints excluded.
+    pub authorized_exclusion_count: u64,
+    /// One entry per declared predicate, entity predicates first, in declaration order.
+    pub per_predicate: Vec<PredicateOutcome>,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.1.5: the outcome of one declared predicate.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PredicateOutcome {
+    /// `entity[i]` or `relationship[i]`: the predicate's kind and declaration index.
+    pub predicate_id: String,
+    /// How many authorized candidates this predicate alone admitted.
+    pub outcome: u64,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.1.5: the evidence a ranked `UnifiedQuery` answer carries.
+#[derive(Debug, Clone, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RetrievalReceipt {
+    /// Present when the request declared hard constraints.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub constraint: Option<TraceConstraint>,
 }
 
 #[cfg(test)]

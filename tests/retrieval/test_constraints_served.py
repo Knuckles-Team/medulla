@@ -142,3 +142,38 @@ def test_unsatisfiable_constraints_return_eligible_exhausted(start_medulla_serve
     finally:
         cl.tenants.delete(graph)
         cl.close()
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.1.5")
+def test_excluded_never_reappears(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.1.5: the receipt carries the constraint binding,
+    identical across plan shapes, and no excluded candidate appears in any ranking branch."""
+    graph = f"constraints-receipt-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    cl.tenants.create(graph)
+    try:
+        rows = [
+            ("d1", "doc", [0.9, 0.1]),
+            ("d2", "doc", [0.8, 0.2]),
+            ("d3", "doc", [0.7, 0.3]),
+            ("m1", "memo", [1.0, 0.0]),
+            ("m2", "memo", [0.99, 0.01]),
+        ]
+        for node_id, kind, embedding in rows:
+            put(cl, graph, node_id, {"type": "Doc", "kind": kind}, embedding)
+        constraints = {"graph_revision": 0, "entity_predicates": [_eq("kind", "doc")]}
+        scan, rank = _SCAN[0], _SCAN[1]
+        top_k = _ranked(cl, graph, [scan, rank, {"Limit": {"k": 2}}], constraints)
+        whole = _ranked(cl, graph, [scan, rank, {"Limit": {"k": 10}}], constraints)
+        for answer in (top_k, whole):
+            assert not {row[0] for row in answer["rows"]} & {"m1", "m2"}
+        traces = [answer["receipt"]["constraint"] for answer in (top_k, whole)]
+        # The same binding for every branch: digest, revision and the two exclusions.
+        assert traces[0] == traces[1]
+        assert len(traces[0]["constraint_digest"]) == 64
+        assert traces[0]["graph_revision"] == 0
+        assert traces[0]["authorized_exclusion_count"] == 2
+        assert traces[0]["per_predicate"] == [{"predicate_id": "entity[0]", "outcome": 3}]
+    finally:
+        cl.tenants.delete(graph)
+        cl.close()
