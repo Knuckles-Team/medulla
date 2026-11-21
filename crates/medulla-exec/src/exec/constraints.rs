@@ -12,7 +12,7 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphView;
-use medulla_types::wire::{
+use medulla_query_types::wire::{
     CmpOp, EntityPredicate, Pred, RelationshipPredicate, RelationshipQuantifier,
     RetrievalConstraints,
 };
@@ -112,7 +112,7 @@ pub fn compile_constraints(
 
 /// The row predicate an entity predicate means.
 fn entity_pred(predicate: &EntityPredicate) -> Pred {
-    let cmp = |property: &String, op: CmpOp, value: &medulla_types::wire::PredLiteral| Pred::Cmp {
+    let cmp = |property: &String, op: CmpOp, value: &medulla_query_types::wire::PredLiteral| Pred::Cmp {
         prop: property.clone(),
         op,
         value: value.clone(),
@@ -136,7 +136,7 @@ mod tests {
     use super::*;
     use medulla_graph_core::graph::GraphCore;
     use medulla_types::contract::BoundedVec;
-    use medulla_types::wire::{EdgeDir, PredLiteral};
+    use medulla_query_types::wire::{EdgeDir, PredLiteral};
     use serde_json::json;
     use std::collections::BTreeMap;
 
