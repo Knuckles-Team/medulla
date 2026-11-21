@@ -300,7 +300,7 @@ async fn indexless_routes_cost_report() {
     assert_eq!(result.cost.cost_used, 6);
     assert_eq!(result.cost.remaining, budget(95, 95, 94));
     assert_eq!(
-        result.cost.operation_ids.to_vec(),
+        result.cost.operation_ids.as_slice().to_vec(),
         ["0:raw_read", "1:corpus_scan", "2:verify_span"]
     );
     assert!(result.cost.authorization_revision > 0);
@@ -344,7 +344,7 @@ async fn budget_exhaustion_refuses() {
     assert_eq!(report.rows_visited, 100);
     assert_eq!(report.remaining.max_rows, 0, "zero in the exhausted dimension");
     assert_eq!(report.remaining.max_visits, 900);
-    assert_eq!(report.operation_ids.to_vec(), ["0:corpus_scan"]);
+    assert_eq!(report.operation_ids.as_slice().to_vec(), ["0:corpus_scan"]);
 
     // A denied document answers exactly as an absent one.
     for op in [
@@ -391,7 +391,7 @@ async fn cost_reports_bind_budget() {
     let first = decode(retrieve(&state, request(ops(), Some(limit))).await);
     assert_eq!(first.cost.applied_budget, limit);
     assert_eq!(
-        first.cost.operation_ids.to_vec(),
+        first.cost.operation_ids.as_slice().to_vec(),
         ["0:corpus_scan", "1:raw_read"]
     );
     assert_eq!(first.cost.rows_visited, 11);
@@ -423,7 +423,7 @@ async fn cost_reports_bind_budget() {
     );
     let report = report.expect("a cost report");
     assert_eq!(report.applied_budget, limit);
-    assert_eq!(report.operation_ids.to_vec(), ["0:corpus_scan"]);
+    assert_eq!(report.operation_ids.as_slice().to_vec(), ["0:corpus_scan"]);
     assert_eq!(report.rows_visited, 10);
 
     // Cross-tenant negative: the other tenant's document is not counted.
