@@ -166,7 +166,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R711 Message-stream records normalize into a `ChangeEnvelope`: refusal, evidence and hot-path proof
 - [ ] T157 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
 - [ ] T158 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
-- [ ] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
+- [x] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
 - [ ] T160 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark
 - [ ] T161 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
 - [ ] T162 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
@@ -258,7 +258,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T154 [US5] MEDULLA-UNIFIED-DATA-PLANE-R711 Message-stream records normalize into a `ChangeEnvelope`: refusal, evidence and hot-path proof
 - [ ] T155 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.700 Identity evidence kinds and merge decisions for candidate links: model and behavior
 - [ ] T156 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.701 Identity evidence kinds and merge decisions: refusal, evidence and hot path
-- [ ] T157 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
+- [x] T157 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
 - [ ] T158 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark
 - [ ] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
 - [ ] T160 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
