@@ -14455,6 +14455,13 @@ class MethodGetSessionUsage(BaseModel):
     params: MethodGetSessionUsageParams
 
 
+class MethodDowntimeSelections(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DowntimeSelections"]
+    params: MethodDowntimeSelectionsParams
+
+
 class MethodGetRunWorkItem(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16142,6 +16149,7 @@ Method = Annotated[
         MethodPublishCurrentPlan,
         MethodGetCurrentPlan,
         MethodGetSessionUsage,
+        MethodDowntimeSelections,
         MethodGetRunWorkItem,
         MethodGetWorkItem,
         MethodListWorkItems,
@@ -18068,6 +18076,49 @@ class MethodGetSessionUsageParams(BaseModel):
 
     context_id: str
     tenant: str
+
+
+class MethodDowntimeSelectionsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    after: str | None = None
+    limit: Annotated[int, Field(ge=1, le=100)] = 20
+
+
+class DowntimeSelected(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    intent: str
+    iri: str
+    job_id: str
+
+
+DowntimeSkipReason = Literal[
+    "precondition_false", "budget_does_not_fit", "lease_not_granted", "budget_required"
+]
+
+
+class DowntimeSkipped(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    iri: str
+    reason: DowntimeSkipReason
+
+
+class DowntimeSelectionRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: int
+    chosen: list[DowntimeSelected]
+    selection_id: str
+    skipped: list[DowntimeSkipped]
+
+
+class DowntimeSelections(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    next_after: str | None = None
+    selections: list[DowntimeSelectionRecord]
 
 
 class MethodGetShortestPathParams(BaseModel):
@@ -38119,6 +38170,13 @@ __all__ = [
     "DocTerms",
     "DocumentDeleteReceipt",
     "DocumentDeleteRequest",
+    "DowntimeSelected",
+    "DowntimeSelectionRecord",
+    "DowntimeSelections",
+    "DowntimeSkipReason",
+    "DowntimeSkipped",
+    "MethodDowntimeSelections",
+    "MethodDowntimeSelectionsParams",
     "DocumentOrphanReport",
     "DocumentSet",
     "DocumentSetKind",

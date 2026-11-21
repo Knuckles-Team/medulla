@@ -384,6 +384,7 @@ SEND_BY_METHOD = {
     "GetRunCheckpoint": coordination.send_get_run_checkpoint,
     "GetRunWorkItem": coordination.send_get_run_work_item,
     "GetSessionUsage": coordination.send_get_session_usage,
+    "DowntimeSelections": coordination.send_downtime_selections,
     "GetShardWriterWidth": coordination.send_get_shard_writer_width,
     "TaskQueueEnqueue": coordination.send_task_queue_enqueue,
     "TaskQueueClaim": coordination.send_task_queue_claim,

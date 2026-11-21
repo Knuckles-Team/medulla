@@ -45,6 +45,7 @@ if TYPE_CHECKING:
     GetCurrentPlanRequest = _models.MethodGetCurrentPlanParams
     GetRunWorkItemRequest = _models.MethodGetRunWorkItemParams
     GetSessionUsageRequest = _models.MethodGetSessionUsageParams
+    DowntimeSelectionsRequest = _models.MethodDowntimeSelectionsParams
     GetWorkItemRequest = _models.MethodGetWorkItemParams
     ListWorkItemsRequest = _models.MethodListWorkItemsParams
     GetWorkItemOutcomeRequest = _models.MethodGetWorkItemOutcomeParams
@@ -2936,6 +2937,7 @@ _REQUEST_METHODS = frozenset(
         "GetCurrentPlan",
         "GetRunWorkItem",
         "GetSessionUsage",
+        "DowntimeSelections",
         "GetWorkItem",
         "ListWorkItems",
         "GetWorkItemOutcome",
@@ -3011,6 +3013,10 @@ send_get_effect_receipt = contract_sender(
 decode_get_effect_receipt = contract_decoder(
     "GetEffectReceipt", "GetEffectReceiptResult"
 )
+send_downtime_selections = contract_sender(
+    "DowntimeSelections", "MethodDowntimeSelectionsParams"
+)
+decode_downtime_selections = contract_decoder("DowntimeSelections", "DowntimeSelections")
 send_get_shard_writer_width = contract_sender(
     "GetShardWriterWidth", "MethodGetShardWriterWidthParams"
 )

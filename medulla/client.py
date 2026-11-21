@@ -4782,6 +4782,33 @@ class WorkItemClient:
         ).payload
         return _session_usage_snapshot(value, context_id)
 
+    async def downtime_selections(
+        self,
+        *,
+        after: str | None = None,
+        limit: int = 20,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """One page of what the deciding downtime ticks chose and skipped.
+
+        Newest first: ``{"selections": [{"selection_id", "at_ms", "chosen",
+        "skipped"}], "next_after"}``. Pass ``next_after`` back as ``after`` for
+        the next page; ``limit`` is in [1, 100].
+        """
+        if isinstance(limit, bool) or not isinstance(limit, int):
+            raise TypeError("DowntimeSelections.limit must be an integer")
+        if not 1 <= limit <= 100:
+            raise ValueError("DowntimeSelections.limit must be in [1, 100]")
+        params: dict[str, Any] = {"limit": limit}
+        if after is not None:
+            params["after"] = _string("DowntimeSelections.after", after)
+        result = await _gen.coordination.send_downtime_selections(
+            self._client, params, graph
+        )
+        return _gen.coordination.decode_downtime_selections(result).model_dump(
+            mode="json"
+        )
+
     async def get_outcome(
         self, *, tenant: str, work_item_id: str
     ) -> dict[str, Any] | None:
