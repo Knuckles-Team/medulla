@@ -45,6 +45,7 @@ pub fn deletion_record(
         nodes_deleted: record.nodes_deleted,
         edges_deleted: record.edges_deleted,
         index_pending: 0,
+        orphan_report: Default::default(),
     };
     (record, receipt)
 }

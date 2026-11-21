@@ -96,3 +96,14 @@ def test_deletion_record_readable(clean_graph):
     assert record["actor"]
     assert record["deleted_at"] > 0
     assert "text" not in record
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R651.6")
+def test_delete_cascades_and_leaves_no_orphan(clean_graph):
+    doc = "doc:orphan-proof"
+    ids = _build(clean_graph, chunks=500, doc=doc)
+    receipt = _delete(clean_graph, doc=doc)
+    assert receipt["nodes_deleted"] == len(ids)
+    assert receipt["orphan_report"] == {"graph_rows_left": 0, "edges_left": 0}
+    for node in ids:
+        assert not clean_graph.nodes.has(node)

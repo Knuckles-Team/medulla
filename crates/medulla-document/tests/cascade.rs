@@ -109,6 +109,7 @@ fn cascade_types_round_trip() {
         nodes_deleted: plan.nodes.len() as u64,
         edges_deleted: plan.edges.len() as u64,
         index_pending: 0,
+        orphan_report: Default::default(),
     };
     let back: DocumentDeleteReceipt =
         serde_json::from_value(serde_json::to_value(&receipt).unwrap()).unwrap();

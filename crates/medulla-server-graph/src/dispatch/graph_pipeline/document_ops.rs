@@ -157,7 +157,8 @@ pub async fn apply_cascade(
 ) -> Response {
     use medulla_h_ingest::document_delete as delete;
     let deleted_at = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let (record, receipt) = delete::deletion_record(&plan, deleted_at, ctx.verified_actor);
+    let core = ctx.core.clone();
+    let (record, mut receipt) = delete::deletion_record(&plan, deleted_at, ctx.verified_actor);
     let write_set = match delete::lower(&plan, &record) {
         Ok(write_set) => write_set,
         Err(error) => return Response::err(ctx.req_id, error),
@@ -179,12 +180,31 @@ pub async fn apply_cascade(
         crate::dispatch::change_envelope::apply_one_change_envelope(ctx, envelope).await;
     match committed.refusal_text() {
         Some(refusal) => Response::err(committed.id, refusal),
-        None => Response::ok(
+        None => {
+            // MEDULLA-UNIFIED-DATA-PLANE-R651.6: scan the cascade neighbourhood after apply.
+            receipt.orphan_report = medulla_query_types::document_ops::DocumentOrphanReport {
+                graph_rows_left: plan
+                    .nodes
+                    .iter()
+                    .filter(|node| core.get_node_properties(&node.id).is_some())
+                    .count() as u64,
+                edges_left: plan
+                    .edges
+                    .iter()
+                    .filter(|edge| {
+                        core.typed_edges_between(&edge.from.id, &edge.to.id)
+                            .iter()
+                            .any(|(label, _)| *label == edge.label)
+                    })
+                    .count() as u64,
+            };
+            Response::ok(
             committed.id,
             ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::DocumentDelete>(
                 receipt,
             ),
-        ),
+            )
+        }
     }
 }
 

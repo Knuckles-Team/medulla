@@ -26,6 +26,19 @@ pub struct DocumentDeleteReceipt {
     pub edges_deleted: u64,
     /// Vector and lexical entries still draining after commit.
     pub index_pending: u64,
+    /// The post-apply scan of the cascade neighbourhood (MEDULLA-UNIFIED-DATA-PLANE-R651.6).
+    pub orphan_report: DocumentOrphanReport,
+}
+
+/// What a committed cascade left in the graph: both counts are 0 once the delete applied.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DocumentOrphanReport {
+    /// Planned nodes still present after the commit.
+    pub graph_rows_left: u64,
+    /// Planned edges still present after the commit.
+    pub edges_left: u64,
 }
 
 /// The content-free record a committed cascade leaves (MEDULLA-UNIFIED-DATA-PLANE-R651.5).

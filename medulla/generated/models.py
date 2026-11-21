@@ -31303,8 +31303,16 @@ class DocumentDeleteReceipt(BaseModel):
     edges_deleted: Annotated[int, Field(ge=0)]
     index_pending: Annotated[int, Field(ge=0)]
     nodes_deleted: Annotated[int, Field(ge=0)]
+    orphan_report: DocumentOrphanReport
     plan_digest: str
     tenant: str
+
+
+class DocumentOrphanReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edges_left: Annotated[int, Field(ge=0)]
+    graph_rows_left: Annotated[int, Field(ge=0)]
 
 
 class DocumentDeleteRequest(BaseModel):
@@ -36072,6 +36080,7 @@ __all__ = [
     "DocTerms",
     "DocumentDeleteReceipt",
     "DocumentDeleteRequest",
+    "DocumentOrphanReport",
     "DocumentSet",
     "DocumentSetKind",
     "DocumentSetKindMembers",
