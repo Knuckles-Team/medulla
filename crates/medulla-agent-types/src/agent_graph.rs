@@ -225,6 +225,30 @@ pub struct AgentGraphEdge {
     /// approved graph.
     #[serde(default)]
     pub condition: Option<ComponentDependency>,
+    /// Whether the edge feeds its target or loops back to an earlier slot.
+    /// Only a `LoopsBack` edge is stored and hashed, so a shape that has none
+    /// keeps its bytes and its digest (MEDULLA-ORCH-VOCAB-R006.5).
+    #[serde(default, skip_serializing_if = "AgentGraphEdgeKind::is_feeds")]
+    pub kind: AgentGraphEdgeKind,
+}
+
+/// How an edge relates its endpoints in a template topology.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum AgentGraphEdgeKind {
+    /// The source slot's output feeds the target slot.
+    #[default]
+    Feeds,
+    /// The target slot runs again on the source slot's output (a peer loop).
+    LoopsBack,
+}
+
+impl AgentGraphEdgeKind {
+    /// Whether this is the default `Feeds` kind (the serde skip test).
+    pub fn is_feeds(&self) -> bool {
+        matches!(self, Self::Feeds)
+    }
 }
 
 /// The composed shape: nodes, edges, and where a run starts.
@@ -400,13 +424,22 @@ impl AgentGraphShape {
 
         let mut edges: Vec<&AgentGraphEdge> = self.edges.iter().collect();
         edges.sort_by(|left, right| {
-            (&left.from, &left.to, &left.condition).cmp(&(&right.from, &right.to, &right.condition))
+            (&left.from, &left.to, &left.condition, left.kind).cmp(&(
+                &right.from,
+                &right.to,
+                &right.condition,
+                right.kind,
+            ))
         });
         hasher.update((edges.len() as u64).to_be_bytes());
         for edge in edges {
             put_text(&mut hasher, &edge.from);
             put_text(&mut hasher, &edge.to);
             put_opt_dependency(&mut hasher, edge.condition.as_ref());
+            // Only a loop-back edge is hashed, so every existing digest stays.
+            if edge.kind == AgentGraphEdgeKind::LoopsBack {
+                put_text(&mut hasher, "loops_back");
+            }
         }
         format!("{DIGEST_PREFIX}{}", hex::encode(hasher.finalize()))
     }
@@ -1443,6 +1476,7 @@ mod tests {
             from: from.into(),
             to: to.into(),
             condition: None,
+            kind: AgentGraphEdgeKind::Feeds,
         }
     }
 
@@ -1593,11 +1627,13 @@ mod tests {
                     from: "review".into(),
                     to: "revise".into(),
                     condition: Some(predicate("predicate:needs-work", 'e')),
+                    kind: AgentGraphEdgeKind::Feeds,
                 },
                 AgentGraphEdge {
                     from: "review".into(),
                     to: "done".into(),
                     condition: Some(predicate("predicate:accepted", 'f')),
+                    kind: AgentGraphEdgeKind::Feeds,
                 },
                 edge("revise", "review"),
             ],
@@ -2267,16 +2303,19 @@ mod tests {
                     from: "review".into(),
                     to: "revise".into(),
                     condition: Some(predicate("predicate:needs-work", 'e')),
+                    kind: AgentGraphEdgeKind::Feeds,
                 },
                 AgentGraphEdge {
                     from: "review".into(),
                     to: "expand".into(),
                     condition: Some(predicate("predicate:expand", 'f')),
+                    kind: AgentGraphEdgeKind::Feeds,
                 },
                 AgentGraphEdge {
                     from: "review".into(),
                     to: "done".into(),
                     condition: Some(predicate("predicate:accepted", '0')),
+                    kind: AgentGraphEdgeKind::Feeds,
                 },
                 edge("revise", "review"),
                 edge("expand", "team"),
@@ -2284,6 +2323,29 @@ mod tests {
             ],
             max_iterations: 5,
         }
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R006.5
+    #[test]
+    fn feeds_edge_keeps_its_shape_digest() {
+        let shape = rich_shape();
+        // The default kind is neither stored nor hashed: the wire bytes of an
+        // edge that feeds are the bytes it had before the field existed.
+        let wire = serde_json::to_string(&shape.edges[0]).unwrap();
+        assert!(!wire.contains("kind"), "{wire}");
+        let back: AgentGraphEdge = serde_json::from_str(&wire).unwrap();
+        assert_eq!(back.kind, AgentGraphEdgeKind::Feeds);
+        assert_eq!(back, shape.edges[0]);
+        // A loop-back edge is stored and moves the digest.
+        let mut looped = rich_shape();
+        looped.edges[4].kind = AgentGraphEdgeKind::LoopsBack;
+        let wire = serde_json::to_string(&looped.edges[4]).unwrap();
+        assert!(wire.contains(r#""kind":"loops_back""#), "{wire}");
+        assert_ne!(looped.shape_digest(), shape.shape_digest());
+        // Naming the default kind explicitly is the same shape.
+        let mut explicit = rich_shape();
+        explicit.edges[4].kind = AgentGraphEdgeKind::Feeds;
+        assert_eq!(explicit.shape_digest(), shape.shape_digest());
     }
 
     #[test]
@@ -2314,6 +2376,7 @@ mod tests {
             from: _,
             to: _,
             condition: _,
+            kind: _,
         } = rich_shape().edges[0].clone();
         // And a node KIND added without digest coverage stops it compiling too.
         let _kinds = |kind: &AgentGraphNodeKind| match kind {
@@ -2413,6 +2476,7 @@ mod tests {
                 s.edges[1].condition = Some(predicate("predicate:other", 'e'))
             }),
             ("edge.condition presence", |s| s.edges[1].condition = None),
+            ("edge.kind", |s| s.edges[4].kind = AgentGraphEdgeKind::LoopsBack),
         ];
 
         let baseline = rich_shape().shape_digest();

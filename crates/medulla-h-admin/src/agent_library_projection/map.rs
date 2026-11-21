@@ -15,7 +15,7 @@ const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 
 /// One IRI path segment: unreserved bytes kept, every other byte
 /// percent-encoded, so any valid tenant or agent id is a valid IRI segment.
-fn segment(text: &str) -> String {
+pub(super) fn segment(text: &str) -> String {
     let mut out = String::with_capacity(text.len());
     for byte in text.bytes() {
         if byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'.' | b'_' | b'~') {

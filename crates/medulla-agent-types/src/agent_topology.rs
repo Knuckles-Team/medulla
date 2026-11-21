@@ -172,6 +172,10 @@ pub struct SlotTopology {
     /// as a slot fact so the plan can derive its sub-agent allowance.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub harness: Option<String>,
+    /// The `:AgentKind` IRI an agent filling this slot must have
+    /// (MEDULLA-ORCH-VOCAB-R006.5). `None` when the slot names no kind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub required_agent_kind: Option<String>,
 }
 
 /// When a running topology stops. Evaluating it is execution, not decision.

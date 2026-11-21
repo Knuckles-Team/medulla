@@ -216,6 +216,7 @@ fn graph_draft(
                 from: AGENT_NODE.to_string(),
                 to: END_NODE.to_string(),
                 condition: None,
+                kind: medulla_agent_types::agent_graph::AgentGraphEdgeKind::Feeds,
             }],
             max_iterations: 2,
         },

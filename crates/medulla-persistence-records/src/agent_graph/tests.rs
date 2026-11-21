@@ -95,6 +95,7 @@ fn edge(from: &str, to: &str) -> AgentGraphEdge {
         from: from.into(),
         to: to.into(),
         condition: None,
+        kind: medulla_agent_types::agent_graph::AgentGraphEdgeKind::Feeds,
     }
 }
 

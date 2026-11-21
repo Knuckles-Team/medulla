@@ -7,6 +7,8 @@ closed_error_codes! {
     /// Existing server refusal vocabulary pending typed handler migration.
     pub enum ServerErrorCode {
         AbortedAtomicGraphBatch => "ABORTED_ATOMIC_GRAPH_BATCH",
+        /// MEDULLA-ORCH-VOCAB-R006.5: a graph template's topology facts break a publish shape rule.
+        TopologyShapeInvalid => "TOPOLOGY_SHAPE_INVALID",
         AlertEnvelopeInvalid => "ALERT_ENVELOPE_INVALID",
         AlertRevisionConflict => "ALERT_REVISION_CONFLICT",
         ActionCriterionFailed => "ACTION_CRITERION_FAILED",

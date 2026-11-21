@@ -40,6 +40,8 @@ use medulla_server_api::state::ServerState;
 
 #[cfg(feature = "rdf")]
 pub mod map;
+#[cfg(feature = "rdf")]
+pub mod topology;
 
 /// Start the singleton projection worker. A build without the Agent Library
 /// or the RDF triple operations has nothing to project.

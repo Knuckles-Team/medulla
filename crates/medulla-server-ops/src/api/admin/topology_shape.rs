@@ -9,8 +9,9 @@
 //! itself. The rules here relate the facts to the shape they describe; each is
 //! one row of [`RULES`], and the first one violated names the refusal.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_agent_types::agent_graph::AgentGraphEdgeKind;
 use medulla_agent_types::agent_topology::SlotRole;
 use medulla_agent_types::agent_topology::StopRule;
 use medulla_agent_types::agent_topology::TopologyFacts;
@@ -29,6 +30,15 @@ const RULES: &[Rule] = &[
     verifier_pass_needs_a_verifier,
     quorum_fits_the_peers,
     nesting_is_declared,
+    feeds_are_acyclic,
+    loop_back_only_in_peer_loops,
+];
+
+/// The template classes a loop-back edge may sit in: the peer loops.
+const PEER_LOOP_CLASSES: &[&str] = &[
+    medulla_types::ontology_iri!("swarm#CritiqueLoop"),
+    medulla_types::ontology_iri!("swarm#Debate"),
+    medulla_types::ontology_iri!("swarm#Council"),
 ];
 
 fn agent_nodes(draft: &AgentGraphDraft) -> BTreeSet<&str> {
@@ -110,6 +120,72 @@ fn nesting_is_declared(draft: &AgentGraphDraft, facts: &TopologyFacts) -> Option
         .any(|node| matches!(node.kind, AgentGraphNodeKind::Graph { .. }));
     (nests && facts.depth < 2)
         .then(|| "a template that nests a graph declares depth of at least two".to_string())
+}
+
+/// The unconditional `Feeds` edges between slot nodes form no cycle
+/// (MEDULLA-ORCH-VOCAB-R006.5). This is the one acyclicity routine in Rust;
+/// `swarm:FeedsAcyclicShape` states the same rule for graph data.
+fn feeds_are_acyclic(draft: &AgentGraphDraft, facts: &TopologyFacts) -> Option<String> {
+    let slots: BTreeSet<&str> = facts.slots.iter().map(|s| s.node_id.as_str()).collect();
+    let mut successors: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    let mut indegree: BTreeMap<&str, usize> = slots.iter().map(|slot| (*slot, 0)).collect();
+    for edge in &draft.shape.edges {
+        if edge.kind != AgentGraphEdgeKind::Feeds || edge.condition.is_some() {
+            continue;
+        }
+        let (from, to) = (edge.from.as_str(), edge.to.as_str());
+        if !slots.contains(from) || !slots.contains(to) {
+            continue;
+        }
+        successors.entry(from).or_default().push(to);
+        *indegree.entry(to).or_default() += 1;
+    }
+    let mut ready: Vec<&str> = indegree
+        .iter()
+        .filter(|(_, degree)| **degree == 0)
+        .map(|(slot, _)| *slot)
+        .collect();
+    let mut visited = 0usize;
+    while let Some(slot) = ready.pop() {
+        visited += 1;
+        for next in successors.get(slot).into_iter().flatten() {
+            if let Some(degree) = indegree.get_mut(next) {
+                *degree -= 1;
+                if *degree == 0 {
+                    ready.push(next);
+                }
+            }
+        }
+    }
+    (visited < slots.len()).then(|| "the unconditional feeds edges between slots form a cycle".to_string())
+}
+
+/// A `LoopsBack` edge has no condition, joins two slot nodes, and sits in a
+/// template whose class is `swarm:CritiqueLoop`, `swarm:Debate` or
+/// `swarm:Council` (MEDULLA-ORCH-VOCAB-R006.5).
+fn loop_back_only_in_peer_loops(draft: &AgentGraphDraft, facts: &TopologyFacts) -> Option<String> {
+    let slots: BTreeSet<&str> = facts.slots.iter().map(|s| s.node_id.as_str()).collect();
+    let peer_loop = PEER_LOOP_CLASSES.contains(&facts.class_iri.as_str());
+    draft
+        .shape
+        .edges
+        .iter()
+        .filter(|edge| edge.kind == AgentGraphEdgeKind::LoopsBack)
+        .find_map(|edge| {
+            let problem = if edge.condition.is_some() {
+                "has a condition"
+            } else if !slots.contains(edge.from.as_str()) || !slots.contains(edge.to.as_str()) {
+                "does not join two slots"
+            } else if !peer_loop {
+                "sits in a template that is not a peer loop"
+            } else {
+                return None;
+            };
+            Some(format!(
+                "loop-back edge '{}' -> '{}' {problem}",
+                edge.from, edge.to
+            ))
+        })
 }
 
 /// The refusal a draft's topology facts earn, if any. A draft without

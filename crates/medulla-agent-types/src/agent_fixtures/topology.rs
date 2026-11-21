@@ -36,6 +36,7 @@ pub fn slot(node_id: &str, role: SlotRole, widths: (u8, u8), p95_ms: Option<u32>
         }])
         .expect("one lease class fits"),
         harness: None,
+        required_agent_kind: None,
     }
 }
 

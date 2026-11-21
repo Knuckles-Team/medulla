@@ -262,11 +262,17 @@ class AgentComponentKind(str, Enum):
     PLAYBOOK = "playbook"
 
 
+class AgentGraphEdgeKind(str, Enum):
+    FEEDS = "feeds"
+    LOOPS_BACK = "loops_back"
+
+
 class AgentGraphEdge(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     condition: ComponentDependency | None = None
     from_: str = Field(..., alias="from")
+    kind: AgentGraphEdgeKind = AgentGraphEdgeKind.FEEDS
     to: str
 
 
@@ -1371,6 +1377,7 @@ class SlotTopology(BaseModel):
     min_width: Annotated[int, Field(ge=0, le=255)]
     node_id: str
     p95_ms: Annotated[int, Field(ge=0)] | None = None
+    required_agent_kind: str | None = None
     role: SlotRole
     tokens: Annotated[int, Field(ge=0)] | None = None
 
@@ -2586,6 +2593,7 @@ __all__ = [
     "AgentComponentFactsToolset",
     "AgentComponentKind",
     "AgentGraphEdge",
+    "AgentGraphEdgeKind",
     "AgentGraphEntryRef",
     "AgentGraphNode",
     "AgentGraphNodeKind",

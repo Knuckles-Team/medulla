@@ -193,6 +193,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // `SeriesRefusal::render`.
     ("TsDefineStateSpace", STATE_SPACE_ERRORS),
     ("TsAppend", STATE_SPACE_ERRORS),
+    // MEDULLA-ORCH-VOCAB-R006.5: a graph template whose topology facts break a publish
+    // shape rule is refused with the rule's detail.
+    ("AgentGraph", &["TOPOLOGY_SHAPE_INVALID"]),
     // MEDULLA-CONTRACT-R054: the served contract read's pagination refusals.
     (
         "DescribeContract",

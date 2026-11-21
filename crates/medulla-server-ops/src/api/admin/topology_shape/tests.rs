@@ -31,6 +31,7 @@ fn edge(from: &str, to: &str) -> AgentGraphEdge {
         from: from.to_string(),
         to: to.to_string(),
         condition: None,
+        kind: medulla_agent_types::agent_graph::AgentGraphEdgeKind::Feeds,
     }
 }
 
@@ -123,4 +124,46 @@ fn every_planted_shape_defect_is_refused_by_name() {
         assert!(refused.starts_with(TOPOLOGY_SHAPE_INVALID), "{refused}");
         assert!(refused.contains(needle), "{needle}: {refused}");
     }
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R006.5
+#[test]
+fn feeds_cycle_and_misplaced_loop_back_refuse() {
+    use medulla_agent_types::agent_graph::AgentGraphEdgeKind;
+
+    let loop_back = |from: &str, to: &str| AgentGraphEdge {
+        kind: AgentGraphEdgeKind::LoopsBack,
+        ..edge(from, to)
+    };
+
+    // Unconditional feeds edges between two slots that form a cycle.
+    let mut cyclic = fan_out_draft();
+    cyclic.shape.edges.push(edge("lead", "worker"));
+    cyclic.shape.edges.push(edge("worker", "lead"));
+    let refused = refusal(&cyclic).expect("a feeds cycle is refused");
+    assert!(refused.starts_with(TOPOLOGY_SHAPE_INVALID), "{refused}");
+    assert!(refused.contains("cycle"), "{refused}");
+
+    // The same back edge as a loop-back is not a cycle of feeds, but a
+    // fan-out template is not a peer loop.
+    let mut misplaced = fan_out_draft();
+    misplaced.shape.edges.push(edge("lead", "worker"));
+    misplaced.shape.edges.push(loop_back("worker", "lead"));
+    let refused = refusal(&misplaced).expect("a loop-back outside a peer loop is refused");
+    assert!(refused.starts_with(TOPOLOGY_SHAPE_INVALID), "{refused}");
+    assert!(refused.contains("not a peer loop"), "{refused}");
+
+    // A loop-back must join two slot nodes.
+    let mut off_slot = fan_out_draft();
+    off_slot.shape.edges.push(loop_back("worker", "fan"));
+    let refused = refusal(&off_slot).expect("a loop-back to a non-slot is refused");
+    assert!(refused.contains("does not join two slots"), "{refused}");
+
+    // In a peer loop the same loop-back is admitted.
+    let mut peer_loop = fan_out_draft();
+    peer_loop.topology.as_mut().unwrap().class_iri =
+        medulla_types::ontology_iri!("swarm#CritiqueLoop").to_string();
+    peer_loop.shape.edges.push(edge("lead", "worker"));
+    peer_loop.shape.edges.push(loop_back("worker", "lead"));
+    assert_eq!(refusal(&peer_loop), None);
 }
