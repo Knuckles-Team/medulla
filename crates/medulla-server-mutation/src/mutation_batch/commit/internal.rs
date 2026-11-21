@@ -16,8 +16,10 @@ use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_types::contract::Nonce;
 
 use medulla_server_api::{
-    batch_compile::compile::authoritative_graph_version, batch_compile::compile::compile_methods,
-    batch_compile::compile::CompileBatch,
+    batch_compile::compile::authoritative_graph_version,
+    batch_compile::compile::compile_methods_with_source_dirty,
+    batch_compile::compile::recorded_source_dirty_input, batch_compile::compile::CompileBatch,
+    batch_compile::compile::SourceDirtyBasis,
 };
 
 /// The serialization lane for one transaction coordinator (a Commit parent
@@ -202,7 +204,7 @@ async fn replay_internal_graph(
         .checked_add(1)
         .ok_or_else(|| "authoritative graph version overflow".to_string())?;
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let probe = compile_methods(
+    let probe = compile_methods_with_source_dirty(
         CompileBatch {
             status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id,
@@ -220,6 +222,8 @@ async fn replay_internal_graph(
             authoritative_state: Some(descriptor),
         },
         methods,
+        Vec::new(),
+        SourceDirtyBasis::Recorded(recorded_source_dirty_input(&record.batch)),
     )?;
     let committed = persistence
         .commit_mutation_batch_state(&graph_fname, &probe, Vec::new(), None, created_at_ms, true)
@@ -383,7 +387,7 @@ async fn commit_prepared_internal_graph(
         ..
     } = input;
     let created_at_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let batch = compile_methods(
+    let batch = compile_methods_with_source_dirty(
         CompileBatch {
             status_writer: medulla_types::edit_machine::StatusWriter::Caller,
             batch_id,
@@ -401,6 +405,8 @@ async fn commit_prepared_internal_graph(
             authoritative_state: Some(descriptor.clone()),
         },
         methods,
+        Vec::new(),
+        SourceDirtyBasis::RowDelta(row_delta.operations()),
     )?;
     let result_msgpack = rmp_serde::to_vec_named(result).map_err(|error| error.to_string())?;
     let committed = persistence

@@ -151,6 +151,7 @@ pub(super) async fn commit_staged_with_receipt(
         ),
         receipt.methods,
         &payload,
+        medulla_server_api::batch_compile::SourceDirtyBasis::RowDelta(row_delta.operations()),
     ) {
         Ok(pair) => pair,
         Err(response) => return response,

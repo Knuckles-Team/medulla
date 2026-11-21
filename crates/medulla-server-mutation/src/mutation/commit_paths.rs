@@ -128,6 +128,7 @@ async fn commit_prepublish_durable_batch(
         ),
         vec![method.clone()],
         predicted,
+        medulla_server_api::batch_compile::SourceDirtyBasis::Methods,
     )?;
     persistence
         .commit_mutation_batch(fname, &batch, Some(&result), created_at_ms)

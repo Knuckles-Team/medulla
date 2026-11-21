@@ -135,6 +135,9 @@ async fn commit_staged_replay_found(
         default_surface,
         Some(descriptor),
         methods,
+        medulla_server_api::batch_compile::SourceDirtyBasis::Recorded(
+            medulla_server_api::batch_compile::recorded_source_dirty_input(&record.batch),
+        ),
     ) {
         Ok(batch) => batch,
         Err(response) => return Some(response),
@@ -203,8 +206,9 @@ fn compile_replay_batch(
     default_surface: medulla_mutation_types::mutation_scope::MutationSurface,
     authoritative_state: Option<medulla_protocol_types::mutation_batch::MutationStateDescriptor>,
     methods: Vec<Method>,
+    source_dirty: medulla_server_api::batch_compile::SourceDirtyBasis<'_>,
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatch, Response> {
-    medulla_server_api::batch_compile::compile_methods(
+    medulla_server_api::batch_compile::compile_methods_with_source_dirty(
         compile_batch_context(
             ctx,
             batch_id,
@@ -214,6 +218,8 @@ fn compile_replay_batch(
             authoritative_state,
         ),
         methods,
+        Vec::new(),
+        source_dirty,
     )
     .map_err(|error| {
         Response::err(
@@ -336,6 +342,7 @@ async fn commit_row_replay_found(
         medulla_mutation_types::mutation_scope::MutationSurface::Graph,
         None,
         vec![method.clone()],
+        medulla_server_api::batch_compile::SourceDirtyBasis::Methods,
     ) {
         Ok(batch) => batch,
         Err(response) => return Some(response),
@@ -381,6 +388,7 @@ pub(super) fn compile_batch_and_encode_result(
     compile: medulla_server_api::batch_compile::CompileBatch<'_>,
     methods: Vec<Method>,
     payload: &ResultPayload,
+    source_dirty: medulla_server_api::batch_compile::SourceDirtyBasis<'_>,
 ) -> Result<
     (
         medulla_protocol_types::mutation_batch::MutationBatch,
@@ -388,7 +396,12 @@ pub(super) fn compile_batch_and_encode_result(
     ),
     Response,
 > {
-    let batch = match medulla_server_api::batch_compile::compile_methods(compile, methods) {
+    let batch = match medulla_server_api::batch_compile::compile_methods_with_source_dirty(
+        compile,
+        methods,
+        Vec::new(),
+        source_dirty,
+    ) {
         Ok(batch) => batch,
         Err(error) => {
             return Err(Response::err(

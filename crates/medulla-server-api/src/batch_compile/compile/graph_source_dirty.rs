@@ -2,28 +2,74 @@
 //!
 //! A semantic index built from a graph text property is woken by the commit that changes one of
 //! its nodes. [`compile_methods`](super::compile_methods) is the one chokepoint every graph write
-//! passes, so the decision lives here: a batch writes a source node when it adds or creates a
-//! node of a bound type that carries the bound property, updates the property, or removes a node
-//! (a removal names no type, so it wakes every source bound in the graph).
+//! passes, so the decision lives here, and it is derived from the node rows the commit writes,
+//! never from which method asked for the write: a runtime-derived write (an RDF load, a
+//! conditional update, a job write-set) commits through a staged node row delta, and that delta
+//! is what [`SourceDirtyBasis::RowDelta`] names. A direct row write (`AddNode`, `RemoveNode`, a
+//! `BatchUpdate` of them) is its own row delta, so [`SourceDirtyBasis::Methods`] reads the
+//! methods. A replayed commit reproduces the decision the original commit recorded
+//! ([`SourceDirtyBasis::Recorded`]), because the wakeup is part of the batch's payload digest.
+//!
+//! A row writes a source node when it carries a bound type and the bound property. A removal
+//! row names no type, so it wakes every source bound in the graph; a wakeup is a hint and the
+//! reconcile reads the source, so an extra one costs a read and never changes an answer.
 
 use medulla_graph_algos::algorithms::{decode_batch_operations, BatchOperation};
-use medulla_index_types::semantic_index::{bound_graph_sources, SemanticDigest};
+use medulla_index_types::semantic_index::{
+    bound_graph_sources, SemanticDigest, SemanticSourceDirtyIntent, SEMANTIC_SOURCE_DIRTY_TOPIC,
+};
+use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
 use sha2::{Digest, Sha256};
 
-/// The wakeup input digest of `methods` committed to `graph` of `tenant`, or `None` when the
-/// batch writes no node of a bound `(type, property)`.
+/// Where a commit's node writes are read from.
+pub enum SourceDirtyBasis<'a> {
+    /// The methods are the row writes (a direct row commit).
+    Methods,
+    /// The staged node row delta of the commit.
+    RowDelta(&'a [Method]),
+    /// A replay: the wakeup input the original commit recorded, if it recorded one.
+    Recorded(Option<SemanticDigest>),
+}
+
+/// The wakeup input digest recorded in an already committed batch, if it carries one.
+pub fn recorded_source_dirty_input(batch: &MutationBatch) -> Option<SemanticDigest> {
+    batch
+        .outbox
+        .iter()
+        .find(|intent| intent.topic == SEMANTIC_SOURCE_DIRTY_TOPIC)
+        .and_then(|intent| SemanticSourceDirtyIntent::from_canonical_cbor(&intent.payload).ok())
+        .map(|intent| intent.input_digest)
+}
+
+/// The wakeup input digest of a commit of `methods` to `graph` of `tenant`, or `None` when the
+/// commit writes no node of a bound `(type, property)`.
 pub(super) fn graph_source_dirty_input(
     tenant: &str,
     graph: &str,
     methods: &[Method],
+    basis: &SourceDirtyBasis<'_>,
 ) -> Option<SemanticDigest> {
+    let rows = match basis {
+        SourceDirtyBasis::Recorded(recorded) => return *recorded,
+        SourceDirtyBasis::Methods => methods,
+        SourceDirtyBasis::RowDelta(rows) => rows,
+    };
     let bound = bound_graph_sources(tenant, graph);
-    if bound.is_empty() || !methods.iter().any(|method| writes_bound_node(&bound, method)) {
+    if bound.is_empty() || !rows.iter().any(|method| writes_bound_node(&bound, method)) {
         return None;
     }
-    let encoded = rmp_serde::to_vec_named(methods).ok()?;
+    let encoded = rmp_serde::to_vec_named(rows).ok()?;
     Some(SemanticDigest::from_bytes(Sha256::digest(&encoded).into()))
+}
+
+/// Whether `actual` is the bound name: the name itself, or an IRI that ends in it, because a
+/// node loaded from RDF carries its type and property keys as full IRIs.
+fn names(actual: &str, bound: &str) -> bool {
+    actual == bound
+        || actual
+            .strip_suffix(bound)
+            .is_some_and(|prefix| prefix.ends_with('#') || prefix.ends_with('/'))
 }
 
 /// Whether `properties_msgpack` is a node of a bound type that carries the bound property.
@@ -33,16 +79,17 @@ fn is_source_node(bound: &[(String, String)], properties_msgpack: &[u8]) -> bool
     };
     let node_type = properties.get("type").and_then(|value| value.as_str());
     bound.iter().any(|(type_id, property_id)| {
-        node_type == Some(type_id.as_str()) && properties.contains_key(property_id)
+        node_type.is_some_and(|actual| names(actual, type_id))
+            && properties.keys().any(|key| names(key, property_id))
     })
 }
 
 /// Whether `updates_msgpack` sets a bound property.
 fn updates_bound_property(bound: &[(String, String)], updates_msgpack: &[u8]) -> bool {
     medulla_types::msgpack::decode_property_object(updates_msgpack).is_ok_and(|updates| {
-        bound
-            .iter()
-            .any(|(_, property_id)| updates.contains_key(property_id))
+        bound.iter().any(|(_, property_id)| {
+            updates.keys().any(|key| names(key, property_id))
+        })
     })
 }
 
@@ -105,7 +152,7 @@ mod tests {
     #[test]
     fn a_commit_of_a_bound_node_wakes_the_source() {
         bind("dirty-t", "dirty-g");
-        let wake = |methods: Vec<Method>| graph_source_dirty_input("dirty-t", "dirty-g", &methods);
+        let wake = |methods: Vec<Method>| graph_source_dirty_input("dirty-t", "dirty-g", &methods, &SourceDirtyBasis::Methods);
         assert!(wake(vec![add("bookmark:1", &[("type", "Bookmark"), ("text", "hello")])]).is_some());
         let removal = Method::RemoveNode {
             node_id: "bookmark:1".into(),
@@ -123,7 +170,7 @@ mod tests {
     fn a_commit_elsewhere_wakes_nothing() {
         bind("dirty-t2", "dirty-g2");
         let wake = |tenant: &str, graph: &str, methods: Vec<Method>| {
-            graph_source_dirty_input(tenant, graph, &methods)
+            graph_source_dirty_input(tenant, graph, &methods, &SourceDirtyBasis::Methods)
         };
         let other_type = add("doc:1", &[("type", "Document"), ("text", "hello")]);
         assert!(wake("dirty-t2", "dirty-g2", vec![other_type]).is_none());
@@ -132,5 +179,68 @@ mod tests {
         let bookmark = add("bookmark:3", &[("type", "Bookmark"), ("text", "hello")]);
         assert!(wake("dirty-t2", "other-graph", vec![bookmark.clone()]).is_none());
         assert!(wake("other-tenant", "dirty-g2", vec![bookmark]).is_none());
+    }
+
+    fn row_delta_wake(tenant: &str, graph: &str, staged: &[Method]) -> Option<SemanticDigest> {
+        graph_source_dirty_input(tenant, graph, &[], &SourceDirtyBasis::RowDelta(staged))
+    }
+
+    /// The node row delta a runtime-derived commit produces: `methods` applied to an empty
+    /// graph, diffed, as the staged commit path does.
+    #[cfg(feature = "rdf")]
+    fn staged_rows(methods: &[Method]) -> Vec<Method> {
+        let base = medulla_graph_core::graph::GraphCore::new().snapshot();
+        let staged = medulla_graph_core::graph::GraphCore::from_snapshot(base.clone(), 0).unwrap();
+        for method in methods {
+            crate::mutation_apply::apply(&staged, method).unwrap();
+        }
+        medulla_kernel::graph_delta::GraphRowDelta::between(&base, &staged.snapshot())
+            .unwrap()
+            .operations()
+            .to_vec()
+    }
+
+    #[cfg(feature = "rdf")]
+    #[test]
+    fn an_rdf_load_of_a_bound_node_wakes_the_source_through_the_row_delta() {
+        bind("dirty-t3", "dirty-g3");
+        let load = |turtle: &str| {
+            staged_rows(&[Method::AddTriples {
+                turtle: turtle.to_string(),
+                ntriples: String::new(),
+            }])
+        };
+        let bookmark = load(
+            "<urn:bookmark:1> a <https://example.test/vocab#Bookmark> ; \
+             <https://example.test/vocab#text> \"hello\" .",
+        );
+        assert!(row_delta_wake("dirty-t3", "dirty-g3", &bookmark).is_some());
+        let other = load(
+            "<urn:doc:1> a <https://example.test/vocab#Document> ; \
+             <https://example.test/vocab#text> \"hello\" .",
+        );
+        assert!(row_delta_wake("dirty-t3", "dirty-g3", &other).is_none());
+        let untexted = load("<urn:bookmark:2> a <https://example.test/vocab#Bookmark> .");
+        assert!(row_delta_wake("dirty-t3", "dirty-g3", &untexted).is_none());
+    }
+
+    #[test]
+    fn an_add_node_row_of_a_bound_node_wakes_the_source_through_the_row_delta() {
+        bind("dirty-t4", "dirty-g4");
+        let bookmark = [add("bookmark:9", &[("type", "Bookmark"), ("text", "hello")])];
+        assert!(row_delta_wake("dirty-t4", "dirty-g4", &bookmark).is_some());
+        let other = [add("doc:9", &[("type", "Document"), ("text", "hello")])];
+        assert!(row_delta_wake("dirty-t4", "dirty-g4", &other).is_none());
+        assert!(row_delta_wake("dirty-t4", "unbound-graph", &bookmark).is_none());
+    }
+
+    #[test]
+    fn a_replayed_commit_reproduces_the_recorded_wakeup() {
+        let recorded = SemanticDigest::from_bytes([7; 32]);
+        let wake = |basis: SourceDirtyBasis<'_>| {
+            graph_source_dirty_input("dirty-t5", "dirty-g5", &[], &basis)
+        };
+        assert_eq!(wake(SourceDirtyBasis::Recorded(Some(recorded))), Some(recorded));
+        assert_eq!(wake(SourceDirtyBasis::Recorded(None)), None);
     }
 }

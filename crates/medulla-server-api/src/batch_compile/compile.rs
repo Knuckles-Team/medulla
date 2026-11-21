@@ -148,6 +148,20 @@ pub fn compile_methods_with_outbox(
     methods: Vec<Method>,
     additional_outbox: Vec<MutationOutboxIntent>,
 ) -> Result<MutationBatch, String> {
+    compile_methods_with_source_dirty(ctx, methods, additional_outbox, SourceDirtyBasis::Methods)
+}
+
+pub use graph_source_dirty::{recorded_source_dirty_input, SourceDirtyBasis};
+
+/// [`compile_methods_with_outbox`] with the commit's node row delta named, so the
+/// graph-source dirty wakeup is derived from the rows the commit writes rather than from the
+/// shape of the method that asked for the write (MEDULLA-MEDIA-VOCAB-R001.102.2).
+pub fn compile_methods_with_source_dirty(
+    ctx: CompileBatch<'_>,
+    methods: Vec<Method>,
+    additional_outbox: Vec<MutationOutboxIntent>,
+    source_dirty: SourceDirtyBasis<'_>,
+) -> Result<MutationBatch, String> {
     // MEDULLA-DECISION-ENGINE-R173.8: a caller's write of `editStatus` is refused before
     // any operation is compiled.
     crate::mutation_batch::edit_status::refuse_direct_edit_status_all(&methods, ctx.status_writer)?;
@@ -171,7 +185,12 @@ pub fn compile_methods_with_outbox(
     let reasoning_events =
         medulla_epistemic::ReasoningProjectionWakeup::events_for_methods(&methods);
     let semantic_source_dirty_input =
-        graph_source_dirty::graph_source_dirty_input(ctx.tenant, ctx.graph, &methods);
+        graph_source_dirty::graph_source_dirty_input(
+            ctx.tenant,
+            ctx.graph,
+            &methods,
+            &source_dirty,
+        );
     let state_backed = ctx.authoritative_state.is_some();
     let operations = methods
         .into_iter()
