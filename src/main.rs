@@ -433,6 +433,13 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
         ),
     )
     .map_err(std::io::Error::other)?;
+    #[cfg(feature = "ann-redb")]
+    medulla_server::rebuild_graph_source_registry(std::path::Path::new(
+        args.persist_dir
+            .as_deref()
+            .expect("persist dir was required"),
+    ))
+    .map_err(std::io::Error::other)?;
 
     let limits = server_startup::admission_limits(&host_capacity);
     // OCC ACID transaction limits (CONCEPT:MEDULLA-KG.txn.multi-op-occ-acid).

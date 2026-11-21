@@ -98,7 +98,7 @@ pub async fn handle_semantic_index(
     // mutation so a binding admitted by this very operation is registered.
     let bound_service = Arc::clone(&service);
     let mutation = op.is_mutation();
-    register_graph_source(req_id, &bound_service).await;
+    register_graph_source(req_id, &persist_dir, &bound_service).await;
     let graph_source = match graph_source_for(req_id, &service, &op, graph_sources).await {
         Ok(snapshot) => snapshot,
         Err(response) => return response,
@@ -115,19 +115,27 @@ pub async fn handle_semantic_index(
     };
     let response = dispatch::handle(&context, op).await;
     if mutation {
-        register_graph_source(req_id, &bound_service).await;
+        register_graph_source(req_id, &persist_dir, &bound_service).await;
     }
     response
 }
 
 /// Record the binding's graph text property, when it has one, in the registry the graph commit
-/// chokepoint reads to decide which commits wake a semantic index.
-async fn register_graph_source(req_id: u64, service: &Arc<SemanticIndexService>) {
+/// chokepoint reads to decide which commits wake a semantic index, and in the durable directory
+/// the registry is rebuilt from at startup.
+async fn register_graph_source(req_id: u64, persist_dir: &Path, service: &Arc<SemanticIndexService>) {
     let service = Arc::clone(service);
+    let persist_dir = persist_dir.to_path_buf();
     let _ = blocking(req_id, move || {
         if let Some(binding) = service.binding()? {
             if let SemanticSourceSelector::GraphTextPropertyRef(selector) = &binding.source_selector
             {
+                crate::semantic_index_runtime::record_graph_source_binding(
+                    &persist_dir,
+                    &binding.tenant_id,
+                    &binding.binding_id,
+                )
+                .map_err(SemanticCodeError::Refused)?;
                 medulla_index_types::semantic_index::bind_graph_source(
                     &binding.tenant_id,
                     selector,
