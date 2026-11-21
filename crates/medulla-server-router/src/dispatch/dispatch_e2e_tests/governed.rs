@@ -119,7 +119,7 @@ async fn a_forged_actor_in_the_body_is_overwritten() {
     let state = state();
     send(&state, verified("svc:au", &[PROPOSE], &[]), propose()).await;
     let forged =
-        GovernedActor::from_identities("usr:bob", ["usr:bob"], false, [APPROVE.to_string()].into());
+        GovernedActor::from_identities("usr:bob", "tenant-a", ["usr:bob"], false, [APPROVE.to_string()].into());
     let response = send(
         &state,
         verified("svc:au", &[READ], &[]),

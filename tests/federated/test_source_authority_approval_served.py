@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import os
 import sys
 import uuid
 from pathlib import Path
 
 import pytest
+from conftest import tenant_request_context
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "source_authority"))
 from governed_ledger import (
@@ -19,7 +21,7 @@ from governed_ledger import (
     validate_repair,
 )
 
-from medulla.client import EngineResponseError
+from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated import reasoning
 from medulla.generated.graph_schema import SchemaSourceOriginViewApproved
 
@@ -58,6 +60,22 @@ async def test_authority_attach_needs_distinct_approver() -> None:
                 ledger.admin, lease_id, changed, source_id, source_authority=True
             )
         assert refused.value.code == "SCHEMA_APPROVAL_MISMATCH"
+
+        # A second tenant does not see the change: it is refused exactly as an
+        # unknown change id.
+        foreign = await MedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=tenant_request_context("tenant:foreign"),
+            graph_name=ledger.graph,
+        )
+        try:
+            with pytest.raises(EngineResponseError) as refused:
+                await attach_approved(
+                    foreign, lease_id, fields, source_id, source_authority=True
+                )
+            assert refused.value.code == "SCHEMA_APPROVAL_REQUIRED"
+        finally:
+            await foreign.close()
 
         # Digest X attaches X.
         await validate_repair(ledger.admin, fields, source_id, source_authority=True)

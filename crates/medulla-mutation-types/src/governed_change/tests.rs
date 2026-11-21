@@ -9,6 +9,7 @@ const APPROVE: &str = "governance:approve-schema-repair";
 fn actor(who: &str, scopes: &[&str], delegated: bool) -> GovernedActor {
     GovernedActor::from_identities(
         who,
+        "tenant-a",
         [who],
         delegated,
         scopes.iter().map(|scope| scope.to_string()).collect(),

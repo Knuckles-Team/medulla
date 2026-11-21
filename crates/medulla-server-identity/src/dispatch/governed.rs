@@ -37,6 +37,7 @@ pub fn governed_actor(context: &VerifiedRequestContext) -> GovernedActor {
         .chain(claims.delegation.iter().map(String::as_str));
     GovernedActor::from_identities(
         &claims.agent_id,
+        context.tenant(),
         identities,
         !claims.delegation.is_empty(),
         scopes,

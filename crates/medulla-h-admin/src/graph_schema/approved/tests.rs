@@ -134,6 +134,20 @@ impl Served {
         key: &str,
         method: Method,
     ) -> Response {
+        self.call_in_tenant(TENANT, principal, scopes, graph, key, method)
+            .await
+    }
+
+    /// One signed call from `principal` verified in `tenant`.
+    async fn call_in_tenant(
+        &self,
+        tenant: &str,
+        principal: &str,
+        scopes: &[&str],
+        graph: &str,
+        key: &str,
+        method: Method,
+    ) -> Response {
         let id = next_id();
         let request = medulla_server_auth::auth::scoped_test_request_on(
             SECRET,
@@ -142,7 +156,7 @@ impl Served {
             method,
             medulla_server_auth::auth::ScopedTestCaller {
                 principal,
-                tenant: TENANT,
+                tenant,
                 scopes,
                 nonce: &format!("schema-approval-nonce-{id}"),
                 idempotency_key: key,
@@ -155,6 +169,11 @@ impl Served {
     /// approve it as another. The approved change is what an authority attach
     /// names, as `governed_approval_ref(change_id)`; no lease is issued.
     async fn govern_authority(&self, change_id: &str, digest: &str) {
+        self.govern_authority_for(change_id, digest, 600_000).await;
+    }
+
+    /// `govern_authority` with an approval window of `window_ms`.
+    async fn govern_authority_for(&self, change_id: &str, digest: &str, window_ms: u64) {
         use medulla_mutation_types::governed_change::{
             GovernedApproval, GovernedChangeOp, GovernedProposal,
         };
@@ -167,7 +186,7 @@ impl Served {
                     digest: digest.to_string(),
                     justification: "authority candidate".to_string(),
                     proposal_ttl_ms: 600_000,
-                    window_ms: 600_000,
+                    window_ms,
                 },
             },
             actor: None,
@@ -716,4 +735,93 @@ async fn a_retried_authority_attach_replays_its_receipt() {
         .attach_contract("attach:other", &approval_ref, authority, None)
         .await;
     assert!(refusal(&other).contains("already used"));
+}
+
+/// An authority attach under `reference` sent by a second verified tenant.
+async fn foreign_attach(
+    served: &Served,
+    contract: RecordContract,
+    reference: String,
+    key: &str,
+) -> Response {
+    let op = GraphSchemaOp::AttachApproved {
+        source_id: SOURCE.to_string(),
+        contract,
+        approval_lease_id: reference,
+        expected_digest: None,
+        if_composed_digest: None,
+    };
+    let method = Method::GraphSchema { op: Box::new(op) };
+    served
+        .call_in_tenant("tenant-foreign", ADMIN, &["*"], GRAPH, key, method)
+        .await
+}
+
+// spec: MEDULLA-SRC-AUTH-R003.3
+#[tokio::test]
+async fn another_tenants_approved_change_answers_like_an_unknown_change() {
+    let served = Served::new().await;
+    served.clean_shadow().await;
+    let mut authority = contract();
+    authority.source_authority = true;
+    let digest = approved_candidate_digest(SOURCE, &authority);
+    served.govern_authority("change-tenant", &digest).await;
+    let approval_ref = governed_approval_ref("change-tenant");
+
+    // The proposing tenant's change, attached by another tenant, is refused
+    // exactly as a change id the ledger does not hold.
+    let foreign = foreign_attach(&served, authority.clone(), approval_ref.clone(), "foreign:held").await;
+    let unknown = foreign_attach(
+        &served,
+        authority.clone(),
+        governed_approval_ref("change-never-proposed"),
+        "foreign:unknown",
+    )
+    .await;
+    assert!(refusal(&foreign).starts_with("SCHEMA_APPROVAL_REQUIRED"));
+    assert_eq!(foreign.error, unknown.error);
+    assert_eq!(foreign.error_detail, unknown.error_detail);
+
+    // The refusal spent nothing: the proposing tenant still attaches.
+    let committed: GraphSchemaCommitted = decode(
+        served
+            .attach_contract("attach:tenant", &approval_ref, authority, None)
+            .await,
+    );
+    assert!(committed.changed);
+}
+
+// spec: MEDULLA-SRC-AUTH-R003.3
+#[tokio::test]
+async fn a_retry_after_the_approval_window_closed_still_replays() {
+    let served = Served::new().await;
+    served.clean_shadow().await;
+    let mut authority = contract();
+    authority.source_authority = true;
+    let digest = approved_candidate_digest(SOURCE, &authority);
+    served
+        .govern_authority_for("change-window", &digest, 1_000)
+        .await;
+    let approval_ref = governed_approval_ref("change-window");
+
+    let first: GraphSchemaCommitted = decode(
+        served
+            .attach_contract("attach:window", &approval_ref, authority.clone(), None)
+            .await,
+    );
+    assert!(first.changed);
+
+    tokio::time::sleep(std::time::Duration::from_millis(1_300)).await;
+
+    // The window is closed: a new request is refused, the same key replays.
+    let late = served
+        .attach_contract("attach:late", &approval_ref, authority.clone(), None)
+        .await;
+    assert!(refusal(&late).starts_with("SCHEMA_APPROVAL_REQUIRED"));
+    let replay: GraphSchemaCommitted = decode(
+        served
+            .attach_contract("attach:window", &approval_ref, authority, None)
+            .await,
+    );
+    assert_eq!(replay, first);
 }

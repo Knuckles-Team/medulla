@@ -7898,6 +7898,7 @@ class GovernedActor(BaseModel):
     delegated: bool
     parties: list[str]
     scopes: Annotated[list[str], AfterValidator(_eg_unique_items)]
+    tenant: str
 
 
 class GovernedApproval(BaseModel):
@@ -7921,6 +7922,7 @@ class GovernedChange(BaseModel):
     proposed_at_ms: Annotated[int, Field(ge=0)]
     proposer: str
     proposer_parties: list[str]
+    proposer_tenant: str
     status: GovernedStatus
     target: str
     window_ms: Annotated[int, Field(ge=0)]

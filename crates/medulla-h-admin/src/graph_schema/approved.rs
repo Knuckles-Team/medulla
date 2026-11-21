@@ -46,8 +46,12 @@ pub(super) async fn handle_gateway(
     method: &Method,
     op: &GraphSchemaOp,
 ) -> Response {
-    if let Err(error) = admit(tenant_id, ctx, op).await {
-        return Response::err(ctx.req_id, error);
+    // A retry under the same request key replays the original receipt before
+    // any re-verification, so it still replays after the approval window closes.
+    if !already_committed(ctx).await {
+        if let Err(error) = admit(tenant_id, ctx, op).await {
+            return Response::err(ctx.req_id, error);
+        }
     }
     let op = op.clone();
     let graph_name = ctx.graph_name.to_string();
@@ -55,6 +59,28 @@ pub(super) async fn handle_gateway(
         super::apply(core, &graph_name, &op)
     })
     .await
+}
+
+/// Whether this request key already committed a batch on the graph: the retry
+/// of an attach that landed. The commit below answers it with the stored
+/// receipt through the batch idempotency. A failed lookup is not a replay, so
+/// the approval is verified as for a first attempt.
+async fn already_committed(ctx: &MutationCtx<'_>) -> bool {
+    let Some(persistence) = ctx.persistence else {
+        return false;
+    };
+    let batch_id = medulla_server_api::batch_compile::opaque_idempotency_key_for_context(
+        "rpc",
+        ctx.tenant_scope,
+        ctx.graph_name,
+        ctx.caller,
+        ctx.idempotency_key,
+    );
+    let fname = medulla_kernel::persist::sanitize(ctx.graph_name);
+    matches!(
+        persistence.read_mutation_batch(&fname, &batch_id).await,
+        Ok(Some(_))
+    )
 }
 
 /// The approval check that must pass before the attach is staged. An ordinary
@@ -81,7 +107,14 @@ async fn admit(
     let candidate = approved_candidate_digest(source_id, contract);
     let now_ms = medulla_server_api::txn::now_ms();
     if contract.source_authority {
-        return verify_governed_change(ctx, approval_lease_id, source_id, &candidate, now_ms);
+        return verify_governed_change(
+            ctx,
+            tenant_id,
+            approval_lease_id,
+            source_id,
+            &candidate,
+            now_ms,
+        );
     }
     let lease = read_lease(ctx, tenant_id, approval_lease_id).await?;
     if lease.is_none() && expected_digest.is_some() {
@@ -159,10 +192,14 @@ pub(super) fn spend_authority_approval(core: &GraphCore, op: &GraphSchemaOp) -> 
 /// same `source_id` and the same candidate digest. `SCHEMA_APPROVAL_MISMATCH`
 /// when the reference names no change or the change names another kind, source
 /// or digest; `SCHEMA_APPROVAL_REQUIRED` when the change is unknown, not
-/// approved or past its window.
+/// approved or past its window. The change must also have been proposed by the
+/// attaching request's verified tenant (`tenant_id`): another tenant's change
+/// answers byte-identically to an unknown change id, so the ledger is no
+/// existence oracle across tenants.
 #[cfg(feature = "security")]
 fn verify_governed_change(
     ctx: &MutationCtx<'_>,
+    tenant_id: &str,
     approval_ref: &str,
     source_id: &str,
     candidate: &str,
@@ -177,17 +214,19 @@ fn verify_governed_change(
     };
     let change_id = governed_change_of_ref(approval_ref)
         .ok_or_else(|| mismatch("the approval reference names no governed change"))?;
+    let unknown = || {
+        format!(
+            "{}: the governed change of this approval is unknown",
+            GraphSchemaErrorCode::ApprovalRequired.as_str()
+        )
+    };
     let change = ctx
         .isolation
         .rbac()
         .governed()
         .get(change_id, now_ms)
-        .ok_or_else(|| {
-            format!(
-                "{}: the governed change of this approval is unknown",
-                GraphSchemaErrorCode::ApprovalRequired.as_str()
-            )
-        })?;
+        .filter(|change| change.proposer_tenant == tenant_id)
+        .ok_or_else(unknown)?;
     if change.status != GovernedStatus::Approved {
         return Err(format!(
             "{}: the governed change of this approval is not approved",
@@ -210,6 +249,7 @@ fn verify_governed_change(
 #[cfg(not(feature = "security"))]
 fn verify_governed_change(
     _ctx: &MutationCtx<'_>,
+    _tenant_id: &str,
     _approval_ref: &str,
     _source_id: &str,
     _candidate: &str,

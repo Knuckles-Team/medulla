@@ -93,6 +93,8 @@ pub fn kind_scopes(kind: &str) -> Option<(&'static str, &'static str)> {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct GovernedActor {
     pub agent_id: String,
+    /// The actor's verified tenant, stamped from the verified request context.
+    pub tenant: String,
     /// One-way ids of the principal, the effective agent and every
     /// delegation hop (sorted, unique) -- the two-person comparison set.
     pub parties: Vec<String>,
@@ -105,6 +107,7 @@ impl GovernedActor {
     /// Build an actor from raw verified identities (hashed, never stored).
     pub fn from_identities<'a>(
         agent_id: &'a str,
+        tenant: &str,
         identities: impl IntoIterator<Item = &'a str>,
         delegated: bool,
         scopes: BTreeSet<String>,
@@ -118,6 +121,7 @@ impl GovernedActor {
         parties.dedup();
         Self {
             agent_id: agent_id.to_string(),
+            tenant: tenant.to_string(),
             parties,
             delegated,
             scopes,
@@ -290,6 +294,9 @@ pub struct GovernedChange {
     pub justification: String,
     pub proposer: String,
     pub proposer_parties: Vec<String>,
+    /// The proposer's verified tenant (MEDULLA-SRC-AUTH-R003.3): a consumer of
+    /// the change must act for this tenant.
+    pub proposer_tenant: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub approver: Option<String>,
     pub status: GovernedStatus,
@@ -578,6 +585,7 @@ impl GovernedLedger {
             justification: request.justification.clone(),
             proposer: actor.agent_id.clone(),
             proposer_parties: actor.parties.clone(),
+            proposer_tenant: actor.tenant.clone(),
             approver: None,
             status: GovernedStatus::Proposed,
             proposed_at_ms: now_ms,
