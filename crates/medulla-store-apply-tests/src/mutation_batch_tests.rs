@@ -4136,6 +4136,7 @@ fn commit_envelope_at(
         "graph-a",
         envelope,
         123,
+        None,
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut audit,
@@ -4377,6 +4378,7 @@ fn commit_envelopes_at(
         "graph-a",
         envelopes,
         123,
+        None,
         DurableCrypto::none(),
         #[cfg(feature = "security")]
         &mut audit,
@@ -5841,4 +5843,94 @@ fn no_graph_version_bump_goes_unpublished() {
     );
     drop(db);
     let _ = std::fs::remove_file(path);
+}
+
+fn ledger_count(principal: &str) -> medulla_store::redb_store::write_ledger::WriteCount {
+    medulla_store::redb_store::write_ledger::WriteCount {
+        graph: "graph-a".to_string(),
+        principal: principal.to_string(),
+        day: 9,
+    }
+}
+
+fn ledger_total(db: &Shard) -> Vec<(String, u64)> {
+    medulla_store::redb_store::write_ledger::write_days(db, "graph-a", 0).unwrap()
+}
+
+// spec: MEDULLA-IDENTITY-R700.7
+#[test]
+fn cross_modal_commit_counts_its_write_in_its_own_transaction() {
+    let path = temp_path("ledger-crossmodal");
+    let db = open(&path);
+    let count = ledger_count("cross-writer");
+    let mutation = batch("batch-ledger-cross", "idem-ledger-cross");
+    #[cfg(feature = "security")]
+    let mut audit = AuditTailCache::new();
+    commit_mutation_batch_crossmodal(
+        &db,
+        CrossModalCommitInput {
+            graph_fname: "graph-a",
+            batch: &mutation,
+            rows: CrossModalBatchRows {
+                methods: &[],
+                vectors: &[],
+                blob_refs: &[],
+                measurements: &[],
+            },
+            result_msgpack: Some(&[0x81, 0xa2, b'o', b'k']),
+            committed_at_ms: 101,
+            write_count: Some(&count),
+        },
+        DurableCrypto::none(),
+        #[cfg(feature = "security")]
+        &mut audit,
+    )
+    .unwrap();
+    assert_eq!(ledger_total(&db), vec![("cross-writer".to_string(), 1)]);
+    let _ = std::fs::remove_file(path);
+}
+
+// spec: MEDULLA-IDENTITY-R700.7
+#[test]
+fn change_envelope_commits_count_each_envelope_as_a_write() {
+    let path = temp_path("ledger-envelopes");
+    let db = open(&path);
+    let count = ledger_count("envelope-writer");
+    #[cfg(feature = "security")]
+    let mut audit = AuditTailCache::new();
+    commit_change_envelope(
+        &db,
+        "graph-a",
+        &governed_envelope("ledger-batch-1", "ledger-key-1", 1),
+        123,
+        Some(&count),
+        DurableCrypto::none(),
+        #[cfg(feature = "security")]
+        &mut audit,
+    )
+    .unwrap();
+    assert_eq!(ledger_total(&db), vec![("envelope-writer".to_string(), 1)]);
+    let _ = std::fs::remove_file(path);
+
+    let page_path = temp_path("ledger-envelope-page");
+    let page_db = open(&page_path);
+    let page: Vec<ChangeEnvelope> = (0..3).map(governed_envelope_seq).collect();
+    #[cfg(feature = "security")]
+    let mut page_audit = AuditTailCache::new();
+    commit_change_envelopes(
+        &page_db,
+        "graph-a",
+        &page,
+        124,
+        Some(&count),
+        DurableCrypto::none(),
+        #[cfg(feature = "security")]
+        &mut page_audit,
+    )
+    .unwrap();
+    assert_eq!(
+        ledger_total(&page_db),
+        vec![("envelope-writer".to_string(), 3)]
+    );
+    let _ = std::fs::remove_file(page_path);
 }

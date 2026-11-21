@@ -292,6 +292,7 @@ macro_rules! writer_command_arms {
                 measurements,
                 result_msgpack,
                 committed_at_ms,
+                write_count,
             } = *payload;
             // Preserve queue order, then let one immediate transaction own every
             // modality and every universal coordinator record.
@@ -309,6 +310,7 @@ macro_rules! writer_command_arms {
                     },
                     result_msgpack: result_msgpack.as_deref(),
                     committed_at_ms,
+                    write_count: write_count.as_ref(),
                 },
                 crypto,
                 #[cfg(feature = "security")]
@@ -464,6 +466,7 @@ macro_rules! writer_command_arms {
                 graph,
                 envelope,
                 committed_at_ms,
+                write_count,
                 source_budget,
             } = *payload;
             // Ordering and atomicity mirror MutationBatch: pending grouped writes
@@ -475,6 +478,7 @@ macro_rules! writer_command_arms {
                 &envelope,
                 source_budget.as_ref(),
                 committed_at_ms,
+                write_count.as_ref(),
                 crypto,
                 #[cfg(feature = "security")]
                 &mut pending.audit_tail,
@@ -487,6 +491,7 @@ macro_rules! writer_command_arms {
                 graph,
                 envelopes,
                 committed_at_ms,
+                write_count,
             } = *payload;
             // Same ordering/atomicity as the single envelope: flush any pending
             // grouped writes first, then this whole page owns one indivisible fsync.
@@ -496,6 +501,7 @@ macro_rules! writer_command_arms {
                 &graph,
                 &envelopes,
                 committed_at_ms,
+                write_count.as_ref(),
                 crypto,
                 #[cfg(feature = "security")]
                 &mut pending.audit_tail,

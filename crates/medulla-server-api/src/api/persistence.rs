@@ -1008,6 +1008,12 @@ pub struct RaftMutationContext {
     #[serde(deserialize_with = "deserialize_required_option")]
     pub fencing_token: Option<u64>,
     pub created_at_ms: u64,
+    /// The verified principal of the counted write this entry replicates
+    /// (MEDULLA-IDENTITY-R700.7). The proposer fills it; every replica applies the entry
+    /// under it, so the write-day count is made from the log alone and needs no request
+    /// scope on the state-machine task. `None` for a write that is not counted.
+    #[serde(default)]
+    pub write_principal: Option<String>,
 }
 
 /// The timing and placement fence attached to an already verified mutation.
@@ -1041,6 +1047,7 @@ impl RaftMutationContext {
             placement_epoch: timing.placement_epoch,
             fencing_token: timing.fencing_token,
             created_at_ms: timing.created_at_ms,
+            write_principal: None,
         };
         context.validate()?;
         if context.tenant_scope == Self::internal_tenant_scope() {
@@ -1075,7 +1082,14 @@ impl RaftMutationContext {
             placement_epoch: 0,
             fencing_token: None,
             created_at_ms,
+            write_principal: None,
         }
+    }
+
+    /// The same authority naming `principal` as the counted writer the replicas record.
+    pub fn with_write_principal(mut self, principal: Option<String>) -> Self {
+        self.write_principal = principal;
+        self
     }
 
     pub fn internal_tenant_scope() -> String {

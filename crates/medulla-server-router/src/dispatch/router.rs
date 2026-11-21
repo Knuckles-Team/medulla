@@ -346,29 +346,43 @@ async fn dispatch_request_method_inner(
     authority: DispatchAuthority,
 ) -> Response {
     let method = analytical_query_job(req.method, &req.graph, verified_context);
+    // Every counted write names its verified principal to the durable commit it makes
+    // (MEDULLA-IDENTITY-R700.7), whichever plane handles it: graph, change-envelope and
+    // cross-modal commits all read the scope where they commit.
+    let counts_as_write = medulla_server_auth::access::requires_write(&method);
     let req = DispatchHeader {
         id: req.id,
         graph: req.graph,
         agent_id: req.agent_id,
     };
-    let ctx = DispatchCtx {
-        state,
-        req: &req,
-        verified_context,
-        state_machine_authorized: authority.state_machine_authorized(),
-        identity_bootstrap: authority.identity_bootstrap(),
+    let dispatch = async {
+        let ctx = DispatchCtx {
+            state,
+            req: &req,
+            verified_context,
+            state_machine_authorized: authority.state_machine_authorized(),
+            identity_bootstrap: authority.identity_bootstrap(),
+        };
+        let method = match method_handler_registry().dispatch(ctx, method).await {
+            ControlFlow::Break(response) => return response,
+            ControlFlow::Continue(method) => method,
+        };
+        dispatch_boxed(dispatch_graph_op(
+            state,
+            &req.graph,
+            req.id,
+            req.agent_id.as_deref(),
+            verified_context,
+            method,
+        ))
+        .await
     };
-    let method = match method_handler_registry().dispatch(ctx, method).await {
-        ControlFlow::Break(response) => return response,
-        ControlFlow::Continue(method) => method,
-    };
-    dispatch_boxed(dispatch_graph_op(
-        state,
-        &req.graph,
-        req.id,
-        req.agent_id.as_deref(),
-        verified_context,
-        method,
-    ))
-    .await
+    if counts_as_write {
+        return medulla_server_api::request_scope::with_writer(
+            verified_context.principal().to_string(),
+            dispatch,
+        )
+        .await;
+    }
+    dispatch.await
 }

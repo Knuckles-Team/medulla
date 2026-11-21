@@ -416,7 +416,9 @@ async fn try_replicate_change_envelope(
         graph_type,
         command,
         committed_at_ms,
-        mutation,
+        // The proposer names the counted writer; every replica counts it when it applies.
+        mutation: mutation
+            .with_write_principal(medulla_server_api::request_scope::current_writer()),
     };
     Some(match routed.handle.client_write(request).await {
         Ok(response) if response.native_error.is_some() => {

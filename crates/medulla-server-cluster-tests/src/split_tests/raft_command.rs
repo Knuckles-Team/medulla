@@ -183,6 +183,7 @@ fn graph_request(
             placement_epoch: 11,
             fencing_token: Some(group_id),
             created_at_ms: 17,
+            write_principal: None,
         },
     }
 }

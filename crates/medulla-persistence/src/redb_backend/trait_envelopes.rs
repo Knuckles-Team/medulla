@@ -16,6 +16,7 @@ pub(super) async fn commit_one_envelope(
             graph: graph_fname.to_string(),
             envelope: envelope.clone(),
             committed_at_ms,
+            write_count: super::backend_write_ledger::current_write_count(graph_fname),
             source_budget,
         }),
         done,
@@ -95,6 +96,7 @@ macro_rules! persistence_envelopes {
                     graph: graph_fname.to_string(),
                     envelopes: envelopes.to_vec(),
                     committed_at_ms,
+                    write_count: super::backend_write_ledger::current_write_count(graph_fname),
                 }),
                 done,
             };

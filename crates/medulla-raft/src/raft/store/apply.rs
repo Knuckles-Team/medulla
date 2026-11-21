@@ -46,9 +46,16 @@ impl MedullaStore {
             }
 
             // Phase 2: an ordinary (non-native) replicated graph mutation --
-            // ChangeEnvelope or a plain graph method.
-            self.apply_ordinary_graph_mutation(req, &server_secret)
-                .await
+            // ChangeEnvelope or a plain graph method. A counted write is applied under the
+            // principal its proposer named, so the commit counts it in its own transaction
+            // (MEDULLA-IDENTITY-R700.7) on every replica alike.
+            let apply = self.apply_ordinary_graph_mutation(req, &server_secret);
+            match req.mutation.write_principal.clone() {
+                Some(principal) => {
+                    medulla_server_api::request_scope::with_writer(principal, apply).await
+                }
+                None => apply.await,
+            }
         })
     }
 

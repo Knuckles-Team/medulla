@@ -126,6 +126,9 @@ pub struct CrossModalCommitInput<'a> {
     pub rows: CrossModalBatchRows<'a>,
     pub result_msgpack: Option<&'a [u8]>,
     pub committed_at_ms: u64,
+    /// The counted write this cross-modal batch is (MEDULLA-IDENTITY-R700.7), applied in the
+    /// batch's own transaction.
+    pub write_count: Option<&'a medulla_store::redb_store::write_ledger::WriteCount>,
 }
 
 /// Commit a canonical cross-modal batch through the universal status/fence/
@@ -147,6 +150,7 @@ pub fn commit_mutation_batch_crossmodal(
                 input.result_msgpack,
                 input.committed_at_ms,
             )
+            .with_write_count(input.write_count)
         },
         crypto,
         #[cfg(feature = "security")]

@@ -397,6 +397,7 @@ mod tests {
                 placement_epoch: 0,
                 fencing_token: None,
                 created_at_ms: 11,
+                write_principal: None,
             },
         };
         (record, request, principal)

@@ -8,6 +8,7 @@ pub fn commit_change_envelope(
     graph_fname: &str,
     envelope: &ChangeEnvelope,
     committed_at_ms: u64,
+    write_count: Option<&medulla_store::redb_store::write_ledger::WriteCount>,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
 ) -> Result<ChangeEnvelopeCommit, String> {
@@ -17,6 +18,7 @@ pub fn commit_change_envelope(
         envelope,
         None,
         committed_at_ms,
+        write_count,
         crypto,
         #[cfg(feature = "security")]
         audit_tail,
@@ -29,6 +31,7 @@ pub fn commit_change_envelope_with_budget(
     envelope: &ChangeEnvelope,
     source_budget: Option<&medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
     committed_at_ms: u64,
+    write_count: Option<&medulla_store::redb_store::write_ledger::WriteCount>,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
 ) -> Result<ChangeEnvelopeCommit, String> {
@@ -46,7 +49,7 @@ pub fn commit_change_envelope_with_budget(
                 // No authoritative state, so audited is inert here.
                 audited: true,
                 crashpoint: None,
-                write_count: None,
+                write_count,
             },
             crossmodal: None,
             result_msgpack: None,
@@ -105,6 +108,7 @@ pub fn commit_change_envelopes(
     graph_fname: &str,
     envelopes: &[ChangeEnvelope],
     committed_at_ms: u64,
+    write_count: Option<&medulla_store::redb_store::write_ledger::WriteCount>,
     crypto: DurableCrypto<'_>,
     #[cfg(feature = "security")] audit_tail: &mut AuditTailCache,
 ) -> Result<Vec<ChangeEnvelopeCommit>, ChangeEnvelopesError> {
@@ -135,6 +139,7 @@ pub fn commit_change_envelopes(
             bound: &prepared.bound,
             outbox_counts: &prepared.outbox_counts,
             members: &prepared.members,
+            write_count,
         },
         session,
         committed_at_ms,
@@ -232,6 +237,8 @@ struct ChangeEnvelopeBatch<'a> {
     bound: &'a [MutationBatch],
     outbox_counts: &'a [u32],
     members: &'a [(String, Arc<OwnedStoreHandle<GraphShardOwner>>)],
+    /// The counted write of the request: each envelope this page commits is one write.
+    write_count: Option<&'a medulla_store::redb_store::write_ledger::WriteCount>,
 }
 
 struct ChangeEnvelopeRowInput<'a> {
@@ -242,6 +249,7 @@ struct ChangeEnvelopeRowInput<'a> {
     committed_at_ms: u64,
     control_source: Option<u64>,
     graph_source: Option<u64>,
+    write_count: Option<&'a medulla_store::redb_store::write_ledger::WriteCount>,
 }
 
 enum ChangeEnvelopeStart<'a> {
@@ -411,6 +419,7 @@ fn process_change_envelope_at(
             committed_at_ms,
             control_source,
             graph_source,
+            write_count: batch.write_count,
         },
         crypto,
         #[cfg(feature = "security")]
@@ -494,7 +503,7 @@ fn finish_change_envelope_rows(
                 committed_at_ms: input.committed_at_ms,
                 audited: true,
                 crashpoint: None,
-                write_count: None,
+                write_count: input.write_count,
             },
             crossmodal: None,
         },

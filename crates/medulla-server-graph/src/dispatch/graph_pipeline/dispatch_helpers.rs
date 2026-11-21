@@ -646,7 +646,10 @@ fn build_bound_graph_request(
         graph_name: input.graph_name.to_string(),
         graph_type: input.graph_type,
         committed_at_ms: input.committed_at_ms,
-        mutation: input.mutation,
+        // The proposer names the counted writer; every replica counts it when it applies.
+        mutation: input
+            .mutation
+            .with_write_principal(medulla_server_api::request_scope::current_writer()),
         command,
     };
     request.bind_graph_command(input.server_secret, input.group_id)?;
@@ -869,5 +872,51 @@ mod tests {
         );
 
         backend.shutdown();
+    }
+}
+
+#[cfg(all(test, feature = "raft"))]
+mod write_principal_tests {
+    use super::*;
+
+    // spec: MEDULLA-IDENTITY-R700.7
+    #[tokio::test]
+    async fn the_proposer_fills_the_counted_writer_into_the_replicated_request() {
+        let build = |method: Method| {
+            build_bound_graph_request(BoundGraphRequest {
+                graph_name: "ledger_graph",
+                graph_fname: medulla_kernel::persist::sanitize("ledger_graph"),
+                graph_type: medulla_protocol_types::protocol::GraphType::Global,
+                committed_at_ms: 5,
+                mutation: medulla_server_api::api::persistence::RaftMutationContext::internal(
+                    "write-principal-test",
+                    "ledger_graph",
+                    "coordinator",
+                    1,
+                    5,
+                ),
+                method,
+                server_secret: "write-principal-secret",
+                group_id: medulla_direct_state::direct_state::DEFAULT_GROUP,
+            })
+            .expect("bound request")
+        };
+        let method = || Method::AddNode {
+            node_id: "n".to_string(),
+            properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({})).expect("encode"),
+        };
+        let counted = medulla_server_api::request_scope::with_writer(
+            "writer-a".to_string(),
+            async { build(method()) },
+        )
+        .await;
+        assert_eq!(counted.mutation.write_principal.as_deref(), Some("writer-a"));
+        // The apply on a replica reads it back from the log entry.
+        let wire = serde_json::to_vec(&counted.mutation).expect("encode context");
+        let replica: medulla_server_api::api::persistence::RaftMutationContext =
+            serde_json::from_slice(&wire).expect("decode context");
+        assert_eq!(replica.write_principal.as_deref(), Some("writer-a"));
+        // A write outside a counted request carries no writer.
+        assert_eq!(build(method()).mutation.write_principal, None);
     }
 }

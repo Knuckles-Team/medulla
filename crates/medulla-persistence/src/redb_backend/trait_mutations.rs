@@ -117,6 +117,7 @@ macro_rules! persistence_mutations {
                     measurements: args.measurements.to_vec(),
                     result_msgpack: args.result_msgpack.map(ToOwned::to_owned),
                     committed_at_ms: args.committed_at_ms,
+                    write_count: current_write_count(graph_fname),
                 }),
                 done,
             };

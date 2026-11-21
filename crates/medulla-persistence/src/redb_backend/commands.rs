@@ -60,12 +60,16 @@ pub struct CrossModalBatchPayload {
     pub(crate) measurements: Vec<medulla_store::MeasurementBatch>,
     pub(crate) result_msgpack: Option<Vec<u8>>,
     pub(crate) committed_at_ms: u64,
+    /// The counted write this batch is (MEDULLA-IDENTITY-R700.7).
+    pub(crate) write_count: Option<medulla_store::redb_store::write_ledger::WriteCount>,
 }
 
 pub struct ChangeEnvelopePayload {
     pub(crate) graph: String,
     pub(crate) envelope: ChangeEnvelope,
     pub(crate) committed_at_ms: u64,
+    /// The counted write this envelope is (MEDULLA-IDENTITY-R700.7).
+    pub(crate) write_count: Option<medulla_store::redb_store::write_ledger::WriteCount>,
     pub(crate) source_budget:
         Option<medulla_store::redb_store::enrichment_budget::SourceBudgetAuthority>,
 }
@@ -76,6 +80,8 @@ pub struct ChangeEnvelopesPayload {
     pub(crate) graph: String,
     pub(crate) envelopes: Vec<ChangeEnvelope>,
     pub(crate) committed_at_ms: u64,
+    /// The counted write of the request; each envelope committed is one write.
+    pub(crate) write_count: Option<medulla_store::redb_store::write_ledger::WriteCount>,
 }
 
 /// How long a shard writer may take to tear down after acknowledging
