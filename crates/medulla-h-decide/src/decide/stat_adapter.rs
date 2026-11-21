@@ -36,7 +36,7 @@ use medulla_decision_types::{
     decision::statistical::retrieval_adapter::MAX_ADAPTER_RANK,
     decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
     decision::statistical::retrieval_adapter::{
-        AdapterMonitorRequest, AdapterMonitored, AdapterScope, AdapterSide, MonitorState,
+        AdapterMonitorRequest, AdapterMonitored, AdapterScope, AdapterSide, AdapterVerdict,
         OutcomeSource, SourceCount,
     },
     decision::statistical::retrieval_generation::IndexAdapterRef,
@@ -558,15 +558,15 @@ pub(super) fn monitor(
     let side = fitted.body.side;
     let verdict = monitor_adapter_for(side, &items, &directions, min_outcomes);
     let evaluation = evaluate_for(side, &items, &directions);
-    let state = match verdict {
-        MonitorVerdict::Insufficient { .. } => MonitorState::Watching,
-        MonitorVerdict::Healthy { .. } => MonitorState::Healthy,
-        MonitorVerdict::Rollback { .. } => MonitorState::RolledBack,
+    let adapter_verdict = match verdict {
+        MonitorVerdict::Insufficient { .. } => AdapterVerdict::Watching,
+        MonitorVerdict::Healthy { .. } => AdapterVerdict::Healthy,
+        MonitorVerdict::Rollback { .. } => AdapterVerdict::RolledBack,
     };
     let monitored = AdapterMonitored {
         adapter_digest: digest.clone(),
         scope: request.scope.clone(),
-        state,
+        verdict: adapter_verdict,
         window: request.window,
         outcomes: evaluation.n,
         wins: evaluation.wins,
@@ -577,7 +577,7 @@ pub(super) fn monitor(
         )),
         min_outcomes,
     };
-    if state == MonitorState::RolledBack {
+    if adapter_verdict == AdapterVerdict::RolledBack {
         let at = PointerMove {
             tenant,
             key,

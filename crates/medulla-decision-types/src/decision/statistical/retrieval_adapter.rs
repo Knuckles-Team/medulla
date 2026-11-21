@@ -263,13 +263,14 @@ pub struct AdapterMonitorRequest {
     pub window: RecordWindow,
 }
 
-/// The state machine of one monitor run: `watching` while the window holds
-/// too few outcomes, `healthy`, or `rolled_back`; the only writer is the
-/// monitor write.
+/// What one monitor call concluded: `watching` while the window holds too few
+/// outcomes, `healthy`, or `rolled_back`. A verdict computed once from the window
+/// counts and returned, never stored and later moved: not a lifecycle
+/// (MEDULLA-DECISION-ENGINE-R831.5).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum MonitorState {
+pub enum AdapterVerdict {
     Watching,
     Healthy,
     RolledBack,
@@ -283,7 +284,9 @@ pub enum MonitorState {
 pub struct AdapterMonitored {
     pub adapter_digest: String,
     pub scope: AdapterScope,
-    pub state: MonitorState,
+    /// The monitor's verdict. The wire key stays `state`.
+    #[serde(rename = "state")]
+    pub verdict: AdapterVerdict,
     pub window: RecordWindow,
     pub outcomes: u64,
     pub wins: u64,
@@ -307,6 +310,27 @@ pub struct AdapterFitted {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.5
+    #[test]
+    fn monitor_verdict_is_not_a_lifecycle_field() {
+        let monitored = AdapterMonitored {
+            adapter_digest: "sha256:a".to_string(),
+            scope: AdapterScope::Graph,
+            verdict: AdapterVerdict::RolledBack,
+            window: RecordWindow { from_ms: 1, to_ms: 2 },
+            outcomes: 10,
+            wins: 2,
+            losses: 8,
+            win_rate_upper_q16: 3,
+            min_outcomes: 5,
+        };
+        let wire = serde_json::to_value(&monitored).unwrap();
+        assert_eq!(wire["state"], "rolled_back");
+        assert!(wire.get("verdict").is_none());
+        let decoded: AdapterMonitored = serde_json::from_value(wire).unwrap();
+        assert_eq!(decoded, monitored);
+    }
 
     fn direction(unit: &[i32], gain_q16: i32) -> AdapterDirection {
         AdapterDirection {
