@@ -13,6 +13,10 @@ pub mod dist_compute;
 #[cfg(feature = "matview")]
 pub mod matview_spill;
 
+/// The shadow check that compares an incremental view with a recompute (MEDULLA-INCREMENTAL-VIEWS-R008.2).
+#[cfg(feature = "matview")]
+pub mod matview_shadow;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "sqlite-file")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

@@ -589,6 +589,8 @@ closed_error_codes! {
         StaleContentVersion => "STALE_CONTENT_VERSION",
         StaleOutboxLease => "STALE_OUTBOX_LEASE",
         StateBudgetExceeded => "STATE_BUDGET_EXCEEDED",
+        /// MEDULLA-INCREMENTAL-VIEWS-R008.2: an incremental view disagreed with a recompute and fell back to recompute.
+        ShadowMismatch => "SHADOW_MISMATCH",
         StaleMappingReference => "STALE_MAPPING_REFERENCE",
         StaleRecomputeFence => "STALE_RECOMPUTE_FENCE",
         StaleRoute => "STALE_ROUTE",

@@ -570,6 +570,29 @@ impl PlanMatViewManager {
         taken
     }
 
+    /// Re-arm the shadow check of `name` after a check that could not compare because
+    /// the graph moved (MEDULLA-INCREMENTAL-VIEWS-R008.2): the view is due again at the
+    /// next [`take_due_checks`](Self::take_due_checks).
+    pub fn rearm_check(&self, name: &str) {
+        if let Some(t) = self.views.lock().get_mut(name) {
+            if t.mode == Mode::Incremental {
+                t.check_due = true;
+            }
+        }
+    }
+
+    /// Demote `name` to recompute mode with `reason` after a shadow mismatch
+    /// (MEDULLA-INCREMENTAL-VIEWS-R008.2); answers whether the view was tracked.
+    pub fn demote_view(&self, name: &str, reason: &str) -> bool {
+        match self.views.lock().get_mut(name) {
+            Some(t) => {
+                t.demote(reason.to_string());
+                true
+            }
+            None => false,
+        }
+    }
+
     /// The stored definition for `name`, if any.
     pub fn get(&self, name: &str) -> Option<PlanMatView> {
         self.views.lock().get(name).map(|t| t.def.clone())
