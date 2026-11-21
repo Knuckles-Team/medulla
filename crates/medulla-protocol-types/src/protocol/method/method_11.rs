@@ -712,6 +712,13 @@ $($variants)*
     WorkerHeartbeat {
         worker_id: String,
     },
+    /// Admit one task to a registered worker (MEDULLA-PLACEMENT-R002.4): a slot grant
+    /// sized from the engine's own lane load, or a typed refusal. Scope
+    /// `worker:register`. A worker of another principal is refused `ACCESS_DENIED`.
+    AdmitWorkerTask {
+        worker_id: String,
+        requested_max: u32,
+    },
     /// What the latest downtime tick decided (MEDULLA-DURABLE-KERNEL-R101.3): the
     /// job types it submitted work for and the types it skipped, with the reason.
     /// Scope `jobs:read`.

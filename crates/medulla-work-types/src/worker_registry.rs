@@ -249,6 +249,12 @@ impl OwnedWorkerRegistry {
         self.registry.get_live(worker_id, now_ms)
     }
 
+    /// The principal that owns `worker_id`, if it was ever registered
+    /// (MEDULLA-PLACEMENT-R002.4).
+    pub fn owner_of(&self, worker_id: &str) -> Option<&str> {
+        self.owners.get(worker_id).map(String::as_str)
+    }
+
     /// The pure registry, for admission sizing.
     pub fn registry(&self) -> &WorkerRegistry {
         &self.registry

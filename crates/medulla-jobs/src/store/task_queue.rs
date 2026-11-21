@@ -224,6 +224,55 @@ impl JobStore {
         )
     }
 
+    /// Per-queue load of the tasks that require `tenant_capability`
+    /// (MEDULLA-PLACEMENT-R002.4): for each queue name, the number of tasks
+    /// holding a live lease (running) and the number ready for scheduling
+    /// (queued). One read transaction over the job table, bounded by
+    /// `MAX_JOB_LIST_ITEMS`; nothing is cached.
+    pub fn task_lane_counts(
+        &self,
+        tenant_capability: &str,
+        now_ms: i64,
+    ) -> Result<std::collections::BTreeMap<String, (u32, u32)>> {
+        let read = self.scoped_read()?;
+        let table = read.open_owner_table(JOBS).map_err(redb_err)?;
+        let mut counts: std::collections::BTreeMap<String, (u32, u32)> =
+            std::collections::BTreeMap::new();
+        let mut scanned = 0usize;
+        for entry in table.iter().map_err(redb_err)? {
+            scanned = scanned
+                .checked_add(1)
+                .filter(|count| *count <= MAX_JOB_LIST_ITEMS)
+                .ok_or_else(|| codec_err("task lane count scan exceeds limits"))?;
+            let (_, value) = entry.map_err(redb_err)?;
+            let job = decode_job(value.value())?;
+            let Some(queue) = job.algo.family.strip_prefix(TASK_FAMILY_PREFIX) else {
+                continue;
+            };
+            if !job
+                .policy
+                .placement
+                .required_capabilities
+                .iter()
+                .any(|capability| capability == tenant_capability)
+            {
+                continue;
+            }
+            let live_lease = job
+                .lease
+                .as_ref()
+                .is_some_and(|lease| lease.expires_at_ms > now_ms);
+            let entry = counts.entry(queue.to_string()).or_insert((0, 0));
+            if live_lease {
+                entry.0 = entry.0.saturating_add(1);
+            }
+            if job_is_ready_for_scheduling(&job, live_lease, now_ms) {
+                entry.1 = entry.1.saturating_add(1);
+            }
+        }
+        Ok(counts)
+    }
+
     /// Acknowledge a leased task of `tenant`. The ack is accepted only from the
     /// worker holding the live lease; a task of another tenant reads as not
     /// claimed so its existence never leaks.
@@ -313,5 +362,54 @@ impl JobStore {
             write_job_transition(self, &write, &job, expected_version, None)?;
         self.mutations.commit(write, &batch).map_err(redb_err)?;
         Ok(job)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dev_scope_grant::open_dev_store_in_dir;
+
+    fn task(queue: &str, key: &str, capability: &str) -> TaskSubmit {
+        TaskSubmit {
+            tenant: "tenant-a".to_string(),
+            actor: "actor".to_string(),
+            tenant_capability: capability.to_string(),
+            queue: queue.to_string(),
+            kind: "kind".to_string(),
+            payload_ref: format!("payload-{key}"),
+            idempotency_key: key.to_string(),
+            priority: 5,
+            not_before_ms: 0,
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R002.4
+    #[test]
+    fn task_lane_counts_split_running_and_queued() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        store.submit_task(task("general", "g1", "cap-a"), 1_000).unwrap();
+        store.submit_task(task("general", "g2", "cap-a"), 1_000).unwrap();
+        store.submit_task(task("hydration", "h1", "cap-a"), 1_000).unwrap();
+        store.submit_task(task("general", "other", "cap-b"), 1_000).unwrap();
+
+        let before = store.task_lane_counts("cap-a", 1_001).unwrap();
+        assert_eq!(before.get("general"), Some(&(0, 2)));
+        assert_eq!(before.get("hydration"), Some(&(0, 1)));
+        assert_eq!(store.task_lane_counts("cap-b", 1_001).unwrap().len(), 1);
+        assert!(store.task_lane_counts("cap-none", 1_001).unwrap().is_empty());
+
+        let claim = store.claim_task("worker-ref", "cap-a", 1_002, 60_000).unwrap();
+        assert!(claim.is_some());
+        let after = store.task_lane_counts("cap-a", 1_003).unwrap();
+        let running: u32 = after.values().map(|(running, _)| *running).sum();
+        let queued: u32 = after.values().map(|(_, queued)| *queued).sum();
+        assert_eq!(running, 1);
+        assert_eq!(queued, 2);
+
+        // The lease lapses: the task is no longer running.
+        let lapsed = store.task_lane_counts("cap-a", 1_002 + 60_001).unwrap();
+        assert_eq!(lapsed.values().map(|(running, _)| *running).sum::<u32>(), 0);
     }
 }

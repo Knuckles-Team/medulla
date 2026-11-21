@@ -96,7 +96,7 @@ pub struct AdmitWorkerTaskInput<'a> {
 /// admission — a `WorkerGrant` or a typed refusal — from the registry, the
 /// scheduler config, the per-lane load and the R077 shard-writer width,
 /// sized through `granted_slots` (MEDULLA-PLACEMENT-R002.3). Gated by
-/// `scheduler:read` before this handler runs; here the body tenant must equal
+/// `worker:register` before this handler runs (MEDULLA-PLACEMENT-R002.4); here the body tenant must equal
 /// the verified carrier tenant. A worker that is not live (unknown or expired)
 /// is refused with `WORKER_UNKNOWN` before any sizing runs.
 pub fn admit_worker_task(input: AdmitWorkerTaskInput<'_>) -> Response {

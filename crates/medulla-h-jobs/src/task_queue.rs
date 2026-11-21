@@ -61,7 +61,7 @@ fn opaque(namespace: &str, parts: &[&str]) -> String {
 }
 
 /// The opaque placement token every task of `tenant` requires.
-fn tenant_capability(tenant: &str) -> String {
+pub(crate) fn tenant_capability(tenant: &str) -> String {
     opaque("task_tenant", &[tenant])
 }
 

@@ -254,3 +254,165 @@ fn unknown_expired_and_cross_owner_requests_refuse() {
     ))
     .contains("ACCESS_DENIED"));
 }
+
+#[cfg(all(
+    feature = "server",
+    feature = "security",
+    feature = "redb",
+    feature = "jobs"
+))]
+mod common;
+#[cfg(all(
+    feature = "server",
+    feature = "security",
+    feature = "redb",
+    feature = "jobs"
+))]
+#[path = "common/test_support.rs"]
+mod test_support;
+
+// MEDULLA-PLACEMENT-R002.4: the served `AdmitWorkerTask` over a redb-backed state.
+#[cfg(all(
+    feature = "server",
+    feature = "security",
+    feature = "redb",
+    feature = "jobs"
+))]
+mod admit_served {
+    use super::*;
+
+    use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_work_types::worker_registry::WorkerRegistration;
+
+    use super::{common, test_support};
+
+    const SECRET: &str = "medulla-placement-r002-4-admit-worker-task-secret";
+
+    fn admission(response: &Response) -> WorkerAdmission {
+        assert!(
+            response.error.is_none(),
+            "unexpected refusal: {:?} {:?}",
+            response.error,
+            response.error_detail
+        );
+        match &response.result {
+            Some(ResultPayload::Raw(bytes)) => {
+                rmp_serde::from_slice(bytes).expect("msgpack admission")
+            }
+            other => panic!("unexpected payload: {other:?}"),
+        }
+    }
+
+    fn admit(worker: &str) -> Method {
+        Method::AdmitWorkerTask {
+            worker_id: worker.to_string(),
+            requested_max: 1,
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R002.4
+    #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+    async fn served_admit_worker_task_grants_general_lane_and_reads_lane_load() {
+        common::configure_authority();
+        let dir = test_support::fresh_dir("placement-r002-4-admit");
+        let (_backend, state) = test_support::redb_state_at(
+            SECRET,
+            common::current_isolation(),
+            dir.to_str().expect("utf-8 temp dir"),
+        );
+        let tenant = common::test_tenant();
+        let owner = VerifiedRequestContext::verified_for_test_in_tenant("agent-a", tenant);
+        let other = VerifiedRequestContext::verified_for_test_in_tenant("agent-b", tenant);
+
+        // The stored scheduler policy: two workers, one slot reserved for `general`.
+        {
+            let current = state.read().await;
+            let store = medulla_persistence::scheduler_config_store::shared_scheduler_config_store(
+                &current,
+            )
+            .expect("scheduler config store");
+            medulla_h_jobs::scheduler_config::apply_config(&store, sched(2, Some(1)))
+                .expect("store the scheduler policy");
+        }
+
+        let registered = medulla_h_jobs::worker_registry::try_handle(
+            &state,
+            1,
+            &owner,
+            Method::WorkerRegister {
+                registration: WorkerRegistration {
+                    worker_id: "worker-1".into(),
+                    cores: 16,
+                    memory_bytes: 8 * 1024 * 1024 * 1024,
+                    lanes_supported: ["general".to_string()].into(),
+                },
+            },
+        )
+        .await
+        .expect("worker registry method");
+        assert!(registered.error.is_none(), "{:?}", registered.error);
+
+        let first = medulla_h_jobs::worker_registry::try_handle(&state, 2, &owner, admit("worker-1"))
+            .await
+            .expect("worker registry method");
+        let WorkerAdmission::Granted(grant) = admission(&first) else {
+            panic!("a one-worker pool was refused")
+        };
+        assert_eq!(grant.slots, 1);
+        assert_eq!(grant.reserved_lane, "general");
+        assert!(grant.grant_id.starts_with("grant:"), "{}", grant.grant_id);
+
+        // One task of queue `general` is enqueued and claimed: the lane has one
+        // running worker and no queued work, so only reserved capacity remains.
+        let enqueued = medulla_h_jobs::task_queue::try_handle(
+            &state,
+            3,
+            &owner,
+            Method::TaskQueueEnqueue {
+                queue: "general".into(),
+                kind: "scan".into(),
+                payload_ref: "blob:1".into(),
+                idempotency_key: "k1".into(),
+                priority: 5,
+                not_before_ms: 0,
+            },
+        )
+        .await
+        .expect("task queue method");
+        assert!(enqueued.error.is_none(), "{:?}", enqueued.error);
+        let claimed = medulla_h_jobs::task_queue::try_handle(
+            &state,
+            4,
+            &owner,
+            Method::TaskQueueClaim {
+                worker_id: "worker-1".into(),
+                grant_id: grant.grant_id.clone(),
+                lease_ms: 60_000,
+            },
+        )
+        .await
+        .expect("task queue method");
+        assert!(claimed.error.is_none(), "{:?}", claimed.error);
+
+        let second = medulla_h_jobs::worker_registry::try_handle(&state, 5, &owner, admit("worker-1"))
+            .await
+            .expect("worker registry method");
+        match admission(&second) {
+            WorkerAdmission::Refused(WorkerAdmissionRefusal::AdmitHeldForReserve { lane }) => {
+                assert_eq!(lane, "general")
+            }
+            other => panic!("expected the reserve refusal: {other:?}"),
+        }
+
+        // Another principal's call for the same worker is refused.
+        let denied = medulla_h_jobs::worker_registry::try_handle(&state, 6, &other, admit("worker-1"))
+            .await
+            .expect("worker registry method");
+        assert!(denied.result.is_none());
+        assert!(denied
+            .error
+            .expect("cross-owner admission is refused")
+            .contains("ACCESS_DENIED"));
+    }
+}

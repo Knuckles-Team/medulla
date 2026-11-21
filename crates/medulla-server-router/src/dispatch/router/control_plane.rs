@@ -537,7 +537,9 @@ pub async fn dispatch_compute_and_media_methods(
             }
             // MEDULLA-DURABLE-KERNEL-R074.2: the served worker registry.
             #[cfg(feature = "jobs")]
-            method @ (Method::WorkerRegister { .. } | Method::WorkerHeartbeat { .. }) => {
+            method @ (Method::WorkerRegister { .. }
+            | Method::WorkerHeartbeat { .. }
+            | Method::AdmitWorkerTask { .. }) => {
                 dispatch_worker_registry_arm(ctx, method).await
             }
 
