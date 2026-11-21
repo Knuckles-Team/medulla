@@ -181,6 +181,25 @@ impl SourceQueryLimits {
         }
         Ok(())
     }
+
+    /// Clamp every caller value to the tenant `ceiling` (MEDULLA-FEDERATED-QUERY-R085.6).
+    /// A zero caller value stays zero and refuses, as does a clamped set that
+    /// [`Self::validate`] refuses; a value under its ceiling is kept as asked.
+    pub fn clamp_to_ceiling(&self, ceiling: &SourceQueryLimits) -> Result<Self, SourceQueryError> {
+        ceiling.validate()?;
+        let clamped = Self {
+            max_rows: self.max_rows.min(ceiling.max_rows),
+            max_bytes: self.max_bytes.min(ceiling.max_bytes),
+            chunk_rows: self.chunk_rows.min(ceiling.chunk_rows),
+            chunk_bytes: self.chunk_bytes.min(ceiling.chunk_bytes),
+            queue_depth: self.queue_depth.min(ceiling.queue_depth),
+            queue_bytes: self.queue_bytes.min(ceiling.queue_bytes),
+            deadline_ms: self.deadline_ms.min(ceiling.deadline_ms),
+            max_resident_bytes: self.max_resident_bytes.min(ceiling.max_resident_bytes),
+        };
+        clamped.validate()?;
+        Ok(clamped)
+    }
 }
 
 /// A request for one read-only SQL operation.

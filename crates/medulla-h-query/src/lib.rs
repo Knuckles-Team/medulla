@@ -29,6 +29,11 @@ pub mod request_cancel;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod streaming;
 
+// MEDULLA-FEDERATED-QUERY-R085.6: source-query limit ceilings.
+#[cfg(test)]
+#[path = "federation/source_query_tests.rs"]
+mod source_query_tests;
+
 // The ambient auth posture these tests run under (MEDULLA-CONTRACT-R056.18).
 #[cfg(test)]
 use medulla_test_ambient_auth as _;

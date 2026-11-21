@@ -834,6 +834,155 @@ pub fn reasoning_knobs() -> ReasoningKnobs {
     REASONING_KNOBS.get().copied().unwrap_or_default()
 }
 
+/// One `knob source_query.*` ceiling: its knob name, environment key, default
+/// and inclusive bounds (MEDULLA-FEDERATED-QUERY-R085.6).
+pub struct SourceQueryKnob {
+    pub knob: &'static str,
+    pub env: &'static str,
+    pub default: u64,
+    pub range: (u64, u64),
+}
+
+/// The source-query execution ceilings, in [`SourceQueryLimits`] field order.
+///
+/// [`SourceQueryLimits`]: medulla_result_types::source_query::SourceQueryLimits
+pub const SOURCE_QUERY_KNOBS: [SourceQueryKnob; 8] = [
+    SourceQueryKnob {
+        knob: "source_query.max_rows",
+        env: "MEDULLA_SOURCE_QUERY_MAX_ROWS",
+        default: 1_000_000,
+        range: (1, 100_000_000),
+    },
+    SourceQueryKnob {
+        knob: "source_query.max_bytes",
+        env: "MEDULLA_SOURCE_QUERY_MAX_BYTES",
+        default: 268_435_456,
+        range: (1_024, 17_179_869_184),
+    },
+    SourceQueryKnob {
+        knob: "source_query.chunk_rows",
+        env: "MEDULLA_SOURCE_QUERY_CHUNK_ROWS",
+        default: 5_000,
+        range: (1, 100_000),
+    },
+    SourceQueryKnob {
+        knob: "source_query.chunk_bytes",
+        env: "MEDULLA_SOURCE_QUERY_CHUNK_BYTES",
+        default: 4_194_304,
+        range: (1_024, 67_108_864),
+    },
+    SourceQueryKnob {
+        knob: "source_query.queue_depth",
+        env: "MEDULLA_SOURCE_QUERY_QUEUE_DEPTH",
+        default: 4,
+        range: (1, 64),
+    },
+    SourceQueryKnob {
+        knob: "source_query.queue_bytes",
+        env: "MEDULLA_SOURCE_QUERY_QUEUE_BYTES",
+        default: 16_777_216,
+        range: (1_024, 1_073_741_824),
+    },
+    SourceQueryKnob {
+        knob: "source_query.deadline_ms",
+        env: "MEDULLA_SOURCE_QUERY_DEADLINE_MS",
+        default: 60_000,
+        range: (1_000, 3_600_000),
+    },
+    SourceQueryKnob {
+        knob: "source_query.resident_bytes",
+        env: "MEDULLA_SOURCE_QUERY_RESIDENT_BYTES",
+        default: 134_217_728,
+        range: (1_048_576, 8_589_934_592),
+    },
+];
+
+/// The tenant ceiling every caller-supplied [`SourceQueryLimits`] is clamped to,
+/// read from the `knob source_query.*` table and bounds-checked at startup.
+///
+/// [`SourceQueryLimits`]: medulla_result_types::source_query::SourceQueryLimits
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SourceQueryKnobs {
+    /// Values in [`SOURCE_QUERY_KNOBS`] order.
+    pub values: [u64; 8],
+}
+
+impl Default for SourceQueryKnobs {
+    fn default() -> Self {
+        Self {
+            values: SOURCE_QUERY_KNOBS.map(|knob| knob.default),
+        }
+    }
+}
+
+impl SourceQueryKnobs {
+    /// Read the knobs through `lookup` (the environment in production), apply
+    /// defaults for unset ones and check every bound.
+    pub fn from_lookup(lookup: impl Fn(&str) -> Option<String>) -> Result<Self, InvalidKnob> {
+        let mut knobs = Self::default();
+        for (slot, knob) in knobs.values.iter_mut().zip(SOURCE_QUERY_KNOBS.iter()) {
+            if let Some(raw) = lookup(knob.env) {
+                *slot = raw.trim().parse().map_err(|_| InvalidKnob {
+                    knob: knob.knob,
+                    value: raw.clone(),
+                })?;
+            }
+        }
+        knobs.validate()?;
+        Ok(knobs)
+    }
+
+    /// Read the knobs from the process environment.
+    pub fn from_env() -> Result<Self, InvalidKnob> {
+        Self::from_lookup(|key| std::env::var(key).ok())
+    }
+
+    /// Check every knob against its range.
+    pub fn validate(&self) -> Result<(), InvalidKnob> {
+        for (value, knob) in self.values.iter().zip(SOURCE_QUERY_KNOBS.iter()) {
+            let (lo, hi) = knob.range;
+            if !(lo..=hi).contains(value) {
+                return Err(InvalidKnob {
+                    knob: knob.knob,
+                    value: value.to_string(),
+                });
+            }
+        }
+        Ok(())
+    }
+
+    /// The ceiling as a limit set, for `SourceQueryLimits::clamp_to_ceiling`.
+    pub fn ceiling(&self) -> medulla_result_types::source_query::SourceQueryLimits {
+        let [max_rows, max_bytes, chunk_rows, chunk_bytes, queue_depth, queue_bytes, deadline_ms, max_resident_bytes] =
+            self.values;
+        medulla_result_types::source_query::SourceQueryLimits {
+            max_rows,
+            max_bytes,
+            chunk_rows,
+            chunk_bytes,
+            queue_depth,
+            queue_bytes,
+            deadline_ms,
+            max_resident_bytes,
+        }
+    }
+}
+
+static SOURCE_QUERY_KNOB_VALUES: std::sync::OnceLock<SourceQueryKnobs> =
+    std::sync::OnceLock::new();
+
+/// Install the startup-validated source-query knobs; the first install wins.
+pub fn install_source_query_knobs(knobs: SourceQueryKnobs) {
+    let _ = SOURCE_QUERY_KNOB_VALUES.set(knobs);
+}
+
+/// The installed source-query knobs, or the defaults when startup installed none
+/// (embedded and test construction).
+pub fn source_query_knobs() -> SourceQueryKnobs {
+    SOURCE_QUERY_KNOB_VALUES.get().copied().unwrap_or_default()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
