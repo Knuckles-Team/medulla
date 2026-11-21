@@ -857,3 +857,41 @@ fn a_wrapped_declared_refusal_keeps_its_code() {
         .unwrap()
         .starts_with("unclassified engine refusal (cause-"));
 }
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.1
+#[cfg(feature = "federation")]
+#[test]
+fn register_foreign_source_acceleration_round_trips() {
+    use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
+    let source: medulla_query_types::wire::ForeignSourceSpec = serde_json::from_value(
+        serde_json::json!({"HttpJson": {
+            "url": "http://example.invalid/a",
+            "json_path": "data",
+            "field_map": {"id": "doi"},
+        }}),
+    )
+    .unwrap();
+    let policy = AccelerationPolicy {
+        source_supports_copy: true,
+        hot_subset_predicate: "year > 2024".into(),
+        freshness_watermark: Some("updated_at".into()),
+    };
+    for acceleration in [Some(policy), None] {
+        let method = Method::RegisterForeignSource {
+            name: "papers".into(),
+            source: source.clone(),
+            quota: None,
+            acceleration: acceleration.clone(),
+        };
+        let bytes = rmp_serde::to_vec_named(&method).unwrap();
+        let back: Method = rmp_serde::from_slice(&bytes).unwrap();
+        assert_eq!(rmp_serde::to_vec_named(&back).unwrap(), bytes);
+        assert!(matches!(
+            &back,
+            Method::RegisterForeignSource { acceleration: got, .. } if *got == acceleration
+        ));
+        // The absent form omits the key, so every existing request keeps its bytes.
+        let json = serde_json::to_value(&method).unwrap();
+        assert_eq!(json["params"].get("acceleration").is_some(), acceleration.is_some());
+    }
+}
