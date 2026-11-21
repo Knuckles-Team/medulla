@@ -567,3 +567,27 @@ fn jobs_before_task_queue_is_a_frozen_predecessor() {
     assert!(current.contains(&"analytics_job_task_queue_totals"));
     assert!(current.contains(&"analytics_job_task_queue_oldest"));
 }
+
+// spec: MEDULLA-INGEST-WORKER-R001.9
+#[test]
+fn jobs_before_task_dead_letters_is_a_frozen_predecessor() {
+    let predecessor = &JOBS_BEFORE_TASK_DEAD_LETTERS;
+    let contracts: Vec<_> = crate::owner::contract::expected_table_contracts(OwnerLayout::Jobs)
+        .into_iter()
+        .filter(|contract| {
+            contract.ownership == crate::physical::manifest::TableOwnership::Ledger
+                || predecessor
+                    .owner_tables
+                    .contains(&contract.table_id.as_str())
+        })
+        .collect();
+    assert_eq!(
+        layout_digest_over(OwnerLayout::Jobs, &contracts),
+        JOBS_PRE_TASK_DEAD_LETTERS_DIGEST
+    );
+    assert_ne!(JOBS_PRE_TASK_DEAD_LETTERS_DIGEST, OwnerLayout::Jobs.digest());
+    assert!(owner_table_names(OwnerLayout::Jobs).contains(&"analytics_job_task_dead_letters"));
+    assert!(!predecessor
+        .owner_tables
+        .contains(&"analytics_job_task_dead_letters"));
+}

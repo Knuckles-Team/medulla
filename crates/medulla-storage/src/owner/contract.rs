@@ -267,6 +267,7 @@ fn jobs_key_type(name: &str) -> Option<&'static str> {
         | "analytics_job_scheduler_meta"
         | "analytics_job_lease_by_worker"
         | "analytics_job_active_totals_by_tenant"
+        | "analytics_job_task_dead_letters"
         | "analytics_job_cancellation_reconcile" => Some("&str"),
         _ => None,
     }
@@ -430,6 +431,7 @@ fn value_type_id(name: &str) -> &'static str {
         | "analytics_jobs"
         | "job_intents"
         | "analytics_job_knowledge_batches"
+        | "analytics_job_task_dead_letters"
         | "statechart_defs"
         | "statechart_instances"
         | "series_chunks"
@@ -565,7 +567,7 @@ fn ledger_and_job_codec(name: &str) -> Option<&'static str> {
         | "write_back_idempotency"
         | "write_back_receipts" => "msgpack-v1",
         "decision_records" | "capability_reward" | "decision_retry_allowance" => "json-utf8-v1",
-        "rbac" | "rbac_profile_use_grant" => "json-utf8-v1",
+        "rbac" | "rbac_profile_use_grant" | "analytics_job_task_dead_letters" => "json-utf8-v1",
         "kv" | "cas_chunks" => "raw-bytes-v1",
         "series_chunks" => "packed-timeseries-chunk-v1",
         "ledger_maintenance"
@@ -718,6 +720,7 @@ fn index_and_scalar_capabilities(name: &str) -> Option<u16> {
         | "analytics_job_by_deadline"
         | "analytics_job_cancellation_reconcile"
         | "analytics_job_task_queue_oldest"
+        | "analytics_job_task_dead_letters"
         | "semantic_binding_heads"
         | "semantic_lexical_manifests"
         | "semantic_ann_manifests"

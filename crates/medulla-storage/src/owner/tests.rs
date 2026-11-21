@@ -272,6 +272,7 @@ fn jobs_manifest_matches_the_current_global_store_schema() {
             "(&str,&str,i64,&str)",
             "()",
         ),
+        ("analytics_job_task_dead_letters", "&str", "&[u8]"),
     ];
     for (name, key, value) in expected {
         let table = manifest
@@ -351,6 +352,7 @@ fn jobs_manifest_matches_the_current_global_store_schema() {
             CAP_READ | CAP_INSERT | CAP_DELETE,
             true,
         ),
+        ("analytics_job_task_dead_letters", CAP_READ | CAP_INSERT | CAP_DELETE, false),
     ] {
         let table = manifest
             .tables

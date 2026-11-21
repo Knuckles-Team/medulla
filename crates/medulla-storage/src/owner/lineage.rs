@@ -752,6 +752,42 @@ pub const JOBS_BEFORE_TASK_QUEUE: LayoutPredecessor = LayoutPredecessor {
     file_name: "jobs.redb",
 };
 
+/// The Jobs owner tables before the ingest dead-letter table (MEDULLA-INGEST-WORKER-R001.9):
+/// the 15-table census with the task-queue totals and oldest-enqueue tables.
+const JOBS_TABLES_BEFORE_TASK_DEAD_LETTERS: &[&str] = &[
+    "analytics_job_records",
+    "analytics_job_committed_results",
+    "job_intents",
+    "job_idempotency_ledger",
+    "analytics_job_knowledge_batches",
+    "analytics_job_scheduler_meta",
+    "analytics_job_ready_by_priority",
+    "analytics_job_ready_by_capability",
+    "analytics_job_lease_by_worker",
+    "analytics_job_lease_by_expiry",
+    "analytics_job_active_totals_by_tenant",
+    "analytics_job_by_deadline",
+    "analytics_job_cancellation_reconcile",
+    "analytics_job_task_queue_totals",
+    "analytics_job_task_queue_oldest",
+];
+
+/// The frozen layout digest of [`JOBS_BEFORE_TASK_DEAD_LETTERS`]: the Jobs layout with the
+/// task-queue tables and without `analytics_job_task_dead_letters`.
+pub const JOBS_PRE_TASK_DEAD_LETTERS_DIGEST: [u8; 32] = [
+    0xc4, 0x9b, 0x1c, 0x73, 0xe2, 0x1a, 0xb9, 0x0c, 0x50, 0x91, 0x53, 0xa0, 0x65, 0x31, 0xf4, 0x7c,
+    0x29, 0x8b, 0x04, 0xbb, 0xc4, 0xc5, 0x1e, 0xf4, 0x45, 0xdb, 0x88, 0xbc, 0xcd, 0xf5, 0x33, 0xce,
+];
+
+/// A Jobs owner file from before the ingest dead-letter table. The upgrade creates it empty.
+pub const JOBS_BEFORE_TASK_DEAD_LETTERS: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::Jobs,
+    label: "jobs before the ingest dead-letter table",
+    owner_tables: JOBS_TABLES_BEFORE_TASK_DEAD_LETTERS,
+    data_lost: "none; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
+    file_name: "jobs.redb",
+};
+
 /// Every predecessor of `layout` this build refuses by name, oldest first.
 ///
 /// Exhaustive on purpose: a new layout must state that it has none.
@@ -775,7 +811,11 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
         ],
         OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS],
         OwnerLayout::Kv => &[KV_BEFORE_NAMESPACE_COLD],
-        OwnerLayout::Jobs => &[JOBS_BEFORE_JOB_MACHINE, JOBS_BEFORE_TASK_QUEUE],
+        OwnerLayout::Jobs => &[
+            JOBS_BEFORE_JOB_MACHINE,
+            JOBS_BEFORE_TASK_QUEUE,
+            JOBS_BEFORE_TASK_DEAD_LETTERS,
+        ],
         OwnerLayout::LedgerOnly
         | OwnerLayout::Statechart
         | OwnerLayout::TimeSeries
@@ -839,7 +879,7 @@ pub fn pinned_layout_digest(layout: OwnerLayout) -> &'static str {
             "9faad03bf787a2a893618b7a8b386de30bdd5b4e09f3930448040c3e47c59e3e"
         }
         OwnerLayout::Rbac => "c30f57c11229b629fefb4470bf9b7afb5010c06c24542d25cd20ea613d729dbd",
-        OwnerLayout::Jobs => "c49b1c73e21ab90c509153a06531f47c298b04bbc4c51ef445db88bccdf533ce",
+        OwnerLayout::Jobs => "313e863a75ffa34576a66f5e898d0c60970ea9662b59ff9f9b879c019083a077",
         OwnerLayout::Statechart => {
             "d8ab661d50af9249a342a101537f0ef92c13df6808b5fd149c037d8587cff8a7"
         }

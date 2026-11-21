@@ -58,6 +58,7 @@ declared_owner_tables!(
     JobDeadlineRows: JobsOwner => ((i64, String), (), "analytics_job_by_deadline"),
     JobCancellationRows: JobsOwner => (String, (), "analytics_job_cancellation_reconcile"),
     JobTaskQueueTotalsRows: JobsOwner => ((String, String), (u64, u64), "analytics_job_task_queue_totals"),
+    JobTaskDeadLetterRows: JobsOwner => (String, Vec<u8>, "analytics_job_task_dead_letters"),
     JobTaskQueueOldestRows: JobsOwner => ((String, String, i64, String), (), "analytics_job_task_queue_oldest"),
     StatechartDefinitionRows: StatechartOwner => (String, Vec<u8>, "statechart_defs"),
     StatechartInstanceRows: StatechartOwner => (String, Vec<u8>, "statechart_instances"),
@@ -149,6 +150,7 @@ pub(crate) fn owner_table_access(table: &str) -> OwnerTableAccess {
         | "analytics_job_cancellation_reconcile"
         | "analytics_job_task_queue_totals"
         | "analytics_job_task_queue_oldest"
+        | "analytics_job_task_dead_letters"
         | "statechart_defs"
         | "statechart_instances"
         | "series_chunks"

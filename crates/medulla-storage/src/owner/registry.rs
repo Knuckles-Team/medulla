@@ -52,6 +52,10 @@ const CANCELLATION: TableDefinition<'static, &str, ()> =
 pub(crate) const TASK_QUEUE_TOTALS: TableDefinition<'static, (&str, &str), (u64, u64)> =
     TableDefinition::new("analytics_job_task_queue_totals");
 /// (tenant, queue, created_at_ms, job id) of every non-terminal task.
+/// One parked ingest task per task id: the canonical JSON of its `DeadLetterItem`
+/// (MEDULLA-INGEST-WORKER-R001.9).
+pub(crate) const TASK_DEAD_LETTERS: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("analytics_job_task_dead_letters");
 pub(crate) const TASK_QUEUE_OLDEST: TableDefinition<'static, (&str, &str, i64, &str), ()> =
     TableDefinition::new("analytics_job_task_queue_oldest");
 const STATECHARTS: [TableDefinition<'static, &str, &[u8]>; 2] = [
@@ -441,6 +445,7 @@ macro_rules! visit_owner_tables {
                 $visit!(CANCELLATION);
                 $visit!(TASK_QUEUE_TOTALS);
                 $visit!(TASK_QUEUE_OLDEST);
+                $visit!(TASK_DEAD_LETTERS);
             }
             OwnerLayout::Statechart => {
                 for table in STATECHARTS {
@@ -919,6 +924,7 @@ pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
             "analytics_job_cancellation_reconcile",
             "analytics_job_task_queue_totals",
             "analytics_job_task_queue_oldest",
+            "analytics_job_task_dead_letters",
         ],
         OwnerLayout::Statechart => &["statechart_defs", "statechart_instances"],
         OwnerLayout::TimeSeries => &["series_chunks", "series_meta", "series_projection_state"],

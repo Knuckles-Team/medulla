@@ -346,3 +346,34 @@ fn jobs_upgrade_creates_empty_task_queue_tables() {
     drop(database);
     StorageKernel::open_owner::<JobsOwner>(&path, identity(), None).unwrap();
 }
+
+// spec: MEDULLA-INGEST-WORKER-R001.9
+#[test]
+fn jobs_upgrade_creates_empty_dead_letter_table() {
+    use crate::owner::domain::JobsOwner;
+    use crate::owner::registry::TASK_DEAD_LETTERS;
+    use redb::{ReadableDatabase, ReadableTableMetadata};
+
+    let upgrade = registered_offline_upgrade(&JOBS_BEFORE_TASK_DEAD_LETTERS)
+        .expect("the pre-dead-letter jobs generation has a registered upgrade");
+    let directory = private_local_tempdir();
+    let path = directory.path().join("jobs.redb");
+    create_predecessor_owner_file(&path, identity(), &JOBS_BEFORE_TASK_DEAD_LETTERS).unwrap();
+    assert!(StorageKernel::open_owner::<JobsOwner>(&path, identity(), None).is_err());
+    let report = upgrade
+        .inspect(&path, identity(), None, options(&path))
+        .unwrap()
+        .apply()
+        .unwrap();
+    assert_eq!(report.current_layout_digest, OwnerLayout::Jobs.digest());
+    assert_eq!(
+        report.previous_layout_digest,
+        crate::owner::lineage::JOBS_PRE_TASK_DEAD_LETTERS_DIGEST
+    );
+    let database = redb::Database::open(&path).unwrap();
+    let read = database.begin_read().unwrap();
+    assert_eq!(read.open_table(TASK_DEAD_LETTERS).unwrap().len().unwrap(), 0);
+    drop(read);
+    drop(database);
+    StorageKernel::open_owner::<JobsOwner>(&path, identity(), None).unwrap();
+}
