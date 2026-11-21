@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import pytest
 
+from medulla.generated.source_ingestion import SourceIngestionDisposition
+
 from .test_source_stream_versions_served import (
     STREAM,
     _batch,
@@ -16,8 +18,6 @@ from .test_source_stream_versions_served import (
     _ingest_client,
     _submit,
 )
-
-from medulla.generated.source_ingestion import SourceIngestionDisposition
 
 KG = "https://knuckles-team.github.io/ontology/core#"
 
