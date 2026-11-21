@@ -135,7 +135,7 @@ pub fn certificate() -> Certificate {
         model_digest: Sha256Digest::of_json("eg-solve/model/v1", &model()),
         algorithm: Algorithm::DepthFirstDualAscent,
         config: SolverConfig::default(),
-        status: SolveStatus::Optimal,
+        outcome: SolveStatus::Optimal,
         incumbent: Some(Incumbent {
             selected: vec![true, false],
             objective: ObjectiveValue {

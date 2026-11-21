@@ -13,7 +13,7 @@ fn assert_matches_oracle(spec: &ModelSpec) {
     let (certificate, verdict) = solve_and_verify(&model(spec), &wide_config());
     let Some(best) = expected else {
         assert!(
-            matches!(certificate.status, SolveStatus::Infeasible { .. }),
+            matches!(certificate.outcome, SolveStatus::Infeasible { .. }),
             "{spec:?}: {certificate:?}"
         );
         assert!(matches!(verdict, Verdict::ProvenInfeasible { .. }));
@@ -31,7 +31,7 @@ fn assert_matches_oracle(spec: &ModelSpec) {
         .map(|level| (level.unknown_selected, level.known.get()))
         .collect();
     assert_eq!(reported, best, "reported level values");
-    assert_eq!(certificate.status, SolveStatus::Optimal, "{spec:?}");
+    assert_eq!(certificate.outcome, SolveStatus::Optimal, "{spec:?}");
     assert!(
         matches!(verdict, Verdict::ProvenOptimal { objective } if objective == incumbent.objective.scalar)
     );

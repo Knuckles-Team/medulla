@@ -32,15 +32,15 @@ fn defect(defect: StatusDefect) -> VerifyError {
 #[test]
 fn infeasibility_claims_need_the_exact_core_and_true_infeasible_leaves() {
     let base = solved(&parity_equality(5), &config(1_000_000, 1 << 16, 0, 1));
-    assert!(matches!(base.1.status, SolveStatus::Infeasible { .. }));
+    assert!(matches!(base.1.outcome, SolveStatus::Infeasible { .. }));
     assert_rejects(
         &base,
-        &|c| c.status = SolveStatus::Infeasible { core: Vec::new() },
+        &|c| c.outcome = SolveStatus::Infeasible { core: Vec::new() },
         defect(StatusDefect::CoreMismatch),
     );
     let nodes_expanded = base.1.nodes_expanded;
     let by_search = move |c: &mut Certificate| {
-        c.status = SolveStatus::InfeasibleByDeterministicSearch { nodes_expanded }
+        c.outcome = SolveStatus::InfeasibleByDeterministicSearch { nodes_expanded }
     };
     assert_rejects(&base, &by_search, defect(StatusDefect::WrongProofKind));
     let fake = |c: &mut Certificate| {
@@ -94,11 +94,11 @@ fn infeasibility_claims_need_the_exact_core_and_true_infeasible_leaves() {
 #[test]
 fn gap_claims_must_match_the_bound_and_the_acceptance_policy() {
     let base = solved(&odd_cycle_cover(12, 5), &config(200, 1 << 16, 1_000, 1));
-    let SolveStatus::FeasibleWithGap { gap } = base.1.status.clone() else {
-        panic!("{:?}", base.1.status)
+    let SolveStatus::FeasibleWithGap { gap } = base.1.outcome.clone() else {
+        panic!("{:?}", base.1.outcome)
     };
     let widened = move |c: &mut Certificate| {
-        c.status = SolveStatus::FeasibleWithGap {
+        c.outcome = SolveStatus::FeasibleWithGap {
             gap: Scalar::new(gap.get() + 1),
         }
     };
@@ -107,12 +107,12 @@ fn gap_claims_must_match_the_bound_and_the_acceptance_policy() {
     assert_rejects(&base, &strict, defect(StatusDefect::GapNotAccepted));
     assert_rejects(
         &base,
-        &|c| c.status = SolveStatus::BudgetExhausted,
+        &|c| c.outcome = SolveStatus::BudgetExhausted,
         defect(StatusDefect::GapAccepted),
     );
     assert_rejects(
         &base,
-        &|c| c.status = SolveStatus::Optimal,
+        &|c| c.outcome = SolveStatus::Optimal,
         defect(StatusDefect::BoundBelowIncumbent),
     );
     // The optimum (36) lies in some leaf, whose bound is at most 36.
@@ -124,7 +124,7 @@ fn gap_claims_must_match_the_bound_and_the_acceptance_policy() {
 fn search_claims_need_a_root_bound_that_supports_the_reported_bound() {
     let base = solved(&odd_cycle_cover(4, 5), &config(1_000_000, 1, 0, 1));
     assert!(matches!(
-        base.1.status,
+        base.1.outcome,
         SolveStatus::OptimalByDeterministicSearch { .. }
     ));
     let empty = |c: &mut Certificate| {
@@ -138,11 +138,11 @@ fn search_claims_need_a_root_bound_that_supports_the_reported_bound() {
     assert_rejects(&base, &empty, defect(StatusDefect::LowerBoundAboveProof));
     assert_rejects(
         &base,
-        &|c| c.status = SolveStatus::Optimal,
+        &|c| c.outcome = SolveStatus::Optimal,
         defect(StatusDefect::BoundBelowIncumbent),
     );
     let miscounted = |c: &mut Certificate| {
-        c.status = SolveStatus::OptimalByDeterministicSearch { nodes_expanded: 0 }
+        c.outcome = SolveStatus::OptimalByDeterministicSearch { nodes_expanded: 0 }
     };
     assert_rejects(&base, &miscounted, defect(StatusDefect::NodeCountMismatch));
     assert_rejects(

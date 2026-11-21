@@ -97,7 +97,7 @@ pub fn decide_topology(
     })?;
     let model = Model::try_from(built.spec.clone()).map_err(super::super::search::model_invalid)?;
     let certificate = solve(&model, &config);
-    let selected = match &certificate.status {
+    let selected = match &certificate.outcome {
         SolveStatus::Optimal
         | SolveStatus::OptimalByDeterministicSearch { .. }
         | SolveStatus::FeasibleWithGap { .. } => match &certificate.incumbent {

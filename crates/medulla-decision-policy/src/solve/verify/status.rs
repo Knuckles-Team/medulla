@@ -28,7 +28,7 @@ pub(super) fn judge(
     verified: &Verified,
 ) -> Result<Verdict, VerifyError> {
     let claimed = certificate.lower_bound.map(Scalar::get);
-    match &certificate.status {
+    match &certificate.outcome {
         SolveStatus::Optimal => optimal(claimed, verified),
         SolveStatus::OptimalByDeterministicSearch { nodes_expanded } => {
             require(

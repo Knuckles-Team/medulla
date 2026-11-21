@@ -259,7 +259,7 @@ pub fn select_with(
         verdict,
         Verdict::ProvenOptimal { .. } | Verdict::OptimalityRequiresReplay { .. }
     ) && matches!(
-        certificate.status,
+        certificate.outcome,
         SolveStatus::Optimal | SolveStatus::OptimalByDeterministicSearch { .. }
     );
     let incumbent = match (&certificate.incumbent, proven) {

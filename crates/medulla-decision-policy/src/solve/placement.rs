@@ -310,7 +310,7 @@ fn solve_residual(
     })
     .map_err(|error| format!("PARAMETER_INVALID: placement.node_budget: {error:?}"))?;
     let certificate = super::solve(&model, &config);
-    match &certificate.status {
+    match &certificate.outcome {
         SolveStatus::Optimal | SolveStatus::OptimalByDeterministicSearch { .. } => {}
         SolveStatus::Infeasible { core } => {
             let labels = core

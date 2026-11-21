@@ -66,7 +66,7 @@ fn forced(context: &SolveContext<'_>, var: VarId, kind: AgentComponentKind) -> W
     });
     let certificate = Model::try_from(spec).map(|model| solve(&model, &context.config));
     let (forced_objective, violation) = match certificate {
-        Ok(certificate) => match certificate.status {
+        Ok(certificate) => match certificate.outcome {
             SolveStatus::Infeasible { .. }
             | SolveStatus::InfeasibleByDeterministicSearch { .. } => {
                 (None, Some(Violation::InfeasibleWhenForced))

@@ -15,7 +15,7 @@ fn assert_recovers(shape: AssemblyShape, seed: u64, solver: &SolverConfig) -> So
     assert_eq!(
         incumbent.selected, planted.optimum,
         "seed {seed}: {:?}",
-        certificate.status
+        certificate.outcome
     );
     match &verdict {
         Verdict::ProvenOptimal { objective }
@@ -24,7 +24,7 @@ fn assert_recovers(shape: AssemblyShape, seed: u64, solver: &SolverConfig) -> So
         }
         other => panic!("seed {seed}: unexpected verdict {other:?}"),
     }
-    certificate.status
+    certificate.outcome
 }
 
 #[test]

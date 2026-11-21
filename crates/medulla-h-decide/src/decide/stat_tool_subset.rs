@@ -294,7 +294,7 @@ pub(super) fn solved_covering_subset(
     statistical
         .verify(&String::from(certificate.model_digest))
         .map_err(|refused| SubsetFailure::Solver(solver_refusal(format!("{refused:?}"))))?;
-    let incumbent = match (&certificate.status, &certificate.incumbent) {
+    let incumbent = match (&certificate.outcome, &certificate.incumbent) {
         (SolveStatus::Optimal | SolveStatus::OptimalByDeterministicSearch { .. }, Some(i)) => i,
         (
             SolveStatus::Infeasible { .. } | SolveStatus::InfeasibleByDeterministicSearch { .. },

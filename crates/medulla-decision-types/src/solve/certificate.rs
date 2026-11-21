@@ -254,7 +254,10 @@ pub struct Certificate {
     pub model_digest: Sha256Digest,
     pub algorithm: Algorithm,
     pub config: SolverConfig,
-    pub status: SolveStatus,
+    /// The solve outcome class: the one finished solve's verdict, not a lifecycle
+    /// (MEDULLA-DECISION-ENGINE-R830.1). The wire key stays `status`.
+    #[serde(rename = "status")]
+    pub outcome: SolveStatus,
     pub incumbent: Option<Incumbent>,
     /// Certified scalar lower bound, when any bound leaf exists.
     pub lower_bound: Option<Scalar>,
@@ -267,5 +270,24 @@ impl Certificate {
     /// every target.
     pub fn digest(&self) -> Sha256Digest {
         Sha256Digest::of_json(CERTIFICATE_DIGEST_DOMAIN, self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::decision_fixtures::contract_solver::certificate;
+
+    // spec: MEDULLA-DECISION-ENGINE-R830.1
+    #[test]
+    fn no_writer_sets_status_outside_apply() {
+        let certificate = certificate();
+        let wire = serde_json::to_value(&certificate).unwrap();
+        assert!(wire.get("status").is_some(), "the wire key stays `status`");
+        assert!(wire.get("outcome").is_none());
+        let back: super::Certificate = serde_json::from_value(wire).unwrap();
+        assert_eq!(back, certificate);
+        let source = include_str!("certificate.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        assert!(!production.contains(".outcome ="));
     }
 }

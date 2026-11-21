@@ -609,7 +609,7 @@ fn exhausted_certificate(
         })
         .expect("a positive node budget");
         let certificate = solve(model, &tight);
-        if matches!(certificate.status, SolveStatus::BudgetExhausted)
+        if matches!(certificate.outcome, SolveStatus::BudgetExhausted)
             && certificate.incumbent.is_some() == with_incumbent
         {
             return certificate;

@@ -15,7 +15,7 @@ use super::support::{model, odd_cycle_cover, rejection, solve_and_verify, wide_c
 fn base() -> (Model, Certificate) {
     let cover = model(&odd_cycle_cover(2, 5));
     let (certificate, _) = solve_and_verify(&cover, &wide_config());
-    assert_eq!(certificate.status, SolveStatus::Optimal);
+    assert_eq!(certificate.outcome, SolveStatus::Optimal);
     (cover, certificate)
 }
 

@@ -184,7 +184,7 @@ fn classify(
     spec: &ModelSpec,
     certificate: &Certificate,
 ) -> Result<Vec<bool>, Vec<AbstainReason>> {
-    let reason = match &certificate.status {
+    let reason = match &certificate.outcome {
         SolveStatus::Optimal
         | SolveStatus::OptimalByDeterministicSearch { .. }
         | SolveStatus::FeasibleWithGap { .. } => {

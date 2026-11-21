@@ -13,7 +13,7 @@ use super::support::{config, model, odd_cycle_cover, parity_equality, solve_and_
 fn exhausted_budget_above_the_accepted_gap_is_unresolved() {
     let cover = model(&odd_cycle_cover(12, 5));
     let (certificate, verdict) = solve_and_verify(&cover, &config(200, 1 << 16, 0, 1));
-    assert_eq!(certificate.status, SolveStatus::BudgetExhausted);
+    assert_eq!(certificate.outcome, SolveStatus::BudgetExhausted);
     assert_eq!(certificate.nodes_expanded, 200);
     let incumbent = certificate
         .incumbent
@@ -43,7 +43,7 @@ fn exhausted_budget_within_the_accepted_gap_reports_a_certified_gap() {
         .expect("open leaves carry bounds")
         .get();
     assert_eq!(
-        certificate.status,
+        certificate.outcome,
         SolveStatus::FeasibleWithGap {
             gap: Scalar::new(36 - lower_bound)
         }
@@ -62,7 +62,7 @@ fn exhausted_budget_within_the_accepted_gap_reports_a_certified_gap() {
 fn parity_exhausts_the_budget_without_an_incumbent() {
     let parity = model(&parity_equality(41));
     let (certificate, verdict) = solve_and_verify(&parity, &config(500, 1 << 16, 0, 1));
-    assert_eq!(certificate.status, SolveStatus::BudgetExhausted);
+    assert_eq!(certificate.outcome, SolveStatus::BudgetExhausted);
     assert_eq!(certificate.nodes_expanded, 500);
     assert!(certificate.incumbent.is_none());
     assert!(matches!(
@@ -79,7 +79,7 @@ fn small_parity_is_proven_infeasible_with_its_core() {
     let parity = model(&parity_equality(9));
     let (certificate, verdict) = solve_and_verify(&parity, &config(1_000_000, 1 << 16, 0, 1));
     assert_eq!(
-        certificate.status,
+        certificate.outcome,
         SolveStatus::Infeasible {
             core: vec![RowId(0)]
         }
@@ -98,7 +98,7 @@ fn infeasibility_beyond_the_certificate_limit_requires_replay() {
     let (certificate, verdict) = solve_and_verify(&parity, &config(1_000_000, 2, 0, 1));
     let expanded = certificate.nodes_expanded;
     assert_eq!(
-        certificate.status,
+        certificate.outcome,
         SolveStatus::InfeasibleByDeterministicSearch {
             nodes_expanded: expanded
         }
@@ -113,7 +113,7 @@ fn optimality_beyond_the_certificate_limit_requires_replay() {
     let (certificate, verdict) = solve_and_verify(&cover, &config(1_000_000, 1, 0, 1));
     let expanded = certificate.nodes_expanded;
     assert_eq!(
-        certificate.status,
+        certificate.outcome,
         SolveStatus::OptimalByDeterministicSearch {
             nodes_expanded: expanded
         }

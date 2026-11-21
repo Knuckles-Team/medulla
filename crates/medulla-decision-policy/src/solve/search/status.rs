@@ -54,7 +54,7 @@ impl Search<'_> {
             model_digest: model.digest(),
             algorithm: Algorithm::DepthFirstDualAscent,
             config: self.config,
-            status,
+            outcome: status,
             incumbent,
             lower_bound: lower_bound.map(Scalar::new),
             proof,
