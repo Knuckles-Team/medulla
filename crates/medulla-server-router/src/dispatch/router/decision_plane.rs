@@ -424,11 +424,34 @@ async fn dispatch_catalog_admin_methods(
     } = ctx;
     ControlFlow::Break(match method {
         Method::ConnectorPack { op } => {
-            dispatch_boxed(async {
+            // MEDULLA-MEDIA-VOCAB-R001.102.2: an import that leaves a pack declaring `Bookmark`
+            // authors the tenant's `bookmark` semantic binding.
+            #[cfg(all(feature = "ann-redb", feature = "query"))]
+            let imported = match op.as_ref() {
+                medulla_catalog_types::connector_pack::ConnectorPackOp::Import { request } => {
+                    Some(request.index.connector.as_str().to_string())
+                }
+                _ => None,
+            };
+            let response = dispatch_boxed(async {
                 medulla_h_admin::admin::handle_connector_pack(state, req.id, verified_context, *op)
                     .await
             })
-            .await
+            .await;
+            #[cfg(all(feature = "ann-redb", feature = "query"))]
+            if let Some(connector) = imported.filter(|_| response.refusal_text().is_none()) {
+                if let Err(refusal) = super::bookmark_binding::author_on_pack_activation(
+                    state,
+                    &req.graph,
+                    verified_context,
+                    &connector,
+                )
+                .await
+                {
+                    return ControlFlow::Break(Response::err(req.id, refusal));
+                }
+            }
+            response
         }
         // MEDULLA-TYPED-PACKS-R097.700: `Preview` evaluates the manifest and writes
         // nothing; `Run` continues to the mutation gateway (`Route::DomainPack`).
@@ -585,6 +608,20 @@ async fn activate_held_pack_release(
     match medulla_h_admin::admin::activate_held_release(state, req.id, verified, &subject, &digest)
         .await
     {
+        // MEDULLA-MEDIA-VOCAB-R001.102.2: a released pack that declares `Bookmark` authors the
+        // tenant's `bookmark` semantic binding.
+        #[cfg(all(feature = "ann-redb", feature = "query"))]
+        Ok(Some(_)) => {
+            let connector = subject.strip_prefix("pack:").unwrap_or(&subject);
+            match super::bookmark_binding::author_on_pack_activation(
+                state, &req.graph, verified, connector,
+            )
+            .await
+            {
+                Ok(()) => applied,
+                Err(refusal) => Response::err(req.id, refusal),
+            }
+        }
         Ok(_) => applied,
         Err(refusal) if refusal.starts_with("PACK_RELEASE_NOT_HELD") => applied,
         Err(refusal) => Response::err(req.id, refusal),

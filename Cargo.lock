@@ -8262,6 +8262,7 @@ dependencies = [
  "medulla-modality",
  "medulla-mutation-types",
  "medulla-persistence",
+ "medulla-persistence-records",
  "medulla-plan",
  "medulla-protocol-types",
  "medulla-query-types",

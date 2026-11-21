@@ -494,6 +494,48 @@ impl AgentLibraryStore {
         })
     }
 
+    /// Whether the connector's current pack declares a record type mapped onto the core
+    /// ontology class `class` (a bare name, a `:`-prefixed name or the full core IRI), read from
+    /// the decoded `schema_mappings` of the `connector://resources` declaration
+    /// (MEDULLA-MEDIA-VOCAB-R001.102.2). A connector with no imported pack, or whose declaration
+    /// carries no decoded mappings, declares nothing.
+    pub fn connector_declares_class(
+        &self,
+        tenant_id: &str,
+        connector: &ResourceId,
+        class: &str,
+    ) -> Result<bool, String> {
+        medulla_agent_types::agent_library::validate_key(tenant_id, connector.as_str())?;
+        let (_, declaration) = match self.current_connector_declaration(tenant_id, connector) {
+            Ok(current) => current,
+            Err(refusal)
+                if refusal.starts_with("UNKNOWN_MAPPING_REFERENCE")
+                    || refusal.starts_with("CONNECTOR_SCHEMA_MAPPING_UNAVAILABLE") =>
+            {
+                return Ok(false)
+            }
+            Err(refusal) => return Err(refusal),
+        };
+        let canonical = |name: &str| {
+            let name = name.trim();
+            if name.contains("://") {
+                name.to_string()
+            } else {
+                format!(
+                    "{}{}",
+                    medulla_types::ontology_base::CORE_NAMESPACE,
+                    name.trim_start_matches(':')
+                )
+            }
+        };
+        let wanted = canonical(class);
+        Ok(declaration.schema_mappings.as_ref().is_some_and(|mappings| {
+            mappings
+                .values()
+                .any(|mapping| canonical(&mapping.ontology_class) == wanted)
+        }))
+    }
+
     pub fn resolve_connector_relationship_mapping(
         &self,
         tenant_id: &str,
