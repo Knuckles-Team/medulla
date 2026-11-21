@@ -22,3 +22,8 @@ tracing = "0.1"
 [dev-dependencies]
 criterion = { version = "0.8", default-features = false }
 tokio = { version = "1.53", features = ["rt-multi-thread", "sync", "time", "macros"] }
+
+[[bench]]
+name = "registry"
+path = "benches/registry.rs"
+harness = false

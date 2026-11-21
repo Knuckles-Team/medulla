@@ -27,6 +27,8 @@ closed_error_codes! {
         ArchiveMissing => "ARCHIVE_MISSING",
         /// A read met a graph whose durable material is only partly in memory (MEDULLA-OBSERVE-R001.1).
         PartialMaterialization => "PARTIAL_MATERIALIZATION",
+        /// MEDULLA-OBSERVE-R005.1: a guarded loop saw the same cursor `observe.progress_idle_limit` times in a row.
+        NoProgress => "NO_PROGRESS",
         /// MEDULLA-FEDERATED-QUERY-R078.3: the caller scope cannot bind to the plan.
         PlanScopeInvalid => "PLAN_SCOPE_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R078.4: the caller has no verified tenant; the

@@ -13,6 +13,7 @@
 #![deny(missing_docs)]
 
 pub mod machine;
+pub mod progress;
 pub mod registry;
 pub mod spawn;
 
