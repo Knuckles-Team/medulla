@@ -15,9 +15,10 @@ float on the wire.
 
 from __future__ import annotations
 
+import uuid
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 
 from medulla.generated._task_plan_feature_schema import (
     TASK_PLAN_FEATURE_SCHEMA,
@@ -1308,7 +1309,129 @@ class DecisionClient:
         return _payload(result)
 
 
+
+@dataclass(frozen=True, slots=True)
+class MeasuredFactRecorded:
+    """What :func:`record_measured_fact` did: the profile component, its revision
+    after the call, and whether the fact was already the head's (no write)."""
+
+    component_id: str
+    entry_revision: int
+    replayed: bool
+
+
+_MEASURED_FACT_FIELDS = (
+    "shell_proficiency",
+    "stopping_behaviour",
+    "context_window_tokens",
+)
+_PLACEHOLDER = "placeholder"
+
+
+def _measured_fact_context(client: Any, expected_revision: int) -> dict[str, Any]:
+    """The mutation context of a library write. Every field but the tenant and
+    the expected revision is a placeholder the server replaces from the verified
+    request (``bind_agent_library_context``), never from the body."""
+    principal = "principal:sha256:" + "a" * 64
+    tenant = getattr(client, "tenant", None) or client._request_tenant()
+    return {
+        "request_id": 0,
+        "principal": principal,
+        "caller_principal": principal,
+        "attempt_nonce": uuid.uuid4().hex * 2,
+        "tenant_id": tenant,
+        "actor_scope": _PLACEHOLDER,
+        "purpose_id": _PLACEHOLDER,
+        "policy_revision": _PLACEHOLDER,
+        "policy_digest": "sha256:" + "0" * 64,
+        "policy_decision_id": _PLACEHOLDER,
+        "idempotency_key": uuid.uuid4().hex,
+        "expected_revision": expected_revision,
+        "trace_id": None,
+        "created_at_ms": 0,
+    }
+
+
+async def record_measured_fact(
+    client: Any,
+    model_profile_ref: str,
+    field: Literal["shell_proficiency", "stopping_behaviour", "context_window_tokens"],
+    value: str | int,
+    evaluation_id: str,
+    digest: str,
+) -> MeasuredFactRecorded:
+    """Apply one evaluation result once through the ``ModelProfile`` publish
+    (MEDULLA-ORCH-VOCAB-R011.10).
+
+    Reads the head, copies it into the next draft with the one fact changed and
+    publishes it. A head that already holds the fact returns ``replayed=True``
+    without sending anything, so a retried result adds no revision. A concurrent
+    head move or an invalid run reference is the engine's refusal, unchanged.
+    """
+    from medulla.generated.agent_component import AgentComponentDraft
+    from medulla.generated.storage import send_agent_component
+
+    if field not in _MEASURED_FACT_FIELDS:
+        raise ValueError(f"UNKNOWN_MEASURED_FACT: {field}")
+    tenant = getattr(client, "tenant", None) or client._request_tenant()
+    head = (
+        await send_agent_component(
+            client,
+            {
+                "op": {
+                    "op": "current",
+                    "tenant_id": tenant,
+                    "component_id": model_profile_ref,
+                }
+            },
+        )
+    ).payload
+    if not isinstance(head, dict) or head.get("kind") != "model_profile":
+        raise ValueError(f"MODEL_PROFILE_UNKNOWN: {model_profile_ref}")
+
+    if field == "context_window_tokens":
+        fact: Any = value
+    else:
+        fact = {
+            "value": value,
+            "evaluation_run_ref": {"evaluation_id": evaluation_id, "digest": digest},
+        }
+    facts = dict(head["facts"])
+    if facts.get(field) == fact:
+        return MeasuredFactRecorded(
+            component_id=head["component_id"],
+            entry_revision=head["entry_revision"],
+            replayed=True,
+        )
+    facts[field] = fact
+    draft = {
+        name: head[name] for name in AgentComponentDraft.model_fields if name in head
+    }
+    draft["facts"] = facts
+    result = await send_agent_component(
+        client,
+        {
+            "op": {
+                "op": "publish",
+                "request": {
+                    "context": _measured_fact_context(client, head["entry_revision"]),
+                    "component": draft,
+                    "evaluation_receipt_digest": None,
+                },
+            }
+        },
+        idempotency_key=f"measured-fact:{model_profile_ref}:{field}:{evaluation_id}",
+    )
+    payload = result.payload
+    return MeasuredFactRecorded(
+        component_id=model_profile_ref,
+        entry_revision=payload["entry"]["entry_revision"],
+        replayed=False,
+    )
+
+
 __all__ = [
+    "MeasuredFactRecorded",
     "Q32_ONE",
     "TASK_PLAN_FEATURE_SCHEMA",
     "DecisionClient",
@@ -1345,6 +1468,7 @@ __all__ = [
     "put_document_set_op",
     "put_profile_op",
     "q32_of",
+    "record_measured_fact",
     "record_outcome_op",
     "resolve_op",
     "task_plan_request",
