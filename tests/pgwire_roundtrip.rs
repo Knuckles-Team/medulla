@@ -2889,3 +2889,85 @@ async fn explain_and_explain_analyze_return_plans_and_refuse_writes() {
         .expect("read after the refused write");
     assert!(simple_ids(rows).is_empty(), "the refused write took effect");
 }
+
+/// Send a raw `CancelRequest` (length 16, code 80877102, pid, secret) on a fresh
+/// connection and wait for the server to close it.
+async fn send_raw_cancel_request(addr: &str, pid: i32, secret: i32) {
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
+    let mut stream = tokio::net::TcpStream::connect(addr)
+        .await
+        .expect("connect for the cancel request");
+    let mut frame = Vec::with_capacity(16);
+    frame.extend_from_slice(&16i32.to_be_bytes());
+    frame.extend_from_slice(&80_877_102i32.to_be_bytes());
+    frame.extend_from_slice(&pid.to_be_bytes());
+    frame.extend_from_slice(&secret.to_be_bytes());
+    stream.write_all(&frame).await.expect("send the cancel request");
+    let mut rest = Vec::new();
+    let _ = stream.read_to_end(&mut rest).await;
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R035.5
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn cancel_request_stops_a_long_query_and_wrong_secret_is_ignored() {
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = Arc::new(connect(&addr).await);
+
+    // A cancel with the connection's own key stops a long statement with 57014.
+    let long = "SELECT count(*) FROM generate_series(1, 5000000000)";
+    let running = {
+        let client = Arc::clone(&client);
+        tokio::spawn(async move { client.simple_query(long).await })
+    };
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    let cancelled_at = std::time::Instant::now();
+    client
+        .cancel_token()
+        .cancel_query(tokio_postgres::NoTls)
+        .await
+        .expect("send the cancel request");
+    let error = running
+        .await
+        .expect("the query task joins")
+        .expect_err("a cancelled statement fails");
+    let elapsed = cancelled_at.elapsed();
+    assert_eq!(
+        error.code(),
+        Some(&tokio_postgres::error::SqlState::QUERY_CANCELED),
+        "{error:?}"
+    );
+    assert!(
+        elapsed < std::time::Duration::from_millis(500),
+        "the cancel took {elapsed:?}"
+    );
+
+    // The connection keeps serving after a cancel.
+    let rows = client
+        .simple_query("SELECT id FROM nodes WHERE rank >= 2 ORDER BY id")
+        .await
+        .expect("the connection serves after a cancel");
+    assert_eq!(simple_ids(rows), vec!["n2".to_string(), "n3".to_string()]);
+
+    // A wrong key matches no registered connection: it is ignored and the
+    // statement completes.
+    let bounded = "SELECT count(*) AS n FROM generate_series(1, 20000000)";
+    let running = {
+        let client = Arc::clone(&client);
+        tokio::spawn(async move { client.simple_query(bounded).await })
+    };
+    tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    send_raw_cancel_request(&addr, 100_000, 0x5eed_0bad).await;
+    let messages = running
+        .await
+        .expect("the query task joins")
+        .expect("a wrong-key cancel leaves the statement running");
+    let count = messages
+        .into_iter()
+        .find_map(|message| match message {
+            tokio_postgres::SimpleQueryMessage::Row(row) => row.get(0).map(str::to_string),
+            _ => None,
+        })
+        .expect("one count row");
+    assert_eq!(count, "20000000");
+}

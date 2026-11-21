@@ -83,6 +83,7 @@ use medulla_wire_core::wire::WireProtocol;
 use medulla_wire_core::wire::WireSession;
 
 mod auth;
+mod cancel;
 mod message_loop;
 
 pub use auth::{derive_pg_password, password_verifier, PgWireAuthMode, PGWIRE_AUTH_ENV};
@@ -1005,8 +1006,13 @@ impl SimpleQueryHandler for EngineBackend {
         // On the first query, adopt the libpq `database` startup parameter as the
         // target graph (priority 1) — readable only now that startup has completed.
         self.bind_startup_from_client(client).await?;
+        // MEDULLA-DURABLE-KERNEL-R035.5: the statement's cancellation scope. pgwire
+        // drops this future when a cancel request fires; the scope then stops the read.
+        let statement = cancel::StatementCancel::begin(&self.session);
         // Simple query: the unified TEXT wire format (no per-column format codes).
-        let outcome = self.session.execute(query).await.map_err(wire_err_to_pg)?;
+        let outcome = self.session.execute(query).await;
+        statement.finish();
+        let outcome = outcome.map_err(wire_err_to_pg)?;
         Ok(vec![outcome_to_response(outcome, None)])
     }
 }
@@ -1788,7 +1794,11 @@ impl ExtendedQueryHandler for EngineBackend {
     {
         self.bind_startup_from_client(client).await?;
         let sql = substitute_params(&portal.statement.statement.sql, portal)?;
-        let outcome = self.session.execute(&sql).await.map_err(wire_err_to_pg)?;
+        // MEDULLA-DURABLE-KERNEL-R035.5: the statement's cancellation scope.
+        let statement = cancel::StatementCancel::begin(&self.session);
+        let outcome = self.session.execute(&sql).await;
+        statement.finish();
+        let outcome = outcome.map_err(wire_err_to_pg)?;
         Ok(outcome_to_response(
             outcome,
             Some(&portal.result_column_format),
@@ -1923,6 +1933,10 @@ struct EngineBackendFactory {
     /// The validated server certificate, retained solely for SCRAM channel
     /// binding (`SCRAM-SHA-256-PLUS`) on this connection.
     tls_certificate_pem: Option<Arc<Vec<u8>>>,
+    /// The listener's one registry of live connections (MEDULLA-DURABLE-KERNEL-R035.5),
+    /// shared by every connection's factory: login registers into it and a cancel
+    /// request, which arrives on its own connection, looks the target up in it.
+    connections: Arc<pgwire::api::ConnectionManager>,
 }
 
 impl EngineBackendFactory {
@@ -1932,12 +1946,14 @@ impl EngineBackendFactory {
         auth_mode: PgWireAuthMode,
         auth_secret: String,
         tls_certificate_pem: Option<Arc<Vec<u8>>>,
+        connections: Arc<pgwire::api::ConnectionManager>,
     ) -> Self {
         Self {
             backend: Arc::new(EngineBackend::new(state, default_graph)),
             auth_mode,
             auth_secret,
             tls_certificate_pem,
+            connections,
         }
     }
 }
@@ -1979,6 +1995,7 @@ impl PgWireServerHandlers for EngineBackendFactory {
                 .as_ref()
                 .map(|certificate| certificate.as_slice()),
             wire_login_cache(),
+            self.connections.clone(),
         ))
     }
 
@@ -1988,8 +2005,12 @@ impl PgWireServerHandlers for EngineBackendFactory {
         self.backend.clone()
     }
 
-    // `error_handler` and `cancel_handler` use the `PgWireServerHandlers` trait
-    // defaults (NoopHandler).
+    fn cancel_handler(&self) -> Arc<impl pgwire::api::cancel::CancelHandler> {
+        // MEDULLA-DURABLE-KERNEL-R035.5: delegate to the listener's registry.
+        Arc::new(cancel::EngineCancelHandler::new(self.connections.clone()))
+    }
+
+    // `error_handler` uses the `PgWireServerHandlers` trait default (NoopHandler).
 }
 
 /// Bind `addr` and serve pgwire connections until the process exits. Spawned by
@@ -2054,6 +2075,8 @@ pub async fn serve_prepared(
     let startup_timeout = Duration::from_millis(
         medulla_server_api::knob_config::KnobConfig::default().pgwire_startup_timeout_ms,
     );
+    // MEDULLA-DURABLE-KERNEL-R035.5: one registry of live connections per listener.
+    let connections = Arc::new(pgwire::api::ConnectionManager::new());
     loop {
         let (socket, peer) = listener.accept().await?;
         // A FRESH factory (and thus a fresh shared `EngineBackend`) per connection,
@@ -2066,6 +2089,7 @@ pub async fn serve_prepared(
             tls_material
                 .as_ref()
                 .map(|(_, certificate_pem)| certificate_pem.clone()),
+            connections.clone(),
         ));
         let tls_acceptor = tls_material.as_ref().map(|(acceptor, _)| acceptor.clone());
         tokio::spawn(async move {

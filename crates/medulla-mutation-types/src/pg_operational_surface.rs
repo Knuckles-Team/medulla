@@ -142,6 +142,12 @@ pub const SERVED_FUNCTIONS: &[&str] = &[
     "tsrange",
 ];
 
+/// The operational surfaces the wire listener serves today. Each R035 child that
+/// delivers a surface adds it here, and [`PgCompatibilityMatrix::with_served_forms`]
+/// declares every surface this list names.
+pub const SERVED_OPERATIONAL_SURFACES: &[PgOperationalSurface] =
+    &[PgOperationalSurface::QueryCancellation];
+
 /// A parity check named one or more surfaces that are not declared
 /// supported. Carries every missing surface, not just the first.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -300,6 +306,18 @@ mod tests {
             matrix.declare_supported(surface);
         }
         assert!(matrix.require_all(&PgOperationalSurface::ALL).is_ok());
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R035.5
+    #[test]
+    fn served_matrix_declares_every_served_operational_surface() {
+        let m = PgCompatibilityMatrix::with_served_forms();
+        for surface in SERVED_OPERATIONAL_SURFACES {
+            assert!(m.is_supported(*surface), "{surface:?} is served but undeclared");
+        }
+        assert!(m.is_supported(PgOperationalSurface::QueryCancellation));
+        assert!(!PgCompatibilityMatrix::fail_closed()
+            .is_supported(PgOperationalSurface::QueryCancellation));
     }
 
     // spec: MEDULLA-ENGINE-PARITY-R009.1

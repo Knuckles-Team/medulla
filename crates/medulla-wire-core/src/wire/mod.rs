@@ -1369,6 +1369,12 @@ pub struct WireSession {
     /// than at connection setup so it costs nothing on a connection that never
     /// touches a mixed transaction.
     pub recovered_intents: std::sync::atomic::AtomicBool,
+    /// The cancellation token of the statement the wire is running, installed by
+    /// [`WireSession::begin_statement`] and taken by [`WireSession::end_statement`]
+    /// (MEDULLA-DURABLE-KERNEL-R035.5). Every read the statement runs carries it, so a
+    /// wire cancel request stops the read at its next batch boundary. `None` between
+    /// statements: a read outside a statement runs with a fresh token.
+    statement_cancel: parking_lot::Mutex<Option<medulla_sql::sql::CancellationToken>>,
 }
 
 /// Explicit, self-documenting choice of the version [`WireSession::commit_graph_methods_with_op`]
@@ -1486,7 +1492,27 @@ impl WireSession {
             serializable_predicate_reads: Default::default(),
             txn_replay_log: Default::default(),
             recovered_intents: Default::default(),
+            statement_cancel: Default::default(),
         }
+    }
+
+    /// Install a fresh cancellation token for the statement about to run and return
+    /// a handle to it (MEDULLA-DURABLE-KERNEL-R035.5). Every [`Self::run_read`] the
+    /// statement reaches carries this token until [`Self::end_statement`].
+    pub fn begin_statement(&self) -> medulla_sql::sql::CancellationToken {
+        let token = medulla_sql::sql::CancellationToken::new();
+        *self.statement_cancel.lock() = Some(token.clone());
+        token
+    }
+
+    /// Take the running statement's cancellation token, ending the statement.
+    pub fn end_statement(&self) -> Option<medulla_sql::sql::CancellationToken> {
+        self.statement_cancel.lock().take()
+    }
+
+    /// The token a read runs with: the running statement's, else a fresh one.
+    fn statement_cancel_token(&self) -> medulla_sql::sql::CancellationToken {
+        self.statement_cancel.lock().clone().unwrap_or_default()
     }
 
     /// Verify and bind a current signed request for an auxiliary SQL carrier.
@@ -2031,13 +2057,16 @@ impl WireSession {
         // The statement runs over `graph`, so `medulla_catalog.matviews` lists that
         // graph's views (MEDULLA-INCREMENTAL-VIEWS-R005.3).
         let statement_graph = graph.to_string();
+        // MEDULLA-DURABLE-KERNEL-R035.5: the running statement's token, so a wire
+        // cancel request stops this read at its next batch boundary.
+        let cancel = self.statement_cancel_token();
         tokio::task::spawn_blocking(move || {
             medulla_sql::sql::exec_sql_typed_with_tables_in_graph(
                 &snap,
                 projection.store(),
                 Some(&statement_graph),
                 &sql,
-                &medulla_sql::sql::CancellationToken::new(),
+                &cancel,
             )
         })
         .await

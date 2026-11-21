@@ -44,7 +44,8 @@ use pgwire::api::auth::{
     AuthSource, DefaultServerParameterProvider, LoginInfo, Password, StartupHandler,
 };
 use pgwire::api::{
-    ClientInfo, PgWireConnectionState, PidSecretKeyGenerator, RandomPidSecretKeyGenerator,
+    ClientInfo, ConnectionGuard, ConnectionHandle, ConnectionManager, PgWireConnectionState,
+    PidSecretKeyGenerator, RandomPidSecretKeyGenerator,
 };
 use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::messages::startup::Authentication;
@@ -186,6 +187,19 @@ pub struct EngineStartupHandler {
     scram: Box<SASLAuthStartupHandler<DefaultServerParameterProvider>>,
     logins: Arc<dyn WireLoginSource>,
     route: tokio::sync::Mutex<LoginRoute>,
+    /// The listener's registry of live connections (MEDULLA-DURABLE-KERNEL-R035.5).
+    /// Every completed login registers here, so a cancel request can find it.
+    connections: Arc<ConnectionManager>,
+}
+
+/// The one backend-key generator every connection of the process draws from, so
+/// two live connections never share a pid (MEDULLA-DURABLE-KERNEL-R035.5).
+fn pid_secret_key_generator() -> Arc<RandomPidSecretKeyGenerator> {
+    static GENERATOR: std::sync::OnceLock<Arc<RandomPidSecretKeyGenerator>> =
+        std::sync::OnceLock::new();
+    GENERATOR
+        .get_or_init(|| Arc::new(RandomPidSecretKeyGenerator::default()))
+        .clone()
 }
 
 impl EngineStartupHandler {
@@ -202,6 +216,7 @@ impl EngineStartupHandler {
         auth_secret: &str,
         certificate_pem: Option<&[u8]>,
         logins: Arc<dyn WireLoginSource>,
+        connections: Arc<ConnectionManager>,
     ) -> Self {
         match mode {
             PgWireAuthMode::Scram => {
@@ -215,14 +230,18 @@ impl EngineStartupHandler {
                         .configure_certificate(certificate_pem)
                         .expect("pgwire TLS certificate was validated before listener startup");
                 }
+                let generator: Arc<dyn PidSecretKeyGenerator> = pid_secret_key_generator();
                 let handler = SASLAuthStartupHandler::new(Arc::new(
                     DefaultServerParameterProvider::default(),
                 ))
-                .with_scram(scram);
+                .with_scram(scram)
+                .with_pid_secret_key_generator(generator)
+                .with_connection_manager(connections.clone());
                 Self {
                     scram: Box::new(handler),
                     logins,
                     route: tokio::sync::Mutex::new(LoginRoute::Scram),
+                    connections,
                 }
             }
         }
@@ -240,14 +259,22 @@ impl EngineStartupHandler {
     }
 }
 
-async fn complete_login<C>(client: &mut C) -> PgWireResult<()>
+async fn complete_login<C>(client: &mut C, connections: &Arc<ConnectionManager>) -> PgWireResult<()>
 where
     C: ClientInfo + futures::Sink<PgWireBackendMessage> + Unpin + Send + Sync,
     C::Error: std::fmt::Debug,
     PgWireError: From<<C as futures::Sink<PgWireBackendMessage>>::Error>,
 {
-    let (pid, secret_key) = RandomPidSecretKeyGenerator::default().generate(client);
-    client.set_pid_and_secret_key(pid, secret_key);
+    let (pid, secret_key) = pid_secret_key_generator().generate(client);
+    client.set_pid_and_secret_key(pid, secret_key.clone());
+    // MEDULLA-DURABLE-KERNEL-R035.5: register the connection under its backend key.
+    // The handle lets pgwire race each statement against a cancel; the guard
+    // unregisters the connection when the session ends.
+    let (handle, guard) = connections.register(pid, secret_key);
+    client
+        .session_extensions()
+        .insert::<Arc<ConnectionHandle>>(handle);
+    client.session_extensions().insert::<ConnectionGuard>(guard);
     finish_authentication(client, &DefaultServerParameterProvider::default()).await
 }
 
@@ -305,7 +332,7 @@ impl StartupHandler for EngineStartupHandler {
                     },
                 )
                 .map_err(|refused| invalid_login_error(&refused))?;
-                return complete_login(client).await;
+                return complete_login(client, &self.connections).await;
             }
         }
         let route = *self.route.lock().await;
@@ -319,7 +346,7 @@ impl StartupHandler for EngineStartupHandler {
                     .unwrap_or_default();
                 resolve_wire_login(self.logins.as_ref(), &user, WireProof::Token(&token))
                     .map_err(|refused| invalid_login_error(&refused))?;
-                return complete_login(client).await;
+                return complete_login(client, &self.connections).await;
             }
             return Ok(());
         }
