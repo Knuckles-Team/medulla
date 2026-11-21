@@ -12882,9 +12882,14 @@ class QueryClient:
         foreign_execution: dict[str, Any] | None = None,
         foreign_executions: list[dict[str, Any]] | None = None,
         latency_class: str = "interactive",
+        retrieval: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Run ONE cross-modal plan (CONCEPT:AU-KG.compute.vector/209) and return ranked
         rows.
+
+        ``retrieval`` is the one carrier of hard ``constraints``, ``topic`` fusion and the
+        ``modality`` pair (``{"query": ..., "target": ...}``); a part that fails
+        validation refuses with its registered code before anything runs.
 
         ``latency_class`` is ``"interactive"`` (the default: the plan runs within
         the node budget and refuses ``QUERY_BUDGET_EXCEEDED`` past it) or
@@ -12927,6 +12932,8 @@ class QueryClient:
             raise ValueError("latency_class must be 'interactive' or 'analytical'")
         if latency_class != "interactive":
             body["latency_class"] = latency_class
+        if retrieval is not None:
+            body["retrieval"] = retrieval
         result = (await _gen.query.send_unified_query(self._client, body)).payload
         if latency_class == "analytical":
             return result

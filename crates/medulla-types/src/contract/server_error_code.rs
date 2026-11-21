@@ -262,6 +262,10 @@ closed_error_codes! {
         EmbeddingSpaceIncompatible => "EMBEDDING_SPACE_INCOMPATIBLE",
         /// MEDULLA-FEDERATED-QUERY-R040.1.7: a retrieval constraint predicate is malformed or unsupported.
         ConstraintInvalid => "CONSTRAINT_INVALID",
+        /// MEDULLA-FEDERATED-QUERY-R040.1.4: the constraints pin a graph revision other than the one the query reads.
+        GraphRevisionStale => "GRAPH_REVISION_STALE",
+        /// MEDULLA-FEDERATED-QUERY-R040.1.4: the constraints pin a revision the query has nothing to compare against.
+        ConstraintUnevaluable => "CONSTRAINT_UNEVALUABLE",
         /// MEDULLA-FEDERATED-QUERY-R040.1.7: a topic bound is out of range (`top_topics` zero, `min_weight` outside `[0, 1]`).
         TopicWeightInvalid => "TOPIC_WEIGHT_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R040.2.2: a topic result or a candidate vector is not in the retriever's embedding space.

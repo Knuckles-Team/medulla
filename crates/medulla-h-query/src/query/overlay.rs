@@ -267,10 +267,13 @@ pub fn run_unified_with_staged_finish<T>(
     finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
 ) -> Result<T, String> {
     let indexes = CoreIndexes::open(core);
-    let served = indexes.served(
+    let mut served = indexes.served(
         #[cfg(feature = "federation")]
         foreign,
     );
+    // MEDULLA-FEDERATED-QUERY-R040.1.4: the revision a constraint pin is compared with
+    // is the graph's version when the served indexes are opened.
+    served.graph_revision = Some(core.version());
     if staged.is_empty() {
         let committed = core.semantic_store.read();
         return run_unified_with(

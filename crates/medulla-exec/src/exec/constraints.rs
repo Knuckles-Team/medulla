@@ -17,6 +17,8 @@ use medulla_query_types::wire::{
     RetrievalConstraints,
 };
 
+use medulla_types::contract::ServerErrorCode;
+
 use crate::exec::expand::{admitted_edges, EdgeFilter};
 
 /// The ids that satisfy a [`RetrievalConstraints`], bound to the graph revision the
@@ -54,15 +56,92 @@ impl ConstraintSet {
     }
 }
 
+/// MEDULLA-FEDERATED-QUERY-R040.1.4: why a constraint set was refused. A refusal ranks
+/// nothing, and a hard exclusion never becomes a score penalty.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ConstraintError {
+    /// A malformed or unsupported predicate (`CONSTRAINT_INVALID`).
+    Invalid(String),
+    /// The constraints pin a graph revision other than the one the query reads
+    /// (`GRAPH_REVISION_STALE`).
+    RevisionStale {
+        /// The revision the constraints named.
+        pinned: u64,
+        /// The revision the query reads.
+        current: u64,
+    },
+    /// The constraints pin a revision but the query binds none to compare against
+    /// (`CONSTRAINT_UNEVALUABLE`).
+    Unevaluable(String),
+}
+
+impl ConstraintError {
+    /// The registered refusal code.
+    pub fn code(&self) -> ServerErrorCode {
+        match self {
+            Self::Invalid(_) => ServerErrorCode::ConstraintInvalid,
+            Self::RevisionStale { .. } => ServerErrorCode::GraphRevisionStale,
+            Self::Unevaluable(_) => ServerErrorCode::ConstraintUnevaluable,
+        }
+    }
+}
+
+impl std::fmt::Display for ConstraintError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let code = self.code();
+        match self {
+            Self::Invalid(message) | Self::Unevaluable(message) => write!(f, "{code}: {message}"),
+            Self::RevisionStale { pinned, current } => write!(
+                f,
+                "{code}: the constraints pin graph revision {pinned}, the query reads revision {current}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ConstraintError {}
+
+impl From<ConstraintError> for String {
+    fn from(error: ConstraintError) -> Self {
+        error.to_string()
+    }
+}
+
 /// Compile `constraints` over `view` into the set of eligible ids. A malformed
 /// predicate is refused before any node is read. Property comparison follows the
 /// engine's SQL three-valued logic: a missing property or a differently typed value
 /// is unknown and does not satisfy a predicate.
+///
+/// `current_revision` is the graph revision the query reads (`None`: a plan run
+/// outside a served read binds none). A `graph_revision` of `0` declares no pin;
+/// any other value must equal it, else `GRAPH_REVISION_STALE`, and a pin with no
+/// revision to compare against is `CONSTRAINT_UNEVALUABLE`. An unsatisfiable but
+/// valid conjunction is not an error: it is an empty set.
 pub fn compile_constraints(
     view: &GraphView,
     constraints: &RetrievalConstraints,
-) -> Result<ConstraintSet, String> {
-    constraints.validate()?;
+    current_revision: Option<u64>,
+) -> Result<ConstraintSet, ConstraintError> {
+    constraints
+        .validate()
+        .map_err(ConstraintError::Invalid)?;
+    if constraints.graph_revision != 0 {
+        match current_revision {
+            Some(current) if current == constraints.graph_revision => {}
+            Some(current) => {
+                return Err(ConstraintError::RevisionStale {
+                    pinned: constraints.graph_revision,
+                    current,
+                })
+            }
+            None => {
+                return Err(ConstraintError::Unevaluable(format!(
+                    "the constraints pin graph revision {} but the query binds no revision to compare against",
+                    constraints.graph_revision
+                )))
+            }
+        }
+    }
     let entity: Vec<Pred> = constraints
         .entity_predicates
         .iter()
@@ -272,6 +351,7 @@ mod tests {
         let set = compile_constraints(
             &view,
             &constraints(vec![cites_banned(RelationshipQuantifier::NotExists)]),
+            Some(4),
         )
         .unwrap();
         assert_eq!(set.graph_revision(), 4);
@@ -289,6 +369,7 @@ mod tests {
         let required = compile_constraints(
             &view,
             &constraints(vec![cites_banned(RelationshipQuantifier::Exists)]),
+            Some(4),
         )
         .unwrap();
         assert_eq!(
@@ -304,6 +385,7 @@ mod tests {
                 cites_banned(RelationshipQuantifier::Exists),
                 cites_banned(RelationshipQuantifier::NotExists),
             ]),
+            Some(4),
         )
         .unwrap();
         assert!(contradictory.is_empty());
@@ -324,7 +406,9 @@ mod tests {
             .unwrap(),
             relationship_predicates: BoundedVec::default(),
         };
-        assert!(compile_constraints(&view, &none).unwrap().is_empty());
+        assert!(compile_constraints(&view, &none, Some(4))
+            .unwrap()
+            .is_empty());
 
         // A malformed predicate is refused before any node is read.
         let malformed = RetrievalConstraints {
@@ -336,6 +420,63 @@ mod tests {
             .unwrap(),
             relationship_predicates: BoundedVec::default(),
         };
-        assert!(compile_constraints(&view, &malformed).is_err());
+        assert!(compile_constraints(&view, &malformed, Some(4)).is_err());
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.1.4
+    #[test]
+    fn refusals_are_typed_and_registered() {
+        let fixture = fixture();
+        let core = graph(&fixture);
+        let view = core.analysis_snapshot();
+        let pinned = constraints(vec![cites_banned(RelationshipQuantifier::NotExists)]);
+        assert_eq!(pinned.graph_revision, 4);
+
+        // The pin matches the revision the query reads: compiled.
+        assert!(compile_constraints(&view, &pinned, Some(4)).is_ok());
+        // An older or newer revision than the pin is stale.
+        for current in [3, 5] {
+            let stale = compile_constraints(&view, &pinned, Some(current)).unwrap_err();
+            assert_eq!(
+                stale,
+                ConstraintError::RevisionStale {
+                    pinned: 4,
+                    current
+                }
+            );
+            assert_eq!(stale.code().as_str(), "GRAPH_REVISION_STALE");
+            assert!(stale.to_string().starts_with("GRAPH_REVISION_STALE"));
+        }
+        // A pin with no revision to compare against cannot be evaluated.
+        let unevaluable = compile_constraints(&view, &pinned, None).unwrap_err();
+        assert_eq!(unevaluable.code().as_str(), "CONSTRAINT_UNEVALUABLE");
+        // Revision 0 declares no pin: it compiles whatever revision the query reads.
+        let unpinned = RetrievalConstraints {
+            graph_revision: 0,
+            ..pinned.clone()
+        };
+        assert!(compile_constraints(&view, &unpinned, None).is_ok());
+        assert!(compile_constraints(&view, &unpinned, Some(9)).is_ok());
+        // A malformed predicate is invalid before the revision is compared.
+        let malformed = RetrievalConstraints {
+            graph_revision: 4,
+            entity_predicates: BoundedVec::new(vec![EntityPredicate::Eq {
+                property: " ".into(),
+                value: PredLiteral::Bool(true),
+            }])
+            .unwrap(),
+            relationship_predicates: BoundedVec::default(),
+        };
+        let invalid = compile_constraints(&view, &malformed, Some(5)).unwrap_err();
+        assert_eq!(invalid.code().as_str(), "CONSTRAINT_INVALID");
+        assert!(matches!(invalid, ConstraintError::Invalid(_)));
+        // A contradictory but valid conjunction is an empty set, never an error.
+        let contradictory = constraints(vec![
+            cites_banned(RelationshipQuantifier::Exists),
+            cites_banned(RelationshipQuantifier::NotExists),
+        ]);
+        assert!(compile_constraints(&view, &contradictory, Some(4))
+            .unwrap()
+            .is_empty());
     }
 }

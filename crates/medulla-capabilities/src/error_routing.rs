@@ -249,6 +249,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             // MEDULLA-FEDERATED-QUERY-R040.1.7: the served retrieval request refusals.
             "EMBEDDING_SPACE_INCOMPATIBLE",
             "CONSTRAINT_INVALID",
+            "GRAPH_REVISION_STALE",
+            "CONSTRAINT_UNEVALUABLE",
             "TOPIC_WEIGHT_INVALID",
             "TOPIC_SPACE_MISMATCH",
             "TOPIC_CORPUS_STALE",

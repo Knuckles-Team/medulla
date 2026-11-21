@@ -250,6 +250,10 @@ pub(crate) fn build_text_index_from_view(
 #[cfg(feature = "query")]
 #[derive(Default)]
 pub struct ServedIndexes<'a> {
+    /// MEDULLA-FEDERATED-QUERY-R040.1.4 — the graph revision the query reads, bound when
+    /// the served indexes are opened. `None` (a plan run outside a served read) leaves
+    /// a constraint pin with nothing to compare against: `CONSTRAINT_UNEVALUABLE`.
+    pub graph_revision: Option<u64>,
     #[cfg(feature = "text")]
     pub text: Option<&'a medulla_h_retrieve::secondary_indexes::ServedTextIndex>,
     #[cfg(feature = "geo")]
@@ -317,6 +321,7 @@ impl<'c> CoreIndexes<'c> {
         >,
     ) -> ServedIndexes<'a> {
         ServedIndexes {
+            graph_revision: None,
             #[cfg(feature = "text")]
             text: Some(&self.text),
             #[cfg(feature = "geo")]
@@ -352,6 +357,8 @@ pub fn run_unified_with<T>(
         tsdb_graph,
         staged_series,
     } = tsdb_ctx;
+    // MEDULLA-FEDERATED-QUERY-R040.1.4 — the revision a constraint pin is checked against.
+    let graph_revision = served.graph_revision;
     #[cfg(feature = "text")]
     let served_text = served.text;
     #[cfg(feature = "geo")]
@@ -484,7 +491,7 @@ pub fn run_unified_with<T>(
     // MEDULLA-FEDERATED-QUERY-R040.1.7 — the served retrieval request binds the
     // compiled constraints, the topic policy and the modality pair onto the context.
     let ctx = match retrieval {
-        Some(request) => run_unified_bind_retrieval(ctx, view, request)?,
+        Some(request) => run_unified_bind_retrieval(ctx, view, graph_revision, request)?,
         None => ctx,
     };
     let result = finish(&medulla_exec::algebra::Plan::new(ops), &ctx);
@@ -579,11 +586,16 @@ pub(crate) fn run_unified_bind_embedder(
 pub(crate) fn run_unified_bind_retrieval<'a>(
     ctx: medulla_exec::exec::PlanCtx<'a>,
     view: &medulla_graph_core::graph::GraphView,
+    graph_revision: Option<u64>,
     request: &medulla_index_types::retrieval_request::RetrievalRequest,
 ) -> Result<medulla_exec::exec::PlanCtx<'a>, String> {
     let mut ctx = ctx;
     if let Some(constraints) = &request.constraints {
-        let set = medulla_exec::exec::constraints::compile_constraints(view, constraints)?;
+        let set = medulla_exec::exec::constraints::compile_constraints(
+            view,
+            constraints,
+            graph_revision,
+        )?;
         ctx = ctx.with_constraints(set);
     }
     if let Some(topic) = &request.topic {
@@ -1196,6 +1208,7 @@ mod tensor_served_round_trip_tests {
 
     fn served_indexes() -> ServedIndexes<'static> {
         ServedIndexes {
+            graph_revision: None,
             #[cfg(feature = "text")]
             text: None,
             #[cfg(feature = "geo")]
@@ -1636,6 +1649,7 @@ mod tests {
         let expected = medulla_exec::exec::constraints::compile_constraints(
             &view,
             request.constraints.as_ref().unwrap(),
+            None,
         )
         .unwrap();
         assert_eq!(constraints, Some(expected));
