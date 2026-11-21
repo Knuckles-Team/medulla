@@ -134,14 +134,14 @@ fn executed(choice: &RouteChoice, ctx: &ExecutionContext) -> Result<Executed, St
         family: None,
         family_premises: Vec::new(),
         route: Some(RouteExecuted {
-            stage: choice.stage,
+            rule: choice.rule,
             option_id: choice.option_id.clone(),
-            resolution: if choice.stage == FAST_PATH_STAGE {
+            resolution: if choice.rule == FAST_PATH_STAGE {
                 ResolutionKind::Constraint
             } else {
                 ResolutionKind::Statistical
             },
-            matched_records: if choice.stage == FAST_PATH_STAGE {
+            matched_records: if choice.rule == FAST_PATH_STAGE {
                 Vec::new()
             } else {
                 ctx.matched
@@ -434,7 +434,7 @@ impl DecisionFamily for RouteFamily {
             .flat_map(|route| {
                 let stage = PremiseRef {
                     subject: route.option_id.clone(),
-                    fact: format!("route_stage={}", route.stage),
+                    fact: format!("route_stage={}", route.rule),
                     class: PremiseClass::Definition,
                     provenance: PremiseProvenance::Policy {
                         policy_digest: policy_digest.to_string(),

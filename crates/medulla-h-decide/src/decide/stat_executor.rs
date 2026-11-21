@@ -203,8 +203,8 @@ impl FamilyPremise {
 
 /// The rule stage that answered a route question.
 pub(super) struct RouteExecuted {
-    /// The stage name recorded in the `route_stage=<stage>` premise.
-    pub(super) stage: &'static str,
+    /// The rule name recorded in the `route_stage=<stage>` premise.
+    pub(super) rule: &'static str,
     /// The option the stage chose.
     pub(super) option_id: String,
     /// How the answer was reached: a rule is a constraint, evaluated history

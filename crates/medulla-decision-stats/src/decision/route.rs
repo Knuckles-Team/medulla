@@ -33,11 +33,11 @@ pub struct RouteInput<'a> {
     pub options: Vec<RouteOption<'a>>,
 }
 
-/// The option a stage chose and the stage that chose it.
+/// The option a stage chose and the rule that chose it.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RouteChoice {
     pub option_id: String,
-    pub stage: &'static str,
+    pub rule: &'static str,
 }
 
 /// One stage of the pipeline: `Some(choice)` answers, `None` passes on.
@@ -68,7 +68,7 @@ impl RouteStage for FastPath {
             .min()
             .map(|option_id| RouteChoice {
                 option_id: option_id.to_string(),
-                stage: FAST_PATH_STAGE,
+                rule: FAST_PATH_STAGE,
             })
     }
 }
@@ -127,7 +127,7 @@ impl RouteStage for TeamReuse<'_> {
             })
             .map(|entry| RouteChoice {
                 option_id: entry.option_id.to_string(),
-                stage: TEAM_REUSE_STAGE,
+                rule: TEAM_REUSE_STAGE,
             })
     }
 }
@@ -185,7 +185,7 @@ mod tests {
             at_bound,
             RouteChoice {
                 option_id: "alpha".to_string(),
-                stage: FAST_PATH_STAGE
+                rule: FAST_PATH_STAGE
             }
         );
         // One token over the bound passes, and with no stage left the
@@ -208,7 +208,7 @@ mod tests {
         fn choose(&self, _input: &RouteInput<'_>) -> Option<RouteChoice> {
             Some(RouteChoice {
                 option_id: "later".to_string(),
-                stage: self.0,
+                rule: self.0,
             })
         }
     }
@@ -220,9 +220,9 @@ mod tests {
         let fast = FastPath { max_tokens: 10 };
         let later = Always("team_reuse");
         let first = route_pipeline(&[&fast, &later], &input(Some(5), &options)).unwrap();
-        assert_eq!(first.stage, FAST_PATH_STAGE);
+        assert_eq!(first.rule, FAST_PATH_STAGE);
         let second = route_pipeline(&[&fast, &later], &input(Some(50), &options)).unwrap();
-        assert_eq!(second.stage, "team_reuse");
+        assert_eq!(second.rule, "team_reuse");
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R035.750.2
@@ -250,7 +250,7 @@ mod tests {
             chosen,
             RouteChoice {
                 option_id: "beta".to_string(),
-                stage: TEAM_REUSE_STAGE
+                rule: TEAM_REUSE_STAGE
             }
         );
         // One judgement short of the floor, or one success short of the rate: pass.
@@ -278,5 +278,19 @@ mod tests {
             min_rate_micros: 0,
         };
         assert!(choose(&floorless).is_none());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R831.9
+    #[test]
+    fn route_rule_is_not_a_lifecycle_field() {
+        // The answering rule is a label chosen at construction, named `rule`.
+        let options = vec![("alpha", classes(&[FAST_PATH_CLASS]))];
+        let fast = FastPath { max_tokens: 10 };
+        let choice = route_pipeline(&[&fast], &input(Some(5), &options)).unwrap();
+        assert_eq!(choice.rule, FAST_PATH_STAGE);
+        // No field of the module is named for a stage of a lifecycle.
+        let source = include_str!("route.rs");
+        let stale = format!("pub {}: &'static str", "stage");
+        assert!(!source.contains(&stale));
     }
 }
