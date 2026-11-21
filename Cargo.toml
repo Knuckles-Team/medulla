@@ -2093,6 +2093,12 @@ path = "benches/engine_parity.rs"
 harness = false
 required-features = ["full"]
 
+# Marking propagation over 100,000 lineage nodes (MEDULLA-TYPED-PACKS-R652.6): nightly budget.
+[[bench]]
+name = "marking_propagate"
+path = "benches/marking_propagate.rs"
+harness = false
+
 # Data-prep declaration at writer concurrency (MEDULLA-INGEST-WORKER-R001.1011): nightly budget.
 [[bench]]
 name = "data_prep_declare"

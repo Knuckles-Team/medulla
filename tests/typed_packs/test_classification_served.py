@@ -173,3 +173,44 @@ def test_marking_sets_and_promoter_read_back(served) -> None:
     assert node["after_markings"] == ["pii"]
     assert node["promoted_by"] == request_context(roles=[STEWARD])["principal"]
     assert node["evidence"] == ["scan:1", "review:1"]
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R652.6")
+def test_claim_propose_propagate_promote_and_redacted_read(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R652.6: promotion proposes claims downstream."""
+    from conftest import tenant_request_context
+
+    graph, client = served
+    for node in ("view:orders_v", "dash:orders_d"):
+        _node(client, graph, node, {"type": "Asset"})
+    asset = "col:orders.email"
+    _lineage(client, graph, asset, "view:orders_v")
+    _lineage(client, graph, "view:orders_v", "dash:orders_d")
+
+    _op(client, graph, {"op": "propose", "claim": _claim(asset, "pii")})
+    result = _op(
+        client,
+        graph,
+        {"op": "promote", "claim_id": _claim_id(asset, "pii"), "evidence": ["review:1"]},
+    )
+    downstream = {record["claim"]["asset"]: record for record in result["propagated"]}
+    assert set(downstream) == {"view:orders_v", "dash:orders_d"}
+    for record in downstream.values():
+        assert record["claim"]["state"] == "proposed"
+        assert record["claim"]["provenance"]["kind"] == "propagated"
+    # Propagated claims are proposals: nothing is stamped downstream until promoted.
+    assert "_markings" not in _props(client, graph, "view:orders_v")
+
+    foreign = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        graph_name=graph,
+        verified_context=tenant_request_context("tenant:foreign", roles=[STEWARD]),
+    )
+    try:
+        try:
+            seen = _props(foreign, graph, _claim_id(asset, "pii"))
+        except Exception:
+            seen = None
+        assert not seen
+    finally:
+        foreign.close()
