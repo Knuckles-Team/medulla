@@ -86,6 +86,10 @@ pub enum ExportSource {
     Workflow { workflow_id: String, version: u32 },
 }
 
+/// A process model sync or deploy against a connection the authority rows do not declare a
+/// federated secondary for the process classes (MEDULLA-CQ-ORCH-R703.4).
+pub const PROCESS_SYNC_SOURCE_NOT_SECONDARY: &str = "PROCESS_SYNC_SOURCE_NOT_SECONDARY";
+
 /// The IRI of the class a process model deploy proposes under: the `:ProcessModel` class of the
 /// core ontology (MEDULLA-CQ-ORCH-R703.3).
 pub const PROCESS_MODEL_CLASS_IRI: &str = "https://knuckles-team.github.io/ontology/core#ProcessModel";
@@ -109,6 +113,7 @@ pub struct ProcessDocumentExported {
 /// The decision plane collects this table with every other family table and refuses a code
 /// declared twice.
 pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(PROCESS_SYNC_SOURCE_NOT_SECONDARY),
     RefusalCode::new("PROCESS_DOC_MALFORMED"),
     RefusalCode::new("PROCESS_DOC_ENTITY_REFUSED"),
     RefusalCode::new("PROCESS_DOC_TOO_LARGE"),

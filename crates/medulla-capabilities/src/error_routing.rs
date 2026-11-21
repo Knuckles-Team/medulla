@@ -1294,6 +1294,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "ProcessModelDeploy",
         &[
+            "PROCESS_SYNC_SOURCE_NOT_SECONDARY",
+            "SYNC_DIRECTION_REFUSED",
             "PROCESS_IMPORT_UNKNOWN_MODEL",
             "PROCESS_EXPORT_NOT_DEPLOYABLE",
             "PARAMETER_INVALID",
@@ -1314,6 +1316,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "SourceSync",
         &[
             "SYNC_SOURCE_NOT_SECONDARY",
+            "PROCESS_SYNC_SOURCE_NOT_SECONDARY",
             "SYNC_NO_SYSTEM_OF_RECORD",
             "SYNC_ADAPTER_MISSING",
             "SYNC_DIRECTION_REFUSED",

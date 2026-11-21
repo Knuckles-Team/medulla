@@ -26,11 +26,16 @@ use medulla_core::process_exchange::xml_tree::XmlLimits;
 use medulla_core::process_import::{admit_canonical, compile_process, export_canonical};
 use medulla_types::contract::Digest256;
 use medulla_source_types::source_sync::{OutboundDraft, SyncReport};
-use medulla_types::process_exchange::{ProcessDocumentExported, PROCESS_MODEL_CLASS_IRI};
+use medulla_types::contract::ServerErrorCode;
+use medulla_types::process_exchange::{
+    ProcessDocumentExported, PROCESS_MODEL_CLASS_IRI, PROCESS_SYNC_SOURCE_NOT_SECONDARY,
+};
 use medulla_types::process_import::{CanonicalWorkflow, ProcessSourceSystem};
 use serde_json::{json, Map, Value};
 
-use crate::source_sync::{GraphEdges, GraphNodes, SyncAdapter, SyncEdge, SyncMutation};
+use crate::source_sync::{
+    GraphEdges, GraphNodes, RecordRole, SyncAdapter, SyncAuthority, SyncEdge, SyncMutation,
+};
 
 /// The `type` of the node that holds one synced model.
 const MODEL_TYPE: &str = "ProcessModel";
@@ -67,6 +72,51 @@ pub fn deploy_report(
         by_type: BTreeMap::new(),
     }
 }
+
+/// Whether `class_iri` is one of the classes a process sync serves: `:ProcessModel` and
+/// `:DecisionLogic` of the core ontology.
+pub fn is_process_class(class_iri: &str) -> bool {
+    class_iri
+        .strip_prefix(CORE_CLASS_BASE)
+        .is_some_and(|label| matches!(label, "ProcessModel" | "DecisionLogic"))
+}
+
+/// The refusal text of a process sync or deploy against `connection_iri`
+/// (MEDULLA-CQ-ORCH-R703.4): the connection is not a federated secondary for the class.
+pub fn not_secondary(connection_iri: &str, class_iri: &str) -> String {
+    format!("{PROCESS_SYNC_SOURCE_NOT_SECONDARY}: {connection_iri} is not a federated secondary for {class_iri}")
+}
+
+/// Admit a deploy to `connection_iri` against the authority rows (MEDULLA-CQ-ORCH-R703.4): the
+/// connection must be a federated secondary for `:ProcessModel`, and its direction must allow
+/// outbound changes. A refusal is decided before the model is read, so it writes nothing and
+/// queues nothing.
+pub fn require_deploy_secondary(
+    authorities: &[SyncAuthority],
+    connection_iri: &str,
+) -> Result<(), String> {
+    let secondary = authorities
+        .iter()
+        .find(|row| {
+            row.class == PROCESS_MODEL_CLASS_IRI
+                && row.role == RecordRole::FederatedSecondary
+                && row.connection == connection_iri
+        })
+        .ok_or_else(|| not_secondary(connection_iri, PROCESS_MODEL_CLASS_IRI))?;
+    if secondary
+        .direction
+        .is_some_and(|direction| !direction.allows_outbound())
+    {
+        return Err(format!(
+            "{}: {connection_iri} is inbound-only for {PROCESS_MODEL_CLASS_IRI}, yet a deploy is outbound",
+            ServerErrorCode::SyncDirectionRefused.as_str()
+        ));
+    }
+    Ok(())
+}
+
+/// The base of a core ontology class IRI.
+const CORE_CLASS_BASE: &str = "https://knuckles-team.github.io/ontology/core#";
 
 /// Syncs the model definitions of one process engine connection.
 #[derive(Clone, Debug)]

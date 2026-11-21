@@ -157,6 +157,13 @@ async fn plan_and_batch(
         .iter()
         .find(|row| row.role == RecordRole::FederatedSecondary && row.connection == connection_iri)
         .ok_or_else(|| {
+            // MEDULLA-CQ-ORCH-R703.4: a process sync names its own refusal code.
+            if medulla_virtual_graph::process_sync::is_process_class(class_iri) {
+                return medulla_virtual_graph::process_sync::not_secondary(
+                    connection_iri,
+                    class_iri,
+                );
+            }
             refusal(
                 ServerErrorCode::SyncSourceNotSecondary,
                 format!("{connection_iri} is not a federated secondary for {class_iri}"),
