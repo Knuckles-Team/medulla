@@ -151,6 +151,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "NlQueryCorrect",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
+    "ProcessCompile",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -215,6 +216,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "FinanceFactorRecord",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
+    "ProcessCompile",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -428,6 +430,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "FinanceFactorRecord",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
+    "ProcessCompile",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -723,6 +726,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "FinanceFactorRecord",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
+    "ProcessCompile",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -811,6 +815,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "FinanceFactorRecord",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
+    "ProcessCompile",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -887,6 +892,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "FinanceFactorRecord",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
+    "ProcessCompile",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -925,6 +931,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "FinanceFactorRecord",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one BatchUpdate.
     "ArchitectureModelImport",
+    "ProcessCompile",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.

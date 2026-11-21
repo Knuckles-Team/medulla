@@ -307,6 +307,7 @@ fn record_write_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::FinanceFactorRecord { .. } => Some("__finance_factor_record"),
         Method::NlQueryCorrect { .. } => Some("__nl_query_correct"),
         Method::ArchitectureModelImport { .. } => Some("__architecture_model_import"),
+        Method::ProcessCompile { .. } => Some("__process_compile"),
         Method::SourceSync { .. } => Some("__source_sync"),
         Method::RetentionCleanupRun { .. } => Some("__retention_cleanup"),
         Method::PolicySourceBind { .. } => Some("__policy_source_bind"),

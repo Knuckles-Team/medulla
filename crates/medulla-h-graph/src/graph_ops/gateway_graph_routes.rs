@@ -26,6 +26,7 @@ enum Route {
     AssistantProfile,
     NlCorrection,
     HarnessEdit,
+    ProcessCompile,
     ObservationState,
     MemorySurface,
     ArchitectureExchange,
@@ -174,6 +175,10 @@ fn is_architecture_exchange(method: &Method) -> bool {
     matches!(method, Method::ArchitectureModelImport { .. })
 }
 
+fn is_process_compile(method: &Method) -> bool {
+    matches!(method, Method::ProcessCompile { .. })
+}
+
 fn is_harness_edit(method: &Method) -> bool {
     matches!(method, Method::HarnessEdit { op } if op.is_mutation())
 }
@@ -224,6 +229,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_assistant_profile, Route::AssistantProfile),
     (is_nl_correction, Route::NlCorrection),
     (is_harness_edit, Route::HarnessEdit),
+    (is_process_compile, Route::ProcessCompile),
     (is_observation_state, Route::ObservationState),
     (is_memory_surface, Route::MemorySurface),
     (is_architecture_exchange, Route::ArchitectureExchange),
@@ -253,6 +259,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::AssistantProfile
         | Route::NlCorrection
         | Route::HarnessEdit
+        | Route::ProcessCompile
         | Route::ObservationState
         | Route::MemorySurface
         | Route::ArchitectureExchange
@@ -339,6 +346,9 @@ async fn try_handle_admin(
         Route::ArgumentMap => super::super::argument_map::handle_put(ctx, tenant_id, method).await,
         Route::RetrievalFeedback => {
             super::super::retrieval_feedback::handle_record(ctx, tenant_id, method).await
+        }
+        Route::ProcessCompile => {
+            super::super::process_compile::handle_process_compile(ctx, tenant_id, method).await
         }
         Route::HarnessEdit => {
             super::super::harness_edit::handle_transition(ctx, tenant_id, method).await

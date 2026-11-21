@@ -195,6 +195,16 @@ $($variants)*
         scope: Option<String>,
     },
 
+    /// Compile one process of the caller's tenant view into a stored
+    /// `WorkflowPattern` version (MEDULLA-CQ-ORCH-R700.3). The write is a
+    /// compare-and-set on `expected_version`, the stored version of the process
+    /// (0 when none); a mismatch refuses `WORKFLOW_VERSION_CONFLICT`. A
+    /// published version is never mutated; an edit writes version `n + 1`.
+    ProcessCompile {
+        process_iri: String,
+        expected_version: Option<u32>,
+    },
+
     /// Keep one federated secondary in step with the native graph, the system
     /// of record (MEDULLA-SRC-AUTH-R012.6). The host owns the connector call:
     /// it opened, filled and completed the foreign read `foreign_execution`

@@ -32,6 +32,7 @@ mod retrieval_feedback;
 pub mod assistant_profile;
 mod atom_context;
 mod harness_edit;
+mod process_compile;
 #[cfg(test)]
 mod harness_edit_tests;
 mod observation_state;

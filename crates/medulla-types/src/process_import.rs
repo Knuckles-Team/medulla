@@ -273,6 +273,43 @@ pub const REFUSALS: &[&str] = &[
     PROCESS_IMPORT_TOO_LARGE,
 ];
 
+/// The wire code of a step that hands off to nothing and is not an end step
+/// (MEDULLA-CQ-ORCH-R700.4).
+pub const PROCESS_TASK_UNBOUND: &str = "PROCESS_TASK_UNBOUND";
+/// The wire code of a cycle of hand-offs none of whose edges is a loop gate.
+pub const PROCESS_CYCLE_WITHOUT_GATE: &str = "PROCESS_CYCLE_WITHOUT_GATE";
+/// The wire code of a process view above `process_compile_max_nodes`.
+pub const PROCESS_TOO_LARGE: &str = "PROCESS_TOO_LARGE";
+/// The wire code of a process the caller's tenant cannot see.
+pub const PROCESS_UNKNOWN: &str = "PROCESS_UNKNOWN";
+/// The wire code of a compile whose `expected_version` is not the stored version
+/// (MEDULLA-CQ-ORCH-R700.3).
+pub const WORKFLOW_VERSION_CONFLICT: &str = "WORKFLOW_VERSION_CONFLICT";
+
+/// Every refusal code of the served process compile that is not an import code,
+/// in the order of `ProcessCompilationError`, then the version-store refusal.
+pub const COMPILE_REFUSALS: &[&str] = &[
+    PROCESS_UNKNOWN,
+    PROCESS_TASK_UNBOUND,
+    PROCESS_CYCLE_WITHOUT_GATE,
+    PROCESS_TOO_LARGE,
+    WORKFLOW_VERSION_CONFLICT,
+];
+
+/// The answer of the served `ProcessCompile` (MEDULLA-CQ-ORCH-R700.3, R700.5).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProcessCompiled {
+    /// The id of the stored `WorkflowPattern` node, `workflow:<process_iri>:v<version>`.
+    pub workflow_id: String,
+    /// The stored version, 1 for the first compile of a process.
+    pub version: u32,
+    /// The canonical workflow digest (`workflowDigest`).
+    pub workflow_digest: String,
+    /// SHA-256 of the canonical process subgraph (`processRevision`).
+    pub process_revision: String,
+}
+
 impl ImportError {
     /// The stable wire code of this refusal.
     pub fn code(&self) -> &'static str {

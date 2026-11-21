@@ -14,12 +14,14 @@
 
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 
+use medulla_types::contract::Digest256;
 use medulla_types::process_import::{
     CanonicalWorkflow, ImportError, KindAnnotation, LoweredFlow, ProcessSourceSystem, SourceGraph,
-    SourceNode, StepKind,
+    SourceNode, StepKind, PROCESS_CYCLE_WITHOUT_GATE, PROCESS_TASK_UNBOUND, PROCESS_TOO_LARGE,
+    PROCESS_UNKNOWN,
 };
 
-use crate::process_import::compile_process;
+use crate::process_import::{canonical_json, compile_process};
 
 /// One node of the tenant view that may belong to a process.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -61,6 +63,68 @@ impl From<ImportError> for ProcessCompilationError {
     fn from(error: ImportError) -> Self {
         Self::Import(error)
     }
+}
+
+/// Every refusal code of the process compile that is not an import code
+/// (MEDULLA-CQ-ORCH-R700.4). The codes live in `medulla_types::process_import`
+/// so the protocol registry can name them; an `Import` error keeps its own
+/// `PROCESS_IMPORT_*` code.
+pub const REFUSALS: &[&str] = medulla_types::process_import::COMPILE_REFUSALS;
+
+impl ProcessCompilationError {
+    /// The stable wire code of this refusal.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::Unknown => PROCESS_UNKNOWN,
+            Self::TaskUnbound { .. } => PROCESS_TASK_UNBOUND,
+            Self::CycleWithoutGate { .. } => PROCESS_CYCLE_WITHOUT_GATE,
+            Self::TooLarge { .. } => PROCESS_TOO_LARGE,
+            Self::Import(error) => error.code(),
+        }
+    }
+}
+
+impl std::fmt::Display for ProcessCompilationError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Unknown => write!(f, "the process is not visible to the caller's tenant"),
+            Self::TaskUnbound { node_id } => {
+                write!(f, "step {node_id} hands off to nothing and is not an end step")
+            }
+            Self::CycleWithoutGate { nodes } => write!(
+                f,
+                "hand-offs form a cycle with no loop gate through {}",
+                nodes.join(", ")
+            ),
+            Self::TooLarge { nodes, limit } => {
+                write!(f, "the process view holds {nodes} nodes, above the limit {limit}")
+            }
+            Self::Import(error) => write!(f, "{error}"),
+        }
+    }
+}
+
+/// A compiled process: the canonical workflow and the revision of the
+/// process subgraph it was compiled from (MEDULLA-CQ-ORCH-R700.5).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CompiledProcess {
+    pub workflow: CanonicalWorkflow,
+    /// SHA-256 of the canonical process subgraph, 64 lowercase hex characters.
+    pub process_revision: String,
+}
+
+/// The revision of a loaded process subgraph: the digest of the canonical
+/// JSON of its process id, nodes and flows, which `load_process_graph` sorts.
+pub fn process_revision(graph: &SourceGraph) -> String {
+    let value = serde_json::json!({
+        "process": graph.model_id,
+        "name": graph.name,
+        "nodes": graph.nodes,
+        "flows": graph.edges,
+    });
+    let mut text = String::new();
+    canonical_json(&value, &mut text);
+    Digest256::sha256(text.as_bytes()).to_hex()
 }
 
 /// Strongly connected components, iterative Tarjan: the component index of
@@ -248,8 +312,9 @@ pub fn compile_process_view(
     edges: &[ViewEdge],
     max_nodes: u64,
     annotations: &[KindAnnotation],
-) -> Result<CanonicalWorkflow, ProcessCompilationError> {
+) -> Result<CompiledProcess, ProcessCompilationError> {
     let graph = load_process_graph(process_iri, nodes, edges, max_nodes)?;
+    let process_revision = process_revision(&graph);
     let workflow = compile_process(&graph, annotations)?;
     let with_outgoing: BTreeSet<&str> = workflow.flows.iter().map(|f| f.source.as_str()).collect();
     for step in &workflow.steps {
@@ -263,5 +328,39 @@ pub fn compile_process_view(
             return Err(ProcessCompilationError::TaskUnbound { node_id });
         }
     }
-    Ok(workflow)
+    Ok(CompiledProcess {
+        workflow,
+        process_revision,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-CQ-ORCH-R700.4
+    #[test]
+    fn codes_are_unique_and_stable() {
+        let errors = [
+            ProcessCompilationError::Unknown,
+            ProcessCompilationError::TaskUnbound {
+                node_id: "n".into(),
+            },
+            ProcessCompilationError::CycleWithoutGate {
+                nodes: vec!["a".into(), "b".into()],
+            },
+            ProcessCompilationError::TooLarge { nodes: 3, limit: 2 },
+        ];
+        let codes: Vec<&str> = errors.iter().map(ProcessCompilationError::code).collect();
+        assert_eq!(codes, &REFUSALS[..4]);
+        assert_eq!(REFUSALS[4], medulla_types::process_import::WORKFLOW_VERSION_CONFLICT);
+        let mut unique = REFUSALS.to_vec();
+        unique.sort_unstable();
+        unique.dedup();
+        assert_eq!(unique.len(), REFUSALS.len());
+        let import = ProcessCompilationError::Import(ImportError::NotCanonical {
+            reason: "schema".into(),
+        });
+        assert_eq!(import.code(), "PROCESS_IMPORT_NOT_CANONICAL");
+    }
 }

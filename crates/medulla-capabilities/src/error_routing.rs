@@ -1117,6 +1117,24 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "ARCHIMATE_VERSION_MISMATCH",
         ],
     ),
+    // MEDULLA-CQ-ORCH-R700.3/R700.4: a process the compile refuses, or a stale expected version.
+    (
+        "ProcessCompile",
+        &[
+            "PROCESS_UNKNOWN",
+            "PROCESS_TASK_UNBOUND",
+            "PROCESS_CYCLE_WITHOUT_GATE",
+            "PROCESS_TOO_LARGE",
+            "PROCESS_IMPORT_UNMAPPED_ELEMENT",
+            "PROCESS_IMPORT_NOT_CANONICAL",
+            "PROCESS_IMPORT_DIGEST_MISMATCH",
+            "PROCESS_IMPORT_UNKNOWN_SOURCE",
+            "PROCESS_IMPORT_UNKNOWN_MODEL",
+            "PROCESS_IMPORT_TOO_LARGE",
+            "WORKFLOW_VERSION_CONFLICT",
+            "PARAMETER_INVALID",
+        ],
+    ),
     // MEDULLA-SRC-AUTH-R012.7: a sync the authority rows or the adapter table refuse.
     (
         "SourceSync",

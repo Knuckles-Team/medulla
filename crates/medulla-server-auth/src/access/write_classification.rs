@@ -521,6 +521,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::NlQueryCorrect { .. }
                 // MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
                 | Method::ArchitectureModelImport { .. }
+                // MEDULLA-CQ-ORCH-R700.3: the process compile commits the workflow version.
+                | Method::ProcessCompile { .. }
                 // MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
                 | Method::SourceSync { .. }
                 // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step removes graph nodes.

@@ -573,6 +573,7 @@ METHOD_IDS = frozenset(
         "DomainPack",
         "ProjectionRead",
         "ArchitectureModelImport",
+        "ProcessCompile",
         "Batch",
         "BeliefRevise",
         "BranchDiff",

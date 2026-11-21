@@ -123,6 +123,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "NlQueryCorrect",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one batch.
     "ArchitectureModelImport",
+    // MEDULLA-CQ-ORCH-R700.3: the process compile commits the next workflow version as one batch.
+    "ProcessCompile",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a retention cleanup step commits as one batch.
@@ -775,6 +777,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "NlQueryCorrect",
     // MEDULLA-CQ-ORCH-R705.6: the architecture import commits as one batch.
     "ArchitectureModelImport",
+    // MEDULLA-CQ-ORCH-R700.3: the process compile commits the next workflow version as one batch.
+    "ProcessCompile",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a retention cleanup step commits as one batch.
@@ -871,6 +875,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::FinanceFactorRecord { .. } => Some("FinanceFactorRecord"),
         Method::NlQueryCorrect { .. } => Some("NlQueryCorrect"),
         Method::ArchitectureModelImport { .. } => Some("ArchitectureModelImport"),
+        Method::ProcessCompile { .. } => Some("ProcessCompile"),
         Method::SourceSync { .. } => Some("SourceSync"),
         Method::RetentionCleanupRun { .. } => Some("RetentionCleanupRun"),
         Method::PolicySourceBind { .. } => Some("PolicySourceBind"),

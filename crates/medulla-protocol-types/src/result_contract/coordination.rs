@@ -270,6 +270,8 @@ method_results! {
     LoopsGet(Loops / "get") => Raw<medulla_decision_types::loops::LoopView>;
     WorkflowRegistryRegister(WorkflowRegistry / "register") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
     WorkflowRegistryRead(WorkflowRegistry / "read") => Raw<medulla_work_types::orchestration::workflows::WorkflowRegistrationEntry>;
+    // MEDULLA-CQ-ORCH-R700.3: the stored workflow version a process compile wrote.
+    ProcessCompile(ProcessCompile) => Json<medulla_types::process_import::ProcessCompiled>;
     HarnessEditTransition(HarnessEdit / "transition") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     HarnessEditGet(HarnessEdit / "get") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     ObservationStatePut(ObservationState / "put") => Raw<medulla_work_types::observation_state::ObservationRecord>;

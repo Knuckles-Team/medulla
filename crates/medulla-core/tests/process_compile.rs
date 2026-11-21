@@ -70,13 +70,15 @@ fn load_is_linear_and_deterministic() {
         assert_eq!(graph.model_id, PROCESS);
 
         let first = compile_process_view(PROCESS, &nodes, &edges, 1_000_000, ANNOTATIONS)
-            .expect("compiles");
+            .expect("compiles")
+            .workflow;
         let mut reversed = (nodes.clone(), edges.clone());
         reversed.0.reverse();
         reversed.1.reverse();
         let second =
             compile_process_view(PROCESS, &reversed.0, &reversed.1, 1_000_000, ANNOTATIONS)
-                .expect("compiles again");
+                .expect("compiles again")
+                .workflow;
         assert_eq!(
             serde_json::to_vec(&first).unwrap(),
             serde_json::to_vec(&second).unwrap()

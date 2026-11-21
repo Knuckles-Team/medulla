@@ -7579,6 +7579,29 @@ class GraphOperationsClient:
             raise RuntimeError("ArchitectureModelImport must answer with an object")
         return result
 
+    async def process_compile(
+        self, process_iri: str, expected_version: int | None = None
+    ) -> dict[str, Any]:
+        """Compile one process into the next stored workflow version
+        (MEDULLA-CQ-ORCH-R700.3).
+
+        Returns ``{workflow_id, version, workflow_digest, process_revision}``.
+        ``expected_version`` is the stored version the caller last saw (0 when
+        none); a mismatch is refused ``WORKFLOW_VERSION_CONFLICT``. An unknown
+        process, an unbound step, a cycle without a loop gate or an oversized
+        process is refused with its ``PROCESS_*`` code and writes nothing.
+        """
+        params: dict[str, Any] = {
+            "process_iri": process_iri,
+            "expected_version": expected_version,
+        }
+        result = await self._client._send(
+            "ProcessCompile", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ProcessCompile must answer with an object")
+        return result
+
     async def architecture_model_export(
         self, scope: str | None = None
     ) -> dict[str, Any]:

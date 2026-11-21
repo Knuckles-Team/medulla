@@ -14893,6 +14893,13 @@ class MethodArchitectureModelExport(BaseModel):
     params: MethodArchitectureModelExportParams
 
 
+class MethodProcessCompile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ProcessCompile"]
+    params: MethodProcessCompileParams
+
+
 class MethodArchitectureView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15811,6 +15818,7 @@ Method = Annotated[
         MethodPublishSkillPackage,
         MethodFeatureLedger,
         MethodArchitectureModelImport,
+        MethodProcessCompile,
         MethodArchitectureModelExport,
         MethodArchitectureView,
         MethodDomainPack,
@@ -33958,6 +33966,13 @@ class MethodArchitectureModelImportParams(BaseModel):
     expected_version: Annotated[int, Field(ge=0)] | None = None
 
 
+class MethodProcessCompileParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    process_iri: str
+    expected_version: Annotated[int, Field(ge=0)] | None = None
+
+
 class MethodBatchParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -40415,6 +40430,8 @@ __all__ = [
     "MethodArchitectureModelExportParams",
     "MethodArchitectureModelImport",
     "MethodArchitectureModelImportParams",
+    "MethodProcessCompile",
+    "MethodProcessCompileParams",
     "MethodArgumentMapEvaluate",
     "MethodArgumentMapGet",
     "MethodArgumentMapPut",

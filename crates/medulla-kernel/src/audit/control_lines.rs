@@ -182,6 +182,13 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             "ARCHITECTURE_MODEL_IMPORT|{}",
             medulla_types::archimate_exchange::sha256_hex(document.as_bytes())
         )),
+        Method::ProcessCompile {
+            process_iri,
+            expected_version,
+        } => Some(format!(
+            "PROCESS_COMPILE|{process_iri}|{}",
+            expected_version.map_or_else(|| "-".to_string(), |v| v.to_string())
+        )),
         Method::LiveArtifactPut { artifact } => Some(format!(
             "LIVE_ARTIFACT_PUT|{}|{}",
             artifact.id, artifact.version

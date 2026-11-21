@@ -317,6 +317,8 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "RetrievalFeedbackRecord",
         # MEDULLA-CQ-ORCH-R705.6: the architecture import commits graph nodes.
         "ArchitectureModelImport",
+        # MEDULLA-CQ-ORCH-R700.3: the process compile commits the workflow version.
+        "ProcessCompile",
         # MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
         "SourceSync",
         # MEDULLA-SRC-AUTH-R801: a reviewed policy source bind commits one graph node.
