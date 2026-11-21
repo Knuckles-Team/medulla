@@ -18,7 +18,7 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [x] T012 [US2] MEDULLA-BUSINESS-OPS-R002.1 Rule records
 - [x] T013 [US2] MEDULLA-BUSINESS-OPS-R002.2 Recurrence and compliance calendar
 - [x] T014 [US2] MEDULLA-BUSINESS-OPS-R002.3 Threshold applicability
-- [ ] T015 [US2] MEDULLA-BUSINESS-OPS-R002.4 Reconciliation matching
+- [x] T015 [US2] MEDULLA-BUSINESS-OPS-R002.4 Reconciliation matching
 - [ ] T016 [US2] MEDULLA-BUSINESS-OPS-R002.5 Reorder point and quantity
 - [ ] T017 [US2] MEDULLA-BUSINESS-OPS-R002.6 Claim-text policy check
 - [ ] T018 [US2] MEDULLA-BUSINESS-OPS-R002.7 Wiring: the UQL `EVALUATE` stage reaches the five kinds
