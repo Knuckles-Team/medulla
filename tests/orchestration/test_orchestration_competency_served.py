@@ -457,7 +457,7 @@ def test_q11_seed_changes() -> None:
     query = (
         "SELECT ?part ?outcome ?digest ?revision WHERE { "
         f"?r a <{_SEED}SeedImportReceipt> ; <{_SEED}part> ?part ; <{_SEED}outcome> ?outcome ; "
-        f"<{_SEED}digest> ?digest ; <{_SEED}graphRevision> ?revision } } ORDER BY ?part"
+        f"<{_SEED}digest> ?digest ; <{_SEED}graphRevision> ?revision }} ORDER BY ?part"
     )
 
     async def receipt_rows(graph: str, want: dict[str, str]) -> dict[str, dict[str, str]]:
