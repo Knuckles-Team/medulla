@@ -4,9 +4,12 @@ use medulla_types::process_import::{
     CanonicalStep, CanonicalWorkflow, ProcessSourceSystem, SourceTrace, StepKind,
 };
 
-use super::bind::{explicit_bindings, resolve_bindings, step_node_id};
-use super::rank::{ranked_bindings, DEFAULT_MIN_TOOL_SCORE_MICROS};
+use super::bind::{explicit_bindings, registered_contract, resolve_bindings, step_node_id};
+use super::rank::ranked_bindings;
 use medulla_decision_types::decision::tool_relevance::AssignedTool;
+
+/// The default of `knob process_plan.min_tool_score`, in millionths.
+const DEFAULT_MIN_TOOL_SCORE_MICROS: u64 = 600_000;
 
 const WORKFLOW: &str = "workflow:invoice:v1";
 
@@ -218,9 +221,18 @@ fn ranked_fallback_respects_min_score() {
     }];
     // Step a: the top tool by rank scores 0.8; step b: the best tool scores 0.5, below 0.6.
     let relevance = |label: &str, _lane: &str| match label {
-        "a" => vec![assigned("send_mail", 2, 900_000), assigned("find_mail", 1, 800_000)],
-        _ => vec![assigned("send_mail", 1, 500_000)],
+        // send_mail ranks first but has no registered contract, so it is not ranked.
+        "a" => vec![assigned("send_mail", 1, 900_000), assigned("find_mail", 2, 800_000)],
+        _ => vec![assigned("find_mail", 1, 500_000)],
     };
+    let mut view = GraphView::default();
+    add_node(&mut view, "tool:send", serde_json::json!({ "name": "send_mail", "ofConnector": "mail-mcp" }));
+    add_node(
+        &mut view,
+        "tool:find",
+        serde_json::json!({ "name": "find_mail", "ofConnector": "mail-mcp", "contractIri": "urn:contract:find-mail" }),
+    );
+    let contract_of = |server: &str, tool: &str| registered_contract(&view, server, tool);
     let steps: Vec<CanonicalStep> = steps
         .into_iter()
         .map(|mut s| {
@@ -228,7 +240,7 @@ fn ranked_fallback_respects_min_score() {
             s
         })
         .collect();
-    let bound = ranked_bindings(&steps, &explicit, DEFAULT_MIN_TOOL_SCORE_MICROS, &relevance);
+    let bound = ranked_bindings(&steps, &explicit, DEFAULT_MIN_TOOL_SCORE_MICROS, &relevance, &contract_of);
     assert_eq!(bound.len(), 1, "only a clears the floor; b is below it, c is bound, d is human");
     assert_eq!(bound[0].step_id, "a");
     assert_eq!(
@@ -236,10 +248,22 @@ fn ranked_fallback_respects_min_score() {
         BindingTarget::Tool {
             server: "mail-mcp".to_string(),
             tool: "find_mail".to_string(),
-            contract_iri: "find_mail".to_string()
+            contract_iri: "urn:contract:find-mail".to_string()
         }
     );
     assert!(matches!(bound[0].source, BindingSource::Ranked { score_q32 } if score_q32 > 0));
     // A lower floor binds b as well.
-    assert_eq!(ranked_bindings(&steps, &explicit, 400_000, &relevance).len(), 2);
+    assert_eq!(ranked_bindings(&steps, &explicit, 400_000, &relevance, &contract_of).len(),
+        2
+    );
+    // The contract is also found through a `hasContract` edge, and only for the serving connector.
+    add_node(&mut view, "tool:read", serde_json::json!({ "name": "read_mail", "ofConnector": "mail-mcp" }));
+    add_node(&mut view, "contract:read", serde_json::json!({ "name": "read" }));
+    add_edge(&mut view, "tool:read", "contract:read", "hasContract");
+    assert_eq!(
+        registered_contract(&view, "mail-mcp", "read_mail").as_deref(),
+        Some("contract:read")
+    );
+    assert_eq!(registered_contract(&view, "other-mcp", "read_mail"), None);
+    assert_eq!(registered_contract(&view, "mail-mcp", "send_mail"), None);
 }

@@ -117,6 +117,42 @@ fn tool_target(view: &GraphView, tool_node: &str) -> BindingTarget {
     }
 }
 
+/// The IRI of the contract registered for the tool `tool` served by `server`: the `contractIri`
+/// property of the catalog node, else the target of its `hasContract` edge. The node is the one
+/// named `tool` whose `ofConnector` (property or edge) names `server`; the first by node id
+/// wins. A tool with no such node, or with no registered contract, answers `None`.
+pub fn registered_contract(view: &GraphView, server: &str, tool: &str) -> Option<String> {
+    let mut nodes: Vec<&String> = view
+        .node_map
+        .keys()
+        .filter(|id| {
+            let properties = decode(view, id);
+            text(&properties, "name").as_deref() == Some(tool)
+        })
+        .collect();
+    nodes.sort();
+    let ids: Vec<String> = nodes.into_iter().cloned().collect();
+    let edges = links(view, &|source| ids.iter().any(|id| id == source));
+    ids.iter().find_map(|node| {
+        let properties = decode(view, node);
+        let served_by = text(&properties, "ofConnector").or_else(|| {
+            edges
+                .get(node)
+                .and_then(|edges| target_of(edges, "ofConnector"))
+                .map(|connector| name_of(view, connector))
+        });
+        if served_by.as_deref() != Some(server) {
+            return None;
+        }
+        text(&properties, "contractIri").or_else(|| {
+            edges
+                .get(node)
+                .and_then(|edges| target_of(edges, "hasContract"))
+                .map(str::to_string)
+        })
+    })
+}
+
 fn kind_name(target: &BindingTarget) -> &'static str {
     match target {
         BindingTarget::Tool { .. } => "tool",

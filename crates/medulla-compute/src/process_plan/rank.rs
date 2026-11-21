@@ -2,8 +2,9 @@
 //!
 //! A step the graph does not bind asks the `ToolRelevance` family with the step label and its
 //! lane. The top tool binds when its relevance reaches the minimum score; otherwise the step
-//! stays unbound and `PROCESS_STEP_UNBOUND` names it later (R704.6). Only a canonical step kind
-//! and the step's label and lane are read.
+//! stays unbound and `PROCESS_STEP_UNBOUND` names it later (R704.6). Only agent steps with no
+//! explicit binding are ranked. A ranked tool binds under the contract registered for it
+//! (`bind::registered_contract`); a tool with no registered contract is not ranked.
 
 use std::collections::BTreeSet;
 
@@ -11,11 +12,11 @@ use medulla_decision_types::decision::process_plan::{BindingSource, BindingTarge
 use medulla_decision_types::decision::tool_relevance::AssignedTool;
 use medulla_types::process_import::{CanonicalStep, StepKind};
 
-/// The default of `knob process_plan.min_tool_score`, in millionths (0.6).
-pub const DEFAULT_MIN_TOOL_SCORE_MICROS: u64 = 600_000;
-
 /// What the `ToolRelevance` family answers for one step: its ranked tools, best first.
 pub type RelevanceAnswer = Vec<AssignedTool>;
+
+/// The IRI of the contract registered for the tool `(server, tool)`, if any.
+pub type ContractOf<'a> = &'a dyn Fn(&str, &str) -> Option<String>;
 
 /// Whether `relevance_q32` (a Q32 fraction) reaches `min_micros` millionths.
 fn reaches(relevance_q32: i64, min_micros: u64) -> bool {
@@ -23,8 +24,8 @@ fn reaches(relevance_q32: i64, min_micros: u64) -> bool {
 }
 
 /// Bind each agent step in `steps` that `explicit` does not bind to the top tool `relevance`
-/// ranks for its label and lane, when that tool's relevance is at least `min_micros`
-/// (`knob process_plan.min_tool_score`). `relevance(label, lane)` is the `ToolRelevance`
+/// ranks for its label and lane among the tools `contract_of` knows a registered contract for,
+/// when that tool's relevance is at least `min_micros` (`knob process_plan.min_tool_score`). `relevance(label, lane)` is the `ToolRelevance`
 /// family's ranked answer. A step of any other kind has its own binding (R704.2) and is never
 /// ranked. The result is in step order; each binding's source is `ranked` with the tool's
 /// relevance as `score_q32`.
@@ -33,6 +34,7 @@ pub fn ranked_bindings(
     explicit: &[StepBinding],
     min_micros: u64,
     relevance: &dyn Fn(&str, &str) -> RelevanceAnswer,
+    contract_of: ContractOf<'_>,
 ) -> Vec<StepBinding> {
     let bound: BTreeSet<&str> = explicit.iter().map(|b| b.step_id.as_str()).collect();
     let mut out = Vec::new();
@@ -41,7 +43,13 @@ pub fn ranked_bindings(
             continue;
         }
         let lane = step.role.as_deref().unwrap_or_default();
-        let Some(top) = relevance(&step.label, lane).into_iter().min_by_key(|tool| tool.rank)
+        let Some((top, contract_iri)) = relevance(&step.label, lane)
+            .into_iter()
+            .filter_map(|tool| {
+                let contract = contract_of(&tool.server_id, &tool.tool_id)?;
+                Some((tool, contract))
+            })
+            .min_by_key(|(tool, _)| tool.rank)
         else {
             continue;
         };
@@ -53,7 +61,7 @@ pub fn ranked_bindings(
             target: BindingTarget::Tool {
                 server: top.server_id.clone(),
                 tool: top.tool_id.clone(),
-                contract_iri: top.tool_id.clone(),
+                contract_iri,
             },
             source: BindingSource::Ranked {
                 score_q32: top.relevance_q32,

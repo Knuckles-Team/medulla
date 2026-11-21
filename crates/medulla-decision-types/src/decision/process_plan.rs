@@ -6,6 +6,29 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::knobs::{KnobSafety, KnobSpec, KnobValue};
+
+/// The `process_plan.*` knobs (MEDULLA-CQ-ORCH-R704.3, R704.4): the least relevance a ranked
+/// tool needs to bind an unbound agent step, and how many `call` levels a plan inlines.
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "process_plan.min_tool_score",
+        unit: "fraction",
+        default: KnobValue::DecimalMicros(600_000),
+        min: KnobValue::DecimalMicros(0),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "process_plan.max_call_depth",
+        unit: "levels",
+        default: KnobValue::Integer(4),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(16),
+        safety: KnobSafety::Tunable,
+    },
+];
+
 /// Plan the stored workflow `workflow_id` at `version`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
