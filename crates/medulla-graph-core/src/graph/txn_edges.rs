@@ -213,6 +213,9 @@ impl<'a> GraphTxn<'a> {
         };
         let log = format!("CAS_NODE|{}|{}", node_id, HexLedger(&reenc));
         self.node_history.record_prior(node_id, Some(bytes.clone()));
+        if let Some(tenant) = super::txn_nodes::memory_tenant_of(node_id, &reenc) {
+            self.move_memory_usage(&tenant, bytes.len() as u64, reenc.len() as u64);
+        }
         self.node_properties
             .insert(node_id.to_string(), Arc::new(reenc));
         self.push_ledger(log);

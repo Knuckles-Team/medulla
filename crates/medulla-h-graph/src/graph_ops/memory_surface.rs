@@ -405,9 +405,10 @@ pub(super) fn admit_remember(
 /// Admit the tenant total (MEDULLA-DECISION-ENGINE-R154.1) and build the one batch that writes the
 /// record node and the tenant's counter node. The counter is a durable graph node; the batch is
 /// the only writer of a new record, so the counter and the node land together. A projected total
-/// above `knob memory.tenant_max_bytes` is first re-measured by a scan (a hard removal elsewhere
-/// does not move the counter) and refuses `MEMORY_TENANT_QUOTA_EXCEEDED` only when the measured
-/// total is still above the knob.
+/// above `knob memory.tenant_max_bytes` refuses `MEMORY_TENANT_QUOTA_EXCEEDED`. The counter is
+/// exact: every write and removal of a memory node moves it in the same transaction
+/// (`GraphTxn::add_node` / `remove_node`), so admission trusts it and never re-measures. A tenant
+/// with no counter node yet is measured once by a scan, and the batch below writes its counter.
 fn admitted_batch(
     core: &GraphCore,
     tenant: &str,
@@ -417,10 +418,7 @@ fn admitted_batch(
 ) -> Result<Method, String> {
     let replaced = core.get_node_properties(id).map_or(0, |stored| stored.len() as u64);
     let project = |total: u64| total.saturating_sub(replaced).saturating_add(blob_len);
-    let mut projected = project(read_usage(core, tenant).unwrap_or_else(|| scan_usage(core, tenant)));
-    if projected > max_tenant {
-        projected = project(scan_usage(core, tenant));
-    }
+    let projected = project(read_usage(core, tenant).unwrap_or_else(|| scan_usage(core, tenant)));
     if projected > max_tenant {
         return Err(refuse(
             MEMORY_TENANT_QUOTA_EXCEEDED.as_str(),

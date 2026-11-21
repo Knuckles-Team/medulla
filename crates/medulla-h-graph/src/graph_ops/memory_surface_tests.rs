@@ -549,9 +549,26 @@ fn tenant_total_admission_keeps_a_durable_counter() {
     let other_len = node_blob("tenant-b", &other).unwrap().len() as u64;
     assert!(admit_remember(&core, "tenant-b", &other, &known, other_len).is_ok());
 
-    // A hard removal does not move the counter; the next refusal-bound admission re-measures.
+    // A hard removal moves the counter in the same transaction, so it is exact without a re-measure.
     assert!(core.forget("memory:tenant-a:m:2", true));
-    assert_eq!(read_usage(&core, "tenant-a"), Some(total));
-    let cap = stored("memory:tenant-a:m:1") + third_len;
-    assert!(admit_remember(&core, "tenant-a", &third, &known, cap).is_ok());
+    let after_delete = stored("memory:tenant-a:m:1");
+    assert_eq!(read_usage(&core, "tenant-a"), Some(after_delete));
+    // Delete then remember at the boundary: the freed bytes are admitted, one byte fewer is not.
+    assert!(admit_remember(&core, "tenant-a", &third, &known, after_delete + third_len).is_ok());
+    let refusal = admit_remember(&core, "tenant-a", &third, &known, after_delete + third_len - 1)
+        .err()
+        .unwrap();
+    assert!(refusal.starts_with("MEMORY_TENANT_QUOTA_EXCEEDED"), "{refusal}");
+    store(&core, "tenant-a", &third);
+    assert_eq!(read_usage(&core, "tenant-a"), Some(after_delete + third_len));
+    // The marking path of a forget rewrites the node, and the counter follows its new size; the
+    // delete path then removes it and the counter drops by exactly the stored bytes.
+    assert!(core.forget("memory:tenant-a:m:3", false));
+    let marked = stored("memory:tenant-a:m:3");
+    assert_eq!(read_usage(&core, "tenant-a"), Some(stored("memory:tenant-a:m:1") + marked));
+    assert!(core.forget("memory:tenant-a:m:3", true));
+    assert_eq!(read_usage(&core, "tenant-a"), Some(stored("memory:tenant-a:m:1")));
+    // A removal through the node route moves it too; the last removal leaves zero.
+    core.remove_node("memory:tenant-a:m:1".to_string());
+    assert_eq!(read_usage(&core, "tenant-a"), Some(0));
 }

@@ -1,5 +1,19 @@
 use super::*;
 
+/// The id prefix of a tenant's memory usage counter node.
+const MEMORY_USAGE_PREFIX: &str = "memory-quota:";
+
+/// The tenant of a stored memory node: its id is `memory:<tenant>:<memory id>` and its properties
+/// carry the same `tenant_scope`. Anything else is not a memory node.
+pub(super) fn memory_tenant_of(node_id: &str, blob: &[u8]) -> Option<String> {
+    let rest = node_id.strip_prefix("memory:")?;
+    let props = decode_property_value(blob).ok()?;
+    let tenant = props.get("tenant_scope")?.as_str()?;
+    rest.strip_prefix(tenant)?
+        .starts_with(':')
+        .then(|| tenant.to_string())
+}
+
 impl<'a> GraphTxn<'a> {
     /// Push one entry onto the ledger, applying `LEDGER_CAP`'s drop-oldest-
     /// half policy (BUG A1 follow-up, 2026-08-12). Every production mutation
@@ -48,6 +62,13 @@ impl<'a> GraphTxn<'a> {
     // ── Node CRUD (under the held topology write guard) ──────────────────
 
     pub fn add_node(&mut self, node_id: String, properties_msgpack: Vec<u8>) {
+        if let Some(tenant) = memory_tenant_of(&node_id, &properties_msgpack) {
+            let replaced = self
+                .node_properties
+                .get(&node_id)
+                .map_or(0, |prior| prior.len() as u64);
+            self.move_memory_usage(&tenant, replaced, properties_msgpack.len() as u64);
+        }
         if !self.topo.node_map.contains_key(&node_id) {
             let new_idx = self.topo.graph.add_node(node_id.clone());
             self.topo.node_map.insert(node_id.clone(), new_idx);
@@ -67,6 +88,31 @@ impl<'a> GraphTxn<'a> {
         self.push_ledger(log);
     }
 
+    /// Move the tenant's memory usage counter by one memory node's stored bytes: `removed` leaves
+    /// and `added` enters (MEDULLA-DECISION-ENGINE-R154.1). This is the one place every logical
+    /// node write and removal passes (hard delete, `forget`, evict, prune, a batch's remove and a
+    /// replayed removal), so the durable counter node `memory-quota:<tenant>` stays exact on every
+    /// path. A tenant with no counter node yet is left to the first `MemoryRemember`, which writes it.
+    pub(super) fn move_memory_usage(&mut self, tenant: &str, removed: u64, added: u64) {
+        let counter_id = format!("{MEMORY_USAGE_PREFIX}{tenant}");
+        let Some(blob) = self.get_node_properties(&counter_id) else {
+            return;
+        };
+        let Ok(serde_json::Value::Object(mut props)) = decode_property_value(&blob) else {
+            return;
+        };
+        let Some(bytes) = props.get("bytes").and_then(serde_json::Value::as_u64) else {
+            return;
+        };
+        props.insert(
+            "bytes".to_string(),
+            serde_json::json!(bytes.saturating_sub(removed).saturating_add(added)),
+        );
+        if let Ok(next) = rmp_serde::to_vec_named(&serde_json::Value::Object(props)) {
+            self.add_node(counter_id, next);
+        }
+    }
+
     /// Insert a node only when its id is absent from the current topology.
     ///
     /// Membership testing and insertion share this transaction's topology write
@@ -82,6 +128,11 @@ impl<'a> GraphTxn<'a> {
 
     pub fn remove_node(&mut self, node_id: String) {
         if let Some(idx) = self.topo.node_map.get(&node_id).copied() {
+            if let Some((tenant, bytes)) = self.node_properties.get(&node_id).and_then(|prior| {
+                memory_tenant_of(&node_id, prior.value()).map(|tenant| (tenant, prior.len() as u64))
+            }) {
+                self.move_memory_usage(&tenant, bytes, 0);
+            }
             // Derive the exact endpoint pairs from petgraph's adjacency lists before
             // removing the node.  The old `DashMap::retain` walked EVERY edge pair
             // for every single-node delete (O(E)); adjacency makes the work
