@@ -89,6 +89,11 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         | Method::TsDefineStateSpace { .. } => DurabilityDomain::TimeSeries,
         #[cfg(feature = "jobs")]
         Method::AnalyticsJob { .. } => DurabilityDomain::AnalyticsJob,
+        // MEDULLA-DURABLE-KERNEL-R072: the served task queue is a typed facade over
+        // the same jobs.redb store, so its writes commit in the analytics-job owner.
+        Method::TaskQueueEnqueue { .. }
+        | Method::TaskQueueClaim { .. }
+        | Method::TaskQueueAck { .. } => DurabilityDomain::AnalyticsJob,
         _ => return service_owner_domain(method),
     })
 }
@@ -742,6 +747,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-UNIFIED-DATA-PLANE-R700.3: self-translates into a request-graph `BatchUpdate`.
         | Method::ActionRegister { .. }
         | Method::ActionSubmit { .. }
+        // MEDULLA-DURABLE-KERNEL-R072: claimed by `owner_domain` (jobs.redb).
+        | Method::TaskQueueEnqueue { .. }
+        | Method::TaskQueueClaim { .. }
+        | Method::TaskQueueAck { .. }
         | Method::WriteBack { .. }
         | Method::DecisionFit { .. }
         | Method::DecisionEval { .. }
@@ -981,6 +990,12 @@ pub fn surface_for(method: &Method) -> Option<MutationSurface> {
         ) => Some(MutationSurface::Job),
         #[cfg(feature = "jobs")]
         (_, Method::AnalyticsJob { .. }) => Some(MutationSurface::Job),
+        (
+            _,
+            Method::TaskQueueEnqueue { .. }
+            | Method::TaskQueueClaim { .. }
+            | Method::TaskQueueAck { .. },
+        ) => Some(MutationSurface::Job),
         (_, Method::QueryWorkItemReservation { .. } | Method::ResourceReservationStatus { .. }) => {
             Some(MutationSurface::Query)
         }

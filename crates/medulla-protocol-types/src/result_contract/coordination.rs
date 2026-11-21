@@ -72,6 +72,10 @@ method_results! {
     ClaimWorkItem(ClaimWorkItem) => Raw<ClaimWorkItemResult>;
     // MEDULLA-UNIFIED-DATA-PLANE-R700.3: the registered action name; the stored run.
     ActionRegister(ActionRegister) => Raw<String>;
+    // MEDULLA-DURABLE-KERNEL-R072: the stored task id, the leased task or nil, the recorded outcome.
+    TaskQueueEnqueue(TaskQueueEnqueue) => Raw<medulla_work_types::task_queue::TaskEnqueued>;
+    TaskQueueClaim(TaskQueueClaim) => Raw<Option<medulla_work_types::task_queue::ClaimedTask>>;
+    TaskQueueAck(TaskQueueAck) => Raw<medulla_work_types::task_queue::TaskAcked>;
     ActionSubmit(ActionSubmit) => Raw<medulla_work_types::action_spec::ActionRun>;
     AcquireCapacity(AcquireCapacity) => Raw<CapacityAcquireResult>;
     RenewCapacity(RenewCapacity) => Raw<CapacityMutationResult>;

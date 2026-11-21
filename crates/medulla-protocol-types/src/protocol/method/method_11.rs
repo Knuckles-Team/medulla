@@ -590,6 +590,38 @@ $($variants)*
         #[serde(default)]
         limit: Option<u16>,
     },
+    /// Enqueue one durable task (MEDULLA-DURABLE-KERNEL-R072) into the job store
+    /// as a job of family `task.<queue>`. Scope `task:enqueue`. The tenant and
+    /// principal come from the verified request; a repeated `idempotency_key` in
+    /// the same queue refuses `TASK_DUPLICATE`.
+    TaskQueueEnqueue {
+        queue: String,
+        kind: String,
+        payload_ref: String,
+        idempotency_key: String,
+        #[serde(default = "medulla_work_types::task_queue::default_priority")]
+        priority: u8,
+        #[serde(default)]
+        not_before_ms: u64,
+    },
+    /// Lease the next ready task of the verified tenant to a worker
+    /// (MEDULLA-DURABLE-KERNEL-R072). Scope `task:work`. The claim names no lane
+    /// or partition; an unacked lease redelivers after `lease_ms`.
+    TaskQueueClaim {
+        worker_id: String,
+        grant_id: String,
+        lease_ms: u64,
+    },
+    /// Acknowledge a leased task (MEDULLA-DURABLE-KERNEL-R072). Scope
+    /// `task:work`. `Succeeded` completes it, `Failed` fails it for good and
+    /// `Retry` releases it for redelivery keeping its attempt count.
+    TaskQueueAck {
+        task_id: String,
+        worker_id: String,
+        outcome: medulla_work_types::task_queue::TaskOutcome,
+        #[serde(default)]
+        detail: String,
+    },
         ]);
     };
 }

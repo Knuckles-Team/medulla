@@ -123,6 +123,12 @@ macro_rules! native_method_catalog {
 
             #[cfg(feature = "jobs")]
             record AnalyticsJob => AnalyticsJob,
+            #[cfg(feature = "jobs")]
+            record TaskQueueEnqueue => AnalyticsJob,
+            #[cfg(feature = "jobs")]
+            record TaskQueueClaim => AnalyticsJob,
+            #[cfg(feature = "jobs")]
+            record TaskQueueAck => AnalyticsJob,
             #[cfg(feature = "sqlite-file")]
             record ImportSqliteFile => SqliteCatalog,
 

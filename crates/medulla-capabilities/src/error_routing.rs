@@ -1187,6 +1187,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     ("TxnPlanWriteback", &["CORRUPT_WRITE_BACK"]),
     ("ActionRegister", &["ACTION_SPEC_INVALID"]),
+    // MEDULLA-DURABLE-KERNEL-R072: the served task-queue refusals.
+    (
+        "TaskQueueEnqueue",
+        &["TASK_DUPLICATE", "TASK_QUEUE_NAME_BLANK"],
+    ),
+    ("TaskQueueClaim", &["TASK_LEASE_ZERO"]),
+    (
+        "TaskQueueAck",
+        &["TASK_ACK_LEASE_EXPIRED", "TASK_ACK_NOT_CLAIMED"],
+    ),
     (
         "ActionSubmit",
         &[

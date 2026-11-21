@@ -27,7 +27,8 @@ pub const TASK_LEASE_MAX_MS: u64 = 300_000;
 /// Longest ack `detail`, in bytes.
 pub const TASK_ACK_DETAIL_MAX_BYTES: usize = 1_024;
 
-fn default_priority() -> u8 {
+/// The priority a `TaskQueueEnqueue` carries when it names none.
+pub fn default_priority() -> u8 {
     TASK_PRIORITY_DEFAULT
 }
 
@@ -75,6 +76,38 @@ pub struct TaskAck {
     pub outcome: TaskOutcome,
     #[serde(default)]
     pub detail: String,
+}
+
+/// The reply of `TaskQueueEnqueue`: the engine-issued id of the stored task.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TaskEnqueued {
+    pub task_id: String,
+}
+
+/// One task leased to a worker by `TaskQueueClaim`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ClaimedTask {
+    pub task_id: String,
+    pub queue: String,
+    pub kind: String,
+    pub payload_ref: String,
+    /// How many times this task has been leased, counting this claim.
+    pub attempt: u32,
+    /// Engine time at which the lease lapses and the task redelivers.
+    pub lease_expires_at_ms: i64,
+}
+
+/// The reply of `TaskQueueAck`: the task and the outcome the engine recorded.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TaskAcked {
+    pub task_id: String,
+    pub outcome: TaskOutcome,
 }
 
 /// A task-queue request refused before it reaches the queue.

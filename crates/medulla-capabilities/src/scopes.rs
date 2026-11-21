@@ -275,6 +275,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("stream:read", User, "engine"),
     entry("stream:write", User, "engine"),
     entry("swarm:read", User, "graph-os"),
+    entry("task:enqueue", User, "engine"),
+    entry("task:work", User, "engine"),
     entry("telemetry:derive", ServiceOnly, "telemetry"),
     entry("telemetry:read", User, "graph-os"),
     entry("telemetry:write", ServiceOnly, "telemetry"),

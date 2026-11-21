@@ -56,8 +56,12 @@ use medulla_transaction::{AdmittedMutation, AdmittedOwnerWrite, Begin, MutationK
 use redb::{ReadableTable, TableDefinition};
 
 mod index_keys;
+mod task_queue;
 use index_keys::{capability_index_key, tenant_index_key};
 use serde::de::DeserializeOwned;
+pub use task_queue::{
+    ClaimFamily, TaskAckError, TaskAckOutcome, TaskSubmit, TaskSubmitOutcome, TASK_FAMILY_PREFIX,
+};
 
 use crate::intent::JobIntent;
 use crate::model::{AnalyticsJob, Checkpoint, JobId, JobPolicy, JobState, WorkerLease};
@@ -814,6 +818,27 @@ impl JobStore {
         lease_ms: u64,
         quota: TenantJobQuota,
     ) -> Result<Option<WorkerClaim>> {
+        self.claim_next_family(
+            worker_ref,
+            worker_capabilities,
+            now_ms,
+            lease_ms,
+            quota,
+            ClaimFamily::Analytics,
+        )
+    }
+
+    /// [`Self::claim_next`] restricted to one job family: analytics workers never
+    /// lease a queued task and task workers never lease an analytics job.
+    fn claim_next_family(
+        &self,
+        worker_ref: &str,
+        worker_capabilities: &[String],
+        now_ms: i64,
+        lease_ms: u64,
+        quota: TenantJobQuota,
+        family: ClaimFamily,
+    ) -> Result<Option<WorkerClaim>> {
         if claim_next_args_invalid(worker_ref, worker_capabilities, lease_ms, &quota) {
             return Err(codec_err(
                 "worker claim requires an opaque worker reference and limits",
@@ -849,8 +874,14 @@ impl JobStore {
         // only the unconstrained queue and the capability/pool/region anchors the
         // worker supplied, then merge the first eligible row from each ordered
         // range. Jobs whose anchor the worker cannot satisfy are never decoded.
-        let selected =
-            select_ready_for_worker(&write, worker_capabilities, &capabilities, now_ms, quota)?;
+        let selected = select_ready_for_worker(
+            &write,
+            worker_capabilities,
+            &capabilities,
+            now_ms,
+            quota,
+            family,
+        )?;
         let Some(mut job) = selected else {
             if let Some(batch) = reconcile_batch {
                 self.mutations.commit(write, &batch).map_err(redb_err)?;
@@ -2089,6 +2120,7 @@ fn select_ready_for_worker(
     capabilities: &BTreeSet<&str>,
     now_ms: i64,
     quota: TenantJobQuota,
+    family: ClaimFamily,
 ) -> Result<Option<AnalyticsJob>> {
     let mut anchors = BTreeSet::from([UNCONSTRAINED_CAPABILITY_ANCHOR.to_string()]);
     anchors.extend(
@@ -2125,6 +2157,7 @@ fn select_ready_for_worker(
                 capabilities,
                 now_ms,
                 quota,
+                family,
             )? {
                 continue;
             }
@@ -2152,8 +2185,10 @@ fn job_ready_for_claim(
     capabilities: &BTreeSet<&str>,
     now_ms: i64,
     quota: TenantJobQuota,
+    family: ClaimFamily,
 ) -> Result<bool> {
-    if !ready_indexed(job)
+    if !family.admits(job)
+        || !ready_indexed(job)
         || placement_anchor(job) != anchor
         || job.not_before_ms > now_ms
         || job
