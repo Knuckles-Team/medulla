@@ -20,7 +20,7 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [x] T014 [US2] MEDULLA-BUSINESS-OPS-R002.3 Threshold applicability
 - [x] T015 [US2] MEDULLA-BUSINESS-OPS-R002.4 Reconciliation matching
 - [x] T016 [US2] MEDULLA-BUSINESS-OPS-R002.5 Reorder point and quantity
-- [ ] T017 [US2] MEDULLA-BUSINESS-OPS-R002.6 Claim-text policy check
+- [x] T017 [US2] MEDULLA-BUSINESS-OPS-R002.6 Claim-text policy check
 - [ ] T018 [US2] MEDULLA-BUSINESS-OPS-R002.7 Wiring: the UQL `EVALUATE` stage reaches the five kinds
 - [ ] T019 [US2] MEDULLA-BUSINESS-OPS-R002.8 Hot-path proof: ask in natural language, get the deterministic answer
 - [ ] T020 [US3] MEDULLA-BUSINESS-OPS-R003 Owner digest as stored queries (rollup)
