@@ -182,6 +182,41 @@ async fn reconcile_removes_orphan_copy_and_keeps_live_copy() {
 }
 
 // spec: MEDULLA-IDENTITY-R023.13.5
+#[tokio::test(flavor = "multi_thread")]
+async fn a_write_after_a_share_succeeds() {
+    // The share audit appends go through the operation-audit chokepoint, which
+    // accounts each commit in the serving version: a write after a grant and
+    // after a revoke must not meet `STALE_VERSION`.
+    let state = durable_state().await;
+    add_node(&state, NODE, serde_json::json!({"type": "Note", "_owner_id": OWNER})).await;
+    let granted = send_method(
+        &state,
+        owner(),
+        Method::RbacAdmin {
+            op: RbacAdminOp::ShareGrant(
+                ShareGrant::new(NODE.to_string(), ShareScope::Tenant, Vec::new())
+                    .expect("a valid grant"),
+            ),
+        },
+    )
+    .await;
+    assert!(granted.error.is_none(), "{:?}", granted.error);
+    add_node(&state, "after-grant", serde_json::json!({"type": "Note", "_owner_id": OWNER})).await;
+    let revoked = send_method(
+        &state,
+        owner(),
+        Method::RbacAdmin {
+            op: RbacAdminOp::ShareRevoke(ShareRevoke::new(NODE.to_string()).expect("a node id")),
+        },
+    )
+    .await;
+    assert!(revoked.error.is_none(), "{:?}", revoked.error);
+    add_node(&state, "after-revoke", serde_json::json!({"type": "Note", "_owner_id": OWNER})).await;
+    assert!(has_node(&state, "after-grant").await);
+    assert!(has_node(&state, "after-revoke").await);
+}
+
+// spec: MEDULLA-IDENTITY-R023.13.5
 #[test]
 fn share_event_fields_validate() {
     use crate::dispatch::router::share::ShareEvent;

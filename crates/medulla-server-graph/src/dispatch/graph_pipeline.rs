@@ -97,6 +97,33 @@ pub async fn dispatch_graph_op(
     .await
 }
 
+/// Append one operation-audit event to a resident graph's chain through the
+/// same chokepoint as `Method::AuditAppend` (`dispatch_op_audit_append`), so the
+/// append marks the graph dirty and accounts the commit in the serving version.
+/// A caller that writes the chain with a bare `audit_append` leaves the next
+/// stamped write on the graph to meet `STALE_VERSION`.
+#[cfg(feature = "security")]
+pub async fn dispatch_audit_append_for_graph(
+    state: &Arc<RwLock<ServerState>>,
+    graph_name: &str,
+    req_id: u64,
+    event: medulla_store::redb_store::OperationAuditEvent,
+) -> Response {
+    let (core, persistence) = {
+        let s = timed_read(state).await;
+        match s.registry.get(graph_name) {
+            Some(entry) => (entry.core.clone(), s.persistence.clone()),
+            None => {
+                return Response::err(
+                    req_id,
+                    format!("INVALID_ARGUMENT: graph '{graph_name}' is not resident"),
+                )
+            }
+        }
+    };
+    dispatch_op_audit_append(req_id, graph_name, core, persistence, event).await
+}
+
 #[cfg(feature = "modality-serving")]
 pub async fn dispatch_served_modality(
     state: &Arc<RwLock<ServerState>>,

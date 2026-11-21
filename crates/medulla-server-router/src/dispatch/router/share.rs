@@ -316,16 +316,7 @@ async fn record_share_event(
     verified_context: &VerifiedRequestContext,
     event: &ShareEvent,
     phase: SharePhase,
-) -> Result<medulla_protocol_types::result_contract::security::AuditAppendReceipt, String> {
-    use medulla_persistence::AsRedb;
-    let backend = medulla_server_graph::dispatch::shared::timed_read(state)
-        .await
-        .persistence
-        .clone();
-    let redb = backend
-        .as_ref()
-        .and_then(|backend| backend.as_redb())
-        .ok_or_else(|| "INVALID_ARGUMENT: share requires the durable audit chain".to_string())?;
+) -> Result<(), String> {
     let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(verified_context)?;
     use medulla_store::redb_store::audit_status::AuditStatus;
     let record = match phase {
@@ -339,8 +330,14 @@ async fn record_share_event(
             event.audit_record(authority.tenant_scope(), authority.actor_scope(), false, AuditStatus::Error)
         }
     };
-    redb.audit_append(&medulla_kernel::persist::sanitize(&req.graph), record)
-        .await
+    let response = medulla_server_graph::dispatch::graph_pipeline::dispatch_audit_append_for_graph(
+        state, &req.graph, req.id, record,
+    )
+    .await;
+    match response.refusal_text() {
+        Some(refusal) => Err(refusal),
+        None => Ok(()),
+    }
 }
 
 #[cfg(not(feature = "security"))]
@@ -351,7 +348,7 @@ async fn record_share_event(
     _event: &ShareEvent,
     _phase: SharePhase,
 ) -> Result<(), String> {
-    Err("INVALID_ARGUMENT: share requires the durable audit chain".to_string())
+    Err("AUDIT_WRITER_UNAVAILABLE: share requires the durable audit chain".to_string())
 }
 
 /// Commit an accepted share: the commons copy first on a promotion, then the
