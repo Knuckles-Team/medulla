@@ -5994,6 +5994,7 @@ dependencies = [
  "medulla-graph-algos",
  "medulla-graph-core",
  "medulla-h-query",
+ "medulla-ingestion-types",
  "medulla-mining",
  "medulla-modality",
  "medulla-plan",

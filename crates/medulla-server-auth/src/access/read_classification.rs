@@ -184,6 +184,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "MemoryExport",
     "MemoryRecall",
     "MineClassifyFit",
+    "ProcessConformance",
     "MineTopology",
     // t1-grounding-0802 follow-up audit: `medulla_h_graph::pipeline::try_handle` (module doc,
     // `src/server/handlers/pipeline.rs`) receives the SAME `core.clone()` the mining/

@@ -285,6 +285,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::MineSequence { .. }
         | Method::MineAssociate { .. }
         | Method::MineClassifyFit { .. }
+        | Method::ProcessConformance { .. }
         | Method::MineCluster { .. }
         | Method::MineRetrievalQuality { .. }
         | Method::MineRootCause { .. }

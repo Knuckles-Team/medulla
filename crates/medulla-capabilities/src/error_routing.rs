@@ -811,6 +811,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "CodeContext",
         &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"],
     ),
+    // MEDULLA-REPO-INGEST-R002.651.4: a conformance request for a model the graph does not hold.
+    ("ProcessConformance", &["PROCESS_MODEL_UNKNOWN"]),
     // MEDULLA-REPO-INGEST-R700.3: a step budget outside its range.
     ("CodeHealthSweep", &["INVALID_ARGUMENT"]),
     ("Diagnose", &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"]),

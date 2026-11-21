@@ -203,6 +203,9 @@ method_results! {
     MineAnomaly(MineAnomaly) => Json<mining::AnomalyMiningResult>;
     #[cfg(feature = "mining")]
     MineClassifyFit(MineClassifyFit) => Json<mining::ClassifierFitResult>;
+    // MEDULLA-REPO-INGEST-R002.651.4: the fitness of traces replayed on a stored process model.
+    #[cfg(feature = "mining")]
+    ProcessConformance(ProcessConformance) => Raw<medulla_ingestion_types::ingest_capabilities::ConformanceReport>;
     #[cfg(feature = "mining")]
     MineClassifyPredict(MineClassifyPredict) => Json<mining::ClassificationMiningResult>;
     #[cfg(feature = "mining")]

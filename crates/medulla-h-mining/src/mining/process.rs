@@ -214,6 +214,107 @@ pub(crate) fn handle_process(
     )
 }
 
+/// The id of `label`, a fresh one when the model does not list it.
+fn intern_label(
+    ids: &mut std::collections::HashMap<String, process_mining::ActivityId>,
+    label: &str,
+) -> process_mining::ActivityId {
+    let next = ids.len() as process_mining::ActivityId;
+    *ids.entry(label.to_string()).or_insert(next)
+}
+
+/// Handle `ProcessConformance` (MEDULLA-REPO-INGEST-R002.651.4): replay `traces` on the
+/// footprint of the stored `:ProcessModel` node `process_model_id`. Trace labels intern
+/// against the node's `activities`; a label the model does not list gets a fresh id. Reads
+/// the caller's projected `core` and writes nothing.
+pub(crate) fn handle_conformance(
+    req_id: u64,
+    core: &GraphCore,
+    process_model_id: String,
+    traces: Vec<Vec<String>>,
+) -> Response {
+    let stored = core
+        .get_node_properties(&process_model_id)
+        .and_then(|blob| medulla_types::msgpack::decode_property_value(&blob).ok())
+        .filter(|node| node["type"].as_str() == Some("ProcessModel"));
+    let Some(node) = stored else {
+        return Response::err(
+            req_id,
+            format!(
+                "{}: no ProcessModel '{process_model_id}'",
+                medulla_types::contract::ServerErrorCode::ProcessModelUnknown.as_str()
+            ),
+        );
+    };
+    if traces.iter().all(Vec::is_empty) {
+        return Response::err(
+            req_id,
+            "INVALID_ARGUMENT: mining: process conformance requires non-empty traces",
+        );
+    }
+    let texts = |key: &str| -> Vec<String> {
+        node[key]
+            .as_array()
+            .map(|items| {
+                items
+                    .iter()
+                    .filter_map(|item| item.as_str().map(str::to_string))
+                    .collect()
+            })
+            .unwrap_or_default()
+    };
+    let mut ids: std::collections::HashMap<String, process_mining::ActivityId> = Default::default();
+    for label in texts("activities") {
+        intern_label(&mut ids, &label);
+    }
+    let known = ids.len();
+    let mut pairs = |key: &str, left: &str, right: &str| -> Vec<(process_mining::ActivityId, process_mining::ActivityId)> {
+        let mut found = Vec::new();
+        for item in node[key].as_array().into_iter().flatten() {
+            if let (Some(a), Some(b)) = (item[left].as_str(), item[right].as_str()) {
+                found.push((intern_label(&mut ids, a), intern_label(&mut ids, b)));
+            }
+        }
+        found
+    };
+    let causal = pairs("causal", "from", "to");
+    let parallel = pairs("parallel", "a", "b");
+    let starts: Vec<process_mining::ActivityId> = texts("start_activities")
+        .iter()
+        .map(|label| intern_label(&mut ids, label))
+        .collect();
+    let ends: Vec<process_mining::ActivityId> = texts("end_activities")
+        .iter()
+        .map(|label| intern_label(&mut ids, label))
+        .collect();
+    let model = process_mining::ProcessModel {
+        n_activities: known,
+        dfg_edges: Vec::new(),
+        causal,
+        parallel,
+        start_activities: starts,
+        end_activities: ends,
+    };
+    let interned: Vec<Vec<process_mining::ActivityId>> = traces
+        .iter()
+        .map(|trace| trace.iter().map(|label| intern_label(&mut ids, label)).collect())
+        .collect();
+    let counts = process_mining::footprint_replay(&model, &interned);
+    Response::ok(
+        req_id,
+        ResultPayload::of::<results::ProcessConformance>(
+            medulla_ingestion_types::ingest_capabilities::ConformanceReport {
+                schema_version: 1,
+                process_id: process_model_id,
+                traces: counts.traces,
+                fitness_milli: counts.fitness_milli(),
+                missing_tokens: counts.missing,
+                remaining_tokens: counts.remaining,
+            },
+        ),
+    )
+}
+
 /// Materialize the footprint as a typed `:ProcessModel` node (CONCEPT:MEDULLA-KG.mining.process-mining),
 /// linked to every activity that IS a resident node via `PROCESS_MEMBER` edges.
 pub(super) fn materialize_process_model(

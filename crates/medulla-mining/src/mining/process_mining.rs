@@ -118,6 +118,69 @@ pub fn alpha_lite(traces: &[Vec<ActivityId>], n_activities: usize) -> ProcessMod
     }
 }
 
+/// Token counts of one footprint replay (MEDULLA-REPO-INGEST-R002.651.4).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct ReplayCounts {
+    /// Non-empty traces replayed.
+    pub traces: u64,
+    /// Tokens produced: the start token plus one per fired activity, per trace.
+    pub produced: u64,
+    /// Tokens consumed: one per fired activity plus the final token, per trace.
+    pub consumed: u64,
+    /// Tokens that had to be created: an unlisted start, or an unlisted step.
+    pub missing: u64,
+    /// Tokens left behind: a trace that does not end on an end activity.
+    pub remaining: u64,
+}
+
+impl ReplayCounts {
+    /// `round(1000 * ((1 - missing/consumed) + (1 - remaining/produced)) / 2)`; 1000 when
+    /// nothing was replayed.
+    pub fn fitness_milli(&self) -> u32 {
+        if self.consumed == 0 || self.produced == 0 {
+            return 1000;
+        }
+        let missing = 1.0 - self.missing as f64 / self.consumed as f64;
+        let remaining = 1.0 - self.remaining as f64 / self.produced as f64;
+        (1000.0 * (missing + remaining) / 2.0).round().clamp(0.0, 1000.0) as u32
+    }
+}
+
+/// Replay `traces` on the footprint of `model` read as an implicit net with one place per
+/// directly-follows step. Per non-empty trace `a1..an`: `produced` and `consumed` grow by
+/// `n + 1`; `missing` grows by one when `a1` is not a start activity and by one for each step
+/// `(ai, ai+1)` in neither `causal` (in that order) nor `parallel` (either order), which
+/// includes any step touching an activity the model does not list; `remaining` grows by one
+/// when `an` is not an end activity. Empty traces are skipped and not counted.
+pub fn footprint_replay(model: &ProcessModel, traces: &[Vec<ActivityId>]) -> ReplayCounts {
+    let mut counts = ReplayCounts::default();
+    for trace in traces {
+        let (Some(&first), Some(&last)) = (trace.first(), trace.last()) else {
+            continue;
+        };
+        let steps = trace.len() as u64;
+        counts.traces += 1;
+        counts.produced += steps + 1;
+        counts.consumed += steps + 1;
+        if !model.start_activities.contains(&first) {
+            counts.missing += 1;
+        }
+        for pair in trace.windows(2) {
+            let (a, b) = (pair[0], pair[1]);
+            let allowed = model.causal.contains(&(a, b))
+                || model.parallel.contains(&(a, b))
+                || model.parallel.contains(&(b, a));
+            if !allowed {
+                counts.missing += 1;
+            }
+        }
+        if !model.end_activities.contains(&last) {
+            counts.remaining += 1;
+        }
+    }
+    counts
+}
+
 /// String-labeled convenience: intern → mine → relabel, returning `(labels,
 /// model)` so a caller can round-trip `ActivityId`s back to their original
 /// strings. Reuses [`super::association::intern`] (same first-seen interning
@@ -139,6 +202,41 @@ mod tests {
             vec![0, 1, 2, 4], // register, check, decide, reject
             vec![0, 1, 2, 3],
         ]
+    }
+
+    // spec: MEDULLA-REPO-INGEST-R002.651.4
+    #[test]
+    fn footprint_replay_counts_missing_and_remaining_tokens() {
+        // register(0) -> check(1) -> decide(2) -> accept(3) | reject(4)
+        let log: Vec<Vec<ActivityId>> = vec![vec![0, 1, 2, 3], vec![0, 1, 2, 4]];
+        let model = alpha_lite(&log, 5);
+        // A conforming trace consumes and produces every token.
+        let conforming = footprint_replay(&model, &[vec![0, 1, 2, 3]]);
+        assert_eq!(
+            conforming,
+            ReplayCounts {
+                traces: 1,
+                produced: 5,
+                consumed: 5,
+                missing: 0,
+                remaining: 0
+            }
+        );
+        assert_eq!(conforming.fitness_milli(), 1000);
+        // A reversed step (2 -> 1) is missing, and ending on 1 leaves a token behind.
+        let deviating = footprint_replay(&model, &[vec![0, 2, 1], vec![]]);
+        assert_eq!(deviating.traces, 1, "empty traces are skipped");
+        assert_eq!((deviating.produced, deviating.consumed), (4, 4));
+        // 0 -> 2 is not a footprint step and 2 -> 1 is reversed; 1 is no end activity.
+        assert_eq!((deviating.missing, deviating.remaining), (2, 1));
+        assert!(deviating.fitness_milli() < 1000);
+        // An unknown activity is missing as a start and as a step, and is no end.
+        let unknown = footprint_replay(&model, &[vec![9, 0]]);
+        assert_eq!((unknown.missing, unknown.remaining), (2, 1));
+        // A parallel pair is allowed in either order.
+        let parallel_model = alpha_lite(&[vec![0, 1, 2], vec![0, 2, 1]], 3);
+        let either = footprint_replay(&parallel_model, &[vec![0, 2, 1]]);
+        assert_eq!(either.missing, 0);
     }
 
     #[test]

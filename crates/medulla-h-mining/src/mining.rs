@@ -172,6 +172,23 @@ pub fn try_handle(
                 },
             ))
         }
+        // MEDULLA-REPO-INGEST-R002.651.4: replay traces on a stored process model; a read
+        // of the caller's projected graph.
+        #[cfg(feature = "mining")]
+        Method::ProcessConformance {
+            process_model_id,
+            traces,
+        } => {
+            let authority = read_authority
+                .expect("ProcessConformance must carry the universal served-read authority");
+            let core = authority.project_core(&core);
+            Ok(process::handle_conformance(
+                req_id,
+                &core,
+                process_model_id,
+                traces,
+            ))
+        }
         // MEDULLA-CQ-ORCH-R010.3: the derived architecture view; a read of the
         // caller's projected graph.
         Method::ArchitectureView { scope } => Ok(architecture::handle_architecture_view(

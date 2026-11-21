@@ -303,6 +303,16 @@ $($variants)*
     },
 
 
+    /// MEDULLA-REPO-INGEST-R002.651.4: replay `traces` on a stored `:ProcessModel` and
+    /// score the fit. `process_model_id` is the `process_model:<hex>` node `MineProcess`
+    /// writes back. A read; nothing is committed. Gated `mining`.
+    #[cfg(feature = "mining")]
+    ProcessConformance {
+        process_model_id: String,
+        #[serde(default)]
+        traces: Vec<Vec<String>>,
+    },
+
     /// Process mining (CONCEPT:MEDULLA-KG.mining.process-mining): directly-follows
     /// graph + alpha-miner-lite footprint (causal / parallel / choice relations,
     /// start/end activity sets) over ordered event `traces`. With
