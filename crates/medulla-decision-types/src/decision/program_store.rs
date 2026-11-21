@@ -516,6 +516,50 @@ impl CompiledProgram {
     }
 }
 
+/// The first-occurrence walk of a trace's literals: parameter `p<k>` is the `k`th distinct
+/// (kind, value) pair, and equal literals share one name. `compile_program` and the match
+/// index build (MEDULLA-DECISION-ENGINE-R135.16.2) read the same walk.
+pub(crate) struct LiteralWalk {
+    /// The kind of each parameter, by index.
+    pub kinds: Vec<ProgramParameterKind>,
+    /// The literal each parameter first took, by index.
+    pub values: Vec<TraceScalar>,
+    /// Per trace step, the parameter index of each argument, in argument order.
+    pub slots: Vec<Vec<usize>>,
+}
+
+/// Walk `trace` once and name every literal.
+pub(crate) fn literal_walk(trace: &RunTraceRecord) -> LiteralWalk {
+    let mut seen: Vec<(ProgramParameterKind, String)> = Vec::new();
+    let mut walk = LiteralWalk {
+        kinds: Vec::new(),
+        values: Vec::new(),
+        slots: Vec::with_capacity(trace.steps.len()),
+    };
+    for step in &trace.steps {
+        let mut step_slots = Vec::new();
+        for argument in &step.arguments {
+            let (kind, text) = match &argument.value {
+                TraceScalar::Text(text) => (ProgramParameterKind::Text, text.clone()),
+                TraceScalar::Int(int) => (ProgramParameterKind::Int, int.to_string()),
+                TraceScalar::Bool(flag) => (ProgramParameterKind::Bool, flag.to_string()),
+            };
+            let slot = match seen.iter().position(|known| *known == (kind, text.clone())) {
+                Some(slot) => slot,
+                None => {
+                    seen.push((kind, text));
+                    walk.kinds.push(kind);
+                    walk.values.push(argument.value.clone());
+                    seen.len() - 1
+                }
+            };
+            step_slots.push(slot);
+        }
+        walk.slots.push(step_slots);
+    }
+    walk
+}
+
 /// Compile one successful run into a program. Every string, integer or
 /// boolean scalar in a step's arguments is a literal: it becomes a parameter
 /// `p0`, `p1`, ... named by first occurrence, and equal literals (same kind and
@@ -538,25 +582,15 @@ pub fn compile_program(
             steps: trace.steps.len(),
         });
     }
-    let mut seen: Vec<(ProgramParameterKind, String)> = Vec::new();
+    let walk = literal_walk(trace);
     let mut steps = Vec::with_capacity(trace.steps.len());
     for (k, step) in trace.steps.iter().enumerate() {
-        let mut args = Vec::new();
-        for argument in &step.arguments {
-            let (kind, text) = match &argument.value {
-                TraceScalar::Text(text) => (ProgramParameterKind::Text, text.clone()),
-                TraceScalar::Int(int) => (ProgramParameterKind::Int, int.to_string()),
-                TraceScalar::Bool(flag) => (ProgramParameterKind::Bool, flag.to_string()),
-            };
-            let slot = match seen.iter().position(|known| *known == (kind, text.clone())) {
-                Some(slot) => slot,
-                None => {
-                    seen.push((kind, text));
-                    seen.len() - 1
-                }
-            };
-            args.push(format!("{}=p{slot}", argument.name));
-        }
+        let args: Vec<String> = step
+            .arguments
+            .iter()
+            .zip(&walk.slots[k])
+            .map(|(argument, slot)| format!("{}=p{slot}", argument.name))
+            .collect();
         let action = if args.is_empty() {
             step.action_ref.clone()
         } else {
@@ -572,10 +606,11 @@ pub fn compile_program(
             output_types: Vec::new(),
         });
     }
-    let parameters = seen
+    let parameters = walk
+        .kinds
         .iter()
         .enumerate()
-        .map(|(slot, (kind, _))| ProgramParameter {
+        .map(|(slot, kind)| ProgramParameter {
             name: format!("p{slot}"),
             kind: *kind,
         })
