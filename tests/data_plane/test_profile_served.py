@@ -109,3 +109,40 @@ def test_profile_refusals(start_medulla_server) -> None:
     finally:
         client.tenants.delete(graph)
         client.close()
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R761.6")
+def test_profile_ten_columns_of_a_native_dataset(start_medulla_server) -> None:
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R761.6: ten columns over 100,000 native rows."""
+    client = _client()
+    graph = f"profile-{uuid.uuid4().hex[:8]}"
+    table = f"prof10_{uuid.uuid4().hex[:8]}"
+    columns = [f"c{k}" for k in range(10)]
+    client.tenants.create(graph)
+    try:
+        client.query.sql(
+            f"CREATE TABLE {table} (id int primary key, "
+            + ", ".join(f"{name} text" for name in columns)
+            + ")"
+        )
+        for batch in range(100):
+            rows = []
+            for n in range(1000):
+                row_id = batch * 1000 + n
+                cells = [
+                    "NULL" if row_id % 10 == k else f"'v{row_id % 7}'" for k in range(10)
+                ]
+                rows.append(f"({row_id}, {', '.join(cells)})")
+            client.query.sql(f"INSERT INTO {table} VALUES {', '.join(rows)}")
+        job = client.jobs.submit(
+            graph, {"DatasetProfile": {"dataset": table, "columns": columns}}
+        )
+        output = _wait(client, job["job_id"])["output"]["rows"]
+        assert [row["column"] for row in output] == columns
+        for row in output:
+            assert row["rows"] == 100_000
+            assert row["method"] == "sample"
+            assert row["sampled_rows"] == 100_000
+    finally:
+        client.tenants.delete(graph)
+        client.close()
