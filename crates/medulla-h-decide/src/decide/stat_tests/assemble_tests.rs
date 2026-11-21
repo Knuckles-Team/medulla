@@ -35,7 +35,7 @@ pub(in crate::decide) const TENANT: &str = "tenant-media";
 pub(in crate::decide) const ASKER: &str = "asker";
 
 pub(in crate::decide) struct Harness {
-    _dir: tempfile::TempDir,
+    pub(in crate::decide) _dir: tempfile::TempDir,
     pub(in crate::decide) state: Arc<RwLock<ServerState>>,
     pub(in crate::decide) store: Arc<AgentLibraryStore>,
 }
@@ -200,56 +200,74 @@ pub(in crate::decide) fn request(required: Vec<ModelInputMediaType>) -> Assembly
     }
 }
 
-/// Create the request graph and store the asker's run-scope bound in it, which
-/// assembly reads before it admits any candidate.
-pub(in crate::decide) async fn prepare_request_graph(h: &Harness) {
-    let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
-    {
-        let mut state = h.state.write().await;
-        if state.registry.get("default").is_none() {
-            state
-                .registry
-                .create_graph(
-                    "default",
-                    medulla_protocol_types::protocol::GraphType::Global,
-                    None,
-                )
-                .expect("create the request graph");
-        }
-    }
-    // The candidate set must lie inside the asker's stored run-scope bound
-    // (MEDULLA-IDENTITY-R008.1/R008.4); an absent bound refuses every tool.
-    {
-        let state = h.state.read().await;
-        let core = &state.registry.get("default").expect("request graph").core;
-        let policy = serde_json::json!({
-            "type": medulla_isolation::isolation::RUN_SCOPE_POLICY_CLASS,
-            "allowed_tools": [
-                "model-a", "prompt-a", "tool-a", "skill-a", "ontology-a", "p-search", "p-sink",
-                "p-bad", "r-ok", "r-kind", "r-schema", "r-caps", "r-effect", "tool-web",
-                "tool-small", "tool-large", "tool-bad",
-                "tool-render-artifact", "tool-apply", "tool-verify", "tool:search", "prompt:agent",
-                "skill:reason", "model-profile:default", "ontology:agent",
-            ],
-            "allowed_graphs": ["default"],
-        });
-        core.add_node(
-            medulla_isolation::isolation::run_scope_policy_iri(
-                &verified.principal_persistence_id(),
-            ),
-            rmp_serde::to_vec_named(&policy).expect("encode the run-scope policy"),
-        );
+/// Create the `default` request graph when it does not exist yet.
+async fn create_request_graph(h: &Harness) {
+    let mut state = h.state.write().await;
+    if state.registry.get("default").is_none() {
+        state
+            .registry
+            .create_graph(
+                "default",
+                medulla_protocol_types::protocol::GraphType::Global,
+                None,
+            )
+            .expect("create the request graph");
     }
 }
 
-pub(in crate::decide) async fn assemble(
+/// The tools the shared harness lets the asker run.
+const DEFAULT_ALLOWED_TOOLS: &[&str] = &[
+    "model-a", "prompt-a", "tool-a", "skill-a", "ontology-a", "p-search", "p-sink", "p-bad",
+    "r-ok", "r-kind", "r-schema", "r-caps", "r-effect", "tool-web", "tool-small", "tool-large",
+    "tool-bad", "tool-render-artifact", "tool-apply", "tool-verify", "tool:search",
+    "prompt:agent", "skill:reason", "model-profile:default", "ontology:agent",
+];
+
+/// Store the run-scope bound of `verified` in the request graph: `None` writes no policy
+/// node, `Some(tools)` writes the node whose `allowed_tools` are `tools`.
+async fn store_run_scope_policy(
     h: &Harness,
+    verified: &VerifiedRequestContext,
+    allowed_tools: Option<&[&str]>,
+) {
+    let Some(tools) = allowed_tools else {
+        return;
+    };
+    let state = h.state.read().await;
+    let core = &state.registry.get("default").expect("request graph").core;
+    let policy = serde_json::json!({
+        "type": medulla_isolation::isolation::RUN_SCOPE_POLICY_CLASS,
+        "allowed_tools": tools,
+        "allowed_graphs": ["default"],
+    });
+    core.add_node(
+        medulla_isolation::isolation::run_scope_policy_iri(&verified.principal_persistence_id()),
+        rmp_serde::to_vec_named(&policy).expect("encode the run-scope policy"),
+    );
+}
+
+/// Create the request graph and store the asker's run-scope bound in it, which
+/// assembly reads before it admits any candidate. The candidate set must lie inside the
+/// asker's stored run-scope bound (MEDULLA-IDENTITY-R008.1/R008.4); an absent bound
+/// refuses every tool.
+pub(in crate::decide) async fn prepare_request_graph(h: &Harness) {
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
+    create_request_graph(h).await;
+    store_run_scope_policy(h, &verified, Some(DEFAULT_ALLOWED_TOOLS)).await;
+}
+
+/// Assemble as `verified` under the run-scope bound `allowed_tools` names (`None`: no policy
+/// node is stored, so the bound is empty).
+pub(super) async fn assemble_with_policy(
+    h: &Harness,
+    verified: &VerifiedRequestContext,
+    allowed_tools: Option<&[&str]>,
     request: AssemblyRequest,
 ) -> Result<AssemblyResult, String> {
-    prepare_request_graph(h).await;
-    let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
+    create_request_graph(h).await;
+    store_run_scope_policy(h, verified, allowed_tools).await;
     let response =
-        super::super::assemble::handle_agent_assemble(&h.state, 1, ("default", &verified), request)
+        super::super::assemble::handle_agent_assemble(&h.state, 1, ("default", verified), request)
             .await;
     if let Some(error) = response.error {
         return Err(error);
@@ -258,6 +276,14 @@ pub(in crate::decide) async fn assemble(
         Some(ResultPayload::Raw(bytes)) => Ok(rmp_serde::from_slice(&bytes).unwrap()),
         other => panic!("unexpected payload {other:?}"),
     }
+}
+
+pub(in crate::decide) async fn assemble(
+    h: &Harness,
+    request: AssemblyRequest,
+) -> Result<AssemblyResult, String> {
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
+    assemble_with_policy(h, &verified, Some(DEFAULT_ALLOWED_TOOLS), request).await
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R815
