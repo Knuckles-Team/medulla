@@ -6,10 +6,13 @@
 mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
+#[cfg(feature = "blob")]
+#[path = "common/failable_blob.rs"]
+mod failable_blob;
 
 use medulla_mutation_types::memory_sync::{
-    DocId, MemorySnapshotRead, RequestId, Resolution, SyncAction, SyncOutcome, SyncRequest,
-    SyncStanding,
+    DocId, MemorySnapshotRead, RequestId, Resolution, SyncAction, SyncOutcome, SyncReceipt,
+    SyncRequest, SyncStanding,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_types::contract::Digest256;
@@ -550,6 +553,8 @@ async fn conflicts_survive_gc_and_retention_refusal() {
 
     // A restart keeps the head and the unresolved candidate: resolving it still works.
     let state = restart(&dir, backend, state).await;
+    #[cfg(feature = "blob")]
+    let blob = failable_blob::attach(&state, &dir).await;
     let head: MemorySnapshotRead = json_of(read(&state, 4, None).await);
     assert_eq!((head.head.revision, head.content.as_str()), (1, "one"));
     let resolve = admitted(
@@ -596,6 +601,69 @@ async fn conflicts_survive_gc_and_retention_refusal() {
     assert!(missing.error.is_some(), "the refused write left no document");
     let after: MemorySnapshotRead = json_of(read(&state, 9, None).await);
     assert_eq!(after.head.revision, 3);
+
+    // A collector pass reclaims nothing the snapshots hold: the resolved
+    // revision's bytes and the capacity-filling head are still in the CAS.
+    #[cfg(feature = "blob")]
+    {
+        use medulla_server_blob::blob::ChunkStore;
+        blob.sweep().expect("the collector pass");
+        for content in ["rival", big.as_str()] {
+            let digest = Digest256::sha256(content.as_bytes()).to_hex();
+            assert!(
+                blob.chunk(&digest).is_some(),
+                "a collector pass reclaimed held snapshot content"
+            );
+        }
+    }
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R085.4
+#[cfg(feature = "blob")]
+#[tokio::test(flavor = "multi_thread")]
+async fn a_storage_failure_refuses_before_commit_and_a_holder_failure_warns() {
+    install_knobs();
+    let (dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-failable",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let blob = failable_blob::attach(&state, &dir).await;
+
+    // The content cannot reach the CAS: the sync refuses before anything commits.
+    blob.fail_put(true);
+    let refused = send(&state, 2, submit("f1", None, "one")).await;
+    assert!(
+        error_of(&refused).contains("MEMSYNC_STORAGE_UNAVAILABLE"),
+        "{refused:?}"
+    );
+    assert!(read(&state, 3, None).await.error.is_some(), "nothing committed");
+
+    // The content reaches the CAS but the holder cannot be registered: the write
+    // is committed, so the answer is a success carrying the receipt warning.
+    blob.fail_put(false);
+    blob.fail_holder(true);
+    let receipt: SyncReceipt = json_of(send(&state, 4, submit("f2", None, "one")).await);
+    assert!(matches!(receipt.outcome, SyncOutcome::Accepted { ref head } if head.revision == 1));
+    assert_eq!(receipt.warnings, vec!["MEMSYNC_HOLDER_PENDING".to_string()]);
+    let head: MemorySnapshotRead = json_of(read(&state, 5, None).await);
+    assert_eq!((head.head.revision, head.content.as_str()), (1, "one"));
+
+    // A clean sync carries no warning.
+    blob.fail_holder(false);
+    let rewrite = admitted(
+        &state,
+        submit("f3", Some(1), "two"),
+        "two",
+        1,
+        medulla_decision_types::decision::memory_benchmark::ChangeKind::Rewrite,
+    )
+    .await;
+    let clean: SyncReceipt = json_of(send(&state, 6, rewrite).await);
+    assert!(clean.warnings.is_empty());
 }
 
 async fn send_as(
