@@ -443,26 +443,26 @@ Search terms included ColumnVector, recommendation, workload and column statisti
 ColumnVectorAdvice must carry stable table/column identities, schema revision and an observation interval.
 Observation counts must derive from successfully authorized, resolved query plans, not guesses from raw SQL strings.
 The record must count text-search uses separately from exact filters, projections and joins.
-Text-search uses include resolved pattern predicates, full-text queries and vector similarity queries.
+Text-search uses are resolved user-table columns under `LIKE`, `ILIKE`, `NOT LIKE`, `NOT ILIKE` or `SIMILAR TO`.
 Pattern predicates supply workload evidence before a column has any vector binding.
 The workload_first default must require at least one observed text-search use for a positive recommendation.
-It must sort by text-search-use count, then average text length, then distinct ratio, then stable column ID.
+It must rank by the weighted score of R077.6.2, then by stable `(table, column)`.
 A versioned policy may replace those weights or thresholds only with explicit evidence.
 Eligible columns without enough observations return insufficient_observations, not a fabricated positive score.
 
 The initial eligibility rule permits embeddable text only.
 It must reject numeric, boolean, timestamp, foreign-key, enumeration and unsupported binary data before recommendation scoring.
 This recommendation refusal is separate from R077.2 binding refusal.
-An unavailable approved encoder also prevents a positive recommendation.
+Advice checks no embedding model; binding admission (R077.2) owns model checks.
 Advice must consume schema and workload from the same authorized scope and declare both revisions.
 
-Proposed read-only catalog relation: `column_vector_advice`.
+Read-only catalog relation: `information_schema.vector_advice`, synthesized like `medulla_index_status`.
 A served `Sql` SELECT over this relation must invoke the advisor through the existing catalog response.
 An implementation must register and authorize that relation before claiming serving.
 The advisor must record only bounded counts and feature contributions; it must retain no raw query text.
 Advice must not bind columns, schedule embedding work or modify existing binding lifecycle state.
 
-Decision: extend R077.4 with measured workload input through R077.6.
+Decision: R077.6 replaces the retired R077.4 with measured workload input.
 Reject a second binding registry and recommendations based only on global query popularity.
 
 #### R040.2: topic/dense fusion
@@ -721,9 +721,9 @@ The following rows either state a closed contract at an existing owner path or n
 
 #### `MEDULLA-FEDERATED-QUERY-R006.1`
 
-**Open definition — temporal derivation producer and semantics are absent.** R006 continues to require proof-carrying results for rule-derived queries. The source asks for temporal forward chaining over extracted facts. Each derived fact must retain provenance to its originating sentence or axiom. But the owner review found only answer-level proofs and no persistent fact-production API/origin chain. Before specifying a producer, the owner must decide rule language/version, temporal interval vocabulary, join/overlap semantics and conflict handling. The owner must also define derived-fact identity/update/retraction behavior and the persistent origin-record schema. The owner must also name the authoritative admission/readback operation. Do not treat query proof premises as a durable fact producer. No derivation or write is authorized by this row.
+**Closed definition — temporal derivation is a reasoning write.** The producer is landed in `crates/medulla-plan/src/rules/temporal.rs`: rule form `temporal-rules-v1`, closed-open intervals, a non-empty overlap join, fact identity and the refusal set. The served route is `RunTemporalRules`, a `reasoning:write` method beside `RunDatalogReasoning`. `Uql` is `mutates: false`, so a rule inside `Uql` would let a read-scope caller write. Premises are live bitemporal edges; derived facts are `DerivedFact` nodes committed through the state-backed `MutationBatch` of `commit_gateway`. The record-domain `MutationPayload` has no served consumer, so `derive_facts_mutation` is deleted. The reply carries the derivation trace. Query proof premises are not a fact producer.
 
-Preserve `MEDULLA-FEDERATED-QUERY-R001, MEDULLA-FEDERATED-QUERY-R011, MEDULLA-DECISION-ENGINE-R003, MEDULLA-FEDERATED-QUERY-R006`. Source record `EG:11` SHA256 `2c2ffcf18d947730bc60a935fed942e1f82e9e8547f4509fe2941a34672fb8f3`. Status remains SPECIFIED until implementation and independently read-back evidence exist.
+Preserve `MEDULLA-FEDERATED-QUERY-R001, MEDULLA-FEDERATED-QUERY-R011, MEDULLA-DECISION-ENGINE-R003, MEDULLA-FEDERATED-QUERY-R006`. Source record `EG:11` SHA256 `2c2ffcf18d947730bc60a935fed942e1f82e9e8547f4509fe2941a34672fb8f3`.
 
 #### `MEDULLA-FEDERATED-QUERY-R040.5`
 
@@ -1296,3 +1296,11 @@ Order: R733, then R734 and R735 in parallel.
 - `SCION-SOURCE-INGEST-R004.7` executes approved source queries through the registered SDK adapter. Provider row: `MEDULLA-FEDERATED-QUERY-R085`. Contract: [contracts/approved-source-query.md](contracts/approved-source-query.md).
 - `SCION-CONNECTOR-CONTROL-R069` supplies transports and contract terms for operation-bound sources. Provider row: `MEDULLA-FEDERATED-QUERY-R073`. Contract: [contracts/connector-source-transport.md](contracts/connector-source-transport.md).
 - `MERISTEM-HARNESS-CYCLE-R079` applies each retrieval verdict and runs the next round. Provider row: `MEDULLA-FEDERATED-QUERY-R081`. Contract: [contracts/retrieval-verdict-consumer.md](contracts/retrieval-verdict-consumer.md).
+
+## Amendments
+
+### 2026-11-20
+
+- `MEDULLA-FEDERATED-QUERY-R723` is withdrawn. Reason: it duplicates the served semantic-index binding lifecycle. `SemanticIndexOp::AdmitBinding` admits, `SemanticIndexOp::RefreshBinding` re-embeds, and `finalize_generation` alone runs the promotion gate (`MEDULLA-UNIFIED-DATA-PLANE-R040.3`).
+- `MEDULLA-FEDERATED-QUERY-R085.2` is corrected to match main. Reason: `apply_issue_control_lease_row` runs `IssueControlLeaseRequest::validate`, which refuses every reserved kind, so approval uses a dedicated native issuer like `host_start::issue`.
+- `MEDULLA-FEDERATED-QUERY-R077.2` is corrected. Reason: the semantic store already holds governed SQL-column bindings, so new bind methods and a table-store catalog record would be a second binding store.

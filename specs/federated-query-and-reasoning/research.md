@@ -277,9 +277,9 @@ The receipt is one typed struct on each advice row, not a second relation: the r
 
 Decision: every tunable of the advice is a registry knob in `knob_config.rs` (`sql_advice.window_hours`, `.min_samples`, `.w_demand`, `.w_length`, `.w_distinct`, `.length_norm`, `.max_columns`, `.max_rows`, `.stats_sample_rows`), never a `SchedulerConfig` field. Why: one tunable mechanism. The table-store crate cannot see the registry, so the caller passes resolved values (`AdvicePolicy`, `UsageBounds`).
 
-Decision: the text-search counters are process-local statistics on the tenant's cached `TableStore` handle, bounded by `sql_advice.max_columns`. Why: the advice is a ranking over recent traffic, not a fact a reader must find after a restart; a restart opens a new window and advice reports `insufficient_observations` until it fills. Each tenant has its own handle, so counters are keyed by tenant and never shared.
+Decision: the text-search counters are process-local statistics on the tenant's cached `TableStore` handle (`Arc<ColumnUsageCounters>`, shared by every clone), bounded by `sql_advice.max_columns`. Why: the advice is a ranking over recent traffic, not a fact a reader must find after a restart; a restart opens a new window and advice reports `insufficient_observations` until it fills. Each tenant has its own handle, so counters are keyed by tenant and never shared.
 
-Decision: refusals scope to the question. A read that pins one column on `information_schema.vector_advice` is admitted for that column (type, schema revision, model capability); a listing never refuses on account of another column. The retired `recommend_vectorization` (R077.4) is deleted; `is_embeddable` is the one type test.
+Decision: refusals scope to the question. A read that pins one column on `information_schema.vector_advice` is admitted for that column (type, schema revision); a listing never refuses on account of another column. Advice checks no embedding model, because no engine fact names an approved encoder before a binding exists; binding admission (R077.2) owns model checks. The retired `recommend_vectorization` (R077.4) is deleted; `is_embeddable` is the one type test.
 
 LAYOUT-REGEN: not needed (no stored layout changed). WIRE-REGEN: not needed (no wire type changed).
 

@@ -76,7 +76,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T070 [P] [US1] MEDULLA-FEDERATED-QUERY-R073.1 Typed model for operation-bound foreign sources, with refusal tests
 - [ ] T071 [US1] MEDULLA-FEDERATED-QUERY-R073.2 Connection-protocol pushdown matrix
 - [ ] T072 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.1 ColumnVectorBinding typed model
-- [ ] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind surface
+- [ ] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind a SQL column through SemanticIndex AdmitBinding and DropBinding
 - [ ] T074 [US1] MEDULLA-FEDERATED-QUERY-R077.3 Column vectorization: row-write re-embedding hook
 - [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: end-to-end column vector search
 - [ ] T076 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.1 Multimodal space: model
@@ -104,9 +104,9 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T094 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.7 Chunk encoding: evidence
 - [ ] T095 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.2.8 Chunk encoding: hot-path proof
 - [ ] T096 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.1 Column advice: model
-- [ ] T097 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.2 Column advice: workload-first behavior
-- [ ] T098 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.3 Column advice: wiring
-- [ ] T099 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.4 Column advice: refusal
+- [ ] T097 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.2 Column advice: pure workload-first `rank_columns` over `AdviceInput` and `AdvicePolicy`
+- [ ] T098 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.3 Column advice: text-search usage counters on the tenant TableStore and `information_schema.vector_advice`
+- [ ] T099 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.4 Column advice: pinned-read refusals `COLUMN_TYPE_UNSUPPORTED` and `SCHEMA_REVISION_STALE`
 - [ ] T100 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.5 Column advice: evidence
 - [ ] T101 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.6.6 Column advice: hot-path proof
 - [ ] T102 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.1 Topic fusion: model
@@ -115,7 +115,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T105 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.4 Topic fusion: refusal
 - [ ] T106 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.5 Topic fusion: evidence
 - [ ] T107 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.6 Topic fusion: hot-path proof
-- [ ] T108 [US1] MEDULLA-FEDERATED-QUERY-R006.1 Temporal rule-derived facts with persisted origin chain
+- [ ] T108 [US1] MEDULLA-FEDERATED-QUERY-R006.1 Temporal rule-derived facts: served `RunTemporalRules` materializes `DerivedFact` nodes
 - [ ] T109 [P] [US1] MEDULLA-FEDERATED-QUERY-R028.1 Typed KnowledgeSet row contract
 - [ ] T110 [US1] MEDULLA-FEDERATED-QUERY-R005.1 Typed consistency-violation matrix on the validation result
 - [ ] T111 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.2.7 Topic fusion: per-document topic responsibilities
@@ -168,7 +168,6 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T154 [US1] MEDULLA-FEDERATED-QUERY-R072.2 UnifiedQuery plans sources through the shared source-coverage resolver
 - [ ] T155 [US1] MEDULLA-FEDERATED-QUERY-R073.3 Bind operation-bound Mcp sources to a connector call through the outbound guard
 - [ ] T156 [US1] MEDULLA-FEDERATED-QUERY-R720.7 UQL stage REQUIRE NONEMPTY with a caller-named refusal code
-- [ ] T157 [P] [US1] MEDULLA-FEDERATED-QUERY-R723 Serve embedding admission and re-embedding as methods
 - [ ] T158 [US1] MEDULLA-FEDERATED-QUERY-R724 Authorization-segmented schema projections method
 - [ ] T159 [P] [US1] MEDULLA-FEDERATED-QUERY-R725 Viewport bins and selection resolve methods
 - [ ] T160 [US1] MEDULLA-FEDERATED-QUERY-R726 UQL EVALUATE grammar
@@ -381,10 +380,10 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 ## User Story 4: Governed sources, masks and approvals
 
 - [ ] T359 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.1 Model of Medulla approves immutable source queries for bounded connector execution
-- [ ] T360 [US4] MEDULLA-FEDERATED-QUERY-R085.2 Behavior: issue approval of Medulla approves immutable source queries for bounded connector execution
+- [ ] T360 [US4] MEDULLA-FEDERATED-QUERY-R085.2 Behavior: issue approval through the dedicated native issuer `source_query::issue`
 - [ ] T361 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.3 Behavior: verify approval of Medulla approves immutable source queries for bounded connector execution
 - [x] T362 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.4 Behavior: read-only SQL of Medulla approves immutable source queries for bounded connector execution
-- [ ] T363 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.5 Wiring of Medulla approves immutable source queries for bounded connector execution
+- [ ] T363 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.5 Wiring: issue through the native work-item route, verify through the foreign-source handler
 - [ ] T364 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.6 Behavior: bounded execution contract of Medulla approves immutable source queries for bounded connector execution
 - [ ] T365 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.7 Refusal of Medulla approves immutable source queries for bounded connector execution
 - [ ] T366 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.8 Evidence and hot-path proof
@@ -466,7 +465,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T437 [US1] MEDULLA-FEDERATED-QUERY-R738.3 ClaimRecord/ClaimState state machine: route 1 census findings through ClaimState::apply
 - [ ] T439 [US1] MEDULLA-FEDERATED-QUERY-R738.5 ContradictionRecord/ContradictionStatus state machine: route 1 census findings through ContradictionStatus::apply
 - [ ] T441 [US1] MEDULLA-FEDERATED-QUERY-R738.7 GapTopic/GapStatus state machine: route 1 census findings through GapStatus::apply
-- [ ] T442 [US1] MEDULLA-FEDERATED-QUERY-R738.8 GeoTask/TaskStatus state machine: route 1 census findings through TaskStatus::apply
+- [ ] T442 [US1] MEDULLA-FEDERATED-QUERY-R738.8 GeoTask state machine: `medulla-geo` routes every status write through `TaskStatusKind::apply`
 - [ ] T444 [US1] MEDULLA-FEDERATED-QUERY-R738.10 HierarchyVisit/DescentLevel is a classification, not a lifecycle: rename DescentStage to DescentLevel
 - [ ] T445 [US1] MEDULLA-FEDERATED-QUERY-R738.11 JointSelection/SolverOutcome is a classification, not a lifecycle: rename SolverStatus to SolverOutcome
 - [ ] T446 [US1] MEDULLA-FEDERATED-QUERY-R738.12 Non-lifecycle fields named `state`: the generator word of six `SplitMix64` pseudo-random generators
