@@ -527,6 +527,11 @@ pub async fn dispatch_compute_and_media_methods(
             method @ (Method::TaskQueueEnqueue { .. }
             | Method::TaskQueueClaim { .. }
             | Method::TaskQueueAck { .. }) => dispatch_task_queue_arm(ctx, method).await,
+            // MEDULLA-DURABLE-KERNEL-R076.2: scheduler settings live in the same store.
+            #[cfg(feature = "jobs")]
+            method @ (Method::GetSchedulerConfig | Method::SetSchedulerConfig { .. }) => {
+                dispatch_scheduler_config_arm(ctx, method).await
+            }
 
             // ── Native statechart engine (CONCEPT:INT-P2-2, feature `statechart`) ───────
             // NOT graph-scoped (own `statecharts.redb`, keyed by def_id/instance_id) —
@@ -632,6 +637,18 @@ async fn dispatch_task_queue_arm(ctx: DispatchCtx<'_>, method: Method) -> Respon
     dispatch_boxed(async {
         match medulla_h_jobs::task_queue::try_handle(state, req.id, verified_context, method).await
         {
+            Ok(response) => response,
+            Err(_) => Response::err(req.id, "router dispatch helper routing mismatch"),
+        }
+    })
+    .await
+}
+
+#[cfg(feature = "jobs")]
+async fn dispatch_scheduler_config_arm(ctx: DispatchCtx<'_>, method: Method) -> Response {
+    let DispatchCtx { state, req, .. } = ctx;
+    dispatch_boxed(async {
+        match medulla_h_jobs::scheduler_config::try_handle(state, req.id, method).await {
             Ok(response) => response,
             Err(_) => Response::err(req.id, "router dispatch helper routing mismatch"),
         }

@@ -76,6 +76,9 @@ method_results! {
     TaskQueueEnqueue(TaskQueueEnqueue) => Raw<medulla_work_types::task_queue::TaskEnqueued>;
     TaskQueueClaim(TaskQueueClaim) => Raw<Option<medulla_work_types::task_queue::ClaimedTask>>;
     TaskQueueAck(TaskQueueAck) => Raw<medulla_work_types::task_queue::TaskAcked>;
+    // MEDULLA-DURABLE-KERNEL-R076.2: the policy in force, and the policy just stored.
+    GetSchedulerConfig(GetSchedulerConfig) => Raw<medulla_work_types::scheduler_config::SchedulerConfig>;
+    SetSchedulerConfig(SetSchedulerConfig) => Raw<medulla_work_types::scheduler_config::SchedulerConfig>;
     ActionSubmit(ActionSubmit) => Raw<medulla_work_types::action_spec::ActionRun>;
     AcquireCapacity(AcquireCapacity) => Raw<CapacityAcquireResult>;
     RenewCapacity(RenewCapacity) => Raw<CapacityMutationResult>;

@@ -822,6 +822,8 @@ mod tests {
         #[cfg(feature = "jobs")]
         ("TaskQueueEnqueue", "MEDULLA-DURABLE-KERNEL-R072: native MutationBatch in jobs.redb, exactly like AnalyticsJob: one job of family task.<queue> plus its idempotency claim"),
         #[cfg(feature = "jobs")]
+        ("SetSchedulerConfig", "MEDULLA-DURABLE-KERNEL-R076.2: native MutationBatch in jobs.redb, exactly like AnalyticsJob: one settings row written as a maintenance batch"),
+        #[cfg(feature = "jobs")]
         ("TaskQueueClaim", "MEDULLA-DURABLE-KERNEL-R072: native MutationBatch in jobs.redb, exactly like AnalyticsJob's worker claim: one fenced lease transition"),
         #[cfg(feature = "jobs")]
         ("TaskQueueAck", "MEDULLA-DURABLE-KERNEL-R072: native MutationBatch in jobs.redb, exactly like AnalyticsJob's fenced worker transitions: one terminal or release transition"),

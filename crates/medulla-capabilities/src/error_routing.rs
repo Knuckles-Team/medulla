@@ -1209,6 +1209,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["TASK_DUPLICATE", "TASK_QUEUE_NAME_BLANK"],
     ),
     ("TaskQueueClaim", &["TASK_LEASE_ZERO"]),
+    // MEDULLA-DURABLE-KERNEL-R076.2: a refused scheduler setting.
+    ("SetSchedulerConfig", &["SCHEDULER_CONFIG_INVALID"]),
     (
         "TaskQueueAck",
         &["TASK_ACK_LEASE_EXPIRED", "TASK_ACK_NOT_CLAIMED"],

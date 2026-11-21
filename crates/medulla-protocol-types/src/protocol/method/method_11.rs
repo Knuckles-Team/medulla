@@ -632,6 +632,17 @@ $($variants)*
         #[serde(default)]
         detail: String,
     },
+    /// The scheduler policy now in force (MEDULLA-DURABLE-KERNEL-R076.2): the
+    /// stored setting, or the startup knob values when none was stored. Scope
+    /// `scheduler:admin`.
+    GetSchedulerConfig,
+    /// Replace the scheduler policy (MEDULLA-DURABLE-KERNEL-R076.2). Scope
+    /// `scheduler:admin`. A setting that fails `SchedulerConfig::validate`
+    /// refuses `SCHEDULER_CONFIG_INVALID` and changes nothing; an accepted one
+    /// persists and answers the stored policy.
+    SetSchedulerConfig {
+        config: medulla_work_types::scheduler_config::SchedulerConfig,
+    },
         ]);
     };
 }

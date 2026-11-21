@@ -412,6 +412,9 @@ pub(super) const REASON_DECIDE_LIBRARY_SNAPSHOT: &str =
 // count (the durable backend's shard count), never a graph row.
 pub(super) const REASON_SHARD_WRITER_WIDTH_CONFIG: &str =
     "native_routes::route_work_item_reads routes GetShardWriterWidth to handlers::worker_admission, which refuses any request tenant other than the verified carrier tenant and returns only the redb backend's configured shard count -- process configuration, never a GraphView/core.analysis_snapshot() row read; gated by scheduler:read in allows_method";
+// MEDULLA-DURABLE-KERNEL-R076.2: the scheduler policy is process configuration.
+pub(super) const REASON_SCHEDULER_CONFIG: &str =
+    "control_plane::dispatch_scheduler_config_arm routes GetSchedulerConfig to handlers::scheduler_config, which returns only the stored or knob-derived scheduler policy -- process configuration, never a GraphView/core.analysis_snapshot() row read; gated by scheduler:admin in allows_method";
 pub(super) const REASON_NATIVE_WORK_ITEM_TENANT_READ: &str =
     "native_routes::route_work_item_reads routes GetWorkItem/ListWorkItems/GetWorkItemOutcome/GetControlLease/ListControlLeases/GapGet/GapList (placement leader + read barrier under raft) to handlers::work_item_read, which refuses any request tenant other than the verified carrier tenant, then reads redb node rows via redb_store::work_item::{read_work_item, list_work_items, read_work_item_outcome, read_control_lease, list_control_leases, read_gap, list_gaps} and projects only rows whose `tenant` equals it -- never a GraphView/core.analysis_snapshot() row read; lease owner/epoch/fencing token are never projected";
 
@@ -687,6 +690,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("GapList", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     // REASON_SHARD_WRITER_WIDTH_CONFIG
     ("GetShardWriterWidth", REASON_SHARD_WRITER_WIDTH_CONFIG),
+    // REASON_SCHEDULER_CONFIG
+    ("GetSchedulerConfig", REASON_SCHEDULER_CONFIG),
     // REASON_CONTRACT_CATALOG_METADATA (MEDULLA-CONTRACT-R054)
     ("DescribeContract", REASON_CONTRACT_CATALOG_METADATA),
 ];

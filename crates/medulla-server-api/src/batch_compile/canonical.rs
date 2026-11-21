@@ -93,7 +93,8 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         // the same jobs.redb store, so its writes commit in the analytics-job owner.
         Method::TaskQueueEnqueue { .. }
         | Method::TaskQueueClaim { .. }
-        | Method::TaskQueueAck { .. } => DurabilityDomain::AnalyticsJob,
+        | Method::TaskQueueAck { .. }
+        | Method::SetSchedulerConfig { .. } => DurabilityDomain::AnalyticsJob,
         _ => return service_owner_domain(method),
     })
 }
@@ -756,6 +757,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::TaskQueueEnqueue { .. }
         | Method::TaskQueueClaim { .. }
         | Method::TaskQueueAck { .. }
+        | Method::SetSchedulerConfig { .. }
+        | Method::GetSchedulerConfig
         | Method::WriteBack { .. }
         | Method::DecisionFit { .. }
         | Method::DecisionEval { .. }
@@ -999,7 +1002,8 @@ pub fn surface_for(method: &Method) -> Option<MutationSurface> {
             _,
             Method::TaskQueueEnqueue { .. }
             | Method::TaskQueueClaim { .. }
-            | Method::TaskQueueAck { .. },
+            | Method::TaskQueueAck { .. }
+            | Method::SetSchedulerConfig { .. },
         ) => Some(MutationSurface::Job),
         (_, Method::QueryWorkItemReservation { .. } | Method::ResourceReservationStatus { .. }) => {
             Some(MutationSurface::Query)

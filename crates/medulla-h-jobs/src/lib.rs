@@ -56,6 +56,10 @@ pub mod work_item_read;
 #[cfg(all(test, feature = "redb"))]
 mod work_item_tests;
 
+/// MEDULLA-DURABLE-KERNEL-R076.2: served scheduler settings over the job store.
+#[cfg(feature = "jobs")]
+pub mod scheduler_config;
+
 /// MEDULLA-DURABLE-KERNEL-R072: served task-queue methods over the durable job store.
 #[cfg(feature = "jobs")]
 pub mod task_queue;

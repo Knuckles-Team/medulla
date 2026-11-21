@@ -249,6 +249,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("resource:reserve", ServiceOnly, "engine"),
     entry("scene:read", User, "engine"),
     entry("scene:write", User, "engine"),
+    entry("scheduler:admin", Admin, "engine"),
     entry("scheduler:read", User, "engine"),
     entry("schema:projections", User, "engine"),
     entry("security:admin", Admin, "engine"),
