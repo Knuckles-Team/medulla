@@ -1,3 +1,4 @@
+import contextlib
 import hashlib
 import importlib.util
 import json
@@ -505,6 +506,82 @@ def start_medulla_server(request, tmp_path_factory):
     stop_server(process, name="session engine", log_path=log_path)
     if os.path.exists(socket_path):
         os.remove(socket_path)
+
+
+class EnginePair:
+    """Two engines over one durable store: a client per engine (R751.763)."""
+
+    def __init__(self, shared_dir: Path, clients, processes) -> None:
+        self.shared_dir = shared_dir
+        self.client_a, self.client_b = clients
+        self.processes = processes
+
+
+@contextlib.contextmanager
+def spawn_engine_pair(shared_dir):
+    """Start two engine processes whose graph and job data live in `shared_dir`.
+
+    The request sockets differ and each engine has its own host identity
+    (`MEDULLA_NODE_ID`). Both are stopped on exit. It exists so served proofs
+    of leader election, fencing and singleton daemons run against two real
+    contenders.
+    """
+
+    shared_dir = Path(shared_dir)
+    persist_dir = shared_dir / "persist"
+    persist_dir.mkdir(parents=True, exist_ok=True)
+    rust_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    prebuilt = _prebuilt_test_binary()
+    auth_secret = "test-medulla-secret"
+    processes = []
+    clients = []
+    sockets = []
+    try:
+        for name in ("a", "b"):
+            runtime_dir = shared_dir / f"engine-{name}"
+            runtime_dir.mkdir(parents=True, exist_ok=True)
+            socket_path = str(runtime_dir / "engine.sock")
+            log_path = runtime_dir / "engine.log"
+            env = strict_server_env(
+                str(shared_dir / "security"),
+                auth_secret=auth_secret,
+                persist_dir=str(persist_dir),
+            )
+            env.setdefault("MEDULLA_ENCRYPTION_KEY", "test-medulla-encryption-key")
+            env["MEDULLA_NODE_ID"] = f"engine-{name}"
+            if prebuilt is not None:
+                command = [prebuilt, "--socket-path", socket_path]
+            else:
+                command = [
+                    "cargo", "run", "--features", "full", "--bin",
+                    "medulla-server", "--", "--socket-path", socket_path,
+                ]  # fmt: skip
+            process = spawn_server(
+                command, cwd=rust_dir, env={**os.environ, **env}, log_path=log_path
+            )
+            processes.append((process, name, log_path))
+            sockets.append(socket_path)
+            wait_for_server(
+                process, socket_path, name=f"engine {name}", log_path=log_path
+            )
+        for socket_path in sockets:
+            clients.append(
+                SyncMedullaClient.connect(
+                    socket_path=socket_path, verified_context=request_context()
+                )
+            )
+        yield EnginePair(shared_dir, clients, processes)
+    finally:
+        for client in clients:
+            client.close()
+        for process, name, log_path in processes:
+            stop_server(process, name=f"engine {name}", log_path=log_path)
+
+
+@pytest.fixture
+def engine_pair(tmp_path):
+    with spawn_engine_pair(tmp_path) as pair:
+        yield pair
 
 
 @pytest.fixture
