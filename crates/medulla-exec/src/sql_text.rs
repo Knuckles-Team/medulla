@@ -14,6 +14,10 @@ pub enum SqlDialect {
     Postgres,
     /// `mysql://` / `mariadb://`.
     MySql,
+    /// `clickhouse://`: a columnar analytic source. Identifiers quote with backticks, a
+    /// literal is single-quoted with backslash escapes, and a rendered statement binds its
+    /// values through `param_<name>` query parameters (MEDULLA-UNIFIED-DATA-PLANE-R017.2.2).
+    ColumnarAnalytic,
 }
 
 impl SqlDialect {
@@ -22,6 +26,7 @@ impl SqlDialect {
         match dsn.split(':').next().unwrap_or("") {
             "postgres" | "postgresql" => Some(Self::Postgres),
             "mysql" | "mariadb" => Some(Self::MySql),
+            "clickhouse" => Some(Self::ColumnarAnalytic),
             _ => None,
         }
     }
@@ -49,13 +54,14 @@ pub fn quote_identifier(ident: &str, dialect: SqlDialect) -> Result<String, Stri
     validate_identifier(ident)?;
     Ok(match dialect {
         SqlDialect::Postgres => format!("\"{ident}\""),
-        SqlDialect::MySql => format!("`{ident}`"),
+        SqlDialect::MySql | SqlDialect::ColumnarAnalytic => format!("`{ident}`"),
     })
 }
 
 /// Render a comparison literal: a validated finite numeric token unquoted when `numeric`,
 /// otherwise a single-quoted string with the dialect's escaping (Postgres doubles `'`;
-/// MySQL, which also treats `\` as an escape, doubles both). A NUL byte is refused.
+/// MySQL, which also treats `\` as an escape, doubles both; the columnar analytic dialect
+/// backslash-escapes `\` and `'`). A NUL byte is refused.
 pub fn render_literal(value: &str, numeric: bool, dialect: SqlDialect) -> Result<String, String> {
     if value.contains('\0') {
         return Err("SQL literal contains a NUL byte".into());
@@ -66,6 +72,7 @@ pub fn render_literal(value: &str, numeric: bool, dialect: SqlDialect) -> Result
     let escaped = match dialect {
         SqlDialect::Postgres => value.replace('\'', "''"),
         SqlDialect::MySql => value.replace('\\', "\\\\").replace('\'', "''"),
+        SqlDialect::ColumnarAnalytic => value.replace('\\', "\\\\").replace('\'', "\\'"),
     };
     Ok(format!("'{escaped}'"))
 }
@@ -88,10 +95,10 @@ fn render_numeric(value: &str) -> Result<String, String> {
     Ok(value.to_string())
 }
 
-/// The ClickHouse entry of the shared renderer (MEDULLA-UNIFIED-DATA-PLANE-R017.2.2). It is a
-/// separate entry rather than a [`SqlDialect`] variant because ClickHouse is never reached
-/// through a DSN: identifiers quote with backticks and every value binds through an HTTP
-/// `param_<name>` query parameter, so no literal is ever spliced into the statement text.
+/// The bound-parameter form of the shared renderer for [`SqlDialect::ColumnarAnalytic`]
+/// (MEDULLA-UNIFIED-DATA-PLANE-R017.2.2): identifiers quote through [`quote_identifier`] and
+/// every value binds through an HTTP `param_<name>` query parameter, so no value is ever
+/// spliced into the statement text.
 pub const CLICKHOUSE_PARAM_PREFIX: &str = "param_";
 
 /// The ClickHouse type a bound value carries in its `{name:Type}` placeholder.
@@ -129,13 +136,6 @@ pub struct ClickHouseStatement {
     pub params: Vec<(String, String)>,
 }
 
-/// Validate, then quote an identifier with backticks (the ClickHouse entry of
-/// [`quote_identifier`]).
-pub fn quote_clickhouse_identifier(ident: &str) -> Result<String, String> {
-    validate_identifier(ident)?;
-    Ok(format!("`{ident}`"))
-}
-
 /// Render `SELECT <columns> FROM <table> [WHERE ...]` for ClickHouse. A numeric value is
 /// re-validated as a finite number before it binds; a NUL byte is refused.
 pub fn render_clickhouse_select(
@@ -148,10 +148,10 @@ pub fn render_clickhouse_select(
     }
     let projection = columns
         .iter()
-        .map(|column| quote_clickhouse_identifier(column))
+        .map(|column| quote_identifier(column, SqlDialect::ColumnarAnalytic))
         .collect::<Result<Vec<_>, String>>()?
         .join(", ");
-    let mut sql = format!("SELECT {projection} FROM {}", quote_clickhouse_identifier(table)?);
+    let mut sql = format!("SELECT {projection} FROM {}", quote_identifier(table, SqlDialect::ColumnarAnalytic)?);
     let mut params = Vec::new();
     let mut predicates = Vec::new();
     for (index, filter) in filters.iter().enumerate() {
@@ -167,7 +167,7 @@ pub fn render_clickhouse_select(
         let name = format!("p{index}");
         predicates.push(format!(
             "{} {} {{{name}:{}}}",
-            quote_clickhouse_identifier(&filter.column)?,
+            quote_identifier(&filter.column, SqlDialect::ColumnarAnalytic)?,
             filter.op,
             filter.kind.type_name()
         ));
@@ -230,6 +230,24 @@ mod tests {
         assert!(render_literal("1; DROP", true, SqlDialect::Postgres).is_err());
         assert!(render_literal("inf", true, SqlDialect::Postgres).is_err());
         assert!(render_literal("a\0b", false, SqlDialect::Postgres).is_err());
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R017.2.2
+    #[test]
+    fn clickhouse_dialect_quotes_and_renders() {
+        assert_eq!(
+            SqlDialect::from_dsn("clickhouse://h"),
+            Some(SqlDialect::ColumnarAnalytic)
+        );
+        assert_eq!(
+            quote_identifier("events", SqlDialect::ColumnarAnalytic).unwrap(),
+            "`events`"
+        );
+        assert_eq!(
+            render_literal("it's a\\b", false, SqlDialect::ColumnarAnalytic).unwrap(),
+            "'it\\'s a\\\\b'"
+        );
+        assert!(render_literal("a\0b", false, SqlDialect::ColumnarAnalytic).is_err());
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R017.2.2

@@ -226,11 +226,12 @@ pub(crate) fn render_key_lookup(
 
 #[cfg(feature = "federation-sql")]
 fn parse_one(statement: &str, dialect: SqlDialect) -> Option<sqlparser::ast::Statement> {
-    use sqlparser::dialect::{MySqlDialect, PostgreSqlDialect};
+    use sqlparser::dialect::{ClickHouseDialect, MySqlDialect, PostgreSqlDialect};
     use sqlparser::parser::Parser;
     let mut parsed = match dialect {
         SqlDialect::Postgres => Parser::parse_sql(&PostgreSqlDialect {}, statement),
         SqlDialect::MySql => Parser::parse_sql(&MySqlDialect {}, statement),
+        SqlDialect::ColumnarAnalytic => Parser::parse_sql(&ClickHouseDialect {}, statement),
     }
     .ok()?;
     (parsed.len() == 1).then(|| parsed.remove(0))

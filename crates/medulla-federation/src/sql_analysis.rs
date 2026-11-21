@@ -10,7 +10,7 @@ use medulla_catalog_types::lineage::{
 };
 use medulla_exec::sql_text::SqlDialect;
 use sqlparser::ast::{ObjectName, ObjectNamePart, Query, Statement, Visit, Visitor};
-use sqlparser::dialect::{MySqlDialect, PostgreSqlDialect};
+use sqlparser::dialect::{ClickHouseDialect, MySqlDialect, PostgreSqlDialect};
 use sqlparser::parser::Parser;
 
 /// Environment override of `knob lineage.max_sql_bytes`.
@@ -35,6 +35,7 @@ pub fn parse_one_statement(sql: &str, dialect: SqlDialect) -> Result<Statement, 
     let parsed = match dialect {
         SqlDialect::Postgres => Parser::parse_sql(&PostgreSqlDialect {}, sql),
         SqlDialect::MySql => Parser::parse_sql(&MySqlDialect {}, sql),
+        SqlDialect::ColumnarAnalytic => Parser::parse_sql(&ClickHouseDialect {}, sql),
     };
     let mut statements = parsed.map_err(|e| LineageError::Parse(e.to_string()))?;
     if statements.len() != 1 {
