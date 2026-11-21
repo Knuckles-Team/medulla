@@ -131,7 +131,7 @@ impl GrampsPilotProgress {
     /// Whether `phase` may be entered now: every earlier phase in order has
     /// already exited. Refuses skipping ahead.
     pub fn admits(&self, phase: GrampsPilotMilestone) -> bool {
-        GrampsPilotMilestone::ORDER[..closes.position()]
+        GrampsPilotMilestone::ORDER[..phase.position()]
             .iter()
             .all(|earlier| self.exited(*earlier))
     }

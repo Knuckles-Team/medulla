@@ -424,7 +424,7 @@ pub fn uql_op(op: &Op) -> Printed {
         Op::Derive { columns } => super::wire_query_uql_modal::derive(columns),
         #[cfg(feature = "timeseries")]
         Op::Skill { spec } => super::wire_query_uql_modal::skill(spec),
-        Op::EvaluateRule { spec } => super::wire_query_uql_modal::evaluate_rule(spec),
+        Op::EvaluateRule { spec } => evaluate_rule(spec),
         #[cfg(feature = "timeseries")]
         Op::Evaluate { spec } => super::wire_query_uql_modal::evaluate(spec),
         #[cfg(feature = "timeseries")]
@@ -497,6 +497,34 @@ fn usage_scan(view: UsageView) -> &'static str {
 }
 
 /// A clause with no arguments.
+/// `EVALUATE RULE 'id' [ASOF ms] [COUNT n] [TEXT 'text' [LOCALE 'locale']]`
+/// (MEDULLA-BUSINESS-OPS-R002.7). A `LOCALE` with no `TEXT` has no spelling.
+fn evaluate_rule(spec: &crate::rule_expr::EvaluateRuleOp) -> Printed {
+    let mut out = format!("EVALUATE RULE {}", uql_quote(&spec.rule));
+    if let Some(as_of_ms) = spec.as_of_ms {
+        out.push_str(&format!(" ASOF {as_of_ms}"));
+    }
+    if let Some(count) = spec.count {
+        out.push_str(&format!(" COUNT {count}"));
+    }
+    match (&spec.text, &spec.locale) {
+        (Some(text), locale) => {
+            out.push_str(&format!(" TEXT {}", uql_quote(text)));
+            if let Some(locale) = locale {
+                out.push_str(&format!(" LOCALE {}", uql_quote(locale)));
+            }
+        }
+        (None, Some(_)) => {
+            return Err(refuse(
+                UqlPrintCode::DegenerateShape,
+                "EVALUATE RULE LOCALE needs a TEXT",
+            ));
+        }
+        (None, None) => {}
+    }
+    Ok(out)
+}
+
 fn fixed(text: &str) -> Printed {
     Ok(text.to_string())
 }

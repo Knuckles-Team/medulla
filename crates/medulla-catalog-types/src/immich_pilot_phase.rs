@@ -138,7 +138,7 @@ impl ImmichPilotProgress {
     /// Whether `phase` may be entered now: every earlier phase in order has
     /// already exited. Refuses skipping ahead.
     pub fn admits(&self, phase: ImmichPilotMilestone) -> bool {
-        ImmichPilotMilestone::ORDER[..closes.position()]
+        ImmichPilotMilestone::ORDER[..phase.position()]
             .iter()
             .all(|earlier| self.exited(*earlier))
     }

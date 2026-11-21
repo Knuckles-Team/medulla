@@ -118,34 +118,6 @@ pub(super) fn evaluate(spec: &crate::series_expr::EvaluateOp) -> Printed {
     Ok(out)
 }
 
-/// `EVALUATE RULE 'id' [ASOF ms] [COUNT n] [TEXT 'text' [LOCALE 'locale']]`
-/// (MEDULLA-BUSINESS-OPS-R002.7). A `LOCALE` with no `TEXT` has no spelling.
-pub(super) fn evaluate_rule(spec: &crate::rule_expr::EvaluateRuleOp) -> Printed {
-    let mut out = format!("EVALUATE RULE {}", uql_quote(&spec.rule));
-    if let Some(as_of_ms) = spec.as_of_ms {
-        out.push_str(&format!(" ASOF {as_of_ms}"));
-    }
-    if let Some(count) = spec.count {
-        out.push_str(&format!(" COUNT {count}"));
-    }
-    match (&spec.text, &spec.locale) {
-        (Some(text), locale) => {
-            out.push_str(&format!(" TEXT {}", uql_quote(text)));
-            if let Some(locale) = locale {
-                out.push_str(&format!(" LOCALE {}", uql_quote(locale)));
-            }
-        }
-        (None, Some(_)) => {
-            return Err(refuse(
-                UqlPrintCode::DegenerateShape,
-                "EVALUATE RULE LOCALE needs a TEXT",
-            ));
-        }
-        (None, None) => {}
-    }
-    Ok(out)
-}
-
 /// `MOTIF OF c LIKE [..] TOP k` / `MOTIF OF c LENGTH m TOP k` / `DISCORD OF c LENGTH m
 /// TOP k`, then `SEED s` when non-zero (EH-529). The channel and `TOP` are always
 /// printed (the canonical form); a parsed stage without them takes `v0` and `TOP 3`.
