@@ -35,7 +35,9 @@ One ontology file, `crates/medulla-core/ontology/business_ops-v1.ttl`, and its s
 
 ## Phase 0: Research
 
-No unknown remained after the reuse search. The existing packs, the numeric registry and the UQL stages cover every need. The reuse inventory under Phase 1 records the search.
+One unknown remained after the reuse search; [research.md](research.md) resolves it.
+
+1. Which existing authority hosts deterministic business rules so that the query path reaches them with no new method?
 
 ## Phase 1: Design
 
