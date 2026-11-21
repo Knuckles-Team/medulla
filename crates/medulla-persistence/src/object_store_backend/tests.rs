@@ -449,3 +449,56 @@ async fn two_nodes_read_identical_state() {
     assert_eq!(state_a, state_b);
     assert_eq!(state_a.batches.len(), 3);
 }
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.2
+// Secret references resolve from named environment variables; each refusal names its
+// code and happens before any request to the store. Variable names are unique per case,
+// so the test is safe under parallel tests.
+#[test]
+fn client_resolves_secret_refs_from_the_environment() {
+    use crate::object_store_backend::resolve_object_store_client;
+    use medulla_storage::SecretRef;
+
+    fn spec(case: &str, with_root: bool) -> StorageBackendSpec {
+        StorageBackendSpec::ObjectStore {
+            endpoint: Some(SecretRef(format!("R2_2_{case}_ENDPOINT"))),
+            bucket: Some(SecretRef(format!("R2_2_{case}_BUCKET"))),
+            root: with_root.then(|| SecretRef(format!("R2_2_{case}_ROOT"))),
+            durability: Some(DurabilityClass::ObjectStoreConditionalPut),
+            layout_digest: None,
+        }
+    }
+    fn set(case: &str, endpoint: &str) {
+        std::env::set_var(format!("R2_2_{case}_ENDPOINT"), endpoint);
+        std::env::set_var(format!("R2_2_{case}_BUCKET"), "bucket-a");
+        std::env::set_var(format!("R2_2_{case}_ROOT"), "root-a/prefix");
+    }
+
+    set("OK", "http://127.0.0.1:9000");
+    let (_client, root) = resolve_object_store_client(&spec("OK", true)).unwrap();
+    assert_eq!(root, "root-a/prefix");
+
+    set("HTTPS", "https://s3.example.invalid");
+    assert!(resolve_object_store_client(&spec("HTTPS", true)).is_ok());
+
+    set("UNSET", "http://127.0.0.1:9000");
+    std::env::remove_var("R2_2_UNSET_BUCKET");
+    let err = resolve_object_store_client(&spec("UNSET", true)).err().unwrap();
+    assert_eq!(err.wire_code(), "OBJECT_STORE_SECRET_UNRESOLVED");
+    assert_eq!(
+        err,
+        crate::object_store_backend::ObjectStoreOpenRefusal::SecretUnresolved { field: "bucket" }
+    );
+
+    set("PLAIN", "http://s3.example.invalid:9000");
+    let err = resolve_object_store_client(&spec("PLAIN", true)).err().unwrap();
+    assert_eq!(err.wire_code(), "OBJECT_STORE_PLAIN_HTTP_REFUSED");
+
+    set("PG", "postgres://db.example.invalid/x");
+    let err = resolve_object_store_client(&spec("PG", true)).err().unwrap();
+    assert_eq!(err.wire_code(), "EXTERNAL_PLACEMENT_FORBIDDEN");
+
+    set("NOROOT", "http://127.0.0.1:9000");
+    let err = resolve_object_store_client(&spec("NOROOT", false)).err().unwrap();
+    assert_eq!(err.wire_code(), "OBJECT_STORE_SECRET_UNRESOLVED");
+}

@@ -18,8 +18,11 @@ use std::sync::Arc;
 
 use medulla_storage::object::commit::{CommitRefusal, ObjectPublisher};
 use medulla_storage::object::fetch::ObjectHead;
-use medulla_storage::{DurabilityClass, StorageBackendSpec};
+use medulla_storage::{BackendSpecRefusal, DurabilityClass, StorageBackendSpec};
 use object_store::ObjectStore;
+
+mod client;
+pub use client::resolve_object_store_client;
 
 /// Typed refusal at open. `wire_code` is the literal the wire boundary keeps
 /// stable.
@@ -29,6 +32,15 @@ pub enum ObjectStoreOpenRefusal {
     DurabilityUndeclared,
     /// The spec does not declare the `object_store` backend.
     WrongVariant,
+    /// A secret reference names a variable that is unset or empty; the
+    /// message names the field and never the value.
+    SecretUnresolved { field: &'static str },
+    /// An `http` endpoint whose host is not loopback.
+    PlainHttpNotLoopback,
+    /// The object-store client could not be built from the resolved values.
+    ClientBuild { reason: String },
+    /// The spec itself refuses (an outside-database endpoint scheme).
+    Spec(BackendSpecRefusal),
 }
 
 impl ObjectStoreOpenRefusal {
@@ -37,6 +49,12 @@ impl ObjectStoreOpenRefusal {
         match self {
             Self::DurabilityUndeclared => "OBJECT_DURABILITY_UNDECLARED",
             Self::WrongVariant => "OBJECT_DURABILITY_UNDECLARED",
+            Self::SecretUnresolved { .. } => "OBJECT_STORE_SECRET_UNRESOLVED",
+            Self::PlainHttpNotLoopback => "OBJECT_STORE_PLAIN_HTTP_REFUSED",
+            Self::ClientBuild { .. } => "OBJECT_STORE_CLIENT_INVALID",
+            Self::Spec(refusal) => refusal
+                .wire_code()
+                .unwrap_or("OBJECT_STORE_CLIENT_INVALID"),
         }
     }
 }
