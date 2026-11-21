@@ -7137,3 +7137,53 @@
     :fromState :LoopMachine_Validating ;
     :toState :LoopMachine_Orphaned ;
     :firedBy :LoopMachine_Event_lease_lost .
+# spec: MEDULLA-DURABLE-KERNEL-R874.10
+# The MutationBatch machine. The Rust edge table MUTATION_BATCH_MACHINE is the same table.
+
+:MutationBatchState a owl:Class ;
+    rdfs:label "MutationBatch State" ;
+    rdfs:comment "A state of the MutationBatch machine." ;
+    rdfs:subClassOf :State .
+
+:MutationBatchTerminalState a owl:Class ;
+    rdfs:label "MutationBatch TerminalState" ;
+    rdfs:comment "A terminal state of the MutationBatch machine." ;
+    rdfs:subClassOf :TerminalState, :MutationBatchState .
+
+:MutationBatchTransition a owl:Class ;
+    rdfs:label "MutationBatch Transition" ;
+    rdfs:comment "A transition of the MutationBatch machine." ;
+    rdfs:subClassOf :Transition .
+
+:MutationBatchEvent a owl:Class ;
+    rdfs:label "MutationBatch Event" ;
+    rdfs:comment "An event of the MutationBatch machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:MutationBatchGuard a owl:Class ;
+    rdfs:label "MutationBatch Guard" ;
+    rdfs:comment "A guard of the MutationBatch machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:MutationBatchMachine a :StateMachine ;
+    rdfs:label "MutationBatch machine" ;
+    :initialState :MutationBatchMachine_Prepared ;
+    :hasState :MutationBatchMachine_Prepared, :MutationBatchMachine_Committed .
+
+:MutationBatchMachine_Prepared a :MutationBatchState ;
+    rdfs:label "MutationBatch Prepared" ;
+    :storedForm "prepared" .
+
+:MutationBatchMachine_Committed a :MutationBatchTerminalState ;
+    rdfs:label "MutationBatch Committed" ;
+    :storedForm "committed" .
+
+:MutationBatchMachine_Event_Commit a :MutationBatchEvent ;
+    rdfs:label "MutationBatch Commit" .
+
+:MutationBatchMachine_B01 a :MutationBatchTransition ;
+    rdfs:label "MutationBatch B01" ;
+    :edgeId "B01" ;
+    :fromState :MutationBatchMachine_Prepared ;
+    :toState :MutationBatchMachine_Committed ;
+    :firedBy :MutationBatchMachine_Event_Commit .

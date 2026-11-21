@@ -64,8 +64,8 @@ fn graph_record_decoder_validates_the_complete_receipt() {
     assert!(decode_mutation_batch_record(&encoded, "graph-b", "decode-record").is_err());
     assert!(decode_mutation_batch_record(&encoded, "graph-a", "moved-record").is_err());
 
-    for status in [MutationBatchStatus::Prepared, MutationBatchStatus::Aborted] {
-        record.status = status;
+    {
+        record.status = MutationBatchStatus::Prepared;
         record.committed_version = CommittedVersion::None;
         record.validate().unwrap();
         let non_terminal = rmp_serde::to_vec_named(&record).unwrap();

@@ -949,7 +949,9 @@ ex:parent a owl:AsymmetricProperty .
         // -162 (MEDULLA-DURABLE-KERNEL-R874.21): the :CommitMachine and :ProjectionMachine
         // blocks, which named Rust tables that do not exist, are deleted from
         // state-machines-v1.ttl (rdflib per-file delta).
-        assert_eq!(composed.ontology.len(), 24_720);
+        // +40 (MEDULLA-DURABLE-KERNEL-R874.10): the :MutationBatchMachine block (two states,
+        // one event, one edge) in state-machines-v1.ttl.
+        assert_eq!(composed.ontology.len(), 24_760);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology

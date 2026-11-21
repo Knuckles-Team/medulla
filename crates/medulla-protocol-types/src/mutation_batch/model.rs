@@ -1,10 +1,12 @@
 mod batch;
 mod envelope;
+mod mutation_batch_machine;
 mod records;
 mod request;
 
 pub use batch::*;
 pub use envelope::*;
+pub use mutation_batch_machine::*;
 pub use records::*;
 pub use request::*;
 

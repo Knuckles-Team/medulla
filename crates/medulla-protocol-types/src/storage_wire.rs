@@ -28,7 +28,6 @@ pub struct RecoveryStoreCounts {
     pub batches: u64,
     pub prepared: u64,
     pub committed: u64,
-    pub aborted: u64,
     pub maintenance_claims: u64,
     pub versions: u64,
     pub fences: u64,

@@ -12,7 +12,8 @@ use medulla_mutation_types::mutation_scope::CommittedVersion;
 use medulla_protocol_types::mutation_batch::MutationEnvelope;
 use medulla_protocol_types::{
     mutation_batch::MutationBatch, mutation_batch::MutationBatchRecord,
-    mutation_batch::MutationBatchStatus,
+    mutation_batch::MutationBatchEvent, mutation_batch::MutationBatchStatus,
+    mutation_batch::MUTATION_BATCH_MACHINE,
 };
 use medulla_storage::{
     ledger_scope_key, MutationOwnerAuthority, OwnedStoreHandle, OwnerDomain, RecordedOperation,
@@ -114,9 +115,6 @@ fn resume_existing_saga<D: OwnerDomain>(
     match record.status {
         MutationBatchStatus::Prepared => Ok(SagaBegin::Resume(record)),
         MutationBatchStatus::Committed => Ok(SagaBegin::Committed(record)),
-        MutationBatchStatus::Aborted => {
-            Err(format!("mutation saga '{}' was aborted", batch.batch_id))
-        }
     }
 }
 
@@ -146,7 +144,7 @@ fn persist_prepared_saga<D: OwnerDomain>(
     let record = MutationBatchRecord {
         batch: batch.clone(),
         identity: batch.identity.clone(),
-        status: MutationBatchStatus::Prepared,
+        status: MUTATION_BATCH_MACHINE.initial,
         committed_version: CommittedVersion::None,
         result_msgpack: None,
         committed_at_ms: prepared_at_ms,
@@ -193,7 +191,7 @@ pub(crate) fn commit_saga<D: OwnerDomain>(
     write.verify_scope(&batch.identity)?;
     let record = read_record_in_write(&write, &batch.identity, &batch.batch_id)?
         .ok_or_else(|| format!("mutation saga '{}' was not prepared", batch.batch_id))?;
-    if record.status == MutationBatchStatus::Committed {
+    if record.status.apply(MutationBatchEvent::Commit).is_err() {
         // Documented exception to "every owner write is an admitted mutation":
         // the saga already committed, and this commit only drops the sealed
         // private recovery payload that its terminal receipt made redundant.
@@ -204,12 +202,6 @@ pub(crate) fn commit_saga<D: OwnerDomain>(
         remove_private(&write, &identity_key, &batch.batch_id)?;
         write.commit()?;
         return Ok((record, true));
-    }
-    if record.status != MutationBatchStatus::Prepared {
-        return Err(format!(
-            "mutation saga '{}' is not resumable",
-            batch.batch_id
-        ));
     }
     write.admit_prepared_batch(batch)?;
     let source_version = source_version(&write, batch)?;

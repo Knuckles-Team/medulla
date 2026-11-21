@@ -724,9 +724,6 @@ pub fn resume_named_admin_saga(
         medulla_protocol_types::mutation_batch::MutationBatchStatus::Committed => {
             return resume_committed_admin_saga(record, &identity, result_contract).map(Some);
         }
-        medulla_protocol_types::mutation_batch::MutationBatchStatus::Aborted => {
-            return Err("coordinator receipt was aborted".to_string())
-        }
     };
     Ok(Some(AdminSaga {
         batch: AdminSagaBatch {

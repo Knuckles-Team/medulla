@@ -468,7 +468,7 @@ fn finish_inner<D: OwnerDomain>(
     let record = MutationBatchRecord {
         batch: batch.clone(),
         identity: batch.identity.clone(),
-        status: MutationBatchStatus::Committed,
+        status: MutationBatchStatus::committed(),
         committed_version,
         result_msgpack,
         committed_at_ms,

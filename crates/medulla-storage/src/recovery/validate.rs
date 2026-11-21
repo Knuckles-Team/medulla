@@ -338,7 +338,6 @@ fn increment_batch_status(
     match status {
         MutationBatchStatus::Prepared => increment(&mut counts.prepared, "prepared count"),
         MutationBatchStatus::Committed => increment(&mut counts.committed, "committed count"),
-        MutationBatchStatus::Aborted => increment(&mut counts.aborted, "aborted count"),
     }
 }
 

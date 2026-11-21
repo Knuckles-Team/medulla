@@ -21675,7 +21675,6 @@ class RecoveryCodesSet(BaseModel):
 class RecoveryStoreCounts(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    aborted: Annotated[int, Field(ge=0)]
     batches: Annotated[int, Field(ge=0)]
     committed: Annotated[int, Field(ge=0)]
     encrypted_private_payloads: Annotated[int, Field(ge=0)]

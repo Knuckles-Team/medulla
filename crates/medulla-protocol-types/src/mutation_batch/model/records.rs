@@ -2,13 +2,13 @@ use serde::{Deserialize, Serialize};
 
 use super::{CommittedVersion, MutationBatch, MutationScopeIdentity};
 
-/// Durable terminal state.
+/// Durable status of a saga record. The only lifecycle is
+/// `Prepared --Commit--> Committed` (`MutationBatchMachine`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum MutationBatchStatus {
     Prepared,
     Committed,
-    Aborted,
 }
 
 /// Durable status/result record used for retry reconciliation after restart.
