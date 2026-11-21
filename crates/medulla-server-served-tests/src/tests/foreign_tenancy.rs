@@ -47,6 +47,7 @@ async fn register_in(
         name: "remote_docs".into(),
         quota: None,
         source,
+        acceleration: None,
     };
     assert_ok(&dispatch_as(state, id, agent, method).await);
 }
@@ -601,6 +602,7 @@ async fn connected_sources_exclude_another_owners_source() {
             name: name.into(),
             source: federation_remote_spec(remote_addr.clone()),
             quota: None,
+            acceleration: None,
         };
         assert_ok(&dispatch_as(&local, id, OWNER_A, register).await);
     }

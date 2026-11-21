@@ -127,6 +127,8 @@ pub enum FragmentExecutionMode {
 /// `copy` capability, the hot-subset predicate it would copy, and the
 /// freshness watermark that bounds how stale a copy may be.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
 pub struct AccelerationPolicy {
     pub source_supports_copy: bool,
     pub hot_subset_predicate: String,
@@ -284,6 +286,18 @@ mod tests {
     fn missing_watermark_falls_back_to_live() {
         let p = policy(true, "updated_at > now() - interval '1 day'", None);
         assert_eq!(p.resolve_mode(NOW, NOW + 1), FragmentExecutionMode::Live);
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2
+    #[test]
+    fn expired_watermark_falls_back_to_live() {
+        let p = policy(
+            true,
+            "updated_at > now() - interval '1 day'",
+            Some("2026-01-01T00:00:00Z"),
+        );
+        assert_eq!(p.resolve_mode(NOW, NOW), FragmentExecutionMode::Copy);
+        assert_eq!(p.resolve_mode(NOW + 1, NOW), FragmentExecutionMode::Live);
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.1

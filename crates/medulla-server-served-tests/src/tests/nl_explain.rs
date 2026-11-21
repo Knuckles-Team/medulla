@@ -283,6 +283,7 @@ async fn nl_query_grounds_foreign_names_from_the_verified_owner_registry() {
                     columns: Default::default(),
                 },
             },
+            acceleration: None,
         },
     )
     .await;

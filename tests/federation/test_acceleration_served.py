@@ -111,3 +111,60 @@ def test_unreachable_source_registers_nothing(clean_graph, dead_pg_dsn):
                 }
             ]
         )
+
+
+def _orders_source(pg_source) -> dict:
+    pg_source.execute("DROP TABLE IF EXISTS accel_hot")
+    pg_source.execute("CREATE TABLE accel_hot (id int primary key, total numeric)")
+    pg_source.execute("INSERT INTO accel_hot VALUES (1, 10), (2, 20)")
+    return {
+        "Sql": {
+            "dsn": pg_source.dsn,
+            "query": "SELECT id, total FROM accel_hot",
+            "id_field": "id",
+            "columns": ["total"],
+        }
+    }
+
+
+def _scan(clean_graph, name: str):
+    return clean_graph.query.unified(
+        [{"ForeignScan": {"source": {"Named": {"name": name}}, "join": False}}]
+    )
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.2.2")
+def test_stale_watermark_reads_live(clean_graph, pg_source):
+    source = _orders_source(pg_source)
+    clean_graph.query.register_foreign_source(
+        "accel-stale",
+        source,
+        acceleration={
+            "source_supports_copy": True,
+            "hot_subset_predicate": "total > 0",
+            "freshness_watermark": "2020-01-01T00:00:00Z",
+        },
+    )
+    assert len(_scan(clean_graph, "accel-stale")) == 2
+    # The watermark plus acceleration.watermark_ttl_ms is long past: the read is live and
+    # sees the row the source gained since.
+    pg_source.execute("INSERT INTO accel_hot VALUES (3, 30)")
+    assert len(_scan(clean_graph, "accel-stale")) == 3
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.2.2")
+def test_predicate_without_copy_capability_is_refused(clean_graph, pg_source):
+    source = _orders_source(pg_source)
+    with pytest.raises(EngineResponseError) as refused:
+        clean_graph.query.register_foreign_source(
+            "accel-nocopy",
+            source,
+            acceleration={
+                "source_supports_copy": False,
+                "hot_subset_predicate": "total > 0",
+                "freshness_watermark": "2026-01-01T00:00:00Z",
+            },
+        )
+    assert "COPY_CAPABILITY_MISSING" in str(refused.value)
+    with pytest.raises(EngineResponseError):
+        _scan(clean_graph, "accel-nocopy")

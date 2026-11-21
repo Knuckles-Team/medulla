@@ -210,6 +210,7 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
         pushed_statement: None,
         mapping_digest: None,
         kept_plan: None,
+        copy_refusal: None,
     });
     let federated = medulla_federation::federation_opt::FederatedExec::with_session(&session);
     let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);

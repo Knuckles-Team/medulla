@@ -241,6 +241,7 @@ impl Harness {
                             capabilities: Default::default(),
                         },
                         quota: None,
+                        acceleration: None,
                     },
                 )
                 .await,

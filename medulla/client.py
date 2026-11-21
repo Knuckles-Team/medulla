@@ -13188,7 +13188,12 @@ class QueryClient:
             params["weights"] = weights
         return (await _gen.query.send_rank_by_provenance(self._client, params)).payload
 
-    async def register_foreign_source(self, name: str, source: dict[str, Any]) -> str:
+    async def register_foreign_source(
+        self,
+        name: str,
+        source: dict[str, Any],
+        acceleration: dict[str, Any] | None = None,
+    ) -> str:
         """Register a named EXTERNAL source for query federation
         (CONCEPT:MEDULLA-KG.query.query-federation,
         Lane P), returning the registered name.
@@ -13241,10 +13246,18 @@ class QueryClient:
         current candidate set (foreign∩local, keyed on id); ``join`` false makes it a
         pure SOURCE that REPLACES the input (like ``Scan``). Federation is included in
         the mandatory main build.
+
+        ``acceleration`` is the optional per-source acceleration policy
+        (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2): ``{"source_supports_copy": bool,
+        "hot_subset_predicate": str, "freshness_watermark": str | None}``. A copy answers a
+        fragment only while the watermark (RFC 3339) plus ``acceleration.watermark_ttl_ms``
+        has not passed; a hot-subset predicate on a source without copy refuses
+        ``COPY_CAPABILITY_MISSING``. Absent, every fragment runs live.
         """
-        return await _gen.cluster.send_register_foreign_source(
-            self._client, {"name": name, "source": source}
-        )
+        params: dict[str, Any] = {"name": name, "source": source}
+        if acceleration is not None:
+            params["acceleration"] = acceleration
+        return await _gen.cluster.send_register_foreign_source(self._client, params)
 
     async def nl_query(
         self,

@@ -67,6 +67,7 @@ use medulla_catalog_types::{
 use medulla_federation::{federation::ForeignSourceRegistry, federation::SharedForeignSource};
 use medulla_query_types::wire::ForeignSourceSpec;
 use medulla_catalog_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
 use medulla_types::contract::Digest256;
 
 use super::foreign_share::{may_use_shared, share_resource, shared_name};
@@ -91,6 +92,9 @@ struct OwnedSpec {
     /// registration's own quota, else the `foreign.default_quota.*` values resolved when it
     /// was registered.
     quota: SourceQuota,
+    /// The acceleration policy of this source (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2): absent
+    /// runs every fragment live.
+    acceleration: Option<AccelerationPolicy>,
     /// The catalog probe of this source (MEDULLA-UNIFIED-DATA-PLANE-R014.2.3): the one state
     /// field and the baseline digest. Registering a source starts a fresh record.
     probe: ProbeRecord,
@@ -300,11 +304,36 @@ impl ForeignSourceCatalog {
                 owner_agent,
                 spec,
                 quota,
+                acceleration: None,
                 probe: ProbeRecord::default(),
                 catalog: None,
             },
         );
         Ok(())
+    }
+
+    /// Store `policy` on `owner`'s source `name` beside its quota
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2). A policy that declares a hot-subset predicate on a
+    /// source without copy refuses `COPY_CAPABILITY_MISSING`; nothing is stored then.
+    pub fn set_acceleration(
+        &self,
+        owner: &CarrierAuthority,
+        name: &str,
+        policy: AccelerationPolicy,
+    ) -> Result<(), String> {
+        medulla_catalog_types::metadata_acceleration::validate_policy(&policy)
+            .map_err(|refusal| refusal.0)?;
+        let key = CatalogKey {
+            owner_scope: owner.owner_scope().to_string(),
+            name: name.to_string(),
+        };
+        match self.entries.get_mut(&key) {
+            Some(mut entry) => {
+                entry.acceleration = Some(policy);
+                Ok(())
+            }
+            None => Err(format!("foreign source `{name}` is not registered")),
+        }
     }
 
     /// The entry `owner` holds under `name`, kept so a registration that fails after the catalog
@@ -364,7 +393,12 @@ impl ForeignSourceCatalog {
         for entry in self.entries.iter() {
             let (key, value) = (entry.key(), entry.value());
             if key.owner_scope == owner_scope {
-                own.push((key.name.clone(), value.spec.clone(), value.quota));
+                own.push((
+                    key.name.clone(),
+                    value.spec.clone(),
+                    value.quota,
+                    value.acceleration.clone(),
+                ));
             } else if may_use_shared(
                 isolation,
                 agent_id,
@@ -374,6 +408,7 @@ impl ForeignSourceCatalog {
                     shared_name(&value.owner_agent, &key.name),
                     value.spec.clone(),
                     value.quota,
+                    value.acceleration.clone(),
                 ));
             }
         }
@@ -384,12 +419,15 @@ impl ForeignSourceCatalog {
             shared
                 .iter()
                 .chain(&own)
-                .map(|(name, spec, _)| (name, spec)),
+                .map(|(name, spec, _, _)| (name, spec)),
         );
         let mut registry = ForeignSourceRegistry::new();
-        for (name, spec, quota) in shared.into_iter().chain(own) {
+        for (name, spec, quota, acceleration) in shared.into_iter().chain(own) {
             registry.register_spec(name.clone(), spec);
-            registry.set_quota(name, quota);
+            registry.set_quota(name.clone(), quota);
+            if let Some(policy) = acceleration {
+                registry.set_acceleration(name, policy);
+            }
         }
         OwnedForeignRegistry {
             owner_scope: owner_scope.to_string(),

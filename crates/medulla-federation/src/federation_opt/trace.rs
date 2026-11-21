@@ -83,6 +83,11 @@ pub struct FragmentTrace {
     /// (MEDULLA-FEDERATED-QUERY-R091.3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub kept_plan: Option<String>,
+    /// The refusal that kept a stored copy from answering and ran the fragment live
+    /// (`COPY_ROW_CAP_EXCEEDED`, `COPY_CAPABILITY_MISSING`); recorded here, never returned to the
+    /// reader (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub copy_refusal: Option<String>,
 }
 
 /// The receipt of one pushed search. The fragment's `source` label names the source; the
@@ -117,6 +122,7 @@ impl FragmentTrace {
             pushed_statement: None,
             mapping_digest: None,
             kept_plan: None,
+            copy_refusal: None,
             keys_pushed: 0,
             limit_pushed: None,
             requests: 0,

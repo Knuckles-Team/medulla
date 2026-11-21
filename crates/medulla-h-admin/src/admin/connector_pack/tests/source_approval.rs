@@ -330,6 +330,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
                         tool: "list_suppliers".to_string(),
                         capabilities: Default::default(),
                     },
+                    acceleration: None,
                 },
             )
             .await,
@@ -860,6 +861,7 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
                             tool: registration.operation.clone(),
                             capabilities: Default::default(),
                         },
+                        acceleration: None,
                     },
                 )
                 .await,

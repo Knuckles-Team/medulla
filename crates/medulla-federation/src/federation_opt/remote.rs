@@ -13,6 +13,7 @@ use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
 use medulla_exec::budget::FederationBudget;
 use medulla_exec::rowset::RowSet;
 use medulla_catalog_types::consolidation_isolation::SourceQuota;
+use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
 
 /// A foreign source that can answer a [`RemoteRequest`]. `fetch` must return a SUPERSET of
 /// the rows the request selects: every row whose id is in `keys` (when keys are given), the
@@ -31,6 +32,11 @@ pub trait RemoteFetch {
     /// The quota this source was registered under (MEDULLA-UNIFIED-DATA-PLANE-R031.2);
     /// `None` for an inline spec, which runs under the session's default quota.
     fn quota(&self) -> Option<SourceQuota> {
+        None
+    }
+    /// The acceleration policy this source was registered under
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2); `None` runs every fragment live.
+    fn acceleration(&self) -> Option<&AccelerationPolicy> {
         None
     }
     /// A source safe to call on several threads. Opaque registered closures remain
@@ -197,7 +203,8 @@ pub(crate) fn resolve_search<'a>(
 /// A resolved source that carries the quota its registration named.
 struct Quoted<'a> {
     inner: Box<dyn RemoteFetch + 'a>,
-    quota: SourceQuota,
+    quota: Option<SourceQuota>,
+    acceleration: Option<&'a AccelerationPolicy>,
 }
 
 impl RemoteFetch for Quoted<'_> {
@@ -211,7 +218,10 @@ impl RemoteFetch for Quoted<'_> {
         self.inner.fetch(request)
     }
     fn quota(&self) -> Option<SourceQuota> {
-        Some(self.quota)
+        self.quota
+    }
+    fn acceleration(&self) -> Option<&AccelerationPolicy> {
+        self.acceleration
     }
     fn parallel_safe(&self) -> Option<&(dyn RemoteFetch + Sync)> {
         self.inner.parallel_safe()
@@ -241,12 +251,15 @@ pub(crate) fn resolve_named<'a>(
 ) -> Option<Box<dyn RemoteFetch + 'a>> {
     let quota = registry.quota(name);
     let remote = resolve_registered(name, registry, quota)?;
-    Some(match quota {
-        Some(quota) => Box::new(Quoted {
+    let acceleration = registry.acceleration(name);
+    Some(if quota.is_some() || acceleration.is_some() {
+        Box::new(Quoted {
             inner: remote,
             quota,
-        }),
-        None => remote,
+            acceleration,
+        })
+    } else {
+        remote
     })
 }
 

@@ -182,6 +182,7 @@ pub async fn try_handle(
             name,
             source,
             quota,
+            acceleration,
         } => {
             let owner = match call.owner("RegisterForeignSource") {
                 Ok(owner) => owner,
@@ -189,6 +190,15 @@ pub async fn try_handle(
             };
             if let Err(error) = medulla_federation::federation::validate_column_mapping(&source) {
                 return Ok(Response::err(req_id, error));
+            }
+            // MEDULLA-UNIFIED-DATA-PLANE-R038.2.2: the policy is validated before anything is
+            // written; a predicate on a source without copy refuses COPY_CAPABILITY_MISSING.
+            if let Some(policy) = &acceleration {
+                if let Err(refusal) =
+                    medulla_catalog_types::metadata_acceleration::validate_policy(policy)
+                {
+                    return Ok(Response::err(req_id, refusal.0));
+                }
             }
             // MEDULLA-UNIFIED-DATA-PLANE-R038.2.1: discovery reads catalog metadata only and runs
             // before anything is registered, so an unreachable source leaves no catalog entry.
@@ -230,6 +240,12 @@ pub async fn try_handle(
             let prior = catalog.prior_registration(&owner, &name);
             if let Err(error) = catalog.register(&owner, name.clone(), source, quota) {
                 return Ok(Response::err(req_id, error));
+            }
+            if let Some(policy) = acceleration {
+                if let Err(error) = catalog.set_acceleration(&owner, &name, policy) {
+                    catalog.restore_registration(&owner, &name, prior);
+                    return Ok(Response::err(req_id, error));
+                }
             }
             drop(s);
             // The contract is written in the same call as the catalog insert; when the durable

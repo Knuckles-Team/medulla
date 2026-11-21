@@ -1495,6 +1495,7 @@ async fn test_register_foreign_source_served() {
                         columns: Default::default(),
                     },
                 },
+                acceleration: None,
             },
         ),
     )
@@ -1557,6 +1558,7 @@ async fn test_registered_foreign_source_is_queryable_by_name() {
                 name: "remote_docs".into(),
                 quota: None,
                 source: federation_remote_spec(remote_addr),
+                acceleration: None,
             },
         ),
     )
@@ -1671,6 +1673,7 @@ async fn test_unregistered_foreign_source_errors_cleanly() {
                 name: "remote_docs".into(),
                 quota: None,
                 source: federation_remote_spec(remote_addr),
+                acceleration: None,
             },
         ),
     )

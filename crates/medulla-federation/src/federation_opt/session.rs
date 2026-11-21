@@ -7,6 +7,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use medulla_exec::algebra::Op;
 use medulla_catalog_types::consolidation_isolation::SourceQuota;
 
+use super::accel::CopyKnobs;
 use super::budget::BudgetMeter;
 use super::cache::FragmentCacheScope;
 use super::snapshot::{Consistency, SnapshotBound, SnapshotHandle};
@@ -41,6 +42,8 @@ struct SessionState {
     /// The quota of a source that carries none of its own (the resolved
     /// `foreign.default_quota.*` knobs; MEDULLA-UNIFIED-DATA-PLANE-R031.2).
     default_quota: Option<SourceQuota>,
+    /// The copy route's knobs (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
+    copy_knobs: CopyKnobs,
     /// Rows each source has returned to this query.
     source_rows: HashMap<Fingerprint, u64>,
 }
@@ -68,6 +71,7 @@ impl FederationSession {
                 bound: SnapshotBound::default(),
                 consistency: Consistency::default(),
                 default_quota: None,
+                copy_knobs: CopyKnobs::default(),
                 source_rows: HashMap::new(),
             }),
         }
@@ -111,6 +115,16 @@ impl FederationSession {
     /// `foreign.default_quota.*` knobs (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
     pub fn set_default_quota(&self, quota: SourceQuota) {
         self.lock().default_quota = Some(quota);
+    }
+
+    /// The resolved `acceleration.max_copy_rows` and `acceleration.watermark_ttl_ms` the copy
+    /// route reads (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
+    pub fn set_copy_knobs(&self, knobs: CopyKnobs) {
+        self.lock().copy_knobs = knobs;
+    }
+
+    pub(super) fn copy_knobs(&self) -> CopyKnobs {
+        self.lock().copy_knobs
     }
 
     /// The quota one source runs under in this query: its own, else the default, narrowed by

@@ -591,6 +591,8 @@ struct Attempt {
     result: Result<RowSet, String>,
     /// The checkpoint of the stored copy that answered, when one did.
     copy: Option<String>,
+    /// Why a stored copy did not answer (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
+    copy_refusal: Option<String>,
 }
 
 impl Attempt {
@@ -600,12 +602,16 @@ impl Attempt {
             rows: 0,
             result: Err(error),
             copy: None,
+            copy_refusal: None,
         }
     }
 
     /// Fold this attempt's route into the fragment trace: a copy-served attempt sets the
     /// fragment's mode to `copy` with the copy's watermark and row count.
     fn note_route(&self, trace: &mut FragmentTrace) {
+        if self.copy_refusal.is_some() {
+            trace.copy_refusal = self.copy_refusal.clone();
+        }
         let Some(watermark) = &self.copy else { return };
         trace.mode = FragmentExecutionMode::Copy;
         trace.watermark = Some(watermark.clone());
@@ -656,7 +662,29 @@ fn fetch_one(
     // MEDULLA-UNIFIED-DATA-PLANE-R031.2: this source's own bounds, narrowed by the query's.
     let quota = session.quota_for(remote.quota());
     if let (Some(scope), Some(name)) = (cache_scope.as_deref(), cache_name) {
-        if let Some(rows) = scope.get(name, &fingerprint, request) {
+        // MEDULLA-UNIFIED-DATA-PLANE-R038.2.2: a source registered with an acceleration policy
+        // reads a stored copy only while the policy resolves `Copy` inside the row bound; any
+        // other resolution, and a refused copy, runs live.
+        let mut copy_refusal = None;
+        let replica = scope
+            .get(name, &fingerprint, request)
+            .filter(|rows| match remote.acceleration() {
+                None => true,
+                Some(policy) => match super::accel::copy_route(
+                    policy,
+                    super::cache::now_ms(),
+                    rows.len(),
+                    session.copy_knobs(),
+                ) {
+                    Ok(()) => true,
+                    Err(super::accel::LiveReason::Policy) => false,
+                    Err(super::accel::LiveReason::Refused(text)) => {
+                        copy_refusal = Some(text);
+                        false
+                    }
+                },
+            });
+        if let Some(rows) = replica {
             let charged = session
                 .with_meter(|meter| meter.check_wall())
                 .and_then(|()| match quota {
@@ -674,9 +702,27 @@ fn fetch_one(
                 rows: 0,
                 result: Ok(rows),
                 copy: scope.watermark_of(name).or_else(|| Some(String::new())),
+                copy_refusal: None,
             };
         }
+        return fetch_live(remote, session, caps, request, copy_refusal);
     }
+    fetch_live(remote, session, caps, request, None)
+}
+
+/// The live leg of [`fetch_one`]: one charged, source-admitted network call.
+fn fetch_live(
+    remote: &dyn RemoteFetch,
+    session: &FederationSession,
+    caps: SourceCapabilities,
+    request: &RemoteRequest,
+    copy_refusal: Option<String>,
+) -> Attempt {
+    let cache_scope = session.cache_scope();
+    let cache_name = remote.identity().cache_name.as_deref();
+    let label = remote.label();
+    let fingerprint = remote.fingerprint();
+    let quota = session.quota_for(remote.quota());
     if let Err(e) = session.with_meter(|m| m.charge_request()) {
         return Attempt::refused(e);
     }
@@ -732,6 +778,7 @@ fn fetch_one(
         rows,
         result,
         copy: None,
+        copy_refusal,
     }
 }
 

@@ -384,6 +384,11 @@ pub fn run_unified_with<T>(
             max_rows: knobs.foreign_default_quota_max_rows,
             max_wall_ms: knobs.foreign_default_quota_max_wall_ms,
         });
+        // MEDULLA-UNIFIED-DATA-PLANE-R038.2.2: the copy route's row bound and watermark ttl.
+        session.set_copy_knobs(medulla_federation::federation_opt::CopyKnobs {
+            max_copy_rows: knobs.acceleration_max_copy_rows,
+            watermark_ttl_ms: knobs.acceleration_watermark_ttl_ms,
+        });
         session
     });
 

@@ -511,6 +511,12 @@ $($variants)*
         /// refuses `SOURCE_QUOTA_INVALID`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         quota: Option<medulla_catalog_types::consolidation_isolation::SourceQuota>,
+        /// The acceleration policy of the source (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2): the
+        /// hot-subset predicate and freshness watermark that bound the copy route. A predicate
+        /// on a source without copy refuses `COPY_CAPABILITY_MISSING`. Absent runs every
+        /// fragment live.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        acceleration: Option<medulla_catalog_types::metadata_acceleration::AccelerationPolicy>,
     },
 
     /// Register (or replace) a named read-only graph view over approved R2RML

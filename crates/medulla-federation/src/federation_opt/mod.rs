@@ -20,6 +20,7 @@
 //! `MEDULLA_FEDERATION_OPT=0` restores the naive full-fetch path (the equivalence
 //! oracle).
 
+mod accel;
 mod budget;
 mod cache;
 pub mod capability;
@@ -49,6 +50,7 @@ mod bounds_tests;
 #[cfg(test)]
 mod tests;
 
+pub use accel::CopyKnobs;
 pub use budget::{
     BUDGET_EXCEEDED, EMBEDDING_SPACE_MISMATCH, REMOTE_SCORE_MISSING, REPLICA_LAG_EXCEEDED,
     REQUIRES_KEYS, RESULT_INCOMPLETE, SNAPSHOT_UNAVAILABLE, SOURCE_QUOTA_EXCEEDED,

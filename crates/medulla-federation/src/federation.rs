@@ -2090,6 +2090,9 @@ pub struct ForeignSourceRegistry {
     /// The per-query bounds each registered name may spend
     /// (MEDULLA-UNIFIED-DATA-PLANE-R031.2).
     quotas: HashMap<String, medulla_catalog_types::consolidation_isolation::SourceQuota>,
+    /// The acceleration policy each registered name carries
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
+    accelerations: HashMap<String, medulla_catalog_types::metadata_acceleration::AccelerationPolicy>,
     cache_scope: Option<Arc<crate::federation_opt::FragmentCacheScope>>,
 }
 
@@ -2115,6 +2118,7 @@ impl ForeignSourceRegistry {
         self.specs.remove(&name);
         self.bound_names.remove(&name);
         self.quotas.remove(&name);
+        self.accelerations.remove(&name);
         self.sources.insert(name, source);
         self
     }
@@ -2208,6 +2212,25 @@ impl ForeignSourceRegistry {
     /// The quota `name` was registered under (`None` for a source registered without one).
     pub fn quota(&self, name: &str) -> Option<medulla_catalog_types::consolidation_isolation::SourceQuota> {
         self.quotas.get(name).copied()
+    }
+
+    /// Route `name` by `policy`: a fragment of it may run from a copy only under this policy
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
+    pub fn set_acceleration(
+        &mut self,
+        name: impl Into<String>,
+        policy: medulla_catalog_types::metadata_acceleration::AccelerationPolicy,
+    ) -> &mut Self {
+        self.accelerations.insert(name.into(), policy);
+        self
+    }
+
+    /// The acceleration policy `name` was registered under (`None` runs every fragment live).
+    pub fn acceleration(
+        &self,
+        name: &str,
+    ) -> Option<&medulla_catalog_types::metadata_acceleration::AccelerationPolicy> {
+        self.accelerations.get(name)
     }
 
     /// The spec a `register_spec` entry was registered with (`None` for table/closure sources).

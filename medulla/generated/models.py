@@ -18296,9 +18296,18 @@ class SourceQuota(BaseModel):
     max_wall_ms: int
 
 
+class AccelerationPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    freshness_watermark: str | None = None
+    hot_subset_predicate: str
+    source_supports_copy: bool
+
+
 class MethodRegisterForeignSourceParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    acceleration: AccelerationPolicy | None = None
     name: str
     quota: SourceQuota | None = None
     source: ForeignSourceSpec
@@ -35237,6 +35246,7 @@ __all__ = [
     "AbstentionResolver",
     "AbstentionResolverHuman",
     "AbstentionResolverModel",
+    "AccelerationPolicy",
     "AccessCheck",
     "AccessDecision",
     "AccessRequest",

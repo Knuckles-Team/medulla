@@ -706,6 +706,8 @@ knobs! {
     federation_statement_timeout_ms: u64 = "federation.statement_timeout_ms", U64(30_000), [1_000, 600_000], "ms", Tunable;
     /// Most rows a copy-served fragment may hold (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
     acceleration_max_copy_rows: u64 = "acceleration.max_copy_rows", U64(1_000_000), [1, 100_000_000], "rows", Tunable;
+    /// How long past its watermark a copy stays valid (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
+    acceleration_watermark_ttl_ms: u64 = "acceleration.watermark_ttl_ms", U64(300_000), [1_000, 86_400_000], "ms", Tunable;
     /// Belief revision per-weight cap (MEDULLA-DECISION-ENGINE-R700.2).
     belief_weight_cap_micro: u64 = "belief.weight_cap_micro", U64(6_000_000), [1_000_000, 12_000_000], "micro-nats", Tunable;
     /// Token-Jaccard floor for two claims to be compared as opposed (MEDULLA-DECISION-ENGINE-R700.2).
