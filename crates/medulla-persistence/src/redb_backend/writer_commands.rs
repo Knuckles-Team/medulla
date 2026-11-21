@@ -82,6 +82,8 @@ macro_rules! writer_command_arms {
                 shard,
                 &mut ops,
                 &mut Vec::new(),
+                // A replay re-commits published methods; no caller write is counted.
+                &mut Vec::new(),
                 &shard_write_attempt_id("replay_drain"),
                 medulla_server_api::txn::now_ms(),
                 crypto,

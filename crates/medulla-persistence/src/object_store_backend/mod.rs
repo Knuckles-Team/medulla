@@ -17,6 +17,7 @@
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use medulla_server_api::api::persistence::PersistenceBackend as _;
 use medulla_storage::object::commit::{CommitRefusal, GraphBootstrap, ObjectPublisher};
 use medulla_storage::object::fetch::{ObjectFetcher, ObjectHead, ObjectReadRefusal};
 use medulla_storage::{BackendSpecRefusal, DurabilityClass, StorageBackendSpec};

@@ -10,6 +10,8 @@
 use std::path::Path;
 use std::sync::Arc;
 
+use redb::ReadableTable;
+
 /// The owner file name under the persist dir.
 pub const GRAPH_SOURCE_BINDINGS_FILE: &str = "graph_source_bindings.redb";
 /// The physical authority of [`GRAPH_SOURCE_BINDINGS_FILE`].
