@@ -103,7 +103,7 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T091 [US7] MEDULLA-CQ-ORCH-R703.6 Process sync conflict proof
 - [ ] T092 [US7] MEDULLA-CQ-ORCH-R703.7 Process sync and deploy hot-path proof
 - [ ] T115 [US7] MEDULLA-CQ-ORCH-R703.8 ARIS repository sync hot-path proof
-- [ ] T093 [US8] MEDULLA-CQ-ORCH-R704.1 Process plan request and binding records
+- [x] T093 [US8] MEDULLA-CQ-ORCH-R704.1 Process plan request and binding records
 - [ ] T094 [US8] MEDULLA-CQ-ORCH-R704.2 Explicit step bindings from the graph
 - [ ] T095 [US8] MEDULLA-CQ-ORCH-R704.3 Ranked fallback for unbound steps
 - [ ] T096 [US8] MEDULLA-CQ-ORCH-R704.4 Workflow to task plan

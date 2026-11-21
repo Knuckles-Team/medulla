@@ -73,6 +73,7 @@ pub mod policy;
 pub mod population;
 pub mod primitive;
 pub mod process_decision;
+pub mod process_plan;
 pub mod process_remediation;
 pub mod program_store;
 pub mod rapid_r015;
