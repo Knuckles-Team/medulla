@@ -350,6 +350,14 @@ pub(super) fn eval_str_function(
         | F::IsBlank
         | F::IsLiteral
         | F::IsNumeric => eval_str_bool_literal(ctx, f, args, sol),
+        // The ranked catalog function (MEDULLA-TYPED-PACKS-R108.16).
+        F::Custom(iri)
+            if iri.as_str() == medulla_catalog_types::catalog_relevance::CAT_RELEVANCE_IRI
+                || iri.as_str()
+                    == medulla_catalog_types::catalog_relevance::CAT_RANK_COMPONENTS_IRI =>
+        {
+            eval_catalog_function(ctx, iri.as_str(), args, sol)
+        }
         // GeoSPARQL value functions (CONCEPT:MEDULLA-KG.ontology.concept-10): `geof:distance(a,b,units)` → a
         // numeric literal; `geof:buffer(g,radius,units)` → a WKT lexical (a wktLiteral).
         // A boolean `geof:sf*` used in a value context renders as "true"/"false".

@@ -324,7 +324,6 @@ struct Ctx<'a> {
 
 impl<'a> Ctx<'a> {
     /// Record a coded refusal; the first one wins.
-    #[cfg(feature = "geosparql")]
     fn refuse(&self, coded: String) {
         let _ = self.refusal.set(coded);
     }

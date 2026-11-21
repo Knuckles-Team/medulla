@@ -185,6 +185,43 @@ pub fn epistemic_decay_udf() -> ScalarUDF {
     )
 }
 
+// ── catalog_relevance scalar UDF (MEDULLA-TYPED-PACKS-R108.16) ─────────────────────────
+
+/// `catalog_relevance(props, text) -> Float64`: the ranked catalog score of the asset node whose
+/// property blob is `props` for the search text. It is the SQL face of the one scorer that
+/// SPARQL reaches as `cat:relevance`, so both rank alike. A blank or over-long text fails the
+/// statement with `CATALOG_QUERY_EMPTY` / `CATALOG_QUERY_TOO_LONG`; a null argument or a blob that
+/// is not a property object scores null.
+pub fn catalog_relevance_udf() -> ScalarUDF {
+    use medulla_catalog_types::catalog_relevance::{relevance, validate_query, AssetDoc};
+    let fun = Arc::new(|args: &[ColumnarValue]| {
+        let (props, texts) = as_inputs(args)?;
+        let out: datafusion::error::Result<Float64Array> = (0..props.len())
+            .map(|i| {
+                if props.is_null(i) || texts.is_null(i) {
+                    return Ok(None);
+                }
+                let text = validate_query(texts.value(i))
+                    .map_err(datafusion::error::DataFusionError::Execution)?;
+                let Ok(Value::Object(obj)) =
+                    medulla_types::msgpack::decode_property_value(props.value(i))
+                else {
+                    return Ok(None);
+                };
+                Ok(Some(relevance(&AssetDoc::from_props(&obj), text)))
+            })
+            .collect();
+        Ok(ColumnarValue::Array(Arc::new(out?) as ArrayRef))
+    });
+    create_udf(
+        "catalog_relevance",
+        vec![DataType::Binary, DataType::Utf8],
+        DataType::Float64,
+        Volatility::Immutable,
+        fun,
+    )
+}
+
 // ── pgvector distance UDFs (CONCEPT:MEDULLA-KG.query.pgvector-binary-wire) ─────────────────────────────────
 
 /// Extract row `row` of `array` as a dense `Vec<f32>` (CONCEPT:MEDULLA-KG.query.pgvector-binary-wire), accepting the

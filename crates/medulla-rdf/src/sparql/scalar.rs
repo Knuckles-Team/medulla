@@ -1,4 +1,3 @@
-#[cfg(any(test, feature = "sparql-star"))]
 use super::*;
 
 // ── MEDULLA-127 helpers: hashing, non-deterministic sources, date-time, URI encoding ──
@@ -283,4 +282,110 @@ pub(super) fn view_of_turtle(ttl: &str) -> GraphView {
     )
     .unwrap();
     core.analysis_snapshot()
+}
+
+// ── MEDULLA-TYPED-PACKS-R108.16: the ranked catalog function ────────────────────────────
+
+/// The `GraphView` key of the node a bound asset term names.
+fn catalog_node_key<'a>(ctx: &'a Ctx, asset: &Binding) -> Option<String> {
+    let raw = asset.as_str();
+    let bare = raw
+        .strip_prefix('<')
+        .and_then(|r| r.strip_suffix('>'))
+        .unwrap_or(raw);
+    [raw, bare]
+        .into_iter()
+        .map(str::to_string)
+        .chain(ctx.proj.base_iri.as_ref().and_then(|base| {
+            bare.strip_prefix(base.as_str()).map(str::to_string)
+        }))
+        .find(|key| ctx.active.node_properties.contains_key(key))
+}
+
+fn node_object(ctx: &Ctx, key: &str) -> Option<serde_json::Map<String, serde_json::Value>> {
+    let blob = ctx.active.node_properties.get(key)?;
+    match medulla_types::msgpack::decode_property_value(blob.as_slice()).ok()? {
+        serde_json::Value::Object(map) => Some(map),
+        _ => None,
+    }
+}
+
+/// The local name of a class or property term.
+fn local_name(term: &str) -> &str {
+    let bare = term.trim_start_matches('<').trim_end_matches('>');
+    bare.rsplit(['#', '/']).next().unwrap_or(bare)
+}
+
+/// The ranking document of the asset a binding names: its own text, counters and flags, the
+/// labels of the glossary terms that define it and the classes those terms name.
+fn catalog_doc(ctx: &Ctx, asset: &Binding) -> Option<medulla_catalog_types::catalog_relevance::AssetDoc> {
+    use medulla_catalog_types::catalog_relevance::{term_labels, AssetDoc};
+    let key = catalog_node_key(ctx, asset)?;
+    let mut doc = AssetDoc::from_props(&node_object(ctx, &key)?);
+    for ((from, to), blobs) in &ctx.active.edge_properties {
+        if *to != key {
+            continue;
+        }
+        let defines = blobs.iter().any(|blob| {
+            medulla_types::msgpack::decode_property_value(blob.as_slice())
+                .ok()
+                .and_then(|v| v.get("relationship").and_then(|r| r.as_str().map(str::to_string)))
+                .is_some_and(|rel| local_name(&rel) == "definesAsset")
+        });
+        if !defines {
+            continue;
+        }
+        if let Some(term) = node_object(ctx, from) {
+            doc.term_labels.extend(term_labels(&term));
+        }
+        for ((term_from, class), class_blobs) in &ctx.active.edge_properties {
+            let names_class = term_from == from
+                && class_blobs.iter().any(|blob| {
+                    medulla_types::msgpack::decode_property_value(blob.as_slice())
+                        .ok()
+                        .and_then(|v| {
+                            v.get("relationship").and_then(|r| r.as_str().map(str::to_string))
+                        })
+                        .is_some_and(|rel| local_name(&rel) == "definesClass")
+                });
+            if names_class {
+                doc.concepts.push(local_name(class).to_string());
+            }
+        }
+    }
+    Some(doc)
+}
+
+/// `cat:relevance(?asset, "text")` and `cat:rankComponents(?asset, "text")`. A text over the
+/// knob or blank ends the query with its coded refusal; an unbound or unknown asset is an
+/// expression error, so its row fails safe.
+pub(super) fn eval_catalog_function(
+    ctx: &Ctx,
+    iri: &str,
+    args: &[Expression],
+    sol: &Solution,
+) -> Option<Binding> {
+    use medulla_catalog_types::catalog_relevance as cr;
+    let text = expr_str(ctx, args.get(1)?, sol)?;
+    let text = match cr::validate_query(&text) {
+        Ok(text) => text.to_string(),
+        Err(coded) => {
+            ctx.refuse(coded);
+            return None;
+        }
+    };
+    let asset = eval_term(ctx, args.first()?, sol)?;
+    let doc = catalog_doc(ctx, &asset)?;
+    if iri == cr::CAT_RANK_COMPONENTS_IRI {
+        let c = cr::rank_components(&doc, &text);
+        let multiplier = cr::trust_multiplier(&doc.flags);
+        return Some(Binding::Literal(
+            serde_json::json!({
+                "text": c.text, "vector": c.vector, "usage": c.usage,
+                "trust": multiplier, "score": c.total() * multiplier,
+            })
+            .to_string(),
+        ));
+    }
+    Some(Binding::Literal(fmt_num(cr::relevance(&doc, &text))))
 }

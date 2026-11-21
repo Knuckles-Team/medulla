@@ -8284,6 +8284,7 @@ dependencies = [
  "ipnet",
  "md-5 0.10.6",
  "medulla-ann",
+ "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
  "medulla-finance-quant",

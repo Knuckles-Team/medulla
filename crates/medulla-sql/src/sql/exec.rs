@@ -37,7 +37,7 @@ use medulla_sql_udfs::{
 };
 use medulla_sql_udfs::{
     udfs::base64_decode_udf, udfs::base64_encode_udf, udfs::bm25_match_udf, udfs::bm25_score_udf,
-    udfs::bm25_snippet_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf,
+    udfs::bm25_snippet_udf, udfs::catalog_relevance_udf, udfs::epistemic_decay_udf, udfs::greatest_udf, udfs::int4range_udf,
     udfs::ipcontains_udf, udfs::ipfamily_udf, udfs::iphost_udf, udfs::ipmasklen_udf,
     udfs::json_get_f64_udf, udfs::json_get_i64_udf, udfs::json_get_udf, udfs::least_udf,
     udfs::md5_udf, udfs::range_contained_by_udf, udfs::range_contains_range_udf,
@@ -956,6 +956,7 @@ fn build_ctx_with(
     ctx.register_udf(json_get_f64_udf());
     ctx.register_udf(json_get_i64_udf());
     ctx.register_udf(epistemic_decay_udf());
+    ctx.register_udf(catalog_relevance_udf());
     // CONCEPT:MEDULLA-KG.query.view-pgvector-operators — pgvector distance functions the `<->`/`<=>`/`<#>` operators
     // desugar to (brute-force over a vector column; the medulla-ann index pushdown is MEDULLA-116).
     ctx.register_udf(vector_l2_udf());
