@@ -81,7 +81,9 @@ pub struct Culprit {
 /// The code graph as one changeset sees it.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CodeGraphView {
-    pub symbols: Vec<SymbolFact>,
+    /// The symbols of the changed files, by path, so a derivation reads only the paths a
+    /// changeset names and never scans the whole code graph (MEDULLA-SDLC-R001.6).
+    pub symbols: BTreeMap<String, Vec<SymbolFact>>,
     /// Changed byte spans per path, at the parent and the new revision.
     pub changed_spans: BTreeMap<String, Vec<Span>>,
     pub on_default_branch: bool,
@@ -122,19 +124,32 @@ impl Emitter {
     }
 }
 
+/// Group symbols by path, the form [`CodeGraphView::symbols`] holds.
+pub fn symbols_by_path(symbols: Vec<SymbolFact>) -> BTreeMap<String, Vec<SymbolFact>> {
+    let mut by_path: BTreeMap<String, Vec<SymbolFact>> = BTreeMap::new();
+    for symbol in symbols {
+        by_path.entry(symbol.path.clone()).or_default().push(symbol);
+    }
+    by_path
+}
+
 fn changed_symbols<'a>(changeset: &Changeset, view: &'a CodeGraphView) -> Vec<&'a SymbolFact> {
-    let touched = |symbol: &&SymbolFact| {
-        let in_changeset = changeset
-            .changed_paths
-            .iter()
-            .any(|p| p.path == symbol.path);
-        in_changeset
-            && view
-                .changed_spans
-                .get(&symbol.path)
-                .is_some_and(|spans| spans.iter().any(|s| s.overlaps(symbol.span)))
-    };
-    view.symbols.iter().filter(touched).collect()
+    let mut paths: Vec<&str> = changeset
+        .changed_paths
+        .iter()
+        .map(|changed| changed.path.as_str())
+        .collect();
+    paths.sort_unstable();
+    paths.dedup();
+    paths
+        .into_iter()
+        .filter_map(|path| Some((view.symbols.get(path)?, view.changed_spans.get(path)?)))
+        .flat_map(|(symbols, spans)| {
+            symbols
+                .iter()
+                .filter(move |symbol| spans.iter().any(|s| s.overlaps(symbol.span)))
+        })
+        .collect()
 }
 
 fn symbol_fact(symbol: &SymbolFact) -> String {

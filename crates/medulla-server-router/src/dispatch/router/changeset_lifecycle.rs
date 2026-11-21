@@ -134,7 +134,7 @@ fn code_graph_view(
                 continue;
             }
             if let (Some(start), Some(end)) = (number(&node, "start_byte"), number(&node, "end_byte")) {
-                view.symbols.push(SymbolFact {
+                view.symbols.entry(file.path.clone()).or_default().push(SymbolFact {
                     id,
                     path: file.path.clone(),
                     span: Span { start, end },

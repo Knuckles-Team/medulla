@@ -143,6 +143,12 @@ name = "sensitive_scan"
 path = "benches/sensitive_scan.rs"
 harness = false
 
+# Lifecycle edge derivation over a million-symbol graph (MEDULLA-SDLC-R001.6): nightly budget.
+[[bench]]
+name = "lifecycle_derive"
+path = "benches/lifecycle_derive.rs"
+harness = false
+
 [[bench]]
 name = "stewardship_resolve"
 path = "benches/stewardship_resolve.rs"

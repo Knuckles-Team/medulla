@@ -3,8 +3,8 @@
 use std::collections::BTreeMap;
 
 use medulla_core::lifecycle::derive::{
-    derive_lifecycle_edges, CodeGraphView, Culprit, ReleaseHead, Span, SymbolFact, TestBinding,
-    TestCall, RULE_VERSION,
+    derive_lifecycle_edges, symbols_by_path, CodeGraphView, Culprit, ReleaseHead, Span, SymbolFact,
+    TestBinding, TestCall, RULE_VERSION,
 };
 use medulla_core::lifecycle::store::LifecycleStore;
 use medulla_source_types::source_changeset::{ChangedPath, Changeset, PathOp, Trailers};
@@ -52,11 +52,11 @@ fn triples(edges: &[medulla_core::lifecycle::derive::DerivedEdge]) -> Vec<(E, &s
 
 fn full_view() -> CodeGraphView {
     CodeGraphView {
-        symbols: vec![
+        symbols: symbols_by_path(vec![
             symbol("sym::f", "a.rs", 0, 50),
             symbol("sym::g", "a.rs", 60, 90),
             symbol("sym::h", "b.rs", 0, 10),
-        ],
+        ]),
         changed_spans: BTreeMap::from([("a.rs".to_string(), vec![Span { start: 40, end: 70 }])]),
         on_default_branch: true,
         test_bindings: vec![TestBinding {
