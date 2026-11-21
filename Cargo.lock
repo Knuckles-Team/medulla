@@ -5967,6 +5967,7 @@ dependencies = [
  "medulla-server-mutation",
  "medulla-server-ops",
  "medulla-shacl",
+ "medulla-source-types",
  "medulla-sql",
  "medulla-sql-lang",
  "medulla-statechart",

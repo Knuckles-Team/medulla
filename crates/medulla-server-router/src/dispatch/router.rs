@@ -40,6 +40,8 @@ use std::sync::OnceLock;
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "ast"))]
 mod changeset_index;
+#[cfg(all(feature = "redb", feature = "blob", feature = "ast"))]
+mod changeset_lifecycle;
 mod branch_merge;
 mod branch_write;
 mod channels;

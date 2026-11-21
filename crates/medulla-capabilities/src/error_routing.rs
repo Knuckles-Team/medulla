@@ -727,6 +727,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "IndexRepository",
         &[
+            "CHANGESET_NODE_CONFLICT",
             "INVALID_COMMIT_DIGEST",
             "LAYER_CYCLE",
             "REPOSITORY_BATCH_TOO_LARGE",
@@ -1123,7 +1124,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_UNKNOWN",
             "CHANGESET_EMPTY",
             "CHANGESET_INVALID",
+            "CHANGESET_NODE_CONFLICT",
             "CHANGESET_PARENT_NOT_ON_BRANCH",
+            "LIFECYCLE_ENDPOINT_UNKNOWN",
             "MERGE_BLOB_UNREADABLE",
             "PATH_WRITE_DENIED",
             "RUN_TRACE_UNKNOWN",

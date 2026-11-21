@@ -239,6 +239,16 @@ pub struct GitOrigin {
 /// Decode the changeset a branch commit carries as its payload (MEDULLA-SCM-R002).
 /// The one decoder: the submit path and the repository index both read the chain
 /// through it.
+/// The graph `type` of a changeset node, written by the repository index and by the accept
+/// of a changeset (MEDULLA-SDLC-R001.3).
+pub const COMMIT_TYPE: &str = "Changeset";
+
+/// The node id of the changeset `digest`: `commit:<digest>`. Every derived lifecycle edge of
+/// a changeset uses it as its endpoint (MEDULLA-SDLC-R001.3).
+pub fn commit_node_id(digest: &str) -> String {
+    format!("commit:{digest}")
+}
+
 pub fn decode_changeset(bytes: &[u8]) -> Result<Changeset, String> {
     rmp_serde::from_slice(bytes).map_err(|error| error.to_string())
 }

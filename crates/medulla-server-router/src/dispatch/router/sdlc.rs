@@ -16,6 +16,7 @@ use medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op;
 use medulla_server_graph::dispatch::shared::{
     authorized_graph_read, ensure_graph_resident, timed_read, typed_response,
 };
+use medulla_source_types::source_changeset::{commit_node_id, COMMIT_TYPE};
 use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
     handle_project_mode_set, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
@@ -40,8 +41,6 @@ const PROJECT_MODE_TYPE: &str = "ProjectMode";
 const PROPOSAL_TYPE: &str = "Proposal";
 /// The property holding the canonical JSON of the release record.
 const RELEASE_RECORD_PROPERTY: &str = "release_record";
-/// The node type of an indexed repository commit.
-const COMMIT_TYPE: &str = "Changeset";
 const MAX_RELEASES_READ: usize = 100_000;
 const MAX_PROPOSALS_READ: usize = 100_000;
 const MAX_CHAIN: usize = 200_000;
@@ -542,7 +541,7 @@ fn release_record(properties: &[u8], tenant: &str) -> Option<Release> {
 /// commit, so the release refuses `RELEASE_HEAD_UNKNOWN`.
 fn commit_chain(core: &GraphCore, tenant: &str, head: &str) -> Vec<String> {
     let parents_of = |digest: &str| -> Option<Vec<String>> {
-        let properties = core.get_node_properties(&format!("commit:{digest}"))?;
+        let properties = core.get_node_properties(&commit_node_id(digest))?;
         let node = medulla_types::msgpack::decode_property_value(&properties).ok()?;
         if node.get("type").and_then(Value::as_str) != Some(COMMIT_TYPE) {
             return None;
@@ -634,7 +633,7 @@ fn release_operations(
         operations.push(edge(
             &id,
             "contains",
-            &format!("commit:{changeset}"),
+            &commit_node_id(changeset),
             target,
         ));
     }

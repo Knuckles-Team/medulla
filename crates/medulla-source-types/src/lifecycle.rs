@@ -133,6 +133,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("MODE_ORIGIN_NOT_ADMITTED"),
     RefusalCode::new("PROPOSAL_NOT_FOUND"),
     RefusalCode::new("PROPOSAL_NOT_OPEN"),
+    RefusalCode::new("CHANGESET_NODE_CONFLICT"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -170,6 +171,8 @@ pub enum LifecycleRefusal {
     ProposalNotFound(String),
     #[error("PROPOSAL_NOT_OPEN: {0}")]
     ProposalNotOpen(String),
+    #[error("CHANGESET_NODE_CONFLICT: {0}")]
+    ChangesetNodeConflict(String),
     #[error("INVALID_ARGUMENT: {0}")]
     InvalidArgument(String),
     #[error("MODE_APPROVAL_REQUIRED: {0}")]
@@ -196,6 +199,7 @@ impl LifecycleRefusal {
             Self::ModeOriginNotAdmitted(_) => "MODE_ORIGIN_NOT_ADMITTED",
             Self::ProposalNotFound(_) => "PROPOSAL_NOT_FOUND",
             Self::ProposalNotOpen(_) => "PROPOSAL_NOT_OPEN",
+            Self::ChangesetNodeConflict(_) => "CHANGESET_NODE_CONFLICT",
             Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
         }
@@ -1134,4 +1138,84 @@ pub struct LifecycleTraceAnswer {
     pub records: Vec<TraceRecord>,
     pub edges: Vec<TraceEdge>,
     pub truncated: bool,
+}
+
+/// The changeset node an accept writes as the endpoint of every derived edge of the
+/// changeset (MEDULLA-SDLC-R001.3). The node is the plan; the router applies it, ahead of the
+/// derived edges, in the one mutation batch.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ChangesetNodeWrite {
+    /// `commit:<changeset.id>`.
+    pub node_id: String,
+    pub changeset_id: String,
+    /// The 1-based position of the changeset on its default-branch chain.
+    pub seq: u64,
+    /// The properties only the accept of a native changeset writes. The repository index
+    /// route writes them itself, so there this is `None` and the node gets no second writer.
+    pub facts: Option<ChangesetNodeFacts>,
+}
+
+/// The properties of a native changeset node beyond `changeset_id` and `seq`.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ChangesetNodeFacts {
+    pub repo: String,
+    pub author: String,
+    pub timestamp_ms: u64,
+    /// The comma-joined parent changeset ids, the encoding of the repository index.
+    pub parents: String,
+}
+
+impl ChangesetNodeWrite {
+    /// The node's properties as the string values the repository index writes.
+    pub fn properties(&self) -> std::collections::BTreeMap<String, String> {
+        let mut properties = std::collections::BTreeMap::from([
+            ("type".to_owned(), crate::source_changeset::COMMIT_TYPE.to_owned()),
+            ("changeset_id".to_owned(), self.changeset_id.clone()),
+            ("seq".to_owned(), self.seq.to_string()),
+        ]);
+        if let Some(facts) = &self.facts {
+            properties.insert("repo".to_owned(), facts.repo.clone());
+            properties.insert("author".to_owned(), facts.author.clone());
+            properties.insert("timestamp_ms".to_owned(), facts.timestamp_ms.to_string());
+            properties.insert("parents".to_owned(), facts.parents.clone());
+        }
+        properties
+    }
+}
+
+/// The `changeset_id` and `seq` of a changeset node the graph already holds.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct StoredChangesetNode {
+    pub changeset_id: Option<String>,
+    pub seq: Option<String>,
+}
+
+/// Decide the changeset node of an accept (MEDULLA-SDLC-R001.3). `native` is true for the
+/// accept of a submitted changeset and false for a commit the repository index ingested. An
+/// existing node whose `changeset_id` or `seq` differs from the new value refuses the whole
+/// batch with `CHANGESET_NODE_CONFLICT`; equal values make the write a no-op.
+pub fn plan_changeset_node(
+    changeset: &crate::source_changeset::Changeset,
+    seq: u64,
+    existing: Option<&StoredChangesetNode>,
+    native: bool,
+) -> Result<ChangesetNodeWrite, LifecycleRefusal> {
+    let node_id = crate::source_changeset::commit_node_id(&changeset.id);
+    if let Some(stored) = existing {
+        let differs = |held: &Option<String>, new: &str| held.as_deref().is_some_and(|v| v != new);
+        if differs(&stored.changeset_id, &changeset.id) || differs(&stored.seq, &seq.to_string()) {
+            return Err(LifecycleRefusal::ChangesetNodeConflict(node_id));
+        }
+    }
+    Ok(ChangesetNodeWrite {
+        node_id,
+        changeset_id: changeset.id.clone(),
+        seq,
+        facts: native.then(|| ChangesetNodeFacts {
+            repo: changeset.repo.clone(),
+            author: changeset.author_principal.clone(),
+            timestamp_ms: changeset.created_at,
+            parents: changeset.parents.join(","),
+        }),
+    })
 }

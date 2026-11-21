@@ -44,12 +44,12 @@ async fn index_commits(h: &Harness) {
         (HIDDEN_COMMIT, "someone-else", "private"),
     ] {
         let props = serde_json::json!({
-            "type": medulla_h_ingest::repository_index::scope_facts::COMMIT_TYPE,
+            "type": medulla_source_types::source_changeset::COMMIT_TYPE,
             "_owner": owner,
             "_visibility": visibility,
         });
         core.add_node(
-            medulla_h_ingest::repository_index::scope_facts::commit_node_id(digest),
+            medulla_source_types::source_changeset::commit_node_id(digest),
             rmp_serde::to_vec_named(&props).unwrap(),
         );
     }

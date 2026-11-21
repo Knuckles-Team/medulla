@@ -44,8 +44,8 @@ impl medulla_server_ops::api::ingest::IngestApi for IngestSeam {
         lookup: &dyn Fn(&str) -> Option<serde_json::Value>,
         closed_by: &str,
     ) -> bool {
-        lookup(&scope_facts::commit_node_id(closed_by)).is_some_and(|properties| {
-            properties.get("type").and_then(|t| t.as_str()) == Some(scope_facts::COMMIT_TYPE)
+        lookup(&medulla_source_types::source_changeset::commit_node_id(closed_by)).is_some_and(|properties| {
+            properties.get("type").and_then(|t| t.as_str()) == Some(medulla_source_types::source_changeset::COMMIT_TYPE)
         })
     }
 }

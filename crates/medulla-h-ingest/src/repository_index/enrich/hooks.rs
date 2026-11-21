@@ -19,9 +19,8 @@ use medulla_protocol_types::protocol::Method;
 
 use super::{add_edge, add_node, Row};
 use crate::ingestion_rung::{rung_label, PRODUCING_RUNG};
-use crate::repository_index::scope_facts::{
-    COMMIT_TYPE, IAC_TYPE, ROUTE_TYPE, SERVICE_PREFIX_TYPE,
-};
+use crate::repository_index::scope_facts::{IAC_TYPE, ROUTE_TYPE, SERVICE_PREFIX_TYPE};
+use medulla_source_types::source_changeset::COMMIT_TYPE;
 
 /// Node type of one commit applied to the history graph.
 pub const COMMIT_HISTORY_TYPE: &str = "CommitHistory";

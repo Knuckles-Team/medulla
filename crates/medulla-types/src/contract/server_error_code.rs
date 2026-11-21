@@ -505,6 +505,10 @@ closed_error_codes! {
         ProposalNotOpen => "PROPOSAL_NOT_OPEN",
         /// MEDULLA-SDLC-R012.8: a move to `evolving` without a full operator approval.
         ModeApprovalRequired => "MODE_APPROVAL_REQUIRED",
+        /// MEDULLA-SDLC-R001.3: an existing changeset node holds another `changeset_id` or `seq`.
+        ChangesetNodeConflict => "CHANGESET_NODE_CONFLICT",
+        /// MEDULLA-SDLC-R001.4: a derived edge names an endpoint the graph does not hold.
+        LifecycleEndpointUnknown => "LIFECYCLE_ENDPOINT_UNKNOWN",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",

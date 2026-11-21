@@ -394,7 +394,7 @@ mod served {
                                 state,
                                 verified,
                                 Arc::clone(&store),
-                                merge_owner,
+                                merge_owner.clone(),
                                 changeset.clone(),
                                 done.commit.id.clone(),
                                 req.id,
@@ -403,6 +403,50 @@ mod served {
                         };
                         #[cfg(not(feature = "ast"))]
                         let index = None;
+                        // MEDULLA-SDLC-R001.3: the changeset node and its derived lifecycle
+                        // edges are written in one batch after the code graph follows the
+                        // changeset. A replay runs it again; the write is idempotent.
+                        #[cfg(feature = "ast")]
+                        {
+                            let commit_id = done.commit.id.clone();
+                            let seq = match target
+                                .read_blocking(move |registry, branch| {
+                                    registry.history_row(
+                                        branch,
+                                        &medulla_compute::source_history::seq_key(&commit_id),
+                                    )
+                                })
+                                .await
+                            {
+                                Ok(Ok(Some(bytes))) => {
+                                    medulla_compute::source_history::decode_seq(&bytes)
+                                }
+                                Ok(Ok(None)) => Err(
+                                    "the history index holds no seq for the accepted changeset"
+                                        .to_string(),
+                                ),
+                                Ok(Err(error)) | Err(error) => Err(error),
+                            };
+                            let accepted = match seq {
+                                Ok(seq) => {
+                                    super::changeset_lifecycle::accept_edges(
+                                        state,
+                                        verified,
+                                        req.id,
+                                        Arc::clone(&store),
+                                        merge_owner,
+                                        &changeset,
+                                        &request.branch,
+                                        seq,
+                                    )
+                                    .await
+                                }
+                                Err(error) => Err(error),
+                            };
+                            if let Err(error) = accepted {
+                                return Response::err(req.id, error);
+                            }
+                        }
                         receipt_response(
                             req.id,
                             SubmitChangesetReceipt {

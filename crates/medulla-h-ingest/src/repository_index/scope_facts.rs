@@ -13,23 +13,17 @@ use std::collections::BTreeSet;
 use medulla_enrich::history::CommitRecord;
 use medulla_enrich::Id;
 use medulla_ingestion_types::ingestion_wire::{IndexCommit, IndexRepositoryScope, IndexResult};
+use medulla_source_types::source_changeset::{commit_node_id, COMMIT_TYPE};
 use medulla_types::contract::ServerErrorCode;
 
 use super::ecosystem::{node, package_node_id, packages};
 
-/// Node type of one commit of the scope.
-pub const COMMIT_TYPE: &str = "Changeset";
 /// Node type of one HTTP route found in the batch.
 pub const ROUTE_TYPE: &str = "HttpRoute";
 /// Node type of one infrastructure resource found in the batch.
 pub const IAC_TYPE: &str = "IacResource";
 /// Node type of one service path prefix.
 pub const SERVICE_PREFIX_TYPE: &str = "ServicePrefix";
-
-/// The node id of the commit with `digest`.
-pub fn commit_node_id(digest: &str) -> String {
-    format!("commit:{digest}")
-}
 
 const VERBS: [&str; 5] = ["get", "post", "put", "delete", "patch"];
 const OPENERS: [&str; 3] = [".", "#[", "@"];
@@ -124,17 +118,68 @@ fn validate_commit(commit: &IndexCommit) -> Result<(), String> {
         .map_err(|error| refuse(ServerErrorCode::InvalidCommitDigest, error.detail))
 }
 
+/// The 1-based position of each commit of the scope on its chain: a commit with no parent in
+/// the scope is 1, any other is one past its highest parent (MEDULLA-SDLC-R001.3). A parent
+/// cycle is refused by the digest check upstream; here it would only stop the walk.
+fn commit_seqs(scope: &IndexRepositoryScope) -> std::collections::BTreeMap<String, u64> {
+    let by_digest: std::collections::BTreeMap<&str, &IndexCommit> = scope
+        .commits
+        .iter()
+        .map(|commit| (commit.digest.as_str(), commit))
+        .collect();
+    let mut seqs: std::collections::BTreeMap<String, u64> = std::collections::BTreeMap::new();
+    for commit in scope.commits.iter() {
+        let mut stack = vec![commit.digest.as_str()];
+        let mut visiting: BTreeSet<&str> = BTreeSet::new();
+        while let Some(&digest) = stack.last() {
+            if seqs.contains_key(digest) {
+                stack.pop();
+                continue;
+            }
+            let parents: Vec<&str> = by_digest
+                .get(digest)
+                .map(|held| {
+                    held.parents
+                        .iter()
+                        .map(String::as_str)
+                        .filter(|parent| by_digest.contains_key(parent))
+                        .collect()
+                })
+                .unwrap_or_default();
+            let pending: Vec<&str> = parents
+                .iter()
+                .copied()
+                .filter(|parent| !seqs.contains_key(*parent))
+                .collect();
+            if pending.is_empty() || !visiting.insert(digest) {
+                let seq = parents.iter().filter_map(|p| seqs.get(*p)).max().map_or(1, |m| m + 1);
+                seqs.insert(digest.to_string(), seq);
+                stack.pop();
+            } else {
+                stack.extend(pending);
+            }
+        }
+    }
+    seqs
+}
+
 fn commit_node(
     commit: &IndexCommit,
+    seq: u64,
 ) -> Result<medulla_ingestion_types::ingestion_wire::ExtractedNode, String> {
     let changes = serde_json::to_string(commit.changes.as_slice())
         .map_err(|error| refuse(ServerErrorCode::InvalidFacts, error))?;
     let parents = commit.parents.join(",");
     let timestamp = commit.timestamp_ms.to_string();
+    // `changeset_id` and `seq` are the two properties the changeset accept writes on the same
+    // node (MEDULLA-SDLC-R001.3), so every route to a `commit:` node agrees on them.
+    let seq = seq.to_string();
     Ok(node(
         commit_node_id(&commit.digest),
         COMMIT_TYPE,
         &[
+            ("changeset_id", &commit.digest),
+            ("seq", &seq),
             ("author", &commit.author),
             ("timestamp_ms", &timestamp),
             ("parents", &parents),
@@ -145,10 +190,12 @@ fn commit_node(
 
 fn add_commits(scope: &IndexRepositoryScope, result: &mut IndexResult) -> Result<(), String> {
     let mut seen = BTreeSet::new();
+    let seqs = commit_seqs(scope);
     for commit in scope.commits.iter() {
         validate_commit(commit)?;
         if seen.insert(commit.digest.as_str()) {
-            result.nodes.push(commit_node(commit)?);
+            let seq = seqs.get(&commit.digest).copied().unwrap_or(1);
+            result.nodes.push(commit_node(commit, seq)?);
         }
     }
     Ok(())
