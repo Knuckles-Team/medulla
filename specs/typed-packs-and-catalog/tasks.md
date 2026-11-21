@@ -204,6 +204,11 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T195 [US4] MEDULLA-TYPED-PACKS-R105.7 The parent catalog declares a data-platform and machine-learning module aligned to DCAT, PROV-O and ML-Schema
 - [ ] T196 [US4] MEDULLA-TYPED-PACKS-R105.8 The parent catalog declares a media and content module aligned to schema.org media types, EBUCore, IFLA LRM and ActivityStreams
 - [ ] T197 [US4] MEDULLA-TYPED-PACKS-R105.9 The parent catalog declares a search, retrieval and information-source module aligned to OpenSearch, DCMI Terms and PROV-O
+- [ ] T332 [US4] MEDULLA-TYPED-PACKS-R105.10 The core ontology is one closed schema
+- [ ] T333 [US4] MEDULLA-TYPED-PACKS-R105.10.1 Every core class reaches the BFO root
+- [ ] T334 [US4] MEDULLA-TYPED-PACKS-R105.10.2 Each core class has one home module
+- [ ] T335 [US4] MEDULLA-TYPED-PACKS-R105.10.3 No local name repeats across the core namespaces
+- [ ] T336 [US4] MEDULLA-TYPED-PACKS-R105.10.4 The engine's parent catalog is the packaged core set
 - [ ] T198 [US4] MEDULLA-TYPED-PACKS-R106.1 Model
 - [ ] T199 [US4] MEDULLA-TYPED-PACKS-R106.2 Behavior
 - [ ] T200 [US4] MEDULLA-TYPED-PACKS-R106.3 Wiring

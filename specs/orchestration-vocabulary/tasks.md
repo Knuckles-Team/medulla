@@ -180,6 +180,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T173 [US9] MEDULLA-ORCH-VOCAB-R812.5 Export the work item state vocabulary
 - [ ] T170 [US9] MEDULLA-ORCH-VOCAB-R813 Lane work item derives terminal from status
 - [ ] T174 [US9] MEDULLA-ORCH-VOCAB-R811.8 Every served machine method returns TransitionRefused through the error mapper. Size: M, 2 PRs, 5 hours.
+- [ ] T191 [US9] MEDULLA-ORCH-VOCAB-R811.10 The core names the typed transition refusal as a class
 - [ ] T178 [US9] MEDULLA-ORCH-VOCAB-R815 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T179 [US9] MEDULLA-ORCH-VOCAB-R815.1 ActionRun/ActionStatus state machine: route 1 census findings through ActionStatus::apply
 - [ ] T180 [US9] MEDULLA-ORCH-VOCAB-R815.2 AgentInstance/AgentLifecycleState state machine: route 1 census findings through AgentLifecycleState::apply

@@ -550,6 +550,11 @@ R085.4–R085.7 preserve their parent obligations as rollups. Their .1 children 
 - `MEDULLA-TYPED-PACKS-R105.7`: `crates/medulla-rdf/tests/domain_modules_classes.rs::dataplatform_classes_exist_with_their_parents`, `crates/medulla-rdf/tests/domain_modules_classes.rs::dataplatform_edges_declare_domain_and_range`.
 - `MEDULLA-TYPED-PACKS-R105.8`: `crates/medulla-rdf/tests/domain_modules_classes.rs::media_classes_exist_with_their_parents`, `crates/medulla-rdf/tests/domain_modules_classes.rs::media_edges_declare_domain_and_range`.
 - `MEDULLA-TYPED-PACKS-R105.9`: `crates/medulla-rdf/tests/domain_modules_classes.rs::retrieval_classes_exist_with_their_parents`, `crates/medulla-rdf/tests/domain_modules_classes.rs::retrieval_edges_declare_domain_and_range`.
+- `MEDULLA-TYPED-PACKS-R105.10`: `tests/test_core_ontology_closed.py::test_every_core_class_reaches_the_root`.
+- `MEDULLA-TYPED-PACKS-R105.10.1`: `tests/test_core_ontology_closed.py::test_every_core_class_reaches_the_root`.
+- `MEDULLA-TYPED-PACKS-R105.10.2`: `tests/test_core_ontology_closed.py::test_every_core_class_has_one_home` (planned).
+- `MEDULLA-TYPED-PACKS-R105.10.3`: `tests/test_core_ontology_closed.py::test_no_local_name_repeats_across_core_namespaces` (planned).
+- `MEDULLA-TYPED-PACKS-R105.10.4`: `crates/medulla-graph-core/src/graph/schema_sources.rs::tests::core_sources_cover_every_packaged_module` (planned).
 - `MEDULLA-TYPED-PACKS-R700.7`: `crates/medulla-h-admin/src/admin/connector_pack/import/front_matter.rs::the_skill_type_is_closed`
 - `MEDULLA-TYPED-PACKS-R700.8`: `tests/packs/test_skill_graph_pack_served.py::test_graph_files_import_and_non_graph_file_refuses`
 - `MEDULLA-TYPED-PACKS-R701.1`: `crates/medulla-catalog-types/tests/skill_graph.rs::layer_round_trip_and_reject_foreign_iri`
