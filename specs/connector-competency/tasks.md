@@ -104,12 +104,12 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T098 [US4] MEDULLA-CQ-CONN-R074.5 agreementExpiresAt
 - [ ] T099 [US4] MEDULLA-CQ-CONN-R074.6 hasRenewalAction
 - [x] T100 [US4] MEDULLA-CQ-CONN-R075.1 Shapes companion for finance-v1 is already registered; bind its test
-- [ ] T101 [US4] MEDULLA-CQ-CONN-R075.2 orderQty
+- [x] T101 [US4] MEDULLA-CQ-CONN-R075.2 orderQty
 - [ ] T102 [US4] MEDULLA-CQ-CONN-R075.3 Budget
-- [ ] T103 [US4] MEDULLA-CQ-CONN-R075.4 budgetLimit
+- [x] T103 [US4] MEDULLA-CQ-CONN-R075.4 budgetLimit
 - [ ] T104 [US4] MEDULLA-CQ-CONN-R075.5 LedgerTransaction
-- [ ] T105 [US4] MEDULLA-CQ-CONN-R075.6 chargedToBudget
-- [ ] T106 [US4] MEDULLA-CQ-CONN-R075.7 transactionAmount
+- [x] T105 [US4] MEDULLA-CQ-CONN-R075.6 chargedToBudget
+- [x] T106 [US4] MEDULLA-CQ-CONN-R075.7 transactionAmount
 - [ ] T107 [US4] MEDULLA-CQ-CONN-R076.1 birthPlace
 - [ ] T108 [US4] MEDULLA-CQ-CONN-R076.2 birthYear
 - [ ] T109 [US4] MEDULLA-CQ-CONN-R076.3 documentType

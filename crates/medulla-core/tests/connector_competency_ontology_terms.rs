@@ -1804,6 +1804,86 @@ mod ontology_audit_finance_v1 {
         ));
     }
 
+    fn conforms(data: &str) -> bool {
+        let shapes = registered_shapes("core:finance-shapes@1", "finance-shapes");
+        medulla_shacl::validate_turtle(&shapes, data)
+            .expect("validation runs")
+            .conforms
+    }
+
+    fn assert_property(name: &str, kind: &str, domain: &str, range: &str) {
+        let triples = triples();
+        let property = format!("{KG}{name}");
+        assert!(has_iri(&triples, &property, RDF_TYPE, kind));
+        assert!(has_iri(
+            &triples,
+            &property,
+            RDFS_DOMAIN,
+            &format!("{KG}{domain}")
+        ));
+        assert!(has_iri(&triples, &property, RDFS_RANGE, range));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R075.2
+    #[test]
+    fn orderQty_declared() {
+        assert_property(
+            "orderQty",
+            OWL_DATATYPE_PROPERTY,
+            "VersionedOrder",
+            &format!("{XSD}float"),
+        );
+        let prefixes = "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
+                        @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n";
+        assert!(conforms(&format!(
+            "{prefixes}:order a :VersionedOrder ; :orderQty \"10\"^^xsd:float ; :filledQty \"4\"^^xsd:float ."
+        )));
+        assert!(!conforms(&format!(
+            "{prefixes}:order a :VersionedOrder ; :orderQty \"4\"^^xsd:float ; :filledQty \"10\"^^xsd:float ."
+        )));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R075.4
+    #[test]
+    fn budgetLimit_declared() {
+        assert_property(
+            "budgetLimit",
+            OWL_DATATYPE_PROPERTY,
+            "Budget",
+            &format!("{XSD}decimal"),
+        );
+        assert!(conforms(
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> .\n\
+             @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .\n\
+             :budget a :Budget ; :budgetLimit \"250.00\"^^xsd:decimal ."
+        ));
+        assert!(!conforms(
+            "@prefix : <https://knuckles-team.github.io/ontology/core#> . :budget a :Budget ."
+        ));
+    }
+
+    // spec: MEDULLA-CQ-CONN-R075.6
+    #[test]
+    fn chargedToBudget_declared() {
+        assert_property(
+            "chargedToBudget",
+            OWL_OBJECT_PROPERTY,
+            "LedgerTransaction",
+            &format!("{KG}Budget"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-CONN-R075.7
+    #[test]
+    fn transactionAmount_declared() {
+        assert_property(
+            "transactionAmount",
+            OWL_DATATYPE_PROPERTY,
+            "LedgerTransaction",
+            &format!("{XSD}decimal"),
+        );
+    }
+
     // spec: MEDULLA-CQ-CONN-R075.3
     #[test]
     fn budget_declared() {

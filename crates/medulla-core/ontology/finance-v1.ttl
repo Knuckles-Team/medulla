@@ -415,6 +415,12 @@
     rdfs:domain :VersionedOrder ;
     rdfs:range xsd:float .
 
+:orderQty a owl:DatatypeProperty ;
+    rdfs:label "order quantity" ;
+    rdfs:comment "The quantity the order asked for. The finance shapes refuse a :filledQty above it." ;
+    rdfs:domain :VersionedOrder ;
+    rdfs:range xsd:float .
+
 :orderSide a owl:DatatypeProperty ;
     rdfs:comment "buy or sell." ;
     rdfs:domain :VersionedOrder ;
@@ -543,6 +549,24 @@
     rdfs:comment "A point-in-time ledger event against a position: buy, sell, dividend, transfer or fee. Immutable once recorded; a correction is a new activity, never an edit. BFO:GenericallyDependentContinuant." ;
     rdfs:subClassOf bfo:0000031 ;
     skos:relatedMatch wd:Q1166072 .
+
+:budgetLimit a owl:DatatypeProperty ;
+    rdfs:label "budget limit" ;
+    rdfs:comment "The most the budget allows for its category and period. A :Budget names one." ;
+    rdfs:domain :Budget ;
+    rdfs:range xsd:decimal .
+
+:transactionAmount a owl:DatatypeProperty ;
+    rdfs:label "transaction amount" ;
+    rdfs:comment "The amount of one ledger transaction, in the currency of its source account." ;
+    rdfs:domain :LedgerTransaction ;
+    rdfs:range xsd:decimal .
+
+:chargedToBudget a owl:ObjectProperty ;
+    rdfs:label "charged to budget" ;
+    rdfs:comment "The budget a ledger transaction is charged against." ;
+    rdfs:domain :LedgerTransaction ;
+    rdfs:range :Budget .
 
 :activityPosition a owl:ObjectProperty ;
     rdfs:label "activity position" ;
