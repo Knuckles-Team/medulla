@@ -254,3 +254,30 @@ async fn process_plan_refusals_name_the_step() {
         }
     }
 }
+
+// spec: MEDULLA-CQ-ORCH-R704.7
+#[tokio::test]
+async fn premises_cite_each_binding() {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let pins = pins(&h, TENANT);
+    seed_workflows(&h, &[("process:check", 1, check_workflow())]).await;
+    let batch = decide(&h, plan_request(&pins.0, "process:check", 1))
+        .await
+        .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+    for expected in [
+        "process_plan_workflow:id=process:check;version=1;workflow_digest=digest",
+        "binding:step=s2;target=approval:clerk;source=explicit;score_q32=none",
+        "binding:step=s3;target=decision:dmn:risk;source=explicit;score_q32=none",
+    ] {
+        assert!(facts.contains(&expected), "{expected} in {facts:?}");
+    }
+    // Every binding came from the graph's own links, so the record is an observation, and the
+    // knobs the decision read are cited (R179.5).
+    assert_eq!(record.evidence_class, EvidenceClass::Observation);
+    assert!(
+        facts.iter().any(|f| f.starts_with("knob:process_plan.")),
+        "{facts:?}"
+    );
+}

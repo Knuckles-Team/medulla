@@ -14,7 +14,8 @@ use medulla_compute::process_plan::plan::{plan_from_workflow, Callee};
 use medulla_compute::process_plan::rank::ranked_bindings;
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::process_plan::{
-    ProcessPlanKnobs, ProcessPlanRefusal, ProcessPlanRequest, StepBinding, PROCESS_PLAN_REFUSALS,
+    BindingSource, BindingTarget, ProcessPlanKnobs, ProcessPlanRefusal, ProcessPlanRequest,
+    StepBinding, PROCESS_PLAN_REFUSALS,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -24,14 +25,14 @@ use medulla_decision_types::decision::tool_relevance::{
     AssignedTool, ToolAssignmentRequest, MAX_TOP_K, TOOL_RELEVANCE_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
+    AbstainReason, DecisionPolicy, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use medulla_types::process_import::{workflow_node_id, CanonicalWorkflow};
 use medulla_types::refusal_code::RefusalCode;
 
-use crate::decide::stat_executor::{Executed, ExecutionContext};
+use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::SharedState;
 use crate::decide::stat_task_plan::{PlanNotes, Planned};
 
@@ -175,6 +176,70 @@ fn abstain(request: &ProcessPlanRequest, code: RefusalCode, steps: &[String]) ->
     }
 }
 
+/// The kind and reference a binding names: `tool:<server>/<tool>`, `prompt:<iri>`,
+/// `decision:<iri>` or `approval:<role>`.
+fn target_text(target: &BindingTarget) -> String {
+    match target {
+        BindingTarget::Tool { server, tool, .. } => format!("tool:{server}/{tool}"),
+        BindingTarget::Prompt { prompt_iri, .. } => format!("prompt:{prompt_iri}"),
+        BindingTarget::Decision { decision_iri } => format!("decision:{decision_iri}"),
+        BindingTarget::Approval { approver_role } => format!("approval:{role}", role = approver_role),
+    }
+}
+
+/// The premises of one process plan (MEDULLA-CQ-ORCH-R704.7): the workflow id, version and
+/// digest, one premise per step binding, and one per binding link a step named but did not
+/// keep. A ranked binding is a claim; the graph's own links are observations.
+fn premises(
+    graph: &str,
+    asked: &ProcessPlanRequest,
+    workflow: &CanonicalWorkflow,
+    bindings: &[StepBinding],
+    dropped: &[String],
+) -> Vec<PremiseRef> {
+    let read = |subject: &str, fact: String, class: PremiseClass| PremiseRef {
+        subject: subject.to_string(),
+        fact,
+        class,
+        provenance: PremiseProvenance::GraphRow {
+            graph: graph.to_string(),
+            graph_version: 0,
+        },
+        trust_tier: None,
+    };
+    let mut out = vec![read(
+        &asked.workflow_id,
+        format!(
+            "process_plan_workflow:id={};version={};workflow_digest={}",
+            asked.workflow_id, asked.version, workflow.digest
+        ),
+        PremiseClass::Observation,
+    )];
+    for binding in bindings {
+        let (source, score, class) = match &binding.source {
+            BindingSource::Explicit => ("explicit", "none".to_string(), PremiseClass::Observation),
+            BindingSource::Ranked { score_q32 } => {
+                ("ranked", score_q32.to_string(), PremiseClass::Claim)
+            }
+        };
+        out.push(read(
+            &binding.step_id,
+            format!(
+                "binding:step={};target={};source={source};score_q32={score}",
+                binding.step_id,
+                target_text(&binding.target)
+            ),
+            class,
+        ));
+    }
+    out.extend(
+        dropped
+            .iter()
+            .map(|fact| read(&asked.workflow_id, fact.clone(), PremiseClass::Observation)),
+    );
+    out
+}
+
 /// Plan the workflow the request names.
 pub(in crate::decide) fn plan(
     ctx: &ExecutionContext,
@@ -207,7 +272,7 @@ pub(in crate::decide) fn plan(
         knobs,
         failure: RefCell::new(None),
     };
-    let (bindings, _premises) = binder.bind(&node, &workflow);
+    let (bindings, dropped) = binder.bind(&node, &workflow);
     let callee = |reference: &str| {
         let version = latest_version(view, reference);
         let (node, workflow) = stored_workflow(view, ctx.tenant_id, reference, version)?;
@@ -219,7 +284,17 @@ pub(in crate::decide) fn plan(
         return Err(detail);
     }
     match planned {
-        Ok(plan) => Ok(Planned::Plan(Box::new(plan), PlanNotes::default())),
+        Ok(plan) => {
+            let graph = text_param(request, PARAM_GRAPH)?.unwrap_or_default();
+            let notes = PlanNotes {
+                process_premises: premises(graph, &asked, &workflow, &bindings, &dropped),
+                process_ranked: bindings
+                    .iter()
+                    .any(|b| matches!(b.source, BindingSource::Ranked { .. })),
+                ..PlanNotes::default()
+            };
+            Ok(Planned::Plan(Box::new(plan), notes))
+        }
         Err(refusal) => refused(&asked, refusal),
     }
 }
@@ -241,7 +316,22 @@ impl DecisionFamily for ProcessPlanFamily {
         graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some(plan(ctx, request, policy, graph_view).map(|planned| match planned {
-            Planned::Plan(plan, _) => executed(crate::decide::stat_task_plan::outcome(&plan)),
+            // Any ranked binding makes the plan a claim; bound by the graph alone it is an
+            // observation.
+            Planned::Plan(plan, notes) => {
+                let mut done = executed(crate::decide::stat_task_plan::outcome(&plan));
+                done.family = Some(FamilyExecuted {
+                    answer: None,
+                    premises: Vec::new(),
+                    resolution: None,
+                    evidence: Some(if notes.process_ranked {
+                        EvidenceClass::Claim
+                    } else {
+                        EvidenceClass::Observation
+                    }),
+                });
+                done
+            }
             Planned::Abstain { code, detail, .. } => {
                 executed(StatisticalOutcome::Abstained {
                     reasons: BoundedVec::new(vec![AbstainReason::Family {

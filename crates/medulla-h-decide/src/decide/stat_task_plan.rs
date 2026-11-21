@@ -70,6 +70,11 @@ pub(super) enum Planned {
 pub(super) struct PlanNotes {
     pub(super) relevance_q32: std::collections::BTreeMap<String, i64>,
     pub(super) engine_chose_aggregation: bool,
+    /// The premises of a process plan: the workflow it planned, each step binding and the
+    /// binding links it dropped (MEDULLA-CQ-ORCH-R704.7); empty for every other plan.
+    pub(super) process_premises: Vec<PremiseRef>,
+    /// Whether any step of a process plan was bound by the ranker.
+    pub(super) process_ranked: bool,
 }
 
 /// A proposer's result before canonicalization.
@@ -701,6 +706,7 @@ pub(super) fn premises(plan: &TaskPlan, notes: &PlanNotes) -> Vec<PremiseRef> {
         }));
     }
     out.extend(assignment_premises(plan, notes));
+    out.extend(notes.process_premises.iter().cloned());
     out.extend(critical_chain_premises(plan));
     out.extend(horizon_premises(plan));
     out.push(PremiseRef {
