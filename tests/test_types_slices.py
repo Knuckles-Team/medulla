@@ -185,7 +185,6 @@ def test_acl_lives_in_the_identity_slice() -> None:
 
 DOMAIN_SLICES = {
     "medulla-mutation-types": (
-        "atomic_primitive",
         "benchmark_claim",
         "branch",
         "cross_store_scope",

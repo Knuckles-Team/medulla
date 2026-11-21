@@ -65,7 +65,6 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T059 [US6] MEDULLA-DURABLE-KERNEL-R038.2 The write path's durability selection: write_plan/refuse_if_durable_log_write are the one entry point a write admission calls
 - [x] T060 [US6] MEDULLA-DURABLE-KERNEL-R037.1 WorkloadClass is a typed classifier with a refusal for an unrecognized operation kind
 - [x] T061 [US6] MEDULLA-DURABLE-KERNEL-R037.2 route is the one dispatch entry point a wire listener calls to decide whether to allocate a DataFusion session
-- [x] T062 [US6] MEDULLA-DURABLE-KERNEL-R039.1 Every in-memory structure and atomic primitive is typed and structurally declares redb as its sole durability authority
 - [ ] T063 [US6] MEDULLA-DURABLE-KERNEL-R039.2 Control-lease consumption checks expiry inside its transaction
 - [ ] T064 [US6] MEDULLA-DURABLE-KERNEL-R039.3 Call-envelope storage and consumption is atomic
 - [ ] T065 [US6] MEDULLA-DURABLE-KERNEL-R039.4.1 Plan-bound call storage works end to end

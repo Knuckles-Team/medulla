@@ -6,11 +6,6 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
-// MEDULLA-DURABLE-KERNEL-R039 — in-memory structure/atomic-primitive kinds and a
-// durability declaration that always names redb as sole durability
-// authority. Pure serde, no dep.
-#[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
-pub mod atomic_primitive;
 // MEDULLA-DURABLE-KERNEL-R042 — a published benchmark report's typed superiority
 // claim and the refusal for an unpublished-configuration or non-passing one.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
