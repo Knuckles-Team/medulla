@@ -824,6 +824,8 @@ closed_error_codes! {
         ReadbackStale => "READBACK_STALE",
         ProcessModelUnknown => "PROCESS_MODEL_UNKNOWN",
         SupersessionUnknownFact => "SUPERSESSION_UNKNOWN_FACT",
+        /// MEDULLA-REPO-INGEST-R002.651.2: a supersession edge without its superseded mark, or the mark without its edge.
+        SupersessionUnpaired => "SUPERSESSION_UNPAIRED",
         DeadLetterUnknownItem => "DEAD_LETTER_UNKNOWN_ITEM",
         EnvelopeSourceMissing => "ENVELOPE_SOURCE_MISSING",
         HydrationBindingMismatch => "HYDRATION_BINDING_MISMATCH",

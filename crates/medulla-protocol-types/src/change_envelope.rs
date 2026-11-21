@@ -42,6 +42,41 @@ pub const CHANGE_ENVELOPE_VERSION: u16 = 1;
 /// commit kernel share ONE bound.
 pub const MAX_ENVELOPES_PER_BATCH: usize = 1024;
 
+/// The relationship of the edge from a new fact to the fact it supersedes
+/// (MEDULLA-REPO-INGEST-R002.651.2).
+pub const SUPERSEDES: &str = "supersedes";
+
+/// The two methods that record one supersession in an envelope batch, in order: the
+/// `supersedes` edge from the new fact to the old one, then the mark on the old
+/// fact (MEDULLA-REPO-INGEST-R002.651.2). Both ride the envelope's one transaction.
+pub fn supersession_methods(
+    supersession: &medulla_ingestion_types::ingest_capabilities::Supersession,
+) -> Result<[crate::protocol::Method; 2], String> {
+    use crate::protocol::Method;
+    let encode = |value: serde_json::Value| {
+        rmp_serde::to_vec_named(&value).map_err(|error| error.to_string())
+    };
+    Ok([
+        Method::AddEdge {
+            source_id: supersession.new_fact.clone(),
+            target_id: supersession.old_fact.clone(),
+            properties_msgpack: encode(serde_json::json!({
+                "relationship": SUPERSEDES,
+                "envelope_id": supersession.envelope_id,
+            }))?,
+        },
+        Method::CompareAndSetNodeFields {
+            node_id: supersession.old_fact.clone(),
+            conditions_msgpack: encode(serde_json::json!({}))?,
+            updates_msgpack: encode(serde_json::json!({
+                "superseded": true,
+                "superseded_by": supersession.new_fact,
+                "superseded_in": supersession.envelope_id,
+            }))?,
+        },
+    ])
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "value", rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

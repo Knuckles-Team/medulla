@@ -698,6 +698,12 @@ async fn apply_one_change_envelope_inner(
     if let Err(error) = harness_boundary_envelope(&envelope, core) {
         return Response::err(req_id, error);
     }
+    // MEDULLA-REPO-INGEST-R002.651.2: a supersession edge and its mark come as a
+    // pair and name known facts; a refusal returns before any durable work.
+    if let Err(error) = medulla_h_graph::supersession_admission::check_supersessions(&envelope, core)
+    {
+        return Response::err(req_id, error);
+    }
     let fname = medulla_kernel::persist::sanitize(graph_name);
     let (backend, known_replay, write_conflict) = match prepare_change_envelope_commit(
         persistence.as_ref(),

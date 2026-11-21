@@ -478,6 +478,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             // MEDULLA-REPO-INGEST-R002.653.
             "ENVELOPE_SOURCE_MISSING",
             "SUPERSESSION_UNKNOWN_FACT",
+            // MEDULLA-REPO-INGEST-R002.651.2.
+            "SUPERSESSION_UNPAIRED",
         ],
     ),
     (
@@ -486,6 +488,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CARRIER_INNER_METHOD_REFUSED",
             "ENVELOPE_SOURCE_MISSING",
             "SUPERSESSION_UNKNOWN_FACT",
+            // MEDULLA-REPO-INGEST-R002.651.2.
+            "SUPERSESSION_UNPAIRED",
         ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R651.4.

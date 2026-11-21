@@ -12,6 +12,9 @@ pub mod graph_ops;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod harness_admission;
 
+/// MEDULLA-REPO-INGEST-R002.651.2: the supersession check of one change envelope.
+pub mod supersession_admission;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[cfg(feature = "ml-pipeline")]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
