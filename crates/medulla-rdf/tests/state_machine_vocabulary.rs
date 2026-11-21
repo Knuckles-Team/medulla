@@ -1520,3 +1520,14 @@ fn lifecycle_machine_matches_edge_table() {
 fn lifecycle_machine_classes_extend_core() {
     sm::assert_extends_core("Lifecycle");
 }
+
+// spec: MEDULLA-FINANCE-PRIMITIVES-R906.1
+#[test]
+fn innovation_shift_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_numeric::series::state_space::INNOVATION_SHIFT_MACHINE);
+}
+// spec: MEDULLA-FINANCE-PRIMITIVES-R906.1
+#[test]
+fn innovation_shift_machine_classes_extend_core() {
+    sm::assert_extends_core("InnovationShift");
+}

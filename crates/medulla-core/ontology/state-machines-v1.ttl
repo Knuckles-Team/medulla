@@ -8488,3 +8488,74 @@
     :fromState :LifecycleMachine_Cold ;
     :toState :LifecycleMachine_Tombstoned ;
     :firedBy :LifecycleMachine_Event_Delete .
+
+# spec: MEDULLA-FINANCE-PRIMITIVES-R906.1
+# The innovation-shift machine: the phase of one innovation-shift detector. The Rust edge table
+# INNOVATION_SHIFT_MACHINE is the same table.
+
+:InnovationShiftState a owl:Class ;
+    rdfs:label "InnovationShift State" ;
+    rdfs:comment "A state of the innovation-shift machine." ;
+    rdfs:subClassOf :State .
+
+:InnovationShiftTerminalState a owl:Class ;
+    rdfs:label "InnovationShift Terminal State" ;
+    rdfs:comment "A terminal state of the innovation-shift machine; the machine has none." ;
+    rdfs:subClassOf :TerminalState, :InnovationShiftState .
+
+:InnovationShiftTransition a owl:Class ;
+    rdfs:label "InnovationShift Transition" ;
+    rdfs:comment "A transition of the innovation-shift machine." ;
+    rdfs:subClassOf :Transition .
+
+:InnovationShiftEvent a owl:Class ;
+    rdfs:label "InnovationShift Event" ;
+    rdfs:comment "An event of the innovation-shift machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:innovation_shift a :StateMachine ;
+    rdfs:label "innovation shift machine" ;
+    :initialState :innovation_shift_Seeding ;
+    :hasState :innovation_shift_Seeding, :innovation_shift_Armed, :innovation_shift_Cooldown .
+
+:innovation_shift_Seeding a :InnovationShiftState ;
+    rdfs:label "InnovationShift Seeding" ;
+    :storedForm "seeding" .
+
+:innovation_shift_Armed a :InnovationShiftState ;
+    rdfs:label "InnovationShift Armed" ;
+    :storedForm "armed" .
+
+:innovation_shift_Cooldown a :InnovationShiftState ;
+    rdfs:label "InnovationShift Cooldown" ;
+    :storedForm "cooldown" .
+
+:innovation_shift_Event_BaselineFilled a :InnovationShiftEvent ;
+    rdfs:label "InnovationShift BaselineFilled" .
+
+:innovation_shift_Event_ShiftConfirmed a :InnovationShiftEvent ;
+    rdfs:label "InnovationShift ShiftConfirmed" .
+
+:innovation_shift_Event_CooldownElapsed a :InnovationShiftEvent ;
+    rdfs:label "InnovationShift CooldownElapsed" .
+
+:innovation_shift_S01 a :InnovationShiftTransition ;
+    rdfs:label "InnovationShift S01" ;
+    :edgeId "S01" ;
+    :fromState :innovation_shift_Seeding ;
+    :toState :innovation_shift_Armed ;
+    :firedBy :innovation_shift_Event_BaselineFilled .
+
+:innovation_shift_S02 a :InnovationShiftTransition ;
+    rdfs:label "InnovationShift S02" ;
+    :edgeId "S02" ;
+    :fromState :innovation_shift_Armed ;
+    :toState :innovation_shift_Cooldown ;
+    :firedBy :innovation_shift_Event_ShiftConfirmed .
+
+:innovation_shift_S03 a :InnovationShiftTransition ;
+    rdfs:label "InnovationShift S03" ;
+    :edgeId "S03" ;
+    :fromState :innovation_shift_Cooldown ;
+    :toState :innovation_shift_Armed ;
+    :firedBy :innovation_shift_Event_CooldownElapsed .

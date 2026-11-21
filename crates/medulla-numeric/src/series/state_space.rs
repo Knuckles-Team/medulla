@@ -14,6 +14,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::detkernel::math::{exp, ln};
+use medulla_types::transition_refused::{
+    transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
+};
 
 /// Symmetry tolerance a model revision pins by default.
 pub const SYMMETRY_TOL: f64 = 1e-9;
@@ -205,27 +208,68 @@ pub enum ShiftEvent {
     CooldownElapsed,
 }
 
-/// An event refused in the current phase.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct ShiftTransitionError {
-    pub machine: &'static str,
-    pub state: ShiftPhase,
-    pub event: ShiftEvent,
+impl MachineState for ShiftPhase {
+    fn stored(self) -> &'static str {
+        match self {
+            Self::Seeding => "seeding",
+            Self::Armed => "armed",
+            Self::Cooldown => "cooldown",
+        }
+    }
 }
 
-impl ShiftPhase {
-    /// The one transition function: the only writer of the phase.
-    pub fn transition(self, event: ShiftEvent) -> Result<ShiftPhase, ShiftTransitionError> {
-        match (self, event) {
-            (Self::Seeding, ShiftEvent::BaselineFilled) => Ok(Self::Armed),
-            (Self::Armed, ShiftEvent::ShiftConfirmed) => Ok(Self::Cooldown),
-            (Self::Cooldown, ShiftEvent::CooldownElapsed) => Ok(Self::Armed),
-            (state, event) => Err(ShiftTransitionError {
-                machine: "innovation_shift",
-                state,
-                event,
-            }),
+impl MachineEvent for ShiftEvent {
+    fn name(self) -> &'static str {
+        match self {
+            Self::BaselineFilled => "BaselineFilled",
+            Self::ShiftConfirmed => "ShiftConfirmed",
+            Self::CooldownElapsed => "CooldownElapsed",
         }
+    }
+}
+
+/// `innovation_shift`: the closed edge table. Every other pair is refused.
+pub static INNOVATION_SHIFT_MACHINE: MachineDef<ShiftPhase, ShiftEvent, &'static str> =
+    MachineDef {
+        name: "innovation_shift",
+        states: &[ShiftPhase::Seeding, ShiftPhase::Armed, ShiftPhase::Cooldown],
+        initial: ShiftPhase::Seeding,
+        terminals: &[],
+        events: &[
+            ShiftEvent::BaselineFilled,
+            ShiftEvent::ShiftConfirmed,
+            ShiftEvent::CooldownElapsed,
+        ],
+        guards: &[],
+        edges: &[
+            Edge {
+                id: "S01",
+                from: ShiftPhase::Seeding,
+                event: ShiftEvent::BaselineFilled,
+                guard: None,
+                to: ShiftPhase::Armed,
+            },
+            Edge {
+                id: "S02",
+                from: ShiftPhase::Armed,
+                event: ShiftEvent::ShiftConfirmed,
+                guard: None,
+                to: ShiftPhase::Cooldown,
+            },
+            Edge {
+                id: "S03",
+                from: ShiftPhase::Cooldown,
+                event: ShiftEvent::CooldownElapsed,
+                guard: None,
+                to: ShiftPhase::Armed,
+            },
+        ],
+    };
+
+impl ShiftPhase {
+    /// The one transition function: the next phase, or the typed refusal.
+    pub fn apply(self, event: ShiftEvent) -> Result<ShiftPhase, TransitionRefused> {
+        transition(&INNOVATION_SHIFT_MACHINE, self, event, |_| false).map(|edge| edge.to)
     }
 }
 
@@ -322,6 +366,12 @@ fn mean(v: &[f64]) -> f64 {
 }
 
 impl ShiftDetector {
+    /// The only writer of `phase`: apply `event`, or refuse and change nothing.
+    fn transition(&mut self, event: ShiftEvent) -> Result<(), TransitionRefused> {
+        self.phase = self.phase.apply(event)?;
+        Ok(())
+    }
+
     fn record(&mut self, stat: f64) {
         self.count += 1;
         self.recent.push(stat);
@@ -332,17 +382,13 @@ impl ShiftDetector {
             ShiftPhase::Seeding => {
                 self.baseline.push(stat);
                 if self.baseline.len() >= self.cfg.window {
-                    self.phase = self
-                        .phase
-                        .transition(ShiftEvent::BaselineFilled)
-                        .unwrap_or(self.phase);
+                    let _ = self.transition(ShiftEvent::BaselineFilled);
                 }
             }
             ShiftPhase::Cooldown => {
                 self.cooldown_left = self.cooldown_left.saturating_sub(1);
                 if self.cooldown_left == 0 {
-                    if let Ok(next) = self.phase.transition(ShiftEvent::CooldownElapsed) {
-                        self.phase = next;
+                    if self.transition(ShiftEvent::CooldownElapsed).is_ok() {
                         self.baseline = self.recent.clone();
                         self.consecutive = 0;
                     }
@@ -1000,9 +1046,7 @@ impl StateSpaceFilter {
         det.retunes.push(det.count);
         det.consecutive = 0;
         det.cooldown_left = det.cfg.cooldown;
-        if let Ok(next) = det.phase.transition(ShiftEvent::ShiftConfirmed) {
-            det.phase = next;
-        }
+        let _ = det.transition(ShiftEvent::ShiftConfirmed);
         Ok(ShiftOutcome::Shifted(ShiftReport {
             cursor: det.count,
             ratio,
@@ -1022,8 +1066,9 @@ impl StateSpaceFilter {
 mod tests {
     use super::*;
 
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R906.1
     #[test]
-    fn shift_phase_machine_has_every_legal_and_illegal_transition() {
+    fn every_legal_transition_applies() {
         use ShiftEvent as E;
         use ShiftPhase as P;
         let legal = [
@@ -1031,21 +1076,61 @@ mod tests {
             (P::Armed, E::ShiftConfirmed, P::Cooldown),
             (P::Cooldown, E::CooldownElapsed, P::Armed),
         ];
+        assert_eq!(INNOVATION_SHIFT_MACHINE.edges.len(), legal.len());
         for (from, event, to) in legal {
-            assert_eq!(from.transition(event), Ok(to));
+            assert_eq!(from.apply(event), Ok(to));
         }
-        for from in [P::Seeding, P::Armed, P::Cooldown] {
-            for event in [E::BaselineFilled, E::ShiftConfirmed, E::CooldownElapsed] {
-                if legal.iter().any(|(f, e, _)| *f == from && *e == event) {
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R906.1
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let machine = &INNOVATION_SHIFT_MACHINE;
+        for &from in machine.states {
+            for &event in machine.events {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|e| e.from == from && e.event == event)
+                {
                     continue;
                 }
-                let err = from.transition(event).unwrap_err();
-                assert_eq!(
-                    (err.machine, err.state, err.event),
-                    ("innovation_shift", from, event)
-                );
+                let refused = from.apply(event).unwrap_err();
+                assert_eq!(refused.machine, "innovation_shift");
+                assert_eq!(refused.from, from.stored());
+                assert_eq!(refused.event, event.name());
+                assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
             }
         }
+        // A refused event changes nothing on the holder.
+        let cfg = ShiftConfig::default();
+        let mut detector = ShiftDetector {
+            cfg,
+            phase: ShiftPhase::Seeding,
+            baseline: Vec::new(),
+            recent: Vec::new(),
+            count: 0,
+            consecutive: 0,
+            cooldown_left: 0,
+            retunes: Vec::new(),
+            last_checked: 0,
+            scale: 1.0,
+        };
+        assert!(detector.transition(ShiftEvent::ShiftConfirmed).is_err());
+        assert_eq!(detector.phase, ShiftPhase::Seeding);
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R906.1
+    #[test]
+    fn no_writer_sets_phase_outside_transition() {
+        let source = include_str!("state_space.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        let writes: Vec<&str> = production
+            .lines()
+            .map(str::trim)
+            .filter(|l| !l.starts_with("//") && l.contains(".phase = "))
+            .collect();
+        assert_eq!(writes, vec!["self.phase = self.phase.apply(event)?;"]);
     }
 
     #[test]
