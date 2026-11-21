@@ -35,7 +35,6 @@ pub fn install_freshness_search_port(state: &ServerState) {
 /// here and only when called inside a runtime; `live_artifact_refresh` has no body yet.
 #[allow(unused_variables)]
 pub fn install_downtime_bodies(shared: &std::sync::Arc<tokio::sync::RwLock<ServerState>>) {
-    #[cfg(all(feature = "jobs", feature = "sparql", feature = "federation"))]
     #[cfg(all(feature = "test-support", feature = "jobs"))]
     medulla_server_api::downtime::install_downtime_body(
         crate::downtime_test_steps::INTENT,
