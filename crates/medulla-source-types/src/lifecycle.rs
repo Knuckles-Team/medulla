@@ -88,6 +88,7 @@ impl LifecycleEdgeKind {
                 | Self::Contains
                 | Self::IntroducedBy
                 | Self::FixedBy
+                | Self::ProducedBy
         )
     }
 }

@@ -240,3 +240,46 @@ fn rebuild_equals_incremental() {
     assert_eq!(rebuilt.edge_set_bytes(), store.edge_set_bytes());
     assert_eq!(rebuilt, store);
 }
+
+// spec: MEDULLA-SDLC-R001.2.1
+#[test]
+fn produced_by_derives_from_run_trace_id_and_refuses_direct_write() {
+    assert_eq!(RULE_VERSION, 2);
+    let mut cs = changeset("c1", &[], Trailers::default());
+    let none = derive_lifecycle_edges(&cs, &CodeGraphView::default());
+    assert!(!none.iter().any(|e| e.kind == E::ProducedBy));
+
+    cs.run_trace_id = Some("run-1".into());
+    let edges = derive_lifecycle_edges(&cs, &CodeGraphView::default());
+    let produced: Vec<_> = edges.iter().filter(|e| e.kind == E::ProducedBy).collect();
+    assert_eq!(produced.len(), 1);
+    assert_eq!(
+        (produced[0].from.as_str(), produced[0].to.as_str()),
+        ("c1", "run-1")
+    );
+    assert_eq!(produced[0].rule, "produced.run_trace");
+    assert_eq!(produced[0].rule_version, 2);
+    assert_eq!(E::ALL.len(), 14);
+
+    // A direct write of the derived kind refuses and writes nothing.
+    let mut store = LifecycleStore::default();
+    store.add_node("c1", K::Changeset);
+    store.add_node("run-1", K::RunTrace);
+    let err = store.write_edge(E::ProducedBy, "c1", "run-1").unwrap_err();
+    assert_eq!(err.code(), "LIFECYCLE_EDGE_DERIVED_ONLY");
+    assert_eq!(store.edge_count(), 0);
+
+    // Accepting the changeset writes the edge when the run node exists.
+    store
+        .accept_changeset(&cs, &CodeGraphView::default())
+        .unwrap();
+    assert_eq!(store.edge_count(), 1);
+
+    // A run with no node refuses the accept and writes nothing.
+    let mut bare = LifecycleStore::default();
+    let err = bare
+        .accept_changeset(&cs, &CodeGraphView::default())
+        .unwrap_err();
+    assert_eq!(err.code(), "LIFECYCLE_ENDPOINT_UNKNOWN");
+    assert_eq!(bare.edge_count(), 0);
+}

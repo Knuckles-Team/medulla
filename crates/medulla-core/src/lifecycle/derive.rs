@@ -11,7 +11,7 @@ use medulla_source_types::{
 use serde::{Deserialize, Serialize};
 
 /// Version of every rule in this pass; a rule change bumps it.
-pub const RULE_VERSION: u32 = 1;
+pub const RULE_VERSION: u32 = 2;
 
 pub const RULE_CHANGES: &str = "changes.span_overlap";
 pub const RULE_CITES: &str = "cites.trailer";
@@ -21,6 +21,7 @@ pub const RULE_EXERCISES: &str = "exercises.call_graph";
 pub const RULE_CONTAINS: &str = "contains.release_range";
 pub const RULE_INTRODUCED: &str = "introduced.bisect";
 pub const RULE_FIXED: &str = "fixed.trailer";
+pub const RULE_PRODUCED: &str = "produced.run_trace";
 
 /// A half-open byte range.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -155,6 +156,16 @@ fn rules_over_changes(changeset: &Changeset, view: &CodeGraphView, em: &mut Emit
             &fact,
         );
     }
+    if let Some(run) = &changeset.run_trace_id {
+        let fact = format!("run:{run}");
+        em.emit(
+            LifecycleEdgeKind::ProducedBy,
+            RULE_PRODUCED,
+            &changeset.id,
+            run,
+            &fact,
+        );
+    }
     for requirement in &changeset.trailers.spec_ids {
         let fact = format!("spec:{requirement}");
         em.emit(
@@ -238,7 +249,7 @@ fn rules_over_history(changeset: &Changeset, view: &CodeGraphView, em: &mut Emit
     }
 }
 
-/// Apply the eight named rules to one accepted changeset. The result is sorted
+/// Apply the nine named rules to one accepted changeset. The result is sorted
 /// and free of duplicates, so equal inputs give byte-equal output.
 pub fn derive_lifecycle_edges(changeset: &Changeset, view: &CodeGraphView) -> Vec<DerivedEdge> {
     let digest = serde_json::to_vec(changeset).unwrap_or_default();
