@@ -37,6 +37,7 @@ PROJECT_TEST = (
 )
 
 
+@pytest.mark.spec("MEDULLA-SDLC-R009")
 def test_spec_document_projects_sections_with_spans() -> None:
     assert "pub fn project(" in PROJECTION_RS.read_text(encoding="utf-8")
     proc = subprocess.run(

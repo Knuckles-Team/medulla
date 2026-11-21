@@ -62,6 +62,7 @@ def _run_engine_test(name: str) -> str:
     return proc.stdout
 
 
+@pytest.mark.spec("MEDULLA-SDLC-R014.2")
 def test_one_file_change_reingests_only_that_file_within_budget() -> None:
     assert "pub fn reingest_changed_artifacts" in PROJECTION_RS.read_text(
         encoding="utf-8"

@@ -67,6 +67,7 @@ def _run_engine_test(name: str) -> str:
     return proc.stdout
 
 
+@pytest.mark.spec("MEDULLA-SDLC-R014.4")
 def test_concept_resolves_to_owning_contract_and_both_repositories() -> None:
     source = PROJECTION_RS.read_text(encoding="utf-8")
     assert "pub fn project_contracts" in source

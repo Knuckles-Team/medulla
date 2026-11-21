@@ -66,6 +66,7 @@ def _run_engine_test(name: str) -> str:
     return proc.stdout
 
 
+@pytest.mark.spec("MEDULLA-SDLC-R018.1")
 def test_bundle_plan_becomes_records_with_in_bundle_edges() -> None:
     source = PROJECTION_RS.read_text(encoding="utf-8")
     assert "pub fn project_bundles" in source

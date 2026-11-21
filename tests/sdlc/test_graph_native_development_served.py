@@ -69,6 +69,7 @@ def _run_engine_test(name: str) -> str:
     return proc.stdout
 
 
+@pytest.mark.spec("MEDULLA-SDLC-R012.2")
 def test_spec_rows_become_requirement_nodes_with_edges() -> None:
     source = PROJECTION_RS.read_text(encoding="utf-8")
     assert "pub fn project_requirements" in source
