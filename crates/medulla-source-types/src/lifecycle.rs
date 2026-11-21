@@ -124,6 +124,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("RELEASE_VERSION_TAKEN"),
     RefusalCode::new("RELEASE_SEALED"),
     RefusalCode::new("GOAL_TARGET_REQUIRED"),
+    RefusalCode::new("PROPOSAL_KIND_UNKNOWN"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -145,6 +146,8 @@ pub enum LifecycleRefusal {
     ReleaseSealed(String),
     #[error("GOAL_TARGET_REQUIRED: {0}")]
     GoalTargetRequired(String),
+    #[error("PROPOSAL_KIND_UNKNOWN: {0}")]
+    ProposalKindUnknown(String),
 }
 
 impl LifecycleRefusal {
@@ -159,6 +162,7 @@ impl LifecycleRefusal {
             Self::ReleaseVersionTaken(_) => "RELEASE_VERSION_TAKEN",
             Self::ReleaseSealed(_) => "RELEASE_SEALED",
             Self::GoalTargetRequired(_) => "GOAL_TARGET_REQUIRED",
+            Self::ProposalKindUnknown(_) => "PROPOSAL_KIND_UNKNOWN",
         }
     }
 }
@@ -442,6 +446,83 @@ pub fn handle_goal_put(goal: Goal) -> Result<GoalWrite, LifecycleRefusal> {
         goal,
         targets,
     })
+}
+
+/// The closed kind of a proposal (MEDULLA-SDLC-R017.2). Row kinds change one
+/// requirement row, the plan kind edits a plan section, task kinds change the
+/// task list and the other kinds add a contract, resolve a clarification marker
+/// or tune a knob.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ProposalKind {
+    /// Add a requirement row.
+    RowAdd,
+    /// Update a requirement row.
+    RowUpdate,
+    /// Split a requirement row.
+    RowSplit,
+    /// Prune a requirement row.
+    RowPrune,
+    /// Retire a requirement row.
+    RowRetire,
+    /// Edit a plan section.
+    EditPlanSection,
+    /// Add a task.
+    TaskAdd,
+    /// Reorder tasks.
+    TaskReorder,
+    /// Split a task.
+    TaskSplit,
+    /// Add a contract.
+    AddContract,
+    /// Resolve a `[NEEDS CLARIFICATION]` marker.
+    ResolveClarification,
+    /// Tune a knob.
+    TuneKnob,
+}
+
+impl ProposalKind {
+    /// Every kind, in documented order.
+    pub const ALL: [ProposalKind; 12] = [
+        Self::RowAdd,
+        Self::RowUpdate,
+        Self::RowSplit,
+        Self::RowPrune,
+        Self::RowRetire,
+        Self::EditPlanSection,
+        Self::TaskAdd,
+        Self::TaskReorder,
+        Self::TaskSplit,
+        Self::AddContract,
+        Self::ResolveClarification,
+        Self::TuneKnob,
+    ];
+
+    /// Parse a wire name; a name outside the closed set refuses
+    /// `PROPOSAL_KIND_UNKNOWN`.
+    pub fn parse(name: &str) -> Result<Self, LifecycleRefusal> {
+        serde_json::from_value(serde_json::Value::String(name.to_owned()))
+            .map_err(|_| LifecycleRefusal::ProposalKindUnknown(name.to_owned()))
+    }
+}
+
+/// A change the learning loop proposes to the specs of one project
+/// (MEDULLA-SDLC-R017.2): one closed kind, the record it targets and a
+/// statement. A proposal that resolves a `[NEEDS CLARIFICATION]` marker names
+/// the marker.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Proposal {
+    pub project: String,
+    pub kind: ProposalKind,
+    /// The row, plan section, task or knob the proposal changes.
+    pub target: String,
+    pub statement: String,
+    /// The marker a `resolve_clarification` proposal resolves.
+    #[serde(default)]
+    pub marker: Option<String>,
 }
 
 /// How a defect reached the engine.

@@ -281,3 +281,56 @@ fn a_goal_with_no_target_refuses_and_a_target_writes() {
     assert_eq!(row.node_id(), "requirement:medulla:MEDULLA-SDLC-R012.2");
     assert_eq!(question.node_id(), "competency_question:cq-1");
 }
+
+// spec: MEDULLA-SDLC-R017.2
+#[test]
+fn proposal_kind_set_is_closed() {
+    use medulla_source_types::lifecycle::{Proposal, ProposalKind, REFUSALS};
+
+    let names = [
+        "row_add",
+        "row_update",
+        "row_split",
+        "row_prune",
+        "row_retire",
+        "edit_plan_section",
+        "task_add",
+        "task_reorder",
+        "task_split",
+        "add_contract",
+        "resolve_clarification",
+        "tune_knob",
+    ];
+    assert_eq!(names.len(), ProposalKind::ALL.len());
+    for (name, kind) in names.iter().zip(ProposalKind::ALL) {
+        assert_eq!(ProposalKind::parse(name).unwrap(), kind);
+        assert_eq!(
+            serde_json::to_value(kind).unwrap(),
+            serde_json::Value::String((*name).to_string())
+        );
+    }
+    let refusal = ProposalKind::parse("rewrite_everything").unwrap_err();
+    assert_eq!(refusal.code(), "PROPOSAL_KIND_UNKNOWN");
+    assert!(REFUSALS
+        .iter()
+        .any(|c| c.as_str() == "PROPOSAL_KIND_UNKNOWN"));
+
+    // An unknown kind never decodes into a proposal.
+    let bad = serde_json::json!({
+        "project": "medulla",
+        "kind": "rewrite_everything",
+        "target": "MEDULLA-SDLC-R017.2",
+        "statement": "x",
+    });
+    assert!(serde_json::from_value::<Proposal>(bad).is_err());
+    let ok = serde_json::json!({
+        "project": "medulla",
+        "kind": "resolve_clarification",
+        "target": "specs/development-lifecycle/spec.md",
+        "statement": "Decide the closed set",
+        "marker": "NEEDS CLARIFICATION: kinds",
+    });
+    let proposal: Proposal = serde_json::from_value(ok).unwrap();
+    assert_eq!(proposal.kind, ProposalKind::ResolveClarification);
+    assert_eq!(proposal.marker.as_deref(), Some("NEEDS CLARIFICATION: kinds"));
+}
