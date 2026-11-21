@@ -2622,6 +2622,7 @@ __all__ = [
     "AbstainReasonIneligibleExternalAgent",
     "AbstainReasonInfeasible",
     "AbstainReasonInsufficientConfidence",
+    "AbstainReasonLimitBreach",
     "AbstainReasonPolicyLoosening",
     "AbstainReasonRecordTooLarge",
     "AbstainReasonUncoveredCapability",
