@@ -387,6 +387,28 @@ cat:DashboardAsset a owl:Class ;
     rdfs:comment "A saved dashboard catalogued as an asset (MEDULLA-TYPED-PACKS-R109.1): its panels, queries, layout and parameters are stored; the data it shows is not. Panels link their data source, query, terms and concepts." ;
     rdfs:subClassOf cat:Asset .
 
+cat:ReportAsset a owl:Class ;
+    rdfs:label "Report Asset" ;
+    rdfs:comment "A published report catalogued as an asset (MEDULLA-TYPED-PACKS-R108.14). It lists the assets it reads (cat:readsAsset), its owner and its usage; the catalog stores the descriptor and the query text, never the data shown." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:ReportTemplate a owl:Class ;
+    rdfs:label "Report Template" ;
+    rdfs:comment "A report whose query takes named parameters (cat:parameterName)." ;
+    rdfs:subClassOf cat:ReportAsset .
+
+cat:readsAsset a owl:ObjectProperty ;
+    rdfs:label "reads asset" ;
+    rdfs:comment "An asset a report or dashboard reads." ;
+    rdfs:domain cat:Asset ;
+    rdfs:range cat:Asset .
+
+cat:parameterName a owl:DatatypeProperty ;
+    rdfs:label "parameter name" ;
+    rdfs:comment "One named parameter of a report template." ;
+    rdfs:domain cat:ReportTemplate ;
+    rdfs:range xsd:string .
+
 cat:revision a owl:DatatypeProperty ;
     rdfs:label "revision" ;
     rdfs:comment "The revision of a stored asset body; it only increases." ;

@@ -95,3 +95,44 @@ def test_one_search_ranks_all_families_with_usage_and_endorsement_boost(catalog_
     # Text over the knob is refused with its code.
     with pytest.raises(Exception, match="CATALOG_QUERY_TOO_LONG"):
         _ranked(admin, "x" * 1001)
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.14")
+def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage(
+    catalog_graph,
+):
+    # spec: MEDULLA-TYPED-PACKS-R108.14
+    admin = catalog_graph
+    xsd_int = "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
+    owner = "<urn:principal:data-team>"
+    admin.rdf.add_triples(
+        turtle=(
+            f"{PREFIX}"
+            f'<urn:medulla:asset:resource:sales> a cat:DataResource ; skos:prefLabel "sales resource" ; '
+            f'cat:flag "owner_missing" ; <https://knuckles-team.github.io/ontology/connector-pack#ofConnector> <urn:c:a> ; '
+            f"<https://knuckles-team.github.io/ontology/connector-pack#servesClass> <urn:class:Sale> .\n"
+            f'<urn:medulla:asset:dashboard:sales> a cat:DashboardAsset ; skos:prefLabel "sales dashboard" ; '
+            f'cat:hasOwner {owner} ; cat:revision "1"^^<{xsd_int}> ; cat:readsAsset <urn:medulla:asset:resource:sales> .\n'
+            f'<urn:medulla:asset:report:sales> a cat:ReportAsset ; skos:prefLabel "sales report" ; '
+            f"cat:hasOwner {owner} ; cat:readsAsset <urn:medulla:asset:resource:sales> .\n"
+            f'<urn:medulla:asset:template:sales> a cat:ReportTemplate ; skos:prefLabel "sales template" ; '
+            f'cat:hasOwner {owner} ; cat:parameterName "region" ; cat:readsAsset <urn:medulla:asset:resource:sales> .\n'
+        )
+    )
+    # Each reporting asset lists what it reads, and the one search ranks them with the rest.
+    rows = admin.rdf.sparql(
+        f"SELECT ?asset WHERE {{ ?asset <{CATALOG}readsAsset> <urn:medulla:asset:resource:sales> }}"
+    )
+    assert len(rows) == 3
+    found = {asset.strip("<>") for asset, _ in _ranked(admin, "sales")}
+    assert {
+        "urn:medulla:asset:dashboard:sales",
+        "urn:medulla:asset:report:sales",
+        "urn:medulla:asset:template:sales",
+    } <= found
+
+    # A template with no parameter is refused and writes nothing.
+    with pytest.raises(Exception):
+        admin.rdf.add_triples(
+            turtle=f"{PREFIX}<urn:medulla:asset:template:bare> a cat:ReportTemplate ; cat:hasOwner {owner} .\n"
+        )

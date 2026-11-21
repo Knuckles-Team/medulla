@@ -373,6 +373,17 @@ fn dashboard_asset_needs_one_revision_and_an_owner_or_flag() {
     ));
 }
 
+// spec: MEDULLA-TYPED-PACKS-R108.14
+#[test]
+fn report_and_template_need_an_owner_and_the_template_a_parameter() {
+    let report = "<urn:r:1> a cat:ReportAsset ; cat:hasOwner <urn:g:x> ; cat:readsAsset <urn:a:t> . ";
+    assert!(conforms(report));
+    assert!(!conforms("<urn:r:1> a cat:ReportAsset ."));
+    let template = "<urn:r:2> a cat:ReportTemplate ; cat:hasOwner <urn:g:x> . ";
+    assert!(!conforms(template));
+    assert!(conforms(&format!("{template}<urn:r:2> cat:parameterName \"region\" .")));
+}
+
 // spec: MEDULLA-TYPED-PACKS-R108.1
 #[test]
 fn six_families_validate_and_share_one_parent_asset_class() {
