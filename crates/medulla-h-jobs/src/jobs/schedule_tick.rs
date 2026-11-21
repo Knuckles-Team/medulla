@@ -506,3 +506,166 @@ fn submitted_job_id(response: &Response) -> Option<String> {
     };
     record.get("job_id")?.as_str().map(str::to_string)
 }
+
+// MEDULLA-TYPED-PACKS-R109.4: the purge of a deleted dashboard runs through the real schedule
+// tick pass (`tick_pass` -> `purge_due_dashboards`) on a served engine state, with the retention
+// knob at its one-day floor and a controlled clock handed to the pass, never a faked null body.
+#[cfg(test)]
+mod dashboard_purge_tick_tests {
+    use super::*;
+    use medulla_persistence::redb_backend::RedbBackend;
+    use medulla_protocol_types::protocol::{GraphType, Method};
+    use medulla_server_auth::auth::{
+        dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller,
+    };
+    use medulla_types::dashboard::{
+        dashboard_node_id, dashboard_revision_node_id, DashboardAssetOp, DashboardBody,
+        DashboardPanel, ENV_DASHBOARD_RETENTION_DAYS,
+    };
+
+    const SECRET: &str = "dashboard-purge-tick-test-secret";
+    const ISSUER: &str = "dashboard-purge-tick-test-issuer";
+    const TENANT: &str = "tenant-dashboard-purge-tick";
+    const GRAPH: &str = "dashboard-purge-tick-test";
+    const DAY_MS: u64 = 86_400_000;
+
+    fn next_nonce() -> u64 {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    }
+
+    async fn call(state: &Arc<RwLock<ServerState>>, method: Method) -> Response {
+        let id = next_nonce() + 1;
+        let request = scoped_test_request_on(
+            SECRET,
+            id,
+            GRAPH,
+            method,
+            ScopedTestCaller {
+                principal: ISSUER,
+                tenant: TENANT,
+                scopes: &["*"],
+                nonce: &format!("dashboard-purge-nonce-{id}"),
+                idempotency_key: &format!("dashboard-purge-key-{id}"),
+            },
+        );
+        dispatch_test_on_heap(state, request).await
+    }
+
+    async fn dashboard(state: &Arc<RwLock<ServerState>>, op: DashboardAssetOp) -> Response {
+        call(state, Method::DashboardAsset { op: Box::new(op) }).await
+    }
+
+    async fn core_of(state: &Arc<RwLock<ServerState>>) -> Arc<GraphCore> {
+        let s = state.read().await;
+        s.registry
+            .all_entries()
+            .into_iter()
+            .find(|entry| entry.name == GRAPH)
+            .expect("the dashboard graph")
+            .core
+            .clone()
+    }
+
+    #[tokio::test]
+    // spec: MEDULLA-TYPED-PACKS-R109.4
+    async fn the_schedule_tick_purges_a_deleted_dashboard_after_its_retention_and_a_read_refuses_purged(
+    ) {
+        std::env::set_var(ENV_DASHBOARD_RETENTION_DAYS, "1");
+        let dir = tempfile::tempdir().unwrap();
+        let mut server = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(ISSUER),
+        );
+        server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
+        let backend =
+            RedbBackend::open(dir.path().join("graphs").to_string_lossy().into_owned(), 64)
+                .unwrap();
+        server.persistence = Some(Arc::new(backend));
+        std::mem::forget(dir);
+        let state = Arc::new(RwLock::new(server));
+        let created = call(
+            &state,
+            Method::CreateGraph {
+                graph_name: GRAPH.into(),
+                graph_type: GraphType::Global,
+            },
+        )
+        .await;
+        assert!(created.error.is_none(), "{:?}", created.error);
+
+        let body = DashboardBody {
+            panels: vec![DashboardPanel {
+                id: "p0".into(),
+                source: "orders".into(),
+                query: "SELECT * FROM orders".into(),
+                terms: Vec::new(),
+                concepts: Vec::new(),
+            }],
+            layout: Value::Null,
+            parameters: Value::Null,
+        };
+        for revision in 0..2 {
+            let saved = dashboard(
+                &state,
+                DashboardAssetOp::Save {
+                    id: "purge-me".into(),
+                    body: body.clone(),
+                    revision,
+                },
+            )
+            .await;
+            assert!(saved.error.is_none(), "{:?}", saved.error);
+        }
+        let kept = dashboard(
+            &state,
+            DashboardAssetOp::Save {
+                id: "kept".into(),
+                body: body.clone(),
+                revision: 0,
+            },
+        )
+        .await;
+        assert!(kept.error.is_none(), "{:?}", kept.error);
+        let deleted = dashboard(&state, DashboardAssetOp::Delete { id: "purge-me".into() }).await;
+        assert!(deleted.error.is_none(), "{:?}", deleted.error);
+
+        let core = core_of(&state).await;
+        let removed_ms = decode_node(&core, &dashboard_node_id("purge-me"))
+            .and_then(|node| node.get("removed_at_ms").and_then(Value::as_u64))
+            .expect("the delete stamped removed_at_ms");
+        let body_of = |id: &str| {
+            decode_node(&core, id).and_then(|node| node.get("body").cloned())
+        };
+        let mut cache = ScheduleCache::default();
+
+        // One pass a moment before the retention ends purges nothing.
+        tick_pass(&state, "engine:test", &mut cache, removed_ms, removed_ms + DAY_MS - 1, 1)
+            .await
+            .unwrap();
+        assert!(body_of(&dashboard_node_id("purge-me")).is_some_and(|b| !b.is_null()));
+
+        // One pass once the retention has ended nulls the body of the asset and of every
+        // revision, keeps the revision nodes, and leaves the live dashboard alone.
+        tick_pass(&state, "engine:test", &mut cache, removed_ms + DAY_MS, removed_ms + DAY_MS + 1, 1)
+            .await
+            .unwrap();
+        for id in [
+            dashboard_node_id("purge-me"),
+            dashboard_revision_node_id("purge-me", 1),
+            dashboard_revision_node_id("purge-me", 2),
+        ] {
+            assert!(decode_node(&core, &id).is_some(), "{id} stays");
+            assert!(body_of(&id).is_none_or(|b| b.is_null()), "{id} body is purged");
+        }
+        assert!(body_of(&dashboard_node_id("kept")).is_some_and(|b| !b.is_null()));
+
+        // The next read refuses as purged, and the restore is refused too.
+        let read = dashboard(&state, DashboardAssetOp::Get { id: "purge-me".into() }).await;
+        assert!(
+            read.refusal_text().is_some_and(|e| e.contains("DASHBOARD_PURGED")),
+            "{:?}",
+            read.error
+        );
+    }
+}

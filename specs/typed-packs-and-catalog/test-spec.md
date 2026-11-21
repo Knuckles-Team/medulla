@@ -514,7 +514,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 - `MEDULLA-TYPED-PACKS-R109.1`: `crates/medulla-types/tests/dashboard.rs::dashboard_asset_round_trips_and_shape_validates`.
 - `MEDULLA-TYPED-PACKS-R109.2`: `crates/medulla-core/tests/dashboard_asset.rs::save_bumps_revision_rebuilds_links_and_delete_keeps_then_purges`.
 - `MEDULLA-TYPED-PACKS-R109.3`: `tests/typed_packs/test_dashboard_asset_served.py::test_save_share_delete_restore_reach_the_handler_with_grant_checks`.
-- `MEDULLA-TYPED-PACKS-R109.4`: `tests/typed_packs/test_dashboard_asset_served.py::test_stale_revision_missing_grant_invalid_body_and_purged_asset_refuse`.
+- `MEDULLA-TYPED-PACKS-R109.4`: `tests/typed_packs/test_dashboard_asset_served.py::test_stale_revision_missing_grant_invalid_body_and_purged_asset_refuse`; `crates/medulla-h-jobs/src/jobs/schedule_tick.rs::dashboard_purge_tick_tests::the_schedule_tick_purges_a_deleted_dashboard_after_its_retention_and_a_read_refuses_purged` (the real purge tick over a served state, retention knob at its one-day floor and a controlled clock, so the purged read is proved on a body the tick nulled, never one written as null).
 - `MEDULLA-TYPED-PACKS-R109.5`: `tests/typed_packs/test_dashboard_asset_served.py::test_revision_grant_and_delete_history_and_usage_are_served`.
 - `MEDULLA-TYPED-PACKS-R109.6`: `tests/typed_packs/test_dashboard_asset_served.py::test_dashboard_save_conflict_share_lineage_search_and_soft_delete`.
 

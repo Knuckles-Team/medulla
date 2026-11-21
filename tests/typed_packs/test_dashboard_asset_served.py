@@ -10,7 +10,6 @@ import os
 import uuid
 from typing import Any
 
-import msgpack
 import pytest
 import stewardship_support as support
 from conftest import request_context
@@ -156,12 +155,8 @@ def test_stale_revision_missing_grant_invalid_body_and_purged_asset_refuse(serve
     with pytest.raises(Exception, match="DASHBOARD_BODY_INVALID"):
         _dash(owner, graph, {"op": "save", "id": DASH, "body": huge, "revision": 2})
     assert _node(owner, graph, f"dashboard:{DASH}")["revision"] == 2
-
-    # A purged asset reads as purged: the purge nulls the body and keeps the history.
-    ops = [{"op": "upsert_node", "id": f"dashboard:{DASH}", "properties": {"body": None}}]
-    owner._send("BatchUpdate", {"operations_msgpack": msgpack.packb(ops)}, graph)
-    with pytest.raises(Exception, match="DASHBOARD_PURGED"):
-        _dash(owner, graph, {"op": "get", "id": DASH})
+    # The purged read is proved on the real tick: `dashboard_purge_tick_tests` in
+    # `crates/medulla-h-jobs/src/jobs/schedule_tick.rs` drives `tick_pass` over a served state.
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R109.5")
