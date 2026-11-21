@@ -34,5 +34,7 @@ closed_error_codes! {
         SpecArtifactUnparseable => "SPEC_ARTIFACT_UNPARSEABLE",
         /// A requirement row names an ID that resolves to no row (MEDULLA-SDLC-R012.2).
         RequirementUnresolved => "REQUIREMENT_UNRESOLVED",
+        /// A contract names a row that no spec holds (MEDULLA-SDLC-R014.4).
+        ContractRowUnresolved => "CONTRACT_ROW_UNRESOLVED",
     }
 }

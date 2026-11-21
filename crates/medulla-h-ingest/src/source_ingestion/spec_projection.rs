@@ -236,6 +236,193 @@ pub fn project_requirements(
     })
 }
 
+/// Refusal code of a contract row that no spec holds.
+pub const CONTRACT_ROW_UNRESOLVED: &str = "CONTRACT_ROW_UNRESOLVED";
+
+/// The node id of the contract record of one seam of one repository.
+pub fn contract_node_id(repo: &str, seam: &str) -> String {
+    format!("contract:{repo}:{seam}")
+}
+
+/// One side of a seam: a repository and the rows it holds on that side.
+#[derive(Default)]
+struct SeamSide {
+    repos: BTreeSet<String>,
+    rows: BTreeSet<(String, String)>,
+}
+
+impl SeamSide {
+    /// `Provider: <repo> <ROW-ID>` header line.
+    fn header(&mut self, rest: &str) {
+        let mut words = rest.split_whitespace();
+        if let (Some(repo), Some(row)) = (words.next(), words.next()) {
+            let row = row.trim_matches(|c: char| matches!(c, '`' | '.' | ','));
+            if is_row_id(row) {
+                self.repos.insert(repo.to_string());
+                self.rows.insert((repo.to_string(), row.to_string()));
+            }
+        }
+    }
+
+    /// `Repository: <repo>. Rows: `A`, `B` (notes).` line of a side section.
+    fn section_line(&mut self, line: &str) {
+        let Some(rest) = line.strip_prefix("Repository:") else {
+            return;
+        };
+        let repo = rest.split('.').next().unwrap_or_default().trim();
+        if repo.is_empty() {
+            return;
+        }
+        self.repos.insert(repo.to_string());
+        for span in ticked(rest) {
+            if is_row_id(span) {
+                self.rows.insert((repo.to_string(), span.to_string()));
+            }
+        }
+    }
+
+    fn join_repos(&self) -> String {
+        self.repos.iter().cloned().collect::<Vec<_>>().join(",")
+    }
+}
+
+/// The parts of one hand-written contract file `specs/<family>/contracts/<seam>.md`.
+struct ContractParts {
+    provider: SeamSide,
+    consumer: SeamSide,
+    wire_shape: String,
+    refusal_codes: BTreeSet<String>,
+    types: BTreeSet<String>,
+    vectors: BTreeSet<String>,
+}
+
+fn parse_contract(text: &str) -> ContractParts {
+    let mut parts = ContractParts {
+        provider: SeamSide::default(),
+        consumer: SeamSide::default(),
+        wire_shape: String::new(),
+        refusal_codes: BTreeSet::new(),
+        types: BTreeSet::new(),
+        vectors: BTreeSet::new(),
+    };
+    let mut heading = String::new();
+    for line in text.lines().map(str::trim_end) {
+        if let Some(title) = line.strip_prefix("## ") {
+            heading = title.trim().to_lowercase();
+            continue;
+        }
+        if let Some(rest) = line.strip_prefix("Provider:") {
+            parts.provider.header(rest);
+        } else if let Some(rest) = line.strip_prefix("Consumer:") {
+            parts.consumer.header(rest);
+        }
+        match heading.as_str() {
+            "provider" => parts.provider.section_line(line),
+            "consumer" => parts.consumer.section_line(line),
+            "wire shape" => {
+                parts.wire_shape.push_str(line);
+                parts.wire_shape.push('\n');
+            }
+            "refusal codes" => {
+                if let Some(code) = line
+                    .strip_prefix("- ")
+                    .and_then(|bullet| ticked(bullet).into_iter().next())
+                {
+                    parts.refusal_codes.insert(code.to_string());
+                }
+            }
+            "authoritative types" | "authoritative code types" => {
+                if line.starts_with("- ") {
+                    parts.types.extend(
+                        ticked(line)
+                            .into_iter()
+                            .filter(|s| s.contains('/'))
+                            .map(str::to_string),
+                    );
+                }
+            }
+            "test vectors" => {
+                if line.starts_with("- ") {
+                    parts.vectors.extend(
+                        ticked(line)
+                            .into_iter()
+                            .filter(|s| s.contains("::"))
+                            .map(str::to_string),
+                    );
+                }
+            }
+            _ => {}
+        }
+    }
+    parts.wire_shape = parts.wire_shape.trim().to_string();
+    parts
+}
+
+/// Project the hand-written contract files of repository `repo` (MEDULLA-SDLC-R014.4).
+///
+/// `files` is `(file name, text)` of each `contracts/<seam>.md`. Each becomes one
+/// Contract record that names the provider and consumer repositories and rows, lists the
+/// wire shape and refusal codes and links the authoritative types and test vectors. Each
+/// named row gets a `crossesSeam` edge from its requirement node to the contract, so a
+/// requirement resolves to the owning contract and both repositories. `known_rows` holds the
+/// requirement node ids that exist; a contract row outside it refuses with
+/// `CONTRACT_ROW_UNRESOLVED` and no operation is produced. The engine generates no contract.
+pub fn project_contracts(
+    repo: &str,
+    files: &[(&str, &str)],
+    known_rows: &BTreeSet<String>,
+) -> Result<RequirementProjection, String> {
+    let mut contracts: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+    let mut links: BTreeSet<(String, String)> = BTreeSet::new();
+    for (name, text) in files {
+        let seam = name.rsplit('/').next().unwrap_or(name);
+        let seam = seam.strip_suffix(".md").unwrap_or(seam);
+        let id = contract_node_id(repo, seam);
+        let parts = parse_contract(text);
+        for (row_repo, row) in parts.provider.rows.iter().chain(parts.consumer.rows.iter()) {
+            let requirement = requirement_node_id(row_repo, row);
+            if !known_rows.contains(&requirement) {
+                return Err(format!(
+                    "{CONTRACT_ROW_UNRESOLVED}: {row} (named by contract {seam}) resolves to no row"
+                ));
+            }
+            links.insert((requirement, id.clone()));
+        }
+        let join = |set: &BTreeSet<String>| set.iter().cloned().collect::<Vec<_>>().join(",");
+        contracts.insert(
+            id.clone(),
+            node(
+                &id,
+                serde_json::json!({
+                    "type": "Contract",
+                    "repo": repo,
+                    "seam": seam,
+                    "declaredIn": name,
+                    "provider_repos": parts.provider.join_repos(),
+                    "consumer_repos": parts.consumer.join_repos(),
+                    "wire_shape": parts.wire_shape,
+                    "refusal_codes": join(&parts.refusal_codes),
+                    "types": join(&parts.types),
+                    "vectors": join(&parts.vectors),
+                }),
+            ),
+        );
+    }
+    let nodes = contracts.len() as u32;
+    let edges = links.len() as u32;
+    let mut operations: Vec<serde_json::Value> = contracts.into_values().collect();
+    operations.extend(
+        links
+            .iter()
+            .map(|(requirement, contract)| edge(requirement, contract, "crossesSeam")),
+    );
+    Ok(RequirementProjection {
+        operations,
+        nodes,
+        edges,
+    })
+}
+
 /// Write one projection as the single `BatchUpdate` through the mutation gateway.
 pub async fn commit_requirements(
     ctx: &MutationCtx<'_>,
@@ -378,5 +565,65 @@ mod tests {
             .expect_err("OTHER-R009 resolves to no row");
         assert!(refusal.starts_with(REQUIREMENT_UNRESOLVED), "{refusal}");
         assert!(refusal.contains("OTHER-R009") && refusal.contains("DEMO-R002"));
+    }
+
+    const CONTRACT: &str = "# Seam contract: demo\n\n\
+Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
+## Provider\n\nRepository: demo. Rows: `DEMO-R001`, `DEMO-R002`.\n\n\
+## Wire shape\n\n| Direction | Record |\n|---|---|\n| a to b | `Req` |\n\n\
+## Refusal codes\n\n- `DEMO_REFUSED`: no.\n\n\
+## Authoritative types\n\n- `crates/demo/src/lib.rs`: `Req`.\n\n\
+## Test vectors\n\n- `tests/demo/test_demo.py::test_demo` holds the vector.\n";
+
+    fn known() -> BTreeSet<String> {
+        ["demo:DEMO-R001", "demo:DEMO-R002", "other:OTHER-R009"]
+            .iter()
+            .map(|id| {
+                let (repo, row) = id.split_once(':').unwrap();
+                requirement_node_id(repo, row)
+            })
+            .collect()
+    }
+
+    // spec: MEDULLA-SDLC-R014.4
+    #[test]
+    fn contract_files_form_the_seam_graph() {
+        let files = [("contracts/demo-seam.md", CONTRACT)];
+        let p = project_contracts("demo", &files, &known()).expect("projects");
+        let id = contract_node_id("demo", "demo-seam");
+        let node = &p.operations[0];
+        assert_eq!(node["id"], id.as_str());
+        assert_eq!(node["properties"]["type"], "Contract");
+        println!(
+            "CONTRACT\t{}\t{}\t{}",
+            node["properties"]["provider_repos"].as_str().unwrap(),
+            node["properties"]["consumer_repos"].as_str().unwrap(),
+            node["properties"]["refusal_codes"].as_str().unwrap()
+        );
+        for op in p.operations.iter().filter(|op| op["op"] == "upsert_edge") {
+            assert_eq!(op["target"], id.as_str());
+            assert_eq!(op["properties"]["relationship"], "crossesSeam");
+            println!("SEAM_EDGE\t{}", op["source"].as_str().unwrap());
+        }
+        assert_eq!(p.nodes, 1);
+        assert_eq!(p.edges, 3);
+        assert_eq!(node["properties"]["types"], "crates/demo/src/lib.rs");
+        assert_eq!(
+            node["properties"]["vectors"],
+            "tests/demo/test_demo.py::test_demo"
+        );
+        assert!(node["properties"]["wire_shape"]
+            .as_str()
+            .unwrap()
+            .contains("| a to b |"));
+    }
+
+    // spec: MEDULLA-SDLC-R014.4
+    #[test]
+    fn contract_with_unknown_row_refuses() {
+        let files = [("contracts/demo-seam.md", CONTRACT)];
+        let refusal =
+            project_contracts("demo", &files, &BTreeSet::new()).expect_err("no row is known");
+        assert!(refusal.starts_with(CONTRACT_ROW_UNRESOLVED), "{refusal}");
     }
 }
