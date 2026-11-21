@@ -234,7 +234,7 @@ pub(crate) fn write_projection_triples(
 /// digest hex>`, so a changed part is a new revision and an equal head the same one.
 fn seed_triples(seed: &[PackSchemaDocument], connector: &str) -> Result<Vec<Triple>, String> {
     use crate::admin::connector_pack::seed::{canonical_digest, seed_content_digest, MAX_SEED_TRIPLES};
-    use medulla_catalog_types::connector_pack::{escape_pack_name, SeedPartKey};
+    use medulla_catalog_types::connector_pack::{seed_revision_iri, SeedPartKey};
 
     if seed.is_empty() {
         return Ok(Vec::new());
@@ -255,11 +255,7 @@ fn seed_triples(seed: &[PackSchemaDocument], connector: &str) -> Result<Vec<Trip
                 .map_err(|error| format!("SEED_TURTLE_INVALID: {error}"))?,
         );
     }
-    let revision = node(&format!(
-        "urn:medulla:seed:{}:{}",
-        escape_pack_name(connector),
-        seed_content_digest(&digests).to_hex()
-    ))?;
+    let revision = node(&seed_revision_iri(connector, &seed_content_digest(&digests)))?;
     let subjects: std::collections::BTreeSet<NamedNode> = triples
         .iter()
         .filter_map(|triple| match &triple.subject {

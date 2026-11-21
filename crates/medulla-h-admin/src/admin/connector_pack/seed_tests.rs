@@ -327,4 +327,54 @@ mod served {
         while sweep(&served.state, &subscribed).await.unwrap() {}
         assert_eq!(pack_graph_rdf(&served, "seed:second").await, projected);
     }
+
+    // spec: MEDULLA-TYPED-PACKS-R104.5
+    #[tokio::test]
+    async fn receipt_names_part_outcomes() {
+        use medulla_catalog_types::connector_pack::{SeedPartKey, SeedPartOutcome};
+
+        let served = Served::new();
+        let _env = served.with_graph_persistence().await;
+        bind(&served, CONNECTOR, ADMIN).await;
+        let first = imported(&served, &build_pack(CONNECTOR, &parts()), None).await;
+        let seed = first.seed.clone().expect("a pack with seed parts carries a receipt");
+        assert_eq!(seed.connector.as_str(), CONNECTOR);
+        assert!(seed
+            .outcomes
+            .values()
+            .all(|outcome| *outcome == SeedPartOutcome::Inserted));
+        assert_eq!(seed.outcomes.len(), 3);
+
+        // Only the changed part is `replaced`; the others are `unchanged`.
+        let mut changed = parts();
+        changed[1] = seed_part("catalog", "<urn:seed:item2> a <urn:seed:CatalogEntry> .\n");
+        let second = imported(
+            &served,
+            &build_pack(CONNECTOR, &changed),
+            Some(head_of(&first)),
+        )
+        .await;
+        let reimport = second.seed.clone().expect("the reimport carries a receipt");
+        assert_eq!(reimport.outcomes[&SeedPartKey::Catalog], SeedPartOutcome::Replaced);
+        assert_eq!(reimport.outcomes[&SeedPartKey::Identity], SeedPartOutcome::Unchanged);
+        assert_eq!(reimport.outcomes[&SeedPartKey::References], SeedPartOutcome::Unchanged);
+        assert_ne!(reimport.content_digest, seed.content_digest);
+        assert_ne!(reimport.graph_revision, seed.graph_revision);
+
+        // The graph holds the receipt's revision node, and each seed subject links to it.
+        let subscribed = AtomicBool::new(false);
+        while sweep(&served.state, &subscribed).await.unwrap() {}
+        let projected = pack_graph_rdf(&served, "seed:receipt").await;
+        assert!(projected.contains(&reimport.graph_revision), "{projected}");
+        assert!(!projected.contains(&seed.graph_revision), "{projected}");
+        assert_eq!(
+            projected
+                .lines()
+                .filter(|line| line.contains("connector-seed#fromSeed")
+                    && line.contains(&reimport.graph_revision))
+                .count(),
+            3,
+            "one fromSeed link per seed subject: {projected}"
+        );
+    }
 }

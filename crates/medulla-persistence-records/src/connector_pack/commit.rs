@@ -285,6 +285,7 @@ fn import_receipt(
         warnings: plan.record.warnings.clone(),
         projection: plan.record.projection.clone(),
         object_model_shape_digest: plan.record.object_model_shape_digest,
+        seed: plan.record.seed.clone(),
     })
 }
 

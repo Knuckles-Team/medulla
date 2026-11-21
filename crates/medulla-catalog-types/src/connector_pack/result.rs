@@ -205,6 +205,10 @@ pub struct PackImportReceipt {
     /// absent when the pack declares none (MEDULLA-TYPED-PACKS-R650.5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub object_model_shape_digest: Option<Digest256>,
+    /// What the import did to each seed part; absent when the pack carries none
+    /// (MEDULLA-TYPED-PACKS-R104.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<super::SeedImportReceipt>,
 }
 
 /// What one import attempt produced.

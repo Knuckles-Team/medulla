@@ -127,7 +127,7 @@ pub use catalog_authority::{
     McpCatalogReconcileRequest, McpJoinedConfigurationRow,
 };
 pub use ids::{
-    connector_instance_iri, escape_pack_name, pack_component_id, validate_connector,
+    connector_instance_iri, escape_pack_name, seed_revision_iri, pack_component_id, validate_connector,
     PACK_COMPONENT_ID_PREFIX,
 };
 pub use index::{
@@ -151,7 +151,7 @@ pub use result::{
     PackViolationCode, PackWarning, PackWarningCode, PackWriteErrorCode,
     MAX_PROJECTION_FAILURE_DETAIL_BYTES,
 };
-pub use seed_graph::{SeedGraphImport, SeedPart, SeedPartKey};
+pub use seed_graph::{SeedGraphImport, SeedImportReceipt, SeedPart, SeedPartKey, SeedPartOutcome};
 pub use self_served_catalog::{
     check_self_served_import, self_served_candidate, self_served_component_revision,
     McpSelfServedCatalogAttestRequest, SelfServedAttester,

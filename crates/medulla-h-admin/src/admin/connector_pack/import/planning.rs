@@ -126,7 +126,7 @@ pub(super) fn prepare(
     if !violations.is_empty() {
         return rejected(request, violations);
     }
-    super::seed_entries::validate_seed_entries(
+    let seed_receipt = super::seed_entries::validate_seed_entries(
         request,
         archive,
         &all,
@@ -181,7 +181,7 @@ pub(super) fn prepare(
         return rejected(request, vec![violation]);
     }
     plan.withdraw_absent(prior, &all)?;
-    plan.finish(warnings, shape_digest)
+    plan.finish(warnings, shape_digest, seed_receipt)
 }
 
 /// `crosswalk` and `concept_path` entries resolve against the pinned vocabulary
@@ -566,6 +566,7 @@ impl<'a> PlanCollector<'a> {
         mut self,
         mut warnings: Vec<PackWarning>,
         object_model_shape_digest: Option<Digest256>,
+        seed: Option<medulla_catalog_types::connector_pack::SeedImportReceipt>,
     ) -> Result<Prepared, String> {
         self.members.sort_by(|a, b| a.uri.cmp(&b.uri));
         self.records.sort_by(|a, b| a.uri.cmp(&b.uri));
@@ -580,6 +581,7 @@ impl<'a> PlanCollector<'a> {
             self.server_pin
                 .ok_or_else(|| "MALFORMED_INDEX: pack has no server".to_string())?,
             object_model_shape_digest,
+            seed,
         )?;
         let record_bytes =
             medulla_storage::encode_bounded(&record, "connector pack import record")?;
@@ -715,6 +717,7 @@ fn import_record(
     warnings: Vec<PackWarning>,
     server: ComponentDependency,
     object_model_shape_digest: Option<Digest256>,
+    seed: Option<medulla_catalog_types::connector_pack::SeedImportReceipt>,
 ) -> Result<PackImportRecord, String> {
     Ok(PackImportRecord {
         schema_version: PACK_IMPORT_RECORD_SCHEMA_VERSION,
@@ -742,6 +745,7 @@ fn import_record(
         entries: BoundedVec::new(entries)?,
         warnings: BoundedVec::new(warnings)?,
         object_model_shape_digest,
+        seed,
     })
 }
 

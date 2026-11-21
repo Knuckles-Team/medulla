@@ -665,6 +665,7 @@ pub mod tests {
             entries: BoundedVec::new(Vec::new()).unwrap(),
             warnings: BoundedVec::new(Vec::new()).unwrap(),
             object_model_shape_digest: None,
+            seed: None,
             projection: PackProjectionState::Pending,
         };
         match store

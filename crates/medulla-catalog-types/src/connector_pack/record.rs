@@ -85,4 +85,8 @@ pub struct PackImportRecord {
     /// absent when the pack declares none (MEDULLA-TYPED-PACKS-R650.5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub object_model_shape_digest: Option<Digest256>,
+    /// The seed import receipt, absent when the pack carries no seed parts
+    /// (MEDULLA-TYPED-PACKS-R104.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub seed: Option<super::SeedImportReceipt>,
 }

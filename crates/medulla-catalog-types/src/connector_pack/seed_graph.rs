@@ -66,6 +66,34 @@ pub struct SeedGraphImport {
     pub content_digest: Digest256,
 }
 
+/// What an import did to one seed part: the closed set of part outcomes
+/// (MEDULLA-TYPED-PACKS-R104.5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum SeedPartOutcome {
+    /// No prior seed state existed: the part is new.
+    Inserted,
+    /// The part differs from the prior head's, and replaced it.
+    Replaced,
+    /// The part is byte-equal to the prior head's.
+    Unchanged,
+}
+
+/// The receipt of one seed import: the connector, the content digest, one outcome per
+/// part, and the IRI of the seed revision node the projection writes into the pack
+/// graph (MEDULLA-TYPED-PACKS-R104.5). Each seed subject links to that node with
+/// `seed:fromSeed`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SeedImportReceipt {
+    pub connector: ResourceId,
+    pub content_digest: Digest256,
+    pub outcomes: BTreeMap<SeedPartKey, SeedPartOutcome>,
+    pub graph_revision: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -111,6 +139,30 @@ mod tests {
 
     /// R104.1: every model field round-trips, and the closed part key rejects
     /// an unknown map member before any seed import handler can run.
+    // spec: MEDULLA-TYPED-PACKS-R104.5
+    #[test]
+    fn receipt_outcomes_are_the_closed_set() {
+        let receipt = SeedImportReceipt {
+            connector: ResourceId::new("example").unwrap(),
+            content_digest: digest(5),
+            outcomes: BTreeMap::from([
+                (SeedPartKey::Identity, SeedPartOutcome::Unchanged),
+                (SeedPartKey::Catalog, SeedPartOutcome::Replaced),
+                (SeedPartKey::References, SeedPartOutcome::Inserted),
+            ]),
+            graph_revision: "urn:medulla:seed:example:00".to_string(),
+        };
+        let wire = serde_json::to_value(&receipt).unwrap();
+        assert_eq!(wire["outcomes"]["catalog"], "replaced");
+        assert_eq!(
+            serde_json::from_value::<SeedImportReceipt>(wire.clone()).unwrap(),
+            receipt
+        );
+        let mut unknown = wire;
+        unknown["outcomes"]["catalog"] = serde_json::json!("merged");
+        assert!(serde_json::from_value::<SeedImportReceipt>(unknown).is_err());
+    }
+
     // spec: MEDULLA-TYPED-PACKS-R104.1
     #[test]
     fn seed_import_round_trips() {

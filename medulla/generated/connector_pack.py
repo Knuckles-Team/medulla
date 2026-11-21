@@ -429,6 +429,21 @@ class PackHeadView(BaseModel):
     visible_record_id: str | None = None
 
 
+class SeedPartOutcome(str, Enum):
+    INSERTED = "inserted"
+    REPLACED = "replaced"
+    UNCHANGED = "unchanged"
+
+
+class SeedImportReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connector: str
+    content_digest: Digest256
+    graph_revision: str
+    outcomes: dict[str, SeedPartOutcome]
+
+
 class PackImportReceipt(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -444,6 +459,7 @@ class PackImportReceipt(BaseModel):
     projection: PackProjectionState
     record_id: str
     schema_version: Annotated[int, Field(ge=0, le=65535)]
+    seed: SeedImportReceipt | None = None
     tenant_id: str
     warnings: BoundedVec_PackWarning_256
 
@@ -771,6 +787,8 @@ PackHeadRef.model_rebuild()
 
 PackHeadView.model_rebuild()
 
+SeedImportReceipt.model_rebuild()
+
 PackImportReceipt.model_rebuild()
 
 PackImportResultImported.model_rebuild()
@@ -862,6 +880,8 @@ __all__ = [
     "PackHeadRef",
     "PackHeadView",
     "PackImportReceipt",
+    "SeedImportReceipt",
+    "SeedPartOutcome",
     "PackImportResult",
     "PackImportResultImported",
     "PackImportResultRejected",

@@ -89,6 +89,16 @@ pub fn connector_instance_iri(connector: &medulla_types::contract::ResourceId) -
     format!("urn:medulla:connector:{}", escape_pack_name(connector.as_str()))
 }
 
+/// The IRI of the seed revision node of one seed content
+/// (MEDULLA-TYPED-PACKS-R104.3): `urn:medulla:seed:<escaped connector>:<content digest hex>`.
+pub fn seed_revision_iri(connector: &str, content_digest: &medulla_types::contract::Digest256) -> String {
+    format!(
+        "urn:medulla:seed:{}:{}",
+        escape_pack_name(connector),
+        content_digest.to_hex()
+    )
+}
+
 /// The component id one pack entry publishes under.
 pub fn pack_component_id(connector: &str, kind: PackEntryKind, name: &str) -> String {
     format!(

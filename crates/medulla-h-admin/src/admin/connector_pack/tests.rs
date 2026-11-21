@@ -707,6 +707,7 @@ pub(in crate::admin) async fn seed_server_only_import(
         entries: BoundedVec::new(entries).unwrap(),
         warnings: BoundedVec::new(Vec::new()).unwrap(),
         object_model_shape_digest: None,
+        seed: None,
         projection: PackProjectionState::None,
     };
     let plan = ConnectorPackCommitPlan {

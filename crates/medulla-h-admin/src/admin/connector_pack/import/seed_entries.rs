@@ -10,6 +10,7 @@
 
 use medulla_catalog_types::connector_pack::{
     ConnectorPackImportRequest, PackEntry, PackEntryKind, PackViolation, PackViolationCode,
+    SeedImportReceipt,
 };
 use medulla_persistence_records::connector_pack::ConnectorPackMemberRow;
 
@@ -23,12 +24,16 @@ pub(super) fn validate_seed_entries(
     prior: &[ConnectorPackMemberRow],
     blob: &dyn medulla_server_blob::blob::ChunkStore,
     violations: &mut Vec<PackViolation>,
-) {
+) -> Option<SeedImportReceipt> {
     if !all.iter().any(|entry| entry.kind == PackEntryKind::SeedPart) {
-        return;
+        return None;
     }
-    if let Err(error) = plan_seed(request, archive, all, prior, blob) {
-        violations.push(seed_violation(&error));
+    match plan_seed(request, archive, all, prior, blob) {
+        Ok(receipt) => Some(receipt),
+        Err(error) => {
+            violations.push(seed_violation(&error));
+            None
+        }
     }
 }
 
@@ -54,12 +59,14 @@ fn plan_seed(
     all: &[&PackEntry],
     prior: &[ConnectorPackMemberRow],
     blob: &dyn medulla_server_blob::blob::ChunkStore,
-) -> Result<(), String> {
+) -> Result<SeedImportReceipt, String> {
     use crate::admin::connector_pack::seed::{
         canonical_digest, current_seed_content, prepare_seed_import, seed_content_digest,
+        SeedImportOutcome,
     };
     use medulla_catalog_types::connector_pack::{
-        connector_instance_iri, SeedGraphImport, SeedPart, SeedPartKey,
+        connector_instance_iri, seed_revision_iri, SeedGraphImport, SeedPart, SeedPartKey,
+        SeedPartOutcome,
     };
     use std::collections::BTreeMap;
 
@@ -134,7 +141,28 @@ fn plan_seed(
         .map_err(|error| format!("SEED_INVALID: the pack's vocabulary does not compose: {error}"))?;
     let composed = medulla_server_api::schema_compose::validate_and_compose(&sources)
         .map_err(|error| format!("SEED_INVALID: the pack's vocabulary does not compose: {error}"))?;
-    prepare_seed_import(&seed, current.as_ref(), &composed.shapes, &sources).map(drop)
+    let plan = prepare_seed_import(&seed, current.as_ref(), &composed.shapes, &sources)?;
+    let outcomes = seed
+        .parts
+        .keys()
+        .map(|key| {
+            let outcome = match &plan.outcome {
+                SeedImportOutcome::Inserted => SeedPartOutcome::Inserted,
+                SeedImportOutcome::Unchanged => SeedPartOutcome::Unchanged,
+                SeedImportOutcome::Replaced { changed_parts } if changed_parts.contains(key) => {
+                    SeedPartOutcome::Replaced
+                }
+                SeedImportOutcome::Replaced { .. } => SeedPartOutcome::Unchanged,
+            };
+            (*key, outcome)
+        })
+        .collect();
+    Ok(SeedImportReceipt {
+        connector: seed.connector.clone(),
+        content_digest: plan.content.content_digest,
+        outcomes,
+        graph_revision: seed_revision_iri(seed.connector.as_str(), &plan.content.content_digest),
+    })
 }
 
 #[cfg(not(all(feature = "rdf", feature = "shacl")))]
@@ -145,7 +173,7 @@ pub(super) fn validate_seed_entries(
     _prior: &[ConnectorPackMemberRow],
     _blob: &dyn medulla_server_blob::blob::ChunkStore,
     violations: &mut Vec<PackViolation>,
-) {
+) -> Option<SeedImportReceipt> {
     if all.iter().any(|entry| entry.kind == PackEntryKind::SeedPart) {
         violations.push(violation(
             PackViolationCode::SeedInvalid,
@@ -153,4 +181,5 @@ pub(super) fn validate_seed_entries(
             "a seed graph needs the rdf and shacl features",
         ));
     }
+    None
 }
