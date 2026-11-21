@@ -963,7 +963,7 @@ fn validate_walkthrough(props: &Props, checks: WalkthroughChecks) -> Result<(), 
         .and_then(|steps| steps.as_array())
         .map(|steps| steps.len() as u64);
     for (position, note) in manifest.execution_notes.iter().enumerate() {
-        if note.step_index != position as u64 {
+        if u64::from(note.step_index) != position as u64 {
             return Err(refuse_code(
                 Code::WalkthroughNoteOrderInvalid,
                 format!(
@@ -974,7 +974,7 @@ fn validate_walkthrough(props: &Props, checks: WalkthroughChecks) -> Result<(), 
         }
     }
     for note in &manifest.execution_notes {
-        let outside_steps = steps.is_some_and(|count| note.step_index >= count);
+        let outside_steps = steps.is_some_and(|count| u64::from(note.step_index) >= count);
         if note.run_id != manifest.run_id || outside_steps {
             return Err(refuse_code(
                 Code::WalkthroughSpanOutsideRun,
