@@ -23,7 +23,7 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T017 [US1] MEDULLA-CQ-XSRC-R005.2 Query fixture: the supply-chain impact query over classes only
 - [ ] T018 [US1] MEDULLA-CQ-XSRC-R005.3 The plan is derived, not authored: planned sources equal the declared authorities
 - [ ] T019 [US1] MEDULLA-CQ-XSRC-R005.4 An unconnected authoritative source yields a typed abstention, not a silent fallback
-- [ ] T020 [US1] MEDULLA-CQ-XSRC-R005.5 Row: `EXPLAIN` shows the authority premise for each planned source
+- [ ] T020 [US1] MEDULLA-CQ-XSRC-R005.5 RETIRED: depended on retired R005.6; premises are served by `SourceCoverage` and `CrossSourceQuestion`
 - [ ] T021 [US1] MEDULLA-CQ-XSRC-R006.1 Add the typed `SupplyChainImpactReport` model
 - [ ] T022 [US1] MEDULLA-CQ-XSRC-R006.2 Report carries freshness per source
 - [ ] T023 [US1] MEDULLA-CQ-XSRC-R006.3 Report abstentions map the source-authority reasons, with no second list
