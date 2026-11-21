@@ -28,6 +28,9 @@ pub mod source_coverage;
 // per-application admission test are later children.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod platform_admission;
+// MEDULLA-IDENTITY-R724.1 — the explicit state machine of `ApplicationAdmission.stage`.
+#[allow(missing_docs)] // docs pending: new machine module
+pub mod application_admission_machine;
 // MEDULLA-SCM-R013 — graph-native symbol edits.
 #[cfg(any(test, feature = "test-support"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

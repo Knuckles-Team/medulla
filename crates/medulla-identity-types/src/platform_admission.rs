@@ -10,7 +10,10 @@
 //! application or database. The live per-application runs against the real
 //! MariaDB-backed candidates remain later children.
 
+use medulla_types::transition_refused::TransitionRefused;
 use serde::{Deserialize, Serialize};
+
+use crate::application_admission_machine::AdmissionEvent;
 
 /// One application's admission progress on the shared platform. Ordered:
 /// each stage names the stages it may advance to next.
@@ -33,44 +36,6 @@ pub enum AdmissionStage {
     RolledBack,
 }
 
-/// An admission attempted a transition its current stage does not allow.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DisallowedTransition {
-    pub from: AdmissionStage,
-    pub to: AdmissionStage,
-}
-
-impl std::fmt::Display for DisallowedTransition {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "cannot advance admission from {:?} to {:?}",
-            self.from, self.to
-        )
-    }
-}
-
-impl std::error::Error for DisallowedTransition {}
-
-impl AdmissionStage {
-    /// Whether advancing from `self` to `next` is an allowed transition.
-    /// `ConnectorRetired` is reachable ONLY from `ParityConfirmed` --
-    /// the acceptance rule this type exists to enforce. Rollback is allowed
-    /// from `Admitted` or `ParityConfirmed` (abandon before the connector is
-    /// retired), never from `ConnectorRetired` (no connector remains to roll
-    /// back to) or `RolledBack` itself.
-    pub fn allows(self, next: Self) -> bool {
-        matches!(
-            (self, next),
-            (Self::Pending, Self::Admitted)
-                | (Self::Admitted, Self::ParityConfirmed)
-                | (Self::ParityConfirmed, Self::ConnectorRetired)
-                | (Self::Admitted, Self::RolledBack)
-                | (Self::ParityConfirmed, Self::RolledBack)
-        )
-    }
-}
-
 /// One application's admission record: its name and current stage.
 /// `advance` is the one entry point that moves it; a direct field write
 /// would bypass the transition rule.
@@ -88,18 +53,12 @@ impl ApplicationAdmission {
         }
     }
 
-    /// Advance to `next`, refusing a transition `self.stage` does not allow
-    /// rather than silently jumping the application's recorded stage.
-    pub fn advance(&mut self, next: AdmissionStage) -> Result<(), DisallowedTransition> {
-        if self.stage.allows(next) {
-            self.stage = next;
-            Ok(())
-        } else {
-            Err(DisallowedTransition {
-                from: self.stage,
-                to: next,
-            })
-        }
+    /// Fire `event`, refusing a transition `self.stage` does not allow with the typed
+    /// `TRANSITION_REFUSED` rather than silently jumping the application's recorded stage
+    /// (MEDULLA-IDENTITY-R724.1). The result of `apply` is the one assignment to `stage`.
+    pub fn advance(&mut self, event: AdmissionEvent) -> Result<(), TransitionRefused> {
+        self.stage = self.stage.apply(event)?;
+        Ok(())
     }
 }
 
@@ -122,8 +81,8 @@ pub trait PriorIngestConnector {
 /// An error the admission runner refuses to proceed past.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum AdmissionRunError {
-    /// The underlying stage transition was disallowed.
-    Transition(DisallowedTransition),
+    /// The underlying stage transition was refused.
+    Transition(TransitionRefused),
     /// Retirement was attempted while the connector still reports writing
     /// after `retire()` ran -- the runner refuses to record
     /// `ConnectorRetired` on a connector that did not actually stop.
@@ -143,8 +102,8 @@ impl std::fmt::Display for AdmissionRunError {
 
 impl std::error::Error for AdmissionRunError {}
 
-impl From<DisallowedTransition> for AdmissionRunError {
-    fn from(err: DisallowedTransition) -> Self {
+impl From<TransitionRefused> for AdmissionRunError {
+    fn from(err: TransitionRefused) -> Self {
         Self::Transition(err)
     }
 }
@@ -170,13 +129,13 @@ impl<C: PriorIngestConnector> AdmissionRunner<C> {
     /// Attach the application to the shared platform. The prior connector
     /// keeps writing.
     pub fn admit(&mut self) -> Result<(), AdmissionRunError> {
-        self.admission.advance(AdmissionStage::Admitted)?;
+        self.admission.advance(AdmissionEvent::Admit)?;
         Ok(())
     }
 
     /// Confirm the attached copy is at parity with the prior connector.
     pub fn confirm_parity(&mut self) -> Result<(), AdmissionRunError> {
-        self.admission.advance(AdmissionStage::ParityConfirmed)?;
+        self.admission.advance(AdmissionEvent::ConfirmParity)?;
         Ok(())
     }
 
@@ -184,7 +143,7 @@ impl<C: PriorIngestConnector> AdmissionRunner<C> {
     /// before `ParityConfirmed`, and refused here if the connector reports
     /// it is still writing after `retire()` runs.
     pub fn retire_connector(&mut self) -> Result<(), AdmissionRunError> {
-        self.admission.advance(AdmissionStage::ConnectorRetired)?;
+        self.admission.advance(AdmissionEvent::RetireConnector)?;
         self.connector.retire();
         if self.connector.is_writing() {
             return Err(AdmissionRunError::ConnectorStillWriting);
@@ -197,7 +156,7 @@ impl<C: PriorIngestConnector> AdmissionRunner<C> {
     /// path -- the runner does not touch it. Refused once the connector has
     /// already been retired (the same-named `advance` refusal).
     pub fn rollback(&mut self) -> Result<(), AdmissionRunError> {
-        self.admission.advance(AdmissionStage::RolledBack)?;
+        self.admission.advance(AdmissionEvent::RollBack)?;
         Ok(())
     }
 }
@@ -233,9 +192,9 @@ mod tests {
     #[test]
     fn full_admission_path_advances_in_order() {
         let mut admission = ApplicationAdmission::new("gramps");
-        admission.advance(AdmissionStage::Admitted).unwrap();
-        admission.advance(AdmissionStage::ParityConfirmed).unwrap();
-        admission.advance(AdmissionStage::ConnectorRetired).unwrap();
+        admission.advance(AdmissionEvent::Admit).unwrap();
+        admission.advance(AdmissionEvent::ConfirmParity).unwrap();
+        admission.advance(AdmissionEvent::RetireConnector).unwrap();
         assert_eq!(admission.stage, AdmissionStage::ConnectorRetired);
     }
 
@@ -243,11 +202,12 @@ mod tests {
     #[test]
     fn retiring_connector_before_parity_is_refused() {
         let mut admission = ApplicationAdmission::new("gramps");
-        admission.advance(AdmissionStage::Admitted).unwrap();
+        admission.advance(AdmissionEvent::Admit).unwrap();
         let err = admission
-            .advance(AdmissionStage::ConnectorRetired)
+            .advance(AdmissionEvent::RetireConnector)
             .unwrap_err();
-        assert_eq!(err.from, AdmissionStage::Admitted);
+        assert_eq!(err.from, "admitted");
+        assert_eq!(err.machine, "ApplicationAdmissionMachine");
         assert_eq!(admission.stage, AdmissionStage::Admitted);
     }
 
@@ -255,7 +215,7 @@ mod tests {
     #[test]
     fn retiring_connector_from_pending_is_refused() {
         let mut admission = ApplicationAdmission::new("twenty");
-        assert!(admission.advance(AdmissionStage::ConnectorRetired).is_err());
+        assert!(admission.advance(AdmissionEvent::RetireConnector).is_err());
         assert_eq!(admission.stage, AdmissionStage::Pending);
     }
 
@@ -263,9 +223,9 @@ mod tests {
     #[test]
     fn rollback_is_allowed_before_connector_retirement() {
         let mut admission = ApplicationAdmission::new("firefly");
-        admission.advance(AdmissionStage::Admitted).unwrap();
-        admission.advance(AdmissionStage::ParityConfirmed).unwrap();
-        admission.advance(AdmissionStage::RolledBack).unwrap();
+        admission.advance(AdmissionEvent::Admit).unwrap();
+        admission.advance(AdmissionEvent::ConfirmParity).unwrap();
+        admission.advance(AdmissionEvent::RollBack).unwrap();
         assert_eq!(admission.stage, AdmissionStage::RolledBack);
     }
 
@@ -273,10 +233,10 @@ mod tests {
     #[test]
     fn rollback_after_connector_retirement_is_refused() {
         let mut admission = ApplicationAdmission::new("immich");
-        admission.advance(AdmissionStage::Admitted).unwrap();
-        admission.advance(AdmissionStage::ParityConfirmed).unwrap();
-        admission.advance(AdmissionStage::ConnectorRetired).unwrap();
-        assert!(admission.advance(AdmissionStage::RolledBack).is_err());
+        admission.advance(AdmissionEvent::Admit).unwrap();
+        admission.advance(AdmissionEvent::ConfirmParity).unwrap();
+        admission.advance(AdmissionEvent::RetireConnector).unwrap();
+        assert!(admission.advance(AdmissionEvent::RollBack).is_err());
         assert_eq!(admission.stage, AdmissionStage::ConnectorRetired);
     }
 

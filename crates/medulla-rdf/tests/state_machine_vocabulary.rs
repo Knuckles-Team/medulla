@@ -1602,3 +1602,17 @@ fn series_projection_machine_matches_edge_table() {
 fn series_projection_machine_classes_extend_core() {
     sm::assert_extends_core("SeriesProjection");
 }
+
+// spec: MEDULLA-IDENTITY-R724.1
+#[test]
+fn application_admission_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_identity_types::application_admission_machine::APPLICATION_ADMISSION_MACHINE,
+    );
+}
+
+// spec: MEDULLA-IDENTITY-R724.1
+#[test]
+fn application_admission_machine_classes_extend_core() {
+    sm::assert_extends_core("ApplicationAdmission");
+}

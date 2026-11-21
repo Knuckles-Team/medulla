@@ -9338,3 +9338,104 @@
     :fromState :SeriesProjectionMachine_Degraded ;
     :toState :SeriesProjectionMachine_Degraded ;
     :firedBy :SeriesProjectionMachine_Event_Degrade .
+
+# spec: MEDULLA-IDENTITY-R724.1
+# The ApplicationAdmission machine: the stage of one application's admission to the shared
+# platform. The Rust edge table APPLICATION_ADMISSION_MACHINE is the same table.
+
+:ApplicationAdmissionState a owl:Class ;
+    rdfs:label "ApplicationAdmission State" ;
+    rdfs:comment "A state of the ApplicationAdmission machine." ;
+    rdfs:subClassOf :State .
+
+:ApplicationAdmissionTerminalState a owl:Class ;
+    rdfs:label "ApplicationAdmission Terminal State" ;
+    rdfs:comment "A terminal state of the ApplicationAdmission machine." ;
+    rdfs:subClassOf :TerminalState, :ApplicationAdmissionState .
+
+:ApplicationAdmissionTransition a owl:Class ;
+    rdfs:label "ApplicationAdmission Transition" ;
+    rdfs:comment "A transition of the ApplicationAdmission machine." ;
+    rdfs:subClassOf :Transition .
+
+:ApplicationAdmissionEvent a owl:Class ;
+    rdfs:label "ApplicationAdmission Event" ;
+    rdfs:comment "An event of the ApplicationAdmission machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ApplicationAdmissionGuard a owl:Class ;
+    rdfs:label "ApplicationAdmission Guard" ;
+    rdfs:comment "A guard of the ApplicationAdmission machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ApplicationAdmissionMachine a :StateMachine ;
+    rdfs:label "Application admission machine" ;
+    :initialState :ApplicationAdmissionMachine_Pending ;
+    :hasState :ApplicationAdmissionMachine_Pending, :ApplicationAdmissionMachine_Admitted, :ApplicationAdmissionMachine_ParityConfirmed, :ApplicationAdmissionMachine_ConnectorRetired, :ApplicationAdmissionMachine_RolledBack .
+
+:ApplicationAdmissionMachine_Pending a :ApplicationAdmissionState ;
+    rdfs:label "Application admission Pending" ;
+    :storedForm "pending" .
+
+:ApplicationAdmissionMachine_Admitted a :ApplicationAdmissionState ;
+    rdfs:label "Application admission Admitted" ;
+    :storedForm "admitted" .
+
+:ApplicationAdmissionMachine_ParityConfirmed a :ApplicationAdmissionState ;
+    rdfs:label "Application admission ParityConfirmed" ;
+    :storedForm "parity_confirmed" .
+
+:ApplicationAdmissionMachine_ConnectorRetired a :ApplicationAdmissionTerminalState ;
+    rdfs:label "Application admission ConnectorRetired" ;
+    :storedForm "connector_retired" .
+
+:ApplicationAdmissionMachine_RolledBack a :ApplicationAdmissionTerminalState ;
+    rdfs:label "Application admission RolledBack" ;
+    :storedForm "rolled_back" .
+
+:ApplicationAdmissionMachine_Event_Admit a :ApplicationAdmissionEvent ;
+    rdfs:label "Application admission event Admit" .
+
+:ApplicationAdmissionMachine_Event_ConfirmParity a :ApplicationAdmissionEvent ;
+    rdfs:label "Application admission event ConfirmParity" .
+
+:ApplicationAdmissionMachine_Event_RetireConnector a :ApplicationAdmissionEvent ;
+    rdfs:label "Application admission event RetireConnector" .
+
+:ApplicationAdmissionMachine_Event_RollBack a :ApplicationAdmissionEvent ;
+    rdfs:label "Application admission event RollBack" .
+
+:ApplicationAdmissionMachine_A01 a :ApplicationAdmissionTransition ;
+    rdfs:label "Application admission A01" ;
+    :edgeId "A01" ;
+    :fromState :ApplicationAdmissionMachine_Pending ;
+    :toState :ApplicationAdmissionMachine_Admitted ;
+    :firedBy :ApplicationAdmissionMachine_Event_Admit .
+
+:ApplicationAdmissionMachine_A02 a :ApplicationAdmissionTransition ;
+    rdfs:label "Application admission A02" ;
+    :edgeId "A02" ;
+    :fromState :ApplicationAdmissionMachine_Admitted ;
+    :toState :ApplicationAdmissionMachine_ParityConfirmed ;
+    :firedBy :ApplicationAdmissionMachine_Event_ConfirmParity .
+
+:ApplicationAdmissionMachine_A03 a :ApplicationAdmissionTransition ;
+    rdfs:label "Application admission A03" ;
+    :edgeId "A03" ;
+    :fromState :ApplicationAdmissionMachine_ParityConfirmed ;
+    :toState :ApplicationAdmissionMachine_ConnectorRetired ;
+    :firedBy :ApplicationAdmissionMachine_Event_RetireConnector .
+
+:ApplicationAdmissionMachine_A04 a :ApplicationAdmissionTransition ;
+    rdfs:label "Application admission A04" ;
+    :edgeId "A04" ;
+    :fromState :ApplicationAdmissionMachine_Admitted ;
+    :toState :ApplicationAdmissionMachine_RolledBack ;
+    :firedBy :ApplicationAdmissionMachine_Event_RollBack .
+
+:ApplicationAdmissionMachine_A05 a :ApplicationAdmissionTransition ;
+    rdfs:label "Application admission A05" ;
+    :edgeId "A05" ;
+    :fromState :ApplicationAdmissionMachine_ParityConfirmed ;
+    :toState :ApplicationAdmissionMachine_RolledBack ;
+    :firedBy :ApplicationAdmissionMachine_Event_RollBack .
