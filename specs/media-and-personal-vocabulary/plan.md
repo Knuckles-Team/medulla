@@ -411,3 +411,4 @@ Gates for any change under these rows: `cargo test -p medulla-core --test media_
 - overstory renderers of summaries, mindmaps and exports: `OVERSTORY-APPS-R001.5` and `OVERSTORY-APPS-R001.6`; contract `contracts/overstory-presentation.md`.
 - meristem invocation receipts for summaries: `MERISTEM-HARNESS-CYCLE-R068`; contract `contracts/meristem-summary-receipt.md`.
 - connector operations and ontology cleanups owned by the connector repositories: `MEDULLA-CQ-CONN-R067.9` and rows R028 to R033; contract `contracts/connector-operations.md`.
+- the post-to-stream mapping that sets `:announcesStream` (R652 declares only the term): the social scheduling connector's ingest mapping, `CONN-POSTIZ-AGENT-R009` (provider of the link: the connector; owner of the term: this spec).

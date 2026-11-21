@@ -114,14 +114,14 @@ Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shape
 - [ ] T108 [US7] MEDULLA-MEDIA-VOCAB-R650.5 Evidence
 - [ ] T109 [US7] MEDULLA-MEDIA-VOCAB-R650.6 Hot-path proof
 - [ ] T110 [US7] MEDULLA-MEDIA-VOCAB-R651 Engagement metric name and value
-- [ ] T111 [US7] MEDULLA-MEDIA-VOCAB-R652 announcesStream link
+- [ ] T111 [US7] MEDULLA-MEDIA-VOCAB-R652 announcesStream term in media-v1.ttl (the post-to-stream mapping is the connector's)
 - [ ] T112 [US7] MEDULLA-MEDIA-VOCAB-R653 totalAmount covers purchase invoices
 - [ ] T113 [US5] MEDULLA-MEDIA-VOCAB-R654 Transcript segments carry storage, event and narrative time
 - [ ] T114 [US7] MEDULLA-MEDIA-VOCAB-R655 Food composition and nutrient reference types
-- [ ] T115 [US7] MEDULLA-MEDIA-VOCAB-R656 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T116 [US7] MEDULLA-MEDIA-VOCAB-R656.1 AsrResult/ResultStatus state machine: route 1 census findings through ResultStatus::apply
-- [ ] T117 [US7] MEDULLA-MEDIA-VOCAB-R656.2 Manifest/ManifestStatus state machine: route 1 census findings through ManifestStatus::apply
-- [ ] T118 [US7] MEDULLA-MEDIA-VOCAB-R656.3 PhaseExitArtifact/GrampsPilotPhase state machine: route 1 census findings through GrampsPilotPhase::apply
-- [ ] T119 [US7] MEDULLA-MEDIA-VOCAB-R656.4 PhaseExitArtifact/ImmichPilotPhase state machine: route 1 census findings through ImmichPilotPhase::apply
-- [ ] T120 [US7] MEDULLA-MEDIA-VOCAB-R656.5 Revision/TranscriptState state machine: route 1 census findings through TranscriptState::apply
-- [ ] T121 [US7] MEDULLA-MEDIA-VOCAB-R656.6 TtsResult/JobStatus state machine: route 1 census findings through JobStatus::apply
+- [ ] T115 [US7] MEDULLA-MEDIA-VOCAB-R656 RETIRED: no remaining lifecycle (all children retired)
+- [ ] T116 [US7] MEDULLA-MEDIA-VOCAB-R656.1 RETIRED: `ResultStatus` is set once at construction
+- [ ] T117 [US7] MEDULLA-MEDIA-VOCAB-R656.2 RETIRED: `ManifestStatus` is set once at construction
+- [ ] T118 [US7] MEDULLA-MEDIA-VOCAB-R656.3 RETIRED: `PhaseExitArtifact.phase` is a record label; progress is derived
+- [ ] T119 [US7] MEDULLA-MEDIA-VOCAB-R656.4 RETIRED: `PhaseExitArtifact.phase` is a record label; progress is derived
+- [ ] T120 [US7] MEDULLA-MEDIA-VOCAB-R656.5 RETIRED: `TranscriptState` is a struct, not a state set
+- [ ] T121 [US7] MEDULLA-MEDIA-VOCAB-R656.6 RETIRED: `TtsResult.status` is fixed at construction
