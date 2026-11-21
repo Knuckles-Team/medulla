@@ -1053,8 +1053,19 @@ impl Cardinality for ModalityCardinality {
         let raw = self.static_rows_out(op, in_card, ctx);
         #[cfg(feature = "learned-cost")]
         {
-            if crate::learned_cost::enabled() {
-                if let Some(kind) = crate::learned_cost::op_kind(op) {
+            if let Some(kind) = crate::learned_cost::op_kind(op) {
+                // MEDULLA-FEDERATED-QUERY-R732.2: a shadow run plans under the revision its
+                // context binds; every other run reads the champion, the published
+                // revision when there is one, never the challenger.
+                if let Some(head) = &ctx.cost_head {
+                    return head.correct(kind, raw);
+                }
+                if let Some(champion) =
+                    crate::learned_cost::PlanRecordStore::global().published_champion()
+                {
+                    return champion.correct(kind, raw);
+                }
+                if crate::learned_cost::enabled() {
                     return crate::learned_cost::LearnedCostStore::global().correct(kind, raw);
                 }
             }

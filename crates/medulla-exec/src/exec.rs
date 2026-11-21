@@ -302,6 +302,9 @@ pub struct PlanCtx<'a> {
     /// MEDULLA-FEDERATED-QUERY-R732.1 — collects each executed operator's estimate and
     /// measured time for the plan record; bound by `execute` when a tenant is set.
     pub op_costs: Option<std::sync::Arc<crate::learned_cost::OpCostRecorder>>,
+    /// MEDULLA-FEDERATED-QUERY-R732.3 — the cost head a shadow run plans under; `None` on
+    /// every run that answers a query, which reads the champion.
+    pub cost_head: Option<std::sync::Arc<crate::learned_cost::CostHeadRevision>>,
 }
 
 /// The lexical BM25 search surface [`PlanCtx::text`] binds (CONCEPT:MEDULLA-KG.query.served-text-index-binding) —
@@ -593,6 +596,7 @@ impl<'a> PlanCtx<'a> {
             tenant: None,
             interactive: false,
             op_costs: None,
+            cost_head: None,
         }
     }
 
@@ -617,6 +621,15 @@ impl<'a> PlanCtx<'a> {
     /// Bind the commit instant of the snapshot revision (MEDULLA-FEDERATED-QUERY-R078.7).
     pub fn with_snapshot_commit_ms(mut self, committed_at_ms: Option<i64>) -> Self {
         self.snapshot_commit_ms = committed_at_ms;
+        self
+    }
+
+    /// Bind the cost head a shadow run plans under (MEDULLA-FEDERATED-QUERY-R732.3).
+    pub fn with_cost_head(
+        mut self,
+        head: Option<std::sync::Arc<crate::learned_cost::CostHeadRevision>>,
+    ) -> Self {
+        self.cost_head = head;
         self
     }
 
@@ -961,7 +974,7 @@ fn record_plan_run(ops: &[Op], ctx: &PlanCtx, rows: &RowSet, measured_us: u64) {
         Ok((
             lc::plan_digest(ops)?,
             lc::shape_digest(ops)?,
-            lc::corrections_digest(&lc::LearnedCostStore::global().snapshot())?,
+            lc::PlanRecordStore::global().champion().digest.clone(),
         ))
     })();
     let (plan_digest, shape_digest, cost_head_revision) = match digests {

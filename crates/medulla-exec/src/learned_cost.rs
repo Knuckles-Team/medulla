@@ -63,7 +63,7 @@ use medulla_graph_algos::{graphlearn::edge_fn::Basis, graphlearn::edge_fn::KanEd
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::{Mutex, OnceLock, RwLock};
+use std::sync::{Arc, Mutex, OnceLock, RwLock};
 
 use crate::algebra::Op;
 
@@ -427,18 +427,70 @@ pub fn shape_digest(ops: &[Op]) -> Result<String, String> {
         .map(|digest| digest.to_hex())
 }
 
-/// Digest of a correction table: the curves in op-kind order.
-pub fn corrections_digest(corrections: &[CostCorrectionArtifact]) -> Result<String, String> {
-    let mut sorted: Vec<&CostCorrectionArtifact> = corrections.iter().collect();
-    sorted.sort_by(|a, b| a.op_kind.cmp(&b.op_kind));
-    let curves: Vec<(&str, &[f64])> = sorted
+/// Digest of a cost head: the correction curves in op-kind order, then the planner
+/// knobs in name order (MEDULLA-FEDERATED-QUERY-R732.2).
+pub fn cost_head_digest(
+    corrections: &[CostCorrectionArtifact],
+    knobs: &[(String, String)],
+) -> String {
+    let mut curves: Vec<(&str, &[f64])> = corrections
         .iter()
         .map(|c| (c.op_kind.as_str(), c.coeffs.as_slice()))
         .collect();
-    let bytes =
-        rmp_serde::to_vec(&curves).map_err(|error| format!("cost head digest: {error}"))?;
-    medulla_types::contract::Digest256::framed(b"eg/cost-head/v1", &[&bytes])
-        .map(|digest| digest.to_hex())
+    curves.sort_by(|a, b| a.0.cmp(b.0));
+    let mut knobs: Vec<(&str, &str)> = knobs.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+    knobs.sort();
+    // A tuple of strings and floats always encodes, and the framing refuses only an
+    // empty domain or a field past 4 GiB.
+    #[allow(clippy::disallowed_methods)]
+    let bytes = rmp_serde::to_vec(&(curves, knobs)).expect("curves and knobs always encode");
+    #[allow(clippy::disallowed_methods)]
+    let digest = medulla_types::contract::Digest256::framed(b"eg/cost-head/v1", &[&bytes])
+        .expect("the cost-head domain is non-empty");
+    digest.to_hex()
+}
+
+/// One revision of the cost head: the correction curves plus the planner knob values
+/// (MEDULLA-FEDERATED-QUERY-R732.2). Its content digest is the `cost_head_revision` a
+/// [`PlanExecutionRecord`] names.
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CostHeadRevision {
+    /// The content digest of `corrections` and `knobs`.
+    pub digest: String,
+    /// The correction curves, one per op kind.
+    pub corrections: Vec<CostCorrectionArtifact>,
+    /// The planner knob values, name to value.
+    pub knobs: Vec<(String, String)>,
+}
+
+impl CostHeadRevision {
+    /// A revision over `corrections` and `knobs`; the digest is derived from them.
+    pub fn new(corrections: Vec<CostCorrectionArtifact>, knobs: Vec<(String, String)>) -> Self {
+        Self {
+            digest: cost_head_digest(&corrections, &knobs),
+            corrections,
+            knobs,
+        }
+    }
+
+    /// The correction table in force when no revision is published: the process
+    /// [`LearnedCostStore`] as it stands.
+    pub fn builtin() -> Self {
+        Self::new(LearnedCostStore::global().snapshot(), Vec::new())
+    }
+
+    /// The revision's corrected estimate for `op_kind`; an op kind with no curve in the
+    /// revision keeps its raw estimate.
+    pub fn correct(&self, op_kind: &str, estimated: f64) -> f64 {
+        let Some(curve) = self.corrections.iter().find(|c| c.op_kind == op_kind) else {
+            return estimated;
+        };
+        let mut kan = KanEdgeFn::zeros(curve.basis, curve.degree);
+        kan.coeffs = curve.coeffs.clone();
+        let est = estimated.max(EPS);
+        let x = est.ln();
+        (x + kan.eval(x)).exp().clamp(est * 1e-4, est * 1e4)
+    }
 }
 
 /// The bounded in-memory store of served plan runs (MEDULLA-FEDERATED-QUERY-R732.1): a
@@ -448,6 +500,8 @@ pub fn corrections_digest(corrections: &[CostCorrectionArtifact]) -> Result<Stri
 pub struct PlanRecordStore {
     per_tenant_cap: AtomicUsize,
     records: Mutex<HashMap<String, VecDeque<PlanExecutionRecord>>>,
+    champion: RwLock<Option<Arc<CostHeadRevision>>>,
+    challenger: RwLock<Option<Arc<CostHeadRevision>>>,
 }
 
 /// The default of the `query.plan_records` knob.
@@ -459,6 +513,8 @@ impl PlanRecordStore {
         Self {
             per_tenant_cap: AtomicUsize::new(per_tenant_cap.max(1)),
             records: Mutex::new(HashMap::new()),
+            champion: RwLock::new(None),
+            challenger: RwLock::new(None),
         }
     }
 
@@ -492,6 +548,43 @@ impl PlanRecordStore {
             .unwrap_or_default()
     }
 
+    /// The champion cost head the planner reads (MEDULLA-FEDERATED-QUERY-R732.2): the
+    /// published revision, else the built-in correction table.
+    pub fn champion(&self) -> Arc<CostHeadRevision> {
+        match self.published_champion() {
+            Some(revision) => revision,
+            None => Arc::new(CostHeadRevision::builtin()),
+        }
+    }
+
+    /// The published champion revision; `None` while the built-in table is in force.
+    pub fn published_champion(&self) -> Option<Arc<CostHeadRevision>> {
+        recover_corrections(self.champion.read()).clone()
+    }
+
+    /// The challenger revision, which only a shadow run reads.
+    pub fn challenger(&self) -> Option<Arc<CostHeadRevision>> {
+        recover_corrections(self.challenger.read()).clone()
+    }
+
+    /// Set (or clear) the challenger. A challenger never answers a query.
+    pub fn set_challenger(&self, revision: Option<CostHeadRevision>) {
+        *recover_corrections(self.challenger.write()) = revision.map(Arc::new);
+    }
+
+    /// Move the champion pointer to `revision` (MEDULLA-FEDERATED-QUERY-R732.5); the
+    /// challenger slot is cleared when it held that revision.
+    pub fn promote(&self, revision: CostHeadRevision) {
+        let mut challenger = recover_corrections(self.challenger.write());
+        if challenger
+            .as_ref()
+            .is_some_and(|held| held.digest == revision.digest)
+        {
+            *challenger = None;
+        }
+        *recover_corrections(self.champion.write()) = Some(Arc::new(revision));
+    }
+
     /// Every tenant that has a record.
     pub fn tenants(&self) -> Vec<String> {
         let mut tenants: Vec<String> = recover_corrections(self.records.lock())
@@ -521,6 +614,54 @@ mod tests {
             cost_head_revision: String::new(),
             recorded_at_ms: serial as i64,
         }
+    }
+
+    fn artifact(kind: &str, offset: f64) -> CostCorrectionArtifact {
+        CostCorrectionArtifact {
+            op_kind: kind.into(),
+            basis: Basis::Chebyshev,
+            degree: CORRECTION_DEGREE,
+            coeffs: vec![offset, 0.0, 0.0, 0.0],
+            samples: 1,
+            mean_abs_log_error_static: 0.0,
+            mean_abs_log_error_learned: 0.0,
+        }
+    }
+
+    #[test]
+    // spec: MEDULLA-FEDERATED-QUERY-R732.2
+    fn champion_revision_digest_names_the_corrections_in_use() {
+        let store = PlanRecordStore::new(8);
+        // With nothing published the champion is the built-in table.
+        assert!(store.published_champion().is_none());
+        assert_eq!(store.champion().digest, CostHeadRevision::builtin().digest);
+
+        let doubling = CostHeadRevision::new(vec![artifact("Scan", 2f64.ln())], Vec::new());
+        let tripling = CostHeadRevision::new(vec![artifact("Scan", 3f64.ln())], Vec::new());
+        assert_ne!(doubling.digest, tripling.digest);
+        assert_eq!(
+            doubling.digest,
+            cost_head_digest(&doubling.corrections, &doubling.knobs)
+        );
+        let tuned = CostHeadRevision::new(
+            doubling.corrections.clone(),
+            vec![("join_cost".into(), "2".into())],
+        );
+        assert_ne!(doubling.digest, tuned.digest, "knob values are part of the digest");
+
+        // A challenger never changes what the planner reads.
+        store.promote(doubling.clone());
+        store.set_challenger(Some(tripling.clone()));
+        assert_eq!(store.champion().digest, doubling.digest);
+        assert_eq!(store.challenger().map(|c| c.digest.clone()), Some(tripling.digest.clone()));
+        assert!((store.champion().correct("Scan", 100.0) - 200.0).abs() < 1e-6);
+        assert!((tripling.correct("Scan", 100.0) - 300.0).abs() < 1e-6);
+        assert_eq!(store.champion().correct("Filter", 7.0), 7.0);
+
+        // Promotion moves the pointer and empties the slot that held the revision.
+        store.promote(tripling.clone());
+        assert_eq!(store.champion().digest, tripling.digest);
+        assert!(store.challenger().is_none());
     }
 
     #[test]
