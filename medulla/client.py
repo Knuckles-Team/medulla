@@ -13211,7 +13211,10 @@ class QueryClient:
         * ``"explain"`` — ``{"kind", "canonical", "optimized", "stages",
           "incremental", "incremental_note", "warnings"}`` (nothing executes), plus
           ``"applied_policies"`` (``{"tag", "kind", "column"}`` per tag-based mask or
-          row filter the plan is rewritten under; no masked value rides on a record).
+          row filter the plan is rewritten under; no masked value rides on a record)
+          and ``"kept_plans"`` (one ``{"source", "plan_digest", "receipt_job_id",
+          "baseline_digest", "replays", "p50_before_us", "p50_after_us", "bytes_before",
+          "bytes_after"}`` per foreign source the statement reads that has a kept plan).
           Authenticated servers may also include their optional
           ``"plan_digest"`` and ``"query_digest"`` pins; callers must forward
           those server-issued values to the existing ``ForeignReadOpen`` flow

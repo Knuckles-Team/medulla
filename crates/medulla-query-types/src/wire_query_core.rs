@@ -1239,6 +1239,28 @@ pub struct AppliedPolicy {
     pub column: String,
 }
 
+/// A plan a plan-evolution run kept for a foreign source the statement reads, with the
+/// measurements that kept it (MEDULLA-FEDERATED-QUERY-R091.5).
+#[cfg(feature = "query")]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct KeptPlanReport {
+    /// The redacted label of the source.
+    pub source: String,
+    /// The digest of the kept plan.
+    pub plan_digest: String,
+    /// The downtime job whose receipt kept the plan.
+    pub receipt_job_id: String,
+    /// The digest of the plan the kept plan replaced.
+    pub baseline_digest: String,
+    /// How many times the kept plan was replayed.
+    pub replays: u32,
+    pub p50_before_us: u64,
+    pub p50_after_us: u64,
+    pub bytes_before: u64,
+    pub bytes_after: u64,
+}
+
 /// One result row of a UQL statement (UQL-08): `id`, the final `score`, and the value of
 /// each requested channel (aligned to [`UqlResult`]'s `columns`; `None` where no stage
 /// produced that channel for the row). Channels are `f64` (EH-521): a series value channel
@@ -1510,6 +1532,10 @@ pub enum UqlResult {
         /// them. No masked value rides on a record.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         applied_policies: Vec<AppliedPolicy>,
+        /// MEDULLA-FEDERATED-QUERY-R091.5: the kept plan of each foreign source the
+        /// statement reads that has one, in plan order, with its measured evidence.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        kept_plans: Vec<KeptPlanReport>,
     },
     /// `PROFILE`: the rows plus per-stage actual rows and time.
     Profile {

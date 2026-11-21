@@ -1,6 +1,6 @@
 //! The federation implementation of the executor's foreign-source seam.
 
-use medulla_query_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::{ForeignSourceSpec, KeptPlanReport};
 
 use super::session::FederationSession;
 use super::trace::{redacted_label, EstimateProvenance};
@@ -71,6 +71,44 @@ impl ForeignExecutor for FederatedExec<'_> {
             }
             None => false,
         }
+    }
+
+    fn kept_plans(&self, ops: &[Op]) -> Vec<KeptPlanReport> {
+        let Some(scope) = self.session.and_then(FederationSession::cache_scope) else {
+            return Vec::new();
+        };
+        if !super::enabled() {
+            return Vec::new();
+        }
+        ops.iter()
+            .filter_map(|op| {
+                // Resolve exactly as `foreign_scan` and `foreign_named` do, so the shape
+                // digest is the key `kept_for` reads at run time.
+                let remote = match op {
+                    Op::ForeignScan { source, .. } => super::remote::resolve(source, self.registry),
+                    Op::Foreign { name } => self
+                        .registry
+                        .and_then(|registry| super::remote::resolve_named(name, registry)),
+                    _ => None,
+                }?;
+                let label = remote.label();
+                let kept = super::plan_evolution::kept_plan(
+                    scope.owner_salt(),
+                    &super::plan_evolution::shape_digest_of(&label),
+                )?;
+                Some(KeptPlanReport {
+                    source: redacted_label(&label),
+                    plan_digest: kept.plan_digest,
+                    receipt_job_id: kept.receipt_job_id,
+                    baseline_digest: kept.evidence.baseline_digest,
+                    replays: kept.evidence.replays,
+                    p50_before_us: kept.evidence.p50_before_us,
+                    p50_after_us: kept.evidence.p50_after_us,
+                    bytes_before: kept.evidence.bytes_before,
+                    bytes_after: kept.evidence.bytes_after,
+                })
+            })
+            .collect()
     }
 
     fn fragment_reports(&self) -> Vec<ForeignFragmentReport> {

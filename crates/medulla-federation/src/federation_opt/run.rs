@@ -944,6 +944,7 @@ mod tests {
             strategy,
             limit_pushed: false,
             receipt_job_id: "job-1".into(),
+            evidence: Default::default(),
         }
     }
 

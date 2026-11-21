@@ -356,6 +356,14 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         Ok(_) => (true, String::new()),
         Err(why) => (false, why.to_string()),
     };
+    // MEDULLA-FEDERATED-QUERY-R091.5: the kept plans of the foreign sources the plan reads.
+    #[cfg(feature = "federation")]
+    let kept_plans = ctx
+        .federation
+        .map(|foreign| foreign.kept_plans(&optimized.ops))
+        .unwrap_or_default();
+    #[cfg(not(feature = "federation"))]
+    let kept_plans = Vec::new();
     Ok(UqlResult::Explain {
         plan_digest: None,
         query_digest: None,
@@ -372,6 +380,7 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         plan_scope_predicates: plan_scope_predicates(plan),
         // MEDULLA-FEDERATED-QUERY-R706.5: the records of the one rewrite `execute` runs.
         applied_policies: medulla_exec::exec::mask_plan(plan, ctx).1,
+        kept_plans,
     })
 }
 

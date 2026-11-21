@@ -74,6 +74,7 @@ pub(super) fn explain(
         plan_scope_tenant: None,
         plan_scope_predicates: Vec::new(),
         applied_policies: Vec::new(),
+        kept_plans: Vec::new(),
     })
 }
 

@@ -29439,6 +29439,7 @@ class UqlResultExplainBody(BaseModel):
     canonical: str
     incremental: bool
     incremental_note: str
+    kept_plans: list[KeptPlanReport] = []
     optimized: str
     plan_digest: Digest256 | None = None
     plan_node_count: int = 0
@@ -31933,6 +31934,22 @@ class AppliedPolicy(BaseModel):
     column: str
     kind: PolicyKind
     tag: str
+
+
+class KeptPlanReport(BaseModel):
+    """A kept plan an ``EXPLAIN`` statement's foreign source reads, with its measured evidence."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    baseline_digest: str
+    bytes_after: int
+    bytes_before: int
+    p50_after_us: int
+    p50_before_us: int
+    plan_digest: str
+    receipt_job_id: str
+    replays: int
+    source: str
 
 
 class ShortfallReason(str, Enum):
@@ -40716,6 +40733,7 @@ __all__ = [
     "PlanScope",
     "PlanScopeLeaf",
     "AppliedPolicy",
+    "KeptPlanReport",
     "PolicyKind",
     "PredicateOutcome",
     "RankedRows",

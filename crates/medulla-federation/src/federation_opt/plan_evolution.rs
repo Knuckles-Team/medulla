@@ -106,6 +106,40 @@ pub struct KeptPlan {
     pub limit_pushed: bool,
     /// The downtime job whose receipt kept the plan.
     pub receipt_job_id: String,
+    /// The measurements that kept the plan (MEDULLA-FEDERATED-QUERY-R091.5).
+    pub evidence: KeptEvidence,
+}
+
+/// What a plan-evolution run measured when it kept a plan: the digest of the plan it
+/// replaced, the candidate's replay count, and the p50 latency and bytes fetched of the
+/// baseline (`before`) and of the kept plan (`after`). All zero for a forced replay plan.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct KeptEvidence {
+    pub baseline_digest: String,
+    pub replays: u32,
+    pub p50_before_us: u64,
+    pub p50_after_us: u64,
+    pub bytes_before: u64,
+    pub bytes_after: u64,
+}
+
+/// The evidence of one run: the p50 of `latency_us` and of `bytes_fetched` over the baseline
+/// and the candidate replays (MEDULLA-FEDERATED-QUERY-R091.5).
+pub fn evidence_of(
+    baseline_digest: &str,
+    baseline: &[ReplayMeasure],
+    candidate: &[ReplayMeasure],
+) -> KeptEvidence {
+    let latency = |runs: &[ReplayMeasure]| p50(runs.iter().map(|r| r.latency_us).collect());
+    let bytes = |runs: &[ReplayMeasure]| p50(runs.iter().map(|r| r.bytes_fetched).collect());
+    KeptEvidence {
+        baseline_digest: baseline_digest.to_string(),
+        replays: u32::try_from(candidate.len()).unwrap_or(u32::MAX),
+        p50_before_us: latency(baseline),
+        p50_after_us: latency(candidate),
+        bytes_before: bytes(baseline),
+        bytes_after: bytes(candidate),
+    }
 }
 
 /// The closed set of candidate kinds.
@@ -663,7 +697,7 @@ pub(super) fn shape_digest_of(source_label: &str) -> String {
 /// Record one finished fragment for `tenant` (MEDULLA-FEDERATED-QUERY-R091.3). The shape is the
 /// fragment's source label and the plan is the fetch strategy with its pushdowns. `replay` is
 /// what a later replay of the fragment reads.
-pub(super) fn observe(tenant: &str, trace: &FragmentTrace, replay: ReplayInput) {
+pub fn observe(tenant: &str, trace: &FragmentTrace, replay: ReplayInput) {
     let shape_digest = shape_digest_of(&trace.source);
     let mut pushdowns = Vec::new();
     if let Some(limit) = trace.limit_pushed {
@@ -1107,6 +1141,7 @@ mod tests {
             strategy: FetchStrategy::BindJoin,
             limit_pushed: false,
             receipt_job_id: "job-1".into(),
+            evidence: Default::default(),
         }
     }
 

@@ -40,6 +40,18 @@ pub struct PlanEvolutionReceipt {
     /// The registered refusal code when the run was refused (`PLAN_RESULT_MISMATCH` or
     /// `PLAN_AUTHORITY_EXPIRED`); the baseline stays in force.
     pub refusal: Option<String>,
+    /// How many times the baseline plan replayed (MEDULLA-FEDERATED-QUERY-R091.5).
+    pub baseline_replays: u32,
+    /// How many times the candidate plan replayed.
+    pub candidate_replays: u32,
+    /// The baseline's p50 latency over its replays, in microseconds.
+    pub p50_before_us: u64,
+    /// The candidate's p50 latency over its replays, in microseconds.
+    pub p50_after_us: u64,
+    /// The baseline's p50 bytes fetched.
+    pub bytes_before: u64,
+    /// The candidate's p50 bytes fetched.
+    pub bytes_after: u64,
 }
 
 /// The evolution policy the registered `federation.*` knobs resolve to.
@@ -117,6 +129,7 @@ fn forced(observation: &PlanObservation, job_id: &str) -> KeptPlan {
         strategy: observation.strategy,
         limit_pushed: observation.limit_pushed.is_some(),
         receipt_job_id: job_id.to_string(),
+        evidence: Default::default(),
     }
 }
 
@@ -129,7 +142,14 @@ fn evolve_one(
     job_id: &str,
 ) -> PlanEvolutionReceipt {
     let shape = &work.candidate.shape_digest;
-    let receipt = |outcome: &str, refusal: Option<PlanEvolutionRefusal>| PlanEvolutionReceipt {
+    let receipt = |outcome: &str,
+                   refusal: Option<PlanEvolutionRefusal>,
+                   measured: Option<(&[ReplayMeasure], &[ReplayMeasure])>| {
+        // All measurements are zero when nothing replayed (`authority_expired`).
+        let none: &[ReplayMeasure] = &[];
+        let (baseline, candidate) = measured.unwrap_or((none, none));
+        let evidence = plan_evolution::evidence_of(&work.candidate.baseline_digest, baseline, candidate);
+        PlanEvolutionReceipt {
         tenant: tenant.to_string(),
         shape_digest: shape.clone(),
         baseline_digest: work.candidate.baseline_digest.clone(),
@@ -137,6 +157,13 @@ fn evolve_one(
         outcome: outcome.to_string(),
         job_id: job_id.to_string(),
         refusal: refusal.map(|refusal| refusal.code().to_string()),
+        baseline_replays: u32::try_from(baseline.len()).unwrap_or(u32::MAX),
+        candidate_replays: evidence.replays,
+        p50_before_us: evidence.p50_before_us,
+        p50_after_us: evidence.p50_after_us,
+        bytes_before: evidence.bytes_before,
+        bytes_after: evidence.bytes_after,
+        }
     };
     // Both plans replay the same recorded input, so their results are comparable.
     let input = &work.observed.replay;
@@ -144,7 +171,7 @@ fn evolve_one(
         registry.and_then(|registry| plan_evolution::resolve_replay(&input.source, registry))
     else {
         plan_evolution::clear(tenant, shape);
-        return receipt("authority_expired", Some(PlanEvolutionRefusal::AuthorityExpired));
+        return receipt("authority_expired", Some(PlanEvolutionRefusal::AuthorityExpired), None);
     };
     let replays = |observation: &PlanObservation| -> Vec<ReplayMeasure> {
         let plan = forced(observation, job_id);
@@ -156,8 +183,11 @@ fn evolve_one(
     let candidate = replays(&work.observed);
     match plan_evolution::evaluate_shape(policy, &baseline, &candidate) {
         Decision::Keep => {
-            plan_evolution::keep(tenant, shape, forced(&work.observed, job_id));
-            receipt("kept", None)
+            let mut kept = forced(&work.observed, job_id);
+            kept.evidence =
+                plan_evolution::evidence_of(&work.candidate.baseline_digest, &baseline, &candidate);
+            plan_evolution::keep(tenant, shape, kept);
+            receipt("kept", None, Some((&baseline, &candidate)))
         }
         Decision::Revert(reason) => {
             plan_evolution::clear(tenant, shape);
@@ -168,6 +198,7 @@ fn evolve_one(
                     RevertReason::NoMeasuredGain => "no_measured_gain",
                 },
                 reason.refusal(),
+                Some((&baseline, &candidate)),
             )
         }
     }
@@ -216,6 +247,7 @@ mod tests {
                 strategy: Default::default(),
                 limit_pushed: false,
                 receipt_job_id: "earlier".into(),
+                evidence: Default::default(),
             },
         );
         let policy = EvolutionPolicy {
@@ -229,5 +261,68 @@ mod tests {
         assert_eq!(receipt.refusal.as_deref(), Some("PLAN_AUTHORITY_EXPIRED"));
         assert_eq!(receipt.job_id, "job-7");
         assert!(plan_evolution::kept_plan(tenant, shape).is_none());
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R091.5
+    #[test]
+    fn receipt_names_measurements() {
+        let tenant = "plan-evolution-measured-tenant";
+        let shape = "plan-evolution-measured-shape";
+        let observation = PlanObservation {
+            shape_digest: shape.into(),
+            plan_digest: "baseline".into(),
+            sources: vec!["registered:gone#00000000".into()],
+            pushdowns: Vec::new(),
+            latency_us: 1,
+            rows_fetched: 1,
+            bytes_fetched: 0,
+            cache_hit: false,
+            graph_revision: 0,
+            strategy: Default::default(),
+            limit_pushed: None,
+            keys_pushed: 0,
+            replay: Default::default(),
+        };
+        let work = EvolutionWork {
+            candidate: plan_evolution::PlanCandidate {
+                shape_digest: shape.into(),
+                kind: plan_evolution::CandidateKind::PushdownChoice,
+                plan_digest: "candidate".into(),
+                baseline_digest: "baseline".into(),
+            },
+            baseline: observation.clone(),
+            observed: observation,
+        };
+        let policy = EvolutionPolicy {
+            top_shapes: 8,
+            min_gain_percent: 10,
+            min_replays: 5,
+            drift_revalidate_percent: 25,
+        };
+        // An unresolvable source replays nothing: every measurement is zero.
+        let receipt = evolve_one(tenant, None, &work, &policy, "job-8");
+        assert_eq!(
+            (
+                receipt.baseline_replays,
+                receipt.candidate_replays,
+                receipt.p50_before_us,
+                receipt.p50_after_us,
+                receipt.bytes_before,
+                receipt.bytes_after
+            ),
+            (0, 0, 0, 0, 0, 0)
+        );
+        // The evidence a kept plan carries is the p50 of each side's measurements.
+        let run = |latency_us: u64, bytes_fetched: u64| ReplayMeasure {
+            latency_us,
+            bytes_fetched,
+            results: vec!["a".into()],
+        };
+        let before = [run(100, 900), run(300, 700), run(200, 800)];
+        let after = [run(10, 90), run(30, 70), run(20, 80)];
+        let evidence = plan_evolution::evidence_of("baseline", &before, &after);
+        assert_eq!(evidence.replays, 3);
+        assert_eq!((evidence.p50_before_us, evidence.p50_after_us), (200, 20));
+        assert_eq!((evidence.bytes_before, evidence.bytes_after), (800, 80));
     }
 }

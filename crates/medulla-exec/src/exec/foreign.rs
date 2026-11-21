@@ -4,7 +4,7 @@
 //! optional [`ForeignExecutor`], and `Op::Foreign` / `Op::ForeignScan` / the pre-run
 //! `prepare` hook call through it. The federation layer implements the trait.
 
-use medulla_query_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::{ForeignSourceSpec, KeptPlanReport};
 
 use super::PlanCtx;
 use crate::algebra::Op;
@@ -48,4 +48,10 @@ pub trait ForeignExecutor: Sync {
 
     /// The fragments the bound per-query session recorded so far.
     fn fragment_reports(&self) -> Vec<ForeignFragmentReport>;
+
+    /// The kept plan of each foreign source `ops` reads that has one, in plan order
+    /// (MEDULLA-FEDERATED-QUERY-R091.5). None by default.
+    fn kept_plans(&self, _ops: &[Op]) -> Vec<KeptPlanReport> {
+        Vec::new()
+    }
 }
