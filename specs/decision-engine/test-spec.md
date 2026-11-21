@@ -151,7 +151,7 @@ The request fixture in `.3.3` depends on those operations.
 | MEDULLA-DECISION-ENGINE-R113.2.3 | `crates/medulla-h-decide/src/decide/stat_tests/commit_admission_tests.rs` | `topology_capacity_denial_leaves_no_commit_parts` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.2.4 | `crates/medulla-h-decide/src/decide/stat_tests/commit_admission_tests.rs` | `topology_commit_recovery_preserves_atomic_outcome` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.3.1 | `crates/medulla-agent-types/src/agent_topology/retry_allowance.rs` | `tests::retry_allowance_consumes_once`, `tests::invalid_allowances_fail_without_mutation` | Direct native module tests pass; workspace integration not run |
-| MEDULLA-DECISION-ENGINE-R113.3.1.1 | `crates/medulla-persistence-records/src/decision_record/retry_allowance.rs` (new) | `decision_record/tests.rs::retry_allowance_table_issues_once_and_consumes_once`, `decision_record/tests.rs::the_allowance_machine_has_one_transition_function_over_every_state_and_event` | SPECIFIED; not run |
+| MEDULLA-DECISION-ENGINE-R113.3.1.1 | `crates/medulla-persistence-records/src/decision_record/retry_allowance.rs` (new) | `crates/medulla-persistence-records/src/decision_record/tests.rs::retry_allowance_table_issues_once_and_consumes_once`, `crates/medulla-persistence-records/src/decision_record/tests.rs::the_allowance_machine_has_one_transition_function_over_every_state_and_event` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.3.2 | `crates/medulla-persistence-records/src/decision_record/tests.rs` | `topology_denial_allowance_consumption_survives_restart` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.3.2 | `crates/medulla-h-decide/src/decide/commit/tests.rs` | `topology_denial_allowance_is_applied_by_the_recovered_abort` | SPECIFIED; not run |
 | MEDULLA-DECISION-ENGINE-R113.3.3 | `crates/medulla-h-decide/src/decide/commit/tests.rs` | `topology_denial_accepts_one_followup_request` | SPECIFIED; not run |
@@ -937,7 +937,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R174`: `tests/decide/test_generation
 
 | Model | `MEDULLA-DECISION-ENGINE-R176.1` | `crates/medulla-decision-outcome-types/src/decision/load_set/tests.rs::load_set_round_trips`: A serde round trip keeps every field and rejects `max_tools` above 128. |
 
-| Behavior | `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-h-decide/src/decide/stat_tests/load_set.rs::bounded_union_in_stable_order`: A job over three packs returns a bounded, duplicate-free set in a stable order. |
+| Behavior | `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-decision-outcome-types/src/decision/load_set/tests.rs::bounded_union_in_stable_order`: A job over three packs returns a bounded, duplicate-free set in a stable order. |
 
 | Wiring | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set`: A served `Decide` with a load-set question reaches the new arm. |
 
@@ -1682,9 +1682,9 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R174.5` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::receipt_holds_model_counts_metrics_and_pointers` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.6` | `tests/decide/test_generation_cycle_served.py::test_cycle_resumes_and_activates` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R174.6` | `crates/medulla-h-decide/src/decide/stat_tests/generation_cycle_tests.rs::cycle_publishes_reembeds_evaluates_and_activates` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R176` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R176` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | |
 | `MEDULLA-DECISION-ENGINE-R176` | `tests/decide/test_load_set_served.py::test_job_returns_bounded_tool_skill_agent_set` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-decision-outcome-types/src/decision/load_set.rs::tests::bounded_union_in_stable_order` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-decision-outcome-types/src/decision/load_set/tests.rs::bounded_union_in_stable_order` | |
 | `MEDULLA-DECISION-ENGINE-R176.2` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::served_decide_reaches_load_set` | |
 | `MEDULLA-DECISION-ENGINE-R176.3` | `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::other_tenant_packs_never_enter_the_set` | |

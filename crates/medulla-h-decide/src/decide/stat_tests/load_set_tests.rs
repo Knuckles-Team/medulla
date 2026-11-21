@@ -248,7 +248,7 @@ fn agent(iri: &str, tools: &[&str]) -> AgentCandidate {
     }
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R176.3
+// spec: MEDULLA-DECISION-ENGINE-R176.2, MEDULLA-DECISION-ENGINE-R176.3
 #[tokio::test]
 async fn served_decide_reaches_load_set() {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
