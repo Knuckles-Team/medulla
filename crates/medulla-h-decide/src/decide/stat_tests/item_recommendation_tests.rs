@@ -65,7 +65,7 @@ fn ranked_ids(pause_steps: u8) -> Vec<String> {
     .collect()
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R175.2
+// spec: MEDULLA-DECISION-ENGINE-R175.2, MEDULLA-DECISION-ENGINE-R175.6
 #[test]
 fn pause_steps_lift_ndcg() {
     let without = ndcg(&ranked_ids(0), "c0-");

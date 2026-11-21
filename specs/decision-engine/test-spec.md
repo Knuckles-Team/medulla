@@ -1624,7 +1624,7 @@ Each entry names a test that does not exist yet, at its post-split path. The tes
 | `MEDULLA-DECISION-ENGINE-R172.12.6` | `tests/decide/test_capability_designation_pack_served.py::test_designation_reads_imported_pack` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R172.13` | `crates/medulla-compute/src/capability_index/tests.rs::capability_adapter_applies_before_rank` | (planned) |
 | `MEDULLA-DECISION-ENGINE-R172.13` | `crates/medulla-h-decide/src/decide/stat_tests/capability_designation_tests.rs::designation_journey` | (planned) |
-| `MEDULLA-DECISION-ENGINE-R175` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | (planned) |
+| `MEDULLA-DECISION-ENGINE-R175` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | |
 | `MEDULLA-DECISION-ENGINE-R175.2` | `crates/medulla-decision-stats/src/decision/recommend.rs::tests::seeded_fixture_ranks_identically_twice` | |
 | `MEDULLA-DECISION-ENGINE-R175.2` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::pause_steps_lift_ndcg` | |
 | `MEDULLA-DECISION-ENGINE-R175.3` | `crates/medulla-h-decide/src/decide/stat_tests/item_recommendation_tests.rs::decide_routes_item_recommendation_to_the_stored_encoder` | (planned) |

@@ -204,6 +204,7 @@ def test_harness_config_end_to_end(clean_graph):
 
 
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R656.4")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R656.6")
 def test_profile_constrains_a_run(clean_graph):
     """A saved assistant profile constrains a served ``Decide`` run: the
     allowlist removes tools and the profile enters the sealed record as a
