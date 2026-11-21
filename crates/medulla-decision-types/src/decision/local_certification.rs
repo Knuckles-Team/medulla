@@ -31,6 +31,13 @@ pub const CERT_ATOMIC_HAS_DEPENDENCIES: RefusalCode =
 pub const CERT_WORKFLOW_NO_DEPENDENCIES: RefusalCode =
     RefusalCode::new("CERT_WORKFLOW_NO_DEPENDENCIES");
 
+/// A workflow names an atomic skill that has no stored attestation
+/// (MEDULLA-DECISION-ENGINE-R142.101).
+pub const CERT_DEPENDENCY_MISSING: RefusalCode = RefusalCode::new("CERT_DEPENDENCY_MISSING");
+/// A workflow's atomic skill has an attestation, but the skill, model, dataset or criteria
+/// revision it attests is no longer the current one (MEDULLA-DECISION-ENGINE-R142.101).
+pub const CERT_DEPENDENCY_STALE: RefusalCode = RefusalCode::new("CERT_DEPENDENCY_STALE");
+
 /// The refusal codes of the certification rule, in the `local_certification` table.
 pub const REFUSALS: &[RefusalCode] = &[
     CERT_ATOMIC_HAS_DEPENDENCIES,
@@ -38,6 +45,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     CERT_CRITERION_FAILED,
     CERT_RECEIPT_MISMATCH,
     CERT_WORKFLOW_NO_DEPENDENCIES,
+    CERT_DEPENDENCY_MISSING,
+    CERT_DEPENDENCY_STALE,
 ];
 
 /// Whether a skill stands alone or composes other skills.
@@ -127,6 +136,11 @@ pub struct LocalCertificationAttestation {
     pub body: LocalCertificationBody,
     /// `digest_text(LOCAL_CERTIFICATION_DIGEST_DOMAIN, &body)`.
     pub digest: String,
+    /// The evidence the attestation rests on: `skill`, `model`, `dataset`, `criteria`,
+    /// `receipt` and one `criterion:<id>` entry per result. Derived from the body, so it is
+    /// not part of the digest (MEDULLA-DECISION-ENGINE-R142.101).
+    #[serde(default)]
+    pub premises: Vec<String>,
 }
 
 /// Why a certification was refused.
@@ -224,7 +238,29 @@ pub fn certify(
         completion_revision: receipt.completion_revision,
     };
     let digest = digest_text(LOCAL_CERTIFICATION_DIGEST_DOMAIN, &body);
-    Ok(LocalCertificationAttestation { body, digest })
+    let pinned = |dependency: &ComponentDependency| {
+        format!("{}@{}", dependency.component_id, dependency.definition_digest)
+    };
+    let mut premises = vec![
+        format!("skill:{}", pinned(&body.skill)),
+        format!("model:{}", pinned(&body.pins.model)),
+        format!(
+            "dataset:{}@{}:{}",
+            body.pins.dataset.id, body.pins.dataset.revision, body.pins.dataset.digest
+        ),
+        format!("criteria:{}", pinned(&body.pins.criteria_policy)),
+        format!("receipt:{}", body.run_id),
+    ];
+    premises.extend(
+        body.results
+            .iter()
+            .map(|result| format!("criterion:{}", result.criterion_id)),
+    );
+    Ok(LocalCertificationAttestation {
+        body,
+        digest,
+        premises,
+    })
 }
 
 #[cfg(test)]

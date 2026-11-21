@@ -1326,6 +1326,8 @@ mod org_runtime_tests;
 mod kernel_family_support;
 // MEDULLA-DECISION-ENGINE-R100.100.2: served pinned ranking evaluation.
 mod retrieval_eval_tests;
+// MEDULLA-DECISION-ENGINE-R142.101: the served local-skill certification.
+mod certification_tests;
 
 mod population_tests;
 mod research_voi_tests;

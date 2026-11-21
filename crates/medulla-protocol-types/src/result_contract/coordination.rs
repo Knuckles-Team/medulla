@@ -218,6 +218,7 @@ method_results! {
     DecisionEvalStatus(DecisionEval / "status") => Raw<Option<DecisionJobRecord>>;
     DecisionEvalRetrievalRankingSubmit(DecisionEval / "retrieval_ranking_submit") => Raw<DecisionJobRecord>;
     DecisionEvalGroundedAnswerSubmit(DecisionEval / "grounded_answer_submit") => Raw<DecisionJobRecord>;
+    DecisionEvalCertifyLocalSkill(DecisionEval / "certify_local_skill") => Raw<DecisionJobRecord>;
     DecisionEvalReceiptGet(DecisionEval / "receipt") => Raw<Option<medulla_decision_types::decision::DecisionEvalReceipt>>;
     DecisionEvalReceipts(DecisionEval / "receipts") => Raw<medulla_decision_types::decision::DecisionReceiptPage>;
     DecisionEvalTimeline(DecisionEval / "timeline") => Raw<medulla_decision_types::decision::DecisionReceiptTimelinePage>;

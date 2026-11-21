@@ -538,6 +538,10 @@ pub enum DecisionJobOutput {
     },
     /// A grounded evaluation's receipt (R100.101.3).
     GroundedEval { receipt: Box<GroundedEvalReceipt> },
+    /// A local-model skill certification's attestation (R142.101).
+    Certification {
+        attestation: Box<super::local_certification::LocalCertificationAttestation>,
+    },
 }
 
 /// How a job ended: written once with its output or its failure code
@@ -682,6 +686,11 @@ pub enum DecisionEvalOp {
     GroundedAnswerSubmit {
         request: Box<GroundedAnswerRequest>,
     },
+    /// Attest one local-model skill certification and store the attestation by digest
+    /// (MEDULLA-DECISION-ENGINE-R142.101).
+    CertifyLocalSkill {
+        request: Box<super::local_certification::LocalCertificationRequest>,
+    },
 }
 
 impl DecisionEvalOp {
@@ -694,6 +703,7 @@ impl DecisionEvalOp {
                 | Self::MemoryChangeBenchmarkSubmit { .. }
                 | Self::RetrievalRankingSubmit { .. }
                 | Self::GroundedAnswerSubmit { .. }
+                | Self::CertifyLocalSkill { .. }
         )
     }
 
@@ -713,6 +723,7 @@ impl DecisionEvalOp {
             Self::MemoryChangeBenchmarkSubmit { request } => &request.tenant_id,
             Self::RetrievalRankingSubmit { request } => &request.tenant_id,
             Self::GroundedAnswerSubmit { request } => &request.tenant_id,
+            Self::CertifyLocalSkill { request } => &request.tenant_id,
         }
     }
 }

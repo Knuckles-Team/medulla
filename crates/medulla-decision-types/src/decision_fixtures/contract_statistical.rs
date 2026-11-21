@@ -290,6 +290,12 @@ pub fn eval_ops() -> Vec<(&'static str, DecisionEvalOp)> {
                 request: Box::new(grounded_request()),
             },
         ),
+        (
+            "DecisionEval.certify_local_skill",
+            DecisionEvalOp::CertifyLocalSkill {
+                request: Box::new(certification_request()),
+            },
+        ),
     ]
 }
 
@@ -298,6 +304,47 @@ fn pinned_set(id: &str, byte: u8) -> crate::decision::statistical::ranking_eval:
         id: id.to_string(),
         revision: 1,
         digest: digest_text(byte),
+    }
+}
+
+/// An atomic local-skill certification submission.
+fn certification_request() -> crate::decision::local_certification::LocalCertificationRequest {
+    use crate::decision::local_certification::{
+        CriterionResult, LocalCertificationRequest, LocalSkillPins, RunReceipt,
+        SkillClassification, LOCAL_CERTIFICATION_SCHEMA_VERSION,
+    };
+    use medulla_agent_types::agent_component::{AgentComponentKind, ComponentDependency};
+    let pin = |id: &str, kind: AgentComponentKind, byte: u8| ComponentDependency {
+        component_id: id.to_string(),
+        kind,
+        definition_digest: digest_text(byte),
+    };
+    let skill = pin("skill-a", AgentComponentKind::Tool, 0xd1);
+    let pins = LocalSkillPins {
+        model: pin("model-a", AgentComponentKind::ModelProfile, 0xd2),
+        dataset: pinned_set("dataset", 0xd3),
+        criteria_policy: pin("criteria-a", AgentComponentKind::DecisionPolicy, 0xd4),
+    };
+    LocalCertificationRequest {
+        schema_version: LOCAL_CERTIFICATION_SCHEMA_VERSION,
+        tenant_id: "tenant-a".to_string(),
+        idempotency_key: "certify-1".to_string(),
+        skill: skill.clone(),
+        classification: SkillClassification::Atomic,
+        dependencies: Vec::new(),
+        pins: pins.clone(),
+        criterion_ids: vec!["accuracy".to_string()],
+        receipt: RunReceipt {
+            run_id: "run-1".to_string(),
+            skill,
+            pins,
+            results: vec![CriterionResult {
+                criterion_id: "accuracy".to_string(),
+                passed: true,
+                evidence_digest: "e".repeat(64),
+            }],
+            completion_revision: 1,
+        },
     }
 }
 
