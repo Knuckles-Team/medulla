@@ -115,17 +115,18 @@ fn check_currency(event: &Event, currency: &str, kind: &str) -> Result<(), Strin
     }
 }
 
-/// The `benchmark_level` records named `name` across the tenant, ascending.
-fn benchmark_events(core: &GraphCore, scope: &str, name: &str) -> Vec<Event> {
+/// The `benchmark_level` records named `name` across the tenant that were known at `known_ns`
+/// (the cut every other record reader applies), ascending.
+fn benchmark_events(core: &GraphCore, scope: &str, name: &str, known_ns: i64) -> Vec<Event> {
     tenant_events(core, scope)
         .into_iter()
-        .filter(|e| e.kind == "benchmark_level" && e.position == name)
+        .filter(|e| e.kind == "benchmark_level" && e.position == name && e.known_ns <= known_ns)
         .collect()
 }
 
-/// `(ns, level_ticks)` of the benchmark `name` across the tenant, ascending.
-fn benchmark_levels(core: &GraphCore, scope: &str, name: &str) -> Vec<(i64, i64)> {
-    levels_of(&benchmark_events(core, scope, name))
+/// `(ns, level_ticks)` of the benchmark `name` known at `known_ns`, ascending.
+fn benchmark_levels(core: &GraphCore, scope: &str, name: &str, known_ns: i64) -> Vec<(i64, i64)> {
+    levels_of(&benchmark_events(core, scope, name, known_ns))
 }
 
 fn levels_of(events: &[Event]) -> Vec<(i64, i64)> {
@@ -413,8 +414,8 @@ fn performance(
     }
     let benchmark_records = match benchmark {
         Some(name) => {
-            let records = benchmark_events(ctx.core, &scope, name);
-            if benchmark_levels(ctx.core, &scope, name).is_empty() {
+            let records = benchmark_events(ctx.core, &scope, name, known_ns);
+            if levels_of(&records).is_empty() {
                 return refuse(
                     ctx.req_id,
                     BENCHMARK_UNKNOWN,
@@ -558,6 +559,29 @@ mod tests {
         let refusal = valuation_series(&events, "EUR").unwrap_err();
         assert_eq!(refusal, "INVALID_ARGUMENT: valuation v1 is in USD, not EUR");
         assert!(flow_series(&events, "USD").unwrap().is_empty());
+    }
+
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R005.3.3
+    #[test]
+    fn benchmark_levels_apply_the_known_at_cut() {
+        let core = GraphCore::new();
+        let put = |id: &str, date: &str, level: &str, known: Option<&str>| {
+            let mut extra = vec![("activityPrice", format!("\"{level}\"^^xsd:decimal"))];
+            if let Some(known) = known {
+                extra.push(("recordKnownAt", format!("\"{known}\"^^xsd:dateTime")));
+            }
+            let extra: Vec<(&str, &str)> = extra.iter().map(|(a, b)| (*a, b.as_str())).collect();
+            seed(&core, id, SCOPE, "account-benchmark", "benchmark_level", "spx", date, &extra);
+        };
+        put("b1", "2026-01-02T00:00:00Z", "100", None);
+        put("b2", "2026-02-01T00:00:00Z", "110", Some("2026-05-01T00:00:00Z"));
+        let known = ns("2026-03-01T00:00:00Z");
+        assert_eq!(
+            benchmark_levels(&core, SCOPE, "spx", known),
+            vec![(ns("2026-01-02T00:00:00Z"), 100 * SCALE)],
+            "a level recorded after known_at is invisible"
+        );
+        assert_eq!(benchmark_levels(&core, SCOPE, "spx", ns("2026-06-01T00:00:00Z")).len(), 2);
     }
 
     // spec: MEDULLA-FINANCE-PRIMITIVES-R005.3.3
