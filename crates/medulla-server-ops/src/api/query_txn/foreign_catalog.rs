@@ -647,6 +647,12 @@ impl ForeignSourceCatalog {
             })
     }
 
+    /// Whether `owner_scope` registered a source of any kind under `name`
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R761.4).
+    pub fn has_source(&self, owner_scope: &str, name: &str) -> bool {
+        self.spec_for_probe(owner_scope, name).is_some()
+    }
+
     /// The spec `owner` registered under `name`, if any.
     #[cfg(any(test, feature = "test-support"))]
     pub fn spec_for(&self, owner: &CarrierAuthority, name: &str) -> Option<ForeignSourceSpec> {

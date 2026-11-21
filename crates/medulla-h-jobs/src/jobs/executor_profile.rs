@@ -135,7 +135,7 @@ pub(super) async fn check_profile_submit(
         // aggregate nor a sample.
         if let Some((name, _)) = dataset.split_once('.') {
             let catalog = state.read().await.foreign_sources();
-            if catalog.spec_for(authority, name).is_some() {
+            if catalog.has_source(authority.owner_scope(), name) {
                 return Err(unsupported(format!(
                     "dataset {dataset} supports neither aggregate pushdown nor sampling"
                 )));
