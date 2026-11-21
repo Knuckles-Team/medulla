@@ -528,3 +528,130 @@ def test_q11_seed_changes() -> None:
             assert row["revision"] == revision, (part, row)
 
     asyncio.run(exercise())
+
+
+_DW = "https://knuckles-team.github.io/ontology/downtime-work#"
+_FAR_FUTURE_MS = 4_102_444_800_000
+
+
+def _downtime_answer(page: dict[str, Any]) -> dict[str, Any]:
+    """The next-job answer of the newest recorded selection: rows of ``job_type``,
+    ``priority``, ``budget`` and ``skip_reason``, in priority order. With no selection
+    the answer is empty and carries the premise ``dw:no_tick_yet``."""
+    if not page["selections"]:
+        return {"rows": [], "premises": ["dw:no_tick_yet"]}
+    return {"rows": [], "premises": []}
+
+
+def _provision_declared_types(graph, tag: str) -> dict[str, tuple[int, bool]]:
+    """Three declared-window job types of the shipped intent (priority, precondition
+    holds) and the two capacity cells their leases draw on."""
+    types = {
+        f"dw:q11-{tag}-high": (30, True),
+        f"dw:q11-{tag}-low": (10, True),
+        f"dw:q11-{tag}-blocked": (20, False),
+    }
+    for iri, (priority, holds) in types.items():
+        graph.nodes.add(
+            iri,
+            {
+                "type": "JobType",
+                "intent": "plan_evolution",
+                "priority": priority,
+                "windowKind": "declared",
+                "windowStartMs": 0,
+                "windowEndMs": _FAR_FUTURE_MS,
+            },
+        )
+        graph.nodes.add(
+            f"{iri}-budget", {"type": "Budget", "cpuMs": 50, "memoryBytes": 1048576}
+        )
+        graph.edges.add(iri, f"{iri}-budget", {"relationship": "hasBudget"})
+        graph.nodes.add(
+            f"{iri}-precondition",
+            {"type": "Precondition", "query": "ASK { }" if holds else "ASK { FILTER(false) }"},
+        )
+        graph.edges.add(iri, f"{iri}-precondition", {"relationship": "hasPrecondition"})
+    now_ms = int(time.time() * 1000)
+    for cell_id, resource_class, capacity in (
+        ("downtime:cpu", "cpu", 1_000_000),
+        ("downtime:memory", "memory", 1 << 32),
+    ):
+        graph.capacity_leases.update_cell(
+            {
+                "schema_version": "1",
+                "cell": {
+                    "cell_id": cell_id,
+                    "resource_class": resource_class,
+                    "capacity": capacity,
+                    "reserved_floor": 0,
+                    "epoch": 1,
+                    "policy_digest": "q11-downtime",
+                    "updated_at_ms": now_ms,
+                },
+                "expected_epoch": None,
+                "now_ms": now_ms,
+            }
+        )
+    return types
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R011.2")
+def test_q11_downtime_next(clean_graph) -> None:
+    tag = uuid.uuid4().hex[:8]
+    types = _provision_declared_types(clean_graph, tag)
+    mine = {iri for iri in types}
+
+    # The served read is empty until a tick records a selection, and then the answer
+    # names the premise: nothing has been decided yet.
+    assert _downtime_answer({"selections": [], "next_after": None}) == {
+        "rows": [],
+        "premises": ["dw:no_tick_yet"],
+    }
+
+    deadline = time.monotonic() + 60
+    record: dict[str, Any] = {}
+    while time.monotonic() < deadline:
+        page = clean_graph.work_items.downtime_selections(limit=20)
+        for candidate in page["selections"]:
+            entries = {item["iri"] for item in candidate["chosen"]} | {
+                item["iri"] for item in candidate["skipped"]
+            }
+            if mine <= entries:
+                record = candidate
+                break
+        if record:
+            break
+        time.sleep(1)
+    assert record, "no tick recorded the three declared job types"
+    assert _downtime_answer({"selections": [record], "next_after": None})["premises"] == []
+
+    # The selection is chosen in priority order and the false precondition is skipped.
+    chosen = [item["iri"] for item in record["chosen"] if item["iri"] in mine]
+    assert chosen == [f"dw:q11-{tag}-high", f"dw:q11-{tag}-low"], record
+    skipped = {item["iri"]: item["reason"] for item in record["skipped"]}
+    assert skipped[f"dw:q11-{tag}-blocked"] == "precondition_false", record
+
+    # The question reads the same facts with Sparql: rows of job type, priority, budget
+    # and skip reason, priority descending.
+    query = (
+        f"PREFIX dw: <{_DW}> "
+        "SELECT ?job_type ?priority ?budget ?skip_reason WHERE { "
+        f"<{_DW}selection/{record['selection_id'].rsplit('/', 1)[-1]}> dw:chosen|dw:skipped ?e . "
+        "?e dw:jobType ?job_type ; dw:priority ?priority ; dw:cpuMs ?budget . "
+        "OPTIONAL { ?e dw:skipReason ?skip_reason } }"
+    )
+    rows = clean_graph.rdf.sparql(query)
+    ranked = sorted(
+        (
+            (int(_lexical(row["priority"])), _lexical(row["job_type"]), _lexical(row.get("skip_reason")))
+            for row in rows
+            if _lexical(row["job_type"]).endswith(tuple(f"q11-{tag}-{n}" for n in ("high", "low", "blocked")))
+        ),
+        reverse=True,
+    )
+    assert [(priority, reason) for priority, _, reason in ranked] == [
+        (30, ""),
+        (20, "precondition_false"),
+        (10, ""),
+    ], rows
