@@ -3,7 +3,7 @@
 
 use std::io::Cursor;
 
-use calamine::{Data, Reader as _, Xlsx};
+use calamine::{Data, DataType as _, Reader as _, Xlsx};
 use medulla_modality::artifact::ModalityKind;
 use medulla_types::contract::Digest256;
 
