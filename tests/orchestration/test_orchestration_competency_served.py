@@ -39,6 +39,15 @@ from medulla import ConnectorPackEntryContent
 from medulla import decision_client as dc
 from medulla.client import EngineResponseError
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind, PackHeadRef
+from tests.federation.conftest import pg_source  # noqa: F401  (a fixture)
+from tests.federation.test_plan_evolution_served import (
+    _explain_kept,
+    _kept_digest,
+    _observe_shape,
+    _provision_downtime,
+    _register_table,
+    _seed_locals,
+)
 
 PACKS = Path(__file__).parent / "fixtures" / "q11" / "packs"
 MAX_TOOLS = 32
@@ -654,3 +663,33 @@ def test_q11_downtime_next(clean_graph) -> None:
         (20, "precondition_false"),
         (10, ""),
     ], rows
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R011.3")
+def test_q11_best_plan(clean_graph, pg_source) -> None:  # noqa: F811
+    """Which virtual query plan is best for the shape over connectors A and B: the answer is
+    the kept plan digest, its receipt id and the measured gain."""
+    _provision_downtime(clean_graph)
+    _seed_locals(clean_graph)
+    # Two fixture connectors attached as foreign sources; one shape of 50 runs on A.
+    _, connector_a = _register_table(clean_graph, pg_source)
+    _, connector_b = _register_table(clean_graph, pg_source)
+    _observe_shape(clean_graph, connector_a, joins=20, reads=30)
+
+    # Before the downtime window keeps a plan, EXPLAIN lists none for either connector.
+    assert _explain_kept(clean_graph, connector_a) == []
+    assert _explain_kept(clean_graph, connector_b) == []
+
+    kept = _kept_digest(clean_graph, connector_a)
+    assert kept, "the plan_evolution job kept no plan"
+    answer = _explain_kept(clean_graph, connector_a)
+    assert len(answer) == 1, answer
+    report = answer[0]
+    assert report["plan_digest"] == kept
+    assert report["receipt_job_id"]
+    assert (
+        report["p50_after_us"] * 10 <= report["p50_before_us"] * 9
+        or report["bytes_after"] * 10 <= report["bytes_before"] * 9
+    ), report
+    # The other connector has no kept plan: no receipt is named for it.
+    assert _explain_kept(clean_graph, connector_b) == []
