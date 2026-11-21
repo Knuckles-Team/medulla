@@ -64,3 +64,27 @@ def test_unembeddable_types_refuse_without_side_effects(clean_graph):
         "eligible",
         "insufficient_observations",
     }
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.6.2")
+def test_workload_changes_advice(clean_graph):
+    """MEDULLA-FEDERATED-QUERY-R077.6.2: the ranking follows the traffic, not the statistics."""
+    table = _table(clean_graph)
+    idle = _advice(clean_graph, table)
+    assert float(idle["body"]["score"]) == 0.0
+    assert float(idle["title"]["score"]) == 0.0
+
+    for _ in range(60):
+        clean_graph.query.sql(f"SELECT id FROM {table} WHERE body LIKE '%long%'")
+    body_first = _advice(clean_graph, table)
+    assert body_first["body"]["eligibility"] == "eligible"
+    assert float(body_first["body"]["score"]) > float(body_first["title"]["score"])
+    assert float(body_first["title"]["score"]) == 0.0
+    # the integer column stays out of the ranking whatever the traffic
+    assert body_first["qty"]["eligibility"] == "unsupported_type"
+
+    for _ in range(180):
+        clean_graph.query.sql(f"SELECT id FROM {table} WHERE title LIKE '%a%'")
+    title_first = _advice(clean_graph, table)
+    assert float(title_first["title"]["score"]) > float(title_first["body"]["score"])
+    assert float(title_first["body"]["score"]) > 0.0
