@@ -3060,7 +3060,7 @@ fn recover_pacing<G>(locked: std::sync::LockResult<G>) -> G {
 // MEDULLA-CQ-ORCH-R811.3: the cutover proofs live beside the other crate tests and read the
 // store's private writers, so they are a child module of the store.
 #[cfg(test)]
-#[path = "../tests/job_machine_cutover.rs"]
+#[path = "tests/job_machine_cutover.rs"]
 mod job_machine_cutover;
 
 #[cfg(test)]
