@@ -8320,6 +8320,7 @@ dependencies = [
  "medulla-document",
  "medulla-exec",
  "medulla-federation",
+ "medulla-finance-types",
  "medulla-graph-core",
  "medulla-graphql",
  "medulla-h-admin",

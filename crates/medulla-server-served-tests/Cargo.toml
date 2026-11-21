@@ -76,6 +76,7 @@ medulla-uql = { path = "../medulla-uql" }
 medulla-server-graph = { path = "../medulla-server-graph" }
 medulla-server-obs = { path = "../medulla-server-obs", optional = true }
 medulla-server-router = { path = "../medulla-server-router" }
+medulla-finance-types = { path = "../medulla-finance-types", optional = true }
 
 medulla-server = { path = "../medulla-server", features = ["test-support"] }
 
@@ -108,6 +109,7 @@ epistemic = ["medulla-server-router/epistemic", "medulla-server-graph/epistemic"
 epistemic-causal = ["medulla-server/epistemic-causal", "epistemic", "medulla-h-query/epistemic-causal", "medulla-server-api/epistemic-causal"]
 epistemic-tms = ["medulla-server/epistemic-tms", "epistemic", "medulla-h-retrieve/epistemic-tms", "medulla-h-query/epistemic-tms", "medulla-kernel/epistemic-tms", "medulla-server-api/epistemic-tms", "medulla-wire/epistemic-tms"]
 evidence-graph = ["medulla-server/evidence-graph", "epistemic", "medulla-h-query/evidence-graph", "medulla-server-api/evidence-graph"]
+finance = ["dep:medulla-finance-types", "medulla-finance-types/finance", "medulla-server/finance", "medulla-protocol-types/finance", "medulla-result-types/finance", "medulla-types/finance", "shacl"]
 federation = ["medulla-server-router/federation", "medulla-server-graph/federation", "medulla-server/federation", "query", "dep:medulla-plan", "medulla-plan/federation", "server", "medulla-wire-core/federation", "medulla-h-admin/federation", "medulla-h-decide/federation", "medulla-h-jobs/federation", "medulla-h-query/federation", "medulla-protocol-types/federation", "medulla-server-api/federation", "medulla-types/federation", "medulla-query-types/federation", "medulla-wire/federation", "medulla-server-ops/federation", "medulla-server-auth/federation", "medulla-exec/federation", "medulla-federation/federation", "medulla-nlq/federation", "medulla-uql/federation", "medulla-graphql?/federation"]
 federation-sql = ["medulla-server/federation-sql", "federation", "dep:medulla-plan", "medulla-plan/federation-sql", "medulla-h-admin/federation-sql", "medulla-h-decide/federation-sql", "medulla-h-jobs/federation-sql", "medulla-h-query/federation-sql", "medulla-server-api/federation-sql", "medulla-wire/federation-sql", "medulla-server-ops/federation-sql", "medulla-federation/federation-sql"]
 graphql = ["medulla-server-graph/graphql", "medulla-server/graphql", "security", "dep:medulla-graphql", "medulla-graphql/hardening", "server", "medulla-h-query/graphql", "medulla-kernel/graphql", "medulla-protocol-types/graphql", "medulla-server-api/graphql", "medulla-types/graphql", "medulla-wire/graphql", "medulla-server-ops/graphql", "medulla-server-auth/graphql"]

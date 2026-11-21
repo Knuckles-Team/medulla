@@ -5,8 +5,12 @@ from __future__ import annotations
 
 from typing import Any
 
+import os
+
 import pytest
-from conftest import TEST_TENANT
+from conftest import TEST_TENANT, tenant_request_context
+
+from medulla.client import SyncMedullaClient
 
 SCHEMA_VERSION = "finance-v1"
 NS = "http://example.org/m#"
@@ -20,11 +24,17 @@ def _dec(text: str) -> str:
     return f'"{text}"^^xsd:decimal'
 
 
-def _put(graph: Any, kind: str, record_id: str, fields: dict[str, str]) -> None:
+def _put(
+    graph: Any,
+    kind: str,
+    record_id: str,
+    fields: dict[str, str],
+    tenant: str = TEST_TENANT,
+) -> None:
     graph.finance.record_put(
         kind,
         SCHEMA_VERSION,
-        {"record_id": record_id, "tenant": TEST_TENANT, "fields": fields},
+        {"record_id": record_id, "tenant": tenant, "fields": fields},
     )
 
 
@@ -35,6 +45,7 @@ def _activity(
     position: str,
     date: str,
     account: str = "acct",
+    tenant: str = TEST_TENANT,
     **extra: str,
 ) -> None:
     fields = {
@@ -46,7 +57,7 @@ def _activity(
         "activitySession": '"regular"',
     }
     fields.update(extra)
-    _put(graph, "Activity", record_id, fields)
+    _put(graph, "Activity", record_id, fields, tenant)
 
 
 def _seed(graph: Any) -> None:
@@ -94,3 +105,33 @@ def test_twr_mwr_xirr_over_ranges_with_benchmark(clean_graph) -> None:
         _ask(clean_graph, "twr", "1M", "NOPE")
     with pytest.raises(Exception, match="ACCOUNT_BINDING_UNVERIFIED"):
         _ask(clean_graph, "twr", "1M", account="loose")
+
+
+# spec: MEDULLA-FINANCE-PRIMITIVES-R005.3.4
+def test_another_tenants_records_never_enter_the_card(clean_graph) -> None:
+    """Valuations and benchmark levels another verified tenant recorded for the same account
+    and benchmark names change neither figure, and a level recorded after `known_at` is
+    invisible to the benchmark."""
+    _seed(clean_graph)
+    before = _ask(clean_graph, "twr", "1M", "SPX")
+    other = "tenant:performance-other"
+    stranger = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context(other),
+    )
+    try:
+        usd = {"activityCurrency": '"USD"'}
+        _activity(stranger, "x-v1", "valuation", "account-value", "2026-03-01T00:00:00Z",
+                  tenant=other, activityMarketValue=_dec("9999"), **usd)
+        _activity(stranger, "x-b1", "benchmark_level", "SPX", "2026-03-01T00:00:00Z",
+                  account="account-benchmark", tenant=other, activityPrice=_dec("9999"))
+    finally:
+        stranger.close()
+    after = _ask(clean_graph, "twr", "1M", "SPX")
+    assert after["value"] == before["value"] == "0.11000000"
+    assert after["benchmark"]["value"] == before["benchmark"]["value"] == "0.10000000"
+    late = "2026-06-01T00:00:00Z"
+    _activity(clean_graph, "b3", "benchmark_level", "SPX", "2026-03-01T00:00:00Z",
+              account="account-benchmark", activityPrice=_dec("9000"),
+              recordKnownAt=_dt(late))
+    assert _ask(clean_graph, "twr", "1M", "SPX")["benchmark"]["value"] == "0.10000000"
