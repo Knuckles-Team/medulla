@@ -7864,6 +7864,30 @@ class GraphOperationsClient:
             raise RuntimeError("ProcessDocumentExport must answer with an object")
         return result
 
+    async def process_model_deploy(
+        self,
+        model_iri: str,
+        connection_iri: str,
+    ) -> dict[str, Any]:
+        """Queue one stored process model for deployment to a process source
+        (MEDULLA-CQ-ORCH-R703.3).
+
+        The latest version of ``model_iri`` is exported and one write-back proposal,
+        bound to the exported document's digest, is queued for the connector
+        ``connection_iri``. The engine never calls the source. Returns a sync report:
+        ``{connection_iri, class_iri, proposed, outbound, queued, queue_id, ...}``.
+        """
+        params: dict[str, Any] = {
+            "model_iri": model_iri,
+            "connection_iri": connection_iri,
+        }
+        result = await self._client._send(
+            "ProcessModelDeploy", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ProcessModelDeploy must answer with an object")
+        return result
+
     async def architecture_model_export(
         self, scope: str | None = None
     ) -> dict[str, Any]:

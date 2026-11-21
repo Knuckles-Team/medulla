@@ -285,6 +285,10 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             class_iri,
             ..
         } => Some(format!("SOURCE_SYNC|{connection_iri}|{class_iri}")),
+        Method::ProcessModelDeploy {
+            model_iri,
+            connection_iri,
+        } => Some(format!("PROCESS_MODEL_DEPLOY|{connection_iri}|{model_iri}")),
         Method::PolicySourceBind { request } => Some(format!(
             "POLICY_SOURCE_BIND|{}|{}",
             request.policy_iri, request.source_revision

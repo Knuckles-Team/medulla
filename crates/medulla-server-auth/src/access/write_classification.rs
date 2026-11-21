@@ -547,6 +547,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ProcessDocumentImport { .. }
                 // MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
                 | Method::SourceSync { .. }
+                // MEDULLA-CQ-ORCH-R703.3: the deploy queues a write-back proposal.
+                | Method::ProcessModelDeploy { .. }
                 // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step removes graph nodes.
                 | Method::RetentionCleanupRun { .. }
                 // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.

@@ -628,6 +628,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ProcessDocumentImport { .. }
         // MEDULLA-SRC-AUTH-R012.6: a sync commits as one request-graph `BatchUpdate`.
         | Method::SourceSync { .. }
+        | Method::ProcessModelDeploy { .. }
         // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one request-graph `BatchUpdate`.
         | Method::RetentionCleanupRun { .. }
         // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.

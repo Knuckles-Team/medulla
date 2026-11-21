@@ -86,6 +86,10 @@ pub enum ExportSource {
     Workflow { workflow_id: String, version: u32 },
 }
 
+/// The IRI of the class a process model deploy proposes under: the `:ProcessModel` class of the
+/// core ontology (MEDULLA-CQ-ORCH-R703.3).
+pub const PROCESS_MODEL_CLASS_IRI: &str = "https://knuckles-team.github.io/ontology/core#ProcessModel";
+
 /// The answer of the served `ProcessDocumentExport` (MEDULLA-CQ-ORCH-R702.10).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

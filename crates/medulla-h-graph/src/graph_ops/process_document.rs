@@ -34,7 +34,7 @@ use medulla_core::process_exchange::dmn_graph::dmn_mutations;
 use medulla_core::process_exchange::dmn_read::parse_dmn;
 use medulla_core::process_exchange::xml_tree::XmlLimits;
 use medulla_protocol_types::result_contract::coordination::{
-    ProcessDocumentExport, ProcessDocumentImport,
+    ProcessDocumentExport, ProcessDocumentImport, ProcessModelDeploy,
 };
 use medulla_server_api::knob_config::knobs;
 use medulla_types::archimate_exchange::sha256_hex;
@@ -406,4 +406,87 @@ pub(super) async fn try_handle_process_document_export(
         Err(error) => Response::err(ctx.req_id, error),
     };
     ControlFlow::Break(response)
+}
+
+/// The format a stored model was imported as, from its latest version's model node; the model
+/// must be of the tenant.
+fn stored_model_format(
+    core: &GraphCore,
+    tenant: &str,
+    model_iri: &str,
+) -> Result<ProcessDocumentFormat, String> {
+    let unknown = || {
+        refuse(
+            PROCESS_IMPORT_UNKNOWN_MODEL,
+            format!("no model {model_iri} is available to the caller's tenant"),
+        )
+    };
+    let latest = stored_model_version(core, model_iri);
+    if latest == 0 {
+        return Err(unknown());
+    }
+    let model = node_properties(core, &model_node_id(model_iri, latest)).ok_or_else(unknown)?;
+    let text = |key: &str| model.get(key).and_then(serde_json::Value::as_str);
+    if text("type") != Some("ProcessModel") || text("tenant_id").is_some_and(|t| t != tenant) {
+        return Err(unknown());
+    }
+    serde_json::from_value(serde_json::Value::String(
+        text("format").unwrap_or_default().to_string(),
+    ))
+    .map_err(|_| {
+        refuse(
+            PROCESS_EXPORT_NOT_DEPLOYABLE,
+            format!("model {model_iri} has no document format to deploy"),
+        )
+    })
+}
+
+/// Answer one `ProcessModelDeploy` (MEDULLA-CQ-ORCH-R703.3): export the latest version of the
+/// model through [`export_document`] and plan the one outbound proposal with
+/// `medulla_virtual_graph::process_sync::deploy_report`. Writes nothing: the router queues the
+/// proposal through the write-back queue of MEDULLA-SRC-AUTH-R012.5.
+pub(super) async fn handle_process_model_deploy(
+    ctx: &MutationCtx<'_>,
+    _tenant_id: &str,
+    method: &Method,
+) -> Option<Response> {
+    let Method::ProcessModelDeploy {
+        model_iri,
+        connection_iri,
+    } = method
+    else {
+        return None;
+    };
+    if model_iri.is_empty() || connection_iri.is_empty() {
+        return Some(Response::err(
+            ctx.req_id,
+            refuse("PARAMETER_INVALID", "model_iri and connection_iri are required"),
+        ));
+    }
+    let tenant = ctx.tenant_scope;
+    let exported = stored_model_format(ctx.core, tenant, model_iri).and_then(|format| {
+        export_document(
+            ctx.core,
+            tenant,
+            &ExportSource::Model {
+                model_iri: model_iri.clone(),
+                version: None,
+            },
+            format,
+        )
+    });
+    Some(match exported {
+        Ok(exported) => {
+            let report = medulla_virtual_graph::process_sync::deploy_report(
+                model_iri,
+                connection_iri,
+                &exported,
+            );
+            match ResultPayload::of::<ProcessModelDeploy>(report) {
+                Ok(payload) => Response::ok(ctx.req_id, payload),
+                Err(error) => Response::err(ctx.req_id, error),
+            }
+        }
+        Err(error) => Response::err(ctx.req_id, error),
+    })
 }

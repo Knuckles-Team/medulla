@@ -25,6 +25,8 @@ use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
 use medulla_core::process_exchange::xml_tree::XmlLimits;
 use medulla_core::process_import::{admit_canonical, compile_process, export_canonical};
 use medulla_types::contract::Digest256;
+use medulla_source_types::source_sync::{OutboundDraft, SyncReport};
+use medulla_types::process_exchange::{ProcessDocumentExported, PROCESS_MODEL_CLASS_IRI};
 use medulla_types::process_import::{CanonicalWorkflow, ProcessSourceSystem};
 use serde_json::{json, Map, Value};
 
@@ -37,6 +39,34 @@ const MODEL_TYPE: &str = "ProcessModel";
 const BPMN: &str = "bpmn20";
 const EPC: &str = "aris_epc";
 const DMN: &str = "dmn";
+
+/// The answer of one `ProcessModelDeploy` before the router queues it (MEDULLA-CQ-ORCH-R703.3):
+/// a sync report that proposes exactly one outbound change, the export of `model_iri`. The
+/// draft's record key is the model IRI and its payload digest the SHA-256 of the exported
+/// document, so the write-back queue the router derives from it names the document. Nothing
+/// here calls the source: the connector deploys the proposal once it is approved and released.
+pub fn deploy_report(
+    model_iri: &str,
+    connection_iri: &str,
+    exported: &ProcessDocumentExported,
+) -> SyncReport {
+    SyncReport {
+        connection_iri: connection_iri.to_string(),
+        class_iri: PROCESS_MODEL_CLASS_IRI.to_string(),
+        unchanged: 0,
+        applied: 0,
+        proposed: 1,
+        conflicts: Vec::new(),
+        outbound: vec![OutboundDraft {
+            record_key: model_iri.to_string(),
+            payload_digest: exported.document_digest.clone(),
+        }],
+        queued: Vec::new(),
+        queue_id: None,
+        skipped: Vec::new(),
+        by_type: BTreeMap::new(),
+    }
+}
 
 /// Syncs the model definitions of one process engine connection.
 #[derive(Clone, Debug)]

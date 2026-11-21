@@ -264,6 +264,17 @@ $($variants)*
         scope: Option<String>,
     },
 
+    /// Queue one stored process model for deployment to a process source
+    /// (MEDULLA-CQ-ORCH-R703.3). Gateway-routed like `SourceSync`: the model is exported
+    /// through the document export of MEDULLA-CQ-ORCH-R702.10 and one outbound proposal,
+    /// bound to the document digest, is queued through the write-back queue of
+    /// MEDULLA-SRC-AUTH-R012.5. The engine never calls the source; the connector deploys the
+    /// released proposal.
+    ProcessModelDeploy {
+        model_iri: String,
+        connection_iri: String,
+    },
+
     /// RF-ADR-009 native ingestion authority. Resolves the exact Connector
     /// Manifest mapping under the verified tenant, admits raw records to CAS,
     /// maps them and atomically commits graph material, provenance and cursor.

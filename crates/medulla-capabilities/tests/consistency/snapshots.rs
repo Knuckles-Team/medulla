@@ -170,6 +170,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    "ProcessModelDeploy",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
     // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
@@ -240,6 +241,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    "ProcessModelDeploy",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
     // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
@@ -460,6 +462,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    "ProcessModelDeploy",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
     // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
@@ -783,6 +786,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    "ProcessModelDeploy",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
     // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
@@ -877,6 +881,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    "ProcessModelDeploy",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
     // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
@@ -969,6 +974,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    "ProcessModelDeploy",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
     // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
@@ -1012,6 +1018,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    "ProcessModelDeploy",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
     "RetentionCleanupRun",
     // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.

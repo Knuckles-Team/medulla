@@ -13,6 +13,7 @@ pub async fn dispatch_decision_plane_methods(
     let method = super::memory_change::dispatch_consolidate_method(ctx, method).await?;
     let method = super::memory_change::dispatch_sync_memory_method(ctx, method).await?;
     let method = dispatch_source_sync_method(ctx, method).await?;
+    let method = dispatch_process_model_deploy_method(ctx, method).await?;
     let method = dispatch_decision_methods(ctx, method).await?;
     let method = dispatch_write_back_method(ctx, method).await?;
     #[cfg(feature = "security")]
@@ -124,6 +125,47 @@ async fn dispatch_source_sync_method(
             verified_context,
             &connection,
             &class,
+            response,
+        ))
+        .await,
+    )
+}
+
+/// `Method::ProcessModelDeploy` (MEDULLA-CQ-ORCH-R703.3): the graph side exports the model and
+/// answers one outbound draft bound to the document digest; this router step queues it as a
+/// write-back proposal through the same `queue_outbound` as a sync (MEDULLA-SRC-AUTH-R012.5).
+/// Deploy never calls the source: the connector deploys the proposal once it is released.
+async fn dispatch_process_model_deploy_method(
+    ctx: DispatchCtx<'_>,
+    method: Method,
+) -> ControlFlow<Response, Method> {
+    let Method::ProcessModelDeploy { connection_iri, .. } = &method else {
+        return ControlFlow::Continue(method);
+    };
+    let connection = connection_iri.clone();
+    let DispatchCtx {
+        state,
+        req,
+        verified_context,
+        ..
+    } = ctx;
+    let response = dispatch_boxed(dispatch_graph_op(
+        state,
+        &req.graph,
+        req.id,
+        req.agent_id.as_deref(),
+        verified_context,
+        method,
+    ))
+    .await;
+    ControlFlow::Break(
+        dispatch_boxed(queue_outbound(
+            state,
+            req.id,
+            &req.graph,
+            verified_context,
+            &connection,
+            medulla_types::process_exchange::PROCESS_MODEL_CLASS_IRI,
             response,
         ))
         .await,

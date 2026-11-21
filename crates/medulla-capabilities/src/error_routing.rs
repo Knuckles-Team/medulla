@@ -1290,6 +1290,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PARAMETER_INVALID",
         ],
     ),
+    // MEDULLA-CQ-ORCH-R703.3: an invisible model, a model the writer cannot write.
+    (
+        "ProcessModelDeploy",
+        &[
+            "PROCESS_IMPORT_UNKNOWN_MODEL",
+            "PROCESS_EXPORT_NOT_DEPLOYABLE",
+            "PARAMETER_INVALID",
+        ],
+    ),
     // MEDULLA-CQ-ORCH-R701.3/R701.4: an invisible workflow, a lossy strict export, an undeployable one.
     (
         "ProcessModelExport",

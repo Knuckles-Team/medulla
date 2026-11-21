@@ -518,6 +518,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "ProcessModelImport": coordination.send_process_model_import,
     "ProcessDocumentImport": coordination.send_process_document_import,
     "ProcessDocumentExport": coordination.send_process_document_export,
+    "ProcessModelDeploy": coordination.send_process_model_deploy,
     "ProcessModelExport": coordination.send_process_model_export,
     "ObservationState": coordination.send_observation_state,
     "ObserveDevelopmentLane": coordination.send_observe_development_lane,

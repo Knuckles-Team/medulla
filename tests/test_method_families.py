@@ -341,6 +341,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "ProcessDocumentImport",
         # MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
         "SourceSync",
+        "ProcessModelDeploy",
         # MEDULLA-SRC-AUTH-R801: a reviewed policy source bind commits one graph node.
         "PolicySourceBind",
         # MEDULLA-FEDERATED-QUERY-R058.7: a certified NL correction commits one node.

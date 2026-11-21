@@ -135,6 +135,7 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
     "SourceSync",
+    "ProcessModelDeploy",
     // MEDULLA-DURABLE-KERNEL-R700.3: a retention cleanup step commits as one batch.
     "RetentionCleanupRun",
     // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
@@ -796,6 +797,7 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
     "SourceSync",
+    "ProcessModelDeploy",
     // MEDULLA-DURABLE-KERNEL-R700.3: a retention cleanup step commits as one batch.
     "RetentionCleanupRun",
     // MEDULLA-SRC-AUTH-R801: a reviewed policy source binds as one node commit.
@@ -896,6 +898,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::ProcessModelImport { .. } => Some("ProcessModelImport"),
         Method::ProcessDocumentImport { .. } => Some("ProcessDocumentImport"),
         Method::SourceSync { .. } => Some("SourceSync"),
+        Method::ProcessModelDeploy { .. } => Some("ProcessModelDeploy"),
         Method::RetentionCleanupRun { .. } => Some("RetentionCleanupRun"),
         Method::PolicySourceBind { .. } => Some("PolicySourceBind"),
         Method::WorkflowRegistry { .. } => Some("WorkflowRegistry"),
