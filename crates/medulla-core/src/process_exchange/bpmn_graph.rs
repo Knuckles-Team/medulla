@@ -6,8 +6,16 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use super::{BpmnDocument, BpmnNode};
+use super::{
+    BpmnDocument, BpmnEventDefinition, BpmnLane, BpmnNode, BpmnProcess, BpmnSequenceFlow,
+    PreservedXml, ProcessExchangeError, BPMN_NODE_KINDS,
+};
 use crate::architecture_exchange::graph::ExchangeMutation;
+
+/// Property prefix of a kept source attribute of a flow node or an event definition.
+const ATTRIBUTE_PREFIX: &str = "bpmnAttribute:";
+/// Property prefix of a namespace the root element declares.
+const NAMESPACE_PREFIX: &str = "bpmnNamespace:";
 
 /// The node id of one element of the model `model_iri`.
 pub fn element_iri(model_iri: &str, element_id: &str) -> String {
@@ -111,10 +119,10 @@ pub fn bpmn_mutations(doc: &BpmnDocument, model_iri: &str) -> Vec<ExchangeMutati
             .push_str(&fragment.xml);
     }
 
-    let mut push_node = |id: &str, class: &str, name: &str, extra: &[(&str, String)]| {
+    let mut push_node = |id: &str, class: &str, name: &str, extra: &[(String, String)]| {
         let mut properties = named(name);
         for (key, value) in extra {
-            properties.insert((*key).to_owned(), value.clone());
+            properties.insert(key.clone(), value.clone());
         }
         nodes.push((
             id.to_owned(),
@@ -129,7 +137,12 @@ pub fn bpmn_mutations(doc: &BpmnDocument, model_iri: &str) -> Vec<ExchangeMutati
         ));
     };
 
-    push_node(&doc.id, "BpmnDefinitions", "", &[]);
+    let namespaces: Vec<(String, String)> = doc
+        .namespaces
+        .iter()
+        .map(|(prefix, iri)| (format!("{NAMESPACE_PREFIX}{prefix}"), iri.clone()))
+        .collect();
+    push_node(&doc.id, "BpmnDefinitions", "", &namespaces);
     for process in &doc.processes {
         push_node(&process.id, "BpmnProcess", &process.name, &[]);
         push_edge(&doc.id, &process.id, "hasProcessElement");
@@ -155,14 +168,19 @@ pub fn bpmn_mutations(doc: &BpmnDocument, model_iri: &str) -> Vec<ExchangeMutati
             push_edge(&process.id, &element.id, "hasProcessElement");
             for (index, definition) in element.event_definitions.iter().enumerate() {
                 let definition_id = format!("{}#{index}", element.id);
-                push_node(&definition_id, &definition_class(&definition.kind), "", &[]);
+                let mut kept = definition_properties(definition);
+                kept.push(("bpmnKind".to_owned(), definition.kind.clone()));
+                push_node(&definition_id, &definition_class(&definition.kind), "", &kept);
                 push_edge(&element.id, &definition_id, "hasEventDefinition");
             }
         }
         for flow in &process.flows {
-            let mut extra = vec![("isDefaultFlow", defaults.contains(flow.id.as_str()).to_string())];
+            let mut extra = vec![(
+                "isDefaultFlow".to_owned(),
+                defaults.contains(flow.id.as_str()).to_string(),
+            )];
             if let Some(condition) = &flow.condition {
-                extra.push(("flowCondition", condition.clone()));
+                extra.push(("flowCondition".to_owned(), condition.clone()));
             }
             push_node(&flow.id, "BpmnSequenceFlow", &flow.name, &extra);
             push_edge(&process.id, &flow.id, "hasProcessElement");
@@ -195,8 +213,234 @@ pub fn bpmn_mutations(doc: &BpmnDocument, model_iri: &str) -> Vec<ExchangeMutati
         .collect()
 }
 
-fn event_properties(element: &BpmnNode) -> Vec<(&'static str, String)> {
-    event_position(&element.kind)
-        .map(|position| vec![("eventPosition", position.to_owned())])
-        .unwrap_or_default()
+fn event_properties(element: &BpmnNode) -> Vec<(String, String)> {
+    let mut out: Vec<(String, String)> = event_position(&element.kind)
+        .map(|position| vec![("eventPosition".to_owned(), position.to_owned())])
+        .unwrap_or_default();
+    out.extend(
+        element
+            .attributes
+            .iter()
+            .map(|(name, value)| (format!("{ATTRIBUTE_PREFIX}{name}"), value.clone())),
+    );
+    out
+}
+
+fn definition_properties(definition: &BpmnEventDefinition) -> Vec<(String, String)> {
+    definition
+        .attributes
+        .iter()
+        .map(|(name, value)| (format!("{ATTRIBUTE_PREFIX}{name}"), value.clone()))
+        .collect()
+}
+
+/// The element id of a node id of the model `model_iri`, or `None` for a foreign node.
+fn element_of<'a>(model_iri: &str, node_id: &'a str) -> Option<&'a str> {
+    node_id
+        .strip_prefix("process:")
+        .and_then(|rest| rest.strip_prefix(model_iri))
+        .and_then(|rest| rest.strip_prefix(':'))
+}
+
+/// The BPMN element local name of a class label: `BpmnUserTask` is `userTask`.
+fn kind_of_class(label: &str) -> Option<String> {
+    let rest = label.strip_prefix("Bpmn")?;
+    let mut chars = rest.chars();
+    let head = chars.next()?.to_ascii_lowercase();
+    Some(format!("{head}{}", chars.as_str()))
+}
+
+fn attributes_of(properties: &BTreeMap<String, String>) -> BTreeMap<String, String> {
+    properties
+        .iter()
+        .filter_map(|(key, value)| {
+            key.strip_prefix(ATTRIBUTE_PREFIX)
+                .map(|name| (name.to_owned(), value.clone()))
+        })
+        .collect()
+}
+
+fn not_deployable(reason: impl Into<String>) -> ProcessExchangeError {
+    ProcessExchangeError::NotDeployable {
+        reason: reason.into(),
+    }
+}
+
+/// The inverse of [`bpmn_mutations`]: rebuild the BPMN document of the model `model_iri` from
+/// the node and edge writes that stored it (MEDULLA-CQ-ORCH-R702.10). A model without one
+/// `BpmnDefinitions` node refuses `NotDeployable`. Elements come back in element id order, a
+/// lane's members in id order, an element's event definitions in their stored order. Collaboration
+/// participants are not part of the stored form and are not restored.
+pub fn bpmn_document(
+    mutations: &[ExchangeMutation],
+    model_iri: &str,
+) -> Result<BpmnDocument, ProcessExchangeError> {
+    let mut nodes: BTreeMap<&str, (&str, &BTreeMap<String, String>)> = BTreeMap::new();
+    let mut edges: Vec<(&str, &str, &str)> = Vec::new();
+    for mutation in mutations {
+        match mutation {
+            ExchangeMutation::UpsertNode {
+                id,
+                label,
+                properties,
+            } => {
+                if let Some(element) = element_of(model_iri, id) {
+                    nodes.insert(element, (label.as_str(), properties));
+                }
+            }
+            ExchangeMutation::Link {
+                source,
+                target,
+                predicate,
+            } => {
+                if let (Some(from), Some(to)) =
+                    (element_of(model_iri, source), element_of(model_iri, target))
+                {
+                    edges.push((from, predicate.as_str(), to));
+                }
+            }
+        }
+    }
+    let targets = |from: &str, predicate: &str| -> Vec<&str> {
+        let mut out: Vec<&str> = edges
+            .iter()
+            .filter(|(source, p, _)| *source == from && *p == predicate)
+            .map(|(_, _, target)| *target)
+            .collect();
+        out.sort_unstable();
+        out
+    };
+    let sources = |to: &str, predicate: &str| -> Vec<&str> {
+        let mut out: Vec<&str> = edges
+            .iter()
+            .filter(|(_, p, target)| *target == to && *p == predicate)
+            .map(|(source, _, _)| *source)
+            .collect();
+        out.sort_unstable();
+        out
+    };
+    let name_of = |properties: &BTreeMap<String, String>| {
+        properties.get("name").cloned().unwrap_or_default()
+    };
+    let kept = |owner: &str, properties: &BTreeMap<String, String>| {
+        properties.get("bpmnPreservedXml").map(|xml| PreservedXml {
+            owner: owner.to_owned(),
+            xml: xml.clone(),
+        })
+    };
+
+    let mut definitions = nodes
+        .iter()
+        .filter(|(_, (label, _))| *label == "BpmnDefinitions");
+    let (Some((definitions_id, (_, definitions_properties))), None) =
+        (definitions.next(), definitions.next())
+    else {
+        return Err(not_deployable(
+            "the model has no single BpmnDefinitions node",
+        ));
+    };
+    let mut doc = BpmnDocument {
+        id: (*definitions_id).to_owned(),
+        namespaces: definitions_properties
+            .iter()
+            .filter_map(|(key, value)| {
+                key.strip_prefix(NAMESPACE_PREFIX)
+                    .map(|prefix| (prefix.to_owned(), value.clone()))
+            })
+            .collect(),
+        ..BpmnDocument::default()
+    };
+    doc.preserved
+        .extend(kept(&doc.id, definitions_properties));
+
+    for (process_id, (label, properties)) in &nodes {
+        if *label != "BpmnProcess" {
+            continue;
+        }
+        let mut process = BpmnProcess {
+            id: (*process_id).to_owned(),
+            name: name_of(properties),
+            ..BpmnProcess::default()
+        };
+        process.preserved.extend(kept(process_id, properties));
+        for element_id in targets(process_id, "hasProcessElement") {
+            let Some((class, element)) = nodes.get(element_id) else {
+                continue;
+            };
+            process.preserved.extend(kept(element_id, element));
+            match *class {
+                "BpmnLane" => process.lanes.push(BpmnLane {
+                    id: element_id.to_owned(),
+                    name: name_of(element),
+                    flow_node_refs: sources(element_id, "inLane")
+                        .into_iter()
+                        .map(str::to_owned)
+                        .collect(),
+                }),
+                "BpmnSequenceFlow" => {
+                    let endpoint = |predicate: &str| {
+                        targets(element_id, predicate)
+                            .first()
+                            .map(|id| (*id).to_owned())
+                            .ok_or_else(|| {
+                                not_deployable(format!(
+                                    "sequence flow {element_id} has no {predicate} edge"
+                                ))
+                            })
+                    };
+                    process.flows.push(BpmnSequenceFlow {
+                        id: element_id.to_owned(),
+                        name: name_of(element),
+                        source_ref: endpoint("flowSource")?,
+                        target_ref: endpoint("flowTarget")?,
+                        condition: element.get("flowCondition").cloned(),
+                    });
+                }
+                other => {
+                    let kind = kind_of_class(other)
+                        .filter(|kind| BPMN_NODE_KINDS.contains(&kind.as_str()))
+                        .ok_or_else(|| {
+                            not_deployable(format!(
+                                "element {element_id} has the class {other}, which is not a flow node"
+                            ))
+                        })?;
+                    let mut definitions: Vec<(usize, BpmnEventDefinition)> = Vec::new();
+                    for definition_id in targets(element_id, "hasEventDefinition") {
+                        let Some((definition_class, definition)) = nodes.get(definition_id) else {
+                            continue;
+                        };
+                        let index = definition_id
+                            .rsplit_once('#')
+                            .and_then(|(_, index)| index.parse::<usize>().ok())
+                            .unwrap_or(usize::MAX);
+                        let kind = definition
+                            .get("bpmnKind")
+                            .cloned()
+                            .or_else(|| kind_of_class(definition_class))
+                            .unwrap_or_default();
+                        definitions.push((
+                            index,
+                            BpmnEventDefinition {
+                                kind,
+                                attributes: attributes_of(definition),
+                            },
+                        ));
+                    }
+                    definitions.sort_by_key(|(index, _)| *index);
+                    process.nodes.push(BpmnNode {
+                        id: element_id.to_owned(),
+                        kind,
+                        name: name_of(element),
+                        attributes: attributes_of(element),
+                        event_definitions: definitions
+                            .into_iter()
+                            .map(|(_, definition)| definition)
+                            .collect(),
+                    });
+                }
+            }
+        }
+        doc.processes.push(process);
+    }
+    Ok(doc)
 }

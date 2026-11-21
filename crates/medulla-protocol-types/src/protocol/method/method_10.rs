@@ -222,6 +222,13 @@ $($variants)*
         model_iri: String,
         expected_version: Option<u32>,
     },
+    /// Write one document from a stored model or workflow (MEDULLA-CQ-ORCH-R702.10): a model
+    /// through `write_bpmn`, a stored workflow through `workflow_to_bpmn` and then
+    /// `write_bpmn`. Reads only.
+    ProcessDocumentExport {
+        source: medulla_types::process_exchange::ExportSource,
+        format: medulla_types::process_exchange::ProcessDocumentFormat,
+    },
     /// Read version `version` of the stored workflow `workflow_id`
     /// (MEDULLA-CQ-ORCH-R701.3). With no `target` the canonical form is returned; with
     /// `bpmn20` the deployable BPMN document too; with `aris_epc` the canonical form with

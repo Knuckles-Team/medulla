@@ -3,6 +3,8 @@
 //!
 //! An import reads one BPMN 2.0 or DMN 1.3 document natively, maps it onto element nodes and
 //! commits them with the model node as one batch under a compare-and-set on the model version.
+//! An export (MEDULLA-CQ-ORCH-R702.10, R702.11) writes a document back from a stored model or
+//! a stored workflow.
 
 #![cfg(feature = "redb")]
 
@@ -10,10 +12,18 @@ mod common;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_core::process_exchange::bpmn_graph::bpmn_mutations;
+use medulla_core::process_exchange::bpmn_read::{parse_bpmn, BpmnLimits};
+use medulla_core::process_exchange::dmn_graph::dmn_mutations;
+use medulla_core::process_exchange::dmn_read::parse_dmn;
+use medulla_core::process_exchange::xml_tree::XmlLimits;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_types::archimate_exchange::sha256_hex;
 use medulla_types::process_exchange::{
-    ProcessDocument, ProcessDocumentFormat, ProcessDocumentImported,
+    ExportSource, ProcessDocument, ProcessDocumentExported, ProcessDocumentFormat,
+    ProcessDocumentImported,
 };
+use medulla_types::process_import::CanonicalWorkflow;
 
 const SECRET: &str = "process-exchange-served-secret";
 const ENCRYPTION_KEY: &str = "process-exchange-served-key-0123456789a";
@@ -45,6 +55,35 @@ fn core_version(state: &test_support::SharedState) -> u64 {
         .unwrap()
         .core
         .version()
+}
+
+const LIMITS_DMN: &[u8] =
+    include_bytes!("../crates/medulla-core/tests/fixtures/process_exchange/limits.dmn");
+const WORKFLOW_JSON: &str = include_str!(
+    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice_approval.canonical.json"
+);
+
+fn import_document(bytes: &[u8], format: ProcessDocumentFormat, iri: &str) -> Method {
+    Method::ProcessDocumentImport {
+        document: ProcessDocument {
+            schema_version: 1,
+            format,
+            document: bytes.to_vec(),
+            source_ref: None,
+        },
+        model_iri: iri.into(),
+        expected_version: None,
+    }
+}
+
+fn export_method(source: ExportSource, format: ProcessDocumentFormat) -> Method {
+    Method::ProcessDocumentExport { source, format }
+}
+
+fn model(iri: &str) -> ExportSource {
+    ExportSource::Model {
+        model_iri: iri.into(),
+    }
 }
 
 fn import_method(bytes: &[u8], expected_version: Option<u32>) -> Method {
@@ -117,4 +156,158 @@ async fn import_writes_model_in_one_batch() {
     let refused = send(&state, 5, import_method(b"<not-bpmn", None)).await;
     assert!(refused.error.is_some());
     assert_eq!(core_version(&state), version, "a refusal writes nothing");
+}
+
+// spec: MEDULLA-CQ-ORCH-R702.10
+#[tokio::test(flavor = "multi_thread")]
+async fn export_reads_model_and_workflow() {
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "process-exchange-export",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let _: ProcessDocumentImported = payload(send(&state, 2, import_method(EVERY_KIND, None)).await);
+
+    // A model exports as the document it was imported from, up to element order.
+    let exported: ProcessDocumentExported = payload(
+        send(
+            &state,
+            3,
+            export_method(model(MODEL_IRI), ProcessDocumentFormat::Bpmn20),
+        )
+        .await,
+    );
+    assert_eq!(exported.document.format, ProcessDocumentFormat::Bpmn20);
+    assert_eq!(exported.document_digest, sha256_hex(&exported.document.document));
+    let original = parse_bpmn(EVERY_KIND, BpmnLimits::default()).unwrap();
+    let written = parse_bpmn(&exported.document.document, BpmnLimits::default()).unwrap();
+    assert_eq!(
+        bpmn_mutations(&written, MODEL_IRI),
+        bpmn_mutations(&original, MODEL_IRI),
+        "the exported model maps onto the same graph writes"
+    );
+
+    // A re-import with fewer elements replaces the model: the export carries no stale element.
+    let slim = br#"<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="defs"><process id="p"><startEvent id="s"/><endEvent id="e"/><sequenceFlow id="f" sourceRef="s" targetRef="e"/></process></definitions>"#;
+    let _: ProcessDocumentImported = payload(
+        send(&state, 4, import_document(slim, ProcessDocumentFormat::Bpmn20, MODEL_IRI)).await,
+    );
+    let replaced: ProcessDocumentExported = payload(
+        send(
+            &state,
+            5,
+            export_method(model(MODEL_IRI), ProcessDocumentFormat::Bpmn20),
+        )
+        .await,
+    );
+    let replaced = parse_bpmn(&replaced.document.document, BpmnLimits::default()).unwrap();
+    assert_eq!(
+        bpmn_mutations(&replaced, MODEL_IRI),
+        bpmn_mutations(&parse_bpmn(slim, BpmnLimits::default()).unwrap(), MODEL_IRI)
+    );
+
+    // A stored workflow exports as a deployable document.
+    let workflow: CanonicalWorkflow = serde_json::from_str(WORKFLOW_JSON).unwrap();
+    let stored = send(
+        &state,
+        6,
+        Method::ProcessModelImport {
+            workflow,
+            workflow_id: "invoice-approval".into(),
+            expected_version: None,
+        },
+    )
+    .await;
+    assert!(stored.error.is_none(), "refused: {:?}", stored.error);
+    let from_workflow: ProcessDocumentExported = payload(
+        send(
+            &state,
+            7,
+            export_method(
+                ExportSource::Workflow {
+                    workflow_id: "invoice-approval".into(),
+                    version: 1,
+                },
+                ProcessDocumentFormat::Bpmn20,
+            ),
+        )
+        .await,
+    );
+    let deployable =
+        parse_bpmn(&from_workflow.document.document, BpmnLimits::default()).unwrap();
+    let kinds: Vec<&str> = deployable.processes[0]
+        .nodes
+        .iter()
+        .map(|node| node.kind.as_str())
+        .collect();
+    assert!(kinds.contains(&"startEvent") && kinds.contains(&"endEvent"));
+
+    // An unknown model and an unknown workflow refuse without a write.
+    let version = core_version(&state);
+    let unknown = send(
+        &state,
+        8,
+        export_method(model("urn:model:absent"), ProcessDocumentFormat::Bpmn20),
+    )
+    .await;
+    assert!(unknown
+        .error
+        .as_deref()
+        .is_some_and(|error| error.starts_with("PROCESS_IMPORT_UNKNOWN_MODEL")));
+    assert_eq!(core_version(&state), version);
+}
+
+// spec: MEDULLA-CQ-ORCH-R702.11
+#[tokio::test(flavor = "multi_thread")]
+async fn dmn_export_reads_definitions() {
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "process-exchange-dmn-export",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let iri = "urn:model:limits";
+    let imported: ProcessDocumentImported = payload(
+        send(&state, 2, import_document(LIMITS_DMN, ProcessDocumentFormat::Dmn13, iri)).await,
+    );
+    assert_eq!(imported.format, ProcessDocumentFormat::Dmn13);
+
+    let exported: ProcessDocumentExported = payload(
+        send(&state, 3, export_method(model(iri), ProcessDocumentFormat::Dmn13)).await,
+    );
+    assert_eq!(exported.document.format, ProcessDocumentFormat::Dmn13);
+    assert_eq!(exported.document_digest, sha256_hex(&exported.document.document));
+    let original = parse_dmn(LIMITS_DMN, XmlLimits::default()).unwrap();
+    let written = parse_dmn(&exported.document.document, XmlLimits::default()).unwrap();
+    assert_eq!(
+        dmn_mutations(&written, iri),
+        dmn_mutations(&original, iri),
+        "the exported decision model maps onto the same graph writes"
+    );
+
+    // A BPMN model is not a DMN source, and a workflow is not either.
+    let _: ProcessDocumentImported = payload(
+        send(&state, 4, import_method(EVERY_KIND, None)).await,
+    );
+    for (id, source) in [
+        (5, model(MODEL_IRI)),
+        (
+            6,
+            ExportSource::Workflow {
+                workflow_id: "invoice-approval".into(),
+                version: 1,
+            },
+        ),
+    ] {
+        let refused = send(&state, id, export_method(source, ProcessDocumentFormat::Dmn13)).await;
+        assert!(refused
+            .error
+            .as_deref()
+            .is_some_and(|error| error.starts_with("PROCESS_EXPORT_NOT_DEPLOYABLE")));
+    }
 }

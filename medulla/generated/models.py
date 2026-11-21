@@ -15843,6 +15843,13 @@ class MethodProcessModelImport(BaseModel):
     params: MethodProcessModelImportParams
 
 
+class MethodProcessDocumentExport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ProcessDocumentExport"]
+    params: MethodProcessDocumentExportParams
+
+
 class MethodProcessModelExport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16823,6 +16830,7 @@ Method = Annotated[
         MethodProcessCompile,
         MethodProcessModelImport,
         MethodProcessDocumentImport,
+        MethodProcessDocumentExport,
         MethodProcessModelExport,
         MethodArchitectureModelExport,
         MethodArchitectureView,
@@ -35857,6 +35865,13 @@ class MethodProcessModelImportParams(BaseModel):
     expected_version: Annotated[int, Field(ge=0)] | None = None
 
 
+class MethodProcessDocumentExportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    source: dict[str, Any]
+    format: Literal["bpmn20", "dmn13"]
+
+
 class MethodProcessModelExportParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -44308,6 +44323,8 @@ __all__ = [
     "MethodProcessModelImportParams",
     "MethodProcessDocumentImport",
     "MethodProcessDocumentImportParams",
+    "MethodProcessDocumentExport",
+    "MethodProcessDocumentExportParams",
     "MethodProcessModelExport",
     "MethodProcessModelExportParams",
     "MethodArgumentMapEvaluate",

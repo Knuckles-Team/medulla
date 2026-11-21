@@ -442,7 +442,7 @@ fn unknown_model(workflow_id: &str, version: u32) -> String {
 }
 
 /// The stored canonical workflow `workflow_id` at `version` that `tenant` may see.
-fn stored_workflow(
+pub(super) fn stored_workflow(
     core: &GraphCore,
     tenant: &str,
     workflow_id: &str,

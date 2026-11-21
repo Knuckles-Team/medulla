@@ -3107,6 +3107,9 @@ send_process_model_import = contract_sender(
 send_process_document_import = contract_sender(
     "ProcessDocumentImport", "MethodProcessDocumentImportParams"
 )
+send_process_document_export = contract_sender(
+    "ProcessDocumentExport", "MethodProcessDocumentExportParams"
+)
 send_process_model_export = contract_sender(
     "ProcessModelExport", "MethodProcessModelExportParams"
 )

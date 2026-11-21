@@ -7764,6 +7764,27 @@ class GraphOperationsClient:
             raise RuntimeError("ProcessModelExport must answer with an object")
         return result
 
+    async def process_document_export(
+        self,
+        source: dict[str, Any],
+        format: str,
+    ) -> dict[str, Any]:
+        """Write one BPMN 2.0 or DMN 1.3 document from a stored model or workflow
+        (MEDULLA-CQ-ORCH-R702.10, R702.11).
+
+        ``source`` is ``{"kind": "model", "model_iri": ...}`` or
+        ``{"kind": "workflow", "workflow_id": ..., "version": ...}``; ``format`` is
+        ``"bpmn20"`` or ``"dmn13"``. Returns ``{document, document_digest}`` where
+        ``document`` is ``{format, document: <bytes>}``.
+        """
+        params: dict[str, Any] = {"source": source, "format": format}
+        result = await self._client._send(
+            "ProcessDocumentExport", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ProcessDocumentExport must answer with an object")
+        return result
+
     async def architecture_model_export(
         self, scope: str | None = None
     ) -> dict[str, Any]:

@@ -67,6 +67,28 @@ pub struct ProcessDocumentImported {
     pub source_document_digest: String,
 }
 
+/// What a `ProcessDocumentExport` writes a document from (MEDULLA-CQ-ORCH-R702.10).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum ExportSource {
+    /// The latest stored version of the imported model `model_iri`.
+    Model { model_iri: String },
+    /// Version `version` of the stored canonical workflow `workflow_id`.
+    Workflow { workflow_id: String, version: u32 },
+}
+
+/// The answer of the served `ProcessDocumentExport` (MEDULLA-CQ-ORCH-R702.10).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProcessDocumentExported {
+    /// The written document; `source_ref` is unset.
+    pub document: ProcessDocument,
+    /// The SHA-256 of the written document bytes, 64 lowercase hex characters.
+    pub document_digest: String,
+}
+
 /// Why a process document was not read or written.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "code", rename_all = "snake_case", deny_unknown_fields)]

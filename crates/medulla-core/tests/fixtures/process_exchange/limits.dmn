@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<definitions xmlns="https://www.omg.org/spec/DMN/20191111/MODEL/" xmlns:ext="urn:ext" id="defs" name="Limits">
+  <inputData id="amount" name="Amount"/>
+  <decision id="tier" name="Tier">
+    <informationRequirement><requiredInput href="#amount"/></informationRequirement>
+    <informationRequirement><requiredDecision href="#base"/></informationRequirement>
+    <ext:note>kept</ext:note>
+    <decisionTable id="t1" hitPolicy="COLLECT" aggregation="SUM">
+      <input id="i1" label="Amount"><inputExpression typeRef="number"><text>amount &gt; 10</text></inputExpression></input>
+      <output id="o1" name="fee" typeRef="number"/>
+      <rule id="r1"><inputEntry><text>&lt; 100</text></inputEntry><outputEntry><text>1.5</text></outputEntry></rule>
+      <rule id="r2"><inputEntry><text>&gt;= 100</text></inputEntry><outputEntry><text>2</text></outputEntry></rule>
+    </decisionTable>
+  </decision>
+  <decision id="base" name="Base"><decisionTable id="t2"><input id="i2"><inputExpression><text>x</text></inputExpression></input><output id="o2" name="y"/></decisionTable></decision>
+  <ext:extension/>
+</definitions>

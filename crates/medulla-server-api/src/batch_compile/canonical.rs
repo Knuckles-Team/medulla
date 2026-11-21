@@ -631,6 +631,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::PolicySourceBind { .. }
         | Method::ArchitectureModelExport { .. }
         | Method::ProcessModelExport { .. }
+        | Method::ProcessDocumentExport { .. }
         | Method::ArchitectureView { .. }
         | Method::OpenGraphSnapshot
         | Method::ReadGraphChanges { .. }
