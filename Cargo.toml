@@ -2042,6 +2042,13 @@ required-features = ["decide", "query"]
 name = "attached_conformance"
 path = "tests/attached_conformance.rs"
 
+# MEDULLA-UNIFIED-DATA-PLANE-R026.2.2: live P0 to P2 of the native-hosting pilot on the synthetic
+# family-tree fixture (a client of the served engine; links no handler crate).
+[[test]]
+name = "native_hosting_gramps"
+path = "tests/native_hosting_gramps.rs"
+required-features = ["pgwire", "rdf"]
+
 # MEDULLA-UNIFIED-DATA-PLANE-R015.2.2: attached SQLite file source (watermark capture and
 # the live read under a concurrent writer).
 [[test]]
