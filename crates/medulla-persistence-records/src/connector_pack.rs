@@ -38,6 +38,8 @@ pub mod catalog_authority;
 pub mod commit;
 mod conformance;
 mod declaration;
+#[cfg(feature = "rdf")]
+pub mod descriptor;
 pub(crate) mod outbox;
 mod pins;
 pub mod projection;
@@ -283,6 +285,19 @@ impl AgentLibraryStore {
     /// The served SPARQL default graph unions these graphs
     /// (MEDULLA-MEDIA-VOCAB-R655).
     pub fn visible_connector_pack_graphs(&self, tenant_id: &str) -> Result<Vec<String>, String> {
+        Ok(self
+            .visible_connector_pack_graph_entries(tenant_id)?
+            .into_iter()
+            .map(|(_, graph)| graph)
+            .collect())
+    }
+
+    /// Every visible pack head of `tenant_id` as `(connector, projection graph)`,
+    /// in connector order (MEDULLA-DECISION-ENGINE-R650.3).
+    pub fn visible_connector_pack_graph_entries(
+        &self,
+        tenant_id: &str,
+    ) -> Result<Vec<(String, String)>, String> {
         let read = self.read()?;
         let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
         let mut graphs = Vec::new();
@@ -301,11 +316,12 @@ impl AgentLibraryStore {
                 continue;
             }
             let connector = ResourceId::new(connector).map_err(|error| error.to_string())?;
-            graphs.push(
+            graphs.push((
+                connector.as_str().to_string(),
                 medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
                     tenant_id, &connector,
                 )?,
-            );
+            ));
         }
         Ok(graphs)
     }

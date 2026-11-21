@@ -294,6 +294,7 @@ fn runtime_of(
         load_set: None,
         usage_guidance: None,
         adapter: None,
+        descriptors: Default::default(),
     }
 }
 
@@ -676,6 +677,7 @@ async fn premises_name_scores_and_knobs() {
         load_set: None,
         usage_guidance: None,
         adapter: None,
+        descriptors: Default::default(),
     };
     let mut reward = CapabilityReward::neutral(
         TenantId::new(TENANT).unwrap(),
@@ -784,6 +786,7 @@ fn pack_runtime(
     let digest = format!("sha256:{}", "ef".repeat(32));
     DesignationRuntime {
         adapter: None,
+        descriptors: Default::default(),
         index,
         projection: SchemaProjection::new(
             &digest,
@@ -1364,6 +1367,7 @@ fn wide_runtime(
         .collect();
     DesignationRuntime {
         adapter: None,
+        descriptors: Default::default(),
         index,
         projection: SchemaProjection::new(&digest, edges),
         schema_digest: digest,
@@ -1484,4 +1488,99 @@ async fn descriptor_refusals_and_tenant_isolation() {
     foreign.params = BoundedVec::new(params).unwrap();
     let error = decide_with_runtime(&h, &foreign, runtime_of(index)).unwrap_err();
     assert!(error.starts_with("ACCESS_DENIED"), "{error}");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R650.3
+#[tokio::test]
+async fn designation_returns_descriptor_and_closure() {
+    use medulla_agent_types::agent_component::capability_descriptor::{
+        derived_reliability, ApprovalClass, CapabilityDescriptor, DataPort, Locality,
+        SideEffectClass, CAPABILITY_DESCRIPTOR_VERSION,
+    };
+    use medulla_types::contract::{ResourceId, ScopeKind};
+
+    const CAP: &str = "eg:capability/translate";
+    let descriptor = |cost: u64| CapabilityDescriptor {
+        version: CAPABILITY_DESCRIPTOR_VERSION,
+        tenant: TenantId::new(TENANT).unwrap(),
+        capability_id: ResourceId::new(CAP).unwrap(),
+        inputs: vec![DataPort {
+            name: ResourceId::new("text").unwrap(),
+            data_type: ResourceId::new("eg:type/text").unwrap(),
+        }],
+        outputs: Vec::new(),
+        side_effect_class: SideEffectClass::External,
+        scopes: vec![ScopeKind::new("tenant").unwrap()],
+        cost,
+        latency_ms: 300,
+        reliability: 0,
+        locality: Locality::Network,
+        approval_class: ApprovalClass::Low,
+    };
+
+    let h = Harness::new().await;
+    let mut packed = record(Some(TENANT), "tool-translate", &[CAP]);
+    packed.entity_kind = EntityKind::Tool;
+    packed.pack = Some(
+        medulla_decision_types::decision::capability_designation::PackOrigin {
+            connector: "finance".to_string(),
+            binding_revision: 5,
+            pack_digest: format!("sha256:{}", "12".repeat(32)),
+            entry_digest: format!("sha256:{}", "34".repeat(32)),
+        },
+    );
+    // A component with no pack origin provides the same capability.
+    let loose = record(Some(TENANT), "agent-translate", &[CAP]);
+    seed(
+        &h,
+        vec![
+            (packed, vec![1.0, 0.0, 0.0]),
+            (loose, vec![0.9, 0.1, 0.0]),
+        ],
+    )
+    .await;
+    let index = shared_capability_index(&*h.state.read().await);
+    let mut runtime = runtime_of(index);
+    runtime.projection = SchemaProjection::new(&runtime.schema_digest, Vec::<(String, String)>::new())
+        .with_classes([CAP.to_string()]);
+    // The finance pack holds the descriptor; another connector's pack holds a
+    // different one for the same IRI and is never attached.
+    runtime
+        .descriptors
+        .insert(("finance".to_string(), CAP.to_string()), descriptor(12));
+    runtime
+        .descriptors
+        .insert(("elsewhere".to_string(), CAP.to_string()), descriptor(99));
+
+    let mut ask = question(&[1.0, 0.0, 0.0], 3, weights(Q32_ONE, 0));
+    ask.required_capabilities = BTreeSet::from([CAP.to_string()]);
+    let request = designation_request(&schema_pin(&h), ask, DecisionPolicyRef::Default);
+    let sealed = decide_with_runtime(&h, &request, runtime).unwrap();
+    let answer = answer_of(&sealed);
+
+    let by_id = |id: &str| {
+        answer
+            .designations
+            .iter()
+            .find(|d| d.entity_id.as_str() == id)
+            .unwrap_or_else(|| panic!("no designation for {id}"))
+    };
+    let packed = by_id("tool-translate");
+    assert_eq!(packed.descriptors.len(), 1);
+    let served = &packed.descriptors[0];
+    assert_eq!(served.capability_id.as_str(), CAP);
+    assert_eq!(served.cost, 12, "the descriptor of its own connector's pack");
+    assert_eq!(served.latency_ms, 300);
+    assert_eq!(served.side_effect_class, SideEffectClass::External);
+    assert_eq!(served.approval_class, ApprovalClass::Low);
+    assert_eq!(served.reliability, derived_reliability(Some(packed.reward_q32)));
+    assert!(by_id("agent-translate").descriptors.is_empty());
+
+    // The closure stays on the designation.
+    assert_eq!(answer.closures.len(), 1);
+    assert_eq!(answer.closures[0].capability_id.as_str(), CAP);
+
+    // The contract holds no separate designate method.
+    let methods = include_str!("../../../../medulla-protocol-types/src/protocol/method/method_10.rs");
+    assert!(!methods.contains("CapabilityDesignate"));
 }

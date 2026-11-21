@@ -163,6 +163,7 @@ pub(super) async fn with_load_set_runtime(
         };
     Ok(DesignationRuntime {
         adapter: None,
+        descriptors: Default::default(),
         index,
         projection,
         schema_digest,

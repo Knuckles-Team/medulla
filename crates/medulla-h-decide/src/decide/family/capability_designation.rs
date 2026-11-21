@@ -18,8 +18,8 @@ use medulla_decision_rank::rank::capability_rank::{
 };
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::capability_designation::{
-    compute_capability_eligibility, CapabilityDesignation, CapabilityReward, DesignatedCapability,
-    DesignationAsk, DesignationKnobs, SchemaProjection, DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
+    compute_capability_eligibility, CapabilityDesignation, CapabilityIri, CapabilityReward,
+    DesignatedCapability, DesignationAsk, PackOrigin, DesignationKnobs, SchemaProjection, DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE,
     DESIGNATION_CLOSURE_TOO_LARGE, DESIGNATION_DIM_MISMATCH,
     DESIGNATION_EMBEDDING_VERSION_MISMATCH, DESIGNATION_EMPTY_QUERY_VECTOR,
     DESIGNATION_INDEX_CAPACITY_EXCEEDED, DESIGNATION_MALFORMED_QUERY_VECTOR,
@@ -411,6 +411,39 @@ pub(crate) enum Designated {
     Abstain(RefusalCode, String),
 }
 
+/// The descriptors a designated component carries: one per capability it
+/// provides that its pack projection graph holds, sorted by capability id, each
+/// with the reliability derived from the component's reward
+/// (MEDULLA-DECISION-ENGINE-R650.3). A component with no pack origin carries none.
+fn descriptors_of_entity(
+    runtime: &DesignationRuntime,
+    pack: Option<&PackOrigin>,
+    capabilities: &BTreeSet<CapabilityIri>,
+    reward_q32: i64,
+) -> Vec<medulla_agent_types::agent_component::capability_descriptor::CapabilityDescriptor> {
+    let Some(origin) = pack else {
+        return Vec::new();
+    };
+    let mut found: Vec<_> = capabilities
+        .iter()
+        .filter_map(|iri| {
+            runtime
+                .descriptors
+                .get(&(origin.connector.clone(), iri.as_str().to_string()))
+        })
+        .cloned()
+        .map(|mut descriptor| {
+            descriptor.reliability =
+                medulla_agent_types::agent_component::capability_descriptor::derived_reliability(
+                    Some(reward_q32),
+                );
+            descriptor
+        })
+        .collect();
+    found.sort_by(|a, b| a.capability_id.as_str().cmp(b.capability_id.as_str()));
+    found
+}
+
 /// Read one designation question from the resident index
 /// (MEDULLA-DECISION-ENGINE-R172.7). `Err` is a typed refusal text; nothing is
 /// written. The `load_set` family calls this once per required capability.
@@ -615,6 +648,7 @@ pub(crate) fn designate(
                 applies_to: hit.record.applies_to.clone(),
                 executes: hit.record.executes.clone(),
                 pack: hit.record.pack.clone(),
+                descriptors: descriptors_of_entity(runtime, hit.record.pack.as_ref(), &hit.record.capabilities, candidate.reward_q32),
                 record_revision: hit.record.record_revision,
                 eligibility,
             })

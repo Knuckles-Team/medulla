@@ -179,6 +179,7 @@ fn runtime_of(h: &Harness, read: UsageGuidanceRead) -> DesignationRuntime {
     let index = futures_lite_block(shared_index(h));
     DesignationRuntime {
         adapter: None,
+        descriptors: Default::default(),
         index,
         projection: SchemaProjection::default(),
         schema_digest: String::new(),

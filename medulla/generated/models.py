@@ -26169,6 +26169,43 @@ class DesignDifference(BaseModel):
     missing: MissingKind
 
 
+class CapabilityLocality(str, Enum):
+    SAME_HOST = "same_host"
+    SAME_REGION = "same_region"
+    NETWORK = "network"
+
+
+class CapabilityApprovalClass(str, Enum):
+    NONE = "none"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
+class CapabilityDataPort(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    data_type: Annotated[str, Field(min_length=1)]
+    name: Annotated[str, Field(min_length=1)]
+
+
+class CapabilityDescriptor(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approval_class: CapabilityApprovalClass
+    capability_id: Annotated[str, Field(min_length=1)]
+    cost: Annotated[int, Field(ge=0)]
+    inputs: list[CapabilityDataPort]
+    latency_ms: Annotated[int, Field(ge=0)]
+    locality: CapabilityLocality
+    outputs: list[CapabilityDataPort]
+    reliability: Annotated[int, Field(ge=0)]
+    scopes: list[str]
+    side_effect_class: SideEffectClass
+    tenant: Annotated[str, Field(min_length=1)]
+    version: Annotated[int, Field(ge=0)]
+
+
 class DesignatedCapability(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -26178,6 +26215,7 @@ class DesignatedCapability(BaseModel):
     applies_to: list[str] = Field(default_factory=list)
     capabilities: list[str]
     cosine_q32: int
+    descriptors: list[CapabilityDescriptor] = Field(default_factory=list)
     eligibility: CapabilityEligibility
     entity_id: Annotated[str, Field(min_length=1)]
     executes: list[str] = Field(default_factory=list)
@@ -38986,8 +39024,12 @@ __all__ = [
     "BoundedVec_ComparativeStageBudget_3",
     "BoundedVec_DesignDifference_64",
     "BoundedVec_uint32_64",
+    "CapabilityApprovalClass",
+    "CapabilityDataPort",
+    "CapabilityDescriptor",
     "CapabilityDesignation",
     "CapabilityEligibility",
+    "CapabilityLocality",
     "ClosureProjection",
     "ComparativeAnalysisPlan",
     "ComparativeAnalysisStage",

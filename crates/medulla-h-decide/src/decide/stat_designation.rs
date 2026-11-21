@@ -2,6 +2,7 @@
 //! request's one typed parameter, and the server-side read that loads the
 //! resident index handle and the schema closure the family concludes over.
 
+use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use medulla_decision_memory::memory::capability_index::{CapabilityIndex, ShardLimits};
@@ -42,6 +43,13 @@ pub(super) struct DesignationRuntime {
     /// scope), applied to the task embedding before the index read
     /// (MEDULLA-DECISION-ENGINE-R172.13). `None` ranks by the base vector.
     pub(super) adapter: Option<AppliedAdapter>,
+    /// The stored descriptors of the pack projection graphs the tenant can
+    /// see, keyed by (connector, capability IRI)
+    /// (MEDULLA-DECISION-ENGINE-R650.3).
+    pub(super) descriptors: BTreeMap<
+        (String, String),
+        medulla_agent_types::agent_component::capability_descriptor::CapabilityDescriptor,
+    >,
 }
 
 /// An active adapter and the revision of the pointer move that activated it.
@@ -226,6 +234,7 @@ pub(super) async fn with_runtime(
     let ask = question_of(request)?;
     let index = shared_capability_index(&*state.read().await);
     let adapter = adapter_of(state, verified, ask).await;
+    let descriptors = pack_descriptors(state, verified).await;
     Ok(match schema_closure(state, verified, &ask.graph).await {
         Ok((projection, schema_digest)) => DesignationRuntime {
             index,
@@ -235,6 +244,7 @@ pub(super) async fn with_runtime(
             load_set: None,
             usage_guidance: None,
             adapter,
+            descriptors,
         },
         Err(detail) => DesignationRuntime {
             index,
@@ -247,6 +257,53 @@ pub(super) async fn with_runtime(
             load_set: None,
             usage_guidance: None,
             adapter,
+            descriptors,
         },
     })
+}
+
+/// The capability descriptors of every pack projection graph the tenant can
+/// see, keyed by (connector, capability IRI), read through the one descriptor
+/// codec the projection writer uses (MEDULLA-DECISION-ENGINE-R650.3). A graph
+/// that cannot be read contributes nothing.
+async fn pack_descriptors(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+) -> BTreeMap<(String, String), medulla_agent_types::agent_component::capability_descriptor::CapabilityDescriptor>
+{
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+
+    let tenant = verified.tenant().to_string();
+    let Ok(store) = state.write().await.ensure_agent_library() else {
+        return BTreeMap::new();
+    };
+    let Ok(entries) = store.visible_connector_pack_graph_entries(&tenant) else {
+        return BTreeMap::new();
+    };
+    let names: Vec<String> = entries.iter().map(|(_, graph)| graph.clone()).collect();
+    let cores = medulla_server_api::api::reentry::resident_graph_cores(state, names).await;
+    tokio::task::spawn_blocking(move || {
+        let mut found = BTreeMap::new();
+        for (connector, graph) in entries {
+            let Some((_, core)) = cores.iter().find(|(name, _)| *name == graph) else {
+                continue;
+            };
+            let Ok(triples) = medulla_rdf::mapping::export_triples(core, &graph) else {
+                continue;
+            };
+            let Ok(descriptors) =
+                medulla_persistence_records::connector_pack::descriptor::descriptors_of(
+                    &tenant, &triples,
+                )
+            else {
+                continue;
+            };
+            for (iri, descriptor) in descriptors {
+                found.insert((connector.clone(), iri), descriptor);
+            }
+        }
+        found
+    })
+    .await
+    .unwrap_or_default()
 }

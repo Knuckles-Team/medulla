@@ -438,6 +438,7 @@ pub(super) async fn with_usage_guidance_runtime(
         .map_err(|error| format!("usage guidance outcome read task failed: {error}"))??;
     Ok(DesignationRuntime {
         adapter: None,
+        descriptors: Default::default(),
         index,
         projection: Default::default(),
         schema_digest: String::new(),

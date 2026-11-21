@@ -200,6 +200,7 @@ fn runtime_of(
     let digest = format!("sha256:{}", "ab".repeat(32));
     DesignationRuntime {
         adapter: None,
+        descriptors: Default::default(),
         index,
         projection: SchemaProjection::new(&digest, Vec::<(String, String)>::new()),
         schema_digest: digest,

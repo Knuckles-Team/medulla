@@ -328,6 +328,12 @@ pub struct DesignatedCapability {
     /// The pack the designated component came from, when it came from one.
     #[serde(default)]
     pub pack: Option<PackOrigin>,
+    /// The stored descriptor of each capability the component provides, read
+    /// from the pack projection graph it came from, sorted by capability id
+    /// and carrying the reliability derived from `reward_q32`
+    /// (MEDULLA-DECISION-ENGINE-R650.3). Omitted when empty.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub descriptors: Vec<medulla_agent_types::agent_component::capability_descriptor::CapabilityDescriptor>,
     /// The record's own revision, the graph revision the pack facts were read at.
     #[serde(default)]
     pub record_revision: u64,
@@ -1079,6 +1085,7 @@ mod tests {
                 applies_to: BTreeSet::new(),
                 executes: BTreeSet::new(),
                 pack: None,
+                descriptors: Vec::new(),
                 record_revision: 9,
                 eligibility: eligibility(),
             }],
