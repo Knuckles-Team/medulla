@@ -98,7 +98,7 @@ File: `crates/medulla-observe/src/registry/`.
 | `TaskRow` | `origin_request` | `Option<u64>` | Request that spawned it |
 | `RequestRow` | `request_id`, `trace_id`, `method`, `graph`, `principal_ref`, `phase`, `age_ms`, `waiting_for` | mixed | `principal_ref` is a keyed hash; no payload |
 | `LockRow` | `name`, `holder`, `hold_ms`, `waiters`, `longest_wait_ms` | mixed | `holder` is a request id or a task name |
-| `WorkerRow` | `index`, `busy_ms`, `busy_ratio`, `parks`, `local_queue`, `spinning` | mixed | From stable tokio metrics |
+| `WorkerRow` | `index`, `busy_ms`, `busy_ratio`, `parks`, `spinning` | mixed | From stable tokio metrics |
 
 ## Wire additions
 

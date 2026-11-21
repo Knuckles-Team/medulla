@@ -308,7 +308,7 @@ pub async fn submit_events(
             role_prefix: LINEAGE_SERVICE,
             unbootstrapped: "LINEAGE_POLICY_UNBOOTSTRAPPED",
         }
-        .ensure(&mut state.write().await.isolation, LINEAGE_GRAPH)?;
+        .ensure(&mut medulla_server_api::state::timed_write(&state).await.isolation, LINEAGE_GRAPH)?;
     }
     let session = format!("{LINEAGE_SERVICE}:{LINEAGE_GRAPH}");
     let context = if anonymous {

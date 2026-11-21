@@ -367,8 +367,6 @@ fn runtime_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
             json!({
                 "key": "global",
                 "global_queue_depth": snapshot.global_queue_depth,
-                "blocking_threads": snapshot.blocking_threads,
-                "idle_blocking_threads": snapshot.idle_blocking_threads,
                 "workers": snapshot.workers.len(),
             }),
         ));
@@ -382,7 +380,6 @@ fn runtime_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
                     "busy_ms": worker.busy_ms,
                     "busy_ratio": worker.busy_ratio,
                     "parks": worker.parks,
-                    "local_queue": worker.local_queue,
                     "spinning": worker.spinning,
                 }),
             ));

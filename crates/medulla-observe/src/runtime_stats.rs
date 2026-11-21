@@ -1,16 +1,16 @@
 //! Runtime worker statistics (MEDULLA-OBSERVE-R006.3).
 //!
 //! [`RuntimeSampler::snapshot`] reads `Handle::metrics()` and reports, per tokio worker, the
-//! busy duration, the busy ratio over the last window, the park count and the local queue
-//! depth, plus the global queue depth and the blocking pool. A worker whose busy ratio is at
+//! busy duration, the busy ratio over the last window and the park count, plus the global
+//! queue depth and the worker count. A worker whose busy ratio is at
 //! least the spin threshold (`observe.worker_spin_busy_ratio`) across two consecutive windows
 //! is flagged `spinning`.
 //!
 //! A window is the time between two roll points: a snapshot rolls the window when at least
 //! the window length has passed since the last roll, so the ratio is exact however often the
 //! section is read. Only metrics tokio stabilizes are read: the worker count, the global queue
-//! depth, each worker's total busy duration and park count. The local queue depth and the
-//! blocking-pool thread counts need `tokio_unstable`; without it they are `None`, never zero.
+//! depth, each worker's total busy duration and park count. Metrics that need
+//! `tokio_unstable` (local queue depth, blocking-pool counts) are not reported at all.
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
@@ -33,8 +33,6 @@ pub struct WorkerRow {
     pub busy_ratio: f64,
     /// How many times the worker parked.
     pub parks: u64,
-    /// Tasks in the worker's local queue; `None` without `tokio_unstable`.
-    pub local_queue: Option<usize>,
     /// Busy at or above the spin threshold across two windows.
     pub spinning: bool,
 }
@@ -46,10 +44,6 @@ pub struct RuntimeSnapshot {
     pub workers: Vec<WorkerRow>,
     /// Tasks in the global queue.
     pub global_queue_depth: usize,
-    /// Threads in the blocking pool; `None` without `tokio_unstable`.
-    pub blocking_threads: Option<usize>,
-    /// Idle threads in the blocking pool; `None` without `tokio_unstable`.
-    pub idle_blocking_threads: Option<usize>,
 }
 
 struct State {
@@ -157,7 +151,6 @@ impl RuntimeSampler {
                     busy_ms: busy[index].as_millis() as u64,
                     busy_ratio: ratio,
                     parks: metrics.worker_park_count(index),
-                    local_queue: None,
                     spinning,
                 }
             })
@@ -165,8 +158,6 @@ impl RuntimeSampler {
         RuntimeSnapshot {
             workers: rows,
             global_queue_depth: metrics.global_queue_depth(),
-            blocking_threads: None,
-            idle_blocking_threads: None,
         }
     }
 }

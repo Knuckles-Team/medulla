@@ -237,7 +237,7 @@ async fn submit(
     let anonymous = state.read().await.local_anonymous;
     #[cfg(feature = "security")]
     if !anonymous {
-        grant::ensure(&mut state.write().await.isolation, graph)
+        grant::ensure(&mut medulla_server_api::state::timed_write(state).await.isolation, graph)
             .map_err(|error| format!("cannot be granted its graph: {error}"))?;
     }
     let context = if anonymous {

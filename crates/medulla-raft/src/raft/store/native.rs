@@ -497,7 +497,7 @@ impl MedullaStore {
         match fast {
             Some(pair) => Ok(pair),
             None => {
-                let mut s = self.ctx.state.write().await;
+                let mut s = medulla_server_api::state::timed_write(&self.ctx.state).await;
                 if !s.registry.exists(&req.graph_name) {
                     s.registry
                         .create_graph(&req.graph_name, req.graph_type, None)

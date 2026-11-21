@@ -477,7 +477,7 @@ pub async fn apply_replicated_batch(
     let mut max_lsn = cursor;
     for op in ops {
         let core = {
-            let mut s = state.write().await;
+            let mut s = medulla_server_api::state::timed_write(state).await;
             if !s.registry.exists(&op.graph_name) {
                 let _ = s.registry.create_graph(&op.graph_name, op.graph_type, None);
             }

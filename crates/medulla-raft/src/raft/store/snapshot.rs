@@ -144,7 +144,7 @@ impl MedullaStore {
             .read_authoritative_graph_snapshot(&graph.fname)
             .await?
             .ok_or_else(|| format!("snapshot graph '{}' has no durable image", name))?;
-        let mut s = self.ctx.state.write().await;
+        let mut s = medulla_server_api::state::timed_write(&self.ctx.state).await;
         let owner = s.registry.catalog_record(name).and_then(|record| {
             if record.incarnation_id == incarnation_id.as_str() {
                 record.owner
@@ -183,7 +183,7 @@ impl MedullaStore {
                 medulla_persistence::online_reshard::RawGraphRows::default(),
             )
             .await?;
-        let mut s = self.ctx.state.write().await;
+        let mut s = medulla_server_api::state::timed_write(&self.ctx.state).await;
         if s.registry.exists(name) {
             s.registry.delete_graph(name)?;
         }

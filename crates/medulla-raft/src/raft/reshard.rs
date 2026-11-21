@@ -503,7 +503,7 @@ impl TenantManager {
 
         let state = self.multi.app_state();
         let core = {
-            let mut s = state.write().await;
+            let mut s = medulla_server_api::state::timed_write(&state).await;
             // The graph entry must exist in the registry (hibernation keeps it — it
             // only clears the core). If a fresh process is rehydrating a graph it
             // never created, recreate the registry entry from the durable identity.
