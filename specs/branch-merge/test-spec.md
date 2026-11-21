@@ -25,12 +25,15 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
   a pinned epistemic policy, the winner selects per the policy. The resolved row keeps the
   contradiction link. It keeps both evidence refs. Without a policy, the conflict stays open with
   both candidates queryable. *(MEDULLA-BRANCH-MERGE-R005)*
+- `crates/medulla-h-decide/src/decide/stat_tests/resolve_conflict_tests.rs::seeded_schema_pins_a_conflict_decision_in_a_fresh_tenant` (planned, L3). A tenant with nothing published gets the `resolve_conflict.feature_schema` component from the engine seed, once and idempotently, and the conflict decision concludes under that pin. *(MEDULLA-BRANCH-MERGE-R005)*
 - `tests/test_branch_time_travel.py::test_as_of_reads_and_diff`. As-of reads at three versions each
   equal that version's write set. The diff between versions equals the intervening commits.
   *(MEDULLA-BRANCH-MERGE-R006)*
 - `tests/test_branch_merge_publish.py::test_atomic_two_parent_publication_and_replay`. The two-parent
   receipt reads back byte-identically. Replay against the same inputs returns the original
   receipt. *(MEDULLA-BRANCH-MERGE-R007)*
+- `tests/test_branch_merge_publish.py::test_removed_property_is_removed_on_the_target` (planned, L4) and `::test_merge_into_main_applies_to_the_base_graph` (planned, L4). A property the source removed is removed on the target; a branch cut from an unmoved main merges into the base graph and a moved main refuses `MERGE_TARGET_STALE`. *(MEDULLA-BRANCH-MERGE-R007)*
+- `crates/medulla-server-router/src/dispatch/router/branch_merge.rs::tests::crash_between_graph_batch_and_registry_commit_retries_to_one_commit` (planned, L3) and `crates/medulla-h-graph/src/graph_ops/branch/publish.rs::tests::unreplayable_payload_refuses_and_empty_principal_is_unknown` (planned, L2). A merge re-run after a crash between the graph batch and the registry commit writes one merge commit; an unreplayable payload refuses `MERGE_PAYLOAD_UNREPLAYABLE` and an empty principal `MERGE_ACTOR_UNKNOWN`. *(MEDULLA-BRANCH-MERGE-R007)*
 
 - `crates/medulla-compute/tests/line_merge.rs::clean_and_conflicting_hunks` (planned). Disjoint hunks merge clean. Overlapping hunks and any binary overlap return `Conflict`. *(MEDULLA-BRANCH-MERGE-R008)*
 - `tests/test_branch_landing_gate.py::test_failing_gate_blocks_merge_and_target_unchanged` (planned). A merge into a protected branch with one failing required gate refuses with `LANDING_GATE_BLOCKED` and leaves the target head unchanged. *(MEDULLA-BRANCH-MERGE-R009)*
@@ -74,11 +77,12 @@ Each row's acceptance test binds its ID where the test lands. The lines below re
 - `# spec: MEDULLA-BRANCH-MERGE-R001` — `tests/test_branch_create.py::test_branch_create_and_refusals` (planned, L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R002` — `tests/test_branch_scoped_mutation.py::test_branch_write_invisible_until_merge` (L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R003` — `tests/test_branch_merge_base.py::test_merge_outcomes_up_to_date_and_fast_forward` (planned, L4)
-- `# spec: MEDULLA-BRANCH-MERGE-R004` — `tests/test_branch_three_way_merge.py::test_entity_level_outcomes` (planned, L4)
-- `# spec: MEDULLA-BRANCH-MERGE-R005` — `tests/test_branch_epistemic_conflict.py::test_evidence_weighted_resolution_and_open_conflict` (planned, L4); `crates/medulla-h-graph/src/graph_ops/branch/conflict.rs::tests::candidates_come_from_provenance_and_missing_evidence_stays_open` (planned, L2)
+- `# spec: MEDULLA-BRANCH-MERGE-R004` — `tests/test_branch_three_way_merge.py::test_entity_level_outcomes` (planned, L4); `crates/medulla-h-graph/src/graph_ops/branch/time_travel.rs::tests::entities_key_nodes_by_type_and_edges_by_pair` (planned, L2); `crates/medulla-h-graph/src/graph_ops/branch/publish.rs::tests::recorded_gate_completes_the_required_order_for_every_entity` (planned, L2)
+- `# spec: MEDULLA-BRANCH-MERGE-R005` — `tests/test_branch_epistemic_conflict.py::test_evidence_weighted_resolution_and_open_conflict` (planned, L4); `crates/medulla-h-graph/src/graph_ops/branch/conflict.rs::tests::candidates_come_from_provenance_and_missing_evidence_stays_open` (planned, L2); `crates/medulla-h-decide/src/decide/stat_tests/resolve_conflict_tests.rs::seeded_schema_pins_a_conflict_decision_in_a_fresh_tenant` (planned, L3)
 - `# spec: MEDULLA-BRANCH-MERGE-R006` — `tests/test_branch_time_travel.py::test_as_of_reads_and_diff` (L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R007` — `tests/test_branch_merge_publish.py::test_atomic_two_parent_publication_and_replay` (L4)
 - `# spec: MEDULLA-BRANCH-MERGE-R007` — `tests/test_branch_merge_publish.py::test_fast_forward_target_reads_source_data` (planned, L4)
+- `# spec: MEDULLA-BRANCH-MERGE-R007` — `tests/test_branch_merge_publish.py::test_removed_property_is_removed_on_the_target` (planned, L4); `tests/test_branch_merge_publish.py::test_merge_into_main_applies_to_the_base_graph` (planned, L4); `crates/medulla-server-router/src/dispatch/router/branch_merge.rs::tests::crash_between_graph_batch_and_registry_commit_retries_to_one_commit` (planned, L3); `crates/medulla-h-graph/src/graph_ops/branch/publish.rs::tests::unreplayable_payload_refuses_and_empty_principal_is_unknown` (planned, L2)
 - `# spec: MEDULLA-BRANCH-MERGE-R008` — `crates/medulla-compute/tests/line_merge.rs::clean_and_conflicting_hunks` (planned, L2)
 - `# spec: MEDULLA-BRANCH-MERGE-R009` — `tests/test_branch_landing_gate.py::test_failing_gate_blocks_merge_and_target_unchanged` (planned, L3)
 - `# spec: MEDULLA-BRANCH-MERGE-R010` — `tests/test_branch_line_merge.py::test_disjoint_hunks_merge_and_overlap_conflicts` (planned, L4)

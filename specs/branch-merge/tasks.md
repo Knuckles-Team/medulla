@@ -13,6 +13,8 @@ One task per leaf row of `requirements.md`, producer first: the branch model (US
 - [ ] T006 [US3] MEDULLA-BRANCH-MERGE-R004 Entity-level three-way merge
 - [x] T007 [US4] MEDULLA-BRANCH-MERGE-R005 Epistemic conflict resolution
 - [ ] T008 [US3] MEDULLA-BRANCH-MERGE-R007 Atomic merge publication
+- [ ] T008b [US3] MEDULLA-BRANCH-MERGE-R005 Seed the `resolve_conflict.feature_schema` component (`ensure_conflict_feature_schema`)
+- [ ] T008c [US3] MEDULLA-BRANCH-MERGE-R007 Retry-safe two-commit apply, property removals, main target, `MERGE_PAYLOAD_UNREPLAYABLE`
 - [ ] T008a [US3] MEDULLA-BRANCH-MERGE-R007 Fast-forward publishes data and history; delete `BranchRegistry::fast_forward`
 - [x] T008 [US3] MEDULLA-BRANCH-MERGE-R007 Atomic merge publication
 - [ ] T009 [US3] MEDULLA-BRANCH-MERGE-R009 Landing policy check at merge publish
