@@ -91,6 +91,28 @@ pub enum QueueClass {
     SlowHeavy,
 }
 
+/// One stage of the ingest worker loop (MEDULLA-INGEST-WORKER-R604.2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum IngestStage {
+    SourceCommit,
+    Projection,
+    Lexical,
+    Vector,
+    Index,
+}
+
+/// The queue class of an ingest stage: `SourceCommit` is fast, `Projection` and `Lexical`
+/// are medium, `Vector` and `Index` are slow and heavy. Rotation across lanes belongs to
+/// MEDULLA-DURABLE-KERNEL-R071.600 and the hot-spare rule to MEDULLA-DURABLE-KERNEL-R075.
+pub fn queue_class_for(stage: IngestStage) -> QueueClass {
+    match stage {
+        IngestStage::SourceCommit => QueueClass::Fast,
+        IngestStage::Projection | IngestStage::Lexical => QueueClass::Medium,
+        IngestStage::Vector | IngestStage::Index => QueueClass::SlowHeavy,
+    }
+}
+
 /// What one lane holds right now.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -144,5 +166,22 @@ mod tests {
         let json = serde_json::to_string(&metrics).unwrap();
         assert_eq!(serde_json::from_str::<LaneMetrics>(&json).unwrap(), metrics);
         assert!(serde_json::from_str::<LaneMetrics>("{\"depth\":1,\"extra\":2}").is_err());
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R604.2
+    #[test]
+    fn every_stage_has_one_class() {
+        for (stage, class) in [
+            (IngestStage::SourceCommit, QueueClass::Fast),
+            (IngestStage::Projection, QueueClass::Medium),
+            (IngestStage::Lexical, QueueClass::Medium),
+            (IngestStage::Vector, QueueClass::SlowHeavy),
+            (IngestStage::Index, QueueClass::SlowHeavy),
+        ] {
+            assert_eq!(queue_class_for(stage), class);
+        }
+        let json = serde_json::to_string(&IngestStage::SourceCommit).unwrap();
+        assert_eq!(json, "\"source_commit\"");
+        assert!(serde_json::from_str::<IngestStage>("\"rank\"").is_err());
     }
 }
