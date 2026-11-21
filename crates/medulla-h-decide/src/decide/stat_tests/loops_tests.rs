@@ -490,3 +490,39 @@ async fn unfired_event_refuses_transition_refused() {
         LoopState::Running
     );
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R653.3
+#[tokio::test]
+async fn loop_ops_reach_the_handler() {
+    let h = Harness::new().await;
+    let id = "reach-loop";
+
+    // Claim creates the loop from its objective and priority and takes the lease.
+    let claimed = writer(&h, claim(id)).await.unwrap();
+    assert_eq!(claimed.instance.state, LoopState::Running);
+    assert_eq!(claimed.instance.tenant_id, TENANT);
+    let epoch = claimed.instance.lease.as_ref().unwrap().epoch;
+
+    // FileGap files an open gap under the lease.
+    let filed = writer(&h, file_gap(id, epoch, "g1", 800_000)).await.unwrap();
+    assert_eq!(filed.gaps.len(), 1);
+    assert_eq!(filed.gaps[0].state, GapState::Open);
+
+    // Beacon records the stage.
+    let beaconed = writer(
+        &h,
+        LoopOp::Beacon {
+            loop_id: id.into(),
+            epoch,
+            stage: "learn".into(),
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(beaconed.beacons.len(), 1);
+
+    // Get reads the one view every op answers.
+    let read = writer(&h, get(id)).await.unwrap();
+    assert_eq!(read.gaps.len(), 1);
+    assert_eq!(read.beacons.len(), 1);
+}
