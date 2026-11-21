@@ -1,0 +1,24 @@
+# Third-party product and vendor names that must not appear in an IRI local name of the
+# business operations pack (MEDULLA-BUSINESS-OPS-R001.8). One lowercase name per line;
+# a line starting with # is a comment.
+stripe
+paypal
+shopify
+woocommerce
+quickbooks
+xero
+netsuite
+salesforce
+hubspot
+etsy
+amazon
+ebay
+gusto
+docusign
+avalara
+bigcommerce
+zendesk
+jira
+github
+gitlab
+slack

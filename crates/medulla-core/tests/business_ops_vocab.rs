@@ -534,3 +534,92 @@ fn approval_gate_deploy_incident_terms_with_shapes() {
         }));
     }
 }
+
+// spec: MEDULLA-BUSINESS-OPS-R001.8
+#[test]
+fn every_class_rolls_up_and_no_product_names() {
+    let business = triples();
+    let ontology_dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("ontology");
+    let foundation = parse_turtle(include_str!("../ontology/core-foundation-v1.ttl")).unwrap();
+    let commercial = parse_turtle(include_str!("../ontology/commercial-v1.ttl")).unwrap();
+    let supply = parse_turtle(include_str!("../ontology/supply_chain-v1.ttl")).unwrap();
+    let core_classes = declared_classes(&foundation);
+
+    // The subclass edges of this pack plus the modules it reuses and core-foundation.
+    let mut graph: Vec<Triple> = business.clone();
+    graph.extend(foundation);
+    graph.extend(commercial);
+    graph.extend(supply);
+    let rolls_up = |class: &str| -> bool {
+        let mut seen = BTreeSet::new();
+        let mut stack = vec![class.to_string()];
+        while let Some(current) = stack.pop() {
+            for parent in graph
+                .iter()
+                .filter(|t| {
+                    subject_str(&t.subject) == Some(current.as_str())
+                        && t.predicate.as_str() == format!("{RDFS}subClassOf")
+                })
+                .filter_map(|t| object_iri(&t.object))
+            {
+                if core_classes.contains(parent) {
+                    return true;
+                }
+                if seen.insert(parent.to_string()) {
+                    stack.push(parent.to_string());
+                }
+            }
+        }
+        false
+    };
+    let classes = declared_classes(&business);
+    assert!(classes.len() >= 30, "the pack declares its classes");
+    for class in &classes {
+        assert!(
+            rolls_up(class),
+            "{class} has no rdfs:subClassOf path to a core-foundation class"
+        );
+    }
+
+    // No IRI local name names a product.
+    let denylist: Vec<String> = include_str!("fixtures/product_name_denylist.txt")
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(str::to_lowercase)
+        .collect();
+    assert!(!denylist.is_empty());
+    for triple in &business {
+        if let Some(subject) = subject_str(&triple.subject) {
+            if let Some(local) = subject.strip_prefix(KG) {
+                let lowered = local.to_lowercase();
+                for name in &denylist {
+                    assert!(
+                        !lowered.contains(name.as_str()),
+                        "{local} contains the product name {name}"
+                    );
+                }
+            }
+        }
+    }
+
+    // One home per class: no other packaged module declares a class of this pack, so the
+    // class-collision census stays at its baseline.
+    for entry in std::fs::read_dir(&ontology_dir).unwrap().flatten() {
+        let name = entry.file_name().to_string_lossy().into_owned();
+        if !name.ends_with(".ttl") || name.ends_with(".shapes.ttl") || name == "business_ops-v1.ttl"
+        {
+            continue;
+        }
+        let text = std::fs::read_to_string(entry.path()).unwrap();
+        let Ok(other) = parse_turtle(&text) else {
+            continue;
+        };
+        for class in declared_classes(&other) {
+            assert!(
+                !classes.contains(&class),
+                "{class} is declared by business_ops and by {name}"
+            );
+        }
+    }
+}
