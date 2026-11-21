@@ -111,3 +111,104 @@ typed over the objects it operates on (actsOn), and carries an effect class
 (producesEffect: read | mutation | external).  BFO:Process / prov:Plan.""" ;
     rdfs:seeAlso prov:Plan ;
     rdfs:subClassOf bfo:0000015 .
+
+# Action provenance (MEDULLA-DECISION-ENGINE-R869.1): an append-only record of one
+# action, the facts it read at the version it read them, and the rules it applied.
+# A correction is a new record whose :causedBy names the corrected one.
+:ActionRecord a owl:Class ;
+    rdfs:label "Action Record" ;
+    rdfs:comment "An append-only record of one action: its kind, its actor, the facts it read and the rules it applied, each at the version and digest it was read at. No writer updates an ActionRecord node; a correction is a new record whose :causedBy names the corrected one (MEDULLA-DECISION-ENGINE-R869.1)." ;
+    rdfs:subClassOf :ActionInvocation .
+
+:FactUse a owl:Class ;
+    rdfs:label "Fact Use" ;
+    rdfs:comment "One fact read by one action: the node id, the graph version it was read at and the digest of its property blob at that version (MEDULLA-DECISION-ENGINE-R869.1)." ;
+    rdfs:subClassOf :DomainEntity .
+
+:RuleUse a owl:Class ;
+    rdfs:label "Rule Use" ;
+    rdfs:comment "One rule applied by one action: the rule node id, its version and its digest (MEDULLA-DECISION-ENGINE-R869.1)." ;
+    rdfs:subClassOf :DomainEntity .
+
+:actionKind a owl:DatatypeProperty ;
+    rdfs:label "action kind" ;
+    rdfs:comment "The kind of an ActionRecord: tool_call, approval, filing, money_movement or publish." ;
+    rdfs:domain :ActionRecord ;
+    rdfs:range xsd:string .
+
+:actor a owl:ObjectProperty ;
+    rdfs:label "actor" ;
+    rdfs:comment "The node of the principal that took the action." ;
+    rdfs:domain :ActionRecord .
+
+:usedFact a owl:ObjectProperty ;
+    rdfs:label "used fact" ;
+    rdfs:comment "Links an ActionRecord to a FactUse it read." ;
+    rdfs:domain :ActionRecord ;
+    rdfs:range :FactUse .
+
+:factNode a owl:DatatypeProperty ;
+    rdfs:label "fact node" ;
+    rdfs:comment "The node id of the fact, a string and not an edge, so a traversal never reaches the fact's current image." ;
+    rdfs:domain :FactUse ;
+    rdfs:range xsd:string .
+
+:factRevision a owl:DatatypeProperty ;
+    rdfs:label "fact revision" ;
+    rdfs:comment "The graph version the action read the node at: the version GraphCore::node_properties_at answers." ;
+    rdfs:domain :FactUse ;
+    rdfs:range xsd:integer .
+
+:factDigest a owl:DatatypeProperty ;
+    rdfs:label "fact digest" ;
+    rdfs:comment "sha256: plus 64 lowercase hex of the SHA-256 over the node's msgpack property blob at that version." ;
+    rdfs:domain :FactUse ;
+    rdfs:range xsd:string .
+
+:usedRule a owl:ObjectProperty ;
+    rdfs:label "used rule" ;
+    rdfs:comment "Links an ActionRecord to a RuleUse it applied." ;
+    rdfs:domain :ActionRecord ;
+    rdfs:range :RuleUse .
+
+:ruleNode a owl:DatatypeProperty ;
+    rdfs:label "rule node" ;
+    rdfs:comment "The node id of the rule." ;
+    rdfs:domain :RuleUse ;
+    rdfs:range xsd:string .
+
+:ruleVersion a owl:DatatypeProperty ;
+    rdfs:label "rule version" ;
+    rdfs:comment "The version of the rule the action applied." ;
+    rdfs:domain :RuleUse ;
+    rdfs:range xsd:integer .
+
+:ruleDigest a owl:DatatypeProperty ;
+    rdfs:label "rule digest" ;
+    rdfs:comment "sha256: plus 64 lowercase hex digest of the rule." ;
+    rdfs:domain :RuleUse ;
+    rdfs:range xsd:string .
+
+:approvedBy a owl:ObjectProperty ;
+    rdfs:label "approved by" ;
+    rdfs:comment "Links an ActionRecord to the GateDecision that approved it." ;
+    rdfs:domain :ActionRecord ;
+    rdfs:range :GateDecision .
+
+:causedBy a owl:ObjectProperty ;
+    rdfs:label "caused by" ;
+    rdfs:comment "Links an ActionRecord to an earlier ActionRecord; a correction names the record it corrects." ;
+    rdfs:domain :ActionRecord ;
+    rdfs:range :ActionRecord .
+
+:actionOutcome a owl:DatatypeProperty ;
+    rdfs:label "action outcome" ;
+    rdfs:comment "The caller's outcome text for an ActionRecord." ;
+    rdfs:domain :ActionRecord ;
+    rdfs:range xsd:string .
+
+:noInputs a owl:DatatypeProperty ;
+    rdfs:label "no inputs" ;
+    rdfs:comment "The stated reason an ActionRecord used no fact." ;
+    rdfs:domain :ActionRecord ;
+    rdfs:range xsd:string .

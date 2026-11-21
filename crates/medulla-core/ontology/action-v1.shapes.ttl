@@ -1,0 +1,74 @@
+# Action provenance shapes (MEDULLA-DECISION-ENGINE-R869.1).
+#
+# SHACL Core only. The companion of action-v1.ttl: an ActionRecord names its kind, its
+# actor and its idempotency key, and either the facts it read or why it read none; each
+# FactUse and RuleUse pins the node, its version and its digest.
+
+@prefix kg:   <https://knuckles-team.github.io/ontology/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# spec: MEDULLA-DECISION-ENGINE-R869.1
+kg:ActionRecordShape a sh:NodeShape ;
+    sh:targetClass kg:ActionRecord ;
+    sh:property [
+        sh:path kg:actionKind ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "tool_call" "approval" "filing" "money_movement" "publish" ) ;
+        sh:message "An ActionRecord names exactly one kind: tool_call, approval, filing, money_movement or publish."
+    ] ;
+    sh:property [
+        sh:path kg:actor ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "An ActionRecord names exactly one actor."
+    ] ;
+    sh:property [
+        sh:path kg:idempotencyKey ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "An ActionRecord carries exactly one idempotency key."
+    ] ;
+    sh:or (
+        [ sh:property [
+            sh:path kg:usedFact ; sh:minCount 1 ;
+            sh:message "An ActionRecord names the facts it used."
+        ] ]
+        [ sh:property [
+            sh:path kg:noInputs ; sh:minCount 1 ;
+            sh:message "An ActionRecord that used no fact states why."
+        ] ]
+    ) ;
+    sh:message "An action record names its kind, actor and idempotency key, and its inputs or why it had none." .
+
+kg:FactUseShape a sh:NodeShape ;
+    sh:targetClass kg:FactUse ;
+    sh:property [
+        sh:path kg:factNode ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A FactUse names exactly one fact node."
+    ] ;
+    sh:property [
+        sh:path kg:factRevision ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:integer ; sh:minInclusive 0 ;
+        sh:message "A FactUse names exactly one revision, an integer of at least 0."
+    ] ;
+    sh:property [
+        sh:path kg:factDigest ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:pattern "^sha256:[0-9a-f]{64}$" ;
+        sh:message "A FactUse digest is sha256: plus 64 lowercase hex characters."
+    ] ;
+    sh:message "A fact use pins the node, its version and its digest." .
+
+kg:RuleUseShape a sh:NodeShape ;
+    sh:targetClass kg:RuleUse ;
+    sh:property [
+        sh:path kg:ruleNode ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:message "A RuleUse names exactly one rule node."
+    ] ;
+    sh:property [
+        sh:path kg:ruleVersion ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:datatype xsd:integer ; sh:minInclusive 0 ;
+        sh:message "A RuleUse names exactly one version, an integer of at least 0."
+    ] ;
+    sh:property [
+        sh:path kg:ruleDigest ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:pattern "^sha256:[0-9a-f]{64}$" ;
+        sh:message "A RuleUse digest is sha256: plus 64 lowercase hex characters."
+    ] ;
+    sh:message "A rule use pins the rule, its version and its digest." .
