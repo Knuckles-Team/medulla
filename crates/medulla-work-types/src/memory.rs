@@ -41,6 +41,10 @@ pub const MEMORY_SUPPORT_BELOW_THRESHOLD: RefusalCode =
 /// (MEDULLA-DECISION-ENGINE-R651.4).
 pub const MEMORY_ENTRY_TOO_LARGE: RefusalCode = RefusalCode::new("MEMORY_ENTRY_TOO_LARGE");
 
+/// A `MemoryRemember` that would take the tenant's stored memory above
+/// `knob memory.tenant_max_bytes` (MEDULLA-DECISION-ENGINE-R154.1).
+pub const MEMORY_TENANT_QUOTA_EXCEEDED: RefusalCode = RefusalCode::new("MEMORY_TENANT_QUOTA_EXCEEDED");
+
 /// A hard removal that left a node a live node still references
 /// (MEDULLA-DECISION-ENGINE-R651.4). It is reported by `EvictBelow` and `Maintain` in their
 /// `live_referenced` list, not answered as a request refusal.
@@ -56,6 +60,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     MEDIA_DERIVATION_KIND_INVALID,
     MEMORY_SUPPORT_BELOW_THRESHOLD,
     MEMORY_ENTRY_TOO_LARGE,
+    MEMORY_TENANT_QUOTA_EXCEEDED,
     MEMORY_LIVE_REFERENCE,
 ];
 

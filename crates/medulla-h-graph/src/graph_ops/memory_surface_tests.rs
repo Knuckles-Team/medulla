@@ -5,7 +5,7 @@
 use super::memory_surface::{absent_record, admit_remember, export, promotion_support_refusal, recall, Admitted};
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
-use medulla_server_mutation::mutation::{apply_coalescable_write, is_gateway_routed};
+use medulla_server_mutation::mutation::is_gateway_routed;
 use medulla_types::contract::{ResourceId, TenantId};
 use medulla_work_types::memory::{
     MediaAttachment, MemoryExportRequest, MemoryKind, MemoryRecallRequest, MemoryRecord, MemoryRememberRequest,
@@ -40,17 +40,34 @@ fn record(tenant: &str, id: &str, tier: MemoryTier, text: &str) -> MemoryRecord 
     }
 }
 
+fn admit(
+    core: &GraphCore,
+    tenant: &str,
+    request: &MemoryRememberRequest,
+    known: &std::collections::BTreeSet<String>,
+) -> Result<Admitted, String> {
+    admit_remember(core, tenant, request, known, tenant_max_bytes())
+}
+
+/// Commit the one batch an admitted remember writes.
+fn apply_batch(core: &GraphCore, write: &Method) {
+    let Method::BatchUpdate { operations_msgpack } = write else {
+        panic!("an admitted write is one batch");
+    };
+    medulla_graph_algos::algorithms::batch_update(core, operations_msgpack).unwrap();
+}
+
 fn remember(record: MemoryRecord, embedding: Vec<f32>) -> MemoryRememberRequest {
     MemoryRememberRequest { record, embedding }
 }
 
 fn store(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) {
-    let Admitted::Write(write, embed, answer) = admit_remember(core, tenant, request, &Default::default()).unwrap()
+    let Admitted::Write(write, embed, answer) = admit(core, tenant, request, &Default::default()).unwrap()
     else {
         panic!("a first remember writes");
     };
     assert!(answer.stored);
-    apply_coalescable_write(core, &write).unwrap();
+    apply_batch(core, &write);
     // The vector lands beside the node through the same write the AddEmbedding route runs.
     if let Some(embed) = embed {
         let Method::AddEmbedding { node_id, embedding } = *embed else {
@@ -101,7 +118,7 @@ fn memory_methods_are_served_and_classified() {
     // no ACCESS_DENIED and no tenant-specific code (MEDULLA-DECISION-ENGINE-R651.4), and it
     // writes nothing.
     let foreign = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![]);
-    let refusal = admit_remember(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
+    let refusal = admit(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
     assert!(refusal.starts_with("PARAMETER_INVALID"), "{refusal}");
     assert!(!refusal.contains("ACCESS_DENIED") && !refusal.to_lowercase().contains("tenant"), "{refusal}");
     assert_eq!(core.node_count(), 0);
@@ -155,10 +172,10 @@ fn remember_recall_consolidate_and_export_round_trip() {
 
     // A repeat of the same record is a replay; a different body is refused.
     let same = remember(sky.clone(), vec![1.0, 0.0]);
-    assert!(matches!(admit_remember(&core, "tenant-a", &same, &Default::default()), Ok(Admitted::Same(_))));
+    assert!(matches!(admit(&core, "tenant-a", &same, &Default::default()), Ok(Admitted::Same(_))));
     let mut changed = sky.clone();
     changed.text = "the sky is green".into();
-    assert!(admit_remember(&core, "tenant-a", &remember(changed, vec![1.0, 0.0]), &Default::default()).is_err());
+    assert!(admit(&core, "tenant-a", &remember(changed, vec![1.0, 0.0]), &Default::default()).is_err());
 
     // Recall ranks by cosine, drops the expired record and respects the budget.
     let found = recall(&core, "tenant-a", NOW, &recall_request(vec![1.0, 0.0], &[], 25)).unwrap();
@@ -251,7 +268,7 @@ fn media_attachment_remember_and_recall() {
         derivation_ids: vec![ResourceId::new(derivation.as_str()).unwrap()],
     }];
     // An attachment the owner scope does not hold refuses before any write.
-    let refusal = admit_remember(&core, "tenant-a", &remember(image.clone(), vec![0.0, 1.0]), &Default::default())
+    let refusal = admit(&core, "tenant-a", &remember(image.clone(), vec![0.0, 1.0]), &Default::default())
         .err()
         .unwrap();
     assert!(refusal.starts_with("MEDIA_BLOB_UNKNOWN"), "{refusal}");
@@ -259,10 +276,10 @@ fn media_attachment_remember_and_recall() {
 
     let known: std::collections::BTreeSet<String> = [digest].into_iter().collect();
     let request = remember(image, vec![0.0, 1.0]);
-    let Admitted::Write(write, embed, _) = admit_remember(&core, "tenant-a", &request, &known).unwrap() else {
+    let Admitted::Write(write, embed, _) = admit(&core, "tenant-a", &request, &known).unwrap() else {
         panic!("a first remember writes");
     };
-    apply_coalescable_write(&core, &write).unwrap();
+    apply_batch(&core, &write);
     let Method::AddEmbedding { node_id, embedding } = *embed.unwrap() else {
         panic!("the vector write is an AddEmbedding");
     };
@@ -305,13 +322,13 @@ fn media_refusals() {
     };
     // A blob above the default limit is refused, and nothing is stored.
     let limit = medulla_work_types::memory::MEDIA_MAX_BLOB_BYTES_DEFAULT;
-    let refusal = admit_remember(&core, "tenant-a", &attach(limit + 1), &known).err().unwrap();
+    let refusal = admit(&core, "tenant-a", &attach(limit + 1), &known).err().unwrap();
     assert!(refusal.starts_with("MEDIA_TOO_LARGE"), "{refusal}");
     assert_eq!(core.node_count(), 0);
     // A blob at the limit passes the size check.
-    assert!(admit_remember(&core, "tenant-a", &attach(limit), &known).is_ok());
+    assert!(admit(&core, "tenant-a", &attach(limit), &known).is_ok());
     // A digest the owner scope does not hold is refused before the size is read.
-    let refusal = admit_remember(&core, "tenant-a", &attach(limit + 1), &Default::default())
+    let refusal = admit(&core, "tenant-a", &attach(limit + 1), &Default::default())
         .err()
         .unwrap();
     assert!(refusal.starts_with("MEDIA_BLOB_UNKNOWN"), "{refusal}");
@@ -333,10 +350,10 @@ fn media_evidence_reads_back() {
     }];
     let known: std::collections::BTreeSet<String> = [digest.clone()].into_iter().collect();
     let request = remember(image, vec![]);
-    let Admitted::Write(write, _, _) = admit_remember(&core, "tenant-a", &request, &known).unwrap() else {
+    let Admitted::Write(write, _, _) = admit(&core, "tenant-a", &request, &known).unwrap() else {
         panic!("a first remember writes");
     };
-    apply_coalescable_write(&core, &write).unwrap();
+    apply_batch(&core, &write);
 
     // The attachment keys ride the memory node, whose id is the citing memory id.
     let blob = core.get_node_properties("memory:tenant-a:m:evidence").unwrap();
@@ -468,7 +485,7 @@ fn memory_refusals() {
     // A foreign tenant's record reads exactly as one that is absent: the same code and text
     // shape as a record the caller never stored, and nothing is written.
     let foreign = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![]);
-    let refusal = admit_remember(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
+    let refusal = admit(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
     assert!(refusal.starts_with("PARAMETER_INVALID"), "{refusal}");
     assert_eq!(refusal, absent_record("m:1"), "a foreign tenant's write is an existence oracle");
     assert!(!refusal.to_lowercase().contains("tenant"), "{refusal}");
@@ -479,7 +496,7 @@ fn memory_refusals() {
         record("tenant-a", "m:big", MemoryTier::Semantic, &"x".repeat(70_000)),
         vec![],
     );
-    let refusal = admit_remember(&core, "tenant-a", &huge, &Default::default()).err().unwrap();
+    let refusal = admit(&core, "tenant-a", &huge, &Default::default()).err().unwrap();
     assert!(refusal.starts_with("MEMORY_ENTRY_TOO_LARGE"), "{refusal}");
     assert_eq!(core.node_count(), 0);
 
@@ -499,4 +516,42 @@ fn memory_refusals() {
     let (pruned, live_referenced) = core.evict_below(&["old".to_string()], 0.5, true);
     assert_eq!(pruned, ["old"]);
     assert!(live_referenced.is_empty());
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R154.1
+#[test]
+fn tenant_total_admission_keeps_a_durable_counter() {
+    let core = GraphCore::new();
+    let first = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "first"), vec![]);
+    store(&core, "tenant-a", &first);
+    let stored = |id: &str| core.get_node_properties(id).unwrap().len() as u64;
+    // The counter is a graph node written with the record, and equals the stored bytes.
+    assert_eq!(read_usage(&core, "tenant-a"), Some(stored("memory:tenant-a:m:1")));
+    let second = remember(record("tenant-a", "m:2", MemoryTier::Semantic, "second"), vec![]);
+    store(&core, "tenant-a", &second);
+    let total = stored("memory:tenant-a:m:1") + stored("memory:tenant-a:m:2");
+    assert_eq!(read_usage(&core, "tenant-a"), Some(total));
+    // Another tenant's counter is its own.
+    assert_eq!(read_usage(&core, "tenant-b"), None);
+
+    // The boundary: a total that lands exactly on the cap is admitted, one byte more is refused.
+    let third = remember(record("tenant-a", "m:3", MemoryTier::Semantic, "third"), vec![]);
+    let third_len = node_blob("tenant-a", &third).unwrap().len() as u64;
+    let known = Default::default();
+    assert!(admit_remember(&core, "tenant-a", &third, &known, total + third_len).is_ok());
+    let refusal = admit_remember(&core, "tenant-a", &third, &known, total + third_len - 1)
+        .err()
+        .unwrap();
+    assert!(refusal.starts_with("MEMORY_TENANT_QUOTA_EXCEEDED"), "{refusal}");
+    assert!(core.get_node_properties("memory:tenant-a:m:3").is_none());
+    // Another tenant is not charged for tenant-a's bytes.
+    let other = remember(record("tenant-b", "m:1", MemoryTier::Semantic, "first"), vec![]);
+    let other_len = node_blob("tenant-b", &other).unwrap().len() as u64;
+    assert!(admit_remember(&core, "tenant-b", &other, &known, other_len).is_ok());
+
+    // A hard removal does not move the counter; the next refusal-bound admission re-measures.
+    assert!(core.forget("memory:tenant-a:m:2", true));
+    assert_eq!(read_usage(&core, "tenant-a"), Some(total));
+    let cap = stored("memory:tenant-a:m:1") + third_len;
+    assert!(admit_remember(&core, "tenant-a", &third, &known, cap).is_ok());
 }

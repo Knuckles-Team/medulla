@@ -36,7 +36,18 @@ pub const ENTRY_MAX_BYTES: KnobSpec = KnobSpec {
     default: KnobValue::Integer(65_536),
     min: KnobValue::Integer(1_024),
     max: KnobValue::Integer(1_048_576),
-    safety: KnobSafety::Tunable,
+    safety: KnobSafety::Fixed,
+};
+
+/// The most bytes a tenant's memory records may store in total: the sum of the stored node
+/// bytes of its `memory:<tenant>:` nodes (MEDULLA-DECISION-ENGINE-R154.1).
+pub const TENANT_MAX_BYTES: KnobSpec = KnobSpec {
+    name: "memory.tenant_max_bytes",
+    unit: "bytes",
+    default: KnobValue::Integer(1_073_741_824),
+    min: KnobValue::Integer(1_048_576),
+    max: KnobValue::Integer(1_099_511_627_776),
+    safety: KnobSafety::Fixed,
 };
 
 /// The default decay half-life of the working tier.
@@ -113,25 +124,10 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::Integer(32),
         safety: KnobSafety::Tunable,
     },
-    KnobSpec {
-        name: "memory.entry_max_bytes",
-        unit: "bytes",
-        default: KnobValue::Integer(65536),
-        min: KnobValue::Integer(1024),
-        max: KnobValue::Integer(1048576),
-        safety: KnobSafety::Fixed,
-    },
-    KnobSpec {
-        name: "memory.tenant_max_bytes",
-        unit: "bytes",
-        default: KnobValue::Integer(1073741824),
-        min: KnobValue::Integer(1048576),
-        max: KnobValue::Integer(1099511627776),
-        safety: KnobSafety::Fixed,
-    },
     IMPORTANCE_CAP,
     PROMOTE_MIN_SUPPORT,
     ENTRY_MAX_BYTES,
+    TENANT_MAX_BYTES,
     HALF_LIFE_WORKING,
     HALF_LIFE_EPISODIC,
     HALF_LIFE_PROCEDURAL,

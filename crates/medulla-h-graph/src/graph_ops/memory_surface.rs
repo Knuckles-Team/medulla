@@ -25,7 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_decision_stats::decision::memory as kernel;
-use medulla_decision_types::decision::knob_families::memory::{ENTRY_MAX_BYTES, PROMOTE_MIN_SUPPORT};
+use medulla_decision_types::decision::knob_families::memory::{ENTRY_MAX_BYTES, PROMOTE_MIN_SUPPORT, TENANT_MAX_BYTES};
 use medulla_decision_types::decision::knobs::{KnobSpec, KnobValue};
 use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_protocol_types::result_contract::graph::{
@@ -38,6 +38,7 @@ use medulla_work_types::memory::{
     MemoryDriftReport, MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
     MemoryRecallResult, MemoryRecord, MemoryRememberRequest, MemoryRememberResult, MemoryTier,
     MEMORY_ENTRY_TOO_LARGE, MEMORY_RECORD_SCHEMA_VERSION, MEMORY_SUPPORT_BELOW_THRESHOLD,
+    MEMORY_TENANT_QUOTA_EXCEEDED,
 };
 use sha2::{Digest, Sha256};
 
@@ -135,6 +136,39 @@ fn tenant_prefix(tenant: &str) -> String {
     format!("memory:{tenant}:")
 }
 
+/// The node type of a tenant's memory usage counter (MEDULLA-DECISION-ENGINE-R154.1).
+const USAGE_NODE_TYPE: &str = "MemoryTenantUsage";
+
+/// The id of the durable counter node of `tenant`: the stored bytes of its memory nodes.
+fn usage_node_id(tenant: &str) -> String {
+    format!("memory-quota:{tenant}")
+}
+
+/// The tenant's counter, when its node is stored.
+fn read_usage(core: &GraphCore, tenant: &str) -> Option<u64> {
+    let blob = core.get_node_properties(&usage_node_id(tenant))?;
+    let props = medulla_types::msgpack::decode_property_object(&blob).ok()?;
+    if props.get(TENANT_KEY)?.as_str()? != tenant {
+        return None;
+    }
+    props.get("bytes")?.as_u64()
+}
+
+/// The stored bytes of every memory node of `tenant`, measured by scanning the four tiers.
+fn scan_usage(core: &GraphCore, tenant: &str) -> u64 {
+    TIERS
+        .iter()
+        .flat_map(|tier| core.get_nodes_by_label(tier.node_type(), SCAN_CAP_PER_TIER))
+        .filter(|(_, blob)| decode(blob, tenant).is_some())
+        .map(|(_, blob)| blob.len() as u64)
+        .sum()
+}
+
+/// The counter node properties holding `bytes`.
+fn usage_props(tenant: &str, bytes: u64) -> serde_json::Value {
+    serde_json::json!({"type": USAGE_NODE_TYPE, TENANT_KEY: tenant, "bytes": bytes})
+}
+
 /// Decode one node of `tenant`; anything else reads as absent.
 fn decode(blob: &[u8], tenant: &str) -> Option<Stored> {
     let mut props = medulla_types::msgpack::decode_property_object(blob).ok()?;
@@ -174,10 +208,14 @@ pub(super) fn absent_record(memory_id: &str) -> String {
     )
 }
 
-fn node_blob(tenant: &str, request: &MemoryRememberRequest) -> Result<Vec<u8>, String> {
+fn node_props(tenant: &str, request: &MemoryRememberRequest) -> serde_json::Value {
     let mut props = request.record.to_props();
     props.insert(TENANT_KEY.into(), tenant.into());
-    rmp_serde::to_vec_named(&serde_json::Value::Object(props)).map_err(|error| {
+    serde_json::Value::Object(props)
+}
+
+fn node_blob(tenant: &str, request: &MemoryRememberRequest) -> Result<Vec<u8>, String> {
+    rmp_serde::to_vec_named(&node_props(tenant, request)).map_err(|error| {
         refuse("PARAMETER_INVALID", format!("record encoding failed: {error}"))
     })
 }
@@ -226,12 +264,18 @@ fn is_sha256_hex(digest: &str) -> bool {
 
 /// What an admitted remember does.
 pub(super) enum Admitted {
-    /// The node upsert to commit, then the vector write beside it, and the answer.
+    /// The one batch to commit (the record node and the tenant's usage counter node, written
+    /// together), then the vector write beside it, and the answer.
     Write(Box<Method>, Option<Box<Method>>, MemoryRememberResult),
     /// The node is already stored but its vector is not indexed: write the vector only.
     Embed(Box<Method>, MemoryRememberResult),
     /// The very same record and vector are already stored: nothing to commit.
     Same(MemoryRememberResult),
+}
+
+/// `knob memory.tenant_max_bytes` (MEDULLA-DECISION-ENGINE-R154.1).
+pub(super) fn tenant_max_bytes() -> u64 {
+    u64::try_from(knob_integer(&TENANT_MAX_BYTES)).unwrap_or(u64::MAX)
 }
 
 /// Admit one remember against the stored node and the vector index, writing nothing.
@@ -244,6 +288,7 @@ pub(super) fn admit_remember(
     tenant: &str,
     request: &MemoryRememberRequest,
     known_digests: &BTreeSet<String>,
+    tenant_max_bytes: u64,
 ) -> Result<Admitted, String> {
     let record = &request.record;
     // A record naming another tenant answers exactly like a record that does not exist for
@@ -330,10 +375,7 @@ pub(super) fn admit_remember(
         })
     };
     let Some(existing) = read_stored(core, tenant, record.memory_id.as_str()) else {
-        let write = Method::AddNode {
-            node_id: id.clone(),
-            properties_msgpack: blob,
-        };
+        let write = admitted_batch(core, tenant, &id, request, (blob.len() as u64, tenant_max_bytes))?;
         return Ok(Admitted::Write(Box::new(write), embed(&request.embedding), answer(true)));
     };
     let indexed = core.semantic_store.read().get_embedding(&id);
@@ -358,6 +400,42 @@ pub(super) fn admit_remember(
             answer(true),
         )),
     }
+}
+
+/// Admit the tenant total (MEDULLA-DECISION-ENGINE-R154.1) and build the one batch that writes the
+/// record node and the tenant's counter node. The counter is a durable graph node; the batch is
+/// the only writer of a new record, so the counter and the node land together. A projected total
+/// above `knob memory.tenant_max_bytes` is first re-measured by a scan (a hard removal elsewhere
+/// does not move the counter) and refuses `MEMORY_TENANT_QUOTA_EXCEEDED` only when the measured
+/// total is still above the knob.
+fn admitted_batch(
+    core: &GraphCore,
+    tenant: &str,
+    id: &str,
+    request: &MemoryRememberRequest,
+    (blob_len, max_tenant): (u64, u64),
+) -> Result<Method, String> {
+    let replaced = core.get_node_properties(id).map_or(0, |stored| stored.len() as u64);
+    let project = |total: u64| total.saturating_sub(replaced).saturating_add(blob_len);
+    let mut projected = project(read_usage(core, tenant).unwrap_or_else(|| scan_usage(core, tenant)));
+    if projected > max_tenant {
+        projected = project(scan_usage(core, tenant));
+    }
+    if projected > max_tenant {
+        return Err(refuse(
+            MEMORY_TENANT_QUOTA_EXCEEDED.as_str(),
+            format!(
+                "the tenant's memory would store {projected} bytes, above knob memory.tenant_max_bytes ({max_tenant})"
+            ),
+        ));
+    }
+    let operations = serde_json::json!([
+        {"op": "add_node", "id": id, "properties": node_props(tenant, request)},
+        {"op": "add_node", "id": usage_node_id(tenant), "properties": usage_props(tenant, projected)},
+    ]);
+    let operations_msgpack = rmp_serde::to_vec_named(&operations)
+        .map_err(|error| refuse("PARAMETER_INVALID", format!("record encoding failed: {error}")))?;
+    Ok(Method::BatchUpdate { operations_msgpack })
 }
 
 /// The attachment digests of a `MemoryRemember` that the caller's owner scope holds in the blob
@@ -488,6 +566,18 @@ async fn commit_embedding(ctx: &MutationCtx<'_>, write: &Method) -> Option<Respo
     )
 }
 
+/// The per-tenant gate serializing the remembers of one tenant.
+fn tenant_gate(tenant: &str) -> std::sync::Arc<tokio::sync::Mutex<()>> {
+    static GATES: std::sync::OnceLock<
+        std::sync::Mutex<BTreeMap<String, std::sync::Arc<tokio::sync::Mutex<()>>>>,
+    > = std::sync::OnceLock::new();
+    let mut gates = GATES
+        .get_or_init(|| std::sync::Mutex::new(BTreeMap::new()))
+        .lock()
+        .unwrap_or_else(std::sync::PoisonError::into_inner);
+    std::sync::Arc::clone(gates.entry(tenant.to_string()).or_default())
+}
+
 /// The `Route::MemorySurface` entry: admit the remember, commit the node upsert
 /// through the coalescable gateway, then the vector beside it.
 pub(super) async fn handle_remember(
@@ -500,7 +590,11 @@ pub(super) async fn handle_remember(
         return None;
     };
     let ok = |answer| ResultPayload::of::<MemoryRememberResultKind>(answer);
-    match admit_remember(ctx.core, ctx.tenant_scope, request, known_digests) {
+    // One remember of a tenant at a time: the counter node is read at admission and written by
+    // the batch, so two concurrent writes must not both start from the same total.
+    let tenant_gate = tenant_gate(ctx.tenant_scope);
+    let _held = tenant_gate.lock().await;
+    match admit_remember(ctx.core, ctx.tenant_scope, request, known_digests, tenant_max_bytes()) {
         Err(error) => Some(Response::err(ctx.req_id, error)),
         Ok(Admitted::Same(answer)) => Some(Response::ok(ctx.req_id, ok(answer))),
         Ok(Admitted::Embed(embed, answer)) => {
@@ -513,9 +607,11 @@ pub(super) async fn handle_remember(
         }
         Ok(Admitted::Write(write, embed, answer)) => {
             let plan = MutationPlan::for_method(&write);
-            let owned = write.as_ref().clone();
-            let node = super::gateway::commit_gateway_coalescable(ctx, &plan, &write, move |core| {
-                medulla_server_mutation::mutation::apply_coalescable_write(core, &owned)?;
+            let Method::BatchUpdate { operations_msgpack } = write.as_ref().clone() else {
+                return Some(Response::err(ctx.req_id, refuse("PARAMETER_INVALID", "an admitted write is one batch")));
+            };
+            let node = medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
+                medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)?;
                 ResultPayload::of::<MemoryRememberResultKind>(answer)
             })
             .await;
