@@ -148,6 +148,7 @@ async fn commit(call: &ScheduleCall<'_>, graph: &str, op: Value) -> Result<(), S
             auth_token: String::new(),
             agent_id: Some(call.authority.agent_id().to_string()),
             method: Method::BatchUpdate { operations_msgpack },
+            trace_id: None,
         },
         call.verified_context.clone(),
     )

@@ -242,6 +242,7 @@ async fn commit(ctx: &HandleContext<'_>, operations: Vec<Value>) -> Result<(), S
             auth_token: String::new(),
             agent_id: ctx.caller.map(str::to_owned),
             method: Method::BatchUpdate { operations_msgpack },
+            trace_id: None,
         },
         ctx.verified_context.clone(),
     )

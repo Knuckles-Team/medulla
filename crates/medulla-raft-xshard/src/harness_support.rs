@@ -150,6 +150,7 @@ pub fn signed_request(
         auth_token: String::new(),
         agent_id: Some(principal),
         method,
+        trace_id: None,
     };
     let sequence = NONCE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let issued_at = SystemTime::now()

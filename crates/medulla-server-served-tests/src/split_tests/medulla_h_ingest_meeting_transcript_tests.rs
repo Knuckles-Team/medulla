@@ -81,6 +81,7 @@ fn signed_as(principal: &str, id: u64, method: Method) -> Request {
         auth_token: String::new(),
         agent_id: Some(principal.to_string()),
         method,
+        trace_id: None,
     };
     request.auth_token = compute_verified_envelope_token(
         SECRET,

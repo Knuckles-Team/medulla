@@ -184,6 +184,7 @@ fn signed(id: u64, graph: &str, idempotency_key: &str, method: Method) -> Reques
         auth_token: String::new(),
         agent_id: Some(context.agent_id.clone()),
         method,
+        trace_id: None,
     };
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

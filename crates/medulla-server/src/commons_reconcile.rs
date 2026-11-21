@@ -112,6 +112,7 @@ async fn call(
         auth_token: String::new(),
         agent_id: Some(RECONCILE_ACTOR.to_string()),
         method,
+        trace_id: None,
     };
     let response =
         medulla_server_api::api::reentry::dispatch_verified_request(state, request, context).await;

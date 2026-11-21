@@ -192,6 +192,7 @@ pub fn signed_request_with_context(
         auth_token: String::new(),
         agent_id: Some(agent_id),
         method,
+        trace_id: None,
     };
     let sequence = NONCE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let nonce = format!("integration-{}-{id}-{sequence}", std::process::id());
@@ -232,6 +233,7 @@ pub fn signed_request_with_node(
         auth_token: String::new(),
         agent_id: Some(TEST_AGENT.to_string()),
         method,
+        trace_id: None,
     };
     let sequence = NONCE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let nonce = format!("integration-{}-{id}-{sequence}", std::process::id());
@@ -358,6 +360,7 @@ pub fn signed_register_identity_request(args: SignedRegisterIdentity<'_>) -> Req
             signature,
             roles,
         },
+        trace_id: None,
     };
     request.auth_token = compute_verified_envelope_token(
         secret,
@@ -391,6 +394,7 @@ pub fn signed_request_with_scopes(
         auth_token: String::new(),
         agent_id: Some(TEST_AGENT.to_string()),
         method,
+        trace_id: None,
     };
     let sequence = NONCE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let nonce = format!("integration-{}-{id}-{sequence}", std::process::id());

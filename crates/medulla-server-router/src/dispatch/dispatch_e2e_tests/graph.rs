@@ -52,6 +52,7 @@ async fn registry_serves_one_method_per_domain() {
                 auth_token: String::new(),
                 agent_id: Some("root".to_string()),
                 method,
+                trace_id: None,
             },
         );
         let response = Box::pin(dispatch(&state, request)).await;
@@ -124,6 +125,7 @@ mod admin_scope_tests {
                 auth_token: String::new(),
                 agent_id: Some(agent_id.unwrap_or("system").to_string()),
                 method,
+                trace_id: None,
             },
         )
     }
@@ -474,6 +476,7 @@ mod admin_scope_tests {
                     method: Method::GetIdentity {
                         agent_id: "alice".into(),
                     },
+                    trace_id: None,
                 },
             ),
         )
@@ -576,6 +579,7 @@ mod blob_dispatch_tests {
                 auth_token: String::new(),
                 agent_id: Some("system".to_string()),
                 method,
+                trace_id: None,
             },
         )
     }
@@ -995,6 +999,7 @@ mod placement_route_carrier_tests {
                     client_epoch: 0,
                 },
             },
+            trace_id: None,
         };
         let sequence = NONCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let issued_at = SystemTime::now()

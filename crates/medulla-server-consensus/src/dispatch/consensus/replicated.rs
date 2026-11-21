@@ -56,6 +56,7 @@ pub async fn apply_replicated_native(
         auth_token: String::new(),
         agent_id: None,
         method,
+        trace_id: None,
     };
     REPLICATED_APPLY
         .scope(

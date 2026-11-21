@@ -17,6 +17,7 @@ fn frame_test_request(id: u64) -> Request {
         auth_token: String::new(),
         agent_id: Some("unsigned-agent-assertion".to_string()),
         method: Method::Ping,
+        trace_id: None,
     }
 }
 

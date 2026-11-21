@@ -171,6 +171,7 @@ pub fn publish_to_request(msg: &serde_json::Value, graph: &str) -> Option<Reques
         auth_token,
         agent_id: None,
         method,
+        trace_id: None,
     })
 }
 

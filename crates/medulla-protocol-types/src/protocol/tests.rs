@@ -161,6 +161,7 @@ fn test_request_roundtrip_add_node() {
                 0x81, 0xa4, 0x74, 0x79, 0x70, 0x65, 0xa5, 0x41, 0x67, 0x65, 0x6e, 0x74,
             ],
         },
+        trace_id: None,
     };
     let json = serde_json::to_string(&req).unwrap();
     let parsed: Request = serde_json::from_str(&json).unwrap();
@@ -368,6 +369,7 @@ fn test_request_roundtrip_create_channel() {
             creator: "agent:a".to_string(),
             initial_members: vec!["agent:a".to_string(), "agent:b".to_string()],
         },
+        trace_id: None,
     };
     let json = serde_json::to_string(&req).unwrap();
     let parsed: Request = serde_json::from_str(&json).unwrap();
@@ -937,4 +939,29 @@ fn uql_decodes_foreign_executions_and_refuses_the_singular_field() {
         serde_json::json!({"foreign_execution": execution(1)})
     ))
     .is_err());
+}
+
+/// MEDULLA-OBSERVE-R006.2: `trace_id` is optional on the wire, omitted when absent and
+/// carried verbatim when present.
+#[test]
+fn request_trace_id_is_optional_and_omitted_when_absent() {
+    let bare = serde_json::json!({
+        "id": 7, "graph": "g", "auth_token": "", "agent_id": null, "method": "Health"
+    });
+    let request: Request = serde_json::from_value(bare).expect("a request without trace_id decodes");
+    assert_eq!(request.trace_id, None);
+    assert!(serde_json::to_value(&request)
+        .expect("encodes")
+        .get("trace_id")
+        .is_none());
+
+    let traced = "00-0af7651916cd43dd8448eb211c80319c-b7ad6b7169203331-01";
+    assert_eq!(traced.len(), TRACE_ID_MAX_LEN);
+    let with_trace = serde_json::json!({
+        "id": 8, "graph": "g", "auth_token": "", "agent_id": null, "method": "Health",
+        "trace_id": traced
+    });
+    let request: Request = serde_json::from_value(with_trace).expect("a traced request decodes");
+    assert_eq!(request.trace_id.as_deref(), Some(traced));
+    assert_eq!(serde_json::to_value(&request).expect("encodes")["trace_id"], traced);
 }

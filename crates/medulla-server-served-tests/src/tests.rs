@@ -332,6 +332,7 @@ pub(crate) fn request(id: u64, graph: &str, agent_id: Option<&str>, method: Meth
         auth_token: String::new(),
         agent_id: Some(effective_agent.to_string()),
         method,
+        trace_id: None,
     };
     let nonce = format!(
         "server-mod-{}-{}",

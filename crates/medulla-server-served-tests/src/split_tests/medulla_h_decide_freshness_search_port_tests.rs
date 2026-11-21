@@ -36,6 +36,7 @@ async fn register(h: &Harness, tenant: &str, agent: &str, name: &str, source: Fo
                     source,
                     acceleration: None,
                 },
+                trace_id: None,
             },
             VerifiedRequestContext::verified_for_test_with_scopes(agent, tenant, &["*"]),
         ),

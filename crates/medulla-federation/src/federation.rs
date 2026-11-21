@@ -671,6 +671,7 @@ impl RemoteEngineSource<'_> {
             auth_token: String::new(),
             agent_id: Some(self.context.agent_id.clone()),
             method,
+            trace_id: None,
         };
         request.auth_token =
             self.auth_token(&request, elapsed.as_secs(), &nonce, &idempotency_key)?;
@@ -2731,6 +2732,7 @@ mod envelope_signer_tests {
             auth_token: String::new(),
             agent_id: Some(agent_id.to_string()),
             method: Method::Ping,
+            trace_id: None,
         }
     }
 

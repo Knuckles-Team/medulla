@@ -193,6 +193,7 @@ fn signed_fixed_request(
         auth_token: String::new(),
         agent_id: Some(common::TEST_AGENT.to_string()),
         method,
+        trace_id: None,
     };
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

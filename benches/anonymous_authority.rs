@@ -53,6 +53,7 @@ fn bound_request() -> Request {
         agent_id: None,
         auth_token: format!("anon1.{padded}"),
         method: Method::Ping,
+        trace_id: None,
     }
 }
 

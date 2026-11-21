@@ -170,6 +170,7 @@ fn signed_request_with_agent(
         auth_token: String::new(),
         agent_id: Some(agent.to_string()),
         method,
+        trace_id: None,
     };
     let nonce = format!(
         "client-wire-{}-{}",

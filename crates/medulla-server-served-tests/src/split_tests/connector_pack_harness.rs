@@ -249,6 +249,7 @@ impl Served {
             auth_token: String::new(),
             agent_id: Some(ADMIN.to_string()),
             method,
+            trace_id: None,
         };
         let context = VerifiedRequestContext::verified_for_test_with_scopes(ADMIN, tenant, scopes);
         Box::pin(

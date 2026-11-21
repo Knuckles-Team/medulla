@@ -628,6 +628,7 @@ mod eg318_dispatch_tests {
                 auth_token: String::new(),
                 agent_id: Some(agent.into()),
                 method,
+                trace_id: None,
             },
         )
     }
@@ -1194,6 +1195,7 @@ mod eg318_dispatch_tests {
                     auth_token: String::new(),
                     agent_id: Some("reader".into()),
                     method,
+                    trace_id: None,
                 },
             )
         };

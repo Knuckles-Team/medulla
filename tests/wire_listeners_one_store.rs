@@ -407,6 +407,7 @@ mod one_store {
                 auth_token: String::new(),
                 agent_id: Some(context.agent_id.clone()),
                 method,
+                trace_id: None,
             };
             let timestamp = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)

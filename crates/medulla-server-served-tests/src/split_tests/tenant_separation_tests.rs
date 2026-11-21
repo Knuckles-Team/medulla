@@ -129,6 +129,7 @@ impl Served {
             auth_token: String::new(),
             agent_id: Some(ADMIN.into()),
             method,
+            trace_id: None,
         };
         let verified =
             VerifiedRequestContext::verified_for_test_with_scopes(ADMIN, tenant, &["kg:read"]);

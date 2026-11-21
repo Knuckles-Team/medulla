@@ -129,10 +129,18 @@ pub struct Request {
     /// this value with the signed effective agent before authorization.
     #[serde(deserialize_with = "deserialize_required_option")]
     pub agent_id: Option<String>,
+    /// The caller's W3C `traceparent`, at most [`TRACE_ID_MAX_LEN`] characters. It rides outside
+    /// the signed envelope, is omitted from the wire when absent, and is recorded by the
+    /// in-flight request registry (MEDULLA-OBSERVE-R006.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trace_id: Option<String>,
     /// The operation to perform.
     #[serde(flatten)]
     pub method: Method,
 }
+
+/// The longest `Request.trace_id`: a W3C `traceparent` is 55 characters.
+pub const TRACE_ID_MAX_LEN: usize = 55;
 
 /// Canonical byte encoding for a verified request-context envelope (v2).
 ///

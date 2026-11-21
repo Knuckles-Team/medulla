@@ -444,6 +444,7 @@ async fn create_missing_sparql_graphs(
                 graph_name: update.graph.clone(),
                 graph_type: update.graph_type,
             },
+            trace_id: None,
         };
         let response = Box::pin(medulla_server_api::api::reentry::dispatch_verified_request(
             coord.state,
@@ -672,6 +673,7 @@ async fn delete_created_sparql_graphs(
             method: Method::DeleteGraph {
                 graph_name: update.graph.clone(),
             },
+            trace_id: None,
         };
         let response = Box::pin(medulla_server_api::api::reentry::dispatch_verified_request(
             coord.state,

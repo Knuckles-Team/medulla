@@ -747,6 +747,7 @@ async fn t20_unsigned_request_is_rejected_before_dispatch() {
         auth_token: "test-invalid-token".to_string(),
         agent_id: Some(common::TEST_AGENT.to_string()),
         method: Method::Ping,
+        trace_id: None,
     };
     let resp = Box::pin(test_support::dispatch(&state, bad)).await;
     assert!(

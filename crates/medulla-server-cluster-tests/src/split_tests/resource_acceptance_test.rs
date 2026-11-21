@@ -543,6 +543,7 @@ fn signed_request_as(request_id: u64, agent_id: &str, method: Method) -> Request
         auth_token: String::new(),
         agent_id: Some(agent_id.to_string()),
         method,
+        trace_id: None,
     };
     let sequence = REQUEST_SEQUENCE.fetch_add(1, Ordering::Relaxed);
     let issued_at = SystemTime::now()

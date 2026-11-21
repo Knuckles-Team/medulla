@@ -547,6 +547,7 @@ async fn tool_ranking(served: &Served, task: &str) -> (Vec<String>, u64, String)
                 auth_token: String::new(),
                 agent_id: Some(ADMIN.into()),
                 method,
+                trace_id: None,
             },
             VerifiedRequestContext::verified_for_test_with_scopes(
                 ADMIN,

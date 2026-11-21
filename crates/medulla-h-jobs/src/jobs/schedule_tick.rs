@@ -422,6 +422,7 @@ async fn dispatch(
             auth_token: String::new(),
             agent_id: Some(context.agent_id().to_string()),
             method,
+            trace_id: None,
         },
         context,
     )

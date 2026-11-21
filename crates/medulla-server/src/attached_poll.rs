@@ -215,6 +215,7 @@ async fn stored_position(
             partition,
             tenant: context.tenant().to_string(),
         },
+        trace_id: None,
     };
     let response = medulla_server_api::api::reentry::dispatch_verified_request(
         state,
@@ -314,6 +315,7 @@ pub async fn poll_source(
         method: Method::ApplyChangeEnvelopeDraft {
             draft: Box::new(draft),
         },
+        trace_id: None,
     };
     let response =
         medulla_server_api::api::reentry::dispatch_verified_request(state, request, commit_context)

@@ -600,6 +600,7 @@ fn canonical_subscription(http: &HttpMessage) -> Result<CanonicalSubscription, S
             query: query.clone(),
             variables: None,
         },
+        trace_id: None,
     };
     Ok(CanonicalSubscription {
         graph,

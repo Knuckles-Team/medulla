@@ -96,6 +96,7 @@ async fn step(
                 cursor: cursor_of(graph),
             },
         },
+        trace_id: None,
     };
     let response =
         medulla_server_api::api::reentry::dispatch_verified_request(state, request, context).await;

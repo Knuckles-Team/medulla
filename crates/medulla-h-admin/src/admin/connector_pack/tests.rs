@@ -173,6 +173,7 @@ impl Served {
             auth_token: String::new(),
             agent_id: Some(ADMIN.to_string()),
             method,
+            trace_id: None,
         };
         let verified = medulla_server_api::authority_context::VerifiedRequestContext::verified_for_test_with_scopes(
             ADMIN, tenant, scopes,

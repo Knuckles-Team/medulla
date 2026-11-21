@@ -65,6 +65,7 @@ async fn ask(state: &medulla_h_decide::decide::SharedState, tenant: &str, task: 
         auth_token: String::new(),
         agent_id: Some("asker".into()),
         method,
+        trace_id: None,
     };
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("asker", TENANT);
     Box::pin(

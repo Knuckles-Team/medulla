@@ -30,6 +30,7 @@ async fn dispatch(h: &Harness, tenant: &str, scopes: &[&str], method: Value) -> 
                 auth_token: String::new(),
                 agent_id: Some(WRITER.into()),
                 method,
+                trace_id: None,
             },
             VerifiedRequestContext::verified_for_test_with_scopes(WRITER, tenant, scopes),
         ),

@@ -22,6 +22,7 @@ async fn dispatch(h: &Harness, method: Method) -> Response {
                 auth_token: String::new(),
                 agent_id: Some("decider".into()),
                 method,
+                trace_id: None,
             },
             VerifiedRequestContext::verified_for_test_with_scopes("decider", TENANT, &["*"]),
         ),

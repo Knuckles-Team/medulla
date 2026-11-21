@@ -76,6 +76,7 @@ impl Served {
             auth_token: String::new(),
             agent_id: Some(PRINCIPAL.to_string()),
             method,
+            trace_id: None,
         };
         Box::pin(
             medulla_server_router::dispatch::request_boundary::dispatch_verified_request(

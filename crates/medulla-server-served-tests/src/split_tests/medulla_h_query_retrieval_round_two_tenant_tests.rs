@@ -143,6 +143,7 @@ impl Served {
             method: Method::RetrievalRound {
                 request: Box::new(round),
             },
+            trace_id: None,
         };
         let verified =
             VerifiedRequestContext::verified_for_test_with_scopes(ADMIN, tenant, &["kg:read"]);

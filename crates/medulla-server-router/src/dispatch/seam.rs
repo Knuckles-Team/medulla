@@ -428,6 +428,7 @@ pub async fn submit_repository_enrichment_page(
             auth_token: String::new(),
             agent_id: None,
             method: Method::SubmitWorkItems { request },
+            trace_id: None,
         },
         Some(verified),
     )

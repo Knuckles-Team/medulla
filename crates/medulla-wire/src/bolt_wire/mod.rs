@@ -1069,6 +1069,7 @@ mod tests {
                 auth_token: String::new(),
                 agent_id: Some("service:bolt-test".to_string()),
                 method: Method::Health,
+                trace_id: None,
             },
         )
     }
@@ -1135,6 +1136,7 @@ mod tests {
             auth_token: String::new(),
             agent_id: Some("service:bolt-test".to_string()),
             method: Method::Health,
+            trace_id: None,
         };
         let claims = RequestContextClaims {
             principal: "service:bolt-test".to_string(),

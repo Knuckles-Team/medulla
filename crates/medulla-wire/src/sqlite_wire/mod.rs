@@ -178,6 +178,7 @@ pub async fn execute_request(session: &WireSession, line: &str) -> String {
             query: request.sql.clone(),
             params_msgpack: Vec::new(),
         },
+        trace_id: None,
     };
     if let Err(error) = session.authenticate_request(&signed).await {
         return wire_error_json(&error);
@@ -374,6 +375,7 @@ mod tests {
                     query: sql.to_string(),
                     params_msgpack: Vec::new(),
                 },
+                trace_id: None,
             },
         );
         serde_json::json!({
@@ -398,6 +400,7 @@ mod tests {
                 query: sql.to_string(),
                 params_msgpack: Vec::new(),
             },
+            trace_id: None,
         };
         signed.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
             "test-sqlite-wire-secret",

@@ -61,6 +61,7 @@ fn signed_graphql_request(id: u64, query: &str, nonce: &str, idempotency_key: &s
             query: query.to_string(),
             variables: None,
         },
+        trace_id: None,
     };
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

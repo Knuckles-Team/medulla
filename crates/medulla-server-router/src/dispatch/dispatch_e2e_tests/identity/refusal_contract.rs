@@ -59,6 +59,7 @@ async fn register(state: &Arc<RwLock<ServerState>>, agent_id: &str, roles: &[&st
                 signature: String::new(),
                 roles: roles.iter().map(|role| role.to_string()).collect(),
             },
+            trace_id: None,
         },
     );
     Box::pin(crate::dispatch::request_boundary::dispatch(state, request)).await

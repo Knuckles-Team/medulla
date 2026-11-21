@@ -150,6 +150,7 @@ fn signed_agent_library_request(
         auth_token: String::new(),
         agent_id: Some(claims.agent_id.clone()),
         method: Method::AgentLibrary { op },
+        trace_id: None,
     };
     request.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
         secret,
@@ -313,6 +314,7 @@ fn agent_library_signed_route_uses_wire_nonce_and_idempotency() {
                 }),
             },
         },
+        trace_id: None,
     };
     request.auth_token = medulla_server_auth::auth::compute_verified_envelope_token(
         "agent-library-test-secret",

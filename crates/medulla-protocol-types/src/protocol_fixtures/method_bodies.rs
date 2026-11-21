@@ -133,6 +133,7 @@ pub fn typed_request_frame(method: Method) -> Vec<u8> {
         auth_token: String::new(),
         agent_id: None,
         method,
+        trace_id: None,
     };
     rmp_serde::to_vec_named(&request).expect("a typed request frame encodes")
 }

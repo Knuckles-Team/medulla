@@ -86,6 +86,7 @@ pub(super) fn signed(id: u64, op: SemanticIndexOp) -> Request {
         auth_token: String::new(),
         agent_id: Some(WORKER.to_string()),
         method: Method::SemanticIndex { op: Box::new(op) },
+        trace_id: None,
     };
     request.auth_token = compute_verified_envelope_token(
         SECRET,

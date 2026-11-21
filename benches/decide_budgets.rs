@@ -312,6 +312,7 @@ async fn dispatch(h: &Harness, method: Method) -> Response {
                 auth_token: String::new(),
                 agent_id: Some("decider".into()),
                 method,
+                trace_id: None,
             },
             VerifiedRequestContext::verified_for_test_with_scopes(
                 "decider",
@@ -1815,6 +1816,7 @@ fn bench_usage_guidance(
                         .to_string(),
                     query: USAGE_PACK_UPDATE.to_string(),
                 },
+                trace_id: None,
             },
             VerifiedRequestContext::verified_for_test_with_scopes(
                 "decider",

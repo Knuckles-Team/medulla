@@ -125,6 +125,7 @@ async fn kv_get(state: &test_support::SharedState, principal: &str, key: &str) -
             key: key.to_string(),
             shared: false,
         },
+        trace_id: None,
     };
     let response = Box::pin(
         medulla_server_router::dispatch::request_boundary::dispatch_authenticated_resp_actor(

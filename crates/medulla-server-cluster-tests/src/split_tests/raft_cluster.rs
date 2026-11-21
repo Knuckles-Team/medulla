@@ -424,6 +424,7 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
             auth_token: String::new(),
             agent_id: Some(TEST_AGENT.to_string()),
             method,
+            trace_id: None,
         };
         let sequence = NONCE_SEQUENCE.fetch_add(1, Ordering::Relaxed);
         let issued_at = SystemTime::now()
@@ -938,6 +939,7 @@ mod placement_admin_wire_rpc {
             auth_token: String::new(),
             agent_id: Some(TEST_AGENT.to_string()),
             method,
+            trace_id: None,
         };
         let sequence = NONCE_SEQUENCE.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let issued_at = std::time::SystemTime::now()

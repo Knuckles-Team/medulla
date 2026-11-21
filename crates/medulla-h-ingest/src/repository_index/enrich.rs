@@ -950,6 +950,7 @@ mod worker {
                 method: Method::ApplyChangeEnvelope {
                     envelope: Box::new(envelope),
                 },
+                trace_id: None,
             },
             verified,
         )

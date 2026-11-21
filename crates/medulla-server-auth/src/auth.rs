@@ -575,6 +575,7 @@ pub fn scoped_test_request_on(
         auth_token: String::new(),
         agent_id: Some(caller.principal.to_string()),
         method,
+        trace_id: None,
     };
     let context = RequestContextClaims {
         principal: caller.principal.to_string(),
@@ -642,6 +643,7 @@ pub fn build_current_test_request(
             auth_token: String::new(),
             agent_id: Some(agent_id.to_string()),
             method,
+            trace_id: None,
         },
     )
 }
@@ -2022,6 +2024,7 @@ mod tests {
             auth_token,
             agent_id: None,
             method: Method::Ping,
+            trace_id: None,
         }
     }
 
@@ -3978,6 +3981,7 @@ mod default_state_authority_tests {
             agent_id: None,
             auth_token: "anon1.{\"idempotency_key\":\"one-operation\"}".into(),
             method: medulla_protocol_types::protocol::Method::Ping,
+            trace_id: None,
         };
         assert!(state.request_authority(&request).is_err());
     }

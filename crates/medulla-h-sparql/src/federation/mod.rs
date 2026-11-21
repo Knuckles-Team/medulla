@@ -355,6 +355,7 @@ async fn local_execute(
         auth_token: String::new(),
         agent_id: Some("service:local-query".to_string()),
         method,
+        trace_id: None,
     };
     let resp =
         medulla_server_api::api::reentry::dispatch_authenticated_local_query(state, request).await;

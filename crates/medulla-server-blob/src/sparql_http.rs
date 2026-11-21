@@ -189,6 +189,7 @@ fn signed_request(
         auth_token,
         agent_id: None,
         method,
+        trace_id: None,
     })
 }
 
@@ -305,6 +306,7 @@ async fn handle_nl(
             dialect: Default::default(),
             max_steps: None,
         },
+        trace_id: None,
     };
     let resp =
         medulla_server_api::api::reentry::dispatch_authenticated_local_query(state, request).await;

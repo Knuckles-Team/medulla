@@ -61,6 +61,7 @@ mod tests {
             auth_token: "eg2.test".to_string(),
             agent_id: Some("service:test".to_string()),
             method: Method::Health,
+            trace_id: None,
         };
         let encoded = encode_session_credential(&request).unwrap();
         let decoded = decode_session_credential(&encoded).unwrap();

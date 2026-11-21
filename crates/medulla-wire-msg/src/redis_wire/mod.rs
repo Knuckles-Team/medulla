@@ -1063,6 +1063,7 @@ impl KvSeam {
             auth_token: String::new(),
             agent_id: None,
             method,
+            trace_id: None,
         };
         let resp = Box::pin(
             medulla_server_api::api::reentry::dispatch_authenticated_resp_actor(

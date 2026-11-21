@@ -84,6 +84,7 @@ mod ne_004_ne_005_tests {
             auth_token: String::new(),
             agent_id: Some(AGENT.to_string()),
             method,
+            trace_id: None,
         };
         let nonce = format!(
             "ne004-005-{}-{}",
@@ -858,6 +859,7 @@ pub mod wired_catalog_tests {
             auth_token: String::new(),
             agent_id: Some(CREATOR.to_string()),
             method,
+            trace_id: None,
         };
         let nonce = format!(
             "wired-catalog-{}-{}",

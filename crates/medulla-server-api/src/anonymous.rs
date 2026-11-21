@@ -69,6 +69,7 @@ mod tests {
             agent_id: None,
             auth_token: token.into(),
             method: medulla_protocol_types::protocol::Method::Ping,
+            trace_id: None,
         }
     }
     // spec: MEDULLA-IDENTITY-R003.1

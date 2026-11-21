@@ -319,6 +319,7 @@ pub async fn engine_call(
         auth_token: String::new(),
         agent_id: None,
         method,
+        trace_id: None,
     };
     let resp = Box::pin(dispatch_authenticated_broker_actor(state, req, actor)).await;
     resp.result.unwrap_or(ResultPayload::Bool(false))

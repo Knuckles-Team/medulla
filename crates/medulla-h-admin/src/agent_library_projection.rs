@@ -566,6 +566,7 @@ pub mod worker {
             method: Method::ApplyChangeEnvelopeDraft {
                 draft: Box::new(draft),
             },
+            trace_id: None,
         };
         let response = medulla_server_api::api::reentry::dispatch_verified_request(
             state,
@@ -642,6 +643,7 @@ pub mod worker {
                 partition: cursor_partition(agent_id),
                 tenant: tenant.to_string(),
             },
+            trace_id: None,
         };
         let response = medulla_server_api::api::reentry::dispatch_verified_request(
             state,

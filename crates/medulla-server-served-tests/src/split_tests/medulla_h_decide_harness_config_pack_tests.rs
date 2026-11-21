@@ -83,6 +83,7 @@ async fn decide(h: &Harness, asked: DecideRequest) -> StatisticalDecisionRecord 
                 auth_token: String::new(),
                 agent_id: Some(ADMIN.into()),
                 method,
+                trace_id: None,
             },
             VerifiedRequestContext::verified_for_test_with_scopes(
                 ADMIN,

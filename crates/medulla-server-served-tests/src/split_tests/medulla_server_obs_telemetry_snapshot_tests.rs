@@ -55,6 +55,7 @@ async fn snapshot(
                 method: Method::GetTelemetrySnapshot {
                     tenant: asked_tenant.to_string(),
                 },
+                trace_id: None,
             },
             VerifiedRequestContext::verified_for_test_with_scopes(
                 "reader",

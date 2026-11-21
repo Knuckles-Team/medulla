@@ -61,6 +61,7 @@ pub async fn send(
         auth_token: String::new(),
         agent_id: Some(context.agent_id().to_string()),
         method,
+        trace_id: None,
     };
     Box::pin(super::request_boundary::dispatch_with_context(
         state,

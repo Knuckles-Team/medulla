@@ -332,6 +332,7 @@ pub async fn submit_events(
         auth_token: String::new(),
         agent_id: Some(context.agent_id().to_string()),
         method: medulla_protocol_types::protocol::Method::LineageIngest { events },
+        trace_id: None,
     };
     let response =
         medulla_server_api::api::reentry::dispatch_verified_request(state, request, context).await;

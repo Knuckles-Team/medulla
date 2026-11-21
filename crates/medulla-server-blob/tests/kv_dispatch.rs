@@ -61,6 +61,7 @@ fn signed(id: u64, how: &Signed<'_>, method: Method) -> Request {
         auth_token: String::new(),
         agent_id: Some(how.agent.to_string()),
         method,
+        trace_id: None,
     };
     let context = RequestContextClaims {
         principal: how.agent.to_string(),

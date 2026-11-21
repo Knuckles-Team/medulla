@@ -201,6 +201,21 @@ pub async fn dispatch_with_context(
     req: Request,
     context: Option<VerifiedRequestContext>,
 ) -> Response {
+    // MEDULLA-OBSERVE-R006.2: the caller's trace id is recorded verbatim, so it is bounded.
+    if let Some(trace_id) = req.trace_id.as_deref() {
+        if trace_id.is_empty() || trace_id.len() > medulla_protocol_types::protocol::TRACE_ID_MAX_LEN {
+            return method_errors::enforce(
+                (&req.method).into(),
+                Response::err(
+                    req.id,
+                    format!(
+                        "INVALID_PARAMS: trace_id must be 1 to {} characters",
+                        medulla_protocol_types::protocol::TRACE_ID_MAX_LEN
+                    ),
+                ),
+            );
+        }
+    }
     // CONCEPT:MEDULLA-OS.observability.slow-query-descriptor — slow-query descriptor, captured BEFORE the method is moved
     // into `dispatch_inner`. `None` (zero cost) unless MEDULLA_SLOW_QUERY_MS
     // enabled it AND this is a query method.
@@ -228,7 +243,7 @@ pub async fn dispatch_with_context(
     let request_guard = medulla_observe::requests().enter(
         medulla_observe::registry::requests::EnterRequest {
             request_id: req.id,
-            trace_id: None,
+            trace_id: req.trace_id.as_deref(),
             method,
             graph: &req.graph,
             principal: &principal,
