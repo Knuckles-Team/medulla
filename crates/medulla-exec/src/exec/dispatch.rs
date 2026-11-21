@@ -72,6 +72,8 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::WindowAgg { .. }
         | Op::Foreign { .. }
         | Op::Group { .. }
+        | Op::Order { .. }
+        | Op::Skip { .. }
         | Op::DecisionScan { .. }
         | Op::Attribute { .. }
         | Op::Decay { .. }
@@ -321,6 +323,8 @@ pub(super) fn apply_core_ops(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<Ro
         // score channels it recorded under the same names.
         Op::Project { channels } => Ok(input.project(channels)),
         Op::Group { keys, aggs } => super::group::group(ctx, input, keys, aggs),
+        Op::Order { keys } => super::order::order(ctx, input, keys),
+        Op::Skip { n } => super::order::skip(input, *n),
         Op::DecisionScan { preds } => super::decisions::decision_scan(ctx, preds),
         Op::Attribute {
             input: players,

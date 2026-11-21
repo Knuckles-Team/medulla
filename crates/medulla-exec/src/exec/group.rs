@@ -32,7 +32,7 @@ fn refusal(code: ServerErrorCode, detail: &str) -> String {
 
 /// A row's value under `name`: its typed cell, else its node's property (`label` reads
 /// the node type).
-fn field(ctx: &PlanCtx, input: &RowSet, row: &Row, name: &str) -> Option<Cell> {
+pub(super) fn field(ctx: &PlanCtx, input: &RowSet, row: &Row, name: &str) -> Option<Cell> {
     if let Some(cell) = input.cell(&row.id, name) {
         return Some(cell.clone());
     }

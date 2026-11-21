@@ -141,6 +141,8 @@ impl<'a> Parser<'a> {
             ("RETURN", Self::return_stage),
             ("FOREIGN", Self::foreign),
             ("GROUP", Self::group),
+            ("ORDER", Self::order_by),
+            ("SKIP", Self::skip_rows),
             ("DECISIONS", Self::decisions),
             ("TEXT", Self::text),
             ("FUSE", Self::fuse),

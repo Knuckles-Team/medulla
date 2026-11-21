@@ -19450,6 +19450,37 @@ class OpGroupBody(BaseModel):
     keys: list[str]
 
 
+class OrderKey(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    descending: bool | None = None
+    field: str
+
+
+class OpOrder(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Order: OpOrderBody
+
+
+class OpOrderBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    keys: list[OrderKey]
+
+
+class OpSkip(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Skip: OpSkipBody
+
+
+class OpSkipBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    n: int
+
+
 class OpForeignScan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -29704,6 +29735,8 @@ Op = (
     | OpWindowAgg
     | OpForeign
     | OpGroup
+    | OpOrder
+    | OpSkip
     | OpSpatialScan
     | OpReproject
     | OpSpatialOp
@@ -37057,6 +37090,11 @@ __all__ = [
     "OpForeignScanBody",
     "OpGroup",
     "OpGroupBody",
+    "OpOrder",
+    "OpOrderBody",
+    "OpSkip",
+    "OpSkipBody",
+    "OrderKey",
     "OpFuseRrf",
     "OpFuseRrfBody",
     "OpLimit",

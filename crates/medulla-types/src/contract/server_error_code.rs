@@ -580,6 +580,7 @@ closed_error_codes! {
         UsageQueryInvalid => "USAGE_QUERY_INVALID",
         UqlEDecayNoTime => "UQL_E_DECAY_NO_TIME",
         UqlGroupLimit => "UQL_GROUP_LIMIT",
+        UqlSkipLimit => "UQL_SKIP_LIMIT",
         UqlUnknownField => "UQL_UNKNOWN_FIELD",
         WalletKeyTrustNotFound => "WALLET_KEY_TRUST_NOT_FOUND",
         WebBackendInvalid => "WEB_BACKEND_INVALID",

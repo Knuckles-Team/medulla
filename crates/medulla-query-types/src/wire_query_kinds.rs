@@ -46,7 +46,7 @@ kinds! {
     #[cfg(feature = "owl-plan")] ValidateShape,
     #[cfg(feature = "wasm-udf")] Udf,
     #[cfg(feature = "federation")] ForeignScan,
-    AsOf, Window, WindowAgg, Foreign, Group,
+    AsOf, Window, WindowAgg, Foreign, Group, Order, Skip,
     #[cfg(feature = "geo")] SpatialScan,
     #[cfg(feature = "geo")] Reproject,
     #[cfg(feature = "geo")] SpatialOp,
@@ -120,6 +120,8 @@ pub fn op_kind(op: &Op) -> OpKind {
         Op::WindowAgg { .. } => OpKind::WindowAgg,
         Op::Foreign { .. } => OpKind::Foreign,
         Op::Group { .. } => OpKind::Group,
+        Op::Order { .. } => OpKind::Order,
+        Op::Skip { .. } => OpKind::Skip,
         #[cfg(feature = "geo")]
         Op::SpatialScan { .. } => OpKind::SpatialScan,
         #[cfg(feature = "geo")]
@@ -244,6 +246,8 @@ impl OpKind {
             | OpKind::AsOf
             | OpKind::Foreign
             | OpKind::Group
+            | OpKind::Order
+            | OpKind::Skip
             | OpKind::DecisionScan
             | OpKind::Decay
             | OpKind::ClusterByEmbedding
@@ -301,6 +305,8 @@ impl OpKind {
             | OpKind::WindowAgg
             | OpKind::Foreign
             | OpKind::Group
+            | OpKind::Order
+            | OpKind::Skip
             | OpKind::DecisionScan => ProofRole::Unproved,
             // A FUSE's branches decide it; medulla-plan inspects them (`FuseRrf` is Neutral
             // exactly when every branch op is).

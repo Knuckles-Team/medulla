@@ -436,6 +436,19 @@ impl GroupAgg {
     }
 }
 
+/// One sort key of the ORDER stage: a field and its direction
+/// (MEDULLA-FEDERATED-QUERY-R734).
+#[cfg(feature = "query")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OrderKey {
+    pub field: String,
+    /// `DESC`; absent or false is ascending.
+    #[serde(default)]
+    pub descending: bool,
+}
+
 /// One cross-modal operator. A [`Plan`] is an ordered list of these — a pipeline
 /// where each op `(RowSet) -> RowSet`. This increment binds SQL + graph + vector
 /// (`Scan | Filter | Traverse | Rank | Limit`); reasoning/blob ops are later
@@ -661,6 +674,15 @@ pub enum Op {
         keys: Vec<String>,
         aggs: Vec<GroupAgg>,
     },
+    /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R734, UQL `ORDER BY k [DESC] {, k [DESC]}`) — a
+    /// stable sort of the rows by the named fields, the row id the last key, so a page is
+    /// repeatable. A key is read like a `GROUP` key (typed cell, else node property, `label`
+    /// the node type); a row without it sorts last. A key no row carries refuses
+    /// `UQL_UNKNOWN_FIELD`.
+    Order { keys: Vec<OrderKey> },
+    /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R734, UQL `SKIP n`) — drop the first `n` rows;
+    /// `SKIP n |> LIMIT k` is the page. An `n` above 100000 refuses `UQL_SKIP_LIMIT`.
+    Skip { n: u64 },
     /// SOURCE (spatial, CONCEPT:MEDULLA-KG.ontology.singles-concept) — seed the RowSet with every node in the spatial
     /// `layer` (a node label / `type`) whose geometry's bounding box intersects `bbox`
     /// (`[minx, miny, maxx, maxy]`). The executor builds medulla-geo's packed Hilbert R-tree

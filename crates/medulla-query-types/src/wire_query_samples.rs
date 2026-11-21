@@ -114,6 +114,19 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
         OpKind::Foreign => Op::Foreign {
             name: "peer-east".into(),
         },
+        OpKind::Order => Op::Order {
+            keys: vec![
+                OrderKey {
+                    field: "updated".into(),
+                    descending: true,
+                },
+                OrderKey {
+                    field: "name".into(),
+                    descending: false,
+                },
+            ],
+        },
+        OpKind::Skip => Op::Skip { n: 100 },
         OpKind::Group => Op::Group {
             keys: vec!["label".into()],
             aggs: vec![

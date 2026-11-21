@@ -186,6 +186,29 @@ impl<'a> Parser<'a> {
         Ok(Op::ClusterByEmbedding { k })
     }
 
+    /// `ORDER BY name [DESC] {, name [DESC]}` (MEDULLA-FEDERATED-QUERY-R734).
+    pub(super) fn order_by(&mut self) -> Result<Op, UqlError> {
+        use medulla_query_types::wire::OrderKey;
+        self.expect_kw("BY")?;
+        let mut keys = Vec::new();
+        loop {
+            let field = self.name("an ORDER key")?;
+            let descending = self.eat_kw("DESC");
+            keys.push(OrderKey { field, descending });
+            if !self.eat(&Tok::Comma) {
+                break;
+            }
+        }
+        Ok(Op::Order { keys })
+    }
+
+    /// `SKIP ( int | $param )` (MEDULLA-FEDERATED-QUERY-R734).
+    pub(super) fn skip_rows(&mut self) -> Result<Op, UqlError> {
+        Ok(Op::Skip {
+            n: self.parse_number::<u64>("a SKIP count")?,
+        })
+    }
+
     /// `GROUP BY name {, name} AGGREGATE agg {, agg}` with
     /// `agg = ( COUNT [ "(" name ")" ] | ( SUM | MIN | MAX | AVG ) "(" name ")" ) [ AS name ]`
     /// (MEDULLA-FEDERATED-QUERY-R733).

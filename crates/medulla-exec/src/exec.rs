@@ -44,6 +44,7 @@ mod expand;
 #[cfg(feature = "federation")]
 pub mod foreign;
 mod group;
+mod order;
 mod pred_sql;
 pub mod propagate;
 mod string_eq;

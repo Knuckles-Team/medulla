@@ -105,6 +105,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "CROSSES",
     "DECAY",
     "DECIDE",
+    "DESC",
     "DECISIONS",
     "DEFAULT",
     "DERIVE",
@@ -168,6 +169,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "OF",
     "ONTOLOGY",
     "OR",
+    "ORDER",
     "OVERLAPS",
     "OWEN",
     "PATH",
@@ -193,6 +195,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "SHAPLEY",
     "SIMPLIFY",
     "SKILL",
+    "SKIP",
     "SLICE",
     "SLIDING",
     "SOURCE",
@@ -380,6 +383,8 @@ pub fn uql_op(op: &Op) -> Printed {
         Op::WindowAgg { secs, agg } => window_agg(*secs, agg),
         Op::Foreign { name } => keyword_quoted("FOREIGN", name),
         Op::Group { keys, aggs } => group(keys, aggs),
+        Op::Order { keys } => order(keys),
+        Op::Skip { n } => Ok(format!("SKIP {n}")),
         #[cfg(feature = "geo")]
         Op::SpatialScan { layer, bbox } => super::wire_query_uql_modal::spatial_scan(layer, bbox),
         #[cfg(feature = "geo")]
@@ -497,6 +502,28 @@ fn filter(preds: &[Pred]) -> Printed {
         ));
     }
     Ok(format!("WHERE {}", conjunction(preds)?))
+}
+
+/// `ORDER BY k [DESC] {, k [DESC]}` (MEDULLA-FEDERATED-QUERY-R734).
+fn order(keys: &[OrderKey]) -> Printed {
+    if keys.is_empty() {
+        return Err(refuse(
+            UqlPrintCode::DegenerateShape,
+            "ORDER needs at least one key",
+        ));
+    }
+    let keys: Vec<String> = keys
+        .iter()
+        .map(|k| {
+            let name = uql_ident(&k.field);
+            if k.descending {
+                format!("{name} DESC")
+            } else {
+                name
+            }
+        })
+        .collect();
+    Ok(format!("ORDER BY {}", keys.join(", ")))
 }
 
 /// `GROUP BY k {, k} AGGREGATE agg {, agg}` (MEDULLA-FEDERATED-QUERY-R733).

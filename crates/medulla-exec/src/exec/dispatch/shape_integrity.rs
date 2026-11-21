@@ -18,7 +18,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_graph_core::graph::GraphView;
 use medulla_types::shape_report::{IntegrityShape, ShapeReport};
-use medulla_types::wire::ShapeKeep;
+use medulla_query_types::wire::ShapeKeep;
 
 use crate::exec::PlanCtx;
 use crate::rowset::{RowSet, TextChannels};

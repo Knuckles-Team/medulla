@@ -516,6 +516,21 @@ impl RowSet {
         .retain_cells()
     }
 
+    /// Drop the first `n` rows (SKIP, MEDULLA-FEDERATED-QUERY-R734).
+    pub fn skip(mut self, n: usize) -> RowSet {
+        self.rows.drain(..n.min(self.rows.len()));
+        self.retain_cells()
+    }
+
+    /// Reorder the rows by `cmp` with a stable sort (ORDER, MEDULLA-FEDERATED-QUERY-R734).
+    pub fn sorted_by<F>(mut self, cmp: F) -> RowSet
+    where
+        F: FnMut(&Row, &Row) -> std::cmp::Ordering,
+    {
+        self.rows.sort_by(cmp);
+        self
+    }
+
     /// Truncate to the top-k (LIMIT). Order-respecting: after a RANK this is top-k by
     /// score; on an unranked set it is the first k discovered.
     pub fn limit(mut self, k: usize) -> RowSet {

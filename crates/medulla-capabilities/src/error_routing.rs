@@ -1325,6 +1325,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-FEDERATED-QUERY-R733: the GROUP stage refusals.
     ("Uql", &["UQL_GROUP_LIMIT", "UQL_UNKNOWN_FIELD"]),
     ("UnifiedQuery", &["UQL_GROUP_LIMIT", "UQL_UNKNOWN_FIELD"]),
+    // MEDULLA-FEDERATED-QUERY-R734: the ORDER and SKIP stage refusals.
+    ("Uql", &["UQL_SKIP_LIMIT"]),
+    ("UnifiedQuery", &["UQL_SKIP_LIMIT"]),
     // MEDULLA-FEDERATED-QUERY-R078.3 / R078.4: the plan scope refusals.
     ("Uql", &["PLAN_SCOPE_INVALID", "PLAN_SCOPE_UNVERIFIED"]),
     (
