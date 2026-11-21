@@ -266,6 +266,10 @@ closed_error_codes! {
         TopicWeightInvalid => "TOPIC_WEIGHT_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R040.2.2: a topic result or a candidate vector is not in the retriever's embedding space.
         TopicSpaceMismatch => "TOPIC_SPACE_MISMATCH",
+        /// MEDULLA-FEDERATED-QUERY-R040.2.4: the topic centroids describe another corpus revision than the current one.
+        TopicCorpusStale => "TOPIC_CORPUS_STALE",
+        /// MEDULLA-FEDERATED-QUERY-R040.2.4: the topic backend holds no topic evidence to fuse.
+        TopicBackendUnavailable => "TOPIC_BACKEND_UNAVAILABLE",
         EmbeddingUnavailable => "EMBEDDING_UNAVAILABLE",
         EnrichmentUnavailable => "ENRICHMENT_UNAVAILABLE",
         EvictionUnconfirmed => "EVICTION_UNCONFIRMED",

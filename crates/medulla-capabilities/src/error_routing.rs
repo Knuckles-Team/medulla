@@ -251,6 +251,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CONSTRAINT_INVALID",
             "TOPIC_WEIGHT_INVALID",
             "TOPIC_SPACE_MISMATCH",
+            "TOPIC_CORPUS_STALE",
+            "TOPIC_BACKEND_UNAVAILABLE",
         ],
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.6.3/.4: a view registration or a view read refuses with

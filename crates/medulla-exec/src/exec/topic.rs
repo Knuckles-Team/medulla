@@ -51,21 +51,90 @@ impl TopicRankingPolicy {
 
     /// Bind the fusion weight `w`; refuses `TOPIC_WEIGHT_INVALID` outside `[0, 1]`.
     pub fn with_weight(mut self, weight: f32) -> Result<Self, String> {
-        check_weight(weight)?;
+        check_weight(weight).map_err(|refusal| refusal.to_string())?;
         self.weight = Some(weight);
         Ok(self)
     }
 }
 
 /// `TOPIC_WEIGHT_INVALID` for a non-finite or out-of-range fusion weight.
-fn check_weight(weight: f32) -> Result<(), String> {
+fn check_weight(weight: f32) -> Result<(), TopicRefusal> {
     if weight.is_finite() && (0.0..=1.0).contains(&weight) {
         return Ok(());
     }
-    Err(format!(
-        "{}: topic fusion weight {weight} must be finite and within [0, 1]",
-        ServerErrorCode::TopicWeightInvalid
-    ))
+    Err(TopicRefusal::WeightInvalid { weight })
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.4: why topic fusion refused. Each refusal is raised
+/// before any candidate is scored, and the requested topic contribution is never
+/// dropped silently.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TopicRefusal {
+    /// The fusion weight is non-finite or outside `[0, 1]` (`TOPIC_WEIGHT_INVALID`).
+    WeightInvalid {
+        /// The refused weight.
+        weight: f32,
+    },
+    /// The dimension, model revision or coordinate space of the topic result or of a
+    /// candidate vector differs from the retriever's (`TOPIC_SPACE_MISMATCH`). Equal
+    /// dimension alone is not compatible.
+    SpaceMismatch(String),
+    /// The centroids describe a corpus revision other than the current one
+    /// (`TOPIC_CORPUS_STALE`).
+    CorpusStale {
+        /// The corpus revision the topic result describes.
+        topics: u64,
+        /// The corpus revision the retriever reads.
+        current: u64,
+    },
+    /// The backend holds no topic evidence to fuse (`TOPIC_BACKEND_UNAVAILABLE`).
+    BackendUnavailable(String),
+}
+
+impl TopicRefusal {
+    /// The registered refusal code.
+    pub fn code(&self) -> ServerErrorCode {
+        match self {
+            Self::WeightInvalid { .. } => ServerErrorCode::TopicWeightInvalid,
+            Self::SpaceMismatch(_) => ServerErrorCode::TopicSpaceMismatch,
+            Self::CorpusStale { .. } => ServerErrorCode::TopicCorpusStale,
+            Self::BackendUnavailable(_) => ServerErrorCode::TopicBackendUnavailable,
+        }
+    }
+}
+
+impl std::fmt::Display for TopicRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let code = self.code();
+        match self {
+            Self::WeightInvalid { weight } => write!(
+                f,
+                "{code}: topic fusion weight {weight} must be finite and within [0, 1]"
+            ),
+            Self::SpaceMismatch(message) | Self::BackendUnavailable(message) => {
+                write!(f, "{code}: {message}")
+            }
+            Self::CorpusStale { topics, current } => write!(
+                f,
+                "{code}: the topic centroids describe corpus revision {topics}, the corpus is at {current}"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for TopicRefusal {}
+
+impl From<TopicRefusal> for String {
+    fn from(refusal: TopicRefusal) -> Self {
+        refusal.to_string()
+    }
+}
+
+/// The identity a topic result and a candidate vector must share with the retriever:
+/// the pinned tuple `(id, dimensions, revision)` and the whole space digest, which
+/// folds in the model and preprocessing hashes.
+fn same_space(a: &EmbeddingSpaceRef, b: &EmbeddingSpaceRef) -> bool {
+    a.id == b.id && a.dimensions == b.dimensions && a.revision == b.revision && a.digest == b.digest
 }
 
 /// MEDULLA-FEDERATED-QUERY-R040.2.2, policy `weighted_topic_dense`:
@@ -76,15 +145,39 @@ fn check_weight(weight: f32) -> Result<(), String> {
 /// topics of the topic's responsibility times the cosine similarity between the
 /// candidate's vector and the topic's centroid. Ties break by candidate id ascending.
 /// A pure function: hard constraints have already narrowed `dense`, and it reads no
-/// state. A candidate with no vector refuses `TOPIC_SPACE_MISMATCH`: its topic
+/// state.
+///
+/// MEDULLA-FEDERATED-QUERY-R040.2.4: before any candidate is scored the weight, the
+/// topic result's space against the `retriever`'s, and the topic corpus revision
+/// against `current_corpus_revision` are checked; a candidate vector must have the
+/// retriever's dimension and a candidate with no vector refuses too, so the topic
 /// contribution is never dropped silently.
 pub fn fuse_topic_dense(
     dense: &[(String, f32)],
     vector_of: &dyn Fn(&str) -> Option<Vec<f32>>,
     topics: &TopicResult,
     weight: f32,
-) -> Result<Vec<(String, f32)>, String> {
+    retriever: &EmbeddingSpaceRef,
+    current_corpus_revision: u64,
+) -> Result<Vec<(String, f32)>, TopicRefusal> {
     check_weight(weight)?;
+    if !same_space(&topics.space, retriever) {
+        return Err(TopicRefusal::SpaceMismatch(format!(
+            "the topic centroids live in space `{}` ({} dimensions, revision `{}`), the retriever in `{}` ({} dimensions, revision `{}`)",
+            topics.space.id,
+            topics.space.dimensions,
+            topics.space.revision,
+            retriever.id,
+            retriever.dimensions,
+            retriever.revision
+        )));
+    }
+    if topics.corpus_revision != current_corpus_revision {
+        return Err(TopicRefusal::CorpusStale {
+            topics: topics.corpus_revision,
+            current: current_corpus_revision,
+        });
+    }
     let (low, high) = dense
         .iter()
         .fold((f32::INFINITY, f32::NEG_INFINITY), |(low, high), (_, s)| {
@@ -95,11 +188,17 @@ pub fn fuse_topic_dense(
     for (id, score) in dense {
         let normalized = if spread > 0.0 { (score - low) / spread } else { 0.0 };
         let vector = vector_of(id).ok_or_else(|| {
-            format!(
-                "{}: candidate `{id}` has no stored embedding to compare with the topic centroids",
-                ServerErrorCode::TopicSpaceMismatch
-            )
+            TopicRefusal::SpaceMismatch(format!(
+                "candidate `{id}` has no stored embedding to compare with the topic centroids"
+            ))
         })?;
+        if vector.len() != retriever.dimensions {
+            return Err(TopicRefusal::SpaceMismatch(format!(
+                "candidate `{id}` has {} dimensions, the retriever's space has {}",
+                vector.len(),
+                retriever.dimensions
+            )));
+        }
         let vector_norm = norm(&vector);
         let topic: f32 = topics
             .topic_weights
@@ -151,6 +250,12 @@ fn weigh(
     corpus_revision: u64,
     space: &EmbeddingSpaceRef,
 ) -> Result<TopicResult, String> {
+    if centroids.is_empty() {
+        return Err(TopicRefusal::BackendUnavailable(
+            "the backend holds no topic centroids".to_string(),
+        )
+        .to_string());
+    }
     if query.len() != space.dimensions {
         return Err(format!(
             "topic query has {} dimensions but space `{}` has {}",
@@ -432,7 +537,8 @@ mod tests {
         };
 
         for weight in [0.0_f32, 1.0, 0.5] {
-            let fused = fuse_topic_dense(&dense, &lookup, &topics, weight).unwrap();
+            let fused =
+                fuse_topic_dense(&dense, &lookup, &topics, weight, &space(), 7).unwrap();
             let expected = oracle(f64::from(weight));
             let got: Vec<&str> = fused.iter().map(|(id, _)| id.as_str()).collect();
             let want: Vec<&str> = expected.iter().map(|(id, _)| id.as_str()).collect();
@@ -442,18 +548,90 @@ mod tests {
             }
         }
         // w = 0 is the dense order alone, ties by id ascending.
-        let dense_only = fuse_topic_dense(&dense, &lookup, &topics, 0.0).unwrap();
+        let dense_only = fuse_topic_dense(&dense, &lookup, &topics, 0.0, &space(), 7).unwrap();
         let order: Vec<&str> = dense_only.iter().map(|(id, _)| id.as_str()).collect();
         assert_eq!(order, ["a", "b", "c", "d"]);
         // A weight outside [0, 1] or non-finite refuses TOPIC_WEIGHT_INVALID.
         for bad in [-0.1_f32, 1.1, f32::NAN, f32::INFINITY] {
-            let refusal = fuse_topic_dense(&dense, &lookup, &topics, bad).unwrap_err();
-            assert!(refusal.starts_with("TOPIC_WEIGHT_INVALID"), "{refusal}");
+            let refusal =
+                fuse_topic_dense(&dense, &lookup, &topics, bad, &space(), 7).unwrap_err();
+            assert_eq!(refusal.code(), ServerErrorCode::TopicWeightInvalid);
             assert!(TopicRankingPolicy::new(1, 0.0).unwrap().with_weight(bad).is_err());
         }
         // A candidate with no vector is refused, never silently unweighted.
         let missing = |_: &str| None;
-        let refusal = fuse_topic_dense(&dense, &missing, &topics, 0.5).unwrap_err();
-        assert!(refusal.starts_with("TOPIC_SPACE_MISMATCH"), "{refusal}");
+        let refusal =
+            fuse_topic_dense(&dense, &missing, &topics, 0.5, &space(), 7).unwrap_err();
+        assert_eq!(refusal.code(), ServerErrorCode::TopicSpaceMismatch);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.2.4
+    #[test]
+    fn incompatible_topics_refuse_before_fusion() {
+        let policy = TopicRankingPolicy::new(3, 0.0).unwrap();
+        let memory = InMemoryTopicBackend {
+            centroids: fixture(),
+            corpus_revision: 7,
+            space: space(),
+        };
+        let topics = memory.topics(&[1.0, 0.5], &policy).unwrap();
+        let dense = vec![("a".to_string(), 0.9_f32), ("b".to_string(), 0.5)];
+        let lookup = |_: &str| Some(vec![1.0_f32, 0.0]);
+        let run = |topics: &TopicResult, retriever: &EmbeddingSpaceRef, current: u64| {
+            fuse_topic_dense(&dense, &lookup, topics, 0.5, retriever, current)
+        };
+        assert!(run(&topics, &space(), 7).is_ok());
+
+        // Equal dimension alone is not compatible: another model revision, another
+        // model id and another coordinate space (hashes) each refuse.
+        let same_width = |id: &str, revision: &str, model_hash: &str| {
+            EmbeddingSpaceRef::pinned(id, revision, model_hash, "b".repeat(64), 2, true).unwrap()
+        };
+        for other in [
+            same_width("model", "2", &"a".repeat(64)),
+            same_width("other", "1", &"a".repeat(64)),
+            same_width("model", "1", &"c".repeat(64)),
+        ] {
+            assert_eq!(other.dimensions, space().dimensions);
+            let refusal = run(&topics, &other, 7).unwrap_err();
+            assert_eq!(refusal.code(), ServerErrorCode::TopicSpaceMismatch);
+        }
+        let wider = EmbeddingSpaceRef::pinned("model", "1", "a".repeat(64), "b".repeat(64), 3, true)
+            .unwrap();
+        assert_eq!(
+            run(&topics, &wider, 7).unwrap_err().code(),
+            ServerErrorCode::TopicSpaceMismatch
+        );
+        // A candidate vector of another width refuses.
+        let narrow = |_: &str| Some(vec![1.0_f32]);
+        assert_eq!(
+            fuse_topic_dense(&dense, &narrow, &topics, 0.5, &space(), 7)
+                .unwrap_err()
+                .code(),
+            ServerErrorCode::TopicSpaceMismatch
+        );
+        // A stale corpus refuses.
+        let stale = run(&topics, &space(), 8).unwrap_err();
+        assert_eq!(stale.code(), ServerErrorCode::TopicCorpusStale);
+        assert!(stale.to_string().starts_with("TOPIC_CORPUS_STALE"));
+        // A backend with no centroids is unavailable, never an empty fusion.
+        let empty = InMemoryTopicBackend {
+            centroids: Vec::new(),
+            corpus_revision: 7,
+            space: space(),
+        };
+        let unavailable = empty.topics(&[1.0, 0.5], &policy).unwrap_err();
+        assert!(unavailable.starts_with("TOPIC_BACKEND_UNAVAILABLE"), "{unavailable}");
+        let core = stored(&[]);
+        let view = core.analysis_snapshot();
+        let stored_backend = StoredCentroidTopicBackend::new(&view, 7, space());
+        assert!(stored_backend
+            .topics(&[1.0, 0.5], &policy)
+            .unwrap_err()
+            .starts_with("TOPIC_BACKEND_UNAVAILABLE"));
+        assert_eq!(
+            TopicRefusal::BackendUnavailable(String::new()).code(),
+            ServerErrorCode::TopicBackendUnavailable
+        );
     }
 }
