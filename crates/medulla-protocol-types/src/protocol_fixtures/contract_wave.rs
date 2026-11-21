@@ -228,6 +228,27 @@ fn glossary_ops() -> Vec<(
                 asset: "col:orders.total".to_string(),
             },
         ),
+        (
+            "Glossary.propose_description",
+            GlossaryOp::ProposeDescription {
+                proposal: medulla_catalog_types::glossary::DescriptionProposal {
+                    target: "col:orders.total".to_string(),
+                    text: "Order total in the order currency.".to_string(),
+                    inputs: medulla_catalog_types::glossary::DescriptionInputs {
+                        samples_digest: Some(format!("sha256:{}", "0".repeat(64))),
+                        ..Default::default()
+                    },
+                    state: medulla_catalog_types::glossary::DescriptionState::Proposed,
+                },
+            },
+        ),
+        (
+            "Glossary.review_description",
+            GlossaryOp::ReviewDescription {
+                proposal: "description_proposal:acme:col:orders.total".to_string(),
+                approve: true,
+            },
+        ),
     ]
 }
 

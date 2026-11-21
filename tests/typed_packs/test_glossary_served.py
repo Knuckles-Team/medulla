@@ -213,3 +213,63 @@ def test_status_history_reads_back(served) -> None:
     assert (submitted["from"], submitted["to"]) == ("draft", "in_review")
     assert "supersedes" not in submitted
     assert approved["supersedes"] == f"glossary_move:{request_context()['tenant']}:{REVENUE}:in_review"
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R801.7")
+def test_proposed_description_needs_review(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R801.7: a proposal becomes the description only once reviewed."""
+    graph, client = served
+    inputs = {"lineage_refs": ["col:orders.subtotal"]}
+    proposal = {
+        "target": ASSET,
+        "text": "Order total in the order currency.",
+        "inputs": inputs,
+        "state": "proposed",
+    }
+    # No input at all is refused under its own code.
+    with pytest.raises(Exception, match="PROPOSAL_INPUTS_MISSING"):
+        _op(
+            client,
+            graph,
+            {"op": "propose_description", "proposal": {**proposal, "inputs": {}}},
+        )
+    # Nobody governs the asset yet, so there is nobody to review.
+    with pytest.raises(Exception, match="STEWARD_ROLE_MISSING"):
+        _op(client, graph, {"op": "propose_description", "proposal": proposal})
+    support.assign_stewards(client, graph, ASSET, support.principal(), support.principal(REVIEWER))
+
+    proposed = _op(client, graph, {"op": "propose_description", "proposal": proposal})
+    proposal_id = proposed["iri"]
+    stored = _props(client, graph, proposal_id)
+    assert stored["state"] == "proposed" and stored["lineage_refs"] == ["col:orders.subtotal"]
+    assert "description" not in _props(client, graph, ASSET)
+
+    reviewer = support.connect(agent_id=REVIEWER)
+    try:
+        # Approving before the change request is approved is refused; nothing is described.
+        with pytest.raises(Exception, match="(?i)review"):
+            _decode(
+                reviewer._send(
+                    "Glossary",
+                    {"op": {"op": "review_description", "proposal": proposal_id, "approve": True}},
+                    graph,
+                )
+            )
+        assert "description" not in _props(client, graph, ASSET)
+        support.stewardship(
+            reviewer,
+            graph,
+            {"op": "review", "request_id": stored["change_request"], "approve": True},
+        )
+        approved = _decode(
+            reviewer._send(
+                "Glossary",
+                {"op": {"op": "review_description", "proposal": proposal_id, "approve": True}},
+                graph,
+            )
+        )
+        assert approved["written"] == 2
+    finally:
+        reviewer.close()
+    assert _props(client, graph, proposal_id)["state"] == "approved"
+    assert _props(client, graph, ASSET)["description"] == proposal["text"]

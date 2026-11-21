@@ -98,6 +98,8 @@ method_results! {
     GlossaryPutTerm(Glossary / "put_term") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
     GlossaryTransition(Glossary / "transition") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
     GlossaryBind(Glossary / "bind") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
+    GlossaryProposeDescription(Glossary / "propose_description") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
+    GlossaryReviewDescription(Glossary / "review_description") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
     // MEDULLA-TYPED-PACKS-R802.3: every stewardship op answers one receipt.
     StewardshipAssign(Stewardship / "assign") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
     StewardshipRevoke(Stewardship / "revoke") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;

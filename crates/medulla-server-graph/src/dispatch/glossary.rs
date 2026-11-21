@@ -3,7 +3,7 @@
 //! Terms are `cat:CatalogGlossaryTerm` graph nodes in SKOS concept schemes. The
 //! handler reads the verified tenant and principal from the request carrier
 //! (never from the body), decides every refusal before its first write, and
-//! commits through the ordinary graph gateway (`dispatch_graph_op`). Four ops:
+//! commits through the ordinary graph gateway (`dispatch_graph_op`). Six ops:
 //!
 //! * `PutScheme` validates the batch (`medulla_core::glossary::PutScheme`) and
 //!   upserts the scheme node and every term node as one batch.
@@ -14,20 +14,27 @@
 //! * `Bind` links a term to an asset through `:definesAsset`
 //!   (`medulla_core::glossary::bind`, which refuses a deprecated term).
 //!
+//! * `ProposeDescription` stores a `cat:DescriptionProposal` node (typed properties) and opens a
+//!   change request for the target, reviewed by the stewards governing it.
+//! * `ReviewDescription` moves a proposal to `approved` or `rejected`; approving needs the
+//!   change request approved and writes the text as the target's `description`
+//!   (MEDULLA-TYPED-PACKS-R801.7).
+//!
 //! Reads are UQL, SPARQL and search over the same nodes; no read op exists.
 
 use std::sync::Arc;
 
 use medulla_catalog_types::glossary::{
-    GlossaryOp, GlossaryReceipt, GlossaryTerm, GlossaryTermEntry, GlossaryTermStatus,
-    CAT_GLOSSARY_TERM, SKOS_IN_SCHEME,
+    DescriptionProposal, DescriptionState, GlossaryOp, GlossaryReceipt, GlossaryTerm,
+    GlossaryTermEntry, GlossaryTermStatus, CAT_GLOSSARY_TERM, SKOS_IN_SCHEME,
 };
 use medulla_core::glossary::{
     bind, check_broader_acyclic_over, check_label_free, require_review, GlossaryError, PutScheme,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::{
-    GlossaryBind, GlossaryPutScheme, GlossaryPutTerm, GlossaryTransition,
+    GlossaryBind, GlossaryProposeDescription, GlossaryPutScheme, GlossaryPutTerm,
+    GlossaryReviewDescription, GlossaryTransition,
 };
 use medulla_server_api::state::ServerState;
 use tokio::sync::RwLock;
@@ -59,6 +66,12 @@ pub async fn dispatch_glossary(
         GlossaryOp::PutTerm { .. } => typed_response::<GlossaryPutTerm>(req_id, result),
         GlossaryOp::Transition { .. } => typed_response::<GlossaryTransition>(req_id, result),
         GlossaryOp::Bind { .. } => typed_response::<GlossaryBind>(req_id, result),
+        GlossaryOp::ProposeDescription { .. } => {
+            typed_response::<GlossaryProposeDescription>(req_id, result)
+        }
+        GlossaryOp::ReviewDescription { .. } => {
+            typed_response::<GlossaryReviewDescription>(req_id, result)
+        }
     }
 }
 
@@ -95,6 +108,10 @@ async fn serve(
             change_request,
         } => transition(state, target, iri, *event, change_request.as_deref()).await,
         GlossaryOp::Bind { term, asset } => bind_term(state, target, term, asset).await,
+        GlossaryOp::ProposeDescription { proposal } => propose_description(state, target, proposal).await,
+        GlossaryOp::ReviewDescription { proposal, approve } => {
+            review_description(state, target, proposal, *approve).await
+        }
     }
 }
 
@@ -417,5 +434,181 @@ async fn bind_term(
         iri: iri.to_string(),
         status: Some(term.status),
         written: 1,
+    })
+}
+
+/// Node label of a description proposal.
+pub const DESCRIPTION_PROPOSAL_LABEL: &str = "cat:DescriptionProposal";
+
+fn proposal_digest(text: &str) -> String {
+    use sha2::{Digest, Sha256};
+    format!("sha256:{:x}", Sha256::digest(text.as_bytes()))
+}
+
+fn proposal_id(tenant: &str, target: &str, digest: &str) -> String {
+    format!("description_proposal:{tenant}:{target}:{digest}")
+}
+
+async fn propose_description(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    proposal: &DescriptionProposal,
+) -> Result<GlossaryReceipt, String> {
+    use medulla_types::contract::ServerErrorCode;
+    if proposal.inputs.is_empty() {
+        return Err(format!(
+            "{}: a proposed description names at least one input",
+            ServerErrorCode::ProposalInputsMissing.as_str()
+        ));
+    }
+    if proposal.state != DescriptionState::Proposed {
+        return Err(invalid("a new proposal is in the proposed state"));
+    }
+    if proposal.text.trim().is_empty() || proposal.target.trim().is_empty() {
+        return Err(invalid("a proposal names its target and its text"));
+    }
+    if read_node(state, target, &proposal.target).await?.is_none() {
+        return Err(invalid(format!("target '{}' does not exist", proposal.target)));
+    }
+    let tenant = target.verified.tenant();
+    let digest = proposal_digest(&proposal.text);
+    let id = proposal_id(tenant, &proposal.target, &digest);
+    if read_node(state, target, &id).await?.is_some() {
+        return Ok(GlossaryReceipt {
+            iri: id,
+            status: None,
+            written: 0,
+        });
+    }
+    // The change request is opened first: a target nobody governs has no reviewer, so its
+    // proposal could never be approved.
+    let request = super::stewardship::open_governed_change(
+        state,
+        target,
+        &proposal.target,
+        &digest,
+        std::slice::from_ref(&proposal.target),
+    )
+    .await?
+    .ok_or_else(|| {
+        format!(
+            "{}: no owner or steward governs '{}'",
+            medulla_types::contract::ServerErrorCode::StewardRoleMissing.as_str(),
+            proposal.target
+        )
+    })?;
+    let mut properties = Properties::new();
+    properties.insert("type".into(), DESCRIPTION_PROPOSAL_LABEL.into());
+    properties.insert("target".into(), proposal.target.clone().into());
+    properties.insert("text".into(), proposal.text.clone().into());
+    properties.insert("text_digest".into(), digest.into());
+    if let Some(samples) = &proposal.inputs.samples_digest {
+        properties.insert("samples_digest".into(), samples.clone().into());
+    }
+    properties.insert("lineage_refs".into(), serde_json::json!(proposal.inputs.lineage_refs));
+    properties.insert("usage_refs".into(), serde_json::json!(proposal.inputs.usage_refs));
+    properties.insert("similar_refs".into(), serde_json::json!(proposal.inputs.similar_refs));
+    properties.insert("state".into(), DescriptionState::Proposed.as_str().into());
+    properties.insert("proposed_by".into(), target.verified.agent_id().into());
+    properties.insert("change_request".into(), request.into());
+    properties.insert(TENANT_PROPERTY.into(), tenant.into());
+    write(
+        state,
+        target,
+        Method::CreateNodeIfAbsent {
+            node_id: id.clone(),
+            properties_msgpack: encode(&properties)?,
+        },
+    )
+    .await?;
+    Ok(GlossaryReceipt {
+        iri: id,
+        status: None,
+        written: 1,
+    })
+}
+
+async fn review_description(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    id: &str,
+    approve: bool,
+) -> Result<GlossaryReceipt, String> {
+    use medulla_types::contract::ServerErrorCode;
+    let properties = read_node(state, target, id)
+        .await?
+        .ok_or_else(|| invalid(format!("proposal '{id}' does not exist")))?;
+    let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
+    if text(TENANT_PROPERTY) != Some(target.verified.tenant())
+        || text("type") != Some(DESCRIPTION_PROPOSAL_LABEL)
+    {
+        return Err(invalid(format!("'{id}' is not a proposal of this tenant")));
+    }
+    if text("state") != Some(DescriptionState::Proposed.as_str()) {
+        return Err(invalid(format!("proposal '{id}' is already decided")));
+    }
+    let subject = text("target").ok_or_else(|| invalid("the stored proposal has no target"))?;
+    let description = text("text").ok_or_else(|| invalid("the stored proposal has no text"))?;
+    let request_id = text("change_request")
+        .ok_or_else(|| invalid("the stored proposal has no change request"))?;
+    let stored = stored_request(state, target, request_id).await?;
+    if !stored
+        .request
+        .reviewers
+        .iter()
+        .any(|reviewer| reviewer == target.verified.agent_id())
+    {
+        return Err(format!(
+            "{}: the caller is not a reviewer of '{subject}'",
+            ServerErrorCode::StewardRoleMissing.as_str()
+        ));
+    }
+    if approve {
+        require_review(subject, Some(&stored.request)).map_err(glossary_refusal)?;
+    }
+    let state_after = if approve {
+        DescriptionState::Approved
+    } else {
+        DescriptionState::Rejected
+    };
+    let mut conditions = Properties::new();
+    conditions.insert("state".into(), DescriptionState::Proposed.as_str().into());
+    let mut updates = Properties::new();
+    updates.insert("state".into(), state_after.as_str().into());
+    updates.insert("reviewed_by".into(), target.verified.agent_id().into());
+    let committed = write(
+        state,
+        target,
+        Method::CompareAndSetNodeFields {
+            node_id: id.to_string(),
+            conditions_msgpack: encode(&conditions)?,
+            updates_msgpack: encode(&updates)?,
+        },
+    )
+    .await?;
+    if !took_effect(&committed) {
+        return Err(invalid(format!("proposal '{id}' changed since it was read")));
+    }
+    let mut written = 1;
+    if approve {
+        let mut subject_properties = read_node(state, target, subject)
+            .await?
+            .ok_or_else(|| invalid(format!("target '{subject}' no longer exists")))?;
+        subject_properties.insert("description".into(), description.into());
+        write(
+            state,
+            target,
+            Method::AddNode {
+                node_id: subject.to_string(),
+                properties_msgpack: encode(&subject_properties)?,
+            },
+        )
+        .await?;
+        written += 1;
+    }
+    Ok(GlossaryReceipt {
+        iri: id.to_string(),
+        status: None,
+        written,
     })
 }

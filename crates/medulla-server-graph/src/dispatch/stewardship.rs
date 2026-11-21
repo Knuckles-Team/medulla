@@ -321,7 +321,7 @@ async fn revoke(
     receipt(state, target, id, &scopes_of_assignment(assignment), None, None).await
 }
 
-fn request_id(tenant: &str, asset: &str, digest: &str) -> String {
+pub(super) fn request_id(tenant: &str, asset: &str, digest: &str) -> String {
     format!("change_request:{tenant}:{asset}:{digest}")
 }
 
@@ -372,10 +372,10 @@ async fn persist_request(
     Ok((id, request))
 }
 
-/// Open the change request a data product version change raises (MEDULLA-TYPED-PACKS-R805.3).
-/// The reviewers are the owners and stewards governing any of the product's `datasets`. A
-/// product none of whose datasets is governed raises none: `Ok(None)`.
-pub async fn open_product_change(
+/// Open the change request a change of `product` (a data product or a described asset) raises
+/// (MEDULLA-TYPED-PACKS-R805.3, R801.7). The reviewers are the owners and stewards governing any
+/// of `datasets`. A subject none of whose assets is governed raises none: `Ok(None)`.
+pub async fn open_governed_change(
     state: &Arc<RwLock<ServerState>>,
     target: &GraphTarget<'_>,
     product: &str,

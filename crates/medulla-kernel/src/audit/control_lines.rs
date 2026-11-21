@@ -148,6 +148,12 @@ fn incident_audit_line(method: &Method) -> Option<String> {
                 GlossaryOp::PutTerm { iri, .. } => format!("GLOSSARY|put_term|{iri}"),
                 GlossaryOp::Transition { iri, .. } => format!("GLOSSARY|transition|{iri}"),
                 GlossaryOp::Bind { term, .. } => format!("GLOSSARY|bind|{term}"),
+                GlossaryOp::ProposeDescription { proposal } => {
+                    format!("GLOSSARY|propose_description|{}", proposal.target)
+                }
+                GlossaryOp::ReviewDescription { proposal, .. } => {
+                    format!("GLOSSARY|review_description|{proposal}")
+                }
             })
         }
         // MEDULLA-TYPED-PACKS-R802.3: the line names the op and the node it addresses.

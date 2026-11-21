@@ -32814,6 +32814,30 @@ class GlossaryTransition(str, Enum):
     DEPRECATE = "deprecate"
 
 
+class DescriptionState(str, Enum):
+    PROPOSED = "proposed"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class DescriptionInputs(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    samples_digest: str | None = None
+    lineage_refs: list[str] = Field(default_factory=list)
+    usage_refs: list[str] = Field(default_factory=list)
+    similar_refs: list[str] = Field(default_factory=list)
+
+
+class DescriptionProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    target: str
+    text: str
+    inputs: DescriptionInputs
+    state: DescriptionState
+
+
 class GlossaryTerm(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -32875,8 +32899,28 @@ class GlossaryOpBind(BaseModel):
     asset: str
 
 
+class GlossaryOpProposeDescription(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["propose_description"]
+    proposal: DescriptionProposal
+
+
+class GlossaryOpReviewDescription(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["review_description"]
+    proposal: str
+    approve: bool
+
+
 GlossaryOp = Annotated[
-    GlossaryOpPutScheme | GlossaryOpPutTerm | GlossaryOpTransition | GlossaryOpBind,
+    GlossaryOpPutScheme
+    | GlossaryOpPutTerm
+    | GlossaryOpTransition
+    | GlossaryOpBind
+    | GlossaryOpProposeDescription
+    | GlossaryOpReviewDescription,
     Field(discriminator="op"),
 ]
 
@@ -39686,6 +39730,11 @@ __all__ = [
     "GlossaryOpPutTerm",
     "GlossaryOpTransition",
     "GlossaryOpBind",
+    "GlossaryOpProposeDescription",
+    "GlossaryOpReviewDescription",
+    "DescriptionState",
+    "DescriptionInputs",
+    "DescriptionProposal",
     "MethodStewardship",
     "MethodStewardshipParams",
     "StewardRole",

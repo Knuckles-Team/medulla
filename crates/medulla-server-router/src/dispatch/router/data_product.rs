@@ -194,7 +194,7 @@ async fn register(
             caller: req.agent_id.as_deref(),
             verified,
         };
-        medulla_server_graph::dispatch::stewardship::open_product_change(
+        medulla_server_graph::dispatch::stewardship::open_governed_change(
             state,
             &target,
             &product.id,

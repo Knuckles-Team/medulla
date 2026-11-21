@@ -832,6 +832,12 @@ decode_glossary_put_scheme = contract_decoder("Glossary", "GlossaryReceipt", "pu
 decode_glossary_put_term = contract_decoder("Glossary", "GlossaryReceipt", "put_term")
 decode_glossary_transition = contract_decoder("Glossary", "GlossaryReceipt", "transition")
 decode_glossary_bind = contract_decoder("Glossary", "GlossaryReceipt", "bind")
+decode_glossary_propose_description = contract_decoder(
+    "Glossary", "GlossaryReceipt", "propose_description"
+)
+decode_glossary_review_description = contract_decoder(
+    "Glossary", "GlossaryReceipt", "review_description"
+)
 send_stewardship = contract_sender("Stewardship", "MethodStewardshipParams")
 decode_stewardship_assign = contract_decoder("Stewardship", "StewardshipReceipt", "assign")
 decode_stewardship_revoke = contract_decoder("Stewardship", "StewardshipReceipt", "revoke")

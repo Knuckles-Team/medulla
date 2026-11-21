@@ -98,6 +98,65 @@ pub struct GlossaryTermEntry {
     pub term: GlossaryTerm,
 }
 
+/// The state of a proposed description.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DescriptionState {
+    Proposed,
+    Approved,
+    Rejected,
+}
+
+impl DescriptionState {
+    /// The stored name of the state.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Proposed => "proposed",
+            Self::Approved => "approved",
+            Self::Rejected => "rejected",
+        }
+    }
+}
+
+/// What a description proposal was drawn from; at least one input is present.
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DescriptionInputs {
+    /// Digest of the sampled values the text was written from.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub samples_digest: Option<String>,
+    #[serde(default)]
+    pub lineage_refs: Vec<String>,
+    #[serde(default)]
+    pub usage_refs: Vec<String>,
+    #[serde(default)]
+    pub similar_refs: Vec<String>,
+}
+
+impl DescriptionInputs {
+    /// Whether no input is named.
+    pub fn is_empty(&self) -> bool {
+        self.samples_digest.as_deref().is_none_or(str::is_empty)
+            && self.lineage_refs.is_empty()
+            && self.usage_refs.is_empty()
+            && self.similar_refs.is_empty()
+    }
+}
+
+/// A proposed description of a term or asset.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DescriptionProposal {
+    /// The term or asset node the text would describe.
+    pub target: String,
+    pub text: String,
+    pub inputs: DescriptionInputs,
+    pub state: DescriptionState,
+}
+
 /// A status move of a term, one per event of `GlossaryTermMachine`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -145,6 +204,11 @@ pub enum GlossaryOp {
     },
     /// Link a term to an asset through `:definesAsset`.
     Bind { term: String, asset: String },
+    /// Propose a description for a term or asset (MEDULLA-TYPED-PACKS-R801.7). The proposer is a
+    /// caller; the engine runs no model. The answer's `iri` is the proposal id.
+    ProposeDescription { proposal: DescriptionProposal },
+    /// Review one proposal: approving needs its change request approved first.
+    ReviewDescription { proposal: String, approve: bool },
 }
 
 impl GlossaryOp {
