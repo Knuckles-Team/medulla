@@ -17,23 +17,32 @@ attach-approved / shadow validate) against the session engine:
 
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import sys
-import time
 import uuid
 from pathlib import Path
 
 import pytest
-from conftest import TEST_TENANT, request_context
+from conftest import request_context
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
 from ontology_pack_support import connect, import_entries
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "source_authority"))
+from governed_ledger import (
+    SOURCE_ID,
+    Fields,
+    attach_approved,
+    candidate_digest,
+    consume_approval_lease,
+    issue_approval_lease,
+    validate_repair,
+)
+
 from medulla import ConnectorPackEntryContent
 from medulla.client import EngineResponseError, MedullaClient
-from medulla.generated import coordination, reasoning
+from medulla.generated import reasoning
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
 from medulla.generated.graph_schema import (
     GraphSchemaSourcesView,
@@ -44,35 +53,6 @@ from medulla.generated.source_ingestion import (
     DriftClass,
     SourceIngestionReceipt,
 )
-
-FieldSpec = dict[str, object]
-Fields = dict[str, FieldSpec]
-
-SOURCE_ID = "approved:drift-served"
-APPROVAL_LEASE_KIND = "action.approval"
-APPROVAL_ACTION = "schema_repair"
-APPROVED_CANDIDATE_DOMAIN = "eg/approved-schema-candidate/v1"
-LEASE_SPAN_MS = 600_000
-
-
-def canonical_contract(contract: dict[str, Fields]) -> str:
-    """The contract's canonical JSON: the sorted-key encoding the Rust side
-    takes the approval digest over (BTreeMap field order, declaration-order
-    field members)."""
-    return json.dumps(
-        {"fields": contract["fields"]}, sort_keys=True, separators=(",", ":")
-    )
-
-
-def candidate_digest(contract: dict[str, Fields], source_id: str = SOURCE_ID) -> str:
-    """The digest an approval grant must bind: domain, key and canonical
-    contract, each NUL-terminated (``approved_candidate_digest``)."""
-    framed = (
-        "\0".join([APPROVED_CANDIDATE_DOMAIN, source_id, canonical_contract(contract)])
-        + "\0"
-    )
-    return hashlib.sha256(framed.encode("utf-8")).hexdigest()
-
 
 # The approved baseline: two required fields.
 BASELINE: dict[str, Fields] = {
@@ -87,88 +67,6 @@ BASELINE: dict[str, Fields] = {
 DRIFTED: dict[str, Fields] = {
     "fields": {"name": {"required": True, "types": ["integer"]}}
 }
-
-
-async def issue_approval_lease(
-    client: MedullaClient, lease_id: str, candidate: str, source_id: str = SOURCE_ID
-) -> None:
-    now_ms = int(time.time() * 1000)
-    await coordination.send_issue_control_lease(
-        client,
-        {
-            "request": {
-                "tenant": TEST_TENANT,
-                "lease_id": lease_id,
-                "kind": APPROVAL_LEASE_KIND,
-                "grant": {
-                    "kind": APPROVAL_ACTION,
-                    "target": source_id,
-                    "candidate_digest": candidate,
-                },
-                "issued_at_ms": now_ms,
-                "expires_at_ms": now_ms + LEASE_SPAN_MS,
-                "hard_expires_at_ms": now_ms + LEASE_SPAN_MS,
-                "idempotency_key": f"issue:{lease_id}",
-            }
-        },
-    )
-
-
-async def consume_approval_lease(client: MedullaClient, lease_id: str) -> None:
-    await coordination.send_transition_control_lease(
-        client,
-        {
-            "request": {
-                "tenant": TEST_TENANT,
-                "lease_id": lease_id,
-                "expected_revision": 1,
-                "to": "consumed",
-                "idempotency_key": f"consume:{lease_id}",
-            }
-        },
-    )
-
-
-async def attach_approved(
-    client: MedullaClient,
-    lease_id: str,
-    fields: dict[str, dict[str, object]],
-    source_id: str = SOURCE_ID,
-) -> None:
-    await reasoning.send_graph_schema(
-        client,
-        {
-            "op": {
-                "op": "attach_approved",
-                "source_id": source_id,
-                "contract": {"fields": fields},
-                "approval_lease_id": lease_id,
-                "if_composed_digest": None,
-            }
-        },
-        idempotency_key=f"attach:{lease_id}:{uuid.uuid4().hex}",
-    )
-
-
-async def validate_repair(
-    client: MedullaClient,
-    fields: dict[str, dict[str, object]],
-    source_id: str = SOURCE_ID,
-) -> bool:
-    """Run the shadow-graph validation; returns the op's `changed` flag."""
-    committed = await reasoning.send_graph_schema(
-        client,
-        {
-            "op": {
-                "op": "validate_repair",
-                "source_id": source_id,
-                "contract": {"fields": fields},
-                "if_composed_digest": None,
-            }
-        },
-        idempotency_key=f"validate:{uuid.uuid4().hex}",
-    )
-    return committed.changed
 
 
 # One record of the request graph per contract: conforming data the shadow
