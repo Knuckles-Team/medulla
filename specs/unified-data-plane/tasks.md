@@ -48,7 +48,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T038 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.2 Kafka consumer plus real conversion into ChangeEnvelope records
 - [ ] T039 [US2] MEDULLA-UNIFIED-DATA-PLANE-R021.3 Replay test feeding a captured Debezium event stream through the bridge
 - [ ] T040 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.1 Model: `DialectConformanceEntry`/`ConformanceReport` are a typed per-engine-version result with a refusal for an auto-suppressed deviation
-- [ ] T041 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.2 Add `conformance/attached_matrix.toml` (five engines, no digest key), `toml_edit` as a root dev-dependency, `MatrixEngine`/`ImagePin`/`pinned_digest` and `manifest_pins_every_image_digest` in `tests/attached_conformance.rs`, reading digests only from the manifest named by `MEDULLA_CONFORMANCE_IMAGE_MANIFEST`
+- [ ] T041 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.2 Add `conformance/attached_matrix.toml` (five engines, no digest key), `toml_edit` as a root dev-dependency, `MatrixEngine`/`ImagePin`/`pinned_digest`/`EngineRun`/`plan_engine` and `manifest_pins_every_image_digest` in `tests/attached_conformance.rs`, reading digests only from the manifest named by `MEDULLA_CONFORMANCE_IMAGE_MANIFEST`
 - [ ] T042 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.1 Model: `compare_replay_to_snapshot` builds a `DialectConformanceEntry` from a replayed row-state map and a source-snapshot row-state map, refusing a blank engine version
 - [ ] T043 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.3.2 Replay stream versus source snapshot
 - [ ] T044 [US2] MEDULLA-UNIFIED-DATA-PLANE-R022.4.1 Residency column
