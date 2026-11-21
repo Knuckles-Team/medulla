@@ -292,4 +292,4 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T284 [US5] MEDULLA-CQ-CONN-R085.4 Refusal: orphaned ontology and held source abstain by name
 - [ ] T285 [US5] MEDULLA-CQ-CONN-R085.5 Evidence: the answer cites digest, revision and fetch time, and lists the load set
 - [ ] T286 [US5] MEDULLA-CQ-CONN-R085.6 Hot-path proof: an onboarded fixture connector answers a cross-ontology live question
-- [ ] T287 [US5] MEDULLA-CQ-CONN-R090 Served proof of one federated read over two virtual graphs and engine facts
+- [ ] T287 [US5] MEDULLA-CQ-CONN-R090 Collect nested plan source names in `bind_many_for_query`; extract `host_read.py::completed_read`; served test of two virtual graphs plus engine facts with per-source coverage and the write-word refusal

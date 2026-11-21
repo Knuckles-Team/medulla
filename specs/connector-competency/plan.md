@@ -343,7 +343,7 @@ One engine, medulla, holds all facts. There is no second database and no sync. E
 
 ### Delivery phase
 
-Row `MEDULLA-CQ-CONN-R090` serves P5. It is the engine side of the federated read in `ARBORA-ACCEPTANCE-R006.7`.
+Row `MEDULLA-CQ-CONN-R090` serves P5. It is the engine side of the federated read in `ARBORA-ACCEPTANCE-R006.7`. Its one engine change is in `bind_many_for_query` (`crates/medulla-server-ops/src/api/query_txn/foreign_read.rs`): plan source names come from `query_support::plan_foreign_names`, which recurses into `UNION`/`FUSE` branches, so the bind and the coverage block read the same name list.
 
 ## Phase 2: Task approach
 
