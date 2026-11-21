@@ -1,7 +1,7 @@
 use medulla_agent_types::{
     agent_component::AgentComponentFacts, agent_component::DeclaredLatency,
     agent_component::ModalityFacts, agent_component::ObservationRef, agent_component::ToolEffect,
-    agent_component::ToolsetTransport,
+    agent_component::ToolFactDeclarer, agent_component::ToolsetTransport,
 };
 
 use super::*;
@@ -291,4 +291,37 @@ fn measured_model_facts_project_ontology_names() {
             ]
         );
     }
+}
+
+/// Verifies MEDULLA-TYPED-PACKS-R045.7: a read-only claim is certified only by a trusted declarer.
+// spec: MEDULLA-TYPED-PACKS-R045.7
+#[test]
+fn a_read_only_claim_is_certified_only_by_a_trusted_declarer() {
+    let atoms_of = |declared_by: Option<ToolFactDeclarer>| {
+        let mut facts = tool(ToolEffect::Read);
+        if let AgentComponentFacts::Tool {
+            declared_by: slot,
+            read_only_unproven,
+            ..
+        } = &mut facts
+        {
+            *slot = declared_by;
+            *read_only_unproven = declared_by == Some(ToolFactDeclarer::McpHint);
+        }
+        let classes: Vec<String> = component_atoms(&ProfiledComponent {
+            component_id: "tool:x",
+            facts: &facts,
+        })
+        .into_iter()
+        .map(|atom| atom.0)
+        .collect();
+        (
+            classes.iter().any(|pred| pred == READ_ONLY_HINT),
+            classes.iter().any(|pred| pred == READ_ONLY_UNPROVEN),
+        )
+    };
+    assert_eq!(atoms_of(None), (true, false));
+    assert_eq!(atoms_of(Some(ToolFactDeclarer::Connector)), (true, false));
+    assert_eq!(atoms_of(Some(ToolFactDeclarer::Certified)), (true, false));
+    assert_eq!(atoms_of(Some(ToolFactDeclarer::McpHint)), (false, true));
 }

@@ -25,7 +25,7 @@ use std::collections::BTreeMap;
 use medulla_agent_types::agent_ontology::AGENT_ONTOLOGY;
 use medulla_agent_types::{
     agent_component::AgentComponentFacts, agent_component::ModalityFacts,
-    agent_component::ToolEffect,
+    agent_component::ToolEffect, agent_component::ToolFactDeclarer,
 };
 
 use super::proof::RuleProofNode;
@@ -54,6 +54,8 @@ const P95_LATENCY_MS: &str = "eg:fact/p95_latency_ms";
 const LATENCY_MEASURED: &str = "eg:fact/latency_measured";
 const EFFECT: &str = "eg:fact/effect";
 const READ_ONLY_HINT: &str = "eg:fact/read_only_hint";
+/// Unary class of a tool whose read-only claim comes from an uncertified MCP hint.
+const READ_ONLY_UNPROVEN: &str = "eg:fact/read_only_unproven";
 const DESTRUCTIVE_HINT: &str = "eg:fact/destructive_hint";
 const IDEMPOTENT_HINT: &str = "eg:fact/idempotent_hint";
 const OPEN_WORLD_HINT: &str = "eg:fact/open_world_hint";
@@ -400,12 +402,20 @@ pub fn component_atoms(component: &ProfiledComponent<'_>) -> Vec<GroundAtom> {
             open_world_hint,
             modalities,
             latency_declared,
+            declared_by,
             ..
         } => {
             atoms.class(TOOL);
             atoms.fact(EFFECT, effect_value(*effect).to_string());
+            // A read-only claim is certified only by a declarer that can be
+            // trusted: the connector author or an evaluation. An MCP hint
+            // stays a claim and is projected as unproven, never as read-only
+            // (MEDULLA-TYPED-PACKS-R045.7).
+            let claimed = *read_only_hint == Some(true);
+            let certified = !matches!(declared_by, Some(ToolFactDeclarer::McpHint));
             atoms.flags(&[
-                (READ_ONLY_HINT, *read_only_hint == Some(true)),
+                (READ_ONLY_HINT, claimed && certified),
+                (READ_ONLY_UNPROVEN, claimed && !certified),
                 (DESTRUCTIVE_HINT, *destructive_hint == Some(true)),
                 (IDEMPOTENT_HINT, *idempotent_hint == Some(true)),
                 (OPEN_WORLD_HINT, *open_world_hint == Some(true)),

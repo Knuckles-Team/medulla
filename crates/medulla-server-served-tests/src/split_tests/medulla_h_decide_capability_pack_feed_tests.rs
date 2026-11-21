@@ -27,13 +27,13 @@ use tokio::sync::RwLock;
 
 const SECRET: &str = "pack-feed-served-fixture-secret"; // sanitizer:ignore
 /// The fixed tenant the served test auth policy expects.
-const TENANT: &str = "tenant-shared";
+pub(super) const TENANT: &str = "tenant-shared";
 /// A tenant that imported nothing.
 const OTHER_TENANT: &str = "tenant-other";
 /// The System-role agent the harness isolation registers.
 const ADMIN: &str = "pack-feed-served-admin";
-const COMMONS: &str = "__commons__";
-const CONNECTOR: &str = "r172-12-3";
+pub(super) const COMMONS: &str = "__commons__";
+pub(super) const CONNECTOR: &str = "r172-12-3";
 const ORDER: &str = "https://example.org/Order";
 const SHIP: &str = "https://example.org/Ship";
 const DIM: usize = 3;
@@ -61,13 +61,13 @@ impl Reembedder for AxisEmbedder {
     }
 }
 
-struct Served {
-    _dir: tempfile::TempDir,
-    state: Arc<RwLock<ServerState>>,
+pub(super) struct Served {
+    pub(super) _dir: tempfile::TempDir,
+    pub(super) state: Arc<RwLock<ServerState>>,
 }
 
 impl Served {
-    fn new() -> Self {
+    pub(super) fn new() -> Self {
         let dir = tempfile::tempdir().unwrap();
         let mut state = medulla_server::seams_install::new_state_for_test(
             SECRET,
@@ -96,7 +96,7 @@ impl Served {
 
     /// Declare the commons graph's active embedding generation, the space the
     /// feed embeds under.
-    async fn declare_generation(&self) -> String {
+    pub(super) async fn declare_generation(&self) -> String {
         let mut guard = self.state.write().await;
         if guard.registry.get(COMMONS).is_none() {
             guard
@@ -178,7 +178,7 @@ impl Served {
         )
     }
 
-    async fn bind(&self) {
+    pub(super) async fn bind(&self) {
         let key = format!("bind:{CONNECTOR}");
         let _: serde_json::Value = ok(
             "Bind",
@@ -200,7 +200,7 @@ impl Served {
     }
 
     /// Upload and import `pack` as the first head of the connector.
-    async fn import(&self, pack: (ConnectorPackIndex, Vec<u8>)) -> PackImportReceipt {
+    pub(super) async fn import(&self, pack: (ConnectorPackIndex, Vec<u8>)) -> PackImportReceipt {
         let (mut index, archive) = pack;
         index.archive.blob_digest = self.upload(&archive).await;
         let key = format!(
@@ -324,6 +324,12 @@ fn entry(
 /// A pack of two tools and the ontology that declares what they act on: `a`
 /// operates on `Order`, `b` executes a method of class `Ship`.
 fn build_pack() -> (ConnectorPackIndex, Vec<u8>) {
+    build_pack_with(&[("a", None), ("b", None)])
+}
+
+/// The same pack with the tools `(name, schema_tokens)`; the ontology still
+/// speaks only of `a` and `b`.
+pub(super) fn build_pack_with(tools: &[(&str, Option<u32>)]) -> (ConnectorPackIndex, Vec<u8>) {
     let mut archive = Vec::new();
     let server_body =
         format!(r#"{{"contract_version":"1","instructions":"Test.","name":"{CONNECTOR}"}}"#);
@@ -348,35 +354,34 @@ fn build_pack() -> (ConnectorPackIndex, Vec<u8>) {
          <tool://{CONNECTOR}/a> cp:operatesOn <{ORDER}> .\n\
          <tool://{CONNECTOR}/b> cp:executes <{SHIP}> .\n"
     );
-    let mut entries = vec![
-        entry(
+    let mut entries = vec![entry(
+        &mut archive,
+        PackEntryKind::Ontology,
+        format!("ontology://{CONNECTOR}/surface.ttl"),
+        "surface.ttl",
+        "text/turtle",
+        ontology.as_bytes(),
+        None,
+    )];
+    for (name, tokens) in tools {
+        let description = match *name {
+            "a" => "alpha lookup".to_string(),
+            "b" => "dispatch shipment".to_string(),
+            other => format!("{other} tool"),
+        };
+        let body = format!(r#"{{"description":"{description}","name":"{name}"}}"#);
+        let mut tool = entry(
             &mut archive,
             PackEntryKind::Tool,
-            format!("tool://{CONNECTOR}/a"),
-            "a",
+            format!("tool://{CONNECTOR}/{name}"),
+            name,
             "application/json",
-            br#"{"description":"alpha lookup","name":"a"}"#,
+            body.as_bytes(),
             Some(schema),
-        ),
-        entry(
-            &mut archive,
-            PackEntryKind::Tool,
-            format!("tool://{CONNECTOR}/b"),
-            "b",
-            "application/json",
-            br#"{"description":"dispatch shipment","name":"b"}"#,
-            Some(schema),
-        ),
-        entry(
-            &mut archive,
-            PackEntryKind::Ontology,
-            format!("ontology://{CONNECTOR}/surface.ttl"),
-            "surface.ttl",
-            "text/turtle",
-            ontology.as_bytes(),
-            None,
-        ),
-    ];
+        );
+        tool.annotations.schema_tokens = *tokens;
+        entries.push(tool);
+    }
     entries.sort_by(|left, right| left.uri.cmp(&right.uri));
     let mut index = ConnectorPackIndex {
         schema_version: CONNECTOR_PACK_SCHEMA_VERSION,

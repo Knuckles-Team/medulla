@@ -142,7 +142,7 @@ These partial regressions intentionally carry no acceptance binding that would m
 - `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains`.
 - `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven`.
 - `MEDULLA-TYPED-PACKS-R045.8`: `tests/test_connector_pack_client.py::test_harness_tool_facts_bind_the_annotation_digest_like_rust` (existing)
-- `MEDULLA-TYPED-PACKS-R045.9`: `tests/harness_config_tool_facts_served.rs::two_tool_pack_subset_respects_budget`.
+- `MEDULLA-TYPED-PACKS-R045.9`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_pack_tests.rs::two_tool_pack_subset_respects_budget`.
 
 ## Measured model producer tests (R048.3, R048.4)
 
@@ -640,16 +640,17 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R042.2`: `crates/medulla-h-admin/src/admin/connector_pack/import.rs::run_import` (existing); `crates/medulla-h-admin/src/admin/connector_pack/import/desired.rs::DesiredBuilder::draft` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/admin.rs::a_rejected_import_mutates_nothing_in_the_catalog` (existing); `crates/medulla-h-admin/src/admin/connector_pack/tests/content_model.rs::capability_annotations_remain_declared_after_import` (existing)
 - `MEDULLA-TYPED-PACKS-R043`: `crates/medulla-h-admin/src/admin/connector_pack/import/modality_tests.rs::modality_digest_replay_is_canonical_and_direction_sensitive` (existing)
 - `MEDULLA-TYPED-PACKS-R044`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::tests::tool_facts_carry_both_section_digests` (existing); `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::framed_digest_vectors_match` (existing)
-- `MEDULLA-TYPED-PACKS-R045`: `tests/harness_config_tool_facts_served.rs::two_tool_pack_subset_respects_budget` (planned)
+- `MEDULLA-TYPED-PACKS-R045`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_pack_tests.rs::two_tool_pack_subset_respects_budget` (planned)
 - `MEDULLA-TYPED-PACKS-R045.1`: `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::new_fields_roundtrip` (existing)
 - `MEDULLA-TYPED-PACKS-R045.2`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::facts` (existing); `crates/medulla-catalog-types/src/connector_pack/annotations.rs::tests::absent_facts_take_safe_defaults` (existing)
 - `MEDULLA-TYPED-PACKS-R045.3`: `crates/medulla-catalog-types/src/connector_pack/digest.rs::tests::absent_new_fields_keep_golden_vectors` (existing)
 - `MEDULLA-TYPED-PACKS-R045.4`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::unknown_side_effect_is_refused` (existing)
 - `MEDULLA-TYPED-PACKS-R045.5`: `crates/medulla-h-admin/src/admin/connector_pack/import/facts.rs::tests::mcp_hint_read_only_is_unproven` (existing)
 - `MEDULLA-TYPED-PACKS-R045.6`: `crates/medulla-h-decide/src/decide/stat_tool_subset.rs::request_body` (existing); `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::missing_schema_tokens_abstains` (existing)
-- `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven` (planned)
+- `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_tests.rs::mcp_hint_read_only_premise_is_unproven`
+- `MEDULLA-TYPED-PACKS-R045.7`: `crates/medulla-reasoner/src/rules/capability/tests.rs::a_read_only_claim_is_certified_only_by_a_trusted_declarer`
 - `MEDULLA-TYPED-PACKS-R045.8`: `tests/test_connector_pack_client.py::test_harness_tool_facts_bind_the_annotation_digest_like_rust` (existing)
-- `MEDULLA-TYPED-PACKS-R045.9`: `tests/harness_config_tool_facts_served.rs::two_tool_pack_subset_respects_budget` (planned)
+- `MEDULLA-TYPED-PACKS-R045.9`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_harness_config_pack_tests.rs::two_tool_pack_subset_respects_budget` (planned)
 - `MEDULLA-TYPED-PACKS-R046`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::cost_latency_and_model_facts_are_bounded` (existing)
 - `MEDULLA-TYPED-PACKS-R047`: `crates/medulla-h-admin/src/admin/connector_pack/import/annotations.rs::tests::cost_latency_and_model_facts_are_bounded` (existing)
 - `MEDULLA-TYPED-PACKS-R048`: `tests/typed_packs/test_model_harness_facts.py::test_model_profile_facts_round_trip` (planned)

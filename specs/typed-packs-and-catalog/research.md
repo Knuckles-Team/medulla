@@ -107,3 +107,11 @@ For a candidate that is fully resident, a class is in use when the graph's `type
 **Why.** One code per refusal cause lets a caller act without parsing text. Evidence on the node keeps every promoted fact traceable to the exact manifest revision and source without a second store.
 
 **Spec fix.** None to the row text. WIRE-REGEN: two new codes in the error-code contract.
+
+## Read-only claim premises and the pack end-to-end proof (R045.7, R045.9)
+
+**Decision.** The `HarnessConfig` premise builder (MEDULLA-DECISION-ENGINE-R128.8) already existed, so `require_supported_question_kind` no longer refuses the kind; the R045.7 row text that said it did was a factual error and is corrected. The read-only label is built by `read_only_claim_premises` in the harness-config family: one Claim premise per declared tool the request tenant's library holds with a read-only claim, labelled `unproven` for an MCP hint and `certified` otherwise. The capability rules project `read_only_hint` as a class only for a connector or certified declarer, and `read_only_unproven` as its own class otherwise.
+
+**Why.** One source of truth for the fact (`PackAnnotations::read_only_unproven`, stored on the tool facts at admission), no second registry, and the lookup is by component id inside the request tenant, so another tenant's tool never contributes a premise.
+
+**R045.9 location.** The proof drives a served pack import and a served decision over one store. The pack-import harness is private to `medulla-server-served-tests`, so the test lives there (the row named a root-crate file that could not reach it); the row text, test-spec and this note say so. Tool sizes are read back from the imported components' stored facts.

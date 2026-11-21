@@ -128,6 +128,8 @@ pub(crate) struct HarnessFacts {
     pub shell_centric: Option<bool>,
     pub task_token_upper_bound: Option<u64>,
     pub plan_scaffold_no_gain: Option<MeasuredFact<bool>>,
+    /// The read-only claims of the declared tools the library holds.
+    pub read_only_claims: Vec<ReadOnlyClaim>,
 }
 
 fn param<'a>(request: &'a DecideRequest, name: &str) -> Option<&'a TypedValue> {
@@ -414,6 +416,7 @@ pub(crate) fn read_facts(
     store: &AgentLibraryStore,
     tenant_id: &str,
     body: &HarnessConfigRequestBody,
+    options: &[DeclaredOption],
     graph_view: Option<&GraphView>,
 ) -> Result<HarnessFacts, String> {
     let profile = profile_facts(store, tenant_id, body)?;
@@ -444,6 +447,7 @@ pub(crate) fn read_facts(
         shell_centric,
         task_token_upper_bound,
         plan_scaffold_no_gain,
+        read_only_claims: read_only_claims(store, tenant_id, options)?,
     })
 }
 
@@ -731,6 +735,124 @@ fn why_not(policy_digest: &str, part: &str, value: &str, code: &str) -> FamilyPr
     )
 }
 
+/// The label of a read-only claim whose declarer is an uncertified MCP hint
+/// (MEDULLA-TYPED-PACKS-R045.7).
+pub const READ_ONLY_UNPROVEN_LABEL: &str = "unproven";
+/// The label of a read-only claim a connector or an evaluation declared.
+pub const READ_ONLY_CERTIFIED_LABEL: &str = "certified";
+
+/// One declared tool's read-only claim as the tenant's library holds it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct ReadOnlyClaim {
+    pub component_id: String,
+    pub definition_digest: String,
+    /// True when the claim is only an MCP hint, never certified.
+    pub unproven: bool,
+}
+
+/// The fact prefix of a read-only claim premise.
+const READ_ONLY_FACT_PREFIX: &str = "harness_config.tool_read_only=";
+
+/// The read-only claim of each declared tool the request tenant's library
+/// holds with one. A tool is looked up by its id in the request tenant's
+/// library only; an id the library does not hold, or a tool that makes no
+/// read-only claim, adds nothing (MEDULLA-TYPED-PACKS-R045.7).
+fn read_only_claims(
+    store: &AgentLibraryStore,
+    tenant_id: &str,
+    options: &[DeclaredOption],
+) -> Result<Vec<ReadOnlyClaim>, String> {
+    let mut out = Vec::new();
+    for option in options {
+        let Some(entry) = store
+            .current_component(tenant_id, &option.option_id)
+            .map_err(invalid_parameter)?
+        else {
+            continue;
+        };
+        let AgentComponentFacts::Tool {
+            read_only_hint: Some(true),
+            read_only_unproven,
+            ..
+        } = &entry.facts
+        else {
+            continue;
+        };
+        out.push(ReadOnlyClaim {
+            component_id: entry.component_id.clone(),
+            definition_digest: entry.definition_digest.clone(),
+            unproven: *read_only_unproven,
+        });
+    }
+    Ok(out)
+}
+
+/// The label of a read-only claim whose declarer is an uncertified MCP hint
+/// (MEDULLA-TYPED-PACKS-R045.7).
+pub const READ_ONLY_UNPROVEN_LABEL: &str = "unproven";
+/// The label of a read-only claim a connector or an evaluation declared.
+pub const READ_ONLY_CERTIFIED_LABEL: &str = "certified";
+
+/// One premise for each read-only claim, labelled `unproven` when the claim is
+/// only an MCP hint and `certified` otherwise.
+fn read_only_claim_premises(claims: &[ReadOnlyClaim]) -> Vec<FamilyPremise> {
+    claims
+        .iter()
+        .map(|claim| {
+            let label = if claim.unproven {
+                READ_ONLY_UNPROVEN_LABEL
+            } else {
+                READ_ONLY_CERTIFIED_LABEL
+            };
+            premise(
+                &claim.component_id,
+                format!("{READ_ONLY_FACT_PREFIX}{label}"),
+                PremiseClass::Claim,
+                PremiseProvenance::Publisher {
+                    component_id: claim.component_id.clone(),
+                    definition_digest: claim.definition_digest.clone(),
+                },
+            )
+        })
+        .collect()
+}
+
+/// The read-only claims the stored premises carry, for the commit replay.
+fn replayed_read_only_claims(
+    record: &StatisticalDecisionRecord,
+) -> Result<Vec<ReadOnlyClaim>, String> {
+    let mut claims = Vec::new();
+    for premise in &record.premises {
+        let Some(label) = premise.fact.strip_prefix(READ_ONLY_FACT_PREFIX) else {
+            continue;
+        };
+        let unproven = match label {
+            READ_ONLY_UNPROVEN_LABEL => true,
+            READ_ONLY_CERTIFIED_LABEL => false,
+            _ => {
+                return Err(mismatch(
+                    "the tool_read_only premise carries an unknown label",
+                ))
+            }
+        };
+        let PremiseProvenance::Publisher {
+            component_id,
+            definition_digest,
+        } = &premise.provenance
+        else {
+            return Err(mismatch(
+                "the tool_read_only premise is not a publisher claim",
+            ));
+        };
+        claims.push(ReadOnlyClaim {
+            component_id: component_id.clone(),
+            definition_digest: definition_digest.clone(),
+            unproven,
+        });
+    }
+    Ok(claims)
+}
+
 const MISSING_FACT: &str = "MISSING_FACT";
 
 /// One why-not premise per rejected value of each closed-vocabulary part, and
@@ -833,7 +955,10 @@ fn conclude_config(
             )));
         }
     };
-    let facts = read_facts(ctx.store, ctx.tenant_id, &body, graph_view)?;
+    let options: &[DeclaredOption] = applied
+        .as_ref()
+        .map_or(declared, |applied| applied.options.as_slice());
+    let facts = read_facts(ctx.store, ctx.tenant_id, &body, options, graph_view)?;
     derive_config(
         body,
         declared,
@@ -912,6 +1037,7 @@ fn derive_config(
         policy_digest: &digest,
     };
     let mut premises = input_premises(&basis);
+    premises.extend(read_only_claim_premises(&facts.read_only_claims));
     if let Some(profile) = assistant_profile {
         premises.push(premise(
             &profile.profile_id,
@@ -1168,6 +1294,7 @@ fn replayed_facts(
         shell_centric,
         task_token_upper_bound,
         plan_scaffold_no_gain,
+        read_only_claims: replayed_read_only_claims(record)?,
     })
 }
 

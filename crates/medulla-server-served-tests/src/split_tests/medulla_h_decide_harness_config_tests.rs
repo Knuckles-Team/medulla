@@ -71,17 +71,17 @@ async fn route_fixture() -> (Harness, DecideRequest) {
 }
 
 /// The knobs and facts one served question is built from.
-struct Cfg {
-    shell: Option<ShellProficiency>,
-    stopping: Option<StoppingBehaviour>,
-    shell_centric: Option<bool>,
-    ablation: Option<bool>,
-    bound: Option<u64>,
-    window: u32,
-    expected: Option<i64>,
-    required: Vec<&'static str>,
-    tools: Vec<(&'static str, Vec<&'static str>, i64)>,
-    budget: i64,
+pub(super) struct Cfg {
+    pub(super) shell: Option<ShellProficiency>,
+    pub(super) stopping: Option<StoppingBehaviour>,
+    pub(super) shell_centric: Option<bool>,
+    pub(super) ablation: Option<bool>,
+    pub(super) bound: Option<u64>,
+    pub(super) window: u32,
+    pub(super) expected: Option<i64>,
+    pub(super) required: Vec<&'static str>,
+    pub(super) tools: Vec<(&'static str, Vec<&'static str>, i64)>,
+    pub(super) budget: i64,
 }
 
 impl Default for Cfg {
@@ -195,6 +195,13 @@ fn config_request(
 /// A harness with the profile and task-class facts of `cfg` published.
 async fn config_fixture(cfg: &Cfg) -> (Harness, DecideRequest) {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let asked = seed_config(&h, cfg).await;
+    (h, asked)
+}
+
+/// Publish the profile and task-class facts of `cfg` into `h` and return the
+/// question that asks for them.
+pub(super) async fn seed_config(h: &Harness, cfg: &Cfg) -> DecideRequest {
     h.publish_model_profile(
         TENANT,
         PROFILE,
@@ -224,9 +231,8 @@ async fn config_fixture(cfg: &Cfg) -> (Harness, DecideRequest) {
         );
     }
     h.seed_node(GRAPH, PROFILE, profile.into()).await;
-    let (schema_pin, _) = publish_route_schema(&h);
-    let asked = config_request(&schema_pin, cfg, PROFILE, DecisionPolicyRef::Default);
-    (h, asked)
+    let (schema_pin, _) = publish_route_schema(h);
+    config_request(&schema_pin, cfg, PROFILE, DecisionPolicyRef::Default)
 }
 
 async fn decided(h: &Harness, asked: DecideRequest) -> StatisticalDecisionRecord {
@@ -287,7 +293,7 @@ fn has_premise(record: &StatisticalDecisionRecord, prefix: &str) -> bool {
     record.premises.iter().any(|p| p.fact.starts_with(prefix))
 }
 
-fn answer(record: &StatisticalDecisionRecord) -> HarnessConfigAnswer {
+pub(super) fn answer(record: &StatisticalDecisionRecord) -> HarnessConfigAnswer {
     record
         .inputs
         .harness_evaluation
@@ -1393,4 +1399,68 @@ async fn over_limit_replay_refuses_before_start() {
         assert_refused_with(&commit_response(&h, &record).await, "HARNESS_REPLAY_LIMIT");
         assert!(!stored(&h, &record.record_id), "{name}");
     }
+}
+
+/// A published `Tool` of the harness tenant that claims to be read-only,
+/// declared by `declared_by`.
+fn publish_read_only_tool(
+    h: &Harness,
+    id: &str,
+    declared_by: medulla_agent_types::agent_component::ToolFactDeclarer,
+) {
+    use medulla_agent_types::agent_component::{AgentComponentFacts, ToolEffect, ToolFactDeclarer};
+    let mut draft = medulla_persistence_records::agent_component::test_component_draft(TENANT, id);
+    draft.facts = AgentComponentFacts::Tool {
+        effect: ToolEffect::Read,
+        required_scopes: Vec::new(),
+        input_schema_digest: None,
+        output_schema_digest: None,
+        read_only_hint: Some(true),
+        destructive_hint: None,
+        idempotent_hint: None,
+        open_world_hint: None,
+        modalities: Default::default(),
+        cost: None,
+        latency_declared: None,
+        side_effects: None,
+        declared_by: Some(declared_by),
+        schema_tokens: Some(100),
+        read_only_unproven: declared_by == ToolFactDeclarer::McpHint,
+    };
+    h.commit(draft, None).unwrap();
+}
+
+// spec: MEDULLA-TYPED-PACKS-R045.7
+#[tokio::test]
+async fn mcp_hint_read_only_premise_is_unproven() {
+    use medulla_agent_types::agent_component::ToolFactDeclarer;
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let (h, asked) = config_fixture(&Cfg::default()).await;
+    publish_read_only_tool(&h, "tool-a", ToolFactDeclarer::McpHint);
+    publish_read_only_tool(&h, "tool-b", ToolFactDeclarer::Connector);
+    let record = decided(&h, asked).await;
+    let label_of = |tool: &str| {
+        record
+            .premises
+            .iter()
+            .find(|p| p.subject == tool && p.fact.starts_with("harness_config.tool_read_only="))
+            .map(|p| p.fact.clone())
+    };
+    assert_eq!(
+        label_of("tool-a").as_deref(),
+        Some("harness_config.tool_read_only=unproven"),
+        "an MCP hint read-only claim must be labelled unproven"
+    );
+    assert_eq!(
+        label_of("tool-b").as_deref(),
+        Some("harness_config.tool_read_only=certified"),
+        "a connector-declared read-only claim is certified"
+    );
+    assert_eq!(
+        label_of("tool-c"),
+        None,
+        "a tool the library does not hold carries no read-only premise"
+    );
+    let claim = premise(&record, "harness_config.tool_read_only=unproven");
+    assert_eq!(claim.class, PremiseClass::Claim);
 }
