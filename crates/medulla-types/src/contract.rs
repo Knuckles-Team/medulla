@@ -21,7 +21,7 @@ pub use engine_error_code::EngineErrorCode;
 pub use identifiers::{
     ActorId, AdmissionOutcome, AudienceId, DecisionOutcome, EffectState, IdempotencyKey,
     IngressSurface, MethodId, MutationDisposition, MutationDomain, OpaqueId, Operation,
-    PolicyRevision, ProtocolId, PurposeKind, ReplayStatus, RequestedMutationResult, ResourceId,
+    PolicyRevision, ProtocolId, PurposeKind, ReplayOutcome, RequestedMutationResult, ResourceId,
     SchemaId, ScopeKind, TenantId, UtcUnixNanos, VerificationStatus,
 };
 pub use server_error_code::ServerErrorCode;

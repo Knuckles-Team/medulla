@@ -315,7 +315,7 @@ closed_token_type!(
     ["tenant", "graph", "incarnation", "native"]
 );
 closed_token_type!(
-    ReplayStatus,
+    ReplayOutcome,
     "replay status",
     ["consumed", "duplicate", "rejected", "unavailable"]
 );

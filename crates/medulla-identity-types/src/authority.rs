@@ -16,7 +16,7 @@ pub use self::evidence::{SignedAuthorityEnvelopeEvidence, VerifiedAuthority};
 pub use self::replay::{NonceReplayKey, OperationReplayIdentity, ReplayReceipt};
 pub use medulla_types::{
     contract::AdmissionOutcome, contract::DecisionOutcome, contract::EffectState,
-    contract::IngressSurface, contract::Operation, contract::PurposeKind, contract::ReplayStatus,
+    contract::IngressSurface, contract::Operation, contract::PurposeKind, contract::ReplayOutcome,
     contract::ScopeKind, contract::VerificationStatus,
 };
 

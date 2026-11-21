@@ -66,7 +66,7 @@ pub fn index_repository(files: &[(String, Vec<u8>)]) -> IndexResult {
     indexed.files_parsed = file_outcomes
         .iter()
         .filter(|outcome| {
-            outcome.status == medulla_ingestion_types::ingestion_wire::IndexFileStatus::Success
+            outcome.verdict == medulla_ingestion_types::ingestion_wire::IndexFileVerdict::Success
         })
         .count();
     let mut evidence =

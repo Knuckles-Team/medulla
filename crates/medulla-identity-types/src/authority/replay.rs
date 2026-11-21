@@ -10,7 +10,7 @@ use medulla_types::{
     contract::ActorId, contract::AudienceId, contract::Digest256, contract::EffectState,
     contract::IdempotencyKey, contract::MethodId, contract::Nonce, contract::OpaqueId,
     contract::Operation, contract::PolicyRevision, contract::ProtocolId, contract::PurposeKind,
-    contract::ReplayStatus, contract::ResourceId, contract::SchemaId, contract::TenantId,
+    contract::ReplayOutcome, contract::ResourceId, contract::SchemaId, contract::TenantId,
     contract::UtcUnixNanos,
 };
 
@@ -185,7 +185,8 @@ pub struct ReplayReceipt {
     pub replay_ledger_epoch: Option<u64>,
     pub nonce_consumed_at: Option<UtcUnixNanos>,
     pub recorded_at: UtcUnixNanos,
-    pub status: ReplayStatus,
+    #[serde(rename = "status")]
+    pub outcome: ReplayOutcome,
     pub effect_state: EffectState,
     pub effect_id: Option<OpaqueId>,
     pub commit_id: Option<OpaqueId>,
@@ -201,7 +202,7 @@ pub struct ReplayReceipt {
 
 impl ReplayReceipt {
     pub fn validate(&self) -> Result<(), String> {
-        let valid = match (self.status.as_str(), self.effect_state.as_str()) {
+        let valid = match (self.outcome.as_str(), self.effect_state.as_str()) {
             ("consumed", "pending") => replay_pending(self),
             ("consumed", "committed") => replay_committed(self),
             ("consumed", "failed_retryable") => replay_failure(self, true),
@@ -239,7 +240,7 @@ impl ReplayReceipt {
         fields.push(&consumed_present);
         fields.push(&consumed_at);
         fields.push(&recorded_at);
-        fields.push(self.status.as_str().as_bytes());
+        fields.push(self.outcome.as_str().as_bytes());
         fields.push(self.effect_state.as_str().as_bytes());
         self.push_effect_fields(&mut fields);
         fields.push(&retryable);

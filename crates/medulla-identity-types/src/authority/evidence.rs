@@ -352,7 +352,7 @@ fn authority_state_is_admitted(authority: &VerifiedAuthority) -> bool {
         && authority.admission_state.as_str() == "admitted"
         && authority.decision_outcome.as_str() == "allow"
         && matches!(
-            authority.replay_receipt.status.as_str(),
+            authority.replay_receipt.outcome.as_str(),
             "consumed" | "duplicate"
         )
 }

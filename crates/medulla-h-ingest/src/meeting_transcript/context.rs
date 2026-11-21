@@ -9,7 +9,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_core::meeting_transcript::{get_final, TranscriptState};
+use medulla_core::meeting_transcript::{get_final, TranscriptSnapshot};
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::meeting_transcript::{
     MeetingSummaryContext, MeetingSummaryContextRequest, SummarySpan,
@@ -37,7 +37,7 @@ fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
 /// The finalized digest a context or summary may be built from: the latest
 /// seal, and only while no revision followed it.
 pub(crate) fn current_final(
-    state: &TranscriptState,
+    state: &TranscriptSnapshot,
     digest: &Digest256,
 ) -> Result<Vec<String>, String> {
     let Some(sealed) = get_final(state) else {
@@ -77,7 +77,7 @@ fn tokens(text: &str) -> usize {
 
 /// Build the bounded context and the write-set of its `SummaryContext` node.
 pub fn build_context(
-    state: &TranscriptState,
+    state: &TranscriptSnapshot,
     request: &MeetingSummaryContextRequest,
 ) -> Result<(IndexWriteSet, MeetingSummaryContext), String> {
     request

@@ -5,7 +5,7 @@
 //! verification (P4) and the schema-understanding demonstration (P5) are
 //! MEDULLA-UNIFIED-DATA-PLANE-R026.3.2+.
 
-use crate::gramps_pilot_phase::{GrampsPilotPhase, InvalidPhaseExit, PhaseExitArtifact};
+use crate::gramps_pilot_phase::{GrampsPilotMilestone, InvalidPhaseExit, PhaseExitArtifact};
 use serde::{Deserialize, Serialize};
 
 /// One gap fixed because a captured driver statement proved a real
@@ -67,8 +67,8 @@ impl GrampsProvenGapFix {
             return Err(GrampsProvenGapFixRefusal::SameTestBeforeAndAfter);
         }
         let artifact = PhaseExitArtifact {
-            phase: GrampsPilotPhase::P3ProvenGapFixes,
-            artifact_kind: GrampsPilotPhase::P3ProvenGapFixes
+            closes: GrampsPilotMilestone::P3ProvenGapFixes,
+            artifact_kind: GrampsPilotMilestone::P3ProvenGapFixes
                 .required_artifact_kind()
                 .to_string(),
             reviewed_by: reviewed_by.to_string(),
@@ -98,7 +98,7 @@ mod tests {
         let exit = valid()
             .to_phase_exit("audel")
             .expect("well-formed fix maps");
-        assert_eq!(exit.phase, GrampsPilotPhase::P3ProvenGapFixes);
+        assert_eq!(exit.closes, GrampsPilotMilestone::P3ProvenGapFixes);
         assert_eq!(exit.artifact_kind, "failing_then_passing_test");
     }
 

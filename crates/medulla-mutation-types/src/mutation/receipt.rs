@@ -132,7 +132,7 @@ fn duplicate_commit_binds_prior(receipt: &MutationReceipt, replay: &ReplayReceip
 fn receipt_matches_replay_lifecycle(receipt: &MutationReceipt, replay: &ReplayReceipt) -> bool {
     match (
         receipt.disposition.as_str(),
-        replay.status.as_str(),
+        replay.outcome.as_str(),
         replay.effect_state.as_str(),
     ) {
         ("committed", "consumed", "committed") => {

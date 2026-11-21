@@ -122,7 +122,7 @@ fn verified(
             replay_ledger_epoch: Some(9),
             nonce_consumed_at: Some(UtcUnixNanos::new(120)),
             recorded_at: UtcUnixNanos::new(121),
-            status: ReplayStatus::new("consumed").unwrap(),
+            outcome: ReplayOutcome::new("consumed").unwrap(),
             effect_state: EffectState::new("committed").unwrap(),
             effect_id: Some(OpaqueId::new("effect:1").unwrap()),
             commit_id: Some(OpaqueId::new("commit:1").unwrap()),
@@ -237,7 +237,7 @@ fn replay_receipt_matrix_rejects_cross_state_fields() {
     assert!(authority
         .validate_evidence_bindings(&operation, &nonce)
         .is_ok());
-    authority.replay_receipt.status = ReplayStatus::new("duplicate").unwrap();
+    authority.replay_receipt.outcome = ReplayOutcome::new("duplicate").unwrap();
     assert!(authority.replay_receipt.validate().is_err());
 
     authority.replay_receipt.prior_result_digest = authority.replay_receipt.result_digest;

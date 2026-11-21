@@ -19,7 +19,7 @@ pub const MAX_INDEX_DIAGNOSTICS_PER_FILE: usize = 8;
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum IndexFileStatus {
+pub enum IndexFileVerdict {
     Success,
     Unsupported,
     Error,
@@ -41,7 +41,8 @@ pub struct IndexDiagnostic {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct IndexFileOutcome {
     pub file_path: String,
-    pub status: IndexFileStatus,
+    #[serde(rename = "status")]
+    pub verdict: IndexFileVerdict,
     pub content_digest: String,
     pub parser_capability_digest: String,
     /// Bounded by the engine. The current parser emits at most one diagnostic
@@ -57,7 +58,7 @@ pub struct IndexFileOutcome {
 pub struct NativeRungEvidence {
     pub content_digest: String,
     pub parser_capability_digest: String,
-    pub status: IndexFileStatus,
+    pub verdict: IndexFileVerdict,
     pub extracted_facts: usize,
     pub inferred_facts: usize,
     pub derived_facts: usize,
@@ -202,7 +203,7 @@ pub struct IndexCommit {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum IndexRefStatus {
+pub enum IndexRefPresence {
     /// The ref resolves to `revision_id`; its memberships ride in `file_versions`.
     Live,
     /// The ref no longer exists; `revision_id` is the last admitted revision and
@@ -217,7 +218,8 @@ pub struct IndexRef {
     pub ref_name: String,
     /// Lowercase 40- or 64-hex Git commit id, never a mutable ref name.
     pub revision_id: String,
-    pub status: IndexRefStatus,
+    #[serde(rename = "status")]
+    pub presence: IndexRefPresence,
 }
 
 /// `ref_name` contains `path` bound to the blob whose content digest is
@@ -554,14 +556,14 @@ impl DiscoverPlanRequest {
 /// the `test-support` feature, because `cfg(test)` does not cross a crate boundary.
 #[cfg(any(test, feature = "test-support"))]
 pub mod fixtures {
-    use super::{IndexFileVersion, IndexRef, IndexRefStatus};
+    use super::{IndexFileVersion, IndexRef, IndexRefPresence};
 
     /// A live ref whose revision id is `revision` repeated to a 40-hex git id.
     pub fn live_ref(name: &str, revision: char) -> IndexRef {
         IndexRef {
             ref_name: name.to_string(),
             revision_id: revision.to_string().repeat(40),
-            status: IndexRefStatus::Live,
+            presence: IndexRefPresence::Live,
         }
     }
 

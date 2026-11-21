@@ -37,7 +37,7 @@ fn visible_properties(ctx: &GraphOpRouting<'_>, node_id: &str) -> Option<Vec<u8>
 fn state(
     ctx: &GraphOpRouting<'_>,
     meeting_id: &str,
-) -> Result<medulla_core::meeting_transcript::TranscriptState, String> {
+) -> Result<medulla_core::meeting_transcript::TranscriptSnapshot, String> {
     let head = visible_properties(ctx, &transcript::transcript_node_id(meeting_id));
     transcript::load_state(head.as_deref())
 }

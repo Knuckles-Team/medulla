@@ -260,7 +260,7 @@ pub struct Checkpoint {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ManifestStatus {
+pub enum ManifestOutcome {
     Complete,
     Degraded,
     Cancelled,
@@ -275,7 +275,8 @@ pub struct Manifest {
     pub sample_rate: u32,
     pub channels: u16,
     pub checkpoints: Vec<Checkpoint>,
-    pub status: ManifestStatus,
+    #[serde(rename = "status")]
+    pub outcome: ManifestOutcome,
     /// Lowercase hex SHA-256 over the checkpoint list, giving a stable
     /// content identity for the manifest as a whole.
     pub content_digest: String,

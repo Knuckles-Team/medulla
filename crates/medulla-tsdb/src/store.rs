@@ -514,7 +514,7 @@ pub struct SeriesMeta {
     #[serde(default)]
     pub legal_hold: bool,
     /// A materialised derived series' definition and incremental state (EH-524): the
-    /// MessagePack of `derive::maintain::DerivedState`, opaque to the store. Written in
+    /// MessagePack of `derive::maintain::DerivedValue`, opaque to the store. Written in
     /// the same transaction as the derived points it accounts for; `None` for an
     /// ordinary series (and for metadata written before the field existed).
     #[serde(default, with = "serde_bytes")]

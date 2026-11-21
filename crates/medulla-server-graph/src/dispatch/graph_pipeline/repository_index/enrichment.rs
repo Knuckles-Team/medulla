@@ -423,7 +423,7 @@ mod tests {
     #[cfg(feature = "blob")]
     use medulla_ingestion_types::ingestion_wire::ExtractedNode;
     use medulla_ingestion_types::ingestion_wire::{
-        IndexFileOutcome, IndexFileStatus, NativeRungEvidence,
+        IndexFileOutcome, IndexFileVerdict, NativeRungEvidence,
     };
     #[cfg(feature = "blob")]
     use medulla_server_blob::blob::store::ChunkStore;
@@ -435,7 +435,7 @@ mod tests {
             let digest = format!("sha256:{index:064x}");
             result.file_outcomes.push(IndexFileOutcome {
                 file_path: format!("file-{index}"),
-                status: IndexFileStatus::Success,
+                verdict: IndexFileVerdict::Success,
                 content_digest: digest.clone(),
                 parser_capability_digest: "grammar:v1".into(),
                 diagnostics: Default::default(),
@@ -443,7 +443,7 @@ mod tests {
             result.native_rung_evidence.push(NativeRungEvidence {
                 content_digest: digest,
                 parser_capability_digest: "grammar:v1".into(),
-                status: IndexFileStatus::Success,
+                verdict: IndexFileVerdict::Success,
                 extracted_facts: 0,
                 inferred_facts: 0,
                 derived_facts: 0,
@@ -477,7 +477,7 @@ mod tests {
             let digest = format!("sha256:{index:064x}");
             result.file_outcomes.push(IndexFileOutcome {
                 file_path: format!("file-{index}"),
-                status: IndexFileStatus::Success,
+                verdict: IndexFileVerdict::Success,
                 content_digest: digest.clone(),
                 parser_capability_digest: "grammar:v1".into(),
                 diagnostics: Default::default(),
@@ -485,7 +485,7 @@ mod tests {
             result.native_rung_evidence.push(NativeRungEvidence {
                 content_digest: digest,
                 parser_capability_digest: "grammar:v1".into(),
-                status: IndexFileStatus::Success,
+                verdict: IndexFileVerdict::Success,
                 extracted_facts: 0,
                 inferred_facts: 0,
                 derived_facts: 0,

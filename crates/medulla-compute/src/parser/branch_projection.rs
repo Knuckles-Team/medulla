@@ -9,7 +9,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use medulla_ingestion_types::ingestion_wire::{
-    ExtractedEdge, ExtractedNode, IndexRef, IndexRefStatus, IndexTombstone,
+    ExtractedEdge, ExtractedNode, IndexRef, IndexRefPresence, IndexTombstone,
 };
 
 use super::branch_scope::{blob_node_id, branch_node_id, file_version_id, ScopeCatalog};
@@ -68,10 +68,10 @@ pub(super) fn project_scope(
     nodes.extend(blobs.into_values());
 }
 
-fn status_label(status: IndexRefStatus) -> &'static str {
+fn status_label(status: IndexRefPresence) -> &'static str {
     match status {
-        IndexRefStatus::Live => "live",
-        IndexRefStatus::Deleted => "deleted",
+        IndexRefPresence::Live => "live",
+        IndexRefPresence::Deleted => "deleted",
     }
 }
 
@@ -83,7 +83,7 @@ fn branch_node(repository_id: &str, item: &IndexRef) -> ExtractedNode {
             ("repository_id".to_string(), repository_id.to_string()),
             ("ref_name".to_string(), item.ref_name.clone()),
             ("revision_id".to_string(), item.revision_id.clone()),
-            ("status".to_string(), status_label(item.status).to_string()),
+            ("status".to_string(), status_label(item.presence).to_string()),
         ]),
     }
 }

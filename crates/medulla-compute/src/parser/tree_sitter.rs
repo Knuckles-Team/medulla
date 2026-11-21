@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use tree_sitter::{Language, Node, Parser};
 
-use medulla_ingestion_types::ingestion_wire::{IndexDiagnostic, IndexFileOutcome, IndexFileStatus};
+use medulla_ingestion_types::ingestion_wire::{IndexDiagnostic, IndexFileOutcome, IndexFileVerdict};
 use medulla_types::contract::BoundedVec;
 use sha2::{Digest, Sha256};
 
@@ -209,7 +209,7 @@ fn parse_outcome(file_path: &str, source: &[u8]) -> (ParseResult, IndexFileOutco
             result,
             IndexFileOutcome {
                 file_path: file_path.to_string(),
-                status: IndexFileStatus::Success,
+                verdict: IndexFileVerdict::Success,
                 content_digest,
                 parser_capability_digest,
                 diagnostics: BoundedVec::new(Vec::new())
@@ -218,9 +218,9 @@ fn parse_outcome(file_path: &str, source: &[u8]) -> (ParseResult, IndexFileOutco
         ),
         Err(message) => {
             let (status, code) = if parser_supported {
-                (IndexFileStatus::Error, "parse_failed")
+                (IndexFileVerdict::Error, "parse_failed")
             } else {
-                (IndexFileStatus::Unsupported, "unsupported_extension")
+                (IndexFileVerdict::Unsupported, "unsupported_extension")
             };
             (
                 ParseResult {
@@ -230,7 +230,7 @@ fn parse_outcome(file_path: &str, source: &[u8]) -> (ParseResult, IndexFileOutco
                 },
                 IndexFileOutcome {
                     file_path: file_path.to_string(),
-                    status,
+                    verdict: status,
                     content_digest,
                     parser_capability_digest,
                     diagnostics: BoundedVec::new(vec![IndexDiagnostic {

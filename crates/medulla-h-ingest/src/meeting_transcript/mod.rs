@@ -12,7 +12,7 @@ pub mod context;
 
 use std::collections::BTreeMap;
 
-use medulla_core::meeting_transcript::{apply_revision, get_final, TranscriptState};
+use medulla_core::meeting_transcript::{apply_revision, get_final, TranscriptSnapshot};
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::meeting_transcript::{
     MeetingTranscriptRevision, MeetingTranscriptRevisionReceipt, TranscriptRevisionOp,
@@ -32,7 +32,7 @@ pub const TRANSCRIPT_TYPE: &str = "MeetingTranscript";
 pub const SEGMENT_TYPE: &str = "TranscriptSegment";
 /// Node type of one committed revision event.
 pub const REVISION_TYPE: &str = "TranscriptRevision";
-/// The stored property holding the serialized [`TranscriptState`].
+/// The stored property holding the serialized [`TranscriptSnapshot`].
 const STATE_PROPERTY: &str = "state_json";
 
 /// The node id of a meeting's transcript head.
@@ -59,9 +59,9 @@ pub(crate) fn decode(properties: &[u8]) -> Result<BTreeMap<String, serde_json::V
 
 /// The transcript state held by a `MeetingTranscript` row; an absent row is
 /// the empty state of a new meeting.
-pub fn load_state(properties: Option<&[u8]>) -> Result<TranscriptState, String> {
+pub fn load_state(properties: Option<&[u8]>) -> Result<TranscriptSnapshot, String> {
     let Some(properties) = properties else {
-        return Ok(TranscriptState::default());
+        return Ok(TranscriptSnapshot::default());
     };
     let map = decode(properties)?;
     let Some(serde_json::Value::String(json)) = map.get(STATE_PROPERTY) else {
@@ -72,7 +72,7 @@ pub fn load_state(properties: Option<&[u8]>) -> Result<TranscriptState, String> 
 }
 
 /// The upsert of a meeting's transcript head holding `state`.
-pub(crate) fn head_method(state: &TranscriptState) -> Result<Method, String> {
+pub(crate) fn head_method(state: &TranscriptSnapshot) -> Result<Method, String> {
     let json = serde_json::to_string(state)
         .map_err(|error| format!("meeting transcript state encoding failed: {error}"))?;
     let mut properties = BTreeMap::new();
@@ -136,7 +136,7 @@ fn segment_methods(event: &MeetingTranscriptRevision, head: &str) -> Result<Vec<
 /// replay answers the stored revision with no write-set; a conflict refuses by
 /// its code before anything is lowered.
 pub fn commit_revision(
-    state: &TranscriptState,
+    state: &TranscriptSnapshot,
     event: &MeetingTranscriptRevision,
 ) -> Result<(Option<IndexWriteSet>, MeetingTranscriptRevisionReceipt), String> {
     if !state.meeting_id.is_empty() && state.meeting_id != event.meeting_id {
@@ -151,7 +151,7 @@ pub fn commit_revision(
         )
     })?;
     let finalization_digest = (event.op == TranscriptRevisionOp::Finalize)
-        .then(|| get_final(&applied.state).map(|sealed| sealed.finalization_digest))
+        .then(|| get_final(&applied.transcript).map(|sealed| sealed.finalization_digest))
         .flatten();
     let receipt = MeetingTranscriptRevisionReceipt {
         meeting_id: event.meeting_id.clone(),
@@ -163,7 +163,7 @@ pub fn commit_revision(
         return Ok((None, receipt));
     }
     let head = transcript_node_id(&event.meeting_id);
-    let mut methods = vec![head_method(&applied.state)?];
+    let mut methods = vec![head_method(&applied.transcript)?];
     methods.extend(segment_methods(event, &head)?);
     let revision_id = format!("{head}:revision:{}", applied.revision);
     let mut properties = BTreeMap::new();

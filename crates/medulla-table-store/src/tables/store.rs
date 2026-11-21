@@ -101,7 +101,7 @@ use medulla_tables::{
     index::MAX_SECONDARY_INDEX_CANDIDATES,
 };
 use medulla_tables::{
-    migration::MigrationState, migration::SchemaMigration, migration::SchemaMigrationApply,
+    migration::MigrationOutcome, migration::SchemaMigration, migration::SchemaMigrationApply,
     migration::SchemaMigrationOperation, migration::SchemaMigrationRecord,
     migration::SecondaryIndexPolicy,
 };
@@ -3592,7 +3592,7 @@ fn finalize_migration_record_in(
     }
     let record = SchemaMigrationRecord {
         migration: migration.clone(),
-        state: MigrationState::Applied,
+        outcome: MigrationOutcome::Applied,
         applied_schema_version: migration.target_schema_version,
         catalog_version: next_catalog_version,
     };
@@ -3723,7 +3723,7 @@ fn verify_migration_record(
     expected_version: u64,
 ) -> Result<(), String> {
     record.migration.validate()?;
-    if record.state != MigrationState::Applied {
+    if record.outcome != MigrationOutcome::Applied {
         return Err(format!(
             "schema migration `{}` is not in Applied state",
             record.migration.migration_id

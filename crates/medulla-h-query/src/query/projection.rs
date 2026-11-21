@@ -9,7 +9,7 @@
 //! orders by primary key and digests them. The answer binds the mapping revision and the
 //! graph revision (`GraphCore::version`) the rows were read at. The handler never writes.
 
-use medulla_plan::virtual_graph_mapping::{MappingApprovalState, VirtualGraphMapping};
+use medulla_plan::virtual_graph_mapping::{MappingApproval, VirtualGraphMapping};
 use medulla_protocol_types::result_contract::query as results;
 use medulla_server_api::read_scope::ReadCaller;
 use medulla_types::contract::ServerErrorCode;
@@ -39,11 +39,11 @@ fn label_of(props: &serde_json::Map<String, Value>) -> Option<&str> {
         .find_map(|key| props.get(*key).and_then(Value::as_str))
 }
 
-fn approval_state(text: &str) -> MappingApprovalState {
+fn approval_state(text: &str) -> MappingApproval {
     match text {
-        "approved" => MappingApprovalState::Approved,
-        "model-suggested" => MappingApprovalState::ModelSuggested,
-        _ => MappingApprovalState::Proposed,
+        "approved" => MappingApproval::Approved,
+        "model-suggested" => MappingApproval::ModelSuggested,
+        _ => MappingApproval::Proposed,
     }
 }
 

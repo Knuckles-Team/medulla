@@ -132,7 +132,7 @@ pub use request::{
     validate_request, InputMode, SensitiveInput, SpeakerSelection, SynthesisControls, TtsLimits,
     TtsRequest, VoiceModelRef,
 };
-pub use result::{DeterminismClaim, JobStatus, TtsResult};
+pub use result::{DeterminismClaim, TtsOutcome, TtsResult};
 
 /// A closed set of policy outcomes a real GOC-15/16 carrier check must
 /// produce. Never freeform — mirrors `crate::asr::PolicyDecision`.
@@ -188,7 +188,7 @@ pub fn authorize_carrier(
 /// Assemble a terminal `tts.result.v1`. Requires:
 /// - an [`AuthorizedCarrier`] (structural authorization proof — known-bad
 ///   proof 2, see the module doc's summary);
-/// - a `status` that is terminal per [`JobStatus::is_terminal`] (a `Running`/
+/// - a `status` that is terminal per [`TtsOutcome::is_terminal`] (a `Running`/
 ///   `Chunking`/etc. status has no result — only a job-status read does);
 /// - a request that independently passes [`validate_request`];
 /// - chunks that each pass [`TtsChunk::validate`], belong to this request/
@@ -204,7 +204,7 @@ pub fn finalize_result(
     authorized: &AuthorizedCarrier,
     request: &TtsRequest,
     chunks: Vec<TtsChunk>,
-    status: JobStatus,
+    status: TtsOutcome,
 ) -> Result<TtsResult, TtsError> {
     validate_finalize_inputs(authorized, request, chunks.len(), status)?;
     let (quality, final_seen) = validate_chunks(request, &chunks)?;
@@ -219,7 +219,7 @@ pub fn finalize_result(
     Ok(TtsResult {
         request_id: request.request_id.clone(),
         job_id: request.job_id.clone(),
-        status,
+        outcome: status,
         chunks,
         voice: request.voice.clone(),
         output_format: request.output_format,
@@ -236,7 +236,7 @@ fn validate_finalize_inputs(
     authorized: &AuthorizedCarrier,
     request: &TtsRequest,
     chunk_count: usize,
-    status: JobStatus,
+    status: TtsOutcome,
 ) -> Result<(), TtsError> {
     if authorized.carrier() != &request.carrier {
         return Err(TtsError::PolicyDenied {
@@ -254,7 +254,7 @@ fn validate_finalize_inputs(
             limit: "max_chunks",
         });
     }
-    if status == JobStatus::Succeeded && chunk_count == 0 {
+    if status == TtsOutcome::Succeeded && chunk_count == 0 {
         return Err(TtsError::MalformedResult {
             reason: "a succeeded result requires at least one ordered chunk",
         });
@@ -339,11 +339,11 @@ fn advance_chunk_state(
 }
 
 fn validate_success_requirements(
-    status: JobStatus,
+    status: TtsOutcome,
     final_seen: bool,
     non_finite_samples: u64,
 ) -> Result<(), TtsError> {
-    if status == JobStatus::Succeeded {
+    if status == TtsOutcome::Succeeded {
         if !final_seen {
             return Err(TtsError::MalformedResult {
                 reason: "a succeeded result requires a chunk marked final",
@@ -750,7 +750,7 @@ mod authorization_tests {
         };
         let authorization = authorize_carrier(&mismatched_carrier, PolicyDecision::Authorized)
             .expect("policy itself authorized this carrier");
-        let outcome = finalize_result(&authorization, &request, vec![], JobStatus::Cancelled);
+        let outcome = finalize_result(&authorization, &request, vec![], TtsOutcome::Cancelled);
         assert_eq!(
             outcome,
             Err(TtsError::PolicyDenied {
@@ -778,7 +778,7 @@ mod finalize_result_tests {
             chunk(&request, 0, 0, false),
             chunk(&request, 1, 1_000, true),
         ];
-        let result = finalize_result(&auth, &request, chunks, JobStatus::Succeeded)
+        let result = finalize_result(&auth, &request, chunks, TtsOutcome::Succeeded)
             .expect("well-formed succeeded result");
         assert_eq!(result.total_sample_count, 2_000);
         assert_eq!(result.deterministic, DeterminismClaim::Unverified);
@@ -790,7 +790,7 @@ mod finalize_result_tests {
     fn non_terminal_status_is_rejected() {
         let request = request();
         let auth = authorized(&request);
-        let outcome = finalize_result(&auth, &request, vec![], JobStatus::Running);
+        let outcome = finalize_result(&auth, &request, vec![], TtsOutcome::Running);
         assert_eq!(
             outcome,
             Err(TtsError::MalformedResult {
@@ -803,7 +803,7 @@ mod finalize_result_tests {
     fn succeeded_status_with_no_chunks_is_rejected() {
         let request = request();
         let auth = authorized(&request);
-        let outcome = finalize_result(&auth, &request, vec![], JobStatus::Succeeded);
+        let outcome = finalize_result(&auth, &request, vec![], TtsOutcome::Succeeded);
         assert_eq!(
             outcome,
             Err(TtsError::MalformedResult {
@@ -816,7 +816,7 @@ mod finalize_result_tests {
     fn cancelled_status_with_no_chunks_is_allowed() {
         let request = request();
         let auth = authorized(&request);
-        let outcome = finalize_result(&auth, &request, vec![], JobStatus::Cancelled);
+        let outcome = finalize_result(&auth, &request, vec![], TtsOutcome::Cancelled);
         assert!(outcome.is_ok());
     }
 
@@ -828,7 +828,7 @@ mod finalize_result_tests {
         let request = request();
         let auth = authorized(&request);
         let chunks = vec![chunk(&request, 0, 0, false)];
-        let outcome = finalize_result(&auth, &request, chunks, JobStatus::Succeeded);
+        let outcome = finalize_result(&auth, &request, chunks, TtsOutcome::Succeeded);
         assert_eq!(
             outcome,
             Err(TtsError::MalformedResult {
@@ -845,7 +845,7 @@ mod finalize_result_tests {
             chunk(&request, 1, 1_000, true),
             chunk(&request, 0, 0, false),
         ];
-        let outcome = finalize_result(&auth, &request, chunks, JobStatus::Succeeded);
+        let outcome = finalize_result(&auth, &request, chunks, TtsOutcome::Succeeded);
         assert_eq!(
             outcome,
             Err(TtsError::MalformedResult {
@@ -864,7 +864,7 @@ mod finalize_result_tests {
             chunk(&request, 0, 0, false),
             chunk(&request, 1, 5_000, true), // gap: previous chunk ended at 1_000
         ];
-        let outcome = finalize_result(&auth, &request, chunks, JobStatus::Succeeded);
+        let outcome = finalize_result(&auth, &request, chunks, TtsOutcome::Succeeded);
         assert_eq!(
             outcome,
             Err(TtsError::MalformedResult {
@@ -881,7 +881,7 @@ mod finalize_result_tests {
             chunk(&request, 0, 0, true),
             chunk(&request, 1, 1_000, false),
         ];
-        let outcome = finalize_result(&auth, &request, chunks, JobStatus::Succeeded);
+        let outcome = finalize_result(&auth, &request, chunks, TtsOutcome::Succeeded);
         assert_eq!(
             outcome,
             Err(TtsError::MalformedResult {
@@ -896,7 +896,7 @@ mod finalize_result_tests {
         let auth = authorized(&request);
         let mut foreign = chunk(&request, 0, 0, true);
         foreign.request_id = fixtures::id("request-2");
-        let outcome = finalize_result(&auth, &request, vec![foreign], JobStatus::Succeeded);
+        let outcome = finalize_result(&auth, &request, vec![foreign], TtsOutcome::Succeeded);
         assert_eq!(
             outcome,
             Err(TtsError::Conflict {
@@ -914,7 +914,7 @@ mod finalize_result_tests {
             chunk(&request, 0, 0, false),
             chunk(&request, 1, 1_000, true),
         ];
-        let outcome = finalize_result(&auth, &request, chunks, JobStatus::Succeeded);
+        let outcome = finalize_result(&auth, &request, chunks, TtsOutcome::Succeeded);
         assert_eq!(
             outcome,
             Err(TtsError::ResourceExhausted {
@@ -936,7 +936,7 @@ mod finalize_result_tests {
             non_finite_samples: 3,
             peak_abs: 0.9,
         };
-        let outcome = finalize_result(&auth, &request, vec![corrupted], JobStatus::Succeeded);
+        let outcome = finalize_result(&auth, &request, vec![corrupted], TtsOutcome::Succeeded);
         assert_eq!(outcome, Err(TtsError::NonFiniteAudio));
     }
 
@@ -954,7 +954,7 @@ mod finalize_result_tests {
             non_finite_samples: 3,
             peak_abs: 0.9,
         };
-        let result = finalize_result(&auth, &request, vec![corrupted], JobStatus::Degraded)
+        let result = finalize_result(&auth, &request, vec![corrupted], TtsOutcome::Degraded)
             .expect("degraded status may carry non-finite quality evidence");
         assert_eq!(result.quality.non_finite_samples, 3);
     }
@@ -965,7 +965,7 @@ mod finalize_result_tests {
         let auth = authorized(&request);
         let mut bad = chunk(&request, 0, 0, true);
         bad.rendition_digest = "not-a-hex-digest".to_string();
-        let outcome = finalize_result(&auth, &request, vec![bad], JobStatus::Succeeded);
+        let outcome = finalize_result(&auth, &request, vec![bad], TtsOutcome::Succeeded);
         assert_eq!(
             outcome,
             Err(TtsError::MalformedResult {
@@ -982,7 +982,7 @@ mod finalize_result_tests {
         let request = request();
         let auth = authorized(&request);
         let chunks = vec![chunk(&request, 0, 0, true)];
-        let result = finalize_result(&auth, &request, chunks, JobStatus::Succeeded)
+        let result = finalize_result(&auth, &request, chunks, TtsOutcome::Succeeded)
             .expect("well-formed succeeded result");
         assert_eq!(result.deterministic, DeterminismClaim::Unverified);
     }

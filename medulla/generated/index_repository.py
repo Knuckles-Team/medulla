@@ -61,16 +61,18 @@ class IndexDiagnostic(BaseModel):
 
 
 class IndexFileOutcome(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+    model_config = ConfigDict(
+        extra="forbid", frozen=True, defer_build=True, populate_by_name=True
+    )
 
     content_digest: str
     diagnostics: BoundedVec_IndexDiagnostic_8
     file_path: str
     parser_capability_digest: str
-    status: IndexFileStatus
+    verdict: IndexFileVerdict = Field(..., alias="status")
 
 
-class IndexFileStatus(str, Enum):
+class IndexFileVerdict(str, Enum):
     SUCCESS = "success"
     UNSUPPORTED = "unsupported"
     ERROR = "error"
@@ -85,14 +87,16 @@ class IndexFileVersion(BaseModel):
 
 
 class IndexRef(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+    model_config = ConfigDict(
+        extra="forbid", frozen=True, defer_build=True, populate_by_name=True
+    )
 
     ref_name: str
     revision_id: str
-    status: IndexRefStatus
+    presence: IndexRefPresence = Field(..., alias="status")
 
 
-class IndexRefStatus(str, Enum):
+class IndexRefPresence(str, Enum):
     LIVE = "live"
     DELETED = "deleted"
 
@@ -209,10 +213,10 @@ __all__ = [
     "IndexCommitChange",
     "IndexDiagnostic",
     "IndexFileOutcome",
-    "IndexFileStatus",
+    "IndexFileVerdict",
     "IndexFileVersion",
     "IndexRef",
-    "IndexRefStatus",
+    "IndexRefPresence",
     "IndexRepositoryScope",
     "IndexResult",
     "IndexTombstone",

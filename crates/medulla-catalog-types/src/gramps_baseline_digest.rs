@@ -5,7 +5,7 @@
 //! the Postgres control, and the unmodified corpus replay are
 //! MEDULLA-UNIFIED-DATA-PLANE-R026.2.2+.
 
-use crate::gramps_pilot_phase::{GrampsPilotPhase, InvalidPhaseExit, PhaseExitArtifact};
+use crate::gramps_pilot_phase::{GrampsPilotMilestone, InvalidPhaseExit, PhaseExitArtifact};
 use serde::{Deserialize, Serialize};
 
 /// A content digest captured for one baseline record set, before any live
@@ -51,8 +51,8 @@ impl GrampsBaselineDigest {
             return Err(GrampsBaselineDigestRefusal::EmptyDigest);
         }
         let artifact = PhaseExitArtifact {
-            phase: GrampsPilotPhase::P0Baseline,
-            artifact_kind: GrampsPilotPhase::P0Baseline
+            closes: GrampsPilotMilestone::P0Baseline,
+            artifact_kind: GrampsPilotMilestone::P0Baseline
                 .required_artifact_kind()
                 .to_string(),
             reviewed_by: reviewed_by.to_string(),
@@ -81,7 +81,7 @@ mod tests {
         let exit = valid()
             .to_phase_exit("audel")
             .expect("well-formed digest maps");
-        assert_eq!(exit.phase, GrampsPilotPhase::P0Baseline);
+        assert_eq!(exit.closes, GrampsPilotMilestone::P0Baseline);
         assert_eq!(exit.artifact_kind, "content_digest");
         assert_eq!(exit.reviewed_by, "audel");
     }

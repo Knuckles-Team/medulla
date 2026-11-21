@@ -99,14 +99,14 @@ pub fn registered_modalities() -> Vec<ModalityDescriptor> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::tck::{TckPoint, TckPointResult, TckStatus};
+    use crate::tck::{TckPoint, TckPointResult, TckVerdict};
 
     fn stub_report() -> TckReport {
         TckReport {
             modality: "registry-test-stub",
             results: vec![TckPointResult {
                 point: TckPoint::InteropWorkloadSmoke,
-                status: TckStatus::Pass,
+                verdict: TckVerdict::Pass,
             }],
             native_production_probe: None,
         }

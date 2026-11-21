@@ -20,7 +20,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use medulla_ingestion_types::ingestion_wire::{
-    ExtractedEdge, IndexFileOutcome, IndexFileStatus, IndexRepositoryScope, IndexResult,
+    ExtractedEdge, IndexFileOutcome, IndexFileVerdict, IndexRepositoryScope, IndexResult,
     ParseResult,
 };
 
@@ -135,7 +135,7 @@ pub fn index_branches(
     project_scope(&catalog, &mut out.nodes, &mut out.edges);
     out.files_parsed = outcomes
         .iter()
-        .filter(|outcome| outcome.status == IndexFileStatus::Success)
+        .filter(|outcome| outcome.verdict == IndexFileVerdict::Success)
         .count();
     out.native_rung_evidence = evidence;
     out.file_outcomes = units.restore_names(outcomes);

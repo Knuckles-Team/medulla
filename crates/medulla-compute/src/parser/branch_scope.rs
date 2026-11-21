@@ -9,7 +9,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_ingestion_types::ingestion_wire::{
-    IndexFileVersion, IndexRefStatus, IndexRepositoryScope, IndexTombstone,
+    IndexFileVersion, IndexRefPresence, IndexRepositoryScope, IndexTombstone,
 };
 use sha2::{Digest, Sha256};
 
@@ -17,7 +17,7 @@ const INVALID: &str = "AST_INPUT_INVALID";
 const MAX_SCOPE_NAME_BYTES: usize = 1_024;
 const SHA256_PREFIX: &str = "sha256:";
 
-type RefTable<'a> = BTreeMap<&'a str, IndexRefStatus>;
+type RefTable<'a> = BTreeMap<&'a str, IndexRefPresence>;
 /// `(ref_name, path) -> blob digest`.
 pub(super) type Memberships<'a> = BTreeMap<(&'a str, &'a str), &'a str>;
 
@@ -68,7 +68,7 @@ fn declared_refs(scope: &IndexRepositoryScope) -> Result<RefTable<'_>, String> {
     for item in scope.refs.iter() {
         check_name("ref_name", &item.ref_name)?;
         check_git_object_id(&item.revision_id)?;
-        if refs.insert(item.ref_name.as_str(), item.status).is_some() {
+        if refs.insert(item.ref_name.as_str(), item.presence).is_some() {
             return Err(format!(
                 "{INVALID}: ref {} is declared twice",
                 item.ref_name
@@ -102,8 +102,8 @@ fn collect_memberships<'a>(
 
 fn require_live_ref(refs: &RefTable<'_>, ref_name: &str) -> Result<(), String> {
     match refs.get(ref_name) {
-        Some(IndexRefStatus::Live) => Ok(()),
-        Some(IndexRefStatus::Deleted) => Err(format!(
+        Some(IndexRefPresence::Live) => Ok(()),
+        Some(IndexRefPresence::Deleted) => Err(format!(
             "{INVALID}: deleted ref {ref_name} cannot contain file versions"
         )),
         None => Err(format!(

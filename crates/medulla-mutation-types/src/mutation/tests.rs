@@ -11,7 +11,7 @@ use medulla_identity_types::{
     authority::AdmissionOutcome, authority::AuthorityContext, authority::AuthorityScope,
     authority::DecisionOutcome, authority::EffectState, authority::IngressSurface,
     authority::NonceReplayKey, authority::Operation, authority::OperationReplayIdentity,
-    authority::ReplayReceipt, authority::ReplayStatus, authority::ScopeKind,
+    authority::ReplayReceipt, authority::ReplayOutcome, authority::ScopeKind,
     authority::SignedAuthorityEnvelopeEvidence, authority::VerificationStatus,
     authority::VerifiedAuthority, authority::AUTHORITY_CONTEXT_SCHEMA_V1,
     authority::AUTHORITY_PROTOCOL_V1,
@@ -172,7 +172,7 @@ fn authority_for(
             replay_ledger_epoch: Some(9),
             nonce_consumed_at: Some(UtcUnixNanos::new(120)),
             recorded_at: UtcUnixNanos::new(121),
-            status: ReplayStatus::new("consumed").unwrap(),
+            outcome: ReplayOutcome::new("consumed").unwrap(),
             effect_state: EffectState::new("committed").unwrap(),
             effect_id: Some(OpaqueId::new("effect:1").unwrap()),
             commit_id: Some(OpaqueId::new("commit:1").unwrap()),
@@ -591,8 +591,8 @@ fn receipt_disposition_is_closed_over_replay_lifecycle() {
     assert!(receipt.validate_against(&envelope).is_err());
 
     let mut replayed_envelope = envelope.clone();
-    replayed_envelope.verified_authority.replay_receipt.status =
-        ReplayStatus::new("duplicate").unwrap();
+    replayed_envelope.verified_authority.replay_receipt.outcome =
+        ReplayOutcome::new("duplicate").unwrap();
     replayed_envelope
         .verified_authority
         .replay_receipt

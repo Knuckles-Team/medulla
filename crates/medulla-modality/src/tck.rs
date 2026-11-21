@@ -159,7 +159,7 @@ impl TckPoint {
 /// hook exists but this modality has not wired it — also with a reason). There is
 /// deliberately no silent-skip / default-pass variant — see module docs.
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum TckStatus {
+pub enum TckVerdict {
     Pass,
     /// The point genuinely does not apply to this modality (e.g. lineage/policy on a
     /// bare numeric tensor). Counts toward "first-class" — it is not a gap.
@@ -167,23 +167,23 @@ pub enum TckStatus {
     NotImplemented(&'static str),
 }
 
-impl TckStatus {
+impl TckVerdict {
     pub fn is_pass(&self) -> bool {
-        matches!(self, TckStatus::Pass)
+        matches!(self, TckVerdict::Pass)
     }
 
     /// `true` for `Pass` OR `NotApplicable` — i.e. this point is not an outstanding
     /// GAP. `is_first_class` is the AND of this over all 12 points.
     pub fn is_covered(&self) -> bool {
-        matches!(self, TckStatus::Pass | TckStatus::NotApplicable(_))
+        matches!(self, TckVerdict::Pass | TckVerdict::NotApplicable(_))
     }
 
     /// A short machine-parseable tag (`"PASS"` / `"N/A"` / `"NOT_IMPLEMENTED"`).
     pub fn tag(&self) -> &'static str {
         match self {
-            TckStatus::Pass => "PASS",
-            TckStatus::NotApplicable(_) => "N/A",
-            TckStatus::NotImplemented(_) => "NOT_IMPLEMENTED",
+            TckVerdict::Pass => "PASS",
+            TckVerdict::NotApplicable(_) => "N/A",
+            TckVerdict::NotImplemented(_) => "NOT_IMPLEMENTED",
         }
     }
 }
@@ -192,7 +192,7 @@ impl TckStatus {
 #[derive(Clone, Debug)]
 pub struct TckPointResult {
     pub point: TckPoint,
-    pub status: TckStatus,
+    pub verdict: TckVerdict,
 }
 
 /// A modality's full capability report: its `storage_kind()` name plus a result for
@@ -211,7 +211,7 @@ impl TckReport {
     /// introduces. A genuinely-N/A point (with a documented reason) is NOT a gap; an
     /// unimplemented one is.
     pub fn is_first_class(&self) -> bool {
-        self.results.iter().all(|r| r.status.is_covered())
+        self.results.iter().all(|r| r.verdict.is_covered())
     }
 
     /// Production certification requires every core dimension to execute and PASS.
@@ -220,7 +220,7 @@ impl TckReport {
     /// cannot certify a served production modality.
     pub fn is_production_ready(&self) -> bool {
         self.results.len() == TckPoint::ALL.len()
-            && self.results.iter().all(|result| result.status.is_pass())
+            && self.results.iter().all(|result| result.verdict.is_pass())
             && self
                 .native_production_probe
                 .is_some_and(crate::NativeProductionProbe::passed)
@@ -235,20 +235,20 @@ impl TckReport {
     pub fn production_gaps(&self) -> Vec<TckPoint> {
         self.results
             .iter()
-            .filter(|result| !result.status.is_pass())
+            .filter(|result| !result.verdict.is_pass())
             .map(|result| result.point)
             .collect()
     }
 
     pub fn pass_count(&self) -> usize {
-        self.results.iter().filter(|r| r.status.is_pass()).count()
+        self.results.iter().filter(|r| r.verdict.is_pass()).count()
     }
 
     /// Count of points marked genuinely `NotApplicable`.
     pub fn na_count(&self) -> usize {
         self.results
             .iter()
-            .filter(|r| matches!(r.status, TckStatus::NotApplicable(_)))
+            .filter(|r| matches!(r.verdict, TckVerdict::NotApplicable(_)))
             .count()
     }
 
@@ -257,7 +257,7 @@ impl TckReport {
     pub fn covered_count(&self) -> usize {
         self.results
             .iter()
-            .filter(|r| r.status.is_covered())
+            .filter(|r| r.verdict.is_covered())
             .count()
     }
 
@@ -267,7 +267,7 @@ impl TckReport {
         let gaps = self.results.len() - self.covered_count();
         let tail = if self.is_production_ready() {
             "PRODUCTION-READY".to_string()
-        } else if self.results.iter().all(|result| result.status.is_pass()) {
+        } else if self.results.iter().all(|result| result.verdict.is_pass()) {
             "NATIVE-PROBE-FAILED".to_string()
         } else if self.is_first_class() {
             "FIRST-CLASS (NON-PRODUCTION N/A)".to_string()
@@ -294,15 +294,15 @@ impl TckReport {
             self.summary(),
         );
         for r in &self.results {
-            let detail = match &r.status {
-                TckStatus::Pass => "",
-                TckStatus::NotApplicable(reason) => reason,
-                TckStatus::NotImplemented(reason) => reason,
+            let detail = match &r.verdict {
+                TckVerdict::Pass => "",
+                TckVerdict::NotApplicable(reason) => reason,
+                TckVerdict::NotImplemented(reason) => reason,
             };
             out.push_str(&format!(
                 "| {} | {} | {} |\n",
                 r.point.label(),
-                r.status.tag(),
+                r.verdict.tag(),
                 detail
             ));
         }
@@ -343,7 +343,7 @@ pub fn render_fleet_table(reports: &[TckReport]) -> String {
                 .results
                 .iter()
                 .find(|r| r.point == point)
-                .map(|r| r.status.tag())
+                .map(|r| r.verdict.tag())
                 .unwrap_or("-");
             out.push_str(&format!(" {tag} |"));
         }
@@ -367,7 +367,7 @@ pub fn render_fleet_table(reports: &[TckReport]) -> String {
     out
 }
 
-/// Map a hook's [`ModalitySelfTest`] outcome onto a [`TckStatus`]: a `Passed`
+/// Map a hook's [`ModalitySelfTest`] outcome onto a [`TckVerdict`]: a `Passed`
 /// self-check is a real `Pass`; a `Failed` one is an HONEST `NotImplemented` (the hook
 /// is wired but its own round-trip broke — never hidden); `Unsupported` is
 /// `NotImplemented` with the caller's "no hook overridden" reason; a genuine
@@ -375,7 +375,7 @@ pub fn render_fleet_table(reports: &[TckReport]) -> String {
 /// `push(point, selftest_status(result, unsupported_reason))` in one call, purely to
 /// keep [`tck_report`]'s own call count down for the KISS `calls_per_function` budget.
 fn push_selftest_point(
-    push: &mut impl FnMut(TckPoint, TckStatus),
+    push: &mut impl FnMut(TckPoint, TckVerdict),
     point: TckPoint,
     result: ModalitySelfTest,
     unsupported_reason: &'static str,
@@ -383,24 +383,24 @@ fn push_selftest_point(
     push(point, selftest_status(result, unsupported_reason));
 }
 
-fn selftest_status(t: ModalitySelfTest, unsupported_reason: &'static str) -> TckStatus {
+fn selftest_status(t: ModalitySelfTest, unsupported_reason: &'static str) -> TckVerdict {
     match t {
-        ModalitySelfTest::Passed => TckStatus::Pass,
-        ModalitySelfTest::Failed => TckStatus::NotImplemented(
+        ModalitySelfTest::Passed => TckVerdict::Pass,
+        ModalitySelfTest::Failed => TckVerdict::NotImplemented(
             "hook self-check FAILED (its own round-trip did not recover the value)",
         ),
-        ModalitySelfTest::Unsupported => TckStatus::NotImplemented(unsupported_reason),
-        ModalitySelfTest::NotApplicable(reason) => TckStatus::NotApplicable(reason),
+        ModalitySelfTest::Unsupported => TckVerdict::NotImplemented(unsupported_reason),
+        ModalitySelfTest::NotApplicable(reason) => TckVerdict::NotApplicable(reason),
     }
 }
 
 /// TCK point (1): `storage_kind()` names itself and `to_rowset(id)` echoes the same
 /// id — the only "schema stability" signal the trait shape can attest to.
-fn schema_and_ids_status(kind: &str, row_id_matches: bool) -> TckStatus {
+fn schema_and_ids_status(kind: &str, row_id_matches: bool) -> TckVerdict {
     if !kind.is_empty() && row_id_matches {
-        TckStatus::Pass
+        TckVerdict::Pass
     } else {
-        TckStatus::NotImplemented(
+        TckVerdict::NotImplemented(
             "storage_kind()/to_rowset(id) do not stably name and echo this modality",
         )
     }
@@ -408,29 +408,29 @@ fn schema_and_ids_status(kind: &str, row_id_matches: bool) -> TckStatus {
 
 /// TCK point (3): a corrupted `Put` payload must `decode_staged` as `Err`, never
 /// silently succeed; a `Delete` sample has no payload to exercise the codec against.
-fn codec_unsupported_format_status<T: ConformanceTestable>(staged: &StagedWrite) -> TckStatus {
+fn codec_unsupported_format_status<T: ConformanceTestable>(staged: &StagedWrite) -> TckVerdict {
     match staged.kind {
         WriteKind::Put => {
             let mut corrupt = staged.clone();
             corrupt.payload = b"\xff\xfe not a valid payload for any codec".to_vec();
             match decode_staged::<T>(&corrupt) {
-                Err(_) => TckStatus::Pass,
-                Ok(_) => TckStatus::NotImplemented(
+                Err(_) => TckVerdict::Pass,
+                Ok(_) => TckVerdict::NotImplemented(
                     "decode_staged silently accepted a malformed payload instead of erroring",
                 ),
             }
         }
-        WriteKind::Delete => TckStatus::NotImplemented(
+        WriteKind::Delete => TckVerdict::NotImplemented(
             "conformance_sample() stages as Delete — no Put payload exists to exercise the codec against",
         ),
     }
 }
 
 /// TCK point (4): Pass iff the modality can attest its own storage stats.
-fn storage_index_stats_status(stats: Option<crate::StorageStats>) -> TckStatus {
+fn storage_index_stats_status(stats: Option<crate::StorageStats>) -> TckVerdict {
     match stats {
-        Some(_) => TckStatus::Pass,
-        None => TckStatus::NotImplemented(
+        Some(_) => TckVerdict::Pass,
+        None => TckVerdict::NotImplemented(
             "storage_stats() is None — modality attests no storage/secondary-index/stats at this layer",
         ),
     }
@@ -438,28 +438,28 @@ fn storage_index_stats_status(stats: Option<crate::StorageStats>) -> TckStatus {
 
 /// TCK point (5): Pass iff the modality declares at least one well-formed named
 /// analytics op.
-fn typed_query_operators_status(ops: &[&'static str]) -> TckStatus {
+fn typed_query_operators_status(ops: &[&'static str]) -> TckVerdict {
     if !ops.is_empty() && ops.iter().all(|o| !o.is_empty()) {
-        TckStatus::Pass
+        TckVerdict::Pass
     } else {
-        TckStatus::NotImplemented("analytics_ops() is empty — no typed query operators declared")
+        TckVerdict::NotImplemented("analytics_ops() is empty — no typed query operators declared")
     }
 }
 
 /// TCK point (6): `txn_stage(id).rollback()` must echo the staged id.
-fn txn_or_saga_outbox_status(rollback_ok: bool) -> TckStatus {
+fn txn_or_saga_outbox_status(rollback_ok: bool) -> TckVerdict {
     if rollback_ok {
-        TckStatus::Pass
+        TckVerdict::Pass
     } else {
-        TckStatus::NotImplemented("txn_stage(id).rollback() did not echo the staged id")
+        TckVerdict::NotImplemented("txn_stage(id).rollback() did not echo the staged id")
     }
 }
 
 /// TCK point (7): Pass only if a genuinely non-empty CDC topic is declared.
-fn cdc_delete_retention_gc_status(topic: Option<&'static str>) -> TckStatus {
+fn cdc_delete_retention_gc_status(topic: Option<&'static str>) -> TckVerdict {
     match topic {
-        Some(topic) if !topic.is_empty() => TckStatus::Pass,
-        _ => TckStatus::NotImplemented(
+        Some(topic) if !topic.is_empty() => TckVerdict::Pass,
+        _ => TckVerdict::NotImplemented(
             "no cdc_topic() declared; a modality that does not publish change events has no observable delete/retention/GC story here",
         ),
     }
@@ -467,11 +467,11 @@ fn cdc_delete_retention_gc_status(topic: Option<&'static str>) -> TckStatus {
 
 /// TCK point (8): Pass iff the modality attaches its own tenant/row/region policy
 /// labels; empty is a legitimate default a modality should instead declare N/A.
-fn tenant_row_region_policy_status(labels: &[String]) -> TckStatus {
+fn tenant_row_region_policy_status(labels: &[String]) -> TckVerdict {
     if !labels.is_empty() {
-        TckStatus::Pass
+        TckVerdict::Pass
     } else {
-        TckStatus::NotImplemented(
+        TckVerdict::NotImplemented(
             "policy_labels() is empty — no modality-level tenant/row/region policy attached",
         )
     }
@@ -479,11 +479,11 @@ fn tenant_row_region_policy_status(labels: &[String]) -> TckStatus {
 
 /// TCK point (9): Pass iff EITHER `provenance()` or `evidence_address()` reports
 /// something.
-fn provenance_evidence_lineage_status(has_lineage: bool) -> TckStatus {
+fn provenance_evidence_lineage_status(has_lineage: bool) -> TckVerdict {
     if has_lineage {
-        TckStatus::Pass
+        TckVerdict::Pass
     } else {
-        TckStatus::NotImplemented(
+        TckVerdict::NotImplemented(
             "both provenance() and evidence_address() are None — no lineage attached at this layer",
         )
     }
@@ -491,23 +491,23 @@ fn provenance_evidence_lineage_status(has_lineage: bool) -> TckStatus {
 
 /// `push(TckPoint::IngestStreaming, ingest_status(report))` in one call, purely to keep
 /// [`tck_report`]'s own call count down for the KISS `calls_per_function` budget.
-fn push_ingest_point(push: &mut impl FnMut(TckPoint, TckStatus), report: crate::IngestReport) {
+fn push_ingest_point(push: &mut impl FnMut(TckPoint, TckVerdict), report: crate::IngestReport) {
     push(TckPoint::IngestStreaming, ingest_status(report));
 }
 
-fn ingest_status(report: crate::IngestReport) -> TckStatus {
+fn ingest_status(report: crate::IngestReport) -> TckVerdict {
     match (report.batch, report.streaming) {
-        (ModalitySelfTest::Passed, ModalitySelfTest::Passed) => TckStatus::Pass,
+        (ModalitySelfTest::Passed, ModalitySelfTest::Passed) => TckVerdict::Pass,
         (ModalitySelfTest::Failed, _) | (_, ModalitySelfTest::Failed) => {
-            TckStatus::NotImplemented("batch or streaming ingest self-check FAILED")
+            TckVerdict::NotImplemented("batch or streaming ingest self-check FAILED")
         }
         (ModalitySelfTest::Unsupported, _) | (_, ModalitySelfTest::Unsupported) => {
-            TckStatus::NotImplemented(
+            TckVerdict::NotImplemented(
                 "ingest_report() does not attest both batch and streaming ingest",
             )
         }
         (ModalitySelfTest::NotApplicable(reason), _)
-        | (_, ModalitySelfTest::NotApplicable(reason)) => TckStatus::NotApplicable(reason),
+        | (_, ModalitySelfTest::NotApplicable(reason)) => TckVerdict::NotApplicable(reason),
     }
 }
 
@@ -531,12 +531,12 @@ pub fn tck_report<T: ConformanceTestable>() -> TckReport {
     // `results` into the report. Consult the modality's N/A escape hatch first; fall
     // back to the auto-derived status only where a point is not declared genuinely N/A.
     {
-        let mut push = |point: TckPoint, auto: TckStatus| {
+        let mut push = |point: TckPoint, auto: TckVerdict| {
             let status = match ModalityContract::tck_not_applicable(&sample, point) {
-                Some(reason) => TckStatus::NotApplicable(reason),
+                Some(reason) => TckVerdict::NotApplicable(reason),
                 None => auto,
             };
-            results.push(TckPointResult { point, status });
+            results.push(TckPointResult { point, verdict: status });
         };
 
         // (1) Stable versioned schema/ids: the only "schema stability" signal the
@@ -632,7 +632,7 @@ pub fn tck_report<T: ConformanceTestable>() -> TckReport {
         // (12) Interop / workload smoke: the base round-trip exercised above (project
         // to a row, stage a write, decode it back, roll it back) completing without
         // panicking IS a genuine minimal cross-cutting smoke test.
-        push(TckPoint::InteropWorkloadSmoke, TckStatus::Pass);
+        push(TckPoint::InteropWorkloadSmoke, TckVerdict::Pass);
     }
 
     TckReport {

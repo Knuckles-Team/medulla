@@ -20,7 +20,7 @@ pub enum DeterminismClaim {
 /// `tts.status.v1` — the durable job's lifecycle state. Progress is bounded
 /// and never implies completion without a durable [`TtsResult`].
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum JobStatus {
+pub enum TtsOutcome {
     Accepted,
     Queued,
     Running,
@@ -32,11 +32,11 @@ pub enum JobStatus {
     Failed,
 }
 
-impl JobStatus {
+impl TtsOutcome {
     pub fn is_terminal(self) -> bool {
         matches!(
             self,
-            JobStatus::Cancelled | JobStatus::Succeeded | JobStatus::Degraded | JobStatus::Failed
+            TtsOutcome::Cancelled | TtsOutcome::Succeeded | TtsOutcome::Degraded | TtsOutcome::Failed
         )
     }
 }
@@ -46,7 +46,8 @@ impl JobStatus {
 pub struct TtsResult {
     pub request_id: RequestId,
     pub job_id: JobId,
-    pub status: JobStatus,
+    #[serde(rename = "status")]
+    pub outcome: TtsOutcome,
     pub chunks: Vec<TtsChunk>,
     pub voice: VoiceModelRef,
     pub output_format: OutputFormat,

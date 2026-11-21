@@ -11,7 +11,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_core::meeting_transcript::{SummaryMark, TranscriptState};
+use medulla_core::meeting_transcript::{SummaryMark, TranscriptSnapshot};
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::meeting_transcript::{
     MeetingSummaryCommitReceipt, MeetingSummaryCommitRequest, SummaryAdmissionRef,
@@ -46,7 +46,7 @@ fn edge(source: &str, target: &str, relationship: &str) -> Result<Method, String
 /// receipt's `input_context_digest` names, `None` when absent) and lower the
 /// summary. Every refusal returns before a write-set exists.
 pub fn commit_summary(
-    state: &TranscriptState,
+    state: &TranscriptSnapshot,
     context: Option<&StoredContext>,
     request: &MeetingSummaryCommitRequest,
 ) -> Result<(IndexWriteSet, MeetingSummaryCommitReceipt), String> {

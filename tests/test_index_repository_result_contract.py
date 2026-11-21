@@ -9,7 +9,7 @@ from _client_fixtures import RecordingTransport, SentCall
 from pydantic import ValidationError
 
 from medulla.client import GraphOperationsClient
-from medulla.generated.index_repository import IndexFileStatus, IndexResult
+from medulla.generated.index_repository import IndexFileVerdict, IndexResult
 
 _ZERO_DIGEST = "sha256:" + ("0" * 64)
 _ONE_DIGEST = "sha256:" + ("1" * 64)
@@ -73,9 +73,9 @@ async def test_public_client_returns_one_typed_outcome_per_file_in_order() -> No
         "src/main.py",
         "README.txt",
     ]
-    assert [item.status for item in result.file_outcomes] == [
-        IndexFileStatus.SUCCESS,
-        IndexFileStatus.UNSUPPORTED,
+    assert [item.verdict for item in result.file_outcomes] == [
+        IndexFileVerdict.SUCCESS,
+        IndexFileVerdict.UNSUPPORTED,
     ]
     assert [call.method for call in client.sent] == ["IndexRepository"]
     assert [call.graph for call in client.sent] == [None]

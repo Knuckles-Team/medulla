@@ -8,13 +8,13 @@ use std::fmt;
 /// How a mapping reached its current state. Only `Approved` may be queried: a deterministic
 /// proposal and a model suggestion are both proposals only, never served.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum MappingApprovalState {
+pub enum MappingApproval {
     Proposed,
     ModelSuggested,
     Approved,
 }
 
-impl fmt::Display for MappingApprovalState {
+impl fmt::Display for MappingApproval {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let label = match self {
             Self::Proposed => "proposed",
@@ -29,7 +29,7 @@ impl fmt::Display for MappingApprovalState {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct VirtualGraphMapping {
     pub name: String,
-    pub approval_state: MappingApprovalState,
+    pub approval_state: MappingApproval,
     pub r2rml: String,
 }
 
@@ -37,7 +37,7 @@ pub struct VirtualGraphMapping {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct MappingNotApproved {
     pub name: String,
-    pub state: MappingApprovalState,
+    pub approval: MappingApproval,
 }
 
 impl fmt::Display for MappingNotApproved {
@@ -45,7 +45,7 @@ impl fmt::Display for MappingNotApproved {
         write!(
             f,
             "virtual graph mapping {:?} is {}, not approved, and cannot be queried",
-            self.name, self.state
+            self.name, self.approval
         )
     }
 }
@@ -56,10 +56,10 @@ impl VirtualGraphMapping {
     /// Returns this mapping's queryable name, refusing unless `approval_state` is `Approved`.
     pub fn queryable_name(&self) -> Result<&str, MappingNotApproved> {
         match self.approval_state {
-            MappingApprovalState::Approved => Ok(self.name.as_str()),
+            MappingApproval::Approved => Ok(self.name.as_str()),
             other => Err(MappingNotApproved {
                 name: self.name.clone(),
-                state: other,
+                approval: other,
             }),
         }
     }
@@ -109,7 +109,7 @@ pub fn validate_via_operation(via_operation: &str) -> Result<(), RefusedValueOpe
 mod tests {
     use super::*;
 
-    fn mapping(state: MappingApprovalState) -> VirtualGraphMapping {
+    fn mapping(state: MappingApproval) -> VirtualGraphMapping {
         VirtualGraphMapping {
             name: "gramps_people".to_string(),
             approval_state: state,
@@ -120,25 +120,25 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R005.1
     #[test]
     fn an_approved_mapping_is_queryable_by_name() {
-        let m = mapping(MappingApprovalState::Approved);
+        let m = mapping(MappingApproval::Approved);
         assert_eq!(m.queryable_name().unwrap(), "gramps_people");
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R005.1
     #[test]
     fn a_proposed_mapping_is_refused() {
-        let m = mapping(MappingApprovalState::Proposed);
+        let m = mapping(MappingApproval::Proposed);
         let err = m.queryable_name().unwrap_err();
-        assert_eq!(err.state, MappingApprovalState::Proposed);
+        assert_eq!(err.approval, MappingApproval::Proposed);
         assert!(err.to_string().contains("not approved"));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R005.1
     #[test]
     fn a_model_suggested_mapping_is_refused() {
-        let m = mapping(MappingApprovalState::ModelSuggested);
+        let m = mapping(MappingApproval::ModelSuggested);
         let err = m.queryable_name().unwrap_err();
-        assert_eq!(err.state, MappingApprovalState::ModelSuggested);
+        assert_eq!(err.approval, MappingApproval::ModelSuggested);
         assert!(err.to_string().contains("model-suggested"));
     }
 

@@ -11,7 +11,7 @@ use std::collections::HashMap;
 
 use medulla_audio::ingress::CarrierRef;
 use medulla_audio::tts::{
-    self, InputMode, JobStatus, OutputEncoding, OutputFormat, PolicyDecision, SpeakerSelection,
+    self, InputMode, TtsOutcome, OutputEncoding, OutputFormat, PolicyDecision, SpeakerSelection,
     SynthesisControls, TtsBoundedId, TtsError, TtsLimits,
 };
 use medulla_tts_piper::{
@@ -205,7 +205,7 @@ fn full_contract_round_trip_produces_real_audio() {
 
     let authorized = tts::authorize_carrier(&request.carrier, PolicyDecision::Authorized)
         .expect("policy authorizes this carrier");
-    let result = tts::finalize_result(&authorized, &request, chunks, JobStatus::Succeeded)
+    let result = tts::finalize_result(&authorized, &request, chunks, TtsOutcome::Succeeded)
         .expect("well-formed, clean chunks finalize as Succeeded");
     assert_eq!(result.total_sample_count, sample_count as u64);
     assert_eq!(result.quality.non_finite_samples, 0);
@@ -729,11 +729,11 @@ fn non_finite_template_is_measured_and_blocks_succeeded_but_not_degraded() {
 
     let authorized = tts::authorize_carrier(&request.carrier, PolicyDecision::Authorized).unwrap();
     let succeeded_err =
-        tts::finalize_result(&authorized, &request, chunks.clone(), JobStatus::Succeeded)
+        tts::finalize_result(&authorized, &request, chunks.clone(), TtsOutcome::Succeeded)
             .unwrap_err();
     assert_eq!(succeeded_err, TtsError::NonFiniteAudio);
 
-    let degraded = tts::finalize_result(&authorized, &request, chunks, JobStatus::Degraded)
+    let degraded = tts::finalize_result(&authorized, &request, chunks, TtsOutcome::Degraded)
         .expect("a degraded result may honestly carry the non-finite evidence");
     assert!(degraded.quality.non_finite_samples > 0);
 }

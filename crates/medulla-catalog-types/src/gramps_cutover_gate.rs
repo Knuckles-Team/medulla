@@ -11,7 +11,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::gramps_pilot_phase::{GrampsPilotPhase, PhaseExitArtifact};
+use crate::gramps_pilot_phase::{GrampsPilotMilestone, PhaseExitArtifact};
 
 /// The minimum read-only SQLite fallback window the spec requires.
 pub const MINIMUM_FALLBACK_WINDOW_DAYS: u32 = 30;
@@ -27,7 +27,7 @@ pub struct GrampsCutoverGoAhead {
 /// A cutover go-ahead failed a gate rule.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum InvalidCutoverGoAhead {
-    WrongExitPhase(GrampsPilotPhase),
+    WrongExitPhase(GrampsPilotMilestone),
     InvalidP5Exit(String),
     NotApproved,
     FallbackWindowTooShort(u32),
@@ -56,9 +56,9 @@ impl std::error::Error for InvalidCutoverGoAhead {}
 /// window of at least 30 days. Refuses rather than admitting a cutover with
 /// missing pilot evidence or an unsafe fallback window.
 pub fn validate_go_ahead(go_ahead: &GrampsCutoverGoAhead) -> Result<(), InvalidCutoverGoAhead> {
-    if go_ahead.p5_exit.phase != GrampsPilotPhase::P5SchemaUnderstanding {
+    if go_ahead.p5_exit.closes != GrampsPilotMilestone::P5SchemaUnderstanding {
         return Err(InvalidCutoverGoAhead::WrongExitPhase(
-            go_ahead.p5_exit.phase,
+            go_ahead.p5_exit.closes,
         ));
     }
     go_ahead
@@ -82,8 +82,8 @@ mod tests {
 
     fn p5_exit() -> PhaseExitArtifact {
         PhaseExitArtifact {
-            phase: GrampsPilotPhase::P5SchemaUnderstanding,
-            artifact_kind: GrampsPilotPhase::P5SchemaUnderstanding
+            closes: GrampsPilotMilestone::P5SchemaUnderstanding,
+            artifact_kind: GrampsPilotMilestone::P5SchemaUnderstanding
                 .required_artifact_kind()
                 .to_string(),
             reviewed_by: "alice".to_string(),
@@ -108,8 +108,8 @@ mod tests {
     #[test]
     fn go_ahead_citing_wrong_phase_is_refused() {
         let mut bad = go_ahead();
-        bad.p5_exit.phase = GrampsPilotPhase::P4RestoreVerification;
-        bad.p5_exit.artifact_kind = GrampsPilotPhase::P4RestoreVerification
+        bad.p5_exit.closes = GrampsPilotMilestone::P4RestoreVerification;
+        bad.p5_exit.artifact_kind = GrampsPilotMilestone::P4RestoreVerification
             .required_artifact_kind()
             .to_string();
         assert!(matches!(

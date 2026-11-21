@@ -465,7 +465,7 @@ pub fn authorize_carrier(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ResultStatus {
+pub enum AsrOutcome {
     Complete,
     Degraded,
     Cancelled,
@@ -475,7 +475,8 @@ pub enum ResultStatus {
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AsrResult {
     pub request_id: RequestId,
-    pub status: ResultStatus,
+    #[serde(rename = "status")]
+    pub outcome: AsrOutcome,
     pub segments: Vec<AsrSegment>,
     pub transcript_rendition_ref: TranscriptRenditionRef,
     pub source: AudioSourceRef,
@@ -525,7 +526,7 @@ pub fn finalize_result(
     authorized: &AuthorizedCarrier,
     request: &AsrRequest,
     segments: Vec<AsrSegment>,
-    status: ResultStatus,
+    status: AsrOutcome,
     transcript_rendition_ref: TranscriptRenditionRef,
 ) -> Result<AsrResult, AsrError> {
     if authorized.carrier() != &request.carrier {
@@ -534,7 +535,7 @@ pub fn finalize_result(
         });
     }
     validate_request(request)?;
-    if status == ResultStatus::Complete && segments.is_empty() {
+    if status == AsrOutcome::Complete && segments.is_empty() {
         return Err(AsrError::MalformedResult {
             reason: "a complete result requires at least one ordered segment",
         });
@@ -556,7 +557,7 @@ pub fn finalize_result(
     };
     Ok(AsrResult {
         request_id: request.request_id.clone(),
-        status,
+        outcome: status,
         segments,
         transcript_rendition_ref,
         source: request.source.clone(),
@@ -977,7 +978,7 @@ mod authorization_tests {
             &authorization,
             &request,
             vec![],
-            ResultStatus::Cancelled,
+            AsrOutcome::Cancelled,
             fixtures::id("rendition-1"),
         );
         assert_eq!(
@@ -1011,7 +1012,7 @@ mod finalize_result_tests {
             &auth,
             &request,
             segments,
-            ResultStatus::Complete,
+            AsrOutcome::Complete,
             fixtures::id("rendition-1"),
         )
         .expect("well-formed complete result");
@@ -1027,7 +1028,7 @@ mod finalize_result_tests {
             &auth,
             &request,
             vec![],
-            ResultStatus::Complete,
+            AsrOutcome::Complete,
             fixtures::id("rendition-1"),
         );
         assert_eq!(
@@ -1046,7 +1047,7 @@ mod finalize_result_tests {
             &auth,
             &request,
             vec![],
-            ResultStatus::Cancelled,
+            AsrOutcome::Cancelled,
             fixtures::id("rendition-1"),
         );
         assert!(outcome.is_ok());
@@ -1064,7 +1065,7 @@ mod finalize_result_tests {
             &auth,
             &request,
             segments,
-            ResultStatus::Complete,
+            AsrOutcome::Complete,
             fixtures::id("rendition-1"),
         );
         assert_eq!(
@@ -1085,7 +1086,7 @@ mod finalize_result_tests {
             &auth,
             &request,
             segments,
-            ResultStatus::Complete,
+            AsrOutcome::Complete,
             fixtures::id("rendition-1"),
         );
         assert_eq!(
@@ -1109,7 +1110,7 @@ mod finalize_result_tests {
             &auth,
             &request,
             segments,
-            ResultStatus::Complete,
+            AsrOutcome::Complete,
             fixtures::id("rendition-1"),
         );
         assert_eq!(
@@ -1140,7 +1141,7 @@ mod finalize_result_tests {
             &auth,
             &request,
             vec![bad_segment],
-            ResultStatus::Complete,
+            AsrOutcome::Complete,
             fixtures::id("rendition-1"),
         );
         assert_eq!(
@@ -1161,7 +1162,7 @@ mod finalize_result_tests {
             &auth,
             &request,
             vec![untimed],
-            ResultStatus::Complete,
+            AsrOutcome::Complete,
             fixtures::id("rendition-1"),
         )
         .expect("missing timing alone is not a rejection reason");

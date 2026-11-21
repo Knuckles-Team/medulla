@@ -10,7 +10,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::enrichment_machine::{EnrichmentEvent, ENRICHMENT_MACHINE};
 use medulla_ingestion_types::ingestion_wire::{
-    ExtractedEdge, IndexFileOutcome, IndexFileStatus, NativeRungEvidence, ParseResult,
+    ExtractedEdge, IndexFileOutcome, IndexFileVerdict, NativeRungEvidence, ParseResult,
 };
 use medulla_result_types::epistemic_operations::RequestContext;
 use medulla_work_types::{
@@ -95,12 +95,12 @@ pub fn record_native_evidence(
         .map(|(result, outcome)| NativeRungEvidence {
             content_digest: outcome.content_digest.clone(),
             parser_capability_digest: outcome.parser_capability_digest.clone(),
-            status: outcome.status,
+            verdict: outcome.verdict,
             extracted_facts: result.nodes.len().saturating_add(result.edges.len()),
             inferred_facts: 0,
             derived_facts: 0,
-            symbol_resolution_completed: outcome.status == IndexFileStatus::Success,
-            statistical_completed: outcome.status == IndexFileStatus::Success,
+            symbol_resolution_completed: outcome.verdict == IndexFileVerdict::Success,
+            statistical_completed: outcome.verdict == IndexFileVerdict::Success,
         })
         .collect()
 }
@@ -164,7 +164,7 @@ pub fn native_admissions(
             parser_capability_digest: item.parser_capability_digest.clone(),
         };
         let decision = policy.get(&unit).and_then(|verdict| {
-            (item.status == IndexFileStatus::Success
+            (item.verdict == IndexFileVerdict::Success
                 && item.extracted_facts == 0
                 && item.inferred_facts == 0
                 && item.derived_facts == 0
@@ -462,7 +462,7 @@ pub fn plan_enrichment_page(
     cursor: Option<&EnrichmentCursor>,
 ) -> Result<EnrichmentPage, AdmissionError> {
     validate_page_inputs(outcomes, budget_units, source_revision, policy_digest)?;
-    let mut status: BTreeMap<UnitKey, Option<IndexFileStatus>> = BTreeMap::new();
+    let mut status: BTreeMap<UnitKey, Option<IndexFileVerdict>> = BTreeMap::new();
     for outcome in outcomes {
         let key = UnitKey {
             content_digest: outcome.content_digest.clone(),
@@ -471,15 +471,15 @@ pub fn plan_enrichment_page(
         status
             .entry(key)
             .and_modify(|prior| {
-                if *prior != Some(outcome.status) {
+                if *prior != Some(outcome.verdict) {
                     *prior = None;
                 }
             })
-            .or_insert(Some(outcome.status));
+            .or_insert(Some(outcome.verdict));
     }
     let mut eligible: Vec<_> = status
         .into_iter()
-        .filter_map(|(unit, parsed)| (parsed == Some(IndexFileStatus::Success)).then_some(unit))
+        .filter_map(|(unit, parsed)| (parsed == Some(IndexFileVerdict::Success)).then_some(unit))
         .filter_map(|unit| {
             let admission = admissions.get(&unit)?;
             if !admission.allowed || admission.compute_units == 0 {
@@ -579,10 +579,10 @@ mod tests {
     };
     use medulla_types::contract::BoundedVec;
 
-    fn outcome(digest: &str, status: IndexFileStatus) -> IndexFileOutcome {
+    fn outcome(digest: &str, status: IndexFileVerdict) -> IndexFileOutcome {
         IndexFileOutcome {
             file_path: format!("{digest}.py"),
-            status,
+            verdict: status,
             content_digest: digest.into(),
             parser_capability_digest: "grammar:v1".into(),
             diagnostics: BoundedVec::new(Vec::new()).unwrap(),
@@ -598,7 +598,7 @@ mod tests {
 
     fn atomic_batch_fixture() -> (Vec<IndexFileOutcome>, BTreeMap<UnitKey, UnitAdmission>) {
         let outcomes: Vec<_> = (0..MAX_SUBMIT_BATCH + 2)
-            .map(|index| outcome(&format!("blob-{index:03}"), IndexFileStatus::Success))
+            .map(|index| outcome(&format!("blob-{index:03}"), IndexFileVerdict::Success))
             .collect();
         let admissions = outcomes
             .iter()
@@ -645,7 +645,7 @@ mod tests {
     #[test]
     fn native_batch_identity_is_stable_and_requires_durable_input() {
         let plan = plan_enrichment(
-            &[outcome("a", IndexFileStatus::Success)],
+            &[outcome("a", IndexFileVerdict::Success)],
             &BTreeMap::from([(
                 key("a"),
                 UnitAdmission {
@@ -695,9 +695,9 @@ mod tests {
     #[test]
     fn demand_is_prioritized_but_cannot_bypass_policy_or_budget() {
         let outcomes = vec![
-            outcome("a", IndexFileStatus::Success),
-            outcome("b", IndexFileStatus::Success),
-            outcome("c", IndexFileStatus::Success),
+            outcome("a", IndexFileVerdict::Success),
+            outcome("b", IndexFileVerdict::Success),
+            outcome("c", IndexFileVerdict::Success),
         ];
         let admissions = BTreeMap::from([
             (
@@ -736,7 +736,7 @@ mod tests {
 
     #[test]
     fn only_explicit_abstention_advances_the_ladder() {
-        let outcomes = vec![outcome("a", IndexFileStatus::Success)];
+        let outcomes = vec![outcome("a", IndexFileVerdict::Success)];
         for (abstained, expected) in [
             (0, None),
             (1, None),
@@ -763,7 +763,7 @@ mod tests {
 
     #[test]
     fn duplicate_or_conflicting_blob_outcomes_are_conservative() {
-        let good = outcome("a", IndexFileStatus::Success);
+        let good = outcome("a", IndexFileVerdict::Success);
         let admissions = BTreeMap::from([(
             key("a"),
             UnitAdmission {
@@ -781,8 +781,8 @@ mod tests {
             1
         );
         let mixed = [
-            outcome("a", IndexFileStatus::Success),
-            outcome("a", IndexFileStatus::Error),
+            outcome("a", IndexFileVerdict::Success),
+            outcome("a", IndexFileVerdict::Error),
         ];
         assert!(plan_enrichment(&mixed, &admissions, &BTreeSet::new(), 1)
             .unwrap()
@@ -811,12 +811,12 @@ mod tests {
             ),
         ]);
         let first = [
-            outcome("a", IndexFileStatus::Success),
-            outcome("b", IndexFileStatus::Success),
+            outcome("a", IndexFileVerdict::Success),
+            outcome("b", IndexFileVerdict::Success),
         ];
         let second = [
-            outcome("b", IndexFileStatus::Success),
-            outcome("a", IndexFileStatus::Success),
+            outcome("b", IndexFileVerdict::Success),
+            outcome("a", IndexFileVerdict::Success),
         ];
         assert_eq!(
             plan_enrichment(&first, &admissions, &BTreeSet::new(), 2),
@@ -826,7 +826,7 @@ mod tests {
 
     #[test]
     fn parser_capability_is_part_of_the_queue_identity() {
-        let mut next_grammar = outcome("a", IndexFileStatus::Success);
+        let mut next_grammar = outcome("a", IndexFileVerdict::Success);
         next_grammar.parser_capability_digest = "grammar:v2".into();
         let v2 = UnitKey {
             parser_capability_digest: "grammar:v2".into(),
@@ -851,7 +851,7 @@ mod tests {
             ),
         ]);
         let plan = plan_enrichment(
-            &[outcome("a", IndexFileStatus::Success), next_grammar],
+            &[outcome("a", IndexFileVerdict::Success), next_grammar],
             &admissions,
             &BTreeSet::new(),
             2,
@@ -932,7 +932,7 @@ mod tests {
     fn continuation_preserves_demand_and_page_budget() {
         let outcomes: Vec<_> = ["a", "b", "c"]
             .into_iter()
-            .map(|name| outcome(name, IndexFileStatus::Success))
+            .map(|name| outcome(name, IndexFileVerdict::Success))
             .collect();
         let admissions = outcomes
             .iter()
@@ -1077,9 +1077,9 @@ mod tests {
             symbols_extracted: 1,
         };
         let outcomes = [
-            outcome("empty", IndexFileStatus::Success),
-            outcome("asserted", IndexFileStatus::Success),
-            outcome("unsupported", IndexFileStatus::Unsupported),
+            outcome("empty", IndexFileVerdict::Success),
+            outcome("asserted", IndexFileVerdict::Success),
+            outcome("unsupported", IndexFileVerdict::Unsupported),
         ];
         let mut evidence = record_native_evidence(&[empty(), asserted, empty()], &outcomes);
         let policy = BTreeMap::from([

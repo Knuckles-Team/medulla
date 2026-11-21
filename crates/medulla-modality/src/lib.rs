@@ -41,7 +41,7 @@
 //!   future `ModalityContract` implementer is wired in for free (MEDULLA-P1-1). See
 //!   `registry.rs` module docs for the `linkme`/`inventory`-vs-explicit-call design
 //!   decision.
-//! * [`TckReport`]/[`TckPoint`]/[`TckStatus`] + [`tck_report`]/[`render_fleet_table`]
+//! * [`TckReport`]/[`TckPoint`]/[`TckVerdict`] + [`tck_report`]/[`render_fleet_table`]
 //!   (module `tck`) — the first-class 12-point Test Compatibility Kit (MEDULLA-P1-1):
 //!   a machine-readable, per-point `Pass`/`NotApplicable`/`NotImplemented`
 //!   capability report for any `ConformanceTestable` modality. The TCK is COMPLETE —
@@ -114,7 +114,7 @@ pub use served::{
     ServedEvent, ServedEventKind, ServedIngest, ServedModalityRuntime, ServedNativeQuery,
     ServedPage, ServedPolicyScope, ServedQuery, ServedRecord, ServedRuntimeStats,
 };
-pub use tck::{render_fleet_table, tck_report, TckPoint, TckPointResult, TckReport, TckStatus};
+pub use tck::{render_fleet_table, tck_report, TckPoint, TckPointResult, TckReport, TckVerdict};
 pub use txn::{decode_staged, encode_staged, StagedWrite, WriteKind};
 
 // Dogfood the harness on a minimal in-crate type so `cargo test -p medulla-modality`

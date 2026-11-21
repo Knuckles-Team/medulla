@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 /// One pilot phase, in required order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum ImmichPilotPhase {
+pub enum ImmichPilotMilestone {
     /// Generates a version-pinned API client from a checked-in OpenAPI
     /// fixture and records its digest.
     I0ClientGeneration,
@@ -34,7 +34,7 @@ pub enum ImmichPilotPhase {
     I6HealthChecks,
 }
 
-impl ImmichPilotPhase {
+impl ImmichPilotMilestone {
     /// Every phase in required order.
     pub const ORDER: [Self; 7] = [
         Self::I0ClientGeneration,
@@ -68,7 +68,8 @@ impl ImmichPilotPhase {
 /// One phase's exit artifact, reviewed before the pilot advances.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PhaseExitArtifact {
-    pub phase: ImmichPilotPhase,
+    #[serde(rename = "phase")]
+    pub closes: ImmichPilotMilestone,
     pub artifact_kind: String,
     pub reviewed_by: String,
 }
@@ -98,7 +99,7 @@ impl PhaseExitArtifact {
     /// and names a reviewer. Refuses rather than accepting any artifact as
     /// closing any phase.
     pub fn validate(&self) -> Result<(), InvalidPhaseExit> {
-        let expected = self.phase.required_artifact_kind();
+        let expected = self.closes.required_artifact_kind();
         if self.artifact_kind != expected {
             return Err(InvalidPhaseExit::WrongArtifactKind {
                 expected,
@@ -122,22 +123,22 @@ pub struct ImmichPilotProgress {
 impl ImmichPilotProgress {
     /// The next phase this pilot may enter: the first phase in order with
     /// no recorded, valid exit yet. `None` once every phase has exited.
-    pub fn next_phase(&self) -> Option<ImmichPilotPhase> {
-        ImmichPilotPhase::ORDER
+    pub fn next_phase(&self) -> Option<ImmichPilotMilestone> {
+        ImmichPilotMilestone::ORDER
             .into_iter()
             .find(|phase| !self.exited(*phase))
     }
 
-    fn exited(&self, phase: ImmichPilotPhase) -> bool {
+    fn exited(&self, phase: ImmichPilotMilestone) -> bool {
         self.exits
             .iter()
-            .any(|exit| exit.phase == phase && exit.validate().is_ok())
+            .any(|exit| exit.closes == phase && exit.validate().is_ok())
     }
 
     /// Whether `phase` may be entered now: every earlier phase in order has
     /// already exited. Refuses skipping ahead.
-    pub fn admits(&self, phase: ImmichPilotPhase) -> bool {
-        ImmichPilotPhase::ORDER[..phase.position()]
+    pub fn admits(&self, phase: ImmichPilotMilestone) -> bool {
+        ImmichPilotMilestone::ORDER[..closes.position()]
             .iter()
             .all(|earlier| self.exited(*earlier))
     }
@@ -147,9 +148,9 @@ impl ImmichPilotProgress {
 mod tests {
     use super::*;
 
-    fn exit(phase: ImmichPilotPhase) -> PhaseExitArtifact {
+    fn exit(phase: ImmichPilotMilestone) -> PhaseExitArtifact {
         PhaseExitArtifact {
-            phase,
+            closes: phase,
             artifact_kind: phase.required_artifact_kind().to_string(),
             reviewed_by: "alice".to_string(),
         }
@@ -159,7 +160,7 @@ mod tests {
     #[test]
     fn well_formed_exit_validates() {
         assert_eq!(
-            exit(ImmichPilotPhase::I0ClientGeneration).validate(),
+            exit(ImmichPilotMilestone::I0ClientGeneration).validate(),
             Ok(())
         );
     }
@@ -167,7 +168,7 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R032.1
     #[test]
     fn wrong_artifact_kind_is_refused() {
-        let mut artifact = exit(ImmichPilotPhase::I0ClientGeneration);
+        let mut artifact = exit(ImmichPilotMilestone::I0ClientGeneration);
         artifact.artifact_kind = "noop_replay_report".to_string();
         assert!(matches!(
             artifact.validate(),
@@ -178,7 +179,7 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R032.1
     #[test]
     fn unreviewed_exit_is_refused() {
-        let mut artifact = exit(ImmichPilotPhase::I0ClientGeneration);
+        let mut artifact = exit(ImmichPilotMilestone::I0ClientGeneration);
         artifact.reviewed_by = "  ".to_string();
         assert_eq!(artifact.validate(), Err(InvalidPhaseExit::NotReviewed));
     }
@@ -187,11 +188,11 @@ mod tests {
     #[test]
     fn fresh_pilot_admits_only_i0() {
         let progress = ImmichPilotProgress::default();
-        assert!(progress.admits(ImmichPilotPhase::I0ClientGeneration));
-        assert!(!progress.admits(ImmichPilotPhase::I1ReadFirstTools));
+        assert!(progress.admits(ImmichPilotMilestone::I0ClientGeneration));
+        assert!(!progress.admits(ImmichPilotMilestone::I1ReadFirstTools));
         assert_eq!(
             progress.next_phase(),
-            Some(ImmichPilotPhase::I0ClientGeneration)
+            Some(ImmichPilotMilestone::I0ClientGeneration)
         );
     }
 
@@ -199,23 +200,23 @@ mod tests {
     #[test]
     fn skipping_ahead_without_prior_exit_is_refused() {
         let progress = ImmichPilotProgress {
-            exits: vec![exit(ImmichPilotPhase::I0ClientGeneration)],
+            exits: vec![exit(ImmichPilotMilestone::I0ClientGeneration)],
         };
-        assert!(!progress.admits(ImmichPilotPhase::I2CatalogRegistration));
-        assert!(progress.admits(ImmichPilotPhase::I1ReadFirstTools));
+        assert!(!progress.admits(ImmichPilotMilestone::I2CatalogRegistration));
+        assert!(progress.admits(ImmichPilotMilestone::I1ReadFirstTools));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R032.1
     #[test]
     fn invalid_exit_does_not_advance_progress() {
-        let mut bad_exit = exit(ImmichPilotPhase::I0ClientGeneration);
+        let mut bad_exit = exit(ImmichPilotMilestone::I0ClientGeneration);
         bad_exit.reviewed_by = String::new();
         let progress = ImmichPilotProgress {
             exits: vec![bad_exit],
         };
         assert_eq!(
             progress.next_phase(),
-            Some(ImmichPilotPhase::I0ClientGeneration)
+            Some(ImmichPilotMilestone::I0ClientGeneration)
         );
     }
 
@@ -223,7 +224,7 @@ mod tests {
     #[test]
     fn full_order_completes_pilot() {
         let progress = ImmichPilotProgress {
-            exits: ImmichPilotPhase::ORDER.into_iter().map(exit).collect(),
+            exits: ImmichPilotMilestone::ORDER.into_iter().map(exit).collect(),
         };
         assert_eq!(progress.next_phase(), None);
     }

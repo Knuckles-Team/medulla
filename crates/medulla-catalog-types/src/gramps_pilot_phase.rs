@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// One pilot phase, in required order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
-pub enum GrampsPilotPhase {
+pub enum GrampsPilotMilestone {
     /// Records a baseline content digest.
     P0Baseline,
     /// Establishes a real-Postgres control with a captured driver statement
@@ -29,7 +29,7 @@ pub enum GrampsPilotPhase {
     P5SchemaUnderstanding,
 }
 
-impl GrampsPilotPhase {
+impl GrampsPilotMilestone {
     /// Every phase in required order.
     pub const ORDER: [Self; 6] = [
         Self::P0Baseline,
@@ -61,7 +61,8 @@ impl GrampsPilotPhase {
 /// One phase's exit artifact, reviewed before the pilot advances.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PhaseExitArtifact {
-    pub phase: GrampsPilotPhase,
+    #[serde(rename = "phase")]
+    pub closes: GrampsPilotMilestone,
     pub artifact_kind: String,
     pub reviewed_by: String,
 }
@@ -91,7 +92,7 @@ impl PhaseExitArtifact {
     /// and names a reviewer. Refuses rather than accepting any artifact as
     /// closing any phase.
     pub fn validate(&self) -> Result<(), InvalidPhaseExit> {
-        let expected = self.phase.required_artifact_kind();
+        let expected = self.closes.required_artifact_kind();
         if self.artifact_kind != expected {
             return Err(InvalidPhaseExit::WrongArtifactKind {
                 expected,
@@ -115,22 +116,22 @@ pub struct GrampsPilotProgress {
 impl GrampsPilotProgress {
     /// The next phase this pilot may enter: the first phase in order with
     /// no recorded, valid exit yet. `None` once every phase has exited.
-    pub fn next_phase(&self) -> Option<GrampsPilotPhase> {
-        GrampsPilotPhase::ORDER
+    pub fn next_phase(&self) -> Option<GrampsPilotMilestone> {
+        GrampsPilotMilestone::ORDER
             .into_iter()
             .find(|phase| !self.exited(*phase))
     }
 
-    fn exited(&self, phase: GrampsPilotPhase) -> bool {
+    fn exited(&self, phase: GrampsPilotMilestone) -> bool {
         self.exits
             .iter()
-            .any(|exit| exit.phase == phase && exit.validate().is_ok())
+            .any(|exit| exit.closes == phase && exit.validate().is_ok())
     }
 
     /// Whether `phase` may be entered now: every earlier phase in order has
     /// already exited. Refuses skipping ahead.
-    pub fn admits(&self, phase: GrampsPilotPhase) -> bool {
-        GrampsPilotPhase::ORDER[..phase.position()]
+    pub fn admits(&self, phase: GrampsPilotMilestone) -> bool {
+        GrampsPilotMilestone::ORDER[..closes.position()]
             .iter()
             .all(|earlier| self.exited(*earlier))
     }
@@ -140,9 +141,9 @@ impl GrampsPilotProgress {
 mod tests {
     use super::*;
 
-    fn exit(phase: GrampsPilotPhase) -> PhaseExitArtifact {
+    fn exit(phase: GrampsPilotMilestone) -> PhaseExitArtifact {
         PhaseExitArtifact {
-            phase,
+            closes: phase,
             artifact_kind: phase.required_artifact_kind().to_string(),
             reviewed_by: "alice".to_string(),
         }
@@ -151,13 +152,13 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.1
     #[test]
     fn well_formed_exit_validates() {
-        assert_eq!(exit(GrampsPilotPhase::P0Baseline).validate(), Ok(()));
+        assert_eq!(exit(GrampsPilotMilestone::P0Baseline).validate(), Ok(()));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.1
     #[test]
     fn wrong_artifact_kind_is_refused() {
-        let mut artifact = exit(GrampsPilotPhase::P0Baseline);
+        let mut artifact = exit(GrampsPilotMilestone::P0Baseline);
         artifact.artifact_kind = "replay_report".to_string();
         assert!(matches!(
             artifact.validate(),
@@ -168,7 +169,7 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.1
     #[test]
     fn unreviewed_exit_is_refused() {
-        let mut artifact = exit(GrampsPilotPhase::P0Baseline);
+        let mut artifact = exit(GrampsPilotMilestone::P0Baseline);
         artifact.reviewed_by = "  ".to_string();
         assert_eq!(artifact.validate(), Err(InvalidPhaseExit::NotReviewed));
     }
@@ -177,37 +178,37 @@ mod tests {
     #[test]
     fn fresh_pilot_admits_only_p0() {
         let progress = GrampsPilotProgress::default();
-        assert!(progress.admits(GrampsPilotPhase::P0Baseline));
-        assert!(!progress.admits(GrampsPilotPhase::P1PostgresControl));
-        assert_eq!(progress.next_phase(), Some(GrampsPilotPhase::P0Baseline));
+        assert!(progress.admits(GrampsPilotMilestone::P0Baseline));
+        assert!(!progress.admits(GrampsPilotMilestone::P1PostgresControl));
+        assert_eq!(progress.next_phase(), Some(GrampsPilotMilestone::P0Baseline));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.1
     #[test]
     fn skipping_ahead_without_prior_exit_is_refused() {
         let progress = GrampsPilotProgress {
-            exits: vec![exit(GrampsPilotPhase::P0Baseline)],
+            exits: vec![exit(GrampsPilotMilestone::P0Baseline)],
         };
-        assert!(!progress.admits(GrampsPilotPhase::P2UnmodifiedReplay));
-        assert!(progress.admits(GrampsPilotPhase::P1PostgresControl));
+        assert!(!progress.admits(GrampsPilotMilestone::P2UnmodifiedReplay));
+        assert!(progress.admits(GrampsPilotMilestone::P1PostgresControl));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.1
     #[test]
     fn invalid_exit_does_not_advance_progress() {
-        let mut bad_exit = exit(GrampsPilotPhase::P0Baseline);
+        let mut bad_exit = exit(GrampsPilotMilestone::P0Baseline);
         bad_exit.reviewed_by = String::new();
         let progress = GrampsPilotProgress {
             exits: vec![bad_exit],
         };
-        assert_eq!(progress.next_phase(), Some(GrampsPilotPhase::P0Baseline));
+        assert_eq!(progress.next_phase(), Some(GrampsPilotMilestone::P0Baseline));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.1
     #[test]
     fn full_order_completes_pilot() {
         let progress = GrampsPilotProgress {
-            exits: GrampsPilotPhase::ORDER.into_iter().map(exit).collect(),
+            exits: GrampsPilotMilestone::ORDER.into_iter().map(exit).collect(),
         };
         assert_eq!(progress.next_phase(), None);
     }

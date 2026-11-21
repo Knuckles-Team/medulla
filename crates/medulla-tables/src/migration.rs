@@ -280,7 +280,8 @@ pub struct SchemaMigration {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct SchemaMigrationRecord {
     pub migration: SchemaMigration,
-    pub state: MigrationState,
+    #[serde(rename = "state")]
+    pub outcome: MigrationOutcome,
     pub applied_schema_version: u64,
     /// Monotonic catalog-wide version assigned at the same commit as this
     /// table transition.  It invalidates query/catalog readers even when no
@@ -290,7 +291,7 @@ pub struct SchemaMigrationRecord {
 
 /// Only forward application is supported today.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-pub enum MigrationState {
+pub enum MigrationOutcome {
     Applied,
 }
 

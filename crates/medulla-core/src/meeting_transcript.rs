@@ -57,7 +57,7 @@ pub struct FinalizedRevision {
 
 /// The transcript state one event is applied to.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct TranscriptState {
+pub struct TranscriptSnapshot {
     pub meeting_id: String,
     pub revision: u64,
     /// Ordered `(segment_id, text_digest)` pairs.
@@ -71,7 +71,8 @@ pub struct TranscriptState {
 /// an exact replay of a stored one.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Revision {
-    pub state: TranscriptState,
+    #[serde(rename = "state")]
+    pub transcript: TranscriptSnapshot,
     pub revision: u64,
     pub replayed: bool,
 }
@@ -88,7 +89,7 @@ pub fn finalization_digest(segments: &[(String, Digest256)]) -> Digest256 {
 
 /// Applies one revision event to `state`.
 pub fn apply_revision(
-    state: &TranscriptState,
+    state: &TranscriptSnapshot,
     event: &MeetingTranscriptRevision,
 ) -> Result<Revision, Conflict> {
     if let Some(stored) = state
@@ -155,13 +156,13 @@ pub fn apply_revision(
         revision,
     });
     Ok(Revision {
-        state: next,
+        transcript: next,
         revision,
         replayed: false,
     })
 }
 
 /// `GetFinal`: the latest finalized revision, when one exists.
-pub fn get_final(state: &TranscriptState) -> Option<&FinalizedRevision> {
+pub fn get_final(state: &TranscriptSnapshot) -> Option<&FinalizedRevision> {
     state.finalized.last()
 }

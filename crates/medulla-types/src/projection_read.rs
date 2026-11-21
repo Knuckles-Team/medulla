@@ -76,7 +76,7 @@ impl ProjectionTable {
 }
 
 /// One stored mapping revision. `approval_state` is the text of
-/// `MappingApprovalState` (`approved`, `proposed`, `model-suggested`).
+/// `MappingApproval` (`approved`, `proposed`, `model-suggested`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ProjectionMapping {

@@ -426,7 +426,7 @@ pub struct StateSpaceObservation {
     pub design: Vec<f64>,
 }
 
-/// The filter state a derived checkpoint carries (rides in `DerivedState.checkpoints`).
+/// The filter state a derived checkpoint carries (rides in `DerivedValue.checkpoints`).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct StateSpaceCheckpoint {

@@ -2,12 +2,12 @@
 //!
 //! A derived series is an ordinary series whose points are `[value, revision,
 //! known_at_ms]` ([`DERIVED_FIELDS`]); its definition and incremental state live in the
-//! [`DerivedState`] the store keeps in the series' metadata. The state advances from
+//! [`DerivedValue`] the store keeps in the series' metadata. The state advances from
 //! its checkpoint on every new source point (O(new points)), never recomputing history.
 //!
 //! A source point at or before the last consumed timestamp is a REVISION (a late or
 //! corrected point — the store keeps every version, equal timestamps in arrival order).
-//! [`DerivedState::replay`] restores the last checkpoint before it, recomputes forward,
+//! [`DerivedValue::replay`] restores the last checkpoint before it, recomputes forward,
 //! and APPENDS a new version (`revision + 1`, a later `known_at_ms`) wherever a value
 //! changed — nothing is edited in place, so the view as of any earlier moment
 //! ([`as_of`]) is exactly what it was.
@@ -42,7 +42,7 @@ pub struct Checkpoint {
 
 /// A derived series' definition, provenance and incremental state.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct DerivedState {
+pub struct DerivedValue {
     /// The source series (local id, in the derived series' own scope).
     pub source: String,
     pub expr: SeriesExpr,
@@ -70,7 +70,7 @@ pub struct Step {
     pub caught_up: bool,
 }
 
-impl DerivedState {
+impl DerivedValue {
     /// A fresh derived series over `source`.
     pub fn define(source: &str, expr: SeriesExpr) -> Result<Self, String> {
         Ok(Self {

@@ -5,7 +5,7 @@ use super::index_branches;
 use crate::parser::branch_scope::{blob_node_id, branch_node_id, content_digest, file_version_id};
 use crate::parser::enrichment_admission::{native_admissions, NativePolicyVerdict, UnitKey};
 use medulla_ingestion_types::ingestion_wire::{
-    IndexFileStatus, IndexFileVersion, IndexRef, IndexRefStatus, IndexRepositoryScope, IndexResult,
+    IndexFileVerdict, IndexFileVersion, IndexRef, IndexRefPresence, IndexRepositoryScope, IndexResult,
     IndexTombstone,
 };
 use medulla_types::contract::BoundedVec;
@@ -163,7 +163,7 @@ fn outcomes_keep_submission_order_and_submitted_names() {
     assert!(result
         .file_outcomes
         .iter()
-        .all(|outcome| outcome.status == IndexFileStatus::Success));
+        .all(|outcome| outcome.verdict == IndexFileVerdict::Success));
     assert_eq!(
         result.file_outcomes[2].content_digest,
         content_digest(APP_FEATURE.as_bytes())
@@ -306,7 +306,7 @@ fn tombstones_project_removal_with_successor() {
 #[test]
 fn a_deleted_ref_carries_only_tombstones() {
     let mut deleted = live("gone", 'd');
-    deleted.status = IndexRefStatus::Deleted;
+    deleted.presence = IndexRefPresence::Deleted;
     let invalid = scope(
         vec![deleted],
         vec![member("gone", "pkg/util.py", UTIL)],

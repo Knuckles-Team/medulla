@@ -16,7 +16,7 @@
 //! and in the series metadata.
 
 use medulla_query_types::series_expr::{DerivedSeriesReceipt, SeriesExpr, StateSpaceModel};
-use medulla_tsdb::derive::maintain::{latest_versions, DerivedState, Step, DERIVED_FIELDS};
+use medulla_tsdb::derive::maintain::{latest_versions, DerivedValue, Step, DERIVED_FIELDS};
 use medulla_tsdb::derive::state_space::{self, Advance, SeriesRefusal, StateSpaceState};
 use medulla_tsdb::derive::KERNEL_VERSION;
 use medulla_tsdb::point::{Point, Ts};
@@ -228,19 +228,19 @@ fn define(
     check_no_cycle(store, scope, &def.source, &def.series_id)?;
     let key = scope.key(&def.series_id)?;
     let state = match meta(store, &key)? {
-        None => DerivedState::define(&def.source, expr)?,
+        None => DerivedValue::define(&def.source, expr)?,
         Some(existing) => same_definition(&existing, &def.source, &expr)?,
     };
     let committed = maintain_one(store, scope, &key, state, None)?;
     Ok(DerivedSeriesReceipt {
         series_id: def.series_id.clone(),
-        derived_from: committed.state.source.clone(),
-        expr: committed.state.canonical.clone(),
-        digest: committed.state.digest.clone(),
+        derived_from: committed.value.source.clone(),
+        expr: committed.value.canonical.clone(),
+        digest: committed.value.digest.clone(),
         kernel_version: KERNEL_VERSION.to_string(),
         appended: committed.step.points.len() as u64,
         caught_up: committed.step.caught_up,
-        last_ts: committed.state.last_ts,
+        last_ts: committed.value.last_ts,
         cursor: 0,
         model_revision: None,
         checkpoint_digest: None,
@@ -292,12 +292,12 @@ fn same_definition(
     existing: &SeriesMeta,
     source: &str,
     expr: &SeriesExpr,
-) -> Result<DerivedState, String> {
+) -> Result<DerivedValue, String> {
     let bytes = existing
         .derived
         .as_deref()
         .ok_or("INVALID_ARGUMENT: the series already exists and is not a derived series")?;
-    let state = DerivedState::decode(bytes)?;
+    let state = DerivedValue::decode(bytes)?;
     if state.source == source && &state.expr == expr {
         return Ok(state);
     }
@@ -326,7 +326,7 @@ fn maintain_dependents(
             if state_space::is_state_space(&bytes) {
                 maintain_state_space(store, scope, &key, StateSpaceState::decode(&bytes)?, min_ts)?
             } else {
-                let state = DerivedState::decode(&bytes)?;
+                let state = DerivedValue::decode(&bytes)?;
                 let committed = maintain_one(store, scope, &key, state, min_ts)?;
                 committed.step.points.iter().map(|p| p.ts).min()
             }
@@ -342,7 +342,7 @@ fn maintain_dependents(
 
 /// One maintenance step's committed outcome.
 struct Committed {
-    state: DerivedState,
+    value: DerivedValue,
     step: Step,
 }
 
@@ -352,7 +352,7 @@ fn maintain_one(
     store: &SeriesStore,
     scope: &BatchScope,
     key: &SeriesKey,
-    mut state: DerivedState,
+    mut state: DerivedValue,
     min_ts: Option<Ts>,
 ) -> Result<Committed, String> {
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
@@ -372,7 +372,7 @@ fn maintain_one(
         }
     };
     commit(store, scope, key, &state, &step, now)?;
-    Ok(Committed { state, step })
+    Ok(Committed { value: state, step })
 }
 
 /// Commit a derived series' points and state as ONE MutationBatch.
@@ -380,7 +380,7 @@ fn commit(
     store: &SeriesStore,
     scope: &BatchScope,
     key: &SeriesKey,
-    state: &DerivedState,
+    state: &DerivedValue,
     step: &Step,
     now: u64,
 ) -> Result<(), String> {
@@ -473,7 +473,7 @@ fn derived_source(store: &SeriesStore, key: &SeriesKey) -> Result<Option<String>
     if state_space::is_state_space(&bytes) {
         Ok(Some(StateSpaceState::decode(&bytes)?.source))
     } else {
-        Ok(Some(DerivedState::decode(&bytes)?.source))
+        Ok(Some(DerivedValue::decode(&bytes)?.source))
     }
 }
 
