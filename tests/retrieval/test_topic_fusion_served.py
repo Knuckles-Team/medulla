@@ -8,7 +8,6 @@ are stored with ``AddEmbedding`` and the centroids are ``TopicCentroid`` nodes w
 
 from __future__ import annotations
 
-import re
 import uuid
 from typing import Any
 
@@ -16,7 +15,7 @@ import msgpack
 import pytest
 from _round_served import client, put
 
-from medulla.client import EngineResponseError
+from medulla.client import EngineResponseError, TopicCorpusStaleError
 from medulla.generated.models import RankedRows
 
 SPACE_ID = "pinned-test-space"
@@ -59,15 +58,13 @@ def _ranked(
 
 
 def _corpus_revision(cl: Any, graph: str, retrieval: dict[str, Any]) -> int:
-    """The graph revision the query reads, named by the stale-corpus refusal."""
+    """The graph revision the query reads, a structured field of the stale-corpus refusal."""
     stale = {**retrieval, "topic": {**retrieval["topic"], "corpus_revision": 2**40}}
-    with pytest.raises(EngineResponseError) as refused:
+    with pytest.raises(TopicCorpusStaleError) as refused:
         _ranked(cl, graph, [1.0, 0.0, 0.0, 0.0], 1, stale)
-    text = str(refused.value)
-    assert "TOPIC_CORPUS_STALE" in text
-    match = re.search(r"the corpus is at (\d+)", text)
-    assert match, text
-    return int(match.group(1))
+    assert refused.value.code == "TOPIC_CORPUS_STALE"
+    assert refused.value.topics == 2**40
+    return refused.value.current
 
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.5")
@@ -187,12 +184,7 @@ def test_topic_fusion_over_stored_centroids(start_medulla_server) -> None:
         plain = _ranked(cl, graph, query, 3, None)
         assert [row[0] for row in plain.rows] == ["d1", "d2", "d3"]
 
-        probe = _topic(_space(), 2**40)
-        text = _refusal(cl, graph, probe)
-        assert "TOPIC_CORPUS_STALE" in text
-        match = re.search(r"the corpus is at (\d+)", text)
-        assert match, text
-        revision = int(match.group(1))
+        revision = _corpus_revision(cl, graph, _topic(_space(), 2**40)["retrieval"])
 
         fused = _ranked(cl, graph, query, 3, _topic(_space(), revision)["retrieval"])
         assert [row[0] for row in fused.rows] == ["d2", "d1", "d3"]
@@ -297,6 +289,48 @@ def test_document_responsibilities_change_order(start_medulla_server) -> None:
         with pytest.raises(EngineResponseError) as mismatch:
             _ranked(cl, graph, query, 2, retrieval)
         assert "TOPIC_SPACE_MISMATCH" in str(mismatch.value)
+    finally:
+        cl.tenants.delete(graph)
+        cl.close()
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.7")
+def test_fused_rank_candidate_without_embedding_refuses(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.7: a text-ranked row with no stored embedding
+    reaches topic fusion through ``FuseRrf`` and refuses ``TOPIC_ASSIGNMENT_MISSING``
+    without returning rows."""
+    graph = f"topic-unembedded-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    cl.tenants.create(graph)
+    try:
+        assert cl.graph.declare_embedding_space(_space(), graph) == "pinned-test-space-digest"
+        put(cl, graph, "d1", {"type": "Doc", "text": "alpha"}, [1.0, 0.2, 0.0, 0.0])
+        put(cl, graph, "d2", {"type": "Doc", "text": "alpha"}, [0.2, 1.0, 0.0, 0.0])
+        # The text matches this document, which holds no embedding.
+        put(cl, graph, "d3", {"type": "Doc", "text": "alpha needle"})
+        for topic, centroid in (("a", [1.0, 0.0, 0.0, 0.0]), ("b", [0.0, 1.0, 0.0, 0.0])):
+            put(cl, graph, f"c-{topic}", {"type": "TopicCentroid", "topic": topic, "centroid": centroid})
+        retrieval: dict[str, Any] = {
+            "topic": {"top_topics": 2, "min_weight": 0.0, "corpus_revision": 0, "space": _space()}
+        }
+        retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
+        query = [1.0, 0.2, 0.0, 0.0]
+        plan = {
+            "ops": [
+                {"Scan": {"label": "Doc"}},
+                {
+                    "FuseRrf": {
+                        "branches": [[{"Rank": {"query": query}}], [{"RankText": {"query": "needle"}}]],
+                        "k": 0.0,
+                    }
+                },
+                {"Limit": {"k": 3}},
+            ],
+            "report_shortfall": True,
+        }
+        with pytest.raises(EngineResponseError) as refused:
+            cl._send("UnifiedQuery", {"plan": plan, "retrieval": retrieval}, graph)
+        assert refused.value.code == "TOPIC_ASSIGNMENT_MISSING"
     finally:
         cl.tenants.delete(graph)
         cl.close()

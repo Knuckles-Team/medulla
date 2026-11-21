@@ -33,6 +33,7 @@ from .client import (
     ServerRegistryClient,
     StaleRouteError,
     SyncMedullaClient,
+    TopicCorpusStaleError,
     TransitionRefusedError,
     validate_request_context,
 )
@@ -178,6 +179,7 @@ __all__ = [
     "RequestContextClaims",
     "validate_request_context",
     "ResultTooLargeError",
+    "TopicCorpusStaleError",
     "TransitionRefusedError",
     "EngineResponseError",
     "StaleRouteError",

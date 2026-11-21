@@ -344,3 +344,33 @@ mod tests {
         assert!(empty.validate().is_err());
     }
 }
+
+/// MEDULLA-FEDERATED-QUERY-R040.2.4: the structured detail of a `TOPIC_CORPUS_STALE`
+/// refusal, so a client reads the graph revision the retriever read without parsing the
+/// refusal text.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TopicCorpusStaleWire {
+    /// Always `TOPIC_CORPUS_STALE`.
+    pub code: String,
+    /// The corpus revision the topic centroids describe.
+    pub topics: u64,
+    /// The corpus revision (the graph revision) the retriever read.
+    pub current: u64,
+}
+
+impl TopicCorpusStaleWire {
+    /// The record of a stale-corpus refusal detail: the inverse of the text the refusal
+    /// formats after its code, `the topic centroids describe corpus revision {topics}, the
+    /// corpus is at {current}`. `None` when the text is not that shape.
+    pub fn from_detail(detail: &str) -> Option<Self> {
+        let rest = detail.strip_prefix("the topic centroids describe corpus revision ")?;
+        let (topics, current) = rest.split_once(", the corpus is at ")?;
+        Some(Self {
+            code: "TOPIC_CORPUS_STALE".to_string(),
+            topics: topics.parse().ok()?,
+            current: current.parse().ok()?,
+        })
+    }
+}

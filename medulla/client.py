@@ -2790,6 +2790,21 @@ class TransitionRefusedError(EngineResponseError):
         self.reason = reason
 
 
+class TopicCorpusStaleError(EngineResponseError):
+    """Raised for ``TOPIC_CORPUS_STALE`` (MEDULLA-FEDERATED-QUERY-R040.2.4).
+
+    ``topics`` is the corpus revision the topic centroids describe and ``current`` is the
+    corpus (graph) revision the retriever read, as structured fields.
+    """
+
+    def __init__(
+        self, code: str, detail: str | None, *, topics: int, current: int
+    ) -> None:
+        super().__init__(code, detail)
+        self.topics = topics
+        self.current = current
+
+
 class ResultTooLargeError(EngineResponseError):
     """Raised when an unbounded read (e.g. ``nodes.list()`` / ``GetNodes``) would
     return more than the engine's configured node cap
@@ -12239,6 +12254,14 @@ def _raise_send_error(resp: dict[str, Any]) -> NoReturn:
     # caller can fall back to a bounded query without string-matching.
     if code == "RESULT_TOO_LARGE":
         raise ResultTooLargeError(code, error_detail)
+    stale = resp.get("topic_corpus_stale")
+    if code == "TOPIC_CORPUS_STALE" and isinstance(stale, dict):
+        topics = stale.get("topics")
+        current = stale.get("current")
+        if isinstance(topics, int) and isinstance(current, int):
+            raise TopicCorpusStaleError(
+                code, error_detail, topics=topics, current=current
+            )
     refused = resp.get("transition_refused")
     if code == "TRANSITION_REFUSED" and isinstance(refused, dict):
         machine = refused.get("machine")
