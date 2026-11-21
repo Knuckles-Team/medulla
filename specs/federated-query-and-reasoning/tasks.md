@@ -468,7 +468,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T449 [US1] MEDULLA-FEDERATED-QUERY-R738.15 StageReceipt/PromotionProbePoint is a classification, not a lifecycle: rename PromotionStage to PromotionProbePoint
 - [x] T450 [US1] MEDULLA-FEDERATED-QUERY-R738.16 TraceOutcome/TraceOutcomeStatus state machine: route 1 census findings through TraceOutcomeStatus::apply
 - [x] T451 [US1] MEDULLA-FEDERATED-QUERY-R738.17 UqlStageReport/UqlStage state machine: route 1 census findings through UqlStage::apply
-- [ ] T452 [US1] MEDULLA-FEDERATED-QUERY-R738.18 VerificationVerdict/VerdictState state machine: route 1 census findings through VerdictState::apply
+- [ ] T452 [US1] MEDULLA-FEDERATED-QUERY-R738.18 RETIRED: the named type does not exist; the nearest type is a result value
 - [ ] T461 [US1] MEDULLA-FEDERATED-QUERY-R739 Census debt of federated query is closed (rollup)
 - [x] T454 [US1] MEDULLA-FEDERATED-QUERY-R739.1 ShardMonitor/ShardMonitorState state machine: holder-level transition delegating to ShardMonitorState::apply
 - [x] T455 [US1] MEDULLA-FEDERATED-QUERY-R739.2 SourceQueryFailure/SourceQueryStage is a failure position, not a lifecycle: rename, no machine
