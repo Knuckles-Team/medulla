@@ -293,6 +293,30 @@ fn premises_of(
             PremiseClass::Observation,
             observation(epoch),
         ));
+        // The descriptor each capability was served with, and the record
+        // revision its reward was read at (MEDULLA-DECISION-ENGINE-R650.5).
+        for descriptor in &designated.descriptors {
+            out.push(premise(
+                designated.entity_id.as_str(),
+                format!(
+                    "descriptor_version:{}={}",
+                    descriptor.capability_id.as_str(),
+                    descriptor.version
+                ),
+                PremiseClass::Observation,
+                observation(epoch),
+            ));
+        }
+        out.push(premise(
+            designated.entity_id.as_str(),
+            format!(
+                "reward_revision:{}={}",
+                designated.entity_id.as_str(),
+                designated.record_revision
+            ),
+            PremiseClass::Observation,
+            observation(epoch),
+        ));
         if !designated.eligibility.target_paths.is_empty() {
             let paths: Vec<String> = designated
                 .eligibility
@@ -333,6 +357,36 @@ fn premises_of(
                 PremiseProvenance::SchemaSource {
                     source_key: "composed".to_string(),
                     schema_digest: answer.schema_digest.clone(),
+                },
+            ));
+        }
+    }
+    // The ontology each closure was classified under, and every closure member.
+    let ontology_digests: std::collections::BTreeSet<&str> = answer
+        .closures
+        .iter()
+        .map(|closure| closure.ontology_digest.as_str())
+        .collect();
+    for digest in ontology_digests {
+        out.push(premise(
+            "schema",
+            format!("ontology_digest:{digest}"),
+            PremiseClass::Definition,
+            PremiseProvenance::SchemaSource {
+                source_key: "composed".to_string(),
+                schema_digest: digest.to_string(),
+            },
+        ));
+    }
+    for closure in &answer.closures {
+        for member in &closure.members {
+            out.push(premise(
+                closure.capability_id.as_str(),
+                format!("closure_member:{}", member.as_str()),
+                PremiseClass::Proof,
+                PremiseProvenance::SchemaSource {
+                    source_key: "composed".to_string(),
+                    schema_digest: closure.ontology_digest.clone(),
                 },
             ));
         }

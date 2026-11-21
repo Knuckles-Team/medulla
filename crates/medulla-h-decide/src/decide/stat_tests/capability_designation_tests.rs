@@ -1585,3 +1585,106 @@ async fn designation_returns_descriptor_and_closure() {
     let methods = include_str!("../../../../medulla-protocol-types/src/protocol/method/method_10.rs");
     assert!(!methods.contains("CapabilityDesignate"));
 }
+
+/// MEDULLA-DECISION-ENGINE-R650.5: a designation that serves a descriptor over
+/// a closure, sealed.
+async fn descriptor_designation(h: &Harness) -> StatisticalDecisionRecord {
+    use medulla_agent_types::agent_component::capability_descriptor::{
+        ApprovalClass, CapabilityDescriptor, DataPort, Locality, SideEffectClass,
+        CAPABILITY_DESCRIPTOR_VERSION,
+    };
+    use medulla_types::contract::{ResourceId, ScopeKind};
+
+    const CAP: &str = "eg:capability/translate";
+    let mut packed = record(Some(TENANT), "tool-translate", &[CAP]);
+    packed.entity_kind = EntityKind::Tool;
+    packed.pack = Some(
+        medulla_decision_types::decision::capability_designation::PackOrigin {
+            connector: "finance".to_string(),
+            binding_revision: 5,
+            pack_digest: format!("sha256:{}", "12".repeat(32)),
+            entry_digest: format!("sha256:{}", "34".repeat(32)),
+        },
+    );
+    packed.record_revision = 7;
+    seed(h, vec![(packed, vec![1.0, 0.0, 0.0])]).await;
+    let index = shared_capability_index(&*h.state.read().await);
+    let mut runtime = runtime_of(index);
+    runtime.projection = SchemaProjection::new(&runtime.schema_digest, Vec::<(String, String)>::new())
+        .with_classes([CAP.to_string()]);
+    runtime.descriptors.insert(
+        ("finance".to_string(), CAP.to_string()),
+        CapabilityDescriptor {
+            version: CAPABILITY_DESCRIPTOR_VERSION,
+            tenant: TenantId::new(TENANT).unwrap(),
+            capability_id: ResourceId::new(CAP).unwrap(),
+            inputs: vec![DataPort {
+                name: ResourceId::new("text").unwrap(),
+                data_type: ResourceId::new("eg:type/text").unwrap(),
+            }],
+            outputs: Vec::new(),
+            side_effect_class: SideEffectClass::External,
+            scopes: vec![ScopeKind::new("tenant").unwrap()],
+            cost: 12,
+            latency_ms: 300,
+            reliability: 0,
+            locality: Locality::Network,
+            approval_class: ApprovalClass::Low,
+        },
+    );
+    let mut ask = question(&[1.0, 0.0, 0.0], 3, weights(Q32_ONE, 0));
+    ask.required_capabilities = BTreeSet::from([CAP.to_string()]);
+    let request = designation_request(&schema_pin(h), ask, DecisionPolicyRef::Default);
+    decide_with_runtime(h, &request, runtime).unwrap()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R650.5
+#[tokio::test]
+async fn descriptor_evidence_reads_back_through_decision_log() {
+    use medulla_decision_types::decision::statistical::log::{DecisionLogEntry, RecordVisibility};
+
+    let h = Harness::new().await;
+    let sealed = descriptor_designation(&h).await;
+
+    // The sealed record names the descriptor version, the ontology digest, each
+    // closure member and the reward revision.
+    let facts: Vec<&str> = sealed.premises.iter().map(|p| p.fact.as_str()).collect();
+    let digest = format!("sha256:{}", "ab".repeat(32));
+    for fact in [
+        "descriptor_version:eg:capability/translate=1".to_string(),
+        format!("ontology_digest:{digest}"),
+        "closure_member:eg:capability/translate".to_string(),
+        "reward_revision:tool-translate=7".to_string(),
+    ] {
+        assert!(facts.contains(&fact.as_str()), "{fact} missing from {facts:?}");
+    }
+    assert_eq!(sealed.evidence_class, EvidenceClass::Observation);
+
+    // A second principal with the decision-read action reads the same record
+    // back through `DecisionLog` op `Get`, premise for premise.
+    let entry = DecisionLogEntry {
+        schema_version: 1,
+        record: Box::new(sealed.clone()),
+        committed_by: super::retrieval_tests::principal_of("decider"),
+        committed_at_ms: 1_000,
+        visibility: RecordVisibility::Tenant,
+        inputs: Default::default(),
+    };
+    let key = medulla_persistence_records::decision_jobs::record_key(&sealed.record_id);
+    let bytes = medulla_persistence_records::decision_jobs::encode_artifact(&entry).unwrap();
+    h.store.put_decision_artifacts(TENANT, &[(key, bytes)]).unwrap();
+    let got: Option<DecisionLogEntry> = decode(
+        super::log_tests::log_op(
+            &h,
+            "reader",
+            DecisionLogOp::Get {
+                tenant_id: TENANT.to_string(),
+                record_id: sealed.record_id.clone(),
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    let got = got.expect("the record is visible to the reader");
+    assert_eq!(got.record.premises.as_slice(), sealed.premises.as_slice());
+}
