@@ -751,6 +751,8 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R039.1.4` | `tests/retrieval/test_multimodal_served.py::test_missing_embedding_shortfall_and_refusals` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.5` | `tests/retrieval/test_multimodal_served.py::test_receipt_matches_model_calls` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.6` | `tests/retrieval/test_multimodal_served.py::test_sixteen_modality_pairs` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R039.1.7` | `crates/medulla-semantic-index/src/semantic.rs::tests::check_space_declaration_matches_declare_space` | L1 |
+| `MEDULLA-FEDERATED-QUERY-R039.1.7` | `tests/retrieval/test_multimodal_served.py::test_declared_space_is_durable_and_refuses_a_different_one` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1` | `tests/retrieval/test_constraints_served.py::test_constraints_before_ranking` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.1` | `crates/medulla-query-types/src/wire_query_core.rs::tests::retrieval_constraints_round_trip_and_refuse_unknown_operator` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.2` | `crates/medulla-exec/src/exec/constraints.rs::tests::failed_constraint_excludes_top_candidate` | L2 |

@@ -84,6 +84,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T079 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.4 Multimodal space: refusal
 - [x] T080 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.5 Multimodal space: evidence
 - [ ] T081 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.6 Multimodal space: hot-path proof
+- [ ] T462 [US1] MEDULLA-FEDERATED-QUERY-R039.1.7 Multimodal space: served declaration
 - [ ] T082 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.1 Model of Hard entity and relationship constraints
 - [x] T083 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.2 Constraints: behavior (L2 compiler test only; served carrier is R040.1.7)
 - [ ] T083a [US1] MEDULLA-FEDERATED-QUERY-R040.1.7 Served retrieval request: add `RetrievalRequest`/`TopicRequest`/`ModalityPair` in `crates/medulla-index-types/src/retrieval_request.rs`, the `retrieval` field on `Method::UnifiedQuery`, validation and cache-key salting in `handle_unified_query`, and the `PlanCtx` binding in `run_unified_with`; register `CONSTRAINT_INVALID` and `TOPIC_WEIGHT_INVALID`
