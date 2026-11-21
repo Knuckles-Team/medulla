@@ -9,6 +9,7 @@ use medulla_catalog_types::{
     graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaCommitted,
     graph_schema::GraphSchemaSourcesView,
 };
+use medulla_query_types::derived_fact::RunTemporalRulesResult;
 use medulla_query_types::rdf_report::{
     RuleReasonResponse, ShaclValidationReport, ShexValidationReport,
 };
@@ -23,6 +24,7 @@ method_results! {
     GraphSchemaList(GraphSchemaList) => Raw<GraphSchemaSourcesView>;
     GraphSchemaClasses(GraphSchemaClasses) => Raw<GraphSchemaClassesView>;
     RunDatalogReasoning(RunDatalogReasoning) => Json<DatalogReasoningResult>;
+    RunTemporalRules(RunTemporalRules) => Json<RunTemporalRulesResult>;
     // The graph serialized as an N-Triples document.
     GetRdf(GetRdf) => Raw<String>;
     #[cfg(feature = "sparql")]

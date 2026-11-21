@@ -409,6 +409,13 @@ $($variants)*
         property_chains: Vec<(String, String, String)>,
     },
 
+    // MEDULLA-FEDERATED-QUERY-R006.1 — temporal forward chaining over live
+    // bitemporal edges. `text` is one `temporal-rules-v1` rule; each derived
+    // fact is committed as a `DerivedFact` node with its origin chain.
+    RunTemporalRules {
+        text: String,
+    },
+
 
     // ── Governed change ingestion ────────────────────────────────────
     /// Atomically materialize one externally sourced object and all of its

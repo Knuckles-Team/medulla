@@ -466,6 +466,10 @@ mod tests {
                 range_rules: Vec::new(),
                 property_chains: Vec::new(),
             },
+            #[cfg(feature = "reasoning")]
+            Method::RunTemporalRules {
+                text: "RULE temporal-rules-v1 h <- a".into(),
+            },
             Method::PruneByLifecycle {
                 max_age_secs: 1,
                 min_score: 0.0,

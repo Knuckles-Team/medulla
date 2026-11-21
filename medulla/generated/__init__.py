@@ -568,6 +568,7 @@ SEND_BY_METHOD = {
     "Rollback": transactions.send_rollback,
     "RunDatalogReasoning": reasoning.send_run_datalog_reasoning,
     "RunRules": reasoning.send_run_rules,
+    "RunTemporalRules": reasoning.send_run_temporal_rules,
     "RunUdf": compute.send_run_udf,
     "SceneChildren": graph.send_scene_children,
     "SchemaProjections": graph.send_schema_projections,

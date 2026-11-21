@@ -442,6 +442,11 @@ pub(super) fn ledger_audit_line(method: &Method) -> Option<String> {
     match method {
         #[cfg(feature = "reasoning")]
         Method::RunDatalogReasoning { .. } => Some("RUN_DATALOG_REASONING".to_string()),
+        #[cfg(feature = "reasoning")]
+        Method::RunTemporalRules { text } => Some(format!(
+            "RUN_TEMPORAL_RULES|text_sha256={}",
+            hex::encode(Sha256::digest(text.as_bytes()))
+        )),
         Method::ClearLedger => Some("CLEAR_LEDGER".to_string()),
         Method::ApplyLedger { transactions } => {
             Some(format!("APPLY_LEDGER|count={}", transactions.len()))

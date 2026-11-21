@@ -4,7 +4,8 @@
 //! A derived fact is identified by the SHA-256 digest of its rule digest, its
 //! premise ids and its validity interval, so the same derivation always names
 //! the same fact. The record is pure data; the derivation lives in
-//! `medulla-plan` and the write goes through the served `ApplyMutation`.
+//! `medulla-plan` and the write goes through the served `RunTemporalRules`,
+//! which stores each record as one `DerivedFact` node.
 
 use medulla_types::contract::Digest256;
 use serde::{Deserialize, Serialize};
@@ -14,6 +15,7 @@ pub const TEMPORAL_RULES_VERSION: &str = "temporal-rules-v1";
 
 /// Where a premise's authority comes from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum OriginKind {
     /// A ledger sentence.
@@ -34,6 +36,7 @@ impl OriginKind {
 
 /// The origin record of one derived fact.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DerivedFact {
     /// SHA-256 of rule digest, premise ids and interval (64 lowercase hex).
     pub fact_id: String,
@@ -52,6 +55,7 @@ pub struct DerivedFact {
 /// One revision of a derived fact as persisted: the origin record, its closed-open
 /// event-time interval `[valid_from, valid_to)` and the revision chain.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DerivedFactRecord {
     /// The origin record.
     pub fact: DerivedFact,
@@ -63,6 +67,42 @@ pub struct DerivedFactRecord {
     pub revision: u64,
     /// A retraction writes a tombstone revision.
     pub tombstone: bool,
+}
+
+/// One derivation step of the served trace.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct DerivationStep {
+    /// Event-time order position (0-based) of the step.
+    pub order: usize,
+    /// Fixpoint round that produced the fact (chains have a higher round).
+    pub round: usize,
+    /// Id of the derived fact.
+    pub fact_id: String,
+    /// Premises joined, in body order.
+    pub premise_ids: Vec<String>,
+    /// Inclusive start of the derived interval.
+    pub valid_from: i64,
+    /// Exclusive end of the derived interval.
+    pub valid_to: i64,
+}
+
+/// Reply of the served `RunTemporalRules` write.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct RunTemporalRulesResult {
+    /// Digest of the rule that ran.
+    pub rule_digest: Digest256,
+    /// Graph generation the premises were read at.
+    pub graph_generation: u64,
+    /// Graph version after the derived facts were applied.
+    pub committed_version: u64,
+    /// Facts the run derived, in event-time order (then fact id).
+    pub facts: Vec<DerivedFactRecord>,
+    /// One derivation step per fact, same order.
+    pub trace: Vec<DerivationStep>,
 }
 
 /// Identity of a derived fact: SHA-256 over the rule digest, the premise ids and

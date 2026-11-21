@@ -13,26 +13,16 @@
 //! facts feed back as premises of the same subject, so chains derive in
 //! event-time order until no new fact appears. Derivation is pure: every
 //! refusal happens before any write, so a refused derivation leaves the graph
-//! revision unchanged. [`derive_facts_mutation`] turns a derivation into the
-//! `ApplyMutation` request the served write persists.
+//! revision unchanged. The served `RunTemporalRules` write stores each derived
+//! record as one `DerivedFact` node through the graph commit gateway.
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_identity_types::authority::AuthorityScope;
-use medulla_mutation_types::mutation::{
-    MutationDomain, MutationEffect, MutationPayload, MutationPrecondition, RecordMutation,
-    RecordTarget, RequestedMutationResult,
-};
 use medulla_query_types::derived_fact::{
-    derived_fact_id, DerivedFact, DerivedFactRecord, OriginKind, TEMPORAL_RULES_VERSION,
+    derived_fact_id, DerivationStep, DerivedFact, DerivedFactRecord, OriginKind,
+    TEMPORAL_RULES_VERSION,
 };
-use medulla_types::contract::{
-    BoundedVec, Digest256, EngineErrorCode, OpaqueId, RecordBytes, ResourceId, SchemaId,
-    ServerErrorCode,
-};
-
-/// Schema id of the persisted derived-fact record.
-pub const DERIVED_FACT_SCHEMA: &str = "derived-fact.v1";
+use medulla_types::contract::{Digest256, EngineErrorCode, ServerErrorCode};
 
 /// Why a derivation or its write was refused. A refusal never changes the graph.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -150,23 +140,6 @@ pub struct DeriveContext {
     pub may_write_derived: bool,
     /// Graph generation the premises were read at.
     pub graph_generation: u64,
-}
-
-/// One derivation step of the served trace.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DerivationStep {
-    /// Event-time order position (0-based) of the step.
-    pub order: usize,
-    /// Fixpoint round that produced the fact (chains have a higher round).
-    pub round: usize,
-    /// Id of the derived fact.
-    pub fact_id: String,
-    /// Premises joined, in body order.
-    pub premise_ids: Vec<String>,
-    /// Inclusive start of the derived interval.
-    pub valid_from: i64,
-    /// Exclusive end of the derived interval.
-    pub valid_to: i64,
 }
 
 /// The result of one derivation: the facts to persist and the trace.
@@ -378,84 +351,6 @@ pub fn derive(
     })
 }
 
-/// One derived record to persist. `prior_digest` is the digest of the revision
-/// being superseded or retracted (`None` for a first revision).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct DerivedWrite {
-    /// The revision to write (a retraction is a record with `tombstone` set).
-    pub record: DerivedFactRecord,
-    /// Digest of the stored prior revision, when this supersedes one.
-    pub prior_digest: Option<Digest256>,
-}
-
-/// Canonical bytes of one record revision (named JSON, fields in declaration order).
-pub fn record_bytes(record: &DerivedFactRecord) -> Result<RecordBytes, String> {
-    let bytes = serde_json::to_vec(record).map_err(|error| error.to_string())?;
-    RecordBytes::new(bytes)
-}
-
-/// Build the `ApplyMutation` request that persists `writes` under `scope`.
-/// A first revision requires the record to be absent; an update or retraction
-/// requires the stored prior revision's digest. Returns `None` for no writes.
-pub fn derive_facts_mutation(
-    mutation_id: OpaqueId,
-    scope: AuthorityScope,
-    writes: &[DerivedWrite],
-) -> Result<Option<MutationPayload>, DeriveRefusal> {
-    if writes.is_empty() {
-        return Ok(None);
-    }
-    let invalid = |error: String| DeriveRefusal::Invalid(error);
-    let tenant = scope
-        .tenant
-        .clone()
-        .ok_or_else(|| invalid("derived-fact mutation requires a tenant scope".into()))?;
-    let scope_digest = scope.digest().map_err(invalid)?;
-    let target = |fact_id: &str| -> Result<RecordTarget, DeriveRefusal> {
-        Ok(RecordTarget {
-            tenant: tenant.clone(),
-            scope_digest,
-            domain: MutationDomain::new("graph").map_err(invalid)?,
-            schema_id: SchemaId::new(DERIVED_FACT_SCHEMA).map_err(invalid)?,
-            record_id: ResourceId::new(fact_id).map_err(invalid)?,
-        })
-    };
-    let mut preconditions = Vec::with_capacity(writes.len());
-    let mut effects = Vec::with_capacity(writes.len());
-    for (ordinal, write) in writes.iter().enumerate() {
-        let record_target = target(&write.record.fact.fact_id)?;
-        let payload = record_bytes(&write.record).map_err(invalid)?;
-        preconditions.push(match write.prior_digest {
-            None => MutationPrecondition::RecordAbsent {
-                target: record_target.clone(),
-            },
-            Some(expected_digest) => MutationPrecondition::RecordDigestEquals {
-                target: record_target.clone(),
-                expected_digest,
-            },
-        });
-        effects.push(MutationEffect {
-            ordinal: u32::try_from(ordinal).map_err(|e| invalid(e.to_string()))?,
-            target: record_target,
-            mutation: RecordMutation::Put {
-                payload_digest: payload.digest().map_err(invalid)?,
-                payload,
-            },
-        });
-    }
-    let payload = MutationPayload::new(
-        mutation_id,
-        scope,
-        BoundedVec::new(preconditions).map_err(invalid)?,
-        BoundedVec::new(effects).map_err(invalid)?,
-        BoundedVec::new(vec![]).map_err(invalid)?,
-        BoundedVec::new(vec![]).map_err(invalid)?,
-        RequestedMutationResult::new("receipt_only").map_err(invalid)?,
-    )
-    .map_err(invalid)?;
-    Ok(Some(payload))
-}
-
 /// The retraction of `record`: the next revision as a tombstone.
 pub fn retraction(record: &DerivedFactRecord) -> DerivedFactRecord {
     DerivedFactRecord {
@@ -468,8 +363,6 @@ pub fn retraction(record: &DerivedFactRecord) -> DerivedFactRecord {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use medulla_identity_types::authority::ScopeKind;
-    use medulla_types::contract::{TenantId, MAX_SCOPE_COMPONENTS};
 
     const RULE: &str = "RULE temporal-rules-v1 colocated <- present & assigned";
 
@@ -491,19 +384,6 @@ mod tests {
                 kind,
                 reference: format!("ref:{id}"),
             }),
-        }
-    }
-
-    fn scope() -> AuthorityScope {
-        AuthorityScope {
-            kind: ScopeKind::new("graph").unwrap(),
-            scope_id: ResourceId::new("graph:tenant:a/g").unwrap(),
-            tenant: Some(TenantId::new("tenant:a").unwrap()),
-            parent_scope_ids: BoundedVec::<ResourceId, MAX_SCOPE_COMPONENTS>::new(vec![
-                ResourceId::new("tenant:a").unwrap(),
-            ])
-            .unwrap(),
-            graph_incarnation: None,
         }
     }
 
@@ -631,7 +511,7 @@ mod tests {
     }
 
     #[test]
-    fn mutation_puts_each_fact_and_retraction_bumps_revision() {
+    fn retraction_bumps_revision_and_tombstones() {
         let rule = TemporalRule::parse(RULE).unwrap();
         let out = derive(
             &rule,
@@ -642,35 +522,8 @@ mod tests {
             context(),
         )
         .unwrap();
-        assert!(
-            derive_facts_mutation(OpaqueId::new("m:0").unwrap(), scope(), &[])
-                .unwrap()
-                .is_none()
-        );
-        let first = DerivedWrite {
-            record: out.facts[0].clone(),
-            prior_digest: None,
-        };
-        let payload = derive_facts_mutation(
-            OpaqueId::new("m:1").unwrap(),
-            scope(),
-            std::slice::from_ref(&first),
-        )
-        .unwrap()
-        .unwrap();
-        payload.canonical_payload_digest().unwrap();
-        let tomb = retraction(&first.record);
+        let tomb = retraction(&out.facts[0]);
         assert_eq!((tomb.revision, tomb.tombstone), (2, true));
-        let stored = record_bytes(&first.record).unwrap().digest().unwrap();
-        derive_facts_mutation(
-            OpaqueId::new("m:2").unwrap(),
-            scope(),
-            &[DerivedWrite {
-                record: tomb,
-                prior_digest: Some(stored),
-            }],
-        )
-        .unwrap()
-        .unwrap();
+        assert_eq!(tomb.fact, out.facts[0].fact);
     }
 }

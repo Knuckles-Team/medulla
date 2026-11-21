@@ -20,6 +20,63 @@ class DatalogReasoningResult(BaseModel):
     schema_digests: list[str]
 
 
+class OriginKind(str, Enum):
+    """Where a temporal premise's authority comes from (MEDULLA-FEDERATED-QUERY-R006.1)."""
+
+    SENTENCE = "sentence"
+    AXIOM = "axiom"
+
+
+class DerivedFact(BaseModel):
+    """Origin record of one temporal rule-derived fact."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    fact_id: str
+    rule_digest: Digest256
+    premise_ids: list[str]
+    origin_kind: OriginKind
+    origin_ref: str
+    graph_generation: Annotated[int, Field(ge=0)]
+
+
+class DerivedFactRecord(BaseModel):
+    """One persisted revision of a derived fact over `[valid_from, valid_to)`."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    fact: DerivedFact
+    valid_from: int
+    valid_to: int
+    revision: Annotated[int, Field(ge=0)]
+    tombstone: bool
+
+
+class DerivationStep(BaseModel):
+    """One step of the `RunTemporalRules` derivation trace."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    order: Annotated[int, Field(ge=0)]
+    round: Annotated[int, Field(ge=0)]
+    fact_id: str
+    premise_ids: list[str]
+    valid_from: int
+    valid_to: int
+
+
+class RunTemporalRulesResult(BaseModel):
+    """Reply of the served `RunTemporalRules` write."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    rule_digest: Digest256
+    graph_generation: Annotated[int, Field(ge=0)]
+    committed_version: Annotated[int, Field(ge=0)]
+    facts: list[DerivedFactRecord]
+    trace: list[DerivationStep]
+
+
 class OntologyClassView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -291,6 +348,9 @@ ShaclValidationResult.model_rebuild()
 
 __all__ = [
     "DatalogReasoningResult",
+    "DerivationStep",
+    "DerivedFact",
+    "DerivedFactRecord",
     "ExternalOntologyCoverage",
     "ExternalTerm",
     "ExternalTermKind",
@@ -305,6 +365,7 @@ __all__ = [
     "OntologyExternalCoverageView",
     "OntologyPropertyView",
     "OntologyUnmappedClassView",
+    "OriginKind",
     "OwlExplainResult",
     "OwlPropertyFact",
     "OwlPropertyFactPremisesItem",
@@ -313,6 +374,7 @@ __all__ = [
     "OwlReasonResultInstancesItem",
     "OwlReasonResultSubclassesItem",
     "ProofNodeWire",
+    "RunTemporalRulesResult",
     "ShaclSeverity",
     "ShaclValidationReport",
     "ShaclValidationResult",

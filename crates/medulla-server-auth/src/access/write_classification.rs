@@ -439,6 +439,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ApplyLedger { .. }
                 | Method::CompactNodesByType { .. }
                 | Method::RunDatalogReasoning { .. }
+                | Method::RunTemporalRules { .. }
                 | Method::ApplyChangeEnvelope { .. }
                 | Method::ApplyChangeEnvelopes { .. }
                 | Method::ApplyChangeEnvelopeDraft { .. }

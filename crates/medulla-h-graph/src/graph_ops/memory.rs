@@ -241,6 +241,11 @@ pub(super) async fn try_handle_lifecycle_serialization(
                 "RunDatalogReasoning is mutation::GATEWAY_ROUTED; dispatch_graph_op \
                  must route it through try_handle_gateway before it ever reaches this terminal handler"
             ),
+            #[cfg(feature = "reasoning")]
+            Method::RunTemporalRules { .. } => unreachable!(
+                "RunTemporalRules is mutation::GATEWAY_ROUTED; dispatch_graph_op \
+                 must route it through try_handle_gateway before it ever reaches this terminal handler"
+            ),
         other => return ControlFlow::Continue(other),
     })
 }

@@ -227,7 +227,7 @@ fn mutating_served_modality(
 
 /// Reserved-marker CDC event id for the "durable but no single node/edge row" methods
 /// (W1c): `ApplyMutation`, `ApplyMultisigMutation`, `RegisterServer`, `IcvConfigure`
-/// (shacl), `RunDatalogReasoning` (reasoning), `ClearLedger`/`ApplyLedger`, and
+/// (shacl), `RunDatalogReasoning` and `RunTemporalRules` (reasoning), `ClearLedger`/`ApplyLedger`, and
 /// `CompactNodesByType`. Falls through to [`x9_marker_event_id`] for the schema-source
 /// family (kept as a separate function rather than a further arm here, so growing
 /// that family doesn't show as a regression on this one). `None` for everything else
@@ -244,6 +244,8 @@ fn marker_event_id(method: &Method) -> Option<&'static str> {
         Method::IcvConfigure { .. } => Some("__icv_configure"),
         #[cfg(feature = "reasoning")]
         Method::RunDatalogReasoning { .. } => Some("__run_datalog_reasoning"),
+        #[cfg(feature = "reasoning")]
+        Method::RunTemporalRules { .. } => Some("__run_temporal_rules"),
         Method::ClearLedger | Method::ApplyLedger { .. } => Some("__ledger"),
         Method::CompactNodesByType { .. } => Some("__compact_nodes_by_type"),
         _ => source_ingestion_marker_event_id(method)

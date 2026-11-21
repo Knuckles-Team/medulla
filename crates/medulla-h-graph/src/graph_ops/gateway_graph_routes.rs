@@ -123,7 +123,10 @@ fn is_policy(method: &Method) -> bool {
         return true;
     }
     #[cfg(feature = "reasoning")]
-    if matches!(method, Method::RunDatalogReasoning { .. }) {
+    if matches!(
+        method,
+        Method::RunDatalogReasoning { .. } | Method::RunTemporalRules { .. }
+    ) {
         return true;
     }
     false
@@ -897,6 +900,26 @@ async fn try_handle_reasoning_policy(
             };
             commit_gateway(ctx, plan, method, move |core| {
                 apply_run_datalog_reasoning(core, input)
+            })
+            .await
+        }
+        // MEDULLA-FEDERATED-QUERY-R006.1: the derived-fact write needs graph write
+        // access on the request graph; the check runs before the commit so a
+        // refused caller changes nothing.
+        #[cfg(feature = "reasoning")]
+        Method::RunTemporalRules { text } => {
+            let text = text.clone();
+            let may_write_derived = check_graph_access(
+                ctx.isolation,
+                ctx.caller,
+                ctx.graph_name,
+                ctx.graph_type,
+                ctx.owner,
+                AccessLevel::Write,
+            )
+            .is_ok();
+            commit_gateway(ctx, plan, method, move |core| {
+                apply_run_temporal_rules(core, &text, may_write_derived)
             })
             .await
         }

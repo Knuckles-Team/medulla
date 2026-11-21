@@ -112,6 +112,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "RenewWorkItemLease",
     "ReserveWorkItemResources",
     "RunDatalogReasoning",
+    "RunTemporalRules",
     "Rollback",
     "SetPose",
     "SqlSourceBatch",
@@ -455,6 +456,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // against the request graph, the same lowering shape as `FleetCatalog`.
     "PolicyEvolution",
     "RunDatalogReasoning",
+    "RunTemporalRules",
     // RF-ADR-009: SourceIngest prepares one governed ChangeEnvelope and calls
     // the existing ApplyChangeEnvelope authority. It owns no parallel graph
     // applier or native command; this inventory records that adapter lowering.
@@ -729,6 +731,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "RenewWorkItemLease",
     "ReserveWorkItemResources",
     "RunDatalogReasoning",
+    "RunTemporalRules",
     "SourceIngest",
     "EnrichDocument",
     "SemanticEnrich",
@@ -861,6 +864,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "RemoveEdge",
     "RemoveNode",
     "RunDatalogReasoning",
+    "RunTemporalRules",
     "SourceIngest",
     "EnrichDocument",
     "SemanticEnrich",

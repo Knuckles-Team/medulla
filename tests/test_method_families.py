@@ -237,6 +237,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "ApplyLedger",
         "CompactNodesByType",
         "RunDatalogReasoning",
+        "RunTemporalRules",
         "ApplyChangeEnvelope",
         "ApplyChangeEnvelopes",
         # Boundary-compiled into ApplyChangeEnvelope(s); added after the base.

@@ -93,6 +93,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "Reconcile",
     "ApplyMutation",
     "RunDatalogReasoning",
+    // MEDULLA-FEDERATED-QUERY-R006.1: temporal rule-derived DerivedFact nodes.
+    "RunTemporalRules",
     // MEDULLA-FEDERATED-QUERY-R700.3: argument map upsert; one atomic batch.
     "ArgumentMapPut",
     // `IcvConfigure` is UNCONDITIONAL in the `Method` enum but its handler (and
@@ -310,6 +312,8 @@ fn graph_control_method_name(m: &Method) -> Option<&'static str> {
         Method::ApplyMutation { .. } => Some("ApplyMutation"),
         #[cfg(feature = "reasoning")]
         Method::RunDatalogReasoning { .. } => Some("RunDatalogReasoning"),
+        #[cfg(feature = "reasoning")]
+        Method::RunTemporalRules { .. } => Some("RunTemporalRules"),
         #[cfg(feature = "shacl")]
         Method::IcvConfigure { .. } => Some("IcvConfigure"),
         _ => None,

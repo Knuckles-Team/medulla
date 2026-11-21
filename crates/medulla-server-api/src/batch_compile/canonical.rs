@@ -420,6 +420,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinishDevelopmentLane { .. }
         | Method::LeaveChannel { .. }
         | Method::RunDatalogReasoning { .. }
+        | Method::RunTemporalRules { .. }
         | Method::GraphColoring
         | Method::FinanceLogitQuotes { .. }
         | Method::FinanceOptimizePortfolio { .. }

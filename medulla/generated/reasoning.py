@@ -27,8 +27,13 @@ from .rdf_report import (
     OntologyInspection,
     OwlExplainResult,
     OwlReasonResult,
+    RunTemporalRulesResult,
     ShaclValidationReport,
 )
+from .rdf_report import DerivationStep as DerivationStep
+from .rdf_report import DerivedFact as DerivedFact
+from .rdf_report import DerivedFactRecord as DerivedFactRecord
+from .rdf_report import OriginKind as OriginKind
 from .rdf_report import OwlPropertyFact as OwlPropertyFact
 from .rdf_report import ProofNodeWire as ProofNodeWire
 from .rdf_report import ShaclSeverity as ShaclSeverity
@@ -38,6 +43,7 @@ if TYPE_CHECKING:
     from . import models as _models
 
     RunDatalogReasoningRequest = _models.MethodRunDatalogReasoningParams
+    RunTemporalRulesRequest = _models.MethodRunTemporalRulesParams
     SparqlRequest = _models.MethodSparqlParams
     SparqlVirtualRequest = _models.MethodSparqlVirtualParams
     OwlReasonDistributedRequest = _models.MethodOwlReasonDistributedParams
@@ -86,6 +92,51 @@ async def send_run_datalog_reasoning(
         idempotency_key=idempotency_key,
     )
     return DatalogReasoningResult.model_validate(payload)
+
+
+async def send_run_temporal_rules(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> RunTemporalRulesResult:
+    """Send one engine-contract request.
+
+    Method:
+        RunTemporalRules
+    Authorization:
+        reasoning:write
+    Durability:
+        GraphRedb
+    Replay:
+        OperationIdentity
+    Result:
+        ResultPayload::Json
+    Result schema:
+        contract/schemas/result.reasoning.json
+        #/methods/RunTemporalRules
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - CONFLICT
+        - IDEMPOTENCY_CONFLICT
+        - REDIRECTED
+        - READ_ONLY
+        - RULE_VERSION_UNSUPPORTED
+        - DERIVED_ORIGIN_MISSING
+        - DERIVED_WINDOW_CONFLICT
+        - DERIVED_WRITE_UNAUTHORIZED
+        - DERIVED_BOUND_MALFORMED
+    """
+    models().MethodRunTemporalRulesParams.model_validate(params or {})
+    payload = await client._send(
+        "RunTemporalRules",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return RunTemporalRulesResult.model_validate(payload)
 
 
 class GetRdfRequest(BaseModel):
@@ -610,6 +661,7 @@ async def send_graph_schema_classes(
 _REQUEST_METHODS = frozenset(
     {
         "RunDatalogReasoning",
+        "RunTemporalRules",
         "Sparql",
         "SparqlVirtual",
         "OwlReasonDistributed",

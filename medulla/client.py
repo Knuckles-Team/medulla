@@ -8101,6 +8101,21 @@ class ReasoningClient:
             )
         ).model_dump(mode="json")
 
+    async def run_temporal_rules(self, text: str) -> dict[str, Any]:
+        """Run one ``temporal-rules-v1`` rule over the graph's live bitemporal
+        edges (MEDULLA-FEDERATED-QUERY-R006.1).
+
+        ``text`` is ``RULE temporal-rules-v1 <head> <- <body> & <body> ...``.
+        Each derived fact is persisted as a ``DerivedFact`` node with its origin
+        chain. Returns ``{"rule_digest", "graph_generation",
+        "committed_version", "facts", "trace"}``.
+        """
+        return (
+            await _gen.reasoning.send_run_temporal_rules(
+                self._client, {"text": text}
+            )
+        ).model_dump(mode="json")
+
 
 class LedgerClient:
     """CONCEPT:AU-KG.query.object-graph-mapper — Ledger Namespace"""
@@ -12348,6 +12363,7 @@ _HEAVY_RPC_METHODS = frozenset(
         "ToMsgpack",
         "Reconcile",
         "RunDatalogReasoning",
+        "RunTemporalRules",
         "GetSubgraph",
         "GetNodes",
         "GetEdges",

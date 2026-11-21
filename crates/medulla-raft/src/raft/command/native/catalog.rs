@@ -28,6 +28,8 @@ macro_rules! native_method_catalog {
             record GraphQl => GraphState,
             #[cfg(feature = "reasoning")]
             record RunDatalogReasoning => GraphState,
+            #[cfg(feature = "reasoning")]
+            record RunTemporalRules => GraphState,
             record IcvConfigure => GraphState,
             record GraphSchema => GraphState,
             #[cfg(feature = "security")]

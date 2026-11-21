@@ -11542,6 +11542,19 @@ class MethodRunDatalogReasoning(BaseModel):
     params: MethodRunDatalogReasoningParams
 
 
+class MethodRunTemporalRulesParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    text: str
+
+
+class MethodRunTemporalRules(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["RunTemporalRules"]
+    params: MethodRunTemporalRulesParams
+
+
 class MethodApplyChangeEnvelope(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -14812,6 +14825,7 @@ Method = Annotated[
         MethodDiffAgainst,
         MethodCompactNodesByType,
         MethodRunDatalogReasoning,
+        MethodRunTemporalRules,
         MethodApplyChangeEnvelope,
         MethodApplyChangeEnvelopes,
         MethodApplyChangeEnvelopeDraft,
@@ -37012,6 +37026,8 @@ __all__ = [
     "MethodRunDatalogReasoningParamsSubpropertyRelationsItem",
     "MethodRunRules",
     "MethodRunRulesParams",
+    "MethodRunTemporalRules",
+    "MethodRunTemporalRulesParams",
     "MethodRunUdf",
     "MethodRunUdfParams",
     "MethodSceneChildren",

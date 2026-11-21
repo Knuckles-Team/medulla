@@ -391,6 +391,7 @@ METHOD_IDS = frozenset(
         "SelectWebPages",
         "Decide",
         "RunDatalogReasoning",
+        "RunTemporalRules",
         "GetRdf",
         "Sparql",
         "SparqlVirtual",

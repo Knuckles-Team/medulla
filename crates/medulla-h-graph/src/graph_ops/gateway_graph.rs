@@ -246,6 +246,223 @@ fn apply_run_datalog_reasoning(
     )
 }
 
+/// `RunTemporalRules` (MEDULLA-FEDERATED-QUERY-R006.1): temporal forward chaining
+/// over the live bitemporal edges of the staged image. Every refusal returns
+/// before any write, so a refused run commits nothing and the graph version
+/// stays where it was. Each derived record becomes one `DerivedFact` node;
+/// a stored fact the run derives again is left unchanged, and a stored fact of
+/// the same rule the run no longer derives gets its retraction revision.
+#[cfg(all(feature = "reasoning", feature = "query"))]
+fn apply_run_temporal_rules(
+    core: &GraphCore,
+    text: &str,
+    may_write_derived: bool,
+) -> Result<ResultPayload, String> {
+    use medulla_plan::rules::temporal::{derive, retraction, DeriveContext, TemporalRule};
+    use medulla_query_types::derived_fact::RunTemporalRulesResult;
+
+    let refusal = |refusal: medulla_plan::rules::temporal::DeriveRefusal| match refusal {
+        medulla_plan::rules::temporal::DeriveRefusal::Coded(code, detail) => {
+            format!("{}: {detail}", code.as_str())
+        }
+        medulla_plan::rules::temporal::DeriveRefusal::Invalid(detail) => format!(
+            "{}: {detail}",
+            medulla_types::contract::EngineErrorCode::InvalidArgument.as_str()
+        ),
+    };
+    let rule = TemporalRule::parse(text).map_err(refusal)?;
+    let graph_generation = core.version();
+    let premises = temporal_premises(core, &rule.body)?;
+    let derivation = derive(
+        &rule,
+        &premises,
+        DeriveContext {
+            may_write_derived,
+            graph_generation,
+        },
+    )
+    .map_err(refusal)?;
+    let rule_digest = rule.digest().map_err(|error| {
+        format!(
+            "{}: {error}",
+            medulla_types::contract::EngineErrorCode::InvalidArgument.as_str()
+        )
+    })?;
+
+    let stored: Vec<medulla_query_types::derived_fact::DerivedFactRecord> = core
+        .get_nodes_by_label(DERIVED_FACT_LABEL, 0)
+        .into_iter()
+        .filter_map(|(_, blob)| stored_derived_fact(&blob))
+        .filter(|record| record.fact.rule_digest == rule_digest)
+        .collect();
+    let derived_ids: std::collections::BTreeSet<&str> = derivation
+        .facts
+        .iter()
+        .map(|record| record.fact.fact_id.as_str())
+        .collect();
+    for record in &derivation.facts {
+        let node_id = derived_fact_node_id(&record.fact.fact_id);
+        if core.has_node(&node_id) {
+            continue;
+        }
+        core.add_node(node_id, derived_fact_props(record)?);
+    }
+    for record in &stored {
+        if record.tombstone || derived_ids.contains(record.fact.fact_id.as_str()) {
+            continue;
+        }
+        let retracted = retraction(record);
+        core.add_node(
+            derived_fact_node_id(&retracted.fact.fact_id),
+            derived_fact_props(&retracted)?,
+        );
+    }
+    // The staged MutationBatch commits at the next graph version.
+    let committed_version = graph_generation
+        .checked_add(1)
+        .ok_or_else(|| "RunTemporalRules: graph version overflow".to_string())?;
+    ResultPayload::of::<medulla_protocol_types::result_contract::reasoning::RunTemporalRules>(
+        RunTemporalRulesResult {
+            rule_digest,
+            graph_generation,
+            committed_version,
+            facts: derivation.facts,
+            trace: derivation.trace,
+        },
+    )
+}
+
+/// A build without the query planner has no temporal derivation.
+#[cfg(all(feature = "reasoning", not(feature = "query")))]
+fn apply_run_temporal_rules(
+    _core: &GraphCore,
+    _text: &str,
+    _may_write_derived: bool,
+) -> Result<ResultPayload, String> {
+    Err("RunTemporalRules requires the `query` feature".to_string())
+}
+
+/// Node label of a stored temporal rule-derived fact.
+#[cfg(all(feature = "reasoning", feature = "query"))]
+const DERIVED_FACT_LABEL: &str = "DerivedFact";
+
+#[cfg(all(feature = "reasoning", feature = "query"))]
+fn derived_fact_node_id(fact_id: &str) -> String {
+    format!("derived:{fact_id}")
+}
+
+/// Every record field as a node property, beside the `DerivedFact` label.
+#[cfg(all(feature = "reasoning", feature = "query"))]
+fn derived_fact_props(
+    record: &medulla_query_types::derived_fact::DerivedFactRecord,
+) -> Result<Vec<u8>, String> {
+    let fact = &record.fact;
+    let props = serde_json::json!({
+        "type": DERIVED_FACT_LABEL,
+        "fact_id": fact.fact_id,
+        "rule_digest": fact.rule_digest.to_hex(),
+        "premise_ids": fact.premise_ids,
+        "origin_kind": fact.origin_kind.as_str(),
+        "origin_ref": fact.origin_ref,
+        "graph_generation": fact.graph_generation,
+        "valid_from": record.valid_from,
+        "valid_to": record.valid_to,
+        "revision": record.revision,
+        "tombstone": record.tombstone,
+    });
+    rmp_serde::to_vec_named(&props)
+        .map_err(|error| format!("RunTemporalRules: property encoding failed: {error}"))
+}
+
+/// Read a stored `DerivedFact` node back as its record.
+#[cfg(all(feature = "reasoning", feature = "query"))]
+fn stored_derived_fact(blob: &[u8]) -> Option<medulla_query_types::derived_fact::DerivedFactRecord> {
+    let props = medulla_types::msgpack::decode_property_object(blob).ok()?;
+    let value = serde_json::json!({
+        "fact": {
+            "fact_id": props.get("fact_id")?,
+            "rule_digest": props.get("rule_digest")?,
+            "premise_ids": props.get("premise_ids")?,
+            "origin_kind": props.get("origin_kind")?,
+            "origin_ref": props.get("origin_ref")?,
+            "graph_generation": props.get("graph_generation")?,
+        },
+        "valid_from": props.get("valid_from")?,
+        "valid_to": props.get("valid_to")?,
+        "revision": props.get("revision")?,
+        "tombstone": props.get("tombstone")?,
+    });
+    serde_json::from_value(value).ok()
+}
+
+/// The premises of one run: every live edge whose `relationship` is a body
+/// predicate. An edge with `tx_to` set is closed history and not live. The
+/// premise id is the edge id `<source>-><target>`; the subject is the source
+/// node; `valid_to` is `valid_until`, or `i64::MAX` when it is absent.
+#[cfg(all(feature = "reasoning", feature = "query"))]
+fn temporal_premises(
+    core: &GraphCore,
+    body: &[String],
+) -> Result<Vec<medulla_plan::rules::temporal::Premise>, String> {
+    use medulla_plan::rules::temporal::{Premise, PremiseOrigin};
+    use medulla_query_types::derived_fact::OriginKind;
+
+    let malformed = |source: &str, target: &str, field: &str| {
+        format!(
+            "{}: edge `{source}->{target}` has no integer `{field}`",
+            medulla_types::contract::ServerErrorCode::DerivedBoundMalformed.as_str()
+        )
+    };
+    let mut premises = Vec::new();
+    for (source, target, blob) in core.get_edges() {
+        let Ok(props) = medulla_types::msgpack::decode_property_object(&blob) else {
+            continue;
+        };
+        let Some(relationship) = props.get("relationship").and_then(|v| v.as_str()) else {
+            continue;
+        };
+        if !body.iter().any(|atom| atom == relationship) {
+            continue;
+        }
+        if props.get("tx_to").is_some_and(|v| !v.is_null()) {
+            continue;
+        }
+        let valid_from = props
+            .get("valid_from")
+            .and_then(|v| v.as_i64())
+            .ok_or_else(|| malformed(&source, &target, "valid_from"))?;
+        let valid_to = match props.get("valid_until") {
+            None => i64::MAX,
+            Some(value) if value.is_null() => i64::MAX,
+            Some(value) => value
+                .as_i64()
+                .ok_or_else(|| malformed(&source, &target, "valid_until"))?,
+        };
+        let kind = match props.get("origin_kind").and_then(|v| v.as_str()) {
+            Some("sentence") => Some(OriginKind::Sentence),
+            Some("axiom") => Some(OriginKind::Axiom),
+            _ => None,
+        };
+        let reference = props.get("origin_ref").and_then(|v| v.as_str());
+        let origin = match (kind, reference) {
+            (Some(kind), Some(reference)) => Some(PremiseOrigin {
+                kind,
+                reference: reference.to_string(),
+            }),
+            _ => None,
+        };
+        premises.push(Premise {
+            id: format!("{source}->{target}"),
+            predicate: relationship.to_string(),
+            subject: source.clone(),
+            valid_from,
+            valid_to,
+            origin,
+        });
+    }
+    Ok(premises)
+}
+
 #[cfg(all(feature = "reasoning", feature = "owl", feature = "shacl"))]
 fn resolve_datalog_input(
     core: &GraphCore,
