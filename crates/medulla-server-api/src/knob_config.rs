@@ -307,6 +307,8 @@ knobs! {
     retrieval_cost_limit: u64 = "retrieval.cost_limit", U64(1_000_000), [1, 1_000_000_000_000], "micro-units", Tunable;
     /// Retrieval round: score change below which quality has saturated.
     retrieval_saturation_epsilon: f64 = "retrieval.saturation_epsilon", F64(0.01), [0.0, 0.2], "score", Tunable;
+    /// Evidence forest: most similarity neighbours one memory contributes to the candidate walk (MEDULLA-FEDERATED-QUERY-R736.2).
+    retrieval_forest_similar_k: u64 = "retrieval.forest.similar_k", U64(8), [1, 64], "neighbours", Tunable;
     /// Retrieval round: most chunks the reranker scores for selection.
     retrieval_rerank_pool: u64 = "retrieval.rerank_pool", U64(50), [1, 256], "chunks", Tunable;
     /// Retrieval round: most nDCG at 10 an adaptive selection policy may lose to its baseline.

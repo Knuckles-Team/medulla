@@ -74,6 +74,8 @@ pub struct RoundKnobs {
     pub transfer_min_threshold: f64,
     /// `knob retrieval.arbitration_margin`, confidence. Two supported candidates need a gap above it.
     pub arbitration_margin: f64,
+    /// `knob retrieval.forest.similar_k`, neighbours (MEDULLA-FEDERATED-QUERY-R736.2).
+    pub forest_similar_k: usize,
 }
 
 impl Default for RoundKnobs {
@@ -98,6 +100,7 @@ impl Default for RoundKnobs {
             feedback_terms: 32,
             transfer_min_threshold: 0.6,
             arbitration_margin: 0.10,
+            forest_similar_k: 8,
         }
     }
 }
@@ -1037,6 +1040,7 @@ mod tests {
         feedback_terms: 32,
         transfer_min_threshold: 0.6,
         arbitration_margin: 0.10,
+        forest_similar_k: 8,
     };
 
     fn blob(label: &str) -> Vec<u8> {

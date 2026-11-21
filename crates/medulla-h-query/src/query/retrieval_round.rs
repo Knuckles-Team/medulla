@@ -41,6 +41,7 @@ fn round_knobs() -> RoundKnobs {
         feedback_terms: u32::try_from(knobs.retrieval_feedback_terms).unwrap_or(u32::MAX),
         transfer_min_threshold: knobs.retrieval_transfer_min_threshold,
         arbitration_margin: knobs.retrieval_arbitration_margin,
+        forest_similar_k: size(knobs.retrieval_forest_similar_k),
     }
 }
 

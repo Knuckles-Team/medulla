@@ -40,6 +40,28 @@ pub fn edge_weight(core: &GraphCore, a: &str, b: &str) -> f64 {
     best.unwrap_or(1.0)
 }
 
+/// [`edge_weight`] over a projected view: the heaviest finite `weight` over the view's edge
+/// properties in either direction, `1.0` when none carries one
+/// (MEDULLA-FEDERATED-QUERY-R736.2).
+pub fn edge_weight_in_view(view: &super::GraphView, a: &str, b: &str) -> f64 {
+    let mut best: Option<f64> = None;
+    for (src, tgt) in [(a, b), (b, a)] {
+        let Some(blobs) = view.edge_properties.get(&(src.to_string(), tgt.to_string())) else {
+            continue;
+        };
+        for blob in blobs {
+            let w = medulla_types::msgpack::decode_property_object(blob)
+                .unwrap_or_default()
+                .get("weight")
+                .and_then(serde_json::Value::as_f64);
+            if let Some(w) = w.filter(|w| w.is_finite()) {
+                best = Some(best.map_or(w, |b| b.max(w)));
+            }
+        }
+    }
+    best.unwrap_or(1.0)
+}
+
 fn better(candidate: &ExpandedHit, held: &ExpandedHit) -> bool {
     candidate
         .score
