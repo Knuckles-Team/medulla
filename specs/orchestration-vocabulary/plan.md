@@ -177,6 +177,7 @@ Organization constitution Article XXXI requires a closed set of states, one tran
 Withdrawn rows, each with its reason:
 
 - `MEDULLA-ORCH-VOCAB-R803`: the five run-trace queries are already served by `Method::Uql` through `HARNESS_QUERIES` (R010.1 to R010.5); a second method is a parallel read path with no paging or write of its own, against plan principle 5.
+- `MEDULLA-ORCH-VOCAB-R815.3`: `ChildInputState` has no production writer of its `Apply` event; the record is built once in `Queued` and no served method moves it, so no machine is needed.
 - `MEDULLA-ORCH-VOCAB-R815.1`: `ActionStatus` is a classification, not a lifecycle; an `ActionRun` is created in its final outcome, `Applied` or `Refused`, and never moves.
 - `MEDULLA-ORCH-VOCAB-R815.7`: `WorkItemDeferStatus` is the outcome classification of one `DeferWorkItem` answer, not a stored lifecycle; the work item lifecycle is `WorkItemMachine` (R812).
 - `MEDULLA-ORCH-VOCAB-R815.8`: `WorkOfferView.stage` is the version stamp of the pricing function (`WORK_OFFER_UTILITY_RATE_STAGE`), not a lifecycle state.
@@ -188,5 +189,4 @@ Resolved rows:
 - `MEDULLA-ORCH-VOCAB-R006.5`: the R003.6 projection is the one writer of template `swarm:` facts; `AgentGraphEdge.kind` marks a loop back; the publish rules refuse a feeds cycle.
 - `MEDULLA-ORCH-VOCAB-R011.7`: the builder returns a `ChangeEnvelopeDraft` of three operations; the engine mints the `MutationBatch`.
 - `MEDULLA-ORCH-VOCAB-R014.3`: the exact triples are in `data-model.md`; the `dmn` core source is registered; each pin moves by a stated delta.
-- `MEDULLA-ORCH-VOCAB-R815.2` to `R815.6` and `R815.9`: each names its initial state, events, edge table, writers and refusal.
-- `MEDULLA-ORCH-VOCAB-R815.3` keeps one open clarification: the served writer of event `Apply`.
+- `MEDULLA-ORCH-VOCAB-R815.2`, `R815.4` to `R815.6` and `R815.9`: each names its initial state, events, edge table, writers and refusal.

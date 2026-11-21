@@ -182,7 +182,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T191 [US9] MEDULLA-ORCH-VOCAB-R811.10 The core names the typed transition refusal as a class
 - [ ] T178 [US9] MEDULLA-ORCH-VOCAB-R815 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T180 [US9] MEDULLA-ORCH-VOCAB-R815.2 AgentLifecycleMachine edge table builds the agent-instance statechart
-- [ ] T181 [US9] MEDULLA-ORCH-VOCAB-R815.3 ChildInputMachine with an engine-owned initial state
 - [ ] T182 [US9] MEDULLA-ORCH-VOCAB-R815.4 GapViewMachine: route merge, transition and settle through GapStatus::apply
 - [ ] T183 [US9] MEDULLA-ORCH-VOCAB-R815.5 IncidentMachine: route the health incident writers through IncidentStatus::apply
 - [ ] T184 [US9] MEDULLA-ORCH-VOCAB-R815.6 IncidentRecordMachine: route IncidentSetStatus through IncidentStatus::apply
