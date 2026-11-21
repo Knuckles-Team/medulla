@@ -284,3 +284,89 @@ def test_tool_call_and_query_provenance_feed_usage_frequency_and_top_queries(
     finally:
         other_tenant.close()
     assert _usage(client, "queries")[_digest(asked)]["values"]["uses"] == 3
+
+
+def _classification(client, graph: str, op: dict) -> dict:
+    import msgpack
+
+    raw = client._send("ClassificationClaim", {"op": op}, graph)
+    return msgpack.unpackb(raw, raw=False) if isinstance(raw, (bytes, bytearray)) else raw
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.9")
+def test_sensitivity_propagates_downstream_as_proposal_and_asset_names_its_policy(
+    catalog_graph,
+):
+    # spec: MEDULLA-TYPED-PACKS-R108.9
+    import msgpack
+
+    admin = catalog_graph
+    graph = admin._client._graph_name
+    steward = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        graph_name=graph,
+        verified_context=request_context(roles=["steward"]),
+    )
+
+    def node(node_id: str, properties: dict) -> None:
+        steward._send(
+            "AddNode",
+            {
+                "node_id": node_id,
+                "properties_msgpack": msgpack.packb(properties, use_bin_type=True),
+            },
+            graph,
+        )
+
+    try:
+        node("marking:pii", {"type": "Marking"})
+        for asset in ("col:r1089.src", "view:r1089.view"):
+            node(asset, {"type": "Column"})
+        steward._send(
+            "AddEdge",
+            {
+                "source_id": "col:r1089.src",
+                "target_id": "view:r1089.view",
+                "properties_msgpack": msgpack.packb(
+                    {"relationship": "cat:lineageTo"}, use_bin_type=True
+                ),
+            },
+            graph,
+        )
+        claim = {
+            "asset": "col:r1089.src",
+            "categories": ["pii"],
+            "provenance": {"kind": "manual"},
+            "state": "proposed",
+            "evidence": [],
+        }
+        _classification(steward, graph, {"op": "propose", "claim": claim})
+        promoted = _classification(
+            steward,
+            graph,
+            {
+                "op": "promote",
+                "claim_id": "classification_claim:col:r1089.src:pii",
+                "evidence": ["review:1"],
+            },
+        )
+        # The derived asset receives a proposal for a steward to promote, not a stamp.
+        derived = promoted["propagated"]
+        assert [r["claim"]["asset"] for r in derived] == ["view:r1089.view"]
+        assert derived[0]["claim"]["state"] == "proposed"
+    finally:
+        steward.close()
+
+    # An asset names its governing policy by IRI; the catalog keeps the link only.
+    asset = "urn:medulla:asset:product:governed"
+    policy = "urn:medulla:policy:orders-mask"
+    admin.rdf.add_triples(
+        turtle=(
+            f"{PREFIX}<{asset}> a cat:Product ; cat:hasOwner <urn:owner:a> ; "
+            f"cat:governedBy <{policy}> .\n"
+        )
+    )
+    rows = admin.rdf.sparql(
+        f"SELECT ?o WHERE {{ <{asset}> <{CATALOG}governedBy> ?o }}"
+    )
+    assert [row["o"].strip("<>") for row in rows] == [policy]

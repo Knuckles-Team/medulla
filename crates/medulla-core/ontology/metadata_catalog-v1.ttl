@@ -387,6 +387,11 @@ cat:DashboardAsset a owl:Class ;
     rdfs:comment "A saved dashboard catalogued as an asset (MEDULLA-TYPED-PACKS-R109.1): its panels, queries, layout and parameters are stored; the data it shows is not. Panels link their data source, query, terms and concepts." ;
     rdfs:subClassOf cat:Asset .
 
+cat:governedBy a owl:ObjectProperty ;
+    rdfs:label "governed by" ;
+    rdfs:comment "Names, by IRI, the access policy that governs an asset (MEDULLA-TYPED-PACKS-R108.9). The catalog stores the link and never the policy body; masking rules are read from the federated query policy and the admission policy name from the arbora admission policy." ;
+    rdfs:domain cat:Asset .
+
 cat:ReportAsset a owl:Class ;
     rdfs:label "Report Asset" ;
     rdfs:comment "A published report catalogued as an asset (MEDULLA-TYPED-PACKS-R108.14). It lists the assets it reads (cat:readsAsset), its owner and its usage; the catalog stores the descriptor and the query text, never the data shown." ;
