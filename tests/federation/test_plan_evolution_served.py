@@ -14,6 +14,9 @@ import time
 import uuid
 
 import pytest
+from conftest import tenant_request_context
+
+from medulla.client import SyncMedullaClient
 
 # The knobs resolve from the environment of the server process, which the session fixture
 # starts from this process's environment: name them at collection time.
@@ -79,48 +82,153 @@ def _fragment(graph, name: str) -> str:
     return next(clause for clause in clauses if clause.startswith("REMOTE "))
 
 
-@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R091.3")
-def test_served_query_records_and_later_query_reads_kept_plan(clean_graph, pg_source):
+def _register_table(graph, pg_source, query: str | None = None) -> tuple[str, str]:
+    """A fresh table of ``ROWS`` rows registered as a named SQL source; ``(table, name)``."""
     table = f"pe_items_{uuid.uuid4().hex[:8]}"
     pg_source.execute(f"CREATE TABLE {table} (id int primary key, name text)")
     pg_source.execute(
         f"INSERT INTO {table} SELECT g, 'item-' || g FROM generate_series(1, {ROWS}) g"
     )
     name = f"pe-{table}"
-    clean_graph.query.register_foreign_source(
+    graph.query.register_foreign_source(
         name,
         {
             "Sql": {
                 "dsn": pg_source.dsn,
-                "query": f"SELECT id::text AS id FROM {table}",
+                "query": query or f"SELECT id::text AS id FROM {table}",
                 "id_field": "id",
             }
         },
     )
+    return table, name
+
+
+def _observe_shape(graph, name: str, joins: int = 7, reads: int = 12) -> None:
+    """Record one source's shape: joins first (bind join), whole reads after (the baseline)."""
+    join = [{"Scan": {"label": "PeDoc"}}, _scan(name, True)]
+    for _ in range(joins):
+        assert len(graph.query.unified(join)) == LOCAL_IDS
+    for _ in range(reads):
+        assert len(graph.query.unified([_scan(name, False)])) > 0
+
+
+def _kept_digest(graph, name: str, seconds: int = 150) -> str:
+    """Wait for the downtime tick to keep a plan for ``name``; its digest, or ``""``."""
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        time.sleep(2)
+        clause = _fragment(graph, name)
+        if "kept_plan=" in clause:
+            return clause.split("kept_plan=", 1)[1].split()[0]
+    return ""
+
+
+def _explain_kept(graph, name: str) -> list[dict[str, object]]:
+    explained = graph.query.uql(f"EXPLAIN MATCH (:PeDoc) |> FOREIGN SCAN '{name}' JOIN")
+    assert explained["kind"] == "explain"
+    return explained.get("kept_plans", [])
+
+
+def _seed_locals(graph) -> None:
     for i in range(1, LOCAL_IDS + 1):
-        clean_graph.nodes.add(str(i), {"type": "PeDoc"})
+        graph.nodes.add(str(i), {"type": "PeDoc"})
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R091.3")
+def test_served_query_records_and_later_query_reads_kept_plan(clean_graph, pg_source):
+    _, name = _register_table(clean_graph, pg_source)
+    _seed_locals(clean_graph)
     _provision_downtime(clean_graph)
 
     # Joins first, while the source is unobserved: the cost model picks the bind join. Whole
     # reads after: the baseline plan is the one a shape runs most often.
-    join = [{"Scan": {"label": "PeDoc"}}, _scan(name, True)]
-    for _ in range(7):
-        rows = clean_graph.query.unified(join)
-        assert len(rows) == LOCAL_IDS
-    for _ in range(12):
-        assert len(clean_graph.query.unified([_scan(name, False)])) == ROWS
+    _observe_shape(clean_graph, name)
 
     # The shape was recorded, so its fragment shows no kept plan yet.
     assert "kept_plan=" not in _fragment(clean_graph, name)
 
     # The downtime tick runs the plan-evolution job, which keeps the bind join (fewer rows
     # fetched, equal results); the next join over the same source reads the kept plan.
-    deadline = time.time() + 150
-    kept = ""
-    while time.time() < deadline:
-        time.sleep(2)
-        clause = _fragment(clean_graph, name)
-        if "kept_plan=" in clause:
-            kept = clause.split("kept_plan=", 1)[1].split()[0]
-            break
+    kept = _kept_digest(clean_graph, name)
     assert len(kept) == 64 and all(c in "0123456789abcdef" for c in kept), kept
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R091.5")
+def test_explain_names_kept_plan_and_receipt(clean_graph, pg_source):
+    table, name = _register_table(clean_graph, pg_source)
+    _seed_locals(clean_graph)
+    _provision_downtime(clean_graph)
+    _observe_shape(clean_graph, name)
+    assert _explain_kept(clean_graph, name) == []
+
+    kept = _kept_digest(clean_graph, name)
+    assert kept, "the plan_evolution job kept no plan"
+    report = _explain_kept(clean_graph, name)[0]
+    assert report["plan_digest"] == kept
+    assert report["receipt_job_id"]
+    assert report["baseline_digest"] and report["baseline_digest"] != kept
+    assert report["replays"] >= int(os.environ["MEDULLA_FEDERATION_MIN_REPLAYS"])
+    for field in ("p50_before_us", "p50_after_us", "bytes_before", "bytes_after"):
+        assert isinstance(report[field], int) and report[field] >= 0
+
+    # The evidence is kept with the plan under the owner: another tenant lists none, even
+    # over a source registered under the same name.
+    other = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context("tenant:plan-evolution-other"),
+    )
+    try:
+        other.query.register_foreign_source(
+            name,
+            {
+                "Sql": {
+                    "dsn": pg_source.dsn,
+                    "query": f"SELECT id::text AS id FROM {table}",
+                    "id_field": "id",
+                }
+            },
+        )
+        assert _explain_kept(other, name) == []
+    finally:
+        other.close()
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R091.6")
+def test_kept_plan_measurably_faster_and_mismatch_reverts(clean_graph, pg_source):
+    _provision_downtime(clean_graph)
+    _seed_locals(clean_graph)
+    # One shape: 50 runs (the bind joins and the whole reads together).
+    _, name = _register_table(clean_graph, pg_source)
+    _observe_shape(clean_graph, name, joins=20, reads=30)
+    # A second shape whose source answers a different set of ids on every read, so the
+    # candidate's replays never equal the baseline's.
+    table = f"pe_items_{uuid.uuid4().hex[:8]}"
+    pg_source.execute(f"CREATE TABLE {table} (id int primary key, name text)")
+    pg_source.execute(
+        f"INSERT INTO {table} SELECT g, 'item-' || g FROM generate_series(1, {ROWS}) g"
+    )
+    unequal = f"pe-unequal-{table}"
+    clean_graph.query.register_foreign_source(
+        unequal,
+        {
+            "Sql": {
+                "dsn": pg_source.dsn,
+                "query": f"SELECT id::text AS id FROM {table} ORDER BY random() LIMIT 10",
+                "id_field": "id",
+            }
+        },
+    )
+    _observe_shape(clean_graph, unequal, joins=20, reads=30)
+
+    # The downtime tick keeps the measurably faster plan; a later query reads it.
+    assert _kept_digest(clean_graph, name), "the plan_evolution job kept no plan"
+    report = _explain_kept(clean_graph, name)[0]
+    assert (
+        report["p50_after_us"] * 10 <= report["p50_before_us"] * 9
+        or report["bytes_after"] * 10 <= report["bytes_before"] * 9
+    ), report
+
+    # The unequal candidate reverted: no kept plan, the baseline stays in force.
+    time.sleep(6)
+    assert "kept_plan=" not in _fragment(clean_graph, unequal)
+    assert _explain_kept(clean_graph, unequal) == []

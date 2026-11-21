@@ -1,0 +1,4 @@
+{
+  "_comment": "MEDULLA-FEDERATED-QUERY-R091.6: committed ceilings, in nanoseconds, for the medulla-federation benches. plan_evolution_record is the p50 cost of recording one fragment observation (20 microseconds).",
+  "plan_evolution_record": 20000
+}

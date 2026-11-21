@@ -64,3 +64,10 @@ medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 name = "spark_submission_id"
 harness = false
 required-features = ["federation"]
+
+# ── Plan-evolution recording overhead (MEDULLA-FEDERATED-QUERY-R091.6) ──────────────
+# p50 of one fragment observation, capped by `benches/thresholds.json`.
+[[bench]]
+name = "plan_evolution"
+harness = false
+required-features = ["federation"]
