@@ -79,3 +79,32 @@ def test_rows_carry_contract_provenance_and_nothing_is_copied(
 
     # The read counted once against the source's catalog asset.
     assert _usage_reads(clean_graph, SOURCE_ID) == before_usage + 1
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R722.6")
+def test_uql_joins_native_fact_to_live_connector_rows_with_zero_copy(
+    clean_graph, tmp_path
+) -> None:
+    """One native ``Note`` joins the connector rows; only its own row survives."""
+    connector = f"ck-mcp_tool-{uuid.uuid4().hex[:8]}"
+    native_id = RECORDING_ITEMS[0]["id"]
+    text = f"LET native = MATCH (:Note); LET live = FOREIGN SCAN '{SOURCE_ID}'; JOIN native, live"
+    # The journey asserts the stored nodes are exactly the native one before and after.
+    answer = _run_journey(
+        "mcp_tool",
+        clean_graph,
+        tmp_path,
+        connector=connector,
+        native_id=native_id,
+        text=text,
+    )
+    rows = answer["rows"]
+    assert [row["id"] for row in rows] == [native_id], answer
+    provenance = rows[0]["provenance"]
+    assert provenance["connector"] == connector, rows[0]
+    assert provenance["contract_iri"] == _contract_iri(connector), rows[0]
+    assert _stored_nodes_of(clean_graph) == [native_id]
+
+
+def _stored_nodes_of(client: Any) -> list[str]:
+    return sorted(client.nodes.ids())

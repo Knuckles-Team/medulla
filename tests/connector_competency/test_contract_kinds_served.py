@@ -144,7 +144,11 @@ async def _send_or_refuse(
 
 
 async def _journey(
-    kind: str, connector: str, fixture: FixtureSource, client: MedullaClient
+    kind: str,
+    connector: str,
+    fixture: FixtureSource,
+    client: MedullaClient,
+    text: str | None = None,
 ) -> dict[str, Any]:
     contract_bytes = _contract_ttl(connector, kind).encode()
     contract_digest = hashlib.sha256(contract_bytes).hexdigest()
@@ -224,7 +228,7 @@ async def _journey(
 
     # The served Uql plans before admission: the server-issued pins are the
     # only digests the correlated foreign read accepts.
-    text = f"FOREIGN SCAN '{SOURCE_ID}'"
+    text = text or f"FOREIGN SCAN '{SOURCE_ID}'"
     prepared = await client.query.uql(text, prepare=True)
     assert prepared["kind"] == "explain", prepared
     plan_digest = prepared["plan_digest"]
@@ -394,8 +398,14 @@ def _run_journey(
     clean_graph: SyncMedullaClient,
     tmp_path: Path,
     connector: str | None = None,
+    native_id: str | None = None,
+    text: str | None = None,
 ) -> dict[str, Any]:
     """Run one kind's journey and return the served answer it read.
+
+    ``native_id`` adds one native ``Note`` node before the journey (the journey then
+    starts from, and must end at, that one stored node); ``text`` replaces the
+    ``FOREIGN SCAN`` statement the journey prepares, opens and runs.
 
     Connector pack heads outlive the per-test graph wipe, so a second journey of
     one kind in the same engine names its own connector (the first import of a
@@ -410,8 +420,13 @@ def _run_journey(
     fixture = FixtureSource(kind, recordings, operations=[OPERATION]).start()
     # The graph holds no row of the source before the journey; the served
     # query must leave the count unchanged (zero stored source rows).
+    if native_id is not None:
+        clean_graph.nodes.add(native_id, {"type": "Note"})
     before = _stored_nodes(clean_graph)
-    assert before == [], "the graph must hold no row of the source before the journey"
+    expected_before = [] if native_id is None else [native_id]
+    assert before == expected_before, (
+        "the graph must hold no row of the source before the journey"
+    )
 
     answers: list[dict[str, Any]] = []
 
@@ -440,7 +455,7 @@ def _run_journey(
                 None,
                 idempotency_key=bind_key,
             )
-            answers.append(await _journey(kind, connector, fixture, client))
+            answers.append(await _journey(kind, connector, fixture, client, text))
         finally:
             await client.close()
 
