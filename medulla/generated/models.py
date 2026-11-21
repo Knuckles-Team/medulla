@@ -22790,10 +22790,31 @@ class ReadbackVerdict(str, Enum):
     MISMATCHED = "mismatched"
 
 
+class HydrationRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    plan_digest: Digest256
+    readback_receipt_digest: Digest256
+    run_output_digest: Digest256
+    workflow_id: str
+    workflow_revision: Annotated[int, Field(ge=0)]
+    write_receipt_digest: Digest256
+
+
+class HydrationRunClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    plan_digest: Digest256
+    run_output_digest: Digest256
+    workflow_id: str
+    workflow_revision: Annotated[int, Field(ge=0)]
+
+
 class VerifyIngestReadbackRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     expected_graph_revision: Annotated[int, Field(ge=0)]
+    hydration_run: HydrationRunClaim | None = None
     results: list[ReadbackExpectation]
     write_receipt_digest: Digest256
 
@@ -38383,6 +38404,8 @@ __all__ = [
     "HostStartInterfaces",
     "HostStartProvenance",
     "HttpFieldMap",
+    "HydrationRun",
+    "HydrationRunClaim",
     "IdempotentPublish",
     "IdentityActor",
     "IdentityAuditEntry",

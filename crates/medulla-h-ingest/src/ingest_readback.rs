@@ -7,7 +7,7 @@
 //! into the one `:ReadbackReceipt` node the route commits.
 
 use medulla_ingestion_types::ingest_readback::{
-    ReadbackReceipt, ReadbackVerdict, VerifyIngestReadbackRequest, READBACK_DENIED,
+    HydrationRun, HydrationRunClaim, ReadbackReceipt, ReadbackVerdict, VerifyIngestReadbackRequest, READBACK_DENIED,
     READBACK_MISMATCH, READBACK_PARTIAL, READBACK_STALE,
 };
 use medulla_protocol_types::protocol::Method;
@@ -18,6 +18,14 @@ use super::repository_index::{EnvelopeLabels, IndexWriteSet};
 
 /// Node type of the readback record.
 pub const READBACK_RECEIPT_TYPE: &str = "ReadbackReceipt";
+/// Node type of a bound hydration run (MEDULLA-REPO-INGEST-R002.101).
+pub const HYDRATION_RUN_TYPE: &str = "HydrationRun";
+/// Node type of a compiled skill plan a hydration run names.
+const SKILL_COMPILATION_TYPE: &str = "SkillCompilation";
+/// Refusal code: the claimed workflow does not match its stored compilation.
+pub const HYDRATION_BINDING_MISMATCH: &str = "HYDRATION_BINDING_MISMATCH";
+const HYDRATION_PREFIX: &str = "hydration-run:";
+const BOUND_BY: &str = "boundBy";
 const ENVELOPE_PREFIX: &str = "readback-receipt:";
 /// Envelope labels of the readback commit.
 pub const LABELS: EnvelopeLabels = EnvelopeLabels {
@@ -47,6 +55,8 @@ pub trait ReadbackView {
     fn graph_revision(&self) -> u64;
     /// One id as the caller reads it.
     fn read(&self, id: &str) -> NodeRead;
+    /// The decoded properties of a node the caller may read.
+    fn properties(&self, id: &str) -> Option<serde_json::Value>;
 }
 
 /// Why a readback refused.
@@ -180,8 +190,7 @@ pub fn receipt_node_id(receipt: &ReadbackReceipt) -> String {
     format!("{ENVELOPE_PREFIX}{}", key.to_hex())
 }
 
-/// Lower a receipt to its one `:ReadbackReceipt` node write-set.
-pub fn lower(receipt: &ReadbackReceipt) -> Result<IndexWriteSet, String> {
+fn receipt_properties(receipt: &ReadbackReceipt) -> serde_json::Value {
     let mut properties = json!({
         "type": READBACK_RECEIPT_TYPE,
         "write_receipt_digest": receipt.write_receipt_digest.to_hex(),
@@ -196,11 +205,122 @@ pub fn lower(receipt: &ReadbackReceipt) -> Result<IndexWriteSet, String> {
     // principal's row: an unowned row is hidden from every non-System reader,
     // the principal included.
     properties[medulla_graph_core::rls::RLS_OWNER_ID_KEY] = json!(receipt.principal);
-    let methods = vec![Method::AddNode {
-        node_id: receipt_node_id(receipt),
-        properties_msgpack: rmp_serde::to_vec_named(&properties)
-            .map_err(|error| format!("readback receipt encoding failed: {error}"))?,
+    properties
+}
+
+fn receipt_blob(receipt: &ReadbackReceipt) -> Result<Vec<u8>, String> {
+    rmp_serde::to_vec_named(&receipt_properties(receipt))
+        .map_err(|error| format!("readback receipt encoding failed: {error}"))
+}
+
+fn mismatch(reason: &str) -> String {
+    format!("{HYDRATION_BINDING_MISMATCH}: {reason}")
+}
+
+/// Bind an executor's hydration claim to a `Matched` readback receipt.
+///
+/// The claimed workflow must be a visible, non-stale `:SkillCompilation` node
+/// whose revision and plan digest equal the claim's. Any failure refuses with
+/// `HYDRATION_BINDING_MISMATCH` and nothing is written.
+pub fn bind_hydration_run(
+    claim: &HydrationRunClaim,
+    receipt: &ReadbackReceipt,
+    view: &dyn ReadbackView,
+) -> Result<HydrationRun, String> {
+    let revision = match view.read(&claim.workflow_id) {
+        NodeRead::Visible { revision, .. } => revision,
+        NodeRead::Absent => return Err(mismatch("the workflow node is absent")),
+        NodeRead::Denied => return Err(mismatch("the workflow node is not readable")),
+    };
+    let properties = view
+        .properties(&claim.workflow_id)
+        .ok_or_else(|| mismatch("the workflow node has no readable properties"))?;
+    if properties.get("type").and_then(|v| v.as_str()) != Some(SKILL_COMPILATION_TYPE) {
+        return Err(mismatch("the workflow node is not a skill compilation"));
+    }
+    if properties.get("stale").and_then(|v| v.as_bool()) == Some(true) {
+        return Err(mismatch("the workflow compilation is stale"));
+    }
+    if revision != claim.workflow_revision {
+        return Err(mismatch("the workflow revision differs from the claim"));
+    }
+    if properties.get("plan_digest").and_then(|v| v.as_str())
+        != Some(claim.plan_digest.to_hex().as_str())
+    {
+        return Err(mismatch("the plan digest differs from the claim"));
+    }
+    let blob = receipt_blob(receipt)?;
+    Ok(HydrationRun {
+        workflow_id: claim.workflow_id.clone(),
+        workflow_revision: claim.workflow_revision,
+        plan_digest: claim.plan_digest,
+        run_output_digest: claim.run_output_digest,
+        write_receipt_digest: receipt.write_receipt_digest,
+        readback_receipt_digest: observe(&blob).0,
+    })
+}
+
+/// Id of the `:HydrationRun` node of one bound run.
+pub fn hydration_node_id(run: &HydrationRun) -> String {
+    let revision = run.workflow_revision.to_string();
+    let (plan, output) = (run.plan_digest.to_hex(), run.run_output_digest.to_hex());
+    let (write, read) = (
+        run.write_receipt_digest.to_hex(),
+        run.readback_receipt_digest.to_hex(),
+    );
+    let key = Digest256::framed(
+        b"eg/hydration-run/v1",
+        &[
+            run.workflow_id.as_bytes(),
+            revision.as_bytes(),
+            plan.as_bytes(),
+            output.as_bytes(),
+            write.as_bytes(),
+            read.as_bytes(),
+        ],
+    )
+    .unwrap_or(run.write_receipt_digest);
+    format!("{HYDRATION_PREFIX}{}", key.to_hex())
+}
+
+/// Lower a receipt, and the hydration run bound to it, to one write-set: the
+/// `:ReadbackReceipt` node, plus the `:HydrationRun` node and its `boundBy`
+/// edge to the receipt when a run is bound.
+pub fn lower(
+    receipt: &ReadbackReceipt,
+    hydration: Option<&HydrationRun>,
+) -> Result<IndexWriteSet, String> {
+    let receipt_id = receipt_node_id(receipt);
+    let mut methods = vec![Method::AddNode {
+        node_id: receipt_id.clone(),
+        properties_msgpack: receipt_blob(receipt)?,
     }];
+    if let Some(run) = hydration {
+        let run_id = hydration_node_id(run);
+        let mut properties = json!({
+            "type": HYDRATION_RUN_TYPE,
+            "workflow_id": run.workflow_id,
+            "workflow_revision": run.workflow_revision,
+            "plan_digest": run.plan_digest.to_hex(),
+            "run_output_digest": run.run_output_digest.to_hex(),
+            "write_receipt_digest": run.write_receipt_digest.to_hex(),
+            "readback_receipt_digest": run.readback_receipt_digest.to_hex(),
+        });
+        properties[medulla_graph_core::rls::RLS_OWNER_ID_KEY] = json!(receipt.principal);
+        let encode = |value: &serde_json::Value| {
+            rmp_serde::to_vec_named(value)
+                .map_err(|error| format!("hydration run encoding failed: {error}"))
+        };
+        methods.push(Method::AddNode {
+            node_id: run_id.clone(),
+            properties_msgpack: encode(&properties)?,
+        });
+        methods.push(Method::AddEdge {
+            source_id: run_id,
+            target_id: receipt_id,
+            properties_msgpack: encode(&json!({ "relationship": BOUND_BY }))?,
+        });
+    }
     IndexWriteSet::from_methods(ENVELOPE_PREFIX, b"eg/ingest-readback", methods)
 }
 
@@ -210,13 +330,16 @@ mod tests {
     use medulla_ingestion_types::ingest_readback::ReadbackExpectation;
     use std::collections::BTreeMap;
 
-    struct View(u64, BTreeMap<String, NodeRead>);
+    struct View(u64, BTreeMap<String, NodeRead>, BTreeMap<String, serde_json::Value>);
     impl ReadbackView for View {
         fn graph_revision(&self) -> u64 {
             self.0
         }
         fn read(&self, id: &str) -> NodeRead {
             self.1.get(id).cloned().unwrap_or(NodeRead::Absent)
+        }
+        fn properties(&self, id: &str) -> Option<serde_json::Value> {
+            self.2.get(id).cloned()
         }
     }
 
@@ -235,6 +358,7 @@ mod tests {
         VerifyIngestReadbackRequest {
             write_receipt_digest: digest("receipt"),
             expected_graph_revision: 5,
+            hydration_run: None,
             results: ids
                 .iter()
                 .map(|id| ReadbackExpectation {
@@ -253,6 +377,7 @@ mod tests {
                 .into_iter()
                 .map(|(k, v)| (k.to_string(), v))
                 .collect(),
+            BTreeMap::new(),
         )
     }
 
@@ -262,7 +387,7 @@ mod tests {
         let receipt = verify(&request(&["a", "b"]), "alice", &ok).unwrap();
         assert_eq!(receipt.verdict, ReadbackVerdict::Matched);
         assert_eq!(receipt.matched_ids, ["a", "b"]);
-        let lowered = lower(&receipt).unwrap();
+        let lowered = lower(&receipt, None).unwrap();
         assert_eq!(lowered.methods.len(), 1);
         let Method::AddNode {
             properties_msgpack, ..
@@ -277,7 +402,7 @@ mod tests {
             "the receipt is owned by the reading principal"
         );
 
-        let stale = View(4, ok.1.clone());
+        let stale = View(4, ok.1.clone(), BTreeMap::new());
         let refusal = verify(&request(&["a"]), "alice", &stale).unwrap_err();
         assert_eq!(refusal.code(), READBACK_STALE);
 
@@ -316,5 +441,54 @@ mod tests {
         assert_eq!(revision, 3);
         let other = rmp_serde::to_vec_named(&json!({"type": "Doc", "revision": 4})).unwrap();
         assert_ne!(digest_a, observe(&other).0);
+    }
+
+    fn hydration_view(revision: u64, stale: bool) -> View {
+        let mut properties = json!({
+            "type": "SkillCompilation",
+            "plan_digest": digest("plan").to_hex(),
+        });
+        if stale {
+            properties["stale"] = json!(true);
+        }
+        let mut view = view(vec![
+            ("a", visible("a", 1)),
+            ("skill-compilation:1", visible("skill", revision)),
+        ]);
+        view.2.insert("skill-compilation:1".into(), properties);
+        view
+    }
+
+    fn claim(revision: u64, plan: &str) -> HydrationRunClaim {
+        HydrationRunClaim {
+            workflow_id: "skill-compilation:1".into(),
+            workflow_revision: revision,
+            plan_digest: digest(plan),
+            run_output_digest: digest("output"),
+        }
+    }
+
+    // MEDULLA-REPO-INGEST-R002.101
+    #[test]
+    fn hydration_binding_refuses_stale_revision_and_plan_mismatch() {
+        let good = hydration_view(2, false);
+        let receipt = verify(&request(&["a"]), "alice", &good).unwrap();
+        let run = bind_hydration_run(&claim(2, "plan"), &receipt, &good).unwrap();
+        assert_eq!(run.write_receipt_digest, receipt.write_receipt_digest);
+        let blob = receipt_blob(&receipt).unwrap();
+        assert_eq!(run.readback_receipt_digest, observe(&blob).0);
+        let lowered = lower(&receipt, Some(&run)).unwrap();
+        assert_eq!(lowered.methods.len(), 3);
+        assert!(matches!(lowered.methods[2], Method::AddEdge { .. }));
+
+        for (view, claim) in [
+            (hydration_view(3, false), claim(2, "plan")),
+            (hydration_view(2, false), claim(2, "other")),
+            (hydration_view(2, true), claim(2, "plan")),
+            (view(vec![("a", visible("a", 1))]), claim(2, "plan")),
+        ] {
+            let refusal = bind_hydration_run(&claim, &receipt, &view).unwrap_err();
+            assert!(refusal.starts_with(HYDRATION_BINDING_MISMATCH), "{refusal}");
+        }
     }
 }

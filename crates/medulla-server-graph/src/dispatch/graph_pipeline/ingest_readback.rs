@@ -50,6 +50,19 @@ impl readback::ReadbackView for CallerView<'_, '_> {
             revision,
         }
     }
+
+    fn properties(&self, id: &str) -> Option<serde_json::Value> {
+        let visible = self
+            .ctx
+            .read_authority
+            .as_ref()
+            .is_none_or(|authority| authority.node_visible(self.ctx.core, id));
+        if !visible {
+            return None;
+        }
+        let blob = self.ctx.core.get_node_properties(id)?;
+        medulla_types::msgpack::decode_property_value(&blob).ok()
+    }
 }
 
 /// Compare the receipt with the caller's reads, then commit the readback node.
@@ -58,14 +71,22 @@ pub async fn handle_verify_ingest_readback(
     request: medulla_ingestion_types::ingest_readback::VerifyIngestReadbackRequest,
 ) -> Response {
     let req_id = ctx.req_id;
-    let receipt = {
+    let (receipt, hydration) = {
         let view = CallerView { ctx: &ctx };
-        match readback::verify(&request, ctx.verified_actor, &view) {
+        let receipt = match readback::verify(&request, ctx.verified_actor, &view) {
             Ok(receipt) => receipt,
             Err(refusal) => return Response::err(req_id, refusal.to_string()),
-        }
+        };
+        let hydration = match request.hydration_run.as_ref() {
+            Some(claim) => match readback::bind_hydration_run(claim, &receipt, &view) {
+                Ok(run) => Some(run),
+                Err(refusal) => return Response::err(req_id, refusal),
+            },
+            None => None,
+        };
+        (receipt, hydration)
     };
-    let write_set = match readback::lower(&receipt) {
+    let write_set = match readback::lower(&receipt, hydration.as_ref()) {
         Ok(write_set) => write_set,
         Err(error) => return Response::err(req_id, error),
     };

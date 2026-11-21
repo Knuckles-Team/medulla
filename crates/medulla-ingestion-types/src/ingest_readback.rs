@@ -27,6 +27,37 @@ pub struct VerifyIngestReadbackRequest {
     pub write_receipt_digest: Digest256,
     pub expected_graph_revision: u64,
     pub results: Vec<ReadbackExpectation>,
+    /// The executor's claim about the compiled workflow it ran
+    /// (MEDULLA-REPO-INGEST-R002.101); bound to the readback when present.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hydration_run: Option<HydrationRunClaim>,
+}
+
+/// What the executor claims about one graph-loaded workflow run
+/// (MEDULLA-REPO-INGEST-R002.101). `workflow_id` names a
+/// `skill-compilation:<hex>` node.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HydrationRunClaim {
+    pub workflow_id: String,
+    pub workflow_revision: u64,
+    pub plan_digest: Digest256,
+    pub run_output_digest: Digest256,
+}
+
+/// What the engine binds for one hydration run: the claim plus the write
+/// receipt digest and the digest of the readback receipt node's property blob.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HydrationRun {
+    pub workflow_id: String,
+    pub workflow_revision: u64,
+    pub plan_digest: Digest256,
+    pub run_output_digest: Digest256,
+    pub write_receipt_digest: Digest256,
+    pub readback_receipt_digest: Digest256,
 }
 
 /// Refusal code: a result id exists but the caller may not read it.

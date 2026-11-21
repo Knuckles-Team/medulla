@@ -120,12 +120,19 @@ def _expectation(reader: SyncMedullaClient, node_id: str) -> dict:
     }
 
 
-def _verify(reader: SyncMedullaClient, results: list[dict], revision: int = 0) -> dict:
+def _verify(
+    reader: SyncMedullaClient,
+    results: list[dict],
+    revision: int = 0,
+    hydration_run: dict | None = None,
+) -> dict:
     request = {
         "write_receipt_digest": _framed(b"test/write-receipt", [b"receipt-1"]),
         "expected_graph_revision": revision,
         "results": results,
     }
+    if hydration_run is not None:
+        request["hydration_run"] = hydration_run
     return reader._send("VerifyIngestReadback", {"request": request})
 
 
@@ -166,6 +173,71 @@ def test_matched_readback_and_each_refusal(readback_server):
         with pytest.raises(EngineResponseError, match="READBACK_MISMATCH"):
             _verify(reader, [{**good[0], "revision": 9}])
         assert reader.nodes.count() == after_match
+    finally:
+        writer.close()
+        reader.close()
+
+
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R002.101")
+def test_hydration_run_binds_workflow_and_readback(readback_server):
+    writer = _client(readback_server, TEST_AGENT_ID)
+    reader = _client(readback_server, READER)
+    try:
+        plan = _framed(b"test/plan", [b"plan-1"])
+        output = _framed(b"test/output", [b"output-1"])
+        shared = {"_owner": TEST_AGENT_ID, "_visibility": "public"}
+        workflow = "skill-compilation:" + "ab" * 32
+        writer.nodes.add(
+            workflow,
+            {**shared, "type": "SkillCompilation", "plan_digest": plan, "revision": 4},
+        )
+        writer.nodes.add("hy:a", {**shared, "type": "Fact"})
+        good = [_expectation(reader, "hy:a")]
+        claim = {
+            "workflow_id": workflow,
+            "workflow_revision": 4,
+            "plan_digest": plan,
+            "run_output_digest": output,
+        }
+        before = reader.nodes.count()
+        receipt = _verify(reader, good, hydration_run=claim)
+        assert receipt["verdict"] == "matched"
+        # One readback receipt node and one hydration run node.
+        assert reader.nodes.count() == before + 2
+        receipt_id = "readback-receipt:" + _framed(
+            b"eg/ingest-readback/id/v1",
+            [
+                bytes.fromhex(receipt["write_receipt_digest"]),
+                READER.encode(),
+            ],
+        )
+        receipt_properties = reader.nodes.properties(receipt_id)
+        run_hex = _framed(
+            b"eg/hydration-run/v1",
+            [
+                workflow.encode(),
+                b"4",
+                plan.encode(),
+                output.encode(),
+                receipt["write_receipt_digest"].encode(),
+                _content_digest(receipt_properties).encode(),
+            ],
+        )
+        run = reader.nodes.properties("hydration-run:" + run_hex)
+        assert run["type"] == "HydrationRun"
+        assert run["workflow_id"] == workflow
+        assert run["readback_receipt_digest"] == _content_digest(receipt_properties)
+        after_bind = reader.nodes.count()
+
+        with pytest.raises(EngineResponseError, match="HYDRATION_BINDING_MISMATCH"):
+            _verify(reader, good, hydration_run={**claim, "workflow_revision": 3})
+        with pytest.raises(EngineResponseError, match="HYDRATION_BINDING_MISMATCH"):
+            _verify(
+                reader,
+                good,
+                hydration_run={**claim, "plan_digest": _framed(b"test/plan", [b"x"])},
+            )
+        assert reader.nodes.count() == after_bind
     finally:
         writer.close()
         reader.close()
