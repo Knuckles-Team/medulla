@@ -284,6 +284,8 @@ async fn decider_role(
 
 /// One dataset's decided share: the node's committed keys and the state the grant leaves.
 struct DatasetShare {
+    /// The request the grant answers, `<product>:<principal>`, recorded in the audit entry.
+    request_id: String,
     node_id: String,
     properties: Properties,
     current: ShareState,
@@ -298,6 +300,7 @@ async fn plan_dataset_share(
     state: &Arc<RwLock<ServerState>>,
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,
+    product: &str,
     dataset: &str,
     principal: &str,
     delegation: &ShareDelegation,
@@ -336,6 +339,7 @@ async fn plan_dataset_share(
         .map(|authority| authority.reason())
         .unwrap_or_default();
     Ok(Some(DatasetShare {
+        request_id: format!("{product}:{principal}"),
         node_id: dataset.to_string(),
         properties,
         current,
@@ -359,7 +363,7 @@ async fn commit_dataset_share(
         &share.next.shared_scope,
         &share.next.grants,
     )
-    .with_authority(share.reason.clone());
+    .with_authority(format!("{};request={}", share.reason, share.request_id));
     record_share_event(state, req, verified, &event, SharePhase::Reserved).await?;
     match commit_share(
         state,
@@ -420,7 +424,8 @@ async fn decide(
         let mut planned = Vec::with_capacity(product.datasets.len());
         for dataset in &product.datasets {
             if let Some(share) =
-                plan_dataset_share(state, req, verified, dataset, principal, &delegation).await?
+                plan_dataset_share(state, req, verified, &product.id, dataset, principal, &delegation)
+                .await?
             {
                 planned.push(share);
             }
