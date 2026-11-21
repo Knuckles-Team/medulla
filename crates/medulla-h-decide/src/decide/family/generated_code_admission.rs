@@ -152,13 +152,12 @@ fn case_of(
         }
     };
     let state = tagged("state:")?;
-    let state: VerifierCaseState = serde_json::from_value(serde_json::Value::String(state))
-        .map_err(|_| {
-            invalid(format!(
-                "option {} names a state outside open, fixed, retested, failed",
-                option.option_id
-            ))
-        })?;
+    let state = VerifierCaseState::from_word(&state).map_err(|_| {
+        invalid(format!(
+            "option {} names a state outside open, fixed, retested, failed",
+            option.option_id
+        ))
+    })?;
     let retest = option
         .texts
         .iter()

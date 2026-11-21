@@ -109,6 +109,7 @@ pub mod trajectory_verdict;
 pub mod transfer;
 pub mod usage;
 pub mod usage_guidance;
+pub mod verifier_case_machine;
 pub mod verifier_receipt;
 
 /// Format identity (RF-ADR-006) of an assembly decision record.

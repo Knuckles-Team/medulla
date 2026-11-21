@@ -1324,6 +1324,19 @@ fn gap_machine_classes_extend_core() {
     sm::assert_extends_core("Gap");
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R831.1
+#[test]
+fn verifiercase_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_decision_types::decision::verifier_case_machine::VERIFIER_CASE_MACHINE,
+    );
+}
+// spec: MEDULLA-DECISION-ENGINE-R831.1
+#[test]
+fn verifiercase_machine_classes_extend_core() {
+    sm::assert_extends_core("VerifierCase");
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R830.6
 #[test]
 fn loop_machine_matches_statechart() {

@@ -8667,3 +8667,118 @@
     :toState :ApprovalRequestMachine_Rejected ;
     :guardedBy :ApprovalRequestMachine_Guard_ApproverHoldsRole ;
     :firedBy :ApprovalRequestMachine_Event_Reject .
+# spec: MEDULLA-DECISION-ENGINE-R831.1
+# The Verifier Case machine. The Rust edge table is the same table; the ontology
+# test asserts equal edge sets.
+
+:VerifierCaseState a owl:Class ;
+    rdfs:label "Verifier Case State" ;
+    rdfs:comment "A state of the Verifier Case machine." ;
+    rdfs:subClassOf :State .
+
+:VerifierCaseTerminalState a owl:Class ;
+    rdfs:label "Verifier Case Terminal State" ;
+    rdfs:comment "A terminal state of the Verifier Case machine." ;
+    rdfs:subClassOf :TerminalState, :VerifierCaseState .
+
+:VerifierCaseTransition a owl:Class ;
+    rdfs:label "Verifier Case Transition" ;
+    rdfs:comment "A transition of the Verifier Case machine." ;
+    rdfs:subClassOf :Transition .
+
+:VerifierCaseEvent a owl:Class ;
+    rdfs:label "Verifier Case Event" ;
+    rdfs:comment "An event of the Verifier Case machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:VerifierCaseGuard a owl:Class ;
+    rdfs:label "Verifier Case Guard" ;
+    rdfs:comment "A guard of the Verifier Case machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:VerifierCaseMachine a :StateMachine ;
+    rdfs:label "Verifier Case machine" ;
+    :initialState :VerifierCaseMachine_Open ;
+    :hasState :VerifierCaseMachine_Open, :VerifierCaseMachine_Fixed, :VerifierCaseMachine_Retested, :VerifierCaseMachine_Failed .
+
+:VerifierCaseMachine_Open a :VerifierCaseState ;
+    rdfs:label "Verifier Case Open" ;
+    :storedForm "open" .
+
+:VerifierCaseMachine_Fixed a :VerifierCaseState ;
+    rdfs:label "Verifier Case Fixed" ;
+    :storedForm "fixed" .
+
+:VerifierCaseMachine_Retested a :VerifierCaseTerminalState ;
+    rdfs:label "Verifier Case Retested" ;
+    :storedForm "retested" .
+
+:VerifierCaseMachine_Failed a :VerifierCaseState ;
+    rdfs:label "Verifier Case Failed" ;
+    :storedForm "failed" .
+
+:VerifierCaseMachine_Event_ProposeFix a :VerifierCaseEvent ;
+    rdfs:label "Verifier Case ProposeFix" .
+
+:VerifierCaseMachine_Event_RetestHeld a :VerifierCaseEvent ;
+    rdfs:label "Verifier Case RetestHeld" .
+
+:VerifierCaseMachine_Event_RetestFailed a :VerifierCaseEvent ;
+    rdfs:label "Verifier Case RetestFailed" .
+
+:VerifierCaseMachine_Event_Reopen a :VerifierCaseEvent ;
+    rdfs:label "Verifier Case Reopen" .
+
+:VerifierCaseMachine_Guard_HasRetestDigest a :VerifierCaseGuard ;
+    rdfs:label "Verifier Case HasRetestDigest" ;
+    rdfs:comment "Guard: the case names the artifact its retest ran against." .
+
+:VerifierCaseMachine_C01 a :VerifierCaseTransition ;
+    rdfs:label "Verifier Case C01" ;
+    :edgeId "C01" ;
+    :fromState :VerifierCaseMachine_Open ;
+    :toState :VerifierCaseMachine_Fixed ;
+    :firedBy :VerifierCaseMachine_Event_ProposeFix .
+
+:VerifierCaseMachine_C02 a :VerifierCaseTransition ;
+    rdfs:label "Verifier Case C02" ;
+    :edgeId "C02" ;
+    :fromState :VerifierCaseMachine_Fixed ;
+    :toState :VerifierCaseMachine_Retested ;
+    :guardedBy :VerifierCaseMachine_Guard_HasRetestDigest ;
+    :firedBy :VerifierCaseMachine_Event_RetestHeld .
+
+:VerifierCaseMachine_C03 a :VerifierCaseTransition ;
+    rdfs:label "Verifier Case C03" ;
+    :edgeId "C03" ;
+    :fromState :VerifierCaseMachine_Fixed ;
+    :toState :VerifierCaseMachine_Failed ;
+    :firedBy :VerifierCaseMachine_Event_RetestFailed .
+
+:VerifierCaseMachine_C04 a :VerifierCaseTransition ;
+    rdfs:label "Verifier Case C04" ;
+    :edgeId "C04" ;
+    :fromState :VerifierCaseMachine_Failed ;
+    :toState :VerifierCaseMachine_Fixed ;
+    :firedBy :VerifierCaseMachine_Event_ProposeFix .
+
+:VerifierCaseMachine_C05 a :VerifierCaseTransition ;
+    rdfs:label "Verifier Case C05" ;
+    :edgeId "C05" ;
+    :fromState :VerifierCaseMachine_Open ;
+    :toState :VerifierCaseMachine_Open ;
+    :firedBy :VerifierCaseMachine_Event_Reopen .
+
+:VerifierCaseMachine_C06 a :VerifierCaseTransition ;
+    rdfs:label "Verifier Case C06" ;
+    :edgeId "C06" ;
+    :fromState :VerifierCaseMachine_Fixed ;
+    :toState :VerifierCaseMachine_Open ;
+    :firedBy :VerifierCaseMachine_Event_Reopen .
+
+:VerifierCaseMachine_C07 a :VerifierCaseTransition ;
+    rdfs:label "Verifier Case C07" ;
+    :edgeId "C07" ;
+    :fromState :VerifierCaseMachine_Failed ;
+    :toState :VerifierCaseMachine_Open ;
+    :firedBy :VerifierCaseMachine_Event_Reopen .
