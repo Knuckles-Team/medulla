@@ -534,6 +534,7 @@ closed_error_codes! {
         SourceIngestionStatusInvalid => "SOURCE_INGESTION_STATUS_INVALID",
         SourceIngestionUnavailable => "SOURCE_INGESTION_UNAVAILABLE",
         SourceUnreachable => "SOURCE_UNREACHABLE",
+        TranscriptInvalid => "TRANSCRIPT_INVALID",
         TranscriptUnknownFormat => "TRANSCRIPT_UNKNOWN_FORMAT",
         TranscriptMissingEventTime => "TRANSCRIPT_MISSING_EVENT_TIME",
         TranscriptDuplicateMessageConflict => "TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT",

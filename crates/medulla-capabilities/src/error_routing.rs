@@ -846,13 +846,14 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("FinanceMarket", &["PROBABILISTIC_INPUT_REFUSED"]),
     // A batch commits through the change-envelope route, whose graph-version
     // fence refuses with WRITE_CONFLICT when another write moved the graph.
-    // MEDULLA-INGEST-WORKER-R003.16: the typed transcript refusals, all before any graph change.
+    // MEDULLA-INGEST-WORKER-R003.15, R003.16: the transcript refusals, all before any graph change.
     (
         "SourceIngest",
         &[
             "FORECAST_SAMPLE_INVALID",
             "TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT",
             "TRANSCRIPT_FOREIGN_CONCEPT",
+            "TRANSCRIPT_INVALID",
             "TRANSCRIPT_MISSING_EVENT_TIME",
             "TRANSCRIPT_UNKNOWN_FORMAT",
             "WRITE_CONFLICT",

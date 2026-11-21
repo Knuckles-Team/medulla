@@ -81,6 +81,27 @@ pub enum TranscriptShapeError {
     RepeatedMessage(String),
 }
 
+/// The header of a transcripts batch: the declared source format and the one thread
+/// (MEDULLA-INGEST-WORKER-R003.15). The dialect is a provenance label: the producer has already
+/// parsed the source lines.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TranscriptHeader {
+    pub dialect: String,
+    pub thread: TranscriptThread,
+}
+
+/// One item of a transcripts batch, externally tagged in snake case. Item 0 is the one `thread`
+/// item and every later item is a `message` item (MEDULLA-INGEST-WORKER-R003.15).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum TranscriptItem {
+    Thread(TranscriptHeader),
+    Message(TranscriptMessage),
+}
+
 /// A transcript refusal with a stable wire code (MEDULLA-INGEST-WORKER-R003.16). Each happens
 /// before any graph mutation and publishes no thread, message or concept link.
 #[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]

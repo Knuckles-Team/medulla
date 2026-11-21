@@ -232,7 +232,8 @@ fn admit_kind(
         | SourceBatchKind::Access
         | SourceBatchKind::Groups
         | SourceBatchKind::Containers
-        | SourceBatchKind::Proposals => Ok(()),
+        | SourceBatchKind::Proposals
+        | SourceBatchKind::Transcripts => Ok(()),
         #[cfg(all(
             feature = "redb",
             feature = "blob",
@@ -261,6 +262,7 @@ pub async fn prepare(
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Groups
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Containers
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Proposals
+            | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Transcripts
             | medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Enumeration
     ) {
         return prepare_extension_batch(ctx, &request).await;
@@ -656,6 +658,29 @@ async fn prepare_extension_batch(
             }
             methods.extend(admission.methods);
         }
+        Some(SourceBatchExtension::Transcripts(items)) => {
+            // Typed items, never mapped records: the batch does not resolve mappings. Every
+            // refusal happens before any write (MEDULLA-INGEST-WORKER-R003.15).
+            let decoded = transcript::decode_transcript_items(items.as_slice())?;
+            let held = read_held_concepts(
+                persistence.as_ref(),
+                &graph_fname,
+                &decoded.concept_ids(),
+            )
+            .await?;
+            let validated = transcript::validate_transcript(
+                ctx.tenant_scope,
+                request,
+                &decoded.thread,
+                &decoded.messages,
+                |concept| held.contains(concept),
+            )?;
+            let admission = transcript::transcript_methods(&decoded, &validated)?;
+            for node_id in &admission.node_ids {
+                policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
+            }
+            methods.extend(admission.methods);
+        }
         _ => {
             return Err(format!(
                 "{}: extension batch carries no matching extension",
@@ -749,6 +774,23 @@ fn decode_permission_items<T: serde::de::DeserializeOwned>(
             Ok(decoded)
         })
         .collect()
+}
+
+/// The concept ids a `transcripts` batch names that the request graph holds: one node read per
+/// distinct id, before any write (MEDULLA-INGEST-WORKER-R003.15).
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn read_held_concepts(
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    ids: &BTreeSet<String>,
+) -> Result<BTreeSet<String>, String> {
+    let mut held = BTreeSet::new();
+    for id in ids {
+        if persistence.read_node(graph_fname, id).await?.is_some() {
+            held.insert(id.clone());
+        }
+    }
+    Ok(held)
 }
 
 /// The held properties of each container node a `containers` batch names; an absent node
