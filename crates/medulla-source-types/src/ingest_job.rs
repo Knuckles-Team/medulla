@@ -284,6 +284,27 @@ pub struct IngestEnqueueReceipt {
     pub deduplicated: bool,
 }
 
+/// One reserved ingest queue's load: tasks enqueued or claimed and not yet acknowledged, and the
+/// age of the oldest one (MEDULLA-INGEST-WORKER-R001.11).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IngestQueueDepthRow {
+    pub queue: String,
+    /// Queued plus running tasks of the verified tenant.
+    pub depth: u64,
+    /// Milliseconds since the oldest pending task was enqueued; 0 for an empty queue.
+    pub oldest_age_ms: u64,
+}
+
+/// The reply of `IngestQueueDepth`, `ingest` before `ingest-hydration`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct IngestQueueDepthReport {
+    pub queues: Vec<IngestQueueDepthRow>,
+}
+
 /// Largest canonical envelope payload one ingest task carries, in bytes
 /// (MEDULLA-INGEST-WORKER-R001.4.1).
 pub const INGEST_TASK_PAYLOAD_MAX_BYTES: usize = 16384;

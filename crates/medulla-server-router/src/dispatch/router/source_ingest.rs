@@ -36,6 +36,16 @@ pub async fn dispatch_source_ingest_methods(
         Method::IngestEnqueue { envelope } => {
             dispatch_boxed(ingest_enqueue(ctx, *envelope)).await
         }
+        // MEDULLA-INGEST-WORKER-R001.11: the served backpressure read.
+        #[cfg(feature = "jobs")]
+        Method::IngestQueueDepth { queue } => {
+            dispatch_boxed(ingest_queue_depth(ctx, queue)).await
+        }
+        #[cfg(not(feature = "jobs"))]
+        Method::IngestQueueDepth { .. } => Response::err(
+            ctx.req.id,
+            "UNAVAILABLE: ingest queue depth requires the `jobs` feature".to_string(),
+        ),
         #[cfg(not(feature = "jobs"))]
         Method::IngestEnqueue { .. } => Response::err(
             ctx.req.id,
@@ -43,6 +53,53 @@ pub async fn dispatch_source_ingest_methods(
         ),
         other => return ControlFlow::Continue(other),
     })
+}
+
+/// Serve `IngestQueueDepth` (MEDULLA-INGEST-WORKER-R001.11): the queued and claimed task count
+/// and the oldest age of the verified tenant's reserved ingest queues. The load is the one
+/// `task_queue_load` read the enqueue refusal uses. Writes nothing.
+#[cfg(feature = "jobs")]
+async fn ingest_queue_depth(ctx: DispatchCtx<'_>, queue: Option<String>) -> Response {
+    use medulla_source_types::ingest_job::{ingest_lane_of_queue, IngestLane};
+    let req_id = ctx.req.id;
+    let queues: Vec<&'static str> = match queue.as_deref() {
+        None => vec![
+            IngestLane::General.queue_name(),
+            IngestLane::Hydration.queue_name(),
+        ],
+        Some(name) => match ingest_lane_of_queue(name) {
+            Some(lane) => vec![lane.queue_name()],
+            None => {
+                return Response::err(
+                    req_id,
+                    format!(
+                        "{}: queue '{name}' is not an ingest queue",
+                        medulla_types::contract::EngineErrorCode::InvalidArgument.as_str()
+                    ),
+                )
+            }
+        },
+    };
+    let persist_dir = ctx.state.read().await.persist_dir.clone();
+    let jobs = medulla_server_ops::api::ingest::jobs_seam(ctx.state).await;
+    let tenant = ctx.verified_context.tenant();
+    let mut loads = Vec::with_capacity(queues.len());
+    for name in queues {
+        let load = match jobs.as_ref() {
+            Some(jobs) => match jobs.task_queue_load(&persist_dir, tenant, name) {
+                Ok(load) => load,
+                Err(error) => return Response::err(req_id, error),
+            },
+            None => (0, 0, None),
+        };
+        loads.push((name, load));
+    }
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as i64;
+    let report = medulla_h_ingest::ingest_queue::queue_depth_report(&loads, now_ms);
+    Response::ok(
+        req_id,
+        ResultPayload::of::<coordination_results::IngestQueueDepth>(report),
+    )
 }
 
 /// Serve `IngestEnqueue`: read the policy and the queue load, then map the job

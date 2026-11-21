@@ -431,6 +431,9 @@ pub(super) const REASON_SHARD_WRITER_WIDTH_CONFIG: &str =
 // MEDULLA-DURABLE-KERNEL-R076.2: the scheduler policy is process configuration.
 pub(super) const REASON_SCHEDULER_CONFIG: &str =
     "control_plane::dispatch_scheduler_config_arm routes GetSchedulerConfig to handlers::scheduler_config, which returns only the stored or knob-derived scheduler policy -- process configuration, never a GraphView/core.analysis_snapshot() row read; gated by scheduler:admin in allows_method";
+// MEDULLA-INGEST-WORKER-R001.11: the ingest queue depth is the verified tenant's own queue load.
+pub(super) const REASON_INGEST_QUEUE_DEPTH: &str =
+    "source_ingest::ingest_queue_depth reads the verified tenant's queued and running task counts and oldest enqueue time of the reserved ingest queues from the jobs seam -- queue load of the caller's own tenant, never a GraphView/core.analysis_snapshot() row read; gated by task:enqueue in allows_method";
 // MEDULLA-DURABLE-KERNEL-R101.5: the recorded downtime selections are engine-owned commons facts.
 // MEDULLA-DURABLE-KERNEL-R074.2: the worker registry is in-memory process state.
 pub(super) const REASON_WORKER_REGISTRY: &str =
@@ -727,6 +730,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("GetShardWriterWidth", REASON_SHARD_WRITER_WIDTH_CONFIG),
     // REASON_SCHEDULER_CONFIG
     ("GetSchedulerConfig", REASON_SCHEDULER_CONFIG),
+    // REASON_INGEST_QUEUE_DEPTH
+    ("IngestQueueDepth", REASON_INGEST_QUEUE_DEPTH),
     // REASON_DOWNTIME_SELECTIONS
     ("DowntimeSelections", REASON_DOWNTIME_SELECTIONS),
     // REASON_WORKER_REGISTRY

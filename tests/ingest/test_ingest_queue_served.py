@@ -152,6 +152,49 @@ async def test_failed_job_retries_then_dead_letters() -> None:
         await client.close()
 
 
+async def _ingest_depth(client: MedullaClient, queue: str | None = None) -> dict[str, Any]:
+    report = await client._send("IngestQueueDepth", {"queue": queue})
+    return {row["queue"]: row for row in report["queues"]}
+
+
+# spec: MEDULLA-INGEST-WORKER-R001.11
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R001.11")
+@pytest.mark.asyncio
+async def test_full_queue_refuses_and_depth_is_unchanged() -> None:
+    client = await _client()
+    try:
+        before_all = await _ingest_depth(client)
+        assert list(before_all) == ["ingest", "ingest-hydration"]
+        assert list(await _ingest_depth(client, "ingest-hydration")) == ["ingest-hydration"]
+        with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+            await _ingest_depth(client, "not-an-ingest-queue")
+
+        current = await client._send("GetSchedulerConfig", {})
+        limit = before_all["ingest"]["depth"] + 3
+        await client._send(
+            "SetSchedulerConfig", {"config": {**current, "max_queue_depth": limit}}
+        )
+        try:
+            for _ in range(3):
+                await client._send(
+                    "IngestEnqueue", {"envelope": _envelope(f"job-{uuid.uuid4().hex[:10]}")}
+                )
+            full = await _ingest_depth(client)
+            assert full["ingest"]["depth"] == limit
+            with pytest.raises(Exception, match="INGEST_QUEUE_FULL") as refusal:
+                await client._send(
+                    "IngestEnqueue", {"envelope": _envelope(f"job-{uuid.uuid4().hex[:10]}")}
+                )
+            assert f"depth {limit} is at limit {limit}" in str(refusal.value)
+            after = await _ingest_depth(client)
+            assert after["ingest"]["depth"] == full["ingest"]["depth"]
+            assert after["ingest-hydration"]["depth"] == full["ingest-hydration"]["depth"]
+        finally:
+            await client._send("SetSchedulerConfig", {"config": current})
+    finally:
+        await client.close()
+
+
 # spec: MEDULLA-INGEST-WORKER-R001.10
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R001.10")
 @pytest.mark.asyncio

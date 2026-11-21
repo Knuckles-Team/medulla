@@ -15274,6 +15274,13 @@ class MethodTaskQueueEnqueue(BaseModel):
     params: MethodTaskQueueEnqueueParams
 
 
+class MethodIngestQueueDepth(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["IngestQueueDepth"]
+    params: MethodIngestQueueDepthParams
+
+
 class MethodTaskQueueClaim(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15954,6 +15961,7 @@ Method = Annotated[
         MethodTaskQueueClaim,
         MethodTaskQueueRenew,
         MethodTaskQueueAck,
+        MethodIngestQueueDepth,
     ],
     Field(discriminator="method"),
 ]
@@ -34661,6 +34669,26 @@ class MethodTaskQueueEnqueueParams(BaseModel):
     queue: str
 
 
+class MethodIngestQueueDepthParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    queue: str | None = Field(default=None)
+
+
+class IngestQueueDepthRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    depth: Annotated[int, Field(ge=0)]
+    oldest_age_ms: Annotated[int, Field(ge=0)]
+    queue: str
+
+
+class IngestQueueDepthReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    queues: list[IngestQueueDepthRow]
+
+
 class MethodTaskQueueClaimParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -40770,6 +40798,10 @@ __all__ = [
     "MethodTaskQueueRenewParams",
     "MethodTaskQueueAck",
     "MethodTaskQueueAckParams",
+    "MethodIngestQueueDepth",
+    "MethodIngestQueueDepthParams",
+    "IngestQueueDepthRow",
+    "IngestQueueDepthReport",
     "TaskOutcome",
     "TaskEnqueued",
     "ClaimedTask",

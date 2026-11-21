@@ -12,7 +12,8 @@ use std::sync::Arc;
 use medulla_server_ops::api::ingest::{IngestTaskWrite, JobsApi};
 use medulla_source_types::ingest_job::{
     partition_key, target_embeds_credentials, task_id, IngestEnqueueReceipt, IngestJobEnvelope,
-    IngestJobError, IngestJobKind, IngestRetryPolicy, INGEST_TASK_PAYLOAD_MAX_BYTES,
+    IngestJobError, IngestJobKind, IngestQueueDepthReport, IngestQueueDepthRow, IngestRetryPolicy,
+    INGEST_TASK_PAYLOAD_MAX_BYTES,
 };
 use medulla_kernel::metrics::IngestJobOutcome;
 use medulla_types::contract::ServerErrorCode;
@@ -172,10 +173,63 @@ fn enqueue_unrecorded(
     })
 }
 
+/// The depth report of the reserved ingest queues (MEDULLA-INGEST-WORKER-R001.11). Each load is
+/// `(queue, (queued, running, oldest_enqueued_at_ms))` as `JobsApi::task_queue_load` answers it,
+/// the one depth count the enqueue refusal reads too. Rows keep the order of `loads`. `depth` is
+/// queued plus running; `oldest_age_ms` is `now_ms - oldest_enqueued_at_ms` saturated at 0, and 0
+/// for a queue with no pending task.
+pub fn queue_depth_report(
+    loads: &[(&'static str, (u64, u64, Option<i64>))],
+    now_ms: i64,
+) -> IngestQueueDepthReport {
+    IngestQueueDepthReport {
+        queues: loads
+            .iter()
+            .map(|(queue, (queued, running, oldest))| IngestQueueDepthRow {
+                queue: (*queue).to_string(),
+                depth: queued.saturating_add(*running),
+                oldest_age_ms: oldest
+                    .map(|enqueued| u64::try_from(now_ms.saturating_sub(enqueued)).unwrap_or(0))
+                    .unwrap_or(0),
+            })
+            .collect(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::sync::Mutex;
+
+    // spec: MEDULLA-INGEST-WORKER-R001.11
+    #[test]
+    fn depth_report_orders_queues_and_saturates_age() {
+        let report = queue_depth_report(
+            &[
+                ("ingest", (3, 2, Some(1_000))),
+                ("ingest-hydration", (0, 0, None)),
+            ],
+            4_500,
+        );
+        assert_eq!(
+            report.queues,
+            vec![
+                IngestQueueDepthRow {
+                    queue: "ingest".into(),
+                    depth: 5,
+                    oldest_age_ms: 3_500
+                },
+                IngestQueueDepthRow {
+                    queue: "ingest-hydration".into(),
+                    depth: 0,
+                    oldest_age_ms: 0
+                },
+            ]
+        );
+        // An enqueue time after now (clock skew) saturates at zero, never wraps.
+        let skewed = queue_depth_report(&[("ingest", (1, 0, Some(9_000)))], 4_500);
+        assert_eq!(skewed.queues[0].oldest_age_ms, 0);
+    }
 
     use medulla_source_types::ingest_job::IngestJobKind;
 

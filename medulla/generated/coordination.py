@@ -3027,6 +3027,12 @@ send_task_queue_renew = contract_sender("TaskQueueRenew", "MethodTaskQueueRenewP
 decode_task_queue_renew = contract_decoder("TaskQueueRenew", "TaskRenewed")
 send_task_queue_ack = contract_sender("TaskQueueAck", "MethodTaskQueueAckParams")
 decode_task_queue_ack = contract_decoder("TaskQueueAck", "TaskAcked")
+send_ingest_queue_depth = contract_sender(
+    "IngestQueueDepth", "MethodIngestQueueDepthParams"
+)
+decode_ingest_queue_depth = contract_decoder(
+    "IngestQueueDepth", "IngestQueueDepthReport"
+)
 send_mark_work_item_effect_started = contract_sender(
     "MarkWorkItemEffectStarted", "MethodMarkWorkItemEffectStartedParams"
 )

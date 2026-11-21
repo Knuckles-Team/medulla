@@ -502,6 +502,15 @@ $($variants)*
         envelope: Box<medulla_source_types::ingest_job::IngestJobEnvelope>,
     },
 
+    /// The queued and claimed task count and the oldest age of the verified tenant's ingest
+    /// queues (MEDULLA-INGEST-WORKER-R001.11). `queue` `None` reports `ingest` then
+    /// `ingest-hydration`; `Some` names one of them and refuses `INVALID_ARGUMENT` for any other
+    /// queue. Scope `task:enqueue`. Reads only. `UNAVAILABLE` without the `jobs` feature.
+    IngestQueueDepth {
+        #[serde(default)]
+        queue: Option<String>,
+    },
+
     /// Read the tree of a repository as of one changeset commit
     /// (MEDULLA-SCM-R004): the files `{path, blob_digest, mode}` under `prefix`
     /// at `rev` on `branch`, at most `depth` path segments below the prefix

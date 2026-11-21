@@ -76,6 +76,8 @@ method_results! {
     TaskQueueEnqueue(TaskQueueEnqueue) => Raw<medulla_work_types::task_queue::TaskEnqueued>;
     // MEDULLA-INGEST-WORKER-R001.4.1: the receipt of one ingest enqueue.
     IngestEnqueue(IngestEnqueue) => Raw<medulla_source_types::ingest_job::IngestEnqueueReceipt>;
+    // MEDULLA-INGEST-WORKER-R001.11: the depth and oldest age of the tenant's ingest queues.
+    IngestQueueDepth(IngestQueueDepth) => Raw<medulla_source_types::ingest_job::IngestQueueDepthReport>;
     TaskQueueClaim(TaskQueueClaim) => Raw<Option<medulla_work_types::task_queue::ClaimedTask>>;
     TaskQueueRenew(TaskQueueRenew) => Raw<medulla_work_types::task_queue::TaskRenewed>;
     TaskQueueAck(TaskQueueAck) => Raw<medulla_work_types::task_queue::TaskAcked>;
