@@ -67,8 +67,11 @@ macro_rules! persistence_mutations {
             };
             self.enqueue(graph_fname, cmd, "commit_mutation_batch")
                 .await?;
-            rx.await
-                .map_err(|_| "redb writer dropped MutationBatch completion".to_string())?
+            let committed = rx
+                .await
+                .map_err(|_| "redb writer dropped MutationBatch completion".to_string())??;
+            self.publish_commit(graph_fname, batch, result_msgpack, committed_at_ms, committed)
+                .await
         }
 
         async fn commit_mutation_batch_state(

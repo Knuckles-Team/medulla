@@ -304,6 +304,8 @@ impl RedbBackend {
             admin_mutations,
             node_info,
             cluster_hierarchy,
+            #[cfg(feature = "object-store")]
+            object_store: None,
         })
     }
 }

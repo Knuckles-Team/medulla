@@ -480,28 +480,34 @@ pub fn open_persistence(
     let queue = bounded_env_override("MEDULLA_REDB_WRITER_QUEUE", automatic_writer_queue)
         .unwrap_or(automatic_writer_queue);
     refuse_upgradable_stores(dir);
+    #[cfg(not(feature = "object-store"))]
     open_configured_object_store();
     info!("Persistence: authoritative redb (queue {})", queue);
-    let backend = medulla_persistence::redb_backend::RedbBackend::open(dir.to_string(), queue)
+    #[cfg_attr(not(feature = "object-store"), allow(unused_mut))]
+    let mut backend = medulla_persistence::redb_backend::RedbBackend::open(dir.to_string(), queue)
         .unwrap_or_else(|error| {
             exit_with(
                 format_args!("failed to open durable graph store: {error}"),
                 1,
             )
         });
+    #[cfg(feature = "object-store")]
+    attach_configured_object_store(&mut backend);
     Some(Arc::new(backend))
 }
 
-/// Read `MEDULLA_STORAGE_BACKEND` at startup and open an `object_store` spec
-/// through the backend factory (MEDULLA-OBJECT-STORAGE-BACKEND-R002.1). A spec
-/// that does not parse, admit or open refuses startup with its wire code.
+/// Read `MEDULLA_STORAGE_BACKEND` at startup, open an `object_store` spec
+/// through the backend factory (MEDULLA-OBJECT-STORAGE-BACKEND-R002.1), restore
+/// the graphs the root holds into the local store, and make the local store
+/// publish every commit to the root before its ack (R002, R003). A spec that
+/// does not parse, admit or open, or a root that does not restore, refuses
+/// startup with its wire code.
 #[cfg(all(feature = "redb", feature = "object-store"))]
-fn open_configured_object_store() {
-    match medulla_persistence::object_store_backend::open_from_env() {
+fn attach_configured_object_store(backend: &mut medulla_persistence::redb_backend::RedbBackend) {
+    match medulla_persistence::object_store_backend::attach_from_env(backend) {
         Ok(None) => {}
-        Ok(Some(backend)) => info!(
-            "Persistence: object-store backend opened ({:?})",
-            backend.durability()
+        Ok(Some(restored)) => info!(
+            "Persistence: object-store backend attached, {restored} batches restored from the root"
         ),
         Err(error) => exit_with(format_args!("invalid storage backend: {error}"), 1),
     }

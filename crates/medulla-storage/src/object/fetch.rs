@@ -16,6 +16,10 @@ use object_store::{ObjectStore, ObjectStoreExt};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+/// SHA-256 of the empty snapshot segment a bootstrapped version zero starts from.
+pub const EMPTY_SEGMENT_SHA256: &str =
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+
 fn hex_digest(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
@@ -213,6 +217,15 @@ impl ObjectFetcher {
                 detail: format!("segment key/digest not content-addressed: {}", header.key),
             });
         }
+        // The empty snapshot of a bootstrapped version zero is implicit: its
+        // digest fixes its bytes, so no object holds it.
+        if header.sha256 == EMPTY_SEGMENT_SHA256 {
+            return Ok(SegmentRef {
+                key: header.key.clone(),
+                bytes: Vec::new(),
+                sha256: header.sha256.clone(),
+            });
+        }
         let bytes = self
             .get(
                 &self.segment_path(tenant, graph, &header.key),
@@ -231,6 +244,31 @@ impl ObjectFetcher {
             bytes,
             sha256: header.sha256.clone(),
         })
+    }
+
+    /// The graph directories the root holds under `tenant`, each the sanitized
+    /// graph name of a `HEAD`-carrying layout
+    /// (MEDULLA-OBJECT-STORAGE-BACKEND-R002). Sorted; a read never writes.
+    pub async fn graphs(&self, tenant: &str) -> Result<Vec<String>, ObjectReadRefusal> {
+        let prefix = ObjPath::from(format!(
+            "{}/{}",
+            self.root.trim_matches('/'),
+            path_segment(tenant)
+        ));
+        let listing = self
+            .store
+            .list_with_delimiter(Some(&prefix))
+            .await
+            .map_err(|e| ObjectReadRefusal::Remote {
+                detail: e.to_string(),
+            })?;
+        let mut graphs: Vec<String> = listing
+            .common_prefixes
+            .iter()
+            .filter_map(|dir| dir.filename().map(str::to_string))
+            .collect();
+        graphs.sort();
+        Ok(graphs)
     }
 
     /// Read manifest `version` and fetch its snapshot and batch segments,

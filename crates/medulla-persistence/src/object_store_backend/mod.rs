@@ -14,15 +14,23 @@
 //! `OBJECT_DURABILITY_UNDECLARED`, the typed form of
 //! [`medulla_storage::backend_spec::BackendSpecRefusal::MissingDurabilityClass`].
 
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
+use medulla_protocol_types::mutation_batch::{
+    MutationBatch, MutationBatchCommit, MutationBatchRecord, MutationBatchStatus,
+};
 use medulla_storage::object::commit::{CommitRefusal, ObjectPublisher};
-use medulla_storage::object::fetch::ObjectHead;
+use medulla_storage::object::fetch::{ObjectFetcher, ObjectHead, ObjectReadRefusal};
 use medulla_storage::{BackendSpecRefusal, DurabilityClass, StorageBackendSpec};
 use object_store::ObjectStore;
 
 mod client;
 pub use client::resolve_object_store_client;
+
+/// The tenant the served engine files its graph versions under in the root:
+/// `<root>/engine/<graph>/`.
+pub const OBJECT_ROOT_TENANT: &str = "engine";
 
 /// The environment variable naming the archive destination: a
 /// `StorageBackendSpec` JSON of the `object_store` variant carrying secret
@@ -78,6 +86,27 @@ pub fn open_from_env() -> Result<Option<ObjectStoreBackend>, String> {
         .map_err(|refusal| format!("{}: {refusal:?}", refusal.wire_code()))
 }
 
+/// Open the backend named by [`STORAGE_BACKEND_ENV`] and attach it to the local
+/// store (MEDULLA-OBJECT-STORAGE-BACKEND-R002, R003): restore every graph the
+/// root holds into `redb`, then make `redb` publish each commit to the root
+/// before its ack. Returns the number of batches restored; `Ok(None)` for the
+/// redb default. The restore client and the serving client are two clients,
+/// because the restore runs on its own runtime.
+#[cfg(feature = "redb")]
+pub fn attach_from_env(
+    redb: &mut crate::redb_backend::RedbBackend,
+) -> Result<Option<usize>, String> {
+    let Some(restoring) = open_from_env()? else {
+        return Ok(None);
+    };
+    let restored = restoring.restore_blocking(redb)?;
+    let publishing = open_from_env()?.ok_or_else(|| {
+        format!("OBJECT_DURABILITY_UNDECLARED: {STORAGE_BACKEND_ENV} changed during startup")
+    })?;
+    redb.attach_object_store(Arc::new(publishing));
+    Ok(Some(restored))
+}
+
 /// Typed refusal at open. `wire_code` is the literal the wire boundary keeps
 /// stable.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -127,7 +156,10 @@ impl ObjectStoreOpenRefusal {
 #[derive(Debug, Clone)]
 pub struct ObjectStoreBackend {
     publisher: ObjectPublisher,
+    fetcher: ObjectFetcher,
     durability: DurabilityClass,
+    /// Set when step 4 lost the conditional put: this node stops publishing.
+    stopped: Arc<AtomicBool>,
 }
 
 impl ObjectStoreBackend {
@@ -148,9 +180,12 @@ impl ObjectStoreBackend {
             }
             StorageBackendSpec::Local => return Err(ObjectStoreOpenRefusal::WrongVariant),
         };
+        let root = root.into();
         Ok(Self {
-            publisher: ObjectPublisher::new(store, root),
+            publisher: ObjectPublisher::new(store.clone(), root.clone()),
+            fetcher: ObjectFetcher::new(store, root),
             durability,
+            stopped: Arc::new(AtomicBool::new(false)),
         })
     }
 
@@ -173,7 +208,146 @@ impl ObjectStoreBackend {
         graph: &str,
         batch_segment: &[u8],
     ) -> Result<ObjectHead, CommitRefusal> {
-        self.publisher.publish(tenant, graph, batch_segment).await
+        match self.publisher.publish(tenant, graph, batch_segment).await {
+            Err(CommitRefusal::HeadMissing) => {
+                self.publisher.bootstrap(tenant, graph).await?;
+                self.publisher.publish(tenant, graph, batch_segment).await
+            }
+            other => other,
+        }
+    }
+
+    /// Publish one batch that is already durable locally (steps 2-4) as the
+    /// one-record `BatchSegment` of this commit, and return only after the
+    /// `HEAD` fence. The record carries the caller's batch, which the restore
+    /// re-commits through the local store. A lost fence is
+    /// `OBJECT_PUBLISH_STALE`: this node stops publishing, and every later
+    /// publish refuses with the same code until the node reopens from the root.
+    pub async fn publish_batch(
+        &self,
+        graph_fname: &str,
+        batch: &MutationBatch,
+        result_msgpack: Option<&[u8]>,
+        committed_at_ms: u64,
+        commit: &MutationBatchCommit,
+    ) -> Result<ObjectHead, String> {
+        if self.stopped.load(Ordering::SeqCst) {
+            return Err(format!(
+                "{}: this node stopped publishing after a lost HEAD fence",
+                CommitRefusal::PublishStale { version: 0 }.wire_code()
+            ));
+        }
+        let record = MutationBatchRecord {
+            batch: batch.clone(),
+            identity: batch.identity.clone(),
+            status: MutationBatchStatus::Committed,
+            committed_version: commit.record.committed_version.clone(),
+            result_msgpack: result_msgpack.map(ToOwned::to_owned),
+            committed_at_ms,
+        };
+        let segment = rmp_serde::to_vec_named(&vec![record])
+            .map_err(|error| format!("OBJECT_HEAD_MISSING: batch segment encode: {error}"))?;
+        self.commit_mutation_batch(OBJECT_ROOT_TENANT, graph_fname, &segment)
+            .await
+            .map_err(|refusal| {
+                if matches!(refusal, CommitRefusal::PublishStale { .. }) {
+                    self.stopped.store(true, Ordering::SeqCst);
+                }
+                format!("{}: {refusal:?}", refusal.wire_code())
+            })
+    }
+
+    /// Restore every graph the root holds into `redb` on a runtime of its own
+    /// (the open path is synchronous), through [`Self::restore_into`].
+    #[cfg(feature = "redb")]
+    pub fn restore_blocking(
+        &self,
+        redb: &crate::redb_backend::RedbBackend,
+    ) -> Result<usize, String> {
+        std::thread::scope(|scope| {
+            scope
+                .spawn(|| {
+                    let runtime = tokio::runtime::Builder::new_current_thread()
+                        .enable_all()
+                        .build()
+                        .map_err(|error| format!("OBJECT_SEGMENT_MISSING: restore runtime: {error}"))?;
+                    runtime.block_on(self.restore_into(redb))
+                })
+                .join()
+                .map_err(|_| "OBJECT_SEGMENT_MISSING: the restore thread panicked".to_string())?
+        })
+    }
+
+    /// Restore the root into the local store: for each graph with a `HEAD`,
+    /// read the head version (`ObjectFetcher::materialize` verifies every
+    /// segment digest) and re-commit its batch records, in order, through the
+    /// local store's mutation kernel. A batch the local store already holds
+    /// replays as a no-op. A read never writes to the root. Returns the number
+    /// of records applied.
+    #[cfg(feature = "redb")]
+    pub async fn restore_into(
+        &self,
+        redb: &crate::redb_backend::RedbBackend,
+    ) -> Result<usize, String> {
+        use medulla_mutation_types::mutation_scope::MutationScope;
+        use medulla_protocol_types::protocol::GraphType;
+        use medulla_server_api::api::persistence::PersistenceBackend;
+
+        let read = |refusal: ObjectReadRefusal| format!("{}: {refusal:?}", refusal.wire_code());
+        let mut applied = 0;
+        for graph_fname in self
+            .fetcher
+            .graphs(OBJECT_ROOT_TENANT)
+            .await
+            .map_err(read)?
+        {
+            let head = match self.fetcher.head(OBJECT_ROOT_TENANT, &graph_fname).await {
+                Ok(head) => head,
+                // A directory with no `HEAD` is a bootstrap that never finished: it holds no version.
+                Err(ObjectReadRefusal::SegmentMissing { .. }) => continue,
+                Err(refusal) => return Err(read(refusal)),
+            };
+            let version = self
+                .fetcher
+                .materialize(OBJECT_ROOT_TENANT, &graph_fname, head.version)
+                .await
+                .map_err(read)?;
+            let mut registered = false;
+            for segment in &version.batches {
+                let records: Vec<MutationBatchRecord> = rmp_serde::from_slice(&segment.bytes)
+                    .map_err(|error| {
+                        format!(
+                            "OBJECT_SEGMENT_MISSING: batch segment {} does not decode: {error}",
+                            segment.key
+                        )
+                    })?;
+                for record in records {
+                    if !registered {
+                        if let MutationScope::Graph { graph } = record.batch.identity.scope() {
+                            let graph_type = if graph.as_str()
+                                == medulla_identity_types::tenancy::COMMONS_GRAPH
+                            {
+                                GraphType::Commons
+                            } else {
+                                GraphType::Global
+                            };
+                            redb.register_graph(&graph_fname, graph.as_str(), graph_type)
+                                .await?;
+                            registered = true;
+                        }
+                    }
+                    redb.commit_mutation_batch(
+                        &graph_fname,
+                        &record.batch,
+                        record.result_msgpack.as_deref(),
+                        record.committed_at_ms,
+                    )
+                    .await?;
+                    applied += 1;
+                }
+            }
+        }
+        Ok(applied)
     }
 }
 

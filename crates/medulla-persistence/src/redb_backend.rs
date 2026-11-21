@@ -72,6 +72,7 @@ mod backend_archive;
 mod backend_backup;
 mod backend_effect_audit;
 mod backend_load;
+mod backend_object_root;
 mod backend_open;
 mod backend_routing;
 mod backend_shard_routes;
@@ -800,6 +801,11 @@ pub struct RedbBackend {
     /// `medulla_server::persistence::cluster_hierarchy_store` for why membership never
     /// rides graph nodes/edges.
     cluster_hierarchy: Arc<super::cluster_hierarchy_store::ClusterHierarchyStore>,
+    /// The object-store root this store publishes every committed compact batch to before
+    /// the ack and restores from at open (MEDULLA-OBJECT-STORAGE-BACKEND-R002, R003). `None`
+    /// for the redb default.
+    #[cfg(feature = "object-store")]
+    object_store: Option<Arc<crate::object_store_backend::ObjectStoreBackend>>,
 }
 
 /// Rebuild a live [`GraphCore`] from a durable [`GraphDump`] (CONCEPT:MEDULLA-KG.storage.100m-tenant —

@@ -502,3 +502,24 @@ fn client_resolves_secret_refs_from_the_environment() {
     let err = resolve_object_store_client(&spec("NOROOT", false)).err().unwrap();
     assert_eq!(err.wire_code(), "OBJECT_STORE_SECRET_UNRESOLVED");
 }
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002
+// The first publish of a graph with no `HEAD` bootstraps version zero, the cold open
+// lists the graph, and the head version materializes the published batch.
+#[tokio::test]
+async fn first_publish_bootstraps_and_the_cold_open_lists_the_graph() {
+    let store = Arc::new(InMemory::new());
+    let backend = backend(store.clone());
+    let segment = to_vec_named(&["batch-a-rows"]).unwrap();
+    let ack = backend
+        .commit_mutation_batch(TENANT, GRAPH, &segment)
+        .await
+        .unwrap();
+    assert_eq!(ack.version, 1);
+    let fetcher = medulla_storage::object::fetch::ObjectFetcher::new(store.clone(), ROOT);
+    assert_eq!(fetcher.graphs(TENANT).await.unwrap(), [GRAPH.to_string()]);
+    let version = fetcher.materialize(TENANT, GRAPH, 1).await.unwrap();
+    assert!(version.snapshot.bytes.is_empty());
+    assert_eq!(version.batches.len(), 1);
+    assert_eq!(version.batches[0].bytes, segment);
+}

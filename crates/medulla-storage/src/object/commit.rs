@@ -215,6 +215,62 @@ impl ObjectPublisher {
         Ok(manifest)
     }
 
+    /// Bootstrap version zero of a graph that has no `HEAD`: an empty snapshot,
+    /// the manifest of version zero (create-only) and `HEAD` (create-only). A
+    /// concurrent bootstrap that loses a create-only put is not an error: the
+    /// root already holds a version zero.
+    pub async fn bootstrap(&self, tenant: &str, graph: &str) -> Result<(), CommitRefusal> {
+        let mut manifest = VersionManifest {
+            schema_version: self.schema_version,
+            tenant: tenant.to_string(),
+            graph: graph.to_string(),
+            version: 0,
+            parent_version: None,
+            snapshot: SegmentHeader {
+                key: super::fetch::EMPTY_SEGMENT_SHA256.to_string(),
+                sha256: super::fetch::EMPTY_SEGMENT_SHA256.to_string(),
+            },
+            batches: Vec::new(),
+            digest: String::new(),
+        };
+        manifest.digest = manifest
+            .body_digest()
+            .map_err(|e| CommitRefusal::Remote { detail: e })?;
+        let create = || PutOptions {
+            mode: PutMode::Create,
+            ..PutOptions::default()
+        };
+        let remote = |e: serde_json::Error| CommitRefusal::Remote {
+            detail: e.to_string(),
+        };
+        let created = |result: Result<(), object_store::Error>| match result {
+            Ok(()) | Err(object_store::Error::AlreadyExists { .. }) => Ok(()),
+            Err(other) => Err(CommitRefusal::Remote {
+                detail: other.to_string(),
+            }),
+        };
+        created(
+            self.put_opts(
+                &self.manifest_path(tenant, graph, 0),
+                serde_json::to_vec(&manifest).map_err(remote)?,
+                create(),
+            )
+            .await,
+        )?;
+        let head = ObjectHead {
+            version: 0,
+            manifest: format!("manifests/{:020}.json", 0),
+        };
+        created(
+            self.put_opts(
+                &self.head_path(tenant, graph),
+                serde_json::to_vec(&head).map_err(remote)?,
+                create(),
+            )
+            .await,
+        )
+    }
+
     /// Steps 2–4: upload this commit's `BatchSegment` as an immutable,
     /// content-addressed segment, put the next manifest create-only, then
     /// conditionally update `HEAD`. Returns the `HEAD` as the fence confirmed
