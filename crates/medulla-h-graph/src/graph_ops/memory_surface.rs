@@ -20,7 +20,7 @@
 //! each record's neighbours from the same index. Ranking, budget and plan are
 //! deterministic.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use super::terminal::GraphOpsContext;
 use super::*;
@@ -31,6 +31,7 @@ use medulla_protocol_types::result_contract::graph::{
     MemoryExport as MemoryExportResultKind, MemoryRecall as MemoryRecallResultKind,
     MemoryRemember as MemoryRememberResultKind,
 };
+use medulla_modality::media_memory::match_derivation;
 use medulla_types::contract::ResourceId;
 use medulla_work_types::memory::{
     MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
@@ -196,10 +197,15 @@ pub(super) enum Admitted {
 }
 
 /// Admit one remember against the stored node and the vector index, writing nothing.
+///
+/// `known_digests` holds the request's attachment digests the caller's owner scope holds in the
+/// blob ledger (MEDULLA-MEDIA-VOCAB-R650.3); an attachment outside it refuses `MEDIA_BLOB_UNKNOWN`
+/// before any write.
 pub(super) fn admit_remember(
     core: &GraphCore,
     tenant: &str,
     request: &MemoryRememberRequest,
+    known_digests: &BTreeSet<String>,
 ) -> Result<Admitted, String> {
     let record = &request.record;
     if record.tenant.as_str() != tenant {
@@ -230,6 +236,19 @@ pub(super) fn admit_remember(
             "PARAMETER_INVALID",
             format!(
                 "attachment digest '{}' is not 64 lowercase hex characters",
+                attachment.blob_digest
+            ),
+        ));
+    }
+    if let Some(attachment) = record
+        .attachments
+        .iter()
+        .find(|attachment| !known_digests.contains(&attachment.blob_digest))
+    {
+        return Err(refuse(
+            "MEDIA_BLOB_UNKNOWN",
+            format!(
+                "attachment digest '{}' is not held by the caller's owner scope",
                 attachment.blob_digest
             ),
         ));
@@ -278,6 +297,51 @@ pub(super) fn admit_remember(
     }
 }
 
+/// The attachment digests of a `MemoryRemember` that the caller's owner scope holds in the blob
+/// ledger (MEDULLA-MEDIA-VOCAB-R650.3). Empty for any other method, for a build without the
+/// `blob` feature and for a request with no verified carrier.
+pub(super) async fn known_attachment_digests(
+    state: &Arc<RwLock<ServerState>>,
+    owner_scope: &str,
+    method: &Method,
+) -> BTreeSet<String> {
+    let Method::MemoryRemember { request } = method else {
+        return BTreeSet::new();
+    };
+    if request.record.attachments.is_empty() {
+        return BTreeSet::new();
+    }
+    #[cfg(feature = "blob")]
+    {
+        use medulla_server_blob::blob::store::ChunkStore;
+        use medulla_server_blob::blob::BlobStateExt;
+        let Ok(holder) = medulla_server_blob::blob::store::HolderId::for_owner(owner_scope) else {
+            return BTreeSet::new();
+        };
+        let guard = state.read().await;
+        let Some(cursors) = guard.blob_cursors() else {
+            return BTreeSet::new();
+        };
+        request
+            .record
+            .attachments
+            .iter()
+            .filter(|attachment| {
+                cursors
+                    .store
+                    .has_named_holder(&attachment.blob_digest, holder.as_str())
+                    .unwrap_or(false)
+            })
+            .map(|attachment| attachment.blob_digest.clone())
+            .collect()
+    }
+    #[cfg(not(feature = "blob"))]
+    {
+        let _ = (state, owner_scope);
+        BTreeSet::new()
+    }
+}
+
 /// Commit the vector write of a remembered record through the existing
 /// `AddEmbedding` gateway path.
 async fn commit_embedding(ctx: &MutationCtx<'_>, write: &Method) -> Option<Response> {
@@ -307,12 +371,13 @@ pub(super) async fn handle_remember(
     ctx: &MutationCtx<'_>,
     _tenant_id: &str,
     method: &Method,
+    known_digests: &BTreeSet<String>,
 ) -> Option<Response> {
     let Method::MemoryRemember { request } = method else {
         return None;
     };
     let ok = |answer| ResultPayload::of::<MemoryRememberResultKind>(answer);
-    match admit_remember(ctx.core, ctx.tenant_scope, request) {
+    match admit_remember(ctx.core, ctx.tenant_scope, request, known_digests) {
         Err(error) => Some(Response::err(ctx.req_id, error)),
         Ok(Admitted::Same(answer)) => Some(Response::ok(ctx.req_id, ok(answer))),
         Ok(Admitted::Embed(embed, answer)) => {
@@ -387,6 +452,56 @@ fn invalid(detail: impl std::fmt::Display) -> String {
     refuse("PARAMETER_INVALID", detail)
 }
 
+/// A record whose attachment derivation scores above the record's own cosine takes that score as
+/// its candidate similarity; a record the vector index did not return joins at that score. The
+/// record stays one candidate (MEDULLA-MEDIA-VOCAB-R650.3).
+fn raise_by_derivations(
+    core: &GraphCore,
+    tenant: &str,
+    request: &MemoryRecallRequest,
+    searched_by_request: &impl Fn(&Stored) -> bool,
+    candidates: &mut Vec<(f64, Stored)>,
+) {
+    let tiers: &[MemoryTier] = if request.tiers.is_empty() {
+        &TIERS
+    } else {
+        &request.tiers
+    };
+    for stored in load(core, tenant, tiers) {
+        if !searched_by_request(&stored) {
+            continue;
+        }
+        let owned: Vec<(String, Vec<f32>)> = {
+            let store = core.semantic_store.read();
+            stored
+                .record
+                .attachments
+                .iter()
+                .flat_map(|attachment| attachment.derivation_ids.iter())
+                .filter_map(|id| {
+                    store
+                        .get_embedding(id.as_str())
+                        .map(|embedding| (id.as_str().to_string(), embedding))
+                })
+                .collect()
+        };
+        let Some(best) =
+            match_derivation(&request.query_embedding, &owned, SEARCH_FANOUT).into_iter().next()
+        else {
+            continue;
+        };
+        let score = f64::from(best.score).clamp(0.0, 1.0);
+        let held = candidates
+            .iter()
+            .position(|(_, held)| held.record.memory_id == stored.record.memory_id);
+        match held {
+            Some(at) if score > candidates[at].0 => candidates[at].0 = score,
+            Some(_) => {}
+            None => candidates.push((score, stored)),
+        }
+    }
+}
+
 /// Answer one recall for `tenant` as of `now_ms`.
 pub(super) fn recall(
     core: &GraphCore,
@@ -406,6 +521,9 @@ pub(super) fn recall(
         .collect();
     let has_embedding = !request.query_embedding.is_empty();
     let has_keywords = !keywords.is_empty();
+    if request.include_media && !has_embedding {
+        return Err(invalid("include_media needs a non-empty query embedding"));
+    }
     if !has_embedding && !has_keywords && request.prime_session.is_none() && !request.include_plan
     {
         return Err(invalid(
@@ -453,6 +571,9 @@ pub(super) fn recall(
             if searched_by_request(&stored) {
                 candidates.push((f64::from(similarity).clamp(0.0, 1.0), stored));
             }
+        }
+        if request.include_media {
+            raise_by_derivations(core, tenant, request, &searched_by_request, &mut candidates);
         }
     } else if has_keywords {
         candidates = load(core, tenant, tiers)

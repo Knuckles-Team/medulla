@@ -2293,6 +2293,7 @@ fn bench_memory_scaling(
                     budget: 100,
                     prime_session: None,
                     include_plan: false,
+                    include_media: false,
                 }),
             },
         ));

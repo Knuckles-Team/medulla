@@ -652,8 +652,11 @@ fn validate_previous_checkpoint(batch: &SourceIngestionBatch) -> Result<(), Stri
     Ok(())
 }
 
-/// The one feature kind a batch carries.
-const MEDIA_TAG_FEATURE_KIND: &str = "media_tag";
+/// The feature kind of a media tag (MEDULLA-MEDIA-VOCAB-R001.100.2).
+pub const MEDIA_TAG_FEATURE_KIND: &str = "media_tag";
+/// The feature kind of a media derivation, a transcript or caption
+/// (MEDULLA-MEDIA-VOCAB-R650.3).
+pub const MEDIA_DERIVATION_FEATURE_KIND: &str = "media_derivation";
 
 fn validate_features(batch: &SourceIngestionBatch) -> Result<(), String> {
     if batch.features.is_empty() {
@@ -670,7 +673,7 @@ fn validate_features(batch: &SourceIngestionBatch) -> Result<(), String> {
         {
             return Err("source feature ids and model version must be non-empty".into());
         }
-        if feature.kind != MEDIA_TAG_FEATURE_KIND {
+        if feature.kind != MEDIA_TAG_FEATURE_KIND && feature.kind != MEDIA_DERIVATION_FEATURE_KIND {
             return Err("source feature kind is not supported".into());
         }
         if !ids.insert(feature.feature_id.as_str()) {

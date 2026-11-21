@@ -1237,8 +1237,9 @@ pub(super) async fn try_handle(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,
+    known_digests: &std::collections::BTreeSet<String>,
 ) -> Option<Response> {
-    gateway_graph_routes::try_handle(state, tenant_id, ctx, plan, method).await
+    gateway_graph_routes::try_handle(state, tenant_id, ctx, plan, method, known_digests).await
 }
 
 #[cfg(all(test, feature = "reasoning", feature = "owl", feature = "shacl"))]

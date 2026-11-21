@@ -8,7 +8,7 @@ use medulla_protocol_types::protocol::Method;
 use medulla_server_mutation::mutation::{apply_coalescable_write, is_gateway_routed};
 use medulla_types::contract::{ResourceId, TenantId};
 use medulla_work_types::memory::{
-    MemoryExportRequest, MemoryKind, MemoryRecallRequest, MemoryRecord, MemoryRememberRequest,
+    MediaAttachment, MemoryExportRequest, MemoryKind, MemoryRecallRequest, MemoryRecord, MemoryRememberRequest,
     MemoryTier, MEMORY_RECORD_SCHEMA_VERSION,
 };
 
@@ -45,7 +45,7 @@ fn remember(record: MemoryRecord, embedding: Vec<f32>) -> MemoryRememberRequest 
 }
 
 fn store(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) {
-    let Admitted::Write(write, embed, answer) = admit_remember(core, tenant, request).unwrap()
+    let Admitted::Write(write, embed, answer) = admit_remember(core, tenant, request, &Default::default()).unwrap()
     else {
         panic!("a first remember writes");
     };
@@ -70,6 +70,7 @@ fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> Memory
         budget,
         prime_session: None,
         include_plan: false,
+        include_media: false,
     }
 }
 
@@ -97,7 +98,7 @@ fn memory_methods_are_served_and_classified() {
     let core = GraphCore::new();
     // A record naming another tenant is refused and writes nothing.
     let foreign = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "x"), vec![]);
-    let refusal = admit_remember(&core, "tenant-b", &foreign).err().unwrap();
+    let refusal = admit_remember(&core, "tenant-b", &foreign, &Default::default()).err().unwrap();
     assert!(refusal.starts_with("ACCESS_DENIED"), "{refusal}");
     assert_eq!(core.node_count(), 0);
 
@@ -148,10 +149,10 @@ fn remember_recall_consolidate_and_export_round_trip() {
 
     // A repeat of the same record is a replay; a different body is refused.
     let same = remember(sky.clone(), vec![1.0, 0.0]);
-    assert!(matches!(admit_remember(&core, "tenant-a", &same), Ok(Admitted::Same(_))));
+    assert!(matches!(admit_remember(&core, "tenant-a", &same, &Default::default()), Ok(Admitted::Same(_))));
     let mut changed = sky.clone();
     changed.text = "the sky is green".into();
-    assert!(admit_remember(&core, "tenant-a", &remember(changed, vec![1.0, 0.0])).is_err());
+    assert!(admit_remember(&core, "tenant-a", &remember(changed, vec![1.0, 0.0]), &Default::default()).is_err());
 
     // Recall ranks by cosine, drops the expired record and respects the budget.
     let found = recall(&core, "tenant-a", NOW, &recall_request(vec![1.0, 0.0], &[], 25)).unwrap();
@@ -228,4 +229,54 @@ fn recall_stays_stable_as_the_corpus_doubles() {
             Some(first) => assert_eq!(&found, first, "top-k changed at {size} facts"),
         }
     }
+}
+
+// spec: MEDULLA-MEDIA-VOCAB-R650.3
+#[test]
+fn media_attachment_remember_and_recall() {
+    let core = GraphCore::new();
+    let digest = "a".repeat(64);
+    let derivation = "b".repeat(64);
+    let mut image = record("tenant-a", "m:image", MemoryTier::Semantic, "a photo");
+    image.attachments = vec![MediaAttachment {
+        blob_digest: digest.clone(),
+        mime: "image/png".into(),
+        byte_len: 12,
+        derivation_ids: vec![ResourceId::new(derivation.as_str()).unwrap()],
+    }];
+    // An attachment the owner scope does not hold refuses before any write.
+    let refusal = admit_remember(&core, "tenant-a", &remember(image.clone(), vec![0.0, 1.0]), &Default::default())
+        .err()
+        .unwrap();
+    assert!(refusal.starts_with("MEDIA_BLOB_UNKNOWN"), "{refusal}");
+    assert_eq!(core.node_count(), 0);
+
+    let known: std::collections::BTreeSet<String> = [digest].into_iter().collect();
+    let request = remember(image, vec![0.0, 1.0]);
+    let Admitted::Write(write, embed, _) = admit_remember(&core, "tenant-a", &request, &known).unwrap() else {
+        panic!("a first remember writes");
+    };
+    apply_coalescable_write(&core, &write).unwrap();
+    let Method::AddEmbedding { node_id, embedding } = *embed.unwrap() else {
+        panic!("the vector write is an AddEmbedding");
+    };
+    core.semantic_store.write().add_embedding(node_id, embedding).unwrap();
+    // The caption embedding sits on its derivation node.
+    core.semantic_store.write().add_embedding(derivation, vec![1.0, 0.0]).unwrap();
+
+    // Without `include_media` the caption vector does not find the record.
+    let query = recall_request(vec![1.0, 0.0], &[], 100);
+    assert!(recall(&core, "tenant-a", NOW, &query).unwrap().hits.is_empty());
+    let mut media = query.clone();
+    media.include_media = true;
+    let hits = recall(&core, "tenant-a", NOW, &media).unwrap().hits;
+    assert_eq!(ids(&hits), ["m:image"]);
+    assert_eq!(hits[0].record.attachments.len(), 1);
+    // Another tenant sees nothing, and `include_media` needs a query embedding.
+    assert!(recall(&core, "tenant-b", NOW, &media).unwrap().hits.is_empty());
+    let mut keywords_only = recall_request(vec![], &["photo"], 100);
+    keywords_only.include_media = true;
+    assert!(recall(&core, "tenant-a", NOW, &keywords_only)
+        .unwrap_err()
+        .starts_with("PARAMETER_INVALID"));
 }

@@ -36940,6 +36940,7 @@ class MemoryRecallRequest(BaseModel):
 
     as_of_ms: int | None = None
     budget: Annotated[int, Field(ge=0)]
+    include_media: bool = False
     include_plan: bool = False
     keywords: list[str] = Field(default_factory=list)
     prime_session: str | None = None

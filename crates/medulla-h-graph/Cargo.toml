@@ -22,6 +22,7 @@ medulla-core = { path = "../medulla-core" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-kernel = { path = "../medulla-kernel" }
+medulla-modality = { path = "../medulla-modality" }
 medulla-mutation-types = { path = "../medulla-mutation-types" }
 medulla-numeric = { path = "../medulla-numeric", optional = true }
 medulla-persistence = { path = "../medulla-persistence" }

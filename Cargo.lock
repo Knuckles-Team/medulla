@@ -5833,6 +5833,7 @@ dependencies = [
  "medulla-isolation",
  "medulla-kernel",
  "medulla-mining",
+ "medulla-modality",
  "medulla-mutation-types",
  "medulla-numeric",
  "medulla-persistence",

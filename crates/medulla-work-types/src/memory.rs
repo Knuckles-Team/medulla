@@ -577,6 +577,10 @@ pub struct MemoryRecallRequest {
     /// Return a consolidation plan over the searched records.
     #[serde(default)]
     pub include_plan: bool,
+    /// Also rank each record by the embeddings of its attachments' derivation nodes
+    /// (MEDULLA-MEDIA-VOCAB-R650.3); needs a non-empty `query_embedding`.
+    #[serde(default)]
+    pub include_media: bool,
 }
 
 /// One recalled record with its relevance, Q16 fixed point in `[0, 65536]`.

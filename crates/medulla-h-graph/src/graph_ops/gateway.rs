@@ -239,8 +239,19 @@ pub async fn try_handle_gateway(
         };
         return Ok(super::retention_cleanup::handle_retention_cleanup_run(&ctx, &method).await);
     }
+    // MEDULLA-MEDIA-VOCAB-R650.3: the attachment digests of a remember that the carrier's owner
+    // scope holds, read here where the carrier and the blob state are in hand.
+    let known_digests = super::memory_surface::known_attachment_digests(
+        state,
+        read_authority
+            .and_then(|authority| authority.carrier())
+            .map_or("", |carrier| carrier.owner_scope()),
+        &method,
+    )
+    .await;
     if let Some(resp) =
-        super::gateway_graph::try_handle(state, tenant_id, &ctx, &plan, &method).await
+        super::gateway_graph::try_handle(state, tenant_id, &ctx, &plan, &method, &known_digests)
+            .await
     {
         return Ok(resp);
     }

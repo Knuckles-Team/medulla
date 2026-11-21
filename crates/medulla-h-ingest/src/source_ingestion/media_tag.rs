@@ -5,7 +5,7 @@
 //! methods so they commit in the one `SourceIngest` change envelope.
 
 use medulla_protocol_types::protocol::Method;
-use medulla_source_types::source_ingestion::SourceIngestionBatch;
+use medulla_source_types::source_ingestion::{SourceIngestionBatch, MEDIA_TAG_FEATURE_KIND};
 use medulla_types::contract::Digest256;
 use medulla_types::media_tag::MediaTagValue;
 
@@ -66,7 +66,11 @@ pub(super) async fn materialize_media_tags(
     entry_revision: u64,
     admitted: &mut AdmittedRecords,
 ) -> Result<(), String> {
-    for feature in &batch.features {
+    for feature in batch
+        .features
+        .iter()
+        .filter(|feature| feature.kind == MEDIA_TAG_FEATURE_KIND)
+    {
         let value: MediaTagValue = rmp_serde::from_slice(&feature.value_msgpack)
             .map_err(|_| format!("{PROVENANCE_MISSING}: feature {}", feature.feature_id))?;
         if value.producer_id.is_empty() || value.evidence_ref.is_empty() {

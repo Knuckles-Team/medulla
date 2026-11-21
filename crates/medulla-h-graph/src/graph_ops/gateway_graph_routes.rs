@@ -290,6 +290,7 @@ pub(super) async fn try_handle(
     ctx: &MutationCtx<'_>,
     plan: &MutationPlan,
     method: &Method,
+    known_digests: &std::collections::BTreeSet<String>,
 ) -> Option<Response> {
     // MEDULLA-DURABLE-KERNEL-R078: the engine clock overwrites `tx_now` before the
     // method is logged, so replay reads the logged value.
@@ -302,7 +303,9 @@ pub(super) async fn try_handle(
     let route = route_for(method);
     match route_handler(route) {
         RouteHandler::Core => try_handle_core(tenant_id, ctx, plan, method, route).await,
-        RouteHandler::Admin => try_handle_admin(state, tenant_id, ctx, plan, method, route).await,
+        RouteHandler::Admin => {
+            try_handle_admin(state, tenant_id, ctx, plan, method, route, known_digests).await
+        }
         RouteHandler::None => None,
     }
 }
@@ -332,6 +335,7 @@ async fn try_handle_admin(
     plan: &MutationPlan,
     method: &Method,
     route: Route,
+    known_digests: &std::collections::BTreeSet<String>,
 ) -> Option<Response> {
     // Only the policy route (shacl/reasoning builds) reads the state; the
     // finance record route reads the tenant.
@@ -368,7 +372,8 @@ async fn try_handle_admin(
             super::super::observation_state::handle_put(ctx, tenant_id, method).await
         }
         Route::MemorySurface => {
-            super::super::memory_surface::handle_remember(ctx, tenant_id, method).await
+            super::super::memory_surface::handle_remember(ctx, tenant_id, method, known_digests)
+                .await
         }
         Route::AssistantProfile => {
             super::super::assistant_profile::handle_put(ctx, tenant_id, method).await

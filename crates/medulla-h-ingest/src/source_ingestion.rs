@@ -52,6 +52,8 @@ pub mod facts;
 pub mod governance;
 pub mod permissions;
 #[cfg(all(feature = "redb", feature = "blob"))]
+mod media_derivation;
+#[cfg(all(feature = "redb", feature = "blob"))]
 mod media_tag;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod proposals;
@@ -494,6 +496,13 @@ pub async fn prepare(
         &mut admitted,
     )
     .await?;
+    media_derivation::materialize_media_derivations(
+        &ctx,
+        batch,
+        &policy_subject,
+        reconciliation.entry_revision,
+        &mut admitted,
+    )?;
     // Outside quality scores: scored against the tenant's approved rules, with the failure
     // streaks and the incidents they open committing in this envelope
     // (MEDULLA-UNIFIED-DATA-PLANE-R762.8).
