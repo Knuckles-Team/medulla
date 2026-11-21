@@ -968,3 +968,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T956 [US7] MEDULLA-DECISION-ENGINE-R135.17.3 Hot-path proof: reported fallbacks demote a program
 - [ ] T957 [US7] MEDULLA-DECISION-ENGINE-R173.7 The engine moves core:editStatus: HarnessEdit serves the edit lifecycle through EditMachine
 - [ ] T958 [US7] MEDULLA-DECISION-ENGINE-R173.8 The mutation compiler refuses every caller write of editStatus; HarnessEdit gains Create
+- [ ] T957 [US7] MEDULLA-DECISION-ENGINE-R869 Action and decision provenance is queryable (rollup)
+- [ ] T958 [US7] MEDULLA-DECISION-ENGINE-R869.1 ActionRecord model
+- [ ] T959 [US7] MEDULLA-DECISION-ENGINE-R869.2 Write path and refusals
+- [ ] T960 [US7] MEDULLA-DECISION-ENGINE-R869.3 The why chain
+- [ ] T961 [US7] MEDULLA-DECISION-ENGINE-R869.4 Hot-path proof: why did we reorder
