@@ -9,6 +9,8 @@ pub mod classify;
 pub mod funcs;
 /// Postgres-family extension parity: pgvector ANN index pushdown, TimescaleDB hypertables/continuous-aggregates, and
 /// ParadeDB `@@@` BM25 — the pure parse/plan/project layer.
+/// The incremental-view compiler (MEDULLA-INCREMENTAL-VIEWS-R009.2).
+pub mod matview_compile;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod pgfamily;
 /// SQL:2023 SQL/PGQ property-graph definitions and bounded `GRAPH_TABLE`

@@ -112,6 +112,33 @@ impl WireSession {
             return Err(user_err(format!("{MATVIEW_EXISTS}: {name}")));
         }
         let inputs = matview_inputs(&store, &plan.select_sql)?;
+        // MEDULLA-INCREMENTAL-VIEWS-R009.2: a defining query outside the incremental forms stays a
+        // recompute view of R014.2 and publishes the first construct that keeps it there.
+        let column_type = |table: &str, column: &str| {
+            store
+                .get_schema(table)
+                .ok()
+                .flatten()
+                .and_then(|schema| schema.column(column).map(|found| found.ty.clone()))
+        };
+        if let Err(refusal) = medulla_sql_lang::sql::matview_compile::compile_incremental_sql(
+            &name,
+            &plan.select_sql,
+            &column_type,
+        ) {
+            medulla_core::view_status::publish(medulla_core::view_status::ViewStatus {
+                name: name.clone(),
+                family: medulla_core::view_status::ViewFamily::Sql,
+                graph: graph.to_string(),
+                mode: medulla_core::view_status::ViewMode::Recompute,
+                reason_code: Some(refusal.code().as_str().to_string()),
+                reason: Some(refusal.construct),
+                state_bytes: 0,
+                applied_changes: 0,
+                shadow_checks: 0,
+                shadow_mismatches: 0,
+            });
+        }
         let seq = store.commit_seq();
         let result = self.run_read(graph, plan.select_sql.clone()).await?;
         let (authority, _) = self.catalog_authority().await?;
@@ -171,6 +198,7 @@ impl WireSession {
         }
         self.commit_table_txn(graph, sql, drop_matview_txn(&name))
             .await?;
+        medulla_core::view_status::remove(&name);
         Ok(WireOutcome::command("DROP MATERIALIZED VIEW"))
     }
 }
