@@ -19,17 +19,20 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import TypeAdapter
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "typed_packs"))
 
+from _commons_generation import connect as connect_engine, restartable_engine
 from ontology_pack_support import connect, import_entries
 
-from conftest import TEST_TENANT  # isort: skip
+from conftest import TEST_TENANT, request_context, tenant_request_context  # isort: skip
 from medulla import ConnectorPackEntryContent
 from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated.agent_component import (
     AgentComponentBlueprintExportRequest,
     AgentComponentContentRequest,
+    AgentComponentEntry,
     AgentComponentOpCurrent,
     AgentComponentOpRecordSourceEffect,
     AgentComponentOpVerifyRender,
@@ -402,18 +405,27 @@ def _native_graph(tenant: str) -> str:
 
 
 async def _projected_revisions(
-    graph: str, component_id: str, want: int, timeout_s: float = 120.0
+    graph: str,
+    component_id: str,
+    want: int,
+    timeout_s: float = 120.0,
+    socket_path: str | None = None,
+    auth_secret: str | None = None,
 ) -> dict[int, str]:
-    """The ``PromptRevision`` nodes of one component by entry revision, once ``want`` exist."""
-    from conftest import request_context  # isort: skip
+    """The ``PromptRevision`` nodes of one component by entry revision, once ``want`` exist.
 
+    ``socket_path`` (default: the session engine) names the engine to read, and
+    ``auth_secret`` the secret a restarted engine signs with.
+    """
     deadline = asyncio.get_running_loop().time() + timeout_s
     found: dict[int, str] = {}
     while asyncio.get_running_loop().time() < deadline:
+        secret = {} if auth_secret is None else {"auth_secret": auth_secret}
         reader = await MedullaClient.connect(
-            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            socket_path=socket_path or os.environ["GRAPH_SERVICE_SOCKET"],
             verified_context=request_context(),
             graph_name=graph,
+            **secret,
         )
         try:
             rows = await reader.rdf.sparql(
@@ -793,3 +805,113 @@ async def test_modified_blueprint_import() -> None:
         assert await _head(client, owned_id) == 1
     finally:
         await client.close()
+
+
+async def _refused_for_tenant_b(client: MedullaClient, component_id: str, secrets: list[str]) -> None:
+    """Tenant B reads nothing of tenant A: ``ACCESS_DENIED`` naming A, and an unknown
+    revision naming B; neither error text carries a blueprint byte or the summary."""
+    with pytest.raises(EngineResponseError, match="ACCESS_DENIED") as denied:
+        await send_agent_component_content(
+            client,
+            AgentComponentContentRequest(
+                tenant_id=TEST_TENANT, component_id=component_id
+            ),
+        )
+    with pytest.raises(
+        EngineResponseError, match="COMPONENT_REVISION_UNKNOWN"
+    ) as unknown:
+        await send_agent_component_content(
+            client,
+            AgentComponentContentRequest(
+                tenant_id="tenant-restart-b",
+                component_id=component_id,
+                entry_revision=1,
+            ),
+        )
+    for error in (denied, unknown):
+        for secret in secrets:
+            assert secret not in str(error.value)
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R002.11")
+@pytest.mark.no_engine
+def test_prompt_restart_readback(tmp_path: Path) -> None:
+    component_id = f"prompt:restart-{uuid.uuid4().hex[:12]}"
+    first = json.dumps({"task": "restart one", "schema_revision": 1}, separators=(",", ":"))
+    second = json.dumps({"task": "restart two", "schema_revision": 1}, separators=(",", ":"))
+    pins = {
+        1: hashlib.sha256(first.encode()).hexdigest(),
+        2: hashlib.sha256(second.encode()).hexdigest(),
+    }
+    graph = _native_graph(TEST_TENANT)
+    leaks = [first, second, "natively published prompt"]
+    context_b = tenant_request_context("tenant-restart-b")
+
+    async def head(client: MedullaClient) -> int:
+        return await _head(client, component_id)
+
+    async def stale_refused(client: MedullaClient) -> None:
+        with pytest.raises(EngineResponseError, match="STALE_AGENT_LIBRARY_REVISION"):
+            await _publish_prompt(client, component_id, first, pins[1], 0)
+        assert await head(client) == 2
+
+    async def run_one(engine: Any) -> None:
+        client = await connect_engine(engine=engine)
+        other = await connect_engine(engine=engine, context=context_b)
+        try:
+            await _publish_prompt(client, component_id, first, pins[1], 0)
+            await _publish_prompt(client, component_id, second, pins[2], 1)
+            projected = await _projected_revisions(
+                graph, component_id, 2, socket_path=engine.socket, auth_secret=engine.secret
+            )
+            assert projected == pins
+            await stale_refused(client)
+            await _refused_for_tenant_b(other, component_id, leaks)
+        finally:
+            await other.close()
+            await client.close()
+
+    async def run_two(engine: Any) -> None:
+        client = await connect_engine(engine=engine)
+        other = await connect_engine(engine=engine, context=context_b)
+        try:
+            history = TypeAdapter(list[AgentComponentEntry]).validate_python(
+                await client._send(
+                    "AgentComponent",
+                    {
+                        "op": {
+                            "op": "history",
+                            "tenant_id": TEST_TENANT,
+                            "component_id": component_id,
+                        }
+                    },
+                    None,
+                )
+            )
+            assert sorted(entry.entry_revision for entry in history) == [1, 2]
+            assert await head(client) == 2
+            for revision, body in ((1, first), (2, second)):
+                content = await send_agent_component_content(
+                    client,
+                    AgentComponentContentRequest(
+                        tenant_id=TEST_TENANT,
+                        component_id=component_id,
+                        entry_revision=revision,
+                    ),
+                )
+                assert content.body == body.encode()
+                assert content.content_digest == "sha256:" + pins[revision]
+            projected = await _projected_revisions(
+                graph, component_id, 2, socket_path=engine.socket, auth_secret=engine.secret
+            )
+            assert projected == pins
+            await stale_refused(client)
+            await _refused_for_tenant_b(other, component_id, leaks)
+        finally:
+            await other.close()
+            await client.close()
+
+    with restartable_engine(tmp_path, "run1", bootstrap=True) as engine:
+        asyncio.run(run_one(engine))
+    with restartable_engine(tmp_path, "run2", bootstrap=False) as engine:
+        asyncio.run(run_two(engine))
