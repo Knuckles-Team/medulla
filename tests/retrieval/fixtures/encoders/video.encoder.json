@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "id": "pinned-video",
+  "modality": "video",
+  "space": {
+    "id": "pinned-test-space",
+    "dimensions": 4,
+    "revision": "1"
+  },
+  "tokens": {
+    "vid-alpha": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "vid-beta": [
+      0,
+      1,
+      0,
+      0
+    ],
+    "vid-gamma": [
+      0,
+      0,
+      1,
+      0
+    ],
+    "vid-delta": [
+      0,
+      0,
+      0,
+      1
+    ]
+  }
+}

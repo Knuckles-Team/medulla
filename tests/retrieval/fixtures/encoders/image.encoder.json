@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "id": "pinned-image",
+  "modality": "image",
+  "space": {
+    "id": "pinned-test-space",
+    "dimensions": 4,
+    "revision": "1"
+  },
+  "tokens": {
+    "img-alpha": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "img-beta": [
+      0,
+      1,
+      0,
+      0
+    ],
+    "img-gamma": [
+      0,
+      0,
+      1,
+      0
+    ],
+    "img-delta": [
+      0,
+      0,
+      0,
+      1
+    ]
+  }
+}

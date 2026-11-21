@@ -1,0 +1,36 @@
+{
+  "format": 1,
+  "id": "pinned-audio",
+  "modality": "audio",
+  "space": {
+    "id": "pinned-test-space",
+    "dimensions": 4,
+    "revision": "1"
+  },
+  "tokens": {
+    "aud-alpha": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "aud-beta": [
+      0,
+      1,
+      0,
+      0
+    ],
+    "aud-gamma": [
+      0,
+      0,
+      1,
+      0
+    ],
+    "aud-delta": [
+      0,
+      0,
+      0,
+      1
+    ]
+  }
+}

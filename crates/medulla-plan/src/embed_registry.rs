@@ -131,6 +131,207 @@ impl ModalityEncoderRegistry {
     }
 }
 
+/// MEDULLA-FEDERATED-QUERY-R039.1.6: one pinned encoder file's contract.
+const ENCODER_FILE_SUFFIX: &str = ".encoder.json";
+/// The one format revision of a pinned encoder file.
+const ENCODER_FILE_FORMAT: u64 = 1;
+/// The largest pinned encoder file the loader reads.
+const ENCODER_FILE_MAX_BYTES: u64 = 16 * 1024 * 1024;
+/// The most tokens one pinned encoder holds.
+const ENCODER_MAX_TOKENS: usize = 65_536;
+/// The widest space a pinned encoder file declares.
+const ENCODER_MAX_DIMENSIONS: usize = 4096;
+
+/// The space tuple a pinned encoder file registers for.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PinnedSpace {
+    id: String,
+    dimensions: usize,
+    revision: String,
+}
+
+/// One `<anything>.encoder.json` file.
+#[derive(serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PinnedEncoderFile {
+    format: u64,
+    id: String,
+    modality: String,
+    space: PinnedSpace,
+    tokens: BTreeMap<String, Vec<f64>>,
+}
+
+/// The encoder a pinned file defines: a whitespace token lookup, summed and L2-normalized.
+struct PinnedEncoder {
+    id: String,
+    dimensions: usize,
+    tokens: BTreeMap<String, Vec<f32>>,
+}
+
+impl TextEmbedder for PinnedEncoder {
+    fn embed(&self, text: &str) -> Result<Vec<f32>, String> {
+        let mut sum = vec![0f32; self.dimensions];
+        let mut known = false;
+        for token in text.split_ascii_whitespace() {
+            if let Some(vector) = self.tokens.get(token) {
+                known = true;
+                for (component, value) in sum.iter_mut().zip(vector) {
+                    *component += value;
+                }
+            }
+        }
+        let norm = sum.iter().map(|c| c * c).sum::<f32>().sqrt();
+        if !known || norm == 0.0 || !norm.is_finite() {
+            return Err(format!(
+                "EMBEDDING_UNAVAILABLE: no token of the input is known to encoder `{}`",
+                self.id
+            ));
+        }
+        Ok(sum.into_iter().map(|c| c / norm).collect())
+    }
+}
+
+/// One encoder a [`ModalityEncoderRegistry::load_dir`] call registered.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LoadedEncoder {
+    /// The registry id.
+    pub id: String,
+    /// The lowercase modality name the file declares.
+    pub modality: String,
+    /// The space id the entry is registered for.
+    pub space_id: String,
+    /// The space's vector width.
+    pub dimensions: usize,
+    /// The space's revision.
+    pub revision: String,
+    /// The file name the entry came from.
+    pub file: String,
+}
+
+fn invalid_file(file: &str, reason: impl std::fmt::Display) -> String {
+    format!("ENCODER_FILE_INVALID: {file}: {reason}")
+}
+
+/// Read and validate one pinned encoder file.
+fn read_pinned(path: &std::path::Path, file: &str) -> Result<(LoadedEncoder, PinnedEncoder), String> {
+    let size = std::fs::metadata(path)
+        .map_err(|error| invalid_file(file, error))?
+        .len();
+    if size > ENCODER_FILE_MAX_BYTES {
+        return Err(invalid_file(
+            file,
+            format!("{size} bytes exceed the {ENCODER_FILE_MAX_BYTES} byte limit"),
+        ));
+    }
+    let bytes = std::fs::read(path).map_err(|error| invalid_file(file, error))?;
+    let parsed: PinnedEncoderFile =
+        serde_json::from_slice(&bytes).map_err(|error| invalid_file(file, error))?;
+    if parsed.format != ENCODER_FILE_FORMAT {
+        return Err(invalid_file(file, format!("format {} is not {ENCODER_FILE_FORMAT}", parsed.format)));
+    }
+    if parsed.id.is_empty() || parsed.id.chars().count() > 128 {
+        return Err(invalid_file(file, "id must be 1 to 128 characters"));
+    }
+    if !matches!(parsed.modality.as_str(), "text" | "image" | "audio" | "video") {
+        return Err(invalid_file(
+            file,
+            format!("modality `{}` is not text, image, audio or video", parsed.modality),
+        ));
+    }
+    let dimensions = parsed.space.dimensions;
+    if !(1..=ENCODER_MAX_DIMENSIONS).contains(&dimensions) {
+        return Err(invalid_file(
+            file,
+            format!("space dimensions {dimensions} are outside [1, {ENCODER_MAX_DIMENSIONS}]"),
+        ));
+    }
+    if parsed.tokens.is_empty() || parsed.tokens.len() > ENCODER_MAX_TOKENS {
+        return Err(invalid_file(
+            file,
+            format!("tokens must hold 1 to {ENCODER_MAX_TOKENS} entries"),
+        ));
+    }
+    let mut tokens = BTreeMap::new();
+    for (token, vector) in parsed.tokens {
+        if vector.len() != dimensions || vector.iter().any(|c| !c.is_finite()) {
+            return Err(invalid_file(
+                file,
+                format!("token `{token}` must be {dimensions} finite numbers"),
+            ));
+        }
+        tokens.insert(token, vector.into_iter().map(|c| c as f32).collect());
+    }
+    let loaded = LoadedEncoder {
+        id: parsed.id.clone(),
+        modality: parsed.modality,
+        space_id: parsed.space.id,
+        dimensions,
+        revision: parsed.space.revision,
+        file: file.to_string(),
+    };
+    let encoder = PinnedEncoder {
+        id: parsed.id,
+        dimensions,
+        tokens,
+    };
+    Ok((loaded, encoder))
+}
+
+impl ModalityEncoderRegistry {
+    /// MEDULLA-FEDERATED-QUERY-R039.1.6: register every `*.encoder.json` file of `dir`, in
+    /// ascending file-name order, and return one [`LoadedEncoder`] per file. Every file is
+    /// validated before anything registers: a directory that cannot be read, a file that
+    /// does not parse or validate and a repeated id (within the directory or against an
+    /// entry already registered) each refuse `ENCODER_FILE_INVALID` and register nothing
+    /// from this call. An empty directory is `Ok(vec![])`.
+    pub fn load_dir(&self, dir: &std::path::Path) -> Result<Vec<LoadedEncoder>, String> {
+        let shown = dir.display().to_string();
+        let mut names = Vec::new();
+        for entry in std::fs::read_dir(dir).map_err(|error| invalid_file(&shown, error))? {
+            let entry = entry.map_err(|error| invalid_file(&shown, error))?;
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.ends_with(ENCODER_FILE_SUFFIX) {
+                names.push(name);
+            }
+        }
+        names.sort();
+        let mut files = Vec::with_capacity(names.len());
+        let mut seen = std::collections::BTreeSet::new();
+        for name in &names {
+            let (loaded, encoder) = read_pinned(&dir.join(name), name)?;
+            if !seen.insert(loaded.id.clone()) {
+                return Err(invalid_file(name, format!("id `{}` is repeated in the directory", loaded.id)));
+            }
+            let registered = self
+                .entries
+                .read()
+                .map_err(|_| invalid_file(name, "the registry is poisoned"))?
+                .contains_key(&loaded.id);
+            if registered {
+                return Err(invalid_file(
+                    name,
+                    format!("id `{}` is already registered", loaded.id),
+                ));
+            }
+            files.push((loaded, encoder));
+        }
+        let mut loaded = Vec::with_capacity(files.len());
+        for (entry, encoder) in files {
+            self.register(
+                &entry.id,
+                &entry.space_id,
+                entry.dimensions,
+                &entry.revision,
+                Box::new(encoder),
+            )
+            .map_err(|error| invalid_file(&entry.file, error))?;
+            loaded.push(entry);
+        }
+        Ok(loaded)
+    }
+}
+
 /// The one process-wide registry the served query path binds from.
 pub fn modality_encoders() -> &'static ModalityEncoderRegistry {
     static REGISTRY: OnceLock<ModalityEncoderRegistry> = OnceLock::new();
@@ -185,5 +386,58 @@ mod tests {
             let error = registry.lookup_by_space(space, dim, revision).err().unwrap();
             assert!(error.starts_with("QUERY_ENCODER_UNAVAILABLE"), "{error}");
         }
+    }
+
+    fn write_encoder(dir: &std::path::Path, file: &str, id: &str, token: &str, vector: &str) {
+        let body = format!(
+            r#"{{"format":1,"id":"{id}","modality":"text","space":{{"id":"s","dimensions":2,"revision":"1"}},"tokens":{{"{token}":{vector}}}}}"#
+        );
+        std::fs::write(dir.join(file), body).unwrap();
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R039.1.6
+    #[test]
+    fn load_dir_registers_pinned_encoders_in_file_order() {
+        let dir = std::env::temp_dir().join(format!("encoders-ok-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        write_encoder(&dir, "b.encoder.json", "enc-b", "beta", "[0.0, 3.0]");
+        write_encoder(&dir, "a.encoder.json", "enc-a", "alpha", "[2.0, 0.0]");
+        std::fs::write(dir.join("ignored.json"), "not an encoder").unwrap();
+        let registry = ModalityEncoderRegistry::new();
+        let loaded = registry.load_dir(&dir).unwrap();
+        assert_eq!(
+            loaded.iter().map(|l| (l.id.as_str(), l.file.as_str())).collect::<Vec<_>>(),
+            vec![("enc-a", "a.encoder.json"), ("enc-b", "b.encoder.json")]
+        );
+        let encoder = registry.lookup("enc-a", "s", 2, "1").unwrap();
+        assert_eq!(encoder.embed("alpha alpha unknown").unwrap(), vec![1.0, 0.0]);
+        let error = encoder.embed("beta").unwrap_err();
+        assert!(error.starts_with("EMBEDDING_UNAVAILABLE"), "{error}");
+        std::fs::remove_dir_all(&dir).unwrap();
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R039.1.6
+    #[test]
+    fn load_dir_refuses_everything_or_nothing() {
+        let dir = std::env::temp_dir().join(format!("encoders-bad-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        write_encoder(&dir, "a.encoder.json", "enc-a", "alpha", "[1.0, 0.0]");
+        write_encoder(&dir, "b.encoder.json", "enc-a", "beta", "[0.0, 1.0]");
+        let registry = ModalityEncoderRegistry::new();
+        let error = registry.load_dir(&dir).unwrap_err();
+        assert!(error.starts_with("ENCODER_FILE_INVALID: b.encoder.json"), "{error}");
+        assert!(registry.lookup("enc-a", "s", 2, "1").is_err());
+        // A wrong-width token and an unknown key each refuse.
+        write_encoder(&dir, "b.encoder.json", "enc-b", "beta", "[0.0]");
+        assert!(registry.load_dir(&dir).unwrap_err().contains("b.encoder.json"));
+        std::fs::write(dir.join("b.encoder.json"), r#"{"format":1,"extra":1}"#).unwrap();
+        assert!(registry.load_dir(&dir).unwrap_err().contains("b.encoder.json"));
+        std::fs::remove_dir_all(&dir).unwrap();
+        let missing = registry.load_dir(&dir).unwrap_err();
+        assert!(missing.starts_with("ENCODER_FILE_INVALID"), "{missing}");
+        let empty = std::env::temp_dir().join(format!("encoders-empty-{}", std::process::id()));
+        std::fs::create_dir_all(&empty).unwrap();
+        assert_eq!(registry.load_dir(&empty), Ok(vec![]));
+        std::fs::remove_dir_all(&empty).unwrap();
     }
 }

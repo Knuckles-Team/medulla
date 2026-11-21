@@ -46,6 +46,17 @@ pub fn register_query_encoders() -> Result<(), String> {
                 return;
             }
         }
+        // MEDULLA-FEDERATED-QUERY-R039.1.6: pinned encoder files an operator names, read once
+        // before any request is served. A load error refuses to boot.
+        if let Some(dir) = std::env::var_os("MEDULLA_EMBEDDING_ENCODER_DIR").filter(|d| !d.is_empty())
+        {
+            if let Err(error) =
+                medulla_plan::embed_registry::modality_encoders().load_dir(std::path::Path::new(&dir))
+            {
+                outcome = Err(error);
+                return;
+            }
+        }
         let (Some(embedder), Some(identity)) = (uql_text_embedder(), uql_text_encoder_identity())
         else {
             return;

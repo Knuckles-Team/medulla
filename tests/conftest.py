@@ -447,6 +447,12 @@ def start_medulla_server(request, tmp_path_factory):
     server_env.setdefault("MEDULLA_RETRIEVAL_RERANKER_MODEL", "builtin:lexical-overlap")
     # Stored summaries and the query text share one deterministic embedding space.
     server_env.setdefault("MEDULLA_UQL_TEXT_EMBEDDER", "hash")
+    # The pinned tiny test encoders, one per modality, loaded at startup
+    # (MEDULLA-FEDERATED-QUERY-R039.1.6).
+    server_env.setdefault(
+        "MEDULLA_EMBEDDING_ENCODER_DIR",
+        str(Path(__file__).resolve().parent / "retrieval" / "fixtures" / "encoders"),
+    )
 
     if os.path.exists(socket_path):
         os.remove(socket_path)

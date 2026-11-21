@@ -167,6 +167,92 @@ def test_receipt_matches_model_calls(start_medulla_server) -> None:
         cl.close()
 
 
+_PINNED_SPACE_ID = "pinned-test-space"
+_CONCEPTS = ("alpha", "beta", "gamma", "delta")
+# The token prefix of each modality in the pinned test encoders
+# (tests/retrieval/fixtures/encoders).
+_TOKEN_PREFIX = {"text": "", "image": "img-", "audio": "aud-", "video": "vid-"}
+
+
+def _pinned_space() -> dict[str, Any]:
+    """The four-modality space the pinned test encoders are registered for."""
+    return {
+        "id": _PINNED_SPACE_ID,
+        "revision": "1",
+        "model_hash": "sha256:w",
+        "preprocessing_hash": "sha256:p",
+        "dimensions": 4,
+        "normalize": False,
+        "digest": "pinned-test-space-digest",
+        "modalities": [
+            {"modality": m, "encoder": f"pinned-{m}"} for m in _MODALITIES
+        ],
+    }
+
+
+def _basis(index: int) -> list[float]:
+    return [1.0 if i == index else 0.0 for i in range(4)]
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R039.1.6")
+def test_sixteen_modality_pairs(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R039.1.6: for each of the 16 (query modality,
+    target modality) pairs, the query is the query modality's `gamma` token and the first
+    answer row is the target modality's `gamma` node, over the pinned test encoders the
+    server loaded from its encoder directory."""
+    graph = f"multimodal-pairs-{uuid.uuid4().hex[:8]}"
+    foreign = f"multimodal-foreign-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    cl.tenants.create(graph)
+    cl.tenants.create(foreign)
+    try:
+        for modality in _MODALITIES:
+            for index, concept in enumerate(_CONCEPTS):
+                put(
+                    cl,
+                    graph,
+                    f"{modality}-{concept}",
+                    {"type": f"Item-{modality}"},
+                    _basis(index),
+                )
+        # Another tenant's nearest node must never surface here.
+        put(cl, foreign, "foreign-gamma", {"type": "Item-image"}, _basis(2))
+        assert cl.graph.declare_embedding_space(_pinned_space(), graph) == (
+            "pinned-test-space-digest"
+        )
+        for query_modality in _MODALITIES:
+            query = f"{_TOKEN_PREFIX[query_modality]}gamma"
+            for target in _MODALITIES:
+                ops = [
+                    {"Scan": {"label": f"Item-{target}"}},
+                    {"RankEmbed": {"text": query}},
+                    {"Limit": {"k": 4}},
+                ]
+                answer = unified(
+                    cl, graph, ops, {"query": query_modality, "target": target}
+                )
+                ids = [row[0] for row in answer.rows]
+                assert ids[0] == f"{target}-gamma", (query_modality, target, ids)
+                assert "foreign-gamma" not in ids
+                assert answer.receipt is not None and answer.receipt.modality is not None
+                assert answer.receipt.modality.modality_direction == (
+                    f"{query_modality}->{target}"
+                )
+        # A query token no encoder knows refuses before ranking.
+        with pytest.raises(EngineResponseError) as unknown:
+            unified(
+                cl,
+                graph,
+                [{"Scan": {"label": "Item-text"}}, {"RankEmbed": {"text": "zzz"}}],
+                {"query": "text", "target": "text"},
+            )
+        assert "EMBEDDING_UNAVAILABLE" in str(unknown.value)
+    finally:
+        cl.tenants.delete(foreign)
+        cl.tenants.delete(graph)
+        cl.close()
+
+
 @contextlib.contextmanager
 def _engine(tmp_path: Path, run: str, *, bootstrap: bool):
     """One engine process on a durable data directory shared across runs."""
