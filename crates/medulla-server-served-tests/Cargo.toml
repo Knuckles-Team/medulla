@@ -27,6 +27,7 @@ medulla-core = { path = "../medulla-core" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-h-admin = { path = "../medulla-h-admin" }
+medulla-observe = { path = "../medulla-observe" }
 medulla-h-decide = { path = "../medulla-h-decide" }
 medulla-h-ingest = { path = "../medulla-h-ingest" }
 medulla-h-jobs = { path = "../medulla-h-jobs" }

@@ -241,6 +241,20 @@ impl TaskRegistry {
         live.finished.iter().rev().find(|row| row.name == name).cloned()
     }
 
+    /// The live rows and the finished rows still kept, ordered by registration.
+    pub fn all(&self) -> Vec<TaskRow> {
+        let live = self.inner.live.lock();
+        let mut rows: Vec<TaskRow> = live.by_name.values().map(|cell| cell.lock().clone()).collect();
+        rows.extend(live.finished.iter().cloned());
+        rows.sort_by_key(|row| row.id);
+        rows
+    }
+
+    /// The registry's sequence number: the id the next registration takes.
+    pub fn sequence(&self) -> u64 {
+        self.inner.next_id.load(Ordering::SeqCst)
+    }
+
     /// The live rows, ordered by registration.
     pub fn live(&self) -> Vec<TaskRow> {
         let live = self.inner.live.lock();

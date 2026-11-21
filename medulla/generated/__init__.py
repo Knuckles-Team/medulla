@@ -394,6 +394,7 @@ SEND_BY_METHOD = {
     "TaskQueueAck": coordination.send_task_queue_ack,
     "IngestEnqueue": coordination.send_ingest_enqueue,
     "IngestQueueDepth": coordination.send_ingest_queue_depth,
+    "Introspect": security.send_introspect,
     "GetShortestPath": compute.send_get_shortest_path,
     "GetSubgraph": graph.send_get_subgraph,
     "GetSuccessors": graph.send_get_successors,

@@ -46,6 +46,11 @@ pub async fn try_handle(
     if let Method::DescribeContract { .. } = method {
         return Ok(super::describe_contract::handle(req_id, method));
     }
+    // The runtime introspection reads process registries, never a substrate
+    // (MEDULLA-OBSERVE-R006.1): serve it before the backend gate too.
+    if let Method::Introspect { .. } = method {
+        return Ok(super::introspect::handle(req_id, method));
+    }
     // Keep the backend owner alive across every async helper call.
     let backend_arc = { state.read().await.persistence.clone() };
     let Some(backend) = backend_arc.as_ref().and_then(|p| p.as_redb()) else {

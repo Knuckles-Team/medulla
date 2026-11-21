@@ -376,6 +376,12 @@ closed_error_codes! {
         DecisionLogTooLarge => "DECISION_LOG_TOO_LARGE",
         DescribeCursorInvalid => "DESCRIBE_CURSOR_INVALID",
         DescribeLimitInvalid => "DESCRIBE_LIMIT_INVALID",
+        /// MEDULLA-OBSERVE-R006.1: `Introspect` named a section the engine does not serve.
+        IntrospectSectionInvalid => "INTROSPECT_SECTION_INVALID",
+        /// MEDULLA-OBSERVE-R006.1: `Introspect` limit is 0 or over 500.
+        IntrospectLimitInvalid => "INTROSPECT_LIMIT_INVALID",
+        /// MEDULLA-OBSERVE-R006.1: `Introspect` cursor is not a key of the section.
+        IntrospectCursorInvalid => "INTROSPECT_CURSOR_INVALID",
         DeltaWeightOverflow => "DELTA_WEIGHT_OVERFLOW",
         DerivedBoundMalformed => "DERIVED_BOUND_MALFORMED",
         DerivedOriginMissing => "DERIVED_ORIGIN_MISSING",

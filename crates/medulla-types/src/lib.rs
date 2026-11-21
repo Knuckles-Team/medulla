@@ -59,6 +59,7 @@ pub mod viewport;
 // RF-RULING-004 — bounded scalar/collection primitives shared by kernel DTOs.
 pub mod contract;
 pub mod contract_catalog;
+pub mod introspect;
 // MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
 pub mod delta;
 // MEDULLA-DURABLE-KERNEL-R038 — the declared durability class (ephemeral/async/sync)

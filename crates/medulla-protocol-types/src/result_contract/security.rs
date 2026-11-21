@@ -272,4 +272,6 @@ method_results! {
     GovernedList(GovernedChange / "list") => Json<Vec<medulla_mutation_types::governed_change::GovernedChange>>;
     // MEDULLA-CONTRACT-R054: the served contract page (descriptors + scopes).
     DescribeContract(DescribeContract) => Json<medulla_types::contract_catalog::DescribeContractPage>;
+    // MEDULLA-OBSERVE-R006.1: one page of one runtime-registry section.
+    Introspect(Introspect) => Json<medulla_types::introspect::IntrospectPage>;
 }

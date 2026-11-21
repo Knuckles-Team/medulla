@@ -6,6 +6,7 @@
 //! never opened through the registry starts at `Opening` on its first event.
 
 use std::collections::BTreeMap;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use medulla_types::transition_refused::TransitionRefused;
@@ -30,6 +31,7 @@ pub struct GraphReadinessRow {
 #[derive(Default)]
 pub struct ReadinessRegistry {
     graphs: Mutex<BTreeMap<String, GraphReadinessRow>>,
+    sequence: AtomicU64,
 }
 
 fn now_ms() -> u64 {
@@ -51,11 +53,14 @@ impl ReadinessRegistry {
         self.graphs
             .lock()
             .entry(graph.to_string())
-            .or_insert_with(|| GraphReadinessRow {
-                graph: graph.to_string(),
-                state: ReadinessState::initial(),
-                reason: None,
-                since_unix_ms: now_ms(),
+            .or_insert_with(|| {
+                self.sequence.fetch_add(1, Ordering::SeqCst);
+                GraphReadinessRow {
+                    graph: graph.to_string(),
+                    state: ReadinessState::initial(),
+                    reason: None,
+                    since_unix_ms: now_ms(),
+                }
             });
     }
 
@@ -78,6 +83,7 @@ impl ReadinessRegistry {
                 since_unix_ms: now_ms(),
             });
         let next = row.state.apply(event)?;
+        self.sequence.fetch_add(1, Ordering::SeqCst);
         row.state = next;
         row.reason = if event == ReadinessEvent::Degrade {
             reason
@@ -97,6 +103,11 @@ impl ReadinessRegistry {
         self.apply(graph, ReadinessEvent::Degrade, Some(reason))
     }
 
+    /// The registry's sequence number: the count of state changes applied.
+    pub fn sequence(&self) -> u64 {
+        self.sequence.load(Ordering::SeqCst)
+    }
+
     /// One graph's row.
     pub fn get(&self, graph: &str) -> Option<GraphReadinessRow> {
         self.graphs.lock().get(graph).cloned()
@@ -109,6 +120,8 @@ impl ReadinessRegistry {
 
     /// Forget a graph that left the catalog.
     pub fn remove(&self, graph: &str) {
-        self.graphs.lock().remove(graph);
+        if self.graphs.lock().remove(graph).is_some() {
+            self.sequence.fetch_add(1, Ordering::SeqCst);
+        }
     }
 }

@@ -211,6 +211,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "DescribeContract",
         &["DESCRIBE_CURSOR_INVALID", "DESCRIBE_LIMIT_INVALID"],
     ),
+    // MEDULLA-OBSERVE-R006.1: the runtime introspection read's refusals.
+    (
+        "Introspect",
+        &[
+            "INTROSPECT_SECTION_INVALID",
+            "INTROSPECT_LIMIT_INVALID",
+            "INTROSPECT_CURSOR_INVALID",
+        ],
+    ),
     // MEDULLA-FEDERATED-QUERY-R709: a GeoSPARQL operand that is not WKT or
     // names an unsupported coordinate reference.
     // MEDULLA-CQ-CONN-R084.7: a competency question names a pack the tenant has not imported.

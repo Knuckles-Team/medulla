@@ -49,6 +49,7 @@ pub mod ownership;
 // `pub(crate)` so the projection worker shares the admin re-projection path.
 pub(crate) mod connector_pack;
 mod describe_contract;
+mod introspect;
 #[cfg(feature = "redb")]
 pub(crate) mod saga;
 mod workflow_registry;
@@ -80,6 +81,7 @@ pub async fn try_handle(
 ) -> Result<Response, Method> {
     match method {
         Method::DescribeContract { .. } => Ok(describe_contract::handle(req_id, method)),
+        Method::Introspect { .. } => Ok(introspect::handle(req_id, method)),
         Method::Reshard { .. }
         | Method::CatalogAssign { .. }
         | Method::CatalogReassign { .. }

@@ -111,7 +111,9 @@ async fn dispatch_cluster_admin_methods_arm_0(ctx: DispatchCtx<'_>, method: Meth
         | Method::Restore { .. }
         // MEDULLA-CONTRACT-R054: the served contract read answers through the
         // same admin seam; it needs no durable substrates.
-        | Method::DescribeContract { .. }) => {
+        | Method::DescribeContract { .. }
+        // MEDULLA-OBSERVE-R006.1: the runtime introspection read, same seam.
+        | Method::Introspect { .. }) => {
             dispatch_boxed(
                 async {
     let req_id = req.id;

@@ -7956,6 +7956,17 @@ class GraphTextPropertyRef(BaseModel):
     type_id: str
 
 
+class IntrospectSection(str, Enum):
+    REQUESTS = "requests"
+    TASKS = "tasks"
+    RUNTIME = "runtime"
+    LOCKS = "locks"
+    READINESS = "readiness"
+    STARTUP = "startup"
+    BUILD = "build"
+    EVENTS = "events"
+
+
 class GraphType(str, Enum):
     AGENT = "Agent"
     TEAM = "Team"
@@ -15106,6 +15117,21 @@ class MethodDescribeContract(BaseModel):
     )
 
 
+class MethodIntrospectParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    section: IntrospectSection
+    limit: int | None = Field(default=None, ge=0, le=65535)
+    cursor: str | None = None
+
+
+class MethodIntrospect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["Introspect"]
+    params: MethodIntrospectParams
+
+
 class MethodMeasureIngestThroughput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16339,6 +16365,7 @@ Method = Annotated[
         MethodLiveArtifactRefresh,
         MethodMarkWorkItemEffectStarted,
         MethodDescribeContract,
+        MethodIntrospect,
         MethodMeasureIngestThroughput,
         MethodMeetingSummaryCommit,
         MethodMeetingSummaryContext,
@@ -39598,6 +39625,9 @@ __all__ = [
     "MethodDecaySweepParams",
     "MethodDescribeContract",
     "MethodDescribeContractParams",
+    "MethodIntrospect",
+    "MethodIntrospectParams",
+    "IntrospectSection",
     "MethodDecide",
     "MethodDecideParams",
     "MethodDecisionCommit",

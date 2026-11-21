@@ -18892,6 +18892,30 @@ class MedullaClient:
             raise RuntimeError("DescribeContract must answer with an object")
         return result
 
+    async def introspect(
+        self,
+        section: str,
+        *,
+        limit: int | None = None,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        """Read one page of one runtime-registry section (MEDULLA-OBSERVE-R006.1).
+
+        ``section`` is one of ``requests``, ``tasks``, ``runtime``, ``locks``,
+        ``readiness``, ``startup``, ``build`` or ``events``. Pages are ascending by
+        the section's key; ``limit`` is 1..=500 (default 100) and ``cursor`` is the
+        ``next_cursor`` of the previous page. Needs the ``observe:read`` scope.
+        """
+        params: dict[str, Any] = {"section": section}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = await self._send("Introspect", params, None, idempotency_key=None)
+        if not isinstance(result, dict):
+            raise RuntimeError("Introspect must answer with an object")
+        return result
+
     async def cancel_request(self, target_req_id: int) -> bool:
         """Cooperatively cancel an IN-FLIGHT request by its ``target_req_id`` (L36) —
         e.g. a long-running :meth:`QueryClient.sql`/:meth:`~JobsClient.status` call

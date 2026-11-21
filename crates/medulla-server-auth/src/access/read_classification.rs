@@ -415,6 +415,12 @@ pub(super) const REASON_SOURCE_INGESTION_MARKER: &str =
 pub(super) const REASON_CONTRACT_CATALOG_METADATA: &str =
     "DescribeContract answers from the static medulla_capabilities catalog (medulla_h_admin::admin::describe_contract, routed by the control-plane admin arm in dispatch/router/control_plane.rs): one bounded page of method descriptors, the scope registry on the first page and the contract catalog digest on every page -- no durable substrates are read and no GraphView/core.analysis_snapshot() is ever constructed, so there is no row for RLS to filter; gated by the contract:read scope";
 
+// MEDULLA-OBSERVE-R006.1: `Introspect` reads the process's own runtime registries (tasks,
+// per-graph readiness and the sections that follow); the rows describe the engine, not
+// graph content, and carry no payload and no token, so there is no row for RLS to filter.
+pub(super) const REASON_RUNTIME_INTROSPECTION: &str =
+    "Introspect answers from the process-wide runtime registries of medulla_observe (medulla_h_admin::admin::introspect, routed by the control-plane admin arm in dispatch/router/control_plane.rs): rows describe the engine's own tasks, readiness and runtime, carry no payload and no token, and no GraphView/core.analysis_snapshot() is ever constructed, so there is no row for RLS to filter; gated by the observe:read scope";
+
 // RF-ADR-010 DL-4: `Decide` reads its candidates from ONE tenant-bound
 // agent_library.redb snapshot through `AgentComponent.Search`'s accessor, and
 // its pinned feature schema, head and policy bodies from the same owner. The
@@ -749,6 +755,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("AdmitWorkerTask", REASON_WORKER_REGISTRY),
     // REASON_CONTRACT_CATALOG_METADATA (MEDULLA-CONTRACT-R054)
     ("DescribeContract", REASON_CONTRACT_CATALOG_METADATA),
+    // REASON_RUNTIME_INTROSPECTION (MEDULLA-OBSERVE-R006.1)
+    ("Introspect", REASON_RUNTIME_INTROSPECTION),
 ];
 
 // L-RLS-1 burn-down (CONCEPT:EPI-P3-3/P3-6): the 5 methods this pass covered (see the

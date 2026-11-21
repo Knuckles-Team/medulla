@@ -607,3 +607,6 @@ decode_check_resource_access = contract_decoder(
 send_describe_contract = contract_sender(
     "DescribeContract", "MethodDescribeContractParams"
 )
+
+
+send_introspect = contract_sender("Introspect", "MethodIntrospectParams")

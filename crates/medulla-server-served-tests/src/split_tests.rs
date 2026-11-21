@@ -73,6 +73,8 @@ mod medulla_h_ingest_web_ingest_tests;
 mod medulla_h_jobs_wire_tests;
 #[cfg(all(test, unix, feature = "jobs", feature = "redb", feature = "security"))]
 mod medulla_h_jobs_session_usage_tests;
+#[cfg(all(test, unix, feature = "redb", feature = "security"))]
+mod observability;
 #[cfg(all(test, feature = "query", feature = "redb", feature = "ann-redb"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod medulla_h_query_dispatch_pipeline_tests;

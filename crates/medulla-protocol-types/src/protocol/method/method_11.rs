@@ -753,6 +753,19 @@ $($variants)*
         #[serde(default)]
         limit: Option<u16>,
     },
+    /// Read one section of the runtime registries (MEDULLA-OBSERVE-R006.1): requests,
+    /// tasks, runtime, locks, readiness, startup, build or events. Scope `observe:read`
+    /// (admin class). Pages are ascending by the section's key; `limit` is 1 to 500,
+    /// defaulting to 100, and `cursor` is the key of the last row of the previous page.
+    /// Refuses `INTROSPECT_SECTION_INVALID`, `INTROSPECT_LIMIT_INVALID` and
+    /// `INTROSPECT_CURSOR_INVALID`.
+    Introspect {
+        section: medulla_types::introspect::IntrospectSection,
+        #[serde(default)]
+        limit: Option<u16>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
     /// Enqueue one durable task (MEDULLA-DURABLE-KERNEL-R072) into the job store
     /// as a job of family `task.<queue>`. Scope `task:enqueue`. The tenant and
     /// principal come from the verified request; a repeated `idempotency_key` in

@@ -33,6 +33,7 @@ METHOD_IDS = frozenset(
         "Ping",
         "EngineCapabilities",
         "DescribeContract",
+        "Introspect",
         "Health",
         "Shutdown",
         "CancelRequest",
