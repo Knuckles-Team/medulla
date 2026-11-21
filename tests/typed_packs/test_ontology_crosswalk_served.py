@@ -26,7 +26,10 @@ from ontology_pack_support import (
     violation_codes,
 )
 
+from conftest import TEST_TENANT  # isort: skip
+from medulla import ConnectorPackClient
 from medulla.generated import reasoning
+from medulla.generated.connector_pack import PackHeadRef
 
 CORE = "https://knuckles-team.github.io/ontology/core#"
 GOLDEN = [
@@ -168,7 +171,7 @@ def test_crosswalk_refusals_leave_state_unchanged() -> None:
                 client,
                 revision,
                 person,
-                "CROSSWALK_SOURCE_UNKNOWN",
+                "CROSSWALK_REVISION_MISMATCH",
                 source_revision=stale,
             )
 
@@ -317,6 +320,56 @@ def test_crosswalk_evidence_matches_committed_records() -> None:
             assert {r["source_class_iri"] for r in records.values()} <= {
                 term.iri for term in classes.terms
             }
+        finally:
+            await client.close()
+
+    asyncio.run(exercise())
+
+
+async def _pack_head(client, connector: str):
+    status = await ConnectorPackClient(client).status(
+        tenant_id=TEST_TENANT, connector=connector
+    )
+    assert status.head is not None
+    return status.head
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R097.2.4")
+def test_refused_domain_import_preserves_heads_and_digests() -> None:
+    fixture = load_fixture()
+
+    async def exercise() -> None:
+        client = await connect()
+        try:
+            revision = await core_revision(client)
+            connector = _connector("xwalk-forged")
+            imported = await import_entries(
+                client, connector, _entries(connector, fixture, revision)
+            )
+            assert imported["result"] == "imported", imported
+            composed = await attach_pack(client, connector)
+            head = await _pack_head(client, connector)
+            state = await _state(client)
+            assert state[0] == composed
+
+            # An edited origin no longer matches the record digest: a forged record.
+            forged = crosswalk_record(fixture["mappings"][0], fixture, revision)
+            forged["origin"] = forged["origin"] + "-edited"
+            refused = await import_entries(
+                client,
+                connector,
+                [crosswalk_entry(connector, "forged", forged)],
+                expected_head=PackHeadRef(
+                    binding_revision=head.binding_revision, pack_digest=head.pack_digest
+                ),
+            )
+            assert "CROSSWALK_EVIDENCE_INVALID" in violation_codes(refused), refused
+
+            # Nothing moved: the pack head, the status and the composed schema digest.
+            after = await _pack_head(client, connector)
+            assert after.binding_revision == head.binding_revision
+            assert str(after.pack_digest) == str(head.pack_digest)
+            assert await _state(client) == state
         finally:
             await client.close()
 

@@ -372,6 +372,8 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::CrosswalkConflict,
         PackViolationCode::CrosswalkCategoryConflict,
         PackViolationCode::CrosswalkLimitExceeded,
+        PackViolationCode::CrosswalkRevisionMismatch,
+        PackViolationCode::CrosswalkEvidenceInvalid,
         PackViolationCode::ConceptPathMalformed,
         PackViolationCode::ConceptPathDuplicateAlias,
         PackViolationCode::ConceptPathParentConflict,

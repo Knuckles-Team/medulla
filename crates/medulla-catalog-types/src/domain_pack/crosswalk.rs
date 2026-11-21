@@ -191,12 +191,20 @@ fn resolve_source<'a>(
     let category = ctx
         .source_classes
         .get(&crosswalk.source_class_iri)
-        .filter(|_| crosswalk.source_revision == ctx.source_revision)
         .ok_or_else(|| VocabularyCrosswalkError::SourceUnknown {
             source_iri: crosswalk.source_class_iri.clone(),
             revision: crosswalk.source_revision.clone(),
             scope: ctx.scope.clone(),
         })?;
+    // A class the pinned revision has, declared at another revision: a stale record, named
+    // apart from an unknown class and before the scope check (MEDULLA-TYPED-PACKS-R097.2.4).
+    if crosswalk.source_revision != ctx.source_revision {
+        return Err(VocabularyCrosswalkError::RevisionMismatch {
+            source_iri: crosswalk.source_class_iri.clone(),
+            declared: crosswalk.source_revision.clone(),
+            pinned: ctx.source_revision.clone(),
+        });
+    }
     if !ctx.selected_sources.contains(&crosswalk.source_class_iri) {
         return Err(VocabularyCrosswalkError::SourceOutOfScope {
             source_iri: crosswalk.source_class_iri.clone(),
@@ -390,7 +398,7 @@ mod tests {
         stale.content_digest = stale.compute_content_digest();
         assert!(matches!(
             validate_crosswalks(&[stale], &context()),
-            Err(VocabularyCrosswalkError::SourceUnknown { .. })
+            Err(VocabularyCrosswalkError::RevisionMismatch { .. })
         ));
         let out = record(
             "Unselected",

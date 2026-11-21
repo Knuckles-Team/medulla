@@ -150,6 +150,12 @@ pub enum VocabularyCrosswalkError {
         revision: String,
         scope: String,
     },
+    #[error("crosswalk source class {source_iri:?} is declared at revision {declared:?}, but the pinned vocabulary revision is {pinned:?}")]
+    RevisionMismatch {
+        source_iri: String,
+        declared: String,
+        pinned: String,
+    },
     #[error("crosswalk source class {source_iri:?} (revision {revision:?}) is outside the selected source scope {scope:?}")]
     SourceOutOfScope {
         source_iri: String,
@@ -171,6 +177,17 @@ pub enum VocabularyCrosswalkError {
     },
     #[error("crosswalk input exceeds the fixed bound {bound} at {iri:?}")]
     LimitExceeded { bound: &'static str, iri: String },
+}
+
+/// Why a crosswalk body did not become a record (MEDULLA-TYPED-PACKS-R097.2.4).
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum CrosswalkParseError {
+    /// The bytes are not a crosswalk record: not JSON, an unknown field or a closed value.
+    #[error("{0}")]
+    Json(String),
+    /// The record parsed but its model-level check refused it.
+    #[error("{0}")]
+    Invalid(VocabularyCrosswalkError),
 }
 
 /// The one record layout this build reads and writes (MEDULLA-TYPED-PACKS-R071.1.1).
@@ -275,6 +292,15 @@ impl VocabularyCrosswalk {
 }
 
 impl VocabularyCrosswalk {
+    /// Parse one crosswalk body. A forged record (a declared `content_digest` that is not the
+    /// computed one) is [`VocabularyCrosswalkError::ContentDigestMismatch`] under `Invalid`,
+    /// apart from a body that is not a record at all (`Json`).
+    pub fn from_json(bytes: &[u8]) -> Result<Self, CrosswalkParseError> {
+        let wire = serde_json::from_slice::<VocabularyCrosswalkWire>(bytes)
+            .map_err(|error| CrosswalkParseError::Json(error.to_string()))?;
+        Self::from_wire(wire).map_err(CrosswalkParseError::Invalid)
+    }
+
     fn from_wire(wire: VocabularyCrosswalkWire) -> Result<Self, VocabularyCrosswalkError> {
         let crosswalk = Self {
             schema_version: wire.schema_version,

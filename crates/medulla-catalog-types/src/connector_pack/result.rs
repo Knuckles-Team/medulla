@@ -53,6 +53,9 @@ pub enum PackViolationCode {
     CrosswalkConflict,
     CrosswalkCategoryConflict,
     CrosswalkLimitExceeded,
+    // A stale source revision and a forged record (MEDULLA-TYPED-PACKS-R097.2.4).
+    CrosswalkRevisionMismatch,
+    CrosswalkEvidenceInvalid,
     // Concept path refusals (MEDULLA-TYPED-PACKS-R071.100).
     ConceptPathMalformed,
     ConceptPathDuplicateAlias,

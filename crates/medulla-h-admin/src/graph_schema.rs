@@ -710,7 +710,8 @@ fn parse_pack_crosswalks(
                 .map_err(|error| {
                     format!(
                         "{}: crosswalk member '{}': {error}",
-                        medulla_types::contract::ServerErrorCode::MalformedBody.as_str(),
+                        crate::admin::connector_pack::import::crosswalk::parse_server_code(&error)
+                            .as_str(),
                         document.uri
                     )
                 })?;

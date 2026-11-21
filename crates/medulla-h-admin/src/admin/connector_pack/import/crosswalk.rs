@@ -7,8 +7,8 @@ use medulla_catalog_types::connector_pack::{
     PackEntry, PackEntryKind, PackViolation, PackViolationCode,
 };
 use medulla_catalog_types::domain_pack::{
-    compute_coverage_of, CrosswalkContext, CrosswalkCoverage, PinnedHierarchy, VocabularyCrosswalk,
-    VocabularyCrosswalkError,
+    compute_coverage_of, CrosswalkContext, CrosswalkCoverage, CrosswalkParseError, PinnedHierarchy,
+    VocabularyCrosswalk, VocabularyCrosswalkError,
 };
 
 use medulla_types::contract::ServerErrorCode;
@@ -30,13 +30,14 @@ pub(super) fn validate_crosswalk_entries(
 ) {
     let mut records: Vec<(&str, VocabularyCrosswalk)> = Vec::new();
     for entry in all.iter().filter(|e| e.kind == PackEntryKind::Crosswalk) {
-        let parsed = section_bytes(archive, &entry.body)
-            .map_err(|error| error.to_string())
-            .and_then(parse_record);
+        let parsed = match section_bytes(archive, &entry.body) {
+            Ok(bytes) => parse_record(bytes),
+            Err(error) => Err(CrosswalkParseError::Json(error.to_string())),
+        };
         match parsed {
             Ok(record) => records.push((entry.uri.as_str(), record)),
             Err(error) => violations.push(violation(
-                PackViolationCode::MalformedBody,
+                parse_violation_code(&error),
                 Some(&entry.uri),
                 &format!("crosswalk record is invalid: {error}"),
             )),
@@ -58,8 +59,30 @@ pub(super) fn validate_crosswalk_entries(
 }
 
 /// One crosswalk body: the JSON of a `VocabularyCrosswalk`.
-pub(crate) fn parse_record(bytes: &[u8]) -> Result<VocabularyCrosswalk, String> {
-    serde_json::from_slice::<VocabularyCrosswalk>(bytes).map_err(|error| error.to_string())
+pub(crate) fn parse_record(bytes: &[u8]) -> Result<VocabularyCrosswalk, CrosswalkParseError> {
+    VocabularyCrosswalk::from_json(bytes)
+}
+
+/// The import code of a body that did not parse: a forged record (its declared digest is not
+/// the computed one) is `CrosswalkEvidenceInvalid`, every other fault `MalformedBody`
+/// (MEDULLA-TYPED-PACKS-R097.2.4).
+pub(crate) fn parse_violation_code(error: &CrosswalkParseError) -> PackViolationCode {
+    match error {
+        CrosswalkParseError::Invalid(VocabularyCrosswalkError::ContentDigestMismatch { .. }) => {
+            PackViolationCode::CrosswalkEvidenceInvalid
+        }
+        _ => PackViolationCode::MalformedBody,
+    }
+}
+
+/// The registered server code of a body that did not parse, as the activation path answers it.
+pub(crate) fn parse_server_code(error: &CrosswalkParseError) -> ServerErrorCode {
+    match error {
+        CrosswalkParseError::Invalid(VocabularyCrosswalkError::ContentDigestMismatch { .. }) => {
+            ServerErrorCode::CrosswalkEvidenceInvalid
+        }
+        _ => ServerErrorCode::MalformedBody,
+    }
 }
 
 /// A refused crosswalk set: the pack violation code of the import, the
@@ -149,6 +172,16 @@ fn classify(
             PackViolationCode::CrosswalkSourceOutOfScope,
             ServerErrorCode::CrosswalkSourceOutOfScope,
             Some(source_iri),
+        ),
+        E::RevisionMismatch { source_iri, .. } => (
+            PackViolationCode::CrosswalkRevisionMismatch,
+            ServerErrorCode::CrosswalkRevisionMismatch,
+            Some(source_iri),
+        ),
+        E::ContentDigestMismatch { .. } => (
+            PackViolationCode::CrosswalkEvidenceInvalid,
+            ServerErrorCode::CrosswalkEvidenceInvalid,
+            None,
         ),
         E::TargetUnknown(iri) => (
             PackViolationCode::CrosswalkTargetUnknown,
