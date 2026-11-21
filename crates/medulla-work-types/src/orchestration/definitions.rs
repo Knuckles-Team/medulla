@@ -8,9 +8,26 @@
 //! (MEDULLA-DECISION-ENGINE-R810.1), carried as its identity text so this
 //! vocabulary crate stays below the program crate.
 
+use medulla_types::closed_error_codes;
 use serde::{Deserialize, Serialize};
 
 use super::workflows::WorkflowIdentity;
+
+closed_error_codes! {
+    /// The four definition faults (MEDULLA-ORCH-VOCAB-R800.4). Each refusal writes
+    /// nothing. The set is registered in
+    /// `medulla_protocol_types::error_registry::declared_error_code`.
+    pub enum DefinitionRefusal {
+        /// A declared slot (or a body placeholder) that has no value.
+        TemplateSlotUnfilled => "TEMPLATE_SLOT_UNFILLED",
+        /// A value of the wrong type for its slot.
+        TemplateSlotType => "TEMPLATE_SLOT_TYPE",
+        /// A pattern that names a workflow step the workflow does not register.
+        PatternStepUnknown => "PATTERN_STEP_UNKNOWN",
+        /// An edit that reuses an already published revision.
+        RevisionPublished => "DEFINITION_REVISION_PUBLISHED",
+    }
+}
 
 /// The closed set of slot types a template can declare.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,9 +100,160 @@ pub struct WorkflowPattern {
     pub process_revision: String,
 }
 
+/// One typed value for a template slot, matching [`SlotType`] one to one
+/// (MEDULLA-ORCH-VOCAB-R800.2).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SlotValue {
+    /// Free text, rendered verbatim.
+    Text(String),
+    /// A signed integer, rendered in base 10.
+    Integer(i64),
+    /// An IRI, rendered verbatim.
+    Iri(String),
+    /// A list, rendered as its items joined by `, `.
+    List(Vec<String>),
+}
+
+impl SlotValue {
+    /// The slot type this value fills.
+    pub fn slot_type(&self) -> SlotType {
+        match self {
+            Self::Text(_) => SlotType::Text,
+            Self::Integer(_) => SlotType::Integer,
+            Self::Iri(_) => SlotType::Iri,
+            Self::List(_) => SlotType::List,
+        }
+    }
+
+    fn render_into(&self, out: &mut String) {
+        match self {
+            Self::Text(text) | Self::Iri(text) => out.push_str(text),
+            Self::Integer(number) => out.push_str(&number.to_string()),
+            Self::List(items) => out.push_str(&items.join(", ")),
+        }
+    }
+}
+
+/// Fill the `{{name}}` placeholders of `body`, the template text read from the blob of
+/// `template.revision_ref`, with typed `values` (MEDULLA-ORCH-VOCAB-R800.2).
+///
+/// Every declared slot must have exactly one value of its declared type, and every
+/// placeholder must name a declared slot. A declared slot with no value, or a placeholder
+/// that names no declared slot, refuses [`DefinitionRefusal::TemplateSlotUnfilled`]; a value of
+/// the wrong type, a value for an undeclared slot, or a second value for one slot refuses
+/// [`DefinitionRefusal::TemplateSlotType`]. A substituted value is never re-scanned for
+/// placeholders, so one pass over the body and the values is the whole cost. Nothing is written.
+pub fn render_template(
+    template: &PromptTemplate,
+    body: &str,
+    values: &[(String, SlotValue)],
+) -> Result<String, DefinitionRefusal> {
+    for (name, value) in values {
+        let declared = template.slots.iter().find(|slot| slot.name == *name);
+        match declared {
+            Some(slot) if slot.slot_type == value.slot_type() => {}
+            _ => return Err(DefinitionRefusal::TemplateSlotType),
+        }
+        if values.iter().filter(|(other, _)| other == name).count() > 1 {
+            return Err(DefinitionRefusal::TemplateSlotType);
+        }
+    }
+    for slot in &template.slots {
+        if !values.iter().any(|(name, _)| *name == slot.name) {
+            return Err(DefinitionRefusal::TemplateSlotUnfilled);
+        }
+    }
+    let mut out = String::with_capacity(body.len());
+    let mut rest = body;
+    while let Some(open) = rest.find("{{") {
+        let Some(length) = rest[open + 2..].find("}}") else {
+            break;
+        };
+        out.push_str(&rest[..open]);
+        let name = &rest[open + 2..open + 2 + length];
+        match values.iter().find(|(declared, _)| declared == name) {
+            Some((_, value)) => value.render_into(&mut out),
+            None => return Err(DefinitionRefusal::TemplateSlotUnfilled),
+        }
+        rest = &rest[open + 2 + length + 2..];
+    }
+    out.push_str(rest);
+    Ok(out)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn four_slot_template() -> PromptTemplate {
+        let slot = |name: &str, slot_type| TemplateSlot {
+            name: name.to_string(),
+            slot_type,
+        };
+        PromptTemplate {
+            id: "template:render".to_string(),
+            revision_ref: "program-revision:render:1".to_string(),
+            slots: vec![
+                slot("subject", SlotType::Text),
+                slot("limit", SlotType::Integer),
+                slot("target", SlotType::Iri),
+                slot("items", SlotType::List),
+            ],
+            digest: format!("sha256:{}", "ab".repeat(32)),
+        }
+    }
+
+    fn four_values() -> Vec<(String, SlotValue)> {
+        vec![
+            ("subject".to_string(), SlotValue::Text("{{x}} ticket".to_string())),
+            ("limit".to_string(), SlotValue::Integer(-42)),
+            ("target".to_string(), SlotValue::Iri("urn:t:1".to_string())),
+            (
+                "items".to_string(),
+                SlotValue::List(vec!["a".to_string(), "b".to_string(), "c".to_string()]),
+            ),
+        ]
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R800.2
+    #[test]
+    fn render_fills_typed_slots_only() {
+        let template = four_slot_template();
+        let body = "Triage {{subject}} (max {{limit}}) at {{target}}: {{items}}. Again {{limit}}.";
+        let rendered = render_template(&template, body, &four_values()).unwrap();
+        // A value that contains `{{x}}` is kept verbatim, never re-scanned.
+        assert_eq!(
+            rendered,
+            "Triage {{x}} ticket (max -42) at urn:t:1: a, b, c. Again -42."
+        );
+
+        let mut unfilled = four_values();
+        unfilled.retain(|(name, _)| name != "items");
+        assert_eq!(
+            render_template(&template, body, &unfilled),
+            Err(DefinitionRefusal::TemplateSlotUnfilled)
+        );
+        assert_eq!(
+            DefinitionRefusal::TemplateSlotUnfilled.as_str(),
+            "TEMPLATE_SLOT_UNFILLED"
+        );
+
+        let mut wrong = four_values();
+        wrong[1].1 = SlotValue::Text("many".to_string());
+        assert_eq!(
+            render_template(&template, body, &wrong),
+            Err(DefinitionRefusal::TemplateSlotType)
+        );
+        assert_eq!(
+            DefinitionRefusal::TemplateSlotType.as_str(),
+            "TEMPLATE_SLOT_TYPE"
+        );
+
+        assert_eq!(
+            render_template(&template, "{{nope}}", &four_values()),
+            Err(DefinitionRefusal::TemplateSlotUnfilled)
+        );
+    }
 
     // spec: MEDULLA-ORCH-VOCAB-R800.1
     #[test]

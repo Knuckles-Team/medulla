@@ -27,6 +27,9 @@ pub fn declared_error_code(code: &str) -> bool {
         medulla_work_types::orchestration::HarnessVocabularyErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
+        medulla_work_types::orchestration::definitions::DefinitionRefusal::ALL
+            .iter()
+            .any(|item| item.as_str() == code),
         medulla_decision_types::decision::harness_contrast::HarnessContrastErrorCode::ALL
             .iter()
             .any(|item| item.as_str() == code),
