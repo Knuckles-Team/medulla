@@ -19,20 +19,15 @@ pub const WALKTHROUGH_ARTIFACT_MAX_BYTES: usize = 16 * 1024 * 1024;
 
 const BRANCH_PREFIX: &str = "branch:";
 
-/// Run `read` under the state's read lock, held for this one read. On a multi-threaded runtime
-/// the thread yields its worker while it waits; on a single-threaded runtime a contended lock
-/// reads as absent, which every caller maps to a refusal.
+/// Run `read` under the state's read lock, taken with `try_read` for this one read. The reader
+/// traits are synchronous and run inside the async `AddNode` path, where a blocking lock panics,
+/// so a lock that is not available reads as absent: the check fails closed
+/// (`WALKTHROUGH_REVISION_STALE`) and the caller retries.
 fn with_state<T>(
     state: &Arc<RwLock<ServerState>>,
     read: impl FnOnce(&ServerState) -> Option<T>,
 ) -> Option<T> {
-    match tokio::runtime::Handle::try_current() {
-        Ok(handle) if handle.runtime_flavor() == tokio::runtime::RuntimeFlavor::MultiThread => {
-            tokio::task::block_in_place(|| read(&state.blocking_read()))
-        }
-        Ok(_) => state.try_read().ok().and_then(|guard| read(&guard)),
-        Err(_) => read(&state.blocking_read()),
-    }
+    state.try_read().ok().and_then(|guard| read(&guard))
 }
 
 /// Reads an artifact body from the engine blob chunk store, owned by the tenant.

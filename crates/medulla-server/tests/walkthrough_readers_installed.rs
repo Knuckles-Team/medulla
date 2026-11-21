@@ -24,7 +24,7 @@ fn props(value: serde_json::Value) -> Vec<u8> {
 }
 
 // spec: MEDULLA-ORCH-VOCAB-R013.7.5
-#[tokio::test(flavor = "multi_thread")]
+#[tokio::test]
 async fn installed_readers_confirm_a_current_revision_and_refuse_another_tenant() {
     let mut state = medulla_server::seams_install::new_state_for_test(
         "walkthrough-readers",
