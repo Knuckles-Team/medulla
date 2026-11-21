@@ -16,6 +16,7 @@ pub mod machine;
 pub mod progress;
 pub mod registry;
 pub mod spawn;
+pub mod startup;
 
 use std::sync::OnceLock;
 
@@ -33,6 +34,13 @@ pub fn global() -> &'static TaskRegistry {
 pub fn readiness() -> &'static ReadinessRegistry {
     static GLOBAL: OnceLock<ReadinessRegistry> = OnceLock::new();
     GLOBAL.get_or_init(ReadinessRegistry::new)
+}
+
+/// The process-wide startup report (MEDULLA-OBSERVE-R008.1). Tests build isolated
+/// instances with [`startup::StartupReport::new`].
+pub fn startup() -> &'static startup::StartupReport {
+    static GLOBAL: OnceLock<startup::StartupReport> = OnceLock::new();
+    GLOBAL.get_or_init(startup::StartupReport::new)
 }
 
 /// Jobs the process-wide registry could not list since start: the live table was full or the

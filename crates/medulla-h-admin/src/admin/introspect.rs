@@ -4,7 +4,7 @@
 //! ascending by the section's key. The `tasks` section reads the task registry (key: the task
 //! id) and the `readiness` section reads the readiness registry (key: the graph name); the
 //! sections whose registries land with their own rows (`requests`, `runtime`, `locks`,
-//! `startup`, `events`) answer an empty page until then. Pure over
+//! `events`) answer an empty page until then. Pure over
 //! `medulla_observe`: no durable substrate is read, so the method serves in every build.
 
 use medulla_observe::registry::tasks::{file_line, ProgressCursor, TaskRow};
@@ -75,6 +75,7 @@ fn read_section(
         IntrospectSection::Tasks => tasks_page(limit, cursor),
         IntrospectSection::Readiness => Ok(readiness_page(limit, cursor)),
         IntrospectSection::Build => Ok(build_page(cursor)),
+        IntrospectSection::Startup => Ok(startup_page(limit, cursor)),
         other => Ok(IntrospectPage {
             section: other,
             rows: Vec::new(),
@@ -202,6 +203,36 @@ fn build_page(cursor: Option<&str>) -> IntrospectPage {
         section: IntrospectSection::Build,
         rows,
         next_cursor: None,
+        seq: 0,
+    }
+}
+
+/// The `startup` section: the recorded boot steps. The key is `<started_unix_ms>:<name>:<graph>`
+/// with the start time zero-padded, so the keys ascend with the rows.
+fn startup_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
+    let key = |step: &medulla_observe::startup::StartupStep| {
+        format!("{:020}:{}:{}", step.started_unix_ms, step.name, step.graph)
+    };
+    let (rows, next_cursor) = page_of(
+        medulla_observe::startup().steps(),
+        limit,
+        |step| cursor.map_or(true, |last| key(step).as_str() > last),
+        key,
+        |step| {
+            json!({
+                "name": step.name,
+                "graph": step.graph,
+                "started_unix_ms": step.started_unix_ms,
+                "duration_ms": step.duration_ms,
+                "outcome": step.outcome.word(),
+                "detail": step.outcome.detail(),
+            })
+        },
+    );
+    IntrospectPage {
+        section: IntrospectSection::Startup,
+        rows,
+        next_cursor,
         seq: 0,
     }
 }
