@@ -367,7 +367,7 @@ pub fn graph_copy(data_dir: &std::path::Path, options: &GraphCopyOptions) -> sup
             store,
             COPY_ROOT,
         ));
-        backend.shutdown();
+        medulla_server_api::api::persistence::PersistenceBackend::shutdown(&backend);
         copied.map_err(|refusal| refusal.to_string())
     })();
     match result {

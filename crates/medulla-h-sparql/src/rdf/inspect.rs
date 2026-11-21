@@ -93,7 +93,7 @@ fn inspect(
 pub fn composed_ontology_properties(
     sources: &GraphSchemaSources,
 ) -> Vec<medulla_nlq::nl::context::OntologyProperty> {
-    let Ok(inspected) = composed_documents(sources, &[]) else {
+    let Ok(inspected) = composed_documents(sources, "", &[]) else {
         return Vec::new();
     };
     let view = inspection_of(inspected);
@@ -121,7 +121,7 @@ pub fn composed_ontology_properties(
 pub fn composed_vocabulary(
     sources: &GraphSchemaSources,
 ) -> Option<medulla_nlq::nl::ground_sources::RdfVocabulary> {
-    let inspected = composed_documents(sources, &[]).ok()?;
+    let inspected = composed_documents(sources, "", &[]).ok()?;
     let view = inspection_of(inspected);
     let terms = view
         .classes
