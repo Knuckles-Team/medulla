@@ -171,7 +171,7 @@ pub struct IcebergManifests {
 
 /// The status a data file carries in a manifest entry (Iceberg v2 `manifest_entry.status`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-enum EntryStatus {
+pub enum ManifestEntryStatus {
     /// Live and introduced by an earlier snapshot.
     Existing,
     /// Introduced by this snapshot's commit.
@@ -180,12 +180,26 @@ enum EntryStatus {
     Deleted,
 }
 
-impl EntryStatus {
-    fn code(self) -> i32 {
+impl ManifestEntryStatus {
+    /// The wire code of this status in a manifest entry: `0` EXISTING, `1` ADDED, `2` DELETED.
+    pub fn code(self) -> i32 {
         match self {
-            EntryStatus::Existing => 0,
-            EntryStatus::Added => 1,
-            EntryStatus::Deleted => 2,
+            ManifestEntryStatus::Existing => 0,
+            ManifestEntryStatus::Added => 1,
+            ManifestEntryStatus::Deleted => 2,
+        }
+    }
+
+    /// Decode a wire code once, at the edge. A code outside the closed set is a typed
+    /// decode error, never a status.
+    pub fn from_code(code: i32) -> Result<Self, String> {
+        match code {
+            0 => Ok(ManifestEntryStatus::Existing),
+            1 => Ok(ManifestEntryStatus::Added),
+            2 => Ok(ManifestEntryStatus::Deleted),
+            other => Err(format!(
+                "ICEBERG_MANIFEST_STATUS_UNKNOWN: manifest entry status {other} is not 0, 1 or 2"
+            )),
         }
     }
 }
@@ -195,14 +209,14 @@ impl EntryStatus {
 /// otherwise; files this commit retired are DELETED; files retired by an earlier
 /// commit are not listed. Append, compaction and copy-on-write deletion all fall out
 /// of this one rule (a rewrite is DELETED old files plus ADDED new files).
-fn classify_files(snapshot: &SnapshotLog, lsn: Lsn) -> Vec<(&FileEntry, EntryStatus)> {
+fn classify_files(snapshot: &SnapshotLog, lsn: Lsn) -> Vec<(&FileEntry, ManifestEntryStatus)> {
     snapshot
         .all_files()
         .iter()
         .filter_map(|file| match file.removed_at {
-            None if file.added_at == lsn => Some((file, EntryStatus::Added)),
-            None => Some((file, EntryStatus::Existing)),
-            Some(removed) if removed == lsn => Some((file, EntryStatus::Deleted)),
+            None if file.added_at == lsn => Some((file, ManifestEntryStatus::Added)),
+            None => Some((file, ManifestEntryStatus::Existing)),
+            Some(removed) if removed == lsn => Some((file, ManifestEntryStatus::Deleted)),
             Some(_) => None,
         })
         .collect()
@@ -322,7 +336,7 @@ fn stats_fields(stats: Option<&Vec<ColumnStat>>) -> [(String, AvroValue); 6] {
 fn manifest_entry_value(
     location: &str,
     f: &FileEntry,
-    status: EntryStatus,
+    status: ManifestEntryStatus,
     snapshot_id: i64,
     partition: Option<(&LakeField, i32)>,
 ) -> AvroValue {
@@ -346,9 +360,11 @@ fn manifest_entry_value(
     // number (null). An EXISTING or DELETED file carries the snapshot and data
     // sequence number it was originally added under (v2 requires them explicit).
     let (entry_snapshot, sequence) = match status {
-        EntryStatus::Added => (snapshot_id, None),
-        EntryStatus::Existing => (f.added_at.value() as i64, Some(f.added_at.value() as i64)),
-        EntryStatus::Deleted => (snapshot_id, Some(f.added_at.value() as i64)),
+        ManifestEntryStatus::Added => (snapshot_id, None),
+        ManifestEntryStatus::Existing => {
+            (f.added_at.value() as i64, Some(f.added_at.value() as i64))
+        }
+        ManifestEntryStatus::Deleted => (snapshot_id, Some(f.added_at.value() as i64)),
     };
     let sequence_value = |sequence: Option<i64>| match sequence {
         Some(n) => AvroValue::Union(1, Box::new(AvroValue::Long(n))),
@@ -372,7 +388,7 @@ fn write_manifest(
     schema: &LakeSchema,
     schema_id: i32,
     location: &str,
-    files: &[(&FileEntry, EntryStatus)],
+    files: &[(&FileEntry, ManifestEntryStatus)],
     snapshot_id: i64,
 ) -> Result<Vec<u8>, String> {
     let partition = schema.partition_source();
@@ -514,15 +530,15 @@ pub fn build_iceberg_manifests(
     let mut counts = ManifestCounts::default();
     for (file, status) in &files {
         match status {
-            EntryStatus::Added => {
+            ManifestEntryStatus::Added => {
                 counts.added_files += 1;
                 counts.added_rows += file.num_rows;
             }
-            EntryStatus::Existing => {
+            ManifestEntryStatus::Existing => {
                 counts.existing_files += 1;
                 counts.existing_rows += file.num_rows;
             }
-            EntryStatus::Deleted => {
+            ManifestEntryStatus::Deleted => {
                 counts.deleted_files += 1;
                 counts.deleted_rows += file.num_rows;
             }
@@ -577,8 +593,8 @@ pub fn read_avro_records(bytes: &[u8]) -> Result<Vec<AvroValue>, String> {
 /// acceptance check compares against the snapshot.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ManifestEntrySummary {
-    /// `0` EXISTING, `1` ADDED, `2` DELETED.
-    pub status: i32,
+    /// EXISTING, ADDED or DELETED.
+    pub status: ManifestEntryStatus,
     /// The entry's snapshot id.
     pub snapshot_id: Option<i64>,
     /// The explicit data sequence number (`None` when inherited).
@@ -731,7 +747,7 @@ fn partition_value(f: &FileEntry, partition: Option<(&LakeField, i32)>) -> AvroV
 /// and `contains_null` true, so a reader never prunes on a guess.
 fn partition_summaries(
     partition: Option<(&LakeField, i32)>,
-    files: &[(&FileEntry, EntryStatus)],
+    files: &[(&FileEntry, ManifestEntryStatus)],
 ) -> AvroValue {
     let Some((field, source_id)) = partition else {
         return AvroValue::Union(0, Box::new(AvroValue::Null));
@@ -742,7 +758,7 @@ fn partition_summaries(
     let mut lower: Option<CellValue> = None;
     let mut upper: Option<CellValue> = None;
     for (file, status) in files {
-        if matches!(status, EntryStatus::Deleted) {
+        if matches!(status, ManifestEntryStatus::Deleted) {
             continue;
         }
         let Some(stat) = source_stat(file, source_id) else {
@@ -864,7 +880,10 @@ pub fn read_manifest_entries(bytes: &[u8]) -> Result<Vec<ManifestEntrySummary>, 
         .into_iter()
         .map(|record| {
             let mut fields = record_fields(record)?;
-            let status = required_long(&mut fields, "status")? as i32;
+            let code = required_long(&mut fields, "status")?;
+            let status = i32::try_from(code)
+                .map_err(|_| format!("ICEBERG_MANIFEST_STATUS_UNKNOWN: status {code} overflows"))
+                .and_then(ManifestEntryStatus::from_code)?;
             let snapshot_id = as_long(take_field(&mut fields, "snapshot_id")?, "snapshot_id")?;
             let sequence_number = as_long(
                 take_field(&mut fields, "sequence_number")?,
@@ -916,4 +935,30 @@ pub fn read_manifest_list(bytes: &[u8]) -> Result<Vec<ManifestListSummary>, Stri
             })
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R768.2
+    #[test]
+    fn status_codes_are_closed_enums_and_unknown_is_refused() {
+        let all = [
+            ManifestEntryStatus::Existing,
+            ManifestEntryStatus::Added,
+            ManifestEntryStatus::Deleted,
+        ];
+        for (code, status) in all.into_iter().enumerate() {
+            assert_eq!(status.code(), code as i32);
+            assert_eq!(ManifestEntryStatus::from_code(code as i32), Ok(status));
+        }
+        for unknown in [-1, 3, 255, i32::MAX, i32::MIN] {
+            let refused = ManifestEntryStatus::from_code(unknown).unwrap_err();
+            assert!(
+                refused.starts_with("ICEBERG_MANIFEST_STATUS_UNKNOWN"),
+                "{refused}"
+            );
+        }
+    }
 }

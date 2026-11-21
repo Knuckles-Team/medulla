@@ -37,7 +37,14 @@ fn decode(table: &LakeTable) -> (Vec<ManifestEntry>, [i32; 3], [i64; 3]) {
     assert_eq!(lists[0].added_snapshot_id, manifests.snapshot_id);
     let view = entries
         .into_iter()
-        .map(|e| (e.status, e.file_path, e.record_count, e.file_size_in_bytes))
+        .map(|e| {
+            (
+                e.status.code(),
+                e.file_path,
+                e.record_count,
+                e.file_size_in_bytes,
+            )
+        })
         .collect();
     (view, lists[0].file_counts, lists[0].row_counts)
 }
