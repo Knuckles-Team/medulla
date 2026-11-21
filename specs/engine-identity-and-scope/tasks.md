@@ -59,7 +59,6 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T050a [US6] MEDULLA-IDENTITY-R700.7 Model and wiring: the per-graph write ledger and creator
 - [ ] T051 [US6] MEDULLA-IDENTITY-R701 Delegation record read for background work
 - [ ] T052 [US6] MEDULLA-IDENTITY-R702 Policy rule bundle: validate, bind and enforce (`IdentityOp::Policy`, lowered into `idm:policy:` roles and grants by `rbac_projection`)
-- [ ] T053 [US6] MEDULLA-IDENTITY-R703 Epistemic policy predicates
 - [ ] T054 [US6] MEDULLA-IDENTITY-R704 Resource-scoped access decision method
 - [ ] T054a [US6] MEDULLA-IDENTITY-R704.1 Resource grant record in the RBAC policy image and `RbacAdminOp::GrantResource`/`RevokeResource`
 - [ ] T054b [US6] MEDULLA-IDENTITY-R704.2 Served `Method::CheckResourceAccess` decision
