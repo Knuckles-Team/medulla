@@ -5,6 +5,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::identity::{validate_principal_id, IdentityRefusal};
+use medulla_types::contract::Digest256;
+
 /// Identity and policy claims carried by a verified request-context envelope.
 ///
 /// This is the wire representation only.  Callers must not treat a deserialized
@@ -262,8 +265,181 @@ pub enum RbacAdminOp {
     RemoveRole(String),
     AddGrant(Grant),
     RemoveGrant(Grant),
+    /// Record a resource grant: a principal or role may call one operation of one
+    /// protocol resource until the grant expires (MEDULLA-IDENTITY-R704.1).
+    GrantResource(ResourceGrant),
+    /// Remove a resource grant by its id; an unknown id changes nothing.
+    RevokeResource {
+        /// The `rgrant:` id of the grant to remove.
+        grant_id: String,
+    },
     /// Read-only: list the current roles + grants.
     List,
+}
+
+/// Longest `resource_ref` or `operation` of a resource grant, in bytes.
+pub const MAX_RESOURCE_GRANT_FIELD_BYTES: usize = 256;
+/// Most entries in the `scope_ceiling` of a resource grant.
+pub const MAX_RESOURCE_GRANT_SCOPES: usize = 64;
+
+/// Who a resource grant is for (MEDULLA-IDENTITY-R704.1).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ResourceGrantSubject {
+    /// One principal.
+    Principal(String),
+    /// Every holder of one role.
+    Role(String),
+}
+
+impl ResourceGrantSubject {
+    fn kind_bytes(&self) -> &'static [u8] {
+        match self {
+            Self::Principal(_) => b"principal",
+            Self::Role(_) => b"role",
+        }
+    }
+
+    fn id(&self) -> &str {
+        match self {
+            Self::Principal(id) | Self::Role(id) => id,
+        }
+    }
+}
+
+/// The protocol a granted resource speaks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ResourceProtocol {
+    /// A tool of a Model Context Protocol server.
+    Mcp,
+    /// A skill of an agent-to-agent peer.
+    A2a,
+}
+
+impl ResourceProtocol {
+    fn as_bytes(self) -> &'static [u8] {
+        match self {
+            Self::Mcp => b"mcp",
+            Self::A2a => b"a2a",
+        }
+    }
+}
+
+/// One resource grant: the subject may call `operation` of the protocol resource
+/// `resource_ref`, within `scope_ceiling`, from `granted_at_ms` until `expires_at_ms`
+/// (MEDULLA-IDENTITY-R704.1).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ResourceGrant {
+    /// `rgrant:` and the framed digest of the subject, resource, protocol, operation and
+    /// grant time.
+    pub grant_id: String,
+    /// Who may call the operation.
+    pub subject: ResourceGrantSubject,
+    /// The resource the operation belongs to.
+    pub resource_ref: String,
+    /// The protocol the resource speaks.
+    pub protocol: ResourceProtocol,
+    /// The operation the grant allows.
+    pub operation: String,
+    /// The scopes the call may carry at most, sorted and unique.
+    pub scope_ceiling: Vec<String>,
+    /// When the grant was made, in unix milliseconds.
+    pub granted_at_ms: u64,
+    /// When the grant ends, in unix milliseconds.
+    pub expires_at_ms: u64,
+}
+
+/// A bounded, non-empty field without whitespace or control characters.
+fn resource_grant_field(value: &str) -> Result<(), IdentityRefusal> {
+    if value.is_empty()
+        || value.len() > MAX_RESOURCE_GRANT_FIELD_BYTES
+        || value.chars().any(|c| c.is_control() || c.is_whitespace())
+    {
+        return Err(IdentityRefusal::InvalidRequest);
+    }
+    Ok(())
+}
+
+impl ResourceGrant {
+    /// Build a grant, deriving its id. Refuses `InvalidRequest` for a subject id that is not a
+    /// valid principal id, an empty, long or whitespace-bearing `resource_ref` or `operation`,
+    /// a `scope_ceiling` of more than 64 entries or one that is not sorted and unique, or an
+    /// expiry that is not after the grant time.
+    pub fn new(
+        subject: ResourceGrantSubject,
+        resource_ref: String,
+        protocol: ResourceProtocol,
+        operation: String,
+        scope_ceiling: Vec<String>,
+        granted_at_ms: u64,
+        expires_at_ms: u64,
+    ) -> Result<Self, IdentityRefusal> {
+        let grant_id = Self::derive_id(&subject, &resource_ref, protocol, &operation, granted_at_ms)?;
+        let grant = Self {
+            grant_id,
+            subject,
+            resource_ref,
+            protocol,
+            operation,
+            scope_ceiling,
+            granted_at_ms,
+            expires_at_ms,
+        };
+        grant.validate()?;
+        Ok(grant)
+    }
+
+    /// Check every field and that `grant_id` is the id the other fields derive. A grant that
+    /// arrives over the wire is checked here before it is stored.
+    pub fn validate(&self) -> Result<(), IdentityRefusal> {
+        validate_principal_id(self.subject.id())?;
+        resource_grant_field(&self.resource_ref)?;
+        resource_grant_field(&self.operation)?;
+        let sorted_unique = self.scope_ceiling.windows(2).all(|pair| pair[0] < pair[1]);
+        if self.scope_ceiling.len() > MAX_RESOURCE_GRANT_SCOPES
+            || !sorted_unique
+            || self.expires_at_ms <= self.granted_at_ms
+        {
+            return Err(IdentityRefusal::InvalidRequest);
+        }
+        let derived = Self::derive_id(
+            &self.subject,
+            &self.resource_ref,
+            self.protocol,
+            &self.operation,
+            self.granted_at_ms,
+        )?;
+        if derived != self.grant_id {
+            return Err(IdentityRefusal::InvalidRequest);
+        }
+        Ok(())
+    }
+
+    fn derive_id(
+        subject: &ResourceGrantSubject,
+        resource_ref: &str,
+        protocol: ResourceProtocol,
+        operation: &str,
+        granted_at_ms: u64,
+    ) -> Result<String, IdentityRefusal> {
+        let digest = Digest256::framed(
+            b"eg/resource-grant/v1",
+            &[
+                subject.kind_bytes(),
+                subject.id().as_bytes(),
+                resource_ref.as_bytes(),
+                protocol.as_bytes(),
+                operation.as_bytes(),
+                &granted_at_ms.to_be_bytes(),
+            ],
+        )
+        .map_err(|_| IdentityRefusal::InvalidRequest)?;
+        Ok(format!("rgrant:{}", digest.to_hex()))
+    }
 }
 
 #[cfg(test)]

@@ -167,4 +167,48 @@ impl IsolationLayer {
         }
         Ok(removed)
     }
+
+    /// Record a resource grant (MEDULLA-IDENTITY-R704.1). The grant is validated first, then
+    /// written to the policy image; a failed save restores the image.
+    #[cfg(feature = "security")]
+    pub fn try_grant_resource(
+        &mut self,
+        grant: medulla_identity_types::acl::ResourceGrant,
+    ) -> Result<(), String> {
+        grant.validate().map_err(|refusal| refusal.to_string())?;
+        let previous = self.rbac.clone();
+        let previous_bootstrap = self.identity_bootstrap;
+        self.rbac.resource_grants_mut().insert(grant);
+        self.identity_bootstrap = crate::rbac_persist::IdentityBootstrapState::Consumed;
+        if let Err(error) = self.persist_state() {
+            self.rbac = previous;
+            self.identity_bootstrap = previous_bootstrap;
+            return Err(error);
+        }
+        Ok(())
+    }
+
+    /// Remove a resource grant by id. `Ok(false)` when no grant had that id; nothing is
+    /// written then.
+    #[cfg(feature = "security")]
+    pub fn try_revoke_resource(&mut self, grant_id: &str) -> Result<bool, String> {
+        let previous = self.rbac.clone();
+        let previous_bootstrap = self.identity_bootstrap;
+        let removed = self.rbac.resource_grants_mut().remove(grant_id).is_some();
+        if removed {
+            self.identity_bootstrap = crate::rbac_persist::IdentityBootstrapState::Consumed;
+            if let Err(error) = self.persist_state() {
+                self.rbac = previous;
+                self.identity_bootstrap = previous_bootstrap;
+                return Err(error);
+            }
+        }
+        Ok(removed)
+    }
+
+    /// The revision of the durable policy image this layer last read or wrote.
+    #[cfg(feature = "security")]
+    pub fn policy_revision(&self) -> u64 {
+        self.persist_revision
+    }
 }

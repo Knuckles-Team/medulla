@@ -678,6 +678,20 @@ fn rbac_admin_response(
                 .map(drop),
             "grant_added",
         ),
+        RbacAdminOp::GrantResource(grant) => rbac_admin_ack::<results::RbacGrantResource>(
+            req_id,
+            s.isolation
+                .try_rbac_admin_audited(RbacAdminOp::GrantResource(grant), audit)
+                .map(drop),
+            "resource_granted",
+        ),
+        RbacAdminOp::RevokeResource { grant_id } => rbac_admin_ack::<results::RbacRevokeResource>(
+            req_id,
+            s.isolation
+                .try_rbac_admin_audited(RbacAdminOp::RevokeResource { grant_id }, audit)
+                .map(drop),
+            "resource_revoked",
+        ),
         RbacAdminOp::RemoveGrant(grant) => {
             match s
                 .isolation

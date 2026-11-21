@@ -598,3 +598,106 @@ fn session_fixture(owner: &IdentityStamp) -> IsolationLayer {
     .unwrap();
     fixture
 }
+
+// spec: MEDULLA-IDENTITY-R704.1
+#[test]
+fn resource_grant_survives_reopen_and_revoke_is_audited() {
+    use crate::rbac_persist::test_support::open_test_store;
+    use medulla_identity_types::acl::{ResourceGrant, ResourceGrantSubject, ResourceProtocol};
+
+    let grant = ResourceGrant::new(
+        ResourceGrantSubject::Principal("usr:alice".to_string()),
+        "github-mcp".to_string(),
+        ResourceProtocol::Mcp,
+        "create_issue".to_string(),
+        vec!["kg:read".to_string()],
+        NOW,
+        NOW + 60_000,
+    )
+    .unwrap();
+    let subjects = [ResourceGrantSubject::Principal("usr:alice".to_string())];
+    let held = |layer: &IsolationLayer| {
+        layer
+            .rbac()
+            .resource_grants()
+            .matching(&subjects, "github-mcp", ResourceProtocol::Mcp, "create_issue")
+            .count()
+    };
+    let audit_len =
+        |layer: &IsolationLayer| layer.rbac().identity_store().audit_trail().entries().len();
+    let dir = durable_fixture_dir("resource-grant");
+    {
+        let source = seeded().policy_store().unwrap().authority_snapshot().unwrap();
+        let disk = open_test_store(&dir).unwrap();
+        let empty = disk.authority_snapshot().unwrap();
+        disk.compare_and_save(
+            empty.revision(),
+            source.policy(),
+            source.identities(),
+            source.bootstrap(),
+        )
+        .unwrap();
+        let mut layer = IsolationLayer::with_policy_store(Arc::new(disk)).unwrap();
+        let before = (layer.policy_revision(), audit_len(&layer));
+        assert_eq!(
+            layer.try_rbac_admin_audited(RbacAdminOp::GrantResource(grant.clone()), actor()),
+            Ok(true)
+        );
+        assert_eq!(held(&layer), 1);
+        assert!(layer.policy_revision() > before.0);
+        assert_eq!(audit_len(&layer), before.1 + 1);
+        let last = layer
+            .rbac()
+            .identity_store()
+            .audit_trail()
+            .entries()
+            .last()
+            .cloned()
+            .unwrap();
+        assert_eq!(last.event, IdentityEvent::RbacPolicyChanged);
+        assert_eq!(last.target.as_deref(), Some(grant.grant_id.as_str()));
+    }
+    {
+        // The grant reopens from the durable image.
+        let mut reopened =
+            IsolationLayer::with_policy_store(Arc::new(open_test_store(&dir).unwrap())).unwrap();
+        assert_eq!(held(&reopened), 1);
+        let before = audit_len(&reopened);
+        assert_eq!(
+            reopened.try_rbac_admin_audited(
+                RbacAdminOp::RevokeResource {
+                    grant_id: grant.grant_id.clone()
+                },
+                actor()
+            ),
+            Ok(true)
+        );
+        assert_eq!(held(&reopened), 0);
+        assert_eq!(audit_len(&reopened), before + 1);
+        // An unknown id changes nothing, and is still audited.
+        assert_eq!(
+            reopened.try_rbac_admin_audited(
+                RbacAdminOp::RevokeResource {
+                    grant_id: grant.grant_id.clone()
+                },
+                actor()
+            ),
+            Ok(false)
+        );
+        assert_eq!(audit_len(&reopened), before + 2);
+    }
+    {
+        let reopened =
+            IsolationLayer::with_policy_store(Arc::new(open_test_store(&dir).unwrap())).unwrap();
+        assert_eq!(held(&reopened), 0);
+        assert!(!reopened.rbac().resource_grants().names_resource("github-mcp"));
+    }
+    // A grant whose id does not derive from its fields is refused and stores nothing.
+    let mut forged = grant.clone();
+    forged.operation = "delete_repo".to_string();
+    let mut layer = seeded();
+    assert!(layer
+        .try_rbac_admin_audited(RbacAdminOp::GrantResource(forged), actor())
+        .is_err());
+    assert_eq!(held(&layer), 0);
+}

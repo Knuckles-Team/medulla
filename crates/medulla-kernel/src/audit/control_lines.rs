@@ -239,6 +239,12 @@ fn rbac_admin_audit_line(op: &medulla_identity_types::acl::RbacAdminOp) -> Optio
         RbacAdminOp::RemoveRole(name) => Some(format!("RBAC_ADMIN|remove_role|{name}")),
         RbacAdminOp::AddGrant(grant) => Some(format!("RBAC_ADMIN|add_grant|{}", grant.role)),
         RbacAdminOp::RemoveGrant(grant) => Some(format!("RBAC_ADMIN|remove_grant|{}", grant.role)),
+        RbacAdminOp::GrantResource(grant) => {
+            Some(format!("RBAC_ADMIN|grant_resource|{}", grant.grant_id))
+        }
+        RbacAdminOp::RevokeResource { grant_id } => {
+            Some(format!("RBAC_ADMIN|revoke_resource|{grant_id}"))
+        }
         RbacAdminOp::List => None,
     }
 }

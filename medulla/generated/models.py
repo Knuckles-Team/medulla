@@ -21714,6 +21714,24 @@ class RbacAction(str, Enum):
     ADMIN = "Admin"
 
 
+class RbacAdminOpGrantResource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    GrantResource: ResourceGrant
+
+
+class RbacAdminOpRevokeResourceBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    grant_id: str
+
+
+class RbacAdminOpRevokeResource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    RevokeResource: RbacAdminOpRevokeResourceBody
+
+
 class RbacAdminOpAddGrant(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -22565,6 +22583,36 @@ class ResourceReservationSummaryState(str, Enum):
     EXPIRED = "expired"
     SUPERSEDED = "superseded"
     ABSENT = "absent"
+
+
+class ResourceGrantSubjectPrincipal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Principal: str
+
+
+class ResourceGrantSubjectRole(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Role: str
+
+
+class ResourceProtocol(str, Enum):
+    MCP = "mcp"
+    A2A = "a2a"
+
+
+class ResourceGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    expires_at_ms: Annotated[int, Field(ge=0)]
+    grant_id: str
+    granted_at_ms: Annotated[int, Field(ge=0)]
+    operation: str
+    protocol: ResourceProtocol
+    resource_ref: str
+    scope_ceiling: list[str]
+    subject: ResourceGrantSubject
 
 
 class ResourceSelectorGraph(BaseModel):
@@ -30359,6 +30407,8 @@ RbacAdminOp = (
     | RbacAdminOpRemoveRole
     | RbacAdminOpAddGrant
     | RbacAdminOpRemoveGrant
+    | RbacAdminOpGrantResource
+    | RbacAdminOpRevokeResource
     | Literal["List"]
 )
 
@@ -30367,6 +30417,9 @@ RegistrationPolicy = str | Literal["admin_only"]
 
 
 ResolveCandidatesResult = list[MergeProposal]
+
+
+ResourceGrantSubject = ResourceGrantSubjectPrincipal | ResourceGrantSubjectRole
 
 
 ResourceSelector = (

@@ -256,6 +256,9 @@ impl IsolationLayer {
             RbacAdminOp::AddGrant(grant) | RbacAdminOp::RemoveGrant(grant) => {
                 (grant.role.clone(), owned_grant(grant))
             }
+            // A resource grant never touches the RBAC image the store owns.
+            RbacAdminOp::GrantResource(grant) => (grant.grant_id.clone(), false),
+            RbacAdminOp::RevokeResource { grant_id } => (grant_id.clone(), false),
             RbacAdminOp::List => return Ok(false),
         };
         if touches_store {
@@ -274,6 +277,16 @@ impl IsolationLayer {
                     changed = layer.try_remove_grant(&grant)?;
                     // An absent grant skips the underlying save, but this
                     // request still appended an audit record. Commit it too.
+                    if !changed {
+                        layer.persist_state()?;
+                    }
+                    Ok(())
+                }
+                RbacAdminOp::GrantResource(grant) => layer.try_grant_resource(grant),
+                RbacAdminOp::RevokeResource { grant_id } => {
+                    changed = layer.try_revoke_resource(&grant_id)?;
+                    // An unknown id skips the underlying save, but this request still
+                    // appended an audit record. Commit it too.
                     if !changed {
                         layer.persist_state()?;
                     }

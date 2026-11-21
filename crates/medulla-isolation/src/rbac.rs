@@ -20,6 +20,7 @@ use std::collections::{HashMap, HashSet};
 use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceContext, Role};
 use medulla_identity_types::identity::IdentityStore;
 use medulla_identity_types::rbac_elevation::ElevationLedger;
+use medulla_identity_types::resource_grant::ResourceGrantLedger;
 use medulla_mutation_types::governed_change::GovernedLedger;
 use serde::{Deserialize, Serialize};
 
@@ -47,6 +48,11 @@ pub struct RbacPolicy {
     /// image as the rest of the authorization state. Omitted while empty.
     #[serde(default, skip_serializing_if = "GovernedLedger::is_empty")]
     governed: GovernedLedger,
+    /// Resource grants (MEDULLA-IDENTITY-R704.1): who may call which operation of which
+    /// protocol resource. Part of the same image, so a grant persists with the rest of the
+    /// policy. Omitted while empty.
+    #[serde(default, skip_serializing_if = "ResourceGrantLedger::is_empty")]
+    resource_grants: ResourceGrantLedger,
 }
 
 impl RbacPolicy {
@@ -102,6 +108,15 @@ impl RbacPolicy {
 
     pub(crate) fn governed_mut(&mut self) -> &mut GovernedLedger {
         &mut self.governed
+    }
+
+    /// The resource grant ledger.
+    pub fn resource_grants(&self) -> &ResourceGrantLedger {
+        &self.resource_grants
+    }
+
+    pub(crate) fn resource_grants_mut(&mut self) -> &mut ResourceGrantLedger {
+        &mut self.resource_grants
     }
 
     /// The identity store.

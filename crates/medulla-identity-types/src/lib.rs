@@ -43,3 +43,5 @@ pub mod identity;
 // graph-access chokepoint consults (two-person, exact-scope, hard expiry).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod rbac_elevation;
+// MEDULLA-IDENTITY-R704.1 — the resource grant ledger in the RBAC policy image.
+pub mod resource_grant;
