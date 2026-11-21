@@ -177,3 +177,103 @@ def test_excluded_never_reappears(start_medulla_server) -> None:
     finally:
         cl.tenants.delete(graph)
         cl.close()
+
+
+def _cites(cl: Any, graph: str, source: str, target: str) -> None:
+    cl._send(
+        "AddEdge",
+        {
+            "source_id": source,
+            "target_id": target,
+            "properties_msgpack": msgpack.packb({"relationship": "cites"}),
+        },
+        graph,
+    )
+
+
+def _cites_kind(kind: str, quantifier: str) -> dict[str, Any]:
+    return {
+        "edge_kind": "cites",
+        "direction": "Out",
+        "target": _eq("kind", kind),
+        "quantifier": quantifier,
+    }
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.1.6")
+def test_constraints_before_ranking(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.1.6: required and forbidden edge predicates,
+    a contradictory conjunction, exact top-k replenishment, a stale revision and a
+    cross-tenant negative, over edges loaded through the wire."""
+    graph = f"constraints-hot-{uuid.uuid4().hex[:8]}"
+    other = f"constraints-other-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    cl.tenants.create(graph)
+    cl.tenants.create(other)
+    try:
+        docs = [
+            ("d1", [1.0, 0.0], "bad"),
+            ("d2", [0.9, 0.1], "good"),
+            ("d3", [0.8, 0.2], "good"),
+            ("d4", [0.7, 0.3], None),
+        ]
+        put(cl, graph, "src-bad", {"type": "Source", "kind": "bad"})
+        put(cl, graph, "src-good", {"type": "Source", "kind": "good"})
+        for node_id, embedding, cited in docs:
+            put(cl, graph, node_id, {"type": "Doc", "kind": "doc"}, embedding)
+            if cited is not None:
+                _cites(cl, graph, node_id, f"src-{cited}")
+        # Another tenant's nearest document must never surface here.
+        put(cl, other, "foreign", {"type": "Doc", "kind": "doc"}, [1.0, 0.0])
+
+        ids = lambda answer: [row[0] for row in answer["rows"]]  # noqa: E731
+        doc = _eq("kind", "doc")
+        scan, rank = _SCAN[0], _SCAN[1]
+
+        # Forbidden edge: d1 cites the banned source, so it never ranks although it is nearest.
+        forbidden = {
+            "graph_revision": 0,
+            "entity_predicates": [doc],
+            "relationship_predicates": [_cites_kind("bad", "not_exists")],
+        }
+        top_two = _ranked(cl, graph, [scan, rank, {"Limit": {"k": 2}}], forbidden)
+        # Exact top-k replenishment: two rows survive, the nearest eligible ones.
+        assert ids(top_two) == ["d2", "d3"]
+        assert top_two["shortfall"] is None
+        everything = _ranked(cl, graph, [scan, rank, {"Limit": {"k": 10}}], forbidden)
+        assert ids(everything) == ["d2", "d3", "d4"]
+
+        # Required edge: only documents that cite the good source.
+        required = {
+            "graph_revision": 0,
+            "entity_predicates": [doc],
+            "relationship_predicates": [_cites_kind("good", "exists")],
+        }
+        assert ids(_ranked(cl, graph, [scan, rank, {"Limit": {"k": 10}}], required)) == [
+            "d2",
+            "d3",
+        ]
+
+        # A contradictory conjunction ranks nothing and says why.
+        contradictory = {"graph_revision": 0, "entity_predicates": [doc, _eq("kind", "memo")]}
+        none = _ranked(cl, graph, [scan, rank, {"Limit": {"k": 3}}], contradictory)
+        assert none["rows"] == []
+        assert none["shortfall"]["reason"] == "eligible_exhausted"
+
+        # A stale pin refuses before anything is ranked.
+        with pytest.raises(EngineResponseError) as stale:
+            _ranked(
+                cl,
+                graph,
+                [scan, rank, {"Limit": {"k": 3}}],
+                {"graph_revision": 2**40, "entity_predicates": [doc]},
+            )
+        assert "GRAPH_REVISION_STALE" in str(stale.value)
+
+        # Cross-tenant: the other tenant's nearest document is absent from every answer.
+        for answer in (top_two, everything):
+            assert "foreign" not in ids(answer)
+    finally:
+        cl.tenants.delete(graph)
+        cl.tenants.delete(other)
+        cl.close()
