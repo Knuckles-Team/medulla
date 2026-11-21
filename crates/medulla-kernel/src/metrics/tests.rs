@@ -159,3 +159,43 @@ fn two_kernel_metrics_values_share_no_series() {
     );
     assert!(!two.contains("__overflow__"), "{two}");
 }
+
+// spec: MEDULLA-INGEST-WORKER-R001.13
+#[test]
+fn ingest_metrics_after_success_retry_dead_letter() {
+    use super::IngestJobOutcome as Outcome;
+    let m = KernelMetrics::new();
+    m.record_job(Outcome::Enqueued, "ingest");
+    m.record_job(Outcome::Completed, "ingest");
+    m.record_job(Outcome::Retried, "ingest");
+    m.record_job(Outcome::DeadLettered, "ingest-hydration");
+    m.record_job(Outcome::Deduplicated, "ingest");
+    m.record_job(Outcome::Refused, "ingest");
+    m.record_job(Outcome::Stale, "ingest");
+    let out = m.render();
+    for outcome in [
+        "enqueued",
+        "completed",
+        "retried",
+        "dead_lettered",
+        "deduplicated",
+        "refused",
+        "stale",
+    ] {
+        let needle = format!("medulla_ingest_jobs_total{{outcome=\"{outcome}\"}} 1");
+        assert!(out.contains(&needle), "missing {needle} in:\n{out}");
+    }
+    // Only a dead letter moves the dead-letter counter, labelled by queue.
+    assert!(
+        out.contains("medulla_ingest_dead_letter_total{queue=\"ingest-hydration\"} 1"),
+        "{out}"
+    );
+    assert!(!out.contains("medulla_ingest_dead_letter_total{queue=\"ingest\"}"));
+    // Labels hold the outcome and the queue only: no tenant, corpus or job id.
+    for line in out.lines().filter(|l| l.starts_with("medulla_ingest_")) {
+        assert!(
+            !line.contains("tenant=") && !line.contains("corpus=") && !line.contains("job="),
+            "{line}"
+        );
+    }
+}

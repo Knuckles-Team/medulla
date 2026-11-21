@@ -62,6 +62,7 @@ impl KernelMetrics {
     pub fn set_epistemic_materializations_stale(&self, _n: i64) {}
     pub fn epistemic_materializations_staled(&self, _n: u64) {}
     pub fn statechart_divergence(&self, _machine: &str) {}
+    pub fn record_job(&self, _outcome: super::IngestJobOutcome, _queue: &str) {}
     pub fn render(&self) -> String {
         String::new()
     }

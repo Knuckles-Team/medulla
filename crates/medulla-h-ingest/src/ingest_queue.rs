@@ -14,6 +14,7 @@ use medulla_source_types::ingest_job::{
     partition_key, target_embeds_credentials, task_id, IngestEnqueueReceipt, IngestJobEnvelope,
     IngestJobError, IngestRetryPolicy,
 };
+use medulla_kernel::metrics::IngestJobOutcome;
 use medulla_types::contract::ServerErrorCode;
 
 /// One refusal of a served `IngestEnqueue`. Every refusal changes no state.
@@ -49,6 +50,32 @@ fn rejected(code: ServerErrorCode, detail: String) -> IngestEnqueueError {
 /// (MEDULLA-INGEST-WORKER-R001.11 owns the depth read). A duplicate task id
 /// returns the first receipt with `deduplicated` true and writes nothing.
 pub fn enqueue_ingest_job(
+    jobs: Option<Arc<dyn JobsApi>>,
+    verified_tenant: &str,
+    envelope: &IngestJobEnvelope,
+    policy: &IngestRetryPolicy,
+    current_depth: u64,
+    max_depth: u64,
+) -> Result<IngestEnqueueReceipt, IngestEnqueueError> {
+    let outcome = enqueue_unrecorded(
+        jobs,
+        verified_tenant,
+        envelope,
+        policy,
+        current_depth,
+        max_depth,
+    );
+    let queue = envelope.lane().queue_name();
+    let counted = match &outcome {
+        Ok(receipt) if receipt.deduplicated => IngestJobOutcome::Deduplicated,
+        Ok(_) => IngestJobOutcome::Enqueued,
+        Err(_) => IngestJobOutcome::Refused,
+    };
+    medulla_kernel::metrics::process().record_job(counted, queue);
+    outcome
+}
+
+fn enqueue_unrecorded(
     jobs: Option<Arc<dyn JobsApi>>,
     verified_tenant: &str,
     envelope: &IngestJobEnvelope,
