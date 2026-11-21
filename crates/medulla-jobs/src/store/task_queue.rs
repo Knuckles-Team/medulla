@@ -22,6 +22,8 @@ const TASK_MAX_ATTEMPTS: u32 = 5;
 const TASK_PRIORITY_STEP: i32 = 10;
 const TASK_CODE_VERSION: &str = "task-queue-v1";
 const TASK_ENV_VERSION: &str = "eg-jobs-v1";
+/// The domain tag of a dead-letter item's payload digest.
+const DEAD_LETTER_PAYLOAD_DOMAIN: &[u8] = b"eg/ingest-dead-letter-payload/v1";
 
 /// Which job family a worker claim may lease.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -90,6 +92,11 @@ pub enum TaskAckOutcome {
     Failed,
     /// Release the task for redelivery, keeping its attempt count.
     Retry,
+    /// Redeliver after `delay_ms` without reading the retry budget: the caller's policy
+    /// decided the attempt count (MEDULLA-INGEST-WORKER-R001.9).
+    RetryAfter { delay_ms: u64 },
+    /// Fail the task for good and park one dead-letter item for it in the same commit.
+    DeadLetter { code: &'static str },
 }
 
 /// Why an ack was refused.
@@ -149,6 +156,32 @@ fn require_task_lease(
         }
         _ => Err(TaskAckError::NotClaimed),
     }
+}
+
+/// The canonical JSON of the dead-letter item of a task that just failed for good. The tenant,
+/// corpus key, kind and target stay in the failed task's stored envelope and are read by
+/// `item_id`; the item copies none of them (MEDULLA-INGEST-WORKER-R001.9).
+fn dead_letter_item_bytes(
+    job: &AnalyticsJob,
+    code: &str,
+    detail: &str,
+    now_ms: i64,
+) -> Result<Vec<u8>> {
+    let payload = job.input_payload.as_deref().unwrap_or_default();
+    let payload_digest =
+        medulla_types::contract::Digest256::framed(DEAD_LETTER_PAYLOAD_DOMAIN, &[payload])
+            .map_err(codec_err)?;
+    let item = medulla_ingestion_types::ingest_capabilities::DeadLetterItem {
+        schema_version: medulla_ingestion_types::ingest_capabilities::INGEST_CAPABILITIES_SCHEMA_VERSION,
+        item_id: job.job_id.clone(),
+        queue: task_queue_of(job).unwrap_or_default().to_string(),
+        reason: code.to_string(),
+        attempts: job.retry.attempts_made,
+        last_error: detail.to_string(),
+        parked_at_ms: u64::try_from(now_ms).unwrap_or(0),
+        payload_digest,
+    };
+    serde_json::to_vec(&item).map_err(codec_err)
 }
 
 impl JobStore {
@@ -348,6 +381,7 @@ impl JobStore {
             lease_owner_matches: true,
             ..job.state.facts()
         };
+        let mut dead_letter: Option<Vec<u8>> = None;
         match outcome {
             TaskAckOutcome::Succeeded => {
                 // Running reaches Succeeded through Publishing (J03, J04) inside the one transaction.
@@ -415,10 +449,39 @@ impl JobStore {
                 job.transition(JobEvent::Fail, &facts, now_ms, failed)
                     .map_err(JobError::from)?;
             }
+            TaskAckOutcome::RetryAfter { delay_ms } => {
+                let facts = JobFacts {
+                    attempts_below_max: true,
+                    ..owner
+                };
+                let backoff = JobState::Backoff {
+                    not_before_ms: now_ms
+                        .saturating_add(i64::try_from(delay_ms).unwrap_or(i64::MAX)),
+                    checkpoint: Some(checkpoint),
+                };
+                job.transition(JobEvent::Fail, &facts, now_ms, backoff)
+                    .map_err(JobError::from)?;
+            }
+            TaskAckOutcome::DeadLetter { code } => {
+                let facts = JobFacts {
+                    attempts_below_max: false,
+                    ..owner
+                };
+                let failed = JobState::Failed {
+                    reason: code.to_string(),
+                    checkpoint: Some(checkpoint),
+                };
+                job.transition(JobEvent::Fail, &facts, now_ms, failed)
+                    .map_err(JobError::from)?;
+                dead_letter = Some(dead_letter_item_bytes(&job, code, detail, now_ms)?);
+            }
         }
         job.updated_at_ms = now_ms;
+        let side = dead_letter
+            .as_deref()
+            .map(|bytes| JobSideRow::DeadLetter(task_id, bytes));
         let (batch, _next_version) =
-            write_job_transition(self, &write, &job, expected_version, None)?;
+            write_job_transition(self, &write, &job, expected_version, side)?;
         self.mutations.commit(write, &batch).map_err(redb_err)?;
         Ok(job)
     }
@@ -531,6 +594,93 @@ mod tests {
             TaskSubmitOutcome::Enqueued(job) => job.job_id,
             TaskSubmitOutcome::Duplicate => panic!("unexpected duplicate"),
         }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.9
+    #[test]
+    fn dead_letter_ack_fails_task_and_parks_item_in_one_commit() {
+        use medulla_ingestion_types::ingest_capabilities::DeadLetterItem;
+
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let id = submit(&store, "a", "ingest", 1_000);
+        let claim = store
+            .claim_task("worker-1", CAPABILITY, 2_000, 60_000)
+            .unwrap()
+            .expect("a ready task");
+        assert_eq!(claim.job.job_id, id);
+        let before = store.live_version().unwrap();
+
+        let job = store
+            .ack_task(
+                "acme",
+                &id,
+                "worker-1",
+                TaskAckOutcome::DeadLetter {
+                    code: "INGEST_RETRIES_EXHAUSTED",
+                },
+                "parser refused the page",
+                3_000,
+            )
+            .unwrap();
+        match &job.state {
+            JobState::Failed { reason, .. } => assert_eq!(reason, "INGEST_RETRIES_EXHAUSTED"),
+            other => panic!("expected a failed task, got {other:?}"),
+        }
+        // The failed state and the parked item share one committed version step.
+        assert_eq!(store.live_version().unwrap(), before + 1);
+        let read = store.scoped_read().unwrap();
+        let table = read.open_owner_table(TASK_DEAD_LETTERS).unwrap();
+        let row = table.get(id.as_str()).unwrap().expect("one parked item");
+        let item: DeadLetterItem = serde_json::from_slice(row.value()).unwrap();
+        assert_eq!(item.item_id, id);
+        assert_eq!(item.queue, "ingest");
+        assert_eq!(item.reason, "INGEST_RETRIES_EXHAUSTED");
+        assert_eq!(item.attempts, 1);
+        assert_eq!(item.last_error, "parser refused the page");
+        assert_eq!(item.parked_at_ms, 3_000);
+        let expected = medulla_types::contract::Digest256::framed(
+            b"eg/ingest-dead-letter-payload/v1",
+            &[b"{}".as_slice()],
+        )
+        .unwrap();
+        assert_eq!(item.payload_digest, expected);
+        assert_eq!(table.len().unwrap(), 1);
+        // The failed task left the queue load.
+        let load = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!((load.queued, load.running), (0, 0));
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.9
+    #[test]
+    fn retry_after_redelivers_after_the_delay_without_reading_the_budget() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let id = submit(&store, "a", "ingest", 1_000);
+        store
+            .claim_task("worker-1", CAPABILITY, 2_000, 60_000)
+            .unwrap()
+            .expect("a ready task");
+        store
+            .ack_task(
+                "acme",
+                &id,
+                "worker-1",
+                TaskAckOutcome::RetryAfter { delay_ms: 5_000 },
+                "",
+                3_000,
+            )
+            .unwrap();
+        assert!(store
+            .claim_task("worker-1", CAPABILITY, 7_999, 60_000)
+            .unwrap()
+            .is_none());
+        let again = store
+            .claim_task("worker-1", CAPABILITY, 8_000, 60_000)
+            .unwrap()
+            .expect("due after the delay");
+        assert_eq!(again.job.job_id, id);
+        assert_eq!(again.job.retry.attempts_made, 2);
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.4.1

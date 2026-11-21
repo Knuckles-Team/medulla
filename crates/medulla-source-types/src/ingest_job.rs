@@ -224,6 +224,48 @@ pub fn next_delay(policy: &IngestRetryPolicy, attempt: u32, seed: u64) -> Durati
     Duration::from_millis(ceiling - removed.min(ceiling))
 }
 
+/// What an ack of an ingest task does to the task (MEDULLA-INGEST-WORKER-R001.9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum IngestAckDecision {
+    /// The task is done.
+    Complete,
+    /// Redeliver after `delay_ms`.
+    Redeliver { delay_ms: u64 },
+    /// The task exhausted its attempts: fail it and park its dead-letter item.
+    DeadLetter,
+}
+
+/// The jitter seed of one task: the first 8 bytes of its 64-hex digest id, big-endian. An id
+/// that is not hex, which no ingest task has, seeds 0.
+fn task_id_seed(task_id: &str) -> u64 {
+    task_id
+        .get(..16)
+        .and_then(|head| u64::from_str_radix(head, 16).ok())
+        .unwrap_or(0)
+}
+
+/// Decide the ack of one ingest task. `attempt` is the job's 1-based `attempts_made`, counted
+/// at each claim. `Succeeded` completes; `Failed` and `Retry` redeliver while
+/// `attempt < max_attempts` and dead-letter from `attempt >= max_attempts`
+/// (MEDULLA-INGEST-WORKER-R001.9).
+pub fn on_ingest_ack(
+    policy: &IngestRetryPolicy,
+    attempt: u32,
+    task_id: &str,
+    outcome: medulla_work_types::task_queue::TaskOutcome,
+) -> IngestAckDecision {
+    use medulla_work_types::task_queue::TaskOutcome;
+    match outcome {
+        TaskOutcome::Succeeded => IngestAckDecision::Complete,
+        TaskOutcome::Failed | TaskOutcome::Retry if attempt >= policy.max_attempts => {
+            IngestAckDecision::DeadLetter
+        }
+        TaskOutcome::Failed | TaskOutcome::Retry => IngestAckDecision::Redeliver {
+            delay_ms: next_delay(policy, attempt, task_id_seed(task_id)).as_millis() as u64,
+        },
+    }
+}
+
 /// The receipt for a served `IngestEnqueue`: the task id, its queue, its
 /// partition and whether the write deduplicated
 /// (MEDULLA-INGEST-WORKER-R001.4).
@@ -305,6 +347,49 @@ mod tests {
             target: "docs/readme.md".into(),
             attempt: 1,
             page: None,
+        }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.9
+    #[test]
+    fn ack_decision_redelivers_then_dead_letters() {
+        use medulla_work_types::task_queue::TaskOutcome;
+        let policy = IngestRetryPolicy {
+            max_attempts: 5,
+            base_delay_ms: 1_000,
+            max_delay_ms: 60_000,
+            jitter: 0.2,
+        };
+        let id = task_id(&envelope());
+        for outcome in [TaskOutcome::Failed, TaskOutcome::Retry] {
+            for attempt in [1u32, 4] {
+                match on_ingest_ack(&policy, attempt, &id, outcome) {
+                    IngestAckDecision::Redeliver { delay_ms } => {
+                        let ceiling = 1_000u64 << (attempt - 1);
+                        assert!(delay_ms <= ceiling && delay_ms * 10 >= ceiling * 8, "{delay_ms}");
+                        // The same attempt and task always draw the same delay.
+                        assert_eq!(
+                            on_ingest_ack(&policy, attempt, &id, outcome),
+                            IngestAckDecision::Redeliver { delay_ms }
+                        );
+                    }
+                    other => panic!("attempt {attempt} must redeliver, got {other:?}"),
+                }
+            }
+            assert_eq!(
+                on_ingest_ack(&policy, 5, &id, outcome),
+                IngestAckDecision::DeadLetter
+            );
+            assert_eq!(
+                on_ingest_ack(&policy, 6, &id, outcome),
+                IngestAckDecision::DeadLetter
+            );
+        }
+        for attempt in [1u32, 4, 5] {
+            assert_eq!(
+                on_ingest_ack(&policy, attempt, &id, TaskOutcome::Succeeded),
+                IngestAckDecision::Complete
+            );
         }
     }
 

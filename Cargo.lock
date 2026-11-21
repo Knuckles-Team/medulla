@@ -6342,6 +6342,7 @@ dependencies = [
  "hex",
  "medulla-core",
  "medulla-graph-core",
+ "medulla-ingestion-types",
  "medulla-jobs",
  "medulla-mutation-types",
  "medulla-protocol-types",

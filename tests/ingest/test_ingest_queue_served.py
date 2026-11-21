@@ -8,7 +8,9 @@ task a worker claims carries the receipt's task id.
 
 from __future__ import annotations
 
+import asyncio
 import os
+import time
 import uuid
 from typing import Any
 
@@ -71,6 +73,76 @@ async def test_duplicate_enqueue_is_one_task() -> None:
         while (claimed := await _claim(client, "ingest-worker-1")) is not None:
             claimed_ids.append(claimed["task_id"])
         assert claimed_ids.count(first["task_id"]) == 1
+    finally:
+        await client.close()
+
+
+async def _claim_task(client: MedullaClient, task_id: str, worker: str) -> dict[str, Any]:
+    """Claim until `task_id` arrives, acking every other task of the shared queue."""
+    deadline = time.monotonic() + 10.0
+    while time.monotonic() < deadline:
+        claimed = await _claim(client, worker)
+        if claimed is None:
+            await asyncio.sleep(0.05)
+        elif claimed["task_id"] == task_id:
+            return claimed
+        else:
+            await client._send(
+                "TaskQueueAck",
+                {
+                    "task_id": claimed["task_id"],
+                    "worker_id": worker,
+                    "outcome": "Succeeded",
+                    "detail": "",
+                },
+            )
+    raise AssertionError(f"task {task_id} was not delivered")
+
+
+# spec: MEDULLA-INGEST-WORKER-R001.9
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R001.9")
+@pytest.mark.asyncio
+async def test_failed_job_retries_then_dead_letters() -> None:
+    client = await _client()
+    try:
+        current = await client._send("GetSchedulerConfig", {})
+        fast = {
+            **current,
+            "ingest_retry": {
+                "max_attempts": 5,
+                "base_delay_ms": 20,
+                "max_delay_ms": 200,
+                "jitter_milli": 200,
+            },
+        }
+        await client._send("SetSchedulerConfig", {"config": fast})
+        try:
+            receipt = await client._send(
+                "IngestEnqueue", {"envelope": _envelope(f"job-{uuid.uuid4().hex[:10]}")}
+            )
+            task_id = receipt["task_id"]
+            for attempt in range(1, 6):
+                claimed = await _claim_task(client, task_id, "ingest-worker-1")
+                assert claimed["attempt"] == attempt
+                acked = await client._send(
+                    "TaskQueueAck",
+                    {
+                        "task_id": task_id,
+                        "worker_id": "ingest-worker-1",
+                        "outcome": "Failed",
+                        "detail": "parse failed",
+                    },
+                )
+                assert acked["task_id"] == task_id
+            # Five deliveries exhausted the policy: the task is failed for good with the
+            # dead-letter reason, and no sixth delivery follows.
+            record = await client.jobs.status(task_id)
+            assert record["state"]["Failed"]["reason"] == "INGEST_RETRIES_EXHAUSTED"
+            await asyncio.sleep(0.5)
+            while (extra := await _claim(client, "ingest-worker-1")) is not None:
+                assert extra["task_id"] != task_id
+        finally:
+            await client._send("SetSchedulerConfig", {"config": current})
     finally:
         await client.close()
 

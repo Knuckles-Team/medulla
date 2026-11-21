@@ -22,6 +22,7 @@ use std::path::Path;
 use medulla_h_jobs::task_queue::{ack, claim, enqueue, renew, TaskQueueCall};
 use medulla_jobs::JobStore;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_source_types::ingest_job::IngestRetryPolicy;
 use medulla_work_types::task_queue::{
     ClaimedTask, TaskAck, TaskAcked, TaskClaim, TaskEnqueue, TaskEnqueued, TaskOutcome,
     TaskRenew, TaskRenewed,
@@ -48,6 +49,11 @@ fn call(tenant: &str, now_ms: i64) -> TaskQueueCall<'_> {
         principal: "ingest-service",
         now_ms,
     }
+}
+
+/// The ingest retry policy the ack of a non-ingest queue never reads.
+fn unused_ingest_policy() -> Result<IngestRetryPolicy, String> {
+    Err("the queues of this test are not ingest queues".to_string())
 }
 
 fn decode<T: serde::de::DeserializeOwned>(response: &Response) -> T {
@@ -143,12 +149,14 @@ fn unacked_claim_redelivers_after_lease_expiry_and_restart() {
         &store,
         &call(tenant, later),
         ack_of(&enqueued.task_id, "w1", TaskOutcome::Succeeded),
+        &unused_ingest_policy(),
     );
     assert_eq!(refusal_code(&stale), "TASK_ACK_NOT_CLAIMED");
     let acked: TaskAcked = decode(&ack(
         &store,
         &call(tenant, later + 1),
         ack_of(&enqueued.task_id, "w2", TaskOutcome::Succeeded),
+        &unused_ingest_policy(),
     ));
     assert_eq!(acked.task_id, enqueued.task_id);
     assert_eq!(acked.outcome, TaskOutcome::Succeeded);
@@ -250,6 +258,7 @@ fn ack_outcomes_map_to_release_fail_and_lapse() {
         &store,
         &call(tenant, T0 + 1),
         ack_of(&retried.task_id, "w1", TaskOutcome::Retry),
+        &unused_ingest_policy(),
     ));
     let again: Option<ClaimedTask> =
         decode(&claim(&store, &call(tenant, T0 + 2), lease("w1", 5_000)));
@@ -262,6 +271,7 @@ fn ack_outcomes_map_to_release_fail_and_lapse() {
         &store,
         &call(tenant, T0 + 3),
         ack_of(&retried.task_id, "w1", TaskOutcome::Failed),
+        &unused_ingest_policy(),
     ));
     let gone: Option<ClaimedTask> =
         decode(&claim(&store, &call(tenant, T0 + 4), lease("w1", 5_000)));
@@ -275,12 +285,14 @@ fn ack_outcomes_map_to_release_fail_and_lapse() {
         &store,
         &call(tenant, T0 + 10 + 1_000),
         ack_of(&lapsed.task_id, "w1", TaskOutcome::Succeeded),
+        &unused_ingest_policy(),
     );
     assert_eq!(refusal_code(&late), "TASK_ACK_LEASE_EXPIRED");
     let unknown = ack(
         &store,
         &call(tenant, T0 + 11),
         ack_of("job-ffffffffffffffff", "w1", TaskOutcome::Succeeded),
+        &unused_ingest_policy(),
     );
     assert_eq!(refusal_code(&unknown), "TASK_ACK_NOT_CLAIMED");
 

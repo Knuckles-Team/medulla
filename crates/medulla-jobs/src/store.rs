@@ -112,6 +112,11 @@ const TASK_QUEUE_TOTALS: TableDefinition<'static, (&str, &str), (u64, u64)> =
 const TASK_QUEUE_OLDEST: TableDefinition<'static, (&str, &str, i64, &str), ()> =
     TableDefinition::new("analytics_job_task_queue_oldest");
 
+/// One parked ingest task per task id: the canonical JSON of its `DeadLetterItem`
+/// (MEDULLA-INGEST-WORKER-R001.9). Authoritative, never rebuilt from the job table.
+const TASK_DEAD_LETTERS: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("analytics_job_task_dead_letters");
+
 const SCHEDULER_INDEX_VERSION: u64 = 3;
 const META_INDEX_VERSION: &str = "scheduler_index_version";
 const META_MAX_JOB_SEQUENCE: &str = "max_job_sequence";
@@ -1118,7 +1123,7 @@ impl JobStore {
             &write,
             &job,
             expected_version,
-            Some((&result.dataset_ref, &result_bytes)),
+            Some(JobSideRow::Result(&result.dataset_ref, &result_bytes)),
         )?;
         self.mutations.commit(write, &batch).map_err(redb_err)?;
         Ok(job)
@@ -2813,12 +2818,20 @@ fn require_lease_ownership(
 /// `write` may carry several transitions (see `reconcile_scheduler` +
 /// `claim_next`), so only the top-level caller, once it knows no further
 /// transition is coming, commits.
+/// One extra row committed with a job transition, in the same write transaction.
+enum JobSideRow<'a> {
+    /// The typed result of a publication, keyed by its dataset reference.
+    Result(&'a str, &'a [u8]),
+    /// The parked ingest task, keyed by task id (MEDULLA-INGEST-WORKER-R001.9).
+    DeadLetter(&'a str, &'a [u8]),
+}
+
 fn write_job_transition(
     store: &JobStore,
     write: &AdmittedMutation<'_, JobsOwner>,
     job: &AnalyticsJob,
     expected_version: u64,
-    result: Option<(&str, &[u8])>,
+    side: Option<JobSideRow<'_>>,
 ) -> Result<(MutationBatch, u64)> {
     let batch = internal_job_batch(
         job,
@@ -2841,15 +2854,27 @@ fn write_job_transition(
             let owner_write = write.owner_rows(&store.owner, &batch).map_err(redb_err)?;
             let staged = (|| -> Result<()> {
                 persist_job_image(&owner_write, job, job_bytes.as_slice())?;
-                if let Some((dataset_ref, result_bytes)) = result {
-                    if !valid_identifier(dataset_ref) || result_bytes.len() > MAX_JOB_RESULT_BYTES {
-                        return Err(codec_err("typed result exceeds the storage limit"));
+                match side {
+                    Some(JobSideRow::Result(dataset_ref, result_bytes)) => {
+                        if !valid_identifier(dataset_ref)
+                            || result_bytes.len() > MAX_JOB_RESULT_BYTES
+                        {
+                            return Err(codec_err("typed result exceeds the storage limit"));
+                        }
+                        owner_write
+                            .open_table(RESULTS)
+                            .map_err(redb_err)?
+                            .insert(dataset_ref, result_bytes)
+                            .map_err(redb_err)?;
                     }
-                    owner_write
-                        .open_table(RESULTS)
-                        .map_err(redb_err)?
-                        .insert(dataset_ref, result_bytes)
-                        .map_err(redb_err)?;
+                    Some(JobSideRow::DeadLetter(task_id, item_bytes)) => {
+                        owner_write
+                            .open_table(TASK_DEAD_LETTERS)
+                            .map_err(redb_err)?
+                            .insert(task_id, item_bytes)
+                            .map_err(redb_err)?;
+                    }
+                    None => {}
                 }
                 Ok(())
             })();

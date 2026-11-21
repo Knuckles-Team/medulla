@@ -17,10 +17,14 @@ use medulla_jobs::{
     JobError, JobStore, TaskAckError, TaskAckOutcome, TaskSubmit, TaskSubmitOutcome,
     TASK_FAMILY_PREFIX,
 };
+use medulla_kernel::metrics::IngestJobOutcome;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::coordination as contract;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use medulla_source_types::ingest_job::{
+    ingest_lane_of_queue, on_ingest_ack, IngestAckDecision, IngestRetryPolicy,
+};
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
 use medulla_work_types::task_queue::{
     ClaimedTask, TaskAck, TaskAcked, TaskClaim, TaskEnqueue, TaskEnqueued, TaskOutcome, TaskRenew,
@@ -180,9 +184,44 @@ pub fn claim(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskClaim) -> 
     }
 }
 
+/// The ack the store performs for a task of an ingest queue: the pure decision of
+/// MEDULLA-INGEST-WORKER-R001.9 over the job's attempt count, or `None` when the task is not of
+/// an ingest queue of this tenant (the lease check of the store then refuses it as unclaimed).
+fn ingest_ack_decision(
+    store: &JobStore,
+    call: &TaskQueueCall<'_>,
+    request: &TaskAck,
+    policy: &Result<IngestRetryPolicy, String>,
+) -> Result<Option<(IngestAckDecision, String)>, String> {
+    let Ok(job) = store.get(&request.task_id) else {
+        return Ok(None);
+    };
+    let Some(queue) = job.algo.family.strip_prefix(TASK_FAMILY_PREFIX) else {
+        return Ok(None);
+    };
+    if job.policy.tenant != call.tenant || ingest_lane_of_queue(queue).is_none() {
+        return Ok(None);
+    }
+    let policy = policy.as_ref().map_err(Clone::clone)?;
+    let decision = on_ingest_ack(
+        policy,
+        job.retry.attempts_made,
+        &request.task_id,
+        request.outcome,
+    );
+    Ok(Some((decision, queue.to_string())))
+}
+
 /// Serve `TaskQueueAck`: complete, fail or release a task the caller's worker
-/// holds under a live lease.
-pub fn ack(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskAck) -> Response {
+/// holds under a live lease. A task of an ingest queue is acked by the decision of
+/// MEDULLA-INGEST-WORKER-R001.9 under `ingest_policy`, the policy in force; every other queue acks
+/// as the caller said.
+pub fn ack(
+    store: &JobStore,
+    call: &TaskQueueCall<'_>,
+    request: TaskAck,
+    ingest_policy: &Result<IngestRetryPolicy, String>,
+) -> Response {
     let req_id = call.req_id;
     if let Err(refusal) = request.validate() {
         return Response::err(req_id, refusal.to_string());
@@ -190,11 +229,28 @@ pub fn ack(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskAck) -> Resp
     if !worker_field_valid(&request.worker_id) {
         return invalid(req_id, "task worker_id must be 1 to 256 bytes");
     }
-    let outcome = match request.outcome {
+    let mut outcome = match request.outcome {
         TaskOutcome::Succeeded => TaskAckOutcome::Succeeded,
         TaskOutcome::Failed => TaskAckOutcome::Failed,
         TaskOutcome::Retry => TaskAckOutcome::Retry,
     };
+    let mut ingest = None;
+    match ingest_ack_decision(store, call, &request, ingest_policy) {
+        Ok(Some((decision, queue))) => {
+            outcome = match decision {
+                IngestAckDecision::Complete => TaskAckOutcome::Succeeded,
+                IngestAckDecision::Redeliver { delay_ms } => {
+                    TaskAckOutcome::RetryAfter { delay_ms }
+                }
+                IngestAckDecision::DeadLetter => TaskAckOutcome::DeadLetter {
+                    code: ServerErrorCode::IngestRetriesExhausted.as_str(),
+                },
+            };
+            ingest = Some((decision, queue));
+        }
+        Ok(None) => {}
+        Err(error) => return Response::err(req_id, error),
+    }
     let acked = store.ack_task(
         call.tenant,
         &request.task_id,
@@ -203,6 +259,14 @@ pub fn ack(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskAck) -> Resp
         &request.detail,
         call.now_ms,
     );
+    if let (Ok(_), Some((decision, queue))) = (&acked, &ingest) {
+        let recorded = match decision {
+            IngestAckDecision::Complete => IngestJobOutcome::Completed,
+            IngestAckDecision::Redeliver { .. } => IngestJobOutcome::Retried,
+            IngestAckDecision::DeadLetter => IngestJobOutcome::DeadLettered,
+        };
+        medulla_kernel::metrics::process().record_job(recorded, queue);
+    }
     match acked {
         Ok(job) => answer(
             req_id,
@@ -270,6 +334,20 @@ pub fn renew(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskRenew) -> 
     }
 }
 
+/// The ingest retry policy in force: the stored scheduler policy, else the startup knobs. An
+/// unreadable policy is an error value, so only the ack of an ingest task refuses on it.
+async fn ingest_retry_policy(
+    state: &Arc<RwLock<ServerState>>,
+) -> Result<IngestRetryPolicy, String> {
+    let store = {
+        let current = state.read().await;
+        medulla_persistence::scheduler_config_store::shared_scheduler_config_store(&current)
+            .map_err(|error| format!("INTERNAL: {error}"))?
+    };
+    let config = crate::scheduler_config::effective_config(&store)?;
+    Ok(IngestRetryPolicy::from_limits(&config.ingest_retry))
+}
+
 /// Route one task-queue method to its handler, or hand the method back when it
 /// is not one of the three.
 pub async fn try_handle(
@@ -335,16 +413,20 @@ pub async fn try_handle(
             worker_id,
             outcome,
             detail,
-        } => ack(
-            &store,
-            &call,
-            TaskAck {
-                task_id,
-                worker_id,
-                outcome,
-                detail,
-            },
-        ),
+        } => {
+            let policy = ingest_retry_policy(state).await;
+            ack(
+                &store,
+                &call,
+                TaskAck {
+                    task_id,
+                    worker_id,
+                    outcome,
+                    detail,
+                },
+                &policy,
+            )
+        }
         Method::TaskQueueRenew {
             task_id,
             worker_id,
@@ -375,6 +457,110 @@ mod tests {
             principal: "principal:test",
             now_ms,
         }
+    }
+
+    fn default_policy() -> IngestRetryPolicy {
+        IngestRetryPolicy::from_limits(
+            &medulla_work_types::scheduler_config::IngestRetryLimits::default(),
+        )
+    }
+
+    fn ingest_envelope() -> IngestJobEnvelope {
+        IngestJobEnvelope {
+            job_id: "job-1".into(),
+            tenant: "acme".into(),
+            corpus_key: "repo-a".into(),
+            kind: IngestJobKind::Document,
+            target: "docs/readme.md".into(),
+            attempt: 1,
+            page: None,
+        }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R001.9
+    #[test]
+    fn ingest_failures_redeliver_with_backoff_then_dead_letter() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let envelope = ingest_envelope();
+        let digest = task_id(&envelope);
+        store
+            .submit_task(
+                TaskSubmit {
+                    tenant: "acme".into(),
+                    actor: "principal:test".into(),
+                    tenant_capability: tenant_capability("acme"),
+                    queue: "ingest".into(),
+                    kind: "document".into(),
+                    payload_ref: serde_json::to_string(&envelope).unwrap(),
+                    idempotency_key: digest.clone(),
+                    priority: medulla_work_types::task_queue::default_priority(),
+                    not_before_ms: 0,
+                    job_id: Some(digest.clone()),
+                    max_attempts: Some(u32::MAX),
+                },
+                1_000,
+            )
+            .unwrap();
+        let policy = Ok(default_policy());
+        let mut now = 2_000;
+        for attempt in 1..=5u32 {
+            let claimed = claim(
+                &store,
+                &call(now),
+                TaskClaim {
+                    worker_id: "worker-1".into(),
+                    grant_id: "grant-1".into(),
+                    lease_ms: 30_000,
+                },
+            );
+            assert!(claimed.error.is_none(), "attempt {attempt}: {:?}", claimed.error);
+            let acked = ack(
+                &store,
+                &call(now + 1),
+                TaskAck {
+                    task_id: digest.clone(),
+                    worker_id: "worker-1".into(),
+                    outcome: TaskOutcome::Failed,
+                    detail: "parse failed".into(),
+                },
+                &policy,
+            );
+            assert!(acked.error.is_none(), "attempt {attempt}: {:?}", acked.error);
+            let job = store.get(&digest).unwrap();
+            if attempt < 5 {
+                // Redelivery waits inside the next_delay bounds of this attempt.
+                let ceiling = 1_000i64 << (attempt - 1);
+                match job.state {
+                    medulla_jobs::JobState::Backoff { not_before_ms, .. } => {
+                        let gap = not_before_ms - (now + 1);
+                        assert!(gap <= ceiling && gap * 10 >= ceiling * 8, "gap {gap}");
+                        now = not_before_ms;
+                    }
+                    other => panic!("attempt {attempt} must back off, got {other:?}"),
+                }
+            } else {
+                match job.state {
+                    medulla_jobs::JobState::Failed { reason, .. } => {
+                        assert_eq!(reason, "INGEST_RETRIES_EXHAUSTED")
+                    }
+                    other => panic!("attempt 5 must dead-letter, got {other:?}"),
+                }
+            }
+        }
+        // No sixth delivery.
+        let sixth = claim(
+            &store,
+            &call(now + 3_600_000),
+            TaskClaim {
+                worker_id: "worker-1".into(),
+                grant_id: "grant-1".into(),
+                lease_ms: 30_000,
+            },
+        );
+        assert!(sixth.error.is_none());
+        let load = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!((load.queued, load.running), (0, 0));
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.4.1
@@ -438,6 +624,7 @@ mod tests {
                 outcome: TaskOutcome::Succeeded,
                 detail: String::new(),
             },
+            &Ok(default_policy()),
         );
         assert!(
             acked.error.is_none(),
