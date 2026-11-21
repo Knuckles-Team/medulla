@@ -454,6 +454,77 @@ async fn ewma_uql_matches_vectors() {
     }
 }
 
+// spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.3.11
+#[tokio::test(flavor = "multi_thread")]
+async fn kalman_uql_matches_vectors() {
+    let mut s = Served::open();
+    // Level, q = 0, r = 1, v0 = [2, 4]: the first row is v0[0]; the second is the
+    // filter seeded at x0 = v0[0], p0 = r, worked by hand: P = 1, S = 2, K = 1/2, x = 3.
+    s.append("s", &[vec![2.0, 4.0]]).await;
+    let rows = s
+        .uql(&format!("{SCAN} |> DERIVE kalman(v0, 0, 1) AS out |> RETURN out"))
+        .await
+        .expect("DERIVE runs");
+    let want = s
+        .object(Op::KalmanLevel {
+            observations: vec![4.0],
+            f: 1.0,
+            q: 0.0,
+            h: 1.0,
+            r: 1.0,
+            x0: 2.0,
+            p0: 1.0,
+        })
+        .await;
+    let states = want["states"].as_array().expect("states").clone();
+    assert_eq!(rows.len(), 2);
+    close(rows[0].channels[0].expect("first row"), 2.0);
+    close(rows[1].channels[0].expect("second row"), 3.0);
+    close(rows[1].channels[0].unwrap(), states[0].as_f64().unwrap());
+    // Beta, q = 0, r = 1, beta0 = 0, p0 = 1, y = v0 = [2, 4], x = v1 = [1, 2]: rows 1 and 5/3.
+    let mut s = Served::open();
+    s.append("s", &[vec![2.0, 4.0], vec![1.0, 2.0]]).await;
+    let rows = s
+        .uql(&format!("{SCAN} |> DERIVE kbeta(v0, v1, 0, 1) AS out |> RETURN out"))
+        .await
+        .expect("DERIVE runs");
+    let want = s
+        .object(Op::KalmanBeta {
+            market_returns: vec![1.0, 2.0],
+            asset_returns: vec![2.0, 4.0],
+            q: 0.0,
+            r: 1.0,
+            beta0: 0.0,
+            p0: 1.0,
+        })
+        .await;
+    let states = want["states"].as_array().expect("states").clone();
+    assert_eq!(rows.len(), states.len());
+    for (row, expected) in rows.iter().zip(&states) {
+        close(row.channels[0].expect("a beta row"), expected.as_f64().unwrap());
+    }
+    close(rows[0].channels[0].unwrap(), 1.0);
+    close(rows[1].channels[0].unwrap(), 5.0 / 3.0);
+    // Invalid arguments: the kernel code through the served op, the plan error through UQL.
+    let empty = s
+        .numeric(Op::KalmanLevel {
+            observations: vec![],
+            f: 1.0,
+            q: 0.0,
+            h: 1.0,
+            r: 1.0,
+            x0: 0.0,
+            p0: 1.0,
+        })
+        .await;
+    assert!(empty.error_detail.unwrap_or_default().contains("KERNEL_INPUT_SHORT"));
+    let detail = s
+        .uql(&format!("{SCAN} |> DERIVE kalman(v0, -1, 1) AS out"))
+        .await
+        .expect_err("a negative process noise");
+    assert!(detail.contains("UQL_E_SERIES_ARG") || detail.contains("KERNEL_PARAM_INVALID"), "{detail}");
+}
+
 // spec: MEDULLA-FINANCE-PRIMITIVES-R002.2.3.3
 #[tokio::test(flavor = "multi_thread")]
 async fn information_coefficient_uql_matches_vectors() {
