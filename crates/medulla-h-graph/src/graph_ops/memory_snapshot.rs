@@ -423,6 +423,33 @@ pub fn planned_content(
     }
 }
 
+/// Whether storing what `plan` writes would hold more than the tenant's
+/// `capacity_bytes` of memory snapshot content (MEDULLA-DURABLE-KERNEL-R085.7).
+/// A new head replaces the head it supersedes; a retained candidate adds to it.
+/// The router refuses `MEMSYNC_RETENTION_EXHAUSTED` before any effect.
+pub fn exceeds_capacity(
+    core: &GraphCore,
+    doc: &DocId,
+    outcome: &SyncOutcome,
+    plan: &SnapshotPlan,
+    capacity_bytes: u64,
+) -> bool {
+    let Some((_, content)) = planned_content(plan, doc, outcome) else {
+        return false;
+    };
+    let incoming = content.len() as u64;
+    let replaced = match outcome {
+        SyncOutcome::Accepted { .. } | SyncOutcome::Resolved { .. } => store::load_head(core, doc)
+            .map_or(0, |head| u64::from(head.content_len)),
+        _ => 0,
+    };
+    store::exceeds_capacity(
+        store::held_bytes(core).saturating_sub(replaced),
+        incoming,
+        capacity_bytes,
+    )
+}
+
 /// Which gate kind a content change maps to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContentChange {

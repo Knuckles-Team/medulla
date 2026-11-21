@@ -19,6 +19,16 @@ const ENCRYPTION_KEY: &str = "memory-sync-served-encryption-key-0123456789";
 const GRAPH: &str = "memsync";
 const DOC: &str = "notes/a.md";
 
+/// The tenant capacity every test of this binary runs under: the knob's lowest
+/// bound, so the exhaustion refusal is reachable with one maximal document.
+/// The first install wins, so every test installs before it dispatches.
+fn install_knobs() {
+    let args = vec!["memory_sync.capacity_bytes=1048576".to_string()];
+    let loaded = medulla_server_api::knob_config::load_knobs(&args, |_: &str| None)
+        .expect("the capacity knob loads");
+    medulla_server_api::knob_config::install(loaded);
+}
+
 async fn send(state: &test_support::SharedState, id: u64, method: Method) -> Response {
     test_support::dispatch(state, test_support::request(SECRET, id, GRAPH, method)).await
 }
@@ -94,6 +104,7 @@ async fn read(state: &test_support::SharedState, id: u64, revision: Option<u64>)
 // spec: MEDULLA-DURABLE-KERNEL-R085.3
 #[tokio::test(flavor = "multi_thread")]
 async fn competing_saves_retain_both_and_resolve_once() {
+    install_knobs();
     let (_dir, _backend, state) = test_support::durable_graph_state(
         SECRET,
         ENCRYPTION_KEY,
@@ -166,6 +177,7 @@ fn error_of(response: &Response) -> String {
 // spec: MEDULLA-DURABLE-KERNEL-R085.2
 #[tokio::test(flavor = "multi_thread")]
 async fn authorized_read_list_and_cursor_isolation() {
+    install_knobs();
     let mut isolation = common::current_isolation();
     isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
         agent_id: "root".to_string(),
@@ -239,6 +251,7 @@ async fn authorized_read_list_and_cursor_isolation() {
 // spec: MEDULLA-DURABLE-KERNEL-R085.4
 #[tokio::test(flavor = "multi_thread")]
 async fn wire_methods_reach_durable_gateway() {
+    install_knobs();
     let (_dir, _backend, state) = test_support::durable_graph_state(
         SECRET,
         ENCRYPTION_KEY,
@@ -296,6 +309,7 @@ async fn wire_methods_reach_durable_gateway() {
 // spec: MEDULLA-DURABLE-KERNEL-R863
 #[tokio::test(flavor = "multi_thread")]
 async fn sync_rewrite_requires_a_current_admit_receipt() {
+    install_knobs();
     let (_dir, _backend, state) = test_support::durable_graph_state(
         SECRET,
         ENCRYPTION_KEY,
@@ -333,6 +347,7 @@ async fn head_bytes(state: &test_support::SharedState, id: u64) -> (u64, String)
 // spec: MEDULLA-DURABLE-KERNEL-R085.5
 #[tokio::test(flavor = "multi_thread")]
 async fn denied_and_malformed_requests_have_no_effects() {
+    install_knobs();
     let (_dir, _backend, state) = test_support::durable_graph_state(
         SECRET,
         ENCRYPTION_KEY,
@@ -475,6 +490,7 @@ fn standing_of(outcome: SyncOutcome) -> SyncStanding {
 // spec: MEDULLA-DURABLE-KERNEL-R085.6
 #[tokio::test(flavor = "multi_thread")]
 async fn provenance_and_materialization_ack_survive_restart() {
+    install_knobs();
     let (dir, backend, state) = test_support::durable_graph_state(
         SECRET,
         ENCRYPTION_KEY,
@@ -508,4 +524,76 @@ async fn provenance_and_materialization_ack_survive_restart() {
     // The retained candidate is durable, so the standing is still a conflict.
     let stale = standing_of(json_of(send(&state, 11, acknowledge("a7", 1, "one", 3)).await));
     assert_eq!(stale, SyncStanding::Conflict, "the conflict survives the restart");
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R085.7
+#[tokio::test(flavor = "multi_thread")]
+async fn conflicts_survive_gc_and_retention_refusal() {
+    install_knobs();
+    let (dir, backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-retention",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let first: SyncOutcome = json_of(send(&state, 2, submit("c1", None, "one")).await);
+    assert!(matches!(first, SyncOutcome::Accepted { .. }));
+    let stale: SyncOutcome = json_of(send(&state, 3, submit("c2", None, "rival")).await);
+    let SyncOutcome::ConflictRetained {
+        candidate_revision, ..
+    } = stale
+    else {
+        panic!("a stale save is retained");
+    };
+
+    // A restart keeps the head and the unresolved candidate: resolving it still works.
+    let state = restart(&dir, backend, state).await;
+    let head: MemorySnapshotRead = json_of(read(&state, 4, None).await);
+    assert_eq!((head.head.revision, head.content.as_str()), (1, "one"));
+    let resolve = admitted(
+        &state,
+        sync(
+            "c3",
+            SyncAction::Resolve {
+                candidate_revision,
+                expected_head_revision: 1,
+                resolution: Resolution::TakeCandidate,
+            },
+        ),
+        "rival",
+        1,
+        medulla_decision_types::decision::memory_benchmark::ChangeKind::Consolidate,
+    )
+    .await;
+    let resolved: SyncOutcome = json_of(send(&state, 5, resolve).await);
+    assert!(matches!(resolved, SyncOutcome::Resolved { ref head } if head.revision == 2));
+
+    // A document that fills the tenant's capacity is accepted; one more byte
+    // anywhere is refused before any effect.
+    let big = "x".repeat(1_048_576);
+    let fill: SyncOutcome = json_of(send(&state, 6, submit("c4", Some(2), &big)).await);
+    assert!(matches!(fill, SyncOutcome::Accepted { ref head } if head.revision == 3));
+    let mut other = submit("c5", None, "tiny");
+    if let Method::SyncMemorySnapshot { request, .. } = &mut other {
+        request.doc_id = DocId::new("notes/b.md").expect("doc id");
+    }
+    let refused = send(&state, 7, other).await;
+    assert!(
+        error_of(&refused).contains("MEMSYNC_RETENTION_EXHAUSTED"),
+        "{refused:?}"
+    );
+    let missing = send(
+        &state,
+        8,
+        Method::ReadMemorySnapshot {
+            doc_id: "notes/b.md".to_string(),
+            revision: None,
+        },
+    )
+    .await;
+    assert!(missing.error.is_some(), "the refused write left no document");
+    let after: MemorySnapshotRead = json_of(read(&state, 9, None).await);
+    assert_eq!(after.head.revision, 3);
 }

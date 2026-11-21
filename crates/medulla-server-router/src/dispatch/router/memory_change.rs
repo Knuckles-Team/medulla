@@ -121,7 +121,7 @@ async fn handle_sync_memory(
     use medulla_decision_types::decision::memory_benchmark::ChangeKind;
     use medulla_h_decide::decide::stat_memory_change::{require_admit_receipts, sync_candidate};
     use medulla_h_graph::graph_ops::memory_snapshot::{
-        content_change, outcome_response, decide_sync, stamp_for, ContentChange,
+        content_change, decide_sync, exceeds_capacity, outcome_response, stamp_for, ContentChange,
     };
     let DispatchCtx {
         state,
@@ -152,6 +152,20 @@ async fn handle_sync_memory(
         let (outcome, snapshot) = decide_sync(&core, &request, &stamp);
         if snapshot.writes.is_empty() {
             return outcome_response(req.id, outcome);
+        }
+        // A write over the tenant's capacity is refused before any effect.
+        if exceeds_capacity(
+            &core,
+            &request.doc_id,
+            &outcome,
+            &snapshot,
+            medulla_server_api::knob_config::memory_sync_config().capacity_bytes,
+        ) {
+            return Response::err(
+                req.id,
+                medulla_mutation_types::memory_sync::MemorySyncRefusal::RetentionExhausted
+                    .as_str(),
+            );
         }
         if let Some((change, digest, _)) = content_change(&request, &outcome, &snapshot) {
             let kind = match change {

@@ -9,6 +9,9 @@
 //! consumer repairs the one window that leaves open (a crash between the commit
 //! and the holder), and the claim is acknowledged only once every holder stands.
 //! The holder change is set-like, so a redelivered intent takes nothing twice.
+//! A revision older than the newest `memory_sync.max_revisions_per_doc` of its
+//! document is released here, oldest first; a retained conflict candidate is
+//! never released.
 
 use std::sync::Arc;
 
@@ -178,10 +181,19 @@ mod worker {
         // router registered, never under the service actor's own scope.
         let owner_scope = medulla_server_api::carrier::memory_snapshot_owner_scope(context.tenant());
         let mut held: Vec<(u64, String)> = Vec::new();
+        // A document keeps its newest `max_revisions_per_doc` revisions held;
+        // older ones release, oldest first (MEDULLA-DURABLE-KERNEL-R085.7).
+        let max_revisions = u64::from(medulla_server_api::knob_config::memory_sync_config().max_revisions_per_doc);
+        let mut released: Vec<(u64, String)> = Vec::new();
         if let Some(head) = store::load_head(&core, doc) {
+            let first_kept = head.revision.saturating_sub(max_revisions) + 1;
             for revision in 1..=head.revision {
                 if let Some(read) = store::read(&core, doc, Some(revision)) {
-                    held.push((revision, read.content));
+                    if revision < first_kept {
+                        released.push((revision, read.head.content_digest.to_hex()));
+                    } else {
+                        held.push((revision, read.content));
+                    }
                 }
             }
         }
@@ -200,6 +212,15 @@ mod worker {
             let method = medulla_protocol_types::protocol::Method::BlobRef {
                 digest: digest.clone(),
             };
+            hold_one(blob.as_ref(), &authority, &holder, &method)?;
+        }
+        // An unresolved conflict candidate is in `held` and never released.
+        for (revision, digest) in released {
+            let holder = HolderChange::release(
+                &digest,
+                HolderId::new(&format!("memory_snapshot:{}@{revision}", doc.as_str()))?,
+            )?;
+            let method = medulla_protocol_types::protocol::Method::BlobRef { digest };
             hold_one(blob.as_ref(), &authority, &holder, &method)?;
         }
         Ok(())

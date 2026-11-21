@@ -438,6 +438,12 @@ knobs! {
     transfer_min_rollouts: u64 = "transfer.min_rollouts", U64(3), [1, 100], "records", Tunable;
     /// Lifetime of a signed memory snapshot list cursor (MEDULLA-DURABLE-KERNEL-R085.2).
     memory_sync_cursor_ttl_s: u64 = "memory_sync.cursor_ttl_s", U64(900), [60, 86_400], "seconds", Tunable;
+    /// Seconds a resolved candidate or a superseded revision stays held before its blob is released (MEDULLA-DURABLE-KERNEL-R085.7).
+    memory_sync_history_retention_s: u64 = "memory_sync.history_retention_s", U64(2_592_000), [3_600, 31_536_000], "seconds", Tunable;
+    /// Most revisions one memory document keeps held; older ones release oldest first (MEDULLA-DURABLE-KERNEL-R085.7).
+    memory_sync_max_revisions_per_doc: u64 = "memory_sync.max_revisions_per_doc", U64(64), [1, 4_096], "revisions", Tunable;
+    /// Most bytes of memory snapshot content one tenant holds; a write over it is refused (MEDULLA-DURABLE-KERNEL-R085.7).
+    memory_sync_capacity_bytes: u64 = "memory_sync.capacity_bytes", U64(1_073_741_824), [1_048_576, 1_099_511_627_776], "bytes", Tunable;
     /// Memory search-state size cap.
     memory_search_state_max_bytes: u64 = "memory.search_state_max_bytes", U64(1_048_576), [65_536, 1_048_576], "bytes", Tunable;
     /// TOC line-index stride.
@@ -1117,6 +1123,20 @@ pub fn knobs() -> &'static KnobConfig {
     INSTALLED.get_or_init(KnobConfig::default)
 }
 
+/// The memory-sync limits the resolved knobs carry (MEDULLA-DURABLE-KERNEL-R085.7).
+/// The receipt lifetime is not a knob; it keeps the contract default.
+pub fn memory_sync_config() -> medulla_mutation_types::memory_sync::MemorySyncConfig {
+    let knobs = knobs();
+    medulla_mutation_types::memory_sync::MemorySyncConfig {
+        cursor_ttl_s: knobs.memory_sync_cursor_ttl_s,
+        history_retention_s: knobs.memory_sync_history_retention_s,
+        max_revisions_per_doc: u32::try_from(knobs.memory_sync_max_revisions_per_doc)
+            .unwrap_or(u32::MAX),
+        capacity_bytes: knobs.memory_sync_capacity_bytes,
+        ..medulla_mutation_types::memory_sync::MemorySyncConfig::default()
+    }
+}
+
 /// The scheduler policy built from the resolved knob values (MEDULLA-DURABLE-KERNEL-R076.2).
 /// Built once at startup and held in `ServerState`; there is no second settings store.
 pub fn scheduler_config_from(
@@ -1183,6 +1203,40 @@ pub fn scheduler_config_from(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-DURABLE-KERNEL-R085.7
+    #[test]
+    fn memory_sync_retention_knobs_register() {
+        let expect = [
+            ("memory_sync.history_retention_s", 2_592_000, 3_600, 31_536_000, "seconds"),
+            ("memory_sync.max_revisions_per_doc", 64, 1, 4_096, "revisions"),
+            (
+                "memory_sync.capacity_bytes",
+                1_073_741_824,
+                1_048_576,
+                1_099_511_627_776,
+                "bytes",
+            ),
+        ];
+        for (name, default, min, max, unit) in expect {
+            let spec = KNOB_TABLE
+                .iter()
+                .find(|spec| spec.name == name)
+                .unwrap_or_else(|| panic!("{name} is registered"));
+            assert_eq!(spec.default, KnobValue::U64(default));
+            assert_eq!(spec.min, KnobValue::U64(min));
+            assert_eq!(spec.max, KnobValue::U64(max));
+            assert_eq!(spec.unit, unit);
+            assert_eq!(spec.class, KnobClass::Tunable);
+        }
+        let none = |_: &str| None;
+        let loaded = load_knobs(&[], none).unwrap();
+        assert_eq!(loaded.memory_sync_max_revisions_per_doc, 64);
+        let args = vec!["memory_sync.max_revisions_per_doc=4097".to_string()];
+        assert!(load_knobs(&args, none).is_err(), "above the bound refuses at startup");
+        let config = memory_sync_config();
+        assert_eq!(config.validate(), Ok(()));
+    }
 
     // spec: MEDULLA-DECISION-ENGINE-R036.105.2
     #[test]

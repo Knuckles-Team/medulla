@@ -123,6 +123,32 @@ pub fn candidates(core: &GraphCore, doc: &DocId) -> Vec<(u64, CandidateRow)> {
         .collect()
 }
 
+/// The bytes of content the graph holds for memory snapshots: every document's
+/// head plus every retained candidate (MEDULLA-DURABLE-KERNEL-R085.7). A head
+/// is the document's current bytes; earlier revisions release on the retention
+/// rules and do not count against the tenant's capacity.
+pub fn held_bytes(core: &GraphCore) -> u64 {
+    let heads: u64 = core
+        .get_nodes_by_label(HEAD_LABEL, usize::MAX)
+        .into_iter()
+        .filter_map(|(_, bytes)| decode_row::<RevisionRow>(&bytes))
+        .map(|row| u64::from(row.head.content_len))
+        .sum();
+    let candidates: u64 = core
+        .get_nodes_by_label(CANDIDATE_LABEL, usize::MAX)
+        .into_iter()
+        .filter_map(|(_, bytes)| decode_row::<CandidateRow>(&bytes))
+        .filter(|row| !row.resolved)
+        .map(|row| row.content.len() as u64)
+        .sum();
+    heads + candidates
+}
+
+/// Whether holding `incoming` more bytes would pass `capacity_bytes`.
+pub fn exceeds_capacity(held: u64, incoming: u64, capacity_bytes: u64) -> bool {
+    held.saturating_add(incoming) > capacity_bytes
+}
+
 /// Whether `core` still holds the pre-image `plan` was decided against: the same
 /// head revision and the same number of retained candidates of `doc`.
 pub fn plan_is_current(core: &GraphCore, doc: &DocId, plan: &SnapshotPlan) -> bool {
