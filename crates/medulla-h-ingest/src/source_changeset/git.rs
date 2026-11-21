@@ -70,9 +70,13 @@ pub enum BranchHeadGit {
 /// a submodule entry it is the hex commit id.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct PlannedChange {
+    /// The repository-relative path.
     pub path: String,
+    /// What the commit does to the path.
     pub op: PathOp,
+    /// The git file mode of the entry.
     pub mode: u32,
+    /// The entry bytes; `None` for a delete.
     pub content: Option<Vec<u8>>,
 }
 
@@ -81,8 +85,11 @@ pub struct PlannedChange {
 pub struct PlannedCommit {
     /// The origin with `side_pack_digest` still `None`; [`materialize`] fills it.
     pub origin: GitOrigin,
+    /// The commit message.
     pub message: String,
+    /// The committer time, in seconds since the epoch.
     pub committer_time_s: i64,
+    /// The paths the commit changes against its first parent.
     pub changes: Vec<PlannedChange>,
     /// The version-2 side pack of a merge commit.
     pub side_pack: Option<Vec<u8>>,
@@ -92,7 +99,9 @@ pub struct PlannedCommit {
 /// branch already holds.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ImportPlan {
+    /// The commits to append, oldest first.
     pub commits: Vec<PlannedCommit>,
+    /// How many first-parent commits the branch already holds.
     pub skipped: u32,
 }
 
@@ -349,8 +358,11 @@ pub fn plan_import(
 /// the origin with its side pack stored, and the changeset time.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ImportStep {
+    /// The changeset request, its blobs already stored.
     pub request: SubmitChangesetRequest,
+    /// The git origin, its side pack already stored.
     pub origin: GitOrigin,
+    /// The changeset time, from the committer time.
     pub created_at_ms: u64,
 }
 
