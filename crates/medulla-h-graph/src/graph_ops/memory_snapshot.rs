@@ -163,6 +163,7 @@ pub fn stamp_for(caller: Option<&str>, tenant_scope: &str, graph_name: &str) -> 
         actor: caller.unwrap_or("anonymous").to_string(),
         policy_digest: Digest256::sha256(policy.as_bytes()),
         graph_incarnation: graph_name.to_string(),
+        committed_at_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
     }
 }
 
@@ -200,6 +201,7 @@ fn revision_writes(
         label: store::REVISION_LABEL.to_string(),
         head: head.clone(),
         content,
+        committed_at_ms: stamp.committed_at_ms,
     };
     let revision_write = write_of(revision_node_id(&request.doc_id, revision), &row);
     let head_write = write_of(
@@ -235,6 +237,7 @@ fn plan_resolve(
         return (refused(MemorySyncRefusal::NotAvailable), Vec::new());
     };
     candidate.resolved = true;
+    candidate.resolved_at_ms = Some(stamp.committed_at_ms);
     let mut writes = vec![write_of(candidate_id, &candidate)];
     let (content, digest) = match resolution {
         Resolution::KeepHead => return (SyncOutcome::Resolved { head }, writes),
@@ -348,6 +351,7 @@ pub fn decide_sync(
                     content,
                     content_digest,
                     resolved: false,
+                    resolved_at_ms: None,
                 };
                 let id = format!(
                     "{}{candidate_revision}",

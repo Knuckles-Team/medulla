@@ -35,6 +35,7 @@ async fn seed_head(h: &Harness) -> u64 {
         actor: "seeder".into(),
         policy_digest: Digest256::sha256(b"policy"),
         graph_incarnation: "incarnation-1".into(),
+        committed_at_ms: 1_000,
     };
     let mut expected = None;
     for (index, content) in ["first", "second"].into_iter().enumerate() {

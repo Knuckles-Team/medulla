@@ -10,7 +10,10 @@
 //! and the holder), and the claim is acknowledged only once every holder stands.
 //! The holder change is set-like, so a redelivered intent takes nothing twice.
 //! A revision older than the newest `memory_sync.max_revisions_per_doc` of its
-//! document is released here, oldest first; a retained conflict candidate is
+//! document is released here, oldest first, and so is a superseded revision or a
+//! resolved candidate once `memory_sync.history_retention_s` has passed since
+//! the commit that superseded or resolved it; a periodic tick releases past
+//! deadlines even when no sync arrives. An unresolved conflict candidate is
 //! never released.
 
 use std::sync::Arc;
@@ -44,6 +47,7 @@ mod worker {
     use std::time::Duration;
 
     const IDLE: Duration = Duration::from_millis(500);
+    const RETENTION_TICK: Duration = Duration::from_secs(60);
     const LEASE_MS: u64 = 60_000;
     const MAX_GRAPHS_PER_SWEEP: usize = 16;
     const MAX_PAYLOAD_BYTES: usize = 16 * 1024;
@@ -51,7 +55,15 @@ mod worker {
 
     pub(super) async fn run(state: Arc<RwLock<ServerState>>) {
         let mut next_graph = 0_usize;
+        let mut last_tick = std::time::Instant::now();
         loop {
+            if last_tick.elapsed() >= RETENTION_TICK {
+                last_tick = std::time::Instant::now();
+                if let Err(error) = release_expired(&state).await {
+                    tracing::warn!(code = "MEMORY_SNAPSHOT_RETENTION_TICK_FAILED", %error,
+                        "memory snapshot retention tick failed");
+                }
+            }
             match sweep(&state, &mut next_graph).await {
                 Ok(true) => {}
                 Ok(false) => tokio::time::sleep(IDLE).await,
@@ -161,7 +173,39 @@ mod worker {
         }
         let request: SyncRequest = rmp_serde::from_slice(&intent.payload)
             .map_err(|_| "CONFLICT: memory snapshot intent payload is invalid")?;
-        let doc: &DocId = &request.doc_id;
+        reconcile(state, graph, &request.doc_id, &intent.key, true).await
+    }
+
+    /// The deadline tick: release every blob past its retention deadline, for
+    /// each document of each resident graph. It holds nothing.
+    pub(super) async fn release_expired(state: &Arc<RwLock<ServerState>>) -> Result<(), String> {
+        let graphs: Vec<String> = state
+            .read()
+            .await
+            .registry
+            .list()
+            .into_iter()
+            .map(|(name, _)| name)
+            .collect();
+        for graph in graphs {
+            let core = state.read().await.registry.get(&graph).map(|entry| entry.core.clone());
+            let Some(core) = core else { continue };
+            for head in store::list_heads(&core, "") {
+                reconcile(state, &graph, &head.doc_id, "retention-tick", false).await?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Hold (when `hold_retained`) and release the blobs of one document by the
+    /// retention rules (MEDULLA-DURABLE-KERNEL-R085.7).
+    async fn reconcile(
+        state: &Arc<RwLock<ServerState>>,
+        graph: &str,
+        doc: &DocId,
+        key: &str,
+        hold_retained: bool,
+    ) -> Result<(), String> {
         let (core, blob, anonymous, server) = {
             let s = state.read().await;
             let core = s.registry.get(graph).map(|entry| entry.core.clone());
@@ -174,34 +218,25 @@ mod worker {
         let context = service_context(
             anonymous,
             &server,
-            format!("memory-snapshot:{graph}:{}", intent.key),
+            format!("memory-snapshot:{graph}:{key}"),
         )?;
         let authority = medulla_server_api::carrier::CarrierAuthority::from_verified(&context)?;
         // The holder is registered under the document owner's scope, the row the
         // router registered, never under the service actor's own scope.
         let owner_scope = medulla_server_api::carrier::memory_snapshot_owner_scope(context.tenant(), doc.as_str());
-        let mut held: Vec<(u64, String)> = Vec::new();
-        // A document keeps its newest `max_revisions_per_doc` revisions held;
-        // older ones release, oldest first (MEDULLA-DURABLE-KERNEL-R085.7).
-        let max_revisions = u64::from(medulla_server_api::knob_config::memory_sync_config().max_revisions_per_doc);
-        let mut released: Vec<(u64, String)> = Vec::new();
-        if let Some(head) = store::load_head(&core, doc) {
-            let first_kept = head.revision.saturating_sub(max_revisions) + 1;
-            for revision in 1..=head.revision {
-                if let Some(read) = store::read(&core, doc, Some(revision)) {
-                    if revision < first_kept {
-                        released.push((revision, read.head.content_digest.to_hex()));
-                    } else {
-                        held.push((revision, read.content));
-                    }
-                }
-            }
-        }
-        held.extend(
-            store::candidates(&core, doc)
-                .into_iter()
-                .map(|(number, row)| (number, row.content)),
+        // A revision releases past its retention deadline or beyond the newest
+        // `max_revisions_per_doc`, oldest first; a resolved candidate releases
+        // past its deadline; an unresolved conflict candidate never releases.
+        let config = medulla_server_api::knob_config::memory_sync_config();
+        let plan = store::retention_plan(
+            &core,
+            doc,
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+            config.history_retention_s,
+            u64::from(config.max_revisions_per_doc),
         );
+        let held = if hold_retained { plan.held } else { Vec::new() };
+        let released = plan.released;
         for (revision, content) in held {
             let (digest, _was_new) = blob.put_chunk(content.as_bytes())?;
             let holder = HolderChange::acquire(
@@ -214,7 +249,6 @@ mod worker {
             };
             hold_one(blob.as_ref(), &authority, &holder, &method)?;
         }
-        // An unresolved conflict candidate is in `held` and never released.
         for (revision, digest) in released {
             let holder = HolderChange::release(
                 &digest,

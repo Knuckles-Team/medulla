@@ -27,6 +27,9 @@ pub struct RevisionRow {
     pub label: String,
     pub head: MemorySnapshotHead,
     pub content: String,
+    /// The engine clock at the commit that wrote this revision. The revision
+    /// before it was superseded at this time (MEDULLA-DURABLE-KERNEL-R085.7).
+    pub committed_at_ms: u64,
 }
 
 /// A retained candidate row.
@@ -37,6 +40,9 @@ pub struct CandidateRow {
     pub content: String,
     pub content_digest: Digest256,
     pub resolved: bool,
+    /// The commit time of the resolution; `None` while the conflict is open.
+    #[serde(default)]
+    pub resolved_at_ms: Option<u64>,
 }
 
 /// An acknowledgment row.
@@ -123,6 +129,67 @@ pub fn candidates(core: &GraphCore, doc: &DocId) -> Vec<(u64, CandidateRow)> {
         .collect()
 }
 
+/// Which blobs of one document stay held and which release.
+pub struct RetentionPlan {
+    /// `(revision or candidate number, content)` to keep held.
+    pub held: Vec<(u64, String)>,
+    /// `(revision or candidate number, content digest hex)` to release.
+    pub released: Vec<(u64, String)>,
+}
+
+/// The retention split of `doc` at `now_ms` (MEDULLA-DURABLE-KERNEL-R085.7). A
+/// superseded revision releases once `history_retention_s` has passed since the
+/// commit of the revision that superseded it, or when it is older than the
+/// newest `max_revisions` revisions (oldest first). The head is always held. A
+/// resolved candidate releases once `history_retention_s` has passed since its
+/// resolution; an unresolved conflict candidate is never released.
+pub fn retention_plan(
+    core: &GraphCore,
+    doc: &DocId,
+    now_ms: u64,
+    history_retention_s: u64,
+    max_revisions: u64,
+) -> RetentionPlan {
+    let retention_ms = history_retention_s.saturating_mul(1000);
+    let mut plan = RetentionPlan {
+        held: Vec::new(),
+        released: Vec::new(),
+    };
+    if let Some(head) = load_head(core, doc) {
+        let first_kept = head.revision.saturating_sub(max_revisions) + 1;
+        for revision in 1..=head.revision {
+            let Some(row) = load_row::<RevisionRow>(core, &revision_node_id(doc, revision)) else {
+                continue;
+            };
+            let superseded_at = if revision < head.revision {
+                load_row::<RevisionRow>(core, &revision_node_id(doc, revision + 1))
+                    .map(|next| next.committed_at_ms)
+            } else {
+                None
+            };
+            let past_deadline = superseded_at
+                .is_some_and(|at| now_ms >= at.saturating_add(retention_ms));
+            if revision < first_kept || past_deadline {
+                plan.released.push((revision, row.head.content_digest.to_hex()));
+            } else {
+                plan.held.push((revision, row.content));
+            }
+        }
+    }
+    for (number, row) in candidates(core, doc) {
+        let past_deadline = row.resolved
+            && row
+                .resolved_at_ms
+                .is_some_and(|at| now_ms >= at.saturating_add(retention_ms));
+        if past_deadline {
+            plan.released.push((number, row.content_digest.to_hex()));
+        } else {
+            plan.held.push((number, row.content));
+        }
+    }
+    plan
+}
+
 /// The bytes of content the graph holds for memory snapshots: every document's
 /// head plus every retained candidate (MEDULLA-DURABLE-KERNEL-R085.7). A head
 /// is the document's current bytes; earlier revisions release on the retention
@@ -161,5 +228,57 @@ pub fn plan_is_current(core: &GraphCore, doc: &DocId, plan: &SnapshotPlan) -> bo
 pub fn apply_plan(core: &GraphCore, plan: &SnapshotPlan) {
     for write in &plan.writes {
         core.add_node(write.node_id.clone(), write.properties_msgpack.clone());
+    }
+}
+
+#[cfg(test)]
+mod retention_tests {
+    use super::*;
+    use medulla_mutation_types::memory_sync::{RequestId, SnapshotProvenance};
+
+    fn put_revision(core: &GraphCore, doc: &DocId, revision: u64, committed_at_ms: u64, head: bool) {
+        let content = format!("content-{revision}");
+        let row = RevisionRow {
+            label: REVISION_LABEL.to_string(),
+            head: MemorySnapshotHead {
+                doc_id: doc.clone(),
+                revision,
+                parent_revision: revision.checked_sub(1).filter(|p| *p > 0),
+                content_digest: Digest256::sha256(content.as_bytes()),
+                content_len: content.len() as u32,
+                graph_incarnation: "g".into(),
+                provenance: SnapshotProvenance {
+                    actor: "a".into(),
+                    policy_digest: Digest256::sha256(b"p"),
+                    request_id: RequestId::new(format!("r{revision}")).unwrap(),
+                },
+                retain_until_ms: None,
+            },
+            content,
+            committed_at_ms,
+        };
+        core.add_node(revision_node_id(doc, revision), encode_row(&row));
+        if head {
+            core.add_node(head_node_id(doc), encode_row(&row));
+        }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R085.7
+    #[test]
+    fn a_superseded_revision_releases_after_the_superseding_commit_plus_retention() {
+        let core = GraphCore::new();
+        let doc = DocId::new("notes/a.md").unwrap();
+        put_revision(&core, &doc, 1, 1_000, false);
+        put_revision(&core, &doc, 2, 5_000, true);
+        let retention_s = 10;
+        // Revision 1 was superseded at 5_000: the deadline is 15_000.
+        let before = retention_plan(&core, &doc, 14_999, retention_s, 64);
+        assert!(before.released.is_empty());
+        assert_eq!(before.held.len(), 2);
+        let after = retention_plan(&core, &doc, 15_000, retention_s, 64);
+        assert_eq!(after.released.len(), 1);
+        assert_eq!(after.released[0].0, 1);
+        // The head never releases on a deadline.
+        assert_eq!(after.held, vec![(2, "content-2".to_string())]);
     }
 }

@@ -17,6 +17,7 @@ fn stamp() -> SyncStamp {
         actor: "writer".into(),
         policy_digest: Digest256::sha256(b"policy"),
         graph_incarnation: "incarnation-1".into(),
+        committed_at_ms: 1_000,
     }
 }
 

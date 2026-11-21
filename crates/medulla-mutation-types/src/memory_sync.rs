@@ -481,6 +481,10 @@ pub struct SyncStamp {
     pub actor: String,
     pub policy_digest: Digest256,
     pub graph_incarnation: String,
+    /// The engine clock at the commit, in epoch milliseconds: the time a revision
+    /// it writes was committed, and so the time the revision it supersedes was
+    /// superseded (MEDULLA-DURABLE-KERNEL-R085.7).
+    pub committed_at_ms: u64,
 }
 
 /// One row a sync plan writes: the node id and its MessagePack properties.

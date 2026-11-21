@@ -34932,6 +34932,7 @@ class SyncStamp(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     actor: str
+    committed_at_ms: Annotated[int, Field(ge=0)]
     graph_incarnation: str
     policy_digest: Digest256
 
