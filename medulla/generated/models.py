@@ -10280,11 +10280,40 @@ class LearningRecordedPointer(BaseModel):
     stack: BoundedVec_PointerEvent_64 = Field(default_factory=list)
 
 
+class LearningRecordedRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    decision_ids: BoundedVec_string_16
+    negative_count: Annotated[int, Field(ge=0)]
+    outcome_digest: str
+    positive_count: Annotated[int, Field(ge=0)]
+    premises: BoundedVec_string_4 = Field(default_factory=list)
+    receipt_digest: str
+    recorded: Literal["run"]
+    run_id: str
+    steps: BoundedVec_StepCredit_1024 = Field(default_factory=list)
+
+
+class StepCredit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    advantage_q16: int
+    baseline_revision: Annotated[int, Field(ge=0)]
+    step_idx: Annotated[int, Field(ge=0)]
+
+
+BoundedVec_StepCredit_1024 = Annotated[list[StepCredit], Field(max_length=1024)]
+
+
+BoundedVec_string_4 = Annotated[list[str], Field(max_length=4)]
+
+
 LearningRecorded = Annotated[
     LearningRecordedOutcome
     | LearningRecordedFitted
     | LearningRecordedGeneration
-    | LearningRecordedPointer,
+    | LearningRecordedPointer
+    | LearningRecordedRun,
     Field(discriminator="recorded"),
 ]
 
@@ -36138,7 +36167,9 @@ __all__ = [
     "BoundedVec_int64_2048",
     "BoundedVec_int64_256",
     "BoundedVec_int64_512",
+    "BoundedVec_StepCredit_1024",
     "BoundedVec_string_16",
+    "BoundedVec_string_4",
     "BoundedVec_string_256",
     "BoundedVec_string_32",
     "BoundedVec_string_64",
@@ -37473,6 +37504,7 @@ __all__ = [
     "LearningRecordedGeneration",
     "LearningRecordedOutcome",
     "LearningRecordedPointer",
+    "LearningRecordedRun",
     "LearningWrite",
     "LearningWriteEvaluateGeneration",
     "LearningWriteFitAdapter",
@@ -40416,6 +40448,7 @@ __all__ = [
     "RefreshBudget",
     "RefreshTrigger",
     "RunOutcome",
+    "StepCredit",
     "StepRecord",
     "TeacherJudgment",
     "PointerRefScopedAdapter",
