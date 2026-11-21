@@ -226,6 +226,36 @@ impl AgentLibraryStore {
             .map(|row| row.value().to_vec()))
     }
 
+    /// Every committed record body of `tenant_id`, ordered by record id. A
+    /// tenant holding more than `limit` bodies is refused by name rather than
+    /// listed partially.
+    pub fn decision_record_bodies(
+        &self,
+        tenant_id: &str,
+        limit: usize,
+    ) -> Result<Vec<(String, Vec<u8>)>, String> {
+        let read = self.read()?;
+        let table = read.open_owner_table(medulla_storage::DECISION_RECORDS)?;
+        let mut out = Vec::new();
+        for row in table
+            .range((tenant_id, "")..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, value) = row.map_err(|error| error.to_string())?;
+            let (row_tenant, record_id) = key.value();
+            if row_tenant != tenant_id {
+                break;
+            }
+            if out.len() == limit {
+                return Err(format!(
+                    "DECISION_LOG_TOO_LARGE: more than {limit} assembly records"
+                ));
+            }
+            out.push((record_id.to_string(), value.value().to_vec()));
+        }
+        Ok(out)
+    }
+
     /// `AgentComponent.content` for a committed decision record: the verbatim
     /// body, re-hashed against the component's content digest before it is
     /// served, so the reader never has to trust the row it came out of.

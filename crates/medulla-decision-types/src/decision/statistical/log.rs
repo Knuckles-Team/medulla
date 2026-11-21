@@ -562,15 +562,40 @@ impl From<&EntryInputs> for InputsState {
     }
 }
 
+/// The committed record family a log item belongs to: the decision log holds
+/// statistical records and assembly records together.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum RecordKind {
+    Statistical,
+    Assembly,
+}
+
+/// How a committed assembly record ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum AssemblyOutcomeState {
+    Solved,
+    Abstained,
+}
+
 /// One row of a `List` page.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DecisionListItem {
     pub record_id: String,
-    pub question_kind: super::QuestionKind,
+    /// Which of the two committed record families this item is.
+    pub record_kind: RecordKind,
+    /// The statistical question; absent for an assembly record.
+    pub question_kind: Option<super::QuestionKind>,
     pub resolution_kind: super::super::record::ResolutionKind,
-    pub outcome: super::StatisticalOutcome,
+    /// The statistical outcome; absent for an assembly record.
+    pub outcome: Option<super::StatisticalOutcome>,
+    /// Whether the assembly was solved; absent for a statistical record.
+    pub assembly_outcome: Option<AssemblyOutcomeState>,
     pub decided_at_ms: u64,
     pub record_digest: String,
     pub inputs: InputsState,
@@ -623,6 +648,7 @@ pub struct ProvenanceRule {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct DecisionProvenance {
     pub record_id: String,
+    pub record_kind: RecordKind,
     pub record_digest: String,
     pub premises: Vec<ProvenancePremise>,
     pub facts: Vec<ProvenanceFact>,

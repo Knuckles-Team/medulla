@@ -6,8 +6,8 @@
 use medulla_decision_types::decision::knob_families::decision_reads::list_page_max;
 use medulla_decision_types::decision::record::{PremiseProvenance, ResolutionKind};
 use medulla_decision_types::decision::statistical::log::{
-    DecisionListItem, DecisionLogList, DecisionProvenance, DecisionWhyNot, InputsState,
-    ProvenanceFact, ProvenancePremise, ProvenanceRule,
+    AssemblyOutcomeState, DecisionListItem, DecisionLogList, DecisionProvenance, DecisionWhyNot,
+    InputsState, ProvenanceFact, ProvenancePremise, ProvenanceRule, RecordKind,
 };
 use medulla_decision_types::decision::DecisionRecord;
 use medulla_graph_core::graph::GraphCore;
@@ -16,7 +16,7 @@ use std::sync::Arc;
 use medulla_decision_types::decision::statistical::QuestionKind;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 
-use super::stat_log::{visible_entries, visible_entry, LogReader};
+use super::stat_log::{visible_entries, visible_entry, LogReader, MAX_LOG_ROWS};
 
 /// A page filter: the optional narrowing fields of `List`.
 pub(super) struct ListFilter {
@@ -66,51 +66,73 @@ pub(super) fn list(
         }
     }
     let after = filter.cursor.as_deref().map(parse_cursor).transpose()?;
-    let mut entries: Vec<_> = visible_entries(store, reader)?
-        .into_iter()
-        .filter(|entry| {
-            let record = &entry.record;
-            filter.question_kind.is_none_or(|k| k == record.question.kind)
-                && filter.resolution_kind.is_none_or(|k| k == record.resolution_kind)
-                && filter.from_ms.is_none_or(|from| record.created_at_ms >= from)
-                && filter.to_ms.is_none_or(|to| record.created_at_ms <= to)
-        })
-        .collect();
-    entries.sort_by(|a, b| {
-        b.record
-            .created_at_ms
-            .cmp(&a.record.created_at_ms)
-            .then_with(|| a.record.record_id.cmp(&b.record.record_id))
-    });
-    if let Some((at, id)) = &after {
-        entries.retain(|entry| {
-            let key = (entry.record.created_at_ms, entry.record.record_id.as_str());
-            key.0 < *at || (key.0 == *at && key.1 > id.as_str())
-        });
-    }
-    let limit = filter.limit as usize;
-    let more = entries.len() > limit;
-    entries.truncate(limit);
-    let next_cursor = more
-        .then(|| entries.last())
-        .flatten()
-        .map(|last| format!("{}:{}", last.record.created_at_ms, last.record.record_id));
-    let records = entries
+    let mut items: Vec<DecisionListItem> = visible_entries(store, reader)?
         .into_iter()
         .map(|entry| DecisionListItem {
             record_id: entry.record.record_id.clone(),
-            question_kind: entry.record.question.kind,
+            record_kind: RecordKind::Statistical,
+            question_kind: Some(entry.record.question.kind),
             resolution_kind: entry.record.resolution_kind,
-            outcome: entry.record.outcome.clone(),
+            outcome: Some(entry.record.outcome.clone()),
+            assembly_outcome: None,
             decided_at_ms: entry.record.created_at_ms,
             record_digest: entry.record.record_digest.clone(),
             inputs: InputsState::from(&entry.inputs),
         })
         .collect();
+    // Assembly records are tenant-visible, like the library they decided over.
+    for (_, body) in store.decision_record_bodies(&reader.tenant_id, MAX_LOG_ROWS)? {
+        let record: DecisionRecord = serde_json::from_slice(&body)
+            .map_err(|error| format!("DECISION_RECORD_UNREADABLE: {error}"))?;
+        items.push(assembly_item(&record));
+    }
+    items.retain(|item| {
+        filter.question_kind.is_none_or(|k| item.question_kind == Some(k))
+            && filter.resolution_kind.is_none_or(|k| k == item.resolution_kind)
+            && filter.from_ms.is_none_or(|from| item.decided_at_ms >= from)
+            && filter.to_ms.is_none_or(|to| item.decided_at_ms <= to)
+    });
+    items.sort_by(|a, b| {
+        b.decided_at_ms
+            .cmp(&a.decided_at_ms)
+            .then_with(|| a.record_id.cmp(&b.record_id))
+    });
+    if let Some((at, id)) = &after {
+        items.retain(|item| {
+            item.decided_at_ms < *at || (item.decided_at_ms == *at && item.record_id.as_str() > id.as_str())
+        });
+    }
+    let limit = filter.limit as usize;
+    let more = items.len() > limit;
+    items.truncate(limit);
+    let next_cursor = more
+        .then(|| items.last())
+        .flatten()
+        .map(|last| format!("{}:{}", last.decided_at_ms, last.record_id));
     Ok(DecisionLogList {
-        records,
+        records: items,
         next_cursor,
     })
+}
+
+/// The list item of one committed assembly record. Its inputs are always held
+/// inline: only statistical entries are compacted.
+fn assembly_item(record: &DecisionRecord) -> DecisionListItem {
+    DecisionListItem {
+        record_id: record.record_id.clone(),
+        record_kind: RecordKind::Assembly,
+        question_kind: None,
+        resolution_kind: record.resolution_kind,
+        outcome: None,
+        assembly_outcome: Some(if record.is_solved() {
+            AssemblyOutcomeState::Solved
+        } else {
+            AssemblyOutcomeState::Abstained
+        }),
+        decided_at_ms: record.created_at_ms,
+        record_digest: record.record_digest.clone(),
+        inputs: InputsState::Inline,
+    }
 }
 
 /// What one committed record rested on. An unknown id and another tenant's id
@@ -122,7 +144,7 @@ pub(super) fn provenance(
     graphs: &[(String, Arc<GraphCore>)],
 ) -> Result<DecisionProvenance, String> {
     let Some(entry) = visible_entry(store, reader, record_id)? else {
-        return Err("DECISION_NOT_FOUND: no committed decision with this id".to_string());
+        return assembly_provenance(store, reader, record_id);
     };
     let record = &entry.record;
     let premises = record
@@ -172,6 +194,7 @@ pub(super) fn provenance(
     };
     Ok(DecisionProvenance {
         record_id: record.record_id.clone(),
+        record_kind: RecordKind::Statistical,
         record_digest: record.record_digest.clone(),
         premises,
         facts,
@@ -184,6 +207,82 @@ pub(super) fn provenance(
     })
 }
 
+/// The provenance of a committed assembly record: its sealed premises, the
+/// candidate revisions it was decided over as facts, the policy premises as
+/// rules, and the approval receipt its component carries. An unknown id and
+/// another tenant's id answer with the same refusal.
+fn assembly_provenance(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    record_id: &str,
+) -> Result<DecisionProvenance, String> {
+    let not_found = || "DECISION_NOT_FOUND: no committed decision with this id".to_string();
+    let body = store
+        .decision_record_body(&reader.tenant_id, record_id)?
+        .ok_or_else(not_found)?;
+    let record: DecisionRecord = serde_json::from_slice(&body)
+        .map_err(|error| format!("DECISION_RECORD_UNREADABLE: {error}"))?;
+    let premises = record
+        .premises
+        .as_slice()
+        .iter()
+        .map(|premise| ProvenancePremise {
+            kind: serde_json::to_value(&premise.provenance)
+                .ok()
+                .and_then(|value| value.get("provenance").and_then(|t| t.as_str().map(String::from)))
+                .unwrap_or_default(),
+            reference: premise.subject.clone(),
+            class: premise.class,
+        })
+        .collect();
+    let facts = record
+        .inputs
+        .candidates
+        .as_slice()
+        .iter()
+        .map(|candidate| ProvenanceFact {
+            node_id: candidate.component_id.clone(),
+            revision: candidate.entry_revision,
+            digest: candidate.definition_digest.clone(),
+        })
+        .collect();
+    let rules = record
+        .premises
+        .as_slice()
+        .iter()
+        .filter_map(|premise| match &premise.provenance {
+            PremiseProvenance::Policy { policy_digest } => Some(ProvenanceRule {
+                rule_id: premise.subject.clone(),
+                version: 0,
+                digest: policy_digest.clone(),
+            }),
+            _ => None,
+        })
+        .collect();
+    let approver = store
+        .current_component(&reader.tenant_id, record_id)?
+        .and_then(|component| {
+            component
+                .attributes
+                .get(medulla_persistence_records::decision_record::APPROVAL_ATTRIBUTE)
+                .cloned()
+        })
+        .and_then(|receipt| {
+            serde_json::from_str::<medulla_decision_types::decision::approval::RecommendationApproval>(&receipt)
+                .ok()
+        })
+        .map(|approval| approval.reviewer_principal);
+    Ok(DecisionProvenance {
+        record_id: record.record_id.clone(),
+        record_kind: RecordKind::Assembly,
+        record_digest: record.record_digest.clone(),
+        premises,
+        facts,
+        rules,
+        approver,
+        inputs: InputsState::Inline,
+    })
+}
 
 /// The graphs a record's rows were read from, opened for the caller; empty when
 /// the record is not visible. The async half of [`provenance`].

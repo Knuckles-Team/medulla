@@ -4323,15 +4323,27 @@ class InputsState(str, Enum):
     retired = "retired"
 
 
+class RecordKind(str, Enum):
+    statistical = "statistical"
+    assembly = "assembly"
+
+
+class AssemblyOutcomeState(str, Enum):
+    solved = "solved"
+    abstained = "abstained"
+
+
 class DecisionListItem(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    assembly_outcome: AssemblyOutcomeState | None = None
     decided_at_ms: Annotated[int, Field(ge=0)]
     inputs: InputsState
-    outcome: StatisticalOutcome
-    question_kind: QuestionKind
+    outcome: StatisticalOutcome | None = None
+    question_kind: QuestionKind | None = None
     record_digest: str
     record_id: str
+    record_kind: RecordKind
     resolution_kind: ResolutionKind
 
 
@@ -4375,6 +4387,7 @@ class DecisionProvenance(BaseModel):
     premises: list[ProvenancePremise]
     record_digest: str
     record_id: str
+    record_kind: RecordKind
     rules: list[ProvenanceRule]
 
 
@@ -37546,6 +37559,7 @@ __all__ = [
     "CapabilityCoverageRequest",
     "CapabilityCoverageResult",
     "ConsolidationPlan",
+    "AssemblyOutcomeState",
     "DecisionListItem",
     "DecisionLogList",
     "DecisionLogOpList",
@@ -37587,6 +37601,7 @@ __all__ = [
     "ProvenanceFact",
     "ProvenancePremise",
     "ProvenanceRule",
+    "RecordKind",
     "WhyNotReason",
     "WhyNotVerdict",
     "RevisionProposalListRequest",
