@@ -205,6 +205,8 @@ closed_error_codes! {
         MalformedGuardrailRule => "MALFORMED_GUARDRAIL_RULE",
         ConnectorPackProjectionClusterUnavailable => "CONNECTOR_PACK_PROJECTION_CLUSTER_UNAVAILABLE",
         ConnectorPackProjectionFailed => "CONNECTOR_PACK_PROJECTION_FAILED",
+        /// A nested prompt or tool schema removes, retypes or changes the required status of a field (MEDULLA-TYPED-PACKS-R001.100).
+        PackSchemaIncompatible => "PACK_SCHEMA_INCOMPATIBLE",
         ConnectorPackProjectionSweepFailed => "CONNECTOR_PACK_PROJECTION_SWEEP_FAILED",
         ConnectorPackReconcileFailed => "CONNECTOR_PACK_RECONCILE_FAILED",
         ConnectorPackUnbound => "CONNECTOR_PACK_UNBOUND",

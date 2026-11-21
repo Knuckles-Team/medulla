@@ -12,7 +12,8 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
 use medulla_catalog_types::connector_pack::contract_version::{
-    ContractBreak, ContractBreakKind, PackContractVersion, PackRelease, PendingPackRelease,
+    compat_verdict, CompatVerdict, ContractBreak, ContractBreakKind, NestedSchema,
+    PackContractVersion, PackRelease, PendingPackRelease, SchemaCompatRecord, SchemaDigest,
 };
 use medulla_catalog_types::connector_pack::{
     ConnectorPackImportRequest, PackEntryKind, PackImportResult, PackViolation, PackViolationCode,
@@ -403,12 +404,90 @@ fn next_contract(
     })
 }
 
-fn release_of(contract: &ReleaseContract) -> PackRelease {
+fn release_of(contract: &ReleaseContract, schemas: BTreeMap<String, SchemaDigest>) -> PackRelease {
     PackRelease {
         version: contract.version.clone(),
         fields: contract.fields.clone(),
         mappings: contract.mappings.clone(),
+        schemas,
     }
+}
+
+/// The nested schema every entry declares, keyed by entry URI plus `#in` or
+/// `#out` (MEDULLA-TYPED-PACKS-R001.100).
+fn next_schemas(
+    request: &ConnectorPackImportRequest,
+    archive: &[u8],
+) -> Result<BTreeMap<String, SchemaDigest>, String> {
+    let mut schemas = BTreeMap::new();
+    for entry in request.index.entries.iter() {
+        for (suffix, section) in [("#in", &entry.input_schema), ("#out", &entry.output_schema)] {
+            let Some(section) = section else {
+                continue;
+            };
+            let document: serde_json::Value =
+                serde_json::from_slice(section_bytes(archive, section)?)
+                    .map_err(|error| format!("MALFORMED_BODY: schema is not JSON: {error}"))?;
+            let schema = NestedSchema::from_document(&document)
+                .map_err(|error| format!("MALFORMED_BODY: schema evolution members: {error}"))?;
+            schemas.insert(
+                format!("{}{suffix}", entry.uri),
+                SchemaDigest {
+                    digest: section.sha256,
+                    schema,
+                    compat: None,
+                },
+            );
+        }
+    }
+    Ok(schemas)
+}
+
+/// Judge each next schema against the one the active release recorded for the
+/// same entry. A schema that names a base the active release no longer holds
+/// is stale; a breaking one is incompatible; any other records its verdict.
+fn judge_schemas(
+    active: &PackRelease,
+    next: &mut BTreeMap<String, SchemaDigest>,
+) -> Vec<PackViolation> {
+    let mut found = Vec::new();
+    for (key, schema) in next.iter_mut() {
+        let uri = key.rsplit_once('#').map_or(key.as_str(), |(uri, _)| uri);
+        let base = active.schemas.get(key);
+        if let Some(declared) = schema.schema.base_digest {
+            if base.map(|held| held.digest) != Some(declared) {
+                found.push(violation(
+                    PackViolationCode::PackPlanStale,
+                    Some(uri.to_string()),
+                    "the schema names a base digest the active release does not hold".to_string(),
+                ));
+                continue;
+            }
+        }
+        let Some(base) = base else {
+            continue;
+        };
+        if base.digest == schema.digest {
+            schema.compat = base.compat.clone();
+            continue;
+        }
+        let (verdict, changed) = compat_verdict(base, &schema.schema);
+        if verdict == CompatVerdict::Breaking {
+            let shown: Vec<&str> = changed.iter().take(8).map(String::as_str).collect();
+            found.push(violation(
+                PackViolationCode::PackSchemaIncompatible,
+                Some(uri.to_string()),
+                format!("incompatible schema change: {}", shown.join(", ")),
+            ));
+        } else {
+            schema.compat = Some(SchemaCompatRecord {
+                verdict,
+                base_digest: base.digest,
+                changed_paths: changed,
+            });
+        }
+    }
+    found
 }
 
 fn violation(code: PackViolationCode, uri: Option<String>, detail: String) -> PackViolation {
@@ -451,9 +530,16 @@ pub(super) fn judge(
     let tenant = request.context.tenant_id.as_str();
     let connector = &request.index.connector;
     let mut next = next_contract(request, archive, ready)?;
+    let mut schemas = next_schemas(request, archive)?;
     let Some(active) = store.connector_pack_release(tenant, connector)? else {
-        return Ok(Verdict::Apply(release_of(&next)));
+        return Ok(Verdict::Apply(release_of(&next, schemas)));
     };
+    let schema_violations = judge_schemas(&active, &mut schemas);
+    if !schema_violations.is_empty() {
+        let over = schema_violations.len() > MAX_REPORTED;
+        let shown = schema_violations.into_iter().take(MAX_REPORTED).collect();
+        return refusal(request, shown, over);
+    }
     let (ontology_ttl, shapes_ttl) = prior_documents(chunks, tenant, prior_members)?;
     let kept_tools: BTreeSet<&str> = request
         .index
@@ -520,7 +606,7 @@ pub(super) fn judge(
         .map_err(|error| error.to_string())?;
     next.version.supersedes = Some(active.version.version.clone());
     match disposition {
-        ReleaseDisposition::Applied { .. } => Ok(Verdict::Apply(release_of(&next))),
+        ReleaseDisposition::Applied { .. } => Ok(Verdict::Apply(release_of(&next, schemas))),
         ReleaseDisposition::Pending {
             breaks,
             total_breaks,
@@ -531,7 +617,7 @@ pub(super) fn judge(
                     .to_string()
             })?;
             let pending = PendingPackRelease {
-                release: release_of(&next),
+                release: release_of(&next, schemas),
                 pack_digest: request.index.pack_digest,
                 breaks: breaks.clone(),
                 total_breaks: u64::try_from(total_breaks).unwrap_or(u64::MAX),

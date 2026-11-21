@@ -637,6 +637,8 @@ class PackViolationCode(str, Enum):
     EXTERNAL_REPORT_FORGED = "EXTERNAL_REPORT_FORGED"
     CONTRACT_BREAK_PENDING = "CONTRACT_BREAK_PENDING"
     CLASS_IN_USE = "CLASS_IN_USE"
+    PACK_SCHEMA_INCOMPATIBLE = "PACK_SCHEMA_INCOMPATIBLE"
+    PACK_PLAN_STALE = "PACK_PLAN_STALE"
     # Client-only fallback for a code this client does not know; the raw
     # code is kept in `PackViolation.raw_code`. Not an engine code.
     UNKNOWN = "UNKNOWN"

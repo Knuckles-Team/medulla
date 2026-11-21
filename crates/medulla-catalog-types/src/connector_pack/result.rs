@@ -84,6 +84,12 @@ pub enum PackViolationCode {
     // A release withdraws a class that stored data still names
     // (MEDULLA-TYPED-PACKS-R107.4).
     ClassInUse,
+    // A nested prompt or tool schema removes, retypes or changes the required
+    // status of a field (MEDULLA-TYPED-PACKS-R001.100).
+    PackSchemaIncompatible,
+    // A schema names a base digest the active release no longer holds
+    // (MEDULLA-TYPED-PACKS-R001.100).
+    PackPlanStale,
 }
 
 /// Something worth saying that did not stop the import.
