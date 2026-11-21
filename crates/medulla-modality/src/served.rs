@@ -18,6 +18,7 @@ use crate::GovernedModality;
 
 mod error;
 mod indexes;
+mod lifecycle_machine;
 mod mutation;
 mod protocol;
 mod query;
@@ -36,6 +37,7 @@ struct IngestUndo<T> {
 
 pub use error::ServedError;
 pub use indexes::record_index_memberships;
+pub use lifecycle_machine::{LifecycleEvent, LIFECYCLE_MACHINE};
 pub use protocol::{ApplyDisposition, ApplyOutcome, IdempotencyEntry, ServedDelete, ServedIngest};
 pub use query::{ServedNativeQuery, ServedPage, ServedQuery, ServedRuntimeStats};
 pub use records::{LifecycleState, ServedEvent, ServedEventKind, ServedPolicyScope, ServedRecord};

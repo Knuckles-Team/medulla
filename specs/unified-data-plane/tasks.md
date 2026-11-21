@@ -304,7 +304,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T201 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.3 The Python served-modality record types `lifecycle` with the contract enum
 - [ ] T202 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.4 ProjectionHealth/ProjectionStatus state machine: route 1 census findings through ProjectionStatus::apply
 - [ ] T203 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.5 SchemaMigrationRecord/MigrationState state machine: route 1 census findings through MigrationState::apply
-- [ ] T204 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.6 ServedRecord/LifecycleState state machine: route 3 census findings through LifecycleState::apply
+- [x] T204 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.6 ServedRecord/LifecycleState state machine: route 3 census findings through LifecycleState::apply
 - [x] T205 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.7 SessionRecord/SessionState state machine: route 9 census findings through SessionState::apply
 - [ ] T206 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.8 Span/SpanStatus state machine: route 1 census findings through SpanStatus::apply
 - [ ] T207 [US6] MEDULLA-UNIFIED-DATA-PLANE-R768.9 TckPointResult/TckStatus state machine: route 1 census findings through TckStatus::apply

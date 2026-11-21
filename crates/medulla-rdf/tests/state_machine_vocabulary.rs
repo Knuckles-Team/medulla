@@ -1509,3 +1509,14 @@ fn session_machine_matches_edge_table() {
 fn session_machine_classes_extend_core() {
     sm::assert_extends_core("Session");
 }
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R768.6
+#[test]
+fn lifecycle_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_modality::served::LIFECYCLE_MACHINE);
+}
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R768.6
+#[test]
+fn lifecycle_machine_classes_extend_core() {
+    sm::assert_extends_core("Lifecycle");
+}

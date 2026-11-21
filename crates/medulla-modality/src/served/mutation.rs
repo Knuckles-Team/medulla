@@ -3,8 +3,8 @@ use sha2::{Digest, Sha256};
 
 use super::indexes::bundle_matches_modality;
 use super::{
-    ApplyDisposition, ApplyOutcome, IdempotencyEntry, IngestUndo, LifecycleState, ServedDelete,
-    ServedError, ServedEvent, ServedEventKind, ServedIngest, ServedModalityRuntime,
+    ApplyDisposition, ApplyOutcome, IdempotencyEntry, IngestUndo, LifecycleEvent, LifecycleState,
+    ServedDelete, ServedError, ServedEvent, ServedEventKind, ServedIngest, ServedModalityRuntime,
     ServedPolicyScope, ServedRecord,
 };
 use crate::artifact::{Occurrence, OccurrenceId, OpaqueRef};
@@ -146,8 +146,12 @@ where
             .records
             .get_mut(&command.occurrence_id)
             .ok_or(ServedError::NotFound)?;
+        let tombstoned = record
+            .lifecycle
+            .apply(LifecycleEvent::Delete)
+            .map_err(|_| ServedError::InvalidLifecycle)?;
         record.observation_version = record.observation_version.saturating_add(1);
-        record.lifecycle = LifecycleState::Tombstoned;
+        record.lifecycle = tombstoned;
         record.value = None;
         let version = record.observation_version;
         *self
@@ -215,17 +219,16 @@ where
         if record.lifecycle == LifecycleState::Tombstoned {
             return Err(ServedError::InvalidLifecycle);
         }
-        let allowed = matches!(
-            (record.lifecycle, target),
-            (LifecycleState::Active, LifecycleState::Cold)
-                | (LifecycleState::Cold, LifecycleState::Active)
-        );
-        if !allowed {
+        let next = record
+            .lifecycle
+            .apply(LifecycleEvent::TransitionLifecycle)
+            .map_err(|_| ServedError::InvalidLifecycle)?;
+        if next != target {
             return Err(ServedError::InvalidLifecycle);
         }
         let tenant_ref = occurrence.policy.tenant_ref.clone();
         let access_policy_ref = occurrence.policy.access_policy_ref.clone();
-        record.lifecycle = target;
+        record.lifecycle = next;
         record.observation_version = record.observation_version.saturating_add(1);
         let version = record.observation_version;
         Ok(self.push_event(

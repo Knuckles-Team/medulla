@@ -176,3 +176,5 @@ medulla-store = { path = "../medulla-store", features = ["redb", "statechart"] }
 medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }
 # The foreign-read session machine edge table (MEDULLA-UNIFIED-DATA-PLANE-R768.7).
 medulla-server-ops = { path = "../medulla-server-ops" }
+# The served-modality lifecycle and TCK status machine edge tables (MEDULLA-UNIFIED-DATA-PLANE-R768.6, R768.9).
+medulla-modality = { path = "../medulla-modality" }

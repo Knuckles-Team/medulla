@@ -8409,3 +8409,82 @@
     :fromState :SessionMachine_Open ;
     :toState :SessionMachine_Aborted ;
     :firedBy :SessionMachine_Event_Abort .
+
+# spec: MEDULLA-UNIFIED-DATA-PLANE-R768.6
+# The Lifecycle machine. The Rust edge table is the same table.
+
+:LifecycleState a owl:Class ;
+    rdfs:label "Lifecycle State" ;
+    rdfs:comment "A state of the Lifecycle machine." ;
+    rdfs:subClassOf :State .
+
+:LifecycleTerminalState a owl:Class ;
+    rdfs:label "Lifecycle Terminal State" ;
+    rdfs:comment "A terminal state of the Lifecycle machine." ;
+    rdfs:subClassOf :TerminalState, :LifecycleState .
+
+:LifecycleTransition a owl:Class ;
+    rdfs:label "Lifecycle Transition" ;
+    rdfs:comment "A transition of the Lifecycle machine." ;
+    rdfs:subClassOf :Transition .
+
+:LifecycleEvent a owl:Class ;
+    rdfs:label "Lifecycle Event" ;
+    rdfs:comment "An event of the Lifecycle machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:LifecycleGuard a owl:Class ;
+    rdfs:label "Lifecycle Guard" ;
+    rdfs:comment "A guard of the Lifecycle machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:LifecycleMachine a :StateMachine ;
+    rdfs:label "Lifecycle machine" ;
+    :initialState :LifecycleMachine_Active ;
+    :hasState :LifecycleMachine_Active, :LifecycleMachine_Cold, :LifecycleMachine_Tombstoned .
+
+:LifecycleMachine_Active a :LifecycleState ;
+    rdfs:label "Lifecycle Active" ;
+    :storedForm "active" .
+
+:LifecycleMachine_Cold a :LifecycleState ;
+    rdfs:label "Lifecycle Cold" ;
+    :storedForm "cold" .
+
+:LifecycleMachine_Tombstoned a :LifecycleTerminalState ;
+    rdfs:label "Lifecycle Tombstoned" ;
+    :storedForm "tombstoned" .
+
+:LifecycleMachine_Event_Delete a :LifecycleEvent ;
+    rdfs:label "Lifecycle Delete" .
+
+:LifecycleMachine_Event_TransitionLifecycle a :LifecycleEvent ;
+    rdfs:label "Lifecycle TransitionLifecycle" .
+
+:LifecycleMachine_L01 a :LifecycleTransition ;
+    rdfs:label "Lifecycle L01" ;
+    :edgeId "L01" ;
+    :fromState :LifecycleMachine_Active ;
+    :toState :LifecycleMachine_Cold ;
+    :firedBy :LifecycleMachine_Event_TransitionLifecycle .
+
+:LifecycleMachine_L02 a :LifecycleTransition ;
+    rdfs:label "Lifecycle L02" ;
+    :edgeId "L02" ;
+    :fromState :LifecycleMachine_Cold ;
+    :toState :LifecycleMachine_Active ;
+    :firedBy :LifecycleMachine_Event_TransitionLifecycle .
+
+:LifecycleMachine_L03 a :LifecycleTransition ;
+    rdfs:label "Lifecycle L03" ;
+    :edgeId "L03" ;
+    :fromState :LifecycleMachine_Active ;
+    :toState :LifecycleMachine_Tombstoned ;
+    :firedBy :LifecycleMachine_Event_Delete .
+
+:LifecycleMachine_L04 a :LifecycleTransition ;
+    rdfs:label "Lifecycle L04" ;
+    :edgeId "L04" ;
+    :fromState :LifecycleMachine_Cold ;
+    :toState :LifecycleMachine_Tombstoned ;
+    :firedBy :LifecycleMachine_Event_Delete .
