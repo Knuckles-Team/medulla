@@ -61,6 +61,7 @@ mod pre_tool_risk;
 mod probe_selection;
 pub(super) mod promotion;
 mod probe_verdict;
+pub(in crate::decide) mod process_plan;
 mod process_remediation;
 mod program_store;
 mod rank;
@@ -376,6 +377,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         answer_ranking::AnswerRankingFamily;
     static SERVINGTECHNIQUEFAMILY: serving_technique::ServingTechniqueFamily =
         serving_technique::ServingTechniqueFamily;
+    static PROCESSPLANFAMILY: process_plan::ProcessPlanFamily = process_plan::ProcessPlanFamily;
     static PROCESSREMEDIATIONFAMILY: process_remediation::ProcessRemediationFamily =
         process_remediation::ProcessRemediationFamily;
     static INGESTSHORTFALLFAMILY: ingest_shortfall::IngestShortfallFamily =
@@ -481,6 +483,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ReasoningParadigm => &REASONINGPARADIGMFAMILY,
         QuestionKind::ModelCapacity => &MODELCAPACITYFAMILY,
         QuestionKind::ProcessRemediation => &PROCESSREMEDIATIONFAMILY,
+        QuestionKind::ProcessPlan => &PROCESSPLANFAMILY,
         QuestionKind::IngestShortfall => &INGESTSHORTFALLFAMILY,
         QuestionKind::CapacityProposal => &CAPACITYPROPOSALFAMILY,
         QuestionKind::ProbeSelection => &PROBESELECTIONFAMILY,
@@ -582,6 +585,7 @@ mod tests {
             QuestionKind::ReasoningParadigm,
             QuestionKind::ModelCapacity,
             QuestionKind::ProcessRemediation,
+            QuestionKind::ProcessPlan,
             QuestionKind::IngestShortfall,
             QuestionKind::CapacityProposal,
             QuestionKind::ProbeSelection,
@@ -674,6 +678,7 @@ mod tests {
             | QuestionKind::ReasoningParadigm
             | QuestionKind::ModelCapacity
             | QuestionKind::ProcessRemediation
+            | QuestionKind::ProcessPlan
             | QuestionKind::IngestShortfall
             | QuestionKind::CapacityProposal
             | QuestionKind::ProbeSelection

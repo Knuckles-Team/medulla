@@ -399,6 +399,11 @@ pub(super) fn plan_of_request(
     principal: &str,
     graph_view: Option<&medulla_graph_core::graph::GraphView>,
 ) -> Result<Option<Planned>, String> {
+    if request.question.kind == QuestionKind::ProcessPlan {
+        let resolved = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
+        return super::family::process_plan::plan(ctx, request, &resolved.policy, graph_view)
+            .map(Some);
+    }
     if request.question.kind != QuestionKind::TaskPlan
         && !request.params.iter().any(|p| is_plan_param(&p.value))
     {

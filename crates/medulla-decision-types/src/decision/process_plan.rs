@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use medulla_types::refusal_code::RefusalCode;
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
+use super::policy::DecisionPolicy;
 
 /// A step the plan needs a binding for has none (MEDULLA-CQ-ORCH-R704.6).
 pub const PROCESS_STEP_UNBOUND: &str = "PROCESS_STEP_UNBOUND";
@@ -60,6 +61,31 @@ pub const KNOBS: &[KnobSpec] = &[
         safety: KnobSafety::Tunable,
     },
 ];
+
+/// The resolved `process_plan.*` knobs of one request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ProcessPlanKnobs {
+    /// `process_plan.min_tool_score`, in millionths.
+    pub min_tool_score_micros: u64,
+    /// `process_plan.max_call_depth`, in levels.
+    pub max_call_depth: u32,
+}
+
+impl ProcessPlanKnobs {
+    /// The knobs `policy` resolves.
+    pub fn from_policy(policy: &DecisionPolicy) -> Self {
+        let number = |value: KnobValue| match value {
+            KnobValue::Integer(v) | KnobValue::DecimalMicros(v) => v,
+            KnobValue::DurationMs(v) => i64::try_from(v).unwrap_or(i64::MAX),
+        };
+        Self {
+            min_tool_score_micros: u64::try_from(number(policy.knob(&KNOBS[0])).clamp(0, 1_000_000))
+                .unwrap_or(600_000),
+            max_call_depth: u32::try_from(number(policy.knob(&KNOBS[1])).clamp(1, 16))
+                .unwrap_or(4),
+        }
+    }
+}
 
 /// Plan the stored workflow `workflow_id` at `version`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

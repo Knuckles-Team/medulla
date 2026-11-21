@@ -43,10 +43,7 @@ pub(super) fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
     format!("{code}: {detail}")
 }
 
-/// The id of version `version` of the workflow compiled from `process_iri`.
-pub(super) fn workflow_node_id(process_iri: &str, version: u32) -> String {
-    format!("workflow:{process_iri}:v{version}")
-}
+pub(super) use medulla_types::process_import::workflow_node_id;
 
 /// The stored version of the workflow of `process_iri`: 0 when none is stored.
 pub(super) fn stored_version(core: &GraphCore, process_iri: &str) -> u32 {

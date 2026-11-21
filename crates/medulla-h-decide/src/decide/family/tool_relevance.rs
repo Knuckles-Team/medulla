@@ -16,7 +16,7 @@ use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::tool_relevance::{
-    max_tools_from_policy, rrf_k_from_policy, ToolAssignmentRequest, ToolRankingKnobs,
+    max_tools_from_policy, rrf_k_from_policy, AssignedTool, ToolAssignmentRequest, ToolRankingKnobs,
     ToolRelevanceRefusal, CATALOG_TOO_LARGE, UNKNOWN_ROLE,
 };
 use medulla_decision_types::decision::{
@@ -25,11 +25,12 @@ use medulla_decision_types::decision::{
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 use std::collections::BTreeMap;
+use std::sync::Arc;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
 };
-use crate::decide::tool_index::{ToolIndexCache, ToolIndexError};
+use crate::decide::tool_index::{ToolIndex, ToolIndexCache, ToolIndexError};
 
 use super::support::{abstained, advisory, invalid};
 
@@ -68,15 +69,15 @@ fn claim(fact: String, field: &'static str) -> FamilyPremise {
     }
 }
 
-fn conclude(
+/// The tenant's tool index and the fused ranking of its visible tools for `asked`, best first.
+/// An empty catalog answers an empty ranking before the role is looked up. The one route to a
+/// tool ranking: the `tool_relevance` family and the process plan family (MEDULLA-CQ-ORCH-R704.3)
+/// both read it.
+pub(in crate::decide) fn fused_ranking(
     ctx: &ExecutionContext,
-    request: &DecideRequest,
     policy: &DecisionPolicy,
-) -> Result<Executed, String> {
-    let asked = assignment(request)?;
-    asked
-        .validate()
-        .map_err(|error| invalid(error.to_string()))?;
+    asked: &ToolAssignmentRequest,
+) -> Result<(Arc<ToolIndex>, Vec<AssignedTool>), String> {
     let max_tools = max_tools_from_policy(policy);
     let index = ToolIndexCache::of(ctx.store)
         .get(ctx.store, ctx.tenant_id, max_tools)
@@ -87,9 +88,8 @@ fn conclude(
             )),
             ToolIndexError::Read(detail) => invalid(detail),
         })?;
-    let kind = QuestionKind::ToolRelevance;
     if index.tools.is_empty() {
-        return Ok(abstained(kind, &ToolRelevanceRefusal::EmptyCatalog));
+        return Ok((index, Vec::new()));
     }
     let allowlist: Option<&[String]> = if asked.agent_role_iri.is_empty() {
         None
@@ -107,6 +107,23 @@ fn conclude(
     };
     let fused = fuse_tool_ranks(&index.tools, asked, allowlist, rrf_k_from_policy(policy))
         .map_err(|error| invalid(error.to_string()))?;
+    Ok((index, fused))
+}
+
+fn conclude(
+    ctx: &ExecutionContext,
+    request: &DecideRequest,
+    policy: &DecisionPolicy,
+) -> Result<Executed, String> {
+    let asked = assignment(request)?;
+    asked
+        .validate()
+        .map_err(|error| invalid(error.to_string()))?;
+    let (index, fused) = fused_ranking(ctx, policy, asked)?;
+    let kind = QuestionKind::ToolRelevance;
+    if index.tools.is_empty() {
+        return Ok(abstained(kind, &ToolRelevanceRefusal::EmptyCatalog));
+    }
     if fused.is_empty() {
         return Ok(abstained(kind, &ToolRelevanceRefusal::EmptyCatalog));
     }

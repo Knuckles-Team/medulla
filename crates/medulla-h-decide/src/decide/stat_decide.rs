@@ -416,6 +416,12 @@ async fn serve(
                 super::family::tool_necessity::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
+            } else if request.question.kind == QuestionKind::ProcessPlan {
+                // A `process_plan` question reads its stored workflow in the graph named by
+                // its `graph` param, under the same ACL and RLS filter (MEDULLA-CQ-ORCH-R704.5).
+                super::family::process_plan::evidence_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::Promotion {
                 // A `promotion` question about a program or policy subject reads its
                 // receipt node in the graph named by its `graph` param, under the same
@@ -865,6 +871,7 @@ fn exploration(sealing: &Sealing, executed: &Executed) -> Option<ExplorationReco
     if matches!(
         sealing.request.question.kind,
         QuestionKind::TaskPlan
+            | QuestionKind::ProcessPlan
             | QuestionKind::ThoughtSearch
             | QuestionKind::RewardDecomposition
             | QuestionKind::PopulationDrift
@@ -1014,6 +1021,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         }
         QuestionKind::TaskPlan => medulla_decision_types::decision::knob_families::task_plan::KNOBS,
         QuestionKind::ToolRelevance => medulla_decision_types::decision::tool_relevance::KNOBS,
+        QuestionKind::ProcessPlan => medulla_decision_types::decision::process_plan::KNOBS,
         QuestionKind::ComparativeAnalysisPlan => {
             medulla_decision_types::decision::comparative_analysis::KNOBS
         }

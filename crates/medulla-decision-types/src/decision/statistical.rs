@@ -280,6 +280,8 @@ pub enum QuestionKind {
     ModelCapacity,
     /// Whether a run-bound process is a zombie, hung or progressing (MEDULLA-DECISION-ENGINE-R820). See `decision::process_remediation`.
     ProcessRemediation,
+    /// The task plan of one stored canonical workflow: each step bound from the graph, else ranked (MEDULLA-CQ-ORCH-R704.5). Evaluate-only. See `decision::process_plan`.
+    ProcessPlan,
     /// Which goals the remaining ingest budget funds and which items may be purged (MEDULLA-DECISION-ENGINE-R826). See `decision::ingest_shortfall`.
     IngestShortfall,
     /// Whether a proposed capacity change is allowed against the ledger (MEDULLA-DECISION-ENGINE-R824). See `decision::statistical::capacity`.

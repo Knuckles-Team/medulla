@@ -20,6 +20,12 @@ fn schema_version() -> u16 {
     PROCESS_IMPORT_SCHEMA_VERSION
 }
 
+/// The id of version `version` of the workflow stored for `process_iri` (the compiled or
+/// imported `WorkflowPattern` node; its step nodes are `<id>:step:<step id>`).
+pub fn workflow_node_id(process_iri: &str, version: u32) -> String {
+    format!("workflow:{process_iri}:v{version}")
+}
+
 /// The closed step kinds, in their canonical order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

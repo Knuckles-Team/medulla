@@ -284,6 +284,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::ReasoningParadigm => "reasoning_paradigm",
         QuestionKind::ModelCapacity => "model_capacity",
         QuestionKind::ProcessRemediation => "process_remediation",
+        QuestionKind::ProcessPlan => "process_plan",
         QuestionKind::IngestShortfall => "ingest_shortfall",
         QuestionKind::CapacityProposal => "capacity_proposal",
         QuestionKind::ProbeSelection => "probe_selection",
