@@ -91,3 +91,57 @@ async fn archive_pass_writes_ordered_segments_and_resumes() {
         .unwrap();
     assert_eq!(again.segments_written, 0);
 }
+
+// spec: MEDULLA-ENGINE-PARITY-R016.4
+#[tokio::test]
+async fn retention_expires_old_segments_and_keeps_the_newest() {
+    let dir = tempfile::tempdir().unwrap();
+    let identity = native_identity("tenant-a", "incarnation:blob:retention");
+    let (fixture, owner) = ledger_fixture(&dir.path().join("native.redb"), identity.clone());
+    let graph = ledger_scope_key(&identity);
+    let archive = ObjectArchive::new(Arc::new(object_store::memory::InMemory::new()), "root");
+    // One byte per segment: every committed record forms its own segment.
+    let policy = ArchivePolicy {
+        segment_bytes: 1,
+        retain_s: 3_600,
+        interval_s: 10,
+    };
+    commit_range(&fixture, &owner, &identity, 0..3);
+    let report = archive_store_pass(&fixture.kernel, &archive, TENANT, &policy)
+        .await
+        .unwrap();
+    assert_eq!(report.segments_written, 3);
+
+    // The manifest stamps each segment with the commit time of its last record.
+    let entries = archive.segments(TENANT, &graph).await.unwrap();
+    assert_eq!(entries.len(), 3);
+    for entry in &entries {
+        let bytes = archive
+            .get_segment(TENANT, &graph, entry.first, entry.last)
+            .await
+            .unwrap();
+        let segment: ArchiveSegment = rmp_serde::from_slice(&bytes).unwrap();
+        let last = decode_batch_record(segment.records.last().unwrap()).unwrap();
+        assert_eq!(entry.last_committed_at_ms, last.committed_at_ms);
+    }
+
+    // A cut-off after all three expires the first two and keeps the newest.
+    let expired = archive
+        .expire_segments(TENANT, &graph, u64::MAX)
+        .await
+        .unwrap();
+    assert_eq!(expired, 2);
+    let kept = archive.segments(TENANT, &graph).await.unwrap();
+    assert_eq!(kept, vec![entries[2].clone()]);
+    for gone in &entries[..2] {
+        assert!(archive
+            .get_segment(TENANT, &graph, gone.first, gone.last)
+            .await
+            .is_err());
+    }
+    assert!(archive
+        .get_segment(TENANT, &graph, entries[2].first, entries[2].last)
+        .await
+        .is_ok());
+    assert_eq!(archive.archived_end(TENANT, &graph).await.unwrap(), 4);
+}

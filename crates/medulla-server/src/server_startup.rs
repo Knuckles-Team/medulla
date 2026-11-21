@@ -956,10 +956,46 @@ fn spawn_archiver(state: SharedState) {
                     ),
                     Err(error) => tracing::error!("archive pass failed: {error}"),
                 }
+                expire_archive(&archive, &policy).await;
             }
             tokio::time::sleep(std::time::Duration::from_secs(policy.interval_s)).await;
         }
     });
+}
+
+/// Segment retention (MEDULLA-ENGINE-PARITY-R016.4): after each pass, expire from every scope
+/// the archive holds the segments committed before now minus `archive.retain_s`; the entry with
+/// the largest `last` of a scope is always kept. A failure is logged and retried at the next
+/// interval.
+#[cfg(all(feature = "redb", feature = "object-store"))]
+async fn expire_archive(
+    archive: &medulla_storage::object::archive::ObjectArchive,
+    policy: &medulla_storage::ArchivePolicy,
+) {
+    let now_ms = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|elapsed| elapsed.as_millis() as u64)
+        .unwrap_or(0);
+    let older_than_ms = now_ms.saturating_sub(policy.retain_s.saturating_mul(1000));
+    let scopes = match archive.list_scopes(ARCHIVE_TENANT).await {
+        Ok(scopes) => scopes,
+        Err(refusal) => {
+            tracing::error!("archive retention failed: {}", refusal.wire_code());
+            return;
+        }
+    };
+    for scope in scopes {
+        match archive
+            .expire_segments(ARCHIVE_TENANT, &scope, older_than_ms)
+            .await
+        {
+            Ok(0) => {}
+            Ok(expired) => tracing::debug!("archive retention expired {expired} segments of {scope}"),
+            Err(refusal) => {
+                tracing::error!("archive retention failed: {}", refusal.wire_code());
+            }
+        }
+    }
 }
 
 /// UDS is the primary transport on unix, with an optional secondary TCP
