@@ -76,6 +76,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "AS",
     "ASOF_HOLD",
     "ASSEMBLE",
+    "ASSETS",
     "AT",
     "ATTRIBUTE",
     "AVG",
@@ -177,6 +178,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "PROFILE",
     "PROOF",
     "PROPAGATE",
+    "QUERIES",
     "RANK",
     "REASON",
     "REDUCE",
@@ -223,6 +225,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "UNIFORM",
     "UNION",
     "UQL",
+    "USAGE",
     "USING",
     "VALID",
     "VALIDATE",
@@ -450,6 +453,7 @@ pub fn uql_op(op: &Op) -> Printed {
         }
         Op::ClusterByEmbedding { k } => Ok(format!("CLUSTER BY EMBEDDING K {k}")),
         Op::DecisionScan { preds } => decision_scan(preds),
+        Op::UsageScan { view } => Ok(usage_scan(*view).to_string()),
         Op::Limit { k } => Ok(format!("LIMIT {k}")),
         Op::Project { channels } => project(channels),
     }
@@ -461,6 +465,14 @@ fn decision_scan(preds: &[Pred]) -> Printed {
         return fixed("DECISIONS");
     }
     Ok(format!("DECISIONS WHERE {}", conjunction(preds)?))
+}
+
+/// `USAGE QUERIES` / `USAGE ASSETS` (MEDULLA-TYPED-PACKS-R108.8).
+fn usage_scan(view: UsageView) -> &'static str {
+    match view {
+        UsageView::Queries => "USAGE QUERIES",
+        UsageView::Assets => "USAGE ASSETS",
+    }
 }
 
 /// A clause with no arguments.

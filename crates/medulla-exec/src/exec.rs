@@ -37,6 +37,9 @@ pub mod reliability;
 #[cfg(feature = "owl")]
 pub mod reason;
 pub use decisions::DecisionSource;
+// MEDULLA-TYPED-PACKS-R108.8 — the `USAGE` source over the caller's usage log.
+mod usage;
+pub use usage::{UsageSeries, UsageSource, UsageWindow};
 pub(crate) mod dispatch;
 // MEDULLA-FEDERATED-QUERY-R720.2/.3/.5 — the `DECAY` and `CLUSTER BY EMBEDDING` stages.
 mod decay_cluster;
@@ -188,6 +191,9 @@ pub struct PlanCtx<'a> {
     /// The caller's visible decision log for a `DECISIONS` source (EH-066); `None` makes
     /// that source a typed error. Bound per request by the served path.
     pub decisions: Option<&'a dyn DecisionSource>,
+    /// The caller's usage log for a `USAGE` source (MEDULLA-TYPED-PACKS-R108.8); `None` makes
+    /// that source a typed error. Bound per request by the served path.
+    pub usage: Option<&'a dyn UsageSource>,
     /// MEDULLA-DURABLE-KERNEL-R079: the instants an `AS OF` stage of the plan pins, per
     /// axis. A traversal follows, and an emitted edge row passes, only edges live at the
     /// pinned instants. `None` (the default) pins nothing. [`execute`] and the DAG
@@ -461,6 +467,7 @@ impl<'a> PlanCtx<'a> {
             #[cfg(feature = "owl")]
             shape_source: None,
             decisions: None,
+            usage: None,
             as_of_pin: None,
             #[cfg(feature = "epistemic")]
             belief_policy: None,
@@ -571,6 +578,12 @@ impl<'a> PlanCtx<'a> {
     /// Attach the caller's visible decision log for a `DECISIONS` source (EH-066).
     pub fn with_decisions(mut self, decisions: &'a dyn DecisionSource) -> Self {
         self.decisions = Some(decisions);
+        self
+    }
+
+    /// Attach the caller's usage log for a `USAGE` source (MEDULLA-TYPED-PACKS-R108.8).
+    pub fn with_usage(mut self, usage: &'a dyn UsageSource) -> Self {
+        self.usage = Some(usage);
         self
     }
 

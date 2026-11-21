@@ -125,6 +125,45 @@ pub fn usage_filter_series_name(principal: &str, asset: &str, column: &str) -> S
     format!("{ASSET_USAGE_FILTER_SERIES}|principal={principal}|asset={asset}|column={column}")
 }
 
+/// The tsdb series name of one question: the tags are principal, asset and the question
+/// digest (MEDULLA-TYPED-PACKS-R108.8). The digest is the SHA-256 of the question the caller
+/// sent (statement text or plan bytes); the result rows are never part of it.
+pub fn usage_query_series_name(principal: &str, asset: &str, digest: &str) -> String {
+    format!("{ASSET_USAGE_QUERIES_SERIES}|principal={principal}|asset={asset}|query={digest}")
+}
+
+/// The tags of one usage series name of `base`: principal, asset and the remaining
+/// `key=value` tag, when there is one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct UsageSeriesTags<'a> {
+    pub principal: &'a str,
+    pub asset: &'a str,
+    pub extra: Option<(&'a str, &'a str)>,
+}
+
+/// Split a usage series name of `base` into its tags; `None` for a series of another base.
+pub fn usage_series_tags<'a>(series: &'a str, base: &str) -> Option<UsageSeriesTags<'a>> {
+    let rest = series.strip_prefix(base)?.strip_prefix("|principal=")?;
+    let (principal, after) = rest.split_once("|asset=")?;
+    let (asset, extra) = match after.split_once('|') {
+        Some((asset, tag)) => (asset, Some(tag.split_once('=')?)),
+        None => (after, None),
+    };
+    Some(UsageSeriesTags {
+        principal,
+        asset,
+        extra,
+    })
+}
+
+/// `knob catalog.top_queries_window_days`: the trailing window, in days, the usage views
+/// (`USAGE QUERIES`, `USAGE ASSETS`) rank over. Declared in the server knob registry.
+pub const TOP_QUERIES_WINDOW_KNOB: &str = "catalog.top_queries_window_days";
+
+/// The row-value channels of the usage views: uses inside the window, the last use (unix
+/// seconds), the distinct principals and the distinct runs that used the row.
+pub const USAGE_VIEW_CHANNELS: [&str; 4] = ["uses", "last_used", "users", "runs"];
+
 /// One principal that reads an asset, most reads first. `principal` is null for a caller
 /// without scope `catalog:usage:principals`.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

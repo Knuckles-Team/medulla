@@ -70,6 +70,7 @@ kinds! {
     #[cfg(feature = "epistemic")] ConfidenceOp,
     #[cfg(feature = "epistemic")] ExplainBelief,
     Decay, ClusterByEmbedding, Attribute, DecisionScan, Limit, Project,
+    UsageScan,
 }
 
 kinds! {
@@ -170,6 +171,7 @@ pub fn op_kind(op: &Op) -> OpKind {
         Op::ClusterByEmbedding { .. } => OpKind::ClusterByEmbedding,
         Op::Attribute { .. } => OpKind::Attribute,
         Op::DecisionScan { .. } => OpKind::DecisionScan,
+        Op::UsageScan { .. } => OpKind::UsageScan,
         Op::Limit { .. } => OpKind::Limit,
         Op::Project { .. } => OpKind::Project,
     }
@@ -229,6 +231,7 @@ impl OpKind {
             OpKind::Reason => Some("reason"),
             OpKind::Window | OpKind::WindowAgg => Some("window"),
             OpKind::Attribute => Some("attribution"),
+            OpKind::UsageScan => Some("usage"),
             #[cfg(feature = "timeseries")]
             OpKind::TsScan | OpKind::SensorFuse | OpKind::SensorAlign => Some("value"),
             #[cfg(feature = "probabilistic")]
@@ -307,7 +310,8 @@ impl OpKind {
             | OpKind::Group
             | OpKind::Order
             | OpKind::Skip
-            | OpKind::DecisionScan => ProofRole::Unproved,
+            | OpKind::DecisionScan
+            | OpKind::UsageScan => ProofRole::Unproved,
             // A FUSE's branches decide it; medulla-plan inspects them (`FuseRrf` is Neutral
             // exactly when every branch op is).
             #[cfg(feature = "text")]

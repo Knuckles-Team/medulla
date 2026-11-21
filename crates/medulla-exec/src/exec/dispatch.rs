@@ -75,6 +75,7 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::Order { .. }
         | Op::Skip { .. }
         | Op::DecisionScan { .. }
+        | Op::UsageScan { .. }
         | Op::Attribute { .. }
         | Op::Decay { .. }
         | Op::ClusterByEmbedding { .. }
@@ -326,6 +327,7 @@ pub(super) fn apply_core_ops(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<Ro
         Op::Order { keys } => super::order::order(ctx, input, keys),
         Op::Skip { n } => super::order::skip(input, *n),
         Op::DecisionScan { preds } => super::decisions::decision_scan(ctx, preds),
+        Op::UsageScan { view } => super::usage::usage_scan(ctx, *view),
         Op::Attribute {
             input: players,
             value,

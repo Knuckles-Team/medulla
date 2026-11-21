@@ -267,10 +267,12 @@ async fn dispatch_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result
     // MEDULLA-UNIFIED-DATA-PLANE-R764.3.1: the assets are read off the verified method before it
     // is consumed; usage is recorded only after the server answered it successfully.
     let assets = super::asset_usage::query_assets(&method);
+    // MEDULLA-TYPED-PACKS-R108.8: the question digest, never the answer.
+    let digest = super::asset_usage::question_digest(&method);
     let result = run_sql_query(ctx, method).await;
     if let Ok(response) = &result {
         if super::asset_usage::answered(response) {
-            super::asset_usage::record_query_usage(ctx, assets).await;
+            super::asset_usage::record_query_usage(ctx, assets, digest).await;
         }
     }
     result

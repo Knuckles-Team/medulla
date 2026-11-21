@@ -19908,6 +19908,18 @@ class OpUdfBody(BaseModel):
     id: str
 
 
+class OpUsageScan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    UsageScan: OpUsageScanBody
+
+
+class OpUsageScanBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    view: UsageView
+
+
 class OpValidateShape(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -26278,6 +26290,11 @@ class UsageStep(BaseModel):
     tool: str
 
 
+class UsageView(str, Enum):
+    QUERIES = "queries"
+    ASSETS = "assets"
+
+
 BoundedVec_ComparativeCandidate_64 = Annotated[
     list[ComparativeCandidate], Field(max_length=64)
 ]
@@ -29842,6 +29859,7 @@ Op = (
     | OpExplainBelief
     | OpAttribute
     | OpDecisionScan
+    | OpUsageScan
     | OpLimit
     | OpProject
     | OpClusterByEmbedding
@@ -37255,6 +37273,8 @@ __all__ = [
     "OpTsScanBody",
     "OpUdf",
     "OpUdfBody",
+    "OpUsageScan",
+    "OpUsageScanBody",
     "OpValidateShape",
     "OpValidateShapeBody",
     "OpWindow",
@@ -38801,6 +38821,7 @@ __all__ = [
     "ThoughtSearchAnswerStop",
     "UsageGuidance",
     "UsageStep",
+    "UsageView",
     "AnswerRankingRequest",
     "AttachPoint",
     "BoundedVec_ContextPackageCandidate_64",

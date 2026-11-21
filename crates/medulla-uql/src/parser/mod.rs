@@ -144,6 +144,7 @@ impl<'a> Parser<'a> {
             ("ORDER", Self::order_by),
             ("SKIP", Self::skip_rows),
             ("DECISIONS", Self::decisions),
+            ("USAGE", Self::usage),
             ("TEXT", Self::text),
             ("FUSE", Self::fuse),
             ("UNION", Self::union_stage),

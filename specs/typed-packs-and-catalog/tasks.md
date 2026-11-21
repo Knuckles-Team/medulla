@@ -228,7 +228,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T215 [US4] MEDULLA-TYPED-PACKS-R108.5 Evidence
 - [ ] T216 [US4] MEDULLA-TYPED-PACKS-R108.6 Hot-path proof
 - [ ] T217 [US4] MEDULLA-TYPED-PACKS-R108.7 Technical metadata from contracts
-- [ ] T218 [US4] MEDULLA-TYPED-PACKS-R108.8 Operational metadata from provenance
+- [x] T218 [US4] MEDULLA-TYPED-PACKS-R108.8 Operational metadata from provenance
 - [ ] T219 [US4] MEDULLA-TYPED-PACKS-R108.9 Sensitivity propagation and policy link
 - [ ] T220 [US4] MEDULLA-TYPED-PACKS-R108.10 End-to-end lineage across the platform
 - [ ] T221 [US4] MEDULLA-TYPED-PACKS-R108.11 Metric and KPI definitions

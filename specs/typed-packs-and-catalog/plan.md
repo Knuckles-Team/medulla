@@ -589,6 +589,10 @@ choice stay here.
 
 The catalog of R106 is the system of record. An open-metadata store is a federated secondary through `MEDULLA-SRC-AUTH-R012`; nothing is copied outside the catalog's own nodes. The `cat:openMetadataType` annotation maps open metadata type names to catalog classes, so the ontology drives the mapping. `OpenMetadataRecord` mirrors the open metadata (OMRS) instance header: GUID, type name and version. Inbound sync writes `cat:externalGuid` and `cat:externalVersion`. Outbound proposals carry the last synced version as the expected version. The connector refuses a write over a concurrent store change. The next sync records the conflict. Call path: `Method::SourceSync` → `handle_source_sync` → `OpenMetadataSyncAdapter` (`crates/medulla-virtual-graph/src/open_metadata_sync.rs`). The open-metadata connector `egeria-mcp` owns the pack sources and the version-checked write sink; R110 names its rows.
 
+### Operational metadata views (R108.8)
+
+The plan source `Op::UsageScan { view }` (`crates/medulla-exec/src/exec/usage.rs`) reads a per-request `UsageSource` bound by `ServedPlanLegs::resolve` (`served_usage_leg`, `crates/medulla-h-query/src/query/asset_usage.rs`) over the tenant's `asset_usage.*` series, trimmed to `knob catalog.top_queries_window_days`, plus the `ToolCall` / `RunTrace` nodes of the narrowed graph view. The question digest is written by `record_query_usage` as a tag of `asset_usage.queries`. See research.md.
+
 ### Domain pack run (R097.700)
 
 Manifest, mapping and op types: `crates/medulla-catalog-types/src/domain_pack/manifest.rs`. Pure evaluator: `crates/medulla-core/src/domain_pack/mapping.rs`. Handler and gateway route: `crates/medulla-h-graph/src/graph_ops/domain_pack.rs`. Refusals `DOMAIN_PACK_INTEGRITY_MISMATCH`, `DOMAIN_PACK_INVALID`, `DOMAIN_PACK_CASE_FAILED`.

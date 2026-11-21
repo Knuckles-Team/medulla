@@ -59,6 +59,7 @@ head               = source | stage | "FROM" name | "JOIN" name "," name { "," n
 match              = "MATCH" "(" [ ":" name ] ")" [ "WHERE" pred ] ;
 foreign            = "FOREIGN" id | "FOREIGN" "SCAN" string [ "JOIN" ] | "FOREIGN" "HTTP" string [ "PATH" string ] "ID" string [ "SCORE" string ] [ "JOIN" ] ;
 decisions          = "DECISIONS" [ "WHERE" pred ] ;
+usage              = "USAGE" ( "QUERIES" | "ASSETS" ) ;
 sparql             = "SPARQL" string "VAR" string ;   (* feature `owl` *)
 tsscan             = "TSSCAN" string_list "FROM" num "TO" num ;   (* feature `timeseries` *)
 sensor             = "SENSOR" "FUSE" string_list "TOLERANCE" int | "SENSOR" "ALIGN" "[" string interp { "," string interp } "]" "CLOCK" clock [ "TOLERANCE" int ] ;   (* feature `timeseries` *)
@@ -157,6 +158,7 @@ A source seeds the RowSet from nothing. Start every pipeline with one.
 | `SPATIAL SCAN 'roads' BBOX [0, 0, 10, 10]` | `SpatialScan{layer,bbox}` | `geo` |
 | `TENSOR SCAN 'frames'` | `TensorScan{layer}` | `tensor` |
 | `DECISIONS [WHERE p]` | `DecisionScan{preds}` — the caller's visible decision records | — (served: `decide`) |
+| `USAGE QUERIES` / `USAGE ASSETS` | `UsageScan{view}` — the caller's usage over the trailing window, ranked by use | — (served: `tsdb`) |
 
 These also seed when they lead a pipeline, and narrow when they follow one: `WHERE`,
 `AS OF`, `VALID AS OF`, `REASON`, `EVIDENCE FOR`, `CONTRADICTS`, `SUPPORTED BY`,
@@ -188,6 +190,19 @@ below the policy's support floor reports `insufficient_history` with no numbers.
 
 ```uql
 DECISIONS WHERE outcome = 'acted' AND committed_at_ms >= 1700000000000 |> LIMIT 50
+```
+
+`USAGE QUERIES` and `USAGE ASSETS` read the usage of the caller's tenant and graph over the
+trailing window `catalog.top_queries_window_days` (default 30 days). `USAGE QUERIES` has one
+row per question digest — the SHA-256 of the statement text or plan the caller sent, never a
+result row — ranked by how often it ran. `USAGE ASSETS` has one row per asset, ranked by its
+reads plus the `ToolCall` nodes of the graph whose `valid_from` (unix seconds) falls in the
+window, each a use of the tool its `tool_name` names. Every row carries the value channels
+`uses`, `last_used` (unix seconds), `users` (distinct principals) and `runs` (distinct
+`RunTrace` nodes that used a tool). A plan with `USAGE` is never result-cached.
+
+```uql
+USAGE QUERIES |> LIMIT 10
 ```
 
 ## Stages

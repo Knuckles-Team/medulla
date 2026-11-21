@@ -193,6 +193,8 @@ macro_rules! knobs {
 }
 
 knobs! {
+    /// Metadata catalog: trailing window the `USAGE QUERIES` / `USAGE ASSETS` views rank over.
+    catalog_top_queries_window_days: u64 = "catalog.top_queries_window_days", U64(30), [1, 365], "days", Tunable;
     /// KV-cache hot tier capacity.
     kvcache_hot_bytes: u64 = "kvcache.hot_bytes", U64(1_073_741_824), [67_108_864, 1_099_511_627_776], "bytes", Tunable;
     /// KV-cache warm tier capacity.

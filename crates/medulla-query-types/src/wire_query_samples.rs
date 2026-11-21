@@ -290,6 +290,9 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
         OpKind::DecisionScan => Op::DecisionScan {
             preds: vec![uql_sample_pred(PredKind::In)],
         },
+        OpKind::UsageScan => Op::UsageScan {
+            view: UsageView::Queries,
+        },
         OpKind::Limit => Op::Limit { k: 10 },
         OpKind::Project => Op::Project {
             channels: vec!["similarity".into(), "window".into()],

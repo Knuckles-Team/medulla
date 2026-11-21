@@ -449,6 +449,17 @@ pub struct OrderKey {
     pub descending: bool,
 }
 
+/// Which usage an [`Op::UsageScan`] ranks (MEDULLA-TYPED-PACKS-R108.8).
+#[cfg(feature = "query")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum UsageView {
+    /// The questions asked, one row per question digest (`USAGE QUERIES`).
+    Queries,
+    /// The assets used, one row per asset or tool (`USAGE ASSETS`).
+    Assets,
+}
 /// One cross-modal operator. A [`Plan`] is an ordered list of these — a pipeline
 /// where each op `(RowSet) -> RowSet`. This increment binds SQL + graph + vector
 /// (`Scan | Filter | Traverse | Rank | Limit`); reasoning/blob ops are later
@@ -965,6 +976,14 @@ pub enum Op {
     /// record-id order. The served path binds the caller's log; unbound it is a typed
     /// error, never an empty set.
     DecisionScan { preds: Vec<Pred> },
+    /// SOURCE (MEDULLA-TYPED-PACKS-R108.8, UQL `USAGE QUERIES` / `USAGE ASSETS`) — the
+    /// caller's usage over the trailing window `knob catalog.top_queries_window_days`, ranked
+    /// by use. `Queries` ranks question digests from the server's own query provenance;
+    /// `Assets` ranks assets by reads plus the `ToolCall` nodes of the graph (each run of a
+    /// tool is a use of that tool). Rows carry the `uses`, `last_used`, `users` and `runs`
+    /// value channels and never a result row. The served path binds the usage of the
+    /// caller's tenant and graph; unbound it is a typed error, never an empty set.
+    UsageScan { view: UsageView },
     /// LIMIT — top-k, respecting the current order.
     Limit { k: usize },
     /// PROJECT (UQL `RETURN`, UQL-08) — name the score CHANNELS the result carries per

@@ -166,6 +166,20 @@ pub(crate) fn plan_needs_decisions(ops: &[medulla_exec::algebra::Op]) -> bool {
     })
 }
 
+/// Does `ops` read the caller's usage log — a `USAGE` source (MEDULLA-TYPED-PACKS-R108.8), at
+/// the top level or inside an `Op::FuseRrf` branch? Only then is the usage log bound to the plan.
+#[cfg(feature = "query")]
+pub(crate) fn plan_needs_usage(ops: &[medulla_exec::algebra::Op]) -> bool {
+    ops.iter().any(|op| match op {
+        medulla_exec::algebra::Op::UsageScan { .. } => true,
+        #[cfg(feature = "text")]
+        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+            branches.iter().any(|b| plan_needs_usage(b))
+        }
+        _ => false,
+    })
+}
+
 /// Does `ops` hold a `SOURCE RELIABILITY` stage (EH-525), which learns from the caller's
 /// decision log when one can be bound — and keeps its belief-graph prior when not?
 #[cfg(all(feature = "query", feature = "decide"))]
@@ -619,6 +633,8 @@ pub(crate) struct ServedPlanLegs {
     /// EH-066 — the caller's visible decision log, bound when the plan reads it.
     #[cfg(feature = "decide")]
     pub(crate) decisions: Option<Arc<dyn medulla_exec::exec::DecisionSource>>,
+    /// MEDULLA-TYPED-PACKS-R108.8 — the caller's usage log, bound when the plan reads it.
+    pub(crate) usage: Option<Arc<dyn medulla_exec::exec::UsageSource>>,
     /// EH-400 — whether the named foreign sources the plan reads are fresh, and their
     /// watermarks (see [`ForeignWatermarks`]).
     #[cfg(feature = "result-cache")]
@@ -664,6 +680,8 @@ impl ServedPlanLegs {
             foreign_coverage: foreign_leg.coverage,
             #[cfg(feature = "decide")]
             decisions: served_decision_leg(state, plan, read_authority).await?,
+            usage: super::asset_usage::served_usage_leg(state, graph_name, read_authority, plan)
+                .await?,
             #[cfg(feature = "result-cache")]
             watermarks: ForeignWatermarks::NotRead,
             #[cfg(feature = "decide")]
@@ -681,6 +699,10 @@ impl ServedPlanLegs {
     /// graph version (the decision log changes without a graph write).
     #[cfg(feature = "result-cache")]
     pub(crate) fn cacheable(&self) -> bool {
+        // MEDULLA-TYPED-PACKS-R108.8: the usage log changes without a graph write.
+        if self.usage.is_some() {
+            return false;
+        }
         #[cfg(feature = "decide")]
         return self.decisions.is_none();
         #[cfg(not(feature = "decide"))]
@@ -987,6 +1009,7 @@ where
         foreign,
         #[cfg(feature = "decide")]
         decisions,
+        usage,
         #[cfg(feature = "decide")]
         adapter,
         ..
@@ -996,6 +1019,7 @@ where
     #[cfg(not(feature = "tsdb"))]
     let _ = state;
     let result = compute_off_lock(req_id, move || {
+        let finish = with_usage_log(usage, finish);
         #[cfg(feature = "decide")]
         let finish = with_decision_log(decisions, finish);
         // EH-396: the tenant's adapter re-aims every vector rank of the plan.
@@ -1047,6 +1071,19 @@ pub(crate) async fn bound_tsdb_leg(
     };
     let (tenant, graph) = scope.map_or((None, None), |(tenant, graph)| (Some(tenant), Some(graph)));
     (store, tenant, graph)
+}
+
+/// Wrap `finish` so it runs over a ctx with the caller's usage log bound
+/// (MEDULLA-TYPED-PACKS-R108.8).
+#[cfg(feature = "query")]
+fn with_usage_log<T>(
+    log: Option<Arc<dyn medulla_exec::exec::UsageSource>>,
+    finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
+) -> impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String> {
+    move |plan, ctx| match log.as_deref() {
+        Some(log) => finish(plan, &ctx.clone().with_usage(log)),
+        None => finish(plan, ctx),
+    }
 }
 
 /// Wrap `finish` so it runs over a ctx with the caller's decision log bound (EH-066).

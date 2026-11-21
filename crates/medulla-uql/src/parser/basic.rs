@@ -1,7 +1,7 @@
 //! The always-available clauses: `MATCH`, `WHERE`, `TRAVERSE`, `RANK`, `RERANK`,
-//! `AS OF`/`VALID AS OF`, `WINDOW`, `LIMIT`, `RETURN`, `FOREIGN` and `DECISIONS`.
+//! `AS OF`/`VALID AS OF`, `WINDOW`, `LIMIT`, `RETURN`, `FOREIGN`, `DECISIONS` and `USAGE`.
 
-use medulla_query_types::wire::{Op, TimeAxis};
+use medulla_query_types::wire::{Op, TimeAxis, UsageView};
 
 use super::Parser;
 use crate::diag::{UqlCode, UqlError};
@@ -60,6 +60,19 @@ impl<'a> Parser<'a> {
             Vec::new()
         };
         Ok(Op::DecisionScan { preds })
+    }
+
+    /// `USAGE ( QUERIES | ASSETS )` (MEDULLA-TYPED-PACKS-R108.8) — the caller's usage over the
+    /// trailing window, ranked by use.
+    pub(super) fn usage(&mut self) -> Result<Op, UqlError> {
+        let view = if self.eat_kw("QUERIES") {
+            UsageView::Queries
+        } else if self.eat_kw("ASSETS") {
+            UsageView::Assets
+        } else {
+            return Err(self.err_here("expected `QUERIES` or `ASSETS` after USAGE"));
+        };
+        Ok(Op::UsageScan { view })
     }
 
     pub(super) fn where_stage(&mut self) -> Result<Op, UqlError> {
