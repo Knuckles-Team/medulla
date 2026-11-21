@@ -20,6 +20,7 @@ use sha2::{Digest, Sha256};
 
 pub mod insight;
 pub mod preplan;
+pub mod replay;
 pub mod semantic;
 
 /// Most steps one compiled program may hold. A `Fixed` safety bound.
@@ -127,6 +128,8 @@ pub enum RunRecord {
     PairedVerdict {
         verdict: super::trajectory_ladder::PairedVerdict,
     },
+    /// Store one replay of a stored program (MEDULLA-DECISION-ENGINE-R135.17.1).
+    ProgramReplay { replay: replay::ProgramReplay },
 }
 
 /// What a committed [`RunRecord`] stored: the compiled program or the insight.
@@ -163,6 +166,8 @@ pub enum StoredRun {
     PairedVerdict {
         verdict: super::trajectory_ladder::PairedVerdict,
     },
+    /// The replay row as stored.
+    ProgramReplay { replay: replay::StoredReplay },
 }
 
 /// One run trace as stored: the trace and the principal that committed it.
@@ -231,6 +236,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     preplan::PREPLAN_ARTIFACTS_UNREADABLE,
     preplan::PREPLAN_ARTIFACTS_EMPTY,
     preplan::PREPLAN_TESTS_FAILED,
+    replay::REPLAY_RECORD_INVALID,
     RefusalCode::new(super::task_plan::horizon::HORIZON_BUDGET_RULE_INVALID),
     RefusalCode::new(super::task_plan::horizon::HORIZON_OVER_CREDIT),
     RefusalCode::new(super::task_plan::horizon::HORIZON_CHECKPOINT_MISSING),

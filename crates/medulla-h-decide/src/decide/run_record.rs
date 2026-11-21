@@ -20,7 +20,9 @@ use medulla_decision_types::decision::program_store::{
         max_receipt_age_ms, pattern_key, verify_preplan, ManifestReading, PrePlanTestReceipt,
         ReusablePattern,
     },
-    program_key, program_node_id, run_trace_key, CompiledProgram, ProgramError, ProgramKnobs,
+    program_key, program_node_id,
+    replay::{replay_key, StoredReplay},
+    run_trace_key, CompiledProgram, ProgramError, ProgramKnobs,
     RunRecord, RunRecordStored, StoredRun, StoredRunTrace, COMPILED_FROM, PROGRAM_NODE_CLASS,
     RUN_TRACE_FIELD,
 };
@@ -504,6 +506,32 @@ fn commit(
             Ok(RunRecordStored {
                 key,
                 stored: StoredRun::PairedVerdict { verdict },
+                replayed,
+            })
+        }
+        // MEDULLA-DECISION-ENGINE-R135.17.1: one replay row per run and task signature, stamped
+        // with the engine time and the committer; equal content replays, other content under
+        // the key refuses `IDEMPOTENCY_CONFLICT`.
+        RunRecord::ProgramReplay { replay } => {
+            replay
+                .validate()
+                .map_err(|detail| refusal(StatisticalErrorCode::ParameterInvalid, detail))?;
+            let key = replay_key(&replay.task_signature, &replay.run_id);
+            let replayed = ctx.store.decision_artifact(ctx.tenant_id, &key)?.is_some();
+            let replay = store_once(
+                ctx,
+                key.clone(),
+                "program replay",
+                StoredReplay {
+                    replay,
+                    recorded_at_ms: ctx.now_ms,
+                    principal: principal.to_string(),
+                },
+                |a, b| a.replay == b.replay,
+            )?;
+            Ok(RunRecordStored {
+                key,
+                stored: StoredRun::ProgramReplay { replay },
                 replayed,
             })
         }

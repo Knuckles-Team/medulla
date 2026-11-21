@@ -4409,6 +4409,32 @@ class RunRecordBranchRetrieval(BaseModel):
     receipt: BranchRetrievalReceipt
 
 
+class ReplayOutcome(str, Enum):
+    HIT = "hit"
+    FALLBACK = "fallback"
+    ABSTAIN = "abstain"
+
+
+class ProgramReplay(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    decision_record_digest: str
+    failed_step: Annotated[int, Field(ge=0, le=4294967295)] | None = None
+    outcome: ReplayOutcome
+    program_digest: str | None = None
+    refusal_code: str | None = None
+    run_id: str
+    schema_version: Annotated[int, Field(ge=0, le=4294967295)]
+    task_signature: str
+
+
+class RunRecordProgramReplay(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["program_replay"]
+    replay: ProgramReplay
+
+
 class RunRecordTrace(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4549,7 +4575,8 @@ RunRecord = Annotated[
     | RunRecordHorizonCheckpoint
     | RunRecordBranchRecord
     | RunRecordBranchRetrieval
-    | RunRecordTrace,
+    | RunRecordTrace
+    | RunRecordProgramReplay,
     Field(discriminator="kind"),
 ]
 
@@ -40897,6 +40924,9 @@ __all__ = [
     "RunRecordBranchRecord",
     "RunRecordBranchRetrieval",
     "RunRecordTrace",
+    "RunRecordProgramReplay",
+    "ProgramReplay",
+    "ReplayOutcome",
     "RunRecordCompiledProgram",
     "RunRecordHorizonCheckpoint",
     "RunRecordInsight",

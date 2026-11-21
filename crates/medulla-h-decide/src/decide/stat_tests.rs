@@ -1119,6 +1119,8 @@ mod runtime_quota_tests;
 
 // MEDULLA-DECISION-ENGINE-R135.3: the served run-record commit and program lookup.
 mod program_store_tests;
+// MEDULLA-DECISION-ENGINE-R135.17.1: the replay row of a stored program.
+mod program_match_tests;
 // MEDULLA-DECISION-ENGINE-R134.14: branch outcome records and the fusion receipt, served.
 mod branch_outcomes_tests;
 // MEDULLA-DECISION-ENGINE-R134.12 and R134.12.1: the rung choice and the paired verdicts, served.
