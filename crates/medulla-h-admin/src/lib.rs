@@ -8,6 +8,9 @@
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod admin;
 
+/// The Agent Library projection worker (MEDULLA-ORCH-VOCAB-R003.6.1).
+pub mod agent_library_projection;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod boot_maintenance;

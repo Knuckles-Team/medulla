@@ -67,7 +67,9 @@ const AGENT_LIBRARY_SCOPE_RESOURCE: &str = "agent-library";
 const AGENT_LIBRARY_SCOPE_INCARNATION: &str = "agent-library:v1";
 const AGENT_LIBRARY_BOOTSTRAP_TENANT: &str = "agent-library-bootstrap";
 const AGENT_LIBRARY_BOOTSTRAP_RESOURCE: &str = "agent-library-bootstrap";
-const AGENT_LIBRARY_OUTBOX_TOPIC: &str = "medulla.agent-library.entry.v1";
+/// The Agent Library entry topic its projection worker subscribes to
+/// (MEDULLA-ORCH-VOCAB-R003.6.1).
+pub const AGENT_LIBRARY_OUTBOX_TOPIC: &str = "medulla.agent-library.entry.v1";
 /// `pub(super)` for [`super::agent_pin_resolution`]: the bound on how deep one
 /// pin lookup may scan this layer's history is this layer's own.
 pub(super) const MAX_AGENT_LIBRARY_REVISIONS: usize = 16_384;

@@ -1080,6 +1080,7 @@ pub fn scheduler_config_from(
         } else {
             AnnHubPruning::Disabled
         },
+        orchestration_limits: Default::default(),
     };
     config.validate()?;
     Ok(config)

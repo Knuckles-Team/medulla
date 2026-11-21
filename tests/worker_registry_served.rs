@@ -52,6 +52,7 @@ fn sched(total_workers: u32, general_floor: Option<u32>) -> SchedulerConfig {
         ann_storage_ceiling_bytes:
             medulla_work_types::scheduler_config::DEFAULT_ANN_STORAGE_CEILING_BYTES,
         ann_hub_pruning: medulla_work_types::scheduler_config::AnnHubPruning::Disabled,
+        orchestration_limits: Default::default(),
     }
 }
 

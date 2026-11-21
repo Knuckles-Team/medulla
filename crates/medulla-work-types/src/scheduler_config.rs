@@ -124,6 +124,34 @@ pub enum AnnHubPruning {
     Enabled,
 }
 
+/// Default rows one Agent Library projection sweep claims
+/// (`orchestration_limits.projection_batch`, unit rows; MEDULLA-ORCH-VOCAB-R003.6.1).
+pub const DEFAULT_PROJECTION_BATCH: u32 = 100;
+/// Inclusive bounds of `orchestration_limits.projection_batch`.
+pub const PROJECTION_BATCH_BOUNDS: (u32, u32) = (1, 1_000);
+
+fn default_projection_batch() -> u32 {
+    DEFAULT_PROJECTION_BATCH
+}
+
+/// Bounds of the orchestration workers (MEDULLA-ORCH-VOCAB-R003.6.1).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OrchestrationLimits {
+    /// Outbox rows one Agent Library projection sweep claims.
+    #[serde(default = "default_projection_batch")]
+    pub projection_batch: u32,
+}
+
+impl Default for OrchestrationLimits {
+    fn default() -> Self {
+        Self {
+            projection_batch: DEFAULT_PROJECTION_BATCH,
+        }
+    }
+}
+
 fn default_ann_storage_ceiling_bytes() -> u64 {
     DEFAULT_ANN_STORAGE_CEILING_BYTES
 }
@@ -417,6 +445,9 @@ pub struct SchedulerConfig {
     /// (MEDULLA-FEDERATED-QUERY-R040.5.5).
     #[serde(default)]
     pub ann_hub_pruning: AnnHubPruning,
+    /// Bounds of the orchestration workers (MEDULLA-ORCH-VOCAB-R003.6.1).
+    #[serde(default)]
+    pub orchestration_limits: OrchestrationLimits,
 }
 
 /// Invalid scheduler policy, refused before it can govern admission.
@@ -441,6 +472,7 @@ pub enum InvalidSchedulerConfig {
     ChangesetMaxBlobBytesOutOfRange,
     TreeCheckpointIntervalOutOfRange,
     AnnStorageCeilingBytesOutOfRange,
+    ProjectionBatchOutOfRange,
     HistoryKnobOutOfRange(&'static str),
     InvalidEnvValue(&'static str),
 }
@@ -516,6 +548,11 @@ impl std::fmt::Display for InvalidSchedulerConfig {
                 f,
                 "scheduler index_max_working_bytes must be within [{}, {}]",
                 INDEX_MAX_WORKING_BYTES_BOUNDS.0, INDEX_MAX_WORKING_BYTES_BOUNDS.1
+            ),
+            Self::ProjectionBatchOutOfRange => write!(
+                f,
+                "scheduler orchestration_limits.projection_batch must be within [{}, {}]",
+                PROJECTION_BATCH_BOUNDS.0, PROJECTION_BATCH_BOUNDS.1
             ),
             Self::AnnStorageCeilingBytesOutOfRange => write!(
                 f,
@@ -619,6 +656,11 @@ impl SchedulerConfig {
             .contains(&self.ann_storage_ceiling_bytes)
         {
             return Err(InvalidSchedulerConfig::AnnStorageCeilingBytesOutOfRange);
+        }
+        if !(PROJECTION_BATCH_BOUNDS.0..=PROJECTION_BATCH_BOUNDS.1)
+            .contains(&self.orchestration_limits.projection_batch)
+        {
+            return Err(InvalidSchedulerConfig::ProjectionBatchOutOfRange);
         }
         let history = [
             self.history_max_commits,
@@ -1107,5 +1149,25 @@ mod tests {
             (k == "MEDULLA_REASONING_CAUSAL_NRMSE_MAX").then(|| "1.5".into())
         });
         assert_eq!(high.unwrap_err().knob, "reasoning.causal_nrmse_max");
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R003.6.1
+    #[test]
+    fn projection_batch_defaults_to_100_within_1_to_1000() {
+        let base = config();
+        assert_eq!(base.orchestration_limits.projection_batch, 100);
+        assert_eq!(base.validate(), Ok(()));
+        for (value, accepted) in [(0, false), (1, true), (1_000, true), (1_001, false)] {
+            let mut bounded = base.clone();
+            bounded.orchestration_limits.projection_batch = value;
+            assert_eq!(bounded.validate().is_ok(), accepted, "projection_batch {value}");
+        }
+        let decoded: SchedulerConfig = serde_json::from_value(json!({
+            "total_workers": 4,
+            "max_queue_depth": 100,
+            "orchestration_limits": {"projection_batch": 7}
+        }))
+        .unwrap();
+        assert_eq!(decoded.orchestration_limits.projection_batch, 7);
     }
 }

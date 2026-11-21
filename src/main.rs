@@ -577,6 +577,8 @@ async fn spawn_optional_service_listeners(
     spawn_kvcache_listener(state).await?;
     recover_durable_catalog(state).await?;
     medulla_h_admin::connector_pack_projection::spawn(state.clone());
+    // MEDULLA-ORCH-VOCAB-R003.6.1: Agent Library entries into the tenant graph.
+    medulla_h_admin::agent_library_projection::spawn(state.clone());
     // The capability index feed starts in `serve_transports` once the listener
     // binds (MEDULLA-DECISION-ENGINE-R172.7.2); starting it here as well ran two
     // feed workers on one outbox.
