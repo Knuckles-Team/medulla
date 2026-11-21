@@ -1432,3 +1432,58 @@ fn semantic_source_reconciliation_machine_matches_edge_table() {
     );
     sm::assert_extends_core("SemanticSourceReconciliation");
 }
+
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.1
+#[test]
+fn access_request_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::access_request_machine::ACCESS_REQUEST_MACHINE);
+}
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.1
+#[test]
+fn access_request_machine_classes_extend_core() {
+    sm::assert_extends_core("AccessRequest");
+}
+
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.2
+#[test]
+fn change_request_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::change_request_machine::CHANGE_REQUEST_MACHINE);
+}
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.2
+#[test]
+fn change_request_machine_classes_extend_core() {
+    sm::assert_extends_core("ChangeRequest");
+}
+
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.3
+#[test]
+fn durable_unit_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::durable_unit_machine::DURABLE_UNIT_MACHINE);
+}
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.3
+#[test]
+fn durable_unit_machine_classes_extend_core() {
+    sm::assert_extends_core("DurableUnit");
+}
+
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.4
+#[test]
+fn glossary_term_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::glossary_term_machine::GLOSSARY_TERM_MACHINE);
+}
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.4
+#[test]
+fn glossary_term_machine_classes_extend_core() {
+    sm::assert_extends_core("GlossaryTerm");
+}
+
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.5
+#[test]
+fn ontology_proposal_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::ontology_proposal_machine::ONTOLOGY_PROPOSAL_MACHINE);
+}
+// spec: MEDULLA-DATAPLAT-VOCAB-R009.5
+#[test]
+fn ontology_proposal_machine_classes_extend_core() {
+    sm::assert_extends_core("OntologyProposal");
+}

@@ -21,6 +21,12 @@ pub mod reservation_machine;
 pub mod schedule_machine;
 pub mod edit_machine;
 pub mod gap_machine;
+// MEDULLA-DATAPLAT-VOCAB-R009 — the data-platform lifecycles as explicit state machines.
+pub mod access_request_machine;
+pub mod change_request_machine;
+pub mod durable_unit_machine;
+pub mod glossary_term_machine;
+pub mod ontology_proposal_machine;
 pub mod transition_refused;
 // MEDULLA-FEDERATED-QUERY-R005.700 — graph integrity shapes and their report.
 pub mod shape_report;

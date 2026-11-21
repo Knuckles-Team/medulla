@@ -51,16 +51,7 @@ pub struct StewardshipAssignment {
     pub principal: String,
 }
 
-/// Where a change request is in its lifecycle.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum ChangeRequestState {
-    Open,
-    Approved,
-    Rejected,
-    Applied,
-}
+pub use medulla_types::change_request_machine::ChangeRequestState;
 
 /// A proposed change to a governed asset.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

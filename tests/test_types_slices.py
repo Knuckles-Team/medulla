@@ -33,6 +33,11 @@ STAY_SET = frozenset(
 )
 # Modules not in the stay set that no move of MEDULLA-SDLC-R021.3 to R021.6 names.
 REMAINING = (
+    "access_request_machine",
+    "change_request_machine",
+    "durable_unit_machine",
+    "glossary_term_machine",
+    "ontology_proposal_machine",
     "archimate_exchange",
     "capability_machine",
     "claim_machine",

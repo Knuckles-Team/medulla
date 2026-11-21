@@ -22,16 +22,7 @@ pub const DCT_IS_REPLACED_BY: &str = "http://purl.org/dc/terms/isReplacedBy";
 /// The class every term node carries.
 pub const CAT_GLOSSARY_TERM: &str = medulla_types::ontology_iri!("catalog#CatalogGlossaryTerm");
 
-/// Where a glossary term is in its review lifecycle.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum GlossaryTermStatus {
-    Draft,
-    InReview,
-    Approved,
-    Deprecated,
-}
+pub use medulla_types::glossary_term_machine::GlossaryTermStatus;
 
 /// One business glossary term.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

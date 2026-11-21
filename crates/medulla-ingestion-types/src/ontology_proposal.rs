@@ -9,15 +9,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-/// Admission state of an induced proposal.
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum ProposalState {
-    #[default]
-    Draft,
-    Admitted,
-}
+pub use medulla_types::ontology_proposal_machine::ProposalState;
 
 /// One induced class and the property names it carries.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

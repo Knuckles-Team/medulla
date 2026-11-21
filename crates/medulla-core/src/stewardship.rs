@@ -10,6 +10,7 @@ use medulla_catalog_types::stewardship::{
     Certification, ChangeRequest, ChangeRequestState, StewardRole, StewardshipAssignment,
     StewardshipFieldError, StewardshipScope, MAX_CHANGE_REQUEST_REVIEWERS,
 };
+use medulla_types::change_request_machine::CHANGE_REQUEST_MACHINE;
 
 /// `knob stewardship.certification_ttl_days` default.
 pub const CERTIFICATION_TTL_DAYS_DEFAULT: u32 = 365;
@@ -110,16 +111,18 @@ pub fn reviewers(assignments: &[StewardshipAssignment], target: &TargetScopes) -
 }
 
 /// The next state of a change request: `open` to `approved` or `rejected`,
-/// then `approved` to `applied`. Everything else is refused.
+/// then `approved` to `applied`. Everything else is refused. The move runs through
+/// `ChangeRequestMachine` (MEDULLA-DATAPLAT-VOCAB-R009.2).
 pub fn transition(
     from: ChangeRequestState,
     to: ChangeRequestState,
 ) -> Result<ChangeRequestState, StewardshipError> {
-    use ChangeRequestState::{Applied, Approved, Open, Rejected};
-    match (from, to) {
-        (Open, Approved) | (Open, Rejected) | (Approved, Applied) => Ok(to),
-        _ => Err(StewardshipError::IllegalTransition { from, to }),
-    }
+    CHANGE_REQUEST_MACHINE
+        .edges
+        .iter()
+        .find(|edge| edge.from == from && edge.to == to)
+        .and_then(|edge| from.apply(edge.event).ok())
+        .ok_or(StewardshipError::IllegalTransition { from, to })
 }
 
 /// Open a change request for `target`, naming its governing reviewers.

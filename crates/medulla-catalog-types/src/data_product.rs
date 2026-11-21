@@ -59,16 +59,7 @@ pub struct DataContract {
     pub freshness_s: u64,
 }
 
-/// Where an access request is in its lifecycle.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum AccessRequestState {
-    Pending,
-    Approved,
-    Rejected,
-    Revoked,
-}
+pub use medulla_types::access_request_machine::AccessRequestState;
 
 /// A consumer's governed request to use a product.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

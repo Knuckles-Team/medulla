@@ -7882,3 +7882,355 @@
     :fromState :AgentLifecycleMachine_Draining ;
     :toState :AgentLifecycleMachine_Terminated ;
     :firedBy :AgentLifecycleMachine_Event_terminate .
+
+# spec: MEDULLA-DATAPLAT-VOCAB-R009.1
+# The AccessRequest machine: the lifecycle of one data-product access request. The Rust edge table
+# ACCESS_REQUEST_MACHINE is the same table.
+
+:AccessRequestState a owl:Class ;
+    rdfs:label "AccessRequest State" ;
+    rdfs:comment "A state of the AccessRequest machine." ;
+    rdfs:subClassOf :State .
+
+:AccessRequestTerminalState a owl:Class ;
+    rdfs:label "AccessRequest Terminal State" ;
+    rdfs:comment "A terminal state of the AccessRequest machine." ;
+    rdfs:subClassOf :TerminalState, :AccessRequestState .
+
+:AccessRequestTransition a owl:Class ;
+    rdfs:label "AccessRequest Transition" ;
+    rdfs:comment "A transition of the AccessRequest machine." ;
+    rdfs:subClassOf :Transition .
+
+:AccessRequestEvent a owl:Class ;
+    rdfs:label "AccessRequest Event" ;
+    rdfs:comment "An event of the AccessRequest machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:AccessRequestMachine a :StateMachine ;
+    rdfs:label "AccessRequest machine" ;
+    :initialState :AccessRequestMachine_Pending ;
+    :hasState :AccessRequestMachine_Pending, :AccessRequestMachine_Approved, :AccessRequestMachine_Rejected, :AccessRequestMachine_Revoked .
+
+:AccessRequestMachine_Pending a :AccessRequestState ;
+    rdfs:label "AccessRequest Pending" ;
+    :storedForm "pending" .
+
+:AccessRequestMachine_Approved a :AccessRequestState ;
+    rdfs:label "AccessRequest Approved" ;
+    :storedForm "approved" .
+
+:AccessRequestMachine_Rejected a :AccessRequestTerminalState ;
+    rdfs:label "AccessRequest Rejected" ;
+    :storedForm "rejected" .
+
+:AccessRequestMachine_Revoked a :AccessRequestTerminalState ;
+    rdfs:label "AccessRequest Revoked" ;
+    :storedForm "revoked" .
+
+:AccessRequestMachine_Event_Approve a :AccessRequestEvent ;
+    rdfs:label "AccessRequest Approve" .
+
+:AccessRequestMachine_Event_Reject a :AccessRequestEvent ;
+    rdfs:label "AccessRequest Reject" .
+
+:AccessRequestMachine_Event_Revoke a :AccessRequestEvent ;
+    rdfs:label "AccessRequest Revoke" .
+
+:AccessRequestMachine_AR01 a :AccessRequestTransition ;
+    rdfs:label "AccessRequest AR01" ;
+    :edgeId "AR01" ;
+    :fromState :AccessRequestMachine_Pending ;
+    :toState :AccessRequestMachine_Approved ;
+    :firedBy :AccessRequestMachine_Event_Approve .
+
+:AccessRequestMachine_AR02 a :AccessRequestTransition ;
+    rdfs:label "AccessRequest AR02" ;
+    :edgeId "AR02" ;
+    :fromState :AccessRequestMachine_Pending ;
+    :toState :AccessRequestMachine_Rejected ;
+    :firedBy :AccessRequestMachine_Event_Reject .
+
+:AccessRequestMachine_AR03 a :AccessRequestTransition ;
+    rdfs:label "AccessRequest AR03" ;
+    :edgeId "AR03" ;
+    :fromState :AccessRequestMachine_Approved ;
+    :toState :AccessRequestMachine_Revoked ;
+    :firedBy :AccessRequestMachine_Event_Revoke .
+
+
+# spec: MEDULLA-DATAPLAT-VOCAB-R009.2
+# The ChangeRequest machine: the lifecycle of one stewardship change request. The Rust edge table
+# CHANGE_REQUEST_MACHINE is the same table.
+
+:ChangeRequestState a owl:Class ;
+    rdfs:label "ChangeRequest State" ;
+    rdfs:comment "A state of the ChangeRequest machine." ;
+    rdfs:subClassOf :State .
+
+:ChangeRequestTerminalState a owl:Class ;
+    rdfs:label "ChangeRequest Terminal State" ;
+    rdfs:comment "A terminal state of the ChangeRequest machine." ;
+    rdfs:subClassOf :TerminalState, :ChangeRequestState .
+
+:ChangeRequestTransition a owl:Class ;
+    rdfs:label "ChangeRequest Transition" ;
+    rdfs:comment "A transition of the ChangeRequest machine." ;
+    rdfs:subClassOf :Transition .
+
+:ChangeRequestEvent a owl:Class ;
+    rdfs:label "ChangeRequest Event" ;
+    rdfs:comment "An event of the ChangeRequest machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ChangeRequestMachine a :StateMachine ;
+    rdfs:label "ChangeRequest machine" ;
+    :initialState :ChangeRequestMachine_Open ;
+    :hasState :ChangeRequestMachine_Open, :ChangeRequestMachine_Approved, :ChangeRequestMachine_Rejected, :ChangeRequestMachine_Applied .
+
+:ChangeRequestMachine_Open a :ChangeRequestState ;
+    rdfs:label "ChangeRequest Open" ;
+    :storedForm "open" .
+
+:ChangeRequestMachine_Approved a :ChangeRequestState ;
+    rdfs:label "ChangeRequest Approved" ;
+    :storedForm "approved" .
+
+:ChangeRequestMachine_Rejected a :ChangeRequestTerminalState ;
+    rdfs:label "ChangeRequest Rejected" ;
+    :storedForm "rejected" .
+
+:ChangeRequestMachine_Applied a :ChangeRequestTerminalState ;
+    rdfs:label "ChangeRequest Applied" ;
+    :storedForm "applied" .
+
+:ChangeRequestMachine_Event_Approve a :ChangeRequestEvent ;
+    rdfs:label "ChangeRequest Approve" .
+
+:ChangeRequestMachine_Event_Reject a :ChangeRequestEvent ;
+    rdfs:label "ChangeRequest Reject" .
+
+:ChangeRequestMachine_Event_Apply a :ChangeRequestEvent ;
+    rdfs:label "ChangeRequest Apply" .
+
+:ChangeRequestMachine_CR01 a :ChangeRequestTransition ;
+    rdfs:label "ChangeRequest CR01" ;
+    :edgeId "CR01" ;
+    :fromState :ChangeRequestMachine_Open ;
+    :toState :ChangeRequestMachine_Approved ;
+    :firedBy :ChangeRequestMachine_Event_Approve .
+
+:ChangeRequestMachine_CR02 a :ChangeRequestTransition ;
+    rdfs:label "ChangeRequest CR02" ;
+    :edgeId "CR02" ;
+    :fromState :ChangeRequestMachine_Open ;
+    :toState :ChangeRequestMachine_Rejected ;
+    :firedBy :ChangeRequestMachine_Event_Reject .
+
+:ChangeRequestMachine_CR03 a :ChangeRequestTransition ;
+    rdfs:label "ChangeRequest CR03" ;
+    :edgeId "CR03" ;
+    :fromState :ChangeRequestMachine_Approved ;
+    :toState :ChangeRequestMachine_Applied ;
+    :firedBy :ChangeRequestMachine_Event_Apply .
+
+
+# spec: MEDULLA-DATAPLAT-VOCAB-R009.3
+# The DurableUnit machine: the status of one durable run unit. The Rust edge table
+# DURABLE_UNIT_MACHINE is the same table.
+
+:DurableUnitState a owl:Class ;
+    rdfs:label "DurableUnit State" ;
+    rdfs:comment "A state of the DurableUnit machine." ;
+    rdfs:subClassOf :State .
+
+:DurableUnitTerminalState a owl:Class ;
+    rdfs:label "DurableUnit Terminal State" ;
+    rdfs:comment "A terminal state of the DurableUnit machine." ;
+    rdfs:subClassOf :TerminalState, :DurableUnitState .
+
+:DurableUnitTransition a owl:Class ;
+    rdfs:label "DurableUnit Transition" ;
+    rdfs:comment "A transition of the DurableUnit machine." ;
+    rdfs:subClassOf :Transition .
+
+:DurableUnitEvent a owl:Class ;
+    rdfs:label "DurableUnit Event" ;
+    rdfs:comment "An event of the DurableUnit machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:DurableUnitMachine a :StateMachine ;
+    rdfs:label "DurableUnit machine" ;
+    :initialState :DurableUnitMachine_InFlight ;
+    :hasState :DurableUnitMachine_InFlight, :DurableUnitMachine_Completed, :DurableUnitMachine_Failed, :DurableUnitMachine_Abandoned .
+
+:DurableUnitMachine_InFlight a :DurableUnitState ;
+    rdfs:label "DurableUnit InFlight" ;
+    :storedForm "in_flight" .
+
+:DurableUnitMachine_Completed a :DurableUnitTerminalState ;
+    rdfs:label "DurableUnit Completed" ;
+    :storedForm "completed" .
+
+:DurableUnitMachine_Failed a :DurableUnitTerminalState ;
+    rdfs:label "DurableUnit Failed" ;
+    :storedForm "failed" .
+
+:DurableUnitMachine_Abandoned a :DurableUnitTerminalState ;
+    rdfs:label "DurableUnit Abandoned" ;
+    :storedForm "abandoned" .
+
+:DurableUnitMachine_Event_Complete a :DurableUnitEvent ;
+    rdfs:label "DurableUnit Complete" .
+
+:DurableUnitMachine_Event_Fail a :DurableUnitEvent ;
+    rdfs:label "DurableUnit Fail" .
+
+:DurableUnitMachine_Event_Abandon a :DurableUnitEvent ;
+    rdfs:label "DurableUnit Abandon" .
+
+:DurableUnitMachine_DU01 a :DurableUnitTransition ;
+    rdfs:label "DurableUnit DU01" ;
+    :edgeId "DU01" ;
+    :fromState :DurableUnitMachine_InFlight ;
+    :toState :DurableUnitMachine_Completed ;
+    :firedBy :DurableUnitMachine_Event_Complete .
+
+:DurableUnitMachine_DU02 a :DurableUnitTransition ;
+    rdfs:label "DurableUnit DU02" ;
+    :edgeId "DU02" ;
+    :fromState :DurableUnitMachine_InFlight ;
+    :toState :DurableUnitMachine_Failed ;
+    :firedBy :DurableUnitMachine_Event_Fail .
+
+:DurableUnitMachine_DU03 a :DurableUnitTransition ;
+    rdfs:label "DurableUnit DU03" ;
+    :edgeId "DU03" ;
+    :fromState :DurableUnitMachine_InFlight ;
+    :toState :DurableUnitMachine_Abandoned ;
+    :firedBy :DurableUnitMachine_Event_Abandon .
+
+
+# spec: MEDULLA-DATAPLAT-VOCAB-R009.4
+# The GlossaryTerm machine: the review lifecycle of one glossary term. The Rust edge table
+# GLOSSARY_TERM_MACHINE is the same table.
+
+:GlossaryTermState a owl:Class ;
+    rdfs:label "GlossaryTerm State" ;
+    rdfs:comment "A state of the GlossaryTerm machine." ;
+    rdfs:subClassOf :State .
+
+:GlossaryTermTerminalState a owl:Class ;
+    rdfs:label "GlossaryTerm Terminal State" ;
+    rdfs:comment "A terminal state of the GlossaryTerm machine." ;
+    rdfs:subClassOf :TerminalState, :GlossaryTermState .
+
+:GlossaryTermTransition a owl:Class ;
+    rdfs:label "GlossaryTerm Transition" ;
+    rdfs:comment "A transition of the GlossaryTerm machine." ;
+    rdfs:subClassOf :Transition .
+
+:GlossaryTermEvent a owl:Class ;
+    rdfs:label "GlossaryTerm Event" ;
+    rdfs:comment "An event of the GlossaryTerm machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:GlossaryTermMachine a :StateMachine ;
+    rdfs:label "GlossaryTerm machine" ;
+    :initialState :GlossaryTermMachine_Draft ;
+    :hasState :GlossaryTermMachine_Draft, :GlossaryTermMachine_InReview, :GlossaryTermMachine_Approved, :GlossaryTermMachine_Deprecated .
+
+:GlossaryTermMachine_Draft a :GlossaryTermState ;
+    rdfs:label "GlossaryTerm Draft" ;
+    :storedForm "draft" .
+
+:GlossaryTermMachine_InReview a :GlossaryTermState ;
+    rdfs:label "GlossaryTerm InReview" ;
+    :storedForm "in_review" .
+
+:GlossaryTermMachine_Approved a :GlossaryTermState ;
+    rdfs:label "GlossaryTerm Approved" ;
+    :storedForm "approved" .
+
+:GlossaryTermMachine_Deprecated a :GlossaryTermTerminalState ;
+    rdfs:label "GlossaryTerm Deprecated" ;
+    :storedForm "deprecated" .
+
+:GlossaryTermMachine_Event_Submit a :GlossaryTermEvent ;
+    rdfs:label "GlossaryTerm Submit" .
+
+:GlossaryTermMachine_Event_Approve a :GlossaryTermEvent ;
+    rdfs:label "GlossaryTerm Approve" .
+
+:GlossaryTermMachine_Event_Deprecate a :GlossaryTermEvent ;
+    rdfs:label "GlossaryTerm Deprecate" .
+
+:GlossaryTermMachine_GL01 a :GlossaryTermTransition ;
+    rdfs:label "GlossaryTerm GL01" ;
+    :edgeId "GL01" ;
+    :fromState :GlossaryTermMachine_Draft ;
+    :toState :GlossaryTermMachine_InReview ;
+    :firedBy :GlossaryTermMachine_Event_Submit .
+
+:GlossaryTermMachine_GL02 a :GlossaryTermTransition ;
+    rdfs:label "GlossaryTerm GL02" ;
+    :edgeId "GL02" ;
+    :fromState :GlossaryTermMachine_InReview ;
+    :toState :GlossaryTermMachine_Approved ;
+    :firedBy :GlossaryTermMachine_Event_Approve .
+
+:GlossaryTermMachine_GL03 a :GlossaryTermTransition ;
+    rdfs:label "GlossaryTerm GL03" ;
+    :edgeId "GL03" ;
+    :fromState :GlossaryTermMachine_Approved ;
+    :toState :GlossaryTermMachine_Deprecated ;
+    :firedBy :GlossaryTermMachine_Event_Deprecate .
+
+
+# spec: MEDULLA-DATAPLAT-VOCAB-R009.5
+# The OntologyProposal machine: the admission state of one induced ontology proposal. The Rust edge table
+# ONTOLOGY_PROPOSAL_MACHINE is the same table.
+
+:OntologyProposalState a owl:Class ;
+    rdfs:label "OntologyProposal State" ;
+    rdfs:comment "A state of the OntologyProposal machine." ;
+    rdfs:subClassOf :State .
+
+:OntologyProposalTerminalState a owl:Class ;
+    rdfs:label "OntologyProposal Terminal State" ;
+    rdfs:comment "A terminal state of the OntologyProposal machine." ;
+    rdfs:subClassOf :TerminalState, :OntologyProposalState .
+
+:OntologyProposalTransition a owl:Class ;
+    rdfs:label "OntologyProposal Transition" ;
+    rdfs:comment "A transition of the OntologyProposal machine." ;
+    rdfs:subClassOf :Transition .
+
+:OntologyProposalEvent a owl:Class ;
+    rdfs:label "OntologyProposal Event" ;
+    rdfs:comment "An event of the OntologyProposal machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:OntologyProposalMachine a :StateMachine ;
+    rdfs:label "OntologyProposal machine" ;
+    :initialState :OntologyProposalMachine_Draft ;
+    :hasState :OntologyProposalMachine_Draft, :OntologyProposalMachine_Admitted .
+
+:OntologyProposalMachine_Draft a :OntologyProposalState ;
+    rdfs:label "OntologyProposal Draft" ;
+    :storedForm "draft" .
+
+:OntologyProposalMachine_Admitted a :OntologyProposalTerminalState ;
+    rdfs:label "OntologyProposal Admitted" ;
+    :storedForm "admitted" .
+
+:OntologyProposalMachine_Event_Admit a :OntologyProposalEvent ;
+    rdfs:label "OntologyProposal Admit" .
+
+:OntologyProposalMachine_OP01 a :OntologyProposalTransition ;
+    rdfs:label "OntologyProposal OP01" ;
+    :edgeId "OP01" ;
+    :fromState :OntologyProposalMachine_Draft ;
+    :toState :OntologyProposalMachine_Admitted ;
+    :firedBy :OntologyProposalMachine_Event_Admit .
+
