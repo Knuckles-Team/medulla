@@ -806,7 +806,6 @@ fn exhausted_before_retrieval(
         premises: vec![premise],
         feedback: None,
         arbitration: None,
-        context_budget_tokens: None,
     }))
 }
 
