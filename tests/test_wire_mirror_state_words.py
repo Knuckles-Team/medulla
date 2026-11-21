@@ -199,3 +199,35 @@ def test_decision_mirrors_type_state_as_the_rust_enum() -> None:
         )
 
     assert _annotation(assembly.Candidate, "lifecycle") is assembly.Lifecycle
+
+
+# spec: MEDULLA-IDENTITY-R725.1
+@pytest.mark.spec("MEDULLA-IDENTITY-R725.1")
+def test_user_views_type_status_as_the_rust_enum() -> None:
+    for name in ("UserView", "UserStatusChange", "PrincipalResolution"):
+        assert _annotation(getattr(models, name), "status") is models.UserStatus, name
+    assert issubclass(models.UserStatus, enum.Enum)
+    assert {m.value for m in models.UserStatus} == {
+        "active",
+        "disabled",
+        "pending_reset",
+        "pending_verification",
+        "deprovisioned",
+    }
+    accepted = models.UserStatusChange.model_validate(
+        {"principal_id": "usr:alice", "status": "disabled"}
+    )
+    assert accepted.status is models.UserStatus.DISABLED
+    # A word outside the enum is refused when decoded.
+    with pytest.raises(ValidationError):
+        models.UserStatusChange.model_validate(
+            {"principal_id": "usr:alice", "status": "suspended"}
+        )
+    # The mirror holds no transition function: it only decodes the Rust machine's state.
+    for name in ("UserView", "UserStatusChange", "PrincipalResolution"):
+        model = getattr(models, name)
+        assert not [
+            attr
+            for attr in vars(model)
+            if attr in {"transition", "transition_status", "apply"}
+        ], name

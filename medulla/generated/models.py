@@ -21370,6 +21370,14 @@ class PreferredExtensions(BaseModel):
     nodes_explored: Annotated[int, Field(ge=0)]
 
 
+class UserStatus(str, Enum):
+    ACTIVE = "active"
+    DISABLED = "disabled"
+    PENDING_RESET = "pending_reset"
+    PENDING_VERIFICATION = "pending_verification"
+    DEPROVISIONED = "deprovisioned"
+
+
 class PrincipalResolution(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -30736,9 +30744,6 @@ UqlProofStep = UqlProofStepSparql | UqlProofStepReason | UqlProofStepUnproved
 
 
 UqlResult = UqlResultRows | UqlResultExplain | UqlResultProfile
-
-
-UserStatus = str | Literal["pending_reset"]
 
 
 VersionExpectation = (
