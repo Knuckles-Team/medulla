@@ -867,6 +867,7 @@ fn component<'a>(
 mod tests {
     use super::*;
     use medulla_source_types::source_changeset::{ChangedPath, Trailers};
+    use std::collections::VecDeque;
 
     fn changed(path: &str, op: PathOp) -> ChangedPath {
         ChangedPath {
@@ -1237,5 +1238,302 @@ mod tests {
         for (key, value) in &original.properties {
             assert_eq!(kept.2.get(key), Some(value), "property {key}");
         }
+    }
+
+    /// The graph a write-set leaves behind: nodes by id and edges by
+    /// (source, target, relationship), each with its text properties.
+    #[derive(Default, Clone)]
+    struct Graph {
+        nodes: BTreeMap<String, BTreeMap<String, String>>,
+        edges: BTreeMap<(String, String, String), BTreeMap<String, String>>,
+    }
+
+    impl Graph {
+        fn apply(&mut self, outcome: &ReindexOutcome) {
+            for method in &outcome.write_set.methods {
+                match method {
+                    Method::AddNode {
+                        node_id,
+                        properties_msgpack,
+                    } => {
+                        let properties: BTreeMap<String, String> =
+                            rmp_serde::from_slice(properties_msgpack).unwrap();
+                        self.nodes.insert(node_id.clone(), properties);
+                    }
+                    Method::AddEdge {
+                        source_id,
+                        target_id,
+                        properties_msgpack,
+                    } => {
+                        let mut properties: BTreeMap<String, String> =
+                            rmp_serde::from_slice(properties_msgpack).unwrap();
+                        let relationship = properties.remove("relationship").unwrap();
+                        self.edges.insert(
+                            (source_id.clone(), target_id.clone(), relationship),
+                            properties,
+                        );
+                    }
+                    Method::RemoveNode { node_id } => {
+                        self.nodes.remove(node_id);
+                        self.edges
+                            .retain(|(source, target, _), _| source != node_id && target != node_id);
+                    }
+                    other => panic!("a re-index write-set holds no {other:?}"),
+                }
+            }
+        }
+
+        fn node(&self, id: &str) -> StoredNode {
+            StoredNode {
+                id: id.to_string(),
+                properties: self.nodes[id].clone(),
+            }
+        }
+
+        fn marked(&self, keep: impl Fn(&BTreeMap<String, String>) -> bool) -> Vec<StoredNode> {
+            self.nodes
+                .iter()
+                .filter(|(_, properties)| keep(properties))
+                .map(|(id, _)| self.node(id))
+                .collect()
+        }
+
+        /// The stored index of `repo` a changeset reads: the same reads the router makes.
+        fn stored_index(&self, changeset: &Changeset) -> StoredIndex {
+            let paths: BTreeSet<&str> = changeset
+                .changed_paths
+                .iter()
+                .map(|changed| changed.path.as_str())
+                .collect();
+            let generation = self.nodes.get(&generation_node_id("repo")).map(|properties| {
+                stored_generation(&serde_json::to_value(properties).unwrap())
+            });
+            let mut stored = StoredIndex {
+                generation,
+                ..Default::default()
+            };
+            for path in &paths {
+                let id = fingerprint_node_id("repo", path).unwrap();
+                if let Some(print) = self
+                    .nodes
+                    .get(&id)
+                    .and_then(|properties| {
+                        super::enrich::fingerprint::stored_fingerprint(
+                            &serde_json::to_value(properties).unwrap(),
+                        )
+                    })
+                {
+                    stored.prints.insert(print.path.clone(), print);
+                }
+                let ids: Vec<String> = self
+                    .nodes
+                    .iter()
+                    .filter(|(_, properties)| {
+                        properties.get("file_path").map(String::as_str) == Some(*path)
+                    })
+                    .map(|(id, _)| id.clone())
+                    .collect();
+                if !ids.is_empty() {
+                    stored.nodes_by_path.insert(path.to_string(), ids);
+                }
+            }
+            let held: BTreeSet<&String> = stored.nodes_by_path.values().flatten().collect();
+            for ((source, target, relationship), properties) in &self.edges {
+                if held.contains(source) || held.contains(target) {
+                    stored.edges.push(StoredEdge {
+                        source: source.clone(),
+                        target: target.clone(),
+                        edge_type: relationship.clone(),
+                        properties: properties.clone(),
+                    });
+                    for far in [source, target] {
+                        if !held.contains(far) {
+                            stored.neighbours.insert(far.clone(), self.node(far));
+                        }
+                    }
+                }
+            }
+            let mut component: BTreeSet<String> = held.iter().map(|id| (*id).clone()).collect();
+            let mut queue: VecDeque<String> = component.iter().cloned().collect();
+            let mut calls = BTreeSet::new();
+            while let Some(node) = queue.pop_front() {
+                for ((source, target, relationship), _) in &self.edges {
+                    if relationship == "calls" && (source == &node || target == &node) {
+                        calls.insert((source.clone(), target.clone()));
+                        let far = if source == &node { target } else { source };
+                        if component.insert(far.clone()) {
+                            queue.push_back(far.clone());
+                        }
+                    }
+                    if relationship == "memberOfFeature" && source == &node {
+                        if let Some(label) = target.strip_prefix("feature:") {
+                            stored.communities.insert(node.clone(), label.to_string());
+                        }
+                    }
+                }
+            }
+            stored.calls = calls.into_iter().collect();
+            stored
+        }
+
+        /// The code graph: everything but the generation record and the communities,
+        /// which the changeset recomputes on the affected subgraph only.
+        fn code(&self) -> (BTreeMap<String, BTreeMap<String, String>>, BTreeMap<(String, String, String), BTreeMap<String, String>>) {
+            let nodes = self
+                .nodes
+                .iter()
+                .filter(|(id, _)| {
+                    **id != generation_node_id("repo") && !id.starts_with("feature:")
+                })
+                .map(|(id, properties)| (id.clone(), properties.clone()))
+                .collect();
+            let edges = self
+                .edges
+                .iter()
+                .filter(|((_, _, relationship), _)| relationship != "memberOfFeature")
+                .map(|(key, properties)| (key.clone(), properties.clone()))
+                .collect();
+            (nodes, edges)
+        }
+    }
+
+    impl StoredLookup for Graph {
+        fn definitions(&self, name: &str) -> Result<Vec<StoredNode>, String> {
+            Ok(self.marked(|properties| {
+                properties.get("type").map(String::as_str) == Some("SYMBOL")
+                    && properties.get("name").map(String::as_str) == Some(name)
+            }))
+        }
+
+        fn file_paths(&self) -> Result<Vec<String>, String> {
+            Ok(self
+                .nodes
+                .iter()
+                .filter(|(_, properties)| {
+                    properties.get("type").map(String::as_str) == Some("FILE")
+                })
+                .filter_map(|(id, _)| id.strip_prefix("file:").map(str::to_string))
+                .collect())
+        }
+
+        fn similar_candidates(&self, bands: &[(String, String)]) -> Result<Vec<StoredNode>, String> {
+            Ok(self.marked(|properties| {
+                properties.get("type").map(String::as_str) == Some("SYMBOL")
+                    && bands
+                        .iter()
+                        .any(|(key, value)| properties.get(key) == Some(value))
+            }))
+        }
+
+        fn unresolved_calls(&self) -> Result<Vec<StoredNode>, String> {
+            Ok(self.marked(|properties| properties.contains_key(HAS_UNRESOLVED_CALLS)))
+        }
+
+        fn unresolved_imports(&self) -> Result<Vec<StoredNode>, String> {
+            Ok(self.marked(|properties| properties.contains_key(HAS_UNRESOLVED_IMPORTS)))
+        }
+    }
+
+    /// Land one changeset on `graph` the way the router does: read the stored index,
+    /// re-index, write.
+    fn land(graph: &mut Graph, id: &str, parent: Option<&str>, commit: &str, steps: &[(&str, PathOp, Option<&str>)]) {
+        let paths = steps
+            .iter()
+            .map(|(path, op, _)| changed(path, *op))
+            .collect();
+        let changeset = changeset(id, parent, paths);
+        let files: Vec<ChangesetFile> = steps
+            .iter()
+            .filter_map(|(path, _, text)| text.map(|text| file(path, text)))
+            .collect();
+        let stored = graph.stored_index(&changeset);
+        let outcome = reindex_changeset(&changeset, commit, &files, &stored, &*graph).unwrap();
+        graph.apply(&outcome);
+    }
+
+    // spec: MEDULLA-SCM-R006
+    #[test]
+    fn a_changeset_reindex_equals_a_full_reindex_of_the_resulting_tree() {
+        let alpha = "def alpha(x):\n    total = 0\n    for i in x:\n        total = total + i\n    return total\n";
+        let beta = "def beta(y):\n    acc = 0\n    for j in y:\n        acc = acc + j\n    return acc\n";
+        let util = format!("def helper():\n    return 1\n\n{alpha}");
+        let util_extended = format!("{util}\ndef extra():\n    return 3\n");
+        let main = "import lib\n\ndef run():\n    helper()\n    later()\n    return external()\n";
+        let lib = format!("def later():\n    return 2\n\n{beta}");
+        let solo = "def solo():\n    return 4\n";
+
+        // The tree grows one changeset at a time, each on the graph the one before left.
+        let mut incremental = Graph::default();
+        land(
+            &mut incremental,
+            "c1",
+            None,
+            "k1",
+            &[
+                ("util.py", PathOp::Add, Some(util.as_str())),
+                ("main.py", PathOp::Add, Some(main)),
+            ],
+        );
+        // lib.py adds the definition of a call and the file of an import that were
+        // unresolved, and a clone of a symbol of util.py.
+        land(
+            &mut incremental,
+            "c2",
+            Some("k1"),
+            "k2",
+            &[("lib.py", PathOp::Add, Some(lib.as_str()))],
+        );
+        // util.py changes structurally while main.py, which calls into it, does not.
+        land(
+            &mut incremental,
+            "c3",
+            Some("k2"),
+            "k3",
+            &[
+                ("util.py", PathOp::Modify, Some(util_extended.as_str())),
+                ("solo.py", PathOp::Add, Some(solo)),
+            ],
+        );
+        land(
+            &mut incremental,
+            "c4",
+            Some("k3"),
+            "k4",
+            &[("solo.py", PathOp::Delete, None)],
+        );
+
+        // A full index of the resulting tree.
+        let mut full = Graph::default();
+        land(
+            &mut full,
+            "full",
+            None,
+            "k4",
+            &[
+                ("util.py", PathOp::Add, Some(util_extended.as_str())),
+                ("main.py", PathOp::Add, Some(main)),
+                ("lib.py", PathOp::Add, Some(lib.as_str())),
+            ],
+        );
+
+        let (inc_nodes, inc_edges) = incremental.code();
+        let (full_nodes, full_edges) = full.code();
+        assert_eq!(inc_nodes, full_nodes, "the node sets differ");
+        assert_eq!(inc_edges, full_edges, "the edge sets differ");
+        // The scenario reached what it is meant to: the call and the import that were
+        // unresolved bound, the clone was linked, and the removed file left nothing.
+        let relationships: BTreeSet<&str> = full_edges
+            .keys()
+            .map(|(_, _, relationship)| relationship.as_str())
+            .collect();
+        assert!(relationships.contains("calls"));
+        assert!(relationships.contains("depends_on"));
+        assert!(relationships.contains("similar_to"));
+        assert!(!incremental.nodes.contains_key("file:solo.py"));
+        assert_eq!(
+            incremental.nodes["file:main.py"].get(UNRESOLVED_IMPORTS),
+            None,
+            "the import that bound is no longer unresolved"
+        );
     }
 }

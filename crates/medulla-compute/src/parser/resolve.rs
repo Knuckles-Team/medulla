@@ -758,9 +758,16 @@ fn similarity_edges(nodes: &[ExtractedNode], edges: &mut Vec<ExtractedEdge>) -> 
         }
         *per_node.entry(a).or_default() += 1;
         *per_node.entry(b).or_default() += 1;
+        // The endpoints are ordered by id, not by the order the nodes arrived in, so a
+        // symbol pair gets the same edge whichever batch it was indexed in.
+        let (source, target) = if sigs[a].0 <= sigs[b].0 {
+            (sigs[a].0, sigs[b].0)
+        } else {
+            (sigs[b].0, sigs[a].0)
+        };
         edges.push(ExtractedEdge {
-            source: sigs[a].0.to_string(),
-            target: sigs[b].0.to_string(),
+            source: source.to_string(),
+            target: target.to_string(),
             edge_type: "similar_to".to_string(),
             properties: HashMap::from([
                 ("score".to_string(), format!("{score:.2}")),
