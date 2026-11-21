@@ -179,6 +179,7 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("incident:write", User, "engine"),
     entry("ingest:read", User, "engine"),
     entry("ingest:write", User, "engine"),
+    entry("jobs:read", User, "engine"),
     entry("jobs:write", User, "engine"),
     entry("kg:admin", Admin, "engine"),
     entry("kg:read", User, "engine"),

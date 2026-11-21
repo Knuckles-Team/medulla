@@ -119,10 +119,108 @@ mod worker_publish;
 mod worker_requests;
 mod worker_validation;
 
+/// The intents the engine ships for downtime work (MEDULLA-DURABLE-KERNEL-R101.3).
+const DOWNTIME_INTENTS: [&str; 2] = ["plan_evolution", "live_artifact_refresh"];
+/// The tenant and actor of every downtime job.
+const DOWNTIME_TENANT: &str = "__engine__";
+const DOWNTIME_ACTOR: &str = "engine:downtime";
+/// The capability a worker names to lease downtime work.
+const DOWNTIME_CAPABILITY: &str = "downtime";
+
 /// Jobs handler behaviour installed on the seam registry's `jobs` slot.
 pub struct JobsSeam;
 
 impl medulla_server_ops::api::ingest::JobsApi for JobsSeam {
+    fn register_downtime_intents(&self, persist_dir: &Option<String>) -> Result<(), String> {
+        let store = core::job_store(persist_dir.as_deref())?;
+        for name in DOWNTIME_INTENTS {
+            let intent = medulla_jobs::JobIntent::new(
+                name,
+                medulla_jobs::Trigger::Manual,
+                medulla_jobs::JobPolicy {
+                    tenant: DOWNTIME_TENANT.to_string(),
+                    actor: DOWNTIME_ACTOR.to_string(),
+                    purpose: format!("downtime work: {name}"),
+                    priority: 0,
+                    ..medulla_jobs::JobPolicy::default()
+                },
+            );
+            store
+                .register_intent(intent)
+                .map_err(|error| job_refusal(&error))?;
+        }
+        Ok(())
+    }
+
+    fn intent_registered(
+        &self,
+        persist_dir: &Option<String>,
+        intent: &str,
+    ) -> Result<bool, String> {
+        let store = core::job_store(persist_dir.as_deref())?;
+        match store.get_intent(intent) {
+            Ok(_) => Ok(true),
+            Err(medulla_jobs::JobError::NotFound(_)) => Ok(false),
+            Err(error) => Err(job_refusal(&error)),
+        }
+    }
+
+    fn submit_downtime_job(
+        &self,
+        persist_dir: &Option<String>,
+        request: &medulla_server_ops::api::ingest::DowntimeJobRequest,
+    ) -> Result<String, String> {
+        let store = core::job_store(persist_dir.as_deref())?;
+        let key = format!("downtime:{}", request.idempotency_key);
+        let owner = native_opaque_ref("downtime_job", &request.iri);
+        if !store
+            .claim_idempotency(&key, &owner)
+            .map_err(|error| job_refusal(&error))?
+        {
+            return Err(format!(
+                "CONFLICT: downtime selection {} was already submitted",
+                request.idempotency_key
+            ));
+        }
+        let spec = SubmitSpec {
+            input_snapshot: InputSnapshotHandle::new("__commons__", 0)
+                .with_dataset("", request.idempotency_key.clone()),
+            policy: medulla_jobs::JobPolicy {
+                tenant: DOWNTIME_TENANT.to_string(),
+                actor: DOWNTIME_ACTOR.to_string(),
+                purpose: format!("downtime work: {}", request.intent),
+                // The background band, so a downtime job never outranks foreground work.
+                priority: i32::from(request.priority.min(24)),
+                quota_cpu_ms: Some(request.cpu_ms),
+                resources: medulla_jobs::ResourceBudget {
+                    cpu_ms: Some(request.cpu_ms),
+                    memory_bytes: Some(request.memory_bytes),
+                    ..medulla_jobs::ResourceBudget::default()
+                },
+                // Only a worker that asks for downtime work may lease it.
+                placement: medulla_jobs::JobPlacement {
+                    required_capabilities: vec![opaque_worker_capability(DOWNTIME_CAPABILITY)],
+                    ..medulla_jobs::JobPlacement::default()
+                },
+                ..medulla_jobs::JobPolicy::default()
+            },
+            algo: medulla_jobs::AlgoVersion {
+                family: format!("downtime.{}", request.intent),
+                algorithm: request.intent.clone(),
+                params_digest: native_opaque_ref("downtime_type", &request.iri),
+                code_version: CODE_VERSION.to_string(),
+                env_version: ENV_VERSION.to_string(),
+            },
+            input_payload: None,
+            max_attempts: 1,
+            backoff_ms: 0,
+        };
+        store
+            .submit(spec)
+            .map(|job| job.job_id)
+            .map_err(|error| job_refusal(&error))
+    }
+
     #[cfg(all(feature = "jobs", feature = "knowledge-batch"))]
     fn knowledge_stream_result(
         &self,

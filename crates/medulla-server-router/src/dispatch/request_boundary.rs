@@ -203,6 +203,11 @@ pub async fn dispatch_with_context(
     // CONCEPT:MEDULLA-OS.observability.slow-query-descriptor — slow-query descriptor, captured BEFORE the method is moved
     // into `dispatch_inner`. `None` (zero cost) unless MEDULLA_SLOW_QUERY_MS
     // enabled it AND this is a query method.
+    // MEDULLA-DURABLE-KERNEL-R101.3: every served request is foreground activity.
+    medulla_server_api::downtime::FOREGROUND_ACTIVITY.note_request(
+        medulla_server_api::txn::now_ms(),
+        medulla_server_api::knob_config::knobs().downtime_idle_max_rps,
+    );
     let method: &'static str = (&req.method).into();
     let slow = medulla_kernel::slow_query::describe(&req.method);
     #[cfg(feature = "metrics")]

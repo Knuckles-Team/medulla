@@ -52,6 +52,9 @@ pub mod icv_guard;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod identity_view;
 
+/// Foreground activity and the latest downtime selections (MEDULLA-DURABLE-KERNEL-R101.3).
+pub mod downtime;
+
 /// Typed server-config knob loader (MEDULLA-CONTRACT-R058).
 pub mod knob_config;
 

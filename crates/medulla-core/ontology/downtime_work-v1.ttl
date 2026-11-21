@@ -35,6 +35,48 @@ dw:priority a owl:DatatypeProperty ;
     rdfs:range xsd:integer ;
     rdfs:comment "A higher priority runs first." .
 
+dw:intent a owl:DatatypeProperty ;
+    rdfs:label "intent" ;
+    rdfs:domain dw:JobType ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The name of the registered job intent a selected type submits a job for." .
+
+dw:windowKind a owl:DatatypeProperty ;
+    rdfs:label "window kind" ;
+    rdfs:domain dw:JobType ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The window the type runs in: idle or declared." .
+
+dw:windowStartMs a owl:DatatypeProperty ;
+    rdfs:label "window start" ;
+    rdfs:domain dw:JobType ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Start of a declared window, in epoch milliseconds." .
+
+dw:windowEndMs a owl:DatatypeProperty ;
+    rdfs:label "window end" ;
+    rdfs:domain dw:JobType ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "End of a declared window, in epoch milliseconds." .
+
+dw:cpuMs a owl:DatatypeProperty ;
+    rdfs:label "cpu budget" ;
+    rdfs:domain dw:Budget ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "CPU milliseconds the type may use in one window." .
+
+dw:memoryBytes a owl:DatatypeProperty ;
+    rdfs:label "memory budget" ;
+    rdfs:domain dw:Budget ;
+    rdfs:range xsd:integer ;
+    rdfs:comment "Bytes of memory the type may hold in one window." .
+
+dw:query a owl:DatatypeProperty ;
+    rdfs:label "precondition query" ;
+    rdfs:domain dw:Precondition ;
+    rdfs:range xsd:string ;
+    rdfs:comment "An ASK query over the commons graph; the type runs only when it is true." .
+
 dw:hasBudget a owl:ObjectProperty ;
     rdfs:label "has budget" ;
     rdfs:domain dw:JobType ;

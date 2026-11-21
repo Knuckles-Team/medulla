@@ -1988,6 +1988,19 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
         });
     }
 
+    // ── Downtime scheduler (MEDULLA-DURABLE-KERNEL-R101.3) ─────────────────────────
+    // Every `downtime.tick_secs` seconds, lease and submit the downtime job types
+    // that fit the open idle or declared window.
+    #[cfg(all(feature = "jobs", feature = "sparql"))]
+    {
+        let downtime_state = state.clone();
+        spawn_periodic_sweep(
+            medulla_server_api::knob_config::knobs().downtime_tick_secs,
+            "downtime_scheduler",
+            move || server_startup::downtime_tick(downtime_state.clone()),
+        );
+    }
+
     // ── Provenance anchoring (CONCEPT:MEDULLA-KG.sharding.row-level-security) ───────────────────────────────
     // Periodically Merkle-anchor every resident graph's `:ToolCall`/`:RunTrace`
     // provenance-node window into the SAME tamper-evident audit chain the

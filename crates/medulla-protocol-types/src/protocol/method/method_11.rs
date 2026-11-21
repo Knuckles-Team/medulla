@@ -654,6 +654,10 @@ $($variants)*
     /// stored setting, or the startup knob values when none was stored. Scope
     /// `scheduler:admin`.
     GetSchedulerConfig,
+    /// What the latest downtime tick decided (MEDULLA-DURABLE-KERNEL-R101.3): the
+    /// job types it submitted work for and the types it skipped, with the reason.
+    /// Scope `jobs:read`.
+    DowntimeSelections,
     /// Replace the scheduler policy (MEDULLA-DURABLE-KERNEL-R076.2). Scope
     /// `scheduler:admin`. A setting that fails `SchedulerConfig::validate`
     /// refuses `SCHEDULER_CONFIG_INVALID` and changes nothing; an accepted one

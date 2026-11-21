@@ -1503,6 +1503,18 @@ fn core_specs() -> &'static [CoreSpec] {
             ))),
             ontology: Some(include_str!(concat!(env!("OUT_DIR"), "/decision.ttl"))),
         },
+        // MEDULLA-DURABLE-KERNEL-R101.3: the downtime job-type vocabulary the
+        // downtime tick reads from the commons graph, with its shapes companion.
+        CoreSpec {
+            module: "downtime-work",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/downtime_work-v1.shapes.ttl"
+            )),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/downtime_work-v1.ttl"
+            )),
+        },
     ];
     SPECS
 }

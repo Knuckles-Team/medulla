@@ -88,6 +88,15 @@ pub async fn try_handle(
     req_id: u64,
     method: Method,
 ) -> Result<Response, Method> {
+    if matches!(method, Method::DowntimeSelections) {
+        // MEDULLA-DURABLE-KERNEL-R101.3: the latest downtime tick's decision.
+        return Ok(answer(
+            req_id,
+            ResultPayload::of::<contract::DowntimeSelections>(
+                medulla_server_api::downtime::latest_selections(),
+            ),
+        ));
+    }
     if !matches!(
         method,
         Method::GetSchedulerConfig | Method::SetSchedulerConfig { .. }

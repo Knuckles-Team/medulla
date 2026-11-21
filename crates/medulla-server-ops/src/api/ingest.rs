@@ -48,8 +48,55 @@ pub trait GraphApi: Send + Sync {
     ) -> medulla_protocol_types::protocol::Response;
 }
 
+/// One downtime job the downtime tick submits through the jobs seam
+/// (MEDULLA-DURABLE-KERNEL-R101.3).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DowntimeJobRequest {
+    /// The IRI of the selected `dw:JobType`.
+    pub iri: String,
+    /// The registered intent the job runs.
+    pub intent: String,
+    /// The type's priority.
+    pub priority: u16,
+    /// The type's CPU budget, in milliseconds.
+    pub cpu_ms: u64,
+    /// The type's memory budget, in bytes.
+    pub memory_bytes: u64,
+    /// Names this selection; a second request with the same key submits nothing.
+    pub idempotency_key: String,
+}
+
 /// Jobs handler behaviour reachable from crates below `medulla-h-jobs`.
 pub trait JobsApi: Send + Sync {
+    /// Register the downtime intents the engine ships (`plan_evolution` and
+    /// `live_artifact_refresh`); registering again keeps their history
+    /// (MEDULLA-DURABLE-KERNEL-R101.3).
+    #[allow(unused_variables)]
+    fn register_downtime_intents(&self, persist_dir: &Option<String>) -> Result<(), String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
+
+    /// Whether `intent` names a registered job intent.
+    #[allow(unused_variables)]
+    fn intent_registered(
+        &self,
+        persist_dir: &Option<String>,
+        intent: &str,
+    ) -> Result<bool, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
+
+    /// Submit one background job for a selected downtime type and answer its job
+    /// id. A repeated `idempotency_key` submits nothing and refuses.
+    #[allow(unused_variables)]
+    fn submit_downtime_job(
+        &self,
+        persist_dir: &Option<String>,
+        request: &DowntimeJobRequest,
+    ) -> Result<String, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
+
     /// Resolve a completed typed job result for the shared KnowledgeBatch stream; the graph
     /// already passed its ACL and placement checks.
     #[cfg(all(feature = "jobs", feature = "knowledge-batch"))]

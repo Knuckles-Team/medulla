@@ -92,6 +92,8 @@ pub mod work_market;
 // `medulla_viz_core::ViewSpec` and resolves it.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod run_usage;
+/// The reply of the served `DowntimeSelections` method (MEDULLA-DURABLE-KERNEL-R101.3).
+pub mod downtime;
 // MEDULLA-DURABLE-KERNEL-R076.1 — authoritative scheduler policy data and validation.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod scheduler_config;

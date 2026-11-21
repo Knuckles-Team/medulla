@@ -12,6 +12,10 @@ pub mod server_startup;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod query_seam;
 
+/// The downtime scheduler tick (MEDULLA-DURABLE-KERNEL-R101.3).
+#[cfg(all(feature = "jobs", feature = "sparql"))]
+pub mod downtime;
+
 // ---- merged from the moved module root (src/server/mod.rs) ----
 #[cfg(feature = "ann-redb")]
 use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;

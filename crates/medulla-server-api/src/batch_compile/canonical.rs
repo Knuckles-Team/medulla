@@ -759,6 +759,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::TaskQueueAck { .. }
         | Method::SetSchedulerConfig { .. }
         | Method::GetSchedulerConfig
+        | Method::DowntimeSelections
         | Method::WriteBack { .. }
         | Method::DecisionFit { .. }
         | Method::DecisionEval { .. }

@@ -7261,6 +7261,7 @@ dependencies = [
  "medulla-identity-types",
  "medulla-index-types",
  "medulla-isolation",
+ "medulla-jobs",
  "medulla-kernel",
  "medulla-kvcache",
  "medulla-lake",

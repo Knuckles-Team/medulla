@@ -1044,6 +1044,17 @@ pub async fn attached_poll_tick(state: SharedState) {
     }
 }
 
+/// One downtime scheduler tick (MEDULLA-DURABLE-KERNEL-R101.3): lease and submit the
+/// downtime job types that fit the open window.
+#[cfg(all(feature = "jobs", feature = "sparql"))]
+pub async fn downtime_tick(state: SharedState) {
+    let now_ms = medulla_server_api::txn::now_ms() as i64;
+    let submitted = crate::downtime::run_tick(&state, now_ms).await;
+    if submitted > 0 {
+        tracing::info!(submitted, "Downtime scheduler: submitted leased job(s) (R101.3)");
+    }
+}
+
 pub async fn registry_reap_tick(state: SharedState) {
     let now_ms = medulla_server_api::txn::now_ms();
     let n = crate::registry_reaper::reap_expired_servers(&state, now_ms).await;

@@ -529,7 +529,9 @@ pub async fn dispatch_compute_and_media_methods(
             | Method::TaskQueueAck { .. }) => dispatch_task_queue_arm(ctx, method).await,
             // MEDULLA-DURABLE-KERNEL-R076.2: scheduler settings live in the same store.
             #[cfg(feature = "jobs")]
-            method @ (Method::GetSchedulerConfig | Method::SetSchedulerConfig { .. }) => {
+            method @ (Method::GetSchedulerConfig
+            | Method::SetSchedulerConfig { .. }
+            | Method::DowntimeSelections) => {
                 dispatch_scheduler_config_arm(ctx, method).await
             }
 
