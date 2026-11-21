@@ -80,6 +80,7 @@ async fn foreign_tenant_is_refused(h: &Harness, schema: &ComponentDependency) {
 /// Verifies MEDULLA-DECISION-ENGINE-R162.3: the served answer carries the
 /// allowed and withheld sets as a constraint.
 // spec: MEDULLA-DECISION-ENGINE-R162.3
+// spec: MEDULLA-DECISION-ENGINE-R162.5
 #[tokio::test]
 async fn shielding_routes() {
     let h = Harness::new().await;

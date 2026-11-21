@@ -508,9 +508,9 @@ async fn catalog_above_the_cap_refuses_and_cap_size_is_served() {
     assert!(error.contains("CATALOG_TOO_LARGE"), "{error}");
 }
 
-// Covers the retired and republished cases of R134.110.7. The connector-pack
-// `Withdrawn` case needs a pack import fixture and is not bound yet, so this
-// test carries no `spec:` marker.
+// Covers the retired and republished cases of R134.110.7; the connector-pack
+// `Withdrawn` case is proved by `withdrawn_pack_tool_leaves_the_tool_index`.
+// spec: MEDULLA-DECISION-ENGINE-R134.110.7
 #[tokio::test]
 async fn index_follows_library_generation_and_hides_invisible_tools() {
     let h = Harness::new().await;

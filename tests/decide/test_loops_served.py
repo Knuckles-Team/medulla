@@ -50,7 +50,9 @@ async def _journey(loop_id: str) -> dict[str, Any]:
 
 
 # spec: MEDULLA-DECISION-ENGINE-R653.3
+# spec: MEDULLA-DECISION-ENGINE-R653.6
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R653.3")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R653.6")
 def test_loop_claim_served(clean_graph):
     outcome = asyncio.run(_journey(f"loop-{uuid.uuid4().hex[:12]}"))
 

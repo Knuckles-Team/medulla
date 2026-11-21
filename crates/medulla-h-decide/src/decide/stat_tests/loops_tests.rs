@@ -82,6 +82,7 @@ fn is_refusal(result: Result<LoopView, String>, code: &str) {
 
 // spec: MEDULLA-DECISION-ENGINE-R653.2
 // spec: MEDULLA-DECISION-ENGINE-R653.3
+// spec: MEDULLA-DECISION-ENGINE-R653.6
 // spec: MEDULLA-DECISION-ENGINE-R653.7
 // spec: MEDULLA-DECISION-ENGINE-R653.8
 #[tokio::test]
