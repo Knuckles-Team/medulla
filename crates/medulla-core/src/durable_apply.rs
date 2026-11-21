@@ -780,6 +780,7 @@ fn apply_memory_episodic(core: &GraphCore, m: &Method) -> bool {
         Method::Consolidate {
             episodic_ids,
             semantic_props_msgpack,
+            ..
         } => {
             if let Some(props) = durable_json_object(semantic_props_msgpack) {
                 let _ = core.consolidate(episodic_ids, props);

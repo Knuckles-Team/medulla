@@ -93,7 +93,7 @@ mod stat_model_capacity;
 #[cfg(feature = "decide")]
 mod stat_log;
 #[cfg(feature = "decide")]
-mod stat_memory_change;
+pub mod stat_memory_change;
 #[cfg(feature = "decide")]
 mod stat_nl;
 #[cfg(feature = "decide")]

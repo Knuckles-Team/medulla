@@ -753,6 +753,7 @@ mod eg318_dispatch_tests {
                 Method::Consolidate {
                     episodic_ids: vec!["a".into(), "b".into()],
                     semantic_props_msgpack: blob(serde_json::json!({"summary": "s"})),
+                    admit_receipt_digests: Vec::new(),
                 },
             ),
         )

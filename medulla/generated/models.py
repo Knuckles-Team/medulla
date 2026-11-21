@@ -16854,6 +16854,7 @@ class MethodConnectorPackParams(BaseModel):
 class MethodConsolidateParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    admit_receipt_digests: list[str]
     episodic_ids: list[str]
     semantic_props_msgpack: _EgOctets
 

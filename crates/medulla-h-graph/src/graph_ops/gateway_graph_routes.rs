@@ -451,6 +451,7 @@ async fn try_handle_node_state(
         Method::Consolidate {
             episodic_ids,
             semantic_props_msgpack,
+            ..
         } => {
             let (episodic_ids, semantic_props_msgpack) =
                 (episodic_ids.clone(), semantic_props_msgpack.clone());

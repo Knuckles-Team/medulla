@@ -5,18 +5,24 @@
 //! (R141.100) and a benchmark receipt (R141.101). Each resolves the request's
 //! named policy, runs the pure kernel and reports the sealed evaluation as the
 //! job output. A receipt never changes memory: the only write is the job row
-//! `submit_job` stores.
+//! `submit_job` stores and the receipt row the admission gate reads
+//! (MEDULLA-DECISION-ENGINE-R141.104).
 
 use std::sync::Arc;
 
 use medulla_decision_stats::decision::memory_benchmark::{benchmark, BenchmarkVerdict, RunMetrics};
 use medulla_decision_stats::decision::memory_rewrite::evaluate_rewrite;
 use medulla_decision_types::decision::memory_benchmark::{
-    BenchmarkKnobs, BenchmarkVerdictKind, MemoryBenchmarkReceipt, MemoryChangeBenchmarkRequest,
-    RunMetricsReceipt, MEMORY_BENCHMARK_SCHEMA_VERSION,
+    BenchmarkKnobs, BenchmarkVerdictKind, ChangeKind, MemoryBenchmarkReceipt,
+    MemoryChangeBenchmarkRequest, RunMetricsReceipt, MEMORY_BENCHMARK_SCHEMA_VERSION,
+    MEMORY_RECEIPT_NOT_ADMIT, MEMORY_RECEIPT_REQUIRED, MEMORY_RECEIPT_STALE,
 };
 use medulla_decision_types::decision::memory_rewrite::{
-    MemoryRewriteKnobs, MemoryRewriteProposal, MEMORY_REVISION_STALE,
+    MemoryRewriteEvaluation, MemoryRewriteKnobs, MemoryRewriteProposal, RewriteVerdict,
+    MEMORY_REVISION_STALE,
+};
+use medulla_persistence_records::decision_jobs::{
+    decode_artifact, encode_artifact, memory_receipt_key,
 };
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::DecisionJobOutput;
@@ -76,11 +82,15 @@ pub(super) fn run_rewrite(
     };
     let evaluation = evaluate_rewrite(proposal, &knobs, head_revision)
         .map_err(|code| coded(code, "the rewrite proposal was refused"))?;
+    let rows = vec![(
+        memory_receipt_key(&evaluation.receipt_digest),
+        encode_artifact(&StoredMemoryReceipt::Rewrite(evaluation.clone()))?,
+    )];
     Ok((
         DecisionJobOutput::MemoryRewrite {
             evaluation: Box::new(evaluation),
         },
-        Vec::new(),
+        rows,
     ))
 }
 
@@ -133,10 +143,134 @@ pub(super) fn run_benchmark(
         receipt_digest: String::new(),
     };
     receipt.receipt_digest = receipt.compute_receipt_digest();
+    let rows = vec![benchmark_receipt_row(&receipt)?];
     Ok((
         DecisionJobOutput::MemoryBenchmark {
             receipt: Box::new(receipt),
         },
-        Vec::new(),
+        rows,
     ))
+}
+
+/// The decision-artifact row that stores a benchmark receipt for the gate.
+pub fn benchmark_receipt_row(
+    receipt: &MemoryBenchmarkReceipt,
+) -> Result<(String, Vec<u8>), String> {
+    Ok((
+        memory_receipt_key(&receipt.receipt_digest),
+        encode_artifact(&StoredMemoryReceipt::Benchmark(receipt.clone()))?,
+    ))
+}
+
+/// A memory-change receipt as the tenant's decision artifacts hold it, under
+/// [`memory_receipt_key`]: the one row the admission gate reads.
+#[derive(serde::Serialize, serde::Deserialize)]
+#[serde(tag = "receipt", rename_all = "snake_case")]
+enum StoredMemoryReceipt {
+    Benchmark(MemoryBenchmarkReceipt),
+    Rewrite(MemoryRewriteEvaluation),
+}
+
+/// The change a memory mutation makes, as the gate checks it.
+pub struct MemoryChange<'a> {
+    pub record_id: &'a str,
+    pub kind: ChangeKind,
+    /// The content digest of the candidate the mutation writes.
+    pub candidate_digest: &'a str,
+    /// The head revision the mutation was planned at.
+    pub head_revision: u64,
+}
+
+/// The admission gate of the memory mutation routes
+/// (MEDULLA-DECISION-ENGINE-R141.104). A `Rewrite` needs one `Admit` rewrite
+/// receipt and one `Admit` benchmark receipt; every other kind needs one
+/// `Admit` benchmark receipt. Each is read in the caller's tenant only, so
+/// another tenant's digest reads as absent, and must bind the change's record
+/// id and kind, its candidate digest and its head revision. Answers the
+/// premises `memory:receipt=<digest>` of the receipts that admitted the change;
+/// a refusal writes nothing.
+pub fn require_admit_receipts(
+    store: &AgentLibraryStore,
+    tenant_id: &str,
+    change: &MemoryChange<'_>,
+    digests: &[String],
+) -> Result<Vec<String>, String> {
+    let (mut benchmark, mut rewrite) = (None, None);
+    let mut seen = Vec::new();
+    for digest in digests {
+        if seen.contains(&digest) {
+            continue;
+        }
+        seen.push(digest);
+        let Some(bytes) = store.decision_artifact(tenant_id, &memory_receipt_key(digest))? else {
+            continue;
+        };
+        match decode_artifact::<StoredMemoryReceipt>(&bytes, "memory receipt")? {
+            StoredMemoryReceipt::Benchmark(receipt)
+                if receipt.record_id == change.record_id && receipt.change_kind == change.kind =>
+            {
+                benchmark = benchmark.or(Some(receipt));
+            }
+            StoredMemoryReceipt::Rewrite(evaluation)
+                if evaluation.proposal.record_id == change.record_id =>
+            {
+                rewrite = rewrite.or(Some(evaluation));
+            }
+            // A receipt for another record or change kind never counts.
+            _ => {}
+        }
+    }
+    let mut premises = Vec::new();
+    let Some(benchmark) = benchmark else {
+        return Err(coded(
+            MEMORY_RECEIPT_REQUIRED,
+            "the change names no benchmark receipt of this record and change kind",
+        ));
+    };
+    if benchmark.verdict != BenchmarkVerdictKind::Admit {
+        return Err(coded(MEMORY_RECEIPT_NOT_ADMIT, "the benchmark receipt discards the change"));
+    }
+    if hex_digest(&benchmark.candidate.digest) != hex_digest(change.candidate_digest)
+        || benchmark.baseline.revision != change.head_revision
+    {
+        return Err(coded(
+            MEMORY_RECEIPT_STALE,
+            "the benchmark receipt is bound to another candidate or head revision",
+        ));
+    }
+    premises.push(format!("memory:receipt={}", benchmark.receipt_digest));
+    if change.kind == ChangeKind::Rewrite {
+        let Some(evaluation) = rewrite else {
+            return Err(coded(
+                MEMORY_RECEIPT_REQUIRED,
+                "a rewrite names no rewrite receipt of this record",
+            ));
+        };
+        if evaluation.verdict != RewriteVerdict::Admit {
+            return Err(coded(MEMORY_RECEIPT_NOT_ADMIT, "the rewrite receipt discards the change"));
+        }
+        if hex_digest(&evaluation.proposal.candidate.digest) != hex_digest(change.candidate_digest)
+            || evaluation.proposal.active.revision != change.head_revision
+        {
+            return Err(coded(
+                MEMORY_RECEIPT_STALE,
+                "the rewrite receipt is bound to another candidate or head revision",
+            ));
+        }
+        premises.push(format!("memory:receipt={}", evaluation.receipt_digest));
+    }
+    Ok(premises)
+}
+
+/// The head revision a mutation on `graph` is planned at: the graph's version,
+/// read behind the caller's read access. The mutation applies only while the
+/// version is unchanged.
+pub async fn planned_head_revision(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    graph: &str,
+) -> Result<u64, String> {
+    super::topology_read::graph_core(state, graph, verified)
+        .await
+        .map(|core| core.version())
 }

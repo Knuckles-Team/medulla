@@ -75,6 +75,14 @@ pub const ACCURACY_BELOW_MIN: RefusalCode = RefusalCode::new("ACCURACY_BELOW_MIN
 /// Reason code: a metric fell below the baseline by more than the knob allows.
 pub const REGRESSION_ABOVE_MAX: RefusalCode = RefusalCode::new("REGRESSION_ABOVE_MAX");
 
+/// Refusal code: a memory mutation names no `Admit` receipt of the caller's tenant
+/// for its change kind (MEDULLA-DECISION-ENGINE-R141.104).
+pub const MEMORY_RECEIPT_REQUIRED: RefusalCode = RefusalCode::new("MEMORY_RECEIPT_REQUIRED");
+/// Refusal code: the named receipt's verdict is `Discard`.
+pub const MEMORY_RECEIPT_NOT_ADMIT: RefusalCode = RefusalCode::new("MEMORY_RECEIPT_NOT_ADMIT");
+/// Refusal code: an `Admit` receipt is bound to another candidate digest or head revision.
+pub const MEMORY_RECEIPT_STALE: RefusalCode = RefusalCode::new("MEMORY_RECEIPT_STALE");
+
 /// The refusal codes the `memory_change` family declares, with the three
 /// discard reasons.
 pub const REFUSALS: &[RefusalCode] = &[
@@ -83,6 +91,9 @@ pub const REFUSALS: &[RefusalCode] = &[
     MEMORY_COVERAGE_INCOMPLETE,
     MEMORY_SNAPSHOT_MISMATCH,
     // MEMORY_METRIC_UNRESOLVED and MEMORY_REVISION_STALE: registered by memory_rewrite.
+    MEMORY_RECEIPT_REQUIRED,
+    MEMORY_RECEIPT_NOT_ADMIT,
+    MEMORY_RECEIPT_STALE,
     RECALL_BELOW_MIN,
     ACCURACY_BELOW_MIN,
     REGRESSION_ABOVE_MAX,

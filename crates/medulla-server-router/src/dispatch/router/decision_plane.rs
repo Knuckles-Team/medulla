@@ -10,6 +10,7 @@ pub async fn dispatch_decision_plane_methods(
     ctx: DispatchCtx<'_>,
     method: Method,
 ) -> ControlFlow<Response, Method> {
+    let method = super::memory_change::dispatch_consolidate_method(ctx, method).await?;
     let method = dispatch_source_sync_method(ctx, method).await?;
     let method = dispatch_decision_methods(ctx, method).await?;
     let method = dispatch_write_back_method(ctx, method).await?;

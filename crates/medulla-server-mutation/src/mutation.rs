@@ -340,6 +340,7 @@ mod tests {
             Method::Consolidate {
                 episodic_ids: vec!["a".into()],
                 semantic_props_msgpack: Vec::new(),
+                admit_receipt_digests: Vec::new(),
             },
             Method::Reinforce {
                 node_id: "x".into(),

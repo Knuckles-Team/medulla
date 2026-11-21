@@ -651,6 +651,7 @@ fn eg318_memory_scene_trajectory_methods_roundtrip() {
         Method::Consolidate {
             episodic_ids: vec!["a".into(), "b".into()],
             semantic_props_msgpack: vec![0x80],
+            admit_receipt_digests: vec!["sha256:00".into()],
         },
         Method::Maintain {
             ids: vec!["m1".into()],

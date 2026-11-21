@@ -254,6 +254,10 @@ $($variants)*
         #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
         #[serde(with = "serde_bytes")]
         semantic_props_msgpack: Vec<u8>,
+        /// The receipt digests that admit this change (MEDULLA-DECISION-ENGINE-R141.104):
+        /// one `Admit` benchmark receipt bound to the cluster and the head the
+        /// request was planned at. Hard cutover: no default.
+        admit_receipt_digests: Vec<String>,
     },
 
     /// CONCEPT:MEDULLA-KG.memory.medulla-batch-decay-caller/MEDULLA-222 — reinforce a memory node: bump access/recency +
