@@ -9,6 +9,7 @@ from __future__ import annotations
 import enum
 import typing
 
+import pydantic
 import pytest
 from pydantic import BaseModel, ValidationError
 
@@ -256,3 +257,21 @@ def test_uql_proof_step_field_is_clause_not_stage() -> None:
         models.UqlProofStepUnproved.model_validate(
             {"Unproved": {"stage": "MATCH (:Doc)"}}
         )
+
+
+# spec: MEDULLA-CQ-ORCH-R821.1
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R821.1")
+def test_job_mirrors_type_state_as_the_rust_enum() -> None:
+    # The claimed job carries the machine's state as the closed `JobState` union, never text.
+    assert _annotation(models.ClaimedAnalyticsJob, "state") is models.JobState
+    # The worker checkpoint's free text is progress, not a state: `stage` is `label`.
+    assert "stage" not in models.JobOpWorkerCheckpointBody.model_fields
+    assert _annotation(models.JobOpWorkerCheckpointBody, "label") is str
+    # A word outside the enum, in text or as a variant tag, is refused when decoded.
+    adapter = pydantic.TypeAdapter(models.JobState)
+    assert adapter.validate_python({"Submitted": {}}) == models.JobStateSubmitted(
+        Submitted=models.JobStateSubmittedBody()
+    )
+    for word in ("Submitted", "submitted", {"Archived": {}}):
+        with pytest.raises(ValidationError):
+            adapter.validate_python(word)
