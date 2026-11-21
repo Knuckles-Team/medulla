@@ -399,7 +399,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R090`: `tests/retrieval/test_discove
 
 | Refusal | `MEDULLA-FEDERATED-QUERY-R091.4` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::evolution_refusals` (planned): Each case returns its code, and the active plan stays the baseline. |
 
-| Evidence | `MEDULLA-FEDERATED-QUERY-R091.5` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::receipt_names_measurements` (planned): A served read finds the receipt linked to the shape. |
+| Evidence | `MEDULLA-FEDERATED-QUERY-R091.5` | `crates/medulla-server/src/downtime_plan_evolution.rs::tests::receipt_names_measurements` (planned): the receipt carries replays, p50 and bytes before and after; a served `EXPLAIN` lists them in `kept_plans`. |
 
 | Hot-path proof | `MEDULLA-FEDERATED-QUERY-R091.6` | `tests/federation/test_plan_evolution_served.py::test_kept_plan_measurably_faster_and_mismatch_reverts` (planned): The kept plan improves p50 by 10% or more, the unequal candidate reverts, and the overhead meets the budget. |
 
@@ -443,7 +443,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R706.1` | `crates/medulla-plan/tests/policy_mask.rs::policies_round_trip` |
 | `MEDULLA-FEDERATED-QUERY-R706.2` | `crates/medulla-plan/tests/policy_mask.rs::one_rewrite_serves_every_language` |
 | `MEDULLA-FEDERATED-QUERY-R706.3` | `tests/test_policy_mask_served.py::test_masked_column_over_sql_and_uql` |
-| `MEDULLA-FEDERATED-QUERY-R706.4` | `tests/test_policy_mask_served.py::test_mask_refusals` |
+| `MEDULLA-FEDERATED-QUERY-R706.4` | `crates/medulla-exec/src/policy_mask.rs::tests::loader_refuses_a_policy_naming_an_unregistered_tag`, `tests/federated/test_policy_mask_served.py::test_mask_refusals` |
 | `MEDULLA-FEDERATED-QUERY-R706.5` | `tests/test_policy_mask_served.py::test_explain_lists_policies` |
 | `MEDULLA-FEDERATED-QUERY-R706.6` | `cargo bench -p medulla-plan --bench policy_mask` |
 | `MEDULLA-FEDERATED-QUERY-R707` | See each child. |
@@ -758,7 +758,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R040.1.7` | `crates/medulla-h-query/src/query/planning.rs::tests::retrieval_request_binds_plan_ctx` | L2 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.7` | `crates/medulla-h-query/src/query/sql_read.rs::tests::retrieval_request_salts_the_cache_key` | L2 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.3` | `tests/retrieval/test_constraints_served.py::test_optimized_and_unoptimized_plans_agree` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.1.4` | `tests/retrieval/test_constraints_served.py::test_refusals_rank_nothing` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.1.4` | `tests/retrieval/test_constraints_served.py::test_refusals_rank_nothing`, `::test_unsatisfiable_constraints_return_eligible_exhausted` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.5` | `tests/retrieval/test_constraints_served.py::test_excluded_never_reappears` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.6` | `tests/retrieval/test_constraints_served.py::test_constraints_before_ranking` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R081.9.7` | `tests/retrieval_round_served.rs::section_traversal_returns_spans_with_paths` | L3 |
@@ -881,7 +881,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R090.5:** `tests/retrieval/test_discover_planning_served.py::test_discover_evidence_fields` (planned). Evidence. Reads every field and recomputes each digest.
 - **MEDULLA-FEDERATED-QUERY-R091.3:** `tests/federation/test_plan_evolution_served.py::test_served_query_records_and_later_query_reads_kept_plan` (planned). Wiring. Runs the served foreign query until the shape has `min_replays` observations, lets the downtime tick (`downtime.tick_secs` 1) run the `plan_evolution` job, reads the job's `receipts`, and asserts a later query's `FragmentTrace.kept_plan`; then unregisters the source, ticks again and asserts outcome `authority_expired` and no kept plan.
 - **MEDULLA-FEDERATED-QUERY-R091.4:** `tests/federation/test_plan_evolution_served.py::test_evolution_refusals` (planned). Refusal. Asserts each code and that the active plan stays the baseline.
-- **MEDULLA-FEDERATED-QUERY-R091.5:** `tests/federation/test_plan_evolution_served.py::test_explain_names_kept_plan_and_receipt` (planned). Evidence. Reads the receipt through EXPLAIN.
+- **MEDULLA-FEDERATED-QUERY-R091.5:** `tests/federation/test_plan_evolution_served.py::test_explain_names_kept_plan_and_receipt` (planned). Evidence. Reads the kept plan and its measurements through EXPLAIN (`kept_plans`).
 - **MEDULLA-FEDERATED-QUERY-R607:** `tests/reasoning/test_topology_served.py::test_each_analytic_is_served` (planned). Topology analytics find partitions, analogies, synergy and hyperedge scores (rollup). The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R607.1:** `crates/medulla-types/src/topology.rs::tests::result_round_trips_and_rejects_bad_ids` (planned). Model. Round-trips each type and rejects an empty id.
 - **MEDULLA-FEDERATED-QUERY-R607.2:** `crates/medulla-graph-algos/src/graph_algos/spectral.rs::tests::planted_partition_is_recovered_and_ids_are_stable` (planned), `tests/reasoning/test_topology_served.py::test_spectral_and_mincut_served` (planned). Behavior: partitions. The fixture and expected result are stated in the row's Test cell.
