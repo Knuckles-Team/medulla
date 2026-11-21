@@ -28,6 +28,7 @@
 //! three-way merge (MEDULLA-BRANCH-MERGE-R004). No second disjointness
 //! check exists on the accept path.
 
+pub mod git;
 pub mod provenance;
 
 use std::io::Write;
@@ -35,7 +36,7 @@ use std::io::Write;
 use medulla_server_blob::blob::store::{BlobManifest, ChunkStore};
 use medulla_server_blob::blob::stream::{stream_blob_get, stream_blob_put_owned};
 use medulla_source_types::source_changeset::{
-    ChangedPath, Changeset, ChangesetRefusal, FileMerger, PathOp, SubmitChangesetRequest,
+    ChangedPath, Changeset, ChangesetRefusal, FileMerger, GitOrigin, PathOp, SubmitChangesetRequest,
     SubmitRefusal, SubmittedBlobRef, SubmittedPath, Trailers,
 };
 use medulla_transaction::occ::{KeyRange, TxnFootprint};
@@ -296,6 +297,13 @@ pub struct AcceptContext<'a> {
     /// The verified agent of an agent request (MEDULLA-SCM-R012); `None` for a
     /// human request.
     pub agent_identity: Option<&'a str>,
+    /// The git commit an imported changeset records (MEDULLA-SCM-R010), copied
+    /// into `Changeset.git`; `None` for `SubmitChangeset`. `Changeset.parents`
+    /// stays the registry head the changeset extends, so the chain walk of
+    /// `accept` and `tree_at` is the first-parent walk. The empty-submission
+    /// refusal lives in `SubmitChangesetRequest::validate`, which the import
+    /// route replaces by `validate_import`.
+    pub git_origin: Option<GitOrigin>,
 }
 
 /// Three-way merge of the overlapping paths of a stale-base submission
@@ -486,6 +494,7 @@ pub fn accept(
         trailers,
         agent_identity: ctx.agent_identity.map(str::to_string),
         run_trace_id: request.run_trace_id.clone(),
+        git: ctx.git_origin.clone(),
     }
     .sealed())
 }
@@ -794,6 +803,7 @@ mod tests {
         blobs: &NoBlobs,
         merge: no_merge,
         agent_identity: None,
+        git_origin: None,
     };
 
     // spec: MEDULLA-SCM-R002

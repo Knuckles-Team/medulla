@@ -376,7 +376,6 @@ pub struct GitExportPackRequest {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct GitExportPackReceipt {
     pub object_format: GitObjectFormat,
-    pub object_count: u32,
     pub pack_hex: String,
 }
 
@@ -583,7 +582,9 @@ fn is_hex64(value: &str) -> bool {
 
 const NAME_SET: fn(char) -> bool =
     |c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '/' | '-');
-const FILE_MODES: [u32; 3] = [0o100644, 0o100755, 0o120000];
+/// The file modes a changeset path carries: regular, executable, symbolic link and
+/// (MEDULLA-SCM-R010) a submodule entry whose blob holds the hex commit id.
+const FILE_MODES: [u32; 4] = [0o100644, 0o100755, 0o120000, 0o160000];
 
 fn invalid(detail: impl Into<String>) -> SubmitRefusal {
     SubmitRefusal::new(ChangesetRefusal::ChangesetInvalid, detail)
@@ -615,6 +616,17 @@ impl SubmitChangesetRequest {
                 "the submission has no paths",
             ));
         }
+        self.validate_bounds(false)
+    }
+
+    /// [`Self::validate`] for one imported git commit (MEDULLA-SCM-R010): git
+    /// allows a commit with no changed path and a commit with an empty message,
+    /// so neither refuses; every other bound holds.
+    pub fn validate_import(&self) -> Result<(), SubmitRefusal> {
+        self.validate_bounds(true)
+    }
+
+    fn validate_bounds(&self, git_import: bool) -> Result<(), SubmitRefusal> {
         if !valid_name(&self.repo, 128) {
             return Err(invalid("repo"));
         }
@@ -630,7 +642,7 @@ impl SubmitChangesetRequest {
                 return Err(invalid("base_head"));
             }
         }
-        if self.message.is_empty() || self.message.len() > 65536 {
+        if (self.message.is_empty() && !git_import) || self.message.len() > 65536 {
             return Err(invalid("message"));
         }
         if self.paths.len() > 10000 {
