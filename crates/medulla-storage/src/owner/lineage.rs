@@ -502,6 +502,52 @@ pub const GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES: LayoutPredecessor = LayoutPr
     file_name: "graph-*.redb",
 };
 
+// Frozen census of the last layout before the reservation record lost its `tombstone` field
+// (MEDULLA-PLACEMENT-R781.4): the same table names as the layout after it, with the reservation
+// table at logical schema revision 1. Only the stored row shape differs, so the offline upgrade
+// converts the rows of `resource_reservations`.
+const GRAPH_SHARD_TABLES_BEFORE_RESERVATION_TOMBSTONE_REMOVAL: &[&str] = super::graph_shard::graph_shard_table_names!(
+    "repository_enrichment_budgets",
+    "repository_enrichment_policy_revisions",
+    "repository_enrichment_supersessions",
+    "repository_enrichment_parks",
+    "audit_requests",
+    "work_item_current_plans",
+    "work_item_run_checkpoints",
+    "work_item_effect_receipts",
+    "work_item_admitted_requests",
+    "xshard_decision_certificate",
+);
+/// The `c613...` digest every graph shard carried before the reservation tombstone removal: the
+/// GraphShard pin of the parent commit.
+pub const GRAPH_SHARD_PRE_RESERVATION_TOMBSTONE_REMOVAL_DIGEST: [u8; 32] = [
+    0xc6, 0x13, 0xd4, 0x8a, 0xf8, 0x64, 0x9e, 0x05, 0xa3, 0xa0, 0x73, 0x7c, 0xe6, 0xab, 0xa8, 0xd4,
+    0xed, 0xd5, 0x8c, 0x88, 0xc0, 0xca, 0x24, 0x4d, 0x05, 0xfc, 0x11, 0xdd, 0x9e, 0xdc, 0x52, 0xa5,
+];
+pub const GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::GraphShard,
+    label: "graph shard before the reservation tombstone removal",
+    owner_tables: GRAPH_SHARD_TABLES_BEFORE_RESERVATION_TOMBSTONE_REMOVAL,
+    data_lost: "none; run `store-upgrade` (the explicit offline layout upgrade). Normal open refuses this predecessor.",
+    file_name: "graph-*.redb",
+};
+
+/// The logical schema revision of the graph-shard reservation table that `predecessor` froze:
+/// 1 for every predecessor up to and including
+/// [`GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL`], 2 for every predecessor declared after
+/// it (the later predecessors take the then-current census). Every other layout is revision 1.
+pub(crate) fn frozen_reservation_revision(predecessor: &LayoutPredecessor) -> u32 {
+    let declared = layout_predecessors(OwnerLayout::GraphShard);
+    let boundary = declared
+        .iter()
+        .position(|candidate| candidate == &GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL);
+    let at = declared.iter().position(|candidate| candidate == predecessor);
+    match (at, boundary) {
+        (Some(at), Some(boundary)) if at > boundary => 2,
+        _ => 1,
+    }
+}
+
 /// Earlier graph-shard layout before the node-payload scrub cursor (EH-384).
 const GRAPH_SHARD_TABLES_BEFORE_STORAGE_SCRUB: &[&str] = GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT
     .split_at(GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT.len() - 1)
@@ -715,6 +761,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
             GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS,
             GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
+            GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL,
         ],
     }
 }

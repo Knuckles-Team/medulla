@@ -25,6 +25,7 @@ fn predecessor_manifest(predecessor: &LayoutPredecessor) -> OwnerManifest {
         table.ownership == crate::physical::manifest::TableOwnership::Ledger
             || predecessor.owner_tables.contains(&table.table_id.as_str())
     });
+    crate::owner::contract::freeze_logical_revisions(predecessor, &mut manifest.tables);
     manifest.layout_digest = layout_digest_over(manifest.layout, &manifest.tables);
     manifest
 }
@@ -54,7 +55,7 @@ fn every_layout_digest_is_pinned() {
 #[test]
 fn graph_shard_before_policy_revisions_matches_the_previous_pin() {
     let predecessor = &GRAPH_SHARD_BEFORE_POLICY_REVISIONS;
-    let contracts: Vec<_> =
+    let mut contracts: Vec<_> =
         crate::owner::contract::expected_table_contracts(OwnerLayout::GraphShard)
             .into_iter()
             .filter(|contract| {
@@ -64,6 +65,7 @@ fn graph_shard_before_policy_revisions_matches_the_previous_pin() {
                         .contains(&contract.table_id.as_str())
             })
             .collect();
+    crate::owner::contract::freeze_logical_revisions(predecessor, &mut contracts);
     let digest: String = layout_digest_over(OwnerLayout::GraphShard, &contracts)
         .iter()
         .map(|byte| format!("{byte:02x}"))
@@ -147,9 +149,18 @@ fn every_predecessor_is_a_different_table_set_with_a_derived_code() {
         let mut seen = std::collections::BTreeSet::new();
         for predecessor in layout_predecessors(layout) {
             assert_eq!(predecessor.layout, layout);
-            assert_ne!(predecessor.owner_tables, current, "{}", predecessor.label);
+            // A generation is its table set and the logical schema revision it froze: a
+            // generation that changed only a stored row shape keeps the table names
+            // (MEDULLA-PLACEMENT-R781.4) and differs from the current layout by revision.
+            let revision = frozen_reservation_revision(predecessor);
             assert!(
-                seen.insert(predecessor.owner_tables),
+                predecessor.owner_tables != current
+                    || (layout == OwnerLayout::GraphShard && revision < 2),
+                "{}",
+                predecessor.label
+            );
+            assert!(
+                seen.insert((predecessor.owner_tables, revision)),
                 "{}",
                 predecessor.label
             );
@@ -501,4 +512,25 @@ fn agent_library_before_retry_allowances_is_a_frozen_predecessor() {
         "{error}"
     );
     assert!(error.contains(predecessor.label), "{error}");
+}
+
+// spec: MEDULLA-PLACEMENT-R781.4
+#[test]
+fn graph_shard_before_reservation_tombstone_removal_is_a_frozen_predecessor() {
+    let predecessor = &GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL;
+    // Same table names as the current layout: only the reservation row shape moved.
+    assert_eq!(
+        predecessor.owner_tables,
+        owner_table_names(OwnerLayout::GraphShard)
+    );
+    let manifest = predecessor_manifest(predecessor);
+    assert_eq!(
+        manifest.layout_digest,
+        GRAPH_SHARD_PRE_RESERVATION_TOMBSTONE_REMOVAL_DIGEST
+    );
+    assert_ne!(manifest.layout_digest, OwnerLayout::GraphShard.digest());
+    let error = validate_against_lineage(&manifest).unwrap_err();
+    assert!(error.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"));
+    assert!(error.contains(predecessor.label));
+    assert!(error.contains("store-upgrade"), "{error}");
 }

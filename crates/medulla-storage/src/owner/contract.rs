@@ -7,6 +7,7 @@
 
 use crate::owner::graph_shard;
 use crate::owner::layout::{OwnerLayout, OWNER_LAYOUT_DOMAINS};
+use crate::owner::persisted_layout::LayoutPredecessor;
 use crate::owner::registry::owner_table_names;
 use crate::physical::manifest::{TableContract, TableOwnership, TableScope};
 
@@ -48,6 +49,67 @@ pub(crate) fn predecessor_table_contracts(layout: OwnerLayout) -> Vec<TableContr
             .map(|name| table_contract(name, Some(layout))),
     );
     contracts
+}
+
+/// The graph-shard table whose stored row shape moved to logical schema revision 2 when the
+/// reservation record lost its `tombstone` field (MEDULLA-PLACEMENT-R781.4).
+const RESERVATIONS_TABLE: &str = "resource_reservations";
+
+/// The logical schema revision a declared predecessor froze for the reservation table. Every
+/// graph-shard predecessor up to and including the one declared by R781.4 carries revision 1.
+fn frozen_reservation_schema_id(predecessor: &LayoutPredecessor) -> String {
+    format!(
+        "eg.logical.{RESERVATIONS_TABLE}.v{}",
+        crate::owner::lineage::frozen_reservation_revision(predecessor)
+    )
+}
+
+/// Reset to the revision `predecessor` froze every table contract whose logical schema revision
+/// the current layout has moved past, so a predecessor's frozen digest is reproduced exactly.
+pub(crate) fn freeze_logical_revisions(
+    predecessor: &LayoutPredecessor,
+    contracts: &mut [TableContract],
+) {
+    if predecessor.layout != OwnerLayout::GraphShard {
+        return;
+    }
+    let frozen = frozen_reservation_schema_id(predecessor);
+    for contract in contracts
+        .iter_mut()
+        .filter(|contract| contract.table_id == RESERVATIONS_TABLE)
+    {
+        contract.logical_schema_id = frozen.clone();
+    }
+}
+
+/// Whether the reservation table of `tables` carries the revision `predecessor` froze. A
+/// predecessor of any other layout has no revised table and always agrees.
+pub(crate) fn frozen_revisions_agree(predecessor: &LayoutPredecessor, tables: &[TableContract]) -> bool {
+    if predecessor.layout != OwnerLayout::GraphShard {
+        return true;
+    }
+    let frozen = frozen_reservation_schema_id(predecessor);
+    tables
+        .iter()
+        .filter(|contract| contract.table_id == RESERVATIONS_TABLE)
+        .all(|contract| contract.logical_schema_id == frozen)
+}
+
+/// The contracts of one declared predecessor: [`predecessor_table_contracts`] at the logical
+/// schema revisions that predecessor froze.
+pub(crate) fn predecessor_contracts_of(predecessor: &LayoutPredecessor) -> Vec<TableContract> {
+    let mut contracts = predecessor_table_contracts(predecessor.layout);
+    freeze_logical_revisions(predecessor, &mut contracts);
+    contracts
+}
+
+/// The current logical schema revision of one table. Every table is at revision 1 except the
+/// graph-shard reservation table, whose row shape lost its `tombstone` field.
+fn logical_schema_revision(name: &str, owner: Option<OwnerLayout>) -> u32 {
+    match (owner, name) {
+        (Some(OwnerLayout::GraphShard), RESERVATIONS_TABLE) => 2,
+        _ => 1,
+    }
 }
 
 /// Contract for one ledger table, which no owner layout owns.
@@ -93,7 +155,10 @@ pub(crate) fn table_contract(name: &str, owner: Option<OwnerLayout>) -> TableCon
         value_type_id: value_type_id.to_string(),
         key_codec: "redb-native-key-v1".to_string(),
         value_codec: "redb-native-value-v1".to_string(),
-        logical_schema_id: format!("eg.logical.{name}.v1"),
+        logical_schema_id: format!(
+            "eg.logical.{name}.v{}",
+            logical_schema_revision(name, owner)
+        ),
         logical_codec_id: logical_codec_id(name).to_string(),
         ownership,
         domain: owner.map(|layout| OWNER_LAYOUT_DOMAINS[layout as usize]),

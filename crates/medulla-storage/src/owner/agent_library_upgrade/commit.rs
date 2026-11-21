@@ -81,6 +81,12 @@ fn retire_predecessor_tables(
     if target == UpgradeTarget::Jobs {
         crate::owner::jobs_upgrade::convert_job_rows(write)?;
     }
+    // Every graph shard generation stores its reservation rows with the retired `tombstone`
+    // field; each upgrade ends at the current layout, so each one converts them
+    // (MEDULLA-PLACEMENT-R781.4).
+    if matches!(target, UpgradeTarget::GraphShard(_)) {
+        crate::owner::offline_upgrade::reservation_tombstone::convert(write)?;
+    }
     Ok(())
 }
 

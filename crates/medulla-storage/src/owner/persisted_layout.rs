@@ -91,6 +91,7 @@ impl LayoutPredecessor {
             && manifest.validate_current().is_err()
             && layout_digest_over(manifest.layout, &manifest.tables) == manifest.layout_digest
             && owner_table_ids(manifest).eq(self.owner_tables.iter().copied())
+            && crate::owner::contract::frozen_revisions_agree(self, &manifest.tables)
     }
 }
 
@@ -214,6 +215,7 @@ pub fn create_predecessor_owner_file(
             .open_table(ANALYTICS_JOBS_BEFORE_JOB_MACHINE)
             .map_err(|error| error.to_string())?;
     }
+    crate::owner::contract::freeze_logical_revisions(predecessor, &mut manifest.tables);
     manifest.layout_digest = layout_digest_over(manifest.layout, &manifest.tables);
     write
         .open_table(OWNER_MANIFEST)

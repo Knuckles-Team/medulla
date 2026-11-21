@@ -110,6 +110,8 @@ pub enum GraphShardSource {
     BeforeEffectReceipts,
     /// Before sealed coordinator-decision certificates.
     BeforeDecisionCertificates,
+    /// Before the reservation record lost its `tombstone` field (MEDULLA-PLACEMENT-R781.4).
+    BeforeReservationTombstoneRemoval,
 }
 
 impl GraphShardSource {
@@ -138,6 +140,10 @@ impl GraphShardSource {
             Self::BeforeDecisionCertificates => (
                 &super::lineage::GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
                 super::lineage::GRAPH_SHARD_PRE_DECISION_CERTIFICATES_DIGEST,
+            ),
+            Self::BeforeReservationTombstoneRemoval => (
+                &super::lineage::GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL,
+                super::lineage::GRAPH_SHARD_PRE_RESERVATION_TOMBSTONE_REMOVAL_DIGEST,
             ),
         }
     }
@@ -546,7 +552,7 @@ fn contracts_for(
     manifest: &OwnerManifest,
     target: UpgradeTarget,
 ) -> Result<Vec<TableContract>, String> {
-    let contracts: Vec<_> = super::contract::predecessor_table_contracts(target.layout())
+    let contracts: Vec<_> = super::contract::predecessor_contracts_of(target.predecessor())
         .into_iter()
         .filter(|contract| {
             contract.ownership == TableOwnership::Ledger

@@ -26,7 +26,8 @@ use super::lineage::{
     AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES, GRAPH_SHARD_BEFORE_AUDIT_REQUESTS,
     GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
     GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
-    GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS, KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_PROFILE_GRANTS,
+    GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
+    KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_PROFILE_GRANTS,
     JOBS_BEFORE_JOB_MACHINE, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
     SQL_BEFORE_MATVIEWS, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
@@ -281,6 +282,17 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
         ),
         upgrade_graph_shard
     ),
+    offline_upgrade!(
+        GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL,
+        |path, identity, integrity, options| inspect_graph_shard_upgrade(
+            path,
+            identity,
+            integrity,
+            options,
+            GraphShardSource::BeforeReservationTombstoneRemoval
+        ),
+        upgrade_graph_shard
+    ),
 ];
 
 /// The registered upgrade that starts from `predecessor`, when there is one.
@@ -405,6 +417,8 @@ pub(crate) fn render_offline_upgrade_procedure() -> String {
     }
     out
 }
+
+pub(crate) mod reservation_tombstone;
 
 #[cfg(test)]
 mod tests;
