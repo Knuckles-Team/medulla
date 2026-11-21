@@ -143,4 +143,72 @@ mod tests {
         );
 
     }
+
+    // spec: MEDULLA-IDENTITY-R700.7
+    #[tokio::test(flavor = "multi_thread")]
+    async fn a_new_day_row_drops_ledger_rows_older_than_the_retention() {
+        let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+        let dir = tempfile::tempdir().expect("tempdir");
+        let backend = RedbBackend::open_with_shards(
+            dir.path().to_string_lossy().to_string(),
+            64,
+            1,
+        )
+        .expect("open");
+        let seed = Method::AddNode {
+            node_id: "seed".to_string(),
+            properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({})).expect("encode"),
+        };
+        backend.record_durable(GRAPH, &seed).await.expect("seed");
+        // One counted write on an explicit ledger day, committed by the shard writer.
+        let on_day = |principal: &'static str, day: u32| {
+            let backend = &backend;
+            let seed = seed.clone();
+            async move {
+                let (done, rx) = tokio::sync::oneshot::channel();
+                backend
+                    .enqueue(
+                        GRAPH,
+                        Cmd::Mutation {
+                            graph: GRAPH.to_string(),
+                            method: Box::new(seed),
+                            write_count: Some(WriteCount {
+                                graph: GRAPH.to_string(),
+                                principal: principal.to_string(),
+                                day,
+                            }),
+                            done,
+                        },
+                        "retention_test",
+                    )
+                    .await
+                    .expect("enqueue");
+                rx.await.expect("done").expect("write");
+            }
+        };
+        let retention = write_ledger::RETENTION_DAYS;
+        on_day("old", 1_000).await;
+        on_day("recent", 1_000 + retention).await;
+        // The first row sits exactly at the retention edge of a bump on day 1_000 + retention:
+        // it is kept, and a later new-day row removes it.
+        let kept = backend.write_days(GRAPH, 0).await.expect("days");
+        assert_eq!(kept.len(), 2, "a row at the retention edge is kept: {kept:?}");
+        on_day("newer", 1_000 + retention + 1).await;
+        let after: Vec<String> = backend
+            .write_days(GRAPH, 0)
+            .await
+            .expect("days")
+            .into_iter()
+            .map(|row| row.0)
+            .collect();
+        assert!(!after.contains(&"old".to_string()), "older than the retention: {after:?}");
+        assert!(after.contains(&"recent".to_string()));
+        assert!(after.contains(&"newer".to_string()));
+        // A bump on a day that already has its row adds to it and deletes nothing.
+        on_day("newer", 1_000 + retention + 1).await;
+        assert_eq!(
+            backend.write_days(GRAPH, 0).await.expect("days").len(),
+            2
+        );
+    }
 }
