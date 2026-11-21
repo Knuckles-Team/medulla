@@ -97,9 +97,11 @@ pub(crate) fn convert_job_rows(write: &WriteTransaction) -> Result<(), String> {
 /// `Running` and `Publishing` with `cancel_requested` and a lease become
 /// `CancelRequested { lease, checkpoint }`; with `cancel_requested` and no lease they become
 /// `Cancelled { checkpoint }`; without `cancel_requested` they keep their variant and move the
-/// stored lease into the payload (no lease refuses the record). `Submitted` with
-/// `not_before_ms > 0` and at least one attempt made becomes
-/// `Backoff { not_before_ms, checkpoint: None }`, else `Submitted`. `Succeeded`, `Failed` and
+/// stored lease into the payload. A `Running` or `Publishing` record with no lease and no cancel
+/// request has no holder to wait for, so it becomes `Submitted { checkpoint }` carrying its
+/// checkpoint and the next claim resumes from it; engine start never blocks on it. `Submitted`
+/// with `not_before_ms > 0`, attempted or never attempted, becomes
+/// `Backoff { not_before_ms, checkpoint: None }`, else `Submitted { checkpoint: None }`. `Succeeded`, `Failed` and
 /// `Cancelled` keep their payload. The fields `cancel_requested`, `lease` and `not_before_ms` are
 /// dropped. Any other shape fails with `JOBS_RECORD_UNMAPPABLE: <job id>`.
 pub fn convert_job_record(old: &Value) -> Result<Value, String> {
@@ -123,19 +125,8 @@ pub fn convert_job_record(old: &Value) -> Result<Value, String> {
         None | Some(Value::Null) => 0,
         Some(value) => value.as_i64().ok_or_else(refuse)?,
     };
-    let attempts_made = record
-        .get("retry")
-        .and_then(|retry| retry.get("attempts_made"))
-        .and_then(Value::as_u64)
-        .unwrap_or(0);
     let state = record.get("state").ok_or_else(refuse)?;
-    let state = convert_state(
-        state,
-        cancel_requested,
-        lease,
-        (not_before_ms, attempts_made),
-    )
-    .ok_or_else(refuse)?;
+    let state = convert_state(state, cancel_requested, lease, not_before_ms).ok_or_else(refuse)?;
     let mut converted: Map<String, Value> = record.clone();
     for dropped in ["cancel_requested", "lease", "not_before_ms"] {
         converted.remove(dropped);
@@ -149,16 +140,16 @@ fn convert_state(
     state: &Value,
     cancel_requested: bool,
     lease: Option<Value>,
-    (not_before_ms, attempts_made): (i64, u64),
+    not_before_ms: i64,
 ) -> Option<Value> {
     if let Value::String(name) = state {
         if name != "Submitted" {
             return None;
         }
-        return Some(if not_before_ms > 0 && attempts_made >= 1 {
+        return Some(if not_before_ms > 0 {
             json!({ "Backoff": { "not_before_ms": not_before_ms, "checkpoint": null } })
         } else {
-            json!("Submitted")
+            json!({ "Submitted": { "checkpoint": null } })
         });
     }
     let map = state.as_object().filter(|map| map.len() == 1)?;
@@ -179,7 +170,7 @@ fn convert_state(
                     wrapped.insert(variant.clone(), Value::Object(body));
                     Some(Value::Object(wrapped))
                 }
-                (false, None) => None,
+                (false, None) => Some(json!({ "Submitted": { "checkpoint": checkpoint } })),
             }
         }
         "Succeeded" | "Failed" | "Cancelled" => Some(state.clone()),
@@ -252,18 +243,26 @@ mod tests {
                 json!({ "Cancelled": { "checkpoint": checkpoint() } })
             );
         }
-        // A submitted job waits in Backoff only after an attempt and with a future start.
+        // A running or publishing job with no lease and no cancel request is reclaimable: it
+        // becomes Submitted carrying its checkpoint.
+        for state in [running.clone(), publishing.clone()] {
+            assert_eq!(
+                converted_state(record(state, false, None, 0, 1)),
+                json!({ "Submitted": { "checkpoint": checkpoint() } })
+            );
+        }
+        // A submitted job with a delay waits in Backoff, attempted or never attempted.
         assert_eq!(
             converted_state(record(json!("Submitted"), false, None, 500, 1)),
             json!({ "Backoff": { "not_before_ms": 500, "checkpoint": null } })
         );
         assert_eq!(
             converted_state(record(json!("Submitted"), false, None, 500, 0)),
-            json!("Submitted")
+            json!({ "Backoff": { "not_before_ms": 500, "checkpoint": null } })
         );
         assert_eq!(
             converted_state(record(json!("Submitted"), false, None, 0, 2)),
-            json!("Submitted")
+            json!({ "Submitted": { "checkpoint": null } })
         );
         // Terminal states keep their payload.
         for state in [
@@ -283,12 +282,6 @@ mod tests {
     #[test]
     fn unmappable_record_fails_the_upgrade() {
         let expected = "JOBS_RECORD_UNMAPPABLE: job-0000000000000001";
-        let running = json!({ "Running": { "checkpoint": checkpoint() } });
-        // Running without a lease and without a cancel request has no owner to carry.
-        assert_eq!(
-            convert_job_record(&record(running, false, None, 0, 1)).unwrap_err(),
-            expected
-        );
         // A state outside the old shape.
         for state in [
             json!("Running"),
@@ -313,7 +306,7 @@ mod tests {
             let mut table = write.open_table(ANALYTICS_JOBS_BEFORE_JOB_MACHINE).unwrap();
             let good = rmp_serde::to_vec_named(&record(json!("Submitted"), false, None, 0, 0)).unwrap();
             table.insert("job-0000000000000001", good.as_slice()).unwrap();
-            let mut bad = record(json!({ "Running": { "checkpoint": checkpoint() } }), false, None, 0, 1);
+            let mut bad = record(json!({ "Running": { "checkpoint": "not a checkpoint" } }), false, None, 0, 1);
             bad["job_id"] = json!("job-0000000000000002");
             let bad = rmp_serde::to_vec_named(&bad).unwrap();
             table.insert("job-0000000000000002", bad.as_slice()).unwrap();
