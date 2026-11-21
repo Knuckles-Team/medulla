@@ -1,0 +1,16 @@
+{
+  "schema_version": "1.0",
+  "task": "lossless-prompt",
+  "type": "prompt",
+  "source": "blueprint-fixture",
+  "instructions": {
+    "core_directive": "Résumé the ticket — 日本語 🚀 included.",
+    "steps": [["collect", {"limit": 3}], ["summarise", null]]
+  },
+  "extensions": {
+    "nothing": null,
+    "nested": {"list": [1, 2.50, {"deep": [true, false, null]}]},
+    "exact_number": 9007199254740993,
+    "decimal": 0.1000000000000000055511151231257827
+  }
+}

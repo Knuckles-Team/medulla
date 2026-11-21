@@ -49,3 +49,36 @@ pub struct AgentComponentContentResult {
     #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
     pub body: Vec<u8>,
 }
+
+/// Format identity (RF-ADR-006) of [`BlueprintExport`].
+pub const BLUEPRINT_EXPORT_SCHEMA_VERSION: u16 = 1;
+
+/// Export one pinned component revision as a native blueprint
+/// (MEDULLA-TYPED-PACKS-R094.2). The revision is required, so every export is
+/// pinned.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AgentComponentBlueprintExportRequest {
+    pub tenant_id: String,
+    pub component_id: String,
+    pub entry_revision: u64,
+}
+
+/// One pinned revision: its complete admitted record and its verified body
+/// bytes. The body is never parsed, so nested values, nulls, arrays and exact
+/// numbers survive without any conversion.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct BlueprintExport {
+    pub schema_version: u16,
+    pub entry: super::AgentComponentEntry,
+    pub media_type: String,
+    /// `sha256:<hex>`, verified by the engine against `body` before the reply.
+    pub content_digest: String,
+    /// At most [`MAX_COMPONENT_BODY_BYTES`].
+    #[serde(with = "serde_bytes")]
+    #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
+    pub body: Vec<u8>,
+}

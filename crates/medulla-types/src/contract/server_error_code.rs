@@ -119,6 +119,8 @@ closed_error_codes! {
         DiscoveryContractWriteFailed => "DISCOVERY_CONTRACT_WRITE_FAILED",
         DiscoveryUnreachable => "DISCOVERY_UNREACHABLE",
         NutrientIdUnmapped => "NUTRIENT_ID_UNMAPPED",
+        /// The tenant has no such revision of the component (MEDULLA-TYPED-PACKS-R094.2).
+        ComponentRevisionUnknown => "COMPONENT_REVISION_UNKNOWN",
         ComponentBodyUnavailable => "COMPONENT_BODY_UNAVAILABLE",
         ComponentWithdrawn => "COMPONENT_WITHDRAWN",
         MemsyncContentMalformed => "MEMSYNC_CONTENT_MALFORMED",

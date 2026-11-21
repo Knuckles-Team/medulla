@@ -8,6 +8,7 @@ use crate::storage_wire::{
     RestoreReceipt, SqliteExportReport, SqliteImportReport,
 };
 use medulla_agent_types::agent_component::AgentComponentCommittedResult;
+use medulla_agent_types::agent_component::BlueprintExport;
 use medulla_agent_types::agent_component::AgentComponentContentResult;
 use medulla_agent_types::agent_component::AgentComponentEntry;
 use medulla_agent_types::agent_component::AgentComponentSearchPage;
@@ -107,6 +108,7 @@ method_results! {
     #[cfg(feature = "query")]
     SqlSourceBatch(SqlSourceBatch) => Raw<SqlSourceBatchResult>;
     AgentComponentContent(AgentComponent / "content") => Raw<AgentComponentContentResult>;
+    AgentComponentBlueprintExport(AgentComponent / "export_blueprint") => Raw<BlueprintExport>;
     AgentComponentAdmitSkillUpgrade(AgentComponent / "admit_skill_upgrade") => Raw<SkillAdmission>;
     AgentAssemble(AgentAssemble) => Raw<AssemblyResult>;
     CapabilityCoverage(CapabilityCoverage) => Raw<CapabilityCoverageResult>;

@@ -85,6 +85,24 @@ class AgentComponentContentResult(BaseModel):
     schema_version: Annotated[int, Field(ge=0, le=65535)]
 
 
+class AgentComponentBlueprintExportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    component_id: str
+    entry_revision: Annotated[int, Field(ge=0)]
+    tenant_id: str
+
+
+class BlueprintExport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    body: _EgOctets
+    content_digest: str
+    entry: AgentComponentEntry
+    media_type: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+
+
 class AgentComponentDraft(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -215,6 +233,13 @@ class AgentComponentOpAdmitSkillUpgrade(BaseModel):
     request: SkillAdmissionRequest
 
 
+class AgentComponentOpExportBlueprint(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["export_blueprint"]
+    request: AgentComponentBlueprintExportRequest
+
+
 AgentComponentOp = Annotated[
     AgentComponentOpPublish
     | AgentComponentOpRetire
@@ -223,7 +248,8 @@ AgentComponentOp = Annotated[
     | AgentComponentOpStatus
     | AgentComponentOpSearch
     | AgentComponentOpContent
-    | AgentComponentOpAdmitSkillUpgrade,
+    | AgentComponentOpAdmitSkillUpgrade
+    | AgentComponentOpExportBlueprint,
     Field(discriminator="op"),
 ]
 
@@ -276,6 +302,10 @@ AgentComponentContentRequest.model_rebuild()
 
 AgentComponentContentResult.model_rebuild()
 
+AgentComponentBlueprintExportRequest.model_rebuild()
+
+BlueprintExport.model_rebuild()
+
 AgentComponentDraft.model_rebuild()
 
 AgentComponentOpPublish.model_rebuild()
@@ -293,6 +323,8 @@ AgentComponentOpSearch.model_rebuild()
 AgentComponentOpContent.model_rebuild()
 
 AgentComponentOpAdmitSkillUpgrade.model_rebuild()
+
+AgentComponentOpExportBlueprint.model_rebuild()
 
 SkillContractFieldWire.model_rebuild()
 
@@ -314,6 +346,9 @@ AgentComponentStatusRequest.model_rebuild()
 
 
 __all__ = [
+    "AgentComponentBlueprintExportRequest",
+    "AgentComponentOpExportBlueprint",
+    "BlueprintExport",
     "AgentComponentContentRequest",
     "AgentComponentContentResult",
     "AgentComponentDraft",

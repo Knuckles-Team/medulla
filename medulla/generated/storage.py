@@ -20,6 +20,7 @@ from ._runtime import (
     models,
 )
 from .agent_component import (
+    AgentComponentBlueprintExportRequest,
     AgentComponentContentRequest,
     AgentComponentContentResult,
     AgentComponentEntry,
@@ -27,6 +28,7 @@ from .agent_component import (
     AgentComponentOpCurrent,
     AgentComponentSearchPage,
     AgentComponentSearchRequest,
+    BlueprintExport,
     SkillAdmission,
     SkillAdmissionRequest,
 )
@@ -568,6 +570,32 @@ async def send_agent_component_content(
         idempotency_key=idempotency_key,
     )
     return AgentComponentContentResult.model_validate(payload)
+
+
+async def send_agent_component_export_blueprint(
+    client: Any,
+    request: AgentComponentBlueprintExportRequest,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> BlueprintExport:
+    """Send typed AgentComponent.export_blueprint."""
+    request = AgentComponentBlueprintExportRequest.model_validate(request)
+    params = {
+        "op": {
+            "op": "export_blueprint",
+            "request": request.model_dump(
+                mode="json", exclude_unset=True, exclude_none=True
+            ),
+        },
+    }
+    payload = await client._send(
+        "AgentComponent",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return BlueprintExport.model_validate(payload)
 
 
 async def send_agent_component_current(

@@ -66,14 +66,14 @@ mod withdrawal;
 
 const SECRET: &str = "connector-pack-served-fixture-secret"; // sanitizer:ignore
 /// The fixed tenant `auth::request_context_policy` expects under `cfg(test)`.
-pub(super) const TENANT: &str = "tenant-shared";
+pub(in crate::admin) const TENANT: &str = "tenant-shared";
 /// The System-role agent the harness isolation registers.
-pub(super) const ADMIN: &str = "pack-served-admin";
+pub(in crate::admin) const ADMIN: &str = "pack-served-admin";
 
 /// One served engine over a private persist directory.
-pub(super) struct Served {
+pub(in crate::admin) struct Served {
     dir: tempfile::TempDir,
-    pub(super) state: Arc<RwLock<ServerState>>,
+    pub(in crate::admin) state: Arc<RwLock<ServerState>>,
 }
 
 /// Request ids and envelope nonces, unique across the whole test process: the
@@ -85,7 +85,7 @@ fn next_id() -> u64 {
 }
 
 impl Served {
-    pub(super) fn new() -> Self {
+    pub(in crate::admin) fn new() -> Self {
         let dir = tempfile::tempdir().unwrap();
         let mut state = medulla_server::seams_install::new_state_for_test(
             SECRET,
@@ -107,7 +107,7 @@ impl Served {
     /// with schema projects into a `pack__` graph, and graph creation
     /// requires durable persistence. The returned guard holds the ambient
     /// encryption environment still while the backend is open.
-    pub(super) async fn with_graph_persistence(&self) -> medulla_kernel::crypto::TestEnvReadGuard {
+    pub(in crate::admin) async fn with_graph_persistence(&self) -> medulla_kernel::crypto::TestEnvReadGuard {
         let guard = medulla_kernel::crypto::acquire_test_env_read_lock().await;
         let root = self.dir.path().join("graphs");
         std::fs::create_dir_all(&root).unwrap();
@@ -121,7 +121,7 @@ impl Served {
     }
 
     /// Send `method` signed as `principal` with `scopes`, under `key`.
-    pub(super) async fn call_as(
+    pub(in crate::admin) async fn call_as(
         &self,
         principal: &str,
         scopes: &[&str],
@@ -159,22 +159,22 @@ impl Served {
     }
 
     /// Send `method` as the admin against the named request `graph`.
-    pub(super) async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
+    pub(in crate::admin) async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
         self.call_as_on(graph, ADMIN, &["*"], key, method).await
     }
 
     /// Send `method` as the System-role admin with every scope.
-    pub(super) async fn call(&self, key: &str, method: Method) -> Response {
+    pub(in crate::admin) async fn call(&self, key: &str, method: Method) -> Response {
         self.call_as(ADMIN, &["*"], key, method).await
     }
 
-    pub(super) async fn pack(&self, key: &str, op: ConnectorPackOp) -> Response {
+    pub(in crate::admin) async fn pack(&self, key: &str, op: ConnectorPackOp) -> Response {
         self.call(key, Method::ConnectorPack { op: Box::new(op) })
             .await
     }
 
     /// Upload `archive` through the Blob CAS and return its blob digest.
-    pub(super) async fn upload(&self, archive: &[u8]) -> String {
+    pub(in crate::admin) async fn upload(&self, archive: &[u8]) -> String {
         // One identity per upload: re-uploading the same bytes is a new cursor.
         let tag = format!("{}:{}", hex::encode(Sha256::digest(archive)), next_id());
         let cursor: u64 = ok(
@@ -211,7 +211,7 @@ impl Served {
 }
 
 /// The principal persistence id a verified `principal` is compared under.
-pub(super) fn persistence_id(principal: &str) -> String {
+pub(in crate::admin) fn persistence_id(principal: &str) -> String {
     format!(
         "principal:sha256:{}",
         hex::encode(Sha256::digest(principal.as_bytes()))
@@ -219,7 +219,7 @@ pub(super) fn persistence_id(principal: &str) -> String {
 }
 
 /// Decode a successful typed result.
-pub(super) fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
+pub(in crate::admin) fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
     assert!(
         response.error.is_none(),
         "{label} was refused: {response:?}"
@@ -240,14 +240,14 @@ pub(super) fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
 }
 
 /// The refusal a request must produce.
-pub(super) fn refused(label: &str, response: Response) -> String {
+pub(in crate::admin) fn refused(label: &str, response: Response) -> String {
     response
         .error
         .unwrap_or_else(|| panic!("{label} was accepted but must be refused"))
 }
 
 /// A request-body context shell; the engine re-binds every field of it.
-pub(super) fn context(
+pub(in crate::admin) fn context(
     key: &str,
 ) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
     medulla_agent_types::agent_library::AgentLibraryMutationContext {
@@ -270,19 +270,19 @@ pub(super) fn context(
 
 /// One entry's content, before archive layout.
 #[derive(Clone)]
-pub(super) struct Content {
-    pub(super) kind: PackEntryKind,
-    pub(super) uri: String,
-    pub(super) name: String,
-    pub(super) media_type: &'static str,
-    pub(super) body: Vec<u8>,
-    pub(super) input_schema: Option<Vec<u8>>,
-    pub(super) annotations: PackAnnotations,
-    pub(super) references: Vec<PackRef>,
+pub(in crate::admin) struct Content {
+    pub(in crate::admin) kind: PackEntryKind,
+    pub(in crate::admin) uri: String,
+    pub(in crate::admin) name: String,
+    pub(in crate::admin) media_type: &'static str,
+    pub(in crate::admin) body: Vec<u8>,
+    pub(in crate::admin) input_schema: Option<Vec<u8>>,
+    pub(in crate::admin) annotations: PackAnnotations,
+    pub(in crate::admin) references: Vec<PackRef>,
 }
 
 /// A well-formed tool whose descriptor says `description`.
-pub(super) fn tool(connector: &str, name: &str, description: &str) -> Content {
+pub(in crate::admin) fn tool(connector: &str, name: &str, description: &str) -> Content {
     Content {
         kind: PackEntryKind::Tool,
         uri: format!("tool://{connector}/{name}"),
@@ -299,7 +299,7 @@ pub(super) fn tool(connector: &str, name: &str, description: &str) -> Content {
 }
 
 /// A well-formed skill using `tools`.
-pub(super) fn skill(connector: &str, name: &str, tools: &[&Content]) -> Content {
+pub(in crate::admin) fn skill(connector: &str, name: &str, tools: &[&Content]) -> Content {
     let _ = connector;
     Content {
         kind: PackEntryKind::Skill,
@@ -320,7 +320,7 @@ pub(super) fn skill(connector: &str, name: &str, tools: &[&Content]) -> Content 
     }
 }
 
-pub(super) fn server(connector: &str) -> Content {
+pub(in crate::admin) fn server(connector: &str) -> Content {
     Content {
         kind: PackEntryKind::McpServer,
         uri: format!("mcp-server://{connector}"),
@@ -367,12 +367,12 @@ fn lay_out(archive: &mut Vec<u8>, content: &Content) -> PackEntry {
 
 /// A complete, digest-honest pack: its index (archive blob digest still to be
 /// filled by the upload) and its archive bytes.
-pub(super) fn build_pack(connector: &str, entries: &[Content]) -> (ConnectorPackIndex, Vec<u8>) {
+pub(in crate::admin) fn build_pack(connector: &str, entries: &[Content]) -> (ConnectorPackIndex, Vec<u8>) {
     build_pack_with_server(connector, &server(connector), entries)
 }
 
 /// Use the same archive and digest layout for a changed server contract.
-pub(super) fn build_pack_with_server(
+pub(in crate::admin) fn build_pack_with_server(
     connector: &str,
     server_content: &Content,
     entries: &[Content],
@@ -414,7 +414,7 @@ pub(super) fn build_pack_with_server(
 }
 
 /// Bind `connector` to `principal`'s persistence id.
-pub(super) async fn bind(served: &Served, connector: &str, principal: &str) {
+pub(in crate::admin) async fn bind(served: &Served, connector: &str, principal: &str) {
     let key = format!("bind:{connector}:{principal}");
     let _: serde_json::Value = ok(
         "Bind",
@@ -434,7 +434,7 @@ pub(super) async fn bind(served: &Served, connector: &str, principal: &str) {
 }
 
 /// Upload and import one pack as the admin, over `expected_head`.
-pub(super) async fn import(
+pub(in crate::admin) async fn import(
     served: &Served,
     pack: &(ConnectorPackIndex, Vec<u8>),
     expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
@@ -446,7 +446,7 @@ pub(super) async fn import(
 
 /// Approve one held source declaration through the served ConnectorPack op.
 #[cfg(all(feature = "owl", feature = "shacl"))]
-pub(super) async fn approve_source(
+pub(in crate::admin) async fn approve_source(
     served: &Served,
     connector: &str,
     contract_iri: &str,
@@ -477,7 +477,7 @@ pub(super) async fn approve_source(
 }
 
 /// Import an already uploaded pack as the admin, over `expected_head`.
-pub(super) async fn import_uploaded(
+pub(in crate::admin) async fn import_uploaded(
     served: &Served,
     index: ConnectorPackIndex,
     expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
@@ -487,7 +487,7 @@ pub(super) async fn import_uploaded(
 
 /// Import an already uploaded pack as the admin, with the mass-withdrawal
 /// approval set as given.
-pub(super) async fn import_uploaded_with(
+pub(in crate::admin) async fn import_uploaded_with(
     served: &Served,
     index: ConnectorPackIndex,
     expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
@@ -519,7 +519,7 @@ pub(super) async fn import_uploaded_with(
 }
 
 /// Import and require a landed receipt.
-pub(super) async fn imported(
+pub(in crate::admin) async fn imported(
     served: &Served,
     pack: &(ConnectorPackIndex, Vec<u8>),
     expected_head: Option<medulla_catalog_types::connector_pack::PackHeadRef>,
@@ -531,7 +531,7 @@ pub(super) async fn imported(
 }
 
 /// The head a receipt names, for the next compare-and-set import.
-pub(super) fn head_of(
+pub(in crate::admin) fn head_of(
     receipt: &medulla_catalog_types::connector_pack::PackImportReceipt,
 ) -> medulla_catalog_types::connector_pack::PackHeadRef {
     medulla_catalog_types::connector_pack::PackHeadRef {
@@ -567,7 +567,7 @@ async fn a_cancelled_waiter_leaves_the_pack_lock_queue() {
 /// rows and their pins untouched. A fresh served import supplies the canonical
 /// server draft; the existing owner commit writes its revision, body holder,
 /// membership and receipt atomically. No raw tables or hash stand-ins are used.
-pub(super) async fn seed_server_only_import(
+pub(in crate::admin) async fn seed_server_only_import(
     served: &Served,
     pack: &(ConnectorPackIndex, Vec<u8>),
     previous: &medulla_catalog_types::connector_pack::PackImportReceipt,

@@ -130,6 +130,12 @@ pub async fn handle_agent_component(
             )
             .await
         }
+        AgentComponentOp::ExportBlueprint { request } => {
+            super::component_content::serve_blueprint_export(
+                state, &store, req_id, verified, request,
+            )
+            .await
+        }
         AgentComponentOp::AdmitSkillUpgrade { request } => {
             super::skill_admission::handle_admit_skill_upgrade(&store, req_id, request)
         }

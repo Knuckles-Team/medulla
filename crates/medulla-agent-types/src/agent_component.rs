@@ -59,6 +59,7 @@ pub mod skill_admission;
 mod validation;
 
 pub use content::{
+    AgentComponentBlueprintExportRequest, BlueprintExport, BLUEPRINT_EXPORT_SCHEMA_VERSION,
     AgentComponentContentRequest, AgentComponentContentResult, COMPONENT_CONTENT_SCHEMA_VERSION,
     COMPONENT_MEDIA_TYPE_ATTRIBUTE, DEFAULT_COMPONENT_MEDIA_TYPE, MAX_COMPONENT_BODY_BYTES,
 };
@@ -1365,6 +1366,10 @@ pub enum AgentComponentOp {
     /// Admit one skill upgrade against the contracts its consumers declared, or re-check a
     /// held admission (MEDULLA-TYPED-PACKS-R100.101).
     AdmitSkillUpgrade { request: SkillAdmissionRequest },
+    /// Export one pinned revision as a native blueprint (MEDULLA-TYPED-PACKS-R094.2).
+    ExportBlueprint {
+        request: AgentComponentBlueprintExportRequest,
+    },
 }
 
 impl AgentComponentOp {
@@ -1388,7 +1393,8 @@ impl AgentComponentOp {
             | Self::History { .. }
             | Self::Status { .. }
             | Self::Search { .. }
-            | Self::Content { .. } => "agent:component-read",
+            | Self::Content { .. }
+            | Self::ExportBlueprint { .. } => "agent:component-read",
         }
     }
 
@@ -1413,6 +1419,17 @@ impl AgentComponentOp {
             Self::Content { request } => {
                 validate_text("tenant_id", &request.tenant_id)?;
                 validate_text("component_id", &request.component_id)
+            }
+            Self::ExportBlueprint { request } => {
+                validate_text("tenant_id", &request.tenant_id)?;
+                validate_text("component_id", &request.component_id)?;
+                if request.entry_revision == 0 {
+                    return Err(
+                        "INVALID_ARGUMENT: a blueprint export is pinned to a revision of at least 1"
+                            .to_string(),
+                    );
+                }
+                Ok(())
             }
             Self::Current {
                 tenant_id,
@@ -1443,6 +1460,7 @@ fn component_op_tenant_id(op: &AgentComponentOp) -> &str {
         AgentComponentOp::Status { request } => &request.context.tenant_id,
         AgentComponentOp::Search { request } => &request.tenant_id,
         AgentComponentOp::Content { request } => &request.tenant_id,
+        AgentComponentOp::ExportBlueprint { request } => &request.tenant_id,
         AgentComponentOp::AdmitSkillUpgrade { request } => &request.tenant_id,
         AgentComponentOp::Current { tenant_id, .. }
         | AgentComponentOp::History { tenant_id, .. } => tenant_id,

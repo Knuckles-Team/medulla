@@ -162,6 +162,9 @@ pub struct ResolvedConnectorRelationshipMapping {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConnectorPackContentPointer {
+    /// The complete admitted record at the pinned revision, read in the same
+    /// snapshot as the body holder (MEDULLA-TYPED-PACKS-R094.2).
+    pub entry: medulla_agent_types::agent_component::AgentComponentEntry,
     pub component_id: String,
     pub entry_revision: u64,
     pub definition_digest: String,
@@ -371,7 +374,10 @@ impl AgentLibraryStore {
         let entry = revisions
             .get((tenant_id, component_id, revision))
             .map_err(|error| error.to_string())?
-            .ok_or_else(|| "agent component revision does not exist".to_string())?;
+.ok_or_else(|| {
+                "COMPONENT_REVISION_UNKNOWN: the tenant has no such revision of the component"
+                    .to_string()
+            })?;
         let entry: medulla_agent_types::agent_component::AgentComponentEntry =
             undecodable::decode_stored(entry.value(), "agent component revision")?;
         let body_hex = entry
@@ -400,13 +406,14 @@ impl AgentLibraryStore {
                 medulla_agent_types::agent_component::DEFAULT_COMPONENT_MEDIA_TYPE.to_string()
             });
         Ok(ConnectorPackContentPointer {
-            component_id: entry.component_id,
+            component_id: entry.component_id.clone(),
             entry_revision: entry.entry_revision,
-            definition_digest: entry.definition_digest,
+            definition_digest: entry.definition_digest.clone(),
             body_sha256,
             engine_manifest_digest: holder.engine_manifest_digest,
             length: holder.length,
             media_type,
+            entry,
         })
     }
 

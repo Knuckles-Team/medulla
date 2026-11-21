@@ -40,7 +40,7 @@ mod self_served_catalog;
 #[cfg(feature = "rdf")]
 mod surface_vocab;
 #[cfg(all(test, feature = "redb", feature = "blob"))]
-mod tests;
+pub(in crate::admin) mod tests;
 
 /// Route one connector-pack operation to the handler that owns it.
 pub async fn handle_connector_pack(
