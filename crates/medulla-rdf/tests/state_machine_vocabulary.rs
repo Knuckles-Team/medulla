@@ -1296,12 +1296,12 @@ fn gap_topic_machine_classes_extend_core() {
 
 // spec: MEDULLA-FEDERATED-QUERY-R738.8
 #[test]
-fn task_machine_matches_edge_table() {
-    sm::assert_matches(&medulla_types::task_machine::GEO_TASK_MACHINE);
+fn geo_task_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_types::geo_task_machine::GEO_TASK_MACHINE);
 }
 // spec: MEDULLA-FEDERATED-QUERY-R738.8
 #[test]
-fn task_machine_classes_extend_core() {
+fn geo_task_machine_classes_extend_core() {
     sm::assert_extends_core("GeoTask");
 }
 

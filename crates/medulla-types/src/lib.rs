@@ -116,4 +116,4 @@ pub mod contradiction_machine;
 // MEDULLA-FEDERATED-QUERY-R738.7 — the status of a failure-pattern gap topic as an explicit state machine.
 pub mod gap_topic_machine;
 // MEDULLA-FEDERATED-QUERY-R738.8 — the lifecycle status of a geolocated task as an explicit state machine.
-pub mod task_machine;
+pub mod geo_task_machine;

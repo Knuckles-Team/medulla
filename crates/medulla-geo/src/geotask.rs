@@ -22,7 +22,7 @@
 //! pure spatial accelerator a caller rebuilds (or persists, via the STR R-tree's serde) as
 //! tasks change.
 
-use medulla_types::task_machine::{TaskEvent, TaskStatusKind};
+use medulla_types::geo_task_machine::{TaskEvent, TaskStatusKind};
 use medulla_types::transition_refused::TransitionRefused;
 use serde::{Deserialize, Serialize};
 
