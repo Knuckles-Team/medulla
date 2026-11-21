@@ -116,3 +116,61 @@ async fn step_cycle_refuses_step_order_cycle() {
     let error = assemble(&h, asking(&[TASK])).await.expect_err("refuses");
     assert!(error.starts_with("STEP_ORDER_CYCLE: "), "{error}");
 }
+
+// spec: MEDULLA-ORCH-VOCAB-R007.4
+/// Verifies MEDULLA-ORCH-VOCAB-R007.4: a slot that requires an agent kind excludes an
+/// executor-only candidate, accepts a verifier, and refuses `NO_CANDIDATE_OF_KIND` when no
+/// visible candidate carries the kind.
+#[tokio::test]
+async fn assemble_enforces_slot_agent_kind() {
+    use super::super::candidates::{filter_by_slot_kind, library_candidates, NO_CANDIDATE_OF_KIND};
+    use super::assemble_tests::publish_with;
+    use medulla_agent_types::agent_component::{AgentComponentKind, A2A_AGENT_KIND_ATTRIBUTE};
+    use medulla_agent_types::agent_fixtures::topology::slot;
+    use medulla_agent_types::agent_topology::SlotRole;
+
+    let verifier = format!("{CORE}agentKindVerifier");
+    let executor = format!("{CORE}agentKindExecutor");
+    let h = harness().await;
+    let store = &h.store;
+    for (nonce, id, kind) in [(1u8, "agent-exec", &executor), (2, "agent-ver", &verifier)] {
+        publish_with(
+            store,
+            nonce,
+            (id, AgentComponentKind::Tool),
+            None,
+            |draft| {
+                draft
+                    .attributes
+                    .insert(A2A_AGENT_KIND_ATTRIBUTE.to_string(), kind.clone());
+            },
+        );
+    }
+    publish_with(
+        store,
+        3,
+        ("agent-plain", AgentComponentKind::Tool),
+        None,
+        |_| {},
+    );
+    let read = library_candidates(store, super::assemble_tests::TENANT, &request(Vec::new()).candidates)
+        .expect("candidates read");
+    let mut verifier_slot = slot("check", SlotRole::Verifier, (1, 1), Some(100));
+    verifier_slot.required_agent_kind = Some(verifier.clone());
+    let kept = filter_by_slot_kind(&[verifier_slot.clone()], &read.entries, &read.views)
+        .expect("a verifier is visible");
+    assert_eq!(
+        kept.iter().map(|view| view.id.as_str()).collect::<Vec<_>>(),
+        vec!["agent-ver"]
+    );
+    // An unconstrained slot keeps current behaviour: every candidate stays.
+    let open = slot("work", SlotRole::Child, (1, 1), Some(100));
+    let all = filter_by_slot_kind(&[open], &read.entries, &read.views).expect("unconstrained");
+    assert_eq!(all.len(), read.views.len());
+    // No visible candidate of the kind abstains by name.
+    let mut missing = verifier_slot;
+    missing.required_agent_kind = Some(format!("{CORE}agentKindPlanner"));
+    let refusal = filter_by_slot_kind(&[missing], &read.entries, &read.views)
+        .expect_err("no planner is visible");
+    assert!(refusal.to_string().starts_with(NO_CANDIDATE_OF_KIND));
+}

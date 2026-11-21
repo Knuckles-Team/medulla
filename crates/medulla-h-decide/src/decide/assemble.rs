@@ -95,14 +95,33 @@ pub(super) async fn assemble_for(
         }
         None => (entries, None),
     };
-    let (candidates, templates) = telemetry::stage(Stage::Constraints, FAMILY, tenant, || {
-        let candidates = medulla_persistence_records::decision_record::candidate_facts(&entries)?;
-        let templates = request
+    let templates = telemetry::stage(Stage::Constraints, FAMILY, tenant, || {
+        request
             .templates
             .iter()
             .map(|reference| store.assembly_template(&request.tenant_id, reference))
-            .collect::<Result<Vec<_>, String>>()?;
-        Ok::<_, String>((candidates, templates))
+            .collect::<Result<Vec<_>, String>>()
+    })?;
+    // Slot agent kinds narrow the candidates before selection (MEDULLA-ORCH-VOCAB-R007.4); the
+    // slot source is the topology facts of the request's templates.
+    let (entries, candidates) = telemetry::stage(Stage::Constraints, FAMILY, tenant, || {
+        let slots: Vec<_> = templates
+            .iter()
+            .filter_map(|template| template.topology.as_ref())
+            .flat_map(|topology| topology.slots.as_slice().iter().cloned())
+            .collect();
+        let views: Vec<_> = entries
+            .iter()
+            .map(medulla_decision_stats::decision::candidate::CandidateView::from_component)
+            .collect();
+        let kept = super::candidates::filter_by_slot_kind(&slots, &entries, &views)
+            .map_err(|refusal| refusal.to_string())?;
+        let entries: Vec<_> = entries
+            .into_iter()
+            .filter(|entry| kept.iter().any(|view| view.id == entry.component_id))
+            .collect();
+        let candidates = medulla_persistence_records::decision_record::candidate_facts(&entries)?;
+        Ok::<_, String>((entries, candidates))
     })?;
     let required_media = request.requirements.required_input_media.clone();
     let coding_agent = request.coding_agent.clone();

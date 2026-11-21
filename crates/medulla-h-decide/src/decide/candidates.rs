@@ -173,6 +173,77 @@ fn view_of(entry: &AgentComponentEntry, derived: &DerivedClasses) -> CandidateVi
     view
 }
 
+/// The refusal code of a slot whose required agent kind no visible candidate carries.
+pub(super) const NO_CANDIDATE_OF_KIND: &str = "NO_CANDIDATE_OF_KIND";
+
+/// A slot-kind constraint no visible candidate satisfies (MEDULLA-ORCH-VOCAB-R007.4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(super) struct AssembleRefusal {
+    /// The template node of the unsatisfied slot.
+    pub node_id: String,
+    /// The `:AgentKind` IRI the slot requires.
+    pub required_agent_kind: String,
+}
+
+impl std::fmt::Display for AssembleRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{NO_CANDIDATE_OF_KIND}: slot '{}' requires agent kind '{}' and no visible candidate carries it",
+            self.node_id, self.required_agent_kind
+        )
+    }
+}
+
+/// Enforce slot agent-kind constraints before selection (MEDULLA-ORCH-VOCAB-R007.4).
+///
+/// A slot with `required_agent_kind` accepts only the candidates whose component carries that
+/// IRI in its `agent_kind` attribute (`A2A_AGENT_KIND_ATTRIBUTE`), compared exactly; a candidate
+/// without the attribute matches no constrained slot. A view survives when some slot accepts it:
+/// any unconstrained slot accepts every candidate, a constrained slot only its kind. A constrained
+/// slot no candidate satisfies refuses with [`NO_CANDIDATE_OF_KIND`]. `views[i]` is the view of
+/// `entries[i]`; with no constrained slot the views come back unchanged. Kinds are data: no
+/// term list is read here.
+pub(super) fn filter_by_slot_kind(
+    slots: &[medulla_agent_types::agent_topology::SlotTopology],
+    entries: &[AgentComponentEntry],
+    views: &[CandidateView],
+) -> Result<Vec<CandidateView>, AssembleRefusal> {
+    let kind_of = |entry: &AgentComponentEntry| {
+        entry
+            .attributes
+            .get(medulla_agent_types::agent_component::A2A_AGENT_KIND_ATTRIBUTE)
+            .map(String::as_str)
+    };
+    if slots.iter().all(|slot| slot.required_agent_kind.is_none()) {
+        return Ok(views.to_vec());
+    }
+    for slot in slots {
+        if let Some(required) = slot.required_agent_kind.as_deref() {
+            if !entries.iter().any(|entry| kind_of(entry) == Some(required)) {
+                return Err(AssembleRefusal {
+                    node_id: slot.node_id.clone(),
+                    required_agent_kind: required.to_string(),
+                });
+            }
+        }
+    }
+    let open_slot = slots.iter().any(|slot| slot.required_agent_kind.is_none());
+    Ok(entries
+        .iter()
+        .zip(views)
+        .filter(|(entry, _)| {
+            open_slot
+                || kind_of(entry).is_some_and(|kind| {
+                    slots
+                        .iter()
+                        .any(|slot| slot.required_agent_kind.as_deref() == Some(kind))
+                })
+        })
+        .map(|(_, view)| view.clone())
+        .collect())
+}
+
 /// Read library candidates for `tenant_id`.
 pub(super) fn library_candidates(
     store: &AgentLibraryStore,
