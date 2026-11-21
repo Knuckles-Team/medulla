@@ -65,6 +65,8 @@ pub fn observe_rf019_tenant_owner(
 }
 
 #[cfg(feature = "query")]
+use medulla_index_types::semantic_index::BuildableSelector;
+#[cfg(feature = "query")]
 use medulla_index_types::semantic_index::SemanticBinding;
 #[cfg(feature = "query")]
 use medulla_index_types::semantic_index::SemanticDigest;
@@ -421,6 +423,9 @@ pub struct SemanticIndexServerAdapter {
 #[cfg(feature = "query")]
 mod authority;
 
+#[cfg(feature = "query")]
+pub mod graph_source;
+
 /// Read-only SQL source capability used by semantic S1 coalescing.
 ///
 /// Every field is owned so a served read can move the whole operation to the
@@ -433,6 +438,8 @@ pub struct AuthorizedSqlSourceReadPort {
     persist_dir: PathBuf,
     authority: CarrierAuthority,
     cursor_auth_secret: [u8; 32],
+    /// The caller's visible nodes of a graph text-property source, when the binding is one.
+    graph: Option<Arc<graph_source::GraphSourceSnapshot>>,
 }
 
 /// The leased completion of one S1 SQL-source stage.
@@ -463,6 +470,7 @@ impl AuthorizedSqlSourceReadPort {
             persist_dir: persist_dir.into(),
             authority,
             cursor_auth_secret,
+            graph: None,
         }
     }
 
@@ -487,7 +495,7 @@ impl AuthorizedSqlSourceReadPort {
         binding: &SemanticBinding,
         cursor: Option<&[u8]>,
     ) -> Result<AuthorizedSqlSourcePage, SemanticIndexError> {
-        let selector = binding.source_selector.require_sql_column()?;
+        let buildable = binding.source_selector.require_buildable()?;
         if binding.tenant_id != self.authority.tenant_scope()
             || binding.actor_scope != self.authority.actor_scope()
             || binding.effective_actor_scope != self.authority.agent_id()
@@ -499,6 +507,12 @@ impl AuthorizedSqlSourceReadPort {
                 <[u8; 40]>::try_from(bytes).map_err(|_| SemanticIndexError::SourceManifestMismatch)
             })
             .transpose()?;
+        let selector = match buildable {
+            BuildableSelector::Sql(selector) => selector,
+            BuildableSelector::Graph(selector) => {
+                return self.read_graph_snapshot(binding, selector, cursor);
+            }
+        };
         let table = open_authorized_table(
             &self.authority,
             &self.persist_dir,

@@ -57,8 +57,34 @@ pub(super) async fn handle_bookmark_search(
             medulla_h_retrieve::bookmark::BOOKMARK_INDEX_BINDING_ID,
         )
         .map_err(|_| "ENGINE_UNAVAILABLE: semantic index storage is unavailable".to_string())?;
+        // The index is built from one graph text property; its hits name source entities, which
+        // map back to the nodes of that type deterministically.
+        let selector = medulla_h_retrieve::bookmark::bookmark_graph_selector(&service)?;
+        if selector.graph_id != graph {
+            return Err(medulla_h_retrieve::bookmark::refusal(
+                medulla_types::bookmark_query::BOOKMARK_INDEX_STALE,
+                "the bookmark index is built from another graph",
+            ));
+        }
         // One version for every read of the call.
         let graph_snapshot_revision = core.version();
+        let mut node_ids = Vec::new();
+        let mut after: Option<String> = None;
+        loop {
+            let page = core.get_nodes_by_label_page(&selector.type_id, after.as_deref(), 1024);
+            let full = page.len() == 1024;
+            after = page.last().map(|(id, _)| id.clone());
+            node_ids.extend(page.into_iter().map(|(id, _)| id));
+            if !full {
+                break;
+            }
+        }
+        let entities = medulla_h_retrieve::bookmark::entity_node_map(
+            &selector,
+            authority.tenant_scope(),
+            node_ids,
+        );
+        let node_of_entity = |entity: &str| entities.get(entity).cloned();
         let visible = |id: &str| {
             core.get_node_properties(id)
                 .is_some_and(|blob| read.can_see_node(&blob, core.is_schema_node(id)))
@@ -77,6 +103,7 @@ pub(super) async fn handle_bookmark_search(
             graph_snapshot_revision,
             authorization_revision,
             tenant: authority.tenant_scope(),
+            node_of_entity: &node_of_entity,
             visible: &visible,
             properties: &properties,
         };

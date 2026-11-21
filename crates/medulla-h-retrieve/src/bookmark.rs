@@ -32,8 +32,50 @@ pub struct BookmarkReadView<'a> {
     pub authorization_revision: u64,
     /// The verified tenant scope the cursor is bound to.
     pub tenant: &'a str,
+    /// The node id a hit's source entity id names. The index is graph sourced, so its members
+    /// are `semantic-graph-source:<digest>` entity ids, deterministic from the node id; the
+    /// router computes this map over the caller's `Bookmark` nodes.
+    pub node_of_entity: &'a dyn Fn(&str) -> Option<String>,
     pub visible: &'a dyn Fn(&str) -> bool,
     pub properties: &'a dyn Fn(&str) -> Option<BTreeMap<String, String>>,
+}
+
+/// The graph text property the tenant's `bookmark` index is built from. An index with no
+/// binding, or one bound to anything but a graph property, is `BOOKMARK_INDEX_STALE`.
+pub fn bookmark_graph_selector(
+    service: &SemanticIndexService,
+) -> Result<crate::semantic_index_runtime::graph_source::GraphTextPropertyRef, String> {
+    use medulla_index_types::semantic_index::SemanticSourceSelector;
+    let stale = |reason: &str| refusal(BOOKMARK_INDEX_STALE, reason);
+    let binding = service
+        .binding()
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| stale("the bookmark index has no binding"))?;
+    match binding.source_selector {
+        SemanticSourceSelector::GraphTextPropertyRef(selector) => Ok(selector),
+        _ => Err(stale("the bookmark index is not built from a graph property")),
+    }
+}
+
+/// The entity-id to node-id map of the given node ids, the `node_of_entity` of a view.
+pub fn entity_node_map(
+    selector: &crate::semantic_index_runtime::graph_source::GraphTextPropertyRef,
+    tenant_scope: &str,
+    node_ids: impl IntoIterator<Item = String>,
+) -> BTreeMap<String, String> {
+    node_ids
+        .into_iter()
+        .map(|node_id| {
+            (
+                crate::semantic_index_runtime::graph_source::graph_source_entity_id(
+                    selector,
+                    tenant_scope,
+                    &node_id,
+                ),
+                node_id,
+            )
+        })
+        .collect()
 }
 
 pub fn refusal(code: medulla_types::refusal_code::RefusalCode, reason: &str) -> String {
@@ -188,7 +230,10 @@ pub fn search(
     let sources: BTreeSet<&str> = request.source_ids.iter().map(String::as_str).collect();
     // Visibility filters before anything is counted.
     let mut visible: Vec<(String, f32, BTreeMap<String, String>)> = Vec::new();
-    for (id, distance) in probe.hits {
+    for (entity, distance) in probe.hits {
+        let Some(id) = (view.node_of_entity)(&entity) else {
+            continue;
+        };
         if !(view.visible)(&id) {
             continue;
         }

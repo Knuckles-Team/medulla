@@ -432,6 +432,10 @@ pub async fn dispatch_agent_library_methods(
                         state,
                         req.id,
                         verified_context,
+                        &super::graph_source::RouterGraphSource {
+                            state,
+                            verified: verified_context,
+                        },
                         op,
                     )
                     .await

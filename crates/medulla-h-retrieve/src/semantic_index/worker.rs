@@ -256,7 +256,7 @@ async fn complete_sql_source_stage(
     match adapter
         .complete_sql_source_stage(
             ctx.req_id,
-            read_port(ctx.persist_dir, ctx.authority),
+            read_port(ctx),
             binding,
             SqlSourceStageCompletion {
                 lease,
@@ -351,7 +351,7 @@ async fn claim_sql_source(
     let claim = adapter
         .claim_sql_source(
             ctx.req_id,
-            read_port(ctx.persist_dir, ctx.authority),
+            read_port(ctx),
             binding.clone(),
             intent,
             page_cursor,

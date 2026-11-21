@@ -31,7 +31,7 @@ async fn admit_record(
     ctx: &SemanticIndexContext<'_>,
     record: medulla_mutation_types::mutation_scope::MutationOutboxRecord,
 ) -> Response {
-    let port = read_port(ctx.persist_dir, ctx.authority);
+    let port = read_port(ctx);
     let service = Arc::clone(&ctx.service);
     let now_ms = ctx.now_ms;
     reply::<ingestion_results::SemanticIndexAdmitSourceRecord, _>(
@@ -53,7 +53,7 @@ async fn admit_page(
         Ok(cursor) => cursor,
         Err(error) => return Response::err(ctx.req_id, error),
     };
-    let port = read_port(ctx.persist_dir, ctx.authority);
+    let port = read_port(ctx);
     let service = Arc::clone(&ctx.service);
     let now_ms = ctx.now_ms;
     reply::<ingestion_results::SemanticIndexAdmitSourcePage, _>(
@@ -70,7 +70,7 @@ async fn admit_reconcile(
     ctx: &SemanticIndexContext<'_>,
     record: medulla_mutation_types::mutation_scope::MutationOutboxRecord,
 ) -> Response {
-    let port = read_port(ctx.persist_dir, ctx.authority);
+    let port = read_port(ctx);
     let service = Arc::clone(&ctx.service);
     let now_ms = ctx.now_ms;
     reply::<ingestion_results::SemanticIndexAdmitSourceReconcile, _>(

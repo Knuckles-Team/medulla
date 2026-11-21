@@ -37,10 +37,11 @@ use medulla_ann_codes::semantic_ann_codes::SemanticCodeError;
 use medulla_ann_codes::semantic_index_service::SemanticIndexService;
 use medulla_index_types::{
     semantic_index::SemanticBinding, semantic_index::SemanticIndexError,
-    semantic_index::SemanticIndexOp,
+    semantic_index::SemanticIndexOp, semantic_index::SemanticSourceSelector,
 };
 use tokio::sync::RwLock;
 
+use crate::semantic_index_runtime::graph_source::{GraphSourceProvider, GraphSourceSnapshot};
 use crate::semantic_index_runtime::open_semantic_service;
 use crate::semantic_index_runtime::semantic_cursor_secret;
 use crate::semantic_index_runtime::semantic_failure_message;
@@ -60,6 +61,9 @@ pub(super) struct SemanticIndexContext<'a> {
     /// (MEDULLA-FEDERATED-QUERY-R081.101.2).
     #[cfg(feature = "query")]
     pub(super) doc_state: Option<Arc<medulla_persistence::doc_state_store::DocumentStateStore>>,
+    /// The caller's visible nodes of the binding's graph text property, read once for a source
+    /// operation over a graph-sourced binding (MEDULLA-MEDIA-VOCAB-R001.102.2).
+    pub(super) graph_source: Option<Arc<GraphSourceSnapshot>>,
 }
 
 /// Route one semantic-index operation.
@@ -67,6 +71,7 @@ pub async fn handle_semantic_index(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    graph_sources: &dyn GraphSourceProvider,
     op: Box<SemanticIndexOp>,
 ) -> Response {
     let op = *op;
@@ -88,6 +93,10 @@ pub async fn handle_semantic_index(
     } else {
         None
     };
+    let graph_source = match graph_source_for(req_id, &service, &op, graph_sources).await {
+        Ok(snapshot) => snapshot,
+        Err(response) => return response,
+    };
     let context = SemanticIndexContext {
         req_id,
         authority: &authority,
@@ -96,8 +105,40 @@ pub async fn handle_semantic_index(
         now_ms,
         #[cfg(feature = "query")]
         doc_state,
+        graph_source,
     };
     dispatch::handle(&context, op).await
+}
+
+/// The graph snapshot a source operation over a graph-sourced binding reads. Every other
+/// operation, and every SQL-sourced binding, reads none.
+async fn graph_source_for(
+    req_id: u64,
+    service: &Arc<SemanticIndexService>,
+    op: &SemanticIndexOp,
+    provider: &dyn GraphSourceProvider,
+) -> Result<Option<Arc<GraphSourceSnapshot>>, Response> {
+    if !matches!(
+        op,
+        SemanticIndexOp::AdmitSourceRecord { .. }
+            | SemanticIndexOp::AdmitSourcePage { .. }
+            | SemanticIndexOp::AdmitSourceReconcile { .. }
+            | SemanticIndexOp::CompleteSqlSourceStage { .. }
+    ) {
+        return Ok(None);
+    }
+    let binding_service = Arc::clone(service);
+    let Ok(Some(binding)) = blocking(req_id, move || binding_service.binding()).await else {
+        return Ok(None);
+    };
+    let SemanticSourceSelector::GraphTextPropertyRef(selector) = &binding.source_selector else {
+        return Ok(None);
+    };
+    provider
+        .snapshot(selector)
+        .await
+        .map(|snapshot| Some(Arc::new(snapshot)))
+        .map_err(|error| Response::err(req_id, error))
 }
 
 fn authorize(
@@ -224,14 +265,14 @@ pub(crate) fn own_lease(
 }
 
 pub(super) fn read_port(
-    persist_dir: &Path,
-    authority: &CarrierAuthority,
+    ctx: &SemanticIndexContext<'_>,
 ) -> crate::semantic_index_runtime::AuthorizedSqlSourceReadPort {
     crate::semantic_index_runtime::AuthorizedSqlSourceReadPort::new(
-        persist_dir.to_path_buf(),
-        authority.clone(),
+        ctx.persist_dir.to_path_buf(),
+        ctx.authority.clone(),
         semantic_cursor_secret(),
     )
+    .with_graph_source(ctx.graph_source.clone())
 }
 
 /// Decode one opaque engine-minted cursor. Hex on the wire, bytes inside; the

@@ -14,6 +14,7 @@ mod codec_tests;
 mod config;
 mod digest;
 mod generation;
+mod graph_source;
 mod identity;
 mod op;
 mod persistence;
@@ -101,6 +102,7 @@ pub use selector_ref::{
     SEMANTIC_GRAPH_SCHEMA_ID, SEMANTIC_SQL_CATALOG_ID, SEMANTIC_SQL_SCHEMA_ID,
 };
 pub use semantic_machine::{SemanticEvent, SemanticGuard, SEMANTIC_MACHINE};
+pub use graph_source::{GraphSourceCoordinates, SEMANTIC_GRAPH_SOURCE_ACL_REVISION};
 pub use source_dirty::SemanticSourceDirtyIntent;
 pub use source_kind::{SemanticSourceKind, SemanticSourceRevision};
 pub use source_manifest::{
