@@ -78,6 +78,11 @@ pub mod source_history;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_ingestion;
 
+/// Research paper ingest: identity and receipt checks, mapping, citation edges
+/// (MEDULLA-MEDIA-VOCAB-R002.5).
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub(crate) mod paper_ingest;
+
 /// Lowering of a planned Document delete cascade (MEDULLA-UNIFIED-DATA-PLANE-R651.3).
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 #[allow(missing_docs)]

@@ -42,7 +42,10 @@ use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 
 pub mod containers;
+#[cfg(all(feature = "redb", feature = "blob"))]
 mod bookmark;
+#[cfg(all(feature = "redb", feature = "blob"))]
+use crate::paper_ingest;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod action_record;
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -118,6 +121,8 @@ pub struct PreparedSourceIngestion {
     row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
     /// Near-duplicate documents linked by this batch (MEDULLA-INGEST-WORKER-R702.4).
     documents: medulla_source_types::source_document::DocumentReport,
+    /// Papers this batch refused (MEDULLA-MEDIA-VOCAB-R002.5.5).
+    papers: medulla_types::paper_ingest::PaperReport,
     /// Per-unit outcomes and links of a `facts` batch (R701.5, R701.7); empty for every
     /// other kind.
     facts: medulla_ingestion_types::extracted_fact::FactReport,
@@ -407,6 +412,18 @@ pub async fn prepare(
         &row_version_node_ids(ctx.tenant_scope, batch)?,
     )
     .await?;
+    let paper_classes = paper_ingest::paper_classes(&ctx.schema_sources)?;
+    let papers = PaperLookups {
+        known: known_paper_nodes(
+            batch,
+            &resolved,
+            persistence.as_ref(),
+            &graph_fname,
+            &paper_classes,
+        )
+        .await?,
+        classes: paper_classes,
+    };
     let mut admitted = admit_records(
         &ctx,
         batch,
@@ -419,6 +436,7 @@ pub async fn prepare(
             held_row_versions: &held_row_versions,
             receipt_id: &batch_id,
             receipt_digest: batch_digest.to_hex(),
+            papers: &papers,
         },
     )?;
     // The bucket nodes of the originals and the links of the near duplicates commit with the
@@ -548,6 +566,7 @@ pub async fn prepare(
         },
         admitted.governance,
         admitted.row_versions,
+        &admitted.papers,
         medulla_source_types::source_document::DocumentReport {
             duplicates,
             atoms_emitted,
@@ -608,6 +627,7 @@ pub async fn prepare(
         relationship_tombstoned_count: reconciliation.relationship_tombstones.len() as u64,
         governance: admitted.governance,
         row_versions: admitted.row_versions,
+        papers: admitted.papers.clone(),
         documents: medulla_source_types::source_document::DocumentReport {
             duplicates,
             atoms_emitted,
@@ -992,6 +1012,7 @@ async fn prepare_extension_batch(
         governance: Default::default(),
         row_versions: Default::default(),
         documents: Default::default(),
+        papers: Default::default(),
         facts: fact_report,
         access,
         reconcile,
@@ -1402,6 +1423,8 @@ struct AdmittedRecords {
     tombstone_count: usize,
     governance: medulla_ingestion_types::source_governance::GovernanceReport,
     row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
+    /// The papers refused by their identity, receipt or provenance checks (R002.5.5).
+    papers: medulla_types::paper_ingest::PaperReport,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -2038,6 +2061,16 @@ struct RecordContext<'a> {
     receipt_id: &'a str,
     /// The batch digest, the content digest of that envelope.
     receipt_digest: String,
+    /// The paper classes and the paper nodes the batch and the graph hold (R002.5).
+    papers: &'a PaperLookups,
+}
+
+/// What the paper checks read before any record is admitted (MEDULLA-MEDIA-VOCAB-R002.5).
+#[cfg(all(feature = "redb", feature = "blob"))]
+struct PaperLookups {
+    classes: Arc<BTreeSet<String>>,
+    /// Node ids of the papers the batch holds and of the cited papers the graph holds.
+    known: BTreeSet<String>,
 }
 
 /// [`RecordContext`] keyed for the per-record lookups of `admit_record`.
@@ -2047,6 +2080,42 @@ struct RecordLookups<'a> {
     held_row_versions: &'a BTreeMap<String, row_version::HeldRowVersion>,
     receipt_id: &'a str,
     receipt_digest: String,
+    papers: &'a PaperLookups,
+}
+
+/// The node ids of the papers `batch` holds and of the cited papers the graph already holds, so a
+/// citation of either writes no stub (MEDULLA-MEDIA-VOCAB-R002.5.3).
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn known_paper_nodes(
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+    resolved: &ResolvedIngestionMappings,
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    classes: &BTreeSet<String>,
+) -> Result<BTreeSet<String>, String> {
+    let mut known = BTreeSet::new();
+    let mut cited = BTreeSet::new();
+    for record in &batch.records {
+        let Some(mapping) = resolved.entities.get(&record.mapping_reference) else {
+            continue;
+        };
+        if !paper_ingest::is_paper(classes, &mapping.schema_mapping.ontology_class) {
+            continue;
+        }
+        let payload = record.payload.value()?;
+        if let Some(canonical_id) = payload.get("canonical_id").and_then(serde_json::Value::as_str)
+        {
+            known.insert(paper_ingest::paper_node_id(canonical_id));
+        }
+        cited.extend(paper_ingest::cites::cited_node_ids(&payload));
+    }
+    for node_id in cited {
+        if !known.contains(&node_id) && persistence.read_node(graph_fname, &node_id).await?.is_some()
+        {
+            known.insert(node_id);
+        }
+    }
+    Ok(known)
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -2069,8 +2138,9 @@ fn admit_records(
         held_row_versions: context.held_row_versions,
         receipt_id: context.receipt_id,
         receipt_digest: context.receipt_digest,
+        papers: context.papers,
     };
-    let mut bookmark_entities = BTreeSet::new();
+    let mut extra_node_ids = BTreeSet::new();
     let mut admitted = AdmittedRecords {
         raw_admissions: Vec::with_capacity(batch.records.len()),
         relationship_raw_admissions: Vec::with_capacity(batch.relationships.len()),
@@ -2082,6 +2152,7 @@ fn admit_records(
         tombstone_count: 0,
         governance: Default::default(),
         row_versions: Default::default(),
+        papers: Default::default(),
     };
     let mut batch_raw_digests = BTreeSet::new();
     let target = BlobTarget { authority, blob };
@@ -2096,9 +2167,10 @@ fn admit_records(
             &context,
             &mut admitted.governance,
             &mut admitted.row_versions,
+            &mut admitted.papers,
         )?
         else {
-            // Governance refused this record: it writes nothing.
+            // Governance or a paper check refused this record: it writes nothing.
             continue;
         };
         let deduplicated = !batch_raw_digests.insert(item.raw_digest_hex.clone());
@@ -2126,10 +2198,10 @@ fn admit_records(
         }
         admitted.methods.push(item.method);
         admitted.methods.extend(item.container_edge);
-        // A bookmark's entity nodes are written once per batch, each with the record's policy;
-        // its edges follow the nodes (MEDULLA-MEDIA-VOCAB-R001.102.2).
-        for (entity_id, entity_method) in item.bookmark_entities {
-            if bookmark_entities.insert(entity_id.clone()) {
+        // A bookmark's entity nodes and a paper's stubs are written once per batch, each with the
+        // record's policy; the edges follow the nodes (MEDULLA-MEDIA-VOCAB-R001.102.2, R002.5.3).
+        for (entity_id, entity_method) in item.extra_nodes {
+            if extra_node_ids.insert(entity_id.clone()) {
                 let mut entity_policy = item.policy.clone();
                 entity_policy.policy_id = format!("policy:{entity_id}");
                 entity_policy.object_id = entity_id;
@@ -2137,7 +2209,7 @@ fn admit_records(
                 admitted.methods.push(entity_method);
             }
         }
-        admitted.methods.extend(item.bookmark_edges);
+        admitted.methods.extend(item.extra_edges);
         // An original document's atoms commit in the same envelope as its record node; each
         // atom node takes the record's policy (MEDULLA-INGEST-WORKER-R003.3).
         if let Some(document) = context.documents.get(item.lineage.object_id.as_str()) {
@@ -2624,9 +2696,10 @@ struct AdmittedRecord {
     /// The `inContainer` edge of a record whose `container_id` property names a
     /// container (MEDULLA-INGEST-WORKER-R904.3).
     container_edge: Option<Method>,
-    /// The entity nodes and edges of a bookmark record (MEDULLA-MEDIA-VOCAB-R001.102.2).
-    bookmark_entities: Vec<(String, Method)>,
-    bookmark_edges: Vec<Method>,
+    /// The entity nodes and edges of a bookmark record, or the stub nodes and `cites` edges of a paper
+    /// record (MEDULLA-MEDIA-VOCAB-R001.102.2, R002.5.3).
+    extra_nodes: Vec<(String, Method)>,
+    extra_edges: Vec<Method>,
     lineage: medulla_protocol_types::change_envelope::LineageRecord,
     policy: medulla_protocol_types::change_envelope::PolicyRecord,
 }
@@ -2649,6 +2722,7 @@ fn admit_record(
     lookups: &RecordLookups<'_>,
     report: &mut medulla_ingestion_types::source_governance::GovernanceReport,
     row_versions: &mut medulla_ingestion_types::source_governance::RowVersionReport,
+    papers: &mut medulla_types::paper_ingest::PaperReport,
 ) -> Result<Option<AdmittedRecord>, String> {
     // Governance parses before anything is written or the node is built
     // (MEDULLA-INGEST-WORKER-R900.2): a refused record leaves no state.
@@ -2665,6 +2739,32 @@ fn admit_record(
             Ok(admitted) => admitted,
             Err(_) => return Ok(None),
         }
+    };
+    // A paper is checked before anything is written (MEDULLA-MEDIA-VOCAB-R002.5.1, R002.5.2): a
+    // refused paper leaves no state and its siblings in the envelope still commit.
+    let paper = match resolved.entities.get(&record.mapping_reference) {
+        Some(mapping)
+            if paper_ingest::is_paper(
+                &lookups.papers.classes,
+                &mapping.schema_mapping.ontology_class,
+            ) =>
+        {
+            match paper_ingest::admit_paper(
+                &record.payload.value()?,
+                ctx.verified.tenant(),
+                &lookups.papers.known,
+            ) {
+                Ok(mapped) => Some(mapped),
+                Err(code) => {
+                    papers.refusals.push(medulla_types::paper_ingest::PaperRefusal {
+                        record_id: record.record_id.clone(),
+                        code: code.as_str().to_string(),
+                    });
+                    return Ok(None);
+                }
+            }
+        }
+        _ => None,
     };
     let raw = rmp_serde::to_vec_named(record)
         .map_err(|error| format!("raw source record encoding failed: {error}"))?;
@@ -2752,13 +2852,17 @@ fn admit_record(
     } else {
         None
     };
-    let (node_id, bookmark_entities, bookmark_edges) = match bookmark {
-        Some(mapped) => {
+    let (node_id, extra_nodes, extra_edges) = match (bookmark, paper) {
+        (Some(mapped), _) => {
             properties.remove("raw");
             properties.extend(mapped.properties);
             (mapped.node_id, mapped.entities, mapped.edges)
         }
-        None => (node_id, Vec::new(), Vec::new()),
+        (None, Some(mapped)) => {
+            properties.extend(mapped.properties);
+            (mapped.node_id, mapped.stubs, mapped.edges)
+        }
+        (None, None) => (node_id, Vec::new(), Vec::new()),
     };
     let toc_blobs = stage_source_toc(ctx, authority, blob, record, &node_id, &mut properties)?;
     // An original document carries its signature and first-indexed version; a near duplicate
@@ -2840,8 +2944,8 @@ fn admit_record(
         toc_blobs,
         method,
         container_edge,
-        bookmark_entities,
-        bookmark_edges,
+        extra_nodes,
+        extra_edges,
         lineage,
         policy,
     }))
@@ -2991,6 +3095,7 @@ fn receipt_method(
     admissions: &RawAdmissions<'_>,
     governance: medulla_ingestion_types::source_governance::GovernanceReport,
     row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
+    papers: &medulla_types::paper_ingest::PaperReport,
     documents: medulla_source_types::source_document::DocumentReport,
     embedding_set: &crate::ingestion_admission::EmbeddingSet,
 ) -> Result<Method, String> {
@@ -3015,6 +3120,7 @@ fn receipt_method(
         "governance": governance,
         "row_versions": row_versions,
         "documents": documents,
+        "papers": papers,
         "column_exclusions": embedding_set.exclusions,
         "embedding_set": embedding_set.entries,
         "record_count": raw_admissions.len(),
@@ -3285,6 +3391,7 @@ fn build_terminal_receipt(
         governance: prepared.governance,
         row_versions: prepared.row_versions,
         documents: prepared.documents,
+        papers: prepared.papers,
         facts: prepared.facts,
         access: prepared.access,
         reconcile: prepared.reconcile,
@@ -3372,6 +3479,7 @@ impl PreparedSourceIngestion {
             governance: Default::default(),
             row_versions: Default::default(),
             documents: Default::default(),
+            papers: Default::default(),
             facts: Default::default(),
             access: None,
             reconcile: None,
@@ -3661,6 +3769,13 @@ fn prepared_replay(
             .map(serde_json::from_value)
             .transpose()
             .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: documents: {error}"))?
+            .unwrap_or_default(),
+        papers: receipt
+            .get("papers")
+            .cloned()
+            .map(serde_json::from_value)
+            .transpose()
+            .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: papers: {error}"))?
             .unwrap_or_default(),
         facts: receipt
             .get("facts")

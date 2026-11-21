@@ -661,7 +661,8 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
     use medulla_catalog_types::asset_usage;
     use medulla_source_types::meeting_transcript;
     use medulla_types::{
-        archimate_exchange, bookmark_query, media_tag, participant, transition_refused,
+        archimate_exchange, bookmark_query, media_tag, paper_ingest, participant,
+        transition_refused,
     };
     let codes = |pairs: &[(RefusalCode, &str)]| pairs.iter().map(|(code, _)| *code).collect();
     vec![
@@ -705,6 +706,8 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ("media_tag", media_tag::REFUSALS.to_vec()),
         // MEDULLA-MEDIA-VOCAB-R001.102.4: the bookmark search and relations refusals.
         ("bookmark", bookmark_query::REFUSALS.to_vec()),
+        // MEDULLA-MEDIA-VOCAB-R002.5.5: the paper ingest refusals.
+        ("paper", paper_ingest::REFUSALS.to_vec()),
         // MEDULLA-MEDIA-VOCAB-R650.4: the media attachment and derivation refusals.
         ("memory", medulla_work_types::memory::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R173.7: the harness edit lifecycle.

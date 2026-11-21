@@ -48,6 +48,8 @@ pub mod media_tag;
 pub mod media_derivation;
 // MEDULLA-MEDIA-VOCAB-R001.102.1 — bookmark semantic search and relations wire types.
 pub mod bookmark_query;
+// MEDULLA-MEDIA-VOCAB-R002.5.5 — paper ingest refusals and the per-batch paper report.
+pub mod paper_ingest;
 // MEDULLA-FEDERATED-QUERY-R039.2.7 — chunk-encoding receipt and the served encoded-document types.
 pub mod retrieval;
 // MEDULLA-FEDERATED-QUERY-R081.101.1 — the reusable compressed document state.

@@ -209,6 +209,19 @@ class DocumentReport(BaseModel):
     duplicates: Annotated[int, Field(ge=0)] = 0
 
 
+class PaperRefusal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record_id: str
+    code: str
+
+
+class PaperReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    refusals: list[PaperRefusal] = Field(default_factory=list)
+
+
 class FactOutcome(str, Enum):
     CREATED = "created"
     UPDATED = "updated"
@@ -351,6 +364,7 @@ class SourceIngestionReceipt(BaseModel):
     content_hash: Digest256 | None = None
     disposition: SourceIngestionDisposition
     documents: DocumentReport = Field(default_factory=DocumentReport)
+    papers: PaperReport = Field(default_factory=PaperReport)
     drift: list[StreamDrift] = Field(default_factory=list)
     facts: FactReport = Field(default_factory=FactReport)
     embedding_set: list[EmbeddingSetEntry] = Field(default_factory=list)
@@ -695,6 +709,8 @@ SourceIngestStatus.model_rebuild()
 SourceIngestionBatch.model_rebuild()
 
 DocumentReport.model_rebuild()
+PaperRefusal.model_rebuild()
+PaperReport.model_rebuild()
 FactUnit.model_rebuild()
 FactReport.model_rebuild()
 
@@ -747,6 +763,8 @@ __all__ = [
     "SourceIngestionDisposition",
     "SourceIngestionMode",
     "DocumentReport",
+    "PaperRefusal",
+    "PaperReport",
     "FactOutcome",
     "FactReport",
     "FactUnit",

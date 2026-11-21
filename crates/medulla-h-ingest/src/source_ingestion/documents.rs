@@ -69,9 +69,9 @@ pub(super) struct DocumentOutput {
     pub first_version: u64,
 }
 
-/// The IRIs of `Document` and every class that extends it, read from the
-/// `rdfs:subClassOf` axioms of `ontologies` (Turtle documents).
-pub(super) fn document_class_set(ontologies: &[&str]) -> Result<BTreeSet<String>, String> {
+/// The IRIs of `root` and every class that extends it, read from the `rdfs:subClassOf` axioms of
+/// `ontologies` (Turtle documents).
+pub(crate) fn class_closure(ontologies: &[&str], root: &str) -> Result<BTreeSet<String>, String> {
     use medulla_rdf::oxrdf::{NamedOrBlankNode, Term};
     let mut children: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
     for text in ontologies {
@@ -89,8 +89,8 @@ pub(super) fn document_class_set(ontologies: &[&str]) -> Result<BTreeSet<String>
             }
         }
     }
-    let mut found = BTreeSet::from([DOCUMENT_CLASS.to_string()]);
-    let mut pending = vec![DOCUMENT_CLASS.to_string()];
+    let mut found = BTreeSet::from([root.to_string()]);
+    let mut pending = vec![root.to_string()];
     while let Some(next) = pending.pop() {
         for child in children.get(&next).into_iter().flatten() {
             if found.insert(child.clone()) {
@@ -117,14 +117,14 @@ pub(super) fn document_classes(
         }
     }
     let documents: Vec<&str> = sources.ontologies().map(|(_, text)| text).collect();
-    let set = Arc::new(document_class_set(&documents)?);
+    let set = Arc::new(class_closure(&documents, DOCUMENT_CLASS)?);
     *cache = Some((digest, Arc::clone(&set)));
     Ok(set)
 }
 
 /// The IRI of a mapping's ontology class: a bare or `:`-prefixed name lives in
 /// the core ontology.
-fn class_iri(ontology_class: &str) -> String {
+pub(crate) fn class_iri(ontology_class: &str) -> String {
     let name = ontology_class.trim().trim_start_matches(':');
     if name.contains("://") {
         name.to_string()
@@ -793,7 +793,7 @@ mod tests {
              <{core}Memo> rdfs:subClassOf <{core}Note> .\n\
              <{core}Person> rdfs:subClassOf <{core}Agent> .\n"
         );
-        let set = document_class_set(&[&turtle]).unwrap();
+        let set = class_closure(&[&turtle], DOCUMENT_CLASS).unwrap();
         for name in ["Document", "Note", "Memo"] {
             assert!(set.contains(&class_iri(&format!(":{name}"))), "{name}");
         }
