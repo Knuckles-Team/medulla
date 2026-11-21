@@ -311,3 +311,40 @@ fn media_refusals() {
     assert!(refusal.starts_with("MEDIA_BLOB_UNKNOWN"), "{refusal}");
     assert_eq!(core.node_count(), 0);
 }
+
+// spec: MEDULLA-MEDIA-VOCAB-R650.5
+#[test]
+fn media_evidence_reads_back() {
+    let core = GraphCore::new();
+    let digest = "d".repeat(64);
+    let derivation = "e".repeat(64);
+    let mut image = record("tenant-a", "m:evidence", MemoryTier::Semantic, "a chart");
+    image.attachments = vec![MediaAttachment {
+        blob_digest: digest.clone(),
+        mime: "image/png".into(),
+        byte_len: 4096,
+        derivation_ids: vec![ResourceId::new(derivation.as_str()).unwrap()],
+    }];
+    let known: std::collections::BTreeSet<String> = [digest.clone()].into_iter().collect();
+    let request = remember(image, vec![]);
+    let Admitted::Write(write, _, _) = admit_remember(&core, "tenant-a", &request, &known).unwrap() else {
+        panic!("a first remember writes");
+    };
+    apply_coalescable_write(&core, &write).unwrap();
+
+    // The attachment keys ride the memory node, whose id is the citing memory id.
+    let blob = core.get_node_properties("memory:tenant-a:m:evidence").unwrap();
+    let props = medulla_types::msgpack::decode_property_object(&blob).unwrap();
+    let attachment = &props["attachments"].as_array().unwrap()[0];
+    assert_eq!(attachment["blob_digest"], digest.as_str());
+    assert_eq!(attachment["mime"], "image/png");
+    assert_eq!(attachment["byte_len"], 4096);
+    assert_eq!(attachment["derivation_ids"][0], derivation.as_str());
+    // The same record is readable under its own tenant only.
+    assert!(recall(&core, "tenant-b", NOW, &recall_request(vec![], &["chart"], 100))
+        .unwrap()
+        .hits
+        .is_empty());
+    let own = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["chart"], 100)).unwrap();
+    assert_eq!(own.hits[0].record.attachments[0].byte_len, 4096);
+}
