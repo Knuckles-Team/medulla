@@ -33,9 +33,13 @@ pub fn check_outbound(host: &str, port: u16, tls: bool) -> Result<(), String> {
 /// One read of a ClickHouse table: what the column plan asked the source for.
 #[derive(Debug, Clone)]
 pub struct ClickHouseRead<'a> {
+    /// The ClickHouse server host.
     pub host: &'a str,
+    /// The ClickHouse HTTP port.
     pub port: u16,
+    /// The database holding the table.
     pub database: &'a str,
+    /// Whether the read uses HTTPS.
     pub tls: bool,
     /// The secret reference of the credential, never the secret.
     pub auth_ref: Option<&'a str>,
@@ -72,13 +76,21 @@ fn registered_reader() -> Option<Arc<dyn ClickHouseReader>> {
 
 /// The [`ForeignSource`] of a `ClickHouse` spec.
 pub struct ClickHouseSource<'a> {
+    /// The ClickHouse server host.
     pub host: &'a str,
+    /// The ClickHouse HTTP port.
     pub port: u16,
+    /// The database holding the table.
     pub database: &'a str,
+    /// Whether reads use HTTPS.
     pub tls: bool,
+    /// The secret reference of the credential, never the secret.
     pub auth_ref: Option<&'a str>,
+    /// The table the spec names.
     pub table: &'a str,
+    /// The columns the spec declares.
     pub columns: &'a [String],
+    /// The column carrying the row id; empty means the row ordinal.
     pub id_column: &'a str,
 }
 
