@@ -32,6 +32,8 @@ mod backup;
 mod cluster;
 #[cfg(feature = "redb")]
 mod component_content;
+#[cfg(feature = "redb")]
+mod prompt_receipt;
 mod skill_admission;
 #[cfg(feature = "redb")]
 mod package_validation;

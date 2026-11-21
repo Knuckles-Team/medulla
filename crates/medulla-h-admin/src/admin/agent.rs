@@ -143,6 +143,9 @@ pub async fn handle_agent_component(
             super::component_content::serve_prompt_render(state, &store, req_id, verified, request)
                 .await
         }
+        AgentComponentOp::VerifyRender { receipt } => {
+            super::prompt_receipt::serve_verify_render(&store, req_id, verified, &receipt)
+        }
         AgentComponentOp::AdmitSkillUpgrade { request } => {
             super::skill_admission::handle_admit_skill_upgrade(&store, req_id, request)
         }

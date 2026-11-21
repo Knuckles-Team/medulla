@@ -26,7 +26,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T020 [US1] MEDULLA-TYPED-PACKS-R002.10 Receipt verification before model dispatch
 - [ ] T021 [US1] MEDULLA-TYPED-PACKS-R002.11 Durable prompt restart proof
 - [x] T022 [US1] MEDULLA-TYPED-PACKS-R002.12 Native-component projection
-- [ ] T023 [US1] MEDULLA-TYPED-PACKS-R002.13 Render receipt verification operation
+- [x] T023 [US1] MEDULLA-TYPED-PACKS-R002.13 Render receipt verification operation
 - [ ] T024 [US1] MEDULLA-TYPED-PACKS-R003 Import boundary enforces archive integrity, importer binding and G1-G21
 - [ ] T025 [US1] MEDULLA-TYPED-PACKS-R004 Python ConnectorPackClient with a deterministic import key
 - [ ] T026 [US1] MEDULLA-TYPED-PACKS-R005 Acceptance suite for pack mutation, crash, authorization and tenancy

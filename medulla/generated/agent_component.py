@@ -123,6 +123,12 @@ class PromptRenderReceipt(BaseModel):
     variables_digest: str
 
 
+class PromptReceiptVerdict(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ok: bool
+
+
 class PromptRenderResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -285,6 +291,13 @@ class AgentComponentOpRender(BaseModel):
     request: PromptRenderRequest
 
 
+class AgentComponentOpVerifyRender(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["verify_render"]
+    receipt: PromptRenderReceipt
+
+
 class AgentComponentOpRecordSourceEffect(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -310,6 +323,7 @@ AgentComponentOp = Annotated[
     | AgentComponentOpAdmitSkillUpgrade
     | AgentComponentOpExportBlueprint
     | AgentComponentOpRender
+    | AgentComponentOpVerifyRender
     | AgentComponentOpRecordSourceEffect,
     Field(discriminator="op"),
 ]
@@ -390,6 +404,10 @@ AgentComponentOpExportBlueprint.model_rebuild()
 
 AgentComponentOpRender.model_rebuild()
 
+AgentComponentOpVerifyRender.model_rebuild()
+
+PromptReceiptVerdict.model_rebuild()
+
 AgentComponentOpRecordSourceEffect.model_rebuild()
 
 PromptRenderRequest.model_rebuild()
@@ -425,6 +443,8 @@ __all__ = [
     "AgentComponentBlueprintExportRequest",
     "AgentComponentOpExportBlueprint",
     "AgentComponentOpRender",
+    "AgentComponentOpVerifyRender",
+    "PromptReceiptVerdict",
     "PromptRenderReceipt",
     "PromptRenderRequest",
     "PromptRenderResult",

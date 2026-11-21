@@ -32,6 +32,7 @@ from medulla.generated.agent_component import (
     AgentComponentContentRequest,
     AgentComponentOpCurrent,
     AgentComponentOpRecordSourceEffect,
+    AgentComponentOpVerifyRender,
     PromptRenderRequest,
 )
 from medulla.generated.connector_pack import (
@@ -45,6 +46,7 @@ from medulla.generated.storage import (
     send_agent_component_export_blueprint,
     send_agent_component_record_source_effect,
     send_agent_component_render,
+    send_agent_component_verify_render,
 )
 
 FIXTURE = Path(__file__).resolve().parent / "fixtures" / "blueprint" / "lossless.json"
@@ -595,5 +597,58 @@ async def test_prompt_render_route() -> None:
             ),
         )
         assert content.body == blueprint.encode()
+    finally:
+        await client.close()
+
+
+async def _verify(client: MedullaClient, receipt: Any) -> Any:
+    return await send_agent_component_verify_render(
+        client,
+        AgentComponentOpVerifyRender(op="verify_render", receipt=receipt),
+    )
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R002.13")
+@pytest.mark.asyncio
+async def test_receipt_verdicts() -> None:
+    client = await connect()
+    component_id = f"prompt:verify-{uuid.uuid4().hex[:12]}"
+    first = json.dumps({"task": "one", "schema_revision": 1}, separators=(",", ":"))
+    second = json.dumps({"task": "two", "schema_revision": 1}, separators=(",", ":"))
+    first_pin = hashlib.sha256(first.encode()).hexdigest()
+    second_pin = hashlib.sha256(second.encode()).hexdigest()
+    try:
+        await _publish_prompt(client, component_id, first, first_pin, 0)
+        rendered = await _render(client, component_id, {})
+        receipt = rendered.receipt
+
+        # A fresh receipt for the live head verifies.
+        assert (await _verify(client, receipt)).ok is True
+
+        # A changed digest, variables digest or scope refuses by name.
+        forged = receipt.model_copy(update={"receipt_digest": "0" * 64})
+        with pytest.raises(EngineResponseError, match="PROMPT_RECEIPT_INVALID"):
+            await _verify(client, forged)
+        changed = receipt.model_copy(update={"variables_digest": "1" * 64})
+        with pytest.raises(EngineResponseError, match="PROMPT_RECEIPT_INVALID"):
+            await _verify(client, changed)
+        rescoped = receipt.model_copy(update={"scope": "tenant-other"})
+        with pytest.raises(EngineResponseError, match="PROMPT_RECEIPT_INVALID"):
+            await _verify(client, rescoped)
+
+        # A receipt for another tenant is denied before any read.
+        foreign_identity = receipt.identity.model_copy(
+            update={"tenant_id": "tenant-other"}
+        )
+        foreign = receipt.model_copy(update={"identity": foreign_identity})
+        with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
+            await _verify(client, foreign)
+
+        # Once a newer revision is the head, the earlier receipt no longer verifies.
+        await _publish_prompt(client, component_id, second, second_pin, 1)
+        with pytest.raises(EngineResponseError, match="PROMPT_RECEIPT_INVALID"):
+            await _verify(client, receipt)
+        latest = await _render(client, component_id, {}, revision=2)
+        assert (await _verify(client, latest.receipt)).ok is True
     finally:
         await client.close()

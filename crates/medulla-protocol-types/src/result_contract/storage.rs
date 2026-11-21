@@ -9,6 +9,7 @@ use crate::storage_wire::{
 };
 use medulla_agent_types::agent_component::AgentComponentCommittedResult;
 use medulla_agent_types::agent_component::BlueprintExport;
+use medulla_agent_types::agent_component::PromptReceiptVerdict;
 use medulla_agent_types::agent_component::PromptRenderResult;
 use medulla_agent_types::agent_component::SourceEffectRecordResult;
 use medulla_agent_types::agent_component::AgentComponentContentResult;
@@ -113,6 +114,7 @@ method_results! {
     AgentComponentContent(AgentComponent / "content") => Raw<AgentComponentContentResult>;
     AgentComponentBlueprintExport(AgentComponent / "export_blueprint") => Raw<BlueprintExport>;
     AgentComponentRender(AgentComponent / "render") => Raw<PromptRenderResult>;
+    AgentComponentVerifyRender(AgentComponent / "verify_render") => Raw<PromptReceiptVerdict>;
     AgentComponentRecordSourceEffect(AgentComponent / "record_source_effect") => Raw<SourceEffectRecordResult>;
     AgentComponentAdmitSkillUpgrade(AgentComponent / "admit_skill_upgrade") => Raw<SkillAdmission>;
     AgentAssemble(AgentAssemble) => Raw<AssemblyResult>;

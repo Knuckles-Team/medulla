@@ -1386,6 +1386,9 @@ pub enum AgentComponentOp {
     /// Render one pinned prompt revision with its variables and return the bytes with a
     /// receipt (MEDULLA-TYPED-PACKS-R002.9).
     Render { request: PromptRenderRequest },
+    /// Check a render receipt against its pins, the live head and the verified scope
+    /// (MEDULLA-TYPED-PACKS-R002.13).
+    VerifyRender { receipt: PromptRenderReceipt },
     /// Record the receipt of an approved repository-source effect on the component
     /// revision it exported (MEDULLA-TYPED-PACKS-R094.8).
     RecordSourceEffect {
@@ -1428,6 +1431,7 @@ impl AgentComponentOp {
             | Self::Search { .. }
             | Self::Content { .. }
             | Self::Render { .. }
+            | Self::VerifyRender { .. }
             | Self::ExportBlueprint { .. } => "agent:component-read",
         }
     }
@@ -1495,6 +1499,10 @@ impl AgentComponentOp {
                 }
                 Ok(())
             }
+            Self::VerifyRender { receipt } => {
+                validate_text("tenant_id", &receipt.identity.tenant_id)?;
+                validate_text("component_id", &receipt.identity.component_id)
+            }
             Self::Render { request } => {
                 validate_text("tenant_id", &request.tenant_id)?;
                 validate_text("component_id", &request.component_id)?;
@@ -1537,6 +1545,7 @@ fn component_op_tenant_id(op: &AgentComponentOp) -> &str {
         AgentComponentOp::Content { request } => &request.tenant_id,
         AgentComponentOp::ExportBlueprint { request } => &request.tenant_id,
         AgentComponentOp::Render { request } => &request.tenant_id,
+        AgentComponentOp::VerifyRender { receipt } => &receipt.identity.tenant_id,
         AgentComponentOp::RecordSourceEffect { tenant_id, .. } => tenant_id,
         AgentComponentOp::AdmitSkillUpgrade { request } => &request.tenant_id,
         AgentComponentOp::Current { tenant_id, .. }
@@ -1739,6 +1748,19 @@ pub struct PromptRenderResult {
     /// 64 lowercase hex characters: SHA-256 of `bytes`.
     pub render_digest: String,
     pub receipt: PromptRenderReceipt,
+}
+
+/// Refusal when a render receipt does not match its pins, the live head or the
+/// verified scope (MEDULLA-TYPED-PACKS-R002.13).
+pub const PROMPT_RECEIPT_INVALID: &str = "PROMPT_RECEIPT_INVALID";
+
+/// The answer to a receipt check that passed. A receipt that fails is refused
+/// with [`PROMPT_RECEIPT_INVALID`] instead.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PromptReceiptVerdict {
+    pub ok: bool,
 }
 
 /// The digest a render receipt carries: SHA-256 over the framed pins

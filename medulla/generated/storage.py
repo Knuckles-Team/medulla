@@ -29,7 +29,9 @@ from .agent_component import (
     AgentComponentOpRecordSourceEffect,
     AgentComponentSearchPage,
     AgentComponentSearchRequest,
+    AgentComponentOpVerifyRender,
     BlueprintExport,
+    PromptReceiptVerdict,
     PromptRenderRequest,
     PromptRenderResult,
     SkillAdmission,
@@ -627,6 +629,27 @@ async def send_agent_component_render(
         idempotency_key=idempotency_key,
     )
     return PromptRenderResult.model_validate(payload)
+
+
+async def send_agent_component_verify_render(
+    client: Any,
+    request: AgentComponentOpVerifyRender,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> PromptReceiptVerdict:
+    """Send typed AgentComponent.verify_render."""
+    request = AgentComponentOpVerifyRender.model_validate(request)
+    params = {
+        "op": request.model_dump(mode="json", exclude_unset=True, exclude_none=True),
+    }
+    payload = await client._send(
+        "AgentComponent",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return PromptReceiptVerdict.model_validate(payload)
 
 
 async def send_agent_component_record_source_effect(
