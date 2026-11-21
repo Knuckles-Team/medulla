@@ -253,6 +253,7 @@ fn commit(
             reusable,
             plan_binding,
             preplan_receipt,
+            ..
         } => {
             let resolved = resolve_policy(ctx.store, ctx.tenant_id, &policy)?;
             let knobs = ProgramKnobs::from_policy(&resolved.policy);

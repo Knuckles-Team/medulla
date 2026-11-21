@@ -185,6 +185,8 @@ fn run_record_op_from(trace: RunTraceRecord, source: TraceSource) -> DecisionLog
             reusable: false,
             plan_binding: None,
             preplan_receipt: None,
+            phrasings: Default::default(),
+            match_threshold_micros: None,
         },
     }
 }

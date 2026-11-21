@@ -19,6 +19,7 @@ use sha2::{Digest, Sha256};
 
 pub mod insight;
 pub mod preplan;
+pub mod semantic;
 
 /// Most steps one compiled program may hold. A `Fixed` safety bound.
 pub const MAX_PROGRAM_STEPS: usize = 40;
@@ -87,6 +88,14 @@ pub enum RunRecord {
         plan_binding: Option<preplan::PlanBinding>,
         #[serde(default, skip_serializing_if = "Option::is_none")]
         preplan_receipt: Option<Box<preplan::PrePlanTestReceipt>>,
+        /// Other ways the request this program answers is worded
+        /// (MEDULLA-DECISION-ENGINE-R135.16.1).
+        #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+        phrasings: BoundedVec<semantic::ProgramPhrasing, 16>,
+        /// The cosine this program matches at, in millionths; absent uses the
+        /// `program.match_threshold` knob.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        match_threshold_micros: Option<i64>,
     },
     /// Store one run-derived insight (MEDULLA-DECISION-ENGINE-R135.12). The
     /// wire value is checked by [`insight::Insight::from_value`], so an insight
@@ -229,33 +238,61 @@ pub const REFUSALS: &[RefusalCode] = &[
 
 /// The `program.*` knob (MEDULLA-DECISION-ENGINE-R135.2). The hard cap
 /// [`MAX_PROGRAM_STEPS`] stays `Fixed`; the knob only lowers it.
-pub const KNOBS: &[KnobSpec] = &[KnobSpec {
-    name: "program.max_steps",
-    unit: "steps",
-    default: KnobValue::Integer(MAX_PROGRAM_STEPS as i64),
-    min: KnobValue::Integer(1),
-    max: KnobValue::Integer(MAX_PROGRAM_STEPS as i64),
-    safety: KnobSafety::Tunable,
-}];
+pub const KNOBS: &[KnobSpec] = &[
+    KnobSpec {
+        name: "program.max_steps",
+        unit: "steps",
+        default: KnobValue::Integer(MAX_PROGRAM_STEPS as i64),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(MAX_PROGRAM_STEPS as i64),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "program.match_threshold",
+        unit: "cosine millionths",
+        default: KnobValue::DecimalMicros(850_000),
+        min: KnobValue::DecimalMicros(500_000),
+        max: KnobValue::DecimalMicros(1_000_000),
+        safety: KnobSafety::Tunable,
+    },
+    KnobSpec {
+        name: "program.match_candidates",
+        unit: "hits",
+        default: KnobValue::Integer(8),
+        min: KnobValue::Integer(1),
+        max: KnobValue::Integer(64),
+        safety: KnobSafety::Tunable,
+    },
+];
 
 /// The resolved values of the `program.*` knobs.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ProgramKnobs {
     pub max_steps: usize,
+    /// The cosine, in millionths, a program matches a request at.
+    pub match_threshold_micros: i64,
+    /// Most program candidates one lookup returns.
+    pub match_candidates: usize,
 }
 
 impl ProgramKnobs {
     /// The values `policy` resolves, clamped to `[1, MAX_PROGRAM_STEPS]`.
     pub fn from_policy(policy: &DecisionPolicy) -> Self {
-        let value = match policy.knob(&KNOBS[0]) {
+        let value = |spec: &KnobSpec| match policy.knob(spec) {
             KnobValue::Integer(v) => v,
             KnobValue::DecimalMicros(v) => v,
             KnobValue::DurationMs(v) => i64::try_from(v).unwrap_or(i64::MAX),
         };
-        let max_steps = usize::try_from(value)
+        let max_steps = usize::try_from(value(&KNOBS[0]))
             .unwrap_or(1)
             .clamp(1, MAX_PROGRAM_STEPS);
-        Self { max_steps }
+        let match_threshold_micros = value(&KNOBS[1]).clamp(500_000, 1_000_000);
+        let match_candidates = usize::try_from(value(&KNOBS[2])).unwrap_or(1).clamp(1, 64);
+        Self {
+            max_steps,
+            match_threshold_micros,
+            match_candidates,
+        }
     }
 }
 
@@ -629,6 +666,8 @@ mod tests {
     fn literals_become_parameters() {
         let knobs = ProgramKnobs {
             max_steps: MAX_PROGRAM_STEPS,
+            match_threshold_micros: 850_000,
+            match_candidates: 8,
         };
         let first = compile_program(
             &trace("run-1", RunOutcome::Succeeded, ["Q3", "x"], 2),
@@ -683,14 +722,22 @@ mod tests {
         ));
 
         // The knob lowers the cap; the hard cap stays 40.
-        let capped = ProgramKnobs { max_steps: 1 };
+        let capped = ProgramKnobs {
+            max_steps: 1,
+            match_threshold_micros: 850_000,
+            match_candidates: 8,
+        };
         let refused = compile_program(
             &trace("run-1", RunOutcome::Succeeded, ["a", "b"], 2),
             &capped,
         )
         .unwrap_err();
         assert_eq!(refused, ProgramError::TooLong { steps: 2 });
-        let wide = ProgramKnobs { max_steps: 1000 };
+        let wide = ProgramKnobs {
+            max_steps: 1000,
+            match_threshold_micros: 850_000,
+            match_candidates: 8,
+        };
         let refused = compile_program(
             &trace("run-1", RunOutcome::Succeeded, ["a", "b"], 41),
             &wide,
