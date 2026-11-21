@@ -428,3 +428,87 @@ pub struct ExternalIdentity {
     pub linked_at_ms: u64,
     pub linked_by: String,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_types::transition_refused::TransitionRefusalReason;
+
+    // spec: MEDULLA-IDENTITY-R721.3
+    #[test]
+    fn every_legal_transition_applies() {
+        assert_eq!(USER_STATUS_MACHINE.edges.len(), 13);
+        for edge in USER_STATUS_MACHINE.edges {
+            assert_eq!(
+                edge.from.apply(edge.event, |_| true),
+                Ok(edge.to),
+                "edge {}",
+                edge.id
+            );
+        }
+    }
+
+    // spec: MEDULLA-IDENTITY-R721.3
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let machine = &USER_STATUS_MACHINE;
+        let mut refused_pairs = 0;
+        for &state in machine.states {
+            for &event in machine.events {
+                if machine
+                    .edges
+                    .iter()
+                    .any(|edge| edge.from == state && edge.event == event)
+                {
+                    continue;
+                }
+                let refused = state.apply(event, |_| true).unwrap_err();
+                assert_eq!(refused.machine, "UserStatusMachine");
+                assert_eq!(refused.from, state.stored());
+                assert_eq!(refused.event, event.name());
+                assert_eq!(refused.reason, TransitionRefusalReason::IllegalTransition);
+                assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+                refused_pairs += 1;
+            }
+        }
+        assert_eq!(
+            refused_pairs,
+            machine.states.len() * machine.events.len() - machine.edges.len()
+        );
+    }
+
+    /// The census findings at `authority/tests.rs` and `rbac_elevation/ledger.rs` assign the
+    /// `status` of other types (a replay receipt and an elevation lease view); the user
+    /// status has one writer, `transition_status`, and it assigns the result of `apply`.
+    // spec: MEDULLA-IDENTITY-R721.3
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        let store = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("src/identity/store");
+        let mut assignments = Vec::new();
+        for entry in std::fs::read_dir(&store).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_none_or(|ext| ext != "rs") {
+                continue;
+            }
+            let text = std::fs::read_to_string(&path).unwrap();
+            let production = text.split("#[cfg(test)]").next().unwrap();
+            for line in production.lines().map(str::trim) {
+                if line.starts_with("//") {
+                    continue;
+                }
+                if line.contains(".status = ") {
+                    assignments.push((
+                        path.file_name().unwrap().to_string_lossy().into_owned(),
+                        line.to_string(),
+                    ));
+                }
+            }
+        }
+        assert_eq!(
+            assignments,
+            vec![("users.rs".to_string(), "user.status = status;".to_string())]
+        );
+        let users = std::fs::read_to_string(store.join("users.rs")).unwrap();
+        assert!(users.contains(".apply(event, |guard| match guard {"));
+    }
+}

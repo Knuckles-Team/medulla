@@ -301,3 +301,38 @@ fn every_transition_and_refusal_is_covered() {
         }
     }
 }
+
+// spec: MEDULLA-IDENTITY-R721.2
+
+#[test]
+fn active_and_revoked_are_derived() {
+    use crate::identity::model::{UserKind, UserRecord};
+    use std::collections::BTreeSet;
+
+    // The directory `active` input and the session `revoked` flag are not stored copies of
+    // the user status: a user record carries only `status`, and `is_active` is computed.
+    for &state in USER_STATUS_MACHINE.states {
+        assert_eq!(state.is_active(), state == UserStatus::Active, "{state:?}");
+        let user = UserRecord {
+            principal_id: "usr:alice".into(),
+            username: "alice".into(),
+            display_name: None,
+            email: None,
+            kind: UserKind::Human,
+            status: state,
+            is_bootstrap: false,
+            source: "local".into(),
+            roles: BTreeSet::new(),
+            created_at_ms: 1,
+            disabled_at_ms: None,
+            last_login_at_ms: None,
+        };
+        let json = serde_json::to_value(&user).unwrap();
+        let object = json.as_object().unwrap();
+        assert_eq!(object["status"], state.stored());
+        assert!(!object.contains_key("active"), "{state:?} stores active");
+        assert!(!object.contains_key("revoked"), "{state:?} stores revoked");
+    }
+    let source = include_str!("../views.rs");
+    assert!(source.contains("revoked: session.revoked_at_ms.is_some(),"));
+}

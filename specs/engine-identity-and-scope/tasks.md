@@ -73,7 +73,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [x] T070 [US7] MEDULLA-IDENTITY-R720.2 Describe the governed change machine in the ontology
 - [ ] T065 [US7] MEDULLA-IDENTITY-R721 User status is one explicit state machine
 - [ ] T066 [US7] MEDULLA-IDENTITY-R721.1 Every user status write goes through transition_status
-- [ ] T067 [US7] MEDULLA-IDENTITY-R721.2 Derive active and revoked, and describe the machine
+- [x] T067 [US7] MEDULLA-IDENTITY-R721.2 Derive active and revoked, and describe the machine
 - [ ] T068 [US7] MEDULLA-IDENTITY-R722 Describe the RBAC elevation machine in the ontology
 - [x] T071 [US7] MEDULLA-IDENTITY-R722.1 Describe the RBAC elevation machine in the ontology
 - [ ] T072 [US7] MEDULLA-IDENTITY-R722.2 Elevation refusals are typed
@@ -82,7 +82,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T076 [US6] MEDULLA-IDENTITY-R724.1 ApplicationAdmission/AdmissionStage state machine: route 1 census findings through AdmissionStage::apply
 - [ ] T077 [US6] MEDULLA-IDENTITY-R722.3 ElevationLease status runs on the existing RbacElevationMachine; every real writer routes through ElevationStatus::apply
 - [ ] T078 [US6] MEDULLA-IDENTITY-R724.2 ReplayReceipt.status becomes the one-shot ReplayOutcome (not a lifecycle)
-- [ ] T079 [US6] MEDULLA-IDENTITY-R721.3 UserRecord/UserStatus state machine: route 12 census findings through UserStatus::apply
+- [x] T079 [US6] MEDULLA-IDENTITY-R721.3 UserRecord/UserStatus state machine: route 12 census findings through UserStatus::apply
 - [ ] T080 [US6] MEDULLA-IDENTITY-R725 Census debt of the identity wire mirrors is closed (rollup)
 - [x] T081 [US6] MEDULLA-IDENTITY-R725.1 User wire views follow `UserStatus`: Python mirror follows the Rust machine
 - [ ] T082 [US6] MEDULLA-IDENTITY-R726 Tenant-qualified unit ownership in scan_units, hidden_metadata and stored-query calls
