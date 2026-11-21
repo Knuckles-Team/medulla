@@ -389,6 +389,29 @@ pub fn content_change(
     }
 }
 
+/// The revision number and bytes a committed sync stored in the graph and that
+/// the blob holder must keep (MEDULLA-DURABLE-KERNEL-R085.7): the new head or
+/// retained revision after `Accepted` or `Resolved`, the retained candidate
+/// after `ConflictRetained`. `None` for an outcome that stored no content.
+pub fn held_content(
+    core: &GraphCore,
+    doc: &DocId,
+    outcome: &SyncOutcome,
+) -> Option<(u64, String)> {
+    match outcome {
+        SyncOutcome::Accepted { head } | SyncOutcome::Resolved { head } => {
+            store::read(core, doc, Some(head.revision)).map(|read| (head.revision, read.content))
+        }
+        SyncOutcome::ConflictRetained {
+            candidate_revision, ..
+        } => store::candidates(core, doc)
+            .into_iter()
+            .find(|(number, _)| number == candidate_revision)
+            .map(|(number, row)| (number, row.content)),
+        _ => None,
+    }
+}
+
 /// Which gate kind a content change maps to.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ContentChange {

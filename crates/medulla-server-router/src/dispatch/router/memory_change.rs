@@ -10,6 +10,8 @@
 
 use super::*;
 
+mod holder;
+
 /// Hand `Consolidate` through the gate; every other method continues.
 pub async fn dispatch_consolidate_method(
     ctx: DispatchCtx<'_>,
@@ -110,7 +112,7 @@ const SYNC_PLAN_ATTEMPTS: usize = 3;
 /// the plan commits through the graph gateway as one batch (head, revision and
 /// the `memory_snapshot_synced` outbox intent) over the pre-image it was decided
 /// against. The blob holder of the committed content is taken after the commit
-/// by the server layer, never by a graph-handler dependency on the blob store.
+/// by the router (`holder`), never by a graph-handler dependency on the blob store.
 /// A client-supplied stamp is replaced; a refusal writes nothing.
 async fn handle_sync_memory(
     ctx: DispatchCtx<'_>,
@@ -186,7 +188,15 @@ async fn handle_sync_memory(
         ))
         .await;
         match response.error.as_deref() {
-            None => return outcome_response(req.id, outcome),
+            None => {
+                if let Err(error) =
+                    holder::hold_content(state, verified_context, req.id, &core, &request, &outcome)
+                        .await
+                {
+                    return Response::err(req.id, error);
+                }
+                return outcome_response(req.id, outcome);
+            }
             Some(error) if error.starts_with("BUSY") => last = response,
             Some(_) => return response,
         }
