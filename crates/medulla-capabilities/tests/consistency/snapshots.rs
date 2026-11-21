@@ -158,6 +158,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "ArchitectureModelImport",
     "ProcessCompile",
     "ProcessModelImport",
+    "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -226,6 +227,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "ArchitectureModelImport",
     "ProcessCompile",
     "ProcessModelImport",
+    "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -443,6 +445,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "ArchitectureModelImport",
     "ProcessCompile",
     "ProcessModelImport",
+    "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -748,6 +751,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "ArchitectureModelImport",
     "ProcessCompile",
     "ProcessModelImport",
+    "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -840,6 +844,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "ArchitectureModelImport",
     "ProcessCompile",
     "ProcessModelImport",
+    "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -923,6 +928,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "ArchitectureModelImport",
     "ProcessCompile",
     "ProcessModelImport",
+    "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
@@ -965,6 +971,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "ArchitectureModelImport",
     "ProcessCompile",
     "ProcessModelImport",
+    "ProcessDocumentImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
     // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.

@@ -212,6 +212,16 @@ $($variants)*
         workflow_id: String,
         expected_version: Option<u32>,
     },
+    /// Import one BPMN 2.0 or DMN 1.3 document as the next version of the model `model_iri`
+    /// (MEDULLA-CQ-ORCH-R702.9). The document is parsed, mapped onto element nodes and
+    /// committed with the model node as one `BatchUpdate` under a compare-and-set on
+    /// `expected_version`, the stored version of the model (0 when none); a mismatch refuses
+    /// `WORKFLOW_VERSION_CONFLICT`. A document the reader refuses writes nothing.
+    ProcessDocumentImport {
+        document: medulla_types::process_exchange::ProcessDocument,
+        model_iri: String,
+        expected_version: Option<u32>,
+    },
     /// Read version `version` of the stored workflow `workflow_id`
     /// (MEDULLA-CQ-ORCH-R701.3). With no `target` the canonical form is returned; with
     /// `bpmn20` the deployable BPMN document too; with `aris_epc` the canonical form with

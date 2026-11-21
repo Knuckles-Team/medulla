@@ -317,6 +317,7 @@ fn record_write_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::ArchitectureModelImport { .. } => Some("__architecture_model_import"),
         Method::ProcessCompile { .. } => Some("__process_compile"),
         Method::ProcessModelImport { .. } => Some("__process_model_import"),
+        Method::ProcessDocumentImport { .. } => Some("__process_document_import"),
         Method::SourceSync { .. } => Some("__source_sync"),
         Method::RetentionCleanupRun { .. } => Some("__retention_cleanup"),
         Method::PolicySourceBind { .. } => Some("__policy_source_bind"),

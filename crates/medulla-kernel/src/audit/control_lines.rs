@@ -257,6 +257,14 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             "PROCESS_MODEL_IMPORT|{workflow_id}|{}",
             workflow.digest
         )),
+        Method::ProcessDocumentImport {
+            document,
+            model_iri,
+            ..
+        } => Some(format!(
+            "PROCESS_DOCUMENT_IMPORT|{model_iri}|{}",
+            medulla_types::archimate_exchange::sha256_hex(&document.document)
+        )),
         Method::LiveArtifactPut { artifact } => Some(format!(
             "LIVE_ARTIFACT_PUT|{}|{}",
             artifact.id, artifact.version

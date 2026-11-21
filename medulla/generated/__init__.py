@@ -507,6 +507,7 @@ SEND_BY_METHOD = {
     "HarnessEdit": coordination.send_harness_edit,
     "ProcessCompile": coordination.send_process_compile,
     "ProcessModelImport": coordination.send_process_model_import,
+    "ProcessDocumentImport": coordination.send_process_document_import,
     "ProcessModelExport": coordination.send_process_model_export,
     "ObservationState": coordination.send_observation_state,
     "ObserveDevelopmentLane": coordination.send_observe_development_lane,

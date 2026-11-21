@@ -28,6 +28,7 @@ enum Route {
     HarnessEdit,
     ProcessCompile,
     ProcessModelImport,
+    ProcessDocumentImport,
     ObservationState,
     MemorySurface,
     ArchitectureExchange,
@@ -186,6 +187,10 @@ fn is_process_model_import(method: &Method) -> bool {
     matches!(method, Method::ProcessModelImport { .. })
 }
 
+fn is_process_document_import(method: &Method) -> bool {
+    matches!(method, Method::ProcessDocumentImport { .. })
+}
+
 fn is_harness_edit(method: &Method) -> bool {
     matches!(method, Method::HarnessEdit { op } if op.is_mutation())
 }
@@ -238,6 +243,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_harness_edit, Route::HarnessEdit),
     (is_process_compile, Route::ProcessCompile),
     (is_process_model_import, Route::ProcessModelImport),
+    (is_process_document_import, Route::ProcessDocumentImport),
     (is_observation_state, Route::ObservationState),
     (is_memory_surface, Route::MemorySurface),
     (is_architecture_exchange, Route::ArchitectureExchange),
@@ -269,6 +275,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::HarnessEdit
         | Route::ProcessCompile
         | Route::ProcessModelImport
+        | Route::ProcessDocumentImport
         | Route::ObservationState
         | Route::MemorySurface
         | Route::ArchitectureExchange
@@ -365,6 +372,10 @@ async fn try_handle_admin(
         }
         Route::ProcessModelImport => {
             super::super::process_compile::handle_process_model_import(ctx, tenant_id, method)
+                .await
+        }
+        Route::ProcessDocumentImport => {
+            super::super::process_document::handle_process_document_import(ctx, tenant_id, method)
                 .await
         }
         Route::HarnessEdit => {

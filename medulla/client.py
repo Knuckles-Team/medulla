@@ -7709,6 +7709,33 @@ class GraphOperationsClient:
             raise RuntimeError("ProcessModelImport must answer with an object")
         return result
 
+    async def process_document_import(
+        self,
+        document: dict[str, Any],
+        model_iri: str,
+        expected_version: int | None = None,
+    ) -> dict[str, Any]:
+        """Import one BPMN 2.0 or DMN 1.3 document as the next version of
+        ``model_iri`` (MEDULLA-CQ-ORCH-R702.9).
+
+        ``document`` is ``{"format": "bpmn20" | "dmn13", "document": <bytes>}``
+        with an optional ``source_ref`` of ``{system, record_id}``. Returns
+        ``{model_node_id, version, format, nodes, edges, source_document_digest}``.
+        A stale ``expected_version`` is refused ``WORKFLOW_VERSION_CONFLICT``; a
+        document the reader refuses writes nothing.
+        """
+        params: dict[str, Any] = {
+            "document": document,
+            "model_iri": model_iri,
+            "expected_version": expected_version,
+        }
+        result = await self._client._send(
+            "ProcessDocumentImport", params, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("ProcessDocumentImport must answer with an object")
+        return result
+
     async def process_model_export(
         self,
         workflow_id: str,

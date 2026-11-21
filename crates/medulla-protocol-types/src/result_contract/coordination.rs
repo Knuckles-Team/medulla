@@ -280,6 +280,8 @@ method_results! {
     ProcessCompile(ProcessCompile) => Json<medulla_types::process_import::ProcessCompiled>;
     // MEDULLA-CQ-ORCH-R701.3: the stored import version and the exported workflow.
     ProcessModelImport(ProcessModelImport) => Json<medulla_types::process_import::ProcessModelImported>;
+    // MEDULLA-CQ-ORCH-R702.9: the stored model version a document import wrote.
+    ProcessDocumentImport(ProcessDocumentImport) => Json<medulla_types::process_exchange::ProcessDocumentImported>;
     ProcessModelExport(ProcessModelExport) => Json<medulla_types::process_import::ProcessModelExported>;
     HarnessEditTransition(HarnessEdit / "transition") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     HarnessEditGet(HarnessEdit / "get") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;

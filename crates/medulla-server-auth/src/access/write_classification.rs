@@ -534,6 +534,7 @@ pub fn requires_write(method: &Method) -> bool {
                 // MEDULLA-CQ-ORCH-R700.3: the process compile commits the workflow version.
                 | Method::ProcessCompile { .. }
                 | Method::ProcessModelImport { .. }
+                | Method::ProcessDocumentImport { .. }
                 // MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
                 | Method::SourceSync { .. }
                 // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step removes graph nodes.

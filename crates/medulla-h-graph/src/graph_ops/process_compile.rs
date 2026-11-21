@@ -39,7 +39,7 @@ use medulla_types::process_import::{
 /// The id of the compiler recorded on every `compiledFromProcess` edge.
 pub(super) const COMPILER_ID: &str = "medulla.process-compile/v1";
 
-fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
+pub(super) fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
     format!("{code}: {detail}")
 }
 
@@ -184,7 +184,7 @@ pub(super) struct Admitted<A> {
     pub(super) stored: u32,
 }
 
-fn batch(operations: &[serde_json::Value]) -> Result<Method, String> {
+pub(super) fn batch(operations: &[serde_json::Value]) -> Result<Method, String> {
     let operations_msgpack = rmp_serde::to_vec_named(operations).map_err(|error| {
         refuse(
             "PARAMETER_INVALID",
@@ -324,11 +324,12 @@ pub(super) fn admit_import(
 }
 
 /// Commit one admitted version through the staged gateway. The commit closure re-reads the
-/// stored version so two racing writers never both write version `n + 1`.
-async fn commit_version<A>(
+/// stored version with `stored_of` so two racing writers never both write version `n + 1`.
+pub(super) async fn commit_version<A>(
     ctx: &MutationCtx<'_>,
     admitted: Admitted<A>,
     key: String,
+    stored_of: fn(&GraphCore, &str) -> u32,
     seal: impl FnOnce(A) -> Result<ResultPayload, String>,
 ) -> Response {
     let Admitted {
@@ -342,7 +343,7 @@ async fn commit_version<A>(
     let operations = operations_msgpack.clone();
     let plan = MutationPlan::for_method(&write);
     medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
-        let current = stored_version(core, &key);
+        let current = stored_of(core, &key);
         if current != stored {
             return Err(refuse(
                 WORKFLOW_VERSION_CONFLICT,
@@ -383,7 +384,7 @@ pub(super) async fn handle_process_compile(
         Err(error) => return Some(Response::err(ctx.req_id, error)),
     };
     Some(
-        commit_version(ctx, admitted, process_iri.clone(), |answer| {
+        commit_version(ctx, admitted, process_iri.clone(), stored_version, |answer| {
             ResultPayload::of::<ProcessCompile>(answer)
         })
         .await,
@@ -422,7 +423,7 @@ pub(super) async fn handle_process_model_import(
         Err(error) => return Some(Response::err(ctx.req_id, error)),
     };
     Some(
-        commit_version(ctx, admitted, workflow_id.clone(), |answer| {
+        commit_version(ctx, admitted, workflow_id.clone(), stored_version, |answer| {
             ResultPayload::of::<ProcessModelImport>(answer)
         })
         .await,

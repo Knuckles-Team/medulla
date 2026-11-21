@@ -622,6 +622,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-CQ-ORCH-R700.3: a compile commits as one request-graph `BatchUpdate`.
         | Method::ProcessCompile { .. }
         | Method::ProcessModelImport { .. }
+        | Method::ProcessDocumentImport { .. }
         // MEDULLA-SRC-AUTH-R012.6: a sync commits as one request-graph `BatchUpdate`.
         | Method::SourceSync { .. }
         // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one request-graph `BatchUpdate`.

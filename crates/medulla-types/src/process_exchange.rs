@@ -16,6 +16,7 @@ fn schema_version() -> u16 {
 
 /// The document formats the engine reads natively.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum ProcessDocumentFormat {
     Bpmn20,
@@ -24,6 +25,7 @@ pub enum ProcessDocumentFormat {
 
 /// The record of the source a document came from.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SourceRecordRef {
     #[serde(default = "schema_version")]
@@ -34,6 +36,7 @@ pub struct SourceRecordRef {
 
 /// One process document as a source hands it to the engine.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ProcessDocument {
     #[serde(default = "schema_version")]
@@ -43,6 +46,25 @@ pub struct ProcessDocument {
     pub document: Vec<u8>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub source_ref: Option<SourceRecordRef>,
+}
+
+/// The answer of the served `ProcessDocumentImport` (MEDULLA-CQ-ORCH-R702.9).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProcessDocumentImported {
+    /// The id of the stored model node, `processmodel:<model_iri>:v<version>`.
+    pub model_node_id: String,
+    /// The stored version of the model, 1 for the first import under the model IRI.
+    pub version: u32,
+    /// The document format that was read.
+    pub format: ProcessDocumentFormat,
+    /// The number of element nodes the batch upserted.
+    pub nodes: u64,
+    /// The number of edges the batch upserted.
+    pub edges: u64,
+    /// The SHA-256 of the input document bytes, 64 lowercase hex characters.
+    pub source_document_digest: String,
 }
 
 /// Why a process document was not read or written.
