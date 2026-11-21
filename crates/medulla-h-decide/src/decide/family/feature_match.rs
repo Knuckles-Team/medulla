@@ -17,7 +17,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_decision_stats::decision::feature_match::{dedup, name_only_pair, MatchParams, PPM};
+use medulla_decision_stats::decision::feature_match::{
+    dedup, name_only_pair, score_parts, MatchParams, PPM,
+};
 use medulla_decision_types::decision::feature_match::{
     match_option_id, plan_option_id, FeatureMatchAnswer, FeatureMatrixRow, Match, PlanProposal,
 };
@@ -293,7 +295,7 @@ impl DecisionFamily for FeatureMatchFamily {
             }));
             let scores = BoundedVec::new(scores)
                 .map_err(|detail| invalid_parameter(format!("{KIND}: {detail}")))?;
-            let premises = vec![
+            let mut premises = vec![
                 claim(
                     KIND,
                     format!("feature_match:local_project={}", parsed.local_project),
@@ -305,6 +307,23 @@ impl DecisionFamily for FeatureMatchFamily {
                     "candidates",
                 ),
             ];
+            // One claim per match with its three similarity parts
+            // (MEDULLA-DECISION-ENGINE-R707.5).
+            for m in &ranked {
+                let row_of = |id: &str| parsed.rows.iter().find(|r| r.feature_id == id);
+                let (Some(left), Some(right)) = (row_of(&m.local), row_of(&m.external)) else {
+                    continue;
+                };
+                let parts = score_parts(left, right, embedding(&m.local, &m.external), &params);
+                premises.push(claim(
+                    KIND,
+                    format!(
+                        "feature_match:match={}/{};token_ppm={};label_ppm={};embedding_ppm={}",
+                        m.local, m.external, parts.token_ppm, parts.label_ppm, parts.embedding_ppm
+                    ),
+                    "candidates",
+                ));
+            }
             Ok(Executed::from_family(
                 StatisticalOutcome::Advisory {
                     scores,

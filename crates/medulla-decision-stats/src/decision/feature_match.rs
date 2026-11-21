@@ -126,21 +126,51 @@ fn jaccard_ppm(a: &BTreeSet<String>, b: &BTreeSet<String>) -> u32 {
     (shared * u64::from(PPM) / union) as u32
 }
 
-fn score(a: &Prepared<'_>, b: &Prepared<'_>, embedding_ppm: u32, params: &MatchParams) -> u32 {
-    let token = if a.random_name || b.random_name {
+/// The three similarity parts of one pair, each on parts per million: the
+/// token overlap of the canonical names, the shared ontology label and the
+/// embedding cosine (MEDULLA-DECISION-ENGINE-R707.5).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MatchParts {
+    pub token_ppm: u32,
+    pub label_ppm: u32,
+    pub embedding_ppm: u32,
+}
+
+fn parts(a: &Prepared<'_>, b: &Prepared<'_>, embedding_ppm: u32) -> MatchParts {
+    let token_ppm = if a.random_name || b.random_name {
         0
     } else {
         jaccard_ppm(&a.tokens, &b.tokens)
     };
-    let label = if !a.row.label.is_empty() && a.row.label == b.row.label {
+    let label_ppm = if !a.row.label.is_empty() && a.row.label == b.row.label {
         PPM
     } else {
         0
     };
-    let total = u64::from(params.w_token) * u64::from(token)
-        + u64::from(params.w_label) * u64::from(label)
-        + u64::from(params.w_embedding) * u64::from(embedding_ppm.min(PPM));
+    MatchParts {
+        token_ppm,
+        label_ppm,
+        embedding_ppm: embedding_ppm.min(PPM),
+    }
+}
+
+fn score(a: &Prepared<'_>, b: &Prepared<'_>, embedding_ppm: u32, params: &MatchParams) -> u32 {
+    let parts = parts(a, b, embedding_ppm);
+    let total = u64::from(params.w_token) * u64::from(parts.token_ppm)
+        + u64::from(params.w_label) * u64::from(parts.label_ppm)
+        + u64::from(params.w_embedding) * u64::from(parts.embedding_ppm);
     (total / u64::from(PPM)).min(u64::from(PPM)) as u32
+}
+
+/// The three similarity parts of one pair; their weighted sum is
+/// [`score_pair`].
+pub fn score_parts(
+    a: &FeatureMatrixRow,
+    b: &FeatureMatrixRow,
+    embedding_ppm: u32,
+    params: &MatchParams,
+) -> MatchParts {
+    parts(&prepare(a, params), &prepare(b, params), embedding_ppm)
 }
 
 /// The score of one pair, on parts per million. `embedding_ppm` is the cosine

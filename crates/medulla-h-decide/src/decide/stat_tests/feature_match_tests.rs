@@ -437,3 +437,91 @@ async fn ledger_refusals_change_no_state() {
     .unwrap();
     assert_eq!(before, after, "a refusal changes no state");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R707.5
+#[tokio::test]
+async fn ledger_rows_cite_matches_and_plan() {
+    let h = Harness::with_isolation(reader_isolation("ledger-writer", &["repo-index"])).await;
+    index_commits(&h).await;
+    let pins = pins(&h, TENANT);
+
+    // The record cites each match with its three similarity parts.
+    let batch = decide(&h, request(&pins.0, features(), Some("local")))
+        .await
+        .unwrap();
+    let record = batch.records.as_slice()[0].clone();
+    let cited = record
+        .premises
+        .iter()
+        .find(|p| p.fact.starts_with("feature_match:match=f-e1/f-l1;"))
+        .expect("a claim per match");
+    assert_eq!(cited.class, medulla_decision_types::decision::PremiseClass::Claim);
+    for part in ["token_ppm=", "label_ppm=", "embedding_ppm="] {
+        assert!(cited.fact.contains(part), "{}", cited.fact);
+    }
+    // The label is shared and the declared cosine is one: those parts are full.
+    assert!(cited.fact.contains("label_ppm=1000000"), "{}", cited.fact);
+    assert!(cited.fact.contains("embedding_ppm=1000000"), "{}", cited.fact);
+    let plan = record
+        .answer
+        .as_ref()
+        .and_then(|a| a.feature_match())
+        .expect("a feature comparison")
+        .plans[0]
+        .clone();
+
+    // The ledger stores the match ids and the plan id on the entry.
+    let match_id = match_option_id("f-e1", "f-l1");
+    only(
+        ledger(
+            &h,
+            TENANT,
+            FeatureLedgerOp::Open {
+                feature_id: "f-e2".to_string(),
+                match_ids: vec![match_id.clone()],
+            },
+        )
+        .await
+        .unwrap(),
+    );
+    ledger(
+        &h,
+        TENANT,
+        FeatureLedgerOp::Plan {
+            plan: plan.clone(),
+            expected_revision: 0,
+        },
+    )
+    .await
+    .unwrap();
+
+    // A read-only principal reads the entry with its match ids and plan id.
+    let reader = VerifiedRequestContext::verified_for_test_in_tenant("ledger-reader", TENANT);
+    let read: FeatureLedgerView = decode(
+        handle_feature_ledger(
+            &h.state,
+            4,
+            &reader,
+            FeatureLedgerOp::Get {
+                feature_ids: vec!["f-e2".to_string()],
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    let entry = only(read);
+    assert_eq!(entry.match_ids, vec![match_id]);
+    assert_eq!(entry.plan_id.as_deref(), Some(plan.plan_id.as_str()));
+
+    // Another tenant finds nothing.
+    let foreign = ledger(
+        &h,
+        OTHER_TENANT,
+        FeatureLedgerOp::Get {
+            feature_ids: vec!["f-e2".to_string()],
+        },
+    )
+    .await
+    .unwrap();
+    assert!(foreign.entries.is_empty());
+}
