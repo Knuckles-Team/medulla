@@ -245,6 +245,20 @@ async fn serve(
     } else {
         request
     };
+    // A `placement_plan` question reads the `placement:Host` budgets of its
+    // graph here, under the caller's access, and records them in its parameter
+    // (MEDULLA-PLACEMENT-R700.3).
+    let request = if request.question.kind == QuestionKind::PlacementPlan {
+        telemetry::stage_async(
+            telemetry::Stage::Entailment,
+            &family,
+            verified.tenant(),
+            super::stat_placement_plan::with_read(state, verified, request),
+        )
+        .await?
+    } else {
+        request
+    };
     // A `harness_contrast`, `recursion_mode` or `sub_call_admission` question
     // declares its candidates but still reads its evidence (held versions,
     // probe runs, stored contrasts, signal references, stored signatures) from

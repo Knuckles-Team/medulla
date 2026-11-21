@@ -145,6 +145,8 @@ mod stat_capacity;
 #[cfg(feature = "decide")]
 mod stat_placement;
 #[cfg(feature = "decide")]
+mod stat_placement_plan;
+#[cfg(feature = "decide")]
 mod stat_task_plan;
 // MEDULLA-DECISION-ENGINE-R174.9.3: fresh data through the search source.
 #[cfg(feature = "decide")]

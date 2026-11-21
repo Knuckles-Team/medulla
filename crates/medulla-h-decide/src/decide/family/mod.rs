@@ -52,6 +52,7 @@ mod over_window_plan;
 mod paper_admission;
 mod path_preference;
 mod placement;
+mod placement_plan;
 pub(super) mod planning_admission;
 mod playbook_triage;
 mod population_drift;
@@ -264,6 +265,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
     static HARNESSCONTRASTFAMILY: harness_contrast::HarnessContrastFamily =
         harness_contrast::HarnessContrastFamily;
     static PLACEMENTFAMILY: placement::PlacementFamily = placement::PlacementFamily;
+    static PLACEMENTPLANFAMILY: placement_plan::PlacementPlanFamily =
+        placement_plan::PlacementPlanFamily;
     static CONTEXTBUDGETFAMILY: context_budget::ContextBudgetFamily =
         context_budget::ContextBudgetFamily;
     static OVERWINDOWPLANFAMILY: over_window_plan::OverWindowPlanFamily =
@@ -409,6 +412,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::TaskPlan => &TASKPLANFAMILY,
         QuestionKind::HarnessContrast => &HARNESSCONTRASTFAMILY,
         QuestionKind::Placement => &PLACEMENTFAMILY,
+        QuestionKind::PlacementPlan => &PLACEMENTPLANFAMILY,
         QuestionKind::ContextBudget => &CONTEXTBUDGETFAMILY,
         QuestionKind::OverWindowPlan => &OVERWINDOWPLANFAMILY,
         QuestionKind::InstructionDisclosure => &INSTRUCTIONDISCLOSUREFAMILY,
@@ -505,6 +509,7 @@ mod tests {
             QuestionKind::TaskPlan,
             QuestionKind::HarnessContrast,
             QuestionKind::Placement,
+            QuestionKind::PlacementPlan,
             QuestionKind::ContextBudget,
             QuestionKind::OverWindowPlan,
             QuestionKind::InstructionDisclosure,
@@ -592,6 +597,7 @@ mod tests {
             | QuestionKind::TaskPlan
             | QuestionKind::HarnessContrast
             | QuestionKind::Placement
+            | QuestionKind::PlacementPlan
             | QuestionKind::ContextBudget
             | QuestionKind::OverWindowPlan
             | QuestionKind::InstructionDisclosure

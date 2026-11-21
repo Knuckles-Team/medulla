@@ -1158,6 +1158,10 @@ mod topology_tests;
 #[cfg(all(feature = "decide", feature = "redb"))]
 mod placement_tests;
 
+// MEDULLA-PLACEMENT-R700.3: the served placement plan question.
+#[cfg(all(feature = "decide", feature = "redb"))]
+mod placement_plan_tests;
+
 #[cfg(feature = "query")]
 mod retrieval_tests;
 

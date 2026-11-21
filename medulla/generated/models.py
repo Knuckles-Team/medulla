@@ -27522,6 +27522,55 @@ class PlacementTarget(str, Enum):
     SWARM = "swarm"
 
 
+class HeavyCapability(str, Enum):
+    GPU = "gpu"
+    QUANTUM_SIMULATION = "quantum_simulation"
+    LARGE_MEMORY = "large_memory"
+    BACKTEST = "backtest"
+    VIDEO_TRANSCODE = "video_transcode"
+
+
+class HostBudget(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    capabilities: list[HeavyCapability]
+    cpu_millis: Annotated[int, Field(ge=0)]
+    host_iri: str
+    memory_bytes: Annotated[int, Field(ge=0)]
+    storage_bytes: Annotated[int, Field(ge=0)]
+
+
+class ServiceSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cpu_millis: Annotated[int, Field(ge=0)]
+    current_host: str | None = None
+    memory_bytes: Annotated[int, Field(ge=0)]
+    required_capability: HeavyCapability | None = None
+    service_iri: str
+    storage_bytes: Annotated[int, Field(ge=0)]
+
+
+class PlacementPlanRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    hosts: list[HostBudget]
+
+
+class PlacementPlanRequestBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    services: list[ServiceSpec]
+
+
+class PlacementPlanQuestion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    body: PlacementPlanRequestBody
+    graph: str
+    read: PlacementPlanRead | None = None
+
+
 class PlanFeature(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -27846,6 +27895,13 @@ class TypedValuePlacement(BaseModel):
     value: PlacementQuestion
 
 
+class TypedValuePlacementPlan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["placement_plan"]
+    value: PlacementPlanQuestion
+
+
 class TypedValuePlanningAdmission(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -28029,6 +28085,7 @@ TypedValue = Annotated[
     | TypedValueIntakeSources
     | TypedValueLoadSet
     | TypedValuePlacement
+    | TypedValuePlacementPlan
     | TypedValuePlanningAdmission
     | TypedValueSkillPlanQuery
     | TypedValueSkillUpgrade
@@ -36160,6 +36217,8 @@ __all__ = [
     "HeadKind",
     "HealthReport",
     "HeldBlobRef",
+    "HeavyCapability",
+    "HostBudget",
     "HostStartBinding",
     "HostStartInterfaces",
     "HostStartProvenance",
@@ -38508,6 +38567,7 @@ __all__ = [
     "ServerTransport",
     "SessionRecordProjection",
     "SessionTouch",
+    "ServiceSpec",
     "SessionUsage",
     "SessionView",
     "SettlementLegResult",
@@ -39432,6 +39492,9 @@ __all__ = [
     "PairwiseComparison",
     "PairwisePreference",
     "PlacementConstraints",
+    "PlacementPlanQuestion",
+    "PlacementPlanRead",
+    "PlacementPlanRequestBody",
     "PlacementQuestion",
     "PlacementRead",
     "PlacementRequestBody",
@@ -39477,6 +39540,7 @@ __all__ = [
     "TypedValueIntakeSources",
     "TypedValueLoadSet",
     "TypedValuePlacement",
+    "TypedValuePlacementPlan",
     "TypedValuePlanningAdmission",
     "TypedValueSkillPlanQuery",
     "TypedValueSkillUpgrade",

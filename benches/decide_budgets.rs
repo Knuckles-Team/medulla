@@ -215,6 +215,7 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::TaskPlan => "task_plan",
         QuestionKind::HarnessContrast => "harness_contrast",
         QuestionKind::Placement => "placement",
+        QuestionKind::PlacementPlan => "placement_plan",
         QuestionKind::ContextBudget => "context_budget",
         QuestionKind::OverWindowPlan => "over_window_plan",
         QuestionKind::InstructionDisclosure => "instruction_disclosure",

@@ -165,6 +165,9 @@ pub enum FamilyAnswer {
     /// The why-not of every non-chosen target of a `placement` question
     /// (MEDULLA-PLACEMENT-R001.9).
     Placement(Box<crate::decision::statistical::placement::PlacementAnswer>),
+    /// The sealed service-to-host plan of a `placement_plan` question
+    /// (MEDULLA-PLACEMENT-R700.3).
+    PlacementPlan(Box<crate::decision::statistical::placement_plan::PlacementPlan>),
     /// The per-step split of a trajectory reward (MEDULLA-DECISION-ENGINE-R751.755).
     RewardDecomposition(Box<crate::decision::reward::TrajectoryReward>),
     /// The ordered reads and stop reason of a research walk (MEDULLA-DECISION-ENGINE-R705.3).
@@ -299,6 +302,16 @@ impl FamilyAnswer {
     pub fn placement(&self) -> Option<&crate::decision::statistical::placement::PlacementAnswer> {
         match self {
             Self::Placement(value) => Some(value),
+            _ => None,
+        }
+    }
+
+    /// The placement plan this answer carries.
+    pub fn placement_plan(
+        &self,
+    ) -> Option<&crate::decision::statistical::placement_plan::PlacementPlan> {
+        match self {
+            Self::PlacementPlan(value) => Some(value),
             _ => None,
         }
     }

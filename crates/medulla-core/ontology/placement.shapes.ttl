@@ -14,3 +14,12 @@ placement:TargetShape a sh:NodeShape ;
     sh:property [ sh:path placement:supportsVolumes ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:boolean ] ;
     sh:property [ sh:path placement:maxReplicas ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ] ;
     sh:property [ sh:path placement:relativeCost ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ] .
+
+# Every `placement:Host` declares its CPU, memory and storage budget once
+# (MEDULLA-PLACEMENT-R700.3); its capabilities are limited to the closed set.
+placement:HostShape a sh:NodeShape ;
+    sh:targetClass placement:Host ;
+    sh:property [ sh:path placement:cpuMillis ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ] ;
+    sh:property [ sh:path placement:memoryBytes ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ] ;
+    sh:property [ sh:path placement:storageBytes ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:nonNegativeInteger ] ;
+    sh:property [ sh:path placement:capabilities ; sh:in ( "gpu" "quantum_simulation" "large_memory" "backtest" "video_transcode" ) ] .

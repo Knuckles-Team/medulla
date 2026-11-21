@@ -127,6 +127,11 @@ pub enum QuestionKind {
     /// why every other target was not chosen; it acquires no capacity and
     /// deploys nothing. See `statistical::placement`.
     Placement,
+    /// Evaluate-only placement of services onto hosts (MEDULLA-PLACEMENT-R700.3):
+    /// `Decide` reads the host budgets from the graph, solves the bounded 0-1
+    /// program and seals the plan; it acquires nothing and moves nothing. See
+    /// `statistical::placement_plan`.
+    PlacementPlan,
     /// Which context sources fit a token budget, most relevant first
     /// (MEDULLA-DECISION-ENGINE-R029.2.2). Evaluate-only. See
     /// `decision::context_source`.
@@ -410,6 +415,8 @@ pub enum TypedValue {
     Topology(Box<topology::TopologyQuestion>),
     /// A placement question (MEDULLA-PLACEMENT-R001.7).
     Placement(Box<placement::PlacementQuestion>),
+    /// A placement-plan question (MEDULLA-PLACEMENT-R700.3).
+    PlacementPlan(Box<placement_plan::PlacementPlanQuestion>),
     /// One trajectory's reward and step signals (MEDULLA-DECISION-ENGINE-R751.755).
     RewardDecomposition(Box<super::reward::RewardDecompositionRequest>),
     /// A stage and its promotion policy (MEDULLA-DECISION-ENGINE-R751.754).

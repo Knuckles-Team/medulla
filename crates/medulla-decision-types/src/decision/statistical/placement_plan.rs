@@ -67,6 +67,44 @@ pub struct PlacementPlan {
     pub certificate_digest: String,
 }
 
+/// The name of the one parameter a `placement_plan` question carries
+/// (MEDULLA-PLACEMENT-R700.3).
+pub const PLACEMENT_PLAN_PARAM: &str = "placement_plan";
+
+/// The one declared option of a `placement_plan` question: the plan is solved
+/// or the question abstains.
+pub const PLACEMENT_PLAN_OPTION: &str = "placement_plan:solve";
+
+/// The services a `placement_plan` request asks to place.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PlacementPlanRequestBody {
+    pub services: Vec<ServiceSpec>,
+}
+
+/// The host budgets the engine read from the graph for one question.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PlacementPlanRead {
+    pub hosts: Vec<HostBudget>,
+}
+
+/// The typed question of a `placement_plan` request: the services to place and
+/// the graph the `placement:Host` nodes are read from. `read` is engine-filled;
+/// a caller-supplied value is refused, because observed host budgets are not a
+/// caller claim.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PlacementPlanQuestion {
+    pub graph: String,
+    pub body: PlacementPlanRequestBody,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read: Option<PlacementPlanRead>,
+}
+
 /// Check the request bounds on the host and service lists.
 pub fn check_plan_request(hosts: &[HostBudget], services: &[ServiceSpec]) -> Result<(), String> {
     if hosts.len() > MAX_PLAN_HOSTS {

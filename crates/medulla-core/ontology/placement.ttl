@@ -34,8 +34,31 @@ placement:relativeCost a owl:DatatypeProperty ;
     rdfs:range xsd:nonNegativeInteger ;
     rdfs:comment "The target's relative cost, compared across candidates; exactly one value per target." .
 
+placement:cpuMillis a owl:DatatypeProperty ;
+    rdfs:domain placement:Host ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "The CPU budget of this host in millicores; exactly one value per host." .
+placement:memoryBytes a owl:DatatypeProperty ;
+    rdfs:domain placement:Host ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "The memory budget of this host in bytes; exactly one value per host." .
+placement:storageBytes a owl:DatatypeProperty ;
+    rdfs:domain placement:Host ;
+    rdfs:range xsd:nonNegativeInteger ;
+    rdfs:comment "The storage budget of this host in bytes; exactly one value per host." .
+placement:capabilities a owl:DatatypeProperty ;
+    rdfs:domain placement:Host ;
+    rdfs:range xsd:string ;
+    rdfs:comment "The heavy capabilities this host declares: gpu, quantum_simulation, large_memory, backtest, video_transcode; an array on the host node." .
+
 # --- Targets ----------------------------------------------------------------
 
 placement:Target a owl:Class ;
     rdfs:subClassOf kg:DomainEntity ;
     rdfs:comment "One deployment target with its declared placement facts." .
+
+# --- Hosts ------------------------------------------------------------------
+
+placement:Host a owl:Class ;
+    rdfs:subClassOf kg:DomainEntity ;
+    rdfs:comment "One host with its declared resource budget and heavy capabilities (MEDULLA-PLACEMENT-R700.3)." .
