@@ -13,8 +13,11 @@
 
 use std::collections::BTreeMap;
 
+use medulla_document::TranscriptDialect;
 use medulla_source_types::source_ingestion::SourceIngestionRequest;
-use medulla_source_types::source_transcript::{TranscriptMessage, TranscriptThread};
+use medulla_source_types::source_transcript::{
+    TranscriptIngestError, TranscriptMessage, TranscriptThread,
+};
 use medulla_types::contract::Digest256;
 
 /// The digest domain of a thread identity.
@@ -70,13 +73,31 @@ pub(super) fn message_identity(thread_id: &str, message_id: &str) -> Result<Stri
     .to_hex())
 }
 
+/// `parse_dialect`: the declared transcript format of a thread header. Only a name in
+/// `TranscriptDialect::ALL` is accepted (MEDULLA-INGEST-WORKER-R003.16); the dialect is a
+/// provenance label because the producer has already parsed the source lines.
+pub(super) fn parse_dialect(name: &str) -> Result<TranscriptDialect, TranscriptIngestError> {
+    TranscriptDialect::ALL
+        .iter()
+        .copied()
+        .find(|dialect| {
+            serde_json::to_value(dialect)
+                .ok()
+                .and_then(|value| value.as_str().map(|text| text == name))
+                .unwrap_or(false)
+        })
+        .ok_or_else(|| TranscriptIngestError::UnknownFormat(name.to_string()))
+}
+
 /// Validate `thread` and `messages` against `request`.
 ///
 /// `tenant` is the verified tenant scope. `concept_visible` answers whether a
 /// concept reference resolves to a node visible under the verified tenant and
 /// policy; a reference that does not resolve refuses the whole thread with
-/// `TRANSCRIPT_FOREIGN_CONCEPT`. The messages returned follow
-/// `thread.message_ids` exactly.
+/// `TRANSCRIPT_FOREIGN_CONCEPT`. An `event_time_ms` of zero or below refuses with
+/// `TRANSCRIPT_MISSING_EVENT_TIME`. A message id sent twice with different content refuses with
+/// `TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT`; the same content is an idempotent no-op
+/// (MEDULLA-INGEST-WORKER-R003.16). The messages returned follow `thread.message_ids` exactly.
 pub(super) fn validate_transcript(
     tenant: &str,
     request: &SourceIngestionRequest,
@@ -94,14 +115,18 @@ pub(super) fn validate_transcript(
                 message.message_id, message.session_id, thread.session_id
             )));
         }
-        if by_id
-            .insert(message.message_id.as_str(), message)
-            .is_some()
-        {
-            return Err(invalid(format!(
-                "message {} appears more than once",
-                message.message_id
-            )));
+        if message.event_time_ms <= 0 {
+            return Err(
+                TranscriptIngestError::MissingEventTime(message.message_id.clone()).to_string(),
+            );
+        }
+        if let Some(earlier) = by_id.insert(message.message_id.as_str(), message) {
+            if earlier != message {
+                return Err(TranscriptIngestError::DuplicateMessageConflict(
+                    message.message_id.clone(),
+                )
+                .to_string());
+            }
         }
     }
     let thread_id = thread_identity(
@@ -120,9 +145,7 @@ pub(super) fn validate_transcript(
             .iter()
             .find(|concept| !concept_visible(concept))
         {
-            return Err(format!(
-                "TRANSCRIPT_FOREIGN_CONCEPT: concept {concept} is not visible to the caller"
-            ));
+            return Err(TranscriptIngestError::ForeignConcept(concept.clone()).to_string());
         }
         ordered.push(ValidatedMessage {
             message_id: message_identity(&thread_id, id)?,
@@ -239,5 +262,57 @@ mod tests {
         assert!(missing.unwrap_err().starts_with("TRANSCRIPT_INVALID:"));
         let short = self::thread(&request, &["m1", "m2"]);
         assert!(validate_transcript("t1", &request, &short, &sent, |_| true).is_err());
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R003.16
+    #[test]
+    fn unknown_format_and_foreign_concept_are_refused() {
+        // Only a name of `TranscriptDialect::ALL` is a format.
+        for name in ["antigravity", "windsurf", "claude", "codex"] {
+            assert!(parse_dialect(name).is_ok(), "{name}");
+        }
+        for name in ["", "Claude", "plain-text"] {
+            let refused = parse_dialect(name).unwrap_err();
+            assert_eq!(refused, TranscriptIngestError::UnknownFormat(name.into()));
+            assert_eq!(refused.code(), "TRANSCRIPT_UNKNOWN_FORMAT");
+        }
+
+        let request = request();
+        let thread = thread(&request, &["m1", "m2"]);
+        let sent = vec![
+            message(&request, "m1", 100, 1),
+            message(&request, "m2", 200, 2),
+        ];
+        // A concept the caller cannot see refuses the whole thread.
+        let foreign = validate_transcript("t1", &request, &thread, &sent, |_| false).unwrap_err();
+        assert!(foreign.starts_with("TRANSCRIPT_FOREIGN_CONCEPT:"), "{foreign}");
+
+        // An event time of zero or below is missing.
+        for event in [0, -5] {
+            let mut bad = sent.clone();
+            bad[1].event_time_ms = event;
+            let refused = validate_transcript("t1", &request, &thread, &bad, |_| true).unwrap_err();
+            assert!(refused.starts_with("TRANSCRIPT_MISSING_EVENT_TIME:"), "{refused}");
+        }
+
+        // A message id sent again with the same content is an idempotent no-op ...
+        let mut same = sent.clone();
+        same.push(sent[0].clone());
+        let validated = validate_transcript("t1", &request, &thread, &same, |_| true).unwrap();
+        assert_eq!(validated.messages.len(), 2);
+        assert_eq!(
+            validated,
+            validate_transcript("t1", &request, &thread, &sent, |_| true).unwrap()
+        );
+        // ... and with different content it is a conflict.
+        let mut changed = sent.clone();
+        let mut other = sent[0].clone();
+        other.text = "different text".into();
+        changed.push(other);
+        let conflict = validate_transcript("t1", &request, &thread, &changed, |_| true).unwrap_err();
+        assert!(
+            conflict.starts_with("TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT:"),
+            "{conflict}"
+        );
     }
 }

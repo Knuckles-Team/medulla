@@ -81,6 +81,38 @@ pub enum TranscriptShapeError {
     RepeatedMessage(String),
 }
 
+/// A transcript refusal with a stable wire code (MEDULLA-INGEST-WORKER-R003.16). Each happens
+/// before any graph mutation and publishes no thread, message or concept link.
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+pub enum TranscriptIngestError {
+    /// The declared format is not in `TranscriptDialect::ALL`.
+    #[error("TRANSCRIPT_UNKNOWN_FORMAT: transcript format {0} is not supported")]
+    UnknownFormat(String),
+    /// `event_time_ms` of zero or below is missing.
+    #[error("TRANSCRIPT_MISSING_EVENT_TIME: message {0} has no event time")]
+    MissingEventTime(String),
+    /// A message id seen before with different content; the same content is an idempotent no-op.
+    #[error(
+        "TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT: message {0} was sent twice with different content"
+    )]
+    DuplicateMessageConflict(String),
+    /// A concept reference that does not resolve to a node visible to the caller.
+    #[error("TRANSCRIPT_FOREIGN_CONCEPT: concept {0} is not visible to the caller")]
+    ForeignConcept(String),
+}
+
+impl TranscriptIngestError {
+    /// The stable wire code: the text before the first colon of the message.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::UnknownFormat(_) => "TRANSCRIPT_UNKNOWN_FORMAT",
+            Self::MissingEventTime(_) => "TRANSCRIPT_MISSING_EVENT_TIME",
+            Self::DuplicateMessageConflict(_) => "TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT",
+            Self::ForeignConcept(_) => "TRANSCRIPT_FOREIGN_CONCEPT",
+        }
+    }
+}
+
 fn matches_request(
     connector: &ResourceId,
     stream: &ResourceId,
