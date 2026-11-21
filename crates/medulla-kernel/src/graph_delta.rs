@@ -208,7 +208,6 @@ impl GraphRowDelta {
         validate_schema_sources_update(self.schema_sources.as_ref())
     }
 
-    /// The mutations this delta replays.
     /// Whether an `AddNode` of this delta replaces a node the `before` image already held. The
     /// source-dirty wakeup reads it: a node that moves off a bound type leaves no before image
     /// in its `AddNode`, so the commit wakes every bound source of the graph.
@@ -216,6 +215,7 @@ impl GraphRowDelta {
         self.replaces_existing_node
     }
 
+    /// The mutations this delta replays.
     pub fn operations(&self) -> &[Method] {
         &self.operations
     }
