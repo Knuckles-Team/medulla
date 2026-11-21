@@ -19,7 +19,7 @@ try:
     from conftest import request_context
 except ImportError:  # pragma: no cover - rootdir import layout
     from tests.conftest import request_context
-from .hms_recorded import HmsTable, RecordedMetastore
+from .hms_recorded import AVRO_INPUT, HmsTable, RecordedMetastore
 
 pa = pytest.importorskip("pyarrow")
 orc = pytest.importorskip("pyarrow.orc")
@@ -46,9 +46,71 @@ def _write_orc_facts(root) -> HmsTable:
     return table
 
 
+EVENTS = {"mon": [(10, "open"), (11, "close")], "tue": [(12, "open")], "wed": [(13, "open")]}
+
+
+def _avro_long(value: int) -> bytes:
+    """One Avro long: zigzag, then base-128 varint."""
+    zigzag = (value << 1) ^ (value >> 63)
+    out = bytearray()
+    while zigzag > 0x7F:
+        out.append((zigzag & 0x7F) | 0x80)
+        zigzag >>= 7
+    out.append(zigzag)
+    return bytes(out)
+
+
+def _avro_bytes(value: bytes) -> bytes:
+    return _avro_long(len(value)) + value
+
+
+def _avro_file(rows: list[tuple[int, str]]) -> bytes:
+    """An Avro object container file (null codec) of `{id: long, kind: string}` records."""
+    schema = json.dumps(
+        {
+            "type": "record",
+            "name": "event",
+            "fields": [
+                {"name": "id", "type": "long"},
+                {"name": "kind", "type": "string"},
+            ],
+        }
+    ).encode()
+    sync = bytes(range(16))
+    meta = (
+        _avro_long(2)
+        + _avro_bytes(b"avro.schema")
+        + _avro_bytes(schema)
+        + _avro_bytes(b"avro.codec")
+        + _avro_bytes(b"null")
+        + _avro_long(0)
+    )
+    body = b"".join(_avro_long(i) + _avro_bytes(kind.encode()) for i, kind in rows)
+    return b"Obj\x01" + meta + sync + _avro_long(len(rows)) + _avro_long(len(body)) + body + sync
+
+
+def _write_avro_events(root) -> HmsTable:
+    table = HmsTable(
+        db="db",
+        name="avro_events",
+        columns=[("id", "bigint"), ("kind", "string")],
+        partition_keys=["day"],
+        location=str(root / "avro_events"),
+        input_format=AVRO_INPUT,
+    )
+    for day, rows in EVENTS.items():
+        directory = root / "avro_events" / f"day={day}"
+        directory.mkdir(parents=True)
+        (directory / "part-0.avro").write_bytes(_avro_file(rows))
+        table.partitions.append(([day], str(directory)))
+    return table
+
+
 @pytest.fixture
 def metastore(tmp_path, hms_port):
-    server = RecordedMetastore([_write_orc_facts(tmp_path)], hms_port)
+    server = RecordedMetastore(
+        [_write_orc_facts(tmp_path), _write_avro_events(tmp_path)], hms_port
+    )
     yield server
     server.close()
 
@@ -150,3 +212,46 @@ def test_served_scan_receipt_counts_what_the_scan_opened(
     )
     assert _receipt(full)["partitions_read"] == 3
     assert _receipt(full)["files_read"] == 3
+
+
+@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.4.6")
+def test_partition_pruned_scan(clean_graph, metastore, hms_port):
+    """A predicate on the partition key reads only matching partitions, and every
+    answer equals the full-scan oracle computed from the files' known rows."""
+    clean_graph.query.register_foreign_source("hive-p", _source(hms_port))
+
+    # ORC: a partition-key predicate prunes the other two partitions.
+    rows, warnings = clean_graph.query.sql_with_warnings(
+        "SELECT id FROM hive('hive-p', 'db.orc_facts') WHERE day = 'tue' ORDER BY id"
+    )
+    assert [row["id"] for row in rows] == DAYS["tue"]
+    receipt = _receipt(warnings)
+    assert receipt["partitions_read"] == 1
+    assert receipt["partitions_pruned"] == 2
+
+    # The unpruned scan is the oracle: every row of every partition.
+    rows, warnings = clean_graph.query.sql_with_warnings(
+        "SELECT id, day FROM hive('hive-p', 'db.orc_facts') ORDER BY id"
+    )
+    oracle = sorted((i, day) for day, ids in DAYS.items() for i in ids)
+    assert [(row["id"], row["day"]) for row in rows] == oracle
+    assert _receipt(warnings)["partitions_read"] == len(DAYS)
+    pruned_ids = sorted(i for i, day in oracle if day == "tue")
+    assert pruned_ids == DAYS["tue"]
+
+    # Avro: the same pruning, and the same equality with the oracle.
+    rows, warnings = clean_graph.query.sql_with_warnings(
+        "SELECT id, kind FROM hive('hive-p', 'db.avro_events') "
+        "WHERE day = 'mon' ORDER BY id"
+    )
+    assert [(row["id"], row["kind"]) for row in rows] == EVENTS["mon"]
+    receipt = _receipt(warnings)
+    assert receipt["partitions_read"] == 1
+    assert receipt["partitions_pruned"] == 2
+    rows, warnings = clean_graph.query.sql_with_warnings(
+        "SELECT id, kind FROM hive('hive-p', 'db.avro_events') ORDER BY id"
+    )
+    assert [(row["id"], row["kind"]) for row in rows] == sorted(
+        row for rows_ in EVENTS.values() for row in rows_
+    )
+    assert _receipt(warnings)["partitions_read"] == len(EVENTS)
