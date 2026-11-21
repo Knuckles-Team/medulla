@@ -489,6 +489,10 @@ closed_error_codes! {
         ProposalEvidenceUnresolved => "PROPOSAL_EVIDENCE_UNRESOLVED",
         /// MEDULLA-SDLC-R017.3: a cited record's content digest differs from the cited one.
         ProposalEvidenceDigestMismatch => "PROPOSAL_EVIDENCE_DIGEST_MISMATCH",
+        /// MEDULLA-SDLC-R017.5: the codebase is in mode `reference` and takes no proposal.
+        ModeReferenceNoProposals => "MODE_REFERENCE_NO_PROPOSALS",
+        /// MEDULLA-SDLC-R017.5: the codebase's mode does not admit the proposal's origin.
+        ModeOriginNotAdmitted => "MODE_ORIGIN_NOT_ADMITTED",
         /// MEDULLA-SDLC-R012.8: a move to `evolving` without a full operator approval.
         ModeApprovalRequired => "MODE_APPROVAL_REQUIRED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",

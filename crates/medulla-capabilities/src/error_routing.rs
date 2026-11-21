@@ -1719,6 +1719,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PROPOSAL_EVIDENCE_REQUIRED",
             "PROPOSAL_EVIDENCE_UNRESOLVED",
             "PROPOSAL_EVIDENCE_DIGEST_MISMATCH",
+            "MODE_REFERENCE_NO_PROPOSALS",
+            "MODE_ORIGIN_NOT_ADMITTED",
         ],
     ),
     // MEDULLA-SDLC-R012.8: the project mode record's refusals.

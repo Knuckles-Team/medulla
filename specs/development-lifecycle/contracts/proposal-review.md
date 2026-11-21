@@ -28,6 +28,7 @@ Repository: arbora, row `ARBORA-OPS-R896.5` (goal, proposal list and decision op
 - `PROPOSAL_EVIDENCE_REQUIRED`: the proposal has no evidence.
 - `PROPOSAL_DIRECT_WRITE_REFUSED`: a caller tried to write a spec file directly.
 - `MODE_REFERENCE_NO_PROPOSALS`: the codebase is in mode `reference`.
+- `MODE_ORIGIN_NOT_ADMITTED`: the codebase's mode does not admit the proposal's origin (an unprompted proposal to a `development` codebase).
 - `MODE_APPROVAL_REQUIRED`: a move to `evolving` has no operator approval.
 - `GOAL_TARGET_REQUIRED`: a goal names no target.
 

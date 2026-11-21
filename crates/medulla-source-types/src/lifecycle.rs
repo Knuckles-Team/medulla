@@ -129,6 +129,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("PROPOSAL_EVIDENCE_REQUIRED"),
     RefusalCode::new("PROPOSAL_EVIDENCE_UNRESOLVED"),
     RefusalCode::new("PROPOSAL_EVIDENCE_DIGEST_MISMATCH"),
+    RefusalCode::new("MODE_REFERENCE_NO_PROPOSALS"),
+    RefusalCode::new("MODE_ORIGIN_NOT_ADMITTED"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -158,6 +160,10 @@ pub enum LifecycleRefusal {
     ProposalEvidenceUnresolved(String),
     #[error("PROPOSAL_EVIDENCE_DIGEST_MISMATCH: {0}")]
     ProposalEvidenceDigestMismatch(String),
+    #[error("MODE_REFERENCE_NO_PROPOSALS: {0}")]
+    ModeReferenceNoProposals(String),
+    #[error("MODE_ORIGIN_NOT_ADMITTED: {0}")]
+    ModeOriginNotAdmitted(String),
     #[error("INVALID_ARGUMENT: {0}")]
     InvalidArgument(String),
     #[error("MODE_APPROVAL_REQUIRED: {0}")]
@@ -180,6 +186,8 @@ impl LifecycleRefusal {
             Self::ProposalEvidenceRequired(_) => "PROPOSAL_EVIDENCE_REQUIRED",
             Self::ProposalEvidenceUnresolved(_) => "PROPOSAL_EVIDENCE_UNRESOLVED",
             Self::ProposalEvidenceDigestMismatch(_) => "PROPOSAL_EVIDENCE_DIGEST_MISMATCH",
+            Self::ModeReferenceNoProposals(_) => "MODE_REFERENCE_NO_PROPOSALS",
+            Self::ModeOriginNotAdmitted(_) => "MODE_ORIGIN_NOT_ADMITTED",
             Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
         }

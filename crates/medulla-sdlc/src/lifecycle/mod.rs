@@ -1,3 +1,4 @@
-//! The development lifecycle: deliveries and their derived stage.
+//! The development lifecycle: deliveries and their derived stage, and the proposal gate.
 
 pub mod delivery;
+pub mod proposals;

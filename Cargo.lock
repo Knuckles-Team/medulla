@@ -8264,6 +8264,7 @@ dependencies = [
  "medulla-rdf",
  "medulla-reasoner",
  "medulla-result-types",
+ "medulla-sdlc",
  "medulla-server",
  "medulla-server-api",
  "medulla-server-auth",

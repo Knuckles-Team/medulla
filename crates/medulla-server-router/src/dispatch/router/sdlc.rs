@@ -170,6 +170,17 @@ async fn proposal_put(
         if target.verified.tenant().trim().is_empty() {
             return Err("TENANT_SCOPE_REQUIRED".to_string());
         }
+        // MEDULLA-SDLC-R017.5: the project mode decides whether the proposal is taken, before
+        // its evidence is resolved. A blank project falls through to the handler's refusal.
+        if !proposal.project.trim().is_empty() {
+            let mode = stored_project_mode(state, &target, &proposal.project).await?;
+            medulla_sdlc::lifecycle::proposals::admit_proposal(
+                mode,
+                proposal.origin,
+                &proposal.project,
+            )
+            .map_err(|e| e.to_string())?;
+        }
         let resolved = resolve_evidence(state, &target, &proposal).await?;
         let write = handle_proposal_put(proposal, &resolved).map_err(|e| e.to_string())?;
         let operations = proposal_operations(&write, &target)?;

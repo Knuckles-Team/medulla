@@ -98,7 +98,9 @@ def _content_digest(properties: dict) -> str:
     return framed_sha256(b"eg/ingest-readback/node/v1", [compact.encode()])
 
 
-async def _proposal(client, project: str, evidence: list[dict]) -> dict:
+async def _proposal(
+    client, project: str, evidence: list[dict], origin: str | None = None
+) -> dict:
     proposal = {
         "project": project,
         "kind": "row_add",
@@ -106,7 +108,27 @@ async def _proposal(client, project: str, evidence: list[dict]) -> dict:
         "statement": "Add the evidence row.",
         "evidence": evidence,
     }
+    if origin is not None:
+        proposal["origin"] = origin
     return _body(await client._send("ProposalPut", {"proposal": proposal}, GRAPH))
+
+
+async def _set_mode(client, project: str, mode: str, approval: dict | None = None) -> dict:
+    request: dict = {"project": project, "mode": mode}
+    if approval is not None:
+        request["approval"] = approval
+    return _body(await client._send("ProjectModeSet", {"request": request}, GRAPH))
+
+
+async def _cited(client, suffix: str) -> dict:
+    record_id = f"fact:mode-{suffix}"
+    properties = {"type": "CodeFact", "name": f"mode-{suffix}"}
+    await _add_node(client, record_id, properties)
+    return {
+        "kind": "code_graph_fact",
+        "record_id": record_id,
+        "digest": _content_digest(properties),
+    }
 
 
 @pytest.mark.spec("MEDULLA-SDLC-R017.3")
@@ -116,6 +138,7 @@ async def test_proposal_without_evidence_is_refused(start_medulla_server) -> Non
     try:
         suffix = uuid.uuid4().hex[:12]
         project = f"project-{suffix}"
+        await _set_mode(client, project, "development")
         with pytest.raises(Exception, match="PROPOSAL_EVIDENCE_REQUIRED"):
             await _proposal(client, project, [])
 
@@ -141,5 +164,43 @@ async def test_proposal_without_evidence_is_refused(start_medulla_server) -> Non
         assert stored["origin"] == "requested"
         again = await _proposal(client, project, [cited])
         assert again["node_id"] == receipt["node_id"]
+    finally:
+        await client.close()
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R017.5")
+@pytest.mark.asyncio
+async def test_mode_gates_proposals(start_medulla_server) -> None:
+    client = await _connect()
+    try:
+        suffix = uuid.uuid4().hex[:12]
+        project = f"project-{suffix}"
+        cited = await _cited(client, suffix)
+
+        # A project with no mode record is a reference codebase: nothing is taken.
+        with pytest.raises(Exception, match="MODE_REFERENCE_NO_PROPOSALS"):
+            await _proposal(client, project, [cited])
+
+        # A development codebase takes a requested proposal and refuses an unprompted one.
+        await _set_mode(client, project, "development")
+        receipt = await _proposal(client, project, [cited], origin="requested")
+        assert receipt["evidence"] == 1
+        with pytest.raises(Exception, match="MODE_ORIGIN_NOT_ADMITTED"):
+            await _proposal(client, project, [cited], origin="unprompted")
+
+        # An evolving codebase takes the proposal the loop raised unprompted.
+        approval = {
+            "approver": "owner",
+            "approved_at_ms": 1_700_000_000_000,
+            "reason": "the owner promotes the project to evolving",
+        }
+        await _set_mode(client, project, "evolving", approval)
+        raised = await _proposal(client, project, [cited], origin="unprompted")
+        # spec: MEDULLA-SDLC-R017.5
+        assert (await _node(client, raised["node_id"]))["origin"] == "unprompted"
+
+        # Proposals never change the mode.
+        again = await _set_mode(client, project, "evolving")
+        assert again["previous"] == "evolving"
     finally:
         await client.close()
