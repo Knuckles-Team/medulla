@@ -90,6 +90,75 @@ kinds! {
     #[cfg(feature = "geo")] SpatialDisjoint,
 }
 
+/// MEDULLA-FEDERATED-QUERY-R720.6: the modality `op` runs in. An exhaustive match on [`OpKind`]
+/// with no catch-all, so a new wire variant is a compile error until it names its modality.
+#[cfg(feature = "query")]
+pub fn uql_modality(op: &Op) -> UqlModality {
+    match op_kind(op) {
+        OpKind::RankEmbed | OpKind::RankMmr | OpKind::ClusterByEmbedding => UqlModality::Vector,
+        #[cfg(feature = "text")]
+        OpKind::RankText | OpKind::FuseRrf => UqlModality::Text,
+        #[cfg(feature = "owl-plan")]
+        OpKind::SparqlBgp | OpKind::Reason | OpKind::ValidateShape => UqlModality::Sparql,
+        #[cfg(feature = "federation")]
+        OpKind::ForeignScan => UqlModality::Foreign,
+        OpKind::Foreign => UqlModality::Foreign,
+        #[cfg(feature = "epistemic")]
+        OpKind::EvidenceFor
+        | OpKind::EvidenceForEach
+        | OpKind::Contradicts
+        | OpKind::SupportedBy
+        | OpKind::BeliefAsOf
+        | OpKind::SourceReliability
+        | OpKind::ConfidenceOp
+        | OpKind::ExplainBelief => UqlModality::Epistemic,
+        #[cfg(feature = "geo")]
+        OpKind::SpatialScan | OpKind::Reproject | OpKind::SpatialOp => UqlModality::Spatial,
+        #[cfg(feature = "tensor")]
+        OpKind::TensorScan | OpKind::TensorOp => UqlModality::Tensor,
+        #[cfg(feature = "stream")]
+        OpKind::Cep => UqlModality::Stream,
+        #[cfg(feature = "timeseries")]
+        OpKind::SensorFuse
+        | OpKind::SensorAlign
+        | OpKind::TsScan
+        | OpKind::Derive
+        | OpKind::Skill
+        | OpKind::Evaluate
+        | OpKind::Motif
+        | OpKind::Events => UqlModality::Timeseries,
+        #[cfg(feature = "probabilistic")]
+        OpKind::Probabilistic => UqlModality::Probabilistic,
+        #[cfg(feature = "wasm-udf")]
+        OpKind::Udf => UqlModality::Udf,
+        OpKind::Scan
+        | OpKind::ScanAll
+        | OpKind::Filter
+        | OpKind::Traverse
+        | OpKind::Expand
+        | OpKind::Propagate
+        | OpKind::Rank
+        | OpKind::RankNodeDistance
+        | OpKind::RankMentions
+        | OpKind::AsOf
+        | OpKind::Window
+        | OpKind::WindowAgg
+        | OpKind::Group
+        | OpKind::Order
+        | OpKind::Skip
+        | OpKind::EvaluateRule
+        | OpKind::Decay
+        | OpKind::Attribute
+        | OpKind::DecisionScan
+        | OpKind::Limit
+        | OpKind::Project
+        | OpKind::UsageScan
+        | OpKind::CompanyContextScan
+        | OpKind::ScanEdges
+        | OpKind::RequireNonEmpty => UqlModality::Graph,
+    }
+}
+
 /// The kind of `op`.
 pub fn op_kind(op: &Op) -> OpKind {
     match op {
@@ -425,4 +494,41 @@ pub enum ProofRole {
     Neutral,
     /// It admits or produces rows but carries no proof.
     Unproved,
+}
+
+#[cfg(all(test, feature = "query"))]
+mod modality_tests {
+    use super::*;
+
+    // spec: MEDULLA-FEDERATED-QUERY-R720.6
+    #[test]
+    fn every_op_kind_has_a_modality() {
+        for kind in OpKind::all() {
+            // The match is exhaustive; this walks every kind compiled into the build.
+            let _ = uql_modality(&crate::wire::uql_sample_op(kind));
+        }
+        assert_eq!(
+            uql_modality(&crate::wire::uql_sample_op(OpKind::RankEmbed)),
+            UqlModality::Vector
+        );
+        assert_eq!(
+            uql_modality(&crate::wire::uql_sample_op(OpKind::Scan)),
+            UqlModality::Graph
+        );
+        #[cfg(feature = "federation")]
+        assert_eq!(
+            uql_modality(&crate::wire::uql_sample_op(OpKind::ForeignScan)),
+            UqlModality::Foreign
+        );
+        #[cfg(feature = "owl-plan")]
+        assert_eq!(
+            uql_modality(&crate::wire::uql_sample_op(OpKind::SparqlBgp)),
+            UqlModality::Sparql
+        );
+        #[cfg(feature = "epistemic")]
+        assert_eq!(
+            uql_modality(&crate::wire::uql_sample_op(OpKind::BeliefAsOf)),
+            UqlModality::Epistemic
+        );
+    }
 }

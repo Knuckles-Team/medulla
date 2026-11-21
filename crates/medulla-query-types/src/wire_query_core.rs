@@ -1397,6 +1397,28 @@ pub enum UqlStage {
     Measured,
 }
 
+/// MEDULLA-FEDERATED-QUERY-R720.6: the modality one UQL stage runs in. UQL has no stage keyword
+/// called SQL: a source read through the federation is the SQL-engine path, and its modality is
+/// named `foreign`.
+#[cfg(feature = "query")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum UqlModality {
+    Graph,
+    Vector,
+    Text,
+    Sparql,
+    Foreign,
+    Epistemic,
+    Spatial,
+    Tensor,
+    Stream,
+    Timeseries,
+    Probabilistic,
+    Udf,
+}
+
 /// One pipeline stage in an `EXPLAIN` / `PROFILE` report (UQL-09).
 #[cfg(feature = "query")]
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -1404,6 +1426,8 @@ pub enum UqlStage {
 pub struct UqlStageReport {
     /// The stage in canonical UQL.
     pub clause: String,
+    /// The modality the stage runs in (MEDULLA-FEDERATED-QUERY-R720.6).
+    pub modality: UqlModality,
     /// The lifecycle state of this report; `rows` and `micros` are present exactly when it
     /// is `Measured`, and only `UqlStageReport::measured` writes them.
     pub stage: UqlStage,

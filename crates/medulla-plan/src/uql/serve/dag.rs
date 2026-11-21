@@ -13,7 +13,7 @@
 
 use std::time::Instant;
 
-use medulla_query_types::wire::{Op, UqlResult, UqlStageReport};
+use medulla_query_types::wire::{uql_modality, Op, UqlResult, UqlStageReport};
 
 use super::{micros_since, record_channel, returned_channels, rows_of, stage_text, ChannelTable};
 use medulla_exec::cost::{Cardinality, ModalityCardinality, PlanStats};
@@ -120,10 +120,18 @@ fn reports(nodes: &[DagNode], ctx: &PlanCtx, actual: Option<&[(u64, u64)]>) -> V
         .map(|((id, node), estimated_rows)| {
             let measured = actual.and_then(|a| a.get(id)).copied();
             match measured {
-                Some((rows, micros)) => {
-                    UqlStageReport::profiled(node_stage(id, node), estimated_rows, rows, micros)
-                }
-                None => UqlStageReport::planned(node_stage(id, node), estimated_rows),
+                Some((rows, micros)) => UqlStageReport::profiled(
+                    node_stage(id, node),
+                    uql_modality(&node.op),
+                    estimated_rows,
+                    rows,
+                    micros,
+                ),
+                None => UqlStageReport::planned(
+                    node_stage(id, node),
+                    uql_modality(&node.op),
+                    estimated_rows,
+                ),
             }
         })
         .collect()

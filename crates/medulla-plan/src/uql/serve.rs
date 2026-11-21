@@ -18,7 +18,7 @@
 use std::collections::BTreeMap;
 use std::time::Instant;
 
-use medulla_query_types::wire::{op_kind, Op, Plan, UqlResult, UqlRow, UqlStageReport};
+use medulla_query_types::wire::{op_kind, uql_modality, Op, Plan, UqlResult, UqlRow, UqlStageReport};
 
 use medulla_uql::{Body, Mode, Statement};
 
@@ -96,6 +96,7 @@ pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement,
             if let Some(source) = explain_source(op) {
                 reports.push(UqlStageReport::planned(
                     format!("REMOTE {source} strategy=planned estimate=pending"),
+                    medulla_query_types::wire::UqlModality::Foreign,
                     0.0,
                 ));
             }
@@ -118,6 +119,7 @@ pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement,
         UqlResult::Explain { stages, .. } => {
             stages.push(UqlStageReport::planned(
                 "LOCAL evaluation (per-stage reports above)".into(),
+                medulla_query_types::wire::UqlModality::Graph,
                 0.0,
             ));
             stages.extend(planned);
@@ -125,12 +127,14 @@ pub(crate) fn attach_federation_report(result: &mut UqlResult, stmt: &Statement,
         UqlResult::Profile { stages, .. } => {
             stages.push(UqlStageReport::planned(
                 "LOCAL evaluation (per-stage reports above)".into(),
+                medulla_query_types::wire::UqlModality::Graph,
                 0.0,
             ));
             if let Some(foreign) = ctx.federation {
                 stages.extend(foreign.fragment_reports().into_iter().map(|fragment| {
                     UqlStageReport::profiled(
                         fragment.stage,
+                        medulla_query_types::wire::UqlModality::Foreign,
                         fragment.estimated_rows,
                         fragment.rows,
                         fragment.micros,
@@ -344,7 +348,9 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         .ops
         .iter()
         .zip(estimates(&optimized.ops, ctx))
-        .map(|(op, estimated_rows)| UqlStageReport::planned(stage_text(op), estimated_rows))
+        .map(|(op, estimated_rows)| {
+            UqlStageReport::planned(stage_text(op), uql_modality(op), estimated_rows)
+        })
         .collect();
     let (incremental, incremental_note) = match medulla_exec::incremental::Circuit::compile(plan) {
         Ok(_) => (true, String::new()),
@@ -386,7 +392,13 @@ fn profile(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         .iter()
         .zip(estimates(&ops, ctx))
         .map(|((op, rows, micros), estimated_rows)| {
-            UqlStageReport::profiled(stage_text(op), estimated_rows, *rows, *micros)
+            UqlStageReport::profiled(
+                stage_text(op),
+                uql_modality(op),
+                estimated_rows,
+                *rows,
+                *micros,
+            )
         })
         .collect();
     let columns = returned_channels(&plan.ops);

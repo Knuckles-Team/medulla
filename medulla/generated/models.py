@@ -29480,12 +29480,28 @@ class UqlStage(str, Enum):
     MEASURED = "measured"
 
 
+class UqlModality(str, Enum):
+    GRAPH = "graph"
+    VECTOR = "vector"
+    TEXT = "text"
+    SPARQL = "sparql"
+    FOREIGN = "foreign"
+    EPISTEMIC = "epistemic"
+    SPATIAL = "spatial"
+    TENSOR = "tensor"
+    STREAM = "stream"
+    TIMESERIES = "timeseries"
+    PROBABILISTIC = "probabilistic"
+    UDF = "udf"
+
+
 class UqlStageReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     clause: str
     estimated_rows: float
     micros: Annotated[int, Field(ge=0)] | None = None
+    modality: UqlModality
     rows: Annotated[int, Field(ge=0)] | None = None
     stage: UqlStage
 

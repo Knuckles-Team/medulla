@@ -9,7 +9,7 @@
 //! initial state and `UqlStageReport::measured` is the one writer of `rows` and `micros`. The
 //! ontology description is `UqlMachine` in `state-machines-v1.ttl`.
 
-use crate::wire::{UqlStage, UqlStageReport};
+use crate::wire::{UqlModality, UqlStage, UqlStageReport};
 use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,
 };
@@ -67,9 +67,10 @@ impl UqlStage {
 
 impl UqlStageReport {
     /// A report in the initial state: the estimate only, no measurement.
-    pub fn planned(clause: String, estimated_rows: f64) -> Self {
+    pub fn planned(clause: String, modality: UqlModality, estimated_rows: f64) -> Self {
         Self {
             clause,
+            modality,
             stage: UqlStage::INITIAL,
             estimated_rows,
             rows: None,
@@ -92,8 +93,14 @@ impl UqlStageReport {
     /// A report built from a stage that already ran under `PROFILE`: a planned report taken
     /// through `Measure`. The edge from the initial state is declared (`U01`) and proven by
     /// `every_legal_transition_applies`, so the transition cannot be refused here.
-    pub fn profiled(clause: String, estimated_rows: f64, rows: u64, micros: u64) -> Self {
-        Self::planned(clause, estimated_rows)
+    pub fn profiled(
+        clause: String,
+        modality: UqlModality,
+        estimated_rows: f64,
+        rows: u64,
+        micros: u64,
+    ) -> Self {
+        Self::planned(clause, modality, estimated_rows)
             .measured(rows, micros)
             .expect("UqlMachine U01: Planned --Measure--> Measured is a declared edge")
     }
@@ -111,14 +118,14 @@ mod tests {
         for edge in UQL_MACHINE.edges {
             assert_eq!(edge.from.apply(edge.event), Ok(edge.to), "{}", edge.id);
         }
-        let planned = UqlStageReport::planned("MATCH ()".into(), 3.0);
+        let planned = UqlStageReport::planned("MATCH ()".into(), UqlModality::Graph, 3.0);
         assert_eq!(planned.stage, UqlStage::Planned);
         assert_eq!((planned.rows, planned.micros), (None, None));
         let measured = planned.measured(2, 40).unwrap();
         assert_eq!(measured.stage, UqlStage::Measured);
         assert_eq!((measured.rows, measured.micros), (Some(2), Some(40)));
         assert_eq!(measured.clause, "MATCH ()");
-        let profiled = UqlStageReport::profiled("MATCH ()".into(), 3.0, 2, 40);
+        let profiled = UqlStageReport::profiled("MATCH ()".into(), UqlModality::Graph, 3.0, 2, 40);
         assert_eq!(profiled, measured);
         for stage in UQL_MACHINE.states {
             let wire = serde_json::to_string(stage).unwrap();
@@ -147,7 +154,7 @@ mod tests {
                 assert_eq!(state.apply(*event).is_ok(), listed, "{state:?} {event:?}");
             }
         }
-        let measured = UqlStageReport::planned("MATCH ()".into(), 1.0)
+        let measured = UqlStageReport::planned("MATCH ()".into(), UqlModality::Graph, 1.0)
             .measured(1, 1)
             .unwrap();
         assert!(measured.clone().measured(9, 9).is_err());
