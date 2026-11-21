@@ -72,6 +72,7 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::Group { .. }
         | Op::Order { .. }
         | Op::Skip { .. }
+        | Op::RequireNonEmpty { .. }
         | Op::DecisionScan { .. }
         | Op::ScanEdges { .. }
         | Op::UsageScan { .. }
@@ -353,6 +354,12 @@ pub(super) fn apply_core_ops(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<Ro
         Op::Group { keys, aggs } => super::group::group(ctx, input, keys, aggs),
         Op::Order { keys } => super::order::order(ctx, input, keys),
         Op::Skip { n } => super::order::skip(input, *n),
+        // MEDULLA-FEDERATED-QUERY-R720.7: an empty input refuses the whole program with the
+        // caller-named code; no partial rows are returned.
+        Op::RequireNonEmpty { code } if input.is_empty() => {
+            Err(format!("{code}: the program returned no rows"))
+        }
+        Op::RequireNonEmpty { .. } => Ok(input),
         Op::DecisionScan { preds } => super::decisions::decision_scan(ctx, preds),
         Op::ScanEdges { rel, preds } => super::edges::scan_edges(ctx, rel.as_deref(), preds),
         Op::UsageScan { view } => super::usage::usage_scan(ctx, *view),

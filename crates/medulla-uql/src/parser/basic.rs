@@ -261,6 +261,27 @@ impl<'a> Parser<'a> {
         Ok(Op::Order { keys })
     }
 
+    /// `REQUIRE NONEMPTY 'CODE'` (MEDULLA-FEDERATED-QUERY-R720.7). A code outside
+    /// `^[A-Z][A-Z0-9_]{2,63}$` refuses at parse time with `UQL_E_REQUIRE_CODE_INVALID`.
+    pub(super) fn require_nonempty(&mut self) -> Result<Op, UqlError> {
+        self.expect_kw("NONEMPTY")?;
+        let span = self.cur_span();
+        let code = self.string("a refusal code")?;
+        let mut chars = code.chars();
+        let valid = (3..=64).contains(&code.len())
+            && chars.next().is_some_and(|c| c.is_ascii_uppercase())
+            && chars.all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
+        if !valid {
+            return Err(UqlError::new(
+                crate::diag::UqlCode::RequireCodeInvalid,
+                format!("`{code}` is not a refusal code"),
+                span,
+            )
+            .expecting(vec!["`^[A-Z][A-Z0-9_]{2,63}$`".to_string()]));
+        }
+        Ok(Op::RequireNonEmpty { code })
+    }
+
     /// `SKIP ( int | $param )` (MEDULLA-FEDERATED-QUERY-R734).
     pub(super) fn skip_rows(&mut self) -> Result<Op, UqlError> {
         Ok(Op::Skip {

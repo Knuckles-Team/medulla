@@ -20450,6 +20450,18 @@ class OpSkipBody(BaseModel):
     n: int
 
 
+class OpRequireNonEmpty(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    RequireNonEmpty: OpRequireNonEmptyBody
+
+
+class OpRequireNonEmptyBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: str
+
+
 class OpForeignScan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -31120,6 +31132,7 @@ Op = (
     | OpGroup
     | OpOrder
     | OpSkip
+    | OpRequireNonEmpty
     | OpSpatialScan
     | OpReproject
     | OpSpatialOp
@@ -39540,6 +39553,8 @@ __all__ = [
     "OpGroupBody",
     "OpOrder",
     "OpOrderBody",
+    "OpRequireNonEmpty",
+    "OpRequireNonEmptyBody",
     "OpSkip",
     "OpSkipBody",
     "OrderKey",

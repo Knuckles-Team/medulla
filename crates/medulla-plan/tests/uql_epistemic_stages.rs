@@ -187,3 +187,29 @@ fn decay_and_cluster_refusals() {
     let mixed = Plan::new(vec![Op::ScanAll {}, Op::ClusterByEmbedding { k: 2 }]).execute(&ctx);
     assert!(mixed.unwrap_err().starts_with("UQL_E_CLUSTER_NO_VECTOR"));
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R720.7
+#[test]
+fn require_nonempty_refuses_with_code() {
+    let (view, semantic) = fixture();
+    let ctx = PlanCtx::new(&view, &semantic).with_now_ms(NOW_MS);
+
+    // Rows pass through unchanged.
+    let kept = plan("MATCH (:Doc) |> REQUIRE NONEMPTY 'NO_DOCS'")
+        .execute(&ctx)
+        .expect("a non-empty input passes");
+    assert_eq!(kept.len(), 6);
+
+    // An empty input refuses the whole program with the caller's code and no rows.
+    let refused = plan("MATCH (:Nothing) |> REQUIRE NONEMPTY 'NO_DOCS_FOUND'")
+        .execute(&ctx)
+        .unwrap_err();
+    assert!(refused.starts_with("NO_DOCS_FOUND"), "{refused}");
+
+    // A code outside ^[A-Z][A-Z0-9_]{2,63}$ is refused at parse time.
+    for bad in ["no_docs", "AB", "1ABC", "NO-DOCS", &"A".repeat(65)] {
+        let text = format!("MATCH (:Doc) |> REQUIRE NONEMPTY '{bad}'");
+        let error = medulla_uql::parse(&text).unwrap_err();
+        assert_eq!(error.code.as_str(), "UQL_E_REQUIRE_CODE_INVALID", "{bad}");
+    }
+}

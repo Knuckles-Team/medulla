@@ -119,6 +119,7 @@ group              = "GROUP" "BY" name { "," name } "AGGREGATE" agg_item { "," a
 agg_item           = ( "COUNT" [ "(" name ")" ] | ( "SUM" | "MIN" | "MAX" | "AVG" ) "(" name ")" ) [ "AS" name ] ;
 order              = "ORDER" "BY" name [ "DESC" ] { "," name [ "DESC" ] } ;
 skip               = "SKIP" ( int | param ) ;
+require_nonempty   = "REQUIRE" "NONEMPTY" string ;
 cluster            = "CLUSTER" "BY" "EMBEDDING" "K" int ;
 attribute          = "ATTRIBUTE" attr_value "OF" ( "SCORE" | name ) ( "LINEAR" | "SHAPLEY" [ "SAMPLES" int "SEED" int ] | "OWEN" "BY" name ) ;   (* feature `numeric` *)
 attr_value         = "SUM" | "MEAN" | "MAX" | "MIN" | percentile ;

@@ -792,6 +792,10 @@ pub enum Op {
     /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R734, UQL `SKIP n`) — drop the first `n` rows;
     /// `SKIP n |> LIMIT k` is the page. An `n` above 100000 refuses `UQL_SKIP_LIMIT`.
     Skip { n: u64 },
+    /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R720.7, UQL `REQUIRE NONEMPTY 'CODE'`) — refuse the
+    /// whole program with the caller-named `code` when the input has zero rows; otherwise the
+    /// rows pass through. `code` matches `^[A-Z][A-Z0-9_]{2,63}$`.
+    RequireNonEmpty { code: String },
     /// SOURCE (spatial, CONCEPT:MEDULLA-KG.ontology.singles-concept) — seed the RowSet with every node in the spatial
     /// `layer` (a node label / `type`) whose geometry's bounding box intersects `bbox`
     /// (`[minx, miny, maxx, maxy]`). The executor builds medulla-geo's packed Hilbert R-tree

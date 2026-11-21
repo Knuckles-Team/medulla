@@ -129,6 +129,9 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
             ],
         },
         OpKind::Skip => Op::Skip { n: 100 },
+        OpKind::RequireNonEmpty => Op::RequireNonEmpty {
+            code: "NO_ROWS".into(),
+        },
         OpKind::Group => Op::Group {
             keys: vec!["label".into()],
             aggs: vec![

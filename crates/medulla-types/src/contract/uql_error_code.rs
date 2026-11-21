@@ -41,6 +41,9 @@ closed_error_codes! {
         /// not one of `organization`, `role`, `data_asset`, `permission`, `time_series`.
         /// Refused at parse time.
         CompanyCategory => "UQL_E_COMPANY_CATEGORY",
+        /// `REQUIRE NONEMPTY 'CODE'` (MEDULLA-FEDERATED-QUERY-R720.7): the code does not match
+        /// `^[A-Z][A-Z0-9_]{2,63}$`. Refused at parse time.
+        RequireCodeInvalid => "UQL_E_REQUIRE_CODE_INVALID",
         /// `WITH KNOWLEDGE` (MEDULLA-FEDERATED-QUERY-R028.1): a row's provenance or
         /// policy frame was omitted — no snapshot binding. A typed absence, never an
         /// empty success; the annotated result is refused whole.

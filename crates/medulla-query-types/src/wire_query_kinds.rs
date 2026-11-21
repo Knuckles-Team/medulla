@@ -72,7 +72,7 @@ kinds! {
     #[cfg(feature = "epistemic")] ConfidenceOp,
     #[cfg(feature = "epistemic")] ExplainBelief,
     Decay, ClusterByEmbedding, Attribute, DecisionScan, Limit, Project,
-    UsageScan, CompanyContextScan, ScanEdges,
+    UsageScan, CompanyContextScan, ScanEdges, RequireNonEmpty,
 }
 
 kinds! {
@@ -125,6 +125,7 @@ pub fn op_kind(op: &Op) -> OpKind {
         Op::Group { .. } => OpKind::Group,
         Op::Order { .. } => OpKind::Order,
         Op::Skip { .. } => OpKind::Skip,
+        Op::RequireNonEmpty { .. } => OpKind::RequireNonEmpty,
         #[cfg(feature = "geo")]
         Op::SpatialScan { .. } => OpKind::SpatialScan,
         #[cfg(feature = "geo")]
@@ -258,6 +259,7 @@ impl OpKind {
             | OpKind::Group
             | OpKind::Order
             | OpKind::Skip
+            | OpKind::RequireNonEmpty
             | OpKind::DecisionScan
             | OpKind::ScanEdges
             | OpKind::CompanyContextScan
@@ -324,6 +326,7 @@ impl OpKind {
             | OpKind::Group
             | OpKind::Order
             | OpKind::Skip
+            | OpKind::RequireNonEmpty
             | OpKind::DecisionScan
             | OpKind::ScanEdges
             | OpKind::CompanyContextScan

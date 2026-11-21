@@ -170,6 +170,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "NEAREST",
     "NODE_DISTANCE",
     "NOISY_OR",
+    "NONEMPTY",
     "NOT",
     "NULL",
     "OF",
@@ -188,6 +189,7 @@ pub const UQL_RESERVED_WORDS: &[&str] = &[
     "REASON",
     "REDUCE",
     "RELIABILITY",
+    "REQUIRE",
     "REPROJECT",
     "RERANK",
     "RETURN",
@@ -403,6 +405,7 @@ pub fn uql_op(op: &Op) -> Printed {
         Op::Group { keys, aggs } => group(keys, aggs),
         Op::Order { keys } => order(keys),
         Op::Skip { n } => Ok(format!("SKIP {n}")),
+        Op::RequireNonEmpty { code } => keyword_quoted("REQUIRE NONEMPTY", code),
         #[cfg(feature = "geo")]
         Op::SpatialScan { layer, bbox } => super::wire_query_uql_modal::spatial_scan(layer, bbox),
         #[cfg(feature = "geo")]
