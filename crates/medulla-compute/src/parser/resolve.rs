@@ -63,6 +63,11 @@ struct ClassDef {
 pub fn index_repository(files: &[(String, Vec<u8>)]) -> IndexResult {
     let (results, file_outcomes) = super::tree_sitter::parse_files_with_outcomes(files);
     let mut indexed = resolve(files, &results);
+    // Every file is a node of its own, carrying the `file_path` its symbols carry, so
+    // one path names the file node and its symbols alike (MEDULLA-SCM-R006).
+    indexed
+        .nodes
+        .extend(files.iter().map(|(path, _)| file_node(path)));
     indexed.files_parsed = file_outcomes
         .iter()
         .filter(|outcome| {
@@ -84,6 +89,15 @@ pub fn index_repository(files: &[(String, Vec<u8>)]) -> IndexResult {
     indexed.native_rung_evidence = evidence;
     indexed.file_outcomes = file_outcomes;
     indexed
+}
+
+/// The node of one indexed file.
+pub fn file_node(path: &str) -> ExtractedNode {
+    ExtractedNode {
+        node_id: format!("file:{path}"),
+        node_type: "FILE".to_string(),
+        properties: HashMap::from([("file_path".to_string(), path.to_string())]),
+    }
 }
 
 /// Resolve already-parsed results against the file set they came from. Split out
@@ -1117,8 +1131,8 @@ mod tests {
         }
         assert_eq!(
             r.nodes.len(),
-            4,
-            "2 classes + 2 methods: {:?}",
+            6,
+            "2 classes + 2 methods + 2 file nodes: {:?}",
             r.nodes.len()
         );
     }
