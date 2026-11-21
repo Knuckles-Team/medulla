@@ -175,7 +175,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T163 [US1] MEDULLA-FEDERATED-QUERY-R729 Federated pushdown to connector raw-source tools
 - [x] T164 [P] [US1] MEDULLA-FEDERATED-QUERY-R730 The unified planner earns its scope through a falsification gate
 - [ ] T165 [P] [US1] MEDULLA-FEDERATED-QUERY-R731 Queries declare a latency class: `latency_class` on `UnifiedQuery` and `Sparql`, interactive node meter with `QUERY_BUDGET_EXCEEDED`, analytical answers a job record via `JobKind::AnalyticalQuery`, result read by `AnalyticsJob` `Status`
-- [ ] T166 [P] [US1] MEDULLA-FEDERATED-QUERY-R732 The unified planner improves through the evolution loop: in-memory `PlanRecordStore`, downtime `planner_evolution` job with shadow estimate error and canary latency, promotion by `PolicyEvaluation` and `MovePointer`
+- [ ] T166 [P] [US1] MEDULLA-FEDERATED-QUERY-R732 The unified planner improves through the evolution loop: in-memory `PlanRecordStore`, downtime `planner_evolution` job with a shadow challenger run on a sampled fraction of interactive queries (plan cost and result digest compared, never served), promotion by `PolicyEvaluation` and `MovePointer`
 
 ## User Story 2: Bounded retrieval rounds and context
 
