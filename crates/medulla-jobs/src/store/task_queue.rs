@@ -230,10 +230,7 @@ impl JobStore {
             .unwrap_or((0, 0));
         let oldest_table = read.open_owner_table(TASK_QUEUE_OLDEST).map_err(redb_err)?;
         let oldest = oldest_table
-            .range_inclusive(
-                (tenant, queue, i64::MIN, ""),
-                (tenant, queue, i64::MAX, "\u{10ffff}"),
-            )
+            .range((tenant, queue, i64::MIN, "")..=(tenant, queue, i64::MAX, "\u{10ffff}"))
             .map_err(redb_err)?
             .next()
             .transpose()
