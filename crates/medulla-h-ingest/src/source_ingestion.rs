@@ -40,6 +40,8 @@ use medulla_server_api::state::ServerState;
 pub mod containers;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod documents;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub mod transcript;
 pub mod drift_gate;
 pub mod governance;
 pub mod permissions;
