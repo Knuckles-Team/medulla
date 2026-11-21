@@ -201,6 +201,46 @@ def test_analysis_and_expansion_evidence(stub_engine) -> None:
         client.tenants.delete(graph)
 
 
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R651.6")
+def test_filters_intent_and_expansion(stub_engine) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R651.6: served `Discover` mode `deep` hot path.
+
+    One deep request returns the filters, the relational intent and the scripted expansions
+    together, asking the provider once.
+    """
+    sock, stub = stub_engine
+    client = connect(sock)
+    graph = f"hot-{uuid.uuid4().hex[:8]}"
+    client.tenants.create(graph)
+    try:
+        _doc(client, graph, "d1", "replica notes")
+        _doc(client, graph, "d2", "team notes")
+        client._send(
+            "AddEdge",
+            {
+                "source_id": "d2",
+                "target_id": "d1",
+                "properties_msgpack": msgpack.packb({"relationship": "owns"}),
+            },
+            graph,
+        )
+        before = stub.calls
+        plan = _deep(client, graph, text="type:Doc after:2026-01-01 team owns replica")[
+            "plan"
+        ]
+        assert stub.calls == before + 1
+        assert plan["analysis"]["filters"]["types"] == ["Doc"]
+        assert plan["analysis"]["filters"]["after"] == "2026-01-01"
+        assert plan["analysis"]["intent"]["relation"] == "owns"
+        assert [e["kind"] for e in plan["expansions"]] == [
+            "hypothetical",
+            "sub_query",
+            "sub_query",
+        ]
+    finally:
+        client.tenants.delete(graph)
+
+
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R651.4")
 def test_expansion_refusals(tmp_path_factory) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R651.4.

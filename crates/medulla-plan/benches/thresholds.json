@@ -16,7 +16,8 @@
     "policy_mask_4col_1m/masked": 3000000000,
     "rerank_top64": 6000000,
     "shortcut_detectors": 6000000,
-    "code_context_impact": 3000000
+    "code_context_impact": 3000000,
+    "query_understanding_plan": 300000
   },
   "finance_r613": {
     "_comment": "MEDULLA-FINANCE-PRIMITIVES-R613.6: p99 budgets in ms for the r613_finance_primitives report (target/finance-r613-report.json). baseline_p99_ms is the stored run a later run may exceed by at most regression_tolerance; null until the pinned bench lane records one.",
@@ -47,6 +48,7 @@
     "knowledge_scope_50": 2000000,
     "nl_steps/corrected_two_steps": 20000000,
     "nl_steps/one_step": 10000000,
+    "query_understanding_plan": 2000000,
     "live_artifact_refresh": 30000000,
     "ontology_diff": 50000000,
     "rerank_top64": 25000000,

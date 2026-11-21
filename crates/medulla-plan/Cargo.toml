@@ -600,6 +600,14 @@ name = "code_context"
 path = "benches/code_context.rs"
 harness = false
 
+# ── Query-understanding bench (MEDULLA-FEDERATED-QUERY-R651.6) ────────────────────────
+# A 20-token query analysed; the key `query_understanding_plan` in `thresholds.json` caps
+# p50 at 300 microseconds and p99 at 2 ms.
+[[bench]]
+name = "query_understanding"
+path = "benches/query_understanding.rs"
+harness = false
+
 # ── Incremental view maintenance delta cost (MEDULLA-INCREMENTAL-VIEWS-R001.10) ──────────
 # 1,000-row deltas against a 1,000,000-row `Scan |> Filter` circuit; asserts p99 <= 20 ms
 # and <= 64 bytes of circuit state per member row. Nightly (L6) only.
