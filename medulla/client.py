@@ -117,6 +117,40 @@ def sync_call_deadline(timeout_s: float):
         _SYNC_CALL_DEADLINE.reset(token)
 
 
+# The longest `Request.trace_id`: a W3C `traceparent` is 55 characters
+# (MEDULLA-OBSERVE-R006.2).
+_TRACE_ID_MAX_LEN = 55
+
+_TRACE_ID: contextvars.ContextVar[str | None] = contextvars.ContextVar(
+    "medulla_trace_id", default=None
+)
+
+
+@contextlib.contextmanager
+def trace_id(value: str):
+    """Attach the caller's W3C ``traceparent`` to every request made in this context.
+
+    The id rides on the request frame outside the signed envelope and is shown
+    by ``Introspect`` ``requests``. It is carried by ``ContextVar``, so callers
+    using :func:`asyncio.to_thread` propagate it. An empty or over-long id raises
+    ``ValueError`` before any request is sent.
+    """
+    if not 1 <= len(value) <= _TRACE_ID_MAX_LEN:
+        raise ValueError(f"trace id must be 1..{_TRACE_ID_MAX_LEN} characters")
+    token = _TRACE_ID.set(value)
+    try:
+        yield
+    finally:
+        _TRACE_ID.reset(token)
+
+
+def _stamp_trace_id(request: dict[str, Any]) -> None:
+    """Add the ambient trace id to a request frame, outside its signed fields."""
+    ambient = _TRACE_ID.get()
+    if ambient is not None:
+        request["trace_id"] = ambient
+
+
 def _sync_result_before_deadline(
     future: concurrent.futures.Future[Any],
 ) -> Any:
@@ -18547,6 +18581,7 @@ class MedullaClient:
                 request["auth_token"] = self._anonymous_correlation(idempotency_key)
             if params:
                 request["params"] = params
+            _stamp_trace_id(request)
             return request
         request = {
             "id": req_id,
@@ -18559,6 +18594,7 @@ class MedullaClient:
         if params:
             request["params"] = params
         request["auth_token"] = self._compute_verified_token(request, idempotency_key)
+        _stamp_trace_id(request)
         return request
 
     def _send_timeouts(self, method: str) -> tuple[float | None, float | None]:
