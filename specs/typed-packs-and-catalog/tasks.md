@@ -20,7 +20,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T014 [US1] MEDULLA-TYPED-PACKS-R002.4 Withdrawn holder transition
 - [ ] T015 [US1] MEDULLA-TYPED-PACKS-R002.5 Orphan grace and fault recovery
 - [ ] T016 [US1] MEDULLA-TYPED-PACKS-R002.6 Verified body serving
-- [ ] T017 [US1] MEDULLA-TYPED-PACKS-R002.7 BUILD native prompt body persistence: add `AgentComponentPublishRequest.prompt_blueprint`, make `component_publish` async and stage the verified blueprint through `put_engine_bodies`, give `publish_component` a `staged_body: Option<ConnectorPackHolderCommit>` committed through `write_revision_with_rows` + `apply_holders`, update every caller with `None`, regenerate the contract, and write `prompt_publish_commits_one_holder_with_its_revision` and `test_prompt_owner_commit`
+- [x] T017 [US1] MEDULLA-TYPED-PACKS-R002.7 BUILD native prompt body persistence: add `AgentComponentPublishRequest.prompt_blueprint`, make `component_publish` async and stage the verified blueprint through `put_engine_bodies`, give `publish_component` a `staged_body: Option<ConnectorPackHolderCommit>` committed through `write_revision_with_rows` + `apply_holders`, update every caller with `None`, regenerate the contract, and write `prompt_publish_commits_one_holder_with_its_revision` and `test_prompt_owner_commit`
 - [ ] T018 [US1] MEDULLA-TYPED-PACKS-R002.8 Prompt graph projection
 - [ ] T019 [US1] MEDULLA-TYPED-PACKS-R002.9 Served prompt rendering
 - [ ] T020 [US1] MEDULLA-TYPED-PACKS-R002.10 Receipt verification before model dispatch
@@ -152,8 +152,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T144 [US3] MEDULLA-TYPED-PACKS-R097.2.1 Crosswalk coverage model
 - [ ] T145 [US3] MEDULLA-TYPED-PACKS-R097.2.2 Crosswalk coverage behaviour
 - [x] T146 [US3] MEDULLA-TYPED-PACKS-R097.2.3 Crosswalk coverage wiring
-- [ ] T147 [US3] MEDULLA-TYPED-PACKS-R097.2.4 Crosswalk coverage refusals
-- [ ] T148 [US3] MEDULLA-TYPED-PACKS-R097.2.5 Crosswalk coverage evidence
+- [x] T147 [US3] MEDULLA-TYPED-PACKS-R097.2.4 Crosswalk coverage refusals
+- [x] T148 [US3] MEDULLA-TYPED-PACKS-R097.2.5 Crosswalk coverage evidence
 - [ ] T149 [US3] MEDULLA-TYPED-PACKS-R097.2.6 Crosswalk coverage hot-path proof
 - [ ] T150 [US3] MEDULLA-TYPED-PACKS-R097.2.7.1 External term mapping and coverage model
 - [x] T151 [US3] MEDULLA-TYPED-PACKS-R097.2.7.2 External term coverage behaviour
@@ -219,7 +219,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T206 [US4] MEDULLA-TYPED-PACKS-R107.2 Behavior
 - [x] T207 [US4] MEDULLA-TYPED-PACKS-R107.3 Wiring
 - [ ] T208 [US4] MEDULLA-TYPED-PACKS-R107.4 Refusal
-- [ ] T209 [US4] MEDULLA-TYPED-PACKS-R107.5 Release evidence on the import answer
+- [x] T209 [US4] MEDULLA-TYPED-PACKS-R107.5 Release evidence on the import answer
 - [ ] T210 [US4] MEDULLA-TYPED-PACKS-R107.6 Hot-path proof
 - [ ] T211 [US4] MEDULLA-TYPED-PACKS-R108.1 Model
 - [ ] T212 [US4] MEDULLA-TYPED-PACKS-R108.2 Behavior
@@ -266,13 +266,13 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T252 [US6] MEDULLA-TYPED-PACKS-R700.2 Behavior
 - [x] T253 [US6] MEDULLA-TYPED-PACKS-R700.3 Wiring
 - [x] T254 [US6] MEDULLA-TYPED-PACKS-R700.4 Refusal
-- [ ] T255 [US6] MEDULLA-TYPED-PACKS-R700.5 Evidence
-- [ ] T256 [US6] MEDULLA-TYPED-PACKS-R700.6 Hot-path proof
+- [x] T255 [US6] MEDULLA-TYPED-PACKS-R700.5 Evidence
+- [x] T256 [US6] MEDULLA-TYPED-PACKS-R700.6 Hot-path proof
 - [ ] T257 [US6] MEDULLA-TYPED-PACKS-R700.7 Declared skill type key
 - [ ] T258 [US6] MEDULLA-TYPED-PACKS-R700.8 Graph reference files import as skill files
 - [ ] T259 [US6] MEDULLA-TYPED-PACKS-R700.9 RETIRED: distill a source set into a skill-graph bundle
 - [x] T260 [US6] MEDULLA-TYPED-PACKS-R701.1 Model
-- [ ] T261 [US6] MEDULLA-TYPED-PACKS-R701.2 Behavior
+- [x] T261 [US6] MEDULLA-TYPED-PACKS-R701.2 Behavior
 - [ ] T262 [US6] MEDULLA-TYPED-PACKS-R701.3 Wiring
 - [ ] T263 [US6] MEDULLA-TYPED-PACKS-R701.4 Refusal
 - [ ] T264 [US6] MEDULLA-TYPED-PACKS-R701.5 Hot-path proof
@@ -281,7 +281,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T267 [US6] MEDULLA-TYPED-PACKS-R714 Delivery-path wiring of drift classification
 - [ ] T268 [US6] MEDULLA-TYPED-PACKS-R715 Served quarantine of a drifted delivery
 - [ ] T269 [US7] MEDULLA-TYPED-PACKS-R801.1 Model
-- [ ] T270 [US7] MEDULLA-TYPED-PACKS-R801.2 Behavior
+- [x] T270 [US7] MEDULLA-TYPED-PACKS-R801.2 Behavior
 - [ ] T271 [US7] MEDULLA-TYPED-PACKS-R801.3 Wiring
 - [ ] T272 [US7] MEDULLA-TYPED-PACKS-R801.4 Refusal
 - [ ] T273 [US7] MEDULLA-TYPED-PACKS-R801.5 Evidence
@@ -296,7 +296,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T282 [US7] MEDULLA-TYPED-PACKS-R802.7 Trust flags on assets
 - [ ] T283 [US7] MEDULLA-TYPED-PACKS-R802.8 Critical data elements
 - [ ] T284 [US7] MEDULLA-TYPED-PACKS-R803.1 BUILD: add `ChecksumAlgorithm`, `DetectorRule`, `SensitiveDetector.rule`, `Detection.sample_size`/`scanned_at_ms`, `InvalidDetector`, `SensitiveDetector::validate`, `DEFAULT_THRESHOLD` and `builtin_detectors()` to `crates/medulla-query-types/src/sensitive_detect.rs`; test `detector_rules_round_trip_and_validate`
-- [ ] T285 [US7] MEDULLA-TYPED-PACKS-R803.2 Add `crates/medulla-core/src/sensitive_scan.rs` (`ScanLimits`, `DetectorResources`, `NoResources`, `ScanError`, `scan_values`, `passing`), the `regex` dependency and the `DETECTOR_RESOURCE_MISSING` / `SCAN_LIMITS_INVALID` codes; test `scan_values_counts_hits_without_values`
+- [x] T285 [US7] MEDULLA-TYPED-PACKS-R803.2 Add `crates/medulla-core/src/sensitive_scan.rs` (`ScanLimits`, `DetectorResources`, `NoResources`, `ScanError`, `scan_values`, `passing`), the `regex` dependency and the `DETECTOR_RESOURCE_MISSING` / `SCAN_LIMITS_INVALID` codes; test `scan_values_counts_hits_without_values`
 - [ ] T286 [US7] MEDULLA-TYPED-PACKS-R803.3 Job wiring
 - [ ] T287 [US7] MEDULLA-TYPED-PACKS-R803.4 Refusals
 - [ ] T288 [US7] MEDULLA-TYPED-PACKS-R803.5 Evidence
@@ -324,7 +324,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T310 [US8] MEDULLA-TYPED-PACKS-R110.3 Inbound open metadata mapping
 - [ ] T311 [US8] MEDULLA-TYPED-PACKS-R110.4 Outbound open metadata payload
 - [x] T312 [US8] MEDULLA-TYPED-PACKS-R110.5 Open metadata sync adapter wiring
-- [ ] T313 [US8] MEDULLA-TYPED-PACKS-R110.6 Open metadata unmapped types and version conflicts in the sync report
+- [x] T313 [US8] MEDULLA-TYPED-PACKS-R110.6 Open metadata unmapped types and version conflicts in the sync report
 - [ ] T314 [US8] MEDULLA-TYPED-PACKS-R110.7 Open metadata evidence on every synced node
 - [ ] T315 [US8] MEDULLA-TYPED-PACKS-R110.8 Open metadata conflict proof: a store version raised under a catalog edit
 - [ ] T316 [US8] MEDULLA-TYPED-PACKS-R110.9 RETIRED: open metadata hot-path proof

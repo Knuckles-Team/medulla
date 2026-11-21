@@ -21,10 +21,10 @@ Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules
 - [x] T015 [US2] MEDULLA-BUSINESS-OPS-R002.4 Reconciliation matching
 - [x] T016 [US2] MEDULLA-BUSINESS-OPS-R002.5 Reorder point and quantity
 - [x] T017 [US2] MEDULLA-BUSINESS-OPS-R002.6 Claim-text policy check
-- [ ] T018 [US2] MEDULLA-BUSINESS-OPS-R002.7 Wiring: the UQL `EVALUATE RULE` stage evaluates one stored rule over the rows it is given
+- [x] T018 [US2] MEDULLA-BUSINESS-OPS-R002.7 Wiring: the UQL `EVALUATE RULE` stage evaluates one stored rule over the rows it is given
 - [ ] T019 [US2] MEDULLA-BUSINESS-OPS-R002.8 RETIRED: natural-language entry to the rule stage
 - [ ] T020 [US3] MEDULLA-BUSINESS-OPS-R003 Owner digest as stored queries (rollup)
-- [ ] T021 [US3] MEDULLA-BUSINESS-OPS-R003.1 Pending approvals and overdue obligations
+- [x] T021 [US3] MEDULLA-BUSINESS-OPS-R003.1 Pending approvals and overdue obligations
 - [ ] T022 [US3] MEDULLA-BUSINESS-OPS-R003.2 Changed in a window
 - [ ] T023 [US3] MEDULLA-BUSINESS-OPS-R003.3 Digest respects scope
 - [x] T024 [US2] MEDULLA-BUSINESS-OPS-R002.9 Cross-architecture byte identity

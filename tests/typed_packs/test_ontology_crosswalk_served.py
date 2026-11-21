@@ -137,6 +137,7 @@ def test_core_metadata_crosswalks() -> None:
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R071.1.4")
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R097.2.4")
 def test_crosswalk_refusals_leave_state_unchanged() -> None:
     fixture = load_fixture()
     person, event = fixture["mappings"][0], fixture["mappings"][1]
