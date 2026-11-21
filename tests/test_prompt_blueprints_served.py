@@ -8,8 +8,11 @@ import and reads the blueprint back over the wire.
 
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import json
+import os
+import struct
 import sys
 import uuid
 from pathlib import Path
@@ -304,9 +307,12 @@ async def _publish_prompt(
     blueprint: str,
     pin: str,
     expected_revision: int,
+    *,
+    context: dict[str, Any] | None = None,
+    idempotency_key: str | None = None,
 ) -> Any:
     request = {
-        "context": _publish_context(expected_revision),
+        "context": context or _publish_context(expected_revision),
         "component": _prompt_draft(component_id, pin),
         "evaluation_receipt_digest": None,
         "prompt_blueprint": blueprint,
@@ -314,7 +320,7 @@ async def _publish_prompt(
     return await send_agent_component(
         client,
         {"op": {"op": "publish", "request": request}},
-        idempotency_key=f"prompt-publish-{uuid.uuid4().hex}",
+        idempotency_key=idempotency_key or f"prompt-publish-{uuid.uuid4().hex}",
     )
 
 
@@ -368,5 +374,108 @@ async def test_prompt_owner_commit() -> None:
         no_task_pin = hashlib.sha256(no_task.encode()).hexdigest()
         with pytest.raises(EngineResponseError, match="PROMPT_SCHEMA_INVALID"):
             await _publish_prompt(client, other_id, no_task, no_task_pin, 0)
+    finally:
+        await client.close()
+
+
+NATIVE_GRAPH_DOMAIN = b"eg/native-component-projection-graph/v1"
+CORE = "https://knuckles-team.github.io/ontology/core#"
+
+
+def _native_graph(tenant: str) -> str:
+    """The physical native-component projection graph: ``Digest256::framed`` of the tenant."""
+    hasher = hashlib.sha256()
+    hasher.update(b"eg/framed-sha256/v1\0")
+    hasher.update(struct.pack(">I", len(NATIVE_GRAPH_DOMAIN)))
+    hasher.update(NATIVE_GRAPH_DOMAIN)
+    field = tenant.encode()
+    hasher.update(struct.pack(">I", 1))
+    hasher.update(struct.pack(">Q", len(field)))
+    hasher.update(field)
+    return f"component__{hasher.hexdigest()}"
+
+
+async def _projected_revisions(
+    graph: str, component_id: str, want: int, timeout_s: float = 120.0
+) -> dict[int, str]:
+    """The ``PromptRevision`` nodes of one component by entry revision, once ``want`` exist."""
+    from conftest import request_context  # isort: skip
+
+    deadline = asyncio.get_running_loop().time() + timeout_s
+    found: dict[int, str] = {}
+    while asyncio.get_running_loop().time() < deadline:
+        reader = await MedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=request_context(),
+            graph_name=graph,
+        )
+        try:
+            rows = await reader.rdf.sparql(
+                "SELECT ?revision ?body WHERE { ?node a <" + CORE + "PromptRevision> ; "
+                "<" + CORE + "componentId> \"" + component_id + "\" ; "
+                "<" + CORE + "entryRevision> ?revision ; "
+                "<" + CORE + "bodySha256> ?body }"
+            )
+        except EngineResponseError:
+            rows = []
+        finally:
+            await reader.close()
+        found = {int(row["revision"]): str(row["body"]) for row in rows}
+        if len(found) >= want:
+            return found
+        await asyncio.sleep(0.5)
+    return found
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R002.8")
+@pytest.mark.asyncio
+async def test_prompt_graph_projection() -> None:
+    client = await connect()
+    component_id = f"prompt:graph-{uuid.uuid4().hex[:12]}"
+    first = json.dumps({"task": "first", "schema_revision": 1}, separators=(",", ":"))
+    second = json.dumps({"task": "second", "schema_revision": 1}, separators=(",", ":"))
+    first_pin = hashlib.sha256(first.encode()).hexdigest()
+    second_pin = hashlib.sha256(second.encode()).hexdigest()
+    graph = _native_graph(TEST_TENANT)
+    first_context = _publish_context(0)
+    first_key = f"prompt-publish-{uuid.uuid4().hex}"
+    try:
+        await _publish_prompt(
+            client,
+            component_id,
+            first,
+            first_pin,
+            0,
+            context=first_context,
+            idempotency_key=first_key,
+        )
+        # The graph names the committed identity: the revision and the body pin.
+        projected = await _projected_revisions(graph, component_id, 1)
+        assert projected == {1: first_pin}
+
+        await _publish_prompt(client, component_id, second, second_pin, 1)
+        projected = await _projected_revisions(graph, component_id, 2)
+        assert projected == {1: first_pin, 2: second_pin}
+
+        # Replaying the first publish returns the stored result and changes nothing:
+        # no event re-projects an old revision over the newer one.
+        await _publish_prompt(
+            client,
+            component_id,
+            first,
+            first_pin,
+            0,
+            context=first_context,
+            idempotency_key=first_key,
+        )
+        replayed = await _projected_revisions(graph, component_id, 2)
+        assert replayed == {1: first_pin, 2: second_pin}
+        current = await send_agent_component_current(
+            client,
+            AgentComponentOpCurrent(
+                op="current", tenant_id=TEST_TENANT, component_id=component_id
+            ),
+        )
+        assert current is not None and current.entry_revision == 2
     finally:
         await client.close()
