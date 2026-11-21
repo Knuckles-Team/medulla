@@ -29,7 +29,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T019 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.1 SQLite live-attach adapter skeleton: typed attach-config → driver-open-config mapping plus the refusal path
 - [ ] T020 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.1 Lock-free WAL snapshot reader
 - [ ] T021 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.2 Watermark polling into change envelopes
-- [ ] T022 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3 Register, read and conformance for a SQLite file source
+- [x] T022 [US2] MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3 Register, read and conformance for a SQLite file source
 - [ ] T023 [US2] MEDULLA-UNIFIED-DATA-PLANE-R016.1 Model: `MssqlSourceCatalog` is a typed catalog model with a bracket-quoting identifier refusal
 - [ ] T024 [US2] MEDULLA-UNIFIED-DATA-PLANE-R016.2.1 MSSQL adapter skeleton: typed connection-config → tiberius-shaped driver-config mapping plus the connect/refusal path
 - [ ] T025 [US2] MEDULLA-UNIFIED-DATA-PLANE-R017.1 Model: `ClickHouseSourceCatalog` is a typed catalog model whose capture capability is always explicit
@@ -72,7 +72,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T062 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.2 Blocking and field-similarity candidate generation across Gramps/Immich/Twenty/Firefly
 - [ ] T063 [US5] MEDULLA-UNIFIED-DATA-PLANE-R030.3 Real Fellegi-Sunter scoring and the approval workflow
 - [ ] T064 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.1 Model: `ApplicationAdmission`/`ConsolidationIsolationRegistry` are a typed admission model with identity and quota refusals
-- [ ] T065 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.2 Per-source quota metering and fault isolation
+- [x] T065 [US3] MEDULLA-UNIFIED-DATA-PLANE-R031.2 Per-source quota metering and fault isolation
 - [ ] T066 [US1] MEDULLA-UNIFIED-DATA-PLANE-R035 Share the compiled ontology cache with attached-schema graphs
 - [ ] T067 [US5] MEDULLA-UNIFIED-DATA-PLANE-R036 Derive HealthAnomaly and Incident facts with conformance checking
 - [ ] T068 [US5] MEDULLA-UNIFIED-DATA-PLANE-R760.1 Model: served incident authority
@@ -170,7 +170,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T160 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark
 - [ ] T161 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
 - [ ] T162 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
-- [ ] T163 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics
+- [x] T163 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics
 - [ ] T164 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3 Avro scans project the reader schema
 - [ ] T165 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.754 Wiring: terminal commit writes audit rows and steps; `HistorySearch` reads them
 - [ ] T166 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.1 Dataset and column profiling: Model
@@ -262,7 +262,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T158 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark
 - [ ] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.3 EXPLAIN states whether each fragment ran live or from a copy
 - [ ] T160 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1 Listing pages at the knob size and partitions prune by pushed predicates
-- [ ] T161 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics
+- [x] T161 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2 ORC scans skip stripes by stripe statistics
 - [ ] T162 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.3 Avro scans project the reader schema
 - [ ] T163 [US7] MEDULLA-UNIFIED-DATA-PLANE-R750.754 Wiring: terminal commit writes audit rows and steps; `HistorySearch` reads them
 - [ ] T164 [US6] MEDULLA-UNIFIED-DATA-PLANE-R761.1 Dataset and column profiling: Model
