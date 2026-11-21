@@ -25,8 +25,10 @@ use crate::carrier::GraphReadAuthority;
 pub const MARKINGS_KEY: &str = "_markings";
 /// The property a redacted node keeps in place of its stored properties.
 pub const REDACTED_KEY: &str = "_redacted";
-/// The clearance scope that holds every marking.
-const ALL_MARKINGS_SCOPE: &str = "*";
+/// The scope prefix that grants one marking to a caller: a scope `marking:<name>`
+/// grants the marking `<name>`. A wildcard scope grants none, so a marking is
+/// always an explicit grant.
+pub const MARKING_SCOPE_PREFIX: &str = "marking:";
 
 /// The label of a principal-owned knowledge unit node.
 pub const KNOWLEDGE_UNIT_LABEL: &str = "KnowledgeUnit";
@@ -44,8 +46,8 @@ pub struct ReadCaller {
     pub principal: UnitPrincipal,
     /// The verified tenant, when it is a valid tenant id.
     pub tenant: Option<TenantId>,
-    /// The markings the caller holds: the verified carrier's scopes, each scope
-    /// naming the marking it clears (`*` clears every marking).
+    /// The markings the caller holds: one per `marking:<name>` scope of the verified
+    /// carrier.
     pub held_markings: BTreeSet<String>,
 }
 
@@ -65,7 +67,13 @@ impl ReadCaller {
             .to_owned();
         Self {
             held_markings: carrier
-                .map(|c| c.scopes().iter().cloned().collect())
+                .map(|c| {
+                    c.scopes()
+                        .iter()
+                        .filter_map(|scope| scope.strip_prefix(MARKING_SCOPE_PREFIX))
+                        .map(str::to_owned)
+                        .collect()
+                })
                 .unwrap_or_default(),
             tenant: TenantId::new(&tenant_raw).ok(),
             principal: UnitPrincipal {
@@ -173,8 +181,7 @@ pub fn scan_units(view: &GraphView, caller: &ReadCaller) -> UnitScan {
 impl ReadCaller {
     /// Whether the caller holds every marking in `markings`.
     pub fn holds_all(&self, markings: &[String]) -> bool {
-        self.held_markings.contains(ALL_MARKINGS_SCOPE)
-            || markings.iter().all(|m| self.held_markings.contains(m))
+        markings.iter().all(|m| self.held_markings.contains(m))
     }
 }
 

@@ -225,7 +225,7 @@ def test_claim_propose_propagate_promote_and_redacted_read(served) -> None:
     )
     marked = sorted([asset, "view:orders_v"])
     everything = sorted([*marked, "dash:orders_d"])
-    holder = _connect(graph, scopes=["kg:read", "pii"])
+    holder = _connect(graph, scopes=["kg:read", "marking:pii"])
     non_holder = _connect(graph, scopes=["kg:read"])
     try:
         assert _readable_ids(holder, "Column") == everything

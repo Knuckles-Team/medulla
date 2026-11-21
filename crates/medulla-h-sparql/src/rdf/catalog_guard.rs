@@ -23,7 +23,7 @@ const CATALOG_ONTOLOGY: &str =
     include_str!("../../../medulla-core/ontology/metadata_catalog-v1.ttl");
 const RDFS_SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 /// The scope prefix that grants one marking to a writer.
-pub(super) const MARKING_SCOPE_PREFIX: &str = "marking:";
+pub(super) const MARKING_SCOPE_PREFIX: &str = medulla_server_api::read_scope::MARKING_SCOPE_PREFIX;
 
 /// What the embedded catalog ontology says about classes and field markings.
 struct CatalogRules {
