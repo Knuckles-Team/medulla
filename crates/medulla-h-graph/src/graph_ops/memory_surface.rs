@@ -25,6 +25,7 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_decision_stats::decision::memory as kernel;
+use medulla_decision_types::decision::knob_families::memory::PROMOTE_MIN_SUPPORT;
 use medulla_decision_types::decision::knobs::{KnobSpec, KnobValue};
 use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_protocol_types::result_contract::graph::{
@@ -36,7 +37,7 @@ use medulla_types::contract::ResourceId;
 use medulla_work_types::memory::{
     MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
     MemoryRecallResult, MemoryRecord, MemoryRememberRequest, MemoryRememberResult, MemoryTier,
-    MEMORY_RECORD_SCHEMA_VERSION,
+    MEMORY_RECORD_SCHEMA_VERSION, MEMORY_SUPPORT_BELOW_THRESHOLD,
 };
 use sha2::{Digest, Sha256};
 
@@ -89,6 +90,34 @@ fn knob_bounds(spec: &KnobSpec) -> (i64, i64) {
         (KnobValue::Integer(min), KnobValue::Integer(max)) => (min, max),
         _ => (0, 0),
     }
+}
+
+/// The refusal of a promotion group below `knob memory.promote_min_support`
+/// (MEDULLA-DECISION-ENGINE-R651.7). A `Consolidate` request whose semantic
+/// properties name a `pattern_key` is a promotion group, and its support is the
+/// number of distinct episode ids it sends. A consolidation without a
+/// `pattern_key` is a plain consolidation and is never counted.
+pub(super) fn promotion_support_refusal(
+    episodic_ids: &[String],
+    semantic_props: &serde_json::Map<String, serde_json::Value>,
+) -> Option<String> {
+    let names_pattern = semantic_props
+        .get("pattern_key")
+        .and_then(serde_json::Value::as_str)
+        .is_some_and(|key| !key.is_empty());
+    if !names_pattern {
+        return None;
+    }
+    let support = episodic_ids.iter().collect::<BTreeSet<_>>().len();
+    let required = usize::try_from(knob_integer(&PROMOTE_MIN_SUPPORT)).unwrap_or(usize::MAX);
+    (support < required).then(|| {
+        refuse(
+            MEMORY_SUPPORT_BELOW_THRESHOLD.as_str(),
+            format!(
+                "a promotion group needs at least {required} episodes (knob memory.promote_min_support), got {support}"
+            ),
+        )
+    })
 }
 
 /// The node id of one record of one tenant.

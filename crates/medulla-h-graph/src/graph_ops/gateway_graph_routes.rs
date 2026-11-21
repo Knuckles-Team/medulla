@@ -475,6 +475,14 @@ async fn try_handle_node_state(
         } => {
             let (episodic_ids, semantic_props_msgpack) =
                 (episodic_ids.clone(), semantic_props_msgpack.clone());
+            // MEDULLA-DECISION-ENGINE-R651.7: a promotion group below the support
+            // threshold is refused before the commit writes anything.
+            if let Some(refusal) = super::memory_surface::promotion_support_refusal(
+                &episodic_ids,
+                &decode_json_object(&semantic_props_msgpack),
+            ) {
+                return Some(Response::err(ctx.req_id, refusal));
+            }
             commit_gateway(ctx, plan, method, move |core| {
                 let props = decode_json_object(&semantic_props_msgpack);
                 let id = core.consolidate(&episodic_ids, props);

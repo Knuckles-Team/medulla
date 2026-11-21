@@ -2,7 +2,7 @@
 //! They run the admission, recall and export rules over one graph holding two
 //! tenants, and check how the three methods are routed.
 
-use super::memory_surface::{admit_remember, export, recall, Admitted};
+use super::memory_surface::{admit_remember, export, promotion_support_refusal, recall, Admitted};
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_mutation::mutation::{apply_coalescable_write, is_gateway_routed};
@@ -347,4 +347,58 @@ fn media_evidence_reads_back() {
         .is_empty());
     let own = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["chart"], 100)).unwrap();
     assert_eq!(own.hits[0].record.attachments[0].byte_len, 4096);
+}
+
+fn promotion_props() -> serde_json::Map<String, serde_json::Value> {
+    let mut props = serde_json::Map::new();
+    props.insert("type".into(), "SemanticMemory".into());
+    props.insert("pattern_key".into(), "build".into());
+    props.insert("support_count".into(), 3.into());
+    props
+}
+
+fn episode_ids(count: usize) -> Vec<String> {
+    (0..count).map(|index| format!("ep:{index}")).collect()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R651.7
+#[test]
+fn episodes_promote_to_a_linked_semantic_fact() {
+    let core = GraphCore::new();
+    let episodes = episode_ids(3);
+    for id in &episodes {
+        core.add_node(
+            id.clone(),
+            rmp_serde::to_vec_named(&serde_json::json!({"type": "EpisodicMemory"})).unwrap(),
+        );
+    }
+    // Three episodes reach the default threshold of three: nothing refuses, and the route's
+    // own `consolidate` writes one semantic node with one CONSOLIDATES edge per episode.
+    assert_eq!(promotion_support_refusal(&episodes, &promotion_props()), None);
+    let semantic = core.consolidate(&episodes, promotion_props());
+    let properties = medulla_types::msgpack::decode_property_object(
+        &core.get_node_properties(&semantic).expect("the semantic node exists"),
+    )
+    .unwrap();
+    assert_eq!(properties["pattern_key"], "build");
+    assert_eq!(properties["support_count"], 3);
+    let edges = core.analysis_snapshot().edge_properties;
+    for id in &episodes {
+        assert!(
+            edges.contains_key(&(semantic.clone(), id.clone())),
+            "no CONSOLIDATES edge to {id}"
+        );
+    }
+
+    // A two-episode group is below the threshold and names its code.
+    let refusal = promotion_support_refusal(&episode_ids(2), &promotion_props())
+        .expect("two episodes are below the threshold");
+    assert!(refusal.starts_with("MEMORY_SUPPORT_BELOW_THRESHOLD"), "{refusal}");
+    // The same id sent twice is one episode.
+    let repeated = vec!["ep:0".to_string(); 5];
+    assert!(promotion_support_refusal(&repeated, &promotion_props()).is_some());
+    // A consolidation that names no pattern key is a plain consolidation and is not counted.
+    let mut plain = promotion_props();
+    plain.remove("pattern_key");
+    assert_eq!(promotion_support_refusal(&episode_ids(2), &plain), None);
 }

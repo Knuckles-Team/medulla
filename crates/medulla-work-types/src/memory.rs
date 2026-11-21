@@ -32,6 +32,11 @@ pub const MEDIA_DERIVATION_EMPTY: RefusalCode = RefusalCode::new("MEDIA_DERIVATI
 pub const MEDIA_DERIVATION_KIND_INVALID: RefusalCode =
     RefusalCode::new("MEDIA_DERIVATION_KIND_INVALID");
 
+/// A `Consolidate` request naming a `pattern_key` that sends fewer episodes than
+/// `knob memory.promote_min_support` (MEDULLA-DECISION-ENGINE-R651.7).
+pub const MEMORY_SUPPORT_BELOW_THRESHOLD: RefusalCode =
+    RefusalCode::new("MEMORY_SUPPORT_BELOW_THRESHOLD");
+
 /// Every refusal code of the `memory` family (MEDULLA-DECISION-ENGINE-R010.100).
 pub const REFUSALS: &[RefusalCode] = &[
     MEDIA_TOO_LARGE,
@@ -40,6 +45,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     MEDIA_BLOB_UNKNOWN,
     MEDIA_DERIVATION_EMPTY,
     MEDIA_DERIVATION_KIND_INVALID,
+    MEMORY_SUPPORT_BELOW_THRESHOLD,
 ];
 
 /// `knob media.max_blob_bytes`: largest attached blob.

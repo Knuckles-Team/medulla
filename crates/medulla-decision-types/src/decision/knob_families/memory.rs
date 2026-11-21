@@ -17,6 +17,17 @@ pub const IMPORTANCE_CAP: KnobSpec = KnobSpec {
     safety: KnobSafety::Tunable,
 };
 
+/// The fewest episodes a `Consolidate` request naming a `pattern_key` may send
+/// (MEDULLA-DECISION-ENGINE-R651.7).
+pub const PROMOTE_MIN_SUPPORT: KnobSpec = KnobSpec {
+    name: "memory.promote_min_support",
+    unit: "episodes",
+    default: KnobValue::Integer(3),
+    min: KnobValue::Integer(2),
+    max: KnobValue::Integer(50),
+    safety: KnobSafety::Tunable,
+};
+
 /// The default decay half-life of the working tier.
 pub const HALF_LIFE_WORKING: KnobSpec = KnobSpec {
     name: "memory.half_life_working",
@@ -108,6 +119,7 @@ pub const KNOBS: &[KnobSpec] = &[
         safety: KnobSafety::Fixed,
     },
     IMPORTANCE_CAP,
+    PROMOTE_MIN_SUPPORT,
     HALF_LIFE_WORKING,
     HALF_LIFE_EPISODIC,
     HALF_LIFE_PROCEDURAL,
