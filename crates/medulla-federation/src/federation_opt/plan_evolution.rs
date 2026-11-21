@@ -791,6 +791,15 @@ fn global_kept() -> &'static Mutex<KeptStore> {
     KEPT.get_or_init(|| Mutex::new(KeptStore::new(medulla_federation_limits().shapes_per_tenant)))
 }
 
+/// The baseline plan `tenant` runs most often for `shape_digest`, when it has observed the
+/// shape: the plan a kept plan must beat, and the plan in force while none is kept.
+pub fn baseline_plan_of(tenant: &str, shape_digest: &str) -> Option<String> {
+    global_store()
+        .lock()
+        .ok()?
+        .baseline_plan(tenant, shape_digest)
+}
+
 /// The plan kept for `tenant`'s `shape_digest`, if a plan-evolution run kept one.
 pub fn kept_plan(tenant: &str, shape_digest: &str) -> Option<KeptPlan> {
     global_kept().lock().ok()?.get(tenant, shape_digest)

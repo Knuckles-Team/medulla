@@ -123,10 +123,17 @@ def _kept_digest(graph, name: str, seconds: int = 150) -> str:
     return ""
 
 
-def _explain_kept(graph, name: str) -> list[dict[str, object]]:
+def _explain_plans(graph, name: str) -> list[dict[str, object]]:
+    """Every plan report ``EXPLAIN`` names for ``name``: the kept plan with its receipt, or
+    the baseline plan in force with an empty receipt id while none is kept."""
     explained = graph.query.uql(f"EXPLAIN MATCH (:PeDoc) |> FOREIGN SCAN '{name}' JOIN")
     assert explained["kind"] == "explain"
     return explained.get("kept_plans", [])
+
+
+def _explain_kept(graph, name: str) -> list[dict[str, object]]:
+    """The kept plans ``EXPLAIN`` names for ``name``: the reports that carry a receipt."""
+    return [report for report in _explain_plans(graph, name) if report["receipt_job_id"]]
 
 
 def _seed_locals(graph) -> None:

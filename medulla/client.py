@@ -13351,7 +13351,10 @@ class QueryClient:
           row filter the plan is rewritten under; no masked value rides on a record)
           and ``"kept_plans"`` (one ``{"source", "plan_digest", "receipt_job_id",
           "baseline_digest", "replays", "p50_before_us", "p50_after_us", "bytes_before",
-          "bytes_after"}`` per foreign source the statement reads that has a kept plan).
+          "bytes_after"}`` per foreign source the statement reads that has a kept plan, or,
+          while none is kept, has observed runs: its entry then names the baseline plan
+          in force as ``"plan_digest"`` and ``"baseline_digest"`` with an empty
+          ``"receipt_job_id"``).
           Authenticated servers may also include their optional
           ``"plan_digest"`` and ``"query_digest"`` pins; callers must forward
           those server-issued values to the existing ``ForeignReadOpen`` flow

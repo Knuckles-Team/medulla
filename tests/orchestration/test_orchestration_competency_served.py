@@ -42,6 +42,7 @@ from medulla.generated.connector_pack import PackAnnotations, PackEntryKind, Pac
 from tests.federation.conftest import pg_source  # noqa: F401  (a fixture)
 from tests.federation.test_plan_evolution_served import (
     _explain_kept,
+    _explain_plans,
     _kept_digest,
     _observe_shape,
     _provision_downtime,
@@ -676,9 +677,17 @@ def test_q11_best_plan(clean_graph, pg_source) -> None:  # noqa: F811
     _, connector_b = _register_table(clean_graph, pg_source)
     _observe_shape(clean_graph, connector_a, joins=20, reads=30)
 
-    # Before the downtime window keeps a plan, EXPLAIN lists none for either connector.
+    # Before the downtime window keeps a plan, EXPLAIN keeps none for either connector: it
+    # names the baseline plan digest in force for the observed shape and no receipt, and
+    # names nothing for the connector that was never observed.
     assert _explain_kept(clean_graph, connector_a) == []
     assert _explain_kept(clean_graph, connector_b) == []
+    before = _explain_plans(clean_graph, connector_a)
+    assert len(before) == 1, before
+    assert before[0]["plan_digest"] == before[0]["baseline_digest"], before
+    assert len(before[0]["baseline_digest"]) == 64, before
+    assert before[0]["receipt_job_id"] == "", before
+    assert _explain_plans(clean_graph, connector_b) == []
 
     kept = _kept_digest(clean_graph, connector_a)
     assert kept, "the plan_evolution job kept no plan"

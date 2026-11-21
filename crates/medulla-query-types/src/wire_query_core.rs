@@ -1249,7 +1249,9 @@ pub struct KeptPlanReport {
     pub source: String,
     /// The digest of the kept plan.
     pub plan_digest: String,
-    /// The downtime job whose receipt kept the plan.
+    /// The downtime job whose receipt kept the plan. Empty when no plan is kept: the report
+    /// then names the baseline plan in force as `plan_digest` and `baseline_digest`, with no
+    /// receipt and no measured gain (MEDULLA-CQ-ORCH-R011.3).
     pub receipt_job_id: String,
     /// The digest of the plan the kept plan replaced.
     pub baseline_digest: String,
