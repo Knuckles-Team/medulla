@@ -705,6 +705,25 @@ impl<'a> PlanCtx<'a> {
     }
 }
 
+/// MEDULLA-FEDERATED-QUERY-R706.3 / R706.5: the plan `execute` runs and the policies it was
+/// rewritten under. The pushed plan carries the masked projection. No bound policy set
+/// leaves the plan byte-for-byte as lowered and the list empty (the default ctx is
+/// unchanged); the rewrite is pure and writes nothing. `EXPLAIN` lists the same records,
+/// so the list a statement reports is the one its execution applies.
+pub fn mask_plan(plan: &Plan, ctx: &PlanCtx) -> (Plan, Vec<crate::policy_mask::AppliedPolicy>) {
+    let mut plan = plan.clone();
+    let applied = match ctx.policies {
+        Some(set) => {
+            let principal = ctx
+                .principal
+                .unwrap_or(crate::policy_mask::PrincipalRef(""));
+            crate::policy_mask::apply_policies(&mut plan, set, &principal)
+        }
+        None => Vec::new(),
+    };
+    (plan, applied)
+}
+
 /// Execute a [`Plan`] over `ctx`, returning the final `RowSet`. A free function (not
 /// an inherent method) because `Plan` is the wire DTO defined in medulla-types — the
 /// orphan rule forbids an `impl Plan` here; behavior attaches to the foreign type
@@ -723,16 +742,8 @@ impl<'a> PlanCtx<'a> {
 ///     feature is built and the environment asks for it.
 pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
     // MEDULLA-FEDERATED-QUERY-R706.3 — tag-based column masking + row filters: the
-    // ONE rewrite, at the top of execute, BEFORE pushdown — the pushed plan carries
-    // the masked projection. No bound policy set ⇒ the plan runs byte-for-byte as
-    // lowered (the default ctx is unchanged); the rewrite is pure and writes nothing.
-    let mut plan = plan.clone();
-    if let Some(set) = ctx.policies {
-        let principal = ctx
-            .principal
-            .unwrap_or(crate::policy_mask::PrincipalRef(""));
-        crate::policy_mask::apply_policies(&mut plan, set, &principal);
-    }
+    // ONE rewrite, at the top of execute, BEFORE pushdown (see [`mask_plan`]).
+    let (plan, _applied) = mask_plan(plan, ctx);
     let pinned;
     let ctx = match AsOfPin::of_ops(plan.ops.iter()) {
         Some(pin) if ctx.as_of_pin.is_none() => {

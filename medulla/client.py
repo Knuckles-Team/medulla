@@ -13051,7 +13051,9 @@ class QueryClient:
         * ``"profile"`` — the same plus ``"stages"`` (per-stage estimated/actual
           rows and microseconds);
         * ``"explain"`` — ``{"kind", "canonical", "optimized", "stages",
-          "incremental", "incremental_note", "warnings"}`` (nothing executes).
+          "incremental", "incremental_note", "warnings"}`` (nothing executes), plus
+          ``"applied_policies"`` (``{"tag", "kind", "column"}`` per tag-based mask or
+          row filter the plan is rewritten under; no masked value rides on a record).
           Authenticated servers may also include their optional
           ``"plan_digest"`` and ``"query_digest"`` pins; callers must forward
           those server-issued values to the existing ``ForeignReadOpen`` flow

@@ -108,27 +108,9 @@ impl<'a> From<&'a str> for PrincipalRef<'a> {
     }
 }
 
-/// Which kind of policy an [`AppliedPolicy`] record names
-/// (MEDULLA-FEDERATED-QUERY-R706.5).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum PolicyKind {
-    /// A column mask ([`MaskPolicy`]).
-    Mask,
-    /// A row filter ([`RowFilterPolicy`]).
-    RowFilter,
-}
-
-/// One applied policy — the EXPLAIN evidence record (MEDULLA-FEDERATED-QUERY-R706.5).
-/// Carries tag/kind/column and NO masked value.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AppliedPolicy {
-    pub tag: String,
-    pub kind: PolicyKind,
-    /// The column the mask covers (Mask) or the column the predicate guards
-    /// (RowFilter).
-    pub column: String,
-}
+/// The `EXPLAIN` evidence record of one applied policy and its kind
+/// (MEDULLA-FEDERATED-QUERY-R706.5); the wire types live with `UqlResult`.
+pub use medulla_query_types::wire::{AppliedPolicy, PolicyKind};
 
 /// The value-level mask (MEDULLA-FEDERATED-QUERY-R706.2): `null` gives `NULL`;
 /// `hash` gives lowercase SHA-256 hex; `partial` keeps the last 4 characters and

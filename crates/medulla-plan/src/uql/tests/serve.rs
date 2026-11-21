@@ -371,3 +371,43 @@ fn a_program_profiles_and_returns_channels() {
         "{rows:?}"
     );
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R706.5
+#[test]
+fn explain_lists_the_applied_policies() {
+    use medulla_exec::policy_mask::{
+        AppliedPolicy, PolicyKind, PolicySet, RowFilterPolicy,
+    };
+    let (view, semantic) = fixture();
+    let set = PolicySet {
+        row_filters: vec![RowFilterPolicy {
+            tag: "region.eu".into(),
+            predicate: "region = 'eu'".into(),
+        }],
+        ..PolicySet::default()
+    };
+    let bound = PlanCtx::new(&view, &semantic)
+        .with_policies(&set)
+        .with_principal("role:analyst");
+    let UqlResult::Explain { applied_policies, .. } =
+        run("EXPLAIN MATCH (:Doc)", &Params::new(), &bound).unwrap()
+    else {
+        panic!("explain expected")
+    };
+    assert_eq!(
+        applied_policies,
+        vec![AppliedPolicy {
+            tag: "region.eu".into(),
+            kind: PolicyKind::RowFilter,
+            column: "region".into(),
+        }]
+    );
+    // No policy bound: nothing is listed.
+    let plain = PlanCtx::new(&view, &semantic);
+    let UqlResult::Explain { applied_policies, .. } =
+        run("EXPLAIN MATCH (:Doc)", &Params::new(), &plain).unwrap()
+    else {
+        panic!("explain expected")
+    };
+    assert!(applied_policies.is_empty());
+}

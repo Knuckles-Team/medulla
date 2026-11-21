@@ -101,3 +101,38 @@ async def test_cross_tenant_policy_not_applied() -> None:
     finally:
         await tenant_a.close()
         await tenant_b.close()
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R706.5
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R706.5")
+@pytest.mark.asyncio
+async def test_explain_lists_policies() -> None:
+    """EXPLAIN lists each policy the plan is rewritten under with its tag, kind and
+    column, and the record carries no masked value; a tenant with no policy lists none."""
+    label = f"PolicyExplain{uuid.uuid4().hex[:8]}"
+    tag = f"region.{uuid.uuid4().hex[:8]}"
+    tenant_a = await _connect(TEST_TENANT)
+    tenant_b = await _connect(OTHER_TENANT)
+    try:
+        await _people(tenant_a, label, 1)
+        await _people(tenant_b, label, 1)
+        await tenant_a.nodes.add(
+            f"policy-{uuid.uuid4().hex}",
+            {
+                "type": "QueryPolicy",
+                "kind": "row_filter",
+                "tag": tag,
+                "predicate": "region = 'eu'",
+            },
+        )
+        explained = await tenant_a.query.uql(f"EXPLAIN MATCH (:{label})")
+        assert explained["kind"] == "explain"
+        assert explained["applied_policies"] == [
+            {"tag": tag, "kind": "row_filter", "column": "region"}
+        ]
+        assert "eu" not in str(explained["applied_policies"][0]["column"])
+        other = await tenant_b.query.uql(f"EXPLAIN MATCH (:{label})")
+        assert other.get("applied_policies", []) == []
+    finally:
+        await tenant_a.close()
+        await tenant_b.close()

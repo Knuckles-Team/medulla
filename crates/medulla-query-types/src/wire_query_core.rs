@@ -1154,6 +1154,32 @@ impl Plan {
     }
 }
 
+/// Which kind of policy an [`AppliedPolicy`] record names
+/// (MEDULLA-FEDERATED-QUERY-R706.5).
+#[cfg(feature = "query")]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum PolicyKind {
+    /// A column mask.
+    Mask,
+    /// A row filter.
+    RowFilter,
+}
+
+/// One applied policy: the `EXPLAIN` evidence record (MEDULLA-FEDERATED-QUERY-R706.5).
+/// It names the tag, the kind and the column and carries NO masked value.
+#[cfg(feature = "query")]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AppliedPolicy {
+    pub tag: String,
+    pub kind: PolicyKind,
+    /// The column the mask covers (Mask) or the column the predicate guards
+    /// (RowFilter).
+    pub column: String,
+}
+
 /// One result row of a UQL statement (UQL-08): `id`, the final `score`, and the value of
 /// each requested channel (aligned to [`UqlResult`]'s `columns`; `None` where no stage
 /// produced that channel for the row). Channels are `f64` (EH-521): a series value channel
@@ -1396,6 +1422,11 @@ pub enum UqlResult {
         /// onto the plan, one text per predicate.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         plan_scope_predicates: Vec<String>,
+        /// MEDULLA-FEDERATED-QUERY-R706.5: each tag-based mask and row filter the
+        /// executed plan is rewritten under, in the order `apply_policies` applied
+        /// them. No masked value rides on a record.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        applied_policies: Vec<AppliedPolicy>,
     },
     /// `PROFILE`: the rows plus per-stage actual rows and time.
     Profile {

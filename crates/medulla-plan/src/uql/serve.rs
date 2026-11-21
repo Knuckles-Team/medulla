@@ -364,6 +364,8 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         plan_root_count: u32::from(!optimized.ops.is_empty()),
         plan_scope_tenant: plan.scope.as_ref().map(|scope| scope.tenant.clone()),
         plan_scope_predicates: plan_scope_predicates(plan),
+        // MEDULLA-FEDERATED-QUERY-R706.5: the records of the one rewrite `execute` runs.
+        applied_policies: medulla_exec::exec::mask_plan(plan, ctx).1,
     })
 }
 

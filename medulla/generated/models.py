@@ -28838,11 +28838,14 @@ class UqlResultExplain(BaseModel):
 class UqlResultExplainBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    applied_policies: list[AppliedPolicy] = []
     canonical: str
     incremental: bool
     incremental_note: str
     optimized: str
     plan_digest: Digest256 | None = None
+    plan_node_count: int = 0
+    plan_root_count: int = 0
     plan_scope_predicates: list[str] = []
     plan_scope_tenant: str | None = None
     query_digest: Digest256 | None = None
@@ -31255,6 +31258,21 @@ UnifiedQueryResultValueItem = (
 
 
 UnifiedQueryResult = list[UnifiedQueryResultValueItem]
+
+
+class PolicyKind(str, Enum):
+    MASK = "mask"
+    ROW_FILTER = "row_filter"
+
+
+class AppliedPolicy(BaseModel):
+    """One policy an ``EXPLAIN`` plan is rewritten under; it carries no masked value."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    column: str
+    kind: PolicyKind
+    tag: str
 
 
 class ShortfallReason(str, Enum):
@@ -39234,6 +39252,8 @@ __all__ = [
     "PlanScaffold",
     "PlanScope",
     "PlanScopeLeaf",
+    "AppliedPolicy",
+    "PolicyKind",
     "RankedRows",
     "Shortfall",
     "ShortfallReason",
