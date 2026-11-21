@@ -141,6 +141,7 @@ impl AgentLibraryStore {
                     medulla_catalog_types::connector_pack::PackEntryKind::Ontology
                         | medulla_catalog_types::connector_pack::PackEntryKind::Shapes
                         | medulla_catalog_types::connector_pack::PackEntryKind::Crosswalk
+                        | medulla_catalog_types::connector_pack::PackEntryKind::SeedPart
                 ))
                 || member.lifecycle != AgentLibraryLifecycle::Published
             {

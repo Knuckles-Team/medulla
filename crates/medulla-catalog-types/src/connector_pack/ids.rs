@@ -83,6 +83,12 @@ pub fn validate_connector(connector: &medulla_types::contract::ResourceId) -> Re
     Ok(())
 }
 
+/// The IRI of the connector instance a seed graph establishes
+/// (MEDULLA-TYPED-PACKS-R104.3): `urn:medulla:connector:` and the escaped connector.
+pub fn connector_instance_iri(connector: &medulla_types::contract::ResourceId) -> String {
+    format!("urn:medulla:connector:{}", escape_pack_name(connector.as_str()))
+}
+
 /// The component id one pack entry publishes under.
 pub fn pack_component_id(connector: &str, kind: PackEntryKind, name: &str) -> String {
     format!(

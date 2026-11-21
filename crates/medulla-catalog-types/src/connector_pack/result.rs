@@ -96,6 +96,12 @@ pub enum PackViolationCode {
     // A class declares `:implementsInterface` and lacks a required property or link
     // (MEDULLA-TYPED-PACKS-R650.4).
     InterfaceUnimplemented,
+    // Seed graph refusals (MEDULLA-TYPED-PACKS-R104.3, R104.4).
+    SeedTooLarge,
+    SeedBulkData,
+    SeedShaclViolation,
+    SeedDigestMismatch,
+    SeedInvalid,
 }
 
 /// Something worth saying that did not stop the import.

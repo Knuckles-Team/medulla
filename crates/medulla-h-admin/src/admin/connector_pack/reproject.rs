@@ -289,6 +289,8 @@ fn projection_documents_from_store(
     let mut shapes = Vec::new();
     let mut ontologies = Vec::new();
     let mut crosswalks = Vec::new();
+    let mut seed = Vec::new();
+    let mut seed_length = 0usize;
     let mut shapes_length = 0usize;
     let mut ontology_length = 0usize;
     let mut crosswalk_length = 0usize;
@@ -307,6 +309,7 @@ fn projection_documents_from_store(
             PackEntryKind::Ontology => (&mut ontologies, &mut ontology_length),
             PackEntryKind::Shapes => (&mut shapes, &mut shapes_length),
             PackEntryKind::Crosswalk => (&mut crosswalks, &mut crosswalk_length),
+            PackEntryKind::SeedPart => (&mut seed, &mut seed_length),
             PackEntryKind::Resource
                 if body.uri
                     == medulla_persistence_records::connector_pack::CONNECTOR_DECLARATION_URI =>
@@ -325,6 +328,7 @@ fn projection_documents_from_store(
             shapes,
             ontologies,
             crosswalks,
+            seed,
             surface: None,
         },
         declaration,

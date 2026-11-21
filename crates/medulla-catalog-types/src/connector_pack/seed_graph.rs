@@ -20,6 +20,30 @@ pub enum SeedPartKey {
     References,
 }
 
+impl SeedPartKey {
+    /// Every key, in the order the content digest folds them.
+    pub const ALL: [SeedPartKey; 3] = [
+        SeedPartKey::Identity,
+        SeedPartKey::Catalog,
+        SeedPartKey::References,
+    ];
+
+    /// The wire token, also the host of the part's pack entry URI.
+    pub fn token(self) -> &'static str {
+        match self {
+            Self::Identity => "identity",
+            Self::Catalog => "catalog",
+            Self::References => "references",
+        }
+    }
+
+    /// The key a seed part entry URI (`seed://<token>`) names.
+    pub fn from_uri(uri: &str) -> Option<Self> {
+        let token = uri.strip_prefix("seed://")?;
+        Self::ALL.into_iter().find(|key| key.token() == token)
+    }
+}
+
 /// One seed part, addressed by the map key in [`SeedGraphImport::parts`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

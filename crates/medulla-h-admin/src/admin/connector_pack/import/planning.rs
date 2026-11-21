@@ -126,6 +126,17 @@ pub(super) fn prepare(
     if !violations.is_empty() {
         return rejected(request, violations);
     }
+    super::seed_entries::validate_seed_entries(
+        request,
+        archive,
+        &all,
+        &prior,
+        blob,
+        &mut violations,
+    );
+    if !violations.is_empty() {
+        return rejected(request, violations);
+    }
     super::skill_graph::validate_graph_bundles(archive, &all, &mut violations);
     if !violations.is_empty() {
         return rejected(request, violations);
@@ -741,7 +752,10 @@ fn projection_for(entries: &[PackEntryRecord]) -> PackProjectionState {
     let projects = entries.iter().any(|entry| {
         matches!(
             entry.kind,
-            PackEntryKind::Ontology | PackEntryKind::Shapes | PackEntryKind::Crosswalk
+            PackEntryKind::Ontology
+                | PackEntryKind::Shapes
+                | PackEntryKind::Crosswalk
+                | PackEntryKind::SeedPart
         ) && entry.disposition != PackDisposition::Withdrawn
     });
     if projects {

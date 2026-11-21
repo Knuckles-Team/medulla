@@ -45,6 +45,10 @@ pub enum PackEntryKind {
     // One external schema (MEDULLA-TYPED-PACKS-R097.2.7.3): the body is an
     // `ExternalSchemaBody` JSON record. Plain comment, like its siblings'.
     ExternalSchema,
+    // One part of the connect-time seed graph (MEDULLA-TYPED-PACKS-R104.3): the body
+    // is the part's Turtle, and the URI `seed://identity`, `seed://catalog` or
+    // `seed://references` names its `SeedPartKey`. Plain comment, like its siblings'.
+    SeedPart,
 }
 
 /// Exact identity of the served MCP catalog snapshot this pack came from.
@@ -188,7 +192,7 @@ mod tests {
         let kinds: std::collections::BTreeSet<PackEntryKind> = std::iter::once(index.server.kind)
             .chain(index.entries.iter().map(|entry| entry.kind))
             .collect();
-        assert_eq!(kinds.len(), 13, "the fixture carries every entry kind");
+        assert_eq!(kinds.len(), 15, "the fixture carries every entry kind");
 
         let mut unknown_kind = json.clone();
         unknown_kind["entries"][0]["kind"] = serde_json::json!("plugin");

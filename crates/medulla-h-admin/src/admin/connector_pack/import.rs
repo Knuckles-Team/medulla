@@ -34,6 +34,7 @@ mod json;
 mod nutrition;
 mod planning;
 pub(super) mod release;
+mod seed_entries;
 mod skill_files;
 mod skill_graph;
 pub(crate) mod validation;

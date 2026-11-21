@@ -406,6 +406,7 @@ class PackEntryKind(str, Enum):
     CROSSWALK = "crosswalk"
     CONCEPT_PATH = "concept_path"
     EXTERNAL_SCHEMA = "external_schema"
+    SEED_PART = "seed_part"
 
 
 class PackHeadRef(BaseModel):
@@ -642,6 +643,11 @@ class PackViolationCode(str, Enum):
     PACK_PLAN_STALE = "PACK_PLAN_STALE"
     OBJECT_MODEL_INVALID = "OBJECT_MODEL_INVALID"
     INTERFACE_UNIMPLEMENTED = "INTERFACE_UNIMPLEMENTED"
+    SEED_TOO_LARGE = "SEED_TOO_LARGE"
+    SEED_BULK_DATA = "SEED_BULK_DATA"
+    SEED_SHACL_VIOLATION = "SEED_SHACL_VIOLATION"
+    SEED_DIGEST_MISMATCH = "SEED_DIGEST_MISMATCH"
+    SEED_INVALID = "SEED_INVALID"
     # Client-only fallback for a code this client does not know; the raw
     # code is kept in `PackViolation.raw_code`. Not an engine code.
     UNKNOWN = "UNKNOWN"

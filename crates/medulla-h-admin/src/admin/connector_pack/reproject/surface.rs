@@ -207,19 +207,76 @@ pub(super) fn surface_triples(
 /// beside the new one and a triple the new head dropped disappears. A head with
 /// nothing to project (`None`) leaves the graph empty. The pack graph holds only
 /// projection output; the attached schema sources are kept apart from its triples.
-pub(crate) fn write_surface(
+///
+/// The seed graph (MEDULLA-TYPED-PACKS-R104.3) is written in the same replacement:
+/// its triples, the `seed:SeedRevision` node of this head's seed content and one
+/// `seed:fromSeed` link per seed subject. This is the one writer of the pack graph.
+pub(crate) fn write_projection_triples(
     core: &medulla_graph_core::graph::GraphCore,
     graph: &str,
     surface: Option<&str>,
+    seed: &[PackSchemaDocument],
+    connector: &str,
 ) -> Result<(), String> {
-    let fresh = match surface {
+    let mut fresh = match surface {
         Some(document) => medulla_rdf::mapping::parse_ntriples(document)?,
         None => Vec::new(),
     };
+    fresh.extend(seed_triples(seed, connector)?);
     let stale = medulla_rdf::mapping::export_triples(core, graph)?;
     medulla_rdf::update::remove_triples(core, &stale);
     medulla_rdf::update::insert_triples(core, &fresh)?;
     Ok(())
+}
+
+/// The seed parts' triples plus the revision node and one `seed:fromSeed` link per
+/// seed subject. The revision IRI is `urn:medulla:seed:<escaped connector>:<content
+/// digest hex>`, so a changed part is a new revision and an equal head the same one.
+fn seed_triples(seed: &[PackSchemaDocument], connector: &str) -> Result<Vec<Triple>, String> {
+    use crate::admin::connector_pack::seed::{canonical_digest, seed_content_digest, MAX_SEED_TRIPLES};
+    use medulla_catalog_types::connector_pack::{escape_pack_name, SeedPartKey};
+
+    if seed.is_empty() {
+        return Ok(Vec::new());
+    }
+    const SEED_NS: &str = medulla_types::ontology_iri!("connector-seed#");
+    let node = |iri: &str| {
+        NamedNode::new(iri).map_err(|error| format!("seed projection IRI is invalid: {error}"))
+    };
+    let mut digests = std::collections::BTreeMap::new();
+    let mut triples = Vec::new();
+    for document in seed {
+        let key = SeedPartKey::from_uri(&document.uri).ok_or_else(|| {
+            format!("CORRUPT_CONNECTOR_PACK: '{}' is not a seed part", document.uri)
+        })?;
+        digests.insert(key, canonical_digest(&document.body)?);
+        triples.extend(
+            medulla_rdf::mapping::parse_turtle_bounded(&document.body, MAX_SEED_TRIPLES)
+                .map_err(|error| format!("SEED_TURTLE_INVALID: {error}"))?,
+        );
+    }
+    let revision = node(&format!(
+        "urn:medulla:seed:{}:{}",
+        escape_pack_name(connector),
+        seed_content_digest(&digests).to_hex()
+    ))?;
+    let subjects: std::collections::BTreeSet<NamedNode> = triples
+        .iter()
+        .filter_map(|triple| match &triple.subject {
+            NamedOrBlankNode::NamedNode(subject) => Some(subject.clone()),
+            _ => None,
+        })
+        .collect();
+    triples.push(Triple::new(
+        revision.clone(),
+        node(RDF_TYPE)?,
+        node(&format!("{SEED_NS}SeedRevision"))?,
+    ));
+    let from_seed = node(&format!("{SEED_NS}fromSeed"))?;
+    for subject in subjects {
+        triples.push(Triple::new(subject, from_seed.clone(), revision.clone()));
+    }
+    Ok(triples)
 }
 
 #[cfg(test)]
@@ -270,15 +327,15 @@ mod tests {
     #[test]
     fn a_newer_head_drops_the_triples_it_no_longer_names() {
         let core = medulla_graph_core::graph::GraphCore::new();
-        write_surface(&core, "pack", Some(&individuals(&["amount_a", "amount_b"]))).unwrap();
+        write_projection_triples(&core, "pack", Some(&individuals(&["amount_a", "amount_b"])), &[], "demo").unwrap();
         assert_eq!(subjects_of(&core).len(), 2);
-        write_surface(&core, "pack", Some(&individuals(&["amount_a"]))).unwrap();
+        write_projection_triples(&core, "pack", Some(&individuals(&["amount_a"])), &[], "demo").unwrap();
         assert_eq!(
             subjects_of(&core),
             vec!["<https://knuckles-team.github.io/ontology/core#amount_a>".to_string()],
             "amount_b was dropped from the newer head"
         );
-        write_surface(&core, "pack", None).unwrap();
+        write_projection_triples(&core, "pack", None, &[], "demo").unwrap();
         assert!(
             subjects_of(&core).is_empty(),
             "a head with nothing to project clears the graph"

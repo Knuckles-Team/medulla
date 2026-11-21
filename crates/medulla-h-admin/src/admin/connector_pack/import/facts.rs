@@ -100,7 +100,7 @@ struct KindSemantics {
     uri_prefix: &'static str,
 }
 
-const KIND_SEMANTICS: [KindSemantics; 14] = [
+const KIND_SEMANTICS: [KindSemantics; 15] = [
     KindSemantics {
         pack: PackEntryKind::McpServer,
         component: AgentComponentKind::McpServer,
@@ -170,6 +170,11 @@ const KIND_SEMANTICS: [KindSemantics; 14] = [
         pack: PackEntryKind::ExternalSchema,
         component: AgentComponentKind::McpResource,
         uri_prefix: "external-schema://",
+    },
+    KindSemantics {
+        pack: PackEntryKind::SeedPart,
+        component: AgentComponentKind::McpResource,
+        uri_prefix: "seed://",
     },
 ];
 

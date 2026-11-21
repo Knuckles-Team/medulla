@@ -237,3 +237,94 @@ fn no_writer_sets_content_outside_construction() {
         }
     }
 }
+
+/// The served import of seed part entries (MEDULLA-TYPED-PACKS-R104.3).
+#[cfg(all(feature = "redb", feature = "blob"))]
+mod served {
+    use std::sync::atomic::AtomicBool;
+
+    use medulla_catalog_types::connector_pack::{PackAnnotations, PackEntryKind, PackImportResult};
+    use medulla_protocol_types::protocol::Method;
+    use medulla_types::contract::ResourceId;
+
+    use crate::admin::connector_pack::tests::{
+        bind, build_pack, head_of, import, imported, ok, Content, Served, ADMIN, TENANT,
+    };
+    use crate::connector_pack_projection::worker::sweep;
+
+    const CONNECTOR: &str = "seed-served";
+
+    fn seed_part(key: &str, turtle: &str) -> Content {
+        Content {
+            kind: PackEntryKind::SeedPart,
+            uri: format!("seed://{key}"),
+            name: key.to_string(),
+            media_type: "text/turtle",
+            body: turtle.as_bytes().to_vec(),
+            input_schema: None,
+            annotations: PackAnnotations::default(),
+            references: Vec::new(),
+        }
+    }
+
+    fn parts() -> Vec<Content> {
+        vec![
+            seed_part(
+                "identity",
+                "<urn:seed:instance> a <urn:seed:Identity> .\n",
+            ),
+            seed_part("catalog", "<urn:seed:item> a <urn:seed:CatalogEntry> .\n"),
+            seed_part(
+                "references",
+                "<urn:seed:item> <urn:seed:references> <urn:source:item> .\n",
+            ),
+        ]
+    }
+
+    async fn pack_graph_rdf(served: &Served, key: &str) -> String {
+        let graph = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
+            TENANT,
+            &ResourceId::new(CONNECTOR).unwrap(),
+        )
+        .unwrap();
+        ok::<String>("GetRdf", served.call_on(&graph, key, Method::GetRdf).await)
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R104.3
+    #[tokio::test]
+    async fn served_import_projects_seed() {
+        let served = Served::new();
+        let _env = served.with_graph_persistence().await;
+        bind(&served, CONNECTOR, ADMIN).await;
+        let pack = build_pack(CONNECTOR, &parts());
+        let receipt = imported(&served, &pack, None).await;
+        let subscribed = AtomicBool::new(false);
+        while sweep(&served.state, &subscribed).await.unwrap() {}
+
+        // The pack graph holds the seed triples, the revision node and one
+        // `seed:fromSeed` link per seed subject.
+        let projected = pack_graph_rdf(&served, "seed:first").await;
+        for subject in ["urn:seed:instance", "urn:seed:item"] {
+            assert!(projected.contains(subject), "{subject} is projected");
+        }
+        assert!(projected.contains("urn:source:item"), "{projected}");
+        assert!(
+            projected.contains("urn:medulla:seed:seed-served:"),
+            "the revision node is projected: {projected}"
+        );
+        assert_eq!(
+            projected.matches("connector-seed#fromSeed").count(),
+            2,
+            "one fromSeed link per seed subject: {projected}"
+        );
+
+        // A repeat with equal entries leaves the head and the graph unchanged.
+        let repeated: PackImportResult = ok(
+            "repeat import",
+            import(&served, &pack, Some(head_of(&receipt))).await,
+        );
+        assert!(matches!(repeated, PackImportResult::Unchanged { .. }));
+        while sweep(&served.state, &subscribed).await.unwrap() {}
+        assert_eq!(pack_graph_rdf(&served, "seed:second").await, projected);
+    }
+}

@@ -108,6 +108,7 @@ pub fn index() -> ConnectorPackIndex {
         PackEntryKind::Crosswalk,
         PackEntryKind::ConceptPath,
         PackEntryKind::ExternalSchema,
+        PackEntryKind::SeedPart,
     ];
     ConnectorPackIndex {
         schema_version: CONNECTOR_PACK_SCHEMA_VERSION,
@@ -392,6 +393,11 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::PackPlanStale,
         PackViolationCode::ObjectModelInvalid,
         PackViolationCode::InterfaceUnimplemented,
+        PackViolationCode::SeedTooLarge,
+        PackViolationCode::SeedBulkData,
+        PackViolationCode::SeedShaclViolation,
+        PackViolationCode::SeedDigestMismatch,
+        PackViolationCode::SeedInvalid,
     ]
 }
 

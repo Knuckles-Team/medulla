@@ -1,36 +1,28 @@
 //! Bounded connect-time seed graph preparation (MEDULLA-TYPED-PACKS-R104.2).
 //!
 //! This module owns the pure validation and per-part replacement plan.  The
-//! ConnectorPack import handler and projection worker remain the integration
-//! owners (R104.3); keeping this step independent means a rejected seed never
-//! reaches either commit authority.
+//! ConnectorPack import (`import/seed_entries.rs`) and the projection writer
+//! (`reproject/surface.rs`) are its callers (R104.3); keeping this step
+//! independent means a rejected seed never reaches either commit authority.
 
-#[cfg(test)]
 use std::collections::{BTreeMap, BTreeSet};
 
-#[cfg(test)]
 use medulla_catalog_types::{
     connector_pack::SeedGraphImport, connector_pack::SeedPart, connector_pack::SeedPartKey,
 };
-#[cfg(test)]
 use medulla_graph_core::graph::GraphSchemaSources;
-#[cfg(test)]
 use medulla_rdf::oxrdf::{BlankNode, Graph, NamedOrBlankNode, Term, Triple};
-#[cfg(test)]
 use medulla_types::contract::Digest256;
 
 /// Maximum number of triples emitted by one seed part parser.
-#[cfg(test)]
 pub(crate) const MAX_SEED_TRIPLES: usize = 50_000;
 /// Maximum UTF-8 byte size of all seed parts in one import.
-#[cfg(test)]
 pub(crate) const MAX_SEED_BYTES: usize = 8 * 1024 * 1024;
 
 /// The canonical representation held by the later persistence/projection step.
 /// It deliberately keeps only the canonical N-Quads and digest; no caller-owned
 /// Turtle bytes can become a second graph representation.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg(test)]
 pub(crate) struct SeedPartState {
     pub(crate) digest: Digest256,
     pub(crate) canonical_nquads: String,
@@ -41,7 +33,6 @@ pub(crate) struct SeedPartState {
 /// plan. A snapshot of data, not a lifecycle, so it carries no state machine
 /// (MEDULLA-TYPED-PACKS-R810.5).
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg(test)]
 pub(crate) struct SeedGraphContent {
     pub(crate) content_digest: Digest256,
     pub(crate) parts: BTreeMap<SeedPartKey, SeedPartState>,
@@ -49,7 +40,6 @@ pub(crate) struct SeedGraphContent {
 
 /// What the one eventual commit must do with the seed parts.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg(test)]
 pub(crate) enum SeedImportOutcome {
     /// The caller supplied the already-visible content digest.
     Unchanged,
@@ -64,7 +54,6 @@ pub(crate) enum SeedImportOutcome {
 /// A validated, atomic replacement plan.  R104.3 supplies the durable commit
 /// around this plan; this module never mutates graph state itself.
 #[derive(Debug, Clone, PartialEq, Eq)]
-#[cfg(test)]
 pub(crate) struct SeedImportPlan {
     pub(crate) outcome: SeedImportOutcome,
     pub(crate) content: SeedGraphContent,
@@ -77,7 +66,6 @@ pub(crate) struct SeedImportPlan {
 /// later commit can replace one part without rewriting the other two.  The
 /// content digest is compared after parsing so a reused digest cannot bypass
 /// Turtle or SHACL validation.
-#[cfg(test)]
 pub(crate) fn prepare_seed_import(
     seed: &SeedGraphImport,
     current: Option<&SeedGraphContent>,
@@ -155,10 +143,49 @@ pub(crate) fn prepare_seed_import(
     })
 }
 
+/// The seed content digest: SHA-256 over each part key and part digest, in
+/// [`SeedPartKey`] order (MEDULLA-TYPED-PACKS-R104.3). A part the seed lacks is skipped.
+pub(crate) fn seed_content_digest(parts: &BTreeMap<SeedPartKey, Digest256>) -> Digest256 {
+    let mut folded = String::new();
+    for (key, digest) in parts {
+        folded.push_str(key.token());
+        folded.push(':');
+        folded.push_str(&digest.to_hex());
+        folded.push('\n');
+    }
+    Digest256::sha256(folded.as_bytes())
+}
+
+/// The current seed content from the Turtle of the prior head's seed members: each
+/// body is canonicalized again, so no stored digest is trusted
+/// (MEDULLA-TYPED-PACKS-R104.3).
+pub(crate) fn current_seed_content(
+    turtle: &BTreeMap<SeedPartKey, String>,
+) -> Result<SeedGraphContent, String> {
+    let mut parts = BTreeMap::new();
+    for (key, body) in turtle {
+        let triples = medulla_rdf::mapping::parse_turtle_bounded(body, MAX_SEED_TRIPLES)
+            .map_err(|error| format!("SEED_TURTLE_INVALID: {error}"))?;
+        let canonical_nquads = canonical_nquads(&triples)?;
+        parts.insert(
+            *key,
+            SeedPartState {
+                digest: Digest256::sha256(canonical_nquads.as_bytes()),
+                canonical_nquads,
+                triple_count: triples.len(),
+            },
+        );
+    }
+    let digests = parts.iter().map(|(key, part)| (*key, part.digest)).collect();
+    Ok(SeedGraphContent {
+        content_digest: seed_content_digest(&digests),
+        parts,
+    })
+}
+
 /// Compute the digest expected in [`SeedPart::digest`] from a Turtle body.
 /// This is exposed to the focused handler test and keeps the exact digest rule
 /// in one production function used by validation.
-#[cfg(test)]
 pub(crate) fn canonical_digest(turtle: &str) -> Result<Digest256, String> {
     let triples = medulla_rdf::mapping::parse_turtle_bounded(turtle, MAX_SEED_TRIPLES)
         .map_err(|error| format!("SEED_TURTLE_INVALID: {error}"))?;
@@ -166,7 +193,6 @@ pub(crate) fn canonical_digest(turtle: &str) -> Result<Digest256, String> {
     Ok(Digest256::sha256(canonical.as_bytes()))
 }
 
-#[cfg(test)]
 fn validate_seed_part(
     part: &SeedPart,
     shapes: &Graph,
@@ -225,7 +251,6 @@ fn validate_seed_part(
 /// `catalog` or `reference` (R104.4). The importer assigns `domain` to the
 /// importing pack's own source, so those predicates are the pack's bulk-data
 /// vocabulary and no seed triple may use them.
-#[cfg(test)]
 fn domain_predicates(sources: &GraphSchemaSources) -> Result<BTreeSet<String>, String> {
     const PROPERTY_TYPES: [&str; 4] = [
         "http://www.w3.org/1999/02/22-rdf-syntax-ns#Property",
@@ -263,7 +288,6 @@ fn domain_predicates(sources: &GraphSchemaSources) -> Result<BTreeSet<String>, S
 /// Serialize a triple set as sorted, duplicate-free N-Quads with stable local
 /// blank-node labels.  The sorted lines make source statement order irrelevant;
 /// labels are normalized per document before serialization.
-#[cfg(test)]
 fn canonical_nquads(triples: &[Triple]) -> Result<String, String> {
     let labels = blank_node_labels(triples);
     let mut lines = BTreeSet::new();
@@ -274,7 +298,6 @@ fn canonical_nquads(triples: &[Triple]) -> Result<String, String> {
     Ok(lines.into_iter().collect::<Vec<_>>().concat())
 }
 
-#[cfg(test)]
 fn blank_node_labels(triples: &[Triple]) -> BTreeMap<String, String> {
     let mut source_labels = BTreeSet::new();
     for triple in triples {
@@ -290,7 +313,6 @@ fn blank_node_labels(triples: &[Triple]) -> BTreeMap<String, String> {
         .collect()
 }
 
-#[cfg(test)]
 fn collect_term_labels(term: &Term, labels: &mut BTreeSet<String>) {
     match term {
         Term::BlankNode(node) => {
@@ -307,7 +329,6 @@ fn collect_term_labels(term: &Term, labels: &mut BTreeSet<String>) {
     }
 }
 
-#[cfg(test)]
 fn remap_triple(triple: &Triple, labels: &BTreeMap<String, String>) -> Triple {
     Triple::new(
         remap_subject(&triple.subject, labels),
@@ -316,7 +337,6 @@ fn remap_triple(triple: &Triple, labels: &BTreeMap<String, String>) -> Triple {
     )
 }
 
-#[cfg(test)]
 fn remap_subject(
     subject: &NamedOrBlankNode,
     labels: &BTreeMap<String, String>,
@@ -334,7 +354,6 @@ fn remap_subject(
     }
 }
 
-#[cfg(test)]
 fn remap_term(term: &Term, labels: &BTreeMap<String, String>) -> Term {
     match term {
         Term::NamedNode(node) => Term::NamedNode(node.clone()),

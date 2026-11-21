@@ -65,6 +65,9 @@ pub(crate) struct PackProjectionDocuments {
     pub(crate) shapes: Vec<PackSchemaDocument>,
     pub(crate) ontologies: Vec<PackSchemaDocument>,
     pub(crate) crosswalks: Vec<PackSchemaDocument>,
+    /// The seed graph parts of the head (MEDULLA-TYPED-PACKS-R104.3): written into the
+    /// pack graph, never composed into its schema source.
+    pub(crate) seed: Vec<PackSchemaDocument>,
     pub(crate) surface: Option<Arc<str>>,
 }
 
@@ -119,7 +122,13 @@ pub(crate) async fn commit_pack_projection(
                 },
                 None,
             )?;
-            write_pack_surface(core, &result_graph_name, documents.surface.as_deref())?;
+            write_pack_projection(
+                core,
+                &result_graph_name,
+                documents.surface.as_deref(),
+                &documents.seed,
+                connector.as_str(),
+            )?;
             Ok(committed)
         },
     )
@@ -260,18 +269,28 @@ where
     }
 }
 
-/// Write one pack head's surface triples into its graph, inside the gateway.
+/// Write one pack head's surface and seed triples into its graph, inside the gateway.
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
-fn write_pack_surface(core: &GraphCore, graph: &str, surface: Option<&str>) -> Result<(), String> {
-    crate::admin::connector_pack::reproject::surface::write_surface(core, graph, surface)
+fn write_pack_projection(
+    core: &GraphCore,
+    graph: &str,
+    surface: Option<&str>,
+    seed: &[PackSchemaDocument],
+    connector: &str,
+) -> Result<(), String> {
+    crate::admin::connector_pack::reproject::surface::write_projection_triples(
+        core, graph, surface, seed, connector,
+    )
 }
 
-/// A build without the pack projection substrates has no surface to write.
+/// A build without the pack projection substrates has nothing to write.
 #[cfg(not(all(feature = "redb", feature = "blob", feature = "shacl")))]
-fn write_pack_surface(
+fn write_pack_projection(
     _core: &GraphCore,
     _graph: &str,
     _surface: Option<&str>,
+    _seed: &[PackSchemaDocument],
+    _connector: &str,
 ) -> Result<(), String> {
     Ok(())
 }

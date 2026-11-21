@@ -148,6 +148,50 @@ mod compose {
         pin_composed(&GraphSchemaSources::default(), &sources)
     }
 
+    /// Core plus the pack's own ontology and shapes entries: the schema sources a seed
+    /// graph is judged against (MEDULLA-TYPED-PACKS-R104.3). The pack's source keeps
+    /// the default `domain` role, assigned here and never read from the archive.
+    pub(in super::super) fn pack_sources(
+        request: &medulla_catalog_types::connector_pack::ConnectorPackImportRequest,
+        archive: &[u8],
+        all: &[&PackEntry],
+    ) -> Result<GraphSchemaSources, String> {
+        let documents = |kind: PackEntryKind| -> Result<Vec<crate::graph_schema::PackSchemaDocument>, String> {
+            let mut documents = Vec::new();
+            for entry in all.iter().filter(|e| e.kind == kind) {
+                let bytes = super::super::validation::section_bytes(archive, &entry.body)?;
+                let text = std::str::from_utf8(bytes)
+                    .map_err(|_| "MALFORMED_BODY: schema entry is not UTF-8".to_string())?;
+                documents.push(crate::graph_schema::PackSchemaDocument {
+                    uri: entry.uri.clone(),
+                    body: std::sync::Arc::from(text),
+                });
+            }
+            Ok(documents)
+        };
+        let shapes =
+            crate::graph_schema::compose_pack_documents("SHAPES", documents(PackEntryKind::Shapes)?)?;
+        let ontology = crate::graph_schema::compose_pack_documents(
+            "ONTOLOGY",
+            documents(PackEntryKind::Ontology)?,
+        )?;
+        let mut sources = GraphSchemaSources::default();
+        if shapes.is_some() || ontology.is_some() {
+            let source = GraphSchemaSource::new(
+                SchemaSourceOrigin::Pack {
+                    connector: request.index.connector.as_str().to_string(),
+                    record_id: format!("import:{}", request.index.pack_digest.to_hex()),
+                    tenant: Some(request.context.tenant_id.clone()),
+                },
+                shapes,
+                ontology,
+                0,
+            )?;
+            sources.attach_dynamic(format!("pack:{}", request.index.connector.as_str()), source)?;
+        }
+        Ok(sources)
+    }
+
     /// Read the pinned vocabulary from `sources`: the revision and the
     /// authorized source set come from the core catalog, the classes, upper
     /// categories and hierarchy from the composed schema. The import and the
@@ -175,7 +219,7 @@ mod compose {
 }
 
 #[cfg(feature = "shacl")]
-pub(super) use compose::pin;
+pub(super) use compose::{pack_sources, pin};
 #[cfg(feature = "shacl")]
 pub(crate) use compose::pin_composed;
 

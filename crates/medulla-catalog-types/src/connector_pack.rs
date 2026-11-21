@@ -126,7 +126,10 @@ pub use catalog_authority::{
     McpCatalogAuthorityCandidate, McpCatalogAuthorityRow, McpCatalogAuthorityStatusRequest,
     McpCatalogReconcileRequest, McpJoinedConfigurationRow,
 };
-pub use ids::{escape_pack_name, pack_component_id, validate_connector, PACK_COMPONENT_ID_PREFIX};
+pub use ids::{
+    connector_instance_iri, escape_pack_name, pack_component_id, validate_connector,
+    PACK_COMPONENT_ID_PREFIX,
+};
 pub use index::{
     ConnectorPackIndex, McpCatalogSnapshotBinding, PackArchiveRef, PackEntry, PackEntryKind,
     PackProducer, PackRef, PackSection,
