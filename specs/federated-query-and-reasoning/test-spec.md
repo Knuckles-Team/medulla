@@ -675,7 +675,7 @@ Each row below names the test that proves it as `path::name`. State `exists` mea
 | MEDULLA-FEDERATED-QUERY-R078.3 | `tests/plan_scope_tenant.rs::planned_statement_executes_only_with_predicate` | planned |
 | MEDULLA-FEDERATED-QUERY-R078.4 | `tests/plan_scope_tenant.rs::unverified_tenant_refused_zero_reads` | exists |
 | MEDULLA-FEDERATED-QUERY-R078.5 | `tests/plan_scope_tenant.rs::trace_and_explain_show_scope` | exists |
-| MEDULLA-FEDERATED-QUERY-R078.6 | `tests/plan_scope_tenant.rs::only_own_rows_return` | planned |
+| MEDULLA-FEDERATED-QUERY-R078.6 | `tests/plan_scope_tenant.rs::only_own_rows_return` | exists |
 | MEDULLA-FEDERATED-QUERY-R079.1 | `crates/medulla-catalog-types/src/lake_catalog.rs::manifest_publication_round_trips_every_field` | exists |
 | MEDULLA-FEDERATED-QUERY-R079.3 | `tests/lake_catalog_schema_evolution.rs::graph_mutation_reaches_catalog_read` | planned |
 | MEDULLA-FEDERATED-QUERY-R079.4 | `tests/lake_catalog_schema_evolution.rs::every_refusal_keeps_visible_versions` | planned |

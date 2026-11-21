@@ -214,3 +214,112 @@ async fn trace_and_explain_show_scope() {
     assert_eq!(traced_tenant.as_deref(), Some("__commons__"));
     assert_eq!(traced_predicates, plan_scope_predicates);
 }
+
+async fn send_in(
+    state: &test_support::SharedState,
+    graph: &str,
+    id: u64,
+    method: Method,
+) -> Response {
+    test_support::dispatch(state, test_support::request(SECRET, id, graph, method)).await
+}
+
+async fn seed_vector_doc(
+    state: &test_support::SharedState,
+    graph: &str,
+    id: u64,
+    node: &str,
+    embedding: Vec<f32>,
+) {
+    let props = serde_json::json!({ "type": "Doc", "node_type": "Doc" });
+    let added = send_in(
+        state,
+        graph,
+        id,
+        Method::AddNode {
+            node_id: node.to_string(),
+            properties_msgpack: test_support::json_bytes(props),
+        },
+    )
+    .await;
+    assert!(added.error.is_none(), "AddNode {node}: {:?}", added.error);
+    let embedded = send_in(
+        state,
+        graph,
+        id + 1,
+        Method::AddEmbedding {
+            node_id: node.to_string(),
+            embedding,
+        },
+    )
+    .await;
+    assert!(
+        embedded.error.is_none(),
+        "AddEmbedding {node}: {:?}",
+        embedded.error
+    );
+}
+
+fn row_ids(response: &Response) -> Vec<String> {
+    let UqlResult::Rows { rows, .. } = body(response) else {
+        panic!("rows were expected: {response:?}")
+    };
+    let mut ids: Vec<String> = rows.into_iter().map(|row| row.id).collect();
+    ids.sort();
+    ids
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R078.6
+#[tokio::test]
+async fn only_own_rows_return() {
+    let state = state();
+    // Two tenants hold the same label and near-identical vectors; each statement is
+    // answered with its own tenant's rows only, on the graph scan and on the vector leaf.
+    seed_vector_doc(&state, "plan-scope-a", 10, "a-1", vec![1.0, 0.0]).await;
+    seed_vector_doc(&state, "plan-scope-a", 20, "a-2", vec![0.9, 0.1]).await;
+    seed_vector_doc(&state, "plan-scope-b", 30, "b-1", vec![1.0, 0.0]).await;
+    seed_vector_doc(&state, "plan-scope-b", 40, "b-2", vec![0.95, 0.05]).await;
+    seed_vector_doc(&state, "plan-scope-b", 50, "b-3", vec![0.0, 1.0]).await;
+
+    for (graph, expected) in [
+        ("plan-scope-a", vec!["a-1", "a-2"]),
+        ("plan-scope-b", vec!["b-1", "b-2", "b-3"]),
+    ] {
+        let scan = send_in(
+            &state,
+            graph,
+            60,
+            test_support::uql("MATCH (:Doc)"),
+        )
+        .await;
+        assert_eq!(row_ids(&scan), expected, "graph scan of {graph}: {scan:?}");
+
+        let ranked = send_in(
+            &state,
+            graph,
+            61,
+            test_support::uql("MATCH (:Doc) |> RANK BY ~[1.0,0.0] |> LIMIT 10"),
+        )
+        .await;
+        assert_eq!(
+            row_ids(&ranked),
+            expected,
+            "vector leaf of {graph}: {ranked:?}"
+        );
+
+        let explain = send_in(
+            &state,
+            graph,
+            62,
+            test_support::uql("EXPLAIN MATCH (:Doc) |> RANK BY ~[1.0,0.0] |> LIMIT 10"),
+        )
+        .await;
+        let UqlResult::Explain {
+            plan_scope_tenant, ..
+        } = body(&explain)
+        else {
+            panic!("EXPLAIN result expected: {explain:?}")
+        };
+        assert_eq!(plan_scope_tenant.as_deref(), Some(graph));
+    }
+}
