@@ -19,6 +19,10 @@ const DCT_IS_PART_OF: &str = "http://purl.org/dc/terms/isPartOf";
 const PROV_USED: &str = "http://www.w3.org/ns/prov#used";
 /// Prefix of every asset node the emitter mints.
 pub const ASSET_NODE_PREFIX: &str = "urn:medulla:asset:";
+/// The `cat:hop` of a lineage edge into a workflow definition (R106.2's closed set).
+pub const HOP_TRANSFORM: &str = "transform";
+/// The `cat:hop` of a lineage edge into a workflow run (R106.2's closed set).
+pub const HOP_INGEST: &str = "ingest";
 /// The flag a node carries when no owner was resolved for it.
 pub const OWNER_MISSING_FLAG: &str = "owner_missing";
 
@@ -180,6 +184,7 @@ fn node(
     id: &str,
     source: &str,
     links: &AssetLinks<'_>,
+    hop: Option<&str>,
 ) -> Result<String, EmitError> {
     require_id(family, id)?;
     if let Some(owner) = links.owner {
@@ -203,6 +208,16 @@ fn node(
     }
     for upstream in links.upstream {
         out.push(iri(upstream, &format!("{CAT}lineageTo"), &subject));
+        // MEDULLA-TYPED-PACKS-R108.10: a family that names its hop type also emits the qualified
+        // `cat:LineageEdge` beside the direct edge (`transform` for a workflow definition,
+        // `ingest` for a run); the hop is one of the closed set of R106.2.
+        if let Some(hop) = hop {
+            let edge = asset_node("lineage-edge", &format!("{upstream}>{subject}"));
+            out.push(iri(&edge, RDF_TYPE, &format!("{CAT}LineageEdge")));
+            out.push(iri(&edge, &format!("{CAT}from"), upstream));
+            out.push(iri(&edge, &format!("{CAT}to"), &subject));
+            out.push(literal(&edge, &format!("{CAT}hop"), hop));
+        }
     }
     Ok(subject)
 }
@@ -227,6 +242,7 @@ pub fn emit_asset(
                 &id,
                 &source,
                 links,
+                None,
             )?;
         }
         AssetRecord::Organization(chart) => {
@@ -237,6 +253,7 @@ pub fn emit_asset(
                 &chart.org_id,
                 &format!("org:{}", chart.org_id),
                 links,
+                None,
             )?;
             for role in &chart.roles {
                 let id = format!("{}/{}", chart.org_id, role.role_id);
@@ -251,6 +268,7 @@ pub fn emit_asset(
                         owner: links.owner,
                         ..AssetLinks::default()
                     },
+                    None,
                 )?;
                 out.push(iri(&role_node, DCT_IS_PART_OF, &unit));
             }
@@ -265,6 +283,7 @@ pub fn emit_asset(
                 &id,
                 &id,
                 links,
+                Some(HOP_TRANSFORM),
             )?;
         }
         AssetRecord::WorkflowRun(run) => {
@@ -275,6 +294,7 @@ pub fn emit_asset(
                 run.run_id,
                 &format!("workflow-run:{}", run.run_id),
                 links,
+                Some(HOP_INGEST),
             )?;
             let definition = asset_node(
                 "workflow",
@@ -290,6 +310,7 @@ pub fn emit_asset(
                 graph.graph_id,
                 &format!("graph:{}", graph.graph_id),
                 links,
+                None,
             )?;
             if let Some(ontology) = graph.ontology_revision {
                 require_id("ontology", ontology)?;
@@ -580,5 +601,36 @@ mod tests {
             emit_asset(AssetRecord::Organization(&empty), &AssetLinks::default()),
             Err(EmitError::SourceIdMissing { family: "org-unit" })
         );
+    }
+    // spec: MEDULLA-TYPED-PACKS-R108.10
+    #[test]
+    fn workflow_and_run_lineage_carry_transform_and_ingest_hops_beside_the_direct_edge() {
+        let upstream = vec!["urn:medulla:asset:source:crm".to_string()];
+        let links = AssetLinks {
+            owner: Some("urn:medulla:principal:alice"),
+            upstream: &upstream,
+            ..AssetLinks::default()
+        };
+        let definition = workflow();
+        let flow = emit_asset(AssetRecord::WorkflowDefinition(&definition), &links).unwrap();
+        let flow_node = asset_node("workflow", &WorkflowRegistrationEntry::node_id(&definition.identity));
+        let edge = asset_node("lineage-edge", &format!("{}>{flow_node}", upstream[0]));
+        assert!(has(&flow, &edge, RDF_TYPE, &Object::Iri(format!("{CAT}LineageEdge"))));
+        assert!(has(&flow, &edge, &format!("{CAT}from"), &Object::Iri(upstream[0].clone())));
+        assert!(has(&flow, &edge, &format!("{CAT}to"), &Object::Iri(flow_node.clone())));
+        assert!(has(&flow, &edge, &format!("{CAT}hop"), &Object::Literal("transform".into())));
+        assert!(has(&flow, &upstream[0], &format!("{CAT}lineageTo"), &Object::Iri(flow_node)));
+
+        let run = emit_asset(
+            AssetRecord::WorkflowRun(WorkflowRunRecord {
+                run_id: "run-9",
+                definition: &definition.identity,
+            }),
+            &links,
+        )
+        .unwrap();
+        assert!(run
+            .iter()
+            .any(|t| t.predicate == format!("{CAT}hop") && t.object == Object::Literal("ingest".into())));
     }
 }

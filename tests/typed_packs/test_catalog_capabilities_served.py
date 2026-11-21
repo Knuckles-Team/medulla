@@ -165,6 +165,56 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
         )
 
 
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.10")
+def test_lineage_walks_source_operation_workflow_dashboard_agent_and_model(catalog_graph):
+    # spec: MEDULLA-TYPED-PACKS-R108.10
+    admin = catalog_graph
+    chain = [
+        ("urn:lineage:source", "connector", "urn:lineage:operation"),
+        ("urn:lineage:operation", "transform", "urn:lineage:workflow"),
+        ("urn:lineage:workflow", "ingest", "urn:lineage:dashboard"),
+        ("urn:lineage:dashboard", "resource", "urn:lineage:agent"),
+        ("urn:lineage:agent", "resource", "urn:lineage:model"),
+    ]
+    turtle = PREFIX
+    for n, (upstream, hop, downstream) in enumerate(chain):
+        turtle += (
+            f"<{upstream}> cat:lineageTo <{downstream}> .\n"
+            f"<urn:lineage:edge:{n}> a cat:LineageEdge ; cat:from <{upstream}> ;"
+            f' cat:to <{downstream}> ; cat:hop "{hop}" .\n'
+        )
+    admin.rdf.add_triples(turtle=turtle)
+
+    # One property path walks the whole platform from the source to the model.
+    reached = {
+        row["node"].strip("<>")
+        for row in admin.rdf.sparql(
+            f"SELECT ?node WHERE {{ <urn:lineage:source> <{CATALOG}lineageTo>+ ?node }}"
+        )
+    }
+    assert reached == {downstream for _, _, downstream in chain}
+
+    # The hop type reads from the lineage edge node and stays in the closed set.
+    hops = {
+        (row["from"].strip("<>"), row["to"].strip("<>")): row["hop"].strip('"')
+        for row in admin.rdf.sparql(
+            f"SELECT ?from ?to ?hop WHERE {{ ?e a <{CATALOG}LineageEdge> ; "
+            f"<{CATALOG}from> ?from ; <{CATALOG}to> ?to ; <{CATALOG}hop> ?hop }}"
+        )
+    }
+    assert hops == {(upstream, downstream): hop for upstream, hop, downstream in chain}
+
+    # A hop outside the closed set is refused and writes nothing.
+    with pytest.raises(Exception, match="hop|sh:in|VALUE_CONSTRAINT"):
+        admin.rdf.add_triples(
+            turtle=(
+                f"{PREFIX}<urn:lineage:edge:bad> a cat:LineageEdge ; cat:from <urn:lineage:a> ;"
+                ' cat:to <urn:lineage:b> ; cat:hop "teleport" .\n'
+                "<urn:lineage:a> cat:lineageTo <urn:lineage:b> .\n"
+            )
+        )
+
+
 SECONDS_PER_DAY = 86_400
 # The default of `knob catalog.top_queries_window_days`.
 TOP_QUERIES_WINDOW_DAYS = 30
