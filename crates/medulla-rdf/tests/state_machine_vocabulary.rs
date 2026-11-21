@@ -1280,3 +1280,10 @@ fn loop_machine_matches_statechart() {
 fn loop_machine_classes_extend_core() {
     sm::assert_extends_core("Loop");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.6
+#[test]
+fn exact_retirement_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_direct_state::direct_state::EXACT_RETIREMENT_MACHINE);
+    sm::assert_extends_core("ExactRetirement");
+}

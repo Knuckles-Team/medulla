@@ -83,6 +83,7 @@ thread_local! {
 mod authority;
 mod capture;
 mod contract;
+mod exact_retirement_machine;
 mod filesystem;
 pub use filesystem::PinnedPrivateDirectory;
 mod generation;
@@ -115,7 +116,10 @@ pub use contract::{
     MAX_DIRECT_STATE_MANIFEST_BYTES, MAX_DIRECT_STATE_OWNER_NAME_BYTES,
     MAX_DIRECT_STATE_OWNER_TABLES,
 };
-pub use filesystem::ensure_private_directory;
+pub use exact_retirement_machine::{
+    ExactRetirementEvent, ExactRetirementGuard, EXACT_RETIREMENT_MACHINE,
+};
+pub use filesystem::{ensure_private_directory, ExactRetirementPhase};
 pub use generation::{
     AssembledDirectStateGeneration, DirectStateDomainValue, DirectStateGeneration,
     DirectStateGenerationEntry, DirectStatePinnedValue, DirectStateRegistryIdentity,

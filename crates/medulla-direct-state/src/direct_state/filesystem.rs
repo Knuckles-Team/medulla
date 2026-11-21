@@ -790,7 +790,7 @@ pub(super) fn copy_regular_file_exact(
 pub(super) static NEXT_DIRECT_STATE_TEMP: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(super) enum ExactRetirementPhase {
+pub enum ExactRetirementPhase {
     Live,
     Quarantined,
     Unlinked,
@@ -844,7 +844,10 @@ impl ExactRetirement {
                 &self.quarantine_name,
                 &format!("quarantine {}", self.label),
             )?;
-            self.phase = ExactRetirementPhase::Quarantined;
+            self.phase = self
+                .phase
+                .apply(ExactRetirementEvent::Quarantine)
+                .map_err(|refused| refused.to_string())?;
         }
         if self.phase == ExactRetirementPhase::Quarantined {
             let moved = self.root.reader().open_regular(
@@ -857,7 +860,10 @@ impl ExactRetirement {
                 &self.quarantine_name,
                 &format!("remove quarantined {}", self.label),
             )?;
-            self.phase = ExactRetirementPhase::Unlinked;
+            self.phase = self
+                .phase
+                .apply(ExactRetirementEvent::Unlink)
+                .map_err(|refused| refused.to_string())?;
         }
         self.root.sync()
     }
