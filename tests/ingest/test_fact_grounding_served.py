@@ -179,3 +179,26 @@ async def test_direction_repair_and_ungrounded_claims() -> None:
         assert claims["Somebody"]["status"] == "ungrounded"
     finally:
         await _close(client, graph)
+
+
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R701.7")
+@pytest.mark.asyncio
+async def test_link_forms_only_on_the_second_batch() -> None:
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    try:
+        first = await _submit(
+            client, _batch(connector, 1, [_fact("Ada", "wrote", "Note G", 10, 30)]), "one"
+        )
+        assert first.facts.links == 0
+        second = await _submit(
+            client, _batch(connector, 2, [_fact("Ada", "annotated", "Note G", 40, 60)]), "two"
+        )
+        assert second.facts.links == 1
+        entities = {
+            (await client.nodes.properties(node_id))["name"]: node_id
+            for node_id, _ in await client.nodes.list_by_label("FactEntity", 0)
+        }
+        assert sorted(entities) == ["Ada", "Note G"]
+    finally:
+        await _close(client, graph)

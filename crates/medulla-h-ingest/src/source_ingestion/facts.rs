@@ -38,6 +38,12 @@ const FACT_ATOM_DOMAIN: &[u8] = b"eg/fact-atom-identity/v1";
 /// The digest domain of a claim identity: the fact without its evidence span.
 const FACT_CLAIM_DOMAIN: &[u8] = b"eg/fact-claim-identity/v1";
 
+/// The `type` property of the stored atoms a pair of entities shares.
+pub const FACT_PAIR_NODE_TYPE: &str = "FactPair";
+
+/// The digest domain of an entity pair identity.
+const FACT_PAIR_DOMAIN: &[u8] = b"eg/fact-pair-identity/v1";
+
 /// The digest domain of a linked entity identity.
 const FACT_ENTITY_DOMAIN: &[u8] = b"eg/fact-entity-identity/v1";
 
@@ -80,6 +86,46 @@ pub struct HeldClaim {
     pub unit_hash: String,
     /// The stored claim's confidence.
     pub confidence: f64,
+}
+
+/// The ordered entity pair a fact's subject and object form; none when they are equal.
+fn entity_pair(fact: &ExtractedFact) -> Option<(String, String)> {
+    let (a, b) = (fact.subject.as_str(), fact.object.as_str());
+    match a.cmp(b) {
+        std::cmp::Ordering::Equal => None,
+        std::cmp::Ordering::Less => Some((a.to_string(), b.to_string())),
+        std::cmp::Ordering::Greater => Some((b.to_string(), a.to_string())),
+    }
+}
+
+/// The node id of the stored atoms an ordered entity pair shares.
+pub fn pair_node_id(tenant: &str, first: &str, second: &str) -> Result<String, String> {
+    let digest = Digest256::framed(
+        FACT_PAIR_DOMAIN,
+        &[tenant.as_bytes(), first.as_bytes(), second.as_bytes()],
+    )?;
+    Ok(format!("fact_pair:{}", digest.to_hex()))
+}
+
+/// The pair node ids a decoded batch may extend, for the held-pairs read.
+pub fn held_pair_ids(tenant: &str, decoded: &DecodedFacts) -> Result<BTreeSet<String>, String> {
+    decoded
+        .batch
+        .facts
+        .iter()
+        .filter_map(entity_pair)
+        .map(|(first, second)| pair_node_id(tenant, &first, &second))
+        .collect()
+}
+
+/// The atom ids a stored pair node holds.
+pub fn held_pair_atoms(properties: &serde_json::Value) -> Option<BTreeSet<String>> {
+    properties
+        .get("atoms")?
+        .as_array()?
+        .iter()
+        .map(|atom| atom.as_str().map(str::to_string))
+        .collect()
 }
 
 /// The decoded elements of a `facts` extension.
@@ -304,18 +350,22 @@ fn encode(value: &serde_json::Value) -> Result<Vec<u8>, String> {
 /// claims and compile the claim, atom and link writes, in batch order
 /// (MEDULLA-INGEST-WORKER-R701.3, R701.5, R701.7). An unchanged claim writes
 /// nothing; an updated claim keeps its node and combines confidence as
-/// `1 - (1 - old) * (1 - new)`. Entities that co-occur in at least `min_shared`
-/// newly created atoms of the batch get a `related_to` edge.
+/// `1 - (1 - old) * (1 - new)`. Every pair of entities a new atom mentions is recorded
+/// on a `fact_pair` node that holds its atom ids; entities that co-occur in at least
+/// `min_shared` stored atoms, counted across batches through `held_pairs`, get a
+/// `related_to` edge.
 pub fn admit_facts(
     tenant: &str,
     decoded: &DecodedFacts,
     cache: &GroundingCache,
     held: &BTreeMap<String, HeldClaim>,
+    held_pairs: &BTreeMap<String, BTreeSet<String>>,
     min_shared: u64,
 ) -> Result<FactAdmission, String> {
     let mut deduper = FactDeduper::default();
     let mut admission = FactAdmission::default();
     let mut created: Vec<CandidateClaim> = Vec::new();
+    let mut new_atoms: BTreeMap<(String, String), Vec<String>> = BTreeMap::new();
     for fact in &decoded.batch.facts {
         if !deduper.admit(fact) {
             admission.duplicates += 1;
@@ -385,6 +435,9 @@ pub fn admit_facts(
         admission.node_ids.push(atom_id);
         admission.admitted += 1;
         if outcome == FactOutcome::Created {
+            if let Some(pair) = entity_pair(fact) {
+                new_atoms.entry(pair).or_default().push(atom_id.clone());
+            }
             created.push(claim);
         }
     }
@@ -396,8 +449,30 @@ pub fn admit_facts(
             detail: detail.clone(),
         });
     }
+    let mut stored: BTreeMap<(String, String), u64> = BTreeMap::new();
+    for (first, second) in new_atoms.keys() {
+        if let Some(atoms) = held_pairs.get(&pair_node_id(tenant, first, second)?) {
+            stored.insert((first.clone(), second.clone()), atoms.len() as u64);
+        }
+    }
+    for ((first, second), added) in &new_atoms {
+        let id = pair_node_id(tenant, first, second)?;
+        let mut atoms: BTreeSet<String> = held_pairs.get(&id).cloned().unwrap_or_default();
+        atoms.extend(added.iter().cloned());
+        admission.methods.push(Method::AddNode {
+            node_id: id.clone(),
+            properties_msgpack: encode(&serde_json::json!({
+                "type": FACT_PAIR_NODE_TYPE,
+                "first": first,
+                "second": second,
+                "tenant": tenant,
+                "atoms": atoms,
+            }))?,
+        });
+        admission.node_ids.push(id);
+    }
     let mut entities: BTreeSet<String> = BTreeSet::new();
-    for link in infer_links(&created, min_shared) {
+    for link in infer_links(&created, &stored, min_shared) {
         let ids = [
             entity_node_id(tenant, &link.first)?,
             entity_node_id(tenant, &link.second)?,
@@ -424,7 +499,9 @@ pub fn admit_facts(
                 "shared_mentions": link.shared_mentions,
             }))?,
         });
-        admission.report.links += 1;
+        if link.previously_shared < min_shared {
+            admission.report.links += 1;
+        }
     }
     Ok(admission)
 }
@@ -478,12 +555,13 @@ mod tests {
             ],
             },
         };
-        let admission = admit_facts("t1", &batch, &cache, &BTreeMap::new(), 2).unwrap();
+        let admission = admit_facts("t1", &batch, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
         assert_eq!(admission.admitted, 2);
         assert_eq!(admission.duplicates, 1);
         assert_eq!(admission.grounded, 1);
-        assert_eq!(admission.methods.len(), 6);
-        assert_eq!(admission.node_ids.len(), 4);
+        // Two claims, two atoms, two edges and one pair node per entity pair.
+        assert_eq!(admission.methods.len(), 8);
+        assert_eq!(admission.node_ids.len(), 6);
 
         let claim = node_properties(&admission.methods[0]);
         assert_eq!(claim["type"], CANDIDATE_CLAIM_NODE_TYPE);
@@ -518,7 +596,7 @@ mod tests {
         let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
         let first = fact("Ada Lovelace", "Note G", 10);
         let batch = decoded(vec![first.clone()]);
-        let created = admit_facts("t1", &batch, &cache, &BTreeMap::new(), 2).unwrap();
+        let created = admit_facts("t1", &batch, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
         assert_eq!(created.report.created, 1);
         let unit = &created.report.entries[0];
         assert_eq!(unit.outcome, FactOutcome::Created);
@@ -528,14 +606,14 @@ mod tests {
 
         let mut held = BTreeMap::new();
         held.insert(unit.claim_id.clone(), stored);
-        let again = admit_facts("t1", &batch, &cache, &held, 2).unwrap();
+        let again = admit_facts("t1", &batch, &cache, &held, &BTreeMap::new(), 2).unwrap();
         assert_eq!(again.report.unchanged, 1);
         assert_eq!(again.report.entries[0].unit_hash, unit.unit_hash);
         assert!(again.methods.is_empty());
 
         // The same triple at another span keeps the claim id and updates it.
         let moved = decoded(vec![fact("Ada Lovelace", "Note G", 90)]);
-        let updated = admit_facts("t1", &moved, &cache, &held, 2).unwrap();
+        let updated = admit_facts("t1", &moved, &cache, &held, &BTreeMap::new(), 2).unwrap();
         assert_eq!(updated.report.updated, 1);
         assert_eq!(updated.report.entries[0].claim_id, unit.claim_id);
         assert_ne!(updated.report.entries[0].unit_hash, unit.unit_hash);
@@ -553,7 +631,7 @@ mod tests {
         .unwrap();
         let decoded = decode_facts(&[item]).unwrap();
         let cache = GroundingCache::default();
-        let admission = admit_facts("t1", &decoded, &cache, &BTreeMap::new(), 2).unwrap();
+        let admission = admit_facts("t1", &decoded, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
         assert_eq!(admission.report.rejected, 1);
         assert_eq!(admission.report.entries[0].outcome, FactOutcome::Rejected);
         assert!(admission.methods.is_empty());
@@ -566,7 +644,7 @@ mod tests {
         let mut second = fact("Ada Lovelace", "Note G", 40);
         second.predicate = "annotated".into();
         let two = decoded(vec![fact("Ada Lovelace", "Note G", 10), second]);
-        let linked = admit_facts("t1", &two, &cache, &BTreeMap::new(), 2).unwrap();
+        let linked = admit_facts("t1", &two, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
         assert_eq!(linked.report.links, 1);
         let edges = linked
             .methods
@@ -576,8 +654,70 @@ mod tests {
         assert_eq!(edges, 2 + 1);
 
         let one = decoded(vec![fact("Somebody", "Something", 10)]);
-        let none = admit_facts("t1", &one, &cache, &BTreeMap::new(), 2).unwrap();
+        let none = admit_facts("t1", &one, &cache, &BTreeMap::new(), &BTreeMap::new(), 2).unwrap();
         assert_eq!(none.report.links, 0);
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R701.7
+    #[test]
+    fn a_link_forms_only_on_the_second_batch() {
+        let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
+        let first = admit_facts(
+            "t1",
+            &decoded(vec![fact("Ada Lovelace", "Note G", 10)]),
+            &cache,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            2,
+        )
+        .unwrap();
+        // One shared atom: no link, but the pair node keeps the evidence.
+        assert_eq!(first.report.links, 0);
+        let pair = first
+            .methods
+            .iter()
+            .map(node_properties_opt)
+            .flatten()
+            .find(|properties| properties["type"] == FACT_PAIR_NODE_TYPE)
+            .expect("pair node");
+        let mut held_pairs = BTreeMap::new();
+        held_pairs.insert(
+            pair_node_id("t1", "Ada Lovelace", "Note G").unwrap(),
+            held_pair_atoms(&pair).expect("atoms"),
+        );
+
+        let mut other = fact("Ada Lovelace", "Note G", 40);
+        other.predicate = "annotated".into();
+        let second = admit_facts(
+            "t1",
+            &decoded(vec![other]),
+            &cache,
+            &BTreeMap::new(),
+            &held_pairs,
+            2,
+        )
+        .unwrap();
+        assert_eq!(second.report.links, 1);
+        let edge = second
+            .methods
+            .iter()
+            .find_map(|method| match method {
+                Method::AddEdge {
+                    properties_msgpack, ..
+                } => rmp_serde::from_slice::<serde_json::Value>(properties_msgpack).ok(),
+                _ => None,
+            })
+            .filter(|properties| properties["relationship"] == RELATED_TO);
+        assert_eq!(edge.expect("related_to edge")["shared_mentions"], 2);
+    }
+
+    fn node_properties_opt(method: &Method) -> Option<serde_json::Value> {
+        match method {
+            Method::AddNode {
+                properties_msgpack, ..
+            } => rmp_serde::from_slice(properties_msgpack).ok(),
+            _ => None,
+        }
     }
 
     // spec: MEDULLA-INGEST-WORKER-R701.3

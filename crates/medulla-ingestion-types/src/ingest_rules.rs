@@ -270,15 +270,23 @@ pub struct EntityLink {
     pub first: String,
     /// The greater entity name.
     pub second: String,
-    /// The atoms the two entities share.
+    /// The atoms the two entities share, stored and new.
     pub shared_mentions: u64,
+    /// The shared atoms already stored before this batch.
+    pub previously_shared: u64,
 }
 
 /// Link entities that co-occur in at least `min_shared` atoms
-/// (MEDULLA-INGEST-WORKER-R701.7). Each claim is one atom whose entities are its
-/// subject and object; a pair below the threshold gets no link. Links come out
-/// sorted by entity pair.
-pub fn infer_links(claims: &[CandidateClaim], min_shared: u64) -> Vec<EntityLink> {
+/// (MEDULLA-INGEST-WORKER-R701.7). Each claim is one new atom whose entities are its
+/// subject and object. `stored` holds, per ordered entity pair, the atoms already stored
+/// from earlier batches, so a link forms as evidence accumulates across batches. Only a
+/// pair a new claim touches is considered; a pair below the threshold gets no link. Links
+/// come out sorted by entity pair.
+pub fn infer_links(
+    claims: &[CandidateClaim],
+    stored: &BTreeMap<(String, String), u64>,
+    min_shared: u64,
+) -> Vec<EntityLink> {
     let mut counts: BTreeMap<(&str, &str), u64> = BTreeMap::new();
     for claim in claims {
         let (subject, object) = (claim.fact.subject.as_str(), claim.fact.object.as_str());
@@ -294,12 +302,19 @@ pub fn infer_links(claims: &[CandidateClaim], min_shared: u64) -> Vec<EntityLink
     }
     counts
         .into_iter()
-        .filter(|(_, shared)| *shared >= min_shared)
-        .map(|((first, second), shared_mentions)| EntityLink {
-            first: first.to_string(),
-            second: second.to_string(),
-            shared_mentions,
+        .map(|((first, second), added)| {
+            let previously_shared = stored
+                .get(&(first.to_string(), second.to_string()))
+                .copied()
+                .unwrap_or(0);
+            EntityLink {
+                first: first.to_string(),
+                second: second.to_string(),
+                shared_mentions: previously_shared + added,
+                previously_shared,
+            }
         })
+        .filter(|link| link.shared_mentions >= min_shared)
         .collect()
 }
 

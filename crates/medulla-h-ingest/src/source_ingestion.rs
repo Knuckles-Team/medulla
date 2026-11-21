@@ -811,11 +811,18 @@ async fn prepare_extension_batch(
                 &facts::held_claim_ids(ctx.tenant_scope, &decoded)?,
             )
             .await?;
+            let held_pairs = read_held_pairs(
+                persistence.as_ref(),
+                &graph_fname,
+                &facts::held_pair_ids(ctx.tenant_scope, &decoded)?,
+            )
+            .await?;
             let admission = facts::admit_facts(
                 ctx.tenant_scope,
                 &decoded,
                 &cache,
                 &held,
+                &held_pairs,
                 medulla_server_api::knob_config::knobs().ingest_link_min_shared_mentions,
             )?;
             for node_id in &admission.node_ids {
@@ -1046,6 +1053,28 @@ async fn read_held_claims(
             .map_err(|error| format!("SOURCE_BATCH_KIND_MISMATCH: held claim: {error}"))?;
         if let Some(claim) = facts::held_claim(&properties) {
             held.insert(id.clone(), claim);
+        }
+    }
+    Ok(held)
+}
+
+/// The atom ids each entity-pair node `ids` names holds, so shared mentions count across
+/// batches (MEDULLA-INGEST-WORKER-R701.7). An absent pair has no entry.
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn read_held_pairs(
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    ids: &BTreeSet<String>,
+) -> Result<BTreeMap<String, BTreeSet<String>>, String> {
+    let mut held = BTreeMap::new();
+    for id in ids {
+        let Some(bytes) = persistence.read_node(graph_fname, id).await? else {
+            continue;
+        };
+        let properties: serde_json::Value = rmp_serde::from_slice(&bytes)
+            .map_err(|error| format!("SOURCE_BATCH_KIND_MISMATCH: held pair: {error}"))?;
+        if let Some(atoms) = facts::held_pair_atoms(&properties) {
+            held.insert(id.clone(), atoms);
         }
     }
     Ok(held)
