@@ -129,6 +129,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R005.1: the changesets that touched one path, newest first.
+        Method::ReadPathHistory { request } => {
+            dispatch_boxed(super::read_path_history::handle_read_path_history(
+                state,
+                req,
+                verified_context,
+                super::read_path_history::ReadPathHistoryFields { request },
+            ))
+            .await
+        }
         other => return ControlFlow::Continue(other),
     })
 }

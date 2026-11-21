@@ -577,6 +577,7 @@ METHOD_IDS = frozenset(
         "ObservationState",
         "OpenGraphSnapshot",
         "ReadGraphChanges",
+        "ReadPathHistory",
         "ReadSpan",
         "RegimeForecast",
         "RegimeSizingInput",

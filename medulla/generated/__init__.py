@@ -603,6 +603,7 @@ SEND_BY_METHOD = {
     "StreamTrim": messaging.send_stream_trim,
     "StronglyConnectedComponents": compute.send_strongly_connected_components,
     "SubmitAdmittedRequest": coordination.send_submit_admitted_request,
+    "ReadPathHistory": cluster.send_read_path_history,
     "SubmitChangeset": cluster.send_submit_changeset,
     "SubmitWorkItem": coordination.send_submit_work_item,
     "SubmitWorkItems": coordination.send_submit_work_items,

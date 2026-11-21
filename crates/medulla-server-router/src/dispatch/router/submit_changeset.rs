@@ -25,6 +25,7 @@ pub struct SubmitChangesetFields {
 mod served {
     use super::*;
     use medulla_h_graph::graph_ops::branch as ops;
+    use medulla_h_ingest::source_history::index_rows;
     use medulla_h_ingest::source_tree::checkpoint_after;
     use medulla_h_ingest::source_changeset::{
         accept, verify_submission, AcceptContext, AcceptError, ChainView, ChunkStoreBlobs,
@@ -161,8 +162,10 @@ mod served {
             .map(|elapsed| elapsed.as_millis() as u64)
             .unwrap_or(0);
         let build_request = Arc::clone(&request);
+        let branch_ref = target.reference.clone();
+        let build_batch = batch_id.clone();
         let appended = target
-            .append_with(verified.tenant(), &batch_id, move |head, read| {
+            .append_with(verified.tenant(), &batch_id, move |head, read, history| {
                 let chain = RegistryChain { head, read };
                 let blobs = ChunkStoreBlobs(merge_store.as_ref(), &merge_owner);
                 let ctx = AcceptContext {
@@ -186,6 +189,15 @@ mod served {
                     &changeset,
                     medulla_work_types::scheduler_config::DEFAULT_TREE_CHECKPOINT_INTERVAL,
                 )?;
+                // MEDULLA-SCM-R005.1: the history rows commit with the changeset,
+                // keyed by the id the registry gives the carrying commit.
+                let commit_id = medulla_mutation_types::branch::branch_commit_id(
+                    &branch_ref,
+                    head,
+                    &build_batch,
+                    &changeset.id,
+                );
+                let history_rows = index_rows(history, &chain, &changeset, &commit_id)?;
                 Ok(CommitPlan {
                     engine_version: 0,
                     manifest_digest: changeset.id.clone(),
@@ -193,6 +205,7 @@ mod served {
                     created_at_ms,
                     payload: Some(payload),
                     checkpoint,
+                    history_rows,
                 })
             })
             .await;

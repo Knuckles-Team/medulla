@@ -66,6 +66,11 @@ pub mod source_changeset;
 #[cfg(feature = "blob")]
 pub mod source_tree;
 
+/// The history index written with an accepted changeset and the path-history
+/// read (MEDULLA-SCM-R005).
+#[cfg(feature = "blob")]
+pub mod source_history;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_ingestion;

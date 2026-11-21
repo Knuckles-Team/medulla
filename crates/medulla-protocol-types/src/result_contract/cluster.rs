@@ -21,6 +21,7 @@ method_results! {
     BranchDiff(BranchDiff) => Json<medulla_mutation_types::versioning::KgDiff>;
     BranchReadAt(BranchReadAt) => Json<medulla_mutation_types::versioning::BranchSnapshot>;
     ReadTree(ReadTree) => Json<medulla_source_types::source_changeset::ReadTreeReceipt>;
+    ReadPathHistory(ReadPathHistory) => Json<medulla_source_types::source_changeset::ReadPathHistoryReceipt>;
     SubmitChangeset(SubmitChangeset) => Json<medulla_source_types::source_changeset::SubmitChangesetReceipt>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;
     Reshard(Reshard) => Json<ShardReshardReport>;

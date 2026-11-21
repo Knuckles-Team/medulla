@@ -438,6 +438,15 @@ $($variants)*
         request: Box<medulla_source_types::source_changeset::ReadTreeRequest>,
     },
 
+    /// Read the history of one path (MEDULLA-SCM-R005.1): the changesets that
+    /// touched `path`, newest first, with seq at or below the seq of `rev` on
+    /// `branch`. `limit` 0 means 100; the maximum is 1000. Refusals:
+    /// `CHANGESET_INVALID`, `REVISION_NOT_ON_CHAIN`, `HISTORY_INDEX_STALE`,
+    /// plus the branch refusals of `ReadTree`. Reads only.
+    ReadPathHistory {
+        request: Box<medulla_source_types::source_changeset::ReadPathHistoryRequest>,
+    },
+
     // ── Context facts (MEDULLA-DECISION-ENGINE-R152) ──
     /// Cited facts of ranked nodes inside a token budget: for each node id in
     /// the caller's order, the visible literal properties and outgoing edges as

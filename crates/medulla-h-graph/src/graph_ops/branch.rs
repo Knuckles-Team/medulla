@@ -20,7 +20,7 @@ use medulla_mutation_types::branch::{
 };
 use medulla_persistence::branch_registry_store::{
     shared_branch_registry, AppendError, AppendedCommit, BranchCommitInput, BranchCreateError,
-    BranchRegistry, CommitPlan, PayloadReader,
+    BranchRegistry, CommitPlan, HistoryReader, PayloadReader,
 };
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -272,7 +272,9 @@ impl BranchTarget {
         build: F,
     ) -> Result<AppendedCommit, AppendError>
     where
-        F: FnOnce(&str, PayloadReader<'_>) -> Result<CommitPlan, String> + Send + 'static,
+        F: FnOnce(&str, PayloadReader<'_>, HistoryReader<'_>) -> Result<CommitPlan, String>
+            + Send
+            + 'static,
     {
         let registry = Arc::clone(&self.registry);
         let reference = self.reference.clone();

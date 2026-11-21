@@ -66,6 +66,9 @@ pub enum ChangesetRefusal {
     /// A tree read named a revision that is not a changeset of the branch
     /// chain (MEDULLA-SCM-R004).
     RevisionNotOnChain,
+    /// The history index row of the branch head is absent, of another
+    /// version, or names another commit (MEDULLA-SCM-R005).
+    HistoryIndexStale,
 }
 
 impl ChangesetRefusal {
@@ -81,6 +84,7 @@ impl ChangesetRefusal {
             Self::SourceConflict => "SOURCE_CONFLICT",
             Self::MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
             Self::RevisionNotOnChain => "REVISION_NOT_ON_CHAIN",
+            Self::HistoryIndexStale => "HISTORY_INDEX_STALE",
         }
     }
 }
@@ -304,6 +308,68 @@ pub struct ReadTreeRequest {
     pub depth: u32,
 }
 
+/// The `limit` a `ReadPathHistory` uses when the request leaves it 0
+/// (MEDULLA-SCM-R005.1).
+pub const PATH_HISTORY_DEFAULT_LIMIT: u32 = 100;
+/// The largest `limit` a `ReadPathHistory` accepts (MEDULLA-SCM-R005.1, `Fixed`).
+pub const PATH_HISTORY_MAX_LIMIT: u32 = 1000;
+
+/// The closed request of `Method::ReadPathHistory` (MEDULLA-SCM-R005.1): the
+/// changesets that touched `path`, newest first, at or below the changeset
+/// commit `rev` of `branch`. `limit` 0 means 100.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReadPathHistoryRequest {
+    pub repo: String,
+    pub branch: String,
+    pub rev: String,
+    pub path: String,
+    #[serde(default)]
+    pub limit: u32,
+}
+
+/// One changeset of a path's history (MEDULLA-SCM-R005.1): `commit` is the
+/// branch commit that carries it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PathHistoryEntry {
+    pub commit: String,
+    pub changeset_id: String,
+    pub op: PathOp,
+    pub author_principal: String,
+    pub created_at: u64,
+    pub message: String,
+}
+
+/// The served answer of `ReadPathHistory`: entries newest first.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ReadPathHistoryReceipt {
+    pub entries: Vec<PathHistoryEntry>,
+}
+
+impl ReadPathHistoryRequest {
+    /// Check every bound of the request; the first failure names its field.
+    /// Returns the effective limit. No store is read.
+    pub fn validate(&self) -> Result<usize, SubmitRefusal> {
+        validate_coordinates(&self.repo, &self.branch, &self.rev)?;
+        if !valid_path(&self.path) {
+            return Err(invalid("path"));
+        }
+        if self.limit > PATH_HISTORY_MAX_LIMIT {
+            return Err(invalid("limit"));
+        }
+        let limit = if self.limit == 0 {
+            PATH_HISTORY_DEFAULT_LIMIT
+        } else {
+            self.limit
+        };
+        Ok(limit as usize)
+    }
+}
+
 /// The served answer of `ReadTree`: entries sorted by path.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -315,20 +381,7 @@ impl ReadTreeRequest {
     /// Check every bound of the request; the first failure names its field.
     /// Returns the prefix without a trailing separator. No store is read.
     pub fn validate(&self) -> Result<String, SubmitRefusal> {
-        if !valid_name(&self.repo, 128) {
-            return Err(invalid("repo"));
-        }
-        if !valid_name(&self.branch, 255) {
-            return Err(invalid("branch"));
-        }
-        let hex64 = self.rev.len() == 64
-            && self
-                .rev
-                .chars()
-                .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c));
-        if !hex64 {
-            return Err(invalid("rev"));
-        }
+        validate_coordinates(&self.repo, &self.branch, &self.rev)?;
         if self.depth > TREE_READ_MAX_DEPTH {
             return Err(invalid("depth"));
         }
@@ -338,6 +391,28 @@ impl ReadTreeRequest {
         }
         Ok(prefix.to_string())
     }
+}
+
+/// The bounds `ReadTree`, `ReadPathHistory` and `ReadBlame` share: `repo`,
+/// `branch` and `rev` (the 64 lowercase hex id of a branch commit).
+fn validate_coordinates(repo: &str, branch: &str, rev: &str) -> Result<(), SubmitRefusal> {
+    if !valid_name(repo, 128) {
+        return Err(invalid("repo"));
+    }
+    if !valid_name(branch, 255) {
+        return Err(invalid("branch"));
+    }
+    if !is_hex64(rev) {
+        return Err(invalid("rev"));
+    }
+    Ok(())
+}
+
+fn is_hex64(value: &str) -> bool {
+    value.len() == 64
+        && value
+            .chars()
+            .all(|c| c.is_ascii_digit() || ('a'..='f').contains(&c))
 }
 
 const NAME_SET: fn(char) -> bool =

@@ -661,6 +661,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("BranchReadAt", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     // MEDULLA-SCM-R004: the tree is folded from the tenant's own branch chain.
     ("ReadTree", REASON_BRANCH_CHAIN_TENANT_SCOPED),
+    // MEDULLA-SCM-R005.1: the history index is read from the tenant's own branch registry rows.
+    ("ReadPathHistory", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     // REASON_TENANT_KEY_SCOPED_KV
     ("KvGet", REASON_TENANT_KEY_SCOPED_KV),
     ("KvScan", REASON_TENANT_KEY_SCOPED_KV),

@@ -162,6 +162,13 @@ fn checkpoint_row_key(branch: &BranchRef, commit_id: &str) -> String {
     format!("tree:{}:{commit_id}", branch.registry_key())
 }
 
+/// Row key of one history index row (MEDULLA-SCM-R005.1): `hist:` cannot
+/// collide with `commit:`, `batch:`, `payload:` or `tree:`. `relative` is built
+/// only by the key functions of `medulla_compute::source_history`.
+fn history_row_key(branch: &BranchRef, relative: &str) -> String {
+    format!("hist:{}:{relative}", branch.registry_key())
+}
+
 /// What a commit builder returns: the commit facts plus the payload that
 /// commits atomically with the head advance.
 #[derive(Debug, Clone)]
@@ -179,10 +186,17 @@ pub struct CommitPlan {
     /// The full tree snapshot committed with the commit, written every
     /// `tree_checkpoint_interval` changesets (MEDULLA-SCM-R004).
     pub checkpoint: Option<Vec<u8>>,
+    /// The history index rows `(relative key, value)` committed with the
+    /// commit (MEDULLA-SCM-R005.1).
+    pub history_rows: Vec<(String, Vec<u8>)>,
 }
 
 /// Reads the payload of an earlier commit inside the append transaction.
 pub type PayloadReader<'a> = &'a dyn Fn(&str) -> Result<Option<Vec<u8>>, String>;
+
+/// Reads one history index row by relative key inside the append transaction
+/// (MEDULLA-SCM-R005.1).
+pub type HistoryReader<'a> = &'a dyn Fn(&str) -> Result<Option<Vec<u8>>, String>;
 
 /// Why an append wrote nothing.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -295,8 +309,9 @@ impl BranchRegistry {
             created_at_ms: input.created_at_ms,
             payload: input.payload.clone(),
             checkpoint: None,
+            history_rows: Vec::new(),
         };
-        match self.append_with(branch, caller_tenant, &input.batch_id, |_, _| Ok(plan)) {
+        match self.append_with(branch, caller_tenant, &input.batch_id, |_, _, _| Ok(plan)) {
             Ok(done) => Ok(done),
             Err(AppendError::Branch(error)) => Err(error),
             Err(AppendError::Rejected(text)) => Err(BranchCreateError::Store(text)),
@@ -334,6 +349,53 @@ impl BranchRegistry {
         Ok(found)
     }
 
+    /// One history index row of `branch` by relative key (MEDULLA-SCM-R005.1).
+    pub fn history_row(&self, branch: &BranchRef, key: &str) -> Result<Option<Vec<u8>>, String> {
+        let read = self.durable.read()?;
+        let table = read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?;
+        let found = table
+            .get(history_row_key(branch, key).as_str())
+            .map_err(|error| error.to_string())?
+            .map(|value| value.value().to_vec());
+        Ok(found)
+    }
+
+    /// At most `limit` history rows of `branch` whose relative key starts with
+    /// `prefix` and is at or below `upper`, newest key first
+    /// (MEDULLA-SCM-R005.1). Keys come back relative.
+    pub fn history_scan_rev(
+        &self,
+        branch: &BranchRef,
+        prefix: &str,
+        upper: &str,
+        limit: usize,
+    ) -> Result<Vec<(String, Vec<u8>)>, String> {
+        let read = self.durable.read()?;
+        let table = read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?;
+        let low = history_row_key(branch, prefix);
+        let high = history_row_key(branch, upper);
+        let strip = history_row_key(branch, "").len();
+        let mut rows = Vec::new();
+        if high.as_str() < low.as_str() {
+            return Ok(rows);
+        }
+        let range = table
+            .range::<&str>(low.as_str()..=high.as_str())
+            .map_err(|error| error.to_string())?;
+        for entry in range.rev() {
+            if rows.len() >= limit {
+                break;
+            }
+            let (key, value) = entry.map_err(|error| error.to_string())?;
+            let key = key.value();
+            if !key.starts_with(low.as_str()) {
+                continue;
+            }
+            rows.push((key[strip..].to_string(), value.value().to_vec()));
+        }
+        Ok(rows)
+    }
+
     /// Append one commit whose facts and payload come from `build`, which sees
     /// the current head and a reader of earlier payloads INSIDE the write
     /// transaction, so the head it extends cannot move before the append. The
@@ -347,7 +409,7 @@ impl BranchRegistry {
         build: F,
     ) -> Result<AppendedCommit, AppendError>
     where
-        F: FnOnce(&str, PayloadReader<'_>) -> Result<CommitPlan, String>,
+        F: FnOnce(&str, PayloadReader<'_>, HistoryReader<'_>) -> Result<CommitPlan, String>,
     {
         let key = branch.registry_key();
         let mut refused: Option<BranchMutationRefusal> = None;
@@ -398,7 +460,13 @@ impl BranchRegistry {
                         .map_err(|error| error.to_string())
                         .map(|found| found.map(|value| value.value().to_vec()))
                 };
-                match build(&row.head_commit, &reader) {
+                let history = |relative: &str| -> Result<Option<Vec<u8>>, String> {
+                    table
+                        .get(history_row_key(branch, relative).as_str())
+                        .map_err(|error| error.to_string())
+                        .map(|found| found.map(|value| value.value().to_vec()))
+                };
+                match build(&row.head_commit, &reader, &history) {
                     Ok(plan) => plan,
                     Err(text) => {
                         rejected = Some(text.clone());
@@ -437,6 +505,11 @@ impl BranchRegistry {
                         checkpoint_row_key(branch, &commit.id).as_str(),
                         checkpoint.as_slice(),
                     )
+                    .map_err(|error| error.to_string())?;
+            }
+            for (relative, value) in &plan.history_rows {
+                table
+                    .insert(history_row_key(branch, relative).as_str(), value.as_slice())
                     .map_err(|error| error.to_string())?;
             }
             table

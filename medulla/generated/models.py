@@ -14589,6 +14589,13 @@ class MethodSubmitChangeset(BaseModel):
     params: MethodSubmitChangesetParams
 
 
+class MethodReadPathHistory(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ReadPathHistory"]
+    params: MethodReadPathHistoryParams
+
+
 class MethodReadSpan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15241,6 +15248,7 @@ Method = Annotated[
         MethodBranchDiff,
         MethodBranchReadAt,
         MethodSubmitChangeset,
+        MethodReadPathHistory,
         MethodReadSpan,
         MethodOpenGraphSnapshot,
         MethodReadGraphChanges,
@@ -33177,6 +33185,12 @@ class MethodStoredQueryPutParams(BaseModel):
     query: StoredQuery
 
 
+class MethodReadPathHistoryParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: ReadPathHistoryRequest
+
+
 class MethodSubmitChangesetParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -33771,6 +33785,33 @@ class StoredQueryLanguage(str, Enum):
     UQL = "uql"
     SQL = "sql"
     SPARQL = "sparql"
+
+
+class PathHistoryEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    author_principal: str
+    changeset_id: str
+    commit: str
+    created_at: Annotated[int, Field(ge=0)]
+    message: str
+    op: PathOp
+
+
+class ReadPathHistoryReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entries: list[PathHistoryEntry]
+
+
+class ReadPathHistoryRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch: str
+    limit: Annotated[int, Field(ge=0)] = 0
+    path: str
+    repo: str
+    rev: str
 
 
 class SubmitChangesetRequest(BaseModel):
@@ -38632,8 +38673,13 @@ __all__ = [
     "MethodStoredQueryCallParams",
     "MethodStoredQueryPut",
     "MethodStoredQueryPutParams",
+    "MethodReadPathHistory",
+    "MethodReadPathHistoryParams",
     "MethodSubmitChangeset",
     "MethodSubmitChangesetParams",
+    "PathHistoryEntry",
+    "ReadPathHistoryReceipt",
+    "ReadPathHistoryRequest",
     "MethodTraceCritique",
     "MethodTraceCritiqueParams",
     "MethodTsDefineStateSpace",
