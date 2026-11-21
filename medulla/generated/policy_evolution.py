@@ -537,7 +537,9 @@ class TrainingRunOutcomeCancelled(BaseModel):
 
 
 TrainingRunOutcome = Annotated[
-    TrainingRunOutcomeSucceeded | TrainingRunOutcomeFailed | TrainingRunOutcomeCancelled,
+    TrainingRunOutcomeSucceeded
+    | TrainingRunOutcomeFailed
+    | TrainingRunOutcomeCancelled,
     Field(discriminator="status"),
 ]
 

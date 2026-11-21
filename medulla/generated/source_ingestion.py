@@ -199,9 +199,7 @@ class SourceFeature(BaseModel):
     ]
 
 
-BoundedVec_SourceFeature_1024 = Annotated[
-    list[SourceFeature], Field(max_length=1024)
-]
+BoundedVec_SourceFeature_1024 = Annotated[list[SourceFeature], Field(max_length=1024)]
 
 
 class SourceIngestionBatch(BaseModel):

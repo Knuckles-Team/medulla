@@ -429,9 +429,9 @@ class AssemblyRequest(BaseModel):
     solver: SolverBudget | None = None
     templates: BoundedVec_AgentGraphEntryRef_8 = Field(default_factory=list)
     tenant_id: str
-    evidence_streams: (
-        Annotated[list[EvidenceStreamRef], Field(max_length=16)]
-    ) = Field(default_factory=list)
+    evidence_streams: Annotated[list[EvidenceStreamRef], Field(max_length=16)] = Field(
+        default_factory=list
+    )
 
 
 class AssemblyRequirements(BaseModel):

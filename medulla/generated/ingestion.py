@@ -886,9 +886,13 @@ decode_classification_claim = contract_decoder(
     "ClassificationClaim", "ClassificationClaimResult"
 )
 send_glossary = contract_sender("Glossary", "MethodGlossaryParams")
-decode_glossary_put_scheme = contract_decoder("Glossary", "GlossaryReceipt", "put_scheme")
+decode_glossary_put_scheme = contract_decoder(
+    "Glossary", "GlossaryReceipt", "put_scheme"
+)
 decode_glossary_put_term = contract_decoder("Glossary", "GlossaryReceipt", "put_term")
-decode_glossary_transition = contract_decoder("Glossary", "GlossaryReceipt", "transition")
+decode_glossary_transition = contract_decoder(
+    "Glossary", "GlossaryReceipt", "transition"
+)
 decode_glossary_bind = contract_decoder("Glossary", "GlossaryReceipt", "bind")
 decode_glossary_propose_description = contract_decoder(
     "Glossary", "GlossaryReceipt", "propose_description"
@@ -897,21 +901,43 @@ decode_glossary_review_description = contract_decoder(
     "Glossary", "GlossaryReceipt", "review_description"
 )
 send_stewardship = contract_sender("Stewardship", "MethodStewardshipParams")
-decode_stewardship_assign = contract_decoder("Stewardship", "StewardshipReceipt", "assign")
-decode_stewardship_revoke = contract_decoder("Stewardship", "StewardshipReceipt", "revoke")
-decode_stewardship_open_change_request = contract_decoder("Stewardship", "StewardshipReceipt", "open_change_request")
-decode_stewardship_review = contract_decoder("Stewardship", "StewardshipReceipt", "review")
-decode_stewardship_apply = contract_decoder("Stewardship", "StewardshipReceipt", "apply")
-decode_stewardship_certify = contract_decoder("Stewardship", "StewardshipReceipt", "certify")
+decode_stewardship_assign = contract_decoder(
+    "Stewardship", "StewardshipReceipt", "assign"
+)
+decode_stewardship_revoke = contract_decoder(
+    "Stewardship", "StewardshipReceipt", "revoke"
+)
+decode_stewardship_open_change_request = contract_decoder(
+    "Stewardship", "StewardshipReceipt", "open_change_request"
+)
+decode_stewardship_review = contract_decoder(
+    "Stewardship", "StewardshipReceipt", "review"
+)
+decode_stewardship_apply = contract_decoder(
+    "Stewardship", "StewardshipReceipt", "apply"
+)
+decode_stewardship_certify = contract_decoder(
+    "Stewardship", "StewardshipReceipt", "certify"
+)
 decode_stewardship_mark_critical = contract_decoder(
     "Stewardship", "StewardshipReceipt", "mark_critical"
 )
 send_dashboard_asset = contract_sender("DashboardAsset", "MethodDashboardAssetParams")
-decode_dashboard_asset_save = contract_decoder("DashboardAsset", "DashboardReceipt", "save")
-decode_dashboard_asset_share = contract_decoder("DashboardAsset", "DashboardReceipt", "share")
-decode_dashboard_asset_delete = contract_decoder("DashboardAsset", "DashboardReceipt", "delete")
-decode_dashboard_asset_restore = contract_decoder("DashboardAsset", "DashboardReceipt", "restore")
-decode_dashboard_asset_get = contract_decoder("DashboardAsset", "DashboardReceipt", "get")
+decode_dashboard_asset_save = contract_decoder(
+    "DashboardAsset", "DashboardReceipt", "save"
+)
+decode_dashboard_asset_share = contract_decoder(
+    "DashboardAsset", "DashboardReceipt", "share"
+)
+decode_dashboard_asset_delete = contract_decoder(
+    "DashboardAsset", "DashboardReceipt", "delete"
+)
+decode_dashboard_asset_restore = contract_decoder(
+    "DashboardAsset", "DashboardReceipt", "restore"
+)
+decode_dashboard_asset_get = contract_decoder(
+    "DashboardAsset", "DashboardReceipt", "get"
+)
 decode_stewardship_set_trust_flag = contract_decoder(
     "Stewardship", "StewardshipReceipt", "set_trust_flag"
 )

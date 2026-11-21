@@ -1476,9 +1476,13 @@ async def send_approve_source_query(
     return OpaqueResult("ApproveSourceQuery", payload)
 
 
-def decode_approve_source_query(result: OpaqueResult) -> _models.SourceQueryApprovalIssued:
+def decode_approve_source_query(
+    result: OpaqueResult,
+) -> _models.SourceQueryApprovalIssued:
     """Validate this method's result against its contract model."""
-    return decode_result("ApproveSourceQuery", models().SourceQueryApprovalIssued, result)
+    return decode_result(
+        "ApproveSourceQuery", models().SourceQueryApprovalIssued, result
+    )
 
 
 async def send_issue_control_lease(
@@ -3016,7 +3020,9 @@ decode_get_effect_receipt = contract_decoder(
 send_downtime_selections = contract_sender(
     "DowntimeSelections", "MethodDowntimeSelectionsParams"
 )
-decode_downtime_selections = contract_decoder("DowntimeSelections", "DowntimeSelections")
+decode_downtime_selections = contract_decoder(
+    "DowntimeSelections", "DowntimeSelections"
+)
 send_get_shard_writer_width = contract_sender(
     "GetShardWriterWidth", "MethodGetShardWriterWidthParams"
 )

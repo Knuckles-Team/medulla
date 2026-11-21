@@ -21,6 +21,8 @@ from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
+from pydantic import BaseModel
+
 from medulla.generated._task_plan_feature_schema import (
     TASK_PLAN_FEATURE_SCHEMA,
 )
@@ -641,7 +643,7 @@ def verify_task_plan_receipt(
     _require_task_plan(served_plan is not None, "missing plan")
     # _require_task_plan already raised for an absent plan; this branch only
     # narrows the type for the checker.
-    if served_plan is None:
+    if not isinstance(served_plan, BaseModel):
         raise ValueError("task_plan receipt mismatch: missing plan")
     plan = served_plan.model_dump(mode="json", by_alias=True, exclude_none=True)
     # ``BranchSpec::exhaustive`` is skipped on the wire when false.
@@ -770,7 +772,8 @@ def memory_benchmark_op(request: Mapping[str, Any]) -> dict[str, Any]:
 
 
 def certify_local_skill_op(request: Mapping[str, Any]) -> dict[str, Any]:
-    """Attest one local-model skill certification (R142.101) as a ``DecisionEval`` job."""
+    """Attest one local-model skill certification (R142.101) as a ``DecisionEval``
+    job."""
     return {"op": "certify_local_skill", "request": dict(request)}
 
 
@@ -1255,7 +1258,8 @@ def usage_record(
 
 
 def failure_ingest_op(graph: str, since_ms: int | None = None) -> dict[str, Any]:
-    """A ``FailureIngest`` ingest of the failed runs in ``graph`` (optionally since ``since_ms``)."""
+    """A ``FailureIngest`` ingest of the failed runs in ``graph`` (optionally since
+    ``since_ms``)."""
     op: dict[str, Any] = {"op": "ingest", "graph": graph}
     if since_ms is not None:
         op["since_ms"] = since_ms
@@ -1424,7 +1428,8 @@ class DecisionClient:
     async def usage(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:
-        """Send ``Usage`` (append usage records, put a price catalog or read the ledger)."""
+        """Send ``Usage`` (append usage records, put a price catalog or read the
+        ledger)."""
         from medulla.generated.coordination import send_usage
 
         result = await send_usage(
@@ -1435,7 +1440,8 @@ class DecisionClient:
     async def failure_ingest(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:
-        """Send ``FailureIngest`` (cluster failed runs and file one gap per recurring pattern)."""
+        """Send ``FailureIngest`` (cluster failed runs and file one gap per recurring
+        pattern)."""
         from medulla.generated.coordination import send_failure_ingest
 
         result = await send_failure_ingest(
@@ -1561,7 +1567,6 @@ class DecisionClient:
             "MemoryExport", {"request": {"limit": limit}}, self.graph
         )
         return _payload(result)
-
 
 
 @dataclass(frozen=True, slots=True)

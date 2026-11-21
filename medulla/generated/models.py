@@ -31100,9 +31100,9 @@ class WireLoginGranted(BaseModel):
 
 
 class WireLoginKind(str, Enum):
-    PASSWORD = "Password"  # nosec B105
+    PASSWORD = "Password"  # nosec B105 - wire enum label, not a credential
     CERTIFICATE = "Certificate"
-    TOKEN = "Token"  # nosec B105
+    TOKEN = "Token"  # nosec B105 - wire enum label, not a credential
 
 
 class WireLoginRevoke(BaseModel):
@@ -33766,7 +33766,7 @@ class ClaimOpPropose(BaseModel):
 
 
 class ProofVerdict(str, Enum):
-    PASS = "pass"  # nosec B105
+    PASS = "pass"  # nosec B105 - verdict enum label, not a credential
     FAIL = "fail"
 
 

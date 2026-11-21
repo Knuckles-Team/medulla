@@ -864,7 +864,7 @@ class ModalityApplyOutcome(TypedDict):
     event_sequence: int
 
 
-class LifecycleState(enum.StrEnum):  # type: ignore[name-defined]
+class LifecycleState(enum.StrEnum):
     """The lifecycle of one served modality record: the members of the engine's
     ``LifecycleState`` contract enum. Python owns no transition; every lifecycle
     change is a served call, and an illegal one raises the engine's typed
@@ -12463,7 +12463,7 @@ async def _open_tcp_stream(
             ),
             connect_timeout,
         )
-    except (asyncio.TimeoutError, TimeoutError) as e:
+    except TimeoutError as e:
         raise TimeoutError("medulla TCP connection timed out") from e
     logger.info("Connected to medulla via native TCP (tls=%s)", tls_context is not None)
     return reader, writer
@@ -17945,7 +17945,7 @@ class MedullaClient:
             reader, writer = await asyncio.wait_for(
                 asyncio.open_unix_connection(_socket), _conn_to
             )
-        except (asyncio.TimeoutError, TimeoutError) as e:
+        except TimeoutError as e:
             raise TimeoutError("medulla local connection timed out") from e
         await _verify_opened_recipient(writer, required_socket_path)
         logger.info("Connected to medulla via a private local socket")
@@ -18710,7 +18710,7 @@ class MedullaClient:
             # late response is still safely dropped by the reader loop.
             self._pending.pop(req_id, None)
             raise
-        except (asyncio.TimeoutError, TimeoutError) as e:
+        except TimeoutError as e:
             # Bounded per-call timeout. Connection-fatal (parity with the pre-pipeline
             # contract): a wedged engine that stops replying must not strand the
             # connection. Tear it down so the pool/breaker reconnects on a clean

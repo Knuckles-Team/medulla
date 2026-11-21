@@ -85,7 +85,9 @@ def derive_placements(catalog: Sequence[CatalogEntry]) -> tuple[Placement, ...]:
         by_district.setdefault(district, []).append(entry.server_id)
     placements: list[Placement] = []
     for index, district in enumerate(sorted(by_district, key=_byte_order)):
-        for plot, server_id in enumerate(sorted(by_district[district], key=_byte_order)):
+        for plot, server_id in enumerate(
+            sorted(by_district[district], key=_byte_order)
+        ):
             placements.append(
                 Placement(
                     server_id=server_id,
@@ -117,7 +119,9 @@ def apply_overrides(
         else placement
         for placement in derived
     )
-    stale = tuple(sorted((sid for sid in by_server if sid not in known), key=_byte_order))
+    stale = tuple(
+        sorted((sid for sid in by_server if sid not in known), key=_byte_order)
+    )
     return Layout(placements=placed, stale_overrides=stale)
 
 
@@ -189,7 +193,8 @@ class WorldDistrict:
 
 @dataclass(frozen=True)
 class WorldBuilding:
-    """One connector building: where it stands and, when a manual override moved it, why."""
+    """One connector building: where it stands and, when a manual override moved it,
+    why."""
 
     server_id: str
     district: str
@@ -211,14 +216,18 @@ class WorldEnvelope:
     stale_overrides: tuple[str, ...]
 
 
-def build_world_envelope(layout: Layout, overrides: Sequence[Override]) -> WorldEnvelope:
+def build_world_envelope(
+    layout: Layout, overrides: Sequence[Override]
+) -> WorldEnvelope:
     """The envelope of a layout. Districts are the distinct placement districts in byte
     order; buildings keep the layout order with the overridden coordinates; a building
     is `overridden` with its reason when an applied override named it. Pure."""
     districts = tuple(
         WorldDistrict(name=name, index=index)
         for index, name in enumerate(
-            sorted({placement.district for placement in layout.placements}, key=_byte_order)
+            sorted(
+                {placement.district for placement in layout.placements}, key=_byte_order
+            )
         )
     )
     stale = set(layout.stale_overrides)
