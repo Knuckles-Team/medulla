@@ -10,6 +10,7 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import os
 import struct
 import sys
 import time
@@ -344,3 +345,100 @@ def test_fixture_ingest_produces_expected_part_rows() -> None:
             assert len(rows.get(name, [])) == expected, (name, rows.get(name))
 
     asyncio.run(exercise())
+
+
+def _answer_params(tenant: str, kinds: list[str]) -> dict[str, Any]:
+    return {
+        "request": {
+            "task_iri": "urn:task:xyz",
+            "assembly": {
+                "tenant_id": tenant,
+                "policy": {"policy": "default"},
+                "candidates": {"kinds": kinds},
+                "requirements": {},
+            },
+        }
+    }
+
+
+_PARTS = ("steps", "staffing", "coverage", "guardrails", "bindings", "workflow", "dag")
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R008.5")
+def test_composed_answer_has_seven_parts_with_provenance(clean_graph) -> None:
+    from composed_support import (
+        index_composed_repo,
+        load_seed_into_request_graph,
+        publish_composed_library,
+    )
+
+    suffix = f"-{uuid.uuid4().hex[:8]}"
+    assert load_seed_into_request_graph(clean_graph)["triples"] > 0
+    publish_composed_library(clean_graph, suffix)
+    index_composed_repo(clean_graph, f"composed-repo-{suffix[1:]}")
+
+    params = _answer_params(TEST_TENANT, ["tool"])
+    first = clean_graph._send("AgentExecutionAnswer", params)
+    second = clean_graph._send("AgentExecutionAnswer", params)
+    assert first["task_iri"] == "urn:task:xyz"
+    assert first == second, "the answer is stable over two calls"
+    for name in _PARTS:
+        part = first["parts"][name]
+        assert part["evidence_class"], (name, part)
+        if name == "coverage":
+            # Only the rollout capability has a covering component; the audit
+            # capability is the observable gap, so coverage may be its own
+            # typed abstention. It is never a missing-source abstention.
+            if part["status"] == "abstain":
+                assert "ORCH_PART_" not in json.dumps(part["reason"]), part
+                continue
+        assert part["status"] == "answer", (name, part)
+        assert part["provenance"], f"{name} carries at least one premise"
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R008.5")
+def test_composed_answer_cross_tenant_abstains(clean_graph) -> None:
+    from composed_support import load_seed_into_request_graph
+
+    from conftest import tenant_request_context
+    from medulla.client import SyncMedullaClient
+
+    load_seed_into_request_graph(clean_graph)
+    other = "tenant:composed-other"
+    foreign = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context(other),
+    )
+    try:
+        answer = foreign._send("AgentExecutionAnswer", _answer_params(other, ["tool"]))
+    finally:
+        foreign.close()
+    for name in _PARTS:
+        assert answer["parts"][name]["status"] == "abstain", (name, answer["parts"][name])
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R008.3")
+def test_missing_source_abstains_one_part(clean_graph) -> None:
+    from composed_support import load_seed_into_request_graph, publish_tool_components
+
+    # One tool above MAX_ASSEMBLY_CANDIDATES (64): the library scan refuses
+    # CANDIDATE_SCOPE_TOO_LARGE for the assembly and for the coverage read.
+    load_seed_into_request_graph(clean_graph)
+    publish_tool_components(clean_graph, 65, prefix=f"tool-{uuid.uuid4().hex[:8]}")
+    answer = clean_graph._send(
+        "AgentExecutionAnswer", _answer_params(TEST_TENANT, ["tool"])
+    )
+    parts = answer["parts"]
+    assert set(parts) == set(_PARTS), "all seven fields are present"
+
+    def code(part: dict[str, Any]) -> str:
+        assert part["status"] == "abstain", part
+        return part["reason"]["code"]
+
+    assert code(parts["coverage"]) == "ORCH_PART_NO_SOURCE"
+    assert "CANDIDATE_SCOPE_TOO_LARGE" in parts["coverage"]["reason"]["detail"]
+    assert "orch:part=coverage/ORCH_PART_NO_SOURCE" in json.dumps(parts["coverage"])
+    for name in ("staffing", "bindings", "dag"):
+        assert code(parts[name]) == "ORCH_PART_ASSEMBLY_ABSTAINED", name
+    for name in ("steps", "workflow", "guardrails"):
+        assert parts[name]["status"] == "answer", (name, parts[name])
