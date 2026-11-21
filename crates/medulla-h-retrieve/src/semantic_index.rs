@@ -93,6 +93,12 @@ pub async fn handle_semantic_index(
     } else {
         None
     };
+    // A graph-sourced binding is woken by graph commits, which find it in the bound-source
+    // registry; register it on every operation so a restart restores it, and again after a
+    // mutation so a binding admitted by this very operation is registered.
+    let bound_service = Arc::clone(&service);
+    let mutation = op.is_mutation();
+    register_graph_source(req_id, &bound_service).await;
     let graph_source = match graph_source_for(req_id, &service, &op, graph_sources).await {
         Ok(snapshot) => snapshot,
         Err(response) => return response,
@@ -107,7 +113,30 @@ pub async fn handle_semantic_index(
         doc_state,
         graph_source,
     };
-    dispatch::handle(&context, op).await
+    let response = dispatch::handle(&context, op).await;
+    if mutation {
+        register_graph_source(req_id, &bound_service).await;
+    }
+    response
+}
+
+/// Record the binding's graph text property, when it has one, in the registry the graph commit
+/// chokepoint reads to decide which commits wake a semantic index.
+async fn register_graph_source(req_id: u64, service: &Arc<SemanticIndexService>) {
+    let service = Arc::clone(service);
+    let _ = blocking(req_id, move || {
+        if let Some(binding) = service.binding()? {
+            if let SemanticSourceSelector::GraphTextPropertyRef(selector) = &binding.source_selector
+            {
+                medulla_index_types::semantic_index::bind_graph_source(
+                    &binding.tenant_id,
+                    selector,
+                );
+            }
+        }
+        Ok(())
+    })
+    .await;
 }
 
 /// The graph snapshot a source operation over a graph-sourced binding reads. Every other

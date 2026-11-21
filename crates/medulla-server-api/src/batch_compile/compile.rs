@@ -23,6 +23,7 @@ use super::terminal_outcome::lower_terminal_outcome_extensions;
 use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 
 mod finish_helpers;
+mod graph_source_dirty;
 use finish_helpers::{
     compiled_outbox, compiled_scope_identity, finance_alert_intents, memory_snapshot_intents,
 };
@@ -169,6 +170,8 @@ pub fn compile_methods_with_outbox(
     #[cfg(feature = "epistemic-tms")]
     let reasoning_events =
         medulla_epistemic::ReasoningProjectionWakeup::events_for_methods(&methods);
+    let semantic_source_dirty_input =
+        graph_source_dirty::graph_source_dirty_input(ctx.tenant, ctx.graph, &methods);
     let state_backed = ctx.authoritative_state.is_some();
     let operations = methods
         .into_iter()
@@ -196,7 +199,7 @@ pub fn compile_methods_with_outbox(
         graph_scope,
         CompiledOutbox {
             extra: terminal_outbox,
-            semantic_source_dirty_input: None,
+            semantic_source_dirty_input,
             #[cfg(feature = "epistemic-tms")]
             reasoning_events,
         },

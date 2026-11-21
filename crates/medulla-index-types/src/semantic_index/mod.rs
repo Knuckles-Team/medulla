@@ -102,7 +102,10 @@ pub use selector_ref::{
     SEMANTIC_GRAPH_SCHEMA_ID, SEMANTIC_SQL_CATALOG_ID, SEMANTIC_SQL_SCHEMA_ID,
 };
 pub use semantic_machine::{SemanticEvent, SemanticGuard, SEMANTIC_MACHINE};
-pub use graph_source::{GraphSourceCoordinates, SEMANTIC_GRAPH_SOURCE_ACL_REVISION};
+pub use graph_source::{
+    bind_graph_source, bound_graph_sources, GraphSourceCoordinates,
+    SEMANTIC_GRAPH_SOURCE_ACL_REVISION,
+};
 pub use source_dirty::SemanticSourceDirtyIntent;
 pub use source_kind::{SemanticSourceKind, SemanticSourceRevision};
 pub use source_manifest::{
