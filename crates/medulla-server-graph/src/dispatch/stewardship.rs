@@ -31,14 +31,14 @@ use medulla_core::stewardship::{
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::{
     StewardshipApply, StewardshipAssign, StewardshipCertify, StewardshipOpenChangeRequest,
-    StewardshipMarkCritical, StewardshipReview, StewardshipRevoke,
+    StewardshipMarkCritical, StewardshipReview, StewardshipRevoke, StewardshipSetTrustFlag,
 };
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
 
 use super::graph_client::{
-    encode, read_node, took_effect, write, GraphTarget, Properties, TENANT_PROPERTY,
+    encode, read_node, took_effect, write, write_batch, GraphTarget, Properties, TENANT_PROPERTY,
 };
 use super::shared::typed_response;
 
@@ -69,6 +69,9 @@ pub async fn dispatch_stewardship(
         StewardshipOp::Certify { .. } => typed_response::<StewardshipCertify>(req_id, result),
         StewardshipOp::MarkCritical { .. } => {
             typed_response::<StewardshipMarkCritical>(req_id, result)
+        }
+        StewardshipOp::SetTrustFlag { .. } => {
+            typed_response::<StewardshipSetTrustFlag>(req_id, result)
         }
     }
 }
@@ -280,6 +283,11 @@ async fn serve(
         StewardshipOp::Apply { request_id } => apply(state, target, request_id).await,
         StewardshipOp::Certify { asset, level } => certify_asset(state, target, asset, level).await,
         StewardshipOp::MarkCritical { element } => mark_critical(state, target, element).await,
+        StewardshipOp::SetTrustFlag {
+            asset,
+            flag,
+            reason,
+        } => set_trust_flag(state, target, asset, flag, reason).await,
     }
 }
 
@@ -829,4 +837,193 @@ async fn mark_critical(
     )
     .await?;
     receipt(state, target, id, &scopes, None, None).await
+}
+
+/// The trust-flag node of `principal` on `asset`: one per pair, so a new flag replaces the old.
+fn trust_flag_id(tenant: &str, asset: &str, principal: &str) -> String {
+    format!("trust_flag:{tenant}:{asset}:{principal}")
+}
+
+/// The batch a trust flag applies (MEDULLA-TYPED-PACKS-R802.7): the flag node upsert and the
+/// asset node upsert whose `flag` is the union of every principal's current flag and the flags
+/// the asset already carries that are not trust flags (such as `owner_missing`).
+struct TrustFlagPlan {
+    id: String,
+    operations: Vec<serde_json::Value>,
+}
+
+/// Plan one trust flag. `others` are the flags other principals hold on the asset; `asset_node`
+/// is the asset's stored properties, absent when the asset has no node of its own yet.
+fn plan_trust_flag(
+    tenant: &str,
+    principal: &str,
+    asset: &str,
+    flag: &str,
+    reason: &str,
+    others: &[String],
+    asset_node: Option<(String, Properties)>,
+) -> Result<TrustFlagPlan, String> {
+    use medulla_catalog_types::stewardship::{TRUST_FLAGS, TRUST_FLAG_LABEL};
+    if asset.trim().is_empty() {
+        return Err(invalid("a trust flag names its asset"));
+    }
+    if !TRUST_FLAGS.contains(&flag) {
+        return Err(invalid(format!(
+            "trust flag '{flag}' is not one of endorsement, warning, deprecation"
+        )));
+    }
+    if reason.trim().is_empty() {
+        return Err(invalid("a trust flag carries a reason"));
+    }
+    let id = trust_flag_id(tenant, asset, principal);
+    let mut node = Properties::new();
+    node.insert("type".into(), TRUST_FLAG_LABEL.into());
+    node.insert("asset".into(), asset.into());
+    node.insert("principal".into(), principal.into());
+    node.insert("flag".into(), flag.into());
+    node.insert("reason".into(), reason.into());
+    node.insert(TENANT_PROPERTY.into(), tenant.into());
+    let mut operations = vec![serde_json::json!({"op": "upsert_node", "id": id, "properties": node})];
+    if let Some((asset_key, mut properties)) = asset_node {
+        let cat_flag = format!("{}flag", medulla_catalog_types::catalog_relevance::CAT_NS);
+        let mut flags: Vec<String> = Vec::new();
+        for key in [cat_flag.as_str(), "flag"] {
+            match properties.remove(key) {
+                Some(serde_json::Value::String(one)) => flags.push(one),
+                Some(serde_json::Value::Array(many)) => {
+                    flags.extend(many.iter().filter_map(|v| v.as_str().map(str::to_string)))
+                }
+                _ => {}
+            }
+        }
+        flags.retain(|held| !TRUST_FLAGS.contains(&held.as_str()));
+        flags.extend(others.iter().cloned());
+        flags.push(flag.to_string());
+        flags.sort();
+        flags.dedup();
+        properties.insert("flag".into(), flags.into());
+        operations.push(serde_json::json!({"op": "upsert_node", "id": asset_key, "properties": properties}));
+    }
+    Ok(TrustFlagPlan { id, operations })
+}
+
+/// The flags every other principal of the tenant holds on `asset`.
+async fn other_trust_flags(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    asset: &str,
+    principal: &str,
+) -> Result<Vec<String>, String> {
+    use medulla_catalog_types::stewardship::TRUST_FLAG_LABEL;
+    let tenant = target.verified.tenant();
+    let mut found = Vec::new();
+    let mut after: Option<String> = None;
+    loop {
+        let response = super::graph_pipeline::dispatch_graph_op(
+            state,
+            target.graph,
+            target.req_id,
+            target.caller,
+            target.verified,
+            Method::GetNodesByLabel {
+                label: TRUST_FLAG_LABEL.to_string(),
+                after: after.clone(),
+                limit: PAGE,
+            },
+        )
+        .await;
+        if let Some(refusal) = response.refusal_text() {
+            return Err(refusal);
+        }
+        let Some(ResultPayload::NodeList(nodes)) = response.result else {
+            break;
+        };
+        let count = nodes.len();
+        after = nodes.last().map(|(id, _)| id.clone());
+        for (_, properties) in nodes {
+            let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
+            if text(TENANT_PROPERTY) == Some(tenant)
+                && text("asset") == Some(asset)
+                && text("principal") != Some(principal)
+            {
+                found.extend(text("flag").map(str::to_string));
+            }
+        }
+        if count < PAGE {
+            break;
+        }
+    }
+    Ok(found)
+}
+
+/// `SetTrustFlag`, plan then apply: the plan is decided from the stored state before any write,
+/// and applied as one `BatchUpdate` whose compile derives the `catalog.trust_flag` outbox intent
+/// of a warning or deprecation (`trust_flag_intents`), so the flag and its event commit together.
+async fn set_trust_flag(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    asset: &str,
+    flag: &str,
+    reason: &str,
+) -> Result<StewardshipReceipt, String> {
+    let tenant = target.verified.tenant();
+    let principal = target.verified.agent_id();
+    let others = other_trust_flags(state, target, asset, principal).await?;
+    // An asset loaded from RDF may be keyed by its bracketed IRI; the flag lands on the node
+    // that exists.
+    let mut asset_node = None;
+    for key in [asset.to_string(), format!("<{asset}>")] {
+        if let Some(properties) = read_node(state, target, &key).await? {
+            asset_node = Some((key, properties));
+            break;
+        }
+    }
+    let plan = plan_trust_flag(tenant, principal, asset, flag, reason, &others, asset_node)?;
+    write_batch(state, target, &plan.operations).await?;
+    let scopes = TargetScopes {
+        asset: Some(asset.to_string()),
+        concept_scheme: None,
+        domain: None,
+    };
+    receipt(state, target, plan.id, &scopes, None, None).await
+}
+
+#[cfg(test)]
+mod trust_flag_tests {
+    use super::*;
+
+    // spec: MEDULLA-TYPED-PACKS-R802.7
+    #[test]
+    fn a_flag_replaces_the_callers_and_keeps_other_flags() {
+        let mut asset = Properties::new();
+        asset.insert("flag".into(), vec!["owner_missing", "endorsement"].into());
+        let plan = plan_trust_flag(
+            "t",
+            "agent-a",
+            "urn:asset:1",
+            "deprecation",
+            "replaced by v2",
+            &["warning".to_string()],
+            Some(("urn:asset:1".to_string(), asset)),
+        )
+        .unwrap();
+        assert_eq!(plan.id, "trust_flag:t:urn:asset:1:agent-a");
+        assert_eq!(plan.operations.len(), 2);
+        assert_eq!(plan.operations[0]["properties"]["type"], "cat:TrustFlag");
+        assert_eq!(
+            plan.operations[1]["properties"]["flag"],
+            serde_json::json!(["deprecation", "owner_missing", "warning"])
+        );
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R802.7
+    #[test]
+    fn an_unknown_flag_or_a_missing_reason_is_refused() {
+        let refused = |flag: &str, reason: &str| {
+            plan_trust_flag("t", "a", "urn:asset:1", flag, reason, &[], None).is_err()
+        };
+        assert!(refused("praise", "because"));
+        assert!(refused("warning", " "));
+        assert!(!refused("warning", "stale"));
+    }
 }

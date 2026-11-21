@@ -34547,6 +34547,15 @@ class StewardshipOpMarkCritical(BaseModel):
     element: str
 
 
+class StewardshipOpSetTrustFlag(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["set_trust_flag"]
+    asset: str
+    flag: str
+    reason: str
+
+
 StewardshipOp = Annotated[
     StewardshipOpAssign
     | StewardshipOpRevoke
@@ -34554,7 +34563,8 @@ StewardshipOp = Annotated[
     | StewardshipOpReview
     | StewardshipOpApply
     | StewardshipOpCertify
-    | StewardshipOpMarkCritical,
+    | StewardshipOpMarkCritical
+    | StewardshipOpSetTrustFlag,
     Field(discriminator="op"),
 ]
 
@@ -44970,6 +44980,7 @@ __all__ = [
     "DashboardAssetOpDelete",
     "DashboardAssetOpRestore",
     "DashboardAssetOpGet",
+    "StewardshipOpSetTrustFlag",
     "ClaimKind",
     "ClassificationClaimState",
     "ClassificationClaimProvenance",

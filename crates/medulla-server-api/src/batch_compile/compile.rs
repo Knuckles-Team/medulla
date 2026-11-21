@@ -25,7 +25,7 @@ use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 mod finish_helpers;
 mod graph_source_dirty;
 use finish_helpers::{
-    compiled_outbox, compiled_scope_identity, finance_alert_intents, memory_snapshot_intents,
+    compiled_outbox, compiled_scope_identity, finance_alert_intents, memory_snapshot_intents, trust_flag_intents,
 };
 
 /// Resolve the current graph version without treating RAM as a substitute for a
@@ -180,6 +180,7 @@ pub fn compile_methods_with_source_dirty(
     // the very method that commits its event node, so both share one batch.
     terminal_outbox.extend(finance_alert_intents(&methods)?);
     terminal_outbox.extend(memory_snapshot_intents(&methods)?);
+    terminal_outbox.extend(trust_flag_intents(&methods)?);
     terminal_outbox.extend(additional_outbox);
     #[cfg(feature = "epistemic-tms")]
     let reasoning_events =
@@ -960,6 +961,35 @@ mod tests {
         )
         .unwrap_err();
         assert!(refused.starts_with("ALERT_ENVELOPE_INVALID"), "{refused}");
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R802.7
+    #[test]
+    fn a_warning_or_deprecation_flag_commits_with_one_catalog_trust_flag_intent() {
+        let flag_batch = |flag: &str| {
+            let operations = vec![serde_json::json!({
+                "op": "upsert_node",
+                "id": format!("trust_flag:t:asset:a:{flag}"),
+                "properties": {
+                    "type": "cat:TrustFlag", "asset": "asset:a", "principal": "a",
+                    "flag": flag, "reason": "because",
+                },
+            })];
+            Method::BatchUpdate {
+                operations_msgpack: rmp_serde::to_vec_named(&operations).unwrap(),
+            }
+        };
+        let announced = compile_methods(source_context(), vec![flag_batch("deprecation")]).unwrap();
+        let intents: Vec<_> = announced
+            .outbox
+            .iter()
+            .filter(|intent| intent.topic == "catalog.trust_flag")
+            .collect();
+        assert_eq!(intents.len(), 1);
+        assert_eq!(intents[0].key, "trust_flag:t:asset:a:deprecation");
+        assert_eq!(intents[0].headers["flag"], "deprecation");
+        let endorsed = compile_methods(source_context(), vec![flag_batch("endorsement")]).unwrap();
+        assert!(endorsed.outbox.iter().all(|intent| intent.topic != "catalog.trust_flag"));
     }
 
     #[test]

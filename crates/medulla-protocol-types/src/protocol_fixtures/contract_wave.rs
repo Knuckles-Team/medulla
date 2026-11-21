@@ -239,6 +239,14 @@ fn stewardship_ops() -> Vec<(
                 element: "col:orders.total".to_string(),
             },
         ),
+        (
+            "Stewardship.set_trust_flag",
+            StewardshipOp::SetTrustFlag {
+                asset: "col:orders.total".to_string(),
+                flag: "warning".to_string(),
+                reason: "the column is being backfilled".to_string(),
+            },
+        ),
     ]
 }
 

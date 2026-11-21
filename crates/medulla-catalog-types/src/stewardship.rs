@@ -182,6 +182,17 @@ pub struct StewardshipTarget {
     pub domain: Option<String>,
 }
 
+/// Node label of one principal's trust flag on one asset (MEDULLA-TYPED-PACKS-R802.7).
+pub const TRUST_FLAG_LABEL: &str = "cat:TrustFlag";
+/// The mutation outbox topic a warning or deprecation flag is announced on.
+pub const TRUST_FLAG_TOPIC: &str = "catalog.trust_flag";
+/// The flags a principal may set on an asset.
+pub const TRUST_FLAGS: [&str; 3] = ["endorsement", "warning", "deprecation"];
+/// Whether setting `flag` is announced on [`TRUST_FLAG_TOPIC`]: a warning or a deprecation.
+pub fn trust_flag_is_announced(flag: &str) -> bool {
+    matches!(flag, "warning" | "deprecation")
+}
+
 /// One stewardship operation (`Method::Stewardship`, MEDULLA-TYPED-PACKS-R802.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
@@ -208,6 +219,14 @@ pub enum StewardshipOp {
     /// (MEDULLA-TYPED-PACKS-R802.8). The element then needs an owner, a steward and one
     /// active quality rule; a repeat refreshes what it misses.
     MarkCritical { element: String },
+    /// Set the caller's trust flag on an asset (MEDULLA-TYPED-PACKS-R802.7): `flag` is
+    /// `endorsement`, `warning` or `deprecation`, and `reason` says why. A caller holds one
+    /// flag per asset; setting another replaces it.
+    SetTrustFlag {
+        asset: String,
+        flag: String,
+        reason: String,
+    },
 }
 
 impl StewardshipOp {

@@ -177,6 +177,9 @@ fn incident_audit_line(method: &Method) -> Option<String> {
                 StewardshipOp::MarkCritical { element } => {
                     format!("STEWARDSHIP|mark_critical|{element}")
                 }
+                StewardshipOp::SetTrustFlag { asset, flag, .. } => {
+                    format!("STEWARDSHIP|set_trust_flag|{asset}|{flag}")
+                }
             })
         }
         // MEDULLA-TYPED-PACKS-R109.3: the line names the op and the dashboard id, never the body.

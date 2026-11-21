@@ -97,6 +97,54 @@ pub(super) fn finance_alert_intents(
         .collect()
 }
 
+/// The `catalog.trust_flag` intent of every warning or deprecation trust flag a `BatchUpdate`
+/// writes (MEDULLA-TYPED-PACKS-R802.7). The flag is a `cat:TrustFlag` node upsert; the intent is
+/// built here, from the very method that commits the node, so the flag and its event share one
+/// batch. The key is the flag node id, so a replay announces the same flag once.
+pub(super) fn trust_flag_intents(
+    methods: &[medulla_protocol_types::protocol::Method],
+) -> Result<Vec<MutationOutboxIntent>, String> {
+    use medulla_catalog_types::stewardship::{
+        trust_flag_is_announced, TRUST_FLAG_LABEL, TRUST_FLAG_TOPIC,
+    };
+    let mut intents = Vec::new();
+    for method in methods {
+        let medulla_protocol_types::protocol::Method::BatchUpdate { operations_msgpack } = method
+        else {
+            continue;
+        };
+        let Ok(operations) = rmp_serde::from_slice::<Vec<serde_json::Value>>(operations_msgpack)
+        else {
+            continue;
+        };
+        for operation in operations {
+            let properties = &operation["properties"];
+            let flag = properties["flag"].as_str().unwrap_or_default();
+            if operation["op"] != "upsert_node"
+                || properties["type"] != TRUST_FLAG_LABEL
+                || !trust_flag_is_announced(flag)
+            {
+                continue;
+            }
+            let id = operation["id"].as_str().unwrap_or_default();
+            let payload = rmp_serde::to_vec_named(&serde_json::json!({
+                "asset": properties["asset"],
+                "flag": flag,
+                "reason": properties["reason"],
+                "principal": properties["principal"],
+            }))
+            .map_err(|error| format!("trust flag intent encoding failed: {error}"))?;
+            intents.push(MutationOutboxIntent {
+                topic: TRUST_FLAG_TOPIC.to_string(),
+                key: id.to_string(),
+                payload,
+                headers: BTreeMap::from([("flag".to_string(), flag.to_string())]),
+            });
+        }
+    }
+    Ok(intents)
+}
+
 /// The `memory_snapshot_synced` intent of every `SyncMemorySnapshotStore` in
 /// `methods` that writes a row (MEDULLA-DURABLE-KERNEL-R085.4). It is built here,
 /// from the very method that commits the head and revision rows, so the rows and

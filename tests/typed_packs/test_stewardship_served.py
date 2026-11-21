@@ -269,3 +269,65 @@ def test_critical_element_gaps_reported(served) -> None:
         )
     )
     assert ASSET not in str(called), called
+
+
+CATALOG = "https://knuckles-team.github.io/ontology/catalog#"
+SEARCH = (
+    f"PREFIX cat: <{CATALOG}>\n"
+    "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n"
+    "SELECT ?asset ?score WHERE {{\n"
+    "  ?asset skos:prefLabel ?name .\n"
+    '  BIND(cat:relevance(?asset, "{text}") AS ?score)\n'
+    "  FILTER(?score > 0)\n"
+    "}}"
+)
+
+
+def _score(client: Any, asset: str, text: str) -> float:
+    rows = client.rdf.sparql(SEARCH.format(text=text))
+    scores = [float(row["score"]) for row in rows if row["asset"].strip("<>") == asset]
+    return scores[0] if scores else 0.0
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.7")
+def test_deprecation_lowers_rank_and_emits_event(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R802.7: a deprecation lowers the asset's rank, a caller holds
+    one flag per asset, and an unknown flag or a missing reason is refused."""
+    graph, client = served
+    asset = f"urn:medulla:asset:product:{uuid.uuid4().hex[:8]}"
+    client.rdf.add_triples(
+        turtle=(
+            f"@prefix cat: <{CATALOG}> .\n"
+            "@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n"
+            f'<{asset}> a cat:Product ; skos:prefLabel "settlement ledger" ;'
+            " cat:hasOwner <urn:principal:data-team> .\n"
+        )
+    )
+    plain = _score(client, asset, "settlement")
+    assert plain > 0
+
+    with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+        _op(client, graph, {"op": "set_trust_flag", "asset": asset, "flag": "praise", "reason": "x"})
+    with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+        _op(client, graph, {"op": "set_trust_flag", "asset": asset, "flag": "warning", "reason": " "})
+
+    receipt = _op(
+        client,
+        graph,
+        {"op": "set_trust_flag", "asset": asset, "flag": "deprecation", "reason": "replaced by v2"},
+    )
+    flag_id = f"trust_flag:{request_context()['tenant']}:{asset}:{request_context()['agent_id']}"
+    assert receipt["id"] == flag_id
+    assert _score(client, asset, "settlement") < plain
+
+    # One flag per caller and asset: an endorsement replaces the deprecation.
+    _op(
+        client,
+        graph,
+        {"op": "set_trust_flag", "asset": asset, "flag": "endorsement", "reason": "v2 is out"},
+    )
+    assert _score(client, asset, "settlement") > plain
+    nodes = _decode(
+        client._send("GetNodesByLabel", {"label": "cat:TrustFlag", "after": None, "limit": 10}, graph)
+    )
+    assert [node_id for node_id, _ in nodes] == [flag_id]

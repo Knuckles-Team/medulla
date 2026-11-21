@@ -116,6 +116,7 @@ method_results! {
     DashboardAssetDelete(DashboardAsset / "delete") => Raw<medulla_types::dashboard::DashboardReceipt>;
     DashboardAssetRestore(DashboardAsset / "restore") => Raw<medulla_types::dashboard::DashboardReceipt>;
     DashboardAssetGet(DashboardAsset / "get") => Raw<medulla_types::dashboard::DashboardReceipt>;
+    StewardshipSetTrustFlag(Stewardship / "set_trust_flag") => Raw<medulla_catalog_types::stewardship::StewardshipReceipt>;
     // MEDULLA-SDLC-R002.3: the release and deployment records.
     RecordRelease(RecordRelease) => Raw<medulla_source_types::lifecycle::ReleaseReceipt>;
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;
