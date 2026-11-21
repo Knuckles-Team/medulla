@@ -235,3 +235,56 @@ fn report_refusals_and_sequence_order() {
     // the stage follows the report
     assert_eq!(derive_stage(&third), DeliveryStage::PersonReview);
 }
+
+// spec: MEDULLA-SDLC-R019.8
+#[test]
+fn one_question_replaced_or_cleared() {
+    let known: BTreeSet<String> = ["v1".to_owned()].into();
+    let mut d = base();
+    d.inputs = vec![person_input(1)];
+    d.seq = 1;
+    let ask = |text: &str| {
+        let mut w = write(DeliveryReportState::Waiting);
+        w.question = Some(text.to_owned());
+        w
+    };
+
+    // a question is raised and names the person's event
+    let d = record_report(&d, &ask("which branch?"), &known).unwrap();
+    let q = d.attention.clone().unwrap();
+    assert_eq!(q.text, "which branch?");
+    assert_eq!(q.raised_by.as_deref(), Some("e1"));
+    assert_eq!(derive_stage(&d), DeliveryStage::PersonAnswer);
+
+    // the same text reuses the open question
+    let same = record_report(&d, &ask("which branch?"), &known).unwrap();
+    assert_eq!(same.attention, Some(q.clone()));
+
+    // a new text replaces it with a new seq
+    let replaced = record_report(&same, &ask("which repo?"), &known).unwrap();
+    let r = replaced.attention.clone().unwrap();
+    assert_eq!(r.text, "which repo?");
+    assert!(r.seq > q.seq);
+
+    // a report without a question leaves it in place
+    let kept = record_report(&replaced, &write(DeliveryReportState::Progress), &known).unwrap();
+    assert_eq!(kept.attention, replaced.attention);
+
+    // an explicit empty question clears it
+    let cleared = record_report(&kept, &ask(""), &known).unwrap();
+    assert_eq!(cleared.attention, None);
+
+    // a ready report clears it
+    let mut ready = write(DeliveryReportState::Ready);
+    ready.evidence = vec!["v1".into()];
+    ready.question = Some("still there?".into());
+    let after_ready = record_report(&replaced, &ready, &known).unwrap();
+    assert_eq!(after_ready.attention, None);
+
+    // 600 characters pass; 601 refuse and change nothing
+    let max = "x".repeat(600);
+    assert!(record_report(&d, &ask(&max), &known).is_ok());
+    let too_long = "é".repeat(601);
+    let refusal = record_report(&d, &ask(&too_long), &known).unwrap_err();
+    assert_eq!(refusal.code(), "QUESTION_TOO_LONG");
+}

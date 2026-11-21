@@ -7,8 +7,9 @@
 use std::collections::BTreeSet;
 
 use medulla_source_types::delivery::{
-    AssignmentReport, AssignmentState, Delivery, DeliveryProposal, DeliveryReportRefusal,
-    DeliveryReportState, DeliveryReportWrite, DeliveryStage, InputSource, ProposalState,
+    AssignmentReport, AssignmentState, Delivery, DeliveryProposal, DeliveryQuestion,
+    DeliveryReportRefusal, DeliveryReportState, DeliveryReportWrite, DeliveryStage, InputSource,
+    ProposalState, QUESTION_MAX_CHARS,
 };
 
 /// Apply one report to `delivery`. `known_verdicts` is the set of gate verdict IDs of the
@@ -41,6 +42,13 @@ pub fn record_report(
         }
     }
 
+    if let Some(text) = &write.question {
+        let length = text.chars().count();
+        if length > QUESTION_MAX_CHARS {
+            return Err(DeliveryReportRefusal::QuestionTooLong(length));
+        }
+    }
+
     let mut next = delivery.clone();
     let seq = next.next_seq();
     let assignment = &mut next.assignments[index];
@@ -62,7 +70,42 @@ pub fn record_report(
             });
         }
     }
+    set_attention(&mut next, write, seq);
     Ok(next)
+}
+
+/// Update the one open question of `delivery` from a report (MEDULLA-SDLC-R019.8).
+///
+/// A `ready` report or an explicit empty question clears it. A question text that equals
+/// the open one keeps it as it is. Another text replaces it and takes `seq`. The question
+/// names, in `raised_by`, the event of the latest person input, when there is one. A report
+/// without a question leaves the open one in place. The caller has checked the length.
+pub fn set_attention(delivery: &mut Delivery, write: &DeliveryReportWrite, seq: u64) {
+    if write.state == DeliveryReportState::Ready {
+        delivery.attention = None;
+        return;
+    }
+    let Some(text) = &write.question else {
+        return;
+    };
+    if text.is_empty() {
+        delivery.attention = None;
+        return;
+    }
+    if delivery.attention.as_ref().is_some_and(|q| &q.text == text) {
+        return;
+    }
+    let raised_by = delivery
+        .inputs
+        .iter()
+        .filter(|i| i.source == InputSource::Person)
+        .max_by_key(|i| i.seq)
+        .map(|i| i.event_id.clone());
+    delivery.attention = Some(DeliveryQuestion {
+        text: text.clone(),
+        raised_by,
+        seq,
+    });
 }
 
 /// The report with the highest `seq` over every assignment of the delivery.

@@ -27,12 +27,19 @@ pub const ASSIGNMENT_ENDED: &str = "ASSIGNMENT_ENDED";
 /// The refusal code for a `ready` report without evidence a verdict backs (R019.7).
 pub const REPORT_EVIDENCE_MISSING: &str = "REPORT_EVIDENCE_MISSING";
 
+/// The refusal code for a question longer than [`QUESTION_MAX_CHARS`] (R019.8).
+pub const QUESTION_TOO_LONG: &str = "QUESTION_TOO_LONG";
+
+/// The longest question a delivery holds, in characters.
+pub const QUESTION_MAX_CHARS: usize = 600;
+
 /// Every refusal code of the delivery records.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(DELIVERY_RECORD_INVALID),
     RefusalCode::new(ASSIGNMENT_UNKNOWN),
     RefusalCode::new(ASSIGNMENT_ENDED),
     RefusalCode::new(REPORT_EVIDENCE_MISSING),
+    RefusalCode::new(QUESTION_TOO_LONG),
 ];
 
 /// How strongly the delivery was mandated.
@@ -271,6 +278,9 @@ pub enum DeliveryReportRefusal {
     /// A `ready` report without evidence a known verdict backs.
     #[error("REPORT_EVIDENCE_MISSING: {0}")]
     EvidenceMissing(String),
+    /// The question is longer than [`QUESTION_MAX_CHARS`] characters.
+    #[error("QUESTION_TOO_LONG: {0} characters")]
+    QuestionTooLong(usize),
 }
 
 impl DeliveryReportRefusal {
@@ -280,6 +290,7 @@ impl DeliveryReportRefusal {
             Self::AssignmentUnknown(_) => ASSIGNMENT_UNKNOWN,
             Self::AssignmentEnded(_) => ASSIGNMENT_ENDED,
             Self::EvidenceMissing(_) => REPORT_EVIDENCE_MISSING,
+            Self::QuestionTooLong(_) => QUESTION_TOO_LONG,
         }
     }
 }
