@@ -108,3 +108,49 @@ def test_feedback_refusals(start_medulla_server) -> None:
     finally:
         cl.tenants.delete(graph)
         cl.close()
+
+
+def _discover_hits(cl: Any, graph: str) -> dict[str, dict[str, Any]]:
+    result = cl._send(
+        "Discover",
+        {"keywords": ["feedback"], "query_embedding": [], "k": 5},
+        graph,
+    )
+    if isinstance(result, (bytes, bytearray)):
+        result = msgpack.unpackb(result, raw=False)
+    return {hit["id"]: hit for hit in result["hits"]}
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R705.5")
+def test_boost_listed_per_hit(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R705.5: a rank answer lists `boost` per hit and
+    the explicit event is stored as a `RetrievalFeedback` node."""
+    graph = f"fb-evidence-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    cl.tenants.create(graph)
+    try:
+        for node_id in ("doc-a", "doc-b"):
+            put(cl, graph, node_id, {"type": "Doc", "name": "feedback", "description": ""})
+        before = _discover_hits(cl, graph)
+        assert all(hit.get("boost", 0.0) == 0.0 for hit in before.values())
+
+        cl._send(
+            "RetrievalFeedbackRecord",
+            {"document_ref": "doc-b", "kind": "upvote", "weight": 0.2},
+            graph,
+        )
+        after = _discover_hits(cl, graph)
+        assert after["doc-b"]["boost"] == pytest.approx(0.2, rel=0.05)
+        assert after["doc-a"].get("boost", 0.0) == 0.0
+
+        stored = cl._send(
+            "GetNodesByLabel",
+            {"label": "RetrievalFeedback", "after": None, "limit": 0},
+            graph,
+        )
+        if isinstance(stored, (bytes, bytearray)):
+            stored = msgpack.unpackb(stored, raw=False)
+        assert len(stored) == 1
+    finally:
+        cl.tenants.delete(graph)
+        cl.close()

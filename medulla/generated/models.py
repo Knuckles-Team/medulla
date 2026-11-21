@@ -5413,6 +5413,7 @@ class DiscoverHit(BaseModel):
     score: float
     type: str
     url: str | None = None
+    boost: float | None = None
 
 
 class DiscoveryAuthBinding(BaseModel):

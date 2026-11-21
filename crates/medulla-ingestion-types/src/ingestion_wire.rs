@@ -360,10 +360,18 @@ pub struct DiscoverHit {
     /// SHA-256 of the query that found the web Document.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub query_digest: Option<String>,
+    /// MEDULLA-FEDERATED-QUERY-R705.5: the learned feedback boost added to this hit's
+    /// calibrated score; `0.0` (and omitted from the wire) when no feedback applied.
+    #[serde(default, skip_serializing_if = "is_zero_boost")]
+    pub boost: f32,
 }
 
 fn neutral_boost() -> f32 {
     1.0
+}
+
+fn is_zero_boost(boost: &f32) -> bool {
+    *boost == 0.0
 }
 
 /// Longest `query_text` a `Discover` request may carry, in bytes (R090.1).

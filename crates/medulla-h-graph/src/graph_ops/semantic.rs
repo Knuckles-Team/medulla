@@ -354,6 +354,9 @@ fn discover_pass(
         }
     }
     // MEDULLA-FEDERATED-QUERY-R705.3: learned document boosts, added after calibration.
+    // MEDULLA-FEDERATED-QUERY-R705.5: each hit lists the boost it received.
+    let mut learned_boost: std::collections::HashMap<String, f32> =
+        std::collections::HashMap::new();
     if let Some(tenant) = call.tenant {
         let candidates: Vec<String> = ranked.iter().map(|(id, _)| id.clone()).collect();
         let now_s = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() / 1000;
@@ -364,6 +367,11 @@ fn discover_pass(
             now_s,
             &super::retrieval_feedback::FeedbackKnobs::from_registry(),
             call.implicit_feedback,
+        );
+        learned_boost.extend(
+            boosts
+                .iter()
+                .map(|boost| (boost.document_ref.clone(), boost.value as f32)),
         );
         if !boosts.is_empty() {
             let calibrated: Vec<(String, f64)> = ranked
@@ -416,6 +424,7 @@ fn discover_pass(
                 },
                 arm_ranks: arm_ranks.remove(&hit.id).unwrap_or_default(),
                 recency_boost: boosts.get(&hit.id).copied().unwrap_or(1.0),
+                boost: learned_boost.get(&hit.id).copied().unwrap_or(0.0),
                 id: hit.id,
                 name,
                 description,

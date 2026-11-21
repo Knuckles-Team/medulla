@@ -261,6 +261,7 @@ mod tests {
             retrieved_at: None,
             backend: None,
             query_digest: None,
+            boost: 0.0,
         }
     }
 
