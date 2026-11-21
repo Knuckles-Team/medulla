@@ -14,7 +14,7 @@ use crate::owner::graph_shard::{
 use crate::owner::registry::{
     predecessor_evidence, CAPABILITY_REWARD, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES,
     DECISION_RETRY_ALLOWANCES, KV_COLD, MCP_CATALOG_CONFIGS, MCP_CATALOG_SCOPES,
-    RBAC_PROFILE_USE_GRANT, SEMANTIC_EMBEDDING_VERSION_TAGS, SEMANTIC_MODALITY_CHECKS,
+    RBAC_DATA_PRODUCT, RBAC_PROFILE_USE_GRANT, SEMANTIC_EMBEDDING_VERSION_TAGS, SEMANTIC_MODALITY_CHECKS,
     SEMANTIC_PROMOTION_VERDICTS, SEMANTIC_STAGE_RECEIPTS, TASK_DEAD_LETTERS, TASK_QUEUE_OLDEST,
     TASK_QUEUE_TOTALS,
 };
@@ -98,9 +98,15 @@ fn open_successor_tables(write: &WriteTransaction, target: UpgradeTarget) -> Res
         UpgradeTarget::AgentLibrary(source) => open_agent_library_tables(write, source)?,
         UpgradeTarget::GraphShard(source) => open_graph_shard_tables(write, source)?,
         UpgradeTarget::SemanticIndex => open_promotion_tables(write)?,
-        UpgradeTarget::Rbac => {
+        // Every Rbac generation ends at the current layout, so the grant table
+        // (MEDULLA-DECISION-ENGINE-R036.106) and the data product table
+        // (MEDULLA-TYPED-PACKS-R805.3) are created empty where the generation lacks them.
+        UpgradeTarget::Rbac(_) => {
             write
                 .open_table(RBAC_PROFILE_USE_GRANT)
+                .map_err(|error| error.to_string())?;
+            write
+                .open_table(RBAC_DATA_PRODUCT)
                 .map_err(|error| error.to_string())?;
         }
         // The Kv successor adds no table: the retired table is deleted above.

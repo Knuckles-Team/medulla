@@ -688,6 +688,26 @@ pub const RBAC_BEFORE_PROFILE_GRANTS: LayoutPredecessor = LayoutPredecessor {
     file_name: "rbac.redb",
 };
 
+/// The Rbac owner tables before the data product, contract and access request records
+/// (MEDULLA-TYPED-PACKS-R805.3), in registry order.
+const RBAC_TABLES_BEFORE_DATA_PRODUCTS: &[&str] = &["rbac", "rbac_profile_use_grant"];
+
+/// The frozen layout digest of [`RBAC_BEFORE_DATA_PRODUCTS`]: the Rbac pin before the
+/// `rbac_data_product` table.
+pub const RBAC_PRE_DATA_PRODUCTS_DIGEST: [u8; 32] = [
+    0xc3, 0x0f, 0x57, 0xc1, 0x12, 0x29, 0xb6, 0x29, 0xfe, 0xfb, 0x44, 0x70, 0xbf, 0x9b, 0x7a, 0xfb,
+    0x50, 0x10, 0xc0, 0x6c, 0x24, 0x54, 0x2d, 0x25, 0xcd, 0x20, 0xea, 0x61, 0x3d, 0x72, 0x9d, 0xbd,
+];
+
+/// An Rbac owner file from before the data product records.
+pub const RBAC_BEFORE_DATA_PRODUCTS: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::Rbac,
+    label: "rbac before data product records",
+    owner_tables: RBAC_TABLES_BEFORE_DATA_PRODUCTS,
+    data_lost: "none; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
+    file_name: "rbac.redb",
+};
+
 /// The Kv owner tables before the KV-cache cold rung moved into a namespace of the `kv`
 /// table (MEDULLA-DURABLE-KERNEL-R083.5), in registry order.
 const KV_TABLES_BEFORE_NAMESPACE_COLD: &[&str] = &["kv", "eg_kvcache_cold"];
@@ -839,7 +859,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             SQL_BEFORE_TRIGGER_REACTIONS,
             SQL_BEFORE_MATVIEWS,
         ],
-        OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS],
+        OwnerLayout::Rbac => &[RBAC_BEFORE_PROFILE_GRANTS, RBAC_BEFORE_DATA_PRODUCTS],
         OwnerLayout::Kv => &[KV_BEFORE_NAMESPACE_COLD],
         OwnerLayout::Jobs => &[
             JOBS_BEFORE_JOB_MACHINE,

@@ -32,6 +32,7 @@ use redb::TableDefinition;
 use sha2::{Digest, Sha256};
 
 use crate::rbac::RbacPolicy;
+use medulla_catalog_types::data_product::{AccessRequest, DataContract, DataProduct};
 use medulla_identity_types::acl::AgentIdentity;
 
 /// `key → serde_json bytes`. One table, three well-known keys (`policy`,
@@ -419,6 +420,49 @@ pub trait RbacPolicyStore: Send + Sync {
         Ok(Vec::new())
     }
 
+    /// The data product and contract of `tenant` named `id` (MEDULLA-TYPED-PACKS-R805.3). The
+    /// in-memory store holds none.
+    fn data_product(
+        &self,
+        _tenant: &str,
+        _id: &str,
+    ) -> Result<Option<(DataProduct, DataContract)>, RbacPersistError> {
+        Ok(None)
+    }
+
+    /// Store a data product with its contract. The in-memory store has no durable table.
+    fn put_data_product(
+        &self,
+        _tenant: &str,
+        _product: &DataProduct,
+        _contract: &DataContract,
+    ) -> Result<(), RbacPersistError> {
+        Err(RbacPersistError::IncompleteState(
+            "this policy store holds no data product records",
+        ))
+    }
+
+    /// The access request of `principal` against `product`. The in-memory store holds none.
+    fn access_request(
+        &self,
+        _tenant: &str,
+        _product: &str,
+        _principal: &str,
+    ) -> Result<Option<AccessRequest>, RbacPersistError> {
+        Ok(None)
+    }
+
+    /// Store an access request whole. The in-memory store has no durable table.
+    fn put_access_request(
+        &self,
+        _tenant: &str,
+        _request: &AccessRequest,
+    ) -> Result<(), RbacPersistError> {
+        Err(RbacPersistError::IncompleteState(
+            "this policy store holds no access request records",
+        ))
+    }
+
     /// Copy this store's durable image verbatim into a FRESH bundle file at
     /// `destination`, returning the number of rows copied.
     ///
@@ -445,6 +489,7 @@ pub trait RbacPolicyStore: Send + Sync {
     }
 }
 
+mod data_product;
 mod durable_write;
 mod memory_store;
 mod profile_grant;
@@ -762,6 +807,40 @@ impl RbacPolicyStore for RbacStore {
 
     fn profile_use_grants(&self) -> Result<Vec<ProfileUseGrant>, RbacPersistError> {
         RbacStore::profile_use_grants(self)
+    }
+
+    fn data_product(
+        &self,
+        tenant: &str,
+        id: &str,
+    ) -> Result<Option<(DataProduct, DataContract)>, RbacPersistError> {
+        RbacStore::data_product(self, tenant, id)
+    }
+
+    fn put_data_product(
+        &self,
+        tenant: &str,
+        product: &DataProduct,
+        contract: &DataContract,
+    ) -> Result<(), RbacPersistError> {
+        RbacStore::put_data_product(self, tenant, product, contract)
+    }
+
+    fn access_request(
+        &self,
+        tenant: &str,
+        product: &str,
+        principal: &str,
+    ) -> Result<Option<AccessRequest>, RbacPersistError> {
+        RbacStore::access_request(self, tenant, product, principal)
+    }
+
+    fn put_access_request(
+        &self,
+        tenant: &str,
+        request: &AccessRequest,
+    ) -> Result<(), RbacPersistError> {
+        RbacStore::put_access_request(self, tenant, request)
     }
 
     fn backup_into(&self, destination: &Path) -> Option<Result<u64, String>> {

@@ -455,7 +455,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 | `MEDULLA-TYPED-PACKS-R805` | See each child. |
 | `MEDULLA-TYPED-PACKS-R805.1` | `crates/medulla-types/tests/data_product.rs::records_round_trip` |
 | `MEDULLA-TYPED-PACKS-R805.2` | `crates/medulla-core/tests/data_product.rs::breach_records_violation` |
-| `MEDULLA-TYPED-PACKS-R805.3` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::request_grants_access_after_steward_approval` (planned) |
+| `MEDULLA-TYPED-PACKS-R805.3` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/data_product.rs::request_grants_access_after_steward_approval` |
 | `MEDULLA-TYPED-PACKS-R805.4` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::product_refusals` (planned) |
 | `MEDULLA-TYPED-PACKS-R805.5` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::violation_evidence_reads_back` |
 | `MEDULLA-TYPED-PACKS-R805.6` | `crates/medulla-core/src/data_product.rs::tests::contract_check_is_linear_in_promises`, `crates/medulla-core/benches/data_contract_check.rs` |
@@ -796,7 +796,7 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R802`: `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` (planned)
 - `MEDULLA-TYPED-PACKS-R803`: `crates/medulla-h-jobs/src/jobs/sensitive_scan_served_tests.rs::profile_job_proposes_claim_without_values`
 - `MEDULLA-TYPED-PACKS-R804`: `crates/medulla-h-admin/src/graph_schema/ontology_diff_tests.rs::import_reports_impact_and_opens_change_request`
-- `MEDULLA-TYPED-PACKS-R805`: `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::request_grants_access_after_steward_approval` (planned)
+- `MEDULLA-TYPED-PACKS-R805`: `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/data_product.rs::request_grants_access_after_steward_approval`
 - `MEDULLA-TYPED-PACKS-R106`: `tests/typed_packs/test_connector_catalog_served.py::test_catalog_search_finds_assets_with_owner_term_and_lineage`
 - `MEDULLA-TYPED-PACKS-R107`: `tests/typed_packs/test_pack_contract_served.py::test_breaking_release_waits_for_approval_then_serves`
 - `MEDULLA-TYPED-PACKS-R108`: `tests/typed_packs/test_catalog_assets_served.py::test_one_query_returns_agents_business_workflows_graphs_and_connector_assets`

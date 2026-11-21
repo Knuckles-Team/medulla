@@ -7,7 +7,8 @@
 //! scans the graph. The committed keys are the only visibility store; row-level
 //! security reads them from the node (`row_visibility`).
 //!
-//! Only the owner (`_owner_id`) or a `kg:admin` holder may change a scope.
+//! Only the owner (`_owner_id`), a `kg:admin` holder or a verified product delegate
+//! ([`ShareDelegation`], MEDULLA-TYPED-PACKS-R805.3) may change a scope.
 //! Promoting a node to the commons records the id of its `__commons__` copy in
 //! `_commons_copy`; the caller creates that copy in the same commit, and a
 //! revoke of a promoted node removes it in the same commit
@@ -75,18 +76,76 @@ impl ShareState {
     }
 }
 
+/// The authority a verified data-product role lends to one share change
+/// (MEDULLA-TYPED-PACKS-R805.3). The caller of [`share_transition`] sets it only after it
+/// verified the principal against the product's owner or the stewardship store; a share by
+/// such a delegate is accepted on that role alone and the role is named in the audit entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ShareDelegation {
+    /// The principal is the owner of this data product.
+    ProductOwner { product: String },
+    /// The principal is an owner or steward of this product's datasets by the stewardship store.
+    ProductSteward { product: String },
+}
+
+impl ShareDelegation {
+    /// The audit reason text: `product_owner:<id>` or `product_steward:<id>`.
+    pub fn reason(&self) -> String {
+        match self {
+            Self::ProductOwner { product } => format!("product_owner:{product}"),
+            Self::ProductSteward { product } => format!("product_steward:{product}"),
+        }
+    }
+}
+
 /// Who asks for the change.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ShareActor {
     pub principal_id: String,
     /// Whether the caller holds `kg:admin`.
     pub admin: bool,
+    /// The verified product role the caller acts under, when it has one.
+    pub delegation: Option<ShareDelegation>,
+}
+
+/// Why an actor may change a share.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ShareAuthority {
+    /// The actor owns the node.
+    Owner,
+    /// The actor holds `kg:admin`.
+    Admin,
+    /// The actor acts under a verified product role.
+    Delegate(ShareDelegation),
+}
+
+impl ShareAuthority {
+    /// The audit reason text: `owner`, `admin` or the delegation's reason.
+    pub fn reason(&self) -> String {
+        match self {
+            Self::Owner => "owner".to_string(),
+            Self::Admin => "admin".to_string(),
+            Self::Delegate(delegation) => delegation.reason(),
+        }
+    }
+}
+
+/// The authority under which `actor` may change the share of `current`: the owner first,
+/// then `kg:admin`, then a verified product role. `None` means the actor may not.
+pub fn share_authority(current: &ShareState, actor: &ShareActor) -> Option<ShareAuthority> {
+    if current.owner_id.as_deref() == Some(actor.principal_id.as_str()) {
+        Some(ShareAuthority::Owner)
+    } else if actor.admin {
+        Some(ShareAuthority::Admin)
+    } else {
+        actor.delegation.clone().map(ShareAuthority::Delegate)
+    }
 }
 
 /// Why a share change is refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ShareRefusal {
-    /// The actor is neither the owner nor a `kg:admin` holder.
+    /// The actor is neither the owner, a `kg:admin` holder nor a verified product delegate.
     NotOwner,
     /// The operation names another node than the state it applies to.
     NodeMismatch,
@@ -159,8 +218,7 @@ pub fn share_transition(
     if op.node_id() != current.node_id {
         return Err(ShareRefusal::NodeMismatch);
     }
-    let owner = current.owner_id.as_deref() == Some(actor.principal_id.as_str());
-    if !owner && !actor.admin {
+    if share_authority(current, actor).is_none() {
         return Err(ShareRefusal::NotOwner);
     }
     let mut next = ShareState {
@@ -197,6 +255,7 @@ mod tests {
         ShareActor {
             principal_id: "usr:owner".to_string(),
             admin: false,
+            delegation: None,
         }
     }
 
@@ -286,6 +345,7 @@ mod tests {
         let stranger = ShareActor {
             principal_id: "usr:other".to_string(),
             admin: false,
+            delegation: None,
         };
         let refused = share_transition(&state(), &grant(ShareScope::Tenant, &[]), &stranger)
             .expect_err("a non-owner is refused");
@@ -294,6 +354,7 @@ mod tests {
         let admin = ShareActor {
             principal_id: "usr:other".to_string(),
             admin: true,
+            delegation: None,
         };
         assert!(share_transition(&state(), &grant(ShareScope::Tenant, &[]), &admin).is_ok());
         // A node nobody owns is changed by an admin only.
@@ -306,5 +367,43 @@ mod tests {
             share_transition(&state(), &other, &owner()),
             Err(ShareRefusal::NodeMismatch)
         );
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R805.3
+    #[test]
+    fn a_verified_product_delegate_changes_a_scope_and_names_its_reason() {
+        let delegate = |delegation| ShareActor {
+            principal_id: "usr:steward".to_string(),
+            admin: false,
+            delegation: Some(delegation),
+        };
+        let steward = delegate(ShareDelegation::ProductSteward {
+            product: "orders".to_string(),
+        });
+        let shared = share_transition(&state(), &grant(ShareScope::Tenant, &["usr:a"]), &steward)
+            .expect("a verified steward may share");
+        assert_eq!(shared.grants, vec!["usr:a"]);
+        assert_eq!(
+            share_authority(&state(), &steward).map(|authority| authority.reason()),
+            Some("product_steward:orders".to_string())
+        );
+        let owner = delegate(ShareDelegation::ProductOwner {
+            product: "orders".to_string(),
+        });
+        assert_eq!(
+            share_authority(&state(), &owner).map(|authority| authority.reason()),
+            Some("product_owner:orders".to_string())
+        );
+        // Admin and node ownership stay first.
+        let admin = ShareActor {
+            admin: true,
+            ..steward.clone()
+        };
+        assert_eq!(share_authority(&state(), &admin), Some(ShareAuthority::Admin));
+        let node_owner = ShareActor {
+            principal_id: "usr:owner".to_string(),
+            ..steward
+        };
+        assert_eq!(share_authority(&state(), &node_owner), Some(ShareAuthority::Owner));
     }
 }

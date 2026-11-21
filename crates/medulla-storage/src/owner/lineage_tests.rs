@@ -115,6 +115,25 @@ fn rbac_before_profile_grants_matches_the_previous_pin() {
     );
 }
 
+// spec: MEDULLA-TYPED-PACKS-R805.3
+#[test]
+fn rbac_before_data_products_matches_the_previous_pin() {
+    let predecessor = &RBAC_BEFORE_DATA_PRODUCTS;
+    let contracts: Vec<_> = crate::owner::contract::expected_table_contracts(OwnerLayout::Rbac)
+        .into_iter()
+        .filter(|contract| {
+            contract.ownership == crate::physical::manifest::TableOwnership::Ledger
+                || predecessor
+                    .owner_tables
+                    .contains(&contract.table_id.as_str())
+        })
+        .collect();
+    assert_eq!(
+        layout_digest_over(OwnerLayout::Rbac, &contracts),
+        RBAC_PRE_DATA_PRODUCTS_DIGEST
+    );
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R172.5.1
 #[test]
 fn agent_library_before_capability_reward_matches_the_previous_pin() {

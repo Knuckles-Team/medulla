@@ -11,11 +11,11 @@
 use super::agent_library_upgrade::{
     inspect_agent_library_capability_reward_upgrade, inspect_agent_library_concept_lineage_upgrade,
     inspect_agent_library_mcp_catalog_upgrade, inspect_agent_library_retry_allowance_upgrade,
-    inspect_graph_shard_upgrade, inspect_kv_cold_tier_upgrade, inspect_rbac_profile_grant_upgrade,
+    inspect_graph_shard_upgrade, inspect_kv_cold_tier_upgrade, inspect_rbac_upgrade,
     inspect_semantic_index_promotion_upgrade, upgrade_agent_library_capability_reward,
     upgrade_agent_library_concept_lineage, upgrade_agent_library_mcp_catalog,
     upgrade_agent_library_retry_allowances, upgrade_graph_shard, upgrade_kv_cold_tier,
-    upgrade_rbac_profile_grants, upgrade_semantic_index_promotion, GraphShardSource,
+    upgrade_rbac, upgrade_semantic_index_promotion, GraphShardSource, RbacSource,
     OwnerLayoutUpgradeReport,
 };
 use super::identity::PhysicalStoreIdentity;
@@ -28,7 +28,7 @@ use super::lineage::{
     GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
     GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
     GRAPH_SHARD_BEFORE_WRITE_LEDGER,
-    KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_PROFILE_GRANTS,
+    KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_DATA_PRODUCTS, RBAC_BEFORE_PROFILE_GRANTS,
     JOBS_BEFORE_JOB_MACHINE, JOBS_BEFORE_TASK_DEAD_LETTERS, JOBS_BEFORE_TASK_QUEUE, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
     SQL_BEFORE_MATVIEWS, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
@@ -260,8 +260,25 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
     ),
     offline_upgrade!(
         RBAC_BEFORE_PROFILE_GRANTS,
-        inspect_rbac_profile_grant_upgrade,
-        upgrade_rbac_profile_grants
+        |path, identity, integrity, options| inspect_rbac_upgrade(
+            path,
+            identity,
+            integrity,
+            options,
+            RbacSource::BeforeProfileGrants
+        ),
+        upgrade_rbac
+    ),
+    offline_upgrade!(
+        RBAC_BEFORE_DATA_PRODUCTS,
+        |path, identity, integrity, options| inspect_rbac_upgrade(
+            path,
+            identity,
+            integrity,
+            options,
+            RbacSource::BeforeDataProducts
+        ),
+        upgrade_rbac
     ),
     offline_upgrade!(
         KV_BEFORE_NAMESPACE_COLD,

@@ -49,6 +49,8 @@ mod graph_lifecycle;
 mod identity_access;
 mod incident;
 mod lifecycle;
+#[cfg(feature = "security")]
+mod data_product;
 mod quality;
 mod resource_cost;
 mod sdlc;
@@ -72,6 +74,8 @@ use control_plane::{
 };
 #[cfg(feature = "query")]
 use data_plane::dispatch_sql_source_methods;
+#[cfg(feature = "security")]
+use data_product::dispatch_data_product_methods;
 use decision_plane::dispatch_decision_plane_methods;
 
 use data_plane::{

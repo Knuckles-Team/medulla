@@ -15,7 +15,7 @@ use super::lineage::{
     AGENT_LIBRARY_BEFORE_MCP_CATALOG, AGENT_LIBRARY_BEFORE_RETRY_ALLOWANCES,
     GRAPH_SHARD_BEFORE_AUDIT_REQUESTS, GRAPH_SHARD_BEFORE_CURRENT_PLANS,
     GRAPH_SHARD_BEFORE_ENRICHMENT, JOBS_BEFORE_JOB_MACHINE, KV_BEFORE_NAMESPACE_COLD,
-    RBAC_BEFORE_PROFILE_GRANTS, SEMANTIC_INDEX_BEFORE_PROMOTION,
+    RBAC_BEFORE_DATA_PRODUCTS, RBAC_BEFORE_PROFILE_GRANTS, SEMANTIC_INDEX_BEFORE_PROMOTION,
 };
 use super::persisted_layout::LayoutPredecessor;
 use super::registry::predecessor_evidence;
@@ -48,12 +48,36 @@ pub(super) enum UpgradeTarget {
     GraphShard(GraphShardSource),
     /// The semantic index before the promotion-gate records.
     SemanticIndex,
-    /// The RBAC store before the profile-use grant records.
-    Rbac,
+    /// An RBAC store of one generation; every one ends at the current layout.
+    Rbac(RbacSource),
     /// The kv store while the KV-cache cold rung still had its own table.
     Kv,
     /// A jobs store of one generation; every one ends at the current layout.
     Jobs(JobsSource),
+}
+
+/// The RBAC generation an offline upgrade starts from. Every one ends at the current layout.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(super) enum RbacSource {
+    /// Before the profile-use grant records (MEDULLA-DECISION-ENGINE-R036.106).
+    BeforeProfileGrants,
+    /// Before the data product, contract and access request records (MEDULLA-TYPED-PACKS-R805.3).
+    BeforeDataProducts,
+}
+
+impl RbacSource {
+    fn descriptor(self) -> (&'static LayoutPredecessor, [u8; 32]) {
+        match self {
+            Self::BeforeProfileGrants => (
+                &RBAC_BEFORE_PROFILE_GRANTS,
+                super::lineage::RBAC_PRE_PROFILE_GRANTS_DIGEST,
+            ),
+            Self::BeforeDataProducts => (
+                &RBAC_BEFORE_DATA_PRODUCTS,
+                super::lineage::RBAC_PRE_DATA_PRODUCTS_DIGEST,
+            ),
+        }
+    }
 }
 
 /// The jobs generation an offline upgrade starts from. Every one ends at the current layout.
@@ -199,7 +223,7 @@ impl UpgradeTarget {
             Self::AgentLibrary(_) => OwnerLayout::AgentLibrary,
             Self::GraphShard(_) => OwnerLayout::GraphShard,
             Self::SemanticIndex => OwnerLayout::SemanticIndex,
-            Self::Rbac => OwnerLayout::Rbac,
+            Self::Rbac(_) => OwnerLayout::Rbac,
             Self::Kv => OwnerLayout::Kv,
             Self::Jobs(_) => OwnerLayout::Jobs,
         }
@@ -210,7 +234,7 @@ impl UpgradeTarget {
             Self::AgentLibrary(source) => source.descriptor().0,
             Self::GraphShard(source) => source.declared_generation(),
             Self::SemanticIndex => &SEMANTIC_INDEX_BEFORE_PROMOTION,
-            Self::Rbac => &RBAC_BEFORE_PROFILE_GRANTS,
+            Self::Rbac(source) => source.descriptor().0,
             Self::Kv => &KV_BEFORE_NAMESPACE_COLD,
             Self::Jobs(source) => source.descriptor().0,
         }
@@ -221,7 +245,7 @@ impl UpgradeTarget {
             Self::AgentLibrary(source) => source.descriptor().1,
             Self::GraphShard(source) => source.frozen_digest(),
             Self::SemanticIndex => super::lineage::SEMANTIC_INDEX_PRE_PROMOTION_DIGEST,
-            Self::Rbac => super::lineage::RBAC_PRE_PROFILE_GRANTS_DIGEST,
+            Self::Rbac(source) => source.descriptor().1,
             Self::Kv => super::lineage::KV_PRE_NAMESPACE_COLD_DIGEST,
             Self::Jobs(source) => source.descriptor().1,
         }
@@ -348,20 +372,22 @@ pub fn inspect_semantic_index_promotion_upgrade(
     )
 }
 
-/// Inspect an RBAC owner file from before the profile-use grant records
-/// (MEDULLA-DECISION-ENGINE-R036.106).
-pub fn inspect_rbac_profile_grant_upgrade(
+/// Inspect an RBAC owner file of the generation `source` names: from before the profile-use
+/// grant records (MEDULLA-DECISION-ENGINE-R036.106) or before the data product records
+/// (MEDULLA-TYPED-PACKS-R805.3).
+pub(super) fn inspect_rbac_upgrade(
     path: &Path,
     expected_physical_identity: PhysicalStoreIdentity,
     private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
     options: SqlSourceCheckpointInspectionOptions,
+    source: RbacSource,
 ) -> Result<ValidatedOwnerLayoutUpgrade, String> {
     inspect_layout_upgrade(
         path,
         expected_physical_identity,
         private_integrity,
         options,
-        UpgradeTarget::Rbac,
+        UpgradeTarget::Rbac(source),
     )
 }
 
@@ -503,13 +529,18 @@ pub fn upgrade_semantic_index_promotion(
     upgrade_layout(token, UpgradeTarget::SemanticIndex)
 }
 
-/// Bring an inspected RBAC file to the current layout in one durable commit:
-/// every authority and reservation row is kept and the profile-use grant table
-/// is created empty.
-pub fn upgrade_rbac_profile_grants(
+/// Bring an inspected RBAC file of either generation to the current layout in one durable
+/// commit: every authority, reservation and grant row is kept and the profile-use grant and
+/// data product tables are created empty where the generation lacks them. The token carries the
+/// generation it was inspected as.
+pub(super) fn upgrade_rbac(
     token: ValidatedOwnerLayoutUpgrade,
 ) -> Result<(StorageKernel, OwnerLayoutUpgradeReport), String> {
-    upgrade_layout(token, UpgradeTarget::Rbac)
+    let target = token.target;
+    if target.layout() != OwnerLayout::Rbac {
+        return Err("owner layout upgrade token targets another store".into());
+    }
+    upgrade_layout(token, target)
 }
 
 /// Bring an inspected kv file to the current layout in one durable commit: every `kv` row
@@ -577,7 +608,7 @@ pub(super) fn upgrade_layout(
             token.source.private_integrity,
             options,
         )?,
-        UpgradeTarget::Rbac => StorageKernel::open_owner_with::<RbacOwner>(
+        UpgradeTarget::Rbac(_) => StorageKernel::open_owner_with::<RbacOwner>(
             &token.source.path,
             current.physical_identity,
             token.source.private_integrity,

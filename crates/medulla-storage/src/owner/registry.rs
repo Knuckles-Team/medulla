@@ -15,6 +15,11 @@ const RBAC: TableDefinition<'static, &str, &[u8]> = TableDefinition::new("rbac")
 /// MEDULLA-DECISION-ENGINE-R036.106: one durable profile-use grant per grant id.
 pub const RBAC_PROFILE_USE_GRANT: TableDefinition<'static, &str, &[u8]> =
     TableDefinition::new("rbac_profile_use_grant");
+/// MEDULLA-TYPED-PACKS-R805.3: data products, their contracts and access requests, one JSON row
+/// each, keyed `product:<tenant>:<id>`, `contract:<tenant>:<id>` and
+/// `request:<tenant>:<product>:<principal>`.
+pub const RBAC_DATA_PRODUCT: TableDefinition<'static, &str, &[u8]> =
+    TableDefinition::new("rbac_data_product");
 const JOB_TABLES_BYTES: [TableDefinition<'static, &str, &[u8]>; 3] = [
     TableDefinition::new("analytics_job_records"),
     TableDefinition::new("job_intents"),
@@ -428,6 +433,7 @@ macro_rules! visit_owner_tables {
             OwnerLayout::Rbac => {
                 $visit!(RBAC);
                 $visit!(RBAC_PROFILE_USE_GRANT);
+                $visit!(RBAC_DATA_PRODUCT);
             }
             OwnerLayout::Jobs => {
                 for table in JOB_TABLES_BYTES {
@@ -907,7 +913,7 @@ pub fn declared_table_names(layout: OwnerLayout) -> Vec<&'static str> {
 pub fn owner_table_names(layout: OwnerLayout) -> &'static [&'static str] {
     match layout {
         OwnerLayout::LedgerOnly => &[],
-        OwnerLayout::Rbac => &["rbac", "rbac_profile_use_grant"],
+        OwnerLayout::Rbac => &["rbac", "rbac_profile_use_grant", "rbac_data_product"],
         OwnerLayout::Jobs => &[
             "analytics_job_records",
             "analytics_job_committed_results",

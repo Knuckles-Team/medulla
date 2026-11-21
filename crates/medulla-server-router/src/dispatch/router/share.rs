@@ -17,9 +17,9 @@ use medulla_isolation::isolation::share::{
 pub(super) const COMMONS_GRAPH: &str = "__commons__";
 
 /// The scope that lets a caller change any node's share.
-const ADMIN_SCOPE: &str = "kg:admin";
+pub(super) const ADMIN_SCOPE: &str = "kg:admin";
 
-type Properties = serde_json::Map<String, serde_json::Value>;
+pub(super) type Properties = serde_json::Map<String, serde_json::Value>;
 
 fn encode(value: &Properties) -> Result<Vec<u8>, String> {
     rmp_serde::to_vec_named(value)
@@ -27,7 +27,7 @@ fn encode(value: &Properties) -> Result<Vec<u8>, String> {
 }
 
 /// The share keys of a node, as committed.
-fn state_of(node_id: &str, properties: &Properties) -> ShareState {
+pub(super) fn state_of(node_id: &str, properties: &Properties) -> ShareState {
     let text = |key: &str| {
         properties
             .get(key)
@@ -64,15 +64,16 @@ fn optional_text(value: &Option<String>) -> serde_json::Value {
 
 /// The answer for a node that does not exist, which is also the answer for a
 /// node the caller cannot see.
-fn node_absent(node_id: &str) -> String {
+pub(super) fn node_absent(node_id: &str) -> String {
     format!("INVALID_ARGUMENT: node '{node_id}' does not exist")
 }
 
 /// Whether the actor may see the node: its owner, a `kg:admin` holder, a named
 /// grantee, or anyone when the node is shared with the org or the commons.
-fn visible_to(state: &ShareState, actor: &ShareActor) -> bool {
+pub(super) fn visible_to(state: &ShareState, actor: &ShareActor) -> bool {
     use medulla_isolation::isolation::share::{SCOPE_COMMONS, SCOPE_ORG};
     actor.admin
+        || actor.delegation.is_some()
         || state.owner_id.as_deref() == Some(actor.principal_id.as_str())
         || state.shared_scope == SCOPE_COMMONS
         || state.shared_scope == SCOPE_ORG
@@ -91,9 +92,9 @@ fn took_effect(response: &Response) -> bool {
 /// Read one node's committed properties through the graph gateway. `Ok(None)`
 /// is an absent node; a refusal (tenant mismatch, access denied) is returned as
 /// the refusal text.
-async fn read_node(
+pub(super) async fn read_node(
     state: &Arc<RwLock<ServerState>>,
-    req: &Request,
+    req: &DispatchHeader,
     verified_context: &VerifiedRequestContext,
     graph: &str,
     node_id: &str,
@@ -123,7 +124,7 @@ async fn read_node(
 
 async fn write(
     state: &Arc<RwLock<ServerState>>,
-    req: &Request,
+    req: &DispatchHeader,
     verified_context: &VerifiedRequestContext,
     graph: &str,
     method: Method,
@@ -147,7 +148,7 @@ async fn write(
 /// first write, so a refused share changes nothing.
 pub(super) async fn apply_share_op(
     state: &Arc<RwLock<ServerState>>,
-    req: &Request,
+    req: &DispatchHeader,
     verified_context: &VerifiedRequestContext,
     op: RbacAdminOp,
 ) -> Response {
@@ -168,7 +169,7 @@ pub(super) async fn apply_share_op(
 
 async fn share_op_outcome(
     state: &Arc<RwLock<ServerState>>,
-    req: &Request,
+    req: &DispatchHeader,
     verified_context: &VerifiedRequestContext,
     op: RbacAdminOp,
 ) -> Result<(), String> {
@@ -196,6 +197,7 @@ async fn share_op_outcome(
     let actor = ShareActor {
         principal_id: verified_context.principal().to_string(),
         admin: verified_context.allows_action(ADMIN_SCOPE),
+        delegation: None,
     };
     if !visible_to(&current, &actor) {
         return Err(node_absent(&node_id));
@@ -234,7 +236,7 @@ async fn share_op_outcome(
 /// The phase of a share's audit event: the reservation before any write, then the
 /// outcome.
 #[derive(Clone, Copy)]
-enum SharePhase {
+pub(super) enum SharePhase {
     Reserved,
     Ok,
     Error,
@@ -248,6 +250,9 @@ pub(crate) struct ShareEvent {
     pub(crate) next: String,
     pub(crate) grantee_digest: String,
     pub(crate) request_id: String,
+    /// The reason the actor was allowed to change the share, when it acted under a
+    /// verified product role (MEDULLA-TYPED-PACKS-R805.3); the audit entry records it.
+    pub(crate) authority: Option<String>,
 }
 
 impl ShareEvent {
@@ -267,7 +272,14 @@ impl ShareEvent {
             next: next.to_string(),
             grantee_digest: grantee_digest(grants),
             request_id: uuid::Uuid::new_v4().to_string(),
+            authority: None,
         }
+    }
+
+    /// The same event with the reason the actor was allowed to share.
+    pub(crate) fn with_authority(mut self, reason: String) -> Self {
+        self.authority = Some(reason);
+        self
     }
 
     /// The operation-audit record of one phase of this share.
@@ -290,7 +302,10 @@ impl ShareEvent {
             request_id: self.request_id.clone(),
             audit_class: "event".to_string(),
             subject_iri: Some(self.node_id.clone()),
-            policy_iri: Some(format!("{}->{}", self.prior, self.next)),
+            policy_iri: Some(match &self.authority {
+                Some(reason) => format!("{}->{};authority={reason}", self.prior, self.next),
+                None => format!("{}->{}", self.prior, self.next),
+            }),
         }
     }
 }
@@ -310,9 +325,9 @@ fn grantee_digest(grants: &[String]) -> String {
 /// Append one phase of a share's `OP_AUDIT` event to the request graph's audit
 /// chain. The commit revision of a share is the chain `seq` of its `Ok` entry.
 #[cfg(feature = "security")]
-async fn record_share_event(
+pub(super) async fn record_share_event(
     state: &Arc<RwLock<ServerState>>,
-    req: &Request,
+    req: &DispatchHeader,
     verified_context: &VerifiedRequestContext,
     event: &ShareEvent,
     phase: SharePhase,
@@ -341,9 +356,9 @@ async fn record_share_event(
 }
 
 #[cfg(not(feature = "security"))]
-async fn record_share_event(
+pub(super) async fn record_share_event(
     _state: &Arc<RwLock<ServerState>>,
-    _req: &Request,
+    _req: &DispatchHeader,
     _verified_context: &VerifiedRequestContext,
     _event: &ShareEvent,
     _phase: SharePhase,
@@ -353,9 +368,9 @@ async fn record_share_event(
 
 /// Commit an accepted share: the commons copy first on a promotion, then the
 /// node's keys, then the copy removal on a revoke.
-async fn commit_share(
+pub(super) async fn commit_share(
     state: &Arc<RwLock<ServerState>>,
-    req: &Request,
+    req: &DispatchHeader,
     verified_context: &VerifiedRequestContext,
     node_id: &str,
     properties: &Properties,

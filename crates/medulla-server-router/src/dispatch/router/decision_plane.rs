@@ -13,6 +13,8 @@ pub async fn dispatch_decision_plane_methods(
     let method = dispatch_source_sync_method(ctx, method).await?;
     let method = dispatch_decision_methods(ctx, method).await?;
     let method = dispatch_write_back_method(ctx, method).await?;
+    #[cfg(feature = "security")]
+    let method = dispatch_data_product_methods(ctx, method).await?;
     dispatch_catalog_admin_methods(ctx, method).await
 }
 

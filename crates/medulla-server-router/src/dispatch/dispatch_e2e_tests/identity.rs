@@ -24,6 +24,7 @@ use super::super::test_support::{
 
 mod approval_keys;
 mod client_session;
+mod data_product;
 mod delegation_record;
 mod policy_bundle;
 mod refusal_contract;

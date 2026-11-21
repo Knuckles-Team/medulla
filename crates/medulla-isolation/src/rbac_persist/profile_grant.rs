@@ -17,7 +17,7 @@ use std::path::Path;
 
 use medulla_storage::{
     InspectedStoreUpgrade, OfflineUpgradeInspectionOptions, PhysicalStoreIdentity,
-    RBAC_BEFORE_PROFILE_GRANTS,
+    RBAC_BEFORE_DATA_PRODUCTS, RBAC_BEFORE_PROFILE_GRANTS,
 };
 use medulla_types::profile_grant_machine::{ProfileGrantEvent, ProfileGrantState};
 use redb::{ReadableTable, TableDefinition};
@@ -215,19 +215,25 @@ pub fn inspect_rbac_layout(
     dir: &Path,
     staging_root: &Path,
 ) -> Result<InspectedRbacLayout, RbacPersistError> {
-    let upgrade = medulla_storage::registered_offline_upgrade(&RBAC_BEFORE_PROFILE_GRANTS).ok_or(
-        RbacPersistError::IncompleteState(
-            "no offline upgrade is registered for the predecessor RBAC layout",
-        ),
-    )?;
-    let options = OfflineUpgradeInspectionOptions::new(staging_root.to_path_buf(), 256 << 20)
-        .map_err(RbacPersistError::Redb)?;
     let identity =
         PhysicalStoreIdentity::new(RBAC_PHYSICAL_STORE).map_err(RbacPersistError::Redb)?;
-    let inspected = upgrade
-        .inspect(&dir.join("rbac.redb"), identity, None, options)
-        .map_err(RbacPersistError::Redb)?;
-    Ok(InspectedRbacLayout { inspected })
+    // The file is a predecessor of exactly one generation: the newest is tried first, and a
+    // generation the file does not match refuses, so the next one is tried.
+    let mut refusal = None;
+    for predecessor in [&RBAC_BEFORE_DATA_PRODUCTS, &RBAC_BEFORE_PROFILE_GRANTS] {
+        let upgrade = medulla_storage::registered_offline_upgrade(predecessor).ok_or(
+            RbacPersistError::IncompleteState(
+                "no offline upgrade is registered for the predecessor RBAC layout",
+            ),
+        )?;
+        let options = OfflineUpgradeInspectionOptions::new(staging_root.to_path_buf(), 256 << 20)
+            .map_err(RbacPersistError::Redb)?;
+        match upgrade.inspect(&dir.join("rbac.redb"), identity.clone(), None, options) {
+            Ok(inspected) => return Ok(InspectedRbacLayout { inspected }),
+            Err(error) => refusal = Some(error),
+        }
+    }
+    Err(RbacPersistError::Redb(refusal.unwrap_or_default()))
 }
 
 /// Bring an inspected predecessor RBAC file to the current layout in one durable commit. Every
