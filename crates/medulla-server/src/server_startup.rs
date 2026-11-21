@@ -682,7 +682,7 @@ pub fn compose_server_state(
     limits: &AdmissionLimits,
     (txn_ttl_secs, txn_max_per_graph, txn_max_per_agent): (u64, usize, usize),
 ) -> ServerState {
-    crate::seams_install::install_seams(&state);
+    crate::seams_install::install_state_seams(&state);
     #[cfg(feature = "plan-modalities")]
     crate::plan_modalities::register_plan_modalities()
         .expect("plan modality registration and store authority are consistent");

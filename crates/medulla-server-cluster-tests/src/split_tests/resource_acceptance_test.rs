@@ -1130,7 +1130,7 @@ async fn attach_multi_raft(cluster: &Cluster) {
         // Every member re-enters through the dispatch seam when it applies a committed
         // native command, so install it before any entry replicates: a follower that
         // gets it only when the test first reads its backend refuses every apply.
-        medulla_server::seams_install::install_seams(&guard);
+        medulla_server::seams_install::install_seams(&guard, &state);
         let raft = guard.raft_handle().cloned();
         guard.install_multi_raft_placement_authority(raft, multi);
     }
@@ -1213,7 +1213,7 @@ fn state_for(
     // The cluster fixture builds its state below the server crate: carry the dispatch seam the
     // replicated apply path re-enters through.
     if let Ok(guard) = state.try_read() {
-        medulla_server::seams_install::install_seams(&guard);
+        medulla_server::seams_install::install_seams(&guard, &state);
     }
     state
 }

@@ -5,9 +5,39 @@
 
 use medulla_server_api::state::ServerState;
 
-/// Install the seam implementations. Called once while the startup composes the state.
+/// Install every seam on a state that is already shared (MEDULLA-ORCH-VOCAB-R013.7.5): the
+/// state-free seams, then the walkthrough readers, which hold a clone of `shared` and take its
+/// read lock for one read at a time.
+pub fn install_seams(state: &ServerState, shared: &std::sync::Arc<tokio::sync::RwLock<ServerState>>) {
+    install_state_seams(state);
+    install_walkthrough_seam(state, shared);
+}
+
+/// Install the walkthrough readers once, in the `L6` slot.
+pub fn install_walkthrough_seam(
+    state: &ServerState,
+    shared: &std::sync::Arc<tokio::sync::RwLock<ServerState>>,
+) {
+    use medulla_server_api::walkthrough_readers::{
+        install_walkthrough_readers, WalkthroughReaders,
+    };
+    let _ = install_walkthrough_readers(
+        &state.seams,
+        WalkthroughReaders::new(
+            std::sync::Arc::new(crate::walkthrough_readers::GraphIndexReader::new(
+                std::sync::Arc::clone(shared),
+            )),
+            std::sync::Arc::new(crate::walkthrough_readers::ServerBlobReader::new(
+                std::sync::Arc::clone(shared),
+            )),
+        ),
+    );
+}
+
+/// Install the seam implementations that need no shared state. Called while the startup
+/// composes the state, before it is shared; `install_walkthrough_seam` follows once it is.
 #[allow(unused_variables)]
-pub fn install_seams(state: &ServerState) {
+pub fn install_state_seams(state: &ServerState) {
     // L1 server helpers: none (moved items need no installation).
 
     // L2 dispatch re-entry.
@@ -143,12 +173,12 @@ pub fn new_state_for_test(
     isolation: medulla_isolation::isolation::IsolationLayer,
 ) -> ServerState {
     let state = ServerState::new_for_test(auth_secret, isolation);
-    install_seams(&state);
+    install_state_seams(&state);
     state
 }
 
 /// Install every seam on a shared state built by a harness below this crate.
 #[cfg(any(test, feature = "test-support"))]
 pub async fn install_seams_on(state: &std::sync::Arc<tokio::sync::RwLock<ServerState>>) {
-    install_seams(&*state.read().await);
+    install_seams(&*state.read().await, state);
 }

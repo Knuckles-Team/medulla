@@ -675,7 +675,7 @@ mod admission_tests {
         state2.max_in_flight = Arc::new(Semaphore::new(64));
         state2.read_admission = Arc::new(Semaphore::new(64));
         state2.per_graph_inflight_limit = 32;
-        medulla_server::seams_install::install_seams(&state2);
+        medulla_server::seams_install::install_state_seams(&state2);
         let state2 = Arc::new(RwLock::new(state2));
         {
             let mut s = state2.write().await;

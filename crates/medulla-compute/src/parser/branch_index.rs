@@ -20,7 +20,7 @@
 use std::collections::{BTreeMap, HashMap};
 
 use medulla_ingestion_types::ingestion_wire::{
-    ExtractedEdge, IndexFileOutcome, IndexFileVerdict, IndexRepositoryScope, IndexResult,
+    ExtractedEdge, ExtractedNode, IndexFileOutcome, IndexFileVerdict, IndexRepositoryScope, IndexResult,
     ParseResult,
 };
 
@@ -132,6 +132,7 @@ pub fn index_branches(
     let endpoints = evidence_endpoints(&catalog, &units.digests, &results);
     record_resolved_facts(&mut evidence, &endpoints, &out.edges);
 
+    stamp_source_provenance(&catalog, &units.digests, &results, &mut out.nodes);
     project_scope(&catalog, &mut out.nodes, &mut out.edges);
     out.files_parsed = outcomes
         .iter()
@@ -140,6 +141,50 @@ pub fn index_branches(
     out.native_rung_evidence = evidence;
     out.file_outcomes = units.restore_names(outcomes);
     Ok(out)
+}
+
+/// MEDULLA-ORCH-VOCAB-R013.7.5: every entity node carries `source_revision` (the revision of the
+/// first live ref, in ref-name order, that binds the entity's blob) and `source_digest` (the
+/// lowercase hex SHA-256 of the entity's source text, which the parser records as `ast_hash`), so a
+/// walkthrough source ref can be checked against the indexed snapshot.
+fn stamp_source_provenance(
+    catalog: &ScopeCatalog<'_>,
+    digests: &[String],
+    results: &[ParseResult],
+    nodes: &mut [ExtractedNode],
+) {
+    let mut revision_of_digest: HashMap<&str, &str> = HashMap::new();
+    for (&(ref_name, _), &digest) in &catalog.memberships {
+        if let Some(item) = catalog
+            .scope
+            .refs
+            .iter()
+            .find(|item| item.ref_name == ref_name)
+        {
+            revision_of_digest
+                .entry(digest)
+                .or_insert(item.revision_id.as_str());
+        }
+    }
+    let mut revision_of_node: HashMap<&str, &str> = HashMap::new();
+    for (result, digest) in results.iter().zip(digests) {
+        if let Some(&revision) = revision_of_digest.get(digest.as_str()) {
+            for node in &result.nodes {
+                revision_of_node.insert(node.node_id.as_str(), revision);
+            }
+        }
+    }
+    for node in nodes {
+        let Some(&revision) = revision_of_node.get(node.node_id.as_str()) else {
+            continue;
+        };
+        let Some(digest) = node.properties.get("ast_hash").cloned() else {
+            continue;
+        };
+        node.properties
+            .insert("source_revision".to_string(), revision.to_string());
+        node.properties.insert("source_digest".to_string(), digest);
+    }
 }
 
 fn evidence_endpoints(

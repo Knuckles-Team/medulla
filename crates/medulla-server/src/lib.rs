@@ -41,6 +41,8 @@ pub mod issuer_trust;
 pub mod plan_modalities;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod seams_install;
+/// Production walkthrough readers (MEDULLA-ORCH-VOCAB-R013.7.5).
+pub mod walkthrough_readers;
 
 /// Verified minimum stack for engine Tokio workers.
 ///

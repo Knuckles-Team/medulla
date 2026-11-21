@@ -480,6 +480,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
     server_state.write_conflict_strategy =
         server_startup::parse_write_conflict_strategy(&args.write_conflict_strategy);
     let state = Arc::new(RwLock::new(server_state));
+    medulla_server::seams_install::install_walkthrough_seam(&*state.read().await, &state);
 
     // Compose the ordinary process as a real local-placement server before any
     // listeners are started.  A configured Raft startup replaces this authority
