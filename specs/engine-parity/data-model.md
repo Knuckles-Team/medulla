@@ -38,16 +38,16 @@ This file describes the entities that the rows add or extend.
 
 ### MatViewSpec
 
-- Fields: `MatViewSpec{name, query, inputs, refreshed_seq, stale}`; stored in the catalog table `sql_matviews`, with the result rows in a user table. Owner: new `crates/medulla-table-store/src/tables/matview.rs`.
+- Fields: `MatViewSpec{name, select_sql, inputs, owner, refreshed_seq, stale}`; stored msgpack in the redb catalog table `__sql_matviews__`, written only by `TxnOp::PutMatView` and removed by `TxnOp::DropMatView`, with the result rows in a user table named like the view (R014.1). Owner: new `crates/medulla-table-store/src/tables/matview.rs`.
 
 ### CdcEvent extension
 
 - Adds the kinds `InsertRow`, `UpdateRow`, `DeleteRow` to `CdcKind` and a `table` field to `CdcEvent`. Owner: `crates/medulla-query-types/src/wire_streaming.rs`.
 
-### RecoveryTarget and ArchivePolicy
+### ArchivePolicy and ArchiveSegment
 
-- Fields: `RecoveryTarget` is `Seq(u64)` or `TimeMs(u64)`; `ArchivePolicy{segment_bytes, retain_s, interval_s}`. Owner: new `crates/medulla-storage/src/recovery/archive.rs`.
+- Fields: `ArchivePolicy{segment_bytes, retain_s, interval_s}`; `ArchiveSegment{scope_key, records}` (each record the stored ledger bytes); `ArchivePassReport{segments_written, records_archived}`. The restore target is the existing `ReplayTarget` (`Sequence(u64)` or `Time(String)`) of `crates/medulla-storage/src/recovery/archive.rs`. A scope's archived position is derived from the archive manifest (`ObjectArchive::archived_end`), never stored. Owner: new `crates/medulla-storage/src/recovery/archiver.rs` (R016.1).
 
 ### EngineCapabilities
 
-- Fields: `{wire_features, index_kinds, constraint_kinds, compat_matrix_digest, replication, pitr}`. Owner: `crates/medulla-catalog-types/src/engine_capabilities.rs`.
+- Fields: `{server_version, wire_features, index_kinds, constraint_kinds, compat_matrix_digest, replication, pitr}`, filled by `EngineCapabilities::for_build` (R020.2). Owner: `crates/medulla-catalog-types/src/engine_capabilities.rs`.

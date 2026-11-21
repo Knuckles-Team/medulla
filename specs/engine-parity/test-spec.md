@@ -23,6 +23,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R006.1` | `crates/medulla-wire-core/src/wire/sqlstate.rs::tests::table_is_closed_and_unique`; `tests/pgwire_roundtrip.rs::extended_query_prepared_and_copy` | planned |
 | `MEDULLA-ENGINE-PARITY-R006.2` | `tests/pgwire_roundtrip.rs::unsupported_message_refuses_0a000` | bound |
 | `MEDULLA-ENGINE-PARITY-R006.3` | `tests/pgwire_roundtrip.rs::prepared_point_read_plan_cache_hits`; bench group `engine_parity/pgwire_prepared_read` | planned |
+| `MEDULLA-ENGINE-PARITY-R006.4` | `crates/medulla-wire/src/pgwire/plan_cache.rs::tests::second_execute_of_one_template_is_a_hit`; `tests/pgwire_roundtrip.rs::prepared_point_read_plan_cache_hits` | planned |
 | `MEDULLA-ENGINE-PARITY-R007.1` | `crates/medulla-wire/src/pgwire/auth.rs::tests::three_login_kinds_resolve_one_principal`; `tests/pgwire_roundtrip.rs::wire_rls_equals_native_rls` | planned |
 | `MEDULLA-ENGINE-PARITY-R007.2` | `tests/pgwire_roundtrip.rs::wire_rls_equals_native_rls`; `Method::Uql` | existing |
 | `MEDULLA-ENGINE-PARITY-R007.3` | `tests/pgwire_roundtrip.rs::login_maps_to_principal`; `tests/pgwire_roundtrip.rs::certificate_login_maps_to_principal`; bench group `engine_parity/pgwire_login` | existing |
@@ -32,7 +33,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R008.3` | `tests/pgwire_roundtrip.rs::introspection_fixture_total_latency`; bench group `engine_parity/introspection` | planned |
 | `MEDULLA-ENGINE-PARITY-R009.1` | `crates/medulla-sql-tests/tests/compat.rs::matrix_loads_and_is_closed`; `tests/test_sql_compat_conformance.py::test_supported_entries_pass` | planned |
 | `MEDULLA-ENGINE-PARITY-R009.2` | `crates/medulla-sql-tests/tests/compat.rs::every_supported_entry_has_a_test`; `tests/pgwire_roundtrip.rs::refused_form_returns_0a000` | bound |
-| `MEDULLA-ENGINE-PARITY-R009.3` | `tests/test_sql_compat_conformance.py::test_supported_entries_pass` | planned |
+| `MEDULLA-ENGINE-PARITY-R009.3` | `tests/pgwire_roundtrip.rs::compat_matrix_entries_replay_over_pgwire` | planned |
 | `MEDULLA-ENGINE-PARITY-R010.1` | `crates/medulla-sql-tests/tests/index.rs::partial_index_holds_only_matching_rows`; `tests/pgwire_roundtrip.rs::create_partial_index_over_wire_is_used` | planned |
 | `MEDULLA-ENGINE-PARITY-R010.2` | `crates/medulla-sql-tests/tests/index.rs::planner_uses_partial_index`; `crates/medulla-sql-tests/tests/index.rs::nondeterministic_expression_refuses` | bound |
 | `MEDULLA-ENGINE-PARITY-R010.3` | `tests/pgwire_roundtrip.rs::create_partial_index_over_wire_is_used`; bench group `engine_parity/index_probe` | existing |
@@ -51,14 +52,15 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R015.1` | `crates/medulla-server-cdc/src/cdc.rs::tests::row_changes_emit_in_commit_order`; `tests/test_change_subscribe_served.py::test_cdc_read_resumes_and_expires` | existing |
 | `MEDULLA-ENGINE-PARITY-R015.2` | `tests/test_change_subscribe_served.py::test_cdc_read_resumes_and_expires` | existing |
 | `MEDULLA-ENGINE-PARITY-R015.3` | `tests/test_change_subscribe_served.py::test_thousand_changes_arrive_in_order`; bench group `engine_parity/cdc_emit` | planned |
-| `MEDULLA-ENGINE-PARITY-R016.1` | `crates/medulla-storage/tests/archive.rs::restore_reaches_target_seq`; `tests/test_pitr_served.py::test_restore_to_time` | planned |
+| `MEDULLA-ENGINE-PARITY-R016.1` | `crates/medulla-transaction/src/tests/archive_pass.rs::archive_pass_writes_ordered_segments_and_resumes`; `tests/test_pitr_served.py::test_restore_to_time` | planned |
 | `MEDULLA-ENGINE-PARITY-R016.2` | `tests/test_pitr_served.py::test_restore_to_time`; `tests/test_pitr_served.py::test_target_past_archive_refuses` | planned |
 | `MEDULLA-ENGINE-PARITY-R016.3` | `tests/test_pitr_served.py::test_restore_drill_no_lost_sequences`; bench group `engine_parity/pitr_restore_drill` | planned |
+| `MEDULLA-ENGINE-PARITY-R016.4` | `crates/medulla-transaction/src/tests/archive_pass.rs::retention_expires_old_segments_and_keeps_the_newest` | planned |
 | `MEDULLA-ENGINE-PARITY-R019.1` | `crates/medulla-storage/tests/provider.rs::provider_set_is_closed`; `tests/test_external_source_boundary.py::test_engine_data_never_syncs_out` | planned |
 | `MEDULLA-ENGINE-PARITY-R019.2` | `tests/test_external_source_boundary.py::test_engine_data_never_syncs_out`; `crates/medulla-storage/src/backend_spec.rs::outside_database_endpoint_schemes_refuse_by_name` | existing |
 | `MEDULLA-ENGINE-PARITY-R019.3` | `tests/test_external_source_boundary.py::test_federated_join_pushes_down`; bench group `engine_parity/external_join` | planned |
 | `MEDULLA-ENGINE-PARITY-R020.1` | `crates/medulla-types/tests/engine_capabilities.rs::report_round_trips` | existing |
-| `MEDULLA-ENGINE-PARITY-R020.2` | `tests/test_engine_capabilities_served.py::test_report_matches_features` | planned |
+| `MEDULLA-ENGINE-PARITY-R020.2` | `tests/test_engine_capabilities_served.py::test_report_matches_features`; `crates/medulla-wire/src/pgwire/mod.rs::tests::startup_parameters_come_from_the_capability_report` | planned |
 
 ## Negative and boundary cases
 
@@ -78,7 +80,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 - A standard PostgreSQL client connects over TLS, introspects the catalog, runs prepared statements and COPY, and reads under row security (`tests/pgwire_roundtrip.rs`).
 - 64 concurrent writers share one fsync; disjoint writers never wait (`MEDULLA-ENGINE-PARITY-R001.3`, `MEDULLA-ENGINE-PARITY-R004.3`).
 - A subscriber follows the change feed, stops and resumes from its cursor (`MEDULLA-ENGINE-PARITY-R015.2`).
-- A restore to a chosen sequence matches the fingerprint recorded at that sequence (`MEDULLA-ENGINE-PARITY-R016.1`).
+- The archiver writes contiguous, non-overlapping segments covering every committed sequence and resumes from the manifest (`MEDULLA-ENGINE-PARITY-R016.1`); a restore to a chosen sequence matches the fingerprint recorded at that sequence (`MEDULLA-ENGINE-PARITY-R016.2`).
 
 ## Quality and release proof
 

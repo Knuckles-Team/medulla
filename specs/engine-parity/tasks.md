@@ -18,17 +18,18 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T012 [P] [US1] MEDULLA-ENGINE-PARITY-R005.3 Write throughput benchmark suite and targets: hot-path proof
 - [ ] T013 [US2] MEDULLA-ENGINE-PARITY-R006.1 PostgreSQL wire protocol front end: model and behavior
 - [x] T014 [US2] MEDULLA-ENGINE-PARITY-R006.2 PostgreSQL wire protocol front end: wiring and refusal
-- [ ] T015 [P] [US2] MEDULLA-ENGINE-PARITY-R006.3 PostgreSQL wire protocol front end: hot-path proof
+- [ ] T056 [US2] MEDULLA-ENGINE-PARITY-R006.4 PostgreSQL wire protocol front end: splice `PlanCache::prepare` into the pgwire extended query for reads, with the process hit counter
+- [ ] T015 [P] [US2] MEDULLA-ENGINE-PARITY-R006.3 PostgreSQL wire protocol front end: hot-path proof (10,000 prepared reads, plan-cache hit counter)
 - [ ] T016 [US2] MEDULLA-ENGINE-PARITY-R007.1 Wire authentication mapped to engine principals and row security: model and behavior
 - [ ] T017 [US2] MEDULLA-ENGINE-PARITY-R007.2 Wire authentication mapped to engine principals and row security: wiring and refusal
 - [x] T018 [P] [US2] MEDULLA-ENGINE-PARITY-R007.3 Wire authentication mapped to engine principals and row security: hot-path proof
-- [ ] T019 [US2] MEDULLA-ENGINE-PARITY-R007.4 Wire authentication mapped to engine principals and row security: wiring: grant and revoke wire logins
+- [ ] T019 [US2] MEDULLA-ENGINE-PARITY-R007.4 Wire authentication: `IdentityOp::WireLogin` grant and revoke in the identity store; pgwire reads logins from the identity store through the TTL cache; delete the process registry
 - [x] T020 [US2] MEDULLA-ENGINE-PARITY-R008.1 Catalog views for outside tools: model and behavior
-- [ ] T021 [US2] MEDULLA-ENGINE-PARITY-R008.2 Catalog views for outside tools: wiring and refusal
+- [ ] T021 [US2] MEDULLA-ENGINE-PARITY-R008.2 Catalog views for outside tools: introspection fixture and the served test proving the catalog lists only selectable tables
 - [ ] T022 [P] [US2] MEDULLA-ENGINE-PARITY-R008.3 Catalog views for outside tools: hot-path proof
 - [ ] T023 [US2] MEDULLA-ENGINE-PARITY-R009.1 SQL dialect compatibility matrix: model and behavior
 - [x] T024 [US2] MEDULLA-ENGINE-PARITY-R009.2 SQL dialect compatibility matrix: wiring and refusal
-- [ ] T025 [P] [US2] MEDULLA-ENGINE-PARITY-R009.3 SQL dialect compatibility matrix: hot-path proof
+- [ ] T025 [P] [US2] MEDULLA-ENGINE-PARITY-R009.3 SQL dialect compatibility matrix: `statements.json` fixture replayed over pgwire for every matrix entry
 - [ ] T026 [US3] MEDULLA-ENGINE-PARITY-R010.1 Partial and expression indexes on user tables: model and behavior
 - [x] T027 [US3] MEDULLA-ENGINE-PARITY-R010.2 Partial and expression indexes on user tables: wiring and refusal
 - [x] T028 [P] [US3] MEDULLA-ENGINE-PARITY-R010.3 Partial and expression indexes on user tables: hot-path proof
@@ -41,21 +42,21 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [ ] T035 [US3] MEDULLA-ENGINE-PARITY-R013.1 Named sequences: model and behavior
 - [x] T036 [US3] MEDULLA-ENGINE-PARITY-R013.2 Named sequences: wiring and refusal
 - [x] T037 [P] [US3] MEDULLA-ENGINE-PARITY-R013.3 Named sequences: hot-path proof
-- [ ] T038 [US3] MEDULLA-ENGINE-PARITY-R014.1 Views and materialized views over tables: model and behavior
+- [ ] T038 [US3] MEDULLA-ENGINE-PARITY-R014.1 Materialized views: classify create, refresh and drop; `MatViewSpec` in `__sql_matviews__`; result table built from the authorized read
 - [ ] T039 [US3] MEDULLA-ENGINE-PARITY-R014.2 Views and materialized views over tables: wiring and refusal
 - [ ] T040 [P] [US3] MEDULLA-ENGINE-PARITY-R014.3 Views and materialized views over tables: hot-path proof
 - [x] T041 [US4] MEDULLA-ENGINE-PARITY-R015.1 Change data capture for graph and table rows: model and behavior
 - [x] T042 [US4] MEDULLA-ENGINE-PARITY-R015.2 Change data capture for graph and table rows: wiring and refusal
 - [ ] T043 [P] [US4] MEDULLA-ENGINE-PARITY-R015.3 Change data capture for graph and table rows: hot-path proof
-- [ ] T044 [US4] MEDULLA-ENGINE-PARITY-R016.1 Point-in-time recovery from a backup bundle and archived batches: model and behavior
+- [ ] T044 [US4] MEDULLA-ENGINE-PARITY-R016.1 Archiver: copy committed ledger batch records into archive segments per scope, resuming from the manifest
 - [ ] T045 [US4] MEDULLA-ENGINE-PARITY-R016.2 Point-in-time recovery from a backup bundle and archived batches: wiring and refusal
 - [ ] T046 [P] [US4] MEDULLA-ENGINE-PARITY-R016.3 Point-in-time recovery from a backup bundle and archived batches: hot-path proof
+- [ ] T057 [US4] MEDULLA-ENGINE-PARITY-R016.4 Archive segment retention by age, keeping each scope's newest segment
 - [ ] T047 [US5] MEDULLA-ENGINE-PARITY-R019.1 Outside PostgreSQL databases are sources only: model and behavior
 - [x] T048 [US5] MEDULLA-ENGINE-PARITY-R019.2 Outside PostgreSQL databases are sources only: wiring and refusal
-- [ ] T049 [P] [US5] MEDULLA-ENGINE-PARITY-R019.3 Outside PostgreSQL databases are sources only: hot-path proof
+- [ ] T049 [P] [US5] MEDULLA-ENGINE-PARITY-R019.3 Outside PostgreSQL databases are sources only: hot-path proof (PROFILE `fetched=` pushdown signal, DSN fixture, test extra)
 - [ ] T050 [US5] MEDULLA-ENGINE-PARITY-R020.1 Capability report: model and behavior
-- [ ] T051 [US5] MEDULLA-ENGINE-PARITY-R020.2 Capability report: wiring and refusal
-- [x] T051 [US5] MEDULLA-ENGINE-PARITY-R020.2 Capability report: wiring and refusal
+- [ ] T051 [US5] MEDULLA-ENGINE-PARITY-R020.2 Capability report: serve `Method::EngineCapabilities` from `EngineCapabilities::for_build`
 - [ ] T052 [US5] MEDULLA-ENGINE-PARITY-R021 Remaining lifecycles are explicit state machines (rollup)
 - [ ] T053 [US5] MEDULLA-ENGINE-PARITY-R021.1 MachineInstance/InstanceStatus state machine: route 1 census findings through InstanceStatus::apply
 - [ ] T054 [US5] MEDULLA-ENGINE-PARITY-R021.2 SqlFormEntry/SqlFormState state machine: route 1 census findings through SqlFormState::apply

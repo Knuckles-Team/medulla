@@ -35,7 +35,7 @@ Every arrow stays inside the library except the wire listener, the archive targe
 
 - **Language/Version**: Rust 2021 edition on the pinned toolchain; Python 3.14 (floor 3.12) for served tests.
 - **Primary Dependencies**: `crates/medulla-persistence`, `crates/medulla-transaction`, `crates/medulla-table-store`, `crates/medulla-tables`, `crates/medulla-sql`, `crates/medulla-sql-lang`, `crates/medulla-wire`, `crates/medulla-wire-core`, `crates/medulla-server-cdc`, `crates/medulla-storage`, `crates/medulla-statechart`. No new third-party dependency.
-- **Storage**: redb store files with new catalog tables `sql_sequences` and `sql_matviews`; archive segments in the object root of `MEDULLA-OBJECT-STORAGE-BACKEND`.
+- **Storage**: redb store files with new catalog tables `sql_sequences` and `__sql_matviews__`; archive segments in the object root of `MEDULLA-OBJECT-STORAGE-BACKEND`.
 - **Testing**: Rust tests in `crates/medulla-sql-tests/tests/`, `crates/medulla-transaction/tests/` and root `tests/pgwire_roundtrip.rs` (L1 to L3); served Python tests under `tests/` (L4); nightly benchmark groups in `benches/engine_parity.rs` (L6).
 - **Target Platform**: Linux x86_64 and aarch64.
 - **Project Type**: Storage, query and wire additions to the existing engine crates.
@@ -63,7 +63,11 @@ crates/medulla-sql/src/sql/catalog.rs          existing: new catalog providers
 crates/medulla-wire-core/src/wire/sqlstate.rs  new: closed SQLSTATE table
 crates/medulla-identity-types/src/identity/    existing ops.rs; new wire_login.rs
 crates/medulla-server-cdc/src/cdc.rs           existing: emit_row_changes
-crates/medulla-storage/src/recovery/archive.rs new: archive_scope, replay_to
+crates/medulla-storage/src/recovery/archive.rs existing: ReplayTarget, replay_to
+crates/medulla-storage/src/recovery/archiver.rs new: ArchivePolicy, ArchiveSegment, archive_store_pass
+crates/medulla-persistence/src/redb_backend/backend_archive.rs new: RedbBackend::archive_pass
+crates/medulla-wire/src/pgwire/plan_cache.rs   new: prepared read classification hit counter (R006.4)
+crates/medulla-wire-core/src/wire/matview.rs   new: materialized view create, refresh, drop
 benches/engine_parity.rs                       new: W1 to W5 and the nightly groups
 ```
 
@@ -100,7 +104,7 @@ Data entities are in [data-model.md](data-model.md); the shortest served proof i
 - `R015.1`: the hub is installed as the tenant store's row-change sink by `handle_sql`; the ring is the knob `cdc.ring_events`; a row event is a `Row` change on `ReadGraphChanges` gated by `cdc:read` and the table's SELECT grant.
 
 ### Wire login resolution (R007.1)
-`resolve_wire_login` (`crates/medulla-wire-core/src/sql_wire_auth.rs`) checks the record, its state and the kind's verifier. The pgwire startup handler routes a login by its record: `Password` and engine agents run SCRAM, `Token` runs the cleartext password message, `Certificate` reads the mTLS leaf. A successful login acts as the record's `principal` (`bind_startup_from_client`). Records live in the process registry `wire_login_registry()`; R007.4 fills it from the identity store.
+`resolve_wire_login` (`crates/medulla-wire-core/src/sql_wire_auth.rs`) checks the record, its state and the kind's verifier. The pgwire startup handler routes a login by its record: `Password` and engine agents run SCRAM, `Token` runs the cleartext password message, `Certificate` reads the mTLS leaf. A successful login acts as the record's `principal` (`bind_startup_from_client`). Records live in the identity store (`IdentityStore.wire_logins`, written by `IdentityOp::WireLogin` of R007.4); the listener reads them through `CachedWireLogins` over `IdentityStoreWireLogins`, and no process-local registry exists.
 
 ## Phase 2: Task approach
 
