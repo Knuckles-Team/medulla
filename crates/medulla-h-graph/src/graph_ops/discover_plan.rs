@@ -227,7 +227,7 @@ pub(crate) fn plan_discover(
             Err(message) => {
                 return Ok(DeepArms {
                     degraded: Some(DiscoverDegraded::ProviderFailed { message }),
-                    analysis: analysis.clone(),
+                    analysis: arms.analysis.clone(),
                     ..DeepArms::default()
                 })
             }

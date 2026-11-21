@@ -289,11 +289,12 @@ pub async fn prepare(
     // Document-class records normalize against the one mapping snapshot, before any
     // reconciliation or admission (MEDULLA-INGEST-WORKER-R003.9).
     let layout = documents::lsh_layout()?;
+    let classes = documents::document_classes(&ctx.schema_sources)?;
     let normalized = documents::normalize_documents(
         ctx.tenant_scope,
         batch,
         &resolved,
-        &documents::document_classes(&ctx.schema_sources)?,
+        &classes,
         medulla_server_api::knob_config::knobs().ingest_atom_max_tokens as usize,
         &layout,
     )?;

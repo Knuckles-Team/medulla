@@ -345,7 +345,7 @@ pub(super) struct LshCandidates {
 }
 
 /// The outcome of [`dedup_documents`].
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone)]
 pub(super) struct DedupPlan {
     /// The documents, each with its `dedup` outcome and `first_version`.
     pub documents: Vec<DocumentOutput>,
