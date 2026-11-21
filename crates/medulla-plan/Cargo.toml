@@ -584,6 +584,15 @@ name = "stored_query"
 path = "benches/stored_query.rs"
 harness = false
 
+# ── Evidence-forest selection bench (MEDULLA-FEDERATED-QUERY-R736.5) ──────────────────
+# `select_forest` over 2,000 candidates and a 4,000-token budget; the key
+# `retrieval/evidence_forest` in `thresholds.json` caps p99 at 150 ms. Nightly only.
+[[bench]]
+name = "evidence_forest"
+path = "benches/evidence_forest.rs"
+harness = false
+required-features = ["query"]
+
 # ── Shortcut-detector bench (MEDULLA-FEDERATED-QUERY-R702.6) ──────────────────────────
 # The four detectors over a 10,000-node evidence graph; the key `shortcut_detectors` in
 # `thresholds.json` caps p50 at 6 ms and p99 at 40 ms.

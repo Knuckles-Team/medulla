@@ -49,6 +49,7 @@
     "nl_steps/corrected_two_steps": 20000000,
     "nl_steps/one_step": 10000000,
     "query_understanding_plan": 2000000,
+    "retrieval/evidence_forest": 150000000,
     "live_artifact_refresh": 30000000,
     "ontology_diff": 50000000,
     "rerank_top64": 25000000,
