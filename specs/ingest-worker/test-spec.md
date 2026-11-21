@@ -55,11 +55,12 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R003.12` | `tests/ingest/test_document_normalization_served.py::test_document_batch_is_atomic` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R003.13` | `crates/medulla-source-types/src/source_transcript.rs::tests::transcript_round_trips` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R003.14` | `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::source_sequence_and_identity_are_preserved` | L2 | planned |
-| `MEDULLA-INGEST-WORKER-R003.15` | `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::prepare_routes_declared_transcript_format` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R003.15` | `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::prepare_routes_declared_transcript_format`; `tests/ingest/test_source_batch_kind_served.py::test_transcripts_batch_commits_thread_and_messages` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R003.16` | `crates/medulla-h-ingest/src/source_ingestion/transcript.rs::tests::unknown_format_and_foreign_concept_are_refused` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R003.17.1` | `tests/ingest/test_transcript_served.py::test_same_tenant_unauthorized_reads_are_denied` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R003.18` | `tests/ingest/test_transcript_served.py::test_thread_messages_are_shared_within_scope` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R003.19` | `tests/typed_packs/test_connector_vocabulary_served.py::test_pack_record_of_each_new_term_round_trips` | L4 | exists |
+| `MEDULLA-INGEST-WORKER-R003.20` | `tests/typed_packs/test_connector_vocabulary_served.py::test_pack_record_of_each_new_term_round_trips` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R604.1` | `crates/medulla-types/src/ingest_lanes.rs::tests::lane_ids_validate_and_round_trip` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R604.2` | `crates/medulla-types/src/ingest_lanes.rs::tests::every_stage_has_one_class` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R604.3` | `tests/ingest/test_lane_admission_served.py::test_claim_enforces_admission` | L4 | planned |
@@ -123,7 +124,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R903.6` | `benches/ingest_source_reconcile.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R904.1` | `crates/medulla-types/tests/source_governance.rs::container_round_trips` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R904.2` | `crates/medulla-core/tests/source_hierarchy.rs::subtree_returns_descendants` | L1 | planned |
-| `MEDULLA-INGEST-WORKER-R904.3` | `tests/ingest/test_source_hierarchy_served.py::test_containers_ingest_and_scope` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R904.3` | `tests/ingest/test_source_hierarchy_served.py::test_container_tree_ingests_and_links_records`; `tests/ingest/test_source_hierarchy_served.py::test_record_in_container_is_admitted_with_its_edge` | L4 | exists |
 | `MEDULLA-INGEST-WORKER-R904.4` | `crates/medulla-types/tests/ingest_rules.rs::container_cycles_and_excess_depth_are_refused` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R904.5` | `tests/ingest/test_source_hierarchy_served.py::test_container_tree_reads_back` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R904.6` | `tests/ingest/test_source_hierarchy_served.py::test_containers_ingest_and_scope` | L3 | planned |

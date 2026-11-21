@@ -43,11 +43,12 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T037 [US3] MEDULLA-INGEST-WORKER-R003.12 Hot-path proof: document normalization through the wire method
 - [ ] T038 [US3] MEDULLA-INGEST-WORKER-R003.13 Model
 - [ ] T039 [US3] MEDULLA-INGEST-WORKER-R003.14 Behavior: transcript validation
-- [ ] T040 [US3] MEDULLA-INGEST-WORKER-R003.15 Wiring: the transcript validator runs inside prepare
+- [ ] T040 [US3] MEDULLA-INGEST-WORKER-R003.15 Wiring: transcripts batches are admitted through the extension path
 - [ ] T041 [US3] MEDULLA-INGEST-WORKER-R003.16 Refusal: typed transcript errors
 - [ ] T042 [US3] MEDULLA-INGEST-WORKER-R003.17.1 Evidence: transcript and quarantine reads enforce stored policy
 - [ ] T043 [US3] MEDULLA-INGEST-WORKER-R003.18 Hot-path proof: transcripts through the wire method
 - [x] T124 [US3] MEDULLA-INGEST-WORKER-R003.19 Behavior: every ingested record carries the core provenance predicates
+- [ ] T125 [US3] MEDULLA-INGEST-WORKER-R003.20 Model: the concept-link predicate of a transcript segment
 - [ ] T044 [US1] MEDULLA-INGEST-WORKER-R604.1 Model: lanes, queue classes and lane metrics
 - [ ] T045 [US1] MEDULLA-INGEST-WORKER-R604.2 Behavior: ingest stage to queue class table
 - [ ] T046 [US1] MEDULLA-INGEST-WORKER-R604.3 Wiring: admission is enforced inside the claim
@@ -81,7 +82,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T074 [US4] MEDULLA-INGEST-WORKER-R701.7 Behavior: link inference over shared mentions
 - [ ] T075 [US3] MEDULLA-INGEST-WORKER-R702.1 Model: the locality-sensitive index
 - [ ] T076 [US3] MEDULLA-INGEST-WORKER-R702.2 Behavior: insert, query and false-negative rate
-- [ ] T077 [US3] MEDULLA-INGEST-WORKER-R702.3 Wiring: dedup runs at admission before enrichment
+- [ ] T077 [US3] MEDULLA-INGEST-WORKER-R702.3 Wiring: dedup runs at admission before atom storage
 - [ ] T078 [US3] MEDULLA-INGEST-WORKER-R702.4 Refusal: a near duplicate is linked, not stored twice
 - [ ] T079 [US3] MEDULLA-INGEST-WORKER-R702.5 Evidence: link similarity
 - [ ] T080 [US3] MEDULLA-INGEST-WORKER-R702.6 Hot-path proof: dedup through the wire method
@@ -92,7 +93,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T085 [US5] MEDULLA-INGEST-WORKER-R900.5 Evidence: governance counts
 - [ ] T086 [US5] MEDULLA-INGEST-WORKER-R900.6 Hot-path proof: governance parsing at batch size
 - [ ] T087 [US5] MEDULLA-INGEST-WORKER-R901.1 Model
-- [ ] T088 [US5] MEDULLA-INGEST-WORKER-R901.2 Behavior: store and supersede row-version evidence
+- [ ] T088 [US5] MEDULLA-INGEST-WORKER-R901.2 Behavior: store and supersede row-version evidence on the record node
 - [ ] T089 [US5] MEDULLA-INGEST-WORKER-R901.3 Wiring: evidence is stored with the record commit
 - [ ] T090 [US5] MEDULLA-INGEST-WORKER-R901.4 Refusal
 - [ ] T091 [US5] MEDULLA-INGEST-WORKER-R901.5 Evidence: row-version counts
@@ -111,7 +112,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T104 [US5] MEDULLA-INGEST-WORKER-R903.6 Hot-path proof: reconcile at 1M identifiers
 - [ ] T105 [US5] MEDULLA-INGEST-WORKER-R904.1 Model
 - [ ] T106 [US5] MEDULLA-INGEST-WORKER-R904.2 Behavior
-- [ ] T107 [US5] MEDULLA-INGEST-WORKER-R904.3 Wiring
+- [ ] T107 [US5] MEDULLA-INGEST-WORKER-R904.3 Wiring: containers batches and the record container edge
 - [ ] T108 [US5] MEDULLA-INGEST-WORKER-R904.4 Refusal
 - [ ] T109 [US5] MEDULLA-INGEST-WORKER-R904.5 Evidence
 - [ ] T110 [US5] MEDULLA-INGEST-WORKER-R904.6 Hot-path proof
