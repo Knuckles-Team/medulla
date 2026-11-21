@@ -118,6 +118,20 @@ pub struct GovernanceReport {
     pub marked: u64,
 }
 
+/// Per-batch count of row-version evidence stored, superseded and refused
+/// (MEDULLA-INGEST-WORKER-R901.5). A replayed version writes nothing and is counted by none.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RowVersionReport {
+    /// First versions of a record: evidence stored.
+    pub stored: u64,
+    /// Newer versions: evidence stored and the held evidence named as superseded.
+    pub superseded: u64,
+    /// Records refused with `ROW_VERSION_INVALID`; a refused record writes nothing.
+    pub refused: u64,
+}
+
 /// Per-batch count of access updates of an `access` batch
 /// (MEDULLA-INGEST-WORKER-R902.5).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]

@@ -239,6 +239,7 @@ mod tests {
             tombstoned_count: 0,
             relationship_tombstoned_count: 0,
             governance: Default::default(),
+            row_versions: Default::default(),
             documents: Default::default(),
             access: None,
             reconcile: None,

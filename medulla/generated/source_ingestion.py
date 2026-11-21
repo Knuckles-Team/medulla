@@ -165,6 +165,14 @@ class DocumentReport(BaseModel):
     duplicates: Annotated[int, Field(ge=0)] = 0
 
 
+class RowVersionReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    refused: Annotated[int, Field(ge=0)]
+    stored: Annotated[int, Field(ge=0)]
+    superseded: Annotated[int, Field(ge=0)]
+
+
 class IngestBatchReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -281,6 +289,9 @@ class SourceIngestionReceipt(BaseModel):
     receipt_digest: Digest256
     receipt_id: str
     reconcile: ReconcileReport | None = None
+    row_versions: RowVersionReport = Field(
+        default_factory=lambda: RowVersionReport(refused=0, stored=0, superseded=0)
+    )
     relationship_count: Annotated[int, Field(ge=0)]
     report: IngestBatchReport
     relationship_live_set_digest: Digest256 | None = None
@@ -563,6 +574,8 @@ SourceIngestionBatch.model_rebuild()
 
 DocumentReport.model_rebuild()
 
+RowVersionReport.model_rebuild()
+
 GovernanceReport.model_rebuild()
 SourceIngestionReceipt.model_rebuild()
 
@@ -602,6 +615,7 @@ __all__ = [
     "SourceIngestionDisposition",
     "SourceIngestionMode",
     "DocumentReport",
+    "RowVersionReport",
     "GovernanceReport",
     "IngestBatchReport",
     "ClassReport",

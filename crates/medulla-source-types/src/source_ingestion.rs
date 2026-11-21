@@ -489,6 +489,10 @@ pub struct SourceIngestionReceipt {
     /// Governed, refused and marked record counts of this batch
     /// (MEDULLA-INGEST-WORKER-R900.5).
     pub governance: GovernanceReport,
+    /// Stored, superseded and refused row-version evidence of this batch
+    /// (MEDULLA-INGEST-WORKER-R901.5).
+    #[serde(default)]
+    pub row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
     /// Near-duplicate documents linked instead of stored again
     /// (MEDULLA-INGEST-WORKER-R702.4). Observation evidence: not part of the receipt digest.
     #[serde(default)]

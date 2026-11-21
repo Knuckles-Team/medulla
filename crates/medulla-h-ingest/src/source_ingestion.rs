@@ -45,6 +45,7 @@ pub mod governance;
 pub mod permissions;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod proposals;
+pub mod row_version;
 pub mod spec_projection;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod transcript;
@@ -91,6 +92,9 @@ pub struct PreparedSourceIngestion {
     tombstoned_count: u64,
     relationship_tombstoned_count: u64,
     governance: medulla_ingestion_types::source_governance::GovernanceReport,
+    /// Row-version evidence stored, superseded and refused by this batch
+    /// (MEDULLA-INGEST-WORKER-R901.5).
+    row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
     /// Near-duplicate documents linked by this batch (MEDULLA-INGEST-WORKER-R702.4).
     documents: medulla_source_types::source_document::DocumentReport,
     /// Counts of an `access` batch (R902.5); `None` for every other kind.
@@ -316,6 +320,12 @@ pub async fn prepare(
     )
     .await?;
     let policy_subject = policy_subject(ctx.tenant_scope)?;
+    let held_row_versions = read_held_row_versions(
+        persistence.as_ref(),
+        &graph_fname,
+        &row_version_node_ids(ctx.tenant_scope, batch)?,
+    )
+    .await?;
     let mut admitted = admit_records(
         &ctx,
         batch,
@@ -323,7 +333,10 @@ pub async fn prepare(
         &resources.blob,
         &resolved,
         &policy_subject,
-        &dedup.documents,
+        RecordContext {
+            documents: &dedup.documents,
+            held_row_versions: &held_row_versions,
+        },
     )?;
     // The bucket nodes of the originals and the links of the near duplicates commit with the
     // records (MEDULLA-INGEST-WORKER-R702.3, R702.4).
@@ -385,6 +398,7 @@ pub async fn prepare(
             relationships: &admitted.relationship_raw_admissions,
         },
         admitted.governance,
+        admitted.row_versions,
         medulla_source_types::source_document::DocumentReport {
             duplicates: dedup.duplicates,
         },
@@ -418,6 +432,8 @@ pub async fn prepare(
             previous_stream_digest,
         },
     )?;
+    // Records admitted: a refused, replayed or invalid-version record writes nothing.
+    let record_count = admitted.raw_admissions.len();
     Ok(PreparedSourceIngestion {
         envelope,
         batch_digest,
@@ -432,7 +448,7 @@ pub async fn prepare(
         accepted_checkpoint: batch.provider_checkpoint.clone(),
         live_set_digest: reconciliation.live_set_digest,
         relationship_live_set_digest: reconciliation.relationship_live_set_digest,
-        affected_count: (batch.records.len() - admitted.governance.refused as usize
+        affected_count: (record_count
             + batch.relationships.len()
             + admitted.tombstone_count
             + reconciliation.relationship_tombstones.len()) as u64,
@@ -440,6 +456,7 @@ pub async fn prepare(
         tombstoned_count: admitted.tombstone_count as u64,
         relationship_tombstoned_count: reconciliation.relationship_tombstones.len() as u64,
         governance: admitted.governance,
+        row_versions: admitted.row_versions,
         documents: medulla_source_types::source_document::DocumentReport {
             duplicates: dedup.duplicates,
         },
@@ -707,6 +724,7 @@ async fn prepare_extension_batch(
         tombstoned_count: 0,
         relationship_tombstoned_count: 0,
         governance: Default::default(),
+        row_versions: Default::default(),
         documents: Default::default(),
         access,
         reconcile,
@@ -814,6 +832,54 @@ async fn read_lsh_candidates(
         }
     }
     Ok(candidates)
+}
+
+/// The node ids of the records of `batch` whose payload carries `_row_version`
+/// (MEDULLA-INGEST-WORKER-R901.2).
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn row_version_node_ids(
+    tenant: &str,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+) -> Result<BTreeSet<String>, String> {
+    let mut ids = BTreeSet::new();
+    for record in &batch.records {
+        let payload = record.payload.value()?;
+        let carries = payload
+            .as_object()
+            .is_some_and(|fields| fields.contains_key(row_version::ROW_VERSION_MEMBER));
+        if carries {
+            ids.insert(source_node_id(
+                tenant,
+                batch.connector.as_str(),
+                record.stream.as_str(),
+                &record.record_id,
+            )?);
+        }
+    }
+    Ok(ids)
+}
+
+/// The row version each of `node_ids` already holds: one node read per record that carries
+/// `_row_version`. A node that is absent or holds no row version has no entry
+/// (MEDULLA-INGEST-WORKER-R901.2).
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn read_held_row_versions(
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    node_ids: &BTreeSet<String>,
+) -> Result<BTreeMap<String, row_version::HeldRowVersion>, String> {
+    let mut held = BTreeMap::new();
+    for node_id in node_ids {
+        let Some(bytes) = persistence.read_node(graph_fname, node_id).await? else {
+            continue;
+        };
+        let properties: serde_json::Value = rmp_serde::from_slice(&bytes)
+            .map_err(|error| format!("ROW_VERSION_INVALID: held record: {error}"))?;
+        if let Some(version) = row_version::HeldRowVersion::of_properties(&properties) {
+            held.insert(node_id.clone(), version);
+        }
+    }
+    Ok(held)
 }
 
 /// What the engine holds about each record an access batch names.
@@ -991,6 +1057,7 @@ struct AdmittedRecords {
     policies: Vec<medulla_protocol_types::change_envelope::PolicyRecord>,
     tombstone_count: usize,
     governance: medulla_ingestion_types::source_governance::GovernanceReport,
+    row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -1616,6 +1683,22 @@ fn policy_subject(tenant: &str) -> Result<String, String> {
     .map(|digest| digest.to_hex())
 }
 
+/// What `prepare` read or decided before any record is admitted.
+#[cfg(all(feature = "redb", feature = "blob"))]
+struct RecordContext<'a> {
+    /// The normalized documents with their near-duplicate outcomes (R702.3).
+    documents: &'a [documents::DocumentOutput],
+    /// The row versions the record nodes already hold (R901.2).
+    held_row_versions: &'a BTreeMap<String, row_version::HeldRowVersion>,
+}
+
+/// [`RecordContext`] keyed for the per-record lookups of `admit_record`.
+#[cfg(all(feature = "redb", feature = "blob"))]
+struct RecordLookups<'a> {
+    documents: &'a BTreeMap<&'a str, &'a documents::DocumentOutput>,
+    held_row_versions: &'a BTreeMap<String, row_version::HeldRowVersion>,
+}
+
 #[cfg(all(feature = "redb", feature = "blob"))]
 fn admit_records(
     ctx: &PrepareContext<'_>,
@@ -1624,12 +1707,17 @@ fn admit_records(
     blob: &Arc<medulla_server_blob::blob::BlobCursors>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
-    documents: &[documents::DocumentOutput],
+    context: RecordContext<'_>,
 ) -> Result<AdmittedRecords, String> {
-    let documents: BTreeMap<&str, &documents::DocumentOutput> = documents
+    let documents: BTreeMap<&str, &documents::DocumentOutput> = context
+        .documents
         .iter()
         .map(|document| (document.record_node_id.as_str(), document))
         .collect();
+    let context = RecordLookups {
+        documents: &documents,
+        held_row_versions: context.held_row_versions,
+    };
     let mut admitted = AdmittedRecords {
         raw_admissions: Vec::with_capacity(batch.records.len()),
         relationship_raw_admissions: Vec::with_capacity(batch.relationships.len()),
@@ -1639,6 +1727,7 @@ fn admit_records(
         policies: Vec::with_capacity(batch.records.len() + 1),
         tombstone_count: 0,
         governance: Default::default(),
+        row_versions: Default::default(),
     };
     let mut batch_raw_digests = BTreeSet::new();
     let target = BlobTarget { authority, blob };
@@ -1650,8 +1739,9 @@ fn admit_records(
             &target,
             resolved,
             policy_subject,
-            &documents,
+            &context,
             &mut admitted.governance,
+            &mut admitted.row_versions,
         )?
         else {
             // Governance refused this record: it writes nothing.
@@ -2172,8 +2262,9 @@ fn admit_record(
     target: &BlobTarget<'_>,
     resolved: &ResolvedIngestionMappings,
     policy_subject: &str,
-    documents: &BTreeMap<&str, &documents::DocumentOutput>,
+    lookups: &RecordLookups<'_>,
     report: &mut medulla_ingestion_types::source_governance::GovernanceReport,
+    row_versions: &mut medulla_ingestion_types::source_governance::RowVersionReport,
 ) -> Result<Option<AdmittedRecord>, String> {
     // Governance parses before anything is written or the node is built
     // (MEDULLA-INGEST-WORKER-R900.2): a refused record leaves no state.
@@ -2194,14 +2285,64 @@ fn admit_record(
     let raw = rmp_serde::to_vec_named(record)
         .map_err(|error| format!("raw source record encoding failed: {error}"))?;
     let BlobTarget { authority, blob } = *target;
-    let raw_digest_hex = admit_raw(ctx, authority, blob, &raw)?;
-    let raw_digest = Digest256::parse(&raw_digest_hex)?;
     let node_id = source_node_id(
         ctx.tenant_scope,
         batch.connector.as_str(),
         record.stream.as_str(),
         &record.record_id,
     )?;
+    // Row-version evidence is the raw blob admitted below, so the version is admitted first: a
+    // replay or a refusal stores no blob (MEDULLA-INGEST-WORKER-R901.2).
+    let row_version_write = {
+        let payload = record.payload.value()?;
+        let member = payload
+            .as_object()
+            .map_or(Ok(None), row_version::RowVersionMember::of_payload);
+        match member {
+            Err(_) => {
+                row_versions.refused += 1;
+                return Ok(None);
+            }
+            Ok(None) => None,
+            Ok(Some(member)) => {
+                let ids = row_version::RowVersionIds {
+                    tenant: ctx.tenant_scope,
+                    connector: batch.connector.as_str(),
+                    stream: record.stream.as_str(),
+                    node_id: &node_id,
+                };
+                let evidence_digest = Digest256::sha256(&raw).to_hex();
+                match row_version::admit_row_version(
+                    lookups.held_row_versions.get(&node_id),
+                    &member,
+                    &evidence_digest,
+                    &ids,
+                ) {
+                    Err(_) => {
+                        row_versions.refused += 1;
+                        return Ok(None);
+                    }
+                    Ok(row_version::RowVersionOutcome::Replay) => return Ok(None),
+                    Ok(row_version::RowVersionOutcome::First(write)) => {
+                        row_versions.stored += 1;
+                        Some((write, evidence_digest))
+                    }
+                    Ok(row_version::RowVersionOutcome::Supersedes(write)) => {
+                        row_versions.superseded += 1;
+                        Some((write, evidence_digest))
+                    }
+                }
+            }
+        }
+    };
+    let raw_digest_hex = admit_raw(ctx, authority, blob, &raw)?;
+    if row_version_write
+        .as_ref()
+        .is_some_and(|(_, evidence_digest)| *evidence_digest != raw_digest_hex)
+    {
+        return Err("ROW_VERSION_INVALID: the evidence digest is not the stored blob".into());
+    }
+    let raw_digest = Digest256::parse(&raw_digest_hex)?;
     let mapping = resolved
         .entities
         .get(&record.mapping_reference)
@@ -2218,7 +2359,16 @@ fn admit_record(
     let toc_blobs = stage_source_toc(ctx, authority, blob, record, &node_id, &mut properties)?;
     // An original document carries its signature and first-indexed version; a near duplicate
     // carries neither (MEDULLA-INGEST-WORKER-R702.3).
-    if let Some(document) = documents.get(node_id.as_str()) {
+    if let Some((write, _)) = row_version_write {
+        properties.insert(row_version::ROW_VERSION_PROPERTY.into(), write.row_version);
+        if let Some(superseded) = write.superseded_digest {
+            properties.insert(
+                row_version::SUPERSEDED_DIGEST_PROPERTY.into(),
+                serde_json::Value::String(superseded),
+            );
+        }
+    }
+    if let Some(document) = lookups.documents.get(node_id.as_str()) {
         if document.dedup == documents::DedupOutcome::Original {
             properties.insert(
                 "minhash_signature".into(),
@@ -2434,6 +2584,7 @@ fn receipt_method(
     reconciliation: &ReconciliationPlan,
     admissions: &RawAdmissions<'_>,
     governance: medulla_ingestion_types::source_governance::GovernanceReport,
+    row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
     documents: medulla_source_types::source_document::DocumentReport,
     embedding_set: &crate::ingestion_admission::EmbeddingSet,
 ) -> Result<Method, String> {
@@ -2456,14 +2607,15 @@ fn receipt_method(
         "withdrawals": reconciliation.tombstones,
         "relationship_tombstones": relationship_tombstone_receipts(&reconciliation.relationship_tombstones),
         "governance": governance,
+        "row_versions": row_versions,
         "documents": documents,
         "column_exclusions": embedding_set.exclusions,
         "embedding_set": embedding_set.entries,
-        "record_count": batch.records.len() - governance.refused as usize,
+        "record_count": raw_admissions.len(),
         "relationship_count": batch.relationships.len(),
         "tombstoned_count": reconciliation.tombstones.len(),
         "relationship_tombstoned_count": reconciliation.relationship_tombstones.len(),
-        "affected_count": batch.records.len() - governance.refused as usize + batch.relationships.len() + reconciliation.tombstones.len() + reconciliation.relationship_tombstones.len(),
+        "affected_count": raw_admissions.len() + batch.relationships.len() + reconciliation.tombstones.len() + reconciliation.relationship_tombstones.len(),
     });
     Ok(Method::AddNode {
         node_id: batch_id.into(),
@@ -2709,6 +2861,7 @@ fn build_terminal_receipt(
         tombstoned_count: prepared.tombstoned_count,
         relationship_tombstoned_count: prepared.relationship_tombstoned_count,
         governance: prepared.governance,
+        row_versions: prepared.row_versions,
         documents: prepared.documents,
         access: prepared.access,
         reconcile: prepared.reconcile,
@@ -2805,6 +2958,13 @@ fn prepared_replay(
             "relationship_tombstoned_count",
         )?,
         governance: replay_governance(&receipt)?,
+        row_versions: receipt
+            .get("row_versions")
+            .cloned()
+            .map(serde_json::from_value)
+            .transpose()
+            .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: row_versions: {error}"))?
+            .unwrap_or_default(),
         documents: receipt
             .get("documents")
             .cloned()
@@ -3165,6 +3325,7 @@ fn validate_strict_source_fields(
         "node_type",
         "externalToolId",
         governance::GOVERNANCE_MEMBER,
+        row_version::ROW_VERSION_MEMBER,
         // The text of a text source is read by `stage_source_toc`
         // (MEDULLA-DECISION-ENGINE-R153.3), never by a field mapping.
         medulla_decision_types::source_toc::SOURCE_TEXT_FIELD,
