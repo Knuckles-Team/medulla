@@ -3,16 +3,21 @@
 //!
 //! The challenger score is the selected candidate's aggregate score on the
 //! test split, the champion score is the request's baseline, and the
-//! evaluation set is the sorted test-split example refs. The promotion gate
+//! evaluation set is the sorted test-split example refs, digested by
+//! `solve_scalar::digest_text`. The promotion gate
 //! (`Decide` kind `Promotion`) reads the evidence off the stored
 //! `ProgramRevision` node.
 
 use medulla_decision_outcome_types::decision::promotion::{
     GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
 };
+use medulla_query_types::solve_scalar::digest_text;
 use sha2::{Digest, Sha256};
 
 use crate::{ExampleSplit, OptimizationRequest, OptimizationResult};
+
+/// Domain of the evaluation-set digest: the sorted test-split example refs.
+pub const HELD_OUT_SET_DIGEST_DOMAIN: &str = "eg-program.held-out-set.v1";
 
 fn ppm(score: f64) -> i64 {
     (score.clamp(0.0, 1.0) * 1_000_000.0).round() as i64
@@ -33,12 +38,8 @@ pub fn program_held_out_evidence(
         .filter(|example| example.split == ExampleSplit::Test)
         .collect();
     tests.sort_by(|left, right| left.example_ref.as_str().cmp(right.example_ref.as_str()));
-    let mut set = Sha256::new();
-    set.update(b"eg-program.held-out-set.v1\0");
-    for example in &tests {
-        set.update((example.example_ref.as_str().len() as u64).to_be_bytes());
-        set.update(example.example_ref.as_str().as_bytes());
-    }
+    let test_refs: Vec<&str> = tests.iter().map(|example| example.example_ref.as_str()).collect();
+    let evaluation_set_digest = digest_text(HELD_OUT_SET_DIGEST_DOMAIN, &test_refs);
     let receipt = Sha256::digest(serde_json::to_vec(evaluation).ok()?);
     let challenger = ppm(evaluation.aggregate_score);
     let champion = ppm(request.baseline.aggregate_score);
@@ -54,7 +55,7 @@ pub fn program_held_out_evidence(
         champion_ref: None,
         receipt_kind: ReceiptKind::ProgramEvaluation,
         receipt_digest: hex::encode(receipt),
-        evaluation_set_digest: hex::encode(set.finalize()),
+        evaluation_set_digest,
         challenger_score_ppm: challenger,
         champion_score_ppm: Some(champion),
         delta_ppm: challenger - champion,

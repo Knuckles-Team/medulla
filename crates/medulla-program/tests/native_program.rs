@@ -285,7 +285,21 @@ fn selected_candidate_carries_held_out_evidence() {
         .filter(|example| example.split == medulla_program::ExampleSplit::Test)
         .count();
     assert_eq!(evidence.case_count, tests as u64);
-    assert_eq!(evidence.evaluation_set_digest.len(), 64);
+    let mut test_refs: Vec<&str> = request
+        .corpus
+        .examples
+        .iter()
+        .filter(|example| example.split == medulla_program::ExampleSplit::Test)
+        .map(|example| example.example_ref.as_str())
+        .collect();
+    test_refs.sort();
+    assert_eq!(
+        evidence.evaluation_set_digest,
+        medulla_query_types::solve_scalar::digest_text(
+            medulla_program::HELD_OUT_SET_DIGEST_DOMAIN,
+            &test_refs
+        )
+    );
     assert_eq!(promoted, NativeCompiler::compile(&request).expect("again"));
 }
 

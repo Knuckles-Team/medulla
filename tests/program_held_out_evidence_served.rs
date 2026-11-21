@@ -14,7 +14,7 @@ mod program_job_support;
 #[path = "common/test_support.rs"]
 mod test_support;
 
-use program_job_support::{evaluated_journey, TEST_EXAMPLES};
+use program_job_support::{evaluated_journey, test_example_refs, TEST_EXAMPLES};
 
 /// Every evidence field on the stored node: the candidate scored 0.8 against a
 /// 0.5 baseline over the two test-split examples.
@@ -43,10 +43,14 @@ fn evaluated_revision_carries_held_out_evidence() {
             assert_eq!(evidence["case_count"], TEST_EXAMPLES);
             assert_eq!(evidence["independent"], true);
             assert_eq!(evidence["grader_kind"], "annotation");
-            for digest in ["receipt_digest", "evaluation_set_digest"] {
-                let text = evidence[digest].as_str().expect("digest text");
-                assert_eq!(text.len(), 64, "{digest} is a SHA-256 hex digest");
-            }
+            assert_eq!(
+                evidence["evaluation_set_digest"],
+                medulla_query_types::solve_scalar::digest_text(
+                    medulla_program::HELD_OUT_SET_DIGEST_DOMAIN,
+                    &test_example_refs()
+                )
+            );
+            assert_eq!(evidence["receipt_digest"].as_str().expect("receipt digest").len(), 64);
             assert_eq!(evidence["subject"]["kind"], "program");
             assert_eq!(
                 evidence["subject"]["program_ref"],

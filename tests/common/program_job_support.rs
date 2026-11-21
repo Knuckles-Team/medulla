@@ -50,6 +50,15 @@ fn policy() -> PolicyEnvelope {
     }
 }
 
+/// The refs of the test-split examples of the fixture corpus, sorted.
+pub fn test_example_refs() -> Vec<String> {
+    let mut refs: Vec<String> = (6..(6 + TEST_EXAMPLES as usize))
+        .map(|index| opaque("example", &format!("example:{index}")).as_str().to_owned())
+        .collect();
+    refs.sort();
+    refs
+}
+
 /// One graph-modality example: six train examples and `TEST_EXAMPLES` test examples.
 fn example(index: usize, policy: &PolicyEnvelope) -> TrainingExample {
     let artifact = ArtifactId::from_token(&token(&format!("artifact:{index}"))).expect("artifact");

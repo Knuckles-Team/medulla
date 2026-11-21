@@ -7050,6 +7050,7 @@ dependencies = [
  "medulla-decision-outcome-types",
  "medulla-modality",
  "medulla-protocol-types",
+ "medulla-query-types",
  "medulla-types",
  "rmp-serde",
  "serde",
