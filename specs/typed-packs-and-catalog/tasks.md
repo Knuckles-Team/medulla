@@ -269,7 +269,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T255 [US6] MEDULLA-TYPED-PACKS-R700.5 Evidence
 - [x] T256 [US6] MEDULLA-TYPED-PACKS-R700.6 Hot-path proof
 - [ ] T257 [US6] MEDULLA-TYPED-PACKS-R700.7 Declared skill type key
-- [ ] T258 [US6] MEDULLA-TYPED-PACKS-R700.8 Graph reference files import as skill files
+- [x] T258 [US6] MEDULLA-TYPED-PACKS-R700.8 Graph reference files import as skill files
 - [ ] T259 [US6] MEDULLA-TYPED-PACKS-R700.9 RETIRED: distill a source set into a skill-graph bundle
 - [x] T260 [US6] MEDULLA-TYPED-PACKS-R701.1 Model
 - [x] T261 [US6] MEDULLA-TYPED-PACKS-R701.2 Behavior
