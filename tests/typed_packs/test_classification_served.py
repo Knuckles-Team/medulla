@@ -21,11 +21,16 @@ from medulla.client import SyncMedullaClient
 STEWARD = "steward"
 
 
-def _connect(graph: str | None = None, *, roles: list[str] | None = None) -> Any:
+def _connect(
+    graph: str | None = None,
+    *,
+    roles: list[str] | None = None,
+    scopes: list[str] | None = None,
+) -> Any:
     return SyncMedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
         graph_name=graph,
-        verified_context=request_context(roles=roles),
+        verified_context=request_context(roles=roles, scopes=scopes),
     )
 
 
@@ -175,14 +180,21 @@ def test_marking_sets_and_promoter_read_back(served) -> None:
     assert node["evidence"] == ["scan:1", "review:1"]
 
 
+def _readable_ids(client: Any, label: str) -> list[str]:
+    result = client.query.uql(f"MATCH (:{label})")
+    return sorted(row["id"] for row in result["rows"])
+
+
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R652.6")
 def test_claim_propose_propagate_promote_and_redacted_read(served) -> None:
-    """Verifies MEDULLA-TYPED-PACKS-R652.6: promotion proposes claims downstream."""
+    """Verifies MEDULLA-TYPED-PACKS-R652.6: promotion proposes claims downstream; a
+    holder of the marking reads the marked assets, a non-holder reads them
+    redacted, and another tenant reads nothing."""
     from conftest import tenant_request_context
 
     graph, client = served
     for node in ("view:orders_v", "dash:orders_d"):
-        _node(client, graph, node, {"type": "Asset"})
+        _node(client, graph, node, {"type": "Column"})
     asset = "col:orders.email"
     _lineage(client, graph, asset, "view:orders_v")
     _lineage(client, graph, "view:orders_v", "dash:orders_d")
@@ -201,6 +213,29 @@ def test_claim_propose_propagate_promote_and_redacted_read(served) -> None:
     # Propagated claims are proposals: nothing is stamped downstream until promoted.
     assert "_markings" not in _props(client, graph, "view:orders_v")
 
+    # A steward promotes the view's proposal; the dashboard stays unmarked.
+    _op(
+        client,
+        graph,
+        {
+            "op": "promote",
+            "claim_id": _claim_id("view:orders_v", "pii"),
+            "evidence": ["review:2"],
+        },
+    )
+    marked = sorted([asset, "view:orders_v"])
+    everything = sorted([*marked, "dash:orders_d"])
+    holder = _connect(graph, scopes=["kg:read", "pii"])
+    non_holder = _connect(graph, scopes=["kg:read"])
+    try:
+        assert _readable_ids(holder, "Column") == everything
+        # Marked assets are redacted for the non-holder, so they no longer match
+        # their label; the unmarked dashboard reads in full.
+        assert _readable_ids(non_holder, "Column") == ["dash:orders_d"]
+    finally:
+        holder.close()
+        non_holder.close()
+
     foreign = SyncMedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
         graph_name=graph,
@@ -212,5 +247,9 @@ def test_claim_propose_propagate_promote_and_redacted_read(served) -> None:
         except Exception:
             seen = None
         assert not seen
+        try:
+            assert _readable_ids(foreign, "Column") == []
+        except Exception:
+            pass  # a refused cross-tenant read also sees nothing
     finally:
         foreign.close()

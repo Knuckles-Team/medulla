@@ -20,6 +20,14 @@ use serde_json::{Map, Value};
 
 use crate::carrier::GraphReadAuthority;
 
+/// The node key that holds the markings a promoted classification claim stamped
+/// (MEDULLA-TYPED-PACKS-R652.3). The one definition; the claim handler writes it.
+pub const MARKINGS_KEY: &str = "_markings";
+/// The property a redacted node keeps in place of its stored properties.
+pub const REDACTED_KEY: &str = "_redacted";
+/// The clearance scope that holds every marking.
+const ALL_MARKINGS_SCOPE: &str = "*";
+
 /// The label of a principal-owned knowledge unit node.
 pub const KNOWLEDGE_UNIT_LABEL: &str = "KnowledgeUnit";
 /// The label of a stored tenant parent link node (keys `tenant`, `parent`, `shared`).
@@ -36,6 +44,9 @@ pub struct ReadCaller {
     pub principal: UnitPrincipal,
     /// The verified tenant, when it is a valid tenant id.
     pub tenant: Option<TenantId>,
+    /// The markings the caller holds: the verified carrier's scopes, each scope
+    /// naming the marking it clears (`*` clears every marking).
+    pub held_markings: BTreeSet<String>,
 }
 
 impl ReadCaller {
@@ -53,6 +64,9 @@ impl ReadCaller {
             .unwrap_or_default()
             .to_owned();
         Self {
+            held_markings: carrier
+                .map(|c| c.scopes().iter().cloned().collect())
+                .unwrap_or_default(),
             tenant: TenantId::new(&tenant_raw).ok(),
             principal: UnitPrincipal {
                 id,
@@ -154,6 +168,31 @@ pub fn scan_units(view: &GraphView, caller: &ReadCaller) -> UnitScan {
         .filter(|id| !seen.contains(id.as_str()))
         .collect();
     UnitScan { visible, hidden }
+}
+
+impl ReadCaller {
+    /// Whether the caller holds every marking in `markings`.
+    pub fn holds_all(&self, markings: &[String]) -> bool {
+        self.held_markings.contains(ALL_MARKINGS_SCOPE)
+            || markings.iter().all(|m| self.held_markings.contains(m))
+    }
+}
+
+/// The node ids whose stamped `_markings` the caller does not hold
+/// (MEDULLA-TYPED-PACKS-R652.6). A marked node the caller lacks clearance for is
+/// redacted, not refused: it stays in the view as an id with no properties.
+fn redacted_nodes(view: &GraphView, caller: &ReadCaller) -> Vec<String> {
+    nodes_with(view, MARKINGS_KEY.as_bytes())
+        .filter_map(|(id, map)| {
+            let markings: Vec<String> = map
+                .get(MARKINGS_KEY)?
+                .as_array()?
+                .iter()
+                .filter_map(|v| v.as_str().map(str::to_owned))
+                .collect();
+            (!markings.is_empty() && !caller.holds_all(&markings)).then(|| id.clone())
+        })
+        .collect()
 }
 
 /// The typed principal metadata labels (MEDULLA-IDENTITY-R023.8).
@@ -287,7 +326,11 @@ pub fn scope_view(
     hidden.extend(hidden_metadata(&view, caller));
     let mut unit_ids = scan.visible;
     unit_ids.truncate(MAX_AUDITED_UNIT_IDS);
-    if hidden.is_empty() {
+    let redacted: Vec<String> = redacted_nodes(&view, caller)
+        .into_iter()
+        .filter(|id| !hidden.contains(id))
+        .collect();
+    if hidden.is_empty() && redacted.is_empty() {
         return Ok(ScopedView {
             view,
             hidden_count: 0,
@@ -304,6 +347,17 @@ pub fn scope_view(
     narrowed
         .edge_properties
         .retain(|(s, t), _| !hidden.contains(s) && !hidden.contains(t));
+    if !redacted.is_empty() {
+        let placeholder = Arc::new(
+            rmp_serde::to_vec_named(&serde_json::json!({ (REDACTED_KEY): true }))
+                .unwrap_or_default(),
+        );
+        for id in &redacted {
+            narrowed
+                .node_properties
+                .insert(id.clone(), Arc::clone(&placeholder));
+        }
+    }
     Ok(ScopedView {
         view: Arc::new(narrowed),
         hidden_count: hidden_units,
@@ -362,6 +416,7 @@ mod tests {
                 tenant: tenant.into(),
             },
             tenant: TenantId::new(tenant).ok(),
+            held_markings: BTreeSet::new(),
         }
     }
 
@@ -434,5 +489,30 @@ mod tests {
             let scan = scan_units(&view, &caller("ann", tenant));
             assert_eq!(scan.visible, [own]);
         }
+    }
+
+    /// Verifies MEDULLA-TYPED-PACKS-R652.6: a marked node is redacted for a caller who
+    /// lacks the marking and read in full by a holder.
+    // spec: MEDULLA-TYPED-PACKS-R652.6
+    #[test]
+    fn marked_node_is_redacted_for_a_non_holder() {
+        let core = GraphCore::new();
+        put(
+            &core,
+            "marked",
+            serde_json::json!({"type": "Column", "_markings": ["pii"]}),
+        );
+        put(&core, "plain", serde_json::json!({"type": "Column"}));
+        let view = Arc::new(core.analysis_snapshot());
+        let vars = vec!["n".to_owned()];
+        let mut holder = caller("a", "acme");
+        holder.held_markings.insert("pii".to_owned());
+        let held = scope_view(view.clone(), &holder, &vars).unwrap();
+        assert_eq!(held.view.node_row_object("marked").unwrap()["type"], "Column");
+        let denied = scope_view(view, &caller("b", "acme"), &vars).unwrap();
+        let redacted = denied.view.node_row_object("marked").unwrap();
+        assert_eq!(redacted.len(), 1);
+        assert_eq!(redacted[REDACTED_KEY], true);
+        assert_eq!(denied.view.node_row_object("plain").unwrap()["type"], "Column");
     }
 }

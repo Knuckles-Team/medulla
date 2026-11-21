@@ -1346,6 +1346,7 @@ mod tenant_scope_served_tests {
                 tenant: tenant.into(),
             },
             tenant: TenantId::new(tenant).ok(),
+            held_markings: Default::default(),
         }
     }
 

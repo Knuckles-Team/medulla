@@ -41,7 +41,7 @@ use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
 
 /// The property that holds the markings stamped on an asset.
-pub const MARKINGS_PROPERTY: &str = "_markings";
+pub const MARKINGS_PROPERTY: &str = medulla_server_api::read_scope::MARKINGS_KEY;
 /// The node id prefix of a registered marking.
 pub const MARKING_NODE_PREFIX: &str = "marking:";
 /// The roles that may promote or reject a claim.
