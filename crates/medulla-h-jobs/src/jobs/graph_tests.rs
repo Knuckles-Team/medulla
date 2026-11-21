@@ -394,6 +394,171 @@ mod colocated_executor_tests {
         }
         assert!(succeeded, "the colocated executor did not finish the job");
     }
+
+    /// A kernel that runs far longer than any test waits: every subset of 20 items is
+    /// frequent, so the rule enumeration is exponential. Only a stop signal ends it.
+    fn long_kernel() -> JobKind {
+        let items: Vec<String> = (0..20).map(|i| format!("item-{i:02}")).collect();
+        JobKind::MineAssociate {
+            transactions: vec![items.clone(), items.clone(), items],
+            min_support: 0.1,
+            min_confidence: 0.0,
+            algorithm: "fpgrowth".to_string(),
+        }
+    }
+
+    fn unix_now_ms() -> i64 {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as i64
+    }
+
+    async fn prepared_state() -> Arc<RwLock<ServerState>> {
+        let dir = tempfile::tempdir().unwrap();
+        let mut server = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(ISSUER),
+        );
+        server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
+        let backend =
+            RedbBackend::open(dir.path().join("graphs").to_string_lossy().into_owned(), 64)
+                .unwrap();
+        server.persistence = Some(Arc::new(backend));
+        // The job store and the pool live for the process; keep the directory with them.
+        std::mem::forget(dir);
+        let state = Arc::new(RwLock::new(server));
+        let created = call(
+            &state,
+            1,
+            Method::CreateGraph {
+                graph_name: GRAPH.into(),
+                graph_type: GraphType::Global,
+            },
+        )
+        .await;
+        assert!(created.error.is_none(), "{:?}", created.error);
+        state
+    }
+
+    async fn status_of(state: &Arc<RwLock<ServerState>>, job_id: &str) -> serde_json::Value {
+        json_of(
+            call(
+                state,
+                next_nonce() + 1_000,
+                Method::AnalyticsJob {
+                    op: JobOp::Status {
+                        job_id: job_id.to_string(),
+                    },
+                },
+            )
+            .await,
+        )
+    }
+
+    async fn submit_long(state: &Arc<RwLock<ServerState>>, spec: SubmitJobSpec) -> String {
+        let submitted = json_of(
+            call(
+                state,
+                next_nonce() + 1_000,
+                Method::AnalyticsJob {
+                    op: JobOp::Submit(spec),
+                },
+            )
+            .await,
+        );
+        submitted
+            .get("job_id")
+            .and_then(serde_json::Value::as_str)
+            .expect("submitted job id")
+            .to_string()
+    }
+
+    /// Poll until `done` holds of the job state, within `limit`.
+    async fn wait_for(
+        state: &Arc<RwLock<ServerState>>,
+        job_id: &str,
+        limit: Duration,
+        done: impl Fn(&serde_json::Value) -> bool,
+    ) -> serde_json::Value {
+        let began = std::time::Instant::now();
+        loop {
+            let status = status_of(state, job_id).await;
+            if done(status.get("state").expect("job state")) {
+                return status;
+            }
+            assert!(
+                began.elapsed() < limit,
+                "the job did not reach the expected state in time: {status}"
+            );
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R082.7
+    #[tokio::test]
+    async fn cancel_deadline_and_cpu_budget_each_stop_the_kernel_with_their_reason() {
+        let state = prepared_state().await;
+        let limit = Duration::from_secs(60);
+
+        // The status tick follows the claim's lease: a third of it, never above 5 s.
+        assert_eq!(super::super::executor_claim::status_tick_ms(60_000), 5_000);
+        assert_eq!(super::super::executor_claim::status_tick_ms(9_000), 3_000);
+        assert_eq!(super::super::executor_claim::status_tick_ms(1), 1);
+
+        // A cancel request stops the running kernel and the job ends `Cancelled`.
+        let job_id = submit_long(
+            &state,
+            SubmitJobSpec {
+                kind: long_kernel(),
+                ..submit_spec()
+            },
+        )
+        .await;
+        wait_for(&state, &job_id, limit, |job| job.get("Running").is_some()).await;
+        let _cancel_reply = json_of(
+            call(
+                &state,
+                next_nonce() + 1_000,
+                Method::AnalyticsJob {
+                    op: JobOp::Cancel {
+                        job_id: job_id.clone(),
+                    },
+                },
+            )
+            .await,
+        );
+        let status = wait_for(&state, &job_id, limit, |job| job.get("Cancelled").is_some()).await;
+        assert!(status["lease"].is_null(), "no lease outlives the stop: {status}");
+
+        // A passed deadline ends the job `Failed` with `deadline_exceeded`.
+        let job_id = submit_long(
+            &state,
+            SubmitJobSpec {
+                kind: long_kernel(),
+                deadline_unix_ms: Some(unix_now_ms() + 1_000),
+                ..submit_spec()
+            },
+        )
+        .await;
+        let status = wait_for(&state, &job_id, limit, |job| job.get("Failed").is_some()).await;
+        assert_eq!(status["state"]["Failed"]["reason"], "deadline_exceeded");
+        assert!(status["lease"].is_null(), "no lease outlives the stop: {status}");
+
+        // An exhausted CPU budget ends it `Failed` with `cpu_budget_exceeded`.
+        let job_id = submit_long(
+            &state,
+            SubmitJobSpec {
+                kind: long_kernel(),
+                quota_cpu_ms: Some(200),
+                ..submit_spec()
+            },
+        )
+        .await;
+        let status = wait_for(&state, &job_id, limit, |job| job.get("Failed").is_some()).await;
+        assert_eq!(status["state"]["Failed"]["reason"], "cpu_budget_exceeded");
+        assert!(status["lease"].is_null(), "no lease outlives the stop: {status}");
+    }
 }
 
 /// The staged association result of the job plane (MEDULLA-DURABLE-KERNEL-R082.5).

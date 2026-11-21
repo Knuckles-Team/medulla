@@ -4,6 +4,12 @@ use super::prelude_jobs::*;
 use super::prelude_std::*;
 use super::*;
 
+/// How often a running kernel's job status is polled, in milliseconds: the lease divided
+/// by three, never above 5000 and never zero (MEDULLA-DURABLE-KERNEL-R082.7).
+pub(super) fn status_tick_ms(lease_ms: u64) -> u64 {
+    (lease_ms / 3).clamp(1, 5_000)
+}
+
 pub(super) async fn execute_claim(
     state: &Arc<RwLock<ServerState>>,
     store: &Arc<JobStore>,
@@ -171,7 +177,17 @@ pub(super) async fn execute_claim(
             )
         });
         let began = Instant::now();
-        let mut ticker = tokio::time::interval(Duration::from_millis(250));
+        // The status tick and the lease renewal follow the claim's own lease:
+        // `min(5000 ms, lease_ms / 3)` (MEDULLA-DURABLE-KERNEL-R082.7).
+        let lease_ms = u64::try_from(
+            claim
+                .lease
+                .expires_at_ms
+                .saturating_sub(claim.lease.acquired_at_ms),
+        )
+        .unwrap_or(0)
+        .max(1);
+        let mut ticker = tokio::time::interval(Duration::from_millis(status_tick_ms(lease_ms)));
         let mut stop_reason: Option<&'static str> = None;
         let rules = loop {
             tokio::select! {
@@ -234,7 +250,7 @@ pub(super) async fn execute_claim(
                     if stop_reason.is_some() {
                         cancellation.store(true, Ordering::Relaxed);
                     } else if store
-                        .renew_lease(&job_id, &worker_ref, epoch, now, 60_000)
+                        .renew_lease(&job_id, &worker_ref, epoch, now, lease_ms)
                         .is_err()
                     {
                         cancellation.store(true, Ordering::Relaxed);
