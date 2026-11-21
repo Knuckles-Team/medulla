@@ -1003,6 +1003,58 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-MEDIA-VOCAB-R650.1
+    #[test]
+    fn media_attachment_round_trips() {
+        let attachment = MediaAttachment {
+            blob_digest: "b".repeat(64),
+            mime: "audio/ogg".into(),
+            byte_len: 2048,
+            derivation_ids: vec![
+                ResourceId::new("derivation:1").unwrap(),
+                ResourceId::new("derivation:2").unwrap(),
+            ],
+        };
+        let wire = serde_json::to_string(&attachment).unwrap();
+        assert_eq!(
+            serde_json::from_str::<MediaAttachment>(&wire).unwrap(),
+            attachment
+        );
+        let record = MemoryRecord {
+            memory_id: ResourceId::new("mem:media").unwrap(),
+            tenant: TenantId::new("tenant-a").unwrap(),
+            kind: MemoryKind::Fact,
+            tier: MemoryTier::Episodic,
+            text: "a voice note".into(),
+            provenance_key: None,
+            session_id: None,
+            timestamp_ms: 1_700_000_000_000,
+            topics: Vec::new(),
+            pattern_key: None,
+            importance: 1.0,
+            access_count: 0,
+            last_access_ms: 0,
+            last_decay_ms: 0,
+            forgotten: false,
+            legal_hold: false,
+            expires_at_ms: None,
+            support_count: 0,
+            token_estimate: 3,
+            attachments: vec![attachment.clone()],
+            schema_version: MEMORY_RECORD_SCHEMA_VERSION,
+        };
+        let props = record.to_props();
+        let stored = props["attachments"].as_array().unwrap();
+        assert_eq!(stored.len(), 1);
+        assert_eq!(stored[0]["blob_digest"], serde_json::json!("b".repeat(64)));
+        assert_eq!(stored[0]["byte_len"], serde_json::json!(2048));
+        let back = MemoryRecord::from_props(&props).unwrap();
+        assert_eq!(back.attachments, vec![attachment]);
+        let mut unknown = serde_json::to_value(&back.attachments[0]).unwrap();
+        unknown["surprise"] = serde_json::json!(1);
+        assert!(serde_json::from_value::<MediaAttachment>(unknown).is_err());
+    }
+
     // spec: MEDULLA-DECISION-ENGINE-R617.1
     #[test]
     fn engine_held_memory_types_round_trip() {

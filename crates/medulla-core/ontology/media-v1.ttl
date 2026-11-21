@@ -2,6 +2,7 @@
 @prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
 @prefix dcterms: <http://purl.org/dc/terms/> .
 @prefix oa: <http://www.w3.org/ns/oa#> .
+@prefix prov: <http://www.w3.org/ns/prov#> .
 @prefix skos: <http://www.w3.org/2004/02/skos/core#> .
 @prefix owl: <http://www.w3.org/2002/07/owl#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -1272,6 +1273,28 @@
     rdfs:label "provenance digest" ;
     rdfs:comment "SHA-256 digest, 64 lower-case hex characters, over the tag's provenance fields." ;
     rdfs:domain :MediaTag ;
+    rdfs:range xsd:string .
+
+# MEDULLA-MEDIA-VOCAB-R650.1: a derivation of a media blob (its transcript or
+# caption) is its own node. Lineage back to the media uses prov:wasDerivedFrom;
+# no property of that name is minted here.
+
+:MediaDerivation a owl:Class ;
+    rdfs:label "Media Derivation" ;
+    rdfs:comment "A transcript or caption derived from a media blob, stored as its own node and linked to the media by prov:wasDerivedFrom." ;
+    rdfs:subClassOf :Observation ;
+    skos:closeMatch prov:Derivation .
+
+:derivationKind a owl:DatatypeProperty ;
+    rdfs:label "derivation kind" ;
+    rdfs:comment "The kind of a media derivation: transcript or caption." ;
+    rdfs:domain :MediaDerivation ;
+    rdfs:range xsd:string .
+
+:derivationText a owl:DatatypeProperty ;
+    rdfs:label "derivation text" ;
+    rdfs:comment "The text of a media derivation." ;
+    rdfs:domain :MediaDerivation ;
     rdfs:range xsd:string .
 
 # ── Core rooting (MEDULLA-TYPED-PACKS-R071.2) ───────────────────────────────────
