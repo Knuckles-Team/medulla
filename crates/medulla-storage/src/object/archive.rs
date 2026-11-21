@@ -197,6 +197,24 @@ impl ObjectArchive {
         Ok(key)
     }
 
+    /// The manifest entries of one scope, in append order.
+    pub async fn segments(
+        &self,
+        tenant: &str,
+        graph: &str,
+    ) -> Result<Vec<ArchiveManifestEntry>, ArchiveRefusal> {
+        self.read_manifest(tenant, graph).await
+    }
+
+    /// The archived position of one scope: the largest `last` (exclusive) of its
+    /// manifest entries, or 0 when it has none. It is derived from the manifest
+    /// on every call and never stored separately
+    /// (`MEDULLA-ENGINE-PARITY-R016.1`).
+    pub async fn archived_end(&self, tenant: &str, graph: &str) -> Result<u64, ArchiveRefusal> {
+        let entries = self.read_manifest(tenant, graph).await?;
+        Ok(entries.iter().map(|e| e.last).max().unwrap_or(0))
+    }
+
     /// Get the segment covering exactly `[first, last)` and verify it against
     /// the manifest digest before returning the bytes.
     pub async fn get_segment(

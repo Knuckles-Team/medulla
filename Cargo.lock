@@ -8678,12 +8678,14 @@ dependencies = [
  "medulla-storage",
  "medulla-types",
  "medulla-work-types",
+ "object_store 0.14.2",
  "redb",
  "rmp-serde",
  "serde",
  "serde_bytes",
  "sha2 0.10.9",
  "tempfile",
+ "tokio",
  "tracing",
 ]
 

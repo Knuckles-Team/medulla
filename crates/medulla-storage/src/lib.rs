@@ -129,6 +129,10 @@ pub use recovery::adopt::{
 pub use recovery::archive::{
     parse_replay_target, replay_to, ArchiveBounds, ArchiveRefusal, ReplayTarget,
 };
+#[cfg(feature = "object-archive")]
+pub use recovery::archiver::{
+    archive_store_pass, ArchivePassReport, ArchivePolicy, ArchiveSegment,
+};
 pub use recovery::authority::{rebind_copied_store, store_root_is_current};
 pub use recovery::backup::{
     backup_recovery_store, recovery_store_data_fingerprint, recovery_store_fingerprint,

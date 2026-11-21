@@ -67,6 +67,8 @@ pub use backend_effect_audit::EffectAudit;
 #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
 pub mod audit_append_tests;
 mod backend_audit;
+#[cfg(feature = "object-store")]
+mod backend_archive;
 mod backend_backup;
 mod backend_effect_audit;
 mod backend_load;

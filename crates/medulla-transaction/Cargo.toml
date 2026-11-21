@@ -39,3 +39,6 @@ medulla-agent-types = { path = "../medulla-agent-types", features = ["test-suppo
 medulla-identity-types = { path = "../medulla-identity-types", features = ["test-support"] }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
 tempfile = "3"
+medulla-storage = { path = "../medulla-storage", features = ["object-archive"] }
+object_store = { workspace = true }
+tokio = { version = "1.53", features = ["macros", "rt"] }

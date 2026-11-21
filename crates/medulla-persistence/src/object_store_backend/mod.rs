@@ -24,6 +24,31 @@ use object_store::ObjectStore;
 mod client;
 pub use client::resolve_object_store_client;
 
+/// The environment variable naming the archive destination: a
+/// `StorageBackendSpec` JSON of the `object_store` variant carrying secret
+/// references only (`MEDULLA-ENGINE-PARITY-R016.1`).
+pub const ARCHIVE_BACKEND_ENV: &str = "MEDULLA_ARCHIVE_BACKEND";
+
+/// Build the archive named by [`ARCHIVE_BACKEND_ENV`]: `Ok(None)` when the
+/// variable is unset or empty (no archiver runs), `Ok(Some(_))` for a spec that
+/// resolves through [`resolve_object_store_client`], and `Err("<wire_code>:
+/// <detail>")` for a spec that does not parse or resolve.
+pub fn archive_from_env() -> Result<Option<medulla_storage::object::archive::ObjectArchive>, String>
+{
+    let raw = match std::env::var(ARCHIVE_BACKEND_ENV) {
+        Ok(raw) if !raw.trim().is_empty() => raw,
+        _ => return Ok(None),
+    };
+    let spec: StorageBackendSpec = serde_json::from_str(&raw).map_err(|error| {
+        format!("OBJECT_STORE_CLIENT_INVALID: {ARCHIVE_BACKEND_ENV} is not a backend spec: {error}")
+    })?;
+    let (store, root) = resolve_object_store_client(&spec)
+        .map_err(|refusal| format!("{}: {refusal:?}", refusal.wire_code()))?;
+    Ok(Some(medulla_storage::object::archive::ObjectArchive::new(
+        store, root,
+    )))
+}
+
 /// Typed refusal at open. `wire_code` is the literal the wire boundary keeps
 /// stable.
 #[derive(Debug, Clone, PartialEq, Eq)]

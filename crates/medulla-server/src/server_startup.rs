@@ -865,10 +865,58 @@ pub struct Transports {
 /// (MEDULLA-DECISION-ENGINE-R172.7.2).
 async fn spawn_post_bind_workers(state: SharedState) {
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
+    #[cfg(all(feature = "redb", feature = "object-store"))]
+    spawn_archiver(state.clone());
     #[cfg(all(feature = "decide", feature = "redb"))]
     medulla_h_decide::decide::capability_feed::spawn(state);
     #[cfg(not(all(feature = "decide", feature = "redb")))]
     let _ = state;
+}
+
+/// The tenant name archive segments are filed under in the archive manifest.
+#[cfg(all(feature = "redb", feature = "object-store"))]
+const ARCHIVE_TENANT: &str = "engine";
+
+/// Start the archiver (MEDULLA-ENGINE-PARITY-R016.1): one `archive_pass` every
+/// `archive.interval_s` seconds over the redb backend, copying committed batch
+/// records into archive segments in the object-store archive named by
+/// `MEDULLA_ARCHIVE_BACKEND`. With the variable unset no task is spawned; a spec
+/// that does not resolve refuses startup with its open refusal. A failed pass is
+/// logged with its code and retried at the next interval.
+#[cfg(all(feature = "redb", feature = "object-store"))]
+fn spawn_archiver(state: SharedState) {
+    use medulla_persistence::AsRedb;
+    let archive = match medulla_persistence::object_store_backend::archive_from_env() {
+        Ok(None) => return,
+        Ok(Some(archive)) => archive,
+        Err(error) => exit_with(format_args!("invalid archive backend: {error}"), 1),
+    };
+    let knobs = medulla_server_api::knob_config::knobs();
+    let policy = medulla_storage::ArchivePolicy {
+        segment_bytes: knobs.archive_segment_bytes,
+        retain_s: knobs.archive_retain_s,
+        interval_s: knobs.archive_interval_s,
+    };
+    info!(
+        "archiver started: one pass every {}s, segments of at most {} bytes",
+        policy.interval_s, policy.segment_bytes
+    );
+    tokio::spawn(async move {
+        loop {
+            let persistence = state.read().await.persistence.clone();
+            if let Some(redb) = persistence.as_ref().and_then(|backend| backend.as_redb()) {
+                match redb.archive_pass(&archive, ARCHIVE_TENANT, &policy).await {
+                    Ok(report) => tracing::debug!(
+                        "archive pass wrote {} segments holding {} records",
+                        report.segments_written,
+                        report.records_archived
+                    ),
+                    Err(error) => tracing::error!("archive pass failed: {error}"),
+                }
+            }
+            tokio::time::sleep(std::time::Duration::from_secs(policy.interval_s)).await;
+        }
+    });
 }
 
 /// UDS is the primary transport on unix, with an optional secondary TCP

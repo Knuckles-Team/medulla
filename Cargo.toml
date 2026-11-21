@@ -329,6 +329,8 @@ kv = ["medulla-server/kv", "medulla-wire/kv", "medulla-wire-msg/kv", "medulla-h-
 # Offline `store-upgrade graph-copy` to an object root (MEDULLA-OBJECT-STORAGE-BACKEND-R003.2).
 graph-copy = ["medulla-persistence-ops/graph-copy"]
 object-store-bench = ["dep:object_store", "medulla-persistence/object-store"]
+# The archiver of committed batch records into object-store archive segments (MEDULLA-ENGINE-PARITY-R016.1).
+object-store = ["redb", "medulla-server/object-store", "medulla-persistence/object-store"]
 blob-s3 = ["medulla-server/blob-s3", "medulla-server-api/blob-s3", "medulla-server-blob/blob-s3", "blob", "dep:object_store"]
 # L21 / W4.7 (CONCEPT:MEDULLA-P1-3 follow-up, DONE) — a REAL `medulla_alignment::EvidenceResolver`
 # backed by the engine's own blob CAS: `src/server/blob/cas_resolver.rs`'s

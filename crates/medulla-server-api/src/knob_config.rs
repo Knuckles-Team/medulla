@@ -904,6 +904,12 @@ knobs! {
     search_task_evidence_hops: u32 = "search_task.evidence_hops", U64(3), [1, 8], "hops", Tunable;
     /// Evidence nodes one served synthesis reads; a larger neighbourhood is refused (MEDULLA-FEDERATED-QUERY-R702.3).
     search_task_max_evidence_nodes: u64 = "search_task.max_evidence_nodes", U64(10_000), [10, 1_000_000], "nodes", Tunable;
+    /// Archiver: upper bound on one encoded archive segment (MEDULLA-ENGINE-PARITY-R016.1).
+    archive_segment_bytes: u64 = "archive.segment_bytes", U64(67_108_864), [1_048_576, 1_073_741_824], "bytes", Tunable;
+    /// Archiver: how long archive segments are kept (MEDULLA-ENGINE-PARITY-R016.1).
+    archive_retain_s: u64 = "archive.retain_s", U64(2_592_000), [3_600, 31_536_000], "s", Tunable;
+    /// Archiver: seconds between archive passes (MEDULLA-ENGINE-PARITY-R016.1).
+    archive_interval_s: u64 = "archive.interval_s", U64(300), [10, 86_400], "s", Tunable;
 }
 
 fn refusal(code: ServerErrorCode, knob: &str, detail: String) -> KnobRefusal {
