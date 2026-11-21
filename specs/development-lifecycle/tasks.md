@@ -63,7 +63,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T056 [US1] MEDULLA-SDLC-R012.4 Reachability and impact are graph queries.
 - [ ] T057 [US1] MEDULLA-SDLC-R012.5 Delivery slices come from the graph.
 - [ ] T058 [US1] MEDULLA-SDLC-R012.6 Specs change through the graph.
-- [ ] T059 [US1] MEDULLA-SDLC-R012.7 Lifecycle evidence lives with the requirement.
+- [ ] T059 [US1] MEDULLA-SDLC-R012.7 Lifecycle evidence lives with the requirement: `judges` edge in `gate_verdict::record`, `requirement_evidence.uql` fixture, no new edge kind.
 - [ ] T060 [US4] MEDULLA-SDLC-R012.8 Project mode record.
 - [ ] T061 [US5] MEDULLA-SDLC-R013 Scenario runs gate phases and release bundles.
 - [ ] T062 [US2] MEDULLA-SDLC-R014 Spec artifacts are graph records .
@@ -107,7 +107,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T100 [US6] MEDULLA-SDLC-R019.4 Shadow dispatch records what the loop would deliver.
 - [ ] T101 [US6] MEDULLA-SDLC-R019.5 Feedback reaches the delivery that follows the proposal.
 - [ ] T102 [P] [US6] MEDULLA-SDLC-R019.6 Mandate revalidation before a resume.
-- [ ] T103 [US6] MEDULLA-SDLC-R019.7 Assignment reports and the derived delivery stage.
+- [ ] T103 [US6] MEDULLA-SDLC-R019.7 Assignment reports and the derived delivery stage: `seq`, `AssignmentReport`, `DeliveryInput`, `DeliveryQuestion`, `DeliveryProposal` with `DELIVERY_PROPOSAL_MACHINE`, `record_report` and `derive_stage`.
 - [ ] T104 [US6] MEDULLA-SDLC-R019.8 One structured question per delivery.
 - [ ] T105 [P] [US6] MEDULLA-SDLC-R019.9 Automated review rounds have a budget.
 - [ ] T106 [US6] MEDULLA-SDLC-R019.10 Merge arming verdict keeps owner-only merge.

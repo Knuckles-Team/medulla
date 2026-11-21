@@ -35,10 +35,13 @@ Governing plan: [plan.md](plan.md). This file lists the records that the deliver
 
 ## Rust records
 
-- `Delivery{id, tenant, repo, slice_root, scope_rows, mandate, proposals, follows, assignments, inputs, attention, ended, created_at}`.
+- `Delivery{id, tenant, repo, slice_root, scope_rows, mandate, proposals: Vec<DeliveryProposal>, follows, assignments, inputs: Vec<DeliveryInput>, attention: Option<DeliveryQuestion>, ended, seq, created_at}`.
 - `DeliveryMandate{strength, basis, policy_version, actor, scope_rows, project_mode}`.
-- `DeliveryAssignment{id, run_trace_id, state, report, started_at, ended_at, ended_reason}`.
-- Closed sets: `DeliveryReportState`, `DeliveryOutcome`, `FeedbackKind` and `ArmingVerdict`.
+- `DeliveryAssignment{id, run_trace_id, state, report: Option<AssignmentReport>, started_at, ended_at, ended_reason}`.
+- `AssignmentReport{state, summary, proposal, evidence, seq}`, `DeliveryInput{event_id, kind, source, seq}`, `DeliveryQuestion{text, raised_by, seq}` and `DeliveryProposal{id, state}` (R019.7).
+- `seq` is the per-delivery sequence from `Delivery::next_seq`. It orders reports against inputs; wall-clock time never does.
+- Closed sets: `DeliveryReportState`, `DeliveryOutcome`, `FeedbackKind`, `ArmingVerdict`, `InputSource`, `ProposalState`, `ProposalEvent` and `DeliveryStage`.
+- `ProposalState` runs the edge table `DELIVERY_PROPOSAL_MACHINE`: `open` → `merged` or `closed`, and `closed` → `open`.
 
 The derived stage is not a record. `derive_stage` computes it on each read (R019.7).
 

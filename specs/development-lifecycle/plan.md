@@ -380,3 +380,10 @@ The R021.4 move carries `assistant_profile` with `acl` and reverses the old `med
 MEDULLA-SDLC-R014.4: proving member ejected from the frozen train; reprove tracked in UNPROVEN.txt
 
 The row keeps its acceptance requirements. This declaration records the evidence correction without changing test behavior or rewriting earlier commits.
+
+## Amendments
+
+### 2026-11-20: build-lane clarifications
+
+- `MEDULLA-SDLC-R012.7` adds no edge kind. The lifecycle edge set stays closed at the 14 of `LifecycleEdgeKind::ALL`. A requirement reaches its verdicts through `citesRequirement` and `judges`, its releases through `contains`, and its deployments through `deploys`. A stored `gatedBy` link would copy a derivable fact. The row now owns the `judges` write in `gate_verdict::record` and one competency fixture. `derive_spec_status` stays a replay of the changeset chain.
+- `MEDULLA-SDLC-R019.7` fixes the record fields the stage table reads. A per-delivery `seq` orders reports against inputs. `attention` holds one `DeliveryQuestion`. Each proposal carries a `ProposalState` driven by `DELIVERY_PROPOSAL_MACHINE`. `record_report` takes the verdict IDs from the R019.14 handler, so it stays pure. R019.5 and R019.11 now depend on R019.7.
