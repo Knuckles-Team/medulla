@@ -19,6 +19,7 @@ fn schema_version() -> u32 {
 
 /// A byte span of one content-addressed document.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct FragmentAddress {
     #[serde(default = "schema_version")]
@@ -30,6 +31,7 @@ pub struct FragmentAddress {
 
 /// A new fact replacing an old one, recorded by the envelope that did it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Supersession {
     #[serde(default = "schema_version")]
@@ -41,6 +43,7 @@ pub struct Supersession {
 
 /// One parked queue item with the reason it was parked.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DeadLetterItem {
     #[serde(default = "schema_version")]
@@ -56,6 +59,7 @@ pub struct DeadLetterItem {
 
 /// The result of replaying traces against a process model.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct ConformanceReport {
     #[serde(default = "schema_version")]
