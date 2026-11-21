@@ -27,6 +27,7 @@ from ontology_pack_support import (
     connect,
     import_entries,
     ontology_entry,
+    violation_codes,
 )
 from test_connector_pack_planted import _context, _pack_op
 
@@ -315,5 +316,53 @@ async def test_layer_classes_read_through_core_class() -> None:
             client, {"kind": "class", "cursor": None, "limit": 5000}
         )
         assert f"{iri}#Concept" in {term.iri for term in classes.terms}
+    finally:
+        await client.close()
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R701.4")
+@pytest.mark.asyncio
+async def test_layer_refusals_leave_state_unchanged() -> None:
+    client = await connect()
+    try:
+        connector = f"graph-layer-refuse-{uuid.uuid4().hex[:8]}"
+        graph = "catalog"
+
+        # A layer that declares another ontology IRI than its layer IRI.
+        foreign = await import_entries(
+            client,
+            connector,
+            _graph_entries(graph)
+            + [
+                ontology_entry(
+                    connector,
+                    f"skillgraph/{graph}",
+                    _layer_turtle("https://example.org/ontology/other"),
+                )
+            ],
+        )
+        assert "SKILL_GRAPH_LAYER_IRI_MISMATCH" in violation_codes(foreign), foreign
+        assert any(
+            "https://example.org/ontology/other" in v["detail"]
+            for v in foreign["violations"]
+        )
+
+        # A layer entry whose graph skill is not in the pack.
+        orphaned = await import_entries(
+            client,
+            connector,
+            [
+                ontology_entry(
+                    connector,
+                    f"skillgraph/{graph}",
+                    _layer_turtle(f"{LAYER_NS}{graph}"),
+                )
+            ],
+        )
+        assert "SKILL_GRAPH_LAYER_WITHOUT_GRAPH" in violation_codes(orphaned), orphaned
+
+        # Neither refusal committed anything.
+        with pytest.raises(EngineResponseError, match=ABSENT):
+            await _evidence(client, connector)
     finally:
         await client.close()

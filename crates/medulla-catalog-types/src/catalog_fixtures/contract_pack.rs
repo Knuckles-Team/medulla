@@ -366,6 +366,8 @@ pub fn every_violation_code() -> Vec<PackViolationCode> {
         PackViolationCode::PackMassWithdrawal,
         PackViolationCode::RetiredEntryReturned,
         PackViolationCode::OntologyOrphan,
+        PackViolationCode::SkillGraphLayerIriMismatch,
+        PackViolationCode::SkillGraphLayerWithoutGraph,
         PackViolationCode::CrosswalkSourceUnknown,
         PackViolationCode::CrosswalkSourceOutOfScope,
         PackViolationCode::CrosswalkTargetUnknown,

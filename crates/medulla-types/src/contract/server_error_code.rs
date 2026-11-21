@@ -442,6 +442,12 @@ closed_error_codes! {
         OntologyDiffIriMismatch => "ONTOLOGY_DIFF_IRI_MISMATCH",
         OntologyDigestMismatch => "ONTOLOGY_DIGEST_MISMATCH",
         OntologyPackImportsCore => "ONTOLOGY_PACK_IMPORTS_CORE",
+        /// A pack ontology class has no subclass path to the parent catalog (MEDULLA-TYPED-PACKS-R105.1, R701.4).
+        OntologyOrphan => "ONTOLOGY_ORPHAN",
+        /// A skill graph layer ontology declares another IRI than its layer IRI (MEDULLA-TYPED-PACKS-R701.4).
+        SkillGraphLayerIriMismatch => "SKILL_GRAPH_LAYER_IRI_MISMATCH",
+        /// A `skillgraph/` ontology entry has no graph skill in the pack (MEDULLA-TYPED-PACKS-R701.4).
+        SkillGraphLayerWithoutGraph => "SKILL_GRAPH_LAYER_WITHOUT_GRAPH",
         OntologyRevisionConflict => "ONTOLOGY_REVISION_CONFLICT",
         OntologyRevisionUnknown => "ONTOLOGY_REVISION_UNKNOWN",
         OutboxOwnerUnavailable => "OUTBOX_OWNER_UNAVAILABLE",

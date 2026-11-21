@@ -46,6 +46,9 @@ pub enum PackViolationCode {
     // A pack ontology class has no subclass path to the parent catalog
     // (MEDULLA-TYPED-PACKS-R105.1); the import is refused.
     OntologyOrphan,
+    // A skill graph layer refusal (MEDULLA-TYPED-PACKS-R701.4).
+    SkillGraphLayerIriMismatch,
+    SkillGraphLayerWithoutGraph,
     // Crosswalk refusals (MEDULLA-TYPED-PACKS-R071.1.4).
     CrosswalkSourceUnknown,
     CrosswalkSourceOutOfScope,

@@ -124,6 +124,34 @@ pub(super) fn bind_layer(
     archive: &[u8],
     all: &[&PackEntry],
 ) -> Result<Option<SkillGraphLayer>, PackViolation> {
+    // A `skillgraph/<graph>` ontology entry with no graph skill is refused by name
+    // (MEDULLA-TYPED-PACKS-R701.4).
+    for layer in all
+        .iter()
+        .filter(|entry| entry.kind == PackEntryKind::Ontology)
+    {
+        let Some(graph) = layer.name.strip_prefix(LAYER_ENTRY_PREFIX) else {
+            continue;
+        };
+        let has_graph = all.iter().any(|entry| {
+            entry.kind == PackEntryKind::Skill
+                && entry.name == graph
+                && section_bytes(archive, &entry.body)
+                    .ok()
+                    .and_then(|body| declared_skill_type(body).ok().flatten())
+                    == Some(GRAPH_SKILL_TYPE)
+        });
+        if !has_graph {
+            return Err(violation(
+                PackViolationCode::SkillGraphLayerWithoutGraph,
+                Some(&layer.uri),
+                &format!(
+                    "SKILL_GRAPH_LAYER_WITHOUT_GRAPH: the ontology entry {} has no graph skill {graph}",
+                    layer.name
+                ),
+            ));
+        }
+    }
     for skill in all
         .iter()
         .filter(|entry| entry.kind == PackEntryKind::Skill)
@@ -158,7 +186,7 @@ pub(super) fn bind_layer(
         if ontologies.len() != 1 || !ontologies.contains(&expected) {
             let found = ontologies.iter().cloned().collect::<Vec<_>>().join(", ");
             return Err(violation(
-                PackViolationCode::MalformedBody,
+                PackViolationCode::SkillGraphLayerIriMismatch,
                 Some(&layer.uri),
                 &format!(
                     "SKILL_GRAPH_LAYER_IRI_MISMATCH: graph {graph} declares ontology IRI \
@@ -553,6 +581,7 @@ mod tests {
         // A foreign ontology IRI is refused by name with the found IRI.
         let foreign = layer_turtle("https://example.org/ontology/other", core_class);
         let refused = bind(Some(foreign.as_str())).unwrap_err();
+        assert_eq!(refused.code, PackViolationCode::SkillGraphLayerIriMismatch);
         assert!(refused.detail.starts_with("SKILL_GRAPH_LAYER_IRI_MISMATCH"));
         assert!(refused.detail.contains("https://example.org/ontology/other"));
 
