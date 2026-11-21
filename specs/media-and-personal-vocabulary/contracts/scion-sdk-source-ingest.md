@@ -1,7 +1,7 @@
 # Seam: scion-sdk source envelopes for bookmarks and papers
 
-Provider: scion-sdk SCION-SOURCE-INGEST-R005.8
-Consumer: medulla MEDULLA-MEDIA-VOCAB-R001.102.1
+Provider: scion-sdk SCION-SOURCE-INGEST-R005.1 and R005.2 (paper records and their document receipts), SCION-SOURCE-INGEST-R005.8 (bookmark records)
+Consumer: medulla MEDULLA-MEDIA-VOCAB-R002.5.1 (papers) and MEDULLA-MEDIA-VOCAB-R001.102.1 (bookmarks)
 
 ## Wire shape
 

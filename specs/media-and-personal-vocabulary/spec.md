@@ -7,7 +7,7 @@ Public provenance: gap found by specs/connector-competency, which marked the voc
 
 Component: ontology and packs, with the ingest and query entries named by each row.
 
-Depends-on: `MEDULLA-DECISION-ENGINE-R010.100` for the refusal tables, `MEDULLA-DECISION-ENGINE-R651.1` for the memory record, `SCION-SOURCE-INGEST-R005.8` for bookmark envelopes. The connector operations that the competency questions need are specified in the connector repositories; until one lands, Medulla answers the affected question with a typed abstention naming the operation and its owner.
+Depends-on: `MEDULLA-DECISION-ENGINE-R010.100` for the refusal tables, `MEDULLA-DECISION-ENGINE-R651.1` for the memory record, `SCION-SOURCE-INGEST-R005.8` for bookmark envelopes, `SCION-SOURCE-INGEST-R005.1` and `SCION-SOURCE-INGEST-R005.2` for paper records and document receipts. The connector operations that the competency questions need are specified in the connector repositories; until one lands, Medulla answers the affected question with a typed abstention naming the operation and its owner.
 
 ## User Scenarios & Testing
 

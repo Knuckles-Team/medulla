@@ -406,7 +406,7 @@ Gates for any change under these rows: `cargo test -p medulla-core --test media_
 
 ## Cross-repo seams
 
-- scion-sdk source envelopes for bookmarks and papers: `SCION-SOURCE-INGEST-R005.8` (consumer rows R001.102.1 and R002.5.1); contract `contracts/scion-sdk-source-ingest.md`.
+- scion-sdk source envelopes for bookmarks and papers: `SCION-SOURCE-INGEST-R005.8` for bookmark records (consumer row R001.102.1) and `SCION-SOURCE-INGEST-R005.1` and `R005.2` for paper records and their document receipts (consumer row R002.5.1); contract `contracts/scion-sdk-source-ingest.md`.
 - arbora served adapters for meeting and bookmark operations: `ARBORA-OPS-R065.4` and `ARBORA-OPS-R066`; contract `contracts/arbora-served-operations.md`.
 - overstory renderers of summaries, mindmaps and exports: `OVERSTORY-APPS-R001.5` and `OVERSTORY-APPS-R001.6`; contract `contracts/overstory-presentation.md`.
 - meristem invocation receipts for summaries: `MERISTEM-HARNESS-CYCLE-R068`; contract `contracts/meristem-summary-receipt.md`.
