@@ -8,6 +8,7 @@ media type, and the extracted text takes the same atom path as a `body` record.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import os
 import sys
@@ -150,8 +151,10 @@ async def test_text_formats_yield_document_atoms() -> None:
             record_id = props.get(SOURCE_RECORD_ID, "")
             if record_id.startswith("reader-"):
                 documents[record_id.removeprefix("reader-")] = node_id
-                # The stored document names the digest of the source record.
-                assert props.get("source_raw_sha256")
+                # The stored document names the digest of the file's own bytes.
+                assert props.get("source_raw_sha256") == hashlib.sha256(
+                    BODIES[record_id.removeprefix("reader-")][1]
+                ).hexdigest()
         assert set(documents) == set(BODIES)
 
         atoms = [node for node, _ in await client.nodes.list_by_label("KnowledgeAtom", 0)]
@@ -233,7 +236,9 @@ async def test_each_format_yields_spanned_fragments() -> None:
             if record_id.startswith("fixture-"):
                 assert record_id not in documents, f"{record_id} has two document nodes"
                 documents[record_id] = node_id
-                assert props.get("source_raw_sha256")
+                assert props.get("source_raw_sha256") == hashlib.sha256(
+                    (FIXTURE_DIR / record_id.removeprefix("fixture-")).read_bytes()
+                ).hexdigest()
         assert set(documents) == {f"fixture-{name}" for _, name in FIXTURES}
 
         atoms = [node for node, _ in await client.nodes.list_by_label("KnowledgeAtom", 0)]

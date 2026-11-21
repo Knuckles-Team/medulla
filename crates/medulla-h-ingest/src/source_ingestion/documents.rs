@@ -67,6 +67,9 @@ pub(super) struct DocumentOutput {
     /// The committed graph version an original was first indexed at; set by
     /// [`dedup_documents`].
     pub first_version: u64,
+    /// SHA-256 of the blob bytes a reader extracted the text from; `None` for a
+    /// record whose text came inline (MEDULLA-INGEST-WORKER-R700.6).
+    pub file_sha256: Option<Digest256>,
 }
 
 /// The IRIs of `root` and every class that extends it, read from the `rdfs:subClassOf` axioms of
@@ -212,6 +215,7 @@ pub(super) fn normalize_record(
     // engine reads with the reader of the mapped `media_type`; the text is the fragments'
     // text joined in source order (MEDULLA-INGEST-WORKER-R700.3).
     let extracted: String;
+    let mut file_sha256: Option<Digest256> = None;
     let text = match value_of("body") {
         Some(serde_json::Value::String(text)) => text.as_str(),
         _ => match value_of("content_ref") {
@@ -231,6 +235,7 @@ pub(super) fn normalize_record(
                         None => normalization_failed(refusal),
                     }
                 })?;
+                file_sha256 = Some(Digest256::sha256(&bytes));
                 let fragments = readers
                     .read(&normalize_media_type(media_type), &bytes)
                     .map_err(|error| DocumentIngestError::from_reader_code(error.code, &error.detail))?;
@@ -306,6 +311,7 @@ pub(super) fn normalize_record(
         signature,
         dedup: DedupOutcome::Original,
         first_version: 0,
+        file_sha256,
     }))
 }
 

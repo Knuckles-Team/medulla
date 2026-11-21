@@ -2877,6 +2877,11 @@ fn admit_record(
         }
     }
     if let Some(document) = lookups.documents.get(node_id.as_str()) {
+        // A document read from a blob carries the SHA-256 of the file's own bytes
+        // (MEDULLA-INGEST-WORKER-R700.6), not the digest of the stored record.
+        if let Some(file_sha256) = document.file_sha256 {
+            properties.insert("source_raw_sha256".into(), file_sha256.to_hex().into());
+        }
         if document.dedup == documents::DedupOutcome::Original {
             properties.insert(
                 "minhash_signature".into(),
