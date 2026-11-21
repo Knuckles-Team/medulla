@@ -753,6 +753,13 @@ $($variants)*
         request: Box<medulla_types::code_context::CodeContextRequest>,
     },
 
+    /// MEDULLA-REPO-INGEST-R700.3: the symbols the caller's declared entry points do
+    /// not reach, over the same code index `CodeContext` reads. A read; nothing is
+    /// committed.
+    CodeHealthSweep {
+        request: Box<medulla_ingestion_types::code_health::CodeHealthSweepRequest>,
+    },
+
     /// MEDULLA-FEDERATED-QUERY-R654.3: the ordered causal chain behind one
     /// operations symptom. A read; nothing is committed.
     Diagnose {

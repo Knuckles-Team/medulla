@@ -651,6 +651,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::GetForeignSource { .. }
         | Method::ProbeForeignSource { .. }
         | Method::CodeContext { .. }
+        | Method::CodeHealthSweep { .. }
         | Method::Diagnose { .. }
         | Method::EncodedDocumentSearch { .. }
         | Method::ProjectionRead { .. }

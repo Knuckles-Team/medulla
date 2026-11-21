@@ -91,6 +91,28 @@ impl CodeHealthFinding {
     }
 }
 
+/// A served `CodeHealthSweep` request (MEDULLA-REPO-INGEST-R700.3): the repository label
+/// written into every finding, the entry points the caller declares and an optional step
+/// budget. With no declared entry point every finding is `unknown`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CodeHealthSweepRequest {
+    pub repo: String,
+    pub entry_points: Vec<String>,
+    #[serde(default)]
+    pub step_budget: Option<u64>,
+}
+
+/// The served `CodeHealthSweep` answer: the findings of one sweep, nothing stored.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CodeHealthReport {
+    pub repo: String,
+    pub findings: Vec<CodeHealthFinding>,
+}
+
 /// One repository's symbol graph and declared entry points.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct CodeGraph {

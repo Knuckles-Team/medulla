@@ -170,6 +170,9 @@ async fn dispatch_query_family(
     #[cfg(feature = "query")]
     let method = match method {
         Method::CodeContext { request } => return Ok(handle_code_context(hctx, *request).await),
+        Method::CodeHealthSweep { request } => {
+            return Ok(handle_code_health_sweep(hctx, *request).await)
+        }
         Method::Diagnose { request } => return Ok(handle_diagnose(hctx, *request).await),
         other => other,
     };

@@ -521,6 +521,8 @@ knobs! {
     identity_ownership_writer_share: f64 = "identity.ownership_writer_share", F64(0.10), [0.01, 0.5], "fraction", Tunable;
     /// Code context: default breadth-first depth of a `CodeContext` walk.
     code_context_depth: u64 = "code.context_depth", U64(3), [1, 6], "hops", Tunable;
+    /// Code health: default step budget of one `CodeHealthSweep` traversal.
+    code_health_step_budget: u64 = "code.health_step_budget", U64(5_000_000), [10_000, 1_000_000_000], "steps", Tunable;
     /// Code context: visited-node cap of a `CodeContext` walk.
     code_max_nodes: u64 = "code.max_nodes", U64(512), [32, 8192], "nodes", Tunable;
     /// Retrieval lineage depth.

@@ -17,7 +17,10 @@ use medulla_plan::code_context::{
     code_context, diagnose, CodeContextError, CodeEdge, CodeIndex, OpsLink, OpsLinkKind, OpsNode,
     OPS_STAGE_BY_LABEL,
 };
-use medulla_protocol_types::result_contract::query::{CodeContext, Diagnose};
+use medulla_ingestion_types::code_health::{
+    sweep, CodeGraph, CodeHealthReport, CodeHealthSweepRequest,
+};
+use medulla_protocol_types::result_contract::query::{CodeContext, CodeHealthSweep, Diagnose};
 use medulla_types::code_context::{CodeContextRequest, DiagnoseRequest};
 use std::collections::BTreeSet;
 
@@ -200,6 +203,70 @@ pub(crate) async fn handle_code_context(
             req_id,
             Ok(Ok(answer)),
             "CodeContext",
+            #[cfg(feature = "result-cache")]
+            ctx.core,
+            #[cfg(feature = "result-cache")]
+            None,
+        ),
+    }
+}
+
+/// Serve one `CodeHealthSweep` (MEDULLA-REPO-INGEST-R700.3): the symbols the declared entry
+/// points do not reach, over the same code index `CodeContext` reads. Rows the caller cannot
+/// read are not in the projected core, so the sweep never reports them. Nothing is stored.
+pub(crate) async fn handle_code_health_sweep(
+    ctx: &QueryHandlerCtx<'_>,
+    request: CodeHealthSweepRequest,
+) -> Response {
+    let req_id = ctx.req_id;
+    let knobs = medulla_server_api::knob_config::knobs();
+    let budget = match request.step_budget {
+        Some(budget) if !(10_000..=1_000_000_000).contains(&budget) => {
+            return Response::err(
+                req_id,
+                "INVALID_ARGUMENT: step_budget must be within [10000, 1000000000]",
+            );
+        }
+        Some(budget) => budget,
+        None => knobs.code_health_step_budget,
+    };
+    let core = Arc::clone(ctx.core);
+    let outcome = compute_off_lock(req_id, move || {
+        let index = code_index(&core);
+        let symbols: BTreeSet<String> = index.symbols.iter().cloned().collect();
+        let mut references: std::collections::BTreeMap<String, BTreeSet<String>> =
+            Default::default();
+        for edge in &index.edges {
+            references
+                .entry(edge.caller.clone())
+                .or_default()
+                .insert(edge.callee.clone());
+        }
+        // An entry point that is not a symbol of the index is dropped.
+        let entry_points = request
+            .entry_points
+            .iter()
+            .filter(|name| symbols.contains(name.as_str()))
+            .cloned()
+            .collect();
+        let graph = CodeGraph {
+            repo: request.repo.clone(),
+            symbols,
+            references,
+            entry_points,
+        };
+        CodeHealthReport {
+            repo: request.repo,
+            findings: sweep(&graph, budget),
+        }
+    })
+    .await;
+    match outcome {
+        Err(response) => response,
+        Ok(report) => served_response::<CodeHealthSweep>(
+            req_id,
+            Ok(Ok(report)),
+            "CodeHealthSweep",
             #[cfg(feature = "result-cache")]
             ctx.core,
             #[cfg(feature = "result-cache")]

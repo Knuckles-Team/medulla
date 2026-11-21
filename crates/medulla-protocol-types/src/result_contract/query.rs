@@ -85,6 +85,8 @@ method_results! {
     SynthesizeSearchTask(SynthesizeSearchTask) => Raw<medulla_work_types::search_task::SynthesizeSearchTaskAnswer>;
     // MEDULLA-FEDERATED-QUERY-R654.3: code context and symptom diagnosis.
     CodeContext(CodeContext) => Raw<medulla_types::code_context::CodeContextAnswer>;
+    // MEDULLA-REPO-INGEST-R700.3: the findings of one code-health sweep.
+    CodeHealthSweep(CodeHealthSweep) => Raw<medulla_ingestion_types::code_health::CodeHealthReport>;
     Diagnose(Diagnose) => Raw<medulla_types::code_context::SymptomDiagnosis>;
     ContextCompile(ContextCompile) => Raw<medulla_decision_types::decision::context_bundle::ContextBundle>;
     ColumnLineage(ColumnLineage) => Raw<medulla_catalog_types::lineage::LineageResult>;
