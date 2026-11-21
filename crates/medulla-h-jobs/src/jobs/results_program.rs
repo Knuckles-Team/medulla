@@ -474,7 +474,7 @@ mod privacy_tests {
             },
             input_payload: None,
             retry: RetryPolicy::default(),
-            state: JobState::Submitted,
+            state: JobState::Submitted { checkpoint: None },
             lease_epoch: 0,
             last_worker_ref: String::new(),
             output: None,

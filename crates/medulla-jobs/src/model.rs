@@ -169,7 +169,11 @@ pub struct Checkpoint {
 /// evidence-bearing claim batch are durable. A `Failed` job never revives.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub enum JobState {
-    Submitted,
+    /// Queued for a worker. A reclaim (J13, J14) carries the checkpoint of the lapsed attempt
+    /// here, and the next claim resumes from it; a job never attempted carries none.
+    Submitted {
+        checkpoint: Option<Checkpoint>,
+    },
     Running {
         lease: WorkerLease,
         checkpoint: Checkpoint,
@@ -215,7 +219,7 @@ impl JobState {
     /// The machine state of this payload: one exhaustive match, one stage per variant.
     pub fn stage(&self) -> JobStage {
         match self {
-            JobState::Submitted => JobStage::Submitted,
+            JobState::Submitted { .. } => JobStage::Submitted,
             JobState::Running { .. } => JobStage::Running,
             JobState::Publishing { .. } => JobStage::Publishing,
             JobState::CancelRequested { .. } => JobStage::CancelRequested,
@@ -254,10 +258,10 @@ impl JobState {
             | JobState::Publishing { checkpoint, .. }
             | JobState::CancelRequested { checkpoint, .. }
             | JobState::Succeeded { checkpoint, .. } => Some(checkpoint),
-            JobState::Backoff { checkpoint, .. }
+            JobState::Submitted { checkpoint }
+            | JobState::Backoff { checkpoint, .. }
             | JobState::Failed { checkpoint, .. }
             | JobState::Cancelled { checkpoint } => checkpoint.as_ref(),
-            JobState::Submitted => None,
         }
     }
 
@@ -269,10 +273,10 @@ impl JobState {
             | JobState::Publishing { checkpoint, .. }
             | JobState::CancelRequested { checkpoint, .. }
             | JobState::Succeeded { checkpoint, .. } => Some(checkpoint),
-            JobState::Backoff { checkpoint, .. }
+            JobState::Submitted { checkpoint }
+            | JobState::Backoff { checkpoint, .. }
             | JobState::Failed { checkpoint, .. }
             | JobState::Cancelled { checkpoint } => checkpoint.as_mut(),
-            JobState::Submitted => None,
         }
     }
 

@@ -144,7 +144,7 @@ fn require_task_lease(
         }
         // A lapsed lease the scheduler already detached returned the task to `Submitted`; it
         // still names its last holder, so that holder reads as expired rather than never claimed.
-        JobState::Submitted if job.last_worker_ref == worker_ref => {
+        JobState::Submitted { .. } if job.last_worker_ref == worker_ref => {
             Err(TaskAckError::LeaseExpired)
         }
         _ => Err(TaskAckError::NotClaimed),
@@ -206,7 +206,7 @@ impl JobStore {
                     checkpoint: None,
                 }
             } else {
-                JobState::Submitted
+                JobState::Submitted { checkpoint: None }
             },
             lease_epoch: 0,
             last_worker_ref: String::new(),

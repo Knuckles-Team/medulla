@@ -646,7 +646,10 @@ mod colocated_executor_tests {
         )
         .unwrap();
         assert!(
-            matches!(failed_again.state, medulla_jobs::model::JobState::Submitted),
+            matches!(
+                failed_again.state,
+                medulla_jobs::model::JobState::Submitted { .. }
+            ),
             "two failures of three attempts leave the job retryable"
         );
         assert_eq!(failed_again.not_before_ms, t1 + 1_000);
@@ -709,7 +712,7 @@ mod association_result_tests {
             },
             input_payload: None,
             retry: medulla_jobs::model::RetryPolicy::default(),
-            state: medulla_jobs::model::JobState::Submitted,
+            state: medulla_jobs::model::JobState::Submitted { checkpoint: None },
             lease_epoch: 0,
             last_worker_ref: String::new(),
             output: None,

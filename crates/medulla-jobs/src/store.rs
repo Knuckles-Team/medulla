@@ -341,7 +341,7 @@ fn decode_job(bytes: &[u8]) -> Result<AnalyticsJob> {
 /// cancel-requested job whose lease lapsed needs one worker poll to reach `Cancelled`.
 fn job_is_ready_for_scheduling(job: &AnalyticsJob, live_lease: bool, now_ms: i64) -> bool {
     match &job.state {
-        JobState::Submitted => true,
+        JobState::Submitted { .. } => true,
         JobState::Backoff { not_before_ms, .. } => *not_before_ms <= now_ms,
         JobState::Running { .. }
         | JobState::Publishing { .. }
@@ -682,7 +682,7 @@ impl JobStore {
                 backoff_ms: spec.backoff_ms,
                 attempts_made: 0,
             },
-            state: JobState::Submitted,
+            state: JobState::Submitted { checkpoint: None },
             lease_epoch: 0,
             last_worker_ref: String::new(),
             output: None,
@@ -726,7 +726,7 @@ impl JobStore {
                         backoff_ms: spec.backoff_ms,
                         attempts_made: 0,
                     },
-                    state: JobState::Submitted,
+                    state: JobState::Submitted { checkpoint: None },
                     lease_epoch: 0,
                     last_worker_ref: String::new(),
                     output: None,
@@ -953,14 +953,20 @@ impl JobStore {
             worker_takes_lease: true,
             ..job.state.facts()
         };
+        // A reclaimed job (J13, J14) carries the checkpoint of its lapsed attempt in `Submitted`;
+        // the new attempt resumes from it instead of starting over.
+        let resumed = match &job.state {
+            JobState::Submitted { checkpoint } => checkpoint.clone(),
+            _ => None,
+        };
         let running = JobState::Running {
             lease: lease.clone(),
-            checkpoint: Checkpoint {
+            checkpoint: resumed.unwrap_or_else(|| Checkpoint {
                 progress: 0.0,
                 stage: "leased".to_string(),
                 state_blob: None,
                 updated_at_ms: now_ms,
-            },
+            }),
         };
         job.transition(JobEvent::Claim, &facts, now_ms, running)?;
         job.updated_at_ms = now_ms;
@@ -1253,7 +1259,10 @@ impl JobStore {
             lease_owner_matches: true,
             ..job.state.facts()
         };
-        job.transition(JobEvent::Reclaim, &facts, now_ms, JobState::Submitted)?;
+        let reclaimed = JobState::Submitted {
+            checkpoint: job.state.checkpoint().cloned(),
+        };
+        job.transition(JobEvent::Reclaim, &facts, now_ms, reclaimed)?;
         job.updated_at_ms = now_ms;
         let (batch, _next_version) =
             write_job_transition(self, &write, &job, expected_version, None)?;
@@ -1394,7 +1403,7 @@ impl JobStore {
             let facts = job.state.facts();
             match job.state.clone() {
                 // J09: nothing holds it, so it is cancelled at once.
-                JobState::Submitted => {
+                JobState::Submitted { .. } => {
                     let cancelled = JobState::Cancelled { checkpoint: None };
                     job.transition(JobEvent::Cancel, &facts, committed, cancelled)?;
                 }
@@ -1411,7 +1420,10 @@ impl JobStore {
                 // The holder's lease lapsed before the scheduler detached it: nothing is
                 // running, so the job returns to `Submitted` (J13) and is cancelled (J09).
                 JobState::Running { checkpoint, .. } => {
-                    job.transition(JobEvent::Reclaim, &facts, committed, JobState::Submitted)?;
+                    let reclaimed = JobState::Submitted {
+                        checkpoint: Some(checkpoint.clone()),
+                    };
+                    job.transition(JobEvent::Reclaim, &facts, committed, reclaimed)?;
                     let cancelled = JobState::Cancelled {
                         checkpoint: Some(checkpoint),
                     };
@@ -1481,9 +1493,11 @@ impl JobStore {
         self.mutate_job_batch(job_id, batch, committed_at_ms, |job| {
             let committed = committed_at_ms as i64;
             let facts = job.state.facts();
+            let carried = job.state.checkpoint().cloned();
             match &job.state {
                 JobState::Running { .. } | JobState::Publishing { .. } => {
-                    job.transition(JobEvent::Reclaim, &facts, committed, JobState::Submitted)?;
+                    let reclaimed = JobState::Submitted { checkpoint: carried };
+                    job.transition(JobEvent::Reclaim, &facts, committed, reclaimed)?;
                 }
                 // The batch is no worker: `Claim` is refused from every other state.
                 other => {
@@ -1893,7 +1907,7 @@ fn adjust_task_queue_load(
         return Ok(());
     };
     let (queued, running) = match &job.state {
-        JobState::Submitted | JobState::Backoff { .. } => (1u64, 0u64),
+        JobState::Submitted { .. } | JobState::Backoff { .. } => (1u64, 0u64),
         JobState::Running { .. } | JobState::CancelRequested { .. } => (0, 1),
         _ => return Ok(()),
     };
@@ -2077,13 +2091,13 @@ fn remove_job_indexes(wtx: &AdmittedOwnerWrite<'_, JobsOwner>, job: &AnalyticsJo
 fn ready_indexed(job: &AnalyticsJob) -> bool {
     matches!(
         &job.state,
-        JobState::Submitted | JobState::Backoff { .. }
+        JobState::Submitted { .. } | JobState::Backoff { .. }
     )
 }
 
 fn deadline_indexed(job: &AnalyticsJob) -> bool {
     job.policy.deadline_unix_ms.is_some()
-        && matches!(&job.state, JobState::Submitted | JobState::Backoff { .. })
+        && matches!(&job.state, JobState::Submitted { .. } | JobState::Backoff { .. })
 }
 
 /// A cancel-requested job is in the cancellation index until its holder confirms the stop or
@@ -2551,7 +2565,12 @@ fn reconcile_expired_lease_job(
         // ready queue; a published result stays durable for the next claim. Fencing still
         // advances only when the next worker leases it.
         _ => {
-            job.transition(JobEvent::Reclaim, &lapsed, now_ms, JobState::Submitted)?;
+            job.transition(
+                JobEvent::Reclaim,
+                &lapsed,
+                now_ms,
+                JobState::Submitted { checkpoint },
+            )?;
         }
     }
     job.updated_at_ms = now_ms;
@@ -3202,7 +3221,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let store = open_dev_store_in_dir(dir.path()).unwrap();
         let job = store.submit(spec("g1", 1)).unwrap();
-        assert_eq!(job.state, JobState::Submitted);
+        assert_eq!(job.state, JobState::Submitted { checkpoint: None });
         assert!(job.job_id.starts_with("job-"));
     }
 
@@ -3643,10 +3662,10 @@ mod tests {
             )
             .unwrap()
             .unwrap();
-        // The lapsed lease returned the orphan to Submitted (J13), so the new claim starts a fresh
-        // attempt under a higher epoch.
+        // The lapsed lease returned the orphan to Submitted (J13) carrying its checkpoint, so the
+        // new claim resumes from that checkpoint under a higher epoch.
         match &claim.job.state {
-            JobState::Running { lease, .. } => assert_eq!(lease.worker_ref, "worker:resume"),
+            JobState::Running { checkpoint, .. } => assert_eq!(checkpoint.progress, 0.4),
             other => panic!("expected reassigned Running job, got {other:?}"),
         }
         assert_eq!(claim.job.lease_epoch, 2);
@@ -3857,7 +3876,7 @@ mod tests {
         assert!(matches!(paced, Err(JobError::ClaimPaced)));
         assert!(matches!(
             store.get(&background.job_id).unwrap().state,
-            JobState::Submitted
+            JobState::Submitted { .. }
         ));
 
         // The foreground claim is not throttled; afterwards the background claim runs.
@@ -3908,7 +3927,7 @@ mod tests {
         assert!(matches!(paced, Err(JobError::ClaimPaced)));
         assert!(matches!(
             store.get(&second.job_id).unwrap().state,
-            JobState::Submitted
+            JobState::Submitted { .. }
         ));
         let later = store
             .claim_next("worker:b", &[], at + 1_000, 30_000, quota)
@@ -4105,7 +4124,7 @@ mod tests {
         // monotonic id sequence must both survive.
         let store = open_dev_store_in_dir(dir.path()).unwrap();
         let job = store.get(&job_id).unwrap();
-        assert_eq!(job.state, JobState::Submitted);
+        assert_eq!(job.state, JobState::Submitted { checkpoint: None });
 
         let next = store.submit(spec("g1", 1)).unwrap();
         assert_ne!(

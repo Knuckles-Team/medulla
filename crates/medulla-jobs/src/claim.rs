@@ -647,7 +647,7 @@ mod tests {
     fn commit_rejects_a_non_succeeded_job() {
         let core = GraphCore::new();
         let job = AnalyticsJob {
-            state: JobState::Submitted,
+            state: JobState::Submitted { checkpoint: None },
             ..succeeded_job("job-0000000000000001", "g1", 5)
         };
         assert!(commit_result_claim(&core, &job, 0.5, None).is_err());

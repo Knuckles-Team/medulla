@@ -238,7 +238,7 @@ pub(super) fn handle_worker_fail(
     if let Ok(job) = store.get(job_id) {
         if matches!(
             &job.state,
-            JobState::Submitted | JobState::Backoff { .. } | JobState::Failed { .. }
+            JobState::Submitted { .. } | JobState::Backoff { .. } | JobState::Failed { .. }
         )
             && job.last_worker_ref == worker_ref
             && job.lease_epoch == lease_epoch

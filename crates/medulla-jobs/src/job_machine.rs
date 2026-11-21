@@ -707,7 +707,7 @@ mod tests {
             lease: sample_lease(),
             checkpoint: sample_checkpoint(),
         };
-        let mut job = sample_job(JobState::Submitted);
+        let mut job = sample_job(JobState::Submitted { checkpoint: None });
         let facts = JobFacts {
             worker_takes_lease: true,
             ..JobFacts::default()
@@ -725,18 +725,18 @@ mod tests {
         assert_eq!(refused.from, "submitted");
         assert_eq!(refused.event, "Claim");
         assert_eq!(refused.reason, TransitionRefusalReason::IllegalTransition);
-        assert_eq!(job.state, JobState::Submitted, "the job is unchanged");
+        assert_eq!(job.state, JobState::Submitted { checkpoint: None }, "the job is unchanged");
         // The matching payload is applied.
         job.transition(JobEvent::Claim, &facts, 10, running.clone())
             .unwrap();
         assert_eq!(job.state, running);
         // A guard that fails refuses too and changes nothing.
-        let mut idle = sample_job(JobState::Submitted);
+        let mut idle = sample_job(JobState::Submitted { checkpoint: None });
         let none = JobFacts::default();
         assert!(idle
             .transition(JobEvent::Claim, &none, 10, running)
             .is_err());
-        assert_eq!(idle.state, JobState::Submitted);
+        assert_eq!(idle.state, JobState::Submitted { checkpoint: None });
     }
 
     // spec: MEDULLA-CQ-ORCH-R811.1
