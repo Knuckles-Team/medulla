@@ -1063,6 +1063,34 @@ fn append_classified(
     }
 }
 
+/// Append the policy candidates of the files `classify_spec_files` typed `SpecPolicy`
+/// (MEDULLA-ORCH-VOCAB-R012.7.2): one `PolicyCandidate` node per clause, `proposed` or
+/// `inactive`. Nothing is activated and no `ProposeRule` is written.
+fn append_policy_candidates(
+    repo: &str,
+    commit: &str,
+    files: &[(String, Vec<u8>)],
+    classified: &ClassifiedSpecFiles,
+    result: &mut medulla_ingestion_types::ingestion_wire::IndexResult,
+) {
+    let policy_paths: Vec<String> = classified
+        .operations
+        .iter()
+        .filter(|op| op["properties"]["type"] == "SpecPolicy")
+        .filter_map(|op| op["properties"]["path"].as_str().map(str::to_owned))
+        .collect();
+    for op in super::policy_candidates::synthesize_policy_candidates(
+        repo,
+        commit,
+        files,
+        &policy_paths,
+    ) {
+        result
+            .nodes
+            .push(super::policy_candidates::candidate_index_node(&op));
+    }
+}
+
 /// The `SourceIngest` and `IndexRepository` worker loop's entry for spec artifacts
 /// (MEDULLA-SDLC-R014.2): called with the files of one scoped repository batch, it
 /// re-ingests only the spec artifact files whose digest differs from `stored` and lowers
@@ -1077,6 +1105,7 @@ pub fn project_spec_artifacts(
     stored: &BTreeMap<String, StoredArtifact>,
     changesets: &[Changeset],
     branch: &str,
+    commit: &str,
     result: &mut medulla_ingestion_types::ingestion_wire::IndexResult,
 ) -> Result<ReingestPlan, String> {
     let mut seen = BTreeSet::new();
@@ -1088,6 +1117,7 @@ pub fn project_spec_artifacts(
     let classified = classify_spec_files(repo, files);
     if texts.is_empty() && changesets.is_empty() {
         append_classified(&classified, result);
+        append_policy_candidates(repo, commit, files, &classified, result);
         return Ok(ReingestPlan {
             operations: Vec::new(),
             reingested: Vec::new(),
@@ -1182,6 +1212,7 @@ pub fn project_spec_artifacts(
         }
     }
     append_classified(&classified, result);
+    append_policy_candidates(repo, commit, files, &classified, result);
     Ok(plan)
 }
 
@@ -1582,7 +1613,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         ];
         let mut first = IndexResult::default();
         let plan =
-            project_spec_artifacts("demo", &files, &BTreeMap::new(), &[], "main", &mut first)
+            project_spec_artifacts("demo", &files, &BTreeMap::new(), &[], "main", "c0ffee", &mut first)
                 .expect("first batch");
         assert_eq!(plan.reingested, ["specs/a/requirements.md"]);
         // The DEMO-R002 `Depends: OTHER-R009` names another repository; it is skipped.
@@ -1599,7 +1630,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         let mut stored = BTreeMap::new();
         stored_after(&plan, &mut stored);
         let mut again = IndexResult::default();
-        let idle = project_spec_artifacts("demo", &files, &stored, &[], "main", &mut again)
+        let idle = project_spec_artifacts("demo", &files, &stored, &[], "main", "c0ffee", &mut again)
             .expect("idle");
         assert!(idle.reingested.is_empty());
         assert!(again.nodes.is_empty() && again.edges.is_empty());
@@ -1804,6 +1835,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             &BTreeMap::new(),
             &changesets,
             "main",
+            "c0ffee",
             &mut first,
         )
         .expect("first batch");
@@ -1827,13 +1859,13 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         stored_after(&plan, &mut stored);
         assert_eq!(stored[CHANGESETS_ARTIFACT].digest, "c1");
         let mut again = IndexResult::default();
-        project_spec_artifacts("demo", &files, &stored, &[], "main", &mut again).expect("idle");
+        project_spec_artifacts("demo", &files, &stored, &[], "main", "c0ffee", &mut again).expect("idle");
         assert!(again.nodes.is_empty() && again.edges.is_empty());
 
         // An id that resolves to no row refuses and writes nothing.
         let unknown = [changeset("c2", 1800, &["DEMO-R999"])];
         let mut refused = IndexResult::default();
-        let error = project_spec_artifacts("demo", &files, &stored, &unknown, "main", &mut refused)
+        let error = project_spec_artifacts("demo", &files, &stored, &unknown, "main", "c0ffee", &mut refused)
             .unwrap_err();
         assert!(error.starts_with("REQUIREMENT_UNRESOLVED: DEMO-R999"));
         assert!(refused.nodes.is_empty() && refused.edges.is_empty());
@@ -1913,7 +1945,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             .filter(|(path, _)| path == "specs/x/notes.md" || path.starts_with(".specify/"))
             .cloned()
             .collect();
-        project_spec_artifacts("demo", &batch, &BTreeMap::new(), &[], "main", &mut result)
+        project_spec_artifacts("demo", &batch, &BTreeMap::new(), &[], "main", "c0ffee", &mut result)
             .expect("projects");
         let diagnostics = result.file_outcomes[0].diagnostics.as_slice();
         assert_eq!(diagnostics.len(), 1);

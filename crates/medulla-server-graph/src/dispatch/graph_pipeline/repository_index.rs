@@ -141,6 +141,16 @@ async fn index_scoped(
     let changesets = branch_changesets(&ctx, &branch_name, &stored_specs)
         .await
         .map_err(|error| Response::err(req_id, error))?;
+    // MEDULLA-ORCH-VOCAB-R012.7.2: the commit a policy candidate cites is the revision of
+    // the indexed branch's ref (its first ref when no ref carries the branch name).
+    let commit = scope
+        .refs
+        .as_slice()
+        .iter()
+        .find(|r| r.ref_name == branch_name || r.ref_name == format!("refs/heads/{branch_name}"))
+        .or_else(|| scope.refs.as_slice().first())
+        .map(|r| r.revision_id.clone())
+        .unwrap_or_default();
     // Validate the complete scope and parse before acquiring CAS holders. A
     // malformed membership must never pin unreferenced source bytes forever.
     let (mut result, files, repository_id) =
@@ -161,6 +171,7 @@ async fn index_scoped(
                 &stored_specs,
                 &changesets,
                 &branch_name,
+                &commit,
                 &mut result,
             )?;
             Ok::<_, String>((result, files, scope.repository_id.clone()))

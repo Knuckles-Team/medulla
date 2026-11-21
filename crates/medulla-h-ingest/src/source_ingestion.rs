@@ -62,6 +62,7 @@ pub mod quality;
 pub mod row_version;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod skill_document;
+pub mod policy_candidates;
 pub mod spec_projection;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod transcript;
