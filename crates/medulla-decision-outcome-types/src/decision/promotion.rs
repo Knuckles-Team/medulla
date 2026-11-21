@@ -185,8 +185,11 @@ impl TryFrom<&crate::policy_evolution::PolicyEvaluation> for HeldOutEvidence {
         Ok(Self {
             schema_version: HELD_OUT_EVIDENCE_SCHEMA_VERSION,
             subject: evaluation.subject.clone(),
-            challenger_ref: evaluation.revision_ref.to_string(),
-            champion_ref: evaluation.champion_revision_ref.as_ref().map(ToString::to_string),
+            challenger_ref: evaluation.revision_ref.as_str().to_string(),
+            champion_ref: evaluation
+                .champion_revision_ref
+                .as_ref()
+                .map(|champion| champion.as_str().to_string()),
             receipt_kind: ReceiptKind::PolicyEvaluation,
             receipt_digest,
             evaluation_set_digest: evaluation.evaluation_set_digest.to_hex(),
