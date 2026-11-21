@@ -2048,7 +2048,7 @@ path = "tests/attached_conformance.rs"
 [[test]]
 name = "native_hosting_gramps"
 path = "tests/native_hosting_gramps.rs"
-required-features = ["pgwire", "rdf"]
+required-features = ["pgwire", "rdf", "obda", "federation-sql"]
 
 # MEDULLA-UNIFIED-DATA-PLANE-R015.2.2: attached SQLite file source (watermark capture and
 # the live read under a concurrent writer).

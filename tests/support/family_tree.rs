@@ -192,6 +192,50 @@ pub fn family_tree_corpus(tree: &FamilyTree) -> Vec<String> {
     ]
 }
 
+/// The approved R2RML mapping of the `person` table (MEDULLA-UNIFIED-DATA-PLANE-R026.3.2): the
+/// reviewed text the P5 `SparqlVirtual` question reads.
+pub const PERSON_MAPPING: &str = r#"
+@prefix rr: <http://www.w3.org/ns/r2rml#> .
+@prefix gramps: <https://example.invalid/gramps#> .
+
+<#PersonMap> a rr:TriplesMap ;
+    rr:logicalTable [ rr:tableName "person" ] ;
+    rr:subjectMap [
+        rr:template "https://example.invalid/gramps/person/{handle}" ;
+        rr:class gramps:Person
+    ] ;
+    rr:predicateObjectMap [ rr:predicate gramps:gid ; rr:objectMap [ rr:column "gid" ] ] ;
+    rr:predicateObjectMap [ rr:predicate gramps:firstName ; rr:objectMap [ rr:column "first_name" ] ] ;
+    rr:predicateObjectMap [ rr:predicate gramps:surname ; rr:objectMap [ rr:column "surname" ] ] ;
+    rr:predicateObjectMap [ rr:predicate gramps:gender ; rr:objectMap [ rr:column "gender" ] ] ;
+    rr:predicateObjectMap [ rr:predicate gramps:birthYear ; rr:objectMap [ rr:column "birth_year" ] ] .
+"#;
+
+/// The table digest of an engine state (MEDULLA-UNIFIED-DATA-PLANE-R026.3.2): the lowercase hex
+/// SHA-256 of the tab-separated text lines of `SELECT * FROM person ORDER BY handle`,
+/// `SELECT * FROM family ORDER BY handle` and `SELECT * FROM child_ref ORDER BY family, child`,
+/// each line ending in a newline and each result followed by one empty line. The record count
+/// is the number of rows over the three results (239 for the tree).
+pub fn table_digest(
+    person: &[String],
+    family: &[String],
+    child_ref: &[String],
+) -> medulla_catalog_types::gramps_baseline_digest::GrampsBaselineDigest {
+    use sha2::{Digest, Sha256};
+    let mut text = String::new();
+    for result in [person, family, child_ref] {
+        for line in result {
+            text.push_str(line);
+            text.push('\n');
+        }
+        text.push('\n');
+    }
+    medulla_catalog_types::gramps_baseline_digest::GrampsBaselineDigest {
+        record_count: (person.len() + family.len() + child_ref.len()) as u64,
+        digest_hex: hex::encode(Sha256::digest(text.as_bytes())),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

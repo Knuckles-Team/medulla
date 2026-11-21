@@ -9,7 +9,7 @@
 //! variable is unset); P2 replays the same statements unmodified on the engine and lists every
 //! statement whose outcome differs. Each phase writes `conformance/native_hosting/<phase>.json`.
 
-#![cfg(all(unix, feature = "pgwire", feature = "rdf"))]
+#![cfg(all(unix, feature = "pgwire", feature = "rdf", feature = "obda", feature = "federation-sql"))]
 
 mod common;
 #[path = "support/family_tree.rs"]
@@ -18,13 +18,18 @@ mod family_tree;
 mod test_support;
 
 use medulla_catalog_types::gramps_baseline_digest::GrampsBaselineDigest;
+use medulla_catalog_types::schema_context::{
+    SchemaContextAnswer, SchemaContextIntent, SCHEMA_CONTEXT_UNMAPPED,
+};
 use medulla_catalog_types::gramps_pilot_phase::{GrampsPilotMilestone, PhaseExitArtifact};
 use medulla_protocol_types::protocol::{GraphType, Method, Request, ResultPayload};
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-use family_tree::{family_tree, family_tree_corpus, PHASE_EXIT_INVALID};
+use family_tree::{
+    family_tree, family_tree_corpus, table_digest, PERSON_MAPPING, PHASE_EXIT_INVALID,
+};
 
 const AUTH_SECRET: &str = "test";
 const ADMIN: &str = "gramps-pilot";
@@ -145,6 +150,13 @@ impl RunningServer {
         panic!("medulla-server did not open its native socket and pgwire listener");
     }
 
+    /// SIGKILL (`Child::kill`), then wait for the process to exit: the process gets no chance
+    /// to finish a commit it has started.
+    fn kill(mut self) {
+        self.child.kill().expect("SIGKILL the server");
+        let _ = self.child.wait().expect("server exit");
+    }
+
     /// SIGTERM, then wait for the process to exit.
     fn stop(mut self) {
         let status = std::process::Command::new("kill")
@@ -192,6 +204,18 @@ impl Native {
         method: Method,
         signer: Option<&str>,
     ) -> medulla_protocol_types::protocol::Response {
+        self.send(graph, context, method, signer).await;
+        self.recv().await
+    }
+
+    /// Sign and send one request without waiting for its reply.
+    async fn send(
+        &mut self,
+        graph: &str,
+        context: &medulla_identity_types::acl::RequestContextClaims,
+        method: Method,
+        signer: Option<&str>,
+    ) {
         use hmac::Mac as _;
         self.next_id += 1;
         self.sequence += 1;
@@ -264,6 +288,10 @@ impl Native {
             .await
             .expect("send length");
         self.stream.write_all(&body).await.expect("send body");
+    }
+
+    /// Read one reply.
+    async fn recv(&mut self) -> medulla_protocol_types::protocol::Response {
         let mut length = [0u8; 4];
         self.stream
             .read_exact(&mut length)
@@ -514,4 +542,497 @@ async fn p0_p1_p2_exit_artifacts() {
     drop(native);
     server.stop();
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+// ---- P4 restore and P5 schema understanding (MEDULLA-UNIFIED-DATA-PLANE-R026.3.2) ----
+
+/// The graph that holds the tables (the pgwire database name) and the source DSN's database.
+const TABLE_GRAPH: &str = "medulla";
+/// The graph that carries the P0 import whose export is the graph digest.
+const BASELINE_GRAPH: &str = "gramps-p4-base";
+/// The attached source of P5: the engine's own pgwire listener.
+const SOURCE_ID: &str = "gramps_native";
+
+/// The pilot identity must be able to act on a fresh engine. The identity registry lives in the
+/// shared security state, so a probe comes first and a registration only when it is refused.
+async fn ensure_admin(native: &mut Native) {
+    let all = Native::context(&["*"]);
+    let probe = native.call("__commons__", &all, Method::GetRdf, None).await;
+    if probe.error.is_some() {
+        let registered = native
+            .call(
+                "__commons__",
+                &Native::context(&["security:bootstrap"]),
+                Method::RegisterIdentity {
+                    agent_id: ADMIN.to_string(),
+                    role: medulla_identity_types::acl::AgentRole::System,
+                    teams: Vec::new(),
+                    signature: String::new(),
+                    roles: Vec::new(),
+                },
+                Some(ADMIN),
+            )
+            .await;
+        assert!(
+            registered.error.is_none(),
+            "bootstrap identity: {registered:?}"
+        );
+    }
+    // The table graph exists on a fresh engine and already on a restored one.
+    let _ = native
+        .call(
+            TABLE_GRAPH,
+            &all,
+            Method::CreateGraph {
+                graph_name: TABLE_GRAPH.to_string(),
+                graph_type: GraphType::Global,
+            },
+            None,
+        )
+        .await;
+}
+
+async fn pg(server: &RunningServer, graph: &str) -> tokio_postgres::Client {
+    test_support::connect_pgwire(&server.pg_addr, AUTH_SECRET, ADMIN, graph)
+        .await
+        .expect("pgwire connect")
+}
+
+/// The tab-separated text lines of one query.
+async fn text_rows(client: &tokio_postgres::Client, sql: &str) -> Vec<String> {
+    use tokio_postgres::SimpleQueryMessage;
+    client
+        .simple_query(sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {error}"))
+        .iter()
+        .filter_map(|message| match message {
+            SimpleQueryMessage::Row(row) => Some(
+                (0..row.len())
+                    .map(|column| row.get(column).unwrap_or("").to_string())
+                    .collect::<Vec<_>>()
+                    .join("\t"),
+            ),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The table digest of the engine's current state.
+async fn tables_digest(client: &tokio_postgres::Client) -> GrampsBaselineDigest {
+    let person = text_rows(client, "SELECT * FROM person ORDER BY handle").await;
+    let family = text_rows(client, "SELECT * FROM family ORDER BY handle").await;
+    let child_ref = text_rows(client, "SELECT * FROM child_ref ORDER BY family, child").await;
+    table_digest(&person, &family, &child_ref)
+}
+
+/// The graph digest: SHA-256 of the exact `GetRdf` string of `graph`.
+async fn graph_digest(native: &mut Native, graph: &str) -> String {
+    match native.ok(graph, &Native::context(&["*"]), Method::GetRdf).await {
+        Some(ResultPayload::Raw(bytes)) => sha256_hex(
+            &rmp_serde::from_slice::<String>(&bytes).expect("GetRdf answers one string"),
+        ),
+        other => panic!("GetRdf answered {other:?}"),
+    }
+}
+
+/// The engine state every restore path starts from: the P0 import and corpus statements 1 to 6.
+async fn load_baseline(native: &mut Native, server: &RunningServer) {
+    ensure_admin(native).await;
+    import_and_export(native, BASELINE_GRAPH).await;
+    let client = pg(server, TABLE_GRAPH).await;
+    for sql in &family_tree_corpus(&family_tree())[..6] {
+        client
+            .simple_query(sql)
+            .await
+            .unwrap_or_else(|error| panic!("baseline statement: {error}"));
+    }
+}
+
+/// Start the server on a fresh directory under `root`; `name` keeps the directories apart.
+async fn fresh_engine(root: &std::path::Path, name: &str) -> (RunningServer, std::path::PathBuf) {
+    let dir = root.join(name);
+    std::fs::create_dir_all(&dir).expect("engine dir");
+    let persist = dir.join("persist");
+    let addr = test_support::ephemeral_listener_addr().await;
+    (RunningServer::start(&dir, &persist, &addr).await, persist)
+}
+
+/// Both digests of `server`, compared with the ones taken before the restore.
+async fn assert_restored(
+    server: &RunningServer,
+    graph_before: &str,
+    tables_before: &GrampsBaselineDigest,
+    check_graph: bool,
+    path: &str,
+) {
+    let mut native = Native::connect(&server.socket).await;
+    ensure_admin(&mut native).await;
+    let client = pg(server, TABLE_GRAPH).await;
+    assert_eq!(&tables_digest(&client).await, tables_before, "{path}: table digest");
+    if check_graph {
+        assert_eq!(
+            graph_digest(&mut native, BASELINE_GRAPH).await,
+            graph_before,
+            "{path}: graph digest"
+        );
+    }
+}
+
+/// A plain value: `"4"^^xsd:integer` and `4` both read `4`.
+fn plain(cell: &str) -> String {
+    cell.split("^^")
+        .next()
+        .unwrap_or(cell)
+        .trim_matches('"')
+        .to_string()
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R026.3.2
+#[tokio::test(flavor = "multi_thread")]
+async fn p4_restore_and_p5_schema() {
+    use futures_util::{SinkExt, TryStreamExt};
+    let root = test_support::fresh_dir("native-hosting-gramps-p4");
+    let all = Native::context(&["*"]);
+
+    // ---- Engine A: the baseline, path one (native Backup and Restore), then P5.
+    let (engine_a, persist_a) = fresh_engine(&root, "a").await;
+    let mut native = Native::connect(&engine_a.socket).await;
+    load_baseline(&mut native, &engine_a).await;
+    let graph_before = graph_digest(&mut native, BASELINE_GRAPH).await;
+    let client_a = pg(&engine_a, TABLE_GRAPH).await;
+    let tables_before = tables_digest(&client_a).await;
+    assert_eq!(tables_before.record_count, 239, "120 + 60 + 59 rows");
+    let _ = persist_a;
+
+    native
+        .ok(
+            "__commons__",
+            &all,
+            Method::Backup {
+                destination: "gramps-p4".to_string(),
+                label: Some("p4".to_string()),
+            },
+        )
+        .await;
+    let bundle = engine_a.backup_root.join("gramps-p4");
+    let manifest: Value = serde_json::from_slice(
+        &std::fs::read(bundle.join("MANIFEST.json")).expect("bundle manifest"),
+    )
+    .expect("manifest json");
+    let shards = manifest["shard_count"].as_u64().expect("shard_count") as usize;
+    match native
+        .ok(
+            "__commons__",
+            &all,
+            Method::Restore {
+                source: "gramps-p4".to_string(),
+                target_shards: shards,
+            },
+        )
+        .await
+    {
+        Some(ResultPayload::Json(report)) => {
+            assert!(report.is_object(), "the Restore report parses as an object")
+        }
+        other => panic!("Restore answered {other:?}"),
+    }
+
+    // P5 on the same engine: (a) the source, (b) the mapping, (c) the schema context.
+    let context = Native::context(&["*"]);
+    native
+        .ok(
+            TABLE_GRAPH,
+            &context,
+            Method::RegisterForeignSource {
+                name: SOURCE_ID.to_string(),
+                source: medulla_query_types::wire::ForeignSourceSpec::Sql {
+                    dsn: pgwire_dsn(&engine_a.pg_addr, TABLE_GRAPH),
+                    query: "SELECT handle FROM person".to_string(),
+                    id_field: "handle".to_string(),
+                    score_field: None,
+                    columns: vec!["handle".to_string()],
+                },
+                quota: None,
+                acceleration: None,
+            },
+        )
+        .await;
+    let schema_context = |intent| Method::SchemaContext {
+        source_id: SOURCE_ID.to_string(),
+        schema: "public".to_string(),
+        object: "person".to_string(),
+        intent,
+    };
+    let waited = std::time::Instant::now();
+    loop {
+        let probe = native
+            .call(
+                TABLE_GRAPH,
+                &context,
+                schema_context(SchemaContextIntent::Definition),
+                None,
+            )
+            .await;
+        let unavailable = format!("{:?}", probe.error).contains("SOURCE_UNAVAILABLE");
+        if !unavailable {
+            assert!(probe.error.is_none(), "schema context: {:?}", probe.error);
+            break;
+        }
+        assert!(
+            waited.elapsed() < std::time::Duration::from_secs(30),
+            "the catalog probe did not finish within 30 seconds"
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
+    }
+    let answer = |response: medulla_protocol_types::protocol::Response| match response.result {
+        Some(ResultPayload::Raw(bytes)) => {
+            rmp_serde::from_slice::<SchemaContextAnswer>(&bytes).expect("schema context answer")
+        }
+        other => panic!("SchemaContext answered {other:?} / {:?}", response.error),
+    };
+    let definition = answer(
+        native
+            .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Definition), None)
+            .await,
+    );
+    let mut columns: Vec<String> = definition.columns.iter().map(|c| c.name.clone()).collect();
+    columns.sort();
+    assert_eq!(
+        columns,
+        ["birth_year", "first_name", "gender", "gid", "handle", "surname"]
+    );
+    let joins = answer(
+        native
+            .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Joins), None)
+            .await,
+    );
+    let joined: std::collections::BTreeSet<&str> = joins
+        .joins
+        .iter()
+        .map(|join| join.joined_table.rsplit('.').next().unwrap_or(""))
+        .collect();
+    assert!(joined.contains("family") && joined.contains("child_ref"), "joins: {joined:?}");
+    let owner = answer(
+        native
+            .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Owner), None)
+            .await,
+    );
+    assert_eq!(owner.owner, ADMIN, "the registering agent owns the source");
+    let ontology = native
+        .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Ontology), None)
+        .await;
+    assert!(
+        format!("{:?}", ontology.error).contains(SCHEMA_CONTEXT_UNMAPPED),
+        "no graph view reads the table: {:?}",
+        ontology.error
+    );
+    let impact = answer(
+        native
+            .call(TABLE_GRAPH, &context, schema_context(SchemaContextIntent::Impact), None)
+            .await,
+    );
+    assert_eq!(impact.change_impact, "no downstream column reads this table");
+
+    let client = pg(&engine_a, TABLE_GRAPH).await;
+    let expected = text_rows(
+        &client,
+        "SELECT surname, count(*) FROM person GROUP BY surname ORDER BY surname",
+    )
+    .await;
+    let sparql = native
+        .ok(
+            TABLE_GRAPH,
+            &context,
+            Method::SparqlVirtual {
+                query: "PREFIX gramps: <https://example.invalid/gramps#> SELECT ?surname \
+                        (COUNT(?p) AS ?n) WHERE { ?p a gramps:Person ; gramps:surname ?surname } \
+                        GROUP BY ?surname ORDER BY ?surname"
+                    .to_string(),
+                mapping: PERSON_MAPPING.to_string(),
+                tables: vec!["person".to_string(), "family".to_string(), "child_ref".to_string()],
+                external_sources: Vec::new(),
+            },
+        )
+        .await;
+    let result: medulla_protocol_types::protocol::SparqlResult = match sparql {
+        Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).expect("sparql result"),
+        other => panic!("SparqlVirtual answered {other:?}"),
+    };
+    let virtual_rows: Vec<String> = result
+        .rows
+        .iter()
+        .map(|row| {
+            row.iter()
+                .map(|cell| plain(cell.as_deref().unwrap_or("")))
+                .collect::<Vec<_>>()
+                .join("\t")
+        })
+        .collect();
+    assert_eq!(virtual_rows, expected, "the virtual graph answers statement 8");
+    write_artifact(
+        "p5",
+        &json!({
+            "phase_exit": valid_exit(GrampsPilotMilestone::P5SchemaUnderstanding),
+            "source_id": SOURCE_ID,
+            "sparql_rows": virtual_rows,
+            "schema_context": {
+                "columns": columns,
+                "joins": joined,
+                "owner": owner.owner,
+                "ontology": SCHEMA_CONTEXT_UNMAPPED,
+                "impact": impact.change_impact,
+            },
+        }),
+    );
+
+    // Path one, continued: stop A and restore the bundle in place into a new directory.
+    drop((client, client_a, native));
+    engine_a.stop();
+    let restored_persist = root.join("restored").join("persist");
+    std::fs::create_dir_all(&restored_persist).expect("restored dir");
+    let status = std::process::Command::new(server_bin())
+        .args(["restore", "--bundle"])
+        .arg(&bundle)
+        .arg("--persist-dir")
+        .arg(&restored_persist)
+        .args(["--shards", &shards.to_string()])
+        .status()
+        .expect("run the offline restore");
+    assert!(status.success(), "offline restore");
+    let restored_addr = test_support::ephemeral_listener_addr().await;
+    let restored_dir = root.join("restored");
+    let engine_r = RunningServer::start(&restored_dir, &restored_persist, &restored_addr).await;
+    assert_restored(&engine_r, &graph_before, &tables_before, true, "native").await;
+    engine_r.stop();
+
+    // Path two: COPY out of a source engine, COPY in to a second fresh engine.
+    let (engine_s, _) = fresh_engine(&root, "s").await;
+    let mut native_s = Native::connect(&engine_s.socket).await;
+    load_baseline(&mut native_s, &engine_s).await;
+    let source_client = pg(&engine_s, TABLE_GRAPH).await;
+    assert_eq!(&tables_digest(&source_client).await, &tables_before, "dump source");
+    let mut dumps = Vec::new();
+    for table in ["person", "family", "child_ref"] {
+        let stream = source_client
+            .copy_out(format!("COPY {table} TO STDOUT").as_str())
+            .await
+            .unwrap_or_else(|error| panic!("COPY {table} TO STDOUT: {error}"));
+        let chunks: Vec<bytes::Bytes> = stream.try_collect().await.expect("copy data");
+        dumps.push(chunks.concat());
+    }
+    drop((source_client, native_s));
+    engine_s.stop();
+    let (engine_c, _) = fresh_engine(&root, "c").await;
+    let mut native_c = Native::connect(&engine_c.socket).await;
+    ensure_admin(&mut native_c).await;
+    let reload = pg(&engine_c, TABLE_GRAPH).await;
+    for sql in &family_tree_corpus(&family_tree())[..3] {
+        reload
+            .simple_query(sql)
+            .await
+            .unwrap_or_else(|error| panic!("dump schema statement: {error}"));
+    }
+    for (table, data) in ["person", "family", "child_ref"].into_iter().zip(dumps) {
+        let sink = reload
+            .copy_in::<_, bytes::Bytes>(format!("COPY {table} FROM STDIN").as_str())
+            .await
+            .unwrap_or_else(|error| panic!("COPY {table} FROM STDIN: {error}"));
+        futures_util::pin_mut!(sink);
+        sink.send(bytes::Bytes::from(data)).await.expect("copy rows");
+        sink.finish().await.expect("copy finish");
+    }
+    assert_eq!(&tables_digest(&reload).await, &tables_before, "sql dump: table digest");
+    drop((reload, native_c));
+    engine_c.stop();
+
+    // Path three: SIGKILL while the last AddTriples batch of a second import is in flight.
+    let (engine_k, persist_k) = fresh_engine(&root, "k").await;
+    let mut native_k = Native::connect(&engine_k.socket).await;
+    load_baseline(&mut native_k, &engine_k).await;
+    native_k
+        .ok(
+            "p4-kill",
+            &all,
+            Method::CreateGraph {
+                graph_name: "p4-kill".to_string(),
+                graph_type: GraphType::Global,
+            },
+        )
+        .await;
+    let mut batches = family_tree().ntriples_batches(500);
+    let last = batches.pop().expect("at least one batch");
+    let previous: usize = batches.iter().map(|batch| batch.lines().count()).sum();
+    let last_size = last.lines().count();
+    for batch in batches {
+        native_k
+            .ok(
+                "p4-kill",
+                &all,
+                Method::AddTriples {
+                    turtle: String::new(),
+                    ntriples: batch,
+                },
+            )
+            .await;
+    }
+    let mut racing = Native::connect(&engine_k.socket).await;
+    racing
+        .send(
+            "p4-kill",
+            &all,
+            Method::AddTriples {
+                turtle: String::new(),
+                ntriples: last.clone(),
+            },
+            None,
+        )
+        .await;
+    let dir_k = root.join("k");
+    let addr_k = engine_k.pg_addr.clone();
+    drop((native_k, racing));
+    engine_k.kill();
+    let engine_k = RunningServer::start(&dir_k, &persist_k, &addr_k).await;
+    let mut native_k = Native::connect(&engine_k.socket).await;
+    ensure_admin(&mut native_k).await;
+    let held = match native_k.ok("p4-kill", &all, Method::GetRdf).await {
+        Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice::<String>(&bytes)
+            .expect("GetRdf answers one string")
+            .lines()
+            .count(),
+        other => panic!("GetRdf answered {other:?}"),
+    };
+    assert!(
+        held == previous || held == previous + last_size,
+        "a commit is all or nothing: {held} triples after the kill"
+    );
+    native_k
+        .ok(
+            "p4-kill",
+            &all,
+            Method::AddTriples {
+                turtle: String::new(),
+                ntriples: last,
+            },
+        )
+        .await;
+    assert_eq!(
+        graph_digest(&mut native_k, "p4-kill").await,
+        graph_before,
+        "the re-sent batch completes the uninterrupted import"
+    );
+    assert_restored(&engine_k, &graph_before, &tables_before, true, "kill").await;
+    drop(native_k);
+    engine_k.stop();
+
+    write_artifact(
+        "p4",
+        &json!({
+            "phase_exit": valid_exit(GrampsPilotMilestone::P4RestoreVerification),
+            "graph_digest": graph_before,
+            "table_digest": tables_before,
+            "paths": ["native", "sql_dump", "kill"],
+        }),
+    );
+    let _ = std::fs::remove_dir_all(&root);
 }
