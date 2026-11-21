@@ -42,4 +42,4 @@ The approval carries the exact SQL and parameters. The engine lease keeps only i
 ## Test vectors
 
 - `crates/medulla-result-types/src/source_query.rs::tests::approval_records_round_trip` in medulla.
-- `tests/source_query_approval_served.rs::approval_to_verification_journey` in medulla.
+- `crates/medulla-h-admin/src/admin/connector_pack/tests/source_approval.rs::approval_to_verification_journey` in medulla.

@@ -141,6 +141,32 @@ impl Served {
         key: &str,
         method: Method,
     ) -> Response {
+        self.call_as_tenant_on(graph, TENANT, principal, scopes, key, method)
+            .await
+    }
+
+    /// Send `method` signed as `principal` of `tenant` with `scopes`, under `key`.
+    pub(in crate::admin) async fn call_as_tenant(
+        &self,
+        tenant: &str,
+        principal: &str,
+        scopes: &[&str],
+        key: &str,
+        method: Method,
+    ) -> Response {
+        self.call_as_tenant_on("__commons__", tenant, principal, scopes, key, method)
+            .await
+    }
+
+    async fn call_as_tenant_on(
+        &self,
+        graph: &str,
+        tenant: &str,
+        principal: &str,
+        scopes: &[&str],
+        key: &str,
+        method: Method,
+    ) -> Response {
         let id = next_id();
         let request = medulla_server_auth::auth::scoped_test_request_on(
             SECRET,
@@ -149,7 +175,7 @@ impl Served {
             method,
             medulla_server_auth::auth::ScopedTestCaller {
                 principal,
-                tenant: TENANT,
+                tenant,
                 scopes,
                 nonce: &format!("pack-served-nonce-{id}"),
                 idempotency_key: key,

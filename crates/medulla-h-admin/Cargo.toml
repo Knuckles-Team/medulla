@@ -121,6 +121,7 @@ medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] 
 medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-source-types = { path = "../medulla-source-types", features = ["test-support"] }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
+medulla-result-types = { path = "../medulla-result-types" }
 medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-blob = { path = "../medulla-server-blob", features = ["test-support"] }

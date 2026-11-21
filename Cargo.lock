@@ -5659,6 +5659,7 @@ dependencies = [
  "medulla-raft",
  "medulla-rdf",
  "medulla-reasoner",
+ "medulla-result-types",
  "medulla-server",
  "medulla-server-api",
  "medulla-server-auth",

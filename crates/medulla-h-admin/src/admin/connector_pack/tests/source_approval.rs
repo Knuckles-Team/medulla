@@ -1007,3 +1007,416 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
         .await;
     assert!(refused("replay", replay).contains("FOREIGN_READ_REPLAY"));
 }
+
+/// One imported pack with one approved, registered source: the receipt and the source name.
+#[cfg(feature = "federation-sql")]
+struct ApprovedSource {
+    receipt: medulla_catalog_types::connector_pack::ConnectorPackSourceApprovalResult,
+    source: String,
+}
+
+#[cfg(feature = "federation-sql")]
+async fn approved_source(served: &Served, connector: &str) -> ApprovedSource {
+    bind(served, connector, ADMIN).await;
+    let pack = build_pack(
+        connector,
+        &[
+            tool(connector, "a", "A."),
+            source_contract(
+                connector,
+                format!(
+                    r#"@prefix ac: <https://knuckles-team.github.io/ontology/access#> .
+<data://{connector}/suppliers#access> a ac:AccessContract ;
+ ac:classIri "urn:Supplier" ; ac:sourceId "{connector}/suppliers" ;
+ ac:entity "suppliers" ; ac:keyField "id" ; ac:accessKind "mcp_tool" ;
+ ac:operation "list_suppliers" ; ac:pagination "none" ."#
+                ),
+            ),
+        ],
+    );
+    let first = imported(served, &pack, None).await;
+    let connector_id = medulla_types::contract::ResourceId::new(connector).unwrap();
+    let store = served.state.write().await.ensure_agent_library().unwrap();
+    let member = store
+        .connector_pack_members(TENANT, &connector_id)
+        .unwrap()
+        .into_iter()
+        .find(|member| !member.source_registrations.is_empty())
+        .expect("source registration");
+    let registration = member.source_registrations[0].clone();
+    let contract_digest = member.body_sha256;
+    drop(store);
+    let receipt = ok(
+        "approve source",
+        approve_source(
+            served,
+            connector,
+            &registration.contract_iri,
+            &registration.resource_uri,
+            head_of(&first),
+            contract_digest,
+        )
+        .await,
+    );
+    let source = registration.source_id.clone();
+    let registered: String = ok(
+        "register foreign source",
+        served
+            .call(
+                &format!("{connector}:register"),
+                medulla_protocol_types::protocol::Method::RegisterForeignSource {
+                    name: source.clone(),
+                    quota: None,
+                    source: medulla_query_types::wire::ForeignSourceSpec::Mcp {
+                        server: connector.to_string(),
+                        tool: "list_suppliers".to_string(),
+                        capabilities: Default::default(),
+                    },
+                    acceleration: None,
+                },
+            )
+            .await,
+    );
+    assert_eq!(registered, source);
+    ApprovedSource { receipt, source }
+}
+
+/// The scope the dedicated source-query issuer requires.
+#[cfg(feature = "federation-sql")]
+const APPROVE_SCOPE: &str = "source:approve-query";
+
+#[cfg(feature = "federation-sql")]
+fn source_query(
+    approved: &ApprovedSource,
+    expires_in_ms: u64,
+) -> medulla_result_types::source_query::SourceQueryRequest {
+    use medulla_result_types::source_query::{
+        SourceQueryDialect, SourceQueryLimits, SourceQueryParameter, SourceQueryRequest,
+        SourceQueryValue,
+    };
+    SourceQueryRequest {
+        schema_version: 1,
+        source_ref: approved.source.clone(),
+        source_revision: approved.receipt.committed_version.to_string(),
+        schema_digest: approved.receipt.contract_digest.to_hex(),
+        snapshot_ref: approved.receipt.head.pack_digest.to_hex(),
+        dialect: SourceQueryDialect::Postgres,
+        sql: "SELECT id FROM suppliers WHERE name = $1".into(),
+        parameters: vec![SourceQueryParameter {
+            position: 1,
+            value: SourceQueryValue::Text("Acme".into()),
+        }],
+        limits: SourceQueryLimits {
+            max_rows: 10,
+            max_bytes: 1_048_576,
+            chunk_rows: 5,
+            chunk_bytes: 65_536,
+            queue_depth: 2,
+            queue_bytes: 1_048_576,
+            deadline_ms: 10_000,
+            max_resident_bytes: 8_388_608,
+        },
+        requested_expires_at_ms: medulla_server_api::txn::now_ms() + expires_in_ms,
+        idempotency_key: "body-key".into(),
+    }
+}
+
+/// Issue one approval through the served native issuer.
+#[cfg(feature = "federation-sql")]
+async fn issue_source_query(
+    served: &Served,
+    approved: &ApprovedSource,
+    key: &str,
+    expires_in_ms: u64,
+) -> medulla_result_types::source_query::ApprovedSourceQuery {
+    let issued: medulla_work_types::source_query_approval::SourceQueryApprovalIssued = ok(
+        "ApproveSourceQuery",
+        served
+            .call_as(
+                ADMIN,
+                &[APPROVE_SCOPE],
+                key,
+                medulla_protocol_types::protocol::Method::ApproveSourceQuery {
+                    request: Box::new(
+                        medulla_work_types::source_query_approval::ApproveSourceQueryRequest {
+                            tenant: TENANT.into(),
+                            query: source_query(approved, expires_in_ms),
+                            admission: None,
+                        },
+                    ),
+                    source_approval: Box::new(approved.receipt.clone()),
+                },
+            )
+            .await,
+    );
+    assert_eq!(
+        issued.outcome,
+        medulla_work_types::control_lease::ControlLeaseIssueOutcome::Issued
+    );
+    issued
+        .approved
+        .expect("an issued approval carries the approved query")
+}
+
+/// The check of `approved` against the identities it was issued for.
+#[cfg(feature = "federation-sql")]
+fn source_query_check(
+    approved: &medulla_result_types::source_query::ApprovedSourceQuery,
+) -> medulla_result_types::source_query::SourceQueryApprovalCheck {
+    medulla_result_types::source_query::SourceQueryApprovalCheck {
+        approved_query: approved.clone(),
+        observed_source_revision: approved.request.source_revision.clone(),
+        observed_schema_digest: approved.request.schema_digest.clone(),
+        observed_snapshot_ref: approved.request.snapshot_ref.clone(),
+        boundary: medulla_result_types::source_query::SourceQueryBoundary::Start,
+    }
+}
+
+#[cfg(feature = "federation-sql")]
+async fn verify_source_query(
+    served: &Served,
+    approved: &ApprovedSource,
+    key: &str,
+    check: medulla_result_types::source_query::SourceQueryApprovalCheck,
+) -> medulla_protocol_types::protocol::Response {
+    served
+        .call(
+            key,
+            medulla_protocol_types::protocol::Method::VerifySourceQueryApproval {
+                request: Box::new(check),
+                source_approval: Box::new(approved.receipt.clone()),
+            },
+        )
+        .await
+}
+
+/// Revoke the approval's lease at `revision`.
+#[cfg(feature = "federation-sql")]
+async fn revoke_source_query(served: &Served, approval_id: &str, revision: u64, key: &str) {
+    let _: serde_json::Value = ok(
+        "TransitionControlLease",
+        served
+            .call(
+                key,
+                medulla_protocol_types::protocol::Method::TransitionControlLease {
+                    request: medulla_work_types::control_lease::TransitionControlLeaseRequest {
+                        tenant: TENANT.into(),
+                        lease_id: approval_id.to_string(),
+                        expected_revision: revision,
+                        to: medulla_work_types::control_lease::ControlLeaseTarget::Revoked,
+                        pending_call_consumption: None,
+                        idempotency_key: key.to_string(),
+                    },
+                },
+            )
+            .await,
+    );
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R085.3
+#[cfg(feature = "federation-sql")]
+#[tokio::test]
+async fn changed_or_revoked_approval_refuses() {
+    use medulla_result_types::source_query::SourceQueryApprovalValidity;
+    let connector = "r085-verify";
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    let source = approved_source(&served, connector).await;
+    let approved = issue_source_query(&served, &source, "r085-verify:issue", 60_000).await;
+
+    // A live approval verifies and the read writes nothing: the lease revision stands.
+    let first: SourceQueryApprovalValidity = ok(
+        "verify",
+        verify_source_query(&served, &source, "r085-verify:ok-1", source_query_check(&approved))
+            .await,
+    );
+    let again: SourceQueryApprovalValidity = ok(
+        "verify again",
+        verify_source_query(&served, &source, "r085-verify:ok-2", source_query_check(&approved))
+            .await,
+    );
+    assert_eq!(first.approval_id, approved.approval_id);
+    assert_eq!(first.query_id, approved.query_id);
+    assert_eq!(first.query_digest, approved.query_digest);
+    assert_eq!(first.lease_revision, again.lease_revision, "verify writes nothing");
+    assert_eq!(
+        first.valid_until_ms,
+        approved.expires_at_ms.min(approved.hard_expires_at_ms)
+    );
+
+    // Changing any request field or expiry refuses SOURCE_QUERY_UNAUTHORIZED.
+    let mut sql = approved.clone();
+    sql.request.sql = "SELECT id FROM suppliers".into();
+    let mut expiry = approved.clone();
+    expiry.expires_at_ms += 1;
+    for (label, changed) in [("sql", sql), ("expiry", expiry)] {
+        let error = refused(
+            label,
+            verify_source_query(
+                &served,
+                &source,
+                &format!("r085-verify:{label}"),
+                source_query_check(&changed),
+            )
+            .await,
+        );
+        assert!(error.contains("SOURCE_QUERY_UNAUTHORIZED"), "{label}: {error}");
+        assert!(!error.contains("SELECT") && !error.contains("Acme"), "{error}");
+    }
+
+    // A lease that was never issued refuses SOURCE_QUERY_UNAUTHORIZED.
+    let mut missing = approved.clone();
+    missing.approval_id = "source-query-approval:missing".into();
+    missing.query_digest = missing.compute_query_digest().unwrap();
+    let error = refused(
+        "missing lease",
+        verify_source_query(&served, &source, "r085-verify:missing", source_query_check(&missing))
+            .await,
+    );
+    assert!(error.contains("SOURCE_QUERY_UNAUTHORIZED"), "{error}");
+
+    // Another principal of the tenant refuses SOURCE_QUERY_UNAUTHORIZED.
+    let other = served
+        .call_as(
+            "pack-served-other",
+            &["*"],
+            "r085-verify:other",
+            medulla_protocol_types::protocol::Method::VerifySourceQueryApproval {
+                request: Box::new(source_query_check(&approved)),
+                source_approval: Box::new(source.receipt.clone()),
+            },
+        )
+        .await;
+    assert!(refused("other principal", other).contains("SOURCE_QUERY_UNAUTHORIZED"));
+
+    // A changed observed source revision refuses SOURCE_QUERY_STALE_SOURCE.
+    let mut stale = source_query_check(&approved);
+    stale.observed_source_revision = "99".into();
+    let error = refused(
+        "stale",
+        verify_source_query(&served, &source, "r085-verify:stale", stale).await,
+    );
+    assert!(error.contains("SOURCE_QUERY_STALE_SOURCE"), "{error}");
+
+    // A revoked lease refuses SOURCE_QUERY_APPROVAL_REVOKED.
+    revoke_source_query(
+        &served,
+        &approved.approval_id,
+        first.lease_revision,
+        "r085-verify:revoke",
+    )
+    .await;
+    let error = refused(
+        "revoked",
+        verify_source_query(&served, &source, "r085-verify:revoked", source_query_check(&approved))
+            .await,
+    );
+    assert!(error.contains("SOURCE_QUERY_APPROVAL_REVOKED"), "{error}");
+
+    // An expired lease refuses SOURCE_QUERY_APPROVAL_EXPIRED.
+    let short = issue_source_query(&served, &source, "r085-verify:issue-short", 1_000).await;
+    tokio::time::sleep(std::time::Duration::from_millis(1_200)).await;
+    let error = refused(
+        "expired",
+        verify_source_query(&served, &source, "r085-verify:expired", source_query_check(&short))
+            .await,
+    );
+    assert!(error.contains("SOURCE_QUERY_APPROVAL_EXPIRED"), "{error}");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R085.5
+#[cfg(feature = "federation-sql")]
+#[tokio::test]
+async fn real_dispatch_issues_and_verifies_approval() {
+    use medulla_result_types::source_query::SourceQueryApprovalValidity;
+    let connector = "r085-dispatch";
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    let source = approved_source(&served, connector).await;
+    // Real authenticated dispatch issues one lease and verifies it.
+    let approved = issue_source_query(&served, &source, "r085-dispatch:issue", 60_000).await;
+    let validity: SourceQueryApprovalValidity = ok(
+        "verify",
+        verify_source_query(&served, &source, "r085-dispatch:verify", source_query_check(&approved))
+            .await,
+    );
+    assert_eq!(validity.approval_id, approved.approval_id);
+    assert_eq!(validity.lease_revision, 1, "an issued lease is revision 1");
+    // No client-side approval authority is accepted: a caller without the issuer scope is
+    // refused, and the foreign-source handler has no arm for the issuer.
+    let denied = served
+        .call_as(
+            ADMIN,
+            &["kg:read"],
+            "r085-dispatch:no-scope",
+            medulla_protocol_types::protocol::Method::ApproveSourceQuery {
+                request: Box::new(
+                    medulla_work_types::source_query_approval::ApproveSourceQueryRequest {
+                        tenant: TENANT.into(),
+                        query: source_query(&source, 60_000),
+                        admission: None,
+                    },
+                ),
+                source_approval: Box::new(source.receipt.clone()),
+            },
+        )
+        .await;
+    assert!(denied.error.is_some(), "the issuer scope is required");
+    let handlers = include_str!("../../../../../medulla-h-sparql/src/foreign_source_handlers.rs");
+    assert!(
+        !handlers.contains("Method::ApproveSourceQuery"),
+        "the foreign-source handler never sees ApproveSourceQuery"
+    );
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R085.8
+#[cfg(feature = "federation-sql")]
+#[tokio::test]
+async fn approval_to_verification_journey() {
+    use medulla_result_types::source_query::SourceQueryApprovalValidity;
+    let connector = "r085-journey";
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    let source = approved_source(&served, connector).await;
+    let approved = issue_source_query(&served, &source, "r085-journey:issue", 60_000).await;
+    // The approval holds digests that bind the request.
+    assert_eq!(approved.query_id, approved.operation_digest);
+    assert_eq!(approved.query_digest, approved.compute_query_digest().unwrap());
+    let validity: SourceQueryApprovalValidity = ok(
+        "verify",
+        verify_source_query(&served, &source, "r085-journey:verify", source_query_check(&approved))
+            .await,
+    );
+    assert_eq!(validity.query_digest, approved.query_digest);
+
+    // Another tenant presenting this tenant's approval is refused.
+    let foreign = served
+        .call_as_tenant(
+            "tenant-other",
+            ADMIN,
+            &["*"],
+            "r085-journey:other-tenant",
+            medulla_protocol_types::protocol::Method::VerifySourceQueryApproval {
+                request: Box::new(source_query_check(&approved)),
+                source_approval: Box::new(source.receipt.clone()),
+            },
+        )
+        .await;
+    assert!(foreign.error.is_some(), "a cross-tenant verification is refused");
+
+    // After revocation verify refuses SOURCE_QUERY_APPROVAL_REVOKED, naming no SQL.
+    revoke_source_query(
+        &served,
+        &approved.approval_id,
+        validity.lease_revision,
+        "r085-journey:revoke",
+    )
+    .await;
+    let error = refused(
+        "revoked",
+        verify_source_query(&served, &source, "r085-journey:revoked", source_query_check(&approved))
+            .await,
+    );
+    assert!(error.contains("SOURCE_QUERY_APPROVAL_REVOKED"), "{error}");
+    assert!(!error.contains("SELECT") && !error.contains("Acme"), "{error}");
+}
