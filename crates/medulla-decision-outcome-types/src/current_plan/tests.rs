@@ -12,7 +12,7 @@ fn current_plan_status_matches_scaffold_contract() {
     assert!(request.validate().is_ok());
     request.snapshot.items.push(PlanItem {
         text: " ".into(),
-        status: PlanStatus::Pending,
+        progress: PlanStatus::Pending,
     });
     assert!(request.validate().is_err());
 }
@@ -123,7 +123,7 @@ fn current_plan_identifier_byte_boundary_and_error_precedence() {
     request.tenant = "tenant".into();
     request.snapshot.items.push(PlanItem {
         text: " ".into(),
-        status: PlanStatus::Pending,
+        progress: PlanStatus::Pending,
     });
     assert_eq!(
         request.validate().unwrap_err(),
@@ -134,4 +134,24 @@ fn current_plan_identifier_byte_boundary_and_error_precedence() {
         request.validate().unwrap_err(),
         "current-plan items require nonblank text"
     );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R830.7
+#[test]
+fn no_writer_sets_status_outside_apply() {
+    // The census named `PlanItem.status`. A published plan replaces its item list under one
+    // revision, so an item is never moved from one mark to another: the Rust field is
+    // `progress` and the wire key is unchanged.
+    let item: PlanItem = serde_json::from_value(serde_json::json!({
+        "text": "write the spec", "status": "in_progress"
+    }))
+    .expect("wire key status");
+    assert_eq!(item.progress, PlanStatus::InProgress);
+    assert_eq!(
+        serde_json::to_value(&item).unwrap(),
+        serde_json::json!({"text": "write the spec", "status": "in_progress"})
+    );
+    let source = include_str!("../current_plan.rs");
+    let production = source.split("#[cfg(test)]").next().unwrap();
+    assert!(!production.contains(".progress ="));
 }

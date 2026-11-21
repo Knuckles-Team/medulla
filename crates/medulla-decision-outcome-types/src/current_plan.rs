@@ -22,7 +22,10 @@ pub enum PlanStatus {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct PlanItem {
     pub text: String,
-    pub status: PlanStatus,
+    /// The progress mark the worker reports for this item; the engine does not move it
+    /// (MEDULLA-DECISION-ENGINE-R830.7). The wire key stays `status`.
+    #[serde(rename = "status")]
+    pub progress: PlanStatus,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
