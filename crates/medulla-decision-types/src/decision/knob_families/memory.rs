@@ -2,6 +2,61 @@
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 
+const MINUTE_MS: u64 = 60_000;
+const HOUR_MS: u64 = 60 * MINUTE_MS;
+const DAY_MS: u64 = 24 * HOUR_MS;
+
+/// The most importance a reinforced memory can hold
+/// (MEDULLA-DECISION-ENGINE-R651.8).
+pub const IMPORTANCE_CAP: KnobSpec = KnobSpec {
+    name: "memory.importance_cap",
+    unit: "importance",
+    default: KnobValue::DecimalMicros(10_000_000),
+    min: KnobValue::DecimalMicros(1_000_000),
+    max: KnobValue::DecimalMicros(100_000_000),
+    safety: KnobSafety::Tunable,
+};
+
+/// The default decay half-life of the working tier.
+pub const HALF_LIFE_WORKING: KnobSpec = KnobSpec {
+    name: "memory.half_life_working",
+    unit: "ms",
+    default: KnobValue::DurationMs(HOUR_MS),
+    min: KnobValue::DurationMs(MINUTE_MS),
+    max: KnobValue::DurationMs(24 * HOUR_MS),
+    safety: KnobSafety::Tunable,
+};
+
+/// The default decay half-life of the episodic tier.
+pub const HALF_LIFE_EPISODIC: KnobSpec = KnobSpec {
+    name: "memory.half_life_episodic",
+    unit: "ms",
+    default: KnobValue::DurationMs(7 * DAY_MS),
+    min: KnobValue::DurationMs(DAY_MS),
+    max: KnobValue::DurationMs(90 * DAY_MS),
+    safety: KnobSafety::Tunable,
+};
+
+/// The default decay half-life of the procedural tier.
+pub const HALF_LIFE_PROCEDURAL: KnobSpec = KnobSpec {
+    name: "memory.half_life_procedural",
+    unit: "ms",
+    default: KnobValue::DurationMs(90 * DAY_MS),
+    min: KnobValue::DurationMs(7 * DAY_MS),
+    max: KnobValue::DurationMs(730 * DAY_MS),
+    safety: KnobSafety::Tunable,
+};
+
+/// The default decay half-life of the semantic tier.
+pub const HALF_LIFE_SEMANTIC: KnobSpec = KnobSpec {
+    name: "memory.half_life_semantic",
+    unit: "ms",
+    default: KnobValue::DurationMs(365 * DAY_MS),
+    min: KnobValue::DurationMs(30 * DAY_MS),
+    max: KnobValue::DurationMs(1825 * DAY_MS),
+    safety: KnobSafety::Tunable,
+};
+
 /// Every `memory.*` knob, each `Tunable` unless stated.
 pub const KNOBS: &[KnobSpec] = &[
     KnobSpec {
@@ -52,6 +107,11 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::Integer(1099511627776),
         safety: KnobSafety::Fixed,
     },
+    IMPORTANCE_CAP,
+    HALF_LIFE_WORKING,
+    HALF_LIFE_EPISODIC,
+    HALF_LIFE_PROCEDURAL,
+    HALF_LIFE_SEMANTIC,
 ];
 
 #[cfg(test)]

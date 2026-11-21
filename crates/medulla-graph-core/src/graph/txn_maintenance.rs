@@ -1,5 +1,47 @@
 use super::*;
 
+use medulla_decision_types::decision::knob_families::memory::IMPORTANCE_CAP;
+use medulla_decision_types::decision::knobs::KnobValue;
+
+/// One change to a memory's importance (MEDULLA-DECISION-ENGINE-R651.8).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(super) enum ImportanceChange {
+    /// Retrieval strengthens the memory by `weight`.
+    Reinforce { weight: f64 },
+    /// Importance halves every `half_life_ms` of the `elapsed_ms` since the
+    /// memory was last touched.
+    Decay { elapsed_ms: u64, half_life_ms: u64 },
+}
+
+/// The importance a memory holds after `change`: the single rule both
+/// [`GraphTxn::reinforce`] and [`GraphTxn::decay_node`] apply. Reinforcement
+/// never lifts importance past `knob memory.importance_cap` (its default
+/// applies here, because the replayed write carries no policy) and never
+/// lowers a value already above it; decay multiplies by `0.5` to the power of
+/// elapsed time over the half-life, and a zero elapsed time or half-life
+/// leaves importance unchanged.
+pub(super) fn importance_update(current: f64, change: ImportanceChange) -> f64 {
+    match change {
+        ImportanceChange::Reinforce { weight } => {
+            let cap = match IMPORTANCE_CAP.default {
+                KnobValue::DecimalMicros(micros) => micros as f64 / 1_000_000.0,
+                _ => f64::INFINITY,
+            };
+            (current + weight).min(cap.max(current))
+        }
+        ImportanceChange::Decay {
+            elapsed_ms,
+            half_life_ms,
+        } => {
+            if elapsed_ms > 0 && half_life_ms > 0 {
+                current * 0.5_f64.powf(elapsed_ms as f64 / half_life_ms as f64)
+            } else {
+                current
+            }
+        }
+    }
+}
+
 impl<'a> GraphTxn<'a> {
     // ── Memory maintenance — decay + reinforcement (CONCEPT:MEDULLA-KG.maintenance.combined-maintenance-primitive) ────────────
     //
@@ -55,7 +97,8 @@ impl<'a> GraphTxn<'a> {
         let Some(current_importance) = Self::memory_importance(&obj) else {
             return false;
         };
-        let importance = current_importance + weight;
+        let importance =
+            importance_update(current_importance, ImportanceChange::Reinforce { weight });
         let access_count = obj
             .get("access_count")
             .and_then(|v| v.as_u64())
@@ -100,13 +143,16 @@ impl<'a> GraphTxn<'a> {
             .or_else(|| obj.get("last_access_ms").and_then(|v| v.as_u64()));
         let mut updates = serde_json::Map::new();
         if let Some(ref_ms) = reference {
-            let elapsed = now_ms.saturating_sub(ref_ms);
-            if elapsed > 0 && half_life_ms > 0 {
-                let factor = 0.5_f64.powf(elapsed as f64 / half_life_ms as f64);
-                updates.insert(
-                    "importance".to_string(),
-                    serde_json::json!(importance * factor),
+            let elapsed_ms = now_ms.saturating_sub(ref_ms);
+            if elapsed_ms > 0 && half_life_ms > 0 {
+                let decayed = importance_update(
+                    importance,
+                    ImportanceChange::Decay {
+                        elapsed_ms,
+                        half_life_ms,
+                    },
                 );
+                updates.insert("importance".to_string(), serde_json::json!(decayed));
             }
         }
         // Advance decay's own clock — makes the pass idempotent + composable.
@@ -195,5 +241,57 @@ impl<'a> GraphTxn<'a> {
         let decayed = self.decay_memories(now_ms, half_life_ms, ids);
         let pruned = self.evict_below(ids, evict_threshold, delete);
         (decayed, pruned)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn core_with(importance: f64) -> GraphCore {
+        let core = GraphCore::new();
+        let props = serde_json::json!({"importance": importance, "last_access_ms": 0});
+        core.add_node("m".into(), rmp_serde::to_vec_named(&props).unwrap());
+        core
+    }
+
+    fn importance_of(core: &GraphCore) -> f64 {
+        let blob = core.get_node_properties("m").expect("node present");
+        decode_property_value(&blob)
+            .unwrap()
+            .get("importance")
+            .and_then(|v| v.as_f64())
+            .expect("importance present")
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.8
+    #[test]
+    fn reinforce_and_decay_share_importance_update() {
+        // The rule itself: capped addition, half-life decay, no-ops.
+        let reinforce = |current, weight| {
+            importance_update(current, ImportanceChange::Reinforce { weight })
+        };
+        assert_eq!(reinforce(2.0, 1.5), 3.5);
+        assert_eq!(reinforce(9.5, 5.0), 10.0, "capped at the knob default");
+        assert_eq!(reinforce(12.0, 1.0), 12.0, "never lowered by reinforcement");
+        let decay = |current, elapsed_ms, half_life_ms| {
+            importance_update(
+                current,
+                ImportanceChange::Decay {
+                    elapsed_ms,
+                    half_life_ms,
+                },
+            )
+        };
+        assert_eq!(decay(4.0, 100, 100), 2.0);
+        assert_eq!(decay(4.0, 0, 100), 4.0);
+        assert_eq!(decay(4.0, 100, 0), 4.0);
+
+        // Both routes apply it: the stored value equals the rule's value.
+        let core = core_with(9.0);
+        assert!(core.reinforce("m", 10, 5.0));
+        assert_eq!(importance_of(&core), reinforce(9.0, 5.0));
+        assert!(core.decay_node("m", 10 + 1000, 1000));
+        assert_eq!(importance_of(&core), decay(10.0, 1000, 1000));
     }
 }
