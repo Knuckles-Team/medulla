@@ -266,6 +266,7 @@ impl JobStore {
             lease_ms,
             quota,
             ClaimFamily::Task,
+            None,
         )
     }
 

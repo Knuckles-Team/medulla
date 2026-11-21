@@ -115,6 +115,19 @@ pub trait JobsApi: Send + Sync {
         Err("this seam method is not built into the installed implementation".to_string())
     }
 
+    /// Claim the downtime job `job_id` as `engine:downtime`, record `output` as its typed
+    /// result and complete it, for a job the engine ran in process
+    /// (MEDULLA-FEDERATED-QUERY-R091.3).
+    #[allow(unused_variables)]
+    fn complete_downtime_job(
+        &self,
+        persist_dir: &Option<String>,
+        job_id: &str,
+        output: serde_json::Value,
+    ) -> Result<(), String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
+
     /// Resolve a completed typed job result for the shared KnowledgeBatch stream; the graph
     /// already passed its ACL and placement checks.
     #[cfg(all(feature = "jobs", feature = "knowledge-batch"))]

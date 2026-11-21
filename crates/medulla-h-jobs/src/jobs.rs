@@ -87,6 +87,7 @@ const MAX_JOB_PUBLICATION_PLAN_BYTES: usize = 16 * 1024 * 1024;
 mod association_hash_tests;
 mod core;
 mod data_plane_write;
+mod downtime_complete;
 mod executor_claim;
 mod executor_loop;
 mod executor_usage_cluster;
@@ -262,6 +263,16 @@ impl medulla_server_ops::api::ingest::JobsApi for JobsSeam {
             .submit(spec)
             .map(|job| job.job_id)
             .map_err(|error| job_refusal(&error))
+    }
+
+    fn complete_downtime_job(
+        &self,
+        persist_dir: &Option<String>,
+        job_id: &str,
+        output: serde_json::Value,
+    ) -> Result<(), String> {
+        let store = core::job_store(persist_dir.as_deref())?;
+        downtime_complete::complete_downtime_job(&store, job_id, output)
     }
 
     #[cfg(all(feature = "jobs", feature = "knowledge-batch"))]

@@ -23,8 +23,15 @@ use medulla_catalog_types::metadata_acceleration::AccelerationPolicy;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+use medulla_query_types::wire::ForeignSourceSpec;
+
 use super::cache::FragmentCacheScope;
-use super::trace::FragmentTrace;
+use super::trace::{FetchStrategy, FragmentTrace};
+
+pub use super::run::replay_fragment;
+
+use super::remote::RemoteFetch;
+use crate::federation::ForeignSourceRegistry;
 
 /// A query with its literals removed, identified by the digest of its template.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -38,7 +45,11 @@ pub struct PlanShape {
 }
 
 /// What one execution of a shape did.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+///
+/// `strategy`, `limit_pushed`, `keys_pushed` and `replay` are what a replay needs (MEDULLA-FEDERATED-QUERY-R091.3).
+/// They stay in memory: the replay input may name a connection, so none of the four is ever
+/// serialized.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct PlanObservation {
     pub shape_digest: String,
@@ -50,6 +61,51 @@ pub struct PlanObservation {
     pub bytes_fetched: u64,
     pub cache_hit: bool,
     pub graph_revision: u64,
+    /// How the fragment was fetched.
+    #[serde(skip)]
+    pub strategy: FetchStrategy,
+    /// The limit the fragment pushed into the source.
+    #[serde(skip)]
+    pub limit_pushed: Option<usize>,
+    /// The distinct local ids the fragment shipped as keys.
+    #[serde(skip)]
+    pub keys_pushed: usize,
+    /// What re-running the fragment needs.
+    #[serde(skip)]
+    pub replay: ReplayInput,
+}
+
+/// What a replay of one fragment reads: the source, the pushed limit hint and, for a join, the
+/// local ids the join ran over (truncated to `max_bind_keys`; empty for a source read).
+#[derive(Clone, Debug, PartialEq)]
+pub struct ReplayInput {
+    pub source: ForeignSourceSpec,
+    pub hint: Option<usize>,
+    pub keys: Vec<String>,
+}
+
+impl Default for ReplayInput {
+    fn default() -> Self {
+        Self {
+            source: ForeignSourceSpec::Named {
+                name: String::new(),
+            },
+            hint: None,
+            keys: Vec::new(),
+        }
+    }
+}
+
+/// A plan a plan-evolution run kept for one shape: the strategy a later query of the shape
+/// reads before it chooses (MEDULLA-FEDERATED-QUERY-R091.3).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct KeptPlan {
+    pub plan_digest: String,
+    pub strategy: FetchStrategy,
+    /// Whether the kept plan pushed the hinted limit into the source.
+    pub limit_pushed: bool,
+    /// The downtime job whose receipt kept the plan.
+    pub receipt_job_id: String,
 }
 
 /// The closed set of candidate kinds.
@@ -155,6 +211,25 @@ impl ObservationStore {
             .shapes
             .get(shape_digest)
             .map(|entry| &entry.shape)
+    }
+
+    /// The latest observation `tenant` holds of `plan_digest` under `shape_digest`.
+    pub fn observation_of_plan(
+        &self,
+        tenant: &str,
+        shape_digest: &str,
+        plan_digest: &str,
+    ) -> Option<&PlanObservation> {
+        self.observations(tenant, shape_digest)
+            .filter(|o| o.plan_digest == plan_digest)
+            .last()
+    }
+
+    /// The tenants that hold observations.
+    pub fn tenants(&self) -> Vec<String> {
+        let mut tenants: Vec<String> = self.tenants.keys().cloned().collect();
+        tenants.sort();
+        tenants
     }
 
     /// The observations `tenant` holds for `shape_digest`, oldest first.
@@ -547,10 +622,16 @@ fn medulla_federation_limits() -> StoreLimits {
     }
 }
 
+/// The shape digest of the fragments of the source labelled `source_label`.
+pub(super) fn shape_digest_of(source_label: &str) -> String {
+    derived_digest(&["shape", source_label])
+}
+
 /// Record one finished fragment for `tenant` (MEDULLA-FEDERATED-QUERY-R091.3). The shape is the
-/// fragment's source label and the plan is the fetch strategy with its pushdowns.
-pub(super) fn observe(tenant: &str, trace: &FragmentTrace) {
-    let shape_digest = derived_digest(&["shape", &trace.source]);
+/// fragment's source label and the plan is the fetch strategy with its pushdowns. `replay` is
+/// what a later replay of the fragment reads.
+pub(super) fn observe(tenant: &str, trace: &FragmentTrace, replay: ReplayInput) {
+    let shape_digest = shape_digest_of(&trace.source);
     let mut pushdowns = Vec::new();
     if let Some(limit) = trace.limit_pushed {
         pushdowns.push(format!("limit:{limit}"));
@@ -575,10 +656,142 @@ pub(super) fn observe(tenant: &str, trace: &FragmentTrace) {
         bytes_fetched: 0,
         cache_hit: false,
         graph_revision: 0,
+        strategy: trace.strategy,
+        limit_pushed: trace.limit_pushed,
+        keys_pushed: trace.keys_pushed,
+        replay,
     };
     if let Ok(mut store) = global_store().lock() {
         store.observe(tenant, shape, observation);
     }
+}
+
+/// The bounded kept plans of every tenant: at most `shapes_per_tenant` per tenant, the oldest
+/// kept shape dropped first. It is a planner cache, not a fact store: a restart starts with
+/// none kept and replays rebuild it.
+pub struct KeptStore {
+    per_tenant: usize,
+    tenants: HashMap<String, VecDeque<(String, KeptPlan)>>,
+}
+
+impl KeptStore {
+    pub fn new(per_tenant: usize) -> Self {
+        Self {
+            per_tenant: per_tenant.max(1),
+            tenants: HashMap::new(),
+        }
+    }
+
+    /// Keep `plan` for `tenant`'s `shape_digest`, replacing a plan already kept for it.
+    pub fn keep(&mut self, tenant: &str, shape_digest: &str, plan: KeptPlan) {
+        let limit = self.per_tenant;
+        let kept = self.tenants.entry(tenant.to_string()).or_default();
+        kept.retain(|(shape, _)| shape != shape_digest);
+        while kept.len() >= limit {
+            kept.pop_front();
+        }
+        kept.push_back((shape_digest.to_string(), plan));
+    }
+
+    /// The plan kept for `tenant`'s `shape_digest`.
+    pub fn get(&self, tenant: &str, shape_digest: &str) -> Option<KeptPlan> {
+        self.tenants
+            .get(tenant)?
+            .iter()
+            .find(|(shape, _)| shape == shape_digest)
+            .map(|(_, plan)| plan.clone())
+    }
+
+    /// Drop the plan kept for `tenant`'s `shape_digest`.
+    pub fn clear(&mut self, tenant: &str, shape_digest: &str) {
+        if let Some(kept) = self.tenants.get_mut(tenant) {
+            kept.retain(|(shape, _)| shape != shape_digest);
+        }
+    }
+
+    /// How many plans `tenant` holds kept.
+    pub fn len(&self, tenant: &str) -> usize {
+        self.tenants.get(tenant).map_or(0, VecDeque::len)
+    }
+
+    pub fn is_empty(&self, tenant: &str) -> bool {
+        self.len(tenant) == 0
+    }
+}
+
+fn global_kept() -> &'static Mutex<KeptStore> {
+    static KEPT: OnceLock<Mutex<KeptStore>> = OnceLock::new();
+    KEPT.get_or_init(|| Mutex::new(KeptStore::new(medulla_federation_limits().shapes_per_tenant)))
+}
+
+/// The plan kept for `tenant`'s `shape_digest`, if a plan-evolution run kept one.
+pub fn kept_plan(tenant: &str, shape_digest: &str) -> Option<KeptPlan> {
+    global_kept().lock().ok()?.get(tenant, shape_digest)
+}
+
+/// Keep `plan` for `tenant`'s `shape_digest`.
+pub fn keep(tenant: &str, shape_digest: &str, plan: KeptPlan) {
+    if let Ok(mut store) = global_kept().lock() {
+        store.keep(tenant, shape_digest, plan);
+    }
+}
+
+/// Drop the plan kept for `tenant`'s `shape_digest`.
+pub fn clear(tenant: &str, shape_digest: &str) {
+    if let Ok(mut store) = global_kept().lock() {
+        store.clear(tenant, shape_digest);
+    }
+}
+
+/// Resolve a recorded fragment's source under `registry`, the replaying tenant's own. `None`
+/// when the source no longer resolves there (MEDULLA-FEDERATED-QUERY-R091.3).
+pub fn resolve_replay<'a>(
+    source: &'a ForeignSourceSpec,
+    registry: &'a ForeignSourceRegistry,
+) -> Option<Box<dyn RemoteFetch + 'a>> {
+    super::remote::resolve(source, Some(registry))
+}
+
+/// The tenants that hold plan observations, in order.
+pub fn observed_tenants() -> Vec<String> {
+    global_store()
+        .lock()
+        .map(|store| store.tenants())
+        .unwrap_or_default()
+}
+
+/// One shape's candidate with the observations a replay needs: the baseline's and the
+/// candidate's own.
+#[derive(Clone, Debug)]
+pub struct EvolutionWork {
+    pub candidate: PlanCandidate,
+    pub baseline: PlanObservation,
+    pub observed: PlanObservation,
+}
+
+/// The `pushdown_choice` candidates of `tenant`, each with the observations of its baseline
+/// plan and of the candidate plan. A candidate whose plan was observed only under another
+/// shape cannot occur: both are read from the one shape.
+pub fn pushdown_work(tenant: &str, policy: &EvolutionPolicy) -> Vec<EvolutionWork> {
+    let Ok(store) = global_store().lock() else {
+        return Vec::new();
+    };
+    pushdown_choice(&store, tenant, policy)
+        .into_iter()
+        .filter_map(|candidate| {
+            let baseline = store
+                .observation_of_plan(tenant, &candidate.shape_digest, &candidate.baseline_digest)?
+                .clone();
+            let observed = store
+                .observation_of_plan(tenant, &candidate.shape_digest, &candidate.plan_digest)?
+                .clone();
+            Some(EvolutionWork {
+                candidate,
+                baseline,
+                observed,
+            })
+        })
+        .collect()
 }
 
 /// How many times `tenant`'s fragments of `source_label` have been recorded.
@@ -618,6 +831,10 @@ mod tests {
             bytes_fetched: 4_096,
             cache_hit: false,
             graph_revision: 7,
+            strategy: FetchStrategy::FullFetch,
+            limit_pushed: None,
+            keys_pushed: 0,
+            replay: ReplayInput::default(),
         }
     }
 
@@ -834,5 +1051,34 @@ mod tests {
         assert!(generate_index_suggestions(&seeded(&[("p1", "src", pushed)], 2), "t", &p).is_empty());
         let bare = seeded(&[("p1", "src", vec!["limit:5".into()])], 3);
         assert!(generate_index_suggestions(&bare, "t", &p).is_empty());
+    }
+
+    fn kept_plan(digest: &str) -> KeptPlan {
+        KeptPlan {
+            plan_digest: digest.into(),
+            strategy: FetchStrategy::BindJoin,
+            limit_pushed: false,
+            receipt_job_id: "job-1".into(),
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R091.3
+    #[test]
+    fn kept_store_is_bounded_per_tenant_and_isolated() {
+        let mut store = KeptStore::new(2);
+        store.keep("tenant-a", "s1", kept_plan("p1"));
+        store.keep("tenant-a", "s2", kept_plan("p2"));
+        store.keep("tenant-a", "s3", kept_plan("p3"));
+        assert_eq!(store.len("tenant-a"), 2);
+        assert!(store.get("tenant-a", "s1").is_none(), "the oldest is dropped first");
+        assert_eq!(store.get("tenant-a", "s3").unwrap().plan_digest, "p3");
+        // Keeping again replaces; another tenant never sees the plan.
+        store.keep("tenant-a", "s3", kept_plan("p4"));
+        assert_eq!(store.len("tenant-a"), 2);
+        assert_eq!(store.get("tenant-a", "s3").unwrap().plan_digest, "p4");
+        assert!(store.get("tenant-b", "s3").is_none());
+        store.clear("tenant-a", "s3");
+        assert!(store.get("tenant-a", "s3").is_none());
+        assert!(!store.is_empty("tenant-a"));
     }
 }

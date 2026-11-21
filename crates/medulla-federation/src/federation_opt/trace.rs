@@ -8,9 +8,10 @@ use medulla_catalog_types::metadata_acceleration::{SnapshotIsolation, SnapshotSe
 use medulla_query_types::search_source::ScoreKind;
 
 /// How a fragment was fetched.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize)]
 pub enum FetchStrategy {
     /// The whole source, then local evaluation (no capability, or cheaper by estimate).
+    #[default]
     FullFetch,
     /// A `Limit k` pushed into the source's request.
     LimitPushdown,
@@ -78,6 +79,10 @@ pub struct FragmentTrace {
     pub pushed_statement: Option<String>,
     /// SHA-256 of the mapping the fragment ran under, 64 lowercase hex characters.
     pub mapping_digest: Option<String>,
+    /// The digest of the kept plan, when a kept plan changed this fragment's choice
+    /// (MEDULLA-FEDERATED-QUERY-R091.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub kept_plan: Option<String>,
 }
 
 /// The receipt of one pushed search. The fragment's `source` label names the source; the
@@ -111,6 +116,7 @@ impl FragmentTrace {
             truncated: false,
             pushed_statement: None,
             mapping_digest: None,
+            kept_plan: None,
             keys_pushed: 0,
             limit_pushed: None,
             requests: 0,

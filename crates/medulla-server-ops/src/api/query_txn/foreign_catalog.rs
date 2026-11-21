@@ -260,6 +260,11 @@ impl OwnedForeignRegistry {
     pub fn registry(&self) -> &ForeignSourceRegistry {
         &self.registry
     }
+
+    /// The executor registry, by value.
+    pub fn into_registry(self) -> ForeignSourceRegistry {
+        self.registry
+    }
 }
 
 impl ForeignSourceCatalog {
@@ -345,7 +350,16 @@ impl ForeignSourceCatalog {
         caller: &CarrierAuthority,
         isolation: &IsolationLayer,
     ) -> OwnedForeignRegistry {
-        let owner_scope = caller.owner_scope();
+        self.registry_for_scope(caller.owner_scope(), caller.agent_id(), isolation)
+    }
+
+    /// [`Self::registry_for`] for the owner `owner_scope` whose agent is `agent_id`.
+    fn registry_for_scope(
+        &self,
+        owner_scope: &str,
+        agent_id: &str,
+        isolation: &IsolationLayer,
+    ) -> OwnedForeignRegistry {
         let (mut shared, mut own) = (Vec::new(), Vec::new());
         for entry in self.entries.iter() {
             let (key, value) = (entry.key(), entry.value());
@@ -353,7 +367,7 @@ impl ForeignSourceCatalog {
                 own.push((key.name.clone(), value.spec.clone(), value.quota));
             } else if may_use_shared(
                 isolation,
-                caller.agent_id(),
+                agent_id,
                 &share_resource(&value.owner_agent, &key.name),
             ) {
                 shared.push((
@@ -382,6 +396,31 @@ impl ForeignSourceCatalog {
             cache_salt,
             registry,
         }
+    }
+
+    /// The registry whose resolved sources carry the served-query cache salt `cache_salt`, or
+    /// `None` when no owner resolves to it any more: a registration, a grant or a revocation
+    /// since the salt was issued changes it. A plan-evolution run replays a recorded fragment
+    /// under this registry only, so a fragment whose authority moved is never replayed
+    /// (MEDULLA-FEDERATED-QUERY-R091.3).
+    pub fn registry_for_cache_salt(
+        &self,
+        cache_salt: &str,
+        isolation: &IsolationLayer,
+    ) -> Option<OwnedForeignRegistry> {
+        let mut owners: Vec<(String, String)> = self
+            .entries
+            .iter()
+            .map(|entry| (entry.key().owner_scope.clone(), entry.value().owner_agent.clone()))
+            .collect();
+        owners.sort();
+        owners.dedup();
+        owners
+            .into_iter()
+            .map(|(owner_scope, agent_id)| {
+                self.registry_for_scope(&owner_scope, &agent_id, isolation)
+            })
+            .find(|owned| owned.cache_salt == cache_salt)
     }
 
     /// Build a request-scoped registry with one already-admitted driver bound.

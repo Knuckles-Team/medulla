@@ -15,6 +15,7 @@ use super::capability::{
 };
 use super::http::PAGE_SIZE;
 use super::limiter;
+use super::plan_evolution::{self, KeptPlan, ReplayInput, ReplayMeasure};
 use super::remote::RemoteFetch;
 use super::session::FederationSession;
 use super::snapshot::{Consistency, SnapshotHandle};
@@ -65,12 +66,17 @@ pub(crate) fn foreign_scan(
     with_session(session, |session| {
         let mut fragment = Fragment::new(remote.as_ref(), session);
         fragment.bind_snapshot(source)?;
+        fragment.kept = kept_for(session, remote.as_ref());
         if join && !input.is_empty() {
-            let fetched = fragment.join(&input)?;
+            let mut fetched = fragment.join(&input)?;
+            fetched.replay = Some(replay_of(session, source, None, Some(&input)));
             let kept = input.intersect_keep_order(&fetched.rows.id_set());
             return Ok(fetched.record(session, kept));
         }
-        Ok(fragment.source(session.limit_hint(op))?.finish(session))
+        let hint = session.limit_hint(op);
+        let mut read = fragment.source(hint)?;
+        read.replay = Some(replay_of(session, source, hint, None));
+        Ok(read.finish(session))
     })
 }
 
@@ -91,8 +97,80 @@ pub(crate) fn foreign_named(
         return registry.resolve(name);
     };
     with_session(session, |session| {
-        let fragment = Fragment::new(remote.as_ref(), session);
-        Ok(fragment.source(session.limit_hint(op))?.finish(session))
+        let mut fragment = Fragment::new(remote.as_ref(), session);
+        fragment.kept = kept_for(session, remote.as_ref());
+        let hint = session.limit_hint(op);
+        let mut read = fragment.source(hint)?;
+        let named = ForeignSourceSpec::Named {
+            name: name.to_string(),
+        };
+        read.replay = Some(replay_of(session, &named, hint, None));
+        Ok(read.finish(session))
+    })
+}
+
+/// The plan a plan-evolution run kept for the shape of `remote`, under the verified owner of
+/// `session` (MEDULLA-FEDERATED-QUERY-R091.3). A standalone plan holds no owner and reads none.
+fn kept_for(session: &FederationSession, remote: &dyn RemoteFetch) -> Option<KeptPlan> {
+    let scope = session.cache_scope()?;
+    plan_evolution::kept_plan(
+        scope.owner_salt(),
+        &plan_evolution::shape_digest_of(&remote.label()),
+    )
+}
+
+/// What a replay of this fragment reads: the source, the limit hint and, for a join, the join's
+/// input ids truncated to `max_bind_keys`. A standalone plan records nothing, so it builds none.
+fn replay_of(
+    session: &FederationSession,
+    source: &ForeignSourceSpec,
+    hint: Option<usize>,
+    join_input: Option<&RowSet>,
+) -> ReplayInput {
+    if session.cache_scope().is_none() {
+        return ReplayInput::default();
+    }
+    let max = session.budget().max_bind_keys;
+    ReplayInput {
+        source: source.clone(),
+        hint,
+        keys: join_input
+            .map(|input| input.ids().into_iter().take(max).collect())
+            .unwrap_or_default(),
+    }
+}
+
+/// Run one recorded fragment again under `forced` (MEDULLA-FEDERATED-QUERY-R091.3): the kept
+/// plan decides the fetch strategy and the limit, and the result is what the plan keeps. A
+/// plan-evolution run replays the baseline and each candidate through this call. Rows received
+/// stand in for bytes fetched: a source reports no byte count.
+pub fn replay_fragment(
+    remote: &dyn RemoteFetch,
+    input: &ReplayInput,
+    forced: &KeptPlan,
+) -> Result<ReplayMeasure, String> {
+    let session = FederationSession::from_env();
+    let mut fragment = Fragment::new(remote, &session);
+    fragment.kept = Some(forced.clone());
+    let started = Instant::now();
+    let (read, mut results) = if input.keys.is_empty() {
+        let read = fragment.source(input.hint)?;
+        let results = read.rows.ids();
+        (read, results)
+    } else {
+        let keys = RowSet::from_rows(input.keys.iter().map(|key| (key.clone(), None)));
+        let read = fragment.join(&keys)?;
+        let results = keys.intersect_keep_order(&read.rows.id_set()).ids();
+        (read, results)
+    };
+    // A source read with a hint keeps its first `hint` rows whichever way it was fetched.
+    if let Some(hint) = input.hint.filter(|_| input.keys.is_empty()) {
+        results.truncate(hint);
+    }
+    Ok(ReplayMeasure {
+        latency_us: u64::try_from(started.elapsed().as_micros()).unwrap_or(u64::MAX),
+        bytes_fetched: u64::try_from(read.trace.rows_fetched).unwrap_or(u64::MAX),
+        results,
     })
 }
 
@@ -126,6 +204,8 @@ fn is_refusal(error: &str) -> bool {
 pub(super) struct Read {
     pub(super) rows: RowSet,
     pub(super) trace: FragmentTrace,
+    /// What a replay of this fragment reads, set by the foreign leaf that knows its source.
+    replay: Option<ReplayInput>,
     started: Instant,
 }
 
@@ -149,7 +229,11 @@ impl Read {
         // MEDULLA-FEDERATED-QUERY-R091.3: a served query's fragment is one observation of its
         // shape, keyed by the verified owner. A standalone plan holds no owner and records nothing.
         if let Some(scope) = session.cache_scope() {
-            super::plan_evolution::observe(scope.owner_salt(), &self.trace);
+            plan_evolution::observe(
+                scope.owner_salt(),
+                &self.trace,
+                self.replay.take().unwrap_or_default(),
+            );
         }
         session.record(self.trace);
         kept
@@ -164,6 +248,9 @@ pub(super) struct Fragment<'r, 's> {
     /// The snapshot every fragment of this source reads, once bound.
     snapshot: Option<SnapshotSemantics>,
     consistency: Consistency,
+    /// The plan kept for this fragment's shape, read before the fragment chooses
+    /// (MEDULLA-FEDERATED-QUERY-R091.3).
+    kept: Option<KeptPlan>,
 }
 
 impl<'r, 's> Fragment<'r, 's> {
@@ -175,6 +262,7 @@ impl<'r, 's> Fragment<'r, 's> {
             caps,
             snapshot: None,
             consistency: Consistency::Snapshot,
+            kept: None,
         }
     }
 
@@ -239,9 +327,14 @@ impl<'r, 's> Fragment<'r, 's> {
             ));
         }
         let started = Instant::now();
-        let limit = hint.filter(|_| self.caps.limit == LimitPushdown::Native);
+        let wanted = hint.filter(|_| self.caps.limit == LimitPushdown::Native);
+        // A kept plan that did not push the limit sends none, even when the source could take it.
+        let limit = wanted.filter(|_| self.kept.as_ref().is_none_or(|kept| kept.limit_pushed));
         let mut trace = self.trace(source_strategy(limit, self.caps.paging));
         trace.limit_pushed = limit;
+        if wanted.is_some() && limit.is_none() {
+            trace.kept_plan = self.kept.as_ref().map(|kept| kept.plan_digest.clone());
+        }
         let request = RemoteRequest {
             limit,
             ..RemoteRequest::full()
@@ -261,6 +354,7 @@ impl<'r, 's> Fragment<'r, 's> {
         Ok(Read {
             rows,
             trace,
+            replay: None,
             started,
         })
     }
@@ -283,13 +377,34 @@ impl<'r, 's> Fragment<'r, 's> {
     pub(super) fn join(&self, input: &RowSet) -> Result<Read, String> {
         let started = Instant::now();
         let keys = input.ids();
-        let (strategy, estimate) = choose_join(&JoinInputs {
+        let max_bind_keys = self.session.budget().max_bind_keys;
+        let keys_expressible = keys.iter().all(|k| self.remote.key_expressible(k));
+        let (chosen, estimate) = choose_join(&JoinInputs {
             caps: &self.caps,
             keys: keys.len(),
-            keys_expressible: keys.iter().all(|k| self.remote.key_expressible(k)),
-            max_bind_keys: self.session.budget().max_bind_keys,
+            keys_expressible,
+            max_bind_keys,
             stats: stats::lookup(&self.remote.fingerprint()),
         });
+        // The kept plan overrides the cost model's choice, never a refusal: a kept bind join
+        // needs expressible keys within the bind bound, and a kept full fetch needs a source
+        // that answers without keys.
+        let bindable =
+            self.caps.max_keys().is_some() && keys_expressible && keys.len() <= max_bind_keys;
+        let kept_strategy = self.kept.as_ref().map(|kept| kept.strategy);
+        let replacement = match (&chosen, kept_strategy) {
+            (JoinStrategy::FullFetch, Some(FetchStrategy::BindJoin)) if bindable => {
+                Some(JoinStrategy::BindJoin)
+            }
+            (JoinStrategy::BindJoin, Some(FetchStrategy::FullFetch))
+                if self.caps.full_fetch != FullFetch::RequiresKeys =>
+            {
+                Some(JoinStrategy::FullFetch)
+            }
+            _ => None,
+        };
+        let overridden = replacement.is_some();
+        let strategy = replacement.unwrap_or(chosen);
         let (rows, mut trace) = match strategy {
             JoinStrategy::Refuse(error) => return Err(error),
             JoinStrategy::BindJoin => self.bind_or_fallback(keys)?,
@@ -299,9 +414,13 @@ impl<'r, 's> Fragment<'r, 's> {
             }
         };
         trace.estimate = estimate;
+        if overridden {
+            trace.kept_plan = self.kept.as_ref().map(|kept| kept.plan_digest.clone());
+        }
         Ok(Read {
             rows,
             trace,
+            replay: None,
             started,
         })
     }
@@ -705,5 +824,181 @@ mod cache_tests {
         session.set_cache_scope(None);
         assert_eq!(fetch_one(&remote, &session, caps, &request).requests, 1);
         assert_eq!(remote.calls.load(Ordering::SeqCst), 5);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use super::*;
+    use crate::federation_opt::capability::KeyLookup;
+    use crate::federation_opt::remote::Identity;
+
+    /// A source over a fixed catalog that answers key lookups and full reads and counts them.
+    struct Keyed {
+        identity: Identity,
+        caps: SourceCapabilities,
+        expressible: bool,
+        catalog: Vec<String>,
+        keyed_calls: AtomicUsize,
+        full_calls: AtomicUsize,
+    }
+
+    impl Keyed {
+        fn new(name: &str, caps: SourceCapabilities, expressible: bool) -> Self {
+            Self {
+                identity: Identity {
+                    label: format!("registered:{name}#00000000"),
+                    fingerprint: stats::fingerprint(name.as_bytes()),
+                    cache_name: None,
+                },
+                caps,
+                expressible,
+                catalog: (0..20).map(|i| format!("x{i}")).collect(),
+                keyed_calls: AtomicUsize::new(0),
+                full_calls: AtomicUsize::new(0),
+            }
+        }
+    }
+
+    impl RemoteFetch for Keyed {
+        fn capabilities(&self) -> SourceCapabilities {
+            self.caps
+        }
+
+        fn identity(&self) -> &Identity {
+            &self.identity
+        }
+
+        fn key_expressible(&self, _key: &str) -> bool {
+            self.expressible
+        }
+
+        fn fetch(&self, request: &RemoteRequest) -> Result<RowSet, String> {
+            let rows: Vec<(String, Option<f32>)> = if request.keys.is_empty() {
+                self.full_calls.fetch_add(1, Ordering::SeqCst);
+                self.catalog.iter().map(|id| (id.clone(), None)).collect()
+            } else {
+                self.keyed_calls.fetch_add(1, Ordering::SeqCst);
+                self.catalog
+                    .iter()
+                    .filter(|id| request.keys.contains(id))
+                    .map(|id| (id.clone(), None))
+                    .collect()
+            };
+            Ok(RowSet::from_rows(rows))
+        }
+    }
+
+    fn kept(strategy: FetchStrategy) -> KeptPlan {
+        KeptPlan {
+            plan_digest: format!("kept-{strategy:?}"),
+            strategy,
+            limit_pushed: false,
+            receipt_job_id: "job-1".into(),
+        }
+    }
+
+    fn input() -> RowSet {
+        RowSet::from_ids((0..5).map(|i| format!("x{i}")))
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R091.3
+    #[test]
+    fn kept_plan_overrides_join_choice_but_not_refusal() {
+        let session = FederationSession::from_env();
+        let caps = SourceCapabilities::single_full_fetch(
+            KeyLookup::Batched { max_keys: 100 },
+            LimitPushdown::Native,
+        );
+
+        // Unkept, the cost model chooses a bind join for an unobserved source.
+        let source = Keyed::new("kept-join-a", caps, true);
+        let read = Fragment::new(&source, &session).join(&input()).unwrap();
+        assert_eq!(read.trace.strategy, FetchStrategy::BindJoin);
+        assert_eq!(read.trace.kept_plan, None);
+
+        // A kept full fetch replaces it, names its digest in the trace and returns the same rows.
+        let source = Keyed::new("kept-join-b", caps, true);
+        let mut fragment = Fragment::new(&source, &session);
+        fragment.kept = Some(kept(FetchStrategy::FullFetch));
+        let read = fragment.join(&input()).unwrap();
+        assert_eq!(read.trace.strategy, FetchStrategy::FullFetch);
+        assert_eq!(read.trace.kept_plan.as_deref(), Some("kept-FullFetch"));
+        assert_eq!(source.keyed_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(
+            input().intersect_keep_order(&read.rows.id_set()),
+            input(),
+            "the kept plan returns the rows the cost model's plan returns"
+        );
+
+        // A kept full fetch never replaces the only plan a key-only source has.
+        let mut key_only = caps;
+        key_only.full_fetch = FullFetch::RequiresKeys;
+        let source = Keyed::new("kept-join-c", key_only, true);
+        let mut fragment = Fragment::new(&source, &session);
+        fragment.kept = Some(kept(FetchStrategy::FullFetch));
+        let read = fragment.join(&input()).unwrap();
+        assert_eq!(read.trace.strategy, FetchStrategy::BindJoin);
+        assert_eq!(read.trace.kept_plan, None);
+
+        // A kept bind join does not turn a refusal into a read: the keys cannot be expressed.
+        let source = Keyed::new("kept-join-d", key_only, false);
+        let mut fragment = Fragment::new(&source, &session);
+        fragment.kept = Some(kept(FetchStrategy::BindJoin));
+        let error = fragment.join(&input()).err().expect("the refusal is final");
+        assert!(error.starts_with(REQUIRES_KEYS), "{error}");
+        assert_eq!(source.keyed_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(source.full_calls.load(Ordering::SeqCst), 0);
+
+        // A kept plan that did not push the limit sends none to a source that could take it.
+        let source = Keyed::new("kept-limit", caps, true);
+        let read = Fragment::new(&source, &session).source(Some(3)).unwrap();
+        assert_eq!(read.trace.limit_pushed, Some(3));
+        let mut fragment = Fragment::new(&source, &session);
+        fragment.kept = Some(kept(FetchStrategy::FullFetch));
+        let read = fragment.source(Some(3)).unwrap();
+        assert_eq!(read.trace.limit_pushed, None);
+        assert_eq!(read.trace.kept_plan.as_deref(), Some("kept-FullFetch"));
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R091.3
+    #[test]
+    fn replay_runs_the_forced_plan_and_keeps_the_same_results() {
+        let caps = SourceCapabilities::single_full_fetch(
+            KeyLookup::Batched { max_keys: 100 },
+            LimitPushdown::Native,
+        );
+        let source = Keyed::new("replay", caps, true);
+        let spec = ForeignSourceSpec::Named {
+            name: "replay".into(),
+        };
+        let join = ReplayInput {
+            source: spec.clone(),
+            hint: None,
+            keys: (0..5).map(|i| format!("x{i}")).collect(),
+        };
+        let bind = replay_fragment(&source, &join, &kept(FetchStrategy::BindJoin)).unwrap();
+        let full = replay_fragment(&source, &join, &kept(FetchStrategy::FullFetch)).unwrap();
+        let mut left = bind.results.clone();
+        let mut right = full.results.clone();
+        left.sort();
+        right.sort();
+        assert_eq!(left, right);
+        assert!(bind.bytes_fetched < full.bytes_fetched);
+
+        // A source read with a hint keeps its first rows whether or not the limit was pushed.
+        let read = ReplayInput {
+            source: spec,
+            hint: Some(3),
+            keys: Vec::new(),
+        };
+        let mut pushed = kept(FetchStrategy::LimitPushdown);
+        pushed.limit_pushed = true;
+        let limited = replay_fragment(&source, &read, &pushed).unwrap();
+        let unlimited = replay_fragment(&source, &read, &kept(FetchStrategy::FullFetch)).unwrap();
+        assert_eq!(limited.results, unlimited.results);
+        assert_eq!(limited.results.len(), 3);
     }
 }

@@ -533,15 +533,33 @@ pub async fn run_tick(state: &Arc<RwLock<ServerState>>, now_ms: i64) -> usize {
     };
     let effects = StateEffects {
         state: state.clone(),
-        persist_dir,
+        persist_dir: persist_dir.clone(),
         backend,
     };
     let decision = apply_plan(&effects, &mut memory, plan, now_ms).await;
     let submitted = decision.selected.len();
+    // MEDULLA-FEDERATED-QUERY-R091.3: the engine runs its own plan-evolution jobs in process,
+    // because a replay needs the engine's registered foreign sources.
+    run_plan_evolution_jobs(state, &decision).await;
     record_selections(decision);
     restore(memory);
     submitted
 }
+
+/// Run every `plan_evolution` job the tick selected.
+#[cfg(feature = "federation")]
+async fn run_plan_evolution_jobs(state: &Arc<RwLock<ServerState>>, decision: &DowntimeSelections) {
+    for selected in decision
+        .selected
+        .iter()
+        .filter(|selected| selected.intent == "plan_evolution")
+    {
+        crate::downtime_plan_evolution::run_plan_evolution(state, &selected.job_id).await;
+    }
+}
+
+#[cfg(not(feature = "federation"))]
+async fn run_plan_evolution_jobs(_state: &Arc<RwLock<ServerState>>, _decision: &DowntimeSelections) {}
 
 fn restore(memory: TickMemory) {
     if let Ok(mut slot) = MEMORY.lock() {

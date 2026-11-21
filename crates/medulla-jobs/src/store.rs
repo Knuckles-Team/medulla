@@ -835,11 +835,37 @@ impl JobStore {
             lease_ms,
             quota,
             ClaimFamily::Analytics,
+            None,
+        )
+    }
+
+    /// [`Self::claim_next`] restricted to the one job `job_id`: the lease goes to that job
+    /// when it is ready for this worker, and to nothing else. The engine's own downtime
+    /// worker claims the exact job it is about to complete through this call
+    /// (MEDULLA-FEDERATED-QUERY-R091.3).
+    pub fn claim_job(
+        &self,
+        job_id: &str,
+        worker_ref: &str,
+        worker_capabilities: &[String],
+        now_ms: i64,
+        lease_ms: u64,
+        quota: TenantJobQuota,
+    ) -> Result<Option<WorkerClaim>> {
+        self.claim_next_family(
+            worker_ref,
+            worker_capabilities,
+            now_ms,
+            lease_ms,
+            quota,
+            ClaimFamily::Analytics,
+            Some(job_id),
         )
     }
 
     /// [`Self::claim_next`] restricted to one job family: analytics workers never
     /// lease a queued task and task workers never lease an analytics job.
+    #[allow(clippy::too_many_arguments)]
     fn claim_next_family(
         &self,
         worker_ref: &str,
@@ -848,6 +874,7 @@ impl JobStore {
         lease_ms: u64,
         quota: TenantJobQuota,
         family: ClaimFamily,
+        only_job: Option<&str>,
     ) -> Result<Option<WorkerClaim>> {
         if claim_next_args_invalid(worker_ref, worker_capabilities, lease_ms, &quota) {
             return Err(codec_err(
@@ -891,6 +918,7 @@ impl JobStore {
             now_ms,
             quota,
             family,
+            only_job,
         )?;
         let Some(mut job) = selected else {
             if let Some(batch) = reconcile_batch {
@@ -2201,6 +2229,7 @@ fn select_ready_for_worker(
     now_ms: i64,
     quota: TenantJobQuota,
     family: ClaimFamily,
+    only_job: Option<&str>,
 ) -> Result<Option<AnalyticsJob>> {
     let mut anchors = BTreeSet::from([UNCONSTRAINED_CAPABILITY_ANCHOR.to_string()]);
     anchors.extend(
@@ -2225,6 +2254,9 @@ fn select_ready_for_worker(
                 .ok_or_else(|| codec_err("scheduler ready scan exceeds limits"))?;
             let (key, _) = row.map_err(redb_err)?;
             let (_, rank, created_at_ms, job_id) = key.value();
+            if only_job.is_some_and(|only| only != job_id) {
+                continue;
+            }
             let Some(value) = jobs.get(job_id).map_err(redb_err)? else {
                 continue;
             };

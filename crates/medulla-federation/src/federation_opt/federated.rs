@@ -91,10 +91,16 @@ impl ForeignExecutor for FederatedExec<'_> {
                 };
                 ForeignFragmentReport {
                     stage: format!(
-                        "REMOTE {source} strategy={:?} keys={} limit={:?} requests={} fetched={} kept={} estimate={estimate} mode={}",
+                        "REMOTE {source} strategy={:?} keys={} limit={:?} requests={} fetched={} kept={} estimate={estimate} mode={}{}",
                         fragment.strategy, fragment.keys_pushed, fragment.limit_pushed,
                         fragment.requests, fragment.rows_fetched, fragment.rows_kept,
                         super::trace::mode_word(fragment.mode),
+                        // MEDULLA-FEDERATED-QUERY-R091.3: the digest of a kept plan that
+                        // changed this fragment's choice.
+                        fragment
+                            .kept_plan
+                            .as_deref()
+                            .map_or_else(String::new, |digest| format!(" kept_plan={digest}")),
                     ),
                     estimated_rows: match fragment.estimate {
                         EstimateProvenance::Learned { rows, .. } => rows,

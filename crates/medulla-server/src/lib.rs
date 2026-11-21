@@ -23,6 +23,10 @@ pub mod retention_cleanup;
 #[cfg(all(feature = "jobs", feature = "sparql"))]
 pub mod downtime;
 
+/// The body of the `plan_evolution` downtime job (MEDULLA-FEDERATED-QUERY-R091.3).
+#[cfg(all(feature = "jobs", feature = "sparql", feature = "federation"))]
+pub mod downtime_plan_evolution;
+
 // ---- merged from the moved module root (src/server/mod.rs) ----
 #[cfg(feature = "ann-redb")]
 use medulla_h_retrieve::semantic_index_runtime::PendingRf019Activation;
