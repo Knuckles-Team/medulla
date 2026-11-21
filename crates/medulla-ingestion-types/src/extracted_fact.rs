@@ -110,6 +110,79 @@ pub struct FactBatch {
     pub facts: Vec<ExtractedFact>,
 }
 
+/// The most per-unit entries a [`FactReport`] holds.
+pub const MAX_FACT_REPORT_ENTRIES: usize = 1024;
+
+/// What one fact of a `facts` batch did to the stored claims
+/// (MEDULLA-INGEST-WORKER-R701.5).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum FactOutcome {
+    /// No claim was stored under the claim id.
+    Created,
+    /// A claim was stored with a different unit hash: its confidence is combined.
+    Updated,
+    /// A claim was stored with the same unit hash: nothing is written.
+    Unchanged,
+    /// The fact carries no valid evidence span (MEDULLA-INGEST-WORKER-R701.4).
+    Rejected,
+}
+
+/// The outcome of one fact.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FactUnit {
+    /// The claim node id; empty for a rejected fact.
+    pub claim_id: String,
+    /// The hex unit hash: SHA-256 framed under `eg/extracted-fact` over subject,
+    /// predicate, object and evidence span; empty for a rejected fact.
+    pub unit_hash: String,
+    pub outcome: FactOutcome,
+    /// The refusal text of a rejected fact; empty otherwise.
+    #[serde(default)]
+    pub detail: String,
+}
+
+/// Per-outcome counts of a `facts` batch, the links it created and up to
+/// [`MAX_FACT_REPORT_ENTRIES`] per-unit entries (MEDULLA-INGEST-WORKER-R701.5,
+/// R701.7). Observation evidence: not part of the receipt digest.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FactReport {
+    #[serde(default)]
+    pub created: u64,
+    #[serde(default)]
+    pub updated: u64,
+    #[serde(default)]
+    pub unchanged: u64,
+    #[serde(default)]
+    pub rejected: u64,
+    /// `related_to` edges written between entities that share enough atoms
+    /// (MEDULLA-INGEST-WORKER-R701.7).
+    #[serde(default)]
+    pub links: u64,
+    #[serde(default)]
+    pub entries: Vec<FactUnit>,
+}
+
+impl FactReport {
+    /// Count one unit and keep its entry while the report has room.
+    pub fn record(&mut self, unit: FactUnit) {
+        match unit.outcome {
+            FactOutcome::Created => self.created += 1,
+            FactOutcome::Updated => self.updated += 1,
+            FactOutcome::Unchanged => self.unchanged += 1,
+            FactOutcome::Rejected => self.rejected += 1,
+        }
+        if self.entries.len() < MAX_FACT_REPORT_ENTRIES {
+            self.entries.push(unit);
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -260,6 +260,49 @@ impl FactDeduper {
     }
 }
 
+/// The relationship of an inferred entity link (MEDULLA-INGEST-WORKER-R701.7).
+pub const RELATED_TO: &str = "related_to";
+
+/// Two entities that co-occur in enough atoms.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EntityLink {
+    /// The lesser entity name.
+    pub first: String,
+    /// The greater entity name.
+    pub second: String,
+    /// The atoms the two entities share.
+    pub shared_mentions: u64,
+}
+
+/// Link entities that co-occur in at least `min_shared` atoms
+/// (MEDULLA-INGEST-WORKER-R701.7). Each claim is one atom whose entities are its
+/// subject and object; a pair below the threshold gets no link. Links come out
+/// sorted by entity pair.
+pub fn infer_links(claims: &[CandidateClaim], min_shared: u64) -> Vec<EntityLink> {
+    let mut counts: BTreeMap<(&str, &str), u64> = BTreeMap::new();
+    for claim in claims {
+        let (subject, object) = (claim.fact.subject.as_str(), claim.fact.object.as_str());
+        if subject == object {
+            continue;
+        }
+        let pair = if subject < object {
+            (subject, object)
+        } else {
+            (object, subject)
+        };
+        *counts.entry(pair).or_insert(0) += 1;
+    }
+    counts
+        .into_iter()
+        .filter(|(_, shared)| *shared >= min_shared)
+        .map(|((first, second), shared_mentions)| EntityLink {
+            first: first.to_string(),
+            second: second.to_string(),
+            shared_mentions,
+        })
+        .collect()
+}
+
 /// The result of judging an induced proposal.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct AdmissionDecision {

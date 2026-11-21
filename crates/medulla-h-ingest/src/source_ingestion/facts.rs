@@ -7,15 +7,16 @@
 //! kind `Fact` whose provenance key is the evidence span reference. The atom
 //! links to its claim by an `atom_of` edge.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::{Arc, Mutex};
 
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_ingestion_types::extracted_fact::{
-    CandidateClaim, ExtractedFact, FactBatch, GroundingResult,
+    CandidateClaim, EvidenceSpan, ExtractedFact, FactBatch, FactOutcome, FactReport, FactUnit,
+    GroundingResult,
 };
 use medulla_ingestion_types::ingest_rules::{
-    check_atom_provenance, ground_fact, FactDeduper, GroundingCache,
+    check_atom_provenance, ground_fact, infer_links, FactDeduper, GroundingCache, RELATED_TO,
 };
 use medulla_ingestion_types::knowledge_atom::{
     atom_node_id, AtomKind, KnowledgeAtom, ATOM_NODE_TYPE, ATOM_OF,
@@ -28,8 +29,20 @@ use medulla_types::contract::{Digest256, ServerErrorCode};
 /// The `type` property of a stored candidate claim node.
 pub const CANDIDATE_CLAIM_NODE_TYPE: &str = "CandidateClaim";
 
+/// The `type` property of a stored entity a link joins.
+pub const FACT_ENTITY_NODE_TYPE: &str = "FactEntity";
+
 /// The digest domain of a fact atom identity.
 const FACT_ATOM_DOMAIN: &[u8] = b"eg/fact-atom-identity/v1";
+
+/// The digest domain of a claim identity: the fact without its evidence span.
+const FACT_CLAIM_DOMAIN: &[u8] = b"eg/fact-claim-identity/v1";
+
+/// The digest domain of a linked entity identity.
+const FACT_ENTITY_DOMAIN: &[u8] = b"eg/fact-entity-identity/v1";
+
+/// The digest domain of a fact unit hash (MEDULLA-INGEST-WORKER-R701.5).
+const FACT_UNIT_DOMAIN: &[u8] = b"eg/extracted-fact";
 
 const RDFS_DOMAIN: &str = "http://www.w3.org/2000/01/rdf-schema#domain";
 const RDFS_RANGE: &str = "http://www.w3.org/2000/01/rdf-schema#range";
@@ -56,33 +69,89 @@ pub struct FactAdmission {
     pub duplicates: u64,
     /// Stored facts that grounded to an ontology class.
     pub grounded: u64,
+    /// The per-unit outcomes and the links created (MEDULLA-INGEST-WORKER-R701.5, R701.7).
+    pub report: FactReport,
+}
+
+/// A claim the graph already holds, read before admission.
+#[derive(Clone, Debug, PartialEq)]
+pub struct HeldClaim {
+    /// The unit hash stored with the claim.
+    pub unit_hash: String,
+    /// The stored claim's confidence.
+    pub confidence: f64,
+}
+
+/// The decoded elements of a `facts` extension.
+#[derive(Debug)]
+pub struct DecodedFacts {
+    /// The facts that carry a valid evidence span.
+    pub batch: FactBatch,
+    /// The refusal text of each fact without one (MEDULLA-INGEST-WORKER-R701.4).
+    pub rejected: Vec<String>,
+}
+
+/// The stored claim properties a held claim is read from.
+pub fn held_claim(properties: &serde_json::Value) -> Option<HeldClaim> {
+    Some(HeldClaim {
+        unit_hash: properties.get("unit_hash")?.as_str()?.to_string(),
+        confidence: properties.get("fact")?.get("confidence")?.as_f64()?,
+    })
+}
+
+/// The claim node ids a decoded batch may update, for the held-claims read.
+pub fn held_claim_ids(tenant: &str, decoded: &DecodedFacts) -> Result<BTreeSet<String>, String> {
+    decoded
+        .batch
+        .facts
+        .iter()
+        .map(|fact| claim_node_id(tenant, fact))
+        .collect()
 }
 
 /// Decode the elements of a `facts` extension.
-pub fn decode_facts(items: &[SourceJson]) -> Result<FactBatch, String> {
+pub fn decode_facts(items: &[SourceJson]) -> Result<DecodedFacts, String> {
     if items.len() > MAX_FACTS {
         return Err(invalid(format!(
             "a facts batch holds at most {MAX_FACTS} facts"
         )));
     }
-    let facts = items
-        .iter()
-        .map(|item| {
-            let fact: ExtractedFact = serde_json::from_value(item.value()?)
-                .map_err(|error| invalid(format!("fact: {error}")))?;
-            if !fact.confidence.is_finite() || !(0.0..=1.0).contains(&fact.confidence) {
-                return Err(invalid("fact confidence must be a number in [0, 1]"));
-            }
-            if fact.subject.trim().is_empty()
-                || fact.predicate.trim().is_empty()
-                || fact.object.trim().is_empty()
-            {
-                return Err(invalid("fact subject, predicate and object must not be blank"));
-            }
-            Ok(fact)
-        })
-        .collect::<Result<Vec<_>, String>>()?;
-    Ok(FactBatch { facts })
+    let mut rejected = Vec::new();
+    let mut facts = Vec::new();
+    for item in items {
+        let value = item.value()?;
+        // A fact without a valid evidence span is rejected on its own, never the batch.
+        let evidence = match value.get("evidence") {
+            Some(evidence) => serde_json::from_value::<EvidenceSpan>(evidence.clone())
+                .err()
+                .map(|error| error.to_string()),
+            None => Some("fact has no evidence span".to_string()),
+        };
+        if let Some(detail) = evidence {
+            rejected.push(detail);
+            continue;
+        }
+        facts.push(decode_fact(value)?);
+    }
+    Ok(DecodedFacts {
+        batch: FactBatch { facts },
+        rejected,
+    })
+}
+
+fn decode_fact(value: serde_json::Value) -> Result<ExtractedFact, String> {
+    let fact: ExtractedFact =
+        serde_json::from_value(value).map_err(|error| invalid(format!("fact: {error}")))?;
+    if !fact.confidence.is_finite() || !(0.0..=1.0).contains(&fact.confidence) {
+        return Err(invalid("fact confidence must be a number in [0, 1]"));
+    }
+    if fact.subject.trim().is_empty()
+        || fact.predicate.trim().is_empty()
+        || fact.object.trim().is_empty()
+    {
+        return Err(invalid("fact subject, predicate and object must not be blank"));
+    }
+    Ok(fact)
 }
 
 fn local_name(iri: &str) -> &str {
@@ -172,6 +241,7 @@ pub fn span_reference(fact: &ExtractedFact) -> String {
     )
 }
 
+/// The digest of a fact's atom identity: tenant, triple and evidence span.
 fn fact_digest(tenant: &str, fact: &ExtractedFact) -> Result<String, String> {
     let span = span_reference(fact);
     Ok(Digest256::framed(
@@ -187,43 +257,103 @@ fn fact_digest(tenant: &str, fact: &ExtractedFact) -> Result<String, String> {
     .to_hex())
 }
 
-/// The node id of the candidate claim stored for a fact.
+/// The node id of the candidate claim stored for a fact: the digest of tenant
+/// and triple, without the evidence span (MEDULLA-INGEST-WORKER-R701.5).
 pub fn claim_node_id(tenant: &str, fact: &ExtractedFact) -> Result<String, String> {
-    Ok(format!("candidate_claim:{}", fact_digest(tenant, fact)?))
+    let digest = Digest256::framed(
+        FACT_CLAIM_DOMAIN,
+        &[
+            tenant.as_bytes(),
+            fact.subject.as_bytes(),
+            fact.predicate.as_bytes(),
+            fact.object.as_bytes(),
+        ],
+    )?;
+    Ok(format!("candidate_claim:{}", digest.to_hex()))
+}
+
+/// The unit hash of a fact: SHA-256 framed under `eg/extracted-fact` over
+/// subject, predicate, object and evidence span (MEDULLA-INGEST-WORKER-R701.5).
+pub fn unit_hash(fact: &ExtractedFact) -> Result<String, String> {
+    let span = span_reference(fact);
+    Ok(Digest256::framed(
+        FACT_UNIT_DOMAIN,
+        &[
+            fact.subject.as_bytes(),
+            fact.predicate.as_bytes(),
+            fact.object.as_bytes(),
+            span.as_bytes(),
+        ],
+    )?
+    .to_hex())
+}
+
+fn entity_node_id(tenant: &str, name: &str) -> Result<String, String> {
+    let digest = Digest256::framed(
+        FACT_ENTITY_DOMAIN,
+        &[tenant.as_bytes(), name.as_bytes()],
+    )?;
+    Ok(format!("fact_entity:{}", digest.to_hex()))
 }
 
 fn encode(value: &serde_json::Value) -> Result<Vec<u8>, String> {
     rmp_serde::to_vec_named(value).map_err(|error| invalid(format!("fact encoding failed: {error}")))
 }
 
-/// Ground each fact, drop repeated triples and compile the claim and atom
-/// writes of the rest, in batch order.
+/// Ground each fact, drop repeated triples, classify the rest against the held
+/// claims and compile the claim, atom and link writes, in batch order
+/// (MEDULLA-INGEST-WORKER-R701.3, R701.5, R701.7). An unchanged claim writes
+/// nothing; an updated claim keeps its node and combines confidence as
+/// `1 - (1 - old) * (1 - new)`. Entities that co-occur in at least `min_shared`
+/// newly created atoms of the batch get a `related_to` edge.
 pub fn admit_facts(
     tenant: &str,
-    batch: &FactBatch,
+    decoded: &DecodedFacts,
     cache: &GroundingCache,
+    held: &BTreeMap<String, HeldClaim>,
+    min_shared: u64,
 ) -> Result<FactAdmission, String> {
     let mut deduper = FactDeduper::default();
     let mut admission = FactAdmission::default();
-    for fact in &batch.facts {
+    let mut created: Vec<CandidateClaim> = Vec::new();
+    for fact in &decoded.batch.facts {
         if !deduper.admit(fact) {
             admission.duplicates += 1;
             continue;
         }
-        let claim: CandidateClaim = ground_fact(fact.clone(), cache);
+        let claim_id = claim_node_id(tenant, fact)?;
+        let hash = unit_hash(fact)?;
+        let (outcome, confidence) = match held.get(&claim_id) {
+            None => (FactOutcome::Created, fact.confidence),
+            Some(stored) if stored.unit_hash == hash => (FactOutcome::Unchanged, stored.confidence),
+            Some(stored) => (
+                FactOutcome::Updated,
+                1.0 - (1.0 - stored.confidence) * (1.0 - fact.confidence),
+            ),
+        };
+        admission.report.record(FactUnit {
+            claim_id: claim_id.clone(),
+            unit_hash: hash.clone(),
+            outcome,
+            detail: String::new(),
+        });
+        if outcome == FactOutcome::Unchanged {
+            continue;
+        }
+        let mut claim: CandidateClaim = ground_fact(fact.clone(), cache);
+        claim.fact.confidence = confidence;
         if matches!(claim.grounding, GroundingResult::Grounded { .. }) {
             admission.grounded += 1;
         }
         let digest = fact_digest(tenant, fact)?;
         let atom = KnowledgeAtom {
-            atom_id: digest.clone(),
+            atom_id: digest,
             kind: AtomKind::Fact,
             text: format!("{} {} {}", fact.subject, fact.predicate, fact.object),
             provenance_key: span_reference(fact),
             tenant: tenant.to_string(),
         };
         check_atom_provenance(&atom).map_err(|refusal| invalid(refusal.code()))?;
-        let claim_id = format!("candidate_claim:{digest}");
         let atom_id = atom_node_id(&atom.atom_id);
         admission.methods.push(Method::AddNode {
             node_id: claim_id.clone(),
@@ -232,6 +362,7 @@ pub fn admit_facts(
                 "tenant": tenant,
                 "fact": claim.fact,
                 "grounding": claim.grounding,
+                "unit_hash": hash,
             }))?,
         });
         admission.methods.push(Method::AddNode {
@@ -253,6 +384,47 @@ pub fn admit_facts(
         admission.node_ids.push(claim_id);
         admission.node_ids.push(atom_id);
         admission.admitted += 1;
+        if outcome == FactOutcome::Created {
+            created.push(claim);
+        }
+    }
+    for detail in &decoded.rejected {
+        admission.report.record(FactUnit {
+            claim_id: String::new(),
+            unit_hash: String::new(),
+            outcome: FactOutcome::Rejected,
+            detail: detail.clone(),
+        });
+    }
+    let mut entities: BTreeSet<String> = BTreeSet::new();
+    for link in infer_links(&created, min_shared) {
+        let ids = [
+            entity_node_id(tenant, &link.first)?,
+            entity_node_id(tenant, &link.second)?,
+        ];
+        for (id, name) in ids.iter().zip([&link.first, &link.second]) {
+            if entities.insert(id.clone()) {
+                admission.methods.push(Method::AddNode {
+                    node_id: id.clone(),
+                    properties_msgpack: encode(&serde_json::json!({
+                        "type": FACT_ENTITY_NODE_TYPE,
+                        "name": name,
+                        "tenant": tenant,
+                    }))?,
+                });
+                admission.node_ids.push(id.clone());
+            }
+        }
+        let [source_id, target_id] = ids;
+        admission.methods.push(Method::AddEdge {
+            source_id,
+            target_id,
+            properties_msgpack: encode(&serde_json::json!({
+                "relationship": RELATED_TO,
+                "shared_mentions": link.shared_mentions,
+            }))?,
+        });
+        admission.report.links += 1;
     }
     Ok(admission)
 }
@@ -294,7 +466,9 @@ mod tests {
     #[test]
     fn facts_reach_the_atom_store() {
         let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
-        let batch = FactBatch {
+        let batch = DecodedFacts {
+            rejected: Vec::new(),
+            batch: FactBatch {
             facts: vec![
                 // Subject and object swapped: direction repair grounds it.
                 fact("Note G", "Ada Lovelace", 10),
@@ -302,8 +476,9 @@ mod tests {
                 fact("Note G", "Ada Lovelace", 10),
                 fact("Somebody", "Something", 50),
             ],
+            },
         };
-        let admission = admit_facts("t1", &batch, &cache).unwrap();
+        let admission = admit_facts("t1", &batch, &cache, &BTreeMap::new(), 2).unwrap();
         assert_eq!(admission.admitted, 2);
         assert_eq!(admission.duplicates, 1);
         assert_eq!(admission.grounded, 1);
@@ -328,6 +503,81 @@ mod tests {
             }
             other => panic!("expected AddEdge, got {other:?}"),
         }
+    }
+
+    fn decoded(facts: Vec<ExtractedFact>) -> DecodedFacts {
+        DecodedFacts {
+            batch: FactBatch { facts },
+            rejected: Vec::new(),
+        }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R701.5
+    #[test]
+    fn a_held_claim_classifies_each_unit() {
+        let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
+        let first = fact("Ada Lovelace", "Note G", 10);
+        let batch = decoded(vec![first.clone()]);
+        let created = admit_facts("t1", &batch, &cache, &BTreeMap::new(), 2).unwrap();
+        assert_eq!(created.report.created, 1);
+        let unit = &created.report.entries[0];
+        assert_eq!(unit.outcome, FactOutcome::Created);
+        let claim = node_properties(&created.methods[0]);
+        let stored = held_claim(&claim).expect("held claim");
+        assert_eq!(stored.unit_hash, unit.unit_hash);
+
+        let mut held = BTreeMap::new();
+        held.insert(unit.claim_id.clone(), stored);
+        let again = admit_facts("t1", &batch, &cache, &held, 2).unwrap();
+        assert_eq!(again.report.unchanged, 1);
+        assert_eq!(again.report.entries[0].unit_hash, unit.unit_hash);
+        assert!(again.methods.is_empty());
+
+        // The same triple at another span keeps the claim id and updates it.
+        let moved = decoded(vec![fact("Ada Lovelace", "Note G", 90)]);
+        let updated = admit_facts("t1", &moved, &cache, &held, 2).unwrap();
+        assert_eq!(updated.report.updated, 1);
+        assert_eq!(updated.report.entries[0].claim_id, unit.claim_id);
+        assert_ne!(updated.report.entries[0].unit_hash, unit.unit_hash);
+        let merged = node_properties(&updated.methods[0]);
+        let confidence = merged["fact"]["confidence"].as_f64().unwrap();
+        assert!((confidence - (1.0 - 0.1 * 0.1)).abs() < 1e-9);
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R701.5
+    #[test]
+    fn a_fact_without_an_evidence_span_is_rejected() {
+        let item = SourceJson::new(serde_json::json!({
+            "subject": "a", "predicate": "p", "object": "b", "confidence": 0.5
+        }))
+        .unwrap();
+        let decoded = decode_facts(&[item]).unwrap();
+        let cache = GroundingCache::default();
+        let admission = admit_facts("t1", &decoded, &cache, &BTreeMap::new(), 2).unwrap();
+        assert_eq!(admission.report.rejected, 1);
+        assert_eq!(admission.report.entries[0].outcome, FactOutcome::Rejected);
+        assert!(admission.methods.is_empty());
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R701.7
+    #[test]
+    fn a_link_needs_enough_shared_mentions() {
+        let cache = build_grounding_cache(&[ONTOLOGY]).unwrap();
+        let mut second = fact("Ada Lovelace", "Note G", 40);
+        second.predicate = "annotated".into();
+        let two = decoded(vec![fact("Ada Lovelace", "Note G", 10), second]);
+        let linked = admit_facts("t1", &two, &cache, &BTreeMap::new(), 2).unwrap();
+        assert_eq!(linked.report.links, 1);
+        let edges = linked
+            .methods
+            .iter()
+            .filter(|method| matches!(method, Method::AddEdge { .. }))
+            .count();
+        assert_eq!(edges, 2 + 1);
+
+        let one = decoded(vec![fact("Somebody", "Something", 10)]);
+        let none = admit_facts("t1", &one, &cache, &BTreeMap::new(), 2).unwrap();
+        assert_eq!(none.report.links, 0);
     }
 
     // spec: MEDULLA-INGEST-WORKER-R701.3

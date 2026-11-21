@@ -209,6 +209,35 @@ class DocumentReport(BaseModel):
     duplicates: Annotated[int, Field(ge=0)] = 0
 
 
+class FactOutcome(str, Enum):
+    CREATED = "created"
+    UPDATED = "updated"
+    UNCHANGED = "unchanged"
+    REJECTED = "rejected"
+
+
+class FactUnit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    unit_hash: str
+    outcome: FactOutcome
+    detail: str = ""
+
+
+class FactReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    created: Annotated[int, Field(ge=0)] = 0
+    updated: Annotated[int, Field(ge=0)] = 0
+    unchanged: Annotated[int, Field(ge=0)] = 0
+    rejected: Annotated[int, Field(ge=0)] = 0
+    links: Annotated[int, Field(ge=0)] = 0
+    entries: Annotated[list[FactUnit], Field(max_length=1024)] = Field(
+        default_factory=list
+    )
+
+
 class RowVersionReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -323,6 +352,7 @@ class SourceIngestionReceipt(BaseModel):
     disposition: SourceIngestionDisposition
     documents: DocumentReport = Field(default_factory=DocumentReport)
     drift: list[StreamDrift] = Field(default_factory=list)
+    facts: FactReport = Field(default_factory=FactReport)
     embedding_set: list[EmbeddingSetEntry] = Field(default_factory=list)
     governance: GovernanceReport
     live_set_digest: Digest256 | None = None
@@ -665,6 +695,8 @@ SourceIngestStatus.model_rebuild()
 SourceIngestionBatch.model_rebuild()
 
 DocumentReport.model_rebuild()
+FactUnit.model_rebuild()
+FactReport.model_rebuild()
 
 RowVersionReport.model_rebuild()
 
@@ -715,6 +747,9 @@ __all__ = [
     "SourceIngestionDisposition",
     "SourceIngestionMode",
     "DocumentReport",
+    "FactOutcome",
+    "FactReport",
+    "FactUnit",
     "RowVersionReport",
     "GovernanceReport",
     "IngestBatchReport",

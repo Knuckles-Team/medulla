@@ -518,6 +518,11 @@ pub struct SourceIngestionReceipt {
     /// (MEDULLA-INGEST-WORKER-R702.4). Observation evidence: not part of the receipt digest.
     #[serde(default)]
     pub documents: crate::source_document::DocumentReport,
+    /// Per-unit outcomes, counts and links of a `facts` batch
+    /// (MEDULLA-INGEST-WORKER-R701.5, R701.7); empty for every other kind. Observation
+    /// evidence: not part of the receipt digest.
+    #[serde(default)]
+    pub facts: medulla_ingestion_types::extracted_fact::FactReport,
     /// Updated, refused and stale counts of an `access` batch
     /// (MEDULLA-INGEST-WORKER-R902.5); absent for every other kind.
     #[serde(default, skip_serializing_if = "Option::is_none")]

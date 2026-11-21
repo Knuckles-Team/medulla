@@ -329,6 +329,7 @@ mod tests {
             governance: Default::default(),
             row_versions: Default::default(),
             documents: Default::default(),
+            facts: Default::default(),
             access: None,
             reconcile: None,
             report: Default::default(),

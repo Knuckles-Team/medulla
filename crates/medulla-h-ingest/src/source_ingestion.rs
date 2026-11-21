@@ -114,6 +114,9 @@ pub struct PreparedSourceIngestion {
     row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
     /// Near-duplicate documents linked by this batch (MEDULLA-INGEST-WORKER-R702.4).
     documents: medulla_source_types::source_document::DocumentReport,
+    /// Per-unit outcomes and links of a `facts` batch (R701.5, R701.7); empty for every
+    /// other kind.
+    facts: medulla_ingestion_types::extracted_fact::FactReport,
     /// Counts of an `access` batch (R902.5); `None` for every other kind.
     access: Option<medulla_ingestion_types::source_governance::AccessReport>,
     /// Evidence of an `enumeration` batch (R903.5); `None` for every other kind.
@@ -597,6 +600,7 @@ pub async fn prepare(
             atoms_emitted,
             atoms_refused,
         },
+        facts: Default::default(),
         access: None,
         reconcile: None,
         committed_graph_version: ctx.graph_version.saturating_add(1),
@@ -637,6 +641,7 @@ async fn prepare_extension_batch(
     let mut proposal_items = Vec::new();
     let mut action_records: Vec<String> = Vec::new();
     let mut access = None;
+    let mut fact_report = medulla_ingestion_types::extracted_fact::FactReport::default();
     #[allow(unused_mut)]
     let mut reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport> = None;
     match batch.extension.as_ref() {
@@ -800,10 +805,23 @@ async fn prepare_extension_batch(
             // candidate claims and fact atoms (MEDULLA-INGEST-WORKER-R701.3).
             let decoded = facts::decode_facts(items.as_slice())?;
             let cache = facts::grounding_cache(&ctx.schema_sources)?;
-            let admission = facts::admit_facts(ctx.tenant_scope, &decoded, &cache)?;
+            let held = read_held_claims(
+                persistence.as_ref(),
+                &graph_fname,
+                &facts::held_claim_ids(ctx.tenant_scope, &decoded)?,
+            )
+            .await?;
+            let admission = facts::admit_facts(
+                ctx.tenant_scope,
+                &decoded,
+                &cache,
+                &held,
+                medulla_server_api::knob_config::knobs().ingest_link_min_shared_mentions,
+            )?;
             for node_id in &admission.node_ids {
                 policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
             }
+            fact_report = admission.report;
             methods.extend(admission.methods);
         }
         Some(SourceBatchExtension::Containers(items)) => {
@@ -898,6 +916,7 @@ async fn prepare_extension_batch(
         &action_records,
         access,
         reconcile.as_ref(),
+        &fact_report,
     )?);
     policies.push(policy(&batch_id, ctx.tenant_scope, &policy_subject, 0));
     let mutation = compile_mutation(&ctx, &batch_id, methods)?;
@@ -942,6 +961,7 @@ async fn prepare_extension_batch(
         governance: Default::default(),
         row_versions: Default::default(),
         documents: Default::default(),
+        facts: fact_report,
         access,
         reconcile,
         drift: Vec::new(),
@@ -1005,6 +1025,28 @@ async fn read_held_containers(
             )
         })?;
         held.insert(id.clone(), properties);
+    }
+    Ok(held)
+}
+
+/// The candidate claims `ids` name that the graph already holds, with the unit hash and
+/// confidence each stores (MEDULLA-INGEST-WORKER-R701.5). An absent claim has no entry.
+#[cfg(all(feature = "redb", feature = "blob"))]
+async fn read_held_claims(
+    persistence: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    ids: &BTreeSet<String>,
+) -> Result<BTreeMap<String, facts::HeldClaim>, String> {
+    let mut held = BTreeMap::new();
+    for id in ids {
+        let Some(bytes) = persistence.read_node(graph_fname, id).await? else {
+            continue;
+        };
+        let properties: serde_json::Value = rmp_serde::from_slice(&bytes)
+            .map_err(|error| format!("SOURCE_BATCH_KIND_MISMATCH: held claim: {error}"))?;
+        if let Some(claim) = facts::held_claim(&properties) {
+            held.insert(id.clone(), claim);
+        }
     }
     Ok(held)
 }
@@ -1179,6 +1221,7 @@ fn permission_receipt_method(
     action_records: &[String],
     access: Option<medulla_ingestion_types::source_governance::AccessReport>,
     reconcile: Option<&medulla_ingestion_types::source_governance::ReconcileReport>,
+    facts: &medulla_ingestion_types::extracted_fact::FactReport,
 ) -> Result<Method, String> {
     let mut properties = serde_json::json!({
         "type": "SourceIngestionReceipt",
@@ -1205,6 +1248,11 @@ fn permission_receipt_method(
     if let Some(reconcile) = reconcile {
         properties["reconcile"] = serde_json::to_value(reconcile)
             .map_err(|error| format!("reconcile receipt encoding failed: {error}"))?;
+    }
+    if *facts != Default::default() {
+        // The per-unit outcomes of a `facts` batch (MEDULLA-INGEST-WORKER-R701.5).
+        properties["facts"] = serde_json::to_value(facts)
+            .map_err(|error| format!("facts receipt encoding failed: {error}"))?;
     }
     if let Some(access) = access {
         properties["access"] = serde_json::to_value(access)
@@ -3131,6 +3179,7 @@ fn build_terminal_receipt(
         governance: prepared.governance,
         row_versions: prepared.row_versions,
         documents: prepared.documents,
+        facts: prepared.facts,
         access: prepared.access,
         reconcile: prepared.reconcile,
         report: medulla_types::ingest_materialize::IngestBatchReport {
@@ -3217,6 +3266,7 @@ impl PreparedSourceIngestion {
             governance: Default::default(),
             row_versions: Default::default(),
             documents: Default::default(),
+            facts: Default::default(),
             access: None,
             reconcile: None,
             committed_graph_version: receipt.committed_graph_version,
@@ -3505,6 +3555,13 @@ fn prepared_replay(
             .map(serde_json::from_value)
             .transpose()
             .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: documents: {error}"))?
+            .unwrap_or_default(),
+        facts: receipt
+            .get("facts")
+            .cloned()
+            .map(serde_json::from_value)
+            .transpose()
+            .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: facts: {error}"))?
             .unwrap_or_default(),
         access: receipt
             .get("access")
