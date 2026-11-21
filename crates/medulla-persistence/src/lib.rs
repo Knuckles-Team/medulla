@@ -114,6 +114,10 @@ pub mod object_store_backend;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod backup;
 
+/// Point-in-time restore from archive segments (`MEDULLA-ENGINE-PARITY-R016.2`).
+#[cfg(all(feature = "redb", feature = "object-store"))]
+pub mod backup_replay;
+
 // Cluster node-info store (CONCEPT:MEDULLA-KG.sharding.cluster-topology, ADR-1 / W1.1): durable
 // node_id -> {raft_addr, advertised_client_addr, tls_server_name} map that backs
 // `Method::ClusterMembers`/`PlacementRoute.endpoints`, replacing the static

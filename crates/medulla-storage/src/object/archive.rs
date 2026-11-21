@@ -104,8 +104,15 @@ impl ObjectArchive {
         tenant: &str,
         graph: &str,
     ) -> Result<Vec<ArchiveManifestEntry>, ArchiveRefusal> {
-        let path = self.manifest_path(tenant, graph);
-        match self.store.get(&path).await {
+        self.read_manifest_at(&self.manifest_path(tenant, graph))
+            .await
+    }
+
+    async fn read_manifest_at(
+        &self,
+        path: &ObjPath,
+    ) -> Result<Vec<ArchiveManifestEntry>, ArchiveRefusal> {
+        match self.store.get(path).await {
             Ok(r) => {
                 let bytes = r.bytes().await.map_err(|e| ArchiveRefusal::Remote {
                     detail: e.to_string(),
@@ -213,6 +220,61 @@ impl ObjectArchive {
     pub async fn archived_end(&self, tenant: &str, graph: &str) -> Result<u64, ArchiveRefusal> {
         let entries = self.read_manifest(tenant, graph).await?;
         Ok(entries.iter().map(|e| e.last).max().unwrap_or(0))
+    }
+
+    /// The scope keys archived under `tenant`, sorted. It lists the scope
+    /// directories under `{root}/archive/{tenant}/` and, for each, reads the
+    /// first manifest entry's segment and returns the `scope_key` decoded from
+    /// it: the directory name is lossy, the key inside the segment is not. A
+    /// directory with no manifest entry holds no scope
+    /// (`MEDULLA-ENGINE-PARITY-R016.2`).
+    pub async fn list_scopes(&self, tenant: &str) -> Result<Vec<String>, ArchiveRefusal> {
+        let prefix = ObjPath::from(format!(
+            "{}/archive/{}",
+            self.root.trim_matches('/'),
+            path_segment(tenant)
+        ));
+        let listing = self
+            .store
+            .list_with_delimiter(Some(&prefix))
+            .await
+            .map_err(|e| ArchiveRefusal::Remote {
+                detail: e.to_string(),
+            })?;
+        let mut scopes = Vec::new();
+        for dir in listing.common_prefixes {
+            let manifest = self
+                .read_manifest_at(&ObjPath::from(format!("{dir}/manifest.mp")))
+                .await?;
+            let Some(entry) = manifest.first() else {
+                continue;
+            };
+            let path = ObjPath::from(format!("{dir}/{}", entry.key));
+            let bytes = match self.store.get(&path).await {
+                Ok(r) => r.bytes().await.map_err(|e| ArchiveRefusal::Remote {
+                    detail: e.to_string(),
+                })?,
+                Err(object_store::Error::NotFound { .. }) => {
+                    return Err(ArchiveRefusal::SegmentMissing {
+                        first: entry.first,
+                        last: entry.last,
+                    })
+                }
+                Err(e) => {
+                    return Err(ArchiveRefusal::Remote {
+                        detail: e.to_string(),
+                    })
+                }
+            };
+            let segment: crate::recovery::archiver::ArchiveSegment = rmp_serde::from_slice(&bytes)
+                .map_err(|e| ArchiveRefusal::Remote {
+                    detail: format!("archive segment decode: {e}"),
+                })?;
+            scopes.push(segment.scope_key);
+        }
+        scopes.sort();
+        scopes.dedup();
+        Ok(scopes)
     }
 
     /// Get the segment covering exactly `[first, last)` and verify it against

@@ -131,7 +131,8 @@ pub use recovery::archive::{
 };
 #[cfg(feature = "object-archive")]
 pub use recovery::archiver::{
-    archive_store_pass, ArchivePassReport, ArchivePolicy, ArchiveSegment,
+    archive_store_pass, last_committed_sequences, ArchivePassReport, ArchivePolicy,
+    ArchiveSegment,
 };
 pub use recovery::authority::{rebind_copied_store, store_root_is_current};
 pub use recovery::backup::{

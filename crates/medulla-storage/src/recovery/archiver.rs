@@ -86,6 +86,16 @@ fn committed_by_scope(kernel: &StorageKernel) -> Result<ScopeRecords, String> {
     Ok(scopes)
 }
 
+/// The last committed sequence of every scope of the store, keyed by scope key.
+/// A scope with no committed record is absent. Restore replay reads it to skip
+/// the records a restored bundle already holds (`MEDULLA-ENGINE-PARITY-R016.2`).
+pub fn last_committed_sequences(kernel: &StorageKernel) -> Result<BTreeMap<String, u64>, String> {
+    Ok(committed_by_scope(kernel)?
+        .into_iter()
+        .filter_map(|(scope, records)| records.last().map(|(seq, _)| (scope, *seq)))
+        .collect())
+}
+
 /// Pack records, in order, into runs whose encoded segment stays within
 /// `segment_bytes`; a record larger than the bound forms its own run.
 fn pack(

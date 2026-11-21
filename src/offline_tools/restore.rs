@@ -37,6 +37,37 @@ use std::path::Path;
 use clap::Parser;
 
 use medulla_persistence::backup;
+#[cfg(feature = "object-store")]
+use medulla_persistence::backup_replay;
+
+/// The tenant name the archiver files every segment under
+/// (`MEDULLA-ENGINE-PARITY-R016.1`).
+#[cfg(feature = "object-store")]
+const ARCHIVE_TENANT: &str = "engine";
+
+/// The runtime the archive reads and the replay commits run on.
+#[cfg(feature = "object-store")]
+fn archive_runtime() -> tokio::runtime::Runtime {
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap_or_else(|error| {
+            eprintln!("restore FAILED: runtime: {error}");
+            std::process::exit(1);
+        })
+}
+
+/// Exit on a refusal already serialized as JSON text; a plain failure keeps the
+/// opaque-reference stderr form.
+#[cfg(feature = "object-store")]
+fn refuse_text(error: &str) -> ! {
+    if error.starts_with("{\"code\":") {
+        println!("restore REFUSED: {error}");
+        std::process::exit(2);
+    }
+    eprintln!("restore FAILED: error_ref={}", opaque_ref(error));
+    std::process::exit(1);
+}
 
 #[derive(Parser, Debug)]
 #[command(name = "medulla-server restore")]
@@ -126,6 +157,46 @@ pub(crate) fn run(argv: Vec<std::ffi::OsString>) {
         }
     }
 
+    // The archive of `MEDULLA_ARCHIVE_BACKEND` (MEDULLA-ENGINE-PARITY-R016.2):
+    // one variable names it, as for the archiver. With it set and a target
+    // given, the target is checked against the archive's bounds BEFORE any
+    // destination effect, the bundle restores verbatim with no bundle-only
+    // bounds check, and the archived records past it are replayed to the target.
+    // With the variable unset the restore is exactly the bundle-only one.
+    #[cfg(feature = "object-store")]
+    let mut archive_replay: Option<(
+        medulla_storage::object::archive::ObjectArchive,
+        medulla_storage::ReplayTarget,
+    )> = None;
+    #[cfg(feature = "object-store")]
+    let target = {
+        let archive = match medulla_persistence::object_store_backend::archive_from_env() {
+            Ok(archive) => archive,
+            Err(error) => {
+                eprintln!("restore FAILED: invalid archive backend: {error}");
+                std::process::exit(1);
+            }
+        };
+        match (archive, target) {
+            (Some(archive), Some(target)) => {
+                let bounds = match archive_runtime()
+                    .block_on(backup_replay::archive_bounds(&archive, ARCHIVE_TENANT))
+                {
+                    Ok(bounds) => bounds,
+                    Err(e) => refuse_text(&e),
+                };
+                if let Err(refusal) = medulla_storage::replay_to(&target, &bounds) {
+                    refuse_typed(&medulla_storage::ArchiveRefusal::RecoveryTargetUnavailable {
+                        detail: format!("{refusal:?}"),
+                    });
+                }
+                archive_replay = Some((archive, target));
+                None
+            }
+            (_, target) => target,
+        }
+    };
+
     match backup::restore_bundle(
         Path::new(&args.bundle),
         Path::new(&args.persist_dir),
@@ -153,6 +224,22 @@ pub(crate) fn run(argv: Vec<std::ffi::OsString>) {
                 r.admin_mutations.encrypted_private_payloads,
                 m.xshard_decisions,
             );
+            #[cfg(feature = "object-store")]
+            if let Some((archive, target)) = archive_replay {
+                match archive_runtime().block_on(backup_replay::replay_archive(
+                    Path::new(&args.persist_dir),
+                    args.shards,
+                    &archive,
+                    ARCHIVE_TENANT,
+                    &target,
+                )) {
+                    Ok(report) => println!(
+                        "replay OK: segments={} records={}",
+                        report.segments_replayed, report.records_applied
+                    ),
+                    Err(e) => refuse_text(&e),
+                }
+            }
         }
         Err(e) => {
             // Fail-closed contract: a typed replay refusal (serialized JSON

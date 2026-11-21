@@ -52,6 +52,26 @@ pub enum ArchiveRefusal {
     /// CLI's only accepted form today is `directory://<bundle-dir>`; anything
     /// else refuses here, before any destination effect.
     UnsupportedArchiveBackend { spec: String },
+    /// A restore target the archive cannot reach: the target lies past the end
+    /// of the archived log, or a segment the replay needs is missing or fails
+    /// its digest (`MEDULLA-ENGINE-PARITY-R016.2`). `detail` names the
+    /// `<scope>/<first>-<last>` segment or the bounds, and keeps the wire code
+    /// of an underlying archive refusal. An offline CLI refusal, so it lives
+    /// here and not in `ServerErrorCode`; `TargetPastArchiveEnd` and
+    /// `TargetTimePastArchiveEnd` stay for the bundle-only path.
+    RecoveryTargetUnavailable { detail: String },
+}
+
+impl ArchiveRefusal {
+    /// The wire-stable literal of the refusal carried by the archive-replay path.
+    /// `None` for the bundle-only refusals, which keep their serde tag as their
+    /// only wire form.
+    pub fn wire_code(&self) -> Option<&'static str> {
+        match self {
+            Self::RecoveryTargetUnavailable { .. } => Some("RECOVERY_TARGET_UNAVAILABLE"),
+            _ => None,
+        }
+    }
 }
 
 /// What an archive can replay to, certified by its MANIFEST read: the first

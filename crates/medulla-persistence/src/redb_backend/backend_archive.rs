@@ -36,3 +36,32 @@ impl RedbBackend {
         Ok(total)
     }
 }
+
+impl RedbBackend {
+    /// The last committed sequence of every scope across all shards and the
+    /// admin mutation store, keyed by scope key (the larger value wins when a
+    /// scope appears in two stores). Restore replay skips the records at or
+    /// below it (`MEDULLA-ENGINE-PARITY-R016.2`).
+    pub fn last_committed_sequences(
+        &self,
+    ) -> Result<std::collections::BTreeMap<String, u64>, String> {
+        let mut out = std::collections::BTreeMap::<String, u64>::new();
+        let mut merge = |found: std::collections::BTreeMap<String, u64>| {
+            for (scope, seq) in found {
+                let slot = out.entry(scope).or_insert(0);
+                *slot = (*slot).max(seq);
+            }
+        };
+        for writer in self.shards.iter() {
+            let shard = writer
+                .shard
+                .upgrade()
+                .ok_or_else(|| "redb writer thread is gone".to_string())?;
+            merge(medulla_storage::last_committed_sequences(shard.kernel())?);
+        }
+        merge(medulla_storage::last_committed_sequences(
+            self.admin_mutations.kernel(),
+        )?);
+        Ok(out)
+    }
+}
