@@ -137,7 +137,7 @@ none
 - Commit: `Method::DecisionCommit` arm to `handle_decision_commit` (`crates/medulla-h-decide/src/decide/commit.rs:22`).
 - Spec folders: `Method::IndexRepository { scope: Some }` to `route_repository_index` (`crates/medulla-server-graph/src/dispatch/graph_pipeline/repository_index.rs:208`).
 - Agent Library projection: `src/main.rs` bootstrap (`src/main.rs:488`) starts the worker beside the connector-pack worker.
-- Obsolete paths to delete: the write-time supersession of `register_version` (`crates/medulla-work-types/src/orchestration/mod.rs:378`) once R801.7 lands.
+- Obsolete paths to delete in R801.7: the write-time supersession of `register_version`, `current_harness_component`, `HarnessSupersession`, `AdoptionSupersession`, `current_adopted_harness`, the head-relative check of `component_admission` and the `supersedes_id` stamp of `stamp_new_record` for components.
 
 ### Machine wiring
 
@@ -202,3 +202,23 @@ Resolved rows:
 - `MEDULLA-ORCH-VOCAB-R007.4`: the slot kind is matched against the candidate component's `agent_kind` attribute (R003.6), read from `ReadCandidates.entries`.
 - `MEDULLA-ORCH-VOCAB-R014.3`: the exact triples are in `data-model.md`; the `dmn` core source is registered; each pin moves by a stated delta.
 - `MEDULLA-ORCH-VOCAB-R815.2`, `R815.4` to `R815.6` and `R815.9`: each names its initial state, events, edge table, writers and refusal.
+
+### 2026-11-20 (pass 3b): wave-3 gap rows resolved
+
+Withdrawn rows, each with its reason:
+
+- `MEDULLA-ORCH-VOCAB-R616.3`: the wiring is the caller chain R616.2 already names; the existing solver decides.
+- `MEDULLA-ORCH-VOCAB-R616.4`: a draft graph's shape is refused at the one `AgentGraph` `Publish` chokepoint (`TOPOLOGY_SHAPE_INVALID`, R006.5); a second check with `SPEC_SHAPE_INVALID` would be a second route.
+- `MEDULLA-ORCH-VOCAB-R801.2`: write-time supersession is replaced by the champion pointer of R801.7.
+
+Resolved rows:
+
+- `MEDULLA-ORCH-VOCAB-R004.4`, `MEDULLA-ORCH-VOCAB-R005.5`: one arm each in R003.6's `project_component`; publish already refuses an unscoped rule (`MALFORMED_GUARDRAIL_RULE`) and a zero window, so no sweep code is added; the window comes from `AgentComponentFacts::ModelProfile`, not an attribute.
+- `MEDULLA-ORCH-VOCAB-R006.5`: graph templates arrive on `medulla.agent-graph.revision.v1`; one generic `ProjectedStream` worker serves the entry, component and graph streams; graph IRI `{CORE}agentGraph/<tenant>/<graph_id>`.
+- `MEDULLA-ORCH-VOCAB-R010.6`: its own statement `harness_config_evidence` with `ConfigEvidence` rows carrying trace ids in provenance; the threshold is the `$min_traces` read parameter (default 20, [5, 1000]), not a stored knob.
+- `MEDULLA-ORCH-VOCAB-R010.100`: `sources: Vec<SourceTrace { run_id, state: TraceState }>` replaces `trace_refs` and `missing_ids`, keeping run order on the wire; the nightly bench is named and registered.
+- `MEDULLA-ORCH-VOCAB-R011.10`: the server binds the whole mutation context except `tenant_id` and `expected_revision`; the helper sends `expected_revision = head.entry_revision` and detects a retry by comparing the head's field.
+- `MEDULLA-ORCH-VOCAB-R750.752`: `TWIN_PIN_MISSING` is a `PARAMETER_INVALID` detail; an excluded offer is an answer, not a refusal; `STATECHART_NO_TRANSITION` and `INSTANCE_DEFINITION_UNREGISTERED` join `ServerErrorCode` and a `Statechart` entry of `EXACT_METHOD_ERRORS`.
+- `MEDULLA-ORCH-VOCAB-R814`, `MEDULLA-ORCH-VOCAB-R805`: a turn is a committed run; timings ride `RunCompletionInput.timings`, so there is no `DecisionLog` entry and no orphan refusal; the session read assigns turn indexes by commit sequence.
+- `MEDULLA-ORCH-VOCAB-R014.6`: `:dmnTable` and `:dmnDecision` are declared as the importer writes them; hit policy, aggregation and requires-decision cycle are shapes; entry counts are refused at `parse_dmn` (`RuleEntriesMismatch`).
+- `MEDULLA-ORCH-VOCAB-R801.7`: versions and adoptions are written with no supersession; `PointerRef::Champion` (MEDULLA-DECISION-ENGINE-R805.3) makes one current; the pointer history is the provenance; R801.1, R801.5 and R801.6 follow the cutover.

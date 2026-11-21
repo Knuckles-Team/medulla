@@ -87,8 +87,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T091 [US4] MEDULLA-ORCH-VOCAB-R009.100 Correlated trace export read
 - [x] T092 [US5] MEDULLA-ORCH-VOCAB-R010.100 Join an evolution proposal to its measured source traces as a read view
 - [x] T093 [US5] MEDULLA-ORCH-VOCAB-R010.101 Index project and agent token and cost totals
-- [ ] T094 [US7] MEDULLA-ORCH-VOCAB-R616.3 Wiring: synthesis proposes and assemble decides
-- [ ] T095 [US7] MEDULLA-ORCH-VOCAB-R616.4 Refusal: a draft that fails its shape
 - [ ] T096 [US7] MEDULLA-ORCH-VOCAB-R616.5 Evidence: capabilities, budget and shape result
 - [ ] T097 [US7] MEDULLA-ORCH-VOCAB-R616.6 Hot-path proof: synthesis over a 10,000-skill catalog
 - [ ] T098 [P] [US7] MEDULLA-ORCH-VOCAB-R750.750 Model: organization, market, twin and lifecycle records
@@ -123,12 +121,11 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T126 [US4] MEDULLA-ORCH-VOCAB-R013.7.3 Evidence: independent readback and artifact digest
 - [ ] T127 [US7] MEDULLA-ORCH-VOCAB-R616.2.1 Export and import a team as OWL
 - [ ] T128 [P] [US8] MEDULLA-ORCH-VOCAB-R801.1 Model
-- [ ] T129 [P] [US8] MEDULLA-ORCH-VOCAB-R801.2 Behavior
 - [ ] T130 [P] [US8] MEDULLA-ORCH-VOCAB-R801.3 Wiring
 - [ ] T131 [P] [US8] MEDULLA-ORCH-VOCAB-R801.4 Refusal
 - [ ] T132 [P] [US8] MEDULLA-ORCH-VOCAB-R801.5 Evidence
 - [ ] T133 [P] [US8] MEDULLA-ORCH-VOCAB-R801.6 Hot-path proof
-- [ ] T134 [US8] MEDULLA-ORCH-VOCAB-R801.7 Harness component and adoption chains become revision subjects
+- [ ] T134 [US8] MEDULLA-ORCH-VOCAB-R801.7 Harness component versions and adoptions become current only by a champion pointer move
 - [ ] T135 [P] [US8] MEDULLA-ORCH-VOCAB-R802.1 Model
 - [ ] T136 [P] [US8] MEDULLA-ORCH-VOCAB-R802.2 Behavior
 - [ ] T137 [P] [US8] MEDULLA-ORCH-VOCAB-R802.3 Query
@@ -136,7 +133,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T139 [P] [US8] MEDULLA-ORCH-VOCAB-R802.5 Refusal
 - [ ] T140 [P] [US8] MEDULLA-ORCH-VOCAB-R802.6 Hot-path proof
 - [ ] T142 [P] [US5] MEDULLA-ORCH-VOCAB-R804 Tenant telemetry snapshot read method
-- [ ] T175 [US5] MEDULLA-ORCH-VOCAB-R814 Committed-turn receipt feeds the session timing writer
+- [ ] T175 [US5] MEDULLA-ORCH-VOCAB-R814 A committed run completion carries its per-phase timings
 - [ ] T143 [P] [US5] MEDULLA-ORCH-VOCAB-R805 Per-turn timing observations in the session usage result
 - [ ] T144 [P] [US5] MEDULLA-ORCH-VOCAB-R806 Policy activation method with review receipt
 - [ ] T145 [P] [US5] MEDULLA-ORCH-VOCAB-R807 Indexed agent-session query method

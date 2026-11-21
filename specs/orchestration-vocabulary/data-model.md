@@ -44,7 +44,7 @@ This file names the records and graph terms that the rows add. Each entity has o
 
 - Records: `HarnessComponentVersion`, `AdoptedHarness`, `HarnessContrast`, `HarnessLesson`.
 - Owner: `crates/medulla-work-types/src/orchestration/mod.rs` and `improvement.rs`.
-- Relation: a newer version supersedes an older one by edge; superseded versions stay readable.
+- Relation: every admitted version stays readable as a node; a version or an adoption becomes current only by a champion pointer move (`champion:definition:harness_component:<component_id>`, `champion:definition:harness_bundle:<agent_ref>:<task_class>`, R801.7), and the pointer history is the supersession provenance. Lessons keep their write-time supersession.
 
 ### PolicyRule and PolicyCandidate
 
