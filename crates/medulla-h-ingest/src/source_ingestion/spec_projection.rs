@@ -1659,6 +1659,50 @@ pub fn project_spec_artifacts(
         ));
     }
     history_ops.extend(kept);
+    // The index envelope commits a node with `AddNode`, which replaces the stored property
+    // set. A Requirement written only for its history therefore carries the whole set
+    // its file projects, so the row's text and other properties survive.
+    if history_ops.iter().any(|op| {
+        op["properties"]["type"] == "Requirement"
+            && op["id"].as_str().is_some_and(|id| !rewritten.contains(id))
+    }) {
+        let mut full: BTreeMap<String, serde_json::Value> = BTreeMap::new();
+        for (name, text) in &texts {
+            let triples = parse_spec_file(name, text).map_err(|refusal| refusal.to_string())?;
+            let projection = project_requirements_in(
+                repo,
+                &triples,
+                &BTreeMap::new(),
+                &BTreeMap::new(),
+                Unresolved::Skip,
+            )?;
+            for op in projection.operations {
+                if op["op"] == "upsert_node" && op["properties"]["type"] == "Requirement" {
+                    if let Some(id) = op["id"].as_str() {
+                        full.insert(id.to_string(), op["properties"].clone());
+                    }
+                }
+            }
+        }
+        for op in &mut history_ops {
+            if op["properties"]["type"] != "Requirement" {
+                continue;
+            }
+            let Some(id) = op["id"].as_str().map(str::to_string) else {
+                continue;
+            };
+            if rewritten.contains(id.as_str()) {
+                continue;
+            }
+            if let (Some(base), Some(extra)) = (full.get(&id), op["properties"].as_object().cloned()) {
+                let mut merged = base.clone();
+                for (key, value) in extra {
+                    merged[key] = value;
+                }
+                op["properties"] = merged;
+            }
+        }
+    }
     merge_history(&mut plan.operations, history_ops);
     for op in &plan.operations {
         match op["op"].as_str() {
@@ -2484,6 +2528,21 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             .collect();
         // Only DEMO-R002 changed status; DEMO-R001 and DEMO-R003 are not rewritten.
         assert_eq!(statuses, [("requirement:demo:DEMO-R002", "LANDED")]);
+        // The index envelope replaces a node's property set, so the status-only rewrite
+        // carries every property the row held: nothing but `rowStatus` differs.
+        let property_set = |result: &IndexResult| {
+            let mut properties = result
+                .nodes
+                .iter()
+                .find(|n| n.node_id == "requirement:demo:DEMO-R002")
+                .expect("requirement node")
+                .properties
+                .clone();
+            properties.remove("rowStatus");
+            properties
+        };
+        assert!(property_set(&delta).contains_key("text"));
+        assert_eq!(property_set(&delta), property_set(&first));
         println!("HISTORY_DELTA\t{}\t{}", commits.len(), elapsed.as_micros());
     }
 
