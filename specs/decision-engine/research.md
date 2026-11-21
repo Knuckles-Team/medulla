@@ -1165,7 +1165,7 @@ Decision: the `Consolidate` route counts the episodes of a request that names a 
 
 
 ## R651.6: where the served journey tests live and what the bench measures
-The L4 journey sits beside the receipt helpers it needs (`tests/decide/test_memory_change_admission_served.py`), because the gated `Consolidate` route takes the current admit receipt and those helpers produce it. The nightly group `decide/memory_consolidate` loads 10,000 entries of 384 dimensions through the served `MemoryRemember`, then times `MemoryRecall` with `include_plan`; its budget (p50 25 ms, p99 120 ms, peak 96 MiB) is in `group_budgets` of `benches/baselines/decide.json`.
+The L4 journey `tests/memory/test_consolidate_served.py` reads the receipt helpers from the shared support module `tests/_memory_receipts.py` (moved out of `tests/decide/test_memory_change_admission_served.py`), because the gated `Consolidate` route takes the current admit receipt and those helpers produce it. The nightly group `decide/memory_consolidate` loads 10,000 entries of 384 dimensions through the served `MemoryRemember`, then times `MemoryRecall` with `include_plan`; its budget (p50 25 ms, p99 120 ms, peak 96 MiB) is in `group_budgets` of `benches/baselines/decide.json`.
 
 ## R651.7: the support threshold is checked before the receipt gate
 The promotion support check runs in the `Consolidate` interception ahead of the admit-receipt gate, so a below-threshold group is refused without a receipt and a group at the threshold still needs the current admit receipt (R141.104). The served test obtains the receipt the same way the gate's own test does.
