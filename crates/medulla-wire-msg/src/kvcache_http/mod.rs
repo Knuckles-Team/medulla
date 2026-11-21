@@ -248,7 +248,7 @@ fn parse_model_identity(
         (None, None) => Ok(None),
         (Some(id), Some(version)) => Ok(Some(ModelIdentity { id, version })),
         _ => Err(KvResponse::error(
-            "400 Bad Request",
+            ReplyStatus::BadRequest,
             "BadRequest",
             "model id and model version headers must be sent together",
         )),
@@ -258,7 +258,7 @@ fn parse_model_identity(
 /// The refusal for a block requested or written under another model revision.
 fn model_version_mismatch(stored: &str, requested: &str) -> KvResponse {
     KvResponse::error(
-        "409 Conflict",
+        ReplyStatus::Conflict,
         medulla_types::contract::ServerErrorCode::KvModelVersionMismatch.as_str(),
         &format!("block stored at model revision {stored:?}, requested {requested:?}"),
     )
@@ -612,16 +612,80 @@ fn parse_data_version(headers: &HashMap<String, String>) -> DataVersion {
 
 // ── request / response + routing ──────────────────────────────────────────────────
 
+/// The closed set of HTTP status lines `KvResponse` emits (MEDULLA-UNIFIED-DATA-PLANE-R768.2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ReplyStatus {
+    /// `200 OK`.
+    Ok,
+    /// `201 Created`.
+    Created,
+    /// `202 Accepted`.
+    Accepted,
+    /// `204 No Content`.
+    NoContent,
+    /// `400 Bad Request`.
+    BadRequest,
+    /// `401 Unauthorized`.
+    Unauthorized,
+    /// `403 Forbidden`.
+    Forbidden,
+    /// `404 Not Found`.
+    NotFound,
+    /// `405 Method Not Allowed`.
+    MethodNotAllowed,
+    /// `409 Conflict`.
+    Conflict,
+    /// `422 Unprocessable Entity`.
+    UnprocessableEntity,
+    /// `500 Internal Server Error`.
+    InternalServerError,
+    /// `507 Insufficient Storage`.
+    InsufficientStorage,
+}
+
+impl ReplyStatus {
+    /// The status line as it goes on the wire.
+    fn line(self) -> &'static str {
+        match self {
+            ReplyStatus::Ok => "200 OK",
+            ReplyStatus::Created => "201 Created",
+            ReplyStatus::Accepted => "202 Accepted",
+            ReplyStatus::NoContent => "204 No Content",
+            ReplyStatus::BadRequest => "400 Bad Request",
+            ReplyStatus::Unauthorized => "401 Unauthorized",
+            ReplyStatus::Forbidden => "403 Forbidden",
+            ReplyStatus::NotFound => "404 Not Found",
+            ReplyStatus::MethodNotAllowed => "405 Method Not Allowed",
+            ReplyStatus::Conflict => "409 Conflict",
+            ReplyStatus::UnprocessableEntity => "422 Unprocessable Entity",
+            ReplyStatus::InternalServerError => "500 Internal Server Error",
+            ReplyStatus::InsufficientStorage => "507 Insufficient Storage",
+        }
+    }
+}
+
+impl std::fmt::Display for ReplyStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.line())
+    }
+}
+
+impl PartialEq<&str> for ReplyStatus {
+    fn eq(&self, other: &&str) -> bool {
+        self.line() == *other
+    }
+}
+
 /// A response ready to serialize: status line, content-type, body bytes, head-only flag.
 struct KvResponse {
-    status: &'static str,
+    status: ReplyStatus,
     content_type: &'static str,
     body: Vec<u8>,
     head_only: bool,
 }
 
 impl KvResponse {
-    fn bytes(status: &'static str, body: Vec<u8>) -> Self {
+    fn bytes(status: ReplyStatus, body: Vec<u8>) -> Self {
         KvResponse {
             status,
             content_type: "application/octet-stream",
@@ -629,7 +693,7 @@ impl KvResponse {
             head_only: false,
         }
     }
-    fn json(status: &'static str, body: String) -> Self {
+    fn json(status: ReplyStatus, body: String) -> Self {
         KvResponse {
             status,
             content_type: "application/json",
@@ -637,7 +701,7 @@ impl KvResponse {
             head_only: false,
         }
     }
-    fn empty(status: &'static str) -> Self {
+    fn empty(status: ReplyStatus) -> Self {
         KvResponse {
             status,
             content_type: "application/octet-stream",
@@ -645,7 +709,7 @@ impl KvResponse {
             head_only: false,
         }
     }
-    fn error(status: &'static str, code: &str, message: &str) -> Self {
+    fn error(status: ReplyStatus, code: &str, message: &str) -> Self {
         let body = serde_json::json!({ "error": code, "message": message }).to_string();
         KvResponse::json(status, body)
     }
@@ -658,14 +722,14 @@ impl KvResponse {
 /// branch (drop the branch first).
 fn release_outcome_response(outcome: ReleaseOutcome) -> KvResponse {
     match outcome {
-        ReleaseOutcome::Released => KvResponse::empty("204 No Content"),
+        ReleaseOutcome::Released => KvResponse::empty(ReplyStatus::NoContent),
         ReleaseOutcome::NotFound => KvResponse::error(
-            "404 Not Found",
+            ReplyStatus::NotFound,
             "NotFound",
             "unknown snapshot/branch id (never existed, or already released)",
         ),
         ReleaseOutcome::StillReferenced { branch_count } => KvResponse::error(
-            "409 Conflict",
+            ReplyStatus::Conflict,
             "StillReferenced",
             &format!(
                 "snapshot still has {branch_count} live branch(es); drop_branch them before releasing"
@@ -685,7 +749,7 @@ fn handle(
     let credential_verified = authorized(auth, &req.headers);
     if !credential_verified {
         return KvResponse::error(
-            "401 Unauthorized",
+            ReplyStatus::Unauthorized,
             "Unauthorized",
             "missing or invalid bearer token",
         );
@@ -704,7 +768,7 @@ fn handle(
     );
     if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
         return KvResponse::error(
-            "403 Forbidden",
+            ReplyStatus::Forbidden,
             "AccessDenied",
             "KV-cache carrier has no verified tenant/page ownership",
         );
@@ -726,7 +790,7 @@ fn handle_authorized(store: &KvCacheStore, req: &HttpMessage) -> KvResponse {
         .strip_prefix("/kv/")
         .or_else(|| (path == "/kv").then_some(""))
     else {
-        return KvResponse::error("404 Not Found", "NotFound", "unknown path");
+        return KvResponse::error(ReplyStatus::NotFound, "NotFound", "unknown path");
     };
     match fork::route(&req.method, rest) {
         Some(route) => route.serve(store, req),
@@ -736,7 +800,11 @@ fn handle_authorized(store: &KvCacheStore, req: &HttpMessage) -> KvResponse {
 
 /// The one `405` this surface answers.
 fn method_not_allowed() -> KvResponse {
-    KvResponse::error("405 Method Not Allowed", "MethodNotAllowed", "unsupported")
+    KvResponse::error(
+        ReplyStatus::MethodNotAllowed,
+        "MethodNotAllowed",
+        "unsupported",
+    )
 }
 
 /// A read route: `GET` and `HEAD` only.
@@ -761,7 +829,7 @@ fn parsed_id(raw: &str, kind: &str, serve: impl FnOnce(u64) -> KvResponse) -> Kv
     match raw.parse::<u64>() {
         Ok(id) => serve(id),
         Err(_) => KvResponse::error(
-            "400 Bad Request",
+            ReplyStatus::BadRequest,
             "BadRequest",
             &format!("{kind} id must be a u64"),
         ),
@@ -803,10 +871,10 @@ impl BlockRoute<'_> {
     fn serve(self, store: &KvCacheStore, req: &HttpMessage) -> KvResponse {
         match self {
             Self::Stats => on_read(&req.method, || {
-                KvResponse::json("200 OK", store.stats_json())
+                KvResponse::json(ReplyStatus::Ok, store.stats_json())
             }),
             Self::Version => on_read(&req.method, || {
-                KvResponse::json("200 OK", store.version_json())
+                KvResponse::json(ReplyStatus::Ok, store.version_json())
             }),
             Self::SetVersion(version) => {
                 on_write(&req.method, || set_version(store, version, &req.body))
@@ -823,17 +891,21 @@ impl BlockRoute<'_> {
 /// (MEDULLA-DURABLE-KERNEL-R083.6). An empty body bumps the version only.
 fn set_version(store: &KvCacheStore, raw: &str, body: &[u8]) -> KvResponse {
     let Ok(version) = raw.parse::<u64>() else {
-        return KvResponse::error("400 Bad Request", "BadRequest", "version must be a u64");
+        return KvResponse::error(
+            ReplyStatus::BadRequest,
+            "BadRequest",
+            "version must be a u64",
+        );
     };
     let edges = match parse_topology_edges(body) {
         Ok(edges) => edges,
-        Err(message) => return KvResponse::error("400 Bad Request", "BadRequest", message),
+        Err(message) => return KvResponse::error(ReplyStatus::BadRequest, "BadRequest", message),
     };
     store.set_data_version(DataVersion::At(version));
     if let Some(edges) = edges {
         store.refresh_importance(&edges);
     }
-    KvResponse::json("200 OK", store.version_json())
+    KvResponse::json(ReplyStatus::Ok, store.version_json())
 }
 
 /// The topology edges a version bump carries, `None` for an empty body.
@@ -853,10 +925,10 @@ fn parse_topology_edges(body: &[u8]) -> Result<Option<Vec<(String, String)>>, &'
 /// `/kv/<hash>/exists` — presence as JSON, without transferring the page.
 fn exists(store: &KvCacheStore, hash: &str) -> KvResponse {
     if hash.is_empty() {
-        return KvResponse::error("400 Bad Request", "BadRequest", "empty hash");
+        return KvResponse::error(ReplyStatus::BadRequest, "BadRequest", "empty hash");
     }
     KvResponse::json(
-        "200 OK",
+        ReplyStatus::Ok,
         serde_json::json!({ "hash": hash, "exists": store.contains(hash) }).to_string(),
     )
 }
@@ -864,7 +936,7 @@ fn exists(store: &KvCacheStore, hash: &str) -> KvResponse {
 /// `/kv/<hash>` — `GET` the page, `HEAD` its presence, `PUT` it.
 fn block(store: &KvCacheStore, req: &HttpMessage, hash: &str) -> KvResponse {
     if hash.is_empty() {
-        return KvResponse::error("400 Bad Request", "BadRequest", "empty hash");
+        return KvResponse::error(ReplyStatus::BadRequest, "BadRequest", "empty hash");
     }
     let model = match parse_model_identity(&req.headers) {
         Ok(model) => model,
@@ -889,10 +961,12 @@ fn block(store: &KvCacheStore, req: &HttpMessage, hash: &str) -> KvResponse {
                 })
                 .unwrap_or_default();
             match store.get(hash, &neighbors) {
-                Ok(Some(bytes)) => KvResponse::bytes("200 OK", bytes),
-                Ok(None) => {
-                    KvResponse::error("404 Not Found", "NoSuchBlock", "no block under that hash")
-                }
+                Ok(Some(bytes)) => KvResponse::bytes(ReplyStatus::Ok, bytes),
+                Ok(None) => KvResponse::error(
+                    ReplyStatus::NotFound,
+                    "NoSuchBlock",
+                    "no block under that hash",
+                ),
                 Err(refusal) => tier_refusal(refusal),
             }
         }
@@ -906,8 +980,8 @@ fn block(store: &KvCacheStore, req: &HttpMessage, hash: &str) -> KvResponse {
 /// (MEDULLA-DURABLE-KERNEL-R083.8).
 fn tier_refusal(refusal: KvTierError) -> KvResponse {
     let status = match refusal.http_status() {
-        507 => "507 Insufficient Storage",
-        _ => "422 Unprocessable Entity",
+        507 => ReplyStatus::InsufficientStorage,
+        _ => ReplyStatus::UnprocessableEntity,
     };
     KvResponse::error(
         status,
@@ -919,9 +993,13 @@ fn tier_refusal(refusal: KvTierError) -> KvResponse {
 /// `HEAD /kv/<hash>` — the presence answer with the body suppressed.
 fn head(store: &KvCacheStore, hash: &str) -> KvResponse {
     let mut response = if store.contains(hash) {
-        KvResponse::empty("200 OK")
+        KvResponse::empty(ReplyStatus::Ok)
     } else {
-        KvResponse::error("404 Not Found", "NoSuchBlock", "no block under that hash")
+        KvResponse::error(
+            ReplyStatus::NotFound,
+            "NoSuchBlock",
+            "no block under that hash",
+        )
     };
     response.head_only = true;
     response
@@ -953,11 +1031,11 @@ fn put_block(
         store.bind_revision(model, hash);
     }
     match outcome {
-        Ok(PutStatus::Created) => KvResponse::empty("201 Created"),
-        Ok(PutStatus::Deduplicated) => KvResponse::empty("200 OK"),
+        Ok(PutStatus::Created) => KvResponse::empty(ReplyStatus::Created),
+        Ok(PutStatus::Deduplicated) => KvResponse::empty(ReplyStatus::Ok),
         // Accepted, not stored: the tier policy kept the block out, and a refusal is a
         // miss for the next GET, never an error for the writer.
-        Ok(PutStatus::Refused) => KvResponse::empty("202 Accepted"),
+        Ok(PutStatus::Refused) => KvResponse::empty(ReplyStatus::Accepted),
         Err(BackendError::Tier(refusal)) => tier_refusal(refusal),
         Err(error) => {
             tracing::warn!(
@@ -967,7 +1045,7 @@ fn put_block(
                 "kvcache PUT failed"
             );
             KvResponse::error(
-                "500 Internal Server Error",
+                ReplyStatus::InternalServerError,
                 "StoreError",
                 "failed to store block",
             )
@@ -1122,7 +1200,7 @@ async fn serve_with_store_inner(
             .await
             {
                 Ok(Some(req)) => handle(&server, &store, &auth, &req),
-                _ => KvResponse::error("400 Bad Request", "InvalidRequest", "malformed"),
+                _ => KvResponse::error(ReplyStatus::BadRequest, "InvalidRequest", "malformed"),
             };
             let head = format!(
                 "HTTP/1.1 {}\r\ncontent-type: {}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",

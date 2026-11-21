@@ -6,6 +6,7 @@
 //! Before the split both were one function of cyclomatic 46 / cognitive 43,
 //! where every verb re-derived where it sat in that hierarchy.
 
+use super::ReplyStatus;
 use super::{
     complete_multipart_xml, initiate_multipart_xml, internal, list_buckets_xml, list_objects_xml,
     list_parts_xml, object_response, query_param, range_response, split_bucket_key, S3Request,
@@ -76,17 +77,21 @@ impl S3Target {
 
 /// The one `405` this surface answers.
 pub(super) fn method_not_allowed() -> S3Response {
-    S3Response::error("405 Method Not Allowed", "MethodNotAllowed", "unsupported")
+    S3Response::error(
+        ReplyStatus::MethodNotAllowed,
+        "MethodNotAllowed",
+        "unsupported",
+    )
 }
 
 /// The one `NoSuchBucket` this surface answers.
 fn no_such_bucket() -> S3Response {
-    S3Response::error("404 Not Found", "NoSuchBucket", "no such bucket")
+    S3Response::error(ReplyStatus::NotFound, "NoSuchBucket", "no such bucket")
 }
 
 /// The one `NoSuchKey` this surface answers.
 fn no_such_key() -> S3Response {
-    S3Response::error("404 Not Found", "NoSuchKey", "no such key")
+    S3Response::error(ReplyStatus::NotFound, "NoSuchKey", "no such key")
 }
 
 /// `None` when the bucket exists; otherwise the response the caller must
@@ -113,7 +118,7 @@ fn service(store: &S3Store, req: &S3Request) -> S3Response {
         return method_not_allowed();
     }
     match store.list_buckets() {
-        Ok(buckets) => S3Response::xml("200 OK", list_buckets_xml(&buckets)),
+        Ok(buckets) => S3Response::xml(ReplyStatus::Ok, list_buckets_xml(&buckets)),
         Err(error) => internal(&error),
     }
 }
@@ -133,7 +138,7 @@ fn bucket_verb(store: &S3Store, req: &S3Request, bucket: &str) -> S3Response {
 fn create_bucket(store: &S3Store, bucket: &str) -> S3Response {
     match store.create_bucket(bucket) {
         Ok(()) => {
-            let mut response = S3Response::empty("200 OK");
+            let mut response = S3Response::empty(ReplyStatus::Ok);
             response
                 .headers
                 .push(("Location".into(), format!("/{bucket}")));
@@ -147,9 +152,9 @@ fn create_bucket(store: &S3Store, bucket: &str) -> S3Response {
 /// silent partial delete.
 fn delete_bucket(store: &S3Store, bucket: &str) -> S3Response {
     match store.delete_bucket(bucket) {
-        Ok(_) => S3Response::empty("204 No Content"),
+        Ok(_) => S3Response::empty(ReplyStatus::NoContent),
         Err(error) if error == "BucketNotEmpty" => S3Response::error(
-            "409 Conflict",
+            ReplyStatus::Conflict,
             "BucketNotEmpty",
             "The bucket you tried to delete is not empty",
         ),
@@ -160,7 +165,7 @@ fn delete_bucket(store: &S3Store, bucket: &str) -> S3Response {
 /// `HEAD /bucket` — HeadBucket.
 fn head_bucket(store: &S3Store, bucket: &str) -> S3Response {
     match store.bucket_exists(bucket) {
-        Ok(true) => S3Response::empty("200 OK"),
+        Ok(true) => S3Response::empty(ReplyStatus::Ok),
         Ok(false) => no_such_bucket(),
         Err(error) => internal(&error),
     }
@@ -171,7 +176,9 @@ fn head_bucket(store: &S3Store, bucket: &str) -> S3Response {
 fn list_objects(store: &S3Store, req: &S3Request, bucket: &str) -> S3Response {
     let prefix = query_param(&req.query, "prefix").unwrap_or_default();
     match store.list_objects(bucket, &prefix) {
-        Ok(objects) => S3Response::xml("200 OK", list_objects_xml(bucket, &prefix, &objects)),
+        Ok(objects) => {
+            S3Response::xml(ReplyStatus::Ok, list_objects_xml(bucket, &prefix, &objects))
+        }
         Err(error) => internal(&error),
     }
 }
@@ -182,7 +189,10 @@ fn create_upload(store: &S3Store, req: &S3Request, bucket: &str, key: &str) -> S
         return refusal;
     }
     match store.create_multipart(bucket, key, &declared_content_type(req)) {
-        Ok(upload_id) => S3Response::xml("200 OK", initiate_multipart_xml(bucket, key, &upload_id)),
+        Ok(upload_id) => S3Response::xml(
+            ReplyStatus::Ok,
+            initiate_multipart_xml(bucket, key, &upload_id),
+        ),
         Err(error) => internal(&error),
     }
 }
@@ -194,7 +204,7 @@ fn object_verb(store: &S3Store, req: &S3Request, bucket: &str, key: &str) -> S3R
         "GET" => get_object(store, req, bucket, key),
         "HEAD" => head_object(store, bucket, key),
         "DELETE" => match store.delete_object(bucket, key) {
-            Ok(_) => S3Response::empty("204 No Content"),
+            Ok(_) => S3Response::empty(ReplyStatus::NoContent),
             Err(error) => internal(&error),
         },
         _ => method_not_allowed(),
@@ -208,7 +218,7 @@ fn put_object(store: &S3Store, req: &S3Request, bucket: &str, key: &str) -> S3Re
     }
     match store.put_object(bucket, key, &req.body, &declared_content_type(req)) {
         Ok(etag) => {
-            let mut response = S3Response::empty("200 OK");
+            let mut response = S3Response::empty(ReplyStatus::Ok);
             response.headers.push(("ETag".into(), etag));
             response
         }
@@ -240,7 +250,7 @@ fn head_object(store: &S3Store, bucket: &str, key: &str) -> S3Response {
 
 /// The one `NoSuchUpload` this surface answers.
 fn no_such_upload() -> S3Response {
-    S3Response::error("404 Not Found", "NoSuchUpload", "no such upload")
+    S3Response::error(ReplyStatus::NotFound, "NoSuchUpload", "no such upload")
 }
 
 /// The verbs an in-flight multipart upload answers: `PUT` (UploadPart), `POST`
@@ -259,7 +269,7 @@ fn upload_verb(
         "POST" => complete_upload(store, bucket, key, upload_id),
         "DELETE" => {
             if store.abort_multipart(bucket, key, upload_id) {
-                S3Response::empty("204 No Content")
+                S3Response::empty(ReplyStatus::NoContent)
             } else {
                 no_such_upload()
             }
@@ -282,14 +292,14 @@ fn upload_part(
     let Some(part_number) = part_number.filter(|n| (1..=MAX_S3_MULTIPART_PARTS as u32).contains(n))
     else {
         return S3Response::error(
-            "400 Bad Request",
+            ReplyStatus::BadRequest,
             "InvalidArgument",
             "partNumber is outside the supported range",
         );
     };
     match store.upload_part(bucket, key, upload_id, part_number, &req.body) {
         Ok(etag) => {
-            let mut response = S3Response::empty("200 OK");
+            let mut response = S3Response::empty(ReplyStatus::Ok);
             response.headers.push(("ETag".into(), etag));
             response
         }
@@ -301,9 +311,10 @@ fn upload_part(
 /// `POST …?uploadId=…` — CompleteMultipartUpload.
 fn complete_upload(store: &S3Store, bucket: &str, key: &str, upload_id: &str) -> S3Response {
     match store.complete_multipart(bucket, key, upload_id) {
-        Ok((bucket, key, etag)) => {
-            S3Response::xml("200 OK", complete_multipart_xml(&bucket, &key, &etag))
-        }
+        Ok((bucket, key, etag)) => S3Response::xml(
+            ReplyStatus::Ok,
+            complete_multipart_xml(&bucket, &key, &etag),
+        ),
         Err(error) if error == "NoSuchUpload" => no_such_upload(),
         Err(error) => internal(&error),
     }
@@ -312,7 +323,10 @@ fn complete_upload(store: &S3Store, bucket: &str, key: &str, upload_id: &str) ->
 /// `GET …?uploadId=…` — ListParts.
 fn list_parts(store: &S3Store, bucket: &str, key: &str, upload_id: &str) -> S3Response {
     match store.list_parts(bucket, key, upload_id) {
-        Ok(parts) => S3Response::xml("200 OK", list_parts_xml(bucket, key, upload_id, &parts)),
+        Ok(parts) => S3Response::xml(
+            ReplyStatus::Ok,
+            list_parts_xml(bucket, key, upload_id, &parts),
+        ),
         Err(error) if error == "NoSuchUpload" => no_such_upload(),
         Err(error) => internal(&error),
     }

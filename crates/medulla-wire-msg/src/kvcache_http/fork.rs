@@ -7,6 +7,7 @@
 //! both were interleaved with the block routes across fourteen early returns
 //! in one function.
 
+use super::ReplyStatus;
 use super::{on_read, on_write, parsed_id, release_outcome_response, KvCacheStore, KvResponse};
 use medulla_server_api::http1::HttpMessage;
 
@@ -70,7 +71,7 @@ impl ForkRoute<'_> {
                 release_outcome_response(store.release_snapshot(id))
             }),
             Self::Stats => on_read(&req.method, || {
-                KvResponse::json("200 OK", store.fork_stats_json())
+                KvResponse::json(ReplyStatus::Ok, store.fork_stats_json())
             }),
             Self::Drop(id) => parsed_id(id, "branch", |id| {
                 release_outcome_response(store.drop_branch(id))
@@ -84,14 +85,14 @@ impl ForkRoute<'_> {
 fn create(store: &KvCacheStore, body: &[u8]) -> KvResponse {
     let Some(keys) = snapshot_keys(body) else {
         return KvResponse::error(
-            "400 Bad Request",
+            ReplyStatus::BadRequest,
             "BadRequest",
             "body must be JSON {\"keys\":[...]}",
         );
     };
     let (id, pages) = store.snapshot(&keys);
     KvResponse::json(
-        "200 OK",
+        ReplyStatus::Ok,
         serde_json::json!({ "snapshot": id, "pages": pages }).to_string(),
     )
 }
@@ -112,10 +113,10 @@ fn snapshot_keys(body: &[u8]) -> Option<Vec<String>> {
 fn fork(store: &KvCacheStore, id: &str) -> KvResponse {
     parsed_id(id, "snapshot", |id| match store.fork(id) {
         Some(branch) => KvResponse::json(
-            "200 OK",
+            ReplyStatus::Ok,
             serde_json::json!({ "branch": branch }).to_string(),
         ),
-        None => KvResponse::error("404 Not Found", "NoSuchSnapshot", "unknown snapshot"),
+        None => KvResponse::error(ReplyStatus::NotFound, "NoSuchSnapshot", "unknown snapshot"),
     })
 }
 
@@ -123,25 +124,25 @@ fn fork(store: &KvCacheStore, id: &str) -> KvResponse {
 fn page(store: &KvCacheStore, req: &HttpMessage, address: &str) -> KvResponse {
     let Some((id, key)) = address.split_once('/').filter(|(_, key)| !key.is_empty()) else {
         return KvResponse::error(
-            "400 Bad Request",
+            ReplyStatus::BadRequest,
             "BadRequest",
             "expected branch/<id>/<key>",
         );
     };
     parsed_id(id, "branch", |branch| match req.method.as_str() {
         "GET" => match store.branch_get(branch, key) {
-            Some(bytes) => KvResponse::bytes("200 OK", bytes),
+            Some(bytes) => KvResponse::bytes(ReplyStatus::Ok, bytes),
             None => KvResponse::error(
-                "404 Not Found",
+                ReplyStatus::NotFound,
                 "NoSuchBranchKey",
                 "no page for that branch/key",
             ),
         },
         "PUT" | "POST" => {
             if store.branch_put(branch, key, req.body.clone()) {
-                KvResponse::empty("200 OK")
+                KvResponse::empty(ReplyStatus::Ok)
             } else {
-                KvResponse::error("404 Not Found", "NoSuchBranch", "unknown branch")
+                KvResponse::error(ReplyStatus::NotFound, "NoSuchBranch", "unknown branch")
             }
         }
         _ => super::method_not_allowed(),

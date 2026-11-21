@@ -827,10 +827,65 @@ struct S3Request {
     body: Vec<u8>,
 }
 
+/// The closed set of HTTP status lines `S3Response` emits (MEDULLA-UNIFIED-DATA-PLANE-R768.2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum ReplyStatus {
+    /// `200 OK`.
+    Ok,
+    /// `204 No Content`.
+    NoContent,
+    /// `206 Partial Content`.
+    PartialContent,
+    /// `400 Bad Request`.
+    BadRequest,
+    /// `403 Forbidden`.
+    Forbidden,
+    /// `404 Not Found`.
+    NotFound,
+    /// `405 Method Not Allowed`.
+    MethodNotAllowed,
+    /// `409 Conflict`.
+    Conflict,
+    /// `416 Range Not Satisfiable`.
+    RangeNotSatisfiable,
+    /// `500 Internal Server Error`.
+    InternalServerError,
+}
+
+impl ReplyStatus {
+    /// The status line as it goes on the wire.
+    fn line(self) -> &'static str {
+        match self {
+            ReplyStatus::Ok => "200 OK",
+            ReplyStatus::NoContent => "204 No Content",
+            ReplyStatus::PartialContent => "206 Partial Content",
+            ReplyStatus::BadRequest => "400 Bad Request",
+            ReplyStatus::Forbidden => "403 Forbidden",
+            ReplyStatus::NotFound => "404 Not Found",
+            ReplyStatus::MethodNotAllowed => "405 Method Not Allowed",
+            ReplyStatus::Conflict => "409 Conflict",
+            ReplyStatus::RangeNotSatisfiable => "416 Range Not Satisfiable",
+            ReplyStatus::InternalServerError => "500 Internal Server Error",
+        }
+    }
+}
+
+impl std::fmt::Display for ReplyStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.line())
+    }
+}
+
+impl PartialEq<&str> for ReplyStatus {
+    fn eq(&self, other: &&str) -> bool {
+        self.line() == *other
+    }
+}
+
 /// A response ready to serialize: HTTP status line, extra headers, body bytes, and
 /// whether to elide the body (a HEAD reply carries the headers only).
 struct S3Response {
-    status: &'static str,
+    status: ReplyStatus,
     content_type: String,
     headers: Vec<(String, String)>,
     body: Vec<u8>,
@@ -838,7 +893,7 @@ struct S3Response {
 }
 
 impl S3Response {
-    fn xml(status: &'static str, body: String) -> Self {
+    fn xml(status: ReplyStatus, body: String) -> Self {
         S3Response {
             status,
             content_type: "application/xml".into(),
@@ -847,7 +902,7 @@ impl S3Response {
             head_only: false,
         }
     }
-    fn empty(status: &'static str) -> Self {
+    fn empty(status: ReplyStatus) -> Self {
         S3Response {
             status,
             content_type: "application/xml".into(),
@@ -856,7 +911,7 @@ impl S3Response {
             head_only: false,
         }
     }
-    fn error(status: &'static str, code: &str, message: &str) -> Self {
+    fn error(status: ReplyStatus, code: &str, message: &str) -> Self {
         let body = format!(
             "<?xml version=\"1.0\" encoding=\"UTF-8\"?><Error><Code>{}</Code><Message>{}</Message></Error>",
             xml_escape(code),
@@ -942,7 +997,7 @@ fn handle(
         S3_SERVICE_SCOPES,
     );
     if medulla_server_api::carrier::unauthenticated_carrier_denied(carrier.as_ref()) {
-        return S3Response::error("403 Forbidden", "AccessDenied", "Access Denied");
+        return S3Response::error(ReplyStatus::Forbidden, "AccessDenied", "Access Denied");
     }
     handle_authorized(store, req)
 }
@@ -959,13 +1014,13 @@ fn handle_authorized(store: &S3Store, req: &S3Request) -> S3Response {
 // `PUT …&partNumber=N` (UploadPart), `POST` (CompleteMultipartUpload),
 
 fn internal(msg: &str) -> S3Response {
-    S3Response::error("500 Internal Server Error", "InternalError", msg)
+    S3Response::error(ReplyStatus::InternalServerError, "InternalError", msg)
 }
 
 /// Build the object GET/HEAD reply headers (content-type/length/etag/last-modified).
 fn object_response(meta: ObjectMeta, bytes: Vec<u8>, head_only: bool) -> S3Response {
     S3Response {
-        status: "200 OK",
+        status: ReplyStatus::Ok,
         content_type: meta.content_type.clone(),
         headers: vec![
             ("ETag".into(), meta.etag.clone()),
@@ -1020,7 +1075,7 @@ fn range_response(meta: ObjectMeta, bytes: Vec<u8>, range: &str) -> S3Response {
         Some((start, end)) => {
             let slice = bytes[start as usize..=end as usize].to_vec();
             S3Response {
-                status: "206 Partial Content",
+                status: ReplyStatus::PartialContent,
                 content_type: meta.content_type.clone(),
                 headers: vec![
                     ("ETag".into(), meta.etag.clone()),
@@ -1037,7 +1092,7 @@ fn range_response(meta: ObjectMeta, bytes: Vec<u8>, range: &str) -> S3Response {
         }
         None => {
             let mut r = S3Response::error(
-                "416 Range Not Satisfiable",
+                ReplyStatus::RangeNotSatisfiable,
                 "InvalidRange",
                 "The requested range is not satisfiable",
             );
@@ -1241,7 +1296,7 @@ async fn serve_with_store_inner(
             let resp =
                 match tokio::time::timeout(HTTP_READ_TIMEOUT, read_request(&mut stream)).await {
                     Ok(Some(req)) => handle(&server, &store, &auth, &req),
-                    _ => S3Response::error("400 Bad Request", "InvalidRequest", "malformed"),
+                    _ => S3Response::error(ReplyStatus::BadRequest, "InvalidRequest", "malformed"),
                 };
             let head = format!(
                 "HTTP/1.1 {}\r\ncontent-type: {}\r\ncontent-length: {}\r\nconnection: close\r\n{}\r\n",
