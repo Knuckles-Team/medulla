@@ -33,9 +33,10 @@ pub(super) const OTHER_TENANT: &str = "tenant-other";
 /// The System-role agent the harness isolation registers.
 const ADMIN: &str = "connector-pack-admin";
 const COMMONS: &str = "__commons__";
-const GRAPH: &str = "connector-pack-ingest";
+/// The graph the connector-pack journeys ingest into by default.
+pub(super) const GRAPH: &str = "connector-pack-ingest";
 
-fn next_id() -> u64 {
+pub(super) fn next_id() -> u64 {
     static NEXT: AtomicU64 = AtomicU64::new(1);
     NEXT.fetch_add(1, Ordering::Relaxed)
 }
@@ -163,11 +164,26 @@ pub(super) struct Served {
     _dir: tempfile::TempDir,
     state: Arc<RwLock<ServerState>>,
     connector: String,
+    /// The graph the pack's records are ingested into.
+    graph: String,
+}
+
+/// How one `SourceIngest` envelope differs from the plain delta of a journey.
+#[derive(Default)]
+pub(super) struct IngestOptions {
+    /// Refuse a record that carries a field its mapping does not name.
+    pub(super) strict_schema: bool,
+    /// The envelope's derived features, as the wire carries them.
+    pub(super) features: Vec<Value>,
 }
 
 impl Served {
-    /// A fresh state, the ingest graph, and the pack of `connector` with its `streams`.
-    pub(super) async fn provisioned(connector: &str, streams: &[(&str, &str)]) -> Self {
+    /// A fresh state, the ingest graph `graph`, and the pack of `connector` with its `streams`.
+    pub(super) async fn provisioned(
+        graph: &str,
+        connector: &str,
+        streams: &[(&str, &str)],
+    ) -> Self {
         let dir = tempfile::tempdir().unwrap();
         let mut state = medulla_server::seams_install::new_state_for_test(
             SECRET,
@@ -195,13 +211,14 @@ impl Served {
             _dir: dir,
             state: Arc::new(RwLock::new(state)),
             connector: connector.to_string(),
+            graph: graph.to_string(),
         };
         served.provision(streams).await;
         served
     }
 
     /// One request as `ADMIN` of the door tenant, on `graph`, through the signed dispatch.
-    async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
+    pub(super) async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
         let id = next_id();
         let request = scoped_test_request_on(
             SECRET,
@@ -228,7 +245,7 @@ impl Served {
     ) -> Response {
         let request = Request {
             id: next_id(),
-            graph: GRAPH.to_string(),
+            graph: self.graph.clone(),
             auth_token: String::new(),
             agent_id: Some(ADMIN.to_string()),
             method,
@@ -246,7 +263,7 @@ impl Served {
 
     /// Upload `bytes` through the blob CAS, hold them under the caller's owner scope and return
     /// the content digest.
-    async fn upload(&self, bytes: &[u8]) -> String {
+    pub(super) async fn upload(&self, bytes: &[u8]) -> String {
         let tag = format!("upload:{}:{}", hex::encode(Sha256::digest(bytes)), next_id());
         let cursor: u64 = ok(
             "BlobBegin",
@@ -287,10 +304,10 @@ impl Served {
     async fn provision(&self, streams: &[(&str, &str)]) {
         let created = self
             .call_on(
-                GRAPH,
+                &self.graph,
                 "create",
                 Method::CreateGraph {
-                    graph_name: GRAPH.to_string(),
+                    graph_name: self.graph.clone(),
                     graph_type: GraphType::Global,
                 },
             )
@@ -343,13 +360,29 @@ impl Served {
         }
     }
 
-    /// Ingest `payloads` as records of `stream`, `(record_id, payload)` each, in one envelope, and
+    /// Ingest `records` of `stream`, `(record_id, payload)` each, in one plain delta envelope and
     /// return the accepted receipt.
     pub(super) async fn ingest(
         &self,
         stream: &str,
         records: &[(&str, Value)],
     ) -> SourceIngestionReceipt {
+        let response = self
+            .ingest_with(stream, records, &IngestOptions::default())
+            .await;
+        ok::<SourceIngestionOutcome>("SourceIngest", response)
+            .into_accepted()
+            .unwrap_or_else(|quarantine| panic!("the batch was quarantined: {quarantine:?}"))
+    }
+
+    /// Ingest `records` of `stream` in one envelope shaped by `options`, and return the raw
+    /// response, so a journey can assert a refusal.
+    pub(super) async fn ingest_with(
+        &self,
+        stream: &str,
+        records: &[(&str, Value)],
+        options: &IngestOptions,
+    ) -> Response {
         static PAGE: AtomicU64 = AtomicU64::new(1);
         let connector = self.connector.as_str();
         let records: Vec<Value> = records
@@ -366,28 +399,28 @@ impl Served {
                 })
             })
             .collect();
-        let value = json!({
-            "connector": connector, "kind": "records", "mode": "delta", "strict_schema": false,
+        let mut value = json!({
+            "connector": connector, "kind": "records", "mode": "delta",
+            "strict_schema": options.strict_schema,
             "records": records,
             "relationships": [], "withdrawals": [],
             "provider_checkpoint": {"stream": stream, "position": {"page": PAGE.fetch_add(1, Ordering::Relaxed)},
                                       "watermark": "2026-11-13T00:00:00Z"},
             "expected_previous_checkpoint": Value::Null,
         });
+        if !options.features.is_empty() {
+            value["features"] = Value::Array(options.features.clone());
+        }
         let request: SourceIngestionRequest =
             serde_json::from_value(value).expect("a valid source ingestion request");
-        let response = self
-            .call_on(
-                GRAPH,
-                &format!("ingest:{stream}:{}", next_id()),
-                Method::SourceIngest {
-                    request: Box::new(request),
-                },
-            )
-            .await;
-        ok::<SourceIngestionOutcome>("SourceIngest", response)
-            .into_accepted()
-            .unwrap_or_else(|quarantine| panic!("the batch was quarantined: {quarantine:?}"))
+        self.call_on(
+            &self.graph,
+            &format!("ingest:{stream}:{}", next_id()),
+            Method::SourceIngest {
+                request: Box::new(request),
+            },
+        )
+        .await
     }
 
     /// The ids a UQL statement answers as a reader of `TENANT` holding only `kg:read`.

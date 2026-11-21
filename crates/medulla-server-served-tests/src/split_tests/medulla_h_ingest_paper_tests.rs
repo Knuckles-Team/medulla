@@ -8,13 +8,13 @@ use std::collections::BTreeMap;
 use serde_json::{json, Value};
 use sha2::{Digest, Sha256};
 
-use super::connector_pack_harness::{Served, OTHER_TENANT, TENANT};
+use super::connector_pack_harness::{Served, GRAPH, OTHER_TENANT, TENANT};
 
 const CONNECTOR: &str = "paper-source";
 const STREAM: &str = "paper";
 
 async fn served() -> Served {
-    Served::provisioned(CONNECTOR, &[(STREAM, "ResearchPaper")]).await
+    Served::provisioned(GRAPH, CONNECTOR, &[(STREAM, "ResearchPaper")]).await
 }
 
 fn sha256_hex(bytes: &[u8]) -> String {

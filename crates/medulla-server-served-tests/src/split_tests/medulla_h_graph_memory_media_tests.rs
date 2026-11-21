@@ -39,40 +39,20 @@ fn media_derivation_feature_wire_contract() {
 
 #[cfg(all(unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
 mod served {
-    use std::sync::atomic::{AtomicU64, Ordering};
-    use std::sync::Arc;
-
-    use medulla_catalog_types::connector_pack::{
-        ConnectorPackBindRequest, ConnectorPackImportRequest, ConnectorPackIndex, ConnectorPackOp,
-        McpCatalogSnapshotBinding, PackAnnotations, PackArchiveRef, PackEntry, PackEntryKind,
-        PackImportResult, PackProducer, PackSection, CONNECTOR_PACK_SCHEMA_VERSION,
-    };
-    use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
-    use medulla_query_types::wire::UqlResult;
-    use medulla_server_api::authority_context::VerifiedRequestContext;
-    use medulla_server_api::state::ServerState;
-    use medulla_server_auth::auth::{dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller};
-    use medulla_server_blob::blob::BlobStateExt;
-    use medulla_source_types::source_ingestion::SourceIngestionRequest;
-    use medulla_types::contract::{BoundedVec, Digest256, Nonce, ResourceId, TenantId};
+    use medulla_protocol_types::protocol::{Method, Response};
+    use medulla_types::contract::{ResourceId, TenantId};
     use medulla_types::media_derivation::MediaDerivationValue;
     use medulla_work_types::memory::{
         MediaAttachment, MemoryKind, MemoryRecallRequest, MemoryRecallResult, MemoryRecord,
         MemoryRememberRequest, MemoryRememberResult, MemoryTier, MEMORY_RECORD_SCHEMA_VERSION,
     };
-    use serde::de::DeserializeOwned;
-    use serde_json::{json, Value};
+    use serde_json::json;
     use sha2::{Digest, Sha256};
-    use tokio::sync::RwLock;
 
-    const SECRET: &str = "media-memory-served-fixture-secret"; // sanitizer:ignore
-    /// The fixed tenant the served test auth policy admits at the door.
-    const TENANT: &str = "tenant-shared";
-    /// A second tenant of the same store.
-    const OTHER_TENANT: &str = "tenant-other";
-    /// The System-role agent the harness isolation registers.
-    const ADMIN: &str = "media-memory-admin";
-    const COMMONS: &str = "__commons__";
+    use super::super::connector_pack_harness::{
+        next_id, ok, IngestOptions, Served, OTHER_TENANT, TENANT,
+    };
+
     const GRAPH: &str = "media-memory";
     const CONNECTOR: &str = "media-source";
     const STREAM: &str = "image";
@@ -80,389 +60,43 @@ mod served {
     const PRODUCER: &str = "captioner-1";
     const PNG_MAGIC: &[u8] = b"\x89PNG\r\n\x1a\n";
 
-    fn next_id() -> u64 {
-        static NEXT: AtomicU64 = AtomicU64::new(1);
-        NEXT.fetch_add(1, Ordering::Relaxed)
-    }
-
-    fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
-        assert!(response.error.is_none(), "{label} was refused: {response:?}");
-        let value = match response.result {
-            Some(ResultPayload::Raw(bytes)) => {
-                return rmp_serde::from_slice(&bytes)
-                    .unwrap_or_else(|error| panic!("{label} result does not decode: {error}"));
-            }
-            Some(ResultPayload::Count(count)) => json!(count),
-            Some(ResultPayload::String(text)) => json!(text),
-            Some(ResultPayload::Bool(flag)) => json!(flag),
-            Some(ResultPayload::Json(value)) => value,
-            other => panic!("{label} answered an unexpected payload shape: {other:?}"),
-        };
-        serde_json::from_value(value)
-            .unwrap_or_else(|error| panic!("{label} result does not decode: {error}"))
-    }
-
     /// The refusal text of a refused response, whichever field carries it.
     fn refusal(label: &str, response: &Response) -> String {
         assert!(response.error.is_some(), "{label} was not refused: {response:?}");
         format!("{response:?}")
     }
 
-    fn context(key: &str) -> medulla_agent_types::agent_library::AgentLibraryMutationContext {
-        medulla_agent_types::agent_library::AgentLibraryMutationContext {
-            request_id: 1,
-            principal: "bound-by-engine".to_string(),
-            caller_principal: "bound-by-engine".to_string(),
-            attempt_nonce: Nonce::from_bytes([0; 32]),
-            tenant_id: TENANT.to_string(),
-            actor_scope: "bound-by-engine".to_string(),
-            purpose_id: "bound-by-engine".to_string(),
-            policy_revision: "bound-by-engine".to_string(),
-            policy_digest: format!("sha256:{}", "0".repeat(64)),
-            policy_decision_id: "bound-by-engine".to_string(),
-            idempotency_key: key.to_string(),
-            expected_revision: None,
-            trace_id: None,
-            created_at_ms: 1,
-        }
-    }
-
-    fn section(archive: &mut Vec<u8>, bytes: &[u8]) -> PackSection {
-        let section = PackSection {
-            offset: archive.len() as u64,
-            length: bytes.len() as u64,
-            sha256: Digest256::from_bytes(Sha256::digest(bytes).into()),
-        };
-        archive.extend_from_slice(bytes);
-        section
-    }
-
-    /// A digest-honest pack whose `image` stream maps to `Document`.
-    fn pack() -> (ConnectorPackIndex, Vec<u8>) {
-        let mut archive = Vec::new();
-        let entry = |kind, uri: String, name: &str, body: PackSection| PackEntry {
-            kind,
-            uri,
-            name: name.to_string(),
-            media_type: "application/json".to_string(),
-            body,
-            input_schema: None,
-            output_schema: None,
-            annotations: PackAnnotations::default(),
-            references: BoundedVec::new(Vec::new()).unwrap(),
-        };
-        let server_body =
-            format!(r#"{{"contract_version":"1","instructions":"Test.","name":"{CONNECTOR}"}}"#);
-        let server = entry(
-            PackEntryKind::McpServer,
-            format!("mcp-server://{CONNECTOR}"),
-            CONNECTOR,
-            section(&mut archive, server_body.as_bytes()),
-        );
-        let mapping = json!({
-            "connector": CONNECTOR,
-            "schema_mappings": {
-                STREAM: {"fields": {"id": "identifier", "name": "label"}, "ontology_class": "Document"},
-            },
-            "sources": [],
-        })
-        .to_string();
-        let resource = entry(
-            PackEntryKind::Resource,
-            "connector://resources".to_string(),
-            "connector-resources",
-            section(&mut archive, mapping.as_bytes()),
-        );
-        let mut index = ConnectorPackIndex {
-            schema_version: CONNECTOR_PACK_SCHEMA_VERSION,
-            connector: ResourceId::new(CONNECTOR).unwrap(),
-            server,
-            server_package_version: "1.0.0".to_string(),
-            archive: PackArchiveRef {
-                blob_digest: String::new(),
-                length: archive.len() as u64,
-                sha256: Digest256::from_bytes(Sha256::digest(&archive).into()),
-            },
-            entries: BoundedVec::new(vec![resource]).unwrap(),
-            producer: PackProducer {
-                name: "media-memory-served-tests".to_string(),
-                version: "1".to_string(),
-            },
-            catalog: McpCatalogSnapshotBinding {
-                configuration_revision: 1,
-                catalog_generation: 1,
-                snapshot_digest: Digest256::from_bytes([1; 32]),
-                child_connection_generation: 1,
-                authorization_scope_digest: Digest256::from_bytes([2; 32]),
-            },
-            pack_digest: Digest256::from_bytes([0; 32]),
-        };
-        index.pack_digest =
-            medulla_catalog_types::connector_pack::digest::pack_digest(&index).unwrap();
-        (index, archive)
-    }
-
-    struct Served {
-        _dir: tempfile::TempDir,
-        state: Arc<RwLock<ServerState>>,
-    }
-
+    /// The media journeys' view of the shared connector-pack harness: one `image` stream that
+    /// maps to `Document`.
     impl Served {
-        fn new() -> Self {
-            let dir = tempfile::tempdir().unwrap();
-            let mut state = medulla_server::seams_install::new_state_for_test(
-                SECRET,
-                ServerState::test_isolation(ADMIN),
-            );
-            state.persist_dir = Some(dir.path().to_string_lossy().into_owned());
-            let blob_dir = dir.path().join("blob");
-            std::fs::create_dir_all(&blob_dir).unwrap();
-            state.set_blob_cursors(Some(medulla_server_ops::api::ingest::cursors_for_test(
-                blob_dir.to_str().unwrap(),
-            )));
-            let graphs = dir.path().join("graphs");
-            std::fs::create_dir_all(&graphs).unwrap();
-            state.persistence = Some(Arc::new(
-                medulla_persistence::redb_backend::RedbBackend::open(
-                    graphs.to_string_lossy().into_owned(),
-                    64,
-                )
-                .expect("open the served graph backend"),
-            ));
-            if state.registry.get(COMMONS).is_none() {
-                state.registry.create_graph(COMMONS, GraphType::Team, None).unwrap();
-            }
-            Self {
-                _dir: dir,
-                state: Arc::new(RwLock::new(state)),
-            }
+        async fn media_provisioned() -> Self {
+            Served::provisioned(GRAPH, CONNECTOR, &[(STREAM, "Document")]).await
         }
 
-        /// One request as `ADMIN` of the door tenant, on `graph`, through the signed dispatch.
-        async fn call_on(&self, graph: &str, key: &str, method: Method) -> Response {
-            let id = next_id();
-            let request = scoped_test_request_on(
-                SECRET,
-                id,
-                graph,
-                method,
-                ScopedTestCaller {
-                    principal: ADMIN,
-                    tenant: TENANT,
-                    scopes: &["*"],
-                    nonce: &format!("media-memory-nonce-{id}"),
-                    idempotency_key: key,
-                },
-            );
-            dispatch_test_on_heap(&self.state, request).await
-        }
-
-        /// One request as `tenant`'s verified context with `scopes`, through the chokepoint.
-        async fn verified(&self, tenant: &str, scopes: &[&str], method: Method) -> Response {
-            let request = Request {
-                id: next_id(),
-                graph: GRAPH.to_string(),
-                auth_token: String::new(),
-                agent_id: Some(ADMIN.to_string()),
-                method,
-            };
-            let context = VerifiedRequestContext::verified_for_test_with_scopes(ADMIN, tenant, scopes);
-            Box::pin(
-                medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
-                    &self.state,
-                    request,
-                    context,
-                ),
-            )
-            .await
-        }
-
-        /// Upload `bytes` through the blob CAS, hold them under the caller's owner scope and
-        /// return the content digest.
-        async fn upload(&self, bytes: &[u8]) -> String {
-            let tag = format!("upload:{}:{}", hex::encode(Sha256::digest(bytes)), next_id());
-            let cursor: u64 = ok(
-                "BlobBegin",
-                self.call_on(COMMONS, &format!("{tag}:begin"), Method::BlobBegin { chunk_size: 1 << 20 })
-                    .await,
-            );
-            let _: Value = ok(
-                "BlobChunkPut",
-                self.call_on(
-                    COMMONS,
-                    &format!("{tag}:chunk"),
-                    Method::BlobChunkPut {
-                        cursor,
-                        data: bytes.to_vec(),
-                    },
-                )
-                .await,
-            );
-            let digest: String = ok(
-                "BlobCommit",
-                self.call_on(COMMONS, &format!("{tag}:commit"), Method::BlobCommit { cursor })
-                    .await,
-            );
-            let _: Value = ok(
-                "BlobRef",
-                self.call_on(
-                    COMMONS,
-                    &format!("{tag}:ref"),
-                    Method::BlobRef {
-                        digest: digest.clone(),
-                    },
-                )
-                .await,
-            );
-            digest
-        }
-
-        /// The ingest graph and the imported pack.
-        async fn provision(&self) {
-            let created = self
-                .call_on(
-                    GRAPH,
-                    "create",
-                    Method::CreateGraph {
-                        graph_name: GRAPH.to_string(),
-                        graph_type: GraphType::Global,
-                    },
-                )
-                .await;
-            assert!(created.error.is_none(), "CreateGraph: {created:?}");
-            let key = format!("bind:{CONNECTOR}");
-            let _: Value = ok(
-                "Bind",
-                self.call_on(
-                    COMMONS,
-                    &key,
-                    Method::ConnectorPack {
-                        op: Box::new(ConnectorPackOp::Bind {
-                            request: ConnectorPackBindRequest {
-                                context: context(&key),
-                                connector: ResourceId::new(CONNECTOR).unwrap(),
-                                importer: format!(
-                                    "principal:sha256:{}",
-                                    hex::encode(Sha256::digest(ADMIN.as_bytes()))
-                                ),
-                            },
-                        }),
-                    },
-                )
-                .await,
-            );
-            let (mut index, archive) = pack();
-            index.archive.blob_digest = self.upload(&archive).await;
-            let key = format!("connector-pack:{CONNECTOR}:import:{}:0", index.pack_digest);
-            let response = self
-                .call_on(
-                    COMMONS,
-                    &key,
-                    Method::ConnectorPack {
-                        op: Box::new(ConnectorPackOp::Import {
-                            request: Box::new(ConnectorPackImportRequest {
-                                context: context(&key),
-                                index,
-                                expected_head: None,
-                                allow_mass_withdrawal: false,
-                            }),
-                        }),
-                    },
-                )
-                .await;
-            match ok::<PackImportResult>("Import", response) {
-                PackImportResult::Imported { .. } => {}
-                other => panic!("the pack did not import: {other:?}"),
-            }
-        }
-
-        /// Ingest one image record with one derivation feature of `kind` and `text`.
-        async fn ingest(&self, record_id: &str, kind: &str, text: &str) -> Response {
-            static PAGE: AtomicU64 = AtomicU64::new(1);
-            let value = json!({
-                "connector": CONNECTOR, "kind": "records", "mode": "delta", "strict_schema": true,
-                "records": [{
-                    "stream": STREAM, "record_id": record_id,
-                    "mapping_reference": format!("connector:{CONNECTOR}#mappings/{STREAM}"),
-                    "payload": {"id": record_id, "name": "beach"},
-                    "updated_at": "2026-11-13T00:00:00Z",
-                    "provenance": {"connector": CONNECTOR, "adapter_kind": "mcp", "server": "media",
-                                   "tool": "image", "tool_schema_sha256": "07".repeat(32),
-                                   "source_uri": format!("media://{record_id}")},
-                }],
-                "features": [{
-                    "feature_id": format!("feature-{record_id}"),
-                    "object_id": node_id(record_id),
-                    "kind": "media_derivation",
-                    "value_msgpack": rmp_serde::to_vec_named(&MediaDerivationValue {
-                        kind: kind.into(),
-                        text: text.into(),
-                        embedding: vec![1.0, 0.0],
-                    })
-                    .unwrap(),
-                    "model_version": PRODUCER,
-                }],
-                "relationships": [], "withdrawals": [],
-                "provider_checkpoint": {"stream": STREAM, "position": {"page": PAGE.fetch_add(1, Ordering::Relaxed)},
-                                          "watermark": "2026-11-13T00:00:00Z"},
-                "expected_previous_checkpoint": Value::Null,
+        /// Ingest one image record with one derivation feature of `kind` and `text`, under a
+        /// strict schema, and return the raw response.
+        async fn ingest_media(&self, record_id: &str, kind: &str, text: &str) -> Response {
+            let feature = json!({
+                "feature_id": format!("feature-{record_id}"),
+                "object_id": node_id(record_id),
+                "kind": "media_derivation",
+                "value_msgpack": rmp_serde::to_vec_named(&MediaDerivationValue {
+                    kind: kind.into(),
+                    text: text.into(),
+                    embedding: vec![1.0, 0.0],
+                })
+                .unwrap(),
+                "model_version": PRODUCER,
             });
-            let request: SourceIngestionRequest =
-                serde_json::from_value(value).expect("a valid source ingestion request");
-            self.call_on(
-                GRAPH,
-                &format!("ingest:{record_id}:{}", next_id()),
-                Method::SourceIngest {
-                    request: Box::new(request),
+            self.ingest_with(
+                STREAM,
+                &[(record_id, json!({"id": record_id, "title": "beach"}))],
+                &IngestOptions {
+                    strict_schema: true,
+                    features: vec![feature],
                 },
             )
             .await
-        }
-
-        /// The ids a UQL statement answers as a reader holding only `kg:read`.
-        async fn uql_ids(&self, tenant: &str, text: &str) -> Vec<String> {
-            let response = self
-                .verified(
-                    tenant,
-                    &["kg:read"],
-                    Method::Uql {
-                        text: text.to_string(),
-                        params: Default::default(),
-                        prepare: false,
-                        foreign_executions: Default::default(),
-                    },
-                )
-                .await;
-            assert!(response.error.is_none(), "{text}: {response:?}");
-            let Some(ResultPayload::Raw(bytes)) = response.result.as_ref() else {
-                panic!("a UQL statement answers with a raw result");
-            };
-            let UqlResult::Rows { rows, .. } =
-                rmp_serde::from_slice(bytes).expect("a UQL result")
-            else {
-                panic!("the statement answers rows");
-            };
-            let mut ids: Vec<String> = rows.into_iter().map(|row| row.id).collect();
-            ids.sort();
-            ids
-        }
-
-        /// The stored properties of a node, read as a `kg:read` reader.
-        async fn properties(&self, id: &str) -> Option<serde_json::Map<String, Value>> {
-            let response = self
-                .verified(
-                    TENANT,
-                    &["kg:read"],
-                    Method::GetNodeProperties {
-                        node_id: id.to_string(),
-                    },
-                )
-                .await;
-            if response.error.is_some() {
-                return None;
-            }
-            let value: Value = ok("GetNodeProperties", response);
-            value.as_object().cloned()
         }
 
         async fn remember(&self, tenant: &str, record: MemoryRecord) -> Response {
@@ -556,9 +190,8 @@ mod served {
     }
 
     async fn journey(record_id: &str) -> Journey {
-        let served = Served::new();
-        served.provision().await;
-        let ingested = served.ingest(record_id, "caption", CAPTION).await;
+        let served = Served::media_provisioned().await;
+        let ingested = served.ingest_media(record_id, "caption", CAPTION).await;
         let outcome: medulla_source_types::source_document::SourceIngestionOutcome =
             ok("SourceIngest", ingested);
         let receipt = outcome
@@ -675,7 +308,7 @@ mod served {
         let journey = journey("img-refusals").await;
         let served = &journey.served;
         let before_recall = served.recall(TENANT, true).await.hits;
-        let before_derivations = served.uql_ids(TENANT, "MATCH (:MediaDerivation)").await;
+        let before_derivations = served.uql_ids("MATCH (:MediaDerivation)").await;
 
         let text_digest = served.upload(b"plain text, no magic number").await;
         let unheld = hex::encode(Sha256::digest(b"never uploaded"));
@@ -724,12 +357,12 @@ mod served {
         // The two derivation refusals of the `SourceIngest` path.
         let empty = refusal(
             "empty derivation",
-            &served.ingest("img-empty", "caption", "").await,
+            &served.ingest_media("img-empty", "caption", "").await,
         );
         assert!(empty.contains("MEDIA_DERIVATION_EMPTY"), "{empty}");
         let kind = refusal(
             "invalid derivation kind",
-            &served.ingest("img-kind", "poem", "text").await,
+            &served.ingest_media("img-kind", "poem", "text").await,
         );
         assert!(kind.contains("MEDIA_DERIVATION_KIND_INVALID"), "{kind}");
 
@@ -737,7 +370,7 @@ mod served {
         assert!(served.properties("mem-refused").await.is_none());
         assert_eq!(served.recall(TENANT, true).await.hits, before_recall);
         assert_eq!(
-            served.uql_ids(TENANT, "MATCH (:MediaDerivation)").await,
+            served.uql_ids("MATCH (:MediaDerivation)").await,
             before_derivations
         );
     }
@@ -758,12 +391,11 @@ mod served {
         // A reader holding only `kg:read` finds the derivation node by UQL, and its
         // `wasDerivedFrom` edge reaches the item.
         let derivations = served
-            .uql_ids(TENANT, &format!("MATCH (:MediaDerivation) WHERE id = '{}'", journey.derivation))
+            .uql_ids(&format!("MATCH (:MediaDerivation) WHERE id = '{}'", journey.derivation))
             .await;
         assert_eq!(derivations, vec![journey.derivation.clone()]);
         let reached = served
             .uql_ids(
-                TENANT,
                 &format!(
                     "MATCH (:MediaDerivation) WHERE id = '{}' |> TRAVERSE -[:wasDerivedFrom]->{{1,1}}",
                     journey.derivation
