@@ -100,21 +100,6 @@ pub async fn handle_semantic_index(
     // mutation so a binding admitted by this very operation is registered.
     let bound_service = Arc::clone(&service);
     let mutation = op.is_mutation();
-    // The engine's S6 worker consumes the S6 intent that S5 publishes, so its consumer is
-    // installed before any stage completes.
-    if matches!(
-        op,
-        SemanticIndexOp::CompleteStage { .. }
-            | SemanticIndexOp::CompleteGenerationStage { .. }
-            | SemanticIndexOp::CompleteSqlSourceStage { .. }
-    ) {
-        let worker = Arc::clone(&service);
-        if let Err(response) =
-            blocking(req_id, move || worker.subscribe_s6_worker()).await
-        {
-            return response;
-        }
-    }
     if let Err(response) = register_graph_source(req_id, state, &bound_service).await {
         return response;
     }
@@ -133,7 +118,16 @@ pub async fn handle_semantic_index(
         graph_source,
     };
     let completes_generation = matches!(op, SemanticIndexOp::CompleteGenerationStage { .. });
+    let admits_binding = matches!(op, SemanticIndexOp::AdmitBinding { .. });
     let response = dispatch::handle(&context, op).await;
+    // The engine's S6 worker consumes the S6 intent that S5 publishes, so its consumer is
+    // installed when the binding is admitted, before any stage can publish that intent.
+    if admits_binding && response.error.is_none() {
+        let worker = Arc::clone(&bound_service);
+        if let Err(response) = blocking(req_id, move || worker.subscribe_s6_worker()).await {
+            return response;
+        }
+    }
     if completes_generation && response.error.is_none() {
         run_s6_worker(&bound_service, bound_space, now_ms).await;
     }
