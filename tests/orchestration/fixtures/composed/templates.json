@@ -1,0 +1,19 @@
+{
+  "templates": [
+    {
+      "agent_id": "agent-rollout",
+      "role": "aggregator",
+      "provides": "urn:capability:rollout"
+    },
+    {
+      "agent_id": "agent-verify",
+      "role": "verifier",
+      "provides": "urn:capability:rollout"
+    },
+    {
+      "agent_id": "agent-report",
+      "role": "reporter",
+      "provides": "urn:capability:rollout"
+    }
+  ]
+}

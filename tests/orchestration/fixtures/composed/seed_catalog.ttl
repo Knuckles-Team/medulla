@@ -1,0 +1,21 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix swarm: <https://knuckles-team.github.io/ontology/swarm#> .
+@prefix dc: <http://purl.org/dc/terms/> .
+
+# One topology template with three slots joined by feeds.
+<urn:template:xyz> a swarm:TopologyTemplate ; swarm:class swarm:Pipeline ;
+    swarm:hasSlot <urn:slot:xyz-a>, <urn:slot:xyz-b>, <urn:slot:xyz-c> ;
+    dc:source <urn:source:topology-templates> .
+<urn:slot:xyz-a> a swarm:Slot ; swarm:nodeId "a" ; swarm:feeds <urn:slot:xyz-b> .
+<urn:slot:xyz-b> a swarm:Slot ; swarm:nodeId "b" ; swarm:feeds <urn:slot:xyz-c> .
+<urn:slot:xyz-c> a swarm:Slot ; swarm:nodeId "c" .
+
+# Two capabilities. Only the rollout capability has a covering candidate
+# (templates.json); the audit capability is the observable coverage gap.
+<urn:task:xyz> :requiresCapability <urn:capability:rollout>, <urn:capability:audit> .
+<urn:capability:rollout> a :ServiceCapability .
+<urn:capability:audit> a :ServiceCapability .
+
+# One rule governs the task class of task XYZ.
+<urn:task-class:rollout> <http://www.w3.org/2000/01/rdf-schema#subClassOf> <urn:task-class:operate> .
+<urn:rule:no-latest> a :BestPractice ; :appliesToTaskClass <urn:task-class:rollout> ; dc:source <urn:source:guardrail-rules> .

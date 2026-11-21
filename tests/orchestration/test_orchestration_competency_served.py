@@ -8,7 +8,9 @@ through the served ``Decide`` path; the fixture packs of
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import json
+import struct
 import sys
 import time
 import uuid
@@ -217,5 +219,128 @@ def test_envelope_assembled_by_graph_assemble() -> None:
             "coverage",
         ):
             assert getattr(answer.parts, part) is not None, part
+
+    asyncio.run(exercise())
+
+
+COMPOSED = Path(__file__).parent / "fixtures" / "composed"
+_CORE = "https://knuckles-team.github.io/ontology/core#"
+_SWARM = "https://knuckles-team.github.io/ontology/swarm#"
+_DC = "http://purl.org/dc/terms/"
+
+
+def _pack_graph(tenant: str, connector: str) -> str:
+    """The physical pack graph name: ``Digest256::framed`` over tenant and connector."""
+    domain = b"eg/connector-pack-projection-graph/v1"
+    hasher = hashlib.sha256()
+    hasher.update(b"eg/framed-sha256/v1\0")
+    hasher.update(struct.pack(">I", len(domain)))
+    hasher.update(domain)
+    fields = [tenant.encode(), connector.encode()]
+    hasher.update(struct.pack(">I", len(fields)))
+    for field in fields:
+        hasher.update(struct.pack(">Q", len(field)))
+        hasher.update(field)
+    return f"pack__{hasher.hexdigest()}"
+
+
+def _composed_seed() -> list[ConnectorPackEntryContent]:
+    parts = []
+    for key in ("identity", "catalog", "references"):
+        path = COMPOSED / f"seed_{key}.ttl"
+        assert path.is_file(), f"missing composed fixture input {path.name}"
+        body = path.read_bytes()
+        parts.append(
+            ConnectorPackEntryContent(
+                kind=PackEntryKind.SEED_PART,
+                uri=f"seed://{key}",
+                name=key,
+                media_type="text/turtle",
+                body=body,
+                annotations=PackAnnotations(),
+            )
+        )
+    return parts
+
+
+def _select(query: str):
+    async def run(client: Any) -> list[dict[str, str | None]]:
+        return await client.rdf.sparql(query)
+
+    return run
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R008.4")
+def test_fixture_ingest_produces_expected_part_rows() -> None:
+    templates = json.loads((COMPOSED / "templates.json").read_text(encoding="utf-8"))
+    assert len(templates["templates"]) == 3, "three Agent Library templates"
+    repo = sorted(
+        path.relative_to(COMPOSED / "repo").as_posix()
+        for path in (COMPOSED / "repo").rglob("*")
+        if path.is_file()
+    )
+    assert repo == ["README.md", "billing/parse.py", "billing/render.py"]
+    for key in ("identity", "catalog", "references"):
+        triples = [
+            line
+            for line in (COMPOSED / f"seed_{key}.ttl").read_text(encoding="utf-8").splitlines()
+            if line.strip() and not line.startswith(("@prefix", "#"))
+        ]
+        assert len(triples) < 5000
+
+    async def exercise() -> None:
+        connector = f"composed-{uuid.uuid4().hex[:8]}"
+        admin = await connect()
+        try:
+            imported = await import_entries(admin, connector, _composed_seed())
+        finally:
+            await admin.close()
+        assert imported["result"] == "imported", imported
+        assert set(imported["receipt"]["seed"]["outcomes"].values()) == {"inserted"}
+
+        graph = _pack_graph(TEST_TENANT, connector)
+        queries = {
+            "steps": (
+                f"SELECT ?step WHERE {{ <urn:task:xyz> <{_CORE}hasStep> ?step }} ORDER BY ?step",
+                4,
+            ),
+            "workflow": (
+                f"SELECT ?from ?to WHERE {{ ?from <{_CORE}handsOffTo> ?to }} ORDER BY ?from",
+                2,
+            ),
+            "dag": (
+                f"SELECT ?from ?to WHERE {{ ?from <{_SWARM}feeds> ?to }} ORDER BY ?from",
+                2,
+            ),
+            "staffing": (
+                f"SELECT ?slot WHERE {{ <urn:template:xyz> <{_SWARM}hasSlot> ?slot }} ORDER BY ?slot",
+                3,
+            ),
+            "coverage": (
+                f"SELECT ?capability WHERE {{ <urn:task:xyz> <{_CORE}requiresCapability> ?capability }} "
+                "ORDER BY ?capability",
+                2,
+            ),
+            "guardrails": (
+                f"SELECT ?rule WHERE {{ ?rule a <{_CORE}BestPractice> }} ORDER BY ?rule",
+                1,
+            ),
+        }
+        deadline = time.monotonic() + 120
+        rows: dict[str, list[dict[str, str | None]]] = {}
+        while time.monotonic() < deadline:
+            client = await connect(graph)
+            try:
+                for name, (query, _expected) in queries.items():
+                    rows[name] = await client.rdf.sparql(query)
+            except Exception:  # the projection has not landed yet
+                rows = {}
+            finally:
+                await client.close()
+            if rows and all(len(rows[n]) == want for n, (_q, want) in queries.items()):
+                break
+            await asyncio.sleep(1)
+        for name, (_query, expected) in queries.items():
+            assert len(rows.get(name, [])) == expected, (name, rows.get(name))
 
     asyncio.run(exercise())
