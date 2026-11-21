@@ -300,6 +300,7 @@ closed_error_codes! {
         ForeignSourcePolicyUnbootstrapped => "FOREIGN_SOURCE_POLICY_UNBOOTSTRAPPED",
         GeoCrsUnsupported => "GEO_CRS_UNSUPPORTED",
         GeoLiteralInvalid => "GEO_LITERAL_INVALID",
+        GoalTargetRequired => "GOAL_TARGET_REQUIRED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",

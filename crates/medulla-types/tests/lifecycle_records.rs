@@ -253,3 +253,31 @@ fn an_identical_release_replays_with_the_same_seal() {
     changed.artifact_digests.push("sha256:cc".into());
     assert_ne!(release_seal(&changed), write.seal);
 }
+
+// spec: MEDULLA-SDLC-R017.1
+#[test]
+fn a_goal_with_no_target_refuses_and_a_target_writes() {
+    use medulla_source_types::lifecycle::{handle_goal_put, Goal, GoalTarget, REFUSALS};
+
+    let goal = |targets: Vec<GoalTarget>| Goal {
+        project: "medulla".into(),
+        statement: "Ship the spec graph".into(),
+        targets,
+    };
+    let refusal = handle_goal_put(goal(vec![])).unwrap_err();
+    assert_eq!(refusal.code(), "GOAL_TARGET_REQUIRED");
+    assert!(REFUSALS
+        .iter()
+        .any(|c| c.as_str() == "GOAL_TARGET_REQUIRED"));
+
+    let row = GoalTarget::Row {
+        repo: "medulla".into(),
+        id: "MEDULLA-SDLC-R012.2".into(),
+    };
+    let question = GoalTarget::CompetencyQuestion { id: "cq-1".into() };
+    let write = handle_goal_put(goal(vec![row.clone(), question.clone(), row.clone()])).unwrap();
+    assert_eq!(write.targets, vec![row.clone(), question.clone()]);
+    assert!(write.node_id.starts_with("goal:"));
+    assert_eq!(row.node_id(), "requirement:medulla:MEDULLA-SDLC-R012.2");
+    assert_eq!(question.node_id(), "competency_question:cq-1");
+}

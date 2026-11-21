@@ -7,6 +7,7 @@ METHOD_IDS = frozenset(
         "MeasureIngestThroughput",
         "RecordRelease",
         "RecordDeployment",
+        "GoalPut",
         "ArgumentMapPut",
         "ArgumentMapGet",
         "ArgumentMapEvaluate",

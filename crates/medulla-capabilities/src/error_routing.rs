@@ -1248,6 +1248,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RELEASE_SEALED",
         ],
     ),
+    // MEDULLA-SDLC-R017.1: the served goal record's refusal.
+    ("GoalPut", &["GOAL_TARGET_REQUIRED"]),
     (
         "IncidentSetStatus",
         &[

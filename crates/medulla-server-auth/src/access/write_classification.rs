@@ -460,6 +460,7 @@ pub fn requires_write(method: &Method) -> bool {
                 // MEDULLA-SDLC-R002.3: release and deployment records.
                 | Method::RecordRelease { .. }
                 | Method::RecordDeployment { .. }
+                | Method::GoalPut { .. }
                 // MEDULLA-UNIFIED-DATA-PLANE-R700.3: action registration and submission.
                 | Method::ActionRegister { .. }
                 | Method::ActionSubmit { .. }

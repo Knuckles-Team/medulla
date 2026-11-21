@@ -302,6 +302,12 @@ $($variants)*
     RecordDeployment {
         deployment: medulla_source_types::lifecycle::DeploymentInput,
     },
+    /// Record one goal of a project (MEDULLA-SDLC-R017.1): a `Goal` node and a
+    /// `targetsGoal` edge from each target row or competency question. Refuses
+    /// `GOAL_TARGET_REQUIRED` when the goal names no target.
+    GoalPut {
+        goal: medulla_source_types::lifecycle::Goal,
+    },
     /// MEDULLA-SRC-AUTH-R004.6.1: which connected source is authoritative for each
     /// class (and facet) within the hop budget, with the premises behind every verdict
     /// and the authority audit built from them. A read; nothing is committed. Refuses

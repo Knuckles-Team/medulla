@@ -64,6 +64,7 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("QualityRulePut");
     covered.insert("RecordRelease");
     covered.insert("RecordDeployment");
+    covered.insert("GoalPut");
     covered.insert("ActionRegister");
     covered.insert("ActionSubmit");
 

@@ -136,6 +136,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "QualityRulePut",
     "RecordRelease",
     "RecordDeployment",
+    "GoalPut",
     "ActionRegister",
     "ActionSubmit",
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2/R011.2.3/R018.5: gateway-routed record,
@@ -466,6 +467,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "QualityRulePut",
     "RecordRelease",
     "RecordDeployment",
+    "GoalPut",
     "ActionRegister",
     "ActionSubmit",
     // MEDULLA-FEDERATED-QUERY-R701.3/R701.5: put and refresh commit the artifact
@@ -665,6 +667,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "QualityRulePut",
     "RecordRelease",
     "RecordDeployment",
+    "GoalPut",
     "ActionRegister",
     "ActionSubmit",
     // Gateway-routed writes that commit as the one AddNode upsert or one
@@ -815,6 +818,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "QualityRulePut",
     "RecordRelease",
     "RecordDeployment",
+    "GoalPut",
     "ActionRegister",
     "ActionSubmit",
     // The AddNode / BatchUpdate lowering emits the change event, like `FleetCatalog`

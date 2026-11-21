@@ -18095,6 +18095,19 @@ class MedullaClient:
             raise TypeError("RecordDeployment returned a non-object result")
         return result
 
+    async def goal_put(self, goal: dict[str, Any]) -> dict[str, Any]:
+        """Record one goal of a project (MEDULLA-SDLC-R017.1).
+
+        ``goal`` carries ``project``, ``statement`` and ``targets``: each target
+        is ``{"kind": "row", "repo": ..., "id": ...}`` or
+        ``{"kind": "competency_question", "id": ...}``. A goal with no target
+        refuses ``GOAL_TARGET_REQUIRED``.
+        """
+        result = await self._send("GoalPut", {"goal": goal}, None)
+        if not isinstance(result, dict):
+            raise TypeError("GoalPut returned a non-object result")
+        return result
+
     async def describe_contract(
         self,
         *,

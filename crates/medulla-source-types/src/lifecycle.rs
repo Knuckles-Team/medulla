@@ -122,6 +122,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("RELEASE_HEAD_UNKNOWN"),
     RefusalCode::new("RELEASE_VERSION_TAKEN"),
     RefusalCode::new("RELEASE_SEALED"),
+    RefusalCode::new("GOAL_TARGET_REQUIRED"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -141,6 +142,8 @@ pub enum LifecycleRefusal {
     ReleaseVersionTaken(String),
     #[error("RELEASE_SEALED: {0}")]
     ReleaseSealed(String),
+    #[error("GOAL_TARGET_REQUIRED: {0}")]
+    GoalTargetRequired(String),
 }
 
 impl LifecycleRefusal {
@@ -154,6 +157,7 @@ impl LifecycleRefusal {
             Self::ReleaseHeadUnknown(_) => "RELEASE_HEAD_UNKNOWN",
             Self::ReleaseVersionTaken(_) => "RELEASE_VERSION_TAKEN",
             Self::ReleaseSealed(_) => "RELEASE_SEALED",
+            Self::GoalTargetRequired(_) => "GOAL_TARGET_REQUIRED",
         }
     }
 }
@@ -361,6 +365,82 @@ pub struct DeploymentReceipt {
     pub deployment_id: String,
     pub release_ref: Option<String>,
     pub outcome: DeploymentOutcome,
+}
+
+/// What a goal aims at: a requirement row of a repository or a competency question.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(tag = "kind", rename_all = "snake_case", deny_unknown_fields)]
+pub enum GoalTarget {
+    /// A requirement row, by owner repository and row id.
+    Row { repo: String, id: String },
+    /// A competency question, by id.
+    CompetencyQuestion { id: String },
+}
+
+impl GoalTarget {
+    /// The graph node the `targetsGoal` edge starts from. A row target is the
+    /// requirement node of the spec projection (`requirement:<repo>:<id>`).
+    pub fn node_id(&self) -> String {
+        match self {
+            Self::Row { repo, id } => format!("requirement:{repo}:{id}"),
+            Self::CompetencyQuestion { id } => format!("competency_question:{id}"),
+        }
+    }
+}
+
+/// A goal of one project (MEDULLA-SDLC-R017.1): a statement and the rows or
+/// competency questions that target it.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct Goal {
+    pub project: String,
+    pub statement: String,
+    pub targets: Vec<GoalTarget>,
+}
+
+/// What `GoalPut` writes: the goal, its node id and its distinct targets.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GoalWrite {
+    pub goal: Goal,
+    pub node_id: String,
+    /// The distinct targets, in order.
+    pub targets: Vec<GoalTarget>,
+}
+
+/// What `GoalPut` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GoalReceipt {
+    pub node_id: String,
+    pub targets: u64,
+}
+
+/// The graph node id of a goal: the project and a digest of its statement.
+pub fn goal_node_id(goal: &Goal) -> String {
+    let key = format!("{}|{}", goal.project, goal.statement);
+    format!("goal:{}", &sha256_hex(key.as_bytes())[..32])
+}
+
+/// `GoalPut` (MEDULLA-SDLC-R017.1): decide what one goal writes, or refuse
+/// before anything is written. A goal that names no target refuses
+/// `GOAL_TARGET_REQUIRED`; a repeated target counts once.
+pub fn handle_goal_put(goal: Goal) -> Result<GoalWrite, LifecycleRefusal> {
+    let mut targets: Vec<GoalTarget> = Vec::with_capacity(goal.targets.len());
+    for target in &goal.targets {
+        if !targets.contains(target) {
+            targets.push(target.clone());
+        }
+    }
+    if targets.is_empty() {
+        return Err(LifecycleRefusal::GoalTargetRequired(goal.project.clone()));
+    }
+    Ok(GoalWrite {
+        node_id: goal_node_id(&goal),
+        goal,
+        targets,
+    })
 }
 
 /// How a defect reached the engine.

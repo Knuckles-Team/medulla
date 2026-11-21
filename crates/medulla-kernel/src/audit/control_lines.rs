@@ -127,6 +127,8 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "RECORD_DEPLOYMENT|{}|{}",
             deployment.environment, deployment.workload
         )),
+        // MEDULLA-SDLC-R017.1: the line names the project, never the statement.
+        Method::GoalPut { goal } => Some(format!("GOAL_PUT|{}", goal.project)),
         _ => record_write_audit_line(method),
     }
 }

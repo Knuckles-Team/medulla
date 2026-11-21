@@ -5,7 +5,8 @@ use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::result_contract::ingestion::{
-    RecordDeployment as RecordDeploymentResult, RecordRelease as RecordReleaseResult,
+    GoalPut as GoalPutResult, RecordDeployment as RecordDeploymentResult,
+    RecordRelease as RecordReleaseResult,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
@@ -14,8 +15,9 @@ use medulla_server_graph::dispatch::shared::{
     authorized_graph_read, ensure_graph_resident, timed_read, typed_response,
 };
 use medulla_source_types::lifecycle::{
-    deployment_node_id, handle_record_deployment, handle_record_release, release_node_id,
-    Deployment, DeploymentInput, DeploymentReceipt, Release, ReleaseReceipt,
+    deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
+    release_node_id, Deployment, DeploymentInput, DeploymentReceipt, Goal, GoalReceipt, GoalWrite,
+    Release, ReleaseReceipt,
 };
 use serde_json::{json, Map, Value};
 use tokio::sync::RwLock;
@@ -24,6 +26,8 @@ use tokio::sync::RwLock;
 const RELEASE_TYPE: &str = "Release";
 /// The node type of a recorded deployment.
 const DEPLOYMENT_TYPE: &str = "Deployment";
+/// The node type of a goal record.
+const GOAL_TYPE: &str = "Goal";
 /// The property holding the canonical JSON of the release record.
 const RELEASE_RECORD_PROPERTY: &str = "release_record";
 /// The node type of an indexed repository commit.
@@ -58,6 +62,7 @@ pub async fn dispatch_sdlc_methods(
         Method::RecordDeployment { deployment } => {
             dispatch_boxed(record_deployment(state, target, deployment)).await
         }
+        Method::GoalPut { goal } => dispatch_boxed(goal_put(state, target, goal)).await,
         other => return ControlFlow::Continue(other),
     };
     ControlFlow::Break(response)
@@ -111,6 +116,53 @@ async fn record_deployment(
     }
     .await;
     typed_response::<RecordDeploymentResult>(target.req_id, result)
+}
+
+/// `GoalPut` (MEDULLA-SDLC-R017.1): a goal with no target refuses before any
+/// write; otherwise one `BatchUpdate` writes the goal node and a `targetsGoal`
+/// edge from each target to it.
+async fn goal_put(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    goal: Goal,
+) -> Response {
+    let result = async {
+        if target.verified.tenant().trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        if goal.project.trim().is_empty() || goal.statement.trim().is_empty() {
+            return Err("INVALID_ARGUMENT: a goal names its project and a statement".to_string());
+        }
+        let write = handle_goal_put(goal).map_err(|e| e.to_string())?;
+        let operations = goal_operations(&write, &target)?;
+        commit(state, &target, operations).await?;
+        Ok(GoalReceipt {
+            node_id: write.node_id,
+            targets: write.targets.len() as u64,
+        })
+    }
+    .await;
+    typed_response::<GoalPutResult>(target.req_id, result)
+}
+
+/// The goal node, then one `targetsGoal` edge from each target to it.
+fn goal_operations(write: &GoalWrite, target: &SdlcTarget<'_>) -> Result<Vec<Value>, String> {
+    let mut properties = Map::new();
+    properties.insert("type".into(), GOAL_TYPE.into());
+    properties.insert("project".into(), write.goal.project.clone().into());
+    properties.insert("statement".into(), write.goal.statement.clone().into());
+    stamp(&mut properties, target);
+    let mut operations =
+        vec![json!({"op": "upsert_node", "id": write.node_id, "properties": properties})];
+    for goal_target in &write.targets {
+        operations.push(edge(
+            &goal_target.node_id(),
+            "targetsGoal",
+            &write.node_id,
+            target,
+        ));
+    }
+    bounded(operations)
 }
 
 /// The request graph and the verified tenant's stored releases visible to the caller.
