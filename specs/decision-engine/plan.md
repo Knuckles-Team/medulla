@@ -228,10 +228,10 @@ Ranked skill tree (R134.9): `plan_of_request` in `stat_task_plan.rs` ranks each 
 Pre-untangled design, one line per answer.
 
 - Owner. Medulla `crates/medulla-h-decide`. Consumers send candidates and a fallback; they hold no scorer.
-- Cohesion. The feature computation sits beside the rank family; the five question ids share it.
+- Cohesion. The feature computation sits beside the rank family; the four question ids share it.
 - Dependency direction. The family reads the catalog table and the feature module; the SDK and arbora call the served method only.
-- Interface depth. One served method, `Decide`, with five new question ids.
-- Special cases. None. A tool, a skill and an operation differ by the question id and nothing else.
+- Interface depth. One served method, `Decide`, with four new question ids. Tools rank through `ToolRelevance` (R134.110), not this table.
+- Special cases. None. A skill, an operation, a catalog item and an intent action differ by the question id and nothing else.
 - State. None.
 - Environment. The two weights are knobs of the feature.
 
@@ -265,3 +265,29 @@ Order: R829.1, R829.2, R829.3.
 - `MEDULLA-DECISION-ENGINE-R650.3` attaches descriptors to designations only. They are read from the pack projection graph through one codec, which moves to `medulla-persistence-records`. Assembly keeps the side-effect facts the pack import already derives, so `CandidateFacts` and assembly record bytes do not change.
 - `MEDULLA-DECISION-ENGINE-R132.3` maps an admitted entry to premise `<fact_key>=<value>` with the new `RetrievedEntry` provenance. A refused entry becomes no premise.
 - `MEDULLA-DECISION-ENGINE-R173.8` places the `editStatus` guard in the mutation compiler, beside the typed metadata admission. It refuses every caller write of the field, `proposed` included, so no graph read is needed. `HarnessEdit` gains a `Create` op that writes the initial `proposed`, and generic-write creation moves there. `HarnessEdit` is told apart by an explicit `StatusWriter` on the compile context, because main passes the compiler nothing else that distinguishes it. No other production writer of `editStatus` exists on main.
+
+### 2026-11-20: spec-gap pass 3b (R701.3, R156.2, R801.7, R814.2, R162.5, R171.5, R831.5, R831.8, R831.11, R121.100)
+
+- `MEDULLA-DECISION-ENGINE-R701.3` reads and writes one caller graph: every `FailureOp` variant carries `graph`. Failed `RunTrace` nodes are read through the filtered view; `HealthAnomaly` nodes are not, because they carry no run trace and belong to the incident path. The handler returns a `PlannedWrite` and the router commits it as one `BatchUpdate` through `dispatch_graph_op`, the pattern `incident.rs` already uses. Gap nodes are `gap:<sha256 of signature>` of the new class `:FailureGap`, which is not a `:CapabilityGap`.
+- `MEDULLA-DECISION-ENGINE-R156.2` owns only the pure `compile_skill_workflow`. The served compile-then-lookup proof belongs to R156.3.
+- `MEDULLA-DECISION-ENGINE-R801.7` is one more `UsageOp` (`Read`) with a closed `UsageReadView` kind and a per-op scope and mutation flag. `DayRollup` moves to the wire types crate. Records page 1000 at a time behind a hex cursor that `USAGE_BAD_CURSOR` confines to the caller's tenant. The consumer is the arbora `usage.read` operation.
+- `MEDULLA-DECISION-ENGINE-R814.2` is the selector kernel only. Its one caller is the R814.3 narrowing step, which builds candidates from the Agent Library scope. No external producer feeds it.
+- `MEDULLA-DECISION-ENGINE-R162.5` keeps the `shielding:*` premise spelling on main. The depth is bound by the policy digest, not by a premise.
+- `MEDULLA-DECISION-ENGINE-R171.5` keeps the main `admission:view` spelling and adds the attach and gap claim premises in the same space-separated `key=value` form.
+- `MEDULLA-DECISION-ENGINE-R831.5` and `R831.8` rename the Rust names and keep the wire keys with `serde(rename)`, the R830.3/R830.11 pattern. Wire bytes, program digests and stored layouts do not change, so there is no upgrade row. The kernel `MonitorVerdict` is the one verdict type, and the wire enum becomes `AdapterVerdict`.
+- `MEDULLA-DECISION-ENGINE-R831.11` renames the Python `TrainingRunStatus*` mirrors to `TrainingRunOutcome*`. No `Queued` or `Running` word exists to mirror.
+- `MEDULLA-DECISION-ENGINE-R121.100` extends the one served `step_verification` family and its one `StepVerification` type. No second type, file or question kind is created. `StepVerdict.passed` becomes the `StepOutcome` kind (`verified`, `failed`, `uncertain`), checks may carry an interval bounded by `verify.max_interval_width`, and later steps are listed as `withheld`. The trace order is the dependency chain, so no cycle or unknown-dependency code exists.
+
+### 2026-11-20: pass-3b gaps in R163, R139.100, R869, R829.1, R128.9, R093.2.1, R614.6, R134.110.7, R174.9.7, R019.100.2 and R148.4
+
+- `MEDULLA-DECISION-ENGINE-R163.3` opens its view with `intake_view` from one `QuestionKind::GraphIntake` arm of the `graph_view` chain, reads `TypedValue::IntakeSources` from param `intake_sources`, and answers one `resolved_set` option. `R163.4` refuses by abstention with three registered `GRAPH_INTAKE_*` codes, the form `command_config` and `field_shielding` use.
+- `MEDULLA-DECISION-ENGINE-R139.100` is retired. Graph reference resolution has one route, the `GraphIntake` family; `ComparativeAnalysisPlan` keeps its unified-query pins.
+- `MEDULLA-DECISION-ENGINE-R869.1` to `R869.3`: a fact use is reified as `:FactUse` with the node id as a string, the graph version the action read and the SHA-256 of the msgpack blob at that version (`GraphCore::node_properties_at`). Ingest is a typed `ActionRecords` source batch extension, validated like transcripts. The why chain is one stored UQL query, `why_action`.
+- `MEDULLA-DECISION-ENGINE-R829.1` keeps four entries. Tool ranking is `ToolRelevance` (R134.110). Candidates are declared options under the existing 64-option bound, with text keys `rank.name`, `rank.description` and `rank.kind`.
+- `MEDULLA-DECISION-ENGINE-R128.9` drops `HARNESS_TOOL_SUBSET_ABSTAINED`. An abstained part is named by its `missing_fact` entries.
+- `MEDULLA-DECISION-ENGINE-R093.2.1` is retired. The gold items are cost-budgeted assemblies, which a token-budgeted `tool_subset` answer cannot label.
+- `MEDULLA-DECISION-ENGINE-R614.6` names the served handler in `medulla-server-graph`, a 1,000-node project test, the bench function and the two baseline entries.
+- `MEDULLA-DECISION-ENGINE-R134.110.7` proves the connector-pack `Withdrawn` case in the served tests crate, where the pack import fixture lives.
+- `MEDULLA-DECISION-ENGINE-R174.9.7` is retired. Drift refresh is `FreshnessRefresh` and Document supersession is `MEDULLA-UNIFIED-DATA-PLANE-R651.7.2`.
+- `MEDULLA-DECISION-ENGINE-R019.100.2` puts the receipt, the pure check and the knob in a new `approval.rs`. The check runs first in both commit functions.
+- `MEDULLA-DECISION-ENGINE-R148.4` states the wire form main uses: an abstained record carrying the code.

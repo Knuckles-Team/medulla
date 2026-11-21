@@ -128,7 +128,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T119 [US3] MEDULLA-DECISION-ENGINE-R091 Resident scorer is bit-reproducible via fixed-point arithmetic
 - [ ] T120 [US3] MEDULLA-DECISION-ENGINE-R092 Scorer selection and structured encoding apply ladder-wide
 - [ ] T121 [US3] MEDULLA-DECISION-ENGINE-R093.1 Typed served-path provenance and ground-truth verification
-- [ ] T122 [US3] MEDULLA-DECISION-ENGINE-R093.2.1 Collect served episode results
+- [ ] T122 [US3] MEDULLA-DECISION-ENGINE-R093.2.1 RETIRED: the served `tool_subset` question does not solve the assembly gold items.
 - [ ] T123 [US3] MEDULLA-DECISION-ENGINE-R093.2.2 Bind served labels to collected results
 - [ ] T124 [US3] MEDULLA-DECISION-ENGINE-R093.2.3 Verify served corpus training
 - [ ] T125 [US3] MEDULLA-DECISION-ENGINE-R094 Decision scoring requires no GPU or model-server dependency
@@ -193,7 +193,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T182 [US7] MEDULLA-DECISION-ENGINE-R128.6 Plan scaffold follows stopping behaviour
 - [ ] T183 [US7] MEDULLA-DECISION-ENGINE-R128.7 Action space follows shell proficiency and task class
 - [ ] T184 [US7] MEDULLA-DECISION-ENGINE-R128.8 The family reads model-profile and task-class facts
-- [ ] T185 [US7] MEDULLA-DECISION-ENGINE-R128.9 The action-space part reuses the exact tool-subset solve
+- [ ] T185 [US7] MEDULLA-DECISION-ENGINE-R128.9 The action-space part reuses the exact tool-subset solve (built; the abstained part carries `missing_fact` and no refusal code).
 - [ ] T186 [US7] MEDULLA-DECISION-ENGINE-R128.10 The dispatch registry routes the new kind
 - [ ] T187 [US7] MEDULLA-DECISION-ENGINE-R128.11 Premises and why-not entries explain every part
 - [ ] T188 [US7] MEDULLA-DECISION-ENGINE-R128.12 The outcome encodes decided and abstained parts
@@ -344,7 +344,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T333 [US2] MEDULLA-DECISION-ENGINE-R036.100.3 Wire primitive checks into AgentAssemble
 - [ ] T334 [US2] MEDULLA-DECISION-ENGINE-R036.100.4 Primitive evidence and proposal path
 - [ ] T335 [US4] MEDULLA-DECISION-ENGINE-R136.101 Criterion review: per-criterion nonregression
-- [ ] T336 [US5] MEDULLA-DECISION-ENGINE-R121.100 Step verification verdicts with uncertainty and proof digest
+- [ ] T336 [US5] MEDULLA-DECISION-ENGINE-R121.100 Step verification answers verified, failed or uncertain and withholds later steps
 - [ ] T337 [US7] MEDULLA-DECISION-ENGINE-R138.100.1 Receipt model and check kernel
 - [ ] T338 [US7] MEDULLA-DECISION-ENGINE-R138.100.2 Family wiring, refusals and evidence
 - [ ] T339 [US4] MEDULLA-DECISION-ENGINE-R136.102 Criterion review: complete and artifact-bound grading
@@ -365,7 +365,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T352 [US4] MEDULLA-DECISION-ENGINE-R148.1 Command config records
 - [ ] T353 [US4] MEDULLA-DECISION-ENGINE-R148.2 Mode selection and config build
 - [ ] T354 [US4] MEDULLA-DECISION-ENGINE-R148.3 Command config family wiring
-- [ ] T355 [US4] MEDULLA-DECISION-ENGINE-R148.4 Command config refusals
+- [ ] T355 [US4] MEDULLA-DECISION-ENGINE-R148.4 Command config refusals (built as abstained records; test `command_config_tests.rs::invalid_config_refuses`).
 - [x] T356 [US4] MEDULLA-DECISION-ENGINE-R148.5 Command config premises
 - [ ] T357 [US4] MEDULLA-DECISION-ENGINE-R148.6 Served proof of mode decision and replay
 - [ ] T358 [US7] MEDULLA-DECISION-ENGINE-R149.1 Search-state model
@@ -386,9 +386,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T373 [US4] MEDULLA-DECISION-ENGINE-R151.4 Refusal
 - [ ] T374 [US4] MEDULLA-DECISION-ENGINE-R151.5 Evidence
 - [x] T375 [US4] MEDULLA-DECISION-ENGINE-R151.6 Hot-path proof
-- [ ] T376 [US7] MEDULLA-DECISION-ENGINE-R139.100 Graph-backed comparative sources with exact revision provenance
+- [ ] T376 [US7] MEDULLA-DECISION-ENGINE-R139.100 RETIRED: graph-backed source resolution is the `GraphIntake` family (R163).
 - [x] T377 [US2] MEDULLA-DECISION-ENGINE-R019.100.1 Evidence-stream references sealed into records
-- [ ] T378 [US2] MEDULLA-DECISION-ENGINE-R019.100.2 Approval receipt checked before commit
+- [ ] T378 [US2] MEDULLA-DECISION-ENGINE-R019.100.2 Approval receipt checked before commit: `approval.rs` with `RecommendationApproval`, `check_approval` and knob `commit.approval_max_age`; three `DecisionErrorCode` variants; fields on both commit requests and `DecisionPolicy`; checks first in both `commit` functions.
 - [ ] T379 [US6] MEDULLA-DECISION-ENGINE-R029.100 Retrieval command config and inference-mode digest binding
 - [ ] T380 [US7] MEDULLA-DECISION-ENGINE-R140.100 Complexity-gated K-trajectory decision
 - [ ] T381 [US7] MEDULLA-DECISION-ENGINE-R140.101 Provenance-preserving trajectory projection and reinsertion
@@ -451,7 +451,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T438 [US7] MEDULLA-DECISION-ENGINE-R155.6 Hot-path proof
 - [ ] T439 [US7] MEDULLA-DECISION-ENGINE-R155.7 Scope narrows cross-session episode recall
 - [ ] T440 [US7] MEDULLA-DECISION-ENGINE-R156.1 Model
-- [ ] T441 [US7] MEDULLA-DECISION-ENGINE-R156.2 Behaviour
+- [ ] T441 [US7] MEDULLA-DECISION-ENGINE-R156.2 Behaviour: pure skill-draft compile
 - [ ] T442 [US7] MEDULLA-DECISION-ENGINE-R156.3 Wiring
 - [ ] T443 [US7] MEDULLA-DECISION-ENGINE-R156.4 Refusal
 - [ ] T444 [US7] MEDULLA-DECISION-ENGINE-R156.5 Evidence
@@ -490,12 +490,12 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T477 [US7] MEDULLA-DECISION-ENGINE-R162.2 Projection behaviour
 - [ ] T478 [US7] MEDULLA-DECISION-ENGINE-R162.3 Wire field shielding into Decide
 - [ ] T479 [US7] MEDULLA-DECISION-ENGINE-R162.4 Field shielding refusals
-- [ ] T480 [US7] MEDULLA-DECISION-ENGINE-R162.5 Field shielding evidence
+- [ ] T480 [US7] MEDULLA-DECISION-ENGINE-R162.5 Field shielding evidence (shielding:* premises)
 - [ ] T481 [US7] MEDULLA-DECISION-ENGINE-R162.6 Field shielding hot-path proof
 - [ ] T482 [US7] MEDULLA-DECISION-ENGINE-R163.1 Graph intake model
 - [ ] T483 [US7] MEDULLA-DECISION-ENGINE-R163.2 Graph reference resolution
-- [ ] T484 [US7] MEDULLA-DECISION-ENGINE-R163.3 Wire graph intake into Decide
-- [ ] T485 [US7] MEDULLA-DECISION-ENGINE-R163.4 Graph intake refusals
+- [ ] T484 [US7] MEDULLA-DECISION-ENGINE-R163.3 Wire graph intake into Decide: `intake_view` and its `stat_decide.rs` arm, `conclude` over `resolve_sources(tenant, view, sources)`, option `resolved_set`, `ResolutionKind::Constraint`; test `graph_intake_tests.rs::graph_intake_routes`.
+- [ ] T485 [US7] MEDULLA-DECISION-ENGINE-R163.4 Graph intake refusals: move `GraphResolutionError` to `medulla-decision-types`, three `GRAPH_INTAKE_*` codes as abstentions, one `FAMILY_TABLES` row; test `graph_intake_tests.rs::missing_graph_data_refuses`.
 - [ ] T486 [US7] MEDULLA-DECISION-ENGINE-R163.5 Graph intake evidence
 - [ ] T487 [US7] MEDULLA-DECISION-ENGINE-R163.6 Graph intake hot-path proof
 - [ ] T488 [US7] MEDULLA-DECISION-ENGINE-R164.1 Model
@@ -541,7 +541,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T528 [US7] MEDULLA-DECISION-ENGINE-R171.2 Behaviour
 - [ ] T529 [US7] MEDULLA-DECISION-ENGINE-R171.3 Wiring
 - [ ] T530 [US7] MEDULLA-DECISION-ENGINE-R171.4 Refusal
-- [ ] T531 [US7] MEDULLA-DECISION-ENGINE-R171.5 Evidence
+- [ ] T531 [US7] MEDULLA-DECISION-ENGINE-R171.5 Evidence: view, attach and gap premises
 - [ ] T532 [US7] MEDULLA-DECISION-ENGINE-R171.6 Hot-path proof
 - [ ] T533 [US8] MEDULLA-DECISION-ENGINE-R172.1 Designation model types
 - [ ] T534 [US8] MEDULLA-DECISION-ENGINE-R172.2.1 Interned ids and capability postings
@@ -584,7 +584,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T571 [US7] MEDULLA-DECISION-ENGINE-R134.110.4 Refusal: tool relevance
 - [ ] T572 [US7] MEDULLA-DECISION-ENGINE-R134.110.5 Evidence: tool relevance premises
 - [x] T573 [US7] MEDULLA-DECISION-ENGINE-R134.110.6 Hot-path proof: one ranking for every search surface
-- [ ] T574 [US7] MEDULLA-DECISION-ENGINE-R134.110.7 Tool index cache with visibility and generation
+- [ ] T574 [US7] MEDULLA-DECISION-ENGINE-R134.110.7 Tool index cache with visibility and generation: add the `spec:` marker to the L3 test and the served `withdrawn_pack_tool_leaves_the_tool_index` test.
 - [ ] T575 [US4] MEDULLA-DECISION-ENGINE-R100.102.1 Run outcome model
 - [ ] T576 [US4] MEDULLA-DECISION-ENGINE-R100.102.2 Run credit kernel
 - [ ] T577 [US4] MEDULLA-DECISION-ENGINE-R100.102.3 Run outcome wiring
@@ -638,7 +638,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T624 [US8] MEDULLA-DECISION-ENGINE-R174.9.4 Refusal
 - [ ] T625 [US8] MEDULLA-DECISION-ENGINE-R174.9.5 Evidence
 - [ ] T626 [US8] MEDULLA-DECISION-ENGINE-R174.9.6 Hot-path proof
-- [ ] T627 [US8] MEDULLA-DECISION-ENGINE-R174.9.7 Held web Documents refresh by drift
+- [ ] T627 [US8] MEDULLA-DECISION-ENGINE-R174.9.7 RETIRED: drift refresh is `FreshnessRefresh` (R174.9.2) and Document supersession is R651.7.2.
 - [x] T935 [US8] MEDULLA-DECISION-ENGINE-R174.10 The first generation bootstraps without an evaluation
 - [ ] T628 [US6] MEDULLA-DECISION-ENGINE-R614.1 Model
 - [ ] T629 [US6] MEDULLA-DECISION-ENGINE-R614.2.1 Store a grounded capability card
@@ -648,7 +648,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T633 [US6] MEDULLA-DECISION-ENGINE-R614.3 SemanticEnrich method and schedule gate
 - [ ] T634 [US6] MEDULLA-DECISION-ENGINE-R614.4 Enrichment refusals
 - [ ] T635 [US6] MEDULLA-DECISION-ENGINE-R614.5 Enrichment evidence
-- [ ] T636 [US6] MEDULLA-DECISION-ENGINE-R614.6 Enrichment served hot path
+- [ ] T636 [US6] MEDULLA-DECISION-ENGINE-R614.6 Enrichment served hot path: L4 `test_project_one_thousand_nodes_in_one_batch`, bench group `decide/semantic_enrichment` with `project_n100000` and `classify_one`, two baseline entries.
 - [ ] T637 [US6] MEDULLA-DECISION-ENGINE-R615.1 Model
 - [ ] T638 [US6] MEDULLA-DECISION-ENGINE-R615.2.1 Preflight and queueing rule
 - [ ] T639 [US6] MEDULLA-DECISION-ENGINE-R615.2.2 Creation and ticket proposals
@@ -761,7 +761,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T741 [US8] MEDULLA-DECISION-ENGINE-R700.6 Hot-path proof
 - [ ] T742 [US8] MEDULLA-DECISION-ENGINE-R701.1 Model
 - [ ] T743 [US8] MEDULLA-DECISION-ENGINE-R701.2 Behavior
-- [ ] T744 [US8] MEDULLA-DECISION-ENGINE-R701.3 Wiring
+- [ ] T744 [US8] MEDULLA-DECISION-ENGINE-R701.3 Wiring: served FailureIngest over a caller graph, committed as one planned BatchUpdate
 - [ ] T745 [US8] MEDULLA-DECISION-ENGINE-R701.4 Refusal
 - [ ] T746 [US8] MEDULLA-DECISION-ENGINE-R701.5 Evidence
 - [ ] T747 [US8] MEDULLA-DECISION-ENGINE-R701.6 Hot-path proof
@@ -813,7 +813,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T793 [US9] MEDULLA-DECISION-ENGINE-R801.4 Ledger refusals write nothing
 - [ ] T794 [US9] MEDULLA-DECISION-ENGINE-R801.5 Audit line and golden cost report
 - [ ] T795 [US9] MEDULLA-DECISION-ENGINE-R801.6 Ledger nightly budget
-- [ ] T796 [US9] MEDULLA-DECISION-ENGINE-R801.7 Served tenant-scoped usage read
+- [ ] T796 [US9] MEDULLA-DECISION-ENGINE-R801.7 Served tenant-scoped usage read (UsageOp::Read, records and rollup views)
 - [ ] T797 [US9] MEDULLA-DECISION-ENGINE-R801.8 Served usage append and price put
 - [ ] T798 [US6] MEDULLA-DECISION-ENGINE-R802.1 Model
 - [ ] T799 [US6] MEDULLA-DECISION-ENGINE-R802.2 Behavior
@@ -901,7 +901,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T879 [US4] MEDULLA-DECISION-ENGINE-R805.13 Serve the champion pointer read
 - [ ] T880 [US8] MEDULLA-DECISION-ENGINE-R814.1.1 Vocabulary
 - [ ] T881 [US8] MEDULLA-DECISION-ENGINE-R814.1.2 Typed record
-- [ ] T882 [US8] MEDULLA-DECISION-ENGINE-R814.2 System-prompt selection per slot
+- [ ] T882 [US8] MEDULLA-DECISION-ENGINE-R814.2 System-prompt selection kernel
 - [ ] T883 [US8] MEDULLA-DECISION-ENGINE-R814.3 System-role pack prompts become SystemPrompt components; narrow_system_prompts narrows the one slot
 - [ ] T884 [US8] MEDULLA-DECISION-ENGINE-R814.4 Prompt candidate refusals
 - [ ] T885 [US8] MEDULLA-DECISION-ENGINE-R814.5 Prompt selection evidence
@@ -935,7 +935,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T913 [US7] MEDULLA-DECISION-ENGINE-R180.6 Process decision evidence
 - [ ] T914 [US7] MEDULLA-DECISION-ENGINE-R180.7 Process decision hot-path proof
 - [ ] T915 [US6] MEDULLA-DECISION-ENGINE-R829 Connector decision-point catalog and option heuristics in Decide
-- [ ] T916 [US6] MEDULLA-DECISION-ENGINE-R829.1 Rank catalog entries for tools, skills, operations, catalog items and intent actions. Size: M, 1 PR, 5 hours.
+- [ ] T916 [US6] MEDULLA-DECISION-ENGINE-R829.1 Rank catalog entries for skills, operations, catalog items and intent actions: four `DECISION_POINTS` entries, `RankFamily::conclude` abstains `QUESTION_UNPUBLISHED`. Size: M, 1 PR, 5 hours.
 - [ ] T917 [US6] MEDULLA-DECISION-ENGINE-R829.2 Option features for capability ranking are computed by medulla from candidate text. Size: M, 2 PRs, 6 hours.
 - [ ] T918 [US6] MEDULLA-DECISION-ENGINE-R829.3 Served proof: a large catalog ranks the named system and object first. Size: S, 1 PR, 3 hours.
 - [ ] T923 [US6] MEDULLA-DECISION-ENGINE-R830 Remaining lifecycles are explicit state machines (rollup)
@@ -955,13 +955,13 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T937 [US6] MEDULLA-DECISION-ENGINE-R831.2 LedgerEntry/LedgerStatus state machine: holder-level transition delegating to LedgerStatus::apply
 - [x] T938 [US6] MEDULLA-DECISION-ENGINE-R831.3 RevisionRow, OptimizationResult/RevisionStage state machine: holder-level transition delegating to RevisionStage::apply
 - [x] T939 [US6] MEDULLA-DECISION-ENGINE-R831.4 ProfileUseGrant/ProfileGrantState, ReservationRecord/ReservationState state machine: holder-level transition delegating to ProfileGrantState and ReservationState::apply
-- [ ] T940 [US6] MEDULLA-DECISION-ENGINE-R831.5 AdapterMonitored/MonitorState is a verdict, not a lifecycle: rename, no machine
+- [ ] T940 [US6] MEDULLA-DECISION-ENGINE-R831.5 AdapterMonitored carries a verdict: rename MonitorState to AdapterVerdict, wire key unchanged
 - [x] T941 [US6] MEDULLA-DECISION-ENGINE-R831.6 InstructionVersion, Asked/InstructionPhase is a disclosure timing, not a lifecycle: rename, no machine
 - [x] T942 [US6] MEDULLA-DECISION-ENGINE-R831.7 FanoutEntry, FanoutSubtaskResult/FanoutStatus is a subtask outcome, not a lifecycle: rename, no machine
-- [ ] T943 [US6] MEDULLA-DECISION-ENGINE-R831.8 ProgramStep state names are node ids: rename, no machine
+- [ ] T943 [US6] MEDULLA-DECISION-ENGINE-R831.8 ProgramStep node ids: rename state/next to node/next_node, wire keys unchanged
 - [ ] T944 [US6] MEDULLA-DECISION-ENGINE-R831.9 RouteChoice, RouteExecuted stage is a rule name, not a lifecycle stage: rename, no machine
 - [ ] T945 [US6] MEDULLA-DECISION-ENGINE-R831.10 HarnessPart discriminator `status` is a decision tag, not a lifecycle: rename, no machine
-- [ ] T946 [US6] MEDULLA-DECISION-ENGINE-R831.11 Decision-engine Python mirrors follow their Rust machines: Python mirror follows the Rust machine
+- [ ] T946 [US6] MEDULLA-DECISION-ENGINE-R831.11 Python mirrors follow the Rust outcome types: TrainingRunStatus becomes TrainingRunOutcome
 - [ ] T948 [US7] MEDULLA-DECISION-ENGINE-R135.16.1 Model: phrasings, match index and bound match
 - [ ] T949 [US7] MEDULLA-DECISION-ENGINE-R135.16.2 Behavior: index build, slot binding and nearest-program selection
 - [ ] T950 [US7] MEDULLA-DECISION-ENGINE-R135.16.3 Wiring: vectors at commit, candidates before conclude
@@ -974,7 +974,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T957 [US7] MEDULLA-DECISION-ENGINE-R173.7 The engine moves core:editStatus: HarnessEdit serves the edit lifecycle through EditMachine
 - [ ] T958 [US7] MEDULLA-DECISION-ENGINE-R173.8 The mutation compiler refuses every caller write of editStatus; HarnessEdit gains Create
 - [ ] T957 [US7] MEDULLA-DECISION-ENGINE-R869 Action and decision provenance is queryable (rollup)
-- [ ] T958 [US7] MEDULLA-DECISION-ENGINE-R869.1 ActionRecord model
-- [ ] T959 [US7] MEDULLA-DECISION-ENGINE-R869.2 Write path and refusals
-- [ ] T960 [US7] MEDULLA-DECISION-ENGINE-R869.3 The why chain
+- [ ] T958 [US7] MEDULLA-DECISION-ENGINE-R869.1 ActionRecord model: `:ActionRecord`, `:FactUse`, `:RuleUse` and their properties in `action-v1.ttl`; new `action-v1.shapes.ttl` wired into the `action` CoreSpec; test `crates/medulla-core/tests/action_provenance.rs::action_record_terms_and_shape`.
+- [ ] T959 [US7] MEDULLA-DECISION-ENGINE-R869.2 Write path and refusals: `SourceBatchExtension::ActionRecords`, `source_action_record.rs` types, `source_ingestion/action_record.rs` validator, four `ServerErrorCode` variants; test `medulla_h_ingest_action_record_tests.rs::refusals_and_idempotent_replay`.
+- [ ] T960 [US7] MEDULLA-DECISION-ENGINE-R869.3 The why chain: stored query `why_action` over `TRAVERSE -[*]->{1,8} WITH PROOF`; test `medulla_h_ingest_action_record_tests.rs::why_chain_shows_facts_at_used_revision`.
 - [ ] T961 [US7] MEDULLA-DECISION-ENGINE-R869.4 Hot-path proof: why did we reorder
