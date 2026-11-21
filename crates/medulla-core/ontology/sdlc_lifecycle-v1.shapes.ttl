@@ -42,3 +42,103 @@
             sh:message "pipelineStatus is success, failed, running or cancelled." ;
             sh:path :pipelineStatus ] ;
     sh:targetClass :PipelineRun .
+
+# MEDULLA-SDLC-R019.1: one shape per delivery class; each constrains only the
+# types of the delivery vocabulary properties.
+
+:DeliveryShape a sh:NodeShape ;
+    sh:description "A Delivery carries only well-typed delivery properties." ;
+    sh:name "Delivery Shape" ;
+    sh:property [ sh:path :deliversRequirement ;
+            sh:class :Requirement ;
+            sh:message "deliversRequirement is a requirement." ] ,
+        [ sh:path :opensProposal ;
+            sh:class :CodeChangeProposal ;
+            sh:message "opensProposal is a code change proposal." ] ,
+        [ sh:path :followsProposal ;
+            sh:class :CodeChangeProposal ;
+            sh:message "followsProposal is a code change proposal." ] ,
+        [ sh:path :deliveryOutcome ;
+            sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "deliveryOutcome is at most one string." ] ;
+    sh:targetClass :Delivery .
+
+:DeliveryAssignmentShape a sh:NodeShape ;
+    sh:description "A DeliveryAssignment carries only well-typed delivery properties." ;
+    sh:name "DeliveryAssignment Shape" ;
+    sh:property [ sh:path :assignedRun ;
+            sh:class :RunTrace ;
+            sh:message "assignedRun is a run trace." ] ,
+        [ sh:path :assignmentOf ;
+            sh:nodeKind sh:IRI ;
+            sh:maxCount 1 ;
+            sh:message "assignmentOf is at most one IRI." ] ;
+    sh:targetClass :DeliveryAssignment .
+
+:FeedbackEventShape a sh:NodeShape ;
+    sh:description "A FeedbackEvent carries only well-typed delivery properties." ;
+    sh:name "FeedbackEvent Shape" ;
+    sh:property [ sh:path :feedbackKind ;
+            sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "feedbackKind is at most one string." ] ,
+        [ sh:path :feedbackFor ;
+            sh:nodeKind sh:IRI ;
+            sh:message "feedbackFor is an IRI." ] ,
+        [ sh:path :feedbackOn ;
+            sh:nodeKind sh:IRI ;
+            sh:message "feedbackOn is an IRI." ] ;
+    sh:targetClass :FeedbackEvent .
+
+:ReviewShape a sh:NodeShape ;
+    sh:description "A Review carries only well-typed delivery properties." ;
+    sh:name "Review Shape" ;
+    sh:property [ sh:path :reviewerKind ;
+            sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "reviewerKind is at most one string." ] ,
+        [ sh:path :reviewOf ;
+            sh:nodeKind sh:IRI ;
+            sh:message "reviewOf is an IRI." ] ;
+    sh:targetClass :Review .
+
+:MergeArmingShape a sh:NodeShape ;
+    sh:description "A MergeArming carries only well-typed delivery properties." ;
+    sh:name "MergeArming Shape" ;
+    sh:property [ sh:path :armedAtHead ;
+            sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "armedAtHead is at most one string." ] ,
+        [ sh:path :armingOf ;
+            sh:nodeKind sh:IRI ;
+            sh:message "armingOf is an IRI." ] ;
+    sh:targetClass :MergeArming .
+
+:DeliveryReportShape a sh:NodeShape ;
+    sh:description "A DeliveryReport carries only well-typed delivery properties." ;
+    sh:name "DeliveryReport Shape" ;
+    sh:property [ sh:path :reportState ;
+            sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "reportState is at most one string." ] ,
+        [ sh:path :reportOf ;
+            sh:nodeKind sh:IRI ;
+            sh:message "reportOf is an IRI." ] ;
+    sh:targetClass :DeliveryReport .
+
+:DeliveryMandateShape a sh:NodeShape ;
+    sh:description "A DeliveryMandate carries only well-typed delivery properties." ;
+    sh:name "DeliveryMandate Shape" ;
+    sh:property [ sh:path :mandateOf ;
+            sh:nodeKind sh:IRI ;
+            sh:message "mandateOf is an IRI." ] ;
+    sh:targetClass :DeliveryMandate .
+
+:ReviewThreadShape a sh:NodeShape ;
+    sh:description "A ReviewThread carries only well-typed delivery properties." ;
+    sh:name "ReviewThread Shape" ;
+    sh:property [ sh:path :threadOf ;
+            sh:nodeKind sh:IRI ;
+            sh:message "threadOf is an IRI." ] ;
+    sh:targetClass :ReviewThread .

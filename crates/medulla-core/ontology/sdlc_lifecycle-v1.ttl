@@ -359,3 +359,132 @@ BFO:Process — it unfolds through open→ack→resolved over time.""" ;
     rdfs:comment "The :Repository (canonical software) a :PipelineRun ran for." ;
     rdfs:domain :PipelineRun ;
     rdfs:range :Repository .
+
+# MEDULLA-SDLC-R019.1: delivery vocabulary. Every class extends a core class.
+
+:Delivery a owl:Class ;
+    rdfs:label "Delivery" ;
+    rdfs:comment "One requested delivery of a requirement: the unit a person asks the engine to carry from row to merged change." ;
+    rdfs:subClassOf :Ticket .
+
+:DeliveryAssignment a owl:Class ;
+    rdfs:label "Delivery Assignment" ;
+    rdfs:comment "One run assigned to carry a delivery." ;
+    rdfs:subClassOf bfo:0000015 .
+
+:FeedbackEvent a owl:Class ;
+    rdfs:label "Feedback Event" ;
+    rdfs:comment "One piece of feedback on a delivery or its proposal." ;
+    rdfs:subClassOf bfo:0000015 .
+
+:Review a owl:Class ;
+    rdfs:label "Review" ;
+    rdfs:comment "One review of a proposed change." ;
+    rdfs:subClassOf bfo:0000015 .
+
+:MergeArming a owl:Class ;
+    rdfs:label "Merge Arming" ;
+    rdfs:comment "The arming of a proposal to merge at a given head." ;
+    rdfs:subClassOf bfo:0000015 .
+
+:DeliveryReport a owl:Class ;
+    rdfs:label "Delivery Report" ;
+    rdfs:comment "One report an assignment makes about its state." ;
+    rdfs:subClassOf bfo:0000031 .
+
+:DeliveryMandate a owl:Class ;
+    rdfs:label "Delivery Mandate" ;
+    rdfs:comment "The standing instruction a delivery runs under." ;
+    rdfs:subClassOf bfo:0000031 .
+
+:ReviewThread a owl:Class ;
+    rdfs:label "Review Thread" ;
+    rdfs:comment "One discussion thread of a review." ;
+    rdfs:subClassOf bfo:0000031 .
+
+:deliversRequirement a owl:ObjectProperty ;
+    rdfs:label "delivers requirement" ;
+    rdfs:comment "A :Delivery delivers a spec requirement." ;
+    rdfs:domain :Delivery ;
+    rdfs:range :Requirement .
+
+:opensProposal a owl:ObjectProperty ;
+    rdfs:label "opens proposal" ;
+    rdfs:comment "A :Delivery opens a :CodeChangeProposal." ;
+    rdfs:domain :Delivery ;
+    rdfs:range :CodeChangeProposal .
+
+:followsProposal a owl:ObjectProperty ;
+    rdfs:label "follows proposal" ;
+    rdfs:comment "A :Delivery follows an existing :CodeChangeProposal." ;
+    rdfs:domain :Delivery ;
+    rdfs:range :CodeChangeProposal .
+
+:assignedRun a owl:ObjectProperty ;
+    rdfs:label "assigned run" ;
+    rdfs:comment "The :RunTrace a :DeliveryAssignment ran." ;
+    rdfs:domain :DeliveryAssignment ;
+    rdfs:range :RunTrace .
+
+:checkRunOf a owl:ObjectProperty ;
+    rdfs:label "check run of" ;
+    rdfs:comment "The :CodeChangeProposal a :CheckRun checks." ;
+    rdfs:domain :CheckRun ;
+    rdfs:range :CodeChangeProposal .
+
+:assignmentOf a owl:ObjectProperty ;
+    rdfs:label "assignment of" ;
+    rdfs:comment "Links a delivery assignment to what it is an assignment of." .
+
+:reportOf a owl:ObjectProperty ;
+    rdfs:label "report of" ;
+    rdfs:comment "Links a delivery report to what it reports on." .
+
+:mandateOf a owl:ObjectProperty ;
+    rdfs:label "mandate of" ;
+    rdfs:comment "Links a delivery mandate to what it governs." .
+
+:feedbackFor a owl:ObjectProperty ;
+    rdfs:label "feedback for" ;
+    rdfs:comment "Links a feedback event to what it is feedback for." .
+
+:feedbackOn a owl:ObjectProperty ;
+    rdfs:label "feedback on" ;
+    rdfs:comment "Links a feedback event to what it comments on." .
+
+:reviewOf a owl:ObjectProperty ;
+    rdfs:label "review of" ;
+    rdfs:comment "Links a review to what it reviews." .
+
+:threadOf a owl:ObjectProperty ;
+    rdfs:label "thread of" ;
+    rdfs:comment "Links a review thread to what it belongs to." .
+
+:armingOf a owl:ObjectProperty ;
+    rdfs:label "arming of" ;
+    rdfs:comment "Links a merge arming to what it arms." .
+
+:armedAtHead a owl:DatatypeProperty ;
+    rdfs:label "armed at head" ;
+    rdfs:comment "The head revision a :MergeArming was armed at." ;
+    rdfs:range xsd:string .
+
+:deliveryOutcome a owl:DatatypeProperty ;
+    rdfs:label "delivery outcome" ;
+    rdfs:comment "How a delivery ended." ;
+    rdfs:range xsd:string .
+
+:reportState a owl:DatatypeProperty ;
+    rdfs:label "report state" ;
+    rdfs:comment "The state a :DeliveryReport states." ;
+    rdfs:range xsd:string .
+
+:feedbackKind a owl:DatatypeProperty ;
+    rdfs:label "feedback kind" ;
+    rdfs:comment "The kind of a :FeedbackEvent." ;
+    rdfs:range xsd:string .
+
+:reviewerKind a owl:DatatypeProperty ;
+    rdfs:label "reviewer kind" ;
+    rdfs:comment "The kind of reviewer of a :Review." ;
+    rdfs:range xsd:string .
