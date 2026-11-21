@@ -178,3 +178,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T172 [US1] MEDULLA-FINANCE-PRIMITIVES-R906.1 ShiftDetector/ShiftPhase state machine: holder-level transition delegating to ShiftPhase::apply
 - [ ] T173 [US1] MEDULLA-FINANCE-PRIMITIVES-R906.2 `SignalAdvance.state` renamed to `checkpoint` (`SignalCheckpoint`)
 - [ ] T174 [US2] MEDULLA-FINANCE-PRIMITIVES-R005.3 Performance and benchmark projection with verbatim figures
+- [ ] T463 [US2] MEDULLA-FINANCE-PRIMITIVES-R005.3.1 Return engine: TWR, MWR and XIRR
+- [ ] T464 [US2] MEDULLA-FINANCE-PRIMITIVES-R005.3.2 Stored records the return engine reads
+- [ ] T465 [US2] MEDULLA-FINANCE-PRIMITIVES-R005.3.3 Range windowing
+- [ ] T466 [US2] MEDULLA-FINANCE-PRIMITIVES-R005.3.4 Served performance method and golden proof
