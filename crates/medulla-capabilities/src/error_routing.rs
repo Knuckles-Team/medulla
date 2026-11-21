@@ -1247,10 +1247,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PARAMETER_INVALID",
         ],
     ),
-    // MEDULLA-CQ-ORCH-R702.9: a stale model version; a document the reader refuses is `INVALID_ARGUMENT`.
+    // MEDULLA-CQ-ORCH-R702.9/R702.12: a stale model version and the reader's refusals.
     (
         "ProcessDocumentImport",
-        &["WORKFLOW_VERSION_CONFLICT", "PARAMETER_INVALID"],
+        &[
+            "WORKFLOW_VERSION_CONFLICT",
+            "PARAMETER_INVALID",
+            "PROCESS_DOC_MALFORMED",
+            "PROCESS_DOC_ENTITY_REFUSED",
+            "PROCESS_DOC_TOO_LARGE",
+            "PROCESS_DOC_NAMESPACE_UNKNOWN",
+            "PROCESS_DOC_RULE_ENTRIES_MISMATCH",
+        ],
     ),
     // MEDULLA-CQ-ORCH-R702.10: an invisible model or workflow, a source the writer cannot write.
     (

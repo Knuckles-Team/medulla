@@ -689,6 +689,11 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ),
         ("asset_usage", asset_usage::REFUSALS.to_vec()),
         ("archimate_exchange", archimate_exchange::REFUSALS.to_vec()),
+        // MEDULLA-CQ-ORCH-R702.12: the served process document refusals.
+        (
+            "process_exchange",
+            medulla_types::process_exchange::REFUSALS.to_vec(),
+        ),
         // MEDULLA-CQ-ORCH-R700.4: the served process compile and the import codes it keeps.
         (
             "process_compile",

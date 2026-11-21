@@ -311,3 +311,53 @@ async fn dmn_export_reads_definitions() {
             .is_some_and(|error| error.starts_with("PROCESS_EXPORT_NOT_DEPLOYABLE")));
     }
 }
+
+// spec: MEDULLA-CQ-ORCH-R702.12
+#[tokio::test(flavor = "multi_thread")]
+async fn document_refusals_leave_state_unchanged() {
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "process-exchange-refusals",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let before = core_version(&state);
+    let oversized = vec![b' '; 16 * 1024 * 1024 + 1];
+    let cases: [(&[u8], &str); 4] = [
+        (b"<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\">\n<process id=\"p\"></task></definitions>", "PROCESS_DOC_MALFORMED"),
+        (br#"<!DOCTYPE d [<!ENTITY x "y">]><definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d"/>"#, "PROCESS_DOC_ENTITY_REFUSED"),
+        (&oversized, "PROCESS_DOC_TOO_LARGE"),
+        (br#"<definitions xmlns="urn:not-bpmn" id="d"/>"#, "PROCESS_DOC_NAMESPACE_UNKNOWN"),
+    ];
+    for (n, (bytes, code)) in cases.iter().enumerate() {
+        let refused = send(&state, 2 + n as u64, import_method(bytes, None)).await;
+        let error = refused.error.as_deref().unwrap_or_default();
+        assert!(error.starts_with(code), "{code}: got {error}");
+    }
+    let malformed = send(&state, 10, import_method(cases[0].0, None)).await;
+    assert!(
+        malformed.error.as_deref().is_some_and(|e| e.contains("2:")),
+        "the malformed refusal names the line and column"
+    );
+
+    // A workflow is not a DMN source.
+    let not_deployable = send(
+        &state,
+        11,
+        export_method(
+            ExportSource::Workflow {
+                workflow_id: "w".into(),
+                version: 1,
+            },
+            ProcessDocumentFormat::Dmn13,
+        ),
+    )
+    .await;
+    assert!(not_deployable
+        .error
+        .as_deref()
+        .is_some_and(|e| e.starts_with("PROCESS_EXPORT_NOT_DEPLOYABLE")));
+    assert_eq!(core_version(&state), before, "a refusal writes nothing");
+}

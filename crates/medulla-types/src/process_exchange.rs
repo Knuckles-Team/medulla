@@ -5,6 +5,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::refusal_code::RefusalCode;
+
 pub use crate::process_import::GateKind;
 
 /// Current record version of the process document types.
@@ -89,6 +91,18 @@ pub struct ProcessDocumentExported {
     pub document_digest: String,
 }
 
+/// The refusal codes of the served process document import and export (MEDULLA-CQ-ORCH-R702.12),
+/// besides `PROCESS_EXPORT_NOT_DEPLOYABLE`, which `process_import::EXPORT_REFUSALS` declares.
+/// The decision plane collects this table with every other family table and refuses a code
+/// declared twice.
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new("PROCESS_DOC_MALFORMED"),
+    RefusalCode::new("PROCESS_DOC_ENTITY_REFUSED"),
+    RefusalCode::new("PROCESS_DOC_TOO_LARGE"),
+    RefusalCode::new("PROCESS_DOC_NAMESPACE_UNKNOWN"),
+    RefusalCode::new("PROCESS_DOC_RULE_ENTRIES_MISMATCH"),
+];
+
 /// Why a process document was not read or written.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "code", rename_all = "snake_case", deny_unknown_fields)]
@@ -107,6 +121,20 @@ pub enum ProcessExchangeError {
         output_entries: u64,
         output_clauses: u64,
     },
+}
+
+impl ProcessExchangeError {
+    /// The stable wire code of this refusal (MEDULLA-CQ-ORCH-R702.12).
+    pub fn wire_code(&self) -> &'static str {
+        match self {
+            Self::Malformed { .. } => "PROCESS_DOC_MALFORMED",
+            Self::EntityRefused => "PROCESS_DOC_ENTITY_REFUSED",
+            Self::TooLarge { .. } => "PROCESS_DOC_TOO_LARGE",
+            Self::NamespaceUnknown { .. } => "PROCESS_DOC_NAMESPACE_UNKNOWN",
+            Self::NotDeployable { .. } => crate::process_import::PROCESS_EXPORT_NOT_DEPLOYABLE,
+            Self::RuleEntriesMismatch { .. } => "PROCESS_DOC_RULE_ENTRIES_MISMATCH",
+        }
+    }
 }
 
 impl std::fmt::Display for ProcessExchangeError {
@@ -141,6 +169,42 @@ impl std::error::Error for ProcessExchangeError {}
 mod tests {
     use super::*;
     use serde_json::json;
+
+    // spec: MEDULLA-CQ-ORCH-R702.12
+    #[test]
+    fn codes_are_unique_and_stable() {
+        let mut codes: Vec<&str> = REFUSALS.iter().map(|c| c.as_str()).collect();
+        let declared = codes.len();
+        codes.sort_unstable();
+        codes.dedup();
+        assert_eq!(codes.len(), declared, "a refusal code is declared twice");
+        let errors = [
+            ProcessExchangeError::Malformed { line: 1, column: 1 },
+            ProcessExchangeError::EntityRefused,
+            ProcessExchangeError::TooLarge { bytes: 1 },
+            ProcessExchangeError::NamespaceUnknown {
+                namespace: String::new(),
+            },
+            ProcessExchangeError::NotDeployable {
+                reason: String::new(),
+            },
+            ProcessExchangeError::RuleEntriesMismatch {
+                rule_id: String::new(),
+                input_entries: 0,
+                input_clauses: 1,
+                output_entries: 0,
+                output_clauses: 1,
+            },
+        ];
+        for error in &errors {
+            let code = error.wire_code();
+            assert!(
+                codes.contains(&code)
+                    || crate::process_import::EXPORT_REFUSALS.contains(&code),
+                "{code} is not declared"
+            );
+        }
+    }
 
     // spec: MEDULLA-CQ-ORCH-R702.1
     #[test]

@@ -90,14 +90,11 @@ fn document_mutations(
     }
 }
 
-/// The wire refusal of a reader or writer error.
+/// The wire refusal of a reader or writer error: its `PROCESS_DOC_*` code (or
+/// `PROCESS_EXPORT_NOT_DEPLOYABLE`) with the error text, which carries the line and column of a
+/// malformed document (MEDULLA-CQ-ORCH-R702.12).
 fn exchange_refusal(error: &ProcessExchangeError) -> String {
-    match error {
-        ProcessExchangeError::NotDeployable { .. } => {
-            refuse(PROCESS_EXPORT_NOT_DEPLOYABLE, error)
-        }
-        _ => refuse("INVALID_ARGUMENT", error),
-    }
+    refuse(error.wire_code(), error)
 }
 
 /// The element node ids a stored model version records.
