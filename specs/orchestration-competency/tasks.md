@@ -128,8 +128,8 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T120 [US2] MEDULLA-CQ-ORCH-R810.1 Broker message transition function
 - [x] T121 [US2] MEDULLA-CQ-ORCH-R810.2 Describe the broker message machine in the ontology
 - [ ] T122 [US2] MEDULLA-CQ-ORCH-R811 Analytics job is one explicit state machine
-- [ ] T123 [US2] MEDULLA-CQ-ORCH-R811.1 Analytics job transition function: one `JobState` variant per `JobStage`, delete the three companion fields, `AnalyticsJob::transition` as the one writer
-- [ ] T124 [US2] MEDULLA-CQ-ORCH-R811.2 Route all job writers through step and describe the machine
+- [ ] T123 [US2] MEDULLA-CQ-ORCH-R811.1 Analytics job transition function: one `JobState` variant per `JobStage`, delete the three companion fields, `AnalyticsJob::transition` as the one writer (lands with R811.3, then R811.4 in the same train)
+- [ ] T124 [US2] MEDULLA-CQ-ORCH-R811.2 Describe the analytics job machine in the ontology
 - [ ] T125 [US2] MEDULLA-CQ-ORCH-R811.3 Route the sixteen job writers through step, site by site. Size: M, 3 PRs, 6 hours.
 - [ ] T126 [US2] MEDULLA-CQ-ORCH-R811.4 Convert stored jobs to the machine shape through the offline jobs upgrade (`analytics_jobs` to `analytics_job_records`) and prove it served. Size: M, 2 PRs, 5 hours.
 - [ ] T127 [US2] MEDULLA-CQ-ORCH-R810.3 Route the broker writers through apply, function by function. Size: M, 2 PRs, 5 hours.

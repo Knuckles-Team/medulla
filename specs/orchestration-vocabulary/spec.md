@@ -124,7 +124,7 @@ Independent test: the bound tests of `MEDULLA-ORCH-VOCAB-R014.8` run this story 
 - **FR-004**: Run traces, steps, windows and durable units are admitted by shape and digest and read back in order. Rows: `MEDULLA-ORCH-VOCAB-R009`, `MEDULLA-ORCH-VOCAB-R013`.
 - **FR-005**: Run-trace metrics and measured model facts are read and written through governed paths. Rows: `MEDULLA-ORCH-VOCAB-R010`, `MEDULLA-ORCH-VOCAB-R011`.
 - **FR-006**: Spec folders and policy sources become typed nodes; policy activates only behind review. Rows: `MEDULLA-ORCH-VOCAB-R012`, `MEDULLA-ORCH-VOCAB-R806`.
-- **FR-007**: Organization, team, definition and workflow records are graph facts with named selection rules. Rows: `MEDULLA-ORCH-VOCAB-R750`, `MEDULLA-ORCH-VOCAB-R751`, `MEDULLA-ORCH-VOCAB-R800`, `MEDULLA-ORCH-VOCAB-R808`, `MEDULLA-ORCH-VOCAB-R809`.
+- **FR-007**: Organization, team, definition and workflow records are graph facts with named selection rules. Rows: `MEDULLA-ORCH-VOCAB-R750`, `MEDULLA-ORCH-VOCAB-R751`, `MEDULLA-ORCH-VOCAB-R800`, `MEDULLA-ORCH-VOCAB-R808`.
 - **FR-008**: Harness components and the improvement library keep versioned, evidenced history. Rows: `MEDULLA-ORCH-VOCAB-R801`, `MEDULLA-ORCH-VOCAB-R802`, `MEDULLA-ORCH-VOCAB-R810`.
 - **FR-009**: BPMN 2.0 and DMN classes and the step binding properties roll up to six core process terms. Rows: `MEDULLA-ORCH-VOCAB-R014`.
 - **FR-010**: every process class of every source, BPMN or EPC, states its canonical step kind with one closed annotation, so sources map onto one canonical workflow. Rows: `MEDULLA-ORCH-VOCAB-R014.9`, `MEDULLA-ORCH-VOCAB-R014.10`.

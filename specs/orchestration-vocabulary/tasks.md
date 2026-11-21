@@ -24,13 +24,13 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T017 [P] [US2] MEDULLA-ORCH-VOCAB-R004.1 Add class `:BestPractice`
 - [ ] T018 [P] [US2] MEDULLA-ORCH-VOCAB-R004.2 Add property `:appliesToTaskClass`
 - [ ] T019 [P] [US2] MEDULLA-ORCH-VOCAB-R004.3 Add rule-scope shape
-- [ ] T020 [US2] MEDULLA-ORCH-VOCAB-R004.4 Project `GuardrailRule` components as best practices
+- [ ] T020 [US2] MEDULLA-ORCH-VOCAB-R004.4 Project `GuardrailRule` components as best practices (build after T192 R003.6 and T015 R003.6.1)
 - [ ] T021 [P] [US2] MEDULLA-ORCH-VOCAB-R004.5 Add Q4 query test
 - [ ] T022 [P] [US2] MEDULLA-ORCH-VOCAB-R005.1 Add class `:ModelProfile`
 - [ ] T023 [P] [US2] MEDULLA-ORCH-VOCAB-R005.2 Add property `:needsSkill`
 - [ ] T024 [P] [US2] MEDULLA-ORCH-VOCAB-R005.3 Add property `:stepAssignedAgent`
 - [ ] T025 [P] [US2] MEDULLA-ORCH-VOCAB-R005.4 Add binding shape
-- [ ] T026 [US2] MEDULLA-ORCH-VOCAB-R005.5 Project `model_profile` components
+- [ ] T026 [US2] MEDULLA-ORCH-VOCAB-R005.5 Project `model_profile` components (build after T192 R003.6 and T015 R003.6.1)
 - [ ] T027 [P] [US2] MEDULLA-ORCH-VOCAB-R005.6 Add Q5 query test
 - [ ] T028 [P] [US1] MEDULLA-ORCH-VOCAB-R006.1 Add property `:handsOffTo`
 - [ ] T029 [P] [US1] MEDULLA-ORCH-VOCAB-R006.2 Add property `swarm:feeds`
@@ -39,7 +39,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [x] T032 [US1] MEDULLA-ORCH-VOCAB-R006.5 Project template topology to `swarm:` facts
 - [ ] T033 [P] [US1] MEDULLA-ORCH-VOCAB-R006.6 Add Q6 and Q7 query tests
 - [ ] T034 [US2] MEDULLA-ORCH-VOCAB-R007.1 Expand a task into assembly steps by `:hasStep`
-- [ ] T036 [US2] MEDULLA-ORCH-VOCAB-R007.4 Enforce slot agent-kind constraints before selection
+- [ ] T036 [US2] MEDULLA-ORCH-VOCAB-R007.4 Enforce slot agent-kind constraints before selection (build after T192 R003.6; R006.5 is landed)
 - [ ] T037 [P] [US3] MEDULLA-ORCH-VOCAB-R008.1 Register `orchestration-v1.shapes.ttl` with the shape loader
 - [ ] T039 [P] [US4] MEDULLA-ORCH-VOCAB-R009.1 Add property `:terminationReason`
 - [ ] T040 [P] [US4] MEDULLA-ORCH-VOCAB-R009.2 Add property `:peakContextTokens`
@@ -98,7 +98,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T104 [US7] MEDULLA-ORCH-VOCAB-R751.752 Refusal: team and social faults
 - [ ] T105 [US7] MEDULLA-ORCH-VOCAB-R751.753 Hot-path proof: team scoring
 - [x] T106 [US7] MEDULLA-ORCH-VOCAB-R800.1 Model: prompt template and workflow pattern
-- [ ] T107 [US7] MEDULLA-ORCH-VOCAB-R800.2 Behaviour: typed rendering and pattern selection
+- [ ] T107 [US7] MEDULLA-ORCH-VOCAB-R800.2 Behaviour: typed rendering (pattern selection retired)
 - [ ] T108 [US7] MEDULLA-ORCH-VOCAB-R800.3 Wiring: definitions are read by assembly and revised by version
 - [ ] T109 [US7] MEDULLA-ORCH-VOCAB-R800.4 Refusal: four definition faults
 - [ ] T110 [US7] MEDULLA-ORCH-VOCAB-R800.5 Evidence: revision history and render digest
@@ -117,9 +117,9 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T123 [US6] MEDULLA-ORCH-VOCAB-R012.7.4 Evidence: decisions record the active policy revision
 - [ ] T124 [US4] MEDULLA-ORCH-VOCAB-R013.7.1 Model: walkthrough manifest
 - [x] T177 [US4] MEDULLA-ORCH-VOCAB-R013.7.4 Repository-index and blob reader seams
+- [ ] T186 [US4] MEDULLA-ORCH-VOCAB-R013.7.5 Production walkthrough readers installed at boot
 - [ ] T125 [US4] MEDULLA-ORCH-VOCAB-R013.7.2 Refusal: validate the manifest on write
 - [ ] T126 [US4] MEDULLA-ORCH-VOCAB-R013.7.3 Evidence: independent readback and artifact digest
-- [ ] T127 [US7] MEDULLA-ORCH-VOCAB-R616.2.1 Export and import a team as OWL
 - [ ] T128 [P] [US8] MEDULLA-ORCH-VOCAB-R801.1 Model
 - [ ] T130 [P] [US8] MEDULLA-ORCH-VOCAB-R801.3 Wiring
 - [ ] T131 [P] [US8] MEDULLA-ORCH-VOCAB-R801.4 Refusal
@@ -138,7 +138,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T144 [P] [US5] MEDULLA-ORCH-VOCAB-R806 Policy activation method with review receipt
 - [ ] T145 [P] [US5] MEDULLA-ORCH-VOCAB-R807 Indexed agent-session query method
 - [ ] T146 [P] [US7] MEDULLA-ORCH-VOCAB-R808 AgentDefinition carries a knowledge scope
-- [ ] T147 [US7] MEDULLA-ORCH-VOCAB-R809 Lossless versioned workflow RDF export and import
 - [ ] T148 [P] [US8] MEDULLA-ORCH-VOCAB-R810 Store run-bound visual observation records
 - [ ] T149 [US9] MEDULLA-ORCH-VOCAB-R014.1 Core event, flow and lane terms
 - [ ] T150 [US9] MEDULLA-ORCH-VOCAB-R014.2 BPMN 2.0 element classes

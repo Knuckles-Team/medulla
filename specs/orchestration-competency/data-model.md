@@ -23,7 +23,7 @@ This file describes the ontology terms, record types and nodes that the rows of 
 
 ### Workflow and imported process
 
-- `WorkflowPattern` is owned by `MEDULLA-ORCH-VOCAB-R800.1`; this spec adds `:ProcessStep`, `:ProcessGate`, `:gateKind` and `:loopGate` (R700.2) and the types `ImportedProcess`, `GateKind`, `ImportedGate` and `ImportError` in the new `crates/medulla-types/src/process_import.rs` (R701.1).
+- `WorkflowPattern` is owned by `MEDULLA-ORCH-VOCAB-R800.1`; this spec adds the edge property `:loopGate` (R700.2); step kinds and gates come from the class annotations of R701.7 and the types `ImportedProcess`, `GateKind`, `ImportedGate` and `ImportError` in the new `crates/medulla-types/src/process_import.rs` (R701.1).
 - Relation: a stored workflow node `workflow:<process_iri>:v<n>` links to its process by `:compiledFrom` and to an imported model by `importedFrom`.
 
 ### Refusal tables

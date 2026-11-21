@@ -205,7 +205,7 @@ Pre-untangled design, one line per answer.
 - State. The explicit machines of R810 and R811; this row family removes the dual truths (`cancel_requested`, `lease`, `not_before_ms`, `reclaimed`).
 - Environment. None.
 
-Order: R811.1, R811.3 (three PRs), R811.4; R810.1, R810.3, R810.4. The two families are independent and run in parallel. The stored job shape changes through the storage kernel's offline upgrade: the table `analytics_jobs` becomes `analytics_job_records`, so the `Jobs` layout digest changes and the predecessor `JOBS_BEFORE_JOB_MACHINE` is upgraded once by `upgrade_jobs_job_machine` at engine open (`migrate_on_open`). Broker messages need no conversion: no stored message holds a text the machine does not read. `Checkpoint.stage` is renamed `label` and is not a machine (R811.6).
+Order: R811.1 and R811.3 as one change (three commits), then R811.4 in the same train; R810.1, R810.3, R810.4 (R810.4 its own change with a workspace compile). The two families are independent and run in parallel. The stored job shape changes through the storage kernel's offline upgrade: the table `analytics_jobs` becomes `analytics_job_records`, so the `Jobs` layout digest changes and the predecessor `JOBS_BEFORE_JOB_MACHINE` is upgraded once by `upgrade_jobs_job_machine` at engine open (`migrate_on_open`). Broker messages need no conversion: no stored message holds a text the machine does not read. `Checkpoint.stage` is renamed `label` and is not a machine (R811.6).
 
 ## Cross-repo seams
 
