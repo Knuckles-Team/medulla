@@ -530,6 +530,23 @@ impl ContractHistory {
         })
     }
 
+    /// A history of the active release and one breaking release held behind `change_request`, as
+    /// the connector's head row stores them (MEDULLA-TYPED-PACKS-R107.6). The held release is in
+    /// the machine's initial `pending` state.
+    pub fn with_held(
+        active: ReleaseContract,
+        held: ReleaseContract,
+        breaks: Vec<ContractBreak>,
+        change_request: ChangeRequest,
+    ) -> Result<Self, ContractDiffError> {
+        let mut history = Self::with_active(active)?;
+        held.version.validate().map_err(ContractDiffError::Record)?;
+        history
+            .releases
+            .push(StoredRelease::new(held, breaks, Some(change_request)));
+        Ok(history)
+    }
+
     /// The release queries resolve through.
     pub fn active(&self) -> Option<&StoredRelease> {
         self.releases

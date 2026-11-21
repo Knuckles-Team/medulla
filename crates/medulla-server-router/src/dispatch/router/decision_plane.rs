@@ -484,17 +484,31 @@ async fn dispatch_catalog_admin_methods(
         // MEDULLA-TYPED-PACKS-R802.3: the stewardship ops commit through the graph gateway.
         Method::Stewardship { op } => {
             dispatch_boxed(async {
-                medulla_server_graph::dispatch::stewardship::dispatch_stewardship(
-                    state,
-                    medulla_server_graph::dispatch::graph_client::GraphTarget {
-                        graph: &req.graph,
-                        req_id: req.id,
-                        caller: req.agent_id.as_deref(),
-                        verified: verified_context,
-                    },
-                    *op,
+                let target = medulla_server_graph::dispatch::graph_client::GraphTarget {
+                    graph: &req.graph,
+                    req_id: req.id,
+                    caller: req.agent_id.as_deref(),
+                    verified: verified_context,
+                };
+                let applied = match op.as_ref() {
+                    medulla_catalog_types::stewardship::StewardshipOp::Apply { request_id } => {
+                        Some(request_id.clone())
+                    }
+                    _ => None,
+                };
+                let response = medulla_server_graph::dispatch::stewardship::dispatch_stewardship(
+                    state, target, *op,
                 )
-                .await
+                .await;
+                // MEDULLA-TYPED-PACKS-R107.6: an applied change request that holds a pack
+                // release activates it through `ContractHistory::approve`, the one path.
+                match applied {
+                    Some(request_id) if response.refusal_text().is_none() => {
+                        activate_held_pack_release(state, req, verified_context, &request_id, response)
+                            .await
+                    }
+                    _ => response,
+                }
             })
             .await
         }
@@ -524,4 +538,37 @@ async fn dispatch_catalog_admin_methods(
         }
         other => return ControlFlow::Continue(other),
     })
+}
+
+/// Activate the pack release held behind the change request just applied, when it holds one.
+/// A failed activation answers its refusal: the request stays applied and a repeat of the
+/// apply finds nothing held.
+async fn activate_held_pack_release(
+    state: &Arc<RwLock<ServerState>>,
+    req: &DispatchHeader,
+    verified: &VerifiedRequestContext,
+    request_id: &str,
+    applied: Response,
+) -> Response {
+    let target = medulla_server_graph::dispatch::graph_client::GraphTarget {
+        graph: &req.graph,
+        req_id: req.id,
+        caller: req.agent_id.as_deref(),
+        verified,
+    };
+    let (subject, digest) = match medulla_server_graph::dispatch::stewardship::request_subject(
+        state, &target, request_id,
+    )
+    .await
+    {
+        Ok(subject) => subject,
+        Err(refusal) => return Response::err(req.id, refusal),
+    };
+    match medulla_h_admin::admin::activate_held_release(state, req.id, verified, &subject, &digest)
+        .await
+    {
+        Ok(_) => applied,
+        Err(refusal) if refusal.starts_with("PACK_RELEASE_NOT_HELD") => applied,
+        Err(refusal) => Response::err(req.id, refusal),
+    }
 }

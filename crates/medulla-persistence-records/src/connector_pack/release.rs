@@ -22,6 +22,7 @@ use super::ConnectorPackHeadRow;
 use crate::agent_library::AgentLibraryStore;
 
 const RELEASE_HOLD_RESULT_SCHEMA_ID: &str = "connector-pack-release-hold-result.v1";
+const RELEASE_ACTIVATE_RESULT_SCHEMA_ID: &str = "connector-pack-release-activate-result.v1";
 
 impl AgentLibraryStore {
     /// The release summary the connector's current head activated, read under
@@ -130,6 +131,82 @@ impl AgentLibraryStore {
                 .insert((tenant.as_str(), connector.as_str()), bytes.as_slice())
                 .map_err(|error| error.to_string())?;
             Ok(pending.clone())
+        })
+    }
+    /// Make the held release the connector's active one, in one admitted write
+    /// (MEDULLA-TYPED-PACKS-R107.6). The write is a compare-and-set on the held
+    /// release: it refuses `PACK_RELEASE_NOT_HELD` when no release is held or the held
+    /// one's change request proposes another digest than `proposed_digest`. The
+    /// caller decided the activation through the release machine and passes the
+    /// activated summary; the held slot is cleared and nothing else of the row moves.
+    pub fn activate_connector_pack_release(
+        &self,
+        context: AgentLibraryMutationContext,
+        connector: &ResourceId,
+        proposed_digest: &str,
+        activated: PackRelease,
+    ) -> Result<PackRelease, String> {
+        medulla_agent_types::agent_library::validate_key(&context.tenant_id, connector.as_str())?;
+        medulla_catalog_types::connector_pack::validate_connector(connector)?;
+        activated.validate().map_err(|error| error.to_string())?;
+        let head = self
+            .connector_pack_head_row(&context.tenant_id, connector)?
+            .ok_or_else(|| "PACK_RELEASE_NOT_HELD: connector pack head is absent".to_string())?;
+        let discriminator = Digest256::framed(
+            b"eg/connector-pack-release-activate/v1",
+            &[connector.as_str().as_bytes(), proposed_digest.as_bytes()],
+        )
+        .map(Digest256::to_hex)?;
+        let identity = PackWriteIdentity {
+            purpose: "connector-pack:release-activate",
+            kind: "connector-pack-release-activate",
+            slug: "connector-pack-release-activate",
+            subject: connector.as_str(),
+            revision: head.head.binding_revision,
+            discriminator: Some(&discriminator),
+            result_schema: RELEASE_ACTIVATE_RESULT_SCHEMA_ID,
+            noun: "connector pack release activation",
+        };
+        let effects = PackWriteEffects {
+            operations: vec![MutationOperation {
+                ordinal: 0,
+                surface: MutationSurface::Lifecycle,
+                domain: DurabilityDomain::ControlPlane,
+                method: Method::ApplyMutation {
+                    event_type: "connector_pack_release_activate".to_string(),
+                    query: format!("{}:{discriminator}", connector.as_str()),
+                },
+            }],
+            outbox: Vec::new(),
+        };
+        let tenant = context.tenant_id.clone();
+        self.commit_pack_write(&context, identity, effects, |write, _staged| {
+            let mut heads = write.open_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
+            let current = heads
+                .get((tenant.as_str(), connector.as_str()))
+                .map_err(|error| error.to_string())?
+                .ok_or_else(|| "PACK_RELEASE_NOT_HELD: connector pack head is absent".to_string())?;
+            let mut head: ConnectorPackHeadRow =
+                super::undecodable::decode_stored(current.value(), "connector pack head")?;
+            drop(current);
+            let held = head
+                .pending_release
+                .as_ref()
+                .filter(|held| held.change_request.proposed_digest == proposed_digest)
+                .ok_or_else(|| {
+                    "PACK_RELEASE_NOT_HELD: no release is held behind this change request"
+                        .to_string()
+                })?;
+            if held.release.version.version != activated.version.version {
+                return Err("PACK_RELEASE_NOT_HELD: the activated version is not the held one".to_string());
+            }
+            head.release = Some(activated.clone());
+            head.pending_release = None;
+            let bytes = medulla_storage::encode_bounded(&head, "connector pack head")?;
+            heads
+                .insert((tenant.as_str(), connector.as_str()), bytes.as_slice())
+                .map_err(|error| error.to_string())?;
+            Ok(activated.clone())
         })
     }
 }

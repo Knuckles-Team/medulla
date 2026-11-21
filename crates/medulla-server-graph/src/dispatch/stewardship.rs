@@ -631,6 +631,16 @@ async fn apply(
     receipt(state, target, id.to_string(), &scopes, Some(request), None).await
 }
 
+/// The target and proposed digest of change request `id` of the verified tenant.
+pub async fn request_subject(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    id: &str,
+) -> Result<(String, String), String> {
+    let stored = stored_request(state, target, id).await?;
+    Ok((stored.request.target, stored.request.proposed_digest))
+}
+
 async fn certify_asset(
     state: &Arc<RwLock<ServerState>>,
     target: &GraphTarget<'_>,

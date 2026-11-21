@@ -64,6 +64,7 @@ pub use backup::backup_bundle_name;
 #[cfg(feature = "redb")]
 pub use cluster::try_handle;
 pub use connector_pack::handle_connector_pack;
+pub use connector_pack::release_approval::activate_held_release;
 #[cfg(feature = "redb")]
 pub use package_validation::handle_publish_skill_package;
 pub use workflow_registry::handle_workflow_registry_read;

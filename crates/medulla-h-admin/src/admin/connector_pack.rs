@@ -31,6 +31,7 @@ pub(crate) mod contract_diff;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub(crate) mod import;
 pub(crate) mod reconcile;
+pub(crate) mod release_approval;
 pub(crate) mod reproject;
 #[cfg(all(feature = "rdf", feature = "shacl"))]
 pub(crate) mod seed;
