@@ -4,7 +4,7 @@
 
 use super::*;
 
-#[cfg(test)]
+#[cfg(any(test, feature = "test-support"))]
 pub mod run_fixture;
 
 pub const GRAPH: &str = "graph-a";

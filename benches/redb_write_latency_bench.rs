@@ -24,6 +24,16 @@
 //!   * `MEDULLA_WRITE_LATENCY_SIZES` -- comma-separated graph sizes (default
 //!     `0,10000,50000`)
 //!
+//!   * `MEDULLA_WRITE_LATENCY_GROUP_SAMPLES` -- samples per native work-item
+//!     group (default 200)
+//!
+//! After the sweep, three native work-item groups run over throwaway shards
+//! (`work_items`): `run_owner_recovery` (MEDULLA-DURABLE-KERNEL-R028.4.2),
+//! `current_plan_publication_readback` (MEDULLA-DURABLE-KERNEL-R028.5.4) and
+//! `paired_pending_consumption` (MEDULLA-DURABLE-KERNEL-R039.4.2). Each writes a
+//! receipt to `benches/receipts/<release>/<group>.json`, and a missed budget exits
+//! non-zero, which fails the nightly job.
+//!
 //! Run: cargo bench --features full --bench redb_write_latency_bench
 
 use std::collections::BTreeMap;
@@ -40,6 +50,15 @@ use tracing::Subscriber;
 use tracing_subscriber::layer::{Context, SubscriberExt};
 use tracing_subscriber::registry::LookupSpan;
 use tracing_subscriber::Layer;
+
+#[path = "common/claim.rs"]
+mod claim;
+#[path = "redb_write_latency_bench/work_items.rs"]
+mod work_items;
+
+/// Counts heap bytes for the transient-memory budgets of the work-item groups.
+#[global_allocator]
+static ALLOCATOR: work_items::CountingAlloc = work_items::CountingAlloc;
 
 const GRAPH: &str = "latency_graph";
 const PAYLOAD_BYTES: usize = 256;
@@ -338,4 +357,24 @@ fn main() {
     }
     backend.shutdown();
     let _ = std::fs::remove_dir_all(&dir);
+
+    let samples = env_usize("MEDULLA_WRITE_LATENCY_GROUP_SAMPLES", 200);
+    let groups = [
+        work_items::run_owner_recovery(samples),
+        work_items::current_plan_publication_readback(samples),
+        work_items::paired_pending_consumption(samples),
+    ];
+    let release = std::env::var("MEDULLA_BENCH_RELEASE").unwrap_or_else(|_| "dev".to_string());
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("benches/receipts");
+    let mut breaches = Vec::new();
+    for group in groups {
+        let path = claim::write_receipt(&root, &release, group.case, &group.receipt)
+            .expect("write the group receipt");
+        println!("receipt {}", path.display());
+        breaches.extend(group.breach);
+    }
+    if !breaches.is_empty() {
+        eprintln!("work-item budgets missed: {}", breaches.join("; "));
+        std::process::exit(1);
+    }
 }

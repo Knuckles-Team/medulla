@@ -1922,6 +1922,9 @@ medulla-persistence = { path = "crates/medulla-persistence", features = ["test-s
 medulla-persistence-records = { path = "crates/medulla-persistence-records", features = ["test-support"] }
 medulla-server-api = { path = "crates/medulla-server-api", features = ["test-support"] }
 medulla-store = { path = "crates/medulla-store", features = ["test-support"] }
+# The work-item shard fixtures the redb write-latency bench's native groups seed
+# with (MEDULLA-DURABLE-KERNEL-R028.4.2, R028.5.4, R039.4.2).
+medulla-work-store = { path = "crates/medulla-work-store", features = ["test-support"] }
 medulla-store-apply = { path = "crates/medulla-store-apply", features = ["test-support"] }
 medulla-protocol-types = { path = "crates/medulla-protocol-types", features = ["test-support"] }
 medulla-source-types = { path = "crates/medulla-source-types", features = ["test-support"] }

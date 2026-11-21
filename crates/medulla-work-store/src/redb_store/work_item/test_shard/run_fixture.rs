@@ -6,7 +6,7 @@ use medulla_work_types::native_control::SubmitWorkItemRequest;
 
 type Row = serde_json::Map<String, serde_json::Value>;
 
-pub(in crate::redb_store::work_item) fn admission(
+pub fn admission(
     metadata: serde_json::Value,
 ) -> SubmitWorkItemRequest {
     let mut request = super::run_request();
@@ -16,7 +16,7 @@ pub(in crate::redb_store::work_item) fn admission(
 
 /// Open graph-row tables inside the same admitted transaction used by native
 /// transitions. Errors skip finish/commit, preserving rollback coverage.
-pub(in crate::redb_store::work_item) fn with_rows<R>(
+pub fn with_rows<R>(
     shard: &Shard,
     tag: &str,
     now: u64,
@@ -31,7 +31,7 @@ pub(in crate::redb_store::work_item) fn with_rows<R>(
 
 /// Seed the canonical owner-bound live lease, including its private native
 /// claim record. Each view supplies only the additional row fields it needs.
-pub(in crate::redb_store::work_item) fn seed_claim(
+pub fn seed_claim(
     shard: &Shard,
     customize: impl FnOnce(&mut Row),
 ) {
