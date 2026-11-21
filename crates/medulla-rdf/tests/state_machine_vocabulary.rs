@@ -1415,3 +1415,10 @@ fn semantic_machine_matches_edge_table() {
     sm::assert_extends_core("Semantic");
 }
 
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.4
+#[test]
+fn direct_state_install_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_direct_state::direct_state::DIRECT_STATE_INSTALL_MACHINE);
+    sm::assert_extends_core("DirectStateInstall");
+}

@@ -299,7 +299,10 @@ async fn current_durability_retry_rejects_published_journal_path_replacement() {
         .unwrap();
     let staged = registry.stage_all(&install, validated).unwrap();
     let mut journal = staged.prepared_journal("a".repeat(64)).unwrap();
-    journal.phase = DirectStateInstallPhase::Published;
+    journal.phase = journal
+        .phase
+        .apply(DirectStateInstallEvent::Publish)
+        .unwrap();
     let current_image = journal::current_image_from_journal(&journal).unwrap();
     let current_bytes = rmp_serde::to_vec_named(&current_image).unwrap();
     let mut options = OpenOptions::new();

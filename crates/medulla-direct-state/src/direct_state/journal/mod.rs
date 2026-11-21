@@ -2,10 +2,14 @@ use super::{authority::*, contract::*, filesystem::*, generation::*, image::*, *
 
 mod current;
 mod install;
+mod install_machine;
 
 pub use current::{
     CurrentCleanupRecovery, CurrentDurabilityRecovery, CurrentPromotion,
     DirectStateRecoveryCompletion, DurableCurrentImage, PendingAbandonRecovery, PendingAbandonment,
+};
+pub use install_machine::{
+    DirectStateInstallEvent, DirectStateInstallGuard, DIRECT_STATE_INSTALL_MACHINE,
 };
 pub use install::{
     DurablePreparedJournal, DurablePublishedJournal, PreparedGenerationRecovery,

@@ -248,10 +248,8 @@ async fn seven_domain_prepared_crash_recovers_publishes_and_restarts_current() {
     let prepared = registry
         .bind_recovered_prepared(&install, durable_prepared, assembled)
         .unwrap();
-    let mut published_journal = prepared.journal().journal().clone();
-    published_journal.phase = DirectStateInstallPhase::Published;
     let published = match registry
-        .transition_prepared_to_published(&install, &journal_path, &prepared, &published_journal)
+        .transition_prepared_to_published(&install, &journal_path, &prepared)
         .unwrap()
     {
         PublishedJournalPublication::Durable(published) => published,
@@ -306,10 +304,8 @@ async fn seven_domain_prepared_crash_recovers_publishes_and_restarts_current() {
         PreparedJournalPublication::Durable(prepared) => prepared,
         _ => panic!("test filesystem must make second Prepared durable"),
     };
-    let mut published_journal = prepared.journal().journal().clone();
-    published_journal.phase = DirectStateInstallPhase::Published;
     let published = match registry
-        .transition_prepared_to_published(&install, &journal_path, &prepared, &published_journal)
+        .transition_prepared_to_published(&install, &journal_path, &prepared)
         .unwrap()
     {
         PublishedJournalPublication::Durable(published) => published,

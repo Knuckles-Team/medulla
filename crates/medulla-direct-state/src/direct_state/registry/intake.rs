@@ -45,7 +45,7 @@ impl StagedWholeGeneration {
             schema_version: DIRECT_STATE_SCHEMA_VERSION,
             snapshot_sha256,
             scope: self.scope.clone(),
-            phase: DirectStateInstallPhase::Prepared,
+            phase: DIRECT_STATE_INSTALL_MACHINE.initial,
             sections: self
                 .sections
                 .iter()

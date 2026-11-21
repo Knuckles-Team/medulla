@@ -140,7 +140,6 @@ impl DirectStateRegistry {
         permit: &StateImageInstallPermit,
         path: &Path,
         prepared: &PreparedWholeGeneration,
-        replacement: &DirectStateInstallJournal,
     ) -> Result<PublishedJournalPublication, String> {
         permit.validate_affinity(&self.authority_identity)?;
         self.validate_filesystem()?;
@@ -160,7 +159,17 @@ impl DirectStateRegistry {
         {
             return Err("Prepared whole generation belongs to another registry".into());
         }
-        replace_install_journal(permit, &self.journal_root, path, prepared, replacement)
+        // The Published journal is the Prepared one advanced by the machine's one event.
+        let replacement = DirectStateInstallJournal {
+            phase: prepared
+                .journal
+                .journal
+                .phase
+                .apply(DirectStateInstallEvent::Publish)
+                .map_err(|refused| refused.to_string())?,
+            ..prepared.journal.journal.clone()
+        };
+        replace_install_journal(permit, &self.journal_root, path, prepared, &replacement)
     }
 
     pub fn promote_published_to_current(

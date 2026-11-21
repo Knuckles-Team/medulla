@@ -132,12 +132,12 @@ pub use image::{
 };
 pub use journal::{
     CurrentCleanupRecovery, CurrentDurabilityRecovery, CurrentPromotion, DirectStateCurrentImage,
-    DirectStateGenerationManifest, DirectStateInstallJournal, DirectStateInstallPhase,
-    DirectStateInstallSection, DirectStateRecoveryCompletion, DurableCurrentImage,
+    DirectStateGenerationManifest, DirectStateInstallEvent, DirectStateInstallGuard,
+    DirectStateInstallJournal, DirectStateInstallPhase, DirectStateInstallSection, DirectStateRecoveryCompletion, DurableCurrentImage,
     DurablePendingJournal, DurablePreparedJournal, DurablePublishedJournal, PendingAbandonRecovery,
     PendingAbandonment, PreparedGenerationRecovery, PreparedJournalPublication,
     PreparedJournalRecovery, PreparedWholeGeneration, PublishedJournalPublication,
-    PublishedJournalRecovery,
+    PublishedJournalRecovery, DIRECT_STATE_INSTALL_MACHINE,
 };
 pub use provider::{
     DirectStateProvider, DirectStateProviderStage, DirectStateRecoveredValue,

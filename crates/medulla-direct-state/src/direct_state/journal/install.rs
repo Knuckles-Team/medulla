@@ -356,9 +356,7 @@ fn validate_install_transition(
     if expected.path != path {
         return Err("Prepared journal token belongs to a different path".into());
     }
-    if expected.journal.phase != DirectStateInstallPhase::Prepared
-        || replacement.phase != DirectStateInstallPhase::Published
-        || expected.journal.snapshot_sha256 != replacement.snapshot_sha256
+    if expected.journal.snapshot_sha256 != replacement.snapshot_sha256
         || expected.journal.scope != replacement.scope
         || expected.journal.sections != replacement.sections
     {
