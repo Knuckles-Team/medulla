@@ -511,6 +511,12 @@
     rdfs:comment "A post on a social platform (Postiz post)." ;
     rdfs:subClassOf :Document .
 
+:announcesStream a owl:ObjectProperty ;
+    rdfs:label "announces stream" ;
+    rdfs:comment "Links a social post to the broadcast stream whose URL its body announces. No open-vocabulary term carries this meaning." ;
+    rdfs:domain :SocialPost ;
+    rdfs:range :BroadcastStream .
+
 :PublishingChannel a owl:Class ;
     rdfs:label "Publishing Channel" ;
     rdfs:comment "A platform channel on which posts are published (Postiz integration)." ;

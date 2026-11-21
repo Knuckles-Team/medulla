@@ -208,3 +208,12 @@ fn engagement_metric_value_declared() {
         "xsd:nonNegativeInteger",
     );
 }
+
+/// MEDULLA-MEDIA-VOCAB-R652: a social post announces the broadcast stream its body names.
+// spec: MEDULLA-MEDIA-VOCAB-R652
+#[test]
+fn announces_stream_declared() {
+    let triples = load_vocabulary();
+    assert_typed(&triples, "announcesStream", "ObjectProperty");
+    assert_domain_range(&triples, "announcesStream", "SocialPost", "BroadcastStream");
+}
