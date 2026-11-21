@@ -7525,3 +7525,80 @@
     :toState :IncidentRecordMachine_Resolved ;
     :firedBy :IncidentRecordMachine_Event_resolve .
 
+
+# spec: MEDULLA-ORCH-VOCAB-R815.9
+# The Workflow machine. The Rust edge table is the same table; the ontology
+# test asserts equal edge sets.
+
+:WorkflowState a owl:Class ;
+    rdfs:label "Workflow State" ;
+    rdfs:comment "A state of the Workflow machine." ;
+    rdfs:subClassOf :State .
+
+:WorkflowTerminalState a owl:Class ;
+    rdfs:label "Workflow Terminal State" ;
+    rdfs:comment "A terminal state of the Workflow machine." ;
+    rdfs:subClassOf :TerminalState, :WorkflowState .
+
+:WorkflowTransition a owl:Class ;
+    rdfs:label "Workflow Transition" ;
+    rdfs:comment "A transition of the Workflow machine." ;
+    rdfs:subClassOf :Transition .
+
+:WorkflowEvent a owl:Class ;
+    rdfs:label "Workflow Event" ;
+    rdfs:comment "A event of the Workflow machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:WorkflowGuard a owl:Class ;
+    rdfs:label "Workflow Guard" ;
+    rdfs:comment "A guard of the Workflow machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:WorkflowMachine a :StateMachine ;
+    rdfs:label "Workflow machine" ;
+    :initialState :WorkflowMachine_Active ;
+    :hasState :WorkflowMachine_Active, :WorkflowMachine_Stale, :WorkflowMachine_Withdrawn .
+
+:WorkflowMachine_Active a :WorkflowState ;
+    rdfs:label "Workflow Active" ;
+    :storedForm "active" .
+
+:WorkflowMachine_Stale a :WorkflowState ;
+    rdfs:label "Workflow Stale" ;
+    :storedForm "stale" .
+
+:WorkflowMachine_Withdrawn a :WorkflowTerminalState ;
+    rdfs:label "Workflow Withdrawn" ;
+    :storedForm "withdrawn" .
+
+:WorkflowMachine_Event_mark_stale a :WorkflowEvent ;
+    rdfs:label "Workflow mark_stale" .
+
+:WorkflowMachine_Event_withdraw a :WorkflowEvent ;
+    rdfs:label "Workflow withdraw" .
+
+:WorkflowMachine_Event_reactivate a :WorkflowEvent ;
+    rdfs:label "Workflow reactivate" .
+
+:WorkflowMachine_F01 a :WorkflowTransition ;
+    rdfs:label "Workflow F01" ;
+    :edgeId "F01" ;
+    :fromState :WorkflowMachine_Active ;
+    :toState :WorkflowMachine_Stale ;
+    :firedBy :WorkflowMachine_Event_mark_stale .
+
+:WorkflowMachine_F02 a :WorkflowTransition ;
+    rdfs:label "Workflow F02" ;
+    :edgeId "F02" ;
+    :fromState :WorkflowMachine_Active ;
+    :toState :WorkflowMachine_Withdrawn ;
+    :firedBy :WorkflowMachine_Event_withdraw .
+
+:WorkflowMachine_F03 a :WorkflowTransition ;
+    rdfs:label "Workflow F03" ;
+    :edgeId "F03" ;
+    :fromState :WorkflowMachine_Stale ;
+    :toState :WorkflowMachine_Withdrawn ;
+    :firedBy :WorkflowMachine_Event_withdraw .
+

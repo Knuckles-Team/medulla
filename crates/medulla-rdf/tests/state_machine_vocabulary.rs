@@ -928,6 +928,17 @@ fn incident_record_machine_classes_extend_core() {
     sm::assert_extends_core("IncidentRecord");
 }
 
+// spec: MEDULLA-ORCH-VOCAB-R815.9
+#[test]
+fn workflow_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_work_types::orchestration::workflow_machine::WORKFLOW_MACHINE);
+}
+// spec: MEDULLA-ORCH-VOCAB-R815.9
+#[test]
+fn workflow_machine_classes_extend_core() {
+    sm::assert_extends_core("Workflow");
+}
+
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R014.2.3
 #[test]
 fn catalog_probe_machine_matches_edge_table() {

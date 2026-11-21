@@ -1746,6 +1746,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "Loops",
     // MEDULLA-ORCH-VOCAB-R815.6: the incident record status machine.
     "IncidentSetStatus",
+    // MEDULLA-ORCH-VOCAB-R815.9: the workflow registration lifecycle machine.
+    "WorkflowRegistry",
 ];
 
 /// The wire code of a refused machine transition.

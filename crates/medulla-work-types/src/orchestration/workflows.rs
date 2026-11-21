@@ -83,15 +83,6 @@ impl WorkflowLifecycle {
             Self::Stale => "stale",
         }
     }
-
-    pub fn parse(text: &str) -> Option<Self> {
-        match text {
-            "active" => Some(Self::Active),
-            "withdrawn" => Some(Self::Withdrawn),
-            "stale" => Some(Self::Stale),
-            _ => None,
-        }
-    }
 }
 
 /// One served registration: the immutable identity, the scope that owns it and
@@ -145,7 +136,8 @@ impl WorkflowRegistrationEntry {
                 content_digest: text("content_digest")?,
             },
             owner_scope: text("owner_scope")?,
-            lifecycle: WorkflowLifecycle::parse(&text("lifecycle")?)?,
+            lifecycle: super::workflow_machine::WORKFLOW_MACHINE
+                .state_from_stored(&text("lifecycle")?)?,
         })
     }
 }

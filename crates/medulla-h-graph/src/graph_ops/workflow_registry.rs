@@ -10,8 +10,10 @@
 
 use super::*;
 use medulla_protocol_types::result_contract::coordination::WorkflowRegistryRegister;
+use medulla_work_types::orchestration::workflow_machine::WORKFLOW_MACHINE;
 use medulla_work_types::orchestration::workflows::{
-    WorkflowRegistrationEntry, WorkflowRegistry, WorkflowRegistryError, WorkflowRegistryOp,
+    WorkflowLifecycle, WorkflowRegistrationEntry, WorkflowRegistry, WorkflowRegistryError,
+    WorkflowRegistryOp,
 };
 
 /// The closed refusal codes of the workflow registry; each is a registered
@@ -65,19 +67,31 @@ pub(super) fn admit_registration(
     let stored = core
         .get_node_properties(&node_id)
         .and_then(|blob| medulla_types::msgpack::decode_property_object(&blob).ok());
-    if let Some(stored) = stored
+    match stored
         .as_ref()
         .and_then(WorkflowRegistrationEntry::from_node_properties)
     {
-        if stored.owner_scope != tenant_scope {
-            return Err(refuse(
-                WorkflowRegistryError::Unauthorized,
-                format!("{node_id} belongs to another scope"),
-            ));
+        Some(stored) => {
+            if stored.owner_scope != tenant_scope {
+                return Err(refuse(
+                    WorkflowRegistryError::Unauthorized,
+                    format!("{node_id} belongs to another scope"),
+                ));
+            }
+            if stored.lifecycle == entry.lifecycle {
+                return Ok(Admitted::Same(entry));
+            }
+            // MEDULLA-ORCH-VOCAB-R815.9: a changed lifecycle fires the event of the
+            // requested state on the stored one; `Reactivate` has no edge.
+            stored
+                .lifecycle
+                .apply(WorkflowLifecycle::event_to(entry.lifecycle))
+                .map_err(|refused| refused.to_string())?;
         }
-        if stored == entry {
-            return Ok(Admitted::Same(entry));
+        None if entry.lifecycle != WORKFLOW_MACHINE.initial => {
+            return Err("INVALID_ARGUMENT: a first registration is active".to_string());
         }
+        None => {}
     }
     let properties_msgpack = rmp_serde::to_vec_named(&entry.node_properties(tenant_id))
         .map_err(|error| format!("INVALID_ARGUMENT: workflow encoding failed: {error}"))?;

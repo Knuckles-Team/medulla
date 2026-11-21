@@ -75,6 +75,41 @@ fn register_read_and_refuse_unknown() {
     );
 }
 
+// spec: MEDULLA-ORCH-VOCAB-R815.9
+#[test]
+fn reactivating_a_withdrawn_workflow_refuses() {
+    let core = GraphCore::new();
+    // A first registration must be active.
+    let mut first = registration(identity());
+    first.lifecycle = WorkflowLifecycle::Stale;
+    let refused = admit_registration(&core, TENANT, "scope-a", &first).unwrap_err();
+    assert_eq!(refused, "INVALID_ARGUMENT: a first registration is active");
+    assert_eq!(core.node_count(), 0);
+
+    let Admitted::Write(write, _) =
+        admit_registration(&core, TENANT, "scope-a", &registration(identity())).unwrap()
+    else {
+        panic!("a first registration writes");
+    };
+    apply_coalescable_write(&core, &write).unwrap();
+
+    let mut withdrawn = registration(identity());
+    withdrawn.lifecycle = WorkflowLifecycle::Withdrawn;
+    let Admitted::Write(write, _) =
+        admit_registration(&core, TENANT, "scope-a", &withdrawn).unwrap()
+    else {
+        panic!("withdrawing an active workflow writes");
+    };
+    apply_coalescable_write(&core, &write).unwrap();
+
+    let refused =
+        admit_registration(&core, TENANT, "scope-a", &registration(identity())).unwrap_err();
+    assert!(refused.starts_with("TRANSITION_REFUSED: "), "{refused}");
+    assert!(refused.contains("terminal_state"), "{refused}");
+    let held = stored(&core, &identity()).expect("the node stays");
+    assert_eq!(held["lifecycle"], "withdrawn");
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R166.4
 #[test]
 fn unknown_identity_refuses_without_default() {

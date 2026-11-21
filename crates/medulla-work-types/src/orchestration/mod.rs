@@ -20,6 +20,7 @@ pub mod errors;
 pub mod improvement;
 pub mod org;
 pub mod teams;
+pub mod workflow_machine;
 pub mod workflows;
 
 use serde::{Deserialize, Serialize};
