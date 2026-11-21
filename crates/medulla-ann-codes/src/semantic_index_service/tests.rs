@@ -7,8 +7,8 @@ use super::{
     coalesce_sql_source_record_to_s1, source_reconciliation_wakeup_digest,
     sql_source_deletion_proof, sql_source_revision_for_epoch, sql_source_stage_artifact,
     validate_page_revision_against_binding, SemanticIndexService,
-    SemanticSourceReconciliationCheckpoint, SemanticSourceReconciliationPhase,
-    SemanticSqlSourceReadPage, SemanticSqlSourceReadPort, SemanticSqlSourceRecord,
+    SemanticSourceReconciliationCheckpoint, SemanticSourceReconciliationEvent,
+    SemanticSourceReconciliationPhase, SemanticSqlSourceReadPage, SemanticSqlSourceReadPort, SemanticSqlSourceRecord,
     SemanticSqlSourceValue,
 };
 use crate::test_scope_grant::TEST_PRINCIPAL;
@@ -454,9 +454,31 @@ fn newer_dirty_wakeup_waits_for_an_older_finalizing_checkpoint() {
         pages_seen: 1,
         complete_snapshot_receipt_digest: Some(digest(77)),
     };
+    // The first checkpoint of a generation starts in the initial phase; the
+    // finalizing checkpoint is reached from it by the complete-scan event.
+    let scanning = SemanticSourceReconciliationCheckpoint {
+        phase: SemanticSourceReconciliationPhase::Scanning,
+        source_cursor: Some(vec![1]),
+        complete_snapshot_receipt_digest: None,
+        ..checkpoint.clone()
+    };
     service
         .store
-        .write_source_reconciliation_checkpoint(binding.generation, None, &checkpoint)
+        .write_source_reconciliation_checkpoint(
+            binding.generation,
+            None,
+            SemanticSourceReconciliationEvent::AdvanceScan,
+            &scanning,
+        )
+        .unwrap();
+    service
+        .store
+        .write_source_reconciliation_checkpoint(
+            binding.generation,
+            Some(&scanning),
+            SemanticSourceReconciliationEvent::CompleteScan,
+            &checkpoint,
+        )
         .unwrap();
 
     let calls_r2 = Arc::new(Mutex::new(Vec::new()));
@@ -528,9 +550,31 @@ fn same_dirty_wakeup_resumes_finalization_and_stale_clear_is_rejected() {
         pages_seen: 1,
         complete_snapshot_receipt_digest: Some(digest(79)),
     };
+    // The first checkpoint of a generation starts in the initial phase; the
+    // finalizing checkpoint is reached from it by the complete-scan event.
+    let scanning = SemanticSourceReconciliationCheckpoint {
+        phase: SemanticSourceReconciliationPhase::Scanning,
+        source_cursor: Some(vec![1]),
+        complete_snapshot_receipt_digest: None,
+        ..checkpoint.clone()
+    };
     service
         .store
-        .write_source_reconciliation_checkpoint(binding.generation, None, &checkpoint)
+        .write_source_reconciliation_checkpoint(
+            binding.generation,
+            None,
+            SemanticSourceReconciliationEvent::AdvanceScan,
+            &scanning,
+        )
+        .unwrap();
+    service
+        .store
+        .write_source_reconciliation_checkpoint(
+            binding.generation,
+            Some(&scanning),
+            SemanticSourceReconciliationEvent::CompleteScan,
+            &checkpoint,
+        )
         .unwrap();
     let calls = Arc::new(Mutex::new(Vec::new()));
     let read_port = super::test_fixture::ScriptedSourcePort::empty(revision, Arc::clone(&calls));

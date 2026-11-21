@@ -80,6 +80,7 @@ mod predecessor;
 mod promotion;
 pub(crate) mod reconciliation;
 mod reconciliation_codec;
+pub mod semantic_source_reconciliation_machine;
 mod record;
 mod refresh;
 mod rows;

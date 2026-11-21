@@ -169,7 +169,8 @@ medulla-numeric = { path = "../medulla-numeric" }
 medulla-jobs = { path = "../medulla-jobs" }
 # The direct-state install and exact-retirement machine edge tables (MEDULLA-DURABLE-KERNEL-R874.4, R874.6).
 medulla-direct-state = { path = "../medulla-direct-state" }
-# The semantic index stage machine edge table (MEDULLA-DURABLE-KERNEL-R874.18).
+# The semantic source-reconciliation and semantic stage machine edge tables (MEDULLA-DURABLE-KERNEL-R874.17, R874.18).
+medulla-ann-codes = { path = "../medulla-ann-codes" }
 medulla-index-types = { path = "../medulla-index-types" }
 medulla-store = { path = "../medulla-store", features = ["redb", "statechart"] }
 medulla-virtual-graph = { path = "../medulla-virtual-graph", features = ["rdf"] }

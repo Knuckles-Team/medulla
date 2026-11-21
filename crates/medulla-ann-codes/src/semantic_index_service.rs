@@ -35,6 +35,7 @@ use sha2::{Digest, Sha256};
 use super::semantic_ann_codes::reconciliation::{
     SemanticSourceReconciliationCheckpoint, SemanticSourceReconciliationPhase,
 };
+use super::semantic_ann_codes::semantic_source_reconciliation_machine::SemanticSourceReconciliationEvent;
 use super::semantic_ann_codes::{
     semantic_contract_error, ExistingTenantOwnerOpen, OperationAttribution, SemanticCodeError,
     SemanticCodeStore, SemanticMutationReceipt,

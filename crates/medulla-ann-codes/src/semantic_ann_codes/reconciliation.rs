@@ -6,6 +6,9 @@ use super::reconciliation_codec::{
     decode_reconciliation_checkpoint, encode_reconciliation_checkpoint,
 };
 use super::record::{decode_valid, row_bytes};
+use super::semantic_source_reconciliation_machine::{
+    SemanticSourceReconciliationEvent, SEMANTIC_SOURCE_RECONCILIATION_MACHINE,
+};
 use super::{
     corrupt, ensure, kernel_error, refused, semantic_contract_error, SemanticCodeError,
     SemanticCodeStore,
@@ -35,8 +38,8 @@ pub(super) const SEMANTIC_RECONCILIATION_MAX_REVISION_BYTES: usize = 256;
 pub(super) const SEMANTIC_RECONCILIATION_MAX_ENTITY_BYTES: usize = 512;
 
 /// The durable phase of a source reconciliation cursor.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum SemanticSourceReconciliationPhase {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SemanticSourceReconciliationPhase {
     /// The authoritative SQL source is still being paged.  `source_cursor`
     /// is required and no tombstone proof may be used yet.
     Scanning,
@@ -105,12 +108,32 @@ impl SemanticCodeStore {
         &self,
         generation: u64,
         expected: Option<&SemanticSourceReconciliationCheckpoint>,
+        event: SemanticSourceReconciliationEvent,
         next: &SemanticSourceReconciliationCheckpoint,
     ) -> Result<(), SemanticCodeError> {
         ensure(
             generation != 0,
             "source reconciliation generation must be nonzero",
         )?;
+        // The one transition of the checkpoint phase: a successor of a stored
+        // checkpoint is the predecessor's phase advanced by `event`; the first
+        // checkpoint of a generation carries the machine's initial phase.
+        match expected {
+            Some(prior) => {
+                let reached = prior
+                    .phase
+                    .apply(event)
+                    .map_err(|error| refused(&error.to_string()))?;
+                ensure(
+                    reached == next.phase,
+                    "source reconciliation checkpoint phase is not the event's successor",
+                )?;
+            }
+            None => ensure(
+                next.phase == SEMANTIC_SOURCE_RECONCILIATION_MACHINE.initial,
+                "the first source reconciliation checkpoint must start in the initial phase",
+            )?,
+        }
         let next_bytes = encode_reconciliation_checkpoint(next)?;
         let expected_bytes = expected.map(encode_reconciliation_checkpoint).transpose()?;
         let batch_id = format!(

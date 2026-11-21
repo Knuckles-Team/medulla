@@ -114,6 +114,7 @@ impl SemanticIndexService {
         self.store.write_source_reconciliation_checkpoint(
             binding.generation,
             checkpoint,
+            SemanticSourceReconciliationEvent::AdvanceScan,
             &state,
         )?;
         admission_result(receipts, &state, false)
@@ -160,6 +161,7 @@ impl SemanticIndexService {
         self.store.write_source_reconciliation_checkpoint(
             binding.generation,
             checkpoint,
+            SemanticSourceReconciliationEvent::AdvanceScan,
             &state,
         )?;
         if budget.exhausted() {

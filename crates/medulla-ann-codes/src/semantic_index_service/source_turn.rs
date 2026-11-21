@@ -199,6 +199,7 @@ impl SemanticIndexService {
         self.store.write_source_reconciliation_checkpoint(
             completed.binding.generation,
             completed.checkpoint,
+            SemanticSourceReconciliationEvent::CompleteScan,
             &state,
         )?;
         self.finalize_source_reconciliation(
@@ -252,6 +253,7 @@ impl SemanticIndexService {
             self.store.write_source_reconciliation_checkpoint(
                 binding.generation,
                 Some(&state),
+                SemanticSourceReconciliationEvent::PageTombstones,
                 &next_state,
             )?;
             return admission_result(receipts, &next_state, false);

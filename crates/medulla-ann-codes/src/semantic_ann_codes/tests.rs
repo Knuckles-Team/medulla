@@ -18,6 +18,7 @@ use super::checkpoint::{current_checkpoint_from_tables, GenerationCoordinates};
 use super::door::store_file_name;
 use super::persist::persist_stage_artifact_with_lease;
 use super::reconciliation::{compare_source_revision, validate_sql_source_revision};
+use super::semantic_source_reconciliation_machine::SemanticSourceReconciliationEvent;
 use super::rows::BoundCodeRows;
 use super::stage::stage_intent_outbox;
 use super::{ExistingTenantOwnerOpen, OperationAttribution, SemanticCodeStore};
@@ -1403,6 +1404,38 @@ fn sql_refresh_revision_binds_authority_and_epoch() {
     assert_ne!(first, foreign);
 }
 
+/// Store `finalizing` as a generation's first reached checkpoint: the first write starts in
+/// the machine's initial phase, and the complete-scan event reaches the finalizing phase.
+fn write_finalizing_checkpoint(
+    codes: &SemanticCodeStore,
+    generation: u64,
+    finalizing: &super::reconciliation::SemanticSourceReconciliationCheckpoint,
+) {
+    let scanning = super::reconciliation::SemanticSourceReconciliationCheckpoint {
+        phase: super::reconciliation::SemanticSourceReconciliationPhase::Scanning,
+        source_cursor: Some(vec![1]),
+        prior_cursor: None,
+        complete_snapshot_receipt_digest: None,
+        ..finalizing.clone()
+    };
+    codes
+        .write_source_reconciliation_checkpoint(
+            generation,
+            None,
+            SemanticSourceReconciliationEvent::AdvanceScan,
+            &scanning,
+        )
+        .unwrap();
+    codes
+        .write_source_reconciliation_checkpoint(
+            generation,
+            Some(&scanning),
+            SemanticSourceReconciliationEvent::CompleteScan,
+            finalizing,
+        )
+        .unwrap();
+}
+
 #[test]
 fn reconciliation_checkpoint_is_durable_cas_and_restart_safe() {
     let dir = tmp_dir("reconciliation-checkpoint");
@@ -1427,7 +1460,12 @@ fn reconciliation_checkpoint_is_durable_cas_and_restart_safe() {
         .unwrap()
         .is_none());
     codes
-        .write_source_reconciliation_checkpoint(1, None, &scanning)
+        .write_source_reconciliation_checkpoint(
+            1,
+            None,
+            SemanticSourceReconciliationEvent::AdvanceScan,
+            &scanning,
+        )
         .unwrap();
     assert_eq!(
         codes
@@ -1449,13 +1487,28 @@ fn reconciliation_checkpoint_is_durable_cas_and_restart_safe() {
         complete_snapshot_receipt_digest: Some(SemanticDigest::from_bytes([9; 32])),
     };
     assert!(codes
-        .write_source_reconciliation_checkpoint(1, None, &finalizing)
+        .write_source_reconciliation_checkpoint(
+            1,
+            None,
+            SemanticSourceReconciliationEvent::CompleteScan,
+            &finalizing,
+        )
         .is_err());
     codes
-        .write_source_reconciliation_checkpoint(1, Some(&scanning), &finalizing)
+        .write_source_reconciliation_checkpoint(
+            1,
+            Some(&scanning),
+            SemanticSourceReconciliationEvent::CompleteScan,
+            &finalizing,
+        )
         .unwrap();
     assert!(codes
-        .write_source_reconciliation_checkpoint(1, Some(&scanning), &finalizing)
+        .write_source_reconciliation_checkpoint(
+            1,
+            Some(&scanning),
+            SemanticSourceReconciliationEvent::CompleteScan,
+            &finalizing,
+        )
         .is_ok());
     assert!(codes
         .clear_source_reconciliation_checkpoint(1, &scanning)
@@ -1632,9 +1685,7 @@ fn complete_reconciliation_tombstone_replaces_completed_prior_revision() {
         pages_seen: 1,
         complete_snapshot_receipt_digest: Some(digest(45)),
     };
-    codes
-        .write_source_reconciliation_checkpoint(1, None, &checkpoint)
-        .unwrap();
+    write_finalizing_checkpoint(&codes, 1, &checkpoint);
     let tombstone_input = super::tombstone::reconciliation_tombstone_input_digest(
         &source_entity_id,
         new_revision,
@@ -2166,9 +2217,7 @@ fn completed_sql_tombstone_replaces_retained_manifest_through_real_completion() 
         pages_seen: 1,
         complete_snapshot_receipt_digest: Some(digest(131)),
     };
-    codes
-        .write_source_reconciliation_checkpoint(binding.generation, None, &checkpoint)
-        .unwrap();
+    write_finalizing_checkpoint(&codes, binding.generation, &checkpoint);
     let tombstone_input = super::tombstone::reconciliation_tombstone_input_digest(
         &source_entity_id,
         new_revision,

@@ -1422,3 +1422,12 @@ fn direct_state_install_machine_matches_edge_table() {
     sm::assert_matches(&medulla_direct_state::direct_state::DIRECT_STATE_INSTALL_MACHINE);
     sm::assert_extends_core("DirectStateInstall");
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R874.17
+#[test]
+fn semantic_source_reconciliation_machine_matches_edge_table() {
+    sm::assert_matches(
+        &medulla_ann_codes::semantic_ann_codes::semantic_source_reconciliation_machine::SEMANTIC_SOURCE_RECONCILIATION_MACHINE,
+    );
+    sm::assert_extends_core("SemanticSourceReconciliation");
+}
