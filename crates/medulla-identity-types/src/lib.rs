@@ -35,6 +35,8 @@ pub mod application_admission_machine;
 #[cfg(any(test, feature = "test-support"))]
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod identity_fixtures;
+// MEDULLA-TYPED-PACKS-R652.1 — the classification claim model.
+pub mod classification;
 // MEDULLA-IDENTITY-R610 — tenant parent chains, secured reads and ownership claims.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod tenancy;
