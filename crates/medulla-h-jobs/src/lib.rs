@@ -64,6 +64,10 @@ pub mod scheduler_config;
 #[cfg(feature = "jobs")]
 pub mod task_queue;
 
+/// MEDULLA-DURABLE-KERNEL-R074.2: the served worker registry.
+#[cfg(feature = "jobs")]
+pub mod worker_registry;
+
 /// MEDULLA-DURABLE-KERNEL-R077: served scheduler worker-admission reads.
 #[cfg(feature = "redb")]
 pub mod worker_admission;

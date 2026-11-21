@@ -770,6 +770,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::SetSchedulerConfig { .. }
         | Method::GetSchedulerConfig
         | Method::DowntimeSelections
+        | Method::WorkerRegister { .. }
+        | Method::WorkerHeartbeat { .. }
         | Method::WriteBack { .. }
         | Method::DecisionFit { .. }
         | Method::DecisionEval { .. }

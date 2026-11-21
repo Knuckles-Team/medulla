@@ -308,6 +308,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("work:read", User, "engine"),
     entry("work:submit", User, "engine"),
     entry("work:write", User, "engine"),
+    // MEDULLA-DURABLE-KERNEL-R074.2: registering a worker and renewing its lease.
+    entry("worker:register", User, "engine"),
     // MEDULLA-DECISION-ENGINE-R166.3: the workflow registry.
     entry("workflow:registry", User, "engine"),
     // MEDULLA-IDENTITY-R004.1: web interface workspace files under the configured root.

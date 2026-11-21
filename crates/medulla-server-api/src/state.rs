@@ -187,6 +187,9 @@ pub struct ServerState {
     /// under `persist_dir` by the first policy read or write.
     #[cfg(feature = "redb")]
     pub scheduler_config_store: Arc<Mutex<Option<ErasedHandle>>>,
+    /// The served worker registry (MEDULLA-DURABLE-KERNEL-R074.2): in-memory, owned
+    /// per verified principal. A restart empties it and workers register again.
+    pub worker_registry: Arc<Mutex<medulla_work_types::worker_registry::OwnedWorkerRegistry>>,
     /// The resident capability designation index (MEDULLA-DECISION-ENGINE-R172.7),
     /// opened once by the first designation read or feed write and then shared.
     /// The index stores nothing durable; the Agent Library is its source.
@@ -494,6 +497,7 @@ impl ServerState {
             doc_state_store: Arc::default(),
             #[cfg(feature = "redb")]
             scheduler_config_store: Arc::default(),
+            worker_registry: Arc::default(),
             capability_index: Arc::default(),
             #[cfg(feature = "redb")]
             cold_tracker: None,

@@ -80,6 +80,9 @@ method_results! {
     // MEDULLA-DURABLE-KERNEL-R076.2: the policy in force, and the policy just stored.
     GetSchedulerConfig(GetSchedulerConfig) => Raw<medulla_work_types::scheduler_config::SchedulerConfig>;
     SetSchedulerConfig(SetSchedulerConfig) => Raw<medulla_work_types::scheduler_config::SchedulerConfig>;
+    // MEDULLA-DURABLE-KERNEL-R074.2: the worker record just registered, and the one just renewed.
+    WorkerRegister(WorkerRegister) => Raw<medulla_work_types::worker_registry::WorkerRecord>;
+    WorkerHeartbeat(WorkerHeartbeat) => Raw<medulla_work_types::worker_registry::WorkerRecord>;
     // MEDULLA-DURABLE-KERNEL-R101.3: the latest downtime tick's decision.
     DowntimeSelections(DowntimeSelections) => Raw<medulla_work_types::downtime::DowntimeSelections>;
     ActionSubmit(ActionSubmit) => Raw<medulla_work_types::action_spec::ActionRun>;

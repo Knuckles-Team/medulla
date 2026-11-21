@@ -535,6 +535,11 @@ pub async fn dispatch_compute_and_media_methods(
             | Method::DowntimeSelections) => {
                 dispatch_scheduler_config_arm(ctx, method).await
             }
+            // MEDULLA-DURABLE-KERNEL-R074.2: the served worker registry.
+            #[cfg(feature = "jobs")]
+            method @ (Method::WorkerRegister { .. } | Method::WorkerHeartbeat { .. }) => {
+                dispatch_worker_registry_arm(ctx, method).await
+            }
 
             // ── Native statechart engine (CONCEPT:INT-P2-2, feature `statechart`) ───────
             // NOT graph-scoped (own `statecharts.redb`, keyed by def_id/instance_id) —
@@ -639,6 +644,25 @@ async fn dispatch_task_queue_arm(ctx: DispatchCtx<'_>, method: Method) -> Respon
     } = ctx;
     dispatch_boxed(async {
         match medulla_h_jobs::task_queue::try_handle(state, req.id, verified_context, method).await
+        {
+            Ok(response) => response,
+            Err(_) => Response::err(req.id, "router dispatch helper routing mismatch"),
+        }
+    })
+    .await
+}
+
+#[cfg(feature = "jobs")]
+async fn dispatch_worker_registry_arm(ctx: DispatchCtx<'_>, method: Method) -> Response {
+    let DispatchCtx {
+        state,
+        req,
+        verified_context,
+        ..
+    } = ctx;
+    dispatch_boxed(async {
+        match medulla_h_jobs::worker_registry::try_handle(state, req.id, verified_context, method)
+            .await
         {
             Ok(response) => response,
             Err(_) => Response::err(req.id, "router dispatch helper routing mismatch"),

@@ -158,3 +158,99 @@ fn non_reserved_task_is_refused_when_only_reserved_capacity_remains() {
         "WORKER_CAPACITY_ZERO"
     );
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R074.2
+#[cfg(feature = "jobs")]
+#[test]
+fn unknown_expired_and_cross_owner_requests_refuse() {
+    use std::sync::atomic::{AtomicU64, Ordering};
+
+    use medulla_h_jobs::worker_registry::{heartbeat, register, Clock};
+    use medulla_work_types::worker_registry::{OwnedWorkerRegistry, WorkerRegistration};
+    use parking_lot::Mutex;
+
+    struct FakeClock(AtomicU64);
+    impl Clock for FakeClock {
+        fn now_ms(&self) -> u64 {
+            self.0.load(Ordering::Relaxed)
+        }
+    }
+
+    const TTL_MS: u64 = 30_000;
+    let clock = FakeClock(AtomicU64::new(1_000));
+    let registry = Mutex::new(OwnedWorkerRegistry::default());
+    let registration = || WorkerRegistration {
+        worker_id: "worker-1".into(),
+        cores: 8,
+        memory_bytes: 8 * 1024 * 1024 * 1024,
+        lanes_supported: ["general".to_string()].into(),
+    };
+    let refusal = |response: medulla_protocol_types::protocol::Response| {
+        response.refusal_text().expect("the call must be refused")
+    };
+
+    // The owner registers; a live worker cannot be taken over.
+    let registered = register(&registry, &clock, 1, "principal-a", TTL_MS, registration());
+    assert!(registered.error.is_none(), "{:?}", registered.error);
+    assert!(refusal(register(
+        &registry,
+        &clock,
+        2,
+        "principal-b",
+        TTL_MS,
+        registration()
+    ))
+    .contains("WORKER_ALREADY_REGISTERED"));
+
+    // An unknown worker and another principal's worker are refused.
+    assert!(refusal(heartbeat(
+        &registry,
+        &clock,
+        3,
+        "principal-a",
+        TTL_MS,
+        "worker-unknown"
+    ))
+    .contains("WORKER_UNKNOWN"));
+    assert!(refusal(heartbeat(
+        &registry,
+        &clock,
+        4,
+        "principal-b",
+        TTL_MS,
+        "worker-1"
+    ))
+    .contains("ACCESS_DENIED"));
+
+    // The owner extends the lease while it is live.
+    clock.0.store(1_000 + TTL_MS - 1, Ordering::Relaxed);
+    let renewed = heartbeat(&registry, &clock, 5, "principal-a", TTL_MS, "worker-1");
+    assert!(renewed.error.is_none(), "{:?}", renewed.error);
+
+    // Past the ttl the worker disappears and its heartbeat is refused.
+    let past_ttl = 1_000 + 2 * TTL_MS;
+    clock.0.store(past_ttl, Ordering::Relaxed);
+    assert!(registry.lock().get_live("worker-1", past_ttl).is_none());
+    assert!(refusal(heartbeat(
+        &registry,
+        &clock,
+        6,
+        "principal-a",
+        TTL_MS,
+        "worker-1"
+    ))
+    .contains("WORKER_EXPIRED"));
+
+    // An expired worker registers anew under another principal, which then owns it.
+    let taken = register(&registry, &clock, 7, "principal-b", TTL_MS, registration());
+    assert!(taken.error.is_none(), "{:?}", taken.error);
+    assert!(refusal(heartbeat(
+        &registry,
+        &clock,
+        8,
+        "principal-a",
+        TTL_MS,
+        "worker-1"
+    ))
+    .contains("ACCESS_DENIED"));
+}

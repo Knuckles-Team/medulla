@@ -424,6 +424,9 @@ pub(super) const REASON_SHARD_WRITER_WIDTH_CONFIG: &str =
 pub(super) const REASON_SCHEDULER_CONFIG: &str =
     "control_plane::dispatch_scheduler_config_arm routes GetSchedulerConfig to handlers::scheduler_config, which returns only the stored or knob-derived scheduler policy -- process configuration, never a GraphView/core.analysis_snapshot() row read; gated by scheduler:admin in allows_method";
 // MEDULLA-DURABLE-KERNEL-R101.3: the latest downtime tick's decision is process state.
+// MEDULLA-DURABLE-KERNEL-R074.2: the worker registry is in-memory process state.
+pub(super) const REASON_WORKER_REGISTRY: &str =
+    "control_plane::dispatch_worker_registry_arm routes WorkerRegister/WorkerHeartbeat to handlers::worker_registry, which touches only the in-memory worker registry of this process (worker id, capacity facts and lease deadline, owned by the verified principal) -- process state, never a GraphView/core.analysis_snapshot() row read; gated by worker:register in allows_method";
 pub(super) const REASON_DOWNTIME_SELECTIONS: &str =
     "control_plane::dispatch_scheduler_config_arm routes DowntimeSelections to handlers::scheduler_config, which returns only the in-memory record of the latest downtime tick (job type IRIs, intent names and job ids) -- process state, never a GraphView/core.analysis_snapshot() row read; gated by jobs:read in allows_method";
 pub(super) const REASON_NATIVE_WORK_ITEM_TENANT_READ: &str =
@@ -709,6 +712,9 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("GetSchedulerConfig", REASON_SCHEDULER_CONFIG),
     // REASON_DOWNTIME_SELECTIONS
     ("DowntimeSelections", REASON_DOWNTIME_SELECTIONS),
+    // REASON_WORKER_REGISTRY
+    ("WorkerRegister", REASON_WORKER_REGISTRY),
+    ("WorkerHeartbeat", REASON_WORKER_REGISTRY),
     // REASON_CONTRACT_CATALOG_METADATA (MEDULLA-CONTRACT-R054)
     ("DescribeContract", REASON_CONTRACT_CATALOG_METADATA),
 ];

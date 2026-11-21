@@ -701,6 +701,17 @@ $($variants)*
     /// stored setting, or the startup knob values when none was stored. Scope
     /// `scheduler:admin`.
     GetSchedulerConfig,
+    /// Register one worker under the verified principal (MEDULLA-DURABLE-KERNEL-R074.2).
+    /// Scope `worker:register`. A live worker id is refused `WORKER_ALREADY_REGISTERED`.
+    WorkerRegister {
+        registration: medulla_work_types::worker_registry::WorkerRegistration,
+    },
+    /// Extend the lease of one registered worker (MEDULLA-DURABLE-KERNEL-R074.2). Scope
+    /// `worker:register`. An unknown worker is refused `WORKER_UNKNOWN`, an expired one
+    /// `WORKER_EXPIRED`, and a worker of another principal `ACCESS_DENIED`.
+    WorkerHeartbeat {
+        worker_id: String,
+    },
     /// What the latest downtime tick decided (MEDULLA-DURABLE-KERNEL-R101.3): the
     /// job types it submitted work for and the types it skipped, with the reason.
     /// Scope `jobs:read`.

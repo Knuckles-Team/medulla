@@ -185,6 +185,76 @@ impl WorkerRegistry {
     }
 }
 
+/// Why a served registry call was refused (MEDULLA-DURABLE-KERNEL-R074.2).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum OwnedWorkerError {
+    /// The registry refused the call.
+    Registry(WorkerRegistryError),
+    /// The worker is registered to another principal.
+    NotOwner,
+}
+
+/// The served worker registry (MEDULLA-DURABLE-KERNEL-R074.2): the pure
+/// [`WorkerRegistry`] plus the verified principal that owns each worker. Only the
+/// owner may heartbeat its worker. The state lives in memory: a restart empties it
+/// and workers register again.
+#[derive(Clone, Debug, Default)]
+pub struct OwnedWorkerRegistry {
+    registry: WorkerRegistry,
+    owners: BTreeMap<String, String>,
+}
+
+impl OwnedWorkerRegistry {
+    /// Register `registration` for `owner`. A live worker cannot be taken over; an
+    /// expired one registers anew under the new owner.
+    pub fn register(
+        &mut self,
+        owner: &str,
+        registration: WorkerRegistration,
+        now_ms: u64,
+        ttl_ms: u64,
+    ) -> Result<WorkerRecord, OwnedWorkerError> {
+        let worker_id = registration.worker_id.clone();
+        let record = self
+            .registry
+            .register(registration, now_ms, ttl_ms)
+            .map_err(OwnedWorkerError::Registry)?;
+        self.owners.insert(worker_id, owner.to_string());
+        Ok(record)
+    }
+
+    /// Extend the lease of `worker_id` for its owner. A worker owned by another
+    /// principal is refused before its liveness is revealed.
+    pub fn heartbeat(
+        &mut self,
+        owner: &str,
+        worker_id: &str,
+        now_ms: u64,
+        ttl_ms: u64,
+    ) -> Result<WorkerRecord, OwnedWorkerError> {
+        if self
+            .owners
+            .get(worker_id)
+            .is_some_and(|registered| registered != owner)
+        {
+            return Err(OwnedWorkerError::NotOwner);
+        }
+        self.registry
+            .heartbeat(worker_id, now_ms, ttl_ms)
+            .map_err(OwnedWorkerError::Registry)
+    }
+
+    /// The live record of `worker_id`, if any.
+    pub fn get_live(&self, worker_id: &str, now_ms: u64) -> Option<&WorkerRecord> {
+        self.registry.get_live(worker_id, now_ms)
+    }
+
+    /// The pure registry, for admission sizing.
+    pub fn registry(&self) -> &WorkerRegistry {
+        &self.registry
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
