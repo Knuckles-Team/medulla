@@ -13,6 +13,7 @@ use medulla_decision_types::loops::{
     Gap, GapState, ImprovementSample, LoopLease, MinedPattern, RatchetEvidence, RatchetVerdict,
     PPM_MAX,
 };
+use medulla_types::gap_machine::GapEvent;
 
 /// The loop knobs, each inside its declared range.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -200,7 +201,12 @@ impl LoopQueue {
 pub fn settle_gap(gap: &mut Gap) -> Result<(), LoopError> {
     match gap.state {
         GapState::Offered => {
-            gap.state = GapState::Settled;
+            gap.state = gap
+                .state
+                .apply(GapEvent::Settle)
+                .map_err(|_| LoopError::GapNotOffered {
+                    gap_id: gap.gap_id.clone(),
+                })?;
             Ok(())
         }
         GapState::Settled => Err(LoopError::GapAlreadySettled {

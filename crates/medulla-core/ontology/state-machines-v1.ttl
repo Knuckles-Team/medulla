@@ -6548,3 +6548,67 @@
     :fromState :AuditMachine_Reserved ;
     :toState :AuditMachine_Denied ;
     :firedBy :AuditMachine_Event_Deny .
+# spec: MEDULLA-DECISION-ENGINE-R830.5
+# The Gap machine. The Rust edge table GAP_MACHINE is the same table; the ontology test asserts equal edge sets.
+
+:GapState a owl:Class ;
+    rdfs:label "Gap State" ;
+    rdfs:comment "A state of the Gap machine." ;
+    rdfs:subClassOf :State .
+
+:GapTerminalState a owl:Class ;
+    rdfs:label "Gap Terminal State" ;
+    rdfs:comment "A terminal state of the Gap machine." ;
+    rdfs:subClassOf :TerminalState, :GapState .
+
+:GapTransition a owl:Class ;
+    rdfs:label "Gap Transition" ;
+    rdfs:comment "A transition of the Gap machine." ;
+    rdfs:subClassOf :Transition .
+
+:GapEvent a owl:Class ;
+    rdfs:label "Gap Event" ;
+    rdfs:comment "An event of the Gap machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:GapGuard a owl:Class ;
+    rdfs:label "Gap Guard" ;
+    rdfs:comment "A guard of the Gap machine; the machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:GapMachine a :StateMachine ;
+    rdfs:label "Gap machine" ;
+    :initialState :GapMachine_Open ;
+    :hasState :GapMachine_Open, :GapMachine_Offered, :GapMachine_Settled .
+
+:GapMachine_Open a :GapState ;
+    rdfs:label "Gap Open" ;
+    :storedForm "open" .
+
+:GapMachine_Offered a :GapState ;
+    rdfs:label "Gap Offered" ;
+    :storedForm "offered" .
+
+:GapMachine_Settled a :GapTerminalState ;
+    rdfs:label "Gap Settled" ;
+    :storedForm "settled" .
+
+:GapMachine_Event_Offer a :GapEvent ;
+    rdfs:label "Gap Offer" .
+
+:GapMachine_Event_Settle a :GapEvent ;
+    rdfs:label "Gap Settle" .
+
+:GapMachine_G01 a :GapTransition ;
+    rdfs:label "Gap G01" ;
+    :edgeId "G01" ;
+    :fromState :GapMachine_Open ;
+    :toState :GapMachine_Offered ;
+    :firedBy :GapMachine_Event_Offer .
+
+:GapMachine_G02 a :GapTransition ;
+    rdfs:label "Gap G02" ;
+    :edgeId "G02" ;
+    :fromState :GapMachine_Offered ;
+    :toState :GapMachine_Settled ;
+    :firedBy :GapMachine_Event_Settle .

@@ -55,6 +55,7 @@ pub(super) mod served {
         OfferEvidence, StageBeacon, PPM_MAX,
     };
     use medulla_protocol_types::protocol::ResultPayload;
+    use medulla_types::gap_machine::GapEvent;
     use medulla_protocol_types::result_contract::coordination::{
         LoopsBeacon, LoopsClaim, LoopsFileGap, LoopsGet, LoopsMine, LoopsOffer, LoopsRatchet,
         LoopsRecordSample, LoopsRelease, LoopsSettle,
@@ -235,7 +236,7 @@ pub(super) mod served {
                             loop_id: loop_id.clone(),
                             severity_ppm,
                             evidence,
-                            state: GapState::Open,
+                            state: GapState::initial(),
                         });
                     }
                     Ok(())
@@ -261,7 +262,10 @@ pub(super) mod served {
                             GapState::Open => {}
                         }
                         let severity_ppm = gap.severity_ppm;
-                        gap.state = GapState::Offered;
+                        gap.state = gap
+                            .state
+                            .apply(GapEvent::Offer)
+                            .map_err(|refused| refuse(refused.code(), &refused.to_string()))?;
                         view.offers.push(OfferEvidence {
                             gap_id,
                             rate_ppm: offer_rate(severity_ppm, open_offers, &knobs),

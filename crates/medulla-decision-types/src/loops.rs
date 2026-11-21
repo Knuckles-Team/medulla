@@ -44,18 +44,9 @@ pub struct LoopInstance {
     pub lease: Option<LoopLease>,
 }
 
-/// The settlement state of a gap.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum GapState {
-    /// Filed, no offer yet.
-    Open,
-    /// An offer is out.
-    Offered,
-    /// Settled; never reopens.
-    Settled,
-}
+/// The settlement state of a gap: the closed state of `GapMachine`
+/// (MEDULLA-DECISION-ENGINE-R830.5).
+pub use medulla_types::gap_machine::GapState;
 
 /// A capability gap a loop filed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
