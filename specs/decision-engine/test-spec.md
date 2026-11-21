@@ -1414,7 +1414,7 @@ Entries for rows whose named test is not yet in the tree.
 - `MEDULLA-DECISION-ENGINE-R141.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/memory_change_tests.rs::benchmark_receipt_binds_both_snapshots`.
 - `MEDULLA-DECISION-ENGINE-R141.102`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/memory_change_tests.rs::rewrite_admit_and_discard_through_decision_eval`.
 - `MEDULLA-DECISION-ENGINE-R141.103`: planned L4 `tests/decide/test_memory_change_served.py::test_consolidate_requires_current_admit_receipt`.
-- `MEDULLA-DECISION-ENGINE-R141.104`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/memory_change_tests.rs::consolidate_requires_a_current_admit_receipt`.
+- `MEDULLA-DECISION-ENGINE-R141.104`: planned L3 `crates/medulla-server-router/src/dispatch/router/memory_change.rs::tests::consolidate_requires_a_current_admit_receipt`.
 - `MEDULLA-DECISION-ENGINE-R142.100`: planned L1 `crates/medulla-decision-types/src/decision/local_certification.rs::tests::attestation_round_trip_and_digest`.
 - `MEDULLA-DECISION-ENGINE-R142.101`: planned L3 `crates/medulla-h-decide/src/decide/stat_tests/certification_tests.rs::attests_atomic_and_gates_workflow`.
 - `MEDULLA-DECISION-ENGINE-R142.102`: planned L4 `tests/decide/test_local_skill_certification_served.py::test_certification_journey`.
