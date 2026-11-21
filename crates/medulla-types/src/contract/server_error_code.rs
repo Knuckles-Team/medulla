@@ -35,6 +35,10 @@ closed_error_codes! {
         /// MEDULLA-FEDERATED-QUERY-R078.7: the requested company-context category's class is
         /// not declared in the snapshot's composed schema.
         CompanyMappingMissing => "COMPANY_MAPPING_MISSING",
+        /// MEDULLA-FEDERATED-QUERY-R078.7: the snapshot revision is older than the retained
+        /// version commit log (or the log was reset), so its commit instant is unknown and a
+        /// time-bounded read refuses instead of using the wall clock.
+        SnapshotTimeUnknown => "SNAPSHOT_TIME_UNKNOWN",
         RunAdmissionUnavailable => "RUN_ADMISSION_UNAVAILABLE",
         /// A catalog node is typed with a class that is not under `cat:Asset` (MEDULLA-TYPED-PACKS-R108.4).
         AssetClassOrphan => "ASSET_CLASS_ORPHAN",

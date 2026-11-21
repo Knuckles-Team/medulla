@@ -173,7 +173,7 @@ pub(super) fn company_context_scan(
         if node_cat == CompanyCategory::DataAsset && wants(CompanyCategory::TimeSeries) {
             if let Some(series_id) = props.get(SERIES_PROPERTY).and_then(serde_json::Value::as_str)
             {
-                if let Some((timestamp_ms, row_id)) = latest_point_row(ctx, series_id) {
+                if let Some((timestamp_ms, row_id)) = latest_point_row(ctx, series_id)? {
                     let mut row = provenance(CompanyCategory::TimeSeries);
                     row.insert("series_id".to_string(), series_id.to_string());
                     row.insert("timestamp_ms".to_string(), timestamp_ms.to_string());
@@ -186,33 +186,54 @@ pub(super) fn company_context_scan(
     Ok(RowSet::from_rows(order.into_iter().map(|id| (id, None))).with_texts(texts))
 }
 
-/// The latest committed point of `series_id` at or before the snapshot's commit instant
-/// (`PlanCtx.snapshot_commit_ms`; the pinned clock, then the wall clock, when the commit
-/// record does not reach the revision), as
-/// `(timestamp_ms, row id)`. No store, scope or point yields none; no value is read out.
+/// The instant a time-bounded read measures "at or before the snapshot" against. A read
+/// pinned to a snapshot revision uses that revision's commit instant, and refuses
+/// `SNAPSHOT_TIME_UNKNOWN` when the commit log does not reach it (never the pinned clock or
+/// the wall clock). A read with no pinned revision uses the pinned `now_ms`, then the clock.
 #[cfg(feature = "timeseries")]
-fn latest_point_row(ctx: &PlanCtx, series_id: &str) -> Option<(i64, String)> {
-    const NS_PER_MS: i64 = 1_000_000;
-    let at_ms = ctx.snapshot_commit_ms.or(ctx.now_ms).unwrap_or_else(|| {
+fn snapshot_instant_ms(ctx: &PlanCtx) -> Result<i64, String> {
+    if let Some(committed_at_ms) = ctx.snapshot_commit_ms {
+        return Ok(committed_at_ms);
+    }
+    if let Some(revision) = ctx.snapshot_revision {
+        return Err(format!(
+            "{}: the commit instant of snapshot revision {revision} is not retained",
+            ServerErrorCode::SnapshotTimeUnknown
+        ));
+    }
+    Ok(ctx.now_ms.unwrap_or_else(|| {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|elapsed| i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX))
             .unwrap_or(0)
-    });
+    }))
+}
+
+/// The latest committed point of `series_id` at or before the snapshot's commit instant
+/// ([`snapshot_instant_ms`]), as `(timestamp_ms, row id)`. No store, scope or point yields
+/// none; no value is read out.
+#[cfg(feature = "timeseries")]
+fn latest_point_row(ctx: &PlanCtx, series_id: &str) -> Result<Option<(i64, String)>, String> {
+    const NS_PER_MS: i64 = 1_000_000;
+    let at_ms = snapshot_instant_ms(ctx)?;
     let committed = super::tsscan::CommittedSeries {
         store: ctx.tsdb,
         tenant: ctx.tsdb_tenant,
         graph: ctx.tsdb_graph,
     };
-    let (ts_ns, _) = committed.latest_at_or_before(series_id, at_ms.saturating_mul(NS_PER_MS))?;
+    let Some((ts_ns, _)) =
+        committed.latest_at_or_before(series_id, at_ms.saturating_mul(NS_PER_MS))
+    else {
+        return Ok(None);
+    };
     let timestamp_ms = ts_ns / NS_PER_MS;
-    Some((timestamp_ms, format!("ts:{series_id}:{timestamp_ms}")))
+    Ok(Some((timestamp_ms, format!("ts:{series_id}:{timestamp_ms}"))))
 }
 
 /// Without the `timeseries` feature there is no store to read: no time-series rows.
 #[cfg(not(feature = "timeseries"))]
-fn latest_point_row(_ctx: &PlanCtx, _series_id: &str) -> Option<(i64, String)> {
-    None
+fn latest_point_row(_ctx: &PlanCtx, _series_id: &str) -> Result<Option<(i64, String)>, String> {
+    Ok(None)
 }
 
 #[cfg(test)]
@@ -328,6 +349,27 @@ mod tests {
         let ctx = PlanCtx::new(&view, &semantic).with_plan_scope(scope(&["internal"]));
         let error = company_context_scan(&ctx, Some(CompanyCategory::Role)).unwrap_err();
         assert!(error.starts_with("COMPANY_MAPPING_MISSING"), "{error}");
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R078.7
+    #[cfg(feature = "timeseries")]
+    #[test]
+    fn a_revision_without_a_commit_instant_refuses_the_time_series_read() {
+        let core = GraphCore::new();
+        core.add_node(
+            "asset-ts".into(),
+            blob(serde_json::json!({ "type": "DataAsset", "series_id": "s1" })),
+        );
+        let view = core.analysis_snapshot();
+        let semantic = SemanticStore::new();
+        let pinned = PlanCtx::new(&view, &semantic)
+            .with_plan_scope(scope(&[]))
+            .with_snapshot_revision(3)
+            .with_now_ms(1_000);
+        let error = company_context_scan(&pinned, Some(CompanyCategory::TimeSeries)).unwrap_err();
+        assert!(error.starts_with("SNAPSHOT_TIME_UNKNOWN"), "{error}");
+        let known = pinned.clone().with_snapshot_commit_ms(Some(500));
+        assert!(company_context_scan(&known, Some(CompanyCategory::TimeSeries)).is_ok());
     }
 
     #[test]
