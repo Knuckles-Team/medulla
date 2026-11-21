@@ -18266,11 +18266,34 @@ class MethodDowntimeSelectionsParams(BaseModel):
     limit: Annotated[int, Field(ge=1, le=100)] = 20
 
 
+DowntimeJobState = Literal[
+    "submitted",
+    "running",
+    "publishing",
+    "cancel_requested",
+    "backoff",
+    "succeeded",
+    "failed",
+    "cancelled",
+]
+
+
+class DowntimeJobObservation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attempts_made: Annotated[int, Field(ge=0, le=4294967295)]
+    checkpoint_stage: str | None = None
+    cpu_ms: Annotated[int, Field(ge=0)] | None = None
+    has_lease: bool
+    state: DowntimeJobState
+
+
 class DowntimeSelected(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     intent: str
     iri: str
+    job: DowntimeJobObservation | None = None
     job_id: str
 
 
@@ -38640,6 +38663,8 @@ __all__ = [
     "DocTerms",
     "DocumentDeleteReceipt",
     "DocumentDeleteRequest",
+    "DowntimeJobObservation",
+    "DowntimeJobState",
     "DowntimeSelected",
     "DowntimeSelectionRecord",
     "DowntimeSelections",

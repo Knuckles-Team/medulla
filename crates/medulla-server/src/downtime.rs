@@ -431,6 +431,7 @@ pub async fn apply_plan(
                     iri: job_type.iri,
                     intent: job_type.intent,
                     job_id,
+                    job: None,
                 });
             }
             Err(error) => {

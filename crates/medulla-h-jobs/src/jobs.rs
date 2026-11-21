@@ -1108,3 +1108,52 @@ mod read_rls_tests {
         }));
     }
 }
+
+/// One downtime job as a read of a selection shows it (MEDULLA-DURABLE-KERNEL-R101.5 4a):
+/// its state, attempts, checkpoint stage, lease and CPU use. `None` when the job store or the
+/// job is absent.
+pub fn observe_downtime_job(
+    persist_dir: Option<&str>,
+    job_id: &str,
+) -> Option<medulla_work_types::downtime::DowntimeJobObservation> {
+    use medulla_jobs::model::JobState;
+    use medulla_work_types::downtime::{DowntimeJobObservation, DowntimeJobState};
+
+    let store = core::job_store(persist_dir).ok()?;
+    let job = store.get(job_id).ok()?;
+    let (state, has_lease, checkpoint) = match &job.state {
+        JobState::Submitted { checkpoint } => {
+            (DowntimeJobState::Submitted, false, checkpoint.as_ref())
+        }
+        JobState::Running { checkpoint, .. } => {
+            (DowntimeJobState::Running, true, Some(checkpoint))
+        }
+        JobState::Publishing { checkpoint, .. } => {
+            (DowntimeJobState::Publishing, true, Some(checkpoint))
+        }
+        JobState::CancelRequested { checkpoint, .. } => {
+            (DowntimeJobState::CancelRequested, true, Some(checkpoint))
+        }
+        JobState::Backoff { checkpoint, .. } => {
+            (DowntimeJobState::Backoff, false, checkpoint.as_ref())
+        }
+        JobState::Succeeded { checkpoint, .. } => {
+            (DowntimeJobState::Succeeded, false, Some(checkpoint))
+        }
+        JobState::Failed { checkpoint, .. } => (DowntimeJobState::Failed, false, checkpoint.as_ref()),
+        JobState::Cancelled { checkpoint } => {
+            (DowntimeJobState::Cancelled, false, checkpoint.as_ref())
+        }
+    };
+    Some(DowntimeJobObservation {
+        state,
+        attempts_made: job.retry.attempts_made,
+        checkpoint_stage: checkpoint.map(|checkpoint| checkpoint.label.clone()),
+        has_lease,
+        cpu_ms: job
+            .output
+            .as_ref()
+            .and_then(|output| output.usage.as_ref())
+            .map(|usage| usage.cpu_ms),
+    })
+}

@@ -96,13 +96,22 @@ async fn downtime_selections(
             "INVALID_PARAMS: the downtime selection page limit {limit} is outside [1, 100]"
         ));
     }
-    let core = {
+    let (core, persist_dir) = {
         let current = state.read().await;
-        current.registry.get(COMMONS).map(|entry| entry.core.clone())
+        (
+            current.registry.get(COMMONS).map(|entry| entry.core.clone()),
+            current.persist_dir.clone(),
+        )
     };
-    let page = core
+    let mut page = core
         .map(|core| selection_page(&core, after.as_deref(), limit as usize))
         .unwrap_or_default();
+    // The job observation is read now and never stored on the selection node.
+    for selection in &mut page.selections {
+        for chosen in &mut selection.chosen {
+            chosen.job = crate::jobs::observe_downtime_job(persist_dir.as_deref(), &chosen.job_id);
+        }
+    }
     ResultPayload::of::<contract::DowntimeSelections>(page)
 }
 
@@ -150,6 +159,7 @@ pub fn selection_page(
                         iri: text("dw:jobType"),
                         intent: text("dw:intent"),
                         job_id: text("dw:jobId"),
+                        job: None,
                     });
                 } else if let Some(reason) = DowntimeSkipReason::from_name(&text("dw:skipReason"))
                 {

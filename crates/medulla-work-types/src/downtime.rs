@@ -14,6 +14,50 @@ pub struct DowntimeSelected {
     pub intent: String,
     /// The id of the submitted job.
     pub job_id: String,
+    /// The job as it stands when the selection is read (MEDULLA-DURABLE-KERNEL-R101.5 4a).
+    /// Filled at read time and never stored on the selection node.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub job: Option<DowntimeJobObservation>,
+}
+
+/// The stored state of a downtime job, one name per `JobState` variant.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum DowntimeJobState {
+    /// Queued for a worker.
+    Submitted,
+    /// A worker holds the lease.
+    Running,
+    /// The typed result is durable and its claims are committing.
+    Publishing,
+    /// The lease holder is asked to stop.
+    CancelRequested,
+    /// A failed attempt waits to be claimed again.
+    Backoff,
+    /// The job finished.
+    Succeeded,
+    /// The job failed for good.
+    Failed,
+    /// The job was cancelled.
+    Cancelled,
+}
+
+/// What a read of a selection shows of one chosen job.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DowntimeJobObservation {
+    /// The job's state.
+    pub state: DowntimeJobState,
+    /// Attempts made so far.
+    pub attempts_made: u32,
+    /// The stage label of the job's checkpoint, when it has one.
+    pub checkpoint_stage: Option<String>,
+    /// Whether a worker lease is held (`Running`, `Publishing` or `CancelRequested`).
+    pub has_lease: bool,
+    /// CPU milliseconds the job used, once it has a result.
+    pub cpu_ms: Option<u64>,
 }
 
 /// Why a tick did not submit a job for a type.
