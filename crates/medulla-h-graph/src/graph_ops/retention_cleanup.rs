@@ -14,9 +14,43 @@
 //! `legal_hold` to true are never removed.
 
 use medulla_graph_core::graph::GraphCore;
+use medulla_mutation_types::retention_cleanup::{
+    RetentionCleanupReport as WireReport, RetentionCleanupRunRequest,
+};
 use medulla_mutation_types::retention_policy::RetentionPolicy;
-use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
 use serde::{Deserialize, Serialize};
+
+/// The actor both entry points attribute removals to (MEDULLA-DURABLE-KERNEL-R700.3).
+pub const RETENTION_ACTOR: &str = "engine:retention-cleanup";
+/// The environment key holding the [`RetentionPolicy`] as JSON; unset disables cleanup.
+pub const POLICY_ENV: &str = "MEDULLA_RETENTION_CLEANUP";
+/// The environment key of the sweep interval, in seconds.
+pub const INTERVAL_ENV: &str = "MEDULLA_RETENTION_CLEANUP_SECS";
+const DEFAULT_INTERVAL_SECS: u64 = 3_600;
+const INTERVAL_SECS_RANGE: (u64, u64) = (60, 86_400);
+
+/// The configured policy; unset or invalid means no cleanup (an invalid one is logged).
+pub fn configured_policy() -> Option<RetentionPolicy> {
+    let spec = std::env::var(POLICY_ENV).ok()?;
+    if spec.trim().is_empty() {
+        return None;
+    }
+    match serde_json::from_str::<RetentionPolicy>(&spec) {
+        Ok(policy) => Some(policy),
+        Err(error) => {
+            tracing::error!(%error, "retention cleanup policy ignored");
+            None
+        }
+    }
+}
+
+/// The configured sweep interval in seconds, clamped to [60, 86400].
+pub fn sweep_interval_secs() -> u64 {
+    medulla_server_api::state::positive_runtime_limit_from_env(INTERVAL_ENV, DEFAULT_INTERVAL_SECS)
+        .clamp(INTERVAL_SECS_RANGE.0, INTERVAL_SECS_RANGE.1)
+}
 
 /// The label whose aged nodes a step removes.
 pub const DOCUMENT_LABEL: &str = "Document";
@@ -45,13 +79,49 @@ pub struct RetentionCleanupReport {
     pub removed: Vec<(String, RemovalReason)>,
     /// Candidates that matched but a hold check kept.
     pub held: u32,
+    /// Of `held`, the candidates a live inbound edge kept.
+    pub held_live_reference: u32,
+    /// Of `held`, the candidates a legal hold kept.
+    pub held_legal_hold: u32,
     /// The cursor the step started from.
     pub cursor: RetentionCursor,
     /// The last examined id of each scan; the next step resumes after it.
     pub next_cursor: RetentionCursor,
 }
 
+impl RetentionCursor {
+    /// The cursor as the opaque string the wire carries; `None` when both scans
+    /// are at their start.
+    pub fn to_wire(&self) -> Option<String> {
+        if self.document.is_none() && self.orphan.is_none() {
+            return None;
+        }
+        serde_json::to_string(self).ok()
+    }
+
+    /// Read a wire cursor; an absent one is the start.
+    pub fn from_wire(cursor: Option<&str>) -> Result<Self, String> {
+        match cursor {
+            None => Ok(Self::default()),
+            Some(text) => serde_json::from_str(text).map_err(|_| {
+                "INVALID_ARGUMENT: the retention cursor is not one this engine issued".to_string()
+            }),
+        }
+    }
+}
+
 impl RetentionCleanupReport {
+    /// The report as the served method answers it.
+    pub fn to_wire(&self) -> WireReport {
+        WireReport {
+            scanned: u64::from(self.examined),
+            removed: self.removed.len() as u64,
+            held_live_reference: u64::from(self.held_live_reference),
+            held_legal_hold: u64::from(self.held_legal_hold),
+            next_cursor: self.next_cursor.to_wire(),
+        }
+    }
+
     /// The single `BatchUpdate` that removes this step's nodes, `None` when the
     /// step removes nothing.
     pub fn removal_batch(&self) -> Result<Option<Method>, String> {
@@ -92,10 +162,36 @@ fn older_than(at: Option<u64>, policy: &RetentionPolicy, now_ms: u64) -> bool {
     at.is_some_and(|at| now_ms.saturating_sub(at) > policy.age_ms())
 }
 
+/// Which hold check keeps a node.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum Hold {
+    LegalHold,
+    LiveReference,
+}
+
 /// Fixed hold checks: a live inbound edge or a legal hold keeps the node. An
 /// unknown node (removed concurrently) is held, never removed blind.
-fn is_held(core: &GraphCore, id: &str, row: &serde_json::Map<String, serde_json::Value>) -> bool {
-    legal_hold(row) || core.in_degree(id).map_or(true, |d| d > 0)
+fn hold_of(
+    core: &GraphCore,
+    id: &str,
+    row: &serde_json::Map<String, serde_json::Value>,
+) -> Option<Hold> {
+    if legal_hold(row) {
+        return Some(Hold::LegalHold);
+    }
+    core.in_degree(id)
+        .map_or(true, |d| d > 0)
+        .then_some(Hold::LiveReference)
+}
+
+impl RetentionCleanupReport {
+    fn note_hold(&mut self, hold: Hold) {
+        self.held += 1;
+        match hold {
+            Hold::LegalHold => self.held_legal_hold += 1,
+            Hold::LiveReference => self.held_live_reference += 1,
+        }
+    }
 }
 
 fn decode_row(blob: &[u8]) -> serde_json::Map<String, serde_json::Value> {
@@ -123,12 +219,11 @@ pub fn cleanup_graph(
         report.examined += 1;
         let row = decode_row(&blob);
         if older_than(row_ms(&row, "updated_at"), policy, now_ms) {
-            if is_held(core, &id, &row) {
-                report.held += 1;
-            } else {
-                report
+            match hold_of(core, &id, &row) {
+                Some(hold) => report.note_hold(hold),
+                None => report
                     .removed
-                    .push((id.clone(), RemovalReason::AgedDocument));
+                    .push((id.clone(), RemovalReason::AgedDocument)),
             }
         }
         report.next_cursor.document = Some(id);
@@ -162,7 +257,7 @@ pub fn cleanup_graph(
                 && older_than(row_ms(&row, "created_at"), policy, now_ms)
             {
                 if legal_hold(&row) {
-                    report.held += 1;
+                    report.note_hold(Hold::LegalHold);
                 } else {
                     report.removed.push((id.clone(), RemovalReason::Orphan));
                 }
@@ -171,6 +266,82 @@ pub fn cleanup_graph(
         report.next_cursor.orphan = Some(id);
     }
     report
+}
+
+/// Serve `RetentionCleanupRun` on the gateway: one bounded step over the request
+/// graph, committed as one `BatchUpdate` unless `dry_run` asks only for the report.
+pub(super) async fn handle_retention_cleanup_run(
+    ctx: &MutationCtx<'_>,
+    method: &Method,
+) -> Response {
+    let Method::RetentionCleanupRun { request } = method else {
+        return Response::err(
+            ctx.req_id,
+            "INVALID_ARGUMENT: not a RetentionCleanupRun".to_string(),
+        );
+    };
+    match plan_step(ctx, request) {
+        Ok((wire, None)) => answer(ctx.req_id, wire),
+        Ok((wire, Some(operations_msgpack))) => {
+            let write = Method::BatchUpdate {
+                operations_msgpack: operations_msgpack.clone(),
+            };
+            let plan = MutationPlan::for_method(&write);
+            medulla_server_ops::api::ingest::graph::commit_gateway(
+                ctx,
+                &plan,
+                &write,
+                move |core| {
+                    medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)
+                        .and_then(|_| payload(wire))
+                },
+            )
+            .await
+        }
+        Err(error) => Response::err(ctx.req_id, error),
+    }
+}
+
+fn payload(report: WireReport) -> Result<ResultPayload, String> {
+    ResultPayload::of::<medulla_protocol_types::result_contract::storage::RetentionCleanupRun>(
+        report,
+    )
+}
+
+fn answer(req_id: u64, report: WireReport) -> Response {
+    match payload(report) {
+        Ok(payload) => Response::ok(req_id, payload),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+/// The report of one step and the encoded removal batch, absent for a dry run or
+/// a step that removes nothing.
+fn plan_step(
+    ctx: &MutationCtx<'_>,
+    request: &RetentionCleanupRunRequest,
+) -> Result<(WireReport, Option<Vec<u8>>), String> {
+    let policy = configured_policy().ok_or_else(|| {
+        format!("INVALID_ARGUMENT: retention cleanup is not configured ({POLICY_ENV} is unset)")
+    })?;
+    if request.graph != ctx.graph_name {
+        return Err(format!(
+            "INVALID_ARGUMENT: the request names graph {} but runs on graph {}",
+            request.graph, ctx.graph_name
+        ));
+    }
+    let cursor = RetentionCursor::from_wire(request.cursor.as_deref())?;
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let report = cleanup_graph(ctx.core, &policy, &cursor, now_ms);
+    let batch = if request.dry_run {
+        None
+    } else {
+        match report.removal_batch()? {
+            Some(Method::BatchUpdate { operations_msgpack }) => Some(operations_msgpack),
+            _ => None,
+        }
+    };
+    Ok((report.to_wire(), batch))
 }
 
 #[cfg(test)]
@@ -289,5 +460,7 @@ mod tests {
             ]
         );
         assert_eq!(report.held, 2);
+        assert_eq!(report.held_legal_hold, 1);
+        assert_eq!(report.held_live_reference, 1);
     }
 }

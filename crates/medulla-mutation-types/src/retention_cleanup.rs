@@ -13,6 +13,7 @@ pub const DEFAULT_RETENTION_BATCH: u32 = 1_000;
 /// One `RetentionCleanupRun` call.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RetentionCleanupRunRequest {
     pub graph: String,
     #[serde(default)]
@@ -24,6 +25,7 @@ pub struct RetentionCleanupRunRequest {
 /// The outcome of one cleanup step.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RetentionCleanupReport {
     pub scanned: u64,
     pub removed: u64,
@@ -35,6 +37,7 @@ pub struct RetentionCleanupReport {
 /// The durable audit record of one cleanup step.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct RetentionCleanupRecord {
     pub graph: String,
     pub cursor_start: Option<String>,

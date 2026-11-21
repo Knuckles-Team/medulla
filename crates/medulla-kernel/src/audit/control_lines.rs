@@ -169,6 +169,10 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             class_iri,
             ..
         } => Some(format!("SOURCE_SYNC|{connection_iri}|{class_iri}")),
+        Method::RetentionCleanupRun { request } => Some(format!(
+            "RETENTION_CLEANUP_RUN|{}|{}",
+            request.graph, request.dry_run
+        )),
         Method::ArchitectureModelImport { document, .. } => Some(format!(
             "ARCHITECTURE_MODEL_IMPORT|{}",
             medulla_types::archimate_exchange::sha256_hex(document.as_bytes())

@@ -12,6 +12,9 @@ pub mod server_startup;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 mod query_seam;
 
+/// The retention cleanup tick (MEDULLA-DURABLE-KERNEL-R700.3).
+pub mod retention_cleanup;
+
 /// The downtime scheduler tick (MEDULLA-DURABLE-KERNEL-R101.3).
 #[cfg(all(feature = "jobs", feature = "sparql"))]
 pub mod downtime;

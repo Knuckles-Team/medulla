@@ -138,6 +138,8 @@ method_results! {
     ConceptLineageClaim(ConceptLineage / "claim") => Raw<ConceptRecord>;
     ConceptLineageAddEdge(ConceptLineage / "add_edge") => Raw<ConceptEdgeRecord>;
     ConceptLineageRead(ConceptLineage / "read") => Raw<ConceptReadResult>;
+    // MEDULLA-DURABLE-KERNEL-R700.3: the report of one retention cleanup step.
+    RetentionCleanupRun(RetentionCleanupRun) => Raw<medulla_mutation_types::retention_cleanup::RetentionCleanupReport>;
     ImportSqliteFile(ImportSqliteFile) => Json<SqliteImportReport>;
     ExportSqliteFile(ExportSqliteFile) => Json<SqliteExportReport>;
 }

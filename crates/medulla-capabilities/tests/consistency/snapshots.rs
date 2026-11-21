@@ -149,6 +149,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
+    "RetentionCleanupRun",
     // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
     "CreateBranch",
     // MEDULLA-BRANCH-MERGE-R002: one branch-scoped mutation and its commit.
@@ -197,6 +199,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
+    "RetentionCleanupRun",
 ];
 
 /// Mirrors `src/server/access.rs::requires_write`'s RUNTIME-CONDITIONAL set: the Mine*/
@@ -401,6 +405,8 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
+    "RetentionCleanupRun",
     // MEDULLA-FINANCE-PRIMITIVES-R004.3.2: an admitted record put self-translates
     // into `Method::AddNode`, which carries the durable effect.
     "FinanceRecordPut",
@@ -687,6 +693,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
+    "RetentionCleanupRun",
     "SchemaProjections",
     "DomainPack",
     // MEDULLA-FEDERATED-QUERY-R701.3/R701.5: committed over the query gateway's
@@ -769,6 +777,8 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
+    "RetentionCleanupRun",
     "LiveArtifactPut",
     "LiveArtifactRefresh",
     "StoredQueryPut",
@@ -840,6 +850,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
+    "RetentionCleanupRun",
     "SchemaProjections",
     "DomainPack",
     "RemoveEdge",
@@ -872,6 +884,8 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     "ArchitectureModelImport",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one BatchUpdate.
     "SourceSync",
+    // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step commits as one BatchUpdate.
+    "RetentionCleanupRun",
 ];
 
 // ── KNOWN_DIVERGENCE ────────────────────────────────────────────────────────────────

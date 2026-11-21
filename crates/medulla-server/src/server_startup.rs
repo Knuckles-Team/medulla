@@ -1044,6 +1044,16 @@ pub async fn attached_poll_tick(state: SharedState) {
     }
 }
 
+/// One retention cleanup sweep (MEDULLA-DURABLE-KERNEL-R700.3): one bounded step
+/// per resident graph under the configured policy; a no-op when none is set.
+pub async fn retention_cleanup_tick(state: SharedState) {
+    let removed =
+        crate::retention_cleanup::run_tick(&state, medulla_server_api::txn::now_ms()).await;
+    if removed > 0 {
+        tracing::info!(removed, "Retention cleanup: removed aged node(s) (R700.3)");
+    }
+}
+
 /// One downtime scheduler tick (MEDULLA-DURABLE-KERNEL-R101.3): lease and submit the
 /// downtime job types that fit the open window.
 #[cfg(all(feature = "jobs", feature = "sparql"))]

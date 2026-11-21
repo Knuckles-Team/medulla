@@ -5,6 +5,7 @@ use crate::{DurabilityDomain, Stability, TxnParticipation};
 use super::{make_policy, spec, PolicyFlags, PolicyRow, PYTHON};
 
 pub(crate) const ROWS: &[PolicyRow] = &[
+    ("RetentionCleanupRun", spec(make_policy(true, DurabilityDomain::GraphRedb, "retention:run", PolicyFlags { idempotent: true, audited: true, emits_cdc: true }, TxnParticipation::Atomic), PYTHON, Stability::Stable), "MEDULLA-DURABLE-KERNEL-R700.3: gateway-routed; one bounded retention cleanup step over the request graph that removes aged documents and orphans as one BatchUpdate, or only reports with dry_run"),
     ("ToMsgpack", spec(make_policy(false, DurabilityDomain::None, "graph:read", PolicyFlags { idempotent: true, audited: false, emits_cdc: false }, TxnParticipation::Snapshot), PYTHON, Stability::Stable), ""),
     ("FromMsgpack", spec(make_policy(true, DurabilityDomain::GraphRedb, "graph:admin", PolicyFlags { idempotent: false, audited: true, emits_cdc: true }, TxnParticipation::Atomic), PYTHON, Stability::Stable), "state-backed MutationBatch commits the imported authoritative image"),
     ("ClearLedger", spec(make_policy(true, DurabilityDomain::GraphRedb, "ledger:admin", PolicyFlags { idempotent: true, audited: true, emits_cdc: true }, TxnParticipation::Atomic), PYTHON, Stability::Stable), "state-backed MutationBatch"),

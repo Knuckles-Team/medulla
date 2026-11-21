@@ -305,6 +305,7 @@ fn record_write_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::NlQueryCorrect { .. } => Some("__nl_query_correct"),
         Method::ArchitectureModelImport { .. } => Some("__architecture_model_import"),
         Method::SourceSync { .. } => Some("__source_sync"),
+        Method::RetentionCleanupRun { .. } => Some("__retention_cleanup"),
         _ => None,
     }
 }

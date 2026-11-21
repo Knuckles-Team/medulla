@@ -176,6 +176,15 @@ pub async fn try_handle_gateway(
         )
         .await);
     }
+    // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step removes under the engine actor,
+    // never under the caller that asked for it.
+    if matches!(method, Method::RetentionCleanupRun { .. }) {
+        let ctx = MutationCtx {
+            caller: Some(super::retention_cleanup::RETENTION_ACTOR),
+            ..ctx
+        };
+        return Ok(super::retention_cleanup::handle_retention_cleanup_run(&ctx, &method).await);
+    }
     if let Some(resp) =
         super::gateway_graph::try_handle(state, tenant_id, &ctx, &plan, &method).await
     {

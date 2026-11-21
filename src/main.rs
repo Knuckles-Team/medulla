@@ -1988,6 +1988,18 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
         });
     }
 
+    // ── Retention cleanup (MEDULLA-DURABLE-KERNEL-R700.3) ──────────────────────────
+    // Armed beside the sealed-record sweep, only when `MEDULLA_RETENTION_CLEANUP`
+    // holds a valid policy; one bounded step per graph every sweep.
+    if medulla_server::retention_cleanup::is_configured() {
+        let interval = medulla_server::retention_cleanup::sweep_interval_secs();
+        info!("Retention cleanup: sweeping every {}s (R700.3)", interval);
+        let cleanup_state = state.clone();
+        spawn_periodic_sweep(interval, "retention_cleanup", move || {
+            server_startup::retention_cleanup_tick(cleanup_state.clone())
+        });
+    }
+
     // ── Downtime scheduler (MEDULLA-DURABLE-KERNEL-R101.3) ─────────────────────────
     // Every `downtime.tick_secs` seconds, lease and submit the downtime job types
     // that fit the open idle or declared window.

@@ -511,6 +511,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ArchitectureModelImport { .. }
                 // MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
                 | Method::SourceSync { .. }
+                // MEDULLA-DURABLE-KERNEL-R700.3: a cleanup step removes graph nodes.
+                | Method::RetentionCleanupRun { .. }
                 // MEDULLA-FEDERATED-QUERY-R700.3: the argument-map upsert
                 // commits graph nodes through the gateway.
                 | Method::ArgumentMapPut { .. }

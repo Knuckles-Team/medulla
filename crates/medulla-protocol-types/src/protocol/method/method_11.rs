@@ -658,6 +658,14 @@ $($variants)*
     /// job types it submitted work for and the types it skipped, with the reason.
     /// Scope `jobs:read`.
     DowntimeSelections,
+    /// One bounded retention cleanup step over the request graph
+    /// (MEDULLA-DURABLE-KERNEL-R700.3), under the policy `MEDULLA_RETENTION_CLEANUP`
+    /// names. `dry_run` reports without removing; `cursor` resumes after the
+    /// previous step's `next_cursor`. Scope `retention:run`; removals are attributed
+    /// to the actor `engine:retention-cleanup`.
+    RetentionCleanupRun {
+        request: medulla_mutation_types::retention_cleanup::RetentionCleanupRunRequest,
+    },
     /// Replace the scheduler policy (MEDULLA-DURABLE-KERNEL-R076.2). Scope
     /// `scheduler:admin`. A setting that fails `SchedulerConfig::validate`
     /// refuses `SCHEDULER_CONFIG_INVALID` and changes nothing; an accepted one
