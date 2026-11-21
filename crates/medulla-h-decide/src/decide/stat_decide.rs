@@ -398,6 +398,13 @@ async fn serve(
                 super::family::harness_config::evidence_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| view.map(|view| (view, 0)))
+            } else if request.question.kind == QuestionKind::ToolNecessity {
+                // A `tool_necessity` question measures over the `RunTrace` nodes of the
+                // graph named by its `graph` param, under the same ACL and RLS filter
+                // (MEDULLA-DECISION-ENGINE-R165.3).
+                super::family::tool_necessity::evidence_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| view.map(|view| (view, 0)))
             } else if request.question.kind == QuestionKind::Promotion {
                 // A `promotion` question about a program or policy subject reads its
                 // receipt node in the graph named by its `graph` param, under the same

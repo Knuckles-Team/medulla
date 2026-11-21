@@ -91,7 +91,7 @@ mod template_choice;
 mod temporal_basis;
 mod thought_search;
 mod tool_action_admission;
-mod tool_necessity;
+pub(super) mod tool_necessity;
 mod tool_relevance;
 mod tool_subset;
 mod topology;
