@@ -87,3 +87,33 @@ fn refusals_and_skips() {
     assert_eq!(hits.len(), 1, "a length mismatch and a zero norm are not hits");
     assert_eq!(hits[0].id, "ok");
 }
+
+// spec: MEDULLA-MEDIA-VOCAB-R650.4
+#[test]
+fn sniff_table_names_each_supported_type() {
+    use medulla_modality::media_memory::sniff_mime;
+    let riff = |form: &[u8]| {
+        let mut head = b"RIFF\0\0\0\0".to_vec();
+        head.extend_from_slice(form);
+        head
+    };
+    let mut mp4 = vec![0, 0, 0, 0x20];
+    mp4.extend_from_slice(b"ftypM4A ");
+    for (head, mime) in [
+        (b"\x89PNG\r\n\x1a\n\0\0\0\rIHDR".to_vec(), "image/png"),
+        (b"\xff\xd8\xff\xe0\0\x10JFIF\0".to_vec(), "image/jpeg"),
+        (riff(b"WEBPVP8 "), "image/webp"),
+        (b"GIF89a\x01\0\x01\0".to_vec(), "image/gif"),
+        (b"ID3\x04\0\0\0\0\0\0".to_vec(), "audio/mpeg"),
+        (b"OggS\0\x02\0\0\0\0\0\0".to_vec(), "audio/ogg"),
+        (riff(b"WAVEfmt "), "audio/wav"),
+        (mp4, "audio/mp4"),
+        (b"%PDF-1.7\n%\xe2\xe3".to_vec(), "application/pdf"),
+    ] {
+        assert_eq!(sniff_mime(&head), Some(mime));
+    }
+    // An unlisted type, a short head and a form tag without the RIFF tag name nothing.
+    assert_eq!(sniff_mime(b"MZ\x90\0\x03\0\0\0\x04\0\0\0\xff\xff\0\0"), None);
+    assert_eq!(sniff_mime(b"\xff"), None);
+    assert_eq!(sniff_mime(b"XXXX\0\0\0\0WEBPVP8 "), None);
+}

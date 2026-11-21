@@ -15,7 +15,50 @@ use serde::{Deserialize, Serialize};
 
 use sha2::{Digest, Sha256};
 
+use medulla_types::refusal_code::RefusalCode;
 use medulla_types::{contract::Digest256, contract::ResourceId, contract::TenantId};
+
+/// A blob above `knob media.max_blob_bytes` (MEDULLA-MEDIA-VOCAB-R650.4).
+pub const MEDIA_TOO_LARGE: RefusalCode = RefusalCode::new("MEDIA_TOO_LARGE");
+/// A declared MIME that differs from the sniffed magic type.
+pub const MEDIA_TYPE_MISMATCH: RefusalCode = RefusalCode::new("MEDIA_TYPE_MISMATCH");
+/// A sniffed type outside the supported table.
+pub const MEDIA_TYPE_UNSUPPORTED: RefusalCode = RefusalCode::new("MEDIA_TYPE_UNSUPPORTED");
+/// An attachment digest the caller's owner scope does not hold.
+pub const MEDIA_BLOB_UNKNOWN: RefusalCode = RefusalCode::new("MEDIA_BLOB_UNKNOWN");
+/// A `media_derivation` feature with empty text.
+pub const MEDIA_DERIVATION_EMPTY: RefusalCode = RefusalCode::new("MEDIA_DERIVATION_EMPTY");
+/// A `media_derivation` feature whose kind is not `transcript` or `caption`.
+pub const MEDIA_DERIVATION_KIND_INVALID: RefusalCode =
+    RefusalCode::new("MEDIA_DERIVATION_KIND_INVALID");
+
+/// Every refusal code of the `memory` family (MEDULLA-DECISION-ENGINE-R010.100).
+pub const REFUSALS: &[RefusalCode] = &[
+    MEDIA_TOO_LARGE,
+    MEDIA_TYPE_MISMATCH,
+    MEDIA_TYPE_UNSUPPORTED,
+    MEDIA_BLOB_UNKNOWN,
+    MEDIA_DERIVATION_EMPTY,
+    MEDIA_DERIVATION_KIND_INVALID,
+];
+
+/// `knob media.max_blob_bytes`: largest attached blob.
+pub const MEDIA_MAX_BLOB_BYTES_KNOB: &str = "media.max_blob_bytes";
+/// Default of the blob size knob, in bytes.
+pub const MEDIA_MAX_BLOB_BYTES_DEFAULT: u64 = 33_554_432;
+/// Inclusive bounds of the blob size knob, in bytes.
+pub const MEDIA_MAX_BLOB_BYTES_RANGE: (u64, u64) = (1_048_576, 268_435_456);
+/// Environment override of the blob size knob.
+pub const ENV_MEDIA_MAX_BLOB_BYTES: &str = "MEDULLA_MEDIA_MAX_BLOB_BYTES";
+
+/// The effective blob size limit: the environment value inside the bounds, the default otherwise.
+pub fn media_max_blob_bytes() -> u64 {
+    std::env::var(ENV_MEDIA_MAX_BLOB_BYTES)
+        .ok()
+        .and_then(|raw| raw.trim().parse::<u64>().ok())
+        .filter(|n| (MEDIA_MAX_BLOB_BYTES_RANGE.0..=MEDIA_MAX_BLOB_BYTES_RANGE.1).contains(n))
+        .unwrap_or(MEDIA_MAX_BLOB_BYTES_DEFAULT)
+}
 
 /// The largest number of nodes one memory prune step may remove.
 pub const MAX_MEMORY_PRUNE_STEP: u32 = 10_000;

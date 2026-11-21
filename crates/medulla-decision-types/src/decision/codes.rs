@@ -685,6 +685,8 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ("participant", participant::REFUSALS.to_vec()),
         // MEDULLA-MEDIA-VOCAB-R001.100.2: the media tag ingest refusals.
         ("media_tag", media_tag::REFUSALS.to_vec()),
+        // MEDULLA-MEDIA-VOCAB-R650.4: the media attachment and derivation refusals.
+        ("memory", medulla_work_types::memory::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R173.7: the harness edit lifecycle.
         (
             "harness_edit",

@@ -145,6 +145,42 @@ pub fn plan_media_write(
     })
 }
 
+/// Bytes of a blob the magic-type sniff reads.
+pub const SNIFF_HEAD_BYTES: usize = 16;
+
+/// One magic-type rule: the bytes that must sit at `offset`, and the type they name.
+type SniffRule = (usize, &'static [u8], &'static str);
+
+/// The sniff table of MEDULLA-MEDIA-VOCAB-R650.4. `RIFF` containers are told apart by the form
+/// bytes at offset 8, and an `ftyp` box at offset 4 names `audio/mp4`.
+pub const SNIFF_TABLE: &[SniffRule] = &[
+    (0, b"\x89PNG\r\n\x1a\n", "image/png"),
+    (0, b"\xff\xd8\xff", "image/jpeg"),
+    (8, b"WEBP", "image/webp"),
+    (0, b"GIF87a", "image/gif"),
+    (0, b"GIF89a", "image/gif"),
+    (0, b"ID3", "audio/mpeg"),
+    (0, b"\xff\xfb", "audio/mpeg"),
+    (0, b"\xff\xf3", "audio/mpeg"),
+    (0, b"\xff\xf2", "audio/mpeg"),
+    (0, b"OggS", "audio/ogg"),
+    (8, b"WAVE", "audio/wav"),
+    (4, b"ftyp", "audio/mp4"),
+    (0, b"%PDF-", "application/pdf"),
+];
+
+/// The type the first bytes of a blob name, or `None` when no table rule matches. A `RIFF` rule
+/// needs the `RIFF` tag at offset 0 as well as its form bytes.
+pub fn sniff_mime(head: &[u8]) -> Option<&'static str> {
+    let head = &head[..head.len().min(SNIFF_HEAD_BYTES)];
+    SNIFF_TABLE.iter().find_map(|(offset, magic, mime)| {
+        let riff = matches!(*mime, "image/webp" | "audio/wav");
+        let fits = head.get(*offset..*offset + magic.len()) == Some(*magic)
+            && (!riff || head.get(..4) == Some(b"RIFF".as_slice()));
+        fits.then_some(*mime)
+    })
+}
+
 /// One recalled derivation: its id and the cosine score against the query.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DerivationHit {

@@ -253,6 +253,20 @@ pub(super) fn admit_remember(
             ),
         ));
     }
+    let max_blob_bytes = medulla_work_types::memory::media_max_blob_bytes();
+    if let Some(attachment) = record
+        .attachments
+        .iter()
+        .find(|attachment| attachment.byte_len > max_blob_bytes)
+    {
+        return Err(refuse(
+            "MEDIA_TOO_LARGE",
+            format!(
+                "attachment of {} bytes is above knob media.max_blob_bytes ({max_blob_bytes})",
+                attachment.byte_len
+            ),
+        ));
+    }
     let id = node_id(tenant, record.memory_id.as_str());
     let answer = |stored| MemoryRememberResult {
         memory_id: record.memory_id.clone(),
@@ -339,6 +353,66 @@ pub(super) async fn known_attachment_digests(
     {
         let _ = (state, owner_scope);
         BTreeSet::new()
+    }
+}
+
+/// Check each held attachment's declared MIME against the type its first bytes name
+/// (MEDULLA-MEDIA-VOCAB-R650.4). An attachment the owner scope does not hold, or one above the
+/// size limit, is left to `admit_remember`, which refuses it first. `Ok` for any other method.
+pub(super) async fn check_attachment_types(
+    state: &Arc<RwLock<ServerState>>,
+    method: &Method,
+    known_digests: &BTreeSet<String>,
+) -> Result<(), String> {
+    let Method::MemoryRemember { request } = method else {
+        return Ok(());
+    };
+    #[cfg(feature = "blob")]
+    {
+        use medulla_server_blob::blob::store::ChunkStore;
+        use medulla_server_blob::blob::BlobStateExt;
+        let max_blob_bytes = medulla_work_types::memory::media_max_blob_bytes();
+        let store = {
+            let guard = state.read().await;
+            guard.blob_cursors().map(|cursors| cursors.store.clone())
+        };
+        let Some(store) = store else {
+            return Ok(());
+        };
+        for attachment in &request.record.attachments {
+            if !known_digests.contains(&attachment.blob_digest)
+                || attachment.byte_len > max_blob_bytes
+            {
+                continue;
+            }
+            let Some(chunk) = store.get_chunk(&attachment.blob_digest)? else {
+                continue;
+            };
+            match medulla_modality::media_memory::sniff_mime(&chunk) {
+                None => {
+                    return Err(refuse(
+                        "MEDIA_TYPE_UNSUPPORTED",
+                        format!("attachment '{}' has an unsupported type", attachment.blob_digest),
+                    ));
+                }
+                Some(sniffed) if sniffed != attachment.mime => {
+                    return Err(refuse(
+                        "MEDIA_TYPE_MISMATCH",
+                        format!(
+                            "attachment '{}' declares '{}' but is '{sniffed}'",
+                            attachment.blob_digest, attachment.mime
+                        ),
+                    ));
+                }
+                Some(_) => {}
+            }
+        }
+        Ok(())
+    }
+    #[cfg(not(feature = "blob"))]
+    {
+        let _ = (state, request, known_digests);
+        Ok(())
     }
 }
 

@@ -280,3 +280,34 @@ fn media_attachment_remember_and_recall() {
         .unwrap_err()
         .starts_with("PARAMETER_INVALID"));
 }
+
+// spec: MEDULLA-MEDIA-VOCAB-R650.4
+#[test]
+fn media_refusals() {
+    let core = GraphCore::new();
+    let digest = "c".repeat(64);
+    let known: std::collections::BTreeSet<String> = [digest.clone()].into_iter().collect();
+    let attach = |byte_len: u64| {
+        let mut image = record("tenant-a", "m:big", MemoryTier::Semantic, "a photo");
+        image.attachments = vec![MediaAttachment {
+            blob_digest: digest.clone(),
+            mime: "image/png".into(),
+            byte_len,
+            derivation_ids: Vec::new(),
+        }];
+        remember(image, vec![])
+    };
+    // A blob above the default limit is refused, and nothing is stored.
+    let limit = medulla_work_types::memory::MEDIA_MAX_BLOB_BYTES_DEFAULT;
+    let refusal = admit_remember(&core, "tenant-a", &attach(limit + 1), &known).err().unwrap();
+    assert!(refusal.starts_with("MEDIA_TOO_LARGE"), "{refusal}");
+    assert_eq!(core.node_count(), 0);
+    // A blob at the limit passes the size check.
+    assert!(admit_remember(&core, "tenant-a", &attach(limit), &known).is_ok());
+    // A digest the owner scope does not hold is refused before the size is read.
+    let refusal = admit_remember(&core, "tenant-a", &attach(limit + 1), &Default::default())
+        .err()
+        .unwrap();
+    assert!(refusal.starts_with("MEDIA_BLOB_UNKNOWN"), "{refusal}");
+    assert_eq!(core.node_count(), 0);
+}

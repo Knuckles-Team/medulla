@@ -249,6 +249,11 @@ pub async fn try_handle_gateway(
         &method,
     )
     .await;
+    if let Err(error) =
+        super::memory_surface::check_attachment_types(state, &method, &known_digests).await
+    {
+        return Ok(Response::err(req_id, error));
+    }
     if let Some(resp) =
         super::gateway_graph::try_handle(state, tenant_id, &ctx, &plan, &method, &known_digests)
             .await
