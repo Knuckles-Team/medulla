@@ -231,7 +231,7 @@ These tests are planned and have not run.
 |---|---|---|
 | MEDULLA-DECISION-ENGINE-R093.2.1 | retired | No binding: the served `tool_subset` question does not solve the assembly gold items. |
 | MEDULLA-DECISION-ENGINE-R093.2.2 | `tests/synthetic/test_synthetic_decision_export.py::test_served_labels_require_collected_results` | Invalid provenance and labels fail closed. |
-| MEDULLA-DECISION-ENGINE-R093.2.3 | `tests/synthetic/test_served_corpus_training.py::test_training_consumes_served_ground_truth` | Training consumes episodes collected from a real server. |
+| MEDULLA-DECISION-ENGINE-R093.2.3 | `tests/synthetic/test_served_corpus_training.py::test_served_fit_trains_on_the_exported_corpus` | Training consumes episodes collected from a real server. |
 
 ### Planned proofs for MEDULLA-DECISION-ENGINE-R130.4 to R137.100
 
