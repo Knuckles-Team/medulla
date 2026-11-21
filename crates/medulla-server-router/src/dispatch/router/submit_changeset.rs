@@ -31,6 +31,8 @@ mod served {
         accept, verify_submission, AcceptContext, AcceptError, ChainView, ChunkStoreBlobs,
     };
     use medulla_persistence::branch_registry_store::{AppendError, CommitPlan, PayloadReader};
+    use medulla_server_auth::access::path_grant;
+    use medulla_source_types::source_path_grant::PathAccess;
     use medulla_server_blob::blob::BlobStateExt;
     use medulla_source_types::source_changeset::{Changeset, SubmitChangesetReceipt};
 
@@ -115,6 +117,27 @@ mod served {
             }
             Ok(None) => {}
             Err(error) => return Response::err(req.id, error),
+        }
+
+        // MEDULLA-SCM-R007: write access on every path and rename source, before
+        // any blob is read.
+        let grants = match target
+            .path_grants(verified.tenant(), &request.repo, verified.agent_id())
+            .await
+        {
+            Ok(grants) => grants,
+            Err(error) => return Response::err(req.id, error),
+        };
+        let touched: Vec<&str> = request
+            .paths
+            .iter()
+            .flat_map(|entry| std::iter::once(entry.path.as_str()).chain(entry.renamed_from.as_deref()))
+            .collect();
+        if let Err(refusal) = path_grant::check(&grants, &touched, PathAccess::Write) {
+            return Response::err(
+                req.id,
+                format!("{}: no write grant covers a submitted path", refusal.code()),
+            );
         }
 
         // Stage one: bounds, pairings and blobs, before any write.

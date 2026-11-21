@@ -149,6 +149,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R007: one principal's path grant on a repository.
+        Method::SetPathGrant { request } => {
+            dispatch_boxed(super::set_path_grant::handle_set_path_grant(
+                state,
+                req,
+                verified_context,
+                super::set_path_grant::SetPathGrantFields { request },
+            ))
+            .await
+        }
         other => return ControlFlow::Continue(other),
     })
 }

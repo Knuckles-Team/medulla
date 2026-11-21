@@ -60,6 +60,9 @@ impl OwnerScopedCall<'_> {
 mod write_classification;
 pub use write_classification::requires_write;
 
+/// Path-scoped access of the source methods (MEDULLA-SCM-R007).
+pub mod path_grant;
+
 /// Whether a wire `Method::Sql` statement mutates state (CONCEPT:MEDULLA-KG.query.mirrors-pgwire). Reuses the
 /// SAME `medulla_sql::sql::classify` the pgwire shim routes on, so a graph-node DML
 /// (INSERT/UPDATE/DELETE on `nodes`), a user-table DDL/DML (CREATE/ALTER/DROP TABLE,

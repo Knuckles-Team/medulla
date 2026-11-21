@@ -20,6 +20,8 @@ mod served {
     use medulla_h_ingest::source_tree::read_tree;
     use medulla_mutation_types::branch::BranchRef;
     use medulla_persistence::branch_registry_store::BranchRegistry;
+    use medulla_server_auth::access::path_grant;
+    use medulla_source_types::source_path_grant::PathAccess;
     use medulla_source_types::source_changeset::{Changeset, ReadTreeReceipt};
 
     /// The branch chain as a tree read sees it.
@@ -67,14 +69,32 @@ mod served {
             Ok(target) => target,
             Err(error) => return ops::target_error_response(req.id, error),
         };
+        // MEDULLA-SCM-R007: the grants are read inside the same blocking snapshot.
+        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
         let answered = target
             .read_blocking(move |registry, branch| {
-                read_tree(&RegistryTree { registry, branch }, &request)
+                let grants = registry.path_grants(&tenant, &request.repo, &principal)?;
+                let prefix = request.prefix.strip_suffix('/').unwrap_or(&request.prefix);
+                if !path_grant::any_allowed_at_or_below(&grants, prefix, PathAccess::Read) {
+                    return Ok(Err(format!(
+                        "{}: no read grant covers the prefix",
+                        PathAccess::Read.denied().code()
+                    )));
+                }
+                let answer = read_tree(&RegistryTree { registry, branch }, &request)?;
+                Ok(answer
+                    .map(|mut receipt| {
+                        receipt
+                            .entries
+                            .retain(|entry| path_grant::allows(&grants, &entry.path, PathAccess::Read));
+                        receipt
+                    })
+                    .map_err(|refusal| refusal.message()))
             })
             .await;
         match answered {
             Ok(Ok(Ok(receipt))) => receipt_response(req.id, receipt),
-            Ok(Ok(Err(refusal))) => Response::err(req.id, refusal.message()),
+            Ok(Ok(Err(message))) => Response::err(req.id, message),
             Ok(Err(error)) | Err(error) => Response::err(req.id, error),
         }
     }

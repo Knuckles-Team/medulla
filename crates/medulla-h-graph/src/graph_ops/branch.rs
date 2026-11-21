@@ -249,6 +249,20 @@ impl BranchTarget {
             .map_err(|error| error.to_string())?
     }
 
+    /// The path grants of `principal` on `repo` (MEDULLA-SCM-R007).
+    pub async fn path_grants(
+        &self,
+        tenant: &str,
+        repo: &str,
+        principal: &str,
+    ) -> Result<Vec<medulla_source_types::source_path_grant::PathGrant>, String> {
+        let registry = Arc::clone(&self.registry);
+        let (tenant, repo, principal) = (tenant.to_string(), repo.to_string(), principal.to_string());
+        tokio::task::spawn_blocking(move || registry.path_grants(&tenant, &repo, &principal))
+            .await
+            .map_err(|error| error.to_string())?
+    }
+
     /// Run `read` against the registry and this branch on a blocking thread
     /// (MEDULLA-SCM-R004): a read that walks the chain does so with sync calls.
     pub async fn read_blocking<R, F>(&self, read: F) -> Result<R, String>

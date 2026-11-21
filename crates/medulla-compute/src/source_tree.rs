@@ -31,15 +31,10 @@ pub enum TreeError {
     Store(String),
 }
 
-/// Whether `path` lies under `prefix` on a path-segment boundary. The empty
-/// prefix holds every path.
-pub fn in_prefix(path: &str, prefix: &str) -> bool {
-    prefix.is_empty()
-        || path == prefix
-        || path
-            .strip_prefix(prefix)
-            .is_some_and(|rest| rest.starts_with('/'))
-}
+/// Whether `path` lies under `prefix` on a path-segment boundary: the one rule
+/// of `medulla_source_types::source_path_grant`, shared with path grants
+/// (MEDULLA-SCM-R007).
+pub use medulla_source_types::source_path_grant::in_prefix;
 
 /// Apply one changeset to `tree`, touching only the paths under `prefix`.
 /// A delete removes the path; every other op sets the path to its new blob.

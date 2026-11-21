@@ -14,6 +14,7 @@ use medulla_mutation_types::branch::{
     branch_commit_id, Branch, BranchCommit, BranchMutationRefusal, BranchRef,
 };
 use medulla_types::contract::ServerErrorCode;
+use medulla_source_types::source_path_grant::PathGrant;
 use redb::{ReadableTable, ReadableTableMetadata};
 
 /// The owner file name under the persist dir.
@@ -167,6 +168,25 @@ fn checkpoint_row_key(branch: &BranchRef, commit_id: &str) -> String {
 /// only by the key functions of `medulla_compute::source_history`.
 fn history_row_key(branch: &BranchRef, relative: &str) -> String {
     format!("hist:{}:{relative}", branch.registry_key())
+}
+
+/// Row key of one path grant (MEDULLA-SCM-R007): `grant:` cannot collide with
+/// `commit:`, `batch:`, `payload:`, `tree:` or `hist:`. Every variable part is
+/// length-prefixed, so no part can forge another.
+fn grant_row_key(tenant: &str, repo: &str, principal: &str, prefix: &str) -> String {
+    format!(
+        "{}{}:{prefix}",
+        grant_row_prefix(tenant, repo),
+        grant_principal_part(principal)
+    )
+}
+
+fn grant_row_prefix(tenant: &str, repo: &str) -> String {
+    format!("grant:{}:{tenant}/{}:{repo}:", tenant.len(), repo.len())
+}
+
+fn grant_principal_part(principal: &str) -> String {
+    format!("{}:{principal}", principal.len())
 }
 
 /// What a commit builder returns: the commit facts plus the payload that
@@ -347,6 +367,63 @@ impl BranchRegistry {
             .map_err(|error| error.to_string())?
             .map(|value| value.value().to_vec());
         Ok(found)
+    }
+
+    /// Every path grant of `principal` on `repo` for `tenant`
+    /// (MEDULLA-SCM-R007), in key order.
+    pub fn path_grants(
+        &self,
+        tenant: &str,
+        repo: &str,
+        principal: &str,
+    ) -> Result<Vec<PathGrant>, String> {
+        let read = self.durable.read()?;
+        let table = read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?;
+        let low = format!(
+            "{}{}:",
+            grant_row_prefix(tenant, repo),
+            grant_principal_part(principal)
+        );
+        let mut grants = Vec::new();
+        for entry in table
+            .range::<&str>(low.as_str()..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, value) = entry.map_err(|error| error.to_string())?;
+            if !key.value().starts_with(low.as_str()) {
+                break;
+            }
+            grants.push(
+                rmp_serde::from_slice::<PathGrant>(value.value())
+                    .map_err(|error| error.to_string())?,
+            );
+        }
+        Ok(grants)
+    }
+
+    /// Write one path grant for `tenant` through the admitted native mutation
+    /// `path_grant` (MEDULLA-SCM-R007). A grant with both bits false deletes
+    /// its row.
+    pub fn set_path_grant(&self, tenant: &str, grant: &PathGrant) -> Result<(), BranchCreateError> {
+        let key = grant_row_key(tenant, &grant.repo, &grant.principal, &grant.prefix);
+        let bytes = rmp_serde::to_vec_named(grant).map_err(|error| error.to_string())?;
+        let delete = !grant.read && !grant.write;
+        self.durable
+            .maintain("path_grant", |owner| {
+                let mut table = owner.open_table(medulla_storage::BRANCH_REGISTRY)?;
+                if delete {
+                    table
+                        .remove(key.as_str())
+                        .map(|_| ())
+                        .map_err(|error| error.to_string())
+                } else {
+                    table
+                        .insert(key.as_str(), bytes.as_slice())
+                        .map(|_| ())
+                        .map_err(|error| error.to_string())
+                }
+            })
+            .map_err(BranchCreateError::Store)
     }
 
     /// One history index row of `branch` by relative key (MEDULLA-SCM-R005.1).
@@ -723,5 +800,45 @@ mod tests {
             Err(BranchCreateError::Refused(ServerErrorCode::BranchExists))
         );
         assert_eq!(registry.get(&reference).unwrap(), Some(branch("f1")));
+    }
+
+    // spec: MEDULLA-SCM-R007
+    #[test]
+    fn path_grants_are_scoped_to_tenant_repo_and_principal_and_a_dead_grant_deletes() {
+        let dir = tempfile::tempdir().unwrap();
+        let registry = BranchRegistry::open(dir.path().to_str().unwrap()).unwrap();
+        let grant = |repo: &str, principal: &str, prefix: &str, read: bool, write: bool| PathGrant {
+            repo: repo.into(),
+            principal: principal.into(),
+            prefix: prefix.into(),
+            read,
+            write,
+        };
+        registry
+            .set_path_grant("t", &grant("r", "alice", "src", true, true))
+            .unwrap();
+        registry
+            .set_path_grant("t", &grant("r", "alice", "src/secret", false, true))
+            .unwrap();
+        registry
+            .set_path_grant("t", &grant("r", "bob", "", true, false))
+            .unwrap();
+        registry
+            .set_path_grant("t", &grant("other", "alice", "", true, true))
+            .unwrap();
+        registry
+            .set_path_grant("u", &grant("r", "alice", "", true, true))
+            .unwrap();
+        let alice = registry.path_grants("t", "r", "alice").unwrap();
+        assert_eq!(alice.len(), 2);
+        assert!(alice.iter().all(|g| g.principal == "alice" && g.repo == "r"));
+        assert_eq!(registry.path_grants("t", "r", "bob").unwrap().len(), 1);
+        assert!(registry.path_grants("t", "r", "carol").unwrap().is_empty());
+        // A grant with both bits false deletes the row.
+        registry
+            .set_path_grant("t", &grant("r", "alice", "src/secret", false, false))
+            .unwrap();
+        let alice = registry.path_grants("t", "r", "alice").unwrap();
+        assert_eq!(alice.iter().map(|g| g.prefix.as_str()).collect::<Vec<_>>(), ["src"]);
     }
 }

@@ -783,6 +783,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     // A source changeset is the payload of a branch commit in the same owner
     // file (MEDULLA-SCM-R002).
     "SubmitChangeset",
+    // A path grant is one row in the same owner file (MEDULLA-SCM-R007).
+    "SetPathGrant",
 ];
 
 /// The local-only names that are NOT gateway-routed.
@@ -860,6 +862,7 @@ fn branch_registry_method_name(m: &Method) -> Option<&'static str> {
         Method::CreateBranch { .. } => Some("CreateBranch"),
         Method::BranchWrite { .. } => Some("BranchWrite"),
         Method::SubmitChangeset { .. } => Some("SubmitChangeset"),
+        Method::SetPathGrant { .. } => Some("SetPathGrant"),
         _ => None,
     }
 }

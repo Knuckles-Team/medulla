@@ -19,7 +19,9 @@ mod served {
     use medulla_h_ingest::source_history::read_blame;
     use medulla_mutation_types::branch::BranchRef;
     use super::super::read_path_history::RegistryHistory;
+    use medulla_server_auth::access::path_grant;
     use medulla_source_types::source_changeset::ReadBlameReceipt;
+    use medulla_source_types::source_path_grant::PathAccess;
 
     fn receipt_response(req_id: u64, receipt: ReadBlameReceipt) -> Response {
         match ResultPayload::of::<medulla_protocol_types::result_contract::cluster::ReadBlame>(
@@ -47,18 +49,25 @@ mod served {
             Ok(target) => target,
             Err(error) => return ops::target_error_response(req.id, error),
         };
+        // MEDULLA-SCM-R007: `read` on the path, from grants read inside the same snapshot.
+        let (tenant, principal) = (verified.tenant().to_string(), verified.agent_id().to_string());
         let answered = target
             .read_blocking(move |registry, branch| {
+                let grants = registry.path_grants(&tenant, &request.repo, &principal)?;
+                if let Err(refusal) = path_grant::check(&grants, &[request.path.as_str()], PathAccess::Read) {
+                    return Ok(Err(format!("{}: no read grant covers the path", refusal.code())));
+                }
                 let head = match registry.get(branch)? {
                     Some(row) => row.head_commit,
                     None => return Err("the resolved branch has no registry row".to_string()),
                 };
-                read_blame(&RegistryHistory { registry, branch }, &head, &request)
+                Ok(read_blame(&RegistryHistory { registry, branch }, &head, &request)?
+                    .map_err(|refusal| refusal.message()))
             })
             .await;
         match answered {
             Ok(Ok(Ok(receipt))) => receipt_response(req.id, receipt),
-            Ok(Ok(Err(refusal))) => Response::err(req.id, refusal.message()),
+            Ok(Ok(Err(message))) => Response::err(req.id, message),
             Ok(Err(error)) | Err(error) => Response::err(req.id, error),
         }
     }

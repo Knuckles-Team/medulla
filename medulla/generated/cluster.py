@@ -1492,6 +1492,7 @@ send_register_udf = contract_sender(
 send_branch_diff = contract_sender("BranchDiff", "MethodBranchDiffParams")
 send_branch_read_at = contract_sender("BranchReadAt", "MethodBranchReadAtParams")
 send_branch_write = contract_sender("BranchWrite", "MethodBranchWriteParams")
+send_set_path_grant = contract_sender("SetPathGrant", "MethodSetPathGrantParams")
 send_read_blame = contract_sender("ReadBlame", "MethodReadBlameParams")
 send_read_path_history = contract_sender(
     "ReadPathHistory", "MethodReadPathHistoryParams"

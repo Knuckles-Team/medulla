@@ -14567,6 +14567,13 @@ class MethodSubmitChangeset(BaseModel):
     params: MethodSubmitChangesetParams
 
 
+class MethodSetPathGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SetPathGrant"]
+    params: MethodSetPathGrantParams
+
+
 class MethodReadBlame(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15233,6 +15240,7 @@ Method = Annotated[
         MethodBranchDiff,
         MethodBranchReadAt,
         MethodSubmitChangeset,
+        MethodSetPathGrant,
         MethodReadPathHistory,
         MethodReadBlame,
         MethodReadSpan,
@@ -33170,6 +33178,12 @@ class MethodStoredQueryPutParams(BaseModel):
     query: StoredQuery
 
 
+class MethodSetPathGrantParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: SetPathGrantRequest
+
+
 class MethodReadBlameParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -33785,6 +33799,26 @@ class BlameRun(BaseModel):
     commit: str
     line_count: Annotated[int, Field(ge=0)]
     start_line: Annotated[int, Field(ge=0)]
+
+
+class PathGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    prefix: str
+    principal: str
+    read: bool
+    repo: str
+    write: bool
+
+
+class SetPathGrantRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    prefix: str
+    principal: str
+    read: bool
+    repo: str
+    write: bool
 
 
 class PathHistoryEntry(BaseModel):
@@ -38685,12 +38719,16 @@ __all__ = [
     "MethodStoredQueryCallParams",
     "MethodStoredQueryPut",
     "MethodStoredQueryPutParams",
+    "MethodSetPathGrant",
+    "MethodSetPathGrantParams",
     "MethodReadBlame",
     "MethodReadBlameParams",
     "MethodReadPathHistory",
     "MethodReadPathHistoryParams",
     "MethodSubmitChangeset",
     "MethodSubmitChangesetParams",
+    "PathGrant",
+    "SetPathGrantRequest",
     "BlameRun",
     "PathHistoryEntry",
     "ReadBlameReceipt",

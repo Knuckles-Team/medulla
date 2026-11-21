@@ -932,9 +932,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CHANGESET_INVALID",
             "CHANGESET_PARENT_NOT_ON_BRANCH",
             "MERGE_BLOB_UNREADABLE",
+            "PATH_WRITE_DENIED",
             "SOURCE_CONFLICT",
         ],
     ),
+    // MEDULLA-SCM-R007: a path grant that is out of bounds.
+    ("SetPathGrant", &["PATH_GRANT_INVALID"]),
     // MEDULLA-SCM-R004: the tree read refusals.
     (
         "ReadTree",
@@ -943,6 +946,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_TENANT_DENIED",
             "BRANCH_UNKNOWN",
             "CHANGESET_INVALID",
+            "PATH_READ_DENIED",
             "REVISION_NOT_ON_CHAIN",
         ],
     ),
@@ -955,6 +959,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_UNKNOWN",
             "CHANGESET_INVALID",
             "HISTORY_INDEX_STALE",
+            "PATH_READ_DENIED",
             "REVISION_NOT_ON_CHAIN",
         ],
     ),
@@ -970,6 +975,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_UNKNOWN",
             "CHANGESET_INVALID",
             "HISTORY_INDEX_STALE",
+            "PATH_READ_DENIED",
             "REVISION_NOT_ON_CHAIN",
         ],
     ),

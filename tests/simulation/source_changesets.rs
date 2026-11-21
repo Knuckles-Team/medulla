@@ -30,6 +30,7 @@ use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, Res
 use medulla_server_auth::auth::{compute_verified_envelope_token, VerifiedEnvelopeParams};
 use medulla_server_blob::blob::store::RedbChunkStore;
 use medulla_server_blob::blob::{BlobCursors, BlobStateExt};
+use medulla_source_types::source_path_grant::SetPathGrantRequest;
 use medulla_source_types::source_changeset::{
     Changeset, PathOp, ReadPathHistoryRequest, ReadPathHistoryReceipt, ReadTreeReceipt,
     ReadTreeRequest, SubmitChangesetReceipt, SubmitChangesetRequest, SubmittedBlobRef,
@@ -263,6 +264,24 @@ impl Sim {
             .await;
         if let Some(error) = made.error {
             return Err(format!("CreateBranch: {error}"));
+        }
+        // MEDULLA-SCM-R007: the source methods deny by default.
+        let granted = sim
+            .call(
+                "init-grant",
+                Method::SetPathGrant {
+                    request: Box::new(SetPathGrantRequest {
+                        repo: sim.graph.clone(),
+                        principal: common::TEST_AGENT.to_string(),
+                        prefix: String::new(),
+                        read: true,
+                        write: true,
+                    }),
+                },
+            )
+            .await;
+        if let Some(error) = granted.error {
+            return Err(format!("SetPathGrant: {error}"));
         }
         Ok(sim)
     }

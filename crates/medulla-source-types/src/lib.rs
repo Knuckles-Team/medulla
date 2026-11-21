@@ -39,6 +39,8 @@ pub mod pre_merge_test_module;
 // MEDULLA-SCM-R002 — the source changeset record and its structured trailers.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod source_changeset;
+// MEDULLA-SCM-R007 — path-scoped access grants of the source methods.
+pub mod source_path_grant;
 // MEDULLA-SDLC — release, deployment, defect, derived status and lifecycle trace records.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod lifecycle;

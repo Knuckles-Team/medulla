@@ -438,6 +438,14 @@ $($variants)*
         request: Box<medulla_source_types::source_changeset::ReadTreeRequest>,
     },
 
+    /// Set one principal's access to the paths of a repository under a prefix
+    /// (MEDULLA-SCM-R007). The source methods deny by default; the longest
+    /// matching prefix decides. `read` and `write` both false deletes the
+    /// grant. Refusal: `PATH_GRANT_INVALID`. Needs `graph:admin`.
+    SetPathGrant {
+        request: Box<medulla_source_types::source_path_grant::SetPathGrantRequest>,
+    },
+
     /// Read the history of one path (MEDULLA-SCM-R005.1): the changesets that
     /// touched `path`, newest first, with seq at or below the seq of `rev` on
     /// `branch`. `limit` 0 means 100; the maximum is 1000. Refusals:

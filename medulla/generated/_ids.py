@@ -585,6 +585,7 @@ METHOD_IDS = frozenset(
         "ResolveViewportSelection",
         "RetrievalRound",
         "SemanticEnrich",
+        "SetPathGrant",
         "SourceCoverage",
         "SourceSync",
         "StoredQueryCall",

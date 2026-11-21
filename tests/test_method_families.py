@@ -294,6 +294,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "BusHeartbeat",
         "BranchWrite",
         "SubmitChangeset",
+        "SetPathGrant",
         "BusRegister",
         "CreateBranch",
         "DocumentDelete",

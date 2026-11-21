@@ -15,7 +15,7 @@ import os
 import uuid
 
 import pytest
-from conftest import TEST_TENANT, request_context
+from conftest import TEST_AGENT_ID, TEST_TENANT, request_context
 
 from medulla.client import MedullaClient
 
@@ -88,6 +88,19 @@ async def _scenario(graph: str) -> None:
         branch = f"feature/tree-{stem}"
         await client._send(
             "CreateBranch", {"tenant": TEST_TENANT, "graph": graph, "name": branch}
+        )
+        # MEDULLA-SCM-R007: the source methods deny by default.
+        await client._send(
+            "SetPathGrant",
+            {
+                "request": {
+                    "repo": graph,
+                    "principal": TEST_AGENT_ID,
+                    "prefix": "",
+                    "read": True,
+                    "write": True,
+                }
+            },
         )
 
         async def blob(text: str) -> tuple[str, int]:

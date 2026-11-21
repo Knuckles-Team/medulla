@@ -22,6 +22,7 @@ method_results! {
     BranchReadAt(BranchReadAt) => Json<medulla_mutation_types::versioning::BranchSnapshot>;
     ReadTree(ReadTree) => Json<medulla_source_types::source_changeset::ReadTreeReceipt>;
     ReadPathHistory(ReadPathHistory) => Json<medulla_source_types::source_changeset::ReadPathHistoryReceipt>;
+    SetPathGrant(SetPathGrant) => Json<medulla_source_types::source_path_grant::PathGrant>;
     ReadBlame(ReadBlame) => Json<medulla_source_types::source_changeset::ReadBlameReceipt>;
     SubmitChangeset(SubmitChangeset) => Json<medulla_source_types::source_changeset::SubmitChangesetReceipt>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;

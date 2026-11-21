@@ -484,6 +484,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::DecisionCommit { .. }
                 // MEDULLA-BRANCH-MERGE-R001: one branch registry row.
                 | Method::CreateBranch { .. }
+                // MEDULLA-SCM-R007: one path grant row in the branch registry.
+                | Method::SetPathGrant { .. }
                 // MEDULLA-BRANCH-MERGE-R002: a branch-scoped mutation.
                 | Method::BranchWrite { .. }
                 // MEDULLA-SCM-R002: a source changeset on a branch.

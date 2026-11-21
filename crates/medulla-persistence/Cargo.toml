@@ -59,6 +59,7 @@ medulla-lane-store = { path = "../medulla-lane-store" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-auth = { path = "../medulla-server-auth" }
+medulla-source-types = { path = "../medulla-source-types" }
 
 [features]
 object-store = ["dep:object_store", "dep:tracing-subscriber", "medulla-storage/object-archive"]

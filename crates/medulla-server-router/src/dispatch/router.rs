@@ -56,6 +56,7 @@ mod source_ingest;
 mod read_blame;
 mod read_path_history;
 mod read_tree;
+mod set_path_grant;
 mod submit_changeset;
 mod telemetry;
 
