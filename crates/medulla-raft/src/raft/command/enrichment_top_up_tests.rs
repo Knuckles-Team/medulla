@@ -211,7 +211,7 @@ fn only_exact_committed_retry_may_cross_a_new_route_fence() {
         .validate_parent_fence(2, Some(2), Some(&record), 12)
         .is_err());
     record.result_msgpack = Some(rmp_serde::to_vec_named(&plan).unwrap());
-    record.status = MutationBatchStatus::Aborted;
+    record.status = MutationBatchStatus::Prepared;
     assert!(plan
         .validate_parent_fence(2, Some(2), Some(&record), 12)
         .is_err());
