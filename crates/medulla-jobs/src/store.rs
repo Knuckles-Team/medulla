@@ -1269,6 +1269,43 @@ impl JobStore {
         Ok(job)
     }
 
+    /// Hand a running job back at a step boundary because foreground load asked for its
+    /// worker (MEDULLA-DURABLE-KERNEL-R101.7). Fenced like [`Self::checkpoint_fenced`]: valid
+    /// only from `Running` with the caller's live lease. The release is a lapse of the lease
+    /// (`Reclaim`, J13): the job returns to `Submitted` carrying its last checkpoint, the
+    /// attempt the claim counted is given back, and the job is in the ready index again, so
+    /// the next claim resumes from `checkpoint.state_blob`.
+    pub fn yield_running_fenced(
+        &self,
+        job_id: &str,
+        worker_ref: &str,
+        epoch: u64,
+        now_ms: i64,
+    ) -> Result<AnalyticsJob> {
+        let expected_version = self.live_version()?;
+        let write = self.mutations.open_write(&self.owner).map_err(redb_err)?;
+        let mut job = read_job_in_wtx(&write, job_id)?;
+        require_lease(&job, worker_ref, epoch, now_ms)?;
+        let JobState::Running { checkpoint, .. } = &job.state else {
+            return Err(invalid_transition(&job, "a yield requires Running"));
+        };
+        let reclaimed = JobState::Submitted {
+            checkpoint: Some(checkpoint.clone()),
+        };
+        let facts = JobFacts {
+            lease_expires_at_ms: Some(now_ms),
+            lease_owner_matches: true,
+            ..job.state.facts()
+        };
+        job.transition(JobEvent::Reclaim, &facts, now_ms, reclaimed)?;
+        job.retry.attempts_made = job.retry.attempts_made.saturating_sub(1);
+        job.updated_at_ms = now_ms;
+        let (batch, _next_version) =
+            write_job_transition(self, &write, &job, expected_version, None)?;
+        self.mutations.commit(write, &batch).map_err(redb_err)?;
+        Ok(job)
+    }
+
     /// Release a failed fenced attempt.  Retryable work waits in ``Backoff`` with a durable
     /// `not_before_ms` (J05, J07); an exhausted job becomes terminal ``Failed`` (J06, J08).
     pub fn fail_attempt_fenced(

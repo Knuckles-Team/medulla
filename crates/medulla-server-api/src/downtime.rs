@@ -8,6 +8,10 @@
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
+#[cfg(feature = "jobs")]
+use std::collections::BTreeMap;
+#[cfg(feature = "jobs")]
+use std::sync::{Arc, RwLock};
 
 pub use medulla_work_types::downtime::{DowntimeSelected, DowntimeSelections};
 
@@ -95,5 +99,70 @@ pub fn latest_selections() -> DowntimeSelections {
         .lock()
         .ok()
         .and_then(|slot| slot.clone())
+        .unwrap_or_default()
+}
+
+/// What one step of a downtime job needs: the claimed job, the state its previous step
+/// checkpointed and the wall-clock time the step may use (MEDULLA-DURABLE-KERNEL-R101.7).
+#[cfg(feature = "jobs")]
+pub struct DowntimeStepInput<'a> {
+    /// The claimed job.
+    pub job: &'a medulla_jobs::AnalyticsJob,
+    /// The `state_blob` of the job's last checkpoint; `None` on a first step.
+    pub state_blob: Option<&'a [u8]>,
+    /// The longest the step may run, in milliseconds.
+    pub step_deadline_ms: u64,
+}
+
+/// What one step of a downtime job answers.
+#[cfg(feature = "jobs")]
+pub enum DowntimeStep {
+    /// More work remains: the state the next step resumes from and the bytes the step held.
+    Continue {
+        /// The state the worker checkpoints.
+        state_blob: Vec<u8>,
+        /// The working memory the step held, in bytes.
+        working_bytes: u64,
+    },
+    /// The job is finished: its typed result and the bytes the last step held.
+    Done {
+        /// The job's typed result.
+        result: medulla_jobs::TypedJobResult,
+        /// The working memory the step held, in bytes.
+        working_bytes: u64,
+    },
+}
+
+/// The work of one downtime intent, run in bounded steps by the downtime worker.
+#[cfg(feature = "jobs")]
+pub trait DowntimeBody: Send + Sync {
+    /// Run one step. An error fails the attempt.
+    fn step(&self, input: DowntimeStepInput<'_>) -> Result<DowntimeStep, String>;
+}
+
+#[cfg(feature = "jobs")]
+static BODIES: RwLock<BTreeMap<&'static str, Arc<dyn DowntimeBody>>> =
+    RwLock::new(BTreeMap::new());
+
+/// Install the body of `intent`; a second install for the same intent replaces the first.
+#[cfg(feature = "jobs")]
+pub fn install_downtime_body(intent: &'static str, body: Arc<dyn DowntimeBody>) {
+    if let Ok(mut bodies) = BODIES.write() {
+        bodies.insert(intent, body);
+    }
+}
+
+/// The body installed for `intent`, if any.
+#[cfg(feature = "jobs")]
+pub fn downtime_body(intent: &str) -> Option<Arc<dyn DowntimeBody>> {
+    BODIES.read().ok()?.get(intent).cloned()
+}
+
+/// The intents that have a body installed, in name order.
+#[cfg(feature = "jobs")]
+pub fn downtime_body_intents() -> Vec<&'static str> {
+    BODIES
+        .read()
+        .map(|bodies| bodies.keys().copied().collect())
         .unwrap_or_default()
 }

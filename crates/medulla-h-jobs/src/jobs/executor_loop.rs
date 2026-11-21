@@ -6,8 +6,8 @@ use super::*;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub(super) struct AnalyticsWorkerTiming {
-    lease_ms: u64,
-    poll_ms: u64,
+    pub(super) lease_ms: u64,
+    pub(super) poll_ms: u64,
 }
 
 static POOL_STARTED: OnceLock<()> = OnceLock::new();
@@ -60,6 +60,15 @@ pub(super) fn ensure_job_workers(
         for slot in 0..workers {
             tokio::spawn(worker_loop(state.clone(), store.clone(), slot, timing));
         }
+        // The one colocated downtime worker (MEDULLA-DURABLE-KERNEL-R101.7); a remote-only
+        // deployment (zero analytics workers) runs none.
+        if workers > 0 {
+            tokio::spawn(super::downtime_worker::downtime_worker_loop(
+                state.clone(),
+                store.clone(),
+                timing,
+            ));
+        }
     });
 }
 
@@ -101,35 +110,43 @@ pub(super) async fn worker_loop(
                 let job_id = claim.job.job_id.clone();
                 let lease = claim.lease.clone();
                 if execute_claim(&state, &store, claim).await.is_err() {
-                    // Compute failures consume the current attempt and obey durable
-                    // retry backoff. Publication failures retain the complete result
-                    // and release only ownership so another replica can replay it.
-                    if let Ok(current) = store.get(&job_id) {
-                        match current.state {
-                            JobState::Running { .. } => {
-                                let _ = fail_attempt(
-                                    &store,
-                                    &job_id,
-                                    &lease.worker_ref,
-                                    lease.epoch,
-                                    "worker_execution_failed",
-                                    unix_ms(),
-                                );
-                            }
-                            JobState::Publishing { .. } => {
-                                let _ = store.release_publication_lease_fenced(
-                                    &job_id,
-                                    &lease.worker_ref,
-                                    lease.epoch,
-                                    unix_ms(),
-                                );
-                            }
-                            _ => {}
-                        }
-                    }
+                    settle_failed_claim(&store, &job_id, &lease);
                 }
             }
             Ok(None) | Err(_) => tokio::time::sleep(Duration::from_millis(timing.poll_ms)).await,
+        }
+    }
+}
+
+/// Settle the claim of `job_id` after its execution failed. Compute failures consume the
+/// current attempt and obey durable retry backoff. Publication failures retain the complete
+/// result and release only ownership so another replica can replay it.
+pub(super) fn settle_failed_claim(
+    store: &JobStore,
+    job_id: &str,
+    lease: &medulla_jobs::model::WorkerLease,
+) {
+    if let Ok(current) = store.get(job_id) {
+        match current.state {
+            JobState::Running { .. } => {
+                let _ = fail_attempt(
+                    store,
+                    job_id,
+                    &lease.worker_ref,
+                    lease.epoch,
+                    "worker_execution_failed",
+                    unix_ms(),
+                );
+            }
+            JobState::Publishing { .. } => {
+                let _ = store.release_publication_lease_fenced(
+                    job_id,
+                    &lease.worker_ref,
+                    lease.epoch,
+                    unix_ms(),
+                );
+            }
+            _ => {}
         }
     }
 }

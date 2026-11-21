@@ -86,9 +86,8 @@ pub struct IngestTaskWrite<'a> {
 
 /// Jobs handler behaviour reachable from crates below `medulla-h-jobs`.
 pub trait JobsApi: Send + Sync {
-    /// Register the downtime intents the engine ships (`plan_evolution` and
-    /// `live_artifact_refresh`); registering again keeps their history
-    /// (MEDULLA-DURABLE-KERNEL-R101.3).
+    /// Register the downtime intents that have an installed body; registering again keeps
+    /// their history (MEDULLA-DURABLE-KERNEL-R101.3, R101.7).
     #[allow(unused_variables)]
     fn register_downtime_intents(&self, persist_dir: &Option<String>) -> Result<(), String> {
         Err("this seam method is not built into the installed implementation".to_string())
@@ -112,19 +111,6 @@ pub trait JobsApi: Send + Sync {
         persist_dir: &Option<String>,
         request: &DowntimeJobRequest,
     ) -> Result<String, String> {
-        Err("this seam method is not built into the installed implementation".to_string())
-    }
-
-    /// Claim the downtime job `job_id` as `engine:downtime`, record `output` as its typed
-    /// result and complete it, for a job the engine ran in process
-    /// (MEDULLA-FEDERATED-QUERY-R091.3).
-    #[allow(unused_variables)]
-    fn complete_downtime_job(
-        &self,
-        persist_dir: &Option<String>,
-        job_id: &str,
-        output: serde_json::Value,
-    ) -> Result<(), String> {
         Err("this seam method is not built into the installed implementation".to_string())
     }
 

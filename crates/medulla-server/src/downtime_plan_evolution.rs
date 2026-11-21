@@ -1,7 +1,7 @@
 //! The body of the `plan_evolution` downtime job (MEDULLA-FEDERATED-QUERY-R091.3).
 //!
-//! The downtime tick submits one `plan_evolution` job per window. This module runs it in
-//! process, because a replay needs the engine's registered foreign sources: for each tenant
+//! The downtime tick submits one `plan_evolution` job per window. The downtime worker runs
+//! this body, because a replay needs the engine's registered foreign sources: for each tenant
 //! with recorded fragments it takes the `pushdown_choice` candidates, replays the baseline
 //! plan and the candidate `federation.min_replays` times each under the tenant's own
 //! registry, and keeps the candidate only when `evaluate_shape` says it measurably wins with
@@ -16,6 +16,7 @@ use medulla_federation::federation_opt::plan_evolution::{
     self, Decision, EvolutionPolicy, EvolutionWork, KeptPlan, PlanObservation, ReplayMeasure,
     RevertReason,
 };
+use medulla_server_api::downtime::{DowntimeBody, DowntimeStep, DowntimeStepInput};
 use medulla_server_api::state::ServerState;
 use medulla_server_ops::api::query_txn::ForeignStateExt;
 use serde::Serialize;
@@ -49,12 +50,28 @@ fn policy() -> EvolutionPolicy {
     }
 }
 
-/// Run the plan-evolution job `job_id` and complete it with its receipts.
-pub async fn run_plan_evolution(state: &Arc<RwLock<ServerState>>, job_id: &str) {
-    let (tenant_registries, persist_dir) = {
-        let current = state.read().await;
-        let catalog = current.foreign_sources();
-        let registries: Vec<(String, Option<ForeignSourceRegistry>)> =
+/// The body of the `plan_evolution` intent, installed by `seams_install`: one step reads the
+/// tenants' foreign-source registries from the shared state, evolves every candidate and
+/// finishes the job with its receipts.
+pub struct PlanEvolutionBody {
+    state: Arc<RwLock<ServerState>>,
+    runtime: tokio::runtime::Handle,
+}
+
+impl PlanEvolutionBody {
+    /// A body that reads `state` on `runtime`.
+    pub fn new(state: Arc<RwLock<ServerState>>, runtime: tokio::runtime::Handle) -> Self {
+        Self { state, runtime }
+    }
+}
+
+impl DowntimeBody for PlanEvolutionBody {
+    fn step(&self, input: DowntimeStepInput<'_>) -> Result<DowntimeStep, String> {
+        // The worker runs a step on a blocking thread, so waiting on the shared state here
+        // never stalls the runtime's own workers.
+        let tenant_registries = self.runtime.block_on(async {
+            let current = self.state.read().await;
+            let catalog = current.foreign_sources();
             plan_evolution::observed_tenants()
                 .into_iter()
                 .map(|tenant| {
@@ -63,22 +80,15 @@ pub async fn run_plan_evolution(state: &Arc<RwLock<ServerState>>, job_id: &str) 
                         .map(|owned| owned.into_registry());
                     (tenant, registry)
                 })
-                .collect();
-        (registries, current.persist_dir.clone())
-    };
-    let Some(jobs) = medulla_server_ops::api::ingest::jobs_seam(state).await else {
-        tracing::warn!("plan evolution could not complete its job: jobs surface unavailable");
-        return;
-    };
-    let owned_job = job_id.to_string();
-    let receipts = tokio::task::spawn_blocking(move || {
-        evolve(&tenant_registries, &policy(), &owned_job)
-    })
-    .await
-    .unwrap_or_default();
-    let output = serde_json::json!({ "receipts": receipts });
-    if let Err(error) = jobs.complete_downtime_job(&persist_dir, job_id, output) {
-        tracing::warn!(%error, job_id, "the plan evolution job was not completed");
+                .collect::<Vec<(String, Option<ForeignSourceRegistry>)>>()
+        });
+        let receipts = evolve(&tenant_registries, &policy(), &input.job.job_id);
+        let output = serde_json::json!({ "receipts": receipts });
+        let result = medulla_h_jobs::jobs::downtime_output_result(input.job, &output)?;
+        Ok(DowntimeStep::Done {
+            result,
+            working_bytes: 0,
+        })
     }
 }
 

@@ -19,6 +19,8 @@ pub(super) const FAILURE_CODES: &[&str] = &[
     "deadline_exceeded",
     "cpu_budget_exceeded",
     "worker_execution_failed",
+    "downtime_budget_exhausted",
+    "downtime_body_missing",
 ];
 
 /// Release a failed fenced attempt under one code of [`FAILURE_CODES`] at `now_ms`. The

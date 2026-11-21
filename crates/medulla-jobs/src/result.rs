@@ -152,6 +152,12 @@ pub struct TypedJobResult {
 pub struct ResultUsage {
     pub run_s: u64,
     pub tokens: u64,
+    /// CPU milliseconds a downtime job's steps used (MEDULLA-DURABLE-KERNEL-R101.5).
+    #[serde(default)]
+    pub cpu_ms: u64,
+    /// The most working memory, in bytes, one step of a downtime job held.
+    #[serde(default)]
+    pub peak_memory_bytes: u64,
 }
 
 impl TypedJobResult {

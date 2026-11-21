@@ -35,6 +35,8 @@ pub(super) fn typed_result_from_wire(result: JobResult) -> TypedJobResult {
         usage: result.usage.map(|usage| medulla_jobs::ResultUsage {
             run_s: usage.run_s,
             tokens: usage.tokens,
+            cpu_ms: 0,
+            peak_memory_bytes: 0,
         }),
     }
 }

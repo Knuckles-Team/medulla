@@ -11,6 +11,24 @@ use medulla_server_api::state::ServerState;
 pub fn install_seams(state: &ServerState, shared: &std::sync::Arc<tokio::sync::RwLock<ServerState>>) {
     install_state_seams(state);
     install_walkthrough_seam(state, shared);
+    install_downtime_bodies(shared);
+}
+
+/// Install the body of every shipped downtime intent that has one
+/// (MEDULLA-DURABLE-KERNEL-R101.7). `plan_evolution` reads the shared state, so it is installed
+/// here and only when called inside a runtime; `live_artifact_refresh` has no body yet.
+#[allow(unused_variables)]
+pub fn install_downtime_bodies(shared: &std::sync::Arc<tokio::sync::RwLock<ServerState>>) {
+    #[cfg(all(feature = "jobs", feature = "sparql", feature = "federation"))]
+    if let Ok(runtime) = tokio::runtime::Handle::try_current() {
+        medulla_server_api::downtime::install_downtime_body(
+            "plan_evolution",
+            std::sync::Arc::new(crate::downtime_plan_evolution::PlanEvolutionBody::new(
+                std::sync::Arc::clone(shared),
+                runtime,
+            )),
+        );
+    }
 }
 
 /// Install the walkthrough readers once, in the `L6` slot.

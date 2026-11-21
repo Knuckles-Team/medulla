@@ -95,6 +95,12 @@ impl DowntimeJobType {
     }
 }
 
+/// Whether foreground load asks a running downtime job to yield
+/// (MEDULLA-DURABLE-KERNEL-R101.7): the request rate is over the idle ceiling.
+pub fn preempt_requested(reading_peak_rps: f64, idle_max_rps: u32) -> bool {
+    reading_peak_rps > f64::from(idle_max_rps)
+}
+
 /// Evaluates one precondition query.
 pub trait PreconditionEval {
     fn holds(&self, precondition: &str) -> bool;
@@ -344,5 +350,14 @@ mod tests {
                 .selected
                 .is_empty()
         );
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R101.7
+    #[test]
+    fn preempt_requested_above_the_idle_ceiling() {
+        assert!(!preempt_requested(0.0, 1));
+        assert!(!preempt_requested(1.0, 1));
+        assert!(preempt_requested(1.5, 1));
+        assert!(preempt_requested(1.0, 0));
     }
 }

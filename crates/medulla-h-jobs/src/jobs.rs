@@ -88,6 +88,7 @@ mod association_hash_tests;
 mod core;
 mod data_plane_write;
 mod downtime_complete;
+mod downtime_worker;
 mod executor_claim;
 mod executor_loop;
 mod executor_usage_cluster;
@@ -122,13 +123,13 @@ mod worker_publish;
 mod worker_requests;
 mod worker_validation;
 
-/// The intents the engine ships for downtime work (MEDULLA-DURABLE-KERNEL-R101.3).
-const DOWNTIME_INTENTS: [&str; 2] = ["plan_evolution", "live_artifact_refresh"];
 /// The tenant and actor of every downtime job.
 const DOWNTIME_TENANT: &str = "__engine__";
 const DOWNTIME_ACTOR: &str = "engine:downtime";
 /// The capability a worker names to lease downtime work.
 const DOWNTIME_CAPABILITY: &str = "downtime";
+
+pub use downtime_complete::downtime_output_result;
 
 /// Jobs handler behaviour installed on the seam registry's `jobs` slot.
 pub struct JobsSeam;
@@ -136,7 +137,7 @@ pub struct JobsSeam;
 impl medulla_server_ops::api::ingest::JobsApi for JobsSeam {
     fn register_downtime_intents(&self, persist_dir: &Option<String>) -> Result<(), String> {
         let store = core::job_store(persist_dir.as_deref())?;
-        for name in DOWNTIME_INTENTS {
+        for name in medulla_server_api::downtime::downtime_body_intents() {
             let intent = medulla_jobs::JobIntent::new(
                 name,
                 medulla_jobs::Trigger::Manual,
@@ -264,16 +265,6 @@ impl medulla_server_ops::api::ingest::JobsApi for JobsSeam {
             .submit(spec)
             .map(|job| job.job_id)
             .map_err(|error| job_refusal(&error))
-    }
-
-    fn complete_downtime_job(
-        &self,
-        persist_dir: &Option<String>,
-        job_id: &str,
-        output: serde_json::Value,
-    ) -> Result<(), String> {
-        let store = core::job_store(persist_dir.as_deref())?;
-        downtime_complete::complete_downtime_job(&store, job_id, output)
     }
 
     #[cfg(all(feature = "jobs", feature = "knowledge-batch"))]

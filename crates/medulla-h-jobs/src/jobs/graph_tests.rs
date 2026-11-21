@@ -731,6 +731,8 @@ mod colocated_executor_tests {
                 "deadline_exceeded",
                 "cpu_budget_exceeded",
                 "worker_execution_failed",
+                "downtime_budget_exhausted",
+                "downtime_body_missing",
             ]
         );
 
