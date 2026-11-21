@@ -325,6 +325,7 @@ units = [
   "medulla-ingest",
   "medulla-lake",
   "medulla-numeric",
+  "medulla-observe",
   "medulla-packs",
   "medulla-parity",
   "medulla-placement",

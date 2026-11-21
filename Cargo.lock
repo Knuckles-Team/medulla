@@ -6595,6 +6595,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "medulla-observe"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "futures-util",
+ "medulla-types",
+ "parking_lot",
+ "serde",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "medulla-packs"
 version = "0.1.0"
 
