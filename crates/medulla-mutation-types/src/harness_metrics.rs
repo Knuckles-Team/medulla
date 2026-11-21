@@ -111,6 +111,13 @@ pub const HARNESS_QUERIES: &[HarnessQuery] = &[
         groups: &[],
         columns: &USAGE_COLUMNS,
     },
+    // MEDULLA-ORCH-VOCAB-R004.6.3: capability gaps of a task class, by exact or descendant
+    // match; the rows are nodes, so the statement has its own pure function.
+    HarnessQuery {
+        name: CAPABILITY_GAPS_BY_TASK_CLASS,
+        groups: &[],
+        columns: &CAPABILITY_GAP_COLUMNS,
+    },
 ];
 
 /// The statement a request text names, if any (surrounding blanks and one
@@ -806,6 +813,243 @@ fn usage_row(
     }
 }
 
+/// The statement that lists the capability gaps of a task class (MEDULLA-ORCH-VOCAB-R004.6.3).
+pub const CAPABILITY_GAPS_BY_TASK_CLASS: &str = "capability_gaps_by_task_class";
+/// The columns of a capability gap row.
+pub const CAPABILITY_GAP_COLUMNS: [&str; 6] = [
+    "node_id",
+    "capability_ref",
+    "task_class_ref",
+    "domain_ref",
+    "disposition",
+    "revision",
+];
+/// The refusal of a `descendant` read whose `taxonomy_revision` is not the current one.
+pub const GAP_TAXONOMY_STALE: &str = "GAP_TAXONOMY_STALE";
+/// The refusal of a cursor that is not a gap page cursor.
+pub const GAP_CURSOR_INVALID: &str = "GAP_CURSOR_INVALID";
+/// The edge `relationship` that links a task class to its parent.
+pub const SUB_TASK_CLASS_OF: &str = "subTaskClassOf";
+
+/// How a gap's task class is matched against the requested one.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum GapMatchMode {
+    /// The gap names exactly the requested task class.
+    Exact,
+    /// The gap names the requested task class or any class below it.
+    Descendant,
+}
+
+/// Where a gap page resumes: after the node id of the last row of the previous page. It
+/// carries no snapshot revision, so it stays valid across writes and restarts.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GapCursor {
+    /// The rows of the next page have a node id strictly greater than this.
+    pub after_node_id: String,
+}
+
+impl GapCursor {
+    /// The cursor text: exactly the node id.
+    #[must_use]
+    pub fn encode(&self) -> String {
+        self.after_node_id.clone()
+    }
+
+    /// Decode a cursor text; an empty text is not a cursor.
+    #[must_use]
+    pub fn decode(text: &str) -> Option<Self> {
+        (!text.is_empty()).then(|| Self {
+            after_node_id: text.to_string(),
+        })
+    }
+}
+
+/// The decoded parameters of [`CAPABILITY_GAPS_BY_TASK_CLASS`].
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CapabilityGapQuery {
+    /// The task class node id.
+    pub task_class: String,
+    /// Exact or descendant match.
+    pub match_mode: GapMatchMode,
+    /// The taxonomy revision the caller read, checked on a descendant match.
+    pub taxonomy_revision: Option<u64>,
+    /// The most rows of a page.
+    pub page_size: usize,
+    /// Where the page resumes.
+    pub cursor: Option<GapCursor>,
+}
+
+fn parameter_invalid(detail: &str) -> String {
+    format!("PARAMETER_INVALID: {detail}")
+}
+
+impl CapabilityGapQuery {
+    /// Decode the statement's parameters; `page_size_max` is the registry ceiling.
+    pub fn from_params(
+        text: impl Fn(&str) -> Option<String>,
+        number: impl Fn(&str) -> Option<f64>,
+        page_size_max: u64,
+    ) -> Result<Self, String> {
+        let task_class = text("task_class")
+            .map(|value| value.trim().to_string())
+            .filter(|value| !value.is_empty())
+            .ok_or_else(|| parameter_invalid("$task_class is required"))?;
+        let match_mode = match text("match_mode").as_deref() {
+            None | Some("exact") => GapMatchMode::Exact,
+            Some("descendant") => GapMatchMode::Descendant,
+            Some(_) => {
+                return Err(parameter_invalid("$match_mode is exact or descendant"));
+            }
+        };
+        let whole = |name: &str| -> Result<Option<u64>, String> {
+            match number(name) {
+                None => Ok(None),
+                Some(value)
+                    if value.is_finite()
+                        && value.fract() == 0.0
+                        && value >= 0.0
+                        && value <= u64::MAX as f64 =>
+                {
+                    Ok(Some(value as u64))
+                }
+                Some(_) => Err(parameter_invalid(&format!(
+                    "${name} must be a non-negative integer"
+                ))),
+            }
+        };
+        let taxonomy_revision = whole("taxonomy_revision")?;
+        let page_size = match whole("page_size")? {
+            None => page_size_max,
+            Some(size) => size.clamp(1, page_size_max),
+        } as usize;
+        let cursor = match text("cursor") {
+            None => None,
+            Some(cursor) => Some(GapCursor::decode(&cursor).ok_or_else(|| {
+                format!("{GAP_CURSOR_INVALID}: the cursor is not a gap page cursor")
+            })?),
+        };
+        Ok(Self {
+            task_class,
+            match_mode,
+            taxonomy_revision,
+            page_size,
+            cursor,
+        })
+    }
+
+    /// Refuse a descendant read whose `taxonomy_revision` differs from `current`. An exact
+    /// match ignores the parameter.
+    pub fn check_taxonomy(&self, current: u64) -> Result<(), String> {
+        match (self.match_mode, self.taxonomy_revision) {
+            (GapMatchMode::Descendant, Some(expected)) if expected != current => Err(format!(
+                "{GAP_TAXONOMY_STALE}: expected {expected}, current {current}"
+            )),
+            _ => Ok(()),
+        }
+    }
+}
+
+/// The task classes below `root`, and `root` itself: every node from which `root` is reachable
+/// over `parent_edges` (`(child, parent)` pairs). Iterative and cycle-safe: a node is visited
+/// once.
+#[must_use]
+pub fn task_class_closure(
+    root: &str,
+    parent_edges: &[(String, String)],
+) -> std::collections::BTreeSet<String> {
+    let mut children: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
+    for (child, parent) in parent_edges {
+        children.entry(parent.as_str()).or_default().push(child.as_str());
+    }
+    let mut seen = std::collections::BTreeSet::from([root.to_string()]);
+    let mut pending = vec![root];
+    while let Some(next) = pending.pop() {
+        for child in children.get(next).into_iter().flatten() {
+            if seen.insert((*child).to_string()) {
+                pending.push(child);
+            }
+        }
+    }
+    seen
+}
+
+/// One capability gap row; every field is the stored text.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GapRow {
+    /// The gap node id.
+    pub node_id: String,
+    /// The capability the gap is for.
+    pub capability_ref: String,
+    /// The task class the gap is for.
+    pub task_class_ref: String,
+    /// The domain the gap is in.
+    pub domain_ref: String,
+    /// Where the gap stands.
+    pub disposition: String,
+    /// The gap's revision.
+    pub revision: String,
+}
+
+/// One page of gap rows and its warnings (`next_cursor=<node id>` when a further row exists).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct GapPage {
+    /// The rows of this page, ordered by node id in byte order.
+    pub rows: Vec<GapRow>,
+    /// The warnings of the page.
+    pub warnings: Vec<String>,
+}
+
+/// The gaps of `query.task_class` among `nodes` (`(node id, properties)` of the caller's
+/// visible snapshot): the `CapabilityGap` nodes whose `task_class_ref` is in `closure`, ordered
+/// by node id, resumed after the cursor and cut at the page size.
+#[must_use]
+pub fn capability_gaps_by_task_class(
+    query: &CapabilityGapQuery,
+    nodes: &[(String, Map<String, Value>)],
+    closure: &std::collections::BTreeSet<String>,
+) -> GapPage {
+    let text_of = |props: &Map<String, Value>, key: &str| -> String {
+        match props.get(key) {
+            Some(Value::String(value)) => value.clone(),
+            Some(Value::Number(value)) => value.to_string(),
+            _ => String::new(),
+        }
+    };
+    let mut rows: Vec<GapRow> = nodes
+        .iter()
+        .filter(|(_, props)| props.get("_capability_gap").and_then(Value::as_bool) == Some(true))
+        .filter(|(_, props)| closure.contains(&text_of(props, "task_class_ref")))
+        .filter(|(id, _)| {
+            query
+                .cursor
+                .as_ref()
+                .is_none_or(|cursor| id.as_str() > cursor.after_node_id.as_str())
+        })
+        .map(|(id, props)| GapRow {
+            node_id: id.clone(),
+            capability_ref: text_of(props, "capability_ref"),
+            task_class_ref: text_of(props, "task_class_ref"),
+            domain_ref: text_of(props, "domain_ref"),
+            disposition: text_of(props, "disposition"),
+            revision: text_of(props, "revision"),
+        })
+        .collect();
+    rows.sort_by(|a, b| a.node_id.as_bytes().cmp(b.node_id.as_bytes()));
+    let more = rows.len() > query.page_size;
+    rows.truncate(query.page_size);
+    let warnings = match (more, rows.last()) {
+        (true, Some(last)) => vec![format!(
+            "next_cursor={}",
+            GapCursor {
+                after_node_id: last.node_id.clone()
+            }
+            .encode()
+        )],
+        _ => Vec::new(),
+    };
+    GapPage { rows, warnings }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1020,4 +1264,30 @@ mod tests {
             );
         }
     }
+
+    // spec: MEDULLA-ORCH-VOCAB-R004.6.3
+    #[test]
+    fn task_class_closure_follows_sub_task_class_edges_once() {
+        let edge = |child: &str, parent: &str| (child.to_string(), parent.to_string());
+        // A three-level chain, a sibling branch and a cycle back to the root.
+        let edges = vec![
+            edge("tc:child", "tc:root"),
+            edge("tc:grandchild", "tc:child"),
+            edge("tc:root", "tc:grandchild"),
+            edge("tc:sibling", "tc:other"),
+        ];
+        let closure = task_class_closure("tc:root", &edges);
+        assert_eq!(
+            closure.into_iter().collect::<Vec<_>>(),
+            ["tc:child", "tc:grandchild", "tc:root"]
+        );
+        // The closure of a leaf is the leaf itself.
+        assert_eq!(
+            task_class_closure("tc:sibling", &edges).into_iter().collect::<Vec<_>>(),
+            ["tc:sibling"]
+        );
+        // A parent is not in the closure of its child.
+        assert!(!task_class_closure("tc:child", &edges).contains("tc:other"));
+    }
+
 }

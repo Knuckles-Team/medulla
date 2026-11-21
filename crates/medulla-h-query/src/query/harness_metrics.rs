@@ -11,7 +11,8 @@ use medulla_mutation_types::evolution_metrics::{
     evolution_trace_metrics, EvolutionTraceQuery, EVOLUTION_TRACE_METRICS,
 };
 use medulla_mutation_types::harness_metrics::{
-    harness_config_evidence, price_table_from_node, run_harness_query, run_trace_usage,
+    capability_gaps_by_task_class, harness_config_evidence, task_class_closure,
+    CapabilityGapQuery, CAPABILITY_GAPS_BY_TASK_CLASS, SUB_TASK_CLASS_OF, price_table_from_node, run_harness_query, run_trace_usage,
     ConfigEvidenceQuery, HarnessQuery, RunTraceUsageQuery, TraceSufficiency,
     HARNESS_CONFIG_EVIDENCE, RUN_TRACE_USAGE,
 };
@@ -31,6 +32,9 @@ pub(crate) fn handle_harness_metric(
     }
     if query.name == HARNESS_CONFIG_EVIDENCE {
         return handle_harness_config_evidence(ctx, query, params);
+    }
+    if query.name == CAPABILITY_GAPS_BY_TASK_CLASS {
+        return handle_capability_gaps(ctx, query, params);
     }
     let (snap, version) = sql_read_snapshot(
         ctx.core,
@@ -312,6 +316,113 @@ fn handle_harness_config_evidence(
         columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
         rows,
         warnings,
+        snapshot_revision: version,
+        knowledge_revision: 0,
+        source_coverage: Vec::new(),
+        historical_risk: Vec::new(),
+    };
+    served_response::<query_results::Uql>(
+        ctx.req_id,
+        Ok(Ok(result)),
+        "UQL",
+        #[cfg(feature = "result-cache")]
+        ctx.core,
+        #[cfg(feature = "result-cache")]
+        None,
+    )
+}
+
+/// MEDULLA-ORCH-VOCAB-R004.6.3: the capability gaps of a task class, by exact or descendant
+/// match. One RLS-filtered snapshot is read, so a foreign tenant sees no rows and no count. The
+/// task class hierarchy is the `subTaskClassOf` edges of that snapshot; a descendant read whose
+/// `taxonomy_revision` is not the current one refuses `GAP_TAXONOMY_STALE`. The statement
+/// writes nothing. A row's id is the gap node id; its other columns travel as provenance text.
+#[cfg(feature = "query")]
+fn handle_capability_gaps(
+    ctx: &QueryHandlerCtx<'_>,
+    query: &HarnessQuery,
+    params: &UqlParams,
+) -> Response {
+    let page_size_max = medulla_server_api::knob_config::knobs().orchestration_limits_page_size_max;
+    let request = match CapabilityGapQuery::from_params(
+        |name| text_param(params, name),
+        |name| number_param(params, name),
+        page_size_max,
+    ) {
+        Ok(request) => request,
+        Err(refusal) => return Response::err(ctx.req_id, refusal),
+    };
+    let (snap, version) = sql_read_snapshot(
+        ctx.core,
+        #[cfg(feature = "security")]
+        ctx.caller,
+        #[cfg(feature = "security")]
+        ctx.rls,
+    );
+    let mut parent_edges: Vec<(String, String)> = Vec::new();
+    for ((child, parent), blobs) in &snap.edge_properties {
+        let linked = blobs.iter().any(|blob| {
+            medulla_types::msgpack::decode_property_object(blob)
+                .ok()
+                .and_then(|props| {
+                    props
+                        .get("relationship")
+                        .and_then(|value| value.as_str())
+                        .map(|name| name == SUB_TASK_CLASS_OF)
+                })
+                .unwrap_or(false)
+        });
+        if linked {
+            parent_edges.push((child.clone(), parent.clone()));
+        }
+    }
+    let mut nodes: Vec<(String, serde_json::Map<String, serde_json::Value>)> = Vec::new();
+    let mut current_revision = 0u64;
+    for id in snap.node_map.keys() {
+        let Some(props) = snap.node_row_object(id) else {
+            continue;
+        };
+        if let Some(revision) = props.get("taxonomy_revision").and_then(|value| value.as_u64()) {
+            current_revision = current_revision.max(revision);
+        }
+        nodes.push((id.clone(), props));
+    }
+    if let Err(refusal) = request.check_taxonomy(current_revision) {
+        return Response::err(ctx.req_id, refusal);
+    }
+    let closure = match request.match_mode {
+        medulla_mutation_types::harness_metrics::GapMatchMode::Exact => {
+            std::collections::BTreeSet::from([request.task_class.clone()])
+        }
+        medulla_mutation_types::harness_metrics::GapMatchMode::Descendant => {
+            task_class_closure(&request.task_class, &parent_edges)
+        }
+    };
+    let page = capability_gaps_by_task_class(&request, &nodes, &closure);
+    let rows = page
+        .rows
+        .into_iter()
+        .map(|row| medulla_query_types::wire::UqlRow {
+            id: row.node_id,
+            score: None,
+            channels: Vec::new(),
+            knowledge: None,
+            proof: None,
+            provenance: [
+                ("capability_ref".to_string(), row.capability_ref),
+                ("task_class_ref".to_string(), row.task_class_ref),
+                ("domain_ref".to_string(), row.domain_ref),
+                ("disposition".to_string(), row.disposition),
+                ("revision".to_string(), row.revision),
+            ]
+            .into_iter()
+            .collect(),
+        })
+        .collect();
+    let result = medulla_query_types::wire::UqlResult::Rows {
+        columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
+        rows,
+        warnings: page.warnings,
         snapshot_revision: version,
         knowledge_revision: 0,
         source_coverage: Vec::new(),

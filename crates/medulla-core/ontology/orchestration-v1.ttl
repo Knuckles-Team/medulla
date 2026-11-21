@@ -1394,3 +1394,10 @@
     rdfs:label "processSourceSystem" ;
     rdfs:comment "The notation a process came from: bpmn20 or aris_epc." ;
     rdfs:range xsd:string .
+
+# MEDULLA-ORCH-VOCAB-R004.6.3: the task class hierarchy a gap query walks.
+:subTaskClassOf a owl:ObjectProperty ;
+    rdfs:label "sub task class of" ;
+    rdfs:comment "A task class is a kind of its parent task class. A descendant gap query follows these edges." ;
+    rdfs:domain :TaskClass ;
+    rdfs:range :TaskClass .

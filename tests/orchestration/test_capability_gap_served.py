@@ -14,7 +14,7 @@ import uuid
 from typing import Any
 
 import pytest
-from conftest import request_context
+from conftest import request_context, tenant_request_context
 
 from medulla.client import MedullaClient
 
@@ -78,3 +78,76 @@ async def test_dedup_conflict_and_invalid_taxonomy():
         assert not await client.nodes.has(other)
     finally:
         await client.close()
+
+
+async def _gap_ids(client: MedullaClient, **params: Any) -> tuple[list[str], list[str]]:
+    result = await client.query.uql("capability_gaps_by_task_class", params)
+    return [row["id"] for row in result["rows"]], list(result.get("warnings", []))
+
+
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R004.6.3")
+@pytest.mark.asyncio
+async def test_query_two_task_classes_across_restart_and_denied_tenant():
+    tag = uuid.uuid4().hex[:8]
+    parent, child = f"task-class:parent-{tag}", f"task-class:child-{tag}"
+    client = await _connect()
+    try:
+        for ref in ("capability", "domain"):
+            await client.nodes.add(f"{ref}:{tag}", {"type": "Taxonomy"})
+        await client.nodes.add(parent, {"type": "TaskClass", "taxonomy_revision": 7})
+        await client.nodes.add(child, {"type": "TaskClass"})
+        await client.edges.add(child, parent, {"relationship": "subTaskClassOf"})
+        gaps = {}
+        for name, task_class in (("parent", parent), ("child", child)):
+            node = f"gap:{name}-{tag}"
+            gaps[name] = node
+            await client.nodes.add(
+                node,
+                _gap(tag, 1, node_id=node, task_class_ref=task_class),
+            )
+
+        # Exact match returns one class; descendant returns both.
+        ids, _ = await _gap_ids(client, task_class=parent)
+        assert ids == [gaps["parent"]]
+        ids, _ = await _gap_ids(client, task_class=parent, match_mode="descendant")
+        assert ids == sorted(gaps.values())
+
+        # Pages of one row follow the node-id cursor.
+        first, warnings = await _gap_ids(
+            client, task_class=parent, match_mode="descendant", page_size=1
+        )
+        assert first == [sorted(gaps.values())[0]]
+        assert warnings == [f"next_cursor={first[0]}"]
+        second, warnings = await _gap_ids(
+            client,
+            task_class=parent,
+            match_mode="descendant",
+            page_size=1,
+            cursor=first[0],
+        )
+        assert second == [sorted(gaps.values())[1]] and warnings == []
+
+        # An empty cursor and a stale taxonomy revision refuse.
+        with pytest.raises(Exception, match="GAP_CURSOR_INVALID"):
+            await _gap_ids(client, task_class=parent, cursor="")
+        with pytest.raises(Exception, match="GAP_TAXONOMY_STALE"):
+            await _gap_ids(
+                client, task_class=parent, match_mode="descendant", taxonomy_revision=3
+            )
+        ids, _ = await _gap_ids(
+            client, task_class=parent, match_mode="descendant", taxonomy_revision=7
+        )
+        assert ids == sorted(gaps.values())
+    finally:
+        await client.close()
+
+    # Another tenant sees no rows.
+    other = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=tenant_request_context(f"tenant-other-{tag}"),
+    )
+    try:
+        ids, _ = await _gap_ids(other, task_class=parent, match_mode="descendant")
+        assert ids == []
+    finally:
+        await other.close()

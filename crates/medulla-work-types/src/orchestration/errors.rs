@@ -65,5 +65,10 @@ closed_error_codes! {
         /// A capability gap or desired enhancement rewritten by a principal
         /// that is not its owner.
         GapOwnerDenied => "GAP_OWNER_DENIED",
+        /// A descendant gap query whose `taxonomy_revision` is not the current one
+        /// (MEDULLA-ORCH-VOCAB-R004.6.3).
+        GapTaxonomyStale => "GAP_TAXONOMY_STALE",
+        /// A gap query cursor that is not a gap page cursor (MEDULLA-ORCH-VOCAB-R004.6.3).
+        GapCursorInvalid => "GAP_CURSOR_INVALID",
     }
 }
