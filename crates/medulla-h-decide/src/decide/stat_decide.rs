@@ -598,11 +598,13 @@ pub(super) fn decide_blocking(
     // The policy's limits are checked against the proposed action next
     // (MEDULLA-DECISION-ENGINE-R131.3).
     let (executed, limit_premises) = super::limit_stage::apply(request, &policy.policy, executed)?;
+    // Admitted retrieved entries enter as premises, and a poisoned required fact
+    // abstains (MEDULLA-DECISION-ENGINE-R132.3, R132.4).
+    let (executed, entry_premises) = super::entry_stage::apply(request, &policy.policy, executed)?;
     let mut trajectory_premises = trajectory_premises;
     trajectory_premises.extend(safety_premises);
     trajectory_premises.extend(limit_premises);
-    // Admitted retrieved entries enter as premises (MEDULLA-DECISION-ENGINE-R132.3).
-    trajectory_premises.extend(super::entry_stage::apply(request, &policy.policy)?);
+    trajectory_premises.extend(entry_premises);
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
         live_slices(ctx, request, &pinned, &candidates.views, graph_view)
     })?;

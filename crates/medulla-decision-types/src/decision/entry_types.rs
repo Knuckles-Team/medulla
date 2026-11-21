@@ -5,7 +5,15 @@
 
 use std::collections::BTreeSet;
 
+use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
+
+/// Every retrieved entry that names a required fact was refused
+/// (MEDULLA-DECISION-ENGINE-R132.4).
+pub const POISONED_ENTRY: RefusalCode = RefusalCode::new("POISONED_ENTRY");
+
+/// The `entry_trust` table of registered refusal codes (MEDULLA-DECISION-ENGINE-R010.100).
+pub const REFUSALS: &[RefusalCode] = &[POISONED_ENTRY];
 
 /// Closed trust tiers, ordered weakest first.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

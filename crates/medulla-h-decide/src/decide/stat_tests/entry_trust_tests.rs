@@ -9,7 +9,8 @@ use super::*;
 use medulla_decision_types::decision::entry_types::{
     EntryTrust, RetrievedEntry, TrustTier,
 };
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
+use medulla_decision_types::decision::entry_types::POISONED_ENTRY;
+use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
 
 const SOURCE: &str = "sha256:known-source";
 
@@ -124,4 +125,100 @@ async fn unverified_entry_cannot_override_a_verified_fact() {
     )
     .unwrap_err();
     assert!(error.starts_with("COMPONENT_PIN_MISMATCH"), "{error}");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R132.4
+#[tokio::test]
+async fn poisoned_only_required_fact_abstains() {
+    let h = Harness::new().await;
+    let schema = h
+        .publish_test_component(
+            "schema-declared",
+            AgentComponentKind::FeatureSchema,
+            "declared-option features",
+            Some(&score_schema()),
+            None,
+        )
+        .unwrap();
+    let mut policy = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    policy.entry_trust.known_source_digests.insert(SOURCE.to_string());
+    let pinned = DecisionPolicyRef::Pinned {
+        component: h.publish_policy("policy-entry-poison", &policy),
+    };
+    let ask = |entries: Vec<RetrievedEntry>, required: Vec<String>| {
+        let mut request = declared_request(
+            &schema,
+            vec![declared("plan-a", 1 << 31), declared("plan-b", 1 << 32)],
+        );
+        request.policy = pinned.clone();
+        request.params = BoundedVec::new(vec![
+            TypedParam {
+                name: "retrieved_entries".to_string(),
+                value: TypedValue::RetrievedEntries(BoundedVec::new(entries).unwrap()),
+            },
+            TypedParam {
+                name: "entry.required_facts".to_string(),
+                value: TypedValue::IriList(BoundedVec::new(required).unwrap()),
+            },
+        ])
+        .unwrap();
+        request
+    };
+    let required = || vec!["urn:agent:planner#max_tools".to_string()];
+    let mut poisoned = entry("e-poisoned", TrustTier::Verified, "99");
+    poisoned.trust.source_digest = "sha256:unknown-source".to_string();
+
+    // The only entry of the required fact has an unknown source: abstain.
+    let batch = decide(&h, ask(vec![poisoned.clone()], required())).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        panic!("a poisoned required fact abstains, got {:?}", record.outcome);
+    };
+    match &reasons.as_slice()[0] {
+        AbstainReason::Family { code, detail, .. } => {
+            assert_eq!(*code, POISONED_ENTRY);
+            assert_eq!(detail, "entry e-poisoned refused by poison_check");
+        }
+        other => panic!("expected a family abstention, got {other:?}"),
+    }
+    assert!(record.answer.is_none());
+
+    // One admitted verified entry on the same fact: no abstention.
+    let batch = decide(
+        &h,
+        ask(
+            vec![poisoned.clone(), entry("e-verified", TrustTier::Verified, "8")],
+            required(),
+        ),
+    )
+    .await
+    .unwrap();
+    assert!(!matches!(
+        batch.records.as_slice()[0].outcome,
+        StatisticalOutcome::Abstained { .. }
+    ));
+
+    // A required fact with no entry at all: nothing was refused.
+    let batch = decide(
+        &h,
+        ask(vec![poisoned], vec!["urn:agent:planner#other_key".to_string()]),
+    )
+    .await
+    .unwrap();
+    assert!(!matches!(
+        batch.records.as_slice()[0].outcome,
+        StatisticalOutcome::Abstained { .. }
+    ));
+
+    // An item without a `#` refuses.
+    let error = decide(
+        &h,
+        ask(
+            vec![entry("e1", TrustTier::Verified, "8")],
+            vec!["nohash".to_string()],
+        ),
+    )
+    .await
+    .unwrap_err();
+    assert!(error.starts_with("PARAMETER_INVALID"), "{error}");
 }
