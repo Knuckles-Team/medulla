@@ -15,6 +15,7 @@ pub mod placement;
 pub mod profile;
 pub mod prompt_candidate;
 pub mod prompt_render;
+pub mod rank;
 pub mod ranking_eval;
 pub mod recommend;
 pub mod red_team;
@@ -55,6 +56,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     route::KNOBS,
     schema_mapping::KNOBS,
     skill::KNOBS,
+    rank::KNOBS,
     ranking_eval::KNOBS,
     retention::KNOBS,
     topology::KNOBS,

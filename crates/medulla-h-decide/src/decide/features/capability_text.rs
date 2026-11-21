@@ -11,18 +11,42 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use medulla_decision_types::decision::knob_families::rank;
+use medulla_decision_types::decision::policy::DecisionPolicy;
 use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
 
 /// `Q32` one.
 const Q32_ONE: f64 = 4_294_967_296.0;
 
-/// Weight of a name match in the rarity-weighted overlap
-/// (`decision.rank.name_weight`, starting value 2.0).
-pub const NAME_WEIGHT: f64 = 2.0;
-/// Weight of the semantic similarity (`decision.rank.semantic_weight`,
-/// starting value 1.0); it is carried for the pinned head's schema and does
-/// not enter the lexical features.
-pub const SEMANTIC_WEIGHT: f64 = 1.0;
+/// The ranking weights: `decision.rank.name_weight` (starting value 2.0), the
+/// weight of a name match in the rarity-weighted overlap, and
+/// `decision.rank.semantic_weight` (starting value 1.0), the weight of the
+/// semantic similarity.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct RankWeights {
+    /// Weight of a name match.
+    pub name: f64,
+    /// Weight of the semantic similarity.
+    pub semantic: f64,
+}
+
+impl RankWeights {
+    /// The weights the pinned policy sets: each knob, or its default.
+    pub fn of(policy: &DecisionPolicy) -> Self {
+        let (name, semantic) = rank::weights(policy);
+        Self { name, semantic }
+    }
+}
+
+impl Default for RankWeights {
+    /// The knobs' starting values.
+    fn default() -> Self {
+        Self {
+            name: 2.0,
+            semantic: 1.0,
+        }
+    }
+}
 
 /// Key of the candidate's name text.
 pub const NAME_KEY: &str = "rank.name";
@@ -105,6 +129,7 @@ pub fn capability_features(
     query: &str,
     options: &[DeclaredOption],
     embed: Option<Embed<'_>>,
+    weights: RankWeights,
 ) -> Vec<Vec<DeclaredNumber>> {
     let query_terms = terms(query);
     let per_option: Vec<(BTreeSet<String>, BTreeSet<String>, BTreeSet<String>)> = options
@@ -152,7 +177,7 @@ pub fn capability_features(
                 let idf = (1.0 + (n + 1.0) / (df[term.as_str()] + 1.0)).ln();
                 if name.contains(term) {
                     name_overlap += 1.0;
-                    weighted += NAME_WEIGHT * idf;
+                    weighted += weights.name * idf;
                 } else if description.contains(term) || kind.contains(term) {
                     weighted += idf;
                 }
@@ -174,7 +199,7 @@ pub fn capability_features(
             ];
             if let Some(vectors) = &semantic {
                 let similarity = cosine(&vectors[0], &vectors[index + 1]).max(0.0);
-                numbers.push((SEMANTIC_KEY, q32(similarity * SEMANTIC_WEIGHT)));
+                numbers.push((SEMANTIC_KEY, q32(similarity * weights.semantic)));
             }
             numbers.sort_by(|a, b| a.0.cmp(b.0));
             numbers
@@ -226,7 +251,7 @@ mod tests {
             option("c", "third_tool", "unrelated text"),
             option("d", "fourth_tool", "media things"),
         ];
-        let out = capability_features("list requests in seerr", &options, None);
+        let out = capability_features("list requests in seerr", &options, None, RankWeights::default());
         let weighted = |i: usize| value(&out[i], TERM_RARITY_KEY).unwrap();
         // A name match outweighs the same match in the description.
         assert!(weighted(0) > weighted(1));
@@ -236,8 +261,8 @@ mod tests {
         // Plural folding: "requests" matches the query term "requests"/"request".
         assert_eq!(value(&out[0], NAME_OVERLAP_KEY), Some(3 << 32));
         // The rare term "seerr" (df 1) weighs more than "request" (df 2).
-        let seerr_only = capability_features("seerr", &options, None);
-        let request_only = capability_features("requests", &options, None);
+        let seerr_only = capability_features("seerr", &options, None, RankWeights::default());
+        let request_only = capability_features("requests", &options, None, RankWeights::default());
         assert!(
             value(&seerr_only[0], TERM_RARITY_KEY).unwrap()
                 > value(&request_only[0], TERM_RARITY_KEY).unwrap()
@@ -255,14 +280,14 @@ mod tests {
     fn semantic_absent_when_embedding_model_not_ready() {
         let options = vec![option("a", "seerr_list_requests", "lists requests")];
         let not_ready = |_: &[String]| -> Option<Vec<Vec<f32>>> { None };
-        let absent = capability_features("list requests", &options, Some(&not_ready as Embed<'_>));
+        let absent = capability_features("list requests", &options, Some(&not_ready as Embed<'_>), RankWeights::default());
         assert_eq!(value(&absent[0], SEMANTIC_KEY), None);
-        let without = capability_features("list requests", &options, None);
+        let without = capability_features("list requests", &options, None, RankWeights::default());
         assert_eq!(absent, without);
         let ready = |texts: &[String]| -> Option<Vec<Vec<f32>>> {
             Some(texts.iter().map(|_| vec![1.0_f32, 0.0]).collect())
         };
-        let present = capability_features("list requests", &options, Some(&ready as Embed<'_>));
+        let present = capability_features("list requests", &options, Some(&ready as Embed<'_>), RankWeights::default());
         assert_eq!(value(&present[0], SEMANTIC_KEY), Some(q32(1.0)));
         // The lexical order is unchanged by the semantic feature.
         assert_eq!(

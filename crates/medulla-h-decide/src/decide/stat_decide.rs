@@ -434,6 +434,7 @@ pub(super) fn decide_blocking(
     let (family, tenant) = (family.as_str(), ctx.tenant_id);
     let registry = super::family::for_kind(request.question.kind);
     let task_plan = super::stat_task_plan::plan_of_request(ctx, request, &principal)?;
+    let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
     let mut candidates = telemetry::stage(Stage::Candidates, family, tenant, || {
         // A tool_relevance question reads its own index (R134.110.3), so the
         // stage-2 candidate scan and its cap do not apply to it.
@@ -449,15 +450,15 @@ pub(super) fn decide_blocking(
             &principal,
             registry,
             request.params.as_slice(),
+            &policy.policy,
         )
     })?;
-    let (pinned, policy, provider_binding) =
+    let (pinned, provider_binding) =
         telemetry::stage(Stage::Constraints, family, tenant, || {
             registry.constraints(request)?;
             let provider_binding = registry.bind(ctx, request)?;
             let pinned = pinned_inputs(ctx, &request.feature_schema, request.head.as_ref())?;
-            let policy = resolve_policy(ctx.store, ctx.tenant_id, &request.policy)?;
-            Ok::<_, String>((pinned, policy, provider_binding))
+            Ok::<_, String>((pinned, provider_binding))
         })?;
     let comparative = super::family::comparative_analysis::plan(
         request,

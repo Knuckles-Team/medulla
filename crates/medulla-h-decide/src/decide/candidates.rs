@@ -37,7 +37,7 @@ use medulla_decision_types::{
 };
 use medulla_types::contract::BoundedVec;
 
-use super::features::capability_text::capability_features;
+use super::features::capability_text::{capability_features, RankWeights};
 use medulla_decision_types::{
     decision::CandidateSourceRecord, decision::LibraryCandidateScope,
     decision::MAX_ASSEMBLY_CANDIDATES,
@@ -570,6 +570,7 @@ pub(super) fn read_candidates(
     principal: &str,
     family: &dyn DecisionFamily,
     params: &[TypedParam],
+    policy: &medulla_decision_types::decision::policy::DecisionPolicy,
 ) -> Result<ReadCandidates, String> {
     match source {
         CandidateSource::AgentLibrary { scope } => library_candidates(store, tenant_id, scope),
@@ -604,10 +605,12 @@ pub(super) fn read_candidates(
                         "a rank catalog question carries a text param named query",
                     )
                 })?;
-            // Medulla computes the features from the candidate text; the
-            // embedding model is not reachable from the candidate stage, so
-            // semantic_similarity is absent.
-            let features = capability_features(query, options, None);
+            // Medulla computes the features from the candidate text, weighted by
+            // the pinned policy's `decision.rank.*` knobs; the embedding model is
+            // not reachable from the candidate stage, so semantic_similarity is
+            // absent.
+            let features =
+                capability_features(query, options, None, RankWeights::of(policy));
             let featured = options
                 .iter()
                 .zip(features)
