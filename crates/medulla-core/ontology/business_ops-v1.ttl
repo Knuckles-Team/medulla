@@ -1,0 +1,149 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix bfo: <http://purl.obolibrary.org/obo/BFO_> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+# Business operations pack (MEDULLA-BUSINESS-OPS-R001). It adds only the terms that no
+# existing pack owns. Every class rolls up to a core-foundation class. Amounts are
+# integers in minor units with a currency code; no term here names a product.
+
+<https://knuckles-team.github.io/ontology/business_ops> a owl:Ontology ;
+    rdfs:label "Business Operations" ;
+    rdfs:comment "Business profile, governance, order, payment, procurement, stock, compliance, tax, approval and deploy vocabulary for running a small business. Reuses the core, commercial and supply-chain classes; redeclares none." ;
+    owl:imports <https://knuckles-team.github.io/ontology/commercial>, <https://knuckles-team.github.io/ontology/supply_chain> .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.1
+:BusinessProfile a owl:Class ;
+    rdfs:label "Business Profile" ;
+    rdfs:comment "The legal entity an operating business runs as, with its brands, role assignments and approval matrix." ;
+    rdfs:subClassOf :LegalEntity .
+
+:Brand a owl:Class ;
+    rdfs:label "Brand" ;
+    rdfs:comment "A trading name a business profile sells under." ;
+    rdfs:subClassOf :DomainEntity .
+
+:RoleAssignment a owl:Class ;
+    rdfs:label "Role Assignment" ;
+    rdfs:comment "One person holding one role within a scope for a valid interval." ;
+    rdfs:subClassOf :DomainEntity .
+
+:ApprovalRule a owl:Class ;
+    rdfs:label "Approval Rule" ;
+    rdfs:comment "Who must approve one action kind up to an amount ceiling, and how many approvers are required. The set of approval rules of one profile is its approval matrix." ;
+    rdfs:subClassOf :GovernanceRule .
+
+:ClaimPolicy a owl:Class ;
+    rdfs:label "Claim Policy" ;
+    rdfs:comment "The approved and forbidden phrases that govern public claim text." ;
+    rdfs:subClassOf :Policy .
+
+:ApprovedPhrase a owl:Class ;
+    rdfs:label "Approved Phrase" ;
+    rdfs:comment "A phrase a claim policy permits." ;
+    rdfs:subClassOf :DomainEntity .
+
+:ForbiddenPhrase a owl:Class ;
+    rdfs:label "Forbidden Phrase" ;
+    rdfs:comment "A phrase a claim policy forbids." ;
+    rdfs:subClassOf :DomainEntity .
+
+:brandOfProfile a owl:ObjectProperty ;
+    rdfs:label "brand of profile" ;
+    rdfs:comment "Links a brand to the business profile that owns it." ;
+    rdfs:domain :Brand ;
+    rdfs:range :BusinessProfile .
+
+:assigneePerson a owl:ObjectProperty ;
+    rdfs:label "assignee person" ;
+    rdfs:comment "The person a role assignment gives the role to." ;
+    rdfs:domain :RoleAssignment ;
+    rdfs:range :Person .
+
+:assignedRole a owl:ObjectProperty ;
+    rdfs:label "assigned role" ;
+    rdfs:comment "The role a role assignment grants." ;
+    rdfs:domain :RoleAssignment ;
+    rdfs:range :Role .
+
+:roleScope a owl:DatatypeProperty ;
+    rdfs:label "role scope" ;
+    rdfs:comment "The scope (a brand, a profile or a system) in which the assigned role holds." ;
+    rdfs:domain :RoleAssignment ;
+    rdfs:range xsd:string .
+
+:assignmentValidFrom a owl:DatatypeProperty ;
+    rdfs:label "assignment valid from" ;
+    rdfs:comment "The first day a role assignment holds." ;
+    rdfs:domain :RoleAssignment ;
+    rdfs:range xsd:date .
+
+:assignmentValidUntil a owl:DatatypeProperty ;
+    rdfs:label "assignment valid until" ;
+    rdfs:comment "The last day a role assignment holds; absent means still current." ;
+    rdfs:domain :RoleAssignment ;
+    rdfs:range xsd:date .
+
+:approvalRuleOfProfile a owl:ObjectProperty ;
+    rdfs:label "approval rule of profile" ;
+    rdfs:comment "Links an approval rule to the business profile whose approval matrix it belongs to." ;
+    rdfs:domain :ApprovalRule ;
+    rdfs:range :BusinessProfile .
+
+:approvalActionKind a owl:DatatypeProperty ;
+    rdfs:label "approval action kind" ;
+    rdfs:comment "The kind of action the approval rule governs, such as refund or purchase." ;
+    rdfs:domain :ApprovalRule ;
+    rdfs:range xsd:string .
+
+:approvalCeilingMinor a owl:DatatypeProperty ;
+    rdfs:label "approval ceiling" ;
+    rdfs:comment "The largest amount the rule covers, an integer in minor units." ;
+    rdfs:domain :ApprovalRule ;
+    rdfs:range xsd:integer .
+
+:approvalCurrency a owl:DatatypeProperty ;
+    rdfs:label "approval currency" ;
+    rdfs:comment "The currency code of the ceiling." ;
+    rdfs:domain :ApprovalRule ;
+    rdfs:range xsd:string .
+
+:approvalRequiredRole a owl:ObjectProperty ;
+    rdfs:label "approval required role" ;
+    rdfs:comment "The role whose holder may approve under this rule." ;
+    rdfs:domain :ApprovalRule ;
+    rdfs:range :Role .
+
+:approvalQuorum a owl:DatatypeProperty ;
+    rdfs:label "approval quorum" ;
+    rdfs:comment "How many distinct approvers the rule requires." ;
+    rdfs:domain :ApprovalRule ;
+    rdfs:range xsd:integer .
+
+:claimApprovedPhrase a owl:ObjectProperty ;
+    rdfs:label "claim approved phrase" ;
+    rdfs:comment "Links a claim policy to a phrase it approves." ;
+    rdfs:domain :ClaimPolicy ;
+    rdfs:range :ApprovedPhrase .
+
+:claimForbiddenPhrase a owl:ObjectProperty ;
+    rdfs:label "claim forbidden phrase" ;
+    rdfs:comment "Links a claim policy to a phrase it forbids." ;
+    rdfs:domain :ClaimPolicy ;
+    rdfs:range :ForbiddenPhrase .
+
+:phraseText a owl:DatatypeProperty ;
+    rdfs:label "phrase text" ;
+    rdfs:comment "The text of an approved or forbidden phrase." ;
+    rdfs:range xsd:string .
+
+:phraseLocale a owl:DatatypeProperty ;
+    rdfs:label "phrase locale" ;
+    rdfs:comment "The locale (BCP 47 tag) the phrase applies to." ;
+    rdfs:range xsd:string .
+
+:phraseMatchMode a owl:DatatypeProperty ;
+    rdfs:label "phrase match mode" ;
+    rdfs:comment "How the phrase matches: exact, word (word-bounded) or stem." ;
+    rdfs:range xsd:string .

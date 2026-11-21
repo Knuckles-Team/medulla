@@ -1,0 +1,38 @@
+# Business operations shapes (MEDULLA-BUSINESS-OPS-R001, R002.1).
+#
+# SHACL Core plus aggregate-free `sh:sparql` only. The companion of
+# business_ops-v1.ttl; further business shapes land beside these, never replacing them.
+
+@prefix kg:   <https://knuckles-team.github.io/ontology/core#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+
+# spec: MEDULLA-BUSINESS-OPS-R001.1
+kg:BusinessProfileShape a sh:NodeShape ;
+    sh:targetClass kg:BusinessProfile ;
+    sh:property [
+        sh:path rdfs:label ; sh:minCount 1 ;
+        sh:message "A BusinessProfile carries a label."
+    ] ;
+    sh:message "A business profile is named." .
+
+kg:ApprovalRuleShape a sh:NodeShape ;
+    sh:targetClass kg:ApprovalRule ;
+    sh:property [
+        sh:path rdfs:label ; sh:minCount 1 ;
+        sh:message "An ApprovalRule carries a label."
+    ] ;
+    sh:property [
+        sh:path kg:approvalCeilingMinor ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:message "An ApprovalRule carries exactly one ceiling, an integer in minor units."
+    ] ;
+    sh:property [
+        sh:path kg:approvalCurrency ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "An ApprovalRule carries exactly one currency code."
+    ] ;
+    sh:message "An approval rule names its ceiling in minor units and its currency." .
+
+kg:BusinessOpsShapesPrefixes a owl:Ontology ;
+    sh:declare [ sh:prefix "kg" ; sh:namespace "https://knuckles-team.github.io/ontology/core#"^^xsd:anyURI ] .

@@ -4,7 +4,7 @@ Governing spec: [spec.md](spec.md).
 
 | Test ID | Row | Level | Planned test | Expected observation |
 |---|---|---|---|---|
-| T-001 | MEDULLA-BUSINESS-OPS-R001.1 | L2 | `crates/medulla-core/tests/business_ops_vocab.rs::profile_and_governance_terms_with_shapes` | Profile, brand and governance terms proves its row as stated in requirements.md (planned: the named files do not exist yet) |
+| T-001 | MEDULLA-BUSINESS-OPS-R001.1 | L2 | `crates/medulla-core/tests/business_ops_vocab.rs::profile_and_governance_terms_with_shapes` | Profile, brand and governance terms proves its row as stated in requirements.md |
 | T-002 | MEDULLA-BUSINESS-OPS-R001.2 | L2 | `crates/medulla-core/tests/business_ops_vocab.rs::lot_traceability_closure_answers_both_directions` | Product, variant, batch and lot traceability proves its row as stated in requirements.md (planned: the named files do not exist yet) |
 | T-003 | MEDULLA-BUSINESS-OPS-R001.3 | L2 | `crates/medulla-core/tests/business_ops_vocab.rs::money_terms_refuse_floats_and_overrefunds` | Order, payment, refund and payout terms proves its row as stated in requirements.md (planned: the named files do not exist yet) |
 | T-004 | MEDULLA-BUSINESS-OPS-R001.4 | L2 | `crates/medulla-core/tests/business_ops_vocab.rs::procurement_terms_reuse_commercial_and_supply_chain` | Procurement and stock terms proves its row as stated in requirements.md (planned: the named files do not exist yet) |

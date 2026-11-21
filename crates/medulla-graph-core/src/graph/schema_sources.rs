@@ -1588,6 +1588,19 @@ fn core_specs() -> &'static [CoreSpec] {
                 "../../../medulla-core/ontology/supply_chain-v1.ttl"
             )),
         },
+        // MEDULLA-BUSINESS-OPS-R001: the business operations pack (profile, orders and
+        // money, procurement, compliance, tax, approvals), with its shapes companion in
+        // the same CoreSpec shapes field (the commercial pattern).
+        CoreSpec {
+            module: "business_ops",
+            version: 1,
+            shapes: Some(include_str!(
+                "../../../medulla-core/ontology/business_ops-v1.shapes.ttl"
+            )),
+            ontology: Some(include_str!(
+                "../../../medulla-core/ontology/business_ops-v1.ttl"
+            )),
+        },
         // MEDULLA-TYPED-PACKS-R101.1/R102.1: the connector-pack ingest-contract and
         // surface vocabulary, registered once, with its shapes companion wired
         // into the same CoreSpec shapes field (the commercial pattern,

@@ -5,7 +5,7 @@ Governing spec: [spec.md](spec.md). Design: [plan.md](plan.md).
 Tasks mirror the rows of requirements.md, producer first: vocabulary, then rules, then wiring, then the digest.
 
 - [ ] T001 [US1] MEDULLA-BUSINESS-OPS-R001 Business operations pack (rollup)
-- [ ] T002 [US1] MEDULLA-BUSINESS-OPS-R001.1 Profile, brand and governance terms
+- [x] T002 [US1] MEDULLA-BUSINESS-OPS-R001.1 Profile, brand and governance terms
 - [ ] T003 [US1] MEDULLA-BUSINESS-OPS-R001.2 Product, variant, batch and lot traceability
 - [ ] T004 [US1] MEDULLA-BUSINESS-OPS-R001.3 Order, payment, refund and payout terms
 - [ ] T005 [US1] MEDULLA-BUSINESS-OPS-R001.4 Procurement and stock terms
