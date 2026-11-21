@@ -143,3 +143,47 @@ def test_context_compile_reranks_before_boost(start_medulla_server) -> None:
     finally:
         client.tenants.delete(graph)
         client.close()
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R652.5")
+def test_receipt_fields(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R652.5: the receipt rides inline in the
+    bundle evidence and carries scorer, calibration, both rank lists and fallback."""
+    graph = f"rerank-receipt-{uuid.uuid4().hex[:8]}"
+    client = _client()
+    client.tenants.create(graph)
+    try:
+        _node(
+            client,
+            graph,
+            "alpha",
+            {"type": "document", "name": "lighthouse keeper", "description": "notes"},
+        )
+        _node(
+            client,
+            graph,
+            "beta",
+            {
+                "type": "document",
+                "name": "lighthouse",
+                "description": "notes",
+                "text": "keeper logbook",
+            },
+        )
+        evidence = _compile(client, graph, "lighthouse keeper logbook")["evidence"]
+        rerank = evidence["rerank"]
+        assert rerank["scorer_name"]
+        assert rerank["scorer_version"]
+        assert rerank["input_ranks"] == [0, 1]
+        assert rerank["output_ranks"] == [1, 0]
+        assert sorted(rerank["output_ranks"]) == sorted(rerank["input_ranks"])
+        # No champion curve is pinned, so no calibration digest and the receipt
+        # names the fallback it took.
+        assert rerank.get("calibration_digest") in (None, "")
+        assert rerank["fallback"] == "no_calibration"
+        # Nothing is stored: a second compile reads the same inline receipt.
+        again = _compile(client, graph, "lighthouse keeper logbook")["evidence"]["rerank"]
+        assert again == rerank
+    finally:
+        client.tenants.delete(graph)
+        client.close()
