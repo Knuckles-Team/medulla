@@ -69,7 +69,7 @@ none
 - Connector mappings: the pack classes of `MEDULLA-BUSINESS-OPS-R001` are the target of connector rows (to file).
 - Action provenance and tenant sharing: `MEDULLA-DECISION-ENGINE-R869` and `MEDULLA-IDENTITY-R727` extend this pack's scope.
 
-## Reuse inventory
+### Reuse inventory
 
 | Need | Existing owner | Action |
 |---|---|---|
@@ -82,17 +82,17 @@ none
 | Numeric kernel registry and UQL stages | `MEDULLA-FINANCE-PRIMITIVES-R002.2.5`, `MEDULLA-FEDERATED-QUERY` | Register five kinds |
 | Valid and known time | `temporal-v1.ttl`, `:ValidityInterval` | Reuse |
 
-## Interfaces
+### Interfaces
 
 - Rule records are graph nodes `:RuleSpec { kind, version, canonical digest, parameters }`. A rule is immutable by id and version.
 - Every evaluation takes an explicit as-of time and returns `{ result, inputs[], rule_digest, trace }`. The inputs are node ids and revisions.
 - Money is an integer in minor units with an ISO currency code. No binary float enters a persisted amount.
 
-## Live wiring
+### Live wiring
 
 Entry: `Method::Uql` → `dispatch_query_family` → UQL `EVALUATE` stage → `crates/medulla-numeric/src/evaluation/registry.rs::evaluate` → `crates/medulla-numeric/src/business/` (new, one file per kind). The natural-language path compiles to the same UQL. Medulla adds no second route.
 
-## Decisions
+### Decisions
 
 - One rule module, five kinds, one registry. A sixth kind is a new row here.
 - A stored query is a graph node that the caller names. The engine stores no per-question API.
