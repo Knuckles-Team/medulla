@@ -264,3 +264,26 @@ def test_evidence_fields(start_medulla_server) -> None:
         assert by_node["svc"]["evidence_ids"] == ["e-dep"]
 
     _with_graph(body)
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.6")
+def test_code_context_and_diagnose(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R654.6: the served hot path answers both methods."""
+
+    def body(client: Any, graph: str) -> None:
+        impact = _call(
+            client,
+            graph,
+            "CodeContext",
+            {"anchor": "::main", "question": "impact", "depth": 3},
+        )
+        assert impact["status"] == "ok"
+        assert [n["symbol"] for n in impact["impact"]] == [
+            _SYMBOLS["sym-lex"],
+            _SYMBOLS["sym-parse"],
+        ]
+        assert impact["usages"] == []
+        diagnosis = _call(client, graph, "Diagnose", {"symptom": "anom"})
+        assert diagnosis["chain"][-1]["node_id"] == "anom"
+
+    _with_graph(body)

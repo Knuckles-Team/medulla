@@ -592,6 +592,14 @@ name = "shortcut_detectors"
 path = "benches/shortcut_detectors.rs"
 harness = false
 
+# ── Code-context impact bench (MEDULLA-FEDERATED-QUERY-R654.6) ────────────────────────
+# Impact at depth 3 over a 1,000,000-symbol index; the key `code_context_impact` in
+# `thresholds.json` caps p50 at 3 ms and p99 at 15 ms.
+[[bench]]
+name = "code_context"
+path = "benches/code_context.rs"
+harness = false
+
 # ── Incremental view maintenance delta cost (MEDULLA-INCREMENTAL-VIEWS-R001.10) ──────────
 # 1,000-row deltas against a 1,000,000-row `Scan |> Filter` circuit; asserts p99 <= 20 ms
 # and <= 64 bytes of circuit state per member row. Nightly (L6) only.
