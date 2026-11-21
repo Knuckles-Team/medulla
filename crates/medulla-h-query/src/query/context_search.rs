@@ -45,7 +45,7 @@ impl medulla_decision_policy::policy::PolicyLibrary for PolicyLibraryHandle<'_> 
 
 /// The policy the request names: the engine default, or a pinned published policy
 /// of the caller's tenant read from the Agent Library through the decision-policy seam.
-async fn resolve_policy(
+pub(super) async fn resolve_policy(
     ctx: &QueryHandlerCtx<'_>,
     tenant_id: &str,
     reference: &DecisionPolicyRef,
@@ -93,7 +93,7 @@ fn query_digest(graph: &str, query: &str, ngram_n: u32) -> String {
 }
 
 /// The type of a stored node: `type`, else `node_type`.
-fn node_type(object: &serde_json::Map<String, serde_json::Value>) -> &str {
+pub(super) fn node_type(object: &serde_json::Map<String, serde_json::Value>) -> &str {
     ["type", "node_type"]
         .iter()
         .filter_map(|key| object.get(*key).and_then(serde_json::Value::as_str))

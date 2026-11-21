@@ -174,6 +174,8 @@ mod context_search;
 #[cfg(feature = "query")]
 mod corpus_retrieve;
 #[cfg(feature = "query")]
+mod indexless;
+#[cfg(feature = "query")]
 mod schema_projections;
 #[cfg(all(feature = "query", feature = "federation", feature = "rdf"))]
 mod source_coverage;
@@ -203,6 +205,8 @@ mod search_task;
 pub(crate) use context_search::handle_context_search;
 #[cfg(feature = "query")]
 pub(crate) use corpus_retrieve::handle_corpus_retrieve;
+#[cfg(feature = "query")]
+pub(crate) use indexless::handle_indexless_retrieve;
 #[cfg(feature = "query")]
 pub(crate) use retrieval_round::handle_retrieval_round;
 #[cfg(feature = "query")]

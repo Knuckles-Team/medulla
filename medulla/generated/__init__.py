@@ -190,6 +190,7 @@ SEND_BY_METHOD = {
     "ContextCompile": query.send_context_compile,
     "ContextFacts": graph.send_context_facts,
     "CorpusRetrieve": query.send_corpus_retrieve,
+    "IndexlessRetrieve": query.send_indexless_retrieve,
     "CreateBranch": cluster.send_create_branch,
     "CreateChannel": messaging.send_create_channel,
     "CreateGraph": cluster.send_create_graph,

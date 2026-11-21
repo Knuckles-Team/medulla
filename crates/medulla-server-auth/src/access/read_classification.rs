@@ -103,6 +103,8 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "DiscountedReturn",
     "ContextCompile",
     "RetrievalContextSearch",
+    // MEDULLA-DECISION-ENGINE-R144.3: indexless reads of the caller's visible documents.
+    "IndexlessRetrieve",
     "SynthesizeSearchTask",
     "RetrievalRound",
     "EncodedDocumentSearch",

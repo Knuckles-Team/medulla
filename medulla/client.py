@@ -7467,6 +7467,49 @@ class GraphOperationsClient:
             raise RuntimeError("RetrievalContextSearch must answer with an object")
         return result
 
+    async def indexless_retrieve(
+        self,
+        *,
+        tenant_id: str,
+        ops: list[dict[str, Any]],
+        graph: str | None = None,
+        budget: dict[str, int] | None = None,
+        policy: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Run indexless operations over the caller's ``Document`` nodes
+        (MEDULLA-DECISION-ENGINE-R144.3).
+
+        ``ops`` holds 1 to 64 of ``{"op": "raw_read", "document_id"}``,
+        ``{"op": "corpus_scan", "limit"}`` and ``{"op": "verify_span",
+        "document_id", "start_byte", "end_byte", "expected_digest"}``. ``budget``
+        (``max_rows``, ``max_visits``, ``max_cost_units``) is clamped field-wise to
+        the tenant's ``indexless.*`` ceiling of the named ``policy`` (default: the
+        engine default policy); no budget applies the ceiling. Returns ``{rows,
+        cost}`` where ``cost`` holds ``rows_visited``, ``visits``, ``cost_used``,
+        ``remaining``, ``applied_budget``, ``operation_ids`` and
+        ``authorization_revision``. An over-budget operation is refused
+        ``INDEXLESS_BUDGET_EXHAUSTED`` and the detail carries the cost report; a
+        denied or absent document is refused ``DOCUMENT_NOT_FOUND``. Writes nothing.
+        """
+        graph = graph or self._client._graph_name
+        request: dict[str, Any] = {
+            "tenant_id": tenant_id,
+            "graph": graph,
+            "ops": ops,
+        }
+        if budget is not None:
+            request["budget"] = budget
+        if policy is not None:
+            request["policy"] = policy
+        result = await self._client._send(
+            "IndexlessRetrieve", {"request": request}, graph, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("IndexlessRetrieve must answer with an object")
+        return result
+
     async def synthesize_search_task(
         self,
         *,

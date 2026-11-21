@@ -629,6 +629,8 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
     let codes = |pairs: &[(RefusalCode, &str)]| pairs.iter().map(|(code, _)| *code).collect();
     vec![
         ("memory_change", super::memory_benchmark::REFUSALS.to_vec()),
+        // MEDULLA-DECISION-ENGINE-R144.1, R144.2: the indexless retrieval refusals.
+        ("indexless", super::indexless_retrieval::REFUSALS.to_vec()),
         ("safety", super::safety::REFUSALS.to_vec()),
         ("limits", super::limit_types::REFUSALS.to_vec()),
         (

@@ -116,6 +116,14 @@ async fn dispatch_query_family(
         }
         other => other,
     };
+    // MEDULLA-DECISION-ENGINE-R144.3: indexless operations over the caller's visible documents.
+    #[cfg(feature = "query")]
+    let method = match method {
+        Method::IndexlessRetrieve { request } => {
+            return Ok(handle_indexless_retrieve(hctx, *request).await)
+        }
+        other => other,
+    };
     // MEDULLA-FEDERATED-QUERY-R650.3: one bundle compile over the caller's projected core.
     #[cfg(feature = "query")]
     let method = match method {

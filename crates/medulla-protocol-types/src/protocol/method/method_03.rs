@@ -421,6 +421,14 @@ $($variants)*
         request: Box<medulla_decision_types::decision::statistical::context_search::RetrievalContextSearchRequest>,
     },
 
+    /// MEDULLA-DECISION-ENGINE-R144.3: run 1 to 64 indexless operations (raw
+    /// read, id-ordered corpus scan, span digest check) over the caller's visible
+    /// `Document` nodes under a budget clamped to the tenant ceiling, and report
+    /// the cost. Builds and consults no index. A read; nothing is committed.
+    IndexlessRetrieve {
+        request: Box<medulla_decision_types::decision::indexless_retrieval::IndexlessRequest>,
+    },
+
     /// MEDULLA-FEDERATED-QUERY-R702.3: synthesize one multi-hop search task around an
     /// answer node from the evidence the caller may read, with its shortcut-risk
     /// report. A read; nothing is committed.

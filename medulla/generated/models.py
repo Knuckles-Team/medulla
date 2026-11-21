@@ -14365,6 +14365,13 @@ class MethodCorpusRetrieve(BaseModel):
     params: MethodCorpusRetrieveParams
 
 
+class MethodIndexlessRetrieve(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["IndexlessRetrieve"]
+    params: MethodIndexlessRetrieveParams
+
+
 class MethodEncodeDocument(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15154,6 +15161,7 @@ Method = Annotated[
         MethodViewportQuery,
         MethodResolveViewportSelection,
         MethodCorpusRetrieve,
+        MethodIndexlessRetrieve,
         MethodEncodeDocument,
         MethodEncodedDocumentSearch,
         MethodTsDefineStateSpace,
@@ -32884,6 +32892,64 @@ class MethodCorpusRetrieveParams(BaseModel):
     request: CorpusRequest
 
 
+class IndexlessOpRawRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["raw_read"]
+    document_id: str
+
+
+class IndexlessOpCorpusScan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["corpus_scan"]
+    limit: Annotated[int, Field(ge=0)]
+
+
+class IndexlessOpVerifySpan(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["verify_span"]
+    document_id: str
+    end_byte: Annotated[int, Field(ge=0)]
+    expected_digest: str
+    start_byte: Annotated[int, Field(ge=0)]
+
+
+IndexlessOp = Annotated[
+    IndexlessOpRawRead | IndexlessOpCorpusScan | IndexlessOpVerifySpan,
+    Field(discriminator="op"),
+]
+
+
+class IndexlessBudget(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    max_cost_units: Annotated[int, Field(ge=0)]
+    max_rows: Annotated[int, Field(ge=0)]
+    max_visits: Annotated[int, Field(ge=0)]
+
+
+class IndexlessRequest(BaseModel):
+    """MEDULLA-DECISION-ENGINE-R144.3: one indexless retrieval request."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    budget: IndexlessBudget | None = None
+    graph: str
+    ops: Annotated[list[IndexlessOp], Field(max_length=64)]
+    policy: DecisionPolicyRef = Field(
+        default_factory=lambda: DecisionPolicyRefDefault(policy="default")
+    )
+    tenant_id: str
+
+
+class MethodIndexlessRetrieveParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: IndexlessRequest
+
+
 class MethodCrossSourceQuestionParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38469,6 +38535,14 @@ __all__ = [
     "MethodContextCompileParams",
     "MethodCorpusRetrieve",
     "MethodCorpusRetrieveParams",
+    "MethodIndexlessRetrieve",
+    "MethodIndexlessRetrieveParams",
+    "IndexlessBudget",
+    "IndexlessOp",
+    "IndexlessOpCorpusScan",
+    "IndexlessOpRawRead",
+    "IndexlessOpVerifySpan",
+    "IndexlessRequest",
     "MethodCrossSourceQuestion",
     "MethodCrossSourceQuestionParams",
     "MethodEncodeDocument",

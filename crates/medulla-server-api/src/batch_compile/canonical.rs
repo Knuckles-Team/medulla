@@ -635,6 +635,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::Discover { .. }
         | Method::ContextCompile { .. }
         | Method::RetrievalContextSearch { .. }
+        | Method::IndexlessRetrieve { .. }
         | Method::SynthesizeSearchTask { .. }
         | Method::RetrievalRound { .. }
         | Method::CorpusRetrieve { .. }

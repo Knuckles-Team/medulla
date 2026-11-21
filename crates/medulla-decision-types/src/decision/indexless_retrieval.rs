@@ -12,9 +12,13 @@ use sha2::{Digest, Sha256};
 
 use medulla_types::contract::BoundedVec;
 
-use super::knob_families::indexless::{MAX_COST_UNITS, MAX_ROWS, MAX_VISITS};
-use super::knobs::KnobValue;
+use super::knob_families::indexless::{
+    MAX_COST_UNITS, MAX_ROWS, MAX_VISITS, READ_COST, SCAN_COST, VERIFY_COST,
+};
+use super::knobs::{KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
+use super::record::outcome::RefusalCode;
+use super::request::DecisionPolicyRef;
 
 /// Most operations one request may carry.
 pub const MAX_INDEXLESS_OPS: usize = 64;
@@ -31,6 +35,14 @@ pub enum IndexlessErrorCode {
     /// An operation would exceed the applied budget.
     IndexlessBudgetExhausted,
 }
+
+/// The `indexless` family table: every refusal code above, registered with the
+/// decision plane's module tables (MEDULLA-DECISION-ENGINE-R144.1, R144.2).
+pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new("INDEXLESS_OPS_EMPTY"),
+    RefusalCode::new("INDEXLESS_SPAN_INVALID"),
+    RefusalCode::new("INDEXLESS_BUDGET_EXHAUSTED"),
+];
 
 impl IndexlessErrorCode {
     /// The stable wire code.
@@ -85,6 +97,10 @@ pub struct CostReport {
     #[serde(default)]
     pub operation_ids: BoundedVec<String, MAX_INDEXLESS_OPS>,
     pub authorization_revision: u64,
+    /// The tenant ceiling the budget was clamped to, as
+    /// `knob:indexless.<name>=<value>` premises (MEDULLA-DECISION-ENGINE-R144.7).
+    #[serde(default)]
+    pub premises: Vec<String>,
 }
 
 /// One indexless retrieval request.
@@ -97,8 +113,14 @@ pub struct IndexlessRequest {
     pub ops: BoundedVec<IndexlessOp, MAX_INDEXLESS_OPS>,
     #[serde(default)]
     pub budget: Option<IndexlessBudget>,
-    /// The pinned decision policy the knobs are read from.
-    pub policy: String,
+    /// The decision policy the knobs are read from: the engine default, or a
+    /// pinned published policy of the caller's tenant.
+    #[serde(default = "default_policy_ref")]
+    pub policy: DecisionPolicyRef,
+}
+
+fn default_policy_ref() -> DecisionPolicyRef {
+    DecisionPolicyRef::Default
 }
 
 impl IndexlessRequest {
@@ -141,18 +163,63 @@ pub fn verify_span(
         .ok_or(IndexlessErrorCode::IndexlessSpanInvalid)
 }
 
+/// The per-unit costs of the three operations, read from the policy
+/// (MEDULLA-DECISION-ENGINE-R144.1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct IndexlessUnitCosts {
+    /// Cost units per document a `RawRead` returns.
+    pub read: u64,
+    /// Cost units per row a `CorpusScan` returns.
+    pub scan: u64,
+    /// Cost units per span a `VerifySpan` checks.
+    pub verify: u64,
+}
+
+fn integer_knob(policy: &DecisionPolicy, spec: &KnobSpec) -> u64 {
+    match policy.knob(spec) {
+        KnobValue::Integer(n) => u64::try_from(n).unwrap_or(0),
+        _ => 0,
+    }
+}
+
+/// The unit costs the policy sets: each `indexless.*_cost` knob, pinned or default.
+pub fn unit_costs(policy: &DecisionPolicy) -> IndexlessUnitCosts {
+    IndexlessUnitCosts {
+        read: integer_knob(policy, &READ_COST),
+        scan: integer_knob(policy, &SCAN_COST),
+        verify: integer_knob(policy, &VERIFY_COST),
+    }
+}
+
+/// The stable id of the operation at `index`: `<index>:<op kind>`
+/// (MEDULLA-DECISION-ENGINE-R144.5).
+pub fn operation_id(index: usize, op: &IndexlessOp) -> String {
+    let kind = match op {
+        IndexlessOp::RawRead { .. } => "raw_read",
+        IndexlessOp::CorpusScan { .. } => "corpus_scan",
+        IndexlessOp::VerifySpan { .. } => "verify_span",
+    };
+    format!("{index}:{kind}")
+}
+
 /// The tenant ceiling the pinned policy sets: the three `indexless.*` knobs,
 /// each the pinned value or its default (MEDULLA-DECISION-ENGINE-R144.7).
 pub fn tenant_ceiling(policy: &DecisionPolicy) -> IndexlessBudget {
-    let read = |value: KnobValue| match value {
-        KnobValue::Integer(n) => u64::try_from(n).unwrap_or(0),
-        _ => 0,
-    };
     IndexlessBudget {
-        max_rows: read(policy.knob(&MAX_ROWS)),
-        max_visits: read(policy.knob(&MAX_VISITS)),
-        max_cost_units: read(policy.knob(&MAX_COST_UNITS)),
+        max_rows: integer_knob(policy, &MAX_ROWS),
+        max_visits: integer_knob(policy, &MAX_VISITS),
+        max_cost_units: integer_knob(policy, &MAX_COST_UNITS),
     }
+}
+
+/// The ceiling premises a cost report carries: `knob:indexless.max_rows=<value>`
+/// and its two siblings (MEDULLA-DECISION-ENGINE-R144.7).
+pub fn ceiling_premises(ceiling: IndexlessBudget) -> Vec<String> {
+    vec![
+        format!("knob:{}={}", MAX_ROWS.name, ceiling.max_rows),
+        format!("knob:{}={}", MAX_VISITS.name, ceiling.max_visits),
+        format!("knob:{}={}", MAX_COST_UNITS.name, ceiling.max_cost_units),
+    ]
 }
 
 /// The applied budget: the field-wise minimum of the caller budget and the
@@ -230,6 +297,7 @@ impl BudgetMeter {
             operation_ids: BoundedVec::new(self.operation_ids.clone())
                 .expect("charge admits at most the op bound"),
             authorization_revision,
+            premises: Vec::new(),
         }
     }
 }
@@ -266,7 +334,7 @@ mod tests {
             graph: "g".into(),
             ops: BoundedVec::new(ops).unwrap(),
             budget: Some(budget(100)),
-            policy: "policy:p".into(),
+            policy: DecisionPolicyRef::Default,
         };
         let text = serde_json::to_string(&request).unwrap();
         assert!(text.contains("\"op\":\"corpus_scan\""));
@@ -317,6 +385,7 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R144.2
     #[test]
     fn budget_enforcement() {
         let mut meter = BudgetMeter::new(budget(100));
@@ -344,6 +413,7 @@ mod tests {
         assert_eq!(fresh.report(1).remaining.max_rows, 100);
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R144.7
     #[test]
     fn clamp_takes_the_field_wise_minimum_and_defaults_to_the_ceiling() {
         let ceiling = IndexlessBudget {
@@ -352,7 +422,27 @@ mod tests {
             max_cost_units: 1_000_000,
         };
         assert_eq!(tenant_ceiling(&DecisionPolicy::engine_default()), ceiling);
+        assert_eq!(
+            unit_costs(&DecisionPolicy::engine_default()),
+            IndexlessUnitCosts {
+                read: 1,
+                scan: 1,
+                verify: 2,
+            }
+        );
+        assert_eq!(
+            operation_id(2, &IndexlessOp::CorpusScan { limit: 1 }),
+            "2:corpus_scan"
+        );
         assert_eq!(clamp_budget(None, ceiling), ceiling);
+        assert_eq!(
+            ceiling_premises(ceiling),
+            [
+                "knob:indexless.max_rows=10000",
+                "knob:indexless.max_visits=100000",
+                "knob:indexless.max_cost_units=1000000",
+            ]
+        );
         let asked = IndexlessBudget {
             max_rows: 20_000,
             max_visits: 50,

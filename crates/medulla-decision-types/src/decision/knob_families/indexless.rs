@@ -1,6 +1,6 @@
-//! The `indexless.*` knobs (MEDULLA-DECISION-ENGINE-R144.7): the tenant
-//! ceiling an indexless retrieval budget is clamped to, read from the pinned
-//! decision policy.
+//! The `indexless.*` knobs: the tenant ceiling an indexless retrieval budget
+//! is clamped to (MEDULLA-DECISION-ENGINE-R144.7) and the per-unit operation
+//! costs (MEDULLA-DECISION-ENGINE-R144.1), read from the decision policy.
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 
@@ -34,5 +34,42 @@ pub const MAX_COST_UNITS: KnobSpec = KnobSpec {
     safety: KnobSafety::Tunable,
 };
 
+/// Cost units one `RawRead` spends per document (MEDULLA-DECISION-ENGINE-R144.1).
+pub const READ_COST: KnobSpec = KnobSpec {
+    name: "indexless.read_cost",
+    unit: "cost units per document",
+    default: KnobValue::Integer(1),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(100),
+    safety: KnobSafety::Tunable,
+};
+
+/// Cost units one `CorpusScan` spends per row (MEDULLA-DECISION-ENGINE-R144.1).
+pub const SCAN_COST: KnobSpec = KnobSpec {
+    name: "indexless.scan_cost",
+    unit: "cost units per row",
+    default: KnobValue::Integer(1),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(100),
+    safety: KnobSafety::Tunable,
+};
+
+/// Cost units one `VerifySpan` spends per span (MEDULLA-DECISION-ENGINE-R144.1).
+pub const VERIFY_COST: KnobSpec = KnobSpec {
+    name: "indexless.verify_cost",
+    unit: "cost units per span",
+    default: KnobValue::Integer(2),
+    min: KnobValue::Integer(1),
+    max: KnobValue::Integer(100),
+    safety: KnobSafety::Tunable,
+};
+
 /// Every `indexless.*` knob, each `Tunable`.
-pub const KNOBS: &[KnobSpec] = &[MAX_ROWS, MAX_VISITS, MAX_COST_UNITS];
+pub const KNOBS: &[KnobSpec] = &[
+    MAX_ROWS,
+    MAX_VISITS,
+    MAX_COST_UNITS,
+    READ_COST,
+    SCAN_COST,
+    VERIFY_COST,
+];

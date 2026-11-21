@@ -1879,6 +1879,9 @@ send_catalog_usage = contract_sender("CatalogUsage", "MethodCatalogUsageParams")
 send_column_lineage = contract_sender("ColumnLineage", "MethodColumnLineageParams")
 send_context_compile = contract_sender("ContextCompile", "MethodContextCompileParams")
 send_corpus_retrieve = contract_sender("CorpusRetrieve", "MethodCorpusRetrieveParams")
+send_indexless_retrieve = contract_sender(
+    "IndexlessRetrieve", "MethodIndexlessRetrieveParams"
+)
 send_cross_source_question = contract_sender(
     "CrossSourceQuestion", "MethodCrossSourceQuestionParams"
 )

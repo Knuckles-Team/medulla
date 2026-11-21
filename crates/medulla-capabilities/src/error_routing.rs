@@ -629,6 +629,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // `ensure_job_workers` refuses an invalid analytics worker timing.
     ("AnalyticsJob", &["INVALID_CONFIGURATION"]),
+    // MEDULLA-DECISION-ENGINE-R144.4: the refusals of an indexless retrieval. A denied
+    // document answers as an absent one; budget exhaustion reports the counts.
+    (
+        "IndexlessRetrieve",
+        &[
+            "COMPONENT_PIN_MISMATCH",
+            "DOCUMENT_NOT_FOUND",
+            "INDEXLESS_BUDGET_EXHAUSTED",
+            "INDEXLESS_OPS_EMPTY",
+            "INDEXLESS_SPAN_INVALID",
+        ],
+    ),
     // MEDULLA-DECISION-ENGINE-R100.100.4: the refusals of a context search. The kernel
     // codes pass through unchanged; a cursor is invalid when forged, edited or issued
     // for another tenant or query, and stale when the snapshot moved.

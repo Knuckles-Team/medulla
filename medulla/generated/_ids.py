@@ -567,6 +567,7 @@ METHOD_IDS = frozenset(
         "ColumnLineage",
         "ContextCompile",
         "CorpusRetrieve",
+        "IndexlessRetrieve",
         "CrossSourceQuestion",
         "EncodeDocument",
         "EncodedDocumentSearch",

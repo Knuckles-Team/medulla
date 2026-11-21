@@ -79,6 +79,8 @@ method_results! {
     SourceCoverage(SourceCoverage) => Raw<medulla_identity_types::source_coverage::SourceCoverageReply>;
     // MEDULLA-DECISION-ENGINE-R100.100.4: the spans of one context search.
     RetrievalContextSearch(RetrievalContextSearch) => Raw<medulla_decision_types::decision::statistical::context_search::RetrievalContextSearchResult>;
+    // MEDULLA-DECISION-ENGINE-R144.3: the rows and the cost report of one indexless retrieval.
+    IndexlessRetrieve(IndexlessRetrieve) => Raw<medulla_decision_types::decision::indexless_retrieval::IndexlessResult>;
     // MEDULLA-FEDERATED-QUERY-R702.3: the accepted task or the typed rejection of one synthesis.
     SynthesizeSearchTask(SynthesizeSearchTask) => Raw<medulla_work_types::search_task::SynthesizeSearchTaskAnswer>;
     // MEDULLA-FEDERATED-QUERY-R654.3: code context and symptom diagnosis.
