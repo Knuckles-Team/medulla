@@ -637,17 +637,16 @@ def test_q11_downtime_next(clean_graph) -> None:
     query = (
         f"PREFIX dw: <{_DW}> "
         "SELECT ?job_type ?priority ?budget ?skip_reason WHERE { "
-        f"<{_DW}selection/{record['selection_id'].rsplit('/', 1)[-1]}> dw:chosen|dw:skipped ?e . "
-        "?e dw:jobType ?job_type ; dw:priority ?priority ; dw:cpuMs ?budget . "
+        "?e a dw:SelectionEntry ; dw:jobType ?job_type ; dw:priority ?priority ; dw:cpuMs ?budget . "
         "OPTIONAL { ?e dw:skipReason ?skip_reason } }"
     )
     rows = clean_graph.rdf.sparql(query)
     ranked = sorted(
-        (
+        {
             (int(_lexical(row["priority"])), _lexical(row["job_type"]), _lexical(row.get("skip_reason")))
             for row in rows
             if _lexical(row["job_type"]).endswith(tuple(f"q11-{tag}-{n}" for n in ("high", "low", "blocked")))
-        ),
+        },
         reverse=True,
     )
     assert [(priority, reason) for priority, _, reason in ranked] == [
