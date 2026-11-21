@@ -677,3 +677,108 @@ async fn view_feed_gap_then_snapshot_resume() {
     };
     send_in(&state, FEED_GRAPH, 26, dropped).await;
 }
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R010.4
+#[cfg(all(feature = "matview", feature = "redb"))]
+#[tokio::test(flavor = "multi_thread")]
+async fn view_delta_feed_matches_result_difference() {
+    use std::collections::BTreeMap;
+
+    use medulla_query_types::wire::CdcKind;
+
+    const DELTA_GRAPH: &str = "r010_4_graph";
+    const DELTA_VIEW: &str = "r010_4_view";
+    const DOCS: u64 = 20;
+    const CHANGES: u64 = 100;
+    let feed = format!("view:{DELTA_VIEW}");
+
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let state = test_state(&[CREATOR]);
+    create_test_graph(&state, DELTA_GRAPH, 1).await;
+    let define = Method::PlanMatViewDefine {
+        name: DELTA_VIEW.into(),
+        graph: DELTA_GRAPH.into(),
+        plan: doc_plan(),
+    };
+    send_in(&state, DELTA_GRAPH, 2, define).await;
+
+    // Subscribe at seq 0, then apply 100 pseudo-random changes: each one adds or replaces
+    // a document with a year on either side of the filter, or removes one. After every
+    // change the rows received since the last read, folded as `+1` for an insert and `-1`
+    // for a delete, must equal the view the served `PlanMatViewGet` answers.
+    let first = read_feed(&state, DELTA_GRAPH, 3, &feed, 0).await;
+    assert!(!first.gap);
+    assert!(first.events.is_empty());
+    let mut cursor = first.head_seq;
+    let mut folded: BTreeMap<String, i64> = BTreeMap::new();
+    let mut seed: u64 = 0x2545_F491_4F6C_DD1D;
+    let mut next = move || {
+        seed ^= seed << 13;
+        seed ^= seed >> 7;
+        seed ^= seed << 17;
+        seed
+    };
+    for step in 0..CHANGES {
+        let draw = next();
+        let node_id = format!("delta-doc-{}", draw % DOCS);
+        let write = if (draw >> 8) % 4 == 0 {
+            Method::RemoveNode {
+                node_id: node_id.clone(),
+            }
+        } else {
+            Method::AddNode {
+                node_id: node_id.clone(),
+                properties_msgpack: doc_props(1990 + ((draw >> 16) % 30) as u32),
+            }
+        };
+        let id = 100 + 4 * step;
+        // A removal of an absent document is refused; the view is unchanged then.
+        let reply = crate::tests::dispatch_on_heap(&state, request(id, DELTA_GRAPH, write)).await;
+        let _ = reply;
+
+        let read = read_feed(&state, DELTA_GRAPH, id + 1, &feed, cursor).await;
+        assert!(!read.gap, "change {step}: the cursor stays inside the ring");
+        for event in &read.events {
+            assert_eq!(event.table, DELTA_VIEW);
+            match event.kind {
+                CdcKind::InsertRow => *folded.entry(event.node_id.clone()).or_insert(0) += 1,
+                CdcKind::DeleteRow => *folded.entry(event.node_id.clone()).or_insert(0) -= 1,
+                other => panic!("a view feed carries row changes only, got {other:?}"),
+            }
+        }
+        cursor = read.head_seq;
+
+        let snapshot = send_in(
+            &state,
+            DELTA_GRAPH,
+            id + 2,
+            Method::PlanMatViewGet {
+                name: DELTA_VIEW.into(),
+            },
+        )
+        .await;
+        let Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) = snapshot.result
+        else {
+            panic!("PlanMatViewGet returned a non-raw payload");
+        };
+        let rows: Vec<(String, Option<f32>)> = rmp_serde::from_slice(&bytes).expect("view rows");
+        let mut served: Vec<String> = rows.into_iter().map(|(row_id, _)| row_id).collect();
+        served.sort();
+        let multiset: Vec<String> = folded
+            .iter()
+            .flat_map(|(row_id, count)| {
+                assert!(
+                    (0..=1).contains(count),
+                    "change {step}: row {row_id} folded to {count}"
+                );
+                std::iter::repeat_n(row_id.clone(), *count as usize)
+            })
+            .collect();
+        assert_eq!(multiset, served, "change {step}: the feed folds to the view");
+    }
+
+    let dropped = Method::PlanMatViewDrop {
+        name: DELTA_VIEW.into(),
+    };
+    send_in(&state, DELTA_GRAPH, 10_000, dropped).await;
+}
