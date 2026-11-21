@@ -31,8 +31,13 @@ use sha2::{Digest, Sha256};
 pub enum SourceDirtyBasis<'a> {
     /// The methods are the row writes (a direct row commit).
     Methods,
-    /// The staged node row delta of the commit.
-    RowDelta(&'a [Method]),
+    /// The staged node row delta of the commit. `replaces_existing_node` is set when an
+    /// `AddNode` of it overwrites a node the graph already held: that node may have left a bound
+    /// type, which its after image cannot say, so the commit wakes every bound source.
+    RowDelta {
+        operations: &'a [Method],
+        replaces_existing_node: bool,
+    },
     /// A replay: the wakeup input the original commit recorded, if it recorded one.
     Recorded(Option<SemanticDigest>),
 }
@@ -55,13 +60,18 @@ pub(super) fn graph_source_dirty_input(
     methods: &[Method],
     basis: &SourceDirtyBasis<'_>,
 ) -> Option<SemanticDigest> {
-    let rows = match basis {
+    let (rows, replaces_existing_node) = match basis {
         SourceDirtyBasis::Recorded(recorded) => return *recorded,
-        SourceDirtyBasis::Methods => methods,
-        SourceDirtyBasis::RowDelta(rows) => rows,
+        SourceDirtyBasis::Methods => (methods, false),
+        SourceDirtyBasis::RowDelta {
+            operations,
+            replaces_existing_node,
+        } => (*operations, *replaces_existing_node),
     };
     let bound = bound_graph_sources(tenant, graph);
-    if bound.is_empty() || !rows.iter().any(|method| writes_bound_node(&bound, method)) {
+    if bound.is_empty()
+        || !(replaces_existing_node || rows.iter().any(|method| writes_bound_node(&bound, method)))
+    {
         return None;
     }
     let encoded = rmp_serde::to_vec_named(rows).ok()?;
@@ -261,7 +271,15 @@ mod tests {
     }
 
     fn row_delta_wake(tenant: &str, graph: &str, staged: &[Method]) -> Option<SemanticDigest> {
-        graph_source_dirty_input(tenant, graph, &[], &SourceDirtyBasis::RowDelta(staged))
+        graph_source_dirty_input(
+            tenant,
+            graph,
+            &[],
+            &SourceDirtyBasis::RowDelta {
+                operations: staged,
+                replaces_existing_node: false,
+            },
+        )
     }
 
     /// The node row delta a runtime-derived commit produces: `methods` applied to an empty
@@ -311,6 +329,49 @@ mod tests {
         let other = [add("doc:9", &[("type", "Document"), ("text", "hello")])];
         assert!(row_delta_wake("dirty-t4", "dirty-g4", &other).is_none());
         assert!(row_delta_wake("dirty-t4", "unbound-graph", &bookmark).is_none());
+    }
+
+    #[test]
+    fn an_add_node_that_overwrites_an_existing_node_wakes_every_bound_source_of_the_graph() {
+        bind("dirty-t8", "dirty-g8");
+        // The node leaves the bound type: its after image names an unbound type and carries no
+        // bound property, so only the before image could say it was a source node.
+        let before = medulla_graph_core::graph::GraphCore::new();
+        before.add_node(
+            "bookmark:1".into(),
+            node(&[("type", "Bookmark"), ("text", "hello")]),
+        );
+        let base = before.snapshot();
+        let staged = medulla_graph_core::graph::GraphCore::from_snapshot(base.clone(), 0).unwrap();
+        crate::mutation_apply::apply(&staged, &add("bookmark:1", &[("type", "Document")])).unwrap();
+        let delta =
+            medulla_kernel::graph_delta::GraphRowDelta::between(&base, &staged.snapshot()).unwrap();
+        assert!(delta.replaces_existing_node());
+        let wake = |replaces_existing_node| {
+            graph_source_dirty_input(
+                "dirty-t8",
+                "dirty-g8",
+                &[],
+                &SourceDirtyBasis::RowDelta {
+                    operations: delta.operations(),
+                    replaces_existing_node,
+                },
+            )
+        };
+        assert!(wake(delta.replaces_existing_node()).is_some());
+        // Without the overwrite flag the same rows name no bound node.
+        assert!(wake(false).is_none());
+        // A graph with no bound source is never woken, overwrite or not.
+        assert!(graph_source_dirty_input(
+            "dirty-t8",
+            "unbound-graph",
+            &[],
+            &SourceDirtyBasis::RowDelta {
+                operations: delta.operations(),
+                replaces_existing_node: true,
+            },
+        )
+        .is_none());
     }
 
     #[test]

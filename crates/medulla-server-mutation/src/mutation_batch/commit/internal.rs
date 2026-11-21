@@ -406,7 +406,10 @@ async fn commit_prepared_internal_graph(
         },
         methods,
         Vec::new(),
-        SourceDirtyBasis::RowDelta(row_delta.operations()),
+        SourceDirtyBasis::RowDelta {
+            operations: row_delta.operations(),
+            replaces_existing_node: row_delta.replaces_existing_node(),
+        },
     )?;
     let result_msgpack = rmp_serde::to_vec_named(result).map_err(|error| error.to_string())?;
     let committed = persistence

@@ -43,6 +43,11 @@ pub struct GraphRowDelta {
     decoded_wire_version: u16,
     schema_version: u16,
     operations: Vec<Method>,
+    /// Whether an `AddNode` of `operations` replaces a node the `before` image already held.
+    /// Known only where the delta is computed ([`Self::between`]); never serialized, so a
+    /// decoded delta reports `false` (a replayed commit reproduces its recorded wakeup instead).
+    #[serde(skip)]
+    replaces_existing_node: bool,
     #[serde(deserialize_with = "deserialize_required_option")]
     ledger: Option<LedgerDelta>,
     /// Authoritative graph-control transition. `None` means unchanged; `Some`
@@ -102,6 +107,7 @@ impl<'de> Deserialize<'de> for GraphRowDelta {
                     decoded_wire_version: value.schema_version,
                     schema_version: value.schema_version,
                     operations: value.operations,
+                    replaces_existing_node: false,
                     ledger: value.ledger,
                     schema_sources,
                 })
@@ -110,6 +116,7 @@ impl<'de> Deserialize<'de> for GraphRowDelta {
                 decoded_wire_version: value.schema_version,
                 schema_version: ROW_DELTA_VERSION,
                 operations: value.operations,
+                replaces_existing_node: false,
                 ledger: value.ledger,
                 schema_sources: value
                     .integrity_policy
@@ -147,10 +154,14 @@ impl GraphRowDelta {
         push_node_operations(&mut operations, &nodes, &removals);
         push_edge_operations(&mut operations, before, after, &removals);
         push_embedding_operations(&mut operations, &embeddings);
+        let replaces_existing_node = operations.iter().any(|operation| {
+            matches!(operation, Method::AddNode { node_id, .. } if nodes.before.contains_key(node_id.as_str()))
+        });
         let delta = Self {
             decoded_wire_version: ROW_DELTA_VERSION,
             schema_version: ROW_DELTA_VERSION,
             operations,
+            replaces_existing_node,
             ledger: ledger_delta(before, after),
             schema_sources: schema_sources_delta(before, after),
         };
@@ -198,6 +209,13 @@ impl GraphRowDelta {
     }
 
     /// The mutations this delta replays.
+    /// Whether an `AddNode` of this delta replaces a node the `before` image already held. The
+    /// source-dirty wakeup reads it: a node that moves off a bound type leaves no before image
+    /// in its `AddNode`, so the commit wakes every bound source of the graph.
+    pub fn replaces_existing_node(&self) -> bool {
+        self.replaces_existing_node
+    }
+
     pub fn operations(&self) -> &[Method] {
         &self.operations
     }
@@ -787,6 +805,7 @@ mod tests {
             decoded_wire_version: ROW_DELTA_VERSION,
             schema_version: ROW_DELTA_VERSION,
             operations,
+            replaces_existing_node: false,
             ledger: None,
             schema_sources: None,
         }
