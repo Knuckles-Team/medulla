@@ -127,6 +127,8 @@ Wire surface at the request boundary; each method variant goes into `crates/medu
   rebase on the server or refuse with `SOURCE_CONFLICT{paths}`.
 - **Provenance is mandatory for agent principals.** An agent changeset names its run trace. A
   human changeset may omit it.
+- **Indexes and grants live with the chain.** History index rows and path grants are rows of the
+  branch registry table. They are read and written in the chain's own transactions.
 
 ### Graph-native edits (R013) and structured trailers (R002.1)
 
@@ -182,3 +184,13 @@ none
 - Symbol edit serving: `MEDULLA-SCM-R013.4` provides, `ARBORA-OPS-R848.4` consumes; `MERISTEM-SCM-R002` applies the answer. Contract: [arbora-symbol-edit.md](contracts/arbora-symbol-edit.md).
 - Git bridge export: `MEDULLA-SCM-R014` provides, `ARBORA-OPS-R851` consumes. Contract: [arbora-git-export.md](contracts/arbora-git-export.md).
 - Run provenance: `MEDULLA-SCM-R012` provides, `MERISTEM-SCM-R001` consumes. Contract: [harness-run-provenance.md](contracts/harness-run-provenance.md).
+
+## Amendments
+
+### 2026-11-20: build-lane gaps resolved
+
+- `MEDULLA-SCM-R005.3` is retired. Reason: ancestry and merge base are owned by MEDULLA-BRANCH-MERGE-R003, and a second `merge_base` would be a parallel route.
+- `MEDULLA-SCM-R005`, `R005.1` and `R005.2`: the history indexes are `hist:` rows of the branch registry table. They commit in the `append_with` transaction of the changeset payload, so the index never lags the chain. A version mismatch rebuilds on the next accept, and a stale read refuses `HISTORY_INDEX_STALE`. Blame reuses the line diff of `line_merge.rs`.
+- `MEDULLA-SCM-R007`: path grants are `grant:` rows of the branch registry, so the source-control store holds them and no graph node or second store does. Reads check the grants in the same snapshot as the chain. Default deny holds, and three served tests now provision a root grant first. The digest-addressed blob methods stay owner-scoped and are outside the path check. `MEDULLA-SCM-R014` now refuses with `PATH_READ_DENIED`, not a second code.
+- `MEDULLA-SCM-R012`: a changeset is a branch registry record, and `accept` writes no graph edge. The graph node `commit:<changeset id>` and its `producedBy` edge are derived by MEDULLA-SDLC-R001.2 and R001.3. The run node must live in the repository graph.
+- `MEDULLA-SCM-R008`: the verdict write adds the `judges` edge of MEDULLA-SDLC-R012.7 to `commit:<changeset>`.

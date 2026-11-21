@@ -8,9 +8,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T002 [US1] MEDULLA-SCM-R002.1 Structured trailers on a changeset
 - [ ] T003 [US2] MEDULLA-SCM-R003.1 Path-set acceptance calls the shared disjoint check
 - [ ] T004 [US2] MEDULLA-SCM-R004 Tree materialization by query
-- [ ] T005 [US2] MEDULLA-SCM-R005.1 Path history
+- [ ] T005 [US2] MEDULLA-SCM-R005.1 Path history and the history index rows
 - [ ] T006 [US2] MEDULLA-SCM-R005.2 Blame
-- [ ] T007 [US2] MEDULLA-SCM-R005.3 Ancestry skip lists
 - [ ] T008 [US2] MEDULLA-SCM-R006 Code graph stays live with changesets
 - [ ] T009 [US2] MEDULLA-SCM-R007 Path-scoped access control
 - [ ] T010 [US3] MEDULLA-SCM-R008 Gate verdicts are records

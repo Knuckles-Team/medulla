@@ -11,12 +11,17 @@
   `SOURCE_CONFLICT{paths}`. *(MEDULLA-SCM-R003)*
 - `tests/test_scm_tree.py::test_tree_at_revision_matches_full_replay` (planned). A subtree read at each revision
   equals the full replay. The checkpoint path returns the same entries. *(MEDULLA-SCM-R004)*
-- `tests/test_scm_history.py::test_incremental_indexes_equal_rebuild`. Incremental index state equals a
-  from-scratch rebuild byte-for-byte. *(MEDULLA-SCM-R005)*
+- `tests/test_scm_history.py::test_incremental_indexes_equal_rebuild`. Incremental index rows equal a
+  from-scratch rebuild byte-for-byte. A stale index head refuses `HISTORY_INDEX_STALE`. *(MEDULLA-SCM-R005)*
+- `tests/test_scm_history.py::test_path_history_lists_touching_changesets`. Path history lists touching
+  changesets newest first up to `rev`. A `limit` over 1000 refuses `CHANGESET_INVALID`. *(MEDULLA-SCM-R005.1)*
+- `tests/test_scm_history.py::test_blame_attributes_lines_across_rename`. Blame keeps line origins across a
+  modify and a rename. A binary file refuses `BLAME_BINARY`. *(MEDULLA-SCM-R005.2)*
 - `tests/test_scm_code_graph.py::test_one_file_change_updates_only_its_symbols`. A one-file changeset
   updates only that file symbols. A structural no-op updates nothing. *(MEDULLA-SCM-R006)*
 - `tests/test_scm_path_access.py::test_prefix_grant_filters_reads_and_refuses_writes`. A prefix grant
-  filters reads to the prefix. A write outside the prefix is refused. *(MEDULLA-SCM-R007)*
+  filters reads to the prefix. A longer denying prefix wins. A write outside the grant refuses
+  `PATH_WRITE_DENIED`. A path with no grant is denied. *(MEDULLA-SCM-R007)*
 - `tests/test_scm_gate_verdict.py::test_verdict_records_are_sealed_and_read_back` (planned). Pass and fail
   verdicts read back byte-identically. An overwrite attempt is refused. *(MEDULLA-SCM-R008)*
 - `tests/test_scm_bisect.py::test_bisect_finds_culprit_and_replays_decision`. A seeded bisect names the
@@ -25,8 +30,9 @@
   import preserves every commit id and tree id. *(MEDULLA-SCM-R010)*
 - `tests/simulation/source_changesets.rs::simulate_concurrent_accept_crash_and_replay`. Concurrent accepts with
   crash and replay hold every chain invariant. *(MEDULLA-SCM-R011)*
-- `tests/test_scm_provenance.py::test_changeset_links_to_run_trace` (planned). An agent changeset reads back with
-  its run trace id. *(MEDULLA-SCM-R012)*
+- `tests/test_scm_provenance.py::test_changeset_links_to_run_trace` (planned). A delegated agent changeset reads
+  back with `agent_identity` and `run_trace_id`. A missing id refuses `AGENT_RUN_TRACE_MISSING`. An
+  invisible or wrong-kind node refuses `RUN_TRACE_UNKNOWN`. *(MEDULLA-SCM-R012)*
 
 ## Negative
 
@@ -38,19 +44,21 @@
   path. No partial change lands.
 - A tree read at a revision not on the repository chain is refused. A cross-tenant tree read is
   refused.
-- An index read past the index head is refused.
-- A read under a prefix with no grant is refused. A write without a write grant is refused.
+- An index read whose head row is absent or of another version refuses `HISTORY_INDEX_STALE`.
+- A read under a prefix with no grant refuses `PATH_READ_DENIED`. A write without a write grant
+  refuses `PATH_WRITE_DENIED`. A bad `SetPathGrant` refuses `PATH_GRANT_INVALID`.
 - A verdict whose input digest mismatches the changeset tree is refused. A sealed verdict cannot
   be overwritten.
 - A bisect without verdict coverage is refused. A revert that later changesets depend on is
   refused.
 - An export with a failing mid-stream tree read is refused. A malformed import graph is refused.
 - A fuzz seed that fails to seed is refused. It records no state.
-- An agent changeset with no run trace id is refused. The refusal is typed.
+- An agent changeset with no run trace id refuses `AGENT_RUN_TRACE_MISSING`. An unknown run node
+  refuses `RUN_TRACE_UNKNOWN`.
 
 ## Integration
 
-- Full agent loop: submit a changeset, read the tree at the new head, read the blob by digest,
+- Full agent loop: submit a changeset, read the tree at the new head, export the changed files,
   read the history and blame for the changed paths.
 - Two concurrent writers on disjoint paths both land. The same two writers on one path land one
   and conflict the other.
@@ -83,16 +91,20 @@ Each entry marked planned names a test or file that does not exist in the tree y
 | `MEDULLA-SCM-R003.1` | `tests/test_scm_disjoint_served.py::test_disjoint_changesets_land_in_parallel` | L4 | planned |
 | `MEDULLA-SCM-R004` | `tests/test_scm_tree.py::test_tree_at_revision_matches_full_replay` | L3 | existing |
 | `MEDULLA-SCM-R004` | `crates/medulla-compute/src/source_tree.rs::tests::tree_at_revision_matches_full_replay` | L2 | existing |
+| `MEDULLA-SCM-R005` | `crates/medulla-compute/src/source_history.rs::tests::incremental_rows_equal_rebuild` | L2 | planned |
 | `MEDULLA-SCM-R005` | `tests/test_scm_history.py::test_incremental_indexes_equal_rebuild` | L3 | planned |
+| `MEDULLA-SCM-R005.1` | `crates/medulla-compute/src/source_history.rs::tests::path_history_lists_newest_first_up_to_rev` | L2 | planned |
 | `MEDULLA-SCM-R005.1` | `tests/test_scm_history.py::test_path_history_lists_touching_changesets` | L3 | planned |
+| `MEDULLA-SCM-R005.2` | `crates/medulla-compute/src/source_history.rs::tests::blame_keeps_origins_across_modify_and_rename` | L2 | planned |
 | `MEDULLA-SCM-R005.2` | `tests/test_scm_history.py::test_blame_attributes_lines_across_rename` | L3 | planned |
-| `MEDULLA-SCM-R005.3` | `crates/medulla-compute/tests/source_history.rs::skip_lists_find_merge_base_in_log_steps` | L2 | planned |
 | `MEDULLA-SCM-R006` | `tests/test_scm_code_graph.py::test_one_file_change_updates_only_its_symbols` | L3 | planned |
+| `MEDULLA-SCM-R007` | `crates/medulla-source-types/src/source_path_grant.rs::tests::longest_segment_prefix_wins_and_no_match_denies` | L2 | planned |
 | `MEDULLA-SCM-R007` | `tests/test_scm_path_access.py::test_prefix_grant_filters_reads_and_refuses_writes` | L3 | planned |
 | `MEDULLA-SCM-R008` | `tests/test_scm_gate_verdict.py::test_verdict_records_are_sealed_and_read_back` | L3 | planned |
 | `MEDULLA-SCM-R009` | `tests/test_scm_bisect.py::test_bisect_finds_culprit_and_replays_decision` | L3 | planned |
 | `MEDULLA-SCM-R010` | `tests/test_scm_git_round_trip.py::test_export_import_preserves_commit_and_tree_ids` | L3 | planned |
 | `MEDULLA-SCM-R011` | `tests/simulation/source_changesets.rs::simulate_concurrent_accept_crash_and_replay` | L3 | planned |
+| `MEDULLA-SCM-R012` | `crates/medulla-h-ingest/src/source_changeset/provenance.rs::tests::agent_needs_a_visible_run_trace` | L2 | planned |
 | `MEDULLA-SCM-R012` | `tests/test_scm_provenance.py::test_changeset_links_to_run_trace` | L3 | planned |
 | `MEDULLA-SCM-R013.3` | `crates/medulla-enrich/tests/symbol_edit_verify.rs::reparse_confirms_edit_and_untouched_symbols` | L2 | planned |
 | `MEDULLA-SCM-R013.4` | `tests/test_scm_symbol_edit_served.py::test_symbol_edit_lands_and_reindexes` | L4 | planned |

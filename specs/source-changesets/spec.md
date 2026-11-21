@@ -97,7 +97,7 @@ Independent test: the bound tests of `MEDULLA-SCM-R013.4` run this story through
 - **FR-002**: Changeset record with first-parent paths and structured trailers. Rows: `MEDULLA-SCM-R002`, `MEDULLA-SCM-R002.1`.
 - **FR-003**: Path-set acceptance, shared disjoint check and server rebase. Rows: `MEDULLA-SCM-R003`, `MEDULLA-SCM-R003.1`.
 - **FR-004**: Tree materialization by query. Rows: `MEDULLA-SCM-R004`.
-- **FR-005**: Derived history indexes. Rows: `MEDULLA-SCM-R005`, `MEDULLA-SCM-R005.1`, `MEDULLA-SCM-R005.2`, `MEDULLA-SCM-R005.3`.
+- **FR-005**: Derived history indexes. Rows: `MEDULLA-SCM-R005`, `MEDULLA-SCM-R005.1`, `MEDULLA-SCM-R005.2`. `MEDULLA-SCM-R005.3` is retired.
 - **FR-006**: Code graph stays live with changesets. Rows: `MEDULLA-SCM-R006`.
 - **FR-007**: Path-scoped access control. Rows: `MEDULLA-SCM-R007`.
 - **FR-008**: Gate verdicts are records. Rows: `MEDULLA-SCM-R008`.

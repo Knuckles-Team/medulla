@@ -5,7 +5,7 @@ Consumer: meristem MERISTEM-SCM-R001
 
 ## Wire shape
 
-An agent principal passes `run_trace_id` in `SubmitChangeset`. It must resolve to a `:RunTrace` node of the tenant. Medulla stores `agent_identity` and `run_trace_id` on the changeset and writes a `producedByRun` edge to the run.
+A delegated agent request passes `run_trace_id` in `SubmitChangeset`. The harness must first write that run node, with `kind` `run_trace`, into the graph named by the request `repo`. Medulla checks that the caller can read the node and stores `agent_identity` and `run_trace_id` on the sealed changeset. The derived lifecycle edge `producedBy` (MEDULLA-SDLC-R001.2) joins `commit:<changeset id>` to the run node in that graph.
 
 ## Refusal codes
 
