@@ -14,6 +14,8 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 use medulla_catalog_types::incident::{
     AnomalyReading, IncidentRecord, IncidentSeverity, IncidentStatus,
 };
+use medulla_catalog_types::incident_record_machine::INCIDENT_RECORD_MACHINE;
+use medulla_types::transition_refused::TransitionRefused;
 use sha2::{Digest, Sha256};
 
 /// A refused call, with its stable code. A refusal changes no state.
@@ -21,11 +23,10 @@ use sha2::{Digest, Sha256};
 pub enum IncidentRefusal {
     /// `TENANT_SCOPE_REQUIRED`
     TenantScopeRequired,
-    /// `INCIDENT_STATUS_SKIP`
-    StatusSkip {
-        from: IncidentStatus,
-        to: IncidentStatus,
-    },
+    /// `TRANSITION_REFUSED`: the incident machine refused the move.
+    Transition(TransitionRefused),
+    /// `INVALID_ARGUMENT`: the request asks for no legal move.
+    InvalidArgument(String),
     /// `INCIDENT_NOT_FOUND`: absent, or owned by another tenant.
     NotFound(String),
     /// `ANOMALY_RESOURCE_REQUIRED`: an anomaly names no resource.
@@ -36,7 +37,8 @@ impl IncidentRefusal {
     pub fn code(&self) -> &'static str {
         match self {
             Self::TenantScopeRequired => "TENANT_SCOPE_REQUIRED",
-            Self::StatusSkip { .. } => "INCIDENT_STATUS_SKIP",
+            Self::Transition(_) => "TRANSITION_REFUSED",
+            Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::NotFound(_) => "INCIDENT_NOT_FOUND",
             Self::AnomalyResourceRequired => "ANOMALY_RESOURCE_REQUIRED",
         }
@@ -211,10 +213,10 @@ impl IncidentAuthority {
             tenant: tenant.to_string(),
             signature_digest: signature,
             severity: severity(&evidence),
-            status: IncidentStatus::Open,
+            status: INCIDENT_RECORD_MACHINE.initial,
             opened_at_ms,
             evidence,
-            status_history: vec![IncidentStatus::Open],
+            status_history: vec![INCIDENT_RECORD_MACHINE.initial],
         };
         self.added.insert(id.clone(), record.evidence.clone());
         self.changed.insert(id.clone());
@@ -245,9 +247,12 @@ impl IncidentAuthority {
         to: IncidentStatus,
     ) -> Result<(), IncidentRefusal> {
         let from = self.evidence(tenant, id)?.status;
-        if from.next() != Some(to) {
-            return Err(IncidentRefusal::StatusSkip { from, to });
-        }
+        let event = IncidentStatus::event_to(to).ok_or_else(|| {
+            IncidentRefusal::InvalidArgument(
+                "an incident never moves back to open".to_string(),
+            )
+        })?;
+        let to = from.apply(event).map_err(IncidentRefusal::Transition)?;
         let record = self.incidents.get_mut(id).expect("checked above");
         record.status = to;
         record.status_history.push(to);
@@ -408,7 +413,14 @@ mod tests {
         let error = authority
             .set_status(Some("acme"), &ids[0], IncidentStatus::Resolved)
             .unwrap_err();
-        assert_eq!(error.code(), "INCIDENT_STATUS_SKIP");
+        assert_eq!(error.code(), "TRANSITION_REFUSED");
+        assert!(matches!(
+            error,
+            IncidentRefusal::Transition(ref refused)
+                if refused.machine == "IncidentRecordMachine"
+                    && refused.from == "open"
+                    && refused.event == "resolve"
+        ));
         assert_eq!(
             authority.evidence(Some("acme"), &ids[0]).unwrap().status,
             IncidentStatus::Open
@@ -422,6 +434,26 @@ mod tests {
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R760.5
+    // spec: MEDULLA-ORCH-VOCAB-R815.6
+    #[test]
+    fn skipped_status_refuses_transition_refused() {
+        let mut authority = IncidentAuthority::default();
+        let ids = authority
+            .correlate(Some("acme"), vec![reading("svc:a", "cpu", 1.0, 1)], 10)
+            .unwrap();
+        let skipped = authority
+            .set_status(Some("acme"), &ids[0], IncidentStatus::Resolved)
+            .unwrap_err();
+        assert_eq!(skipped.code(), "TRANSITION_REFUSED");
+        let backwards = authority
+            .set_status(Some("acme"), &ids[0], IncidentStatus::Open)
+            .unwrap_err();
+        assert_eq!(backwards.code(), "INVALID_ARGUMENT");
+        let record = authority.evidence(Some("acme"), &ids[0]).unwrap();
+        assert_eq!(record.status, IncidentStatus::Open);
+        assert_eq!(record.status_history, vec![IncidentStatus::Open]);
+    }
+
     #[test]
     fn evidence_per_signature_and_state_order() {
         let mut authority = IncidentAuthority::default();

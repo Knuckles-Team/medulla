@@ -7459,3 +7459,69 @@
     :fromState :EditMachine_Shipped ;
     :toState :EditMachine_Reverted ;
     :firedBy :EditMachine_Event_Revert .
+# spec: MEDULLA-ORCH-VOCAB-R815.6
+# The Incident Record machine. The Rust edge table is the same table; the ontology
+# test asserts equal edge sets.
+
+:IncidentRecordState a owl:Class ;
+    rdfs:label "Incident Record State" ;
+    rdfs:comment "A state of the Incident Record machine." ;
+    rdfs:subClassOf :State .
+
+:IncidentRecordTerminalState a owl:Class ;
+    rdfs:label "Incident Record Terminal State" ;
+    rdfs:comment "A terminal state of the Incident Record machine." ;
+    rdfs:subClassOf :TerminalState, :IncidentRecordState .
+
+:IncidentRecordTransition a owl:Class ;
+    rdfs:label "Incident Record Transition" ;
+    rdfs:comment "A transition of the Incident Record machine." ;
+    rdfs:subClassOf :Transition .
+
+:IncidentRecordEvent a owl:Class ;
+    rdfs:label "Incident Record Event" ;
+    rdfs:comment "A event of the Incident Record machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:IncidentRecordGuard a owl:Class ;
+    rdfs:label "Incident Record Guard" ;
+    rdfs:comment "A guard of the Incident Record machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:IncidentRecordMachine a :StateMachine ;
+    rdfs:label "Incident Record machine" ;
+    :initialState :IncidentRecordMachine_Open ;
+    :hasState :IncidentRecordMachine_Open, :IncidentRecordMachine_Acknowledged, :IncidentRecordMachine_Resolved .
+
+:IncidentRecordMachine_Open a :IncidentRecordState ;
+    rdfs:label "Incident Record Open" ;
+    :storedForm "open" .
+
+:IncidentRecordMachine_Acknowledged a :IncidentRecordState ;
+    rdfs:label "Incident Record Acknowledged" ;
+    :storedForm "acknowledged" .
+
+:IncidentRecordMachine_Resolved a :IncidentRecordTerminalState ;
+    rdfs:label "Incident Record Resolved" ;
+    :storedForm "resolved" .
+
+:IncidentRecordMachine_Event_acknowledge a :IncidentRecordEvent ;
+    rdfs:label "Incident Record acknowledge" .
+
+:IncidentRecordMachine_Event_resolve a :IncidentRecordEvent ;
+    rdfs:label "Incident Record resolve" .
+
+:IncidentRecordMachine_R01 a :IncidentRecordTransition ;
+    rdfs:label "Incident Record R01" ;
+    :edgeId "R01" ;
+    :fromState :IncidentRecordMachine_Open ;
+    :toState :IncidentRecordMachine_Acknowledged ;
+    :firedBy :IncidentRecordMachine_Event_acknowledge .
+
+:IncidentRecordMachine_R02 a :IncidentRecordTransition ;
+    rdfs:label "Incident Record R02" ;
+    :edgeId "R02" ;
+    :fromState :IncidentRecordMachine_Acknowledged ;
+    :toState :IncidentRecordMachine_Resolved ;
+    :firedBy :IncidentRecordMachine_Event_resolve .
+

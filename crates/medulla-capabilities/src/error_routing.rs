@@ -1392,11 +1392,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("GoalPut", &["GOAL_TARGET_REQUIRED"]),
     (
         "IncidentSetStatus",
-        &[
-            "TENANT_SCOPE_REQUIRED",
-            "INCIDENT_STATUS_SKIP",
-            "INCIDENT_NOT_FOUND",
-        ],
+        &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
     ),
     (
         "QualityRulePut",
@@ -1748,6 +1744,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "HarnessEdit",
     // MEDULLA-DECISION-ENGINE-R830.6: the loop statechart and `GapMachine` refusals.
     "Loops",
+    // MEDULLA-ORCH-VOCAB-R815.6: the incident record status machine.
+    "IncidentSetStatus",
 ];
 
 /// The wire code of a refused machine transition.

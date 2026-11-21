@@ -382,7 +382,6 @@ closed_error_codes! {
         IdentityWeakPassword => "IDENTITY_WEAK_PASSWORD",
         ImporterMismatch => "IMPORTER_MISMATCH",
         IncidentNotFound => "INCIDENT_NOT_FOUND",
-        IncidentStatusSkip => "INCIDENT_STATUS_SKIP",
         Internal => "INTERNAL",
         InvalidConfiguration => "INVALID_CONFIGURATION",
         InvalidFacts => "INVALID_FACTS",

@@ -31,7 +31,8 @@ pub enum IncidentSeverity {
     High,
 }
 
-/// Incident status; it only moves forward one step at a time.
+/// Incident status; it moves through `IncidentRecordMachine`
+/// (`crate::incident_record_machine`), open, acknowledged, resolved.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -39,17 +40,6 @@ pub enum IncidentStatus {
     Open,
     Acknowledged,
     Resolved,
-}
-
-impl IncidentStatus {
-    /// The one status this status may move to, if any.
-    pub fn next(self) -> Option<Self> {
-        match self {
-            Self::Open => Some(Self::Acknowledged),
-            Self::Acknowledged => Some(Self::Resolved),
-            Self::Resolved => None,
-        }
-    }
 }
 
 /// One served incident and its evidence.

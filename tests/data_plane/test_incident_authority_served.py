@@ -76,7 +76,7 @@ async def test_five_methods_served_under_caller_tenant(start_medulla_server) -> 
         )
         assert claims == []
 
-        with pytest.raises(Exception, match="INCIDENT_STATUS_SKIP"):
+        with pytest.raises(Exception, match="TRANSITION_REFUSED"):
             await client._send(
                 "IncidentSetStatus",
                 {"incident_id": incident_id, "status": "resolved"},

@@ -209,6 +209,9 @@ pub mod attached_source_dialect;
 pub mod attached_source_governance;
 // MEDULLA-UNIFIED-DATA-PLANE-R014.2.3 -- the catalog probe state machine.
 pub mod probe_machine;
+// MEDULLA-ORCH-VOCAB-R815.6 -- the served incident record status machine.
+pub mod incident_record_machine;
+
 // MEDULLA-UNIFIED-DATA-PLANE-R761.1 — column profile record.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod profile;

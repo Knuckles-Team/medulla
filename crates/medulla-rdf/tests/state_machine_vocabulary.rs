@@ -917,6 +917,17 @@ fn generation_cycle_machine_classes_extend_core() {
     sm::assert_extends_core("GenerationCycle");
 }
 
+// spec: MEDULLA-ORCH-VOCAB-R815.6
+#[test]
+fn incident_record_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_catalog_types::incident_record_machine::INCIDENT_RECORD_MACHINE);
+}
+// spec: MEDULLA-ORCH-VOCAB-R815.6
+#[test]
+fn incident_record_machine_classes_extend_core() {
+    sm::assert_extends_core("IncidentRecord");
+}
+
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R014.2.3
 #[test]
 fn catalog_probe_machine_matches_edge_table() {

@@ -149,6 +149,8 @@ async fn correlate(
 fn refusal(error: IncidentRefusal) -> String {
     match &error {
         IncidentRefusal::NotFound(id) => format!("{}: {id}", error.code()),
+        IncidentRefusal::Transition(refused) => refused.to_string(),
+        IncidentRefusal::InvalidArgument(detail) => format!("{}: {detail}", error.code()),
         _ => error.code().to_string(),
     }
 }
