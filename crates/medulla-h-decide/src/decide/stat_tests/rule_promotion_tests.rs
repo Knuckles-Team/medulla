@@ -404,11 +404,13 @@ async fn rule_versions_move_through_approval_supersession_and_revocation() {
     // Revocation names the active version and keeps the history.
     let revoked = rule_op(&h, "governor", revoke_op("rule:tier", 2)).await.unwrap();
     assert_eq!(revoked.state, RuleLifecycle::Revoked);
-    // The revoke takes effect: the component is retired in the same write and the rule is no
-    // longer in the set `GuardrailEntailment` reasons over.
+    // The revoke takes effect: that version's revision is retired in the same write and the rule
+    // is no longer in the set `GuardrailEntailment` reasons over. The retirement is per revision:
+    // the component stays published and takes a later version.
     assert!(h.store.published_guardrail_rules(TENANT).unwrap().is_empty());
     let retired = h.store.current_component(TENANT, "rule:tier").unwrap().unwrap();
-    assert_eq!(retired.lifecycle, medulla_agent_types::agent_library::AgentLibraryLifecycle::Retired);
+    assert!(medulla_agent_types::agent_guardrail::is_revision_retired(&retired.attributes));
+    assert_eq!(retired.lifecycle, medulla_agent_types::agent_library::AgentLibraryLifecycle::Published);
     let again = rule_op(&h, "governor", revoke_op("rule:tier", 2)).await;
     assert!(again.unwrap_err().starts_with("RULE_NOT_ACTIVE"));
     let transitions = h
@@ -416,6 +418,20 @@ async fn rule_versions_move_through_approval_supersession_and_revocation() {
         .decision_artifacts_with_prefix(TENANT, "rule-transition:rule:tier:", 100)
         .unwrap();
     assert_eq!(transitions.len(), 6, "every transition keeps its row");
+
+    // Revoke v1 then approve v2 publishes a new revision under the same component id: the later
+    // version is entailed again, and the retired revision stays out of every lookup.
+    let v3 = rule_op(&h, "governor", propose_op("rule:tier", OUTPUT_A, None)).await.unwrap();
+    assert_eq!(v3.version, 3);
+    rule_op(&h, "governor", approve_op("rule:tier", 3, OUTPUT_A)).await.unwrap();
+    let v3 = rule_op(&h, "governor-2", approve_op("rule:tier", 3, OUTPUT_A)).await.unwrap();
+    assert_eq!(v3.state, RuleLifecycle::Active);
+    let entailed = h.store.published_guardrail_rules(TENANT).unwrap();
+    assert_eq!(entailed.len(), 1, "the later version is entailed");
+    assert_eq!(entailed[0].rule_id, "rule:tier");
+    let head = h.store.current_component(TENANT, "rule:tier").unwrap().unwrap();
+    assert!(!medulla_agent_types::agent_guardrail::is_revision_retired(&head.attributes));
+    assert!(head.entry_revision > retired.entry_revision);
 
     // The invariant gate is not replaced by approval.
     rule_op(&h, "governor", propose_op("rule:skip", OUTPUT_A, None)).await.unwrap();

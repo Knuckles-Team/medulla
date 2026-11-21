@@ -145,6 +145,9 @@ fn project_a2a_card(subject: &NamedNode, entry: &AgentComponentEntry) -> Vec<Tri
 /// class. Publish refuses a rule whose class is missing or not an IRI, so a rule that does not
 /// decode (or whose class is not a valid IRI) is unreachable and writes no triple.
 fn project_guardrail_rule(subject: &NamedNode, entry: &AgentComponentEntry) -> Vec<Triple> {
+    if medulla_agent_types::agent_guardrail::is_revision_retired(&entry.attributes) {
+        return Vec::new();
+    }
     let Ok(rule) = GuardrailRule::from_attributes(&entry.component_id, &entry.attributes) else {
         return Vec::new();
     };

@@ -231,6 +231,19 @@ pub fn promote_on_consensus(
 pub const GUARDRAIL_APPLIES_TO_CLASS_ATTRIBUTE: &str = "applies_to_class";
 /// Attribute a `GuardrailRule` component carries its source generation in.
 pub const GUARDRAIL_SOURCE_GENERATION_ATTRIBUTE: &str = "source_generation";
+/// Attribute that marks one revision of a component retired (MEDULLA-DECISION-ENGINE-R129.100).
+pub const REVISION_STATUS_ATTRIBUTE: &str = "revision_status";
+/// The value of [`REVISION_STATUS_ATTRIBUTE`] on a retired revision.
+pub const REVISION_STATUS_RETIRED: &str = "retired";
+
+/// Whether these component attributes mark their revision retired. A retired revision is left out
+/// of every rule lookup and of guardrail entailment; it keeps its place in the revision history,
+/// and a later revision of the same component publishes over it.
+pub fn is_revision_retired(attributes: &BTreeMap<String, String>) -> bool {
+    attributes
+        .get(REVISION_STATUS_ATTRIBUTE)
+        .is_some_and(|status| status == REVISION_STATUS_RETIRED)
+}
 
 impl GuardrailRule {
     /// The attributes a `GuardrailRule` component is published with
@@ -246,6 +259,17 @@ impl GuardrailRule {
                 self.source_generation.clone(),
             ),
         ])
+    }
+
+    /// The attributes of the revision that retires this rule's published revision
+    /// (MEDULLA-DECISION-ENGINE-R129.100): the rule's own attributes plus the retired status.
+    pub fn to_retired_attributes(&self) -> BTreeMap<String, String> {
+        let mut attributes = self.to_attributes();
+        attributes.insert(
+            REVISION_STATUS_ATTRIBUTE.to_string(),
+            REVISION_STATUS_RETIRED.to_string(),
+        );
+        attributes
     }
 
     /// Decode a stored `GuardrailRule` component back into the rule it

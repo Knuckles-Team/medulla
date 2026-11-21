@@ -15,11 +15,11 @@
 //! A rejection and a promotion each store one [`RulePromotionRecord`].
 
 use medulla_agent_types::agent_component::{
-    AgentComponentDraft, AgentComponentKind, AgentComponentPublishRequest, AgentComponentRetireRequest,
+    AgentComponentDraft, AgentComponentKind, AgentComponentPublishRequest,
     DraftPublication, DraftSubject,
 };
 use medulla_agent_types::agent_guardrail::{
-    check_rule_against_invariants, promote_on_consensus, GuardrailRule, RuleLifecycle,
+    check_rule_against_invariants, is_revision_retired, promote_on_consensus, GuardrailRule, RuleLifecycle,
     RulePromotionVerdict, RuleVersion,
 };
 use medulla_agent_types::agent_library::{AgentLibraryLifecycle, AgentLibraryMutationContext};
@@ -187,7 +187,26 @@ fn publish_active(
     rule: &GuardrailRule,
     source_revision: &str,
 ) -> Result<String, String> {
-    let content_digest = content_digest_of(&canonical_body_bytes(rule)?);
+    publish_revision(ctx, reader, rule, source_revision, false)
+}
+
+/// Publish one revision of the rule's component: the active revision, or with `retired` the
+/// revision that retires it (MEDULLA-DECISION-ENGINE-R129.100). A retired revision carries the
+/// retired status attribute and a content digest of its own, so a later version of the same rule
+/// publishes a new revision over it, even one with the same body. The idempotency key names the
+/// source revision, so each version's publish is its own write.
+fn publish_revision(
+    ctx: &ExecutionContext,
+    reader: &LogReader,
+    rule: &GuardrailRule,
+    source_revision: &str,
+    retired: bool,
+) -> Result<String, String> {
+    let mut body = canonical_body_bytes(rule)?;
+    if retired {
+        body.extend_from_slice(b"|revision_status=retired");
+    }
+    let content_digest = content_digest_of(&body);
     let current = ctx.store.current_component(ctx.tenant_id, &rule.rule_id)?;
     if let Some(entry) = &current {
         if entry.kind == AgentComponentKind::GuardrailRule
@@ -215,11 +234,18 @@ fn publish_active(
             source_revision_digest: &content_digest,
         },
     );
-    draft.attributes = rule.to_attributes();
+    draft.attributes = if retired {
+        rule.to_retired_attributes()
+    } else {
+        rule.to_attributes()
+    };
     let context = library_context(
         ctx,
         reader,
-        ("agent-component:publish", format!("promote-rule:{}:{content_digest}", rule.rule_id)),
+        (
+            "agent-component:publish",
+            format!("promote-rule:{}:{content_digest}:{source_revision}", rule.rule_id),
+        ),
         (&content_digest, current.as_ref().map_or(0, |entry| entry.entry_revision)),
         policy_digest,
     )?;
@@ -504,24 +530,16 @@ pub(super) fn revoke(
             format!("version {version} of {rule_id} is not active"),
         ));
     }
-    // The published component is retired first, so a revoke takes effect: a retired revision
-    // is left out of every component lookup and of `GuardrailEntailment`. A retry after the
-    // transition row failed finds the component already retired and only writes the row.
+    // This version's revision is retired first, so a revoke takes effect: a retired revision is
+    // left out of every rule lookup and of `GuardrailEntailment`, and a later approved version
+    // publishes a new revision under the same component id. A retry after the transition row
+    // failed finds the revision already retired and only writes the row.
     if let Some(entry) = ctx.store.current_component(ctx.tenant_id, rule_id)? {
         if entry.kind == AgentComponentKind::GuardrailRule
             && entry.lifecycle == AgentLibraryLifecycle::Published
+            && !is_revision_retired(&entry.attributes)
         {
-            let context = library_context(
-                ctx,
-                reader,
-                ("agent-component:retire", format!("revoke-rule:{rule_id}:{version}")),
-                (&entry.content_digest, entry.entry_revision),
-                current_agent_library_policy_digest()?,
-            )?;
-            ctx.store.retire_component(AgentComponentRetireRequest {
-                context,
-                component_id: rule_id.to_string(),
-            })?;
+            publish_revision(ctx, reader, &proposal.rule, &format!("rule-revoke:{version}"), true)?;
         }
     }
     let transition = RuleTransition {

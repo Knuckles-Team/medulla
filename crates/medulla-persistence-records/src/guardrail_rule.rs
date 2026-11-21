@@ -10,7 +10,7 @@
 //! (MEDULLA-DECISION-ENGINE-R127) to reason over. It adds no served query.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_agent_types::agent_guardrail::{GuardrailRule, RuleInvariant};
+use medulla_agent_types::agent_guardrail::{is_revision_retired, GuardrailRule, RuleInvariant};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 
 use super::agent_component::ComponentLayer;
@@ -23,8 +23,8 @@ const MAX_GUARDRAIL_SCAN: usize = 4_096;
 
 impl AgentLibraryStore {
     /// Every current, published `GuardrailRule` of `tenant_id`, sorted by
-    /// rule id, read from one snapshot. Retired and withdrawn rules are not
-    /// in force and are left out.
+    /// rule id, read from one snapshot. Retired and withdrawn rules, and a revision
+    /// marked retired, are not in force and are left out.
     pub fn published_guardrail_rules(&self, tenant_id: &str) -> Result<Vec<GuardrailRule>, String> {
         self.published_of_kind(tenant_id, AgentComponentKind::GuardrailRule, |entry| {
             GuardrailRule::from_attributes(&entry.component_id, &entry.attributes)
@@ -71,7 +71,10 @@ impl AgentLibraryStore {
                 .map_err(|error| error.to_string())?
                 .ok_or_else(|| "agent component head points to a missing revision".to_string())?;
             let entry = decode_revision::<ComponentLayer>(stored.value())?;
-            if entry.kind != kind || entry.lifecycle != AgentLibraryLifecycle::Published {
+            if entry.kind != kind
+                || entry.lifecycle != AgentLibraryLifecycle::Published
+                || is_revision_retired(&entry.attributes)
+            {
                 continue;
             }
             found.push(decode(&entry)?);
