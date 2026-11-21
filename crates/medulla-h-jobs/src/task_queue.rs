@@ -17,6 +17,7 @@ use medulla_jobs::{
     JobError, JobStore, TaskAckError, TaskAckOutcome, TaskSubmit, TaskSubmitOutcome,
     TASK_FAMILY_PREFIX,
 };
+use crate::worker_admission::{admission_inputs, AdmissionInputs};
 use medulla_kernel::metrics::IngestJobOutcome;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::coordination as contract;
@@ -26,6 +27,9 @@ use medulla_source_types::ingest_job::{
     ingest_lane_of_queue, on_ingest_ack, IngestAckDecision, IngestRetryPolicy,
 };
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
+use medulla_work_types::worker_registry::{
+    admit_reserved_worker_task, WorkerAdmission, WorkerAdmissionRefusal, WorkerSizingInput,
+};
 use medulla_work_types::task_queue::{
     ClaimedTask, TaskAck, TaskAcked, TaskClaim, TaskEnqueue, TaskEnqueued, TaskOutcome, TaskRenew,
     TaskRenewed,
@@ -139,15 +143,73 @@ pub fn enqueue(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskEnqueue)
     }
 }
 
-/// Serve `TaskQueueClaim`: lease the next ready task of the verified tenant, or
-/// answer nil when none is ready. The lease length is the request's.
-pub fn claim(store: &JobStore, call: &TaskQueueCall<'_>, request: TaskClaim) -> Response {
+/// The one reserved-worker admission rule of MEDULLA-DURABLE-KERNEL-R075 applied to a claim
+/// (MEDULLA-INGEST-WORKER-R604.3): the worker must be live in the registry, and the grant its
+/// lane load allows must not starve the reserve. A refusal names the closed code and nothing is
+/// claimed or written.
+fn admit_claim(
+    call: &TaskQueueCall<'_>,
+    request: &TaskClaim,
+    admission: &AdmissionInputs,
+) -> Result<(), String> {
+    let now_ms = u64::try_from(call.now_ms).unwrap_or(0);
+    let Some(record) = admission.registry.get_live(&request.worker_id, now_ms) else {
+        let refusal = WorkerAdmissionRefusal::WorkerUnknown;
+        return Err(format!(
+            "{}: no live worker '{}' is registered",
+            refusal.code(),
+            request.worker_id
+        ));
+    };
+    let decision = admit_reserved_worker_task(
+        record,
+        &admission.config,
+        &admission.lane_load,
+        WorkerSizingInput {
+            request_ceiling: None,
+            available_memory_bytes: record.memory_bytes,
+            is_write_lane: false,
+        },
+        admission.shard_writer_width,
+        request.grant_id.clone(),
+    );
+    match decision {
+        WorkerAdmission::Granted(_) => Ok(()),
+        WorkerAdmission::Refused(refusal) => {
+            let detail = match &refusal {
+                WorkerAdmissionRefusal::AdmitHeldForReserve { lane } => {
+                    format!("lane '{lane}' would drop below its reserve")
+                }
+                WorkerAdmissionRefusal::WorkerCapacityZero { limit } => {
+                    format!("worker capacity is zero at limit '{limit}'")
+                }
+                WorkerAdmissionRefusal::WorkerUnknown => {
+                    format!("no live worker '{}' is registered", request.worker_id)
+                }
+            };
+            Err(format!("{}: {detail}", refusal.code()))
+        }
+    }
+}
+
+/// Serve `TaskQueueClaim`: admit the worker through the one admission rule, then lease the next
+/// ready task of the verified tenant, or answer nil when none is ready. The lease length is the
+/// request's.
+pub fn claim(
+    store: &JobStore,
+    call: &TaskQueueCall<'_>,
+    request: TaskClaim,
+    admission: &AdmissionInputs,
+) -> Response {
     let req_id = call.req_id;
     if let Err(refusal) = request.validate() {
         return Response::err(req_id, refusal.to_string());
     }
     if !worker_field_valid(&request.worker_id) || !worker_field_valid(&request.grant_id) {
         return invalid(req_id, "task worker_id and grant_id must be 1 to 256 bytes");
+    }
+    if let Err(refusal) = admit_claim(call, &request, admission) {
+        return Response::err(req_id, refusal);
     }
     let claimed = store.claim_task(
         &worker_ref(call, &request.worker_id),
@@ -399,15 +461,22 @@ pub async fn try_handle(
             worker_id,
             grant_id,
             lease_ms,
-        } => claim(
-            &store,
-            &call,
-            TaskClaim {
-                worker_id,
-                grant_id,
-                lease_ms,
-            },
-        ),
+        } => {
+            let admission = match admission_inputs(state, verified_context, &store).await {
+                Ok(inputs) => inputs,
+                Err(error) => return Ok(Response::err(req_id, error)),
+            };
+            claim(
+                &store,
+                &call,
+                TaskClaim {
+                    worker_id,
+                    grant_id,
+                    lease_ms,
+                },
+                &admission,
+            )
+        }
         Method::TaskQueueAck {
             task_id,
             worker_id,
@@ -449,6 +518,9 @@ mod tests {
     use super::*;
     use medulla_jobs::dev_scope_grant::open_dev_store_in_dir;
     use medulla_source_types::ingest_job::{task_id, IngestJobEnvelope, IngestJobKind};
+    use medulla_work_types::scheduler_config::SchedulerConfig;
+    use medulla_work_types::worker_registry::{WorkerRegistration, WorkerRegistry};
+    use std::collections::BTreeMap;
 
     fn call<'a>(now_ms: i64) -> TaskQueueCall<'a> {
         TaskQueueCall {
@@ -456,6 +528,68 @@ mod tests {
             tenant: "acme",
             principal: "principal:test",
             now_ms,
+        }
+    }
+
+    fn admission(workers: &[&str]) -> AdmissionInputs {
+        let mut registry = WorkerRegistry::default();
+        for worker in workers {
+            registry
+                .register(
+                    WorkerRegistration {
+                        worker_id: (*worker).to_string(),
+                        host_iri: "host:alpha".into(),
+                        cores: 16,
+                        memory_bytes: 8 * 1024 * 1024 * 1024,
+                        lanes_supported: ["general".to_string()].into(),
+                    },
+                    0,
+                    u64::MAX / 2,
+                )
+                .unwrap();
+        }
+        let total_workers = 8;
+        AdmissionInputs {
+            registry,
+            config: SchedulerConfig {
+            total_workers,
+            lane_floors: BTreeMap::new(),
+            cores_per_mille: 1000,
+            memory_per_worker_bytes: 1024 * 1024 * 1024,
+            max_queue_depth: 64,
+            analytics_workers: 1,
+            analytics_lease_ms: 60_000,
+            analytics_poll_ms: 250,
+            task_lease_ms: 60_000,
+            retry_after_ms: 250,
+            worker_ttl_ms: 30_000,
+            analytics_slots: 1,
+            hydration_scope_cap: 10_000,
+            hydration_split_target_files: 2_000,
+            architecture_view_max_containers: 512,
+            enrich_timeout_ms: 5_000,
+            history_max_commits: 100_000,
+            history_support_floor: 3,
+            history_confidence_floor_milli: 300,
+            history_max_files_per_commit: 200,
+            process_import_max_elements: 100_000,
+            process_compile_max_nodes: 100_000,
+            process_document_max_bytes: 16 * 1024 * 1024,
+            process_document_max_depth: 64,
+            changeset_max_blob_bytes:
+                medulla_work_types::scheduler_config::DEFAULT_CHANGESET_MAX_BLOB_BYTES,
+            tree_checkpoint_interval:
+                medulla_work_types::scheduler_config::DEFAULT_TREE_CHECKPOINT_INTERVAL,
+            index_max_working_bytes:
+                medulla_work_types::scheduler_config::DEFAULT_INDEX_MAX_WORKING_BYTES,
+            ann_storage_ceiling_bytes:
+                medulla_work_types::scheduler_config::DEFAULT_ANN_STORAGE_CEILING_BYTES,
+            ann_hub_pruning: medulla_work_types::scheduler_config::AnnHubPruning::Disabled,
+            orchestration_limits: Default::default(),
+            ingest_retry: Default::default(),
+        },
+            lane_load: BTreeMap::new(),
+            shard_writer_width: 4,
         }
     }
 
@@ -475,6 +609,50 @@ mod tests {
             attempt: 1,
             page: None,
         }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R604.3
+    #[test]
+    fn claim_runs_admission_before_leasing() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        store
+            .submit_task(
+                TaskSubmit {
+                    tenant: "acme".into(),
+                    actor: "principal:test".into(),
+                    tenant_capability: tenant_capability("acme"),
+                    queue: "ingest".into(),
+                    kind: "document".into(),
+                    payload_ref: "{}".into(),
+                    idempotency_key: "k".into(),
+                    priority: medulla_work_types::task_queue::default_priority(),
+                    not_before_ms: 0,
+                    job_id: None,
+                    max_attempts: None,
+                },
+                1_000,
+            )
+            .unwrap();
+        let request = || TaskClaim {
+            worker_id: "worker-1".into(),
+            grant_id: "grant-1".into(),
+            lease_ms: 30_000,
+        };
+        // An unregistered worker is refused and the task stays ready.
+        let refused = claim(&store, &call(2_000), request(), &admission(&[]));
+        assert!(
+            refused.error.as_deref().is_some_and(|e| e.contains("WORKER_UNKNOWN")),
+            "{:?}",
+            refused.error
+        );
+        let load = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!((load.queued, load.running), (1, 0));
+        // A registered worker is admitted and leases the task.
+        let leased = claim(&store, &call(3_000), request(), &admission(&["worker-1"]));
+        assert!(leased.error.is_none(), "{:?}", leased.error);
+        let load = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!((load.queued, load.running), (0, 1));
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.9
@@ -513,6 +691,7 @@ mod tests {
                     grant_id: "grant-1".into(),
                     lease_ms: 30_000,
                 },
+                &admission(&["worker-1"]),
             );
             assert!(claimed.error.is_none(), "attempt {attempt}: {:?}", claimed.error);
             let acked = ack(
@@ -557,6 +736,7 @@ mod tests {
                 grant_id: "grant-1".into(),
                 lease_ms: 30_000,
             },
+            &admission(&["worker-1"]),
         );
         assert!(sixth.error.is_none());
         let load = store.task_queue_load("acme", "ingest").unwrap();
@@ -609,6 +789,7 @@ mod tests {
                 grant_id: "grant-1".into(),
                 lease_ms: 30_000,
             },
+            &admission(&["worker-1"]),
         );
         assert!(claimed.error.is_none(), "claim refused: {:?}", claimed.error);
         let leased = store

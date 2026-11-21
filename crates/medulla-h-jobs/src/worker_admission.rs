@@ -60,11 +60,89 @@ pub fn shard_writer_width(
 
 use std::collections::BTreeMap;
 
+use medulla_jobs::JobStore;
+use medulla_persistence::scheduler_config_store::shared_scheduler_config_store;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_server_api::state::ServerState;
+use medulla_source_types::ingest_job::IngestLane;
 use medulla_work_types::scheduler_config::SchedulerConfig;
+use tokio::sync::RwLock;
 use medulla_work_types::worker_registry::{
     admit_reserved_worker_task, LaneLoad, WorkerAdmission, WorkerAdmissionRefusal, WorkerRegistry,
     WorkerSizingInput,
 };
+
+/// The inputs of the one reserved-worker admission rule, built once per call so
+/// `AdmitWorkerTask` and `TaskQueueClaim` never restate the rule or its inputs
+/// (MEDULLA-INGEST-WORKER-R604.3).
+pub struct AdmissionInputs {
+    /// A snapshot of the live worker registry.
+    pub registry: WorkerRegistry,
+    /// The scheduler policy in force.
+    pub config: SchedulerConfig,
+    /// The load of each lane id: its ingest queue from `JobStore::task_queue_load`, plus the
+    /// tasks of any other queue named like the lane (`JobStore::task_lane_counts`).
+    pub lane_load: BTreeMap<String, LaneLoad>,
+    /// The shard-writer width (MEDULLA-DURABLE-KERNEL-R077).
+    pub shard_writer_width: u32,
+}
+
+fn saturate(count: u64) -> u32 {
+    u32::try_from(count).unwrap_or(u32::MAX)
+}
+
+/// Build the admission inputs of the verified tenant: the registry snapshot, the policy in force,
+/// the shard-writer width and the lane load. The durable job store is the one source of lane
+/// load; nothing is cached.
+pub async fn admission_inputs(
+    state: &Arc<RwLock<ServerState>>,
+    verified: &VerifiedRequestContext,
+    store: &JobStore,
+) -> Result<AdmissionInputs, String> {
+    let tenant = verified.tenant();
+    let (config_store, persistence, registry) = {
+        let current = state.read().await;
+        (
+            shared_scheduler_config_store(&current),
+            current.persistence.clone(),
+            current.worker_registry.clone(),
+        )
+    };
+    let config = crate::scheduler_config::effective_config(
+        &config_store.map_err(|error| format!("INTERNAL: {error}"))?,
+    )?;
+    let shard_writer_width = shard_writer_width(tenant, &persistence)?.shard_writers;
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let mut counts = store
+        .task_lane_counts(
+            &crate::task_queue::tenant_capability(tenant),
+            i64::try_from(now_ms).unwrap_or(i64::MAX),
+        )
+        .map_err(|error| format!("INTERNAL: {error}"))?;
+    // The ingest queues are counted once, by lane id, from their own totals.
+    for lane in [IngestLane::General, IngestLane::Hydration] {
+        counts.remove(lane.queue_name());
+    }
+    let mut lane_load: BTreeMap<String, LaneLoad> = counts
+        .into_iter()
+        .map(|(lane, (running, queued))| (lane, LaneLoad { running, queued }))
+        .collect();
+    for lane in [IngestLane::General, IngestLane::Hydration] {
+        let load = store
+            .task_queue_load(tenant, lane.queue_name())
+            .map_err(|error| format!("INTERNAL: {error}"))?;
+        let entry = lane_load.entry(lane.lane_id().as_str().to_string()).or_default();
+        entry.running = entry.running.saturating_add(saturate(load.running));
+        entry.queued = entry.queued.saturating_add(saturate(load.queued));
+    }
+    let registry = registry.lock().registry().clone();
+    Ok(AdmissionInputs {
+        registry,
+        config,
+        lane_load,
+        shard_writer_width,
+    })
+}
 
 /// The inputs of one served `AdmitWorkerTask` call.
 pub struct AdmitWorkerTaskInput<'a> {

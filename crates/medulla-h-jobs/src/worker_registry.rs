@@ -8,7 +8,6 @@
 //! `worker_ttl_ms` is expired. Both methods are gated by `worker:register` before
 //! this handler runs. The handler takes an injected [`Clock`].
 
-use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use medulla_persistence::scheduler_config_store::shared_scheduler_config_store;
@@ -19,7 +18,7 @@ use medulla_server_api::state::ServerState;
 use medulla_types::contract::Digest256;
 use medulla_types::contract::{EngineErrorCode, ServerErrorCode};
 use medulla_work_types::worker_registry::{
-    LaneLoad, OwnedWorkerError, OwnedWorkerRegistry, WorkerRecord, WorkerRegistration, WorkerRegistryError,
+    OwnedWorkerError, OwnedWorkerRegistry, WorkerRecord, WorkerRegistration, WorkerRegistryError,
 };
 use parking_lot::Mutex;
 use tokio::sync::RwLock;
@@ -149,41 +148,18 @@ async fn admit(
 ) -> Response {
     let tenant = verified_context.tenant();
     let principal = verified_context.principal();
-    let (config_store, persistence, registry) = {
-        let current = state.read().await;
-        (
-            shared_scheduler_config_store(&current),
-            current.persistence.clone(),
-            current.worker_registry.clone(),
-        )
-    };
-    let config = match config_store
-        .and_then(|store| crate::scheduler_config::effective_config(&store))
-    {
-        Ok(config) => config,
-        Err(error) => return Response::err(req_id, error),
-    };
-    let shard_writer_width = match crate::worker_admission::shard_writer_width(tenant, &persistence)
-    {
-        Ok(width) => width.shard_writers,
-        Err(error) => return Response::err(req_id, error),
-    };
+    let registry = state.read().await.worker_registry.clone();
     let now_ms = EngineClock.now_ms();
     let job_store = match crate::jobs::outbox_job_store(state).await {
         Ok(store) => store,
         Err(error) => return Response::err(req_id, error),
     };
-    let counts = match job_store.task_lane_counts(
-        &crate::task_queue::tenant_capability(tenant),
-        i64::try_from(now_ms).unwrap_or(i64::MAX),
-    ) {
-        Ok(counts) => counts,
-        Err(error) => return Response::err(req_id, format!("INTERNAL: {error}")),
+    let inputs = match crate::worker_admission::admission_inputs(state, verified_context, &job_store)
+        .await
+    {
+        Ok(inputs) => inputs,
+        Err(error) => return Response::err(req_id, error),
     };
-    let lane_load: BTreeMap<String, LaneLoad> = counts
-        .into_iter()
-        .map(|(lane, (running, queued))| (lane, LaneLoad { running, queued }))
-        .collect();
     let grant_id = match Digest256::framed(
         b"eg/worker-grant/v1",
         &[
@@ -211,10 +187,10 @@ async fn admit(
         tenant,
         verified_tenant: tenant,
         now_ms,
-        registry: owned.registry(),
-        config: &config,
-        lane_load: &lane_load,
-        shard_writer_width,
+        registry: &inputs.registry,
+        config: &inputs.config,
+        lane_load: &inputs.lane_load,
+        shard_writer_width: inputs.shard_writer_width,
         grant_id,
     })
 }

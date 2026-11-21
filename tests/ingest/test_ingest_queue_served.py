@@ -48,7 +48,32 @@ async def _client() -> MedullaClient:
     )
 
 
+_REGISTERED: set[str] = set()
+
+
+async def _ensure_worker(client: MedullaClient, worker: str) -> None:
+    """A claim is admitted only for a worker the registry holds live (R604.3)."""
+    if worker in _REGISTERED:
+        return
+    await client._send(
+        "WorkerRegister",
+        {
+            "registration": {
+                "worker_id": worker,
+                "host_iri": "host:alpha",
+                "cores": 8,
+                "memory_bytes": 8 * 1024**3,
+                "lanes_supported": ["general"],
+            }
+        },
+    )
+    _REGISTERED.add(worker)
+    # Keep the lease alive for the rest of the module's tests.
+    await client._send("WorkerHeartbeat", {"worker_id": worker})
+
+
 async def _claim(client: MedullaClient, worker: str) -> dict[str, Any] | None:
+    await _ensure_worker(client, worker)
     return await client._send(
         "TaskQueueClaim",
         {"worker_id": worker, "grant_id": "grant-1", "lease_ms": 60_000},
