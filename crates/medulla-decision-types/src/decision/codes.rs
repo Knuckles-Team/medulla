@@ -246,6 +246,10 @@ pub const REVIEW_NOT_INDEPENDENT: RefusalCode = RefusalCode::new("REVIEW_NOT_IND
 /// A calibration fit has fewer judged pairs than the knob requires.
 pub const CALIBRATION_TOO_FEW_PAIRS: RefusalCode = RefusalCode::new("CALIBRATION_TOO_FEW_PAIRS");
 
+/// A retrieval strategy did not beat its champion by `retrieval.adopt_margin`
+/// on the paired held-out run (MEDULLA-DECISION-ENGINE-R821).
+pub const ADOPTION_NOT_PROVEN: RefusalCode = RefusalCode::new("ADOPTION_NOT_PROVEN");
+
 /// Every promotion and calibration code, in declaration order.
 pub const PROMOTION: &[RefusalCode] = &[
     EVAL_SET_NOT_INDEPENDENT,
@@ -256,6 +260,7 @@ pub const PROMOTION: &[RefusalCode] = &[
     REVIEW_APPROVAL_REQUIRED,
     REVIEW_NOT_INDEPENDENT,
     CALIBRATION_TOO_FEW_PAIRS,
+    ADOPTION_NOT_PROVEN,
 ];
 
 // The `rank` family's refusals (MEDULLA-DECISION-ENGINE-R130.4).

@@ -21,6 +21,7 @@ pub mod ranking_eval;
 pub mod recommend;
 pub mod red_team;
 pub mod resolve_entity;
+pub mod retrieval;
 pub mod retention;
 pub mod round_verdict;
 pub mod route;
@@ -52,6 +53,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     prompt_render::KNOBS,
     task_plan::KNOBS,
     resolve_entity::KNOBS,
+    retrieval::KNOBS,
     recommend::KNOBS,
     red_team::KNOBS,
     round_verdict::KNOBS,

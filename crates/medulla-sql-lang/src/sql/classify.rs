@@ -1735,6 +1735,7 @@ pub const READ_ONLY_RELATION_NAMES: &[&str] = &[
     // EH-394..EH-397: retrieval learning over the same visible log.
     "decision_retrieval_outcomes",
     "decision_hard_negatives",
+    "decision_source_trust",
     "decision_class_usage",
     "decision_proven_paths",
     "decision_pointers",

@@ -28,9 +28,10 @@ use medulla_decision_outcome_types::decision::promotion::{
     REGRESSION_MARGIN, REGRESSION_WINDOW,
 };
 use medulla_decision_types::decision::codes::{
-    EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
+    ADOPTION_NOT_PROVEN, EVAL_SET_NOT_INDEPENDENT, MEASUREMENT_NOT_NEWER, PROMOTION_EVAL_TOO_SMALL,
     PROMOTION_JUDGE_ONLY, PROMOTION_NO_BASELINE, REVIEW_APPROVAL_REQUIRED, REVIEW_NOT_INDEPENDENT,
 };
+use medulla_decision_types::decision::knob_families::retrieval::adopt_margin_micros;
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_types::refusal_code::RefusalCode;
@@ -311,6 +312,11 @@ fn margin_micros(policy: &DecisionPolicy) -> i64 {
 /// each abstain with their own code; a sound evidence record below the margin
 /// holds with `margin_not_met`.
 pub fn challenger_wins(evidence: &HeldOutEvidence, policy: &DecisionPolicy) -> PromotionGate {
+    wins_by(evidence, policy, margin_micros(policy))
+}
+
+/// [`challenger_wins`] over an explicit margin, in micros.
+fn wins_by(evidence: &HeldOutEvidence, policy: &DecisionPolicy, margin: i64) -> PromotionGate {
     if !evidence.independent {
         return PromotionGate::Abstain(EVAL_SET_NOT_INDEPENDENT);
     }
@@ -323,7 +329,7 @@ pub fn challenger_wins(evidence: &HeldOutEvidence, policy: &DecisionPolicy) -> P
     if evidence.champion_score_ppm.is_none() {
         return PromotionGate::Abstain(PROMOTION_NO_BASELINE);
     }
-    if evidence.delta_ppm >= margin_micros(policy) {
+    if evidence.delta_ppm >= margin {
         PromotionGate::Promote
     } else {
         PromotionGate::Hold {
@@ -414,6 +420,14 @@ pub fn subject_gate(
             }
             _ => PromotionGate::Abstain(REVIEW_APPROVAL_REQUIRED),
         },
+        // R821: the paired run must beat the champion by
+        // `retrieval.adopt_margin`; a margin not met is a refusal, not a hold.
+        RevisionSubject::RetrievalStrategy { .. } => {
+            match wins_by(evidence, policy, adopt_margin_micros(policy)) {
+                PromotionGate::Hold { .. } => PromotionGate::Abstain(ADOPTION_NOT_PROVEN),
+                other => other,
+            }
+        }
         _ => challenger_wins(evidence, policy),
     }
 }

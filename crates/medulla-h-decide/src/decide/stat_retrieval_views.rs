@@ -6,6 +6,8 @@
 //!   (rank, content class, whether the answer cited it, the run's verdict);
 //! * `decision_hard_negatives` -- returned, uncited units that outranked a
 //!   cited one in an independently judged successful run;
+//! * `decision_source_trust` -- per retrieval source, the Beta posterior
+//!   (alpha, beta) over independently judged successful runs (R821);
 //! * `decision_class_usage` -- per content class, returned and cited counts,
 //!   k-anonymised by the policy's `min_support`;
 //! * `decision_proven_paths` -- judged plan templates by digest with their
@@ -16,6 +18,7 @@
 use medulla_decision_stats::{
     decision::retrieval::class_usage, decision::retrieval::hard_negatives,
     decision::retrieval::proven_paths, decision::retrieval::Verdict,
+    decision::source_trust::{posterior, JudgedUnits, SourceTrust},
 };
 use medulla_decision_types::decision::statistical::retrieval_pointer::PointerEvent;
 use medulla_decision_types::{
@@ -99,6 +102,14 @@ const NEGATIVE_COLUMNS: &[Col<HardNegative>] = &[
     ("outranked_cited", ColumnType::BigInt, |n| {
         Value::from(n.outranked_cited)
     }),
+];
+
+const TRUST_COLUMNS: &[Col<(String, SourceTrust)>] = &[
+    ("source", ColumnType::Text, |(source, _)| {
+        Value::from(source.clone())
+    }),
+    ("alpha", ColumnType::BigInt, |(_, t)| millis(t.alpha)),
+    ("beta", ColumnType::BigInt, |(_, t)| millis(t.beta)),
 ];
 
 const USAGE_COLUMNS: &[Col<ClassUsage>] = &[
@@ -203,6 +214,12 @@ pub(super) fn learning_relations(
         .filter(|run| run.verdict == Verdict::Success)
         .flat_map(|run| hard_negatives(&run.stored.outcome))
         .collect();
+    let judged: Vec<JudgedUnits> = runs
+        .iter()
+        .filter(|run| run.verdict == Verdict::Success)
+        .map(|run| JudgedUnits::of(&run.stored.outcome))
+        .collect();
+    let trust: Vec<(String, SourceTrust)> = posterior(&judged).into_iter().collect();
     let min_support = default_statistical_policy().min_support;
     let usage = class_usage(runs.iter().map(|run| &run.stored.outcome), min_support);
     Ok(vec![
@@ -212,6 +229,7 @@ pub(super) fn learning_relations(
             &unit_rows(&runs),
         ),
         relation("decision_hard_negatives", NEGATIVE_COLUMNS, &negatives),
+        relation("decision_source_trust", TRUST_COLUMNS, &trust),
         relation("decision_class_usage", USAGE_COLUMNS, &usage),
         relation("decision_proven_paths", PATH_COLUMNS, &judged_paths(&runs)),
         relation(

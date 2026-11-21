@@ -254,6 +254,13 @@ class RevisionSubjectRerankCalibration(BaseModel):
     scorer_version: str
 
 
+class RevisionSubjectRetrievalStrategy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["retrieval_strategy"]
+    strategy_ref: str
+
+
 RevisionSubject = Annotated[
     RevisionSubjectDecisionHead
     | RevisionSubjectProgram
@@ -262,7 +269,8 @@ RevisionSubject = Annotated[
     | RevisionSubjectDefinition
     | RevisionSubjectGovernedSet
     | RevisionSubjectMeasuredFact
-    | RevisionSubjectRerankCalibration,
+    | RevisionSubjectRerankCalibration
+    | RevisionSubjectRetrievalStrategy,
     Field(discriminator="kind"),
 ]
 
@@ -681,6 +689,7 @@ __all__ = [
     "RevisionSubjectModelPolicy",
     "RevisionSubjectProgram",
     "RevisionSubjectRerankCalibration",
+    "RevisionSubjectRetrievalStrategy",
     "RewardEvidenceSource",
     "RewardRecord",
     "SafetyOutcome",

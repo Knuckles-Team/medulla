@@ -1183,6 +1183,10 @@ mod learning_tests;
 #[cfg(feature = "query")]
 mod calibration_tests;
 
+// MEDULLA-DECISION-ENGINE-R821: per-source trust and retrieval strategy adoption.
+#[cfg(feature = "query")]
+mod retrieval_adoption_tests;
+
 #[cfg(feature = "query")]
 mod run_adjustment_tests;
 mod run_credit_tests;

@@ -218,6 +218,10 @@ pub enum RevisionSubject {
     RerankCalibration {
         scorer_version: String,
     },
+    /// A retrieval strategy, adopted by a paired held-out run (R821).
+    RetrievalStrategy {
+        strategy_ref: String,
+    },
 }
 
 impl RevisionSubject {
@@ -246,6 +250,9 @@ impl RevisionSubject {
             }
             Self::RerankCalibration { scorer_version } => {
                 format!("champion:rerank_calibration:{scorer_version}")
+            }
+            Self::RetrievalStrategy { strategy_ref } => {
+                format!("champion:retrieval_strategy:{strategy_ref}")
             }
         }
     }
@@ -777,6 +784,12 @@ mod tests {
                     scorer_version: "v3".to_owned(),
                 },
                 "champion:rerank_calibration:v3",
+            ),
+            (
+                RevisionSubject::RetrievalStrategy {
+                    strategy_ref: "hyde-rrf".to_owned(),
+                },
+                "champion:retrieval_strategy:hyde-rrf",
             ),
         ];
         for (subject, key) in cases {

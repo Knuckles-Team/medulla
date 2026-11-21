@@ -84,6 +84,7 @@ pub mod schema_mapping;
 pub mod scorer;
 pub mod skill_evolution;
 pub mod skill_plan;
+pub mod source_trust;
 pub mod step_verify;
 mod targets;
 pub mod temporal_basis;
