@@ -98,6 +98,7 @@ fn origin_view(
         Origin::Pack {
             connector,
             record_id,
+            ..
         } => View::Pack {
             connector: connector.clone(),
             record_id: record_id.clone(),

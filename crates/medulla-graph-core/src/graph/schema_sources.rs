@@ -57,9 +57,17 @@ pub enum SchemaSourceOrigin {
     Admin {
         name: String,
     },
+    /// `tenant` is the verified tenant whose pack head this source composes,
+    /// recorded where the source is attached. It is how the catalog answers
+    /// "which graphs compose tenant T's `pack:<connector>`" without opening a
+    /// graph (DECISIONS PACK-CLASS-IN-USE-IS-SCOPED-AND-INDEXED). A source
+    /// attached before the tenant was recorded carries `None` and counts for
+    /// every tenant until its next attach records one.
     Pack {
         connector: String,
         record_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tenant: Option<String>,
     },
     Ingestion {
         mapping: String,
@@ -782,7 +790,12 @@ fn origin_owns_key(source_id: &str, origin: &SchemaSourceOrigin) -> bool {
         SchemaSourceOrigin::Pack {
             connector,
             record_id,
-        } => keyed(source_id, "pack:", connector) && !record_id.is_empty(),
+            tenant,
+        } => {
+            keyed(source_id, "pack:", connector)
+                && !record_id.is_empty()
+                && tenant.as_deref().is_none_or(|tenant| !tenant.is_empty())
+        }
         SchemaSourceOrigin::Ingestion { mapping, .. } => keyed(source_id, "ingest:", mapping),
         SchemaSourceOrigin::Approved {
             name,
@@ -819,14 +832,24 @@ fn validate_replacement_progression(
             SchemaSourceOrigin::Pack {
                 connector: current_connector,
                 record_id: current_record,
+                tenant: current_tenant,
             },
             SchemaSourceOrigin::Pack {
                 connector: replacement_connector,
                 record_id: replacement_record,
+                tenant: replacement_tenant,
             },
         ) => {
+            // A source never moves to another tenant's pack. A source attached
+            // before the tenant was recorded adopts the tenant of the same
+            // record when that record is attached again.
+            let same_tenant = current_tenant.is_none() || current_tenant == replacement_tenant;
+            let adopts_tenant = current_record == replacement_record
+                && current_tenant.is_none()
+                && replacement_tenant.is_some();
             current_connector == replacement_connector
-                && pack_record_advances(current_record, replacement_record)
+                && same_tenant
+                && (adopts_tenant || pack_record_advances(current_record, replacement_record))
         }
         (
             SchemaSourceOrigin::Ingestion {
@@ -1585,10 +1608,18 @@ fn origin_bytes(origin: &SchemaSourceOrigin) -> Vec<u8> {
         }
         SchemaSourceOrigin::Operator => b"operator".to_vec(),
         SchemaSourceOrigin::Admin { name } => format!("admin\0{name}").into_bytes(),
+        // A source with no recorded tenant keeps the bytes it was digested
+        // under, so a stored graph's composed digest does not move.
         SchemaSourceOrigin::Pack {
             connector,
             record_id,
+            tenant: None,
         } => format!("pack\0{connector}\0{record_id}").into_bytes(),
+        SchemaSourceOrigin::Pack {
+            connector,
+            record_id,
+            tenant: Some(tenant),
+        } => format!("pack\0{connector}\0{record_id}\0{tenant}").into_bytes(),
         SchemaSourceOrigin::Ingestion { mapping, revision } => {
             format!("ingestion\0{mapping}\0{revision}").into_bytes()
         }
@@ -1749,6 +1780,7 @@ mod tests {
             SchemaSourceOrigin::Pack {
                 connector: "actual".to_string(),
                 record_id: "r1".to_string(),
+                tenant: None,
             },
             None,
             Some(Arc::from("@prefix owl: <http://www.w3.org/2002/07/owl#> .")),
@@ -1771,6 +1803,7 @@ mod tests {
                 SchemaSourceOrigin::Pack {
                     connector: "github".to_string(),
                     record_id: record_id.to_string(),
+                    tenant: None,
                 },
                 None,
                 Some(Arc::from(document)),
@@ -1808,6 +1841,7 @@ mod tests {
                 SchemaSourceOrigin::Pack {
                     connector: "numeric".to_string(),
                     record_id: record_id.to_string(),
+                    tenant: None,
                 },
                 None,
                 Some(Arc::from(document)),
@@ -1840,12 +1874,69 @@ mod tests {
     }
 
     #[test]
+    fn pack_source_records_its_tenant_and_never_changes_tenant() {
+        let pack = |record_id: &str, tenant: Option<&str>| {
+            GraphSchemaSource::new(
+                SchemaSourceOrigin::Pack {
+                    connector: "github".to_string(),
+                    record_id: record_id.to_string(),
+                    tenant: tenant.map(str::to_string),
+                },
+                None,
+                Some(Arc::from("@prefix owl: <http://www.w3.org/2002/07/owl#> .")),
+                0,
+            )
+            .unwrap()
+        };
+        let mut legacy = GraphSchemaSources::default();
+        legacy
+            .attach_dynamic("pack:github".to_string(), pack("pack:github:1:aaaa", None))
+            .unwrap();
+        let legacy_digest = legacy.composed_digest();
+        // A source with no recorded tenant keeps its digest bytes.
+        assert_eq!(
+            origin_bytes(&pack("pack:github:1:aaaa", None).origin),
+            b"pack\0github\0pack:github:1:aaaa".to_vec()
+        );
+        // Attaching the same record again records the tenant.
+        assert!(legacy
+            .attach_dynamic(
+                "pack:github".to_string(),
+                pack("pack:github:1:aaaa", Some("tenant:a")),
+            )
+            .unwrap());
+        assert_ne!(legacy.composed_digest(), legacy_digest);
+        // Once recorded, neither the same nor a newer record moves the source
+        // to another tenant.
+        for record_id in ["pack:github:1:aaaa", "pack:github:2:bbbb"] {
+            assert!(legacy
+                .attach_dynamic("pack:github".to_string(), pack(record_id, Some("tenant:b")))
+                .unwrap_err()
+                .contains("SCHEMA_SOURCE_REGRESSION"));
+        }
+        assert!(legacy
+            .attach_dynamic(
+                "pack:github".to_string(),
+                pack("pack:github:2:bbbb", Some("tenant:a")),
+            )
+            .unwrap());
+        // An empty tenant is not a tenant.
+        assert!(GraphSchemaSources::default()
+            .attach_dynamic(
+                "pack:github".to_string(),
+                pack("pack:github:1:aaaa", Some("")),
+            )
+            .is_err());
+    }
+
+    #[test]
     fn empty_pack_head_is_a_monotonic_withdrawal_tombstone() {
         let pack = |record_id: &str, ontology: Option<&'static str>| {
             GraphSchemaSource::new(
                 SchemaSourceOrigin::Pack {
                     connector: "graph-os".to_string(),
                     record_id: record_id.to_string(),
+                    tenant: None,
                 },
                 None,
                 ontology.map(Arc::from),
@@ -1962,6 +2053,7 @@ mod tests {
                 SchemaSourceOrigin::Pack {
                     connector: "servicenow".to_string(),
                     record_id: record_id.to_string(),
+                    tenant: None,
                 },
                 Some(Arc::from(document)),
                 None,
@@ -1987,6 +2079,7 @@ mod tests {
             SchemaSourceOrigin::Pack {
                 connector: "pagerduty".to_string(),
                 record_id: "rec:1".to_string(),
+                tenant: None,
             },
             None,
             Some(Arc::from(approved_authority)),

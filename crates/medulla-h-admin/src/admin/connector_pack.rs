@@ -202,7 +202,6 @@ async fn serve_import(
                     tenant_pack_guard,
                     std::sync::Arc::new(import::release::GraphClassUsage {
                         state: std::sync::Arc::clone(state),
-                        handle: tokio::runtime::Handle::current(),
                     }),
                 )
                 .await

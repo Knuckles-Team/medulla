@@ -35,77 +35,200 @@ const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 /// Most violations one `Rejected` result carries.
 const MAX_REPORTED: usize = 256;
 
-/// Which of `classes` stored data still names, for the graphs that compose a
-/// connector's current head.
+/// Which of `classes` stored data still names, for the importing tenant's
+/// graphs that compose a connector's current head.
 pub(crate) trait ClassUsage: Send + Sync {
     fn classes_in_use(
         &self,
+        tenant: &str,
         connector: &ResourceId,
         record_id: &str,
         classes: &BTreeSet<String>,
     ) -> Result<BTreeSet<String>, String>;
 }
 
-/// The served implementation: every graph whose `pack:<connector>` schema
-/// source was composed from `record_id` is opened (lazily when it is only
-/// catalog-known) and its data triples are read for `rdf:type` objects.
+/// The served implementation (DECISIONS PACK-CLASS-IN-USE-IS-SCOPED-AND-INDEXED).
+///
+/// A graph is a candidate only when its recorded `pack:<connector>` schema
+/// source was composed from `record_id` for the importing tenant: a resident
+/// graph answers that from its installed sources, a catalog-only graph from its
+/// durable catalog row. No graph is opened. Another tenant's graph is never a
+/// candidate, so its data never holds back this tenant's release.
+///
+/// A fully resident candidate answers from its `type` label index (the
+/// `rdf:type` fold of `medulla_rdf::mapping`), and for a resource typed more
+/// than once from the class node's incoming typing edges. A candidate that is
+/// not resident, or whose material is hibernated or incomplete, answers from
+/// the durable node table by the class's node id: a class node stored there
+/// counts as named.
+///
+/// `classes_in_use` runs on the import's blocking thread (`validate_and_commit`
+/// runs `run_import` under `spawn_blocking`), so it takes the state lock with
+/// `blocking_read`, holds it only to copy the candidate list, and never enters
+/// the async runtime.
 pub(crate) struct GraphClassUsage {
     pub state: Arc<RwLock<ServerState>>,
-    pub handle: tokio::runtime::Handle,
+}
+
+/// One registered graph the check may read.
+struct UsageCandidate {
+    name: String,
+    /// The resident core, `None` for a catalog-only graph.
+    core: Option<Arc<medulla_graph_core::graph::GraphCore>>,
+    /// Whether the resident core's material is complete.
+    complete: bool,
+}
+
+impl GraphClassUsage {
+    fn candidates(
+        &self,
+    ) -> (
+        Vec<UsageCandidate>,
+        Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
+    ) {
+        let state = self.state.blocking_read();
+        let candidates = state
+            .registry
+            .list()
+            .into_iter()
+            .map(|(name, _)| {
+                let core = state.registry.get(&name).map(|entry| entry.core.clone());
+                let complete = core.is_some()
+                    && state
+                        .registry
+                        .materialization_handle(&name)
+                        .is_none_or(|manifest| manifest.read().is_ok_and(|m| m.valid));
+                UsageCandidate {
+                    name,
+                    core,
+                    complete,
+                }
+            })
+            .collect();
+        (candidates, state.persistence.clone())
+    }
+}
+
+/// Whether `sources` holds `pack:<connector>` composed from `record_id` for
+/// `tenant`. A source with no recorded tenant counts for every tenant.
+fn composes_tenant_pack(
+    sources: &medulla_graph_core::graph::GraphSchemaSources,
+    source_id: &str,
+    tenant: &str,
+    record_id: &str,
+) -> bool {
+    sources.dynamic.get(source_id).is_some_and(|source| {
+        matches!(
+            &source.origin,
+            medulla_graph_core::graph::SchemaSourceOrigin::Pack {
+                record_id: composed,
+                tenant: recorded,
+                ..
+            } if composed == record_id
+                && recorded.as_deref().is_none_or(|recorded| recorded == tenant)
+        )
+    })
+}
+
+/// The canonical node id of an IRI resource (`medulla_rdf::mapping`).
+fn class_node_id(class: &str) -> String {
+    format!("<{class}>")
+}
+
+/// The classes a resident core's data types an instance with: the `type`
+/// label index first, then the class node's incoming typing edges for a
+/// resource whose folded `type` is another of its classes.
+fn resident_typed(
+    core: &medulla_graph_core::graph::GraphCore,
+    pending: &[&String],
+) -> Result<Vec<String>, String> {
+    let mut typed = Vec::new();
+    for class in pending {
+        if !core.get_nodes_by_label(class, 1).is_empty() {
+            typed.push((*class).clone());
+            continue;
+        }
+        let node = class_node_id(class);
+        if !core.has_node(&node) {
+            continue;
+        }
+        let typing = core.get_predecessors(&node)?.iter().any(|subject| {
+            core.get_edge_properties(subject, &node).iter().any(|blob| {
+                medulla_types::msgpack::decode_edge_relationship(blob).as_deref() == Some(RDF_TYPE)
+            })
+        });
+        if typing {
+            typed.push((*class).clone());
+        }
+    }
+    Ok(typed)
+}
+
+/// The classes whose node the durable node table of `graph_fname` holds.
+fn durable_named(
+    backend: &dyn medulla_server_api::api::persistence::PersistenceBackend,
+    graph_fname: &str,
+    pending: &[&String],
+) -> Result<Vec<String>, String> {
+    let ids: Vec<String> = pending.iter().map(|class| class_node_id(class)).collect();
+    let present = backend.durable_node_presence(graph_fname, &ids)?;
+    if present.len() != ids.len() {
+        return Err(format!(
+            "durable node presence for {graph_fname} answered {} of {} class nodes",
+            present.len(),
+            ids.len()
+        ));
+    }
+    Ok(pending
+        .iter()
+        .zip(present)
+        .filter(|(_, present)| *present)
+        .map(|(class, _)| (*class).clone())
+        .collect())
 }
 
 impl ClassUsage for GraphClassUsage {
     fn classes_in_use(
         &self,
+        tenant: &str,
         connector: &ResourceId,
         record_id: &str,
         classes: &BTreeSet<String>,
     ) -> Result<BTreeSet<String>, String> {
         let source_id = format!("pack:{}", connector.as_str());
-        self.handle.block_on(async {
-            let names = self.state.read().await.registry.list();
-            let cap = medulla_persistence::cold_offload::max_resident_graphs();
-            let page_size = medulla_persistence::cold_offload::lazy_open_page_size();
-            let mut found = BTreeSet::new();
-            for (name, _) in names {
-                medulla_persistence::cold_offload::lazy_open(&self.state, &name, cap, page_size)
-                    .await;
-                let core = {
-                    let state = self.state.read().await;
-                    let Some(entry) = state.registry.get(&name) else {
-                        continue;
-                    };
-                    entry.core.clone()
-                };
-                let composes = core
-                    .schema_sources()
-                    .dynamic
-                    .get(&source_id)
-                    .is_some_and(|s| {
-                        matches!(
-                            &s.origin,
-                            medulla_graph_core::graph::SchemaSourceOrigin::Pack {
-                                record_id: composed, ..
-                            } if composed == record_id
-                        )
-                    });
-                if !composes {
-                    continue;
-                }
-                for triple in medulla_rdf::mapping::export_view_triples(&core.analysis_snapshot())?
-                {
-                    if triple.predicate.as_str() != RDF_TYPE {
-                        continue;
-                    }
-                    if let medulla_rdf::oxrdf::Term::NamedNode(class) = &triple.object {
-                        if classes.contains(class.as_str()) {
-                            found.insert(class.as_str().to_string());
-                        }
-                    }
-                }
+        let (candidates, persistence) = self.candidates();
+        let mut found = BTreeSet::new();
+        for candidate in candidates {
+            let pending: Vec<&String> = classes.iter().filter(|c| !found.contains(*c)).collect();
+            if pending.is_empty() {
+                break;
             }
-            Ok::<_, String>(found)
-        })
+            let graph_fname = medulla_kernel::persist::sanitize(&candidate.name);
+            let sources = match (&candidate.core, &persistence) {
+                (Some(core), _) => core.schema_sources(),
+                (None, Some(backend)) => {
+                    match backend.graph_catalog_schema_sources(&graph_fname)? {
+                        Some(sources) => sources,
+                        None => continue,
+                    }
+                }
+                // Without a durable catalog every registered graph is resident.
+                (None, None) => continue,
+            };
+            if !composes_tenant_pack(&sources, &source_id, tenant, record_id) {
+                continue;
+            }
+            let typed = match (&candidate.core, &persistence) {
+                (Some(core), _) if candidate.complete && core.node_count() > 0 => {
+                    resident_typed(core, &pending)?
+                }
+                (_, Some(backend)) => durable_named(backend.as_ref(), &graph_fname, &pending)?,
+                (Some(core), None) => resident_typed(core, &pending)?,
+                (None, None) => Vec::new(),
+            };
+            found.extend(typed);
+        }
+        Ok(found)
     }
 }
 
@@ -364,7 +487,7 @@ pub(super) fn judge(
         .map(|found| found.item.clone())
         .collect();
     if !removed.is_empty() {
-        let in_use = usage.classes_in_use(connector, &active.version.version, &removed)?;
+        let in_use = usage.classes_in_use(tenant, connector, &active.version.version, &removed)?;
         if !in_use.is_empty() {
             let violations = in_use
                 .iter()

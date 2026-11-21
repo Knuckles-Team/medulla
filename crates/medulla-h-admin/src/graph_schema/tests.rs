@@ -2,6 +2,9 @@ use super::*;
 use medulla_catalog_types::connector_pack::ids::pack_projection_graph_name;
 use medulla_catalog_types::graph_schema::GraphSchemaOp;
 
+/// The verified tenant every pack attach in these tests is recorded under.
+const PACK_TENANT: &str = "tenant:test";
+
 fn pack_document(uri: &str, body: Arc<str>) -> PackSchemaDocument {
     PackSchemaDocument {
         uri: uri.to_string(),
@@ -289,6 +292,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
     let first = apply_pack_source(
         &core,
         "pack__graph-os",
+        PACK_TENANT,
         &connector,
         "pack:graph-os:1:aaaa",
         PackSourceDocuments {
@@ -314,12 +318,14 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
         medulla_graph_core::graph::SchemaSourceOrigin::Pack {
             connector: "graph-os".to_string(),
             record_id: "pack:graph-os:1:aaaa".to_string(),
+            tenant: Some(PACK_TENANT.to_string()),
         }
     );
 
     let identical = apply_pack_source(
         &core,
         "pack__graph-os",
+        PACK_TENANT,
         &connector,
         "pack:graph-os:1:aaaa",
         PackSourceDocuments {
@@ -340,6 +346,7 @@ fn internal_pack_projection_owns_identity_and_rejects_regression() {
     let error = apply_pack_source(
         &core,
         "pack__graph-os",
+        PACK_TENANT,
         &connector,
         "pack:graph-os:0:bbbb",
         PackSourceDocuments {
@@ -364,6 +371,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
     apply_pack_source(
         &core,
         "pack__test",
+        PACK_TENANT,
         &connector,
         "pack:meristem:1:aaaa",
         PackSourceDocuments {
@@ -380,6 +388,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
     let withdrawal = apply_pack_source(
         &core,
         "pack__test",
+        PACK_TENANT,
         &connector,
         "pack:meristem:2:bbbb",
         PackSourceDocuments {
@@ -405,6 +414,7 @@ fn internal_pack_projection_withdrawal_retains_record_high_water() {
     assert!(apply_pack_source(
         &restarted,
         "pack__test",
+        PACK_TENANT,
         &connector,
         "pack:meristem:1:cccc",
         PackSourceDocuments {
@@ -517,6 +527,7 @@ fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
     apply_pack_source(
         &spare,
         "tenant-a-spare",
+        PACK_TENANT,
         &connector,
         "pack:graph-os:1:aaaa",
         PackSourceDocuments {
@@ -541,6 +552,7 @@ fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
     apply_pack_source(
         &reserved,
         &reserved_name,
+        PACK_TENANT,
         &connector,
         "pack:graph-os:2:bbbb",
         PackSourceDocuments {
@@ -569,6 +581,7 @@ fn attach_pack_into_a_spare_graph_copies_a_static_snapshot() {
         medulla_graph_core::graph::SchemaSourceOrigin::Pack {
             connector: "graph-os".to_string(),
             record_id: "pack:graph-os:1:aaaa".to_string(),
+            tenant: Some(PACK_TENANT.to_string()),
         }
     );
     // ...while the reserved projection graph serves the newer head.
@@ -660,11 +673,18 @@ async fn pack_projection_prevalidation_memoizes_the_entering_schema_verdict() {
     )];
     let record_id = "pack:bug009-prevalidate:1:aaaa";
 
-    prevalidate_pack_projection(&core, &connector, record_id, &documents(good.clone()))
-        .await
-        .unwrap();
+    prevalidate_pack_projection(
+        &core,
+        PACK_TENANT,
+        &connector,
+        record_id,
+        &documents(good.clone()),
+    )
+    .await
+    .unwrap();
     let (candidate, changed, _) = pack_candidate_sources(
         &core.schema_sources(),
+        PACK_TENANT,
         &connector,
         record_id,
         source(good.clone()),
@@ -680,6 +700,7 @@ async fn pack_projection_prevalidation_memoizes_the_entering_schema_verdict() {
     let committed = apply_pack_source(
         &core,
         "pack__bug009",
+        PACK_TENANT,
         &connector,
         record_id,
         source(good),
@@ -697,13 +718,19 @@ async fn pack_projection_prevalidation_memoizes_the_entering_schema_verdict() {
         "ontology://bug009-prevalidate/broken.ttl",
         Arc::from("this is not turtle"),
     )];
-    let error =
-        prevalidate_pack_projection(&core, &connector, record_id, &documents(broken.clone()))
-            .await
-            .unwrap_err();
+    let error = prevalidate_pack_projection(
+        &core,
+        PACK_TENANT,
+        &connector,
+        record_id,
+        &documents(broken.clone()),
+    )
+    .await
+    .unwrap_err();
     let commit_error = apply_pack_source(
         &core,
         "pack__bug009",
+        PACK_TENANT,
         &connector,
         record_id,
         source(broken),
@@ -755,6 +782,7 @@ fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
     let first = apply_pack_source(
         &core,
         "pack__coverage-pack",
+        PACK_TENANT,
         &connector,
         "record-1",
         documents(),
@@ -800,6 +828,7 @@ fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
     let again = apply_pack_source(
         &core,
         "pack__coverage-pack",
+        PACK_TENANT,
         &connector,
         "record-1",
         documents(),
@@ -814,6 +843,7 @@ fn pack_activation_stores_the_revision_bound_crosswalk_coverage() {
     let refused = apply_pack_source(
         &core,
         "pack__coverage-pack",
+        PACK_TENANT,
         &connector,
         "record-2",
         PackSourceDocuments {

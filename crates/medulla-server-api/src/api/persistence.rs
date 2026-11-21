@@ -705,6 +705,18 @@ pub trait PersistenceBackend: Send + Sync {
         Ok(vec![false; node_ids.len()])
     }
 
+    /// The schema sources one graph's durable catalog (`graph_meta`) row
+    /// records, read from that row alone: the graph is neither opened nor made
+    /// resident. `Ok(None)` when the catalog has no row for the graph. The
+    /// default refuses, so a backend that cannot read its catalog never answers
+    /// as if the graph composed nothing.
+    fn graph_catalog_schema_sources(
+        &self,
+        _graph_fname: &str,
+    ) -> Result<Option<Arc<medulla_graph_core::graph::GraphSchemaSources>>, String> {
+        Err("this persistence backend does not read graph catalog schema sources".to_string())
+    }
+
     /// SYNC read-through of a single node's stored properties (CONCEPT:MEDULLA-KG.storage.read-through-seam-exercised).
     /// The medulla-core read path (`GraphCore::get_node_properties`) is synchronous, so
     /// the read-through it consults on a RAM miss must be sync too. The redb backend

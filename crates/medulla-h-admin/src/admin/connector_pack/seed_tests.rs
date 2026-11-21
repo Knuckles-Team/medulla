@@ -140,6 +140,7 @@ fn pack_sources(role: SchemaSourceRole) -> GraphSchemaSources {
         SchemaSourceOrigin::Pack {
             connector: "demo".to_string(),
             record_id: "record-1".to_string(),
+            tenant: None,
         },
         None,
         Some(ontology.into()),

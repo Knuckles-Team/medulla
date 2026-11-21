@@ -256,6 +256,7 @@ fn inspection_returns_composed_crosswalks() {
         SchemaSourceOrigin::Pack {
             connector: "metadata".to_string(),
             record_id: "record-1".to_string(),
+            tenant: None,
         },
         None,
         None,
@@ -337,6 +338,7 @@ fn inspection_reports_pack_revision_coverage() {
             SchemaSourceOrigin::Pack {
                 connector: connector.to_string(),
                 record_id: "record-1".to_string(),
+                tenant: None,
             },
             None,
             None,

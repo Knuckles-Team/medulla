@@ -92,6 +92,22 @@ macro_rules! persistence_graph {
             read_durable_node_presence(&shard, graph_fname, node_ids)
         }
 
+        fn graph_catalog_schema_sources(
+            &self,
+            graph_fname: &str,
+        ) -> Result<Option<std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>>, String>
+        {
+            let writer = self.shard_for(graph_fname);
+            let shard = writer
+                .shard
+                .upgrade()
+                .ok_or_else(|| "redb writer thread is gone".to_string())?;
+            Ok(
+                medulla_store_apply::redb_store::dump::read_catalog_record(&shard, graph_fname)?
+                    .map(|record| record.schema_sources),
+            )
+        }
+
         fn read_node_blocking(
             &self,
             graph_fname: &str,

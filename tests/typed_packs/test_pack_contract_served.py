@@ -6,7 +6,8 @@ release commits and becomes the active one. A release that removes a class is
 held behind a change request and answers ``CONTRACT_BREAK_PENDING`` with its
 breaks; one that removes a class stored data still names answers
 ``CLASS_IN_USE``. In both refusals the head, and so the active version, is
-unchanged.
+unchanged. Only the importing tenant's graphs count: another tenant's data in
+the same store never holds back a withdrawal.
 """
 
 from __future__ import annotations
@@ -14,9 +15,23 @@ from __future__ import annotations
 import asyncio
 import os
 import uuid
+from collections.abc import Iterator
+from contextlib import contextmanager
+from pathlib import Path
 
 import pytest
-from conftest import TEST_TENANT, request_context
+from conftest import (
+    TEST_AGENT_ID,
+    TEST_SIGNER_KEY,
+    TEST_TENANT,
+    bootstrap_context,
+    find_server_binary,
+    request_context,
+    spawn_server,
+    stop_server,
+    strict_server_env,
+    wait_for_server,
+)
 from ontology_pack_support import (
     attach_pack,
     connect,
@@ -26,7 +41,7 @@ from ontology_pack_support import (
 )
 
 from medulla import ConnectorPackClient
-from medulla.client import MedullaClient
+from medulla.client import MedullaClient, SyncMedullaClient
 from medulla.generated.connector_pack import PackHeadRef
 
 CORE = "https://knuckles-team.github.io/ontology/core"
@@ -175,3 +190,187 @@ def test_breaking_and_in_use_refuse() -> None:
             await client.close()
 
     asyncio.run(exercise())
+
+
+OTHER_TENANT = "tenant:other"
+
+
+def _tenant_context(tenant: str, base: dict[str, object]) -> dict[str, object]:
+    return {**base, "tenant": tenant}
+
+
+@contextmanager
+def _engine(
+    runtime: Path, persist: Path, tenant: str, *, bootstrap: bool
+) -> Iterator[str]:
+    """One served engine for `tenant` over the shared store in `persist`.
+
+    The door admits one tenant per process (``MEDULLA_TENANT``), so the two
+    tenants of one store are served one after the other by engines that open
+    the same durable directory.
+    """
+
+    binary = find_server_binary()
+    if binary is None:
+        pytest.fail("no full-featured medulla-server binary is built")
+    socket_path = str(runtime / f"{tenant.replace(':', '-')}.sock")
+    log_path = runtime / f"{tenant.replace(':', '-')}.log"
+    env = {
+        **os.environ,
+        **strict_server_env(
+            str(runtime / "security"),
+            auth_secret=os.environ["GRAPH_SERVICE_AUTH_SECRET"],
+            persist_dir=str(persist),
+        ),
+        "MEDULLA_TENANT": tenant,
+    }
+    process = spawn_server(
+        [binary, "--socket-path", socket_path], env=env, log_path=log_path
+    )
+    try:
+        wait_for_server(
+            process, socket_path, name=f"{tenant} engine", log_path=log_path
+        )
+        if bootstrap:
+            system = SyncMedullaClient.connect(
+                socket_path=socket_path,
+                verified_context=_tenant_context(tenant, bootstrap_context()),
+            )
+            try:
+                system.consensus.bootstrap_system_identity(
+                    agent_id=TEST_AGENT_ID,
+                    signer_id=TEST_AGENT_ID,
+                    signer_key=TEST_SIGNER_KEY,
+                )
+            finally:
+                system.close()
+        yield socket_path
+    finally:
+        stop_server(process, name=f"{tenant} engine", log_path=log_path)
+
+
+async def _store_typed_fact(
+    socket_path: str, tenant: str, connector: str, graph: str, iri: str, cls: str
+) -> None:
+    """Create `graph`, compose the tenant's pack into it and type `iri` as `cls`."""
+
+    context = _tenant_context(tenant, request_context())
+    admin = await MedullaClient.connect(
+        socket_path=socket_path, verified_context=context
+    )
+    try:
+        await admin.tenants.create(graph)
+    finally:
+        await admin.close()
+    client = await MedullaClient.connect(
+        socket_path=socket_path, verified_context=context, graph_name=graph
+    )
+    try:
+        await attach_pack(client, connector)
+        await client.rdf.add_triples(
+            turtle=(
+                "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .\n"
+                f"<{iri}> rdf:type <{cls}> .\n"
+            )
+        )
+    finally:
+        await client.close()
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R107.4")
+def test_other_tenant_data_never_blocks_a_withdrawal(tmp_path: Path) -> None:
+    """Two tenants import the same connector into one store. Tenant B's fact
+    typed with a class tenant A withdraws leaves A's release held as a break,
+    not refused as in use; A's own fact typed with it refuses the release."""
+
+    tag = uuid.uuid4().hex[:8]
+    connector = f"contract-tenants-{tag}"
+    base = f"https://example.org/{connector}"
+    incident = f"{base}#Incident"
+    entry = lambda classes: [  # noqa: E731
+        ontology_entry(connector, "vocabulary", _ontology(base, classes))
+    ]
+    persist = tmp_path / "persist"
+    persist.mkdir()
+
+    async def other_tenant(socket_path: str) -> None:
+        context = _tenant_context(OTHER_TENANT, request_context())
+        admin = await MedullaClient.connect(
+            socket_path=socket_path, verified_context=context
+        )
+        try:
+            first = await import_entries(
+                admin, connector, entry(["Ticket", "Incident"])
+            )
+            assert first["result"] == "imported", first
+        finally:
+            await admin.close()
+        await _store_typed_fact(
+            socket_path,
+            OTHER_TENANT,
+            connector,
+            f"contract-other-{tag}",
+            "https://example.org/data/other-case",
+            incident,
+        )
+
+    async def importing_tenant(socket_path: str) -> None:
+        context = _tenant_context(TEST_TENANT, request_context())
+        admin = await MedullaClient.connect(
+            socket_path=socket_path, verified_context=context
+        )
+        try:
+            first = await import_entries(
+                admin, connector, entry(["Ticket", "Incident"])
+            )
+            assert first["result"] == "imported", first
+            head = _head(first["receipt"])
+            status = await ConnectorPackClient(admin).status(
+                tenant_id=TEST_TENANT, connector=connector
+            )
+            assert status.head is not None
+            active = (status.head.binding_revision, str(status.head.pack_digest))
+
+            # The other tenant's stored fact names the class; the withdrawal
+            # is still only a held break.
+            pending = await import_entries(
+                admin, connector, entry(["Ticket"]), expected_head=head
+            )
+            assert violation_codes(pending) == {"CONTRACT_BREAK_PENDING"}, pending
+            assert any(incident == v["uri"] for v in pending["violations"]), pending
+        finally:
+            await admin.close()
+
+        await _store_typed_fact(
+            socket_path,
+            TEST_TENANT,
+            connector,
+            f"contract-own-{tag}",
+            "https://example.org/data/own-case",
+            incident,
+        )
+        admin = await MedullaClient.connect(
+            socket_path=socket_path, verified_context=context
+        )
+        try:
+            # The importing tenant's own fact refuses the same release.
+            in_use = await import_entries(
+                admin, connector, entry(["Ticket"]), expected_head=head
+            )
+            assert violation_codes(in_use) == {"CLASS_IN_USE"}, in_use
+            assert [v["uri"] for v in in_use["violations"]] == [incident], in_use
+            status = await ConnectorPackClient(admin).status(
+                tenant_id=TEST_TENANT, connector=connector
+            )
+            assert status.head is not None
+            assert (
+                status.head.binding_revision,
+                str(status.head.pack_digest),
+            ) == active
+        finally:
+            await admin.close()
+
+    with _engine(tmp_path, persist, OTHER_TENANT, bootstrap=True) as socket_path:
+        asyncio.run(other_tenant(socket_path))
+    with _engine(tmp_path, persist, TEST_TENANT, bootstrap=False) as socket_path:
+        asyncio.run(importing_tenant(socket_path))

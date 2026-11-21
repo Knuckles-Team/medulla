@@ -91,11 +91,13 @@ pub(crate) async fn commit_pack_projection(
     )?;
     let core =
         resident_internal_graph(state, req_id, verified, &graph_name, idempotency_key).await?;
-    prevalidate_pack_projection(&core, connector, record_id, &documents).await?;
+    prevalidate_pack_projection(&core, verified.tenant(), connector, record_id, &documents)
+        .await?;
     let result_graph_name = graph_name.clone();
     let source = connector.clone();
     let connector = connector.clone();
     let record_id = record_id.to_string();
+    let tenant = verified.tenant().to_string();
     commit_internal_graph_write(
         state,
         req_id,
@@ -107,6 +109,7 @@ pub(crate) async fn commit_pack_projection(
             let committed = apply_pack_source(
                 core,
                 &result_graph_name,
+                &tenant,
                 &connector,
                 &record_id,
                 PackSourceDocuments {
@@ -406,10 +409,12 @@ async fn handle_attach_pack_gateway(
     let connector = connector.clone();
     let expected_digest = expected_digest.map(str::to_owned);
     let graph_name = ctx.graph_name.to_string();
+    let tenant = tenant_id.to_string();
     medulla_server_ops::api::ingest::graph::commit_gateway(ctx, plan, method, move |core| {
         apply_pack_source(
             core,
             &graph_name,
+            &tenant,
             &connector,
             &resolved.record_id,
             PackSourceDocuments {
@@ -441,9 +446,12 @@ pub(crate) struct PackSourceDocuments {
 /// only connector identity, immutable record identity, and engine-owned bytes;
 /// it constructs the reserved key and provenance itself.  Consequently neither
 /// a wire caller nor a pack worker can forge a core/admin/ingestion origin.
+/// `tenant` is the verified tenant whose pack head is attached; the source
+/// records it so the catalog can select a tenant's composing graphs.
 pub(crate) fn apply_pack_source(
     core: &GraphCore,
     graph_name: &str,
+    tenant: &str,
     connector: &medulla_types::contract::ResourceId,
     record_id: &str,
     documents: PackSourceDocuments,
@@ -452,6 +460,7 @@ pub(crate) fn apply_pack_source(
     use medulla_catalog_types::graph_schema::GraphSchemaCommitted;
     let (mut sources, changed, records) = pack_candidate_sources(
         &core.schema_sources(),
+        tenant,
         connector,
         record_id,
         documents,
@@ -490,12 +499,14 @@ pub(crate) fn apply_pack_source(
 /// depends on this warm-up.
 async fn prevalidate_pack_projection(
     core: &Arc<GraphCore>,
+    tenant: &str,
     connector: &medulla_types::contract::ResourceId,
     record_id: &str,
     documents: &PackProjectionDocuments,
 ) -> Result<(), String> {
     let (candidate, _, _) = pack_candidate_sources(
         &core.schema_sources(),
+        tenant,
         connector,
         record_id,
         PackSourceDocuments {
@@ -519,6 +530,7 @@ async fn prevalidate_pack_projection(
 /// `composed_digest`.
 fn pack_candidate_sources(
     current: &medulla_graph_core::graph::GraphSchemaSources,
+    tenant: &str,
     connector: &medulla_types::contract::ResourceId,
     record_id: &str,
     documents: PackSourceDocuments,
@@ -560,6 +572,7 @@ fn pack_candidate_sources(
         medulla_graph_core::graph::SchemaSourceOrigin::Pack {
             connector: connector.as_str().to_string(),
             record_id: record_id.to_string(),
+            tenant: Some(tenant.to_string()),
         },
         shapes_ttl,
         ontology_ttl,

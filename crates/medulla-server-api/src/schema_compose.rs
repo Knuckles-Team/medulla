@@ -677,6 +677,7 @@ ex:Shape a sh:NodeShape ; sh:targetClass ex:Thing ;
             SchemaSourceOrigin::Pack {
                 connector: "example".to_string(),
                 record_id: "pack:example:1".to_string(),
+                tenant: None,
             },
             None,
             Some(Arc::from(ontology)),

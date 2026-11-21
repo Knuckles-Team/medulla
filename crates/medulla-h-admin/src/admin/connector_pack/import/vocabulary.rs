@@ -137,6 +137,7 @@ mod compose {
                 SchemaSourceOrigin::Pack {
                     connector: request.index.connector.as_str().to_string(),
                     record_id: format!("import:{}", request.index.pack_digest.to_hex()),
+                    tenant: Some(request.context.tenant_id.clone()),
                 },
                 None,
                 ontology,
