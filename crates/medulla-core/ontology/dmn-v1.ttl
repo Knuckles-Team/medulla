@@ -70,6 +70,17 @@
     rdfs:comment "The declared type name of a clause or an input data, kept verbatim." ;
     rdfs:range xsd:string .
 
+:dmnTable a owl:DatatypeProperty ;
+    rdfs:label "dmnTable" ;
+    rdfs:comment "The IRI text of the decision table a rule or clause belongs to." ;
+    rdfs:range xsd:string .
+
+:dmnDecision a owl:DatatypeProperty ;
+    rdfs:label "dmnDecision" ;
+    rdfs:comment "The IRI text of the decision whose logic a decision table is." ;
+    rdfs:domain :DmnDecisionTable ;
+    rdfs:range xsd:string .
+
 :dmnRuleIndex a owl:DatatypeProperty ;
     rdfs:label "dmnRuleIndex" ;
     rdfs:comment "The zero-based position of a rule in its decision table." ;

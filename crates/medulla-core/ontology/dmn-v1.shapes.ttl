@@ -1,10 +1,16 @@
 @prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+
+:DmnShapesPrefixes a owl:Ontology ;
+    sh:declare [ sh:prefix "" ; sh:namespace "https://knuckles-team.github.io/ontology/core#"^^xsd:anyURI ] .
 
 :DmnDecisionTableShape a sh:NodeShape ;
     sh:targetClass :DmnDecisionTable ;
     sh:property [
         sh:path :dmnHitPolicy ;
+        sh:minCount 1 ;
         sh:maxCount 1 ;
         sh:in ( "UNIQUE" "FIRST" "PRIORITY" "ANY" "COLLECT" "RULE ORDER" "OUTPUT ORDER" ) ;
     ] ;
@@ -12,4 +18,24 @@
         sh:path :dmnAggregation ;
         sh:maxCount 1 ;
         sh:in ( "SUM" "MIN" "MAX" "COUNT" ) ;
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A dmnAggregation appears only with the COLLECT hit policy." ;
+        sh:prefixes :DmnShapesPrefixes ;
+        sh:select """SELECT $this WHERE { $this :dmnAggregation ?a ; :dmnHitPolicy ?p . FILTER(?p != "COLLECT") }""" ;
     ] .
+
+:DmnDecisionShape a sh:NodeShape ;
+    sh:targetClass :DmnDecision ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A dmnRequiresDecision chain does not return to its start." ;
+        sh:prefixes :DmnShapesPrefixes ;
+        sh:select """SELECT $this WHERE { $this :dmnRequiresDecision+ $this }""" ;
+    ] .
+
+:DmnRuleShape a sh:NodeShape ;
+    sh:targetClass :DmnRule ;
+    sh:property [ sh:path :dmnTable ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ] ;
+    sh:property [ sh:path :dmnRuleIndex ; sh:minCount 1 ; sh:maxCount 1 ] .

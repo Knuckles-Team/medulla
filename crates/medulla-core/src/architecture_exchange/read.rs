@@ -23,7 +23,8 @@ fn lift(error: ProcessExchangeError) -> ArchimateExchangeError {
         ProcessExchangeError::NamespaceUnknown { namespace } => {
             ArchimateExchangeError::NamespaceUnknown { namespace }
         }
-        ProcessExchangeError::NotDeployable { .. } => {
+        ProcessExchangeError::NotDeployable { .. }
+        | ProcessExchangeError::RuleEntriesMismatch { .. } => {
             ArchimateExchangeError::Malformed { line: 0, column: 0 }
         }
     }

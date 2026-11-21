@@ -114,8 +114,8 @@ fn clause(element: &XmlElement, expression: String) -> DmnClause {
     }
 }
 
-fn table(element: &XmlElement) -> DmnTable {
-    DmnTable {
+fn table(element: &XmlElement) -> Result<DmnTable, ProcessExchangeError> {
+    let table = DmnTable {
         id: id_of(element),
         hit_policy: element.attr("hitPolicy").unwrap_or("UNIQUE").to_owned(),
         aggregation: element.attr("aggregation").map(str::to_owned),
@@ -141,7 +141,23 @@ fn table(element: &XmlElement) -> DmnTable {
                     .collect(),
             })
             .collect(),
+    };
+    // One input entry per input clause and one output entry per output clause:
+    // positional entries are not one RDF predicate, so the import enforces it.
+    for rule in &table.rules {
+        if rule.input_entries.len() != table.inputs.len()
+            || rule.output_entries.len() != table.outputs.len()
+        {
+            return Err(ProcessExchangeError::RuleEntriesMismatch {
+                rule_id: rule.id.clone(),
+                input_entries: rule.input_entries.len() as u64,
+                input_clauses: table.inputs.len() as u64,
+                output_entries: rule.output_entries.len() as u64,
+                output_clauses: table.outputs.len() as u64,
+            });
+        }
     }
+    Ok(table)
 }
 
 fn text_of_entry(entry: &XmlElement) -> String {
@@ -175,7 +191,7 @@ pub fn parse_dmn(bytes: &[u8], limits: XmlLimits) -> Result<DmnDocument, Process
                 };
                 for part in &child.children {
                     match part.local.as_str() {
-                        "decisionTable" => decision.table = Some(table(part)),
+                        "decisionTable" => decision.table = Some(table(part)?),
                         "informationRequirement" => {
                             for reference in &part.children {
                                 let kind = match reference.local.as_str() {

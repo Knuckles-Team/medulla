@@ -54,6 +54,15 @@ pub enum ProcessExchangeError {
     TooLarge { bytes: u64 },
     NamespaceUnknown { namespace: String },
     NotDeployable { reason: String },
+    /// A decision-table rule whose entries do not match the table's clauses
+    /// (MEDULLA-ORCH-VOCAB-R014.6).
+    RuleEntriesMismatch {
+        rule_id: String,
+        input_entries: u64,
+        input_clauses: u64,
+        output_entries: u64,
+        output_clauses: u64,
+    },
 }
 
 impl std::fmt::Display for ProcessExchangeError {
@@ -68,6 +77,16 @@ impl std::fmt::Display for ProcessExchangeError {
                 write!(f, "process document namespace {namespace} is unknown")
             }
             Self::NotDeployable { reason } => write!(f, "workflow is not deployable: {reason}"),
+            Self::RuleEntriesMismatch {
+                rule_id,
+                input_entries,
+                input_clauses,
+                output_entries,
+                output_clauses,
+            } => write!(
+                f,
+                "rule {rule_id} has {input_entries} of {input_clauses} input entries and {output_entries} of {output_clauses} output entries"
+            ),
         }
     }
 }

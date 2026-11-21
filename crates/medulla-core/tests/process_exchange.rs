@@ -445,3 +445,25 @@ fn dmn_write_then_read_keeps_digest() {
         Err(ProcessExchangeError::NotDeployable { .. })
     ));
 }
+
+// spec: MEDULLA-ORCH-VOCAB-R014.6
+#[test]
+fn dmn_rule_with_missing_entry_is_refused() {
+    use medulla_core::process_exchange::dmn_read::parse_dmn;
+    use medulla_core::process_exchange::xml_tree::XmlLimits;
+    let planted = DMN_FIXTURE.replace(
+        r#"<input id="i1" label="Amount">"#,
+        r#"<input id="i0" label="Other"><inputExpression typeRef="number"><text>other</text></inputExpression></input><input id="i1" label="Amount">"#,
+    );
+    // The first table now has two input clauses but each rule keeps one entry.
+    assert_eq!(
+        parse_dmn(planted.as_bytes(), XmlLimits::default()),
+        Err(ProcessExchangeError::RuleEntriesMismatch {
+            rule_id: "r1".into(),
+            input_entries: 1,
+            input_clauses: 2,
+            output_entries: 1,
+            output_clauses: 1,
+        })
+    );
+}
