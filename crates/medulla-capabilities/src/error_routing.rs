@@ -129,7 +129,7 @@ const METHOD_PREFIXES: &[(&str, &[&str])] = &[
     ),
     ("Decide", &["DECISION_", "COMPONENT_", "CORRUPT_DECISION_"]),
     // MEDULLA-DECISION-ENGINE-R652.4: the claim surface's refusal codes.
-    ("Claims", &["ARTIFACT_", "CLAIM_", "EVIDENCE_"]),
+    ("Claims", &["ARTIFACT_", "CLAIM_", "EVIDENCE_", "PROOF_"]),
     // MEDULLA-DECISION-ENGINE-R653.4: the loop surface's refusal codes.
     ("Loops", &["LOOP_", "GAP_", "RATCHET_"]),
     // MEDULLA-DECISION-ENGINE-R700.4: the belief surface's refusal codes.

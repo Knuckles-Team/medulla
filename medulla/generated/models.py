@@ -30850,6 +30850,23 @@ class ClaimOpPropose(BaseModel):
     op: Literal["propose"]
 
 
+class ProofVerdict(str, Enum):
+    PASS = "pass"
+    FAIL = "fail"
+
+
+class ProofReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact_digest: Annotated[str, Field(min_length=64, max_length=64)]
+    axioms: list[str]
+    checker_id: Annotated[str, Field(min_length=1)]
+    declaration: Annotated[str, Field(min_length=1)]
+    has_sorry: bool
+    toolchain_version: Annotated[str, Field(min_length=1)]
+    verdict: ProofVerdict
+
+
 class ClaimOpRecordEvidence(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -30858,6 +30875,7 @@ class ClaimOpRecordEvidence(BaseModel):
     evidence_id: str
     feed: FeedItem | None = None
     op: Literal["record_evidence"]
+    proof: ProofReceipt | None = None
     source_digest: str
     stances: dict[str, Stance] | None = None
     supports: bool
@@ -31131,6 +31149,7 @@ class Evidence(BaseModel):
     channel: EvidenceChannel
     claim_id: str
     evidence_id: str
+    proof: ProofReceipt | None = None
     source_digest: str
     supports: bool
     tenant_id: str
@@ -38098,6 +38117,8 @@ __all__ = [
     "ProbQuerySample",
     "ProcessMiningResult",
     "ProductPort",
+    "ProofReceipt",
+    "ProofVerdict",
     "ProductPortKind",
     "ProfileOp",
     "ProfileOpGetDocumentSet",

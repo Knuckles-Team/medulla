@@ -44,6 +44,14 @@ pub const REFUSALS: &[(RefusalCode, &str)] = &[
         RefusalCode::new("EVIDENCE_WEIGHT_OUT_OF_RANGE"),
         "the evidence weight is above 1000000 ppm",
     ),
+    (
+        RefusalCode::new("PROOF_RECEIPT_INVALID"),
+        "a proof receipt is malformed, off the process channel, or does not support the claim",
+    ),
+    (
+        RefusalCode::new("PROOF_SORRY_PRESENT"),
+        "a pass proof receipt whose proof holds an unfinished step",
+    ),
 ];
 
 /// The lifecycle state of a claim.
@@ -161,6 +169,65 @@ pub enum EvidenceChannel {
     Mined,
 }
 
+/// The verdict of an external proof checker.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ProofVerdict {
+    Pass,
+    Fail,
+}
+
+/// Typed evidence that an external checker verified a formal declaration
+/// (MEDULLA-DECISION-ENGINE-R652.10). Medulla never runs the checker: a
+/// connector runs it and sends the receipt.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProofReceipt {
+    pub checker_id: String,
+    pub toolchain_version: String,
+    pub declaration: String,
+    /// SHA-256 of the checked artifact: 64 lower-case hex characters.
+    pub artifact_digest: String,
+    /// The axioms the proof depends on, sorted and deduplicated.
+    pub axioms: Vec<String>,
+    /// True when the proof holds an unfinished step.
+    pub has_sorry: bool,
+    pub verdict: ProofVerdict,
+}
+
+impl ProofReceipt {
+    /// Checks the receipt: every string field is non-empty, the digest is 64
+    /// lower-case hex characters, and a `pass` verdict never carries
+    /// `has_sorry`.
+    pub fn check(&self) -> Result<(), ServerErrorCode> {
+        let digest_ok = self.artifact_digest.len() == 64
+            && self
+                .artifact_digest
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b));
+        if self.checker_id.is_empty()
+            || self.toolchain_version.is_empty()
+            || self.declaration.is_empty()
+            || !digest_ok
+        {
+            return Err(ServerErrorCode::ProofReceiptInvalid);
+        }
+        if self.verdict == ProofVerdict::Pass && self.has_sorry {
+            return Err(ServerErrorCode::ProofSorryPresent);
+        }
+        Ok(())
+    }
+
+    /// The receipt with `axioms` sorted and deduplicated.
+    pub fn normalised(mut self) -> Self {
+        self.axioms.sort();
+        self.axioms.dedup();
+        self
+    }
+}
+
 /// One piece of evidence for or against a claim.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -175,13 +242,24 @@ pub struct Evidence {
     /// Weight in parts per million, `[0, WEIGHT_PPM_MAX]`.
     pub weight_ppm: u32,
     pub source_digest: String,
+    /// A machine-checked proof receipt; such evidence moves no log-odds.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub proof: Option<ProofReceipt>,
 }
 
 impl Evidence {
-    /// Checks the weight bound.
+    /// Checks the weight bound and, when the evidence carries a proof receipt,
+    /// the receipt: it must sit on the `process` channel, support the claim and
+    /// be well formed.
     pub fn check(&self) -> Result<(), ServerErrorCode> {
         if self.weight_ppm > WEIGHT_PPM_MAX {
             return Err(ServerErrorCode::EvidenceWeightOutOfRange);
+        }
+        if let Some(proof) = &self.proof {
+            if self.channel != EvidenceChannel::Process || !self.supports {
+                return Err(ServerErrorCode::ProofReceiptInvalid);
+            }
+            proof.check()?;
         }
         Ok(())
     }
@@ -282,6 +360,9 @@ pub enum ClaimOp {
         stances: BTreeMap<String, Stance>,
         #[serde(default)]
         feed: Option<FeedItem>,
+        /// A machine-checked proof receipt (MEDULLA-DECISION-ENGINE-R652.10).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        proof: Option<ProofReceipt>,
     },
     /// Seal and store a research artifact over a cohort.
     CompileArtifact {
@@ -357,7 +438,78 @@ mod tests {
             supports: true,
             weight_ppm: 750_000,
             source_digest: "sha256:aa".to_string(),
+            proof: None,
         }
+    }
+
+    fn sample_receipt() -> ProofReceipt {
+        ProofReceipt {
+            checker_id: "kernel-checker".to_string(),
+            toolchain_version: "1.2.3".to_string(),
+            declaration: "Mathlib.Foo.bar".to_string(),
+            artifact_digest: "ab".repeat(32),
+            axioms: vec!["propext".to_string(), "quot.sound".to_string()],
+            has_sorry: false,
+            verdict: ProofVerdict::Pass,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R652.10
+    #[test]
+    fn proof_receipt_round_trips_and_refuses_invalid() {
+        let mut evidence = Evidence {
+            channel: EvidenceChannel::Process,
+            proof: Some(sample_receipt()),
+            ..sample_evidence()
+        };
+        // Existing record bytes are unchanged: no `proof` key without a receipt.
+        let plain = serde_json::to_value(sample_evidence()).unwrap();
+        assert!(plain.get("proof").is_none());
+        // A receipt round-trips and passes the check.
+        let json = serde_json::to_value(&evidence).unwrap();
+        assert_eq!(json["proof"]["verdict"], "pass");
+        let back: Evidence = serde_json::from_value(json).unwrap();
+        assert_eq!(back, evidence);
+        assert!(evidence.check().is_ok());
+        // The receipt's axioms normalise to sorted, deduplicated order.
+        let messy = ProofReceipt {
+            axioms: vec!["b".into(), "a".into(), "b".into()],
+            ..sample_receipt()
+        }
+        .normalised();
+        assert_eq!(messy.axioms, ["a", "b"]);
+
+        // Off the process channel, or not supporting: PROOF_RECEIPT_INVALID.
+        let mut off_channel = evidence.clone();
+        off_channel.channel = EvidenceChannel::Outcome;
+        assert_eq!(off_channel.check(), Err(ServerErrorCode::ProofReceiptInvalid));
+        let mut opposing = evidence.clone();
+        opposing.supports = false;
+        assert_eq!(opposing.check(), Err(ServerErrorCode::ProofReceiptInvalid));
+
+        // A malformed receipt: an empty field or a bad digest.
+        for broken in [
+            ProofReceipt { checker_id: String::new(), ..sample_receipt() },
+            ProofReceipt { toolchain_version: String::new(), ..sample_receipt() },
+            ProofReceipt { declaration: String::new(), ..sample_receipt() },
+            ProofReceipt { artifact_digest: "ab".repeat(31), ..sample_receipt() },
+            ProofReceipt { artifact_digest: "AB".repeat(32), ..sample_receipt() },
+            ProofReceipt { artifact_digest: "zz".repeat(32), ..sample_receipt() },
+        ] {
+            evidence.proof = Some(broken);
+            assert_eq!(evidence.check(), Err(ServerErrorCode::ProofReceiptInvalid));
+        }
+
+        // A pass that still holds an unfinished step: PROOF_SORRY_PRESENT; a
+        // failing verdict may carry it.
+        evidence.proof = Some(ProofReceipt { has_sorry: true, ..sample_receipt() });
+        assert_eq!(evidence.check(), Err(ServerErrorCode::ProofSorryPresent));
+        evidence.proof = Some(ProofReceipt {
+            has_sorry: true,
+            verdict: ProofVerdict::Fail,
+            ..sample_receipt()
+        });
+        assert!(evidence.check().is_ok());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R652.1

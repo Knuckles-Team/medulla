@@ -215,6 +215,7 @@ pub(super) mod served {
                     source_digest,
                     stances,
                     feed,
+                    proof,
                 } => {
                     let evidence = self.evidence_of(
                         evidence_id,
@@ -223,6 +224,7 @@ pub(super) mod served {
                         supports,
                         weight_ppm,
                         source_digest,
+                        proof,
                     )?;
                     payload_of::<ClaimsRecordEvidence>(
                         self.record_evidence(evidence, stances, feed)?,
@@ -386,6 +388,7 @@ pub(super) mod served {
             supports: bool,
             weight_ppm: u32,
             source_digest: String,
+            proof: Option<medulla_decision_types::claims::ProofReceipt>,
         ) -> Result<Evidence, String> {
             let Some(channel) = channel else {
                 return Err(refuse(ServerErrorCode::EvidenceNoChannel, &evidence_id));
@@ -399,7 +402,7 @@ pub(super) mod served {
             if evidence_id.is_empty() {
                 return Err(invalid("evidence_id is empty"));
             }
-            Ok(Evidence {
+            let evidence = Evidence {
                 tenant_id: self.tenant.clone(),
                 evidence_id,
                 claim_id,
@@ -407,7 +410,16 @@ pub(super) mod served {
                 supports,
                 weight_ppm,
                 source_digest,
-            })
+                proof: proof.map(medulla_decision_types::claims::ProofReceipt::normalised),
+            };
+            // A proof receipt is checked before any state changes: a refusal
+            // returns here and records nothing.
+            if evidence.proof.is_some() {
+                evidence
+                    .check()
+                    .map_err(|code| refuse(code, &evidence.evidence_id))?;
+            }
+            Ok(evidence)
         }
 
         fn record_evidence(

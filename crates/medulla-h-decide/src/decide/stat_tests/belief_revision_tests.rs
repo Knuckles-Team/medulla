@@ -64,6 +64,7 @@ async fn claim_with_evidence(h: &Harness, claim_id: &str, supports: bool, weight
             source_digest: format!("sha256:{claim_id}"),
             stances: BTreeMap::new(),
             feed: None,
+            proof: None,
         },
     )
     .await
@@ -186,6 +187,7 @@ async fn belief_refusals_leave_state_unchanged() {
             source_digest: "sha256:disk-is-fast-2".to_string(),
             stances: BTreeMap::new(),
             feed: None,
+            proof: None,
         },
     )
     .await
@@ -353,6 +355,7 @@ async fn belief_pass_proposes_and_never_retracts() {
             source_digest: "sha256:disk-is-fast-2".to_string(),
             stances: BTreeMap::new(),
             feed: None,
+            proof: None,
         },
     )
     .await

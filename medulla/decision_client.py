@@ -885,9 +885,14 @@ def claim_evidence_op(
     source_digest: str,
     stances: Mapping[str, str] | None = None,
     feed: Mapping[str, Any] | None = None,
+    proof: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Record one piece of evidence; ``stances`` maps perspective to stance."""
-    return {
+    """Record one piece of evidence; ``stances`` maps perspective to stance.
+
+    ``proof`` is a machine-checked proof receipt (R652.10): a receipt must sit on
+    the ``process`` channel with ``supports=True`` and moves no log-odds.
+    """
+    op: dict[str, Any] = {
         "op": "record_evidence",
         "evidence_id": evidence_id,
         "claim_id": claim_id,
@@ -898,6 +903,9 @@ def claim_evidence_op(
         "stances": dict(stances or {}),
         "feed": dict(feed) if feed is not None else None,
     }
+    if proof is not None:
+        op["proof"] = dict(proof)
+    return op
 
 
 def claim_compile_op(

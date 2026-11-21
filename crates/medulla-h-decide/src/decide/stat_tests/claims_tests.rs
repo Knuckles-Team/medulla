@@ -7,7 +7,8 @@ use std::collections::BTreeMap;
 use super::*;
 use crate::decide::claims::handle_claims;
 use medulla_decision_types::claims::{
-    ClaimGetResult, ClaimOp, ClaimRecord, ClaimState, EvidenceChannel, ResearchArtifact, Stance,
+    ClaimGetResult, ClaimOp, ClaimRecord, ClaimState, EvidenceChannel, ProofReceipt,
+    ProofVerdict, ResearchArtifact, Stance,
 };
 
 const OTHER_TENANT: &str = "tenant-claims-other";
@@ -60,7 +61,34 @@ fn evidence(
         source_digest: format!("sha256:{evidence_id}"),
         stances: BTreeMap::new(),
         feed: None,
+        proof: None,
     }
+}
+
+fn proof_receipt() -> ProofReceipt {
+    ProofReceipt {
+        checker_id: "kernel-checker".to_string(),
+        toolchain_version: "1.2.3".to_string(),
+        declaration: "Mathlib.Foo.bar".to_string(),
+        artifact_digest: "ab".repeat(32),
+        axioms: vec!["quot.sound".to_string(), "propext".to_string(), "propext".to_string()],
+        has_sorry: false,
+        verdict: ProofVerdict::Pass,
+    }
+}
+
+fn receipt_evidence(
+    claim_id: &str,
+    evidence_id: &str,
+    channel: EvidenceChannel,
+    supports: bool,
+    proof: ProofReceipt,
+) -> ClaimOp {
+    let mut op = evidence(claim_id, evidence_id, Some(channel), supports, 900_000);
+    if let ClaimOp::RecordEvidence { proof: slot, .. } = &mut op {
+        *slot = Some(proof);
+    }
+    op
 }
 
 fn get_claim(claim_id: &str) -> ClaimOp {
@@ -391,4 +419,76 @@ async fn claim_evidence_reads_back_through_a_second_principal() {
         call::<ClaimGetResult>(&h, "claim-reader", OTHER_TENANT, get_claim(id)).await,
         Err("CLAIM_NOT_FOUND".to_string())
     );
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R652.10: a proof receipt is recorded through
+/// the one evidence path, moves no log-odds, keeps its axioms sorted and
+/// deduplicated, and each refusal changes no state.
+// spec: MEDULLA-DECISION-ENGINE-R652.10
+#[tokio::test]
+async fn proof_receipt_records_through_evidence_path_and_refusals_change_no_state() {
+    let h = Harness::new().await;
+    let id = "proof-claim";
+    let _: ClaimRecord = writer(&h, propose(id)).await.unwrap();
+
+    let recorded: ClaimRecord = writer(
+        &h,
+        receipt_evidence(id, "proof-e1", EvidenceChannel::Process, true, proof_receipt()),
+    )
+    .await
+    .unwrap();
+    // The receipt never moves the log-odds, however heavy its weight.
+    assert_eq!(recorded.log_odds_micro, 0);
+    let stored = recorded.evidence.last().unwrap();
+    let receipt = stored.proof.as_ref().expect("the receipt is stored on the evidence");
+    assert_eq!(receipt.axioms, ["propext", "quot.sound"]);
+    assert_eq!(receipt.verdict, ProofVerdict::Pass);
+
+    let before = read_claim(&h, id).await;
+    let invalid = |mut receipt: ProofReceipt| {
+        receipt.artifact_digest = "not-hex".to_string();
+        receipt
+    };
+    let sorry = ProofReceipt {
+        has_sorry: true,
+        ..proof_receipt()
+    };
+    let refused: Vec<(&str, Result<ClaimRecord, String>)> = vec![
+        (
+            "PROOF_RECEIPT_INVALID",
+            writer(
+                &h,
+                receipt_evidence(id, "proof-e2", EvidenceChannel::Process, true, invalid(proof_receipt())),
+            )
+            .await,
+        ),
+        (
+            "PROOF_RECEIPT_INVALID",
+            writer(
+                &h,
+                receipt_evidence(id, "proof-e3", EvidenceChannel::Outcome, true, proof_receipt()),
+            )
+            .await,
+        ),
+        (
+            "PROOF_RECEIPT_INVALID",
+            writer(
+                &h,
+                receipt_evidence(id, "proof-e4", EvidenceChannel::Process, false, proof_receipt()),
+            )
+            .await,
+        ),
+        (
+            "PROOF_SORRY_PRESENT",
+            writer(
+                &h,
+                receipt_evidence(id, "proof-e5", EvidenceChannel::Process, true, sorry),
+            )
+            .await,
+        ),
+    ];
+    for (code, result) in refused {
+        assert_eq!(result, Err(code.to_string()));
+    }
+    assert_eq!(read_claim(&h, id).await, before, "a refusal changes no state");
 }

@@ -76,14 +76,20 @@ fn contribution(evidence: &Evidence, knobs: &ClaimKnobs) -> i64 {
     }
 }
 
-/// Sum the signed contributions of `evidence` in micro-nats.
+/// Sum the signed contributions of `evidence` in micro-nats. Evidence that
+/// carries a proof receipt is skipped.
 pub fn combine_evidence<'a>(
     evidence: impl IntoIterator<Item = &'a Evidence>,
     knobs: &ClaimKnobs,
 ) -> i64 {
-    evidence.into_iter().fold(0i64, |sum, item| {
-        sum.saturating_add(contribution(item, knobs))
-    })
+    // A proof receipt is typed evidence of a checker's verdict, never weight:
+    // it moves no log-odds (MEDULLA-DECISION-ENGINE-R652.10).
+    evidence
+        .into_iter()
+        .filter(|item| item.proof.is_none())
+        .fold(0i64, |sum, item| {
+            sum.saturating_add(contribution(item, knobs))
+        })
 }
 
 /// Whether the log-odds guard of the edge into `to` holds. Entering
@@ -238,6 +244,7 @@ mod tests {
             supports,
             weight_ppm: weight,
             source_digest: format!("sha256:{id}"),
+            proof: None,
         }
     }
 

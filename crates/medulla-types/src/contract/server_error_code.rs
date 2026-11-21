@@ -763,6 +763,10 @@ closed_error_codes! {
         ClaimNotFound => "CLAIM_NOT_FOUND",
         EvidenceNoChannel => "EVIDENCE_NO_CHANNEL",
         EvidenceWeightOutOfRange => "EVIDENCE_WEIGHT_OUT_OF_RANGE",
+        /// A proof receipt is malformed, is off the `process` channel or has `supports: false` (MEDULLA-DECISION-ENGINE-R652.10).
+        ProofReceiptInvalid => "PROOF_RECEIPT_INVALID",
+        /// A `pass` proof receipt whose proof still holds an unfinished step (MEDULLA-DECISION-ENGINE-R652.10).
+        ProofSorryPresent => "PROOF_SORRY_PRESENT",
         ArtifactSealViolation => "ARTIFACT_SEAL_VIOLATION",
         LoopNotFound => "LOOP_NOT_FOUND",
         LoopStateUnknown => "LOOP_STATE_UNKNOWN",
