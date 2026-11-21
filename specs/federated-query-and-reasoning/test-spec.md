@@ -109,7 +109,7 @@ These are required acceptance cases, not claims of completed tests.
 - `MEDULLA-FEDERATED-QUERY-R082.3`: `crates/medulla-exec/src/exec.rs::tests::execute_returns_stop_verdict_with_history`.
 - `MEDULLA-FEDERATED-QUERY-R082.4`: `crates/medulla-plan/src/retrieval_stop.rs::tests::uncalibrated_round_refuses`.
 - `MEDULLA-FEDERATED-QUERY-R082.5`: `crates/medulla-plan/src/retrieval_stop.rs::tests::stop_premise_lists_margin_and_reason`.
-- `MEDULLA-FEDERATED-QUERY-R082.6`: `tests/retrieval/test_stop_rule_served.py::test_repeat_with_margin_stops`.
+- `MEDULLA-FEDERATED-QUERY-R082.6`: `tests/retrieval/test_stop_rule_served.py::test_repeat_with_margin_stops` (wire behaviour, no span assertion) and `tests/retrieval_round_served.rs::terminal_stop_runs_no_later_retrieval` (the `medulla.retrieval.execute` span count).
 
 ### MEDULLA-FEDERATED-QUERY-R083 tests
 
@@ -257,7 +257,7 @@ The following are proving targets, not execution receipts. Runtime delivery requ
 
 - **MEDULLA-FEDERATED-QUERY-R085:** All child tests and linked consumer evidence. Each child must pass; these definitions do not establish runtime delivery.
 - **MEDULLA-FEDERATED-QUERY-R085.1:** `crates/medulla-result-types/src/source_query.rs::tests::approval_records_round_trip` (planned). Round trips preserve every binding. Invalid references, parameter types, nonfinite values, absent snapshot identity and zero/unbounded limits refuse.
-- **MEDULLA-FEDERATED-QUERY-R085.2:** `crates/medulla-h-jobs/src/work_item/source_query_tests.rs::approval_requires_authority_and_native_commit` (planned). An unregistered source refuses `SOURCE_QUERY_UNAUTHORIZED` and a changed schema digest refuses `SOURCE_QUERY_STALE_SOURCE`. A generic `IssueControlLease` of `source.query.approval` refuses `ACCESS_DENIED`. A wire `admission` is replaced by the one `source_query_authority` derives. A success writes one lease row through `source_query::issue` whose grant holds identity and digests and no SQL text or parameter value; its `query_digest` equals `compute_query_digest()`. No external SQL executes during approval.
+- **MEDULLA-FEDERATED-QUERY-R085.2:** `crates/medulla-h-jobs/src/work_item/source_query_tests.rs::approval_requires_authority_and_native_commit` (planned). An unregistered source refuses `SOURCE_QUERY_UNAUTHORIZED` and a changed schema digest refuses `SOURCE_QUERY_STALE_SOURCE`. A generic `IssueControlLease` of `source.query.approval` refuses `ACCESS_DENIED`. A wire `admission` is replaced by the one `source_query_authority` derives. A success writes one lease row through `source_query::issue` whose grant holds identity and digests and no SQL text or parameter value; its `query_digest` equals `compute_query_digest()`. No external SQL executes during approval. Registration: `crates/medulla-protocol-types/src/protocol/method/carrier.rs::tests::approve_source_query_cannot_be_hidden_inside_a_generic_carrier` (L1) asserts `CarrierRefusal::NativeAuthority`, and the `crates/medulla-capabilities/tests/consistency/snapshots.rs` lists include `ApproveSourceQuery`.
 - **MEDULLA-FEDERATED-QUERY-R085.3:** `crates/medulla-h-query/src/federation/source_query_tests.rs::changed_or_revoked_approval_refuses` (planned). Changing any request field, digest or expiry refuses `SOURCE_QUERY_UNAUTHORIZED`; another principal, agent, delegation chain or graph refuses `SOURCE_QUERY_UNAUTHORIZED`. A revoked or consumed lease refuses `SOURCE_QUERY_APPROVAL_REVOKED`, an expired one `SOURCE_QUERY_APPROVAL_EXPIRED`, a missing one `SOURCE_QUERY_UNAUTHORIZED`, an absent lease store `SOURCE_QUERY_VERIFICATION_UNAVAILABLE`, and a changed observed revision `SOURCE_QUERY_STALE_SOURCE`. Success returns `lease_revision` equal to the lease row revision and `valid_until_ms` equal to the smaller expiry. Verification writes nothing, grants no SQL effect and creates no bearer credential.
 - **MEDULLA-FEDERATED-QUERY-R085.4:** `crates/medulla-federation/src/federation_sql_tests.rs::approved_source_query_has_no_write_effects`. Native parameter binding preserves values and query meaning. Supported projections, predicates, ordering and limits match the query oracle. Unknown dialects, functions or effects refuse without issuing approval.
 - **MEDULLA-FEDERATED-QUERY-R085.5:** `tests/source_query_approval_served.rs::real_dispatch_issues_and_verifies_approval` (planned). Real authenticated dispatch issues through `route_native_lifecycle_ops` → `source_query_approval::try_handle` → `work_item::try_handle` and verifies through `foreign_source_handlers::try_handle`. The foreign-source handler does not handle `ApproveSourceQuery`. No parallel planner, store or client-side approval authority appears.
@@ -274,13 +274,13 @@ All targets below are planned acceptance, not executed tests or receipts. Use th
 
 - **`MEDULLA-FEDERATED-QUERY-R083.7` / EG:22:** Extend existing R083 behavior/model/refusal acceptance with the support-margin inputs and invariant that unsupported candidates lose. Add a served counterexample with a higher-confidence unsupported candidate and an evidence-supported lower-confidence candidate. Retain current two-candidate, class, abstention and evidence obligations. Producer/consumer path: Planned MERISTEM-RETRIEVAL-R006 prior probe -> served cross-modal query -> medulla_plan::execute -> arbitrate -> ArbitrationVerdict -> harness. R083.3/.6 identify the producer path. This audit does not claim it is implemented. Source review `544b7b0054e8c7cd9a76aedd0d665589d555a0bcf20d1f00679442574936af36`. Exercise the served Medulla producer and named consumer where that owner contract exists. Assert its defined output/refusal. These are planned cases only, not test or receipt evidence.
 
-- **`MEDULLA-FEDERATED-QUERY-R081.10` / EG:25. Source `fb8d54d8554b8158da64f7c9e8bf02ea846e5b411768a0381c2682b2e6302dac`:** Once defined, serve a fixture where all three clocks disagree and another where one clock is absent. Assert the selected basis and its provenance, and trigger exactly the configured bounded fallback only below the declared sufficiency threshold. enough first-pass context must issue no second pass. Stale or conflicting clock provenance and exhausted query budget must return a typed partial/refusal with no unbounded retry. No executable acceptance is currently authorized.
+- **`MEDULLA-FEDERATED-QUERY-R081.10` / EG:25. Source `fb8d54d8554b8158da64f7c9e8bf02ea846e5b411768a0381c2682b2e6302dac`:** Serve a `RetrievalRound` over a fixture where one evidence node's `event_time`, `narrative_time` and `storage_time` disagree and another node lacks `event_time`. Assert `RoundRow.clock` picks `event_time` for the first (with `disagreement: true`, its source, provenance and policy revision `clock-precedence`, and a `retrieval.clock` premise) and `narrative_time` for the second. With a `second_pass` part of four slots: two filled gives sufficiency 0.5 and no queries; one filled gives three planned queries for the first three unmet slots, `budget_exceeded: false`; none filled gives three queries, `budget_exceeded: true` and the `RETRIEVAL_BUDGET_EXCEEDED` premise. A request without `second_pass` returns no `second_pass` field.
 
 - **`MEDULLA-FEDERATED-QUERY-R028.1` / EG:29. Source `2eb8aadb1b6ccc2d5de77a4d1964fc04a4e944bccf9bcc1793e262f146af7583`:** Create one plain row and one row with resolved evidence/policy frames. Compare both with the same structured KnowledgeSet producer. Verify row id/score/projection are unchanged and both frame states are row-local. Independently omit provenance, policy and snapshot binding. Each case must return the typed refusal without a partial row. Keep R045 foreign-row pushdown behavior unchanged. Tests are acceptance targets only. No UQL implementation or served receipt is claimed.
 
-- **`MEDULLA-FEDERATED-QUERY-R005.1` / EG:31. Source `973de1c3b38646a438d057299d8070070f0ef7a2056bb30acff6d1a3814df513`:** For asymmetry, `(a,p,b)` alone is the clean control. Adding `(b,p,a)` creates a violation. It cites the declared asymmetric axiom, both edge ids and evidence refs at pinned graph/ontology revisions. A missing reverse edge is not a violation. Serve positive/control pairs for temporal conflict, cardinality, self-loop and ontology defect. Combine two independent defects and require both diagnostics. Refuse missing kind-specific fields, unknown kinds and stale ontology revisions. Read back graph state to prove validation made no mutation. Retraction remains denied absent explicit authorization.
+- **`MEDULLA-FEDERATED-QUERY-R005.1` / EG:31. Source `973de1c3b38646a438d057299d8070070f0ef7a2056bb30acff6d1a3814df513`:** For asymmetry, `(a,p,b)` alone is the clean control. Adding `(b,p,a)` creates a violation. It cites the declared asymmetric axiom, both edge ids and evidence refs at pinned graph/ontology revisions. A missing reverse edge is not a violation. Serve positive/control pairs for temporal conflict, cardinality, self-loop and ontology defect. Combine two independent defects and require both diagnostics. Refuse a stale pinned ontology revision with `ONTOLOGY_REVISION_STALE`; kind-specific fields are required by the `ViolationDetail` type, and an unknown kind fails to decode (L1 `violation_round_trips_and_rejects_unknown_kind`). Read back graph state to prove validation made no mutation. Retraction remains denied absent explicit authorization.
 
-- **`MEDULLA-FEDERATED-QUERY-R078.7` / EG:59. Source `fd5990a7c9f30e1e1aa0eed9aa08efef4e2ebc8f5f34387598f1c9e577c458dc`:** With category mappings supplied, serve identical company-context queries as two tenants with differing clearances. Verify the authorized tenant receives each mapped category as source-bound references. Exclude denied rows before any source read and copy no source record. Join native time-series values only by the declared series/time key and snapshot. Missing/ambiguous mapping, unverified tenant, stale source revision or cross-tenant join refuses. Current scope-planning acceptance remains covered by R078.1-.6. This new composed view stays held until mappings are exact.
+- **`MEDULLA-FEDERATED-QUERY-R078.7` / EG:59. Source `fd5990a7c9f30e1e1aa0eed9aa08efef4e2ebc8f5f34387598f1c9e577c458dc`:** Seed one `Organization`, `Role`, `DataAsset` (with `series_id` and two points, one after the snapshot) and `SecurityClearance` node per tenant, one synced node with `source` and `EXTERNAL_VERSION_PROPERTY`, and one node whose `clearance` exceeds the caller's labels. Serve `COMPANY CONTEXT` and `COMPANY CONTEXT CATEGORY <each>` as two tenants with differing clearances. Assert each row's provenance `category`, `entity_id`, `source_id`, `source_revision`, `clearance`; the time-series row `ts:<series_id>:<timestamp_ms>` is the point at or before the snapshot and carries no value; the over-cleared node and the other tenant's nodes are absent and no time-series read happens for a dropped data asset. Refusals: `PLAN_SCOPE_UNVERIFIED` with zero reads, `COMPANY_MAPPING_MISSING` for a category whose class the schema lacks, `UQL_E_COMPANY_CATEGORY` for an unknown name. Unit: `crates/medulla-exec/src/exec/company_context.rs::tests::fixed_category_order_and_clearance_subset` (L1). Current scope-planning acceptance remains covered by R078.1-.6.
 
 - **`MEDULLA-FEDERATED-QUERY-R081.9.7.7` / GRAPHOS:24. Source `b2e5de8386b3ca72b59a81ca5fa3193eaf7736af86aca472a720b9e4511961c0`:** Serve all three granularities over a nested authorized section tree. Compare selected path/span ids with an independent tree oracle. Instrument external model, embedding and vector calls and require zero calls on every positive query. Malformed or stale section records and exhausted depth/visit/token limits refuse before extra dispatch. Tenant isolation and existing community traversal outputs remain unchanged. No runtime proof is claimed.
 
@@ -295,7 +295,7 @@ No test named here has run. Names describe acceptance obligations, not evidence.
 
 - **`MEDULLA-FEDERATED-QUERY-R053.100` (EG:37. Source `803f4e4ffbcd939af750e23451469835555beaa37e14ce555ffd0a59c0a3ac48`):** Build-time test enters the Cypher query-construction path. Check generated property keys for plain, reserved, spaced, Unicode and embedded-backtick names. Parse safe output against the Cypher grammar. An unquoted or malformed generated key fails the build. Keep values parameterized, preserve ForeignSourceSpec registration and Spark batch-only capability, and add no served API or runtime receipt. Gate evidence binds renderer source revision, fixture digest and test result.
 
-- **`MEDULLA-FEDERATED-QUERY-R032.100` (AU:43. Source `327ced0e0605f34366c662017d82ac892a481c5ca5f40bba2f3693ba6a5f7649`):** Graph fixtures cover ancestors and descendants across three layers. Include differing historical failure counts, a cycle boundary and missing-history data. Verify both directions and deterministic layer/history contribution. Refuse stale or malformed history, and compare existing R032 propagation outputs unchanged. Producer/consumer boundary: Medulla owns graph impact query/risk decision; Meristem requests and consumes the result. Existing numeric risk helpers are not this two-direction historical impact contract. Require exact source revision, input/output digests, caller and independent readback where specified. These cases are planned only. No implementation or receipt is asserted.
+- **`MEDULLA-FEDERATED-QUERY-R032.100` (AU:43. Source `327ced0e0605f34366c662017d82ac892a481c5ca5f40bba2f3693ba6a5f7649`):** Graph fixtures cover ancestors and descendants across three layers (`layer` = `service`, `os`, `hardware`), with `:Observation` nodes of dataset `deploys` (`outcome` `failure`/`success`, `observationTime` inside and outside the window) linked by `:observedEntity`, a cycle boundary and one node with no observations. Verify both directions, the `failure_rate`, `layer_contribution` and `path_risk` values, `partial: true` with `aggregate_risk` null, the `dataset_digest` and `request_digest` byte forms, `HISTORY_DATASET_UNAVAILABLE` for an absent and for a hidden dataset, a `HISTORY_MALFORMED` warning for an unknown `outcome`, and an `impact` channel identical to the same query without the `RISK HISTORY` tail. Unit tests: `crates/medulla-exec/src/exec/propagate_history.rs::tests::path_risk_and_cycles` and `crates/medulla-uql/src/parser/traverse.rs::tests::risk_history_tail_parses_prints_and_refuses`. Producer/consumer boundary: Medulla owns graph impact query/risk decision; Meristem requests and consumes the result. Existing numeric risk helpers are not this two-direction historical impact contract. Require exact source revision, input/output digests, caller and independent readback where specified. These cases are planned only. No implementation or receipt is asserted.
 
 ## Final mapped planned acceptance
 No cases listed here have run. They describe required future acceptance, not evidence.
@@ -327,7 +327,7 @@ No test in this section has run.
 | Wiring | `MEDULLA-FEDERATED-QUERY-R058.4.3` | A dispatch test observes one schema read per request. |
 | Refusal | `MEDULLA-FEDERATED-QUERY-R058.4.4` | Each case returns its code and no rows. |
 | Evidence | `MEDULLA-FEDERATED-QUERY-R058.4.5` | A test reads the step list and the digest. |
-| Hot-path proof | `MEDULLA-FEDERATED-QUERY-R058.4.6` | The served test passes, and the measured overhead meets the budget. |
+| Hot-path proof | `MEDULLA-FEDERATED-QUERY-R058.4.6` | `tests/nl_query_bounded_steps.rs::second_step_corrects_parse_error` passes, and the nightly `cargo bench --features server,security,nl-query --bench nl_steps` meets `nl_steps/one_step` (10 ms p99) and `nl_steps/corrected_two_steps` (20 ms p99). |
 
 Snapshot grounding acceptance for `MEDULLA-FEDERATED-QUERY-R058.4.7.1` uses the `medulla-plan` NL context suite. It covers full-snapshot discovery beyond 4096 nodes, attribution property repairs, named-source authority, JOIN scope and mixed fusion scope. Feature-enabled tests check source scope replacement and spatial/tensor layers. Served tests must show that each caller sees only names from its owner-authorized registry.
 
@@ -375,7 +375,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R089`: `tests/discover_quality_verdi
 | Wiring | `MEDULLA-FEDERATED-QUERY-R090.3` | A dispatch test observes one planner call and batched neighbor reads. |
 | Refusal | `MEDULLA-FEDERATED-QUERY-R090.4` | Each case returns its code and no rows. |
 | Evidence | `MEDULLA-FEDERATED-QUERY-R090.5` | A test reads each field. |
-| Hot-path proof | `MEDULLA-FEDERATED-QUERY-R090.6` | The served test passes, and the benchmark receipt meets the budget. |
+| Hot-path proof | `MEDULLA-FEDERATED-QUERY-R090.6` | `tests/retrieval/test_discover_planning_served.py::test_deep_recency_multihop` passes, and the nightly `cargo bench --features server,security,query --bench discover_planning` meets `discover/standard_1m` (15 ms p99) and `discover/deep_overhead` (40 ms p99). |
 | Wiring | `MEDULLA-FEDERATED-QUERY-R090.7` | `tests/retrieval/test_discover_planning_served.py::test_deep_arms_use_scoped_adapter` observes one adapter application per arm and refresh provenance. |
 
 Hot-path proof for `MEDULLA-FEDERATED-QUERY-R090`: `tests/retrieval/test_discover_planning_served.py::test_deep_recency_multihop`.
@@ -395,7 +395,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R090`: `tests/retrieval/test_discove
 
 | Behavior | `MEDULLA-FEDERATED-QUERY-R091.2` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::keep_or_revert_by_measurement` (planned): A faster equal candidate is kept, and a slower or unequal candidate is reverted. |
 
-| Wiring | `MEDULLA-FEDERATED-QUERY-R091.3` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::served_path_records_and_reads` (planned): A served query records one observation, and a later query uses the kept plan. |
+| Wiring | `MEDULLA-FEDERATED-QUERY-R091.3` | `crates/medulla-federation/src/federation_opt/run.rs::tests::kept_plan_overrides_join_choice_but_not_refusal` (planned): a kept `FullFetch` replaces a `BindJoin` choice, a kept `BindJoin` with keys over `max_bind_keys` does not apply, a `Refuse` stays a refusal, and the trace names the kept digest only when the choice changed. |
 
 | Refusal | `MEDULLA-FEDERATED-QUERY-R091.4` | `crates/medulla-federation/src/federation_opt/plan_evolution.rs::tests::evolution_refusals` (planned): Each case returns its code, and the active plan stays the baseline. |
 
@@ -434,6 +434,8 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R705.1` | `crates/medulla-plan/tests/feedback_boost.rs::feedback_round_trips` |
 | `MEDULLA-FEDERATED-QUERY-R705.2` | `crates/medulla-plan/tests/feedback_boost.rs::boost_decays_and_clamps` |
 | `MEDULLA-FEDERATED-QUERY-R705.3` | `tests/retrieval/test_feedback_boost_served.py::test_upvote_raises_rank` |
+| `MEDULLA-FEDERATED-QUERY-R705.3` | `crates/medulla-retrieval/src/feedback_boost.rs::tests::implicit_events_map_cited_and_uncited_returned_rows` |
+| `MEDULLA-FEDERATED-QUERY-R705.3` | `crates/medulla-h-graph/src/graph_ops/retrieval_feedback.rs::tests::wire_stamp_is_replaced_and_implicit_kinds_refused` |
 | `MEDULLA-FEDERATED-QUERY-R705.4` | `tests/retrieval/test_feedback_boost_served.py::test_feedback_refusals` |
 | `MEDULLA-FEDERATED-QUERY-R705.5` | `tests/retrieval/test_feedback_boost_served.py::test_boost_listed_per_hit` |
 | `MEDULLA-FEDERATED-QUERY-R705.6` | `cargo bench -p medulla-plan --bench feedback_boost` |
@@ -450,7 +452,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | `MEDULLA-FEDERATED-QUERY-R707.3` | `tests/test_sparql_update_served.py::test_insert_then_select` |
 | `MEDULLA-FEDERATED-QUERY-R707.4` | `tests/federated/test_sparql_update_served.py::test_update_refusals` |
 | `MEDULLA-FEDERATED-QUERY-R707.5` | `tests/federated/test_sparql_update_served.py::test_update_receipt_reads_back` |
-| `MEDULLA-FEDERATED-QUERY-R707.6` | `cargo bench -p medulla-rdf --bench sparql_update` |
+| `MEDULLA-FEDERATED-QUERY-R707.6` | `cargo bench -p medulla-server --features sparql-http,redb,test-support --bench sparql_update` (p99 key `sparql_update_insert_10k`) |
 | `MEDULLA-FEDERATED-QUERY-R708` | See each child. |
 | `MEDULLA-FEDERATED-QUERY-R708.1` | `crates/medulla-source-types/src/stored_query.rs::tests::stored_query_round_trips` |
 | `MEDULLA-FEDERATED-QUERY-R708.2` | `crates/medulla-plan/tests/stored_query.rs::on_change_refreshes` |
@@ -488,7 +490,7 @@ Hot-path proof for `MEDULLA-FEDERATED-QUERY-R091`: `tests/federation/test_plan_e
 | Wiring and store authority | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-persistence/src/durable_stores.rs::tests::each_plan_modality_maps_to_one_store` |
 | Wiring and store authority (bootstrap registration) | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-server/src/plan_modalities.rs::tests::bootstrap_registers_every_plan_modality` |
 | Wiring and store authority (fold) | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-exec/src/modality_fold.rs::tests::fold_modality_keeps_contract_rows_and_refuses_foreign_kinds` |
-| Refusal | `MEDULLA-FEDERATED-QUERY-R721.3` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::unknown_modality_refuses` |
+| Refusal (retired) | `MEDULLA-FEDERATED-QUERY-R721.3` | No test; retired, see R721.1. |
 | Hot-path proof: cross-modal queries with default configuration | `MEDULLA-FEDERATED-QUERY-R721.4` | `tests/advanced_crossmodal_roundtrip.rs::fresh_engine_answers_cross_modal_query` |
 
 - `MEDULLA-FEDERATED-QUERY-R722`: See each child.
@@ -585,7 +587,8 @@ cases against the same frozen source archive before composing this evidence.
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.6` | `tests/nl_query_certified_definitions.rs::mismatch_is_corrected_then_disclosed`: one feedback step, the certified terms in the result, and `NL_DEFINITION_CONFLICT` when the loop ends; beside it, the L1 `crates/medulla-nlq/src/nl/certified_tests.rs::candidate_without_the_whole_lineage_is_a_mismatch`. (planned: the test file does not exist yet) |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.7` | `tests/nl_query_certified_definitions.rs::recorded_correction_grounds_the_next_plan`: the approved pair is in the next planning context; no scope returns `NL_CORRECTION_UNAUTHORIZED`; beside it, the L1 `crates/medulla-h-graph/src/graph_ops/nl_correction.rs::a_correction_needs_a_parsable_distinct_approved_query` and `crates/medulla-nlq/src/nl/certified_tests.rs::only_the_same_question_matches_its_corrections`. (planned: the test file does not exist yet) |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R058.8` | `tests/nl_query_bounded_steps.rs::follow_up_is_rewritten_and_disclosed`: the rewritten question is disclosed; without history the question is unchanged. |
-| Behavior | `MEDULLA-FEDERATED-QUERY-R058.9` | `tests/nl_query_certified_definitions.rs::conflicting_sources_record_one_conflict`: one conflict fact; planning does not treat the term as certified. |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R058.9` | `tests/nl_query_certified_definitions.rs::conflicting_sources_record_one_conflict`: two `SourceSync` runs on two connections write one conflict node in the second sync batch, none on a repeat sync; planning does not treat the term as certified. |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R058.9` | `crates/medulla-nlq/src/nl/certified.rs::tests::reconcile_term_nodes_reads_catalog_terms_and_skips_existing`: a `CatalogGlossaryTerm` pair from two sources yields one conflict; an existing conflict id yields none. |
 
 ## Planned bindings, range 1
 
@@ -677,13 +680,14 @@ Each row below names the test that proves it as `path::name`. State `exists` mea
 | MEDULLA-FEDERATED-QUERY-R079.3 | `tests/lake_catalog_schema_evolution.rs::graph_mutation_reaches_catalog_read` | planned |
 | MEDULLA-FEDERATED-QUERY-R079.4 | `tests/lake_catalog_schema_evolution.rs::every_refusal_keeps_visible_versions` | planned |
 | MEDULLA-FEDERATED-QUERY-R079.5 | `tests/lake_catalog_schema_evolution.rs::evidence_correlates_commit_publication_load` | planned |
-| MEDULLA-FEDERATED-QUERY-R079.6 | `tests/lake/test_pyiceberg_reader.py::test_reader_sees_committed_rows` | planned |
+| MEDULLA-FEDERATED-QUERY-R079.6 | `tests/lake/test_pyiceberg_reader.py::test_reader_sees_committed_rows` (pyiceberg `RestCatalog` with `py-io-impl` `lake_file_io.LakeFileIO`, every file fetched through `GET /v1/files/<lake path>`) | planned |
+| MEDULLA-FEDERATED-QUERY-R079.6 | `crates/medulla-server-lake/src/lake/rest/mod.rs::tests::file_route_serves_visible_bytes_and_hides_others` (byte-identical manifest list; 404 for another tenant, an unindexed path and a non-`lake://` path) | planned |
 | MEDULLA-FEDERATED-QUERY-R080.1 | `crates/medulla-lake/src/catalog.rs::every_registered_entry_is_read_only` | exists |
 | MEDULLA-FEDERATED-QUERY-R080.2 | `crates/medulla-lake/src/catalog.rs::refuse_projection_write_classifies_each_operation` | exists |
 | MEDULLA-FEDERATED-QUERY-R080.3 | `crates/medulla-server-lake/src/lake/rest/mod.rs::every_write_route_is_refused_as_projection_read_only` | planned |
 | MEDULLA-FEDERATED-QUERY-R080.4 | `crates/medulla-server-lake/src/lake/rest/mod.rs::projection_write_returns_405_and_leaves_graph_version` | planned |
 | MEDULLA-FEDERATED-QUERY-R080.5 | `crates/medulla-server-lake/src/lake/rest/mod.rs::refusal_and_read_leave_audit_records` | planned |
-| MEDULLA-FEDERATED-QUERY-R080.6 | `tests/lake_projection_read_only.rs::projection_writes_are_refused_and_graph_writes_appear` | planned |
+| MEDULLA-FEDERATED-QUERY-R080.6 | `tests/lake_projection_read_only.rs::projection_writes_are_refused_and_graph_writes_appear` (real listener; commit and drop refused 405, snapshot and LSN unchanged, next engine publication visible) | planned |
 | MEDULLA-FEDERATED-QUERY-R081.1 | `crates/medulla-result-types/src/retrieval_verdict.rs::verdict_round_trips_and_rejects_unknown` | exists |
 | MEDULLA-FEDERATED-QUERY-R081.2 | `crates/medulla-retrieval/src/retrieval_verdict_tests.rs::repair_order_ends_at_round_limit` | exists |
 | MEDULLA-FEDERATED-QUERY-R081.3 | `crates/medulla-plan/src/retrieval_round.rs::run_round_returns_verdict_for_rule_plan` | planned |
@@ -716,7 +720,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R081.8.4` | `tests/retrieval_round_served.rs::feedback_refusals_dispatch_nothing` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.5` | `tests/retrieval_round_served.rs::feedback_premise_links_next_query_to_feedback` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.6` | `tests/retrieval/test_feedback_served.py::test_uncalibrated_continuation_precedence` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R081.8.6` | `tests/retrieval_round_served.rs::feedback_continuation_is_validated_and_bounded` | L3 |
+| `MEDULLA-FEDERATED-QUERY-R081.8.6` | `tests/retrieval_round_served.rs::terminal_feedback_continuation_executes_nothing` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.9` | `tests/retrieval_round_served.rs::community_descent_returns_entities_with_receipt` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.9` | `tests/retrieval_round_served.rs::section_traversal_returns_spans_with_paths` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.9.3` | `tests/retrieval_round_served.rs::community_descent_returns_entities_with_receipt` | L3 |
@@ -730,7 +734,7 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R082.4` | `tests/retrieval_round_served.rs::uncalibrated_rounds_keep_the_refusal_marker` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R082.5` | `tests/retrieval_round_served.rs::stop_premise_lists_margin_and_reason` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R082.6` | `tests/retrieval/test_stop_rule_served.py::test_repeat_with_margin_stops` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R082.6` | `tests/retrieval/test_feedback_served.py::test_uncalibrated_continuation_precedence` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R082.6` | `tests/retrieval_round_served.rs::terminal_stop_runs_no_later_retrieval` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R083` | `tests/retrieval_round_served.rs::support_precedes_confidence_and_small_gap_abstains` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R083.1` | `crates/medulla-result-types/src/retrieval_arbitration.rs::tests::verdict_carries_both_candidates_and_support` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R083.2` | `crates/medulla-plan/src/retrieval_arbitration.rs::tests::support_precedence_precedes_confidence_margin` | L1 |
@@ -741,7 +745,6 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R083.6` | `tests/retrieval/test_arbitration_served.py::test_small_gap_abstains_with_both` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R039.1` | `tests/retrieval/test_multimodal_served.py::test_sixteen_modality_pairs` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.1` | `crates/medulla-index-types/src/embedding.rs::tests::modality_bindings_round_trip` | L1 |
-| `MEDULLA-FEDERATED-QUERY-R039.1.1` | `tests/retrieval/test_multimodal_served.py::test_sixteen_modality_pairs` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.2` | `crates/medulla-exec/src/exec/vector_rank.rs::tests::sixteen_pairs_match_oracle` | L2 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.2` | `tests/retrieval/test_multimodal_served.py::test_sixteen_modality_pairs` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R039.1.3` | `tests/retrieval/test_multimodal_served.py::test_registry_encoders_reach_index` (planned) | L4 |
@@ -751,7 +754,9 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R040.1` | `tests/retrieval/test_constraints_served.py::test_constraints_before_ranking` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.1` | `crates/medulla-query-types/src/wire_query_core.rs::tests::retrieval_constraints_round_trip_and_refuse_unknown_operator` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.2` | `crates/medulla-exec/src/exec/constraints.rs::tests::failed_constraint_excludes_top_candidate` | L2 |
-| `MEDULLA-FEDERATED-QUERY-R040.1.2` | `tests/retrieval/test_constraints_served.py::test_constraints_before_ranking` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.1.7` | `crates/medulla-index-types/src/retrieval_request.rs::tests::request_round_trips_and_refuses_unknown_fields` | L1 |
+| `MEDULLA-FEDERATED-QUERY-R040.1.7` | `crates/medulla-h-query/src/query/planning.rs::tests::retrieval_request_binds_plan_ctx` | L2 |
+| `MEDULLA-FEDERATED-QUERY-R040.1.7` | `crates/medulla-h-query/src/query/sql_read.rs::tests::retrieval_request_salts_the_cache_key` | L2 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.3` | `tests/retrieval/test_constraints_served.py::test_optimized_and_unoptimized_plans_agree` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.4` | `tests/retrieval/test_constraints_served.py::test_refusals_rank_nothing` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.1.5` | `tests/retrieval/test_constraints_served.py::test_excluded_never_reappears` | L4 |
@@ -786,15 +791,14 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R077.6.4` | `tests/retrieval/test_column_advice_served.py::test_unembeddable_types_refuse_without_side_effects` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.5` | `tests/retrieval/test_column_advice_served.py::test_receipt_matches_observations_binding_unchanged` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R077.6.6` | `tests/retrieval/test_column_advice_served.py::test_workload_changes_advice` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.2` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.1` | `crates/medulla-exec/src/exec/topic.rs::tests::two_backends_one_result_contract` (planned) | L1 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.1` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2` | `tests/retrieval/test_topic_fusion_served.py::test_topic_fusion_over_stored_centroids` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.1` | `crates/medulla-exec/src/exec/topic.rs::tests::two_backends_one_result_contract` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R040.2.2` | `crates/medulla-exec/src/exec/topic.rs::tests::order_matches_oracle_w0_w1_mid` (planned) | L2 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.2` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.2` | `tests/retrieval/test_topic_fusion_served.py::test_topic_fusion_over_stored_centroids` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.2.3` | `tests/retrieval/test_topic_fusion_served.py::test_dense_and_topic_both_exercised` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.2.4` | `tests/retrieval/test_topic_fusion_served.py::test_incompatible_topics_refuse_before_fusion` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R040.2.5` | `tests/retrieval/test_topic_fusion_served.py::test_receipt_reproduces_final_score` (planned) | L4 |
-| `MEDULLA-FEDERATED-QUERY-R040.2.6` | `tests/retrieval/test_topic_fusion_served.py::test_two_backends_interchange` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R040.2.6` | `tests/retrieval/test_topic_fusion_served.py::test_topic_fusion_over_stored_centroids` (planned) | L4 |
 | `MEDULLA-FEDERATED-QUERY-R084` | `tests/shex_served.rs::served_shex_contract_journey` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R084.1` | `tests/shex_served.rs::wire_report_preserves_shape_map` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R084.3` | `tests/shex_served.rs::bounded_constraints_report_results` | L3 |
@@ -814,14 +818,19 @@ Each test below is planned: its path is the post-split location and its name is 
 | `MEDULLA-FEDERATED-QUERY-R040.5` | `tests/retrieval/test_low_storage_ann_served.py::test_selectivity_bound_and_readback` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R081.10` | `tests/retrieval_round_served.rs::clock_basis_and_second_pass_are_bounded` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R028.1` | `tests/query/test_knowledge_set_uql_served.py::test_frames_resolved_missing_stale` (planned) | L4 |
+| `MEDULLA-FEDERATED-QUERY-R005.1` | `crates/medulla-types/src/shape_report.rs::tests::violation_round_trips_and_rejects_unknown_kind` | L1 |
+| `MEDULLA-FEDERATED-QUERY-R005.1` | `crates/medulla-exec/src/exec/dispatch/consistency.rs::tests::five_kinds_and_their_controls` | L2 |
 | `MEDULLA-FEDERATED-QUERY-R005.1` | `tests/query/test_validate_shape_served.py::test_violation_matrix_five_kinds` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R078.7` | `tests/query/test_company_context_served.py::test_two_tenants_two_clearances` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R078.7` | `crates/medulla-exec/src/exec/company_context.rs::tests::fixed_category_order_and_clearance_subset` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R040.2.7` | `tests/retrieval/test_topic_fusion_served.py::test_document_responsibilities_change_order` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.100` | `crates/medulla-plan/src/retrieval_feedback.rs::tests::strategy_reuse_needs_matching_retriever_or_receipt` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R081.8.100` | `tests/retrieval_round_served.rs::transfer_receipt_gates_strategy_reuse` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R053.100` | `crates/medulla-federation/src/federation_cypher_unbound.rs::tests::key_quoting_fixtures` | L2 |
 | `MEDULLA-FEDERATED-QUERY-R053.100` | `tests/query/test_foreign_kinds_served.py::test_cypher_keys_quoted` | L4 |
 | `MEDULLA-FEDERATED-QUERY-R032.100` | `tests/query/test_propagate_served.py::test_historical_risk_both_directions` | L4 |
+| `MEDULLA-FEDERATED-QUERY-R032.100` | `crates/medulla-exec/src/exec/propagate_history.rs::tests::path_risk_and_cycles` | L1 |
+| `MEDULLA-FEDERATED-QUERY-R032.100` | `crates/medulla-uql/src/parser/traverse.rs::tests::risk_history_tail_parses_prints_and_refuses` | L1 |
 | `MEDULLA-FEDERATED-QUERY-R086` | `tests/graphlearn_nary_served.rs::nary_hypotheses_are_read_only_and_ordered` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R086.100` | `tests/graphlearn_nary_served.rs::nary_hypotheses_are_read_only_and_ordered` | L3 |
 | `MEDULLA-FEDERATED-QUERY-R081.101` | `tests/retrieval_round_served.rs::compressed_state_rerank_is_order_independent` | L3 |
@@ -870,7 +879,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R090.3:** `tests/retrieval/test_discover_planning_served.py::test_deep_mode_calls_one_provider_per_request` (planned). Wiring: planner entry. Counts provider calls through a scripted provider and asserts exactly one.
 - **MEDULLA-FEDERATED-QUERY-R090.4:** `tests/retrieval/test_discover_planning_served.py::test_discover_refusals` (planned). Refusal. Asserts each code, an empty result, and the degraded path with a failing provider.
 - **MEDULLA-FEDERATED-QUERY-R090.5:** `tests/retrieval/test_discover_planning_served.py::test_discover_evidence_fields` (planned). Evidence. Reads every field and recomputes each digest.
-- **MEDULLA-FEDERATED-QUERY-R091.3:** `tests/federation/test_plan_evolution_served.py::test_served_query_records_and_later_query_reads_kept_plan` (planned). Wiring. Runs two served queries and a tick.
+- **MEDULLA-FEDERATED-QUERY-R091.3:** `tests/federation/test_plan_evolution_served.py::test_served_query_records_and_later_query_reads_kept_plan` (planned). Wiring. Runs the served foreign query until the shape has `min_replays` observations, lets the downtime tick (`downtime.tick_secs` 1) run the `plan_evolution` job, reads the job's `receipts`, and asserts a later query's `FragmentTrace.kept_plan`; then unregisters the source, ticks again and asserts outcome `authority_expired` and no kept plan.
 - **MEDULLA-FEDERATED-QUERY-R091.4:** `tests/federation/test_plan_evolution_served.py::test_evolution_refusals` (planned). Refusal. Asserts each code and that the active plan stays the baseline.
 - **MEDULLA-FEDERATED-QUERY-R091.5:** `tests/federation/test_plan_evolution_served.py::test_explain_names_kept_plan_and_receipt` (planned). Evidence. Reads the receipt through EXPLAIN.
 - **MEDULLA-FEDERATED-QUERY-R607:** `tests/reasoning/test_topology_served.py::test_each_analytic_is_served` (planned). Topology analytics find partitions, analogies, synergy and hyperedge scores (rollup). The fixture and expected result are stated in the row's Test cell.
@@ -905,7 +914,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R652.1:** `crates/medulla-plan/src/rerank.rs::tests::types_round_trip_and_reject_non_monotone_knots` (planned). Model. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R652.2:** `crates/medulla-plan/src/rerank.rs::tests::bm25_order_and_interpolation` (planned), `crates/medulla-plan/src/rerank.rs::tests::calibration_is_monotone` (planned). Behavior: lexical scoring and calibration. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R652.3:** `tests/retrieval/test_rerank_served.py::test_context_compile_reranks_before_boost`. Wiring. Asserts the receipt order of stages.
-- **MEDULLA-FEDERATED-QUERY-R652.4:** `tests/retrieval/test_rerank_served.py::test_rerank_refusals` (planned). Refusal. Asserts both codes and no items.
+- **MEDULLA-FEDERATED-QUERY-R652.4:** Retired; no test. The rerank `k` is knob-bounded (R652.2) and a curve applies only to its own scorer (R652.7).
 - **MEDULLA-FEDERATED-QUERY-R652.5:** `tests/retrieval/test_rerank_served.py::test_receipt_fields` (planned). Evidence. Reads and compares every field.
 - **MEDULLA-FEDERATED-QUERY-R652.6:** `tests/retrieval/test_rerank_served.py::test_rerank_calibrate_and_fallback` (planned). Hot-path proof. Served test passes. cargo bench -p medulla-plan --bench rerank meets the key.
 - **MEDULLA-FEDERATED-QUERY-R653:** `tests/retrieval/test_corpus_retrieve_served.py::test_each_mode_is_served` (planned). Corpus grep, entity neighbourhood, session history and answer lineage (rollup). The fixture and expected result are stated in the row's Test cell.
@@ -945,7 +954,7 @@ Proving targets for rows `MEDULLA-FEDERATED-QUERY-R058.4.2` to `MEDULLA-FEDERATE
 - **MEDULLA-FEDERATED-QUERY-R702.6:** `tests/query/test_search_task_synthesis_served.py::test_single_clue_task_is_rejected`. Hot-path proof. Served test passes. cargo bench -p medulla-plan --bench shortcut_detectors meets the key.
 - **MEDULLA-FEDERATED-QUERY-R053.700:** `crates/medulla-federation/src/federation_spark.rs::tests::submission_id_idempotent_and_fenced` (planned), `tests/query/test_spark_trino_sources_served.py::test_resubmission_returns_same_submission` (L4); `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs::tests::identical_submission_resumes_one_execution_per_owner` (L2). Trino and Spark sources with idempotent submission: model and behavior. The fixture and expected result are stated in the row's Test cell.
 - **MEDULLA-FEDERATED-QUERY-R053.701:** `tests/query/test_spark_trino_sources_served.py::test_resubmission_returns_same_submission` (L4); `crates/medulla-server-ops/src/api/query_txn/foreign_read.rs::tests::identical_submission_resumes_one_execution_per_owner` (L2). Trino and Spark sources: refusal, evidence and hot-path proof. It asserts one id for two identical submissions, both refusals, and a cross-tenant negative.
-- **MEDULLA-FEDERATED-QUERY-R005.700:** `crates/medulla-exec/src/exec/dispatch/shape_integrity.rs::tests::finding_per_shape_and_bound` (planned), `tests/query/test_graph_integrity_shapes_served.py::test_fatal_finding_blocks` (planned). Graph integrity validation as named shapes: model and behavior. It builds one violation per shape, asserts severity and the blocking flag, and asserts one visit per element.
+- **MEDULLA-FEDERATED-QUERY-R005.700:** `crates/medulla-exec/src/exec/dispatch/shape_integrity.rs::tests::finding_per_shape_and_bound`, `tests/query/test_graph_integrity_shapes_served.py::test_violating_rows_carry_shape_columns` (planned). Graph integrity validation as named shapes: model and behavior. The L1 test builds one violation per shape, asserts severity and the blocking flag, and asserts one visit per element; the L4 test reads `shape.severity` and `shape.blocks` from `UqlRow.provenance` of the kept rows (no refusal; `FAIL ON FATAL` is R005.701).
 - **MEDULLA-FEDERATED-QUERY-R005.701:** `tests/query/test_graph_integrity_shapes_served.py::test_fatal_finding_blocks` (planned). Graph integrity validation: refusal, evidence and hot-path proof. It asserts the blocking finding and its shape id. It asserts the gap result over a budget-exceeding graph. A second tenant sees nothing. The benchmark receipt meets the budget.
 
 ## Planned bindings, range 4
@@ -984,7 +993,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R707.3` | `tests/federated/test_sparql_update_served.py::test_insert_then_select` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R707.4` | `tests/federated/test_sparql_update_served.py::test_update_refusals` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R707.5` | `tests/federated/test_sparql_update_served.py::test_update_receipt_reads_back` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R707.6` | `cargo bench -p medulla-rdf --bench sparql_update` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R707.6` | `cargo bench -p medulla-server --features sparql-http,redb,test-support --bench sparql_update` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708` | `tests/federated/test_stored_query_served.py::test_put_then_call` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.2` | `crates/medulla-plan/tests/stored_query.rs::on_change_refreshes` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.3` | `tests/federated/test_stored_query_served.py::test_put_then_call` |
@@ -1010,7 +1019,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R721` | `tests/advanced_crossmodal_roundtrip.rs::fresh_engine_answers_cross_modal_query` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R721.1` | `crates/medulla-modality/tests/rowset_views.rs::seven_modalities_implement_contract` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R721.2` | `crates/medulla-persistence/src/durable_stores.rs::tests::each_plan_modality_maps_to_one_store` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R721.3` | `crates/medulla-uql/src/parser/modality.rs::tests::unknown_modality_refuses_without_plan` |
+| Retired | `MEDULLA-FEDERATED-QUERY-R721.3` | No test; unbuilt and unknown clauses refuse with the existing `UQL_FEATURE_NOT_IN_BUILD` / `UQL_UNKNOWN_STAGE`. |
 | Planned | `MEDULLA-FEDERATED-QUERY-R721.4` | `tests/advanced_crossmodal_roundtrip.rs::fresh_engine_answers_cross_modal_query` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R722` | `tests/federated/test_pack_source_served.py::test_uql_joins_native_fact_to_live_connector_rows_with_zero_copy` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R722.2` | `crates/medulla-h-admin/src/admin/connector_pack/tests/pack_source.rs::held_serves_none_approved_serves_rows_and_changed_contract_returns_to_held` |
@@ -1029,7 +1038,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.3` | `tests/nl_query_grounding.rs::cep_identifiers` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.4` | `tests/nl_query_grounding.rs::udf_identifiers` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R058.4.7.2.5` | `tests/nl_query_grounding.rs::rdf_identifiers` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R072.2` | `tests/federated/test_unified_query_source_plan_served.py::test_plan_sources_equal_authority_rows` |
+| Retired | `MEDULLA-FEDERATED-QUERY-R072.2` | No test; selection is proven by the `MEDULLA-SRC-AUTH-R004.6.1` served test. |
 | Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `crates/medulla-federation/src/federation_opt/tests.rs::mcp_remote_delegates_to_connector_row_source` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R073.3` | `tests/federation/test_web_metasearch_served.py::test_mcp_source_resolves` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R079.2.1` | `tests/lake_manifest_interoperability.rs::append_compaction_cow_delete` |
@@ -1076,6 +1085,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Behavior | `MEDULLA-FEDERATED-QUERY-R706.7` | `tests/federated/test_policy_mask_served.py::test_cross_tenant_policy_not_applied` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.8` | `tests/federated/test_stored_query_served.py::test_share_scope_limits_calls` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.9` | `tests/federated/test_stored_query_served.py::test_workspace_share_schedule_and_lint` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R708.11` | `crates/medulla-source-types/src/stored_query.rs::tests::period_floor_is_the_supplied_minimum` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.10` | `crates/medulla-source-types/src/stored_query.rs::tests::sql_and_sparql_text_binds_typed_literals` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.10` | `tests/federated/test_stored_query_served.py::test_sql_and_sparql_stored_queries_call` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R720.7` | `crates/medulla-plan/tests/uql_epistemic_stages.rs::require_nonempty_refuses_with_code` |
@@ -1093,14 +1103,17 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R729` | `tests/federated/test_raw_pushdown_served.py::test_raw_source_search_is_budgeted_and_refuses_over_ceiling` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R730` | `tests/test_unified_planner_gate.py::test_failed_gate_records_the_freeze_decision` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R731` | `tests/query/test_latency_classes_served.py::test_interactive_budget_refuses_and_analytical_runs_as_job` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R731` | `crates/medulla-exec/src/budget.rs::tests::interactive_meter_refuses_past_bound` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R732` | `tests/query/test_planner_evolution_served.py::test_recorded_plans_train_a_challenger_that_promotes_only_on_improvement` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R732` | `crates/medulla-exec/src/learned_cost.rs::tests::plan_record_store_bounds_and_shadow_error` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R722.7` | `crates/medulla-h-admin/src/admin/connector_pack/tests/source_approval.rs::approve_source_requires_current_head_and_contract_digest` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R733` | `crates/medulla-uql/tests/group_stage.rs::group_by_label_counts_rows`, `crates/medulla-uql/tests/group_stage.rs::unknown_field_is_refused` and `tests/query/test_uql_group_served.py::test_node_type_counts_over_the_wire` (L2, L4). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R734` | `crates/medulla-uql/tests/order_skip_stage.rs::order_is_stable_with_row_id_tiebreak` and `crates/medulla-uql/tests/order_skip_stage.rs::skip_past_the_cap_is_refused` (L2). |
-| Behavior | `MEDULLA-FEDERATED-QUERY-R735` | `crates/medulla-uql/tests/edges_source.rs::edges_rows_carry_source_target_rel_and_properties` and `tests/query/test_uql_edges_served.py::test_edge_rows_respect_edge_read_scope` (L2, L4). |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R735` | `crates/medulla-uql/tests/edges_source.rs::edges_rows_carry_source_target_rel_and_properties` (L2: rel and predicate filter, typed cells, key order, non-relational refusal, print round-trip) and `tests/query/test_uql_edges_served.py::test_edge_rows_respect_edge_read_scope` (L4: an edge to a node hidden by the caller's read authority is absent). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736` | Satisfied only when every child is satisfied. Root journey: `tests/query/test_evidence_forest_served.py::test_forest_fits_budget_and_keeps_supported_evidence` (planned) (L4). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.1` | `crates/medulla-result-types/tests/evidence_forest.rs::scores_stay_separate_and_bounded` (planned) (L2). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.2` | `crates/medulla-plan/tests/evidence_forest.rs::expansion_respects_hops_and_cap` (planned) (L2). |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R736.2` | `crates/medulla-plan/src/evidence_forest.rs::tests::plan_forest_graph_reads_projected_view_and_similarity` (planned) (L2): `PlanForestGraph` schema and similarity relations over a projected view, no hidden target. |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.3` | `crates/medulla-plan/tests/evidence_forest.rs::selection_is_a_forest_within_budget_and_drops_redundant_and_conflicting` (planned) (L2). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.4` | `tests/query/test_evidence_forest_served.py::test_round_with_budget_returns_forest_rows` (planned) (L4). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.5` | `tests/query/test_evidence_forest_served.py::test_forest_fits_budget_and_keeps_supported_evidence` (planned) (L4). |
@@ -1129,4 +1142,4 @@ Each entry names the test the row binds once its code lands; the path is the pos
 - `MEDULLA-FEDERATED-QUERY-R739`: see each child (rollup).
 - `MEDULLA-FEDERATED-QUERY-R739.1`: `crates/medulla-h-decide/src/decide/drift_registry.rs::tests::every_legal_transition_applies`, `crates/medulla-h-decide/src/decide/drift_registry.rs::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-h-decide/src/decide/drift_registry.rs::tests::no_writer_sets_state_outside_transition`, `crates/medulla-rdf/tests/state_machine_vocabulary.rs::shard_monitor_machine_matches_edge_table` (L1): proves: ShardMonitor/ShardMonitorState state machine: holder-level transition delegating to ShardMonitorState::apply.
 - `MEDULLA-FEDERATED-QUERY-R739.2`: `crates/medulla-result-types/src/source_query.rs::tests::source_query_failure_step_is_not_a_lifecycle_field` (L1): proves: SourceQueryFailure/SourceQueryStage is a failure position, not a lifecycle: rename, no machine.
-- `MEDULLA-FEDERATED-QUERY-R739.3`: `tests/test_wire_mirror_state_words.py::test_uql_proof_step_field_is_clause_not_stage` (L1): proves: UqlProofStep discriminator `stage` is a variant tag, not a lifecycle: rename, no machine.
+- `MEDULLA-FEDERATED-QUERY-R739.3`: `tests/test_wire_mirror_state_words.py::test_uql_proof_step_field_is_clause_not_stage` (L1): proves each generated `UqlProofStep*Body` mirror carries `clause` and no `stage` or `kind` field, and that a body keyed `stage` is refused.

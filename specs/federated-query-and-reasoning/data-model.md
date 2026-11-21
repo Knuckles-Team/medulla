@@ -11,7 +11,7 @@ Governing plan: [plan.md](plan.md). The tables list the types this spec adds or 
 | `ArgumentMap`, `AifNode`, `AifEdge`, `DungProjection`, `ExtensionResult` | `crates/medulla-result-types/src/argument_map.rs` | `MEDULLA-FEDERATED-QUERY-R700.1`, `MEDULLA-FEDERATED-QUERY-R700.5` |
 | `LiveArtifact`, `QuerySource`, `RefreshRecord` | `crates/medulla-source-types/src/live_artifact.rs` | `MEDULLA-FEDERATED-QUERY-R701.1` |
 | `EvidenceGraph`, `SearchTask`, `RiskFinding`, `RiskReport` | `crates/medulla-work-types/src/search_task.rs` | `MEDULLA-FEDERATED-QUERY-R702.1` |
-| `IntegrityShape`, `Severity`, `ShapeReport` | `crates/medulla-types/src/shape_report.rs` (new) | `MEDULLA-FEDERATED-QUERY-R005.700` |
+| `IntegrityShape`, `Severity`, `ShapeReport` | `crates/medulla-types/src/shape_report.rs` | `MEDULLA-FEDERATED-QUERY-R005.700` |
 | `SourceQueryRequest`, `ApprovedSourceQuery` | `crates/medulla-result-types/src/source_query.rs` | `MEDULLA-FEDERATED-QUERY-R085.1` |
 | `ApproveSourceQueryRequest`, `SourceQueryAdmission`, `SourceQueryApprovalGrant`, `SourceQueryApprovalIssued` | `crates/medulla-work-types/src/source_query_approval.rs` (new) | `MEDULLA-FEDERATED-QUERY-R085.2` |
 | `AdviceReceipt` | `crates/medulla-table-store/src/tables/embedding_binding.rs` | `MEDULLA-FEDERATED-QUERY-R077.6.5` |
