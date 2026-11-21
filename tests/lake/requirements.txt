@@ -1,0 +1,4 @@
+# The independent Iceberg reader of MEDULLA-FEDERATED-QUERY-R079.6. Pinned so the
+# manifest interoperability proof reads with one known reader version; installed in the CI image.
+pytest>=7.0.0
+pyiceberg[pyarrow]==0.9.1

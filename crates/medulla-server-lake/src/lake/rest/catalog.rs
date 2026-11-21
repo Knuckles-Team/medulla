@@ -13,6 +13,7 @@ use super::super::{namespace_levels, LakeManager, LakeVisibility};
 use super::{
     carrier_denied_response, err_body, not_found, operation_scope, parse_as_of_lsn,
     parse_pagination, percent_decode, scope_authorized, table_ident_namespace, visibility_for,
+    RestReply,
 };
 use medulla_lake::catalog::{
     refuse_projection_write, CatalogOperation, ProjectionAccess, TableEntry, PROJECTION_READ_ONLY,
@@ -75,14 +76,14 @@ fn record_operation(
 /// target namespace or table even exists.
 pub(super) fn handle(
     lake: &LakeManager,
-    _store: &dyn ChunkStore,
+    store: &dyn ChunkStore,
     req: &HttpMessage,
     carrier: Option<&CarrierAuthority>,
-) -> (&'static str, String) {
-    // `_store`: every chunk-store write route is refused at the projection
-    // boundary, so routing reads only the lake catalog.
+) -> RestReply {
+    // Every chunk-store write route is refused at the projection boundary; `store`
+    // is read only by the file route, which serves published bytes.
     if !req.header("origin").is_empty() {
-        return (
+        return RestReply::Json(
             "403 Forbidden",
             err_body("browser origin denied", "ForbiddenException", 403),
         );
@@ -108,13 +109,69 @@ pub(super) fn handle(
             "owner": scope.owner_label(),
             "outcome": "deny",
         }));
-        return carrier_denied_response();
+        return carrier_denied_response().into();
     }
 
-    if let Some(refused) = guard_projection_write(lake, req, &seg_refs, &scope) {
-        return refused;
+    if let ("GET", ["v1", "files", path]) = (req.method.as_str(), seg_refs.as_slice()) {
+        return serve_lake_file(lake, store, path, &scope);
     }
-    catalog_route(lake, req, &seg_refs, &scope)
+    if let Some(refused) = guard_projection_write(lake, req, &seg_refs, &scope) {
+        return refused.into();
+    }
+    catalog_route(lake, req, &seg_refs, &scope).into()
+}
+
+/// `GET /v1/files/<lake path>` (MEDULLA-FEDERATED-QUERY-R079.6): the bytes of one
+/// published `lake://<namespace>/<table>/<relative path>` file, so an independent
+/// reader can follow the `lake://` locations the catalog returns. A path not of that
+/// form, a table the caller cannot see and a path with no indexed bytes all answer the
+/// same 404, so a hidden table is no existence oracle.
+fn serve_lake_file(
+    lake: &LakeManager,
+    store: &dyn ChunkStore,
+    path: &str,
+    scope: &RequestScope,
+) -> RestReply {
+    let not_found_reply = || RestReply::Json("404 Not Found", not_found("file"));
+    let Some(rest) = path.strip_prefix("lake://") else {
+        return not_found_reply();
+    };
+    let mut parts = rest.splitn(3, '/');
+    let (Some(namespace), Some(table), Some(relative)) =
+        (parts.next(), parts.next(), parts.next())
+    else {
+        return not_found_reply();
+    };
+    if relative.is_empty()
+        || lake
+            .load_table_visible(namespace, table, &scope.visibility)
+            .is_none()
+    {
+        return not_found_reply();
+    }
+    let table_path = format!("{namespace}.{table}");
+    match lake.read_visible_path_bytes(store, path) {
+        Ok(bytes) => {
+            record_operation(
+                lake,
+                "FileRead",
+                &[
+                    ("table", json!(table_path)),
+                    ("path", json!(path)),
+                    ("principal", json!(scope.owner_label())),
+                ],
+                &scope.owner_label(),
+                "200 OK",
+                true,
+            );
+            RestReply::Bytes("200 OK", bytes)
+        }
+        Err(error) if error.starts_with("no bytes indexed") => not_found_reply(),
+        Err(_) => RestReply::Json(
+            "500 Internal Server Error",
+            err_body("lake file read failed", "ServerErrorException", 500),
+        ),
+    }
 }
 
 /// The projection write boundary (MEDULLA-FEDERATED-QUERY-R080.3): every

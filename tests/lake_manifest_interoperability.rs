@@ -226,3 +226,56 @@ fn failure_before_metadata_publication_keeps_previous_snapshot_readable() {
         .expect("previous snapshot stays readable");
     assert_eq!(before, after, "no partial snapshot became visible");
 }
+
+/// Seeds one table with committed rows, serves it on the lake REST listener and
+/// runs the independent Iceberg reader against it (MEDULLA-FEDERATED-QUERY-R079.6).
+// spec: MEDULLA-FEDERATED-QUERY-R079.6
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn external_reader_loads_v2_manifests() {
+    let store = std::sync::Arc::new(open_chunk_store());
+    let tsdb = series_store("external-reader");
+    let series = "interop_reader";
+    let manager = std::sync::Arc::new(LakeManager::new());
+    // Two commits, so the reader has a retained snapshot and a current one.
+    tsdb.append_batch(series, 1, TEST_BUCKET_NS, &["v".to_string()], &points(0, 3))
+        .expect("append points");
+    manager
+        .drain_series(store.as_ref(), &tsdb, series)
+        .expect("first drain")
+        .expect("first drain materializes");
+    tsdb.append_batch(series, 1, TEST_BUCKET_NS, &["v".to_string()], &points(3, 2))
+        .expect("append more points");
+    manager
+        .drain_series(store.as_ref(), &tsdb, series)
+        .expect("second drain")
+        .expect("second drain materializes");
+
+    let listener = tokio::net::TcpListener::bind("127.0.0.1:0")
+        .await
+        .expect("bind the lake listener");
+    let address = listener.local_addr().expect("listener address");
+    let chunk_store: std::sync::Arc<dyn ChunkStore> = store.clone();
+    let server = tokio::spawn(medulla_server_lake::lake::rest::serve(
+        listener,
+        manager.clone(),
+        chunk_store,
+    ));
+
+    let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"));
+    let output = tokio::process::Command::new("python3")
+        .args(["-m", "pytest", "tests/lake/test_pyiceberg_reader.py", "--noconftest", "-q"])
+        .current_dir(root)
+        .env("LAKE_REST_URI", format!("http://{address}"))
+        .env("LAKE_TABLE", series)
+        .env("LAKE_EXPECT_ROWS", "5")
+        .output()
+        .await
+        .expect("run the independent reader");
+    server.abort();
+    assert!(
+        output.status.success(),
+        "independent reader failed:\n{}\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+}

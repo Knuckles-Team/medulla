@@ -523,6 +523,17 @@ impl LakeManager {
         Ok(out)
     }
 
+    /// The bytes published at `path`, read through the one CAS reader. The caller has
+    /// already checked that the path's table is visible to it
+    /// (MEDULLA-FEDERATED-QUERY-R079.6).
+    pub(crate) fn read_visible_path_bytes(
+        &self,
+        store: &dyn ChunkStore,
+        path: &str,
+    ) -> Result<Vec<u8>, String> {
+        self.read_path_bytes(store, path)
+    }
+
     /// The `LakeSchema` a series with `n_values` fields per point materializes under:
     /// `ts` (required Timestamp) + one `value`/`value_N` Double column per field.
     fn series_schema(n_values: usize) -> LakeSchema {

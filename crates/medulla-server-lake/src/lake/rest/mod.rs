@@ -220,6 +220,7 @@ const ROUTE_TABLE: &[(&str, &[&str], Option<IcebergScope>)] = &[
         Some(IcebergScope::Write),
     ),
     ("GET", &["v1", "config"], None),
+    ("GET", &["v1", "files", "*"], Some(IcebergScope::Read)),
     ("GET", &["v1", "namespaces"], Some(IcebergScope::Read)),
     ("GET", &["v1", "namespaces", "*"], Some(IcebergScope::Read)),
     (
@@ -394,7 +395,7 @@ async fn serve_inner(
         let credential = credential.clone();
         let rate_limiter = rate_limiter.clone();
         tokio::spawn(async move {
-            let (status, body) = match tokio::time::timeout(
+            let reply = match tokio::time::timeout(
                 HTTP_READ_TIMEOUT,
                 http1::read_request(&mut stream, HTTP_LIMITS),
             )
@@ -413,11 +414,13 @@ async fn serve_inner(
                             }));
                             return respond(
                                 &mut stream,
-                                "429 Too Many Requests",
-                                err_body(
-                                    "Iceberg-REST request rate exceeded",
-                                    "RateLimitedException",
-                                    429,
+                                RestReply::Json(
+                                    "429 Too Many Requests",
+                                    err_body(
+                                        "Iceberg-REST request rate exceeded",
+                                        "RateLimitedException",
+                                        429,
+                                    ),
                                 ),
                             )
                             .await;
@@ -431,27 +434,55 @@ async fn serve_inner(
                         credential.as_deref(),
                     )
                 }
-                _ => (
+                _ => RestReply::Json(
                     "400 Bad Request",
                     err_body("malformed HTTP request", "BadRequestException", 400),
                 ),
             };
-            respond(&mut stream, status, body).await;
+            respond(&mut stream, reply).await;
         });
     }
 }
 
-async fn respond(stream: &mut TcpStream, status: &str, body: String) {
+/// One reply of the REST listener: a JSON body, or the raw bytes of a published
+/// lake file (MEDULLA-FEDERATED-QUERY-R079.6).
+pub(super) enum RestReply {
+    Json(&'static str, String),
+    Bytes(&'static str, Vec<u8>),
+}
+
+impl From<(&'static str, String)> for RestReply {
+    fn from((status, body): (&'static str, String)) -> Self {
+        Self::Json(status, body)
+    }
+}
+
+impl RestReply {
+    /// The `(status, body)` of a JSON reply; a byte reply has no JSON body.
+    #[cfg(test)]
+    fn into_json(self) -> (&'static str, String) {
+        match self {
+            Self::Json(status, body) => (status, body),
+            Self::Bytes(status, _) => panic!("{status}: a byte reply has no JSON body"),
+        }
+    }
+}
+
+async fn respond(stream: &mut TcpStream, reply: RestReply) {
     // `handle`'s HEAD arm already returns an empty body, so the response
     // envelope needs no extra verb-tracking here (unlike a framework that
     // strips the body post-hoc) — content-length is 0 for HEAD/404-empty
     // responses and the body write below is simply empty.
-    let resp = format!(
-        "HTTP/1.1 {status}\r\ncontent-type: application/json\r\ncontent-length: {}\r\nconnection: close\r\n\r\n{}",
+    let (status, content_type, body) = match reply {
+        RestReply::Json(status, body) => (status, "application/json", body.into_bytes()),
+        RestReply::Bytes(status, bytes) => (status, "application/octet-stream", bytes),
+    };
+    let head = format!(
+        "HTTP/1.1 {status}\r\ncontent-type: {content_type}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
         body.len(),
-        body
     );
-    let _ = stream.write_all(resp.as_bytes()).await;
+    let _ = stream.write_all(head.as_bytes()).await;
+    let _ = stream.write_all(&body).await;
     let _ = stream.shutdown().await;
 }
 
@@ -466,7 +497,7 @@ fn route(
     req: &HttpMessage,
     security_state: Option<&Arc<RwLock<ServerState>>>,
     credential: Option<&IcebergCredential>,
-) -> (&'static str, String) {
+) -> RestReply {
     let path = req.target.split('?').next().unwrap_or(&req.target);
     let segs: Vec<String> = path
         .trim_matches('/')
@@ -486,7 +517,7 @@ fn route(
                 "status": status,
             }));
         }
-        return (status, body);
+        return RestReply::Json(status, body);
     }
 
     match resolve_carrier(security_state, credential, &req.headers) {
@@ -498,7 +529,7 @@ fn route(
                 "path": req.target,
                 "outcome": "deny",
             }));
-            carrier_denied_response()
+            carrier_denied_response().into()
         }
         Ok(carrier) => handle(lake, store, req, carrier.as_ref()),
     }
@@ -794,6 +825,16 @@ mod tests {
     use medulla_tsdb::store::SeriesStore;
     use tokio::io::AsyncReadExt as _;
 
+    /// The JSON routes' `(status, body)`; the file route has its own tests.
+    fn handle(
+        lake: &LakeManager,
+        store: &dyn ChunkStore,
+        req: &HttpMessage,
+        carrier: Option<&CarrierAuthority>,
+    ) -> (&'static str, String) {
+        super::handle(lake, store, req, carrier).into_json()
+    }
+
     fn seed() -> (LakeManager, RedbChunkStore) {
         let store = RedbChunkStore::open_temp().unwrap();
         let tsdb = SeriesStore::open_in_dir(
@@ -873,6 +914,71 @@ mod tests {
         ];
         for (method, segs, expected) in cases {
             assert_eq!(operation_scope(method, segs), expected, "{method} {segs:?}");
+        }
+    }
+
+    /// A `GET /v1/files/<lake path>` request: the whole path is one percent-encoded segment.
+    fn file_req(lake_path: &str) -> HttpMessage {
+        let encoded: String = lake_path
+            .bytes()
+            .map(|b| match b {
+                b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                    (b as char).to_string()
+                }
+                other => format!("%{other:02X}"),
+            })
+            .collect();
+        req("GET", &format!("/v1/files/{encoded}"))
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R079.6
+    #[test]
+    fn file_route_serves_visible_bytes_and_hides_others() {
+        let (mgr, store) = seed();
+        let alice = carrier_for("file-alice", "tenant-shared");
+        let bob = carrier_for("file-bob", "tenant-shared");
+        let (status, body) = handle(
+            &mgr,
+            &store,
+            &req("GET", "/v1/namespaces/engine/tables/rest_series1"),
+            None,
+        );
+        assert_eq!(status, "200 OK");
+        let loaded: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let manifest_list = loaded["metadata"]["snapshots"][0]["manifest-list"]
+            .as_str()
+            .expect("snapshot manifest-list path")
+            .to_string();
+        let expected = mgr.read_path_bytes(&store, &manifest_list).unwrap();
+
+        // A visible table's published manifest list is served byte for byte.
+        let reply = super::handle(&mgr, &store, &file_req(&manifest_list), None);
+        match reply {
+            RestReply::Bytes(status, bytes) => {
+                assert_eq!(status, "200 OK");
+                assert_eq!(bytes, expected);
+            }
+            RestReply::Json(status, body) => panic!("{status}: {body}"),
+        }
+
+        // Another owner's table, an unindexed path and a non-lake path all answer 404.
+        publish(&store, &mgr, "alice_ns", "alice_private", Some(alice.owner_scope()));
+        let digest = mgr.paths.lock().get(&manifest_list).cloned().unwrap();
+        let alice_path = "lake://alice_ns/alice_private/metadata/list.avro";
+        mgr.paths.lock().insert(alice_path.to_string(), digest);
+        assert!(matches!(
+            super::handle(&mgr, &store, &file_req(alice_path), Some(&alice)),
+            RestReply::Bytes("200 OK", _)
+        ));
+        for hidden in [
+            (alice_path, Some(&bob)),
+            ("lake://engine/rest_series1/metadata/absent.avro", None),
+            ("s3://engine/rest_series1/metadata/list.avro", None),
+        ] {
+            match super::handle(&mgr, &store, &file_req(hidden.0), hidden.1) {
+                RestReply::Json(status, _) => assert_eq!(status, "404 Not Found", "{}", hidden.0),
+                RestReply::Bytes(..) => panic!("{} must not be served", hidden.0),
+            }
         }
     }
 
