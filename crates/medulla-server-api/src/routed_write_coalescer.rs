@@ -349,10 +349,21 @@ impl Default for RoutedWriteCoalescerRegistry {
 /// cannot race a gateway write while its durable-before-RAM batch is in flight. A
 /// fixed number of deterministic stripes bounds memory across create/delete churn; a hash
 /// collision only serializes two unrelated graphs and cannot weaken correctness.
-pub async fn lock_graph(graph: &str) -> OwnedMutexGuard<()> {
+///
+/// The lock is a named site (`lock_graph:<graph>`) of the observability lock registry, so
+/// `Introspect locks` shows its holder, its waiters and the longest wait
+/// (MEDULLA-OBSERVE-R006.4). A hold past `observe.lock_hold_warn_ms` logs at WARN.
+pub async fn lock_graph(graph: &str) -> GraphLockGuard {
     static LOCKS: OnceLock<Vec<Arc<Mutex<()>>>> = OnceLock::new();
-    striped_lock(&LOCKS, graph).await
+    medulla_observe::locks()
+        .site(format!("lock_graph:{graph}"))
+        .acquire(striped_lock(&LOCKS, graph))
+        .await
 }
+
+/// The guard of [`lock_graph`]: it dereferences to the stripe's mutex guard and clears the
+/// lock site's holder when dropped.
+pub type GraphLockGuard = medulla_observe::registry::locks::Held<OwnedMutexGuard<()>>;
 
 pub const LOCK_STRIPES: usize = 1024;
 

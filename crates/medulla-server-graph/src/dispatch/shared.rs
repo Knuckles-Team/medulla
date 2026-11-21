@@ -224,7 +224,18 @@ pub async fn timed_read(
     state: &Arc<RwLock<ServerState>>,
 ) -> tokio::sync::RwLockReadGuard<'_, ServerState> {
     let started = DispatchLockInstant::now();
-    let guard = state.read().await;
+    // The shared state lock has many readers and no single holder. An uncontended read takes
+    // the lock directly; a contended one waits through the lock site, which records the
+    // waiters and the longest wait (MEDULLA-OBSERVE-R006.4).
+    let guard = match state.try_read() {
+        Ok(guard) => guard,
+        Err(_) => {
+            medulla_observe::locks()
+                .site("server_state")
+                .wait(state.read())
+                .await
+        }
+    };
     medulla_kernel::metrics::process()
         .observe_dispatch_lock_wait("read", started.elapsed().as_secs_f64());
     guard

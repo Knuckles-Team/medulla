@@ -15,6 +15,7 @@
 pub mod machine;
 pub mod progress;
 pub mod registry;
+pub mod runtime_stats;
 pub mod spawn;
 pub mod startup;
 
@@ -34,6 +35,26 @@ pub fn global() -> &'static TaskRegistry {
 pub fn readiness() -> &'static ReadinessRegistry {
     static GLOBAL: OnceLock<ReadinessRegistry> = OnceLock::new();
     GLOBAL.get_or_init(ReadinessRegistry::new)
+}
+
+/// The process-wide in-flight request registry (MEDULLA-OBSERVE-R006.2). Tests build isolated
+/// instances with [`registry::requests::RequestRegistry::new`].
+pub fn requests() -> &'static registry::requests::RequestRegistry {
+    static GLOBAL: OnceLock<registry::requests::RequestRegistry> = OnceLock::new();
+    GLOBAL.get_or_init(registry::requests::RequestRegistry::default)
+}
+
+/// The process-wide lock-site registry (MEDULLA-OBSERVE-R006.4). Tests build isolated
+/// instances with [`registry::locks::LockRegistry::new`].
+pub fn locks() -> &'static registry::locks::LockRegistry {
+    static GLOBAL: OnceLock<registry::locks::LockRegistry> = OnceLock::new();
+    GLOBAL.get_or_init(registry::locks::LockRegistry::new)
+}
+
+/// The process-wide runtime sampler (MEDULLA-OBSERVE-R006.3).
+pub fn runtime_sampler() -> &'static runtime_stats::RuntimeSampler {
+    static GLOBAL: OnceLock<runtime_stats::RuntimeSampler> = OnceLock::new();
+    GLOBAL.get_or_init(runtime_stats::RuntimeSampler::new)
 }
 
 /// The process-wide startup report (MEDULLA-OBSERVE-R008.1). Tests build isolated

@@ -67,5 +67,45 @@ fn guard_check(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, register_progress_finish, spawn_over_bare_spawn, guard_check);
+fn request_enter_and_exit(c: &mut Criterion) {
+    use medulla_observe::registry::requests::{EnterRequest, RequestRegistry};
+    let registry = RequestRegistry::new(4096);
+    c.bench_function("request_enter_and_exit", |b| {
+        b.iter(|| {
+            let guard = registry.enter(EnterRequest {
+                request_id: 1,
+                trace_id: None,
+                method: "Introspect",
+                graph: "bench",
+                principal: "bench-principal",
+            });
+            drop(guard);
+        })
+    });
+}
+
+fn lock_acquire_uncontended(c: &mut Criterion) {
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .expect("bench runtime");
+    let registry = medulla_observe::registry::locks::LockRegistry::new();
+    let site = registry.site("bench-lock");
+    c.bench_function("lock_acquire_uncontended", |b| {
+        b.iter(|| {
+            runtime.block_on(async {
+                let held = site.acquire(async {}).await;
+                drop(held);
+            })
+        })
+    });
+}
+
+criterion_group!(
+    benches,
+    register_progress_finish,
+    spawn_over_bare_spawn,
+    guard_check,
+    request_enter_and_exit,
+    lock_acquire_uncontended
+);
 criterion_main!(benches);

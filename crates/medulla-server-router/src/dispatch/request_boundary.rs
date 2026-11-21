@@ -219,7 +219,35 @@ pub async fn dispatch_with_context(
     // skip the clock entirely — byte-for-byte the prior `not(metrics)` path.
     let start = (cfg!(feature = "metrics") || slow.is_some()).then(std::time::Instant::now);
 
-    let resp = dispatch_inner(state, req, context).await;
+    // MEDULLA-OBSERVE-R006.2: the request is listed from entry to every exit; its phase
+    // follows `RequestMachine`. The guard removes the row when this future ends or is dropped.
+    let principal = context
+        .as_ref()
+        .map(|context| context.agent_id().to_string())
+        .unwrap_or_default();
+    let request_guard = medulla_observe::requests().enter(
+        medulla_observe::registry::requests::EnterRequest {
+            request_id: req.id,
+            trace_id: None,
+            method,
+            graph: &req.graph,
+            principal: &principal,
+        },
+    );
+    let _ = request_guard.apply(medulla_observe::machine::request::RequestEvent::Admit);
+    let resp = medulla_observe::registry::requests::scope(
+        request_guard.handle(),
+        dispatch_inner(state, req, context),
+    )
+    .await;
+    if resp.error.is_some() {
+        let _ = request_guard.apply(medulla_observe::machine::request::RequestEvent::Refuse);
+    } else if request_guard
+        .apply(medulla_observe::machine::request::RequestEvent::Respond)
+        .is_ok()
+    {
+        let _ = request_guard.apply(medulla_observe::machine::request::RequestEvent::Complete);
+    }
 
     if let Some(start) = start {
         let elapsed = start.elapsed();
@@ -520,6 +548,10 @@ async fn dispatch_inner(
             Ok(v) => v,
             Err(resp) => return resp,
         };
+    // The caller is authorized for the method: the request machine moves on.
+    medulla_observe::registry::requests::advance(
+        medulla_observe::machine::request::RequestEvent::Authorize,
+    );
     dispatch_admitted_request(state, req, &verified_context, authority).await
 }
 
@@ -529,6 +561,10 @@ async fn dispatch_admitted_request(
     verified_context: &VerifiedRequestContext,
     authority: DispatchAuthority,
 ) -> Response {
+    // The handler side begins: everything from here to the response is `Handling`.
+    medulla_observe::registry::requests::advance(
+        medulla_observe::machine::request::RequestEvent::Handle,
+    );
     let session_control = match begin_session_control_saga(
         state,
         req.id,

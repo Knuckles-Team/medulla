@@ -1,4 +1,4 @@
-//! MEDULLA-OBSERVE-R006.1, R003.3 and R007.1: the served `Introspect` read answers every
+//! MEDULLA-OBSERVE-R006.1 to R006.4, R003.3 and R007.1: the served `Introspect` read answers every
 //! section by its refusals and pages, shows the lazy-paging task with its keyset cursor, and
 //! shows a graph's readiness follow open, eviction and materialization.
 //!
@@ -318,4 +318,121 @@ async fn graph_readiness_follows_open_migrate_materialize() {
         .find(|row| row["graph"] == "observe:ready")
         .unwrap();
     assert_eq!(row["state"], "opening");
+}
+
+// spec: MEDULLA-OBSERVE-R006.2
+#[tokio::test(flavor = "multi_thread")]
+async fn in_flight_request_is_listed_with_phase_and_age() {
+    let served = Served::new().await;
+    // The Introspect call is itself in flight while it reads the registry.
+    let page = served.page(IntrospectSection::Requests).await;
+    let row = page
+        .rows
+        .iter()
+        .find(|row| row["method"] == "Introspect")
+        .expect("the reading request is listed");
+    assert_eq!(row["phase"], "handling");
+    assert_eq!(row["graph"], "__commons__");
+    assert!(row["age_ms"].is_u64());
+    assert!(row["waiting_for"].is_null());
+    let principal_ref = row["principal_ref"].as_str().unwrap();
+    assert!(principal_ref.starts_with("p:"));
+    assert!(!principal_ref.contains(PRINCIPAL), "the principal is never listed");
+    // Every exit path removes the row: the request that just returned is gone.
+    let request_id = row["request_id"].as_u64().unwrap();
+    assert!(medulla_observe::requests()
+        .snapshot()
+        .iter()
+        .all(|listed| listed.request_id != request_id));
+}
+
+// spec: MEDULLA-OBSERVE-R006.3
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn spinning_worker_is_flagged_in_runtime_section() {
+    let served = Served::new().await;
+    // Three of the four workers spin for longer than two sampler windows; the fourth and
+    // the test thread keep serving.
+    let spinners: Vec<_> = (0..3)
+        .map(|_| {
+            tokio::spawn(async {
+                let until = std::time::Instant::now() + std::time::Duration::from_secs(5);
+                while std::time::Instant::now() < until {
+                    std::hint::spin_loop();
+                }
+            })
+        })
+        .collect();
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(8);
+    let flagged = loop {
+        let page = served.page(IntrospectSection::Runtime).await;
+        let spinning = page
+            .rows
+            .iter()
+            .filter(|row| row["spinning"] == true)
+            .count();
+        if spinning > 0 {
+            break page;
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "no worker was flagged spinning: {:?}",
+            page.rows
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+    };
+    assert_eq!(flagged.rows[0]["key"], "global");
+    assert!(flagged.rows[0]["global_queue_depth"].is_u64());
+    let worker = flagged
+        .rows
+        .iter()
+        .find(|row| row["spinning"] == true)
+        .unwrap();
+    assert!(worker["busy_ratio"].as_f64().unwrap() >= 0.9);
+    assert!(worker["parks"].is_u64() && worker["busy_ms"].is_u64());
+    for spinner in spinners {
+        spinner.await.unwrap();
+    }
+}
+
+// spec: MEDULLA-OBSERVE-R006.4
+#[tokio::test(flavor = "multi_thread")]
+async fn held_graph_lock_shows_holder_and_waiter() {
+    let served = Served::new().await;
+    let graph = "observe:locked";
+    let site = format!("lock_graph:{graph}");
+    let held = medulla_server_api::routed_write_coalescer::lock_graph(graph).await;
+    let waiter = tokio::spawn(async move {
+        let guard = medulla_server_api::routed_write_coalescer::lock_graph(graph).await;
+        drop(guard);
+    });
+    let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+    let row = loop {
+        let page = served.page(IntrospectSection::Locks).await;
+        if let Some(row) = page
+            .rows
+            .iter()
+            .find(|row| row["name"] == site.as_str() && row["waiters"] == 1)
+        {
+            break row.clone();
+        }
+        assert!(
+            std::time::Instant::now() < deadline,
+            "the waiter never showed: {:?}",
+            page.rows
+        );
+        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+    };
+    assert!(row["holder"].is_string(), "a held lock names its holder");
+    assert!(row["hold_ms"].is_u64());
+    drop(held);
+    waiter.await.unwrap();
+    let page = served.page(IntrospectSection::Locks).await;
+    let row = page
+        .rows
+        .iter()
+        .find(|row| row["name"] == site.as_str())
+        .expect("the site stays listed");
+    assert!(row["holder"].is_null());
+    assert_eq!(row["waiters"], 0);
+    assert!(row["longest_wait_ms"].as_u64().is_some());
 }

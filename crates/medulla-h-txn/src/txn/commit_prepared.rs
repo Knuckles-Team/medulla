@@ -228,7 +228,7 @@ pub(super) struct CommitPreparedDurableArgs<'a> {
     tenant_scope: String,
     begin_version: u64,
     applied: Vec<Method>,
-    mutation_guard: tokio::sync::OwnedMutexGuard<()>,
+    mutation_guard: medulla_server_api::routed_write_coalescer::GraphLockGuard,
     attempt_nonce: Option<Nonce>,
 }
 

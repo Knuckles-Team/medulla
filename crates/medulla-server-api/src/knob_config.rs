@@ -444,6 +444,10 @@ knobs! {
     memory_sync_max_revisions_per_doc: u64 = "memory_sync.max_revisions_per_doc", U64(64), [1, 4_096], "revisions", Tunable;
     /// Most bytes of memory snapshot content one tenant holds; a write over it is refused (MEDULLA-DURABLE-KERNEL-R085.7).
     memory_sync_capacity_bytes: u64 = "memory_sync.capacity_bytes", U64(1_073_741_824), [1_048_576, 1_099_511_627_776], "bytes", Tunable;
+    /// Busy ratio at or above which a tokio worker, across two windows, is flagged spinning (MEDULLA-OBSERVE-R006.3).
+    observe_worker_spin_busy_ratio: f64 = "observe.worker_spin_busy_ratio", F64(0.9), [0.5, 1.0], "ratio", Tunable;
+    /// A lock held this long logs at WARN with its holder (MEDULLA-OBSERVE-R006.4).
+    observe_lock_hold_warn_ms: u64 = "observe.lock_hold_warn_ms", U64(5_000), [100, 600_000], "ms", Tunable;
     /// Memory search-state size cap.
     memory_search_state_max_bytes: u64 = "memory.search_state_max_bytes", U64(1_048_576), [65_536, 1_048_576], "bytes", Tunable;
     /// TOC line-index stride.
@@ -1113,6 +1117,9 @@ static INSTALLED: OnceLock<KnobConfig> = OnceLock::new();
 pub fn install(config: KnobConfig) {
     // The source access gate lives below this crate; it reads the resolved staleness bound.
     medulla_graph_core::rls::install_source_acl_stale_after_s(config.ingest_acl_stale_after_s);
+    // The observability registries sit below this crate and cannot read the knobs.
+    medulla_observe::runtime_sampler().set_spin_busy_ratio(config.observe_worker_spin_busy_ratio);
+    medulla_observe::locks().set_hold_warn_ms(config.observe_lock_hold_warn_ms);
     if INSTALLED.set(config).is_ok() {
         // The graph cores read the retention bound at write time and cannot see this
         // crate, so the resolved value is handed to them once, here.

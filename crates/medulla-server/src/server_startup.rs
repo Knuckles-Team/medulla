@@ -460,6 +460,8 @@ pub fn admission_limits(capacity: &medulla_kernel::autosize::Capacity) -> Admiss
         "Backpressure: max in-flight = {} (per-graph cap = {}, reserved read lane = {})",
         max_in_flight, per_graph_inflight_limit, read_reserved
     );
+    // The in-flight request registry is bounded by the same admission cap (MEDULLA-OBSERVE-R006.2).
+    medulla_observe::requests().set_capacity(max_in_flight);
     // Per-graph write coalescer (CONCEPT:MEDULLA-KG.sharding.per-graph-write-coalescer): batch
     // size auto-sized from cpu count and always enabled with bounded queues.
     let coalescer = medulla_kernel::write_coalescer::CoalescerConfig::auto();

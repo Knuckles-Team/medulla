@@ -2,9 +2,11 @@
 //!
 //! `Method::Introspect` answers one page of one section of the process's runtime registries,
 //! ascending by the section's key. The `tasks` section reads the task registry (key: the task
-//! id) and the `readiness` section reads the readiness registry (key: the graph name); the
-//! sections whose registries land with their own rows (`requests`, `runtime`, `locks`,
-//! `events`) answer an empty page until then. Pure over
+//! id) and the `readiness` section reads the readiness registry (key: the graph name). The
+//! `requests` section reads the in-flight request registry (key: the registry key), the
+//! `locks` section the lock sites (key: the lock name) and the `runtime` section the runtime
+//! sampler (keys `global`, then `worker:<index>`). The `events` section answers an empty page
+//! until the event ring lands. Pure over
 //! `medulla_observe`: no durable substrate is read, so the method serves in every build.
 
 use medulla_observe::registry::tasks::{file_line, ProgressCursor, TaskRow};
@@ -76,6 +78,9 @@ fn read_section(
         IntrospectSection::Readiness => Ok(readiness_page(limit, cursor)),
         IntrospectSection::Build => Ok(build_page(cursor)),
         IntrospectSection::Startup => Ok(startup_page(limit, cursor)),
+        IntrospectSection::Requests => requests_page(limit, cursor),
+        IntrospectSection::Locks => Ok(locks_page(limit, cursor)),
+        IntrospectSection::Runtime => Ok(runtime_page(limit, cursor)),
         other => Ok(IntrospectPage {
             section: other,
             rows: Vec::new(),
@@ -231,6 +236,119 @@ fn startup_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
     );
     IntrospectPage {
         section: IntrospectSection::Startup,
+        rows,
+        next_cursor,
+        seq: 0,
+    }
+}
+
+/// The `requests` section: the in-flight requests, key the registry key (MEDULLA-OBSERVE-R006.2).
+fn requests_page(limit: usize, cursor: Option<&str>) -> Result<IntrospectPage, String> {
+    let after: Option<u64> = match cursor {
+        Some(value) => Some(value.parse().map_err(|_| {
+            "INTROSPECT_CURSOR_INVALID: a requests cursor is a request key".to_string()
+        })?),
+        None => None,
+    };
+    let registry = medulla_observe::requests();
+    let seq = registry.sequence();
+    let (rows, next_cursor) = page_of(
+        registry.snapshot(),
+        limit,
+        |row: &medulla_observe::registry::requests::RequestRow| {
+            after.map_or(true, |key| row.key > key)
+        },
+        |row| row.key.to_string(),
+        |row| {
+            json!({
+                "key": row.key,
+                "request_id": row.request_id,
+                "trace_id": row.trace_id,
+                "method": row.method,
+                "graph": row.graph,
+                "principal_ref": row.principal_ref,
+                "phase": medulla_types::transition_refused::MachineState::stored(row.phase),
+                "age_ms": row.age_ms,
+                "waiting_for": row.waiting_for,
+            })
+        },
+    );
+    Ok(IntrospectPage {
+        section: IntrospectSection::Requests,
+        rows,
+        next_cursor,
+        seq,
+    })
+}
+
+/// The `locks` section: the named lock sites, key the lock name (MEDULLA-OBSERVE-R006.4).
+fn locks_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
+    let (rows, next_cursor) = page_of(
+        medulla_observe::locks().snapshot(),
+        limit,
+        |row| cursor.map_or(true, |last| row.name.as_str() > last),
+        |row| row.name.clone(),
+        |row| {
+            json!({
+                "name": row.name,
+                "holder": row.holder,
+                "hold_ms": row.hold_ms,
+                "waiters": row.waiters,
+                "longest_wait_ms": row.longest_wait_ms,
+            })
+        },
+    );
+    IntrospectPage {
+        section: IntrospectSection::Locks,
+        rows,
+        next_cursor,
+        seq: 0,
+    }
+}
+
+/// The `runtime` section: the `global` row, then one `worker:<index>` row per tokio worker
+/// (MEDULLA-OBSERVE-R006.3). Outside a runtime the page is empty.
+fn runtime_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
+    let snapshot = tokio::runtime::Handle::try_current()
+        .ok()
+        .map(|handle| medulla_observe::runtime_sampler().snapshot(&handle));
+    let mut keyed: Vec<(String, Value)> = Vec::new();
+    if let Some(snapshot) = snapshot {
+        keyed.push((
+            "global".to_string(),
+            json!({
+                "key": "global",
+                "global_queue_depth": snapshot.global_queue_depth,
+                "blocking_threads": snapshot.blocking_threads,
+                "idle_blocking_threads": snapshot.idle_blocking_threads,
+                "workers": snapshot.workers.len(),
+            }),
+        ));
+        for worker in snapshot.workers {
+            let key = format!("worker:{:04}", worker.index);
+            keyed.push((
+                key.clone(),
+                json!({
+                    "key": key,
+                    "index": worker.index,
+                    "busy_ms": worker.busy_ms,
+                    "busy_ratio": worker.busy_ratio,
+                    "parks": worker.parks,
+                    "local_queue": worker.local_queue,
+                    "spinning": worker.spinning,
+                }),
+            ));
+        }
+    }
+    let (rows, next_cursor) = page_of(
+        keyed,
+        limit,
+        |(key, _)| cursor.map_or(true, |last| key.as_str() > last),
+        |(key, _)| key.clone(),
+        |(_, row)| row.clone(),
+    );
+    IntrospectPage {
+        section: IntrospectSection::Runtime,
         rows,
         next_cursor,
         seq: 0,

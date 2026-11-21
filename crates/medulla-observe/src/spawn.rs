@@ -22,6 +22,7 @@ use crate::registry::tasks::{Outcome, ProgressCursor, TaskProgress, TaskSpec};
 
 tokio::task_local! {
     static CURRENT: TaskProgress;
+    static CURRENT_NAME: String;
 }
 
 thread_local! {
@@ -121,15 +122,19 @@ where
     F::Output: IntoOutcome,
 {
     install_panic_hook();
+    let name = spec.name.clone();
     let handle = crate::global().register(spec);
     let reporter = handle.reporter();
     let span = tracing::Span::current();
     // The one bare spawn for a registered job: every other spawn site calls this helper.
     tokio::spawn(async move {
-        let result = CURRENT
+        let result = CURRENT_NAME
             .scope(
-                reporter,
-                AssertUnwindSafe(future.instrument(span)).catch_unwind(),
+                name,
+                CURRENT.scope(
+                    reporter,
+                    AssertUnwindSafe(future.instrument(span)).catch_unwind(),
+                ),
             )
             .await;
         let outcome = match result {
@@ -151,4 +156,10 @@ pub fn progress(cursor: ProgressCursor, units_done: u64) -> bool {
     };
     reporter.progress(cursor, units_done);
     true
+}
+
+/// The registered name of the job this call runs in, or `None` outside a job started by
+/// [`spawn`]. Lock sites use it to name a holder that is not a request (MEDULLA-OBSERVE-R006.4).
+pub fn current_task_name() -> Option<String> {
+    CURRENT_NAME.try_with(String::clone).ok()
 }

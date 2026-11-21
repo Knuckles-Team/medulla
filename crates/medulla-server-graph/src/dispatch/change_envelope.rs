@@ -620,7 +620,7 @@ pub async fn apply_repository_change_envelope(
 /// advance the graph in between, and the envelope then meets a
 /// `WRITE_CONFLICT` the caller never chose and cannot correct. Its route takes
 /// this guard first, reads the version under it, and hands it to the apply.
-pub type GraphWriteGuard = tokio::sync::OwnedMutexGuard<()>;
+pub type GraphWriteGuard = medulla_server_api::routed_write_coalescer::GraphLockGuard;
 
 /// Take the write lock of `graph_name` for an engine-lowered envelope.
 pub async fn lock_graph_for_lowering(graph_name: &str) -> GraphWriteGuard {

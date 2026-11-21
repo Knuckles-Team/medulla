@@ -59,7 +59,7 @@ struct PreparedOperation {
     backend: Arc<dyn PersistenceBackend>,
     graph: String,
     now_ms: u64,
-    _mutation_guard: tokio::sync::OwnedMutexGuard<()>,
+    _mutation_guard: medulla_server_api::routed_write_coalescer::GraphLockGuard,
 }
 
 async fn prepare(ctx: &HandleContext<'_>) -> Result<PreparedOperation, Response> {

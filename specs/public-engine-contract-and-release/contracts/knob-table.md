@@ -47,6 +47,8 @@ The initial `KNOB_TABLE` of `crates/medulla-server-api/src/knob_config.rs`: one 
 | `uql.group.max_groups` | u64 | 100000 | [1, 1000000] | groups | Tunable | `MEDULLA_UQL_GROUP_MAX_GROUPS` |
 | `transfer.min_rollouts` | u64 | 3 | [1, 100] | records | Tunable | `MEDULLA_TRANSFER_MIN_ROLLOUTS` |
 | `memory_sync.cursor_ttl_s` | u64 | 900 | [60, 86400] | seconds | Tunable | `MEDULLA_MEMORY_SYNC_CURSOR_TTL_S` |
+| `observe.worker_spin_busy_ratio` | f64 | 0.9 | [0.5, 1.0] | ratio | Tunable | `MEDULLA_OBSERVE_WORKER_SPIN_BUSY_RATIO` |
+| `observe.lock_hold_warn_ms` | u64 | 5000 | [100, 600000] | ms | Tunable | `MEDULLA_OBSERVE_LOCK_HOLD_WARN_MS` |
 | `memory.search_state_max_bytes` | u64 | 1048576 | [65536, 1048576] | bytes | Tunable | `MEDULLA_MEMORY_SEARCH_STATE_MAX_BYTES` |
 | `toc.line_index_stride` | u64 | 64 | [16, 1024] | lines | Tunable | `MEDULLA_TOC_LINE_INDEX_STRIDE` |
 | `held_item.min_passes` | u64 | 2 | [1, 20] | passes | Tunable | `MEDULLA_HELD_ITEM_MIN_PASSES` |
