@@ -743,6 +743,18 @@ knobs! {
     metastore_timeout_ms: u64 = "metastore.timeout_ms", U64(10_000), [100, 600_000], "ms", Tunable;
     /// Most connections one catalog read of an attached MySQL or MariaDB source opens (MEDULLA-UNIFIED-DATA-PLANE-R014.2.2).
     foreign_mysql_pool_size: u64 = "foreign.mysql.pool_size", U64(4), [1, 64], "connections", Tunable;
+    /// Fewest text-search uses before column advice ranks anything (MEDULLA-FEDERATED-QUERY-R077.6.2).
+    sql_advice_min_samples: u64 = "sql_advice.min_samples", U64(50), [1, 100_000], "observations", Tunable;
+    /// Weight of a column's share of text-search uses in its advice score (MEDULLA-FEDERATED-QUERY-R077.6.2).
+    sql_advice_w_demand: f64 = "sql_advice.w_demand", F64(0.6), [0.0, 1.0], "weight", Tunable;
+    /// Weight of a column's average text length in its advice score (MEDULLA-FEDERATED-QUERY-R077.6.2).
+    sql_advice_w_length: f64 = "sql_advice.w_length", F64(0.25), [0.0, 1.0], "weight", Tunable;
+    /// Weight of a column's distinct-value ratio in its advice score (MEDULLA-FEDERATED-QUERY-R077.6.2).
+    sql_advice_w_distinct: f64 = "sql_advice.w_distinct", F64(0.15), [0.0, 1.0], "weight", Tunable;
+    /// Average text length at which the length term of an advice score saturates (MEDULLA-FEDERATED-QUERY-R077.6.2).
+    sql_advice_length_norm: u64 = "sql_advice.length_norm", U64(512), [1, 65_536], "bytes", Tunable;
+    /// Most rows one advice listing returns (MEDULLA-FEDERATED-QUERY-R077.6.2).
+    sql_advice_max_rows: u64 = "sql_advice.max_rows", U64(1000), [1, 10_000], "rows", Tunable;
     /// Largest hop bound of one column lineage impact walk (MEDULLA-UNIFIED-DATA-PLANE-R763.3).
     lineage_impact_max_depth: u64 = "lineage.impact_max_depth", U64(8), [1, 32], "hops", Tunable;
     /// Most columns one column lineage impact walk may reach (MEDULLA-UNIFIED-DATA-PLANE-R763.3).

@@ -28,6 +28,7 @@
 
 pub mod ann_authority;
 pub mod ann_plan;
+pub mod column_advice;
 pub mod embedding_binding;
 pub mod index_plan;
 pub mod property_graph;
@@ -38,11 +39,12 @@ pub use ann_authority::{
     AnnServeReceipt, AnnServingPath, AnnTopK, AnnTopKRequest, UserAnnAuthority,
 };
 pub use ann_plan::{AnnIndexPlan, AnnMethod, HypertablePlan, VectorMetric};
+pub use column_advice::{rank_columns, AdviceColumn, AdviceInput, AdvicePolicy, ColumnAdviceError};
 pub use embedding_binding::{
     catalog_key as embedding_binding_catalog_key, decode_binding, default_target_column,
-    encode_binding, is_embeddable, model_digest, prepare_catalog_write, recommend_vectorization,
+    encode_binding, is_embeddable, model_digest, prepare_catalog_write,
     validate_binding, BindingRequest, BindingState, EmbeddingBinding, Maintenance, ModelRef,
-    SourceSelector, StampedVector, TargetVector, TextColumnStats, VectorizationRecommendation,
+    AdviceEligibility, ColumnVectorAdvice, SourceSelector, StampedVector, TargetVector,
     EMBEDDING_BINDING_SCHEMA_VERSION, EMBEDDING_TARGET_SUFFIX, MAX_EMBEDDING_BINDINGS_PER_TABLE,
     MAX_EMBEDDING_DIM,
 };
