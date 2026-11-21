@@ -38,8 +38,13 @@ def test_semantic_and_audit_mirrors_type_state_as_the_rust_enum() -> None:
     }
     for name in STAGE_MIRRORS:
         assert _annotation(getattr(models, name), "stage") is models.SemanticStage, name
-    status = _annotation(models.SemanticOutboxStatus, "status")
-    assert isinstance(status, type) and issubclass(status, enum.Enum)
+    # The outbox consumer standing is a snapshot of counters, not a lifecycle
+    # (MEDULLA-DURABLE-KERNEL-R874.11): it is a model under `standing`, and the
+    # old `status` field no longer exists.
+    standing = _annotation(models.SemanticOutboxStatus, "standing")
+    assert standing is models.OutboxConsumerStanding
+    assert "status" not in models.SemanticOutboxStatus.model_fields
+    assert "status" not in models.MutationOutboxStatusView.model_fields
 
     fields = {
         "op": "graph.nodes.write",

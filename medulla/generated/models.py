@@ -19051,7 +19051,7 @@ class MutationOutboxStatusView(BaseModel):
 
     head: OutboxHeadView | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
-    status: OutboxConsumerStatus
+    standing: OutboxConsumerStanding
 
 
 class MutationScopeGraph(BaseModel):
@@ -20100,7 +20100,7 @@ class OuThresholds(BaseModel):
     z: float
 
 
-class OutboxConsumerStatus(BaseModel):
+class OutboxConsumerStanding(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     capacity: Annotated[int, Field(ge=0)]
@@ -24159,7 +24159,7 @@ class SemanticOutboxStatus(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     consecutive_claims: Annotated[int, Field(ge=0)]
-    status: OutboxConsumerStatus
+    standing: OutboxConsumerStanding
     total_claims: Annotated[int, Field(ge=0)]
 
 
@@ -37449,7 +37449,7 @@ __all__ = [
     "Order",
     "OuParams",
     "OuThresholds",
-    "OutboxConsumerStatus",
+    "OutboxConsumerStanding",
     "OutboxDeadLetterPage",
     "OutboxDeadLetterView",
     "OutboxHeadView",

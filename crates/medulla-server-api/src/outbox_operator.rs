@@ -5,6 +5,6 @@
 //! the server's name for them.
 
 pub use medulla_transaction::{
-    consumer_status, operate_outbox as operate, outbox_position as position,
+    consumer_standing, operate_outbox as operate, outbox_position as position,
     read_outbox_view as read_view, OutboxView, OutboxViewAnswer, OutboxWrite, OutboxWriteReply,
 };

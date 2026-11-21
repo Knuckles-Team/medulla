@@ -101,7 +101,7 @@ pub(crate) use rewind::rewind;
 pub use rewind::{OutboxRewindOutcome, OutboxRewindTarget};
 pub(crate) use stream::subscribe;
 pub use views::{
-    consumer_status, operate_outbox, outbox_position, read_outbox_view, OutboxView,
+    consumer_standing, operate_outbox, outbox_position, read_outbox_view, OutboxView,
     OutboxViewAnswer, OutboxWrite, OutboxWriteReply,
 };
 

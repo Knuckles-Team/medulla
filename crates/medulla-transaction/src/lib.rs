@@ -50,7 +50,7 @@ pub use group::{AdmittedGroup, CurrentIntent, ScopedIntent};
 pub use kernel::MutationKernel;
 pub use maintenance::MaintenanceBatch;
 pub use outbox::{
-    consumer_status, max_delivery_attempts, operate_outbox, outbox_cursor, outbox_position,
+    consumer_standing, max_delivery_attempts, operate_outbox, outbox_cursor, outbox_position,
     outbox_status, queue_capacity, read_outbox_view, OutboxClaimBudget, OutboxClaimCursor,
     OutboxClaimOutcome, OutboxConsumerState, OutboxDeadLetterPage, OutboxDeferral, OutboxDelivery,
     OutboxHead, OutboxPosition, OutboxRejectReason, OutboxRewindOutcome, OutboxRewindTarget,

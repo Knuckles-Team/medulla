@@ -511,8 +511,8 @@ async fn boot_listener_binds_before_the_projection_drain_completes() {
     // listener was already up while it did.
     let drain_at = loop {
         if let Some(view) = outbox_status(&state).await {
-            let delivered = view.status.delivered;
-            let pending = view.status.pending;
+            let delivered = view.standing.delivered;
+            let pending = view.standing.pending;
             if pending == 0 && delivered == PENDING_ROWS as u64 {
                 break Instant::now();
             }

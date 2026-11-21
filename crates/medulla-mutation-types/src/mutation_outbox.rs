@@ -224,7 +224,7 @@ pub struct OutboxHeadView {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct OutboxConsumerStatus {
+pub struct OutboxConsumerStanding {
     pub consumer: String,
     #[serde(default)]
     pub topic: Option<String>,
@@ -249,7 +249,7 @@ pub struct OutboxConsumerStatus {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct MutationOutboxStatusView {
     pub schema_version: u16,
-    pub status: OutboxConsumerStatus,
+    pub standing: OutboxConsumerStanding,
     #[serde(default)]
     pub head: Option<OutboxHeadView>,
 }
@@ -360,5 +360,69 @@ mod scope_tests {
             target,
             native(NativeOutboxStore::Jobs, NativeOutboxScope::Tenant)
         );
+    }
+}
+
+#[cfg(test)]
+mod standing_tests {
+    use super::*;
+
+    fn standing() -> OutboxConsumerStanding {
+        OutboxConsumerStanding {
+            consumer: "consumer-a".into(),
+            topic: Some("topic-a".into()),
+            live: true,
+            capacity: 8,
+            inflight: 1,
+            inflight_is_lower_bound: false,
+            pending: 4,
+            pending_is_lower_bound: false,
+            delivered: 10,
+            dead_lettered: 0,
+            oldest_pending_age_ms: 25,
+            lag_rows: 4,
+            lag_versions: 2,
+            saturated: false,
+            index_complete: true,
+        }
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R874.11
+    #[test]
+    fn outbox_consumer_standing_is_a_snapshot_with_no_lifecycle_field() {
+        let wire = serde_json::to_value(standing()).unwrap();
+        let fields: std::collections::BTreeSet<&str> = wire
+            .as_object()
+            .unwrap()
+            .keys()
+            .map(String::as_str)
+            .collect();
+        // Counters, liveness and capacity only: no field names a phase the consumer moves
+        // through, so there is no state machine to declare.
+        for lifecycle_word in ["state", "status", "phase", "stage"] {
+            assert!(
+                !fields.iter().any(|field| field.contains(lifecycle_word)),
+                "{lifecycle_word} would make the standing a lifecycle: {fields:?}"
+            );
+        }
+        assert_eq!(fields.len(), 15, "{fields:?}");
+        let packed = rmp_serde::to_vec_named(&standing()).unwrap();
+        assert_eq!(
+            rmp_serde::from_slice::<OutboxConsumerStanding>(&packed).unwrap(),
+            standing()
+        );
+        // The view carries it under the renamed field, and the old name is refused.
+        let view = MutationOutboxStatusView {
+            schema_version: 1,
+            standing: standing(),
+            head: None,
+        };
+        let wire = serde_json::to_value(&view).unwrap();
+        assert!(wire.get("standing").is_some());
+        assert!(wire.get("status").is_none());
+        let mut old = wire;
+        let moved = old.as_object_mut().unwrap().remove("standing").unwrap();
+        old["status"] = moved;
+        assert!(serde_json::from_value::<MutationOutboxStatusView>(old).is_err());
     }
 }

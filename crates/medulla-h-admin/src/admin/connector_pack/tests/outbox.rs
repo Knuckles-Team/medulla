@@ -147,8 +147,8 @@ async fn the_worker_consumes_an_import_and_the_operator_can_rewind_it() {
         )
         .await,
     );
-    assert!(status.status.live);
-    assert_eq!((status.status.delivered, status.status.pending), (1, 0));
+    assert!(status.standing.live);
+    assert_eq!((status.standing.delivered, status.standing.pending), (1, 0));
     let rewound: OutboxRewindReceipt = ok(
         "Rewind",
         outbox(
@@ -560,8 +560,8 @@ async fn failed_projection_records_durable_failed_status() {
         )
         .await,
     );
-    assert_eq!(status.status.dead_lettered, 1, "{status:?}");
-    assert_eq!(status.status.pending, 0, "{status:?}");
+    assert_eq!(status.standing.dead_lettered, 1, "{status:?}");
+    assert_eq!(status.standing.pending, 0, "{status:?}");
     // The head records the failure's stable code and cause, not a bare error.
     let store = served.state.write().await.ensure_agent_library().unwrap();
     let failed = store
@@ -674,7 +674,7 @@ async fn rejected_projection_is_visible_and_retried() {
         .await,
     );
     assert_eq!(
-        status.status.dead_lettered, 0,
+        status.standing.dead_lettered, 0,
         "a retryable rejection moves to the retry state, not the dead letters: {status:?}"
     );
     let tool_b = format!("mcp:{schema}/tool/b");
@@ -809,7 +809,7 @@ async fn a_failing_pack_never_delays_a_healthy_pack_and_ends_terminal() {
         )
         .await,
     );
-    assert_eq!(status.status.pending, 0, "{status:?}");
+    assert_eq!(status.standing.pending, 0, "{status:?}");
     assert!(status.head.is_none(), "{status:?}");
 
     // Sweeps that run before the backoff ends retry nothing; the sweep at the

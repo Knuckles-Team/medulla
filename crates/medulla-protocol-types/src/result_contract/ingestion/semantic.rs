@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 
 use medulla_index_types::semantic_index::SemanticDigest;
-use medulla_mutation_types::mutation_outbox::OutboxConsumerStatus;
+use medulla_mutation_types::mutation_outbox::OutboxConsumerStanding;
 
 /// Durable receipt returned by the semantic-index owner for a committed mutation.
 /// The runtime type lives above `medulla-types`; this wire mirror keeps the contract at
@@ -42,12 +42,12 @@ pub struct SemanticSqlSourceReconciliationAdmission {
 
 /// Wire view of the outbox status returned by the semantic stage queue. The
 /// fields every outbox-status view shares live in
-/// [`OutboxConsumerStatus`]; `consecutive_claims`/`total_claims` are this
+/// [`OutboxConsumerStanding`]; `consecutive_claims`/`total_claims` are this
 /// queue's own.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SemanticOutboxStatus {
-    pub status: OutboxConsumerStatus,
+    pub standing: OutboxConsumerStanding,
     pub consecutive_claims: u32,
     pub total_claims: u64,
 }

@@ -65,7 +65,7 @@ fn a_reopened_owner_answers_the_same_outbox_and_still_writes() {
             .unwrap();
         status(&codes)
     };
-    assert_eq!(before.status.pending, 2);
+    assert_eq!(before.standing.pending, 2);
 
     // (a) the reopened owner answers the identical view.
     let codes = open_store(&dir);
@@ -75,7 +75,7 @@ fn a_reopened_owner_answers_the_same_outbox_and_still_writes() {
     codes
         .enqueue_stage_intent(&intent(&binding, "e3", 3), 5)
         .unwrap();
-    assert_eq!(status(&codes).status.pending, 3);
+    assert_eq!(status(&codes).standing.pending, 3);
     let mut budget = OutboxClaimBudget::new(32, 5_000, NOW).unwrap();
     let claimed = codes.claim_stage_leases(WORKER, &mut budget).unwrap();
     assert_eq!(claimed.claims.len(), 3);

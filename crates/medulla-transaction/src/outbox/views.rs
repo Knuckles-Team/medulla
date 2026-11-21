@@ -16,7 +16,7 @@ use crate::outbox::{
 };
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_mutation_types::{
-    mutation_outbox::MutationOutboxStatusView, mutation_outbox::OutboxConsumerStatus,
+    mutation_outbox::MutationOutboxStatusView, mutation_outbox::OutboxConsumerStanding,
     mutation_outbox::OutboxDeadLetterPage, mutation_outbox::OutboxDeadLetterView,
     mutation_outbox::OutboxHeadView, mutation_outbox::OutboxPositionView,
     mutation_outbox::OutboxRewindReceipt, mutation_outbox::RewindTarget,
@@ -187,8 +187,8 @@ fn rewind_target(to: &RewindTarget) -> OutboxRewindTarget {
 }
 
 /// The generic consumer standing, shared by every outbox view.
-pub fn consumer_status(status: &OutboxStatus) -> OutboxConsumerStatus {
-    OutboxConsumerStatus {
+pub fn consumer_standing(status: &OutboxStatus) -> OutboxConsumerStanding {
+    OutboxConsumerStanding {
         consumer: status.consumer.clone(),
         topic: status.topic.clone(),
         live: status.live,
@@ -216,7 +216,7 @@ fn status_view(status: OutboxStatus) -> MutationOutboxStatusView {
     });
     MutationOutboxStatusView {
         schema_version: MUTATION_OUTBOX_VIEW_SCHEMA_VERSION,
-        status: consumer_status(&status),
+        standing: consumer_standing(&status),
         head,
     }
 }
