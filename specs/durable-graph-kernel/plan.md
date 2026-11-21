@@ -1113,6 +1113,10 @@ Graph shards now take the same entry point. Restore copies each bundle shard int
 It verifies the digest, adopts the copy and runs the unchanged move migration out of staging.
 This also stops restore from consuming the bundle. Today `migrate_shards` runs against the bundle directory and retires its scopes.
 `rebind_copied_store` stays reserved for a copy of a store the process already trusts. Restore never uses it.
+MEDULLA-DURABLE-KERNEL-R862.2 now uses that existing function for its rebind step, and the planned `rebind_store_root` is dropped.
+The command gains `--copied-from`, because `rebind_copied_store` proves the copy against the root of its source.
+The row is not withdrawn: the verb, lock, confirmation, fingerprints and skip check are still unbuilt.
+The false checked duplicates of tasks T228, T229 and T230 are removed. Those rows are not delivered.
 
 Amendment, 2026-11-20. MEDULLA-DURABLE-KERNEL-R028.4.4 states that replay is the ledger's operation replay.
 The ledger tests in `crates/medulla-transaction/src/tests/replay.rs` and `fault_restart.rs` already hold replay, conflict, nonce and tamper refusal.
