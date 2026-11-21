@@ -687,6 +687,10 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "distilled",
             super::statistical::distilled::REFUSALS.to_vec(),
         ),
+        (
+            "retrieval_drift",
+            super::statistical::retrieval_drift::REFUSALS.to_vec(),
+        ),
         ("asset_usage", asset_usage::REFUSALS.to_vec()),
         ("archimate_exchange", archimate_exchange::REFUSALS.to_vec()),
         // MEDULLA-CQ-ORCH-R702.12: the served process document refusals.

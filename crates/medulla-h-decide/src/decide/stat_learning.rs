@@ -43,13 +43,17 @@ use super::stat_pointer::{activate, read_pointer, rollback, PointerMove, Qualifi
 use super::stat_promotion::{qualified_champion, record_rollouts};
 use super::stat_retrieval::record_outcome;
 use super::stat_run_credit::record_run;
-use super::stat_support::invalid_parameter;
+use super::stat_support::{invalid_parameter, refusal};
 use super::stat_vectors::{graph_vectors, GraphVectors};
 use super::SharedState;
 use medulla_decision_stats::decision::drift::DriftThresholds;
 use medulla_decision_types::decision::statistical::retrieval_drift::{
-    DriftEvaluated, FiringShard, RefreshPlan, RefreshPriority, ScheduledRefresh,
+    shard_generation_node_id, DriftEvaluated, DriftKind, DriftPolicyNode, DriftRefreshed,
+    DriftSignal, FiringShard, RefreshPlan, RefreshPriority, ScheduledRefresh,
+    ShardGenerationNode, ShardSwap, RETRIEVAL_DRIFT_SCHEMA_VERSION, SHARD_GENERATION_NODE_TYPE,
 };
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_mutation_types::capacity_lease::{CapacityResourceClass, LeasePriority};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
@@ -69,8 +73,11 @@ pub(super) struct LearningInputs {
     graphs: Vec<GraphVectors>,
     /// What a generation cycle runs with; `None` for every other write.
     cycle: Option<CycleSupport>,
-    /// The background analytics lease of a drift evaluation; `None` for every other write.
+    /// The background analytics lease of a drift evaluation or refresh; `None` for every
+    /// other write.
     drift_lease: Option<String>,
+    /// The embedder a drift refresh re-embeds with; `None` for every other write.
+    drift_embedder: Option<Box<dyn Reembedder>>,
     /// The materialized tenant graph a freshness refresh writes its rows into; `None` for
     /// every other write and for a logical graph that is virtual only.
     refresh_graph: Option<GraphVectors>,
@@ -158,24 +165,95 @@ impl Serving<'_> {
         run_cycle(&run, request)
     }
 
+    /// The drift policy of `logical`, or `DRIFT_POLICY_MISSING`.
+    fn drift_policy(&self, logical: &str) -> Result<DriftPolicyNode, String> {
+        let key = format!("drift-policy:{logical}");
+        match self.ctx.store.decision_artifact(self.ctx.tenant_id, &key)? {
+            Some(bytes) => decode_artifact(&bytes, "drift policy"),
+            None => Err(refusal(
+                StatisticalErrorCode::DriftPolicyMissing,
+                format!("the logical graph {logical} has no registered drift policy"),
+            )),
+        }
+    }
+
+    /// Register or replace the drift policy of `logical` (MEDULLA-DECISION-ENGINE-R174.8.4).
+    fn register_drift_policy(
+        &self,
+        logical: &str,
+        region_budget: u32,
+    ) -> Result<LearningRecorded, String> {
+        let node = DriftPolicyNode::new(logical.to_string(), region_budget)
+            .map_err(invalid_parameter)?;
+        let key = format!("drift-policy:{logical}");
+        let bytes = encode_artifact(&node)?;
+        let tenant = self.ctx.tenant_id;
+        if self.ctx.store.decision_artifact(tenant, &key)?.is_some() {
+            self.ctx.store.replace_decision_artifact(tenant, &key, bytes)?;
+        } else {
+            self.ctx.store.put_decision_artifacts(tenant, &[(key, bytes)])?;
+        }
+        Ok(LearningRecorded::DriftPolicy(Box::new(node)))
+    }
+
     /// Evaluate the logical graph's drift monitors on the lease the write acquired and
-    /// schedule one refresh plan for the shards that fire (MEDULLA-DECISION-ENGINE-R174.8.3).
-    fn evaluate_drift(&self, logical: &str) -> Result<LearningRecorded, String> {
+    /// schedule one refresh plan for the shards that fire (MEDULLA-DECISION-ENGINE-R174.8.3,
+    /// R174.8.4, R174.8.5).
+    fn evaluate_drift(
+        &self,
+        logical: &str,
+        priority: RefreshPriority,
+    ) -> Result<LearningRecorded, String> {
         self.inputs
             .drift_lease
             .as_ref()
             .ok_or("a drift evaluation holds no analytics lease")?;
+        let region_budget = self.drift_policy(logical)?.region_budget as usize;
         let policy = DecisionPolicy::engine_default();
         let thresholds = DriftThresholds::from_policy(&policy);
         let (monitored_shards, firing) = registry().evaluate(self.tenant(), logical, &thresholds);
         let mut regions = Vec::new();
         let mut shards = Vec::new();
-        for (shard_id, kinds, shard_regions) in &firing {
-            regions.extend(shard_regions.iter().cloned());
+        let mut signals = Vec::new();
+        let mut shard_generations = Vec::new();
+        for reading in &firing {
+            regions.extend(reading.regions.iter().cloned());
             shards.push(FiringShard {
-                shard_id: *shard_id,
-                kinds: kinds.clone(),
+                shard_id: reading.shard,
+                kinds: reading.kinds.iter().map(|(kind, _)| *kind).collect(),
             });
+            shard_generations.push((reading.shard, reading.generation));
+            for (kind, value) in &reading.kinds {
+                let threshold = match kind {
+                    DriftKind::DistributionShift => thresholds.shift,
+                    DriftKind::VocabularyGrowth => thresholds.vocabulary_points as f64,
+                    DriftKind::QualityDecay => thresholds.quality_decay_pct as f64,
+                    DriftKind::Staleness => thresholds.max_version_lag as f64,
+                };
+                signals.push(
+                    DriftSignal {
+                        schema_version: RETRIEVAL_DRIFT_SCHEMA_VERSION,
+                        scope: format!("{}/{logical}/{}", self.tenant(), reading.shard),
+                        kind: *kind,
+                        value_q16: q16_round(*value),
+                        threshold_q16: q16_round(threshold),
+                        window: reading.window,
+                        reference_generation: format!("{logical}/{}@{}", reading.shard, reading.generation),
+                        observed_at: self.ctx.now_ms,
+                    }
+                    .checked()
+                    .map_err(invalid_parameter)?,
+                );
+            }
+        }
+        if regions.len() > region_budget {
+            return Err(refusal(
+                StatisticalErrorCode::RefreshRegionBudget,
+                format!(
+                    "the plan names {} regions, the drift policy of {logical} allows {region_budget}",
+                    regions.len()
+                ),
+            ));
         }
         let scheduled = match shards.first().and_then(|s| s.kinds.first()).copied() {
             None => None,
@@ -185,7 +263,7 @@ impl Serving<'_> {
                     logical.to_string(),
                     regions,
                     reason,
-                    RefreshPriority::Downtime,
+                    priority,
                     format!("refresh-{logical}@{to}"),
                 )
                 .map_err(invalid_parameter)?;
@@ -194,6 +272,8 @@ impl Serving<'_> {
                     plan_digest: plan_digest.clone(),
                     plan,
                     scheduled_at_ms: self.ctx.now_ms,
+                    signals,
+                    shard_generations,
                 };
                 Some(store_once(
                     self.ctx,
@@ -210,6 +290,177 @@ impl Serving<'_> {
             firing: shards,
             scheduled,
         })))
+    }
+
+    /// The durable generation pointers of the plan's shards, read from the graph.
+    fn durable_generations(
+        &self,
+        graph: &GraphVectors,
+        logical: &str,
+        scheduled: &ScheduledRefresh,
+    ) -> std::collections::BTreeMap<u32, u64> {
+        scheduled
+            .shard_generations
+            .iter()
+            .filter_map(|(shard, _)| {
+                let blob = graph
+                    .core()
+                    .get_node_properties(&shard_generation_node_id(logical, *shard))?;
+                let node: serde_json::Value = rmp_serde::from_slice(&blob).ok()?;
+                Some((*shard, node.get("generation")?.as_u64()?))
+            })
+            .collect()
+    }
+
+    /// Execute one scheduled refresh plan (MEDULLA-DECISION-ENGINE-R174.8.4, R174.8.5): the
+    /// only executor of a plan. A recorded receipt is returned as it is. Otherwise every shard
+    /// of the plan is checked against its generation before any embedding, the nodes of the
+    /// planned types are re-embedded, the shards are swapped, and the receipt is stored. The
+    /// swapped generations become the durable shard pointer nodes the served write commits.
+    fn refresh_drift(&self, logical: &str, plan_digest: &str) -> Result<LearningRecorded, String> {
+        let receipt_key = format!("drift-refresh:{plan_digest}");
+        let tenant = self.ctx.tenant_id;
+        if let Some(bytes) = self.ctx.store.decision_artifact(tenant, &receipt_key)? {
+            return Ok(LearningRecorded::DriftRefreshed(Box::new(decode_artifact(
+                &bytes,
+                "drift refresh receipt",
+            )?)));
+        }
+        self.inputs
+            .drift_lease
+            .as_ref()
+            .ok_or("a drift refresh holds no analytics lease")?;
+        let bytes = self
+            .ctx
+            .store
+            .decision_artifact(tenant, &format!("drift-plan:{plan_digest}"))?
+            .ok_or_else(|| invalid_parameter("no scheduled refresh plan has that digest"))?;
+        let scheduled: ScheduledRefresh = decode_artifact(&bytes, "drift refresh plan")?;
+        if scheduled.plan.logical_graph != logical {
+            return Err(invalid_parameter("the plan belongs to another logical graph"));
+        }
+        let graph = self.graph(0)?;
+        let embedder = self
+            .inputs
+            .drift_embedder
+            .as_ref()
+            .ok_or("a drift refresh was not prepared")?;
+        let durable = self.durable_generations(graph, logical, &scheduled);
+        let conflict = |found: super::drift_registry::SwapConflict| {
+            refusal(
+                StatisticalErrorCode::ShardSwapConflict,
+                format!(
+                    "shard {} is at generation {:?}, the plan was scheduled at {}",
+                    found.shard, found.found, found.expected
+                ),
+            )
+        };
+        registry()
+            .verify_generations(self.tenant(), logical, &scheduled.shard_generations, &durable)
+            .map_err(conflict)?;
+
+        // Re-embed each distinct node whose type a region names.
+        let regions = scheduled.plan.regions.as_slice();
+        let region_of = |node_type: &str| regions.iter().find(|region| region.node_type == node_type);
+        let mut nodes: Vec<(String, u32)> = Vec::new();
+        for id in graph.node_ids() {
+            let node_type = graph
+                .visible_properties(&id)
+                .and_then(|props| props.get("type")?.as_str().map(str::to_string));
+            if let Some(region) = node_type.as_deref().and_then(region_of) {
+                nodes.push((id, region.shard_id));
+            }
+        }
+        let batch = (medulla_server_api::knob_config::knobs().generation_batch_nodes as usize).max(1);
+        for chunk in nodes.chunks(batch) {
+            let texts: Vec<String> = chunk.iter().map(|(id, _)| graph.node_text(id)).collect();
+            let vectors = embedder.embed(&texts)?;
+            if vectors.len() != chunk.len() {
+                return Err(invalid_parameter(
+                    "the embedder returned a vector count other than the batch's",
+                ));
+            }
+            for ((id, _), vector) in chunk.iter().zip(vectors) {
+                graph.store_embedding(id, vector)?;
+            }
+        }
+
+        let swapped = registry()
+            .swap_generations(self.tenant(), logical, &scheduled.shard_generations, &durable)
+            .map_err(conflict)?;
+        // The embedding writes reach the monitors through the same port the commit path uses,
+        // so the refreshed shards' new reference collects them.
+        if let Some(signals) = medulla_retrieval::discover_signals::discover_signals() {
+            for (id, shard) in &nodes {
+                let Some(vector) = graph.stored_vector(id) else {
+                    continue;
+                };
+                let node_type = graph
+                    .visible_properties(id)
+                    .and_then(|props| props.get("type")?.as_str().map(str::to_string))
+                    .unwrap_or_default();
+                let tokens: Vec<String> = graph
+                    .node_text(id)
+                    .split_whitespace()
+                    .map(str::to_lowercase)
+                    .collect();
+                signals.observe_write(&medulla_retrieval::discover_signals::WrittenVector {
+                    tenant: self.tenant(),
+                    graph: logical,
+                    shard: *shard,
+                    node_id: id,
+                    node_type: &node_type,
+                    vector: &vector,
+                    tokens: &tokens,
+                    version: graph.version(),
+                });
+            }
+        }
+
+        let receipt = DriftRefreshed {
+            plan_digest: plan_digest.to_string(),
+            logical_graph: logical.to_string(),
+            regions: regions.to_vec(),
+            reembedded_nodes: u32::try_from(nodes.len()).unwrap_or(u32::MAX),
+            shards: swapped
+                .iter()
+                .map(|(shard_id, before, after)| ShardSwap {
+                    shard_id: *shard_id,
+                    generation_before: *before,
+                    generation_after: *after,
+                })
+                .collect(),
+            signals: scheduled.signals.clone(),
+        };
+        let receipt = store_once(self.ctx, receipt_key, "drift refresh receipt", receipt, |a, b| a == b)?;
+        let mut methods = Vec::new();
+        for swap in &receipt.shards {
+            let node = ShardGenerationNode {
+                schema_version: RETRIEVAL_DRIFT_SCHEMA_VERSION,
+                logical_graph: logical.to_string(),
+                shard_id: swap.shard_id,
+                generation: swap.generation_after,
+            };
+            let mut props = serde_json::to_value(&node).map_err(|error| error.to_string())?;
+            props["type"] = serde_json::json!(SHARD_GENERATION_NODE_TYPE);
+            methods.push(medulla_protocol_types::protocol::Method::AddNode {
+                node_id: shard_generation_node_id(logical, swap.shard_id),
+                properties_msgpack: rmp_serde::to_vec_named(&props).map_err(|error| error.to_string())?,
+            });
+        }
+        if !methods.is_empty() {
+            *self
+                .inputs
+                .refresh_link
+                .lock()
+                .map_err(|_| "the staged refresh slot is poisoned".to_string())? =
+                Some(super::run_record::StagedLink {
+                    graph: logical.to_string(),
+                    core: std::sync::Arc::clone(graph.core()),
+                    methods,
+                });
+        }
+        Ok(LearningRecorded::DriftRefreshed(Box::new(receipt)))
     }
 
     fn evaluate(&self, request: &GenerationEvalRequest) -> Result<LearningRecorded, String> {
@@ -304,6 +555,11 @@ impl Serving<'_> {
     }
 }
 
+/// A reading on the `Q16` scale, rounded to nearest.
+fn q16_round(value: f64) -> i64 {
+    (value * 65_536.0).round() as i64
+}
+
 fn graphs_of(write: &LearningWrite) -> Vec<&str> {
     match write {
         LearningWrite::FitAdapter { request } => vec![request.graph.as_str()],
@@ -318,10 +574,13 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         // A refresh's logical graph is a virtual graph read through its
         // registered search source (R174.9.3); it needs no materialized graph,
         // and a graph with no source refuses SEARCH_SOURCE_UNREGISTERED (R174.9.4).
+        // A drift refresh executes against the materialized graph it re-embeds.
+        LearningWrite::RefreshDrift { logical_graph, .. } => vec![logical_graph.as_str()],
         LearningWrite::RefreshFreshness { .. }
         | LearningWrite::RecordOutcome { .. }
         | LearningWrite::FitCalibration { .. }
         | LearningWrite::EvaluateDrift { .. }
+        | LearningWrite::RegisterDriftPolicy { .. }
         | LearningWrite::RunOutcome { .. }
         | LearningWrite::UploadDistilledScores { .. }
         | LearningWrite::PackageRun { .. }
@@ -423,18 +682,23 @@ async fn acquire_drift_lease(
     tenant: &str,
     logical: &str,
     cell: &str,
+    refreshing: Option<&str>,
 ) -> Result<String, String> {
     let persistence = state.read().await.persistence.clone().ok_or_else(|| {
         "CAPACITY_UNAVAILABLE: a drift evaluation needs the durable capacity ledger".to_string()
     })?;
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
-    let id = format!(
-        "drift-eval:{}",
-        digest_text(
-            "eg/drift-eval-job/v1",
-            &(logical, now_ms / CYCLE_LEASE_TTL_MS)
-        )
-    );
+    // An evaluation's job is per graph and window; a refresh's is its plan.
+    let id = match refreshing {
+        Some(plan_digest) => format!("drift-refresh:{plan_digest}"),
+        None => format!(
+            "drift-eval:{}",
+            digest_text(
+                "eg/drift-eval-job/v1",
+                &(logical, now_ms / CYCLE_LEASE_TTL_MS)
+            )
+        ),
+    };
     let lease_id = format!("lease:{id}");
     let acquire = CapacityAcquireRequest {
         schema_version: NativeControlSchemaVersion::V1,
@@ -507,6 +771,7 @@ pub(super) async fn prepare(
         LearningWrite::EvaluateDrift {
             logical_graph,
             capacity_cell,
+            ..
         } => Some(
             acquire_drift_lease(
                 state,
@@ -514,9 +779,31 @@ pub(super) async fn prepare(
                 &served_tenant,
                 logical_graph,
                 capacity_cell,
+                None,
             )
             .await?,
         ),
+        LearningWrite::RefreshDrift {
+            logical_graph,
+            plan_digest,
+            capacity_cell,
+        } => Some(
+            acquire_drift_lease(
+                state,
+                verified,
+                &served_tenant,
+                logical_graph,
+                capacity_cell,
+                Some(plan_digest),
+            )
+            .await?,
+        ),
+        _ => None,
+    };
+    let drift_embedder: Option<Box<dyn Reembedder>> = match write {
+        LearningWrite::RefreshDrift { .. } => Some(Box::new(ConfiguredEmbedder(
+            medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env(),
+        ))),
         _ => None,
     };
     let refresh_graph = match write {
@@ -530,6 +817,7 @@ pub(super) async fn prepare(
         graphs,
         cycle,
         drift_lease,
+        drift_embedder,
         refresh_graph,
         refresh_link: Default::default(),
     }))
@@ -582,7 +870,20 @@ pub(super) fn dispatch(
         LearningWrite::PackageRun { run } => Ok(LearningRecorded::PackageRun(Box::new(
             super::stat_package_run::record_package_run(ctx, *run)?,
         ))),
-        LearningWrite::EvaluateDrift { logical_graph, .. } => s.evaluate_drift(&logical_graph),
+        LearningWrite::EvaluateDrift {
+            logical_graph,
+            priority,
+            ..
+        } => s.evaluate_drift(&logical_graph, priority),
+        LearningWrite::RegisterDriftPolicy {
+            logical_graph,
+            region_budget,
+        } => s.register_drift_policy(&logical_graph, region_budget),
+        LearningWrite::RefreshDrift {
+            logical_graph,
+            plan_digest,
+            ..
+        } => s.refresh_drift(&logical_graph, &plan_digest),
         LearningWrite::RecordRollouts { set } => Ok(LearningRecorded::Rollouts(Box::new(
             record_rollouts(ctx, *set)?,
         ))),

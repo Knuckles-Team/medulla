@@ -4954,6 +4954,9 @@
 :ShardMonitorMachine_Event_SealReference a :ShardMonitorEvent ;
     rdfs:label "Shard Monitor SealReference" .
 
+:ShardMonitorMachine_Event_Refresh a :ShardMonitorEvent ;
+    rdfs:label "Shard Monitor Refresh" .
+
 :ShardMonitorMachine_Guard_ReferenceComplete a :ShardMonitorGuard ;
     rdfs:label "Shard Monitor guard ReferenceComplete" .
 
@@ -4978,6 +4981,13 @@
     :fromState :ShardMonitorMachine_Monitoring ;
     :toState :ShardMonitorMachine_Monitoring ;
     :firedBy :ShardMonitorMachine_Event_Write .
+
+:ShardMonitorMachine_S04 a :ShardMonitorTransition ;
+    rdfs:label "Shard Monitor S04" ;
+    :edgeId "S04" ;
+    :fromState :ShardMonitorMachine_Monitoring ;
+    :toState :ShardMonitorMachine_Warming ;
+    :firedBy :ShardMonitorMachine_Event_Refresh .
 
 # spec: MEDULLA-TYPED-PACKS-R107.2
 # The PackRelease machine: the lifecycle of one pack release in its contract history. The Rust

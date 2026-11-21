@@ -129,6 +129,17 @@ impl ShardMonitor {
                 reference.clone(),
                 vocabulary.clone(),
             )));
+            // The first seal makes generation 1; after a refresh the swap already
+            // moved the generation, so the re-seal adds no second increment.
+            if self.generation == 0 {
+                self.generation = 1;
+            }
+        }
+        if let (ShardMonitorState::Monitoring, ShardMonitorState::Warming) = (self.state, next) {
+            self.body = Body::Warming {
+                reference: Moments::new(self.dimension),
+                vocabulary: VocabBloom::default(),
+            };
             self.generation += 1;
         }
         self.state = next;
@@ -187,7 +198,17 @@ impl ShardMonitor {
 type Key = (String, String, u32);
 
 /// One firing shard: its index, the drift kinds firing and the refresh regions it covers.
-type FiringShard = (u32, Vec<DriftKind>, Vec<RegionRef>);
+/// One firing shard: its id, the kinds that fire with their readings, the regions to refresh,
+/// its generation and the reference window length.
+pub struct FiringReading {
+    pub shard: u32,
+    pub kinds: Vec<(DriftKind, f64)>,
+    pub regions: Vec<RegionRef>,
+    pub generation: u64,
+    pub window: u64,
+}
+
+type FiringShard = FiringReading;
 
 /// The monitors of every served graph.
 #[derive(Default)]
@@ -254,6 +275,7 @@ impl DriftRegistry {
         graph: &str,
         thresholds: &DriftThresholds,
     ) -> (u32, Vec<FiringShard>) {
+        let reference_window = reference_vectors(&DecisionPolicy::engine_default());
         let mut shards = self.shards.lock();
         let mut monitored = 0;
         let mut firing = Vec::new();
@@ -267,7 +289,19 @@ impl DriftRegistry {
             let Body::Monitoring(monitor) = &mut entry.body else {
                 continue;
             };
-            let kinds = monitor.evaluate(thresholds);
+            let kinds: Vec<(DriftKind, f64)> = monitor
+                .evaluate(thresholds)
+                .into_iter()
+                .map(|kind| {
+                    let reading = match kind {
+                        DriftKind::DistributionShift => monitor.shift(),
+                        DriftKind::VocabularyGrowth => monitor.vocabulary_points() as f64,
+                        DriftKind::QualityDecay => monitor.quality_decay_pct().unwrap_or(0.0),
+                        DriftKind::Staleness => monitor.version_lag() as f64,
+                    };
+                    (kind, reading)
+                })
+                .collect();
             if !kinds.is_empty() {
                 let regions = types
                     .into_iter()
@@ -278,10 +312,94 @@ impl DriftRegistry {
                         revision_to: to.max(from),
                     })
                     .collect();
-                firing.push((*shard, kinds, regions));
+                firing.push(FiringReading {
+                    shard: *shard,
+                    kinds,
+                    regions,
+                    generation: entry.generation,
+                    window: reference_window,
+                });
             }
         }
         (monitored, firing)
+    }
+}
+
+/// A refresh plan's shard generations no longer match the shards
+/// (MEDULLA-DECISION-ENGINE-R174.8.4); nothing was changed.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SwapConflict {
+    pub shard: u32,
+    pub expected: u64,
+    pub found: Option<u64>,
+}
+
+impl DriftRegistry {
+    /// Swap the generations of `expected` shards in one step: the registry lock is taken
+    /// once, every shard is verified, and only then is `ShardMonitorEvent::Refresh` applied.
+    /// A shard's current generation is its durable pointer in `durable` when it has one,
+    /// else the monitor's, else (a restart emptied the registry and no swap ever ran) the
+    /// plan's own: nothing moved it. A monitor present but not `Monitoring`, or a current
+    /// generation other than the expected one, is a [`SwapConflict`] that changes nothing.
+    /// Returns `(shard, before, after)` per shard.
+    pub fn swap_generations(
+        &self,
+        tenant: &str,
+        graph: &str,
+        expected: &[(u32, u64)],
+        durable: &BTreeMap<u32, u64>,
+    ) -> Result<Vec<(u32, u64, u64)>, SwapConflict> {
+        let window = reference_vectors(&DecisionPolicy::engine_default());
+        let mut shards = self.shards.lock();
+        let wanted = Self::verified(&shards, tenant, graph, expected, durable)?;
+        let mut swapped = Vec::with_capacity(wanted.len());
+        for (shard, generation) in wanted {
+            if let Some(entry) = shards.get_mut(&(tenant.to_string(), graph.to_string(), shard)) {
+                if entry.transition(ShardMonitorEvent::Refresh, window).is_ok() {
+                    entry.generation = generation + 1;
+                }
+            }
+            swapped.push((shard, generation, generation + 1));
+        }
+        Ok(swapped)
+    }
+
+    /// The check of [`Self::swap_generations`] without the swap: run before any embedding.
+    pub fn verify_generations(
+        &self,
+        tenant: &str,
+        graph: &str,
+        expected: &[(u32, u64)],
+        durable: &BTreeMap<u32, u64>,
+    ) -> Result<(), SwapConflict> {
+        let shards = self.shards.lock();
+        Self::verified(&shards, tenant, graph, expected, durable).map(|_| ())
+    }
+
+    fn verified(
+        shards: &BTreeMap<Key, ShardMonitor>,
+        tenant: &str,
+        graph: &str,
+        expected: &[(u32, u64)],
+        durable: &BTreeMap<u32, u64>,
+    ) -> Result<Vec<(u32, u64)>, SwapConflict> {
+        let mut wanted: Vec<(u32, u64)> = expected.to_vec();
+        wanted.sort_unstable();
+        wanted.dedup();
+        for &(shard, generation) in &wanted {
+            let entry = shards.get(&(tenant.to_string(), graph.to_string(), shard));
+            let held = entry.map(|entry| entry.generation);
+            let current = durable.get(&shard).copied().or(held).unwrap_or(generation);
+            let monitoring = entry.is_none_or(|entry| entry.state == ShardMonitorState::Monitoring);
+            if current != generation || !monitoring {
+                return Err(SwapConflict {
+                    shard,
+                    expected: generation,
+                    found: durable.get(&shard).copied().or(held),
+                });
+            }
+        }
+        Ok(wanted)
     }
 }
 
@@ -360,7 +478,7 @@ mod tests {
         // Every edge of the table was exercised above.
         assert_eq!(
             SHARD_MONITOR_MACHINE.edges.len(),
-            ["S01", "S02", "S03"].len()
+            ["S01", "S02", "S03", "S04"].len()
         );
     }
 

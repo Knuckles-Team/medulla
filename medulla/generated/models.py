@@ -11110,6 +11110,8 @@ class ScheduledRefresh(BaseModel):
     plan: RefreshPlan
     plan_digest: str
     scheduled_at_ms: Annotated[int, Field(ge=0)]
+    shard_generations: list[tuple[int, int]] = Field(default_factory=list)
+    signals: list[DriftSignal] = Field(default_factory=list)
 
 
 class DriftEvaluated(BaseModel):
@@ -11119,6 +11121,63 @@ class DriftEvaluated(BaseModel):
     logical_graph: str
     monitored_shards: Annotated[int, Field(ge=0)]
     scheduled: ScheduledRefresh | None = None
+
+
+class DriftPolicyNode(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    logical_graph: str
+    region_budget: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+
+
+class ShardSwap(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    generation_after: Annotated[int, Field(ge=0)]
+    generation_before: Annotated[int, Field(ge=0)]
+    shard_id: Annotated[int, Field(ge=0)]
+
+
+class DriftRefreshed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    logical_graph: str
+    plan_digest: str
+    reembedded_nodes: Annotated[int, Field(ge=0)]
+    regions: list[RegionRef]
+    shards: list[ShardSwap]
+    signals: list[DriftSignal]
+
+
+class ShardGenerationNode(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    generation: Annotated[int, Field(ge=0)]
+    logical_graph: str
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    shard_id: Annotated[int, Field(ge=0)]
+
+
+class LearningRecordedDriftPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    logical_graph: str
+    region_budget: Annotated[int, Field(ge=0)]
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    recorded: Literal["drift_policy"]
+
+
+class LearningRecordedDriftRefreshed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    logical_graph: str
+    plan_digest: str
+    reembedded_nodes: Annotated[int, Field(ge=0)]
+    regions: list[RegionRef]
+    shards: list[ShardSwap]
+    signals: list[DriftSignal]
+    recorded: Literal["drift_refreshed"]
 
 
 class LearningRecordedDrift(BaseModel):
@@ -11172,6 +11231,8 @@ LearningRecorded = Annotated[
     | LearningRecordedRefreshed
     | LearningRecordedDistilledScores
     | LearningRecordedDrift
+    | LearningRecordedDriftPolicy
+    | LearningRecordedDriftRefreshed
     | LearningRecordedFeedback
     | LearningRecordedPackageRun,
     Field(discriminator="recorded"),
@@ -11258,7 +11319,25 @@ class LearningWriteEvaluateDrift(BaseModel):
 
     capacity_cell: str
     logical_graph: str
+    priority: RefreshPriority = RefreshPriority.DOWNTIME
     write: Literal["evaluate_drift"]
+
+
+class LearningWriteRegisterDriftPolicy(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    logical_graph: str
+    region_budget: Annotated[int, Field(ge=0)]
+    write: Literal["register_drift_policy"]
+
+
+class LearningWriteRefreshDrift(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    capacity_cell: str
+    logical_graph: str
+    plan_digest: str
+    write: Literal["refresh_drift"]
 
 
 class LearningWriteMonitorAdapter(BaseModel):
@@ -11397,6 +11476,8 @@ LearningWrite = Annotated[
     | LearningWriteEvaluateGeneration
     | LearningWriteMovePointer
     | LearningWriteEvaluateDrift
+    | LearningWriteRegisterDriftPolicy
+    | LearningWriteRefreshDrift
     | LearningWriteMonitorAdapter
     | LearningWriteRefreshFreshness
     | LearningWriteRunGenerationCycle
@@ -40458,6 +40539,8 @@ __all__ = [
     "LearningRecordedCycle",
     "LearningRecordedDistilledScores",
     "LearningRecordedDrift",
+    "LearningRecordedDriftPolicy",
+    "LearningRecordedDriftRefreshed",
     "LearningRecordedFeedback",
     "LearningRecordedMonitored",
     "LearningRecordedPackageRun",
@@ -40548,6 +40631,10 @@ __all__ = [
     "RunMetricsReceipt",
     "RunRecordStored",
     "ScheduledRefresh",
+    "DriftPolicyNode",
+    "DriftRefreshed",
+    "ShardGenerationNode",
+    "ShardSwap",
     "Signature",
     "SkillCandidateRow",
     "SkillMergeCandidate",
@@ -44983,6 +45070,8 @@ __all__ = [
     "GenerationCycleRequest",
     "IndexAdapterRef",
     "LearningWriteEvaluateDrift",
+    "LearningWriteRegisterDriftPolicy",
+    "LearningWriteRefreshDrift",
     "LearningWriteMonitorAdapter",
     "LearningWriteRefreshFreshness",
     "LearningWriteRunGenerationCycle",

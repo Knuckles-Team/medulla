@@ -36,6 +36,9 @@ pub enum ShardMonitorEvent {
     Write,
     /// The reference window is complete.
     SealReference,
+    /// A refresh plan swapped the shard's generation: the reference restarts
+    /// (MEDULLA-DECISION-ENGINE-R174.8.4).
+    Refresh,
 }
 
 impl MachineEvent for ShardMonitorEvent {
@@ -43,6 +46,7 @@ impl MachineEvent for ShardMonitorEvent {
         match self {
             Self::Write => "Write",
             Self::SealReference => "SealReference",
+            Self::Refresh => "Refresh",
         }
     }
 }
@@ -74,7 +78,11 @@ pub static SHARD_MONITOR_MACHINE: MachineDef<
     states: &[ShardMonitorState::Warming, ShardMonitorState::Monitoring],
     initial: ShardMonitorState::Warming,
     terminals: &[],
-    events: &[ShardMonitorEvent::Write, ShardMonitorEvent::SealReference],
+    events: &[
+        ShardMonitorEvent::Write,
+        ShardMonitorEvent::SealReference,
+        ShardMonitorEvent::Refresh,
+    ],
     guards: &[ShardMonitorGuard::ReferenceComplete],
     edges: &[
         Edge {
@@ -97,6 +105,13 @@ pub static SHARD_MONITOR_MACHINE: MachineDef<
             event: ShardMonitorEvent::Write,
             guard: None,
             to: ShardMonitorState::Monitoring,
+        },
+        Edge {
+            id: "S04",
+            from: ShardMonitorState::Monitoring,
+            event: ShardMonitorEvent::Refresh,
+            guard: None,
+            to: ShardMonitorState::Warming,
         },
     ],
 };

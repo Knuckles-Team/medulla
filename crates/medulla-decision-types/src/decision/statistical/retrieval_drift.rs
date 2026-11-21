@@ -8,10 +8,65 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::BoundedVec;
 
+use crate::decision::record::outcome::RefusalCode;
+
 /// Format identity of a drift signal and a refresh plan.
 pub const RETRIEVAL_DRIFT_SCHEMA_VERSION: u16 = 1;
 /// Most regions one refresh plan may name.
 pub const MAX_REFRESH_REGIONS: usize = 4_096;
+
+/// An evaluation of a graph with no registered drift policy
+/// (MEDULLA-DECISION-ENGINE-R174.8.4).
+pub const DRIFT_POLICY_MISSING: RefusalCode = RefusalCode::new("DRIFT_POLICY_MISSING");
+/// A firing plan names more regions than the graph's drift policy allows
+/// (MEDULLA-DECISION-ENGINE-R174.8.4).
+pub const REFRESH_REGION_BUDGET: RefusalCode = RefusalCode::new("REFRESH_REGION_BUDGET");
+/// A shard's generation is not the one the plan was scheduled against
+/// (MEDULLA-DECISION-ENGINE-R174.8.4).
+pub const SHARD_SWAP_CONFLICT: RefusalCode = RefusalCode::new("SHARD_SWAP_CONFLICT");
+
+/// The drift refusals, registered with the decision refusal registry
+/// (`codes::module_tables`); each is also a `StatisticalErrorCode`.
+pub const REFUSALS: &[RefusalCode] = &[
+    DRIFT_POLICY_MISSING,
+    REFRESH_REGION_BUDGET,
+    SHARD_SWAP_CONFLICT,
+];
+
+/// Most regions a drift policy can allow; the cap of [`RefreshPlan`].
+pub const MAX_REGION_BUDGET: u32 = MAX_REFRESH_REGIONS as u32;
+
+/// The drift policy of one tenant's logical graph (MEDULLA-DECISION-ENGINE-R174.8.4).
+///
+/// `region_budget` can only lower the [`MAX_REFRESH_REGIONS`] cap of a plan.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DriftPolicyNode {
+    pub schema_version: u16,
+    pub logical_graph: String,
+    pub region_budget: u32,
+}
+
+impl DriftPolicyNode {
+    /// The validating constructor: the current schema, a named graph and a
+    /// budget in `[1, 4096]`.
+    pub fn new(logical_graph: String, region_budget: u32) -> Result<Self, String> {
+        if logical_graph.trim().is_empty() {
+            return Err("a drift policy names a logical graph".into());
+        }
+        if !(1..=MAX_REGION_BUDGET).contains(&region_budget) {
+            return Err(format!(
+                "region_budget must be in [1, {MAX_REGION_BUDGET}], got {region_budget}"
+            ));
+        }
+        Ok(Self {
+            schema_version: RETRIEVAL_DRIFT_SCHEMA_VERSION,
+            logical_graph,
+            region_budget,
+        })
+    }
+}
 
 /// The closed set of drift kinds.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -132,6 +187,59 @@ pub struct ScheduledRefresh {
     pub plan: RefreshPlan,
     /// Recorded scheduling time in milliseconds since the epoch.
     pub scheduled_at_ms: u64,
+    /// The signals that fired, one per firing kind of each firing shard
+    /// (MEDULLA-DECISION-ENGINE-R174.8.5): the premises of the plan.
+    #[serde(default)]
+    pub signals: Vec<DriftSignal>,
+    /// The generation of each firing shard when the plan was scheduled; the
+    /// swap of `RefreshDrift` checks each against the durable shard pointer.
+    #[serde(default)]
+    pub shard_generations: Vec<(u32, u64)>,
+}
+
+/// One shard whose generation a refresh moved.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ShardSwap {
+    pub shard_id: u32,
+    pub generation_before: u64,
+    pub generation_after: u64,
+}
+
+/// The receipt of an executed refresh plan, stored under
+/// `drift-refresh:<plan_digest>` (MEDULLA-DECISION-ENGINE-R174.8.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DriftRefreshed {
+    pub plan_digest: String,
+    pub logical_graph: String,
+    pub regions: Vec<RegionRef>,
+    /// Distinct nodes re-embedded.
+    pub reembedded_nodes: u32,
+    pub shards: Vec<ShardSwap>,
+    pub signals: Vec<DriftSignal>,
+}
+
+/// The durable generation pointer of one shard: one graph node per shard,
+/// written in the batch that swaps the generation (MEDULLA-DECISION-ENGINE-R174.8.4).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ShardGenerationNode {
+    pub schema_version: u16,
+    pub logical_graph: String,
+    pub shard_id: u32,
+    pub generation: u64,
+}
+
+/// The graph node type of a [`ShardGenerationNode`].
+pub const SHARD_GENERATION_NODE_TYPE: &str = "DriftShardGeneration";
+
+/// The id of the shard generation node of `shard_id` in `logical_graph`.
+pub fn shard_generation_node_id(logical_graph: &str, shard_id: u32) -> String {
+    format!("drift-shard:{logical_graph}/{shard_id}")
 }
 
 /// What one drift evaluation of a logical graph found.

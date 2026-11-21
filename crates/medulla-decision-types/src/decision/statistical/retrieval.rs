@@ -353,6 +353,24 @@ pub enum LearningWrite {
         logical_graph: String,
         /// The capacity cell the background analytics lease is drawn from.
         capacity_cell: String,
+        /// How soon the scheduled plan runs; `on_demand` is governance at
+        /// schedule time too (MEDULLA-DECISION-ENGINE-R174.8.4).
+        #[serde(default = "default_refresh_priority")]
+        priority: super::retrieval_drift::RefreshPriority,
+    },
+    /// Register or replace the drift policy of a logical graph
+    /// (MEDULLA-DECISION-ENGINE-R174.8.4).
+    RegisterDriftPolicy {
+        logical_graph: String,
+        region_budget: u32,
+    },
+    /// Execute a scheduled refresh plan: re-embed its regions and swap the
+    /// generation of its shards (MEDULLA-DECISION-ENGINE-R174.8.4).
+    RefreshDrift {
+        logical_graph: String,
+        plan_digest: String,
+        /// The capacity cell the background analytics lease is drawn from.
+        capacity_cell: String,
     },
     /// Fit the isotonic rerank calibration curve of one scorer version from
     /// judged outcomes (MEDULLA-DECISION-ENGINE-R822).
@@ -400,9 +418,15 @@ impl LearningWrite {
             | Self::RefreshFreshness { .. }
             | Self::UploadDistilledScores { .. }
             | Self::EvaluateDrift { .. }
+            | Self::RegisterDriftPolicy { .. }
+            | Self::RefreshDrift { .. }
             | Self::MovePointer { .. } => LogOpClass::Govern,
         }
     }
+}
+
+fn default_refresh_priority() -> super::retrieval_drift::RefreshPriority {
+    super::retrieval_drift::RefreshPriority::Downtime
 }
 
 /// What one learning write recorded.
@@ -422,6 +446,10 @@ pub enum LearningRecorded {
     /// The scorer manifest after a distilled score upload.
     DistilledScores(Box<super::distilled::DistilledScorerManifest>),
     Drift(Box<super::retrieval_drift::DriftEvaluated>),
+    /// The drift policy after a `RegisterDriftPolicy` write.
+    DriftPolicy(Box<super::retrieval_drift::DriftPolicyNode>),
+    /// The receipt of an executed refresh plan.
+    DriftRefreshed(Box<super::retrieval_drift::DriftRefreshed>),
     /// The stored feedback event after a `RecordFeedback` write.
     Feedback(Box<super::feedback::StoredFeedback>),
     /// The package run row after a `PackageRun` write.

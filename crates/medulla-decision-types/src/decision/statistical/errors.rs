@@ -198,6 +198,15 @@ closed_error_codes! {
         /// A freshness refresh would spend more cost units than its budget
         /// (MEDULLA-DECISION-ENGINE-R174.9.4).
         RefreshCostBudgetExceeded => "REFRESH_COST_BUDGET_EXCEEDED",
+        /// A drift evaluation of a graph that has no registered drift policy
+        /// (MEDULLA-DECISION-ENGINE-R174.8.4).
+        DriftPolicyMissing => "DRIFT_POLICY_MISSING",
+        /// A firing plan names more regions than the drift policy's budget
+        /// (MEDULLA-DECISION-ENGINE-R174.8.4).
+        RefreshRegionBudget => "REFRESH_REGION_BUDGET",
+        /// A refresh plan's shard generation is no longer the shard's current
+        /// generation (MEDULLA-DECISION-ENGINE-R174.8.4).
+        ShardSwapConflict => "SHARD_SWAP_CONFLICT",
         /// The logical graph has no registered search source
         /// (MEDULLA-DECISION-ENGINE-R174.9.4).
         SearchSourceUnregistered => "SEARCH_SOURCE_UNREGISTERED",
