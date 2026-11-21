@@ -7,8 +7,10 @@
 //! failing one is stored `Draft` with the failing check. The refusal lives in the
 //! per-item receipt, never as a batch refusal.
 
-use medulla_ingestion_types::ingest_rules::judge_proposal;
-use medulla_ingestion_types::ontology_proposal::{ProposalState, ProposalThresholds};
+use medulla_ingestion_types::ingest_rules::IngestRefusal;
+use medulla_ingestion_types::ontology_proposal::{
+    score_proposal, ProposalState, ProposalThresholds,
+};
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::{ProposalSubmission, SourceJson, MAX_OBSERVED_TERMS};
 use medulla_types::contract::ServerErrorCode;
@@ -19,10 +21,14 @@ pub const MAX_SUBMISSIONS: usize =
     medulla_source_types::source_ingestion::batch_kind::MAX_PROPOSALS;
 
 /// The judgment of one submission, as it appears in the batch receipt.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct ProposalItemReceipt {
     pub proposal_id: String,
     pub state: ProposalState,
+    /// Share of the observed property names the proposal declares, as judged.
+    pub coverage: f64,
+    /// Share of classes whose property set duplicates an earlier class, as judged.
+    pub redundancy: f64,
     /// `PROPOSAL_NOT_ADMITTED` for a failing proposal.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub refusal: Option<String>,
@@ -86,21 +92,14 @@ pub fn admit_proposals(
     let mut admission = ProposalAdmission::default();
     for submission in submissions {
         let mut proposal = submission.proposal.clone();
-        let (state, refusal, failing_check) = match judge_proposal(
-            &proposal,
-            &submission.observed_terms,
-            thresholds,
-        ) {
-            Ok(decision) => (decision.state, None, None),
-            Err(refusal) => (
+        // One score, judged once: the scores reported are the ones that decided.
+        let score = score_proposal(&proposal, &submission.observed_terms);
+        let (state, refusal, failing_check) = match score.failing_check(thresholds) {
+            None => (ProposalState::Admitted, None, None),
+            Some(check) => (
                 ProposalState::Draft,
-                Some(refusal.code()),
-                match &refusal {
-                    medulla_ingestion_types::ingest_rules::IngestRefusal::ProposalNotAdmitted(
-                        check,
-                    ) => Some(format!("{check:?}").to_lowercase()),
-                    _ => None,
-                },
+                Some(IngestRefusal::ProposalNotAdmitted(check).code()),
+                Some(format!("{check:?}").to_lowercase()),
             ),
         };
         proposal.state = state;
@@ -110,6 +109,8 @@ pub fn admit_proposals(
             "proposal_id": proposal.proposal_id,
             "state": state,
             "failing_check": failing_check,
+            "coverage": score.coverage,
+            "redundancy": score.redundancy,
             "proposal": proposal,
         });
         admission.methods.push(Method::AddNode {
@@ -121,6 +122,8 @@ pub fn admit_proposals(
         admission.items.push(ProposalItemReceipt {
             proposal_id: proposal.proposal_id,
             state,
+            coverage: score.coverage,
+            redundancy: score.redundancy,
             refusal,
             failing_check,
         });
@@ -164,6 +167,9 @@ mod tests {
         );
         assert_eq!(admission.items[0].state, ProposalState::Admitted);
         assert_eq!(admission.items[0].refusal, None);
+        // The receipt carries the scores the judgment used.
+        assert_eq!(admission.items[0].coverage, 1.0);
+        assert!(admission.items[1].coverage < 0.8);
         // A failing proposal is stored as a draft with the failing check, as an item
         // refusal and not a batch refusal.
         assert_eq!(admission.items[1].state, ProposalState::Draft);
