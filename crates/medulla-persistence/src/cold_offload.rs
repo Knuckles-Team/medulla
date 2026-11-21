@@ -562,13 +562,16 @@ async fn page_in_remaining(
     ticket: medulla_core::registry::LazyOpenTicket,
     mut cursor: medulla_core::registry::MaterializeCursor,
     page_size: usize,
-) {
+) -> Result<(), String> {
     let mut units_done = 0_u64;
+    // A cursor that repeats `observe.progress_idle_limit` times in a row ends the loop with
+    // `NO_PROGRESS` naming this loop and its `file:line` (MEDULLA-DURABLE-KERNEL-R873.1).
+    let mut guard = medulla_observe::progress::ProgressGuard::new("page_in_remaining");
     loop {
         let _lifecycle_guard =
             medulla_server_api::routed_write_coalescer::lock_graph(ticket.name()).await;
         if ticket.is_cancelled() {
-            return;
+            return Ok(());
         }
         let fetch_ticket = ticket.clone();
         let paged_from = cursor.clone();
@@ -579,15 +582,21 @@ async fn page_in_remaining(
         .await
         {
             Ok(Some(page)) => page,
-            _ => return,
+            Ok(None) => return Err(paging_failed(ticket.name(), "the page fetch returned no page")),
+            Err(error) => {
+                return Err(paging_failed(
+                    ticket.name(),
+                    &format!("the page fetch task failed: {error}"),
+                ))
+            }
         };
         let (handle, manifest) = {
             let s = state.read().await;
             let Some(handle) = s.registry.handle(ticket.name()) else {
-                return;
+                return Ok(());
             };
             let Some(manifest) = s.registry.materialization_handle(ticket.name()) else {
-                return;
+                return Ok(());
             };
             (handle, manifest)
         };
@@ -597,6 +606,20 @@ async fn page_in_remaining(
         );
         match next {
             Some(c) => {
+                if let Err(stuck) = guard.check(&keyset_progress(&c)) {
+                    // Mark the partial image failed and evict it, as the failed branch below
+                    // does, so the next access restarts from page zero.
+                    if let Ok(mut manifest) = manifest.write() {
+                        manifest.fail(true);
+                    }
+                    state.write().await.registry.evict_resident_if_current(&handle);
+                    tracing::warn!(
+                        target: "medulla::paging",
+                        graph = %ticket.name(),
+                        "lazy page-in stopped: {stuck}"
+                    );
+                    return Err(stuck.to_string());
+                }
                 // One progress call per applied page: the keyset cursor and the rows paged.
                 medulla_observe::spawn::progress(keyset_progress(&c), units_done);
                 cursor = c;
@@ -617,10 +640,25 @@ async fn page_in_remaining(
                     // The last page landed: record it under the cursor it was paged from.
                     medulla_observe::spawn::progress(keyset_progress(&paged_from), units_done);
                 }
-                return;
+                return Ok(());
             }
         }
     }
+}
+
+/// A page fetch that failed or was cancelled: the typed failure the registered task finishes
+/// with (`PARTIAL_MATERIALIZATION`, the graph stays partly materialized) and a WARN line that
+/// names the graph.
+fn paging_failed(graph: &str, detail: &str) -> String {
+    tracing::warn!(
+        target: "medulla::paging",
+        graph = %graph,
+        "lazy page-in stopped: {detail}"
+    );
+    format!(
+        "{}: graph {graph}: {detail}",
+        medulla_types::contract::ServerErrorCode::PartialMaterialization.as_str()
+    )
 }
 
 #[cfg(any(test, feature = "test-support"))]

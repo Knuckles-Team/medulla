@@ -17,7 +17,7 @@ use futures_util::FutureExt;
 use medulla_types::transition_refused::TransitionRefused;
 use tracing::Instrument;
 
-use crate::machine::task::TaskFailure;
+use crate::machine::task::{TaskFailure, NO_PROGRESS};
 use crate::registry::tasks::{Outcome, ProgressCursor, TaskProgress, TaskSpec};
 
 tokio::task_local! {
@@ -79,9 +79,14 @@ impl<T, E: FailureCode> IntoOutcome for Result<T, E> {
     fn into_outcome(self) -> Outcome {
         match self {
             Ok(_) => Outcome::Completed,
-            Err(error) => Outcome::Failed(TaskFailure::Refused {
-                code: error.failure_code(),
-            }),
+            Err(error) => {
+                let code = error.failure_code();
+                Outcome::Failed(if code == NO_PROGRESS {
+                    TaskFailure::NoProgress
+                } else {
+                    TaskFailure::Refused { code }
+                })
+            }
         }
     }
 }

@@ -142,7 +142,7 @@ impl MaterializationManifest {
     /// Mark this image FAILED and not valid — the single owner of that transition.
     /// `discard_cursor` also drops the completeness cursor, which a partial image whose
     /// source snapshot moved under it must do: it can no longer be continued, only restarted.
-    fn fail(&mut self, discard_cursor: bool) {
+    pub fn fail(&mut self, discard_cursor: bool) {
         self.phase = MaterializationPhase::Failed;
         self.valid = false;
         if discard_cursor {

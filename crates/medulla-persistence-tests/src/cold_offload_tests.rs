@@ -702,6 +702,110 @@ mod admission_tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
+    /// A source whose resume cursor never moves although every page carries a row.
+    struct FrozenMaterializer {
+        served: AtomicU64,
+    }
+
+    impl medulla_core::registry::GraphMaterializer for FrozenMaterializer {
+        fn materialize(&self, _graph_name: &str) -> Option<medulla_core::registry::GraphMaterial> {
+            None
+        }
+
+        fn materialize_page(
+            &self,
+            _graph_name: &str,
+            _cursor: Option<medulla_core::registry::MaterializeCursor>,
+            _page_size: usize,
+        ) -> Option<medulla_core::registry::MaterialPage> {
+            let served = self.served.fetch_add(1, Ordering::SeqCst);
+            Some(medulla_core::registry::MaterialPage {
+                nodes: vec![(
+                    format!("n{served}"),
+                    props(serde_json::json!({"payload": served})),
+                )],
+                edges: Vec::new(),
+                semantic: Vec::new(),
+                schema_sources: None,
+                next_cursor: Some(medulla_core::registry::MaterializeCursor {
+                    node_after: Some("frozen".to_string()),
+                    ..Default::default()
+                }),
+                incarnation_id: None,
+                source_snapshot_version: None,
+            })
+        }
+    }
+
+    /// MEDULLA-DURABLE-KERNEL-R873.1: a paging cursor that never advances ends `page_in_remaining`
+    /// with `NO_PROGRESS` after `observe.progress_idle_limit` equal cursors in a row, finishes the
+    /// registered task `Failed(NO_PROGRESS)` and evicts the partial image, whose manifest is no
+    /// longer valid, so the next access restarts from page zero.
+    // spec: MEDULLA-DURABLE-KERNEL-R873.1
+    #[tokio::test(flavor = "multi_thread")]
+    async fn frozen_cursor_ends_with_no_progress_and_marks_manifest_failed() {
+        let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+        let dir =
+            std::env::temp_dir().join(format!("medulla-lazy-frozen-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let dir_s = dir.to_string_lossy().to_string();
+        let state = redb_state(&dir_s).await;
+
+        let source = Arc::new(FrozenMaterializer {
+            served: AtomicU64::new(0),
+        });
+        {
+            let mut s = state.write().await;
+            s.registry.set_materializer(source.clone());
+            s.registry
+                .register_catalog_only("frozen:graph", GraphType::Agent, None);
+        }
+        assert!(
+            lazy_open(
+                &state,
+                "frozen:graph",
+                DEFAULT_PRODUCTION_MAX_RESIDENT_GRAPHS,
+                1
+            )
+            .await,
+            "the first page is applied inline, so the graph opens resident"
+        );
+
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(10);
+        let row = loop {
+            let row = medulla_observe::global().get("lazy-page-in:frozen:graph");
+            if let Some(row) = row.filter(|row| row.state.is_terminal()) {
+                break row;
+            }
+            assert!(
+                std::time::Instant::now() < deadline,
+                "the page-in task did not end within the deadline"
+            );
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        };
+        assert_eq!(row.state, medulla_observe::machine::task::TaskState::Failed);
+        assert_eq!(
+            row.failure
+                .as_ref()
+                .map(medulla_observe::machine::task::TaskFailure::code),
+            Some("NO_PROGRESS")
+        );
+        // One page inline, then the first cursor, the first repeat and the second repeat.
+        assert_eq!(source.served.load(Ordering::SeqCst), 4);
+        assert_eq!(row.units_done, 2);
+
+        let s = state.read().await;
+        assert!(
+            !s.registry.is_resident("frozen:graph"),
+            "the failed partial core is evicted"
+        );
+        let manifest = s.registry.materialization_manifest("frozen:graph").unwrap();
+        assert!(!manifest.valid, "the image is never advertised as complete");
+        drop(s);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     /// Startup with many persisted graphs (`load_catalog`) hydrates NONE of them —
     /// only the catalog populates; every graph materializes on first access.
     #[tokio::test(flavor = "multi_thread")]
