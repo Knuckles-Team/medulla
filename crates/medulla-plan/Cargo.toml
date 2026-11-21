@@ -536,6 +536,14 @@ name = "live_artifact_refresh"
 path = "benches/live_artifact_refresh.rs"
 harness = false
 
+# ── Lexical rerank bench (MEDULLA-FEDERATED-QUERY-R652.6) ──────────────────────────────
+# 64 candidates of 256 tokens with the lexical scorer; the key `rerank_top64` in
+# `thresholds.json` caps p50 at 6 ms and p99 at 25 ms.
+[[bench]]
+name = "rerank"
+path = "benches/rerank.rs"
+harness = false
+
 # ── Context bundle compile bench (MEDULLA-FEDERATED-QUERY-R650.6) ─────────────────────
 # 256 ranked hits per source in an 8,000-token budget; the key `context_bundle_compile` in
 # `thresholds.json` caps p50 at 2 ms and p99 at 12 ms.

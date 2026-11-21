@@ -187,3 +187,50 @@ def test_receipt_fields(start_medulla_server) -> None:
     finally:
         client.tenants.delete(graph)
         client.close()
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R652.6")
+def test_rerank_calibrate_and_fallback(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R652.6: with no pinned curve the rerank
+    calibrates by min-max scaling and the receipt names the fallback, whether the
+    list holds one candidate or several."""
+    graph = f"rerank-calibrate-{uuid.uuid4().hex[:8]}"
+    client = _client()
+    client.tenants.create(graph)
+    try:
+        _node(
+            client,
+            graph,
+            "alpha",
+            {"type": "document", "name": "lighthouse keeper", "description": "notes"},
+        )
+        # One candidate: it is reranked in place and the fallback is named.
+        single = _compile(client, graph, "lighthouse keeper")["evidence"]
+        assert single["stages"] == ["fuse", "rerank", "calibrate", "cut", "select"]
+        assert single["rerank"]["input_ranks"] == [0]
+        assert single["rerank"]["output_ranks"] == [0]
+        assert single["rerank"]["fallback"] == "no_calibration"
+        assert single["rerank"].get("calibration_digest") in (None, "")
+
+        # Several candidates: the ranks are a permutation of the input ranks and the
+        # same fallback holds, so calibration never invents a curve.
+        _node(
+            client,
+            graph,
+            "beta",
+            {
+                "type": "document",
+                "name": "lighthouse",
+                "description": "notes",
+                "text": "keeper logbook",
+            },
+        )
+        many = _compile(client, graph, "lighthouse keeper logbook")["evidence"]
+        rerank = many["rerank"]
+        assert sorted(rerank["output_ranks"]) == sorted(rerank["input_ranks"])
+        assert rerank["fallback"] == "no_calibration"
+        assert rerank.get("calibration_digest") in (None, "")
+        assert many["stages"].index("rerank") < many["stages"].index("calibrate")
+    finally:
+        client.tenants.delete(graph)
+        client.close()
