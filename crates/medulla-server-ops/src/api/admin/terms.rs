@@ -47,7 +47,9 @@ pub async fn handle_classes(
         graph_name,
         &super::schema_read::disclosed_sources(core),
         &request,
-    ) {
+    )
+    .and_then(|view| with_node_counts(view, core))
+    {
         Ok(view) => Response::ok(
             req_id,
             ResultPayload::of::<
@@ -73,6 +75,33 @@ pub fn composed_vocabulary(
                 .map(|position| (position.iri.as_str(), position.kind)),
         ),
     )
+}
+
+/// The nodes of the graph typed with each class term of the page (MEDULLA-TYPED-PACKS-R106.5).
+fn with_node_counts(
+    mut view: GraphSchemaClassesView,
+    core: &GraphCore,
+) -> Result<GraphSchemaClassesView, String> {
+    const COUNT_PAGE: usize = 1000;
+    let mut terms = view.terms.as_slice().to_vec();
+    for term in terms
+        .iter_mut()
+        .filter(|term| term.kind == GraphSchemaTermKind::Class)
+    {
+        let mut count = 0u64;
+        let mut after: Option<String> = None;
+        loop {
+            let page = core.get_nodes_by_label_page(&term.iri, after.as_deref(), COUNT_PAGE);
+            count += page.len() as u64;
+            if page.len() < COUNT_PAGE {
+                break;
+            }
+            after = page.last().map(|(id, _)| id.clone());
+        }
+        term.node_count = Some(count);
+    }
+    view.terms = medulla_types::contract::BoundedVec::new(terms)?;
+    Ok(view)
 }
 
 fn classes_page(
@@ -177,6 +206,7 @@ fn term_view(
         kind: position.kind,
         source_id: source_id.to_string(),
         ontology_revision: active_ontology_revision(sources, source_id),
+        node_count: None,
     }
 }
 

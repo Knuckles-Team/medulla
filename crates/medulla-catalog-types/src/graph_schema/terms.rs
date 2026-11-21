@@ -115,6 +115,10 @@ pub struct GraphSchemaTermView {
     /// source is a runtime ontology (MEDULLA-TYPED-PACKS-R103.5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ontology_revision: Option<u64>,
+    /// For a class: the nodes of the request graph typed with it, the asset count per class of
+    /// the metadata catalog (MEDULLA-TYPED-PACKS-R106.5). Absent for any other term kind.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub node_count: Option<u64>,
 }
 
 /// One class that declares `:implementsInterface`, with the required members

@@ -211,6 +211,7 @@ class GraphSchemaTermView(BaseModel):
     kind: GraphSchemaTermKind
     local_name: str
     ontology_revision: Annotated[int, Field(ge=0)] | None = None
+    node_count: Annotated[int, Field(ge=0)] | None = None
     source_id: str
 
 

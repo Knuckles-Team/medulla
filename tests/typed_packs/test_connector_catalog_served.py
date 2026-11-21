@@ -145,3 +145,27 @@ def test_unresolved_class_unowned_resource_unpaired_edge_and_oversize_batch_refu
     # An ownerless pack is not a refusal: it imports flagged.
     admin.rdf.add_triples(turtle=_batch(with_digest=True))
     assert _tool_ids(admin) == {TOOL}
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R106.5")
+def test_asset_carries_digest_version_revision_and_class_counts(catalog_graph):
+    """Verifies MEDULLA-TYPED-PACKS-R106.5: the asset keeps its digest and pack version, and
+    GraphSchemaClasses reports the asset count per class."""
+    import msgpack
+
+    admin = catalog_graph
+    graph = admin._client._graph_name
+    version = _triple(TOOL, f"{CONNECTOR_PACK}packVersion", "rec-7", literal=True)
+    admin.rdf.add_triples(turtle=_batch(with_digest=True) + version)
+    raw = admin._send("GetNodeProperties", {"node_id": TOOL}, graph)
+    node = msgpack.unpackb(raw, raw=False) if isinstance(raw, (bytes, bytearray)) else raw
+    assert node[f"{CONNECTOR_PACK}digest"] == DIGEST
+    assert node[f"{CONNECTOR_PACK}packVersion"] == "rec-7"
+    page = admin._send(
+        "GraphSchemaClasses", {"kind": "class", "cursor": None, "limit": 1000}, graph
+    )
+    if isinstance(page, (bytes, bytearray)):
+        page = msgpack.unpackb(page, raw=False)
+    counts = {term["iri"]: term.get("node_count") for term in page["terms"]}
+    assert counts[f"{CATALOG}ToolAsset"] == 1
+    assert counts[f"{CATALOG}DataResource"] == 1
