@@ -686,3 +686,53 @@ async fn capacity_proposal_reuses_placement_headroom() {
     let batch = decide(&h, placement_request(&schema, placement)).await.unwrap();
     assert!(premise_facts(&batch).contains(&format!("lease:{cell_id}:cpu={available}")));
 }
+
+// spec: MEDULLA-PLACEMENT-R001.13
+/// Verifies MEDULLA-PLACEMENT-R001.13: a deployment template whose tool component is
+/// absent from the tenant library abstains with the uncovered capability and holds no
+/// graph, instead of inventing a component.
+#[tokio::test]
+async fn assemble_abstains_on_uncovered_component() {
+    let library = library::harness().await;
+    let targets: Vec<&str> = PlacementTarget::ALL
+        .iter()
+        .map(|target| target.option_id().trim_start_matches("placement:"))
+        .collect();
+    library::seed(&library.store, None);
+    // The verify step's tool is never published.
+    for (nonce, tool) in (40u8..).zip(["tool-render-artifact", "tool-apply"]) {
+        library::publish(
+            &library.store,
+            nonce,
+            (
+                tool,
+                medulla_agent_types::agent_component::AgentComponentKind::Tool,
+            ),
+            None,
+        );
+    }
+    let templates = medulla_persistence_records::agent_graph::tests::publish_deployment_templates(
+        &library.store,
+        library::TENANT,
+        &targets,
+    );
+    let mut request = library::request(Vec::new());
+    request.templates = BoundedVec::new(vec![templates[0].clone()]).unwrap();
+    let result = library::assemble(&library, request)
+        .await
+        .expect("an uncovered template is an abstention, not a refusal");
+    let DecisionOutcome::Abstained { reasons } = &result.record.outcome else {
+        panic!(
+            "expected an abstention, got {:?}",
+            result.record.outcome
+        );
+    };
+    match reasons.as_slice().first() {
+        Some(AbstainReason::UncoveredCapability { iri }) => assert!(!iri.is_empty()),
+        other => panic!("expected the uncovered capability first, got {other:?}"),
+    }
+    assert!(
+        result.graph.is_none(),
+        "an abstained assembly answers no graph"
+    );
+}
