@@ -402,6 +402,18 @@ async fn dispatch_catalog_admin_methods(
             })
             .await
         }
+        Method::PublishSkillPackage { request } => {
+            dispatch_boxed(async {
+                medulla_h_admin::admin::handle_publish_skill_package(
+                    state,
+                    req.id,
+                    verified_context,
+                    *request,
+                )
+                .await
+            })
+            .await
+        }
         Method::MutationOutbox { op } => {
             dispatch_boxed(async {
                 medulla_h_jobs::mutation_outbox::handle_mutation_outbox(

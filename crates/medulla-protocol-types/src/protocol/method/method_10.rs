@@ -133,6 +133,12 @@ $($variants)*
     BeliefRevise {
         request: Box<medulla_decision_types::belief_revision::BeliefReviseRequest>,
     },
+    /// Publish a rendered skill package when the run history `DecisionLog`
+    /// `learn` recorded for its digest validates it (MEDULLA-DECISION-ENGINE-R160.3).
+    /// The handler is the single writer of publication receipts.
+    PublishSkillPackage {
+        request: Box<medulla_decision_types::decision::package_validation::PublishSkillPackageRequest>,
+    },
     /// General bounded 0-1 integer programme with an independently verifiable
     /// certificate. Pure compute: no store, no clock, no float.
     Solve {

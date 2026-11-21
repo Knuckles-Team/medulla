@@ -239,6 +239,7 @@ method_results! {
     FeatureLedgerClose(FeatureLedger / "close") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
     FeatureLedgerGet(FeatureLedger / "get") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
     BeliefRevise(BeliefRevise) => Raw<medulla_decision_types::belief_revision::BeliefPassResult>;
+    PublishSkillPackage(PublishSkillPackage) => Raw<medulla_decision_types::decision::package_validation::PublicationReceipt>;
     // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger append and price put.
     UsageAppend(Usage / "append") => Raw<medulla_decision_types::usage::UsageAppended>;
     UsagePutPrice(Usage / "put_price") => Raw<medulla_decision_types::usage::UsagePriceStored>;

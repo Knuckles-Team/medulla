@@ -10127,6 +10127,21 @@ class LearningWriteMonitorAdapter(BaseModel):
     write: Literal["monitor_adapter"]
 
 
+class RunHistoryEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    package_digest: Digest256
+    passed: bool
+    run_id: Annotated[str, Field(min_length=1)]
+
+
+class LearningWritePackageRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    run: RunHistoryEntry
+    write: Literal["package_run"]
+
+
 class LearningWriteRefreshFreshness(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -10216,7 +10231,8 @@ LearningWrite = Annotated[
     | LearningWriteRefreshFreshness
     | LearningWriteRunGenerationCycle
     | LearningWriteRunOutcome
-    | LearningWriteUploadDistilledScores,
+    | LearningWriteUploadDistilledScores
+    | LearningWritePackageRun,
     Field(discriminator="write"),
 ]
 
@@ -14483,6 +14499,13 @@ class MethodUsage(BaseModel):
     params: MethodUsageParams
 
 
+class MethodPublishSkillPackage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["PublishSkillPackage"]
+    params: MethodPublishSkillPackageParams
+
+
 class MethodArchitectureModelImport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15292,6 +15315,7 @@ Method = Annotated[
         MethodLoops,
         MethodBeliefRevise,
         MethodUsage,
+        MethodPublishSkillPackage,
         MethodFeatureLedger,
         MethodArchitectureModelImport,
         MethodArchitectureModelExport,
@@ -32910,6 +32934,19 @@ class MethodBeliefReviseParams(BaseModel):
     request: BeliefReviseRequest
 
 
+class PublishSkillPackageRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    package: RenderedSkillPackage
+    package_id: Annotated[str, Field(min_length=1)]
+
+
+class MethodPublishSkillPackageParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: PublishSkillPackageRequest
+
+
 class MethodFeatureLedgerParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38842,6 +38879,9 @@ __all__ = [
     "MethodBeliefRevise",
     "MethodBeliefReviseParams",
     "MethodUsage",
+    "MethodPublishSkillPackage",
+    "MethodPublishSkillPackageParams",
+    "PublishSkillPackageRequest",
     "MethodFeatureLedger",
     "MethodFeatureLedgerParams",
     "FeatureLedgerEntry",
@@ -39096,6 +39136,8 @@ __all__ = [
     "LearningWriteRunGenerationCycle",
     "LearningWriteRunOutcome",
     "LearningWriteUploadDistilledScores",
+    "LearningWritePackageRun",
+    "RunHistoryEntry",
     "RefreshBudget",
     "RefreshTrigger",
     "RunOutcome",

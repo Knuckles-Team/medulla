@@ -117,6 +117,8 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
         Method::DecisionLog { op } => Some(op.is_mutation()),
         // MEDULLA-DECISION-ENGINE-R801.8: append and put_price both write.
         Method::Usage { .. } => Some(true),
+        // MEDULLA-DECISION-ENGINE-R160.3: a publication writes its receipt.
+        Method::PublishSkillPackage { .. } => Some(true),
         Method::DecisionEval { op } => Some(op.is_mutation()),
         Method::MutationOutbox { op } => Some(op.is_mutation()),
         Method::EdgeIndex { op } => Some(op.is_mutation()),

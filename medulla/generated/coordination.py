@@ -3021,6 +3021,9 @@ decode_assistant_profile_list_document_sets = contract_decoder(
 send_batch = contract_sender("Batch", "MethodBatchParams")
 send_belief_revise = contract_sender("BeliefRevise", "MethodBeliefReviseParams")
 send_usage = contract_sender("Usage", "MethodUsageParams")
+send_publish_skill_package = contract_sender(
+    "PublishSkillPackage", "MethodPublishSkillPackageParams"
+)
 send_feature_ledger = contract_sender("FeatureLedger", "MethodFeatureLedgerParams")
 decode_feature_ledger = contract_decoder("FeatureLedger", "FeatureLedgerView")
 send_loops = contract_sender("Loops", "MethodLoopsParams")

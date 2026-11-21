@@ -34,6 +34,10 @@ mod cluster;
 mod component_content;
 mod skill_admission;
 #[cfg(feature = "redb")]
+mod package_validation;
+#[cfg(all(test, feature = "redb"))]
+mod package_validation_tests;
+#[cfg(feature = "redb")]
 pub mod concept_lineage;
 // Declared in every build -- the dispatch arm that reaches it carries no cfg;
 // each op refuses by name in a build without its durable substrates.
@@ -55,6 +59,8 @@ pub use backup::backup_bundle_name;
 #[cfg(feature = "redb")]
 pub use cluster::try_handle;
 pub use connector_pack::handle_connector_pack;
+#[cfg(feature = "redb")]
+pub use package_validation::handle_publish_skill_package;
 pub use workflow_registry::handle_workflow_registry_read;
 
 /// Non-redb build: every admin method returns a clean "not available" error.

@@ -300,6 +300,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         | LearningWrite::EvaluateDrift { .. }
         | LearningWrite::RunOutcome { .. }
         | LearningWrite::UploadDistilledScores { .. }
+        | LearningWrite::PackageRun { .. }
         | LearningWrite::MovePointer { .. } => Vec::new(),
     }
 }
@@ -531,6 +532,9 @@ pub(super) fn dispatch(
         LearningWrite::UploadDistilledScores { upload } => Ok(LearningRecorded::DistilledScores(
             Box::new(upload_scores(ctx, *upload)?),
         )),
+        LearningWrite::PackageRun { run } => Ok(LearningRecorded::PackageRun(Box::new(
+            super::stat_package_run::record_package_run(ctx, *run)?,
+        ))),
         LearningWrite::EvaluateDrift { logical_graph, .. } => s.evaluate_drift(&logical_graph),
         LearningWrite::MovePointer { pointer, movement } => s.move_pointer(&pointer, &movement),
     }

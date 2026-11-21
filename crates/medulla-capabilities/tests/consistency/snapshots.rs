@@ -10,6 +10,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     // (MEDULLA-DECISION-ENGINE-R801.8).
     "BeliefRevise",
     "Usage",
+    "PublishSkillPackage",
     "AddEdge",
     "AddEmbedding",
     "AddNode",

@@ -108,6 +108,41 @@ pub struct RunHistoryEntry {
     pub passed: bool,
 }
 
+/// Key prefix of every recorded package run (MEDULLA-DECISION-ENGINE-R160.3).
+pub const PACKAGE_RUN_PREFIX: &str = "package_run/";
+/// Key prefix of every package publication receipt.
+pub const PACKAGE_PUBLICATION_PREFIX: &str = "package_publication/";
+/// Most run rows one package's history reads.
+pub const MAX_PACKAGE_RUNS: usize = 4096;
+/// Most publication receipts one tenant's catalog read loads.
+pub const MAX_PUBLISHED_PACKAGES: usize = 65536;
+
+/// The key prefix of the runs recorded for one package digest.
+pub fn package_run_prefix(digest: &Digest256) -> String {
+    format!("{PACKAGE_RUN_PREFIX}{}/", digest.to_hex())
+}
+
+/// The key of one recorded run: the package prefix then the run id, so a
+/// prefix read returns the history in ascending `run_id` order.
+pub fn package_run_key(digest: &Digest256, run_id: &OpaqueId) -> String {
+    format!("{}{}", package_run_prefix(digest), run_id.as_str())
+}
+
+/// The key of the publication receipt of one package digest.
+pub fn package_publication_key(digest: &Digest256) -> String {
+    format!("{PACKAGE_PUBLICATION_PREFIX}{}", digest.to_hex())
+}
+
+/// The body of `Method::PublishSkillPackage`. The request carries no tenant:
+/// the tenant is the verified one.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PublishSkillPackageRequest {
+    pub package_id: OpaqueId,
+    pub package: RenderedSkillPackage,
+}
+
 /// Validate a rendered package against its recorded run history. Pure: it reads no clock,
 /// store or tenant policy, and returns the validation, not the receipt; the handler mints the
 /// [`PublicationReceipt`] from it. `history` is the tenant-visible run history in recorded

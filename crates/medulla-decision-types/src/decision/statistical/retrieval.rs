@@ -354,6 +354,11 @@ pub enum LearningWrite {
     FitCalibration {
         request: Box<super::retrieval_calibration::CalibrationFitRequest>,
     },
+    /// Record one run of a rendered skill package and whether it passed
+    /// (MEDULLA-DECISION-ENGINE-R160.3).
+    PackageRun {
+        run: Box<crate::decision::package_validation::RunHistoryEntry>,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -366,7 +371,9 @@ impl LearningWrite {
     /// everything that can change what the engine serves is governance.
     pub fn class(&self) -> LogOpClass {
         match self {
-            Self::RecordOutcome { .. } | Self::RunOutcome { .. } => LogOpClass::Write,
+            Self::RecordOutcome { .. } | Self::RunOutcome { .. } | Self::PackageRun { .. } => {
+                LogOpClass::Write
+            }
             Self::FitAdapter { .. }
             | Self::MonitorAdapter { .. }
             | Self::FitCalibration { .. }
@@ -397,6 +404,8 @@ pub enum LearningRecorded {
     /// The scorer manifest after a distilled score upload.
     DistilledScores(Box<super::distilled::DistilledScorerManifest>),
     Drift(Box<super::retrieval_drift::DriftEvaluated>),
+    /// The package run row after a `PackageRun` write.
+    PackageRun(Box<crate::decision::package_validation::RunHistoryEntry>),
 }
 
 #[cfg(test)]
