@@ -231,22 +231,9 @@ pub enum ResourceReservationResultDecision {
     NotFound,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum ResourceReservationResultState {
-    #[serde(rename = "reserved")]
-    Reserved,
-    #[serde(rename = "released")]
-    Released,
-    #[serde(rename = "reclaimed")]
-    Reclaimed,
-    #[serde(rename = "expired")]
-    Expired,
-    #[serde(rename = "superseded")]
-    Superseded,
-    #[serde(rename = "absent")]
-    Absent,
-}
+/// The state a reservation result reports: the one `ResourceReservationMachine` state, not a copy
+/// (MEDULLA-PLACEMENT-R781.5).
+pub type ResourceReservationResultState = ResourceReservationRecordState;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -392,4 +379,87 @@ pub struct ResourceReservationResult {
     pub fairness_debt: u64,
     pub tombstone: bool,
     pub changed_work_item_ids: Vec<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use medulla_types::transition_refused::TransitionRefusalReason;
+
+    // spec: MEDULLA-PLACEMENT-R781.5, MEDULLA-PLACEMENT-R781.6
+    #[test]
+    fn every_legal_transition_applies() {
+        let machine = &RESOURCE_RESERVATION_MACHINE;
+        assert!(!machine.edges.is_empty());
+        for edge in machine.edges {
+            assert_eq!(edge.from.apply(edge.event, |_| true), Ok(edge.to), "{}", edge.id);
+            if edge.guard.is_some() {
+                let refused = edge.from.apply(edge.event, |_| false).unwrap_err();
+                assert_eq!(refused.reason, TransitionRefusalReason::GuardFailed, "{}", edge.id);
+            }
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R781.5, MEDULLA-PLACEMENT-R781.6
+    #[test]
+    fn every_illegal_pair_is_refused_with_transition_refused() {
+        let machine = &RESOURCE_RESERVATION_MACHINE;
+        for &state in machine.states {
+            for &event in machine.events {
+                let has_edge = machine
+                    .edges
+                    .iter()
+                    .any(|edge| edge.from == state && edge.event == event);
+                if has_edge {
+                    continue;
+                }
+                let refused = state.apply(event, |_| true).unwrap_err();
+                let expected = if machine.is_terminal(state) {
+                    TransitionRefusalReason::TerminalState
+                } else {
+                    TransitionRefusalReason::IllegalTransition
+                };
+                assert_eq!(refused.reason, expected, "{state:?} {event:?}");
+                assert_eq!(refused.machine, "ResourceReservationMachine");
+                assert_eq!(refused.code().as_str(), "TRANSITION_REFUSED");
+            }
+        }
+    }
+
+    // spec: MEDULLA-PLACEMENT-R781.5, MEDULLA-PLACEMENT-R781.6
+    #[test]
+    fn no_writer_sets_state_outside_apply() {
+        // The result and summary states are the machine's own enum, so a writer that
+        // assigns one of the three names directly would skip `apply`.
+        let dir = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/../medulla-resource-store/src/redb_store/resource"
+        );
+        let needles = [
+            ".state = ResourceReservationRecordState::",
+            ".state = ResourceReservationResultState::",
+            ".state = ResourceReservationSummaryState::",
+        ];
+        let mut scanned = 0;
+        for entry in std::fs::read_dir(dir).expect("resource store source directory") {
+            let path = entry.expect("directory entry").path();
+            if path.extension().and_then(|e| e.to_str()) != Some("rs") {
+                continue;
+            }
+            scanned += 1;
+            let source = std::fs::read_to_string(&path).expect("writer source");
+            for (n, line) in source.lines().map(str::trim).enumerate() {
+                if line.starts_with("//") {
+                    continue;
+                }
+                assert!(
+                    !needles.iter().any(|needle| line.contains(needle)),
+                    "{}:{}: reservation state written outside apply",
+                    path.display(),
+                    n + 1
+                );
+            }
+        }
+        assert!(scanned > 3, "the resource store writers were not scanned");
+    }
 }

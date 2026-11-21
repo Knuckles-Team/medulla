@@ -198,50 +198,16 @@ pub fn resource_capacity_sum(
             .is_some_and(|value| value <= host.capacity.process_slots)
 }
 
-struct ResourceStateProjection {
-    pub result: ResourceReservationResultState,
-    pub summary: ResourceReservationSummaryState,
-}
-
-fn resource_state_projection(state: ResourceReservationRecordState) -> ResourceStateProjection {
-    match state {
-        ResourceReservationRecordState::Reserved => ResourceStateProjection {
-            result: ResourceReservationResultState::Reserved,
-            summary: ResourceReservationSummaryState::Reserved,
-        },
-        ResourceReservationRecordState::Released => ResourceStateProjection {
-            result: ResourceReservationResultState::Released,
-            summary: ResourceReservationSummaryState::Released,
-        },
-        ResourceReservationRecordState::Reclaimed => ResourceStateProjection {
-            result: ResourceReservationResultState::Reclaimed,
-            summary: ResourceReservationSummaryState::Reclaimed,
-        },
-        ResourceReservationRecordState::Expired => ResourceStateProjection {
-            result: ResourceReservationResultState::Expired,
-            summary: ResourceReservationSummaryState::Expired,
-        },
-        ResourceReservationRecordState::Superseded => ResourceStateProjection {
-            result: ResourceReservationResultState::Superseded,
-            summary: ResourceReservationSummaryState::Superseded,
-        },
-        ResourceReservationRecordState::Absent => ResourceStateProjection {
-            result: ResourceReservationResultState::Absent,
-            summary: ResourceReservationSummaryState::Absent,
-        },
-    }
-}
-
 pub fn resource_result_state(
     state: ResourceReservationRecordState,
 ) -> ResourceReservationResultState {
-    resource_state_projection(state).result
+    state
 }
 
 pub fn resource_summary_state(
     state: ResourceReservationRecordState,
 ) -> ResourceReservationSummaryState {
-    resource_state_projection(state).summary
+    state
 }
 
 pub fn resource_result_payload(

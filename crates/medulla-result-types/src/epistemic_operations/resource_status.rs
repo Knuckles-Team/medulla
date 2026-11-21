@@ -33,22 +33,10 @@ pub enum ResourceReservationStatusResultSchemaVersion {
     V1,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub enum ResourceReservationSummaryState {
-    #[serde(rename = "reserved")]
-    Reserved,
-    #[serde(rename = "released")]
-    Released,
-    #[serde(rename = "reclaimed")]
-    Reclaimed,
-    #[serde(rename = "expired")]
-    Expired,
-    #[serde(rename = "superseded")]
-    Superseded,
-    #[serde(rename = "absent")]
-    Absent,
-}
+/// The state a reservation summary reports: the one `ResourceReservationMachine` state, not a copy
+/// (MEDULLA-PLACEMENT-R781.6).
+pub type ResourceReservationSummaryState =
+    super::resource_core::ResourceReservationRecordState;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
