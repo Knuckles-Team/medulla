@@ -141,6 +141,11 @@ pub struct AssetDoc {
     pub usage_reads: u64,
     /// Trust flags set on the asset.
     pub flags: Vec<TrustFlag>,
+    /// The review status of an article (`cat:articleStatus`); `None` for any other asset.
+    pub article_status: Option<String>,
+    /// For an article: the best score, for the search text, among the assets its
+    /// `cat:aboutAsset` edges name, filled by the caller that can read the edges.
+    pub described_best: f64,
 }
 
 /// Predicate keys, by IRI and by bare local name, that carry each text field.
@@ -168,6 +173,9 @@ fn term_keys() -> [String; 3] {
 }
 fn concept_keys() -> [String; 3] {
     [format!("{CAT_NS}concept"), "concept".into(), "concepts".into()]
+}
+fn article_status_keys() -> [String; 2] {
+    [format!("{CAT_NS}articleStatus"), "articleStatus".into()]
 }
 fn flag_keys() -> [String; 2] {
     [
@@ -207,6 +215,11 @@ fn collect(obj: &Map<String, Value>, keys: &[String]) -> Vec<String> {
 impl AssetDoc {
     /// Read the asset text, counters and flags of one decoded node property object.
     pub fn from_props(obj: &Map<String, Value>) -> Self {
+        let status = collect(obj, &article_status_keys())
+            .into_iter()
+            .next()
+            .map(|raw| raw.trim().to_ascii_lowercase());
+        let article_status = status.as_deref();
         Self {
             names: collect(obj, &name_keys()),
             term_labels: collect(obj, &term_keys()),
@@ -216,7 +229,13 @@ impl AssetDoc {
             flags: collect(obj, &flag_keys())
                 .iter()
                 .filter_map(|raw| TrustFlag::parse(raw))
+                .chain(
+                    // A deprecated article takes the deprecation penalty.
+                    (article_status == Some("deprecated")).then_some(TrustFlag::Deprecation),
+                )
                 .collect(),
+            article_status: article_status.map(str::to_string),
+            described_best: 0.0,
         }
     }
 }
@@ -480,9 +499,32 @@ pub fn rank_components(doc: &AssetDoc, query: &str) -> HitComponents {
     fuse_with_usage_prior(text, text, usage_norm(doc.usage_reads))
 }
 
-/// The final score of one asset: the fused components scaled by the trust flags.
+/// The share of the best described-asset score an article gains as its `described_asset`
+/// component. The constant is part of MEDULLA-TYPED-PACKS-R108.16, not a knob.
+pub const DESCRIBED_ASSET_FACTOR: f64 = 0.5;
+
+/// Whether the asset is an article no search returns: one still in `draft` or `in_review`.
+pub fn hidden_from_search(doc: &AssetDoc) -> bool {
+    matches!(doc.article_status.as_deref(), Some("draft" | "in_review"))
+}
+
+/// The `described_asset` component of an article: half the best score among the assets it
+/// describes. Zero for a hidden article or an asset that is no article.
+pub fn described_asset_component(doc: &AssetDoc) -> f64 {
+    if doc.article_status.is_none() || hidden_from_search(doc) {
+        return 0.0;
+    }
+    DESCRIBED_ASSET_FACTOR * doc.described_best
+}
+
+/// The final score of one asset: the fused components plus the `described_asset` component,
+/// scaled by the trust flags. A `draft` or `in_review` article scores zero for every caller.
 pub fn relevance(doc: &AssetDoc, query: &str) -> f64 {
-    rank_components(doc, query).total() * trust_multiplier(&doc.flags)
+    if hidden_from_search(doc) {
+        return 0.0;
+    }
+    (rank_components(doc, query).total() + described_asset_component(doc))
+        * trust_multiplier(&doc.flags)
 }
 
 #[cfg(test)]
@@ -519,6 +561,31 @@ mod tests {
         unrelated.usage_reads = 1_000_000;
         assert_eq!(relevance(&unrelated, "orders"), 0.0);
         assert!(relevance(&busy, "orders") > relevance(&doc("orders"), "orders"));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R108.16
+    #[test]
+    fn draft_articles_are_hidden_and_approved_ones_gain_the_described_asset_component() {
+        let article = |status: &str, described: f64| AssetDoc {
+            names: vec!["unrelated guide".into()],
+            article_status: Some(status.into()),
+            described_best: described,
+            ..AssetDoc::default()
+        };
+        for hidden in ["draft", "in_review"] {
+            assert_eq!(relevance(&article(hidden, 0.9), "orders"), 0.0);
+        }
+        let approved = article("approved", 0.8);
+        assert_eq!(described_asset_component(&approved), 0.4);
+        assert_eq!(relevance(&approved, "orders"), 0.4);
+        assert_eq!(described_asset_component(&doc("orders")), 0.0);
+        let plain = relevance(&article("approved", 0.0), "guide");
+        let props: Map<String, Value> = serde_json::from_value(serde_json::json!({
+            "https://knuckles-team.github.io/ontology/catalog#articleStatus": "deprecated",
+            "name": "guide"
+        }))
+        .unwrap();
+        assert!(relevance(&AssetDoc::from_props(&props), "guide") < plain);
     }
 
     // spec: MEDULLA-TYPED-PACKS-R108.16

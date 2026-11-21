@@ -316,17 +316,16 @@ fn local_name(term: &str) -> &str {
     bare.rsplit(['#', '/']).next().unwrap_or(bare)
 }
 
-/// The ranking document of the asset a binding names: its own text, counters and flags, the
-/// labels of the glossary terms that define it and the classes those terms name.
-fn catalog_doc(ctx: &Ctx, asset: &Binding) -> Option<medulla_catalog_types::catalog_relevance::AssetDoc> {
+/// The ranking document of the node `key`: its own text, counters and flags, the labels of the
+/// glossary terms that define it and the classes those terms name.
+fn node_doc(ctx: &Ctx, key: &str) -> Option<medulla_catalog_types::catalog_relevance::AssetDoc> {
     use medulla_catalog_types::catalog_relevance::{term_labels, AssetDoc};
-    let key = catalog_node_key(ctx, asset)?;
-    let mut doc = AssetDoc::from_props(&node_object(ctx, &key)?);
+    let mut doc = AssetDoc::from_props(&node_object(ctx, key)?);
     if let Some(index) = &ctx.proj.usage {
-        doc.usage_reads = medulla_catalog_types::catalog_relevance::usage_of(index, &doc.names, &key);
+        doc.usage_reads = medulla_catalog_types::catalog_relevance::usage_of(index, &doc.names, key);
     }
     for ((from, to), blobs) in &ctx.active.edge_properties {
-        if *to != key {
+        if to != key {
             continue;
         }
         let defines = blobs.iter().any(|blob| {
@@ -359,6 +358,38 @@ fn catalog_doc(ctx: &Ctx, asset: &Binding) -> Option<medulla_catalog_types::cata
     Some(doc)
 }
 
+/// The ranking document of the asset a binding names. An article also carries the best score,
+/// for `text`, among the assets its `cat:aboutAsset` edges name (MEDULLA-TYPED-PACKS-R108.16).
+fn catalog_doc(
+    ctx: &Ctx,
+    asset: &Binding,
+    text: &str,
+) -> Option<medulla_catalog_types::catalog_relevance::AssetDoc> {
+    let key = catalog_node_key(ctx, asset)?;
+    let mut doc = node_doc(ctx, &key)?;
+    if doc.article_status.is_some() {
+        doc.described_best = ctx
+            .active
+            .edge_properties
+            .iter()
+            .filter(|((from, _), blobs)| {
+                *from == key
+                    && blobs.iter().any(|blob| {
+                        medulla_types::msgpack::decode_property_value(blob.as_slice())
+                            .ok()
+                            .and_then(|v| {
+                                v.get("relationship").and_then(|r| r.as_str().map(str::to_string))
+                            })
+                            .is_some_and(|rel| local_name(&rel) == "aboutAsset")
+                    })
+            })
+            .filter_map(|((_, described), _)| node_doc(ctx, described))
+            .map(|described| medulla_catalog_types::catalog_relevance::relevance(&described, text))
+            .fold(0.0, f64::max);
+    }
+    Some(doc)
+}
+
 /// `cat:relevance(?asset, "text")` and `cat:rankComponents(?asset, "text")`. A text over the
 /// knob or blank ends the query with its coded refusal; an unbound or unknown asset is an
 /// expression error, so its row fails safe.
@@ -378,14 +409,15 @@ pub(super) fn eval_catalog_function(
         }
     };
     let asset = eval_term(ctx, args.first()?, sol)?;
-    let doc = catalog_doc(ctx, &asset)?;
+    let doc = catalog_doc(ctx, &asset, &text)?;
     if iri == cr::CAT_RANK_COMPONENTS_IRI {
         let c = cr::rank_components(&doc, &text);
         let multiplier = cr::trust_multiplier(&doc.flags);
         return Some(Binding::Literal(
             serde_json::json!({
                 "text": c.text, "vector": c.vector, "usage": c.usage,
-                "trust": multiplier, "score": c.total() * multiplier,
+                "described_asset": cr::described_asset_component(&doc),
+                "trust": multiplier, "score": cr::relevance(&doc, &text),
             })
             .to_string(),
         ));

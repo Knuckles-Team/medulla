@@ -398,6 +398,9 @@ def test_article_attaches_to_asset_and_domain_and_is_found_by_text_and_by_asset(
         )
 
     admin.rdf.add_triples(turtle=article_turtle(2, "draft"))
+    # A draft article is returned by no search, by its text or by the asset it describes.
+    assert not any(article in asset_id for asset_id, _ in _ranked(admin, "onboarding"))
+    assert not any(article in asset_id for asset_id, _ in _ranked(admin, "invoices"))
     # A rewrite at a lower version is refused.
     with pytest.raises(Exception, match="ARTICLE_VERSION_INVALID"):
         admin.rdf.add_triples(turtle=article_turtle(1, "draft"))
