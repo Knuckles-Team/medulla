@@ -97,6 +97,11 @@ pub fn parse_file(source_code: &str, file_path: &str, language: SourceLanguage) 
     let mut errors = Vec::new();
 
     let root = tree.root_node();
+    // A source with syntax errors still yields the symbols that parsed, and
+    // reports the error so a caller can refuse it (MEDULLA-SCM-R013.3).
+    if root.has_error() {
+        errors.push("syntax error in source".to_string());
+    }
     extract_symbols(
         &root,
         source_code,
