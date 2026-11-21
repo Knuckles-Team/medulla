@@ -14,7 +14,8 @@ use medulla_jobs::schedule_run::ScheduleBudget;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::result_contract::coordination::{
     JobScheduleCreate, JobScheduleDelete, JobScheduleGet, JobScheduleList, JobSchedulePause,
-    JobScheduleResume, JobScheduleUpdate, ScheduleRemoved, ScheduleView, ScheduleViewList,
+    JobScheduleResume, JobScheduleTicks, JobScheduleUpdate, ScheduleRemoved, ScheduleTickList,
+    ScheduleTickView, ScheduleView, ScheduleViewList,
 };
 use medulla_protocol_types::result_contract::MethodResult;
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -310,4 +311,69 @@ pub(super) async fn set_state(
         ScheduleEvent::Pause => typed::<JobSchedulePause>(call.req_id, result),
         ScheduleEvent::Resume => typed::<JobScheduleResume>(call.req_id, result),
     }
+}
+
+/// Ticks one schedule read returns when the op names no limit.
+const DEFAULT_TICK_LIMIT: u32 = 20;
+/// The most ticks one read returns.
+const MAX_TICK_LIMIT: u32 = 200;
+
+fn tick_view(fields: &Value) -> Option<ScheduleTickView> {
+    let text = |key: &str| {
+        fields
+            .get(key)
+            .and_then(Value::as_str)
+            .unwrap_or_default()
+            .to_string()
+    };
+    let number = |key: &str| fields.get(key).and_then(Value::as_u64).unwrap_or(0);
+    let job = text("job_id");
+    Some(ScheduleTickView {
+        window_start_ms: fields.get("window_start_ms").and_then(Value::as_u64)?,
+        outcome: text("outcome"),
+        reason: text("reason"),
+        host: text("host"),
+        work_item_id: (!job.is_empty()).then_some(job),
+        used_run_s: number("used_run_s"),
+        used_tokens: number("used_tokens"),
+    })
+}
+
+/// The last ticks of one schedule of the caller's tenant, oldest first. The schedule must
+/// exist; a tick node belongs to it by its `schedule` and `tenant` fields.
+pub(super) async fn ticks(
+    call: ScheduleCall<'_>,
+    graph: String,
+    name: String,
+    limit: Option<u32>,
+) -> Response {
+    let result = async {
+        let core = core_of(&call, &graph).await?;
+        let tenant = call.verified_context.tenant().to_string();
+        load(&core, &tenant, &name)?;
+        let prefix = format!("schedule-tick:{tenant}:{name}:");
+        let mut found = Vec::new();
+        for id in core.node_ids().iter().filter(|id| id.starts_with(&prefix)) {
+            let Some(raw) = core.get_node_properties(id) else {
+                continue;
+            };
+            let Ok(fields) = medulla_types::msgpack::decode_property_value(&raw) else {
+                continue;
+            };
+            let ours = fields.get("schedule").and_then(Value::as_str) == Some(name.as_str())
+                && fields.get("tenant").and_then(Value::as_str) == Some(tenant.as_str());
+            if let Some(tick) = ours.then(|| tick_view(&fields)).flatten() {
+                found.push(tick);
+            }
+        }
+        found.sort_by_key(|tick| tick.window_start_ms);
+        let keep = limit.unwrap_or(DEFAULT_TICK_LIMIT).clamp(1, MAX_TICK_LIMIT) as usize;
+        let skip = found.len().saturating_sub(keep);
+        Ok(ScheduleTickList {
+            schedule: name,
+            ticks: found.split_off(skip),
+        })
+    }
+    .await;
+    typed::<JobScheduleTicks>(call.req_id, result)
 }

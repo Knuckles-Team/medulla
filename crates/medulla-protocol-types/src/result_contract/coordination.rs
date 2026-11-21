@@ -196,6 +196,8 @@ method_results! {
     JobScheduleDelete(AnalyticsJob / "ScheduleDelete") => Json<ScheduleRemoved>;
     #[cfg(feature = "jobs")]
     JobScheduleList(AnalyticsJob / "ScheduleList") => Json<ScheduleViewList>;
+    #[cfg(feature = "jobs")]
+    JobScheduleTicks(AnalyticsJob / "ScheduleTicks") => Json<ScheduleTickList>;
     #[cfg(feature = "statechart")]
     StatechartDefine(Statechart / "Define") => Json<StatechartDefinitionId>;
     #[cfg(feature = "statechart")]

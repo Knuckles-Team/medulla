@@ -141,6 +141,15 @@ pub enum JobOp {
     ScheduleDelete { graph: String, name: String },
     /// List the schedules of the caller's tenant.
     ScheduleList { graph: String },
+    /// The last `limit` ticks of one schedule of the caller's tenant, oldest first, each with
+    /// its outcome, reason, window, linked work item and budget used
+    /// (MEDULLA-PLACEMENT-R751.758). `limit` defaults to 20 and is capped at 200.
+    ScheduleTicks {
+        graph: String,
+        name: String,
+        #[serde(default)]
+        limit: Option<u32>,
+    },
 }
 
 fn default_lease_ms() -> u64 {

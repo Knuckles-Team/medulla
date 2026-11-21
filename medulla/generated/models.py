@@ -9312,6 +9312,20 @@ class JobOpScheduleListBody(BaseModel):
     graph: str
 
 
+class JobOpScheduleTicks(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ScheduleTicks: JobOpScheduleTicksBody
+
+
+class JobOpScheduleTicksBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    limit: Annotated[int, Field(ge=0, le=4294967295)] | None = None
+    name: str
+
+
 class JobOpSchedulePause(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -29503,6 +29517,7 @@ JobOp = (
     | JobOpScheduleDelete
     | JobOpScheduleGet
     | JobOpScheduleList
+    | JobOpScheduleTicks
     | JobOpSchedulePause
     | JobOpScheduleResume
     | JobOpScheduleUpdate
@@ -36010,6 +36025,8 @@ __all__ = [
     "JobOpScheduleGetBody",
     "JobOpScheduleList",
     "JobOpScheduleListBody",
+    "JobOpScheduleTicks",
+    "JobOpScheduleTicksBody",
     "JobOpSchedulePause",
     "JobOpSchedulePauseBody",
     "JobOpScheduleResume",

@@ -32,7 +32,7 @@ use super::prelude_std::*;
 use super::*;
 
 const SERVICE: &str = "scheduler";
-const TICK_NODE_TYPE: &str = "ScheduleTick";
+pub(super) const TICK_NODE_TYPE: &str = "ScheduleTick";
 /// Longest time a cached schedule list is kept without a re-read.
 const SCHEDULE_REREAD_MS: u64 = 60_000;
 
@@ -239,6 +239,8 @@ async fn tick_pass(
             fields.insert("outcome".into(), outcome.as_str().into());
             fields.insert("reason".into(), outcome.reason().into());
             fields.insert("job_id".into(), job_id.into());
+            fields.insert("used_run_s".into(), run.used_run_s.into());
+            fields.insert("used_tokens".into(), run.used_tokens.into());
             let run_fields = run.to_fields(&record.tenant, &record.name);
             let run_id = ScheduleRun::node_id(&record.tenant, &record.name);
             commit(

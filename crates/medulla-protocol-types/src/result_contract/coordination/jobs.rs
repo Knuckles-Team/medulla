@@ -199,6 +199,36 @@ pub struct ScheduleViewList {
     pub schedules: Vec<ScheduleView>,
 }
 
+/// One recorded tick of a schedule (MEDULLA-PLACEMENT-R751.758).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScheduleTickView {
+    /// The window the tick decided, in milliseconds.
+    pub window_start_ms: u64,
+    /// `fired`, `skipped` or `refused`.
+    pub outcome: String,
+    /// Why the window was not fired; empty for a fired one.
+    pub reason: String,
+    /// The engine that acted as leader for the tick.
+    pub host: String,
+    /// The work item the tick submitted; present only for a fired tick.
+    pub work_item_id: Option<String>,
+    /// Run seconds charged to the schedule's budget period when the tick was decided.
+    pub used_run_s: u64,
+    /// Tokens charged to the schedule's budget period when the tick was decided.
+    pub used_tokens: u64,
+}
+
+/// The last ticks of one schedule, oldest first.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScheduleTickList {
+    pub schedule: String,
+    pub ticks: Vec<ScheduleTickView>,
+}
+
 /// The name of a schedule that was removed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

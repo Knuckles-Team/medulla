@@ -16004,6 +16004,23 @@ class JobsClient:
             )
         ).payload
 
+    async def schedule_ticks(
+        self, graph: str, name: str, *, limit: int | None = None
+    ) -> dict[str, Any]:
+        """The last ticks of one schedule, oldest first.
+
+        Each tick carries its outcome (`fired`, `skipped` or `refused`), the reason,
+        the window, the work item a fired tick submitted and the budget used.
+        """
+        body: dict[str, Any] = {"graph": graph, "name": name}
+        if limit is not None:
+            body["limit"] = limit
+        return (
+            await _gen.coordination.send_analytics_job(
+                self._client, {"op": {"ScheduleTicks": body}}
+            )
+        ).payload
+
 
 class KnowledgeStreamClient:
     """Current native Arrow result stream for every served query family.

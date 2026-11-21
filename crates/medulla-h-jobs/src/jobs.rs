@@ -487,6 +487,9 @@ pub async fn handle(
             schedules::delete(schedule_call(), graph, name).await
         }
         JobOp::ScheduleList { graph } => schedules::list(schedule_call(), graph).await,
+        JobOp::ScheduleTicks { graph, name, limit } => {
+            schedules::ticks(schedule_call(), graph, name, limit).await
+        }
         JobOp::WorkerFail {
             job_id,
             worker_instance,
