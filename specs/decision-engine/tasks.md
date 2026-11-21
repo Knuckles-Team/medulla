@@ -475,9 +475,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T462 [US7] MEDULLA-DECISION-ENGINE-R159.5 Evidence
 - [ ] T463 [US7] MEDULLA-DECISION-ENGINE-R159.6 Hot-path proof
 - [ ] T464 [US7] MEDULLA-DECISION-ENGINE-R160.1 Package validation model
-- [ ] T465 [US7] MEDULLA-DECISION-ENGINE-R160.2 Package validation behaviour
+- [ ] T465 [US7] MEDULLA-DECISION-ENGINE-R160.2 Package validation behaviour: pure validate_rendered_package returning RenderedPackageValidation, Fixed package knobs, five ordered steps
 - [ ] T466 [US7] MEDULLA-DECISION-ENGINE-R160.3 Serve PublishSkillPackage
-- [ ] T467 [US7] MEDULLA-DECISION-ENGINE-R160.4 Package publication refusals
+- [ ] T467 [US7] MEDULLA-DECISION-ENGINE-R160.4 Package publication refusals: PublicationRefusal with four codes, REFUSALS and the EXACT_METHOD_ERRORS entry
 - [ ] T468 [US7] MEDULLA-DECISION-ENGINE-R160.5 Package validation evidence
 - [ ] T469 [US7] MEDULLA-DECISION-ENGINE-R160.6 Package publication hot-path proof
 - [ ] T470 [US7] MEDULLA-DECISION-ENGINE-R161.1 Correction binding model
@@ -934,13 +934,13 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T917 [US6] MEDULLA-DECISION-ENGINE-R829.2 Option features for capability ranking are computed by medulla from candidate text. Size: M, 2 PRs, 6 hours.
 - [ ] T918 [US6] MEDULLA-DECISION-ENGINE-R829.3 Served proof: a large catalog ranks the named system and object first. Size: S, 1 PR, 3 hours.
 - [ ] T923 [US6] MEDULLA-DECISION-ENGINE-R830 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T924 [US6] MEDULLA-DECISION-ENGINE-R830.1 Certificate/SolveStatus state machine: route 1 census findings through SolveStatus::apply
-- [ ] T925 [US6] MEDULLA-DECISION-ENGINE-R830.2 ComparativeStageBudget/ComparativeAnalysisStage state machine: route 1 census findings through ComparativeAnalysisStage::apply
-- [ ] T926 [US6] MEDULLA-DECISION-ENGINE-R830.3 DecisionJobRecord/DecisionJobState state machine: route 1 census findings through DecisionJobState::apply
-- [ ] T927 [US6] MEDULLA-DECISION-ENGINE-R830.4 EditFact/EditStatus state machine: route 1 census findings through EditStatus::apply
+- [ ] T924 [US6] MEDULLA-DECISION-ENGINE-R830.1 Rename Certificate.status to outcome (serde key status); naming row, no machine
+- [ ] T925 [US6] MEDULLA-DECISION-ENGINE-R830.2 Rename ComparativeStageBudget.stage to stage_id (serde key stage); naming row, no machine
+- [ ] T926 [US6] MEDULLA-DECISION-ENGINE-R830.3 Rename DecisionJobState to DecisionJobOutcome and the field to outcome; delete the unwritten Queued, Running and Cancelled variants
+- [ ] T927 [US6] MEDULLA-DECISION-ENGINE-R830.4 Rename EditFact.status to standing (serde key status); naming row, no machine
 - [ ] T928 [US6] MEDULLA-DECISION-ENGINE-R830.5 Gap/GapState state machine: route 1 census findings through GapState::apply
-- [ ] T929 [US6] MEDULLA-DECISION-ENGINE-R830.6 LoopInstance/LoopState state machine: route 13 census findings through LoopState::apply
-- [ ] T930 [US6] MEDULLA-DECISION-ENGINE-R830.7 PlanItem/PlanStatus state machine: route 1 census findings through PlanStatus::apply
+- [ ] T929 [US6] MEDULLA-DECISION-ENGINE-R830.6 Type LoopInstance.state as LoopState, build the loop chart from LoopState::ALL, make view_of the one writer, refuse unfired events with TRANSITION_REFUSED, add :LoopMachine
+- [ ] T930 [US6] MEDULLA-DECISION-ENGINE-R830.7 Rename PlanItem.status to progress (serde key status); naming row, no machine
 - [x] T931 [US6] MEDULLA-DECISION-ENGINE-R830.8 SourceReliabilityKind rename (not a lifecycle)
 - [x] T932 [US6] MEDULLA-DECISION-ENGINE-R830.9 StageBeacon.stage_id rename (not a lifecycle)
 - [x] T933 [US6] MEDULLA-DECISION-ENGINE-R830.10 StageInput/StageAllocation stage_id rename (not a lifecycle)

@@ -245,3 +245,14 @@ Order: R829.1, R829.2, R829.3.
 - Connector path outcomes: `MEDULLA-DECISION-ENGINE-R159.3` provides, `SCION-CONNECTOR-CONTROL-R904` consumes. Contract: [connector-control-feedback.md](contracts/connector-control-feedback.md).
 - Program reuse in the run loop: `MEDULLA-DECISION-ENGINE-R135.16` and `MEDULLA-DECISION-ENGINE-R135.17` provide, `MERISTEM-HARNESS-CYCLE-R022` (children `.4` to `.8`) consumes. Contract: [harness-program-reuse.md](contracts/harness-program-reuse.md).
 - Governed write-back proposals: `MEDULLA-DECISION-ENGINE-R615` provides, `SCION-GOVERNED-WRITEBACK-R006` consumes. Contract: [governed-writeback-proposals.md](contracts/governed-writeback-proposals.md).
+
+## Amendments
+
+### 2026-11-20: build-lane gaps in R160 and R830
+
+- `MEDULLA-DECISION-ENGINE-R830.1`, `.2`, `.4` and `.7` are now naming rows. On main no code moves `Certificate.status`, `ComparativeStageBudget.stage`, `EditFact.status` or `PlanItem.status` after construction. Each field is renamed with its serde key unchanged, and no machine is added.
+- `MEDULLA-DECISION-ENGINE-R830.3` is a naming and cleanup row. A decision job is written once, in its terminal outcome. `DecisionJobState` becomes `DecisionJobOutcome` with two variants. The never-written `Queued`, `Running` and `Cancelled` variants are deleted.
+- `MEDULLA-DECISION-ENGINE-R830.6` reuses the existing durable loop statechart as the one machine. It adds the typed `LoopState`, builds the chart's state list from it, makes `view_of` the one writer, and routes unfired events to `TRANSITION_REFUSED`. A second `apply` machine would be a parallel route.
+- `MEDULLA-DECISION-ENGINE-R830` now names its root test in the landed `gap_machine.rs`, because the planned `solve_machine.rs` no longer exists.
+- `MEDULLA-DECISION-ENGINE-R160.2` returns `RenderedPackageValidation`, not the receipt, so the pure rule reads no clock. The handler mints the receipt.
+- `MEDULLA-DECISION-ENGINE-R160.4` names the one refusal enum, `PublicationRefusal`, with four codes. The R160.2 codes `PACKAGE_RUN_SET_INCOMPLETE` and `PACKAGE_POLICY_MISMATCH` are removed, because a run entry carries no tenant or policy revision. R160.2 now depends on R160.4.
