@@ -9,14 +9,20 @@ use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::retrieval_plan::{
-    RetrievalPlanKind, RetrievalProviderBinding, PROVIDER_PARAM, REASONING_MODEL_PARAM,
+    is_prefixed_sha256, RetrievalPlanKind, RetrievalProviderBinding, COMMAND_CONFIG_DIGEST_PARAM,
+    INFERENCE_MODE_BINDING_INCOMPLETE, INFERENCE_MODE_DIGEST_INVALID,
+    INFERENCE_MODE_DIGEST_PARAM, PROVIDER_PARAM, REASONING_MODEL_PARAM,
     RETRIEVAL_PROVIDER_STALE, RETRIEVAL_PROVIDER_UNAVAILABLE,
 };
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalErrorCode, TypedValue,
 };
 
-use crate::decide::stat_executor::ExecutionContext;
+use medulla_decision_types::decision::{PremiseClass, PremiseRef};
+
+use crate::decide::stat_executor::{
+    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+};
 use crate::decide::stat_support::{invalid_parameter, refusal};
 
 use super::DecisionFamily;
@@ -88,7 +94,87 @@ fn resolve_pin(
     Ok(head)
 }
 
+/// The command-config and inference-mode digests the request carries: both or
+/// neither, each `sha256:` plus 64 lowercase hex characters
+/// (MEDULLA-DECISION-ENGINE-R029.100).
+fn mode_digests(request: &DecideRequest) -> Result<Option<(String, String)>, String> {
+    let text = |name: &str| -> Result<Option<String>, String> {
+        match request.params.iter().find(|p| p.name == name) {
+            None => Ok(None),
+            Some(param) => match &param.value {
+                TypedValue::Text(value) => Ok(Some(value.clone())),
+                _ => Err(invalid_parameter(format!("{name} must be a text value"))),
+            },
+        }
+    };
+    let config = text(COMMAND_CONFIG_DIGEST_PARAM)?;
+    let mode = text(INFERENCE_MODE_DIGEST_PARAM)?;
+    let (config, mode) = match (config, mode) {
+        (None, None) => return Ok(None),
+        (Some(config), Some(mode)) => (config, mode),
+        _ => {
+            return Err(coded(
+                INFERENCE_MODE_BINDING_INCOMPLETE,
+                format!(
+                    "{COMMAND_CONFIG_DIGEST_PARAM} and {INFERENCE_MODE_DIGEST_PARAM} \
+                     are supplied together or not at all"
+                ),
+            ))
+        }
+    };
+    for (name, value) in [
+        (COMMAND_CONFIG_DIGEST_PARAM, &config),
+        (INFERENCE_MODE_DIGEST_PARAM, &mode),
+    ] {
+        if !is_prefixed_sha256(value) {
+            return Err(coded(
+                INFERENCE_MODE_DIGEST_INVALID,
+                format!("{name} must be sha256: plus 64 lowercase hex characters"),
+            ));
+        }
+    }
+    Ok(Some((config, mode)))
+}
+
 impl DecisionFamily for RetrievalPlanFamily {
+    fn constraints(&self, request: &DecideRequest) -> Result<(), String> {
+        mode_digests(request).map(|_| ())
+    }
+
+    fn premises(
+        &self,
+        request: &DecideRequest,
+        _executed: &Executed,
+        policy_digest: &str,
+    ) -> Vec<PremiseRef> {
+        let Ok(Some((config, mode))) = mode_digests(request) else {
+            return Vec::new();
+        };
+        [
+            (
+                "command_config_digest",
+                config,
+                "params.retrieval.command_config_digest",
+            ),
+            (
+                "inference_mode_digest",
+                mode,
+                "params.retrieval.inference_mode_digest",
+            ),
+        ]
+        .into_iter()
+        .map(|(name, digest, field)| {
+            FamilyPremise {
+                subject: "retrieval_plan".into(),
+                fact: format!("{name}={digest}"),
+                class: PremiseClass::Claim,
+                source: FamilyPremiseSource::Request(field),
+            }
+            .seal(policy_digest)
+        })
+        .collect()
+    }
+
     fn bind(
         &self,
         ctx: &ExecutionContext,

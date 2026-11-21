@@ -558,3 +558,107 @@ async fn provider_binding_is_independent_and_never_substituted() {
             .unwrap();
     assert_eq!(stored.record.retrieval_binding, record.retrieval_binding);
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R029.100
+#[tokio::test]
+async fn inference_mode_and_config_digests_are_bound() {
+    let h = Harness::new().await;
+    let schema = h
+        .publish_test_component(
+            "schema-declared",
+            AgentComponentKind::FeatureSchema,
+            "declared-option features",
+            Some(&score_schema()),
+            None,
+        )
+        .unwrap();
+    let config = format!("sha256:{}", "a".repeat(64));
+    let mode = format!("sha256:{}", "b".repeat(64));
+    let ask = |params: Vec<(&str, String)>| {
+        let mut asked = declared_request(
+            &schema,
+            vec![
+                declared("plan-deep", 1 << 31),
+                declared("plan-hyde", 1 << 32),
+            ],
+        );
+        asked.params = BoundedVec::new(
+            params
+                .into_iter()
+                .map(|(name, value)| TypedParam {
+                    name: name.to_string(),
+                    value: TypedValue::Text(value),
+                })
+                .collect(),
+        )
+        .unwrap();
+        asked
+    };
+
+    // Both digests bind: each is a Claim premise beside the selected plan.
+    let batch = decide(
+        &h,
+        ask(vec![
+            ("retrieval.command_config_digest", config.clone()),
+            ("retrieval.inference_mode_digest", mode.clone()),
+        ]),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    for (name, digest) in [
+        ("command_config_digest", &config),
+        ("inference_mode_digest", &mode),
+    ] {
+        let premise = record
+            .premises
+            .iter()
+            .find(|premise| premise.fact == format!("{name}={digest}"))
+            .unwrap_or_else(|| panic!("no premise for {name}"));
+        assert_eq!(premise.class, PremiseClass::Claim);
+        assert!(matches!(
+            premise.provenance,
+            PremiseProvenance::Request { .. }
+        ));
+    }
+
+    // Neither digest: no such premise.
+    let plain = decide(&h, ask(Vec::new())).await.unwrap();
+    assert!(!plain.records.as_slice()[0]
+        .premises
+        .iter()
+        .any(|premise| premise.fact.starts_with("command_config_digest=")));
+
+    // One without the other refuses.
+    for only in [
+        ("retrieval.command_config_digest", config.clone()),
+        ("retrieval.inference_mode_digest", mode.clone()),
+    ] {
+        let error = decide(&h, ask(vec![only])).await.unwrap_err();
+        assert!(
+            error.starts_with("INFERENCE_MODE_BINDING_INCOMPLETE"),
+            "{error}"
+        );
+    }
+
+    // A digest that is not sha256: plus 64 lowercase hex refuses.
+    for bad in [
+        "a".repeat(64),
+        format!("sha256:{}", "A".repeat(64)),
+        format!("sha256:{}", "a".repeat(63)),
+    ] {
+        let error = decide(
+            &h,
+            ask(vec![
+                ("retrieval.command_config_digest", bad),
+                ("retrieval.inference_mode_digest", mode.clone()),
+            ]),
+        )
+        .await
+        .unwrap_err();
+        assert!(
+            error.starts_with("INFERENCE_MODE_DIGEST_INVALID"),
+            "{error}"
+        );
+    }
+}

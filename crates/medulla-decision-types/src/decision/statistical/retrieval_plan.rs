@@ -36,9 +36,39 @@ pub const RETRIEVAL_PROVIDER_UNAVAILABLE: RefusalCode =
 /// The pin's definition digest is not the provider's current revision.
 pub const RETRIEVAL_PROVIDER_STALE: RefusalCode = RefusalCode::new("RETRIEVAL_PROVIDER_STALE");
 
+/// The parameter naming the digest of the command configuration the plan runs
+/// under: `sha256:` and 64 lowercase hex characters
+/// (MEDULLA-DECISION-ENGINE-R029.100).
+pub const COMMAND_CONFIG_DIGEST_PARAM: &str = "retrieval.command_config_digest";
+/// The parameter naming the digest of the inference mode the plan runs under.
+pub const INFERENCE_MODE_DIGEST_PARAM: &str = "retrieval.inference_mode_digest";
+
+/// A command-config or inference-mode digest is not `sha256:` plus 64
+/// lowercase hex characters.
+pub const INFERENCE_MODE_DIGEST_INVALID: RefusalCode =
+    RefusalCode::new("INFERENCE_MODE_DIGEST_INVALID");
+/// One of the two digests was supplied without the other.
+pub const INFERENCE_MODE_BINDING_INCOMPLETE: RefusalCode =
+    RefusalCode::new("INFERENCE_MODE_BINDING_INCOMPLETE");
+
 /// The refusal codes of the committed provider binding, in the
 /// `RetrievalPlan` table.
-pub const REFUSALS: &[RefusalCode] = &[RETRIEVAL_PROVIDER_STALE, RETRIEVAL_PROVIDER_UNAVAILABLE];
+pub const REFUSALS: &[RefusalCode] = &[
+    INFERENCE_MODE_BINDING_INCOMPLETE,
+    INFERENCE_MODE_DIGEST_INVALID,
+    RETRIEVAL_PROVIDER_STALE,
+    RETRIEVAL_PROVIDER_UNAVAILABLE,
+];
+
+/// Whether `value` is `sha256:` followed by 64 lowercase hex characters.
+pub fn is_prefixed_sha256(value: &str) -> bool {
+    value.strip_prefix("sha256:").is_some_and(|hex| {
+        hex.len() == 64
+            && hex
+                .bytes()
+                .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(&byte))
+    })
+}
 
 /// The provider (and optional reasoning model) a retrieval-plan decision
 /// commits to. The consumer executes only this provider
