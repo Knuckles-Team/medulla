@@ -636,6 +636,12 @@ def memory_benchmark_op(request: Mapping[str, Any]) -> dict[str, Any]:
     return {"op": "memory_change_benchmark_submit", "request": dict(request)}
 
 
+def delegation_quality_op(request: Mapping[str, Any]) -> dict[str, Any]:
+    """Judge one window of a delegate's observations (R157.3) as a
+    ``DecisionEval`` job."""
+    return {"op": "delegation_quality", "request": dict(request)}
+
+
 def aggregate_op(
     tenant_id: str, window: tuple[int, int], question_id: str | None = None
 ) -> dict[str, Any]:
