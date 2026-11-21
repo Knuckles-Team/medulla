@@ -14,25 +14,35 @@ use serde::{Deserialize, Serialize};
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct PathGrant {
+    /// The repository the grant covers.
     pub repo: String,
+    /// The principal the grant is given to.
     pub principal: String,
+    /// The path prefix the grant covers; empty covers the whole repository.
     pub prefix: String,
+    /// Whether the principal may read paths under the prefix.
     pub read: bool,
+    /// Whether the principal may write paths under the prefix.
     pub write: bool,
 }
 
 /// What a request does to a path.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PathAccess {
+    /// The request reads the path.
     Read,
+    /// The request writes the path.
     Write,
 }
 
 /// Why a path grant check or write refused; each variant serves one stable code.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum PathGrantRefusal {
+    /// No grant lets the principal read the path (`PATH_READ_DENIED`).
     ReadDenied,
+    /// No grant lets the principal write the path (`PATH_WRITE_DENIED`).
     WriteDenied,
+    /// A `SetPathGrant` request broke a bound (`PATH_GRANT_INVALID`).
     Invalid,
 }
 
@@ -91,10 +101,15 @@ impl PathGrant {
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SetPathGrantRequest {
+    /// The repository the grant covers.
     pub repo: String,
+    /// The principal the grant is given to.
     pub principal: String,
+    /// The path prefix the grant covers; empty covers the whole repository.
     pub prefix: String,
+    /// Whether the principal may read paths under the prefix.
     pub read: bool,
+    /// Whether the principal may write paths under the prefix.
     pub write: bool,
 }
 
