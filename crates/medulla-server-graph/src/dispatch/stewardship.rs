@@ -25,8 +25,8 @@ use medulla_catalog_types::stewardship::{
     StewardshipReceipt, StewardshipScope, StewardshipTarget,
 };
 use medulla_core::stewardship::{
-    certify, open_change_request, resolve, reviewers, transition, TargetScopes,
-    CERTIFICATION_TTL_DAYS_DEFAULT,
+    authorize_review, certify, open_change_request, resolve, reviewers, transition, ReviewRefusal,
+    TargetScopes, CERTIFICATION_TTL_DAYS_DEFAULT,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::{
@@ -344,6 +344,10 @@ async fn open(
     }
     let mut properties = request_properties(tenant, &id, &request, target.verified.agent_id())?;
     properties.insert("verdicts".into(), serde_json::json!([]));
+    properties.insert(
+        "digest_before".into(),
+        target_digest(state, target, asset).await?.into(),
+    );
     write(
         state,
         target,
@@ -393,12 +397,33 @@ fn state_from(name: &str) -> Option<ChangeRequestState> {
     }
 }
 
-struct StoredRequest {
-    request: ChangeRequest,
+/// A change request as stored, with the facts its review checks.
+pub(super) struct StoredRequest {
+    pub(super) request: ChangeRequest,
     verdicts: Vec<serde_json::Value>,
+    opened_by: String,
+    /// The target's content digest when the request was opened; empty when it had none.
+    digest_before: String,
 }
 
-async fn stored_request(
+/// The content digest of `asset` now; empty when the asset has none.
+async fn target_digest(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    asset: &str,
+) -> Result<String, String> {
+    Ok(read_node(state, target, asset)
+        .await?
+        .and_then(|properties| {
+            properties
+                .get("content_digest")
+                .and_then(serde_json::Value::as_str)
+                .map(str::to_string)
+        })
+        .unwrap_or_default())
+}
+
+pub(super) async fn stored_request(
     state: &Arc<RwLock<ServerState>>,
     target: &GraphTarget<'_>,
     id: &str,
@@ -431,7 +456,12 @@ async fn stored_request(
         .and_then(serde_json::Value::as_array)
         .cloned()
         .unwrap_or_default();
-    Ok(StoredRequest { request, verdicts })
+    Ok(StoredRequest {
+        request,
+        verdicts,
+        opened_by: text("opened_by").unwrap_or_default().to_string(),
+        digest_before: text("digest_before").unwrap_or_default().to_string(),
+    })
 }
 
 /// Move a stored request to `to`, recording `extra` fields, as a compare-and-set on
@@ -468,12 +498,34 @@ async fn move_request(
     Ok(request)
 }
 
-fn require_reviewer(request: &ChangeRequest, principal: &str) -> Result<(), String> {
-    if request.reviewers.iter().any(|reviewer| reviewer == principal) {
-        Ok(())
-    } else {
-        Err(role_missing("the principal is not an owner or steward of the target"))
-    }
+/// Check the verified principal against a stored request: the role, self-approval and a target
+/// that moved since the request was opened (MEDULLA-TYPED-PACKS-R802.4).
+async fn authorize(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    stored: &StoredRequest,
+    approving: bool,
+) -> Result<(), String> {
+    let current = target_digest(state, target, &stored.request.target).await?;
+    authorize_review(
+        &stored.request,
+        &stored.opened_by,
+        target.verified.agent_id(),
+        approving,
+        &stored.digest_before,
+        &current,
+    )
+    .map_err(|refusal| match refusal {
+        ReviewRefusal::RoleMissing => role_missing(&refusal.to_string()),
+        ReviewRefusal::SelfApproval => format!(
+            "{}: {refusal}",
+            ServerErrorCode::SelfApprovalDenied.as_str()
+        ),
+        ReviewRefusal::Stale { .. } => format!(
+            "{}: {refusal}",
+            ServerErrorCode::ChangeRequestStale.as_str()
+        ),
+    })
 }
 
 async fn review(
@@ -484,7 +536,7 @@ async fn review(
 ) -> Result<StewardshipReceipt, String> {
     let stored = stored_request(state, target, id).await?;
     let principal = target.verified.agent_id();
-    require_reviewer(&stored.request, principal)?;
+    authorize(state, target, &stored, approve).await?;
     let mut verdicts = stored.verdicts.clone();
     verdicts.push(serde_json::json!({"principal": principal, "approve": approve}));
     let mut extra = Properties::new();
@@ -509,13 +561,9 @@ async fn apply(
     id: &str,
 ) -> Result<StewardshipReceipt, String> {
     let stored = stored_request(state, target, id).await?;
-    require_reviewer(&stored.request, target.verified.agent_id())?;
-    let before = read_node(state, target, &stored.request.target)
-        .await?
-        .and_then(|properties| properties.get("content_digest").cloned())
-        .unwrap_or(serde_json::Value::Null);
+    authorize(state, target, &stored, false).await?;
     let mut extra = Properties::new();
-    extra.insert("digest_before".into(), before);
+    extra.insert("digest_before".into(), stored.digest_before.clone().into());
     extra.insert(
         "digest_after".into(),
         stored.request.proposed_digest.clone().into(),

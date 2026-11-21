@@ -575,6 +575,30 @@ closed_error_codes! {
         ClaimUnknownMarking => "CLAIM_UNKNOWN_MARKING",
         /// The actor holds neither the steward nor the owner role (MEDULLA-TYPED-PACKS-R652.4; shared with stewardship approval, R802.4).
         StewardRoleMissing => "STEWARD_ROLE_MISSING",
+        /// The `broader` links of a glossary term lead back to itself (MEDULLA-TYPED-PACKS-R801.4).
+        GlossaryCycle => "GLOSSARY_CYCLE",
+        /// Two approved terms of one scheme share a preferred label (MEDULLA-TYPED-PACKS-R801.4).
+        GlossaryLabelTaken => "GLOSSARY_LABEL_TAKEN",
+        /// A term moved to `approved` without an approved change request (MEDULLA-TYPED-PACKS-R801.4).
+        GlossaryUnreviewed => "GLOSSARY_UNREVIEWED",
+        /// A description proposal carries no input (MEDULLA-TYPED-PACKS-R801.7).
+        ProposalInputsMissing => "PROPOSAL_INPUTS_MISSING",
+        /// The target changed since the change request was opened (MEDULLA-TYPED-PACKS-R802.4).
+        ChangeRequestStale => "CHANGE_REQUEST_STALE",
+        /// The approver opened the change request (MEDULLA-TYPED-PACKS-R802.4).
+        SelfApprovalDenied => "SELF_APPROVAL_DENIED",
+        /// An access request names no purpose (MEDULLA-TYPED-PACKS-R805.4).
+        AccessPurposeMissing => "ACCESS_PURPOSE_MISSING",
+        /// A new product version breaks the contract schema without a higher major version (MEDULLA-TYPED-PACKS-R805.4).
+        ContractSchemaBreak => "CONTRACT_SCHEMA_BREAK",
+        /// `cp:servesClass` names a class absent from the pack ontology and the parent graph (MEDULLA-TYPED-PACKS-R106.4).
+        UnresolvedReference => "UNRESOLVED_REFERENCE",
+        /// A catalog resource has no `cp:ofConnector` (MEDULLA-TYPED-PACKS-R106.4).
+        ResourceUnowned => "RESOURCE_UNOWNED",
+        /// A `cat:LineageEdge` has no matching `cat:lineageTo` edge (MEDULLA-TYPED-PACKS-R106.4).
+        LineageEdgeUnpaired => "LINEAGE_EDGE_UNPAIRED",
+        /// A catalog batch exceeds `catalog.onboard_batch_max_triples` (MEDULLA-TYPED-PACKS-R106.4).
+        CatalogBatchTooLarge => "CATALOG_BATCH_TOO_LARGE",
         QualityThresholdInvalid => "QUALITY_THRESHOLD_INVALID",
         /// An outside quality score names a rule the tenant has no approved copy of (MEDULLA-UNIFIED-DATA-PLANE-R762.8).
         QualityRuleUnknown => "QUALITY_RULE_UNKNOWN",

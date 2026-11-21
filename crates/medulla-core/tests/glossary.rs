@@ -84,3 +84,45 @@ fn alt_label_search_finds_term_and_deprecated_names_replacement() {
         Err(GlossaryError::SchemeMismatch { .. })
     ));
 }
+
+// spec: MEDULLA-TYPED-PACKS-R801.4
+#[test]
+fn cycle_taken_label_and_missing_review_carry_their_codes() {
+    use medulla_catalog_types::stewardship::{ChangeRequest, ChangeRequestState};
+    use medulla_core::glossary::{check_broader_acyclic_over, check_label_free, require_review};
+    use medulla_types::contract::ServerErrorCode;
+
+    let stored = vec![
+        ("t:a".to_string(), term("A", &[], &["t:b"], GlossaryTermStatus::Draft)),
+        ("t:b".to_string(), term("B", &[], &[], GlossaryTermStatus::Approved)),
+    ];
+    // A new `b` that points back at `a` closes a cycle through the stored term.
+    let cycle = check_broader_acyclic_over(
+        stored.clone(),
+        &[("t:b".to_string(), term("B", &[], &["t:a"], GlossaryTermStatus::Draft))],
+    )
+    .expect_err("a cycle through a stored term is refused");
+    assert_eq!(cycle.code(), Some(ServerErrorCode::GlossaryCycle));
+
+    let taken = check_label_free(
+        &stored,
+        "t:c",
+        &term(" b ", &[], &[], GlossaryTermStatus::InReview),
+    )
+    .expect_err("an approved term already has the label");
+    assert_eq!(taken.code(), Some(ServerErrorCode::GlossaryLabelTaken));
+    assert!(check_label_free(&stored, "t:b", &stored[1].1).is_ok());
+
+    let request = |state| ChangeRequest {
+        target: "t:a".into(),
+        proposed_digest: "sha256:x".into(),
+        state,
+        reviewers: vec!["steward".into()],
+    };
+    for missing in [None, Some(request(ChangeRequestState::Open))] {
+        let refused = require_review("t:a", missing.as_ref()).expect_err("no approved request");
+        assert_eq!(refused.code(), Some(ServerErrorCode::GlossaryUnreviewed));
+    }
+    assert!(require_review("t:a", Some(&request(ChangeRequestState::Approved))).is_ok());
+    assert!(require_review("t:other", Some(&request(ChangeRequestState::Approved))).is_err());
+}

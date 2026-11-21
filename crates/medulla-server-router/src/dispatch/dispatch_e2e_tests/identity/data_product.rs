@@ -237,3 +237,61 @@ async fn product_methods_refuse_another_tenant() {
         foreign.error
     );
 }
+
+fn refusal_of(response: &Response) -> String {
+    response.refusal_text().unwrap_or_default()
+}
+
+// spec: MEDULLA-TYPED-PACKS-R805.4
+#[tokio::test(flavor = "multi_thread")]
+async fn product_refusals() {
+    let state = durable_state().await;
+    add_node(&state, "ds-owned", serde_json::json!({"type": "Dataset", "_owner_id": OWNER})).await;
+    register(&state, "revenue", "ds-owned").await;
+
+    // An empty purpose is refused under its own code, and nothing is stored.
+    let mut empty = request("revenue");
+    empty.purpose = "  ".to_string();
+    let refused = send_method(
+        &state,
+        context(CONSUMER, &["*"]),
+        Method::AccessRequestOpen {
+            tenant: TENANT.to_string(),
+            request: empty,
+        },
+    )
+    .await;
+    assert!(refusal_of(&refused).contains("ACCESS_PURPOSE_MISSING"), "{:?}", refused.error);
+    let unstored = send_method(&state, context(OWNER, &["*"]), decide("revenue", true)).await;
+    assert!(refusal_of(&unstored).contains("no access request"), "{:?}", unstored.error);
+
+    // A caller that is not the product owner cannot register it.
+    let (held_product, held_contract) = product("revenue", "ds-owned");
+    let stranger = send_method(
+        &state,
+        context(CONSUMER, &["*"]),
+        Method::DataProductRegister {
+            tenant: TENANT.to_string(),
+            product: held_product,
+            contract: held_contract,
+        },
+    )
+    .await;
+    assert!(refusal_of(&stranger).contains("STEWARD_ROLE_MISSING"), "{:?}", stranger.error);
+
+    // A new version that changes the contract schema needs a higher major version.
+    let broken = |version: &str| {
+        let (mut product, mut contract) = product("revenue", "ds-owned");
+        product.version = version.to_string();
+        contract.schema_digest = format!("sha256:{}", "b".repeat(64));
+        Method::DataProductRegister {
+            tenant: TENANT.to_string(),
+            product,
+            contract,
+        }
+    };
+    let minor = send_method(&state, context(OWNER, &["*"]), broken("1.1.0")).await;
+    assert!(refusal_of(&minor).contains("CONTRACT_SCHEMA_BREAK"), "{:?}", minor.error);
+    let major = send_method(&state, context(OWNER, &["*"]), broken("2.0.0")).await;
+    assert!(major.error.is_none(), "{:?}", major.error);
+}

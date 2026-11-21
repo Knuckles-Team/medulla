@@ -42,6 +42,24 @@ pub enum GlossaryError {
     SchemeBatchTooLarge { terms: usize, max: u64 },
     /// A term of the batch names another scheme.
     SchemeMismatch { term: String, scheme: String },
+    /// Another approved term of the scheme already carries this preferred label.
+    LabelTaken { label: String, term: String },
+    /// The term moves to `approved` without an approved change request naming it.
+    Unreviewed { term: String },
+}
+
+impl GlossaryError {
+    /// The registered refusal code of this error, when it has one; the rest are
+    /// `INVALID_ARGUMENT`.
+    pub fn code(&self) -> Option<medulla_types::contract::ServerErrorCode> {
+        use medulla_types::contract::ServerErrorCode;
+        match self {
+            Self::BroaderCycle(_) => Some(ServerErrorCode::GlossaryCycle),
+            Self::LabelTaken { .. } => Some(ServerErrorCode::GlossaryLabelTaken),
+            Self::Unreviewed { .. } => Some(ServerErrorCode::GlossaryUnreviewed),
+            _ => None,
+        }
+    }
 }
 
 impl std::fmt::Display for GlossaryError {
@@ -60,6 +78,12 @@ impl std::fmt::Display for GlossaryError {
             }
             Self::SchemeMismatch { term, scheme } => {
                 write!(f, "term {term} is not in scheme {scheme}")
+            }
+            Self::LabelTaken { label, term } => {
+                write!(f, "the approved term {term} already carries the label '{label}'")
+            }
+            Self::Unreviewed { term } => {
+                write!(f, "term {term} needs an approved change request to be approved")
             }
         }
     }
@@ -171,6 +195,65 @@ pub fn check_broader_acyclic(
         }
     }
     Ok(())
+}
+
+/// Refuse a `broader` cycle among the `stored` terms of a scheme with `incoming` written over
+/// them (an incoming term replaces the stored term of the same IRI).
+pub fn check_broader_acyclic_over(
+    stored: Vec<(String, GlossaryTerm)>,
+    incoming: &[(String, GlossaryTerm)],
+) -> Result<(), GlossaryError> {
+    let mut all: Vec<(String, GlossaryTerm)> = stored
+        .into_iter()
+        .filter(|(iri, _)| !incoming.iter().any(|(other, _)| other == iri))
+        .collect();
+    all.extend(incoming.iter().cloned());
+    check_broader_acyclic(&all, GLOSSARY_BROADER_DEPTH_MAX.value())
+}
+
+/// Refuse approving `term` (stored as `iri`) while another approved term of the scheme carries
+/// the same preferred label, compared without case and surrounding space.
+pub fn check_label_free(
+    stored: &[(String, GlossaryTerm)],
+    iri: &str,
+    term: &GlossaryTerm,
+) -> Result<(), GlossaryError> {
+    let label = term.pref_label.trim().to_lowercase();
+    match stored.iter().find(|(other, t)| {
+        other != iri
+            && t.scheme == term.scheme
+            && t.status == GlossaryTermStatus::Approved
+            && t.pref_label.trim().to_lowercase() == label
+    }) {
+        Some((other, _)) => Err(GlossaryError::LabelTaken {
+            label: term.pref_label.clone(),
+            term: other.clone(),
+        }),
+        None => Ok(()),
+    }
+}
+
+/// Refuse approving the term `iri` unless `request` is an approved or applied change request
+/// whose target is that term.
+pub fn require_review(
+    iri: &str,
+    request: Option<&medulla_catalog_types::stewardship::ChangeRequest>,
+) -> Result<(), GlossaryError> {
+    use medulla_catalog_types::stewardship::ChangeRequestState;
+    match request {
+        Some(request)
+            if request.target == iri
+                && matches!(
+                    request.state,
+                    ChangeRequestState::Approved | ChangeRequestState::Applied
+                ) =>
+        {
+            Ok(())
+        }
+        _ => Err(GlossaryError::Unreviewed {
+            term: iri.to_string(),
+        }),
+    }
 }
 
 /// The `PutScheme` payload: one concept scheme and its terms.

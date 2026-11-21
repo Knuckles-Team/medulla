@@ -95,9 +95,14 @@ def bootstrap_context() -> dict[str, object]:
 
 
 def register_commons_agents(
-    *agent_ids: str, socket_path: str | None = None, auth_secret: str | None = None
+    *agent_ids: str,
+    socket_path: str | None = None,
+    auth_secret: str | None = None,
+    graph: str = "__commons__",
 ) -> None:
     """Register each agent as an `Agent` identity that reads and writes the commons.
+
+    `graph` names another graph the agents read and write instead of the commons.
 
     Under a provisioned identity policy an unregistered verified caller is denied
     every graph, and the commons is reached only through an RBAC grant. A served
@@ -112,15 +117,16 @@ def register_commons_agents(
         verified_context=request_context(),
     )
     try:
-        system.rbac.add_role("commons-access")
+        role = "commons-access" if graph == "__commons__" else f"graph-access:{graph}"
+        system.rbac.add_role(role)
         for action in ("Read", "Write"):
-            system.rbac.add_grant("commons-access", {"Graph": "__commons__"}, action)
+            system.rbac.add_grant(role, {"Graph": graph}, action)
         for agent_id in agent_ids:
             system.consensus.register_identity(
                 agent_id,
                 "Agent",
                 [],
-                ["commons-access"],
+                [role],
                 signer_id=TEST_AGENT_ID,
                 signer_key=TEST_SIGNER_KEY,
             )

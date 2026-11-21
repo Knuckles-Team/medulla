@@ -1591,11 +1591,47 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     (
         "Glossary",
-        &["TENANT_SCOPE_REQUIRED"],
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "GLOSSARY_CYCLE",
+            "GLOSSARY_LABEL_TAKEN",
+            "GLOSSARY_UNREVIEWED",
+        ],
     ),
     (
         "Stewardship",
-        &["TENANT_SCOPE_REQUIRED", "STEWARD_ROLE_MISSING"],
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "STEWARD_ROLE_MISSING",
+            "CHANGE_REQUEST_STALE",
+            "SELF_APPROVAL_DENIED",
+        ],
+    ),
+    (
+        "DataProductRegister",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "RECORD_TENANT_MISMATCH",
+            "STEWARD_ROLE_MISSING",
+            "CONTRACT_SCHEMA_BREAK",
+        ],
+    ),
+    (
+        "AccessRequestOpen",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "RECORD_TENANT_MISMATCH",
+            "ACCESS_PURPOSE_MISSING",
+            "STEWARD_ROLE_MISSING",
+        ],
+    ),
+    (
+        "AccessRequestDecide",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "RECORD_TENANT_MISMATCH",
+            "STEWARD_ROLE_MISSING",
+        ],
     ),
     (
         "ClassificationClaim",
@@ -1999,6 +2035,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "WorkflowRegistry",
     // MEDULLA-ORCH-VOCAB-R815.4: the work market gap status machine.
     "GapTransition",
+    // MEDULLA-TYPED-PACKS-R805.3: an access request moves `AccessRequestMachine`.
+    "AccessRequestDecide",
 ];
 
 /// The wire code of a refused machine transition.

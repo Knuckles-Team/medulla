@@ -12,7 +12,9 @@ from typing import Any
 
 import msgpack
 import pytest
+import stewardship_support as support
 from conftest import request_context
+from stewardship_support import REVIEWER
 
 from medulla.client import SyncMedullaClient
 
@@ -53,6 +55,24 @@ def _term(status: str = "draft") -> dict[str, Any]:
     }
 
 
+def _approve(client: Any, graph: str, iri: str) -> str:
+    """Submit a term, then approve it under an approved change request; returns the request id."""
+    submitted = _op(client, graph, {"op": "transition", "iri": iri, "event": "submit"})
+    assert submitted["status"] == "in_review"
+    reviewer = support.connect(agent_id=REVIEWER)
+    try:
+        request_id = support.approved_request(client, reviewer, graph, iri)
+    finally:
+        reviewer.close()
+    approved = _op(
+        client,
+        graph,
+        {"op": "transition", "iri": iri, "event": "approve", "change_request": request_id},
+    )
+    assert approved["status"] == "approved"
+    return request_id
+
+
 @pytest.fixture
 def served():
     graph = f"medulla-r801-{uuid.uuid4().hex}"
@@ -61,6 +81,7 @@ def served():
     try:
         client.tenants.create(graph, graph_type="Global")
         created = True
+        support.register_agents(graph, REVIEWER)
         client._send(
             "AddNode",
             {
@@ -103,14 +124,92 @@ def test_import_scheme_and_bind_term(served) -> None:
             {"op": "put_term", "iri": "urn:term:cost", "term": _term("approved")},
         )
 
-    for event, status in (("submit", "in_review"), ("approve", "approved")):
-        moved = _op(
-            client,
-            graph,
-            {"op": "transition", "iri": REVENUE, "event": event},
-        )
-        assert moved["status"] == status
+    _approve(client, graph, REVENUE)
     assert _props(client, graph, REVENUE)["status"] == "approved"
 
     bound = _op(client, graph, {"op": "bind", "term": REVENUE, "asset": ASSET})
     assert bound["iri"] == REVENUE
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R801.4")
+def test_glossary_refusals(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R801.4: each code is refused and nothing changes."""
+    graph, client = served
+    other = "urn:term:turnover"
+    _op(
+        client,
+        graph,
+        {
+            "op": "put_scheme",
+            "scheme": SCHEME,
+            "terms": [
+                {"iri": REVENUE, "term": _term()},
+                {"iri": other, "term": _term()},
+            ],
+        },
+    )
+    # GLOSSARY_CYCLE: two terms that name each other as broader.
+    cyclic = [
+        {"iri": REVENUE, "term": {**_term(), "broader": [other]}},
+        {"iri": other, "term": {**_term(), "broader": [REVENUE]}},
+    ]
+    with pytest.raises(Exception, match="GLOSSARY_CYCLE"):
+        _op(client, graph, {"op": "put_scheme", "scheme": SCHEME, "terms": cyclic})
+    assert _props(client, graph, REVENUE)["broader"] == []
+
+    # GLOSSARY_UNREVIEWED: approving needs an approved change request naming the term.
+    _op(client, graph, {"op": "transition", "iri": REVENUE, "event": "submit"})
+    with pytest.raises(Exception, match="GLOSSARY_UNREVIEWED"):
+        _op(client, graph, {"op": "transition", "iri": REVENUE, "event": "approve"})
+    assert _props(client, graph, REVENUE)["status"] == "in_review"
+
+    # GLOSSARY_LABEL_TAKEN: a second term with the label of an approved one.
+    _approve_in_review(client, graph, REVENUE)
+    _op(client, graph, {"op": "transition", "iri": other, "event": "submit"})
+    reviewer = support.connect(agent_id=REVIEWER)
+    try:
+        request_id = support.approved_request(client, reviewer, graph, other)
+    finally:
+        reviewer.close()
+    with pytest.raises(Exception, match="GLOSSARY_LABEL_TAKEN"):
+        _op(
+            client,
+            graph,
+            {"op": "transition", "iri": other, "event": "approve", "change_request": request_id},
+        )
+    assert _props(client, graph, other)["status"] == "in_review"
+
+
+def _approve_in_review(client: Any, graph: str, iri: str) -> None:
+    reviewer = support.connect(agent_id=REVIEWER)
+    try:
+        request_id = support.approved_request(client, reviewer, graph, iri)
+    finally:
+        reviewer.close()
+    _op(
+        client,
+        graph,
+        {"op": "transition", "iri": iri, "event": "approve", "change_request": request_id},
+    )
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R801.5")
+def test_status_history_reads_back(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R801.5: each move records its actor and change request."""
+    graph, client = served
+    _op(
+        client,
+        graph,
+        {"op": "put_scheme", "scheme": SCHEME, "terms": [{"iri": REVENUE, "term": _term()}]},
+    )
+    request_id = _approve(client, graph, REVENUE)
+    actor = request_context()["agent_id"]
+    approved = _props(client, graph, f"glossary_move:{request_context()['tenant']}:{REVENUE}:approved")
+    assert approved["term"] == REVENUE
+    assert (approved["from"], approved["to"]) == ("in_review", "approved")
+    assert approved["actor"] == actor
+    assert approved["change_request"] == request_id
+    submitted = _props(client, graph, f"glossary_move:{request_context()['tenant']}:{REVENUE}:in_review")
+    assert (submitted["from"], submitted["to"]) == ("draft", "in_review")
+    assert "supersedes" not in submitted
+    assert approved["supersedes"] == f"glossary_move:{request_context()['tenant']}:{REVENUE}:in_review"

@@ -16,7 +16,8 @@ use super::share::{
 };
 use super::*;
 use medulla_catalog_types::data_product::{
-    AccessRequest, AccessRequestState, DataProductRegistered,
+    parse_product_version, AccessRequest, AccessRequestState, DataProductError,
+    DataProductRegistered, ACCESS_PURPOSE_MISSING,
 };
 use medulla_core::stewardship::{reviewers, TargetScopes};
 use medulla_identity_types::acl::ShareGrant;
@@ -98,6 +99,19 @@ fn invalid(detail: impl std::fmt::Display) -> String {
     format!("INVALID_ARGUMENT: {detail}")
 }
 
+/// A record's validation failure: an empty purpose under its registered code, any other
+/// failure as `INVALID_ARGUMENT` (MEDULLA-TYPED-PACKS-R805.4).
+fn record_refusal(error: DataProductError) -> String {
+    if error.code == ACCESS_PURPOSE_MISSING {
+        format!(
+            "{}: the access request names no purpose",
+            ServerErrorCode::AccessPurposeMissing.as_str()
+        )
+    } else {
+        invalid(error)
+    }
+}
+
 /// The `tenant` of a method must be the verified request tenant.
 fn require_tenant(verified: &VerifiedRequestContext, tenant: &str) -> Result<(), String> {
     if verified.tenant().trim().is_empty() {
@@ -148,6 +162,22 @@ async fn register(
         ));
     }
     let store = policy_store(state).await?;
+    // A new version that changes the contract schema needs a higher major version.
+    if let Some((held_product, held_contract)) = store
+        .data_product(tenant, &product.id)
+        .map_err(store_error)?
+    {
+        let major = |version: &str| parse_product_version(version).map(|(major, _, _)| major);
+        let raised = major(&product.version) > major(&held_product.version);
+        if held_contract.schema_digest != contract.schema_digest && !raised {
+            return Err(format!(
+                "{}: version {} changes the contract schema of {} without a higher major version",
+                ServerErrorCode::ContractSchemaBreak.as_str(),
+                product.version,
+                held_product.version
+            ));
+        }
+    }
     store
         .put_data_product(tenant, &product, &contract)
         .map_err(store_error)?;
@@ -164,7 +194,7 @@ async fn open(
     request: AccessRequest,
 ) -> Result<AccessRequest, String> {
     require_tenant(verified, tenant)?;
-    request.validate().map_err(invalid)?;
+    request.validate().map_err(record_refusal)?;
     if request.state != AccessRequestState::Pending || request.grant_ref.is_some() {
         return Err(invalid("a new access request is pending and holds no grant"));
     }

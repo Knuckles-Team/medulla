@@ -132,3 +132,42 @@ fn most_specific_assignment_wins_and_certification_expires() {
         Err(StewardshipError::TtlOutOfRange(1096))
     );
 }
+
+// spec: MEDULLA-TYPED-PACKS-R802.4
+#[test]
+fn review_refuses_missing_role_self_approval_and_a_moved_target() {
+    use medulla_core::stewardship::{authorize_review, ReviewRefusal};
+
+    let request = open_change_request(
+        "table:orders",
+        "sha256:new",
+        &[assign(
+            StewardshipScope::Asset("table:orders".into()),
+            StewardRole::Steward,
+            "steward-a",
+        )],
+        &scopes(),
+    )
+    .unwrap();
+    assert_eq!(
+        authorize_review(&request, "opener", "stranger", true, "d1", "d1"),
+        Err(ReviewRefusal::RoleMissing)
+    );
+    assert_eq!(
+        authorize_review(&request, "steward-a", "steward-a", true, "d1", "d1"),
+        Err(ReviewRefusal::SelfApproval)
+    );
+    // A rejection of one's own request is allowed.
+    assert_eq!(
+        authorize_review(&request, "steward-a", "steward-a", false, "d1", "d1"),
+        Ok(())
+    );
+    assert!(matches!(
+        authorize_review(&request, "opener", "steward-a", true, "d1", "d2"),
+        Err(ReviewRefusal::Stale { .. })
+    ));
+    assert_eq!(
+        authorize_review(&request, "opener", "steward-a", true, "d1", "d1"),
+        Ok(())
+    );
+}

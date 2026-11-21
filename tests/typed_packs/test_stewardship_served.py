@@ -13,12 +13,13 @@ from typing import Any
 
 import msgpack
 import pytest
+import stewardship_support as support
 from conftest import request_context
+from stewardship_support import DIGEST, REVIEWER, STRANGER
 
 from medulla.client import SyncMedullaClient
 
 ASSET = "col:orders.total"
-DIGEST = "sha256:" + "ab" * 32
 
 
 def _connect(graph: str | None = None, *, roles: list[str] | None = None) -> Any:
@@ -47,6 +48,7 @@ def served():
     try:
         client.tenants.create(graph, graph_type="Global")
         created = True
+        support.register_agents(graph, REVIEWER, STRANGER)
         yield graph, client
     finally:
         try:
@@ -62,13 +64,21 @@ def test_change_request_flow(served) -> None:
     """Verifies MEDULLA-TYPED-PACKS-R802.3: open, approve and apply one request."""
     graph, client = served
     me = request_context()["principal"]
-    assignment = {
-        "scope": {"kind": "asset", "id": ASSET},
-        "role": "steward",
-        "principal": me,
-    }
-    assigned = _op(client, graph, {"op": "assign", "assignment": assignment})
-    assert assigned["stewards"] == [me]
+    other = support.principal(REVIEWER)
+    for who in (me, other):
+        assigned = _op(
+            client,
+            graph,
+            {
+                "op": "assign",
+                "assignment": {
+                    "scope": {"kind": "asset", "id": ASSET},
+                    "role": "steward",
+                    "principal": who,
+                },
+            },
+        )
+    assert assigned["stewards"] == sorted([me, other])
 
     opened = _op(
         client,
@@ -81,10 +91,16 @@ def test_change_request_flow(served) -> None:
         },
     )
     assert opened["change_request"]["state"] == "open"
-    assert opened["change_request"]["reviewers"] == [me]
+    assert opened["change_request"]["reviewers"] == sorted([me, other])
     request_id = opened["id"]
 
-    approved = _op(client, graph, {"op": "review", "request_id": request_id, "approve": True})
+    reviewer = support.connect(agent_id=REVIEWER)
+    try:
+        approved = support.stewardship(
+            reviewer, graph, {"op": "review", "request_id": request_id, "approve": True}
+        )
+    finally:
+        reviewer.close()
     assert approved["change_request"]["state"] == "approved"
     applied = _op(client, graph, {"op": "apply", "request_id": request_id})
     assert applied["change_request"]["state"] == "applied"
@@ -99,3 +115,62 @@ def test_principal_without_assignment_is_refused(served) -> None:
     graph, client = served
     with pytest.raises(Exception, match="STEWARD_ROLE_MISSING"):
         _op(client, graph, {"op": "certify", "asset": ASSET, "level": "gold"})
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.4")
+def test_stewardship_refusals(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R802.4: each code is refused and the request is unchanged."""
+    graph, client = served
+    me = request_context()["principal"]
+    support.assign_stewards(client, graph, ASSET, me, support.principal(REVIEWER))
+    request_id = support.open_request(client, graph, ASSET)
+    stranger = support.connect(agent_id=STRANGER)
+    reviewer = support.connect(agent_id=REVIEWER)
+    try:
+        with pytest.raises(Exception, match="STEWARD_ROLE_MISSING"):
+            support.stewardship(
+                stranger, graph, {"op": "review", "request_id": request_id, "approve": True}
+            )
+        with pytest.raises(Exception, match="SELF_APPROVAL_DENIED"):
+            _op(client, graph, {"op": "review", "request_id": request_id, "approve": True})
+        # The target moves after the request was opened: the review is stale.
+        client._send(
+            "AddNode",
+            {
+                "node_id": ASSET,
+                "properties_msgpack": msgpack.packb(
+                    {"type": "Column", "content_digest": "sha256:" + "cd" * 32},
+                    use_bin_type=True,
+                ),
+            },
+            graph,
+        )
+        with pytest.raises(Exception, match="CHANGE_REQUEST_STALE"):
+            support.stewardship(
+                reviewer, graph, {"op": "review", "request_id": request_id, "approve": True}
+            )
+    finally:
+        stranger.close()
+        reviewer.close()
+    stored = _decode(client._send("GetNodeProperties", {"node_id": request_id}, graph))
+    assert stored["state"] == "open"
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.5")
+def test_request_evidence_reads_back(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R802.5: digests, verdicts and the receipt are typed properties."""
+    graph, client = served
+    reviewer = support.connect(agent_id=REVIEWER)
+    try:
+        request_id = support.approved_request(client, reviewer, graph, ASSET)
+    finally:
+        reviewer.close()
+    _op(client, graph, {"op": "apply", "request_id": request_id})
+    stored = _decode(client._send("GetNodeProperties", {"node_id": request_id}, graph))
+    assert stored["state"] == "applied"
+    assert stored["digest_after"] == DIGEST
+    assert "digest_before" in stored
+    assert stored["receipt_id"] == f"receipt:{request_id}"
+    assert [verdict["approve"] for verdict in stored["verdicts"]] == [True]
+    assert stored["verdicts"][0]["principal"] == support.principal(REVIEWER)
+    assert stored["applied_by"] == request_context()["principal"]

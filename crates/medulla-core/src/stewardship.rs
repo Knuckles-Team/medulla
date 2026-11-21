@@ -146,6 +146,59 @@ pub fn open_change_request(
     Ok(request)
 }
 
+/// Why a review or an apply of a change request is refused (MEDULLA-TYPED-PACKS-R802.4).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ReviewRefusal {
+    /// The principal is not one of the request's resolved owners or stewards.
+    RoleMissing,
+    /// The principal opened the request it would approve.
+    SelfApproval,
+    /// The target's digest is no longer the one recorded when the request was opened.
+    Stale { opened_at: String, now: String },
+}
+
+impl std::fmt::Display for ReviewRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::RoleMissing => f.write_str("the principal is not an owner or steward of the target"),
+            Self::SelfApproval => f.write_str("the approver opened the change request"),
+            Self::Stale { opened_at, now } => write!(
+                f,
+                "the target changed since the request was opened (digest {opened_at}, now {now})"
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ReviewRefusal {}
+
+/// Whether `principal` may review or apply `request`, in the order role, self-approval,
+/// staleness. `approving` is false for a rejection, which the opener may make of its own
+/// request. `opened_digest` is the target digest recorded when the request was opened and
+/// `current_digest` the target's digest now; a request whose target moved is stale.
+pub fn authorize_review(
+    request: &ChangeRequest,
+    opened_by: &str,
+    principal: &str,
+    approving: bool,
+    opened_digest: &str,
+    current_digest: &str,
+) -> Result<(), ReviewRefusal> {
+    if !request.reviewers.iter().any(|reviewer| reviewer == principal) {
+        return Err(ReviewRefusal::RoleMissing);
+    }
+    if approving && opened_by == principal {
+        return Err(ReviewRefusal::SelfApproval);
+    }
+    if opened_digest != current_digest {
+        return Err(ReviewRefusal::Stale {
+            opened_at: opened_digest.to_string(),
+            now: current_digest.to_string(),
+        });
+    }
+    Ok(())
+}
+
 /// Certify `asset` at `now` (unix seconds); it lapses after `ttl_days`.
 pub fn certify(
     asset: &str,

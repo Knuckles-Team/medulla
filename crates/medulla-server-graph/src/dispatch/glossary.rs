@@ -22,8 +22,10 @@ use medulla_catalog_types::glossary::{
     GlossaryOp, GlossaryReceipt, GlossaryTerm, GlossaryTermEntry, GlossaryTermStatus,
     CAT_GLOSSARY_TERM, SKOS_IN_SCHEME,
 };
-use medulla_core::glossary::{bind, PutScheme};
-use medulla_protocol_types::protocol::{Method, Response};
+use medulla_core::glossary::{
+    bind, check_broader_acyclic_over, check_label_free, require_review, GlossaryError, PutScheme,
+};
+use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::{
     GlossaryBind, GlossaryPutScheme, GlossaryPutTerm, GlossaryTransition,
 };
@@ -34,11 +36,15 @@ use super::graph_client::{
     encode, read_node, took_effect, write, write_batch, GraphTarget, Properties, TENANT_PROPERTY,
 };
 use super::shared::typed_response;
+use super::stewardship::stored_request;
 
 /// The class of a concept scheme node.
 const SCHEME_CLASS: &str = "http://www.w3.org/2004/02/skos/core#ConceptScheme";
 /// The property holding the serialized term.
 const RECORD_PROPERTY: &str = "record";
+/// Node label of one status move of a term: the supersession chain a term's history reads from.
+pub const STATUS_MOVE_LABEL: &str = "cat:GlossaryStatusMove";
+const PAGE: usize = 1000;
 
 /// Serve one `Glossary` op.
 pub async fn dispatch_glossary(
@@ -58,6 +64,15 @@ pub async fn dispatch_glossary(
 
 fn invalid(detail: impl std::fmt::Display) -> String {
     format!("INVALID_ARGUMENT: {detail}")
+}
+
+/// A rule's refusal under its registered code, or `INVALID_ARGUMENT` when it has none
+/// (MEDULLA-TYPED-PACKS-R801.4).
+fn glossary_refusal(error: GlossaryError) -> String {
+    match error.code() {
+        Some(code) => format!("{}: {error}", code.as_str()),
+        None => invalid(error),
+    }
 }
 
 async fn serve(
@@ -106,6 +121,77 @@ async fn stored_term(
     let term: GlossaryTerm = serde_json::from_str(body)
         .map_err(|error| invalid(format!("the stored term '{iri}' is malformed: {error}")))?;
     Ok(Some((term, properties)))
+}
+
+/// Every stored term of `scheme` in the verified tenant, with its IRI.
+async fn scheme_terms(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    scheme: &str,
+) -> Result<Vec<(String, GlossaryTerm)>, String> {
+    let tenant = target.verified.tenant();
+    let mut found = Vec::new();
+    let mut after: Option<String> = None;
+    loop {
+        let response = super::graph_pipeline::dispatch_graph_op(
+            state,
+            target.graph,
+            target.req_id,
+            target.caller,
+            target.verified,
+            Method::GetNodesByLabel {
+                label: CAT_GLOSSARY_TERM.to_string(),
+                after: after.clone(),
+                limit: PAGE,
+            },
+        )
+        .await;
+        if let Some(refusal) = response.refusal_text() {
+            return Err(refusal);
+        }
+        let Some(ResultPayload::NodeList(nodes)) = response.result else {
+            break;
+        };
+        let count = nodes.len();
+        after = nodes.last().map(|(id, _)| id.clone());
+        for (id, properties) in nodes {
+            let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
+            if text(TENANT_PROPERTY) != Some(tenant) || text("scheme") != Some(scheme) {
+                continue;
+            }
+            let Some(term) = text(RECORD_PROPERTY)
+                .and_then(|body| serde_json::from_str::<GlossaryTerm>(body).ok())
+            else {
+                continue;
+            };
+            found.push((id, term));
+        }
+        if count < PAGE {
+            break;
+        }
+    }
+    Ok(found)
+}
+
+/// The review a term needs before it is approved: an approved change request naming it, and a
+/// preferred label no other approved term of the scheme carries (MEDULLA-TYPED-PACKS-R801.4).
+async fn approval_gate(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    iri: &str,
+    term: &GlossaryTerm,
+    change_request: Option<&str>,
+) -> Result<(), String> {
+    let request = match change_request {
+        Some(id) => stored_request(state, target, id)
+            .await
+            .ok()
+            .map(|stored| stored.request),
+        None => None,
+    };
+    require_review(iri, request.as_ref()).map_err(glossary_refusal)?;
+    let stored = scheme_terms(state, target, &term.scheme).await?;
+    check_label_free(&stored, iri, term).map_err(glossary_refusal)
 }
 
 fn term_properties(
@@ -177,7 +263,9 @@ async fn put_scheme(
             .map(|entry| (entry.iri.clone(), entry.term.clone()))
             .collect(),
     };
-    batch.validate().map_err(invalid)?;
+    batch.validate().map_err(glossary_refusal)?;
+    let stored = scheme_terms(state, target, scheme).await?;
+    check_broader_acyclic_over(stored, &batch.terms).map_err(glossary_refusal)?;
     let tenant = target.verified.tenant();
     let mut scheme_properties = Properties::new();
     scheme_properties.insert("type".into(), SCHEME_CLASS.into());
@@ -212,7 +300,9 @@ async fn put_term(
         scheme: term.scheme.clone(),
         terms: vec![(iri.to_string(), term.clone())],
     };
-    single.validate().map_err(invalid)?;
+    single.validate().map_err(glossary_refusal)?;
+    let stored = scheme_terms(state, target, &term.scheme).await?;
+    check_broader_acyclic_over(stored, &single.terms).map_err(glossary_refusal)?;
     let term = admitted_term(state, target, iri, term).await?;
     let properties = term_properties(target.verified.tenant(), iri, &term)?;
     write(
@@ -245,39 +335,59 @@ async fn transition(
     let to = from
         .apply(event.event())
         .map_err(|refused| invalid(format!("term '{iri}': {refused:?}")))?;
-    term.status = to;
-    let record = serde_json::to_string(&term)
-        .map_err(|error| invalid(format!("term encoding failed: {error}")))?;
-    let mut conditions = Properties::new();
-    conditions.insert("status".into(), status_name(from).into());
-    conditions.insert(TENANT_PROPERTY.into(), target.verified.tenant().into());
-    let mut updates = Properties::new();
-    updates.insert("status".into(), status_name(to).into());
-    updates.insert(RECORD_PROPERTY.into(), record.into());
-    updates.insert("status_actor".into(), target.verified.agent_id().into());
-    if let Some(request) = change_request {
-        updates.insert("status_change_request".into(), request.into());
+    if event == medulla_catalog_types::glossary::GlossaryTransition::Approve {
+        approval_gate(state, target, iri, &term, change_request).await?;
     }
-    let committed = write(
+    term.status = to;
+    let tenant = target.verified.tenant();
+    let actor = target.verified.agent_id();
+    // The term and its move record commit as one batch: the term carries the latest actor and
+    // request, and each move is one `cat:GlossaryStatusMove` node chained to the move into the
+    // state it left through `supersedes`, so the history reads by UQL (R801.5).
+    let mut properties = term_properties(tenant, iri, &term)?;
+    properties.insert("status_actor".into(), actor.into());
+    if let Some(request) = change_request {
+        properties.insert("status_change_request".into(), request.into());
+    }
+    let mut record = Properties::new();
+    record.insert("type".into(), STATUS_MOVE_LABEL.into());
+    record.insert("term".into(), iri.into());
+    record.insert("from".into(), status_name(from).into());
+    record.insert("to".into(), status_name(to).into());
+    record.insert("actor".into(), actor.into());
+    if let Some(request) = change_request {
+        record.insert("change_request".into(), request.into());
+    }
+    if from != GlossaryTermStatus::Draft {
+        record.insert(
+            "supersedes".into(),
+            move_id(tenant, iri, status_name(from)).into(),
+        );
+    }
+    record.insert(TENANT_PROPERTY.into(), tenant.into());
+    write_batch(
         state,
         target,
-        Method::CompareAndSetNodeFields {
-            node_id: iri.to_string(),
-            conditions_msgpack: encode(&conditions)?,
-            updates_msgpack: encode(&updates)?,
-        },
+        &[
+            serde_json::json!({"op": "upsert_node", "id": iri, "properties": properties}),
+            serde_json::json!({
+                "op": "upsert_node",
+                "id": move_id(tenant, iri, status_name(to)),
+                "properties": record,
+            }),
+        ],
     )
     .await?;
-    if !took_effect(&committed) {
-        return Err(invalid(format!(
-            "term '{iri}' changed status since it was read"
-        )));
-    }
     Ok(GlossaryReceipt {
         iri: iri.to_string(),
         status: Some(to),
-        written: 1,
+        written: 2,
     })
+}
+
+/// The id of the move record of `iri` into `status`.
+fn move_id(tenant: &str, iri: &str, status: &str) -> String {
+    format!("glossary_move:{tenant}:{iri}:{status}")
 }
 
 async fn bind_term(
@@ -289,7 +399,7 @@ async fn bind_term(
     let (term, _) = stored_term(state, target, iri)
         .await?
         .ok_or_else(|| invalid(format!("term '{iri}' does not exist")))?;
-    let link = bind(iri, &term, asset).map_err(invalid)?;
+    let link = bind(iri, &term, asset).map_err(glossary_refusal)?;
     let mut properties = Properties::new();
     properties.insert("predicate".into(), link.predicate.into());
     properties.insert(TENANT_PROPERTY.into(), target.verified.tenant().into());

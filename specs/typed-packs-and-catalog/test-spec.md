@@ -428,14 +428,14 @@ requires an error response with no result. Canonical artifact freshness passes. 
 | `MEDULLA-TYPED-PACKS-R801.1` | `crates/medulla-types/tests/glossary.rs::term_round_trips_and_maps_to_skos` |
 | `MEDULLA-TYPED-PACKS-R801.2` | `crates/medulla-core/tests/glossary.rs::alt_label_search_finds_term_and_deprecated_names_replacement` |
 | `MEDULLA-TYPED-PACKS-R801.3` | `tests/typed_packs/test_glossary_served.py::test_import_scheme_and_bind_term` (planned) |
-| `MEDULLA-TYPED-PACKS-R801.4` | `tests/typed_packs/test_glossary_served.py::test_glossary_refusals` (planned) |
-| `MEDULLA-TYPED-PACKS-R801.5` | `tests/typed_packs/test_glossary_served.py::test_status_history_reads_back` (planned) |
+| `MEDULLA-TYPED-PACKS-R801.4` | `tests/typed_packs/test_glossary_served.py::test_glossary_refusals` |
+| `MEDULLA-TYPED-PACKS-R801.5` | `tests/typed_packs/test_glossary_served.py::test_status_history_reads_back` |
 | `MEDULLA-TYPED-PACKS-R801.6` | `tests/typed_packs/test_glossary_served.py::test_import_scheme_bind_term_and_review_lifecycle` |
 | `MEDULLA-TYPED-PACKS-R802` | See each child. |
 | `MEDULLA-TYPED-PACKS-R802.1` | `crates/medulla-types/tests/stewardship.rs::records_round_trip` |
 | `MEDULLA-TYPED-PACKS-R802.2` | `crates/medulla-core/tests/stewardship.rs::most_specific_assignment_wins_and_certification_expires` |
-| `MEDULLA-TYPED-PACKS-R802.3` | `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` (planned) |
-| `MEDULLA-TYPED-PACKS-R802.4` | `tests/typed_packs/test_stewardship_served.py::test_stewardship_refusals` (planned) |
+| `MEDULLA-TYPED-PACKS-R802.3` | `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` |
+| `MEDULLA-TYPED-PACKS-R802.4` | `tests/typed_packs/test_stewardship_served.py::test_stewardship_refusals` |
 | `MEDULLA-TYPED-PACKS-R802.5` | `tests/typed_packs/test_stewardship_served.py::test_request_evidence_reads_back` |
 | `MEDULLA-TYPED-PACKS-R802.6` | `tests/typed_packs/test_stewardship_served.py::test_change_request_flow` |
 | `MEDULLA-TYPED-PACKS-R803` | See each child. |
@@ -456,7 +456,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 | `MEDULLA-TYPED-PACKS-R805.1` | `crates/medulla-types/tests/data_product.rs::records_round_trip` |
 | `MEDULLA-TYPED-PACKS-R805.2` | `crates/medulla-core/tests/data_product.rs::breach_records_violation` |
 | `MEDULLA-TYPED-PACKS-R805.3` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/data_product.rs::request_grants_access_after_steward_approval` |
-| `MEDULLA-TYPED-PACKS-R805.4` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::product_refusals` (planned) |
+| `MEDULLA-TYPED-PACKS-R805.4` | `crates/medulla-server-router/src/dispatch/dispatch_e2e_tests/identity/data_product.rs::product_refusals` |
 | `MEDULLA-TYPED-PACKS-R805.5` | `crates/medulla-h-admin/src/catalog/data_product_served_tests.rs::violation_evidence_reads_back` |
 | `MEDULLA-TYPED-PACKS-R805.6` | `crates/medulla-core/src/data_product.rs::tests::contract_check_is_linear_in_promises`, `crates/medulla-core/benches/data_contract_check.rs` |
 
