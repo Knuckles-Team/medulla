@@ -54,6 +54,9 @@ pub struct DowntimeJobObservation {
     pub attempts_made: u32,
     /// The stage label of the job's checkpoint, when it has one.
     pub checkpoint_stage: Option<String>,
+    /// Whether the job holds a checkpoint: a `Submitted` job that has one was left by a
+    /// preempted step and resumes from it (MEDULLA-DURABLE-KERNEL-R101.6).
+    pub has_checkpoint: bool,
     /// Whether a worker lease is held (`Running`, `Publishing` or `CancelRequested`).
     pub has_lease: bool,
     /// CPU milliseconds the job used, once it has a result.

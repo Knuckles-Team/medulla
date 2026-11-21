@@ -29,6 +29,11 @@ pub mod commons_reconcile;
 #[cfg(all(feature = "jobs", feature = "sparql"))]
 pub mod downtime;
 
+/// The body of the `test_downtime_steps` downtime intent, built only for tests
+/// (MEDULLA-DURABLE-KERNEL-R101.6).
+#[cfg(all(feature = "test-support", feature = "jobs"))]
+pub mod downtime_test_steps;
+
 /// The body of the `plan_evolution` downtime job (MEDULLA-FEDERATED-QUERY-R091.3).
 #[cfg(all(feature = "jobs", feature = "sparql", feature = "federation"))]
 pub mod downtime_plan_evolution;

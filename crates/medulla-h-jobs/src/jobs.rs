@@ -1149,6 +1149,7 @@ pub fn observe_downtime_job(
         state,
         attempts_made: job.retry.attempts_made,
         checkpoint_stage: checkpoint.map(|checkpoint| checkpoint.label.clone()),
+        has_checkpoint: checkpoint.is_some(),
         has_lease,
         cpu_ms: job
             .output
