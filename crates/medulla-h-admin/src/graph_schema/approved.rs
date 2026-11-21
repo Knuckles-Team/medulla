@@ -70,13 +70,82 @@ async fn admit(tenant_id: &str, ctx: &MutationCtx<'_>, op: &GraphSchemaOp) -> Re
             GraphSchemaErrorCode::CandidateUnknown.as_str()
         ));
     }
+    let now_ms = medulla_server_api::txn::now_ms();
     verify_schema_approval(
         lease.as_ref(),
         approval_action(contract),
         source_id,
         &candidate,
-        medulla_server_api::txn::now_ms(),
-    )
+        now_ms,
+    )?;
+    if contract.source_authority {
+        verify_governed_change(ctx, lease.as_ref(), source_id, &candidate, now_ms)?;
+    }
+    Ok(())
+}
+
+/// A source-authority attach also needs the lease to be the one its governed
+/// change issued (MEDULLA-SRC-AUTH-R003.3): the grant names a `change_id`, and
+/// that change is `approved` in the governed ledger for this kind, target and
+/// candidate digest. A lease that no approved change stands behind is refused.
+#[cfg(feature = "security")]
+fn verify_governed_change(
+    ctx: &MutationCtx<'_>,
+    lease: Option<&medulla_work_types::control_lease::ControlLeaseView>,
+    source_id: &str,
+    candidate: &str,
+    now_ms: u64,
+) -> Result<(), String> {
+    use medulla_mutation_types::governed_change::GovernedStatus;
+    let mismatch = |detail: &str| {
+        format!(
+            "{}: {detail}",
+            GraphSchemaErrorCode::ApprovalMismatch.as_str()
+        )
+    };
+    let change_id = lease
+        .and_then(|lease| lease.grant.get("change_id"))
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| mismatch("the approval grant does not name a governed change"))?;
+    let change = ctx
+        .isolation
+        .rbac()
+        .governed()
+        .get(change_id, now_ms)
+        .ok_or_else(|| {
+            format!(
+                "{}: the governed change of this approval is unknown",
+                GraphSchemaErrorCode::ApprovalRequired.as_str()
+            )
+        })?;
+    if change.status != GovernedStatus::Approved {
+        return Err(format!(
+            "{}: the governed change of this approval is not approved",
+            GraphSchemaErrorCode::ApprovalRequired.as_str()
+        ));
+    }
+    if change.kind != SOURCE_AUTHORITY_KIND
+        || change.target != source_id
+        || change.digest != candidate
+    {
+        return Err(mismatch(
+            "the governed change does not name this kind, source and candidate digest",
+        ));
+    }
+    Ok(())
+}
+
+/// Without the RBAC image no governed change can be proven, so a
+/// source-authority attach is refused.
+#[cfg(not(feature = "security"))]
+fn verify_governed_change(
+    _ctx: &MutationCtx<'_>,
+    _lease: Option<&medulla_work_types::control_lease::ControlLeaseView>,
+    _source_id: &str,
+    _candidate: &str,
+    _now_ms: u64,
+) -> Result<(), String> {
+    Err(approval_store_unavailable())
 }
 
 /// The action the approval grant must name: a source-authority candidate (the

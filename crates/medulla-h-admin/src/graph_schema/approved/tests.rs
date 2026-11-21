@@ -27,6 +27,7 @@ use medulla_work_types::{
 
 use super::*;
 use medulla_protocol_types::protocol::ResultPayload;
+use medulla_mutation_types::governed_change::SOURCE_AUTHORITY_KIND;
 use medulla_server_api::state::ServerState;
 use medulla_server_auth::auth::dispatch_test_on_heap;
 
@@ -105,6 +106,17 @@ impl Served {
     }
 
     async fn call(&self, graph: &str, key: &str, method: Method) -> Response {
+        self.call_as(ADMIN, &["*"], graph, key, method).await
+    }
+
+    async fn call_as(
+        &self,
+        principal: &str,
+        scopes: &[&str],
+        graph: &str,
+        key: &str,
+        method: Method,
+    ) -> Response {
         let id = next_id();
         let request = medulla_server_auth::auth::scoped_test_request_on(
             SECRET,
@@ -112,14 +124,66 @@ impl Served {
             graph,
             method,
             medulla_server_auth::auth::ScopedTestCaller {
-                principal: ADMIN,
+                principal,
                 tenant: TENANT,
-                scopes: &["*"],
+                scopes,
                 nonce: &format!("schema-approval-nonce-{id}"),
                 idempotency_key: key,
             },
         );
         dispatch_test_on_heap(&self.state, request).await
+    }
+
+    /// Propose a source-authority change for `digest` as one principal and
+    /// approve it as another: the approval issues the lease
+    /// `governed_approval_lease_id(change_id)`.
+    async fn govern_authority(&self, change_id: &str, digest: &str) {
+        use medulla_mutation_types::governed_change::{
+            GovernedApproval, GovernedChangeOp, GovernedProposal,
+        };
+        let propose = Method::GovernedChange {
+            op: GovernedChangeOp::Propose {
+                request: GovernedProposal {
+                    change_id: change_id.to_string(),
+                    kind: SOURCE_AUTHORITY_KIND.to_string(),
+                    target: SOURCE.to_string(),
+                    digest: digest.to_string(),
+                    justification: "authority candidate".to_string(),
+                    proposal_ttl_ms: 600_000,
+                    window_ms: 600_000,
+                },
+            },
+            actor: None,
+        };
+        let proposed = self
+            .call_as(
+                "authority-proposer",
+                &["governance:propose"],
+                GRAPH,
+                &format!("propose:{change_id}"),
+                propose,
+            )
+            .await;
+        assert!(proposed.error.is_none(), "{:?}", proposed.error);
+        let approve = Method::GovernedChange {
+            op: GovernedChangeOp::Approve {
+                request: GovernedApproval {
+                    change_id: change_id.to_string(),
+                    digest: digest.to_string(),
+                },
+            },
+            actor: None,
+        };
+        let approved = self
+            .call_as(
+                "authority-approver",
+                &["governance:approve-source-authority", "governance:read"],
+                GRAPH,
+                &format!("approve:{change_id}"),
+                approve,
+            )
+            .await;
+        assert!(approved.error.is_none(), "{:?}", approved.error);
     }
 
     /// Issue an approval lease whose grant names `candidate`, and approve it
@@ -509,10 +573,24 @@ async fn authority_candidate_needs_matching_action_and_digest() {
         .await;
     assert!(refusal(&ordinary).starts_with("SCHEMA_APPROVAL_MISMATCH"));
 
-    // The matching action, source and digest admit it.
+    // A matching lease that no governed change issued is refused.
+    let unbound = served
+        .attach_contract(
+            "attach:unbound",
+            "action_approval:authority",
+            authority.clone(),
+            None,
+        )
+        .await;
+    assert!(refusal(&unbound).starts_with("SCHEMA_APPROVAL_MISMATCH"));
+
+    // Approving the governed change issues the lease bound to its change id;
+    // the matching action, source, digest and change admit the attach.
+    served.govern_authority("change-authority", &digest).await;
+    let lease_id = medulla_work_types::control_lease::governed_approval_lease_id("change-authority");
     let committed: GraphSchemaCommitted = decode(
         served
-            .attach_contract("attach:authority", "action_approval:authority", authority, None)
+            .attach_contract("attach:authority", &lease_id, authority, None)
             .await,
     );
     assert!(committed.changed);

@@ -195,6 +195,12 @@ async def approve_authority(
 # --- approval lease and attach -------------------------------------------------------
 
 
+def approval_lease_id(change_id: str) -> str:
+    """The lease that approving ``change_id`` issues (``governed_approval_lease_id`` in Rust)."""
+    return f"governed-change:{change_id}"
+
+
+
 async def issue_approval_lease(
     client: MedullaClient,
     lease_id: str,

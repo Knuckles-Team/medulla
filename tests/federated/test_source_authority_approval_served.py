@@ -13,13 +13,10 @@ from conftest import tenant_request_context
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "source_authority"))
 from governed_ledger import (
     BASELINE_FIELDS_CONTRACT,
-    SOURCE_AUTHORITY_KIND,
+    approval_lease_id,
     approve_authority,
     attach_approved,
-    candidate_digest,
-    consume_approval_lease,
     governed_graph,
-    issue_approval_lease,
     propose_authority,
     validate_repair,
 )
@@ -34,10 +31,8 @@ from medulla.generated.graph_schema import SchemaSourceOriginViewApproved
 async def test_authority_attach_needs_distinct_approver() -> None:
     tag = uuid.uuid4().hex[:8]
     source_id = f"approved:srcauth-{tag}"
-    lease_id = f"approval:srcauth-{tag}"
     fields = BASELINE_FIELDS_CONTRACT["fields"]
     authority = {"fields": fields, "source_authority": True}
-    digest = candidate_digest(authority, source_id)
     async with governed_graph() as ledger:
         await ledger.admin.nodes.add(
             f"record-{tag}",
@@ -51,11 +46,9 @@ async def test_authority_attach_needs_distinct_approver() -> None:
         assert refused.value.code == "GOVERNED_SELF_APPROVAL"
         await approve_authority(ledger, change_id, ledger.approver)
 
-        # The approved digest is bound under the source-authority action.
-        await issue_approval_lease(
-            ledger.admin, lease_id, digest, source_id, action=SOURCE_AUTHORITY_KIND
-        )
-        await consume_approval_lease(ledger.admin, lease_id)
+        # Approving the change issued the lease bound to its change id; the
+        # attach needs that lease and nothing else.
+        lease_id = approval_lease_id(change_id)
 
         # One changed byte changes the digest and fails the match.
         changed = {
