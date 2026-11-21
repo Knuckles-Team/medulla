@@ -7,6 +7,11 @@ use serde::{Deserialize, Serialize};
 
 use crate::tenancy::Marking;
 
+/// MEDULLA-FEDERATED-QUERY-R706.4: the label of a tenant's registered marking node.
+pub const MARKING_LABEL: &str = "Marking";
+/// The node-id prefix of a registered marking: the node `marking:<tag>` registers `<tag>`.
+pub const MARKING_NODE_PREFIX: &str = "marking:";
+
 /// Why a claim exists.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

@@ -317,7 +317,8 @@ const PROMOTED_STATE: &str = "promoted";
 /// refused, never run unmasked (MEDULLA-FEDERATED-QUERY-R706.7).
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PolicyLoadError {
-    /// `POLICY_RECORD_INVALID`.
+    /// `POLICY_RECORD_INVALID`, or `POLICY_TAG_UNKNOWN` for a policy whose tag has no
+    /// registered marking (MEDULLA-FEDERATED-QUERY-R706.4).
     pub code: &'static str,
     /// The node id of the malformed record.
     pub record: String,
@@ -399,6 +400,10 @@ pub fn load_policy_set(
     let mut ids: Vec<&String> = view.node_properties.keys().collect();
     ids.sort_unstable();
     let mut set = PolicySet::default();
+    // MEDULLA-FEDERATED-QUERY-R706.4: the tenant's registered markings, and the tag each
+    // policy names, checked once every record has been read.
+    let mut markings: std::collections::BTreeSet<String> = Default::default();
+    let mut policy_tags: Vec<(String, String)> = Vec::new();
     for id in ids {
         let Some(blob) = view.node_properties.get(id) else {
             continue;
@@ -409,8 +414,18 @@ pub fn load_policy_set(
         if !belongs_to(&object, tenant) {
             continue;
         }
+        if let Some(registered) = id.strip_prefix(medulla_identity_types::classification::MARKING_NODE_PREFIX) {
+            if medulla_graph_core::graph::node_carries_label(
+                &object,
+                medulla_identity_types::classification::MARKING_LABEL,
+            ) {
+                markings.insert(registered.to_string());
+            }
+            continue;
+        }
         if medulla_graph_core::graph::node_carries_label(&object, QUERY_POLICY_LABEL) {
             let tag = required_str(&object, "tag", id)?.to_string();
+            policy_tags.push((id.clone(), tag.clone()));
             match required_str(&object, "kind", id)? {
                 "mask" => {
                     let method: MaskMethod = serde_json::from_value(serde_json::Value::String(
@@ -450,6 +465,13 @@ pub fn load_policy_set(
                 }
             }
         }
+    }
+    if let Some((record, _)) = policy_tags.iter().find(|(_, tag)| !markings.contains(tag)) {
+        return Err(PolicyLoadError {
+            code: medulla_types::contract::ServerErrorCode::PolicyTagUnknown.as_str(),
+            record: record.clone(),
+            field: "tag",
+        });
     }
     Ok(set)
 }
@@ -821,10 +843,16 @@ mod tests {
         })
     }
 
+    fn marking_record(tenant: &str) -> serde_json::Value {
+        serde_json::json!({"node_type": "Marking", "tenant": tenant})
+    }
+
     // spec: MEDULLA-FEDERATED-QUERY-R706.7
     #[test]
     fn loader_binds_policies_to_promoted_claim_columns_only() {
         let view = view_of(&[
+            ("marking:pii.email", marking_record("acme")),
+            ("marking:region.eu", marking_record("acme")),
             ("p1", mask_record("pii.email", "acme")),
             (
                 "p2",
@@ -867,6 +895,7 @@ mod tests {
     #[test]
     fn loader_never_crosses_tenants() {
         let view = view_of(&[
+            ("marking:pii.email", marking_record("acme")),
             ("p1", mask_record("pii.email", "other")),
             (
                 "c1",
@@ -892,8 +921,13 @@ mod tests {
         assert_eq!(error.code, "POLICY_RECORD_INVALID");
         assert_eq!(error.record, "p1");
 
-        let one = view_of(&[("p1", mask_record("pii.email", "acme"))]);
+        let one = view_of(&[
+            ("marking:pii.email", marking_record("acme")),
+            ("p1", mask_record("pii.email", "acme")),
+        ]);
         let two = view_of(&[
+            ("marking:pii.email", marking_record("acme")),
+            ("marking:pii.ssn", marking_record("acme")),
             ("p1", mask_record("pii.email", "acme")),
             ("p2", mask_record("pii.ssn", "acme")),
         ]);
@@ -901,5 +935,39 @@ mod tests {
         let b = policy_digest(&load_policy_set("acme", &two).unwrap());
         assert_ne!(a, b);
         assert_eq!(a, policy_digest(&load_policy_set("acme", &one).unwrap()));
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R706.4
+    #[test]
+    fn loader_refuses_a_policy_naming_an_unregistered_tag() {
+        // A policy-first write: no marking node for its tag.
+        let first = view_of(&[
+            ("p1", mask_record("pii.email", "acme")),
+            ("p2", mask_record("pii.ssn", "acme")),
+            ("marking:pii.ssn", marking_record("acme")),
+        ]);
+        let error = load_policy_set("acme", &first).expect_err("an unregistered tag refuses");
+        assert_eq!(error.code, "POLICY_TAG_UNKNOWN");
+        assert_eq!((error.record.as_str(), error.field), ("p1", "tag"));
+
+        // Registering the marking, in any node order, lets the same policy load.
+        let registered = view_of(&[
+            ("p1", mask_record("pii.email", "acme")),
+            ("marking:pii.email", marking_record("acme")),
+        ]);
+        assert_eq!(load_policy_set("acme", &registered).unwrap().masks.len(), 1);
+
+        // Another tenant's marking does not register the tag; a node that is not labelled
+        // `Marking` does not either.
+        let foreign = view_of(&[
+            ("p1", mask_record("pii.email", "acme")),
+            ("marking:pii.email", marking_record("other")),
+        ]);
+        assert_eq!(load_policy_set("acme", &foreign).unwrap_err().code, "POLICY_TAG_UNKNOWN");
+        let unlabelled = view_of(&[
+            ("p1", mask_record("pii.email", "acme")),
+            ("marking:pii.email", serde_json::json!({"node_type": "Other", "tenant": "acme"})),
+        ]);
+        assert_eq!(load_policy_set("acme", &unlabelled).unwrap_err().code, "POLICY_TAG_UNKNOWN");
     }
 }

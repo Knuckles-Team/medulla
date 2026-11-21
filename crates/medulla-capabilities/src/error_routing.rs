@@ -258,6 +258,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "UnifiedQuery",
         &[
+            // MEDULLA-FEDERATED-QUERY-R706.4: a policy names a tag with no registered marking.
+            "POLICY_TAG_UNKNOWN",
             "SNAPSHOT_UNAVAILABLE",
             "CODE_MAP_STALE",
             "CODE_MAP_INVALID",
@@ -1586,6 +1588,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "Uql",
         &[
+            // MEDULLA-FEDERATED-QUERY-R706.4: a policy names a tag with no registered marking.
+            "POLICY_TAG_UNKNOWN",
             "CYPHER_KEY_INVALID",
             "FENCE_FIELD_MISSING",
             "ONTOLOGY_REVISION_STALE",

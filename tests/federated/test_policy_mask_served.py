@@ -71,6 +71,8 @@ async def test_cross_tenant_policy_not_applied() -> None:
                 "categories": [tag],
             },
         )
+        # A policy written before its marking is registered refuses (R706.4); registering
+        # the `marking:<tag>` node lets the same policy serve.
         await tenant_a.nodes.add(
             f"policy-{uuid.uuid4().hex}",
             {
@@ -81,6 +83,10 @@ async def test_cross_tenant_policy_not_applied() -> None:
                 "principals_exempt": [],
             },
         )
+        with pytest.raises(Exception) as unregistered:
+            await _ids(tenant_a, label)
+        assert "POLICY_TAG_UNKNOWN" in str(unregistered.value)
+        await tenant_a.nodes.add(f"marking:{tag}", {"type": "Marking"})
         assert len(await _ids(tenant_a, label)) == 2, "a valid policy still serves"
         assert await _ids(tenant_b, label) == before_b, "B reads raw rows"
 
@@ -116,6 +122,7 @@ async def test_explain_lists_policies() -> None:
     try:
         await _people(tenant_a, label, 1)
         await _people(tenant_b, label, 1)
+        await tenant_a.nodes.add(f"marking:{tag}", {"type": "Marking"})
         await tenant_a.nodes.add(
             f"policy-{uuid.uuid4().hex}",
             {
@@ -133,6 +140,42 @@ async def test_explain_lists_policies() -> None:
         assert "eu" not in str(explained["applied_policies"][0]["column"])
         other = await tenant_b.query.uql(f"EXPLAIN MATCH (:{label})")
         assert other.get("applied_policies", []) == []
+    finally:
+        await tenant_a.close()
+        await tenant_b.close()
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R706.4
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R706.4")
+@pytest.mark.asyncio
+async def test_mask_refusals() -> None:
+    """A policy written before its `marking:<tag>` node refuses every read of the tenant
+    with POLICY_TAG_UNKNOWN and runs nothing unmasked; registering the marking lets the
+    same policy serve; another tenant never sees the refusal."""
+    label = f"PolicyRefusal{uuid.uuid4().hex[:8]}"
+    tag = f"pii.{uuid.uuid4().hex[:8]}"
+    tenant_a = await _connect(TEST_TENANT)
+    tenant_b = await _connect(OTHER_TENANT)
+    try:
+        await _people(tenant_a, label, 2)
+        await _people(tenant_b, label, 1)
+        await tenant_a.nodes.add(
+            f"policy-{uuid.uuid4().hex}",
+            {
+                "type": "QueryPolicy",
+                "kind": "mask",
+                "tag": tag,
+                "method": "redact",
+                "principals_exempt": [],
+            },
+        )
+        with pytest.raises(Exception) as refused:
+            await _ids(tenant_a, label)
+        assert "POLICY_TAG_UNKNOWN" in str(refused.value)
+        assert len(await _ids(tenant_b, label)) == 1
+
+        await tenant_a.nodes.add(f"marking:{tag}", {"type": "Marking"})
+        assert len(await _ids(tenant_a, label)) == 2
     finally:
         await tenant_a.close()
         await tenant_b.close()
