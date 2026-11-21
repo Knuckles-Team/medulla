@@ -172,3 +172,50 @@ def test_q11_usage_guidance(clean_graph) -> None:
         asyncio.run(_guide(schema, graph, f"q11-unknown-{suffix}", job))
     assert "USAGE_GUIDANCE_UNKNOWN_CONNECTOR" in str(unknown.value)
 
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R008.2")
+def test_envelope_assembled_by_graph_assemble() -> None:
+    from medulla.generated import storage
+
+    async def exercise() -> None:
+        graph = f"q8-envelope-{uuid.uuid4().hex[:8]}"
+        admin = await connect()
+        try:
+            await admin.tenants.create(graph)
+        finally:
+            await admin.close()
+        client = await connect(graph)
+        try:
+            for connector, entries in _fixture_packs(uuid.uuid4().hex[:8])[:1]:
+                imported = await import_entries(client, connector, entries)
+                assert imported["result"] == "imported", imported
+            params = {
+                "request": {
+                    "task_iri": "urn:task:xyz",
+                    "assembly": {
+                        "tenant_id": TEST_TENANT,
+                        "policy": {"policy": "default"},
+                        "candidates": {"kinds": ["tool"]},
+                        "requirements": {},
+                    },
+                }
+            }
+            opaque = await storage.send_agent_execution_answer(client, params, graph)
+            answer = storage.decode_agent_execution_answer(opaque)
+        finally:
+            await client.close()
+        assert answer.assembled_by == "graph.assemble", answer
+        assert answer.task_iri == "urn:task:xyz"
+        for part in (
+            "steps",
+            "staffing",
+            "guardrails",
+            "bindings",
+            "workflow",
+            "dag",
+            "coverage",
+        ):
+            assert getattr(answer.parts, part) is not None, part
+
+    asyncio.run(exercise())
