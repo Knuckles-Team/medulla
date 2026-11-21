@@ -553,20 +553,12 @@ impl ForeignReadSessions {
             .map(|handle| lock(handle))
             .collect::<Result<Vec<_>, _>>()?;
         let mut sources = Vec::with_capacity(records.len());
-        let plan_names: std::collections::HashSet<&str> = plan
-            .ops
-            .iter()
-            .filter_map(|op| match op {
-                medulla_exec::algebra::Op::Foreign { name } => Some(name.as_str()),
-                medulla_exec::algebra::Op::ForeignScan { source, .. } => match source.as_ref() {
-                    medulla_query_types::wire::ForeignSourceSpec::Named { name } => {
-                        Some(name.as_str())
-                    }
-                    _ => None,
-                },
-                _ => None,
-            })
-            .collect();
+        // The plan's source names include those inside a `UNION` or `FUSE` branch, as
+        // the served leg that excludes unreadable sources reads them (MEDULLA-CQ-CONN-R090).
+        let plan_names: std::collections::HashSet<String> =
+            crate::api::query_txn::query_support::plan_foreign_names(&plan.ops)
+                .into_iter()
+                .collect();
         for (record, handle) in records.iter().zip(&handles) {
             self.check_expiry(record)?;
             if record.plan_digest != plan_digest {
@@ -578,7 +570,7 @@ impl ForeignReadSessions {
             if record.consumed {
                 return Err("FOREIGN_READ_REPLAY: execution was already consumed".into());
             }
-            if !plan_names.contains(record.source_name.as_str()) {
+            if !plan_names.contains(&record.source_name) {
                 return Err("FOREIGN_READ_UNUSED: execution source is absent from plan".into());
             }
             let driver: medulla_federation::federation::SharedForeignSource =
