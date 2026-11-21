@@ -468,6 +468,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::QualityRulePut { .. }
                 // MEDULLA-TYPED-PACKS-R652.3: the classification claim ops.
                 | Method::ClassificationClaim { .. }
+                // MEDULLA-TYPED-PACKS-R801.3: the glossary ops.
+                | Method::Glossary { .. }
                 // MEDULLA-SDLC-R002.3: release and deployment records.
                 | Method::RecordRelease { .. }
                 | Method::RecordDeployment { .. }

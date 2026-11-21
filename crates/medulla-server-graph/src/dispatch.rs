@@ -42,6 +42,10 @@ pub mod change_envelope;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod change_envelope_draft;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
+pub mod glossary;
+#[allow(missing_docs)]
+pub mod graph_client;
+#[allow(missing_docs)]
 pub mod graph_pipeline;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod policy_evolution;

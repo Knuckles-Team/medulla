@@ -290,6 +290,14 @@ $($variants)*
         op: medulla_identity_types::classification::ClassificationClaimOp,
     },
 
+    // ── Business glossary (MEDULLA-TYPED-PACKS-R801.3) ─────────────────────
+    /// One glossary op in the caller's tenant: `PutScheme`, `PutTerm`,
+    /// `Transition` or `Bind`. Scope `glossary:write`. Terms are
+    /// `cat:CatalogGlossaryTerm` graph nodes; reads are UQL, SPARQL and search.
+    Glossary {
+        op: Box<medulla_catalog_types::glossary::GlossaryOp>,
+    },
+
     // ── Governed actions (MEDULLA-UNIFIED-DATA-PLANE-R700.3) ───────────────
     /// Validate and register one action spec in the request graph's registry.
     ActionRegister {

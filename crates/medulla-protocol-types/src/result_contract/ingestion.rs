@@ -93,6 +93,11 @@ method_results! {
     QualityRulePut(QualityRulePut) => Raw<medulla_catalog_types::quality::QualityRuleReceipt>;
     // MEDULLA-TYPED-PACKS-R652.3: the claim and the claims it proposed downstream.
     ClassificationClaim(ClassificationClaim) => Raw<medulla_identity_types::classification::ClassificationClaimResult>;
+    // MEDULLA-TYPED-PACKS-R801.3: every glossary op answers one receipt.
+    GlossaryPutScheme(Glossary / "put_scheme") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
+    GlossaryPutTerm(Glossary / "put_term") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
+    GlossaryTransition(Glossary / "transition") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
+    GlossaryBind(Glossary / "bind") => Raw<medulla_catalog_types::glossary::GlossaryReceipt>;
     // MEDULLA-SDLC-R002.3: the release and deployment records.
     RecordRelease(RecordRelease) => Raw<medulla_source_types::lifecycle::ReleaseReceipt>;
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;

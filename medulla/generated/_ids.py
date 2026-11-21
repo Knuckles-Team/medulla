@@ -537,6 +537,7 @@ METHOD_IDS = frozenset(
         "IncidentSetStatus",
         "QualityRulePut",
         "ClassificationClaim",
+        "Glossary",
         "LineageIngest",
         "ListMemorySnapshots",
         "LiveArtifactGet",

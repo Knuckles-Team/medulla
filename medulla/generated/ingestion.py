@@ -827,6 +827,11 @@ send_classification_claim = contract_sender(
 decode_classification_claim = contract_decoder(
     "ClassificationClaim", "ClassificationClaimResult"
 )
+send_glossary = contract_sender("Glossary", "MethodGlossaryParams")
+decode_glossary_put_scheme = contract_decoder("Glossary", "GlossaryReceipt", "put_scheme")
+decode_glossary_put_term = contract_decoder("Glossary", "GlossaryReceipt", "put_term")
+decode_glossary_transition = contract_decoder("Glossary", "GlossaryReceipt", "transition")
+decode_glossary_bind = contract_decoder("Glossary", "GlossaryReceipt", "bind")
 send_lineage_ingest = contract_sender("LineageIngest", "MethodLineageIngestParams")
 decode_lineage_ingest = contract_decoder("LineageIngest", "LineageIngestReceipt")
 send_measure_ingest_throughput = contract_sender(

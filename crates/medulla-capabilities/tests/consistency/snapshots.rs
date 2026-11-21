@@ -139,6 +139,7 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     // MEDULLA-UNIFIED-DATA-PLANE-R762.3: like `TelemetryDerive`.
     "QualityRulePut",
     "ClassificationClaim",
+    "Glossary",
     "RecordRelease",
     "RecordDeployment",
     "GoalPut",
@@ -510,6 +511,7 @@ pub(crate) const NATIVE_GRAPHREDB_DURABLE: &[&str] = &[
     // MEDULLA-UNIFIED-DATA-PLANE-R762.3: like `TelemetryDerive`.
     "QualityRulePut",
     "ClassificationClaim",
+    "Glossary",
     "RecordRelease",
     "RecordDeployment",
     "GoalPut",
@@ -713,6 +715,7 @@ pub(crate) const AUDIT_RS_AUDITED: &[&str] = &[
     // MEDULLA-UNIFIED-DATA-PLANE-R762.3: like `TelemetryDerive`.
     "QualityRulePut",
     "ClassificationClaim",
+    "Glossary",
     "RecordRelease",
     "RecordDeployment",
     "GoalPut",
@@ -882,6 +885,7 @@ pub(crate) const CDC_RS_EMITS_CDC: &[&str] = &[
     // MEDULLA-UNIFIED-DATA-PLANE-R762.3: like `TelemetryDerive`.
     "QualityRulePut",
     "ClassificationClaim",
+    "Glossary",
     "RecordRelease",
     "RecordDeployment",
     "GoalPut",

@@ -140,6 +140,16 @@ fn incident_audit_line(method: &Method) -> Option<String> {
                 format!("CLASSIFICATION_CLAIM|reject|{claim_id}")
             }
         }),
+        // MEDULLA-TYPED-PACKS-R801.3: the line names the op and the addressed IRI.
+        Method::Glossary { op } => {
+            use medulla_catalog_types::glossary::GlossaryOp;
+            Some(match op.as_ref() {
+                GlossaryOp::PutScheme { scheme, .. } => format!("GLOSSARY|put_scheme|{scheme}"),
+                GlossaryOp::PutTerm { iri, .. } => format!("GLOSSARY|put_term|{iri}"),
+                GlossaryOp::Transition { iri, .. } => format!("GLOSSARY|transition|{iri}"),
+                GlossaryOp::Bind { term, .. } => format!("GLOSSARY|bind|{term}"),
+            })
+        }
         // MEDULLA-SDLC-R017.1: the line names the project, never the statement.
         Method::GoalPut { goal } => Some(format!("GOAL_PUT|{}", goal.project)),
         _ => record_write_audit_line(method),

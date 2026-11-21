@@ -281,6 +281,8 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::QualityRulePut { .. } => Some("__quality"),
         // MEDULLA-TYPED-PACKS-R652.3: like the quality rule write.
         Method::ClassificationClaim { .. } => Some("__classification"),
+        // MEDULLA-TYPED-PACKS-R801.3: like the classification claim ops.
+        Method::Glossary { .. } => Some("__glossary"),
         // MEDULLA-SDLC-R002.3: like the incident writes.
         Method::RecordRelease { .. }
         | Method::RecordDeployment { .. }

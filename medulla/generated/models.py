@@ -14707,6 +14707,13 @@ class MethodQualityRulePut(BaseModel):
     params: MethodQualityRulePutParams
 
 
+class MethodGlossary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["Glossary"]
+    params: MethodGlossaryParams
+
+
 class MethodClassificationClaim(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15965,6 +15972,7 @@ Method = Annotated[
         MethodIncidentSetStatus,
         MethodQualityRulePut,
         MethodClassificationClaim,
+        MethodGlossary,
         MethodLineageIngest,
         MethodListMemorySnapshots,
         MethodLiveArtifactGet,
@@ -32348,6 +32356,86 @@ class ClassificationClaimOpPromote(BaseModel):
     evidence: list[str] = Field(default_factory=list)
 
 
+class GlossaryTermStatus(str, Enum):
+    DRAFT = "draft"
+    IN_REVIEW = "in_review"
+    APPROVED = "approved"
+    DEPRECATED = "deprecated"
+
+
+class GlossaryTransition(str, Enum):
+    SUBMIT = "submit"
+    APPROVE = "approve"
+    DEPRECATE = "deprecate"
+
+
+class GlossaryTerm(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    scheme: str
+    pref_label: str
+    alt_labels: list[str] = Field(default_factory=list)
+    definition: str
+    broader: list[str] = Field(default_factory=list)
+    related: list[str] = Field(default_factory=list)
+    status: GlossaryTermStatus
+    replaced_by: str | None = None
+
+
+class GlossaryTermEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    iri: str
+    term: GlossaryTerm
+
+
+class GlossaryReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    iri: str
+    status: GlossaryTermStatus | None = None
+    written: Annotated[int, Field(ge=0)]
+
+
+class GlossaryOpPutScheme(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["put_scheme"]
+    scheme: str
+    terms: list[GlossaryTermEntry]
+
+
+class GlossaryOpPutTerm(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["put_term"]
+    iri: str
+    term: GlossaryTerm
+
+
+class GlossaryOpTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["transition"]
+    iri: str
+    event: GlossaryTransition
+    change_request: str | None = None
+
+
+class GlossaryOpBind(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["bind"]
+    term: str
+    asset: str
+
+
+GlossaryOp = Annotated[
+    GlossaryOpPutScheme | GlossaryOpPutTerm | GlossaryOpTransition | GlossaryOpBind,
+    Field(discriminator="op"),
+]
+
+
 class ClassificationClaimOpReject(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -32730,6 +32818,12 @@ class MethodQualityRulePutParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     rule: QualityRule
+
+
+class MethodGlossaryParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: GlossaryOp
 
 
 class MethodClassificationClaimParams(BaseModel):
@@ -38815,6 +38909,18 @@ __all__ = [
     "MethodQualityRulePutParams",
     "MethodClassificationClaim",
     "MethodClassificationClaimParams",
+    "MethodGlossary",
+    "MethodGlossaryParams",
+    "GlossaryTermStatus",
+    "GlossaryTransition",
+    "GlossaryTerm",
+    "GlossaryTermEntry",
+    "GlossaryReceipt",
+    "GlossaryOp",
+    "GlossaryOpPutScheme",
+    "GlossaryOpPutTerm",
+    "GlossaryOpTransition",
+    "GlossaryOpBind",
     "ClaimKind",
     "ClaimState",
     "ClaimProvenance",

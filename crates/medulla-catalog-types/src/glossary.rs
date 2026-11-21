@@ -87,3 +87,83 @@ impl GlossaryTerm {
         out
     }
 }
+
+/// One term of a scheme batch with the IRI that names its node.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GlossaryTermEntry {
+    /// The term IRI; the graph node id.
+    pub iri: String,
+    pub term: GlossaryTerm,
+}
+
+/// A status move of a term, one per event of `GlossaryTermMachine`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum GlossaryTransition {
+    /// `draft` to `in_review`.
+    Submit,
+    /// `in_review` to `approved`.
+    Approve,
+    /// `approved` to `deprecated`.
+    Deprecate,
+}
+
+impl GlossaryTransition {
+    /// The machine event this move applies.
+    pub fn event(self) -> medulla_types::glossary_term_machine::GlossaryTermEvent {
+        use medulla_types::glossary_term_machine::GlossaryTermEvent;
+        match self {
+            Self::Submit => GlossaryTermEvent::Submit,
+            Self::Approve => GlossaryTermEvent::Approve,
+            Self::Deprecate => GlossaryTermEvent::Deprecate,
+        }
+    }
+}
+
+/// One glossary operation (`Method::Glossary`, MEDULLA-TYPED-PACKS-R801.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum GlossaryOp {
+    /// Import one concept scheme and its terms as one batch.
+    PutScheme {
+        scheme: String,
+        terms: Vec<GlossaryTermEntry>,
+    },
+    /// Write one term (an upsert of its node).
+    PutTerm { iri: String, term: GlossaryTerm },
+    /// Move one term along `GlossaryTermMachine`. `change_request` and the
+    /// verified principal are recorded on the term.
+    Transition {
+        iri: String,
+        event: GlossaryTransition,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        change_request: Option<String>,
+    },
+    /// Link a term to an asset through `:definesAsset`.
+    Bind { term: String, asset: String },
+}
+
+impl GlossaryOp {
+    /// Every glossary operation writes.
+    pub fn is_mutation(&self) -> bool {
+        true
+    }
+}
+
+/// The answer of a glossary operation.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GlossaryReceipt {
+    /// The scheme or term IRI the operation addressed.
+    pub iri: String,
+    /// The term's status after the operation, for term operations.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub status: Option<GlossaryTermStatus>,
+    /// Nodes written.
+    pub written: u64,
+}

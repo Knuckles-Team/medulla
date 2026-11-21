@@ -116,7 +116,64 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
     samples.extend(classification_claim_ops().into_iter().map(|(label, op)| {
         (label, Method::ClassificationClaim { op })
     }));
+    samples.extend(glossary_ops().into_iter().map(|(label, op)| {
+        (label, Method::Glossary { op: Box::new(op) })
+    }));
     samples
+}
+
+/// One valid `Glossary` op per op (MEDULLA-TYPED-PACKS-R801.3).
+fn glossary_ops() -> Vec<(
+    &'static str,
+    medulla_catalog_types::glossary::GlossaryOp,
+)> {
+    use medulla_catalog_types::glossary::{
+        GlossaryOp, GlossaryTerm, GlossaryTermEntry, GlossaryTermStatus, GlossaryTransition,
+    };
+    let term = GlossaryTerm {
+        scheme: "urn:scheme:finance".to_string(),
+        pref_label: "Revenue".to_string(),
+        alt_labels: vec!["Turnover".to_string()],
+        definition: "Income from sales.".to_string(),
+        broader: Vec::new(),
+        related: Vec::new(),
+        status: GlossaryTermStatus::Draft,
+        replaced_by: None,
+    };
+    vec![
+        (
+            "Glossary.put_scheme",
+            GlossaryOp::PutScheme {
+                scheme: "urn:scheme:finance".to_string(),
+                terms: vec![GlossaryTermEntry {
+                    iri: "urn:term:revenue".to_string(),
+                    term: term.clone(),
+                }],
+            },
+        ),
+        (
+            "Glossary.put_term",
+            GlossaryOp::PutTerm {
+                iri: "urn:term:revenue".to_string(),
+                term,
+            },
+        ),
+        (
+            "Glossary.transition",
+            GlossaryOp::Transition {
+                iri: "urn:term:revenue".to_string(),
+                event: GlossaryTransition::Submit,
+                change_request: None,
+            },
+        ),
+        (
+            "Glossary.bind",
+            GlossaryOp::Bind {
+                term: "urn:term:revenue".to_string(),
+                asset: "col:orders.total".to_string(),
+            },
+        ),
+    ]
 }
 
 /// One valid `ClassificationClaim` op per op (MEDULLA-TYPED-PACKS-R652.3).

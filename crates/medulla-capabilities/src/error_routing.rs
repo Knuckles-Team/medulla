@@ -1570,6 +1570,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &["TENANT_SCOPE_REQUIRED", "INCIDENT_NOT_FOUND"],
     ),
     (
+        "Glossary",
+        &["TENANT_SCOPE_REQUIRED"],
+    ),
+    (
         "ClassificationClaim",
         &[
             "TENANT_SCOPE_REQUIRED",

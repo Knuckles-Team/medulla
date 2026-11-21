@@ -278,6 +278,9 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         # MEDULLA-TYPED-PACKS-R652.3: the classification claim ops self-translate
         # into request-graph writes, like the quality rule write.
         "ClassificationClaim",
+        # MEDULLA-TYPED-PACKS-R801.3: the glossary ops self-translate into
+        # request-graph writes, like the classification claim ops.
+        "Glossary",
         "MeetingSummaryCommit",
         "MeetingSummaryContext",
         "MeetingTranscriptRevision",

@@ -461,6 +461,23 @@ async fn dispatch_catalog_admin_methods(
             })
             .await
         }
+        // MEDULLA-TYPED-PACKS-R801.3: the glossary ops commit through the graph gateway.
+        Method::Glossary { op } => {
+            dispatch_boxed(async {
+                medulla_server_graph::dispatch::glossary::dispatch_glossary(
+                    state,
+                    medulla_server_graph::dispatch::graph_client::GraphTarget {
+                        graph: &req.graph,
+                        req_id: req.id,
+                        caller: req.agent_id.as_deref(),
+                        verified: verified_context,
+                    },
+                    *op,
+                )
+                .await
+            })
+            .await
+        }
         Method::PublishSkillPackage { request } => {
             dispatch_boxed(async {
                 medulla_h_admin::admin::handle_publish_skill_package(
