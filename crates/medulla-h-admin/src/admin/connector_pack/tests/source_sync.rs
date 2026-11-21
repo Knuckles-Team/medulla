@@ -738,3 +738,81 @@ async fn report_lists_conflicts_with_both_digests() {
             && node["sourceDigest"] == json!(held_digest)
     }));
 }
+
+// spec: MEDULLA-SRC-AUTH-R012.9
+#[tokio::test]
+async fn two_way_sync_applies_proposes_and_records_conflicts() {
+    let h = Harness::new().await;
+    let base = model_records();
+
+    // Sync 1 writes the base of the three records.
+    let first = h.sync(APP, &base).await;
+    assert_eq!(first.unchanged, 3);
+    assert_eq!(h.nodes_of(SYNC_STATE_CLASS).await.len(), 3);
+
+    // The source renames `id-proc`; the graph renames `id-app`; both sides rename `id-cap`.
+    for (node, name) in [
+        ("archimate:id-model:id-app", "Billing (graph)"),
+        ("archimate:id-model:id-cap", "Invoicing (graph)"),
+    ] {
+        let changed: bool = ok(
+            "CompareAndSetNodeFields",
+            h.served
+                .call_on(
+                    GRAPH,
+                    &unique("graph-edit"),
+                    Method::CompareAndSetNodeFields {
+                        node_id: node.to_string(),
+                        conditions_msgpack: rmp_serde::to_vec_named(&json!({})).unwrap(),
+                        updates_msgpack: rmp_serde::to_vec_named(&json!({ "name": name }))
+                            .unwrap(),
+                    },
+                )
+                .await,
+        );
+        assert!(changed, "the graph edit of {node} applies");
+    }
+    let source = renamed(&base, "id-proc", "Order to cash (source)");
+    let source = renamed(&source, "id-cap", "Invoicing (source)");
+    let graph_cap = renamed(&base, "id-cap", "Invoicing (graph)");
+
+    let before = h.version().await;
+    let report = h.sync(APP, &source).await;
+    assert_eq!(
+        (report.unchanged, report.applied, report.proposed),
+        (0, 1, 2)
+    );
+    assert_eq!(report.conflicts.len(), 1);
+    let conflict = &report.conflicts[0];
+    assert_eq!(conflict.record_key, "id-cap");
+    assert_eq!(conflict.rule, "system_of_record_wins");
+    assert_eq!(
+        conflict.graph_digest.as_deref(),
+        Some(adapter().record_digest(&graph_cap[2]).as_str())
+    );
+    assert_eq!(
+        conflict.source_digest.as_deref(),
+        Some(adapter().record_digest(&source[2]).as_str())
+    );
+    let outbound: BTreeSet<&str> = report
+        .outbound
+        .iter()
+        .map(|draft| draft.record_key.as_str())
+        .collect();
+    assert_eq!(outbound, BTreeSet::from(["id-app", "id-cap"]));
+
+    let nodes = h.nodes().await;
+    assert_eq!(
+        nodes["archimate:id-model:id-proc"]["name"],
+        json!("Order to cash (source)")
+    );
+    assert_eq!(
+        nodes["archimate:id-model:id-app"]["name"],
+        json!("Billing (graph)")
+    );
+    assert_eq!(
+        nodes["archimate:id-model:id-cap"]["name"],
+        json!("Invoicing (graph)")
+    );
+    assert_eq!(h.version().await, before + 1, "one sync commits one batch");
+}
