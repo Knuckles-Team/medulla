@@ -2496,3 +2496,46 @@ async fn terminal_feedback_continuation_executes_nothing() {
     assert!(refused.contains("round_limit"), "{refused}");
     assert_eq!(executed(), 1, "the terminal continuation executed nothing");
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R082.6
+#[tokio::test(flavor = "multi_thread")]
+async fn terminal_stop_runs_no_later_retrieval() {
+    span_capture::install();
+    // A corpus revision no other test uses, so the span count is this test's alone.
+    const REVISION: &str = "corpus-r082-6-terminal-stop";
+    let executed = || {
+        span_capture::spans_with_field("medulla.retrieval.execute", "corpus_revision", REVISION)
+            .len()
+    };
+    let state = state();
+    seed(&state, 2).await;
+
+    // A calibrated round whose answer repeated with a margin above the threshold stops on
+    // repeat-with-margin; it retrieved once.
+    let repeated = stop_part(
+        calibration(&[2]),
+        vec![answer(1, "d", 0.6), answer(2, "d", 0.9)],
+    );
+    let mut stopping = stop_request(2, repeated.clone());
+    stopping.corpus_revision = REVISION.into();
+    let result = decode(round_as(&state, None, stopping).await);
+    let verdict = result.stop.expect("stop verdict");
+    assert!(verdict.stop && verdict.reason == StopReason::AnswerRepeatedMarginMet);
+    assert_eq!(executed(), 1, "the stopping round runs one retrieval");
+
+    // A continuation sent after the terminal verdict is refused, returns no result, and
+    // runs no retrieval: the count stays one.
+    let mut spent = repeated;
+    spent.usage.tokens_used = 5;
+    spent.limits.token_limit = Some(5);
+    let mut later = stop_request(4, spent);
+    later.corpus_revision = REVISION.into();
+    let response = round_as(&state, None, later).await;
+    assert!(response.result.is_none(), "a continuation after a stop has no result");
+    let refused = error_of(response);
+    assert!(
+        refused.starts_with("RETRIEVAL_BUDGET_EXCEEDED"),
+        "{refused}"
+    );
+    assert_eq!(executed(), 1, "no later retrieval ran after the terminal stop");
+}
