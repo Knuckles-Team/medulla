@@ -606,6 +606,64 @@ async fn run_admission_binds_verified_owner_and_replays_without_row_changes() {
     let _ = std::fs::remove_dir_all(dir);
 }
 
+/// Replay one run admission and a changed-`kind` retry, and check both against
+/// the original result.
+async fn assert_run_replay_and_conflict(
+    state: &test_support::SharedState,
+    original: &SubmitWorkItemResult,
+    first_id: u64,
+) {
+    let replay = test_support::dispatch(
+        state,
+        signed_run_request(first_id, run_submit_method(), "run-replay-key"),
+    )
+    .await;
+    let replay: SubmitWorkItemResult = decode_raw(&replay, "run admission replay");
+    assert!(replay.replayed, "the retry was not a replay");
+    assert_eq!(
+        SubmitWorkItemResult {
+            replayed: original.replayed,
+            ..replay
+        },
+        *original,
+        "the replay differs from the original result in more than `replayed`"
+    );
+    let mut changed = run_submit_method();
+    if let Method::SubmitWorkItem { request } = &mut changed {
+        request.kind = "changed-kind-same-key".into();
+    }
+    let refused = test_support::dispatch(
+        state,
+        signed_run_request(first_id + 1, changed, "run-replay-key"),
+    )
+    .await;
+    assert_eq!(
+        refused.error.as_deref(),
+        Some("IDEMPOTENCY_CONFLICT"),
+        "a changed kind under the same key: {refused:?}"
+    );
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R028.4.4
+#[tokio::test]
+async fn run_admission_replay_returns_the_original_result_and_conflicts_on_change() {
+    let (dir, concrete, state) = fresh_run_state("medulla-run-admission-replay").await;
+    let first = test_support::dispatch(
+        &state,
+        signed_run_request(501, run_submit_method(), "run-replay-key"),
+    )
+    .await;
+    let original: SubmitWorkItemResult = decode_raw(&first, "run admission");
+    assert!(original.created && !original.replayed);
+    assert_run_replay_and_conflict(&state, &original, 502).await;
+
+    let (reopened, restarted) = reopen_run_state(state, concrete, &dir).await;
+    assert_run_replay_and_conflict(&restarted, &original, 510).await;
+    drop(restarted);
+    reopened.shutdown();
+    let _ = std::fs::remove_dir_all(dir);
+}
+
 /// Claim a newly admitted run through its authenticated native request path.
 async fn claim_admitted_run(
     state: &test_support::SharedState,
