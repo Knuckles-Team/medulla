@@ -113,6 +113,13 @@ pub(super) async fn open_graph(
 }
 
 fn program_refusal(error: ProgramError) -> String {
+    // A match-index refusal carries its own code and leads the detail with it.
+    if let ProgramError::Invalid(detail) = &error {
+        let code = detail.split(':').next().unwrap_or_default();
+        if !code.is_empty() && code.bytes().all(|b| b.is_ascii_uppercase() || b == b'_') {
+            return refusal(StatisticalErrorCode::ParameterInvalid, detail);
+        }
+    }
     refusal(StatisticalErrorCode::ParameterInvalid, error)
 }
 

@@ -213,3 +213,143 @@ async fn commit_writes_vectors_and_lookup_reads_them() {
     assert_eq!(candidates.embedding_calls, 0);
     assert!(candidates.hits.is_empty());
 }
+
+async fn commit_phrased(
+    f: &Fixture,
+    run: &str,
+    phrasings: &[&str],
+    threshold: Option<i64>,
+) -> Result<RunRecordStored, String> {
+    let record = trace(run, RunOutcome::Succeeded, 3, "weekly");
+    let source = TraceSource {
+        graph: GRAPH.to_string(),
+        node_id: format!("trace:{run}"),
+    };
+    commit_op(
+        f,
+        DecisionLogOp::RunRecord {
+            tenant_id: TENANT.to_string(),
+            record: RunRecord::CompiledProgram {
+                trace: record,
+                policy: DecisionPolicyRef::Default,
+                source,
+                reusable: false,
+                plan_binding: None,
+                preplan_receipt: None,
+                phrasings: BoundedVec::new(
+                    phrasings
+                        .iter()
+                        .map(|text| ProgramPhrasing {
+                            text: (*text).to_string(),
+                        })
+                        .collect(),
+                )
+                .unwrap(),
+                match_threshold_micros: threshold,
+            },
+        },
+    )
+    .await
+}
+
+fn abstain_codes(batch: &DecisionBatch) -> Vec<String> {
+    match &batch.records.as_slice()[0].outcome {
+        StatisticalOutcome::Abstained { reasons } => reasons
+            .iter()
+            .map(|reason| match reason {
+                medulla_decision_types::decision::AbstainReason::Family { code, .. } => {
+                    code.as_str().to_string()
+                }
+                other => panic!("unexpected abstain reason {other:?}"),
+            })
+            .collect(),
+        other => panic!("an abstention, got {other:?}"),
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R135.16.4
+#[tokio::test]
+async fn each_match_refusal_names_its_code() {
+    let f = Fixture::new().await;
+    f.add_trace_node(&trace("run-r", RunOutcome::Succeeded, 3, "weekly"), "recorder")
+        .await;
+
+    // Commit refusals lead with their code, store no row and write no graph node.
+    for (phrasings, threshold, code) in [
+        (vec!["   "], None, "PHRASING_INVALID"),
+        (vec!["order {p9}"], None, "PHRASING_SLOT_UNKNOWN"),
+        (vec!["{p0} {p1}"], None, "PHRASING_SLOTS_ADJACENT"),
+        (vec!["a {p0}", "b {p1}"], None, "PHRASING_SLOTS_DIFFER"),
+        (vec!["a {p0}"], Some(499_999), "MATCH_THRESHOLD_OUT_OF_RANGE"),
+    ] {
+        let refused = commit_phrased(&f, "run-r", &phrasings, threshold)
+            .await
+            .unwrap_err();
+        assert!(refused.starts_with("PARAMETER_INVALID: "), "{refused}");
+        assert!(refused["PARAMETER_INVALID: ".len()..].starts_with(code), "{refused}");
+        assert_eq!(run_rows(&f.h), 0, "{code} stores nothing");
+        assert!(f.core.get_node_properties(&program_node_id("summarize-report")).is_none());
+    }
+    f.core
+        .semantic_store
+        .write()
+        .declare_space(
+            medulla_index_types::embedding::EmbeddingSpaceRef::pinned("other", "1", "aa", "bb", 8, true)
+                .unwrap(),
+        )
+        .unwrap();
+    let refused = commit_phrased(&f, "run-r", &["a {p0}"], None).await.unwrap_err();
+    assert!(refused.contains("PROGRAM_EMBEDDING_SPACE_MISMATCH"), "{refused}");
+    assert_eq!(run_rows(&f.h), 0);
+    assert!(f.core.get_node_properties(&program_node_id("summarize-report")).is_none());
+
+    // Lookup refusals.
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", TENANT);
+    let lookup = |request: DecideRequest| {
+        super::super::family::with_program_candidates(&f.h.state, f.h.store.as_ref(), &verified, request)
+    };
+    let long = with_text(lookup_request(&f.h, None), "x", &"a".repeat(4097));
+    assert!(lookup(long).await.unwrap_err().contains("REQUEST_TEXT_TOO_LONG"));
+    let mut no_graph = with_text(lookup_request(&f.h, None), "x", "text");
+    no_graph.params = BoundedVec::new(
+        no_graph
+            .params
+            .as_slice()
+            .iter()
+            .filter(|param| param.name != "program_graph")
+            .cloned()
+            .collect(),
+    )
+    .unwrap();
+    assert!(lookup(no_graph).await.unwrap_err().contains("PROGRAM_GRAPH_REQUIRED"));
+    let mut reserved = with_text(lookup_request(&f.h, None), "x", "text");
+    let mut params = reserved.params.as_slice().to_vec();
+    params.push(TypedParam {
+        name: "program_candidates".to_string(),
+        value: TypedValue::Text("{}".to_string()),
+    });
+    reserved.params = BoundedVec::new(params).unwrap();
+    assert!(lookup(reserved).await.unwrap_err().contains("PROGRAM_CANDIDATES_RESERVED"));
+
+    // The graph declares another space, so the lookup abstains with the cause; an unknown
+    // signature with no hit abstains NO_PROGRAM on a fresh graph.
+    let unavailable = decide(&f.h, with_text(lookup_request(&f.h, None), "x", "summarize")).await.unwrap();
+    assert_eq!(abstain_codes(&unavailable), ["PROGRAM_EMBEDDING_UNAVAILABLE"]);
+
+    let g = Fixture::new().await;
+    g.add_trace_node(&trace("run-r", RunOutcome::Succeeded, 3, "weekly"), "recorder")
+        .await;
+    let none = decide(&g.h, with_text(lookup_request(&g.h, None), "x", "summarize")).await.unwrap();
+    assert_eq!(abstain_codes(&none), ["NO_PROGRAM"]);
+    commit_phrased(&g, "run-r", &["summarize the {p0} report"], Some(1_000_000))
+        .await
+        .unwrap();
+    let below = decide(&g.h, with_text(lookup_request(&g.h, None), "x", "completely unrelated words here"))
+        .await
+        .unwrap();
+    assert_eq!(abstain_codes(&below), ["PROGRAM_BELOW_THRESHOLD"]);
+    let unbound = decide(&g.h, with_text(lookup_request(&g.h, None), "summarize-report", "unrelated"))
+        .await
+        .unwrap();
+    assert_eq!(abstain_codes(&unbound), ["PROGRAM_SLOTS_UNBOUND"]);
+}

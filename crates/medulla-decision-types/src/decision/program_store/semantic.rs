@@ -177,6 +177,24 @@ pub struct ProgramCandidates {
     pub unavailable: Option<String>,
 }
 
+/// Refusal code `PHRASING_INVALID` (MEDULLA-DECISION-ENGINE-R135.16.4).
+pub const PHRASING_INVALID: RefusalCode = RefusalCode::new("PHRASING_INVALID");
+/// Refusal code `PHRASING_SLOT_UNKNOWN` (MEDULLA-DECISION-ENGINE-R135.16.4).
+pub const PHRASING_SLOT_UNKNOWN: RefusalCode = RefusalCode::new("PHRASING_SLOT_UNKNOWN");
+/// Refusal code `PHRASING_SLOTS_ADJACENT` (MEDULLA-DECISION-ENGINE-R135.16.4).
+pub const PHRASING_SLOTS_ADJACENT: RefusalCode = RefusalCode::new("PHRASING_SLOTS_ADJACENT");
+/// Refusal code `PHRASING_SLOTS_DIFFER` (MEDULLA-DECISION-ENGINE-R135.16.4).
+pub const PHRASING_SLOTS_DIFFER: RefusalCode = RefusalCode::new("PHRASING_SLOTS_DIFFER");
+/// Refusal code `MATCH_THRESHOLD_OUT_OF_RANGE` (MEDULLA-DECISION-ENGINE-R135.16.4).
+pub const MATCH_THRESHOLD_OUT_OF_RANGE: RefusalCode = RefusalCode::new("MATCH_THRESHOLD_OUT_OF_RANGE");
+/// Refusal code `PROGRAM_EMBEDDING_SPACE_MISMATCH` (MEDULLA-DECISION-ENGINE-R135.16.4).
+pub const PROGRAM_EMBEDDING_SPACE_MISMATCH: RefusalCode = RefusalCode::new("PROGRAM_EMBEDDING_SPACE_MISMATCH");
+/// Refusal code `REQUEST_TEXT_TOO_LONG` (MEDULLA-DECISION-ENGINE-R135.16.4).
+pub const REQUEST_TEXT_TOO_LONG: RefusalCode = RefusalCode::new("REQUEST_TEXT_TOO_LONG");
+/// Refusal code `PROGRAM_GRAPH_REQUIRED` (MEDULLA-DECISION-ENGINE-R135.16.4).
+pub const PROGRAM_GRAPH_REQUIRED: RefusalCode = RefusalCode::new("PROGRAM_GRAPH_REQUIRED");
+/// Refusal code `PROGRAM_CANDIDATES_RESERVED` (MEDULLA-DECISION-ENGINE-R135.16.4).
+pub const PROGRAM_CANDIDATES_RESERVED: RefusalCode = RefusalCode::new("PROGRAM_CANDIDATES_RESERVED");
 /// Abstain reason: the best score is below the program's threshold.
 pub const PROGRAM_BELOW_THRESHOLD: RefusalCode = RefusalCode::new("PROGRAM_BELOW_THRESHOLD");
 /// Abstain reason: no phrasing fits the request text, or a capture does not convert.
@@ -189,6 +207,15 @@ pub const PROGRAM_EMBEDDING_UNAVAILABLE: RefusalCode =
 
 /// Every abstain code of the semantic lookup, joined to `program_store::REFUSALS`.
 pub const MATCH_REFUSALS: &[RefusalCode] = &[
+    PHRASING_INVALID,
+    PHRASING_SLOT_UNKNOWN,
+    PHRASING_SLOTS_ADJACENT,
+    PHRASING_SLOTS_DIFFER,
+    MATCH_THRESHOLD_OUT_OF_RANGE,
+    PROGRAM_EMBEDDING_SPACE_MISMATCH,
+    REQUEST_TEXT_TOO_LONG,
+    PROGRAM_GRAPH_REQUIRED,
+    PROGRAM_CANDIDATES_RESERVED,
     PROGRAM_BELOW_THRESHOLD,
     PROGRAM_SLOTS_UNBOUND,
     PROGRAM_NOT_EXECUTABLE,
