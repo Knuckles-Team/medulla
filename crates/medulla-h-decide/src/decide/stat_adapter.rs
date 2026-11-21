@@ -11,7 +11,7 @@
 //! audited event, and rollback returns to the adapter active before.
 
 use medulla_decision_stats::decision::adapter::{
-    evaluate_for, fit_for, fit_scoped, is_held_out, monitor_adapter_for, wilson_upper,
+    evaluate_for, feedback_labels, fit_for, FeedbackLabel, fit_scoped, is_held_out, monitor_adapter_for, wilson_upper,
     MonitorVerdict, ScopedFitError, ScopedFitParams, ScopedItem,
 };
 use medulla_decision_stats::{
@@ -19,6 +19,9 @@ use medulla_decision_stats::{
     decision::adapter::JudgedItem,
 };
 use medulla_decision_stats::{decision::retrieval::hard_negatives, decision::retrieval::Verdict};
+use medulla_decision_types::decision::statistical::feedback::{
+    FeedbackEvent, StoredFeedback, FEEDBACK_PREFIX,
+};
 use medulla_decision_types::decision::statistical::retrieval::RetrievalOutcome;
 use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
 use medulla_decision_types::decision::statistical::run_credit::RunCreditReceipt;
@@ -85,20 +88,56 @@ fn query_of(outcome: &RetrievalOutcome, space: &str) -> Option<Vec<f64>> {
 }
 
 /// The judged item of one successful run, when both sides have vectors.
+/// `labels` are the feedback labels of this run's evidence units
+/// (MEDULLA-DECISION-ENGINE-R100.1.2): positives are the cited ids plus the
+/// `Ok`-labelled ids, negatives are the hard negatives plus the
+/// negative-labelled ids, minus the positives.
 fn judged_item(
     outcome: &RetrievalOutcome,
     space: &str,
     vectors: &GraphVectors,
+    labels: &BTreeMap<String, FeedbackLabel>,
 ) -> Option<JudgedItem> {
+    // Order-preserving: the cited and hard-negative ids keep their run order,
+    // feedback-labelled ids follow in id order.
+    let mut positives: Vec<String> = outcome.cited.iter().cloned().collect();
+    let mut negatives: Vec<String> = hard_negatives(outcome)
+        .into_iter()
+        .map(|n| n.evidence_id)
+        .collect();
+    for (evidence_id, label) in labels {
+        let side = match label {
+            FeedbackLabel::Positive => &mut positives,
+            FeedbackLabel::HardNegative => &mut negatives,
+        };
+        if !side.contains(evidence_id) {
+            side.push(evidence_id.clone());
+        }
+    }
+    negatives.retain(|id| !positives.contains(id));
     let item = JudgedItem {
         query: query_of(outcome, space)?,
-        positives: vectors.vectors(outcome.cited.iter().cloned()),
-        negatives: vectors.vectors(hard_negatives(outcome).into_iter().map(|n| n.evidence_id)),
+        positives: vectors.vectors(positives.into_iter()),
+        negatives: vectors.vectors(negatives.into_iter()),
     };
     (!item.positives.is_empty() && !item.negatives.is_empty()).then_some(item)
 }
 
-fn held_out(record_id: &str, per_mille: u16) -> bool {
+/// Every stored feedback event of `tenant`, in key order.
+fn feedback_events(store: &AgentLibraryStore, tenant: &str) -> Result<Vec<FeedbackEvent>, String> {
+    store
+        .decision_artifacts_with_prefix(tenant, FEEDBACK_PREFIX, MAX_FEEDBACK_ROWS)?
+        .iter()
+        .map(|(_, bytes)| {
+            decode_artifact::<StoredFeedback>(bytes, "feedback event").map(|row| row.event)
+        })
+        .collect()
+}
+
+/// Most stored feedback events one fit reads.
+const MAX_FEEDBACK_ROWS: usize = 100_000;
+
+pub(super) fn held_out(record_id: &str, per_mille: u16) -> bool {
     let digest = digest_text(HOLDOUT_DOMAIN, &record_id);
     let hex = digest.trim_start_matches("sha256:");
     let bucket = u32::from_str_radix(hex.get(..4).unwrap_or("0"), 16).unwrap_or(0) % 1000;
@@ -119,18 +158,35 @@ fn split_items(
         window: request.window,
     };
     let mut split: Split = (Vec::new(), Vec::new(), Vec::new());
+    // Feedback events of the reader's tenant only, joined to the runs below by
+    // record id.
+    let events = feedback_events(store, &reader.tenant_id)?;
+    let labelled = feedback_labels(&events);
     for judged in judged_outcomes(store, reader, scope)? {
         if judged.verdict != Verdict::Success {
             continue;
         }
         let outcome = &judged.stored.outcome;
-        let Some(item) = judged_item(outcome, &request.space_digest, vectors) else {
+        let labels: BTreeMap<String, FeedbackLabel> = labelled
+            .iter()
+            .filter(|((record, _), _)| *record == outcome.record_id)
+            .map(|((_, evidence), label)| (evidence.clone(), *label))
+            .collect();
+        let Some(item) = judged_item(outcome, &request.space_digest, vectors, &labels) else {
             continue;
         };
         if held_out(&outcome.record_id, request.holdout_per_mille) {
             split.2.push(item);
         } else {
             split.0.push(outcome.record_id.clone());
+            // Each feedback event on a training run adds its own training id,
+            // so the training digest binds the example set.
+            split.0.extend(
+                events
+                    .iter()
+                    .filter(|event| event.record_id == outcome.record_id)
+                    .map(|event| format!("feedback:{}:{}", event.event_id, event.source_revision)),
+            );
             split.1.push(item);
         }
     }
@@ -268,7 +324,9 @@ fn scoped_split(
         if !in_scope(outcome, &request.scope) || !(from_retrieval || from_run) {
             continue;
         }
-        let Some(item) = judged_item(outcome, &request.space_digest, vectors) else {
+        let Some(item) =
+            judged_item(outcome, &request.space_digest, vectors, &BTreeMap::new())
+        else {
             continue;
         };
         if from_retrieval {
@@ -551,7 +609,14 @@ pub(super) fn monitor(
     let items: Vec<JudgedItem> = judged_outcomes(ctx.store, reader, scope)?
         .iter()
         .filter(|j| j.verdict == Verdict::Success && in_scope(&j.stored.outcome, &request.scope))
-        .filter_map(|j| judged_item(&j.stored.outcome, &fitted.body.space_digest, vectors))
+        .filter_map(|j| {
+            judged_item(
+                &j.stored.outcome,
+                &fitted.body.space_digest,
+                vectors,
+                &BTreeMap::new(),
+            )
+        })
         .collect();
     let directions = directions_of(&fitted.body);
     let min_outcomes = medulla_server_api::knob_config::knobs().adapter_monitor_min_outcomes;

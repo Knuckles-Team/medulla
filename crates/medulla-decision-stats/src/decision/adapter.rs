@@ -19,7 +19,9 @@ use medulla_decision_types::{
     decision::statistical::retrieval_adapter::QUERY_ADAPTER_SCHEMA_VERSION,
     decision::statistical::retrieval_adapter::UNIT_SCALE_BITS,
 };
+use medulla_decision_types::decision::statistical::feedback::{FeedbackEvent, FeedbackOutcome};
 use medulla_types::contract::BoundedVec;
+use std::collections::BTreeMap;
 
 /// Power-iteration steps per direction.
 const POWER_STEPS: usize = 64;
@@ -30,6 +32,50 @@ const GAIN_GRID: [f64; 7] = [0.0, 0.25, -0.25, 0.5, -0.5, 1.0, -1.0];
 /// The two-sided 95% normal quantile of the Wilson bound.
 const WILSON_Z: f64 = 1.959_963_984_540_054;
 const Q16: f64 = 65_536.0;
+
+/// The training label a feedback event gives one evidence unit
+/// (MEDULLA-DECISION-ENGINE-R100.1.2).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FeedbackLabel {
+    /// The unit helped: outcome `Ok`.
+    Positive,
+    /// The unit did not help: outcome `Error` or `Correction`.
+    HardNegative,
+}
+
+/// The label of every `(record id, evidence id)` the `events` name. Outcome `Ok`
+/// labels positive; `Error` and `Correction` label hard-negative. For one
+/// record and evidence id the label with the latest `event_time_ms` wins, and a
+/// tie goes to the hard-negative label. The result does not depend on the
+/// order of `events`.
+pub fn feedback_labels(events: &[FeedbackEvent]) -> BTreeMap<(String, String), FeedbackLabel> {
+    let mut latest: BTreeMap<(String, String), (u64, FeedbackLabel)> = BTreeMap::new();
+    for event in events {
+        let label = match event.outcome {
+            FeedbackOutcome::Ok => FeedbackLabel::Positive,
+            FeedbackOutcome::Error | FeedbackOutcome::Correction => FeedbackLabel::HardNegative,
+        };
+        for evidence_id in event.evidence_ids.iter() {
+            let key = (event.record_id.clone(), evidence_id.clone());
+            let candidate = (event.event_time_ms, label);
+            latest
+                .entry(key)
+                .and_modify(|held| {
+                    let newer = candidate.0 > held.0;
+                    let tie_to_negative = candidate.0 == held.0
+                        && candidate.1 == FeedbackLabel::HardNegative;
+                    if newer || tie_to_negative {
+                        *held = candidate;
+                    }
+                })
+                .or_insert(candidate);
+        }
+    }
+    latest
+        .into_iter()
+        .map(|(key, (_, label))| (key, label))
+        .collect()
+}
 
 /// One judged retrieval: its query and the stored vectors of what the answer
 /// cited (`positives`) and passed over while ranking it higher (`negatives`).
@@ -832,6 +878,65 @@ pub fn resolve_scope<'a, T>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_decision_types::decision::statistical::feedback::FEEDBACK_SCHEMA_VERSION;
+
+    fn event(
+        id: &str,
+        outcome: FeedbackOutcome,
+        evidence: &[&str],
+        event_time_ms: u64,
+    ) -> FeedbackEvent {
+        FeedbackEvent {
+            schema_version: FEEDBACK_SCHEMA_VERSION,
+            event_id: id.to_string(),
+            source_revision: 1,
+            record_id: "rec-1".to_string(),
+            record_digest: "a".repeat(64),
+            option_id: "plan".to_string(),
+            actor_id: "user".to_string(),
+            outcome,
+            evidence_ids: BoundedVec::new(evidence.iter().map(|e| e.to_string()).collect())
+                .unwrap(),
+            evidence_digests: BoundedVec::new(evidence.iter().map(|_| "b".repeat(64)).collect())
+                .unwrap(),
+            event_time_ms,
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R100.1.2
+    #[test]
+    fn latest_feedback_label_wins_and_ties_go_negative() {
+        let key = |evidence: &str| ("rec-1".to_string(), evidence.to_string());
+        // Ok maps positive; Error and Correction map hard-negative.
+        let labels = feedback_labels(&[
+            event("a", FeedbackOutcome::Ok, &["u1"], 1),
+            event("b", FeedbackOutcome::Error, &["u2"], 1),
+            event("c", FeedbackOutcome::Correction, &["u3"], 1),
+        ]);
+        assert_eq!(labels[&key("u1")], FeedbackLabel::Positive);
+        assert_eq!(labels[&key("u2")], FeedbackLabel::HardNegative);
+        assert_eq!(labels[&key("u3")], FeedbackLabel::HardNegative);
+
+        // The latest event wins, in either input order.
+        let early_bad = event("a", FeedbackOutcome::Error, &["u1"], 5);
+        let late_good = event("b", FeedbackOutcome::Ok, &["u1"], 9);
+        for events in [
+            vec![early_bad.clone(), late_good.clone()],
+            vec![late_good.clone(), early_bad.clone()],
+        ] {
+            assert_eq!(feedback_labels(&events)[&key("u1")], FeedbackLabel::Positive);
+        }
+
+        // A tie goes to the hard-negative label, in either input order.
+        let good = event("a", FeedbackOutcome::Ok, &["u1"], 7);
+        let bad = event("b", FeedbackOutcome::Correction, &["u1"], 7);
+        for events in [vec![good.clone(), bad.clone()], vec![bad, good]] {
+            assert_eq!(
+                feedback_labels(&events)[&key("u1")],
+                FeedbackLabel::HardNegative
+            );
+        }
+    }
 
     /// Cited units lie along axis 1, the negatives the query prefers along
     /// axis 0: the base query ranks the negative first.

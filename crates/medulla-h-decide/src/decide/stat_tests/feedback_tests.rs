@@ -141,3 +141,111 @@ async fn feedback_event_joins_once_and_refuses_incomplete_joins() {
     assert!(response.error.is_some(), "{response:?}");
     assert_eq!(rows(&h, "tenant-other"), 0);
 }
+
+// ---- MEDULLA-DECISION-ENGINE-R100.1.2: feedback labels reach the adapter fit ----
+
+use super::learning_tests::{embedded_graph, fit_request, judged_runs};
+use medulla_decision_types::decision::statistical::feedback::{feedback_key, StoredFeedback};
+use medulla_decision_types::decision::statistical::retrieval_adapter::AdapterFitted;
+use medulla_persistence_records::decision_jobs::encode_artifact;
+
+async fn fit(h: &Harness, space: &str) -> AdapterFitted {
+    let write = LearningWrite::FitAdapter {
+        request: Box::new(fit_request(space)),
+    };
+    match learn(h, "decider", write).await.expect("the fit answers") {
+        LearningRecorded::Fitted(fitted) => *fitted,
+        other => panic!("fit: {other:?}"),
+    }
+}
+
+fn labelled_event(
+    digest: &str,
+    record: &str,
+    id: &str,
+    outcome: FeedbackOutcome,
+    evidence: &str,
+) -> FeedbackEvent {
+    let mut labelled = event(digest, record, 1);
+    labelled.event_id = id.to_string();
+    labelled.outcome = outcome;
+    labelled.evidence_ids = BoundedVec::new(vec![evidence.to_string()]).unwrap();
+    labelled.evidence_digests = BoundedVec::new(vec!["b".repeat(64)]).unwrap();
+    labelled
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R100.1.2
+#[tokio::test]
+async fn feedback_labels_reach_the_adapter_fit() {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let core = embedded_graph(&h).await;
+    let space = core.semantic_store.read().space().unwrap().digest.clone();
+    let digest = judged_runs(&h, &space).await;
+    let before = fit(&h, &space).await;
+
+    // Two runs that train the fit (not held out): one `Ok`, one `Error` event.
+    let training: Vec<usize> = (0..40)
+        .filter(|i| !super::super::stat_adapter::held_out(&format!("rec-{i:02}"), 300))
+        .take(2)
+        .collect();
+    let (good, bad) = (training[0], training[1]);
+    let ok = labelled_event(
+        &digest,
+        &format!("rec-{good:02}"),
+        "fb-ok",
+        FeedbackOutcome::Ok,
+        &format!("p{good}"),
+    );
+    let error = labelled_event(
+        &digest,
+        &format!("rec-{bad:02}"),
+        "fb-error",
+        FeedbackOutcome::Error,
+        &format!("n{bad}"),
+    );
+    send(&h, ok.clone()).await.unwrap();
+    send(&h, error.clone()).await.unwrap();
+
+    let after = fit(&h, &space).await;
+    assert_ne!(
+        before.receipt.training_digest, after.receipt.training_digest,
+        "the feedback ids bind the training set"
+    );
+    assert_eq!(
+        after.receipt.n_training,
+        before.receipt.n_training + 2,
+        "each feedback event adds one training id"
+    );
+
+    // An equal event replay adds nothing: the fit is unchanged.
+    send(&h, ok).await.unwrap();
+    send(&h, error).await.unwrap();
+    let replayed = fit(&h, &space).await;
+    assert_eq!(after.receipt.training_digest, replayed.receipt.training_digest);
+    assert_eq!(after.receipt.n_training, replayed.receipt.n_training);
+
+    // Another tenant's feedback row is never read.
+    let foreign = StoredFeedback {
+        event: labelled_event(
+            &digest,
+            &format!("rec-{good:02}"),
+            "fb-foreign",
+            FeedbackOutcome::Error,
+            &format!("p{good}"),
+        ),
+        producer: "decider".to_string(),
+        recorded_at_ms: 1,
+        premises: Vec::new(),
+    };
+    h.store
+        .put_decision_artifacts(
+            "tenant-other",
+            &[(
+                feedback_key("fb-foreign", 1),
+                encode_artifact(&foreign).unwrap(),
+            )],
+        )
+        .unwrap();
+    let unchanged = fit(&h, &space).await;
+    assert_eq!(after.receipt.training_digest, unchanged.receipt.training_digest);
+}

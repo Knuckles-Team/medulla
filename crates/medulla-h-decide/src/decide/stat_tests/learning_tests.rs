@@ -119,8 +119,15 @@ pub(super) fn q16(values: &[f64]) -> BoundedVec<i32, 4096> {
     .unwrap()
 }
 
-pub(super) async fn judged_runs(h: &Harness, space: &str) {
+/// Forty judged runs; returns the hex record digest their sealed records share.
+pub(super) async fn judged_runs(h: &Harness, space: &str) -> String {
     let template_entry = executed_template(h).await;
+    let digest = template_entry
+        .record
+        .record_digest
+        .strip_prefix("sha256:")
+        .unwrap_or(&template_entry.record.record_digest)
+        .to_string();
     for i in 0..40 {
         let record_id = format!("rec-{i:02}");
         clone_executed(h, &template_entry, &record_id);
@@ -134,6 +141,7 @@ pub(super) async fn judged_runs(h: &Harness, space: &str) {
         assert!(recorded.is_ok(), "{recorded:?}");
         evaluate_by(h, "evaluator", &record_id, true).await;
     }
+    digest
 }
 
 pub(super) fn fit_request(space: &str) -> AdapterFitRequest {
