@@ -62,7 +62,7 @@ LEGACY_PROTOCOL_DEFAULT_HELPERS = (
 # conflate an omitted field with an explicit null.
 REQUIRED_PROTOCOL_FIELDS: dict[str, tuple[str, ...]] = {
     "CreateNodeIfAbsent": ("node_id", "properties_msgpack"),
-    "BrokerAckTag": ("delivery_tag", "consumer"),
+    "BrokerAckTag": ("delivery_tag", "consumer", "now_ms"),
     "BrokerNackTag": ("delivery_tag", "consumer", "requeue", "now_ms"),
     "BrokerRenewTag": ("delivery_tag", "consumer", "now_ms", "lease_ms"),
     "DecaySweep": ("half_life_secs", "floor", "prune"),

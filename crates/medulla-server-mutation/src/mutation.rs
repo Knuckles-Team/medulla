@@ -607,6 +607,7 @@ mod tests {
             Method::BrokerAckTag {
                 delivery_tag: 0,
                 consumer: "c".into(),
+                now_ms: 0,
             },
             #[cfg(feature = "broker")]
             Method::BrokerNackTag {

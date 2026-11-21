@@ -304,6 +304,19 @@ pub fn broker_ack(
     consumer: &str,
     now_ms: u64,
 ) -> Result<bool, TransitionRefused> {
+    ack_message(core, node_id, consumer, now_ms, true)
+}
+
+/// The one ack route behind [`broker_ack`] and [`broker_ack_tag`]. `retire_tag_lookup` drops the
+/// message's delivery-tag lookup node on the first ack (by id); the tag path keeps it until the
+/// purge so a repeated tag ack by the owner still resolves.
+fn ack_message(
+    core: &GraphCore,
+    node_id: &str,
+    consumer: &str,
+    now_ms: u64,
+    retire_tag_lookup: bool,
+) -> Result<bool, TransitionRefused> {
     let Some(blob) = core.get_node_properties(node_id) else {
         return Ok(false);
     };
@@ -327,8 +340,10 @@ pub fn broker_ack(
     }
     // MEDULLA-284: drop the message's delivery-tag reverse-lookup node (if it was
     // consumed via the tag path) so ack-by-id and ack-by-tag never leak it.
-    if let Some(tag) = obj.get("delivery_tag").and_then(|v| v.as_i64()) {
-        core.remove_node(dtag_lookup_node_id(tag));
+    if retire_tag_lookup {
+        if let Some(tag) = obj.get("delivery_tag").and_then(|v| v.as_i64()) {
+            core.remove_node(dtag_lookup_node_id(tag));
+        }
     }
     // B02: keep the node as `Acked`; the lease ends and the ack time is recorded.
     let mut updates = serde_json::Map::new();
@@ -857,10 +872,20 @@ pub fn publish_confirmed(
 
 /// Acknowledge a claimed message by its consumer `delivery_tag` (CONCEPT:
 /// MEDULLA-284) — the tag-addressed sibling of [`broker_ack`], for a consumer that tracks
-/// tags instead of node ids. The caller must name the current owner; status, tag,
-/// and owner are fenced atomically before either lookup or message is removed.
-pub fn broker_ack_tag(core: &GraphCore, delivery_tag: i64, consumer: &str) -> bool {
-    core.broker_ack_delivery_tag(delivery_tag, consumer)
+/// tags instead of node ids. The caller must name the current owner: an absent, stale or
+/// foreign-owned tag answers `Ok(false)`. The tag resolves to its message and the ack then takes
+/// the same route as [`broker_ack`] (`MessageState::apply` with the claimant and live-lease
+/// guards at `now_ms`), so an expired lease answers `TRANSITION_REFUSED` by tag exactly as by id.
+pub fn broker_ack_tag(
+    core: &GraphCore,
+    delivery_tag: i64,
+    consumer: &str,
+    now_ms: u64,
+) -> Result<bool, TransitionRefused> {
+    let Some(node_id) = core.broker_resolve_ack_tag(delivery_tag, consumer) else {
+        return Ok(false);
+    };
+    ack_message(core, &node_id, consumer, now_ms, false)
 }
 
 /// Renew a current delivery tag's live visibility lease for its owning consumer.
@@ -1738,12 +1763,12 @@ mod tests {
         let tag = p.get("delivery_tag").and_then(|v| v.as_i64()).unwrap();
         assert_eq!(tag, 1);
         // Ack BY TAG keeps the message as acked, with its reverse-lookup node, until the purge.
-        assert!(broker_ack_tag(&core, tag, "c"));
+        assert_eq!(broker_ack_tag(&core, tag, "c", 1), Ok(true));
         assert!(core.has_node(&id));
         assert!(core.has_node(&dtag_lookup_node_id(tag)));
         // A second ack of the same tag by the owner answers true and writes nothing.
-        assert!(broker_ack_tag(&core, tag, "c"));
-        assert!(!broker_ack_tag(&core, tag, "other"));
+        assert_eq!(broker_ack_tag(&core, tag, "c", 2), Ok(true));
+        assert_eq!(broker_ack_tag(&core, tag, "other", 2), Ok(false));
     }
 
     #[test]
@@ -1762,7 +1787,7 @@ mod tests {
         let tag2 = p2.get("delivery_tag").and_then(|v| v.as_i64()).unwrap();
         assert_eq!(tag2, 2, "a fresh delivery-tag is issued on re-claim");
         // Ack the redelivery to finish.
-        assert!(broker_ack_tag(&core, tag2, "c"));
+        assert_eq!(broker_ack_tag(&core, tag2, "c", 2), Ok(true));
         assert!(broker_consume(&core, "q", "g", "c", 3, 0, 0).is_none());
     }
 
@@ -1800,7 +1825,7 @@ mod tests {
         assert!(stale_tag > 0 && current_tag > stale_tag);
         assert!(!core.has_node(&dtag_lookup_node_id(stale_tag)));
 
-        assert!(!broker_ack_tag(&core, stale_tag, "consumer-a"));
+        assert_eq!(broker_ack_tag(&core, stale_tag, "consumer-a", 112), Ok(false));
         assert_eq!(
             broker_nack_tag(&core, stale_tag, "consumer-a", true, 112),
             "absent"
@@ -1818,9 +1843,9 @@ mod tests {
             Some(current_tag)
         );
 
-        assert!(!broker_ack_tag(&core, current_tag, "consumer-a"));
+        assert_eq!(broker_ack_tag(&core, current_tag, "consumer-a", 112), Ok(false));
         assert!(core.has_node(&dtag_lookup_node_id(current_tag)));
-        assert!(broker_ack_tag(&core, current_tag, "consumer-b"));
+        assert_eq!(broker_ack_tag(&core, current_tag, "consumer-b", 112), Ok(true));
     }
 
     #[test]
@@ -1851,7 +1876,7 @@ mod tests {
         assert!(!broker_renew_tag(&core, tag, "consumer-a", 1_250, 200));
         assert!(core.has_node(&node_id));
         assert!(core.has_node(&dtag_lookup_node_id(tag)));
-        assert!(broker_ack_tag(&core, tag, "consumer-a"));
+        assert_eq!(broker_ack_tag(&core, tag, "consumer-a", 1_100), Ok(true));
     }
 
     #[test]
@@ -1873,7 +1898,7 @@ mod tests {
         assert!(core.has_node(&dtag_lookup_node_id(tag)));
         assert!(!broker_renew_tag(&core, tag, "consumer-a", 2_000, 100));
         assert!(core.has_node(&dtag_lookup_node_id(tag)));
-        assert!(broker_ack_tag(&core, tag, "consumer-a"));
+        assert_eq!(broker_ack_tag(&core, tag, "consumer-a", 1_100), Ok(true));
     }
 
     // ══════════════════════════════════════════════════════════════════════

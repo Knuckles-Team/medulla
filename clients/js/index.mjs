@@ -625,8 +625,8 @@ export class MedullaThinClient {
   brokerReject(queue, node_id, { requeue, nowMs }) {
     return this._send("BrokerReject", { queue, node_id, requeue, now_ms: nowMs });
   }
-  brokerAckTag(delivery_tag, { consumer }) {
-    return this._send("BrokerAckTag", { delivery_tag, consumer });
+  brokerAckTag(delivery_tag, { consumer, nowMs }) {
+    return this._send("BrokerAckTag", { delivery_tag, consumer, now_ms: nowMs });
   }
   brokerNackTag(delivery_tag, { consumer, requeue, nowMs }) {
     return this._send("BrokerNackTag", { delivery_tag, consumer, requeue, now_ms: nowMs });

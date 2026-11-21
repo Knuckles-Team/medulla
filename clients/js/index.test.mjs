@@ -110,7 +110,7 @@ test("tag operations carry the current owner and explicit clock", async () => {
     return Promise.resolve(true);
   };
 
-  await client.brokerAckTag(7, { consumer: "worker:a" });
+  await client.brokerAckTag(7, { consumer: "worker:a", nowMs: 1_000 });
   await client.brokerNackTag(8, {
     consumer: "worker:b",
     requeue: true,
@@ -123,7 +123,7 @@ test("tag operations carry the current owner and explicit clock", async () => {
   });
 
   assert.deepEqual(sent, [
-    ["BrokerAckTag", { delivery_tag: 7, consumer: "worker:a" }],
+    ["BrokerAckTag", { delivery_tag: 7, consumer: "worker:a", now_ms: 1_000 }],
     [
       "BrokerNackTag",
       {

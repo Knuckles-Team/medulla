@@ -477,10 +477,13 @@ async fn try_handle_tag_confirmations(
         Method::BrokerAckTag {
             delivery_tag,
             consumer,
+            now_ms,
         } => {
-            let (delivery_tag, consumer) = (*delivery_tag, consumer.clone());
+            let (delivery_tag, consumer, now_ms) = (*delivery_tag, consumer.clone(), *now_ms);
             commit_gateway(ctx, plan, method, move |core| {
-                let existed = medulla_core::broker::broker_ack_tag(core, delivery_tag, &consumer);
+                let existed =
+                    medulla_core::broker::broker_ack_tag(core, delivery_tag, &consumer, now_ms)
+                        .map_err(|refused| refused.to_string())?;
                 Ok(ResultPayload::scalar::<results::BrokerAckTag>(existed))
             })
             .await

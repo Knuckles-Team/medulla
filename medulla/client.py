@@ -15281,13 +15281,19 @@ class BrokerClient:
             },
         )
 
-    async def ack_tag(self, delivery_tag: int, *, consumer: str) -> bool:
+    async def ack_tag(self, delivery_tag: int, *, consumer: str, now_ms: int) -> bool:
         """Acknowledge a claimed message by its consumer ``delivery_tag`` (MEDULLA-284)
-        — the
-        tag-addressed sibling of :meth:`ack`. Status, tag, and current owner are
-        fenced atomically; stale or foreign deliveries return ``False``."""
+        — the tag-addressed sibling of :meth:`ack`. Status, tag, and current owner are
+        fenced atomically; stale or foreign deliveries return ``False``. The ack takes
+        the same lease check as :meth:`ack` at ``now_ms``: a lapsed lease answers
+        ``TRANSITION_REFUSED``."""
         return await _gen.messaging.send_broker_ack_tag(
-            self._client, {"delivery_tag": int(delivery_tag), "consumer": consumer}
+            self._client,
+            {
+                "delivery_tag": int(delivery_tag),
+                "consumer": consumer,
+                "now_ms": int(now_ms),
+            },
         )
 
     async def nack_tag(
@@ -15580,12 +15586,12 @@ class JobsClient:
     Every method returns the durable ``AnalyticsJob`` record as a dict (``job_id``,
     ``input_snapshot``, ``algo``, ``policy``, ``state``, …).
     ``state`` mirrors the Rust ``JobState`` enum's own externally-tagged shape:
-    the bare string ``"Submitted"`` for that one unit variant, or
+    a dict with one key, the state name: ``{"Submitted": {"checkpoint": ...}}`` (the
+    checkpoint of a reclaimed attempt, else ``None``),
     ``{"Running": {"lease": ..., "checkpoint": ...}}`` / ``{"Succeeded": {"result_ref",
     "checkpoint"}}``
-    / ``{"Failed": {"reason", "checkpoint"}}`` / ``{"Cancelled": {"checkpoint"}}`` for
-    the rest — check ``isinstance(state, str)`` first, else take the dict's one key
-    as the state name. Authenticated standalone executors use the fenced
+    / ``{"Failed": {"reason", "checkpoint"}}`` / ``{"Cancelled": {"checkpoint"}}`` and
+    so on — take the dict's one key as the state name. Authenticated standalone executors use the fenced
     ``worker_*`` methods below; they never open ``jobs.redb`` directly. Durable jobs
     are included in the mandatory main build.
     """

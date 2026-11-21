@@ -56,7 +56,7 @@ async def test_tag_operations_always_carry_owner_and_explicit_clock() -> None:
     fake = _FakeClient()
     broker = BrokerClient(fake)
 
-    assert await broker.ack_tag(7, consumer="worker-a") is False
+    assert await broker.ack_tag(7, consumer="worker-a", now_ms=1_000) is False
     assert (
         await broker.nack_tag(8, consumer="worker-b", requeue=True, now_ms=1_000)
         == "absent"
@@ -66,7 +66,10 @@ async def test_tag_operations_always_carry_owner_and_explicit_clock() -> None:
         is True
     )
     assert fake.sent == [
-        ("BrokerAckTag", {"delivery_tag": 7, "consumer": "worker-a"}),
+        (
+            "BrokerAckTag",
+            {"delivery_tag": 7, "consumer": "worker-a", "now_ms": 1_000},
+        ),
         (
             "BrokerNackTag",
             {

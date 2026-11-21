@@ -177,14 +177,17 @@ $($variants)*
         now_ms: Option<u64>,
     },
 
-    /// Acknowledge (remove) a claimed message by its positive `delivery_tag`
+    /// Acknowledge a claimed message by its positive `delivery_tag`
     /// (CONCEPT:MEDULLA-KG.compute.publisher-confirms-consumer-qos). The caller must name the claiming `consumer`; the
-    /// status, current tag, and owner are fenced atomically. Returns `Bool(false)`
-    /// for an absent, stale, or foreign-owned generation.
+    /// status, current tag, and owner are fenced atomically, and the ack takes the same lease check
+    /// as `BrokerAck` at `now_ms`. Returns `Bool(true)` when the message is acked by this call or
+    /// was already acked by this consumer, `Bool(false)` for an absent, stale, or foreign-owned
+    /// generation, and `TRANSITION_REFUSED` when the lease does not hold.
     #[cfg(feature = "broker")]
     BrokerAckTag {
         delivery_tag: i64,
         consumer: String,
+        now_ms: u64,
     },
 
     /// Nack a claimed message by its positive `delivery_tag` (CONCEPT:MEDULLA-KG.compute.publisher-confirms-consumer-qos). The caller

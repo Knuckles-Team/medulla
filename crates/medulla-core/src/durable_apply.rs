@@ -678,8 +678,9 @@ fn apply_broker_streams(core: &GraphCore, m: &Method) -> bool {
         Method::BrokerAckTag {
             delivery_tag,
             consumer,
+            now_ms,
         } => {
-            let _ = crate::broker::broker_ack_tag(core, *delivery_tag, consumer);
+            let _ = crate::broker::broker_ack_tag(core, *delivery_tag, consumer, *now_ms);
         }
         #[cfg(feature = "broker")]
         Method::BrokerNackTag {

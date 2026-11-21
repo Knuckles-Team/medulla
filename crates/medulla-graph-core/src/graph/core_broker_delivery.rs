@@ -1,77 +1,55 @@
 use super::*;
 
 impl GraphCore {
+    /// Resolve a consumer's `delivery_tag` to the id of the message it fences, for the tag-addressed
+    /// ack (MEDULLA-CQ-ORCH-R810.4). The tag must be the message's current tag, held by `consumer`,
+    /// on a `claimed` message or one the consumer already acked; a stale generation retires its
+    /// lookup node. This reads and fences only: the ack itself is decided by the one ack route,
+    /// `medulla_core::broker::broker_ack`, so the lease check is the same by id and by tag.
     #[cfg(feature = "broker")]
-    pub fn broker_ack_delivery_tag(&self, delivery_tag: i64, consumer: &str) -> bool {
-        if delivery_tag <= 0 || consumer.trim().is_empty() {
-            return false;
+    pub fn broker_resolve_ack_tag(&self, delivery_tag: i64, consumer: &str) -> Option<String> {
+        if !Self::broker_tag_addressable(delivery_tag, consumer) {
+            return None;
         }
         let lookup_id = crate::broker_keys::dtag_lookup_node_id(delivery_tag);
         let mut txn = self.txn();
-        let Some(lookup) = txn.node_row_map(&lookup_id) else {
-            return false;
-        };
+        let lookup = txn.node_row_map(&lookup_id)?;
         if lookup.get("type").and_then(serde_json::Value::as_str)
             != Some(crate::broker_keys::DTAG_LOOKUP_TYPE)
         {
             txn.remove_node(lookup_id);
-            return false;
+            return None;
         }
         if lookup
             .get("owner_consumer")
             .and_then(serde_json::Value::as_str)
             != Some(consumer)
         {
-            return false;
+            return None;
         }
-        let node_id = lookup
-            .get("node_id")
-            .and_then(serde_json::Value::as_str)
-            .unwrap_or("")
-            .to_string();
+        let node_id = Self::broker_lookup_str(&lookup, "node_id");
         if node_id.is_empty() {
             txn.remove_node(lookup_id);
-            return false;
+            return None;
         }
-        let Some(mut properties) = txn.node_row_map(&node_id) else {
+        let Some(properties) = txn.node_row_map(&node_id) else {
             txn.remove_node(lookup_id);
-            return false;
+            return None;
         };
         let status = properties.get("status").and_then(serde_json::Value::as_str);
         let current_tag = properties
             .get("delivery_tag")
             .and_then(serde_json::Value::as_i64)
             == Some(delivery_tag);
+        if !current_tag || !matches!(status, Some("claimed") | Some("acked")) {
+            txn.remove_node(lookup_id);
+            return None;
+        }
         let owned = properties
             .get("owner_consumer")
             .and_then(serde_json::Value::as_str)
             == Some(consumer);
-        if status == Some("acked") && current_tag && owned {
-            // The repeated ack by the claimant: nothing is written (MEDULLA-CQ-ORCH-R810.4).
-            return true;
-        }
-        if status != Some("claimed") || !current_tag {
-            txn.remove_node(lookup_id);
-            return false;
-        }
-        if !owned {
-            return false;
-        }
-        // The message stays `acked` and its lookup node stays until the sweep purges both.
-        // A tag ack carries no clock, so the ack time is the claim time of this delivery.
-        let acked_at = properties
-            .get("claimed_at")
-            .and_then(serde_json::Value::as_u64)
-            .unwrap_or(0);
-        properties.insert("status".into(), serde_json::Value::String("acked".into()));
-        properties.insert("acked_at_ms".into(), serde_json::Value::from(acked_at));
-        properties.insert("lease_until".into(), serde_json::Value::Null);
-        let value = serde_json::Value::Object(properties);
-        let Ok(blob) = rmp_serde::to_vec_named(&value) else {
-            return false;
-        };
-        txn.add_node(node_id, blob);
-        true
+        owned.then_some(node_id)
     }
 
     /// Extend a still-live claimed delivery lease for its current owner. Every

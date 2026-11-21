@@ -326,6 +326,7 @@ mod l10_broker_stream_write_tests {
         assert!(requires_write(&Method::BrokerAckTag {
             delivery_tag: 1,
             consumer: "c1".into(),
+            now_ms: 0,
         }));
     }
 
@@ -398,6 +399,7 @@ mod l10_broker_stream_write_tests {
             Method::BrokerAckTag {
                 delivery_tag: 1,
                 consumer: "c1".into(),
+                now_ms: 0,
             },
             Method::BrokerNackTag {
                 delivery_tag: 1,

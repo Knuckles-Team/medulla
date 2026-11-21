@@ -615,6 +615,7 @@ type brokerRejectParams struct {
 type brokerAckTagParams struct {
 	DeliveryTag int64  `msgpack:"delivery_tag"`
 	Consumer    string `msgpack:"consumer"`
+	NowMs       uint64 `msgpack:"now_ms"`
 }
 
 type brokerNackTagParams struct {
@@ -792,9 +793,9 @@ func (c *Client) BrokerReject(queue, nodeID string, requeue bool, nowMs uint64) 
 	}, "")
 }
 
-func (c *Client) BrokerAckTag(deliveryTag int64, consumer string) (any, error) {
+func (c *Client) BrokerAckTag(deliveryTag int64, consumer string, nowMs uint64) (any, error) {
 	return c.send("BrokerAckTag", brokerAckTagParams{
-		DeliveryTag: deliveryTag, Consumer: consumer,
+		DeliveryTag: deliveryTag, Consumer: consumer, NowMs: nowMs,
 	}, "")
 }
 
