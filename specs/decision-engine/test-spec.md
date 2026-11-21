@@ -2217,3 +2217,8 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program
 - `MEDULLA-DECISION-ENGINE-R869.2`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_action_record_tests.rs::refusals_and_idempotent_replay` (planned, L3): proves: Write path and refusals.
 - `MEDULLA-DECISION-ENGINE-R869.3`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_action_record_tests.rs::why_chain_shows_facts_at_used_revision` (planned, L3): proves: The why chain.
 - `MEDULLA-DECISION-ENGINE-R869.4`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_action_record_tests.rs::why_did_we_reorder_end_to_end` (planned, L3): proves: Hot-path proof: why did we reorder.
+- `MEDULLA-DECISION-ENGINE-R652.10`: `crates/medulla-decision-types/src/claims.rs::tests::proof_receipt_round_trips_and_refuses_invalid` (planned, L1): proves: Machine-checked proof evidence kind
+- `MEDULLA-DECISION-ENGINE-R652.11`: `crates/medulla-epistemic/src/claims.rs::tests::proof_standing_needs_pass_no_sorry_and_standard_axioms` (planned, L2): proves: Proven standing rule `PROVEN_STANDING`
+- `MEDULLA-DECISION-ENGINE-R652.12`: `crates/medulla-core/tests/formalizes_edge.rs::formalizes_is_declared_once_in_core_with_entity_domain_and_range` (planned, L1): proves: The `formalizes` edge in the core ontology
+- `MEDULLA-DECISION-ENGINE-R652.13`: `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::proven_claims_lists_checked_claims_with_axioms_and_isolates_tenants` (planned, L3): proves: Query: which claims are machine-checked, under which axioms
+- `MEDULLA-DECISION-ENGINE-R652.14`: `crates/medulla-h-decide/src/decide/stat_tests/claims_tests.rs::proof_journey` (planned, L3): proves: Hot-path proof for machine-checked standing
