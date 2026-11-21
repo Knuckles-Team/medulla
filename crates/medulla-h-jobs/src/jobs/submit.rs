@@ -140,6 +140,13 @@ pub(super) async fn handle_submit_op(
     spec: SubmitJobSpec,
 ) -> Response {
     let authority = caller.0;
+    // A required heavy capability no host declares is refused before anything is
+    // compiled or queued (MEDULLA-PLACEMENT-R004.4).
+    if let Err(error) =
+        super::host_capabilities::refuse_uncovered(state, &spec.required_capabilities).await
+    {
+        return Response::err(req_id, error);
+    }
     let method = Method::AnalyticsJob {
         op: JobOp::Submit(spec.clone()),
     };

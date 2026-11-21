@@ -4055,6 +4055,29 @@ mod tests {
         assert_eq!(claim.job.job_id, downtime.job_id);
     }
 
+    // spec: MEDULLA-PLACEMENT-R004.4
+    #[test]
+    fn no_capable_host_refuses() {
+        // The submit handler refuses a job no host can take, so nothing queues for it;
+        // a worker that lists no heavy capability is never handed another job's heavy work.
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let mut heavy = spec("g1", 1);
+        heavy.policy.placement.required_capabilities = vec!["backtest".to_string()];
+        store.submit(heavy).unwrap();
+        let without = vec!["pool:default".to_string()];
+        let none = store
+            .claim_next(
+                "worker:plain",
+                &without,
+                now_ms(),
+                30_000,
+                TenantJobQuota::default(),
+            )
+            .unwrap();
+        assert!(none.is_none(), "a host without the capability claims nothing");
+    }
+
     #[test]
     fn capability_anchor_skips_unsatisfied_ready_jobs_without_raw_labels() {
         let dir = tempfile::tempdir().unwrap();

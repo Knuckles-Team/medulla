@@ -18,6 +18,14 @@ use tokio::sync::RwLock;
 
 use super::helpers::opaque_worker_capability;
 
+/// The refusal of a job whose required heavy capability no host declares
+/// (MEDULLA-PLACEMENT-R004.4): `NO_CAPABLE_HOST: <capability>`.
+pub(crate) const NO_CAPABLE_HOST: &str = "NO_CAPABLE_HOST";
+
+/// The placement refusals the job handler raises. The claim never falls back to another host.
+pub(crate) const REFUSALS: &[medulla_types::refusal_code::RefusalCode] =
+    &[medulla_types::refusal_code::RefusalCode::new(NO_CAPABLE_HOST)];
+
 /// The most `placement:Host` nodes one declaration read scans.
 const MAX_DECLARED_HOSTS: usize = 512;
 
@@ -68,6 +76,46 @@ pub(crate) async fn declared_for(
         declared.insert(capability);
     }
     Ok(declared)
+}
+
+/// Refuse a submit whose `required_capabilities` names a heavy capability that no
+/// `placement:Host` node of the commons graph declares: `NO_CAPABLE_HOST: <capability>`
+/// (MEDULLA-PLACEMENT-R004.4). The job is never queued, so `claim_next` has nothing to
+/// hand out, and no claim falls back to another host. Capability names that are not
+/// one of the five heavy capabilities are not placement facts and pass.
+pub(crate) async fn refuse_uncovered(
+    state: &Arc<RwLock<ServerState>>,
+    required_capabilities: &[String],
+) -> Result<(), String> {
+    let heavy: Vec<&str> = required_capabilities
+        .iter()
+        .map(String::as_str)
+        .filter(|name| HEAVY_CAPABILITY_NAMES.contains(name))
+        .collect();
+    if heavy.is_empty() {
+        return Ok(());
+    }
+    let core = {
+        let current = state.read().await;
+        current
+            .registry
+            .get(COMMONS_GRAPH)
+            .map(|entry| entry.core.clone())
+    };
+    let mut declared: BTreeSet<HeavyCapability> = BTreeSet::new();
+    if let Some(core) = core {
+        for (host_iri, _) in core.get_nodes_by_label(host_class(), MAX_DECLARED_HOSTS) {
+            declared.extend(declared_for(state, &host_iri).await?);
+        }
+    }
+    let declared_names: BTreeSet<&str> = declared
+        .into_iter()
+        .map(heavy_capability_name)
+        .collect();
+    match heavy.iter().find(|name| !declared_names.contains(*name)) {
+        Some(missing) => Err(format!("{NO_CAPABLE_HOST}: {missing}")),
+        None => Ok(()),
+    }
 }
 
 /// The claim capability strings of the host the worker `worker_instance` registered on, when
@@ -155,6 +203,22 @@ mod tests {
             }
         }
         state
+    }
+
+    // spec: MEDULLA-PLACEMENT-R004.4
+    #[tokio::test]
+    async fn submit_without_a_capable_host_refuses_by_name() {
+        let state = state_with_commons(&[("host:alpha", serde_json::json!(["backtest"]))]).await;
+        let none: Vec<String> = Vec::new();
+        assert!(refuse_uncovered(&state, &none).await.is_ok());
+        let backtest = vec!["backtest".to_string(), "opaque".to_string()];
+        assert!(refuse_uncovered(&state, &backtest).await.is_ok());
+        let gpu = vec!["backtest".to_string(), "gpu".to_string()];
+        assert_eq!(
+            refuse_uncovered(&state, &gpu).await.unwrap_err(),
+            "NO_CAPABLE_HOST: gpu"
+        );
+        assert!(REFUSALS.iter().any(|code| code.as_str() == NO_CAPABLE_HOST));
     }
 
     // spec: MEDULLA-PLACEMENT-R004.3

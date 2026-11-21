@@ -118,6 +118,8 @@ closed_error_codes! {
         BusSessionForeign => "BUS_SESSION_FOREIGN",
         Cancelled => "CANCELLED",
         CapacityUnavailable => "CAPACITY_UNAVAILABLE",
+        /// MEDULLA-PLACEMENT-R004.4: a job whose required heavy capability no host declares.
+        NoCapableHost => "NO_CAPABLE_HOST",
         ChangeBatchTooLarge => "CHANGE_BATCH_TOO_LARGE",
         ChangeBatchUnavailableUnderPlacement => "CHANGE_BATCH_UNAVAILABLE_UNDER_PLACEMENT",
         ChunkConfigInvalid => "CHUNK_CONFIG_INVALID",
