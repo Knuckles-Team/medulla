@@ -26,6 +26,7 @@ use medulla_storage::{
     PhysicalStoreIdentity, OFFLINE_UPGRADE_APPLY_COMMAND,
 };
 
+mod at_rest;
 mod auto_migrate;
 mod discover;
 #[cfg(feature = "graph-copy")]
@@ -208,7 +209,13 @@ impl Staging {
             Some(budget) => budget,
             None => default_budget(store)?,
         };
-        OfflineUpgradeInspectionOptions::new(root, budget)
+        let options = OfflineUpgradeInspectionOptions::new(root, budget)?;
+        // The same at-rest key source the engine uses, so an encrypted shard converts offline
+        // like a plain one (MEDULLA-PLACEMENT-R781.4).
+        Ok(match at_rest::row_cipher()? {
+            Some(cipher) => options.with_row_cipher(cipher),
+            None => options,
+        })
     }
 }
 

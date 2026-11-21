@@ -116,7 +116,7 @@ pub use physical::binding::ledger_scope_key;
 pub use physical::incarnation::{
     StoreIdentityDigest, StoreIncarnation, STORAGE_KERNEL_SCHEMA_VERSION,
 };
-pub use physical::integrity::PrivatePayloadIntegrity;
+pub use physical::integrity::{PrivatePayloadIntegrity, StoredRowCipher};
 pub use physical::manifest::OwnerManifestDigest;
 pub use physical::read_only::{open_read_only, ReadOnlyStore};
 pub use physical::root::OpenReport;

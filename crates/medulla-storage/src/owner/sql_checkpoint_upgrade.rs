@@ -20,7 +20,7 @@ use super::registry::{
 use super::validate_declared_tables_write;
 use crate::codec::encode_bounded;
 use crate::physical::incarnation::StoreIncarnation;
-use crate::physical::integrity::{authenticate_with, PrivatePayloadIntegrity};
+use crate::physical::integrity::{authenticate_with, PrivatePayloadIntegrity, StoredRowCipher};
 use crate::physical::manifest::OwnerManifest;
 use crate::physical::root::{store_handle, validate_handle_write, validate_incarnation_read};
 use crate::recovery::evidence::{HashSnapshot, StrictRecoveryEvidence};
@@ -49,6 +49,7 @@ pub(crate) const UPGRADE_CACHE_BYTES: usize = 64 * 1024 * 1024;
 pub struct SqlSourceCheckpointInspectionOptions {
     staging_root: PathBuf,
     max_bytes: u64,
+    row_cipher: Option<Arc<dyn StoredRowCipher>>,
 }
 
 impl SqlSourceCheckpointInspectionOptions {
@@ -57,7 +58,19 @@ impl SqlSourceCheckpointInspectionOptions {
         Ok(Self {
             staging_root,
             max_bytes,
+            row_cipher: None,
         })
+    }
+
+    /// Supply the at-rest cipher that opens and re-seals sealed row values an upgrade rewrites
+    /// (MEDULLA-PLACEMENT-R781.4).
+    pub fn with_row_cipher(mut self, row_cipher: Arc<dyn StoredRowCipher>) -> Self {
+        self.row_cipher = Some(row_cipher);
+        self
+    }
+
+    pub(super) fn row_cipher(&self) -> Option<Arc<dyn StoredRowCipher>> {
+        self.row_cipher.clone()
     }
 }
 
@@ -86,6 +99,7 @@ pub(super) struct ValidatedUpgradeSource {
     pub(super) source_fingerprint: [u8; 32],
     pub(super) source_bytes: u64,
     pub(super) private_integrity: Option<Arc<dyn PrivatePayloadIntegrity>>,
+    pub(super) row_cipher: Option<Arc<dyn StoredRowCipher>>,
 }
 
 impl ValidatedUpgradeSource {
@@ -106,7 +120,13 @@ impl ValidatedUpgradeSource {
             source_fingerprint: inspected.2,
             source_bytes,
             private_integrity,
+            row_cipher: None,
         }
+    }
+
+    pub(super) fn with_row_cipher(mut self, row_cipher: Option<Arc<dyn StoredRowCipher>>) -> Self {
+        self.row_cipher = row_cipher;
+        self
     }
 }
 

@@ -21,6 +21,7 @@ use crate::owner::sql_checkpoint_upgrade::{
     begin_immediate_upgrade_write, read_upgrade_write_manifest, stage_upgrade_manifest,
 };
 use crate::owner::{validate_declared_tables_write, validate_manifest_write};
+use crate::physical::integrity::StoredRowCipher;
 use crate::physical::manifest::OwnerManifest;
 use crate::physical::root::{store_handle, validate_handle_write};
 use crate::recovery::evidence::HashSnapshot;
@@ -56,7 +57,7 @@ pub(super) fn commit_upgrade(
         return Err("owner predecessor changed before atomic upgrade".into());
     }
     let current = successor(&old, target)?;
-    retire_predecessor_tables(&write, target)?;
+    retire_predecessor_tables(&write, target, token.source.row_cipher.as_deref())?;
     open_successor_tables(&write, target)?;
     stage_upgrade_manifest(&write, &current, "upgraded owner manifest")?;
     validate_manifest_write(&write, &current.physical_identity, target.layout())?;
@@ -70,6 +71,7 @@ pub(super) fn commit_upgrade(
 fn retire_predecessor_tables(
     write: &WriteTransaction,
     target: UpgradeTarget,
+    row_cipher: Option<&dyn StoredRowCipher>,
 ) -> Result<(), String> {
     if target == UpgradeTarget::Kv {
         write
@@ -85,7 +87,7 @@ fn retire_predecessor_tables(
     // field; each upgrade ends at the current layout, so each one converts them
     // (MEDULLA-PLACEMENT-R781.4).
     if matches!(target, UpgradeTarget::GraphShard(_)) {
-        crate::owner::offline_upgrade::reservation_tombstone::convert(write)?;
+        crate::owner::offline_upgrade::reservation_tombstone::convert(write, row_cipher)?;
     }
     Ok(())
 }

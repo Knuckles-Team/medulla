@@ -382,7 +382,8 @@ pub(super) fn inspect_layout_upgrade(
             (manifest, evidence, source_fingerprint),
             source_bytes,
             private_integrity,
-        ),
+        )
+        .with_row_cipher(options.row_cipher()),
     })
 }
 
