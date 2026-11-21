@@ -86,6 +86,10 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R700.4` | `tests/ingest/test_readers_served.py::test_reader_refusals_quarantine_without_projection` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R700.5` | `crates/medulla-document/tests/readers_scale.rs::spans_reextract_to_fragment_text` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R700.6` | `tests/ingest/test_readers_served.py::test_each_format_yields_spanned_fragments` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R700.7` | `crates/medulla-document/tests/readers_formats.rs::pdf_pages_become_paged_fragments` | L2 | planned |
+| `MEDULLA-INGEST-WORKER-R700.8` | `crates/medulla-document/tests/readers_formats.rs::docx_paragraphs_become_fragments` | L2 | planned |
+| `MEDULLA-INGEST-WORKER-R700.9` | `crates/medulla-document/tests/readers_formats.rs::xlsx_rows_become_cell_range_fragments` | L2 | planned |
+| `MEDULLA-INGEST-WORKER-R700.10` | `crates/medulla-document/tests/readers_formats.rs::eml_subject_and_body_become_fragments` | L2 | planned |
 | `MEDULLA-INGEST-WORKER-R701.1` | `crates/medulla-ingestion-types/src/extracted_fact.rs::tests::golden_vector_round_trips_and_invalid_shapes_are_rejected` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R701.2` | `crates/medulla-types/tests/ingest_rules.rs::grounding_repairs_direction_and_deduper_scales_linearly` | L2 | exists |
 | `MEDULLA-INGEST-WORKER-R701.3` | `crates/medulla-h-ingest/src/source_ingestion/facts.rs::tests::facts_reach_the_atom_store` | L3 | exists |

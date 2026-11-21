@@ -94,7 +94,7 @@ Independent test: `tests/ingest/test_source_governance_served.py::test_policy_an
 - **FR-005**: A chunked drain is a chain of bounded page tasks with a routed graph. Rows: `MEDULLA-INGEST-WORKER-R605.2`, `MEDULLA-INGEST-WORKER-R605.3`, `MEDULLA-INGEST-WORKER-R605.4`.
 - **FR-006**: One materialization path stamps provenance on every connector record. Rows: `MEDULLA-INGEST-WORKER-R606.2`, `MEDULLA-INGEST-WORKER-R606.3`, `MEDULLA-INGEST-WORKER-R606.4`.
 - **FR-007**: Documents and transcripts become atoms or quarantine without partial state. Rows: `MEDULLA-INGEST-WORKER-R003.8`, `MEDULLA-INGEST-WORKER-R003.10.1`, `MEDULLA-INGEST-WORKER-R003.14`.
-- **FR-008**: Readers produce typed fragments with span provenance. Rows: `MEDULLA-INGEST-WORKER-R700.1`, `MEDULLA-INGEST-WORKER-R700.3`, `MEDULLA-INGEST-WORKER-R700.4`.
+- **FR-008**: Readers produce typed fragments with span provenance. Rows: `MEDULLA-INGEST-WORKER-R700.1`, `MEDULLA-INGEST-WORKER-R700.3`, `MEDULLA-INGEST-WORKER-R700.4`, `MEDULLA-INGEST-WORKER-R700.7`, `MEDULLA-INGEST-WORKER-R700.8`, `MEDULLA-INGEST-WORKER-R700.9`, `MEDULLA-INGEST-WORKER-R700.10`.
 - **FR-009**: Proposals and facts are judged and grounded before admission. Rows: `MEDULLA-INGEST-WORKER-R002.3`, `MEDULLA-INGEST-WORKER-R701.3`, `MEDULLA-INGEST-WORKER-R701.7`.
 - **FR-010**: Near duplicates link instead of storing twice. Rows: `MEDULLA-INGEST-WORKER-R702.2`, `MEDULLA-INGEST-WORKER-R702.3`, `MEDULLA-INGEST-WORKER-R702.4`.
 - **FR-011**: Source governance, permissions, deletions and containers follow the source. Rows: `MEDULLA-INGEST-WORKER-R900.2`, `MEDULLA-INGEST-WORKER-R902.2`, `MEDULLA-INGEST-WORKER-R903.2`, `MEDULLA-INGEST-WORKER-R904.2`.

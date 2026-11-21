@@ -1,0 +1,10 @@
+From: ada@example.invalid
+To: grace@example.invalid
+Subject: Reader fixture
+Date: Mon, 02 Nov 2026 09:00:00 +0000
+Message-ID: <fixture-1@example.invalid>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+The readers ship together.
+Every fragment keeps its span.

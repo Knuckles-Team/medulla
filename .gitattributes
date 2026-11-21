@@ -201,3 +201,6 @@ Procfile          text
 crates/medulla-types/src/contract/server_error_code.rs merge=union
 crates/medulla-types/src/lib.rs merge=union
 architecture/component-registry.yml merge=union
+
+# Reader fixtures are byte-exact inputs (MEDULLA-INGEST-WORKER-R700.6)
+tests/fixtures/readers/* -text

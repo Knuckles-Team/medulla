@@ -1,0 +1,17 @@
+From: ada@example.invalid
+To: grace@example.invalid
+Subject: sealed
+MIME-Version: 1.0
+Content-Type: multipart/encrypted; protocol="application/pgp-encrypted"; boundary="b1"
+
+--b1
+Content-Type: application/pgp-encrypted
+
+Version: 1
+--b1
+Content-Type: application/octet-stream
+
+-----BEGIN PGP MESSAGE-----
+AAAA
+-----END PGP MESSAGE-----
+--b1--
