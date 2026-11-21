@@ -784,6 +784,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
             medulla_decision_types::decision::knob_families::round_verdict::KNOBS
         }
         QuestionKind::Route => medulla_decision_types::decision::knob_families::route::KNOBS,
+        QuestionKind::ToolNecessity => medulla_decision_types::decision::tool_necessity::KNOBS,
         QuestionKind::ItemRecommendation => {
             medulla_decision_types::decision::knob_families::recommend::KNOBS
         }

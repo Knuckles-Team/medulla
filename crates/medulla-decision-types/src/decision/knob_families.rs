@@ -79,6 +79,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     super::program_store::insight::KNOBS,
     super::program_store::preplan::KNOBS,
     super::tool_relevance::KNOBS,
+    super::tool_necessity::KNOBS,
     super::delegation::KNOBS,
     super::comparative_analysis::KNOBS,
     super::memory_rewrite::KNOBS,
