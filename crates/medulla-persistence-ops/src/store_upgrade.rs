@@ -28,6 +28,8 @@ use medulla_storage::{
 
 mod auto_migrate;
 mod discover;
+#[cfg(feature = "graph-copy")]
+pub mod graph_copy;
 mod rebind;
 mod report;
 

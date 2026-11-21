@@ -38,7 +38,8 @@ medulla-direct-state = { path = "../medulla-direct-state" }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-table-store = { path = "../medulla-table-store" }
 
-object_store = { version = "0.14.2", optional = true, features = ["aws"] }
+futures-util = { version = "0.3", default-features = false, optional = true }
+object_store = { version = "0.14.2", optional = true, features = ["aws", "fs"] }
 
 [features]
 cold-tier = ["medulla-persistence/cold-tier", "medulla-graph-core/cold-tier"]
@@ -47,8 +48,11 @@ metrics = ["medulla-persistence/metrics", "medulla-kernel/metrics", "medulla-pro
 query = ["redb", "medulla-persistence/query", "medulla-kernel/query", "medulla-protocol-types/query", "medulla-server-api/query", "medulla-server-auth/query", "medulla-store/query", "medulla-types/query", "medulla-query-types/query"]
 raft = ["redb", "medulla-persistence/raft", "medulla-kernel/raft", "medulla-server-api/raft", "medulla-server-auth/raft", "medulla-store-apply/raft", "medulla-store/raft", "server"]
 server = ["medulla-persistence/server", "medulla-kernel/server", "medulla-server-api/server", "medulla-store/server"]
+# Offline copy of one graph to an object root (MEDULLA-OBJECT-STORAGE-BACKEND-R003.2).
+graph-copy = ["redb", "dep:object_store", "dep:futures-util", "medulla-storage/object-archive"]
 redb = ["dep:redb", "dep:medulla-transaction", "dep:medulla-storage", "medulla-persistence/redb", "medulla-persistence-records/redb", "medulla-kernel/redb", "medulla-server-api/redb", "medulla-store/redb"]
 [dev-dependencies]
+async-trait = "0.1"
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }

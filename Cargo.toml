@@ -326,6 +326,8 @@ kv = ["medulla-server/kv", "medulla-wire/kv", "medulla-wire-msg/kv", "medulla-h-
 # and `full-extras` bundles, so only an explicit source build selecting `blob-s3`
 # links the `object_store` SDK (asserted by cargo tree).
 # The comparative cost bench of the object-store backend (MEDULLA-OBJECT-STORAGE-BACKEND-R005).
+# Offline `store-upgrade graph-copy` to an object root (MEDULLA-OBJECT-STORAGE-BACKEND-R003.2).
+graph-copy = ["medulla-persistence-ops/graph-copy"]
 object-store-bench = ["dep:object_store", "medulla-persistence/object-store"]
 blob-s3 = ["medulla-server/blob-s3", "medulla-server-api/blob-s3", "medulla-server-blob/blob-s3", "blob", "dep:object_store"]
 # L21 / W4.7 (CONCEPT:MEDULLA-P1-3 follow-up, DONE) — a REAL `medulla_alignment::EvidenceResolver`

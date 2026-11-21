@@ -53,6 +53,28 @@ pub(super) enum StoreUpgradeVerb {
         #[arg(long, value_name = "BYTES")]
         max_store_bytes: Option<u64>,
     },
+    #[cfg(feature = "graph-copy")]
+    /// Copy one graph of a stopped engine's data directory to an object-store root with a
+    /// verified whole-graph digest (MEDULLA-OBJECT-STORAGE-BACKEND-R003.2). Refuses
+    /// `GRAPH_COPY_DIGEST_MISMATCH` (the destination is left empty) and
+    /// `GRAPH_COPY_DESTINATION_NOT_EMPTY` (nothing is written). Exit status: 0 done,
+    /// 1 refused.
+    GraphCopy {
+        /// The engine's persistence directory.
+        #[arg(env = "GRAPH_SERVICE_PERSIST_DIR", value_name = "DATA_DIR")]
+        data_dir: PathBuf,
+        /// The graph to copy.
+        graph: String,
+        /// The tenant the graph's object keys carry.
+        #[arg(long, default_value = "default")]
+        tenant: String,
+        /// The object root: a local directory, or `s3://bucket[/prefix]`.
+        #[arg(long, value_name = "OBJECT_ROOT")]
+        to: String,
+        /// Required: confirm that the object root may be written.
+        #[arg(long)]
+        confirm: bool,
+    },
     /// Re-bind a data directory that was copied from another one. Each store
     /// binds to the device and inode of its file, so a copy refuses the ordinary
     /// open. The engine must be stopped. A store that already carries the root of
@@ -95,6 +117,22 @@ impl OperatorCommand {
                     confirm,
                     staging_dir,
                     max_store_bytes,
+                },
+            ),
+            #[cfg(feature = "graph-copy")]
+            StoreUpgradeVerb::GraphCopy {
+                data_dir,
+                graph,
+                tenant,
+                to,
+                confirm,
+            } => store_upgrade::graph_copy::graph_copy(
+                &data_dir,
+                &store_upgrade::graph_copy::GraphCopyOptions {
+                    graph,
+                    tenant,
+                    to,
+                    confirm,
                 },
             ),
             StoreUpgradeVerb::Rebind {

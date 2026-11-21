@@ -168,6 +168,21 @@ impl RedbBackend {
         await_writer_reply(&rx, "read_graph_dump")?
     }
 
+    /// Export ONE bounded page of one graph's durable rows for an offline copy
+    /// (MEDULLA-OBJECT-STORAGE-BACKEND-R003.2). Resume with the `node_after` and
+    /// `edge_after` positions the previous page returned; `None` means the graph has
+    /// no durable rows. Unlike [`Self::export_graph_raw_for_snapshot`], which returns the
+    /// whole graph at once, one call holds at most `page_size` rows of each family.
+    pub fn export_graph_raw_page(
+        &self,
+        graph_fname: &str,
+        node_after: Option<String>,
+        edge_after: Option<(String, String, u32)>,
+        page_size: usize,
+    ) -> Result<Option<medulla_store_apply::redb_store::dump::GraphDumpPage>, String> {
+        self.read_graph_dump_page_blocking(graph_fname, 0, 0, node_after, edge_after, page_size)
+    }
+
     /// Read ONE bounded page of one graph's durable rows (CONCEPT:MEDULLA-KG.sharding.paged-lazy-open, L38 "paged
     /// adjacency") — the memory-bounded sibling of [`Self::read_graph_dump_blocking`]
     /// backing [`PersistenceBackend::read_graph_material_page_blocking`] below.
