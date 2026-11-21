@@ -845,14 +845,24 @@ pub(super) fn logged_dataset(
     })
 }
 
+/// The graph reads a `DecisionLog` op carries into its blocking half, all
+/// opened before it.
+struct ReadGraphs<'a> {
+    /// The view a committed family answer re-reads.
+    replay: Option<&'a medulla_graph_core::graph::GraphView>,
+    /// The graph rows a commit re-reads at their versions.
+    snapshots: &'a GraphSnapshots,
+    /// The graphs a `Provenance` read follows action links through.
+    provenance: &'a [(String, std::sync::Arc<medulla_graph_core::graph::GraphCore>)],
+}
+
 fn dispatch(
     ctx: &ExecutionContext,
     reader: &LogReader,
     op: DecisionLogOp,
     inputs: Option<&super::stat_learning::LearningInputs>,
     index: &medulla_decision_memory::memory::capability_index::CapabilityIndex,
-    replay_graph: Option<&medulla_graph_core::graph::GraphView>,
-    graphs: &GraphSnapshots,
+    read: &ReadGraphs<'_>,
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::{
         result_contract::coordination::DecisionLogAggregate,
@@ -875,8 +885,8 @@ fn dispatch(
                 &record,
                 evaluator.as_ref(),
                 approval.as_ref(),
-                replay_graph,
-                graphs,
+                read.replay,
+                read.snapshots,
             )?)
         }
         DecisionLogOp::Evaluate { evaluation, .. } => {
@@ -996,7 +1006,24 @@ fn dispatch(
         DecisionLogOp::Provenance { record_id, .. } => ResultPayload::of::<
             medulla_protocol_types::result_contract::coordination::DecisionLogProvenance,
         >(super::stat_decision_reads::provenance(
-            ctx.store, reader, &record_id,
+            ctx.store,
+            reader,
+            &record_id,
+            read.provenance,
+        )?),
+        DecisionLogOp::WhyNot {
+            record_id,
+            option_id,
+            budget_ms,
+            ..
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogWhyNot,
+        >(super::stat_decision_reads::why_not(
+            ctx.store,
+            ctx.tenant_id,
+            &record_id,
+            &option_id,
+            budget_ms,
         )?),
         DecisionLogOp::Verify { record_id, .. } => ResultPayload::of::<DecisionLogVerify>(verify(
             ctx,
@@ -1065,6 +1092,15 @@ async fn serve(
     let blocking_graph = run_graph.clone();
     let principal = verified.agent_id().to_string();
     let graphs = commit_graphs(state, verified, &op).await?;
+    let provenance = match &op {
+        DecisionLogOp::Provenance { record_id, .. } => {
+            super::stat_decision_reads::provenance_graphs(
+                state, verified, &store, &reader, record_id,
+            )
+            .await?
+        }
+        _ => Vec::new(),
+    };
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
     let result = tokio::task::spawn_blocking(move || {
@@ -1094,8 +1130,11 @@ async fn serve(
                 op,
                 inputs.as_ref(),
                 &index,
-                replay_graph.as_ref(),
-                &graphs,
+                &ReadGraphs {
+                    replay: replay_graph.as_ref(),
+                    snapshots: &graphs,
+                    provenance: &provenance,
+                },
             )
             .map(Served::Payload),
         }

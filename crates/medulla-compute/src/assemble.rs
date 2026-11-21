@@ -53,6 +53,7 @@ use medulla_decision_types::{
 };
 
 pub use seal::{encoded_len, RecordIdentity};
+pub use why_not::explain_option;
 pub use topology::admit::admit_topology;
 pub use topology::standalone::{decide_topology, TopologyConclusion, TopologyQuestionInputs};
 

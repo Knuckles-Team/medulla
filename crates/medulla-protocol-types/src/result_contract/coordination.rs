@@ -243,6 +243,7 @@ method_results! {
     DecisionLogHarnessLessons(DecisionLog / "harness_lessons") => Raw<medulla_decision_types::decision::statistical::log::HarnessLessonsFound>;
     DecisionLogList(DecisionLog / "list") => Raw<medulla_decision_types::decision::statistical::log::DecisionLogList>;
     DecisionLogProvenance(DecisionLog / "provenance") => Raw<medulla_decision_types::decision::statistical::log::DecisionProvenance>;
+    DecisionLogWhyNot(DecisionLog / "why_not") => Raw<medulla_decision_types::decision::statistical::log::DecisionWhyNot>;
     FeatureLedgerOpen(FeatureLedger / "open") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
     FeatureLedgerPlan(FeatureLedger / "plan") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
     FeatureLedgerClose(FeatureLedger / "close") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;

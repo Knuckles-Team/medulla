@@ -1,14 +1,18 @@
 //! The committed-decision reads of `DecisionLog` (MEDULLA-DECISION-ENGINE-R870.1,
-//! R870.2): `List` pages a tenant's records, `Provenance` states what one record
-//! rested on. Both read the record index `Get` reads, filter by each record's own
-//! visibility and write nothing.
+//! R870.2, R870.3): `List` pages a tenant's records, `Provenance` states what one
+//! record rested on, `WhyNot` re-solves why one option was not chosen. All three
+//! filter by each record's own visibility and write nothing.
 
 use medulla_decision_types::decision::knob_families::decision_reads::list_page_max;
 use medulla_decision_types::decision::record::{PremiseProvenance, ResolutionKind};
 use medulla_decision_types::decision::statistical::log::{
-    DecisionListItem, DecisionLogList, DecisionProvenance, InputsState, ProvenanceFact,
-    ProvenancePremise, ProvenanceRule,
+    DecisionListItem, DecisionLogList, DecisionProvenance, DecisionWhyNot, InputsState,
+    ProvenanceFact, ProvenancePremise, ProvenanceRule,
 };
+use medulla_decision_types::decision::DecisionRecord;
+use medulla_graph_core::graph::GraphCore;
+use serde_json::Value;
+use std::sync::Arc;
 use medulla_decision_types::decision::statistical::QuestionKind;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 
@@ -115,6 +119,7 @@ pub(super) fn provenance(
     store: &AgentLibraryStore,
     reader: &LogReader,
     record_id: &str,
+    graphs: &[(String, Arc<GraphCore>)],
 ) -> Result<DecisionProvenance, String> {
     let Some(entry) = visible_entry(store, reader, record_id)? else {
         return Err("DECISION_NOT_FOUND: no committed decision with this id".to_string());
@@ -134,7 +139,7 @@ pub(super) fn provenance(
         })
         .collect();
     // The graph rows keep the write version the decision read them at.
-    let facts = record
+    let sealed_facts: Vec<ProvenanceFact> = record
         .inputs
         .graph_rows
         .as_slice()
@@ -145,7 +150,7 @@ pub(super) fn provenance(
             digest: record.inputs_digest.clone(),
         })
         .collect();
-    let rules = record
+    let sealed_rules: Vec<ProvenanceRule> = record
         .premises
         .as_slice()
         .iter()
@@ -158,6 +163,13 @@ pub(super) fn provenance(
             _ => None,
         })
         .collect();
+    // The `:ActionRecord` rows reached through the record's gate decision state the
+    // revision and digest each fact and rule was used at; the sealed premises
+    // answer only when the record has none.
+    let (facts, rules) = match action_links(record.inputs.graph_rows.as_slice(), graphs) {
+        Some(links) => links,
+        None => (sealed_facts, sealed_rules),
+    };
     Ok(DecisionProvenance {
         record_id: record.record_id.clone(),
         record_digest: record.record_digest.clone(),
@@ -169,5 +181,166 @@ pub(super) fn provenance(
             .as_ref()
             .map(|approval| approval.reviewer_principal.clone()),
         inputs: InputsState::from(&entry.inputs),
+    })
+}
+
+
+/// The graphs a record's rows were read from, opened for the caller; empty when
+/// the record is not visible. The async half of [`provenance`].
+pub(super) async fn provenance_graphs(
+    state: &super::SharedState,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    record_id: &str,
+) -> Result<Vec<(String, Arc<GraphCore>)>, String> {
+    let Some(entry) = visible_entry(store, reader, record_id)? else {
+        return Ok(Vec::new());
+    };
+    let mut names: Vec<&str> = entry
+        .record
+        .inputs
+        .graph_rows
+        .as_slice()
+        .iter()
+        .map(|row| row.graph.as_str())
+        .collect();
+    names.sort_unstable();
+    names.dedup();
+    let mut opened = Vec::new();
+    for name in names {
+        let (core, _) = super::stat_support::readable_graph(
+            state,
+            verified.agent_id(),
+            name,
+            medulla_decision_types::decision::statistical::StatisticalErrorCode::ParameterInvalid,
+        )
+        .await?;
+        opened.push((name.to_string(), core));
+    }
+    Ok(opened)
+}
+
+fn properties_of(core: &GraphCore, node: &str) -> Option<Value> {
+    rmp_serde::from_slice(&core.get_node_properties(node)?).ok()
+}
+
+/// Whether the edge `source -> target` carries `relationship`.
+fn has_edge(core: &GraphCore, source: &str, target: &str, relationship: &str) -> bool {
+    core.get_edge_properties(source, target).iter().any(|bytes| {
+        rmp_serde::from_slice::<Value>(bytes)
+            .ok()
+            .is_some_and(|edge| edge.get("relationship").and_then(Value::as_str) == Some(relationship))
+    })
+}
+
+/// The facts and rules of the `:ActionRecord`s approved by a gate decision among
+/// the record's graph rows. The gate decision is followed along its
+/// `decisionRequest` edge (MEDULLA-DECISION-ENGINE-R869.2); an action is one
+/// whose `approvedBy` edge reaches the gate. `None` when no such action exists.
+fn action_links(
+    rows: &[medulla_decision_types::decision::statistical::graph_rows::GraphRowProvenance],
+    graphs: &[(String, Arc<GraphCore>)],
+) -> Option<(Vec<ProvenanceFact>, Vec<ProvenanceRule>)> {
+    let (mut facts, mut rules, mut found) = (Vec::new(), Vec::new(), false);
+    for row in rows {
+        let Some((_, core)) = graphs.iter().find(|(name, _)| *name == row.graph) else {
+            continue;
+        };
+        let is_gate = properties_of(core, &row.node_id)
+            .is_some_and(|node| node.get("type").and_then(Value::as_str) == Some("GateDecision"));
+        let decides_a_request = is_gate
+            && core.get_successors(&row.node_id).ok().is_some_and(|targets| {
+                targets
+                    .iter()
+                    .any(|target| has_edge(core, &row.node_id, target, "decisionRequest"))
+            });
+        if !decides_a_request {
+            continue;
+        }
+        let mut actions = core.get_predecessors(&row.node_id).unwrap_or_default();
+        actions.sort();
+        for action in actions.iter().filter(|action| {
+            has_edge(core, action, &row.node_id, "approvedBy")
+                && properties_of(core, action)
+                    .is_some_and(|node| node.get("type").and_then(Value::as_str) == Some("ActionRecord"))
+        }) {
+            found = true;
+            let mut used = core.get_successors(action).unwrap_or_default();
+            used.sort();
+            for target in used {
+                let Some(node) = properties_of(core, &target) else {
+                    continue;
+                };
+                let text = |key: &str| node.get(key).and_then(Value::as_str).unwrap_or_default().to_string();
+                let number = |key: &str| node.get(key).and_then(Value::as_u64).unwrap_or_default();
+                if has_edge(core, action, &target, "usedFact") {
+                    facts.push(ProvenanceFact {
+                        node_id: text("factNode"),
+                        revision: number("factRevision"),
+                        digest: text("factDigest"),
+                    });
+                } else if has_edge(core, action, &target, "usedRule") {
+                    rules.push(ProvenanceRule {
+                        rule_id: text("ruleNode"),
+                        version: number("ruleVersion"),
+                        digest: text("ruleDigest"),
+                    });
+                }
+            }
+        }
+    }
+    found.then_some((facts, rules))
+}
+
+/// Why one option was not chosen by a committed assembly record: the stored
+/// inputs are re-derived (the digest must match the record's, else
+/// `DECISION_REPLAY_MISMATCH`), then the option is forced in under the bounded
+/// budget. Reads the tenant's own record only; changes nothing.
+pub(super) fn why_not(
+    store: &AgentLibraryStore,
+    tenant_id: &str,
+    record_id: &str,
+    option_id: &str,
+    budget_ms: Option<u32>,
+) -> Result<DecisionWhyNot, String> {
+    let not_found = || "DECISION_NOT_FOUND: no committed decision with this id".to_string();
+    let body = store
+        .decision_record_body(tenant_id, record_id)?
+        .ok_or_else(not_found)?;
+    let record: DecisionRecord = serde_json::from_slice(&body)
+        .map_err(|error| format!("DECISION_INPUTS_RETIRED: the stored inputs cannot rebuild the problem: {error}"))?;
+    let replayed = medulla_compute::assemble::assemble(
+        record.inputs.clone(),
+        medulla_compute::assemble::RecordIdentity::of(&record),
+    )
+    .map_err(|error| match error.code {
+        medulla_decision_types::decision::DecisionErrorCode::AssemblyInputsInvalid => {
+            format!("DECISION_INPUTS_RETIRED: {error}")
+        }
+        _ => error.to_string(),
+    })?;
+    if replayed.record.record_digest != record.record_digest {
+        return Err(format!(
+            "{}: re-deriving the record from its stored inputs reached a different record",
+            medulla_decision_types::decision::DecisionErrorCode::DecisionReplayMismatch.as_str()
+        ));
+    }
+    let budget = medulla_decision_types::decision::knob_families::decision_reads::why_not_budget_ms(budget_ms);
+    let clock = || {
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |elapsed| elapsed.as_millis() as u64)
+    };
+    let explained = medulla_compute::assemble::explain_option(&record.inputs, option_id, budget, &clock)
+        .map_err(|error| error.to_string())?
+        .ok_or_else(|| "OPTION_NOT_VISIBLE: the option is not among the record's candidates".to_string())?;
+    Ok(DecisionWhyNot {
+        record_id: record.record_id,
+        option_id: option_id.to_string(),
+        verdict: explained.verdict,
+        reasons: explained.reasons,
+        budget_used_ms: explained.budget_used_ms,
+        budget_exhausted: explained.budget_exhausted,
     })
 }

@@ -744,6 +744,25 @@ def provenance_op(tenant_id: str, record_id: str) -> dict[str, Any]:
     return {"op": "provenance", "tenant_id": tenant_id, "record_id": record_id}
 
 
+def why_not_op(
+    tenant_id: str,
+    record_id: str,
+    option_id: str,
+    *,
+    budget_ms: int | None = None,
+) -> dict[str, Any]:
+    """Re-solve why one option was not chosen by a committed assembly record."""
+    op: dict[str, Any] = {
+        "op": "why_not",
+        "tenant_id": tenant_id,
+        "record_id": record_id,
+        "option_id": option_id,
+    }
+    if budget_ms is not None:
+        op["budget_ms"] = budget_ms
+    return op
+
+
 def learn_op(tenant_id: str, write: str, **fields: Any) -> dict[str, Any]:
     """The one retrieval-learning write (EH-394..EH-397): ``record_outcome``,
     ``fit_adapter``, ``evaluate_generation`` or ``move_pointer``. What was

@@ -521,6 +521,18 @@ pub enum DecisionLogOp {
         tenant_id: String,
         record_id: String,
     },
+    /// Re-solve why one option was not chosen by a committed assembly record,
+    /// within a bounded budget (MEDULLA-DECISION-ENGINE-R870.3). Replays the
+    /// record's stored inputs; changes nothing.
+    WhyNot {
+        tenant_id: String,
+        record_id: String,
+        option_id: String,
+        /// Wall-clock budget in milliseconds; the smaller of this and the knob
+        /// `decision.why_not_budget_ms` applies.
+        #[serde(default)]
+        budget_ms: Option<u32>,
+    },
 }
 
 /// Records per `List` page when the request names no limit.
@@ -617,6 +629,54 @@ pub struct DecisionProvenance {
     pub rules: Vec<ProvenanceRule>,
     pub approver: Option<String>,
     pub inputs: InputsState,
+}
+
+/// Where a re-solved option stands against the committed assembly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum WhyNotVerdict {
+    /// The option is in the assembly.
+    Selected,
+    /// A rule removed the option before the solve.
+    Eliminated,
+    /// Forcing the option in leaves no feasible answer.
+    Infeasible,
+    /// Forcing the option in is feasible and costs more.
+    Worse,
+    /// The re-solve could not decide.
+    Unresolved,
+}
+
+/// One reason an option was not chosen.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WhyNotReason {
+    pub kind: String,
+    pub detail: String,
+}
+
+/// What the compute crate answers for one re-solved option.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct OptionExplanation {
+    pub verdict: WhyNotVerdict,
+    pub reasons: Vec<WhyNotReason>,
+    pub budget_used_ms: u32,
+    pub budget_exhausted: bool,
+}
+
+/// The answer of a `WhyNot` read.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DecisionWhyNot {
+    pub record_id: String,
+    pub option_id: String,
+    pub verdict: WhyNotVerdict,
+    pub reasons: Vec<WhyNotReason>,
+    pub budget_used_ms: u32,
+    pub budget_exhausted: bool,
 }
 
 /// The lesson retrieval of a `HarnessLessons` read.
@@ -744,7 +804,8 @@ impl DecisionLogOp {
             | Self::WritebackAudit { .. }
             | Self::HarnessLessons { .. }
             | Self::List { .. }
-            | Self::Provenance { .. } => LogOpClass::Read,
+            | Self::Provenance { .. }
+            | Self::WhyNot { .. } => LogOpClass::Read,
             Self::Writeback { computation, .. } => {
                 use super::writeback::WritebackOp as W;
                 match computation {
@@ -788,7 +849,8 @@ impl DecisionLogOp {
             | Self::HarnessAdoption { tenant_id, .. }
             | Self::HarnessLessons { tenant_id, .. }
             | Self::List { tenant_id, .. }
-            | Self::Provenance { tenant_id, .. } => tenant_id,
+            | Self::Provenance { tenant_id, .. }
+            | Self::WhyNot { tenant_id, .. } => tenant_id,
             Self::Aggregate { request } => &request.tenant_id,
         }
     }

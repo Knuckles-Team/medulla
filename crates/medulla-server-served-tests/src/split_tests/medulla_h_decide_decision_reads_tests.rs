@@ -1,5 +1,5 @@
-//! The committed-decision reads of the served `DecisionLog`: `List` and
-//! `Provenance` (MEDULLA-DECISION-ENGINE-R870.1, R870.2).
+//! The committed-decision reads of the served `DecisionLog`: `List`,
+//! `Provenance` and `WhyNot` (MEDULLA-DECISION-ENGINE-R870.1 to R870.4).
 
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_types::decision::statistical::log::{
@@ -219,4 +219,160 @@ async fn provenance_keeps_used_revision_and_hides_other_tenants() {
     let foreign = read(OTHER_TENANT, record.record_id.clone()).await.error.unwrap();
     assert!(unknown.contains("DECISION_NOT_FOUND"), "{unknown}");
     assert_eq!(unknown, foreign);
+}
+
+/// Commit the assembled fixture record of `tenant-a` through the store, the way a
+/// served `DecisionCommit` stores it, and return it.
+fn commit_assembly(h: &Harness) -> medulla_decision_types::decision::DecisionRecord {
+    use medulla_persistence_records::decision_record::tests as v1;
+    v1::seed_library(&h.store);
+    let record = v1::decided(&h.store).record;
+    let digest = record.inputs.catalog_digest.clone();
+    h.store
+        .commit_decision_record(v1::commit_context(&h.store, "why-not", 1), &record, &digest, None)
+        .expect("commits");
+    record
+}
+
+async fn why_not(
+    h: &Harness,
+    tenant: &'static str,
+    record_id: &str,
+    option_id: &str,
+    budget_ms: Option<u32>,
+) -> Response {
+    dispatch_as(
+        h,
+        tenant,
+        Method::DecisionLog {
+            op: Box::new(DecisionLogOp::WhyNot {
+                tenant_id: tenant.to_string(),
+                record_id: record_id.to_string(),
+                option_id: option_id.to_string(),
+                budget_ms,
+            }),
+        },
+    )
+    .await
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R870.3
+#[tokio::test]
+async fn why_not_is_bounded_read_only_and_refuses_retired_inputs() {
+    use medulla_decision_types::decision::statistical::log::{DecisionWhyNot, WhyNotVerdict};
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let record = commit_assembly(&h);
+    let tenant: &'static str = medulla_persistence_records::decision_record::tests::TENANT;
+    let before = h.store.decision_record_body(tenant, &record.record_id).unwrap();
+    let medulla_decision_types::decision::DecisionOutcome::Solved { slots, .. } = &record.outcome
+    else {
+        panic!("the fixture is solved")
+    };
+    let chosen: Vec<String> = slots
+        .iter()
+        .map(|slot| slot.component.component_id.clone())
+        .collect();
+    for candidate in record.inputs.candidates.as_slice() {
+        let answer: DecisionWhyNot = decode(
+            why_not(&h, tenant, &record.record_id, &candidate.component_id, None).await,
+        )
+        .expect("a committed assembly re-solves");
+        assert_eq!(answer.record_id, record.record_id);
+        assert_eq!(answer.option_id, candidate.component_id);
+        // The budget is the knob's, never more.
+        assert!(answer.budget_used_ms <= 2_000 || answer.budget_exhausted);
+        assert_eq!(
+            answer.verdict == WhyNotVerdict::Selected,
+            chosen.contains(&candidate.component_id),
+            "{answer:?}"
+        );
+        if answer.verdict != WhyNotVerdict::Selected {
+            assert!(!answer.reasons.is_empty(), "{answer:?}");
+        }
+    }
+    // An option outside the record's candidates is not visible.
+    let unseen = why_not(&h, tenant, &record.record_id, "no-such-component", None).await;
+    assert!(unseen.error.unwrap().contains("OPTION_NOT_VISIBLE"));
+    // An unknown id and another tenant's id refuse with the same body.
+    let unknown = why_not(&h, tenant, "decision:missing", "tool-web", Some(100)).await;
+    let foreign = why_not(&h, OTHER_TENANT, &record.record_id, "tool-web", Some(100)).await;
+    let unknown = unknown.error.unwrap();
+    assert!(unknown.contains("DECISION_NOT_FOUND"), "{unknown}");
+    assert_eq!(unknown, foreign.error.unwrap());
+    // The call never changes the record.
+    assert_eq!(
+        h.store.decision_record_body(tenant, &record.record_id).unwrap(),
+        before
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R870.4
+#[tokio::test]
+async fn decision_reads_end_to_end() {
+    use medulla_decision_types::decision::statistical::log::DecisionWhyNot;
+    let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+    let (h, asked) = fixture().await;
+    let listed_record = committed(&h, &asked, 0).await;
+    let list_page: DecisionLogList =
+        decode(list(&h, TENANT, list_op(TENANT, 10, None)).await).unwrap();
+    assert!(list_page
+        .records
+        .iter()
+        .any(|item| item.record_id == listed_record.record_id));
+    let provenance: DecisionProvenance = decode(
+        dispatch_as(
+            &h,
+            TENANT,
+            Method::DecisionLog {
+                op: Box::new(DecisionLogOp::Provenance {
+                    tenant_id: TENANT.to_string(),
+                    record_id: listed_record.record_id.clone(),
+                }),
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    assert_eq!(provenance.record_digest, listed_record.record_digest);
+    for (fact, row) in provenance
+        .facts
+        .iter()
+        .zip(listed_record.inputs.graph_rows.as_slice())
+    {
+        assert_eq!(fact.revision, row.graph_version);
+    }
+    // The assembly record of the same tenant: why-not names an exclusion, and a
+    // second tenant gets DECISION_NOT_FOUND from each read.
+    let assembly = commit_assembly(&h);
+    let tenant: &'static str = medulla_persistence_records::decision_record::tests::TENANT;
+    let medulla_decision_types::decision::DecisionOutcome::Solved { slots, .. } = &assembly.outcome
+    else {
+        panic!("the fixture is solved")
+    };
+    let excluded = assembly
+        .inputs
+        .candidates
+        .as_slice()
+        .iter()
+        .find(|c| !slots.iter().any(|s| s.component.component_id == c.component_id));
+    if let Some(excluded) = excluded {
+        let answer: DecisionWhyNot = decode(
+            why_not(&h, tenant, &assembly.record_id, &excluded.component_id, None).await,
+        )
+        .unwrap();
+        assert!(!answer.reasons.is_empty(), "{answer:?}");
+    }
+    for refusal in [
+        why_not(&h, OTHER_TENANT, &assembly.record_id, "tool-web", None).await,
+        list(&h, OTHER_TENANT, list_op(OTHER_TENANT, 10, None)).await,
+    ] {
+        // An empty page or a not-found: never the first tenant's data.
+        if let Some(error) = refusal.error {
+            assert!(error.contains("DECISION_NOT_FOUND"), "{error}");
+        } else {
+            let page: DecisionLogList = decode(refusal).unwrap();
+            assert!(page.records.is_empty());
+        }
+    }
 }

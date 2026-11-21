@@ -4378,6 +4378,32 @@ class DecisionProvenance(BaseModel):
     rules: list[ProvenanceRule]
 
 
+class WhyNotVerdict(str, Enum):
+    selected = "selected"
+    eliminated = "eliminated"
+    infeasible = "infeasible"
+    worse = "worse"
+    unresolved = "unresolved"
+
+
+class WhyNotReason(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    detail: str
+    kind: str
+
+
+class DecisionWhyNot(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    budget_exhausted: bool
+    budget_used_ms: Annotated[int, Field(ge=0)]
+    option_id: str
+    reasons: list[WhyNotReason]
+    record_id: str
+    verdict: WhyNotVerdict
+
+
 class DecisionLogOpList(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4395,6 +4421,16 @@ class DecisionLogOpProvenance(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     op: Literal["provenance"]
+    record_id: str
+    tenant_id: str
+
+
+class DecisionLogOpWhyNot(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    budget_ms: Annotated[int, Field(ge=0)] | None = None
+    op: Literal["why_not"]
+    option_id: str
     record_id: str
     tenant_id: str
 
@@ -4790,6 +4826,7 @@ DecisionLogOp = Annotated[
     | DecisionLogOpHarnessLessons
     | DecisionLogOpList
     | DecisionLogOpProvenance
+    | DecisionLogOpWhyNot
     | DecisionLogOpPromoteRule
     | DecisionLogOpCapabilityOutcome
     | DecisionLogOpGenerationSpace
@@ -37347,7 +37384,9 @@ __all__ = [
     "DecisionLogList",
     "DecisionLogOpList",
     "DecisionLogOpProvenance",
+    "DecisionLogOpWhyNot",
     "DecisionProvenance",
+    "DecisionWhyNot",
     "ExecutionAnswer",
     "ExecutionAnswerPart",
     "ExecutionAnswerPartAbstain",
@@ -37382,6 +37421,8 @@ __all__ = [
     "ProvenanceFact",
     "ProvenancePremise",
     "ProvenanceRule",
+    "WhyNotReason",
+    "WhyNotVerdict",
     "RevisionProposalListRequest",
     "RevisionProposalPage",
     "RevisionRow",

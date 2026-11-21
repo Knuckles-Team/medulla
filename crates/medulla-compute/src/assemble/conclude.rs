@@ -80,6 +80,23 @@ pub(super) fn decide(inputs: &DecisionInputs) -> Result<Decided, AssembleError> 
 }
 
 fn decide_core(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
+    match prepare(inputs)? {
+        Prepared::Done(decided) => Ok(decided),
+        Prepared::Ready(ladder) => match inputs.templates.is_empty() {
+            true => decide_one(&ladder, None),
+            false => template::enumerate(&ladder),
+        },
+    }
+}
+
+/// The ladder's steps 1b and 2: either a decision reached before any search, or
+/// the ladder the search runs over.
+pub(super) enum Prepared<'a> {
+    Done(Decided),
+    Ready(Ladder<'a>),
+}
+
+pub(super) fn prepare(inputs: &DecisionInputs) -> Result<Prepared<'_>, AssembleError> {
     let budget = inputs.request.requirements.constraints.cost_budget.as_ref();
     let currency = facts::objective_currency(
         inputs.candidates.as_slice(),
@@ -89,10 +106,10 @@ fn decide_core(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
     if let Some(refused) = super::primitive::screen_request(inputs)? {
         let mut eliminated = screened.eliminated;
         eliminated.extend(refused.eliminated);
-        return Ok(abstained(&[], eliminated, refused.reasons));
+        return Ok(Prepared::Done(abstained(&[], eliminated, refused.reasons)));
     }
     if let Some(reasons) = super::coding_agent::refusals(inputs)? {
-        return Ok(abstained(&[], screened.eliminated, reasons));
+        return Ok(Prepared::Done(abstained(&[], screened.eliminated, reasons)));
     }
     let required =
         match required_capabilities(
@@ -101,7 +118,7 @@ fn decide_core(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
             &inputs.ontology_digest,
         ) {
             Ok(required) => required,
-            Err(reasons) => return Ok(abstained(&[], screened.eliminated, reasons)),
+            Err(reasons) => return Ok(Prepared::Done(abstained(&[], screened.eliminated, reasons))),
         };
     if required.len() > MAX_ASSEMBLY_REQUIRED_CAPABILITIES {
         return Err(AssembleError::new(
@@ -110,7 +127,7 @@ fn decide_core(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
         ));
     }
     if let Some(reasons) = pinned_ineligible(inputs, &screened.eliminated) {
-        return Ok(abstained(&required, screened.eliminated, reasons));
+        return Ok(Prepared::Done(abstained(&required, screened.eliminated, reasons)));
     }
     if inputs.policy.unknown_cost == UnknownCostRule::ExcludeWhenStrict {
         if let Some((component_id, field)) =
@@ -120,7 +137,7 @@ fn decide_core(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
                 component_id,
                 field: field.to_string(),
             };
-            return Ok(abstained(&required, screened.eliminated, vec![reason]));
+            return Ok(Prepared::Done(abstained(&required, screened.eliminated, vec![reason])));
         }
     }
     let ladder = Ladder {
@@ -129,10 +146,7 @@ fn decide_core(inputs: &DecisionInputs) -> Result<Decided, AssembleError> {
         screened,
         currency,
     };
-    match inputs.templates.is_empty() {
-        true => decide_one(&ladder, None),
-        false => template::enumerate(&ladder),
-    }
+    Ok(Prepared::Ready(ladder))
 }
 
 /// Decide over one topology: the one-agent graph, or one template.
