@@ -2778,25 +2778,7 @@ async fn constraint_violations_return_sqlstate() {
 #[cfg(feature = "statechart")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
 async fn wire_txn_create_and_drop_trigger_follow_the_transaction() {
-    use medulla_statechart::{Action, ActionValue, State, StatechartDef, Transition};
-
-    let machine = StatechartDef {
-        name: "stamp_before_insert".to_string(),
-        schema_version: 1,
-        states: vec![State::new("idle")],
-        alphabet: vec!["before_insert".to_string()],
-        transitions: vec![
-            Transition::new("idle", "before_insert", "idle").with_actions(vec![Action::Assign {
-                key: "new.status".to_string(),
-                value: ActionValue::Const {
-                    value: serde_json::json!("open"),
-                },
-            }]),
-        ],
-        initial: "idle".to_string(),
-        finals: Vec::new(),
-        meta: Default::default(),
-    };
+    let machine = stamp_before_insert_machine();
     // The machine lives in the engine's own statechart store, which is where
     // the served `CREATE TRIGGER` reads it.
     let persist_dir = sql_test_persist_dir();
@@ -3641,4 +3623,306 @@ async fn prepared_point_read_plan_cache_hits() {
         "the plan cache served {hits} of {EXECUTIONS} executions"
     );
     let _ = client.simple_query(&format!("DROP TABLE {table}")).await;
+}
+
+// ── Catalog views for outside tools (MEDULLA-ENGINE-PARITY-R008.2) ──────────────
+
+/// The grant a principal holds on a user table is the SQL privilege
+/// `SqlPrivilege::Select`; the catalog views list exactly the tables the
+/// principal may select, and the 40 introspection queries of an outside tool
+/// replay without error.
+// spec: MEDULLA-ENGINE-PARITY-R008.2
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn bi_tool_introspection_queries_pass() {
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_server_api::carrier::CarrierAuthority;
+    use medulla_server_auth::sql_catalog_acl::SqlPrivilege;
+
+    const QUERIES: &str = include_str!("fixtures/pg_introspection/queries.sql");
+    let statements: Vec<&str> = QUERIES.lines().collect();
+    assert_eq!(statements.len(), 40, "the fixture holds 40 statements");
+    assert!(
+        statements
+            .iter()
+            .all(|line| !line.trim().is_empty() && !line.trim_start().starts_with("--")),
+        "no blank or comment lines"
+    );
+    let distinct: std::collections::BTreeSet<&str> = statements.iter().copied().collect();
+    assert_eq!(distinct.len(), 40, "the 40 statements are distinct");
+
+    let state = login_state(&["intro-owner", "intro-reader"]);
+    let persist_dir = state
+        .read()
+        .await
+        .persist_dir
+        .clone()
+        .expect("persist dir");
+    let addr = spawn_listener_mode(state.clone(), pgwire::PgWireAuthMode::Scram).await;
+    register_password_login(&state, "intro-owner-login", "intro-owner", common::TEST_TENANT).await;
+    register_password_login(
+        &state,
+        "intro-reader-login",
+        "intro-reader",
+        common::TEST_TENANT,
+    )
+    .await;
+
+    let owner = connect_scram(&addr, "intro-owner-login", LOGIN_PASSWORD, "__commons__")
+        .await
+        .expect("owner login");
+    owner
+        .simple_query("CREATE TABLE t_visible (id BIGINT PRIMARY KEY, name TEXT)")
+        .await
+        .expect("CREATE TABLE t_visible");
+    owner
+        .simple_query("CREATE TABLE t_hidden (id BIGINT PRIMARY KEY)")
+        .await
+        .expect("CREATE TABLE t_hidden");
+
+    let owner_carrier = CarrierAuthority::from_verified(
+        &VerifiedRequestContext::verified_for_test_in_tenant(
+            "intro-owner",
+            common::TEST_TENANT,
+        ),
+    )
+    .unwrap();
+    medulla_server_auth::sql_catalog_acl::grant(
+        std::path::Path::new(&persist_dir),
+        &owner_carrier,
+        "t_visible",
+        "intro-reader",
+        &[SqlPrivilege::Select],
+        uuid::Uuid::new_v4(),
+    )
+    .unwrap();
+
+    let reader = connect_scram(&addr, "intro-reader-login", LOGIN_PASSWORD, "__commons__")
+        .await
+        .expect("grantee login");
+    for statement in &statements {
+        reader
+            .simple_query(statement)
+            .await
+            .unwrap_or_else(|err| panic!("{statement}: {}", error_chain(&err)));
+    }
+
+    let relnames = "SELECT relname FROM pg_catalog.pg_class WHERE relkind = 'r'";
+    let tables = "SELECT table_name FROM information_schema.tables";
+    for query in [relnames, tables] {
+        let seen = simple_ids(reader.simple_query(query).await.expect("reader catalog read"));
+        assert!(
+            seen.iter().any(|name| name == "t_visible"),
+            "{query}: the grantee lists t_visible, got {seen:?}"
+        );
+        assert!(
+            !seen.iter().any(|name| name == "t_hidden"),
+            "{query}: the grantee does not list t_hidden, got {seen:?}"
+        );
+        let owned = simple_ids(owner.simple_query(query).await.expect("owner catalog read"));
+        assert!(
+            owned.iter().any(|name| name == "t_visible")
+                && owned.iter().any(|name| name == "t_hidden"),
+            "{query}: the owner lists both tables, got {owned:?}"
+        );
+    }
+}
+
+// ── SQL dialect compatibility matrix (MEDULLA-ENGINE-PARITY-R009.3) ─────────────
+
+/// The one-state `stamp_before_insert` machine the trigger forms run against.
+#[cfg(feature = "statechart")]
+fn stamp_before_insert_machine() -> medulla_statechart::StatechartDef {
+    use medulla_statechart::{Action, ActionValue, State, StatechartDef, Transition};
+
+    StatechartDef {
+        name: "stamp_before_insert".to_string(),
+        schema_version: 1,
+        states: vec![State::new("idle")],
+        alphabet: vec!["before_insert".to_string()],
+        transitions: vec![
+            Transition::new("idle", "before_insert", "idle").with_actions(vec![Action::Assign {
+                key: "new.status".to_string(),
+                value: ActionValue::Const {
+                    value: serde_json::json!("open"),
+                },
+            }]),
+        ],
+        initial: "idle".to_string(),
+        finals: Vec::new(),
+        meta: Default::default(),
+    }
+}
+
+/// Every `supported` and `partial` entry of the compatibility matrix succeeds
+/// over pgwire on its recorded statement, and each of the five refused forms
+/// refuses with `0A000`.
+// spec: MEDULLA-ENGINE-PARITY-R009.3
+#[cfg(feature = "statechart")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn compat_matrix_entries_replay_over_pgwire() {
+    use bytes::Bytes;
+    use futures_util::{SinkExt, TryStreamExt};
+    use medulla_mutation_types::pg_operational_surface::{PgCompatibilityMatrix, SqlFormState};
+
+    const STATEMENTS: &str = include_str!("fixtures/sql_compat/statements.json");
+    const REFUSED: [&str; 5] = [
+        "create_policy",
+        "create_role",
+        "create_publication",
+        "create_rule",
+        "create_type",
+    ];
+
+    let entries: Vec<serde_json::Value> =
+        serde_json::from_str(STATEMENTS).expect("the statements fixture is a JSON array");
+    let text = |entry: &serde_json::Value, key: &str| -> String {
+        entry[key]
+            .as_str()
+            .unwrap_or_else(|| panic!("entry {entry} lacks `{key}`"))
+            .to_string()
+    };
+    let texts = |entry: &serde_json::Value, key: &str| -> Vec<String> {
+        entry[key]
+            .as_array()
+            .unwrap_or_else(|| panic!("entry {entry} lacks `{key}`"))
+            .iter()
+            .map(|v| v.as_str().expect("a statement text").to_string())
+            .collect()
+    };
+
+    // The fixture's supported and partial form set equals the matrix's entry set.
+    let matrix = PgCompatibilityMatrix::with_served_forms();
+    let served: std::collections::BTreeSet<String> = matrix
+        .forms
+        .iter()
+        .filter(|f| f.state != SqlFormState::Refused)
+        .map(|f| f.name.clone())
+        .collect();
+    let fixture_served: std::collections::BTreeSet<String> = entries
+        .iter()
+        .filter(|e| e["state"] != "refused")
+        .map(|e| text(e, "form"))
+        .collect();
+    for name in &served {
+        assert!(
+            fixture_served.contains(name),
+            "matrix entry `{name}` has no entry in the statements fixture"
+        );
+    }
+    assert_eq!(fixture_served, served, "the fixture covers the matrix entries");
+    let fixture_refused: Vec<String> = entries
+        .iter()
+        .filter(|e| e["state"] == "refused")
+        .map(|e| text(e, "form"))
+        .collect();
+    assert_eq!(fixture_refused, REFUSED, "the five closed refused forms");
+    for name in REFUSED {
+        assert_eq!(
+            matrix.resolve_form(name),
+            SqlFormState::Refused,
+            "`{name}` is absent from the matrix, so a later served form fails here by name"
+        );
+        assert!(
+            matrix.form_state(name).is_none(),
+            "`{name}` has no matrix entry"
+        );
+    }
+
+    let persist_dir = sql_test_persist_dir();
+    let machine_id = medulla_h_jobs::statechart::statechart_store(Some(&persist_dir))
+        .expect("statechart store")
+        .define(&stamp_before_insert_machine())
+        .expect("define the trigger machine");
+    let state = state_with_dir(default_persistence(), persist_dir);
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+
+    for entry in &entries {
+        let form = text(entry, "form");
+        let machine = entry["machine"].as_bool().unwrap_or(false);
+        let bind = |sql: String| {
+            if machine {
+                sql.replace("{machine_id}", &machine_id.to_string())
+            } else {
+                sql
+            }
+        };
+        let sql = bind(text(entry, "sql"));
+
+        if entry["state"] == "refused" {
+            let err = client
+                .simple_query(&sql)
+                .await
+                .expect_err(&format!("`{form}` is refused"));
+            assert_eq!(
+                err.code(),
+                Some(&tokio_postgres::error::SqlState::FEATURE_NOT_SUPPORTED),
+                "`{form}` refuses 0A000, got {}",
+                error_chain(&err)
+            );
+            assert!(
+                error_chain(&err).contains(&form),
+                "`{form}`: the message names the entry, got {}",
+                error_chain(&err)
+            );
+            continue;
+        }
+
+        for statement in texts(entry, "setup") {
+            client
+                .simple_query(&bind(statement.clone()))
+                .await
+                .unwrap_or_else(|err| panic!("{form} setup `{statement}`: {}", error_chain(&err)));
+        }
+        match entry["client"].as_str() {
+            Some("copy_in") => {
+                let sink = client
+                    .copy_in::<_, Bytes>(sql.as_str())
+                    .await
+                    .unwrap_or_else(|err| panic!("{form}: {}", error_chain(&err)));
+                futures_util::pin_mut!(sink);
+                sink.send(Bytes::from(text(entry, "copy_data")))
+                    .await
+                    .unwrap_or_else(|err| panic!("{form}: {}", error_chain(&err)));
+                let rows = sink
+                    .finish()
+                    .await
+                    .unwrap_or_else(|err| panic!("{form}: {}", error_chain(&err)));
+                assert_eq!(
+                    rows,
+                    entry["expect_rows"].as_u64().expect("expect_rows"),
+                    "{form}: rows copied in"
+                );
+            }
+            Some("copy_out") => {
+                let stream = client
+                    .copy_out(sql.as_str())
+                    .await
+                    .unwrap_or_else(|err| panic!("{form}: {}", error_chain(&err)));
+                let chunks: Vec<Bytes> = stream
+                    .try_collect()
+                    .await
+                    .unwrap_or_else(|err| panic!("{form}: {}", error_chain(&err)));
+                let data: Vec<u8> = chunks.iter().flat_map(|c| c.iter().copied()).collect();
+                assert_eq!(
+                    String::from_utf8(data).expect("utf-8 copy data"),
+                    text(entry, "expect_data"),
+                    "{form}: data copied out"
+                );
+            }
+            Some(other) => panic!("{form}: unknown client `{other}`"),
+            None => {
+                client
+                    .simple_query(&sql)
+                    .await
+                    .unwrap_or_else(|err| panic!("{form} `{sql}`: {}", error_chain(&err)));
+            }
+        }
+        for statement in texts(entry, "cleanup") {
+            client
+                .simple_query(&bind(statement.clone()))
+                .await
+                .unwrap_or_else(|err| panic!("{form} cleanup `{statement}`: {}", error_chain(&err)));
+        }
+    }
 }

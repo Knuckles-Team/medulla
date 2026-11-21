@@ -1,0 +1,623 @@
+[
+ {
+  "form": "read",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT 1",
+  "cleanup": []
+ },
+ {
+  "form": "explain",
+  "state": "supported",
+  "setup": [],
+  "sql": "EXPLAIN SELECT 1",
+  "cleanup": []
+ },
+ {
+  "form": "insert_nodes",
+  "state": "supported",
+  "setup": [],
+  "sql": "INSERT INTO nodes (id, type) VALUES ('cmp-n1', 'Agent')",
+  "cleanup": [
+   "DELETE FROM nodes WHERE id = 'cmp-n1'"
+  ]
+ },
+ {
+  "form": "insert_nodes_select",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_prices (sku TEXT PRIMARY KEY, px BIGINT NOT NULL)",
+   "INSERT INTO cmp_prices (sku, px) VALUES ('cmp-s1', 7)"
+  ],
+  "sql": "INSERT INTO nodes (id, rank) SELECT sku, px FROM cmp_prices",
+  "cleanup": [
+   "DELETE FROM nodes WHERE id = 'cmp-s1'",
+   "DROP TABLE cmp_prices"
+  ]
+ },
+ {
+  "form": "update_nodes",
+  "state": "supported",
+  "setup": [
+   "INSERT INTO nodes (id, type) VALUES ('cmp-n1', 'Agent')"
+  ],
+  "sql": "UPDATE nodes SET rank = 5 WHERE id = 'cmp-n1'",
+  "cleanup": [
+   "DELETE FROM nodes WHERE id = 'cmp-n1'"
+  ]
+ },
+ {
+  "form": "update_nodes_join",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_prices (sku TEXT PRIMARY KEY, px BIGINT NOT NULL)",
+   "INSERT INTO cmp_prices (sku, px) VALUES ('cmp-s1', 7)",
+   "INSERT INTO nodes (id, symbol) VALUES ('cmp-n1', 'cmp-s1')"
+  ],
+  "sql": "UPDATE nodes SET rank = p.px FROM cmp_prices p WHERE nodes.symbol = p.sku",
+  "cleanup": [
+   "DELETE FROM nodes WHERE id = 'cmp-n1'",
+   "DROP TABLE cmp_prices"
+  ]
+ },
+ {
+  "form": "delete_nodes",
+  "state": "supported",
+  "setup": [
+   "INSERT INTO nodes (id, type) VALUES ('cmp-n1', 'Agent')"
+  ],
+  "sql": "DELETE FROM nodes WHERE id = 'cmp-n1'",
+  "cleanup": []
+ },
+ {
+  "form": "delete_nodes_join",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_prices (sku TEXT PRIMARY KEY, px BIGINT NOT NULL)",
+   "INSERT INTO cmp_prices (sku, px) VALUES ('cmp-s1', 7)",
+   "INSERT INTO nodes (id, symbol) VALUES ('cmp-n1', 'cmp-s1')"
+  ],
+  "sql": "DELETE FROM nodes USING cmp_prices p WHERE nodes.symbol = p.sku",
+  "cleanup": [
+   "DELETE FROM nodes WHERE id = 'cmp-n1'",
+   "DROP TABLE cmp_prices"
+  ]
+ },
+ {
+  "form": "create_table",
+  "state": "supported",
+  "setup": [],
+  "sql": "CREATE TABLE cmp_t (a INT)",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "drop_table",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "DROP TABLE cmp_t",
+  "cleanup": []
+ },
+ {
+  "form": "alter_table",
+  "state": "partial",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "ALTER TABLE cmp_t ADD COLUMN b INT",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "create_view",
+  "state": "supported",
+  "setup": [],
+  "sql": "CREATE VIEW cmp_v AS SELECT 1",
+  "cleanup": [
+   "DROP VIEW cmp_v"
+  ]
+ },
+ {
+  "form": "drop_view",
+  "state": "supported",
+  "setup": [
+   "CREATE VIEW cmp_v AS SELECT 1"
+  ],
+  "sql": "DROP VIEW cmp_v",
+  "cleanup": []
+ },
+ {
+  "form": "insert_table",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "INSERT INTO cmp_t (a) VALUES (1)",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "insert_select",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)",
+   "CREATE TABLE cmp_u (a INT)",
+   "INSERT INTO cmp_u (a) VALUES (1)"
+  ],
+  "sql": "INSERT INTO cmp_t (a) SELECT a FROM cmp_u",
+  "cleanup": [
+   "DROP TABLE cmp_t",
+   "DROP TABLE cmp_u"
+  ]
+ },
+ {
+  "form": "update_table",
+  "state": "partial",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)",
+   "INSERT INTO cmp_t (a) VALUES (2)"
+  ],
+  "sql": "UPDATE cmp_t SET a = 1 WHERE a = 2",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "delete_table",
+  "state": "partial",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)",
+   "INSERT INTO cmp_t (a) VALUES (1)"
+  ],
+  "sql": "DELETE FROM cmp_t WHERE a = 1",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "property_graph_ddl",
+  "state": "partial",
+  "setup": [
+   "CREATE TABLE customers (customer_id BIGINT PRIMARY KEY, name TEXT)"
+  ],
+  "sql": "CREATE PROPERTY GRAPH shop VERTEX TABLES (customers KEY (customer_id))",
+  "cleanup": [
+   "DROP PROPERTY GRAPH shop",
+   "DROP TABLE customers"
+  ]
+ },
+ {
+  "form": "property_graph_privilege",
+  "state": "partial",
+  "setup": [
+   "CREATE TABLE customers (customer_id BIGINT PRIMARY KEY, name TEXT)",
+   "CREATE PROPERTY GRAPH shop VERTEX TABLES (customers KEY (customer_id))"
+  ],
+  "sql": "GRANT SELECT ON PROPERTY GRAPH shop TO reader",
+  "cleanup": [
+   "DROP PROPERTY GRAPH shop",
+   "DROP TABLE customers"
+  ]
+ },
+ {
+  "form": "graph_table_read",
+  "state": "partial",
+  "setup": [
+   "CREATE TABLE customers (customer_id BIGINT PRIMARY KEY, name TEXT)",
+   "CREATE PROPERTY GRAPH shop VERTEX TABLES (customers KEY (customer_id))"
+  ],
+  "sql": "SELECT * FROM GRAPH_TABLE (shop MATCH (c:customer) COLUMNS (c.name))",
+  "cleanup": [
+   "DROP PROPERTY GRAPH shop",
+   "DROP TABLE customers"
+  ]
+ },
+ {
+  "form": "begin",
+  "state": "supported",
+  "setup": [],
+  "sql": "BEGIN",
+  "cleanup": [
+   "ROLLBACK"
+  ]
+ },
+ {
+  "form": "commit",
+  "state": "supported",
+  "setup": [
+   "BEGIN"
+  ],
+  "sql": "COMMIT",
+  "cleanup": []
+ },
+ {
+  "form": "rollback",
+  "state": "supported",
+  "setup": [
+   "BEGIN"
+  ],
+  "sql": "ROLLBACK",
+  "cleanup": []
+ },
+ {
+  "form": "discard_all",
+  "state": "supported",
+  "setup": [],
+  "sql": "DISCARD ALL",
+  "cleanup": []
+ },
+ {
+  "form": "copy_in",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_prices (sku TEXT PRIMARY KEY, px BIGINT NOT NULL)"
+  ],
+  "sql": "COPY cmp_prices FROM STDIN",
+  "cleanup": [
+   "DROP TABLE cmp_prices"
+  ],
+  "client": "copy_in",
+  "copy_data": "cmp-s1\\t7\\n",
+  "expect_rows": 1
+ },
+ {
+  "form": "copy_out",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_prices (sku TEXT PRIMARY KEY, px BIGINT NOT NULL)",
+   "INSERT INTO cmp_prices (sku, px) VALUES ('cmp-s1', 7)"
+  ],
+  "sql": "COPY cmp_prices TO STDOUT",
+  "cleanup": [
+   "DROP TABLE cmp_prices"
+  ],
+  "client": "copy_out",
+  "expect_data": "cmp-s1\\t7\\n"
+ },
+ {
+  "form": "create_extension",
+  "state": "partial",
+  "setup": [],
+  "sql": "CREATE EXTENSION vector",
+  "cleanup": [
+   "DROP EXTENSION vector"
+  ]
+ },
+ {
+  "form": "drop_extension",
+  "state": "partial",
+  "setup": [
+   "CREATE EXTENSION vector"
+  ],
+  "sql": "DROP EXTENSION vector",
+  "cleanup": []
+ },
+ {
+  "form": "create_sequence",
+  "state": "supported",
+  "setup": [],
+  "sql": "CREATE SEQUENCE cmp_s START 1",
+  "cleanup": [
+   "DROP SEQUENCE cmp_s"
+  ]
+ },
+ {
+  "form": "drop_sequence",
+  "state": "supported",
+  "setup": [
+   "CREATE SEQUENCE cmp_s START 1"
+  ],
+  "sql": "DROP SEQUENCE cmp_s",
+  "cleanup": []
+ },
+ {
+  "form": "create_trigger",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "CREATE TRIGGER audit AFTER INSERT ON cmp_t EXECUTE MACHINE {machine_id}",
+  "cleanup": [
+   "DROP TRIGGER audit ON cmp_t",
+   "DROP TABLE cmp_t"
+  ],
+  "machine": true
+ },
+ {
+  "form": "drop_trigger",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)",
+   "CREATE TRIGGER audit AFTER INSERT ON cmp_t EXECUTE MACHINE {machine_id}"
+  ],
+  "sql": "DROP TRIGGER audit ON cmp_t",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ],
+  "machine": true
+ },
+ {
+  "form": "create_ann_index",
+  "state": "supported",
+  "setup": [
+   "CREATE EXTENSION vector",
+   "CREATE TABLE cmp_docs (id BIGINT PRIMARY KEY, emb vector(3))"
+  ],
+  "sql": "CREATE INDEX ON cmp_docs USING hnsw (emb vector_l2_ops)",
+  "cleanup": [
+   "DROP TABLE cmp_docs",
+   "DROP EXTENSION vector"
+  ]
+ },
+ {
+  "form": "create_index",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "CREATE INDEX cmp_i ON cmp_t (a)",
+  "cleanup": [
+   "DROP INDEX cmp_i",
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "drop_index",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)",
+   "CREATE INDEX cmp_i ON cmp_t (a)"
+  ],
+  "sql": "DROP INDEX cmp_i",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "create_hypertable",
+  "state": "partial",
+  "setup": [
+   "CREATE TABLE cmp_ts (ts BIGINT, v BIGINT)"
+  ],
+  "sql": "SELECT create_hypertable('cmp_ts', 'ts')",
+  "cleanup": [
+   "DROP TABLE cmp_ts"
+  ]
+ },
+ {
+  "form": "create_continuous_aggregate",
+  "state": "partial",
+  "setup": [
+   "CREATE TABLE cmp_ts (ts BIGINT, v BIGINT)",
+   "SELECT create_hypertable('cmp_ts', 'ts')"
+  ],
+  "sql": "CREATE MATERIALIZED VIEW cmp_daily WITH (timescaledb.continuous) AS SELECT time_bucket('1 day', ts) AS d, count(*) FROM cmp_ts GROUP BY 1",
+  "cleanup": [
+   "DROP MATERIALIZED VIEW cmp_daily",
+   "DROP TABLE cmp_ts"
+  ]
+ },
+ {
+  "form": "create_matview",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "CREATE MATERIALIZED VIEW cmp_mv AS SELECT a FROM cmp_t",
+  "cleanup": [
+   "DROP MATERIALIZED VIEW cmp_mv",
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "refresh_matview",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)",
+   "CREATE MATERIALIZED VIEW cmp_mv AS SELECT a FROM cmp_t"
+  ],
+  "sql": "REFRESH MATERIALIZED VIEW cmp_mv",
+  "cleanup": [
+   "DROP MATERIALIZED VIEW cmp_mv",
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "drop_matview",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)",
+   "CREATE MATERIALIZED VIEW cmp_mv AS SELECT a FROM cmp_t"
+  ],
+  "sql": "DROP MATERIALIZED VIEW cmp_mv",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "create_function",
+  "state": "partial",
+  "setup": [],
+  "sql": "CREATE FUNCTION add_two(a int, b int) RETURNS int AS $$ SELECT a + b $$ LANGUAGE sql",
+  "cleanup": [
+   "DROP FUNCTION add_two"
+  ]
+ },
+ {
+  "form": "drop_function",
+  "state": "partial",
+  "setup": [
+   "CREATE FUNCTION add_two(a int, b int) RETURNS int AS $$ SELECT a + b $$ LANGUAGE sql"
+  ],
+  "sql": "DROP FUNCTION add_two",
+  "cleanup": []
+ },
+ {
+  "form": "json_get",
+  "state": "supported",
+  "setup": [
+   "INSERT INTO nodes (id, type) VALUES ('cmp-n1', 'Agent')"
+  ],
+  "sql": "SELECT json_get(props, 'k') FROM nodes",
+  "cleanup": [
+   "DELETE FROM nodes WHERE id = 'cmp-n1'"
+  ]
+ },
+ {
+  "form": "json_get_f64",
+  "state": "supported",
+  "setup": [
+   "INSERT INTO nodes (id, type) VALUES ('cmp-n1', 'Agent')"
+  ],
+  "sql": "SELECT json_get_f64(props, 'x') FROM nodes",
+  "cleanup": [
+   "DELETE FROM nodes WHERE id = 'cmp-n1'"
+  ]
+ },
+ {
+  "form": "json_get_i64",
+  "state": "supported",
+  "setup": [
+   "INSERT INTO nodes (id, type) VALUES ('cmp-n1', 'Agent')"
+  ],
+  "sql": "SELECT json_get_i64(props, 'ts') FROM nodes",
+  "cleanup": [
+   "DELETE FROM nodes WHERE id = 'cmp-n1'"
+  ]
+ },
+ {
+  "form": "time_bucket",
+  "state": "supported",
+  "setup": [
+   "CREATE TABLE cmp_ts (ts BIGINT, v BIGINT)",
+   "SELECT create_hypertable('cmp_ts', 'ts')"
+  ],
+  "sql": "SELECT time_bucket('1 day', ts) FROM cmp_ts",
+  "cleanup": [
+   "DROP TABLE cmp_ts"
+  ]
+ },
+ {
+  "form": "greatest",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT greatest(1, 5, 3)",
+  "cleanup": []
+ },
+ {
+  "form": "least",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT least(4, 2, 9)",
+  "cleanup": []
+ },
+ {
+  "form": "md5",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT md5('a')",
+  "cleanup": []
+ },
+ {
+  "form": "sha1",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT sha1('a')",
+  "cleanup": []
+ },
+ {
+  "form": "sha256",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT sha256('a')",
+  "cleanup": []
+ },
+ {
+  "form": "base64_encode",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT base64_encode('a')",
+  "cleanup": []
+ },
+ {
+  "form": "base64_decode",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT base64_decode('YQ==')",
+  "cleanup": []
+ },
+ {
+  "form": "int4range",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT int4range(1, 5)",
+  "cleanup": []
+ },
+ {
+  "form": "tsrange",
+  "state": "supported",
+  "setup": [],
+  "sql": "SELECT tsrange(1000, 2000)",
+  "cleanup": []
+ },
+ {
+  "form": "create_policy",
+  "state": "refused",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "CREATE POLICY p ON cmp_t USING (true)",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "create_role",
+  "state": "refused",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "CREATE ROLE cmp_r",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "create_publication",
+  "state": "refused",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "CREATE PUBLICATION cmp_pub FOR ALL TABLES",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "create_rule",
+  "state": "refused",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "CREATE RULE cmp_rule AS ON INSERT TO cmp_t DO NOTHING",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ },
+ {
+  "form": "create_type",
+  "state": "refused",
+  "setup": [
+   "CREATE TABLE cmp_t (a INT)"
+  ],
+  "sql": "CREATE TYPE cmp_ty AS ENUM ('a')",
+  "cleanup": [
+   "DROP TABLE cmp_t"
+  ]
+ }
+]
