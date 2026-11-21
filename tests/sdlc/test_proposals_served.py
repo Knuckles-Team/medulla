@@ -204,3 +204,79 @@ async def test_mode_gates_proposals(start_medulla_server) -> None:
         assert again["previous"] == "evolving"
     finally:
         await client.close()
+
+
+async def _list(client, request: dict) -> list[dict]:
+    return _body(await client._send("ProposalList", {"request": request}, GRAPH))
+
+
+async def _decide(client, proposal_id: str, decision: str) -> dict:
+    request = {
+        "id": proposal_id,
+        "decision": decision,
+        "reviewer": "reviewer-1",
+        "reason": f"{decision} after reading the evidence",
+    }
+    return _body(await client._send("ProposalDecide", {"request": request}, GRAPH))
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R017.6")
+@pytest.mark.asyncio
+async def test_review_list_and_decision_round_trip(start_medulla_server) -> None:
+    client = await _connect()
+    try:
+        suffix = uuid.uuid4().hex[:12]
+        project = f"project-{suffix}"
+        cited = await _cited(client, suffix)
+        await _set_mode(client, project, "development")
+        first = await _proposal(client, project, [cited])
+
+        listed = await _list(client, {"repo": project})
+        assert [entry["id"] for entry in listed] == [first["node_id"]]
+        entry = listed[0]
+        assert entry["kind"] == "row_add"
+        assert entry["target"] == "MEDULLA-SDLC-R017.3"
+        assert entry["evidence"] == [cited]
+        assert entry["state"] == "open"
+        # The list narrows by state and kind, and never crosses projects.
+        assert await _list(client, {"repo": project, "state": "approved"}) == []
+        assert await _list(client, {"repo": project, "kind": "row_update"}) == []
+        assert await _list(client, {"repo": f"other-{suffix}"}) == []
+
+        # spec: MEDULLA-SDLC-R017.6
+        decided = await _decide(client, first["node_id"], "approve")
+        assert decided == {"id": first["node_id"], "state": "approved"}
+        listed = await _list(client, {"repo": project, "state": "approved"})
+        assert [entry["id"] for entry in listed] == [first["node_id"]]
+        assert await _list(client, {"repo": project, "state": "open"}) == []
+        stored = await _node(client, first["node_id"])
+        assert stored["reviewer"] == "reviewer-1"
+        assert stored["evidence"]
+
+        # A decided proposal is not decided again; an unknown id is not found.
+        with pytest.raises(Exception, match="PROPOSAL_NOT_OPEN"):
+            await _decide(client, first["node_id"], "reject")
+        with pytest.raises(Exception, match="PROPOSAL_NOT_FOUND"):
+            await _decide(client, f"proposal:absent-{suffix}", "reject")
+
+        # A rejection ends a second proposal the same way.
+        second_cited = await _cited(client, suffix + "b")
+        second = _body(
+            await client._send(
+                "ProposalPut",
+                {
+                    "proposal": {
+                        "project": project,
+                        "kind": "row_update",
+                        "target": "MEDULLA-SDLC-R017.6",
+                        "statement": "Update the review row.",
+                        "evidence": [second_cited],
+                    }
+                },
+                GRAPH,
+            )
+        )
+        rejected = await _decide(client, second["node_id"], "reject")
+        assert rejected["state"] == "rejected"
+    finally:
+        await client.close()

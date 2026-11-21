@@ -397,6 +397,16 @@ $($variants)*
     ProposalPut {
         proposal: medulla_source_types::lifecycle::Proposal,
     },
+    /// List the proposals of one project for review (MEDULLA-SDLC-R017.6),
+    /// optionally narrowed to one state and one kind. Reads only.
+    ProposalList {
+        request: medulla_source_types::lifecycle::ProposalListRequest,
+    },
+    /// Record a reviewer's approval or rejection of one open proposal
+    /// (MEDULLA-SDLC-R017.6). Refuses `PROPOSAL_NOT_FOUND` and `PROPOSAL_NOT_OPEN`.
+    ProposalDecide {
+        request: medulla_source_types::lifecycle::ProposalDecideRequest,
+    },
     /// Set the mode of one project (MEDULLA-SDLC-R012.8): `reference`,
     /// `development` or `evolving`. A move to `evolving` needs an operator
     /// approval (`MODE_APPROVAL_REQUIRED`).

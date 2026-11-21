@@ -182,6 +182,8 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // `handle_incident_related_claims` reads claims from `project_core` of the
     // request graph, after `load`'s `can_see_node` incident filter.
     "IncidentRelatedClaims",
+    // `dispatch_sdlc_methods::proposal_list` keeps only proposal nodes `can_see_node` admits.
+    "ProposalList",
     "KnowledgeStream",
     "ListGraphs",
     // `graph_ops::memory_snapshot::{list, read}` read the projected core of

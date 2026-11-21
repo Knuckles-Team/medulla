@@ -464,3 +464,56 @@ fn proposal_evidence_is_required_resolved_and_matched() {
     let refusal = handle_proposal_put(proposal(too_many), &[]).unwrap_err();
     assert_eq!(refusal.code(), "INVALID_ARGUMENT");
 }
+
+// spec: MEDULLA-SDLC-R017.6
+#[test]
+fn a_decision_moves_only_an_open_proposal() {
+    use medulla_source_types::lifecycle::{
+        handle_proposal_decide, ProposalDecision, ProposalDecideRequest, ProposalState, REFUSALS,
+    };
+
+    let request = |decision: ProposalDecision, reviewer: &str, reason: &str| ProposalDecideRequest {
+        id: "proposal:1".into(),
+        decision,
+        reviewer: reviewer.into(),
+        reason: reason.into(),
+    };
+    for code in ["PROPOSAL_NOT_FOUND", "PROPOSAL_NOT_OPEN"] {
+        assert!(REFUSALS.iter().any(|c| c.as_str() == code), "{code}");
+    }
+    let approve = request(ProposalDecision::Approve, "reviewer", "evidence holds");
+    assert_eq!(
+        handle_proposal_decide(ProposalState::Open, &approve).unwrap(),
+        ProposalState::Approved
+    );
+    let reject = request(ProposalDecision::Reject, "reviewer", "evidence is thin");
+    assert_eq!(
+        handle_proposal_decide(ProposalState::Open, &reject).unwrap(),
+        ProposalState::Rejected
+    );
+    for decided in [
+        ProposalState::Approved,
+        ProposalState::Rejected,
+        ProposalState::Landed,
+    ] {
+        let refusal = handle_proposal_decide(decided, &approve).unwrap_err();
+        assert_eq!(refusal.code(), "PROPOSAL_NOT_OPEN");
+    }
+    let refusal = handle_proposal_decide(
+        ProposalState::Open,
+        &request(ProposalDecision::Approve, " ", "reason"),
+    )
+    .unwrap_err();
+    assert_eq!(refusal.code(), "INVALID_ARGUMENT");
+    // An open proposal is stored `proposed`; every stored value reads back.
+    assert_eq!(ProposalState::Open.stored(), "proposed");
+    for state in [
+        ProposalState::Open,
+        ProposalState::Approved,
+        ProposalState::Rejected,
+        ProposalState::Landed,
+    ] {
+        assert_eq!(ProposalState::from_stored(state.stored()), Some(state));
+    }
+    assert_eq!(ProposalState::from_stored("open"), None);
+}

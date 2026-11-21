@@ -499,6 +499,10 @@ closed_error_codes! {
         ModeReferenceNoProposals => "MODE_REFERENCE_NO_PROPOSALS",
         /// MEDULLA-SDLC-R017.5: the codebase's mode does not admit the proposal's origin.
         ModeOriginNotAdmitted => "MODE_ORIGIN_NOT_ADMITTED",
+        /// MEDULLA-SDLC-R017.6: no proposal of the tenant has the id a decision names.
+        ProposalNotFound => "PROPOSAL_NOT_FOUND",
+        /// MEDULLA-SDLC-R017.6: the proposal a decision names is no longer open.
+        ProposalNotOpen => "PROPOSAL_NOT_OPEN",
         /// MEDULLA-SDLC-R012.8: a move to `evolving` without a full operator approval.
         ModeApprovalRequired => "MODE_APPROVAL_REQUIRED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",

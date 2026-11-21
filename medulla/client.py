@@ -18996,6 +18996,32 @@ class MedullaClient:
             raise TypeError("ProposalPut returned a non-object result")
         return result
 
+    async def proposal_list(self, request: dict[str, Any]) -> list[dict[str, Any]]:
+        """List the proposals of one project for review (MEDULLA-SDLC-R017.6).
+
+        ``request`` carries ``repo`` and optionally ``state`` (``open``,
+        ``approved``, ``rejected`` or ``landed``) and ``kind``. Each entry holds
+        ``id``, ``kind``, ``target``, ``evidence`` and ``state``.
+        """
+        result = await self._send("ProposalList", {"request": request}, None)
+        if not isinstance(result, list):
+            raise TypeError("ProposalList returned a non-list result")
+        return result
+
+    async def proposal_decide(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Record a reviewer's decision on one open proposal (MEDULLA-SDLC-R017.6).
+
+        ``request`` carries ``id`` (from :meth:`proposal_list`), ``decision``
+        (``approve`` or ``reject``), ``reviewer`` and ``reason``. The answer holds
+        ``id``, the new ``state`` and, once a pull request exists, ``pull_request``.
+        An unknown id refuses ``PROPOSAL_NOT_FOUND``; a proposal that is not open
+        refuses ``PROPOSAL_NOT_OPEN``.
+        """
+        result = await self._send("ProposalDecide", {"request": request}, None)
+        if not isinstance(result, dict):
+            raise TypeError("ProposalDecide returned a non-object result")
+        return result
+
     async def project_mode_set(self, request: dict[str, Any]) -> dict[str, Any]:
         """Set the mode of one project (MEDULLA-SDLC-R012.8).
 

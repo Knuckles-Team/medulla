@@ -20,7 +20,7 @@ Repository: arbora, row `ARBORA-OPS-R896.5` (goal, proposal list and decision op
 | `ProposalDecide` | `{id, decision, reviewer, reason}` | `{id, state, pull_request?}` |
 | `GoalPut` | `{repo, statement, targets[]}` | `{goal_id}` |
 
-`kind` is one of twelve values. Row kinds: add, update, split, prune and retire. Plan kind: edit plan section. Task kinds: add, reorder and split. Other kinds: add contract, resolve clarification and tune knob. `state` is `open`, `approved`, `rejected` or `landed`. A proposal reaches `landed` only after its pull request merges.
+`kind` is one of twelve values. Row kinds: add, update, split, prune and retire. Plan kind: edit plan section. Task kinds: add, reorder and split. Other kinds: add contract, resolve clarification and tune knob. `decision` is `approve` or `reject`. `state` is `open`, `approved`, `rejected` or `landed`; an open proposal is stored with status `proposed`. A proposal reaches `landed` only after its pull request merges.
 
 ## Refusal codes
 
@@ -30,6 +30,8 @@ Repository: arbora, row `ARBORA-OPS-R896.5` (goal, proposal list and decision op
 - `MODE_REFERENCE_NO_PROPOSALS`: the codebase is in mode `reference`.
 - `MODE_ORIGIN_NOT_ADMITTED`: the codebase's mode does not admit the proposal's origin (an unprompted proposal to a `development` codebase).
 - `MODE_APPROVAL_REQUIRED`: a move to `evolving` has no operator approval.
+- `PROPOSAL_NOT_FOUND`: a decision names an id that no proposal of the tenant has.
+- `PROPOSAL_NOT_OPEN`: a decision names a proposal that is no longer `open`.
 - `GOAL_TARGET_REQUIRED`: a goal names no target.
 
 ## Authoritative code types

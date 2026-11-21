@@ -1726,6 +1726,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "MODE_ORIGIN_NOT_ADMITTED",
         ],
     ),
+    // MEDULLA-SDLC-R017.6: the proposal review list and decision.
+    ("ProposalList", &["TENANT_SCOPE_REQUIRED"]),
+    (
+        "ProposalDecide",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INVALID_ARGUMENT",
+            "PROPOSAL_NOT_FOUND",
+            "PROPOSAL_NOT_OPEN",
+        ],
+    ),
     // MEDULLA-SDLC-R012.8: the project mode record's refusals.
     (
         "ProjectModeSet",

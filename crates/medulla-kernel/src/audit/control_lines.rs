@@ -186,6 +186,11 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "PROPOSAL_PUT|{}|{:?}",
             proposal.project, proposal.kind
         )),
+        // MEDULLA-SDLC-R017.6: the line names the proposal and the decision, never the reason.
+        Method::ProposalDecide { request } => Some(format!(
+            "PROPOSAL_DECIDE|{}|{:?}",
+            request.id, request.decision
+        )),
         // MEDULLA-SDLC-R012.8: the line names the project and the mode, never the approval.
         Method::ProjectModeSet { request } => Some(format!(
             "PROJECT_MODE_SET|{}|{}",

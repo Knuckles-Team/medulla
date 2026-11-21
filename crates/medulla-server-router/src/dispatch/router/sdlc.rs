@@ -6,6 +6,7 @@ use std::sync::Arc;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::result_contract::ingestion::{
     GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
+    ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
     RecordRelease as RecordReleaseResult,
 };
@@ -17,7 +18,9 @@ use medulla_server_graph::dispatch::shared::{
 };
 use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
-    handle_project_mode_set, handle_proposal_put, project_mode_node_id, Proposal, ProposalReceipt,
+    handle_project_mode_set, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
+    LifecycleRefusal, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalEvidence,
+    ProposalKind, ProposalListEntry, ProposalListRequest, ProposalReceipt, ProposalState,
     ProposalWrite, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
     DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
     ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
@@ -40,6 +43,7 @@ const RELEASE_RECORD_PROPERTY: &str = "release_record";
 /// The node type of an indexed repository commit.
 const COMMIT_TYPE: &str = "Changeset";
 const MAX_RELEASES_READ: usize = 100_000;
+const MAX_PROPOSALS_READ: usize = 100_000;
 const MAX_CHAIN: usize = 200_000;
 const MAX_BATCH_OPERATIONS: usize = 50_000;
 
@@ -72,6 +76,12 @@ pub async fn dispatch_sdlc_methods(
         Method::GoalPut { goal } => dispatch_boxed(goal_put(state, target, goal)).await,
         Method::ProposalPut { proposal } => {
             dispatch_boxed(proposal_put(state, target, proposal)).await
+        }
+        Method::ProposalList { request } => {
+            dispatch_boxed(proposal_list(state, target, request)).await
+        }
+        Method::ProposalDecide { request } => {
+            dispatch_boxed(proposal_decide(state, target, request)).await
         }
         Method::ProjectModeSet { request } => {
             dispatch_boxed(project_mode_set(state, target, request)).await
@@ -244,7 +254,7 @@ fn proposal_operations(
     properties.insert("target".into(), proposal.target.clone().into());
     properties.insert("statement".into(), proposal.statement.clone().into());
     properties.insert("origin".into(), proposal.origin.name().into());
-    properties.insert("status".into(), "proposed".into());
+    properties.insert("status".into(), ProposalState::Open.stored().into());
     properties.insert("evidence".into(), evidence.into());
     if let Some(marker) = &proposal.marker {
         properties.insert("marker".into(), marker.clone().into());
@@ -259,6 +269,125 @@ fn proposal_operations(
         }
     }
     bounded(operations)
+}
+
+/// A stored `Proposal` node of the verified tenant, decoded for review.
+struct StoredProposal {
+    project: String,
+    entry: ProposalListEntry,
+}
+
+/// Decode one stored proposal node; `None` for a node of another tenant, another type or a
+/// shape this method did not write.
+fn stored_proposal(node_id: &str, properties: &[u8], tenant: &str) -> Option<StoredProposal> {
+    let node = medulla_types::msgpack::decode_property_value(properties).ok()?;
+    if node.get("type").and_then(Value::as_str) != Some(PROPOSAL_TYPE)
+        || node.get("tenant_id").and_then(Value::as_str) != Some(tenant)
+    {
+        return None;
+    }
+    let text = |key: &str| node.get(key).and_then(Value::as_str);
+    let kind: ProposalKind =
+        serde_json::from_value(Value::String(text("kind")?.to_owned())).ok()?;
+    let evidence: Vec<ProposalEvidence> = serde_json::from_str(text("evidence")?).ok()?;
+    let state = ProposalState::from_stored(text("status")?)?;
+    Some(StoredProposal {
+        project: text("project")?.to_owned(),
+        entry: ProposalListEntry {
+            id: node_id.to_owned(),
+            kind,
+            target: text("target")?.to_owned(),
+            evidence,
+            state,
+        },
+    })
+}
+
+/// The verified tenant's proposals the caller can see, by node id.
+async fn visible_proposals(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+) -> Result<Vec<StoredProposal>, String> {
+    let tenant = target.verified.tenant();
+    if tenant.trim().is_empty() {
+        return Err("TENANT_SCOPE_REQUIRED".to_string());
+    }
+    ensure_graph_resident(state, target.graph).await;
+    let (core, authority) = {
+        let current = timed_read(state).await;
+        authorized_graph_read(
+            &current,
+            target.graph,
+            target.verified,
+            &format!("GRAPH_NOT_FOUND: {}", target.graph),
+        )?
+    };
+    let mut proposals: Vec<StoredProposal> = core
+        .get_nodes_by_label(PROPOSAL_TYPE, MAX_PROPOSALS_READ)
+        .into_iter()
+        .filter(|(node_id, properties)| {
+            authority.can_see_node(properties, core.is_schema_node(node_id))
+        })
+        .filter_map(|(node_id, properties)| stored_proposal(&node_id, &properties, tenant))
+        .collect();
+    proposals.sort_by(|a, b| a.entry.id.cmp(&b.entry.id));
+    Ok(proposals)
+}
+
+/// `ProposalList` (MEDULLA-SDLC-R017.6): the proposals of one project, narrowed by the
+/// optional state and kind. Reads only.
+async fn proposal_list(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: ProposalListRequest,
+) -> Response {
+    let result = async {
+        let proposals = visible_proposals(state, &target).await?;
+        Ok(proposals
+            .into_iter()
+            .filter(|stored| stored.project == request.repo)
+            .filter(|stored| request.state.is_none_or(|wanted| stored.entry.state == wanted))
+            .filter(|stored| request.kind.is_none_or(|wanted| stored.entry.kind == wanted))
+            .map(|stored| stored.entry)
+            .collect::<Vec<_>>())
+    }
+    .await;
+    typed_response::<ProposalListResult>(target.req_id, result)
+}
+
+/// `ProposalDecide` (MEDULLA-SDLC-R017.6): read the stored proposal, decide the new state,
+/// then write the state and the reviewer in one `BatchUpdate`. The node merges these keys; its
+/// owner and its content stay as `ProposalPut` wrote them. A refusal returns before any write.
+async fn proposal_decide(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: ProposalDecideRequest,
+) -> Response {
+    let result = async {
+        let proposals = visible_proposals(state, &target).await?;
+        let stored = proposals
+            .iter()
+            .find(|stored| stored.entry.id == request.id)
+            .ok_or_else(|| LifecycleRefusal::ProposalNotFound(request.id.clone()).to_string())?;
+        let next = handle_proposal_decide(stored.entry.state, &request).map_err(|e| e.to_string())?;
+        let mut properties = Map::new();
+        properties.insert("type".into(), PROPOSAL_TYPE.into());
+        properties.insert("tenant_id".into(), target.verified.tenant().into());
+        properties.insert("status".into(), next.stored().into());
+        properties.insert("reviewer".into(), request.reviewer.clone().into());
+        properties.insert("review_reason".into(), request.reason.clone().into());
+        let operations = bounded(vec![
+            json!({"op": "upsert_node", "id": request.id, "properties": properties}),
+        ])?;
+        commit(state, &target, operations).await?;
+        Ok(ProposalDecideReceipt {
+            id: request.id,
+            state: next,
+            pull_request: None,
+        })
+    }
+    .await;
+    typed_response::<ProposalDecideResult>(target.req_id, result)
 }
 
 /// `ProjectModeSet` (MEDULLA-SDLC-R012.8): read the project's stored mode (none

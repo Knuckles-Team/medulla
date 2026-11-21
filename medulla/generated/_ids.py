@@ -10,6 +10,8 @@ METHOD_IDS = frozenset(
         "GoalPut",
         "ProjectModeSet",
         "ProposalPut",
+        "ProposalList",
+        "ProposalDecide",
         "ArgumentMapPut",
         "RetrievalFeedbackRecord",
         "ArgumentMapGet",

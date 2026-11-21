@@ -1093,6 +1093,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::GoalPut { .. }
             | Method::ProjectModeSet { .. }
             | Method::ProposalPut { .. }
+            | Method::ProposalDecide { .. }
             | Method::ActionRegister { .. }
             | Method::ActionSubmit { .. }
     ) {

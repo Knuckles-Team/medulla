@@ -131,6 +131,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("PROPOSAL_EVIDENCE_DIGEST_MISMATCH"),
     RefusalCode::new("MODE_REFERENCE_NO_PROPOSALS"),
     RefusalCode::new("MODE_ORIGIN_NOT_ADMITTED"),
+    RefusalCode::new("PROPOSAL_NOT_FOUND"),
+    RefusalCode::new("PROPOSAL_NOT_OPEN"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -164,6 +166,10 @@ pub enum LifecycleRefusal {
     ModeReferenceNoProposals(String),
     #[error("MODE_ORIGIN_NOT_ADMITTED: {0}")]
     ModeOriginNotAdmitted(String),
+    #[error("PROPOSAL_NOT_FOUND: {0}")]
+    ProposalNotFound(String),
+    #[error("PROPOSAL_NOT_OPEN: {0}")]
+    ProposalNotOpen(String),
     #[error("INVALID_ARGUMENT: {0}")]
     InvalidArgument(String),
     #[error("MODE_APPROVAL_REQUIRED: {0}")]
@@ -188,6 +194,8 @@ impl LifecycleRefusal {
             Self::ProposalEvidenceDigestMismatch(_) => "PROPOSAL_EVIDENCE_DIGEST_MISMATCH",
             Self::ModeReferenceNoProposals(_) => "MODE_REFERENCE_NO_PROPOSALS",
             Self::ModeOriginNotAdmitted(_) => "MODE_ORIGIN_NOT_ADMITTED",
+            Self::ProposalNotFound(_) => "PROPOSAL_NOT_FOUND",
+            Self::ProposalNotOpen(_) => "PROPOSAL_NOT_OPEN",
             Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
         }
@@ -783,6 +791,136 @@ pub fn handle_proposal_put(
         node_id: proposal_node_id(&proposal),
         proposal,
     })
+}
+
+/// Where a proposal stands in review (MEDULLA-SDLC-R017.6). A proposal is
+/// written `open`; a reviewer moves it to `approved` or `rejected`; it reaches
+/// `landed` only after its pull request merges (MEDULLA-SDLC-R017.4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ProposalState {
+    Open,
+    Approved,
+    Rejected,
+    Landed,
+}
+
+impl ProposalState {
+    /// The snake case wire name.
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Open => "open",
+            Self::Approved => "approved",
+            Self::Rejected => "rejected",
+            Self::Landed => "landed",
+        }
+    }
+
+    /// The value of the `status` property of a stored `Proposal` node. An open
+    /// proposal is stored `proposed` (MEDULLA-SDLC-R017.3); the others keep their
+    /// wire name.
+    pub fn stored(self) -> &'static str {
+        match self {
+            Self::Open => "proposed",
+            other => other.name(),
+        }
+    }
+
+    /// Parse a stored `status` value; `None` for a value this record never wrote.
+    pub fn from_stored(stored: &str) -> Option<Self> {
+        match stored {
+            "proposed" => Some(Self::Open),
+            other => serde_json::from_value(serde_json::Value::String(other.to_owned()))
+                .ok()
+                .filter(|state| *state != Self::Open),
+        }
+    }
+}
+
+/// `ProposalList` request (MEDULLA-SDLC-R017.6): the proposals of one project,
+/// optionally narrowed to one state and one kind.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProposalListRequest {
+    /// The project (repository) the proposals name.
+    pub repo: String,
+    #[serde(default)]
+    pub state: Option<ProposalState>,
+    #[serde(default)]
+    pub kind: Option<ProposalKind>,
+}
+
+/// One entry of the `ProposalList` answer: what a reviewer needs to decide.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProposalListEntry {
+    pub id: String,
+    pub kind: ProposalKind,
+    pub target: String,
+    pub evidence: Vec<ProposalEvidence>,
+    pub state: ProposalState,
+}
+
+/// A reviewer's decision on one open proposal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ProposalDecision {
+    Approve,
+    Reject,
+}
+
+impl ProposalDecision {
+    /// The state this decision moves an open proposal to.
+    pub fn state(self) -> ProposalState {
+        match self {
+            Self::Approve => ProposalState::Approved,
+            Self::Reject => ProposalState::Rejected,
+        }
+    }
+}
+
+/// `ProposalDecide` request (MEDULLA-SDLC-R017.6).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProposalDecideRequest {
+    /// The proposal node id, as `ProposalList` returns it.
+    pub id: String,
+    pub decision: ProposalDecision,
+    pub reviewer: String,
+    pub reason: String,
+}
+
+/// What `ProposalDecide` answers. `pull_request` stays absent until the
+/// approved proposal has a pull request (MEDULLA-SDLC-R017.4).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProposalDecideReceipt {
+    pub id: String,
+    pub state: ProposalState,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub pull_request: Option<String>,
+}
+
+/// `ProposalDecide` (MEDULLA-SDLC-R017.6): the state one decision moves a
+/// proposal to. A blank reviewer or reason refuses `INVALID_ARGUMENT`; a
+/// proposal that is not `open` refuses `PROPOSAL_NOT_OPEN`.
+pub fn handle_proposal_decide(
+    current: ProposalState,
+    request: &ProposalDecideRequest,
+) -> Result<ProposalState, LifecycleRefusal> {
+    if request.reviewer.trim().is_empty() || request.reason.trim().is_empty() {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a decision names its reviewer and a reason".to_owned(),
+        ));
+    }
+    if current != ProposalState::Open {
+        return Err(LifecycleRefusal::ProposalNotOpen(request.id.clone()));
+    }
+    Ok(request.decision.state())
 }
 
 /// How a defect reached the engine.
