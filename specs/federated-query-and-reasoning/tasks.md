@@ -77,8 +77,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T071 [US1] MEDULLA-FEDERATED-QUERY-R073.2 Connection-protocol pushdown matrix
 - [ ] T072 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.1 ColumnVectorBinding typed model
 - [ ] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind a SQL column through SemanticIndex AdmitBinding and DropBinding
-- [ ] T074 [US1] MEDULLA-FEDERATED-QUERY-R077.3 Column vectorization: row-write re-embedding hook
-- [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: end-to-end column vector search
+- [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: `NEAREST` over the bound column's live semantic generation
 - [ ] T076 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.1 Multimodal space: model
 - [ ] T077 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.2 Multimodal space: behavior
 - [ ] T078 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.3 Multimodal space: wiring

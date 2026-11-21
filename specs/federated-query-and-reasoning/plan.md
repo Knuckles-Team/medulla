@@ -1304,3 +1304,5 @@ Order: R733, then R734 and R735 in parallel.
 - `MEDULLA-FEDERATED-QUERY-R723` is withdrawn. Reason: it duplicates the served semantic-index binding lifecycle. `SemanticIndexOp::AdmitBinding` admits, `SemanticIndexOp::RefreshBinding` re-embeds, and `finalize_generation` alone runs the promotion gate (`MEDULLA-UNIFIED-DATA-PLANE-R040.3`).
 - `MEDULLA-FEDERATED-QUERY-R085.2` is corrected to match main. Reason: `apply_issue_control_lease_row` runs `IssueControlLeaseRequest::validate`, which refuses every reserved kind, so approval uses a dedicated native issuer like `host_start::issue`.
 - `MEDULLA-FEDERATED-QUERY-R077.2` is corrected. Reason: the semantic store already holds governed SQL-column bindings, so new bind methods and a table-store catalog record would be a second binding store.
+- `MEDULLA-FEDERATED-QUERY-R077.3` is withdrawn. Reason: committed `SqlCatalog` batches already emit the semantic source-dirty outbox record that `AdmitSourceRecord` admits, and `RefreshBinding` re-embeds on a model change.
+- `MEDULLA-FEDERATED-QUERY-R077.5` is aligned to the semantic binding: `NEAREST` probes the binding's live generation through one search executor.

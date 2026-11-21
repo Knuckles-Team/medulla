@@ -521,7 +521,7 @@ These are planned acceptance cases. They have not run. They establish no native,
 | `MEDULLA-FEDERATED-QUERY-R040.5.5` | Compact graph pruning tests | With pruning disabled, the topology is byte-identical. With a pinned policy, edges are deterministic, hubs stay, no edge dangles, and the graph stays connected. The test refuses invalid bounds, missing digests, policy mismatch, and disconnected output. It reports measured recall and storage per fixture. |
 | `MEDULLA-FEDERATED-QUERY-R040.5.6` | `tests/retrieval/test_low_storage_ann_served.py::test_revision_bound_low_storage_ann_path` | The test builds, updates, restarts, queries, and reads the receipt independently through authenticated `UnifiedQuery`. It compares fixed corpus and selectivity workloads with the exact full-scan oracle. It reads source-text, model, and build-space digests and the generation. It reads bytes, rows, visits, p50, p99, rescore, batch, and cache counters. It reads recall@k. It refuses budget exhaustion, a stale generation, unauthorized source, and an incomplete receipt before any effect. No external storage-savings claim serves as acceptance. |
 
-The benchmark matrix records actual results under declared ceilings. It sets no storage or accuracy target. A deterministic hash embedder serves seam and refusal tests. Semantic quality needs a pinned real model and independent readback. These cases do not replace R039.1.1, R039.2.1, R040.3, R040.4, R059, or R077.3. Those rows stay required.
+The benchmark matrix records actual results under declared ceilings. It sets no storage or accuracy target. A deterministic hash embedder serves seam and refusal tests. Semantic quality needs a pinned real model and independent readback. These cases do not replace R039.1.1, R039.2.1, R040.3, R040.4 or R059. Those rows stay required.
 
 ### R722.1 import-held registration slice
 
@@ -666,7 +666,6 @@ Each row below names the test that proves it as `path::name`. State `exists` mea
 | MEDULLA-FEDERATED-QUERY-R073.2 | `crates/medulla-federation/src/federation_opt/tests.rs::protocol_matrix_bounds_pushdown` | exists |
 | MEDULLA-FEDERATED-QUERY-R077.1 | `crates/medulla-sql/src/sql/ann.rs::r0771_column_vector_binding_round_trips_and_rejects_zero_dimension` | exists |
 | MEDULLA-FEDERATED-QUERY-R077.2 | `tests/retrieval/test_column_vector_served.py::test_bind_text_refuse_integer` | planned |
-| MEDULLA-FEDERATED-QUERY-R077.3 | `tests/retrieval/test_column_vector_served.py::test_write_queues_one_embed_per_bound_row` | planned |
 | MEDULLA-FEDERATED-QUERY-R077.5 | `tests/retrieval/test_column_vector_served.py::test_bound_column_nearest_neighbour` | planned |
 | MEDULLA-FEDERATED-QUERY-R078.1 | `crates/medulla-table-store/src/plan_scope.rs::plan_scope_round_trips_and_rejects_empty_tenant` | exists |
 | MEDULLA-FEDERATED-QUERY-R078.2 | `crates/medulla-table-store/src/plan_scope.rs::three_leaf_plan_all_scoped` | planned |
