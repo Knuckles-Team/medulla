@@ -501,3 +501,57 @@ async fn proposal_records_model_hash_and_tier() {
     let refused = decide(&h, forged).await.unwrap_err();
     assert!(refused.starts_with("PARAMETER_INVALID"), "{refused}");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R706.1
+// spec: MEDULLA-DECISION-ENGINE-R706.6
+#[tokio::test]
+async fn cross_tenant_candidates_never_returned() {
+    // Nodes of two tenants are embedded; the other tenant's node is the
+    // nearest to a declared side and forges the asking tenant's `tenant_id`.
+    let h = Harness::with_isolation(reader_isolation("decider", &[GRAPH])).await;
+    entity_graph(&h).await;
+    let (schema, digest) = publish_schema(&h);
+    let head = publish_acting_head(&h, &digest, "head-er-cross-tenant", 0.4);
+    let batch = decide(
+        &h,
+        with_graph(pair_request(
+            &schema,
+            Some(&head),
+            DecisionPolicyRef::Default,
+            two_pairs(),
+        )),
+    )
+    .await
+    .unwrap();
+    let record = &batch.records.as_slice()[0];
+    let foreign = entity("foreign");
+
+    // No premise, option or prediction names the other tenant's node.
+    assert!(
+        !record
+            .premises
+            .iter()
+            .any(|premise| premise.fact.contains(&foreign) || premise.subject.contains(&foreign)),
+        "another tenant's node never appears: {:?}",
+        record.premises
+    );
+    let StatisticalOutcome::Acted {
+        option_id,
+        prediction_set,
+        ..
+    } = &record.outcome
+    else {
+        panic!("the exact pair still acts: {:?}", record.outcome)
+    };
+    assert!(!option_id.contains(&foreign));
+    assert!(prediction_set.iter().all(|option| !option.contains(&foreign)));
+
+    // The asking tenant's own neighbours are proposed in its place.
+    let proposed = facts(record, "entity_pair:");
+    assert!(proposed.contains(&format!(
+        "entity_pair:{}={}",
+        entity("a-left"),
+        entity("near-1")
+    )));
+    assert!(proposed.iter().all(|fact| !fact.contains(&foreign)));
+}
