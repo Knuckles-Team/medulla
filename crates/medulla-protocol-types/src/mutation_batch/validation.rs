@@ -221,7 +221,7 @@ impl MutationBatchRecord {
         self.batch.validate()?;
         self.validate_identity()?;
         match self.status {
-            MutationBatchStatus::Prepared | MutationBatchStatus::Aborted
+            MutationBatchStatus::Prepared
                 if self.committed_version == CommittedVersion::None =>
             {
                 Ok(())
@@ -347,7 +347,7 @@ mod commit_tests {
             .validate()
             .unwrap();
 
-        for status in [MutationBatchStatus::Prepared, MutationBatchStatus::Aborted] {
+        for status in [MutationBatchStatus::Prepared] {
             let error = graph_commit(status).validate().unwrap_err();
             assert!(error.contains("must contain a committed receipt"));
         }

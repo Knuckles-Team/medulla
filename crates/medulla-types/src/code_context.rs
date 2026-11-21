@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// Which code-context question a request asks (MEDULLA-FEDERATED-QUERY-R654.1).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum CodeQuestion {
     How,
@@ -16,6 +17,7 @@ pub enum CodeQuestion {
 
 /// A served `CodeContext` request.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct CodeContextRequest {
     /// Qualified symbol name, or a suffix of one.
@@ -31,6 +33,7 @@ pub struct CodeContextRequest {
 
 /// Outcome of a code-context walk.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum CodeContextStatus {
     Ok,
@@ -40,6 +43,7 @@ pub enum CodeContextStatus {
 
 /// One symbol reached by the walk with its hop count from the anchor.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct CodeNode {
     pub symbol: String,
@@ -48,6 +52,7 @@ pub struct CodeNode {
 
 /// A hub with its centrality inputs.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct RankedHub {
     pub symbol: String,
@@ -58,6 +63,7 @@ pub struct RankedHub {
 
 /// The served `CodeContext` answer.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct CodeContextAnswer {
     pub status: CodeContextStatus,
@@ -74,6 +80,7 @@ pub struct CodeContextAnswer {
 
 /// The closed set of operations causal stages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum OpsCausalStage {
     Change,
@@ -86,6 +93,7 @@ pub enum OpsCausalStage {
 
 /// One link of a diagnosed causal chain.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct CausalLink {
     pub stage: OpsCausalStage,
@@ -96,6 +104,7 @@ pub struct CausalLink {
 
 /// The served `Diagnose` answer: a symptom and its causal chain.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SymptomDiagnosis {
     pub symptom: String,
@@ -104,6 +113,7 @@ pub struct SymptomDiagnosis {
 
 /// A served `Diagnose` request: the `HealthAnomaly` node to explain.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct DiagnoseRequest {
     /// Node id of the symptom.
