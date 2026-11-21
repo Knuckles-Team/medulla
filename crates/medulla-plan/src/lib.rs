@@ -89,6 +89,9 @@ pub mod retrieval_head;
 // MEDULLA-FEDERATED-QUERY-R081.9.3 / R081.9.7.3: graph-backed hierarchy sources of a round.
 #[cfg(feature = "query")]
 pub mod hierarchy_source;
+// MEDULLA-FEDERATED-QUERY-R736.2: candidate expansion of the evidence forest.
+#[cfg(feature = "query")]
+pub mod evidence_forest;
 // MEDULLA-FEDERATED-QUERY-R082.2: the retrieval stop rule.
 #[cfg(feature = "query")]
 pub mod retrieval_stop;
