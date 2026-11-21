@@ -300,6 +300,18 @@ fn no_callee(_: &str) -> Option<super::plan::Callee> {
     None
 }
 
+/// The sealed plan of a workflow: its proposal through `plan_explicit_tasks`.
+fn sealed(
+    workflow: &CanonicalWorkflow,
+    bindings: &[StepBinding],
+    callee: super::plan::CalleeOf<'_>,
+    max_call_depth: u32,
+) -> Result<medulla_decision_types::decision::task_plan::TaskPlan, medulla_decision_types::decision::process_plan::ProcessPlanRefusal> {
+    let drafted = super::plan::plan_from_workflow(workflow, bindings, callee, max_call_depth)?;
+    medulla_decision_types::decision::task_plan::plan_explicit_tasks(&drafted.proposal)
+        .map_err(|message| super::plan::engine_refusal(&message))
+}
+
 /// The invoice process: a start, a human check, a decision, an XOR split with two arms (one
 /// through a human approval), an XOR join, an agent post, an AND fork of two agent steps, an
 /// AND join and an end.
@@ -361,8 +373,8 @@ fn invoice() -> (CanonicalWorkflow, Vec<StepBinding>) {
 fn workflow_maps_to_canonical_plan() {
     use medulla_decision_types::decision::task_plan::{BranchCondition, BranchKind};
     let (wf, bindings) = invoice();
-    let plan = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4).unwrap();
-    let again = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4).unwrap();
+    let plan = sealed(&wf, &bindings, &no_callee, 4).unwrap();
+    let again = sealed(&wf, &bindings, &no_callee, 4).unwrap();
     assert_eq!(plan.plan_digest, again.plan_digest, "equal digest on a second run");
     // start and end add no task.
     assert_eq!(plan.tasks.len(), 10);
@@ -383,7 +395,7 @@ fn workflow_maps_to_canonical_plan() {
     assert_eq!(branch.arms.len(), 1);
     match branch.arms.as_slice()[0].condition.as_ref().unwrap() {
         BranchCondition::Decision(d) => {
-            assert_eq!(d.decision_iri, "urn:medulla:flow-condition:amount%20%3E%201000");
+            assert_eq!(d.decision_iri, "flowcondition:d:f4");
         }
         other => panic!("{other:?}"),
     }
@@ -391,6 +403,15 @@ fn workflow_maps_to_canonical_plan() {
     assert_eq!(task("s6").join.as_ref().unwrap().branch_task_id, "s4");
     assert_eq!(task("s11").join.as_ref().unwrap().branch_task_id, "s8");
     assert_eq!(task("s8").branch.as_ref().unwrap().kind, BranchKind::Parallel);
+    // The flow condition is also returned as a decision question for the caller to register.
+    let drafted = super::plan::plan_from_workflow(&wf, &bindings, &no_callee, 4).unwrap();
+    assert_eq!(
+        drafted.questions,
+        vec![super::plan::ConditionQuestion {
+            decision_iri: "flowcondition:d:f4".to_string(),
+            text: "amount > 1000".to_string(),
+        }]
+    );
 }
 
 // spec: MEDULLA-CQ-ORCH-R704.4
@@ -442,7 +463,7 @@ fn plan_refuses_loops_unbound_steps_and_deep_calls() {
             bindings: vec![bound("s2", BindingTarget::Approval { approver_role: "clerk".to_string() })],
         })
     };
-    let plan = super::plan::plan_from_workflow(&caller, &[post.clone()], &callee, 4).unwrap();
+    let plan = sealed(&caller, &[post.clone()], &callee, 4).unwrap();
     let ids: Vec<&str> = plan.tasks.iter().map(|t| t.task_id.as_str()).collect();
     assert_eq!(ids, vec!["s2:s2", "s3"]);
     assert_eq!(plan.tasks.as_slice()[1].depends_on.as_slice().to_vec(), vec!["s2:s2".to_string()]);
@@ -497,8 +518,8 @@ fn equal_canonical_digest_gives_equal_plan_digest() {
         type_num: None,
     }];
     assert_eq!(bpmn.digest, epc.digest);
-    let first = super::plan::plan_from_workflow(&bpmn, &bindings, &no_callee, 4).unwrap();
-    let second = super::plan::plan_from_workflow(&epc, &bindings, &no_callee, 4).unwrap();
+    let first = sealed(&bpmn, &bindings, &no_callee, 4).unwrap();
+    let second = sealed(&epc, &bindings, &no_callee, 4).unwrap();
     assert_eq!(first.plan_digest, second.plan_digest);
     assert_eq!(first.input_digest, second.input_digest);
 }

@@ -10,7 +10,9 @@
 use std::cell::RefCell;
 
 use medulla_compute::process_plan::bind::{registered_contract, resolve_bindings};
-use medulla_compute::process_plan::plan::{plan_from_workflow, Callee};
+use medulla_compute::process_plan::plan::{
+    engine_refusal, plan_from_workflow, Callee, ConditionQuestion,
+};
 use medulla_compute::process_plan::rank::ranked_bindings;
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::process_plan::{
@@ -21,6 +23,7 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
+use medulla_decision_types::decision::task_plan::plan_explicit_tasks;
 use medulla_decision_types::decision::tool_relevance::{
     AssignedTool, ToolAssignmentRequest, MAX_TOP_K, TOOL_RELEVANCE_SCHEMA_VERSION,
 };
@@ -196,6 +199,7 @@ fn premises(
     workflow: &CanonicalWorkflow,
     bindings: &[StepBinding],
     dropped: &[String],
+    questions: &[ConditionQuestion],
 ) -> Vec<PremiseRef> {
     let read = |subject: &str, fact: String, class: PremiseClass| PremiseRef {
         subject: subject.to_string(),
@@ -237,6 +241,17 @@ fn premises(
             .iter()
             .map(|fact| read(&asked.workflow_id, fact.clone(), PremiseClass::Observation)),
     );
+    // Each flow condition that became a decision question, for the host to register.
+    out.extend(questions.iter().map(|question| {
+        read(
+            &question.decision_iri,
+            format!(
+                "flow_condition:decision_iri={};text={}",
+                question.decision_iri, question.text
+            ),
+            PremiseClass::Observation,
+        )
+    }));
     out
 }
 
@@ -279,15 +294,20 @@ pub(in crate::decide) fn plan(
         let (bindings, _) = binder.bind(&node, &workflow);
         Some(Callee { workflow, bindings })
     };
-    let planned = plan_from_workflow(&workflow, &bindings, &callee, knobs.max_call_depth);
+    let planned = plan_from_workflow(&workflow, &bindings, &callee, knobs.max_call_depth)
+        .and_then(|drafted| {
+            plan_explicit_tasks(&drafted.proposal)
+                .map(|plan| (plan, drafted.questions))
+                .map_err(|message| engine_refusal(&message))
+        });
     if let Some(detail) = binder.failure.take() {
         return Err(detail);
     }
     match planned {
-        Ok(plan) => {
+        Ok((plan, questions)) => {
             let graph = text_param(request, PARAM_GRAPH)?.unwrap_or_default();
             let notes = PlanNotes {
-                process_premises: premises(graph, &asked, &workflow, &bindings, &dropped),
+                process_premises: premises(graph, &asked, &workflow, &bindings, &dropped, &questions),
                 process_ranked: bindings
                     .iter()
                     .any(|b| matches!(b.source, BindingSource::Ranked { .. })),

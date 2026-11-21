@@ -3,10 +3,11 @@
 //! One canonical workflow and its step bindings become one task plan: each step except
 //! `start` and `end` is one task whose `depends_on` come from its incoming flows. A `call`
 //! step is inlined (its callee's steps carry the id `<call step>:<callee step>`), a `boundary`
-//! step becomes a branch after its activity, and the proposal passes through
+//! step becomes a branch after its activity, and the caller passes the proposal through
 //! `plan_explicit_tasks`. Nothing here names a source format (R704.9); a flow condition is free
-//! text, so it becomes a typed `Decision` arm condition whose IRI carries the text and which
-//! the decision engine resolves at run time.
+//! text, so it becomes a typed `Decision` arm condition (`flowcondition:<workflow digest>:<flow
+//! id>`) that the decision engine resolves at run time; the questions are returned beside the
+//! proposal so the caller can register them. No condition text is parsed or evaluated here.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -15,8 +16,8 @@ use medulla_decision_types::decision::process_plan::{
     PROCESS_PLAN_TOO_LARGE, PROCESS_STEP_UNBOUND, WORKFLOW_UNKNOWN,
 };
 use medulla_decision_types::decision::task_plan::{
-    plan_explicit_tasks, ApprovalSpec, BranchArm, BranchCondition, BranchDecisionCondition,
-    BranchKind, BranchSpec, DecisionSpec, JoinSpec, TaskPlan, TaskPlanCall, TaskPlanProposal,
+    ApprovalSpec, BranchArm, BranchCondition, BranchDecisionCondition,
+    BranchKind, BranchSpec, DecisionSpec, JoinSpec, TaskPlanCall, TaskPlanProposal,
     TaskPlanTask, MAX_CONCURRENCY, MAX_DECISION_IRI_BYTES, MAX_TASKS,
 };
 use medulla_types::contract::BoundedVec;
@@ -26,9 +27,23 @@ use medulla_types::process_import::{CanonicalStep, CanonicalWorkflow, GateKind, 
 /// `MIN_APPROVAL_TIMEOUT_S..=MAX_APPROVAL_TIMEOUT_S`.
 pub const APPROVAL_TIMEOUT_S: u64 = 86_400;
 
-/// The prefix of the decision IRI a flow condition becomes; the percent-encoded condition
-/// text follows.
-pub const CONDITION_IRI_PREFIX: &str = "urn:medulla:flow-condition:";
+/// The prefix of the decision IRI a flow condition becomes; the digest of the workflow that
+/// holds the flow and the flow id (`f<n>`, the 1-based position of the flow) follow.
+pub const CONDITION_IRI_PREFIX: &str = "flowcondition:";
+
+/// One flow condition as a decision question: its IRI and the condition text.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConditionQuestion {
+    pub decision_iri: String,
+    pub text: String,
+}
+
+/// The proposal of one workflow with the decision questions its flow conditions became.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlanFromWorkflow {
+    pub proposal: TaskPlanProposal,
+    pub questions: Vec<ConditionQuestion>,
+}
 
 /// A stored workflow a `call` step names, with its explicit and ranked bindings.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,7 +66,7 @@ struct Node {
 struct Edge {
     source: String,
     target: String,
-    condition: Option<String>,
+    condition: Option<ConditionQuestion>,
     default: bool,
 }
 
@@ -66,19 +81,6 @@ fn refusal(code: &str, steps: Vec<String>) -> ProcessPlanRefusal {
         code: code.to_string(),
         steps,
     }
-}
-
-/// The IRI of the decision question whose text is `condition`.
-fn condition_iri(condition: &str) -> String {
-    let mut iri = String::from(CONDITION_IRI_PREFIX);
-    for byte in condition.bytes() {
-        if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
-            iri.push(char::from(byte));
-        } else {
-            iri.push_str(&format!("%{byte:02X}"));
-        }
-    }
-    iri
 }
 
 fn is_anchor(kind: StepKind) -> bool {
@@ -153,7 +155,7 @@ fn flatten(
         graph.nodes.extend(inner.nodes);
         graph.edges.extend(inner.edges);
     }
-    for flow in &workflow.flows {
+    for (position, flow) in workflow.flows.iter().enumerate() {
         let source = format!("{prefix}{}", flow.source);
         let target = format!("{prefix}{}", flow.target);
         let sources = calls
@@ -167,7 +169,14 @@ fn flatten(
                 graph.edges.push(Edge {
                     source: source.clone(),
                     target: target.clone(),
-                    condition: flow.condition.clone(),
+                    condition: flow.condition.as_ref().map(|text| ConditionQuestion {
+                        decision_iri: format!(
+                            "{CONDITION_IRI_PREFIX}{}:f{}",
+                            workflow.digest,
+                            position + 1
+                        ),
+                        text: text.clone(),
+                    }),
                     default: flow.default,
                 });
             }
@@ -212,7 +221,7 @@ fn contract_anchors(graph: &mut Graph) {
 /// A boundary event is reached from the activity it attaches to. Each other flow out of that
 /// activity moves to leave the boundary instead (the normal arm), and each flow out of the
 /// boundary without a condition of its own carries the trigger as its condition.
-fn lower_boundaries(graph: &mut Graph) {
+fn lower_boundaries(graph: &mut Graph, digest: &str) {
     let boundaries: Vec<(String, String)> = graph
         .nodes
         .iter()
@@ -234,7 +243,10 @@ fn lower_boundaries(graph: &mut Graph) {
             if hosts.contains(&edge.source) && !boundary_ids.contains(&edge.target) {
                 edge.source = boundary.clone();
             } else if &edge.source == boundary && edge.condition.is_none() && !edge.default {
-                edge.condition = Some(format!("trigger {trigger}"));
+                edge.condition = Some(ConditionQuestion {
+                    decision_iri: format!("{CONDITION_IRI_PREFIX}{digest}:{boundary}:trigger"),
+                    text: format!("trigger {trigger}"),
+                });
             }
         }
     }
@@ -335,17 +347,20 @@ fn join_splits(graph: &Graph, order: &[String]) -> BTreeMap<String, String> {
     out
 }
 
-fn arm_condition(text: &str) -> Result<BranchCondition, ProcessPlanRefusal> {
-    let decision_iri = condition_iri(text);
-    if decision_iri.len() > MAX_DECISION_IRI_BYTES {
+fn arm_condition(question: &ConditionQuestion) -> Result<BranchCondition, ProcessPlanRefusal> {
+    if question.decision_iri.len() > MAX_DECISION_IRI_BYTES {
         return Err(refusal(PROCESS_PLAN_TOO_LARGE, Vec::new()));
     }
     Ok(BranchCondition::Decision(BranchDecisionCondition {
-        decision_iri,
+        decision_iri: question.decision_iri.clone(),
     }))
 }
 
-fn branch_of(node: &Node, graph: &Graph) -> Result<BranchSpec, ProcessPlanRefusal> {
+fn branch_of(
+    node: &Node,
+    graph: &Graph,
+    questions: &mut Vec<ConditionQuestion>,
+) -> Result<BranchSpec, ProcessPlanRefusal> {
     let kind = match (node.step.kind, node.step.gate) {
         (StepKind::Fork, Some(GateKind::Or)) => BranchKind::Inclusive,
         (StepKind::Fork, Some(GateKind::And) | None) => BranchKind::Parallel,
@@ -361,8 +376,12 @@ fn branch_of(node: &Node, graph: &Graph) -> Result<BranchSpec, ProcessPlanRefusa
             continue;
         }
         let condition = match (&edge.condition, kind) {
-            (Some(text), BranchKind::Exclusive | BranchKind::Inclusive) => {
-                Some(arm_condition(text)?)
+            (Some(question), BranchKind::Exclusive | BranchKind::Inclusive) => {
+                let condition = arm_condition(question)?;
+                if !questions.contains(question) {
+                    questions.push(question.clone());
+                }
+                Some(condition)
             }
             _ => None,
         };
@@ -384,6 +403,7 @@ fn task_of(
     node: &Node,
     graph: &Graph,
     splits: &BTreeMap<String, String>,
+    questions: &mut Vec<ConditionQuestion>,
 ) -> Result<Option<TaskPlanTask>, ProcessPlanRefusal> {
     let kind = node.step.kind;
     let mut depends: Vec<String> = graph
@@ -436,7 +456,7 @@ fn task_of(
             });
         }
         (StepKind::Branch | StepKind::Fork | StepKind::Boundary, _) => {
-            task.branch = Some(branch_of(node, graph)?);
+            task.branch = Some(branch_of(node, graph, questions)?);
         }
         (StepKind::Join, _) => {
             let Some(split) = splits.get(&node.id) else {
@@ -457,17 +477,19 @@ fn task_of(
     Ok(Some(task))
 }
 
-/// The proposal for `workflow` and its `bindings`. `callee` resolves the workflow a `call`
-/// step names; `max_call_depth` is `knob process_plan.max_call_depth`.
-pub fn proposal_from_workflow(
+/// The proposal for `workflow` and its `bindings`, with the decision questions its flow
+/// conditions became. `callee` resolves the workflow a `call` step names; `max_call_depth` is
+/// `knob process_plan.max_call_depth`. The caller passes the proposal through
+/// `plan_explicit_tasks`.
+pub fn plan_from_workflow(
     workflow: &CanonicalWorkflow,
     bindings: &[StepBinding],
     callee: CalleeOf<'_>,
     max_call_depth: u32,
-) -> Result<TaskPlanProposal, ProcessPlanRefusal> {
+) -> Result<PlanFromWorkflow, ProcessPlanRefusal> {
     let mut graph = flatten(workflow, bindings, "", 0, max_call_depth, callee)?;
     contract_anchors(&mut graph);
-    lower_boundaries(&mut graph);
+    lower_boundaries(&mut graph, &workflow.digest);
     let order = match topological(&graph) {
         Ok(order) => order,
         Err(cycle) => {
@@ -495,8 +517,9 @@ pub fn proposal_from_workflow(
     let splits = join_splits(&graph, &order);
     let mut tasks = Vec::new();
     let mut unbound = Vec::new();
+    let mut questions = Vec::new();
     for node in &graph.nodes {
-        match task_of(node, &graph, &splits) {
+        match task_of(node, &graph, &splits, &mut questions) {
             Ok(task) => tasks.extend(task),
             Err(refused) if refused.code == PROCESS_STEP_UNBOUND => unbound.extend(refused.steps),
             Err(refused) => return Err(refused),
@@ -512,25 +535,24 @@ pub fn proposal_from_workflow(
         .find(|id| !sources.contains(id.as_str()))
         .cloned()
         .unwrap_or_default();
-    Ok(TaskPlanProposal {
-        tasks: BoundedVec::new(tasks).map_err(|_| refusal(PROCESS_PLAN_TOO_LARGE, Vec::new()))?,
-        output_task_id: output,
-        max_concurrency: MAX_CONCURRENCY,
-        max_steps: MAX_TASKS,
-        final_artifact: None,
+    Ok(PlanFromWorkflow {
+        proposal: TaskPlanProposal {
+            tasks: BoundedVec::new(tasks)
+                .map_err(|_| refusal(PROCESS_PLAN_TOO_LARGE, Vec::new()))?,
+            output_task_id: output,
+            max_concurrency: MAX_CONCURRENCY,
+            max_steps: MAX_TASKS,
+            final_artifact: None,
+        },
+        questions,
     })
 }
 
-/// The sealed task plan of `workflow`: its proposal passed through `plan_explicit_tasks`.
-pub fn plan_from_workflow(
-    workflow: &CanonicalWorkflow,
-    bindings: &[StepBinding],
-    callee: CalleeOf<'_>,
-    max_call_depth: u32,
-) -> Result<TaskPlan, ProcessPlanRefusal> {
-    let proposal = proposal_from_workflow(workflow, bindings, callee, max_call_depth)?;
-    plan_explicit_tasks(&proposal).map_err(|message| ProcessPlanRefusal {
+/// The refusal of the task plan engine, as `ProcessPlanRefusal`: the message is
+/// `<CODE>: <detail>`; the refusal keeps the code and names no step.
+pub fn engine_refusal(message: &str) -> ProcessPlanRefusal {
+    ProcessPlanRefusal {
         code: message.split(':').next().unwrap_or_default().to_string(),
         steps: Vec::new(),
-    })
+    }
 }
