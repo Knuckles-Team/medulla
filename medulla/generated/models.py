@@ -35076,6 +35076,7 @@ class RoundFeedback(BaseModel):
 class RoundRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    context_budget_tokens: Annotated[int, Field(ge=0)] | None = None
     corpus_revision: str
     feedback: RoundFeedback | None = None
     hierarchy: HierarchyPart | None = None

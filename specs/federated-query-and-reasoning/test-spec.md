@@ -1116,7 +1116,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.2` | `crates/medulla-plan/tests/evidence_forest.rs::expansion_respects_hops_and_cap` (planned) (L2). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.2` | `crates/medulla-plan/src/evidence_forest.rs::tests::plan_forest_graph_reads_projected_view_and_similarity` (planned) (L2): `PlanForestGraph` schema and similarity relations over a projected view, no hidden target. |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.3` | `crates/medulla-plan/tests/evidence_forest.rs::selection_is_a_forest_within_budget_and_drops_redundant_and_conflicting` (planned) (L2). |
-| Behavior | `MEDULLA-FEDERATED-QUERY-R736.4` | `tests/query/test_evidence_forest_served.py::test_round_with_budget_returns_forest_rows` (planned) (L4). |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R736.4` | `tests/query/test_evidence_forest_served.py::test_round_with_budget_returns_forest_rows` (L4). |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R736.5` | `tests/query/test_evidence_forest_served.py::test_forest_fits_budget_and_keeps_supported_evidence` (planned) (L4). |
 
 - **MEDULLA-FEDERATED-QUERY-R737:** `crates/medulla-exec/tests/rowset_columns.rs::group_and_projection_share_one_typed_row_shape`. Proves the row at its entry point; no receipt is asserted.

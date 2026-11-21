@@ -94,6 +94,7 @@ fn request(sufficiency: Option<SufficiencyPart>) -> RoundRequest {
         state: None,
         feedback: None,
         arbitration: None,
+        context_budget_tokens: None,
     }
 }
 

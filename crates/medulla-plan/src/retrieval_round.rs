@@ -7,6 +7,9 @@
 //! and tenant scope are applied by the handler before the `PlanCtx` is built, so the plan
 //! and every part can only see what the caller may read.
 
+use crate::evidence_forest::{
+    expand_candidates, forest_limits, select_forest, ForestPenalty, PlanForestGraph,
+};
 use crate::retrieval_stop::{decide_stop, round_progress, stop_premise};
 use medulla_decision_stats::sparse_select::{joint_sparse_select, SparseSelectError};
 use medulla_exec::exec::{execute, PlanCtx};
@@ -141,6 +144,9 @@ fn validate(request: &RoundRequest) -> Result<(), RoundError> {
             "a round names the corpus revision and the model revision it retrieved with",
         ));
     }
+    if let Some(budget) = request.context_budget_tokens {
+        medulla_result_types::evidence_forest::check_budget(budget).map_err(forest_refusal)?;
+    }
     if let Some(part) = &request.sufficiency {
         if part.round == 0 || part.k == 0 {
             return Err(contract_invalid(
@@ -164,6 +170,67 @@ fn validate(request: &RoundRequest) -> Result<(), RoundError> {
         }
     }
     Ok(())
+}
+
+/// A forest refusal keeps its registered code on the wire.
+fn forest_refusal(refusal: medulla_result_types::evidence_forest::ForestRefusal) -> RoundError {
+    RetrievalRefusal::new(refusal.code.as_str(), refusal.detail).into()
+}
+
+/// The evidence forest of a round (MEDULLA-FEDERATED-QUERY-R736.4): the plan's rows are the
+/// seeds; their schema and similarity neighbours are the candidates; the forest chosen under
+/// `budget` joins the seeds as the round's evidence rows, seeds first, then roots, then the
+/// children in the order the selection chose them. The premise `retrieval.forest` lists the
+/// forest and what the selection left out.
+fn run_forest(
+    budget: u32,
+    seeds: &RowSet,
+    ctx: &PlanCtx,
+    knobs: &RoundKnobs,
+    steps: &mut Steps,
+) -> Result<RowSet, RoundError> {
+    let seed_scores: Vec<(String, f32)> = seeds
+        .rows()
+        .iter()
+        .map(|r| (r.id.clone(), r.score.unwrap_or(1.0)))
+        .collect();
+    let seed_ids: Vec<String> = seed_scores.iter().map(|(id, _)| id.clone()).collect();
+    let graph = PlanForestGraph::new(ctx.view, ctx.semantic, knobs.forest_similar_k);
+    let (hops, cap) = forest_limits(None, None);
+    let candidates =
+        expand_candidates(&seed_scores, &graph, hops, cap).map_err(forest_refusal)?;
+    let penalty = ForestPenalty {
+        redundancy_weight: knobs.forest_redundancy_weight as f32,
+        conflict_weight: knobs.forest_conflict_weight as f32,
+    };
+    let forest = select_forest(&candidates, &seed_ids, &graph, budget, penalty)
+        .map_err(forest_refusal)?;
+    let support: std::collections::BTreeMap<&str, f32> = candidates
+        .iter()
+        .map(|c| (c.memory_id.as_str(), c.support))
+        .collect();
+    let chosen = forest
+        .roots
+        .iter()
+        .chain(forest.edges.iter().map(|(_, child)| child))
+        .map(|id| (id.clone(), support.get(id.as_str()).copied()));
+    steps.premises.push(RetrievalPremise {
+        step: "forest".into(),
+        name: "retrieval.forest".into(),
+        value: serde_json::json!({
+            "budget_tokens": budget,
+            "tokens_used": forest.tokens_used,
+            "roots": forest.roots,
+            "edges": forest.edges,
+            "dropped": forest.dropped,
+        }),
+    });
+    Ok(RowSet::from_rows(
+        seed_scores
+            .iter()
+            .map(|(id, score)| (id.clone(), Some(*score)))
+            .chain(chosen),
+    ))
 }
 
 /// What the steps of one round accumulate beside the rows.
@@ -733,6 +800,7 @@ fn exhausted_before_retrieval(
         premises: vec![premise],
         feedback: None,
         arbitration: None,
+        context_budget_tokens: None,
     }))
 }
 
@@ -780,6 +848,15 @@ pub fn run_round_with_state(
         execute(&request.plan, ctx).map_err(RoundError::Plan)?
     };
     let mut steps = Steps::default();
+    // MEDULLA-FEDERATED-QUERY-R736.4: a context budget turns the forest step on; the forest
+    // is the evidence every later part reads. Without a budget the plan's rows stay.
+    let rows = match request.context_budget_tokens {
+        None => rows,
+        Some(budget) => {
+            let _span = tracing::info_span!("medulla.retrieval.forest").entered();
+            run_forest(budget, &rows, ctx, knobs, &mut steps)?
+        }
+    };
     let hierarchy_selected = match &request.hierarchy {
         None => Vec::new(),
         Some(part) => {

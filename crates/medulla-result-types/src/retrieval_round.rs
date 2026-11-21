@@ -318,6 +318,10 @@ pub struct RoundRequest {
     /// (MEDULLA-FEDERATED-QUERY-R083.3).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub arbitration: Option<ArbitrationPart>,
+    /// Select the evidence forest under this token budget and return it as the round's
+    /// evidence rows (MEDULLA-FEDERATED-QUERY-R736.4). Absent keeps the plan's rows.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_budget_tokens: Option<u32>,
 }
 
 /// The arbitration part of a round (MEDULLA-FEDERATED-QUERY-R083.3): the harness sends

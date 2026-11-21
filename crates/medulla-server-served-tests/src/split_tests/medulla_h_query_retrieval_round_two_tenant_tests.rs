@@ -192,6 +192,7 @@ fn request() -> RoundRequest {
         state: None,
         feedback: None,
         arbitration: None,
+        context_budget_tokens: None,
     }
 }
 

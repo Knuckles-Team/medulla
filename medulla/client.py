@@ -7511,6 +7511,7 @@ class GraphOperationsClient:
         corpus_revision: str,
         model_revision: str,
         sufficiency: dict[str, Any] | None = None,
+        context_budget_tokens: int | None = None,
     ) -> dict[str, Any]:
         """Run one retrieval round (MEDULLA-FEDERATED-QUERY-R081.11).
 
@@ -7519,7 +7520,10 @@ class GraphOperationsClient:
         part. ``sufficiency`` is ``{round, round_limit, k, fallback_mode,
         fallback}``; without ``round_limit`` the part is refused
         ``RETRIEVAL_ROUND_LIMIT_REQUIRED``, and an empty revision is refused
-        ``RETRIEVAL_CONTRACT_INVALID``. The method writes nothing.
+        ``RETRIEVAL_CONTRACT_INVALID``. ``context_budget_tokens`` selects the
+        evidence forest under that token budget and returns it as the rows
+        (MEDULLA-FEDERATED-QUERY-R736.4); zero is refused ``FOREST_BUDGET_ZERO``.
+        The method writes nothing.
         """
         request: dict[str, Any] = {
             "plan": plan,
@@ -7528,6 +7532,8 @@ class GraphOperationsClient:
         }
         if sufficiency is not None:
             request["sufficiency"] = sufficiency
+        if context_budget_tokens is not None:
+            request["context_budget_tokens"] = context_budget_tokens
         result = await self._client._send(
             "RetrievalRound", {"request": request}, None, idempotency_key=None
         )
