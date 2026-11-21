@@ -87,3 +87,8 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [x] T081 [US6] MEDULLA-IDENTITY-R725.1 User wire views follow `UserStatus`: Python mirror follows the Rust machine
 - [ ] T082 [US6] MEDULLA-IDENTITY-R726 Tenant-qualified unit ownership in scan_units, hidden_metadata and stored-query calls
   Depends: none
+- [ ] T083 [US6] MEDULLA-IDENTITY-R727 One engine serves a business tenant and a personal tenant with hard separation and explicit sharing (rollup)
+- [ ] T084 [US6] MEDULLA-IDENTITY-R727.1 No cross-tenant read, count, search or inference
+- [ ] T085 [US6] MEDULLA-IDENTITY-R727.2 Cross-tenant share grant
+- [ ] T086 [US6] MEDULLA-IDENTITY-R727.3 Every cross-tenant read is audited
+- [ ] T087 [US6] MEDULLA-IDENTITY-R727.4 Granted units never feed the recipient's inference

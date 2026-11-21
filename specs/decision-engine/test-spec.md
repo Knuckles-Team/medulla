@@ -2213,3 +2213,7 @@ Every row below has a planned test at its exact post-split path; the row text na
 - `MEDULLA-DECISION-ENGINE-R135.17.3`: `tests/decide/test_program_store_served.py::test_replay_fallbacks_demote_program` (planned, L4): proves the served demotion. The owning change adds it at this exact path.
 
 Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program_store_served.py::test_paraphrase_reuses_program`. Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.17`: `tests/decide/test_program_store_served.py::test_replay_fallbacks_demote_program`.
+- `MEDULLA-DECISION-ENGINE-R869.1`: `crates/medulla-core/tests/action_provenance.rs::action_record_terms_and_shape` (planned, L2): proves: ActionRecord model.
+- `MEDULLA-DECISION-ENGINE-R869.2`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_action_record_tests.rs::refusals_and_idempotent_replay` (planned, L3): proves: Write path and refusals.
+- `MEDULLA-DECISION-ENGINE-R869.3`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_action_record_tests.rs::why_chain_shows_facts_at_used_revision` (planned, L3): proves: The why chain.
+- `MEDULLA-DECISION-ENGINE-R869.4`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_ingest_action_record_tests.rs::why_did_we_reorder_end_to_end` (planned, L3): proves: Hot-path proof: why did we reorder.
