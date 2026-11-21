@@ -230,6 +230,7 @@ mod tests {
                 trailers: Trailers::default(),
                 agent_identity: None,
                 run_trace_id: None,
+                git: None,
             }
             .sealed();
             let id = changeset.id.clone();

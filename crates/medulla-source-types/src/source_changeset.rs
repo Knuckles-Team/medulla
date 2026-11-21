@@ -82,6 +82,17 @@ pub enum ChangesetRefusal {
     /// A `run_trace_id` that names no `run_trace` node the caller can read
     /// (MEDULLA-SCM-R012).
     RunTraceUnknown,
+    /// A git object graph that cannot be imported or exported: a missing object,
+    /// a parent list that disagrees with the headers, a non-UTF-8 commit, a
+    /// pack that fails its checks, or exported ids that differ from the stored
+    /// origin (MEDULLA-SCM-R010).
+    GitGraphMalformed,
+    /// A tree entry whose mode is not `100644`, `100755`, `120000` or `160000`
+    /// (MEDULLA-SCM-R010).
+    GitModeUnsupported,
+    /// A tree, blob or side pack could not be read for a git export
+    /// (MEDULLA-SCM-R010).
+    GitExportTreeReadFailed,
 }
 
 impl ChangesetRefusal {
@@ -103,6 +114,9 @@ impl ChangesetRefusal {
             Self::BlamePathAbsent => "BLAME_PATH_ABSENT",
             Self::AgentRunTraceMissing => "AGENT_RUN_TRACE_MISSING",
             Self::RunTraceUnknown => "RUN_TRACE_UNKNOWN",
+            Self::GitGraphMalformed => "GIT_GRAPH_MALFORMED",
+            Self::GitModeUnsupported => "GIT_MODE_UNSUPPORTED",
+            Self::GitExportTreeReadFailed => "GIT_EXPORT_TREE_READ_FAILED",
         }
     }
 }
@@ -191,6 +205,37 @@ impl Trailers {
     }
 }
 
+/// The hash function of a git object store (MEDULLA-SCM-R010).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum GitObjectFormat {
+    Sha1,
+    Sha256,
+}
+
+/// Where an imported changeset came from (MEDULLA-SCM-R010): the git commit it
+/// records, kept so export recreates the same commit and tree ids.
+///
+/// `parent_commit_ids` holds the commit id of every `parent` header in header
+/// order: empty for a root commit, one entry for an ordinary commit, two or
+/// more for a merge. The first entry is the only parent the chain follows.
+/// `side_pack_digest` is `None` unless the commit has more than one parent;
+/// otherwise it is the SHA-256 digest of the stored version-2 pack holding the
+/// objects the later parents bring in. `raw_headers` is every header line after
+/// `tree <id>\n` up to the blank line, verbatim.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GitOrigin {
+    pub object_format: GitObjectFormat,
+    pub commit_id: String,
+    pub tree_id: String,
+    pub parent_commit_ids: Vec<String>,
+    pub side_pack_digest: Option<String>,
+    pub raw_headers: String,
+}
+
 /// A changeset: the paths that changed against the first parent.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -208,6 +253,10 @@ pub struct Changeset {
     pub agent_identity: Option<String>,
     /// The run that produced the change (MEDULLA-SCM-R012).
     pub run_trace_id: Option<String>,
+    /// The git commit this changeset records (MEDULLA-SCM-R010); `None` for a
+    /// native changeset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub git: Option<GitOrigin>,
 }
 
 impl Changeset {
@@ -226,7 +275,12 @@ impl Changeset {
             &self.agent_identity,
             &self.run_trace_id,
         );
-        let bytes = rmp_serde::to_vec_named(&body).unwrap_or_default();
+        let mut bytes = rmp_serde::to_vec_named(&body).unwrap_or_default();
+        // The git origin joins the hashed bytes only when present, so the id of
+        // every native changeset is unchanged (MEDULLA-SCM-R010).
+        if let Some(git) = &self.git {
+            bytes.extend(rmp_serde::to_vec_named(git).unwrap_or_default());
+        }
         hex::encode(Sha256::digest(bytes))
     }
 
@@ -274,6 +328,56 @@ pub struct SubmitChangesetReceipt {
     /// The branch head after the append: the id of the carrying branch commit.
     pub branch_head: String,
     pub replayed: bool,
+}
+
+/// The closed request of `Method::ImportGitHistory` (MEDULLA-SCM-R010):
+/// `pack_digest` names a version-2 git pack already stored through the blob
+/// methods, `head` the commit id whose first-parent line is imported.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ImportGitHistoryRequest {
+    pub repo: String,
+    pub branch: String,
+    pub pack_digest: String,
+    pub head: String,
+    pub object_format: GitObjectFormat,
+}
+
+/// The served answer of `ImportGitHistory`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ImportGitHistoryReceipt {
+    pub imported: u32,
+    pub skipped: u32,
+    pub branch_head: String,
+}
+
+/// The closed request of `Method::GitExportPack` (MEDULLA-SCM-R014): the pack
+/// holding the changeset chain of `branch` from each of `wants` back along
+/// first parents to, excluding, a `haves` commit or the root. Wants and haves
+/// are git commit ids of imported changesets or branch commit ids of native
+/// ones.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GitExportPackRequest {
+    pub repo: String,
+    pub branch: String,
+    pub wants: Vec<String>,
+    #[serde(default)]
+    pub haves: Vec<String>,
+}
+
+/// The served answer of `GitExportPack`: the pack bytes in hex (the result
+/// contract is JSON).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GitExportPackReceipt {
+    pub object_format: GitObjectFormat,
+    pub object_count: u32,
+    pub pack_hex: String,
 }
 
 /// A request refused with the stable code and a detail naming the field.

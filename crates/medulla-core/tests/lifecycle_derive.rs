@@ -31,6 +31,7 @@ fn changeset(id: &str, paths: &[&str], trailers: Trailers) -> Changeset {
         trailers,
         agent_identity: None,
         run_trace_id: None,
+        git: None,
     }
 }
 

@@ -21,6 +21,7 @@ fn cs(id: &str, spec: &[&str], withdraw: &[&str]) -> Changeset {
         },
         agent_identity: None,
         run_trace_id: None,
+        git: None,
     }
 }
 

@@ -4872,6 +4872,7 @@ version = "0.27.0"
 dependencies = [
  "criterion",
  "cudarc",
+ "flate2",
  "hex",
  "medulla-agent-types",
  "medulla-catalog-types",
@@ -4905,6 +4906,7 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
+ "sha1 0.10.7",
  "sha2 0.10.9",
  "tracing",
  "tree-sitter",

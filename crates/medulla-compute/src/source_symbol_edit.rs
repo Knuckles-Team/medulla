@@ -181,5 +181,6 @@ pub fn project_symbol_edit(
         trailers: Trailers::default(),
         agent_identity: None,
         run_trace_id: None,
+        git: None,
     })
 }

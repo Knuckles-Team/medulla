@@ -88,6 +88,8 @@ pub mod screen;
 pub mod line_merge;
 // MEDULLA-SCM-R013.2 — projection of a graph-native symbol edit to file bytes and one changeset.
 pub mod source_symbol_edit;
+/// Git object ids, trees, commits and version-2 packs (MEDULLA-SCM-R010).
+pub mod source_git_objects;
 /// Derived history indexes of the source-changeset chain (MEDULLA-SCM-R005).
 pub mod source_history;
 /// Tree materialization of the source-changeset chain (MEDULLA-SCM-R004).

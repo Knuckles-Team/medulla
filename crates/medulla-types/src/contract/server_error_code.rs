@@ -76,6 +76,12 @@ closed_error_codes! {
         MergeBlobUnreadable => "MERGE_BLOB_UNREADABLE",
         SourceConflict => "SOURCE_CONFLICT",
         RevisionNotOnChain => "REVISION_NOT_ON_CHAIN",
+        /// MEDULLA-SCM-R010: a git object graph that cannot be imported or exported.
+        GitGraphMalformed => "GIT_GRAPH_MALFORMED",
+        /// MEDULLA-SCM-R010: a tree entry mode outside the four git file modes.
+        GitModeUnsupported => "GIT_MODE_UNSUPPORTED",
+        /// MEDULLA-SCM-R010: a tree, blob or side pack could not be read for an export.
+        GitExportTreeReadFailed => "GIT_EXPORT_TREE_READ_FAILED",
         /// MEDULLA-SCM-R005: the history index row of the branch head is absent, of another version, or names another commit.
         HistoryIndexStale => "HISTORY_INDEX_STALE",
         /// MEDULLA-SCM-R005.2: the blamed file is binary.

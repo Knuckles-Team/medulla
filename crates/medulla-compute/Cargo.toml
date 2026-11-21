@@ -140,6 +140,9 @@ rmp-serde = "1.3"
 petgraph = { version = "0.8.3", features = ["serde-1"] }
 rayon = "1.12"
 sha2 = "0.10"
+# Git object ids (SHA-1 object format) and pack streams (MEDULLA-SCM-R010).
+sha1 = "0.10"
+flate2 = { version = "1.1", default-features = false, features = ["rust_backend"] }
 hex = "0.4"
 rand = "0.8"
 # Lightweight tracing spans for AST parse/index throughput (CONCEPT:MEDULLA-011). The
