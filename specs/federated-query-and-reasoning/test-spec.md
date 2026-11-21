@@ -1073,7 +1073,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R654.7` | `crates/medulla-plan/src/code_context.rs::tests::diagnose_orders_chain_by_stage` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R654.7` | `tests/retrieval/test_code_context_served.py::test_diagnose_chain` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R703.7` | `tests/retrieval/test_access_check_served.py::test_discover_excludes_checked_at_read_sources` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R706.7` | `tests/federated/test_policy_mask_served.py::test_cross_tenant_policy_not_applied` |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R706.7` | `tests/federated/test_policy_mask_served.py::test_cross_tenant_policy_not_applied` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.8` | `tests/federated/test_stored_query_served.py::test_share_scope_limits_calls` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.9` | `tests/federated/test_stored_query_served.py::test_workspace_share_schedule_and_lint` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R708.10` | `crates/medulla-source-types/src/stored_query.rs::tests::sql_and_sparql_text_binds_typed_literals` |
@@ -1088,7 +1088,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R722.11` | `crates/medulla-protocol-types/src/protocol/tests.rs::uql_decodes_foreign_executions_and_refuses_the_singular_field` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R724` | `tests/served_schema_projections.rs::projections_follow_caller_grants_and_hide_other_boundaries` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R725` | `tests/served_viewport_bins.rs::bins_match_independent_reference_and_obey_limits` |
-| Planned | `MEDULLA-FEDERATED-QUERY-R726` | `crates/medulla-uql/src/parser/evaluate.rs::tests::parses_every_kernel_and_refuses_unknown` |
+| Behavior | `MEDULLA-FEDERATED-QUERY-R726` | `crates/medulla-uql/src/parser/evaluate.rs::tests::parses_every_kernel_and_refuses_unknown` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R727` | `tests/query/test_nl_answer_atoms_served.py::test_answer_cites_atom_provenance` |
 | Planned | `MEDULLA-FEDERATED-QUERY-R729` | `tests/federated/test_raw_pushdown_served.py::test_raw_source_search_is_budgeted_and_refuses_over_ceiling` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R730` | `tests/test_unified_planner_gate.py::test_failed_gate_records_the_freeze_decision` |

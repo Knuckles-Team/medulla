@@ -76,7 +76,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T070 [P] [US1] MEDULLA-FEDERATED-QUERY-R073.1 Typed model for operation-bound foreign sources, with refusal tests
 - [ ] T071 [US1] MEDULLA-FEDERATED-QUERY-R073.2 Connection-protocol pushdown matrix
 - [ ] T072 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.1 ColumnVectorBinding typed model
-- [ ] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind a SQL column through SemanticIndex AdmitBinding and DropBinding
+- [x] T073 [US1] MEDULLA-FEDERATED-QUERY-R077.2 Column vectorization: bind and unbind a SQL column through SemanticIndex AdmitBinding and DropBinding
 - [ ] T075 [P] [US1] MEDULLA-FEDERATED-QUERY-R077.5 Column vectorization: `NEAREST` over the bound column's live semantic generation (canonical binding id, `search_live`, projection narrowing, per-statement `nearest` UDF)
 - [ ] T076 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.1 Multimodal space: model
 - [ ] T077 [P] [US1] MEDULLA-FEDERATED-QUERY-R039.1.2 Multimodal space: behavior
@@ -142,8 +142,8 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T132 [US1] MEDULLA-FEDERATED-QUERY-R008.1 NL planner routes catalog questions to CatalogSearch
 - [ ] T133 [P] [US1] MEDULLA-FEDERATED-QUERY-R720.1 Epistemic row fields
 - [ ] T134 [US1] MEDULLA-FEDERATED-QUERY-R720.2 Confidence, belief and decay stages
-- [ ] T432 [US1] MEDULLA-FEDERATED-QUERY-R720.8 EXPLAIN reports the plan DAG and root count
-- [ ] T433 [US1] MEDULLA-FEDERATED-QUERY-R720.9 UQL union stage and valid-as-of window
+- [x] T432 [US1] MEDULLA-FEDERATED-QUERY-R720.8 EXPLAIN reports the plan DAG and root count
+- [x] T433 [US1] MEDULLA-FEDERATED-QUERY-R720.9 UQL union stage and valid-as-of window
 - [ ] T135 [US1] MEDULLA-FEDERATED-QUERY-R720.3 Embedding-similarity clustering stage
 - [ ] T136 [US1] MEDULLA-FEDERATED-QUERY-R720.4 Wiring of One UQL plan across graph, vector, SQL, SPARQL and epistemic stages
 - [ ] T137 [US1] MEDULLA-FEDERATED-QUERY-R720.5 Refusal of One UQL plan across graph, vector, SQL, SPARQL and epistemic stages
@@ -168,7 +168,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T156 [US1] MEDULLA-FEDERATED-QUERY-R720.7 UQL stage REQUIRE NONEMPTY with a caller-named refusal code
 - [ ] T158 [US1] MEDULLA-FEDERATED-QUERY-R724 Authorization-segmented schema projections method
 - [ ] T159 [P] [US1] MEDULLA-FEDERATED-QUERY-R725 Viewport bins and selection resolve methods
-- [ ] T160 [US1] MEDULLA-FEDERATED-QUERY-R726 UQL EVALUATE grammar
+- [x] T160 [US1] MEDULLA-FEDERATED-QUERY-R726 UQL EVALUATE grammar
 - [ ] T161 [US1] MEDULLA-FEDERATED-QUERY-R727 Natural-language answers take context from AtomContext
 - [x] T162 [US1] MEDULLA-FEDERATED-QUERY-R728 Exhaustive OpKind and PredKind printer and parser round trip
 - [ ] T163 [US1] MEDULLA-FEDERATED-QUERY-R729 Federated pushdown to connector raw-source tools
@@ -199,7 +199,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T185 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.2 Behavior of Retrieval sufficiency verdict with repair step, fallback policy and round limit
 - [ ] T186 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.3 Wiring of Retrieval sufficiency verdict with repair step, fallback policy and round limit
 - [ ] T187 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.4 Refusal of Retrieval sufficiency verdict with repair step, fallback policy and round limit
-- [ ] T188 [US2] MEDULLA-FEDERATED-QUERY-R081.5 Evidence of Retrieval sufficiency verdict with repair step, fallback policy and round limit
+- [x] T188 [US2] MEDULLA-FEDERATED-QUERY-R081.5 Evidence of Retrieval sufficiency verdict with repair step, fallback policy and round limit
 - [ ] T189 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.6 Hot-path proof of Retrieval sufficiency verdict with repair step, fallback policy and round limit
 - [ ] T190 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.7.1 Model of Adaptive dual-score chunk selection
 - [ ] T191 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.7.2 Behavior of Adaptive dual-score chunk selection
@@ -305,7 +305,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T291 [US2] MEDULLA-FEDERATED-QUERY-R653.7 Web Document citations
 - [ ] T292 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.1 Model of Code, operations and deployment context
 - [ ] T293 [US2] MEDULLA-FEDERATED-QUERY-R654.2 Behavior: code context of Code, operations and deployment context
-- [ ] T294 [US2] MEDULLA-FEDERATED-QUERY-R654.3 Wiring of Code, operations and deployment context
+- [x] T294 [US2] MEDULLA-FEDERATED-QUERY-R654.3 Wiring of Code, operations and deployment context
 - [ ] T295 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.4 Refusal and degraded answers
 - [ ] T296 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.5 Evidence of Code, operations and deployment context
 - [ ] T297 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.6 Hot-path proof of Code, operations and deployment context
@@ -404,7 +404,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T383 [US4] MEDULLA-FEDERATED-QUERY-R722.5 Evidence of Connector data resources register as virtual-graph sources at pack import
 - [ ] T384 [US4] MEDULLA-FEDERATED-QUERY-R722.6 Hot-path proof of Connector data resources register as virtual-graph sources at pack import
 - [ ] T385 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.7 Discover excludes unchecked records
-- [ ] T386 [US4] MEDULLA-FEDERATED-QUERY-R706.7 Policy load of Tag-based column masking and row filters
+- [x] T386 [US4] MEDULLA-FEDERATED-QUERY-R706.7 Policy load of Tag-based column masking and row filters
 - [ ] T387 [US4] MEDULLA-FEDERATED-QUERY-R722.7 Source approval compare-and-set
 - [x] T388 [US4] MEDULLA-FEDERATED-QUERY-R722.8 Pushdown and residual filter
 - [ ] T389 [US4] MEDULLA-FEDERATED-QUERY-R722.9 Request-scoped driver binding
@@ -450,7 +450,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T418 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.100 The bench gate checks p99 ceilings
 - [ ] T431 [US4] MEDULLA-FEDERATED-QUERY-R737 Typed tabular channel on RowSet
 - [ ] T422 [US4] MEDULLA-FEDERATED-QUERY-R733 UQL aggregates rows by key: the GROUP stage. Size: M, 2 PRs, 6 hours.
-- [ ] T423 [US4] MEDULLA-FEDERATED-QUERY-R734 UQL orders and pages rows: the ORDER and SKIP stages. Size: M, 1 PR, 5 hours.
+- [x] T423 [US4] MEDULLA-FEDERATED-QUERY-R734 UQL orders and pages rows: the ORDER and SKIP stages. Size: M, 1 PR, 5 hours.
 - [ ] T424 [US4] MEDULLA-FEDERATED-QUERY-R735 UQL reads edges as rows: the EDGES source. Size: M, 1 PR, 5 hours.
 - [ ] T425 [US1] MEDULLA-FEDERATED-QUERY-R736 Query-aware evidence forest for context selection (rollup).
 - [ ] T426 [US1] MEDULLA-FEDERATED-QUERY-R736.1 Model: candidate graph, scores and forest.
@@ -459,10 +459,10 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T429 [US1] MEDULLA-FEDERATED-QUERY-R736.4 Wiring: the retrieval round returns the forest.
 - [ ] T430 [US1] MEDULLA-FEDERATED-QUERY-R736.5 Hot-path proof and benchmark: forest quality and cost.
 - [ ] T434 [US1] MEDULLA-FEDERATED-QUERY-R738 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T435 [US1] MEDULLA-FEDERATED-QUERY-R738.1 CapabilityEntry/CapabilityStatus state machine: route 2 census findings through CapabilityStatus::apply
-- [ ] T437 [US1] MEDULLA-FEDERATED-QUERY-R738.3 ClaimRecord/ClaimState state machine: route 1 census findings through ClaimState::apply
-- [ ] T439 [US1] MEDULLA-FEDERATED-QUERY-R738.5 ContradictionRecord/ContradictionStatus state machine: route 1 census findings through ContradictionStatus::apply
-- [ ] T441 [US1] MEDULLA-FEDERATED-QUERY-R738.7 GapTopic/GapStatus state machine: route 1 census findings through GapStatus::apply
+- [x] T435 [US1] MEDULLA-FEDERATED-QUERY-R738.1 CapabilityEntry/CapabilityStatus state machine: route 2 census findings through CapabilityStatus::apply
+- [x] T437 [US1] MEDULLA-FEDERATED-QUERY-R738.3 ClaimRecord/ClaimState state machine: route 1 census findings through ClaimState::apply
+- [x] T439 [US1] MEDULLA-FEDERATED-QUERY-R738.5 ContradictionRecord/ContradictionStatus state machine: route 1 census findings through ContradictionStatus::apply
+- [x] T441 [US1] MEDULLA-FEDERATED-QUERY-R738.7 GapTopic/GapStatus state machine: route 1 census findings through GapStatus::apply
 - [ ] T442 [US1] MEDULLA-FEDERATED-QUERY-R738.8 GeoTask state machine: `medulla-geo` routes every status write through `TaskStatusKind::apply`
 - [ ] T444 [US1] MEDULLA-FEDERATED-QUERY-R738.10 HierarchyVisit/DescentLevel is a classification, not a lifecycle: rename DescentStage to DescentLevel
 - [ ] T445 [US1] MEDULLA-FEDERATED-QUERY-R738.11 JointSelection/SolverOutcome is a classification, not a lifecycle: rename SolverStatus to SolverOutcome
