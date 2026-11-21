@@ -231,3 +231,28 @@ def test_user_views_type_status_as_the_rust_enum() -> None:
             for attr in vars(model)
             if attr in {"transition", "transition_status", "apply"}
         ], name
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R739.3
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R739.3")
+def test_uql_proof_step_field_is_clause_not_stage() -> None:
+    """A proof step's tag is the variant name; its text field is the clause it proves."""
+    for name in (
+        "UqlProofStepSparqlBody",
+        "UqlProofStepReasonBody",
+        "UqlProofStepUnprovedBody",
+    ):
+        fields = getattr(models, name).model_fields
+        assert "clause" in fields, name
+        assert "stage" not in fields, name
+        assert "kind" not in fields, name
+
+    step = models.UqlProofStepUnproved.model_validate(
+        {"Unproved": {"clause": "MATCH (:Doc)"}}
+    )
+    assert step.Unproved.clause == "MATCH (:Doc)"
+    # The old word is a hard cutover: no alias is accepted.
+    with pytest.raises(ValidationError):
+        models.UqlProofStepUnproved.model_validate(
+            {"Unproved": {"stage": "MATCH (:Doc)"}}
+        )
