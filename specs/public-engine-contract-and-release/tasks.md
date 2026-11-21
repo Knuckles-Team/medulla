@@ -8,17 +8,18 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T002 [US1] MEDULLA-CONTRACT-R001.1 Export the type manifest that the Meristem lifecycle consumes
 - [ ] T003 [US1] MEDULLA-CONTRACT-R001.2 Canonical blueprint bytes survive export, disk write and re-export
 - [ ] T004 [US1] MEDULLA-CONTRACT-R001.4 Gate: Python models accept and re-emit every Rust vector
+- [ ] T125 [US1] MEDULLA-CONTRACT-R001.4.1 Move the wire-vector builder into `medulla_capabilities::wire_vectors`, add the `emit_wire_vectors` example, read it from `tests/test_wire_vectors.py`, delete `tests/fixtures/wire_vectors/`
 - [ ] T005 [US1] MEDULLA-CONTRACT-R001.5 Consumer proof: SDK adapter uses only the typed models
 - [ ] T006 [US1] MEDULLA-CONTRACT-R002.1 Served Decide tenant auth-boundary refusal
 - [ ] T007 [US1] MEDULLA-CONTRACT-R002.2 Served Decide authorized-tenant path and pack-import journey
 - [ ] T008 [US1] MEDULLA-CONTRACT-R002.3 Installed-wheel / no-source-tree-import check for the Decide and pack-import client surface
 - [ ] T009 [US4] MEDULLA-CONTRACT-R003 Privacy scan covers relocated graph-backends documentation
-- [ ] T116 [US2] MEDULLA-CONTRACT-R061 Method-body vector emitter
+- [ ] T116 [US2] MEDULLA-CONTRACT-R061 Emit method-body vectors beside both codec copies on every build; delete `tests/fixtures/method_body_vectors.json` and `--write-vectors`
 - [ ] T010 [US2] MEDULLA-CONTRACT-R004 Go and JavaScript clients sign bodies through the shared codec
 - [ ] T011 [US1] MEDULLA-CONTRACT-R005 One generated model per wire shape, with typed SPARQL decode
 - [ ] T012 [US2] MEDULLA-CONTRACT-R006.1 Fresh canonical codec export with provenance
 - [ ] T013 [US2] MEDULLA-CONTRACT-R006.2 Complete canonical qualification of the codec artifact
-- [ ] T014 [US2] MEDULLA-CONTRACT-R006.3 Export fresh typed contracts for parity repair
+- [ ] T014 [US2] MEDULLA-CONTRACT-R006.3 RETIRED: no committed generated contract exists to repair
 - [ ] T015 [US4] MEDULLA-CONTRACT-R007 Dispatch decomposition test is current and runs in CI
 - [ ] T016 [US4] MEDULLA-CONTRACT-R008.1 Resolved-checkout parity contract (producer-first split of R008)
 - [ ] T017 [US4] MEDULLA-CONTRACT-R008.2 The repo-root-parity xtask command wires in the parity contract
@@ -62,7 +63,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T055 [US1] MEDULLA-CONTRACT-R048 Generated work-claim and evidence DTOs refuse coerced, empty and duplicate inputs
 - [ ] T056 [US1] MEDULLA-CONTRACT-R049 The Python client retries an idempotent read once on a dropped connection
 - [ ] T057 [US1] MEDULLA-CONTRACT-R050 Typed client ingests OTLP logs
-- [ ] T058 [US1] MEDULLA-CONTRACT-R051.1 RunTrace ingest carries harness fields
+- [ ] T058 [US1] MEDULLA-CONTRACT-R051.1 RETIRED: the harness fields are served and validated on `AddNode`
 - [ ] T059 [US5] MEDULLA-CONTRACT-R052.1 Module ownership model
 - [ ] T060 [US5] MEDULLA-CONTRACT-R052.2 Build, package, and deployment behavior
 - [ ] T061 [US5] MEDULLA-CONTRACT-R052.3 Shared-contract wiring
@@ -101,7 +102,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T089 [US5] MEDULLA-CONTRACT-R056.12 Lane landing: a step lands on a passing build-train run of its changed crates
 - [ ] T090 [US5] MEDULLA-CONTRACT-R056.13 Lane order and parallel groups
 - [ ] T091 [US5] MEDULLA-CONTRACT-R056.14 Build profiles keep iteration fast
-- [ ] T092 [US5] MEDULLA-CONTRACT-R056.15 Served tests live with their handler crate
+- [ ] T092 [US5] MEDULLA-CONTRACT-R056.15 Structural test: served tests live in `medulla-server-served-tests`, handler crates never name `medulla-server-router`
 - [ ] T093 [US5] MEDULLA-CONTRACT-R056.16 Cargo features map to crates one to one
 - [ ] T094 [US5] MEDULLA-CONTRACT-R056.17 The split leaves no crate-level lint allows
 - [ ] T095 [US5] MEDULLA-CONTRACT-R056.18 The ambient test auth posture does not change behaviour under workspace feature unification
@@ -118,16 +119,17 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T106 [US1] MEDULLA-CONTRACT-R001.3.9 Wire vectors for the security method domain
 - [ ] T107 [US1] MEDULLA-CONTRACT-R001.3.10 Wire vectors for the storage method domain
 - [ ] T108 [US1] MEDULLA-CONTRACT-R001.3.11 Wire vectors for the transactions method domain
-- [ ] T111 [US1] MEDULLA-CONTRACT-R059 The Python client is a thin layer over the served catalog.
+- [ ] T111 [US1] MEDULLA-CONTRACT-R059 The Python client has one generic call over the typed senders (rollup)
+- [ ] T126 [US1] MEDULLA-CONTRACT-R059.1 `MedullaClient.call(method, params, graph, *, idempotency_key)` over `SEND_BY_METHOD`
 - [ ] T112 [US1] MEDULLA-CONTRACT-R060 Release binaries ship split symbols and one-command symbolization.
 - [ ] T113 [US1] MEDULLA-CONTRACT-R060.1 Debug info splits from the shipped binary and the build-id stays in both. Files: `Cargo.toml`, `scripts/split_release_symbols.sh`. Test: `tests/release/test_split_symbols.py::test_split_keeps_build_id_and_symbolizes`.
 - [ ] T114 [US1] MEDULLA-CONTRACT-R060.2 Each release uploads a symbol artifact per platform, named by build-id. Files: `.github/workflows/release.yml`. Test: `tests/test_release_symbols_workflow.py::test_every_server_target_uploads_a_symbol_artifact_named_by_build_id`.
 - [ ] T115 [US1] MEDULLA-CONTRACT-R060.3 One command symbolizes a stack. Files: `scripts/symbolize.sh`, `docs/interfaces/engine-observability.md`. Test: `tests/release/test_symbolize_script.py::test_symbolize_resolves_offsets_from_a_local_artifact`.
-- [ ] T117 [US1] MEDULLA-CONTRACT-R062 Remaining lifecycles are explicit state machines (rollup)
-- [ ] T118 [US1] MEDULLA-CONTRACT-R062.1 ControlQubit/ControlState state machine: route 1 census findings through ControlState::apply
-- [ ] T119 [US1] MEDULLA-CONTRACT-R062.2 HardwareJob/JobStatus state machine: route 1 census findings through JobStatus::apply
-- [ ] T120 [US1] MEDULLA-CONTRACT-R062.3 HealthReport/HealthStatus state machine: route 1 census findings through HealthStatus::apply
-- [ ] T121 [US1] MEDULLA-CONTRACT-R062.4 Ranking fact flags: `is_clifford` and `noise_requested`
-- [ ] T122 [US1] MEDULLA-CONTRACT-R062.5 QuantumBackend/BackendState state machine: route 3 census findings through BackendState::apply
+- [ ] T117 [US1] MEDULLA-CONTRACT-R062 Classify every state-named quantum and health field (rollup)
+- [ ] T118 [US1] MEDULLA-CONTRACT-R062.1 Rename `ControlState` to `ControlPolarity` and `ControlQubit.state` to `polarity` (no machine)
+- [ ] T119 [US1] MEDULLA-CONTRACT-R062.2 `HardwareJobMachine` in `medulla-quantum-hardware/src/job_machine.rs`; route `refresh_with` and `cancel` through `observe` and `cancel_accepted`
+- [ ] T120 [US1] MEDULLA-CONTRACT-R062.3 Delete `HealthReport.status` (Rust, Python model, transport mock)
+- [ ] T121 [US1] MEDULLA-CONTRACT-R062.4 Replace `RankingFacts` with the five-variant `RankingClass`
+- [ ] T122 [US1] MEDULLA-CONTRACT-R062.5 Rename `registry::BackendState` to `AdapterCore` and the adapters' field `state` to `core` (no machine)
 - [ ] T123 [US1] MEDULLA-CONTRACT-R063 Clear the state-machine census and switch the hook to blocking
-- [ ] T124 [US1] MEDULLA-CONTRACT-R064 No unmaintained date-time crates in the dependency graph: move to `jiff`, upgrade third-party dependents, remove the four advisory ignores
+- [ ] T124 [US1] MEDULLA-CONTRACT-R064 No workspace manifest names a date-time crate: `medulla-h-ingest` moves to `jiff`, the root drops `chrono`, the four ignores name their transitive dependents
