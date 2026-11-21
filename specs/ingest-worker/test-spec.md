@@ -91,7 +91,8 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R701.3` | `crates/medulla-h-ingest/src/source_ingestion/facts.rs::tests::facts_reach_the_atom_store` | L3 | exists |
 | `MEDULLA-INGEST-WORKER-R701.4` | `crates/medulla-types/tests/ingest_rules.rs::a_fact_without_evidence_is_refused_and_an_unfit_fact_stays_an_ungrounded_claim` | L1 | exists |
 | `MEDULLA-INGEST-WORKER-R701.5` | `tests/ingest/test_fact_grounding_served.py::test_unchanged_content_is_unchanged` | L4 | planned |
-| `MEDULLA-INGEST-WORKER-R701.6` | `tests/ingest/test_fact_grounding_served.py::test_direction_repair_and_ungrounded_claims` | L4 | planned |
+| `MEDULLA-INGEST-WORKER-R701.6` | `tests/ingest/test_fact_grounding_served.py::test_direction_repair_and_ungrounded_claims` | L4 | exists |
+| `MEDULLA-INGEST-WORKER-R701.6` | `benches/fact_grounding.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R701.7` | `tests/ingest/test_fact_grounding_served.py::test_link_needs_shared_mentions` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R702.1` | `crates/medulla-compute/src/sketch.rs::tests::lsh_config_validates_and_round_trips` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R702.2` | `crates/medulla-compute/src/sketch.rs::tests::lsh_scaling_and_fn_rate` | L2 | planned |

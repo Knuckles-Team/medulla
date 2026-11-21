@@ -2124,6 +2124,12 @@ name = "ingest_row_version"
 path = "benches/ingest_row_version.rs"
 harness = false
 
+# Fact grounding at batch size (MEDULLA-INGEST-WORKER-R701.6): nightly budget.
+[[bench]]
+name = "fact_grounding"
+path = "benches/fact_grounding.rs"
+harness = false
+
 # Source reconcile at one million identifiers (MEDULLA-INGEST-WORKER-R903.6): nightly budget.
 [[bench]]
 name = "ingest_source_reconcile"
