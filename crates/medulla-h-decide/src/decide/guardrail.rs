@@ -28,7 +28,7 @@ pub async fn handle_guardrail_entailment(
 }
 
 #[cfg(feature = "decide")]
-async fn entailment_for(
+pub(super) async fn entailment_for(
     state: &SharedState,
     verified: &VerifiedRequestContext,
     request: &GuardrailEntailmentRequest,

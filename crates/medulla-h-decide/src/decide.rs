@@ -12,6 +12,9 @@ pub(crate) mod belief_revise;
 pub(crate) mod claims;
 pub(crate) mod commit;
 pub(crate) mod coverage;
+#[cfg(all(test, feature = "decide", feature = "redb"))]
+mod execution_answer_tests;
+pub(crate) mod execution_answer;
 #[cfg(all(test, feature = "decide"))]
 mod coverage_tests;
 pub(crate) mod feature_ledger;
@@ -202,6 +205,7 @@ pub use belief_revise::handle_belief_revise;
 pub use claims::handle_claims;
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;
+pub use execution_answer::handle_agent_execution_answer;
 pub use feature_ledger::handle_feature_ledger;
 pub use guardrail::handle_guardrail_entailment;
 pub use jobs::{handle_decision_eval, handle_decision_fit};

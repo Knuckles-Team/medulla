@@ -61,6 +61,16 @@ pub struct ExecutionAnswer {
     pub certificate_digest: String,
 }
 
+/// The served request for the composed answer: the task to answer for and the
+/// assembly request the answer is assembled from (MEDULLA-CQ-ORCH-R008.2).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AgentExecutionAnswerRequest {
+    pub task_iri: String,
+    pub assembly: medulla_decision_types::decision::AssemblyRequest,
+}
+
 impl ExecutionAnswer {
     /// Return the canonical digest used to pin this envelope across the wire.
     pub fn digest(&self) -> String {

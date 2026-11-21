@@ -233,6 +233,18 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        Method::AgentExecutionAnswer { request } => {
+            dispatch_boxed(async {
+                medulla_h_decide::decide::handle_agent_execution_answer(
+                    state,
+                    req.id,
+                    (&req.graph, verified_context),
+                    *request,
+                )
+                .await
+            })
+            .await
+        }
         Method::RevisionProposalList { request } => {
             dispatch_boxed(async {
                 medulla_h_decide::decide::handle_revision_proposal_list(

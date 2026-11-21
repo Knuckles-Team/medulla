@@ -86,6 +86,7 @@ SEND_BY_METHOD = {
     "AddSceneObject": graph.send_add_scene_object,
     "AddTriples": graph.send_add_triples,
     "AgentAssemble": storage.send_agent_assemble,
+    "AgentExecutionAnswer": storage.send_agent_execution_answer,
     "AgentComponent": storage.send_agent_component,
     "AgentGraph": storage.send_agent_graph,
     "AgentLibrary": storage.send_agent_library,

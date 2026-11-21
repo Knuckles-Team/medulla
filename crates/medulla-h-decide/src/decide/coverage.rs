@@ -36,7 +36,7 @@ pub async fn handle_capability_coverage(
 }
 
 #[cfg(feature = "decide")]
-async fn coverage_for(
+pub(super) async fn coverage_for(
     state: &SharedState,
     verified: &VerifiedRequestContext,
     request: &CapabilityCoverageRequest,

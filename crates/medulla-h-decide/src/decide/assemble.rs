@@ -43,7 +43,7 @@ pub async fn handle_agent_assemble(
 }
 
 #[cfg(feature = "decide")]
-async fn assemble_for(
+pub(super) async fn assemble_for(
     state: &SharedState,
     graph: &str,
     verified: &VerifiedRequestContext,

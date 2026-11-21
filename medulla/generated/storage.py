@@ -72,6 +72,7 @@ if TYPE_CHECKING:
     AgentGraphRequest = _models.MethodAgentGraphParams
     AgentTemplateRequest = _models.MethodAgentTemplateParams
     CapabilityCoverageRequest = _models.MethodCapabilityCoverageParams
+    AgentExecutionAnswerRequest = _models.MethodAgentExecutionAnswerParams
     RevisionProposalListRequest = _models.MethodRevisionProposalListParams
     GuardrailEntailmentRequest = _models.MethodGuardrailEntailmentParams
     TsAppendRequest = _models.MethodTsAppendParams
@@ -776,6 +777,49 @@ def decode_capability_coverage(
     return decode_result(
         "CapabilityCoverage", models().CapabilityCoverageResult, result
     )
+
+
+async def send_agent_execution_answer(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        AgentExecutionAnswer
+    Authorization:
+        agent:assemble-read
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Result schema:
+        contract/schemas/result.storage.json
+        #/methods/AgentExecutionAnswer
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+    """
+    models().MethodAgentExecutionAnswerParams.model_validate(params or {})
+    payload = await client._send(
+        "AgentExecutionAnswer",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("AgentExecutionAnswer", payload)
+
+
+def decode_agent_execution_answer(
+    result: OpaqueResult,
+) -> _models.ExecutionAnswer:
+    """Validate this method's result against its contract model."""
+    return decode_result("AgentExecutionAnswer", models().ExecutionAnswer, result)
 
 
 async def send_guardrail_entailment(
@@ -2413,6 +2457,7 @@ _REQUEST_METHODS = frozenset(
         "AgentGraph",
         "AgentTemplate",
         "CapabilityCoverage",
+        "AgentExecutionAnswer",
         "GuardrailEntailment",
         "TsAppend",
         "TsRange",

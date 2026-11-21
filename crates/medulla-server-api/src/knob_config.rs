@@ -386,6 +386,8 @@ knobs! {
     topology_lease_ttl_ms: u64 = "topology.lease_ttl_ms", U64(900_000), [1_000, 86_400_000], "ms", Tunable;
     /// Primitive graph edge cap (MEDULLA-DECISION-ENGINE-R036.100.2).
     primitive_max_edges: u64 = "primitive.max_edges", U64(256), [16, 1_024], "edges", Tunable;
+    /// Most rows the steps and workflow parts of a composed execution answer keep (MEDULLA-CQ-ORCH-R008.2).
+    execution_answer_max_rows_per_part: u64 = "execution_answer.max_rows_per_part", U64(256), [1, 4_096], "rows", Tunable;
     /// Oldest coding-agent discovery receipt a plan accepts (MEDULLA-DECISION-ENGINE-R036.101).
     coding_agent_max_receipt_age: u64 = "coding_agent.max_receipt_age", U64(3_600), [3_600, 3_600], "seconds", Fixed;
     /// Topology candidate-set cap.

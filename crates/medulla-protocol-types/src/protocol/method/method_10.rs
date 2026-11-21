@@ -61,6 +61,13 @@ $($variants)*
     CapabilityCoverage {
         request: Box<medulla_decision_outcome_types::decision::coverage::CapabilityCoverageRequest>,
     },
+    /// The composed answer to "How can I execute task XYZ?"
+    /// (MEDULLA-CQ-ORCH-R008.2): one assembly, the capability coverage, the
+    /// guardrails and the task's steps and workflow in one seven-part
+    /// envelope. Reads tenant-bound snapshots; commits nothing.
+    AgentExecutionAnswer {
+        request: Box<medulla_decision_outcome_types::decision::execution_answer::AgentExecutionAnswerRequest>,
+    },
     /// The verified tenant's revision challengers, paged in creation order
     /// (MEDULLA-DECISION-ENGINE-R817). Reads the revision rows of the governed
     /// pointer store; writes nothing.

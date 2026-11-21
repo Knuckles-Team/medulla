@@ -1939,6 +1939,62 @@ class CapabilityCoverageResult(BaseModel):
     schema_version: Annotated[int, Field(ge=0, le=65535)]
 
 
+BoundedVec_PremiseRef_64 = Annotated[list[PremiseRef], Field(max_length=64)]
+
+
+class ExecutionAnswerPartAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence_class: EvidenceClass
+    provenance: BoundedVec_PremiseRef_64
+    status: Literal["answer"]
+    value: Any
+
+
+class ExecutionAnswerPartAbstain(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence_class: EvidenceClass
+    provenance: BoundedVec_PremiseRef_64
+    reason: AbstainReason
+    status: Literal["abstain"]
+
+
+ExecutionAnswerPart = Annotated[
+    ExecutionAnswerPartAnswer | ExecutionAnswerPartAbstain,
+    Field(discriminator="status"),
+]
+
+
+class ExecutionAnswerParts(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    bindings: ExecutionAnswerPart
+    coverage: ExecutionAnswerPart
+    dag: ExecutionAnswerPart
+    guardrails: ExecutionAnswerPart
+    staffing: ExecutionAnswerPart
+    steps: ExecutionAnswerPart
+    workflow: ExecutionAnswerPart
+
+
+class ExecutionAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    assembled_by: str
+    certificate_digest: str
+    parts: ExecutionAnswerParts
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    task_iri: str
+
+
+class AgentExecutionAnswerRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    assembly: AssemblyRequest
+    task_iri: str
+
+
 class CapacityAcquireRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -13614,6 +13670,13 @@ class MethodCapabilityCoverage(BaseModel):
     params: MethodCapabilityCoverageParams
 
 
+class MethodAgentExecutionAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["AgentExecutionAnswer"]
+    params: MethodAgentExecutionAnswerParams
+
+
 class MethodRevisionProposalList(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -15225,6 +15288,7 @@ Method = Annotated[
         MethodMineCommunity,
         MethodAgentAssemble,
         MethodCapabilityCoverage,
+        MethodAgentExecutionAnswer,
         MethodRevisionProposalList,
         MethodGuardrailEntailment,
         MethodDecisionCommit,
@@ -15717,6 +15781,12 @@ class MethodCancelWorkItemParams(BaseModel):
     reason_ref: str | None = None
     tenant: str
     work_item_id: str
+
+
+class MethodAgentExecutionAnswerParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: AgentExecutionAnswerRequest
 
 
 class MethodCapabilityCoverageParams(BaseModel):
@@ -34775,6 +34845,7 @@ __all__ = [
     "AgentComponentSearchPage",
     "AgentComponentSearchRequest",
     "AgentComponentStatusRequest",
+    "AgentExecutionAnswerRequest",
     "AgentGraphCommittedResult",
     "AgentGraphDraft",
     "AgentGraphEdge",
@@ -34996,6 +35067,7 @@ __all__ = [
     "BoundedVec_PooledRate_64",
     "BoundedVec_PremiseRef_1024",
     "BoundedVec_PremiseRef_32",
+    "BoundedVec_PremiseRef_64",
     "BoundedVec_QuantisedValue_32",
     "BoundedVec_QuantisedValue_4096",
     "BoundedVec_QuantisedValue_64",
@@ -35069,6 +35141,11 @@ __all__ = [
     "CapabilityCoverageRequest",
     "CapabilityCoverageResult",
     "ConsolidationPlan",
+    "ExecutionAnswer",
+    "ExecutionAnswerPart",
+    "ExecutionAnswerPartAbstain",
+    "ExecutionAnswerPartAnswer",
+    "ExecutionAnswerParts",
     "MediaAttachment",
     "Memento",
     "MemoryExportManifest",
@@ -35083,6 +35160,8 @@ __all__ = [
     "MemoryRememberResult",
     "MemoryTier",
     "MergeGroup",
+    "MethodAgentExecutionAnswer",
+    "MethodAgentExecutionAnswerParams",
     "MethodMemoryExport",
     "MethodMemoryExportParams",
     "MethodMemoryRecall",

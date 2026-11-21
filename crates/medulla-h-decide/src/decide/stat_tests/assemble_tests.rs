@@ -31,16 +31,16 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 
-pub(super) const TENANT: &str = "tenant-media";
-pub(super) const ASKER: &str = "asker";
+pub(in crate::decide) const TENANT: &str = "tenant-media";
+pub(in crate::decide) const ASKER: &str = "asker";
 
-pub(super) struct Harness {
+pub(in crate::decide) struct Harness {
     _dir: tempfile::TempDir,
-    pub(super) state: Arc<RwLock<ServerState>>,
-    pub(super) store: Arc<AgentLibraryStore>,
+    pub(in crate::decide) state: Arc<RwLock<ServerState>>,
+    pub(in crate::decide) store: Arc<AgentLibraryStore>,
 }
 
-pub(super) async fn harness() -> Harness {
+pub(in crate::decide) async fn harness() -> Harness {
     let dir = tempfile::tempdir().unwrap();
     // The graph ACL admits only a principal the provisioned policy knows
     // (`topology_read::graph_core` checks read on the request graph).
@@ -122,7 +122,7 @@ pub(super) fn publish_with(
 
 /// One model (declaring `capabilities`), one prompt, one tool, one skill and
 /// one ontology: every slot of a runnable agent (`one:tool` is at least one).
-pub(super) fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>) {
+pub(in crate::decide) fn seed(store: &AgentLibraryStore, capabilities: Option<ModelInputCapabilities>) {
     seed_with(store, capabilities, |_| {});
 }
 
@@ -170,7 +170,7 @@ pub(super) fn seed_with(
     publish_with(store, 5, ("tool-a", AgentComponentKind::Tool), None, &tweak);
 }
 
-pub(super) fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
+pub(in crate::decide) fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
     AssemblyRequest {
         tenant_id: TENANT.to_string(),
         requirements: AssemblyRequirements {
@@ -199,12 +199,10 @@ pub(super) fn request(required: Vec<ModelInputMediaType>) -> AssemblyRequest {
     }
 }
 
-pub(super) async fn assemble(
-    h: &Harness,
-    request: AssemblyRequest,
-) -> Result<AssemblyResult, String> {
-    // Assembly reads the caller's run-scope bound from the request graph
-    // (MEDULLA-IDENTITY-R008.4), so the graph it names must exist.
+/// Create the request graph and store the asker's run-scope bound in it, which
+/// assembly reads before it admits any candidate.
+pub(in crate::decide) async fn prepare_request_graph(h: &Harness) {
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
     {
         let mut state = h.state.write().await;
         if state.registry.get("default").is_none() {
@@ -218,7 +216,6 @@ pub(super) async fn assemble(
                 .expect("create the request graph");
         }
     }
-    let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
     // The candidate set must lie inside the asker's stored run-scope bound
     // (MEDULLA-IDENTITY-R008.1/R008.4); an absent bound refuses every tool.
     {
@@ -242,6 +239,14 @@ pub(super) async fn assemble(
             rmp_serde::to_vec_named(&policy).expect("encode the run-scope policy"),
         );
     }
+}
+
+pub(in crate::decide) async fn assemble(
+    h: &Harness,
+    request: AssemblyRequest,
+) -> Result<AssemblyResult, String> {
+    prepare_request_graph(h).await;
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(ASKER, TENANT);
     let response =
         super::super::assemble::handle_agent_assemble(&h.state, 1, ("default", &verified), request)
             .await;

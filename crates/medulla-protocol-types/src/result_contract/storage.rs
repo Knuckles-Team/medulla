@@ -32,6 +32,7 @@ use medulla_catalog_types::{
     connector_pack::PackRetireResult,
 };
 use medulla_decision_outcome_types::decision::coverage::CapabilityCoverageResult;
+use medulla_decision_outcome_types::decision::execution_answer::ExecutionAnswer;
 use medulla_decision_types::{decision::AssemblyResult, decision::DecisionCommitResult};
 use medulla_mutation_types::{
     write_back::ReconciliationReceipt, write_back::SourceChangeSet, write_back::WriteBackReceipt,
@@ -114,6 +115,7 @@ method_results! {
     AgentComponentAdmitSkillUpgrade(AgentComponent / "admit_skill_upgrade") => Raw<SkillAdmission>;
     AgentAssemble(AgentAssemble) => Raw<AssemblyResult>;
     CapabilityCoverage(CapabilityCoverage) => Raw<CapabilityCoverageResult>;
+    AgentExecutionAnswer(AgentExecutionAnswer) => Raw<ExecutionAnswer>;
     RevisionProposalList(RevisionProposalList) => Raw<medulla_decision_outcome_types::decision::revision_list::RevisionProposalPage>;
     GuardrailEntailment(GuardrailEntailment) => Raw<GuardrailEntailmentResult>;
     DecisionCommit(DecisionCommit) => Raw<DecisionCommitResult>;
