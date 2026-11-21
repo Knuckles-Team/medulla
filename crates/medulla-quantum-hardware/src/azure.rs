@@ -25,7 +25,7 @@ use crate::{
     credentials::{CredentialSource, EnvCredentials},
     error::HardwareError,
     quota::QuotaStatus,
-    registry::{self, BackendState, ConfiguredQuota, HardwareJob, PreparedCircuit},
+    registry::{self, AdapterCore, ConfiguredQuota, HardwareJob, PreparedCircuit},
     transport::{Body, HttpRequest, HttpTransport, Method, ProviderHttp, ReqwestTransport},
 };
 use medulla_quantum_core::backend::{JobHandle, RunOptions};
@@ -190,7 +190,7 @@ pub struct AzureQuantumBackend<
     C: CredentialSource = EnvCredentials,
     T: HttpTransport = ReqwestTransport,
 > {
-    state: BackendState,
+    core: AdapterCore,
     client: AzureClient<C, T>,
     /// Owns the mandatory operator-declared budget and its usage state; see
     /// [`ConfiguredQuota`] for why this is separate from the request lifecycle.
@@ -212,7 +212,7 @@ impl Default for AzureQuantumBackend<EnvCredentials, ReqwestTransport> {
 impl<C: CredentialSource, T: HttpTransport> AzureQuantumBackend<C, T> {
     pub fn with_parts(credentials: C, transport: T) -> Self {
         AzureQuantumBackend {
-            state: BackendState::new("hardware-azure"),
+            core: AdapterCore::new("hardware-azure"),
             client: AzureClient::new(credentials, transport),
             quota: ConfiguredQuota::default(),
         }
@@ -223,7 +223,7 @@ impl<C: CredentialSource, T: HttpTransport> AzureQuantumBackend<C, T> {
     }
 
     pub fn quota_status_at_submit(&self, job: JobHandle) -> Option<QuotaStatus> {
-        self.state.quota_status_at_submit(job)
+        self.core.quota_status_at_submit(job)
     }
 }
 

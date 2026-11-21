@@ -15,7 +15,7 @@
 use crate::credentials::{CredentialSource, EnvCredentials};
 use crate::error::HardwareError;
 use crate::quota::{QuotaStatus, QuotaTracker, QuotaUnits};
-use crate::registry::{self, BackendState, HardwareJob, PreparedCircuit};
+use crate::registry::{self, AdapterCore, HardwareJob, PreparedCircuit};
 use crate::sigv4::{self, AwsCredentials};
 use crate::transport::{Body, HttpRequest, HttpTransport, Method, ProviderHttp, ReqwestTransport};
 use medulla_quantum_core::backend::{JobHandle, RunOptions};
@@ -197,7 +197,7 @@ impl<C: CredentialSource, T: HttpTransport> registry::ProviderClient for BraketC
 
 pub struct BraketBackend<C: CredentialSource = EnvCredentials, T: HttpTransport = ReqwestTransport>
 {
-    state: BackendState,
+    core: AdapterCore,
     client: BraketClient<C, T>,
     quota: QuotaTracker,
 }
@@ -226,7 +226,7 @@ impl Default for BraketBackend<EnvCredentials, ReqwestTransport> {
 impl<C: CredentialSource, T: HttpTransport> BraketBackend<C, T> {
     pub fn with_parts(credentials: C, transport: T, quota: QuotaTracker) -> Self {
         BraketBackend {
-            state: BackendState::new("hardware-braket"),
+            core: AdapterCore::new("hardware-braket"),
             client: BraketClient::new(credentials, transport),
             quota,
         }
@@ -237,7 +237,7 @@ impl<C: CredentialSource, T: HttpTransport> BraketBackend<C, T> {
     }
 
     pub fn quota_status_at_submit(&self, job: JobHandle) -> Option<QuotaStatus> {
-        self.state.quota_status_at_submit(job)
+        self.core.quota_status_at_submit(job)
     }
 }
 

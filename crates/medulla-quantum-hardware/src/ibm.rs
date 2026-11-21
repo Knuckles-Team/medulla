@@ -13,7 +13,7 @@ use crate::{
     credentials::{CredentialSource, EnvCredentials},
     error::HardwareError,
     quota::{QuotaStatus, QuotaTracker, QuotaUnits},
-    registry::{self, BackendState, HardwareJob, PreparedCircuit},
+    registry::{self, AdapterCore, HardwareJob, PreparedCircuit},
     transport::{Body, HttpRequest, HttpTransport, Method, ProviderHttp, ReqwestTransport},
 };
 use medulla_quantum_core::backend::{BackendId, JobHandle, RunOptions};
@@ -174,7 +174,7 @@ pub struct IbmQuantumBackend<
     C: CredentialSource = EnvCredentials,
     T: HttpTransport = ReqwestTransport,
 > {
-    state: BackendState,
+    core: AdapterCore,
     client: IbmClient<C, T>,
     quota: QuotaTracker,
 }
@@ -208,7 +208,7 @@ impl<C: CredentialSource, T: HttpTransport> IbmQuantumBackend<C, T> {
     /// directly (e.g. `StaticCredentials` + `MockTransport` + a tiny test budget).
     pub fn with_parts(credentials: C, transport: T, quota: QuotaTracker) -> Self {
         IbmQuantumBackend {
-            state: BackendState::new("hardware-ibm"),
+            core: AdapterCore::new("hardware-ibm"),
             client: IbmClient::new(credentials, transport),
             quota,
         }
@@ -224,7 +224,7 @@ impl<C: CredentialSource, T: HttpTransport> IbmQuantumBackend<C, T> {
     /// The budget snapshot recorded at the moment a specific job was submitted, if
     /// that job handle is known.
     pub fn quota_status_at_submit(&self, job: JobHandle) -> Option<QuotaStatus> {
-        self.state.quota_status_at_submit(job)
+        self.core.quota_status_at_submit(job)
     }
 }
 
@@ -244,7 +244,7 @@ impl<C: CredentialSource, T: HttpTransport> registry::ProviderRemoteSubmit
         circuit: &PreparedCircuit,
         opts: &RunOptions,
     ) -> Result<String, HardwareError> {
-        self.client.submit(&self.state.id, circuit, opts)
+        self.client.submit(&self.core.id, circuit, opts)
     }
 }
 

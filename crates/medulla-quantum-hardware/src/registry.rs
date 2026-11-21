@@ -244,14 +244,14 @@ impl HardwareJobRegistry {
 }
 
 /// Provider-neutral identity and local job storage shared by every adapter.
-pub(crate) struct BackendState {
+pub(crate) struct AdapterCore {
     pub(crate) id: BackendId,
     pub(crate) jobs: HardwareJobRegistry,
 }
 
-impl BackendState {
+impl AdapterCore {
     pub(crate) fn new(id: &'static str) -> Self {
-        BackendState {
+        AdapterCore {
             id: BackendId::from(id),
             jobs: HardwareJobRegistry::default(),
         }
@@ -619,7 +619,7 @@ macro_rules! impl_hardware_backend {
             medulla_quantum_core::backend::QuantumBackend for $backend<C, T>
         {
             fn backend_id(&self) -> medulla_quantum_core::backend::BackendId {
-                self.state.id.clone()
+                self.core.id.clone()
             }
 
             fn family(&self) -> medulla_quantum_core::backend::BackendFamily {
@@ -651,8 +651,8 @@ macro_rules! impl_hardware_backend {
             > {
                 let record =
                     $crate::registry::ProviderSubmission::execute_submit(self, program, opts)
-                        .map_err(|error| error.into_backend_error(&self.state.id))?;
-                Ok(self.state.jobs.insert(record))
+                        .map_err(|error| error.into_backend_error(&self.core.id))?;
+                Ok(self.core.jobs.insert(record))
             }
 
             fn poll(
@@ -662,13 +662,13 @@ macro_rules! impl_hardware_backend {
                 medulla_quantum_core::backend::JobStatus,
                 medulla_quantum_core::backend::BackendError,
             > {
-                self.state.jobs.with_record(job, |record| {
+                self.core.jobs.with_record(job, |record| {
                     $crate::registry::ProviderClient::refresh_status(
                         &self.client,
                         record,
                         $status_mapping,
                     )
-                    .map_err(|error| error.into_backend_error(&self.state.id))?;
+                    .map_err(|error| error.into_backend_error(&self.core.id))?;
                     Ok(record.status.clone())
                 })
             }
@@ -680,7 +680,7 @@ macro_rules! impl_hardware_backend {
                 medulla_quantum_core::result::QuantumResult,
                 medulla_quantum_core::backend::BackendError,
             > {
-                self.state.jobs.with_record(job, |record| {
+                self.core.jobs.with_record(job, |record| {
                     if !matches!(
                         record.status,
                         medulla_quantum_core::backend::JobStatus::Completed
@@ -691,11 +691,11 @@ macro_rules! impl_hardware_backend {
                     }
                     $crate::registry::ProviderClient::fetch_result(
                         &self.client,
-                        &self.state.id,
+                        &self.core.id,
                         record,
                         $result_mapping,
                     )
-                    .map_err(|error| error.into_backend_error(&self.state.id))
+                    .map_err(|error| error.into_backend_error(&self.core.id))
                 })
             }
 
@@ -703,12 +703,12 @@ macro_rules! impl_hardware_backend {
                 &self,
                 job: medulla_quantum_core::backend::JobHandle,
             ) -> Result<(), medulla_quantum_core::backend::BackendError> {
-                self.state.jobs.with_record(job, |record| {
+                self.core.jobs.with_record(job, |record| {
                     if record.is_terminal() {
                         return Ok(());
                     }
                     $crate::registry::ProviderClient::cancel(&self.client, record)
-                        .map_err(|error| error.into_backend_error(&self.state.id))?;
+                        .map_err(|error| error.into_backend_error(&self.core.id))?;
                     record.status = medulla_quantum_core::backend::JobStatus::Cancelled;
                     Ok(())
                 })
@@ -736,3 +736,18 @@ macro_rules! impl_hardware_backend {
 }
 
 pub(crate) use impl_hardware_backend;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-CONTRACT-R062.5
+    #[test]
+    fn adapter_core_holds_identity_and_jobs() {
+        let core = AdapterCore::new("hardware-ibm");
+        assert_eq!(core.id, BackendId::from("hardware-ibm"));
+        assert!(core
+            .quota_status_at_submit(JobHandle(u64::MAX))
+            .is_none());
+    }
+}
