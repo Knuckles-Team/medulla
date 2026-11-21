@@ -137,6 +137,9 @@ pub(crate) async fn handle_uql(
         #[cfg(feature = "security")]
         ctx.rls,
     );
+    // MEDULLA-FEDERATED-QUERY-R078.7: the commit instant of that snapshot revision, from
+    // the graph's version commit record; "at or before the snapshot" is measured against it.
+    let committed_at_ms = ctx.core.committed_at_ms(version);
     // MEDULLA-FEDERATED-QUERY-R088.3: the header names the one snapshot the rows
     // (and their `WITH KNOWLEDGE` summaries) were read from. The epistemic layer
     // is resolved over that same snapshot, so its revision is the snapshot
@@ -185,7 +188,8 @@ pub(crate) async fn handle_uql(
                 .clone()
                 .with_policies(&policies)
                 .with_principal(&principal)
-                .with_snapshot_revision(version);
+                .with_snapshot_revision(version)
+                .with_snapshot_commit_ms(committed_at_ms);
             let mut result = medulla_plan::uql::serve::run_statement(&stmt_for_run, &bound)?;
             if let medulla_query_types::wire::UqlResult::Rows {
                 snapshot_revision,

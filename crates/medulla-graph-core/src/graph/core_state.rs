@@ -57,6 +57,7 @@ impl GraphCore {
             visibility_index_rebuilds: std::sync::atomic::AtomicU64::new(0),
             schema_refs: DashMap::new(),
             node_history: NodeHistory::default(),
+            version_commits: VersionCommitLog::default(),
             ledger_dropped_total: std::sync::atomic::AtomicU64::new(0),
         }
     }

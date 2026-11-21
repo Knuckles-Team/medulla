@@ -367,6 +367,7 @@ impl GraphCore {
         core.version
             .store(version, std::sync::atomic::Ordering::Release);
         core.node_history.reset(version);
+        core.version_commits.reset();
         core.dirty
             .store(false, std::sync::atomic::Ordering::Release);
         Ok(core)
@@ -405,6 +406,7 @@ impl GraphCore {
             .store(false, std::sync::atomic::Ordering::Release);
         // The projection was loaded at this version: nothing earlier is retained.
         self.node_history.reset(authoritative_version);
+        self.version_commits.reset();
         Ok(())
     }
 
@@ -429,6 +431,7 @@ impl GraphCore {
         *topo = topology;
         // The old image's history describes a different image.
         self.node_history.reset(self.version());
+        self.version_commits.reset();
         self.node_properties.clear();
         for (node_id, properties) in node_properties {
             self.node_properties.insert(node_id, properties);

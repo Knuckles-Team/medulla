@@ -51,6 +51,7 @@ mod txn_memory;
 mod txn_nodes;
 mod txn_scene;
 mod txn_trajectory;
+mod version_commits;
 mod view;
 
 use analysis_support::apply_decay;
@@ -62,6 +63,7 @@ use core_helpers::{edge_endpoint_not_found, push_ledger_impl, HexLedger};
 pub use node_history::{
     install_node_history_limit, NodeHistory, NodeHistoryError, DEFAULT_NODE_HISTORY_REVISIONS,
 };
+pub use version_commits::VersionCommitLog;
 pub use schema_sources::{
     current_core_set_digest, lift_v2_integrity_policy, GraphSchemaSource, GraphSchemaSources,
     OntologyRevisionEntry, SchemaSourceOrigin, SchemaSourceRole, CORE_SOURCE_PREFIX,
@@ -651,6 +653,8 @@ pub struct GraphCore {
     /// Prior node images by version (MEDULLA-DECISION-ENGINE-R121.2): the one source
     /// for reading a node as of a recorded graph version.
     node_history: NodeHistory,
+    /// The wall-clock instant each version became visible (MEDULLA-FEDERATED-QUERY-R078.7).
+    version_commits: VersionCommitLog,
     /// BUG A1 follow-up (2026-08-12): count of ledger entries permanently
     /// dropped from the FRONT of [`Self::ledger`] over this `GraphCore`
     /// instance's lifetime, by [`Self::push_ledger`]'s drop-oldest-half cap.

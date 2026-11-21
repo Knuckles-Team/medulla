@@ -282,6 +282,11 @@ pub struct PlanCtx<'a> {
     /// MEDULLA-FEDERATED-QUERY-R078.7 — the revision of the one snapshot this read is
     /// pinned to, the `source_revision` a company-context row reports when its node names none.
     pub snapshot_revision: Option<u64>,
+    /// MEDULLA-FEDERATED-QUERY-R078.7 — the commit instant (epoch milliseconds) of the
+    /// snapshot revision, read from the graph's version commit record. The company-context
+    /// view reads the latest time-series point at or before it; `None` means the record
+    /// does not reach that revision.
+    pub snapshot_commit_ms: Option<i64>,
 }
 
 /// The lexical BM25 search surface [`PlanCtx::text`] binds (CONCEPT:MEDULLA-KG.query.served-text-index-binding) —
@@ -509,12 +514,19 @@ impl<'a> PlanCtx<'a> {
             replenish: vector_rank::ReplenishPolicy::default(),
             plan_scope: None,
             snapshot_revision: None,
+            snapshot_commit_ms: None,
         }
     }
 
     /// Bind the revision of the snapshot this read is pinned to (MEDULLA-FEDERATED-QUERY-R078.7).
     pub fn with_snapshot_revision(mut self, revision: u64) -> Self {
         self.snapshot_revision = Some(revision);
+        self
+    }
+
+    /// Bind the commit instant of the snapshot revision (MEDULLA-FEDERATED-QUERY-R078.7).
+    pub fn with_snapshot_commit_ms(mut self, committed_at_ms: Option<i64>) -> Self {
+        self.snapshot_commit_ms = committed_at_ms;
         self
     }
 

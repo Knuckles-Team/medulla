@@ -22,6 +22,13 @@ impl GraphCore {
             })
     }
 
+    /// The commit instant (epoch milliseconds) of the newest recorded version at or
+    /// before `version` (MEDULLA-FEDERATED-QUERY-R078.7); `None` when no record reaches
+    /// that far back.
+    pub fn committed_at_ms(&self, version: u64) -> Option<i64> {
+        self.version_commits.committed_at_ms(version)
+    }
+
     /// Record the image of `node_id` before a caller that edits `node_properties`
     /// in place replaces it, so the history keeps it.
     pub fn record_prior_image(&self, node_id: &str) {
@@ -93,6 +100,8 @@ impl GraphCore {
         // The node images the writes since the last bump replaced become the history
         // of this version (MEDULLA-DECISION-ENGINE-R121.2).
         self.node_history.stamp(new_version);
+        self.version_commits
+            .record(new_version, super::version_commits::now_epoch_ms());
         // Retire the lazy secondary indexes made stale by this write — but only the ones a
         // preceding `maintain_indexes` did NOT already bring current (W1.6/P7,
         // CONCEPT:MEDULLA-KG.storage.incremental-index-stamp). A node add/remove that was incrementally

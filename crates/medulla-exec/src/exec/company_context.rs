@@ -186,12 +186,14 @@ pub(super) fn company_context_scan(
     Ok(RowSet::from_rows(order.into_iter().map(|id| (id, None))).with_texts(texts))
 }
 
-/// The latest committed point of `series_id` at or before the snapshot, as
+/// The latest committed point of `series_id` at or before the snapshot's commit instant
+/// (`PlanCtx.snapshot_commit_ms`; the pinned clock, then the wall clock, when the commit
+/// record does not reach the revision), as
 /// `(timestamp_ms, row id)`. No store, scope or point yields none; no value is read out.
 #[cfg(feature = "timeseries")]
 fn latest_point_row(ctx: &PlanCtx, series_id: &str) -> Option<(i64, String)> {
     const NS_PER_MS: i64 = 1_000_000;
-    let at_ms = ctx.now_ms.unwrap_or_else(|| {
+    let at_ms = ctx.snapshot_commit_ms.or(ctx.now_ms).unwrap_or_else(|| {
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|elapsed| i64::try_from(elapsed.as_millis()).unwrap_or(i64::MAX))
