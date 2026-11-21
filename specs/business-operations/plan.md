@@ -35,39 +35,19 @@ One ontology file, `crates/medulla-core/ontology/business_ops-v1.ttl`, and its s
 
 ## Phase 0: Research
 
-No unknown remains. The existing packs, the numeric registry and the UQL stages cover every need. The reuse inventory below records the search.
+No unknown remained after the reuse search. The existing packs, the numeric registry and the UQL stages cover every need. The reuse inventory under Phase 1 records the search.
 
 ## Phase 1: Design
 
-The interfaces below fix the rule record, the result shape and the money rule. The data shapes follow the row text in `requirements.md`.
+Design answers:
 
-## Phase 2: Task approach
-
-`tasks.md` holds one task per row, producer first. Vocabulary precedes rules, rules precede wiring, wiring precedes the digest.
-
-## Complexity Tracking
-
-none
-
-## Build contract
-
-- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
-- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
-- The module reuses the numeric registry; the no-duplicate-authority check finds no parallel one.
-- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
-
-## Production caller chain
-
-- `Method::Uql` to `dispatch_query_family` (`crates/medulla-h-query/src/query/dispatch.rs`) to the UQL `EVALUATE` stage to `registry::evaluate` to `crates/medulla-numeric/src/business/`.
-- `Method::SourceIngest` to `crates/medulla-h-ingest/src/source_ingestion.rs` for pack facts.
-- `GraphSchemaSources::default()` to `current_core_catalog` to the `business_ops` module for the vocabulary.
-- Obsolete paths to delete: none; every path above is new.
-
-## Cross-repo seams
-
-- Scheduling and digest calls: `MEDULLA-BUSINESS-OPS-R003` provides stored queries; an ARBORA row (to file) consumes them.
-- Connector mappings: the pack classes of `MEDULLA-BUSINESS-OPS-R001` are the target of connector rows (to file).
-- Action provenance and tenant sharing: `MEDULLA-DECISION-ENGINE-R869` and `MEDULLA-IDENTITY-R727` extend this pack's scope.
+- **Owner.** Medulla. The vocabulary lives in `medulla-core`, the rule kinds in `medulla-numeric` and the stages in `medulla-h-query` and `medulla-exec`.
+- **Cohesion.** One pack, one rule record, one result shape and one registry, so every kind shares the as-of rule and the input list.
+- **Dependency direction.** The UQL stage points down to the registry in `medulla-numeric`; the numeric crate reads no handler and no store.
+- **Interface depth.** One `EVALUATE` stage over one registry; a new rule kind is a new registry entry, not a new method.
+- **Special cases.** None per caller. Missing data returns `unknown` or `insufficient_data` in every kind, never a guess.
+- **State.** The rule kinds hold no state between calls; the graph holds `:RuleSpec`, instances and approvals.
+- **Environment.** The rules read no environment variable and no clock; the caller supplies the as-of time.
 
 ### Reuse inventory
 
@@ -97,3 +77,29 @@ Entry: `Method::Uql` → `dispatch_query_family` → UQL `EVALUATE` stage → `c
 - One rule module, five kinds, one registry. A sixth kind is a new row here.
 - A stored query is a graph node that the caller names. The engine stores no per-question API.
 - The pack carries no jurisdiction data. A `HolidayCalendar` and a `TaxRegime` are facts the operator ingests.
+
+## Phase 2: Task approach
+
+`tasks.md` holds one task per row, producer first. Vocabulary precedes rules, rules precede wiring, wiring precedes the digest.
+
+## Complexity Tracking
+
+none
+
+## Build contract
+
+- `cargo clippy --workspace --all-targets -- -D warnings` and `cargo fmt --check` pass for every touched crate.
+- The architecture, complexity and duplication gates of `.config/pre-commit.yaml` pass with no baseline entry and no suppression.
+- The module reuses the numeric registry; the no-duplicate-authority check finds no parallel one.
+- Spec rows pass `spec-standard`, `plan-conformance` and `spec-decomposition` with zero findings.
+
+## Production caller chain
+
+- `Method::Uql` to `dispatch_query_family` (`crates/medulla-h-query/src/query/dispatch.rs`) to the UQL `EVALUATE` stage to `registry::evaluate` to `crates/medulla-numeric/src/business/`.
+- `Method::SourceIngest` to `crates/medulla-h-ingest/src/source_ingestion.rs` for pack facts.
+- `GraphSchemaSources::default()` to `current_core_catalog` to the `business_ops` module for the vocabulary.
+- Obsolete paths to delete: none; every path above is new.
+
+## Cross-repo seams
+
+- Stored queries and rule results: `MEDULLA-BUSINESS-OPS-R003` provides, an ARBORA row (to file) consumes. Contract: [arbora-digest-queries.md](contracts/arbora-digest-queries.md).

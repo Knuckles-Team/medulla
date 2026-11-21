@@ -64,8 +64,8 @@ The owner asks what needs approval, what is overdue and what changed this week. 
 - **FR-001**: One pack models profile, products, orders, money, procurement, compliance, tax, approvals, deploys and incidents. Rows: `MEDULLA-BUSINESS-OPS-R001`.
 - **FR-002**: Five rule kinds evaluate deterministically through UQL. Rows: `MEDULLA-BUSINESS-OPS-R002`.
 - **FR-003**: The owner digest answers as stored queries with as-of reads. Rows: `MEDULLA-BUSINESS-OPS-R003`.
-- **FR-004**: Approvals, gate decisions and deploys are stored so that action provenance can link to them. Rows: `MEDULLA-BUSINESS-OPS-R001.7`. The provenance rows themselves live in `MEDULLA-DECISION-ENGINE-R869`.
-- **FR-005**: The digest runs under the caller's tenant and scope. Rows: `MEDULLA-BUSINESS-OPS-R003.3`. Tenant separation and sharing live in `MEDULLA-IDENTITY-R727`.
+- **FR-004**: Approvals, gate decisions and deploys are stored so that action provenance can link to them. Rows: `MEDULLA-BUSINESS-OPS-R001.7`. The provenance rows live in the decision-engine spec.
+- **FR-005**: The digest runs under the caller's tenant and scope. Rows: `MEDULLA-BUSINESS-OPS-R003.3`. Tenant separation and sharing live in the identity spec.
 
 ## Success Criteria
 
