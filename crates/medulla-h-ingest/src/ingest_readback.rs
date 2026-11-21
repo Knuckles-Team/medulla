@@ -238,10 +238,28 @@ pub fn bind_hydration_run(
     if properties.get("type").and_then(|v| v.as_str()) != Some(SKILL_COMPILATION_TYPE) {
         return Err(mismatch("the workflow node is not a skill compilation"));
     }
-    if properties.get("stale").and_then(|v| v.as_bool()) == Some(true) {
-        return Err(mismatch("the workflow compilation is stale"));
+    // Staleness is computed on read: the document and type digests are the
+    // node's own, so only capability drift refuses here.
+    let own = |name: &str| {
+        properties
+            .get(name)
+            .and_then(|v| v.as_str())
+            .and_then(|hex| Digest256::parse(hex).ok())
+    };
+    let (Some(document), Some(types)) = (own("document_digest"), own("type_digest")) else {
+        return Err(mismatch("the workflow compilation carries no document or type digest"));
+    };
+    let capability = Digest256::parse(medulla_capabilities::catalog::contract_catalog_digest())
+        .map_err(|_| mismatch("the contract catalog digest is invalid"))?;
+    if let Some(drifted) = medulla_ingestion_types::skill_plan::skill_binding_stale(
+        &properties,
+        &document,
+        &capability,
+        &types,
+    ) {
+        return Err(mismatch(&format!("the workflow compilation is stale: {drifted}")));
     }
-    if revision != claim.workflow_revision {
+    if revision < 1 || revision != claim.workflow_revision {
         return Err(mismatch("the workflow revision differs from the claim"));
     }
     if properties.get("plan_digest").and_then(|v| v.as_str())
@@ -444,13 +462,18 @@ mod tests {
     }
 
     fn hydration_view(revision: u64, stale: bool) -> View {
-        let mut properties = json!({
+        let capability = if stale {
+            digest("drifted capability")
+        } else {
+            Digest256::parse(medulla_capabilities::catalog::contract_catalog_digest()).unwrap()
+        };
+        let properties = json!({
             "type": "SkillCompilation",
             "plan_digest": digest("plan").to_hex(),
+            "document_digest": digest("document").to_hex(),
+            "capability_digest": capability.to_hex(),
+            "type_digest": digest("types").to_hex(),
         });
-        if stale {
-            properties["stale"] = json!(true);
-        }
         let mut view = view(vec![
             ("a", visible("a", 1)),
             ("skill-compilation:1", visible("skill", revision)),

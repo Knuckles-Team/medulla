@@ -27,6 +27,9 @@ from conftest import (
 
 from medulla.client import EngineResponseError, SyncMedullaClient
 
+from ingest.test_source_stream_versions_served import _close, _connector, _ingest_client
+from test_skill_plan_served import _batch, _compilation, _document, _ingest
+
 RUST_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 SERVER_BIN = find_server_binary() or os.path.join(
     RUST_DIR, "target", "debug", "medulla-server"
@@ -179,23 +182,25 @@ def test_matched_readback_and_each_refusal(readback_server):
 
 
 @pytest.mark.spec("MEDULLA-REPO-INGEST-R002.101")
-def test_hydration_run_binds_workflow_and_readback(readback_server):
-    writer = _client(readback_server, TEST_AGENT_ID)
-    reader = _client(readback_server, READER)
+@pytest.mark.asyncio
+async def test_hydration_run_binds_workflow_and_readback():
+    """A real compiled skill batch binds; staleness is computed on read."""
+    connector = _connector()
+    ingest, graph = await _ingest_client(connector)
+    reader = SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        graph_name=graph,
+    )
     try:
-        plan = _framed(b"test/plan", [b"plan-1"])
+        await _ingest(ingest, _batch(connector, _document("Report it"), 1))
+        workflow, node = await _compilation(ingest)
+        plan = node["plan_digest"]
         output = _framed(b"test/output", [b"output-1"])
-        shared = {"_owner": TEST_AGENT_ID, "_visibility": "public"}
-        workflow = "skill-compilation:" + "ab" * 32
-        writer.nodes.add(
-            workflow,
-            {**shared, "type": "SkillCompilation", "plan_digest": plan, "revision": 4},
-        )
-        writer.nodes.add("hy:a", {**shared, "type": "Fact"})
-        good = [_expectation(reader, "hy:a")]
+        good = [_expectation(reader, workflow)]
         claim = {
             "workflow_id": workflow,
-            "workflow_revision": 4,
+            "workflow_revision": node["revision"],
             "plan_digest": plan,
             "run_output_digest": output,
         }
@@ -208,7 +213,7 @@ def test_hydration_run_binds_workflow_and_readback(readback_server):
             b"eg/ingest-readback/id/v1",
             [
                 bytes.fromhex(receipt["write_receipt_digest"]),
-                READER.encode(),
+                receipt["principal"].encode(),
             ],
         )
         receipt_properties = reader.nodes.properties(receipt_id)
@@ -216,7 +221,7 @@ def test_hydration_run_binds_workflow_and_readback(readback_server):
             b"eg/hydration-run/v1",
             [
                 workflow.encode(),
-                b"4",
+                str(node["revision"]).encode(),
                 plan.encode(),
                 output.encode(),
                 receipt["write_receipt_digest"].encode(),
@@ -230,7 +235,11 @@ def test_hydration_run_binds_workflow_and_readback(readback_server):
         after_bind = reader.nodes.count()
 
         with pytest.raises(EngineResponseError, match="HYDRATION_BINDING_MISMATCH"):
-            _verify(reader, good, hydration_run={**claim, "workflow_revision": 3})
+            _verify(
+                reader,
+                good,
+                hydration_run={**claim, "workflow_revision": node["revision"] + 1},
+            )
         with pytest.raises(EngineResponseError, match="HYDRATION_BINDING_MISMATCH"):
             _verify(
                 reader,
@@ -239,5 +248,5 @@ def test_hydration_run_binds_workflow_and_readback(readback_server):
             )
         assert reader.nodes.count() == after_bind
     finally:
-        writer.close()
         reader.close()
+        await _close(ingest, graph)
