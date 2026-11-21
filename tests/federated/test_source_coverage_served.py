@@ -22,6 +22,9 @@ _ROOT = Path(__file__).resolve().parents[2]
 TEMPLATE = (
     _ROOT / "crates/medulla-rdf/tests/fixtures/source_authority_incident.ttl"
 ).read_text()
+TWO_SOURCES = (
+    _ROOT / "tests/fixtures/source_authority/incident_two_sources.ttl"
+).read_text()
 INCIDENT = "https://knuckles-team.github.io/ontology/core#Incident"
 GRAPH = "__commons__"
 SOURCE = {"Mcp": {"server": "coverage-test-mcp", "tool": "search"}}
@@ -75,10 +78,15 @@ def _agent(tag: str) -> str:
 
 
 def _attach(servicenow: int, pagerduty: int) -> None:
-    client = _client()
-    document = TEMPLATE.replace("RANK_SERVICENOW", str(servicenow)).replace(
-        "RANK_PAGERDUTY", str(pagerduty)
+    _attach_document(
+        TEMPLATE.replace("RANK_SERVICENOW", str(servicenow)).replace(
+            "RANK_PAGERDUTY", str(pagerduty)
+        )
     )
+
+
+def _attach_document(document: str) -> None:
+    client = _client()
     try:
         client._send(
             "GraphSchema",
@@ -177,3 +185,31 @@ def test_other_principals_source_is_unconnected() -> None:
     assert not reply["audit"]["used"]
     assert {entry["reason"] for entry in reply["audit"]["not_used"]} == {"unconnected"}
     assert "registered" not in repr(reply)
+
+
+@pytest.mark.spec("MEDULLA-SRC-AUTH-R009.4")
+def test_swapping_authority_rank_changes_sources_used() -> None:
+    owner = _client(_agent("swap"))
+    _register(owner, "servicenow-mcp", "pagerduty-mcp")
+    request = {"classes": [INCIDENT], "hop_budget": 0}
+    request_bytes = msgpack.packb(request)
+
+    # ServiceNow rank 1, PagerDuty rank 2: the audit names ServiceNow as the source used.
+    _attach_document(TWO_SOURCES)
+    first = _coverage(owner, **request)
+    assert [entry["source"] for entry in first["audit"]["used"]] == ["servicenow-mcp"]
+    assert _incident(first)["source"] == "servicenow-mcp"
+
+    # Swap the two ranks of the same two vg:SourceAuthority rows and ask again.
+    swapped = TWO_SOURCES.replace("vg:authorityRank 1 ;", "vg:authorityRank TMP ;")
+    swapped = swapped.replace("vg:authorityRank 2 ;", "vg:authorityRank 1 ;")
+    swapped = swapped.replace("vg:authorityRank TMP ;", "vg:authorityRank 2 ;")
+    assert swapped != TWO_SOURCES
+    _attach_document(swapped)
+    second = _coverage(owner, **request)
+
+    # The winner changes; the request bytes do not.
+    assert msgpack.packb(request) == request_bytes
+    assert [entry["source"] for entry in second["audit"]["used"]] == ["pagerduty-mcp"]
+    assert _incident(second)["source"] == "pagerduty-mcp"
+    assert first["audit"]["used"] != second["audit"]["used"]

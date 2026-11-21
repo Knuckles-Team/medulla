@@ -46,7 +46,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T039 [US3] MEDULLA-SRC-AUTH-R008.2 An `accelerated` row resolves through `AccelerationPolicy` and carries its reason into the audit
 - [ ] T040 [US3] MEDULLA-SRC-AUTH-R009.1 Fixture: ServiceNow rank 1 and PagerDuty rank 2 for `:Incident`
 - [ ] T041 [US3] MEDULLA-SRC-AUTH-R009.2 Decisive test: swapping two ranks changes `sources_used` with equal query text
-- [ ] T042 [US3] MEDULLA-SRC-AUTH-R009.4 Served decisive test: swapping two ranks changes sources_used
+- [x] T042 [US3] MEDULLA-SRC-AUTH-R009.4 Served decisive test: swapping two ranks changes sources_used
 - [ ] T043 [US5] MEDULLA-SRC-AUTH-R010.1 Model
 - [ ] T044 [US5] MEDULLA-SRC-AUTH-R010.2 Behavior
 - [ ] T045 [US5] MEDULLA-SRC-AUTH-R010.3 Wire source roles into the served selection call
