@@ -11,6 +11,10 @@ The connector sync sends `IndexHarnessSessionBatch` with a manifest (`manifest_i
 
 `SESSION_MANIFEST_UNSUPPORTED`, `SESSION_CONTENT_CHANGED`, `SESSION_TRACE_UNKNOWN` and `SESSION_CURSOR_STALE` on the search side. A cross-tenant reference reads as absent.
 
+## Run trace digest
+
+`trace_digest` is the lowercase hex SHA-256 (no prefix) of the canonical JSON of the stored `RunTrace` node's property map with the keys `node_type`, `tenant` and `run_revision` removed: object keys sorted at every depth, no whitespace, JSON scalars as `serde_json` writes them. Medulla computes it with `run_trace_digest` in `crates/medulla-h-ingest/src/harness_session.rs`, and a connector computes the same function over the same node. The record's `run_trace_revision` is the node's stored `run_revision` (a trace that stores none counts as revision 1). A record whose revision or digest differs from the stored trace is refused `SESSION_CONTENT_CHANGED`.
+
 ## Authoritative types
 
 `HarnessSessionRecord` and `IndexHarnessSessionBatch` in `crates/medulla-types/src/harness_session.rs`.

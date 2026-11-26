@@ -1416,6 +1416,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PROCESS_DOC_RULE_ENTRIES_MISMATCH",
         ],
     ),
+    // MEDULLA-ORCH-VOCAB-R009.101.1: a manifest the engine does not read, content that differs from
+    // the index or from the run trace, a run trace the tenant does not hold.
+    (
+        "IndexHarnessSessionBatch",
+        &[
+            "SESSION_MANIFEST_UNSUPPORTED",
+            "SESSION_CONTENT_CHANGED",
+            "SESSION_TRACE_UNKNOWN",
+        ],
+    ),
     // MEDULLA-ORCH-VOCAB-R009.100: a declared span the walk did not reach, a span reached twice,
     // a token or pinned revision cut from another snapshot, an invisible root run.
     (

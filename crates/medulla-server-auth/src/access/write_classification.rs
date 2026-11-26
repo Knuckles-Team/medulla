@@ -564,6 +564,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ProcessCompile { .. }
                 | Method::ProcessModelImport { .. }
                 | Method::ProcessDocumentImport { .. }
+                // MEDULLA-ORCH-VOCAB-R009.101.1: a session batch commits index nodes.
+                | Method::IndexHarnessSessionBatch { .. }
                 // MEDULLA-SRC-AUTH-R012.6: the source sync commits graph nodes.
                 | Method::SourceSync { .. }
                 // MEDULLA-CQ-ORCH-R703.3: the deploy queues a write-back proposal.

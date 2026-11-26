@@ -632,6 +632,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ProcessCompile { .. }
         | Method::ProcessModelImport { .. }
         | Method::ProcessDocumentImport { .. }
+        // MEDULLA-ORCH-VOCAB-R009.101.1: a session batch commits as one request-graph `BatchUpdate`.
+        | Method::IndexHarnessSessionBatch { .. }
         // MEDULLA-SRC-AUTH-R012.6: a sync commits as one request-graph `BatchUpdate`.
         | Method::SourceSync { .. }
         | Method::ProcessModelDeploy { .. }

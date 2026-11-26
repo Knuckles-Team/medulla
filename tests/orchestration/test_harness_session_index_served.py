@@ -1,0 +1,126 @@
+"""MEDULLA-ORCH-VOCAB-R009.101.1 served harness session index.
+
+L4: every call goes through the running engine over the wire client. A committed
+``RunTrace`` is indexed through ``index_harness_session_batch``; the engine verifies the
+record against the stored trace (revision and digest) and writes the index nodes once.
+"""
+
+from __future__ import annotations
+
+import hashlib
+import json
+import os
+from typing import Any
+
+import pytest
+from conftest import TEST_TENANT, tenant_request_context
+
+from medulla.client import SyncMedullaClient
+
+_EXCLUDED = {"node_type", "tenant", "run_revision"}
+
+
+def _canonical(value: Any) -> str:
+    if isinstance(value, dict):
+        body = ",".join(
+            f"{json.dumps(key)}:{_canonical(value[key])}" for key in sorted(value)
+        )
+        return "{" + body + "}"
+    if isinstance(value, list):
+        return "[" + ",".join(_canonical(item) for item in value) + "]"
+    return json.dumps(value, separators=(",", ":"))
+
+
+def _trace_digest(properties: dict[str, Any]) -> str:
+    """The connector side of ``run_trace_digest`` (session ingest contract)."""
+    kept = {k: v for k, v in properties.items() if k not in _EXCLUDED}
+    return hashlib.sha256(_canonical(kept).encode()).hexdigest()
+
+
+def _batch(client: Any, trace_id: str, **overrides: Any) -> dict[str, Any]:
+    properties = client.nodes.properties(trace_id)
+    batch: dict[str, Any] = {
+        "tenant_id": TEST_TENANT,
+        "manifest_id": "manifest-1",
+        "manifest_revision": 1,
+        "manifest_digest": "ab" * 32,
+        "declared_total": 2,
+        "sync_receipt_id": "receipt-1",
+        "sync_receipt_digest": "cd" * 32,
+        "source_cursor": "cursor-1",
+        "records": [
+            {
+                "harness_id": "claude-code",
+                "adapter_revision": 1,
+                "source_session_id": "session-1",
+                "run_trace_id": trace_id,
+                "run_trace_revision": 1,
+                "trace_digest": _trace_digest(properties),
+                "source_sequence": 5,
+            }
+        ],
+        "unavailable": [
+            {
+                "harness_id": "claude-code",
+                "source_session_id": "session-2",
+                "reason": "transcript unreadable",
+            }
+        ],
+    }
+    batch.update(overrides)
+    return batch
+
+
+def _seed_trace(client: Any, trace_id: str) -> None:
+    client.nodes.add(
+        trace_id, {"node_type": "RunTrace", "status": "completed", "goal": "ship"}
+    )
+    client.nodes.add(f"{trace_id}:step-1", {"node_type": "RunTraceStep", "index": 0})
+    client.nodes.add(f"{trace_id}:step-2", {"node_type": "RunTraceStep", "index": 1})
+    client.edges.add(trace_id, f"{trace_id}:step-1", {"relationship": "hasStep"})
+    client.edges.add(trace_id, f"{trace_id}:step-2", {"relationship": "hasStep"})
+
+
+# Verifies MEDULLA-ORCH-VOCAB-R009.101.1: replay is idempotent, changes refuse.
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.101.1")
+def test_replay_is_idempotent_and_changed_content_refuses(clean_graph) -> None:
+    client = clean_graph
+    trace_id = "run:session-index-1"
+    _seed_trace(client, trace_id)
+    first = client.graph.index_harness_session_batch(_batch(client, trace_id))
+    assert (first["indexed"], first["unavailable"], first["unchanged"]) == (1, 1, 0)
+
+    # The identical replay changes nothing and keeps the revision.
+    replay = client.graph.index_harness_session_batch(_batch(client, trace_id))
+    assert replay["unchanged"] == 2
+    assert replay["index_revision"] == first["index_revision"]
+
+    # The same sequence with another trace digest is changed content.
+    changed = _batch(client, trace_id)
+    changed["records"][0]["trace_digest"] = "00" * 32
+    changed["sync_receipt_id"] = "receipt-2"
+    with pytest.raises(Exception, match="SESSION_CONTENT_CHANGED"):
+        client.graph.index_harness_session_batch(changed)
+
+    # An unknown trace and an unsupported manifest revision are refused by name.
+    unknown = _batch(client, trace_id)
+    unknown["records"][0]["run_trace_id"] = "run:absent"
+    with pytest.raises(Exception, match="SESSION_TRACE_UNKNOWN"):
+        client.graph.index_harness_session_batch(unknown)
+    with pytest.raises(Exception, match="SESSION_MANIFEST_UNSUPPORTED"):
+        client.graph.index_harness_session_batch(
+            _batch(client, trace_id, manifest_revision=2)
+        )
+
+    # A second tenant sees the same run trace id as absent.
+    socket_path = os.environ["GRAPH_SERVICE_SOCKET"]
+    other = SyncMedullaClient.connect(
+        socket_path=socket_path,
+        verified_context=tenant_request_context("tenant-session-other"),
+    )
+    try:
+        foreign = _batch(client, trace_id, tenant_id="tenant-session-other")
+        with pytest.raises(Exception, match="SESSION_TRACE_UNKNOWN"):
+            other.graph.index_harness_session_batch(foreign)
+    finally:
+        other.close()

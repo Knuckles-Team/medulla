@@ -30,6 +30,7 @@ enum Route {
     ProcessModelImport,
     ProcessDocumentImport,
     ProcessModelDeploy,
+    IndexHarnessSessionBatch,
     ObservationState,
     MemorySurface,
     Participant,
@@ -195,6 +196,10 @@ fn is_process_document_import(method: &Method) -> bool {
     matches!(method, Method::ProcessDocumentImport { .. })
 }
 
+fn is_index_harness_session_batch(method: &Method) -> bool {
+    matches!(method, Method::IndexHarnessSessionBatch { .. })
+}
+
 fn is_process_model_deploy(method: &Method) -> bool {
     matches!(method, Method::ProcessModelDeploy { .. })
 }
@@ -256,6 +261,7 @@ const ROUTE_MATCHERS: &[(RouteMatcher, Route)] = &[
     (is_process_model_import, Route::ProcessModelImport),
     (is_process_document_import, Route::ProcessDocumentImport),
     (is_process_model_deploy, Route::ProcessModelDeploy),
+    (is_index_harness_session_batch, Route::IndexHarnessSessionBatch),
     (is_observation_state, Route::ObservationState),
     (is_memory_surface, Route::MemorySurface),
     (is_participant, Route::Participant),
@@ -290,6 +296,7 @@ fn route_handler(route: Route) -> RouteHandler {
         | Route::ProcessModelImport
         | Route::ProcessDocumentImport
         | Route::ProcessModelDeploy
+        | Route::IndexHarnessSessionBatch
         | Route::ObservationState
         | Route::MemorySurface
         | Route::Participant
@@ -396,6 +403,12 @@ async fn try_handle_admin(
         Route::ProcessModelDeploy => {
             super::super::process_document::handle_process_model_deploy(ctx, tenant_id, method)
                 .await
+        }
+        Route::IndexHarnessSessionBatch => {
+            super::super::harness_session::handle_index_harness_session_batch(
+                ctx, tenant_id, method,
+            )
+            .await
         }
         Route::HarnessEdit => {
             super::super::harness_edit::handle_mutation(ctx, tenant_id, method).await

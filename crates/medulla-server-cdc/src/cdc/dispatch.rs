@@ -338,6 +338,7 @@ fn record_write_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::ProcessCompile { .. } => Some("__process_compile"),
         Method::ProcessModelImport { .. } => Some("__process_model_import"),
         Method::ProcessDocumentImport { .. } => Some("__process_document_import"),
+        Method::IndexHarnessSessionBatch { .. } => Some("__index_harness_session_batch"),
         Method::SourceSync { .. } => Some("__source_sync"),
         Method::ProcessModelDeploy { .. } => Some("__process_model_deploy"),
         Method::RetentionCleanupRun { .. } => Some("__retention_cleanup"),

@@ -8051,6 +8051,27 @@ class GraphOperationsClient:
             raise RuntimeError("RunTraceExport must answer with an object")
         return result
 
+    async def index_harness_session_batch(
+        self, batch: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Index one batch of harness sessions of one manifest
+        (MEDULLA-ORCH-VOCAB-R009.101.1).
+
+        ``batch`` is the ``IndexHarnessSessionBatch`` record: ``tenant_id``,
+        ``manifest_id``, ``manifest_revision``, ``manifest_digest``, ``declared_total``,
+        ``sync_receipt_id``, ``sync_receipt_digest``, ``source_cursor``, ``records`` and
+        ``unavailable``. Every record is verified against the committed ``RunTrace`` it
+        names. Returns ``{indexed, unchanged, unavailable, index_revision}``; an
+        identical replay changes nothing. Refusals: ``SESSION_MANIFEST_UNSUPPORTED``,
+        ``SESSION_CONTENT_CHANGED``, ``SESSION_TRACE_UNKNOWN``.
+        """
+        result = await self._client._send(
+            "IndexHarnessSessionBatch", {"batch": batch}, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("IndexHarnessSessionBatch must answer with an object")
+        return result
+
     async def process_model_deploy(
         self,
         model_iri: str,

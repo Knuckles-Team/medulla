@@ -35,6 +35,8 @@ mod atom_context;
 mod harness_edit;
 mod process_compile;
 mod process_document;
+// MEDULLA-ORCH-VOCAB-R009.101.1: the harness session index write.
+mod harness_session;
 #[cfg(test)]
 mod harness_edit_tests;
 mod observation_state;

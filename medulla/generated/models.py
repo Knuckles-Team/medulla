@@ -16872,6 +16872,13 @@ class MethodRunTraceExport(BaseModel):
     params: MethodRunTraceExportParams
 
 
+class MethodIndexHarnessSessionBatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["IndexHarnessSessionBatch"]
+    params: MethodIndexHarnessSessionBatchParams
+
+
 class MethodProcessModelDeploy(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17944,6 +17951,7 @@ Method = Annotated[
         MethodProcessDocumentImport,
         MethodProcessDocumentExport,
         MethodRunTraceExport,
+        MethodIndexHarnessSessionBatch,
         MethodProcessModelDeploy,
         MethodProcessModelExport,
         MethodArchitectureModelExport,
@@ -38111,6 +38119,12 @@ class MethodRunTraceExportParams(BaseModel):
     request: dict[str, Any]
 
 
+class MethodIndexHarnessSessionBatchParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    batch: dict[str, Any]
+
+
 class MethodProcessModelDeployParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -49532,6 +49546,8 @@ __all__ = [
     "MethodProcessDocumentExportParams",
     "MethodRunTraceExport",
     "MethodRunTraceExportParams",
+    "MethodIndexHarnessSessionBatch",
+    "MethodIndexHarnessSessionBatchParams",
     "MethodProcessModelDeploy",
     "MethodProcessModelDeployParams",
     "MethodProcessModelExport",

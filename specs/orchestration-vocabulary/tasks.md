@@ -129,7 +129,6 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T175 [US5] MEDULLA-ORCH-VOCAB-R814 A committed run completion carries its per-phase timings
 - [ ] T143 [P] [US5] MEDULLA-ORCH-VOCAB-R805 Per-turn timing observations in the session usage result
 - [ ] T144 [P] [US5] MEDULLA-ORCH-VOCAB-R806 Policy activation method with review receipt
-- [ ] T145 [P] [US5] MEDULLA-ORCH-VOCAB-R807 Indexed agent-session query method
 - [ ] T146 [P] [US7] MEDULLA-ORCH-VOCAB-R808 AgentDefinition carries a knowledge scope
 - [ ] T148 [P] [US8] MEDULLA-ORCH-VOCAB-R810 Store run-bound visual observation records
 - [ ] T149 [US9] MEDULLA-ORCH-VOCAB-R014.1 Core event, flow and lane terms

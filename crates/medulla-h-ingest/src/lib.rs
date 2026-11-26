@@ -81,6 +81,8 @@ pub mod source_bisect;
 /// (MEDULLA-SCM-R013.4).
 #[cfg(feature = "blob")]
 pub mod source_symbol_edit;
+// MEDULLA-ORCH-VOCAB-R009.101.1: the harness session index admission.
+pub mod harness_session;
 // MEDULLA-SCM-R008 — gate verdicts are sealed records.
 pub mod gate_verdict;
 /// Defect intake: a symptom lands on the defect of its signature (MEDULLA-SDLC-R003.3).

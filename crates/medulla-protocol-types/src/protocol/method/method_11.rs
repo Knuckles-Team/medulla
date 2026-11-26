@@ -262,6 +262,15 @@ $($variants)*
         standard: Option<String>,
     },
 
+    // ── Harness session index (MEDULLA-ORCH-VOCAB-R009.101.1) ──────────────
+    /// Index one batch of harness sessions of one manifest: every record is verified against
+    /// the committed `RunTrace` it names, then the index nodes, the receipt node, the counter
+    /// node and the `indexesRun` edges commit as one batch. An identical replay changes
+    /// nothing.
+    IndexHarnessSessionBatch {
+        batch: Box<medulla_types::harness_session::IndexHarnessSessionBatch>,
+    },
+
     // ── Run trace export (MEDULLA-ORCH-VOCAB-R009.100) ─────────────────────
     /// One page of the records correlated to a root `:RunTrace`: the parent run, its child
     /// agent runs, spans and tool calls, read along the declared child edges at one pinned

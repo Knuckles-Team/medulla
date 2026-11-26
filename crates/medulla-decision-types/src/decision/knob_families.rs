@@ -12,6 +12,7 @@ pub mod fanout;
 pub mod grounded;
 pub mod indexless;
 pub mod memory;
+pub mod orchestration_limits;
 pub mod package;
 pub mod participant;
 pub mod placement;
@@ -47,6 +48,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     context_search::KNOBS,
     grounded::KNOBS,
     memory::KNOBS,
+    orchestration_limits::KNOBS,
     package::KNOBS,
     participant::KNOBS,
     placement::KNOBS,

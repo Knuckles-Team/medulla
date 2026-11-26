@@ -133,6 +133,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "ProcessCompile",
     "ProcessModelImport",
     "ProcessDocumentImport",
+    // MEDULLA-ORCH-VOCAB-R009.101.1: a session batch commits as one batch.
+    "IndexHarnessSessionBatch",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
     "SourceSync",
     "ProcessModelDeploy",
@@ -804,6 +806,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "ProcessCompile",
     "ProcessModelImport",
     "ProcessDocumentImport",
+    // MEDULLA-ORCH-VOCAB-R009.101.1: a session batch commits as one batch.
+    "IndexHarnessSessionBatch",
     // MEDULLA-SRC-AUTH-R012.6: the source sync commits as one batch.
     "SourceSync",
     "ProcessModelDeploy",
@@ -913,6 +917,7 @@ fn finance_record_method_name(m: &Method) -> Option<&'static str> {
         Method::ProcessCompile { .. } => Some("ProcessCompile"),
         Method::ProcessModelImport { .. } => Some("ProcessModelImport"),
         Method::ProcessDocumentImport { .. } => Some("ProcessDocumentImport"),
+        Method::IndexHarnessSessionBatch { .. } => Some("IndexHarnessSessionBatch"),
         Method::SourceSync { .. } => Some("SourceSync"),
         Method::ProcessModelDeploy { .. } => Some("ProcessModelDeploy"),
         Method::RetentionCleanupRun { .. } => Some("RetentionCleanupRun"),

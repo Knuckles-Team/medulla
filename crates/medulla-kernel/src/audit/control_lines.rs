@@ -338,6 +338,10 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             "PROCESS_DOCUMENT_IMPORT|{model_iri}|{}",
             medulla_types::archimate_exchange::sha256_hex(&document.document)
         )),
+        Method::IndexHarnessSessionBatch { batch } => Some(format!(
+            "INDEX_HARNESS_SESSION_BATCH|{}|{}",
+            batch.manifest_id, batch.sync_receipt_digest
+        )),
         Method::LiveArtifactPut { artifact } => Some(format!(
             "LIVE_ARTIFACT_PUT|{}|{}",
             artifact.id, artifact.version
