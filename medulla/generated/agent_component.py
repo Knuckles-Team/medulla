@@ -305,6 +305,30 @@ class SkillAdmission(BaseModel):
     verdict: Literal["compatible", "breaking_with_migration", "breaking_refused"]
 
 
+class SkillSourcePatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    range_end: Annotated[int, Field(ge=0)]
+    range_start: Annotated[int, Field(ge=0)]
+    replacement: str
+
+
+class SkillSourceEditRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    component_id: str
+    context: AgentLibraryMutationContext
+    patches: list[SkillSourcePatch]
+    source_digest: str
+
+
+class AgentComponentOpEditSkillSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["edit_skill_source"]
+    request: SkillSourceEditRequest
+
+
 class AgentComponentOpAdmitSkillUpgrade(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -370,6 +394,7 @@ AgentComponentOp = Annotated[
     | AgentComponentOpSearch
     | AgentComponentOpContent
     | AgentComponentOpAdmitSkillUpgrade
+    | AgentComponentOpEditSkillSource
     | AgentComponentOpExportBlueprint
     | AgentComponentOpImportBlueprint
     | AgentComponentOpStoreProposal
@@ -380,13 +405,33 @@ AgentComponentOp = Annotated[
 ]
 
 
+class ComponentBodyPromptBlueprint(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["prompt_blueprint"]
+    text: str
+
+
+class ComponentBodySkillSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["skill_source"]
+    text: str
+
+
+ComponentBody = Annotated[
+    ComponentBodyPromptBlueprint | ComponentBodySkillSource,
+    Field(discriminator="kind"),
+]
+
+
 class AgentComponentPublishRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     component: AgentComponentDraft
     context: AgentLibraryMutationContext
+    body: ComponentBody | None = None
     evaluation_receipt_digest: str | None = None
-    prompt_blueprint: str | None = None
 
 
 class AgentComponentRetireRequest(BaseModel):
@@ -465,6 +510,8 @@ AgentComponentOpContent.model_rebuild()
 
 AgentComponentOpAdmitSkillUpgrade.model_rebuild()
 
+AgentComponentOpEditSkillSource.model_rebuild()
+
 AgentComponentOpExportBlueprint.model_rebuild()
 
 AgentComponentOpStoreProposal.model_rebuild()
@@ -505,6 +552,12 @@ AgentComponentStatusRequest.model_rebuild()
 
 
 __all__ = [
+    "AgentComponentOpEditSkillSource",
+    "ComponentBody",
+    "ComponentBodyPromptBlueprint",
+    "ComponentBodySkillSource",
+    "SkillSourceEditRequest",
+    "SkillSourcePatch",
     "AgentComponentOpRecordSourceEffect",
     "SourceEffectRecordResult",
     "AgentComponentBlueprintExportRequest",

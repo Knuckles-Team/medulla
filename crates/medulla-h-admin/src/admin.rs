@@ -36,6 +36,8 @@ mod component_content;
 mod prompt_receipt;
 mod skill_admission;
 #[cfg(feature = "redb")]
+mod skill_source_edit;
+#[cfg(feature = "redb")]
 mod package_validation;
 #[cfg(all(test, feature = "redb"))]
 mod package_validation_tests;

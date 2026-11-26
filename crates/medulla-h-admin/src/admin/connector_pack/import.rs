@@ -29,7 +29,7 @@ pub(crate) mod crosswalk;
 mod desired;
 mod external_schema;
 mod facts;
-mod front_matter;
+pub(crate) mod front_matter;
 mod json;
 #[cfg(feature = "rdf")]
 mod nutrition;

@@ -268,7 +268,7 @@ async fn canonical_task_plan_schema_publishes_once_and_routes() {
                 ),
                 component: draft,
                 evaluation_receipt_digest: None,
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .unwrap()
             .result
@@ -690,7 +690,7 @@ fn publish_skill_with_parent(
             ),
             component: draft,
             evaluation_receipt_digest: None,
-            prompt_blueprint: None,
+            body: None,
         }, None)
         .unwrap();
 }

@@ -1047,7 +1047,7 @@ pub(super) fn entry_description(entry: &PackEntry, body: &[u8]) -> Option<String
         .filter(|value| !value.is_empty())
 }
 
-pub(super) fn valid_skill_frontmatter(body: &[u8], expected_name: &str) -> bool {
+pub(crate) fn valid_skill_frontmatter(body: &[u8], expected_name: &str) -> bool {
     let Ok(text) = std::str::from_utf8(body) else {
         return false;
     };

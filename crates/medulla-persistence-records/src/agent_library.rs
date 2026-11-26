@@ -1928,7 +1928,7 @@ pub mod tests {
                         source_revision: "rev-seed".to_string(),
                         source_revision_digest: digest('8'),
                     },
-                    prompt_blueprint: None,
+                    body: None,
                 }, None,
             )
             .expect_err("an unresolvable `requires` must be refused");

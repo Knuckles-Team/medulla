@@ -636,7 +636,7 @@ pub(crate) fn seed_component_for_test(
                         source_revision: "component-seed:1".to_string(),
                         ..test_component_draft(tenant_id, component_id)
                     },
-                    prompt_blueprint: None,
+                    body: None,
                 }, None)
                 .expect("the fixture's component publishes")
                 .result
@@ -751,7 +751,7 @@ pub mod tests {
                 ),
                 evaluation_receipt_digest: None,
                 component: mcp_server_draft(tenant_id),
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .expect("the fixture mcp server seeds");
     }
@@ -810,7 +810,7 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .unwrap();
         assert!(!published.replayed);
@@ -875,7 +875,7 @@ pub mod tests {
             context: context(&store, key, nonce, expected, "agent-component:publish"),
             evaluation_receipt_digest: None,
             component: pinned_prompt_draft(id, &hex),
-            prompt_blueprint: None,
+            body: None,
         };
 
         // A pinned draft with no holder, and a holder for another revision, refuse.
@@ -925,7 +925,7 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .unwrap();
         let mut retry = context(&store, "key-1", 2, 0, "agent-component:publish");
@@ -939,7 +939,7 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .unwrap();
         assert!(replayed.replayed);
@@ -966,7 +966,7 @@ pub mod tests {
                 context: context(&store, "key-1", 1, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: component.clone(),
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .unwrap();
 
@@ -975,7 +975,7 @@ pub mod tests {
                 context: context(&store, "key-1", 2, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: component.clone(),
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .unwrap();
         assert!(replayed.replayed);
@@ -985,7 +985,7 @@ pub mod tests {
                 context: context(&store, "key-1", 2, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component,
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .expect_err("a replay nonce must be consumed before the replay returns");
         assert!(error.contains("REPLAY_NONCE_CONSUMED"), "got: {error}");
@@ -1012,7 +1012,7 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .unwrap();
         assert_eq!(
@@ -1038,7 +1038,7 @@ pub mod tests {
                         "eg:capability/retrieval/web-search",
                         ToolEffect::Read,
                     ),
-                    prompt_blueprint: None,
+                    body: None,
                 }, None)
                 .unwrap();
         }
@@ -1072,7 +1072,7 @@ pub mod tests {
                     context: context(&store, "model-media", 1, 0, "agent-component:publish"),
                     evaluation_receipt_digest: None,
                     component,
-                    prompt_blueprint: None,
+                    body: None,
                 }, None)
                 .unwrap();
             expected_digest = store
@@ -1120,7 +1120,7 @@ pub mod tests {
                 context: context(&store, "key-1", 1, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: orphan,
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .expect_err("an unresolvable provenance pin must be refused");
         assert!(
@@ -1156,7 +1156,7 @@ pub mod tests {
                 context: context(&store, "key-1", 1, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: stale,
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .expect_err("a digest no server revision carries must be refused");
         assert!(error.contains("that was never published"), "got: {error}");
@@ -1195,7 +1195,7 @@ pub mod tests {
                 context: context(&store, "key-1", 1, 0, "agent-component:publish"),
                 evaluation_receipt_digest: None,
                 component: mislabelled,
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .expect_err("a provenance naming a non-server must be refused");
         assert!(error.contains("but it is a toolset"), "got: {error}");
@@ -1239,7 +1239,7 @@ pub mod tests {
                     ),
                     evaluation_receipt_digest: None,
                     component: tool(id, capability, *effect),
-                    prompt_blueprint: None,
+                    body: None,
                 }, None)
                 .unwrap();
         }
@@ -1261,7 +1261,7 @@ pub mod tests {
                     ),
                     evaluation_receipt_digest: None,
                     component: tool_for("tenant-b", id, capability, ToolEffect::Read),
-                    prompt_blueprint: None,
+                    body: None,
                 }, None)
                 .unwrap();
         }
@@ -1395,7 +1395,7 @@ pub mod tests {
                     "eg:capability/retrieval/web-search",
                     ToolEffect::Read,
                 ),
-                prompt_blueprint: None,
+                body: None,
             }, None)
             .unwrap();
         assert_eq!(

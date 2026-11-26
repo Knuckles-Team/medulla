@@ -1348,11 +1348,32 @@ pub struct AgentComponentPublishRequest {
     /// is the one case where "we can evaluate it later" is not recoverable.
     #[serde(default)]
     pub evaluation_receipt_digest: Option<String>,
-    /// The blueprint of a pinned system prompt as canonical JSON text: the exact
-    /// bytes `body_sha256` pins (MEDULLA-TYPED-PACKS-R002.7). Present only with a
-    /// pinned system prompt.
+    /// The engine-owned body this revision commits with (MEDULLA-TYPED-PACKS-R002.7,
+    /// MEDULLA-TYPED-PACKS-R100.100). Present only with a body kind the draft names.
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub prompt_blueprint: Option<String>,
+    pub body: Option<ComponentBody>,
+}
+
+/// The one body a publish stages in the engine body store. Its SHA-256 is the draft's
+/// `content_digest`, so the revision, the head and the body holder commit together.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", content = "text", rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ComponentBody {
+    /// The blueprint of a pinned system prompt as canonical JSON text: the exact bytes
+    /// `body_sha256` pins.
+    PromptBlueprint(String),
+    /// The SKILL.md source of a skill component, byte for byte.
+    SkillSource(String),
+}
+
+impl ComponentBody {
+    /// The body's bytes.
+    pub fn text(&self) -> &str {
+        match self {
+            Self::PromptBlueprint(text) | Self::SkillSource(text) => text,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -1399,6 +1420,10 @@ pub enum AgentComponentOp {
     /// Admit one skill upgrade against the contracts its consumers declared, or re-check a
     /// held admission (MEDULLA-TYPED-PACKS-R100.101).
     AdmitSkillUpgrade { request: SkillAdmissionRequest },
+    /// Edit one skill's SKILL.md by byte-range patches over its original bytes and publish
+    /// the result as the next revision (MEDULLA-TYPED-PACKS-R100.100). Boxed like the import
+    /// carrier.
+    EditSkillSource { request: Box<SkillSourceEditRequest> },
     /// Export one pinned revision as a native blueprint (MEDULLA-TYPED-PACKS-R094.2).
     ExportBlueprint {
         request: AgentComponentBlueprintExportRequest,
@@ -1438,6 +1463,7 @@ impl AgentComponentOp {
                 | Self::AdmitSkillUpgrade { .. }
                 | Self::RecordSourceEffect { .. }
                 | Self::ImportBlueprint { .. }
+                | Self::EditSkillSource { .. }
                 | Self::StoreProposal { .. }
         )
     }
@@ -1451,6 +1477,7 @@ impl AgentComponentOp {
         match self {
             Self::Publish { request } => request.component.kind.publish_authz_action(),
             Self::ImportBlueprint { request } => request.envelope.entry.kind.publish_authz_action(),
+            Self::EditSkillSource { .. } => AgentComponentKind::Skill.publish_authz_action(),
             Self::Retire { .. }
             | Self::AdmitSkillUpgrade { .. }
             | Self::StoreProposal { .. }
@@ -1510,6 +1537,10 @@ impl AgentComponentOp {
             }
             Self::Search { request } => request.validate(),
             Self::AdmitSkillUpgrade { request } => request.validate(),
+            Self::EditSkillSource { request } => {
+                request.validate()?;
+                refuse_reserved_id(&request.component_id)
+            }
             Self::Content { request } => {
                 validate_text("tenant_id", &request.tenant_id)?;
                 validate_text("component_id", &request.component_id)
@@ -1590,6 +1621,7 @@ fn component_op_tenant_id(op: &AgentComponentOp) -> &str {
         AgentComponentOp::ExportBlueprint { request } => &request.tenant_id,
         AgentComponentOp::ImportBlueprint { request } => &request.context.tenant_id,
         AgentComponentOp::StoreProposal { request } => &request.context.tenant_id,
+        AgentComponentOp::EditSkillSource { request } => &request.context.tenant_id,
         AgentComponentOp::Render { request } => &request.tenant_id,
         AgentComponentOp::VerifyRender { receipt } => &receipt.identity.tenant_id,
         AgentComponentOp::RecordSourceEffect { tenant_id, .. } => tenant_id,
@@ -2020,7 +2052,7 @@ mod tests {
                     context: mutation_context(),
                     component: draft(&format!("shape-{kind:?}"), kind),
                     evaluation_receipt_digest: None,
-                    prompt_blueprint: None,
+                    body: None,
                 }),
             };
             let wire = serde_json::to_value(&op).unwrap();
@@ -3394,7 +3426,7 @@ mod tests {
                 AgentComponentKind::DecisionRecord,
             ),
             evaluation_receipt_digest: None,
-            prompt_blueprint: None,
+            body: None,
         };
         let error = validate_publish(&request).expect_err("must be refused");
         assert!(error.contains("FORBIDDEN_COMPONENT_KIND"), "got: {error}");
@@ -3419,7 +3451,7 @@ mod tests {
             context: mutation_context(),
             component: draft("decision-head-a", AgentComponentKind::DecisionHead),
             evaluation_receipt_digest: None,
-            prompt_blueprint: None,
+            body: None,
         };
         let error = validate_publish(&request).expect_err("must be refused");
         assert!(

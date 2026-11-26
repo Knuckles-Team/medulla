@@ -730,7 +730,7 @@ async fn pack_import_refusals_leave_state_unchanged() {
                                         &format!("mcp:{connector}/tool/b"),
                                     ),
                                 evaluation_receipt_digest: None,
-                                prompt_blueprint: None,
+                                body: None,
                             },
                         ),
                     },

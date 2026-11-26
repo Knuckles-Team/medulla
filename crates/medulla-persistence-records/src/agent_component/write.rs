@@ -25,19 +25,26 @@ fn staged_body_invalid(why: &str) -> String {
     )
 }
 
-/// A pinned system prompt publishes with exactly the holder its pin names; every
-/// other draft publishes with none.
+/// A pinned system prompt, or a skill that publishes its source, carries exactly the holder
+/// its pin names; every other draft publishes with none.
 fn check_staged_body(
     request: &AgentComponentPublishRequest,
     expected_revision: u64,
     staged_body: Option<&ConnectorPackHolderCommit>,
 ) -> Result<(), String> {
-    use medulla_agent_types::agent_component::AgentComponentFacts;
-    let pin = match &request.component.facts {
-        AgentComponentFacts::SystemPrompt {
-            body_sha256: Some(hex),
-            ..
-        } => Some(hex.as_str()),
+    use medulla_agent_types::agent_component::{AgentComponentFacts, ComponentBody};
+    let pin = match (&request.component.facts, &request.body) {
+        (
+            AgentComponentFacts::SystemPrompt {
+                body_sha256: Some(hex),
+                ..
+            },
+            _,
+        ) => Some(hex.as_str()),
+        (_, Some(ComponentBody::SkillSource(_))) => request
+            .component
+            .content_digest
+            .strip_prefix("sha256:"),
         _ => None,
     };
     match (pin, staged_body) {
@@ -46,7 +53,7 @@ fn check_staged_body(
             "a pinned system prompt publish carries its staged body",
         )),
         (None, Some(_)) => Err(staged_body_invalid(
-            "only a pinned system prompt carries a staged body",
+            "only a pinned system prompt or a skill source carries a staged body",
         )),
         (Some(hex), Some(holder)) => {
             if holder.body_sha256.to_hex() != hex {

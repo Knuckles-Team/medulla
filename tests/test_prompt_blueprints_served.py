@@ -327,7 +327,7 @@ async def _publish_prompt(
         "context": context or _publish_context(expected_revision),
         "component": _prompt_draft(component_id, pin),
         "evaluation_receipt_digest": None,
-        "prompt_blueprint": blueprint,
+        "body": {"kind": "prompt_blueprint", "text": blueprint},
     }
     return await send_agent_component(
         client,

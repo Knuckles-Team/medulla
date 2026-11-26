@@ -390,7 +390,7 @@ impl Engine<'_> {
             },
             component,
             evaluation_receipt_digest: None,
-            prompt_blueprint: None,
+            body: None,
         };
         let id = request.component.component_id.clone();
         let content = request.component.content_digest.clone();

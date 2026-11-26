@@ -16,7 +16,7 @@ fn block(body: &[u8]) -> Option<&str> {
 
 /// The whitespace-collapsed value of top-level `key`, when present and
 /// non-empty.
-pub(super) fn front_matter_value(body: &[u8], key: &str) -> Option<String> {
+pub(crate) fn front_matter_value(body: &[u8], key: &str) -> Option<String> {
     block(body)?.lines().find_map(|line| {
         let (name, value) = line.split_once(':')?;
         (name.trim() == key)

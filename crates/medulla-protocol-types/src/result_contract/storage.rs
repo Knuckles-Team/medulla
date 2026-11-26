@@ -115,6 +115,7 @@ method_results! {
     AgentComponentContent(AgentComponent / "content") => Raw<AgentComponentContentResult>;
     AgentComponentBlueprintExport(AgentComponent / "export_blueprint") => Raw<BlueprintExport>;
     AgentComponentImportBlueprint(AgentComponent / "import_blueprint") => Raw<AgentComponentCommittedResult>;
+    AgentComponentEditSkillSource(AgentComponent / "edit_skill_source") => Raw<AgentComponentCommittedResult>;
     AgentComponentRender(AgentComponent / "render") => Raw<PromptRenderResult>;
     AgentComponentVerifyRender(AgentComponent / "verify_render") => Raw<PromptReceiptVerdict>;
     AgentComponentStoreProposal(AgentComponent / "store_proposal") => Raw<BlueprintProposalResult>;

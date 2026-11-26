@@ -349,7 +349,7 @@ fn republish(h: &Harness, id: &str, summary: &str, expected_revision: u64) -> Co
             ),
             component: draft,
             evaluation_receipt_digest: None,
-            prompt_blueprint: None,
+            body: None,
         }, None)
         .unwrap();
     ComponentDependency {

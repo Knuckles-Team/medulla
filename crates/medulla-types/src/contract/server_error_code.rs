@@ -1151,6 +1151,14 @@ closed_error_codes! {
         SkillBreakingNoMigration => "SKILL_BREAKING_NO_MIGRATION",
         /// A held skill admission no longer matches the consumer contract or package in force (MEDULLA-TYPED-PACKS-R100.101).
         SkillConsumerContractChanged => "SKILL_CONSUMER_CONTRACT_CHANGED",
+        /// Two skill edit patches overlap, or two insertions share one point (MEDULLA-TYPED-PACKS-R100.100).
+        SkillPatchOverlap => "SKILL_PATCH_OVERLAP",
+        /// A skill edit patch splits a character or breaks the source's line-ending style (MEDULLA-TYPED-PACKS-R100.100).
+        SkillPatchAnchorInvalid => "SKILL_PATCH_ANCHOR_INVALID",
+        /// A skill edit names a source digest other than the bytes it would patch (MEDULLA-TYPED-PACKS-R100.100).
+        SkillSourceStale => "SKILL_SOURCE_STALE",
+        /// A skill edit span lies outside the source, or the edited source is over the bound (MEDULLA-TYPED-PACKS-R100.100).
+        SkillSpanUnknown => "SKILL_SPAN_UNKNOWN",
         /// A skill migration is bound to another change or its receipt did not pass (MEDULLA-TYPED-PACKS-R100.101).
         SkillMigrationReceiptInvalid => "SKILL_MIGRATION_RECEIPT_INVALID",
         /// A skill binding no longer matches its compilation (MEDULLA-REPO-INGEST-R002.1.3).

@@ -39,6 +39,7 @@ from .agent_component import (
     PromptRenderResult,
     SkillAdmission,
     SkillAdmissionRequest,
+    SkillSourceEditRequest,
     SourceEffectRecordResult,
 )
 from .concept_lineage import (
@@ -607,6 +608,32 @@ async def send_agent_component_export_blueprint(
         idempotency_key=idempotency_key,
     )
     return BlueprintExport.model_validate(payload)
+
+
+async def send_agent_component_edit_skill_source(
+    client: Any,
+    request: SkillSourceEditRequest,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> AgentComponentCommittedResult:
+    """Send typed AgentComponent.edit_skill_source."""
+    request = SkillSourceEditRequest.model_validate(request)
+    params = {
+        "op": {
+            "op": "edit_skill_source",
+            "request": request.model_dump(
+                mode="json", exclude_unset=True, exclude_none=True
+            ),
+        },
+    }
+    payload = await client._send(
+        "AgentComponent",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return AgentComponentCommittedResult.model_validate(payload)
 
 
 async def send_agent_component_import_blueprint(

@@ -58,7 +58,7 @@ fn serve_decision_record(
 /// engine-owned bytes, digest-verified by `read_engine_body`. Shared by
 /// `Content` and `ExportBlueprint`, so there is no second read route.
 #[cfg(feature = "blob")]
-async fn read_verified_body(
+pub(super) async fn read_verified_body(
     state: &Arc<RwLock<ServerState>>,
     store: &AgentLibraryStore,
     tenant_id: &str,
@@ -272,6 +272,35 @@ pub(crate) fn check_blueprint_identity(
     Ok(())
 }
 
+/// The draft that republishes `entry`'s fields: the server-owned entry fields are dropped and
+/// restamped by publish. The one conversion the import and the skill edit share.
+pub(super) fn draft_of(
+    entry: medulla_agent_types::agent_component::AgentComponentEntry,
+) -> medulla_agent_types::agent_component::AgentComponentDraft {
+    medulla_agent_types::agent_component::AgentComponentDraft {
+        component_id: entry.component_id,
+        kind: entry.kind,
+        version: entry.version,
+        content_digest: entry.content_digest,
+        content_ref: None,
+        facts: entry.facts,
+        provenance: entry.provenance,
+        summary: entry.summary,
+        classification: entry.classification,
+        requires: entry.requires,
+        declared_capabilities: entry.declared_capabilities,
+        required_capabilities: entry.required_capabilities,
+        declared_required_capabilities: entry.declared_required_capabilities,
+        attributes: entry.attributes,
+        tenant_id: entry.tenant_id,
+        actor_scope: entry.actor_scope,
+        purpose_id: entry.purpose_id,
+        policy_digest: entry.policy_digest,
+        source_revision: entry.source_revision,
+        source_revision_digest: entry.source_revision_digest,
+    }
+}
+
 /// `AgentComponent.import_blueprint`: the edited envelope becomes the next revision of a
 /// native prompt through the one publish path of R002.7 (MEDULLA-TYPED-PACKS-R094.3). The
 /// server-owned entry fields are ignored and restamped by publish.
@@ -282,7 +311,7 @@ pub(crate) async fn serve_blueprint_import(
     verified: &VerifiedRequestContext,
     request: medulla_agent_types::agent_component::BlueprintImportRequest,
 ) -> Response {
-    use medulla_agent_types::agent_component::{AgentComponentDraft, AgentComponentPublishRequest};
+    use medulla_agent_types::agent_component::AgentComponentPublishRequest;
 
     if request.context.tenant_id != verified.tenant() {
         return Response::err(
@@ -314,30 +343,11 @@ pub(crate) async fn serve_blueprint_import(
     };
     let publish = AgentComponentPublishRequest {
         context,
-        component: AgentComponentDraft {
-            component_id: entry.component_id,
-            kind: entry.kind,
-            version: entry.version,
-            content_digest: entry.content_digest,
-            content_ref: None,
-            facts: entry.facts,
-            provenance: entry.provenance,
-            summary: entry.summary,
-            classification: entry.classification,
-            requires: entry.requires,
-            declared_capabilities: entry.declared_capabilities,
-            required_capabilities: entry.required_capabilities,
-            declared_required_capabilities: entry.declared_required_capabilities,
-            attributes: entry.attributes,
-            tenant_id: entry.tenant_id,
-            actor_scope: entry.actor_scope,
-            purpose_id: entry.purpose_id,
-            policy_digest: entry.policy_digest,
-            source_revision: entry.source_revision,
-            source_revision_digest: entry.source_revision_digest,
-        },
+        component: draft_of(entry),
         evaluation_receipt_digest: None,
-        prompt_blueprint: Some(prompt_blueprint),
+        body: Some(medulla_agent_types::agent_component::ComponentBody::PromptBlueprint(
+            prompt_blueprint,
+        )),
     };
     super::agent::component_publish(state, store, req_id, verified, Box::new(publish)).await
 }

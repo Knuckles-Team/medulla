@@ -163,7 +163,7 @@ async fn publish_policy(
         ),
         component: draft,
         evaluation_receipt_digest: None,
-        prompt_blueprint: None,
+        body: None,
     };
     let committed = store.publish_component(request, None).expect("publish policy");
     ComponentDependency {

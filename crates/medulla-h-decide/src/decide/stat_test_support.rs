@@ -155,7 +155,7 @@ impl Harness {
             ),
             component: draft,
             evaluation_receipt_digest: receipt,
-            prompt_blueprint: None,
+            body: None,
         };
         let committed = self.store.publish_component(request, None)?;
         Ok(ComponentDependency {
@@ -258,7 +258,7 @@ impl Harness {
             ),
             component: draft,
             evaluation_receipt_digest: None,
-            prompt_blueprint: None,
+            body: None,
         };
         let committed = self.store.publish_component(request, None)?;
         Ok(ComponentDependency {

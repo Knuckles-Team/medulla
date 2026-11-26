@@ -145,6 +145,12 @@ pub async fn handle_agent_component(
             )
             .await
         }
+        AgentComponentOp::EditSkillSource { request } => {
+            super::skill_source_edit::serve_skill_source_edit(
+                state, &store, req_id, verified, *request,
+            )
+            .await
+        }
         AgentComponentOp::StoreProposal { request } => {
             match store.store_proposal(
                 &request.context.tenant_id,
@@ -195,7 +201,7 @@ fn component_record_source_effect(
     }
 }
 
-/// `AgentComponent.publish`: a pinned system prompt stages its blueprint in the engine
+/// `AgentComponent.publish`: a pinned system prompt (or a skill source) stages its body in the engine
 /// body store, then the owner write commits revision, head, body holder and receipt
 /// together (MEDULLA-TYPED-PACKS-R002.7).
 #[cfg(feature = "redb")]
@@ -222,7 +228,7 @@ pub(crate) async fn component_publish(
     request.component.purpose_id = context.purpose_id.clone();
     request.component.policy_digest = context.policy_digest.clone();
     request.context = context;
-    let staged = match stage_prompt_blueprint(state, &mut request).await {
+    let staged = match stage_component_body(state, &mut request).await {
         Ok(staged) => staged,
         Err(error) => return Response::err(req_id, error),
     };
@@ -237,20 +243,22 @@ pub(crate) async fn component_publish(
     }
 }
 
-/// Check the blueprint of a pinned system prompt against its pins and the bounded
-/// profile, then stage its bytes in the engine body store. Returns the holder the
-/// owner write commits with the revision, or `None` for a publish that carries no
-/// blueprint. No refusal before the staging call stages a body.
+/// Check the body a publish carries against its pins, then stage its bytes in the engine
+/// body store. Returns the holder the owner write commits with the revision, or `None` for a
+/// publish that carries no body. No refusal before the staging call stages a body.
+///
+/// One mechanism for both body kinds (MEDULLA-TYPED-PACKS-R100.100): a pinned system prompt
+/// stages its blueprint, a skill stages its SKILL.md source.
 #[cfg(feature = "redb")]
-async fn stage_prompt_blueprint(
+async fn stage_component_body(
     state: &Arc<RwLock<ServerState>>,
     request: &mut medulla_agent_types::agent_component::AgentComponentPublishRequest,
 ) -> Result<Option<medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit>, String>
 {
-    use medulla_agent_types::agent_component::facts::{
-        validate_prompt_blueprint, PromptLimits, PROMPT_SCHEMA_INVALID,
+    use medulla_agent_types::agent_component::facts::PROMPT_SCHEMA_INVALID;
+    use medulla_agent_types::agent_component::{
+        AgentComponentFacts, AgentComponentKind, ComponentBody, MAX_COMPONENT_BODY_BYTES,
     };
-    use medulla_agent_types::agent_component::{AgentComponentFacts, PromptBlueprintIdentity};
 
     let pin = match &request.component.facts {
         AgentComponentFacts::SystemPrompt {
@@ -259,20 +267,76 @@ async fn stage_prompt_blueprint(
         } => Some(hex.clone()),
         _ => None,
     };
-    let (pin, blueprint) = match (pin, request.prompt_blueprint.clone()) {
-        (None, None) => return Ok(None),
-        (Some(_), None) => {
-            return Err(format!(
-                "{PROMPT_SCHEMA_INVALID}: a pinned system prompt publish carries its blueprint"
-            ))
+    let expected_revision = request
+        .context
+        .expected_revision
+        .ok_or_else(|| "agent component writes require an explicit expected_revision".to_string())?;
+    let entry_revision = expected_revision + 1;
+    match (pin, request.body.clone()) {
+        (None, None) => Ok(None),
+        (Some(_), None) => Err(format!(
+            "{PROMPT_SCHEMA_INVALID}: a pinned system prompt publish carries its blueprint"
+        )),
+        (None, Some(ComponentBody::PromptBlueprint(_))) => Err(format!(
+            "{PROMPT_SCHEMA_INVALID}: only a pinned system prompt carries a blueprint"
+        )),
+        (Some(_), Some(ComponentBody::SkillSource(_))) => Err(format!(
+            "{PROMPT_SCHEMA_INVALID}: a pinned system prompt carries a blueprint, not a skill source"
+        )),
+        (Some(pin), Some(ComponentBody::PromptBlueprint(blueprint))) => {
+            stage_prompt_body(state, request, entry_revision, &pin, blueprint).await
         }
-        (None, Some(_)) => {
-            return Err(format!(
-                "{PROMPT_SCHEMA_INVALID}: only a pinned system prompt carries a blueprint"
-            ))
+        (None, Some(ComponentBody::SkillSource(source))) => {
+            if request.component.kind != AgentComponentKind::Skill {
+                return Err(
+                    "INVALID_ARGUMENT: only a skill component carries a skill source".to_string(),
+                );
+            }
+            if source.len() > MAX_COMPONENT_BODY_BYTES {
+                return Err(
+                    "SKILL_SPAN_UNKNOWN: the skill source is over the component body limit"
+                        .to_string(),
+                );
+            }
+            let sha256 = medulla_types::contract::Digest256::sha256(source.as_bytes());
+            let hex = sha256.to_hex();
+            if request.component.content_digest != format!("sha256:{hex}") {
+                return Err(
+                    "BODY_DIGEST_MISMATCH: the skill source bytes differ from the content digest"
+                        .to_string(),
+                );
+            }
+            request.component.content_ref = Some(format!("eg-body:sha256:{hex}"));
+            stage_engine_body(
+                state,
+                &request.context.tenant_id,
+                &request.component.component_id,
+                entry_revision,
+                sha256,
+                source.into_bytes(),
+                request.context.created_at_ms,
+            )
+            .await
+            .map(Some)
         }
-        (Some(pin), Some(blueprint)) => (pin, blueprint),
+    }
+}
+
+/// The blueprint of a pinned system prompt, checked against its pin and the bounded profile.
+#[cfg(feature = "redb")]
+async fn stage_prompt_body(
+    state: &Arc<RwLock<ServerState>>,
+    request: &mut medulla_agent_types::agent_component::AgentComponentPublishRequest,
+    entry_revision: u64,
+    pin: &str,
+    blueprint: String,
+) -> Result<Option<medulla_persistence_records::connector_pack::commit::ConnectorPackHolderCommit>, String>
+{
+    use medulla_agent_types::agent_component::facts::{
+        validate_prompt_blueprint, PromptLimits, PROMPT_SCHEMA_INVALID,
     };
+    use medulla_agent_types::agent_component::PromptBlueprintIdentity;
+
     let sha256 = medulla_types::contract::Digest256::sha256(blueprint.as_bytes());
     let hex = sha256.to_hex();
     if hex != pin || request.component.content_digest != format!("sha256:{hex}") {
@@ -284,11 +348,6 @@ async fn stage_prompt_blueprint(
     request.component.content_ref = Some(format!("eg-body:sha256:{hex}"));
     let value: serde_json::Value = serde_json::from_str(&blueprint)
         .map_err(|error| format!("{PROMPT_SCHEMA_INVALID}: blueprint is not JSON: {error}"))?;
-    let expected_revision = request
-        .context
-        .expected_revision
-        .ok_or_else(|| "agent component writes require an explicit expected_revision".to_string())?;
-    let entry_revision = expected_revision + 1;
     let identity = PromptBlueprintIdentity::derive(
         &request.context.tenant_id,
         &request.component.component_id,

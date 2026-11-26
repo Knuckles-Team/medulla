@@ -253,7 +253,7 @@ fn publish_revision(
         context,
         evaluation_receipt_digest: None,
         component: draft,
-        prompt_blueprint: None,
+        body: None,
     }, None)?;
     Ok(committed.result.component.definition_digest)
 }

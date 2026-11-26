@@ -117,7 +117,7 @@ pub(super) fn publish_with(
             ),
             evaluation_receipt_digest: None,
             component: draft,
-            prompt_blueprint: None,
+            body: None,
         }, None)
         .expect("publishes");
 }

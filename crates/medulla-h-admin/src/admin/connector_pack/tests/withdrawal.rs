@@ -128,7 +128,7 @@ async fn withdrawn_tool_leaves_search_but_keeps_historical_content() {
             context: publish_context,
             component: draft,
             evaluation_receipt_digest: None,
-            prompt_blueprint: None,
+            body: None,
         }),
     };
     op.validate()
