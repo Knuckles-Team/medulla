@@ -1,0 +1,20 @@
+{
+  "source": "erpnext",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "supplierName": "Acme",
+      "late": true,
+      "joinKey": "party-1",
+      "id": "erpnext-cross_twenty-1",
+      "label": "Acme"
+    },
+    {
+      "supplierName": "Globex",
+      "late": false,
+      "joinKey": "party-2",
+      "id": "erpnext-cross_twenty-2",
+      "label": "Globex"
+    }
+  ]
+}

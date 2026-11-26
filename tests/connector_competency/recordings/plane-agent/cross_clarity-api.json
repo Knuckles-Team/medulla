@@ -1,0 +1,12 @@
+{
+  "source": "plane-agent",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "workItemKey": "PL-2",
+      "joinKey": "page-1",
+      "id": "plane-agent-cross_clarity-api-1",
+      "label": "PL-2"
+    }
+  ]
+}

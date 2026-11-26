@@ -1,0 +1,36 @@
+{
+  "connector": "archivebox",
+  "rollup": "MEDULLA-CQ-CONN-R003",
+  "vocabulary_module": "documentation-v1.ttl",
+  "terms": [
+    ":WebSnapshot",
+    ":ArchiveResult",
+    ":hasArchiveResult",
+    ":extractorName",
+    ":resultStatus"
+  ],
+  "questions": [
+    {
+      "id": "archivebox.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'archivebox-api'",
+      "question": "Which archived snapshots of a given domain failed one or more extractors, and when?",
+      "sources": [
+        "archivebox-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "archivebox-api": "http_endpoint"
+      },
+      "columns": [
+        "url",
+        "extractor",
+        "finishedAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "archivebox-api/single.json"
+      ]
+    }
+  ]
+}

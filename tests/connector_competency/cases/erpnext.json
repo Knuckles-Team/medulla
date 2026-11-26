@@ -1,0 +1,63 @@
+{
+  "connector": "erpnext",
+  "rollup": "MEDULLA-CQ-CONN-R019",
+  "vocabulary_module": "commercial-v1.ttl",
+  "terms": [
+    "Supplier",
+    "PurchaseOrder",
+    "lateOrder"
+  ],
+  "questions": [
+    {
+      "id": "erpnext.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'erpnext'",
+      "question": "Which open purchase orders are late, and from which supplier?",
+      "sources": [
+        "erpnext"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "erpnext": "mcp_tool"
+      },
+      "columns": [
+        "purchaseOrderId",
+        "supplierName",
+        "scheduleDate"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "erpnext/single.json"
+      ]
+    },
+    {
+      "id": "erpnext.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'erpnext'; LET s1 = FOREIGN SCAN 'twenty'; LET s2 = FOREIGN SCAN 'firefly-iii'; JOIN s0, s1, s2",
+      "question": "Which ERPNext suppliers with late orders are also marked as active accounts in the Twenty CRM or paid in Firefly III?",
+      "sources": [
+        "erpnext",
+        "twenty",
+        "firefly-iii"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "erpnext": "mcp_tool",
+        "twenty": "http_endpoint",
+        "firefly-iii": "http_endpoint"
+      },
+      "columns": [
+        "supplierName",
+        "accountStatus",
+        "paymentId"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "erpnext/cross_twenty.json",
+        "twenty/cross_erpnext.json",
+        "erpnext/cross_firefly-iii.json",
+        "firefly-iii/cross_erpnext.json"
+      ]
+    }
+  ]
+}

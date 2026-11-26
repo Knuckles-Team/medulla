@@ -1,0 +1,20 @@
+{
+  "source": "dockerhub-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "name": "example/old",
+      "lastPushedAt": "2025-01-05T00:00:00Z",
+      "pullCount": 1200,
+      "id": "dockerhub-api-single-1",
+      "label": "example/old"
+    },
+    {
+      "name": "example/new",
+      "lastPushedAt": "2026-11-10T00:00:00Z",
+      "pullCount": 50,
+      "id": "dockerhub-api-single-2",
+      "label": "example/new"
+    }
+  ]
+}

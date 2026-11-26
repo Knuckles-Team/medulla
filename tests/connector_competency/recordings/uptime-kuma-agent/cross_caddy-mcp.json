@@ -1,0 +1,12 @@
+{
+  "source": "uptime-kuma-agent",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "monitorName": "db",
+      "joinKey": "host-b",
+      "id": "uptime-kuma-agent-cross_caddy-mcp-1",
+      "label": "db"
+    }
+  ]
+}

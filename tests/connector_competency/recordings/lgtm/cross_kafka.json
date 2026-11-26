@@ -1,0 +1,13 @@
+{
+  "source": "lgtm",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "alertName": "BillingLag",
+      "state": "firing",
+      "joinKey": "svc-1",
+      "id": "lgtm-cross_kafka-1",
+      "label": "BillingLag"
+    }
+  ]
+}

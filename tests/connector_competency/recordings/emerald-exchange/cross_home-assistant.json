@@ -1,0 +1,22 @@
+{
+  "source": "emerald-exchange",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "fillId": "f-1",
+      "currency": "USDC",
+      "amount": 250,
+      "joinKey": "acct-1",
+      "id": "emerald-exchange-cross_home-assistant-1",
+      "label": "f-1"
+    },
+    {
+      "fillId": "f-2",
+      "currency": "BTC",
+      "amount": 1,
+      "joinKey": "acct-2",
+      "id": "emerald-exchange-cross_home-assistant-2",
+      "label": "f-2"
+    }
+  ]
+}

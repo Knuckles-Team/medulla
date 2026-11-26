@@ -1,0 +1,63 @@
+{
+  "connector": "ansible-tower",
+  "rollup": "MEDULLA-CQ-CONN-R001",
+  "vocabulary_module": "infrastructure-v1.ttl",
+  "terms": [
+    "AutomationJob",
+    "jobStatus",
+    "ranAgainstHost"
+  ],
+  "questions": [
+    {
+      "id": "ansible-tower.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'ansible-tower-mcp'",
+      "question": "Which job templates failed in their last run, and against which inventory hosts?",
+      "sources": [
+        "ansible-tower-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "ansible-tower-mcp": "mcp_tool"
+      },
+      "columns": [
+        "templateName",
+        "hostId",
+        "finishedAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "ansible-tower-mcp/single.json"
+      ]
+    },
+    {
+      "id": "ansible-tower.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'ansible-tower-mcp'; LET s1 = FOREIGN SCAN 'servicenow-api'; LET s2 = FOREIGN SCAN 'systems-manager'; JOIN s0, s1, s2",
+      "question": "Which hosts that failed their last Tower run also have an open ServiceNow change or incident?",
+      "sources": [
+        "ansible-tower-mcp",
+        "servicenow-api",
+        "systems-manager"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "ansible-tower-mcp": "mcp_tool",
+        "servicenow-api": "http_endpoint",
+        "systems-manager": "mcp_tool"
+      },
+      "columns": [
+        "hostId",
+        "hostname",
+        "number"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "ansible-tower-mcp/cross_servicenow-api.json",
+        "servicenow-api/cross_ansible-tower-mcp.json",
+        "ansible-tower-mcp/cross_systems-manager.json",
+        "systems-manager/cross_ansible-tower-mcp.json"
+      ]
+    }
+  ]
+}

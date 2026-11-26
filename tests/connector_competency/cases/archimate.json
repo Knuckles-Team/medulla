@@ -1,0 +1,66 @@
+{
+  "connector": "archimate",
+  "rollup": "MEDULLA-CQ-CONN-R002",
+  "vocabulary_module": "archimate-v1.ttl",
+  "terms": [
+    ":ApplicationComponent",
+    ":BusinessProcess",
+    ":ArchimateRelationship",
+    ":relationshipType",
+    ":relSource",
+    ":relTarget"
+  ],
+  "questions": [
+    {
+      "id": "archimate.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'archimate-mcp'",
+      "question": "Which application components serve a business process, and through which relationships?",
+      "sources": [
+        "archimate-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "archimate-mcp": "mcp_tool"
+      },
+      "columns": [
+        "componentName",
+        "processName",
+        "relationshipId"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "archimate-mcp/single.json"
+      ]
+    },
+    {
+      "id": "archimate.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'archimate-mcp'; LET s1 = FOREIGN SCAN 'leanix-agent'; LET s2 = FOREIGN SCAN 'servicenow-api'; JOIN s0, s1, s2",
+      "question": "Which ArchiMate application components lack a matching LeanIX fact sheet or ServiceNow CI?",
+      "sources": [
+        "archimate-mcp",
+        "leanix-agent",
+        "servicenow-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "archimate-mcp": "mcp_tool",
+        "leanix-agent": "a2a_skill",
+        "servicenow-api": "http_endpoint"
+      },
+      "columns": [
+        "componentName",
+        "missingLeanix",
+        "missingCi"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "archimate-mcp/cross_leanix-agent.json",
+        "leanix-agent/cross_archimate-mcp.json",
+        "archimate-mcp/cross_servicenow-api.json",
+        "servicenow-api/cross_archimate-mcp.json"
+      ]
+    }
+  ]
+}

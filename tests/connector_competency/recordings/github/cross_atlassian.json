@@ -1,0 +1,20 @@
+{
+  "source": "github",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "pullRequestUrl": "https://example.invalid/r/pull/4",
+      "closesTicket": "PROJ-7",
+      "joinKey": "chg-1",
+      "id": "github-cross_atlassian-1",
+      "label": "https://example.invalid/r/pull/4"
+    },
+    {
+      "pullRequestUrl": "https://example.invalid/r/pull/5",
+      "closesTicket": "PROJ-8",
+      "joinKey": "chg-2",
+      "id": "github-cross_atlassian-2",
+      "label": "https://example.invalid/r/pull/5"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "source": "firefly-iii",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "transactionId": "t-7",
+      "transactionAmount": 1200,
+      "date": "2026-11-02",
+      "joinKey": "txn-1",
+      "id": "firefly-iii-cross_erpnext-1",
+      "label": "t-7"
+    },
+    {
+      "transactionId": "t-8",
+      "transactionAmount": 15,
+      "date": "2026-11-03",
+      "joinKey": "txn-2",
+      "id": "firefly-iii-cross_erpnext-2",
+      "label": "t-8"
+    }
+  ]
+}

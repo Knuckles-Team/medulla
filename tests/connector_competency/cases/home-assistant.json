@@ -1,0 +1,40 @@
+{
+  "connector": "home-assistant",
+  "rollup": "MEDULLA-CQ-CONN-R026",
+  "vocabulary_module": "infrastructure-v1.ttl",
+  "terms": [
+    "entityState",
+    "unavailableSince"
+  ],
+  "questions": [
+    {
+      "id": "home-assistant.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'home-assistant'; LET s1 = FOREIGN SCAN 'fan-manager'; LET s2 = FOREIGN SCAN 'uptime'; JOIN s0, s1, s2",
+      "question": "Which Home Assistant devices went unavailable at the same time as an Uptime Kuma monitor failure?",
+      "sources": [
+        "home-assistant",
+        "fan-manager",
+        "uptime"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "home-assistant": "http_endpoint",
+        "fan-manager": "mcp_tool",
+        "uptime": "http_endpoint"
+      },
+      "columns": [
+        "deviceName",
+        "unavailableSince",
+        "monitorName"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "home-assistant/cross_fan-manager.json",
+        "fan-manager/cross_home-assistant.json",
+        "home-assistant/cross_uptime.json",
+        "uptime/cross_home-assistant.json"
+      ]
+    }
+  ]
+}

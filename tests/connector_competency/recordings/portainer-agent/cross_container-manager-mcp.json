@@ -1,0 +1,12 @@
+{
+  "source": "portainer-agent",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "stack": "web",
+      "joinKey": "img-1",
+      "id": "portainer-agent-cross_container-manager-mcp-1",
+      "label": "web"
+    }
+  ]
+}

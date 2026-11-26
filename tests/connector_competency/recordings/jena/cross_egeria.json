@@ -1,0 +1,18 @@
+{
+  "source": "jena",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "graphName": "urn:graph:orders",
+      "joinKey": "ds-1",
+      "id": "jena-cross_egeria-1",
+      "label": "urn:graph:orders"
+    },
+    {
+      "graphName": "urn:graph:misc",
+      "joinKey": "ds-8",
+      "id": "jena-cross_egeria-2",
+      "label": "urn:graph:misc"
+    }
+  ]
+}

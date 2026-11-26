@@ -1,0 +1,20 @@
+{
+  "source": "gramps",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "personName": "Ada",
+      "mediaPath": "/Photos/ada.jpg",
+      "joinKey": "media-1",
+      "id": "gramps-cross_nextcloud-1",
+      "label": "Ada"
+    },
+    {
+      "personName": "Cy",
+      "mediaPath": "/Photos/cy.jpg",
+      "joinKey": "media-2",
+      "id": "gramps-cross_nextcloud-2",
+      "label": "Cy"
+    }
+  ]
+}

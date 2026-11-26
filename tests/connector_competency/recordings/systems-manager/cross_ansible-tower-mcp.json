@@ -1,0 +1,13 @@
+{
+  "source": "systems-manager",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "hostname": "web-1",
+      "host_id": "h-1",
+      "joinKey": "host-1",
+      "id": "systems-manager-cross_ansible-tower-mcp-1",
+      "label": "web-1"
+    }
+  ]
+}

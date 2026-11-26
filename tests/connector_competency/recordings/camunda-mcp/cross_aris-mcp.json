@@ -1,0 +1,12 @@
+{
+  "source": "camunda-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "definitionKey": "order_to_cash",
+      "joinKey": "proc-1",
+      "id": "camunda-mcp-cross_aris-mcp-1",
+      "label": "order_to_cash"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "source": "clarity-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "url": "https://example.invalid/checkout",
+      "rageClickRate": 0.21,
+      "joinKey": "page-1",
+      "id": "clarity-api-cross_plane-agent-1",
+      "label": "https://example.invalid/checkout"
+    },
+    {
+      "url": "https://example.invalid/about",
+      "rageClickRate": 0.01,
+      "joinKey": "page-2",
+      "id": "clarity-api-cross_plane-agent-2",
+      "label": "https://example.invalid/about"
+    }
+  ]
+}

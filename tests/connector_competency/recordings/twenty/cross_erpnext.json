@@ -1,0 +1,12 @@
+{
+  "source": "twenty",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "accountStatus": "active",
+      "joinKey": "party-1",
+      "id": "twenty-cross_erpnext-1",
+      "label": "active"
+    }
+  ]
+}

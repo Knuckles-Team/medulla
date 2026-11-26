@@ -1,0 +1,65 @@
+{
+  "connector": "kafka",
+  "rollup": "MEDULLA-CQ-CONN-R029",
+  "vocabulary_module": "data_platform-v1.ttl",
+  "terms": [
+    "dp:ConsumerGroup",
+    "dp:TopicPartition",
+    "dp:PartitionLag",
+    "dp:lag"
+  ],
+  "questions": [
+    {
+      "id": "kafka.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'kafka'",
+      "question": "Which consumer groups lag by more than a threshold on which topic partitions?",
+      "sources": [
+        "kafka"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "kafka": "http_endpoint"
+      },
+      "columns": [
+        "consumerGroup",
+        "topic",
+        "partition",
+        "lag"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "kafka/single.json"
+      ]
+    },
+    {
+      "id": "kafka.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'kafka'; LET s1 = FOREIGN SCAN 'langfuse'; LET s2 = FOREIGN SCAN 'lgtm'; JOIN s0, s1, s2",
+      "question": "Which Kafka consumer groups with sustained lag belong to a service that Grafana is alerting on?",
+      "sources": [
+        "kafka",
+        "langfuse",
+        "lgtm"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "kafka": "http_endpoint",
+        "langfuse": "http_endpoint",
+        "lgtm": "http_endpoint"
+      },
+      "columns": [
+        "consumerGroup",
+        "serviceName",
+        "alertName"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "kafka/cross_langfuse.json",
+        "langfuse/cross_kafka.json",
+        "kafka/cross_lgtm.json",
+        "lgtm/cross_kafka.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "source": "atlassian-agent",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "key": "PROJ-1",
+      "blockedBy": "PROJ-9",
+      "assignee": null,
+      "id": "atlassian-agent-single-1",
+      "label": "PROJ-1"
+    },
+    {
+      "key": "PROJ-2",
+      "blockedBy": "PROJ-9",
+      "assignee": "u-1",
+      "id": "atlassian-agent-single-2",
+      "label": "PROJ-2"
+    }
+  ]
+}

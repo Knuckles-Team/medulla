@@ -1,0 +1,12 @@
+{
+  "source": "egeria",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "assetName": "orders",
+      "joinKey": "ds-1",
+      "id": "egeria-cross_jena-1",
+      "label": "orders"
+    }
+  ]
+}

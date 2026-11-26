@@ -1,0 +1,33 @@
+{
+  "source": "gitlab_api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "pipelineId": "pl-1",
+      "jobName": "unit",
+      "status": "failed",
+      "isDefaultBranch": true,
+      "finishedAt": "2026-11-19T22:00:00Z",
+      "id": "gitlab_api-single-1",
+      "label": "pl-1"
+    },
+    {
+      "pipelineId": "pl-2",
+      "jobName": "lint",
+      "status": "success",
+      "isDefaultBranch": true,
+      "finishedAt": "2026-11-19T23:00:00Z",
+      "id": "gitlab_api-single-2",
+      "label": "pl-2"
+    },
+    {
+      "pipelineId": "pl-3",
+      "jobName": "unit",
+      "status": "failed",
+      "isDefaultBranch": false,
+      "finishedAt": "2026-11-19T21:00:00Z",
+      "id": "gitlab_api-single-3",
+      "label": "pl-3"
+    }
+  ]
+}

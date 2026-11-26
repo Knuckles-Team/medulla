@@ -1,0 +1,18 @@
+{
+  "source": "archimate-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "componentName": "Billing",
+      "joinKey": "app-1",
+      "id": "archimate-mcp-cross_leanix-agent-1",
+      "label": "Billing"
+    },
+    {
+      "componentName": "Orphan",
+      "joinKey": "app-2",
+      "id": "archimate-mcp-cross_leanix-agent-2",
+      "label": "Orphan"
+    }
+  ]
+}

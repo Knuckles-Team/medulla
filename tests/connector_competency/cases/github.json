@@ -1,0 +1,63 @@
+{
+  "connector": "github",
+  "rollup": "MEDULLA-CQ-CONN-R023",
+  "vocabulary_module": "sdlc_lifecycle-v1.ttl",
+  "terms": [
+    "requestedReviewer",
+    "closesTicket",
+    "proposalState",
+    "Repository"
+  ],
+  "questions": [
+    {
+      "id": "github.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'github'",
+      "question": "Which open pull requests have failing checks and no reviewer assigned?",
+      "sources": [
+        "github"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "github": "a2a_skill"
+      },
+      "columns": [
+        "pullRequestUrl",
+        "checkState"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "github/single.json"
+      ]
+    },
+    {
+      "id": "github.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'github'; LET s1 = FOREIGN SCAN 'gitlab_api'; LET s2 = FOREIGN SCAN 'atlassian'; JOIN s0, s1, s2",
+      "question": "Which GitHub pull requests close a Jira issue that is still in an open state?",
+      "sources": [
+        "github",
+        "gitlab_api",
+        "atlassian"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "github": "a2a_skill",
+        "gitlab_api": "http_endpoint",
+        "atlassian": "a2a_skill"
+      },
+      "columns": [
+        "pullRequestUrl",
+        "issueKey",
+        "issueState"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "github/cross_gitlab_api.json",
+        "gitlab_api/cross_github.json",
+        "github/cross_atlassian.json",
+        "atlassian/cross_github.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "source": "firefly-iii",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "budgetName": "Groceries",
+      "budgetLimit": 300,
+      "transactionId": "t-1",
+      "transactionAmount": 320,
+      "chargedToBudget": "Groceries",
+      "id": "firefly-iii-single-1",
+      "label": "Groceries"
+    },
+    {
+      "budgetName": "Travel",
+      "budgetLimit": 900,
+      "transactionId": "t-2",
+      "transactionAmount": 100,
+      "chargedToBudget": "Travel",
+      "id": "firefly-iii-single-2",
+      "label": "Travel"
+    }
+  ]
+}

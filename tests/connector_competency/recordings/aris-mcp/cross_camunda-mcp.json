@@ -1,0 +1,18 @@
+{
+  "source": "aris-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "processName": "Order to cash",
+      "joinKey": "proc-1",
+      "id": "aris-mcp-cross_camunda-mcp-1",
+      "label": "Order to cash"
+    },
+    {
+      "processName": "Returns",
+      "joinKey": "proc-2",
+      "id": "aris-mcp-cross_camunda-mcp-2",
+      "label": "Returns"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "source": "caddy-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "routeId": "r-1",
+      "routeHostname": "app.example.invalid",
+      "upstreamAddress": "10.0.0.5:8080",
+      "id": "caddy-mcp-single-1",
+      "label": "r-1"
+    },
+    {
+      "routeId": "r-2",
+      "routeHostname": "db.example.invalid",
+      "upstreamAddress": "10.0.0.6:5432",
+      "id": "caddy-mcp-single-2",
+      "label": "r-2"
+    }
+  ]
+}

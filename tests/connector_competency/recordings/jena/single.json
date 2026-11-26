@@ -1,0 +1,20 @@
+{
+  "source": "jena",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "graphName": "urn:graph:big",
+      "tripleCount": 90000,
+      "lastModifiedAt": "2025-01-01T00:00:00Z",
+      "id": "jena-single-1",
+      "label": "urn:graph:big"
+    },
+    {
+      "graphName": "urn:graph:small",
+      "tripleCount": 10,
+      "lastModifiedAt": "2026-11-18T00:00:00Z",
+      "id": "jena-single-2",
+      "label": "urn:graph:small"
+    }
+  ]
+}

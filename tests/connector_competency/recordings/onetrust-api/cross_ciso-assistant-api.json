@@ -1,0 +1,12 @@
+{
+  "source": "onetrust-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "assessmentName": "SSO DPIA",
+      "joinKey": "svc-c",
+      "id": "onetrust-api-cross_ciso-assistant-api-1",
+      "label": "SSO DPIA"
+    }
+  ]
+}

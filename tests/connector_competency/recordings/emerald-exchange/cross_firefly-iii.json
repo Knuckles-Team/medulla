@@ -1,0 +1,12 @@
+{
+  "source": "emerald-exchange",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "fillId": "f-5",
+      "joinKey": "txn-3",
+      "id": "emerald-exchange-cross_firefly-iii-1",
+      "label": "f-5"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "source": "archimate-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "componentName": "Billing",
+      "processName": "Invoicing",
+      "relationshipId": "rel-1",
+      "relationshipType": "Serving",
+      "id": "archimate-mcp-single-1",
+      "label": "Billing"
+    },
+    {
+      "componentName": "Billing",
+      "processName": "Audit",
+      "relationshipId": "rel-2",
+      "relationshipType": "Flow",
+      "id": "archimate-mcp-single-2",
+      "label": "Billing"
+    }
+  ]
+}

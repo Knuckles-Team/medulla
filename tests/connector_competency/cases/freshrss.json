@@ -1,0 +1,34 @@
+{
+  "connector": "freshrss",
+  "rollup": "MEDULLA-CQ-CONN-R022",
+  "vocabulary_module": "content-v1.ttl",
+  "terms": [
+    "cv:Feed",
+    "cv:Article",
+    "cv:isRead",
+    "cv:publishedAt"
+  ],
+  "questions": [
+    {
+      "id": "freshrss.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'freshrss'",
+      "question": "Which unread articles from a given feed were published in the last 48 hours?",
+      "sources": [
+        "freshrss"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "freshrss": "http_endpoint"
+      },
+      "columns": [
+        "articleTitle",
+        "publishedAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "freshrss/single.json"
+      ]
+    }
+  ]
+}

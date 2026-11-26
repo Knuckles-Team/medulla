@@ -1,0 +1,30 @@
+{
+  "source": "github",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "pullRequestUrl": "https://example.invalid/r/pull/1",
+      "proposalState": "open",
+      "checkState": "failure",
+      "requestedReviewer": null,
+      "id": "github-single-1",
+      "label": "https://example.invalid/r/pull/1"
+    },
+    {
+      "pullRequestUrl": "https://example.invalid/r/pull/2",
+      "proposalState": "open",
+      "checkState": "failure",
+      "requestedReviewer": "rev-1",
+      "id": "github-single-2",
+      "label": "https://example.invalid/r/pull/2"
+    },
+    {
+      "pullRequestUrl": "https://example.invalid/r/pull/3",
+      "proposalState": "open",
+      "checkState": "success",
+      "requestedReviewer": null,
+      "id": "github-single-3",
+      "label": "https://example.invalid/r/pull/3"
+    }
+  ]
+}

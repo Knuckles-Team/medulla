@@ -1,0 +1,58 @@
+{
+  "connector": "gramps",
+  "rollup": "MEDULLA-CQ-CONN-R025",
+  "vocabulary_module": "personal-v1.ttl",
+  "terms": [
+    "birthPlace",
+    "birthYear"
+  ],
+  "questions": [
+    {
+      "id": "gramps.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'gramps'",
+      "question": "Which people were born in a given place before a given year, and who are their parents?",
+      "sources": [
+        "gramps"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "gramps": "http_endpoint"
+      },
+      "columns": [
+        "personName",
+        "birthPlace",
+        "birthYear",
+        "parentName"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "gramps/single.json"
+      ]
+    },
+    {
+      "id": "gramps.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'gramps'; LET s1 = FOREIGN SCAN 'nextcloud'; JOIN s0, s1",
+      "question": "Which Gramps people have a photo or document reference that exists as a file in Nextcloud?",
+      "sources": [
+        "gramps",
+        "nextcloud"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "gramps": "http_endpoint",
+        "nextcloud": "http_endpoint"
+      },
+      "columns": [
+        "personName",
+        "mediaPath"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "gramps/cross_nextcloud.json",
+        "nextcloud/cross_gramps.json"
+      ]
+    }
+  ]
+}

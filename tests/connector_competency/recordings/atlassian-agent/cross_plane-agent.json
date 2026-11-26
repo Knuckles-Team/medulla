@@ -1,0 +1,22 @@
+{
+  "source": "atlassian-agent",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "key": "PROJ-3",
+      "status": "open",
+      "pullRequestUrl": "https://example.invalid/r/pull/9",
+      "joinKey": "chg-3",
+      "id": "atlassian-agent-cross_plane-agent-1",
+      "label": "PROJ-3"
+    },
+    {
+      "key": "PROJ-4",
+      "status": "done",
+      "pullRequestUrl": "https://example.invalid/r/pull/10",
+      "joinKey": "chg-4",
+      "id": "atlassian-agent-cross_plane-agent-2",
+      "label": "PROJ-4"
+    }
+  ]
+}

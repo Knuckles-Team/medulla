@@ -1,0 +1,21 @@
+{
+  "source": "home-assistant",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "deviceName": "NAS fan",
+      "entityState": "unavailable",
+      "unavailableSince": "2026-11-19T03:00:00Z",
+      "joinKey": "dev-1",
+      "id": "home-assistant-cross_fan-manager-1",
+      "label": "NAS fan"
+    },
+    {
+      "deviceName": "Lamp",
+      "entityState": "on",
+      "joinKey": "dev-2",
+      "id": "home-assistant-cross_fan-manager-2",
+      "label": "Lamp"
+    }
+  ]
+}

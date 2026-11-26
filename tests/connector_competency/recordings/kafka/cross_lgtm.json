@@ -1,0 +1,20 @@
+{
+  "source": "kafka",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "consumerGroup": "billing",
+      "lag": 5000,
+      "joinKey": "svc-1",
+      "id": "kafka-cross_lgtm-1",
+      "label": "billing"
+    },
+    {
+      "consumerGroup": "audit",
+      "lag": 3,
+      "joinKey": "svc-2",
+      "id": "kafka-cross_lgtm-2",
+      "label": "audit"
+    }
+  ]
+}

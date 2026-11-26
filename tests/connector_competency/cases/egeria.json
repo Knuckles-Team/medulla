@@ -1,0 +1,40 @@
+{
+  "connector": "egeria",
+  "rollup": "MEDULLA-CQ-CONN-R017",
+  "vocabulary_module": "core-foundation-v1.ttl",
+  "terms": [
+    "GlossaryTerm",
+    "termAssignedTo"
+  ],
+  "questions": [
+    {
+      "id": "egeria.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'egeria'; LET s1 = FOREIGN SCAN 'sql'; LET s2 = FOREIGN SCAN 'jena'; JOIN s0, s1, s2",
+      "question": "Which Egeria-cataloged assets correspond to a live SQL table, and which are cataloged but missing?",
+      "sources": [
+        "egeria",
+        "sql",
+        "jena"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "egeria": "mcp_tool",
+        "sql": "http_endpoint",
+        "jena": "http_endpoint"
+      },
+      "columns": [
+        "assetName",
+        "tableName",
+        "missing"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "egeria/cross_sql.json",
+        "sql/cross_egeria.json",
+        "egeria/cross_jena.json",
+        "jena/cross_egeria.json"
+      ]
+    }
+  ]
+}

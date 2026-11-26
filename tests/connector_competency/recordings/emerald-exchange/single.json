@@ -1,0 +1,30 @@
+{
+  "source": "emerald-exchange",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "orderId": "o-1",
+      "orderQty": 10,
+      "filledQty": 4,
+      "status": "open",
+      "id": "emerald-exchange-single-1",
+      "label": "o-1"
+    },
+    {
+      "orderId": "o-2",
+      "orderQty": 5,
+      "filledQty": 5,
+      "status": "filled",
+      "id": "emerald-exchange-single-2",
+      "label": "o-2"
+    },
+    {
+      "orderId": "o-3",
+      "orderQty": 8,
+      "filledQty": 0,
+      "status": "open",
+      "id": "emerald-exchange-single-3",
+      "label": "o-3"
+    }
+  ]
+}

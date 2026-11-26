@@ -1,0 +1,20 @@
+{
+  "source": "gitlab_api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "repositoryName": "app",
+      "headCommit": "c0ffee1",
+      "joinKey": "repo-1",
+      "id": "gitlab_api-cross_repository-manager-1",
+      "label": "app"
+    },
+    {
+      "repositoryName": "lib",
+      "headCommit": "abc1234",
+      "joinKey": "repo-2",
+      "id": "gitlab_api-cross_repository-manager-2",
+      "label": "lib"
+    }
+  ]
+}

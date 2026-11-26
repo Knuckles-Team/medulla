@@ -1,0 +1,41 @@
+{
+  "connector": "clarity",
+  "rollup": "MEDULLA-CQ-CONN-R012",
+  "vocabulary_module": "retrieval-v1.ttl",
+  "terms": [
+    ":WebResource",
+    ":rageClickRate",
+    ":changesResource"
+  ],
+  "questions": [
+    {
+      "id": "clarity.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'clarity-api'; LET s1 = FOREIGN SCAN 'github-agent'; LET s2 = FOREIGN SCAN 'plane-agent'; JOIN s0, s1, s2",
+      "question": "Which pages with a spike in rage clicks were changed by a pull request merged in the previous week?",
+      "sources": [
+        "clarity-api",
+        "github-agent",
+        "plane-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "clarity-api": "http_endpoint",
+        "github-agent": "a2a_skill",
+        "plane-agent": "a2a_skill"
+      },
+      "columns": [
+        "url",
+        "pullRequestUrl",
+        "mergedAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "clarity-api/cross_github-agent.json",
+        "github-agent/cross_clarity-api.json",
+        "clarity-api/cross_plane-agent.json",
+        "plane-agent/cross_clarity-api.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "source": "aris-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "modelId": "m-1",
+      "functionId": "fn-1",
+      "name": "Check order",
+      "outgoing": 0,
+      "id": "aris-mcp-single-1",
+      "label": "m-1"
+    },
+    {
+      "modelId": "m-1",
+      "functionId": "fn-2",
+      "name": "Ship order",
+      "outgoing": 1,
+      "id": "aris-mcp-single-2",
+      "label": "m-1"
+    }
+  ]
+}

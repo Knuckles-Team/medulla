@@ -1,0 +1,62 @@
+{
+  "connector": "caddy",
+  "rollup": "MEDULLA-CQ-CONN-R009",
+  "vocabulary_module": "infrastructure-v1.ttl",
+  "terms": [
+    "routeHostname",
+    "upstreamAddress"
+  ],
+  "questions": [
+    {
+      "id": "caddy.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'caddy-mcp'",
+      "question": "Which routes proxy to a given upstream, and which hostnames are served by each site block?",
+      "sources": [
+        "caddy-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "caddy-mcp": "mcp_tool"
+      },
+      "columns": [
+        "routeId",
+        "routeHostname",
+        "upstreamAddress"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "caddy-mcp/single.json"
+      ]
+    },
+    {
+      "id": "caddy.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'caddy-mcp'; LET s1 = FOREIGN SCAN 'technitium-dns-mcp'; LET s2 = FOREIGN SCAN 'uptime-kuma-agent'; JOIN s0, s1, s2",
+      "question": "Which Caddy hostnames have no DNS record in Technitium or no Uptime Kuma monitor?",
+      "sources": [
+        "caddy-mcp",
+        "technitium-dns-mcp",
+        "uptime-kuma-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "caddy-mcp": "mcp_tool",
+        "technitium-dns-mcp": "mcp_tool",
+        "uptime-kuma-agent": "a2a_skill"
+      },
+      "columns": [
+        "routeHostname",
+        "missingDns",
+        "missingMonitor"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "caddy-mcp/cross_technitium-dns-mcp.json",
+        "technitium-dns-mcp/cross_caddy-mcp.json",
+        "caddy-mcp/cross_uptime-kuma-agent.json",
+        "uptime-kuma-agent/cross_caddy-mcp.json"
+      ]
+    }
+  ]
+}

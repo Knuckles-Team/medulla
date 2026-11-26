@@ -1,0 +1,24 @@
+{
+  "source": "egeria",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "assetName": "orders",
+      "joinKey": "ds-1",
+      "id": "egeria-cross_sql-1",
+      "label": "orders"
+    },
+    {
+      "assetName": "invoices",
+      "joinKey": "ds-2",
+      "id": "egeria-cross_sql-2",
+      "label": "invoices"
+    },
+    {
+      "assetName": "ghost_ledger",
+      "joinKey": "ds-3",
+      "id": "egeria-cross_sql-3",
+      "label": "ghost_ledger"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "source": "jellyfin",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "filmTitle": "Old Unplayed",
+      "addedAt": "2025-06-01T00:00:00Z",
+      "playCount": 0,
+      "id": "jellyfin-single-1",
+      "label": "Old Unplayed"
+    },
+    {
+      "filmTitle": "Old Played",
+      "addedAt": "2025-06-01T00:00:00Z",
+      "playCount": 3,
+      "id": "jellyfin-single-2",
+      "label": "Old Played"
+    },
+    {
+      "filmTitle": "New Unplayed",
+      "addedAt": "2026-10-01T00:00:00Z",
+      "playCount": 0,
+      "id": "jellyfin-single-3",
+      "label": "New Unplayed"
+    }
+  ]
+}

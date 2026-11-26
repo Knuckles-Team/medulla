@@ -1,0 +1,12 @@
+{
+  "source": "archimate-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "serviceName": "Orders",
+      "joinKey": "svc-a",
+      "id": "archimate-mcp-cross_camunda-mcp-1",
+      "label": "Orders"
+    }
+  ]
+}

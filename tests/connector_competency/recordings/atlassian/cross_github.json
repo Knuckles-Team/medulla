@@ -1,0 +1,20 @@
+{
+  "source": "atlassian",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "issueKey": "PROJ-7",
+      "issueState": "open",
+      "joinKey": "chg-1",
+      "id": "atlassian-cross_github-1",
+      "label": "PROJ-7"
+    },
+    {
+      "issueKey": "PROJ-8",
+      "issueState": "done",
+      "joinKey": "chg-2",
+      "id": "atlassian-cross_github-2",
+      "label": "PROJ-8"
+    }
+  ]
+}

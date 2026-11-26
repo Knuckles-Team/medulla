@@ -1,0 +1,12 @@
+{
+  "source": "leanix-agent",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "factSheetName": "billing",
+      "joinKey": "app-1",
+      "id": "leanix-agent-cross_archimate-mcp-1",
+      "label": "billing"
+    }
+  ]
+}

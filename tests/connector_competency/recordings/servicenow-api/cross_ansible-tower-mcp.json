@@ -1,0 +1,14 @@
+{
+  "source": "servicenow-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "number": "INC001",
+      "state": "open",
+      "cmdbCi": "h-1",
+      "joinKey": "host-1",
+      "id": "servicenow-api-cross_ansible-tower-mcp-1",
+      "label": "INC001"
+    }
+  ]
+}

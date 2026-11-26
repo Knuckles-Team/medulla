@@ -1,0 +1,12 @@
+{
+  "source": "nextcloud",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "filePath": "/Photos/ada.jpg",
+      "joinKey": "media-1",
+      "id": "nextcloud-cross_gramps-1",
+      "label": "/Photos/ada.jpg"
+    }
+  ]
+}

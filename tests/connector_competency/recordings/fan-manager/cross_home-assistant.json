@@ -1,0 +1,12 @@
+{
+  "source": "fan-manager",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "fanName": "NAS fan",
+      "joinKey": "dev-1",
+      "id": "fan-manager-cross_home-assistant-1",
+      "label": "NAS fan"
+    }
+  ]
+}

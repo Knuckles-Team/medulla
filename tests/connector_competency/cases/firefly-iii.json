@@ -1,0 +1,66 @@
+{
+  "connector": "firefly-iii",
+  "rollup": "MEDULLA-CQ-CONN-R021",
+  "vocabulary_module": "finance-v1.ttl",
+  "terms": [
+    "Budget",
+    "budgetLimit",
+    "LedgerTransaction",
+    "chargedToBudget",
+    "transactionAmount"
+  ],
+  "questions": [
+    {
+      "id": "firefly-iii.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'firefly-iii'",
+      "question": "Which budgets were exceeded this month, and by which transactions?",
+      "sources": [
+        "firefly-iii"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "firefly-iii": "http_endpoint"
+      },
+      "columns": [
+        "budgetName",
+        "budgetLimit",
+        "transactionId",
+        "transactionAmount"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "firefly-iii/single.json"
+      ]
+    },
+    {
+      "id": "firefly-iii.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'firefly-iii'; LET s1 = FOREIGN SCAN 'erpnext'; LET s2 = FOREIGN SCAN 'emerald-exchange'; JOIN s0, s1, s2",
+      "question": "Which Firefly III expenses match an ERPNext purchase invoice by amount and date?",
+      "sources": [
+        "firefly-iii",
+        "erpnext",
+        "emerald-exchange"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "firefly-iii": "http_endpoint",
+        "erpnext": "mcp_tool",
+        "emerald-exchange": "mcp_tool"
+      },
+      "columns": [
+        "transactionId",
+        "transactionAmount",
+        "invoiceId"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "firefly-iii/cross_erpnext.json",
+        "erpnext/cross_firefly-iii.json",
+        "firefly-iii/cross_emerald-exchange.json",
+        "emerald-exchange/cross_firefly-iii.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "source": "dockerhub-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "name": "example/app",
+      "lastPushedAt": "2025-02-01T00:00:00Z",
+      "joinKey": "repo-5",
+      "id": "dockerhub-api-cross_container-manager-mcp-1",
+      "label": "example/app"
+    },
+    {
+      "name": "example/lib",
+      "lastPushedAt": "2026-11-15T00:00:00Z",
+      "joinKey": "repo-6",
+      "id": "dockerhub-api-cross_container-manager-mcp-2",
+      "label": "example/lib"
+    }
+  ]
+}

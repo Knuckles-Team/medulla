@@ -1,0 +1,62 @@
+{
+  "connector": "aris",
+  "rollup": "MEDULLA-CQ-CONN-R004",
+  "vocabulary_module": "process_intelligence-v1.ttl",
+  "terms": [
+    ":EpcFunction",
+    ":flowsTo",
+    ":hasEpcNode"
+  ],
+  "questions": [
+    {
+      "id": "aris.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'aris-mcp'",
+      "question": "Which EPC functions in a process model lack an outgoing control-flow connection?",
+      "sources": [
+        "aris-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "aris-mcp": "mcp_tool"
+      },
+      "columns": [
+        "modelId",
+        "functionId",
+        "name"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "aris-mcp/single.json"
+      ]
+    },
+    {
+      "id": "aris.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'aris-mcp'; LET s1 = FOREIGN SCAN 'camunda-mcp'; LET s2 = FOREIGN SCAN 'archimate-mcp'; JOIN s0, s1, s2",
+      "question": "Which ARIS-modelled processes have a deployed Camunda definition, and which do not?",
+      "sources": [
+        "aris-mcp",
+        "camunda-mcp",
+        "archimate-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "aris-mcp": "mcp_tool",
+        "camunda-mcp": "mcp_tool",
+        "archimate-mcp": "mcp_tool"
+      },
+      "columns": [
+        "processName",
+        "deployed"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "aris-mcp/cross_camunda-mcp.json",
+        "camunda-mcp/cross_aris-mcp.json",
+        "aris-mcp/cross_archimate-mcp.json",
+        "archimate-mcp/cross_aris-mcp.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "source": "langfuse",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "serviceName": "billing-svc",
+      "joinKey": "svc-1",
+      "id": "langfuse-cross_kafka-1",
+      "label": "billing-svc"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "source": "archivebox-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "url": "https://example.invalid/a",
+      "extractor": "wget",
+      "resultStatus": "failed",
+      "finishedAt": "2026-11-10T00:00:00Z",
+      "id": "archivebox-api-single-1",
+      "label": "https://example.invalid/a"
+    },
+    {
+      "url": "https://example.invalid/b",
+      "extractor": "pdf",
+      "resultStatus": "succeeded",
+      "finishedAt": "2026-11-10T00:00:00Z",
+      "id": "archivebox-api-single-2",
+      "label": "https://example.invalid/b"
+    }
+  ]
+}

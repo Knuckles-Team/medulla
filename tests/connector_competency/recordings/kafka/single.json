@@ -1,0 +1,22 @@
+{
+  "source": "kafka",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "consumerGroup": "billing",
+      "topic": "orders",
+      "partition": 0,
+      "lag": 5000,
+      "id": "kafka-single-1",
+      "label": "billing"
+    },
+    {
+      "consumerGroup": "audit",
+      "topic": "orders",
+      "partition": 1,
+      "lag": 3,
+      "id": "kafka-single-2",
+      "label": "audit"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "connector": "emerald-exchange",
+  "rollup": "MEDULLA-CQ-CONN-R018",
+  "vocabulary_module": "finance-v1.ttl",
+  "terms": [
+    "orderQty",
+    "filledQty"
+  ],
+  "questions": [
+    {
+      "id": "emerald-exchange.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'emerald-exchange'",
+      "question": "Which open orders on an exchange are partially filled and what is their remaining quantity?",
+      "sources": [
+        "emerald-exchange"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "emerald-exchange": "mcp_tool"
+      },
+      "columns": [
+        "orderId",
+        "orderQty",
+        "filledQty"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "emerald-exchange/single.json"
+      ]
+    },
+    {
+      "id": "emerald-exchange.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'emerald-exchange'; LET s1 = FOREIGN SCAN 'firefly-iii'; LET s2 = FOREIGN SCAN 'home-assistant'; JOIN s0, s1, s2",
+      "question": "Which exchange fills correspond to a deposit or withdrawal recorded in the Firefly III ledger?",
+      "sources": [
+        "emerald-exchange",
+        "firefly-iii",
+        "home-assistant"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "emerald-exchange": "mcp_tool",
+        "firefly-iii": "http_endpoint",
+        "home-assistant": "http_endpoint"
+      },
+      "columns": [
+        "fillId",
+        "currency",
+        "transactionId"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "emerald-exchange/cross_firefly-iii.json",
+        "firefly-iii/cross_emerald-exchange.json",
+        "emerald-exchange/cross_home-assistant.json",
+        "home-assistant/cross_emerald-exchange.json"
+      ]
+    }
+  ]
+}

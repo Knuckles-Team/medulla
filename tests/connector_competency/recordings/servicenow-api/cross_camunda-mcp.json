@@ -1,0 +1,13 @@
+{
+  "source": "servicenow-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "number": "INC002",
+      "state": "open",
+      "joinKey": "svc-a",
+      "id": "servicenow-api-cross_camunda-mcp-1",
+      "label": "INC002"
+    }
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "source": "ciso-assistant-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "riskScenarioName": "Credential theft",
+      "serviceRef": "svc-sso",
+      "joinKey": "svc-c",
+      "id": "ciso-assistant-api-cross_onetrust-api-1",
+      "label": "Credential theft"
+    },
+    {
+      "riskScenarioName": "Insider misuse",
+      "serviceRef": "svc-hr",
+      "joinKey": "svc-d",
+      "id": "ciso-assistant-api-cross_onetrust-api-2",
+      "label": "Insider misuse"
+    }
+  ]
+}

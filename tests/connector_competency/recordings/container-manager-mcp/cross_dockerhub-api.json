@@ -1,0 +1,12 @@
+{
+  "source": "container-manager-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "image": "example/app",
+      "joinKey": "repo-5",
+      "id": "container-manager-mcp-cross_dockerhub-api-1",
+      "label": "example/app"
+    }
+  ]
+}

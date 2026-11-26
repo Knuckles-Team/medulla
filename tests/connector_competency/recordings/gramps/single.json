@@ -1,0 +1,22 @@
+{
+  "source": "gramps",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "personName": "Ada",
+      "birthPlace": "Springfield",
+      "birthYear": 1890,
+      "parentName": "Ben",
+      "id": "gramps-single-1",
+      "label": "Ada"
+    },
+    {
+      "personName": "Cy",
+      "birthPlace": "Springfield",
+      "birthYear": 1950,
+      "parentName": "Dee",
+      "id": "gramps-single-2",
+      "label": "Cy"
+    }
+  ]
+}

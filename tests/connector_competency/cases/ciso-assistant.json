@@ -1,0 +1,63 @@
+{
+  "connector": "ciso-assistant",
+  "rollup": "MEDULLA-CQ-CONN-R011",
+  "vocabulary_module": "government-v1.ttl",
+  "terms": [
+    ":RiskScenario",
+    ":mitigatesRisk",
+    ":inFramework",
+    ":riskAffectsService"
+  ],
+  "questions": [
+    {
+      "id": "ciso-assistant.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'ciso-assistant-api'",
+      "question": "Which controls in an applied framework are non-compliant and which risk scenarios do they mitigate?",
+      "sources": [
+        "ciso-assistant-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "ciso-assistant-api": "http_endpoint"
+      },
+      "columns": [
+        "controlId",
+        "riskScenarioName"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "ciso-assistant-api/single.json"
+      ]
+    },
+    {
+      "id": "ciso-assistant.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'ciso-assistant-api'; LET s1 = FOREIGN SCAN 'onetrust-api'; LET s2 = FOREIGN SCAN 'servicenow-api'; JOIN s0, s1, s2",
+      "question": "Which CISO Assistant risks map to a ServiceNow CMDB service with an open incident?",
+      "sources": [
+        "ciso-assistant-api",
+        "onetrust-api",
+        "servicenow-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "ciso-assistant-api": "http_endpoint",
+        "onetrust-api": "http_endpoint",
+        "servicenow-api": "http_endpoint"
+      },
+      "columns": [
+        "riskScenarioName",
+        "serviceRef",
+        "number"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "ciso-assistant-api/cross_onetrust-api.json",
+        "onetrust-api/cross_ciso-assistant-api.json",
+        "ciso-assistant-api/cross_servicenow-api.json",
+        "servicenow-api/cross_ciso-assistant-api.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "source": "sql",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "tableName": "orders",
+      "joinKey": "ds-1",
+      "id": "sql-cross_jena-1",
+      "label": "orders"
+    }
+  ]
+}

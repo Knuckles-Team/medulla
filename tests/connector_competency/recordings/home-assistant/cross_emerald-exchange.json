@@ -1,0 +1,12 @@
+{
+  "source": "home-assistant",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "entityId": "sensor.wallet",
+      "joinKey": "acct-1",
+      "id": "home-assistant-cross_emerald-exchange-1",
+      "label": "sensor.wallet"
+    }
+  ]
+}

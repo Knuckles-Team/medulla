@@ -1,0 +1,60 @@
+{
+  "connector": "camunda",
+  "rollup": "MEDULLA-CQ-CONN-R010",
+  "vocabulary_module": "process_intelligence-v1.ttl",
+  "terms": [
+    ":instanceOfProcessModel",
+    ":ProcessInstance"
+  ],
+  "questions": [
+    {
+      "id": "camunda.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'camunda-mcp'",
+      "question": "Which process instances have an open incident, and at which activity did they stop?",
+      "sources": [
+        "camunda-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "camunda-mcp": "mcp_tool"
+      },
+      "columns": [
+        "processInstanceId",
+        "activityId"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "camunda-mcp/single.json"
+      ]
+    },
+    {
+      "id": "camunda.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'camunda-mcp'; LET s1 = FOREIGN SCAN 'archimate-mcp'; LET s2 = FOREIGN SCAN 'servicenow-api'; JOIN s0, s1, s2",
+      "question": "Which running Camunda process definitions have an open ServiceNow incident raised against their service?",
+      "sources": [
+        "camunda-mcp",
+        "archimate-mcp",
+        "servicenow-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "camunda-mcp": "mcp_tool",
+        "archimate-mcp": "mcp_tool",
+        "servicenow-api": "http_endpoint"
+      },
+      "columns": [
+        "definitionKey",
+        "number"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "camunda-mcp/cross_archimate-mcp.json",
+        "archimate-mcp/cross_camunda-mcp.json",
+        "camunda-mcp/cross_servicenow-api.json",
+        "servicenow-api/cross_camunda-mcp.json"
+      ]
+    }
+  ]
+}

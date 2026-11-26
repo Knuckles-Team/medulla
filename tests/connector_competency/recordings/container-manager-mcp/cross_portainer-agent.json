@@ -1,0 +1,20 @@
+{
+  "source": "container-manager-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "repository": "example/app",
+      "deployedTag": "1.0.0",
+      "joinKey": "img-1",
+      "id": "container-manager-mcp-cross_portainer-agent-1",
+      "label": "example/app"
+    },
+    {
+      "repository": "example/db",
+      "deployedTag": "2.1.0",
+      "joinKey": "img-2",
+      "id": "container-manager-mcp-cross_portainer-agent-2",
+      "label": "example/db"
+    }
+  ]
+}

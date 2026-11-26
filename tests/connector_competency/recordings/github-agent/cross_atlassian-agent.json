@@ -1,0 +1,13 @@
+{
+  "source": "github-agent",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "pullRequestUrl": "https://example.invalid/r/pull/9",
+      "mergedAt": "2026-11-15T00:00:00Z",
+      "joinKey": "chg-3",
+      "id": "github-agent-cross_atlassian-agent-1",
+      "label": "https://example.invalid/r/pull/9"
+    }
+  ]
+}

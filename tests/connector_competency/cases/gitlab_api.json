@@ -1,0 +1,66 @@
+{
+  "connector": "gitlab_api",
+  "rollup": "MEDULLA-CQ-CONN-R024",
+  "vocabulary_module": "sdlc_lifecycle-v1.ttl",
+  "terms": [
+    "PipelineJob",
+    "pipelineJobOf",
+    "branchOf",
+    "headCommit",
+    "isDefaultBranch",
+    "Branch"
+  ],
+  "questions": [
+    {
+      "id": "gitlab_api.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'gitlab_api'",
+      "question": "Which pipelines on the default branch failed in the last day, and at which job?",
+      "sources": [
+        "gitlab_api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "gitlab_api": "http_endpoint"
+      },
+      "columns": [
+        "pipelineId",
+        "jobName",
+        "finishedAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "gitlab_api/single.json"
+      ]
+    },
+    {
+      "id": "gitlab_api.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'gitlab_api'; LET s1 = FOREIGN SCAN 'github'; LET s2 = FOREIGN SCAN 'repository-manager'; JOIN s0, s1, s2",
+      "question": "Which repositories exist in GitLab and GitHub with diverging default-branch heads?",
+      "sources": [
+        "gitlab_api",
+        "github",
+        "repository-manager"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "gitlab_api": "http_endpoint",
+        "github": "a2a_skill",
+        "repository-manager": "mcp_tool"
+      },
+      "columns": [
+        "repositoryName",
+        "gitlabHead",
+        "githubHead"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "gitlab_api/cross_github.json",
+        "github/cross_gitlab_api.json",
+        "gitlab_api/cross_repository-manager.json",
+        "repository-manager/cross_gitlab_api.json"
+      ]
+    }
+  ]
+}

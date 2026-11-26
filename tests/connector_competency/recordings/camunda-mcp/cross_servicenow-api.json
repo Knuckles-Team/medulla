@@ -1,0 +1,20 @@
+{
+  "source": "camunda-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "definitionKey": "order_to_cash",
+      "state": "running",
+      "joinKey": "svc-a",
+      "id": "camunda-mcp-cross_servicenow-api-1",
+      "label": "order_to_cash"
+    },
+    {
+      "definitionKey": "returns",
+      "state": "running",
+      "joinKey": "svc-b",
+      "id": "camunda-mcp-cross_servicenow-api-2",
+      "label": "returns"
+    }
+  ]
+}

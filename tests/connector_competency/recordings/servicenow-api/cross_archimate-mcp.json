@@ -1,0 +1,12 @@
+{
+  "source": "servicenow-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "ciName": "Billing",
+      "joinKey": "app-1",
+      "id": "servicenow-api-cross_archimate-mcp-1",
+      "label": "Billing"
+    }
+  ]
+}

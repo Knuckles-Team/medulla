@@ -1,0 +1,12 @@
+{
+  "source": "plane-agent",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "workItemKey": "PL-1",
+      "joinKey": "chg-3",
+      "id": "plane-agent-cross_atlassian-agent-1",
+      "label": "PL-1"
+    }
+  ]
+}

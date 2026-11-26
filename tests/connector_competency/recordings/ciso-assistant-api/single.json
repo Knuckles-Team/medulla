@@ -1,0 +1,20 @@
+{
+  "source": "ciso-assistant-api",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "controlId": "AC-1",
+      "complianceStatus": "non_compliant",
+      "riskScenarioName": "Credential theft",
+      "id": "ciso-assistant-api-single-1",
+      "label": "AC-1"
+    },
+    {
+      "controlId": "AC-2",
+      "complianceStatus": "compliant",
+      "riskScenarioName": "Insider misuse",
+      "id": "ciso-assistant-api-single-2",
+      "label": "AC-2"
+    }
+  ]
+}

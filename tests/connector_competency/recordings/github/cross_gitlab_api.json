@@ -1,0 +1,20 @@
+{
+  "source": "github",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "repositoryName": "app",
+      "headCommit": "deadbee",
+      "joinKey": "repo-1",
+      "id": "github-cross_gitlab_api-1",
+      "label": "app"
+    },
+    {
+      "repositoryName": "lib",
+      "headCommit": "abc1234",
+      "joinKey": "repo-2",
+      "id": "github-cross_gitlab_api-2",
+      "label": "lib"
+    }
+  ]
+}

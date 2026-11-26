@@ -1,0 +1,35 @@
+{
+  "connector": "jellyfin",
+  "rollup": "MEDULLA-CQ-CONN-R027",
+  "vocabulary_module": "media-v1.ttl",
+  "terms": [
+    "mv:Film",
+    "mv:PlaybackSession",
+    "mv:playCount",
+    "mv:addedAt"
+  ],
+  "questions": [
+    {
+      "id": "jellyfin.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'jellyfin'",
+      "question": "Which movies in a library have never been played and were added more than a year ago?",
+      "sources": [
+        "jellyfin"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "jellyfin": "http_endpoint"
+      },
+      "columns": [
+        "filmTitle",
+        "addedAt",
+        "playCount"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "jellyfin/single.json"
+      ]
+    }
+  ]
+}

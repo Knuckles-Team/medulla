@@ -1,0 +1,20 @@
+{
+  "source": "camunda-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "processInstanceId": "pi-1",
+      "activityId": "review",
+      "incident": "open",
+      "id": "camunda-mcp-single-1",
+      "label": "pi-1"
+    },
+    {
+      "processInstanceId": "pi-2",
+      "activityId": "ship",
+      "incident": null,
+      "id": "camunda-mcp-single-2",
+      "label": "pi-2"
+    }
+  ]
+}

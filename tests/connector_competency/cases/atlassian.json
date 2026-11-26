@@ -1,0 +1,62 @@
+{
+  "connector": "atlassian",
+  "rollup": "MEDULLA-CQ-CONN-R006",
+  "vocabulary_module": "sdlc_lifecycle-v1.ttl",
+  "terms": [
+    ":blockedBy",
+    ":assignedTo",
+    ":closesTicket"
+  ],
+  "questions": [
+    {
+      "id": "atlassian.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'atlassian-agent'",
+      "question": "Which Jira issues in a project are blocked and unassigned, and by which linked issue?",
+      "sources": [
+        "atlassian-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "atlassian-agent": "a2a_skill"
+      },
+      "columns": [
+        "key",
+        "blockedBy"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "atlassian-agent/single.json"
+      ]
+    },
+    {
+      "id": "atlassian.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'atlassian-agent'; LET s1 = FOREIGN SCAN 'github-agent'; LET s2 = FOREIGN SCAN 'plane-agent'; JOIN s0, s1, s2",
+      "question": "Which open Jira issues reference a GitHub pull request that is already merged?",
+      "sources": [
+        "atlassian-agent",
+        "github-agent",
+        "plane-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "atlassian-agent": "a2a_skill",
+        "github-agent": "a2a_skill",
+        "plane-agent": "a2a_skill"
+      },
+      "columns": [
+        "key",
+        "pullRequestUrl",
+        "mergedAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "atlassian-agent/cross_github-agent.json",
+        "github-agent/cross_atlassian-agent.json",
+        "atlassian-agent/cross_plane-agent.json",
+        "plane-agent/cross_atlassian-agent.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "source": "technitium-dns-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "recordName": "app.example.invalid",
+      "joinKey": "host-a",
+      "id": "technitium-dns-mcp-cross_caddy-mcp-1",
+      "label": "app.example.invalid"
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "connector": "jena",
+  "rollup": "MEDULLA-CQ-CONN-R028",
+  "vocabulary_module": "virtual_graph-v1.ttl",
+  "terms": [
+    "NamedGraph",
+    "tripleCount",
+    "lastModifiedAt"
+  ],
+  "questions": [
+    {
+      "id": "jena.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'jena'",
+      "question": "Which named graphs contain the most triples and which have no recent update?",
+      "sources": [
+        "jena"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "jena": "http_endpoint"
+      },
+      "columns": [
+        "graphName",
+        "tripleCount",
+        "lastModifiedAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "jena/single.json"
+      ]
+    },
+    {
+      "id": "jena.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'jena'; LET s1 = FOREIGN SCAN 'egeria'; LET s2 = FOREIGN SCAN 'sql'; JOIN s0, s1, s2",
+      "question": "Which Jena named graphs describe the same entities as an Egeria-cataloged asset?",
+      "sources": [
+        "jena",
+        "egeria",
+        "sql"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "jena": "http_endpoint",
+        "egeria": "mcp_tool",
+        "sql": "http_endpoint"
+      },
+      "columns": [
+        "graphName",
+        "assetName"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "jena/cross_egeria.json",
+        "egeria/cross_jena.json",
+        "jena/cross_sql.json",
+        "sql/cross_jena.json"
+      ]
+    }
+  ]
+}

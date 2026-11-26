@@ -1,0 +1,30 @@
+{
+  "source": "freshrss",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "articleTitle": "Release notes",
+      "feed": "feed-1",
+      "isRead": false,
+      "publishedAt": "2026-11-19T10:00:00Z",
+      "id": "freshrss-single-1",
+      "label": "Release notes"
+    },
+    {
+      "articleTitle": "Old post",
+      "feed": "feed-1",
+      "isRead": false,
+      "publishedAt": "2026-10-01T10:00:00Z",
+      "id": "freshrss-single-2",
+      "label": "Old post"
+    },
+    {
+      "articleTitle": "Read post",
+      "feed": "feed-1",
+      "isRead": true,
+      "publishedAt": "2026-11-19T11:00:00Z",
+      "id": "freshrss-single-3",
+      "label": "Read post"
+    }
+  ]
+}

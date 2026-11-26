@@ -1,0 +1,62 @@
+{
+  "connector": "dockerhub",
+  "rollup": "MEDULLA-CQ-CONN-R015",
+  "vocabulary_module": "infrastructure-v1.ttl",
+  "terms": [
+    "lastPushedAt",
+    "pullCount"
+  ],
+  "questions": [
+    {
+      "id": "dockerhub.q1",
+      "kind": "single",
+      "uql": "FOREIGN SCAN 'dockerhub-api'",
+      "question": "Which repositories in an organization have not been pushed to in a year, and what are their pull counts?",
+      "sources": [
+        "dockerhub-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "dockerhub-api": "http_endpoint"
+      },
+      "columns": [
+        "name",
+        "lastPushedAt",
+        "pullCount"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "dockerhub-api/single.json"
+      ]
+    },
+    {
+      "id": "dockerhub.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'dockerhub-api'; LET s1 = FOREIGN SCAN 'container-manager-mcp'; LET s2 = FOREIGN SCAN 'github-agent'; JOIN s0, s1, s2",
+      "question": "Which Docker Hub repositories correspond to a GitHub repository with recent commits but no recent image push?",
+      "sources": [
+        "dockerhub-api",
+        "container-manager-mcp",
+        "github-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "dockerhub-api": "http_endpoint",
+        "container-manager-mcp": "mcp_tool",
+        "github-agent": "a2a_skill"
+      },
+      "columns": [
+        "name",
+        "pushedAt",
+        "lastPushedAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "dockerhub-api/cross_container-manager-mcp.json",
+        "container-manager-mcp/cross_dockerhub-api.json",
+        "dockerhub-api/cross_github-agent.json",
+        "github-agent/cross_dockerhub-api.json"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+{
+  "connector": "container-manager",
+  "rollup": "MEDULLA-CQ-CONN-R013",
+  "vocabulary_module": "infrastructure-v1.ttl",
+  "terms": [
+    ":ContainerImage"
+  ],
+  "questions": [
+    {
+      "id": "container-manager.q2",
+      "kind": "cross",
+      "uql": "LET s0 = FOREIGN SCAN 'container-manager-mcp'; LET s1 = FOREIGN SCAN 'dockerhub-api'; LET s2 = FOREIGN SCAN 'portainer-agent'; JOIN s0, s1, s2",
+      "question": "Which running images have a newer tag on Docker Hub than the one deployed?",
+      "sources": [
+        "container-manager-mcp",
+        "dockerhub-api",
+        "portainer-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "container-manager-mcp": "mcp_tool",
+        "dockerhub-api": "http_endpoint",
+        "portainer-agent": "a2a_skill"
+      },
+      "columns": [
+        "repository",
+        "deployedTag",
+        "newerTag"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "container-manager-mcp/cross_dockerhub-api.json",
+        "dockerhub-api/cross_container-manager-mcp.json",
+        "container-manager-mcp/cross_portainer-agent.json",
+        "portainer-agent/cross_container-manager-mcp.json"
+      ]
+    }
+  ]
+}

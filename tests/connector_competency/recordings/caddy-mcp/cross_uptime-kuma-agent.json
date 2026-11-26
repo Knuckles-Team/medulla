@@ -1,0 +1,18 @@
+{
+  "source": "caddy-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "routeHostname": "app.example.invalid",
+      "joinKey": "host-a",
+      "id": "caddy-mcp-cross_uptime-kuma-agent-1",
+      "label": "app.example.invalid"
+    },
+    {
+      "routeHostname": "db.example.invalid",
+      "joinKey": "host-b",
+      "id": "caddy-mcp-cross_uptime-kuma-agent-2",
+      "label": "db.example.invalid"
+    }
+  ]
+}

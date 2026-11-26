@@ -1,0 +1,20 @@
+{
+  "source": "ansible-tower-mcp",
+  "as_of": "2026-11-20T00:00:00Z",
+  "items": [
+    {
+      "hostId": "h-1",
+      "jobStatus": "failed",
+      "joinKey": "host-1",
+      "id": "ansible-tower-mcp-cross_servicenow-api-1",
+      "label": "h-1"
+    },
+    {
+      "hostId": "h-2",
+      "jobStatus": "successful",
+      "joinKey": "host-2",
+      "id": "ansible-tower-mcp-cross_servicenow-api-2",
+      "label": "h-2"
+    }
+  ]
+}
