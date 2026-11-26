@@ -253,7 +253,7 @@ Hot-path proof for `MEDULLA-UNIFIED-DATA-PLANE-R651.7`: `tests/web_document_enri
 | Row | Proving test |
 |---|---|
 | `MEDULLA-UNIFIED-DATA-PLANE-R762.7` | `crates/medulla-types/tests/quality.rs::profile_yields_proposed_rules` |
-| `MEDULLA-UNIFIED-DATA-PLANE-R762.8` | `tests/data_plane/test_quality_served.py::test_outside_scores_open_incident` (planned) |
+| `MEDULLA-UNIFIED-DATA-PLANE-R762.8` | `tests/data_plane/test_quality_served.py::test_outside_scores_open_incident` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R764.7` | `tests/data_plane/test_catalog_search_served.py::test_source_query_log_feeds_usage` |
 | `MEDULLA-UNIFIED-DATA-PLANE-R764.8` | `tests/data_plane/test_catalog_search_served.py::test_frequent_users_and_join_suggestions`; `tests/data_plane/test_catalog_search_served.py::test_usage_refusals` |
 
@@ -353,7 +353,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.1:** `crates/medulla-protocol-types/src/protocol/method/tests/` `register_foreign_source_acceleration_round_trips` (planned, L1).
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.2:** `tests/federation/test_acceleration_served.py::test_copy_policy_without_capability_is_refused` (planned, L4).
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.3:** `crates/medulla-federation/src/federation_opt/tests.rs::registered_policy_reaches_the_resolved_remote` (planned, L2).
-- **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4:** `crates/medulla-catalog-types/src/metadata_acceleration.rs::tests::expired_watermark_falls_back_to_live` (L1). `resolve_mode(now_ms = valid_through_ms + 1, valid_through_ms)` gives `Live`, `now_ms == valid_through_ms` gives `Copy`, and `copy_admitted(policy, max + 1, max)` refuses `COPY_ROW_CAP_EXCEEDED`. (planned for the route; the model test exists).
+- **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4:** `crates/medulla-catalog-types/src/metadata_acceleration.rs::tests::expired_watermark_falls_back_to_live` (L1). `resolve_mode(now_ms = valid_through_ms + 1, valid_through_ms)` gives `Live`, `now_ms == valid_through_ms` gives `Copy`, and `copy_admitted(policy, max + 1, max)` refuses `COPY_ROW_CAP_EXCEEDED`.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4:** `tests/federation/test_acceleration_served.py::test_stale_watermark_reads_live` (L4), using the `clean_graph` and `pg_source` fixtures of that file. The test registers the source with `acceleration = {source_supports_copy: true, hot_subset_predicate: "id < 10", freshness_watermark: "2000-01-01T00:00:00Z"}`, runs a `UnifiedQuery` with trace, and asserts that the rows equal the source's and the fragment reports `live`. Registering `{source_supports_copy: false, hot_subset_predicate: "id < 10"}` refuses `COPY_CAPABILITY_MISSING` and writes no source.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.3:** `crates/medulla-federation/src/federation_opt/tests.rs::trace_names_route_per_fragment` (planned). Proves the row: EXPLAIN states whether each fragment ran live or from a copy.
 - **MEDULLA-UNIFIED-DATA-PLANE-R038.2.3:** `tests/federation/test_acceleration_served.py::test_explain_names_live_and_copy` (planned). Proves the row: EXPLAIN states whether each fragment ran live or from a copy.
@@ -415,7 +415,7 @@ These entries name tests that do not exist yet. Each is the exact post-split pat
 - `MEDULLA-UNIFIED-DATA-PLANE-R026.3.2`: `tests/native_hosting_gramps.rs::p4_restore_and_p5_schema` (planned). L3: three equal restore digests and the schema answer.
 - `MEDULLA-UNIFIED-DATA-PLANE-R029.2`: `tests/data_plane/test_schema_context_served.py::test_schema_context_answers_each_intent_and_refuses_unknown_table` (planned). L4: joins, class, application and impact for a known table and the typed refusal for an unknown one.
 - `MEDULLA-UNIFIED-DATA-PLANE-R030.3`: `tests/data_plane/test_entity_link_served.py::test_no_sameas_before_approval` (planned). L4: true, false and ambiguous pairs; no `owl:sameAs` edge before approval and one after.
-- `MEDULLA-UNIFIED-DATA-PLANE-R030.4`: `crates/medulla-kernel/src/same_as_guard.rs::tests::owl_same_as_edges_are_refused_on_every_generic_edge_writer` (planned, L1) and `tests/data_plane/test_entity_link_served.py::test_raw_add_edge_same_as_is_refused_and_approval_still_writes` (planned, L4).
+- `MEDULLA-UNIFIED-DATA-PLANE-R030.4`: `crates/medulla-kernel/src/same_as_guard.rs::tests::owl_same_as_edges_are_refused_on_every_generic_edge_writer` (L1) and `tests/data_plane/test_entity_link_served.py::test_raw_add_edge_same_as_is_refused_and_approval_still_writes` (L4).
 - `MEDULLA-UNIFIED-DATA-PLANE-R031.2`: `tests/attached_isolation_served.rs::quota_breach_and_failure_do_not_degrade_other_source`. L3: hangs source A and breaches its quota; source B answers within its quota and A returns the codes.
 - `MEDULLA-UNIFIED-DATA-PLANE-R035`: `crates/medulla-server-api/src/icv_guard.rs::attached_schema_write_reuses_the_compiled_policy` (planned). Counts `compose_validated_sources` calls over 1,000 writes to a graph with a dynamic schema source and asserts one compile and an `IcvPolicy` built once.
 - `MEDULLA-UNIFIED-DATA-PLANE-R760.1`: `crates/medulla-stream/tests/incident_authority.rs::model_round_trips_and_status_order_is_closed` (planned). L2: `AnomalyReading` and `IncidentRecord` serde round trip; the status enum orders open, acknowledged, resolved.

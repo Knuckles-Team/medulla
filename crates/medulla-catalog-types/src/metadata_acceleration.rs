@@ -289,6 +289,7 @@ mod tests {
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4
     #[test]
     fn expired_watermark_falls_back_to_live() {
         let p = policy(
@@ -298,6 +299,8 @@ mod tests {
         );
         assert_eq!(p.resolve_mode(NOW, NOW), FragmentExecutionMode::Copy);
         assert_eq!(p.resolve_mode(NOW + 1, NOW), FragmentExecutionMode::Live);
+        let refusal = copy_admitted(&p, 11, 10).unwrap_err();
+        assert_eq!(refusal.code, ServerErrorCode::CopyRowCapExceeded);
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.1
@@ -319,14 +322,6 @@ mod tests {
             panic!("a predicate declared without copy capability must be refused");
         };
         assert!(error.0.contains("copy capability"), "{error}");
-    }
-
-    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2
-    #[test]
-    fn expired_watermark_falls_back_to_live() {
-        let p = policy(true, "hot", Some("lsn:42"));
-        assert_eq!(p.resolve_mode(NOW, NOW), FragmentExecutionMode::Copy);
-        assert_eq!(p.resolve_mode(NOW + 1, NOW), FragmentExecutionMode::Live);
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2

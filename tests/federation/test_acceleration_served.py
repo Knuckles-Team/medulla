@@ -133,7 +133,9 @@ def _scan(clean_graph, name: str):
     )
 
 
-@pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.2.2")
+@pytest.mark.spec(
+    "MEDULLA-UNIFIED-DATA-PLANE-R038.2.2", "MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4"
+)
 def test_stale_watermark_reads_live(clean_graph, pg_source):
     source = _orders_source(pg_source)
     clean_graph.query.register_foreign_source(
@@ -146,8 +148,8 @@ def test_stale_watermark_reads_live(clean_graph, pg_source):
         },
     )
     assert len(_scan(clean_graph, "accel-stale")) == 2
-    # The watermark plus acceleration.watermark_ttl_ms is long past: the read is live and
-    # sees the row the source gained since.
+    # The watermark plus acceleration.watermark_ttl_ms is long past: the read is
+    # live and sees the row the source gained since.
     pg_source.execute("INSERT INTO accel_hot VALUES (3, 30)")
     assert len(_scan(clean_graph, "accel-stale")) == 3
 
