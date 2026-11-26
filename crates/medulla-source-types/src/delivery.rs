@@ -436,6 +436,38 @@ pub struct DeliveryAssignment {
     pub started_at: Option<i64>,
     pub ended_at: Option<i64>,
     pub ended_reason: Option<String>,
+    /// Set on an assignment that replaces one a restart ended (R019.13).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub recovery: Option<RecoveryNote>,
+}
+
+/// Whether an outside effect a lost assignment recorded has a receipt (R019.13).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReceiptState {
+    Confirmed,
+    /// No receipt: the new assignment must reconcile it before a retry.
+    Uncertain,
+}
+
+/// One outside effect named in a recovery note.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecoveredEffect {
+    pub description: String,
+    pub receipt: ReceiptState,
+}
+
+/// What a new assignment inherits from the one a restart ended (R019.13).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RecoveryNote {
+    /// The id of the assignment this one replaces.
+    pub replaces: String,
+    /// The outside effects the old assignment recorded.
+    pub effects: Vec<RecoveredEffect>,
+    /// The sequence numbers of the inputs the old assignment had not read.
+    pub moved_inputs: Vec<u64>,
 }
 
 /// The delivery record.

@@ -89,6 +89,7 @@ pub fn open_delivery(
         started_at: None,
         ended_at: None,
         ended_reason: None,
+        recovery: None,
     };
     Ok(Delivery {
         schema_version: DELIVERY_SCHEMA_VERSION,
