@@ -25,3 +25,7 @@ medulla-protocol-types = { path = "../medulla-protocol-types" }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 rmp-serde = "1.3"
+
+[[bench]]
+name = "front_insert"
+harness = false

@@ -39,6 +39,10 @@ struct Observed {
     /// The result rows of a rerun over the same seed and evaluations whose
     /// promotion bar nothing clears, so it publishes no revision.
     rerun_rows: Vec<Value>,
+    /// The candidates the draft named, one per reflection artifact.
+    candidate_count: usize,
+    /// The stage the evaluated job staged its result at, and its job id.
+    evaluated_job: Value,
 }
 
 static OBSERVED: OnceLock<Observed> = OnceLock::new();
@@ -66,8 +70,8 @@ fn observed() -> &'static Observed {
     })
 }
 
-/// Evaluate every candidate the draft named, each trading accuracy against
-/// benchmark and cost so none dominates another.
+/// Evaluate every candidate the draft named (64 of them), each trading accuracy
+/// against benchmark and cost so none dominates another.
 fn evaluations_of(candidates: &[String]) -> Vec<medulla_program::EvaluationSummary> {
     let count = candidates.len() as f64;
     candidates
@@ -90,7 +94,11 @@ async fn journey() -> Observed {
     let state = program_job_support::redb_state(directory.path());
     let draft = run_program_job(&state, 100, &reflective_request("draft", Vec::new())).await;
     let candidates = strings_with_prefix(&draft, "eg:program_candidate:");
-    assert!(!candidates.is_empty(), "the draft names its candidates");
+    assert_eq!(
+        candidates.len(),
+        program_job_support::REFLECTIVE_CANDIDATES,
+        "the draft names one candidate per reflection artifact"
+    );
     let evaluations = evaluations_of(&candidates);
 
     let evaluated = run_program_job(
@@ -117,6 +125,8 @@ async fn journey() -> Observed {
         evaluated_rows: result_rows(&evaluated),
         revision,
         rerun_rows: result_rows(&rerun),
+        candidate_count: candidates.len(),
+        evaluated_job: evaluated["state"].clone(),
     }
 }
 
@@ -264,4 +274,29 @@ fn front_inputs_refuse_with_stable_codes() {
     })
     .expect("start engine driver");
     medulla_server::join_engine_driver(driver).expect("engine driver failed");
+}
+
+/// The hot-path proof: a served reflective job over 64 evaluated candidates
+/// reports a bounded front whose scoreboard names only evaluated candidates,
+/// publishes the evaluated revision with its front digest and moves no champion.
+// spec: MEDULLA-DECISION-ENGINE-R800.6
+#[test]
+fn served_reflective_job_journey() {
+    let observed = observed();
+    assert_eq!(observed.candidate_count, program_job_support::REFLECTIVE_CANDIDATES);
+    assert!(observed.evaluated_job.get("Succeeded").is_some());
+    let candidates = candidate_rows(&observed.evaluated_rows);
+    assert_eq!(candidates.len(), observed.candidate_count);
+    let front: Vec<&&Value> = candidates
+        .iter()
+        .filter(|row| row["front_rank"].is_u64())
+        .collect();
+    assert!(!front.is_empty() && front.len() <= observed.candidate_count);
+    assert_eq!(
+        observed.revision["front_digest"],
+        digest_of(&observed.evaluated_rows).as_str()
+    );
+    assert_eq!(observed.revision["stage"], "published");
+    assert_eq!(observed.revision["optimizer"], "gepa");
+    assert!(observed.revision["held_out"].is_object());
 }

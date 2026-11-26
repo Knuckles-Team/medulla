@@ -193,9 +193,13 @@ pub fn sized_program_request(
 /// `knob front.min_eval_examples` (MEDULLA-DECISION-ENGINE-R800.4).
 pub const FRONT_TEST_EXAMPLES: usize = 30;
 
+/// Candidates of a reflective request: one reflection artifact each, as many
+/// as the hot-path proof evaluates (MEDULLA-DECISION-ENGINE-R800.6).
+pub const REFLECTIVE_CANDIDATES: usize = 64;
+
 /// A reflective (`Gepa`) request over a corpus whose test split holds
-/// [`FRONT_TEST_EXAMPLES`] examples: it names one reflection artifact, so the
-/// optimizer has something to materialize candidates from
+/// [`FRONT_TEST_EXAMPLES`] examples: it names [`REFLECTIVE_CANDIDATES`]
+/// reflection artifacts, so the optimizer materializes one candidate from each
 /// (MEDULLA-DECISION-ENGINE-R800.3).
 pub fn reflective_request(
     label: &str,
@@ -207,17 +211,20 @@ pub fn reflective_request(
         (TRAIN_EXAMPLES, FRONT_TEST_EXAMPLES),
         OptimizerKind::Gepa,
     );
-    request
-        .optimizer_artifacts
-        .push(medulla_program::OptimizerArtifact {
-            artifact_ref: opaque("reflection", "gepa-reflection"),
-            kind: medulla_program::OptimizerArtifactKind::Reflection,
-            source_ref: request.program.program_ref.clone(),
-            modalities: ProgramModality::ALL.into_iter().collect(),
-            score: 0.8,
-            evidence_refs: vec![opaque("evidence", "gepa-reflection")],
-            access_policy_ref: request.program.policy.access_policy_ref.clone(),
-        });
+    request.budget.max_candidates = REFLECTIVE_CANDIDATES;
+    for index in 0..REFLECTIVE_CANDIDATES {
+        request
+            .optimizer_artifacts
+            .push(medulla_program::OptimizerArtifact {
+                artifact_ref: opaque("reflection", &format!("gepa-reflection-{index}")),
+                kind: medulla_program::OptimizerArtifactKind::Reflection,
+                source_ref: request.program.program_ref.clone(),
+                modalities: ProgramModality::ALL.into_iter().collect(),
+                score: 0.5 + index as f64 / 200.0,
+                evidence_refs: vec![opaque("evidence", &format!("gepa-reflection-{index}"))],
+                access_policy_ref: request.program.policy.access_policy_ref.clone(),
+            });
+    }
     request
 }
 
