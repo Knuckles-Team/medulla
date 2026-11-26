@@ -650,7 +650,7 @@ impl ForeignReadSessions {
         if Instant::now() >= record.expires_at {
             return Err(format!(
                 "{}: execution deadline elapsed",
-                medulla_types::contract::EngineErrorCode::EngineDeadlineExceeded.as_str()
+                medulla_types::contract::ServerErrorCode::ForeignReadExpired.as_str()
             ));
         }
         Ok(())
@@ -734,7 +734,7 @@ impl medulla_federation::federation::ForeignSource for PageBackedSource {
         if Instant::now() >= record.expires_at {
             return Err(format!(
                 "{}: execution deadline elapsed",
-                medulla_types::contract::EngineErrorCode::EngineDeadlineExceeded.as_str()
+                medulla_types::contract::ServerErrorCode::ForeignReadExpired.as_str()
             ));
         }
         if record.state != SessionState::Complete {
@@ -775,7 +775,7 @@ impl medulla_federation::federation::ForeignSource for PageBackedSource {
         if Instant::now() >= record.expires_at {
             return Err(format!(
                 "{}: execution deadline elapsed",
-                medulla_types::contract::EngineErrorCode::EngineDeadlineExceeded.as_str()
+                medulla_types::contract::ServerErrorCode::ForeignReadExpired.as_str()
             ));
         }
         if record.state != SessionState::Complete {
@@ -1200,7 +1200,7 @@ mod tests {
         );
         assert!(refusal
             .expect_err("expired execution cannot complete")
-            .starts_with("ENGINE_DEADLINE_EXCEEDED:"));
+            .starts_with("FOREIGN_READ_EXPIRED:"));
     }
 
     #[test]

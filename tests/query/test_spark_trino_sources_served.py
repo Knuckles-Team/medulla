@@ -271,3 +271,90 @@ async def _exercise() -> None:
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R053.701")
 def test_resubmission_returns_same_submission(clean_graph) -> None:
     asyncio.run(_exercise())
+
+
+async def _lifecycle() -> None:
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    try:
+        approved = await _approved_receipt(client)
+        prepared = await client.query.uql(f"FOREIGN SCAN '{SOURCE_ID}'", prepare=True)
+
+        def opened(limits: dict[str, Any]) -> Any:
+            return client._send(
+                "ForeignReadOpen",
+                {
+                    "request": {
+                        "schema_version": 1,
+                        "source_name": SOURCE_ID,
+                        "approval": approved,
+                        "limits": limits,
+                        "submission": None,
+                        "plan_digest": prepared["plan_digest"],
+                        "query_digest": prepared["query_digest"],
+                    }
+                },
+                None,
+            )
+
+        def chunk(opened_read: dict[str, Any], sequence: int) -> Any:
+            return client._send(
+                "ForeignReadChunk",
+                {
+                    "request": {
+                        "execution": opened_read["execution"],
+                        "sequence": sequence,
+                        "source_identity": opened_read["source_identity"],
+                        "rows": [{"id": f"row-{sequence}"}],
+                    }
+                },
+                None,
+            )
+
+        def terminal(kind: str, opened_read: dict[str, Any], sequence: int) -> Any:
+            body: dict[str, Any] = {
+                "execution": opened_read["execution"],
+                "sequence": sequence,
+            }
+            if kind == "ForeignReadAbort":
+                body["reason"] = "host stopped"
+            return client._send(kind, {"request": body}, None)
+
+        async def refused(call: Any, code: str) -> None:
+            with pytest.raises(Exception) as refusal:
+                await call
+            assert code in str(refusal.value), (code, str(refusal.value))
+
+        # Sequence: chunks arrive in order, and a repeated or skipped page is refused.
+        read = await opened(LIMITS)
+        assert read["next_sequence"] == 0, read
+        first = await chunk(read, 0)
+        assert first["next_sequence"] == 1, first
+        await refused(chunk(read, 0), "FOREIGN_READ_SEQUENCE")
+        await refused(chunk(read, 5), "FOREIGN_READ_SEQUENCE")
+
+        # Exactly one terminal outcome: after complete, every further call is refused.
+        done = await terminal("ForeignReadComplete", read, 1)
+        assert done["total_rows"] == 1, done
+        await refused(chunk(read, 1), "FOREIGN_READ_TERMINAL")
+        await refused(terminal("ForeignReadComplete", read, 1), "FOREIGN_READ_TERMINAL")
+        await refused(terminal("ForeignReadAbort", read, 1), "FOREIGN_READ_TERMINAL")
+
+        # An aborted read is terminal as well.
+        aborted = await opened(LIMITS)
+        await terminal("ForeignReadAbort", aborted, 0)
+        await refused(chunk(aborted, 0), "FOREIGN_READ_TERMINAL")
+
+        # A handle expires at its deadline and refuses replay after it.
+        short = await opened({**LIMITS, "deadline_ms": 1})
+        await asyncio.sleep(0.2)
+        await refused(chunk(short, 0), "FOREIGN_READ_EXPIRED")
+    finally:
+        await client.close()
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R722.10")
+def test_lifecycle_sequence_replay_expiry_and_terminal(clean_graph) -> None:
+    asyncio.run(_lifecycle())
