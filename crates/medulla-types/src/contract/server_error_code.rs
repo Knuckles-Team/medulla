@@ -1079,6 +1079,9 @@ closed_error_codes! {
         IngestQueueFull => "INGEST_QUEUE_FULL",
         /// MEDULLA-INGEST-WORKER-R001.9: the reason of a dead-lettered ingest task whose attempts ran out.
         IngestRetriesExhausted => "INGEST_RETRIES_EXHAUSTED",
+        /// MEDULLA-INGEST-WORKER-R606.4: a batch with a blank connector, or a record with no
+        /// `provenance.connector`; distinct from `ATOM_PROVENANCE_MISSING`.
+        MaterializeNoProvenance => "MATERIALIZE_NO_PROVENANCE",
         /// MEDULLA-INGEST-WORKER-R001.12: the reason of a dead-lettered ingest task whose lease lapsed on every attempt.
         LeaseExpiredExhausted => "LEASE_EXPIRED_EXHAUSTED",
         /// MEDULLA-INGEST-WORKER-R700.4: a file over `ingest.reader_max_bytes`.

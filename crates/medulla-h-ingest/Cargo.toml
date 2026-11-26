@@ -39,6 +39,7 @@ medulla-server-api = { path = "../medulla-server-api" }
 medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-store = { path = "../medulla-store" }
 medulla-types = { path = "../medulla-types" }
+unicode-normalization = "0.1"
 medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-query-types = { path = "../medulla-query-types" }

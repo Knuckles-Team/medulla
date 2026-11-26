@@ -132,6 +132,8 @@ pub struct PreparedSourceIngestion {
     reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport>,
     /// Evidence of a `transcripts` batch (R003.17); `None` for every other kind.
     transcript: Option<medulla_source_types::source_transcript::TranscriptReceipt>,
+    /// What the batch did to each ontology class, keyed by label (MEDULLA-INGEST-WORKER-R606.5).
+    class_reports: BTreeMap<String, medulla_types::ingest_materialize::IngestBatchReport>,
     committed_graph_version: u64,
     /// Set when the batch is quarantined instead of accepted: the envelope then
     /// stores restricted evidence only (MEDULLA-INGEST-WORKER-R003.10.1) and
@@ -286,6 +288,58 @@ fn admit_kind(
     }
 }
 
+/// The node label of a mapped ontology class: its local name (after the last `#`, `/` or `:`),
+/// NFC-normalized, with every character outside `[A-Za-z0-9_]` replaced by `_`
+/// (MEDULLA-INGEST-WORKER-R606.2).
+pub fn normalize_label(ontology_class: &str) -> String {
+    use unicode_normalization::UnicodeNormalization;
+    let local = ontology_class
+        .rsplit(['#', '/', ':'])
+        .next()
+        .filter(|local| !local.is_empty())
+        .unwrap_or(ontology_class);
+    local
+        .nfc()
+        .map(|c| if c.is_ascii_alphanumeric() || c == '_' { c } else { '_' })
+        .collect()
+}
+
+/// The three provenance stamps every materialized node and edge carries
+/// (MEDULLA-INGEST-WORKER-R606.2): `source_system` is the connector id, `source_id` the record
+/// or relation id, `ingest_time_ms` the engine clock at prepare.
+pub fn stamp_record(
+    properties: &mut serde_json::Map<String, serde_json::Value>,
+    stamp: &medulla_types::ingest_materialize::MaterializeStamp,
+) {
+    properties.insert("source_system".into(), stamp.source_system.clone().into());
+    properties.insert("source_id".into(), stamp.source_id.clone().into());
+    properties.insert("ingest_time_ms".into(), stamp.ingest_time_ms.into());
+}
+
+/// A batch names its source system: every record's `provenance.connector` is the batch's
+/// connector. A blank id cannot be built (`ResourceId` refuses it at decode), so the engine-side
+/// failure is a record that names no source system of this batch. The whole batch is refused,
+/// before any mapping is resolved and before anything is written (MEDULLA-INGEST-WORKER-R606.4).
+#[cfg(all(feature = "redb", feature = "blob"))]
+fn require_provenance(
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+) -> Result<(), String> {
+    match batch
+        .records
+        .as_slice()
+        .iter()
+        .find(|record| record.provenance.connector != batch.connector)
+    {
+        Some(record) => Err(format!(
+            "{}: record {} carries no provenance.connector of connector {}",
+            medulla_types::contract::ServerErrorCode::MaterializeNoProvenance.as_str(),
+            record.record_id,
+            batch.connector.as_str()
+        )),
+        None => Ok(()),
+    }
+}
+
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub async fn prepare(
     ctx: PrepareContext<'_>,
@@ -294,6 +348,7 @@ pub async fn prepare(
     authorize_ingestion(&ctx)?;
     let batch = request.as_batch();
     admit_kind(batch.kind)?;
+    require_provenance(batch)?;
     if matches!(
         batch.kind,
         medulla_source_types::source_ingestion::batch_kind::SourceBatchKind::Access
@@ -607,6 +662,7 @@ pub async fn prepare(
     // Records admitted: a refused, replayed or invalid-version record writes nothing.
     let record_count = admitted.raw_admissions.len();
     Ok(PreparedSourceIngestion {
+        class_reports: admitted.class_reports.clone(),
         envelope,
         batch_digest,
         mode: batch.mode,
@@ -1018,6 +1074,7 @@ async fn prepare_extension_batch(
     )?;
     envelope.cursor = None;
     Ok(PreparedSourceIngestion {
+        class_reports: BTreeMap::new(),
         envelope,
         batch_digest,
         mode: batch.mode,
@@ -1484,6 +1541,8 @@ struct AdmittedRecords {
     row_versions: medulla_ingestion_types::source_governance::RowVersionReport,
     /// The papers refused by their identity, receipt or provenance checks (R002.5.5).
     papers: medulla_types::paper_ingest::PaperReport,
+    /// What the batch did to each ontology class, keyed by class name (R606.5).
+    class_reports: BTreeMap<String, medulla_types::ingest_materialize::IngestBatchReport>,
 }
 
 #[cfg(all(feature = "redb", feature = "blob"))]
@@ -2140,6 +2199,8 @@ struct RecordLookups<'a> {
     receipt_id: &'a str,
     receipt_digest: String,
     papers: &'a PaperLookups,
+    /// The engine clock at prepare, stamped on every node of the batch (R606.2).
+    ingest_time_ms: u64,
 }
 
 /// The node ids of the papers `batch` holds and of the cited papers the graph already holds, so a
@@ -2198,6 +2259,7 @@ fn admit_records(
         receipt_id: context.receipt_id,
         receipt_digest: context.receipt_digest,
         papers: context.papers,
+        ingest_time_ms: permission_clock_ms(),
     };
     let mut extra_node_ids = BTreeSet::new();
     let mut admitted = AdmittedRecords {
@@ -2212,6 +2274,7 @@ fn admit_records(
         governance: Default::default(),
         row_versions: Default::default(),
         papers: Default::default(),
+        class_reports: BTreeMap::new(),
     };
     let mut batch_raw_digests = BTreeSet::new();
     let target = BlobTarget { authority, blob };
@@ -2230,9 +2293,28 @@ fn admit_records(
         )?
         else {
             // Governance or a paper check refused this record: it writes nothing.
+            if let Some(mapping) = resolved.entities.get(&record.mapping_reference) {
+                admitted
+                    .class_reports
+                    .entry(normalize_label(&mapping.schema_mapping.ontology_class))
+                    .or_default()
+                    .refused += 1;
+            }
             continue;
         };
         let deduplicated = !batch_raw_digests.insert(item.raw_digest_hex.clone());
+        if let Some(mapping) = resolved.entities.get(&record.mapping_reference) {
+            let class = admitted
+                .class_reports
+                .entry(normalize_label(&mapping.schema_mapping.ontology_class))
+                .or_default();
+            // A record whose raw digest repeats inside the batch is unchanged, not written.
+            if deduplicated {
+                class.unchanged += 1;
+            } else {
+                class.written += 1;
+            }
+        }
         admitted.raw_admissions.push(RawAdmissionReceipt {
             stream: record.stream.clone(),
             record_id: record.record_id.clone(),
@@ -2335,6 +2417,7 @@ fn admit_relationships(
             ))
         })
         .collect::<Result<_, String>>()?;
+    let relationship_ingest_time_ms = permission_clock_ms();
     for relationship in &batch.relationships {
         let relationship_id = canonical_relationship_id(ctx.tenant_scope, batch, relationship)?;
         let relation = resolved
@@ -2383,6 +2466,8 @@ fn admit_relationships(
             relation,
             &raw_digest_hex,
             batch.strict_schema,
+            batch.connector.as_str(),
+            relationship_ingest_time_ms,
         )?;
         admitted
             .blobs
@@ -2560,6 +2645,8 @@ fn relationship_properties(
     resolved: &medulla_persistence_records::connector_pack::ResolvedConnectorRelationshipMapping,
     raw_digest: &str,
     strict_schema: bool,
+    source_system: &str,
+    ingest_time_ms: u64,
 ) -> Result<serde_json::Map<String, serde_json::Value>, String> {
     let supplied = relationship
         .properties
@@ -2592,6 +2679,14 @@ fn relationship_properties(
         "source_provenance".into(),
         serde_json::to_value(&relationship.provenance)
             .map_err(|error| format!("relationship provenance encoding failed: {error}"))?,
+    );
+    stamp_record(
+        &mut mapped,
+        &medulla_types::ingest_materialize::MaterializeStamp {
+            source_system: source_system.to_string(),
+            source_id: relationship_id.to_string(),
+            ingest_time_ms,
+        },
     );
     Ok(mapped)
 }
@@ -2900,6 +2995,14 @@ fn admit_record(
         &raw_digest_hex,
         batch.strict_schema,
     )?;
+    stamp_record(
+        &mut properties,
+        &medulla_types::ingest_materialize::MaterializeStamp {
+            source_system: record.provenance.connector.as_str().to_string(),
+            source_id: record.record_id.clone(),
+            ingest_time_ms: lookups.ingest_time_ms,
+        },
+    );
     // A bookmark record is the `bookmark:<record_key>` node; its envelope keys replace the mapped
     // ones and `raw` is not stored (MEDULLA-MEDIA-VOCAB-R001.102.2).
     let bookmark = if mapping.schema_mapping.ontology_class.trim_start_matches(':') == bookmark::BOOKMARK_CLASS {
@@ -3461,14 +3564,35 @@ fn build_terminal_receipt(
         access: prepared.access,
         reconcile: prepared.reconcile,
         transcript: prepared.transcript,
-        report: medulla_types::ingest_materialize::IngestBatchReport {
-            written: prepared
-                .affected_count
-                .saturating_add(prepared.relationship_count),
-            unchanged: 0,
-            refused: prepared.governance.refused,
+        report: if prepared.class_reports.is_empty() {
+            medulla_types::ingest_materialize::IngestBatchReport {
+                written: prepared
+                    .affected_count
+                    .saturating_add(prepared.relationship_count),
+                unchanged: 0,
+                refused: prepared.governance.refused,
+            }
+        } else {
+            // Nodes and edges committed, records found unchanged, items refused (R606.5).
+            let classes = medulla_types::ingest_materialize::IngestBatchReport::sum(
+                prepared.class_reports.values(),
+            );
+            medulla_types::ingest_materialize::IngestBatchReport {
+                written: classes.written.saturating_add(prepared.relationship_count),
+                unchanged: classes.unchanged,
+                refused: classes.refused.max(prepared.governance.refused),
+            }
         },
-        classes: medulla_types::contract::BoundedVec::new(Vec::new())?,
+        classes: medulla_types::contract::BoundedVec::new(
+            prepared
+                .class_reports
+                .iter()
+                .map(|(label, report)| medulla_types::ingest_materialize::ClassReport {
+                    ontology_class: label.clone(),
+                    report: *report,
+                })
+                .collect(),
+        )?,
         committed_graph_version: prepared.committed_graph_version,
         drift: prepared.drift,
         column_exclusions: prepared.embedding_set.exclusions,
@@ -3811,6 +3935,7 @@ fn prepared_replay(
     )?;
     let committed_graph_version = replay_graph_version(&envelope)?;
     Ok(PreparedSourceIngestion {
+        class_reports: BTreeMap::new(),
         envelope,
         batch_digest,
         mode: batch.mode,
@@ -4064,7 +4189,7 @@ fn mapped_properties(
         .as_object()
         .ok_or_else(|| "source record payload must be an object".to_string())?;
     let mut mapped = serde_json::Map::new();
-    mapped.insert("type".into(), ontology_class.into());
+    mapped.insert("type".into(), normalize_label(ontology_class).into());
     let mut targets: BTreeSet<String> = [
         "type",
         SOURCE_RECORD_ID,
