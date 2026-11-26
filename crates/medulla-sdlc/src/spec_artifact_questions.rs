@@ -340,7 +340,8 @@ pub fn answer(
         SpecQuestion::UnboundRequirements
         | SpecQuestion::DeploymentOfRequirement
         | SpecQuestion::OpenDefectsInRelease
-        | SpecQuestion::ChangesetsBetweenDeployments => {}
+        | SpecQuestion::ChangesetsBetweenDeployments
+        | SpecQuestion::OpenTasksOfBundle => {}
     }
     Ok(out.finish())
 }
@@ -452,7 +453,70 @@ fn answer_lifecycle(
                 out.row(&[changeset], &[("changeset", changeset)]);
             }
         }
+        SpecQuestion::OpenTasksOfBundle => open_tasks_of_bundle(subject, view, out)?,
         _ => {}
+    }
+    Ok(())
+}
+
+/// The open tasks of one bundle (MEDULLA-SDLC-R018.2). A bundle is a `ReleaseBundle` node
+/// whose `train_order` lists repository names in release order and whose `open_tasks` lists
+/// row ids; the `inBundle` edges say which requirement node of which repository each row is.
+/// The rows come out ordered by the position of their repository in the train order (a
+/// repository the order does not name comes last), then by row id in natural order, and each
+/// row names its unticked tasks.
+fn open_tasks_of_bundle(
+    bundle: &str,
+    view: &SpecGraphView,
+    out: &mut Collector<'_>,
+) -> Result<(), LifecycleRefusal> {
+    require_node_type(view, bundle, "ReleaseBundle")?;
+    out.read(bundle);
+    let train: Vec<&str> = view.prop(bundle, "train_order").split(',').collect();
+    let open: BTreeSet<&str> = view
+        .prop(bundle, "open_tasks")
+        .split(',')
+        .filter(|row| !row.is_empty())
+        .collect();
+    let mut rows: Vec<(usize, Vec<(u8, u64, String)>, &str, &str)> = view
+        .inbound(bundle, "inBundle")
+        .filter(|requirement| open.contains(view.prop(requirement, "rowId")))
+        .map(|requirement| {
+            let repo = view.prop(requirement, "repo");
+            let position = train
+                .iter()
+                .position(|name| *name == repo)
+                .unwrap_or(train.len());
+            (
+                position,
+                natural_key(view.prop(requirement, "rowId")),
+                requirement,
+                repo,
+            )
+        })
+        .collect();
+    rows.sort();
+    for (position, _, requirement, repo) in rows {
+        let mut tasks: Vec<&str> = view
+            .of_type("TaskLine")
+            .filter(|task| view.prop(task, "ticked") == "false")
+            .filter(|task| view.out(task, "forRow").any(|row| row == requirement))
+            .collect();
+        tasks.sort_by_key(|task| natural_key(view.prop(task, "taskId")));
+        let position = position.to_string();
+        let joined = tasks.join(",");
+        let mut read = vec![requirement];
+        read.extend(&tasks);
+        out.row(
+            &read,
+            &[
+                ("position", position.as_str()),
+                ("repo", repo),
+                ("row", view.prop(requirement, "rowId")),
+                ("requirement", requirement),
+                ("tasks", joined.as_str()),
+            ],
+        );
     }
     Ok(())
 }
@@ -541,6 +605,48 @@ mod tests {
         }
         let malformed = answer(SpecQuestion::ChangesetsBetweenDeployments, Some("one"), &view);
         assert_eq!(malformed.unwrap_err().code(), "PARAMETER_INVALID");
+    }
+
+    // spec: MEDULLA-SDLC-R018.2
+    #[test]
+    fn open_tasks_of_a_bundle_come_out_in_train_order() {
+        let mut view = SpecGraphView::default();
+        view.nodes.insert(
+            "bundle:b".into(),
+            node(
+                "ReleaseBundle",
+                &[("train_order", "other,demo"), ("open_tasks", "D-R2,O-R9,D-R1")],
+            ),
+        );
+        for (id, repo, row) in [
+            ("requirement:demo:D-R1", "demo", "D-R1"),
+            ("requirement:demo:D-R2", "demo", "D-R2"),
+            ("requirement:demo:D-R3", "demo", "D-R3"),
+            ("requirement:other:O-R9", "other", "O-R9"),
+        ] {
+            view.nodes
+                .insert(id.into(), node("Requirement", &[("repo", repo), ("rowId", row)]));
+            edge(&mut view, id, "inBundle", "bundle:b");
+        }
+        for (id, task_id, row, ticked) in [
+            ("task:demo:t#T2", "T2", "requirement:demo:D-R2", "false"),
+            ("task:demo:t#T10", "T10", "requirement:demo:D-R2", "false"),
+            ("task:demo:t#T1", "T1", "requirement:demo:D-R1", "true"),
+            ("task:other:t#T1", "T1", "requirement:other:O-R9", "false"),
+        ] {
+            view.nodes.insert(
+                id.into(),
+                node("TaskLine", &[("taskId", task_id), ("ticked", ticked)]),
+            );
+            edge(&mut view, id, "forRow", row);
+        }
+        let answered = answer(SpecQuestion::OpenTasksOfBundle, Some("bundle:b"), &view).unwrap();
+        let rows: Vec<&str> = answered.rows.iter().map(|r| r["row"].as_str()).collect();
+        assert_eq!(rows, ["O-R9", "D-R1", "D-R2"], "other first, D-R3 is not open");
+        assert_eq!(answered.rows[2]["tasks"], "task:demo:t#T2,task:demo:t#T10");
+        assert_eq!(answered.rows[1]["tasks"], "");
+        let unknown = answer(SpecQuestion::OpenTasksOfBundle, Some("bundle:none"), &view);
+        assert_eq!(unknown.unwrap_err().code(), "COMPETENCY_SUBJECT_UNKNOWN");
     }
 
     // spec: MEDULLA-SDLC-R014.6

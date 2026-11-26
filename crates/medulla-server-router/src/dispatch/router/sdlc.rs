@@ -295,7 +295,7 @@ async fn record_gate_verdict(
 }
 
 /// The node types a competency question reads.
-const SPEC_VIEW_TYPES: [&str; 11] = [
+const SPEC_VIEW_TYPES: [&str; 12] = [
     "Requirement",
     "SYMBOL",
     "TaskLine",
@@ -307,9 +307,10 @@ const SPEC_VIEW_TYPES: [&str; 11] = [
     RELEASE_TYPE,
     DEPLOYMENT_TYPE,
     DEFECT_TYPE,
+    "ReleaseBundle",
 ];
 /// The relationships a competency question reads.
-const SPEC_VIEW_RELATIONSHIPS: [&str; 14] = [
+const SPEC_VIEW_RELATIONSHIPS: [&str; 15] = [
     "implementedByCommit",
     "verifiedBy",
     "implementedBy",
@@ -324,6 +325,7 @@ const SPEC_VIEW_RELATIONSHIPS: [&str; 14] = [
     "contains",
     "deploys",
     "affects",
+    "inBundle",
 ];
 const SPEC_VIEW_EXTRA_RELATIONSHIPS: [&str; 2] = ["forRow", "governedBy"];
 

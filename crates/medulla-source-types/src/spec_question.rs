@@ -34,6 +34,9 @@ pub enum SpecQuestion {
     /// The changesets one deployment's release contains and another's does not
     /// (MEDULLA-SDLC-R006.3).
     ChangesetsBetweenDeployments,
+    /// The open task rows of one release bundle in the bundle's train order
+    /// (MEDULLA-SDLC-R018.2).
+    OpenTasksOfBundle,
 }
 
 impl SpecQuestion {
@@ -49,6 +52,7 @@ impl SpecQuestion {
                 | Self::DeploymentOfRequirement
                 | Self::OpenDefectsInRelease
                 | Self::ChangesetsBetweenDeployments
+                | Self::OpenTasksOfBundle
         )
     }
 }

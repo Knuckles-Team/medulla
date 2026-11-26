@@ -10,16 +10,20 @@ drives it through the scoped crate test.
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 import subprocess
+import uuid
 from pathlib import Path
 
+import msgpack
 import pytest
+from conftest import request_context
 
-pytestmark = (
-    pytest.mark.no_engine
-)  # The projection runs in the scoped crate test, not the shared engine.
+from medulla.client import MedullaClient
+
+# The projection tests run in the scoped crate test, not the shared engine.
 
 ROOT = Path(__file__).resolve().parents[2]
 PROJECTION_RS = (
@@ -66,6 +70,7 @@ def _run_engine_test(name: str) -> str:
     return proc.stdout
 
 
+@pytest.mark.no_engine
 @pytest.mark.spec("MEDULLA-SDLC-R018.1")
 def test_bundle_plan_becomes_records_with_in_bundle_edges() -> None:
     source = PROJECTION_RS.read_text(encoding="utf-8")
@@ -89,6 +94,72 @@ def test_bundle_plan_becomes_records_with_in_bundle_edges() -> None:
     }
 
 
+@pytest.mark.no_engine
 def test_bundle_plan_with_unknown_row_refuses() -> None:
     # spec: MEDULLA-SDLC-R018.1
     _run_engine_test(REFUSAL_TEST)
+
+
+async def _open_tasks(graph_name: str):
+    def node(node_id: str, node_type: str, **props: str) -> dict:
+        return {
+            "op": "upsert_node",
+            "id": node_id,
+            "properties": {"type": node_type, **props},
+        }
+
+    def edge(source: str, relationship: str, target: str) -> dict:
+        return {
+            "op": "upsert_edge",
+            "source": source,
+            "target": target,
+            "properties": {"relationship": relationship},
+        }
+
+    seed = [
+        node(
+            "bundle:b",
+            "ReleaseBundle",
+            train_order="other,demo",
+            open_tasks="D-R1,O-R9",
+        ),
+        node("requirement:demo:D-R1", "Requirement", repo="demo", rowId="D-R1"),
+        node("requirement:other:O-R9", "Requirement", repo="other", rowId="O-R9"),
+        edge("requirement:demo:D-R1", "inBundle", "bundle:b"),
+        edge("requirement:other:O-R9", "inBundle", "bundle:b"),
+        node("task:demo:t#T1", "TaskLine", taskId="T1", ticked="false", phase="1"),
+        node("task:other:t#T1", "TaskLine", taskId="T1", ticked="false", phase="1"),
+        edge("task:demo:t#T1", "forRow", "requirement:demo:D-R1"),
+        edge("task:other:t#T1", "forRow", "requirement:other:O-R9"),
+    ]
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        timeout=30,
+    )
+    try:
+        await client.tenants.create(graph_name, "Global")
+        await client._send(
+            "BatchUpdate",
+            {"operations_msgpack": msgpack.packb(seed, use_bin_type=True)},
+            graph_name,
+        )
+        try:
+            return await client.spec_question(
+                "open_tasks_of_bundle", graph_name, "bundle:b"
+            )
+        finally:
+            await client.tenants.delete(graph_name)
+    finally:
+        await client.close()
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R018.2")
+def test_open_tasks_of_bundle_in_train_order_match_plan() -> None:
+    answer = asyncio.run(_open_tasks(f"sdlc-bundle-{uuid.uuid4().hex[:8]}"))
+    if isinstance(answer, (bytes, bytearray)):
+        answer = msgpack.unpackb(answer, raw=False)
+    # spec: MEDULLA-SDLC-R018.2
+    # The generated plan lists the train order `other,demo`; the answer follows it.
+    assert [row["repo"] for row in answer["rows"]] == ["other", "demo"]
+    assert [row["row"] for row in answer["rows"]] == ["O-R9", "D-R1"]
