@@ -146,7 +146,8 @@ cat:FamilyAssetOwnerShape a sh:NodeShape ;
     sh:targetClass cat:AgentTemplateAsset, cat:A2AAgentAsset, cat:AgentVersion, cat:OrgUnit,
         cat:TeamAsset, cat:PersonAsset, cat:RoleAsset, cat:BusinessDomain, cat:Product, cat:ServiceAsset,
         cat:WorkflowDefinitionAsset, cat:WorkflowRun, cat:WorkflowStepAsset, cat:KnowledgeGraph,
-        cat:SpecialistPackage, cat:ProviderAsset, cat:DashboardAsset, cat:ReportAsset, cat:Article ;
+        cat:SpecialistPackage, cat:ProviderAsset, cat:DashboardAsset, cat:ReportAsset, cat:Article,
+        cat:SavedQueryAsset ;
     sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" "field_unmapped" ) ],
     [ sh:path cat:hasOwner ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
     sh:or ( [ sh:path cat:hasOwner ; sh:minCount 1 ]
@@ -164,10 +165,12 @@ cat:DashboardAssetShape a sh:NodeShape ;
     sh:property [ sh:path cat:revision ; sh:minCount 1 ; sh:maxCount 1 ;
                   sh:datatype xsd:nonNegativeInteger ] .
 
-# A report template names at least one parameter (MEDULLA-TYPED-PACKS-R108.14).
+# A report template runs exactly one saved query, which holds its parameters
+# (MEDULLA-TYPED-PACKS-R108.14).
 cat:ReportTemplateShape a sh:NodeShape ;
     sh:targetClass cat:ReportTemplate ;
-    sh:property [ sh:path cat:parameterName ; sh:minCount 1 ; sh:datatype xsd:string ] .
+    sh:property [ sh:path cat:usesStoredQuery ; sh:minCount 1 ; sh:maxCount 1 ;
+                  sh:class cat:SavedQueryAsset ; sh:nodeKind sh:IRI ] .
 
 # A model asset has one registry reference, at most one input and one output schema of at most
 # 65536 bytes, evaluation results of at most 4096 bytes and at most one model profile

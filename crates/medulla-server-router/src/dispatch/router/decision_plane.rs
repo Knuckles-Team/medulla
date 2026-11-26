@@ -567,6 +567,36 @@ async fn dispatch_catalog_admin_methods(
             let _ = registration;
             response
         }
+        // MEDULLA-TYPED-PACKS-R108.14: a published stored-query version is cataloged by the one
+        // emitter, as a descriptor and a link; the text stays on its own node.
+        Method::StoredQueryPut { query } => {
+            let published = query.clone();
+            let response = dispatch_boxed(dispatch_graph_op(
+                state,
+                &req.graph,
+                req.id,
+                req.agent_id.as_deref(),
+                verified_context,
+                Method::StoredQueryPut { query },
+            ))
+            .await;
+            #[cfg(feature = "rdf")]
+            if response.refusal_text().is_none() {
+                let emitted = super::catalog_emit::commit_asset(
+                    state,
+                    req,
+                    verified_context,
+                    &req.graph,
+                    medulla_catalog::emit::AssetRecord::StoredQuery(&published),
+                )
+                .await;
+                return ControlFlow::Break(super::catalog_emit::after_emit(
+                    response, req.id, emitted,
+                ));
+            }
+            let _ = published;
+            response
+        }
         // MEDULLA-TYPED-PACKS-R801.3: the glossary ops commit through the graph gateway.
         Method::Glossary { op } => {
             dispatch_boxed(async {

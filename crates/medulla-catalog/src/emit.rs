@@ -7,6 +7,7 @@
 //! definitions stay in their own stores and are reached through the source id.
 
 use medulla_agent_types::agent_library::AgentLibraryEntry;
+use medulla_source_types::stored_query::{StoredQuery, StoredQueryLanguage};
 use medulla_work_types::orchestration::org::OrgChart;
 use medulla_work_types::orchestration::workflows::{WorkflowIdentity, WorkflowRegistrationEntry};
 
@@ -17,6 +18,7 @@ pub const CORE: &str = "https://knuckles-team.github.io/ontology/core#";
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const DCT_IS_PART_OF: &str = "http://purl.org/dc/terms/isPartOf";
 const PROV_USED: &str = "http://www.w3.org/ns/prov#used";
+const SKOS_PREF_LABEL: &str = "http://www.w3.org/2004/02/skos/core#prefLabel";
 /// Prefix of every asset node the emitter mints.
 pub const ASSET_NODE_PREFIX: &str = "urn:medulla:asset:";
 /// The `cat:hop` of a lineage edge into a workflow definition (R106.2's closed set).
@@ -123,6 +125,9 @@ pub enum AssetRecord<'a> {
     WorkflowRun(WorkflowRunRecord<'a>),
     /// A registered graph.
     Graph(GraphRegistration<'a>),
+    /// One published version of a stored query (MEDULLA-TYPED-PACKS-R108.14). The query text
+    /// stays on its `stored_query:<name>:<version>` node and is never copied here.
+    StoredQuery(&'a StoredQuery),
 }
 
 fn encode(raw: &str) -> String {
@@ -332,6 +337,28 @@ pub fn emit_asset(
                 &WorkflowRegistrationEntry::node_id(run.definition),
             );
             out.push(iri(&run_node, PROV_USED, &definition));
+        }
+        AssetRecord::StoredQuery(query) => {
+            let id = format!("{}:{}", query.name, query.version);
+            let saved = node(
+                &mut out,
+                "SavedQueryAsset",
+                "stored-query",
+                &id,
+                &format!("stored_query:{id}"),
+                links,
+                None,
+            )?;
+            out.push(literal(&saved, SKOS_PREF_LABEL, &query.name));
+            let language = match query.language {
+                StoredQueryLanguage::Uql => "uql",
+                StoredQueryLanguage::Sql => "sql",
+                StoredQueryLanguage::Sparql => "sparql",
+            };
+            out.push(literal(&saved, &format!("{CAT}queryLanguage"), language));
+            for parameter in query.params.keys() {
+                out.push(literal(&saved, &format!("{CAT}parameterName"), parameter));
+            }
         }
         AssetRecord::Graph(graph) => {
             let graph_node = node(
@@ -666,5 +693,44 @@ mod tests {
         assert!(run
             .iter()
             .any(|t| t.predicate == format!("{CAT}hop") && t.object == Object::Literal("ingest".into())));
+    }
+    // spec: MEDULLA-TYPED-PACKS-R108.14
+    #[test]
+    fn stored_query_emits_without_text() {
+        use medulla_source_types::stored_query::{RefreshPolicy, StoredParamType};
+        let query = StoredQuery {
+            name: "sales-by-region".into(),
+            version: 2,
+            language: StoredQueryLanguage::Sparql,
+            text: "SELECT ?s WHERE { ?s ?p $region }".into(),
+            params: [("region".to_string(), StoredParamType::String)].into(),
+            materialize: false,
+            refresh: RefreshPolicy::OnChange,
+            author: "alice".into(),
+            share: medulla_identity_types::identity::ShareScope::Private,
+        };
+        let triples = emit_asset(AssetRecord::StoredQuery(&query), &AssetLinks::default()).unwrap();
+        let node = asset_node("stored-query", "sales-by-region:2");
+        assert!(has(&triples, &node, RDF_TYPE, &Object::Iri(format!("{CAT}SavedQueryAsset"))));
+        assert!(has(
+            &triples,
+            &node,
+            &format!("{CAT}sourceRecord"),
+            &Object::Literal("stored_query:sales-by-region:2".into())
+        ));
+        assert!(has(&triples, &node, SKOS_PREF_LABEL, &Object::Literal("sales-by-region".into())));
+        assert!(has(&triples, &node, &format!("{CAT}queryLanguage"), &Object::Literal("sparql".into())));
+        assert!(has(&triples, &node, &format!("{CAT}parameterName"), &Object::Literal("region".into())));
+        // No owner resolved: the node is flagged, and the text is nowhere in the output.
+        assert!(has(
+            &triples,
+            &node,
+            &format!("{CAT}flag"),
+            &Object::Literal(OWNER_MISSING_FLAG.into())
+        ));
+        assert!(!triples.iter().any(|t| match &t.object {
+            Object::Literal(value) => value.contains("SELECT"),
+            _ => false,
+        }));
     }
 }

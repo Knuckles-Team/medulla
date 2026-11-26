@@ -14,5 +14,6 @@ path = "src/lib.rs"
 [dependencies]
 medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-identity-types = { path = "../medulla-identity-types" }
+medulla-source-types = { path = "../medulla-source-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 thiserror = "2.0"

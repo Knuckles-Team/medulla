@@ -564,7 +564,7 @@ cat:ReportAsset a owl:Class ;
 
 cat:ReportTemplate a owl:Class ;
     rdfs:label "Report Template" ;
-    rdfs:comment "A report whose query takes named parameters (cat:parameterName)." ;
+    rdfs:comment "A report whose stored query takes named parameters (cat:usesStoredQuery)." ;
     rdfs:subClassOf cat:ReportAsset .
 
 cat:readsAsset a owl:ObjectProperty ;
@@ -573,10 +573,27 @@ cat:readsAsset a owl:ObjectProperty ;
     rdfs:domain cat:Asset ;
     rdfs:range cat:Asset .
 
+cat:SavedQueryAsset a owl:Class ;
+    rdfs:label "Saved Query Asset" ;
+    rdfs:comment "A stored, versioned query catalogued as an asset (MEDULLA-TYPED-PACKS-R108.14). The catalog holds the descriptor and a link back to its stored_query node; the query text is never copied." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:queryLanguage a owl:DatatypeProperty ;
+    rdfs:label "query language" ;
+    rdfs:comment "The language of a saved query: uql, sql or sparql." ;
+    rdfs:domain cat:SavedQueryAsset ;
+    rdfs:range xsd:string .
+
+cat:usesStoredQuery a owl:ObjectProperty ;
+    rdfs:label "uses stored query" ;
+    rdfs:comment "The exact stored-query version a report, template or dashboard runs." ;
+    rdfs:domain cat:Asset ;
+    rdfs:range cat:SavedQueryAsset .
+
 cat:parameterName a owl:DatatypeProperty ;
     rdfs:label "parameter name" ;
-    rdfs:comment "One named parameter of a report template." ;
-    rdfs:domain cat:ReportTemplate ;
+    rdfs:comment "One named parameter of a saved query; a template's parameters are those of its stored query." ;
+    rdfs:domain cat:SavedQueryAsset ;
     rdfs:range xsd:string .
 
 cat:revision a owl:DatatypeProperty ;

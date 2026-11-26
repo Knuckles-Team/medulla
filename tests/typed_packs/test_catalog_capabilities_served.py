@@ -119,6 +119,43 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
     admin = catalog_graph
     xsd_int = "http://www.w3.org/2001/XMLSchema#nonNegativeInteger"
     owner = "<urn:principal:data-team>"
+
+    # A published stored query is catalogued as a saved query asset with its language and
+    # parameters, and never with its text.
+    text = "MATCH () WHERE type = 'Sale' AND region = $region"
+    admin._send(
+        "StoredQueryPut",
+        {
+            "query": {
+                "name": "sales-by-region",
+                "version": 1,
+                "language": "uql",
+                "text": text,
+                "params": {"region": "string"},
+                "materialize": False,
+                "refresh": {"kind": "on_change"},
+            }
+        },
+    )
+    saved = "urn:medulla:asset:stored-query:sales-by-region%3A1"
+    saved_node = f"<{saved}>"
+    found = admin.rdf.sparql(f"SELECT ?c WHERE {{ <{saved}> a ?c }}")
+    assert [row["c"].strip("<>") for row in found] == [f"{CATALOG}SavedQueryAsset"]
+    source = admin.rdf.sparql(
+        f"SELECT ?s WHERE {{ <{saved}> <{CATALOG}sourceRecord> ?s }}"
+    )
+    assert [row["s"].strip('"') for row in source] == ["stored_query:sales-by-region:1"]
+    language = admin.rdf.sparql(
+        f"SELECT ?l WHERE {{ <{saved}> <{CATALOG}queryLanguage> ?l }}"
+    )
+    assert [row["l"].strip('"') for row in language] == ["uql"]
+    parameters = admin.rdf.sparql(
+        f"SELECT ?p WHERE {{ <{saved}> <{CATALOG}parameterName> ?p }}"
+    )
+    assert [row["p"].strip('"') for row in parameters] == ["region"]
+    stored_objects = admin.rdf.sparql(f"SELECT ?o WHERE {{ <{saved}> ?p ?o }}")
+    assert not any("region = $region" in str(row["o"]) for row in stored_objects)
+
     admin.rdf.add_triples(
         turtle=(
             f"{PREFIX}"
@@ -139,8 +176,8 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
             f"<urn:medulla:asset:resource:sales> .\n"
             f"<urn:medulla:asset:template:sales> a cat:ReportTemplate ; "
             f'skos:prefLabel "sales template" ; '
-            f'cat:hasOwner {owner} ; cat:parameterName "region" ; cat:readsAsset '
-            f"<urn:medulla:asset:resource:sales> .\n"
+            f"cat:hasOwner {owner} ; cat:usesStoredQuery {saved_node} ; "
+            f"cat:readsAsset <urn:medulla:asset:resource:sales> .\n"
         )
     )
     # Each reporting asset lists what it reads, and the one search ranks them with
@@ -157,7 +194,7 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
         "urn:medulla:asset:template:sales",
     } <= found
 
-    # A template with no parameter is refused and writes nothing.
+    # A template that names no stored query is refused and writes nothing.
     with pytest.raises(EngineResponseError):
         admin.rdf.add_triples(
             turtle=(
@@ -165,6 +202,9 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
                 f"cat:hasOwner {owner} .\n"
             )
         )
+    assert not admin.rdf.sparql(
+        "SELECT ?t WHERE { <urn:medulla:asset:template:bare> a ?t }"
+    )
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.15")

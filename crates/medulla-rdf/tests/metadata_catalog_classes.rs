@@ -404,14 +404,20 @@ fn dashboard_asset_needs_one_revision_and_an_owner_or_flag() {
 
 // spec: MEDULLA-TYPED-PACKS-R108.14
 #[test]
-fn report_and_template_need_an_owner_and_the_template_a_parameter() {
+fn report_and_template_need_an_owner_and_the_template_a_stored_query() {
     let report =
         "<urn:r:1> a cat:ReportAsset ; cat:hasOwner <urn:g:x> ; cat:readsAsset <urn:a:t> . ";
     assert!(conforms(report));
     assert!(!conforms("<urn:r:1> a cat:ReportAsset ."));
     let template = "<urn:r:2> a cat:ReportTemplate ; cat:hasOwner <urn:g:x> . ";
     assert!(!conforms(template));
+    let saved = "<urn:q:1> a cat:SavedQueryAsset ; cat:hasOwner <urn:g:x> ; \
+                 cat:parameterName \"region\" . ";
     assert!(conforms(&format!(
+        "{saved}{template}<urn:r:2> cat:usesStoredQuery <urn:q:1> ."
+    )));
+    // A parameter on the template itself no longer stands for a stored query.
+    assert!(!conforms(&format!(
         "{template}<urn:r:2> cat:parameterName \"region\" ."
     )));
 }
