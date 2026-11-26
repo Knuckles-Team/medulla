@@ -9,12 +9,16 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import struct
+import time
 import uuid
 from typing import Any
 
 import msgpack
 import pytest
 from _round_served import client, put
+from conftest import TEST_AGENT_ID, register_commons_agents, request_context
 
 
 def _answer(cl: Any, graph: str, agent_ref: str | None) -> dict[str, Any]:
@@ -178,5 +182,118 @@ def test_scope_digest_recorded(start_medulla_server) -> None:
         assert _answer(cl, graph, "agent:open")["scope_digest"] == empty
         assert _answer(cl, graph, None)["scope_digest"] == empty
     finally:
+        cl.tenants.delete(graph)
+        cl.close()
+
+
+def _framed(domain: bytes, fields: list[bytes]) -> str:
+    """The engine's framed SHA-256 (`Digest256::framed`) as lowercase hex."""
+    data = b"eg/framed-sha256/v1\0" + struct.pack(">I", len(domain)) + domain
+    data += struct.pack(">I", len(fields))
+    for field in fields:
+        data += struct.pack(">Q", len(field)) + field
+    return hashlib.sha256(data).hexdigest()
+
+
+def _resource_grant(
+    principal: str, resource: str, granted_at_ms: int, expires_at_ms: int
+) -> dict[str, Any]:
+    """One knowledge-set grant of `operation: discover`, with its derived id."""
+    digest = _framed(
+        b"eg/resource-grant/v1",
+        [
+            b"principal",
+            principal.encode(),
+            resource.encode(),
+            b"knowledge",
+            b"discover",
+            struct.pack(">Q", granted_at_ms),
+        ],
+    )
+    return {
+        "grant_id": f"rgrant:{digest}",
+        "subject": {"Principal": principal},
+        "resource_ref": resource,
+        "protocol": "knowledge",
+        "operation": "discover",
+        "scope_ceiling": [],
+        "granted_at_ms": granted_at_ms,
+        "expires_at_ms": expires_at_ms,
+    }
+
+
+def _grant(cl: Any, grant: dict[str, Any]) -> None:
+    cl._send(
+        "RbacAdmin",
+        {"op": {"GrantResource": grant}},
+        None,
+        idempotency_key=f"grant-{uuid.uuid4().hex}",
+    )
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R704.4")
+def test_resource_grants_default_deny(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R704.4: a knowledge set the agent scope names
+    is denied without an unexpired grant naming the caller (none, expired, revoked),
+    allowed with one, and a non-admin caller cannot write a grant."""
+    graph = f"knowledge-grants-{uuid.uuid4().hex[:8]}"
+    resource = f"ks:grants-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    cl.tenants.create(graph)
+    outsider = None
+    try:
+        _corpus(cl, graph)
+        put(cl, graph, resource, {"type": "KnowledgeSet"})
+        put(
+            cl,
+            graph,
+            "agent:granted",
+            {
+                "type": "AgentDefinition",
+                "knowledgeScope": {"knowledge_sets": [resource]},
+            },
+        )
+
+        # No grant: denied by default.
+        with pytest.raises(Exception, match="RESOURCE_ACCESS_DENIED"):
+            _discover(cl, graph, "agent:granted")
+
+        # An expired grant is no grant, and answers like a missing one.
+        now_ms = int(time.time() * 1000)
+        _grant(
+            cl, _resource_grant(TEST_AGENT_ID, resource, now_ms - 2000, now_ms - 1000)
+        )
+        with pytest.raises(Exception, match="RESOURCE_ACCESS_DENIED"):
+            _discover(cl, graph, "agent:granted")
+
+        # An unexpired grant admits the read.
+        live = _resource_grant(TEST_AGENT_ID, resource, now_ms, now_ms + 3_600_000)
+        _grant(cl, live)
+        assert isinstance(_discover(cl, graph, "agent:granted"), list)
+
+        # Revoked, it is denied again.
+        cl._send(
+            "RbacAdmin",
+            {"op": {"RevokeResource": {"grant_id": live["grant_id"]}}},
+            None,
+            idempotency_key=f"revoke-{uuid.uuid4().hex}",
+        )
+        with pytest.raises(Exception, match="RESOURCE_ACCESS_DENIED"):
+            _discover(cl, graph, "agent:granted")
+
+        # A caller that is not an admin cannot write a grant.
+        agent = f"grants-outsider-{uuid.uuid4().hex[:8]}"
+        register_commons_agents(agent, graph=graph)
+        from medulla.client import SyncMedullaClient
+
+        outsider = SyncMedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=request_context(agent_id=agent),
+        )
+        with pytest.raises(Exception, match="security:admin|ACCESS_DENIED|SCOPE"):
+            _grant(outsider, _resource_grant(agent, resource, now_ms, now_ms + 60_000))
+    finally:
+        if outsider is not None:
+            outsider.close()
         cl.tenants.delete(graph)
         cl.close()

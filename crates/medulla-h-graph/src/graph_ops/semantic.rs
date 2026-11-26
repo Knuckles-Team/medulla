@@ -785,6 +785,33 @@ fn agent_scope_for(
     Ok((scope.map(|scope| ResolvedScope::resolve(core, &scope)), digest))
 }
 
+/// The grant gate of the agent's knowledge scope (MEDULLA-FEDERATED-QUERY-R704.4): every
+/// knowledge set the scope names needs an unexpired `discover` grant naming the caller.
+/// Access is denied by default. A scope that cannot be read passes here: `agent_scope_for`
+/// has already refused it, so the scope refusals stay ahead of the grant refusal.
+#[cfg(all(feature = "query", feature = "security"))]
+async fn require_scope_grants(
+    ctx: &GraphOpsContext<'_>,
+    agent_ref: Option<&str>,
+) -> Result<(), String> {
+    let Some(agent) = agent_ref else {
+        return Ok(());
+    };
+    let Ok(Some(scope)) = medulla_retrieval::knowledge_scope::agent_scope(ctx.core, agent) else {
+        return Ok(());
+    };
+    let principal = ctx.read_authority.verified_actor()?.to_string();
+    let now_ms = medulla_server_api::txn::now_ms();
+    let state = ctx.state.read().await;
+    state.isolation.require_resource_grants(
+        &principal,
+        &scope.knowledge_sets,
+        medulla_identity_types::acl::ResourceProtocol::Knowledge,
+        "discover",
+        now_ms,
+    )
+}
+
 /// Handle semantic and embedding operations.
 ///
 /// Every arm here is a READ, and every read is served from `core.semantic_store`
@@ -844,6 +871,10 @@ pub(super) async fn try_handle_semantic_compute(
                 Ok(resolved) => resolved,
                 Err(error) => return ControlFlow::Break(Response::err(req_id, error)),
             };
+            #[cfg(feature = "security")]
+            if let Err(error) = require_scope_grants(&ctx, agent_ref.as_deref()).await {
+                return ControlFlow::Break(Response::err(req_id, error));
+            }
             let served = discover_served(&ctx, capability.as_deref()).await;
             let implicit_feedback = match served.0.as_deref() {
                 Some(tenant) => {

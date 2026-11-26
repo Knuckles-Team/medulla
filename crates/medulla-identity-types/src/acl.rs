@@ -327,6 +327,9 @@ pub enum ResourceProtocol {
     Mcp,
     /// A skill of an agent-to-agent peer.
     A2a,
+    /// A knowledge set of the engine, read by `Discover` and `ContextCompile`
+    /// (MEDULLA-FEDERATED-QUERY-R704.4).
+    Knowledge,
 }
 
 impl ResourceProtocol {
@@ -334,6 +337,7 @@ impl ResourceProtocol {
         match self {
             Self::Mcp => b"mcp",
             Self::A2a => b"a2a",
+            Self::Knowledge => b"knowledge",
         }
     }
 }

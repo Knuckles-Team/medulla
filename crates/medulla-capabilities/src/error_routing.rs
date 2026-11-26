@@ -719,6 +719,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             // MEDULLA-FEDERATED-QUERY-R704.4: a scope that names no agent node or a foreign set.
             "SCOPE_AGENT_UNKNOWN",
             "SCOPE_SET_UNKNOWN",
+            "RESOURCE_ACCESS_DENIED",
         ],
     ),
     ("MemoryExport", &["ACCESS_DENIED"]),
@@ -852,6 +853,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             // MEDULLA-FEDERATED-QUERY-R704.4: a scope that names no agent node or a foreign set.
             "SCOPE_AGENT_UNKNOWN",
             "SCOPE_SET_UNKNOWN",
+            "RESOURCE_ACCESS_DENIED",
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R081.11: a round refuses a malformed part and the

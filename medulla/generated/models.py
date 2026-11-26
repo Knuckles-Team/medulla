@@ -25236,6 +25236,7 @@ class ResourceGrantSubjectRole(BaseModel):
 class ResourceProtocol(str, Enum):
     MCP = "mcp"
     A2A = "a2a"
+    KNOWLEDGE = "knowledge"
 
 
 class ResourceAccessDecision(BaseModel):

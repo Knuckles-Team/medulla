@@ -1190,6 +1190,10 @@ closed_error_codes! {
         ContextItemCostInvalid => "CONTEXT_ITEM_COST_INVALID",
         /// MEDULLA-FEDERATED-QUERY-R704.4: an `agent_ref` with no definition node in the caller's view.
         ScopeAgentUnknown => "SCOPE_AGENT_UNKNOWN",
+        /// MEDULLA-FEDERATED-QUERY-R704.4: a knowledge set a scope names has no unexpired grant
+        /// naming the caller for the requested operation. Access is denied by default, and an
+        /// unknown set, a missing grant and an expired one answer alike.
+        ResourceAccessDenied => "RESOURCE_ACCESS_DENIED",
         /// MEDULLA-FEDERATED-QUERY-R704.4: a knowledge scope names a set the caller cannot see. A set of
         /// another tenant and a set that does not exist answer this one code with one detail, so the
         /// refusal is no existence oracle.

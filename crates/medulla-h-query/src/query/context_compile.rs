@@ -621,6 +621,33 @@ async fn access_check_servers(_ctx: &QueryHandlerCtx<'_>) -> BTreeMap<String, St
     BTreeMap::new()
 }
 
+/// The grant gate of the agent's knowledge scope (MEDULLA-FEDERATED-QUERY-R704.4): every
+/// knowledge set the scope names needs an unexpired `compile` grant naming the caller. Access
+/// is denied by default; a scope that cannot be read passes here and refuses in `run_compile`,
+/// so the scope refusals stay ahead of the grant refusal.
+#[cfg(feature = "security")]
+async fn require_scope_grants(ctx: &QueryHandlerCtx<'_>, agent: &str) -> Result<(), Refusal> {
+    let Ok(Some(scope)) = medulla_retrieval::knowledge_scope::agent_scope(ctx.core, agent) else {
+        return Ok(());
+    };
+    let now_ms = medulla_server_api::txn::now_ms();
+    let s = ctx.state.read().await;
+    s.isolation
+        .require_resource_grants(
+            ctx.caller,
+            &scope.knowledge_sets,
+            medulla_identity_types::acl::ResourceProtocol::Knowledge,
+            "compile",
+            now_ms,
+        )
+        .map_err(|error| {
+            let detail = error
+                .split_once(": ")
+                .map_or(error.clone(), |(_, detail)| detail.to_string());
+            refuse("RESOURCE_ACCESS_DENIED", detail)
+        })
+}
+
 /// Serve one `ContextCompile`.
 pub(crate) async fn handle_context_compile(
     ctx: &QueryHandlerCtx<'_>,
@@ -632,7 +659,14 @@ pub(crate) async fn handle_context_compile(
     }
     // The agent scope is checked once, in `run_compile`, by the same
     // `agent_scope` read `Discover` uses (MEDULLA-FEDERATED-QUERY-R704.4): a
-    // foreign agent and a missing one both answer `SCOPE_AGENT_UNKNOWN`.
+    // foreign agent and a missing one both answer `SCOPE_AGENT_UNKNOWN`. The sets it
+    // names then need grants.
+    #[cfg(feature = "security")]
+    if let Some(agent) = &request.agent_ref {
+        if let Err(refusal) = require_scope_grants(ctx, agent).await {
+            return refusal_response(req_id, refusal);
+        }
+    }
     let revision = ctx.core.version();
     if let Some(as_of) = request.as_of {
         if as_of != revision {

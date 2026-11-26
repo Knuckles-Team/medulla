@@ -178,6 +178,8 @@ mod identity_query;
 #[cfg(feature = "security")]
 mod identity_store_admin;
 #[cfg(feature = "security")]
+mod resource_access;
+#[cfg(feature = "security")]
 pub use identity_store_admin::{
     AuditActor, IdentityStoreError, STORE_MANAGED, STORE_NAMESPACE, SYSTEM_BOOTSTRAP_PENDING,
 };
