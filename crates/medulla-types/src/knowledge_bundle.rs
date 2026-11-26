@@ -467,6 +467,118 @@ fn read_entries(bytes: &[u8]) -> Result<Vec<(String, Vec<u8>)>, BundleError> {
     Err(BundleError::malformed("the tar stream has no end marker"))
 }
 
+/// The `type` of the control-graph node that records one import (MEDULLA-DURABLE-KERNEL-R877.3).
+pub const IMPORT_NODE_TYPE: &str = "BundleImport";
+/// How long an `importing` record is left to its importer before the recovery pass deletes the
+/// graphs it names. The pass receives its clock as an input.
+pub const IMPORT_GRACE_MS: u64 = 300_000;
+
+/// Where one import stands. A graph an import creates is hidden from every read until the single
+/// control-graph write that sets every graph of the import to `ready`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ImportState {
+    /// The target graphs are being written and are hidden from every read.
+    Importing,
+    /// Every target graph committed and is readable.
+    Ready,
+    /// A step refused or the importer crashed; the graphs were deleted.
+    Aborted,
+}
+
+impl ImportState {
+    /// The stored spelling.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Importing => "importing",
+            Self::Ready => "ready",
+            Self::Aborted => "aborted",
+        }
+    }
+}
+
+/// One import as the control graph holds it: the graphs it created and its state.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ImportRecord {
+    /// Names this import: a digest of the tenant, the bundle, the prefix and the idempotency key.
+    pub import_id: String,
+    /// The tenant that imports.
+    pub tenant_id: String,
+    /// The graphs this import created (graphs it skipped are not listed).
+    pub graphs: Vec<String>,
+    /// Where the import stands.
+    pub state: ImportState,
+    /// When the import began, in milliseconds.
+    pub started_ms: u64,
+}
+
+impl ImportRecord {
+    /// A record for a new import in the `importing` state.
+    pub fn begin(
+        tenant_id: &str,
+        bundle_ref: &str,
+        prefix: &str,
+        idempotency_key: &str,
+        graphs: Vec<String>,
+        started_ms: u64,
+    ) -> Self {
+        let seed = format!("{tenant_id}\n{bundle_ref}\n{prefix}\n{idempotency_key}");
+        Self {
+            import_id: Digest256::sha256(seed.as_bytes()).to_hex(),
+            tenant_id: tenant_id.to_string(),
+            graphs,
+            state: ImportState::Importing,
+            started_ms,
+        }
+    }
+
+    /// The control-graph node id of an import.
+    pub fn node_id_of(import_id: &str) -> String {
+        format!("bundle_import:{import_id}")
+    }
+
+    /// The control-graph node id of this import.
+    pub fn node_id(&self) -> String {
+        Self::node_id_of(&self.import_id)
+    }
+
+    /// The same import in `state`.
+    pub fn with_state(&self, state: ImportState) -> Self {
+        Self {
+            state,
+            ..self.clone()
+        }
+    }
+
+    /// The `upsert_node` operation that stores this record, stamped with the writing agent.
+    pub fn node_operation(&self, agent: &str) -> serde_json::Value {
+        serde_json::json!({
+            "op": "upsert_node",
+            "id": self.node_id(),
+            "properties": {
+                "type": IMPORT_NODE_TYPE,
+                "import_record": serde_json::to_string(self).unwrap_or_default(),
+                "state": self.state.as_str(),
+                "tenant_id": self.tenant_id,
+                "_owner": agent,
+            },
+        })
+    }
+
+    /// The record a stored node holds, or `None` when the node is not an import record.
+    pub fn from_properties(properties: &serde_json::Value) -> Option<Self> {
+        serde_json::from_str(properties.get("import_record")?.as_str()?).ok()
+    }
+
+    /// Whether the recovery pass may delete this import at `now_ms`: it is still `importing`
+    /// and its grace has passed.
+    pub fn is_stale(&self, now_ms: u64) -> bool {
+        self.state == ImportState::Importing
+            && now_ms.saturating_sub(self.started_ms) >= IMPORT_GRACE_MS
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -544,5 +656,22 @@ mod tests {
         large.parts[0].triple_count = BUNDLE_TRIPLES_MAX + 1;
         let error = Bundle::unpack(&Bundle::pack(&large.seal(), &entries)).unwrap_err();
         assert_eq!(error.code, BUNDLE_TOO_LARGE);
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R877.3
+    #[test]
+    fn an_import_record_round_trips_and_goes_stale_only_while_importing() {
+        let record = ImportRecord::begin("t", "cas:sha256:aa", "copy-", "k", vec!["copy-g".into()], 1_000);
+        let node = record.node_operation("agent");
+        let stored = ImportRecord::from_properties(&node["properties"]).expect("the node holds the record");
+        assert_eq!(stored, record);
+        assert_eq!(node["id"], record.node_id());
+        assert_eq!(record.state, ImportState::Importing);
+        assert!(!record.is_stale(1_000 + IMPORT_GRACE_MS - 1));
+        assert!(record.is_stale(1_000 + IMPORT_GRACE_MS));
+        assert!(!record.with_state(ImportState::Ready).is_stale(u64::MAX));
+        assert!(!record.with_state(ImportState::Aborted).is_stale(u64::MAX));
+        let other = ImportRecord::begin("t", "cas:sha256:aa", "copy-", "k2", vec![], 1_000);
+        assert_ne!(other.import_id, record.import_id);
     }
 }

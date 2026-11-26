@@ -154,6 +154,11 @@ async fn tick_pass(
             if let Err(error) = crate::memory_event_publisher::publish_claim_events(state).await {
                 eprintln!("MEMORY_EVENT_RECOVERY_FAILED: {error}");
             }
+            // MEDULLA-DURABLE-KERNEL-R877.3: the graphs of a bundle import that stopped before
+            // it was `ready` are deleted, and its record is set `aborted`.
+            if let Err(error) = crate::bundle_import_recovery::recover_bundle_imports(state, now_ms).await {
+                eprintln!("BUNDLE_IMPORT_RECOVERY_FAILED: {error}");
+            }
         }
         relint_stored_queries(state, &graph, &core, cache, host, now_ms, poll_s).await?;
         let schedules = cache.schedules(&graph, &core, now_ms);

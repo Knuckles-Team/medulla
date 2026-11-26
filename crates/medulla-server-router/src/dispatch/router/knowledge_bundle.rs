@@ -3,10 +3,16 @@
 //! The handlers live in `medulla_h_admin::knowledge_bundle`. The export answers from there. The
 //! import is verified there and committed here: each target graph is created through the graph
 //! lifecycle path, its triples commit through the `AddTriples` gateway, and its provenance rows
-//! and embeddings commit as one `BatchUpdate`. A refused step deletes every graph this import
-//! created, so a refusal leaves the target unchanged.
+//! and embeddings commit as one `BatchUpdate`. The import is one `importing` control-graph record:
+//! its graphs are hidden from every read until one write sets the record `ready`, and a refused
+//! step deletes every graph this import created. A crash leaves the record `importing`, and the
+//! leader tick (`medulla_h_jobs`, bundle import recovery) deletes the graphs it names.
 
 use super::*;
+#[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]
+use medulla_server_auth::access::importing;
+#[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]
+use medulla_types::knowledge_bundle::{ImportRecord, ImportState};
 
 /// Serve `Method::BundleExport`.
 pub(super) async fn serve_bundle_export(
@@ -61,8 +67,69 @@ pub(super) async fn serve_bundle_import(
             Ok(plan) => plan,
             Err(refusal) => return Response::err(req.id, refusal),
         };
-        let mut created: Vec<String> = Vec::new();
-        let outcome = commit_plan(state, req, verified, &plan, &mut created).await;
+        let targets: Vec<String> = plan
+            .graphs
+            .iter()
+            .filter(|graph| !graph.skip)
+            .map(|graph| graph.target.clone())
+            .collect();
+        // MEDULLA-DURABLE-KERNEL-R877.3: the import is one control-graph record. Every graph it
+        // creates is hidden from every read while the record says `importing`; one write of the
+        // record flips them all to `ready`. A crash leaves the record `importing`, and the
+        // leader tick deletes the graphs it names.
+        let record = ImportRecord::begin(
+            verified.tenant(),
+            &bundle_ref,
+            &target_graph_prefix,
+            verified.idempotency_key(),
+            targets.clone(),
+            medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+        );
+        let control = medulla_server_api::knob_config::default_ingest_graph();
+        let target = medulla_server_graph::dispatch::graph_client::GraphTarget {
+            graph: control,
+            req_id: req.id,
+            caller: req.agent_id.as_deref(),
+            verified,
+        };
+        let agent = verified.agent_id();
+        let write_record = |record: ImportRecord| {
+            let operation = record.node_operation(agent);
+            let target = &target;
+            async move {
+                medulla_server_graph::dispatch::graph_client::write_batch(state, target, &[operation])
+                    .await
+            }
+        };
+        // The importing record is durable before any graph exists.
+        if let Err(refusal) = write_record(record.clone()).await {
+            return Response::err(req.id, refusal);
+        }
+        importing::hide(targets.iter().cloned());
+        importing::mark_live(&record.import_id);
+        let scope: std::collections::BTreeSet<String> = targets.iter().cloned().collect();
+        let outcome = importing::within_import(scope.clone(), async {
+            let mut created: Vec<String> = Vec::new();
+            let committed = commit_plan(state, req, verified, &plan, &mut created).await;
+            let committed = match committed {
+                // The one write that makes every graph of the import readable.
+                Ok(()) => write_record(record.with_state(ImportState::Ready)).await,
+                Err(refusal) => Err(refusal),
+            };
+            if committed.is_err() {
+                // Every graph this import created goes again, newest first.
+                for graph in created.iter().rev() {
+                    if let Ok(request) = rollback_request(req, verified, graph) {
+                        let _ = delete_graph(state, request, state_machine_authorized, graph).await;
+                    }
+                }
+                let _ = write_record(record.with_state(ImportState::Aborted)).await;
+            }
+            committed
+        })
+        .await;
+        importing::reveal(targets.iter());
+        importing::mark_done(&record.import_id);
         match outcome {
             Ok(()) => {
                 match ResultPayload::of::<
@@ -73,15 +140,7 @@ pub(super) async fn serve_bundle_import(
                     Err(error) => Response::err(req.id, error),
                 }
             }
-            Err(refusal) => {
-                // Every graph this import created goes again, newest first.
-                for graph in created.iter().rev() {
-                    if let Ok(request) = rollback_request(req, verified, graph) {
-                        let _ = delete_graph(state, request, state_machine_authorized, graph).await;
-                    }
-                }
-                Response::err(req.id, refusal)
-            }
+            Err(refusal) => Response::err(req.id, refusal),
         }
     }
     #[cfg(not(all(feature = "rdf", feature = "blob", feature = "redb")))]

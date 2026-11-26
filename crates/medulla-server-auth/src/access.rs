@@ -63,6 +63,9 @@ pub use write_classification::requires_write;
 /// Path-scoped access of the source methods (MEDULLA-SCM-R007).
 pub mod path_grant;
 
+/// Graphs a knowledge-bundle import is still writing (MEDULLA-DURABLE-KERNEL-R877.3).
+pub mod importing;
+
 /// Whether a wire `Method::Sql` statement mutates state (CONCEPT:MEDULLA-KG.query.mirrors-pgwire). Reuses the
 /// SAME `medulla_sql::sql::classify` the pgwire shim routes on, so a graph-node DML
 /// (INSERT/UPDATE/DELETE on `nodes`), a user-table DDL/DML (CREATE/ALTER/DROP TABLE,
@@ -134,6 +137,12 @@ fn check_graph_access_with_policy(
 ) -> Result<(), String> {
     let agent = require_verified_caller(caller)?;
     require_provisioned_policy(isolation)?;
+    // MEDULLA-DURABLE-KERNEL-R877.3: a graph an import is still writing answers as any denied graph.
+    if importing::hidden_from_current(graph_name) {
+        return Err(format!(
+            "ACCESS_DENIED: verified principal lacks {access:?} access to graph '{graph_name}'"
+        ));
+    }
     let query = medulla_isolation::isolation::AccessQuery {
         agent_id: agent,
         graph_name,

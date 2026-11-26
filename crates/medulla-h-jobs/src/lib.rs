@@ -26,6 +26,11 @@ pub mod development_lane;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod jobs;
 
+/// MEDULLA-DURABLE-KERNEL-R877.3: the leader-tick pass that deletes the graphs of an import that
+/// never finished.
+#[cfg(feature = "jobs")]
+pub mod bundle_import_recovery;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mutation_outbox;
