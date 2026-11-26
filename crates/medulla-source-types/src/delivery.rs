@@ -504,3 +504,30 @@ impl MandateRevoked {
         MANDATE_REVOKED
     }
 }
+
+/// Who produced a review (R019.9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ReviewerKind {
+    Automated,
+    Person,
+}
+
+/// One stored `:Review` record as the round budget reads it (R019.9).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ReviewRecord {
+    pub proposal_id: String,
+    pub reviewer: String,
+    pub reviewer_kind: ReviewerKind,
+    /// The distinct automated review run that produced the review.
+    pub run_key: String,
+}
+
+/// Whether an automated review is still addressed (R019.9).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RoundVerdict {
+    Address,
+    StopAddressing,
+}
