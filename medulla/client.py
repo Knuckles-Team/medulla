@@ -2843,6 +2843,21 @@ class TransitionRefusedError(EngineResponseError):
         self.reason = reason
 
 
+class SchemaDriftQuarantinedError(EngineResponseError):
+    """Raised for ``SCHEMA_DRIFT_QUARANTINED`` (MEDULLA-TYPED-PACKS-R715).
+
+    A delivery that breaks an approved contract applies no record and does not
+    advance the source checkpoint. ``drift`` holds one engine
+    :class:`~medulla.generated.source_ingestion.StreamDrift` (the stream and its
+    ``DriftReport``) per stream of the batch. The engine gate is the authority
+    for the class (SCION-SOURCE-INGEST-R007.1).
+    """
+
+    def __init__(self, code: str, detail: str | None, *, drift: list[Any]) -> None:
+        super().__init__(code, detail)
+        self.drift = drift
+
+
 class TopicCorpusStaleError(EngineResponseError):
     """Raised for ``TOPIC_CORPUS_STALE`` (MEDULLA-FEDERATED-QUERY-R040.2.4).
 
@@ -12625,6 +12640,20 @@ def _raise_placement_redirect(
     )
 
 
+def _schema_drift_streams(detail: str) -> list[Any]:
+    """The per-stream drift reports of a quarantine refusal detail, or ``[]``."""
+    from medulla.generated.source_ingestion import StreamDrift
+
+    start = detail.find("[")
+    if start < 0:
+        return []
+    try:
+        raw = json.loads(detail[start:])
+        return [StreamDrift.model_validate(item) for item in raw]
+    except (ValueError, TypeError):
+        return []
+
+
 def _raise_send_error(resp: dict[str, Any]) -> NoReturn:
     """Raise the typed exception for an error response frame."""
     code = resp.get("error")
@@ -12655,6 +12684,10 @@ def _raise_send_error(resp: dict[str, Any]) -> NoReturn:
             raise TopicCorpusStaleError(
                 code, error_detail, topics=topics, current=current
             )
+    if code == "SCHEMA_DRIFT_QUARANTINED" and error_detail:
+        drift = _schema_drift_streams(error_detail)
+        if drift:
+            raise SchemaDriftQuarantinedError(code, error_detail, drift=drift)
     refused = resp.get("transition_refused")
     if code == "TRANSITION_REFUSED" and isinstance(refused, dict):
         machine = refused.get("machine")

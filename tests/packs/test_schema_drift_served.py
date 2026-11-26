@@ -44,7 +44,11 @@ from governed_ledger import (
 )
 
 from medulla import ConnectorPackEntryContent
-from medulla.client import EngineResponseError, MedullaClient
+from medulla.client import (
+    EngineResponseError,
+    MedullaClient,
+    SchemaDriftQuarantinedError,
+)
 from medulla.generated import reasoning
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
 from medulla.generated.graph_schema import (
@@ -412,6 +416,12 @@ async def test_breaking_delivery_is_quarantined() -> None:
         ) as refused:
             await submit_delivery(client, delivery_batch(connector, 3, 2, {"name": 7}))
         assert "breaking" in str(refused.value).lower()
+        # The refusal is typed: the engine's per-stream DriftReports, so a runner keeps
+        # the report digest without parsing text (SCION-SOURCE-INGEST-R007.1).
+        assert isinstance(refused.value, SchemaDriftQuarantinedError)
+        assert refused.value.drift
+        assert refused.value.drift[0].report.action is DriftAction.QUARANTINED
+        assert refused.value.drift[0].report.shape_digest
         assert await _count(client, DELIVERY_CLASS) == records_before
 
         # One dead-letter item is parked, with digests only and no record body.
