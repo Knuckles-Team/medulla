@@ -142,6 +142,17 @@ pub fn apply_transition_control_lease_row(
             false,
         );
     };
+    // Two-person approval is proven from the record: an approval is consumed only with the
+    // verified decider the engine stamped, and the lease keeps it for every consumer.
+    if request.to == ControlLeaseTarget::Consumed
+        && current.kind == medulla_work_types::control_lease::ACTION_APPROVAL_LEASE_KIND
+        && request.decided_by.is_empty()
+    {
+        return Err("ACCESS_DENIED: deciding an approval requires a verified decider".into());
+    }
+    if !request.decided_by.is_empty() {
+        row.insert("decided_by".into(), request.decided_by.clone().into());
+    }
     let pair = pending_call::transition(graph, request, &row, nodes, committed_at_ms, crypto)?;
     let plan = plan_pair::consume(graph, request, &row, nodes, committed_at_ms, crypto)?;
     row.insert("status".into(), next.as_stored().into());

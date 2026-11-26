@@ -70,6 +70,10 @@ pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Respon
         Ok(method) => method,
         Err(error) => return Ok(Response::err(ctx.req_id, error)),
     };
+    let method = match stamp_decided_by(method, ctx.caller) {
+        Ok(method) => method,
+        Err(error) => return Ok(Response::err(ctx.req_id, error)),
+    };
 
     #[cfg(feature = "raft")]
     let (placement_epoch, placement_fence) = if let Some(routed) = ctx.routed_raft.as_ref() {
@@ -170,6 +174,20 @@ fn stamp_retired_by(method: Method, caller: Option<&str>) -> Result<Method, Stri
         caller.ok_or("ACCESS_DENIED: retiring a sealed record requires a verified caller")?;
     request.retired_by = medulla_server_api::batch_compile::principal_fingerprint(caller)?;
     Ok(Method::RetireSealedRecord { request })
+}
+
+/// A control-lease transition records its verified decider: whatever `decided_by` the client
+/// sent is replaced by the fingerprint of the verified caller, or cleared when the request
+/// carries none (the store then refuses to consume an `action.approval` lease).
+fn stamp_decided_by(method: Method, caller: Option<&str>) -> Result<Method, String> {
+    let Method::TransitionControlLease { mut request } = method else {
+        return Ok(method);
+    };
+    request.decided_by = match caller {
+        Some(caller) => medulla_server_api::batch_compile::principal_fingerprint(caller)?,
+        None => String::new(),
+    };
+    Ok(Method::TransitionControlLease { request })
 }
 
 /// Only private publications replace body retry keys with verified transport identity.

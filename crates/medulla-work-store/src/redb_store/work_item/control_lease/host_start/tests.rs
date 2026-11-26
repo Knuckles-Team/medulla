@@ -80,6 +80,7 @@ fn generic_transition_can_revoke_but_cannot_consume_host_grants() {
             lease_id: "host-grant".into(),
             expected_revision: 1,
             to: ControlLeaseTarget::Consumed,
+            decided_by: String::new(),
             idempotency_key: "transition-host".into(),
             pending_call_consumption: None,
         };

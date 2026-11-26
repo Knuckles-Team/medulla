@@ -35,6 +35,7 @@ fn end(
         lease_id: lease_id.into(),
         expected_revision,
         to,
+        decided_by: String::new(),
         idempotency_key: format!("end:{lease_id}:{expected_revision}:{to:?}"),
     }
 }
@@ -195,6 +196,37 @@ fn a_single_use_lease_is_consumed_once_and_can_still_be_revoked() {
         (view.status, view.revision),
         (ControlLeaseStatus::Revoked, 3)
     );
+}
+
+// spec: MEDULLA-TYPED-PACKS-R806
+#[test]
+fn an_approval_is_consumed_only_with_a_verified_decider_and_keeps_it() {
+    let temp = open("lease-decider");
+    let mut approval = issue("action_approval:d1", "tenant-a");
+    approval.kind = "action.approval".into();
+    issued(&temp.shard, "d1", approval);
+
+    let anonymous = native_call(
+        &temp.shard,
+        "anonymous",
+        &Method::TransitionControlLease {
+            request: end("action_approval:d1", 1, ControlLeaseTarget::Consumed),
+        },
+    );
+    assert!(anonymous.unwrap_err().starts_with("ACCESS_DENIED"));
+    let pending = get(&temp.shard, "tenant-a", "action_approval:d1").unwrap();
+    assert_eq!(
+        (pending.status, pending.decided_by),
+        (ControlLeaseStatus::Active, None)
+    );
+
+    let mut decided = end("action_approval:d1", 1, ControlLeaseTarget::Consumed);
+    decided.decided_by = "principal:sha256:decider".into();
+    let consumed = transitioned(&temp.shard, "decided", decided);
+    assert_eq!(consumed.outcome, ControlLeaseTransitionOutcome::Applied);
+    let view = get(&temp.shard, "tenant-a", "action_approval:d1").unwrap();
+    assert_eq!(view.status, ControlLeaseStatus::Consumed);
+    assert_eq!(view.decided_by.as_deref(), Some("principal:sha256:decider"));
 }
 
 #[test]

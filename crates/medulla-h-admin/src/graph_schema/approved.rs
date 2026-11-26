@@ -125,12 +125,17 @@ async fn admit(
             GraphSchemaErrorCode::CandidateUnknown.as_str()
         ));
     }
+    let executor = medulla_server_api::batch_compile::principal_fingerprint(
+        ctx.caller
+            .ok_or("ACCESS_DENIED: an approved attach requires a verified caller")?,
+    )?;
     verify_schema_approval(
         lease.as_ref(),
         approval_action(contract),
         source_id,
         &candidate,
         now_ms,
+        &executor,
     )
 }
 

@@ -15,6 +15,12 @@
 //!   `approved:<name>` key as `target`, and the exact candidate as
 //!   `candidate_digest` ([`approved_candidate_digest`]).
 //!
+//! * decided by a principal other than the one executing the activation: the
+//!   lease records the verified decider when it is consumed
+//!   ([`ControlLeaseView::decided_by`], stamped by the engine from the verified
+//!   caller), and a lease with no recorded decider, or one decided by the
+//!   executing caller, is refused `REPAIR_SELF_APPROVED` (two-person approval).
+//!
 //! The digest binds the key and the typed contract, so an approval of one
 //! candidate can never activate another. The check is pure: the served handler
 //! reads the lease and supplies its clock.
@@ -29,7 +35,7 @@ use medulla_work_types::{control_lease::ControlLeaseStatus, control_lease::Contr
 /// Key prefix of a governed, approval-bound schema source.
 pub const APPROVED_SOURCE_PREFIX: &str = "approved:";
 /// Control-lease kind of the approval record (the AU approvals queue).
-pub const SCHEMA_APPROVAL_LEASE_KIND: &str = "action.approval";
+pub const SCHEMA_APPROVAL_LEASE_KIND: &str = medulla_work_types::control_lease::ACTION_APPROVAL_LEASE_KIND;
 /// The approved action a schema-activation grant must name.
 pub const SCHEMA_APPROVAL_ACTION: &str = "schema_repair";
 /// Domain separator of the candidate digest.
@@ -88,20 +94,28 @@ fn mismatch(field: &str) -> String {
     )
 }
 
+fn self_approved(detail: &str) -> String {
+    format!("{}: {detail}", GraphSchemaErrorCode::RepairSelfApproved.as_str())
+}
+
 /// Whether `lease` approves `expected_action` for `candidate_digest` under `source_id` at
-/// `now_ms`. `None` (no lease of the caller's tenant with that id) is refused.
+/// `now_ms`, decided by someone other than `executor` (the principal fingerprint of the
+/// verified caller that executes the activation). `None` (no lease of the caller's tenant
+/// with that id) is refused.
 pub fn verify_schema_approval(
     lease: Option<&ControlLeaseView>,
     expected_action: &str,
     source_id: &str,
     candidate_digest: &str,
     now_ms: u64,
+    executor: &str,
 ) -> Result<(), String> {
     let lease = lease.ok_or_else(|| required("no approval lease with this id is visible"))?;
     if lease.kind != SCHEMA_APPROVAL_LEASE_KIND {
         return Err(mismatch("lease kind"));
     }
     verify_approved_state(lease, now_ms)?;
+    verify_two_person(lease, executor)?;
     let grant_text = |key: &str| lease.grant.get(key).and_then(Value::as_str);
     let bindings = [
         ("kind", expected_action),
@@ -114,6 +128,17 @@ pub fn verify_schema_approval(
     {
         Some((key, _)) => Err(mismatch(key)),
         None => Ok(()),
+    }
+}
+
+/// The lease records who decided it, and that is not the executing caller.
+fn verify_two_person(lease: &ControlLeaseView, executor: &str) -> Result<(), String> {
+    match lease.decided_by.as_deref() {
+        None => Err(self_approved("the approval records no verified decider")),
+        Some(decider) if decider == executor => Err(self_approved(
+            "the approval was decided by the principal executing the repair",
+        )),
+        Some(_) => Ok(()),
     }
 }
 

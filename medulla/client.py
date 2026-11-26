@@ -5422,11 +5422,17 @@ _CONTROL_LEASE_VIEW_FIELDS = frozenset(
 
 
 def _control_lease_view(value: Any) -> dict[str, Any]:
-    if not isinstance(value, dict) or set(value) not in (
-        _CONTROL_LEASE_VIEW_FIELDS,
-        _CONTROL_LEASE_VIEW_FIELDS | {"host_start_provenance"},
+    optional = ("host_start_provenance", "decided_by")
+    if (
+        not isinstance(value, dict)
+        or not _CONTROL_LEASE_VIEW_FIELDS <= set(value)
+        or not set(value) <= _CONTROL_LEASE_VIEW_FIELDS | set(optional)
     ):
         raise RuntimeError("control lease view does not match the typed contract")
+    if "decided_by" in value and not (
+        isinstance(value["decided_by"], str) and value["decided_by"]
+    ):
+        raise RuntimeError("control lease view carries a malformed decider")
     if value["status"] not in ("active", "consumed", "revoked", "expired"):
         raise RuntimeError("control lease view carries an unknown status")
     if "host_start_provenance" in value:

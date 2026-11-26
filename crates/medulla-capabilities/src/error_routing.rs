@@ -2016,6 +2016,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "TENANT_SCOPE_REQUIRED",
             "DRIFT_NOT_FOUND",
             "REPAIR_APPROVAL_MISSING",
+            "REPAIR_SELF_APPROVED",
             "REPAIR_DIGEST_MISMATCH",
             "SCHEMA_REPAIR_SHADOW_MISSING",
             "SCHEMA_REPAIR_SHADOW_VIOLATIONS",

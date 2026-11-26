@@ -8,6 +8,8 @@ use crate::graph_schema::GraphSchemaOp;
 
 const SOURCE: &str = "approved:container-manager-mcp";
 const NOW: u64 = 1_700_000_000_000;
+const DECIDER: &str = "principal:sha256:decider";
+const EXECUTOR: &str = "principal:sha256:executor";
 
 fn contract_with(field: &str) -> RecordContract {
     let mut fields = BTreeMap::new();
@@ -46,6 +48,7 @@ fn lease(status: ControlLeaseStatus, grant: Value) -> ControlLeaseView {
         expires_at_ms: NOW + 1_000,
         hard_expires_at_ms: NOW + 1_000,
         revision: 2,
+        decided_by: Some(DECIDER.to_string()),
     }
 }
 
@@ -58,13 +61,15 @@ fn approving_grant() -> Value {
 }
 
 fn refusal(lease: Option<&ControlLeaseView>) -> String {
-    verify_schema_approval(lease, SCHEMA_APPROVAL_ACTION, SOURCE, &candidate(), NOW).unwrap_err()
+    verify_schema_approval(lease, SCHEMA_APPROVAL_ACTION, SOURCE, &candidate(), NOW, EXECUTOR)
+        .unwrap_err()
 }
 
 #[test]
 fn an_approved_unexpired_lease_naming_the_candidate_admits_it() {
     let approved = lease(ControlLeaseStatus::Consumed, approving_grant());
-    verify_schema_approval(Some(&approved), SCHEMA_APPROVAL_ACTION, SOURCE, &candidate(), NOW).unwrap();
+    verify_schema_approval(Some(&approved), SCHEMA_APPROVAL_ACTION, SOURCE, &candidate(), NOW, EXECUTOR)
+        .unwrap();
 }
 
 #[test]
@@ -84,6 +89,18 @@ fn no_lease_pending_refused_and_expired_approvals_are_all_refused() {
     let mut hard_lapsed = lease(ControlLeaseStatus::Consumed, approving_grant());
     hard_lapsed.hard_expires_at_ms = NOW;
     assert!(refusal(Some(&hard_lapsed)).starts_with("SCHEMA_APPROVAL_REQUIRED"));
+}
+
+#[test]
+fn an_approval_decided_by_its_executor_or_by_nobody_is_refused_as_self_approved() {
+    let mut own = lease(ControlLeaseStatus::Consumed, approving_grant());
+    own.decided_by = Some(EXECUTOR.to_string());
+    let error = refusal(Some(&own));
+    assert!(error.starts_with("REPAIR_SELF_APPROVED"), "{error}");
+    let mut unrecorded = lease(ControlLeaseStatus::Consumed, approving_grant());
+    unrecorded.decided_by = None;
+    let error = refusal(Some(&unrecorded));
+    assert!(error.starts_with("REPAIR_SELF_APPROVED"), "{error}");
 }
 
 #[test]

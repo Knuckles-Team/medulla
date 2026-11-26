@@ -20,6 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "source_authority")
 from governed_ledger import (
     candidate_digest,
     consume_approval_lease,
+    consume_approval_lease_as_executor,
     issue_approval_lease,
 )
 
@@ -108,6 +109,18 @@ async def test_propose_then_approve_activates_once() -> None:
             )
         unchanged = await reasoning.send_graph_schema_list(client, {})
         assert unchanged.composed_digest == before.composed_digest
+
+        # A lease the executing caller decided itself is not a two-person approval.
+        own_lease = "approval:drift-806-own"
+        await issue_approval_lease(client, own_lease, digest, DELIVERY_SOURCE_ID)
+        await consume_approval_lease_as_executor(client, own_lease)
+        with pytest.raises(EngineResponseError, match="REPAIR_SELF_APPROVED"):
+            await client.schema_repair_approve(
+                drift["drift_id"], DELIVERY_STREAM, digest, own_lease
+            )
+        assert (await reasoning.send_graph_schema_list(client, {})).composed_digest == (
+            before.composed_digest
+        )
 
         # 4. The decided approval activates the candidate once.
         await consume_approval_lease(client, lease)

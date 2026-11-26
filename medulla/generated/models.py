@@ -3578,6 +3578,7 @@ class ControlLeaseStatus(str, Enum):
 class ControlLeaseView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    decided_by: str | None = None
     expires_at_ms: Annotated[int, Field(ge=0)]
     grant: dict[str, Any]
     hard_expires_at_ms: Annotated[int, Field(ge=0)]
@@ -30058,6 +30059,7 @@ class TransactionSource(BaseModel):
 class TransitionControlLeaseRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    decided_by: str = ""
     expected_revision: Annotated[int, Field(ge=0)]
     idempotency_key: str
     lease_id: str

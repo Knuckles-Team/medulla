@@ -7,6 +7,8 @@ approval-lease issue and consume operations, ``GraphSchemaOp::AttachApproved`` a
 ``SourceCoverage`` read-back.
 """
 
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import hashlib
@@ -61,7 +63,7 @@ async def _connect(graph: str | None = None, **claims: Any) -> MedullaClient:
     return await MedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
         verified_context=request_context(**claims),
-        **({"graph_name": graph} if graph else {}),
+        graph_name=graph or "__commons__",
     )
 
 
@@ -199,6 +201,7 @@ def approval_lease_id(change_id: str) -> str:
     """The approval reference of ``change_id`` (``governed_approval_ref`` in Rust): the change, not a lease."""
     return f"governed-change:{change_id}"
 
+
 async def issue_approval_lease(
     client: MedullaClient,
     lease_id: str,
@@ -229,6 +232,41 @@ async def issue_approval_lease(
 
 
 async def consume_approval_lease(client: MedullaClient, lease_id: str) -> None:
+    """Decide (consume) an approval lease as a registered agent other than ``client``'s.
+
+    The engine records the verified decider on the lease, and an activation refuses a lease
+    decided by the principal executing it (``REPAIR_SELF_APPROVED``). The decider is a fresh
+    agent registered on the client's graph, so the activation by ``client`` is two-person.
+    """
+    graph = client._graph_name
+    decider_id = f"approval-decider-{uuid.uuid4().hex[:8]}"
+    register_commons_agents(decider_id, graph=graph)
+    decider = await _connect(
+        None if graph == "__commons__" else graph,
+        agent_id=decider_id,
+        scopes=["*"],
+    )
+    try:
+        await coordination.send_transition_control_lease(
+            decider,
+            {
+                "request": {
+                    "tenant": TEST_TENANT,
+                    "lease_id": lease_id,
+                    "expected_revision": 1,
+                    "to": "consumed",
+                    "idempotency_key": f"consume:{lease_id}",
+                }
+            },
+        )
+    finally:
+        await decider.close()
+
+
+async def consume_approval_lease_as_executor(
+    client: MedullaClient, lease_id: str
+) -> None:
+    """Decide the lease as ``client`` itself: the self-approval a two-person rule refuses."""
     await coordination.send_transition_control_lease(
         client,
         {
@@ -237,7 +275,7 @@ async def consume_approval_lease(client: MedullaClient, lease_id: str) -> None:
                 "lease_id": lease_id,
                 "expected_revision": 1,
                 "to": "consumed",
-                "idempotency_key": f"consume:{lease_id}",
+                "idempotency_key": f"consume-self:{lease_id}",
             }
         },
     )

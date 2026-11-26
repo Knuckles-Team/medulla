@@ -289,11 +289,19 @@ impl Served {
             lease_id: lease_id.to_string(),
             expected_revision: 1,
             to: ControlLeaseTarget::Consumed,
+            decided_by: String::new(),
             idempotency_key: format!("approve:{lease_id}"),
         };
         let method = Method::TransitionControlLease { request: consume };
+        // The approvals queue's decider is a principal other than the executing caller.
         let approved = self
-            .call(GRAPH, &format!("approve:{lease_id}"), method)
+            .call_as(
+                APPROVER,
+                &["*"],
+                GRAPH,
+                &format!("approve:{lease_id}"),
+                method,
+            )
             .await;
         assert!(approved.error.is_none(), "{:?}", approved.error);
     }
@@ -416,6 +424,47 @@ async fn an_approved_candidate_attaches_under_its_approval_and_records_it() {
         matches!(&source.origin, SchemaSourceOriginView::Approved { shadow_report_digest: Some(digest), .. } if digest.len() == 64),
         "the attach records the shadow report digest as provenance"
     );
+}
+
+// spec: MEDULLA-TYPED-PACKS-R806
+#[tokio::test]
+async fn an_approval_decided_by_the_executing_caller_is_refused_as_self_approved() {
+    let served = Served::new().await;
+    served.clean_shadow().await;
+    served
+        .approval("action_approval:own", &candidate(), false)
+        .await;
+    // The executing caller (ADMIN) decides its own approval. A decider the client
+    // names in the request is overwritten by the engine with the verified caller.
+    let consume = TransitionControlLeaseRequest {
+        pending_call_consumption: None,
+        tenant: TENANT.to_string(),
+        lease_id: "action_approval:own".to_string(),
+        expected_revision: 1,
+        to: ControlLeaseTarget::Consumed,
+        decided_by: "principal:sha256:forged-other-decider".to_string(),
+        idempotency_key: "approve:own".to_string(),
+    };
+    let decided = served
+        .call(
+            GRAPH,
+            "approve:own",
+            Method::TransitionControlLease { request: consume },
+        )
+        .await;
+    assert!(decided.error.is_none(), "{:?}", decided.error);
+    let refused = served.attach_approved("action_approval:own").await;
+    assert!(
+        refusal(&refused).starts_with("REPAIR_SELF_APPROVED"),
+        "{:?}",
+        refused.error
+    );
+    let listed: GraphSchemaSourcesView =
+        decode(served.call(GRAPH, "list-own", Method::GraphSchemaList).await);
+    assert!(listed
+        .dynamic_sources
+        .iter()
+        .all(|source| source.source_id != SOURCE));
 }
 
 #[tokio::test]

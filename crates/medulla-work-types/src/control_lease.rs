@@ -55,6 +55,10 @@ pub const MAX_CONTROL_LEASE_GRANT_BYTES: usize = 64 * 1024;
 /// issued only by `DecisionLog.commit`, stored beside the record it grants,
 /// and never through `IssueControlLease`.
 pub const DECISION_EVALUATION_LEASE_KIND: &str = "decision.evaluation";
+/// The control-lease kind of an approval record: filed by one principal and
+/// decided (consumed) by another. The engine records the verified decider on
+/// the lease at consumption, and every consumer refuses a self-decided one.
+pub const ACTION_APPROVAL_LEASE_KIND: &str = "action.approval";
 /// Most leases one `ListControlLeases` page may return.
 pub const MAX_CONTROL_LEASE_LIST_LIMIT: u32 = 100;
 /// The `ListControlLeases` cursor family.
@@ -276,6 +280,11 @@ pub struct TransitionControlLeaseRequest {
     /// The `revision` of the view the caller decided on.
     pub expected_revision: u64,
     pub to: ControlLeaseTarget,
+    /// The verified decider's principal fingerprint. The engine stamps it from the
+    /// verified caller before the transition is committed; a value the client
+    /// sends is overwritten, never trusted.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub decided_by: String,
     /// Required when consuming a pending-call envelope.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pending_call_consumption: Option<PendingCallConsumption>,
@@ -297,6 +306,11 @@ pub struct ControlLeaseView {
     pub hard_expires_at_ms: u64,
     /// Row revision: 1 at issue, bumped by every transition.
     pub revision: u64,
+    /// The verified decider's principal fingerprint, recorded when the lease was
+    /// consumed or ended; absent while the lease is active and on leases decided
+    /// before the engine recorded it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub decided_by: Option<String>,
     /// Native issuance provenance, absent on legacy and ordinary leases.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host_start_provenance: Option<crate::host_start::HostStartProvenance>,
@@ -465,6 +479,9 @@ impl TransitionControlLeaseRequest {
         bounded("tenant", &self.tenant)?;
         bounded("lease_id", &self.lease_id)?;
         bounded("idempotency_key", &self.idempotency_key)?;
+        if !self.decided_by.is_empty() {
+            bounded("decided_by", &self.decided_by)?;
+        }
         if let Some(pending) = &self.pending_call_consumption {
             pending.work_item.validate()?;
             if let Some(plan) = &pending.plan {
@@ -514,8 +531,12 @@ impl ControlLeaseView {
             }
             provenance.validate()?;
         }
+        let decided_by = Some(text("decided_by"))
+            .filter(|decider| !decider.is_empty())
+            .map(str::to_string);
         Ok(Self {
             host_start_provenance,
+            decided_by,
             lease_id: lease_id.to_string(),
             kind: text("kind").to_string(),
             status,

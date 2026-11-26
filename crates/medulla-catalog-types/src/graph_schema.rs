@@ -563,6 +563,9 @@ closed_error_codes! {
         RepairShadowMissing => "SCHEMA_REPAIR_SHADOW_MISSING",
         /// The stored shadow-ingest report holds violations or ingested no node.
         RepairShadowViolations => "SCHEMA_REPAIR_SHADOW_VIOLATIONS",
+        /// The approval lease was decided by the principal executing the repair, or records no
+        /// verified decider: two-person approval is not met (every `action.approval` consumer).
+        RepairSelfApproved => "REPAIR_SELF_APPROVED",
         /// A `vg:sourceRole` value outside the closed role set (MEDULLA-SRC-AUTH-R010.3).
         SourceRoleUnknown => "SOURCE_ROLE_UNKNOWN",
     }

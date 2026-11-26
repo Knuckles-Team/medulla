@@ -84,6 +84,7 @@ fn transition_and_get_requests_are_bounded() {
         lease_id: "browserlease_1".into(),
         expected_revision: 1,
         to: ControlLeaseTarget::Revoked,
+        decided_by: String::new(),
         idempotency_key: String::new(),
     };
     assert!(transition.validate().is_err());
