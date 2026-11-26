@@ -1092,6 +1092,8 @@ mod correction_tests;
 mod knowledge_flag_tests;
 // MEDULLA-DECISION-ENGINE-R709.3 to R709.7: the knowledge curation cycle.
 mod knowledge_curation_tests;
+// MEDULLA-DECISION-ENGINE-R711.3, R711.4, R711.5: the skill evaluation job.
+mod skill_eval_tests;
 
 // MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
 mod context_budget_tests;

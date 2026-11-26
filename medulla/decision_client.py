@@ -797,6 +797,12 @@ def delegation_quality_op(request: Mapping[str, Any]) -> dict[str, Any]:
     return {"op": "delegation_quality", "request": dict(request)}
 
 
+def skill_eval_op(request: Mapping[str, Any]) -> dict[str, Any]:
+    """Evaluate one skill's suite of cases and store the results and the report
+    (R711.3) as a ``DecisionEval`` job."""
+    return {"op": "skill_eval", "request": dict(request)}
+
+
 def aggregate_op(
     tenant_id: str, window: tuple[int, int], question_id: str | None = None
 ) -> dict[str, Any]:
@@ -1780,6 +1786,20 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def skill_eval(
+        self, request: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``DecisionEval`` op ``skill_eval`` (run one skill's suite)."""
+        from medulla.generated.coordination import send_decision_eval
+
+        result = await send_decision_eval(
+            self.client,
+            {"op": skill_eval_op(request)},
+            self.graph,
+            idempotency_key=idempotency_key,
+        )
+        return _payload(result)
+
     async def failure_ingest(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:
@@ -2135,6 +2155,7 @@ __all__ = [
     "revoke_rule_op",
     "policy_activation_op",
     "set_observation_op",
+    "skill_eval_op",
     "task_plan_request",
     "verify_task_plan_receipt",
     "usage_append_op",

@@ -191,6 +191,88 @@ pub struct JudgeCalibration {
     pub n: u64,
 }
 
+/// What a harness observed when it ran one case in a clean room.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillEvalRun {
+    /// The case that was run.
+    pub case_id: String,
+    /// The digest of the answer the skill gave.
+    pub actual_digest: String,
+    /// The steps the skill took.
+    #[serde(default)]
+    pub actual_trajectory: Vec<TrajectoryStep>,
+    /// The verdict of the judge, for a judged case.
+    #[serde(default)]
+    pub judged_passed: Option<bool>,
+    /// What the run attests about its environment.
+    pub attestation: EnvironmentAttestation,
+    /// The run trace node of the run, when it has one.
+    #[serde(default)]
+    pub run_trace_id: Option<String>,
+}
+
+/// The body of `DecisionEval` op `skill_eval`: one skill's suite and the runs of its cases.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillEvalRequest {
+    /// The tenant that owns the suite.
+    pub tenant_id: String,
+    /// The skill revision under test.
+    pub skill_ref: String,
+    /// The cases of the suite; every case names `skill_ref`.
+    pub cases: Vec<SkillEvalCase>,
+    /// The runs of those cases.
+    pub runs: Vec<SkillEvalRun>,
+    /// The calibration of the judge that graded the judged cases.
+    #[serde(default)]
+    pub calibration: Option<JudgeCalibration>,
+    /// The tools the skill may call; every mock names one of them.
+    pub known_tools: Vec<String>,
+}
+
+/// One stored result with the case and the run trace it links to.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct StoredSkillEvalResult {
+    /// The result.
+    pub result: SkillEvalResult,
+    /// The run trace the result was observed in.
+    #[serde(default)]
+    pub run_trace_id: Option<String>,
+}
+
+/// A case whose result was refused and not stored.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct RefusedEvalCase {
+    /// The case.
+    pub case_id: String,
+    /// The registered refusal code.
+    pub code: String,
+}
+
+/// What the `skill_eval` job answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillEvalOutcome {
+    /// The skill revision.
+    pub skill_ref: String,
+    /// The stored results.
+    pub results: Vec<StoredSkillEvalResult>,
+    /// The cases whose results were refused.
+    pub refused: Vec<RefusedEvalCase>,
+    /// The report of the stored results.
+    pub report: SuiteReport,
+    /// The premises of the sealed record (R711.5), in order.
+    pub premises: Vec<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

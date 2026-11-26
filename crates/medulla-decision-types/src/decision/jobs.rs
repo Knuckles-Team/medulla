@@ -691,6 +691,11 @@ pub enum DecisionEvalOp {
     CertifyLocalSkill {
         request: Box<super::local_certification::LocalCertificationRequest>,
     },
+    /// Evaluate one skill's suite of cases and store the results and the report
+    /// (MEDULLA-DECISION-ENGINE-R711.3).
+    SkillEval {
+        request: Box<crate::skill_eval::SkillEvalRequest>,
+    },
 }
 
 impl DecisionEvalOp {
@@ -704,6 +709,7 @@ impl DecisionEvalOp {
                 | Self::RetrievalRankingSubmit { .. }
                 | Self::GroundedAnswerSubmit { .. }
                 | Self::CertifyLocalSkill { .. }
+                | Self::SkillEval { .. }
         )
     }
 
@@ -724,6 +730,7 @@ impl DecisionEvalOp {
             Self::RetrievalRankingSubmit { request } => &request.tenant_id,
             Self::GroundedAnswerSubmit { request } => &request.tenant_id,
             Self::CertifyLocalSkill { request } => &request.tenant_id,
+            Self::SkillEval { request } => &request.tenant_id,
         }
     }
 }

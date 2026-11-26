@@ -3900,6 +3900,149 @@ class ChangeKind(str, Enum):
     CONSOLIDATE = "consolidate"
 
 
+class EvalCaseKind(str, Enum):
+    GOLDEN = "golden"
+    REAL_PROMPT = "real_prompt"
+    AUTHOR_JUDGED = "author_judged"
+
+
+class EvalCaseSource(str, Enum):
+    AUTHORED = "authored"
+    TRACE = "trace"
+    CORRECTION = "correction"
+    REVIEW_SIGNAL = "review_signal"
+
+
+class TrajectoryKind(str, Enum):
+    SKILL = "skill"
+    TOOL = "tool"
+
+
+class SuiteBand(str, Enum):
+    HEALTHY = "healthy"
+    TOO_LOW = "too_low"
+    SATURATED = "saturated"
+
+
+class ToolMock(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    args_digest: str
+    result_digest: str
+    tool: str
+
+
+class TrajectoryStep(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: TrajectoryKind
+    name: str
+
+
+class SkillEvalCase(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case_id: str
+    expected_digest: str | None = None
+    expected_trajectory: list[TrajectoryStep] = Field(default_factory=list)
+    input_digest: str
+    kind: EvalCaseKind
+    skill_ref: str
+    source: EvalCaseSource
+    tool_mocks: list[ToolMock] = Field(default_factory=list)
+
+
+class EnvironmentAttestation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    env_digest: str
+    host_paths_read: Annotated[int, Field(ge=0)]
+    sandbox_digest: str
+
+
+class SkillEvalResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attestation: EnvironmentAttestation
+    case_id: str
+    outcome_score_ppm: Annotated[int, Field(ge=0)]
+    passed: bool
+    trajectory_score_ppm: Annotated[int, Field(ge=0)] | None = None
+
+
+class SuiteReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    band: SuiteBand
+    case_count: Annotated[int, Field(ge=0)]
+    golden_ppm: Annotated[int, Field(ge=0)]
+    judged_ppm: Annotated[int, Field(ge=0)]
+    pass_rate_ppm: Annotated[int, Field(ge=0)]
+    real_ppm: Annotated[int, Field(ge=0)]
+
+
+class JudgeCalibration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    annotated_set_ref: str
+    judge_ref: str
+    kappa_ppm: Annotated[int, Field(ge=0)]
+    n: Annotated[int, Field(ge=0)]
+
+
+class SkillEvalRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actual_digest: str
+    actual_trajectory: list[TrajectoryStep] = Field(default_factory=list)
+    attestation: EnvironmentAttestation
+    case_id: str
+    judged_passed: bool | None = None
+    run_trace_id: str | None = None
+
+
+class SkillEvalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calibration: JudgeCalibration | None = None
+    cases: list[SkillEvalCase]
+    known_tools: list[str]
+    runs: list[SkillEvalRun]
+    skill_ref: str
+    tenant_id: str
+
+
+class StoredSkillEvalResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    result: SkillEvalResult
+    run_trace_id: str | None = None
+
+
+class RefusedEvalCase(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case_id: str
+    code: str
+
+
+class SkillEvalOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    premises: list[str]
+    refused: list[RefusedEvalCase]
+    report: SuiteReport
+    results: list[StoredSkillEvalResult]
+    skill_ref: str
+
+
+class DecisionEvalOpSkillEval(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["skill_eval"]
+    request: SkillEvalRequest
+
+
 class DecisionEvalOpDelegationQuality(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4147,6 +4290,7 @@ DecisionEvalOp = Annotated[
     | DecisionEvalOpReceipts
     | DecisionEvalOpTimeline
     | DecisionEvalOpDelegationQuality
+    | DecisionEvalOpSkillEval
     | DecisionEvalOpMemoryChangeBenchmarkSubmit
     | DecisionEvalOpMemoryRewriteSubmit
     | DecisionEvalOpCertifyLocalSkill
@@ -50083,6 +50227,23 @@ __all__ = [
     "PatternRef",
     "SourceChangeRef",
     "TraceRef",
+    "DecisionEvalOpSkillEval",
+    "EnvironmentAttestation",
+    "EvalCaseKind",
+    "EvalCaseSource",
+    "JudgeCalibration",
+    "RefusedEvalCase",
+    "SkillEvalCase",
+    "SkillEvalOutcome",
+    "SkillEvalRequest",
+    "SkillEvalResult",
+    "SkillEvalRun",
+    "StoredSkillEvalResult",
+    "SuiteBand",
+    "SuiteReport",
+    "ToolMock",
+    "TrajectoryKind",
+    "TrajectoryStep",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both
