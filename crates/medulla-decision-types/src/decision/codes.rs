@@ -735,6 +735,8 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ("friction", crate::friction::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R711.4: the skill evaluation refusals.
         ("skill_eval", crate::skill_eval::REFUSALS.to_vec()),
+        // MEDULLA-DECISION-ENGINE-R713.4: the skill telemetry refusals.
+        ("skill_telemetry", crate::skill_telemetry::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R709.2, R709.4: the knowledge curation refusals.
         (
             "knowledge_curation",

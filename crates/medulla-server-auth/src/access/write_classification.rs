@@ -125,6 +125,8 @@ fn requires_write_decision_surface(method: &Method) -> Option<bool> {
         Method::KnowledgeCuration { op } => Some(op.is_mutation()),
         // MEDULLA-DECISION-ENGINE-R710.3: `Group` and `Get` read; `Report` and `Transition` write.
         Method::FrictionReport { op } => Some(op.is_mutation()),
+        // MEDULLA-DECISION-ENGINE-R713.3: only `Ingest` writes.
+        Method::SkillTelemetry { op } => Some(op.is_mutation()),
         // MEDULLA-DECISION-ENGINE-R801.8: append and put_price both write.
         Method::Usage { op } => Some(op.is_mutation()),
         // MEDULLA-DECISION-ENGINE-R160.3: a publication writes its receipt.

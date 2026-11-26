@@ -35,6 +35,7 @@ pub mod friction;
 pub mod knowledge_curation;
 pub mod knowledge_flag;
 pub mod skill_eval;
+pub mod skill_telemetry;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod loops;
 /// Generated decision ontology and shapes (MEDULLA-DECISION-ENGINE-R054.1).

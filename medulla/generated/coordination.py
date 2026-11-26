@@ -3188,6 +3188,7 @@ send_knowledge_curation = contract_sender(
     "KnowledgeCuration", "MethodKnowledgeCurationParams"
 )
 send_friction_report = contract_sender("FrictionReport", "MethodFrictionReportParams")
+send_skill_telemetry = contract_sender("SkillTelemetry", "MethodSkillTelemetryParams")
 send_publish_skill_package = contract_sender(
     "PublishSkillPackage", "MethodPublishSkillPackageParams"
 )

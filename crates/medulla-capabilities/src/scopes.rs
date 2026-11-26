@@ -192,6 +192,10 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("knowledge:curate", User, "engine"),
     // MEDULLA-DECISION-ENGINE-R708.3: raise a knowledge flag.
     entry("knowledge:flag", User, "engine"),
+    // MEDULLA-DECISION-ENGINE-R713.3: read skill measures, ranks, peers and traces.
+    entry("telemetry:read", User, "engine"),
+    // MEDULLA-DECISION-ENGINE-R713.3: a service ingests skill invocations.
+    entry("telemetry:write", User, "engine"),
     entry("kv:read", User, "engine"),
     entry("kv:shared:write", User, "engine"),
     entry("kv:write", User, "engine"),

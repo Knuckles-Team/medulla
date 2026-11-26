@@ -270,6 +270,7 @@ METHOD_IDS = frozenset(
         "KnowledgeFlag",
         "KnowledgeCuration",
         "FrictionReport",
+        "SkillTelemetry",
         "PublishSkillPackage",
         "FeatureLedger",
         "Statechart",

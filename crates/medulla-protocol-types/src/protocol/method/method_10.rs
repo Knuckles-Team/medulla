@@ -133,6 +133,12 @@ $($variants)*
     FrictionReport {
         op: Box<medulla_decision_types::friction::FrictionOp>,
     },
+    /// Skill telemetry (MEDULLA-DECISION-ENGINE-R713.3): a service ingests skill invocations, and
+    /// callers read the twelve measures of a skill, a quality rank, peer skills and the run traces
+    /// of a skill by eval outcome. No invocation holds free text.
+    SkillTelemetry {
+        op: Box<medulla_decision_types::skill_telemetry::SkillTelemetryOp>,
+    },
     /// Failure-pattern mining (MEDULLA-DECISION-ENGINE-R701.3): read the failed
     /// runs of a caller graph, cluster them by signature and file one gap per
     /// recurring pattern; mark a gap addressed; read one gap. The

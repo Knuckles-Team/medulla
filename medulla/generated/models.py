@@ -17130,6 +17130,13 @@ class MethodFrictionReport(BaseModel):
     params: MethodFrictionReportParams
 
 
+class MethodSkillTelemetry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SkillTelemetry"]
+    params: MethodSkillTelemetryParams
+
+
 class MethodPublishSkillPackage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18259,6 +18266,7 @@ Method = Annotated[
         MethodKnowledgeFlag,
         MethodKnowledgeCuration,
         MethodFrictionReport,
+        MethodSkillTelemetry,
         MethodPublishSkillPackage,
         MethodFeatureLedger,
         MethodArchitectureModelImport,
@@ -39416,6 +39424,82 @@ FrictionOp = Annotated[
 ]
 
 
+class TelemetryWindow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    end_ms: Annotated[int, Field(ge=0)]
+    start_ms: Annotated[int, Field(ge=0)]
+
+
+class EvalOutcome(str, Enum):
+    PASSED = "pass"
+    FAILED = "fail"
+    UNSCORED = "unscored"
+
+
+class SkillTelemetryOpIngest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    events: list[dict[str, Any]]
+    graph: str
+    op: Literal["ingest"]
+
+
+class SkillTelemetryOpMeasures(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    op: Literal["measures"]
+    skill_ref: str
+    window: TelemetryWindow
+
+
+class SkillTelemetryOpRank(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    limit: Annotated[int, Field(ge=0)] | None = None
+    op: Literal["rank"]
+    skill_refs: list[str] = []
+    window: TelemetryWindow
+
+
+class SkillTelemetryOpPeers(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cohort: list[str]
+    graph: str
+    op: Literal["peers"]
+    window: TelemetryWindow
+
+
+class SkillTelemetryOpTracesByEval(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    graph: str
+    limit: Annotated[int, Field(ge=0)] | None = None
+    op: Literal["traces_by_eval"]
+    outcome: EvalOutcome
+    skill_ref: str
+
+
+SkillTelemetryOp = Annotated[
+    SkillTelemetryOpIngest
+    | SkillTelemetryOpMeasures
+    | SkillTelemetryOpRank
+    | SkillTelemetryOpPeers
+    | SkillTelemetryOpTracesByEval,
+    Field(discriminator="op"),
+]
+
+
+class MethodSkillTelemetryParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: SkillTelemetryOp
+
+
 class MethodFrictionReportParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -50838,6 +50922,16 @@ __all__ = [
     "FrictionTransition",
     "MethodFrictionReport",
     "MethodFrictionReportParams",
+    "EvalOutcome",
+    "MethodSkillTelemetry",
+    "MethodSkillTelemetryParams",
+    "SkillTelemetryOp",
+    "SkillTelemetryOpIngest",
+    "SkillTelemetryOpMeasures",
+    "SkillTelemetryOpPeers",
+    "SkillTelemetryOpRank",
+    "SkillTelemetryOpTracesByEval",
+    "TelemetryWindow",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both

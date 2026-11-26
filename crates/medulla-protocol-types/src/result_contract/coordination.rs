@@ -288,6 +288,12 @@ method_results! {
     FrictionReportMove(FrictionReport / "transition") => Raw<medulla_decision_types::friction::FrictionMoved>;
     FrictionReportGroup(FrictionReport / "group") => Raw<medulla_decision_types::friction::FrictionGroups>;
     FrictionReportGet(FrictionReport / "get") => Raw<medulla_decision_types::friction::FrictionGroupView>;
+    // MEDULLA-DECISION-ENGINE-R713.3: skill telemetry ingest, measures, rank, peers and traces.
+    SkillTelemetryIngest(SkillTelemetry / "ingest") => Raw<medulla_decision_types::skill_telemetry::IngestReceipt>;
+    SkillTelemetryMeasures(SkillTelemetry / "measures") => Raw<medulla_decision_types::skill_telemetry::SkillMeasures>;
+    SkillTelemetryRank(SkillTelemetry / "rank") => Raw<medulla_decision_types::skill_telemetry::RankAnswer>;
+    SkillTelemetryPeers(SkillTelemetry / "peers") => Raw<medulla_decision_types::skill_telemetry::PeersAnswer>;
+    SkillTelemetryTraces(SkillTelemetry / "traces_by_eval") => Raw<medulla_decision_types::skill_telemetry::TracesAnswer>;
     // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger append and price put.
     UsageAppend(Usage / "append") => Raw<medulla_decision_types::usage::UsageAppended>;
     UsagePutPrice(Usage / "put_price") => Raw<medulla_decision_types::usage::UsagePriceStored>;

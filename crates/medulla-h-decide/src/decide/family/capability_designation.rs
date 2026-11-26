@@ -744,6 +744,26 @@ pub(crate) fn capability_designation_outcome(
     };
     let policy_digest = medulla_decision_types::decision::digest::policy_digest(policy);
     let mut premises = premises_of(&answer, policy, &policy_digest);
+    // A designated skill that has an evaluation suite states its quality (MEDULLA-DECISION-ENGINE-R713.5).
+    let prior = medulla_server_api::knob_config::knobs().skill_quality_prior_runs;
+    for designated in &answer.designations {
+        let entity = designated.entity_id.as_str();
+        if let Some(report) =
+            crate::decide::stat_skill_eval::read_report(ctx.store, ctx.tenant_id, entity)?
+        {
+            let quality = medulla_decision_stats::decision::skill_telemetry::quality_ppm(
+                report.pass_rate_ppm,
+                report.case_count,
+                prior,
+            );
+            premises.push(premise(
+                entity,
+                format!("skill:quality={quality}"),
+                PremiseClass::Observation,
+                observation(answer.index_epoch),
+            ));
+        }
+    }
     if let Some(applied) = &runtime.adapter {
         premises.push(premise(
             "adapter",

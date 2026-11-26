@@ -442,6 +442,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "FrictionReport",
         &["CANDIDATE_PLAN_REFUSED", "PARAMETER_INVALID"],
     ),
+    // MEDULLA-DECISION-ENGINE-R713.4: a malformed op and an unreadable graph.
+    (
+        "SkillTelemetry",
+        &["CANDIDATE_PLAN_REFUSED", "PARAMETER_INVALID"],
+    ),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R040.4: a blocked embedding-model promotion.
     // MEDULLA-FEDERATED-QUERY-R039.2.2/R039.2.4: the chunk-encoding recipe the
@@ -2658,6 +2663,14 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
         // MEDULLA-DECISION-ENGINE-R710.4: the friction refusal table.
         codes.extend(
             medulla_decision_types::friction::REFUSALS
+                .iter()
+                .map(|code| code.as_str()),
+        );
+    }
+    if id == "SkillTelemetry" {
+        // MEDULLA-DECISION-ENGINE-R713.4: the telemetry refusal table.
+        codes.extend(
+            medulla_decision_types::skill_telemetry::REFUSALS
                 .iter()
                 .map(|code| code.as_str()),
         );

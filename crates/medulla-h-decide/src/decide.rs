@@ -23,6 +23,7 @@ mod coverage_tests;
 pub mod correction;
 pub mod failure_ingest;
 pub mod friction;
+pub mod skill_telemetry;
 pub mod knowledge_curation;
 pub mod knowledge_flag;
 pub(crate) mod feature_ledger;

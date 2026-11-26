@@ -284,6 +284,8 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "KnowledgeCuration",
     // MEDULLA-DECISION-ENGINE-R710.3: `Group` and `Get` read; `Report` and `Transition` write.
     "FrictionReport",
+    // MEDULLA-DECISION-ENGINE-R713.3: `Ingest` writes; the other ops read.
+    "SkillTelemetry",
     "ConnectorPack",
     "DecisionEval",
     "DecisionFit",

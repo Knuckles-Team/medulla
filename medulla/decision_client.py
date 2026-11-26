@@ -1730,6 +1730,94 @@ def friction_group_op(
     return op
 
 
+def skill_pseudonym(tenant_id: str, principal: str, salt: int = 1) -> str:
+    """The pseudonym of one principal in skill telemetry: the hex SHA-256 the engine
+    frames over the tenant, the principal and knob ``skill.pseudonym_salt``."""
+    import hashlib
+
+    domain = b"medulla.skill_telemetry.pseudonym.v1"
+    fields = [tenant_id.encode(), principal.encode(), str(salt).encode()]
+    body = b"eg/framed-sha256/v1\0" + len(domain).to_bytes(4, "big") + domain
+    body += len(fields).to_bytes(4, "big")
+    for item in fields:
+        body += len(item).to_bytes(8, "big") + item
+    return hashlib.sha256(body).hexdigest()
+
+
+def skill_telemetry_ingest_op(
+    graph: str, events: Sequence[Mapping[str, Any]]
+) -> dict[str, Any]:
+    """A ``SkillTelemetry`` ingest of at most 500 invocations (``telemetry:write``);
+    one bad event refuses the whole batch."""
+    return {"op": "ingest", "graph": graph, "events": [dict(event) for event in events]}
+
+
+def skill_telemetry_measures_op(
+    graph: str, skill_ref: str, start_ms: int, end_ms: int
+) -> dict[str, Any]:
+    """A ``SkillTelemetry`` read of one skill's twelve measures (``telemetry:read``)."""
+    return {
+        "op": "measures",
+        "graph": graph,
+        "skill_ref": skill_ref,
+        "window": {"start_ms": start_ms, "end_ms": end_ms},
+    }
+
+
+def skill_telemetry_rank_op(
+    graph: str,
+    start_ms: int,
+    end_ms: int,
+    skill_refs: list[str] | None = None,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """A ``SkillTelemetry`` quality rank of skills."""
+    op: dict[str, Any] = {
+        "op": "rank",
+        "graph": graph,
+        "skill_refs": list(skill_refs or []),
+        "window": {"start_ms": start_ms, "end_ms": end_ms},
+    }
+    if limit is not None:
+        op["limit"] = limit
+    return op
+
+
+def skill_telemetry_peers_op(
+    graph: str, cohort: list[str], start_ms: int, end_ms: int
+) -> dict[str, Any]:
+    """A ``SkillTelemetry`` read of the skills a cohort used and the caller did not;
+    a cohort under the floor of ``skill.peers.min_peers`` is refused."""
+    return {
+        "op": "peers",
+        "graph": graph,
+        "cohort": list(cohort),
+        "window": {"start_ms": start_ms, "end_ms": end_ms},
+    }
+
+
+def skill_telemetry_traces_op(
+    graph: str,
+    skill_ref: str,
+    outcome: str,
+    limit: int | None = None,
+    cursor: str | None = None,
+) -> dict[str, Any]:
+    """A ``SkillTelemetry`` read of the run traces of a skill by eval outcome
+    (``pass``, ``fail`` or ``unscored``)."""
+    op: dict[str, Any] = {
+        "op": "traces_by_eval",
+        "graph": graph,
+        "skill_ref": skill_ref,
+        "outcome": outcome,
+    }
+    if limit is not None:
+        op["limit"] = limit
+    if cursor is not None:
+        op["cursor"] = cursor
+    return op
+
+
 def friction_get_op(graph: str, group_ref: str) -> dict[str, Any]:
     """A ``FrictionReport`` read of one group with its reports and steps."""
     return {"op": "get", "graph": graph, "group_ref": group_ref}
@@ -1962,6 +2050,18 @@ class DecisionClient:
         from medulla.generated.coordination import send_knowledge_curation
 
         result = await send_knowledge_curation(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
+    async def skill_telemetry(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``SkillTelemetry`` (ingest invocations, or read measures, rank, peers
+        and traces by eval)."""
+        from medulla.generated.coordination import send_skill_telemetry
+
+        result = await send_skill_telemetry(
             self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
         )
         return _payload(result)
@@ -2281,6 +2381,12 @@ __all__ = [
     "get_op",
     "get_profile_op",
     "friction_get_op",
+    "skill_pseudonym",
+    "skill_telemetry_ingest_op",
+    "skill_telemetry_measures_op",
+    "skill_telemetry_peers_op",
+    "skill_telemetry_rank_op",
+    "skill_telemetry_traces_op",
     "friction_group_op",
     "friction_report_op",
     "friction_transition_op",

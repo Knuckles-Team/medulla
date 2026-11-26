@@ -39,6 +39,18 @@ const RESULT_PREFIX: &str = "skill-eval-result:";
 /// The store key prefix of one suite report.
 const REPORT_PREFIX: &str = "skill-eval-report:";
 
+/// The latest stored suite report of `skill_ref` in `tenant`, when the skill has one.
+pub(super) fn read_report(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    skill_ref: &str,
+) -> Result<Option<SuiteReport>, String> {
+    store
+        .decision_artifact(tenant, &format!("{REPORT_PREFIX}{skill_ref}"))?
+        .map(|bytes| medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "suite report"))
+        .transpose()
+}
+
 fn knobs() -> EvalKnobs {
     let knobs = medulla_server_api::knob_config::knobs();
     EvalKnobs {

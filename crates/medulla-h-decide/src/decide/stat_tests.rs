@@ -1098,6 +1098,8 @@ mod friction_report_tests;
 mod skill_eval_tests;
 // MEDULLA-DECISION-ENGINE-R712.3, R712.4, R712.5: ablation, canary and compile staleness.
 mod skill_ablation_tests;
+// MEDULLA-DECISION-ENGINE-R713.3 to R713.7: skill telemetry.
+mod skill_telemetry_tests;
 
 // MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
 mod context_budget_tests;
