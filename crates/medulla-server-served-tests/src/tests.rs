@@ -5441,7 +5441,7 @@ ex:carol a ex:Person ; ex:name "Carol" ; ex:age "40"^^xsd:integer ; ex:knows ex:
     let mut names: Vec<String> = res
         .rows
         .iter()
-        .filter_map(|row| row[name_idx].as_ref().map(|term| term.display_text()))
+        .filter_map(|row| row[name_idx].as_ref().map(|term| term.value.clone()))
         .collect();
     names.sort();
     assert_eq!(names, vec!["Alice".to_string(), "Carol".to_string()]);
@@ -5815,7 +5815,7 @@ async fn test_sparql_virtual_method_round_trips() {
     let mut names: Vec<Option<String>> = res
         .rows
         .iter()
-        .map(|row| row[name_idx].as_ref().map(|term| term.display_text()))
+        .map(|row| row[name_idx].as_ref().map(|term| term.value.clone()))
         .collect();
     names.sort();
     assert_eq!(

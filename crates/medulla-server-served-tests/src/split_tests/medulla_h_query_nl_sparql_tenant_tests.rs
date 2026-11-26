@@ -322,7 +322,7 @@ fn subjects(result: SparqlResult) -> Vec<String> {
     let mut found: Vec<String> = result
         .rows
         .iter()
-        .filter_map(|row| row[column].as_ref().map(|term| term.display_text()))
+        .filter_map(|row| row[column].as_ref().map(|term| term.value.clone()))
         .collect();
     found.sort();
     found

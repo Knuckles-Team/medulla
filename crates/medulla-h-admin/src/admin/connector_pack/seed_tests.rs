@@ -323,7 +323,7 @@ mod served {
                 let cell = |index: usize| {
                     row[index]
                         .as_ref()
-                        .map(|term| term.display_text())
+                        .map(|term| term.value.clone())
                         .unwrap_or_default()
                 };
                 format!("<{}> <{}> \"{}\"", cell(0), cell(1), cell(2))

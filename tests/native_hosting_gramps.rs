@@ -865,7 +865,7 @@ async fn p4_restore_and_p5_schema() {
         .iter()
         .map(|row| {
             row.iter()
-                .map(|cell| plain(cell.as_deref().unwrap_or("")))
+                .map(|cell| plain(cell.as_ref().map_or("", |term| term.value.as_str())))
                 .collect::<Vec<_>>()
                 .join("\t")
         })

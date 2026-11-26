@@ -10,7 +10,9 @@ mod common;
 mod test_support;
 
 use medulla_h_query::query::state_machine_next::next_events_sparql;
-use medulla_protocol_types::protocol::{GraphType, Method, Response, ResultPayload, SparqlResult};
+use medulla_protocol_types::protocol::{
+    GraphType, Method, Response, ResultPayload, SparqlResult, SparqlTerm,
+};
 
 const SECRET: &str = "state-machine-next-served-secret";
 const GRAPH: &str = "next-events";
@@ -97,7 +99,8 @@ async fn status_of(state: &test_support::SharedState, id: u64, node: &str) -> St
 }
 
 /// One `Method::Sparql` against `__commons__` with the given statement text.
-async fn sparql(state: &test_support::SharedState, id: u64, query: String) -> Vec<Vec<Option<String>>> {
+async fn sparql(state: &test_support::SharedState, id: u64, query: String,
+) -> Vec<Vec<Option<SparqlTerm>>> {
     let response = ok(
         state,
         id,
@@ -120,12 +123,11 @@ async fn sparql(state: &test_support::SharedState, id: u64, query: String) -> Ve
     result.rows
 }
 
-/// A cell without the angle brackets or quotes a term may be rendered with.
-fn plain(cell: &Option<String>) -> String {
-    cell.as_deref()
+/// The `value` of a typed cell (the IRI or the lexical form); empty for an unbound cell.
+fn plain(cell: &Option<SparqlTerm>) -> String {
+    cell.as_ref()
+        .map(|term| term.value.clone())
         .unwrap_or_default()
-        .trim_matches(|c| c == '<' || c == '>' || c == '"')
-        .to_string()
 }
 
 // spec: MEDULLA-ORCH-VOCAB-R811.7
