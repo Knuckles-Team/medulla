@@ -215,6 +215,10 @@ pub struct ChampionPointer {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub parent_ref: Option<OpaqueId>,
     pub promoted_by_decision: OpaqueId,
+    /// The canary split of a skill champion, when a challenger takes a share of its runs
+    /// (MEDULLA-DECISION-ENGINE-R712.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub canary: Option<medulla_decision_types::skill_eval::SkillCanary>,
 }
 
 /// A decision to move a champion from one revision to another.
@@ -344,6 +348,7 @@ mod tests {
             revision_ref: reference("revision", "revision-2"),
             parent_ref: Some(reference("revision", "revision-1")),
             promoted_by_decision: reference("decision", "decision-4"),
+            canary: None,
         }
     }
 

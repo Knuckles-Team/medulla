@@ -55,15 +55,36 @@ pub const PROGRAM_OPTION: &str = "program";
 pub const PARAM_TASK_SIGNATURE: &str = "task_signature";
 /// The prefix of the answer option that carries the stored program as JSON.
 pub const ANSWER_PREFIX: &str = "program:";
+/// The skill a program was compiled from (MEDULLA-DECISION-ENGINE-R712.3).
+pub const PARAM_SKILL_REF: &str = "skill_ref";
+/// The model a program was compiled for (MEDULLA-DECISION-ENGINE-R712.3).
+pub const PARAM_MODEL_REF: &str = "model_ref";
 
 /// The family of the `program_lookup` question kind.
 pub struct ProgramLookupFamily;
 
-fn signature(request: &DecideRequest) -> Result<&str, String> {
-    match text_param(request, PARAM_TASK_SIGNATURE)? {
-        Some(text) if !text.trim().is_empty() => Ok(text),
+/// The key a program is stored and looked up under. A request that names the pair `skill_ref`
+/// and `model_ref` keys the program by that pair as well as by its task signature, so one task
+/// compiled by two skills, or for two models, keeps two programs (MEDULLA-DECISION-ENGINE-R712.3).
+fn signature(request: &DecideRequest) -> Result<String, String> {
+    let task = match text_param(request, PARAM_TASK_SIGNATURE)? {
+        Some(text) if !text.trim().is_empty() => text,
+        _ => {
+            return Err(invalid(
+                "a program_lookup question requires a non-empty task_signature",
+            ))
+        }
+    };
+    match (
+        text_param(request, PARAM_SKILL_REF)?,
+        text_param(request, PARAM_MODEL_REF)?,
+    ) {
+        (None, None) => Ok(task.to_string()),
+        (Some(skill), Some(model)) if !skill.trim().is_empty() && !model.trim().is_empty() => {
+            Ok(medulla_decision_types::decision::program_store::pair_signature(task, skill, model))
+        }
         _ => Err(invalid(
-            "a program_lookup question requires a non-empty task_signature",
+            "skill_ref and model_ref are given together, and neither is empty",
         )),
     }
 }
@@ -421,7 +442,7 @@ pub(in crate::decide) async fn with_program_candidates(
         .filter(|name| !name.trim().is_empty())
         .map(str::to_string)
         .ok_or_else(|| invalid("PROGRAM_GRAPH_REQUIRED: request_text needs program_graph"))?;
-    let task_signature = signature(&request)?.to_string();
+    let task_signature = signature(&request)?;
     let exact = store
         .decision_artifact(
             &request.tenant_id,
@@ -512,6 +533,7 @@ impl DecisionFamily for ProgramLookupFamily {
     ) -> Option<Result<Executed, String>> {
         Some((|| {
             let task_signature = signature(request)?;
+            let task_signature = task_signature.as_str();
             if text_param(request, PARAM_REQUEST_TEXT)?.is_some() {
                 return semantic(ctx, request, policy, task_signature);
             }

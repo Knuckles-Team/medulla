@@ -694,7 +694,10 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         | LearningWrite::PackageRun { .. }
         | LearningWrite::RecordFeedback { .. }
         | LearningWrite::RecordRollouts { .. }
+        | LearningWrite::RecordAblation { .. }
+        | LearningWrite::RecordCanary { .. }
         | LearningWrite::MovePointer { .. } => Vec::new(),
+        LearningWrite::RecordModelCompile { graph, .. } => vec![graph.as_str()],
         LearningWrite::RecordPolicyReview { graph, .. } => vec![graph.as_str()],
     }
 }
@@ -1005,6 +1008,24 @@ pub(super) fn dispatch(
         } => s.refresh_drift(&logical_graph, &plan_digest),
         LearningWrite::RecordRollouts { set } => Ok(LearningRecorded::Rollouts(Box::new(
             record_rollouts(ctx, *set)?,
+        ))),
+        LearningWrite::RecordCanary { canary, verdict } => Ok(LearningRecorded::Canary(Box::new(
+            super::stat_skill_ablation::record_canary(ctx, *canary, verdict)?,
+        ))),
+        LearningWrite::RecordAblation { record } => Ok(LearningRecorded::Ablation(Box::new(
+            super::stat_skill_ablation::record_ablation(ctx, *record)?,
+        ))),
+        LearningWrite::RecordModelCompile {
+            compile,
+            model_revision,
+            ..
+        } => Ok(LearningRecorded::ModelCompile(Box::new(
+            super::stat_skill_ablation::record_model_compile(
+                ctx,
+                s.graph(0)?,
+                *compile,
+                &model_revision,
+            )?,
         ))),
         LearningWrite::RecordPolicyReview { review, .. } => Ok(LearningRecorded::PolicyReview(
             Box::new(record_review(ctx, s.graph(0)?, *review)?),

@@ -889,6 +889,7 @@ mod tests {
             revision_ref: id("two"),
             parent_ref: parent.map(id),
             promoted_by_decision: OpaqueId::new("decision:d4".to_owned()).expect("id"),
+            canary: None,
         }
     }
 

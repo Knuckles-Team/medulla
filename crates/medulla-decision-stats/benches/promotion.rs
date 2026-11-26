@@ -58,6 +58,7 @@ fn main() {
         revision_ref: OpaqueId::new("revision:champion".to_owned()).unwrap(),
         parent_ref: Some(OpaqueId::new("revision:previous".to_owned()).unwrap()),
         promoted_by_decision: OpaqueId::new("decision:promoted".to_owned()).unwrap(),
+        canary: None,
     };
     let cases: Vec<HeldOutEvidence> = (0..CASES).map(evidence).collect();
     let promoted = evidence(0);

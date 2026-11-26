@@ -393,6 +393,29 @@ pub enum LearningWrite {
     RecordRollouts {
         set: Box<crate::decision::skill_evolution::RolloutSet>,
     },
+    /// Record the runs of one skill's ablation: the identical runs set the noise band and the
+    /// paired with-and-without runs are stored as rollout rows; answers the band, the verdict and
+    /// the rollout evidence (MEDULLA-DECISION-ENGINE-R712.3).
+    RecordAblation {
+        record: Box<crate::skill_eval::AblationRecord>,
+    },
+    /// Put a canary split in force after a `ramp` or `hold` verdict, or take it off after a
+    /// `rollback`: the champion pointer read of the skill returns it
+    /// (MEDULLA-DECISION-ENGINE-R712.3).
+    RecordCanary {
+        canary: Box<crate::skill_eval::SkillCanary>,
+        verdict: crate::skill_eval::CanaryVerdict,
+    },
+    /// Record the program a skill was compiled into for one model. When the model revision
+    /// differs from the one recorded, the other compiled rows of that model become stale and one
+    /// draft revision per row is filed (MEDULLA-DECISION-ENGINE-R712.3).
+    RecordModelCompile {
+        /// The graph whose model catalog names `compile.model_ref`.
+        graph: String,
+        compile: Box<crate::skill_eval::ModelCompile>,
+        /// The revision of the model now in force.
+        model_revision: String,
+    },
     /// Fit the residual-quantization encoder of one item catalog: the embedded
     /// nodes of the graph `catalog_ref` names, as the caller may see them
     /// (MEDULLA-DECISION-ENGINE-R175.8).
@@ -477,6 +500,12 @@ pub enum LearningRecorded {
     PackageRun(Box<crate::decision::package_validation::RunHistoryEntry>),
     /// The held-out evidence of the rollout set a `RecordRollouts` write stored.
     Rollouts(Box<crate::decision::held_out::HeldOutEvidence>),
+    /// The noise band, verdict and rollout evidence of a `RecordAblation` write.
+    Ablation(Box<crate::skill_eval::AblationRecorded>),
+    /// The canary split after a `RecordCanary` write.
+    Canary(Box<crate::skill_eval::CanaryRecorded>),
+    /// The compile row and the stale rows of a `RecordModelCompile` write.
+    ModelCompile(Box<crate::skill_eval::ModelCompileRecorded>),
     /// The `ReviewApproval` evidence of the policy review a `RecordPolicyReview` write stored.
     PolicyReview(Box<crate::decision::held_out::HeldOutEvidence>),
     /// The encoder a `FitCatalogEncoder` write stored.

@@ -273,6 +273,17 @@ pub const CALIBRATION_TOO_FEW_PAIRS: RefusalCode = RefusalCode::new("CALIBRATION
 /// on the paired held-out run (MEDULLA-DECISION-ENGINE-R821).
 pub const ADOPTION_NOT_PROVEN: RefusalCode = RefusalCode::new("ADOPTION_NOT_PROVEN");
 
+/// A caller asked to promote on a delta inside the noise band (MEDULLA-DECISION-ENGINE-R712.4).
+pub const ABLATION_WITHIN_NOISE: RefusalCode = RefusalCode::new("ABLATION_WITHIN_NOISE");
+/// Fewer identical runs than `eval.ablation.identical_runs`, or none recorded for the skill.
+pub const ABLATION_NOISE_BAND_MISSING: RefusalCode = RefusalCode::new("ABLATION_NOISE_BAND_MISSING");
+/// A canary traffic share outside the bounds of `canary.traffic_ppm`.
+pub const CANARY_TRAFFIC_OUT_OF_BOUNDS: RefusalCode = RefusalCode::new("CANARY_TRAFFIC_OUT_OF_BOUNDS");
+/// A canary needs a champion revision and the skill has none.
+pub const CANARY_NO_CHAMPION: RefusalCode = RefusalCode::new("CANARY_NO_CHAMPION");
+/// A compiled program names a model the model catalog lacks.
+pub const COMPILE_MODEL_UNKNOWN: RefusalCode = RefusalCode::new("COMPILE_MODEL_UNKNOWN");
+
 /// Every promotion and calibration code, in declaration order.
 pub const PROMOTION: &[RefusalCode] = &[
     PROMOTION_UNEVALUATED,
@@ -289,6 +300,11 @@ pub const PROMOTION: &[RefusalCode] = &[
     REVIEW_NOT_INDEPENDENT,
     CALIBRATION_TOO_FEW_PAIRS,
     ADOPTION_NOT_PROVEN,
+    ABLATION_WITHIN_NOISE,
+    ABLATION_NOISE_BAND_MISSING,
+    CANARY_TRAFFIC_OUT_OF_BOUNDS,
+    CANARY_NO_CHAMPION,
+    COMPILE_MODEL_UNKNOWN,
 ];
 
 // The `rank` family's refusals (MEDULLA-DECISION-ENGINE-R130.4).

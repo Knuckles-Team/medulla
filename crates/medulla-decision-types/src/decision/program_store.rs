@@ -198,6 +198,13 @@ pub struct RunRecordStored {
     pub replayed: bool,
 }
 
+/// The task signature a program compiled for the pair (`skill_ref`, `model_ref`) is stored and
+/// looked up under: the task signature joined with both refs by the unit separator
+/// (MEDULLA-DECISION-ENGINE-R712.3). A program compiled for no pair keeps its plain signature.
+pub fn pair_signature(task_signature: &str, skill_ref: &str, model_ref: &str) -> String {
+    format!("{task_signature}\u{1f}{skill_ref}\u{1f}{model_ref}")
+}
+
 /// The decision-artifact key of the program stored for `task_signature`.
 pub fn program_key(task_signature: &str) -> String {
     format!("run_record/compiled_program/{task_signature}")

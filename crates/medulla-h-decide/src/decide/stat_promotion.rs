@@ -100,9 +100,10 @@ pub(super) fn held_out_evidence(
             definition_kind: DefinitionKind::HarnessBundle,
             definition_ref,
         } => bundle_evidence(sources, subject, definition_ref, receipt_digest),
-        RevisionSubject::Definition { .. } | RevisionSubject::RetrievalStrategy { .. } => {
-            rollout_evidence(sources, subject, receipt_digest)
-        }
+        // A skill revision is promoted on the paired rollouts of its challenger (R712.3).
+        RevisionSubject::Definition { .. }
+        | RevisionSubject::RetrievalStrategy { .. }
+        | RevisionSubject::Skill { .. } => rollout_evidence(sources, subject, receipt_digest),
         RevisionSubject::KnobSet { .. } | RevisionSubject::ModelPolicy { .. } => {
             policy_evidence(sources, subject, receipt_digest)
         }
@@ -213,7 +214,9 @@ fn rollout_evidence(
     let mut evidence = paired_rollout_evidence(&set, sources.policy);
     if matches!(
         subject,
-        RevisionSubject::Definition { .. } | RevisionSubject::RetrievalStrategy { .. }
+        RevisionSubject::Definition { .. }
+            | RevisionSubject::RetrievalStrategy { .. }
+            | RevisionSubject::Skill { .. }
     ) {
         evidence.subject = subject.clone();
     } else if &evidence.subject != subject {

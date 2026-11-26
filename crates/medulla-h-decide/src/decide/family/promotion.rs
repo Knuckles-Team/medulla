@@ -17,6 +17,14 @@ use medulla_decision_outcome_types::decision::promotion::{
     ChampionPointer, HeldOutEvidence, PromotionVerdict, ReceiptKind, RevisionSubject,
 };
 use medulla_decision_stats::decision::promotion::{regression_rollback, subject_gate, PromotionGate};
+use medulla_decision_stats::decision::skill_eval::{canary_verdict, check_traffic};
+use medulla_decision_types::decision::codes::{
+    ABLATION_NOISE_BAND_MISSING, ABLATION_WITHIN_NOISE, CANARY_NO_CHAMPION,
+    CANARY_TRAFFIC_OUT_OF_BOUNDS,
+};
+use medulla_decision_types::skill_eval::{
+    CompileState, ModelCompile, CANARY_TRAFFIC_MAX_PPM, CANARY_TRAFFIC_MIN_PPM,
+};
 use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind, StatisticalOutcome};
@@ -35,13 +43,17 @@ use crate::decide::stat_promotion::{
 };
 use crate::decide::SharedState;
 
-use super::support::{abstained, advisory, advisory_scored, invalid, json_param, text_param};
+use super::support::{
+    abstained, advisory, advisory_scored, invalid, json_param, text_param, unsigned_param,
+};
 use super::DecisionFamily;
 
 const PARAM_SUBJECT: &str = "subject";
 const PARAM_RECEIPT: &str = "receipt_digest";
 const PARAM_MODE: &str = "mode";
 const PARAM_GRAPH: &str = "graph";
+const PARAM_TRAFFIC: &str = "traffic_ppm";
+const PARAM_REGRESSION: &str = "regression_receipt";
 
 /// The graph a program or policy receipt is read from, when the request names one.
 pub(in crate::decide) async fn evidence_view(
@@ -76,6 +88,7 @@ impl DecisionRefusal for PromotionRefusal {
 enum Mode {
     Promote,
     Review,
+    Canary,
 }
 
 struct Ask {
@@ -83,6 +96,10 @@ struct Ask {
     receipt: String,
     mode: Mode,
     option: String,
+    /// The canary traffic share the caller asks for (`canary` mode).
+    traffic: Option<u64>,
+    /// A later receipt of the champion, read as the regression verdict (`canary` mode).
+    regression: Option<String>,
 }
 
 fn parse(request: &DecideRequest) -> Result<Ask, String> {
@@ -93,7 +110,8 @@ fn parse(request: &DecideRequest) -> Result<Ask, String> {
     let mode = match text_param(request, PARAM_MODE)? {
         Some("promote") => Mode::Promote,
         Some("review") => Mode::Review,
-        _ => return Err(invalid("parameter mode is `promote` or `review`")),
+        Some("canary") => Mode::Canary,
+        _ => return Err(invalid("parameter mode is `promote`, `review` or `canary`")),
     };
     let medulla_decision_types::decision::statistical::CandidateSource::Declared { options } =
         &request.candidates
@@ -108,13 +126,17 @@ fn parse(request: &DecideRequest) -> Result<Ask, String> {
         receipt,
         mode,
         option: only.option_id.clone(),
+        traffic: unsigned_param(request, PARAM_TRAFFIC)?,
+        regression: text_param(request, PARAM_REGRESSION)?.map(str::to_owned),
     })
 }
 
 fn premise(fact: String, receipt: &str) -> FamilyPremise {
     // The rollout premises keep their own `rollout.` namespace
     // (MEDULLA-DECISION-ENGINE-R654.5).
-    let fact = if fact.starts_with("rollout.") {
+    // The ablation, canary and compile premises keep their own names (MEDULLA-DECISION-ENGINE-R712.5).
+    let own = ["rollout.", "ablation:", "canary:", "compile:"];
+    let fact = if own.iter().any(|prefix| fact.starts_with(prefix)) {
         fact
     } else {
         format!("{PREMISE_PREFIX}{fact}")
@@ -208,6 +230,27 @@ fn promote(
             "the declared option is not the challenger the receipt evaluates",
         ));
     }
+    // A skill never wins on a delta inside the noise band of its identical runs.
+    if let RevisionSubject::Skill { skill_ref } = &ask.subject {
+        if let Some(noise) = crate::decide::stat_skill_ablation::read_noise_band(
+            ctx.store,
+            ctx.tenant_id,
+            skill_ref,
+        )? {
+            if evidence.delta_ppm.unsigned_abs() <= noise.band_ppm {
+                return Ok(abstained(
+                    QuestionKind::Promotion,
+                    &PromotionRefusal(
+                        ABLATION_WITHIN_NOISE,
+                        format!(
+                            "a delta of {} ppm is inside the noise band of {} ppm",
+                            evidence.delta_ppm, noise.band_ppm
+                        ),
+                    ),
+                ));
+            }
+        }
+    }
     // The champion active now is pinned in the record: a later move of the
     // pointer is refused if another revision has taken the seat since.
     let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &ask.subject.pointer_key())?;
@@ -261,6 +304,7 @@ fn review(
             None => None,
         },
         promoted_by_decision: opaque(&format!("decision:{promoted_by}"))?,
+        canary: None,
     };
     let mut facts = evidence_facts(&latest);
     match regression_rollback(&pointer, &promoted, &latest, policy) {
@@ -275,6 +319,135 @@ fn review(
         }
         PromotionVerdict::Promote { .. } => decided(ask, "hold", facts, None),
     }
+}
+
+/// Whether a later receipt of the champion calls for a rollback (MEDULLA-DECISION-ENGINE-R805.2),
+/// the regression verdict a canary reads. A champion with no promotion evidence on record has no
+/// regression to show.
+fn regressed(
+    ctx: &ExecutionContext,
+    graph: Option<&GraphView>,
+    policy: &DecisionPolicy,
+    ask: &Ask,
+    latest_receipt: &str,
+) -> Result<Result<bool, PromotionRefusal>, String> {
+    let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &ask.subject.pointer_key())?;
+    let Some(active) = state.active.as_ref() else {
+        return Ok(Ok(false));
+    };
+    let promoted_by = active.receipt_digest.clone().unwrap_or_default();
+    let Some(promoted_digest) =
+        crate::decide::stat_promotion::promoted_receipt(ctx.store, ctx.tenant_id, &promoted_by)?
+    else {
+        return Ok(Ok(false));
+    };
+    let latest = match resolve(ctx, graph, policy, &ask.subject, latest_receipt)? {
+        Ok(evidence) => evidence,
+        Err(refusal) => return Ok(Err(refusal)),
+    };
+    let promoted = match resolve(ctx, graph, policy, &ask.subject, &promoted_digest)? {
+        Ok(evidence) => evidence,
+        Err(refusal) => return Ok(Err(refusal)),
+    };
+    let pointer = ChampionPointer {
+        subject: ask.subject.clone(),
+        revision_ref: opaque(active.target.as_deref().unwrap_or_default())?,
+        parent_ref: match state.stack.last().and_then(|event| event.target.as_deref()) {
+            Some(parent) => Some(opaque(parent)?),
+            None => None,
+        },
+        promoted_by_decision: opaque(&format!("decision:{promoted_by}"))?,
+        canary: None,
+    };
+    Ok(Ok(matches!(
+        regression_rollback(&pointer, &promoted, &latest, policy),
+        PromotionVerdict::Rollback(_)
+    )))
+}
+
+/// The `canary` mode (MEDULLA-DECISION-ENGINE-R712.3): the challenger rollouts, the noise band of
+/// the skill and the regression verdict of its champion decide `ramp`, `hold` or `rollback`.
+fn canary(
+    ctx: &ExecutionContext,
+    graph: Option<&GraphView>,
+    policy: &DecisionPolicy,
+    ask: &Ask,
+) -> Result<Executed, String> {
+    let RevisionSubject::Skill { skill_ref } = &ask.subject else {
+        return Err(invalid("a canary promotes a skill revision"));
+    };
+    let refused = |code, detail: &str| {
+        Ok(abstained(
+            QuestionKind::Promotion,
+            &PromotionRefusal(code, detail.to_owned()),
+        ))
+    };
+    let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &ask.subject.pointer_key())?;
+    if state.active.is_none() {
+        return refused(CANARY_NO_CHAMPION, "the skill has no champion to run a canary against");
+    }
+    let knob_traffic = medulla_server_api::knob_config::knobs().canary_traffic_ppm;
+    let traffic = match check_traffic(
+        ask.traffic.unwrap_or(knob_traffic),
+        CANARY_TRAFFIC_MIN_PPM,
+        CANARY_TRAFFIC_MAX_PPM,
+    ) {
+        Ok(traffic) => traffic,
+        Err(_) => return refused(CANARY_TRAFFIC_OUT_OF_BOUNDS, "the traffic share is outside its bounds"),
+    };
+    let Some(noise) =
+        crate::decide::stat_skill_ablation::read_noise_band(ctx.store, ctx.tenant_id, skill_ref)?
+    else {
+        return refused(ABLATION_NOISE_BAND_MISSING, "no identical runs are recorded for the skill");
+    };
+    let evidence = match resolve(ctx, graph, policy, &ask.subject, &ask.receipt)? {
+        Ok(evidence) => evidence,
+        Err(refusal) => return Ok(abstained(QuestionKind::Promotion, &refusal)),
+    };
+    if evidence.challenger_ref != ask.option {
+        return Err(invalid(
+            "the declared option is not the challenger the receipt evaluates",
+        ));
+    }
+    let regression = match ask.regression.as_deref() {
+        Some(receipt) => match regressed(ctx, graph, policy, ask, receipt)? {
+            Ok(regressed) => regressed,
+            Err(refusal) => return Ok(abstained(QuestionKind::Promotion, &refusal)),
+        },
+        None => false,
+    };
+    let verdict = canary_verdict(evidence.delta_ppm, noise.band_ppm, regression);
+    let stale = stale_compiles(ctx, skill_ref)?;
+    let mut facts = evidence_facts(&evidence);
+    facts.push(format!("ablation:delta={}", evidence.delta_ppm));
+    facts.push(format!("ablation:band={}", noise.band_ppm));
+    facts.push(format!("canary:traffic={traffic}"));
+    facts.push(format!("canary:verdict={}", verdict.as_str()));
+    facts.push(format!("compile:stale={stale}"));
+    let chosen = match verdict {
+        medulla_decision_types::skill_eval::CanaryVerdict::Ramp => Some(ask.option.clone()),
+        medulla_decision_types::skill_eval::CanaryVerdict::Hold => None,
+        medulla_decision_types::skill_eval::CanaryVerdict::Rollback => {
+            Some(format!("rollback:{}", ask.option))
+        }
+    };
+    decided(ask, verdict.as_str(), facts, chosen.as_deref())
+}
+
+/// How many compiled rows of `skill_ref` are stale.
+fn stale_compiles(ctx: &ExecutionContext, skill_ref: &str) -> Result<usize, String> {
+    use medulla_persistence_records::decision_jobs::decode_artifact;
+    let mut stale = 0;
+    for (_, bytes) in ctx
+        .store
+        .decision_artifacts_with_prefix(ctx.tenant_id, "model-compile:", 10_000)?
+    {
+        let row: ModelCompile = decode_artifact(&bytes, "model compile")?;
+        if row.skill_ref == skill_ref && row.state == CompileState::Stale {
+            stale += 1;
+        }
+    }
+    Ok(stale)
 }
 
 impl DecisionFamily for PromotionFamily {
@@ -303,6 +476,7 @@ impl DecisionFamily for PromotionFamily {
         Some(parse(request).and_then(|ask| match ask.mode {
             Mode::Promote => promote(ctx, graph_view, policy, &ask),
             Mode::Review => review(ctx, graph_view, policy, &ask),
+            Mode::Canary => canary(ctx, graph_view, policy, &ask),
         }))
     }
 

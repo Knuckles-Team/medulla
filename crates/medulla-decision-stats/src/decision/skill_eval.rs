@@ -9,7 +9,9 @@ use std::collections::BTreeSet;
 
 use medulla_decision_types::correction::{CorrectionSource, EvalCase};
 use medulla_decision_types::knowledge_flag::target_form;
+use medulla_decision_types::decision::codes::{ABLATION_NOISE_BAND_MISSING, CANARY_TRAFFIC_OUT_OF_BOUNDS};
 use medulla_decision_types::skill_eval::{
+    AblationVerdict, CanaryVerdict, CompileState, ModelCompile, NoiseBand,
     EnvironmentAttestation, EvalCaseKind, EvalCaseSource, JudgeCalibration, SkillEvalCase, SuiteBand,
     TrajectoryStep, EVAL_CASE_INVALID, EVAL_RUN_NOT_CLEAN_ROOM, JUDGE_MIN_ANNOTATED,
     JUDGE_NOT_CALIBRATED,
@@ -209,6 +211,111 @@ pub fn check_case(case: &SkillEvalCase, known_tools: &BTreeSet<String>) -> Resul
     Ok(())
 }
 
+/// The noise band of identical runs: twice their standard deviation, in ppm
+/// (MEDULLA-DECISION-ENGINE-R712.2). `min_runs` is knob `eval.ablation.identical_runs`; fewer
+/// scores refuse `ABLATION_NOISE_BAND_MISSING`. Integer arithmetic only, rounded down.
+pub fn noise_band(identical_scores_ppm: &[u64], min_runs: u64) -> Result<NoiseBand, EvalRefusal> {
+    let n = identical_scores_ppm.len() as u64;
+    if n < min_runs.max(2) {
+        return Err(refuse(
+            ABLATION_NOISE_BAND_MISSING,
+            format!("{n} identical runs are fewer than the {min_runs} a noise band needs"),
+        ));
+    }
+    let sum: u128 = identical_scores_ppm.iter().map(|score| u128::from(*score)).sum();
+    let squares: u128 = identical_scores_ppm
+        .iter()
+        .map(|score| u128::from(*score) * u128::from(*score))
+        .sum();
+    // n^2 times the variance: n * sum(x^2) - (sum x)^2, never negative.
+    let spread = u128::from(n) * squares - sum * sum;
+    let band = 2 * spread.isqrt() / u128::from(n);
+    Ok(NoiseBand {
+        identical_runs: n,
+        band_ppm: u64::try_from(band).unwrap_or(u64::MAX),
+    })
+}
+
+fn mean_ppm(scores: &[u64]) -> i64 {
+    if scores.is_empty() {
+        return 0;
+    }
+    let sum: i128 = scores.iter().map(|score| i128::from(*score)).sum();
+    i64::try_from(sum.div_euclid(scores.len() as i128)).unwrap_or(i64::MAX)
+}
+
+/// With against without: `Effect` only when the absolute difference of the arm means exceeds the
+/// noise band; the delta is `mean(with) - mean(without)` (MEDULLA-DECISION-ENGINE-R712.2). An arm
+/// with no score is no evidence of an effect.
+pub fn ablation_verdict(with: &[u64], without: &[u64], band_ppm: u64) -> AblationVerdict {
+    if with.is_empty() || without.is_empty() {
+        return AblationVerdict::WithinNoise;
+    }
+    let delta_ppm = mean_ppm(with) - mean_ppm(without);
+    if delta_ppm.unsigned_abs() > band_ppm {
+        AblationVerdict::Effect { delta_ppm }
+    } else {
+        AblationVerdict::WithinNoise
+    }
+}
+
+/// The canary bucket of one run: the first 8 bytes of the framed SHA-256 of the run id and the
+/// skill, as a big-endian number modulo one million (MEDULLA-DECISION-ENGINE-R712.2).
+pub fn canary_bucket(run_id: &str, skill_ref: &str) -> u64 {
+    let digest = medulla_types::contract::Digest256::framed(
+        b"medulla.skill.canary.v1",
+        &[run_id.as_bytes(), skill_ref.as_bytes()],
+    )
+    .expect("a canary bucket frames two short fields");
+    let mut head = [0u8; 8];
+    head.copy_from_slice(&digest.as_bytes()[..8]);
+    u64::from_be_bytes(head) % PPM
+}
+
+/// Whether a run takes the challenger: its bucket is below the canary traffic share.
+pub fn takes_challenger(bucket: u64, traffic_ppm: u64) -> bool {
+    bucket < traffic_ppm
+}
+
+/// A traffic share inside the bounds of knob `canary.traffic_ppm`, or the refusal
+/// (MEDULLA-DECISION-ENGINE-R712.4).
+pub fn check_traffic(traffic_ppm: u64, low: u64, high: u64) -> Result<u64, EvalRefusal> {
+    if (low..=high).contains(&traffic_ppm) {
+        Ok(traffic_ppm)
+    } else {
+        Err(refuse(
+            CANARY_TRAFFIC_OUT_OF_BOUNDS,
+            format!("traffic {traffic_ppm} is outside [{low}, {high}]"),
+        ))
+    }
+}
+
+/// What a canary decides (MEDULLA-DECISION-ENGINE-R712.3): a regression verdict rolls back; a
+/// challenger whose paired lower bound clears the noise band ramps; anything else holds.
+pub fn canary_verdict(delta_lower_ppm: i64, band_ppm: u64, regressed: bool) -> CanaryVerdict {
+    if regressed {
+        CanaryVerdict::Rollback
+    } else if delta_lower_ppm > 0 && delta_lower_ppm.unsigned_abs() > band_ppm {
+        CanaryVerdict::Ramp
+    } else {
+        CanaryVerdict::Hold
+    }
+}
+
+/// The rows of `model_ref` that a change of its model revision makes stale: every `Current` row
+/// of that model but the one just compiled (MEDULLA-DECISION-ENGINE-R712.2).
+pub fn stale_after_change(rows: &[ModelCompile], model_ref: &str, keep_skill: &str) -> Vec<ModelCompile> {
+    rows.iter()
+        .filter(|row| {
+            row.model_ref == model_ref && row.state == CompileState::Current && row.skill_ref != keep_skill
+        })
+        .map(|row| ModelCompile {
+            state: CompileState::Stale,
+            ..row.clone()
+        })
+        .collect()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -349,5 +456,63 @@ mod tests {
         }];
         assert_eq!(check_case(&mocked, &tools).unwrap_err().code, EVAL_CASE_INVALID);
         assert!(check_case(&case(EvalCaseKind::RealPrompt), &tools).is_ok());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R712.2
+    #[test]
+    fn noise_band_and_canary_bucket_are_deterministic() {
+        // Twice the standard deviation of five identical runs, rounded down.
+        let band = noise_band(&[100, 200, 300, 400, 500], 5).expect("five runs");
+        assert_eq!(band, NoiseBand { identical_runs: 5, band_ppm: 282 });
+        // Fewer runs than the knob refuse; identical scores have no noise.
+        assert_eq!(noise_band(&[1, 2, 3, 4], 5).unwrap_err().code, ABLATION_NOISE_BAND_MISSING);
+        assert_eq!(noise_band(&[7, 7, 7, 7, 7], 5).unwrap().band_ppm, 0);
+
+        // The verdict compares the mean difference with the band.
+        let with = [700_000, 710_000, 690_000];
+        let without = [600_000, 610_000, 590_000];
+        assert_eq!(ablation_verdict(&with, &without, 282), AblationVerdict::Effect { delta_ppm: 100_000 });
+        assert_eq!(ablation_verdict(&with, &without, 100_000), AblationVerdict::WithinNoise);
+        assert_eq!(
+            ablation_verdict(&without, &with, 282),
+            AblationVerdict::Effect { delta_ppm: -100_000 }
+        );
+        assert_eq!(ablation_verdict(&[], &without, 0), AblationVerdict::WithinNoise);
+
+        // A bucket is a pure function of the run and the skill, below one million.
+        let bucket = canary_bucket("run-1", "skill:triage@3");
+        assert_eq!(bucket, canary_bucket("run-1", "skill:triage@3"));
+        assert!(bucket < 1_000_000);
+        assert_ne!(bucket, canary_bucket("run-2", "skill:triage@3"));
+        assert!(takes_challenger(49_999, 50_000) && !takes_challenger(50_000, 50_000));
+        let taking = (0..2_000)
+            .filter(|index| takes_challenger(canary_bucket(&format!("run-{index}"), "s"), 100_000))
+            .count();
+        assert!((100..300).contains(&taking), "about a tenth of 2000 runs, got {taking}");
+
+        assert_eq!(check_traffic(50_000, 1_000, 500_000), Ok(50_000));
+        assert_eq!(
+            check_traffic(900, 1_000, 500_000).unwrap_err().code,
+            CANARY_TRAFFIC_OUT_OF_BOUNDS
+        );
+        assert_eq!(canary_verdict(5_000, 1_000, false), CanaryVerdict::Ramp);
+        assert_eq!(canary_verdict(500, 1_000, false), CanaryVerdict::Hold);
+        assert_eq!(canary_verdict(5_000, 1_000, true), CanaryVerdict::Rollback);
+
+        let row = |skill: &str, model: &str, state| ModelCompile {
+            skill_ref: skill.into(),
+            model_ref: model.into(),
+            compiled_digest: "d".into(),
+            state,
+        };
+        let rows = [
+            row("a", "m1", CompileState::Current),
+            row("b", "m1", CompileState::Current),
+            row("c", "m2", CompileState::Current),
+            row("d", "m1", CompileState::Stale),
+        ];
+        let stale = stale_after_change(&rows, "m1", "a");
+        assert_eq!(stale.len(), 1);
+        assert_eq!((stale[0].skill_ref.as_str(), stale[0].state), ("b", CompileState::Stale));
     }
 }

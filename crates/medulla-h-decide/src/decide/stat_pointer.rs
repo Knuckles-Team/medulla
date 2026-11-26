@@ -198,10 +198,18 @@ pub(super) fn champion_pointer(
         Some(parent) => Some(opaque(parent)?),
         None => None,
     };
+    // A skill champion carries the canary split in force, when there is one.
+    let canary = match &subject {
+        RevisionSubject::Skill { skill_ref } => {
+            super::stat_skill_ablation::read_canary(store, tenant, skill_ref)?
+        }
+        _ => None,
+    };
     Ok(ChampionPointer {
         subject,
         revision_ref: opaque(target)?,
         parent_ref,
         promoted_by_decision: opaque(&format!("decision:{receipt}"))?,
+        canary,
     })
 }

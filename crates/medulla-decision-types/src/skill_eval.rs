@@ -273,6 +273,210 @@ pub struct SkillEvalOutcome {
     pub premises: Vec<String>,
 }
 
+/// Which side of an ablation one run belongs to (MEDULLA-DECISION-ENGINE-R712.1).
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum AblationArm {
+    /// The skill is loaded.
+    With,
+    /// The skill is not loaded.
+    Without,
+    /// The skill is loaded without one named part.
+    WithoutPart {
+        /// The part left out.
+        part: String,
+    },
+}
+
+/// One run of an ablation. The arm stays with the engine: a judge reads only [`JudgeInput`].
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct AblationRun {
+    /// The skill revision under test.
+    pub skill_ref: String,
+    /// The digest of the prompt both arms ran; no prompt text is stored.
+    pub prompt_digest: String,
+    /// The arm of the run.
+    pub arm: AblationArm,
+    /// The id a judge sees in place of the arm.
+    pub blind_id: String,
+    /// How well the run did, in ppm.
+    pub outcome_score_ppm: u64,
+    /// The seed of the run; a pair shares prompt and seed.
+    pub seed: u64,
+}
+
+/// What a judge reads about one run: the blind id and the digests, never the arm.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct JudgeInput {
+    /// The blind id of the run.
+    pub blind_id: String,
+    /// The digest of the prompt.
+    pub prompt_digest: String,
+    /// The digest of the output to grade.
+    pub output_digest: String,
+}
+
+impl AblationRun {
+    /// The input a judge is handed for this run: the arm is not part of it.
+    pub fn judge_input(&self, output_digest: &str) -> JudgeInput {
+        JudgeInput {
+            blind_id: self.blind_id.clone(),
+            prompt_digest: self.prompt_digest.clone(),
+            output_digest: output_digest.to_string(),
+        }
+    }
+}
+
+/// How much two identical runs differ by chance.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct NoiseBand {
+    /// How many identical runs the band was measured on.
+    pub identical_runs: u64,
+    /// Twice their standard deviation, in ppm.
+    pub band_ppm: u64,
+}
+
+/// What an ablation shows.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum AblationVerdict {
+    /// The arms differ by more than the noise band.
+    Effect {
+        /// The mean of the first arm minus the mean of the second, in ppm.
+        delta_ppm: i64,
+    },
+    /// The arms differ by no more than the noise band.
+    WithinNoise,
+}
+
+/// A challenger revision taking a share of the runs of one skill.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillCanary {
+    /// The skill.
+    pub skill_ref: String,
+    /// The revision that serves the rest of the runs.
+    pub champion_revision: String,
+    /// The revision that serves the canary share.
+    pub challenger_revision: String,
+    /// The share of runs the challenger takes, in ppm.
+    pub traffic_ppm: u64,
+    /// How long the canary window lasts, in milliseconds.
+    pub window_ms: u64,
+}
+
+/// What a canary decides.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum CanaryVerdict {
+    /// Raise the challenger's share.
+    Ramp,
+    /// Keep the share where it is.
+    Hold,
+    /// Take the challenger off.
+    Rollback,
+}
+
+impl CanaryVerdict {
+    /// The text a premise names the verdict by.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Ramp => "ramp",
+            Self::Hold => "hold",
+            Self::Rollback => "rollback",
+        }
+    }
+}
+
+/// Whether a compiled program still matches its model.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum CompileState {
+    /// The program was compiled against the current model revision.
+    Current,
+    /// The model revision changed after the program was compiled.
+    Stale,
+}
+
+/// One program a skill was compiled into for one model.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ModelCompile {
+    /// The skill.
+    pub skill_ref: String,
+    /// The model the program was compiled for.
+    pub model_ref: String,
+    /// The digest of the compiled program.
+    pub compiled_digest: String,
+    /// Current or stale.
+    pub state: CompileState,
+}
+
+/// The body of `DecisionLog` `learn` write `record_ablation`: the runs of one skill's ablation.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct AblationRecord {
+    /// The skill revision under test.
+    pub skill_ref: String,
+    /// The score of each identical run, in ppm: one prompt, one arm, many seeds.
+    pub identical_scores_ppm: Vec<u64>,
+    /// The paired runs: a `With` run and a `Without` run per `(prompt_digest, seed)`.
+    pub runs: Vec<AblationRun>,
+}
+
+/// What `record_ablation` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct AblationRecorded {
+    /// The noise band of the identical runs.
+    pub noise: NoiseBand,
+    /// With against without, judged against the band.
+    pub verdict: AblationVerdict,
+    /// The paired runs as rollout evidence; its receipt digest names the stored rollout set.
+    pub evidence: crate::decision::held_out::HeldOutEvidence,
+}
+
+/// The bounds of knob `canary.traffic_ppm`.
+pub const CANARY_TRAFFIC_MIN_PPM: u64 = 1_000;
+/// The upper bound of knob `canary.traffic_ppm`.
+pub const CANARY_TRAFFIC_MAX_PPM: u64 = 500_000;
+
+/// What `record_canary` answers: the canary now in force, or none after a rollback.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CanaryRecorded {
+    /// The canary split of the skill after the write.
+    pub canary: Option<SkillCanary>,
+}
+
+/// What `record_model_compile` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ModelCompileRecorded {
+    /// The row that was recorded, current.
+    pub compile: ModelCompile,
+    /// The rows a change of the model revision made stale.
+    pub stale: Vec<ModelCompile>,
+    /// The draft revisions filed for the stale rows, one per row.
+    pub proposals: Vec<String>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -312,5 +516,44 @@ mod tests {
         assert_eq!(serde_json::from_str::<SuiteReport>(&text).unwrap(), report);
         let unknown = GOLDEN_CASE.replace("\"case_id\":\"c1\"", "\"case_id\":\"c1\",\"x\":1");
         assert!(serde_json::from_str::<SkillEvalCase>(&unknown).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R712.1
+    #[test]
+    fn ablation_types_round_trip_and_hide_the_arm() {
+        let run = AblationRun {
+            skill_ref: "skill:triage@3".into(),
+            prompt_digest: "p1".into(),
+            arm: AblationArm::WithoutPart { part: "intro".into() },
+            blind_id: "b-17".into(),
+            outcome_score_ppm: 700_000,
+            seed: 4,
+        };
+        let wire = serde_json::to_string(&run).expect("encodes");
+        assert_eq!(serde_json::from_str::<AblationRun>(&wire).expect("decodes"), run);
+        for arm in [AblationArm::With, AblationArm::Without] {
+            let text = serde_json::to_string(&arm).expect("encodes");
+            assert_eq!(serde_json::from_str::<AblationArm>(&text).expect("decodes"), arm);
+        }
+        // A judge reads the blind id and the digests; no field or text of its input names the arm.
+        let input = serde_json::to_string(&run.judge_input("out-1")).expect("encodes");
+        assert!(input.contains("b-17") && input.contains("p1") && input.contains("out-1"));
+        assert!(!input.contains("arm") && !input.contains("without") && !input.contains("intro"));
+        for verdict in [AblationVerdict::Effect { delta_ppm: -5 }, AblationVerdict::WithinNoise] {
+            let text = serde_json::to_string(&verdict).expect("encodes");
+            assert_eq!(
+                serde_json::from_str::<AblationVerdict>(&text).expect("decodes"),
+                verdict
+            );
+        }
+        let compile = ModelCompile {
+            skill_ref: "skill:triage@3".into(),
+            model_ref: "model:m1".into(),
+            compiled_digest: "d".into(),
+            state: CompileState::Stale,
+        };
+        let text = serde_json::to_string(&compile).expect("encodes");
+        assert!(text.contains("\"stale\""));
+        assert_eq!(serde_json::from_str::<ModelCompile>(&text).expect("decodes"), compile);
     }
 }

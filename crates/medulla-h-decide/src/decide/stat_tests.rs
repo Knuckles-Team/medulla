@@ -1096,6 +1096,8 @@ mod knowledge_curation_tests;
 mod friction_report_tests;
 // MEDULLA-DECISION-ENGINE-R711.3, R711.4, R711.5: the skill evaluation job.
 mod skill_eval_tests;
+// MEDULLA-DECISION-ENGINE-R712.3, R712.4, R712.5: ablation, canary and compile staleness.
+mod skill_ablation_tests;
 
 // MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
 mod context_budget_tests;

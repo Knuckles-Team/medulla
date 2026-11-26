@@ -11591,6 +11591,7 @@ class ChampionPointer(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     parent_ref: str | None = None
+    canary: SkillCanary | None = None
     promoted_by_decision: str
     revision_ref: str
     subject: RevisionSubject
@@ -12192,6 +12193,149 @@ class LearningWriteRecordPolicyReview(BaseModel):
     write: Literal["record_policy_review"]
 
 
+class AblationPart(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    part: str
+
+
+class AblationArmWithoutPart(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    without_part: AblationPart
+
+
+AblationArm = Literal["with", "without"] | AblationArmWithoutPart
+
+
+class AblationRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    arm: AblationArm
+    blind_id: str
+    outcome_score_ppm: Annotated[int, Field(ge=0)]
+    prompt_digest: str
+    seed: Annotated[int, Field(ge=0)]
+    skill_ref: str
+
+
+class JudgeInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    blind_id: str
+    output_digest: str
+    prompt_digest: str
+
+
+class NoiseBand(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    band_ppm: Annotated[int, Field(ge=0)]
+    identical_runs: Annotated[int, Field(ge=0)]
+
+
+class AblationEffect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    delta_ppm: int
+
+
+class AblationVerdictEffect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    effect: AblationEffect
+
+
+AblationVerdict = Literal["within_noise"] | AblationVerdictEffect
+
+
+class CanaryVerdict(str, Enum):
+    RAMP = "ramp"
+    HOLD = "hold"
+    ROLLBACK = "rollback"
+
+
+class CompileState(str, Enum):
+    CURRENT = "current"
+    STALE = "stale"
+
+
+class SkillCanary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    challenger_revision: str
+    champion_revision: str
+    skill_ref: str
+    traffic_ppm: Annotated[int, Field(ge=0)]
+    window_ms: Annotated[int, Field(ge=0)]
+
+
+class ModelCompile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    compiled_digest: str
+    model_ref: str
+    skill_ref: str
+    state: CompileState
+
+
+class AblationRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    identical_scores_ppm: list[Annotated[int, Field(ge=0)]]
+    runs: list[AblationRun]
+    skill_ref: str
+
+
+class LearningWriteRecordAblation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record: AblationRecord
+    write: Literal["record_ablation"]
+
+
+class LearningWriteRecordCanary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    canary: SkillCanary
+    verdict: CanaryVerdict
+    write: Literal["record_canary"]
+
+
+class LearningWriteRecordModelCompile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    compile: ModelCompile
+    graph: str
+    model_revision: str
+    write: Literal["record_model_compile"]
+
+
+class LearningRecordedAblation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence: HeldOutEvidence
+    noise: NoiseBand
+    recorded: Literal["ablation"]
+    verdict: AblationVerdict
+
+
+class LearningRecordedCanary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    canary: SkillCanary | None = None
+    recorded: Literal["canary"]
+
+
+class LearningRecordedModelCompile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    compile: ModelCompile
+    proposals: list[str]
+    recorded: Literal["model_compile"]
+    stale: list[ModelCompile]
+
+
 LearningRecorded = Annotated[
     LearningRecordedOutcome
     | LearningRecordedFitted
@@ -12211,7 +12355,10 @@ LearningRecorded = Annotated[
     | LearningRecordedDriftPolicy
     | LearningRecordedDriftRefreshed
     | LearningRecordedFeedback
-    | LearningRecordedPackageRun,
+    | LearningRecordedPackageRun
+    | LearningRecordedAblation
+    | LearningRecordedCanary
+    | LearningRecordedModelCompile,
     Field(discriminator="recorded"),
 ]
 
@@ -12466,7 +12613,10 @@ LearningWrite = Annotated[
     | LearningWriteFitCalibration
     | LearningWriteFitCatalogEncoder
     | LearningWriteRecordPolicyReview
-    | LearningWriteRecordSessionNote,
+    | LearningWriteRecordSessionNote
+    | LearningWriteRecordAblation
+    | LearningWriteRecordCanary
+    | LearningWriteRecordModelCompile,
     Field(discriminator="write"),
 ]
 
@@ -46846,6 +46996,26 @@ __all__ = [
     "LearningRecordedPointer",
     "LearningRecordedPolicyReview",
     "LearningRecordedRollouts",
+    "AblationArm",
+    "AblationArmWithoutPart",
+    "AblationEffect",
+    "AblationPart",
+    "AblationRecord",
+    "AblationRun",
+    "AblationVerdict",
+    "AblationVerdictEffect",
+    "CanaryVerdict",
+    "CompileState",
+    "JudgeInput",
+    "LearningRecordedAblation",
+    "LearningRecordedCanary",
+    "LearningRecordedModelCompile",
+    "LearningWriteRecordAblation",
+    "LearningWriteRecordCanary",
+    "LearningWriteRecordModelCompile",
+    "ModelCompile",
+    "NoiseBand",
+    "SkillCanary",
     "LearningRecordedRun",
     "LearningWrite",
     "LearningWriteEvaluateGeneration",
