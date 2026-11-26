@@ -7,7 +7,7 @@
 //! generation it was computed from. Everything here is a pure function of its arguments;
 //! the served handler in `medulla-h-query` owns storage and execution.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_identity_types::identity::{
     owner_or_matching_scope, KnowledgeUnit, ShareScope, UnitPrincipal,
@@ -21,6 +21,9 @@ pub const STORED_QUERY_PARAM_MISSING: &str = "STORED_QUERY_PARAM_MISSING";
 pub const STORED_QUERY_IMMUTABLE: &str = "STORED_QUERY_IMMUTABLE";
 pub const STORED_QUERY_NOT_FOUND: &str = "STORED_QUERY_NOT_FOUND";
 pub const ACCESS_DENIED: &str = "ACCESS_DENIED";
+/// The warning code of a stored query that reads an asset flagged `deprecation`
+/// (MEDULLA-FEDERATED-QUERY-R708.9).
+pub const STORED_QUERY_DEPRECATED_ASSET: &str = "STORED_QUERY_DEPRECATED_ASSET";
 
 /// A typed stored-query refusal.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, thiserror::Error)]
@@ -316,6 +319,51 @@ pub fn args_digest(bound: &BTreeMap<String, Value>) -> String {
     hex::encode(Sha256::digest(canonical))
 }
 
+/// One typed lint warning of a stored query (MEDULLA-FEDERATED-QUERY-R708.9). A warning never
+/// stops a save or a run.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct StoredQueryWarning {
+    /// `STORED_QUERY_DEPRECATED_ASSET`.
+    pub code: String,
+    /// The asset id the warning is about.
+    pub asset: String,
+}
+
+/// The receipt of `StoredQueryPut`: the published version and the lint warnings of its
+/// references (MEDULLA-FEDERATED-QUERY-R708.9).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct StoredQueryReceipt {
+    pub query: StoredQuery,
+    #[serde(default)]
+    pub warnings: Vec<StoredQueryWarning>,
+}
+
+/// Lint the assets a stored query reads against the assets flagged `deprecation`: one
+/// `STORED_QUERY_DEPRECATED_ASSET` warning per deprecated asset, in asset order. The assets
+/// are the references the language's extractor found; a language with no extractor has none.
+pub fn lint_stored_query(
+    references: &[String],
+    deprecated: &BTreeSet<String>,
+) -> Vec<StoredQueryWarning> {
+    let mut assets: Vec<&String> = references
+        .iter()
+        .filter(|asset| deprecated.contains(*asset))
+        .collect();
+    assets.sort();
+    assets.dedup();
+    assets
+        .into_iter()
+        .map(|asset| StoredQueryWarning {
+            code: STORED_QUERY_DEPRECATED_ASSET.to_string(),
+            asset: asset.clone(),
+        })
+        .collect()
+}
+
 /// The stored materialized result of one (query version, binding) pair.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -329,6 +377,9 @@ pub struct StoredResult {
     pub input_generation: u64,
     /// When the rows were computed, in milliseconds.
     pub refreshed_at_ms: u64,
+    /// The lint warnings of the run that computed the rows (MEDULLA-FEDERATED-QUERY-R708.9).
+    #[serde(default)]
+    pub warnings: Vec<StoredQueryWarning>,
 }
 
 /// What one call returns (MEDULLA-FEDERATED-QUERY-R708.5).
@@ -346,6 +397,9 @@ pub struct StoredCall {
     pub refreshed_at_ms: u64,
     /// Whole seconds since `refreshed_at_ms`, computed on read.
     pub staleness_s: u64,
+    /// The lint warnings of the run that computed the rows (MEDULLA-FEDERATED-QUERY-R708.9).
+    #[serde(default)]
+    pub warnings: Vec<StoredQueryWarning>,
 }
 
 /// Whole seconds from a refresh to a read.
@@ -407,6 +461,7 @@ pub fn serve_materialized(
             row_count,
             input_generation: generation,
             refreshed_at_ms: now_ms,
+            warnings: Vec::new(),
         },
         Served::Recomputed,
     ))
@@ -579,6 +634,7 @@ mod tests {
             row_count: 1,
             input_generation: generation,
             refreshed_at_ms,
+            warnings: Vec::new(),
         }
     }
 
@@ -643,5 +699,22 @@ mod tests {
         let b = BTreeMap::from([("x".to_string(), json!(2))]);
         assert_ne!(args_digest(&a), args_digest(&b));
         assert_eq!(args_digest(&a), args_digest(&a.clone()));
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R708.9
+    #[test]
+    fn a_deprecated_reference_warns_once_and_a_clean_query_does_not() {
+        let deprecated: BTreeSet<String> = ["orders".to_string()].into();
+        let references = vec!["orders".to_string(), "users".to_string(), "orders".to_string()];
+        let warnings = lint_stored_query(&references, &deprecated);
+        assert_eq!(
+            warnings,
+            vec![StoredQueryWarning {
+                code: STORED_QUERY_DEPRECATED_ASSET.to_string(),
+                asset: "orders".to_string(),
+            }]
+        );
+        assert!(lint_stored_query(&["users".to_string()], &deprecated).is_empty());
+        assert!(lint_stored_query(&[], &deprecated).is_empty());
     }
 }

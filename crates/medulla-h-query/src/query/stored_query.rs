@@ -18,9 +18,9 @@ use medulla_identity_types::identity::UnitPrincipal;
 use medulla_query_types::wire::{UqlParam, UqlResult, UqlRow};
 use medulla_server_api::read_scope::ReadCaller;
 use medulla_source_types::stored_query::{
-    args_digest, needs_run, refuse, serve_materialized, staleness_s, Served, StoredCall,
-    StoredParamType, StoredQuery, StoredQueryLanguage, StoredQueryRefusal, StoredResult,
-    ACCESS_DENIED, STORED_QUERY_IMMUTABLE, STORED_QUERY_INVALID, STORED_QUERY_NOT_FOUND,
+    args_digest, lint_stored_query, needs_run, refuse, serve_materialized, staleness_s, Served,
+    StoredCall, StoredParamType, StoredQuery, StoredQueryLanguage, StoredQueryReceipt,
+    StoredQueryRefusal, StoredQueryWarning, StoredResult, ACCESS_DENIED, STORED_QUERY_IMMUTABLE, STORED_QUERY_INVALID, STORED_QUERY_NOT_FOUND,
 };
 use serde_json::{json, Value};
 
@@ -32,6 +32,9 @@ const QUERY_LABEL: &str = "StoredQuery";
 const HEAD_LABEL: &str = "StoredQueryHead";
 const RESULT_LABEL: &str = "StoredQueryResult";
 const INTERNAL: &str = "INTERNAL";
+/// The node property that holds the assets a stored query version reads
+/// (MEDULLA-FEDERATED-QUERY-R708.9).
+const REFERENCES_PROPERTY: &str = "references";
 
 fn query_node(name: &str, version: u32) -> String {
     format!("stored_query:{name}:{version}")
@@ -208,6 +211,63 @@ pub fn seed_catalog_queries(
     Ok(())
 }
 
+// ── Lint (MEDULLA-FEDERATED-QUERY-R708.9) ─────────────────────────────────────────────
+
+/// The assets a stored query reads, found by the extractor of its language: the SQL tables of a
+/// SQL query, the scan labels of the plan a UQL query parses to. SPARQL has no extractor, so a
+/// SPARQL stored query records no references and is never linted.
+fn query_references(query: &StoredQuery) -> Vec<String> {
+    match query.language {
+        StoredQueryLanguage::Uql => {
+            medulla_uql::parse_with(&query.text, &placeholder_params(query))
+                .map(|plan| super::asset_usage::plan_labels(&plan))
+                .unwrap_or_default()
+        }
+        #[cfg(feature = "federation-sql")]
+        StoredQueryLanguage::Sql => query
+            .render(&placeholder_values(query))
+            .ok()
+            .and_then(|text| {
+                medulla_federation::sql_analysis::referenced_tables(
+                    &text,
+                    medulla_exec::sql_text::SqlDialect::Postgres,
+                )
+                .ok()
+            })
+            .unwrap_or_default(),
+        #[cfg(not(feature = "federation-sql"))]
+        StoredQueryLanguage::Sql => Vec::new(),
+        StoredQueryLanguage::Sparql => Vec::new(),
+    }
+}
+
+/// The assets the caller's tenant has flagged `deprecation`, read from the trust-flag nodes of
+/// the graph.
+fn deprecated_in(ctx: &QueryHandlerCtx<'_>) -> std::collections::BTreeSet<String> {
+    let flags: Vec<serde_json::Map<String, Value>> = ctx
+        .core
+        .get_nodes_by_label(medulla_catalog_types::stewardship::TRUST_FLAG_LABEL, usize::MAX)
+        .into_iter()
+        .filter_map(|(_, blob)| medulla_types::msgpack::decode_property_object(&blob).ok())
+        .collect();
+    medulla_catalog_types::stewardship::deprecated_assets(&flags, &reader_of(ctx).tenant)
+}
+
+/// The warnings of one stored version: its recorded references against the deprecated assets.
+fn lint_version(ctx: &QueryHandlerCtx<'_>, references: &[String]) -> Vec<StoredQueryWarning> {
+    if references.is_empty() {
+        return Vec::new();
+    }
+    lint_stored_query(references, &deprecated_in(ctx))
+}
+
+/// The references recorded on a stored version node.
+fn recorded_references(core: &GraphCore, name: &str, version: u32) -> Vec<String> {
+    props_of(core, &query_node(name, version))
+        .and_then(|props| serde_json::from_value(props.get(REFERENCES_PROPERTY)?.clone()).ok())
+        .unwrap_or_default()
+}
+
 // ── Put ───────────────────────────────────────────────────────────────────────────────
 
 /// Declared parameter types as placeholder bindings, so a put parses the text once.
@@ -272,7 +332,7 @@ fn check_text(language: StoredQueryLanguage, text: &str) -> Result<(), StoredQue
 pub(crate) fn handle_stored_put(
     ctx: &QueryHandlerCtx<'_>,
     mut query: StoredQuery,
-) -> Result<StoredQuery, StoredQueryRefusal> {
+) -> Result<StoredQueryReceipt, StoredQueryRefusal> {
     query.validate(medulla_server_api::knob_config::knobs().stored_query_min_period_s)?;
     match query.language {
         StoredQueryLanguage::Uql => {
@@ -305,6 +365,7 @@ pub(crate) fn handle_stored_put(
         ));
     }
     query.author = ctx.caller.to_string();
+    let references = query_references(&query);
     let latest = head.map_or(0, |head| head.latest).max(query.version);
     let props = json!({
         "type": QUERY_LABEL,
@@ -313,6 +374,7 @@ pub(crate) fn handle_stored_put(
         "author": query.author,
         "author_tenant": reader_of(ctx).tenant,
         "query": serde_json::to_value(&query).map_err(internal)?,
+        (REFERENCES_PROPERTY): references,
     });
     write_node(ctx.core, query_node(&query.name, query.version), &props)?;
     let head = json!({
@@ -322,7 +384,8 @@ pub(crate) fn handle_stored_put(
         "latest": latest,
     });
     write_node(ctx.core, head_node(&query.name), &head)?;
-    Ok(query)
+    let warnings = lint_version(ctx, &references);
+    Ok(StoredQueryReceipt { query, warnings })
 }
 
 // ── Call ──────────────────────────────────────────────────────────────────────────────
@@ -504,6 +567,8 @@ pub(crate) async fn handle_stored_call(
     }
     let bound = query.bind(args)?;
     let now = now_ms();
+    // The lint runs before each run; it warns and never stops the run.
+    let warnings = lint_version(ctx, &recorded_references(ctx.core, name, version));
     if !query.materialize {
         let (columns, rows, generation) =
             run_stored(ctx, query, &bound).await.map_err(run_refusal)?;
@@ -518,6 +583,7 @@ pub(crate) async fn handle_stored_call(
             input_generation: generation,
             refreshed_at_ms: now,
             staleness_s: 0,
+            warnings,
         });
     }
     let digest = args_digest(&bound);
@@ -527,11 +593,12 @@ pub(crate) async fn handle_stored_call(
     } else {
         None
     };
-    let (result, served) = serve_materialized(query.refresh, prior, now, || {
+    let (mut result, served) = serve_materialized(query.refresh, prior, now, || {
         outcome.ok_or_else(|| "the run was skipped".to_string())
     })
     .map_err(internal)?;
     if served == Served::Recomputed {
+        result.warnings = warnings.clone();
         let props = json!({
             "type": RESULT_LABEL,
             "name": name,
@@ -551,6 +618,7 @@ pub(crate) async fn handle_stored_call(
         row_count: result.row_count,
         input_generation: result.input_generation,
         refreshed_at_ms: result.refreshed_at_ms,
+        warnings,
     })
 }
 

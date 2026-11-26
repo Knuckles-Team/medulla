@@ -35,7 +35,7 @@ pub(crate) fn query_assets(method: &Method) -> Vec<String> {
 }
 
 /// The distinct scan labels of a plan, sorted.
-fn plan_labels(plan: &medulla_exec::algebra::Plan) -> Vec<String> {
+pub(super) fn plan_labels(plan: &medulla_exec::algebra::Plan) -> Vec<String> {
     let mut labels: Vec<String> = plan
         .ops
         .iter()

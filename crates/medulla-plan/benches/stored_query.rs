@@ -22,6 +22,7 @@ fn stored() -> StoredResult {
         row_count: ROWS as u64,
         input_generation: 7,
         refreshed_at_ms: 1_000,
+        warnings: Vec::new(),
     }
 }
 

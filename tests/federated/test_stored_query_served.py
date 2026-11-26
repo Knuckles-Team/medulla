@@ -14,7 +14,7 @@ import pytest
 from conftest import register_commons_agents, request_context
 
 from medulla.client import MedullaClient
-from medulla.generated import query
+from medulla.generated import ingestion, query
 
 TEXT = "MATCH (:StoredIncident) WHERE status = $status"
 
@@ -73,7 +73,7 @@ async def test_put_then_call() -> None:
     name = f"open_{uuid.uuid4().hex}"
     status = f"open-{uuid.uuid4().hex}"
     try:
-        stored = await _put(client, _stored(name))
+        stored = (await _put(client, _stored(name)))["query"]
         assert stored["version"] == 1
         await _put(client, _stored(name, version=2, materialize=True))
 
@@ -160,7 +160,7 @@ async def test_share_scope_limits_calls() -> None:
     try:
         # The author comes from the verified principal, whatever the request says.
         put = await _put(author, _stored(private, author="usr:someone-else"))
-        assert put["author"] == "usr:stored-author"
+        assert put["query"]["author"] == "usr:stored-author"
         await _put(author, _stored(shared, share="tenant"))
 
         assert (await _call(author, private, {"status": "x"}))["version"] == 1
@@ -256,5 +256,50 @@ async def test_sql_and_sparql_stored_queries_call() -> None:
             )
         with pytest.raises(RuntimeError, match="STORED_QUERY_PARAM_MISSING"):
             await _call(client, sparql, {})
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R708.9
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R708.9")
+@pytest.mark.asyncio
+async def test_workspace_share_schedule_and_lint() -> None:
+    """A stored query that reads a deprecated asset warns on its put receipt and on each
+    call, and the save and the run still proceed."""
+    client = await _connect()
+    suffix = uuid.uuid4().hex
+    label = f"StoredLint{suffix}"
+    name = f"lint_{suffix}"
+    text = f"MATCH (:{label}) WHERE status = $status"
+    try:
+        clean = await _put(client, _stored(name, text=text))
+        assert clean["query"]["version"] == 1
+        assert clean["warnings"] == []
+        assert (await _call(client, name, {"status": "open"}))["warnings"] == []
+
+        # A steward deprecates the asset the query reads.
+        await ingestion.send_stewardship(
+            client,
+            {
+                "op": {
+                    "op": "set_trust_flag",
+                    "asset": label,
+                    "flag": "deprecation",
+                    "reason": "replaced by a newer table",
+                }
+            },
+        )
+        expected = [{"code": "STORED_QUERY_DEPRECATED_ASSET", "asset": label}]
+
+        # The save proceeds and carries the typed warning on its receipt.
+        second = await _put(client, _stored(name, text=text, version=2))
+        assert second["query"]["version"] == 2
+        assert second["warnings"] == expected
+
+        # The run proceeds too; the lint is re-read before it, so version 1, saved
+        # clean, now warns.
+        called = await _call(client, name, {"status": "open"}, version=1)
+        assert called["warnings"] == expected
+        assert called["row_count"] == 0
     finally:
         await client.close()

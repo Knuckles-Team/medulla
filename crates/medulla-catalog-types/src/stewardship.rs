@@ -193,6 +193,30 @@ pub fn trust_flag_is_announced(flag: &str) -> bool {
     matches!(flag, "warning" | "deprecation")
 }
 
+/// The property of a trust-flag node that names the tenant that set it.
+pub const TRUST_FLAG_TENANT_PROPERTY: &str = "tenant_id";
+
+/// The assets `tenant` has flagged `deprecation`: every one of `flags` (the properties of the
+/// `cat:TrustFlag` nodes) whose `flag` is `deprecation` and whose tenant is `tenant`. One
+/// principal's deprecation stands whatever another principal flags the same asset
+/// (MEDULLA-FEDERATED-QUERY-R708.9).
+pub fn deprecated_assets<'a>(
+    flags: impl IntoIterator<Item = &'a serde_json::Map<String, serde_json::Value>>,
+    tenant: &str,
+) -> std::collections::BTreeSet<String> {
+    fn text<'n>(node: &'n serde_json::Map<String, serde_json::Value>, key: &str) -> Option<&'n str> {
+        node.get(key).and_then(serde_json::Value::as_str)
+    }
+    flags
+        .into_iter()
+        .filter(|node| {
+            text(node, "flag") == Some("deprecation")
+                && text(node, TRUST_FLAG_TENANT_PROPERTY) == Some(tenant)
+        })
+        .filter_map(|node| text(node, "asset").map(str::to_string))
+        .collect()
+}
+
 /// One stewardship operation (`Method::Stewardship`, MEDULLA-TYPED-PACKS-R802.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
@@ -251,4 +275,29 @@ pub struct StewardshipReceipt {
     pub owners: Vec<String>,
     /// The stewards that govern the addressed target.
     pub stewards: Vec<String>,
+}
+
+#[cfg(test)]
+mod deprecation_tests {
+    use super::*;
+    use serde_json::json;
+
+    fn flag(asset: &str, flag: &str, tenant: &str) -> serde_json::Map<String, serde_json::Value> {
+        json!({"asset": asset, "flag": flag, "tenant_id": tenant})
+            .as_object()
+            .cloned()
+            .unwrap_or_default()
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R708.9
+    #[test]
+    fn only_the_tenants_deprecation_flags_name_a_deprecated_asset() {
+        let flags = [
+            flag("orders", "deprecation", "t1"),
+            flag("users", "endorsement", "t1"),
+            flag("ledger", "deprecation", "t2"),
+        ];
+        let found = deprecated_assets(&flags, "t1");
+        assert_eq!(found.into_iter().collect::<Vec<_>>(), vec!["orders".to_string()]);
+    }
 }

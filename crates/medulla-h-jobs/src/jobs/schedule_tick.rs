@@ -73,6 +73,8 @@ struct ScheduleCache {
     /// (a new process, or a pass that was due while another engine led) is scanned from each
     /// schedule's cursor, so the windows nobody acted on are recorded as missed.
     followed: std::collections::BTreeSet<String>,
+    /// When each graph's stored queries were last re-linted (MEDULLA-FEDERATED-QUERY-R708.9).
+    relinted_at: BTreeMap<String, u64>,
 }
 
 impl ScheduleCache {
@@ -142,6 +144,7 @@ async fn tick_pass(
         .saturating_mul(1_000);
     for (graph, core) in graphs {
         purge_due_dashboards(state, &graph, &core, host, now_ms, poll_s).await?;
+        relint_stored_queries(state, &graph, &core, cache, host, now_ms, poll_s).await?;
         let schedules = cache.schedules(&graph, &core, now_ms);
         let mut due = Vec::new();
         for record in &schedules {
@@ -287,6 +290,96 @@ async fn purge_due_dashboards(
             operations.extend(purge_operations(&stored.asset.id, stored.asset.revision));
         }
     }
+    if operations.is_empty() {
+        return Ok(());
+    }
+    if decode_node(core, LEASE_NODE_ID).is_none() {
+        commit(
+            state,
+            graph,
+            vec![upsert(LEASE_NODE_ID, LeaseRecord::default().to_fields())],
+        )
+        .await?;
+    }
+    let cell = GraphLeaseCell { core };
+    let ttl_ms = poll_s.max(1) * 3_000;
+    let Some(fence) = contend(&cell, host, now_ms, ttl_ms).map_err(|e| format!("{e:?}"))? else {
+        return Ok(());
+    };
+    cell.read()
+        .leadership()
+        .authorize(host, fence, now_ms)
+        .map_err(|e| e.to_string())?;
+    commit(state, graph, operations).await
+}
+
+/// Re-lint the stored query versions of `graph` against the trust flags (MEDULLA-FEDERATED-QUERY-R708.9).
+///
+/// At most once per `stored_query.relint_period_s` per graph, on the leader only. Each stored
+/// version names the assets it reads (recorded at its put); a version that reads an asset
+/// flagged `deprecation` carries one `STORED_QUERY_DEPRECATED_ASSET` warning per asset on its
+/// `StoredQueryLint` node. A node is rewritten only when its warnings change, and a version
+/// whose warnings cleared has its node's list emptied. The lint warns; it never stops a run.
+async fn relint_stored_queries(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    core: &GraphCore,
+    cache: &mut ScheduleCache,
+    host: &str,
+    now_ms: u64,
+    poll_s: u64,
+) -> Result<(), String> {
+    use medulla_catalog_types::stewardship::{deprecated_assets, TRUST_FLAG_LABEL};
+    use medulla_source_types::stored_query::{lint_stored_query, StoredQueryWarning};
+    let period_ms = medulla_server_api::knob_config::knobs()
+        .stored_query_relint_period_s
+        .saturating_mul(1_000);
+    if let Some(last) = cache.relinted_at.get(graph) {
+        if now_ms < last.saturating_add(period_ms) {
+            return Ok(());
+        }
+    }
+    let queries = core
+        .nodes_by_property("type", "StoredQuery")
+        .unwrap_or_default();
+    if queries.is_empty() {
+        cache.relinted_at.insert(graph.to_string(), now_ms);
+        return Ok(());
+    }
+    let flags: Vec<serde_json::Map<String, Value>> = core
+        .get_nodes_by_label(TRUST_FLAG_LABEL, usize::MAX)
+        .into_iter()
+        .filter_map(|(_, blob)| medulla_types::msgpack::decode_property_object(&blob).ok())
+        .collect();
+    let mut operations = Vec::new();
+    for id in queries {
+        let Some(Value::Object(node)) = decode_node(core, &id) else {
+            continue;
+        };
+        let text = |key: &str| node.get(key).and_then(Value::as_str).unwrap_or_default();
+        let version = node.get("version").and_then(Value::as_u64).unwrap_or(0);
+        let references: Vec<String> = node
+            .get("references")
+            .and_then(|value| serde_json::from_value(value.clone()).ok())
+            .unwrap_or_default();
+        let warnings: Vec<StoredQueryWarning> =
+            lint_stored_query(&references, &deprecated_assets(&flags, text("author_tenant")));
+        let lint_id = format!("stored_query_lint:{}:{version}", text("name"));
+        let held: Vec<StoredQueryWarning> = decode_node(core, &lint_id)
+            .and_then(|lint| serde_json::from_value(lint.get("warnings")?.clone()).ok())
+            .unwrap_or_default();
+        if warnings == held {
+            continue;
+        }
+        let mut fields = serde_json::Map::new();
+        fields.insert("type".into(), "StoredQueryLint".into());
+        fields.insert("name".into(), text("name").into());
+        fields.insert("version".into(), version.into());
+        fields.insert("warnings".into(), serde_json::to_value(&warnings).map_err(|e| e.to_string())?);
+        fields.insert("linted_at_ms".into(), now_ms.into());
+        operations.push(upsert(&lint_id, fields));
+    }
+    cache.relinted_at.insert(graph.to_string(), now_ms);
     if operations.is_empty() {
         return Ok(());
     }

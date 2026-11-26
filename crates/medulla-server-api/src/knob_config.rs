@@ -356,6 +356,8 @@ knobs! {
     source_coverage_max_classes: u64 = "source_coverage.max_classes", U64(64), [1, 512], "classes", Tunable;
     /// Stored queries: shortest periodic refresh a put accepts (MEDULLA-FEDERATED-QUERY-R708.11).
     stored_query_min_period_s: u64 = "stored_query.min_period_s", U64(300), [60, 86400], "seconds", Tunable;
+    /// Stored queries: how often the schedule tick re-lints the stored versions against the trust flags (MEDULLA-FEDERATED-QUERY-R708.9).
+    stored_query_relint_period_s: u64 = "stored_query.relint_period_s", U64(3600), [60, 86400], "seconds", Tunable;
     /// Bookmark relations: most edges one read window holds; a page beyond it or an answer above it refuses `BOOKMARK_LIMIT_EXCEEDED` (MEDULLA-MEDIA-VOCAB-R001.102.3).
     bookmark_relations_window: u64 = "bookmark.relations_window", U64(5000), [1, 100_000], "edges", Tunable;
     /// RESP listener: compare-and-swap attempts one `INCR` makes before it answers `INCR_CONFLICT` (MEDULLA-DURABLE-KERNEL-R860.3).

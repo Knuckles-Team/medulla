@@ -47,7 +47,7 @@ method_results! {
     EncodeDocument(EncodeDocument) => Json<medulla_types::retrieval::EncodedDocument>;
     EncodedDocumentSearch(EncodedDocumentSearch) => Json<medulla_types::retrieval::EncodedSearchResult>;
     ProjectionRead(ProjectionRead) => Json<medulla_types::projection_read::ProjectionReadResponse>;
-    StoredQueryPut(StoredQueryPut) => Json<medulla_source_types::stored_query::StoredQuery>;
+    StoredQueryPut(StoredQueryPut) => Json<medulla_source_types::stored_query::StoredQueryReceipt>;
     ApproveEntityLink(ApproveEntityLink) => Json<medulla_catalog_types::entity_link_proposal::EntityLinkApproval>;
     StoredQueryCall(StoredQueryCall) => Json<medulla_source_types::stored_query::StoredCall>;
     RetrievalFeedbackRecord(RetrievalFeedbackRecord) => Json<medulla_result_types::feedback_event::RetrievalFeedback>;
