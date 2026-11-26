@@ -107,15 +107,12 @@ fn read_pattern(
 ) -> Result<WorkflowPattern, String> {
     let properties = node_properties(core, tenant, id)?;
     let digest = text(&properties, "workflowDigest").unwrap_or_default();
-    // The compile writer stores the bare 64-character digest; the pattern carries it with its
-    // `sha256:` prefix.
-    let content_digest = if digest.starts_with("sha256:") {
-        digest.to_string()
-    } else if digest.len() == 64 && digest.bytes().all(|b| b.is_ascii_hexdigit()) {
-        format!("sha256:{digest}")
-    } else {
+    // The compile writer stores `sha256:<64 hex>` and nothing else; any other form is refused
+    // (hard cutover, one digest format).
+    if !medulla_types::process_import::is_stored_workflow_digest(digest) {
         return Err(invalid(format!("{id} digest malformed")));
-    };
+    }
+    let content_digest = digest.to_string();
     let version = properties
         .get("version")
         .map(|value| match value {
@@ -217,7 +214,7 @@ mod tests {
             "process_iri": "process:invoice",
             "version": 1,
             "steps": steps,
-            "workflowDigest": "ab".repeat(32),
+            "workflowDigest": format!("sha256:{}", "ab".repeat(32)),
             "canonical": serde_json::json!({"steps": [{"id": "s1"}, {"id": "s2"}]}).to_string(),
             "preconditions": "[]",
         })

@@ -26,6 +26,23 @@ pub fn workflow_node_id(process_iri: &str, version: u32) -> String {
     format!("workflow:{process_iri}:v{version}")
 }
 
+/// The prefix of a stored workflow digest. A stored `workflowDigest` (node property, edge
+/// property and compile or import answer) is always `sha256:<64 hex>`; the bare hex digest of
+/// the canonical document is the input to [`stored_workflow_digest`], never a stored form.
+pub const WORKFLOW_DIGEST_PREFIX: &str = "sha256:";
+
+/// The stored form of the canonical workflow digest `hex`.
+pub fn stored_workflow_digest(hex: &str) -> String {
+    format!("{WORKFLOW_DIGEST_PREFIX}{hex}")
+}
+
+/// Whether `stored` is a well formed stored workflow digest: the prefix and 64 hex digits.
+pub fn is_stored_workflow_digest(stored: &str) -> bool {
+    stored.strip_prefix(WORKFLOW_DIGEST_PREFIX).is_some_and(|hex| {
+        hex.len() == 64 && hex.bytes().all(|b| b.is_ascii_hexdigit())
+    })
+}
+
 /// The closed step kinds, in their canonical order.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

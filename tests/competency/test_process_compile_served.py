@@ -103,7 +103,8 @@ def test_compile_round_trip(clean_graph):
     first, second = asyncio.run(_compile_round_trip(prefix))
     assert first["workflow_id"] == f"workflow:{prefix}:process:v1"
     assert first["version"] == 1
-    assert len(first["workflow_digest"]) == 64
+    assert first["workflow_digest"].startswith("sha256:")
+    assert len(first["workflow_digest"]) == 71
     assert len(first["process_revision"]) == 64
     assert second["version"] == 2
     assert second["workflow_digest"] == first["workflow_digest"]
