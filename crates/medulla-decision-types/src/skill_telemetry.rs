@@ -53,6 +53,9 @@ pub const RETENTION_WINDOW_MS: u64 = 14 * 24 * 60 * 60 * 1000;
 
 /// `TELEMETRY_FIELD_UNKNOWN`: an event holds a field outside the type.
 pub const TELEMETRY_FIELD_UNKNOWN: RefusalCode = RefusalCode::new("TELEMETRY_FIELD_UNKNOWN");
+/// `TELEMETRY_SESSION_UNKNOWN`: a person's span names a run that is not one of its own
+/// sessions; an absent run and another principal's run answer the same.
+pub const TELEMETRY_SESSION_UNKNOWN: RefusalCode = RefusalCode::new("TELEMETRY_SESSION_UNKNOWN");
 /// `TELEMETRY_SKILL_UNKNOWN`: an event names a skill revision the graph does not hold.
 pub const TELEMETRY_SKILL_UNKNOWN: RefusalCode = RefusalCode::new("TELEMETRY_SKILL_UNKNOWN");
 /// `TELEMETRY_BATCH_TOO_LARGE`: more than 500 events in one batch.

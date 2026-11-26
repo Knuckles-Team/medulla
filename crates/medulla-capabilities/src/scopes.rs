@@ -192,10 +192,6 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("knowledge:curate", User, "engine"),
     // MEDULLA-DECISION-ENGINE-R708.3: raise a knowledge flag.
     entry("knowledge:flag", User, "engine"),
-    // MEDULLA-DECISION-ENGINE-R713.3: read skill measures, ranks, peers and traces.
-    entry("telemetry:read", User, "engine"),
-    // MEDULLA-DECISION-ENGINE-R713.3: a service ingests skill invocations.
-    entry("telemetry:write", User, "engine"),
     entry("kv:read", User, "engine"),
     entry("kv:shared:write", User, "engine"),
     entry("kv:write", User, "engine"),
@@ -268,6 +264,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("resource:read", User, "engine"),
     entry("resource:reserve", ServiceOnly, "engine"),
     entry("retention:run", Admin, "engine"),
+    // MEDULLA-IDENTITY-R736: start, pause, resume and cancel a harness run.
+    entry("runs:control", User, "engine"),
     entry("scene:read", User, "engine"),
     entry("scene:write", User, "engine"),
     entry("scheduler:admin", Admin, "engine"),
@@ -289,6 +287,12 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("semantic:stage-read", User, "engine"),
     entry("service:admin", Admin, "engine"),
     entry("service:control", User, "engine"),
+    // MEDULLA-IDENTITY-R736: browse and search the harness session index.
+    entry("sessions:read", User, "engine"),
+    // MEDULLA-IDENTITY-R736: add a skill evaluation case.
+    entry("skills:author", User, "engine"),
+    // MEDULLA-IDENTITY-R736: run, report, calibrate, ablate and decide a canary of a skill.
+    entry("skills:eval", User, "engine"),
     // MEDULLA-FEDERATED-QUERY-R085.2: the native source-query approval issuer.
     entry("source:approve-query", ServiceOnly, "engine"),
     entry("source:ingest", User, "engine"),
@@ -309,7 +313,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("task:work", User, "engine"),
     entry("telemetry:derive", ServiceOnly, "telemetry"),
     entry("telemetry:read", User, "graph-os"),
-    entry("telemetry:write", ServiceOnly, "telemetry"),
+    // MEDULLA-IDENTITY-R737: user class, so a human principal ingests spans of its own sessions.
+    entry("telemetry:write", User, "telemetry"),
     entry("timeseries:read", User, "engine"),
     entry("timeseries:write", ServiceOnly, "engine"),
     entry("trace:read", User, "engine"),

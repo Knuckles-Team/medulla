@@ -176,7 +176,6 @@ fn the_rulings_hold_in_the_registry() {
         "compute:finance",
         "capacity:throttle",
         "security:check",
-        "telemetry:write",
     ] {
         assert_eq!(
             ScopeRegistry.class_of(infrastructure),

@@ -50,6 +50,7 @@ mod served {
         InvocationOutcome, PeersAnswer, RankAnswer, SkillInvocation, SkillMeasures,
         SkillTelemetryOp, TracesAnswer, Window, INDEX_KEY_DAY, INDEX_KEY_PRINCIPAL,
         INDEX_KEY_SKILL, INGEST_BATCH_MAX, PEER_COHORT_TOO_SMALL, SCOPE_READ, SCOPE_WRITE,
+        TELEMETRY_SESSION_UNKNOWN,
         SKILL_INVOCATION_CLASS, TELEMETRY_BATCH_TOO_LARGE, TELEMETRY_CLOCK_INVALID,
         TELEMETRY_CODE_INVALID, TELEMETRY_FIELD_UNKNOWN, TELEMETRY_SCOPE_REQUIRED,
         TELEMETRY_SKILL_UNKNOWN, TRACES_PAGE_MAX,
@@ -406,13 +407,32 @@ mod served {
 
         /// The run trace of `run_id` in `tenant` the caller may see: the first by id.
         fn run_trace_of(&self, tenant: &str, run_id: &str) -> Option<String> {
+            self.run_trace_where(tenant, run_id, None)
+        }
+
+        /// The run trace of `run_id` in `tenant` that the caller may see and that `owner` owns:
+        /// the first by id. A trace with no owner, or another owner, is not found, so a run that
+        /// is absent and a run of another principal look the same.
+        fn run_trace_owned_by(&self, tenant: &str, run_id: &str, owner: &str) -> Option<String> {
+            self.run_trace_where(tenant, run_id, Some(owner))
+        }
+
+        fn run_trace_where(&self, tenant: &str, run_id: &str, owner: Option<&str>) -> Option<String> {
             self.ids_where("run_id", run_id).into_iter().find(|id| {
                 self.visible_row(id).is_some_and(|row| {
                     let same_tenant = ["tenant", "tenant_id"]
                         .iter()
                         .filter_map(|key| row.get(*key).and_then(Value::as_str))
-                        .all(|owner| owner == tenant);
-                    row.get("node_type").and_then(Value::as_str) == Some(RUN_TRACE) && same_tenant
+                        .all(|found| found == tenant);
+                    let owned = owner.is_none_or(|owner| {
+                        ["_owner", "_owner_id"]
+                            .iter()
+                            .filter_map(|key| row.get(*key).and_then(Value::as_str))
+                            .any(|found| found == owner)
+                    });
+                    row.get("node_type").and_then(Value::as_str) == Some(RUN_TRACE)
+                        && same_tenant
+                        && owned
                 })
             })
         }
@@ -425,6 +445,16 @@ mod served {
         events: Vec<Value>,
     ) -> Result<PlannedWrite, String> {
         let tenant = verified.tenant();
+        // A person ingests spans of its own sessions only (MEDULLA-IDENTITY-R737): the engine
+        // takes the attribution from the verified principal, and a run the caller does not own
+        // is refused exactly as a run that does not exist.
+        let person = (!verified.is_loop_principal()).then(|| {
+            principal_pseudonym(
+                tenant,
+                &verified.principal_persistence_id(),
+                medulla_server_api::knob_config::knobs().skill_pseudonym_salt,
+            )
+        });
         if events.len() > INGEST_BATCH_MAX {
             return Err(refuse(
                 TELEMETRY_BATCH_TOO_LARGE,
@@ -464,6 +494,18 @@ mod served {
                 return Err(invalid_parameter(
                     "an invocation names its id, its run and a 64-hex principal pseudonym",
                 ));
+            }
+            if let Some(own) = &person {
+                if index
+                    .run_trace_owned_by(tenant, &row.run_id, verified.agent_id())
+                    .is_none()
+                {
+                    return Err(refuse(
+                        TELEMETRY_SESSION_UNKNOWN,
+                        format!("{} is not a session of the caller", row.run_id),
+                    ));
+                }
+                row.principal_pseudonym = own.clone();
             }
             let skill_known = index.visible_row(&row.skill_ref).is_some_and(|node| {
                 class_of(&node) == Some("Skill")

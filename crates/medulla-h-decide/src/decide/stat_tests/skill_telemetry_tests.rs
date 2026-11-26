@@ -11,7 +11,7 @@ use medulla_decision_types::skill_telemetry::{
     principal_pseudonym, EvalOutcome, IngestReceipt, PeersAnswer, RankAnswer, SkillMeasures,
     SkillTelemetryOp, TracesAnswer, Window, PEER_COHORT_TOO_SMALL, TELEMETRY_BATCH_TOO_LARGE,
     TELEMETRY_CLOCK_INVALID, TELEMETRY_FIELD_UNKNOWN, TELEMETRY_SCOPE_REQUIRED,
-    TELEMETRY_SKILL_UNKNOWN,
+    TELEMETRY_SESSION_UNKNOWN, TELEMETRY_SKILL_UNKNOWN,
 };
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::encode_artifact;
@@ -464,4 +464,94 @@ async fn a_foreign_tenants_invocation_id_never_collides_or_answers_differently()
     assert_eq!(measured(&owner, SKILL).await, 1);
     assert_eq!(measured(&foreign, FOREIGN_SKILL).await, 1);
     assert_eq!(measured(&foreign, SKILL).await, 0);
+}
+
+/// A person: the principal is its own effective agent, with no delegation and no service or
+/// agent prefix, so the engine treats it as a human principal.
+fn person(name: &str, tenant: &str, scopes: &[&str]) -> VerifiedRequestContext {
+    VerifiedRequestContext::from_verified_claims(
+        medulla_identity_types::acl::RequestContextClaims {
+            principal: name.to_string(),
+            tenant: tenant.to_string(),
+            audience: "medulla".to_string(),
+            agent_id: name.to_string(),
+            roles: Vec::new(),
+            scopes: scopes.iter().map(|scope| scope.to_string()).collect(),
+            policy_version: "policy-test".to_string(),
+            delegation: Vec::new(),
+            node: None,
+            priority: None,
+        },
+        format!("test:{name}"),
+    )
+}
+
+async fn person_harness() -> (Harness, std::sync::Arc<medulla_graph_core::graph::GraphCore>) {
+    let mut isolation = medulla_isolation::isolation::IsolationLayer::new();
+    for name in ["alice", "bob"] {
+        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+            agent_id: name.into(),
+            role: medulla_identity_types::acl::AgentRole::Agent,
+            teams: Vec::new(),
+            roles: Vec::new(),
+        });
+    }
+    let h = Harness::with_isolation(isolation).await;
+    let core = core(&h).await;
+    put(&core, SKILL, json!({"type": "Skill", "tenant_id": TENANT, "_owner": "alice", "_visibility": "public"}));
+    put(&core, "trace-alice", json!({"node_type": "RunTrace", "run_id": "run-alice", "tenant": TENANT, "_owner": "alice"}));
+    put(&core, "trace-bob", json!({"node_type": "RunTrace", "run_id": "run-bob", "tenant": TENANT, "_owner": "bob", "_visibility": "public"}));
+    (h, core)
+}
+
+// spec: MEDULLA-IDENTITY-R737
+#[tokio::test]
+async fn a_person_ingests_spans_of_its_own_sessions_attributed_to_the_verified_principal() {
+    let (h, core) = person_harness().await;
+    let alice = person("alice", TENANT, &["telemetry:write", "telemetry:read"]);
+    // The event claims another principal's pseudonym; the engine overwrites it.
+    let claimed = event("p1", SKILL, "someone-else", 1, "run-alice", false);
+    let write = run(&h, &alice, ingest_op(vec![claimed])).await.expect("a person ingests its own session");
+    assert_eq!(reply::<IngestReceipt>(&write), IngestReceipt { stored: 1, repeated: 0 });
+    commit(&core, &write);
+    let blob = core.get_node_properties(&invocation_node_id(TENANT, "p1")).expect("stored");
+    let row = medulla_types::msgpack::decode_property_value(&blob).unwrap();
+    let verified = principal_pseudonym(
+        TENANT,
+        &alice.principal_persistence_id(),
+        medulla_server_api::knob_config::knobs().skill_pseudonym_salt,
+    );
+    assert_eq!(row["principal_pseudonym"], json!(verified));
+    assert_eq!(row["tenant_id"], json!(TENANT));
+}
+
+// spec: MEDULLA-IDENTITY-R737
+#[tokio::test]
+async fn spans_of_another_principals_session_answer_exactly_like_an_absent_session() {
+    let (h, _core) = person_harness().await;
+    let alice = person("alice", TENANT, &["telemetry:write", "telemetry:read"]);
+    // `run-bob` belongs to another principal and is visible to alice; `run-missing` does not exist.
+    let foreign = run(&h, &alice, ingest_op(vec![event("p2", SKILL, "u", 1, "run-bob", false)]))
+        .await
+        .expect_err("another principal's session is refused");
+    let absent = run(&h, &alice, ingest_op(vec![event("p2", SKILL, "u", 1, "run-missing", false)]))
+        .await
+        .expect_err("an absent session is refused");
+    assert!(foreign.starts_with(TELEMETRY_SESSION_UNKNOWN.as_str()), "{foreign}");
+    assert_eq!(
+        foreign.replace("run-bob", "<run>"),
+        absent.replace("run-missing", "<run>"),
+        "foreign and absent answer the same"
+    );
+}
+
+// spec: MEDULLA-IDENTITY-R737
+#[tokio::test]
+async fn a_person_without_the_write_scope_is_refused() {
+    let (h, _core) = person_harness().await;
+    let reader = person("alice", TENANT, &["telemetry:read"]);
+    let refused = run(&h, &reader, ingest_op(vec![event("p3", SKILL, "u", 1, "run-alice", false)]))
+        .await
+        .expect_err("the write scope is required");
+    assert!(refused.starts_with(TELEMETRY_SCOPE_REQUIRED.as_str()), "{refused}");
 }
