@@ -19,7 +19,7 @@ use super::{
 };
 use crate::tables::matview::MatViewSpec;
 use crate::tables::matview_incremental::{
-    group_key_text, row_key_text, GroupState, IncrementalViewProgram, Row, ViewOutput,
+    group_key_text, merged_row, row_key_text, GroupState, IncrementalViewProgram, Row, ViewOutput,
     ViewRowChanges, MV_KEY,
 };
 
@@ -210,23 +210,6 @@ fn table_rows(wtx: &SqlWrite<'_>, table: &str, schema: &TableSchema) -> Result<V
         out.push(row_map(schema, &cells));
     }
     Ok(out)
-}
-
-/// The row a join output expression sees: every column under `<table>.<column>`, plus the bare
-/// column name where the two tables do not share it.
-fn merged_row(left_table: &str, left: &Row, right_table: &str, right: &Row) -> Row {
-    let mut merged = Row::new();
-    for (name, value) in left {
-        merged.insert(format!("{left_table}.{name}"), value.clone());
-        merged.insert(name.clone(), value.clone());
-    }
-    for (name, value) in right {
-        merged.insert(format!("{right_table}.{name}"), value.clone());
-        if !left.contains_key(name) {
-            merged.insert(name.clone(), value.clone());
-        }
-    }
-    merged
 }
 
 /// Probes `rows` for the ones whose `column` equals `key` (never for NULL), refusing a probe

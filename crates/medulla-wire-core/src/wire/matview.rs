@@ -11,7 +11,8 @@ use medulla_federation::sql_analysis::referenced_tables;
 use medulla_sql_lang::sql::classify::CreateMatViewPlan;
 use medulla_sql_lang::sql::typed_result::{matview_result_schema, PgColType};
 use medulla_table_store::tables::{
-    create_incremental_matview_txn, create_matview_txn, drop_matview_txn, refresh_matview_txn, MatViewSpec, TableStore, TableTxn, TxnOp,
+    create_incremental_matview_txn, create_matview_txn, drop_matview_txn, join_key_indexed,
+    refresh_matview_txn, MatViewSpec, TableStore, TableTxn, TxnOp,
     MATVIEW_EXISTS, MATVIEW_UNKNOWN,
 };
 use medulla_tables::schema::ColumnType;
@@ -125,6 +126,7 @@ impl WireSession {
             &name,
             &plan.select_sql,
             &column_type,
+            &|table: &str, column: &str| join_key_indexed(&store, table, column),
         );
         let seq = store.commit_seq();
         // The typed read gives the visible columns; an incremental view takes its rows from the

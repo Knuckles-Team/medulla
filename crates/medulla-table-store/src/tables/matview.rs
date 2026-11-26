@@ -200,17 +200,29 @@ pub fn create_incremental_matview_txn(
     let source = store
         .get_schema(&program.table)?
         .ok_or_else(|| format!("table `{}` does not exist", program.table))?;
-    let pk = pk_columns(&source);
-    let mut rows: Vec<(String, Row)> = Vec::new();
-    for cells in store.scan(&program.table)? {
-        let mut row = Row::new();
-        for (index, column) in source.columns().iter().enumerate() {
-            let cell = cells.get(index).cloned().unwrap_or(medulla_tables::schema::Cell::Null);
-            row.insert(column.name.clone(), cell.to_typed_json(column.ty));
+    let source_rows = |table: &str, schema: &TableSchema| -> Result<Vec<(String, Row)>, String> {
+        let pk = pk_columns(schema);
+        let mut rows = Vec::new();
+        for cells in store.scan(table)? {
+            let mut row = Row::new();
+            for (index, column) in schema.columns().iter().enumerate() {
+                let cell = cells.get(index).cloned().unwrap_or(medulla_tables::schema::Cell::Null);
+                row.insert(column.name.clone(), cell.to_typed_json(column.ty));
+            }
+            rows.push((super::matview_incremental::row_key_text(&pk, &row), row));
         }
-        rows.push((super::matview_incremental::row_key_text(&pk, &row), row));
-    }
-    let initial = program.initial_rows(&rows)?;
+        Ok(rows)
+    };
+    let rows = source_rows(&program.table, &source)?;
+    let initial = match &program.join {
+        None => program.initial_rows(&rows)?,
+        Some(join) => {
+            let right = store
+                .get_schema(&join.right)?
+                .ok_or_else(|| format!("table `{}` does not exist", join.right))?;
+            program.initial_join_rows(&rows, &source_rows(&join.right, &right)?)?
+        }
+    };
     let schema = incremental_result_schema(visible, &program);
     let col_order: Vec<String> = schema.columns().iter().map(|c| c.name.clone()).collect();
     let values = initial
@@ -224,4 +236,26 @@ pub fn create_incremental_matview_txn(
         .collect();
     spec.program = Some(program);
     Ok(create_matview_txn(spec, schema, col_order, values))
+}
+
+/// Whether `column` of `table` can serve a join probe: it is the whole primary key, or the
+/// first column of a full (not partial) secondary index with no key expression
+/// (MEDULLA-INCREMENTAL-VIEWS-R013.3).
+pub fn join_key_indexed(store: &TableStore, table: &str, column: &str) -> bool {
+    if let Ok(Some(schema)) = store.get_schema(table) {
+        if pk_columns(&schema) == [column.to_string()] {
+            return true;
+        }
+    }
+    store
+        .list_secondary_indexes(Some(table))
+        .unwrap_or_default()
+        .iter()
+        .any(|spec| {
+            spec.predicate.is_none()
+                && spec
+                    .columns
+                    .first()
+                    .is_some_and(|first| first.name == column && first.expr.is_none())
+        })
 }

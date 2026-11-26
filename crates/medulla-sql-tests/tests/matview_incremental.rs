@@ -116,7 +116,12 @@ fn spec(select_sql: &str, inputs: &[&str]) -> MatViewSpec {
 
 /// Creates the view `mv` as the wire does for an incremental view.
 fn create_view(store: &TableStore, select_sql: &str) {
-    let program = compile_incremental_sql("mv", select_sql, &column_type(store))
+    let program = compile_incremental_sql(
+        "mv",
+        select_sql,
+        &column_type(store),
+        &|table: &str, column: &str| medulla_table_store::tables::join_key_indexed(store, table, column),
+    )
         .unwrap_or_else(|refusal| panic!("{select_sql}: {refusal}"));
     create_view_from(store, select_sql, program);
 }

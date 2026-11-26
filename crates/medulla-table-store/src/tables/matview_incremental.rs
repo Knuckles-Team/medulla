@@ -672,7 +672,54 @@ pub fn group_key_text(values: &[Value]) -> String {
     Value::Array(values.to_vec()).to_string()
 }
 
+/// The row a join output expression sees: every column under `<table>.<column>`, plus the bare
+/// column name where the two tables do not share it (MEDULLA-INCREMENTAL-VIEWS-R013.2).
+pub fn merged_row(left_table: &str, left: &Row, right_table: &str, right: &Row) -> Row {
+    let mut merged = Row::new();
+    for (name, value) in left {
+        merged.insert(format!("{left_table}.{name}"), value.clone());
+        merged.insert(name.clone(), value.clone());
+    }
+    for (name, value) in right {
+        merged.insert(format!("{right_table}.{name}"), value.clone());
+        if !left.contains_key(name) {
+            merged.insert(name.clone(), value.clone());
+        }
+    }
+    merged
+}
+
 impl IncrementalViewProgram {
+    /// The stored rows of a join view over the full source tables (R013.2): one per matching
+    /// pair that the filter admits, keyed `<left key>|<right key>`.
+    pub fn initial_join_rows(
+        &self,
+        left: &[(String, Row)],
+        right: &[(String, Row)],
+    ) -> Result<Vec<Row>, String> {
+        let join = self
+            .join
+            .as_ref()
+            .ok_or_else(|| "MATVIEW_PROGRAM: not a join view".to_string())?;
+        let mut out = Vec::new();
+        for (left_key, a) in left {
+            let key = a.get(&join.left_key).unwrap_or(&Value::Null);
+            if key.is_null() {
+                continue;
+            }
+            for (right_key, b) in right {
+                if b.get(&join.right_key) != Some(key) {
+                    continue;
+                }
+                let merged = merged_row(&self.table, a, &join.right, b);
+                if self.admits(&merged)? {
+                    out.push(self.project(&merged, &format!("{left_key}|{right_key}"))?);
+                }
+            }
+        }
+        Ok(out)
+    }
+
     /// Whether a source `row` enters the view: the filter is true over it.
     pub fn admits(&self, row: &Row) -> Result<bool, String> {
         match &self.filter {

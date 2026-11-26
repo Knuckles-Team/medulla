@@ -23,13 +23,13 @@
 //! `SELECT *` has no column list here and is refused.
 
 use datafusion::sql::sqlparser::ast::{
-    BinaryOperator, Distinct, Expr, FunctionArg, FunctionArgExpr, FunctionArguments, GroupByExpr, Query,
+    BinaryOperator, Distinct, Expr, JoinConstraint, JoinOperator, FunctionArg, FunctionArgExpr, FunctionArguments, GroupByExpr, Query,
     SelectItem, SetExpr, TableFactor, UnaryOperator, Value as SqlValue,
 };
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
 use datafusion::sql::sqlparser::parser::Parser;
 use medulla_table_store::tables::matview_incremental::{
-    ExactAgg, IncrementalViewProgram, RowExpr, ViewOutput,
+    EquiJoin, ExactAgg, IncrementalViewProgram, RowExpr, ViewOutput,
 };
 use medulla_tables::schema::ColumnType;
 use medulla_types::contract::ServerErrorCode;
@@ -92,21 +92,25 @@ pub fn compile_incremental_sql(
     name: &str,
     select_sql: &str,
     column_type: &dyn Fn(&str, &str) -> Option<ColumnType>,
+    indexed: &dyn Fn(&str, &str) -> bool,
 ) -> Result<IncrementalViewProgram, NotIncremental> {
     let statements = Parser::parse_sql(&PostgreSqlDialect {}, select_sql)
         .map_err(|error| NotIncremental::new(format!("unparsable query: {error}")))?;
     let [datafusion::sql::sqlparser::ast::Statement::Query(query)] = statements.as_slice() else {
         return Err(NotIncremental::new("statement that is not one query"));
     };
-    compile_incremental(name, query, column_type)
+    compile_incremental(name, query, column_type, indexed)
 }
 
 /// Compile the defining `query` of the view `name`. `column_type(table, column)` answers the
-/// declared type of a column of the one source table, `None` for an unknown column.
+/// declared type of a column of a source table, `None` for an unknown column. `indexed(table,
+/// column)` answers whether the column has a secondary index (or is the primary key), which a
+/// join key needs on both sides (R013.3).
 pub fn compile_incremental(
     name: &str,
     query: &Query,
     column_type: &dyn Fn(&str, &str) -> Option<ColumnType>,
+    indexed: &dyn Fn(&str, &str) -> bool,
 ) -> Result<IncrementalViewProgram, NotIncremental> {
     // (1) A second table, a join or a subquery.
     if query.with.is_some() {
@@ -119,7 +123,7 @@ pub fn compile_incremental(
             _ => "subquery",
         }));
     };
-    let table = source_table(select)?;
+    let sources = source_tables(select)?;
     let exprs = all_exprs(select);
     for expr in &exprs {
         if find(expr, &|e| {
@@ -162,8 +166,13 @@ pub fn compile_incremental(
     }
     // (5) The shapes the program has no node for, and float columns.
     let ctx = Ctx {
-        table: &table,
+        tables: sources.tables(),
+        qualify: sources.join.is_some(),
         column_type,
+    };
+    let join = match &sources.join {
+        Some(on) => Some(ctx.join(on, indexed)?),
+        None => None,
     };
     let filter = select
         .selection
@@ -179,17 +188,56 @@ pub fn compile_incremental(
     }
     Ok(IncrementalViewProgram {
         view: name.to_string(),
-        table,
-        join: None,
+        table: sources.left.1.clone(),
+        join,
         filter,
         output,
     })
 }
 
-/// The one source table: a single bare table, no join.
-fn source_table(
-    select: &datafusion::sql::sqlparser::ast::Select,
-) -> Result<String, Refusal> {
+/// The source tables of a select: the left table (`alias`, `table`) and, for a join, the right
+/// table with the `ON` expression.
+struct Sources {
+    left: (String, String),
+    join: Option<JoinSource>,
+}
+
+struct JoinSource {
+    right: (String, String),
+    on: Expr,
+}
+
+impl Sources {
+    fn tables(&self) -> Vec<(String, String)> {
+        let mut tables = vec![self.left.clone()];
+        tables.extend(self.join.iter().map(|join| join.right.clone()));
+        tables
+    }
+}
+
+/// One table factor as `(alias, table)`.
+fn table_factor(factor: &TableFactor) -> Result<(String, String), Refusal> {
+    match factor {
+        TableFactor::Table { name, alias, .. } => {
+            let table = name
+                .0
+                .last()
+                .and_then(|part| part.as_ident())
+                .map(|ident| ident.value.clone())
+                .ok_or_else(|| Refusal::new("table name"))?;
+            let alias = alias
+                .as_ref()
+                .map(|alias| alias.name.value.clone())
+                .unwrap_or_else(|| table.clone());
+            Ok((alias, table))
+        }
+        TableFactor::Derived { .. } => Err(Refusal::new("subquery")),
+        _ => Err(Refusal::new("table function")),
+    }
+}
+
+/// The source tables: one bare table, or one table with one `INNER JOIN ... ON` (R013.3).
+fn source_tables(select: &datafusion::sql::sqlparser::ast::Select) -> Result<Sources, Refusal> {
     let [from] = select.from.as_slice() else {
         return Err(Refusal::new(if select.from.is_empty() {
             "query without a table"
@@ -197,19 +245,26 @@ fn source_table(
             "second table"
         }));
     };
-    if !from.joins.is_empty() {
-        return Err(Refusal::new("join"));
-    }
-    match &from.relation {
-        TableFactor::Table { name, .. } => name
-            .0
-            .last()
-            .and_then(|part| part.as_ident())
-            .map(|ident| ident.value.clone())
-            .ok_or_else(|| Refusal::new("table name")),
-        TableFactor::Derived { .. } => Err(Refusal::new("subquery")),
-        _ => Err(Refusal::new("table function")),
-    }
+    let left = table_factor(&from.relation)?;
+    let join = match from.joins.as_slice() {
+        [] => None,
+        [join] => {
+            let (JoinOperator::Inner(constraint) | JoinOperator::Join(constraint)) =
+                &join.join_operator
+            else {
+                return Err(Refusal::new("join"));
+            };
+            let JoinConstraint::On(on) = constraint else {
+                return Err(Refusal::new("join without an ON equality"));
+            };
+            Some(JoinSource {
+                right: table_factor(&join.relation)?,
+                on: on.clone(),
+            })
+        }
+        _ => return Err(Refusal::new("third table")),
+    };
+    Ok(Sources { left, join })
 }
 
 /// Every expression of the select that a pass scans, in walk order: filter, group by,
@@ -299,7 +354,10 @@ fn find<'a>(expr: &'a Expr, hit: &dyn Fn(&Expr) -> bool) -> Option<&'a Expr> {
 }
 
 struct Ctx<'a> {
-    table: &'a str,
+    /// `(alias, table)` of each source table.
+    tables: Vec<(String, String)>,
+    /// A join qualifies every column as `<table>.<column>`, the name the join delta gives it.
+    qualify: bool,
     column_type: &'a dyn Fn(&str, &str) -> Option<ColumnType>,
 }
 
@@ -308,32 +366,98 @@ fn boxed(expr: RowExpr) -> Box<RowExpr> {
 }
 
 impl Ctx<'_> {
-    /// A source column as a program expression, typed by its declared type.
-    fn column(&self, column: &str, aggregate: Option<&str>) -> Result<RowExpr, Refusal> {
-        let Some(ty) = (self.column_type)(self.table, column) else {
-            return Err(Refusal::new(format!(
-                "unknown column {}.{column}",
-                self.table
-            )));
+    /// The table a column reference names: a qualifier by alias or table name, a bare name by
+    /// the one table that has the column.
+    fn resolve(&self, qualifier: Option<&str>, column: &str) -> Result<(String, ColumnType), Refusal> {
+        let candidates: Vec<&(String, String)> = match qualifier {
+            Some(q) => self.tables.iter().filter(|(alias, table)| alias == q || table == q).collect(),
+            None => self.tables.iter().collect(),
         };
+        let found: Vec<(String, ColumnType)> = candidates
+            .iter()
+            .filter_map(|(_, table)| (self.column_type)(table, column).map(|ty| (table.clone(), ty)))
+            .collect();
+        match found.as_slice() {
+            [one] => Ok(one.clone()),
+            [] => Err(Refusal::new(format!(
+                "unknown column {}.{column}",
+                qualifier.unwrap_or(&self.tables[0].1)
+            ))),
+            _ => Err(Refusal::new(format!("ambiguous column {column}"))),
+        }
+    }
+
+    /// A source column as a program expression, typed by its declared type.
+    fn column(
+        &self,
+        qualifier: Option<&str>,
+        column: &str,
+        aggregate: Option<&str>,
+    ) -> Result<RowExpr, Refusal> {
+        let (table, ty) = self.resolve(qualifier, column)?;
+        let name = if self.qualify { format!("{table}.{column}") } else { column.to_string() };
         match ty {
-            ColumnType::Numeric(_) => Ok(RowExpr::Decimal(boxed(RowExpr::Column(
-                column.to_string(),
-            )))),
+            ColumnType::Numeric(_) => Ok(RowExpr::Decimal(boxed(RowExpr::Column(name)))),
             ColumnType::Int
             | ColumnType::BigInt
             | ColumnType::Text
             | ColumnType::Bool
-            | ColumnType::Timestamp => Ok(RowExpr::Column(column.to_string())),
+            | ColumnType::Timestamp => Ok(RowExpr::Column(name)),
             ColumnType::Float | ColumnType::Double => Err(Refusal::new(match aggregate {
                 Some(function) => format!("{function} over a float column"),
-                None => format!("float column {}.{column}", self.table),
+                None => format!("float column {table}.{column}"),
             })),
             _ => Err(Refusal::new(format!(
-                "column {}.{column} of a type the program cannot hold",
-                self.table
+                "column {table}.{column} of a type the program cannot hold"
             ))),
         }
+    }
+
+    /// The `(table, column)` one side of an `ON` equality names.
+    fn join_side(&self, expr: &Expr) -> Result<(String, String), Refusal> {
+        match expr {
+            Expr::Identifier(ident) => {
+                self.resolve(None, &ident.value).map(|(table, _)| (table, ident.value.clone()))
+            }
+            Expr::CompoundIdentifier(parts) => match parts.as_slice() {
+                [qualifier, column] => self
+                    .resolve(Some(&qualifier.value), &column.value)
+                    .map(|(table, _)| (table, column.value.clone())),
+                _ => Err(Refusal::new(format!("expression {expr}"))),
+            },
+            other => Err(Refusal::new(format!("non-equality join on {other}"))),
+        }
+    }
+
+    /// The equi-join of the one `INNER JOIN`: one equality between a column of each table, with a
+    /// secondary index (or the primary key) on both join keys (R013.3).
+    fn join(
+        &self,
+        join: &JoinSource,
+        indexed: &dyn Fn(&str, &str) -> bool,
+    ) -> Result<EquiJoin, Refusal> {
+        let Expr::BinaryOp { left, op: BinaryOperator::Eq, right } = &join.on else {
+            return Err(Refusal::new("non-equality join"));
+        };
+        let (a, b) = (self.join_side(left)?, self.join_side(right)?);
+        let (left_table, right_table) = (&self.tables[0].1, &join.right.1);
+        let (left_key, right_key) = if &a.0 == left_table && &b.0 == right_table {
+            (a, b)
+        } else if &b.0 == left_table && &a.0 == right_table {
+            (b, a)
+        } else {
+            return Err(Refusal::new("join on columns of one table"));
+        };
+        for (table, column) in [&left_key, &right_key] {
+            if !indexed(table, column) {
+                return Err(Refusal::new(format!("join key not indexed: {table}.{column}")));
+            }
+        }
+        Ok(EquiJoin {
+            right: right_key.0,
+            left_key: left_key.1,
+            right_key: right_key.1,
+        })
     }
 
     fn expr(&self, expr: &Expr) -> Result<RowExpr, Refusal> {
@@ -344,15 +468,9 @@ impl Ctx<'_> {
     fn expr_in(&self, expr: &Expr, aggregate: Option<&str>) -> Result<RowExpr, Refusal> {
         let sub = |inner: &Expr| self.expr_in(inner, aggregate);
         match expr {
-            Expr::Identifier(ident) => self.column(&ident.value, aggregate),
+            Expr::Identifier(ident) => self.column(None, &ident.value, aggregate),
             Expr::CompoundIdentifier(parts) => match parts.as_slice() {
-                [table, column] if table.value == self.table => {
-                    self.column(&column.value, aggregate)
-                }
-                [table, column] => Err(Refusal::new(format!(
-                    "unknown column {}.{}",
-                    table.value, column.value
-                ))),
+                [table, column] => self.column(Some(&table.value), &column.value, aggregate),
                 _ => Err(Refusal::new(format!("expression {expr}"))),
             },
             Expr::Value(value) => literal(&value.value),
@@ -471,16 +589,15 @@ impl Ctx<'_> {
         let name = match arg {
             Expr::Identifier(ident) => ident.value.clone(),
             Expr::CompoundIdentifier(parts) => match parts.as_slice() {
-                [table, column] if table.value == self.table => column.value.clone(),
+                [_, column] => column.value.clone(),
                 _ => return None,
             },
             _ => return None,
         };
-        matches!(
-            (self.column_type)(self.table, &name),
-            Some(ColumnType::Float | ColumnType::Double)
-        )
-        .then(|| RowExpr::Column(name))
+        let (table, ty) = self.resolve(None, &name).ok()?;
+        matches!(ty, ColumnType::Float | ColumnType::Double).then(|| {
+            RowExpr::Column(if self.qualify { format!("{table}.{name}") } else { name })
+        })
     }
 
     fn aggregate(
@@ -579,6 +696,13 @@ mod tests {
     use super::*;
 
     fn types(table: &str, column: &str) -> Option<ColumnType> {
+        if table == "customers" {
+            return match column {
+                "id" => Some(ColumnType::Int),
+                "area" | "region" => Some(ColumnType::Text),
+                _ => None,
+            };
+        }
         if table != "orders" {
             return None;
         }
@@ -591,8 +715,13 @@ mod tests {
         })
     }
 
+    /// Indexed join keys: `orders.id` and `customers.id`; `customers.region` is not indexed.
+    fn indexed(table: &str, column: &str) -> bool {
+        matches!((table, column), ("orders", "id" | "qty") | ("customers", "id"))
+    }
+
     fn compile(sql: &str) -> Result<IncrementalViewProgram, String> {
-        compile_incremental_sql("v", sql, &types).map_err(|refusal| refusal.construct)
+        compile_incremental_sql("v", sql, &types, &indexed).map_err(|refusal| refusal.construct)
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R009.2
@@ -603,8 +732,16 @@ mod tests {
         };
         refused("SELECT id FROM orders, other", "second table");
         refused(
-            "SELECT o.id FROM orders o JOIN other p ON o.id = p.id",
+            "SELECT o.id FROM orders o LEFT JOIN customers c ON o.id = c.id",
             "join",
+        );
+        refused(
+            "SELECT o.id FROM orders o JOIN customers c ON o.id < c.id",
+            "non-equality join",
+        );
+        refused(
+            "SELECT o.id FROM orders o JOIN customers c ON o.id = c.id JOIN other p ON o.id = p.id",
+            "third table",
         );
         refused("SELECT id FROM (SELECT id FROM orders) t", "subquery");
         refused(
@@ -640,7 +777,7 @@ mod tests {
             "DISTINCT with an aggregate or GROUP BY",
         );
         // The code and text of the refusal.
-        let error = compile_incremental_sql("v", "SELECT id FROM orders LIMIT 1", &types).unwrap_err();
+        let error = compile_incremental_sql("v", "SELECT id FROM orders LIMIT 1", &types, &indexed).unwrap_err();
         assert_eq!(error.code(), ServerErrorCode::MatviewNotIncremental);
         assert_eq!(error.to_string(), "MATVIEW_NOT_INCREMENTAL: LIMIT");
     }
@@ -710,6 +847,42 @@ mod tests {
                 ),
                 ("hi".to_string(), ExactAgg::Max(RowExpr::Column("ratio".into()))),
             ]
+        );
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R013.3
+    #[test]
+    fn join_compiles_only_when_both_keys_are_indexed() {
+        let program = compile(
+            "SELECT o.id, c.area FROM orders o JOIN customers c ON o.id = c.id WHERE o.qty > 1",
+        )
+        .unwrap();
+        assert_eq!(program.table, "orders");
+        assert_eq!(
+            program.join,
+            Some(EquiJoin {
+                right: "customers".into(),
+                left_key: "id".into(),
+                right_key: "id".into()
+            })
+        );
+        let ViewOutput::Rows(columns) = &program.output else {
+            panic!("a join projection is a Rows view");
+        };
+        assert_eq!(columns[1].1, RowExpr::Column("customers.area".into()));
+        // The same equality written the other way round names the same sides.
+        let flipped =
+            compile("SELECT o.id FROM orders o JOIN customers c ON c.id = o.id").unwrap();
+        assert_eq!(flipped.join, program.join);
+        // A join key without an index on one side is refused with its name.
+        assert_eq!(
+            compile("SELECT o.id FROM orders o JOIN customers c ON o.region = c.region")
+                .unwrap_err(),
+            "join key not indexed: orders.region"
+        );
+        assert_eq!(
+            compile("SELECT o.id FROM orders o JOIN customers c ON o.id = c.region").unwrap_err(),
+            "join key not indexed: customers.region"
         );
     }
 }
