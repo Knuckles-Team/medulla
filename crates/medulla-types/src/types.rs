@@ -232,6 +232,10 @@ pub struct ScenePose {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SubgraphNode {
     pub id: String,
+    /// The node's stored type, read from its property object (`type`, then `node_type`, then
+    /// `label`), or the empty string when it has none. It replaces a reader's guess at
+    /// `properties.node_type` (MEDULLA-DURABLE-KERNEL-R876.7).
+    pub node_type: String,
     /// The node's property object, or `null` when it does not decode.
     pub properties: serde_json::Value,
 }
@@ -242,8 +246,46 @@ pub struct SubgraphNode {
 pub struct SubgraphEdge {
     pub source: String,
     pub target: String,
+    /// The edge's stored type, read from its property object (`relationship`), or the empty
+    /// string when it has none. It replaces a reader's guess at `properties.relationship`
+    /// (MEDULLA-DURABLE-KERNEL-R876.7).
+    pub edge_type: String,
     /// The edge's property object, or `null` when it does not decode.
     pub properties: serde_json::Value,
+}
+
+impl SubgraphNode {
+    /// The one constructor: the node type is derived from the decoded property object here, so
+    /// no producer fills it separately.
+    pub fn new(id: String, properties: serde_json::Value) -> Self {
+        let node_type = ["type", "node_type", "label"]
+            .iter()
+            .find_map(|key| properties.get(*key).and_then(serde_json::Value::as_str))
+            .unwrap_or_default()
+            .to_string();
+        Self {
+            id,
+            node_type,
+            properties,
+        }
+    }
+}
+
+impl SubgraphEdge {
+    /// The one constructor: the edge type is derived from the decoded property object here.
+    pub fn new(source: String, target: String, properties: serde_json::Value) -> Self {
+        let edge_type = properties
+            .get("relationship")
+            .and_then(serde_json::Value::as_str)
+            .unwrap_or_default()
+            .to_string();
+        Self {
+            source,
+            target,
+            edge_type,
+            properties,
+        }
+    }
 }
 
 /// The induced subgraph over a node-id set (`Method::GetSubgraph`): the nodes that exist
@@ -403,15 +445,15 @@ mod bitemporal_tests {
     #[test]
     fn neighborhood_result_round_trips_with_golden_vector() {
         let result = NeighborhoodResult {
-            nodes: vec![SubgraphNode {
-                id: "hub".into(),
-                properties: serde_json::json!({"label": "Hub"}),
-            }],
-            edges: vec![SubgraphEdge {
-                source: "hub".into(),
-                target: "leaf-1".into(),
-                properties: serde_json::json!({"relationship": "LINKS"}),
-            }],
+            nodes: vec![SubgraphNode::new(
+                "hub".into(),
+                serde_json::json!({"node_type": "Doc", "label": "Hub"}),
+            )],
+            edges: vec![SubgraphEdge::new(
+                "hub".into(),
+                "leaf-1".into(),
+                serde_json::json!({"relationship": "LINKS"}),
+            )],
             hidden: vec![HiddenCount {
                 node_id: "hub".into(),
                 count: 1950,
@@ -421,8 +463,8 @@ mod bitemporal_tests {
             graph_revision: 7,
         };
         let golden = serde_json::json!({
-            "nodes": [{"id": "hub", "properties": {"label": "Hub"}}],
-            "edges": [{"source": "hub", "target": "leaf-1", "properties": {"relationship": "LINKS"}}],
+            "nodes": [{"id": "hub", "node_type": "Doc", "properties": {"node_type": "Doc", "label": "Hub"}}],
+            "edges": [{"source": "hub", "target": "leaf-1", "edge_type": "LINKS", "properties": {"relationship": "LINKS"}}],
             "hidden": [{"node_id": "hub", "count": 1950}],
             "next_cursor": "7.50",
             "truncated": true,
@@ -434,5 +476,33 @@ mod bitemporal_tests {
         let bytes = rmp_serde::to_vec_named(&result).expect("msgpack encode");
         let again: NeighborhoodResult = rmp_serde::from_slice(&bytes).expect("msgpack decode");
         assert_eq!(again, result);
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R876.7
+    #[test]
+    fn a_subgraph_node_and_edge_carry_their_stored_type() {
+        let node = SubgraphNode::new("n".into(), serde_json::json!({"node_type": "Doc"}));
+        assert_eq!(node.node_type, "Doc");
+        let by_type = SubgraphNode::new(
+            "n".into(),
+            serde_json::json!({"type": "Agent", "node_type": "Doc", "label": "L"}),
+        );
+        assert_eq!(by_type.node_type, "Agent", "`type` wins over `node_type`");
+        let by_label = SubgraphNode::new("n".into(), serde_json::json!({"label": "L"}));
+        assert_eq!(by_label.node_type, "L");
+        assert_eq!(
+            SubgraphNode::new("n".into(), serde_json::Value::Null).node_type,
+            ""
+        );
+        let edge = SubgraphEdge::new(
+            "a".into(),
+            "b".into(),
+            serde_json::json!({"relationship": "LINKS"}),
+        );
+        assert_eq!(edge.edge_type, "LINKS");
+        assert_eq!(
+            SubgraphEdge::new("a".into(), "b".into(), serde_json::Value::Null).edge_type,
+            ""
+        );
     }
 }

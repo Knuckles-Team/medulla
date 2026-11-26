@@ -792,6 +792,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 - `MEDULLA-DURABLE-KERNEL-R876.4`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::refusals_and_visibility` (planned, L3): proves: Refusal
 - `MEDULLA-DURABLE-KERNEL-R876.5`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::audit_line_carries_counts_only` (planned, L3): proves: Evidence
 - `MEDULLA-DURABLE-KERNEL-R876.6`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::hub_pages_to_completion` (planned, L3): proves: Hot-path proof and budget
+- `MEDULLA-DURABLE-KERNEL-R876.7`: `crates/medulla-types/src/types.rs::tests::a_subgraph_node_and_edge_carry_their_stored_type` (L1): proves: model: a subgraph node and edge carry their stored type.
 
 ## Knowledge bundle (R877)
 

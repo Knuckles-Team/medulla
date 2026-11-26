@@ -29629,6 +29629,7 @@ class SubgraphAlgorithm(str, Enum):
 class SubgraphEdge(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    edge_type: str
     properties: Any
     source: str
     target: str
@@ -29638,6 +29639,7 @@ class SubgraphNode(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     id: str
+    node_type: str
     properties: Any
 
 

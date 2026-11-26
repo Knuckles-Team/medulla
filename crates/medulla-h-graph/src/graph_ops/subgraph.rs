@@ -34,20 +34,13 @@ fn handle_get_subgraph(req_id: u64, core: &Arc<GraphCore>, node_ids: &[String]) 
     for (id, blob) in &sub.node_properties {
         let props =
             medulla_types::msgpack::decode_property_value(blob).unwrap_or(serde_json::Value::Null);
-        nodes.push(medulla_types::types::SubgraphNode {
-            id: id.clone(),
-            properties: props,
-        });
+        nodes.push(medulla_types::types::SubgraphNode::new(id.clone(), props));
     }
     let edges: Vec<_> = decoded_edge_properties(&sub)
         .into_iter()
-        .map(
-            |(source, target, properties)| medulla_types::types::SubgraphEdge {
-                source,
-                target,
-                properties,
-            },
-        )
+        .map(|(source, target, properties)| {
+            medulla_types::types::SubgraphEdge::new(source, target, properties)
+        })
         .collect();
     Response::ok(
         req_id,
@@ -118,12 +111,13 @@ fn handle_get_neighborhood(
     let nodes: Vec<_> = walked
         .nodes
         .iter()
-        .map(|id| medulla_types::types::SubgraphNode {
-            id: id.clone(),
-            properties: core
-                .get_node_properties(id)
-                .and_then(|blob| medulla_types::msgpack::decode_property_value(&blob).ok())
-                .unwrap_or(serde_json::Value::Null),
+        .map(|id| {
+            medulla_types::types::SubgraphNode::new(
+                id.clone(),
+                core.get_node_properties(id)
+                    .and_then(|blob| medulla_types::msgpack::decode_property_value(&blob).ok())
+                    .unwrap_or(serde_json::Value::Null),
+            )
         })
         .collect();
     let mut edges = Vec::with_capacity(walked.edges.len());
@@ -135,12 +129,12 @@ fn handle_get_neighborhood(
             continue;
         };
         for blob in blobs.iter().filter(|b| blob_follows(b, request.edge_types)) {
-            edges.push(medulla_types::types::SubgraphEdge {
-                source: edge.source.clone(),
-                target: edge.target.clone(),
-                properties: medulla_types::msgpack::decode_property_value(blob)
+            edges.push(medulla_types::types::SubgraphEdge::new(
+                edge.source.clone(),
+                edge.target.clone(),
+                medulla_types::msgpack::decode_property_value(blob)
                     .unwrap_or(serde_json::Value::Null),
-            });
+            ));
         }
     }
     let result = medulla_types::types::NeighborhoodResult {
