@@ -276,6 +276,25 @@ mod tests {
         }
     }
 
+    /// Each built example names the score row it came from, the kind that
+    /// graded it, its author and the run it scores; a row with no run link is
+    /// counted, not built (the L2 of MEDULLA-DECISION-ENGINE-R813.5).
+    #[test]
+    fn built_example_carries_its_row_provenance() {
+        let mut authored = row("authored", GraderKind::Human, true, 4.0);
+        authored.author = Some(opaque("author", "annotator"));
+        let unlinked = row("unlinked", GraderKind::Api, false, 2.0);
+        let built = corpus_from_scores(&[authored.clone(), unlinked], &policy()).expect("corpus");
+        assert_eq!(built.skipped_without_run, 1);
+        assert_eq!(built.corpus.examples.len(), 1);
+        let example = &built.corpus.examples[0];
+        assert_eq!(example.score_ref.as_ref(), Some(&authored.score_ref));
+        assert_eq!(example.example_ref, authored.score_ref);
+        assert_eq!(example.grader_kind, GraderKind::Human);
+        assert_eq!(example.author, authored.author);
+        assert_eq!(example.trace_ref, authored.run_ref);
+    }
+
     // spec: MEDULLA-DECISION-ENGINE-R813.2
     #[test]
     fn each_grader_kind_and_the_skip() {

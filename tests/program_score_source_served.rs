@@ -111,6 +111,7 @@ fn score_request() -> OptimizationRequest {
         optimizer_artifacts: Vec::new(),
         candidate_evaluations: Vec::new(),
         score_source: Some(ScoreSource {
+            skipped_without_run: 0,
             graph: GRAPH.to_string(),
         }),
     }

@@ -29,3 +29,7 @@ rmp-serde = "1.3"
 [[bench]]
 name = "front_insert"
 harness = false
+
+[[bench]]
+name = "score_corpus"
+harness = false

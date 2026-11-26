@@ -558,6 +558,7 @@ pub fn score_source_request(label: &str) -> OptimizationRequest {
     request.corpus.examples.clear();
     request.score_source = Some(medulla_program::ScoreSource {
         graph: GRAPH.to_string(),
+        skipped_without_run: 0,
     });
     request
 }

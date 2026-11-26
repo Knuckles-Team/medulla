@@ -1093,8 +1093,8 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R803`: `tests/decide/test_harness_co
 | Behavior | `MEDULLA-DECISION-ENGINE-R813.2` | `crates/medulla-program/src/corpus.rs::tests::each_grader_kind_and_the_skip`; `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile`; `tests/program_score_source_served.rs::optimize_submit_refuses_client_examples_with_a_score_source`; `tests/program_score_source_served.rs::optimize_submit_refuses_client_examples_with_a_score_source` |
 | Wiring | `MEDULLA-DECISION-ENGINE-R813.3` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::scores_build_a_corpus_and_compile` |
 | Refusal | `MEDULLA-DECISION-ENGINE-R813.4` | `tests/program_score_source_served.rs::score_refusals` |
-| Evidence | `MEDULLA-DECISION-ENGINE-R813.5` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::example_names_score_grader_author_and_run` |
-| Hot-path proof | `MEDULLA-DECISION-ENGINE-R813.6` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::served_scores_to_program_journey` |
+| Evidence | `MEDULLA-DECISION-ENGINE-R813.5` | `tests/program_scores_to_program_served.rs::example_names_score_grader_author_and_run` |
+| Hot-path proof | `MEDULLA-DECISION-ENGINE-R813.6` | `tests/program_scores_to_program_served.rs::served_scores_to_program_journey` |
 
 Hot-path proof for `MEDULLA-DECISION-ENGINE-R810`: `tests/test_program_optimize_served.py::test_program_optimize_job_end_to_end`.
 
@@ -2093,8 +2093,8 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R813.1` | `crates/medulla-program/tests/native_program.rs::example_round_trips_per_grader_kind` |
 | `MEDULLA-DECISION-ENGINE-R813.2` | `crates/medulla-program/src/corpus.rs::tests::each_grader_kind_and_the_skip` |
 | `MEDULLA-DECISION-ENGINE-R813.4` | `tests/program_score_source_served.rs::score_refusals` |
-| `MEDULLA-DECISION-ENGINE-R813.5` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::example_names_score_grader_author_and_run` |
-| `MEDULLA-DECISION-ENGINE-R813.6` | `crates/medulla-h-decide/src/decide/stat_tests/score_corpus_tests.rs::served_scores_to_program_journey` |
+| `MEDULLA-DECISION-ENGINE-R813.5` | `tests/program_scores_to_program_served.rs::example_names_score_grader_author_and_run` |
+| `MEDULLA-DECISION-ENGINE-R813.6` | `tests/program_scores_to_program_served.rs::served_scores_to_program_journey` |
 | `MEDULLA-DECISION-ENGINE-R036.107` | `crates/medulla-h-decide/src/decide/stat_tests/assemble_tests.rs::allowlist_removes_tools_and_admission_still_runs` |
 | `MEDULLA-DECISION-ENGINE-R804` | `tests/program_optimize_job_served.rs::judge_only_test_split_refuses` |
 | `MEDULLA-DECISION-ENGINE-R805.2` | `crates/medulla-decision-stats/src/decision/promotion.rs::tests::regression_triggers_rollback` |

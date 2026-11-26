@@ -11,6 +11,7 @@ pub(super) fn typed_program_result(
     optimization: &medulla_program::OptimizationResult,
     promotion_identity: Option<&ProgramRevisionIdentity>,
     expected_policy: &PolicyEnvelope,
+    skipped_without_run: u64,
 ) -> Result<TypedJobResult, String> {
     let mut rows = optimization
         .candidates
@@ -22,6 +23,14 @@ pub(super) fn typed_program_result(
             .iter()
             .map(|step| program_plan_step_row(job, optimization, plan, step))
     }));
+    // MEDULLA-DECISION-ENGINE-R813.5: how many stored scores the corpus left out
+    // because they link no run, on every row.
+    for row in &mut rows {
+        row.insert(
+            "skipped_without_run".to_string(),
+            serde_json::json!(skipped_without_run),
+        );
+    }
     let (confidence, calibration) = program_score_summary(optimization);
     let result = TypedJobResult::new(
         program_result_columns(),
@@ -421,6 +430,7 @@ fn program_result_columns() -> Vec<ResultColumn> {
         ("front_cost_micro_usd", "uint64", true),
         ("front_next_parent", "bool", false),
         ("evaluation_set_digest", "string", true),
+        ("skipped_without_run", "uint64", false),
     ]
     .into_iter()
     .map(|(name, logical_type, nullable)| ResultColumn {
@@ -552,7 +562,7 @@ mod privacy_tests {
             updated_at_ms: 0,
         };
 
-        let result = typed_program_result(&job, &optimization, None, &policy)
+        let result = typed_program_result(&job, &optimization, None, &policy, 0)
             .expect("the producer output passes its privacy validator");
         assert_eq!(
             result.rows[0].get("id").and_then(serde_json::Value::as_str),

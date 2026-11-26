@@ -361,6 +361,15 @@ pub struct OptimizationRequest {
 #[serde(deny_unknown_fields)]
 pub struct ScoreSource {
     pub graph: String,
+    /// Stored scores left out of the corpus because they link no run. The
+    /// server writes it when it builds the corpus (MEDULLA-DECISION-ENGINE-R813.5);
+    /// a client value is overwritten.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub skipped_without_run: u64,
+}
+
+fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
 
 impl OptimizationRequest {

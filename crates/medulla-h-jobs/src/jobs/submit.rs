@@ -580,6 +580,9 @@ fn fill_corpus_from_scores(
     )
     .map_err(|refusal| refusal.to_string())?;
     request.corpus = built.corpus;
+    if let Some(source) = request.score_source.as_mut() {
+        source.skipped_without_run = built.skipped_without_run as u64;
+    }
     Ok(())
 }
 

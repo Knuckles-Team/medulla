@@ -40,6 +40,10 @@ pub(super) async fn execute_program_claim(
         )
         .map_err(|error| error.to_string())?;
 
+    let skipped_without_run = request
+        .score_source
+        .as_ref()
+        .map_or(0, |source| source.skipped_without_run);
     let promotion_program = request.program.clone();
     let promotion_corpus = request.corpus.clone();
     let promotion_seed = request.budget.seed;
@@ -79,6 +83,7 @@ pub(super) async fn execute_program_claim(
         &optimization,
         promotion_identity.as_ref(),
         &promotion_program.policy,
+        skipped_without_run,
     )?;
     let staged = store
         .stage_result_fenced(&job.job_id, worker_ref, epoch, result, unix_ms())
