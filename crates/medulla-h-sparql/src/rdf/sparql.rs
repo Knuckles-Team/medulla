@@ -32,24 +32,82 @@ pub(super) struct SparqlShapeGate {
     pub(super) log: Arc<medulla_exec::policy_mask::PolicyEvaluationLog>,
 }
 
-/// The graph node a bound cell names, if any: the cell itself, the cell without its angle
-/// brackets, or the node a projected IRI of the core ontology namespace stands for.
-fn node_of_cell(view: &GraphView, cell: &str) -> Option<String> {
-    let bare = cell
-        .strip_prefix('<')
-        .and_then(|inner| inner.strip_suffix('>'))
-        .unwrap_or(cell);
-    let local = bare.strip_prefix(medulla_types::ontology_base::CORE_NAMESPACE);
-    [
-        Some(cell.to_string()),
-        Some(bare.to_string()),
-        Some(format!("<{bare}>")),
-        local.map(str::to_string),
-    ]
-    .into_iter()
-    .flatten()
-    .find(|candidate| view.node_properties.contains_key(candidate.as_str()))
+/// The graph node a bound term names, if any: an IRI as its bracketed or bare key or as the
+/// node a projected IRI of the core ontology namespace stands for, and a blank node as its
+/// `_:` key. A literal or a quoted triple names no node.
+fn node_of_cell(
+    view: &GraphView,
+    cell: &medulla_protocol_types::protocol::SparqlTerm,
+) -> Option<String> {
+    use medulla_protocol_types::protocol::SparqlTermKind;
+    let candidates: Vec<String> = match cell.kind {
+        SparqlTermKind::Iri => {
+            let bare = cell.value.as_str();
+            let local = bare.strip_prefix(medulla_types::ontology_base::CORE_NAMESPACE);
+            [
+                Some(format!("<{bare}>")),
+                Some(bare.to_string()),
+                local.map(str::to_string),
+            ]
+            .into_iter()
+            .flatten()
+            .collect()
+        }
+        SparqlTermKind::Bnode => vec![format!("_:{}", cell.value)],
+        SparqlTermKind::Literal | SparqlTermKind::Triple => return None,
+    };
+    candidates
+        .into_iter()
+        .find(|candidate| view.node_properties.contains_key(candidate.as_str()))
 }
+
+/// The wire form of one solution term (MEDULLA-FEDERATED-QUERY-R742.3).
+pub(super) fn wire_term(
+    term: &medulla_rdf::sparql::Binding,
+) -> medulla_protocol_types::protocol::SparqlTerm {
+    use medulla_protocol_types::protocol::{SparqlTerm, SparqlTermKind};
+    use medulla_rdf::sparql::Binding;
+    match term {
+        Binding::Iri(iri) => SparqlTerm {
+            kind: SparqlTermKind::Iri,
+            value: iri.clone(),
+            datatype: None,
+            language: None,
+        },
+        Binding::Blank(label) => SparqlTerm {
+            kind: SparqlTermKind::Bnode,
+            value: label.clone(),
+            datatype: None,
+            language: None,
+        },
+        Binding::Literal(literal) => SparqlTerm {
+            kind: SparqlTermKind::Literal,
+            value: literal.lexical.clone(),
+            datatype: Some(literal.datatype.clone()),
+            language: literal.language.clone(),
+        },
+        Binding::Triple(_) => SparqlTerm {
+            kind: SparqlTermKind::Triple,
+            value: term.to_ntriples(),
+            datatype: None,
+            language: None,
+        },
+    }
+}
+
+/// The wire rows of a solution table: each bound term in its wire form, `None` for unbound.
+pub(super) fn wire_rows(
+    rows: Vec<Vec<Option<medulla_rdf::sparql::Binding>>>,
+) -> Vec<Vec<Option<medulla_protocol_types::protocol::SparqlTerm>>> {
+    rows.into_iter()
+        .map(|row| row.iter().map(|cell| cell.as_ref().map(wire_term)).collect())
+        .collect()
+}
+
+/// The revision of the wire result shape the result cache stores. It joins the cache key, so
+/// an entry written under an earlier shape is never served (MEDULLA-FEDERATED-QUERY-R742.3).
+#[cfg(feature = "result-cache")]
+const SPARQL_RESULT_SHAPE_REVISION: u32 = 2;
 
 /// Hold a SPARQL result to the shape policies (MEDULLA-FEDERATED-QUERY-R706.12).
 ///
@@ -165,7 +223,7 @@ pub(super) async fn handle_sparql(
     #[cfg(feature = "result-cache")]
     let cache_key = {
         let mut key = format!(
-            "{query}\u{0}{:?}\u{0}{}\u{0}{mode:?}\u{0}{graph_media_type:?}",
+            "{query}\u{0}{:?}\u{0}{}\u{0}{mode:?}\u{0}{graph_media_type:?}\u{0}shape@{SPARQL_RESULT_SHAPE_REVISION}",
             proj.base_iri, proj.camel_type
         );
         if let Some(usage) = &proj.usage {
@@ -487,7 +545,7 @@ fn run_sparql(
     };
     Ok(medulla_protocol_types::protocol::SparqlResult {
         vars,
-        rows,
+        rows: wire_rows(rows),
         proofs,
         spatial,
         graph_body,

@@ -578,8 +578,8 @@ impl medulla_rdf::sparql::RemoteSparql for ServiceClient {
 }
 
 /// Parse a SPARQL 1.1 Query Results JSON document into a [`SparqlResult`] — the INVERSE of
-/// [`term_json`]: `{"type":"uri"}` → a `Node <iri>`, `bnode` → `Node _:label`, everything
-/// else (`literal`/`typed-literal`) → a `Literal`. `head.vars` gives the column order.
+/// [`term_json`]: `{"type":"uri"}` → an `Iri`, `bnode` → a `Blank`, and a `literal` or
+/// `typed-literal` → a `Literal` with its datatype or language. `head.vars` gives the column order.
 #[cfg(feature = "sparql-service")]
 fn parse_results_json(body: &str) -> Result<SparqlResult, String> {
     let j: serde_json::Value =
@@ -609,17 +609,27 @@ fn parse_results_json(body: &str) -> Result<SparqlResult, String> {
     Ok(SparqlResult { vars, solutions })
 }
 
-/// One SPARQL-results-JSON term object → a [`Binding`] (inverse of [`term_json`]).
+/// One SPARQL-results-JSON term object → a [`Binding`] (inverse of [`term_json`]): `uri` is an
+/// IRI, `bnode` a blank node, and a literal keeps its `datatype` or `xml:lang`
+/// (MEDULLA-FEDERATED-QUERY-R742.3). A term of any other type has no binding.
 #[cfg(feature = "sparql-service")]
 fn json_term_to_binding(term: &serde_json::Value) -> Option<Binding> {
     let ty = term.get("type")?.as_str()?;
     let val = term.get("value")?.as_str()?;
-    Some(match ty {
-        "uri" => Binding::Node(format!("<{val}>")),
-        "bnode" => Binding::Node(format!("_:{val}")),
-        // "literal" / "typed-literal" (+ any unknown kind) → lexical literal.
-        _ => Binding::Literal(val.to_string()),
-    })
+    match ty {
+        "uri" => Some(Binding::iri(val)),
+        "bnode" => Some(Binding::blank(val)),
+        "literal" | "typed-literal" => {
+            if let Some(tag) = term.get("xml:lang").and_then(|t| t.as_str()) {
+                return Some(Binding::lang(val, tag));
+            }
+            match term.get("datatype").and_then(|d| d.as_str()) {
+                Some(datatype) => Some(Binding::typed(val, datatype)),
+                None => Some(Binding::string(val)),
+            }
+        }
+        _ => None,
+    }
 }
 
 // ── result serialization ────────────────────────────────────────────────────────
@@ -651,19 +661,31 @@ fn select_json(r: &SparqlResult) -> String {
     .to_string()
 }
 
-/// A solution binding → a SPARQL-JSON RDF term object (`uri` / `bnode` / `literal`).
+/// A solution binding → a SPARQL-JSON RDF term object (`uri` / `bnode` / `literal`). A literal
+/// carries its `xml:lang` or, unless it is a plain string, its `datatype`.
 fn term_json(b: &Binding) -> serde_json::Value {
     match b {
-        Binding::Node(s) => {
-            if let Some(iri) = s.strip_prefix('<').and_then(|x| x.strip_suffix('>')) {
-                serde_json::json!({ "type": "uri", "value": iri })
-            } else if let Some(bn) = s.strip_prefix("_:") {
-                serde_json::json!({ "type": "bnode", "value": bn })
-            } else {
-                serde_json::json!({ "type": "literal", "value": s })
+        Binding::Iri(iri) => serde_json::json!({ "type": "uri", "value": iri }),
+        Binding::Blank(label) => serde_json::json!({ "type": "bnode", "value": label }),
+        Binding::Literal(l) => match (&l.language, l.datatype.as_str()) {
+            (Some(tag), _) => {
+                serde_json::json!({ "type": "literal", "value": l.lexical, "xml:lang": tag })
             }
-        }
-        Binding::Literal(v) => serde_json::json!({ "type": "literal", "value": v }),
+            (None, medulla_rdf::sparql::XSD_STRING) => {
+                serde_json::json!({ "type": "literal", "value": l.lexical })
+            }
+            (None, datatype) => {
+                serde_json::json!({ "type": "literal", "value": l.lexical, "datatype": datatype })
+            }
+        },
+        Binding::Triple(parts) => serde_json::json!({
+            "type": "triple",
+            "value": {
+                "subject": term_json(&parts[0]),
+                "predicate": term_json(&parts[1]),
+                "object": term_json(&parts[2]),
+            }
+        }),
     }
 }
 
@@ -708,25 +730,38 @@ fn results_xml(r: &SparqlResult) -> String {
 }
 
 /// A binding → a SPARQL-XML term element (`<uri>`/`<bnode>`/`<literal>`), mirroring the
-/// `term_json` classification.
+/// `term_json` classification: a literal carries `xml:lang` or its non-string `datatype`.
 fn term_xml(b: &Binding) -> String {
     match b {
-        Binding::Node(s) => {
-            if let Some(iri) = s.strip_prefix('<').and_then(|x| x.strip_suffix('>')) {
-                format!("<uri>{}</uri>", xml_escape(iri))
-            } else if let Some(bn) = s.strip_prefix("_:") {
-                format!("<bnode>{}</bnode>", xml_escape(bn))
-            } else {
-                format!("<literal>{}</literal>", xml_escape(s))
+        Binding::Iri(iri) => format!("<uri>{}</uri>", xml_escape(iri)),
+        Binding::Blank(label) => format!("<bnode>{}</bnode>", xml_escape(label)),
+        Binding::Literal(l) => match (&l.language, l.datatype.as_str()) {
+            (Some(tag), _) => format!(
+                "<literal xml:lang=\"{}\">{}</literal>",
+                xml_escape(tag),
+                xml_escape(&l.lexical)
+            ),
+            (None, medulla_rdf::sparql::XSD_STRING) => {
+                format!("<literal>{}</literal>", xml_escape(&l.lexical))
             }
-        }
-        Binding::Literal(v) => format!("<literal>{}</literal>", xml_escape(v)),
+            (None, datatype) => format!(
+                "<literal datatype=\"{}\">{}</literal>",
+                xml_escape(datatype),
+                xml_escape(&l.lexical)
+            ),
+        },
+        Binding::Triple(parts) => format!(
+            "<triple><subject>{}</subject><predicate>{}</predicate><object>{}</object></triple>",
+            term_xml(&parts[0]),
+            term_xml(&parts[1]),
+            term_xml(&parts[2])
+        ),
     }
 }
 
 /// SPARQL 1.1 Query Results CSV: a header row of bare variable names, then one row per
-/// solution. CSV is lossy (no term-type info): IRIs are the bare IRI, literals the
-/// lexical value; a field with `,`/`"`/CR/LF is double-quoted with `"` doubled. CRLF
+/// solution. CSV is lossy (no term-type info): IRIs are the bare IRI, blank nodes the label,
+/// literals the lexical value; a field with `,`/`"`/CR/LF is double-quoted with `"` doubled. CRLF
 /// line endings per the spec; an unbound variable is an empty field.
 fn results_csv(r: &SparqlResult) -> String {
     let mut out = String::new();
@@ -745,14 +780,7 @@ fn results_csv(r: &SparqlResult) -> String {
 }
 
 fn csv_cell(b: &Binding) -> String {
-    let raw = match b {
-        Binding::Node(s) => s
-            .strip_prefix('<')
-            .and_then(|x| x.strip_suffix('>'))
-            .map(String::from)
-            .unwrap_or_else(|| s.clone()),
-        Binding::Literal(v) => v.clone(),
-    };
+    let raw = b.value_text();
     if raw.contains([',', '"', '\n', '\r']) {
         format!("\"{}\"", raw.replace('"', "\"\""))
     } else {
@@ -762,7 +790,7 @@ fn csv_cell(b: &Binding) -> String {
 
 /// SPARQL 1.1 Query Results TSV: a header row of `?var` names, then one tab-separated row
 /// per solution. TSV keeps term types (Turtle syntax): IRIs as `<iri>`, blank nodes as
-/// `_:label`, literals as escaped quoted strings; an unbound variable is an empty field.
+/// `_:label`, literals as escaped quoted strings with `@tag` or `^^<datatype>`; an unbound variable is an empty field.
 fn results_tsv(r: &SparqlResult) -> String {
     let mut out = String::new();
     let header: Vec<String> = r.vars.iter().map(|v| format!("?{v}")).collect();
@@ -782,9 +810,15 @@ fn results_tsv(r: &SparqlResult) -> String {
 
 fn tsv_cell(b: &Binding) -> String {
     match b {
-        Binding::Node(s) if s.starts_with('<') || s.starts_with("_:") => s.clone(),
-        Binding::Node(s) => format!("\"{}\"", tsv_escape(s)),
-        Binding::Literal(v) => format!("\"{}\"", tsv_escape(v)),
+        Binding::Literal(l) => {
+            let quoted = format!("\"{}\"", tsv_escape(&l.lexical));
+            match (&l.language, l.datatype.as_str()) {
+                (Some(tag), _) => format!("{quoted}@{tag}"),
+                (None, medulla_rdf::sparql::XSD_STRING) => quoted,
+                (None, datatype) => format!("{quoted}^^<{datatype}>"),
+            }
+        }
+        other => other.to_ntriples(),
     }
 }
 
@@ -982,7 +1016,7 @@ mod tests {
     #[test]
     fn select_json_shape() {
         let mut sol = medulla_rdf::sparql::Solution::new();
-        sol.insert("s".to_string(), Binding::Node("<http://x>".to_string()));
+        sol.insert("s".to_string(), Binding::iri("http://x"));
         let r = SparqlResult {
             vars: vec!["s".to_string()],
             solutions: vec![sol],
@@ -993,12 +1027,38 @@ mod tests {
         assert_eq!(j["results"]["bindings"][0]["s"]["value"], "http://x");
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R742.3
+    #[test]
+    fn typed_terms_serialize_with_their_datatype_and_language() {
+        let mut sol = medulla_rdf::sparql::Solution::new();
+        sol.insert("t".to_string(), Binding::lang("chat", "fr"));
+        sol.insert("n".to_string(), Binding::integer(42));
+        sol.insert("p".to_string(), Binding::string("plain"));
+        let r = SparqlResult {
+            vars: vec!["t".to_string(), "n".to_string(), "p".to_string()],
+            solutions: vec![sol],
+        };
+        let j: serde_json::Value = serde_json::from_str(&select_json(&r)).unwrap();
+        let b = &j["results"]["bindings"][0];
+        assert_eq!(b["t"]["xml:lang"], "fr");
+        assert_eq!(b["n"]["datatype"], "http://www.w3.org/2001/XMLSchema#integer");
+        assert!(b["p"].get("datatype").is_none() && b["p"].get("xml:lang").is_none());
+        let xml = results_xml(&r);
+        assert!(xml.contains("<literal xml:lang=\"fr\">chat</literal>"), "{xml}");
+        assert!(xml.contains("<literal datatype=\"http://www.w3.org/2001/XMLSchema#integer\">42</literal>"), "{xml}");
+        let tsv = results_tsv(&r);
+        assert!(tsv.contains("\"chat\"@fr"), "{tsv}");
+        assert!(tsv.contains("\"42\"^^<http://www.w3.org/2001/XMLSchema#integer>"), "{tsv}");
+        let csv = results_csv(&r);
+        assert!(csv.contains("chat,42,plain"), "{csv}");
+    }
+
     // ── CONCEPT:MEDULLA-KG.ontology.content-negotiation-serializers content negotiation + serializers ─────────────────────────
 
     fn sample_result() -> SparqlResult {
         let mut sol = medulla_rdf::sparql::Solution::new();
-        sol.insert("s".to_string(), Binding::Node("<http://x>".to_string()));
-        sol.insert("n".to_string(), Binding::Literal("a,b".to_string()));
+        sol.insert("s".to_string(), Binding::iri("http://x"));
+        sol.insert("n".to_string(), Binding::string("a,b"));
         SparqlResult {
             vars: vec!["s".to_string(), "n".to_string()],
             solutions: vec![sol],
@@ -1159,10 +1219,10 @@ mod tests {
         let sol = &r.solutions[0];
         assert_eq!(
             sol.get("s").unwrap(),
-            &Binding::Node("<http://x>".to_string())
+            &Binding::iri("http://x")
         );
-        assert_eq!(sol.get("b").unwrap(), &Binding::Node("_:n1".to_string()));
-        assert_eq!(sol.get("l").unwrap(), &Binding::Literal("hi".to_string()));
+        assert_eq!(sol.get("b").unwrap(), &Binding::blank("n1"));
+        assert_eq!(sol.get("l").unwrap(), &Binding::string("hi"));
         // And `term_json` maps them straight back to the same JSON term kinds.
         assert_eq!(term_json(sol.get("s").unwrap())["type"], "uri");
         assert_eq!(term_json(sol.get("b").unwrap())["type"], "bnode");

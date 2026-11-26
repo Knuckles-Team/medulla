@@ -105,9 +105,9 @@ fn live_service_query_returns_real_filtered_rows_from_fuseki() {
     let people: std::collections::BTreeSet<String> = result
         .solutions
         .iter()
-        .map(|s| s.get("person").unwrap().as_str().to_string())
+        .map(|s| s.get("person").unwrap().display_text())
         .collect();
-    // `Binding::Node`'s lexical form is the bracketed IRI (`<...>`), matching how
+    // `Binding::Iri`'s one-line text is the bracketed IRI (`<...>`), matching how
     // `json_term_to_binding` constructs it when parsing the remote SPARQL-results JSON.
     assert_eq!(
         people,
@@ -118,7 +118,7 @@ fn live_service_query_returns_real_filtered_rows_from_fuseki() {
         "architect (bob) must be filtered out by the local FILTER over the remote rows"
     );
     for s in &result.solutions {
-        assert_eq!(s.get("role").unwrap().as_str(), "engineer");
+        assert_eq!(s.get("role").unwrap().display_text(), "engineer");
     }
 }
 

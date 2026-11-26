@@ -28690,7 +28690,7 @@ class SparqlResult(BaseModel):
 
     graph_body: str | None = None
     proofs: list[SparqlRowProof]
-    rows: list[list[str | None]]
+    rows: list[list[SparqlTerm | None]]
     spatial: list[SparqlSpatialUse] = Field(default_factory=list)
     vars: list[str]
 
@@ -28701,6 +28701,22 @@ class SparqlRowProof(BaseModel):
     coverage: SparqlProofCoverage
     row: Annotated[int, Field(ge=0)]
     witnesses: list[SparqlWitnessTriple]
+
+
+class SparqlTerm(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    datatype: str | None = None
+    kind: SparqlTermKind
+    language: str | None = None
+    value: str
+
+
+class SparqlTermKind(str, Enum):
+    IRI = "iri"
+    BNODE = "bnode"
+    LITERAL = "literal"
+    TRIPLE = "triple"
 
 
 class SparqlSpatialUse(BaseModel):
@@ -49128,6 +49144,8 @@ __all__ = [
     "SparqlResult",
     "SparqlRowProof",
     "SparqlSpatialUse",
+    "SparqlTerm",
+    "SparqlTermKind",
     "SparqlUpdateReport",
     "SparqlWitnessTriple",
     "SpatialOpKind",

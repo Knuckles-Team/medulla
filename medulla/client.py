@@ -57,6 +57,7 @@ if TYPE_CHECKING:
         DrainStatus,
         SearchTaskRejection,
         SparqlResult,
+        SparqlTerm,
         TaskAcked,
         TaskEnqueued,
         TaskRenewed,
@@ -14832,9 +14833,24 @@ class TimeSeriesClient:
         return dict(receipt or {})
 
 
+def _sparql_cell(term: SparqlTerm | None) -> str | None:
+    """The one-line text of a typed term: ``<iri>``, ``_:label`` or the lexical form."""
+    if term is None:
+        return None
+    if term.kind.value == "iri":
+        return f"<{term.value}>"
+    if term.kind.value == "bnode":
+        return f"_:{term.value}"
+    return term.value
+
+
 def _sparql_rows(result: SparqlResult) -> list[dict[str, str | None]]:
-    """One ``{var: value}`` dict per row of a typed ``SparqlResult``."""
-    return [dict(zip(result.vars, row, strict=False)) for row in result.rows]
+    """One ``{var: text}`` dict per row of a typed ``SparqlResult``. Read the typed
+    terms (datatype and language) from :meth:`RdfClient.sparql_result`."""
+    return [
+        dict(zip(result.vars, (_sparql_cell(cell) for cell in row), strict=False))
+        for row in result.rows
+    ]
 
 
 class RdfClient:

@@ -288,6 +288,52 @@ pub struct QueryResult {
     pub warnings: Vec<String>,
 }
 
+/// The kind of one RDF term in a SPARQL result row (MEDULLA-FEDERATED-QUERY-R742.3).
+#[cfg(feature = "sparql")]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum SparqlTermKind {
+    /// An IRI; `value` is the IRI without angle brackets.
+    Iri,
+    /// A blank node; `value` is the label without `_:`.
+    Bnode,
+    /// A literal; `value` is the lexical form, with `datatype` and `language`.
+    Literal,
+    /// A quoted triple; `value` is its N-Triples-star text.
+    Triple,
+}
+
+/// One RDF term of a SPARQL result row: its kind, its value and, for a literal, its
+/// datatype IRI and language tag (MEDULLA-FEDERATED-QUERY-R742.3).
+#[cfg(feature = "sparql")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SparqlTerm {
+    /// The kind of term.
+    pub kind: SparqlTermKind,
+    /// The IRI, the blank-node label, the lexical form or the quoted-triple text.
+    pub value: String,
+    /// The datatype IRI of a literal; absent for any other term.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub datatype: Option<String>,
+    /// The language tag of a language-tagged literal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+}
+
+#[cfg(feature = "sparql")]
+impl SparqlTerm {
+    /// The one-line text of the term: `<iri>`, `_:label`, or the lexical form of a literal.
+    pub fn display_text(&self) -> String {
+        match self.kind {
+            SparqlTermKind::Iri => format!("<{}>", self.value),
+            SparqlTermKind::Bnode => format!("_:{}", self.value),
+            SparqlTermKind::Literal | SparqlTermKind::Triple => self.value.clone(),
+        }
+    }
+}
+
 /// Materialized result of a `Method::Sparql` SELECT (CONCEPT:MEDULLA-KG.ontology.concept-11). Returned via
 /// `ResultPayload::raw`. `vars` is the projected variable order; each row is aligned
 /// to `vars` with `None` for an unbound (OPTIONAL) variable. Lives in medulla-types (the
@@ -297,7 +343,7 @@ pub struct QueryResult {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct SparqlResult {
     pub vars: Vec<String>,
-    pub rows: Vec<Vec<Option<String>>>,
+    pub rows: Vec<Vec<Option<SparqlTerm>>>,
     /// One witness proof per row, in row order, when the request asked to `explain`
     /// (EH-197); empty otherwise.
     pub proofs: Vec<medulla_query_types::rdf_report::SparqlRowProof>,

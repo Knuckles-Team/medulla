@@ -419,6 +419,10 @@ fn decode_local_rows(bytes: &[u8], lang: &str) -> Vec<FedRow> {
                 .rows
                 .into_iter()
                 .map(|cells| {
+                    let cells: Vec<Option<String>> = cells
+                        .iter()
+                        .map(|c| c.as_ref().map(|t| t.display_text()))
+                        .collect();
                     let key = cells
                         .iter()
                         .map(|c| c.clone().unwrap_or_default())

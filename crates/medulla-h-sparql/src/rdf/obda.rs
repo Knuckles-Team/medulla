@@ -205,7 +205,10 @@ fn sparql_virtual(
     let (vars, rows) = match outcome {
         medulla_rdf::sparql::QueryOutcome::Solutions(res) => res.to_rows(),
         medulla_rdf::sparql::QueryOutcome::Boolean(b) => {
-            (vec!["_ask".to_string()], vec![vec![Some(b.to_string())]])
+            (
+                vec!["_ask".to_string()],
+                vec![vec![Some(medulla_rdf::sparql::Binding::boolean(b))]],
+            )
         }
         #[cfg(feature = "rdf")]
         medulla_rdf::sparql::QueryOutcome::Graph(_) => (Vec::new(), Vec::new()),
@@ -214,7 +217,7 @@ fn sparql_virtual(
     // there is no graph witness to attach (EH-197 proofs are `Sparql`-only).
     Ok(medulla_protocol_types::protocol::SparqlResult {
         vars,
-        rows,
+        rows: super::sparql::wire_rows(rows),
         proofs: Vec::new(),
         spatial: Vec::new(),
         graph_body: None,
