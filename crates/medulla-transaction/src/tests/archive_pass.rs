@@ -93,6 +93,8 @@ async fn archive_pass_writes_ordered_segments_and_resumes() {
 }
 
 // spec: MEDULLA-ENGINE-PARITY-R016.4
+/// A cut-off after every segment expires all but the newest, from the manifest and the
+/// store alike.
 #[tokio::test]
 async fn retention_expires_old_segments_and_keeps_the_newest() {
     let dir = tempfile::tempdir().unwrap();
