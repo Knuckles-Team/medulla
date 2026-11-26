@@ -14,6 +14,15 @@ pub enum RequiredTestModuleCategory {
 }
 
 impl RequiredTestModuleCategory {
+    /// The declared name of this category: the inverse of [`Self::parse`].
+    pub fn name(self) -> &'static str {
+        match self {
+            Self::Raft => "raft",
+            Self::Backup => "backup",
+            Self::Persistence => "persistence",
+        }
+    }
+
     /// Parse a category's declared name. Refuses any name the requirement
     /// does not list, rather than silently admitting an unrelated test
     /// suite into the pre-merge-required set.

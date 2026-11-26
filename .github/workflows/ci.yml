@@ -74,6 +74,32 @@ jobs:
     with:
       runner: ${{ vars.ARBORA_TRUSTED_CI_RUNNER == 'true' && '"arbora-ci-trusted"' || '"ubuntu-latest"' }}
 
+  # The required runtime manifest (MEDULLA-DURABLE-KERNEL-R011.3): a pull request runs the raft,
+  # backup and persistence test modules of `required_test_modules` through the shared gate, which
+  # fails on a failed test or on `ZERO_SELECTED_TESTS`. The repository ruleset requires the
+  # `required-runtime` check. The manifest job prints the manifest; the gate job adds no logic.
+  required-runtime-manifest:
+    timeout-minutes: 15
+    name: Required runtime manifest
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    outputs:
+      manifest: ${{ steps.manifest.outputs.json }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - id: manifest
+        run: echo "json=$(cargo run --locked --quiet -p medulla-source-types --example print_required_manifest)" >> "$GITHUB_OUTPUT"
+
+  required-runtime:
+    name: Required runtime
+    if: github.event_name == 'pull_request'
+    needs: required-runtime-manifest
+    uses: Knuckles-Team/pipelines/.github/workflows/required_runtime_gate.yml@main
+    with:
+      manifest: ${{ needs.required-runtime-manifest.outputs.manifest }}
+
   # Change scope plus the pull-request path gates. Every native job keeps its
   # needs.changes.outputs.code edge; path-gated jobs also read their gate.
   changes:
