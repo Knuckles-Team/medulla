@@ -33,8 +33,20 @@ pub const QUESTION_TOO_LONG: &str = "QUESTION_TOO_LONG";
 /// The longest question a delivery holds, in characters.
 pub const QUESTION_MAX_CHARS: usize = 600;
 
+/// No registered connector provides the feedback event (R019.5).
+pub const FEEDBACK_SOURCE_UNKNOWN: &str = "FEEDBACK_SOURCE_UNKNOWN";
+
+/// The feedback event names a proposal the engine does not hold (R019.5).
+pub const FEEDBACK_PROPOSAL_UNKNOWN: &str = "FEEDBACK_PROPOSAL_UNKNOWN";
+
+/// The feedback event is blank in a required field (R019.5).
+pub const FEEDBACK_EVENT_INVALID: &str = "FEEDBACK_EVENT_INVALID";
+
 /// Every refusal code of the delivery records.
 pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(FEEDBACK_SOURCE_UNKNOWN),
+    RefusalCode::new(FEEDBACK_PROPOSAL_UNKNOWN),
+    RefusalCode::new(FEEDBACK_EVENT_INVALID),
     RefusalCode::new(DELIVERY_RECORD_INVALID),
     RefusalCode::new(ASSIGNMENT_UNKNOWN),
     RefusalCode::new(ASSIGNMENT_ENDED),
@@ -326,6 +338,49 @@ pub enum FeedbackKind {
     ProposalClosed,
     ProposalReopened,
     HeadPushed,
+}
+
+/// One source-control feedback event as the delivery feedback route reads it (R019.5): the
+/// provider event id the engine dedups by, the connector that provided it, what happened, who
+/// caused it, the proposal it concerns and whether a check it reports failed.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScmFeedbackEvent {
+    pub event_id: String,
+    pub connector: String,
+    pub kind: FeedbackKind,
+    pub source: InputSource,
+    pub proposal_id: String,
+    /// True for a `check_changed` event whose check failed.
+    #[serde(default)]
+    pub failed: bool,
+    pub summary: String,
+    pub observed_at: i64,
+}
+
+/// A refused feedback event.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum FeedbackRefusal {
+    /// No registered connector provides the event.
+    #[error("FEEDBACK_SOURCE_UNKNOWN: {0}")]
+    SourceUnknown(String),
+    /// The proposal is not one the engine holds.
+    #[error("FEEDBACK_PROPOSAL_UNKNOWN: {0}")]
+    ProposalUnknown(String),
+    /// A required field is blank.
+    #[error("FEEDBACK_EVENT_INVALID: {0}")]
+    EventInvalid(String),
+}
+
+impl FeedbackRefusal {
+    /// The stable refusal code.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::SourceUnknown(_) => FEEDBACK_SOURCE_UNKNOWN,
+            Self::ProposalUnknown(_) => FEEDBACK_PROPOSAL_UNKNOWN,
+            Self::EventInvalid(_) => FEEDBACK_EVENT_INVALID,
+        }
+    }
 }
 
 /// The merge-arming verdict for a proposal.
