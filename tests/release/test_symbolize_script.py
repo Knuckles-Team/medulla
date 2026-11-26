@@ -29,8 +29,12 @@ int main(void) {
 """
 
 
-def _run(*args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(list(args), capture_output=True, text=True, check=False, env=env)
+def _run(
+    *args: str, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        list(args), capture_output=True, text=True, check=False, env=env
+    )
 
 
 def _build(workdir: Path) -> Path:
@@ -53,12 +57,17 @@ def _build(workdir: Path) -> Path:
     not sys.platform.startswith("linux"),
     reason="the Linux symbol file is the one addr2line reads",
 )
+# proves R060.3: One command symbolizes a stack
 def test_symbolize_resolves_offsets_from_a_local_artifact(tmp_path: Path) -> None:
     binary = _build(tmp_path)
     symbols = tmp_path / "symbols"
-    split = _run("bash", str(SCRIPTS / "split_release_symbols.sh"), str(binary), str(symbols))
+    split = _run(
+        "bash", str(SCRIPTS / "split_release_symbols.sh"), str(binary), str(symbols)
+    )
     assert split.returncode == 0, split.stderr
-    build_id = _run(sys.executable, str(SCRIPTS / "read_build_id.py"), str(binary)).stdout.strip()
+    build_id = _run(
+        sys.executable, str(SCRIPTS / "read_build_id.py"), str(binary)
+    ).stdout.strip()
     assert re.fullmatch(r"[0-9a-f]+", build_id)
 
     out = tmp_path / "dist-symbols"
