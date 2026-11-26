@@ -849,3 +849,68 @@ mod observation_flag_proofs {
         assert!(observation_of(&core, SCOPE_A, "other-session", &id("ada-1")).observe_self);
     }
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R656.5
+#[test]
+fn profile_refusals_change_no_state() {
+    // The six codes are registered once, in the participant table.
+    let registered: Vec<&str> = medulla_types::participant::REFUSALS.iter().map(|code| code.as_str()).collect();
+    for code in [
+        "PROFILE_NOT_FOUND",
+        "PROFILE_NOT_VISIBLE",
+        "PROFILE_REVISION_CONFLICT",
+        "PROFILE_TOOL_NOT_ALLOWED",
+        "DOCUMENT_SET_NOT_FOUND",
+        "DOCUMENT_SET_QUERY_NOT_READ_ONLY",
+    ] {
+        assert_eq!(registered.iter().filter(|held| **held == code).count(), 1, "{code}");
+    }
+
+    let core = GraphCore::new();
+    let iso = isolation();
+    save(&core, &iso, SCOPE_A, "alice", profile(0, vec![])).unwrap();
+    // Every stored byte of the graph, in node-id order.
+    let snapshot = |core: &GraphCore| {
+        let mut ids = core.node_ids();
+        ids.sort();
+        ids.into_iter()
+            .map(|id| {
+                let blob = core.get_node_properties(&id);
+                (id, blob)
+            })
+            .collect::<Vec<_>>()
+    };
+    let before = snapshot(&core);
+
+    // PROFILE_NOT_FOUND: a save derived from a revision of a profile that was never stored.
+    let mut ghost = profile(3, vec![]);
+    ghost.profile_id = "p-ghost".into();
+    let not_found = save(&core, &iso, SCOPE_A, "alice", ghost).unwrap_err();
+    assert!(not_found.starts_with("PROFILE_NOT_FOUND: "), "{not_found}");
+    // PROFILE_REVISION_CONFLICT: a save derived from a stale revision.
+    let conflict = save(&core, &iso, SCOPE_A, "alice", profile(7, vec![])).unwrap_err();
+    assert!(conflict.starts_with("PROFILE_REVISION_CONFLICT: "), "{conflict}");
+    // PROFILE_NOT_VISIBLE: a profile nobody shared with the caller, and another tenant's.
+    let hidden = get(&core, &iso, SCOPE_A, "bob", "p-1").unwrap_err();
+    assert!(hidden.starts_with("PROFILE_NOT_VISIBLE: "), "{hidden}");
+    let foreign = get(&core, &iso, SCOPE_B, "alice", "p-1").unwrap_err();
+    assert!(foreign.starts_with("PROFILE_NOT_VISIBLE: "), "{foreign}");
+    // DOCUMENT_SET_QUERY_NOT_READ_ONLY and DOCUMENT_SET_NOT_FOUND.
+    let not_read_only = admit_put(
+        &core,
+        &iso,
+        SCOPE_A,
+        "alice",
+        &ProfileOp::PutDocumentSet { set: set(DocumentSetKind::SavedQuery("INSERT INTO x VALUES (1)".into())) },
+    )
+    .map(|_| ())
+    .unwrap_err();
+    assert!(not_read_only.starts_with("DOCUMENT_SET_QUERY_NOT_READ_ONLY: "), "{not_read_only}");
+    let absent_set = read_op(&core, &iso, SCOPE_A, "alice", &ProfileOp::GetDocumentSet { set_id: "set-ghost".into() })
+        .map(|_| ())
+        .unwrap_err();
+    assert!(absent_set.starts_with("DOCUMENT_SET_NOT_FOUND: "), "{absent_set}");
+
+    // None of the refusals wrote anything.
+    assert_eq!(snapshot(&core), before);
+}
