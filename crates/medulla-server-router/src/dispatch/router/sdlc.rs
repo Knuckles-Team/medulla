@@ -28,7 +28,7 @@ use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
     handle_project_mode_get, handle_project_mode_set, project_mode_record, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
     check_pull_request_target, pull_request_arguments, pull_request_outcome,
-    ProposalDecision, OPEN_PULL_REQUEST_TOOL,
+    ProposalDecision, OPEN_PULL_REQUEST_TOOL, REPOSITORY_NODE_TYPE, resolve_source_connection, SourceConnection,
     handle_file_defect, handle_get_defect, handle_transition_defect, defect_node_id, defect_from_node,
     DefectFileOutcome, GetDefectReceipt, GetDefectRequest, TransitionDefectRequest, Defect, DefectWrite, FileDefectRequest,
     DEFECT_TYPE, LifecycleRefusal, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalEvidence,
@@ -1452,7 +1452,14 @@ async fn proposal_decide(
         if let (ProposalDecision::Approve, Some(pull_request)) =
             (request.decision, &request.pull_request)
         {
-            match open_pull_request(&target, stored, &request.id, pull_request).await {
+            let opened = match repository_connection(state, &target, &stored.project).await {
+                Ok(connection) => {
+                    open_pull_request(&target, stored, &request.id, &connection, pull_request)
+                        .await
+                }
+                Err(error) => Err(error),
+            };
+            match opened {
                 Ok(address) => receipt.pull_request = Some(address),
                 Err(error) => receipt.pull_request_error = Some(error),
             }
@@ -1469,6 +1476,45 @@ async fn proposal_decide(
     typed_response::<ProposalDecideResult>(target.req_id, result)
 }
 
+/// Read the registered source connection of the proposal's repository from its `Repository`
+/// node (MEDULLA-SDLC-R017.8). The engine asks the graph, never the caller. No visible node of
+/// the tenant for the repository, or a node without a server and repo, is the typed
+/// `SOURCE_CONNECTION_UNKNOWN`; a graph that cannot be read is `SOURCE_CONNECTION_READ_FAILED`.
+async fn repository_connection(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    repository: &str,
+) -> Result<SourceConnection, PullRequestError> {
+    let tenant = target.verified.tenant();
+    let (core, authority) = {
+        let current = timed_read(state).await;
+        authorized_graph_read(
+            &current,
+            target.graph,
+            target.verified,
+            &format!("GRAPH_NOT_FOUND: {}", target.graph),
+        )
+        .map_err(|why| PullRequestError {
+            code: "SOURCE_CONNECTION_READ_FAILED".to_owned(),
+            message: why,
+        })?
+    };
+    let node = core
+        .get_nodes_by_label(REPOSITORY_NODE_TYPE, MAX_PROPOSALS_READ)
+        .into_iter()
+        .filter(|(node_id, properties)| {
+            authority.can_see_node(properties, core.is_schema_node(node_id))
+        })
+        .filter_map(|(_, properties)| {
+            medulla_types::msgpack::decode_property_value(&properties).ok()
+        })
+        .find(|node| {
+            node.get("name").and_then(Value::as_str) == Some(repository)
+                && node.get("tenant_id").and_then(Value::as_str) == Some(tenant)
+        });
+    resolve_source_connection(repository, node.as_ref())
+}
+
 /// The code of an outcome that could not be written back to the proposal.
 const PULL_REQUEST_RECORD_FAILED: &str = "PULL_REQUEST_RECORD_FAILED";
 
@@ -1478,6 +1524,7 @@ async fn open_pull_request(
     target: &SdlcTarget<'_>,
     stored: &StoredProposal,
     proposal_id: &str,
+    connection: &SourceConnection,
     pull_request: &PullRequestTarget,
 ) -> Result<String, PullRequestError> {
     let kind = serde_json::to_value(stored.entry.kind)
@@ -1485,6 +1532,7 @@ async fn open_pull_request(
         .and_then(|value| value.as_str().map(str::to_owned))
         .unwrap_or_default();
     let arguments = pull_request_arguments(
+        connection,
         pull_request,
         proposal_id,
         &kind,
@@ -1492,7 +1540,7 @@ async fn open_pull_request(
         &stored.statement,
     );
     let reply = run_connector_tool(
-        pull_request.server.clone(),
+        connection.server.clone(),
         OPEN_PULL_REQUEST_TOOL.to_owned(),
         arguments,
         target.verified.agent_id().to_owned(),

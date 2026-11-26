@@ -3,7 +3,10 @@
 L4: every call goes through the running engine. The test engine has no connector
 gateway, so the `open_pull_request` call fails with the typed
 `CONNECTOR_PORT_UNAVAILABLE`: the accept still commits, the receipt carries the typed
-error and the proposal records it.
+error and the proposal records it. The caller passes only `head` and `base`; the engine
+resolves the connector server from the repository node's registered source
+connection, and a repository with none gets `SOURCE_CONNECTION_UNKNOWN` on the
+receipt.
 """
 
 from __future__ import annotations
@@ -15,17 +18,12 @@ from typing import Any
 
 import msgpack
 import pytest
-from conftest import request_context
+from conftest import TEST_TENANT, request_context
 
 from medulla.generated.digest import framed_sha256
 
 GRAPH = "__commons__"
-TARGET = {
-    "server": "scm",
-    "repo": "org/demo",
-    "head": "proposal/1",
-    "base": "main",
-}
+TARGET = {"head": "proposal/1", "base": "main"}
 
 
 def _body(payload: Any) -> dict[str, Any]:
@@ -85,6 +83,25 @@ async def _decide(client: Any, proposal_id: str, decision: str, **extra: Any) ->
     return _body(await client._send("ProposalDecide", {"request": request}, GRAPH))
 
 
+async def _register_connection(client: Any, project: str) -> None:
+    """Register the repository node's source connection (server and repo)."""
+    properties = {
+        "type": "Repository",
+        "name": project,
+        "tenant_id": TEST_TENANT,
+        "source_connection_server": "scm",
+        "source_connection_repo": "org/demo",
+    }
+    await client._send(
+        "AddNode",
+        {
+            "node_id": f"repository:{project}",
+            "properties_msgpack": msgpack.packb(properties, use_bin_type=True),
+        },
+        GRAPH,
+    )
+
+
 async def _node(client: Any, node_id: str) -> dict[str, Any]:
     return _body(await client._send("GetNodeProperties", {"node_id": node_id}, GRAPH))
 
@@ -105,13 +122,25 @@ async def test_accept_commits_and_a_failed_pull_request_is_a_typed_error(
             await _decide(client, first, "approve", pull_request=broken)
         assert (await _node(client, first))["status"] == "proposed"
 
-        # The accept commits; the pull request fails with a typed error on the receipt.
+        # No registered source connection: the accept commits and the receipt says why.
         # spec: MEDULLA-SDLC-R017.8
         receipt = await _decide(client, first, "approve", pull_request=TARGET)
         assert receipt["state"] == "approved"
         assert "pull_request" not in receipt
-        assert receipt["pull_request_error"]["code"] == "CONNECTOR_PORT_UNAVAILABLE"
+        assert receipt["pull_request_error"]["code"] == "SOURCE_CONNECTION_UNKNOWN"
         stored = await _node(client, first)
+        assert stored["status"] == "approved"
+        assert stored["pull_request_error_code"] == "SOURCE_CONNECTION_UNKNOWN"
+
+        # With a registered connection the engine resolves the server itself; the test
+        # engine has no gateway, so the call fails with the typed port error.
+        project, third = await _open_proposal(client, suffix + "c")
+        await _register_connection(client, project)
+        receipt = await _decide(client, third, "approve", pull_request=TARGET)
+        assert receipt["state"] == "approved"
+        assert "pull_request" not in receipt
+        assert receipt["pull_request_error"]["code"] == "CONNECTOR_PORT_UNAVAILABLE"
+        stored = await _node(client, third)
         assert stored["status"] == "approved"
         assert stored["pull_request"] is None
         assert stored["pull_request_error_code"] == "CONNECTOR_PORT_UNAVAILABLE"

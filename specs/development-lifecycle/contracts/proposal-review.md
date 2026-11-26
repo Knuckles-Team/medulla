@@ -17,12 +17,12 @@ Repository: arbora, row `ARBORA-OPS-R896.5` (goal, proposal list and decision op
 | Method | Request | Answer |
 |---|---|---|
 | `ProposalList` | `{repo, state?, kind?}` | `[{id, kind, target, evidence[], state}]` |
-| `ProposalDecide` | `{id, decision, reviewer, reason, pull_request?: {server, repo, head, base}}` | `{id, state, pull_request?, pull_request_error?: {code, message}}` |
+| `ProposalDecide` | `{id, decision, reviewer, reason, pull_request?: {head, base}}` | `{id, state, pull_request?, pull_request_error?: {code, message}}` |
 | `GoalPut` | `{repo, statement, targets[]}` | `{goal_id}` |
 
 `kind` is one of twelve values. Row kinds: add, update, split, prune and retire. Plan kind: edit plan section. Task kinds: add, reorder and split. Other kinds: add contract, resolve clarification and tune knob. `decision` is `approve` or `reject`. `state` is `open`, `approved`, `rejected` or `landed`; an open proposal is stored with status `proposed`. A proposal reaches `landed` only after its pull request merges.
 
-An approval that carries `pull_request` opens the pull request after the accept commits, through the connector gateway tool `open_pull_request`. The answer holds the pull request address, or `pull_request_error`, whose `code` is the connector's own code or one of `CONNECTOR_UNREACHABLE`, `CONNECTOR_REPLY_INVALID`, `CONNECTOR_FAILED`, `CONNECTOR_PORT_UNAVAILABLE`, `PULL_REQUEST_REPLY_INVALID` and `PULL_REQUEST_RECORD_FAILED`. A failure never undoes the accept.
+An approval that carries `pull_request` opens the pull request after the accept commits, through the connector gateway tool `open_pull_request`. The answer holds the pull request address, or `pull_request_error`, whose `code` is the connector's own code or one of `SOURCE_CONNECTION_UNKNOWN` (the repository node has no registered source connection; the engine resolves the server and repo, the caller passes only `head` and `base`), `CONNECTOR_UNREACHABLE`, `CONNECTOR_REPLY_INVALID`, `CONNECTOR_FAILED`, `CONNECTOR_PORT_UNAVAILABLE`, `PULL_REQUEST_REPLY_INVALID` and `PULL_REQUEST_RECORD_FAILED`. A failure never undoes the accept.
 
 ## Refusal codes
 

@@ -19442,11 +19442,14 @@ class MedullaClient:
         ``request`` carries ``id`` (from :meth:`proposal_list`), ``decision``
         (``approve`` or ``reject``), ``reviewer`` and ``reason``. The answer holds
         ``id``, the new ``state`` and, once a pull request exists, ``pull_request``.
-        An approval that carries ``pull_request`` (``server``, ``repo``, ``head`` and
-        ``base`` of the SCM connector) opens the pull request through the connector
-        gateway after the accept commits (MEDULLA-SDLC-R017.8): the answer holds its
-        ``pull_request`` address, or ``pull_request_error`` (``code`` and ``message``)
-        when the call failed, and the accept stays committed. A blank target field
+        An approval that carries ``pull_request`` (only ``head`` and ``base``) opens
+        the pull request through the connector gateway after the accept commits
+        (MEDULLA-SDLC-R017.8). The engine resolves the connector server and repo
+        from the repository node's registered source connection; with none the
+        receipt gets ``pull_request_error`` code ``SOURCE_CONNECTION_UNKNOWN``. The
+        answer holds the ``pull_request`` address, or ``pull_request_error``
+        (``code`` and ``message``) when the call failed, and the accept stays
+        committed. A blank target field
         refuses ``INVALID_ARGUMENT``. An unknown id refuses ``PROPOSAL_NOT_FOUND``; a
         proposal that is not open refuses ``PROPOSAL_NOT_OPEN``.
         """

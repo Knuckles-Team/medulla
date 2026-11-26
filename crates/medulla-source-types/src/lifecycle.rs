@@ -1079,21 +1079,63 @@ impl ProposalDecision {
     }
 }
 
-/// Where an approved proposal's pull request is opened (MEDULLA-SDLC-R017.8): the SCM
-/// connector server, the repository it hosts, the branch that holds the change and the branch
-/// it merges into.
+/// Where an approval opens its pull request (MEDULLA-SDLC-R017.8): the two branches only. The
+/// connector server and the repository on it are never the caller's to name; the engine reads
+/// them from the repository node's registered source connection ([`SourceConnection`]).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct PullRequestTarget {
-    /// The registered SCM connector server.
-    pub server: String,
-    /// The repository on that server.
-    pub repo: String,
     /// The branch that holds the change.
     pub head: String,
     /// The branch the pull request merges into.
     pub base: String,
+}
+
+/// The registered source connection of one repository node: the SCM connector server that
+/// serves it and the repository's name on that server (MEDULLA-SDLC-R017.8). It lives on the
+/// `Repository` node as the properties `source_connection_server` and `source_connection_repo`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SourceConnection {
+    pub server: String,
+    pub repo: String,
+}
+
+/// The node type of a repository the repository-manager connector ingested.
+pub const REPOSITORY_NODE_TYPE: &str = "Repository";
+/// The `Repository` node property that names the connector server.
+pub const SOURCE_CONNECTION_SERVER_PROPERTY: &str = "source_connection_server";
+/// The `Repository` node property that names the repository on that server.
+pub const SOURCE_CONNECTION_REPO_PROPERTY: &str = "source_connection_repo";
+/// The code of a pull request whose repository has no registered source connection.
+pub const SOURCE_CONNECTION_UNKNOWN: &str = "SOURCE_CONNECTION_UNKNOWN";
+
+/// Read the registered source connection from a stored `Repository` node (`None` when the
+/// repository has no node). A missing node, or a node whose server or repo is absent or blank,
+/// is the typed error `SOURCE_CONNECTION_UNKNOWN`: a missing target is never silent.
+pub fn resolve_source_connection(
+    repository: &str,
+    node: Option<&serde_json::Value>,
+) -> Result<SourceConnection, PullRequestError> {
+    let text = |key: &str| {
+        node.and_then(|node| node.get(key))
+            .and_then(serde_json::Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(str::to_owned)
+    };
+    match (
+        text(SOURCE_CONNECTION_SERVER_PROPERTY),
+        text(SOURCE_CONNECTION_REPO_PROPERTY),
+    ) {
+        (Some(server), Some(repo)) => Ok(SourceConnection { server, repo }),
+        _ => Err(PullRequestError {
+            code: SOURCE_CONNECTION_UNKNOWN.to_owned(),
+            message: format!("repository {repository} has no registered source connection"),
+        }),
+    }
 }
 
 /// Why an approved proposal has no pull request (MEDULLA-SDLC-R017.8): a stable code and a
@@ -1143,14 +1185,14 @@ pub const PULL_REQUEST_REPLY_INVALID: &str = "PULL_REQUEST_REPLY_INVALID";
 /// The longest message a pull request error keeps, in characters.
 pub const PULL_REQUEST_MESSAGE_MAX_CHARS: usize = 256;
 
-/// Check a pull request target: all four fields named. A blank one refuses `INVALID_ARGUMENT`.
+/// Check a pull request target: both branches named. A blank one refuses `INVALID_ARGUMENT`.
 pub fn check_pull_request_target(target: &PullRequestTarget) -> Result<(), LifecycleRefusal> {
-    let blank = [&target.server, &target.repo, &target.head, &target.base]
+    let blank = [&target.head, &target.base]
         .iter()
         .any(|field| field.trim().is_empty());
     if blank {
         return Err(LifecycleRefusal::InvalidArgument(
-            "a pull request target names its server, repo, head and base".to_owned(),
+            "a pull request target names its head and base".to_owned(),
         ));
     }
     Ok(())
@@ -1159,6 +1201,7 @@ pub fn check_pull_request_target(target: &PullRequestTarget) -> Result<(), Lifec
 /// The arguments of the `open_pull_request` tool: the repository, the two branches and a title
 /// and body taken from the proposal (`kind` is its wire name).
 pub fn pull_request_arguments(
+    connection: &SourceConnection,
     target: &PullRequestTarget,
     proposal_id: &str,
     kind: &str,
@@ -1168,7 +1211,7 @@ pub fn pull_request_arguments(
     let title = format!("{kind}: {proposal_target}");
     let body = format!("{statement}\n\nProposal: {proposal_id}");
     [
-        ("repo", target.repo.as_str()),
+        ("repo", connection.repo.as_str()),
         ("head", target.head.as_str()),
         ("base", target.base.as_str()),
         ("title", title.as_str()),

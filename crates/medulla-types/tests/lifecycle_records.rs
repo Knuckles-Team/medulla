@@ -469,30 +469,50 @@ fn project_mode_get_reads_the_record_and_defaults_to_reference() {
 fn approval_pull_request_arguments_and_outcome_are_typed() {
     use medulla_source_types::lifecycle::{
         check_pull_request_target, pull_request_arguments, pull_request_outcome,
-        ProposalDecideReceipt, ProposalState, PullRequestError,
-        PullRequestTarget, PULL_REQUEST_REPLY_INVALID,
+        resolve_source_connection, ProposalDecideReceipt, ProposalState, PullRequestError,
+        PullRequestTarget, SourceConnection, PULL_REQUEST_REPLY_INVALID,
+        SOURCE_CONNECTION_UNKNOWN,
     };
 
+    // The caller names the branches only; the connection is read from the repository node.
     let target = PullRequestTarget {
-        server: "scm".into(),
-        repo: "org/demo".into(),
         head: "proposal/1".into(),
         base: "main".into(),
     };
     check_pull_request_target(&target).unwrap();
-    for blank in 0..4 {
+    let node = serde_json::json!({
+        "type": "Repository",
+        "name": "demo",
+        "source_connection_server": "scm",
+        "source_connection_repo": "org/demo",
+    });
+    let connection = resolve_source_connection("demo", Some(&node)).unwrap();
+    assert_eq!(
+        connection,
+        SourceConnection { server: "scm".into(), repo: "org/demo".into() }
+    );
+    // A missing node, a missing field or a blank one is never silent.
+    let blank_server = serde_json::json!({
+        "source_connection_server": " ",
+        "source_connection_repo": "org/demo",
+    });
+    let no_repo = serde_json::json!({"source_connection_server": "scm"});
+    for unknown in [None, Some(&blank_server), Some(&no_repo)] {
+        let error = resolve_source_connection("demo", unknown).unwrap_err();
+        assert_eq!(error.code, SOURCE_CONNECTION_UNKNOWN);
+        assert!(error.message.contains("demo"));
+    }
+    for blank in 0..2 {
         let mut broken = target.clone();
         match blank {
-            0 => broken.server = " ".into(),
-            1 => broken.repo = String::new(),
-            2 => broken.head = " ".into(),
+            0 => broken.head = " ".into(),
             _ => broken.base = String::new(),
         }
         let refusal = check_pull_request_target(&broken).unwrap_err();
         assert_eq!(refusal.code(), "INVALID_ARGUMENT");
     }
 
-    let arguments = pull_request_arguments(&target, "proposal:1", "add_row", "R1", "Add a row.");
+    let arguments = pull_request_arguments(&connection, &target, "proposal:1", "add_row", "R1", "Add a row.");
     assert_eq!(arguments["repo"], "org/demo");
     assert_eq!(arguments["head"], "proposal/1");
     assert_eq!(arguments["base"], "main");
