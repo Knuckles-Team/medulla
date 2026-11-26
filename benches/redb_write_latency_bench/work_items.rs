@@ -156,6 +156,7 @@ fn run_id(i: usize) -> String {
     format!("run-{i:05}")
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R028.4.2
 /// Recover owner-bound original submissions from a store of 10 000 WorkItems.
 pub fn run_owner_recovery(samples: usize) -> GroupResult {
     let temp = test_shard::open("bench-run-owner-recovery");
@@ -232,6 +233,7 @@ fn plan_request(
     }
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R028.5.4
 /// Publish and read back a 64-task current plan on one claimed run.
 pub fn current_plan_publication_readback(samples: usize) -> GroupResult {
     let temp = test_shard::open("bench-current-plan");
@@ -436,6 +438,7 @@ fn paired_sample(sample: usize) -> f64 {
     elapsed
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R039.4.2
 /// Paired pending consumption: three rows in one transaction, 64 KiB preimages.
 pub fn paired_pending_consumption(samples: usize) -> GroupResult {
     let measured: Vec<f64> = (0..samples).map(paired_sample).collect();

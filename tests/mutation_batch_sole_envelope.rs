@@ -128,6 +128,7 @@ async fn run_members(state: &test_support::SharedState, round: &str, base: u64) 
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R043.100.5
+// spec: MEDULLA-DURABLE-KERNEL-R043.101
 #[tokio::test]
 async fn every_store_member_replays_its_terminal_outcome_across_restart() {
     let dir = test_support::fresh_dir("medulla-sole-envelope");
