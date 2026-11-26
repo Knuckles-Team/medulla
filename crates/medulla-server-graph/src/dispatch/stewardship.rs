@@ -21,8 +21,8 @@
 use std::sync::Arc;
 
 use medulla_catalog_types::stewardship::{
-    ChangeRequest, ChangeRequestState, StewardRole, StewardshipAssignment, StewardshipOp,
-    StewardshipReceipt, StewardshipScope, StewardshipTarget,
+    ChangeRequest, StewardRole, StewardshipAssignment, StewardshipOp, StewardshipReceipt,
+    StewardshipScope, StewardshipTarget,
 };
 use medulla_core::stewardship::{
     authorize_review, certify, governing, open_change_request, reviewers, transition,
@@ -34,6 +34,7 @@ use medulla_protocol_types::result_contract::ingestion::{
     StewardshipMarkCritical, StewardshipReview, StewardshipRevoke, StewardshipSetTrustFlag,
 };
 use medulla_server_api::state::ServerState;
+use medulla_types::change_request_machine::ChangeRequestState;
 use medulla_types::contract::ServerErrorCode;
 use tokio::sync::RwLock;
 

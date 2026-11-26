@@ -4,11 +4,12 @@
 
 use super::*;
 use medulla_catalog_types::data_product::{
-    AccessRequest, AccessRequestState, DataContract, DataProduct, ProductPort, ProductPortKind,
+    AccessRequest, DataContract, DataProduct, ProductPort, ProductPortKind,
 };
 use medulla_catalog_types::stewardship::{
     StewardRole, StewardshipAssignment, StewardshipOp, StewardshipScope,
 };
+use medulla_types::access_request_machine::AccessRequestState;
 
 const TENANT: &str = "tenant-shared";
 const OWNER: &str = "usr:owner";

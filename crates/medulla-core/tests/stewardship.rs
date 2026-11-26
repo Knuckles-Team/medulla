@@ -1,12 +1,11 @@
 //! Stewardship rules (MEDULLA-TYPED-PACKS-R802.2).
 
-use medulla_catalog_types::stewardship::{
-    ChangeRequestState, StewardRole, StewardshipAssignment, StewardshipScope,
-};
+use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use medulla_core::stewardship::{
     certify, open_change_request, resolve, reviewers, transition, StewardshipError, TargetScopes,
     CERTIFICATION_TTL_DAYS_DEFAULT,
 };
+use medulla_types::change_request_machine::ChangeRequestState;
 
 fn assign(scope: StewardshipScope, role: StewardRole, who: &str) -> StewardshipAssignment {
     StewardshipAssignment {

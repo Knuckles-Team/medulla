@@ -101,7 +101,7 @@ pub fn product_schema_digest(dataset_digests: &[String]) -> String {
     format!("sha256:{}", hex::encode(hash.finalize()))
 }
 
-pub use medulla_types::access_request_machine::AccessRequestState;
+use medulla_types::access_request_machine::AccessRequestState;
 
 /// A consumer's governed request to use a product.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

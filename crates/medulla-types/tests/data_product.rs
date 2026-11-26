@@ -1,9 +1,10 @@
 //! Data product, contract and access-request records (MEDULLA-TYPED-PACKS-R805.1).
 
 use medulla_catalog_types::data_product::{
-    parse_product_version, AccessRequest, AccessRequestState, ContractPromise, ContractViolation,
-    DataContract, DataProduct, ProductPort, ProductPortKind, ACCESS_PURPOSE_MISSING,
+    parse_product_version, AccessRequest, ContractPromise, ContractViolation, DataContract,
+    DataProduct, ProductPort, ProductPortKind, ACCESS_PURPOSE_MISSING,
 };
+use medulla_types::access_request_machine::AccessRequestState;
 
 fn round_trip<T>(value: &T) -> T
 where

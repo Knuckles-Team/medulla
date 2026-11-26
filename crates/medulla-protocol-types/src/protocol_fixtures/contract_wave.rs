@@ -280,8 +280,9 @@ fn glossary_ops() -> Vec<(
     medulla_catalog_types::glossary::GlossaryOp,
 )> {
     use medulla_catalog_types::glossary::{
-        GlossaryOp, GlossaryTerm, GlossaryTermEntry, GlossaryTermStatus, GlossaryTransition,
+        GlossaryOp, GlossaryTerm, GlossaryTermEntry, GlossaryTransition,
     };
+    use medulla_types::glossary_term_machine::GlossaryTermStatus;
     let term = GlossaryTerm {
         scheme: "urn:scheme:finance".to_string(),
         pref_label: "Revenue".to_string(),

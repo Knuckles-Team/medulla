@@ -3,10 +3,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_catalog_types::connector_pack::contract_version::{
     ContractBreak, ContractBreakKind, PackContractVersion,
 };
-use medulla_catalog_types::stewardship::{
-    ChangeRequestState, StewardRole, StewardshipAssignment, StewardshipScope,
-};
+use medulla_catalog_types::stewardship::{StewardRole, StewardshipAssignment, StewardshipScope};
 use medulla_core::stewardship::TargetScopes;
+use medulla_types::change_request_machine::ChangeRequestState;
 
 use super::*;
 

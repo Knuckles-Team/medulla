@@ -16,8 +16,8 @@ use super::share::{
 };
 use super::*;
 use medulla_catalog_types::data_product::{
-    parse_product_version, AccessRequest, AccessRequestState, DataProductError,
-    DataProductRegistered, ACCESS_PURPOSE_MISSING,
+    parse_product_version, AccessRequest, DataProductError, DataProductRegistered,
+    ACCESS_PURPOSE_MISSING,
 };
 use medulla_core::stewardship::{reviewers, TargetScopes};
 use medulla_identity_types::acl::ShareGrant;
@@ -32,6 +32,7 @@ use medulla_protocol_types::result_contract::storage::{
 use medulla_server_graph::dispatch::graph_client::GraphTarget;
 use medulla_server_graph::dispatch::shared::typed_response;
 use medulla_types::access_request_machine::AccessRequestEvent;
+use medulla_types::access_request_machine::AccessRequestState;
 use medulla_types::contract::ServerErrorCode;
 
 /// Serve one data product method; hands any other method back.

@@ -1,10 +1,11 @@
 //! Glossary rules (MEDULLA-TYPED-PACKS-R801.2).
 
-use medulla_catalog_types::glossary::{GlossaryTerm, GlossaryTermStatus};
+use medulla_catalog_types::glossary::GlossaryTerm;
 use medulla_core::glossary::{
     bind, check_broader_acyclic, label_matches, replacement, GlossaryError, GlossaryLabelIndex,
     PutScheme, DEFINES_ASSET,
 };
+use medulla_types::glossary_term_machine::GlossaryTermStatus;
 
 const SCHEME: &str = "http://example.org/scheme/finance";
 
@@ -88,8 +89,9 @@ fn alt_label_search_finds_term_and_deprecated_names_replacement() {
 // spec: MEDULLA-TYPED-PACKS-R801.4
 #[test]
 fn cycle_taken_label_and_missing_review_carry_their_codes() {
-    use medulla_catalog_types::stewardship::{ChangeRequest, ChangeRequestState};
+    use medulla_catalog_types::stewardship::ChangeRequest;
     use medulla_core::glossary::{check_broader_acyclic_over, check_label_free, require_review};
+    use medulla_types::change_request_machine::ChangeRequestState;
     use medulla_types::contract::ServerErrorCode;
 
     let stored = vec![

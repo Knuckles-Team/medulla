@@ -9,7 +9,8 @@
 use std::collections::{BTreeMap, HashMap, HashSet};
 
 use medulla_catalog_types::asset_usage::UsageKnob;
-use medulla_catalog_types::glossary::{GlossaryTerm, GlossaryTermStatus};
+use medulla_catalog_types::glossary::GlossaryTerm;
+use medulla_types::glossary_term_machine::GlossaryTermStatus;
 
 /// `:definesAsset`: links a term to an asset that serves the class the term names.
 pub const DEFINES_ASSET: &str = medulla_types::ontology_iri!("core#definesAsset");
@@ -318,7 +319,7 @@ pub fn require_review(
     iri: &str,
     request: Option<&medulla_catalog_types::stewardship::ChangeRequest>,
 ) -> Result<(), GlossaryError> {
-    use medulla_catalog_types::stewardship::ChangeRequestState;
+    use medulla_types::change_request_machine::ChangeRequestState;
     match request {
         Some(request)
             if request.target == iri

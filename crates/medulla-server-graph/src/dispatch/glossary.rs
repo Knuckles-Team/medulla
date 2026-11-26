@@ -26,7 +26,7 @@ use std::sync::Arc;
 
 use medulla_catalog_types::glossary::{
     DescriptionProposal, DescriptionState, GlossaryOp, GlossaryReceipt, GlossaryTerm,
-    GlossaryTermEntry, GlossaryTermStatus, CAT_GLOSSARY_TERM, SKOS_IN_SCHEME,
+    GlossaryTermEntry, CAT_GLOSSARY_TERM, SKOS_IN_SCHEME,
 };
 use medulla_core::glossary::{
     bind, check_broader_acyclic_over, check_label_free, require_review, GlossaryError, PutScheme,
@@ -37,6 +37,7 @@ use medulla_protocol_types::result_contract::ingestion::{
     GlossaryReviewDescription, GlossaryTransition,
 };
 use medulla_server_api::state::ServerState;
+use medulla_types::glossary_term_machine::GlossaryTermStatus;
 use tokio::sync::RwLock;
 
 use super::graph_client::{

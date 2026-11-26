@@ -7,9 +7,10 @@
 //! never the handler crate.
 
 use medulla_catalog_types::stewardship::{
-    Certification, ChangeRequest, ChangeRequestState, StewardRole, StewardshipAssignment,
-    StewardshipFieldError, StewardshipScope, MAX_CHANGE_REQUEST_REVIEWERS,
+    Certification, ChangeRequest, StewardRole, StewardshipAssignment, StewardshipFieldError,
+    StewardshipScope, MAX_CHANGE_REQUEST_REVIEWERS,
 };
+use medulla_types::change_request_machine::ChangeRequestState;
 use medulla_types::change_request_machine::CHANGE_REQUEST_MACHINE;
 
 /// `knob stewardship.certification_ttl_days` default.

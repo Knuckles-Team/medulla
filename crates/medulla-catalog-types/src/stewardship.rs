@@ -51,7 +51,7 @@ pub struct StewardshipAssignment {
     pub principal: String,
 }
 
-pub use medulla_types::change_request_machine::ChangeRequestState;
+use medulla_types::change_request_machine::ChangeRequestState;
 
 /// A proposed change to a governed asset.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

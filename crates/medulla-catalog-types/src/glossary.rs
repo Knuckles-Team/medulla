@@ -22,7 +22,7 @@ pub const DCT_IS_REPLACED_BY: &str = "http://purl.org/dc/terms/isReplacedBy";
 /// The class every term node carries.
 pub const CAT_GLOSSARY_TERM: &str = medulla_types::ontology_iri!("catalog#CatalogGlossaryTerm");
 
-pub use medulla_types::glossary_term_machine::GlossaryTermStatus;
+use medulla_types::glossary_term_machine::GlossaryTermStatus;
 
 /// One business glossary term.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

@@ -12,8 +12,9 @@ use std::hint::black_box;
 use std::time::{Duration, Instant};
 
 use criterion::{criterion_group, Criterion};
-use medulla_catalog_types::glossary::{GlossaryTerm, GlossaryTermStatus};
+use medulla_catalog_types::glossary::GlossaryTerm;
 use medulla_core::glossary::{label_matches, GlossaryLabelIndex};
+use medulla_types::glossary_term_machine::GlossaryTermStatus;
 use serde_json::json;
 
 const TERMS: usize = 100_000;

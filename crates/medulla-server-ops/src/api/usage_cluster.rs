@@ -185,7 +185,7 @@ mod tests {
         assert_eq!(found[0].request.reviewers, vec!["a"]);
         assert_eq!(
             found[0].request.state,
-            medulla_catalog_types::stewardship::ChangeRequestState::Open
+            medulla_types::change_request_machine::ChangeRequestState::Open
         );
     }
 }
