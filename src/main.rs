@@ -329,7 +329,7 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
             // builds its cache.
             #[cfg(feature = "result-cache")]
             medulla_query_cache::result_cache::install_tier_policy(
-                medulla_query_cache::result_cache::TierPolicy {
+                medulla_kvcache::TierPolicy {
                     max_bytes: knobs.kvcache_answer_max_bytes,
                     min_worth: knobs.kvcache_min_worth,
                 },

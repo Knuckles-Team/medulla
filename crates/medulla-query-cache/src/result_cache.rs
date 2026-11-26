@@ -52,7 +52,6 @@ use parking_lot::Mutex;
 use crate::dep_scope::DepSet;
 
 pub use admission::{dep_generations, install_tier_policy, DepAdmission, DEFAULT_TIER_POLICY};
-pub use medulla_kvcache::TierPolicy;
 
 mod admission;
 mod dependency;
