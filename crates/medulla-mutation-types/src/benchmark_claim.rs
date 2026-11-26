@@ -23,6 +23,9 @@ pub enum BenchmarkComparison {
     /// A converged graph, vector, SQL and time-series benchmark against
     /// PostgreSQL with AGE, pgvector and TimescaleDB.
     ConvergedGraphVectorSqlTimeseries,
+    /// NDCG of item recommendation with pause steps against the same ranking
+    /// without them (MEDULLA-DECISION-ENGINE-R175.5).
+    NdcgItemRecommendation,
 }
 
 /// A benchmark report for one named comparison. Never itself runs a

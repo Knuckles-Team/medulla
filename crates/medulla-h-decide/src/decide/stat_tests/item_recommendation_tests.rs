@@ -267,5 +267,19 @@ mod served {
             .filter(|p| p.fact.starts_with("item:"))
             .all(|p| p.class == PremiseClass::Observation));
         assert_eq!(record.evidence_class, EvidenceClass::Observation);
+
+        // The NDCG reproduction persists as a benchmark claim: the ranking with
+        // pause steps is at least as good as the one without them.
+        let without = super::ndcg(&super::ranked_ids(0), "c0-");
+        let with = super::ndcg(&super::ranked_ids(2), "c0-");
+        let claim = medulla_mutation_types::benchmark_claim::BenchmarkClaim {
+            comparison:
+                medulla_mutation_types::benchmark_claim::BenchmarkComparison::NdcgItemRecommendation,
+            configuration: "4 clusters of 6 items, top 6, 2 levels of 4 codes, 0 versus 2 pause steps"
+                .to_string(),
+            measured_result: format!("ndcg@6 with pause steps {with:.6}, without {without:.6}"),
+            passed: with >= without,
+        };
+        assert_eq!(claim.accept_as_superiority_claim(), Ok(()));
     }
 }
