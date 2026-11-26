@@ -47,62 +47,34 @@ Run this before any code. Full table and gates: the Spec-driven development sect
 
 Never write code for a row that is not SPECIFIED. Feature directories use the stable spec ID, never a numbered prefix. The state is computed from rows, `Spec:` trailers and test bindings; never write `status.json` or a `Status:` line.
 
-## Rapid delivery: the 5-minute contract
+## Delivery contract
 
-Specs are already designed. The work is implementation, delivered in very small, continuously landed slices.
+Specs are already designed. The work is implementation.
 
-**Extend first (anti-sprawl)**
-- Before any code change, find the spec row that owns the behavior: `git grep -n "<term>" -- specs`. Cite its ID in the commit `Spec:` trailer.
-- Before any new spec text, extend the owning spec: a child row (`R012.4`), a new rollup at the end of that spec, or a dated entry in the `plan.md` section "Amendments". Create a new spec only for a capability that no spec owns, and record the search in "Why a new spec".
-- Audits, reviews, gap analyses and carry-overs never get a spec directory. Their findings land in the spec that owns the row; a finding against another repository lands in that repository's spec.
-- Before any new function, module, planner, selector or store, search for the existing one and reuse it. A second implementation of an owned capability is a defect, not a delivery.
-- The rules are in `specs/README.md`. The `spec-standard` gate enforces the names, file set, title and index.
+**A row is delivered when**
+- its behaviour is fully implemented, as the row says;
+- it is wired to its production entry point (a production caller exists outside the new code and its tests);
+- every test level its test-spec names passes;
+- the tests are bound to the row;
+- the gates verify it.
 
-**Time and size**
-- A writer delivers one item (at most 8 rows of one served-method slice) and pushes it without building or testing; no writer runs longer than 5 minutes of active work, and the orchestrator dispatches the next item to a fresh writer. One PR covers one green item or one green train of 20 to 100 rows.
-- Self-timer (hard): run `date +%s > /tmp/agent-start-$$` as your FIRST command, and before every later step check elapsed with `echo $(( $(date +%s) - $(cat /tmp/agent-start-*) ))`. At 300 s, stop starting new work. At 480 s, commit what passes, push it, open the PR, report and STOP. Never exceed 600 s. Keep installed commit/push hooks enabled; use the immutable-range publication procedure below and report required gate time separately.
-- CI turns around in 5 minutes or less. PR CI runs the fast subset: lint, type check, the spec check, and only the tests and crates the diff touches. Pushes to main run the full suite.
-- CI timer (hard): every PR-path job carries `timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 60 }}`, so a PR gate is killed at 10 minutes and a slow gate shows up as a failure instead of a silent queue.
-- Never spawn sub-agents from a delivery agent.
+There is no time limit, no size limit per agent or per change, and no rule about how many agents deliver a row.
 
-**Investigation budget**
-- At most 2 minutes and about 10 tool calls of reading before the first edit, and at most about 25 tool calls per PR.
-- If the change is not clear by then, ship the `.1` slice (typed model plus refusal test) or skip the row with a one-line note. Do not write deferral essays.
-- Trust the orchestrator's evidence and ID list; do not re-verify it.
-
-**Sizing (deterministic)**
-- Split a requirement when its size score is above 6, it names more than 2 code roots, or it is cross-repo. Children are `<ID>.<n>`, producer first.
-- Net-new work is sliced, never skipped: `.1` typed model plus validation and refusal tests, `.2` the one entry point that uses it, `.3`+ each further behavior.
-- Cross-repo moves split into one child per repo: the destination copies the behavior first, then the source switches importers and deletes.
-
-**Specs update themselves (land VERIFIED, not just LANDED)**
-- Every commit that delivers a requirement ends with the trailer `Spec: <ID>[, <ID>...]`. A commit that touches code without delivering one says `Spec: none (ci|deps|refactor|fix-forward)`.
-- Every delivered ID gets at least one test bound to it in the same PR. Python: `@pytest.mark.spec("<ID>")`. Rust/TypeScript: a `// spec: <ID>` line directly above the test.
-- Never write `status.json`; the state is computed (`pipelines-hook spec-status`). Never write placeholder SHAs. If the work is only part of a requirement, decompose it into `<ID>.<n>` children first and deliver whole children.
-- Write the marker with the literal ID, never a variable. Put `Spec:` and `Co-Authored-By:` on consecutive lines in the last paragraph of the commit message, or `Spec:` is not read as a trailer.
-- The generator applies the rules. Run `pipelines-hook spec-status` to see each row's state.
-
-**Delivered means the row's acceptance is met**
-- Never delete or stub out behaviour whose replacement is not wired. Never make a caller "fail closed" in place of repointing it. Never substitute a scope, weaken an assertion or add an allowlist entry to pass a gate.
-- If the replacement lives in another repository, do not deliver: record the blocker in the row, name the missing capability, and stop. The orchestrator adds the row in the owning repository.
-- Never re-add a path that another requirement retired; report the conflict.
-- Valid outcomes are DELIVERED (with a bound test), SPLIT, BLOCKED and GAP (a "landed" row that is not really delivered). A half-delivery is not an outcome.
-
-**Where progress shows**
-- The repository's spec-delivery page computes each state at read time from rows, `Spec:` trailers and test bindings. SPECIFIED is written, LANDED is on main, VERIFIED is on main with a bound test.
+**Recommendations (optional)**
+- Extend first: find the spec row that owns the behaviour (`git grep -n "<term>" -- specs`), cite its ID in the commit `Spec:` trailer, and reuse the existing function or module rather than adding a second implementation.
+- Group rows that share an entry point into one bundle and deliver bundles in dependency order, producer first. Split a requirement into `<ID>.<n>` children when it names more than 2 code roots or is cross-repo; the destination repository copies a behaviour first, then the source switches importers and deletes.
+- Net-new work can be sliced: `.1` typed model plus validation and refusal tests, `.2` the one entry point that uses it, `.3`+ each further behaviour.
+- Every delivered ID gets at least one test bound to it in the same PR. Python: `@pytest.mark.spec("<ID>")`. Rust and TypeScript: a `// spec: <ID>` line directly above the test. Never write generated status files; the state is computed.
+- Run the targeted tests for the change; leave the full suite to the main-branch gates.
+- Report the PR URL, requirement IDs, test result, and any `ID:<main sha>` proof for rows already on main.
 
 **Before every push**
 - Work in a real `git worktree add` from `origin/main`. Never edit a shared checkout, never `git stash`, never `git add -A`, never force-push.
-- Run the configured commit and push stages against immutable refs as described below. Fix every failure. No `noqa`, `type: ignore`, skip, xfail or whitelist entries to pass a gate.
-- Select targeted tests for local feedback, and honor broader checks required by the configured gates. Run the type checker on every changed file, and keep each function at cyclomatic complexity 10 or less.
+- Run the repo's own pre-commit on the changed files: `uvx --from pre-commit==4.6.0 pre-commit run --files $(git diff --name-only origin/main...HEAD)`. Fix every failure. No `noqa`, `type: ignore`, skip, xfail or whitelist entries to pass a gate.
 
 **Landing**
-- Writers open no PR and run no build. Validation workers build pushed branches in batches (format check, the linter on the crate set PR CI selects, then the bound tests) and record a green result as a commit status on the exact head SHA.
-- A PR covers one green item or one green train. PR CI skips its own build and test for a SHA that already has the green status; forks and pushes to main run in full.
-- Merges happen automatically on green. Mechanical conflicts (generated files, Markdown) resolve automatically; real conflicts are additive in most cases and are resolved, not deferred.
-- Full CI on main catches what the batched build missed; regressions are fixed forward immediately.
-
-**Report**: at most 8 lines: PR URL, requirement IDs, test result, and any `ID:<main sha>` proof for rows already on main.
+- Open the pull request and merge it when every required check is green. Mechanical conflicts (generated files, Markdown) resolve by merging `origin/main`; real conflicts are additive in most cases and are resolved, not deferred.
+- Full CI on main catches what the pull-request subset missed; regressions are fixed forward.
 
 ## Bulk delivery
 
