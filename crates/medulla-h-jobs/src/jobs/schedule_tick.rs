@@ -146,6 +146,14 @@ async fn tick_pass(
         purge_due_dashboards(state, &graph, &core, host, now_ms, poll_s).await?;
         if graph == medulla_server_api::knob_config::default_ingest_graph() {
             recover_drains(state, &graph, &core, &store, host, now_ms, poll_s).await?;
+            // MEDULLA-DECISION-ENGINE-R073.6: a claim event whose publish was interrupted after
+            // the claim store committed is published now. The publisher leases each row under one
+            // consumer and its graph write replays by row, so concurrent or repeated passes
+            // publish each row once.
+            #[cfg(feature = "statechart")]
+            if let Err(error) = crate::memory_event_publisher::publish_claim_events(state).await {
+                eprintln!("MEMORY_EVENT_RECOVERY_FAILED: {error}");
+            }
         }
         relint_stored_queries(state, &graph, &core, cache, host, now_ms, poll_s).await?;
         let schedules = cache.schedules(&graph, &core, now_ms);

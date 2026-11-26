@@ -141,12 +141,57 @@ impl MemoryEvent {
         Ok(format!("memory-event:{}", hex::encode(hasher.finalize())))
     }
 
+    /// The outbox intent of a claim-store row: [`Self::outbox_intent`] plus the `graph` header
+    /// that names the graph the event is published into (MEDULLA-DECISION-ENGINE-R073.6).
+    pub fn outbox_intent_in(
+        &self,
+        tenant: &str,
+        graph: &str,
+    ) -> Result<medulla_mutation_types::mutation_scope::MutationOutboxIntent, String> {
+        let mut intent = self.outbox_intent(tenant)?;
+        intent.headers.insert("graph".to_string(), graph.to_string());
+        Ok(intent)
+    }
+
+    /// The id of the node that carries the event of one outbox row of the claim store. The row's
+    /// batch id and ordinal name it, so a republish after a crash (the node was written, the row
+    /// was not yet acknowledged) names the same node.
+    pub fn row_node_id(tenant: &str, topic: &str, batch_id: &str, ordinal: u32) -> String {
+        let mut hasher = Sha256::new();
+        for part in [tenant, topic, batch_id, &ordinal.to_string()] {
+            hasher.update((part.len() as u64).to_be_bytes());
+            hasher.update(part.as_bytes());
+        }
+        format!("memory-event:{}", hex::encode(hasher.finalize()))
+    }
+
     /// The `BatchUpdate` operation that stores this event. `at_ms` is the commit time the caller
     /// read from the one authoritative clock.
     pub fn node_operation(&self, tenant: &str, at_ms: u64) -> Result<serde_json::Value, String> {
+        self.node_operation_with_id(self.node_id(tenant, at_ms)?, tenant, at_ms)
+    }
+
+    /// The operation that stores the event of one claim-store outbox row, under
+    /// [`Self::row_node_id`].
+    pub fn row_node_operation(
+        &self,
+        tenant: &str,
+        at_ms: u64,
+        batch_id: &str,
+        ordinal: u32,
+    ) -> Result<serde_json::Value, String> {
+        self.node_operation_with_id(Self::row_node_id(tenant, self.topic(), batch_id, ordinal), tenant, at_ms)
+    }
+
+    fn node_operation_with_id(
+        &self,
+        id: String,
+        tenant: &str,
+        at_ms: u64,
+    ) -> Result<serde_json::Value, String> {
         Ok(serde_json::json!({
             "op": "upsert_node",
-            "id": self.node_id(tenant, at_ms)?,
+            "id": id,
             "properties": {
                 "type": MEMORY_EVENT_LABEL,
                 "tenant_scope": tenant,
@@ -204,5 +249,26 @@ mod tests {
             assert_eq!(first["properties"]["type"], MEMORY_EVENT_LABEL);
             assert_eq!(first["properties"]["topic"], event.topic());
         }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R073.6
+    #[test]
+    fn an_outbox_row_names_one_node_whatever_the_publish_time() {
+        let event = MemoryEvent::ClaimChanged(ClaimChanged {
+            claim_id: "c1".into(),
+            from: ClaimState::Proposed,
+            to: ClaimState::Supported,
+            subject: id("ada"),
+            observer: ObserverRef::System,
+        });
+        let first = event.row_node_operation("t1", 5, "batch-a", 1).unwrap();
+        let later = event.row_node_operation("t1", 900, "batch-a", 1).unwrap();
+        assert_eq!(first["id"], later["id"]);
+        assert_ne!(first["id"], event.row_node_operation("t1", 5, "batch-a", 2).unwrap()["id"]);
+        assert_ne!(first["id"], event.row_node_operation("t1", 5, "batch-b", 1).unwrap()["id"]);
+        assert_ne!(first["id"], event.row_node_operation("t2", 5, "batch-a", 1).unwrap()["id"]);
+        let intent = event.outbox_intent_in("t1", "g1").unwrap();
+        assert_eq!(intent.headers["graph"], "g1");
+        assert_eq!(intent.headers["tenant"], "t1");
     }
 }

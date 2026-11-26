@@ -30,6 +30,10 @@ pub mod jobs;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod mutation_outbox;
 
+/// MEDULLA-DECISION-ENGINE-R073.6: the one reader of the claim store's memory event rows.
+#[cfg(feature = "statechart")]
+pub mod memory_event_publisher;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod native_write_authority;

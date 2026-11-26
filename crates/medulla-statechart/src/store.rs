@@ -701,6 +701,38 @@ impl StatechartStore {
         medulla_transaction::version(&self.scoped_read()?).map_err(redb_err)
     }
 
+    /// Durably subscribe `consumer` to `topic` of this store's outbox. Idempotent for the same
+    /// topic (MEDULLA-DECISION-ENGINE-R073.6: the memory event publisher reads the rows a claim
+    /// transition committed with its own transaction).
+    pub fn outbox_subscribe(&self, consumer: &str, topic: &str) -> Result<()> {
+        self.mutations
+            .outbox_subscribe(&self.owner, consumer, topic)
+            .map_err(StatechartError::Redb)
+    }
+
+    /// Lease pending outbox rows of `consumer`, in commit order.
+    pub fn outbox_claim(
+        &self,
+        consumer: &str,
+        budget: &mut medulla_transaction::OutboxClaimBudget,
+    ) -> Result<medulla_transaction::OutboxClaimOutcome> {
+        self.mutations
+            .outbox_claim(&self.owner, consumer, budget)
+            .map_err(StatechartError::Redb)
+    }
+
+    /// Acknowledge one held lease; the acknowledgement advances the consumer's cursor.
+    pub fn outbox_ack(
+        &self,
+        lease: &medulla_mutation_types::mutation_scope::MutationOutboxLease,
+        now_ms: u64,
+    ) -> Result<()> {
+        self.mutations
+            .outbox_ack(&self.owner, lease, now_ms)
+            .map(drop)
+            .map_err(StatechartError::Redb)
+    }
+
     /// List instance ids, optionally filtered to one definition. Diagnostic/admin use;
     /// ownership filtering is the caller's responsibility (see the dispatch handler).
     pub fn list_instance_ids(&self, def_id: Option<&str>) -> Result<Vec<InstanceId>> {

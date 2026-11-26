@@ -92,6 +92,7 @@ pub async fn handle_claims_planned(
             verified.tenant(),
             &verified.principal_persistence_id(),
         )
+        .map(|claims| claims.in_graph(graph))
         .and_then(|claims| {
             let payload = claims.serve(op, reader.as_ref())?;
             Ok((payload, claims.take_events()))
@@ -315,6 +316,8 @@ pub(super) mod served {
         tenant: String,
         actor: String,
         knobs: ClaimKnobs,
+        /// The graph the store's events are published into; empty for a read-only caller.
+        graph: String,
         /// Events of the transitions this store committed, in order.
         events: std::sync::Mutex<Vec<medulla_decision_types::memory_events::MemoryEvent>>,
     }
@@ -340,8 +343,15 @@ pub(super) mod served {
                 tenant: tenant.to_string(),
                 actor: actor.to_string(),
                 knobs: claim_knobs(),
+                graph: String::new(),
                 events: std::sync::Mutex::new(Vec::new()),
             })
+        }
+
+        /// The store of a caller whose transitions announce events into `graph`.
+        pub(in crate::decide) fn in_graph(mut self, graph: &str) -> Self {
+            self.graph = graph.to_string();
+            self
         }
 
         /// The memory events of the transitions committed so far, taken once.
@@ -575,7 +585,7 @@ pub(super) mod served {
                 })
             });
             let intents = match &changed {
-                Some(changed) => vec![changed.outbox_intent(&self.tenant)?],
+                Some(changed) => vec![changed.outbox_intent_in(&self.tenant, &self.graph)?],
                 None => Vec::new(),
             };
             let advanced = record_of(&self.send_with_outbox(&instance, event, &intents)?)?;
