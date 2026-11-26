@@ -157,7 +157,7 @@ fn program_promotion_methods(
             "type".to_string(),
             serde_json::Value::String("ProgramCandidate".to_string()),
         );
-    let revision_properties = serde_json::json!({
+    let mut revision_properties = serde_json::json!({
         "type": "ProgramRevision",
         "schema_version": identity.schema_version,
         "program_ref": identity.program_ref.as_str(),
@@ -172,7 +172,18 @@ fn program_promotion_methods(
         "model_profile_ref": identity.model_profile_ref.as_ref().map(|value| value.as_str()),
         "candidate_record": &identity.candidate_record,
         "held_out": &identity.held_out,
+        "dev_score": identity.dev_score,
     });
+    // MEDULLA-DECISION-ENGINE-R810.5: the candidate record's optimizer, seed and
+    // corpus binding, and the stage, are restated flat on the revision node.
+    if let Some(object) = revision_properties.as_object_mut() {
+        object.extend(
+            identity
+                .derived_revision_properties()
+                .into_iter()
+                .map(|(name, value)| (name.to_string(), value)),
+        );
+    }
     let active_properties = serde_json::json!({
         "type": "ProgramActiveRevision",
         "schema_version": identity.schema_version,

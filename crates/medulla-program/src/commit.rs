@@ -315,6 +315,56 @@ pub struct ProgramRevisionIdentity {
     /// `held_out` property of its node (MEDULLA-DECISION-ENGINE-R810.7).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub held_out: Option<medulla_decision_outcome_types::decision::promotion::HeldOutEvidence>,
+    /// The mean validation-split score of the corpus in ppm, stored as the
+    /// `dev_score` property of the node; absent when the corpus has no
+    /// validation example (MEDULLA-DECISION-ENGINE-R810.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dev_score: Option<i64>,
+}
+
+/// The stage a stored `ProgramRevision` node is written at: only an evaluated
+/// result is promoted (MEDULLA-DECISION-ENGINE-R810.5).
+pub const REVISION_NODE_STAGE: medulla_decision_outcome_types::decision::promotion::RevisionStage =
+    medulla_decision_outcome_types::decision::promotion::RevisionStage::Evaluated;
+
+/// The node properties that restate the identity's candidate record flat, so a
+/// reader filters revisions without opening the record. They are projections:
+/// [`ProgramRevisionIdentity::from_durable_properties`] drops them before it
+/// decodes the identity.
+const DERIVED_REVISION_PROPERTIES: [&str; 5] = [
+    "optimizer",
+    "seed",
+    "corpus_ref",
+    "corpus_snapshot_version",
+    "stage",
+];
+
+impl ProgramRevisionIdentity {
+    /// The flat revision-record properties of MEDULLA-DECISION-ENGINE-R810.5
+    /// derived from the candidate record: `optimizer`, `seed`, `corpus_ref`,
+    /// `corpus_snapshot_version` and `stage`. Empty when the identity carries
+    /// no candidate record.
+    pub fn derived_revision_properties(&self) -> Vec<(&'static str, serde_json::Value)> {
+        let Some(record) = self.candidate_record.as_ref() else {
+            return Vec::new();
+        };
+        vec![
+            ("optimizer", serde_json::json!(record.optimizer.as_str())),
+            ("seed", serde_json::json!(record.seed)),
+            ("corpus_ref", serde_json::json!(record.corpus_ref.as_str())),
+            (
+                "corpus_snapshot_version",
+                serde_json::json!(record.corpus_snapshot_version),
+            ),
+            ("stage", serde_json::json!(REVISION_NODE_STAGE)),
+        ]
+    }
+
+    /// The identity carrying the mean validation score of its corpus in ppm.
+    pub fn with_dev_score(mut self, dev_score: Option<i64>) -> Self {
+        self.dev_score = dev_score;
+        self
+    }
 }
 
 impl ProgramRevisionIdentity {
@@ -413,6 +463,7 @@ impl ProgramRevisionIdentity {
             model_profile_ref: candidate.model_profile_ref.clone(),
             candidate_record,
             held_out: None,
+            dev_score: None,
         };
         identity.validate()?;
         Ok(identity)
@@ -429,6 +480,9 @@ impl ProgramRevisionIdentity {
         match object.remove("type") {
             Some(serde_json::Value::String(value)) if value == "ProgramRevision" => {}
             _ => return Err(ProgramError::InvalidCommit),
+        }
+        for derived in DERIVED_REVISION_PROPERTIES {
+            object.remove(derived);
         }
         let identity: Self = serde_json::from_value(serde_json::Value::Object(object))
             .map_err(|_| ProgramError::InvalidCommit)?;

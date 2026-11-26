@@ -301,6 +301,23 @@ impl EvaluationSummary {
     }
 }
 
+impl TrainingCorpus {
+    /// The mean score of the validation-split examples in ppm
+    /// (MEDULLA-DECISION-ENGINE-R810.5); `None` when the corpus has no
+    /// validation example. The sum is taken in ppm per example, so one corpus
+    /// always yields one value.
+    pub fn dev_score_ppm(&self) -> Option<i64> {
+        let scores: Vec<i64> = self
+            .examples
+            .iter()
+            .filter(|example| example.split == crate::ExampleSplit::Validation)
+            .map(|example| (example.score.clamp(0.0, 1.0) * 1_000_000.0).round() as i64)
+            .collect();
+        let count = i64::try_from(scores.len()).ok().filter(|count| *count > 0)?;
+        Some(scores.iter().sum::<i64>() / count)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct OptimizationRequest {
