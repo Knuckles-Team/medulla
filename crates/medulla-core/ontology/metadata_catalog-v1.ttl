@@ -533,6 +533,18 @@ cat:revision a owl:DatatypeProperty ;
     rdfs:comment "The revision of a stored asset body; it only increases." ;
     rdfs:range xsd:nonNegativeInteger .
 
+cat:graphRevision a owl:DatatypeProperty ;
+    rdfs:label "graph revision" ;
+    rdfs:comment "The revision of the graph an asset node was catalogued from (MEDULLA-TYPED-PACKS-R108.5)." ;
+    rdfs:domain cat:Asset ;
+    rdfs:range xsd:nonNegativeInteger .
+
+cat:lastChangedMs a owl:DatatypeProperty ;
+    rdfs:label "last changed" ;
+    rdfs:comment "When the source record of an asset node last changed, in milliseconds since the epoch (MEDULLA-TYPED-PACKS-R108.5)." ;
+    rdfs:domain cat:Asset ;
+    rdfs:range xsd:nonNegativeInteger .
+
 cat:Article a owl:Class ;
     rdfs:label "Article" ;
     rdfs:comment "A curated, versioned article or guide catalogued as an asset (MEDULLA-TYPED-PACKS-R108.13). It has an author, a version and a status on the review lifecycle of a glossary term, attaches to the assets it explains (cat:aboutAsset) and to the business domains it belongs to (cat:inBusinessDomain), and is found by its text and by the asset it describes." ;

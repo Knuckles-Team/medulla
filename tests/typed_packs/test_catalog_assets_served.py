@@ -13,6 +13,7 @@ refused write changes nothing.
 from __future__ import annotations
 
 import os
+import time
 import uuid
 
 import pytest
@@ -236,3 +237,85 @@ def test_publish_register_and_create_reach_the_one_emitter(catalog_graph):
             creator.close()
     finally:
         admin.tenants.delete(created)
+
+
+def _publish_agent(admin, graph: str, agent_id: str, base: int, version: str) -> dict:
+    context = _publish_context()
+    context["expected_revision"] = base
+    context["idempotency_key"] = f"request:{agent_id}:{base}"
+    context["attempt_nonce"] = f"{base + 1:02x}" * 32
+    draft = _agent_draft(agent_id)
+    draft["version"] = version
+    return support.decode(
+        admin._send(
+            "AgentLibrary",
+            {
+                "op": {
+                    "operation": "publish",
+                    "request": {"context": context, "entry": draft},
+                }
+            },
+            graph,
+        )
+    )
+
+
+def _node_id(agent_id: str, revision: int) -> str:
+    return (
+        f"urn:medulla:asset:agent-version:{agent_id.replace(':', '%3A')}%40{revision}"
+    )
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.5")
+def test_node_carries_source_owner_steward_revision_and_history(catalog_graph):
+    """Verifies MEDULLA-TYPED-PACKS-R108.5: a catalog node carries its evidence."""
+    graph, admin = catalog_graph
+    agent_id = f"agent:catalog-evidence-{uuid.uuid4().hex[:8]}"
+    owner = support.principal(None)
+    steward = "urn:medulla:principal:data-steward"
+
+    # The stewardship store names an owner and a steward of the node before it is written.
+    first_node = _node_id(agent_id, 1)
+    for role, who in (("owner", owner), ("steward", steward)):
+        support.stewardship(
+            admin,
+            graph,
+            {
+                "op": "assign",
+                "assignment": {
+                    "scope": {"kind": "asset", "id": first_node},
+                    "role": role,
+                    "principal": who,
+                },
+            },
+        )
+    before_ms = int(time.time() * 1000) - 60_000
+    _publish_agent(admin, graph, agent_id, 0, "1.0.0")
+
+    # The node carries its source record, owner, steward, graph revision and last change.
+    assert _rows(admin, first_node, SOURCE_RECORD) == [f"agent-library:{agent_id}:1"]
+    assert _rows(admin, first_node, f"{CATALOG}hasOwner") == [
+        f"urn:medulla:principal:{owner}"
+    ]
+    assert _rows(admin, first_node, f"{CATALOG}hasSteward") == [steward]
+    assert not _rows(admin, first_node, f"{CATALOG}flag")
+    revisions = _rows(admin, first_node, f"{CATALOG}graphRevision")
+    assert len(revisions) == 1 and int(_integer(revisions[0])) >= 1
+    changed = _rows(admin, first_node, f"{CATALOG}lastChangedMs")
+    assert len(changed) == 1 and int(_integer(changed[0])) > before_ms
+
+    # Version history reads from the supersession chain: each published revision is its own
+    # node, and the second names its own source record.
+    _publish_agent(admin, graph, agent_id, 1, "1.1.0")
+    second_node = _node_id(agent_id, 2)
+    assert _rows(admin, second_node, SOURCE_RECORD) == [f"agent-library:{agent_id}:2"]
+    versions = admin.rdf.sparql(
+        f"SELECT ?n WHERE {{ ?n <{RDF_TYPE}> <{CATALOG}AgentVersion> ; "
+        f'<{SOURCE_RECORD}> ?s . FILTER(CONTAINS(?s, "{agent_id}:")) }}'
+    )
+    assert len(versions) == 2
+
+
+def _integer(term: str) -> str:
+    """The lexical value of a typed integer term as the served SPARQL returns it."""
+    return term.strip('"<>').split('"')[0].split("^^")[0].strip('"')

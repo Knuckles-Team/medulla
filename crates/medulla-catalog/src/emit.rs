@@ -33,6 +33,8 @@ pub enum Object {
     Iri(String),
     /// A plain string literal.
     Literal(String),
+    /// A non-negative integer literal (`xsd:nonNegativeInteger`).
+    Integer(u64),
 }
 
 /// One emitted catalog triple. The caller converts it to its own RDF type or
@@ -77,6 +79,12 @@ pub struct AssetLinks<'a> {
     pub terms: &'a [String],
     /// Upstream assets this asset derives from.
     pub upstream: &'a [String],
+    /// The steward that manages the asset day to day (MEDULLA-TYPED-PACKS-R108.5).
+    pub steward: Option<&'a str>,
+    /// The revision of the graph the asset was catalogued from (R108.5).
+    pub graph_revision: Option<u64>,
+    /// When the source record last changed, in milliseconds since the epoch (R108.5).
+    pub changed_at_ms: Option<u64>,
 }
 
 /// One workflow run: the run id and the exact definition it ran.
@@ -168,6 +176,14 @@ fn iri(subject: &str, predicate: &str, object: &str) -> Triple {
     }
 }
 
+fn integer(subject: &str, predicate: &str, object: u64) -> Triple {
+    Triple {
+        subject: subject.to_string(),
+        predicate: predicate.to_string(),
+        object: Object::Integer(object),
+    }
+}
+
 fn literal(subject: &str, predicate: &str, object: &str) -> Triple {
     Triple {
         subject: subject.to_string(),
@@ -190,6 +206,9 @@ fn node(
     if let Some(owner) = links.owner {
         require_iri("owner", owner)?;
     }
+    if let Some(steward) = links.steward {
+        require_iri("steward", steward)?;
+    }
     for term in links.terms {
         require_iri("term", term)?;
     }
@@ -202,6 +221,15 @@ fn node(
     match links.owner {
         Some(owner) => out.push(iri(&subject, &format!("{CAT}hasOwner"), owner)),
         None => out.push(literal(&subject, &format!("{CAT}flag"), OWNER_MISSING_FLAG)),
+    }
+    if let Some(steward) = links.steward {
+        out.push(iri(&subject, &format!("{CAT}hasSteward"), steward));
+    }
+    if let Some(revision) = links.graph_revision {
+        out.push(integer(&subject, &format!("{CAT}graphRevision"), revision));
+    }
+    if let Some(changed) = links.changed_at_ms {
+        out.push(integer(&subject, &format!("{CAT}lastChangedMs"), changed));
     }
     for term in links.terms {
         out.push(iri(term, &format!("{CORE}definesAsset"), &subject));
@@ -266,6 +294,9 @@ pub fn emit_asset(
                     &source,
                     &AssetLinks {
                         owner: links.owner,
+                        steward: links.steward,
+                        graph_revision: links.graph_revision,
+                        changed_at_ms: links.changed_at_ms,
                         ..AssetLinks::default()
                     },
                     None,
@@ -363,6 +394,9 @@ pub fn to_ntriples(triples: &[Triple]) -> String {
         match &triple.object {
             Object::Iri(value) => out.push_str(&format!("<{value}>")),
             Object::Literal(value) => out.push_str(&format!("\"{}\"", escape_literal(value))),
+            Object::Integer(value) => out.push_str(&format!(
+                "\"{value}\"^^<http://www.w3.org/2001/XMLSchema#nonNegativeInteger>"
+            )),
         }
         out.push_str(" .\n");
     }
