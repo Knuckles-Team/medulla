@@ -51,7 +51,7 @@ pub mod ownership;
 // `pub(crate)` so the projection worker shares the admin re-projection path.
 pub(crate) mod connector_pack;
 mod describe_contract;
-mod introspect;
+pub mod introspect;
 #[cfg(feature = "redb")]
 pub(crate) mod saga;
 mod workflow_registry;

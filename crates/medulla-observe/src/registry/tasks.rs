@@ -271,6 +271,41 @@ impl TaskRegistry {
         rows
     }
 
+    /// Mark every live `Running` or `Progressing` task whose last progress is older than
+    /// `stall_after_ms` at `now_unix_ms` as stalled, and return the rows as they were marked
+    /// (MEDULLA-OBSERVE-R005.2). The registry lock is held only to clone the live cells; each
+    /// task is then locked alone, so a scan never blocks a registration for long. A task that
+    /// never reported progress (`last_progress_unix_ms` is 0) is not scanned: it has no age.
+    /// Each stalled task logs at ERROR with its name, owner, cursor, units, last progress
+    /// location and age.
+    pub fn detect_stalls(&self, now_unix_ms: u64, stall_after_ms: u64) -> Vec<TaskRow> {
+        let cells: Vec<Cell> = self.inner.live.lock().by_name.values().cloned().collect();
+        let mut stalled = Vec::new();
+        for cell in cells {
+            let mut row = cell.lock();
+            let scanned = matches!(row.state, TaskState::Running | TaskState::Progressing);
+            let age_ms = now_unix_ms.saturating_sub(row.last_progress_unix_ms);
+            if !scanned || row.last_progress_unix_ms == 0 || age_ms <= stall_after_ms {
+                continue;
+            }
+            if apply_event(&mut row, TaskEvent::StallDetected).is_err() {
+                continue;
+            }
+            tracing::error!(
+                target: "medulla::observe",
+                task = %row.name,
+                owner = %row.owner,
+                cursor = ?row.cursor,
+                units_done = row.units_done,
+                last_progress = row.last_progress_location.map(file_line).unwrap_or_default(),
+                age_ms,
+                "task stalled: no progress within observe.task_stall_after_ms"
+            );
+            stalled.push(row.clone());
+        }
+        stalled
+    }
+
     fn end(&self, cell: &Cell, listed: bool) {
         let row = cell.lock().clone();
         let mut live = self.inner.live.lock();

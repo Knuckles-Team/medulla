@@ -189,6 +189,22 @@ fn readiness_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
     }
 }
 
+/// Log the build identity once at INFO with target `medulla::build`: version, git SHA, build id,
+/// profile and features (MEDULLA-OBSERVE-R009.2). The fields are the ones `Introspect build`
+/// answers.
+pub fn log_build_identity() {
+    let info = &*medulla_version::BUILD_INFO;
+    tracing::info!(
+        target: "medulla::build",
+        version = info.version,
+        git_sha = info.git_sha,
+        build_id = info.build_id.as_deref().unwrap_or("unavailable"),
+        profile = info.profile,
+        features = %info.features.join(","),
+        "engine build"
+    );
+}
+
 /// The `build` section: one row, key `build`, the identity of the running binary
 /// (MEDULLA-OBSERVE-R009.1).
 fn build_page(cursor: Option<&str>) -> IntrospectPage {
