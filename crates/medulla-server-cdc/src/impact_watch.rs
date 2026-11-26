@@ -207,7 +207,7 @@ fn watch_changes(
     pending
         .changed
         .iter()
-        .filter(|id| watch.watches_label(plan::label_of(&plan::node_props(view, id))))
+        .filter(|id| watch.watches_label(plan::label_of(&medulla_exec::exec::propagate::node_props(view, id))))
         .cloned()
         .collect()
 }
