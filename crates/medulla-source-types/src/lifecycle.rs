@@ -160,6 +160,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("DEFECT_TRANSITION_ILLEGAL"),
     RefusalCode::new("DEFECT_UNVERIFIED"),
     RefusalCode::new("LIFECYCLE_DEPTH_INVALID"),
+    RefusalCode::new("DELIVERY_SCOPE_EMPTY"),
     RefusalCode::new("SPEC_STATUS_REV_UNKNOWN"),
     RefusalCode::new("SPEC_TREE_ABSENT"),
 ];
@@ -221,6 +222,8 @@ pub enum LifecycleRefusal {
     InvalidArgument(String),
     #[error("MODE_APPROVAL_REQUIRED: {0}")]
     ModeApprovalRequired(String),
+    #[error("DELIVERY_SCOPE_EMPTY: {0}")]
+    DeliveryScopeEmpty(String),
     #[error("SPEC_STATUS_REV_UNKNOWN: {0}")]
     SpecStatusRevUnknown(String),
     #[error("SPEC_TREE_ABSENT: {0}")]
@@ -258,6 +261,7 @@ impl LifecycleRefusal {
             Self::ParameterInvalid(_) => "PARAMETER_INVALID",
             Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
+            Self::DeliveryScopeEmpty(_) => "DELIVERY_SCOPE_EMPTY",
             Self::SpecStatusRevUnknown(_) => "SPEC_STATUS_REV_UNKNOWN",
             Self::SpecTreeAbsent(_) => "SPEC_TREE_ABSENT",
         }

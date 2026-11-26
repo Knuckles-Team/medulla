@@ -541,6 +541,8 @@ closed_error_codes! {
         DefectTransitionIllegal => "DEFECT_TRANSITION_ILLEGAL",
         /// MEDULLA-SDLC-R003.4: a move to verified has no passing verdict of the bound test on the fix changeset.
         DefectUnverified => "DEFECT_UNVERIFIED",
+        /// MEDULLA-SDLC-R019.3: a delivery slice names no requirement row.
+        DeliveryScopeEmpty => "DELIVERY_SCOPE_EMPTY",
         /// MEDULLA-SDLC-R005.4: a status request names a revision the repository chain does not hold.
         SpecStatusRevUnknown => "SPEC_STATUS_REV_UNKNOWN",
         /// MEDULLA-SDLC-R005.4: a status request names a repository with no ingested spec tree.
