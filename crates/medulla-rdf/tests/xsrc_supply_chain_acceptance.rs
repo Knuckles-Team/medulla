@@ -81,6 +81,8 @@ fn local(cell: &str) -> String {
         .to_string()
 }
 
+// proves R007: End-to-end acceptance from real connected data
+// spec: MEDULLA-CQ-XSRC-R007
 // spec: MEDULLA-CQ-XSRC-R007.1
 #[test]
 fn the_recorded_responses_answer_the_impact_question_with_provenance() {
