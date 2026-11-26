@@ -177,6 +177,8 @@ mod tests {
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R180.3
+    /// Each branch kind takes its own arms: first match, every match, the default and all arms,
+    /// and a missing input is refused.
     #[test]
     fn branch_kinds_take_the_right_arms() {
         let inputs = BTreeMap::from([("age".to_string(), DmnValue::Integer(42))]);
