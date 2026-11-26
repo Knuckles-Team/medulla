@@ -58,9 +58,9 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T048 [US3] MEDULLA-UNIFIED-DATA-PLANE-R024.3.1 One fake-connector admission test per candidate application, confirming rollback and that the retired connector no longer writes
 - [ ] T049 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.1 Model: `GrampsPilotProgress` is a typed P0-P5 phase gate refusing a wrong, unreviewed, or out-of-order exit
 - [ ] T050 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.2.1 P0 adapter skeleton: typed baseline-digest → P0 phase-exit mapping plus the refusal path
-- [ ] T051 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.2.2 Live P0 to P2 on the synthetic fixture
+- [x] T051 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.2.2 Live P0 to P2 on the synthetic fixture
 - [ ] T052 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.3.1 P3 adapter skeleton: typed proven-gap-fix → P3 phase-exit mapping plus the refusal path
-- [ ] T053 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.3.2 Live P4 restore and P5 schema understanding
+- [x] T053 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.3.2 Live P4 restore and P5 schema understanding
 - [ ] T054 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.1 Model: `FeatureFixRecord` is a typed inventory entry refusing a fix without complete captured-traffic/test proof
 - [ ] T055 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.2.1 Model: `capture_feature_fix` assembles a `FeatureFixRecord` from a pluggable `TrafficCaptureSource`, refusing an unproven or incomplete capture
 - [ ] T056 [US3] MEDULLA-UNIFIED-DATA-PLANE-R027.3.1 Model: `apply_proven_fix` applies a feature's fix only once its record is proven fixed, refusing -- without invoking the fix -- an unproven record
@@ -91,10 +91,10 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T080 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.5 Evidence: EXPLAIN and provenance name the snapshot
 - [ ] T081 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.3.6 Hot-path proof: a concurrent writer does not split the answer
 - [ ] T082 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.1 Model: metastore spec, file formats and table metadata
-- [ ] T083 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.3 Wiring: the `hive()` table function and discovery
+- [x] T083 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.3 Wiring: the `hive()` table function and discovery
 - [ ] T084 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.4 Refusal: schema mismatch, unsupported layout, unreachable catalog
-- [ ] T085 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.5 Evidence: the scan receipt counts partitions, files, stripes and bytes
-- [ ] T086 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.6 Hot-path proof: a pruned scan over a recorded metastore
+- [x] T085 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.5 Evidence: the scan receipt counts partitions, files, stripes and bytes
+- [x] T086 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.4.6 Hot-path proof: a pruned scan over a recorded metastore
 - [ ] T087 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.1 Model: `SearchIndexCapability` on the operation-bound source
 - [ ] T088 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.2 Behavior: push text match, nearest-neighbour search, filters and top-k
 - [ ] T089 [US4] MEDULLA-UNIFIED-DATA-PLANE-R038.5.3 Wiring: the search remote joins the shared fusion
@@ -123,7 +123,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T113 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.3 Wiring: the gate runs in the activation path before a binding with a new model version goes `Live`
 - [ ] T114 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.4 Refusal: a blocked promotion leaves the prior version active
 - [ ] T115 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.5 Evidence: each `PromotionVerdict` is a graph node linked to the model and version
-- [ ] T116 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.6 Add served `SemanticIndexOp::InstallModelConfig` and `RecordProbeMeasurement` with their handlers and registrations, the `regressed_image_config` fixture and the L2 and L3 tests
+- [x] T116 [US7] MEDULLA-UNIFIED-DATA-PLANE-R040.6 Add served `SemanticIndexOp::InstallModelConfig` and `RecordProbeMeasurement` with their handlers and registrations, the `regressed_image_config` fixture and the L2 and L3 tests
 - [ ] T117 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.1 Projection read binds mapping and graph revisions
 - [ ] T118 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.2 Projected tables refuse every SQL write
 - [ ] T119 [US3] MEDULLA-UNIFIED-DATA-PLANE-R026.4.3 Graph changes reach the projection only through MutationBatch
@@ -151,7 +151,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [ ] T145 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.3 Add the `Standard`/`StandardsAsset` node schema, `StandardsDriftResult`, `Method::StandardsDrift { scope, standard }` with its registrations and `handle_standards_drift` in `crates/medulla-h-query/src/query/standards.rs`; register `STANDARDS_NODE_INVALID` and `STANDARD_NOT_FOUND`
 - [ ] T146 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.4 Standards conformance: cohorts, drift scores and consolidation recommendations: Refusal
 - [ ] T147 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.5 Standards conformance: cohorts, drift scores and consolidation recommendations: Evidence
-- [ ] T148 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.6 Hot-path proof: a missing standard scores unscored, never zero
+- [x] T148 [US6] MEDULLA-UNIFIED-DATA-PLANE-R701.6 Hot-path proof: a missing standard scores unscored, never zero
 - [ ] T149 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.1 ETL runs record lineage and consume external lineage run events: Model
 - [ ] T150 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.2 ETL runs record lineage and consume external lineage run events: Behavior
 - [ ] T151 [US6] MEDULLA-UNIFIED-DATA-PLANE-R702.3 Wiring: `LineageIngest` is called by the lake sweep and the arbora route; lineage reads are plain graph queries
@@ -164,7 +164,7 @@ Story map: US1 attach and understand a source, US2 dialect adapters and conforma
 - [x] T159 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.1 Discovery writes one `MetadataContract` per registered source kind
 - [ ] T160 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2 The copy route is bounded by rows and by watermark (rollup of .1 to .4)
 - [ ] T160.1 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.1 Model derives and the `acceleration` field on `RegisterForeignSource` (wire, Python mirror)
-- [ ] T160.2 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.2 Register validates and stores the policy beside the quota
+- [x] T160.2 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.2 Register validates and stores the policy beside the quota
 - [ ] T160.3 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.3 `RemoteFetch::acceleration` and the `acceleration.watermark_ttl_ms` knob
 - [ ] T160.4 [US1] MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.4 The route resolves live or copy per fragment in `foreign_scan`
 - [ ] T155 [US5] MEDULLA-UNIFIED-DATA-PLANE-R710 Message-stream records normalize into a `ChangeEnvelope`: model and behavior
