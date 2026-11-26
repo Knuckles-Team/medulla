@@ -1744,6 +1744,35 @@ mod tests {
         assert!(sources.core.keys().all(|id| id.starts_with("core:")));
     }
 
+    // spec: MEDULLA-ORCH-VOCAB-R014.7
+    #[test]
+    fn bpmn_and_dmn_sources_compose() {
+        let sources = GraphSchemaSources::default();
+        sources.validate().unwrap();
+        for module in ["bpmn", "dmn"] {
+            let id = format!("core:{module}@1");
+            let source = sources
+                .core
+                .get(&id)
+                .unwrap_or_else(|| panic!("{id} is a core source"));
+            assert!(source.shapes_ttl.is_some(), "{id} loads its shapes");
+            assert!(source.ontology_ttl.is_some(), "{id} loads its ontology");
+            assert!(
+                sources.shapes().any(|(source_id, _)| source_id == id),
+                "{id} is composed with the shapes"
+            );
+            assert!(
+                sources.ontologies().any(|(source_id, _)| source_id == id),
+                "{id} is composed with the ontology"
+            );
+        }
+        // The classes the process vocabulary answers queries over are in the composed text.
+        let composed: String = sources.ontologies().map(|(_, text)| text).collect();
+        for class in [":BpmnUserTask", ":BpmnExclusiveGateway", ":DmnDecisionTable"] {
+            assert!(composed.contains(class), "{class} is composed");
+        }
+    }
+
     // spec: MEDULLA-TYPED-PACKS-R105.10.4
     #[test]
     fn core_sources_cover_every_packaged_module() {
