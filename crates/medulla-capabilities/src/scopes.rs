@@ -53,6 +53,8 @@ pub const APPROVER_GROUPS: &[(&str, &str)] = &[
 /// The registry, sorted by scope.
 pub const SCOPES: &[ScopeEntry] = &[
     // MEDULLA-UNIFIED-DATA-PLANE-R700.3: register and submit typed actions.
+    // MEDULLA-UNIFIED-DATA-PLANE-R792: list the registered actions.
+    entry("actions:read", User, "engine"),
     entry("actions:write", User, "engine"),
     entry("admin:backup", Admin, "engine"),
     entry("admin:cluster", Admin, "engine"),
@@ -204,7 +206,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("ledger:admin", Admin, "engine"),
     entry("ledger:read", User, "engine"),
     entry("ledger:write", User, "engine"),
-    // MEDULLA-SDLC-R002.3: release and deployment records.
+    // MEDULLA-SDLC-R002.3, R002.8: release and deployment records and their reads.
+    entry("lifecycle:read", User, "engine"),
     entry("lifecycle:write", User, "engine"),
     entry("loops:control", Admin, "graph-os"),
     entry("loops:read", User, "graph-os"),
@@ -293,6 +296,9 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("skills:author", User, "engine"),
     // MEDULLA-IDENTITY-R736: run, report, calibrate, ablate and decide a canary of a skill.
     entry("skills:eval", User, "engine"),
+    // MEDULLA-IDENTITY-R739: review a skill promotion; platform or team review is the reviewer's
+    // graph role, not a second scope.
+    entry("skills:review", User, "engine"),
     // MEDULLA-FEDERATED-QUERY-R085.2: the native source-query approval issuer.
     entry("source:approve-query", ServiceOnly, "engine"),
     entry("source:ingest", User, "engine"),

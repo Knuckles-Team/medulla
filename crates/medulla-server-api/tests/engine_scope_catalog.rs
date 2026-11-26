@@ -9,7 +9,13 @@ use medulla_capabilities::scopes::{scope_entry, ScopeRegistry};
 use medulla_identity_types::identity::{ScopeClass, ScopeClassifier, UserKind};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
-const ADDED: [&str; 4] = ["skills:eval", "skills:author", "sessions:read", "runs:control"];
+const ADDED: [&str; 5] = [
+    "skills:eval",
+    "skills:author",
+    "skills:review",
+    "sessions:read",
+    "runs:control",
+];
 
 // spec: MEDULLA-IDENTITY-R736
 #[test]

@@ -129,6 +129,26 @@ method_results! {
     // MEDULLA-SCM-R008: the gate verdict record.
     RecordGateVerdict(RecordGateVerdict) => Raw<medulla_source_types::gate_verdict::GateVerdictReceipt>;
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;
+    // MEDULLA-SDLC-R002.7, R002.8: the deploy record write and its two reads.
+    DeployRecordPut(DeployRecordPut) => Raw<medulla_source_types::deploy_record::DeployRecordReceipt>;
+    DeployRecordGet(DeployRecordGet) => Raw<medulla_source_types::deploy_record::DeployRecord>;
+    DeployRecordList(DeployRecordList) => Raw<medulla_source_types::deploy_record::DeployRecordPage>;
+    // MEDULLA-BUSINESS-OPS-R004: the approval gate question.
+    ApprovalGateResolve(ApprovalGateResolve) => Raw<medulla_source_types::approval_gate::ApprovalGateAnswer>;
+    // MEDULLA-DECISION-ENGINE-R901: the agent goal reads and control.
+    GoalList(GoalList) => Raw<medulla_source_types::agent_goal::GoalPage>;
+    GoalIterations(GoalIterations) => Raw<medulla_source_types::agent_goal::GoalIterations>;
+    GoalControl(GoalControl) => Raw<medulla_source_types::agent_goal::GoalControlReceipt>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R790: the connector run list and report.
+    ConnectorRuns(ConnectorRuns) => Raw<medulla_source_types::connector_run::ConnectorRunPage>;
+    ConnectorRunRecord(ConnectorRunRecord) => Raw<medulla_source_types::connector_run::ConnectorRunReceipt>;
+    ConnectorRunGet(ConnectorRunGet) => Raw<medulla_source_types::connector_run::ConnectorRun>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R791: the source connection and mapping reads and controls.
+    SourceConnectionGet(SourceConnectionGet) => Raw<medulla_source_types::source_connection::SourceConnection>;
+    SourceConnectionList(SourceConnectionList) => Raw<medulla_source_types::source_connection::SourceConnectionPage>;
+    SourceConnectionControl(SourceConnectionControl) => Raw<medulla_source_types::source_connection::SourceConnectionReceipt>;
+    SourceMappingGet(SourceMappingGet) => Raw<medulla_source_types::source_connection::SourceMapping>;
+    SourceMappingControl(SourceMappingControl) => Raw<medulla_source_types::source_connection::SourceMappingOutcome>;
     // MEDULLA-SDLC-R017.1: the goal record.
     GoalPut(GoalPut) => Raw<medulla_source_types::lifecycle::GoalReceipt>;
     // MEDULLA-SDLC-R017.3: the proposal record.
@@ -161,6 +181,8 @@ method_results! {
     ProjectModeSet(ProjectModeSet) => Raw<medulla_source_types::lifecycle::ProjectModeReceipt>;
     // MEDULLA-SDLC-R012.9: the typed project mode read.
     ProjectModeGet(ProjectModeGet) => Raw<medulla_source_types::lifecycle::ProjectModeRecord>;
+    // MEDULLA-IDENTITY-R740: the layered configuration read.
+    ConfigLayers(ConfigLayers) => Raw<medulla_source_types::config_layers::ConfigLayersAnswer>;
     // MEDULLA-UNIFIED-DATA-PLANE-R702.3: edge, quarantine and replay counts.
     LineageIngest(LineageIngest) => Raw<medulla_catalog_types::lineage::LineageIngestReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.

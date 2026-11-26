@@ -74,6 +74,8 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         | Method::BlobCommit { .. }
         | Method::BlobRef { .. }
         | Method::BlobUnref { .. }
+        | Method::MediaPut { .. }
+        | Method::MediaTombstone { .. }
         | Method::BlobGc => DurabilityDomain::BlobStore,
         // Wire-unconditional, same reason as `blob` just above: `medulla-capabilities`
         // forces `medulla-types/kv` on unconditionally too (EH-319).
@@ -648,6 +650,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ArchitectureView { .. }
         | Method::OpenGraphSnapshot
         | Method::ReadGraphChanges { .. }
+        | Method::GraphLiveLimits
         | Method::BranchDiff { .. }
         | Method::BranchReadAt { .. }
         | Method::ReadTree { .. }
@@ -713,6 +716,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-FEDERATED-QUERY-R039.2.5: document-vector nodes through the staged query gateway.
         | Method::EncodeDocument { .. }
         | Method::StoredQueryCall { .. }
+        // MEDULLA-FEDERATED-QUERY-R708.12: two reads and the retirement tombstone write.
+        | Method::StoredQueryGet { .. }
+        | Method::StoredQueryList { .. }
+        | Method::StoredQueryRetire { .. }
         // MEDULLA-FEDERATED-QUERY-R700.3: argument map write; the reads are query-family.
         | Method::ArgumentMapPut { .. }
         // MEDULLA-FEDERATED-QUERY-R705.3: feedback record write.
@@ -812,6 +819,29 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-SCM-R008: the gate verdict record self-translates likewise.
         | Method::RecordGateVerdict { .. }
         | Method::RecordDeployment { .. }
+        // MEDULLA-SDLC-R002.7: the deploy record self-translates likewise; its two reads and the
+        // approval gate question (MEDULLA-BUSINESS-OPS-R004) commit nothing.
+        | Method::DeployRecordPut { .. }
+        | Method::DeployRecordGet { .. }
+        | Method::DeployRecordList { .. }
+        | Method::ApprovalGateResolve { .. }
+        // MEDULLA-DECISION-ENGINE-R901: the goal control self-translates likewise; its two reads
+        // commit nothing. MEDULLA-UNIFIED-DATA-PLANE-R790: so does the connector run report.
+        | Method::GoalList { .. }
+        | Method::GoalIterations { .. }
+        | Method::GoalControl { .. }
+        | Method::ConnectorRuns { .. }
+        | Method::ConnectorRunRecord { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R790, R791: the run read, the connection and mapping reads
+        // commit nothing; the two controls self-translate likewise.
+        | Method::ConnectorRunGet { .. }
+        | Method::SourceConnectionGet { .. }
+        | Method::SourceConnectionList { .. }
+        | Method::SourceConnectionControl { .. }
+        | Method::SourceMappingGet { .. }
+        | Method::SourceMappingControl { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R792: the action list commits nothing.
+        | Method::ActionList { .. }
         // MEDULLA-SDLC-R017.1: the goal record self-translates into a request-graph `BatchUpdate`.
         | Method::GoalPut { .. }
         // MEDULLA-SDLC-R012.8: the project mode record self-translates likewise.
@@ -820,6 +850,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ProposalPut { .. }
         // MEDULLA-SDLC-R017.6: the review list commits nothing; the decision self-translates.
         | Method::ProposalList { .. }
+        // MEDULLA-IDENTITY-R740: the layered configuration read commits nothing.
+        | Method::ConfigLayers { .. }
         // MEDULLA-SDLC-R012.9: the project mode read commits nothing.
         | Method::ProjectModeGet { .. }
         // MEDULLA-SDLC-R014.6: the competency questions commit nothing.
@@ -1016,6 +1048,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::BlobCommit { .. }
         | Method::BlobRef { .. }
         | Method::BlobUnref { .. }
+        | Method::MediaPut { .. }
+        | Method::MediaTombstone { .. }
         | Method::BlobGc => owner_domain(method)
             .unwrap_or_else(|| unreachable!("{method:?} is claimed by owner_domain")),
         // Wire-unconditional (`medulla-capabilities` forces `medulla-types/kv` on

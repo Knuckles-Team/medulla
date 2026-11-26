@@ -136,7 +136,7 @@ fn profile_and_governance_terms_with_shapes() {
     let (ok, _) = conforms("ex:p a :BusinessProfile .\n");
     assert!(!ok, "a profile without a label is refused");
 
-    // A rule with a ceiling that is not an integer, or no currency, fails.
+    // A rule with a ceiling that is not an integer fails.
     let (ok, paths) = conforms(
         "ex:r a :ApprovalRule ; rdfs:label \"Refunds\" ; \
          :approvalCeilingMinor 500.5 ; :approvalCurrency \"USD\" .\n",
@@ -145,10 +145,32 @@ fn profile_and_governance_terms_with_shapes() {
     assert!(paths
         .iter()
         .any(|path| path.ends_with("approvalCeilingMinor>")));
-    let (ok, paths) =
-        conforms("ex:r a :ApprovalRule ; rdfs:label \"Refunds\" ; :approvalCeilingMinor 500 .\n");
-    assert!(!ok, "a rule with no currency is refused");
-    assert!(paths.iter().any(|path| path.ends_with("approvalCurrency>")));
+
+    // A rule that is not monetary may omit the ceiling and the currency.
+    let (ok, _) = conforms(
+        "ex:r a :ApprovalRule ; rdfs:label \"Deploy\" ; :approvalGateClass \"production_qa\" ; \
+         :approvalQuorum 2 ; :approvalActionKind \"deploy.promotions.apply\" .\n",
+    );
+    assert!(ok, "a non-monetary rule owes no ceiling or currency");
+    let (ok, _) = conforms("ex:r a :ApprovalRule ; rdfs:label \"Plain\" .\n");
+    assert!(ok, "a rule with no gate class owes no ceiling or currency");
+
+    // A monetary rule that lacks the ceiling, the currency or both is refused.
+    for body in [
+        ":approvalCurrency \"USD\"",
+        ":approvalCeilingMinor 500",
+        ":approvalQuorum 1",
+    ] {
+        let (ok, _) = conforms(&format!(
+            "ex:r a :ApprovalRule ; rdfs:label \"Pay\" ; :approvalGateClass \"money_movement\" ; {body} .\n"
+        ));
+        assert!(!ok, "a monetary rule without both is refused: {body}");
+    }
+    let (ok, _) = conforms(
+        "ex:r a :ApprovalRule ; rdfs:label \"Pay\" ; :approvalGateClass \"money_movement\" ; \
+         :approvalCeilingMinor 500 ; :approvalCurrency \"USD\" .\n",
+    );
+    assert!(ok, "a monetary rule with both conforms");
 }
 
 // spec: MEDULLA-BUSINESS-OPS-R001.3

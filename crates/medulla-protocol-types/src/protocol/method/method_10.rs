@@ -489,6 +489,100 @@ $($variants)*
     RecordDeployment {
         deployment: medulla_source_types::lifecycle::DeploymentInput,
     },
+    /// Record one applied deployment plan (MEDULLA-SDLC-R002.7): a sealed `DeployRecord` node
+    /// keyed by the verified tenant and the plan digest, carrying the target, the outcome of every
+    /// node, the image digests, the verified actor and the engine-clock time. The same body again
+    /// replays the stored record and writes nothing; a different body for the same plan digest
+    /// refuses `DEPLOY_RECORD_SEALED`; a field out of bounds refuses `DEPLOY_RECORD_INVALID`.
+    DeployRecordPut {
+        record: medulla_source_types::deploy_record::DeployRecordInput,
+    },
+    /// Read the deploy record of one plan digest of the verified tenant (MEDULLA-SDLC-R002.8). A
+    /// missing, foreign or invisible record refuses the same `DEPLOY_RECORD_NOT_FOUND`. Reads only.
+    DeployRecordGet { plan_digest: String },
+    /// One cursor-paged, newest-first page of the verified tenant's deploy records
+    /// (MEDULLA-SDLC-R002.8). `limit` is 1..=100 (100 when absent); the cursor is opaque and bound
+    /// to the tenant it was minted for. Reads only.
+    DeployRecordList {
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+    /// Ask which approval gate applies to an operation (MEDULLA-BUSINESS-OPS-R004): `none`,
+    /// `single`, `two_person`, or `unresolved` when no `ApprovalRule` of the request graph covers
+    /// it, with the gate class, approver roles and expiry. The graph is the only authority.
+    /// Reads only.
+    ApprovalGateResolve {
+        request: medulla_source_types::approval_gate::ApprovalGateRequest,
+    },
+    /// One cursor-paged, newest-first page of the verified tenant's agent goals
+    /// (MEDULLA-DECISION-ENGINE-R901). `limit` is 1..=100 (100 when absent); the cursor is opaque
+    /// and bound to the tenant it was minted for. Reads only.
+    GoalList {
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+    /// The iterations of one agent goal of the verified tenant, oldest first
+    /// (MEDULLA-DECISION-ENGINE-R901). A missing, foreign or invisible goal refuses the same
+    /// `GOAL_NOT_FOUND`. Reads only.
+    GoalIterations { goal_id: String },
+    /// Create, run, finish or cancel one agent goal (MEDULLA-DECISION-ENGINE-R901). The goal
+    /// moves only along the edges of the goal state machine; a refused event is
+    /// `TRANSITION_REFUSED` and writes nothing. A run opens a numbered iteration with a derived
+    /// run id. Every time is the engine clock.
+    GoalControl {
+        op: medulla_source_types::agent_goal::GoalControlOp,
+    },
+    /// One cursor-paged, newest-first page of the verified tenant's connector source-sync runs,
+    /// optionally of one connection and one state (MEDULLA-UNIFIED-DATA-PLANE-R790). A connection
+    /// no run of the tenant names refuses `CONNECTION_NOT_FOUND`. Reads only.
+    ConnectorRuns {
+        #[serde(default)]
+        connection_id: Option<String>,
+        #[serde(default)]
+        state: Option<medulla_source_types::connector_run::RunState>,
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+    /// Report one connector run as it starts or ends (MEDULLA-UNIFIED-DATA-PLANE-R790): the
+    /// engine stamps its start and end with its own clock; a finished run is sealed.
+    ConnectorRunRecord {
+        run: medulla_source_types::connector_run::ConnectorRunInput,
+    },
+    /// Read one connector run of the verified tenant (MEDULLA-UNIFIED-DATA-PLANE-R790). An
+    /// absent, foreign or invisible run refuses the same `CONNECTOR_RUN_NOT_FOUND`. Reads only.
+    ConnectorRunGet { run_id: String },
+    /// Read one source connection of the verified tenant (MEDULLA-UNIFIED-DATA-PLANE-R791). An
+    /// absent, foreign or invisible connection refuses the same `CONNECTION_NOT_FOUND`. Reads
+    /// only.
+    SourceConnectionGet { connection_id: String },
+    /// One cursor-paged page of the verified tenant's source connections, by connection id
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R791). `limit` is 1..=100 (100 when absent). Reads only.
+    SourceConnectionList {
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+    /// Put or delete one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791). The credential is
+    /// a locator (`env://` or `openbao://`), never a value.
+    SourceConnectionControl {
+        op: medulla_source_types::source_connection::SourceConnectionOp,
+    },
+    /// Read the mapping of one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791): the mapping,
+    /// its digest and whether it is proposed or approved. Reads only.
+    SourceMappingGet { connection_id: String },
+    /// Propose a mapping for a source connection, or approve the stored one at the digest the
+    /// approver reviewed (MEDULLA-UNIFIED-DATA-PLANE-R791). A stale digest refuses
+    /// `MAPPING_CHANGED`.
+    SourceMappingControl {
+        op: medulla_source_types::source_connection::SourceMappingOp,
+    },
     /// Record one goal of a project (MEDULLA-SDLC-R017.1): a `Goal` node and a
     /// `targetsGoal` edge from each target row or competency question. Refuses
     /// `GOAL_TARGET_REQUIRED` when the goal names no target.
@@ -616,6 +710,13 @@ $($variants)*
     /// verified tenant answers `reference` with `recorded: false`. Reads only.
     ProjectModeGet {
         request: medulla_source_types::lifecycle::ProjectModeGetRequest,
+    },
+    /// Read the configuration layers of the verified caller (MEDULLA-IDENTITY-R740): the
+    /// company layer, the layer of every team the caller belongs to and the caller's own user
+    /// layer, each a `ConfigLayer` node of the verified tenant the caller may see. The request
+    /// names nothing; a layer that is absent, foreign or hidden is left out. Reads only.
+    ConfigLayers {
+        request: medulla_source_types::config_layers::ConfigLayersRequest,
     },
     /// MEDULLA-SRC-AUTH-R004.6.1: which connected source is authoritative for each
     /// class (and facet) within the hop budget, with the premises behind every verdict

@@ -495,6 +495,14 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::RecordRelease { .. }
                 | Method::RecordGateVerdict { .. }
                 | Method::RecordDeployment { .. }
+                // MEDULLA-SDLC-R002.7: the deploy record of one applied plan.
+                | Method::DeployRecordPut { .. }
+                // MEDULLA-DECISION-ENGINE-R901, MEDULLA-UNIFIED-DATA-PLANE-R790.
+                | Method::GoalControl { .. }
+                | Method::ConnectorRunRecord { .. }
+                // MEDULLA-UNIFIED-DATA-PLANE-R791.
+                | Method::SourceConnectionControl { .. }
+                | Method::SourceMappingControl { .. }
                 | Method::GoalPut { .. }
                 | Method::ProjectModeSet { .. }
                 | Method::ProposalPut { .. }
@@ -551,6 +559,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::LiveArtifactRefresh { .. }
                 // MEDULLA-FEDERATED-QUERY-R708.3: the stored-query record and its materialized result.
                 | Method::StoredQueryPut { .. }
+                // MEDULLA-FEDERATED-QUERY-R708.12: the tombstone on the name's head node.
+                | Method::StoredQueryRetire { .. }
                 | Method::ApproveEntityLink { .. }
                 // MEDULLA-FEDERATED-QUERY-R039.2.5: the encoded-document node and its index head.
                 | Method::EncodeDocument { .. }

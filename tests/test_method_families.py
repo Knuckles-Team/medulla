@@ -301,11 +301,17 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "DataPrepDeclare",
         "EncodeDocument",
         "RecordDeployment",
+        "DeployRecordPut",
+        "GoalControl",
+        "ConnectorRunRecord",
+        "SourceConnectionControl",
+        "SourceMappingControl",
         "RecordGateVerdict",
         "RecordRelease",
         "SemanticEnrich",
         "StoredQueryCall",
         "StoredQueryPut",
+        "StoredQueryRetire",
         "VerifyIngestReadback",
         # Declared writes added after the base: typed actions, the agent bus, the
         # branch registry, document deletion, live artifacts and memory sync.

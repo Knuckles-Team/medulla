@@ -146,7 +146,10 @@ pub struct SkillInvocation {
     pub skill_version: String,
     /// Who chose the skill.
     pub chosen_by: ChosenBy,
-    /// `sha256(tenant_id, principal, salt)` as hex: see [`principal_pseudonym`].
+    /// `sha256(tenant_id, principal, salt)` as hex: see [`principal_pseudonym`]. A person never
+    /// sends it: the engine derives it from the verified principal, so it is absent on the wire
+    /// of a human caller and defaults to empty. A service caller sends it (MEDULLA-IDENTITY-R737).
+    #[serde(default)]
     pub principal_pseudonym: String,
     /// The run the skill ran in.
     pub run_id: String,

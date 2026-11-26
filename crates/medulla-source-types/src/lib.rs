@@ -48,8 +48,20 @@ pub mod source_path_grant;
 pub mod lifecycle;
 // MEDULLA-SCM-R008 — gate verdict records and the landing policy.
 pub mod gate_verdict;
+// MEDULLA-SDLC-R002.7 — the durable record of one applied deployment plan.
+pub mod deploy_record;
+// MEDULLA-BUSINESS-OPS-R004 — the approval gate question answered from the graph's approval rules.
+pub mod approval_gate;
+// MEDULLA-DECISION-ENGINE-R901 — agent goals, their iterations and the goal state machine.
+pub mod agent_goal;
+// MEDULLA-UNIFIED-DATA-PLANE-R790 — connector source-sync runs and the run list.
+pub mod connector_run;
+// MEDULLA-UNIFIED-DATA-PLANE-R791 — source connections and their approved field mappings.
+pub mod source_connection;
 // MEDULLA-SCM-R009 — the bisect request and answer over the gate verdicts of a chain.
 pub mod source_bisect;
+// MEDULLA-IDENTITY-R740 — the layered configuration read.
+pub mod config_layers;
 pub mod spec_question;
 pub mod stack_frame;
 // MEDULLA-SDLC-R019.2 — delivery records.

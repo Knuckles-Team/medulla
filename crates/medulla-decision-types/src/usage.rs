@@ -60,6 +60,14 @@ pub struct UsageRecord {
     /// Digest of the prompt and completion content; the content itself is
     /// never stored.
     pub content_digest: String,
+    /// The project the call was made for; empty when the caller named none
+    /// (MEDULLA-DECISION-ENGINE-R801.9).
+    #[serde(default)]
+    pub project_id: String,
+    /// The agent that made the call; empty when the caller named none
+    /// (MEDULLA-DECISION-ENGINE-R801.9).
+    #[serde(default)]
+    pub agent_id: String,
 }
 
 impl UsageRecord {
@@ -98,6 +106,12 @@ pub struct PriceEntry {
     pub out_per_mtok_micro: u64,
     /// Micro-units per million cached input tokens.
     pub cached_per_mtok_micro: u64,
+    /// ISO 4217 code of the currency this price is recorded in (three uppercase
+    /// letters); empty when the catalog named none. A cost is reported in the
+    /// currency of the price that produced it and is never converted
+    /// (MEDULLA-DECISION-ENGINE-R801.9).
+    #[serde(default)]
+    pub currency: String,
 }
 
 /// The price entries and the model-name aliases a ledger prices against.
@@ -140,6 +154,10 @@ pub enum UsageOp {
         model_key: Option<String>,
         /// Which view to return.
         view: UsageReadView,
+        /// Also fold the window into one row per model, project or agent
+        /// (`Rollup` view only; MEDULLA-DECISION-ENGINE-R801.9).
+        #[serde(default)]
+        group_by: Option<UsageGroupBy>,
         /// Opaque cursor of the previous records page.
         #[serde(default)]
         cursor: Option<String>,
@@ -173,6 +191,46 @@ pub enum UsageReadView {
     Rollup,
 }
 
+/// The closed dimension a grouped rollup folds the window by
+/// (MEDULLA-DECISION-ENGINE-R801.9).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum UsageGroupBy {
+    /// One row per normalized model key.
+    Model,
+    /// One row per `project_id`; the empty id groups the unassigned calls.
+    Project,
+    /// One row per `agent_id`; the empty id groups the unassigned calls.
+    Agent,
+}
+
+/// One group of a grouped rollup (MEDULLA-DECISION-ENGINE-R801.9).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct UsageGroupRollup {
+    /// The model key, project id or agent id the group is keyed by.
+    pub key: String,
+    /// Calls in the group.
+    pub calls: u64,
+    /// Input tokens.
+    pub tokens_in: u64,
+    /// Output tokens.
+    pub tokens_out: u64,
+    /// Cached input tokens.
+    pub tokens_cached: u64,
+    /// Calls that errored.
+    pub errors: u64,
+    /// Summed derived cost; `None` when any call has no price or the prices
+    /// are in different currencies.
+    pub cost_micro: Option<u64>,
+    /// ISO 4217 currency of `cost_micro`, as recorded on the prices; `None`
+    /// when the cost is `None` or the catalog named no currency.
+    pub currency: Option<String>,
+    /// Nearest-rank 95th percentile of the calls' latency, in milliseconds.
+    pub latency_p95_ms: u64,
+}
+
 /// One day of one model in a rollup.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -194,6 +252,10 @@ pub struct DayRollup {
     /// Derived cost, priced at the last millisecond of the day; `None` when no
     /// price applies.
     pub cost_micro: Option<u64>,
+    /// ISO 4217 currency of `cost_micro`, as recorded on the price used;
+    /// `None` when there is no cost or the price named no currency.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
 }
 
 /// What a served `Usage` read returns (MEDULLA-DECISION-ENGINE-R801.7).
@@ -212,6 +274,15 @@ pub enum UsageReadResult {
     Rollup {
         /// Buckets in `(model_key, day)` order.
         days: Vec<DayRollup>,
+        /// The window folded by the requested `group_by`, in key order;
+        /// empty when none was requested.
+        #[serde(default)]
+        groups: Vec<UsageGroupRollup>,
+        /// The newest `recorded_at_ms` the tenant's ledger holds (the last
+        /// ingested event time), independent of the window; `None` when the
+        /// ledger is empty.
+        #[serde(default)]
+        index_watermark_ms: Option<u64>,
     },
 }
 
@@ -255,6 +326,8 @@ mod tests {
             latency_ms: 40,
             outcome: UsageOutcome::Ok,
             content_digest: "a".repeat(64),
+            project_id: "p-1".into(),
+            agent_id: "a-1".into(),
         }
     }
 
@@ -266,6 +339,7 @@ mod tests {
             in_per_mtok_micro: 3_000_000,
             out_per_mtok_micro: 15_000_000,
             cached_per_mtok_micro: 300_000,
+            currency: "USD".into(),
         }
     }
 

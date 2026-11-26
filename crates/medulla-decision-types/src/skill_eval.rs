@@ -21,8 +21,21 @@ pub const EVAL_RUN_NOT_CLEAN_ROOM: RefusalCode = RefusalCode::new("EVAL_RUN_NOT_
 /// `EVAL_CASE_INVALID`: a case the kind or its mocks make unrunnable.
 pub const EVAL_CASE_INVALID: RefusalCode = RefusalCode::new("EVAL_CASE_INVALID");
 
+/// `EVAL_SCOPE_REQUIRED`: the caller lacks the scope the evaluation op needs.
+pub const EVAL_SCOPE_REQUIRED: RefusalCode = RefusalCode::new("EVAL_SCOPE_REQUIRED");
+
+/// The scope that adds an evaluation case (MEDULLA-IDENTITY-R736).
+pub const SCOPE_AUTHOR: &str = "skills:author";
+/// The scope that reads a suite report and records a judge calibration (MEDULLA-IDENTITY-R736).
+pub const SCOPE_EVAL: &str = "skills:eval";
+
 /// The `skill_eval` table of registered refusal codes.
-pub const REFUSALS: &[RefusalCode] = &[JUDGE_NOT_CALIBRATED, EVAL_RUN_NOT_CLEAN_ROOM, EVAL_CASE_INVALID];
+pub const REFUSALS: &[RefusalCode] = &[
+    JUDGE_NOT_CALIBRATED,
+    EVAL_RUN_NOT_CLEAN_ROOM,
+    EVAL_CASE_INVALID,
+    EVAL_SCOPE_REQUIRED,
+];
 
 /// What kind of case it is.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -271,6 +284,86 @@ pub struct SkillEvalOutcome {
     pub report: SuiteReport,
     /// The premises of the sealed record (R711.5), in order.
     pub premises: Vec<String>,
+}
+
+/// The body of `DecisionEval` op `skill_eval_case_add`: one case added to a skill's suite
+/// (MEDULLA-DECISION-ENGINE-R711.7). Scope `skills:author`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillEvalCaseAddRequest {
+    /// The tenant that owns the suite.
+    pub tenant_id: String,
+    /// The case to add; its `skill_ref` names the suite.
+    pub case: SkillEvalCase,
+    /// The tools the skill may call; every mock of the case names one of them.
+    pub known_tools: Vec<String>,
+}
+
+/// What `skill_eval_case_add` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillEvalCaseAdded {
+    /// The case id the caller sent.
+    pub case_id: String,
+    /// The skill revision the case tests.
+    pub skill_ref: String,
+    /// The graph node the case is stored as.
+    pub node_id: String,
+}
+
+/// The body of `DecisionEval` op `skill_eval_report`: read the latest suite report of one skill
+/// (MEDULLA-DECISION-ENGINE-R711.7). Scope `skills:eval`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillEvalReportRequest {
+    /// The tenant that owns the suite.
+    pub tenant_id: String,
+    /// The skill revision.
+    pub skill_ref: String,
+}
+
+/// What `skill_eval_report` answers: both fields are absent for a skill the tenant has no suite
+/// for, whether the skill exists or not, so the answer is no existence oracle.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillEvalReportAnswer {
+    /// The skill revision asked about.
+    pub skill_ref: String,
+    /// The latest suite report, when the tenant has one.
+    pub report: Option<SuiteReport>,
+    /// The judge calibration on record, when the tenant has one.
+    pub calibration: Option<JudgeCalibration>,
+}
+
+/// The body of `DecisionEval` op `skill_eval_calibrate`: record how well a judge agrees with
+/// human annotation for one skill's suite (MEDULLA-DECISION-ENGINE-R711.7). Scope `skills:eval`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillEvalCalibrateRequest {
+    /// The tenant that owns the suite.
+    pub tenant_id: String,
+    /// The skill revision whose judged cases the judge grades.
+    pub skill_ref: String,
+    /// The calibration to record.
+    pub calibration: JudgeCalibration,
+}
+
+/// What `skill_eval_calibrate` answers.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SkillEvalCalibrated {
+    /// The skill revision.
+    pub skill_ref: String,
+    /// The calibration now on record.
+    pub calibration: JudgeCalibration,
+    /// Whether the judge clears the kappa bound and the annotated count, so a judged case runs.
+    pub admitted: bool,
 }
 
 /// Which side of an ablation one run belongs to (MEDULLA-DECISION-ENGINE-R712.1).

@@ -555,3 +555,55 @@ async fn a_person_without_the_write_scope_is_refused() {
         .expect_err("the write scope is required");
     assert!(refused.starts_with(TELEMETRY_SCOPE_REQUIRED.as_str()), "{refused}");
 }
+
+/// An event as a person sends it: the field `principal_pseudonym` is absent.
+fn event_without_pseudonym(id: &str, run_id: &str) -> Value {
+    let mut event = event(id, SKILL, "ignored", 1, run_id, false);
+    event.as_object_mut().expect("an object").remove("principal_pseudonym");
+    event
+}
+
+// spec: MEDULLA-IDENTITY-R738
+#[tokio::test]
+async fn a_person_event_without_a_pseudonym_is_stored_under_the_derived_one() {
+    let (h, core) = person_harness().await;
+    let alice = person("alice", TENANT, &["telemetry:write", "telemetry:read"]);
+    let write = run(&h, &alice, ingest_op(vec![event_without_pseudonym("q1", "run-alice")]))
+        .await
+        .expect("a person ingests an event with no pseudonym");
+    assert_eq!(reply::<IngestReceipt>(&write), IngestReceipt { stored: 1, repeated: 0 });
+    commit(&core, &write);
+    let blob = core.get_node_properties(&invocation_node_id(TENANT, "q1")).expect("stored");
+    let row = medulla_types::msgpack::decode_property_value(&blob).unwrap();
+    let derived = principal_pseudonym(
+        TENANT,
+        &alice.principal_persistence_id(),
+        medulla_server_api::knob_config::knobs().skill_pseudonym_salt,
+    );
+    assert_eq!(row["principal_pseudonym"], json!(derived));
+}
+
+// spec: MEDULLA-IDENTITY-R738
+#[tokio::test]
+async fn a_service_event_without_a_pseudonym_is_refused_and_a_foreign_run_still_looks_absent() {
+    let (h, _core) = person_harness().await;
+    // A service keeps the pseudonym duty of R713.3: an absent field is an invalid parameter.
+    let service = who();
+    let refused = run(&h, &service, ingest_op(vec![event_without_pseudonym("q2", "run-alice")]))
+        .await
+        .expect_err("a service sends its pseudonym");
+    assert!(refused.contains("PARAMETER_INVALID"), "{refused}");
+    // The person path still refuses a run it does not own exactly as an absent run, with the field
+    // absent, so leaving the field out opens no existence oracle.
+    let alice = person("alice", TENANT, &["telemetry:write", "telemetry:read"]);
+    let foreign = run(&h, &alice, ingest_op(vec![event_without_pseudonym("q3", "run-bob")]))
+        .await
+        .expect_err("another principal's session is refused");
+    let absent = run(&h, &alice, ingest_op(vec![event_without_pseudonym("q3", "run-missing")]))
+        .await
+        .expect_err("an absent session is refused");
+    assert_eq!(
+        foreign.replace("run-bob", "<run>"),
+        absent.replace("run-missing", "<run>")
+    );
+}

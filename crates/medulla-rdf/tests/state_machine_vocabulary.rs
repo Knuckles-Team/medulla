@@ -1674,3 +1674,36 @@ fn finance_receipt_machine_matches_edge_table() {
 fn finance_receipt_machine_classes_extend_core() {
     sm::assert_extends_core("FinanceReceipt");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R901
+#[test]
+fn agent_goal_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_source_types::agent_goal::GOAL_MACHINE);
+}
+// spec: MEDULLA-DECISION-ENGINE-R901
+#[test]
+fn agent_goal_machine_classes_extend_core() {
+    sm::assert_extends_core("AgentGoal");
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R790
+#[test]
+fn connector_run_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_source_types::connector_run::CONNECTOR_RUN_MACHINE);
+}
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R790
+#[test]
+fn connector_run_machine_classes_extend_core() {
+    sm::assert_extends_core("ConnectorRun");
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R791
+#[test]
+fn source_mapping_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_source_types::source_connection::SOURCE_MAPPING_MACHINE);
+}
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R791
+#[test]
+fn source_mapping_machine_classes_extend_core() {
+    sm::assert_extends_core("SourceMapping");
+}

@@ -529,6 +529,7 @@ pub fn is_query_gateway_method(m: &Method) -> bool {
             | "ApproveEntityLink"
             | "EncodeDocument"
             | "StoredQueryCall"
+            | "StoredQueryRetire"
     )
 }
 

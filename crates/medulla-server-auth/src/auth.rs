@@ -1182,6 +1182,10 @@ pub fn authentication_refusal(error: &str) -> String {
         }
         return audience.to_string();
     }
+    if error == medulla_server_api::anonymous::AUTH_MODE_NOT_NONE_REFUSAL {
+        // MEDULLA-IDENTITY-R003.9: fixed text, never caller data.
+        return error.to_string();
+    }
     if error.starts_with(medulla_server_api::anonymous::REFUSAL_PREFIX) {
         // MEDULLA-IDENTITY-R003.2/R003.3: the anonymous decoder's typed refusals
         // (oversize metadata, presented credentials, identity claims). They
@@ -3156,21 +3160,24 @@ mod tests {
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "pgwire",
-            "local-login", &medulla_identity_types::identity::default_wire_login_scopes()
+            "local-login",
+            &medulla_identity_types::identity::default_wire_login_scopes(),
         )
         .unwrap();
         let mysql = VerifiedRequestContext::authenticated_sql_wire_actor(
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "mysql-wire",
-            "local-login", &medulla_identity_types::identity::default_wire_login_scopes()
+            "local-login",
+            &medulla_identity_types::identity::default_wire_login_scopes(),
         )
         .unwrap();
         let other_key = VerifiedRequestContext::authenticated_sql_wire_actor(
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-b",
             "pgwire",
-            "local-login", &medulla_identity_types::identity::default_wire_login_scopes()
+            "local-login",
+            &medulla_identity_types::identity::default_wire_login_scopes(),
         )
         .unwrap();
 
@@ -3182,14 +3189,16 @@ mod tests {
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "unknown-wire",
-            "local-login", &medulla_identity_types::identity::default_wire_login_scopes()
+            "local-login",
+            &medulla_identity_types::identity::default_wire_login_scopes()
         )
         .is_err());
         assert!(VerifiedRequestContext::authenticated_sql_wire_actor(
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "pgwire",
-            "", &medulla_identity_types::identity::default_wire_login_scopes()
+            "",
+            &medulla_identity_types::identity::default_wire_login_scopes()
         )
         .is_err());
     }
@@ -3961,6 +3970,11 @@ impl RequestAuthorityExt for medulla_server_api::state::ServerState {
     ) -> Result<VerifiedRequestContext, String> {
         if self.local_anonymous {
             medulla_server_api::anonymous::request_authority(request)
+        } else if medulla_server_api::anonymous::carries_sandbox_admission(request) {
+            // MEDULLA-IDENTITY-R003.9: a sandbox admission is honored only under
+            // `--auth-mode none`; every other mode refuses it before it reads the
+            // tenant or principal it names.
+            Err(medulla_server_api::anonymous::AUTH_MODE_NOT_NONE_REFUSAL.into())
         } else {
             verify_request(&self.context, &self.auth_secret, request)
         }
@@ -3988,5 +4002,54 @@ mod default_state_authority_tests {
             trace_id: None,
         };
         assert!(state.request_authority(&request).is_err());
+    }
+
+    // spec: MEDULLA-IDENTITY-R003.9
+    #[test]
+    fn a_sandbox_admission_is_refused_outside_auth_mode_none() {
+        let state = medulla_server_api::state::ServerState::new(
+            "synthetic-test-secret",
+            medulla_isolation::isolation::IsolationLayer::new(),
+            std::sync::Arc::new(medulla_server_api::server_context::ServerContext::fixture()),
+        );
+        assert!(!state.local_anonymous);
+        let sandbox = |tenant: &str| Request {
+            id: 1,
+            graph: "__commons__".into(),
+            agent_id: None,
+            auth_token: format!(
+                "anon1.{}",
+                serde_json::json!({
+                    "idempotency_key": "k",
+                    "sandbox": {"principal": "sandbox:p1", "tenant": tenant},
+                })
+            ),
+            method: medulla_protocol_types::protocol::Method::Ping,
+            trace_id: None,
+        };
+        let refusal = state.request_authority(&sandbox("sandbox:t1")).unwrap_err();
+        assert_eq!(
+            refusal,
+            medulla_server_api::anonymous::AUTH_MODE_NOT_NONE_REFUSAL
+        );
+        // The wire text is the same for any tenant: it reveals nothing about which exist.
+        assert_eq!(
+            super::authentication_refusal(&refusal),
+            super::authentication_refusal(
+                &state.request_authority(&sandbox("another")).unwrap_err()
+            )
+        );
+        assert!(super::authentication_refusal(&refusal).starts_with("AUTH_MODE_NOT_NONE"));
+
+        // The same request in none mode is admitted into its tenant, and only that one.
+        let mut anonymous = medulla_server_api::state::ServerState::new(
+            "",
+            medulla_isolation::isolation::IsolationLayer::new(),
+            std::sync::Arc::new(medulla_server_api::server_context::ServerContext::fixture()),
+        );
+        anonymous.local_anonymous = true;
+        let admitted = anonymous.request_authority(&sandbox("sandbox:t1")).unwrap();
+        assert_eq!(admitted.tenant(), "sandbox:t1");
+        assert_eq!(admitted.principal(), "sandbox:p1");
     }
 }

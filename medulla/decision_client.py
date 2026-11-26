@@ -196,6 +196,12 @@ def promotion_request(
     """A ``promotion`` ``Decide`` request: may ``challenger`` replace the champion
     of ``subject`` on the held-out evidence ``receipt_digest`` names.
 
+    A request that carries a ``tier_review`` needs the scope ``skills:review``. The
+    reviewer of a person is the verified caller, never a field of the review: the
+    engine reads the caller's team and platform membership from ``graph`` and refuses
+    ``TIER_SELF_REVIEW`` when the caller authored the skill revision. A service keeps
+    the ``approver_principal`` its review names.
+
     ``subject`` is a ``RevisionSubject`` wire body (``{"kind": "skill",
     "skill_ref": ..., "tier": "domain"}`` for a tiered skill). ``graph`` names the
     graph the approver's team membership is read from, and ``tier_review`` is the
@@ -251,6 +257,23 @@ def rollout_set(
         body["champion_ref"] = champion_ref
     body["rollouts"] = [dict(rollout) for rollout in rollouts]
     return body
+
+
+def record_ablation_op(tenant_id: str, record: Mapping[str, Any]) -> dict[str, Any]:
+    """Record the runs of one skill's ablation (``learn`` write ``record_ablation``,
+    R712.3): the identical runs set the noise band and each with-and-without pair
+    becomes a rollout. Needs the scope ``skills:eval`` at the door; the answer holds
+    the noise band, the verdict and the rollout evidence."""
+    return learn_op(tenant_id, "record_ablation", record=dict(record))
+
+
+def record_canary_op(
+    tenant_id: str, canary: Mapping[str, Any], verdict: str
+) -> dict[str, Any]:
+    """Put a canary split in force after a ``ramp`` or ``hold`` verdict, or take it
+    off after ``rollback`` (``learn`` write ``record_canary``, R712.3). The verdict
+    comes from a ``promotion_request`` with ``mode="canary"``."""
+    return learn_op(tenant_id, "record_canary", canary=dict(canary), verdict=verdict)
 
 
 def record_rollouts_op(tenant_id: str, rollouts: Mapping[str, Any]) -> dict[str, Any]:
@@ -905,6 +928,40 @@ def delegation_quality_op(request: Mapping[str, Any]) -> dict[str, Any]:
     """Judge one window of a delegate's observations (R157.3) as a
     ``DecisionEval`` job."""
     return {"op": "delegation_quality", "request": dict(request)}
+
+
+def skill_eval_case_add_op(request: Mapping[str, Any]) -> dict[str, Any]:
+    """Add one case to a skill's suite (R711.7) as a ``DecisionEval`` op. Needs the
+    scope ``skills:author``; ``request`` carries ``tenant_id``, ``case`` and
+    ``known_tools``. The case is checked as a suite run checks it."""
+    return {"op": "skill_eval_case_add", "request": dict(request)}
+
+
+def skill_eval_report_op(tenant_id: str, skill_ref: str) -> dict[str, Any]:
+    """Read the latest suite report and judge calibration of one skill (R711.7) as a
+    ``DecisionEval`` op. Needs the scope ``skills:eval``; both fields are ``null``
+    for a skill the tenant has no suite for."""
+    return {
+        "op": "skill_eval_report",
+        "request": {"tenant_id": tenant_id, "skill_ref": skill_ref},
+    }
+
+
+def skill_eval_calibrate_op(
+    tenant_id: str, skill_ref: str, calibration: Mapping[str, Any]
+) -> dict[str, Any]:
+    """Record the calibration of the judge of one skill's suite (R711.7) as a
+    ``DecisionEval`` op. Needs the scope ``skills:eval``; the answer says whether the
+    judge is ``admitted`` to grade judged cases. A later ``skill_eval`` that sends no
+    calibration reads this one."""
+    return {
+        "op": "skill_eval_calibrate",
+        "request": {
+            "tenant_id": tenant_id,
+            "skill_ref": skill_ref,
+            "calibration": dict(calibration),
+        },
+    }
 
 
 def skill_eval_op(request: Mapping[str, Any]) -> dict[str, Any]:
@@ -1584,11 +1641,14 @@ def usage_record(
     tokens_cached: int = 0,
     latency_ms: int = 50,
     content: str | None = None,
+    project_id: str = "",
+    agent_id: str = "",
 ) -> dict[str, Any]:
     """Build one ``UsageRecord`` for :func:`usage_append_op`.
 
     Only a SHA-256 digest of ``content`` (default: the run id) travels; the
-    engine stamps the verified principal over ``principal``.
+    engine stamps the verified principal over ``principal``. ``project_id`` and
+    ``agent_id`` are what a grouped rollup folds by (MEDULLA-DECISION-ENGINE-R801.9).
     """
     import hashlib
 
@@ -1608,6 +1668,8 @@ def usage_record(
         "latency_ms": latency_ms,
         "outcome": "error" if errored else "ok",
         "content_digest": digest,
+        "project_id": project_id,
+        "agent_id": agent_id,
     }
 
 
@@ -1849,7 +1911,12 @@ def skill_telemetry_ingest_op(
     graph: str, events: Sequence[Mapping[str, Any]]
 ) -> dict[str, Any]:
     """A ``SkillTelemetry`` ingest of at most 500 invocations (``telemetry:write``);
-    one bad event refuses the whole batch."""
+    one bad event refuses the whole batch.
+
+    A person (a caller that is not a service, an agent or a delegate) omits
+    ``principal_pseudonym``: the engine derives it from the verified principal and
+    overwrites any value sent. A service sends it, computed with
+    :func:`skill_pseudonym`, as 64 hex digits."""
     return {"op": "ingest", "graph": graph, "events": [dict(event) for event in events]}
 
 
@@ -1933,10 +2000,16 @@ def usage_read_op(
     view: str,
     model_key: str | None = None,
     cursor: str | None = None,
+    group_by: str | None = None,
 ) -> dict[str, Any]:
     """A ``Usage`` read of the caller's tenant (scope ``usage:read``).
 
     ``view`` is ``records`` (paged by ``cursor``) or ``rollup`` (day buckets).
+    ``group_by`` (``model``, ``project`` or ``agent``, ``rollup`` only) also folds
+    the window into one row per group with its cost, the currency the cost was
+    recorded in, and the p95 latency; the rollup answer carries
+    ``index_watermark_ms``, the newest ``recorded_at_ms`` of the ledger
+    (MEDULLA-DECISION-ENGINE-R801.9).
     """
     op: dict[str, Any] = {
         "op": "read",
@@ -1948,6 +2021,8 @@ def usage_read_op(
         op["model_key"] = model_key
     if cursor is not None:
         op["cursor"] = cursor
+    if group_by is not None:
+        op["group_by"] = group_by
     return op
 
 
@@ -2104,6 +2179,47 @@ class DecisionClient:
             self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
         )
         return _payload(result)
+
+    async def _skill_eval_send(
+        self, op: Mapping[str, Any], idempotency_key: str | None
+    ) -> Any:
+        from medulla.generated.coordination import send_decision_eval
+
+        result = await send_decision_eval(
+            self.client,
+            {"op": dict(op)},
+            self.graph,
+            idempotency_key=idempotency_key,
+        )
+        return _payload(result)
+
+    async def skill_eval_case_add(
+        self, request: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``DecisionEval`` op ``skill_eval_case_add`` (``skills:author``)."""
+        return await self._skill_eval_send(
+            skill_eval_case_add_op(request), idempotency_key
+        )
+
+    async def skill_eval_report(self, tenant_id: str, skill_ref: str) -> Any:
+        """Send ``DecisionEval`` op ``skill_eval_report`` (scope ``skills:eval``)."""
+        return await self._skill_eval_send(
+            skill_eval_report_op(tenant_id, skill_ref), None
+        )
+
+    async def skill_eval_calibrate(
+        self,
+        tenant_id: str,
+        skill_ref: str,
+        calibration: Mapping[str, Any],
+        *,
+        idempotency_key: str | None = None,
+    ) -> Any:
+        """Send ``DecisionEval`` op ``skill_eval_calibrate`` (scope ``skills:eval``)."""
+        return await self._skill_eval_send(
+            skill_eval_calibrate_op(tenant_id, skill_ref, calibration),
+            idempotency_key,
+        )
 
     async def skill_eval(
         self, request: Mapping[str, Any], *, idempotency_key: str | None = None
@@ -2505,7 +2621,12 @@ __all__ = [
     "param",
     "participant_wire",
     "promotion_request",
+    "record_ablation_op",
+    "record_canary_op",
     "record_rollouts_op",
+    "skill_eval_calibrate_op",
+    "skill_eval_case_add_op",
+    "skill_eval_report_op",
     "rollout_set",
     "activate_champion_op",
     "ask_op",

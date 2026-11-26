@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_types::usage::{
-    PriceCatalog, PriceEntry, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION,
+    PriceCatalog, PriceEntry, UsageGroupBy, UsageOutcome, UsageRecord, USAGE_SCHEMA_VERSION,
 };
 
 use super::super::agent_fixtures::open_agent_store;
@@ -25,6 +25,8 @@ fn record(run: &str, model: &str, at_ms: u64, tokens: (u64, u64, u64)) -> UsageR
         latency_ms: 10,
         outcome: UsageOutcome::Ok,
         content_digest: "a".repeat(64),
+        project_id: String::new(),
+        agent_id: String::new(),
     }
 }
 
@@ -36,6 +38,7 @@ fn price(model: &str, valid_from_ms: u64, in_p: u64, out_p: u64, cached_p: u64) 
         in_per_mtok_micro: in_p,
         out_per_mtok_micro: out_p,
         cached_per_mtok_micro: cached_p,
+        currency: String::new(),
     }
 }
 
@@ -247,4 +250,151 @@ fn recent_runs_flags_errored_runs_newest_first() {
         .recent_runs("t2", "child", "decide", 5)
         .unwrap()
         .is_empty());
+}
+
+fn project_record(
+    run: &str,
+    at_ms: u64,
+    project: &str,
+    agent: &str,
+    latency_ms: u64,
+) -> UsageRecord {
+    UsageRecord {
+        latency_ms,
+        project_id: project.into(),
+        agent_id: agent.into(),
+        ..record(run, "gpt-x", at_ms, (1_000_000, 0, 0))
+    }
+}
+
+#[test]
+fn groups_fold_by_project_and_agent_with_cost_currency_and_p95() {
+    // spec: MEDULLA-DECISION-ENGINE-R801.9
+    let (_dir, store) = open_agent_store();
+    let mut priced = price("gpt-x", 0, 1_000_000, 0, 0);
+    priced.currency = "EUR".into();
+    let catalog = PriceCatalog {
+        aliases: BTreeMap::new(),
+        entries: vec![priced],
+    };
+    // Twenty calls of project alpha with latencies 1..=20, one of project beta.
+    let mut batch: Vec<UsageRecord> = (1..=20u64)
+        .map(|i| project_record(&format!("a{i}"), 100 + i, "alpha", "agent-1", i))
+        .collect();
+    batch.push(project_record("b1", 200, "beta", "agent-2", 7));
+    store
+        .append_usage(TENANT, "p1", &catalog, &batch, 5)
+        .unwrap();
+
+    let by_project = store
+        .usage_groups(TENANT, &catalog, 0, u64::MAX, UsageGroupBy::Project)
+        .unwrap();
+    let keys: Vec<&str> = by_project.iter().map(|g| g.key.as_str()).collect();
+    assert_eq!(keys, ["alpha", "beta"]);
+    let alpha = &by_project[0];
+    assert_eq!(alpha.calls, 20);
+    assert_eq!(alpha.cost_micro, Some(20_000_000));
+    assert_eq!(alpha.currency.as_deref(), Some("EUR"));
+    // Nearest rank: the ceil(0.95 * 20) = 19th smallest latency.
+    assert_eq!(alpha.latency_p95_ms, 19);
+    assert_eq!(by_project[1].latency_p95_ms, 7);
+
+    let by_agent = store
+        .usage_groups(TENANT, &catalog, 0, u64::MAX, UsageGroupBy::Agent)
+        .unwrap();
+    assert_eq!(
+        by_agent.iter().map(|g| g.calls).collect::<Vec<_>>(),
+        [20, 1]
+    );
+    // The window bounds the fold.
+    let narrow = store
+        .usage_groups(TENANT, &catalog, 150, u64::MAX, UsageGroupBy::Project)
+        .unwrap();
+    assert_eq!(narrow.len(), 1);
+    assert_eq!(narrow[0].key, "beta");
+
+    // The ledger of another tenant is empty: nothing of this one is reachable.
+    assert!(store
+        .usage_groups("other", &catalog, 0, u64::MAX, UsageGroupBy::Project)
+        .unwrap()
+        .is_empty());
+}
+
+#[test]
+fn a_group_with_unpriced_calls_or_mixed_currencies_reports_no_cost() {
+    // spec: MEDULLA-DECISION-ENGINE-R801.9
+    let (_dir, store) = open_agent_store();
+    let mut eur = price("gpt-x", 0, 1_000_000, 0, 0);
+    eur.currency = "EUR".into();
+    let mut usd = price("gpt-x", 1_000, 1_000_000, 0, 0);
+    usd.currency = "USD".into();
+    let catalog = PriceCatalog {
+        aliases: BTreeMap::new(),
+        entries: vec![eur, usd],
+    };
+    let batch = vec![
+        project_record("m1", 10, "mixed", "a", 1),
+        project_record("m2", 2_000, "mixed", "a", 1),
+        project_record("c1", 20, "clean", "a", 1),
+        UsageRecord {
+            model_key: "unpriced-model".into(),
+            ..project_record("u1", 30, "gap", "a", 1)
+        },
+    ];
+    store
+        .append_usage(TENANT, "p1", &catalog, &batch, 5)
+        .unwrap();
+    let groups = store
+        .usage_groups(TENANT, &catalog, 0, u64::MAX, UsageGroupBy::Project)
+        .unwrap();
+    let get = |key: &str| groups.iter().find(|g| g.key == key).unwrap();
+    // No conversion is ever made: two currencies leave the cost absent.
+    assert_eq!(
+        (get("mixed").cost_micro, get("mixed").currency.clone()),
+        (None, None)
+    );
+    assert_eq!(get("clean").cost_micro, Some(1_000_000));
+    assert_eq!(get("clean").currency.as_deref(), Some("EUR"));
+    assert_eq!(get("gap").cost_micro, None);
+}
+
+#[test]
+fn watermark_is_the_newest_recorded_time_and_survives_older_appends() {
+    // spec: MEDULLA-DECISION-ENGINE-R801.9
+    let (_dir, store) = open_agent_store();
+    assert_eq!(store.usage_watermark(TENANT).unwrap(), None);
+    let catalog = catalog();
+    store
+        .append_usage(
+            TENANT,
+            "p1",
+            &catalog,
+            &[record("r1", "gpt-x", 500, (1, 1, 0))],
+            1,
+        )
+        .unwrap();
+    assert_eq!(store.usage_watermark(TENANT).unwrap(), Some(500));
+    // An append of older events never moves the watermark back.
+    store
+        .append_usage(
+            TENANT,
+            "p1",
+            &catalog,
+            &[record("r2", "gpt-x", 100, (1, 1, 0))],
+            2,
+        )
+        .unwrap();
+    assert_eq!(store.usage_watermark(TENANT).unwrap(), Some(500));
+    store
+        .append_usage(
+            TENANT,
+            "p1",
+            &catalog,
+            &[record("r3", "gpt-x", 900, (1, 1, 0))],
+            3,
+        )
+        .unwrap();
+    assert_eq!(store.usage_watermark(TENANT).unwrap(), Some(900));
+    // Another tenant's ledger has its own.
+    assert_eq!(store.usage_watermark("other").unwrap(), None);
 }

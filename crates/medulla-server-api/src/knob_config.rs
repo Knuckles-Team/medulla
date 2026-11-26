@@ -491,6 +491,8 @@ knobs! {
     ingest_proposal_min_coverage: f64 = "ingest.proposal_min_coverage", F64(0.8), [0.5, 1.0], "ratio", Tunable;
     /// Seconds between paper intake firings, aligned to UTC (MEDULLA-REPO-INGEST-R006.6).
     paper_intake_interval: u64 = "paper_intake.interval", U64(21_600), [3_600, 86_400], "seconds", Tunable;
+    /// Most bytes one served media object may hold; a larger put is refused `MEDIA_TOO_LARGE` (MEDULLA-MEDIA-VOCAB-R657.1).
+    media_max_bytes: u64 = "media.max_bytes", U64(33_554_432), [1_024, 67_108_864], "bytes", Tunable;
     /// Most records one drain page task holds (MEDULLA-INGEST-WORKER-R605.2).
     ingest_drain_page_records: u64 = "ingest.drain_page_records", U64(500), [1, 1_024], "records", Tunable;
     /// Most class redundancy an induced ontology proposal may carry and still be admitted (MEDULLA-INGEST-WORKER-R002.3).
@@ -501,6 +503,14 @@ knobs! {
     cdc_ring_events: u64 = "cdc.ring_events", U64(65_536), [16, 16_777_216], "events", Tunable;
     /// Largest page of `ReadGraphChanges` (MEDULLA-DURABLE-KERNEL-R043.100.3).
     graph_change_feed_max_page: u64 = "graph_change_feed.max_page", U64(256), [1, 256], "events", Tunable;
+    /// Revision of the live-graph latency profile; `GraphLiveLimits` answers it and every change-feed event names it as `latency_profile_revision` (MEDULLA-DURABLE-KERNEL-R043.100.5).
+    graph_live_profile_revision: u64 = "graph_live.profile_revision", U64(1), [1, 1_000_000], "revision", Tunable;
+    /// 95th-percentile bound from a commit to its first authorized read, in milliseconds (MEDULLA-DURABLE-KERNEL-R043.100.5).
+    graph_live_commit_to_visible_p95_ms: f64 = "graph_live.commit_to_visible_p95_ms", F64(1_000.0), [1.0, 60_000.0], "ms", Tunable;
+    /// 95th-percentile bound of one live-graph frame, in milliseconds (MEDULLA-DURABLE-KERNEL-R043.100.5).
+    graph_live_frame_p95_ms: f64 = "graph_live.frame_p95_ms", F64(16.7), [1.0, 1_000.0], "ms", Tunable;
+    /// Bound on a live-graph layout settling after a change, in milliseconds (MEDULLA-DURABLE-KERNEL-R043.100.5).
+    graph_live_layout_settle_ms: f64 = "graph_live.layout_settle_ms", F64(2_000.0), [1.0, 60_000.0], "ms", Tunable;
     /// Lowest risk tier (0 low, 1 medium, 2 high) a write-back proposal queues for approval at.
     writeback_queue_min_tier: u64 = "writeback.queue_min_tier", U64(2), [2, 2], "tier", Fixed;
     /// Most proposals one approval queue may hold (MEDULLA-DECISION-ENGINE-R615.3).
@@ -1073,7 +1083,8 @@ pub fn load_knobs(
         let name = name.trim();
         if !ROOT_LIST_KEYS.contains(&name)
             && name != DEFAULT_INGEST_GRAPH_KEY
-            && !KNOB_TABLE.iter().any(|spec| spec.name == name) {
+            && !KNOB_TABLE.iter().any(|spec| spec.name == name)
+        {
             return Err(refusal(
                 ServerErrorCode::KnobUnknown,
                 name,
@@ -1333,8 +1344,20 @@ mod tests {
     #[test]
     fn memory_sync_retention_knobs_register() {
         let expect = [
-            ("memory_sync.history_retention_s", 2_592_000, 3_600, 31_536_000, "seconds"),
-            ("memory_sync.max_revisions_per_doc", 64, 1, 4_096, "revisions"),
+            (
+                "memory_sync.history_retention_s",
+                2_592_000,
+                3_600,
+                31_536_000,
+                "seconds",
+            ),
+            (
+                "memory_sync.max_revisions_per_doc",
+                64,
+                1,
+                4_096,
+                "revisions",
+            ),
             (
                 "memory_sync.capacity_bytes",
                 1_073_741_824,
@@ -1358,7 +1381,10 @@ mod tests {
         let loaded = load_knobs(&[], none).unwrap();
         assert_eq!(loaded.memory_sync_max_revisions_per_doc, 64);
         let args = vec!["memory_sync.max_revisions_per_doc=4097".to_string()];
-        assert!(load_knobs(&args, none).is_err(), "above the bound refuses at startup");
+        assert!(
+            load_knobs(&args, none).is_err(),
+            "above the bound refuses at startup"
+        );
         let config = memory_sync_config();
         assert_eq!(config.validate(), Ok(()));
     }
@@ -1376,9 +1402,15 @@ mod tests {
         assert_eq!(spec.unit, "ms");
         assert_eq!(spec.class, KnobClass::Tunable);
         let none = |_: &str| None;
-        assert_eq!(load_knobs(&[], none).unwrap().acceleration_watermark_ttl_ms, 300_000);
+        assert_eq!(
+            load_knobs(&[], none).unwrap().acceleration_watermark_ttl_ms,
+            300_000
+        );
         let below = vec!["acceleration.watermark_ttl_ms=999".to_string()];
-        assert!(load_knobs(&below, none).is_err(), "below the range refuses at startup");
+        assert!(
+            load_knobs(&below, none).is_err(),
+            "below the range refuses at startup"
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R036.105.2

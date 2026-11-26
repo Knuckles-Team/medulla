@@ -1312,6 +1312,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-SCM-R007: a path grant that is out of bounds.
     ("SetPathGrant", &["PATH_GRANT_INVALID"]),
+    // MEDULLA-MEDIA-VOCAB-R657: the served media refusals.
+    ("MediaPut", &["MEDIA_INVALID", "MEDIA_TOO_LARGE"]),
+    ("MediaGet", &["MEDIA_NOT_FOUND"]),
     // MEDULLA-SCM-R004: the tree read refusals.
     (
         "ReadTree",
@@ -1989,6 +1992,100 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RELEASE_SEALED",
         ],
     ),
+    // MEDULLA-SDLC-R002.7, R002.8: the deploy record write and its reads.
+    (
+        "DeployRecordPut",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DEPLOY_RECORD_INVALID",
+            "DEPLOY_RECORD_SEALED",
+        ],
+    ),
+    (
+        "DeployRecordGet",
+        &["TENANT_SCOPE_REQUIRED", "DEPLOY_RECORD_NOT_FOUND"],
+    ),
+    (
+        "DeployRecordList",
+        &["TENANT_SCOPE_REQUIRED", "DEPLOY_RECORD_INVALID"],
+    ),
+    // MEDULLA-BUSINESS-OPS-R004: the approval gate question.
+    (
+        "ApprovalGateResolve",
+        &["TENANT_SCOPE_REQUIRED", "APPROVAL_GATE_INVALID"],
+    ),
+    // MEDULLA-DECISION-ENGINE-R901: the agent goal reads and control.
+    (
+        "GoalList",
+        &["TENANT_SCOPE_REQUIRED", "GOAL_INVALID"],
+    ),
+    (
+        "GoalIterations",
+        &["TENANT_SCOPE_REQUIRED", "GOAL_NOT_FOUND"],
+    ),
+    (
+        "GoalControl",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "GOAL_INVALID",
+            "GOAL_NOT_FOUND",
+        ],
+    ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R790: the connector run list and report.
+    (
+        "ConnectorRuns",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "CONNECTOR_RUN_INVALID",
+            "CONNECTION_NOT_FOUND",
+        ],
+    ),
+    (
+        "ConnectorRunGet",
+        &["TENANT_SCOPE_REQUIRED", "CONNECTOR_RUN_NOT_FOUND"],
+    ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R791: the source connection and mapping reads and controls.
+    (
+        "SourceConnectionGet",
+        &["TENANT_SCOPE_REQUIRED", "CONNECTION_NOT_FOUND"],
+    ),
+    (
+        "SourceConnectionList",
+        &["TENANT_SCOPE_REQUIRED", "SOURCE_CONNECTION_INVALID"],
+    ),
+    (
+        "SourceConnectionControl",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "SOURCE_CONNECTION_INVALID",
+            "CONNECTION_NOT_FOUND",
+        ],
+    ),
+    (
+        "SourceMappingGet",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "CONNECTION_NOT_FOUND",
+            "MAPPING_NOT_FOUND",
+        ],
+    ),
+    (
+        "SourceMappingControl",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "SOURCE_CONNECTION_INVALID",
+            "CONNECTION_NOT_FOUND",
+            "MAPPING_NOT_FOUND",
+            "MAPPING_CHANGED",
+        ],
+    ),
+    (
+        "ConnectorRunRecord",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "CONNECTOR_RUN_INVALID",
+        ],
+    ),
     // MEDULLA-SCM-R008: the gate verdict record's refusals.
     (
         "RecordGateVerdict",
@@ -2200,6 +2297,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PROPOSAL_NOT_OPEN",
         ],
     ),
+    // MEDULLA-IDENTITY-R740: the layered configuration read's refusals.
+    ("ConfigLayers", &["TENANT_SCOPE_REQUIRED"]),
     // MEDULLA-SDLC-R012.9: the project mode read's refusals.
     (
         "ProjectModeGet",
@@ -2729,6 +2828,12 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
 /// organization constitution Article XXXI). Each may answer the typed record
 /// `{code: TRANSITION_REFUSED, machine, from, event, reason}`.
 pub const MACHINE_METHODS: &[&str] = &[
+    // MEDULLA-DECISION-ENGINE-R901: `GoalControl` moves the goal machine.
+    "GoalControl",
+    // MEDULLA-UNIFIED-DATA-PLANE-R790: `ConnectorRunRecord` moves the connector run machine.
+    "ConnectorRunRecord",
+    // MEDULLA-UNIFIED-DATA-PLANE-R791: `SourceMappingControl` moves the source mapping machine.
+    "SourceMappingControl",
     "FeatureLedger",
     // MEDULLA-DECISION-ENGINE-R701.3: `MarkAddressed` moves the gap-topic machine.
     "FailureIngest",

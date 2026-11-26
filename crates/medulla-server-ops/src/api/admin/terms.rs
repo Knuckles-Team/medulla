@@ -25,12 +25,43 @@ use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
+const INTERFACE_TYPE: &str = medulla_types::ontology_iri!("core#Interface");
 const RDFS_SUBCLASS_OF: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
 
 /// The declared terms of a composition and the direct superclasses of its classes.
 struct DeclaredVocabulary {
     terms: BTreeMap<GraphSchemaTermPosition, String>,
     superclasses: BTreeMap<String, BTreeSet<String>>,
+}
+
+/// The interface markers of the composed schema: which classes are interfaces and which
+/// interfaces each class implements (MEDULLA-TYPED-PACKS-R650.8).
+struct InterfaceMarks {
+    interfaces: BTreeSet<String>,
+    implements: BTreeMap<String, Vec<String>>,
+}
+
+impl InterfaceMarks {
+    fn of(model: &medulla_core::ontology::object_model::ObjectModel) -> Self {
+        let mut implements: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+        for implementation in &model.implementations {
+            implements
+                .entry(implementation.class.clone())
+                .or_default()
+                .insert(implementation.interface.clone());
+        }
+        Self {
+            interfaces: model
+                .interfaces
+                .iter()
+                .map(|interface| interface.name.clone())
+                .collect(),
+            implements: implements
+                .into_iter()
+                .map(|(class, interfaces)| (class, interfaces.into_iter().collect()))
+                .collect(),
+        }
+    }
 }
 
 /// One page request, as the method carries it.
@@ -122,6 +153,8 @@ fn classes_page(
         .map(GraphSchemaTermPosition::parse)
         .transpose()?;
     let DeclaredVocabulary { terms, superclasses } = scan_vocabulary(sources)?;
+    let model = object_model(sources)?;
+    let marks = InterfaceMarks::of(&model);
     let matching: Vec<(&GraphSchemaTermPosition, &String)> = terms
         .iter()
         .filter(|(position, _)| request.kind.is_none_or(|kind| kind == position.kind))
@@ -131,7 +164,9 @@ fn classes_page(
         .into_iter()
         .filter(|(position, _)| after.as_ref().is_none_or(|after| *position > after))
         .take(limit + 1)
-        .map(|(position, source_id)| term_view(position, source_id, sources, &superclasses))
+        .map(|(position, source_id)| {
+            term_view(position, source_id, sources, &superclasses, &marks)
+        })
         .collect();
     let next_cursor = (page.len() > limit).then(|| {
         page.truncate(limit);
@@ -148,25 +183,33 @@ fn classes_page(
         composed_digest: sources.composed_digest().to_hex(),
         total_terms,
         terms: medulla_types::contract::BoundedVec::new(page)?,
-        interfaces: interface_reports(sources)?,
+        interfaces: interface_reports(&model)?,
         next_cursor,
     })
 }
 
-/// Every `:implementsInterface` the composed schema declares, with the required
-/// members the implementing class lacks (MEDULLA-TYPED-PACKS-R650.3). One
-/// extraction path: the model the pack import compiles its shapes from.
-fn interface_reports(sources: &GraphSchemaSources) -> Result<Vec<GraphSchemaInterfaceView>, String> {
-    use medulla_core::ontology::object_model::interface_gaps;
-
+/// The object model of the composed schema: one extraction path, the model the pack import
+/// compiles its shapes from (MEDULLA-TYPED-PACKS-R650.7).
+fn object_model(
+    sources: &GraphSchemaSources,
+) -> Result<medulla_core::ontology::object_model::ObjectModel, String> {
     let documents: Vec<&str> = sources.ontologies().map(|(_, text)| text).collect();
-    let model = medulla_rdf::pack::extract_object_model(&documents).map_err(|error| {
+    medulla_rdf::pack::extract_object_model(&documents).map_err(|error| {
         format!(
             "OBJECT_MODEL_INVALID: {}: {}",
             error.subject(),
             error.reason()
         )
-    })?;
+    })
+}
+
+/// Every `:implementsInterface` the composed schema declares, with the required
+/// members the implementing class lacks (MEDULLA-TYPED-PACKS-R650.3).
+fn interface_reports(
+    model: &medulla_core::ontology::object_model::ObjectModel,
+) -> Result<Vec<GraphSchemaInterfaceView>, String> {
+    use medulla_core::ontology::object_model::interface_gaps;
+
     let mut missing: BTreeMap<(String, String), Vec<String>> = model
         .implementations
         .iter()
@@ -177,7 +220,7 @@ fn interface_reports(sources: &GraphSchemaSources) -> Result<Vec<GraphSchemaInte
             )
         })
         .collect();
-    for gap in interface_gaps(&model) {
+    for gap in interface_gaps(model) {
         missing
             .entry((gap.class, gap.interface))
             .or_default()
@@ -207,7 +250,9 @@ fn term_view(
     source_id: &str,
     sources: &GraphSchemaSources,
     superclasses: &BTreeMap<String, BTreeSet<String>>,
+    marks: &InterfaceMarks,
 ) -> GraphSchemaTermView {
+    let is_class = position.kind == GraphSchemaTermKind::Class;
     let superclasses = match position.kind {
         GraphSchemaTermKind::Class => superclasses
             .get(&position.iri)
@@ -223,6 +268,12 @@ fn term_view(
         ontology_revision: active_ontology_revision(sources, source_id),
         node_count: None,
         superclasses,
+        interface: is_class && marks.interfaces.contains(&position.iri),
+        implements: if is_class {
+            marks.implements.get(&position.iri).cloned().unwrap_or_default()
+        } else {
+            Vec::new()
+        },
     }
 }
 
@@ -289,9 +340,16 @@ fn declared_position(triple: &Triple) -> Option<GraphSchemaTermPosition> {
     else {
         return None;
     };
+    // A subject typed `:Interface` is a class term even when it carries no `owl:Class` typing,
+    // so every interface the object model names is a row a client can list.
+    let kind = if object.as_str() == INTERFACE_TYPE {
+        GraphSchemaTermKind::Class
+    } else {
+        GraphSchemaTermKind::declared_by(object.as_str())?
+    };
     Some(GraphSchemaTermPosition {
         iri: subject.as_str().to_string(),
-        kind: GraphSchemaTermKind::declared_by(object.as_str())?,
+        kind,
     })
 }
 
@@ -418,6 +476,59 @@ mod tests {
             term("https://example.org/pack#partOf").superclasses.is_empty(),
             "a property term carries no superclasses"
         );
+    }
+
+    const INTERFACE_ONTOLOGY: &str = "@prefix owl: <http://www.w3.org/2002/07/owl#> .\n\
+        @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .\n\
+        @prefix kg: <https://knuckles-team.github.io/ontology/core#> .\n\
+        <https://example.org/pack#Named> a kg:Interface .\n\
+        <https://example.org/pack#Person> a owl:Class ;\n\
+            kg:implementsInterface <https://example.org/pack#Named> .\n\
+        <https://example.org/pack#Robot> a owl:Class ;\n\
+            kg:implementsInterface <https://example.org/pack#Named> .\n\
+        <https://example.org/pack#Plain> a owl:Class .\n\
+        <https://example.org/pack#partOf> a owl:ObjectProperty .\n";
+
+    // spec: MEDULLA-TYPED-PACKS-R650.8
+    #[test]
+    fn a_class_row_marks_its_interface_and_lists_the_interfaces_it_implements() {
+        let source = GraphSchemaSource::new(
+            SchemaSourceOrigin::Admin {
+                name: "ifaces".to_string(),
+            },
+            None,
+            Some(Arc::from(INTERFACE_ONTOLOGY)),
+            0,
+        )
+        .expect("a bounded admin source");
+        let sources = GraphSchemaSources::with_dynamic(BTreeMap::from([(
+            "admin:ifaces".to_string(),
+            source,
+        )]))
+        .expect("the source composes with the core catalog");
+        let page = classes_page("g", &sources, &request(None, None, 1000))
+            .expect("a first page")
+            .terms
+            .as_slice()
+            .to_vec();
+        let term = |iri: &str| {
+            page.iter()
+                .find(|term| term.iri == iri)
+                .unwrap_or_else(|| panic!("{iri} is listed"))
+        };
+        let named = term("https://example.org/pack#Named");
+        assert!(named.interface, "an :Interface is a class row marked interface");
+        assert_eq!(named.kind, GraphSchemaTermKind::Class);
+        assert!(named.implements.is_empty());
+        for implementer in ["Person", "Robot"] {
+            let row = term(&format!("https://example.org/pack#{implementer}"));
+            assert!(!row.interface);
+            assert_eq!(row.implements, ["https://example.org/pack#Named".to_string()]);
+        }
+        let plain = term("https://example.org/pack#Plain");
+        assert!(!plain.interface && plain.implements.is_empty());
+        let property = term("https://example.org/pack#partOf");
+        assert!(!property.interface && property.implements.is_empty());
     }
 
     // spec: MEDULLA-TYPED-PACKS-R812.1

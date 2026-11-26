@@ -239,3 +239,104 @@ async fn report_is_a_graph_node_with_counts_and_a_receipt_digest() {
         .expect("plans");
     assert_eq!(repeat[0]["id"], node["id"]);
 }
+
+fn eval_caller(tenant: &str, scopes: &[&str]) -> VerifiedRequestContext {
+    VerifiedRequestContext::verified_for_test_with_scopes("agent-7", tenant, scopes)
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R711.7
+#[tokio::test]
+async fn a_case_is_added_checked_and_scoped_to_its_tenant() {
+    use super::super::stat_skill_eval::{case_add_operations, case_node_id, require_scope};
+    use medulla_decision_types::skill_eval::{SkillEvalCaseAddRequest, SCOPE_AUTHOR};
+    let add = |case: SkillEvalCase, tenant: &str| SkillEvalCaseAddRequest {
+        tenant_id: tenant.into(),
+        case,
+        known_tools: vec!["search".into()],
+    };
+    let author = eval_caller(TENANT, &[SCOPE_AUTHOR]);
+    // The scope gate refuses a caller without `skills:author` and admits one with it.
+    let reader = eval_caller(TENANT, &["skills:eval"]);
+    let refused = require_scope(&reader, SCOPE_AUTHOR).expect_err("the author scope is required");
+    assert!(refused.starts_with("EVAL_SCOPE_REQUIRED"), "{refused}");
+    require_scope(&author, SCOPE_AUTHOR).expect("admitted");
+
+    // A valid case plans one tenant-namespaced node that carries the vocabulary properties.
+    let good = case(1, EvalCaseKind::RealPrompt);
+    let (operations, added) = case_add_operations(&author, &add(good.clone(), TENANT)).expect("plans");
+    assert_eq!(added.node_id, case_node_id(TENANT, "case-1"));
+    let props = &operations[0]["properties"];
+    assert_eq!(operations[0]["id"], added.node_id);
+    assert_eq!(props["type"], "SkillEvalCase");
+    assert_eq!(props["case_kind"], "real_prompt");
+    assert_eq!(props["case_source"], "authored");
+    assert_eq!(props["tenant_id"], TENANT);
+    assert_eq!(props["_owner"], "agent-7");
+    // The same case id of another tenant is another node: no collision, no oracle.
+    assert_ne!(case_node_id("tenant-b", "case-1"), added.node_id);
+
+    // The run's own checks refuse an unrunnable case: a golden case with no expected digest,
+    // a real-prompt case with no trajectory and a mock of an unknown tool.
+    let mut golden = case(2, EvalCaseKind::Golden);
+    golden.expected_digest = None;
+    let mut bare = case(3, EvalCaseKind::RealPrompt);
+    bare.expected_trajectory.clear();
+    let mut mocked = case(4, EvalCaseKind::Golden);
+    mocked.tool_mocks = vec![medulla_decision_types::skill_eval::ToolMock {
+        tool: "unknown".into(),
+        args_digest: "a".into(),
+        result_digest: "b".into(),
+    }];
+    for bad in [golden, bare, mocked] {
+        let error = case_add_operations(&author, &add(bad, TENANT)).expect_err("refused");
+        assert!(error.starts_with("EVAL_CASE_INVALID"), "{error}");
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R711.7
+#[tokio::test]
+async fn report_and_calibration_are_read_and_recorded_per_tenant() {
+    use super::super::stat_skill_eval::{calibrate, report_answer};
+    use medulla_decision_types::skill_eval::{SkillEvalCalibrateRequest, SkillEvalReportRequest};
+    let h = Harness::new().await;
+    let store = store(&h).await;
+    let ask = |tenant: &str| SkillEvalReportRequest {
+        tenant_id: tenant.into(),
+        skill_ref: SKILL.into(),
+    };
+
+    // No suite yet: the answer is empty, and the same for another tenant and for a skill that
+    // does not exist, so it says nothing about what exists.
+    let empty = report_answer(&store, &ask(TENANT)).expect("reads");
+    assert_eq!((empty.report.clone(), empty.calibration.clone()), (None, None));
+
+    // Calibrate below the bound: recorded, not admitted. At the bound and enough items: admitted.
+    let record = |kappa_ppm: u64, n: u64| SkillEvalCalibrateRequest {
+        tenant_id: TENANT.into(),
+        skill_ref: SKILL.into(),
+        calibration: JudgeCalibration {
+            judge_ref: "judge-1".into(),
+            annotated_set_ref: "set-1".into(),
+            kappa_ppm,
+            n,
+        },
+    };
+    assert!(!calibrate(&store, &record(100_000, 60)).expect("records").admitted);
+    assert!(!calibrate(&store, &record(900_000, 10)).expect("records").admitted);
+    let admitted = calibrate(&store, &record(900_000, 60)).expect("records");
+    assert!(admitted.admitted);
+
+    // A suite run that sends no calibration reads the one on record and runs its judged cases.
+    let mut req = request(4, 0);
+    req.calibration = None;
+    let outcome = run(&store, &req).expect("runs with the recorded calibration");
+    assert!(outcome.refused.is_empty(), "{:?}", outcome.refused);
+    assert!(outcome.premises.contains(&"eval:judge_kappa=900000".to_string()));
+
+    // The report read returns the stored report and calibration; another tenant sees none.
+    let mine = report_answer(&store, &ask(TENANT)).expect("reads");
+    assert_eq!(mine.report, Some(outcome.report));
+    assert_eq!(mine.calibration, Some(admitted.calibration));
+    let theirs = report_answer(&store, &ask("tenant-b")).expect("reads");
+    assert_eq!((theirs.report, theirs.calibration), (None, None));
+}

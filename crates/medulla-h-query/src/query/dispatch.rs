@@ -297,6 +297,9 @@ fn is_sql_query_method(method: &Method) -> bool {
             | Method::StoredQueryPut { .. }
             | Method::ApproveEntityLink { .. }
             | Method::StoredQueryCall { .. }
+            | Method::StoredQueryGet { .. }
+            | Method::StoredQueryList { .. }
+            | Method::StoredQueryRetire { .. }
             | Method::CatalogRead { .. }
             | Method::EncodeDocument { .. }
     )
@@ -369,7 +372,11 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
             Ok(super::entity_link::handle_approve(ctx, left, right))
         }
         // MEDULLA-FEDERATED-QUERY-R708.3: stored, versioned queries.
-        other @ (Method::StoredQueryPut { .. } | Method::StoredQueryCall { .. }) => {
+        other @ (Method::StoredQueryPut { .. }
+        | Method::StoredQueryCall { .. }
+        | Method::StoredQueryGet { .. }
+        | Method::StoredQueryList { .. }
+        | Method::StoredQueryRetire { .. }) => {
             super::stored_query::dispatch_stored_query(ctx, other).await
         }
         // MEDULLA-TYPED-PACKS-R108.17: browse, search and detail run the registered stored queries.

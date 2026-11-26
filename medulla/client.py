@@ -28,6 +28,7 @@ import socket
 import ssl
 import threading
 import time
+import uuid
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import (
@@ -7547,6 +7548,23 @@ class GraphOperationsClient:
         )
         if not isinstance(result, dict):
             raise RuntimeError("OpenGraphSnapshot must answer with an object")
+        return result
+
+    async def graph_live_limits(self, graph: str | None = None) -> dict[str, Any]:
+        """Read the owner's live-graph latency and layout limits
+        (MEDULLA-DURABLE-KERNEL-R043.100.5).
+
+        Returns ``{profile_revision, contract_revision, workload,
+        commit_to_visible_p95_ms, frame_p95_ms, layout_settle_ms}``, read from engine
+        config. ``profile_revision`` is the ``latency_profile_revision`` every event of
+        :meth:`read_graph_changes` carries. Names no tenant or node. The caller needs
+        ``graph:read``.
+        """
+        result = await self._client._send(
+            "GraphLiveLimits", None, graph, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("GraphLiveLimits must answer with an object")
         return result
 
     async def read_graph_changes(
@@ -16004,6 +16022,37 @@ class BlobClient:
         blobs, chunks = (await _gen.storage.send_blob_gc(self._client)).payload
         return int(blobs), int(chunks)
 
+    # ── Tenant-scoped media objects (MEDULLA-MEDIA-VOCAB-R657) ──
+    async def media_put(self, media_type: str, data: bytes) -> str:
+        """Store one media object for the caller's tenant.
+
+        Returns its lowercase hex SHA-256. Identical bytes give the same digest and
+        repeating the put changes nothing. Refuses ``MEDIA_INVALID`` (no bytes, or a
+        media type that is not ``type/subtype``) and ``MEDIA_TOO_LARGE`` (over the
+        ``media.max_bytes`` knob).
+        """
+        return await _gen.storage.send_media_put(
+            self._client, {"media_type": media_type, "data": data}
+        )
+
+    async def media_get(self, digest: str) -> bytes:
+        """Read one media object of the caller's tenant by digest.
+
+        A missing, foreign, tombstoned or malformed digest all refuse
+        ``MEDIA_NOT_FOUND``.
+        """
+        out = (
+            await _gen.storage.send_media_get(self._client, {"digest": digest})
+        ).payload
+        return bytes(out)
+
+    async def media_tombstone(self, digest: str) -> bool:
+        """Release the caller tenant's hold of a media object.
+
+        Answers ``False`` when the tenant held none.
+        """
+        return await _gen.storage.send_media_tombstone(self._client, {"digest": digest})
+
 
 def _as_bytes(value: Any) -> Any:
     """Normalize a msgpack-decoded byte payload to ``bytes``.
@@ -18030,6 +18079,36 @@ def _validate_anonymous_peer(writer: asyncio.StreamWriter) -> None:
     raise ValueError("auth_mode='none' requires a local transport peer")
 
 
+def _validate_sandbox_admission(
+    sandbox: Mapping[str, str] | None, auth_mode: str
+) -> dict[str, str] | None:
+    """The ``{principal, tenant}`` a sandbox client sends, or ``None``.
+
+    A sandbox admission exists only under ``auth_mode="none"``
+    (MEDULLA-IDENTITY-R003.9); anywhere else it is a programming error, not a
+    request to send.
+    """
+    if sandbox is None:
+        return None
+    if auth_mode != "none":
+        raise ValueError("a sandbox admission requires auth_mode='none'")
+    if set(sandbox) != {"principal", "tenant"}:
+        raise ValueError("sandbox must hold exactly 'principal' and 'tenant'")
+    for name in ("principal", "tenant"):
+        value = sandbox[name]
+        if (
+            not isinstance(value, str)
+            or not value
+            or value != value.strip()
+            or len(value.encode("utf-8")) > 128
+            or any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in value)
+        ):
+            raise ValueError(
+                f"sandbox {name} must be 1..128 UTF-8 bytes without controls"
+            )
+    return {"principal": sandbox["principal"], "tenant": sandbox["tenant"]}
+
+
 def _validate_auth_mode(
     auth_mode: str,
     auth_secret: str | None,
@@ -18104,8 +18183,10 @@ class MedullaClient:
         timeout: float | None = _DEFAULT_RPC_TIMEOUT,
         heavy_timeout: float | None = _HEAVY_RPC_TIMEOUT,
         node_id: str | None = None,
+        sandbox: Mapping[str, str] | None = None,
     ) -> None:
         _validate_auth_mode(auth_mode, auth_secret, verified_context)
+        self._sandbox = _validate_sandbox_admission(sandbox, auth_mode)
         if auth_mode == "none":
             if node_id is not None:
                 raise ValueError("auth_mode='none' cannot use verified authority")
@@ -18422,8 +18503,18 @@ class MedullaClient:
         node_id: str | None = None,
         required_socket_path: str | None = None,
         write_admission: _WriteAdmission | None = None,
+        sandbox: Mapping[str, str] | None = None,
     ) -> MedullaClient:
+        """Connect to the engine.
+
+        ``sandbox`` (``{"principal": ..., "tenant": ...}``, only with
+        ``auth_mode="none"``) asks the engine to admit that sandbox-minted
+        principal into the named tenant (MEDULLA-IDENTITY-R003.9): every request
+        resolves to that tenant's session and no other. An engine in any other auth
+        mode refuses it ``AUTH_MODE_NOT_NONE``.
+        """
         _validate_auth_mode(auth_mode, auth_secret, verified_context)
+        _validate_sandbox_admission(sandbox, auth_mode)
         if auth_mode == "none":
             _validate_anonymous_target(tcp_addr)
             if write_admission is not None or node_id is not None:
@@ -18481,6 +18572,7 @@ class MedullaClient:
             timeout=timeout,
             heavy_timeout=heavy_timeout,
             node_id=node_id,
+            sandbox=sandbox,
         )
         # Remember the endpoint so a dropped connection self-heals (KG-2.19).
         client._socket_path = resolved_socket or socket_path
@@ -18952,7 +19044,9 @@ class MedullaClient:
         return getattr(self, binder)(params, request_id=req_id, graph=target_graph)
 
     @staticmethod
-    def _anonymous_correlation(key: str) -> str:
+    def _anonymous_correlation(
+        key: str, sandbox: Mapping[str, str] | None = None
+    ) -> str:
         """Unsigned replay metadata in the legacy auth_token slot, NOT a credential.
 
         Only an explicitly anonymous server accepts this marker. It contains no
@@ -18967,8 +19061,11 @@ class MedullaClient:
             raise ValueError(
                 "anonymous idempotency key must be 1..256 UTF-8 bytes without controls"
             )
+        envelope: dict[str, Any] = {"idempotency_key": key}
+        if sandbox is not None:
+            envelope["sandbox"] = dict(sandbox)
         return "anon1." + json.dumps(
-            {"idempotency_key": key}, ensure_ascii=False, separators=(",", ":")
+            envelope, ensure_ascii=False, separators=(",", ":")
         )
 
     def _build_send_request(
@@ -18994,8 +19091,12 @@ class MedullaClient:
                 "agent_id": None,
                 "method": method,
             }
-            if idempotency_key is not None:
-                request["auth_token"] = self._anonymous_correlation(idempotency_key)
+            if idempotency_key is not None or self._sandbox is not None:
+                # A sandbox admission rides the correlation envelope, so every request
+                # of a sandbox client carries one (MEDULLA-IDENTITY-R003.9).
+                request["auth_token"] = self._anonymous_correlation(
+                    idempotency_key or f"sandbox-{uuid.uuid4().hex}", self._sandbox
+                )
             if params:
                 request["params"] = params
             _stamp_trace_id(request)
@@ -19546,6 +19647,312 @@ class MedullaClient:
             raise TypeError("RecordDeployment returned a non-object result")
         return result
 
+    async def deploy_record_put(
+        self, record: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Record one applied deployment plan (MEDULLA-SDLC-R002.7).
+
+        ``record`` carries ``plan_digest`` (``sha256:`` and 64 lowercase hex
+        digits, the key), ``target``, ``nodes`` (one ``{"node", "outcome",
+        "code"?}`` per node; ``outcome`` is ``succeeded``, ``failed``,
+        ``skipped`` or ``rolled_back``), ``image_digests`` and, optionally,
+        ``approver``, ``started_at_ms`` and ``finished_at_ms``. The engine adds
+        the verified actor and the time of its own clock. The same body again
+        replays the stored record (``replayed`` is true and nothing is written);
+        a different body for the same plan digest refuses
+        ``DEPLOY_RECORD_SEALED``; a field out of bounds refuses
+        ``DEPLOY_RECORD_INVALID``.
+        """
+        result = await self._send("DeployRecordPut", {"record": record}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("DeployRecordPut returned a non-object result")
+        return result
+
+    async def deploy_record_get(
+        self, plan_digest: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read the deploy record of one plan digest (MEDULLA-SDLC-R002.8).
+
+        A missing record, a record of another tenant and a malformed digest all
+        refuse the same ``DEPLOY_RECORD_NOT_FOUND``.
+        """
+        result = await self._send(
+            "DeployRecordGet", {"plan_digest": plan_digest}, graph
+        )
+        if not isinstance(result, dict):
+            raise TypeError("DeployRecordGet returned a non-object result")
+        return result
+
+    async def deploy_record_list(
+        self,
+        limit: int | None = None,
+        cursor: str | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """List deploy records, newest first (MEDULLA-SDLC-R002.8).
+
+        The answer holds ``records`` (``plan_digest``, ``target``, ``actor``,
+        ``recorded_at_ms``, ``node_count``, ``all_succeeded``) and
+        ``next_cursor``. ``limit`` is 1 to 100; pass ``next_cursor`` back as
+        ``cursor`` for the next page.
+        """
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = await self._send("DeployRecordList", params, graph)
+        if not isinstance(result, dict):
+            raise TypeError("DeployRecordList returned a non-object result")
+        return result
+
+    async def approval_gate_resolve(
+        self,
+        operation: str,
+        *,
+        graph: str,
+        amount_minor: int | None = None,
+        currency: str | None = None,
+    ) -> dict[str, Any]:
+        """Ask which approval gate applies to an operation (MEDULLA-BUSINESS-OPS-R004).
+
+        The answer holds ``gate`` (``none``, ``single``, ``two_person`` or
+        ``unresolved``), ``gate_class``, ``approver_roles``,
+        ``expires_after_ms``, ``rule_ids`` and ``policy_digest``, all read from
+        the ``ApprovalRule`` nodes of ``graph``. ``unresolved`` means no rule
+        covers the operation; it is not ``none``, and a caller applies its
+        strictest gate.
+        """
+        request: dict[str, Any] = {"operation": operation}
+        if amount_minor is not None:
+            request["amount_minor"] = amount_minor
+        if currency is not None:
+            request["currency"] = currency
+        result = await self._send("ApprovalGateResolve", {"request": request}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ApprovalGateResolve returned a non-object result")
+        return result
+
+    async def goal_list(
+        self,
+        limit: int | None = None,
+        cursor: str | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """List agent goals, newest first (MEDULLA-DECISION-ENGINE-R901).
+
+        The answer holds ``goals`` (``goal_id``, ``tenant_id``, ``title``,
+        ``run_id``, ``state``, ``created_ms``) and ``next_cursor``. ``limit`` is
+        1 to 100; pass ``next_cursor`` back as ``cursor`` for the next page.
+        Scope ``agent:library-read``.
+        """
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = await self._send("GoalList", params, graph)
+        if not isinstance(result, dict):
+            raise TypeError("GoalList returned a non-object result")
+        return result
+
+    async def goal_iterations(
+        self, goal_id: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read the iterations of one agent goal, oldest first.
+
+        Spec MEDULLA-DECISION-ENGINE-R901.
+
+        Each iteration holds ``goal_id``, ``iteration``, ``run_id``,
+        ``outcome``, ``started_ms`` and ``ended_ms``. A goal that is absent,
+        another tenant's or invisible refuses the same ``GOAL_NOT_FOUND``.
+        Scope ``agent:library-read``.
+        """
+        result = await self._send("GoalIterations", {"goal_id": goal_id}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("GoalIterations returned a non-object result")
+        return result
+
+    async def goal_control(
+        self, op: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Create, run, finish or cancel one agent goal.
+
+        Spec MEDULLA-DECISION-ENGINE-R901.
+
+        ``op`` is one of ``{"operation": "create", "goal_id", "title"}``,
+        ``{"operation": "run", "goal_id"}``, ``{"operation": "cancel",
+        "goal_id"}`` and ``{"operation": "finish", "goal_id", "outcome":
+        "succeeded" | "failed"}``. The goal moves along the edges of the goal
+        state machine (queued, running, succeeded, failed, cancelled); an event
+        the machine refuses is ``TRANSITION_REFUSED`` and writes nothing. A run
+        opens a numbered iteration and answers its ``run_id``; every time is the
+        engine clock. The answer holds ``goal_id``, ``state``, ``run_id``,
+        ``iteration`` and ``replayed``. Scope ``runs:control``.
+        """
+        result = await self._send("GoalControl", {"op": op}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("GoalControl returned a non-object result")
+        return result
+
+    async def connector_runs(
+        self,
+        connection_id: str | None = None,
+        state: str | None = None,
+        limit: int | None = None,
+        cursor: str | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """List connector source-sync runs, newest first.
+
+        Spec MEDULLA-UNIFIED-DATA-PLANE-R790.
+
+        The answer holds ``runs`` (``run_id``, ``connection_id``, ``state``,
+        ``started_ms``, ``finished_ms``, ``counts``) and ``next_cursor``.
+        ``state`` is ``running``, ``succeeded``, ``failed`` or ``cancelled``.
+        A connection no run of the tenant names refuses
+        ``CONNECTION_NOT_FOUND``. Scope ``ingest:read``.
+        """
+        params: dict[str, Any] = {}
+        if connection_id is not None:
+            params["connection_id"] = connection_id
+        if state is not None:
+            params["state"] = state
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = await self._send("ConnectorRuns", params, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ConnectorRuns returned a non-object result")
+        return result
+
+    async def connector_run_record(
+        self, run: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Report one connector run as it starts or ends.
+
+        Spec MEDULLA-UNIFIED-DATA-PLANE-R790.
+
+        ``run`` carries ``run_id``, ``connection_id``, ``state`` and optional
+        ``counts``. The engine stamps the start and the end with its own clock;
+        a finished run is sealed (``TRANSITION_REFUSED`` for any other report).
+        The same report again replays. Scope ``ingest:write``.
+        """
+        result = await self._send("ConnectorRunRecord", {"run": run}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ConnectorRunRecord returned a non-object result")
+        return result
+
+    async def connector_run_get(
+        self, run_id: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read one connector run (MEDULLA-UNIFIED-DATA-PLANE-R790).
+
+        An absent, foreign or invisible run refuses the same
+        ``CONNECTOR_RUN_NOT_FOUND``. Cancel a run by reporting it ``cancelled``
+        with ``connector_run_record``. Scope ``ingest:read``.
+        """
+        result = await self._send("ConnectorRunGet", {"run_id": run_id}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ConnectorRunGet returned a non-object result")
+        return result
+
+    async def source_connection_get(
+        self, connection_id: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        The answer holds ``connection_id``, ``tenant_id``, ``provider``,
+        ``label``, ``settings``, ``credential_ref`` and ``state``. An absent or
+        foreign connection refuses the same ``CONNECTION_NOT_FOUND``. Scope
+        ``ingest:read``.
+        """
+        result = await self._send(
+            "SourceConnectionGet", {"connection_id": connection_id}, graph
+        )
+        if not isinstance(result, dict):
+            raise TypeError("SourceConnectionGet returned a non-object result")
+        return result
+
+    async def source_connection_list(
+        self,
+        limit: int | None = None,
+        cursor: str | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """List source connections by id (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        The answer holds ``connections`` and ``next_cursor``. ``limit`` is 1 to
+        100. Scope ``ingest:read``.
+        """
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = await self._send("SourceConnectionList", params, graph)
+        if not isinstance(result, dict):
+            raise TypeError("SourceConnectionList returned a non-object result")
+        return result
+
+    async def source_connection_control(
+        self, op: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Put or delete one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        ``op`` is ``{"operation": "put", "connection": {...}}`` with
+        ``connection_id``, ``provider``, ``label``, ``settings``,
+        ``credential_ref`` (an ``env://`` or ``openbao://`` locator, never a
+        value) and optional ``state`` (``active`` or ``paused``), or
+        ``{"operation": "delete", "connection_id"}``. Scope ``ingest:write``.
+        """
+        result = await self._send("SourceConnectionControl", {"op": op}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("SourceConnectionControl returned a non-object result")
+        return result
+
+    async def source_mapping_get(
+        self, connection_id: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read the mapping of one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        The answer holds ``connection_id``, ``mapping``, ``digest`` and
+        ``state`` (``proposed`` or ``approved``). Scope ``ingest:read``.
+        """
+        result = await self._send(
+            "SourceMappingGet", {"connection_id": connection_id}, graph
+        )
+        if not isinstance(result, dict):
+            raise TypeError("SourceMappingGet returned a non-object result")
+        return result
+
+    async def source_mapping_control(
+        self, op: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Propose or approve a source mapping (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        ``op`` is ``{"operation": "propose", "connection_id", "mapping"}`` or
+        ``{"operation": "approve", "connection_id", "mapping_digest"}``. An
+        approval of a digest that is no longer the stored one refuses
+        ``MAPPING_CHANGED``. Scope ``ingest:write``.
+        """
+        result = await self._send("SourceMappingControl", {"op": op}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("SourceMappingControl returned a non-object result")
+        return result
+
+    async def action_list(self, graph: str | None = None) -> dict[str, Any]:
+        """List the registered actions (MEDULLA-UNIFIED-DATA-PLANE-R792).
+
+        The answer holds ``actions``: one ``{"name", "params_schema"}`` per
+        action registered in the graph, by name. Scope ``actions:read``.
+        """
+        result = await self._send("ActionList", {}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ActionList returned a non-object result")
+        return result
+
     async def goal_put(self, goal: dict[str, Any]) -> dict[str, Any]:
         """Record one goal of a project (MEDULLA-SDLC-R017.1).
 
@@ -19639,6 +20046,22 @@ class MedullaClient:
         result = await self._send("ProjectModeGet", {"request": request}, None)
         if not isinstance(result, dict):
             raise TypeError("ProjectModeGet returned a non-object result")
+        return result
+
+    async def config_layers(self, graph: str | None = None) -> dict[str, Any]:
+        """Read the configuration layers of the verified caller (MEDULLA-IDENTITY-R740).
+
+        The answer holds ``layers``, in application order: the company layer, the
+        layer of every team the caller is a member of (by team id) and the caller's
+        own user layer. Each names ``layer`` (``company``, ``team`` or ``user``),
+        ``scope``, ``node_id``, ``revision`` and ``settings``. The request names no
+        team and no user: both come from the verified caller. A layer that is
+        absent, foreign or hidden is left out, so the read is no existence oracle.
+        Needs the scope ``policy:read``.
+        """
+        result = await self._send("ConfigLayers", {"request": {}}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ConfigLayers returned a non-object result")
         return result
 
     async def spec_question(

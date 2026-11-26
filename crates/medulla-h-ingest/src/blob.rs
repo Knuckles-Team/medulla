@@ -24,6 +24,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_protocol_types::result_contract::storage as results;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
+use medulla_server_blob::blob::media;
 use medulla_server_blob::blob::store;
 use medulla_server_blob::blob::BlobCursors;
 use medulla_types::contract::Nonce;
@@ -123,6 +124,33 @@ pub async fn try_handle(
 
         Method::BlobGc => {
             handle_blob_gc(&cursors, req_id, authority, attempt_nonce, &original_method).await
+        }
+
+        Method::MediaPut { media_type, data } => {
+            handle_media_put(
+                &cursors,
+                req_id,
+                authority,
+                attempt_nonce,
+                &original_method,
+                &media_type,
+                data,
+            )
+            .await
+        }
+
+        Method::MediaGet { digest } => handle_media_get(&cursors, req_id, authority, digest).await,
+
+        Method::MediaTombstone { digest } => {
+            handle_media_tombstone(
+                &cursors,
+                req_id,
+                authority,
+                attempt_nonce,
+                &original_method,
+                digest,
+            )
+            .await
         }
 
         other => Err(other),
@@ -467,6 +495,129 @@ where
     .await
 }
 
+/// `MediaPut` (MEDULLA-MEDIA-VOCAB-R657.1): one chunk of the CAS keyed by the SHA-256 of the
+/// bytes, held by the verified tenant's media holder in one native blob batch. Identical bytes are
+/// the same chunk and the same holder, so a repeated put changes nothing.
+async fn handle_media_put(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+    media_type: &str,
+    data: Vec<u8>,
+) -> Result<Response, Method> {
+    let max_bytes = medulla_server_api::knob_config::knobs().media_max_bytes;
+    if let Err(error) = media::validate_put(media_type, &data, max_bytes) {
+        return Ok(Response::err(req_id, error));
+    }
+    let digest = store::hex_digest(&data);
+    let change = match media::media_holder(authority.tenant_scope(), &digest).and_then(|holder| {
+        store::HolderChange::acquire(&digest, holder, store::ENGINE_BLOB_OWNER_SCOPE)
+    }) {
+        Ok(change) => change,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
+        cursors.store.as_ref(),
+        req_id,
+        authority,
+        method,
+        attempt_nonce,
+    ) {
+        Ok(value) => value,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+    let store = cursors.store.clone();
+    let stored = run_blocking(req_id, move || {
+        store.put_chunk(&data)?;
+        store.holder_batch(&change, &batch, now)?;
+        Ok::<String, String>(digest)
+    })
+    .await;
+    match stored {
+        Ok(Ok(digest)) => Ok(Response::ok(
+            req_id,
+            ResultPayload::scalar::<results::MediaPut>(digest),
+        )),
+        Ok(Err(error)) => Ok(Response::err(req_id, error)),
+        Err(response) => Ok(response),
+    }
+}
+
+/// `MediaGet` (MEDULLA-MEDIA-VOCAB-R657.2): the bytes of one object the verified tenant holds.
+/// Every unreadable digest is the one `MEDIA_NOT_FOUND` refusal.
+async fn handle_media_get(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    digest: String,
+) -> Result<Response, Method> {
+    let store = cursors.store.clone();
+    let tenant = authority.tenant_scope().to_string();
+    let read = run_blocking(req_id, move || {
+        media::read_media(store.as_ref(), &tenant, &digest)
+    })
+    .await;
+    match read {
+        Ok(Ok(bytes)) => Ok(Response::ok(
+            req_id,
+            ResultPayload::of_dynamic::<results::MediaGet, _>(&serde_bytes::Bytes::new(&bytes)),
+        )),
+        Ok(Err(error)) => Ok(Response::err(req_id, error)),
+        Err(response) => Ok(response),
+    }
+}
+
+/// `MediaTombstone` (MEDULLA-MEDIA-VOCAB-R657.3): release the verified tenant's hold of one object.
+async fn handle_media_tombstone(
+    cursors: &BlobCursors,
+    req_id: u64,
+    authority: &CarrierAuthority,
+    attempt_nonce: Option<Nonce>,
+    method: &Method,
+    digest: String,
+) -> Result<Response, Method> {
+    // A malformed digest holds nothing, so the release is the same no-op as for an absent one.
+    if !media::is_sha256_hex(&digest) {
+        return Ok(Response::ok(
+            req_id,
+            ResultPayload::scalar::<results::MediaTombstone>(false),
+        ));
+    }
+    let change = match media::media_holder(authority.tenant_scope(), &digest)
+        .and_then(|holder| store::HolderChange::release(&digest, holder))
+    {
+        Ok(change) => change,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+    let (batch, now) = match medulla_server_ops::api::ingest::compile_blob_batch_with_nonce(
+        cursors.store.as_ref(),
+        req_id,
+        authority,
+        method,
+        attempt_nonce,
+    ) {
+        Ok(value) => value,
+        Err(error) => return Ok(Response::err(req_id, error)),
+    };
+    let store = cursors.store.clone();
+    let released = run_blocking(req_id, move || {
+        store
+            .holder_batch(&change, &batch, now)
+            .map(|outcome| outcome.changed)
+    })
+    .await;
+    match released {
+        Ok(Ok(changed)) => Ok(Response::ok(
+            req_id,
+            ResultPayload::scalar::<results::MediaTombstone>(changed),
+        )),
+        Ok(Err(error)) => Ok(Response::err(req_id, error)),
+        Err(response) => Ok(response),
+    }
+}
+
 async fn handle_blob_gc(
     cursors: &BlobCursors,
     req_id: u64,
@@ -595,5 +746,8 @@ fn is_blob_method(method: &Method) -> bool {
             | Method::BlobRef { .. }
             | Method::BlobUnref { .. }
             | Method::BlobGc
+            | Method::MediaPut { .. }
+            | Method::MediaGet { .. }
+            | Method::MediaTombstone { .. }
     )
 }

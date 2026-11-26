@@ -1,5 +1,5 @@
 //! Every store member commits through the envelope with an idempotent terminal outcome
-//! (MEDULLA-DURABLE-KERNEL-R043.101).
+//! (MEDULLA-DURABLE-KERNEL-R043.100.5).
 //!
 //! For each member of the durable store (the graph shard, the key-value store, the user-table
 //! store and the series store) a second request that carries the first request's idempotency
@@ -127,7 +127,7 @@ async fn run_members(state: &test_support::SharedState, round: &str, base: u64) 
     }
 }
 
-// spec: MEDULLA-DURABLE-KERNEL-R043.101
+// spec: MEDULLA-DURABLE-KERNEL-R043.100.5
 #[tokio::test]
 async fn every_store_member_replays_its_terminal_outcome_across_restart() {
     let dir = test_support::fresh_dir("medulla-sole-envelope");

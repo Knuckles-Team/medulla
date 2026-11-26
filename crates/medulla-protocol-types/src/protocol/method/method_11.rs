@@ -370,6 +370,10 @@ $($variants)*
         action: String,
         params: std::collections::BTreeMap<String, medulla_work_types::action_spec::ParamValue>,
     },
+    /// List the actions registered in the request graph, by name, each with the JSON schema of
+    /// its parameters (MEDULLA-UNIFIED-DATA-PLANE-R792). A spec of another tenant is left out.
+    /// Reads only.
+    ActionList {},
 
     // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
     /// Drain lineage run events into the request graph: each event maps to
@@ -695,6 +699,9 @@ $($variants)*
     /// that continues after it (`high_water_cursor`). Reads only, through the
     /// caller's graph view. See [`medulla_mutation_types::graph_change_feed`].
     OpenGraphSnapshot,
+    /// The owner's live-graph latency and layout limits, read from engine config
+    /// (MEDULLA-DURABLE-KERNEL-R043.100.5). Takes nothing and names no tenant.
+    GraphLiveLimits,
     /// One page of committed graph changes after `cursor`, at most `limit`
     /// (1 to 256) scanned events. Delivery is at-least-once under stable ids.
     /// An expired, stale or revoked cursor is refused with a typed code.

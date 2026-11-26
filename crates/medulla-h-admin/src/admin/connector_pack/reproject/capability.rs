@@ -10,10 +10,10 @@
 //! and is never stored on the node: a pack that declares `cp:reliability` is
 //! refused.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::HashSet;
 
 use medulla_persistence_records::connector_pack::descriptor::{
-    descriptor_of, is_typed, triples_of, INVALID,
+    descriptor_of, triples_of, TripleIndex, INVALID,
 };
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Triple};
 use medulla_types::contract::TenantId;
@@ -26,27 +26,18 @@ pub(super) fn persist_descriptors(
     tenant: &str,
     individuals: Vec<Triple>,
 ) -> Result<Vec<Triple>, String> {
-    let subjects: BTreeMap<String, NamedOrBlankNode> = individuals
-        .iter()
-        .map(|t| &t.subject)
-        .filter(|s| is_typed(&individuals, s, "Capability"))
-        .map(|s| (s.to_string(), s.clone()))
-        .collect();
+    let index = TripleIndex::build(&individuals);
+    let subjects: Vec<&NamedOrBlankNode> = index.capability_subjects().collect();
     if subjects.is_empty() {
         return Ok(individuals);
     }
     let tenant = TenantId::new(tenant).map_err(|e| format!("{INVALID}: tenant: {e}"))?;
     let mut consumed = HashSet::new();
     let mut descriptors = Vec::new();
-    for subject in subjects.values() {
-        descriptors.push(descriptor_of(
-            &tenant,
-            &individuals,
-            subject,
-            &mut consumed,
-        )?);
+    for subject in &subjects {
+        descriptors.push(descriptor_of(&tenant, &index, subject, &mut consumed)?);
     }
-    let replaced: HashSet<&NamedOrBlankNode> = subjects.values().chain(consumed.iter()).collect();
+    let replaced: HashSet<&NamedOrBlankNode> = subjects.iter().copied().chain(consumed.iter()).collect();
     let mut out: Vec<Triple> = individuals
         .iter()
         .filter(|t| !replaced.contains(&t.subject))

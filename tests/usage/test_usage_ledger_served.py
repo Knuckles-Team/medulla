@@ -236,3 +236,87 @@ def test_append_then_read_cost_end_to_end(clean_graph):
                 tenant=TENANT_B,
             )
         )
+
+
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R801.9")
+def test_grouped_rollup_reports_currency_latency_and_watermark(clean_graph):
+    # spec: MEDULLA-DECISION-ENGINE-R801.9
+    suffix = uuid.uuid4().hex[:8]
+    model = f"m-{suffix}"
+    child = f"usage-{suffix}"
+    day = 47_000 + uuid.uuid4().int % 1_000
+    base = day * 86_400_000 + 3_600_000
+    service = ["usage:write"]
+    human = ["usage:read", "kg:write"]
+    price = {
+        "schema_version": 1,
+        "model_key": model,
+        "valid_from_ms": 1,
+        "in_per_mtok_micro": 1_000_000,
+        "out_per_mtok_micro": 0,
+        "cached_per_mtok_micro": 0,
+        "currency": "EUR",
+    }
+    asyncio.run(_usage(dc.usage_put_price_op({"entries": [price]}), scopes=service))
+    with pytest.raises(Exception, match="PARAMETER_INVALID"):
+        asyncio.run(
+            _usage(
+                dc.usage_put_price_op(
+                    {"entries": [{**price, "valid_from_ms": 2, "currency": "euro"}]}
+                ),
+                scopes=service,
+            )
+        )
+    shape = [("alpha", "a1", 10), ("alpha", "a2", 90), ("beta", "a1", 30)]
+    records = [
+        dc.usage_record(
+            TEST_TENANT,
+            child,
+            OPERATION,
+            f"{child}-run-{i}",
+            base + i,
+            model_key=model,
+            tokens_in=1_000_000,
+            latency_ms=latency,
+            project_id=project,
+            agent_id=agent,
+        )
+        for i, (project, agent, latency) in enumerate(shape)
+    ]
+    asyncio.run(_usage(dc.usage_append_op(records), scopes=service))
+
+    rollup = asyncio.run(
+        _usage(
+            dc.usage_read_op(base, base + 10, "rollup", group_by="project"),
+            scopes=human,
+        )
+    )
+    groups = {g["key"]: g for g in rollup["groups"]}
+    assert groups["alpha"]["calls"] == 2
+    assert groups["alpha"]["cost_micro"] == 2_000_000
+    assert groups["alpha"]["currency"] == "EUR"
+    assert groups["alpha"]["latency_p95_ms"] == 90
+    assert groups["beta"]["calls"] == 1 and groups["beta"]["latency_p95_ms"] == 30
+    assert rollup["index_watermark_ms"] >= base + 2
+
+    by_agent = asyncio.run(
+        _usage(
+            dc.usage_read_op(base, base + 10, "rollup", group_by="agent"),
+            scopes=human,
+        )
+    )
+    assert {g["key"] for g in by_agent["groups"]} == {"a1", "a2"}
+    ungrouped = asyncio.run(
+        _usage(dc.usage_read_op(base, base + 10, "rollup"), scopes=human)
+    )
+    assert ungrouped["groups"] == []
+
+    # Another tenant's caller is refused, and never sees this ledger's groups.
+    with pytest.raises(Exception, match="AUTH_TENANT_MISMATCH"):
+        asyncio.run(
+            _usage(
+                dc.usage_read_op(base, base + 10, "rollup", group_by="project"),
+                scopes=human,
+                tenant=TENANT_B,
+            )
+        )

@@ -398,6 +398,21 @@ async fn dispatch_decision_methods(
                             Err(refusal) => Response::err(req.id, refusal),
                         }
                     }
+                    // A case is a graph node too (MEDULLA-DECISION-ENGINE-R711.7).
+                    medulla_decision_types::decision::DecisionEvalOp::SkillEvalCaseAdd { request } => {
+                        match medulla_h_decide::decide::handle_skill_eval_case_add(
+                            verified_context,
+                            &req.graph,
+                            *request,
+                        )
+                        .await
+                        {
+                            Ok(plan) => {
+                                commit_planned_write(state, req.id, verified_context, plan).await
+                            }
+                            Err(refusal) => Response::err(req.id, refusal),
+                        }
+                    }
                     op => {
                         medulla_h_decide::decide::handle_decision_eval(
                             state,

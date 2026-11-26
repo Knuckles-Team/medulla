@@ -875,8 +875,36 @@ async fn serve_eval(
         DecisionEvalOp::Timeline { request } => serve_eval_timeline(&store, &request),
         // The suite report is also a graph node, so the op is planned with its graph by
         // `plan_skill_eval` and never answered here (MEDULLA-DECISION-ENGINE-R711.3).
-        DecisionEvalOp::SkillEval { .. } => {
-            return Err("INVALID_ARGUMENT: skill_eval is planned with its graph".to_string())
+        DecisionEvalOp::SkillEval { .. } | DecisionEvalOp::SkillEvalCaseAdd { .. } => {
+            return Err("INVALID_ARGUMENT: this skill_eval op is planned with its graph".to_string())
+        }
+        DecisionEvalOp::SkillEvalReport { request } => {
+            super::stat_skill_eval::require_scope(
+                verified,
+                medulla_decision_types::skill_eval::SCOPE_EVAL,
+            )?;
+            let answer = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || super::stat_skill_eval::report_answer(&store, &request),
+            )
+            .await?;
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::DecisionEvalSkillEvalReport,
+            >(answer)
+        }
+        DecisionEvalOp::SkillEvalCalibrate { request } => {
+            super::stat_skill_eval::require_scope(
+                verified,
+                medulla_decision_types::skill_eval::SCOPE_EVAL,
+            )?;
+            let answer = medulla_server_api::api::dispatch_support::blocking_task(
+                BLOCKING_TASK,
+                move || super::stat_skill_eval::calibrate(&store, &request),
+            )
+            .await?;
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::DecisionEvalSkillEvalCalibrate,
+            >(answer)
         }
         DecisionEvalOp::DelegationQuality { request } => {
             let outcome = medulla_server_api::api::dispatch_support::blocking_task(
@@ -1146,6 +1174,38 @@ pub(super) async fn plan_skill_eval(
             graph: graph.to_string(),
             operations,
             reply: ResultPayload::of::<DecisionEvalSkillEval>(outcome)?,
+        })
+    }
+    .instrument(span)
+    .await
+    .inspect_err(|error| telemetry::refused("DecisionEval", error))
+}
+
+/// Plan one `DecisionEval` op `skill_eval_case_add`: the case checked and planned as one
+/// `SkillEvalCase` node the router commits to `graph` (MEDULLA-DECISION-ENGINE-R711.7).
+pub(super) async fn plan_skill_eval_case_add(
+    verified: &VerifiedRequestContext,
+    graph: &str,
+    request: medulla_decision_types::skill_eval::SkillEvalCaseAddRequest,
+) -> Result<super::planned_write::PlannedWrite, String> {
+    use medulla_protocol_types::result_contract::coordination::DecisionEvalSkillEvalCaseAdd;
+
+    if request.tenant_id != verified.tenant() {
+        let error = tenant_refusal("DecisionEval");
+        telemetry::refused("DecisionEval", &error);
+        return Err(error);
+    }
+    let span = telemetry::span("DecisionEval", verified.tenant());
+    async {
+        super::stat_skill_eval::require_scope(
+            verified,
+            medulla_decision_types::skill_eval::SCOPE_AUTHOR,
+        )?;
+        let (operations, added) = super::stat_skill_eval::case_add_operations(verified, &request)?;
+        Ok(super::planned_write::PlannedWrite {
+            graph: graph.to_string(),
+            operations,
+            reply: ResultPayload::of::<DecisionEvalSkillEvalCaseAdd>(added)?,
         })
     }
     .instrument(span)

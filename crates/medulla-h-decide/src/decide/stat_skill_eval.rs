@@ -14,8 +14,11 @@ use medulla_decision_stats::decision::skill_eval::{
     trajectory_score, EvalKnobs, EvalRefusal,
 };
 use medulla_decision_types::skill_eval::{
-    EvalCaseKind, RefusedEvalCase, SkillEvalCase, SkillEvalOutcome, SkillEvalRequest,
+    EvalCaseKind, JudgeCalibration, RefusedEvalCase, SkillEvalCalibrateRequest,
+    SkillEvalCalibrated, SkillEvalCase, SkillEvalCaseAddRequest, SkillEvalCaseAdded,
+    SkillEvalOutcome, SkillEvalReportAnswer, SkillEvalReportRequest, SkillEvalRequest,
     SkillEvalResult, StoredSkillEvalResult, SuiteBand, SuiteReport, EVAL_CASE_INVALID,
+    EVAL_SCOPE_REQUIRED, JUDGE_MIN_ANNOTATED, SKILL_EVAL_CASE_CLASS,
 };
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::encode_artifact;
@@ -38,6 +41,113 @@ const PPM: u64 = 1_000_000;
 const RESULT_PREFIX: &str = "skill-eval-result:";
 /// The store key prefix of one suite report.
 const REPORT_PREFIX: &str = "skill-eval-report:";
+/// The store key prefix of the judge calibration of one skill's suite.
+const CALIBRATION_PREFIX: &str = "judge-calibration:";
+
+/// Refuse a caller that lacks `scope` (MEDULLA-DECISION-ENGINE-R711.7).
+pub(super) fn require_scope(verified: &VerifiedRequestContext, scope: &str) -> Result<(), String> {
+    if verified.allows_action(scope) {
+        Ok(())
+    } else {
+        Err(format!(
+            "{}: this op needs the scope {scope}",
+            EVAL_SCOPE_REQUIRED.as_str()
+        ))
+    }
+}
+
+/// The judge calibration on record for `skill_ref` in `tenant`, when there is one.
+pub(super) fn read_calibration(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    skill_ref: &str,
+) -> Result<Option<JudgeCalibration>, String> {
+    store
+        .decision_artifact(tenant, &format!("{CALIBRATION_PREFIX}{skill_ref}"))?
+        .map(|bytes| {
+            medulla_persistence_records::decision_jobs::decode_artifact(&bytes, "judge calibration")
+        })
+        .transpose()
+}
+
+/// Answer `skill_eval_report`: the latest report and calibration of the tenant's own suite. The
+/// store is keyed by tenant, so a skill with no suite of this tenant answers the same whether
+/// another tenant has one or the skill exists at all.
+pub(super) fn report_answer(
+    store: &AgentLibraryStore,
+    request: &SkillEvalReportRequest,
+) -> Result<SkillEvalReportAnswer, String> {
+    Ok(SkillEvalReportAnswer {
+        skill_ref: request.skill_ref.clone(),
+        report: read_report(store, &request.tenant_id, &request.skill_ref)?,
+        calibration: read_calibration(store, &request.tenant_id, &request.skill_ref)?,
+    })
+}
+
+/// Record the judge calibration of one skill's suite and say whether it admits judged cases.
+/// A later `skill_eval` that sends no calibration of its own reads this one.
+pub(super) fn calibrate(
+    store: &AgentLibraryStore,
+    request: &SkillEvalCalibrateRequest,
+) -> Result<SkillEvalCalibrated, String> {
+    let knobs = knobs();
+    if request.skill_ref.is_empty() || request.calibration.judge_ref.is_empty() {
+        return Err(invalid_parameter("a calibration names its skill and its judge"));
+    }
+    let key = format!("{CALIBRATION_PREFIX}{}", request.skill_ref);
+    swap(store, &request.tenant_id, &key, encode_artifact(&request.calibration)?)?;
+    Ok(SkillEvalCalibrated {
+        skill_ref: request.skill_ref.clone(),
+        admitted: request.calibration.kappa_ppm >= knobs.judge_min_kappa_ppm
+            && request.calibration.n >= JUDGE_MIN_ANNOTATED,
+        calibration: request.calibration.clone(),
+    })
+}
+
+/// The graph node id of one case: namespaced by the tenant with its length in front, so no
+/// tenant and case pair spells another's and a foreign tenant's case id never collides with it
+/// (no existence oracle).
+pub(super) fn case_node_id(tenant: &str, case_id: &str) -> String {
+    format!("skill-eval-case:{}:{tenant}:{case_id}", tenant.len())
+}
+
+/// Plan `skill_eval_case_add`: check the case as the suite run checks it, then one
+/// `SkillEvalCase` node owned by the caller in the caller's tenant. Adding a case id the tenant
+/// already holds replaces that case only.
+pub(super) fn case_add_operations(
+    verified: &VerifiedRequestContext,
+    request: &SkillEvalCaseAddRequest,
+) -> Result<(Vec<Value>, SkillEvalCaseAdded), String> {
+    let case = &request.case;
+    if case.case_id.is_empty() || case.skill_ref.is_empty() || case.input_digest.is_empty() {
+        return Err(invalid_parameter("a case names its id, its skill and its input digest"));
+    }
+    let tools: BTreeSet<String> = request.known_tools.iter().cloned().collect();
+    check_case(case, &tools).map_err(|refusal| format!("{}: {}", refusal.code.as_str(), refusal.reason))?;
+    let node_id = case_node_id(&request.tenant_id, &case.case_id);
+    let mut properties = match serde_json::to_value(case) {
+        Ok(Value::Object(fields)) => fields,
+        _ => return Err(invalid_parameter("the case does not encode")),
+    };
+    let text = |value: Option<&Value>| value.and_then(Value::as_str).unwrap_or_default().to_string();
+    let kind = text(properties.get("kind"));
+    let source = text(properties.get("source"));
+    properties.insert("type".into(), SKILL_EVAL_CASE_CLASS.into());
+    properties.insert("node_type".into(), SKILL_EVAL_CASE_CLASS.into());
+    properties.insert("case_kind".into(), kind.into());
+    properties.insert("case_source".into(), source.into());
+    properties.insert("tenant_id".into(), request.tenant_id.clone().into());
+    properties.insert("_owner".into(), verified.agent_id().into());
+    let operations = vec![json!({"op": "upsert_node", "id": node_id, "properties": properties})];
+    Ok((
+        operations,
+        SkillEvalCaseAdded {
+            case_id: case.case_id.clone(),
+            skill_ref: case.skill_ref.clone(),
+            node_id,
+        },
+    ))
+}
 
 /// The latest stored suite report of `skill_ref` in `tenant`, when the skill has one.
 pub(super) fn read_report(
@@ -81,6 +191,11 @@ pub(super) fn run(
         )));
     }
     let tools: BTreeSet<String> = request.known_tools.iter().cloned().collect();
+    // A request that sends no calibration reads the one on record (`skill_eval_calibrate`).
+    let calibration = match &request.calibration {
+        Some(own) => Some(own.clone()),
+        None => read_calibration(store, &request.tenant_id, &request.skill_ref)?,
+    };
     let runs: BTreeMap<&str, _> = request
         .runs
         .iter()
@@ -91,7 +206,7 @@ pub(super) fn run(
     let mut refused = Vec::new();
     let mut admitted_cases: Vec<&SkillEvalCase> = Vec::new();
     for case in &request.cases {
-        let verdict = admit(case, &tools, request, &knobs);
+        let verdict = admit(case, &tools, calibration.as_ref(), &knobs);
         let run = runs.get(case.case_id.as_str());
         match (verdict, run) {
             (Err(refusal), _) => refused.push(RefusedEvalCase {
@@ -164,7 +279,7 @@ pub(super) fn run(
         ),
         format!(
             "eval:judge_kappa={}",
-            request.calibration.as_ref().map_or(0, |judge| judge.kappa_ppm)
+            calibration.as_ref().map_or(0, |judge| judge.kappa_ppm)
         ),
     ];
     if band == SuiteBand::Saturated {
@@ -195,11 +310,11 @@ pub(super) fn run(
 fn admit(
     case: &SkillEvalCase,
     tools: &BTreeSet<String>,
-    request: &SkillEvalRequest,
+    calibration: Option<&JudgeCalibration>,
     knobs: &EvalKnobs,
 ) -> Result<(), EvalRefusal> {
     check_case(case, tools)?;
-    check_judge(case, request.calibration.as_ref(), knobs)
+    check_judge(case, calibration, knobs)
 }
 
 fn swap(

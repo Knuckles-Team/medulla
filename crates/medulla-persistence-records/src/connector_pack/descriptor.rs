@@ -8,7 +8,7 @@
 //! Reliability is derived from the learned reward when a descriptor is served
 //! and is never stored: a node that declares `cp:reliability` is refused.
 
-use std::collections::{BTreeMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use medulla_agent_types::agent_component::capability_descriptor::{
     derived_reliability, ApprovalClass, CapabilityDescriptor, DataPort, Locality, SideEffectClass,
@@ -32,11 +32,61 @@ pub fn cp(local: &str) -> NamedNode {
     NamedNode::new_unchecked(format!("{CP}{local}"))
 }
 
-pub fn is_typed(triples: &[Triple], subject: &NamedOrBlankNode, class: &str) -> bool {
-    triples.iter().any(|t| {
-        &t.subject == subject
-            && t.predicate.as_str() == RDF_TYPE
-            && matches!(&t.object, Term::NamedNode(n) if n.as_str() == format!("{CP}{class}"))
+/// The triples of one pack, grouped by subject in a single pass.
+///
+/// A pack projection carries every triple its ontologies declare, so reading a
+/// node's properties by rescanning all triples (once per property, once per
+/// subject) is quadratic in the pack size. Build the index once, then every
+/// read touches only the triples of its own subject.
+pub struct TripleIndex<'a> {
+    by_subject: HashMap<&'a NamedOrBlankNode, Vec<&'a Triple>>,
+    capabilities: BTreeMap<String, &'a NamedOrBlankNode>,
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Triples visited by [`TripleIndex::build`] on this thread (complexity pin).
+    static INDEX_VISITS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+impl<'a> TripleIndex<'a> {
+    /// Index `triples`: the one pass over them that discovery and every
+    /// descriptor read share.
+    pub fn build(triples: &'a [Triple]) -> Self {
+        let class = format!("{CP}Capability");
+        let mut by_subject: HashMap<&NamedOrBlankNode, Vec<&Triple>> = HashMap::new();
+        let mut capabilities = BTreeMap::new();
+        for t in triples {
+            #[cfg(test)]
+            INDEX_VISITS.with(|visits| visits.set(visits.get() + 1));
+            by_subject.entry(&t.subject).or_default().push(t);
+            if t.predicate.as_str() == RDF_TYPE
+                && matches!(&t.object, Term::NamedNode(n) if n.as_str() == class)
+            {
+                capabilities.insert(t.subject.to_string(), &t.subject);
+            }
+        }
+        Self {
+            by_subject,
+            capabilities,
+        }
+    }
+
+    /// The `cp:Capability` nodes, keyed by rendered subject (capability-id order).
+    pub fn capability_subjects(&self) -> impl Iterator<Item = &'a NamedOrBlankNode> + '_ {
+        self.capabilities.values().copied()
+    }
+
+    fn of(&self, subject: &NamedOrBlankNode) -> &[&'a Triple] {
+        self.by_subject.get(subject).map_or(&[], Vec::as_slice)
+    }
+}
+
+pub fn is_typed(index: &TripleIndex<'_>, subject: &NamedOrBlankNode, class: &str) -> bool {
+    let class = format!("{CP}{class}");
+    index.of(subject).iter().any(|t| {
+        t.predicate.as_str() == RDF_TYPE
+            && matches!(&t.object, Term::NamedNode(n) if n.as_str() == class)
     })
 }
 
@@ -44,21 +94,22 @@ pub fn invalid(subject: &NamedOrBlankNode, detail: impl std::fmt::Display) -> St
     format!("{INVALID}: capability {subject}: {detail}")
 }
 
-/// The literal values of `predicate` on `subject`.
+/// The values of `predicate` on `subject`.
 pub fn literals<'a>(
-    triples: &'a [Triple],
+    index: &'a TripleIndex<'a>,
     subject: &'a NamedOrBlankNode,
     predicate: &'a str,
 ) -> impl Iterator<Item = &'a Term> + 'a {
     let predicate = format!("{CP}{predicate}");
-    triples
+    index
+        .of(subject)
         .iter()
-        .filter(move |t| &t.subject == subject && t.predicate.as_str() == predicate)
+        .filter(move |t| t.predicate.as_str() == predicate)
         .map(|t| &t.object)
 }
 
 pub fn one_literal(
-    triples: &[Triple],
+    triples: &TripleIndex<'_>,
     subject: &NamedOrBlankNode,
     predicate: &str,
 ) -> Result<String, String> {
@@ -73,7 +124,7 @@ pub fn one_literal(
 }
 
 pub fn one_number(
-    triples: &[Triple],
+    triples: &TripleIndex<'_>,
     subject: &NamedOrBlankNode,
     predicate: &str,
 ) -> Result<u64, String> {
@@ -83,7 +134,7 @@ pub fn one_number(
 }
 
 pub fn enum_value<T: serde::de::DeserializeOwned>(
-    triples: &[Triple],
+    triples: &TripleIndex<'_>,
     subject: &NamedOrBlankNode,
     predicate: &str,
 ) -> Result<T, String> {
@@ -97,7 +148,7 @@ pub fn enum_value<T: serde::de::DeserializeOwned>(
 }
 
 pub fn ports(
-    triples: &[Triple],
+    triples: &TripleIndex<'_>,
     subject: &NamedOrBlankNode,
     predicate: &str,
     consumed: &mut HashSet<NamedOrBlankNode>,
@@ -130,7 +181,7 @@ pub fn ports(
 /// reward (neutral) here: the node never stores it.
 pub fn descriptor_of(
     tenant: &TenantId,
-    triples: &[Triple],
+    triples: &TripleIndex<'_>,
     subject: &NamedOrBlankNode,
     consumed: &mut HashSet<NamedOrBlankNode>,
 ) -> Result<CapabilityDescriptor, String> {
@@ -292,16 +343,11 @@ pub fn descriptors_of(
     triples: &[Triple],
 ) -> Result<BTreeMap<String, CapabilityDescriptor>, String> {
     let tenant = TenantId::new(tenant).map_err(|e| format!("{INVALID}: tenant: {e}"))?;
-    let subjects: BTreeMap<String, NamedOrBlankNode> = triples
-        .iter()
-        .map(|t| &t.subject)
-        .filter(|s| is_typed(triples, s, "Capability"))
-        .map(|s| (s.to_string(), s.clone()))
-        .collect();
+    let index = TripleIndex::build(triples);
     let mut consumed = HashSet::new();
     let mut out = BTreeMap::new();
-    for subject in subjects.values() {
-        let mut descriptor = descriptor_of(&tenant, triples, subject, &mut consumed)?;
+    for subject in index.capability_subjects() {
+        let mut descriptor = descriptor_of(&tenant, &index, subject, &mut consumed)?;
         descriptor.reliability = 0;
         out.insert(descriptor.capability_id.as_str().to_string(), descriptor);
     }
@@ -337,5 +383,52 @@ mod tests {
         let read = descriptors_of("tenant-a", &triples).unwrap();
         assert_eq!(read.len(), 1);
         assert_eq!(read["eg:capability/translate"], descriptor);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R650.2.1
+    #[test]
+    fn discovery_and_descriptors_make_one_pass_over_the_triples() {
+        let tenant = TenantId::new("tenant-a").unwrap();
+        let descriptor = CapabilityDescriptor {
+            version: CAPABILITY_DESCRIPTOR_VERSION,
+            tenant,
+            capability_id: ResourceId::new("eg:capability/translate").unwrap(),
+            inputs: vec![DataPort {
+                name: ResourceId::new("text").unwrap(),
+                data_type: ResourceId::new("eg:type/text").unwrap(),
+            }],
+            outputs: Vec::new(),
+            side_effect_class: SideEffectClass::External,
+            scopes: vec![ScopeKind::new("tenant").unwrap()],
+            cost: 12,
+            latency_ms: 300,
+            reliability: 0,
+            locality: Locality::Network,
+            approval_class: ApprovalClass::Low,
+        };
+        let mut triples = triples_of(&descriptor).unwrap();
+        for i in 0..5_000 {
+            let subject = NamedNode::new_unchecked(format!("urn:pack:class/{i}"));
+            triples.push(Triple::new(
+                subject.clone(),
+                NamedNode::new_unchecked(RDF_TYPE),
+                Term::from(NamedNode::new_unchecked(
+                    "http://www.w3.org/2002/07/owl#Class",
+                )),
+            ));
+            triples.push(Triple::new(
+                subject,
+                NamedNode::new_unchecked("http://www.w3.org/2000/01/rdf-schema#label"),
+                Term::from(Literal::new_simple_literal("c")),
+            ));
+        }
+        INDEX_VISITS.with(|visits| visits.set(0));
+        let read = descriptors_of("tenant-a", &triples).unwrap();
+        assert_eq!(read.len(), 1);
+        assert_eq!(
+            INDEX_VISITS.with(|visits| visits.get()),
+            triples.len(),
+            "discovery plus every descriptor read is one pass, not one per subject or property"
+        );
     }
 }

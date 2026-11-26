@@ -46,6 +46,7 @@ mod admission_tests;
 mod batch;
 pub mod context;
 mod history;
+mod list;
 #[cfg(test)]
 mod open_tests;
 mod receipt;

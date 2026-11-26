@@ -10,7 +10,9 @@
 
 use std::time::{Duration, Instant};
 
-use medulla_decision_types::usage::{PriceCatalog, UsageOp, UsageOutcome, UsageReadView, UsageRecord};
+use medulla_decision_types::usage::{
+    PriceCatalog, UsageOp, UsageOutcome, UsageReadView, UsageRecord,
+};
 use medulla_h_decide::decide::stat_test_support::{Harness, TENANT};
 use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -60,6 +62,8 @@ fn record(index: usize, base_ms: u64) -> UsageRecord {
         latency_ms: 50,
         outcome: UsageOutcome::Ok,
         content_digest: format!("{:064x}", index),
+        project_id: String::new(),
+        agent_id: String::new(),
     }
 }
 
@@ -77,7 +81,13 @@ fn high_water_mib() -> f64 {
             status
                 .lines()
                 .find_map(|line| line.strip_prefix("VmHWM:"))
-                .and_then(|rest| rest.trim().trim_end_matches("kB").trim().parse::<f64>().ok())
+                .and_then(|rest| {
+                    rest.trim()
+                        .trim_end_matches("kB")
+                        .trim()
+                        .parse::<f64>()
+                        .ok()
+                })
         })
         .map_or(0.0, |kib| kib / 1024.0)
 }
@@ -115,6 +125,7 @@ fn main() {
         let mut rollups = Vec::with_capacity(ROLLUP_READS);
         for _ in 0..ROLLUP_READS {
             let read = UsageOp::Read {
+                group_by: None,
                 from_ms: base_ms,
                 to_ms: base_ms + DAYS * DAY_MS,
                 model_key: None,

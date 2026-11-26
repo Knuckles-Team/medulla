@@ -511,6 +511,8 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("BlobCommit", "BlobStore"),
     ("BlobRef", "BlobStore"),
     ("BlobUnref", "BlobStore"),
+    ("MediaPut", "BlobStore"),
+    ("MediaTombstone", "BlobStore"),
     ("BlobGc", "BlobStore"),
     ("KvPut", "KvStore"),
     ("KvDelete", "KvStore"),

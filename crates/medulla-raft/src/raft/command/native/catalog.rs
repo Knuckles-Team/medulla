@@ -103,6 +103,10 @@ macro_rules! native_method_catalog {
             record BlobRef => Blob,
             #[cfg(feature = "blob")]
             record BlobUnref => Blob,
+            #[cfg(feature = "blob")]
+            record MediaPut => Blob,
+            #[cfg(feature = "blob")]
+            record MediaTombstone => Blob,
 
             #[cfg(feature = "kv")]
             record KvPut => KeyValue,

@@ -19,7 +19,8 @@ use medulla_decision_stats::decision::promotion::{regression_rollback, subject_g
 use medulla_decision_stats::decision::promotion_tier::tier_gate;
 use medulla_decision_stats::decision::skill_eval::{canary_verdict, check_traffic};
 use medulla_decision_types::decision::promotion_tier::{
-    SkillTier, TierContext, TierKnobs, TierReview, PREMISE_ALWAYS_ON, PREMISE_TARGET,
+    SkillTier, TierContext, TierKnobs, TierReview, PARAM_TIER_REVIEWER, PLATFORM_TEAM,
+    PREMISE_ALWAYS_ON, PREMISE_TARGET,
 };
 use medulla_decision_types::decision::codes::{
     ABLATION_NOISE_BAND_MISSING, ABLATION_WITHIN_NOISE, CANARY_NO_CHAMPION,
@@ -106,6 +107,9 @@ struct Ask {
     regression: Option<String>,
     /// The review receipt of the tier a skill is promoted to (R714.2).
     tier_review: Option<TierReview>,
+    /// The verified reviewer the engine bound to a tiered promotion of a person; `None` for a
+    /// service, whose review names its approver (MEDULLA-IDENTITY-R739).
+    reviewer: Option<String>,
 }
 
 fn parse(request: &DecideRequest) -> Result<Ask, String> {
@@ -138,6 +142,7 @@ fn parse(request: &DecideRequest) -> Result<Ask, String> {
             true => Some(json_param(request, PARAM_TIER_REVIEW)?),
             false => None,
         },
+        reviewer: text_param(request, PARAM_TIER_REVIEWER)?.map(str::to_owned),
     })
 }
 
@@ -236,22 +241,53 @@ fn tier_verdict(
     tier: SkillTier,
 ) -> Result<Result<Vec<String>, PromotionRefusal>, String> {
     use crate::decide::stat_skill_eval::read_report;
-    use crate::decide::stat_skill_tier::{always_on_set, is_member, read_tier, read_tiers};
+    use crate::decide::stat_skill_tier::{
+        always_on_set, is_author, is_member, read_tier, read_tiers, teams_of,
+    };
     let knobs = medulla_server_api::knob_config::knobs();
     let tiers = read_tiers(ctx.store, ctx.tenant_id)?;
     let always_on = always_on_set(&tiers)
         .into_iter()
         .filter(|held| held != skill_ref)
         .count() as u64;
-    let approver_in_team = match (&ask.tier_review, graph) {
-        (Some(review), Some(view)) => {
-            is_member(view, &review.approver_principal, &review.reviewer_team)
+    // The reviewer is the verified caller of a person (bound by `bind_reviewer`), else the
+    // approver a service names. A person's team is decided by the graph: the platform team when
+    // the reviewer is a member of it, else the team the review names when the reviewer is a
+    // member, else the first team the reviewer belongs to; a reviewer in no team has none.
+    let reviewer = ask.reviewer.clone().or_else(|| {
+        ask.tier_review
+            .as_ref()
+            .map(|review| review.approver_principal.clone())
+    });
+    let (review, approver_in_team, reviewer_is_author) = match (&ask.tier_review, graph, reviewer) {
+        (Some(review), Some(view), Some(reviewer)) => {
+            let author = is_author(view, skill_ref, &reviewer);
+            if ask.reviewer.is_some() {
+                let teams = teams_of(view, &reviewer);
+                let team = if teams.contains(PLATFORM_TEAM) {
+                    PLATFORM_TEAM.to_owned()
+                } else if teams.contains(&review.reviewer_team) {
+                    review.reviewer_team.clone()
+                } else {
+                    teams.into_iter().next().unwrap_or_default()
+                };
+                let derived = TierReview {
+                    reviewer_team: team.clone(),
+                    approver_principal: reviewer,
+                    ..review.clone()
+                };
+                (Some(derived), !team.is_empty(), author)
+            } else {
+                let member = is_member(view, &review.approver_principal, &review.reviewer_team);
+                (Some(review.clone()), member, author)
+            }
         }
-        _ => false,
+        (review, _, _) => (review.clone(), false, false),
     };
     let context = TierContext {
         current: read_tier(ctx.store, ctx.tenant_id, skill_ref)?,
         approver_in_team,
+        reviewer_is_author,
     };
     let report = read_report(ctx.store, ctx.tenant_id, skill_ref)?;
     let gate_knobs = TierKnobs {
@@ -260,7 +296,7 @@ fn tier_verdict(
     };
     match tier_gate(
         tier,
-        ask.tier_review.as_ref(),
+        review.as_ref(),
         report.as_ref(),
         always_on,
         &context,

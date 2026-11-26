@@ -199,6 +199,31 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "IncidentRelatedClaims",
     // `dispatch_sdlc_methods::proposal_list` keeps only proposal nodes `can_see_node` admits.
     "ProposalList",
+    // `dispatch_sdlc_methods::deploy_record_get` and `deploy_record_list` read only a
+    // `DeployRecord` node `can_see_node` admits, of the verified tenant.
+    "DeployRecordGet",
+    "DeployRecordList",
+    // `dispatch_sdlc_methods::approval_gate_resolve` reads only an `ApprovalRule` node
+    // `can_see_node` admits, of the verified tenant.
+    "ApprovalGateResolve",
+    // `dispatch_sdlc_methods::goal_list` and `goal_iterations` read only an `AgentGoal` or
+    // `AgentGoalIteration` node `can_see_node` admits, of the verified tenant.
+    "GoalList",
+    "GoalIterations",
+    // `dispatch_sdlc_methods::connector_runs` reads only a `ConnectorRun` node `can_see_node`
+    // admits, of the verified tenant.
+    "ConnectorRuns",
+    // `dispatch_sdlc_methods::connector_run_get`, `source_connection_get`, `source_connection_list`
+    // and `source_mapping_get` read only a node `can_see_node` admits, of the verified tenant.
+    "ConnectorRunGet",
+    "SourceConnectionGet",
+    "SourceConnectionList",
+    "SourceMappingGet",
+    // `action::handle_action_list` reads only `ActionSpec` nodes of the verified tenant (or with
+    // no tenant stamp) in the graph the request gate already authorized for reading.
+    "ActionList",
+    // `dispatch_sdlc_methods::config_layers` reads only a node `can_see_node` admits.
+    "ConfigLayers",
     // `dispatch_sdlc_methods::project_mode_get` reads only a node `can_see_node` admits.
     "ProjectModeGet",
     // `dispatch_sdlc_methods::spec_question` reads only nodes `can_see_node` admits.
@@ -224,6 +249,10 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ListRegisteredServers",
     "ListTriggers",
     "LiveArtifactGet",
+    // MEDULLA-FEDERATED-QUERY-R708.12: both read the stored-query head and version nodes of the
+    // core `read_authority.project_core` projected, then keep what the reader may call.
+    "StoredQueryGet",
+    "StoredQueryList",
     "MatchOntologyTerms",
     "MaterializationStatus",
     // MEDULLA-DECISION-ENGINE-R651.3: both read the memory nodes of the core
@@ -568,7 +597,10 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
         REASON_FOREIGN_READ_SESSION_OWNER_SCOPED,
     ),
     ("ForeignReadOpen", REASON_FOREIGN_READ_SESSION_OWNER_SCOPED),
-    ("VerifySourceQueryApproval", REASON_FOREIGN_READ_SESSION_OWNER_SCOPED),
+    (
+        "VerifySourceQueryApproval",
+        REASON_FOREIGN_READ_SESSION_OWNER_SCOPED,
+    ),
     // REASON_FOREIGN_SOURCE_OWNER_SCOPED (EH-572)
     ("QueryForeignColumns", REASON_FOREIGN_SOURCE_OWNER_SCOPED),
     ("ListForeignSources", REASON_FOREIGN_SOURCE_OWNER_SCOPED),
@@ -612,6 +644,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("Health", REASON_SERVER_LIFECYCLE),
     ("Metrics", REASON_SERVER_LIFECYCLE),
     ("Ping", REASON_SERVER_LIFECYCLE),
+    // MEDULLA-DURABLE-KERNEL-R043.100.5: answers engine config only, no tenant row.
+    ("GraphLiveLimits", REASON_SERVER_LIFECYCLE),
     ("ResourceStatsPage", REASON_SERVER_LIFECYCLE),
     // REASON_AUDIT_CHAIN_ADMIN_GATED
     ("AuditVerify", REASON_AUDIT_CHAIN_ADMIN_GATED),
@@ -750,6 +784,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("BlobChunkGet", REASON_BLOB_OWNER_SCOPED),
     ("BlobFetchBegin", REASON_BLOB_OWNER_SCOPED),
     ("BlobFetchEnd", REASON_BLOB_OWNER_SCOPED),
+    // MEDULLA-MEDIA-VOCAB-R657.2: the read checks the caller tenant's own media holder.
+    ("MediaGet", REASON_BLOB_OWNER_SCOPED),
     // REASON_BRANCH_CHAIN_TENANT_SCOPED (MEDULLA-BRANCH-MERGE-R006)
     ("BranchDiff", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     ("BranchReadAt", REASON_BRANCH_CHAIN_TENANT_SCOPED),
@@ -786,7 +822,10 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("QueryDevelopmentLane", REASON_NATIVE_DEVELOPMENT_LANE_READ),
     // REASON_NATIVE_WORK_ITEM_TENANT_READ
     ("GetWorkItem", REASON_NATIVE_WORK_ITEM_TENANT_READ),
-    ("ListWorkItemTransitions", REASON_NATIVE_WORK_ITEM_TENANT_READ),
+    (
+        "ListWorkItemTransitions",
+        REASON_NATIVE_WORK_ITEM_TENANT_READ,
+    ),
     ("GetEffectReceipt", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("GetAdmittedRequest", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("TraceCritique", REASON_NATIVE_WORK_ITEM_TENANT_READ),

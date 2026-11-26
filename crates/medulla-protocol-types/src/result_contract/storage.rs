@@ -21,6 +21,7 @@ use medulla_agent_types::agent_graph::AgentGraphEntry;
 use medulla_agent_types::agent_guardrail::GuardrailEntailmentResult;
 use medulla_agent_types::agent_library::AgentLibraryEntry;
 use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
+use medulla_agent_types::agent_library::AgentLibraryPage;
 use medulla_agent_types::agent_library::AgentLibraryWriteResult;
 use medulla_agent_types::agent_template::AgentTemplateCommittedResult;
 use medulla_agent_types::agent_template::AgentTemplateEntry;
@@ -57,6 +58,8 @@ method_results! {
     AgentLibraryPublish(AgentLibrary / "publish") => Raw<AgentLibraryWriteResult>;
     AgentLibraryRetire(AgentLibrary / "retire") => Raw<AgentLibraryWriteResult>;
     AgentLibraryStatus(AgentLibrary / "status") => Raw<Option<AgentLibraryWriteResult>>;
+    AgentLibraryList(AgentLibrary / "list") => Raw<AgentLibraryPage>;
+    AgentLibraryGet(AgentLibrary / "get") => Raw<Option<medulla_agent_types::agent_library::AgentLibraryListEntry>>;
     AgentGraphCurrent(AgentGraph / "current") => Raw<Option<AgentGraphEntry>>;
     AgentGraphHistory(AgentGraph / "history") => Raw<Vec<AgentGraphEntry>>;
     AgentGraphPublish(AgentGraph / "publish") => Raw<AgentGraphCommittedResult>;
@@ -100,6 +103,12 @@ method_results! {
     BlobUnref(BlobUnref) => Count<u64>;
     // `(blobs_reclaimed, chunks_reclaimed)`.
     BlobGc(BlobGc) => Raw<(u64, u64)>;
+    // The lowercase hex SHA-256 of a stored media object (MEDULLA-MEDIA-VOCAB-R657.1).
+    MediaPut(MediaPut) => Text<String>;
+    // One media object of the caller's tenant, as a MessagePack `bin` (MEDULLA-MEDIA-VOCAB-R657.2).
+    MediaGet(MediaGet) => Raw<Dynamic> dynamic CallerBytes;
+    // Whether the tenant's hold was released (MEDULLA-MEDIA-VOCAB-R657.3).
+    MediaTombstone(MediaTombstone) => Bool<bool>;
     // The stored value bytes and their version, or null when the key is absent.
     KvGet(KvGet) => Raw<Option<KvEntry>>;
     KvPut(KvPut) => Raw<KvWriteReceipt>;

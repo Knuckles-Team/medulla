@@ -139,6 +139,12 @@ closed_error_codes! {
         PathWriteDenied => "PATH_WRITE_DENIED",
         /// MEDULLA-SCM-R007: a path grant request out of bounds.
         PathGrantInvalid => "PATH_GRANT_INVALID",
+        /// MEDULLA-MEDIA-VOCAB-R657.1: a media put with no bytes or a media type that is not `type/subtype`.
+        MediaInvalid => "MEDIA_INVALID",
+        /// MEDULLA-MEDIA-VOCAB-R657.1: a media put over the `media.max_bytes` knob.
+        MediaTooLarge => "MEDIA_TOO_LARGE",
+        /// MEDULLA-MEDIA-VOCAB-R657.2: a media digest the caller's tenant does not hold.
+        MediaNotFound => "MEDIA_NOT_FOUND",
         /// MEDULLA-SCM-R005.2: the blamed path is deleted or has no blame row at the revision.
         BlamePathAbsent => "BLAME_PATH_ABSENT",
         Busy => "BUSY",
@@ -790,6 +796,30 @@ closed_error_codes! {
         ReceiptNotFound => "RECEIPT_NOT_FOUND",
         ReleaseHeadUnknown => "RELEASE_HEAD_UNKNOWN",
         ReleaseSealed => "RELEASE_SEALED",
+        /// MEDULLA-SDLC-R002.7: a different deploy record is already stored for the plan digest.
+        DeployRecordSealed => "DEPLOY_RECORD_SEALED",
+        /// MEDULLA-SDLC-R002.8: no deploy record of the verified tenant has this plan digest; an absent and a foreign record answer alike.
+        DeployRecordNotFound => "DEPLOY_RECORD_NOT_FOUND",
+        /// MEDULLA-SDLC-R002.7: a deploy record field is out of bounds, or its list cursor is not usable.
+        DeployRecordInvalid => "DEPLOY_RECORD_INVALID",
+        /// MEDULLA-BUSINESS-OPS-R004: an approval gate question field is out of bounds.
+        ApprovalGateInvalid => "APPROVAL_GATE_INVALID",
+        /// MEDULLA-DECISION-ENGINE-R901: no agent goal of the verified tenant has this id; an absent and a foreign goal answer alike.
+        GoalNotFound => "GOAL_NOT_FOUND",
+        /// MEDULLA-DECISION-ENGINE-R901: a goal field is out of bounds, a goal id is taken, or a goal list cursor is not usable.
+        GoalInvalid => "GOAL_INVALID",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R790: no connector run of the verified tenant names this connection; an absent and a foreign connection answer alike.
+        ConnectionNotFound => "CONNECTION_NOT_FOUND",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R790: a connector run field is out of bounds, a run changed its connection, or a run list cursor is not usable.
+        ConnectorRunInvalid => "CONNECTOR_RUN_INVALID",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R790: no connector run of the verified tenant has this id; an absent and a foreign run answer alike.
+        ConnectorRunNotFound => "CONNECTOR_RUN_NOT_FOUND",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R791: a source connection or mapping field is out of bounds, a credential reference is not a locator, or a connection list cursor is not usable.
+        SourceConnectionInvalid => "SOURCE_CONNECTION_INVALID",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R791: the connection has no mapping yet.
+        MappingNotFound => "MAPPING_NOT_FOUND",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R791: the digest an approval names is no longer the digest of the stored mapping.
+        MappingChanged => "MAPPING_CHANGED",
         /// A skill package could not render: the graph holds no body for the skill (MEDULLA-TYPED-PACKS-R100.2).
         RenderBodyMissing => "RENDER_BODY_MISSING",
         /// A skill package could not render: it references an ontology term the graph does not define (MEDULLA-TYPED-PACKS-R100.4).

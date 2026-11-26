@@ -10221,3 +10221,258 @@
     :toState :FinanceReceiptMachine_Due ;
     :guardedBy :FinanceReceiptMachine_Guard_UnderAttemptLimit ;
     :firedBy :FinanceReceiptMachine_Event_Retry .
+
+# spec: MEDULLA-DECISION-ENGINE-R901
+# The AgentGoal machine. The Rust edge table is the same table; the ontology test asserts equal edge sets.
+
+:AgentGoalState a owl:Class ;
+    rdfs:label "AgentGoal State" ;
+    rdfs:comment "A state of the AgentGoal machine." ;
+    rdfs:subClassOf :State .
+
+:AgentGoalTerminalState a owl:Class ;
+    rdfs:label "AgentGoal Terminal State" ;
+    rdfs:comment "A terminal state of the AgentGoal machine." ;
+    rdfs:subClassOf :TerminalState, :AgentGoalState .
+
+:AgentGoalTransition a owl:Class ;
+    rdfs:label "AgentGoal Transition" ;
+    rdfs:comment "A transition of the AgentGoal machine." ;
+    rdfs:subClassOf :Transition .
+
+:AgentGoalEvent a owl:Class ;
+    rdfs:label "AgentGoal Event" ;
+    rdfs:comment "An event of the AgentGoal machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:AgentGoalGuard a owl:Class ;
+    rdfs:label "AgentGoal Guard" ;
+    rdfs:comment "A guard of the AgentGoal machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:AgentGoalMachine a :StateMachine ;
+    rdfs:label "AgentGoal machine" ;
+    :initialState :AgentGoalMachine_Queued ;
+    :hasState :AgentGoalMachine_Queued, :AgentGoalMachine_Running, :AgentGoalMachine_Succeeded, :AgentGoalMachine_Failed, :AgentGoalMachine_Cancelled .
+
+:AgentGoalMachine_Queued a :AgentGoalState ;
+    rdfs:label "AgentGoal Queued" ;
+    :storedForm "queued" .
+
+:AgentGoalMachine_Running a :AgentGoalState ;
+    rdfs:label "AgentGoal Running" ;
+    :storedForm "running" .
+
+:AgentGoalMachine_Succeeded a :AgentGoalTerminalState ;
+    rdfs:label "AgentGoal Succeeded" ;
+    :storedForm "succeeded" .
+
+:AgentGoalMachine_Failed a :AgentGoalState ;
+    rdfs:label "AgentGoal Failed" ;
+    :storedForm "failed" .
+
+:AgentGoalMachine_Cancelled a :AgentGoalTerminalState ;
+    rdfs:label "AgentGoal Cancelled" ;
+    :storedForm "cancelled" .
+
+:AgentGoalMachine_Event_Run a :AgentGoalEvent ;
+    rdfs:label "AgentGoal Run" .
+
+:AgentGoalMachine_Event_Succeed a :AgentGoalEvent ;
+    rdfs:label "AgentGoal Succeed" .
+
+:AgentGoalMachine_Event_Fail a :AgentGoalEvent ;
+    rdfs:label "AgentGoal Fail" .
+
+:AgentGoalMachine_Event_Cancel a :AgentGoalEvent ;
+    rdfs:label "AgentGoal Cancel" .
+
+:AgentGoalMachine_G01 a :AgentGoalTransition ;
+    rdfs:label "AgentGoal G01" ;
+    :edgeId "G01" ;
+    :fromState :AgentGoalMachine_Queued ;
+    :toState :AgentGoalMachine_Running ;
+    :firedBy :AgentGoalMachine_Event_Run .
+
+:AgentGoalMachine_G02 a :AgentGoalTransition ;
+    rdfs:label "AgentGoal G02" ;
+    :edgeId "G02" ;
+    :fromState :AgentGoalMachine_Running ;
+    :toState :AgentGoalMachine_Succeeded ;
+    :firedBy :AgentGoalMachine_Event_Succeed .
+
+:AgentGoalMachine_G03 a :AgentGoalTransition ;
+    rdfs:label "AgentGoal G03" ;
+    :edgeId "G03" ;
+    :fromState :AgentGoalMachine_Running ;
+    :toState :AgentGoalMachine_Failed ;
+    :firedBy :AgentGoalMachine_Event_Fail .
+
+:AgentGoalMachine_G04 a :AgentGoalTransition ;
+    rdfs:label "AgentGoal G04" ;
+    :edgeId "G04" ;
+    :fromState :AgentGoalMachine_Queued ;
+    :toState :AgentGoalMachine_Cancelled ;
+    :firedBy :AgentGoalMachine_Event_Cancel .
+
+:AgentGoalMachine_G05 a :AgentGoalTransition ;
+    rdfs:label "AgentGoal G05" ;
+    :edgeId "G05" ;
+    :fromState :AgentGoalMachine_Running ;
+    :toState :AgentGoalMachine_Cancelled ;
+    :firedBy :AgentGoalMachine_Event_Cancel .
+
+:AgentGoalMachine_G06 a :AgentGoalTransition ;
+    rdfs:label "AgentGoal G06" ;
+    :edgeId "G06" ;
+    :fromState :AgentGoalMachine_Failed ;
+    :toState :AgentGoalMachine_Running ;
+    :firedBy :AgentGoalMachine_Event_Run .
+
+
+# spec: MEDULLA-UNIFIED-DATA-PLANE-R790
+# The ConnectorRun machine. The Rust edge table is the same table; the ontology test asserts equal edge sets.
+
+:ConnectorRunState a owl:Class ;
+    rdfs:label "ConnectorRun State" ;
+    rdfs:comment "A state of the ConnectorRun machine." ;
+    rdfs:subClassOf :State .
+
+:ConnectorRunTerminalState a owl:Class ;
+    rdfs:label "ConnectorRun Terminal State" ;
+    rdfs:comment "A terminal state of the ConnectorRun machine." ;
+    rdfs:subClassOf :TerminalState, :ConnectorRunState .
+
+:ConnectorRunTransition a owl:Class ;
+    rdfs:label "ConnectorRun Transition" ;
+    rdfs:comment "A transition of the ConnectorRun machine." ;
+    rdfs:subClassOf :Transition .
+
+:ConnectorRunEvent a owl:Class ;
+    rdfs:label "ConnectorRun Event" ;
+    rdfs:comment "An event of the ConnectorRun machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ConnectorRunGuard a owl:Class ;
+    rdfs:label "ConnectorRun Guard" ;
+    rdfs:comment "A guard of the ConnectorRun machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ConnectorRunMachine a :StateMachine ;
+    rdfs:label "ConnectorRun machine" ;
+    :initialState :ConnectorRunMachine_Running ;
+    :hasState :ConnectorRunMachine_Running, :ConnectorRunMachine_Succeeded, :ConnectorRunMachine_Failed, :ConnectorRunMachine_Cancelled .
+
+:ConnectorRunMachine_Running a :ConnectorRunState ;
+    rdfs:label "ConnectorRun Running" ;
+    :storedForm "running" .
+
+:ConnectorRunMachine_Succeeded a :ConnectorRunTerminalState ;
+    rdfs:label "ConnectorRun Succeeded" ;
+    :storedForm "succeeded" .
+
+:ConnectorRunMachine_Failed a :ConnectorRunTerminalState ;
+    rdfs:label "ConnectorRun Failed" ;
+    :storedForm "failed" .
+
+:ConnectorRunMachine_Cancelled a :ConnectorRunTerminalState ;
+    rdfs:label "ConnectorRun Cancelled" ;
+    :storedForm "cancelled" .
+
+:ConnectorRunMachine_Event_Succeed a :ConnectorRunEvent ;
+    rdfs:label "ConnectorRun Succeed" .
+
+:ConnectorRunMachine_Event_Fail a :ConnectorRunEvent ;
+    rdfs:label "ConnectorRun Fail" .
+
+:ConnectorRunMachine_Event_Cancel a :ConnectorRunEvent ;
+    rdfs:label "ConnectorRun Cancel" .
+
+:ConnectorRunMachine_C01 a :ConnectorRunTransition ;
+    rdfs:label "ConnectorRun C01" ;
+    :edgeId "C01" ;
+    :fromState :ConnectorRunMachine_Running ;
+    :toState :ConnectorRunMachine_Succeeded ;
+    :firedBy :ConnectorRunMachine_Event_Succeed .
+
+:ConnectorRunMachine_C02 a :ConnectorRunTransition ;
+    rdfs:label "ConnectorRun C02" ;
+    :edgeId "C02" ;
+    :fromState :ConnectorRunMachine_Running ;
+    :toState :ConnectorRunMachine_Failed ;
+    :firedBy :ConnectorRunMachine_Event_Fail .
+
+:ConnectorRunMachine_C03 a :ConnectorRunTransition ;
+    rdfs:label "ConnectorRun C03" ;
+    :edgeId "C03" ;
+    :fromState :ConnectorRunMachine_Running ;
+    :toState :ConnectorRunMachine_Cancelled ;
+    :firedBy :ConnectorRunMachine_Event_Cancel .
+
+# spec: MEDULLA-UNIFIED-DATA-PLANE-R791
+# The SourceMapping machine. The Rust edge table is the same table; the ontology test asserts equal edge sets.
+
+:SourceMappingState a owl:Class ;
+    rdfs:label "SourceMapping State" ;
+    rdfs:comment "A state of the SourceMapping machine." ;
+    rdfs:subClassOf :State .
+
+:SourceMappingTerminalState a owl:Class ;
+    rdfs:label "SourceMapping Terminal State" ;
+    rdfs:comment "A terminal state of the SourceMapping machine." ;
+    rdfs:subClassOf :TerminalState, :SourceMappingState .
+
+:SourceMappingTransition a owl:Class ;
+    rdfs:label "SourceMapping Transition" ;
+    rdfs:comment "A transition of the SourceMapping machine." ;
+    rdfs:subClassOf :Transition .
+
+:SourceMappingEvent a owl:Class ;
+    rdfs:label "SourceMapping Event" ;
+    rdfs:comment "An event of the SourceMapping machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:SourceMappingGuard a owl:Class ;
+    rdfs:label "SourceMapping Guard" ;
+    rdfs:comment "A guard of the SourceMapping machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:SourceMappingMachine a :StateMachine ;
+    rdfs:label "SourceMapping machine" ;
+    :initialState :SourceMappingMachine_Proposed ;
+    :hasState :SourceMappingMachine_Proposed, :SourceMappingMachine_Approved .
+
+:SourceMappingMachine_Proposed a :SourceMappingState ;
+    rdfs:label "SourceMapping Proposed" ;
+    :storedForm "proposed" .
+
+:SourceMappingMachine_Approved a :SourceMappingState ;
+    rdfs:label "SourceMapping Approved" ;
+    :storedForm "approved" .
+
+:SourceMappingMachine_Event_Propose a :SourceMappingEvent ;
+    rdfs:label "SourceMapping Propose" .
+
+:SourceMappingMachine_Event_Approve a :SourceMappingEvent ;
+    rdfs:label "SourceMapping Approve" .
+
+:SourceMappingMachine_M01 a :SourceMappingTransition ;
+    rdfs:label "SourceMapping M01" ;
+    :edgeId "M01" ;
+    :fromState :SourceMappingMachine_Proposed ;
+    :toState :SourceMappingMachine_Proposed ;
+    :firedBy :SourceMappingMachine_Event_Propose .
+
+:SourceMappingMachine_M02 a :SourceMappingTransition ;
+    rdfs:label "SourceMapping M02" ;
+    :edgeId "M02" ;
+    :fromState :SourceMappingMachine_Proposed ;
+    :toState :SourceMappingMachine_Approved ;
+    :firedBy :SourceMappingMachine_Event_Approve .
+
+:SourceMappingMachine_M03 a :SourceMappingTransition ;
+    rdfs:label "SourceMapping M03" ;
+    :edgeId "M03" ;
+    :fromState :SourceMappingMachine_Approved ;
+    :toState :SourceMappingMachine_Proposed ;
+    :firedBy :SourceMappingMachine_Event_Propose .

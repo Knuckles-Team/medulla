@@ -3,7 +3,7 @@
 use super::handle_usage;
 use crate::decide::stat_test_support::Harness;
 use medulla_decision_types::usage::{
-    PriceCatalog, PriceEntry, UsageAppended, UsageOp, UsageOutcome, UsagePriceStored,
+    PriceCatalog, PriceEntry, UsageAppended, UsageGroupBy, UsageOp, UsageOutcome, UsagePriceStored,
     UsageReadResult, UsageReadView, UsageRecord, USAGE_SCHEMA_VERSION,
 };
 use medulla_protocol_types::protocol::{Response, ResultPayload};
@@ -27,6 +27,8 @@ fn record(tenant: &str, run: &str) -> UsageRecord {
         latency_ms: 40,
         outcome: UsageOutcome::Ok,
         content_digest: "a".repeat(64),
+        project_id: String::new(),
+        agent_id: String::new(),
     }
 }
 
@@ -38,6 +40,7 @@ fn price(valid_from_ms: u64, input: u64) -> PriceEntry {
         in_per_mtok_micro: input,
         out_per_mtok_micro: 15_000_000,
         cached_per_mtok_micro: 300_000,
+        currency: "USD".into(),
     }
 }
 
@@ -170,6 +173,7 @@ fn read_op(view: UsageReadView, cursor: Option<String>) -> UsageOp {
     UsageOp::Read {
         from_ms: 0,
         to_ms: u64::MAX,
+        group_by: None,
         model_key: None,
         view,
         cursor,
@@ -250,15 +254,14 @@ async fn read_is_tenant_scoped() {
         decode(handle_usage(&h.state, 5, &human(), read_op(UsageReadView::Rollup, None)).await)
             .unwrap();
     match rollup {
-        UsageReadResult::Rollup { days } => {
+        UsageReadResult::Rollup { days, .. } => {
             assert_eq!(days.iter().map(|d| d.calls).sum::<u64>(), 2);
         }
         other => panic!("rollup view expected, got {other:?}"),
     }
 
     // A caller without `usage:read` is refused; an inverted window is invalid.
-    let nobody =
-        VerifiedRequestContext::verified_for_test_with_scopes("x", TENANT, &["kg:write"]);
+    let nobody = VerifiedRequestContext::verified_for_test_with_scopes("x", TENANT, &["kg:write"]);
     let denied = decode::<UsageReadResult>(
         handle_usage(&h.state, 6, &nobody, read_op(UsageReadView::Records, None)).await,
     )
@@ -272,6 +275,7 @@ async fn read_is_tenant_scoped() {
             UsageOp::Read {
                 from_ms: 2,
                 to_ms: 1,
+                group_by: None,
                 model_key: None,
                 view: UsageReadView::Records,
                 cursor: None,
@@ -303,8 +307,16 @@ async fn read_is_tenant_scoped() {
         .unwrap();
     }
     let (first, cursor) = records(
-        decode(handle_usage(&h.state, 200, &human(), read_op(UsageReadView::Records, None)).await)
-            .unwrap(),
+        decode(
+            handle_usage(
+                &h.state,
+                200,
+                &human(),
+                read_op(UsageReadView::Records, None),
+            )
+            .await,
+        )
+        .unwrap(),
     );
     assert_eq!(first.len(), 1000);
     let cursor = cursor.expect("a full page carries a cursor");
@@ -347,4 +359,129 @@ async fn read_is_tenant_scoped() {
     )
     .unwrap_err();
     assert!(garbage.starts_with("USAGE_BAD_CURSOR"), "{garbage}");
+}
+
+fn grouped_read(group_by: Option<UsageGroupBy>) -> UsageOp {
+    UsageOp::Read {
+        from_ms: 0,
+        to_ms: u64::MAX,
+        group_by,
+        model_key: None,
+        view: UsageReadView::Rollup,
+        cursor: None,
+    }
+}
+
+#[tokio::test]
+async fn grouped_rollup_is_tenant_scoped_and_carries_the_watermark() {
+    // spec: MEDULLA-DECISION-ENGINE-R801.9
+    const OTHER: &str = "tenant-usage-b";
+    let h = Harness::new().await;
+    let other =
+        VerifiedRequestContext::verified_for_test_with_scopes("svc-b", OTHER, &["usage:write"]);
+    let reader_b =
+        VerifiedRequestContext::verified_for_test_with_scopes("bob", OTHER, &["usage:read"]);
+    let mut priced = price(0, 1_000_000);
+    priced.currency = "GBP".into();
+    let put = UsageOp::PutPrice {
+        catalog: PriceCatalog {
+            aliases: Default::default(),
+            entries: vec![priced],
+        },
+    };
+    decode::<UsagePriceStored>(handle_usage(&h.state, 1, &service(), put).await).unwrap();
+    let mut first = record(TENANT, "g1");
+    first.project_id = "proj-a".into();
+    first.agent_id = "agent-1".into();
+    first.tokens_in = 1_000_000;
+    first.tokens_cached = 0;
+    first.tokens_out = 0;
+    first.recorded_at_ms = 5_000;
+    let mut second = record(TENANT, "g2");
+    second.project_id = "proj-b".into();
+    second.recorded_at_ms = 9_000;
+    decode::<UsageAppended>(
+        handle_usage(
+            &h.state,
+            2,
+            &service(),
+            UsageOp::Append {
+                records: vec![first, second],
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    decode::<UsageAppended>(
+        handle_usage(
+            &h.state,
+            3,
+            &other,
+            UsageOp::Append {
+                records: vec![record(OTHER, "foreign")],
+            },
+        )
+        .await,
+    )
+    .unwrap();
+
+    let read = |response: Response| match decode::<UsageReadResult>(response).unwrap() {
+        UsageReadResult::Rollup {
+            groups,
+            index_watermark_ms,
+            ..
+        } => (groups, index_watermark_ms),
+        other => panic!("rollup expected, got {other:?}"),
+    };
+    let (groups, watermark) = read(
+        handle_usage(
+            &h.state,
+            4,
+            &human(),
+            grouped_read(Some(UsageGroupBy::Project)),
+        )
+        .await,
+    );
+    let keys: Vec<&str> = groups.iter().map(|g| g.key.as_str()).collect();
+    assert_eq!(keys, ["proj-a", "proj-b"]);
+    assert_eq!(groups[0].cost_micro, Some(1_000_000));
+    assert_eq!(groups[0].currency.as_deref(), Some("GBP"));
+    assert_eq!(watermark, Some(9_000));
+
+    // Without a `group_by` no group is folded, and the foreign tenant sees only itself.
+    let (none, _) = read(handle_usage(&h.state, 5, &human(), grouped_read(None)).await);
+    assert!(none.is_empty());
+    let (theirs, theirs_mark) = read(
+        handle_usage(
+            &h.state,
+            6,
+            &reader_b,
+            grouped_read(Some(UsageGroupBy::Agent)),
+        )
+        .await,
+    );
+    assert_eq!(theirs.len(), 1);
+    assert_eq!(theirs[0].key, "");
+    assert_eq!(theirs_mark, Some(1_700_000_000_000));
+
+    // A currency that is not an ISO 4217 code is refused and stores nothing.
+    let mut bad = price(50, 1);
+    bad.currency = "euro".into();
+    let refused = decode::<UsagePriceStored>(
+        handle_usage(
+            &h.state,
+            7,
+            &service(),
+            UsageOp::PutPrice {
+                catalog: PriceCatalog {
+                    aliases: Default::default(),
+                    entries: vec![bad],
+                },
+            },
+        )
+        .await,
+    )
+    .unwrap_err();
+    assert!(refused.starts_with("PARAMETER_INVALID"), "{refused}");
+    assert_eq!(h.store.price_entries(TENANT).unwrap().len(), 1);
 }

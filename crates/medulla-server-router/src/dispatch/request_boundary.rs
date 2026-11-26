@@ -206,7 +206,9 @@ pub async fn dispatch_with_context(
 ) -> Response {
     // MEDULLA-OBSERVE-R006.2: the caller's trace id is recorded verbatim, so it is bounded.
     if let Some(trace_id) = req.trace_id.as_deref() {
-        if trace_id.is_empty() || trace_id.len() > medulla_protocol_types::protocol::TRACE_ID_MAX_LEN {
+        if trace_id.is_empty()
+            || trace_id.len() > medulla_protocol_types::protocol::TRACE_ID_MAX_LEN
+        {
             return method_errors::enforce(
                 (&req.method).into(),
                 Response::err(
@@ -243,15 +245,14 @@ pub async fn dispatch_with_context(
         .as_ref()
         .map(|context| context.agent_id().to_string())
         .unwrap_or_default();
-    let request_guard = medulla_observe::requests().enter(
-        medulla_observe::registry::requests::EnterRequest {
+    let request_guard =
+        medulla_observe::requests().enter(medulla_observe::registry::requests::EnterRequest {
             request_id: req.id,
             trace_id: req.trace_id.as_deref(),
             method,
             graph: &req.graph,
             principal: &principal,
-        },
-    );
+        });
     let _ = request_guard.apply(medulla_observe::machine::request::RequestEvent::Admit);
     let resp = medulla_observe::registry::requests::scope(
         request_guard.handle(),
@@ -386,6 +387,44 @@ async fn stamp_identity_request(
     )
     .await
     .map_err(|error| Response::err(req.id, error))
+}
+
+/// Register the sandbox principal as an ordinary agent when it has not been seen
+/// (MEDULLA-IDENTITY-R003.9). A name that already belongs to an agent of another role (the
+/// owner's `System` agent among them) is refused with the one fixed text, so a sandbox can
+/// never act as an identity the engine holds for itself, and the refusal reveals nothing
+/// about which names exist.
+async fn admit_sandbox_agent(
+    state: &Arc<RwLock<ServerState>>,
+    verified_context: &VerifiedRequestContext,
+) -> Result<(), String> {
+    #[cfg(feature = "security")]
+    {
+        use medulla_identity_types::acl::{AgentIdentity, AgentRole};
+        let refused = || medulla_server_api::anonymous::SANDBOX_REFUSAL.to_string();
+        let principal = verified_context.agent_id();
+        let held = timed_read(state).await.isolation.get_identity(principal);
+        match held {
+            Some(identity) if matches!(identity.role, AgentRole::Agent) => Ok(()),
+            Some(_) => Err(refused()),
+            None => state
+                .write()
+                .await
+                .isolation
+                .try_register_agent_from_request(AgentIdentity {
+                    agent_id: principal.to_string(),
+                    role: AgentRole::Agent,
+                    teams: Vec::new(),
+                    roles: Vec::new(),
+                })
+                .map_err(|_| refused()),
+        }
+    }
+    #[cfg(not(feature = "security"))]
+    {
+        let _ = (state, verified_context);
+        Ok(())
+    }
 }
 
 async fn dispatch_preamble_checks(
@@ -540,6 +579,11 @@ async fn dispatch_inner(
     };
     if timed_read(state).await.local_anonymous == verified_context.is_authenticated() {
         return Response::err(req.id, "AUTHENTICATION_REQUIRED: authority mode mismatch");
+    }
+    if verified_context.is_sandbox_tenant() {
+        if let Err(refusal) = admit_sandbox_agent(state, &verified_context).await {
+            return Response::err(req.id, refusal);
+        }
     }
     req.agent_id = Some(verified_context.agent_id().to_string());
 

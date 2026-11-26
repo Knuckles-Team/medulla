@@ -14,7 +14,7 @@ use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::usage as codes;
 use medulla_decision_types::usage::{
-    DayRollup, PriceCatalog, PriceEntry, UsageOutcome, UsageRecord,
+    DayRollup, PriceCatalog, PriceEntry, UsageGroupBy, UsageGroupRollup, UsageOutcome, UsageRecord,
 };
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_server_api::knob_config::knobs;
@@ -179,6 +179,14 @@ fn bucket_key(tenant: &str, model_key: &str, day: u64) -> String {
     format!("usage-bucket:{tenant}/{model_key}/{day:010}")
 }
 
+fn watermark_prefix(tenant: &str) -> String {
+    format!("usage-mark:{tenant}/")
+}
+
+fn watermark_key(tenant: &str) -> String {
+    format!("usage-mark:{tenant}/watermark")
+}
+
 fn audit_key(tenant: &str, appended_at_ms: u64, seq: usize) -> String {
     format!("usage-audit:{tenant}/{appended_at_ms:020}/{seq:010}")
 }
@@ -229,6 +237,94 @@ pub fn cost_micro(record: &UsageRecord, catalog: &PriceCatalog) -> Option<u64> {
         record.tokens_cached,
         record.tokens_out,
     )
+}
+
+/// The cost of one record and the currency of the price that produced it.
+fn priced(record: &UsageRecord, catalog: &PriceCatalog) -> Option<(u64, String)> {
+    let key = normalize_model_key(catalog, &record.model_key);
+    let price = price_at(catalog, &key, record.recorded_at_ms)?;
+    let cost = cost_of(
+        price,
+        record.tokens_in,
+        record.tokens_cached,
+        record.tokens_out,
+    )?;
+    Some((cost, price.currency.clone()))
+}
+
+/// Running sums of one group of a grouped rollup.
+#[derive(Default)]
+struct GroupAcc {
+    calls: u64,
+    tokens_in: u64,
+    tokens_out: u64,
+    tokens_cached: u64,
+    errors: u64,
+    cost: u64,
+    /// False once a call has no price, a cost overflows or two currencies meet.
+    cost_known: bool,
+    currency: Option<String>,
+    latencies: Vec<u64>,
+}
+
+impl GroupAcc {
+    fn new() -> Self {
+        Self {
+            cost_known: true,
+            ..Self::default()
+        }
+    }
+
+    fn add(&mut self, record: &UsageRecord, priced: Option<(u64, String)>) {
+        self.calls += 1;
+        self.tokens_in += record.tokens_in;
+        self.tokens_out += record.tokens_out;
+        self.tokens_cached += record.tokens_cached;
+        if record.outcome == UsageOutcome::Error {
+            self.errors += 1;
+        }
+        self.latencies.push(record.latency_ms);
+        match priced {
+            Some((cost, currency)) if self.cost_known => {
+                if self.calls > 1 && self.currency.as_deref().unwrap_or("") != currency {
+                    self.cost_known = false;
+                } else {
+                    self.currency.get_or_insert(currency);
+                    match self.cost.checked_add(cost) {
+                        Some(total) => self.cost = total,
+                        None => self.cost_known = false,
+                    }
+                }
+            }
+            _ => self.cost_known = false,
+        }
+    }
+
+    fn finish(mut self, key: String) -> UsageGroupRollup {
+        self.latencies.sort_unstable();
+        // Nearest rank: the ceil(0.95 * n)-th smallest sample.
+        let rank = (self.latencies.len() * 95).div_ceil(100).max(1);
+        let latency_p95_ms = self.latencies.get(rank - 1).copied().unwrap_or(0);
+        let (cost_micro, currency) = if self.cost_known {
+            (
+                Some(self.cost),
+                self.currency.filter(|currency| !currency.is_empty()),
+            )
+        } else {
+            (None, None)
+        };
+        UsageGroupRollup {
+            key,
+            calls: self.calls,
+            tokens_in: self.tokens_in,
+            tokens_out: self.tokens_out,
+            tokens_cached: self.tokens_cached,
+            errors: self.errors,
+            cost_micro,
+            currency,
+            latency_p95_ms,
+        }
+    }
 }
 
 fn validate_batch(tenant: &str, records: &[UsageRecord]) -> Result<(), UsageRefusal> {
@@ -305,6 +401,25 @@ impl AgentLibraryStore {
         let result = self.maintain_control_rows(tenant, "usage_ledger_append", |owner| {
             let mut table = owner.open_table(DECISION_ARTIFACTS)?;
             let mut seq_in_batch: BTreeMap<u64, usize> = BTreeMap::new();
+            // The watermark row only advances once it exists; a ledger that holds
+            // records but no row stays on the keyed read until it is rebuilt.
+            let mark_key = watermark_key(tenant);
+            let held = match table.get((tenant, mark_key.as_str())).map_err(store)? {
+                Some(row) => decode::<u64>(row.value()).ok(),
+                None => None,
+            };
+            let mut legacy = false;
+            if held.is_none() {
+                let records = record_prefix(tenant);
+                if let Some(row) = table
+                    .range((tenant, records.as_str())..)
+                    .map_err(store)?
+                    .next()
+                {
+                    let (key, _) = row.map_err(store)?;
+                    legacy = key.value().0 == tenant && key.value().1.starts_with(&records);
+                }
+            }
             for (index, (recorded_at_ms, model_key, day, bytes)) in rows.iter().enumerate() {
                 let prefix = format!("usage:{tenant}/{recorded_at_ms:020}/");
                 let mut existing = 0usize;
@@ -351,6 +466,22 @@ impl AgentLibraryStore {
                 table
                     .insert((tenant, bucket.as_str()), encoded.as_slice())
                     .map_err(store)?;
+            }
+            let newest = rows.iter().map(|row| row.0).max();
+            if let Some(newest) = newest.filter(|_| !legacy) {
+                let key = mark_key.as_str();
+                if held.map_or(true, |held| newest > held) {
+                    let bytes = match encode(&newest) {
+                        Ok(bytes) => bytes,
+                        Err(refusal) => {
+                            failure = Some(refusal);
+                            return Err("usage watermark cannot be encoded".to_string());
+                        }
+                    };
+                    table
+                        .insert((tenant, key), bytes.as_slice())
+                        .map_err(store)?;
+                }
             }
             let prefix = format!("usage-audit:{tenant}/{appended_at_ms:020}/");
             let mut existing = 0usize;
@@ -575,6 +706,10 @@ impl AgentLibraryStore {
                     tokens_cached: sums.tokens_cached,
                     errors: sums.errors,
                     cost_micro,
+                    currency: price_at(catalog, model_key, day * DAY_MS + DAY_MS - 1)
+                        .filter(|_| cost_micro.is_some())
+                        .map(|price| price.currency.clone())
+                        .filter(|currency| !currency.is_empty()),
                 });
             }
             if !full {
@@ -582,6 +717,91 @@ impl AgentLibraryStore {
             }
         }
         Ok(Rollup { days, rows_read })
+    }
+
+    /// The window `[from_ms, to_ms]` of `tenant`'s records folded by
+    /// `group_by` (MEDULLA-DECISION-ENGINE-R801.9), in key order. Reads the
+    /// tenant's own record rows only. A cost is the sum of the prices in force at
+    /// each record's time, in the currency those prices were recorded in; it is
+    /// `None` when any call has no price or two currencies meet, and no
+    /// conversion is ever made. `latency_p95_ms` is the nearest-rank 95th
+    /// percentile of the calls' `latency_ms`.
+    pub fn usage_groups(
+        &self,
+        tenant: &str,
+        catalog: &PriceCatalog,
+        from_ms: u64,
+        to_ms: u64,
+        group_by: UsageGroupBy,
+    ) -> Result<Vec<UsageGroupRollup>, UsageRefusal> {
+        let prefix = record_prefix(tenant);
+        let mut groups: BTreeMap<String, GroupAcc> = BTreeMap::new();
+        let mut cursor = format!("{prefix}{from_ms:020}/");
+        'scan: loop {
+            let page =
+                self.decision_artifacts_page(tenant, &prefix, Some(&cursor), USAGE_READ_PAGE)?;
+            let Some((last, _)) = page.last() else { break };
+            cursor = last.clone();
+            let full = page.len() == USAGE_READ_PAGE;
+            for (_, bytes) in &page {
+                let record = decode::<UsageRecord>(bytes)?;
+                if record.recorded_at_ms > to_ms {
+                    break 'scan;
+                }
+                if record.recorded_at_ms < from_ms {
+                    continue;
+                }
+                let key = match group_by {
+                    UsageGroupBy::Model => record.model_key.clone(),
+                    UsageGroupBy::Project => record.project_id.clone(),
+                    UsageGroupBy::Agent => record.agent_id.clone(),
+                };
+                let priced = priced(&record, catalog);
+                groups
+                    .entry(key)
+                    .or_insert_with(GroupAcc::new)
+                    .add(&record, priced);
+            }
+            if !full {
+                break;
+            }
+        }
+        Ok(groups
+            .into_iter()
+            .map(|(key, acc)| acc.finish(key))
+            .collect())
+    }
+
+    /// The newest `recorded_at_ms` of `tenant`'s ledger: the last ingested event
+    /// time (MEDULLA-DECISION-ENGINE-R801.9). Held as one row that every append
+    /// advances in its own transaction; a ledger written before the row existed
+    /// is read once from its record keys. `None` when the tenant has no records.
+    pub fn usage_watermark(&self, tenant: &str) -> Result<Option<u64>, UsageRefusal> {
+        let held = self.decision_artifacts_page(tenant, &watermark_prefix(tenant), None, 1)?;
+        if let Some((_, bytes)) = held.first() {
+            return decode::<u64>(bytes).map(Some);
+        }
+        let prefix = record_prefix(tenant);
+        let mut newest: Option<u64> = None;
+        let mut after: Option<String> = None;
+        loop {
+            let page =
+                self.decision_artifacts_page(tenant, &prefix, after.as_deref(), SCAN_PAGE)?;
+            let Some((last, _)) = page.last() else { break };
+            after = Some(last.clone());
+            let full = page.len() == SCAN_PAGE;
+            for (key, _) in &page {
+                let stamp = key[prefix.len()..]
+                    .split('/')
+                    .next()
+                    .and_then(|ms| ms.parse::<u64>().ok());
+                newest = newest.max(stamp);
+            }
+            if !full {
+                break;
+            }
+        }
+        Ok(newest)
     }
 
     /// The newest `n` distinct runs of `(child_id, operation)`, newest first.

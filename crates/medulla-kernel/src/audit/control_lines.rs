@@ -137,6 +137,30 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "RECORD_DEPLOYMENT|{}|{}",
             deployment.environment, deployment.workload
         )),
+        // MEDULLA-SDLC-R002.7: the line names the plan and its target, never a node outcome.
+        Method::DeployRecordPut { record } => Some(format!(
+            "DEPLOY_RECORD_PUT|{}|{}",
+            record.plan_digest, record.target
+        )),
+        // MEDULLA-DECISION-ENGINE-R901: the line names the operation and the goal, never the title.
+        Method::GoalControl { op } => Some(format!("GOAL_CONTROL|{}|{}", op.name(), op.goal_id())),
+        // MEDULLA-UNIFIED-DATA-PLANE-R790: the line names the run and its connection, never a count.
+        Method::ConnectorRunRecord { run } => Some(format!(
+            "CONNECTOR_RUN_RECORD|{}|{}",
+            run.connection_id, run.run_id
+        )),
+        // MEDULLA-UNIFIED-DATA-PLANE-R791: the lines name the operation and the connection, never
+        // a setting, a credential locator or a mapping.
+        Method::SourceConnectionControl { op } => Some(format!(
+            "SOURCE_CONNECTION_CONTROL|{}|{}",
+            op.name(),
+            op.connection_id()
+        )),
+        Method::SourceMappingControl { op } => Some(format!(
+            "SOURCE_MAPPING_CONTROL|{}|{}",
+            op.name(),
+            op.connection_id()
+        )),
         // MEDULLA-TYPED-PACKS-R652.3: the line names the op and the claim, never the evidence.
         Method::ClassificationClaim { op } => Some(match op {
             medulla_identity_types::classification::ClassificationClaimOp::Propose { claim } => {
@@ -375,6 +399,9 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             "STORED_QUERY_CALL|{name}|{}",
             version.map_or_else(|| "latest".to_string(), |v| v.to_string())
         )),
+        Method::StoredQueryRetire { name, reason } => {
+            Some(format!("STORED_QUERY_RETIRE|{name}|{reason:?}"))
+        }
         Method::DataProductRegister { product, .. } => {
             Some(format!("DATA_PRODUCT_REGISTER|{}", product.id))
         }

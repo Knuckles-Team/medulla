@@ -121,6 +121,21 @@
     rdfs:domain :ApprovalRule ;
     rdfs:range xsd:integer .
 
+# spec: MEDULLA-BUSINESS-OPS-R004
+# The two properties the approval gate question reads beside the quorum, the role and the
+# ceiling: the class of the gate and how long an approval of the rule stays open.
+:approvalGateClass a owl:DatatypeProperty ;
+    rdfs:label "approval gate class" ;
+    rdfs:comment "The class of the gate the rule sets: legal_filing, money_movement, publishing or production_qa." ;
+    rdfs:domain :ApprovalRule ;
+    rdfs:range xsd:string .
+
+:approvalExpiryMs a owl:DatatypeProperty ;
+    rdfs:label "approval expiry" ;
+    rdfs:comment "How long an approval under the rule stays open, in milliseconds." ;
+    rdfs:domain :ApprovalRule ;
+    rdfs:range xsd:integer .
+
 :claimApprovedPhrase a owl:ObjectProperty ;
     rdfs:label "claim approved phrase" ;
     rdfs:comment "Links a claim policy to a phrase it approves." ;

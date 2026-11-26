@@ -1,6 +1,10 @@
 use super::*;
 
 mod delivery;
+mod connector_runs;
+mod deploy;
+mod goals;
+mod source_connections;
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -11,7 +15,8 @@ use medulla_work_types::orchestration::visual_observation::{
     VISUAL_OBSERVATION_NODE_TYPE, VISUAL_OBSERVATION_RECORD_PROPERTY,
 };
 use medulla_protocol_types::result_contract::ingestion::{
-    GoalPut as GoalPutResult, ProjectModeGet as ProjectModeGetResult,
+    ConfigLayers as ConfigLayersResult, GoalPut as GoalPutResult,
+    ProjectModeGet as ProjectModeGetResult,
     ProjectModeSet as ProjectModeSetResult,
     FileDefect as FileDefectResult, SpecStatus as SpecStatusResult, LifecycleTrace as LifecycleTraceResult, PutObservation as PutObservationResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
@@ -36,6 +41,10 @@ use medulla_source_types::lifecycle::{
     ProposalWrite, PullRequestError, PullRequestTarget, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
     DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
     ProjectModeGetRequest, ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
+};
+use medulla_source_types::config_layers::{
+    config_layer_node_id, config_layer_record, ConfigLayerKind, ConfigLayersAnswer,
+    ConfigLayersRequest,
 };
 use medulla_source_types::gate_verdict::{
     gate_verdict_node_id, handle_landing_policy_put, GateVerdictReceipt, GateVerdictRecord,
@@ -112,6 +121,67 @@ pub async fn dispatch_sdlc_methods(
         Method::RecordDeployment { deployment } => {
             dispatch_boxed(record_deployment(state, target, deployment)).await
         }
+        // MEDULLA-SDLC-R002.7, R002.8: the deploy record write and its reads.
+        Method::DeployRecordPut { record } => {
+            dispatch_boxed(deploy::put(state, target, record)).await
+        }
+        Method::DeployRecordGet { plan_digest } => {
+            dispatch_boxed(deploy::get(state, target, plan_digest)).await
+        }
+        Method::DeployRecordList { limit, cursor } => {
+            dispatch_boxed(deploy::list(state, target, limit, cursor)).await
+        }
+        // MEDULLA-BUSINESS-OPS-R004: which approval gate applies to an operation.
+        Method::ApprovalGateResolve { request } => {
+            dispatch_boxed(deploy::approval_gate_resolve(state, target, request)).await
+        }
+        // MEDULLA-DECISION-ENGINE-R901: the agent goal reads and control.
+        Method::GoalList { limit, cursor } => {
+            dispatch_boxed(goals::list(state, target, limit, cursor)).await
+        }
+        Method::GoalIterations { goal_id } => {
+            dispatch_boxed(goals::iterations(state, target, goal_id)).await
+        }
+        Method::GoalControl { op } => dispatch_boxed(goals::control(state, target, op)).await,
+        // MEDULLA-UNIFIED-DATA-PLANE-R790: the connector run list and report.
+        Method::ConnectorRuns {
+            connection_id,
+            state: run_state,
+            limit,
+            cursor,
+        } => {
+            dispatch_boxed(connector_runs::list(
+                state,
+                target,
+                connection_id,
+                run_state,
+                limit,
+                cursor,
+            ))
+            .await
+        }
+        Method::ConnectorRunRecord { run } => {
+            dispatch_boxed(connector_runs::record(state, target, run)).await
+        }
+        Method::ConnectorRunGet { run_id } => {
+            dispatch_boxed(connector_runs::get(state, target, run_id)).await
+        }
+        // MEDULLA-UNIFIED-DATA-PLANE-R791: the source connection and mapping reads and controls.
+        Method::SourceConnectionGet { connection_id } => {
+            dispatch_boxed(source_connections::get(state, target, connection_id)).await
+        }
+        Method::SourceConnectionList { limit, cursor } => {
+            dispatch_boxed(source_connections::list(state, target, limit, cursor)).await
+        }
+        Method::SourceConnectionControl { op } => {
+            dispatch_boxed(source_connections::control(state, target, op)).await
+        }
+        Method::SourceMappingGet { connection_id } => {
+            dispatch_boxed(source_connections::mapping_get(state, target, connection_id)).await
+        }
+        Method::SourceMappingControl { op } => {
+            dispatch_boxed(source_connections::mapping_control(state, target, op)).await
+        }
         Method::GoalPut { goal } => dispatch_boxed(goal_put(state, target, goal)).await,
         Method::ProposalPut { proposal } => {
             dispatch_boxed(proposal_put(state, target, proposal)).await
@@ -127,6 +197,9 @@ pub async fn dispatch_sdlc_methods(
         }
         Method::ProjectModeGet { request } => {
             dispatch_boxed(project_mode_get(state, target, request)).await
+        }
+        Method::ConfigLayers { request } => {
+            dispatch_boxed(config_layers(state, target, request)).await
         }
         Method::SpecQuestion {
             question,
@@ -1667,6 +1740,84 @@ async fn project_mode_get(
     }
     .await;
     typed_response::<ProjectModeGetResult>(target.req_id, result)
+}
+
+/// The teams `principals` are members of in `core`: the targets of their `memberOf` edges.
+fn member_teams(core: &GraphCore, principals: &[String]) -> BTreeSet<String> {
+    let relation_of = |blob: &[u8]| {
+        medulla_types::msgpack::decode_property_value(blob)
+            .ok()
+            .and_then(|props| {
+                props
+                    .get("relationship")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+            })
+    };
+    let mut teams = BTreeSet::new();
+    for principal in principals {
+        for team in core.get_successors(principal).unwrap_or_default() {
+            let typed = core
+                .typed_edges_between(principal, &team)
+                .into_iter()
+                .any(|(relation, _)| relation == "memberOf");
+            let plain = core
+                .get_edge_properties(principal, &team)
+                .iter()
+                .any(|blob| relation_of(blob).as_deref() == Some("memberOf"));
+            if typed || plain {
+                teams.insert(team);
+            }
+        }
+    }
+    teams
+}
+
+/// `ConfigLayers` (MEDULLA-IDENTITY-R740): the company layer, the layer of every team the verified
+/// caller is a member of and the caller's own user layer, each a `ConfigLayer` node of the
+/// verified tenant that the caller may see. Nothing in the request names a team or a user, and a
+/// layer that is absent, foreign or hidden is left out alike. Reads only.
+async fn config_layers(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    _request: ConfigLayersRequest,
+) -> Response {
+    let result = async {
+        let tenant = target.verified.tenant().to_owned();
+        if tenant.trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        ensure_graph_resident(state, target.graph).await;
+        let (core, authority) = {
+            let current = timed_read(state).await;
+            authorized_graph_read(
+                &current,
+                target.graph,
+                target.verified,
+                &format!("GRAPH_NOT_FOUND: {}", target.graph),
+            )?
+        };
+        let user = target.verified.principal_persistence_id();
+        let principals = vec![target.verified.agent_id().to_owned(), user.clone()];
+        let read = |layer: ConfigLayerKind, scope: &str| {
+            let node_id = config_layer_node_id(&tenant, layer, scope);
+            let properties = core.get_node_properties(&node_id)?;
+            if !authority.can_see_node(&properties, core.is_schema_node(&node_id)) {
+                return None;
+            }
+            let node = medulla_types::msgpack::decode_property_value(&properties).ok()?;
+            config_layer_record(&tenant, layer, scope, &node)
+        };
+        let mut layers = Vec::new();
+        layers.extend(read(ConfigLayerKind::Company, ""));
+        for team in member_teams(&core, &principals) {
+            layers.extend(read(ConfigLayerKind::Team, &team));
+        }
+        layers.extend(read(ConfigLayerKind::User, &user));
+        Ok(ConfigLayersAnswer { layers })
+    }
+    .await;
+    typed_response::<ConfigLayersResult>(target.req_id, result)
 }
 
 /// The stored mode of `project` in the request graph, `reference` when no record

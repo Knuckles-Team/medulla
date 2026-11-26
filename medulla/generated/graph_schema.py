@@ -220,6 +220,8 @@ class GraphSchemaTermKind(str, Enum):
 class GraphSchemaTermView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    implements: list[str] = Field(default_factory=list)
+    interface: bool = False
     iri: str
     kind: GraphSchemaTermKind
     local_name: str

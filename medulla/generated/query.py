@@ -1970,7 +1970,14 @@ send_source_coverage = contract_sender("SourceCoverage", "MethodSourceCoveragePa
 send_stored_query_call = contract_sender(
     "StoredQueryCall", "MethodStoredQueryCallParams"
 )
+send_stored_query_get = contract_sender("StoredQueryGet", "MethodStoredQueryGetParams")
+send_stored_query_list = contract_sender(
+    "StoredQueryList", "MethodStoredQueryListParams"
+)
 send_stored_query_put = contract_sender("StoredQueryPut", "MethodStoredQueryPutParams")
+send_stored_query_retire = contract_sender(
+    "StoredQueryRetire", "MethodStoredQueryRetireParams"
+)
 send_viewport_query = contract_sender("ViewportQuery", "MethodViewportQueryParams")
 send_projection_read = contract_sender("ProjectionRead", "MethodProjectionReadParams")
 send_bookmark_semantic_search = contract_sender(

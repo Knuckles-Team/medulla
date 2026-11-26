@@ -1147,14 +1147,59 @@ class AgentLibraryOpStatus(BaseModel):
     request: AgentLibraryStatusRequest
 
 
+class AgentLibraryKind(str, Enum):
+    AGENT = "agent"
+    TOOL = "tool"
+    SUGGESTION = "suggestion"
+
+
+class AgentLibraryOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    kind: AgentLibraryKind
+    operation: Literal["get"]
+    tenant_id: str
+
+
+class AgentLibraryOpList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    kind: AgentLibraryKind | None = None
+    lifecycle: AgentLibraryLifecycle | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    operation: Literal["list"]
+    tenant_id: str
+
+
 AgentLibraryOp = Annotated[
     AgentLibraryOpPublish
     | AgentLibraryOpRetire
     | AgentLibraryOpCurrent
     | AgentLibraryOpHistory
-    | AgentLibraryOpStatus,
+    | AgentLibraryOpStatus
+    | AgentLibraryOpList
+    | AgentLibraryOpGet,
     Field(discriminator="operation"),
 ]
+
+
+class AgentLibraryListEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent_id: str
+    kind: AgentLibraryKind = AgentLibraryKind.AGENT
+    definition_digest: str
+    entry_revision: Annotated[int, Field(ge=0)]
+    lifecycle: AgentLibraryLifecycle
+
+
+class AgentLibraryPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entries: list[AgentLibraryListEntry]
+    next_cursor: str | None = None
 
 
 class AgentLibraryPublishRequest(BaseModel):
@@ -4081,6 +4126,74 @@ class DecisionEvalOpSkillEval(BaseModel):
     request: SkillEvalRequest
 
 
+class SkillEvalCaseAddRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case: SkillEvalCase
+    known_tools: list[str]
+    tenant_id: str
+
+
+class SkillEvalCaseAdded(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case_id: str
+    node_id: str
+    skill_ref: str
+
+
+class DecisionEvalOpSkillEvalCaseAdd(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["skill_eval_case_add"]
+    request: SkillEvalCaseAddRequest
+
+
+class SkillEvalReportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    skill_ref: str
+    tenant_id: str
+
+
+class SkillEvalReportAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calibration: JudgeCalibration | None = None
+    report: SuiteReport | None = None
+    skill_ref: str
+
+
+class DecisionEvalOpSkillEvalReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["skill_eval_report"]
+    request: SkillEvalReportRequest
+
+
+class SkillEvalCalibrateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calibration: JudgeCalibration
+    skill_ref: str
+    tenant_id: str
+
+
+class SkillEvalCalibrated(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    admitted: bool
+    calibration: JudgeCalibration
+    skill_ref: str
+
+
+class DecisionEvalOpSkillEvalCalibrate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["skill_eval_calibrate"]
+    request: SkillEvalCalibrateRequest
+
+
 class DecisionEvalOpDelegationQuality(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4329,6 +4442,9 @@ DecisionEvalOp = Annotated[
     | DecisionEvalOpTimeline
     | DecisionEvalOpDelegationQuality
     | DecisionEvalOpSkillEval
+    | DecisionEvalOpSkillEvalCaseAdd
+    | DecisionEvalOpSkillEvalReport
+    | DecisionEvalOpSkillEvalCalibrate
     | DecisionEvalOpMemoryChangeBenchmarkSubmit
     | DecisionEvalOpMemoryRewriteSubmit
     | DecisionEvalOpCertifyLocalSkill
@@ -15597,6 +15713,27 @@ class MethodBlobGc(BaseModel):
     method: Literal["BlobGc"]
 
 
+class MethodMediaPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MediaPut"]
+    params: MethodMediaPutParams
+
+
+class MethodMediaGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MediaGet"]
+    params: MethodMediaGetParams
+
+
+class MethodMediaTombstone(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MediaTombstone"]
+    params: MethodMediaTombstoneParams
+
+
 class MethodKvGet(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16552,6 +16689,13 @@ class MethodActionSubmit(BaseModel):
     params: MethodActionSubmitParams
 
 
+class MethodActionList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ActionList"]
+    params: MethodActionListParams
+
+
 class MethodBusHeartbeat(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17091,6 +17235,27 @@ class MethodStoredQueryCall(BaseModel):
     params: MethodStoredQueryCallParams
 
 
+class MethodStoredQueryGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["StoredQueryGet"]
+    params: MethodStoredQueryGetParams
+
+
+class MethodStoredQueryList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["StoredQueryList"]
+    params: MethodStoredQueryListParams
+
+
+class MethodStoredQueryRetire(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["StoredQueryRetire"]
+    params: MethodStoredQueryRetireParams
+
+
 class MethodApproveEntityLink(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17512,6 +17677,111 @@ class MethodRecordDeployment(BaseModel):
     params: MethodRecordDeploymentParams
 
 
+class MethodDeployRecordPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DeployRecordPut"]
+    params: MethodDeployRecordPutParams
+
+
+class MethodDeployRecordGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DeployRecordGet"]
+    params: MethodDeployRecordGetParams
+
+
+class MethodDeployRecordList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DeployRecordList"]
+    params: MethodDeployRecordListParams
+
+
+class MethodApprovalGateResolve(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ApprovalGateResolve"]
+    params: MethodApprovalGateResolveParams
+
+
+class MethodGoalList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GoalList"]
+    params: MethodGoalListParams
+
+
+class MethodGoalIterations(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GoalIterations"]
+    params: MethodGoalIterationsParams
+
+
+class MethodGoalControl(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GoalControl"]
+    params: MethodGoalControlParams
+
+
+class MethodConnectorRuns(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ConnectorRuns"]
+    params: MethodConnectorRunsParams
+
+
+class MethodConnectorRunRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ConnectorRunRecord"]
+    params: MethodConnectorRunRecordParams
+
+
+class MethodConnectorRunGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ConnectorRunGet"]
+    params: MethodConnectorRunGetParams
+
+
+class MethodSourceConnectionGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceConnectionGet"]
+    params: MethodSourceConnectionGetParams
+
+
+class MethodSourceConnectionList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceConnectionList"]
+    params: MethodSourceConnectionListParams
+
+
+class MethodSourceConnectionControl(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceConnectionControl"]
+    params: MethodSourceConnectionControlParams
+
+
+class MethodSourceMappingGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceMappingGet"]
+    params: MethodSourceMappingGetParams
+
+
+class MethodSourceMappingControl(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceMappingControl"]
+    params: MethodSourceMappingControlParams
+
+
 class MethodSourceCoverage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17670,6 +17940,12 @@ class MethodOpenGraphSnapshot(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     method: Literal["OpenGraphSnapshot"]
+
+
+class MethodGraphLiveLimits(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GraphLiveLimits"]
 
 
 class MethodReadGraphChanges(BaseModel):
@@ -18189,6 +18465,9 @@ Method = Annotated[
         MethodBlobRef,
         MethodBlobUnref,
         MethodBlobGc,
+        MethodMediaPut,
+        MethodMediaGet,
+        MethodMediaTombstone,
         MethodKvGet,
         MethodKvPut,
         MethodKvDelete,
@@ -18311,6 +18590,7 @@ Method = Annotated[
         MethodAccessRequestOpen,
         MethodActionRegister,
         MethodActionSubmit,
+        MethodActionList,
         MethodBusHeartbeat,
         MethodBusRegister,
         MethodBusRoster,
@@ -18384,6 +18664,9 @@ Method = Annotated[
         MethodRegimeSizingInput,
         MethodStoredQueryPut,
         MethodStoredQueryCall,
+        MethodStoredQueryGet,
+        MethodStoredQueryList,
+        MethodStoredQueryRetire,
         MethodApproveEntityLink,
         MethodContextCompile,
         MethodRetrievalRound,
@@ -18435,6 +18718,21 @@ Method = Annotated[
         MethodRecordRelease,
         MethodRecordGateVerdict,
         MethodRecordDeployment,
+        MethodDeployRecordPut,
+        MethodDeployRecordGet,
+        MethodDeployRecordList,
+        MethodApprovalGateResolve,
+        MethodGoalList,
+        MethodGoalIterations,
+        MethodGoalControl,
+        MethodConnectorRuns,
+        MethodConnectorRunRecord,
+        MethodConnectorRunGet,
+        MethodSourceConnectionGet,
+        MethodSourceConnectionList,
+        MethodSourceConnectionControl,
+        MethodSourceMappingGet,
+        MethodSourceMappingControl,
         MethodSourceCoverage,
         MethodObservationState,
         MethodHarnessEdit,
@@ -18461,6 +18759,7 @@ Method = Annotated[
         MethodReadSpan,
         MethodAtomContext,
         MethodOpenGraphSnapshot,
+        MethodGraphLiveLimits,
         MethodReadGraphChanges,
         MethodTaskQueueEnqueue,
         MethodTaskQueueClaim,
@@ -18746,6 +19045,25 @@ class MethodBlobRefParams(BaseModel):
 
 
 class MethodBlobUnrefParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+
+
+class MethodMediaPutParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    media_type: str
+    data: _EgOctets
+
+
+class MethodMediaGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+
+
+class MethodMediaTombstoneParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     digest: str
@@ -36708,6 +37026,10 @@ class MethodActionSubmitParams(BaseModel):
     params: dict[str, ParamValue]
 
 
+class MethodActionListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+
 class MethodBusHeartbeatParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38217,6 +38539,372 @@ class DeploymentOutcome(str, Enum):
     UNATTRIBUTED = "unattributed"
 
 
+class DeployNodeResult(str, Enum):
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+    ROLLED_BACK = "rolled_back"
+
+
+class DeployNodeOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: str | None = None
+    node: str
+    outcome: DeployNodeResult
+
+
+class DeployRecordInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver: str | None = None
+    finished_at_ms: Annotated[int, Field(ge=0)] | None = None
+    image_digests: list[str]
+    nodes: list[DeployNodeOutcome]
+    plan_digest: str
+    started_at_ms: Annotated[int, Field(ge=0)] | None = None
+    target: str
+
+
+class DeployRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+    record: DeployRecordInput
+    seal: str
+
+
+class DeployRecordReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    node_id: str
+    plan_digest: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+    replayed: bool
+    seal: str
+
+
+class DeployRecordSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    all_succeeded: bool
+    node_count: Annotated[int, Field(ge=0)]
+    plan_digest: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+    target: str
+
+
+class DeployRecordPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    next_cursor: str | None = None
+    records: list[DeployRecordSummary]
+
+
+class ApprovalGate(str, Enum):
+    NONE = "none"
+    SINGLE = "single"
+    TWO_PERSON = "two_person"
+    UNRESOLVED = "unresolved"
+
+
+class GateClass(str, Enum):
+    LEGAL_FILING = "legal_filing"
+    MONEY_MOVEMENT = "money_movement"
+    PUBLISHING = "publishing"
+    PRODUCTION_QA = "production_qa"
+
+
+class ApprovalGateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    amount_minor: Annotated[int, Field(ge=0)] | None = None
+    currency: str | None = None
+    operation: str
+
+
+class ApprovalGateAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver_roles: list[str]
+    expires_after_ms: Annotated[int, Field(ge=0)] | None = None
+    gate: ApprovalGate
+    gate_class: GateClass | None = None
+    operation: str
+    policy_digest: str
+    rule_ids: list[str]
+
+
+class GoalState(str, Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class IterationOutcome(str, Enum):
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class GoalFinish(str, Enum):
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
+class AgentGoal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    created_ms: Annotated[int, Field(ge=0)]
+    goal_id: str
+    run_id: str | None = None
+    state: GoalState
+    tenant_id: str
+    title: str
+
+
+class GoalIteration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ended_ms: Annotated[int, Field(ge=0)] | None = None
+    goal_id: str
+    iteration: Annotated[int, Field(ge=0)]
+    outcome: IterationOutcome
+    run_id: str
+    started_ms: Annotated[int, Field(ge=0)]
+
+
+class GoalControlOpCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    operation: Literal["create"]
+    title: str
+
+
+class GoalControlOpRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    operation: Literal["run"]
+
+
+class GoalControlOpCancel(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    operation: Literal["cancel"]
+
+
+class GoalControlOpFinish(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    operation: Literal["finish"]
+    outcome: GoalFinish
+
+
+GoalControlOp = Annotated[
+    GoalControlOpCreate | GoalControlOpRun | GoalControlOpCancel | GoalControlOpFinish,
+    Field(discriminator="operation"),
+]
+
+
+class GoalControlReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    iteration: Annotated[int, Field(ge=0)] | None = None
+    replayed: bool
+    run_id: str | None = None
+    state: GoalState
+
+
+class GoalPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goals: list[AgentGoal]
+    next_cursor: str | None = None
+
+
+class GoalIterations(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    iterations: list[GoalIteration]
+
+
+class RunState(str, Enum):
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ConnectorRunInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    counts: dict[str, Annotated[int, Field(ge=0)]] = Field(default_factory=dict)
+    run_id: str
+    state: RunState
+
+
+class ConnectorRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    counts: dict[str, Annotated[int, Field(ge=0)]] = Field(default_factory=dict)
+    finished_ms: Annotated[int, Field(ge=0)] | None = None
+    run_id: str
+    started_ms: Annotated[int, Field(ge=0)]
+    state: RunState
+
+
+class ConnectorRunReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    finished_ms: Annotated[int, Field(ge=0)] | None = None
+    node_id: str
+    replayed: bool
+    run_id: str
+    started_ms: Annotated[int, Field(ge=0)]
+    state: RunState
+
+
+class ConnectorRunPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    next_cursor: str | None = None
+    runs: list[ConnectorRun]
+
+
+class ConnectionState(str, Enum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+
+
+class SourceConnectionInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    credential_ref: str
+    label: str
+    provider: str
+    settings: dict[str, Any] = Field(default_factory=dict)
+    state: ConnectionState | None = None
+
+
+class SourceConnection(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    credential_ref: str
+    label: str
+    provider: str
+    settings: dict[str, Any]
+    state: ConnectionState
+    tenant_id: str
+
+
+class SourceConnectionPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connections: list[SourceConnection]
+    next_cursor: str | None = None
+
+
+class SourceConnectionReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    deleted: bool
+    replayed: bool
+
+
+class SourceConnectionOpPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection: SourceConnectionInput
+    operation: Literal["put"]
+
+
+class SourceConnectionOpDelete(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    operation: Literal["delete"]
+
+
+SourceConnectionOp = Annotated[
+    SourceConnectionOpPut | SourceConnectionOpDelete,
+    Field(discriminator="operation"),
+]
+
+
+class MappingState(str, Enum):
+    PROPOSED = "proposed"
+    APPROVED = "approved"
+
+
+class SourceMapping(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    digest: str
+    mapping: dict[str, Any]
+    state: MappingState
+
+
+class SourceMappingOpPropose(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    mapping: dict[str, Any]
+    operation: Literal["propose"]
+
+
+class SourceMappingOpApprove(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    mapping_digest: str
+    operation: Literal["approve"]
+
+
+SourceMappingOp = Annotated[
+    SourceMappingOpPropose | SourceMappingOpApprove,
+    Field(discriminator="operation"),
+]
+
+
+class SourceMappingOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    mapping: dict[str, Any]
+    replayed: bool
+    state: MappingState
+
+
+class ActionListEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    params_schema: Any
+
+
+class ActionList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actions: list[ActionListEntry]
+
+
 class DocumentAggregation(str, Enum):
     MEAN_CHUNKS = "mean_chunks"
 
@@ -38980,6 +39668,7 @@ class UsageOutcome(str, Enum):
 class UsageRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    agent_id: str = ""
     child_id: str
     content_digest: str
     latency_ms: Annotated[int, Field(ge=0)]
@@ -38987,6 +39676,7 @@ class UsageRecord(BaseModel):
     operation: str
     outcome: UsageOutcome
     principal: str
+    project_id: str = ""
     recorded_at_ms: Annotated[int, Field(ge=0)]
     run_id: str
     schema_version: Annotated[int, Field(ge=0, le=65535)]
@@ -39000,6 +39690,7 @@ class PriceEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     cached_per_mtok_micro: Annotated[int, Field(ge=0)]
+    currency: str = ""
     in_per_mtok_micro: Annotated[int, Field(ge=0)]
     model_key: str
     out_per_mtok_micro: Annotated[int, Field(ge=0)]
@@ -39033,11 +39724,18 @@ class UsageReadView(str, Enum):
     ROLLUP = "rollup"
 
 
+class UsageGroupBy(str, Enum):
+    MODEL = "model"
+    PROJECT = "project"
+    AGENT = "agent"
+
+
 class UsageOpRead(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     cursor: str | None = None
     from_ms: Annotated[int, Field(ge=0)]
+    group_by: UsageGroupBy | None = None
     model_key: str | None = None
     op: Literal["read"]
     to_ms: Annotated[int, Field(ge=0)]
@@ -39055,9 +39753,24 @@ class DayRollup(BaseModel):
 
     calls: Annotated[int, Field(ge=0)]
     cost_micro: Annotated[int, Field(ge=0)] | None = None
+    currency: str | None = None
     day: Annotated[int, Field(ge=0)]
     errors: Annotated[int, Field(ge=0)]
     model_key: str
+    tokens_cached: Annotated[int, Field(ge=0)]
+    tokens_in: Annotated[int, Field(ge=0)]
+    tokens_out: Annotated[int, Field(ge=0)]
+
+
+class UsageGroupRollup(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calls: Annotated[int, Field(ge=0)]
+    cost_micro: Annotated[int, Field(ge=0)] | None = None
+    currency: str | None = None
+    errors: Annotated[int, Field(ge=0)]
+    key: str
+    latency_p95_ms: Annotated[int, Field(ge=0)]
     tokens_cached: Annotated[int, Field(ge=0)]
     tokens_in: Annotated[int, Field(ge=0)]
     tokens_out: Annotated[int, Field(ge=0)]
@@ -39075,6 +39788,8 @@ class UsageReadResultRollup(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     days: list[DayRollup]
+    groups: list[UsageGroupRollup] = Field(default_factory=list)
+    index_watermark_ms: Annotated[int, Field(ge=0)] | None = None
     view: Literal["rollup"]
 
 
@@ -40329,6 +41044,102 @@ class MethodRecordDeploymentParams(BaseModel):
     deployment: DeploymentInput
 
 
+class MethodDeployRecordPutParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record: DeployRecordInput
+
+
+class MethodDeployRecordGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    plan_digest: str
+
+
+class MethodDeployRecordListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodApprovalGateResolveParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: ApprovalGateRequest
+
+
+class MethodGoalListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodGoalIterationsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+
+
+class MethodGoalControlParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: GoalControlOp
+
+
+class MethodConnectorRunsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str | None = None
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    state: RunState | None = None
+
+
+class MethodConnectorRunRecordParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    run: ConnectorRunInput
+
+
+class MethodConnectorRunGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    run_id: str
+
+
+class MethodSourceConnectionGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+
+
+class MethodSourceConnectionListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodSourceConnectionControlParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: SourceConnectionOp
+
+
+class MethodSourceMappingGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+
+
+class MethodSourceMappingControlParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: SourceMappingOp
+
+
 class MethodRecordGateVerdictParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -40406,10 +41217,33 @@ class MethodStoredQueryCallParams(BaseModel):
     version: Annotated[int, Field(ge=0)] | None = None
 
 
+class MethodStoredQueryGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    version: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodStoredQueryListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    author: str | None = None
+    cursor: str | None = None
+    include_retired: bool = False
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
 class MethodStoredQueryPutParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     query: StoredQuery
+
+
+class MethodStoredQueryRetireParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    reason: StoredQueryRetireReason
 
 
 class MethodSetPathGrantParams(BaseModel):
@@ -41307,6 +42141,13 @@ class StoredQueryLanguage(str, Enum):
     UQL = "uql"
     SQL = "sql"
     SPARQL = "sparql"
+
+
+class StoredQueryRetireReason(str, Enum):
+    SUPERSEDED = "superseded"
+    DEPRECATED = "deprecated"
+    INCORRECT = "incorrect"
+    UNSAFE = "unsafe"
 
 
 class BisectOutcome(str, Enum):
@@ -45527,14 +46368,19 @@ __all__ = [
     "AgentLibraryEntryDraft",
     "AgentLibraryEntryRef",
     "AgentLibraryLifecycle",
+    "AgentLibraryKind",
+    "AgentLibraryListEntry",
+    "AgentLibraryOpGet",
     "AgentLibraryMutationContext",
     "AgentLibraryMutationKind",
     "AgentLibraryOp",
     "AgentLibraryOpCurrent",
     "AgentLibraryOpHistory",
+    "AgentLibraryOpList",
     "AgentLibraryOpPublish",
     "AgentLibraryOpRetire",
     "AgentLibraryOpStatus",
+    "AgentLibraryPage",
     "AgentLibraryPublishRequest",
     "AgentLibraryRetireRequest",
     "AgentLibraryStatusRequest",
@@ -47573,6 +48419,12 @@ __all__ = [
     "MethodBlobRefParams",
     "MethodBlobUnref",
     "MethodBlobUnrefParams",
+    "MethodMediaGet",
+    "MethodMediaGetParams",
+    "MethodMediaPut",
+    "MethodMediaPutParams",
+    "MethodMediaTombstone",
+    "MethodMediaTombstoneParams",
     "MethodBrokerAck",
     "MethodBrokerAckParams",
     "MethodBrokerAckTag",
@@ -48004,6 +48856,7 @@ __all__ = [
     "MethodGetCurrentPlanParams",
     "MethodGetDelegationRecord",
     "MethodGetDelegationRecordParams",
+    "MethodGraphLiveLimits",
     "MethodGraphOwnershipPlan",
     "MethodGraphOwnershipPlanParams",
     "MethodGetEdgeProperties",
@@ -49871,6 +50724,43 @@ __all__ = [
     "TaskPlan",
     "ContextSection",
     "TaskContext",
+    "ApprovalGate",
+    "ApprovalGateAnswer",
+    "ApprovalGateRequest",
+    "AgentGoal",
+    "GoalState",
+    "IterationOutcome",
+    "GoalFinish",
+    "GoalIteration",
+    "GoalControlOpCreate",
+    "GoalControlOpRun",
+    "GoalControlOpCancel",
+    "GoalControlOpFinish",
+    "GoalControlOp",
+    "GoalControlReceipt",
+    "GoalPage",
+    "GoalIterations",
+    "RunState",
+    "ConnectorRunInput",
+    "ConnectorRun",
+    "ConnectorRunReceipt",
+    "ConnectorRunPage",
+    "ConnectionState",
+    "SourceConnectionInput",
+    "SourceConnection",
+    "SourceConnectionPage",
+    "SourceConnectionReceipt",
+    "SourceConnectionOpPut",
+    "SourceConnectionOpDelete",
+    "SourceConnectionOp",
+    "MappingState",
+    "SourceMapping",
+    "SourceMappingOpPropose",
+    "SourceMappingOpApprove",
+    "SourceMappingOp",
+    "SourceMappingOutcome",
+    "ActionListEntry",
+    "ActionList",
     "ApprovalSpec",
     "BranchArm",
     "BranchComparison",
@@ -50329,8 +51219,16 @@ __all__ = [
     "DelegationQualityOutcome",
     "DelegationQualityRequest",
     "DelegationQualityWindow",
+    "DeployNodeOutcome",
+    "DeployNodeResult",
+    "DeployRecord",
+    "DeployRecordInput",
+    "DeployRecordPage",
+    "DeployRecordReceipt",
+    "DeployRecordSummary",
     "DeploymentInput",
     "DeploymentOutcome",
+    "GateClass",
     "DesignDifference",
     "DesignatedCapability",
     "DesignationAsk",
@@ -50678,6 +51576,38 @@ __all__ = [
     "MethodReadPathHistoryParams",
     "MethodReadSpan",
     "MethodReadSpanParams",
+    "MethodApprovalGateResolve",
+    "MethodApprovalGateResolveParams",
+    "MethodGoalList",
+    "MethodGoalListParams",
+    "MethodGoalIterations",
+    "MethodGoalIterationsParams",
+    "MethodGoalControl",
+    "MethodGoalControlParams",
+    "MethodConnectorRuns",
+    "MethodConnectorRunsParams",
+    "MethodConnectorRunRecord",
+    "MethodConnectorRunRecordParams",
+    "MethodConnectorRunGet",
+    "MethodConnectorRunGetParams",
+    "MethodSourceConnectionGet",
+    "MethodSourceConnectionGetParams",
+    "MethodSourceConnectionList",
+    "MethodSourceConnectionListParams",
+    "MethodSourceConnectionControl",
+    "MethodSourceConnectionControlParams",
+    "MethodSourceMappingGet",
+    "MethodSourceMappingGetParams",
+    "MethodSourceMappingControl",
+    "MethodSourceMappingControlParams",
+    "MethodActionList",
+    "MethodActionListParams",
+    "MethodDeployRecordGet",
+    "MethodDeployRecordGetParams",
+    "MethodDeployRecordList",
+    "MethodDeployRecordListParams",
+    "MethodDeployRecordPut",
+    "MethodDeployRecordPutParams",
     "MethodRecordDeployment",
     "MethodRecordDeploymentParams",
     "MethodRecordGateVerdict",
@@ -50705,8 +51635,14 @@ __all__ = [
     "MethodSourceSyncParams",
     "MethodStoredQueryCall",
     "MethodStoredQueryCallParams",
+    "MethodStoredQueryGet",
+    "MethodStoredQueryGetParams",
+    "MethodStoredQueryList",
+    "MethodStoredQueryListParams",
     "MethodStoredQueryPut",
     "MethodStoredQueryPutParams",
+    "MethodStoredQueryRetire",
+    "MethodStoredQueryRetireParams",
     "MethodSubmitChangeset",
     "MethodSubmitChangesetParams",
     "MethodSupplyChainImpact",
@@ -50988,6 +51924,7 @@ __all__ = [
     "StoredParamType",
     "StoredQuery",
     "StoredQueryLanguage",
+    "StoredQueryRetireReason",
     "ChangedPath",
     "GitOrigin",
     "Changeset",
@@ -51120,6 +52057,8 @@ __all__ = [
     "UpgradeSubjectKind",
     "UqlFrameState",
     "UsageAppended",
+    "UsageGroupBy",
+    "UsageGroupRollup",
     "UsageOp",
     "UsageOpAppend",
     "UsageOpPutPrice",
@@ -51176,12 +52115,21 @@ __all__ = [
     "SourceChangeRef",
     "TraceRef",
     "DecisionEvalOpSkillEval",
+    "DecisionEvalOpSkillEvalCalibrate",
+    "DecisionEvalOpSkillEvalCaseAdd",
+    "DecisionEvalOpSkillEvalReport",
     "EnvironmentAttestation",
     "EvalCaseKind",
     "EvalCaseSource",
     "JudgeCalibration",
     "RefusedEvalCase",
+    "SkillEvalCalibrateRequest",
+    "SkillEvalCalibrated",
     "SkillEvalCase",
+    "SkillEvalCaseAddRequest",
+    "SkillEvalCaseAdded",
+    "SkillEvalReportAnswer",
+    "SkillEvalReportRequest",
     "SkillEvalOutcome",
     "SkillEvalRequest",
     "SkillEvalResult",

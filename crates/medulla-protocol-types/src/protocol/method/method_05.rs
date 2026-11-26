@@ -738,6 +738,37 @@ $($variants)*
         version: Option<u32>,
         args: std::collections::BTreeMap<String, serde_json::Value>,
     },
+    /// Read one published version of a stored query as written (the highest published one when
+    /// `version` is absent), under the verified caller's share scope. A name that is missing,
+    /// retired or outside the caller's share scope refuses the same `STORED_QUERY_NOT_FOUND`
+    /// (MEDULLA-FEDERATED-QUERY-R708.12).
+    StoredQueryGet {
+        name: String,
+        #[serde(default)]
+        version: Option<u32>,
+    },
+    /// One cursor-paged, name-ordered page of the stored queries the verified caller may call,
+    /// optionally of one `author`. `limit` is 1..=256 (the maximum when absent). The cursor is
+    /// opaque and bound to the tenant it was minted for. Retired names are left out unless
+    /// `include_retired` (MEDULLA-FEDERATED-QUERY-R708.12).
+    StoredQueryList {
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
+        #[serde(default)]
+        author: Option<String>,
+        #[serde(default)]
+        include_retired: bool,
+    },
+    /// Retire a stored query name with a typed reason: a durable tombstone, never a delete.
+    /// Only the author may retire; a missing name and another principal's name refuse the same
+    /// `STORED_QUERY_NOT_FOUND`. Retiring an already retired name returns its existing
+    /// tombstone (MEDULLA-FEDERATED-QUERY-R708.12).
+    StoredQueryRetire {
+        name: String,
+        reason: medulla_source_types::stored_query::StoredQueryRetireReason,
+    },
 
     // ── Entity-link approval (MEDULLA-UNIFIED-DATA-PLANE-R030.3) ──────────────────────────────
     /// Approve the proposed link between two attached records. The server rebuilds the

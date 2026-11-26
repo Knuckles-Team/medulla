@@ -284,3 +284,51 @@ async fn expired_stale_and_revoked_cursors_return_typed_results_without_leaks() 
     .await;
     assert_eq!(refused.error.as_deref(), Some("INVALID_ARGUMENT"));
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R043.100.5
+#[tokio::test]
+async fn live_limits_come_from_config_and_name_the_event_profile() {
+    use medulla_mutation_types::graph_change_feed::GraphLiveLimitsAnswer;
+    let state = state();
+    let answered = call(&state, 1, Method::GraphLiveLimits).await;
+    assert!(answered.error.is_none(), "limits: {answered:?}");
+    let limits: GraphLiveLimitsAnswer = match &answered.result {
+        Some(ResultPayload::Json(value)) => serde_json::from_value(value.clone()).expect("limits"),
+        other => panic!("expected limits, got {other:?}"),
+    };
+    assert!(limits.profile_revision > 0);
+    assert!(!limits.contract_revision.is_empty() && !limits.workload.is_empty());
+    assert!(limits.commit_to_visible_p95_ms > 0.0);
+    assert!(limits.frame_p95_ms > 0.0);
+    assert!(limits.layout_settle_ms > 0.0);
+
+    // An event of the feed names the profile the limits answer.
+    let snapshot = snapshot_of(&call(&state, 2, Method::OpenGraphSnapshot).await);
+    add_node(&state, 3, "limits-1").await;
+    let page = page_of(
+        &call(
+            &state,
+            4,
+            Method::ReadGraphChanges {
+                cursor: snapshot.high_water_cursor,
+                limit: 10,
+                table: None,
+            },
+        )
+        .await,
+    );
+    assert!(!page.events.is_empty());
+    assert!(page
+        .events
+        .iter()
+        .all(|event| event.latency_profile_revision == limits.profile_revision));
+
+    // The read needs the existing `graph:read` scope and nothing else.
+    let denied = call_scoped(&state, 5, &["kg:write"], Method::GraphLiveLimits).await;
+    assert!(
+        denied.error.is_some() && denied.result.is_none(),
+        "{denied:?}"
+    );
+    let allowed = call_scoped(&state, 6, &["graph:read"], Method::GraphLiveLimits).await;
+    assert!(allowed.error.is_none(), "{allowed:?}");
+}
