@@ -15,9 +15,13 @@ from typing import Any
 
 import msgpack
 import pytest
-from conftest import request_context
+from conftest import register_commons_agents, request_context
 
 ROOTS = ["Service", "SoftwareComponent", "Supplier", "Vulnerability"]
+
+CORE = "https://knuckles-team.github.io/ontology/core#"
+SOURCE = {"Mcp": {"server": "coverage-test-mcp", "tool": "search"}}
+PROCUREMENT = {f"{CORE}Supplier", f"{CORE}SupplyChainItem"}
 
 SEED = (
     Path(__file__).resolve().parents[2]
@@ -86,13 +90,15 @@ def _ask(
 
 @pytest.mark.spec("MEDULLA-CQ-XSRC-R011")
 def test_method_returns_typed_report(start_medulla_server) -> None:
-    """Verifies MEDULLA-CQ-XSRC-R011: a typed report with rows, abstentions and refusals."""
+    """Verifies MEDULLA-CQ-XSRC-R011: a typed report, abstentions and refusals."""
     graph = f"supply-chain-impact-{uuid.uuid4().hex[:8]}"
     client = _client()
     client.tenants.create(graph)
     try:
         _attach_seed(client, graph)
-        _add_node(client, graph, "svc-checkout", {"type": "Service", "name": "checkout"})
+        _add_node(
+            client, graph, "svc-checkout", {"type": "Service", "name": "checkout"}
+        )
         _add_node(
             client,
             graph,
@@ -135,7 +141,9 @@ def test_method_returns_typed_report(start_medulla_server) -> None:
 
 
 @pytest.mark.spec("MEDULLA-SUPPLY-VOCAB-R005.9")
-def test_uncovered_contract_abstains_until_link_is_approved(start_medulla_server) -> None:
+def test_uncovered_contract_abstains_until_link_is_approved(
+    start_medulla_server,
+) -> None:
     """Verifies MEDULLA-SUPPLY-VOCAB-R005.9: a contract with no `coversService` edge is
     `contract_uncovered`; once a steward's approved link is written the report lists the
     service; a contract that names no node is refused."""
@@ -144,7 +152,9 @@ def test_uncovered_contract_abstains_until_link_is_approved(start_medulla_server
     client.tenants.create(graph)
     try:
         _attach_seed(client, graph)
-        _add_node(client, graph, "svc-checkout", {"type": "Service", "name": "checkout"})
+        _add_node(
+            client, graph, "svc-checkout", {"type": "Service", "name": "checkout"}
+        )
         _add_node(client, graph, "contract-1", {"type": "CustomerContract"})
 
         before = _ask(client, graph, ROOTS, ["contract-1"])
@@ -170,3 +180,103 @@ def test_uncovered_contract_abstains_until_link_is_approved(start_medulla_server
     finally:
         client.tenants.delete(graph)
         client.close()
+
+
+def _agent_client(agent: str, graph: str) -> Any:
+    """A client for a fresh principal that reads `graph`, with its own catalog."""
+    from medulla.client import SyncMedullaClient
+
+    register_commons_agents(agent, graph=graph)
+    return SyncMedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(agent_id=agent),
+    )
+
+
+def _register(client: Any, *names: str) -> None:
+    for name in names:
+        client._send(
+            "RegisterForeignSource",
+            {"name": name, "source": SOURCE},
+            None,
+            idempotency_key=f"register-{name}-{uuid.uuid4().hex}",
+        )
+
+
+@pytest.mark.spec("MEDULLA-CQ-XSRC-R007.3")
+def test_erpnext_absent_abstains_and_software_rows_unchanged(
+    start_medulla_server,
+) -> None:
+    """Verifies MEDULLA-CQ-XSRC-R007.3: with the procurement source unconnected the
+    report names the abstention and uses no Supplier source; connecting it removes
+    only that."""
+    graph = f"supply-chain-erpnext-{uuid.uuid4().hex[:8]}"
+    system = _client()
+    system.tenants.create(graph)
+    agent = f"xsrc-erpnext-{uuid.uuid4().hex[:8]}"
+    caller = None
+    try:
+        _attach_seed(system, graph)
+        _add_node(
+            system, graph, "svc-checkout", {"type": "Service", "name": "checkout"}
+        )
+        _add_node(
+            system,
+            graph,
+            "ver-nginx-1.18",
+            {"type": "ComponentVersion", "source": "github-mcp"},
+        )
+        _add_node(system, graph, "cmp-nginx", {"type": "SoftwareComponent"})
+        _add_node(system, graph, "sup-acme", {"type": "Supplier"})
+        _add_edge(system, graph, "svc-checkout", "usesComponent", "ver-nginx-1.18")
+        _add_edge(system, graph, "ver-nginx-1.18", "supplyChainVersionOf", "cmp-nginx")
+        _add_edge(system, graph, "cmp-nginx", "publishedBy", "sup-acme")
+
+        caller = _agent_client(agent, graph)
+        _register(
+            caller,
+            "leanix-mcp",
+            "github-mcp",
+            "gitlab-mcp",
+            "dockerhub-mcp",
+            "uptime-mcp",
+        )
+
+        without = _ask(caller, graph, ROOTS)
+        missing = {
+            "kind": "unconnected",
+            "source": "erpnext-mcp",
+            "class": f"{CORE}Supplier",
+        }
+        assert missing in without["abstentions"], without["abstentions"]
+        assert all(
+            entry["class_served"] != f"{CORE}Supplier"
+            for entry in without["sources_used"]
+        )
+
+        _register(caller, "erpnext-mcp")
+        with_erpnext = _ask(caller, graph, ROOTS)
+        assert missing not in with_erpnext["abstentions"], with_erpnext["abstentions"]
+
+        def software_sources(report: dict) -> list[dict]:
+            return [
+                e
+                for e in report["sources_used"]
+                if e["class_served"] not in PROCUREMENT
+            ]
+
+        def other_items(report: dict) -> list[dict]:
+            return [
+                item
+                for impact in report["service_impacts"]
+                for item in impact["items"]
+                if item["source"] != "erpnext-mcp"
+            ]
+
+        assert software_sources(without) == software_sources(with_erpnext)
+        assert other_items(without) == other_items(with_erpnext)
+    finally:
+        if caller is not None:
+            caller.close()
+        system.tenants.delete(graph)
+        system.close()
