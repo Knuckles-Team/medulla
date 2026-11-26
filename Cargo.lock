@@ -6170,6 +6170,7 @@ dependencies = [
  "medulla-source-types",
  "medulla-sql",
  "medulla-statechart",
+ "medulla-store",
  "medulla-stream",
  "medulla-table-store",
  "medulla-tables",

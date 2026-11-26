@@ -129,4 +129,119 @@ mod tests {
         assert_ne!(a, ledger_consumer("t1", "hooks", "memory.card.updated"));
         assert_eq!(a, ledger_consumer("t1", "hooks", "memory.claim.changed"));
     }
+
+    /// One committed batch whose outbox holds three `memory.claim.changed` rows, owned by tenants
+    /// `t1`, `t2` and `t1` in that order, so a consumer of `t1` sees the foreign row between its own.
+    fn claim_event_batch(graph: &str, batch_id: &str) -> medulla_protocol_types::mutation_batch::MutationBatch {
+        use medulla_mutation_types::mutation_scope::{
+            DurabilityDomain, IncarnationId, LogicalName, MutationOutboxIntent, MutationScopeIdentity,
+            MutationSurface, ScopeTenantId, MUTATION_BATCH_VERSION,
+        };
+        use medulla_protocol_types::mutation_batch::{
+            MutationBatch, MutationOperation, VersionExpectation, MUTATION_ACTOR_HEADER,
+        };
+        use medulla_protocol_types::protocol::Method;
+        let identity = MutationScopeIdentity::graph(
+            ScopeTenantId::new("caller-tenant").unwrap(),
+            LogicalName::new(graph).unwrap(),
+            IncarnationId::new("incarnation:test:memory-events").unwrap(),
+        );
+        let actor = format!("principal:sha256:{}", "c".repeat(64));
+        let intent = |tenant: &str, claim: &str| MutationOutboxIntent {
+            topic: "memory.claim.changed".to_string(),
+            key: "ada".to_string(),
+            payload: rmp_serde::to_vec_named(&serde_json::json!({
+                "claim_id": claim,
+                "from": "proposed",
+                "to": "supported",
+                "subject": "ada",
+                "observer": "system",
+            }))
+            .unwrap(),
+            headers: std::collections::BTreeMap::from([
+                (MUTATION_ACTOR_HEADER.to_string(), actor.clone()),
+                ("tenant".to_string(), tenant.to_string()),
+                ("event_kind".to_string(), "claim_changed".to_string()),
+            ]),
+        };
+        let mut batch = MutationBatch {
+            schema_version: MUTATION_BATCH_VERSION,
+            batch_id: batch_id.to_string(),
+            envelope: medulla_store::redb_store::store_graph_names::fixture_operation_envelope(
+                &identity, &actor, 17, batch_id,
+            ),
+            identity,
+            placement_epoch: 1,
+            version_expectation: VersionExpectation::Graph(0),
+            fencing_token: Some(1),
+            authoritative_state: None,
+            operations: vec![MutationOperation {
+                ordinal: 0,
+                surface: MutationSurface::Transaction,
+                domain: DurabilityDomain::GraphRows,
+                method: Method::AddNode {
+                    node_id: "memory-event-node".to_string(),
+                    properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({"type": "MemoryEvent"}))
+                        .unwrap(),
+                },
+            }],
+            outbox: vec![intent("t1", "c-first"), intent("t2", "c-foreign"), intent("t1", "c-last")],
+            created_at_ms: 10,
+        };
+        let schema_digest = batch
+            .envelope
+            .operation()
+            .expect("fixture carries an operation envelope")
+            .method_schema_digest;
+        batch.reseal_envelope(schema_digest).unwrap();
+        batch
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R073.7
+    #[tokio::test(flavor = "multi_thread")]
+    async fn pull_leases_then_ack_advances_cursor() {
+        let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
+        let dir = tempfile::tempdir().unwrap();
+        let backend = medulla_persistence::redb_backend::RedbBackend::open(
+            dir.path().to_string_lossy().into_owned(),
+            64,
+        )
+        .expect("open redb backend");
+        let persistence: Arc<dyn PersistenceBackend> = Arc::new(backend);
+        let graph = "memory-events-graph";
+        persistence
+            .commit_mutation_batch(graph, &claim_event_batch(graph, "events-batch"), None, 11)
+            .await
+            .expect("the fixture batch commits");
+
+        let verified = VerifiedRequestContext::verified_for_test_in_tenant("consumer", "t1");
+        let target = OutboxTarget::Graph { graph: graph.to_string() };
+        let topics = vec!["memory.claim.changed".to_string()];
+
+        // The pull leases the tenant's two rows in commit order; the other tenant's row sits
+        // between them, is acknowledged in this cursor and is never returned.
+        let pulled = pull(&persistence, &verified, &target, "hooks", &topics, 8, 100).await.unwrap();
+        let claims: Vec<(String, u32)> =
+            pulled.leases.iter().map(|lease| (lease.record.batch_id.clone(), lease.record.ordinal)).collect();
+        assert_eq!(
+            claims,
+            vec![("events-batch".to_string(), 0), ("events-batch".to_string(), 2)]
+        );
+        assert!(pulled.leases.iter().all(|lease| lease.record.intent.headers["tenant"] == "t1"));
+
+        // A lease of another consumer name is refused; the right one advances the cursor.
+        let foreign = ack(&persistence, &verified, &target, "someone-else", &pulled.leases[0], 101).await;
+        assert!(foreign.unwrap_err().starts_with("ACCESS_DENIED"));
+        let first = ack(&persistence, &verified, &target, "hooks", &pulled.leases[0], 101).await.unwrap();
+        assert_eq!((first.batch_id.as_str(), first.ordinal), ("events-batch", 0));
+        let last = ack(&persistence, &verified, &target, "hooks", &pulled.leases[1], 102).await.unwrap();
+        assert_eq!((last.batch_id.as_str(), last.ordinal), ("events-batch", 2));
+
+        // Everything is acknowledged: a later pull returns nothing, and a topic outside the three
+        // is refused.
+        let again = pull(&persistence, &verified, &target, "hooks", &topics, 8, 200).await.unwrap();
+        assert!(again.leases.is_empty());
+        let outside = pull(&persistence, &verified, &target, "hooks", &["other.topic".to_string()], 8, 200).await;
+        assert!(outside.unwrap_err().starts_with("ACCESS_DENIED"));
+    }
 }

@@ -120,6 +120,7 @@ medulla-identity-types = { path = "../medulla-identity-types" }
 medulla-work-types = { path = "../medulla-work-types", features = ["test-support"] }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types", features = ["test-support"] }
 medulla-persistence-records = { path = "../medulla-persistence-records", features = ["test-support"] }
+medulla-store = { path = "../medulla-store", features = ["test-support"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 medulla-server-mutation = { path = "../medulla-server-mutation", features = ["test-support"] }
 medulla-server = { path = "../medulla-server", features = ["alignment", "ann-redb", "asr-whisper", "cost-opt", "cypher", "cypher-plan", "decide", "epistemic", "federation", "federation-sql", "full", "geo", "gpu", "gpu-cuda", "jobs", "knowledge-batch", "modality-serving", "nl-query", "numeric", "owl-plan", "par-runtime", "quantum-agent-api", "query", "raft", "redb", "result-cache", "server", "statechart", "stream", "tensor", "test-support", "text", "tsdb", "viz", "wasm-udf"] }
