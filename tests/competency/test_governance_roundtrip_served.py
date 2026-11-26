@@ -93,8 +93,8 @@ async def _round_trip() -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]
     try:
         workflow = _workflow()
         workflow_id = f"workflow:gov-{uuid.uuid4().hex[:8]}"
-        imported = await client.process_model_import(workflow, workflow_id)
-        exported = await client.process_model_export(
+        imported = await client.graph.process_model_import(workflow, workflow_id)
+        exported = await client.graph.process_model_export(
             workflow_id, imported["version"], target="aris_epc"
         )
         return workflow, imported, exported
@@ -116,7 +116,16 @@ def test_roundtrip_preserves_gates(clean_graph):
     assert {s.get("gate") for s in back["steps"]} >= {"and", "or", "xor"}
     assert [s["kind"] for s in back["steps"]] == [s["kind"] for s in workflow["steps"]]
     assert {s["kind"] for s in back["steps"]} == {
-        "start", "end", "human", "agent", "decision", "branch",
-        "fork", "join", "wait", "call", "boundary",
+        "start",
+        "end",
+        "human",
+        "agent",
+        "decision",
+        "branch",
+        "fork",
+        "join",
+        "wait",
+        "call",
+        "boundary",
     }
     assert back["annex"] == ANNEX
