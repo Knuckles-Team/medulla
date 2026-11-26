@@ -1,0 +1,37 @@
+{
+  "connector": "plane",
+  "rollup": "MEDULLA-CQ-CONN-R047",
+  "vocabulary_module": "sdlc_lifecycle-v1.ttl",
+  "terms": [
+    "Ticket",
+    "inCycle",
+    "inModule",
+    "ticketDueDate",
+    "ticketStatus",
+    "cycleState"
+  ],
+  "questions": [
+    {
+      "id": "plane.q1",
+      "kind": "single",
+      "question": "Which work items in the active cycle are overdue and which module do they belong to?",
+      "uql": "FOREIGN SCAN 'plane-agent'",
+      "sources": [
+        "plane-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "plane-agent": "mcp_tool"
+      },
+      "columns": [
+        "ticket",
+        "due_date",
+        "module"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "plane-agent/single.json"
+      ]
+    }
+  ]
+}

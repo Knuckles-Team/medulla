@@ -1,0 +1,22 @@
+{
+  "source": "plane-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "ticket": "ticket-1",
+      "due_date": "due_date-1",
+      "module": "module-1",
+      "joinKey": "plane.q1-key-1",
+      "id": "plane-agent-plane.q1-1",
+      "label": "plane-agent 1"
+    },
+    {
+      "ticket": "ticket-2",
+      "due_date": "due_date-2",
+      "module": "module-2",
+      "joinKey": "plane.q1-key-2",
+      "id": "plane-agent-plane.q1-2",
+      "label": "plane-agent 2"
+    }
+  ]
+}
