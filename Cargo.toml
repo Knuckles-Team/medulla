@@ -2129,6 +2129,12 @@ name = "architecture_exchange"
 path = "benches/architecture_exchange.rs"
 harness = false
 
+# Participant card lookup over 10,000 stored cards (MEDULLA-DECISION-ENGINE-R655.6): nightly budget.
+[[bench]]
+name = "participant_card"
+path = "benches/participant_card.rs"
+harness = false
+
 # Container subtree resolution at 10,000 containers (MEDULLA-INGEST-WORKER-R904.6): nightly budget.
 [[bench]]
 name = "source_hierarchy"

@@ -1128,3 +1128,12 @@ async fn participant_refusals_are_non_disclosing_and_change_no_state() {
     // Every refusal above changed nothing stored.
     assert_eq!(snapshot(&h).await, before);
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R652.9
+#[tokio::test]
+async fn the_claims_harness_registers_the_default_graph() {
+    // `seed_participants` and every perspective test read the request graph named `default`.
+    let h = Harness::new().await;
+    let guard = h.state.read().await;
+    assert!(guard.registry.get("default").is_some(), "the harness registers `default`");
+}
