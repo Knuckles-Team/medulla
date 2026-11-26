@@ -802,3 +802,201 @@ async fn signed_public_dispatch_persists_publish_retire_action_and_receipts() {
         "{missing_read_response:?}"
     );
 }
+
+async fn dispatch_library_op(
+    state: &Arc<RwLock<medulla_server_api::state::ServerState>>,
+    secret: &str,
+    claims: &RequestContextClaims,
+    id: u64,
+    op: AgentLibraryOp,
+) -> medulla_protocol_types::protocol::Response {
+    medulla_server_router::dispatch::request_boundary::dispatch(
+        state,
+        signed_agent_library_request(
+            secret,
+            claims,
+            id,
+            op,
+            &format!("library-list-nonce-{id}"),
+            &format!("library-list-key-{id}"),
+        ),
+    )
+    .await
+}
+
+fn list_op(
+    tenant_id: &str,
+    lifecycle: Option<medulla_agent_types::agent_library::AgentLibraryLifecycle>,
+    limit: Option<u32>,
+    cursor: Option<String>,
+) -> AgentLibraryOp {
+    AgentLibraryOp::List {
+        tenant_id: tenant_id.to_string(),
+        lifecycle,
+        limit,
+        cursor,
+    }
+}
+
+// spec: MEDULLA-TYPED-PACKS-R011.1
+#[tokio::test]
+async fn signed_public_dispatch_lists_the_tenants_library_in_cursor_pages() {
+    use medulla_agent_types::agent_library::{AgentLibraryLifecycle, AgentLibraryPage};
+    // Synthetic HMAC fixture, same as the publish test above: it authenticates nothing outside
+    // this process and is never a live credential.
+    let secret = "agent-library-list-dispatch-secret"; // sanitizer:ignore
+    let directory = tempfile::tempdir().unwrap();
+    let mut server_state = medulla_server::seams_install::new_state_for_test(
+        secret,
+        medulla_isolation::isolation::IsolationLayer::new(),
+    );
+    server_state.persist_dir = Some(directory.path().to_string_lossy().into_owned());
+    let state = Arc::new(RwLock::new(server_state));
+    let store = {
+        let mut guard = state.write().await;
+        guard.ensure_agent_library().unwrap()
+    };
+
+    let write_claims = claims(
+        "caller-a",
+        "tenant-shared",
+        &["agent:library-write"],
+        "policy-test",
+    );
+    let first = seeded_definition(&store, "tenant-shared");
+    let mut second = first.clone();
+    second.agent_id = "agent-b".to_string();
+    for (id, draft) in [(601, first.clone()), (602, second)] {
+        let response = dispatch_library_op(
+            &state,
+            secret,
+            &write_claims,
+            id,
+            AgentLibraryOp::Publish {
+                request: Box::new(AgentLibraryPublishRequest {
+                    context: forged_context(&store, "tenant-shared"),
+                    entry: draft,
+                }),
+            },
+        )
+        .await;
+        assert!(response.error.is_none(), "publish failed: {response:?}");
+    }
+
+    let read_claims = claims(
+        "caller-a",
+        "tenant-shared",
+        &["agent:library-read"],
+        "policy-test",
+    );
+    let page_of = |response| -> AgentLibraryPage {
+        medulla_server_api::test_support::decode_raw_response("Agent Library list", response)
+    };
+
+    // Two pages of one, in agent id order; the last carries no cursor.
+    let first_page = page_of(
+        dispatch_library_op(
+            &state,
+            secret,
+            &read_claims,
+            603,
+            list_op("tenant-shared", None, Some(1), None),
+        )
+        .await,
+    );
+    assert_eq!(first_page.entries.len(), 1);
+    assert_eq!(first_page.entries[0].agent_id, "agent-a");
+    assert_eq!(first_page.entries[0].entry_revision, 1);
+    assert_eq!(first_page.entries[0].lifecycle, AgentLibraryLifecycle::Published);
+    let cursor = first_page.next_cursor.clone().expect("a second page remains");
+    let second_page = page_of(
+        dispatch_library_op(
+            &state,
+            secret,
+            &read_claims,
+            604,
+            list_op("tenant-shared", None, Some(1), Some(cursor.clone())),
+        )
+        .await,
+    );
+    assert_eq!(second_page.entries.len(), 1);
+    assert_eq!(second_page.entries[0].agent_id, "agent-b");
+    assert_eq!(second_page.next_cursor, None);
+    let digest_a = store
+        .current("tenant-shared", "agent-a")
+        .unwrap()
+        .expect("agent-a is published")
+        .definition_digest;
+    assert_eq!(first_page.entries[0].definition_digest, digest_a);
+
+    // The lifecycle filter keeps only the heads in that lifecycle.
+    let retired_only = page_of(
+        dispatch_library_op(
+            &state,
+            secret,
+            &read_claims,
+            605,
+            list_op(
+                "tenant-shared",
+                Some(AgentLibraryLifecycle::Retired),
+                None,
+                None,
+            ),
+        )
+        .await,
+    );
+    assert!(retired_only.entries.is_empty());
+    assert_eq!(retired_only.next_cursor, None);
+
+    // A tenant other than the verified one is refused, and so is a cursor minted for another.
+    let foreign = dispatch_library_op(
+        &state,
+        secret,
+        &read_claims,
+        606,
+        list_op("tenant-other", None, None, None),
+    )
+    .await;
+    assert!(format!("{foreign:?}").contains("ACCESS_DENIED"), "{foreign:?}");
+    let other_claims = claims(
+        "caller-a",
+        "tenant-other",
+        &["agent:library-read"],
+        "policy-test",
+    );
+    let transplanted = dispatch_library_op(
+        &state,
+        secret,
+        &other_claims,
+        607,
+        list_op("tenant-other", None, None, Some(cursor)),
+    )
+    .await;
+    assert!(
+        format!("{transplanted:?}").contains("was not minted for this tenant"),
+        "{transplanted:?}"
+    );
+
+    // A limit outside its bound and a write-only caller are refused.
+    let bad_limit = dispatch_library_op(
+        &state,
+        secret,
+        &read_claims,
+        608,
+        list_op("tenant-shared", None, Some(0), None),
+    )
+    .await;
+    assert!(format!("{bad_limit:?}").contains("limit must be"), "{bad_limit:?}");
+    let write_only = dispatch_library_op(
+        &state,
+        secret,
+        &write_claims,
+        609,
+        list_op("tenant-shared", None, None, None),
+    )
+    .await;
+    assert!(
+        format!("{write_only:?}").contains("agent:library-read"),
+        "{write_only:?}"
+    );
+}

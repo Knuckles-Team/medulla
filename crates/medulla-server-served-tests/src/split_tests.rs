@@ -59,6 +59,8 @@ mod medulla_h_decide_freshness_search_port_tests;
 mod medulla_h_ingest_action_record_tests;
 #[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
 mod connector_pack_harness;
+#[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security", feature = "query"))]
+mod stored_query_workspace_tests;
 #[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
 mod medulla_h_ingest_paper_tests;
 #[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]

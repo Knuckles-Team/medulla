@@ -1147,14 +1147,41 @@ class AgentLibraryOpStatus(BaseModel):
     request: AgentLibraryStatusRequest
 
 
+class AgentLibraryOpList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    lifecycle: AgentLibraryLifecycle | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    operation: Literal["list"]
+    tenant_id: str
+
+
 AgentLibraryOp = Annotated[
     AgentLibraryOpPublish
     | AgentLibraryOpRetire
     | AgentLibraryOpCurrent
     | AgentLibraryOpHistory
-    | AgentLibraryOpStatus,
+    | AgentLibraryOpStatus
+    | AgentLibraryOpList,
     Field(discriminator="operation"),
 ]
+
+
+class AgentLibraryListEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    agent_id: str
+    definition_digest: str
+    entry_revision: Annotated[int, Field(ge=0)]
+    lifecycle: AgentLibraryLifecycle
+
+
+class AgentLibraryPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entries: list[AgentLibraryListEntry]
+    next_cursor: str | None = None
 
 
 class AgentLibraryPublishRequest(BaseModel):
@@ -17162,6 +17189,27 @@ class MethodStoredQueryCall(BaseModel):
     params: MethodStoredQueryCallParams
 
 
+class MethodStoredQueryGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["StoredQueryGet"]
+    params: MethodStoredQueryGetParams
+
+
+class MethodStoredQueryList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["StoredQueryList"]
+    params: MethodStoredQueryListParams
+
+
+class MethodStoredQueryRetire(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["StoredQueryRetire"]
+    params: MethodStoredQueryRetireParams
+
+
 class MethodApproveEntityLink(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18461,6 +18509,9 @@ Method = Annotated[
         MethodRegimeSizingInput,
         MethodStoredQueryPut,
         MethodStoredQueryCall,
+        MethodStoredQueryGet,
+        MethodStoredQueryList,
+        MethodStoredQueryRetire,
         MethodApproveEntityLink,
         MethodContextCompile,
         MethodRetrievalRound,
@@ -40511,10 +40562,33 @@ class MethodStoredQueryCallParams(BaseModel):
     version: Annotated[int, Field(ge=0)] | None = None
 
 
+class MethodStoredQueryGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    version: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodStoredQueryListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    author: str | None = None
+    cursor: str | None = None
+    include_retired: bool = False
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
 class MethodStoredQueryPutParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     query: StoredQuery
+
+
+class MethodStoredQueryRetireParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    reason: StoredQueryRetireReason
 
 
 class MethodSetPathGrantParams(BaseModel):
@@ -41412,6 +41486,13 @@ class StoredQueryLanguage(str, Enum):
     UQL = "uql"
     SQL = "sql"
     SPARQL = "sparql"
+
+
+class StoredQueryRetireReason(str, Enum):
+    SUPERSEDED = "superseded"
+    DEPRECATED = "deprecated"
+    INCORRECT = "incorrect"
+    UNSAFE = "unsafe"
 
 
 class BisectOutcome(str, Enum):
@@ -45632,14 +45713,17 @@ __all__ = [
     "AgentLibraryEntryDraft",
     "AgentLibraryEntryRef",
     "AgentLibraryLifecycle",
+    "AgentLibraryListEntry",
     "AgentLibraryMutationContext",
     "AgentLibraryMutationKind",
     "AgentLibraryOp",
     "AgentLibraryOpCurrent",
     "AgentLibraryOpHistory",
+    "AgentLibraryOpList",
     "AgentLibraryOpPublish",
     "AgentLibraryOpRetire",
     "AgentLibraryOpStatus",
+    "AgentLibraryPage",
     "AgentLibraryPublishRequest",
     "AgentLibraryRetireRequest",
     "AgentLibraryStatusRequest",
@@ -50811,8 +50895,14 @@ __all__ = [
     "MethodSourceSyncParams",
     "MethodStoredQueryCall",
     "MethodStoredQueryCallParams",
+    "MethodStoredQueryGet",
+    "MethodStoredQueryGetParams",
+    "MethodStoredQueryList",
+    "MethodStoredQueryListParams",
     "MethodStoredQueryPut",
     "MethodStoredQueryPutParams",
+    "MethodStoredQueryRetire",
+    "MethodStoredQueryRetireParams",
     "MethodSubmitChangeset",
     "MethodSubmitChangesetParams",
     "MethodSupplyChainImpact",
@@ -51094,6 +51184,7 @@ __all__ = [
     "StoredParamType",
     "StoredQuery",
     "StoredQueryLanguage",
+    "StoredQueryRetireReason",
     "ChangedPath",
     "GitOrigin",
     "Changeset",

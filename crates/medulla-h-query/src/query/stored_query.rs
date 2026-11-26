@@ -1,9 +1,13 @@
 //! Stored, versioned queries (MEDULLA-FEDERATED-QUERY-R708.2 to R708.8): `StoredQueryPut`,
-//! `StoredQueryCall` and the UQL form `CALL STORED name(args)`.
+//! `StoredQueryCall`, the UQL form `CALL STORED name(args)`, and the reads and retirement of
+//! a name: `StoredQueryGet`, `StoredQueryList` and `StoredQueryRetire`
+//! (MEDULLA-FEDERATED-QUERY-R708.12).
 //!
 //! One immutable version is one node of label `StoredQuery` (`stored_query:<name>:<version>`).
 //! A head node (`stored_query_head:<name>`) names the author and the highest published
-//! version. A materialized result is one `StoredQueryResult` node per (version, binding)
+//! version. Retiring a name writes a tombstone (`retired`) on its head node: the versions stay,
+//! the name stops being served and is never published again. A materialized result is one
+//! `StoredQueryResult` node per (version, binding)
 //! (`stored_query_result:<name>:<version>:<args digest>`). Put and Call run over the staged
 //! graph of the query gateway, so a record and its refreshed result commit together or not at
 //! all. UQL stored queries run through `handle_uql`, the one served UQL path, so typed
@@ -18,9 +22,13 @@ use medulla_identity_types::identity::UnitPrincipal;
 use medulla_query_types::wire::{UqlParam, UqlResult, UqlRow};
 use medulla_server_api::read_scope::ReadCaller;
 use medulla_source_types::stored_query::{
-    args_digest, lint_stored_query, needs_run, refuse, serve_materialized, staleness_s, Served,
-    StoredCall, StoredParamType, StoredQuery, StoredQueryLanguage, StoredQueryReceipt,
-    StoredQueryRefusal, StoredQueryWarning, StoredResult, ACCESS_DENIED, STORED_QUERY_IMMUTABLE, STORED_QUERY_INVALID, STORED_QUERY_NOT_FOUND,
+    args_digest, decode_list_cursor, encode_list_cursor, lint_stored_query, needs_run, refuse,
+    serve_materialized, staleness_s, Served, StoredCall, StoredParamType, StoredQuery,
+    StoredQueryLanguage, StoredQueryListEntry, StoredQueryPage, StoredQueryReceipt,
+    StoredQueryRefusal, StoredQueryRetireReason, StoredQueryRetired, StoredQueryTombstone,
+    StoredQueryView, StoredQueryWarning, StoredResult, ACCESS_DENIED,
+    MAX_STORED_QUERY_LIST_LIMIT, STORED_QUERY_IMMUTABLE, STORED_QUERY_INVALID,
+    STORED_QUERY_NOT_FOUND,
 };
 use serde_json::{json, Value};
 
@@ -35,13 +43,19 @@ const INTERNAL: &str = "INTERNAL";
 /// The node property that holds the assets a stored query version reads
 /// (MEDULLA-FEDERATED-QUERY-R708.9).
 const REFERENCES_PROPERTY: &str = "references";
+/// The head-node property that holds the tombstone of a retired name
+/// (MEDULLA-FEDERATED-QUERY-R708.12).
+const RETIRED_PROPERTY: &str = "retired";
 
 fn query_node(name: &str, version: u32) -> String {
     format!("stored_query:{name}:{version}")
 }
 
+/// The node-id prefix of every stored-query head; the rest of the id is the name.
+const HEAD_NODE_PREFIX: &str = "stored_query_head:";
+
 fn head_node(name: &str) -> String {
-    format!("stored_query_head:{name}")
+    format!("{HEAD_NODE_PREFIX}{name}")
 }
 
 fn result_node(name: &str, version: u32, digest: &str) -> String {
@@ -71,6 +85,23 @@ pub(crate) async fn dispatch_stored_query(
             ctx.req_id,
             handle_stored_call(ctx, &name, version, &args).await,
         )),
+        Method::StoredQueryGet { name, version } => Ok(reply::<results::StoredQueryGet>(
+            ctx.req_id,
+            handle_stored_get(ctx, &name, version),
+        )),
+        Method::StoredQueryList {
+            limit,
+            cursor,
+            author,
+            include_retired,
+        } => Ok(reply::<results::StoredQueryList>(
+            ctx.req_id,
+            handle_stored_list(ctx, limit, cursor.as_deref(), author.as_deref(), include_retired),
+        )),
+        Method::StoredQueryRetire { name, reason } => Ok(reply::<results::StoredQueryRetire>(
+            ctx.req_id,
+            handle_stored_retire(ctx, &name, reason),
+        )),
         other => Err(other),
     }
 }
@@ -97,10 +128,12 @@ fn write_node(core: &GraphCore, node: String, props: &Value) -> Result<(), Store
     Ok(())
 }
 
-/// The head of one name: its author and its highest published version.
+/// The head of one name: its author, its highest published version and, once the name is
+/// retired, its tombstone.
 struct Head {
     author: String,
     latest: u32,
+    retired: Option<StoredQueryTombstone>,
 }
 
 fn load_head(core: &GraphCore, name: &str) -> Option<Head> {
@@ -108,6 +141,9 @@ fn load_head(core: &GraphCore, name: &str) -> Option<Head> {
     Some(Head {
         author: props.get("author")?.as_str()?.to_string(),
         latest: u32::try_from(props.get("latest")?.as_u64()?).ok()?,
+        retired: props
+            .get(RETIRED_PROPERTY)
+            .and_then(|tombstone| serde_json::from_value(tombstone.clone()).ok()),
     })
 }
 
@@ -115,6 +151,7 @@ fn load_head(core: &GraphCore, name: &str) -> Option<Head> {
 struct Stored {
     query: StoredQuery,
     author_tenant: String,
+    created_at_ms: Option<u64>,
 }
 
 fn load_query(core: &GraphCore, name: &str, version: u32) -> Option<Stored> {
@@ -126,6 +163,7 @@ fn load_query(core: &GraphCore, name: &str, version: u32) -> Option<Stored> {
             .and_then(Value::as_str)
             .unwrap_or_default()
             .to_string(),
+        created_at_ms: props.get("created_at_ms").and_then(Value::as_u64),
     })
 }
 
@@ -355,6 +393,12 @@ pub(crate) fn handle_stored_put(
             ));
         }
     }
+    if head.as_ref().is_some_and(|head| head.retired.is_some()) {
+        return Err(refuse(
+            STORED_QUERY_IMMUTABLE,
+            format!("`{}` is retired and cannot be published again", query.name),
+        ));
+    }
     if ctx.core.has_node(&query_node(&query.name, query.version)) {
         return Err(refuse(
             STORED_QUERY_IMMUTABLE,
@@ -373,6 +417,7 @@ pub(crate) fn handle_stored_put(
         "version": query.version,
         "author": query.author,
         "author_tenant": reader_of(ctx).tenant,
+        "created_at_ms": now_ms(),
         "query": serde_json::to_value(&query).map_err(internal)?,
         (REFERENCES_PROPERTY): references,
     });
@@ -386,6 +431,182 @@ pub(crate) fn handle_stored_put(
     write_node(ctx.core, head_node(&query.name), &head)?;
     let warnings = lint_version(ctx, &references);
     Ok(StoredQueryReceipt { query, warnings })
+}
+
+// ── Get, List and Retire (MEDULLA-FEDERATED-QUERY-R708.12) ─────────────────────────────
+
+/// The one refusal of every read and retirement that cannot name its target: a missing name,
+/// a retired name, a version that was never published, a name outside the caller's share scope
+/// and a name another principal authored all answer this exact text, so the answer is not an
+/// existence oracle.
+fn hidden(name: &str) -> StoredQueryRefusal {
+    refuse(STORED_QUERY_NOT_FOUND, format!("no stored query `{name}`"))
+}
+
+/// Most head nodes one `StoredQueryList` page examines, whatever the filters match: the bound
+/// applies to rows examined, not rows matched, so a page that stops early returns a cursor.
+const MAX_LIST_SCAN: usize = 1_024;
+
+/// The core a read runs over: the caller's row-security view.
+fn visible_core(ctx: &QueryHandlerCtx<'_>) -> std::sync::Arc<GraphCore> {
+    ctx.read_authority.map_or_else(
+        || std::sync::Arc::clone(ctx.core),
+        |authority| authority.project_core(ctx.core),
+    )
+}
+
+/// Whether the verified caller may see this stored version: its author always, anyone else only
+/// inside the share scope.
+fn callable_by_reader(ctx: &QueryHandlerCtx<'_>, stored: &Stored) -> bool {
+    let author = UnitPrincipal {
+        id: stored.query.author.clone(),
+        placement: ctx.graph_name.to_string(),
+        tenant: stored.author_tenant.clone(),
+    };
+    stored.query.may_call(&reader_of(ctx), &author)
+}
+
+/// `StoredQueryGet`: one published version as written. A missing, retired or out-of-scope name
+/// refuses the one `hidden` text.
+pub(crate) fn handle_stored_get(
+    ctx: &QueryHandlerCtx<'_>,
+    name: &str,
+    version: Option<u32>,
+) -> Result<StoredQueryView, StoredQueryRefusal> {
+    let core = visible_core(ctx);
+    let head = load_head(&core, name).ok_or_else(|| hidden(name))?;
+    if head.retired.is_some() {
+        return Err(hidden(name));
+    }
+    let version = version.unwrap_or(head.latest);
+    let stored = load_query(&core, name, version).ok_or_else(|| hidden(name))?;
+    if !callable_by_reader(ctx, &stored) {
+        return Err(hidden(name));
+    }
+    let query = stored.query;
+    Ok(StoredQueryView {
+        name: query.name,
+        version: query.version,
+        language: query.language,
+        text: query.text,
+        params: query.params,
+        materialize: query.materialize,
+        refresh: query.refresh,
+        share: query.share,
+        author: query.author,
+        created_at_ms: stored.created_at_ms,
+    })
+}
+
+/// `StoredQueryList`: one name-ordered page of the names whose latest version the caller may
+/// call. The cursor resumes strictly after the last name of the previous page and is bound to
+/// the reader's tenant.
+pub(crate) fn handle_stored_list(
+    ctx: &QueryHandlerCtx<'_>,
+    limit: Option<u32>,
+    cursor: Option<&str>,
+    author: Option<&str>,
+    include_retired: bool,
+) -> Result<StoredQueryPage, StoredQueryRefusal> {
+    let limit = limit.unwrap_or(MAX_STORED_QUERY_LIST_LIMIT);
+    if limit == 0 || limit > MAX_STORED_QUERY_LIST_LIMIT {
+        return Err(refuse(
+            STORED_QUERY_INVALID,
+            format!("stored query list limit must be 1..={MAX_STORED_QUERY_LIST_LIMIT}"),
+        ));
+    }
+    let tenant = reader_of(ctx).tenant;
+    let resume_after = cursor
+        .map(|cursor| decode_list_cursor(&tenant, cursor))
+        .transpose()?;
+    let core = visible_core(ctx);
+    // Head node ids sort exactly as names do (one shared prefix), so the label's keyset page
+    // resumes strictly after the cursor's name. One extra head tells whether more remain.
+    let after = resume_after.as_deref().map(head_node);
+    let heads = core.get_nodes_by_label_page(HEAD_LABEL, after.as_deref(), MAX_LIST_SCAN + 1);
+    let wanted = limit as usize;
+    let mut queries: Vec<StoredQueryListEntry> = Vec::new();
+    // The last head this page consumed, so the cursor resumes strictly after a head the caller
+    // has been shown or that was not theirs. Every bound is checked BEFORE a head is consumed.
+    let mut last_consumed: Option<String> = None;
+    let mut truncated = false;
+    for (scanned, (id, _)) in heads.into_iter().enumerate() {
+        if queries.len() >= wanted || scanned >= MAX_LIST_SCAN {
+            truncated = true;
+            break;
+        }
+        let Some(name) = id.strip_prefix(HEAD_NODE_PREFIX).map(str::to_string) else {
+            continue;
+        };
+        last_consumed = Some(name.clone());
+        let Some(head) = load_head(&core, &name) else {
+            continue;
+        };
+        if (head.retired.is_some() && !include_retired)
+            || author.is_some_and(|author| head.author != author)
+        {
+            continue;
+        }
+        let Some(stored) = load_query(&core, &name, head.latest) else {
+            continue;
+        };
+        if !callable_by_reader(ctx, &stored) {
+            continue;
+        }
+        queries.push(StoredQueryListEntry {
+            name,
+            latest_version: head.latest,
+            author: head.author,
+            retired: head.retired,
+        });
+    }
+    let next_cursor = match (truncated, last_consumed) {
+        (true, Some(name)) => Some(encode_list_cursor(&tenant, &name)),
+        _ => None,
+    };
+    Ok(StoredQueryPage {
+        queries,
+        next_cursor,
+    })
+}
+
+/// `StoredQueryRetire`: write the tombstone on the head of a name the verified caller authored.
+/// The versions and results stay; the name stops being served and cannot be published again. A
+/// missing name and another principal's name refuse the one `hidden` text. Retiring a retired
+/// name answers its existing tombstone and writes nothing.
+pub(crate) fn handle_stored_retire(
+    ctx: &QueryHandlerCtx<'_>,
+    name: &str,
+    reason: StoredQueryRetireReason,
+) -> Result<StoredQueryRetired, StoredQueryRefusal> {
+    let head = load_head(ctx.core, name)
+        .filter(|head| head.author == ctx.caller)
+        .ok_or_else(|| hidden(name))?;
+    if let Some(tombstone) = head.retired {
+        return Ok(StoredQueryRetired {
+            name: name.to_string(),
+            retired: true,
+            tombstone,
+        });
+    }
+    let tombstone = StoredQueryTombstone {
+        reason,
+        retired_at_ms: now_ms(),
+        retired_by: ctx.caller.to_string(),
+    };
+    let props = json!({
+        "type": HEAD_LABEL,
+        "name": name,
+        "author": head.author,
+        "latest": head.latest,
+        (RETIRED_PROPERTY): serde_json::to_value(&tombstone).map_err(internal)?,
+    });
+    write_node(ctx.core, head_node(name), &props)?;
+    Ok(StoredQueryRetired {
+        name: name.to_string(),
+        retired: true,
+        tombstone,
+    })
 }
 
 // ── Call ──────────────────────────────────────────────────────────────────────────────
@@ -549,9 +770,13 @@ pub(crate) async fn handle_stored_call(
     args: &BTreeMap<String, Value>,
 ) -> Result<StoredCall, StoredQueryRefusal> {
     let not_found = || refuse(STORED_QUERY_NOT_FOUND, format!("no stored query `{name}`"));
+    let head = load_head(ctx.core, name);
+    if head.as_ref().is_some_and(|head| head.retired.is_some()) {
+        return Err(not_found());
+    }
     let version = match version {
         Some(version) => version,
-        None => load_head(ctx.core, name).ok_or_else(not_found)?.latest,
+        None => head.ok_or_else(not_found)?.latest,
     };
     let stored = load_query(ctx.core, name, version).ok_or_else(not_found)?;
     let query = &stored.query;

@@ -319,3 +319,88 @@ async def test_workspace_share_schedule_and_lint() -> None:
     finally:
         await sharee.close()
         await client.close()
+
+
+async def _get(client: MedullaClient, name: str, version: int | None = None) -> dict:
+    request = {"name": name, "version": version}
+    return (await query.send_stored_query_get(client, request)).payload
+
+
+async def _list(client: MedullaClient, **params: object) -> dict:
+    return (await query.send_stored_query_list(client, params)).payload
+
+
+async def _retire(client: MedullaClient, name: str, reason: str) -> dict:
+    request = {"name": name, "reason": reason}
+    return (await query.send_stored_query_retire(client, request)).payload
+
+
+# spec: MEDULLA-FEDERATED-QUERY-R708.12
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R708.12")
+@pytest.mark.asyncio
+async def test_get_list_and_retire_a_stored_query() -> None:
+    author = await _connect("usr:stored-workspace-author")
+    sharee = await _connect("usr:stored-workspace-sharee")
+    suffix = uuid.uuid4().hex
+    private, shared = f"wsprivate-{suffix}", f"wsshared-{suffix}"
+    try:
+        await _put(author, _stored(private))
+        await _put(author, _stored(shared, share="tenant"))
+        await _put(author, _stored(shared, version=2, share="tenant"))
+
+        # Get returns the version as written, the highest one when none is named.
+        latest = await _get(author, shared)
+        assert latest["version"] == 2 and latest["text"] == TEXT
+        assert latest["author"] == "usr:stored-workspace-author"
+        assert latest["created_at_ms"] > 0
+        assert (await _get(author, shared, version=1))["version"] == 1
+
+        # A private name and a missing name refuse alike for another principal.
+        with pytest.raises(RuntimeError, match="STORED_QUERY_NOT_FOUND"):
+            await _get(sharee, private)
+        with pytest.raises(RuntimeError, match="STORED_QUERY_NOT_FOUND"):
+            await _get(sharee, f"absent-{suffix}")
+        assert (await _get(sharee, shared))["version"] == 2
+
+        # List pages by cursor and shows each reader only what it may call.
+        page = await _list(sharee, limit=1, author="usr:stored-workspace-author")
+        listed = [entry["name"] for entry in page["queries"]]
+        cursor = page["next_cursor"]
+        while cursor:
+            page = await _list(
+                sharee, limit=1, cursor=cursor, author="usr:stored-workspace-author"
+            )
+            listed += [entry["name"] for entry in page["queries"]]
+            cursor = page["next_cursor"]
+        assert shared in listed and private not in listed
+        mine = {
+            entry["name"]
+            for entry in (await _list(author, author="usr:stored-workspace-author"))[
+                "queries"
+            ]
+        }
+        assert {private, shared} <= mine
+
+        # Retire is a tombstone: the name is no longer served or published again.
+        with pytest.raises(RuntimeError, match="STORED_QUERY_NOT_FOUND"):
+            await _retire(sharee, shared, "superseded")
+        retired = await _retire(author, shared, "superseded")
+        assert retired["retired"] is True
+        assert retired["tombstone"]["reason"] == "superseded"
+        with pytest.raises(RuntimeError, match="STORED_QUERY_NOT_FOUND"):
+            await _get(author, shared)
+        with pytest.raises(RuntimeError, match="STORED_QUERY_NOT_FOUND"):
+            await _call(author, shared, {"status": "x"})
+        with pytest.raises(RuntimeError, match="STORED_QUERY_IMMUTABLE"):
+            await _put(author, _stored(shared, version=3, share="tenant"))
+        with_retired = await _list(
+            author, include_retired=True, author="usr:stored-workspace-author"
+        )
+        tombstones = {
+            entry["name"]: entry["retired"] for entry in with_retired["queries"]
+        }
+        assert tombstones[shared]["reason"] == "superseded"
+        assert tombstones[private] is None
+    finally:
+        await author.close()
+        await sharee.close()

@@ -342,6 +342,117 @@ pub struct StoredQueryReceipt {
     pub warnings: Vec<StoredQueryWarning>,
 }
 
+/// Most stored queries one `StoredQueryList` page may carry.
+pub const MAX_STORED_QUERY_LIST_LIMIT: u32 = 256;
+/// Longest opaque `StoredQueryList` cursor a caller may hand back.
+pub const MAX_STORED_QUERY_LIST_CURSOR_BYTES: usize = 4 * 1024;
+/// Domain-separation prefix of the `StoredQueryList` cursor family.
+pub const STORED_QUERY_LIST_CURSOR_DOMAIN: &[u8] = b"au-eg/stored-query-list-cursor/v1";
+
+/// The `StoredQueryList` cursor family: the tenant-bound framing is owned by
+/// `medulla_types::tenant_cursor`; this row only names the read and its resume key (a name).
+const LIST_CURSOR: medulla_types::tenant_cursor::CursorFamily =
+    medulla_types::tenant_cursor::CursorFamily {
+        domain: STORED_QUERY_LIST_CURSOR_DOMAIN,
+        max_bytes: MAX_STORED_QUERY_LIST_CURSOR_BYTES,
+        noun: "stored query list",
+    };
+
+/// Mint the opaque cursor that resumes a listing after `name`, bound to `tenant`.
+pub fn encode_list_cursor(tenant: &str, name: &str) -> String {
+    LIST_CURSOR.encode(tenant, name)
+}
+
+/// Recover the resume name from an opaque cursor, or refuse it by name with
+/// `STORED_QUERY_INVALID`.
+pub fn decode_list_cursor(tenant: &str, cursor: &str) -> Result<String, StoredQueryRefusal> {
+    LIST_CURSOR
+        .decode(tenant, cursor, |name| !name.trim().is_empty())
+        .map_err(|detail| refuse(STORED_QUERY_INVALID, detail))
+}
+
+/// Why a stored query name was retired. A typed reason, never free text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum StoredQueryRetireReason {
+    /// Another stored query replaces it.
+    Superseded,
+    /// It reads assets that are going away.
+    Deprecated,
+    /// Its answers are wrong.
+    Incorrect,
+    /// Running it is unsafe.
+    Unsafe,
+}
+
+/// The durable tombstone of a retired stored query name. A retired name is never deleted and
+/// never published again, so its versions keep their provenance.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct StoredQueryTombstone {
+    pub reason: StoredQueryRetireReason,
+    pub retired_at_ms: u64,
+    /// The verified principal that retired the name.
+    pub retired_by: String,
+}
+
+/// What `StoredQueryGet` returns: one published version as written.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct StoredQueryView {
+    pub name: String,
+    pub version: u32,
+    pub language: StoredQueryLanguage,
+    pub text: String,
+    pub params: BTreeMap<String, StoredParamType>,
+    pub materialize: bool,
+    pub refresh: RefreshPolicy,
+    pub share: ShareScope,
+    pub author: String,
+    /// When the version was published, in milliseconds; absent for a version seeded before
+    /// publication time was recorded.
+    #[serde(default)]
+    pub created_at_ms: Option<u64>,
+}
+
+/// One name of a `StoredQueryList` page.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct StoredQueryListEntry {
+    pub name: String,
+    pub latest_version: u32,
+    pub author: String,
+    /// Present only for a retired name, listed when the request asked for retired names.
+    #[serde(default)]
+    pub retired: Option<StoredQueryTombstone>,
+}
+
+/// One page of `StoredQueryList`, in name order. An object so the cursor has a home.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct StoredQueryPage {
+    pub queries: Vec<StoredQueryListEntry>,
+    /// `Some` when more names remain; hand it back unmodified. `None` means the list is
+    /// exhausted. A page may be empty and still carry a cursor, so loop until `None`.
+    #[serde(default)]
+    pub next_cursor: Option<String>,
+}
+
+/// What `StoredQueryRetire` returns: the tombstone now on the name.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct StoredQueryRetired {
+    pub name: String,
+    pub retired: bool,
+    pub tombstone: StoredQueryTombstone,
+}
+
 /// Lint the assets a stored query reads against the assets flagged `deprecation`: one
 /// `STORED_QUERY_DEPRECATED_ASSET` warning per deprecated asset, in asset order. The assets
 /// are the references the language's extractor found; a language with no extractor has none.
@@ -716,5 +827,56 @@ mod tests {
         );
         assert!(lint_stored_query(&["users".to_string()], &deprecated).is_empty());
         assert!(lint_stored_query(&[], &deprecated).is_empty());
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R708.12
+    #[test]
+    fn a_list_cursor_resumes_only_for_the_tenant_that_minted_it() {
+        let cursor = encode_list_cursor("tenant-a", "open_incidents");
+        assert_eq!(
+            decode_list_cursor("tenant-a", &cursor).unwrap(),
+            "open_incidents"
+        );
+        let foreign = decode_list_cursor("tenant-b", &cursor).unwrap_err();
+        assert_eq!(foreign.code, STORED_QUERY_INVALID);
+        let garbage = decode_list_cursor("tenant-a", "not-a-cursor").unwrap_err();
+        assert_eq!(garbage.code, STORED_QUERY_INVALID);
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R708.12
+    #[test]
+    fn the_retire_reason_and_the_tombstone_round_trip_on_the_wire() {
+        for (reason, wire) in [
+            (StoredQueryRetireReason::Superseded, "superseded"),
+            (StoredQueryRetireReason::Deprecated, "deprecated"),
+            (StoredQueryRetireReason::Incorrect, "incorrect"),
+            (StoredQueryRetireReason::Unsafe, "unsafe"),
+        ] {
+            assert_eq!(serde_json::to_value(reason).unwrap(), json!(wire));
+        }
+        let tombstone = StoredQueryTombstone {
+            reason: StoredQueryRetireReason::Superseded,
+            retired_at_ms: 7,
+            retired_by: "usr:alice".into(),
+        };
+        let wire = serde_json::to_value(&tombstone).unwrap();
+        assert_eq!(
+            serde_json::from_value::<StoredQueryTombstone>(wire).unwrap(),
+            tombstone
+        );
+        let page = StoredQueryPage {
+            queries: vec![StoredQueryListEntry {
+                name: "q".into(),
+                latest_version: 2,
+                author: "usr:alice".into(),
+                retired: Some(tombstone),
+            }],
+            next_cursor: None,
+        };
+        let wire = serde_json::to_value(&page).unwrap();
+        assert_eq!(
+            serde_json::from_value::<StoredQueryPage>(wire).unwrap(),
+            page
+        );
     }
 }

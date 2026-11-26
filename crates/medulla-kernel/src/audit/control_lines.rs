@@ -375,6 +375,9 @@ fn record_write_audit_line(method: &Method) -> Option<String> {
             "STORED_QUERY_CALL|{name}|{}",
             version.map_or_else(|| "latest".to_string(), |v| v.to_string())
         )),
+        Method::StoredQueryRetire { name, reason } => {
+            Some(format!("STORED_QUERY_RETIRE|{name}|{reason:?}"))
+        }
         Method::DataProductRegister { product, .. } => {
             Some(format!("DATA_PRODUCT_REGISTER|{}", product.id))
         }

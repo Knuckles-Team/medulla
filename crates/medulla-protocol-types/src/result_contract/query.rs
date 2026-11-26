@@ -51,6 +51,10 @@ method_results! {
     StoredQueryPut(StoredQueryPut) => Json<medulla_source_types::stored_query::StoredQueryReceipt>;
     ApproveEntityLink(ApproveEntityLink) => Json<medulla_catalog_types::entity_link_proposal::EntityLinkApproval>;
     StoredQueryCall(StoredQueryCall) => Json<medulla_source_types::stored_query::StoredCall>;
+    // MEDULLA-FEDERATED-QUERY-R708.12: one version as written, one page of names, one tombstone.
+    StoredQueryGet(StoredQueryGet) => Json<medulla_source_types::stored_query::StoredQueryView>;
+    StoredQueryList(StoredQueryList) => Json<medulla_source_types::stored_query::StoredQueryPage>;
+    StoredQueryRetire(StoredQueryRetire) => Json<medulla_source_types::stored_query::StoredQueryRetired>;
     RetrievalFeedbackRecord(RetrievalFeedbackRecord) => Json<medulla_result_types::feedback_event::RetrievalFeedback>;
     ArgumentMapPut(ArgumentMapPut) => Json<medulla_result_types::argument_map::ArgumentMap>;
     ArgumentMapGet(ArgumentMapGet) => Json<medulla_result_types::argument_map::ArgumentMap>;

@@ -247,6 +247,8 @@ pub const GATEWAY_ROUTED: &[&str] = &[
     "ApproveEntityLink",
     "EncodeDocument",
     "StoredQueryCall",
+    // MEDULLA-FEDERATED-QUERY-R708.12: the retirement tombstone on a name's head node.
+    "StoredQueryRetire",
     // ── L11 rollout batch 4: native RDF write surface (GraphRedb-durable,
     // audited) — routed via `commit_conditional_mutation_async` at the rdf
     // dispatch site because parsing and graph projection require `state`.
@@ -557,6 +559,7 @@ fn query_method_name(m: &Method) -> Option<&'static str> {
         Method::ApproveEntityLink { .. } => Some("ApproveEntityLink"),
         Method::EncodeDocument { .. } => Some("EncodeDocument"),
         Method::StoredQueryCall { .. } => Some("StoredQueryCall"),
+        Method::StoredQueryRetire { .. } => Some("StoredQueryRetire"),
         Method::ArgumentMapPut { .. } => Some("ArgumentMapPut"),
         Method::RetrievalFeedbackRecord { .. } => Some("RetrievalFeedbackRecord"),
         #[cfg(feature = "graphql")]

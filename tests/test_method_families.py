@@ -306,6 +306,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "SemanticEnrich",
         "StoredQueryCall",
         "StoredQueryPut",
+        "StoredQueryRetire",
         "VerifyIngestReadback",
         # Declared writes added after the base: typed actions, the agent bus, the
         # branch registry, document deletion, live artifacts and memory sync.

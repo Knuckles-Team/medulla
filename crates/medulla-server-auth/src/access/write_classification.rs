@@ -551,6 +551,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::LiveArtifactRefresh { .. }
                 // MEDULLA-FEDERATED-QUERY-R708.3: the stored-query record and its materialized result.
                 | Method::StoredQueryPut { .. }
+                // MEDULLA-FEDERATED-QUERY-R708.12: the tombstone on the name's head node.
+                | Method::StoredQueryRetire { .. }
                 | Method::ApproveEntityLink { .. }
                 // MEDULLA-FEDERATED-QUERY-R039.2.5: the encoded-document node and its index head.
                 | Method::EncodeDocument { .. }

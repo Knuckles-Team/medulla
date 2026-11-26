@@ -21,6 +21,7 @@ use medulla_agent_types::agent_graph::AgentGraphEntry;
 use medulla_agent_types::agent_guardrail::GuardrailEntailmentResult;
 use medulla_agent_types::agent_library::AgentLibraryEntry;
 use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
+use medulla_agent_types::agent_library::AgentLibraryPage;
 use medulla_agent_types::agent_library::AgentLibraryWriteResult;
 use medulla_agent_types::agent_template::AgentTemplateCommittedResult;
 use medulla_agent_types::agent_template::AgentTemplateEntry;
@@ -57,6 +58,7 @@ method_results! {
     AgentLibraryPublish(AgentLibrary / "publish") => Raw<AgentLibraryWriteResult>;
     AgentLibraryRetire(AgentLibrary / "retire") => Raw<AgentLibraryWriteResult>;
     AgentLibraryStatus(AgentLibrary / "status") => Raw<Option<AgentLibraryWriteResult>>;
+    AgentLibraryList(AgentLibrary / "list") => Raw<AgentLibraryPage>;
     AgentGraphCurrent(AgentGraph / "current") => Raw<Option<AgentGraphEntry>>;
     AgentGraphHistory(AgentGraph / "history") => Raw<Vec<AgentGraphEntry>>;
     AgentGraphPublish(AgentGraph / "publish") => Raw<AgentGraphCommittedResult>;

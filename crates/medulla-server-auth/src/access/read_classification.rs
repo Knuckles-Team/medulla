@@ -226,6 +226,10 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "ListRegisteredServers",
     "ListTriggers",
     "LiveArtifactGet",
+    // MEDULLA-FEDERATED-QUERY-R708.12: both read the stored-query head and version nodes of the
+    // core `read_authority.project_core` projected, then keep what the reader may call.
+    "StoredQueryGet",
+    "StoredQueryList",
     "MatchOntologyTerms",
     "MaterializationStatus",
     // MEDULLA-DECISION-ENGINE-R651.3: both read the memory nodes of the core

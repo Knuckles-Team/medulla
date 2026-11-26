@@ -978,6 +978,21 @@ pub async fn handle_agent_library(
         medulla_agent_types::agent_library::AgentLibraryOp::Status { request } => {
             library_status(&store, req_id, verified, request).into()
         }
+        medulla_agent_types::agent_library::AgentLibraryOp::List {
+            tenant_id,
+            lifecycle,
+            limit,
+            cursor,
+        } => library_list(
+            &store,
+            req_id,
+            verified,
+            &tenant_id,
+            lifecycle,
+            limit,
+            cursor.as_deref(),
+        )
+        .into(),
     }
 }
 
@@ -1093,6 +1108,36 @@ fn library_history(
             ResultPayload::of_ref::<
                 medulla_protocol_types::result_contract::storage::AgentLibraryHistory,
             >(&result),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+/// `AgentLibrary` op `list` (MEDULLA-TYPED-PACKS-R011.1): one cursor-paged page of the
+/// verified tenant's library heads. A tenant other than the verified one refuses exactly as the
+/// other reads do.
+#[cfg(feature = "redb")]
+fn library_list(
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    tenant_id: &str,
+    lifecycle: Option<medulla_agent_types::agent_library::AgentLibraryLifecycle>,
+    limit: Option<u32>,
+    cursor: Option<&str>,
+) -> Response {
+    if tenant_id != verified.tenant() {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: Agent Library tenant must match verified request tenant",
+        );
+    }
+    match store.list(tenant_id, lifecycle, limit, cursor) {
+        Ok(page) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryList,
+            >(&page),
         ),
         Err(error) => Response::err(req_id, error),
     }

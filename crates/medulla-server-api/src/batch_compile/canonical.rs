@@ -714,6 +714,10 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-FEDERATED-QUERY-R039.2.5: document-vector nodes through the staged query gateway.
         | Method::EncodeDocument { .. }
         | Method::StoredQueryCall { .. }
+        // MEDULLA-FEDERATED-QUERY-R708.12: two reads and the retirement tombstone write.
+        | Method::StoredQueryGet { .. }
+        | Method::StoredQueryList { .. }
+        | Method::StoredQueryRetire { .. }
         // MEDULLA-FEDERATED-QUERY-R700.3: argument map write; the reads are query-family.
         | Method::ArgumentMapPut { .. }
         // MEDULLA-FEDERATED-QUERY-R705.3: feedback record write.

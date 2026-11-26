@@ -49,9 +49,11 @@ const DIGEST_PREFIX: &str = "sha256:";
 
 pub mod agent_library_machine;
 pub mod lifecycle;
+pub mod list;
 
 pub use crate::agent_component::ComponentDependency;
 pub use lifecycle::{refuse_withdrawn, AgentLibraryLifecycle};
+pub use list::{AgentLibraryListEntry, AgentLibraryPage};
 
 /// Whether the system prompt is fixed at publish time or resolved per run.
 ///
@@ -846,6 +848,19 @@ pub enum AgentLibraryOp {
     },
     Status {
         request: AgentLibraryStatusRequest,
+    },
+    /// One cursor-paged, agent-id-ordered page of the verified tenant's library entries (their
+    /// current head), optionally of one `lifecycle`. `limit` is 1..=256 (the maximum when
+    /// absent). The cursor is opaque and bound to the tenant it was minted for
+    /// (MEDULLA-TYPED-PACKS-R011.1).
+    List {
+        tenant_id: String,
+        #[serde(default)]
+        lifecycle: Option<AgentLibraryLifecycle>,
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
     },
 }
 
