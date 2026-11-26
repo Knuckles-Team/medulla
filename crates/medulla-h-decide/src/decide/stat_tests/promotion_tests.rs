@@ -612,3 +612,122 @@ async fn promote_then_roll_back_every_subject_kind() {
         assert_eq!(back.target(), Some(promoted[0].0.as_str()), "{subject:?}");
     }
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R805.5: a promotion record seals the
+/// subject, receipt, delta, case count and the champion it pinned as premises;
+/// every pointer event carries the deciding record digest and its principal;
+/// and replaying the history from the empty state reproduces the stored pointer
+/// byte for byte.
+// spec: MEDULLA-DECISION-ENGINE-R805.5
+#[tokio::test]
+async fn pointer_history_replays() {
+    use super::super::stat_pointer::{pointer_events, read_pointer};
+    use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
+    use medulla_decision_types::decision::statistical::retrieval_pointer::{
+        PointerEvent, PointerState, PointerTransition,
+    };
+
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+    let subject = subject();
+    let champion = PointerRef::Champion {
+        subject: subject.clone(),
+    };
+    let mut promoted: Vec<(String, String)> = Vec::new();
+    for generation in ["one", "two"] {
+        let target = format!("revision:{generation}");
+        let set = RolloutSet {
+            challenger_ref: target.clone(),
+            ..rollout_set(150_000)
+        };
+        let digest = rollout_set_digest(&set);
+        learn(
+            &h,
+            "decider",
+            LearningWrite::RecordRollouts { set: Box::new(set) },
+        )
+        .await
+        .unwrap();
+        let record = decide(&h, promotion_request(&pins.0, &subject, &digest, &target))
+            .await
+            .unwrap()
+            .records
+            .as_slice()[0]
+            .clone();
+        let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+        let pinned = promoted.last().map_or("none", |(target, _)| target.as_str());
+        for expected in [
+            format!("promotion.subject={}", subject.pointer_key()),
+            format!("promotion.receipt_digest={digest}"),
+            format!("promotion.champion_at_decision={pinned}"),
+        ] {
+            assert!(facts.contains(&expected.as_str()), "{expected} in {facts:?}");
+        }
+        assert!(
+            facts.iter().any(|fact| fact.starts_with("promotion.delta_ppm=")),
+            "{facts:?}"
+        );
+        assert!(
+            facts
+                .iter()
+                .any(|fact| fact.starts_with("promotion.case_count=")),
+            "{facts:?}"
+        );
+        commit(&h, &record).await;
+        pointer_state(&h, champion.clone(), activate(&target, &record.record_id))
+            .await
+            .unwrap();
+        promoted.push((target, record.record_id));
+    }
+    pointer_state(&h, champion, PointerMovement::Rollback)
+        .await
+        .unwrap();
+
+    // The audit: two activations then the rollback, each naming the deciding
+    // record and the principal that moved the pointer.
+    let key = subject.pointer_key();
+    let events: Vec<PointerEvent> = pointer_events(&h.store, TENANT)
+        .unwrap()
+        .into_iter()
+        .filter(|(row_key, ..)| row_key == &key)
+        .map(|(_, _, _, event)| event)
+        .collect();
+    assert_eq!(events.len(), 3, "{events:?}");
+    for (event, (target, record_id)) in events.iter().zip(&promoted) {
+        assert_eq!(event.transition, PointerTransition::Activated);
+        assert_eq!(event.target.as_deref(), Some(target.as_str()));
+        assert_eq!(event.receipt_digest.as_deref(), Some(record_id.as_str()));
+        assert_eq!(event.principal, "decider");
+    }
+    assert_eq!(events[2].transition, PointerTransition::RolledBack);
+    assert_eq!(events[2].target.as_deref(), Some(promoted[0].0.as_str()));
+    assert_eq!(events[2].receipt_digest.as_deref(), Some(promoted[0].1.as_str()));
+
+    // Replay from the empty state: an activation pushes the active event on the
+    // stack, a rollback pops it.
+    let mut active: Option<PointerEvent> = None;
+    let mut stack: Vec<PointerEvent> = Vec::new();
+    for event in &events {
+        match event.transition {
+            PointerTransition::Activated => {
+                if let Some(previous) = active.take() {
+                    stack.push(previous);
+                }
+                active = Some(event.clone());
+            }
+            PointerTransition::RolledBack => active = stack.pop().map(|_| event.clone()),
+        }
+    }
+    let replayed = PointerState {
+        key: key.clone(),
+        active,
+        stack: BoundedVec::new(stack).unwrap(),
+        history: BoundedVec::new(events).unwrap(),
+    };
+    let (stored_bytes, stored) = read_pointer(&h.store, TENANT, &key).unwrap();
+    assert_eq!(replayed, stored);
+    assert_eq!(
+        encode_artifact(&replayed).unwrap(),
+        stored_bytes.expect("the pointer is stored")
+    );
+}
