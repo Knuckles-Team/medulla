@@ -20,6 +20,7 @@ from .graph_schema import (
     GraphSchemaClassesView,
     GraphSchemaCommitted,
     GraphSchemaOp,
+    GraphSchemaSourceDocumentsView,
     GraphSchemaSourcesView,
 )
 from .rdf_report import (
@@ -52,6 +53,7 @@ if TYPE_CHECKING:
     OntologyInspectRequest = _models.MethodOntologyInspectParams
     IcvConfigureRequest = _models.MethodIcvConfigureParams
     GraphSchemaClassesRequest = _models.MethodGraphSchemaClassesParams
+    GraphSchemaGetRequest = _models.MethodGraphSchemaGetParams
 
 
 async def send_run_datalog_reasoning(
@@ -597,7 +599,7 @@ async def send_graph_schema_list(
     Method:
         GraphSchemaList
     Authorization:
-        security:admin
+        owl:read
     Durability:
         None
     Replay:
@@ -619,6 +621,43 @@ async def send_graph_schema_list(
         idempotency_key=idempotency_key,
     )
     return GraphSchemaSourcesView.model_validate(payload)
+
+
+async def send_graph_schema_get(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> GraphSchemaSourceDocumentsView:
+    """Send one engine-contract request.
+
+    Method:
+        GraphSchemaGet
+    Authorization:
+        owl:read
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Result schema:
+        contract/schemas/result.reasoning.json
+        #/methods/GraphSchemaGet
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - SCHEMA_SOURCE_NOT_FOUND
+    """
+    models().MethodGraphSchemaGetParams.model_validate(params or {})
+    payload = await client._send(
+        "GraphSchemaGet",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return GraphSchemaSourceDocumentsView.model_validate(payload)
 
 
 async def send_graph_schema_classes(
@@ -670,6 +709,7 @@ _REQUEST_METHODS = frozenset(
         "OntologyInspect",
         "IcvConfigure",
         "GraphSchemaClasses",
+        "GraphSchemaGet",
     }
 )
 

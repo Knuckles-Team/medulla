@@ -186,6 +186,17 @@ class GraphSchemaSourceView(BaseModel):
     source_id: str
 
 
+class GraphSchemaSourceDocumentsView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    composed_digest: str
+    graph: str
+    ontology_ttl: str | None = None
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    shapes_ttl: str | None = None
+    source: GraphSchemaSourceView
+
+
 class GraphSchemaSourcesView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -399,6 +410,8 @@ GraphSchemaOpAttachApproved.model_rebuild()
 
 GraphSchemaOpValidateRepair.model_rebuild()
 
+GraphSchemaSourceDocumentsView.model_rebuild()
+
 GraphSchemaSourceView.model_rebuild()
 
 GraphSchemaSourcesView.model_rebuild()
@@ -442,6 +455,7 @@ __all__ = [
     "GraphSchemaOpRevertEdit",
     "GraphSchemaOpValidateRepair",
     "GraphSchemaOpWithdrawOntology",
+    "GraphSchemaSourceDocumentsView",
     "GraphSchemaSourceView",
     "GraphSchemaSourcesView",
     "GraphSchemaTermKind",

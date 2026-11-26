@@ -359,10 +359,20 @@ fn contract_wave_rows_declare_their_static_policy() {
             flags(
                 false,
                 DurabilityDomain::None,
-                "security:admin",
+                "owl:read",
                 TxnParticipation::Snapshot,
             ),
             "separate method",
+        ),
+        (
+            "GraphSchemaGet",
+            flags(
+                false,
+                DurabilityDomain::None,
+                "owl:read",
+                TxnParticipation::Snapshot,
+            ),
+            "disclosed-source accessor",
         ),
         (
             "MutationOutbox",
@@ -441,6 +451,7 @@ fn contract_wave_op_policies_follow_their_ops() {
         "Decide",
         "Solve",
         "GraphSchemaList",
+        "GraphSchemaGet",
         "EdgeIndex.status",
         "EdgeSearch",
     ];

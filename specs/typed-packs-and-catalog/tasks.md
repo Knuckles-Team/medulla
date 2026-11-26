@@ -347,3 +347,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T347 [US8] MEDULLA-TYPED-PACKS-R812.1 Model and behavior: `GraphSchemaTermView.superclasses`
 - [ ] T348 [US8] MEDULLA-TYPED-PACKS-R812.2 Wiring: the served page carries the superclasses
 - [ ] T349 [US8] MEDULLA-TYPED-PACKS-R812.3 Python mirror: `GraphSchemaTermView.superclasses`
+- [ ] T351 [US8] MEDULLA-TYPED-PACKS-R813 Schema source reads are ordinary ontology reads (rollup)
+- [ ] T352 [US8] MEDULLA-TYPED-PACKS-R813.1 `GraphSchemaList` is `owl:read`
+- [ ] T353 [US8] MEDULLA-TYPED-PACKS-R813.2 `GraphSchemaGet`: one source with its documents
+- [ ] T354 [US8] MEDULLA-TYPED-PACKS-R813.3 Python mirror: `GraphSchemaGet`

@@ -438,6 +438,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "GraphQl": query.send_graph_ql,
     "GraphSchema": reasoning.send_graph_schema,
     "GraphSchemaClasses": reasoning.send_graph_schema_classes,
+    "GraphSchemaGet": reasoning.send_graph_schema_get,
     "GraphSchemaList": reasoning.send_graph_schema_list,
     "GuardrailEntailment": storage.send_guardrail_entailment,
     "HasEdge": graph.send_has_edge,

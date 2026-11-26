@@ -356,8 +356,16 @@ $($variants)*
     GraphSchema {
         op: Box<medulla_catalog_types::graph_schema::GraphSchemaOp>,
     },
-    /// List the request graph's schema sources and its composed digest.
+    /// List the request graph's schema sources and its composed digest. Read only, scope
+    /// `owl:read` (MEDULLA-TYPED-PACKS-R813).
     GraphSchemaList,
+    /// One schema source of the request graph with its stored shapes and ontology
+    /// documents (MEDULLA-TYPED-PACKS-R813). Read only, scope `owl:read`; `GraphSchema`
+    /// stays the admin write. A key the request graph does not carry refuses
+    /// `SCHEMA_SOURCE_NOT_FOUND`.
+    GraphSchemaGet {
+        source_id: String,
+    },
     /// One page of the classes and properties the request graph's composed
     /// schema declares, ordered by `(iri, kind)` (EH-389). `kind` keeps one
     /// term kind; `cursor` is the previous page's `next_cursor`; `limit` is

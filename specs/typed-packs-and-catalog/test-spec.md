@@ -848,3 +848,10 @@ Each line binds one row to its proving test. A test marked planned does not exis
 - `MEDULLA-TYPED-PACKS-R812.1`: `crates/medulla-server-ops/src/api/admin/terms.rs::tests::a_class_term_lists_its_direct_named_superclasses_sorted` (L1), `crates/medulla-server-ops/src/api/admin/terms.rs::tests::a_core_class_rolls_up_through_its_declared_superclass` (L1): proves: model and behavior: `GraphSchemaTermView.superclasses`.
 - `MEDULLA-TYPED-PACKS-R812.2`: `crates/medulla-h-admin/src/graph_schema/terms_served_tests.rs::a_served_class_term_carries_its_direct_superclasses` (L3): proves: wiring: the served page carries the superclasses.
 - `MEDULLA-TYPED-PACKS-R812.3`: `tests/test_graph_schema_term_superclasses.py::test_term_view_carries_superclasses_and_defaults_to_none` (L1): proves: python mirror: `GraphSchemaTermView.superclasses`.
+
+## Schema source reads (R813)
+
+- `MEDULLA-TYPED-PACKS-R813`: `crates/medulla-h-admin/src/graph_schema/terms_served_tests.rs::get_serves_one_source_of_the_request_graph_and_refuses_the_rest` (L3): proves: schema source reads are ordinary ontology reads.
+- `MEDULLA-TYPED-PACKS-R813.1`: `crates/medulla-capabilities/tests/invariants.rs::contract_wave_rows_declare_their_static_policy` (L1): proves: `GraphSchemaList` is `owl:read`.
+- `MEDULLA-TYPED-PACKS-R813.2`: `crates/medulla-server-ops/src/api/admin/schema_read.rs::get_tests::get_answers_the_stored_documents_and_the_list_projection_of_one_source` (L1), `crates/medulla-server-ops/src/api/admin/schema_read.rs::get_tests::get_refuses_an_unattached_key_by_code` (L1): proves: `GraphSchemaGet` answers one source with its documents and refuses an unattached key.
+- `MEDULLA-TYPED-PACKS-R813.3`: `tests/test_graph_schema_get_client.py::test_get_sends_the_source_key_and_decodes_the_documents` (L4): proves: python mirror: `GraphSchemaGet`.

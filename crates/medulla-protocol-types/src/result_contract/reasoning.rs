@@ -7,7 +7,7 @@ use crate::protocol::{OwlExplainResult, OwlReasonResult};
 use medulla_catalog_types::ontology_inspection::{OntologyCanonicalHashResult, OntologyInspection};
 use medulla_catalog_types::{
     graph_schema::GraphSchemaClassesView, graph_schema::GraphSchemaCommitted,
-    graph_schema::GraphSchemaSourcesView,
+    graph_schema::GraphSchemaSourceDocumentsView, graph_schema::GraphSchemaSourcesView,
 };
 use medulla_query_types::derived_fact::RunTemporalRulesResult;
 use medulla_query_types::rdf_report::{
@@ -22,6 +22,7 @@ method_results! {
     // attach, attach-pack and detach paths all answer the committed view.
     GraphSchema(GraphSchema) => Raw<GraphSchemaCommitted>;
     GraphSchemaList(GraphSchemaList) => Raw<GraphSchemaSourcesView>;
+    GraphSchemaGet(GraphSchemaGet) => Raw<GraphSchemaSourceDocumentsView>;
     GraphSchemaClasses(GraphSchemaClasses) => Raw<GraphSchemaClassesView>;
     RunDatalogReasoning(RunDatalogReasoning) => Json<DatalogReasoningResult>;
     RunTemporalRules(RunTemporalRules) => Json<RunTemporalRulesResult>;

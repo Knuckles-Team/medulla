@@ -418,11 +418,13 @@ pub(super) const REASON_AGENT_LIBRARY_TENANT_SNAPSHOT: &str =
 // There is no row for RLS to scope.
 pub(super) const REASON_SOLVE_PURE_COMPUTE: &str =
     "Solve is a pure function of the model in its request: no store is opened, no clock is read, and the certificate it returns is independently verifiable -- there is no row to scope";
-// X9: the schema-source list is graph CONTROL state (which shapes and ontology
-// documents are attached, and their digests), not graph data. It is gated by
-// `security:admin`, which additionally requires the RBAC admin capability.
+// X9 / MEDULLA-TYPED-PACKS-R813: the schema-source list and one source's documents are the
+// request graph's own schema, an ordinary ontology read (`owl:read`) so a served read operation
+// can serve them. Both read through the one disclosed-source accessor
+// (`schema_read::disclosed_sources`), so neither can show a source the other would not, and
+// neither constructs a GraphView or row. The writes stay `GraphSchema` behind `security:admin`.
 pub(super) const REASON_GRAPH_SCHEMA_CONTROL_STATE: &str =
-    "GraphSchemaList reads the request graph's attached schema-source keys, origins and digests -- graph control state behind security:admin and the RBAC admin capability, never a GraphView/core.analysis_snapshot() row read";
+    "GraphSchemaList and GraphSchemaGet read the request graph's own attached schema sources (keys, origins, digests and stored documents) through the one disclosed-source accessor behind owl:read, never a GraphView/core.analysis_snapshot() row read; the writes stay GraphSchema behind security:admin and the RBAC admin capability";
 // EH-389: the class/property vocabulary the composed schema declares -- the
 // ontology's own terms and the key of the source declaring each, never graph
 // rows and never the source documents. Gated like every ontology read
@@ -591,6 +593,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("Solve", REASON_SOLVE_PURE_COMPUTE),
     // REASON_GRAPH_SCHEMA_CONTROL_STATE
     ("GraphSchemaList", REASON_GRAPH_SCHEMA_CONTROL_STATE),
+    ("GraphSchemaGet", REASON_GRAPH_SCHEMA_CONTROL_STATE),
     // REASON_GRAPH_SCHEMA_VOCABULARY
     ("GraphSchemaClasses", REASON_GRAPH_SCHEMA_VOCABULARY),
     // REASON_ONTOLOGY_SCHEMA_DOCUMENTS

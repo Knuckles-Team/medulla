@@ -222,3 +222,58 @@ async fn a_served_class_term_carries_its_direct_superclasses() {
     );
     assert!(superclasses("https://example.org/c#Free").is_empty());
 }
+
+/// Verifies MEDULLA-TYPED-PACKS-R813: `GraphSchemaGet` answers one source's stored documents
+/// through the same disclosed set `GraphSchemaList` shows, refuses a key the request graph does
+/// not carry (a key of another graph included) by code, and both reads are `owl:read`.
+// spec: MEDULLA-TYPED-PACKS-R813
+#[tokio::test]
+async fn get_serves_one_source_of_the_request_graph_and_refuses_the_rest() {
+    use medulla_catalog_types::graph_schema::GraphSchemaSourceDocumentsView;
+
+    let state = state_with_two_graphs().await;
+    let get = |source_id: &str| Method::GraphSchemaGet {
+        source_id: source_id.to_string(),
+    };
+    let found: GraphSchemaSourceDocumentsView =
+        raw(&call(&state, TENANT, "vocab-a", get("admin:alpha")).await);
+    assert_eq!(found.graph, "vocab-a");
+    assert_eq!(found.source.source_id, "admin:alpha");
+    assert!(found
+        .ontology_ttl
+        .as_deref()
+        .is_some_and(|ttl| ttl.contains("https://example.org/a#OnlyInA")));
+    assert_eq!(found.shapes_ttl, None);
+    assert_eq!(found.source.ontology_bytes as usize, found.ontology_ttl.unwrap().len());
+
+    // The list of the same graph names the same source with the same projection and digest.
+    let listed: GraphSchemaSourcesView =
+        raw(&call(&state, TENANT, "vocab-a", Method::GraphSchemaList).await);
+    assert_eq!(listed.composed_digest, found.composed_digest);
+    assert!(listed
+        .dynamic_sources
+        .as_slice()
+        .iter()
+        .any(|source| source == &found.source));
+
+    // Another graph's key and an absent key refuse alike.
+    for key in ["admin:beta", "admin:absent"] {
+        let refused = call(&state, TENANT, "vocab-a", get(key)).await;
+        assert_eq!(refused.error.as_deref(), Some("SCHEMA_SOURCE_NOT_FOUND"), "{key}");
+    }
+    // A core source is readable: the composition's reference vocabulary is part of the graph.
+    let core_key = listed
+        .core_sources
+        .as_slice()
+        .first()
+        .map(|source| source.source_id.clone())
+        .expect("the engine core catalog attaches at least one source");
+    let core: GraphSchemaSourceDocumentsView =
+        raw(&call(&state, TENANT, "vocab-a", get(&core_key)).await);
+    assert_eq!(core.source.source_id, core_key);
+
+    // A request from another tenant never reaches the handler.
+    let foreign = call(&state, "tenant-foreign", "vocab-a", get("admin:alpha")).await;
+    assert!(foreign.error.is_some());
+    assert!(foreign.result.is_none());
+}

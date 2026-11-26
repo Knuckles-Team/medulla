@@ -732,7 +732,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // there does not by itself imply `ControlPlane` here -- see the four
         // Agent* arms' own precedent). Examined individually, not defaulted
         // reflexively:
-        //  * `AgentAssemble`/`Decide`/`GraphSchemaList`/`GraphSchemaClasses` read only,
+        //  * `AgentAssemble`/`Decide`/`GraphSchemaList`/`GraphSchemaGet`/`GraphSchemaClasses` read only,
         //    commit nothing.
         //  * `Solve` is pure compute: no store, no clock, no float.
         //  * `DecisionCommit`/`ConnectorPack` DO write natively (agent_library.redb,
@@ -893,6 +893,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // the one gateway `AddNode`/`BatchUpdate` graph write.
         | Method::FinanceRecordPut { .. }
         | Method::GraphSchemaList
+        | Method::GraphSchemaGet { .. }
         | Method::GraphSchemaClasses { .. }
         // EH-219 / graph-os MEDULLA-2/3 typed reads: MVCC snapshot reads that commit
         // nothing, so like every other read they carry the surface-keyed default.

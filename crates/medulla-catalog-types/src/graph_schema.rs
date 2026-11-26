@@ -471,6 +471,25 @@ pub struct GraphSchemaSourceView {
     pub attached_at_ms: u64,
 }
 
+/// One attached schema source with its documents (answer of `Method::GraphSchemaGet`,
+/// MEDULLA-TYPED-PACKS-R813). The documents are the stored Turtle of the one source the
+/// request names, in the request graph only.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GraphSchemaSourceDocumentsView {
+    pub schema_version: u16,
+    pub graph: String,
+    /// Identity of the exact core+dynamic composition the source belongs to.
+    pub composed_digest: String,
+    /// The source's projection, the same row `GraphSchemaList` shows for it.
+    pub source: GraphSchemaSourceView,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub shapes_ttl: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ontology_ttl: Option<String>,
+}
+
 /// What one attach or detach committed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -568,6 +587,8 @@ closed_error_codes! {
         RepairSelfApproved => "REPAIR_SELF_APPROVED",
         /// A `vg:sourceRole` value outside the closed role set (MEDULLA-SRC-AUTH-R010.3).
         SourceRoleUnknown => "SOURCE_ROLE_UNKNOWN",
+        /// `GraphSchemaGet` named a source the request graph does not carry (MEDULLA-TYPED-PACKS-R813).
+        SourceNotFound => "SCHEMA_SOURCE_NOT_FOUND",
     }
 }
 

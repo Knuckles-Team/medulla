@@ -578,6 +578,13 @@ async fn try_handle_validation(
             medulla_server_ops::api::admin::schema_read::handle_list(req_id, graph_name, core).await,
         ),
         #[cfg(feature = "shacl")]
+        Method::GraphSchemaGet { source_id } => Some(
+            medulla_server_ops::api::admin::schema_read::handle_get(
+                req_id, graph_name, core, source_id,
+            )
+            .await,
+        ),
+        #[cfg(feature = "shacl")]
         Method::GraphSchemaClasses {
             kind,
             cursor,

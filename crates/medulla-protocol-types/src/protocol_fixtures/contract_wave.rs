@@ -52,6 +52,12 @@ pub fn contract_wave_samples() -> Vec<(&'static str, Method)> {
         ),
         ("GraphSchemaList", Method::GraphSchemaList),
         (
+            "GraphSchemaGet",
+            Method::GraphSchemaGet {
+                source_id: "admin:local".to_string(),
+            },
+        ),
+        (
             "EdgeIndex.status",
             Method::EdgeIndex {
                 op: Box::new(medulla_index_types::managed_index::EdgeIndexOp::Status),

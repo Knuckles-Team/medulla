@@ -16140,6 +16140,13 @@ class MethodGraphSchemaList(BaseModel):
     method: Literal["GraphSchemaList"]
 
 
+class MethodGraphSchemaGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GraphSchemaGet"]
+    params: MethodGraphSchemaGetParams
+
+
 class MethodGraphSchemaClasses(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18253,6 +18260,7 @@ Method = Annotated[
         MethodWriteBack,
         MethodGraphSchema,
         MethodGraphSchemaList,
+        MethodGraphSchemaGet,
         MethodGraphSchemaClasses,
         MethodMutationOutbox,
         MethodEdgeIndex,
@@ -20397,6 +20405,12 @@ class MethodGraphQlParams(BaseModel):
 
     query: str
     variables: Any | None = None
+
+
+class MethodGraphSchemaGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    source_id: str
 
 
 class MethodGraphSchemaClassesParams(BaseModel):
@@ -48044,6 +48058,8 @@ __all__ = [
     "GlossaryOpReviewDescription",
     "DescriptionState",
     "DescriptionInputs",
+    "MethodGraphSchemaGet",
+    "MethodGraphSchemaGetParams",
     "DescriptionProposal",
     "MethodStewardship",
     "MethodStewardshipParams",
