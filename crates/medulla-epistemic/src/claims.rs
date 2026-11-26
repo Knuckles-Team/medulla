@@ -282,6 +282,47 @@ pub fn verify_seal(artifact: &ResearchArtifact) -> Result<(), ServerErrorCode> {
     Ok(())
 }
 
+/// The view one reader holds over claims: the observer it reads as and the sessions that
+/// observer belongs to (MEDULLA-DECISION-ENGINE-R652.9).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReaderView {
+    observer: ObserverRef,
+    sessions: BTreeSet<String>,
+}
+
+impl ReaderView {
+    /// A view that reads as `observer` over `sessions`.
+    pub fn of(observer: ObserverRef, sessions: BTreeSet<String>) -> Self {
+        Self { observer, sessions }
+    }
+
+    /// The observer this view reads as.
+    pub fn observer(&self) -> &ObserverRef {
+        &self.observer
+    }
+}
+
+/// Whether `reader` may see `claim`: the one pure visibility rule (MEDULLA-DECISION-ENGINE-R652.9).
+/// A claim proposed without a perspective keeps its present visibility. A claim of the shared
+/// system observer is visible to every observer; a claim of one participant only to that
+/// participant. In both cases every session its evidence names must be a session of the reader's
+/// view; evidence that names no session never narrows a view.
+pub fn claim_visible_to(claim: &ClaimRecord, reader: &ReaderView) -> bool {
+    let Some(perspective) = &claim.perspective else {
+        return true;
+    };
+    let observer_sees = match &perspective.observer {
+        ObserverRef::System => true,
+        participant => participant == &reader.observer,
+    };
+    observer_sees
+        && claim
+            .evidence
+            .iter()
+            .filter_map(|evidence| evidence.session_id.as_ref())
+            .all(|session| reader.sessions.contains(session))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
