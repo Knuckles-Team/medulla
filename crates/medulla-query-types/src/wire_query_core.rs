@@ -1015,6 +1015,14 @@ pub enum Op {
     /// so both count). Same seed-or-filter shape as `EvidenceFor`. Gated by `epistemic`.
     #[cfg(feature = "epistemic")]
     Contradicts { node_id: String },
+    /// TRANSFORM (epistemic, MEDULLA-CQ-XSRC-R009.3) — for each input row, in input
+    /// order, the nodes with an INCOMING `CONTRADICTS` or `ATTACKS` edge into that row, each
+    /// id emitted once: the per-row reading of `Contradicts`, the way `EvidenceForEach` is
+    /// the per-row reading of `EvidenceFor`. An empty input gives an empty output (no seed
+    /// form). Serde form: the string `"ContradictsEach"`. UQL: `CONTRADICTS EACH`. Gated by
+    /// `epistemic`.
+    #[cfg(feature = "epistemic")]
+    ContradictsEach,
     /// FILTER/SOURCE (epistemic, CONCEPT:MEDULLA-KG.epistemic.epistemic-substrate, E2) — the claims
     /// `node_id` itself supports: nodes reached by an OUTGOING `SUPPORTS`/`SUPPORTS_BELIEF`/
     /// `HAS_EVIDENCE`/`CORROBORATES` edge FROM `node_id` — the mirror direction of
@@ -1067,6 +1075,11 @@ pub enum Op {
     /// valid time in seconds. An unscored row takes score `1.0` before the decay. A row
     /// with no valid time refuses the whole program with `UQL_E_DECAY_NO_TIME`.
     Decay { half_life_secs: f64 },
+    /// FILTER (MEDULLA-CQ-XSRC-R009.1, UQL `SCORE AT LEAST <num>`) — keep the rows whose
+    /// current score is at least `min`, in input order, scores unchanged. An unscored row
+    /// takes score `1.0`, as it does for `Decay`. After `RANK BY ~…` the score is the cosine
+    /// similarity, so the stage is the similarity floor of a vector branch.
+    ScoreAtLeast { min: f64 },
     /// TRANSFORM (MEDULLA-FEDERATED-QUERY-R720.3, UQL `CLUSTER BY EMBEDDING K <n>`) — partition
     /// the rows into `k` clusters by cosine distance over their stored embeddings, seed 0,
     /// so results repeat. Each row gains the `cluster_id` and `centroid_distance` value

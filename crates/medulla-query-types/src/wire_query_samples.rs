@@ -259,6 +259,8 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
         #[cfg(feature = "epistemic")]
         OpKind::EvidenceForEach => Op::EvidenceForEach,
         #[cfg(feature = "epistemic")]
+        OpKind::ContradictsEach => Op::ContradictsEach,
+        #[cfg(feature = "epistemic")]
         OpKind::Contradicts => Op::Contradicts {
             node_id: "c1".into(),
         },
@@ -293,6 +295,7 @@ pub fn uql_sample_op(kind: OpKind) -> Op {
         OpKind::Decay => Op::Decay {
             half_life_secs: 3600.0,
         },
+        OpKind::ScoreAtLeast => Op::ScoreAtLeast { min: 0.75 },
         OpKind::ClusterByEmbedding => Op::ClusterByEmbedding { k: 3 },
         OpKind::EvaluateRule => Op::EvaluateRule {
             spec: crate::rule_expr::EvaluateRuleOp {

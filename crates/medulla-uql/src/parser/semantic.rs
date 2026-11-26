@@ -192,8 +192,12 @@ impl<'a> Parser<'a> {
     }
 
     gated! { "epistemic",
-        /// `CONTRADICTS id`.
+        /// `CONTRADICTS id` or `CONTRADICTS EACH`. A bare `EACH` is the per-row form, as
+        /// `EVIDENCE EACH` is; a claim whose id is `EACH` is reached as `CONTRADICTS 'EACH'`.
         fn contradicts(&mut self) -> Result<Op, UqlError> {
+            if self.eat_kw("EACH") {
+                return Ok(Op::ContradictsEach);
+            }
             Ok(Op::Contradicts {
                 node_id: self.id("a node id")?,
             })

@@ -22152,6 +22152,10 @@ class OpContradictsBody(BaseModel):
     node_id: str
 
 
+# `Op::ContradictsEach` is a unit variant: its serde form is the bare string.
+OpContradictsEach = Literal["ContradictsEach"]
+
+
 class OpDecisionScan(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -33601,6 +33605,18 @@ class OpDecayBody(BaseModel):
     half_life_secs: float
 
 
+class OpScoreAtLeast(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ScoreAtLeast: OpScoreAtLeastBody
+
+
+class OpScoreAtLeastBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    min: float
+
+
 class OpEvaluateBody(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -33669,6 +33685,7 @@ Op = (
     | OpEvidenceFor
     | OpEvidenceForEach
     | OpContradicts
+    | OpContradictsEach
     | OpSupportedBy
     | OpBeliefAsOf
     | OpSourceReliability
@@ -33683,6 +33700,7 @@ Op = (
     | OpProject
     | OpClusterByEmbedding
     | OpDecay
+    | OpScoreAtLeast
     | OpEvaluate
     | OpEvaluateRule
 )
@@ -46824,6 +46842,7 @@ __all__ = [
     "OpConfidenceOp",
     "OpContradicts",
     "OpContradictsBody",
+    "OpContradictsEach",
     "OpDecisionScan",
     "OpDecisionScanBody",
     "OpDerive",
@@ -48770,6 +48789,8 @@ __all__ = [
     "OpClusterByEmbeddingBody",
     "OpDecay",
     "OpDecayBody",
+    "OpScoreAtLeast",
+    "OpScoreAtLeastBody",
     "OutcomeRef",
     "OutcomeSource",
     "OutcomeWhyNot",

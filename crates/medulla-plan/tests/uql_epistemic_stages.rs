@@ -213,3 +213,64 @@ fn require_nonempty_refuses_with_code() {
         assert_eq!(error.code.as_str(), "UQL_E_REQUIRE_CODE_INVALID", "{bad}");
     }
 }
+
+// spec: MEDULLA-CQ-XSRC-R009.1
+/// `SCORE AT LEAST` keeps the rows whose score reaches the floor: after a vector rank the
+/// score is the cosine similarity, so it is the similarity floor of a vector branch.
+#[test]
+fn score_at_least_is_the_similarity_floor() {
+    let (view, semantic) = fixture();
+    let ctx = PlanCtx::new(&view, &semantic).with_now_ms(NOW_MS);
+    let program = plan("MATCH (:Doc) |> RANK BY ~[1, 0, 0] |> SCORE AT LEAST 0.75");
+    assert_eq!(program.ops[2], Op::ScoreAtLeast { min: 0.75 });
+    let kept = program.execute(&ctx).unwrap().ids();
+    let mut sorted = kept.clone();
+    sorted.sort();
+    assert_eq!(sorted, ["a1", "a2", "a3"], "the b-direction docs fall below 0.75");
+
+    // An unscored row takes 1.0, so a floor of 1.0 keeps it and a floor above drops it.
+    let unscored = plan("MATCH (:Claim) |> SCORE AT LEAST 1.0")
+        .execute(&ctx)
+        .unwrap();
+    assert_eq!(unscored.len(), 3);
+    let none = plan("MATCH (:Claim) |> SCORE AT LEAST 1.5")
+        .execute(&ctx)
+        .unwrap();
+    assert!(none.is_empty());
+}
+
+// spec: MEDULLA-CQ-XSRC-R009.3
+/// `CONTRADICTS EACH |> DECAY HALF_LIFE` gives each contradicting node its decayed weight:
+/// 0.5 at one half-life of age and 1.0 at age zero, on a fixed `now`.
+#[test]
+fn contradicts_each_then_decay_weights_each_contradiction_by_age() {
+    let core = GraphCore::new();
+    core.add_node("claim".into(), blob(json!({"type": "Claim"})));
+    core.add_node(
+        "recent".into(),
+        blob(json!({"type": "Evidence", "valid_time_ms": NOW_MS})),
+    );
+    core.add_node(
+        "week_old".into(),
+        blob(json!({"type": "Evidence", "valid_time_ms": NOW_MS - 604_800_000})),
+    );
+    for from in ["recent", "week_old"] {
+        core.add_edge(
+            from.into(),
+            "claim".into(),
+            blob(json!({"relationship": "CONTRADICTS"})),
+        )
+        .unwrap();
+    }
+    let view = core.analysis_snapshot();
+    let semantic = SemanticStore::new();
+    let ctx = PlanCtx::new(&view, &semantic).with_now_ms(NOW_MS);
+    let weights = plan(
+        "MATCH (:Claim) |> CONTRADICTS EACH |> DECAY HALF_LIFE 604800",
+    )
+    .execute(&ctx)
+    .unwrap();
+    assert_eq!(weights.len(), 2);
+    assert!((f64::from(score(&weights, "recent")) - 1.0).abs() < 1e-9);
+    assert!((f64::from(score(&weights, "week_old")) - 0.5).abs() < 1e-9);
+}

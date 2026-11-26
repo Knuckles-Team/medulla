@@ -233,6 +233,20 @@ impl<'a> Parser<'a> {
         Ok(Op::Decay { half_life_secs })
     }
 
+    /// `SCORE AT LEAST num` (MEDULLA-CQ-XSRC-R009.1): keep the rows scoring at least `num`.
+    pub(super) fn score_at_least(&mut self) -> Result<Op, UqlError> {
+        self.expect_kw("AT")?;
+        self.expect_kw("LEAST")?;
+        let min = self.number("a SCORE AT LEAST threshold")?;
+        if !min.is_finite() {
+            return Err(self.err_at(
+                self.prev_start(),
+                "the SCORE AT LEAST threshold must be finite",
+            ));
+        }
+        Ok(Op::ScoreAtLeast { min })
+    }
+
     /// `CLUSTER BY EMBEDDING K int` (MEDULLA-FEDERATED-QUERY-R720.3): `k` ≥ 1 clusters.
     pub(super) fn cluster_by_embedding(&mut self) -> Result<Op, UqlError> {
         self.expect_kw("BY")?;

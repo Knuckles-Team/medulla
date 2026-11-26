@@ -310,3 +310,41 @@ fn evidence_for_runs_once_per_input_row() {
     .unwrap();
     assert!(empty.ids().is_empty());
 }
+
+// spec: MEDULLA-CQ-XSRC-R009.3
+/// `ContradictsEach` runs once per input row, in input order: the ids that contradict or
+/// attack one row sort by byte order and an id already emitted is not emitted again.
+#[test]
+fn contradicts_runs_once_per_input_row() {
+    let core = GraphCore::new();
+    for id in ["c1", "c2", "x1", "x2", "x3"] {
+        core.add_node(id.into(), blob(json!({ "type": "Claim" })));
+    }
+    for (from, to, relationship) in [
+        ("x1", "c1", "CONTRADICTS"),
+        ("x2", "c1", "ATTACKS"),
+        ("x2", "c2", "CONTRADICTS"),
+        ("x3", "c2", "SUPPORTS"),
+    ] {
+        core.add_edge(
+            from.into(),
+            to.into(),
+            blob(json!({ "relationship": relationship })),
+        )
+        .unwrap();
+    }
+    let view = core.analysis_snapshot();
+    let sem = SemanticStore::new();
+    let ctx = PlanCtx::new(&view, &sem);
+    let input = medulla_exec::rowset::RowSet::from_ids(["c2".to_string(), "c1".to_string()]);
+    let out = medulla_exec::exec::apply(&Op::ContradictsEach, input, &ctx).unwrap();
+    assert_eq!(out.ids(), vec!["x2".to_string(), "x1".to_string()]);
+    // An empty input gives an empty output: there is no seed form.
+    let empty = medulla_exec::exec::apply(
+        &Op::ContradictsEach,
+        medulla_exec::rowset::RowSet::new(),
+        &ctx,
+    )
+    .unwrap();
+    assert!(empty.ids().is_empty());
+}

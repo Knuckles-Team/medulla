@@ -175,6 +175,7 @@ impl<'a> Parser<'a> {
             ("EVENTS", Self::events),
             ("PROB", Self::prob),
             ("DECAY", Self::decay),
+            ("SCORE", Self::score_at_least),
             ("CLUSTER", Self::cluster_by_embedding),
             ("ATTRIBUTE", Self::attribute),
         ]

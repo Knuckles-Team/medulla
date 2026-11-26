@@ -2823,11 +2823,16 @@ fn evidence_for_op(view: &GraphView, input: RowSet, claim_id: &str) -> RowSet {
     )
 }
 
-/// `EvidenceForEach` (MEDULLA-CQ-XSRC-R009.6) — for each input row, in input order, the
-/// nodes with an INCOMING `Supports` edge into it, ids of one row sorted by byte order, each
-/// id emitted once. Output rows carry no score; an empty input gives an empty output.
+/// The per-input-row reading shared by `EvidenceForEach` and `ContradictsEach`: for each input
+/// row, in input order, the nodes with an INCOMING edge of one of `kinds` into it, ids of one
+/// row sorted by byte order, each id emitted once. Output rows carry no score; an empty input
+/// gives an empty output.
 #[cfg(feature = "epistemic")]
-pub(crate) fn evidence_for_each_op(view: &GraphView, input: RowSet) -> RowSet {
+fn linked_each_op(
+    view: &GraphView,
+    input: RowSet,
+    kinds: &[medulla_epistemic::EdgeKind],
+) -> RowSet {
     if input.is_empty() {
         return RowSet::new();
     }
@@ -2835,14 +2840,9 @@ pub(crate) fn evidence_for_each_op(view: &GraphView, input: RowSet) -> RowSet {
     let mut emitted: HashSet<String> = HashSet::new();
     let mut ids: Vec<String> = Vec::new();
     for row in input.rows() {
-        let mut linked: Vec<String> = linked_ids(
-            &bg,
-            &row.id,
-            &[medulla_epistemic::EdgeKind::Supports],
-            EdgeDir::Incoming,
-        )
-        .into_iter()
-        .collect();
+        let mut linked: Vec<String> = linked_ids(&bg, &row.id, kinds, EdgeDir::Incoming)
+            .into_iter()
+            .collect();
         linked.sort();
         for id in linked {
             if emitted.insert(id.clone()) {
@@ -2851,6 +2851,27 @@ pub(crate) fn evidence_for_each_op(view: &GraphView, input: RowSet) -> RowSet {
         }
     }
     RowSet::from_ids(ids)
+}
+
+/// `EvidenceForEach` (MEDULLA-CQ-XSRC-R009.6) — for each input row, the nodes with an INCOMING
+/// `Supports` edge into it.
+#[cfg(feature = "epistemic")]
+pub(crate) fn evidence_for_each_op(view: &GraphView, input: RowSet) -> RowSet {
+    linked_each_op(view, input, &[medulla_epistemic::EdgeKind::Supports])
+}
+
+/// `ContradictsEach` (MEDULLA-CQ-XSRC-R009.3) — for each input row, the nodes with an INCOMING
+/// `Contradicts` or `Attacks` edge into it, the per-row reading of `Contradicts`.
+#[cfg(feature = "epistemic")]
+pub(crate) fn contradicts_each_op(view: &GraphView, input: RowSet) -> RowSet {
+    linked_each_op(
+        view,
+        input,
+        &[
+            medulla_epistemic::EdgeKind::Contradicts,
+            medulla_epistemic::EdgeKind::Attacks,
+        ],
+    )
 }
 
 /// `Contradicts { node_id }` — the nodes with an INCOMING `Contradicts` OR `Attacks` edge

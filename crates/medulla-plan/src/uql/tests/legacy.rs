@@ -581,6 +581,22 @@ fn contradicts_clause_parses() {
     );
 }
 
+// spec: MEDULLA-CQ-XSRC-R009.3
+/// `CONTRADICTS EACH` lowers to `Op::ContradictsEach`; the quoted `'EACH'` is still a claim id.
+#[cfg(feature = "epistemic")]
+#[test]
+fn contradicts_each_lowers_to_contradicts_each() {
+    let p = parse("MATCH (:Claim) |> CONTRADICTS EACH |> LIMIT 5").unwrap();
+    assert_eq!(p.ops[1], Op::ContradictsEach);
+    let p = parse("MATCH (:Claim) |> CONTRADICTS 'EACH' |> LIMIT 5").unwrap();
+    assert_eq!(
+        p.ops[1],
+        Op::Contradicts {
+            node_id: "EACH".into()
+        }
+    );
+}
+
 /// `SUPPORTED BY <id>` lowers to `Op::SupportedBy`.
 #[cfg(feature = "epistemic")]
 #[test]

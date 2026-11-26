@@ -40,6 +40,7 @@ pub(crate) fn is_epistemic_op(op: &Op) -> bool {
             | Op::Contradicts { .. }
             | Op::EvidenceFor { .. }
             | Op::EvidenceForEach
+            | Op::ContradictsEach
     )
 }
 
@@ -79,6 +80,7 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         | Op::CompanyContextScan { .. }
         | Op::Attribute { .. }
         | Op::Decay { .. }
+        | Op::ScoreAtLeast { .. }
         | Op::ClusterByEmbedding { .. }
         | Op::Limit { .. } => apply_core_ops(op, input, ctx),
 
@@ -129,6 +131,7 @@ pub fn apply(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<RowSet, String> {
         Op::EvidenceFor { .. }
         | Op::EvidenceForEach
         | Op::Contradicts { .. }
+        | Op::ContradictsEach
         | Op::SupportedBy { .. }
         | Op::BeliefAsOf { .. }
         | Op::SourceReliability { .. }
@@ -373,6 +376,7 @@ pub(super) fn apply_core_ops(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<Ro
         } => super::attribution::attribute(ctx, input, attribute_spec(players, *value, method))
             .map(|attributed| attributed.rows),
         Op::Decay { half_life_secs } => super::decay_cluster::decay(ctx, input, *half_life_secs),
+        Op::ScoreAtLeast { min } => Ok(super::decay_cluster::score_at_least(input, *min)),
         Op::ClusterByEmbedding { k } => super::decay_cluster::cluster_by_embedding(ctx, input, *k),
         Op::Rank { .. }
         | Op::RankEmbed { .. }
@@ -550,6 +554,7 @@ pub(super) fn apply_epistemic(op: &Op, input: RowSet, ctx: &PlanCtx) -> Result<R
         Op::EvidenceFor { claim_id } => Ok(evidence_for_op(ctx.view, input, claim_id)),
         Op::EvidenceForEach => Ok(evidence_for_each_op(ctx.view, input)),
         Op::Contradicts { node_id } => Ok(contradicts_op(ctx.view, input, node_id)),
+        Op::ContradictsEach => Ok(contradicts_each_op(ctx.view, input)),
         Op::SupportedBy { node_id } => Ok(supported_by_op(ctx.view, input, node_id)),
         Op::BeliefAsOf { ts } => Ok(belief_as_of_op(ctx, input, *ts)),
         Op::SourceReliability { source_id } => {

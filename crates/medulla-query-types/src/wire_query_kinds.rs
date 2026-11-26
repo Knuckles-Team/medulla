@@ -65,13 +65,14 @@ kinds! {
     #[cfg(feature = "probabilistic")] Probabilistic,
     #[cfg(feature = "epistemic")] EvidenceFor,
     #[cfg(feature = "epistemic")] EvidenceForEach,
+    #[cfg(feature = "epistemic")] ContradictsEach,
     #[cfg(feature = "epistemic")] Contradicts,
     #[cfg(feature = "epistemic")] SupportedBy,
     #[cfg(feature = "epistemic")] BeliefAsOf,
     #[cfg(feature = "epistemic")] SourceReliability,
     #[cfg(feature = "epistemic")] ConfidenceOp,
     #[cfg(feature = "epistemic")] ExplainBelief,
-    Decay, ClusterByEmbedding, Attribute, DecisionScan, Limit, Project,
+    Decay, ScoreAtLeast, ClusterByEmbedding, Attribute, DecisionScan, Limit, Project,
     UsageScan, CompanyContextScan, ScanEdges, RequireNonEmpty,
 }
 
@@ -107,6 +108,7 @@ pub fn uql_modality(op: &Op) -> UqlModality {
         OpKind::EvidenceFor
         | OpKind::EvidenceForEach
         | OpKind::Contradicts
+        | OpKind::ContradictsEach
         | OpKind::SupportedBy
         | OpKind::BeliefAsOf
         | OpKind::SourceReliability
@@ -148,6 +150,7 @@ pub fn uql_modality(op: &Op) -> UqlModality {
         | OpKind::Skip
         | OpKind::EvaluateRule
         | OpKind::Decay
+        | OpKind::ScoreAtLeast
         | OpKind::Attribute
         | OpKind::DecisionScan
         | OpKind::Limit
@@ -233,6 +236,8 @@ pub fn op_kind(op: &Op) -> OpKind {
         #[cfg(feature = "epistemic")]
         Op::Contradicts { .. } => OpKind::Contradicts,
         #[cfg(feature = "epistemic")]
+        Op::ContradictsEach => OpKind::ContradictsEach,
+        #[cfg(feature = "epistemic")]
         Op::SupportedBy { .. } => OpKind::SupportedBy,
         #[cfg(feature = "epistemic")]
         Op::BeliefAsOf { .. } => OpKind::BeliefAsOf,
@@ -243,6 +248,7 @@ pub fn op_kind(op: &Op) -> OpKind {
         #[cfg(feature = "epistemic")]
         Op::ExplainBelief { .. } => OpKind::ExplainBelief,
         Op::Decay { .. } => OpKind::Decay,
+        Op::ScoreAtLeast { .. } => OpKind::ScoreAtLeast,
         Op::ClusterByEmbedding { .. } => OpKind::ClusterByEmbedding,
         Op::Attribute { .. } => OpKind::Attribute,
         Op::DecisionScan { .. } => OpKind::DecisionScan,
@@ -333,6 +339,7 @@ impl OpKind {
             | OpKind::ScanEdges
             | OpKind::CompanyContextScan
             | OpKind::Decay
+            | OpKind::ScoreAtLeast
             | OpKind::ClusterByEmbedding
             | OpKind::EvaluateRule
             | OpKind::Limit
@@ -356,6 +363,7 @@ impl OpKind {
             OpKind::EvidenceFor
             | OpKind::EvidenceForEach
             | OpKind::Contradicts
+            | OpKind::ContradictsEach
             | OpKind::SupportedBy => None,
         }
     }
@@ -372,6 +380,7 @@ impl OpKind {
             | OpKind::RankMmr
             | OpKind::Attribute
             | OpKind::Decay
+            | OpKind::ScoreAtLeast
             | OpKind::ClusterByEmbedding
             | OpKind::Limit
             | OpKind::Project => ProofRole::Neutral,
@@ -430,6 +439,7 @@ impl OpKind {
             OpKind::EvidenceFor
             | OpKind::EvidenceForEach
             | OpKind::Contradicts
+            | OpKind::ContradictsEach
             | OpKind::SupportedBy
             | OpKind::BeliefAsOf
             | OpKind::ExplainBelief => ProofRole::Unproved,

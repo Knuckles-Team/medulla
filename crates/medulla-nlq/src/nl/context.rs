@@ -767,6 +767,7 @@ impl SchemaContext {
             Op::EvidenceFor { .. }
             | Op::EvidenceForEach
             | Op::Contradicts { .. }
+            | Op::ContradictsEach
             | Op::SupportedBy { .. }
             | Op::ExplainBelief { .. } => Ok((op.clone(), Scope::AnyLocal)),
             _ => Ok((op.clone(), scope)),

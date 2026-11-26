@@ -453,6 +453,8 @@ pub fn uql_op(op: &Op) -> Printed {
         #[cfg(feature = "epistemic")]
         Op::Contradicts { node_id } => keyword_quoted("CONTRADICTS", node_id),
         #[cfg(feature = "epistemic")]
+        Op::ContradictsEach => fixed("CONTRADICTS EACH"),
+        #[cfg(feature = "epistemic")]
         Op::SupportedBy { node_id } => keyword_quoted("SUPPORTED BY", node_id),
         #[cfg(feature = "epistemic")]
         Op::BeliefAsOf { ts } => prefixed_num("BELIEF AS OF @", *ts),
@@ -472,6 +474,7 @@ pub fn uql_op(op: &Op) -> Printed {
         Op::Decay { half_life_secs } => {
             Ok(format!("DECAY HALF_LIFE {}", uql_num(*half_life_secs)?))
         }
+        Op::ScoreAtLeast { min } => Ok(format!("SCORE AT LEAST {}", uql_num(*min)?)),
         Op::ClusterByEmbedding { k } => Ok(format!("CLUSTER BY EMBEDDING K {k}")),
         Op::DecisionScan { preds } => decision_scan(preds),
         Op::UsageScan { view } => Ok(usage_scan(*view).to_string()),

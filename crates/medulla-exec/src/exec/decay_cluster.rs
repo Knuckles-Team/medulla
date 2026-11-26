@@ -74,6 +74,16 @@ pub(super) fn decay(ctx: &PlanCtx, input: RowSet, half_life_secs: f64) -> Result
     Ok(RowSet::from_epistemic_rows(decayed).with_values(values))
 }
 
+/// `SCORE AT LEAST <num>` (MEDULLA-CQ-XSRC-R009.1): the rows whose score (1.0 when unscored)
+/// is at least `min`, in input order. Scores and value channels are kept.
+pub(super) fn score_at_least(input: RowSet, min: f64) -> RowSet {
+    let (rows, values) = input.into_parts();
+    let kept = rows
+        .into_iter()
+        .filter(|row| f64::from(row.score.unwrap_or(1.0)) >= min);
+    RowSet::from_epistemic_rows(kept).with_values(values)
+}
+
 fn unit(v: &[f32]) -> Vec<f64> {
     let norm = v
         .iter()

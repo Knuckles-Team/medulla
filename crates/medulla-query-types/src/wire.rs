@@ -413,6 +413,7 @@ mod epistemic_tests {
             Op::Contradicts {
                 node_id: "c1".into(),
             },
+            Op::ContradictsEach,
             Op::SupportedBy {
                 node_id: "c1".into(),
             },
