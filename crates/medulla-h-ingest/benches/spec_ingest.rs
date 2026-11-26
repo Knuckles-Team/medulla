@@ -10,14 +10,20 @@
 //! each step must stay at most 300 ms. The benchmarks gate only the nightly run, never a pull
 //! request.
 //!
+//! `lifecycle/spec_ingest` (MEDULLA-SDLC-R014.9, the budgets of R014.2): one changed file of a
+//! repository with 2,000 rows and 2,000 task lines is re-ingested by digest; only that file is
+//! parsed. The p99 must stay at most one second.
+//!
 //! Run: cargo bench -p medulla-h-ingest --bench spec_ingest
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use std::hint::black_box;
 use std::time::{Duration, Instant};
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use medulla_h_ingest::source_ingestion::spec_projection::{plan_unknowns, project_plans};
+use medulla_h_ingest::source_ingestion::spec_projection::{
+    plan_unknowns, project_plans, reingest_changed_artifacts, StoredArtifact,
+};
 use medulla_sdlc::lifecycle::proposals::{check_changeset_provenance, StoredBinding};
 use medulla_sdlc::lifecycle::research::{research_item_key, unknown_frontier};
 use medulla_source_types::lifecycle::{
@@ -29,6 +35,8 @@ const ITEMS: usize = 1_000;
 const SAMPLES: usize = 200;
 const RESEARCH_P99: Duration = Duration::from_millis(100);
 const PROPOSAL_P99: Duration = Duration::from_millis(300);
+const INGEST_P99: Duration = Duration::from_secs(1);
+const ROWS: usize = 2_000;
 
 fn plan() -> String {
     let mut text = String::from("# Plan\n\n## Phase 0: Research\n");
@@ -146,5 +154,85 @@ fn proposals(c: &mut Criterion) {
     group.finish();
 }
 
-criterion_group!(benches, research_trigger, proposals);
+fn requirements_text() -> String {
+    let mut text = String::from("# Requirements\n\n| ID | Requirement | Acceptance |\n|----|----|----|\n");
+    for n in 1..=ROWS {
+        text.push_str(&format!(
+            "| `DEMO-R{n:04}` | **Row {n}.** Caller chain: `serve_{n}` -> `src/demo.py:{n}`. | \
+Test: `tests/test_demo.py::test_row_{n}` (L3). |\n"
+        ));
+    }
+    text
+}
+
+fn tasks_text(ticked: usize) -> String {
+    let mut text = String::from("# Tasks\n\n## Phase 1: Build\n");
+    for n in 1..=ROWS {
+        let box_ = if n <= ticked { 'x' } else { ' ' };
+        text.push_str(&format!("- [{box_}] T{n:04} DEMO-R{n:04} Build row {n}\n"));
+    }
+    text
+}
+
+fn stored_of(plan: &medulla_h_ingest::source_ingestion::spec_projection::ReingestPlan) -> BTreeMap<String, StoredArtifact> {
+    plan.operations
+        .iter()
+        .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "SpecArtifactFile")
+        .map(|op| {
+            let properties = &op["properties"];
+            let records = properties["records"].as_str().unwrap_or_default();
+            (
+                properties["file"].as_str().unwrap_or_default().to_string(),
+                StoredArtifact {
+                    digest: properties["digest"].as_str().unwrap_or_default().to_string(),
+                    records: records
+                        .split(',')
+                        .filter(|id| !id.is_empty())
+                        .map(str::to_string)
+                        .collect(),
+                    terms: Vec::new(),
+                },
+            )
+        })
+        .collect()
+}
+
+fn spec_ingest(c: &mut Criterion) {
+    let requirements = requirements_text();
+    let (open, ticked) = (tasks_text(0), tasks_text(1));
+    let none = BTreeMap::new();
+    let first = reingest_changed_artifacts(
+        "demo",
+        &[("specs/demo/requirements.md", requirements.as_str()), ("specs/demo/tasks.md", open.as_str())],
+        &BTreeMap::new(),
+        &none,
+        &none,
+    )
+    .expect("the repository ingests");
+    let stored = stored_of(&first);
+    let changed = [
+        ("specs/demo/requirements.md", requirements.as_str()),
+        ("specs/demo/tasks.md", ticked.as_str()),
+    ];
+    let mut samples: Vec<Duration> = (0..20)
+        .map(|_| {
+            let started = Instant::now();
+            let plan = reingest_changed_artifacts("demo", &changed, &stored, &none, &none)
+                .expect("the one-file change ingests");
+            assert_eq!(plan.reingested, ["specs/demo/tasks.md"]);
+            black_box(plan);
+            started.elapsed()
+        })
+        .collect();
+    let measured = p99(&mut samples);
+    assert!(measured <= INGEST_P99, "p99 {measured:?} over the one second budget");
+    let mut group = c.benchmark_group("lifecycle/spec_ingest");
+    group.sample_size(10);
+    group.bench_function("one_file_change", |b| {
+        b.iter(|| reingest_changed_artifacts("demo", &changed, &stored, &none, &none))
+    });
+    group.finish();
+}
+
+criterion_group!(benches, research_trigger, proposals, spec_ingest);
 criterion_main!(benches);

@@ -14,15 +14,24 @@ import hashlib
 import os
 import re
 import subprocess
+import sys
+import uuid
 from pathlib import Path
 from typing import Any
 
+import msgpack
 import pytest
+from conftest import request_context
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+import _spec_fixture as fixture
+
+from medulla.client import MedullaClient
 from medulla.generated.index_repository import IndexRepositoryScope
 
-# The reingest tests run in scoped crate tests and own no engine; the wiring test uses the
-# shared engine.
+# The reingest tests run in scoped crate tests and own no engine; the wiring test uses
+# the shared engine.
 no_engine = pytest.mark.no_engine
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -94,7 +103,9 @@ def test_trailers_become_citation_edges() -> None:
 
     # spec: MEDULLA-SDLC-R014.3
     assert re.search(
-        r"^CITE\tchangeset:demo:c1\trequirement:demo:DEMO-R001$", out, flags=re.MULTILINE
+        r"^CITE\tchangeset:demo:c1\trequirement:demo:DEMO-R001$",
+        out,
+        flags=re.MULTILINE,
     )
     assert re.search(
         r"^CITE_REFUSED\tREQUIREMENT_UNRESOLVED: DEMO-R999 \(cited by changeset c2\)",
@@ -128,7 +139,11 @@ def test_repository_ingest_includes_spec_artifacts(clean_graph) -> None:
             "repository_id": _REPO,
             "commits": [],
             "refs": [
-                {"ref_name": "refs/heads/main", "revision_id": _REVISION, "status": "live"}
+                {
+                    "ref_name": "refs/heads/main",
+                    "revision_id": _REVISION,
+                    "status": "live",
+                }
             ],
             "file_versions": [
                 {
@@ -153,5 +168,72 @@ def test_repository_ingest_includes_spec_artifacts(clean_graph) -> None:
     assert _rows(clean_graph, "SYMBOL"), "the code graph has no symbol of src/demo.py"
     requirements = [str(row.get("id", "")) for row in _rows(clean_graph, "Requirement")]
     assert requirements == [f"requirement:{_REPO}:DEMO-R001"]
-    artifacts = [str(row.get("id", "")) for row in _rows(clean_graph, "SpecArtifactFile")]
-    assert any(artifact.endswith("specs/demo/requirements.md") for artifact in artifacts)
+    artifacts = [
+        str(row.get("id", "")) for row in _rows(clean_graph, "SpecArtifactFile")
+    ]
+    assert any(
+        artifact.endswith("specs/demo/requirements.md") for artifact in artifacts
+    )
+
+
+async def _nodes(client: MedullaClient, graph: str, label: str) -> list[str]:
+    ids: list[str] = []
+    after = None
+    while True:
+        page = await client._send(
+            "GetNodesByLabel", {"label": label, "after": after, "limit": 1000}, graph
+        )
+        if not page:
+            return ids
+        ids.extend(entry[0] for entry in page)
+        after = page[-1][0]
+
+
+async def _file_digests(client: MedullaClient, graph: str) -> dict[str, str]:
+    digests: dict[str, str] = {}
+    for node_id in await _nodes(client, graph, "SpecArtifactFile"):
+        raw = await client._send("GetNodeProperties", {"node_id": node_id}, graph)
+        node = msgpack.unpackb(raw, raw=False) if isinstance(raw, bytes) else raw
+        digests[node["file"]] = node["digest"]
+    return digests
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R014.9")
+@pytest.mark.asyncio
+async def test_artifacts_ingest_and_answer_next_task(start_medulla_server) -> None:
+    graph = f"spec-artifacts-{uuid.uuid4().hex[:8]}"
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        timeout=300,
+    )
+    try:
+        await client.tenants.create(graph, "Global")
+        files = fixture.repository_files()
+        await client.graph.index_repository(
+            files, scope=fixture.scope_of(graph, files), graph=graph
+        )
+        assert len(await _nodes(client, graph, "Requirement")) == 2_000
+        assert len(await _nodes(client, graph, "TaskLine")) == 2_000
+        assert len(await _nodes(client, graph, "Contract")) == 10
+        before = await _file_digests(client, graph)
+
+        # One file changes: the first task is ticked; every other file is kept.
+        edited = fixture.repository_files(ticked=1)
+        await client.graph.index_repository(
+            edited, scope=fixture.scope_of(graph, edited), graph=graph
+        )
+        after = await _file_digests(client, graph)
+        changed = sorted(path for path in after if after[path] != before.get(path))
+        assert changed == [fixture.TASKS]
+        assert len(await _nodes(client, graph, "Requirement")) == 2_000
+
+        # The next unblocked task of phase 1 follows the task states of R005.7: the
+        # ticked task is done and the tasks of the contract rows are blocked.
+        answer = await client.spec_question("next_unblocked_task", graph, "1")
+        # spec: MEDULLA-SDLC-R014.9
+        assert [row["task_id"] for row in answer["rows"]] == [fixture.task_id(2)]
+        assert answer["rows"][0]["row"].endswith(fixture.row_id(2))
+    finally:
+        await client.tenants.delete(graph)
+        await client.close()
