@@ -465,8 +465,8 @@ mod tests {
         for (id, end) in [("run:1", 100u64), ("run:2", 200)] {
             let mut trace = object(json!({
                 "node_type": "RunTrace", "endMs": end, "runModel": "m1",
-                "uncached_input_tokens": 1000, "cached_input_tokens": 0,
-                "output_tokens": 500, "reasoning_output_tokens": 0,
+                "uncachedInputTokens": 1000, "cachedInputTokens": 0,
+                "outputTokens": 500, "reasoningOutputTokens": 0,
             }));
             if with_price {
                 trace.insert("accounting_revision".into(), json!("prices-1"));
@@ -474,6 +474,22 @@ mod tests {
             nodes.push((id.to_string(), trace));
         }
         nodes
+    }
+
+    /// The `PriceTable` node pinned at revision `prices-1`: `model` costs `rate` minor units
+    /// per million tokens in every category (the node JSON `price_table_from_node` reads).
+    fn price_table_node(model: &str, rate: u64) -> (String, Map<String, Value>) {
+        let table = json!({
+            "schema_version": 1, "version": 1, "currency": "USD", "minor_unit_exponent": 2,
+            "token_rates": {model: {"uncached_input": rate, "cached_input": rate,
+                                    "output": rate, "reasoning_output": rate}},
+        });
+        (
+            "pricetable:t:prices-1".into(),
+            object(json!({
+                "node_type": "PriceTable", "revision": "prices-1", "table": table.to_string(),
+            })),
+        )
     }
 
     fn query(params: &[(&str, &str)], numbers: &[(&str, f64)]) -> SessionSearchQuery {
@@ -559,5 +575,46 @@ mod tests {
         assert_eq!(by_window.rows[0].columns["received"], "1");
         let none = harness_session_search(&query(&[("harness_id", "absent")], &[]), &fixture(3, true)).unwrap();
         assert_eq!(none.rows.len(), 1);
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R009.101.2
+    #[test]
+    fn measured_cost_prices_the_matching_traces_against_the_pinned_table() {
+        // Two traces of 1000 uncached and 500 output tokens each, at 2_000_000 minor units per
+        // million tokens: 2000 * 2 + 1000 * 2 = 6000, rounded once for the one group.
+        let mut nodes = fixture(3, true);
+        nodes.push(price_table_node("m1", 2_000_000));
+        let page = harness_session_search(&query(&[], &[]), &nodes).unwrap();
+        let summary = &page.rows[0].columns;
+        assert_eq!(summary["cost_status"], "measured");
+        assert_eq!(summary["uncached_input"], "2000");
+        assert_eq!(summary["cached_input"], "0");
+        assert_eq!(summary["output"], "1000");
+        assert_eq!(summary["reasoning_output"], "0");
+        assert_eq!(summary["cost_minor"], "6000");
+        assert_eq!(summary["currency"], "USD");
+        assert_eq!(summary["accounting_revision"], "prices-1");
+        assert!(!summary.contains_key("cost_reason"));
+
+        // A table with no rate for the traces' model is price_missing, never a zero cost.
+        let mut other_model = fixture(3, true);
+        other_model.push(price_table_node("another-model", 2_000_000));
+        let page = harness_session_search(&query(&[], &[]), &other_model).unwrap();
+        assert_eq!(page.rows[0].columns["cost_status"], "unknown");
+        assert_eq!(page.rows[0].columns["cost_reason"], "price_missing");
+        assert!(!page.rows[0].columns.contains_key("cost_minor"));
+
+        // A trace that reports no counter is attribution_missing, even with a table pinned.
+        let mut uncounted = fixture(3, true);
+        uncounted.push(price_table_node("m1", 2_000_000));
+        uncounted
+            .iter_mut()
+            .find(|(id, _)| id == "run:2")
+            .unwrap()
+            .1
+            .remove("outputTokens");
+        let page = harness_session_search(&query(&[], &[]), &uncounted).unwrap();
+        assert_eq!(page.rows[0].columns["cost_status"], "unknown");
+        assert_eq!(page.rows[0].columns["cost_reason"], "attribution_missing");
     }
 }
