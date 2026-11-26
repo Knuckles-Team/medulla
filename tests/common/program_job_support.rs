@@ -331,6 +331,25 @@ pub fn first_string_with_prefix(value: &serde_json::Value, prefix: &str) -> Opti
     }
 }
 
+/// The champion revision of the fixture program in the caller's tenant: the
+/// target of its governed pointer, absent until a `MovePointer` activates one
+/// (MEDULLA-DECISION-ENGINE-R805.8).
+pub async fn champion_target(state: &crate::test_support::SharedState) -> Option<String> {
+    let store = medulla_persistence_records::agent_library::shared_agent_library(state)
+        .await
+        .expect("the agent library opens");
+    let subject = medulla_decision_outcome_types::decision::promotion::RevisionSubject::Program {
+        program_ref: program_ref().as_str().to_string(),
+    };
+    let (_, pointer) = medulla_persistence_records::decision_jobs::read_pointer(
+        &store,
+        medulla_persistence::cost::tenant_of(GRAPH),
+        &subject.pointer_key(),
+    )
+    .expect("read the champion pointer");
+    pointer.target().map(str::to_owned)
+}
+
 pub async fn node_properties(
     state: &crate::test_support::SharedState,
     id: u64,
@@ -370,20 +389,15 @@ pub struct Journey {
 /// Two jobs over one corpus. The first has no evaluation and stays a draft; its
 /// result names the candidate the server derived under the caller's policy. The
 /// second carries that candidate's evaluation, reaches `Evaluated` and commits
-/// the revision and the active pointer. Returns the committed revision node.
+/// its revision. No champion pointer moves (MEDULLA-DECISION-ENGINE-R805.8).
+/// Returns the committed revision node.
 pub async fn evaluated_journey(state: &crate::test_support::SharedState) -> Journey {
     let draft = run_program_job(state, 100, &program_request("draft", Vec::new())).await;
     let candidate = first_string_with_prefix(&draft, "eg:program_candidate:")
         .expect("the draft result names its candidate");
     assert!(
-        node_properties(
-            state,
-            200,
-            ProgramRevisionIdentity::active_pointer_ref_for(&program_ref()).as_str()
-        )
-        .await
-        .is_none(),
-        "a draft moves no pointer"
+        first_string_with_prefix(&draft, "eg:program_revision:").is_none(),
+        "a draft publishes no revision"
     );
 
     let evaluated = program_request("evaluated", vec![evaluation_of(&candidate, 0.8)]);
@@ -393,18 +407,8 @@ pub async fn evaluated_journey(state: &crate::test_support::SharedState) -> Jour
         .and_then(serde_json::Value::as_str)
         .expect("the status names its job")
         .to_string();
-    let pointer = node_properties(
-        state,
-        2_000,
-        ProgramRevisionIdentity::active_pointer_ref_for(&program_ref()).as_str(),
-    )
-    .await
-    .expect("the evaluated job moved the active pointer");
-    let revision_ref = pointer
-        .get("revision_ref")
-        .and_then(serde_json::Value::as_str)
-        .expect("the pointer names its revision")
-        .to_string();
+    let revision_ref = first_string_with_prefix(&status, "eg:program_revision:")
+        .expect("the evaluated job's result names the revision it published");
     let revision = node_properties(state, 2_001, &revision_ref)
         .await
         .expect("the revision node is stored");

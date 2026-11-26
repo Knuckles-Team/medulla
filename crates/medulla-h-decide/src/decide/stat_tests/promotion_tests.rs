@@ -650,7 +650,8 @@ async fn promote_then_roll_back_every_subject_kind() {
 // spec: MEDULLA-DECISION-ENGINE-R805.5
 #[tokio::test]
 async fn pointer_history_replays() {
-    use super::super::stat_pointer::{pointer_events, read_pointer};
+    use super::super::stat_pointer::pointer_events;
+    use medulla_persistence_records::decision_jobs::read_pointer;
     use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
     use medulla_decision_types::decision::statistical::retrieval_pointer::{
         PointerEvent, PointerState, PointerTransition,

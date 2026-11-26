@@ -533,7 +533,7 @@ async fn refusal_codes() {
         vec![vec![json!("activated"), json!(true)]],
         "only the operator's move is recorded"
     );
-    let (_, pointer) = super::super::stat_pointer::read_pointer(
+    let (_, pointer) = medulla_persistence_records::decision_jobs::read_pointer(
         &h.store,
         &served_scope(),
         &super::super::stat_generation::generation_pointer(ACTIVE),
@@ -596,7 +596,7 @@ async fn first_generation_bootstraps_without_an_evaluation() {
         pointer_rows(&h).await,
         vec![vec![json!("activated"), json!(true)]]
     );
-    let (_, pointer) = super::super::stat_pointer::read_pointer(
+    let (_, pointer) = medulla_persistence_records::decision_jobs::read_pointer(
         &h.store,
         &served_scope(),
         &super::super::stat_generation::generation_pointer(ACTIVE),

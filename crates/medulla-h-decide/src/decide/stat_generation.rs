@@ -29,7 +29,8 @@ use medulla_decision_types::{
 
 use super::stat_executor::ExecutionContext;
 use super::stat_log::LogReader;
-use super::stat_pointer::{read_pointer, Qualified};
+use super::stat_pointer::Qualified;
+use medulla_persistence_records::decision_jobs::read_pointer;
 use super::stat_retrieval::{judged_outcomes, Scope};
 use super::stat_support::{invalid_parameter as invalid, refusal};
 use medulla_persistence_records::agent_library::AgentLibraryStore;

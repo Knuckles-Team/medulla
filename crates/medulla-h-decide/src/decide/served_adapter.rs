@@ -77,7 +77,7 @@ fn load(
     tenant: &str,
     pointer_key: &str,
 ) -> Result<Option<(Arc<ServedAdapter>, u64)>, String> {
-    let (_, pointer) = super::stat_pointer::read_pointer(store, tenant, pointer_key)?;
+    let (_, pointer) = medulla_persistence_records::decision_jobs::read_pointer(store, tenant, pointer_key)?;
     let revision = pointer.active.as_ref().map_or(0, |event| event.at_ms);
     match pointer.target() {
         Some(digest) => {

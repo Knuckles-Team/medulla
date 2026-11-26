@@ -733,7 +733,7 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
         .with_attempt_nonce(Some(Nonce::from_bytes([14; 32]))),
     )
     .await
-    .expect("second promotion advances the active pointer");
+    .expect("second promotion publishes its revision");
     assert!(!second.replayed);
     let published_second = job_store
         .complete_publication_fenced(
@@ -1043,51 +1043,17 @@ async fn promotion_replay_and_failed_cas_preserve_authority_and_restart_identity
         graph_after_job_store_reopen.1,
     )
     .expect("restore promoted graph");
-    let pointer = first_identity.active_pointer_ref();
-    let pointer_bytes = restarted
-        .get_node_properties(pointer.as_str())
-        .expect("active pointer survives restart");
-    let pointer_value = medulla_types::msgpack::decode_property_value(&pointer_bytes)
-        .expect("decode active pointer");
-    assert_eq!(
-        pointer_value
-            .get("base_revision")
-            .and_then(serde_json::Value::as_u64),
-        Some(second_identity.base_revision)
-    );
-    assert_eq!(
-        pointer_value
-            .get("revision_ref")
-            .and_then(serde_json::Value::as_str),
-        Some(second_identity.revision_ref.as_str())
-    );
-    assert_eq!(
-        pointer_value.get("policy"),
-        Some(&serde_json::to_value(&second_identity.policy).unwrap()),
-    );
-    assert_eq!(
-        pointer_value
-            .get("tool_policy_ref")
-            .and_then(serde_json::Value::as_str),
-        second_identity
-            .tool_policy_ref
-            .as_ref()
-            .map(medulla_modality::OpaqueRef::as_str),
-    );
-    assert_eq!(
-        pointer_value
-            .get("model_profile_ref")
-            .and_then(serde_json::Value::as_str),
-        second_identity
-            .model_profile_ref
-            .as_ref()
-            .map(medulla_modality::OpaqueRef::as_str),
-    );
     let revision_properties = restarted
         .get_node_properties(second_identity.revision_ref.as_str())
         .expect("durable revision survives restart after job retention");
     let revision_value = medulla_types::msgpack::decode_property_value(&revision_properties)
         .expect("decode durable revision");
+    // The promotion publishes a revision and writes no champion pointer node
+    // (MEDULLA-DECISION-ENGINE-R805.8).
+    assert_eq!(
+        revision_value.get("stage").and_then(serde_json::Value::as_str),
+        Some("published")
+    );
     let resolved =
         medulla_program::ProgramRevisionIdentity::from_durable_properties(&revision_value)
             .expect("resolve durable revision identity after job purge");

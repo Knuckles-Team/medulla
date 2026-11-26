@@ -39,7 +39,8 @@ use super::stat_generation_cycle::{
     job_id, run_cycle, ConfiguredEmbedder, CycleRun, NoEndpoint, Reembedder,
 };
 use super::stat_log::{store_once, LogReader};
-use super::stat_pointer::{activate, read_pointer, rollback, PointerMove, Qualified};
+use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
+use medulla_persistence_records::decision_jobs::read_pointer;
 use super::stat_promotion::{qualified_champion, record_rollouts};
 use super::stat_retrieval::record_outcome;
 use super::stat_run_credit::record_run;

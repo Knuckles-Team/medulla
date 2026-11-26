@@ -31,7 +31,8 @@ use super::stat_generation::{
 };
 use super::stat_generation_space::model_space;
 use super::stat_log::LogReader;
-use super::stat_pointer::{activate, read_pointer, PointerMove};
+use super::stat_pointer::{activate, PointerMove};
+use medulla_persistence_records::decision_jobs::read_pointer;
 use super::stat_support::{invalid_parameter as invalid, refusal};
 
 /// Domain of a cycle's job id.

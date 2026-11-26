@@ -1,6 +1,6 @@
 //! MEDULLA-DECISION-ENGINE-R810.5: the `ProgramRevision` node a served job
 //! commits records the optimizer, seed and corpus binding of its candidate, its
-//! stage, its parent, its dev score and its held-out evidence, and a rerun over
+//! stage (`published`), its parent, its dev score and its held-out evidence, and a rerun over
 //! one seed derives one content digest.
 //!
 //! The colocated job executor is one process-wide pool bound to the first state
@@ -60,7 +60,7 @@ fn rerun_with_one_seed_gives_one_revision_digest() {
                 revision["candidate_record"]["corpus_ref"]
             );
             assert_eq!(revision["corpus_snapshot_version"], 7);
-            assert_eq!(revision["stage"], "evaluated");
+            assert_eq!(revision["stage"], "published");
             assert!(revision["parent_ref"].is_null());
             // The fixture corpus holds no validation example, so no dev score.
             assert!(revision["dev_score"].is_null());

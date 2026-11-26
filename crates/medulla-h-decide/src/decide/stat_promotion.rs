@@ -32,7 +32,8 @@ use super::stat_executor::ExecutionContext;
 use super::stat_harness_adoption::{ADOPTED_PREFIX, CONTRAST_PREFIX};
 use super::stat_harness_contrast::run_scores_graded;
 use super::stat_log::store_once;
-use super::stat_pointer::{read_pointer, Qualified};
+use super::stat_pointer::Qualified;
+use medulla_persistence_records::decision_jobs::read_pointer;
 
 /// The premise fact prefix every `Promotion` decision seals its reading under.
 pub(super) const PREMISE_PREFIX: &str = "promotion.";

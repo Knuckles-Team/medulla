@@ -2043,7 +2043,7 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R038.2` | `crates/medulla-h-decide/src/decide/stat_tests/tool_action_admission_tests.rs::untrusted_follow_up_is_denied` (planned); `EvidenceClass::Observation` |
 | `MEDULLA-DECISION-ENGINE-R038.3` | `crates/medulla-h-decide/src/decide/stat_tests/held_item_admission_tests.rs::program_needs_independent_verifier_and_passes` |
 | `MEDULLA-DECISION-ENGINE-R039.3` | `crates/medulla-h-decide/src/decide/stat_tests/route_tests.rs::legal_preference_wins_and_illegal_is_recorded` |
-| `MEDULLA-DECISION-ENGINE-R805.8` | `tests/program_optimize_job_served.rs::job_publishes_a_revision_without_moving_the_champion` |
+| `MEDULLA-DECISION-ENGINE-R805.8` | `tests/program_champion_pointer_served.rs::job_publishes_a_revision_without_moving_the_champion` |
 | `MEDULLA-DECISION-ENGINE-R805.9` | `crates/medulla-h-decide/src/decide/stat_tests/promotion_tests.rs::every_receipt_kind_resolves_to_held_out_evidence` |
 | `MEDULLA-DECISION-ENGINE-R134.111.1` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::task_plan_round_trips`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |
 | `MEDULLA-DECISION-ENGINE-R134.111.2` | `crates/medulla-decision-types/src/decision/task_plan/tests.rs::plan_respects_dependencies`; `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan` |

@@ -130,18 +130,7 @@ fn judge_only_test_split_refuses() {
         let text = refused_submit(&state, 20, &judged).await;
         assert!(text.starts_with("PROGRAM_HELDOUT_MISSING"), "{text}");
 
-        // The refusal staged nothing: the pointer a revision would move is absent.
-        assert!(
-            program_job_support::node_properties(
-                &state,
-                30,
-                medulla_program::ProgramRevisionIdentity::active_pointer_ref_for(
-                    &program_job_support::program_ref()
-                )
-                .as_str()
-            )
-            .await
-            .is_none()
-        );
+        // The refusal staged nothing: no champion exists for the program.
+        assert!(program_job_support::champion_target(&state).await.is_none());
     });
 }

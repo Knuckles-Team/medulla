@@ -29,7 +29,7 @@ use medulla_types::contract::OpaqueId;
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
 };
-use crate::decide::stat_pointer::read_pointer;
+use medulla_persistence_records::decision_jobs::read_pointer;
 use crate::decide::stat_promotion::{
     held_out_evidence, EvidenceError, EvidenceSources, PREMISE_PREFIX,
 };

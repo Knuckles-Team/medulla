@@ -245,6 +245,11 @@ fn program_stop_reason(
     }
 }
 
+/// The champion revision of `program_ref` in the graph's tenant: the target of
+/// the governed pointer `champion:program:<program_ref>`, read through the one
+/// pointer read the decide handlers also use (MEDULLA-DECISION-ENGINE-R805.8).
+/// `None` while no champion has been moved in; the named revision must resolve
+/// in `graph` as a complete durable revision chain.
 #[cfg(feature = "program-optimization")]
 pub(super) async fn current_program_active_revision_ref(
     state: &Arc<RwLock<ServerState>>,
@@ -254,27 +259,29 @@ pub(super) async fn current_program_active_revision_ref(
     let (_, _, core) = resolve_core_ref(state, graph)
         .await
         .ok_or_else(|| "program promotion target graph is unavailable".to_string())?;
-    let pointer = ProgramRevisionIdentity::active_pointer_ref_for(program_ref);
-    let Some(properties) = core.get_node_properties(pointer.as_str()) else {
+    let store = medulla_persistence_records::agent_library::shared_agent_library(state).await?;
+    let subject = medulla_decision_outcome_types::decision::promotion::RevisionSubject::Program {
+        program_ref: program_ref.as_str().to_string(),
+    };
+    let (_, pointer) = medulla_persistence_records::decision_jobs::read_pointer(
+        &store,
+        medulla_persistence::cost::tenant_of(graph),
+        &subject.pointer_key(),
+    )?;
+    let Some(target) = pointer.target() else {
         return Ok(None);
     };
-    let value = medulla_types::msgpack::decode_property_value(&properties)
-        .map_err(|_| "program active pointer properties are invalid".to_string())?;
-    if value.get("program_ref").and_then(serde_json::Value::as_str) != Some(program_ref.as_str()) {
-        return Err("program active pointer has a different program identity".to_string());
-    }
-    let revision_ref = value
-        .get("revision_ref")
-        .and_then(serde_json::Value::as_str)
-        .ok_or_else(|| "program active pointer has no revision identity".to_string())?;
-    let revision_ref = OpaqueRef::new(revision_ref.to_string())
-        .map_err(|_| "program active pointer revision identity is invalid".to_string())?;
+    let revision_ref = OpaqueRef::new(target.to_string())
+        .map_err(|_| "program champion revision identity is invalid".to_string())?;
     if revision_ref.namespace() != "program_revision" {
-        return Err("program active pointer revision identity has the wrong namespace".to_string());
+        return Err("program champion revision identity has the wrong namespace".to_string());
     }
-    medulla_server_mutation::mutation_batch::resolve_program_promotion_identity(
+    let revision = medulla_server_mutation::mutation_batch::resolve_program_promotion_identity(
         &core,
         &revision_ref,
     )?;
+    if revision.program_ref != *program_ref {
+        return Err("program champion has a different program identity".to_string());
+    }
     Ok(Some(revision_ref))
 }

@@ -17,8 +17,9 @@ use medulla_types::contract::BoundedVec;
 
 use super::stat_support::refusal;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
-use medulla_persistence_records::decision_jobs::decode_artifact;
-use medulla_persistence_records::decision_jobs::encode_artifact;
+use medulla_persistence_records::decision_jobs::{
+    decode_artifact, encode_artifact, pointer_artifact_key, read_pointer,
+};
 
 /// Who moves which pointer, and when.
 pub(super) struct PointerMove<'a> {
@@ -37,28 +38,6 @@ pub(super) struct Qualified {
 /// Most pointers one tenant's relation lists.
 const MAX_POINTERS: usize = 4_096;
 
-fn artifact_key(key: &str) -> String {
-    format!("pointer:{key}")
-}
-
-/// A pointer's stored bytes (for the compare-and-set) and its state; an
-/// absent pointer is the empty state of `key`.
-pub(super) fn read_pointer(
-    store: &AgentLibraryStore,
-    tenant: &str,
-    key: &str,
-) -> Result<(Option<Vec<u8>>, PointerState), String> {
-    let Some(bytes) = store.decision_artifact(tenant, &artifact_key(key))? else {
-        let state = PointerState {
-            key: key.to_string(),
-            ..PointerState::default()
-        };
-        return Ok((None, state));
-    };
-    let state = decode_artifact(&bytes, "pointer state")?;
-    Ok((Some(bytes), state))
-}
-
 fn bounded_push(
     list: &BoundedVec<PointerEvent, MAX_POINTER_HISTORY>,
     event: PointerEvent,
@@ -75,7 +54,7 @@ fn write(
     expected: Option<Vec<u8>>,
     state: &PointerState,
 ) -> Result<(), String> {
-    let key = artifact_key(&at.key);
+    let key = pointer_artifact_key(&at.key);
     store.swap_decision_artifact(at.tenant, &key, expected, encode_artifact(state)?)
 }
 

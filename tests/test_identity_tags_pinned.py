@@ -112,11 +112,6 @@ PINNED_TAGS: tuple[tuple[str, str, str], ...] = (
     ),
     (
         "crates/medulla-program/src/commit.rs",
-        "eg-program.active-pointer.v1\\0",
-        "medulla-program.active-pointer.v1\\0",
-    ),
-    (
-        "crates/medulla-program/src/commit.rs",
         "eg-program.candidate-authority.v1\\0",
         "medulla-program.candidate-authority.v1\\0",
     ),

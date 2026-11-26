@@ -349,6 +349,38 @@ pub fn encode_artifact<T: serde::Serialize>(value: &T) -> Result<Vec<u8>, String
     rmp_serde::to_vec_named(value).map_err(|error| error.to_string())
 }
 
+/// The store key of one governed pointer row (EH-396, EH-397): `pointer:<key>`
+/// where `<key>` is `champion:<kind>:<ref>` for a champion.
+pub fn pointer_artifact_key(key: &str) -> String {
+    format!("pointer:{key}")
+}
+
+/// A governed pointer's stored bytes (for the compare-and-set) and its state;
+/// an absent pointer is the empty state of `key`. The one pointer read: the
+/// decide handlers and the program job executor both call it
+/// (MEDULLA-DECISION-ENGINE-R805.8).
+pub fn read_pointer(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    key: &str,
+) -> Result<
+    (
+        Option<Vec<u8>>,
+        medulla_decision_types::decision::statistical::retrieval_pointer::PointerState,
+    ),
+    String,
+> {
+    let Some(bytes) = store.decision_artifact(tenant, &pointer_artifact_key(key))? else {
+        let state = medulla_decision_types::decision::statistical::retrieval_pointer::PointerState {
+            key: key.to_string(),
+            ..Default::default()
+        };
+        return Ok((None, state));
+    };
+    let state = decode_artifact(&bytes, "pointer state")?;
+    Ok((Some(bytes), state))
+}
+
 /// Key of a fitted rerank calibration curve (curve and receipt) by digest.
 pub fn calibration_key(curve_digest: &str) -> String {
     format!("calibration:{curve_digest}")
@@ -382,12 +414,7 @@ pub fn champion_calibration(
     String,
 > {
     use medulla_decision_types::decision::statistical::retrieval_calibration::champion_pointer_key;
-    use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
-    let key = format!("pointer:{}", champion_pointer_key(scorer_version));
-    let Some(bytes) = store.decision_artifact(tenant, &key)? else {
-        return Ok(None);
-    };
-    let state: PointerState = decode_artifact(&bytes, "pointer state")?;
+    let (_, state) = read_pointer(store, tenant, &champion_pointer_key(scorer_version))?;
     let Some(digest) = state.target() else {
         return Ok(None);
     };

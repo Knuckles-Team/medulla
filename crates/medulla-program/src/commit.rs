@@ -289,7 +289,7 @@ pub(crate) fn digest_optional_ref(
 ///
 /// The revision reference is content addressed over the logical program, base
 /// revision, observed active parent, selected candidate, content digest, and
-/// retained policy/model bindings. The active pointer is a separate, mutable
+/// retained policy/model bindings. The champion is a separate, mutable
 /// graph row; the engine's promotion coordinator changes it with a strict
 /// compare-and-set after classifying replay.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -322,10 +322,12 @@ pub struct ProgramRevisionIdentity {
     pub dev_score: Option<i64>,
 }
 
-/// The stage a stored `ProgramRevision` node is written at: only an evaluated
-/// result is promoted (MEDULLA-DECISION-ENGINE-R810.5).
+/// The stage a stored `ProgramRevision` node is written at: an evaluated
+/// result is published as a revision and never becomes the champion by that
+/// write; the champion moves only through the governed pointer store
+/// (MEDULLA-DECISION-ENGINE-R810.5, R805.8).
 pub const REVISION_NODE_STAGE: medulla_decision_outcome_types::decision::promotion::RevisionStage =
-    medulla_decision_outcome_types::decision::promotion::RevisionStage::Evaluated;
+    medulla_decision_outcome_types::decision::promotion::RevisionStage::Published;
 
 /// The node properties that restate the identity's candidate record flat, so a
 /// reader filters revisions without opening the record. They are projections:
@@ -488,20 +490,6 @@ impl ProgramRevisionIdentity {
             .map_err(|_| ProgramError::InvalidCommit)?;
         identity.validate()?;
         Ok(identity)
-    }
-
-    /// Stable row id for the one mutable pointer associated with a program.
-    pub fn active_pointer_ref(&self) -> OpaqueRef {
-        Self::active_pointer_ref_for(&self.program_ref)
-    }
-
-    /// Stable row id for the one mutable pointer associated with a program.
-    pub fn active_pointer_ref_for(program_ref: &OpaqueRef) -> OpaqueRef {
-        let mut digest = Sha256::new();
-        digest.update(b"eg-program.active-pointer.v1\0");
-        frame_digest(&mut digest, program_ref.as_str());
-        OpaqueRef::scoped("program_active", &hex::encode(digest.finalize()))
-            .expect("program active pointer digest is a valid opaque reference")
     }
 }
 

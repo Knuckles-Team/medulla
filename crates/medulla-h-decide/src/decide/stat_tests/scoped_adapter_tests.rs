@@ -115,7 +115,8 @@ async fn discover_applies_the_resolved_adapter() {
 // --- scoped fit, activation, rollback, monitor and refusals ---------------
 
 use super::super::stat_adapter::scoped_adapter_pointer;
-use super::super::stat_pointer::{read_pointer, PointerMove, Qualified};
+use super::super::stat_pointer::{PointerMove, Qualified};
+use medulla_persistence_records::decision_jobs::read_pointer;
 use super::learning_tests::{q16, space_of};
 use super::retrieval_tests::{
     attest, clone_executed, evaluate_by, executed_template, outcome, template,

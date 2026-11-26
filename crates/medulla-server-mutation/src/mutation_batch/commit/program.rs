@@ -58,7 +58,7 @@ impl<'a> ProgramPromotionRequest<'a> {
 /// Commit the selected native program revision and its result claim through the
 /// same graph authority. The stable batch identity is checked before this
 /// function performs any pointer/CAS validation, so a retry with a new nonce
-/// returns its stored receipt even when the active pointer has since moved.
+/// returns its stored receipt even when the champion has since moved.
 pub async fn commit_program_promotion(
     request: ProgramPromotionRequest<'_>,
 ) -> Result<medulla_protocol_types::mutation_batch::MutationBatchCommit, String> {
@@ -120,6 +120,7 @@ pub async fn commit_program_promotion(
     {
         return Err("program promotion claim contains a non-claim graph method".to_string());
     }
+    check_program_parent(core, identity)?;
     let mut methods = program_promotion_methods(identity)?;
     methods.extend(claim_methods);
     super::internal::commit_internal_graph_methods_with_nonce_mode(
@@ -139,6 +140,26 @@ pub async fn commit_program_promotion(
         .with_strict_promotion(),
     )
     .await
+}
+
+/// A revision's parent is the champion its job observed. The commit writes no
+/// pointer (MEDULLA-DECISION-ENGINE-R805.8), so it checks only that the named
+/// parent is a stored, valid revision of the same program whose own revision
+/// number is this one's base revision: a parent that does not exist or belongs
+/// to another program refuses the commit and stores nothing.
+fn check_program_parent(
+    core: &GraphCore,
+    identity: &medulla_program::ProgramRevisionIdentity,
+) -> Result<(), String> {
+    let Some(parent_ref) = &identity.parent_ref else {
+        return Ok(());
+    };
+    let parent = load_program_revision_identity(core, parent_ref)
+        .map_err(|error| format!("program promotion parent is not a stored revision: {error}"))?;
+    if parent.program_ref != identity.program_ref || parent.revision != identity.base_revision {
+        return Err("program promotion parent is not the base revision of this program".to_string());
+    }
+    Ok(())
 }
 
 fn program_promotion_methods(
@@ -184,28 +205,10 @@ fn program_promotion_methods(
                 .map(|(name, value)| (name.to_string(), value)),
         );
     }
-    let active_properties = serde_json::json!({
-        "type": "ProgramActiveRevision",
-        "schema_version": identity.schema_version,
-        "program_ref": identity.program_ref.as_str(),
-        "revision_ref": identity.revision_ref.as_str(),
-        "base_revision": identity.base_revision,
-        "revision": identity.revision,
-        "parent_ref": identity.parent_ref.as_ref().map(|value| value.as_str()),
-        "candidate_ref": identity.candidate_ref.as_str(),
-        "content_digest": identity.content_digest,
-        "policy": &identity.policy,
-        "tool_policy_ref": identity.tool_policy_ref.as_ref().map(|value| value.as_str()),
-        "model_profile_ref": identity.model_profile_ref.as_ref().map(|value| value.as_str()),
-        "candidate_record": &identity.candidate_record,
-    });
     let candidate_bytes =
         rmp_serde::to_vec_named(&candidate_properties).map_err(|error| error.to_string())?;
     let revision_bytes =
         rmp_serde::to_vec_named(&revision_properties).map_err(|error| error.to_string())?;
-    let active_bytes =
-        rmp_serde::to_vec_named(&active_properties).map_err(|error| error.to_string())?;
-    let active_node = identity.active_pointer_ref();
     let mut methods = vec![
         Method::AddNode {
             node_id: identity.candidate_ref.as_str().to_string(),
@@ -233,25 +236,6 @@ fn program_promotion_methods(
                     .map_err(|error| error.to_string())?,
             });
         }
-    }
-    if let Some(parent_ref) = &identity.parent_ref {
-        let conditions = serde_json::json!({
-            "program_ref": identity.program_ref.as_str(),
-            "revision_ref": parent_ref.as_str(),
-            "revision": identity.base_revision,
-        });
-        let conditions_msgpack =
-            rmp_serde::to_vec_named(&conditions).map_err(|error| error.to_string())?;
-        methods.push(Method::CompareAndSetNodeFields {
-            node_id: active_node.as_str().to_string(),
-            conditions_msgpack,
-            updates_msgpack: active_bytes,
-        });
-    } else {
-        methods.push(Method::AddNode {
-            node_id: active_node.as_str().to_string(),
-            properties_msgpack: active_bytes,
-        });
     }
     Ok(methods)
 }
@@ -560,7 +544,7 @@ pub(super) fn apply_promotion_projectable_method(
                 Ok(())
             } else {
                 Err(format!(
-                    "promotion active pointer CAS failed for '{}'",
+                    "promotion binding CAS failed for '{}'",
                     node_id
                 ))
             }
