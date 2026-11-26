@@ -62,6 +62,9 @@ pub struct ConnectorBinding {
 pub struct ProjectionInputs<'a> {
     pub desired: &'a BTreeMap<String, ServerDesiredState>,
     pub skill_overrides: &'a BTreeMap<String, (SkillType, u64)>,
+    /// The operator's live `enabled` toggles by component id, with the
+    /// revision that set each.
+    pub enabled_overrides: &'a BTreeMap<String, (bool, u64)>,
     /// What each listed skill's rendering reads, by component id, loaded for
     /// THIS read. A skill with no entry here renders as a missing body.
     pub skill_graph: &'a BTreeMap<String, SkillGraphRead>,
@@ -213,7 +216,13 @@ fn component_ref(
         description: entry.summary.clone(),
         server_name: binding.server_name.clone(),
         connector: binding.connector.clone(),
-        enabled: inputs.desired.get(&binding.server_name) != Some(&ServerDesiredState::Disabled),
+        // Effective: the server must not be disabled AND the operator's
+        // toggle, when one is set, must not turn the component off.
+        enabled: inputs.desired.get(&binding.server_name) != Some(&ServerDesiredState::Disabled)
+            && inputs
+                .enabled_overrides
+                .get(&entry.component_id)
+                .map_or(true, |(enabled, _)| *enabled),
         entry_revision: entry.entry_revision,
         definition_digest: entry.definition_digest.clone(),
         acl: FleetRowAcl {

@@ -96,7 +96,8 @@ pub struct FleetOverrideSetRequest {
 
 impl FleetOverrideSetRequest {
     pub fn validate(&self) -> Result<(), String> {
-        validate_member_id(&self.component_id)
+        validate_member_id(&self.component_id)?;
+        validate_override_target(self.value.field(), &self.component_id)
     }
 }
 
@@ -114,7 +115,27 @@ pub struct FleetOverrideClearRequest {
 
 impl FleetOverrideClearRequest {
     pub fn validate(&self) -> Result<(), String> {
-        validate_member_id(&self.component_id)
+        validate_member_id(&self.component_id)?;
+        validate_override_target(self.field, &self.component_id)
+    }
+}
+
+/// An `enabled` toggle governs a skill or a tool; no other component kind has
+/// one. The kind is the middle segment of the pack member id
+/// (`mcp:<connector>/<kind>/<name>`).
+fn validate_override_target(
+    field: super::FleetOverrideField,
+    component_id: &str,
+) -> Result<(), String> {
+    if field != super::FleetOverrideField::Enabled {
+        return Ok(());
+    }
+    let kind = component_id
+        .strip_prefix(PACK_MEMBER_PREFIX)
+        .and_then(|rest| rest.split('/').nth(1));
+    match kind {
+        Some("skill" | "tool") => Ok(()),
+        _ => Err("INVALID_ARGUMENT: an enabled override names a skill or a tool".to_string()),
     }
 }
 

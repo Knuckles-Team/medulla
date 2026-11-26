@@ -256,8 +256,15 @@ class FleetOverrideSkillType(BaseModel):
     skill_type: SkillType
 
 
+class FleetOverrideEnabled(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    field: Literal["enabled"]
+    enabled: bool
+
+
 FleetOverride = Annotated[
-    FleetOverrideSkillType,
+    FleetOverrideSkillType | FleetOverrideEnabled,
     Field(discriminator="field"),
 ]
 
@@ -272,6 +279,7 @@ class FleetOverrideClearRequest(BaseModel):
 
 class FleetOverrideField(str, Enum):
     SKILL_TYPE = "skill_type"
+    ENABLED = "enabled"
 
 
 class FleetOverrideSetRequest(BaseModel):
@@ -447,6 +455,8 @@ FleetDiscoveryRow.model_rebuild()
 
 FleetOverrideSkillType.model_rebuild()
 
+FleetOverrideEnabled.model_rebuild()
+
 FleetOverrideClearRequest.model_rebuild()
 
 FleetOverrideSetRequest.model_rebuild()
@@ -503,6 +513,7 @@ __all__ = [
     "FleetDiscoveryRow",
     "FleetOverride",
     "FleetOverrideClearRequest",
+    "FleetOverrideEnabled",
     "FleetOverrideField",
     "FleetOverrideSetRequest",
     "FleetOverrideSkillType",

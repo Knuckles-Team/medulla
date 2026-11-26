@@ -261,10 +261,18 @@ impl Viewer<'_> {
 
 /// A live skill-type override: the value and the revision that set it.
 pub fn skill_type_override(record: &StoredRecord<OverrideBody>) -> Option<(SkillType, u64)> {
-    record
-        .body
-        .value
-        .map(|FleetOverride::SkillType { skill_type }| (skill_type, record.meta.revision))
+    match record.body.value {
+        Some(FleetOverride::SkillType { skill_type }) => Some((skill_type, record.meta.revision)),
+        _ => None,
+    }
+}
+
+/// A live `enabled` override: the toggle and the revision that set it.
+pub fn enabled_override(record: &StoredRecord<OverrideBody>) -> Option<(bool, u64)> {
+    match record.body.value {
+        Some(FleetOverride::Enabled { enabled }) => Some((enabled, record.meta.revision)),
+        _ => None,
+    }
 }
 
 #[cfg(test)]

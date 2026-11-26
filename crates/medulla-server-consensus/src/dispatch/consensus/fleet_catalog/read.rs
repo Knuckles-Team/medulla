@@ -24,7 +24,7 @@ use super::project::{
     parse_member_id, ConnectorBinding, ProjectionInputs, VisibleDiscovery,
 };
 use super::records::{
-    decode_record, discovery_record_id, skill_type_override, DiscoveryBody, OverrideBody, Viewer,
+    decode_record, discovery_record_id, enabled_override, skill_type_override, DiscoveryBody, OverrideBody, Viewer,
     DISCOVERY_NODE_TYPE, OVERRIDE_NODE_TYPE,
 };
 use super::skill_read::SkillGraphRead;
@@ -37,6 +37,7 @@ struct CommonsView {
     observed_at_ms: u64,
     discoveries: Vec<VisibleDiscovery>,
     skill_overrides: BTreeMap<String, (SkillType, u64)>,
+    enabled_overrides: BTreeMap<String, (bool, u64)>,
     desired: BTreeMap<String, ServerDesiredState>,
 }
 
@@ -48,6 +49,7 @@ impl CommonsView {
         ProjectionInputs {
             desired: &self.desired,
             skill_overrides: &self.skill_overrides,
+            enabled_overrides: &self.enabled_overrides,
             skill_graph,
         }
     }
@@ -88,6 +90,23 @@ fn live_skill_overrides(
         .collect()
 }
 
+/// The tenant's live `enabled` overrides, by component id.
+fn live_enabled_overrides(
+    core: &medulla_graph_core::graph::GraphCore,
+    tenant_id: &str,
+) -> BTreeMap<String, (bool, u64)> {
+    core.get_nodes_by_label(OVERRIDE_NODE_TYPE, 0)
+        .into_iter()
+        .filter_map(|(_, properties)| {
+            decode_record::<OverrideBody>(OVERRIDE_NODE_TYPE, &properties)
+        })
+        .filter(|record| record.meta.tenant_id == tenant_id)
+        .filter_map(|record| {
+            enabled_override(&record).map(|value| (record.body.component_id.clone(), value))
+        })
+        .collect()
+}
+
 async fn load_commons(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
@@ -117,6 +136,7 @@ async fn load_commons(
         observed_at_ms,
         discoveries: visible_discoveries(&core, &viewer),
         skill_overrides: live_skill_overrides(&core, verified.tenant()),
+        enabled_overrides: live_enabled_overrides(&core, verified.tenant()),
         desired: live_desired_states(&core, observed_at_ms, |node_id, properties| {
             authority.can_see_node(properties, core.is_schema_node(node_id))
         }),

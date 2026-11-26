@@ -203,6 +203,34 @@ mod tests {
         assert_eq!(tag, serde_json::json!(set.name()), "name() is the wire tag");
     }
 
+    // spec: MEDULLA-TYPED-PACKS-R072.101
+    #[test]
+    fn an_enabled_override_names_a_skill_or_a_tool() {
+        let set = |id: &str, enabled| FleetOverrideSetRequest {
+            component_id: id.to_string(),
+            value: FleetOverride::Enabled { enabled },
+            expected_revision: None,
+        };
+        assert!(set("mcp:skills/skill/triage", false).validate().is_ok());
+        assert!(set("mcp:github/tool/create_issue", true).validate().is_ok());
+        for refused in ["mcp:github/prompt/p", "mcp:github/resource/r", "mcp:github"] {
+            assert!(set(refused, false).validate().is_err(), "{refused}");
+        }
+        let clear = |id: &str| FleetOverrideClearRequest {
+            component_id: id.to_string(),
+            field: FleetOverrideField::Enabled,
+            expected_revision: None,
+        };
+        assert!(clear("mcp:github/tool/create_issue").validate().is_ok());
+        assert!(clear("mcp:github/prompt/p").validate().is_err());
+        // The wire form is the tagged variant.
+        assert_eq!(
+            serde_json::to_value(FleetOverride::Enabled { enabled: false }).unwrap(),
+            serde_json::json!({"field": "enabled", "enabled": false})
+        );
+        assert_eq!(FleetOverride::Enabled { enabled: true }.field().as_str(), "enabled");
+    }
+
     #[test]
     fn op_wire_form_is_tagged_and_closed() {
         let encoded = rmp_serde::to_vec_named(&list()).unwrap();

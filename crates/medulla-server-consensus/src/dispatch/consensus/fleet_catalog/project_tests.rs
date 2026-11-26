@@ -95,6 +95,7 @@ fn row(kind: FleetCatalogKind, entry: &AgentComponentEntry) -> Option<FleetCatal
         &ProjectionInputs {
             desired: &desired,
             skill_overrides: &overrides,
+            enabled_overrides: &BTreeMap::new(),
             skill_graph: &BTreeMap::new(),
         },
     )
@@ -231,6 +232,58 @@ fn only_served_members_of_the_listed_kind_project() {
     );
 }
 
+// spec: MEDULLA-TYPED-PACKS-R072.101
+#[test]
+fn an_enabled_override_decides_the_effective_enabled_of_a_skill_or_tool() {
+    let skill = opaque("mcp:skills/skill/triage", "skill");
+    let tool_entry = tool("mcp:github/tool/t");
+    let desired = BTreeMap::new();
+    let enabled = BTreeMap::from([
+        (skill.component_id.clone(), (false, 3)),
+        (tool_entry.component_id.clone(), (true, 4)),
+    ]);
+    let inputs = ProjectionInputs {
+        desired: &desired,
+        skill_overrides: &BTreeMap::new(),
+        enabled_overrides: &enabled,
+        skill_graph: &BTreeMap::new(),
+    };
+    let Some(FleetCatalogRow::Skill { row: skill_row }) = component_row(
+        FleetCatalogKind::Skills,
+        &skill,
+        &binding("skills", "skills"),
+        &inputs,
+    ) else {
+        panic!("a published skill projects as a skill row");
+    };
+    assert!(!skill_row.component.enabled, "an override turns a skill off");
+    let Some(FleetCatalogRow::Tool { row: tool_row }) = component_row(
+        FleetCatalogKind::Tools,
+        &tool_entry,
+        &binding("github", "github"),
+        &inputs,
+    ) else {
+        panic!("a published tool projects as a tool row");
+    };
+    assert!(tool_row.component.enabled);
+
+    // An override never turns on a component of a disabled server.
+    let disabled = BTreeMap::from([("github".to_string(), ServerDesiredState::Disabled)]);
+    let on_disabled = ProjectionInputs {
+        desired: &disabled,
+        ..inputs
+    };
+    let Some(FleetCatalogRow::Tool { row: still_off }) = component_row(
+        FleetCatalogKind::Tools,
+        &tool_entry,
+        &binding("github", "github"),
+        &on_disabled,
+    ) else {
+        panic!("a published tool projects as a tool row");
+    };
+    assert!(!still_off.component.enabled);
+}
+
 #[test]
 fn an_override_beats_the_declaration_which_beats_the_default() {
     let skill = opaque("mcp:skills/skill/triage", "skill");
@@ -239,6 +292,7 @@ fn an_override_beats_the_declaration_which_beats_the_default() {
     let inputs = ProjectionInputs {
         desired: &desired,
         skill_overrides: &overrides,
+        enabled_overrides: &BTreeMap::new(),
         skill_graph: &BTreeMap::new(),
     };
     let Some(FleetCatalogRow::Skill { row: overridden }) = component_row(

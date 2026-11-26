@@ -198,12 +198,17 @@ pub enum FleetOverride {
     /// import never writes override records and the projection applies them at
     /// read time.
     SkillType { skill_type: SkillType },
+    /// Turn one skill or tool on or off. The engine holds the toggle, so it
+    /// survives every re-import of the pack and every restart; the read
+    /// projection applies it to the component's effective `enabled`.
+    Enabled { enabled: bool },
 }
 
 impl FleetOverride {
     pub fn field(&self) -> FleetOverrideField {
         match self {
             Self::SkillType { .. } => FleetOverrideField::SkillType,
+            Self::Enabled { .. } => FleetOverrideField::Enabled,
         }
     }
 }
@@ -214,12 +219,14 @@ impl FleetOverride {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum FleetOverrideField {
     SkillType,
+    Enabled,
 }
 
 impl FleetOverrideField {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::SkillType => "skill_type",
+            Self::Enabled => "enabled",
         }
     }
 }

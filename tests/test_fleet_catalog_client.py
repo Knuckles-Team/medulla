@@ -165,6 +165,43 @@ def test_writes_use_their_own_typed_operations() -> None:
     assert op["op"]["request"]["expected_revision"] == 0
 
 
+# spec: MEDULLA-TYPED-PACKS-R072.101
+def test_the_enabled_override_is_set_and_cleared_through_the_typed_operations() -> None:
+    receipt = {
+        "record_id": "ovr:enabled:mcp:skills/skill/triage",
+        "revision": 1,
+        "disposition": "written",
+        "observed_at_ms": 5,
+    }
+    client, transport = _client([receipt, receipt])
+    asyncio.run(
+        client.set_override(
+            medulla.FleetOverrideSetRequest.model_validate(
+                {
+                    "component_id": "mcp:skills/skill/triage",
+                    "value": {"field": "enabled", "enabled": False},
+                }
+            )
+        )
+    )
+    asyncio.run(
+        client.clear_override(
+            medulla.FleetOverrideClearRequest.model_validate(
+                {
+                    "component_id": "mcp:skills/skill/triage",
+                    "field": "enabled",
+                    "expected_revision": 1,
+                }
+            )
+        )
+    )
+    set_op, clear_op = transport.sent[0][1], transport.sent[1][1]
+    assert set_op is not None and clear_op is not None
+    assert set_op["op"]["request"]["value"] == {"field": "enabled", "enabled": False}
+    assert clear_op["op"]["op"] == "clear_override"
+    assert clear_op["op"]["request"]["field"] == "enabled"
+
+
 def test_fleet_catalog_surface_is_a_wheel_root_export() -> None:
     for name in (
         "FleetCatalogClient",
