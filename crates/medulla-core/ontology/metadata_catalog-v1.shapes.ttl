@@ -154,6 +154,18 @@ cat:ReportTemplateShape a sh:NodeShape ;
     sh:targetClass cat:ReportTemplate ;
     sh:property [ sh:path cat:parameterName ; sh:minCount 1 ; sh:datatype xsd:string ] .
 
+# A model asset has one registry reference, at most one input and one output schema of at most
+# 65536 bytes, evaluation results of at most 4096 bytes and at most one model profile
+# (MEDULLA-TYPED-PACKS-R108.15).
+cat:ModelAssetShape a sh:NodeShape ;
+    sh:targetClass cat:ModelAsset ;
+    sh:property [ sh:path cat:modelRegistryRef ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:anyURI ],
+    [ sh:path cat:modelInputSchema ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 65536 ],
+    [ sh:path cat:modelOutputSchema ; sh:maxCount 1 ; sh:datatype xsd:string ; sh:maxLength 65536 ],
+    [ sh:path cat:trainedOn ; sh:class cat:DataResource ],
+    [ sh:path cat:evaluationResult ; sh:datatype xsd:string ; sh:maxLength 4096 ],
+    [ sh:path cat:hasModelProfile ; sh:maxCount 1 ; sh:class :ModelProfile ] .
+
 # An article has one author, one version and one status of the review lifecycle
 # (MEDULLA-TYPED-PACKS-R108.13).
 cat:ArticleShape a sh:NodeShape ;

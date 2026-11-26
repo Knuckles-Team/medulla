@@ -460,6 +460,47 @@ cat:DashboardAsset a owl:Class ;
     rdfs:comment "A saved dashboard catalogued as an asset (MEDULLA-TYPED-PACKS-R109.1): its panels, queries, layout and parameters are stored; the data it shows is not. Panels link their data source, query, terms and concepts." ;
     rdfs:subClassOf cat:Asset .
 
+cat:ModelAsset a owl:Class ;
+    rdfs:label "Model Asset" ;
+    rdfs:comment "An AI or ML model catalogued as an asset (MEDULLA-TYPED-PACKS-R108.15). The engine stores the registry reference and metadata and never weights. The training lineage of a model is the cat:lineageTo of its training datasets, so no second lineage property exists." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:modelRegistryRef a owl:DatatypeProperty ;
+    rdfs:label "model registry reference" ;
+    rdfs:comment "The registry reference of a model asset, an IRI. Weights are never stored." ;
+    rdfs:domain cat:ModelAsset ;
+    rdfs:range xsd:anyURI .
+
+cat:modelInputSchema a owl:DatatypeProperty ;
+    rdfs:label "model input schema" ;
+    rdfs:comment "JSON Schema text of the model input, at most 65536 bytes." ;
+    rdfs:domain cat:ModelAsset ;
+    rdfs:range xsd:string .
+
+cat:modelOutputSchema a owl:DatatypeProperty ;
+    rdfs:label "model output schema" ;
+    rdfs:comment "JSON Schema text of the model output, at most 65536 bytes." ;
+    rdfs:domain cat:ModelAsset ;
+    rdfs:range xsd:string .
+
+cat:trainedOn a owl:ObjectProperty ;
+    rdfs:label "trained on" ;
+    rdfs:comment "A training dataset of a model asset. Its lineage is the existing cat:lineageTo of that dataset." ;
+    rdfs:domain cat:ModelAsset ;
+    rdfs:range cat:DataResource .
+
+cat:evaluationResult a owl:DatatypeProperty ;
+    rdfs:label "evaluation result" ;
+    rdfs:comment "One JSON object {metric, value, dataset, evaluated_at} per evaluation, at most 4096 bytes." ;
+    rdfs:domain cat:ModelAsset ;
+    rdfs:range xsd:string .
+
+cat:hasModelProfile a owl:ObjectProperty ;
+    rdfs:label "has model profile" ;
+    rdfs:comment "The :ModelProfile that describes the serving profile of a model asset." ;
+    rdfs:domain cat:ModelAsset ;
+    rdfs:range :ModelProfile .
+
 cat:governedBy a owl:ObjectProperty ;
     rdfs:label "governed by" ;
     rdfs:comment "Names, by IRI, the access policy that governs an asset (MEDULLA-TYPED-PACKS-R108.9). The catalog stores the link and never the policy body; masking rules are read from the federated query policy and the admission policy name from the arbora admission policy." ;

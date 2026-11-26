@@ -5,6 +5,8 @@ served ``Sparql`` method as ``cat:relevance(?asset, "text")``; the usage prior i
 capped (the counts come from the usage series) and the trust flags scale the score.
 """
 
+# ruff: noqa: E501  (long IRI and Turtle literals in served-proof fixtures)
+
 from __future__ import annotations
 
 import hashlib
@@ -165,8 +167,87 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
         )
 
 
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.15")
+def test_model_asset_links_registry_ref_schemas_and_training_lineage_without_weights(
+    catalog_graph,
+):
+    # spec: MEDULLA-TYPED-PACKS-R108.15
+    admin = catalog_graph
+    xsd_any_uri = "http://www.w3.org/2001/XMLSchema#anyURI"
+    evaluation = (
+        '{"metric":"auc","value":0.91,"dataset":"holdout","evaluated_at":"2026-11-01"}'
+    )
+    admin.rdf.add_triples(
+        turtle=(
+            f"{PREFIX}"
+            "<urn:medulla:asset:resource:train> a cat:DataResource ; skos:prefLabel "
+            '"training data" ; cat:flag "owner_missing" ; '
+            "<https://knuckles-team.github.io/ontology/connector-pack#ofConnector> <urn:c:a> ; "
+            "<https://knuckles-team.github.io/ontology/connector-pack#servesClass> "
+            "<urn:class:Sale> ; cat:lineageTo <urn:medulla:asset:model:churn> .\n"
+            "<urn:medulla:asset:model:churn> a cat:ModelAsset ; skos:prefLabel "
+            '"churn model" ; cat:flag "owner_missing" ; '
+            f'cat:modelRegistryRef "registry://models/churn/3"^^<{xsd_any_uri}> ; '
+            'cat:modelInputSchema "{\\"type\\":\\"object\\"}" ; '
+            'cat:modelOutputSchema "{\\"type\\":\\"number\\"}" ; '
+            "cat:trainedOn <urn:medulla:asset:resource:train> ; "
+            f"cat:evaluationResult {_turtle_literal(evaluation)} .\n"
+        )
+    )
+    # The training lineage is the existing lineage property of the dataset.
+    reached = {
+        row["node"].strip("<>")
+        for row in admin.rdf.sparql(
+            f"SELECT ?node WHERE {{ <urn:medulla:asset:resource:train> "
+            f"<{CATALOG}lineageTo>+ ?node }}"
+        )
+    }
+    assert reached == {"urn:medulla:asset:model:churn"}
+    trained = admin.rdf.sparql(
+        f"SELECT ?d WHERE {{ <urn:medulla:asset:model:churn> <{CATALOG}trainedOn> ?d }}"
+    )
+    assert len(trained) == 1
+
+    # A model asset with no registry reference is refused and writes nothing.
+    with pytest.raises(EngineResponseError):
+        admin.rdf.add_triples(
+            turtle=(
+                f"{PREFIX}<urn:medulla:asset:model:bare> a cat:ModelAsset ; "
+                'skos:prefLabel "bare" ; cat:flag "owner_missing" .\n'
+            )
+        )
+    # An input schema over 65536 bytes is refused.
+    oversized = "x" * 65537
+    with pytest.raises(EngineResponseError):
+        admin.rdf.add_triples(
+            turtle=(
+                f"{PREFIX}<urn:medulla:asset:model:big> a cat:ModelAsset ; "
+                'skos:prefLabel "big" ; cat:flag "owner_missing" ; '
+                f'cat:modelRegistryRef "registry://models/big/1"^^<{xsd_any_uri}> ; '
+                f'cat:modelInputSchema "{oversized}" .\n'
+            )
+        )
+    # The engine stores references and metadata, never weights: the model node
+    # carries no weights property.
+    props = {
+        row["p"].strip("<>")
+        for row in admin.rdf.sparql(
+            "SELECT ?p WHERE { <urn:medulla:asset:model:churn> ?p ?o }"
+        )
+    }
+    assert not any("weights" in p for p in props)
+    assert admin.rdf.sparql(f"SELECT ?m WHERE {{ ?m a <{CATALOG}ModelAsset> }}")
+
+
+def _turtle_literal(text: str) -> str:
+    escaped = text.replace("\\", "\\\\").replace('"', '\\"')
+    return f'"{escaped}"'
+
+
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.10")
-def test_lineage_walks_source_operation_workflow_dashboard_agent_and_model(catalog_graph):
+def test_lineage_walks_source_operation_workflow_dashboard_agent_and_model(
+    catalog_graph,
+):
     # spec: MEDULLA-TYPED-PACKS-R108.10
     admin = catalog_graph
     chain = [
@@ -341,7 +422,9 @@ def _classification(client, graph: str, op: dict) -> dict:
     import msgpack
 
     raw = client._send("ClassificationClaim", {"op": op}, graph)
-    return msgpack.unpackb(raw, raw=False) if isinstance(raw, (bytes, bytearray)) else raw
+    return (
+        msgpack.unpackb(raw, raw=False) if isinstance(raw, (bytes, bytearray)) else raw
+    )
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.9")
@@ -417,9 +500,7 @@ def test_sensitivity_propagates_downstream_as_proposal_and_asset_names_its_polic
             f"cat:governedBy <{policy}> .\n"
         )
     )
-    rows = admin.rdf.sparql(
-        f"SELECT ?o WHERE {{ <{asset}> <{CATALOG}governedBy> ?o }}"
-    )
+    rows = admin.rdf.sparql(f"SELECT ?o WHERE {{ <{asset}> <{CATALOG}governedBy> ?o }}")
     assert [row["o"].strip("<>") for row in rows] == [policy]
 
 
@@ -440,11 +521,11 @@ def test_article_attaches_to_asset_and_domain_and_is_found_by_text_and_by_asset(
 
     def article_turtle(version: int, status: str) -> str:
         return (
-            f"{PREFIX}<{asset}> a cat:DataResource ; skos:prefLabel \"invoices\" .\n"
-            f"<{domain}> a cat:BusinessDomain ; skos:prefLabel \"finance\" .\n"
-            f"<{article}> a cat:Article ; skos:prefLabel \"Invoice onboarding\" ;\n"
-            f"  cat:author \"usr:writer\" ; cat:articleVersion {version} ;\n"
-            f"  cat:articleStatus \"{status}\" ;\n"
+            f'{PREFIX}<{asset}> a cat:DataResource ; skos:prefLabel "invoices" .\n'
+            f'<{domain}> a cat:BusinessDomain ; skos:prefLabel "finance" .\n'
+            f'<{article}> a cat:Article ; skos:prefLabel "Invoice onboarding" ;\n'
+            f'  cat:author "usr:writer" ; cat:articleVersion {version} ;\n'
+            f'  cat:articleStatus "{status}" ;\n'
             f"  cat:aboutAsset <{asset}> ; cat:inBusinessDomain <{domain}> .\n"
         )
 
@@ -457,7 +538,11 @@ def test_article_attaches_to_asset_and_domain_and_is_found_by_text_and_by_asset(
         admin.rdf.add_triples(turtle=article_turtle(1, "draft"))
 
     def decode(value):
-        return msgpack.unpackb(value, raw=False) if isinstance(value, (bytes, bytearray)) else value
+        return (
+            msgpack.unpackb(value, raw=False)
+            if isinstance(value, (bytes, bytearray))
+            else value
+        )
 
     def move(client, event, change_request=None):
         op = {"op": "transition", "iri": f"<{article}>", "event": event}
@@ -484,21 +569,21 @@ def test_article_attaches_to_asset_and_domain_and_is_found_by_text_and_by_asset(
     assert len(moves) == 2
 
     # The approved article is found by its text and by the asset it describes; a draft is not.
-    assert any(
-        article in asset_id for asset_id, _ in _ranked(admin, "onboarding")
-    )
+    assert any(article in asset_id for asset_id, _ in _ranked(admin, "onboarding"))
     assert any(article in asset_id for asset_id, _ in _ranked(admin, "invoices"))
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.12")
-def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(catalog_graph):
+def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(
+    catalog_graph,
+):
     # spec: MEDULLA-TYPED-PACKS-R108.12
     admin = catalog_graph
     xsd = "http://www.w3.org/2001/XMLSchema#"
     asset = "urn:medulla:asset:resource:orders"
     note = "urn:annotation:orders:1"
     asset_turtle = (
-        f"{PREFIX}<{asset}> a cat:DataResource ; skos:prefLabel \"orders ledger\" ;"
+        f'{PREFIX}<{asset}> a cat:DataResource ; skos:prefLabel "orders ledger" ;'
         " cat:hasOwner <urn:principal:data-team> ;"
         " <https://knuckles-team.github.io/ontology/connector-pack#ofConnector> <urn:c:a> ;"
         " <https://knuckles-team.github.io/ontology/connector-pack#servesClass> <urn:class:Order> ;"
@@ -515,14 +600,24 @@ def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(
         )
 
     # A comment, a tag, a rating and a reply attach to the asset.
-    admin.rdf.add_triples(turtle=annotation(note, "comment", 'cat:annotationText "check the totals"'))
-    admin.rdf.add_triples(turtle=annotation("urn:annotation:orders:2", "tag", 'cat:annotationText "finance"'))
     admin.rdf.add_triples(
-        turtle=annotation("urn:annotation:orders:3", "rating", f'cat:rating "5"^^<{xsd}integer>')
+        turtle=annotation(note, "comment", 'cat:annotationText "check the totals"')
     )
     admin.rdf.add_triples(
         turtle=annotation(
-            "urn:annotation:orders:4", "comment", f'cat:annotationText "done" ; cat:inReplyTo <{note}>'
+            "urn:annotation:orders:2", "tag", 'cat:annotationText "finance"'
+        )
+    )
+    admin.rdf.add_triples(
+        turtle=annotation(
+            "urn:annotation:orders:3", "rating", f'cat:rating "5"^^<{xsd}integer>'
+        )
+    )
+    admin.rdf.add_triples(
+        turtle=annotation(
+            "urn:annotation:orders:4",
+            "comment",
+            f'cat:annotationText "done" ; cat:inReplyTo <{note}>',
         )
     )
     rows = admin.rdf.sparql(
@@ -531,9 +626,13 @@ def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(
     assert len(rows) == 4
 
     # A rating outside 1 to 5 is refused and writes nothing.
-    with pytest.raises(Exception, match="rating|minInclusive|maxInclusive|VALUE_CONSTRAINT"):
+    with pytest.raises(
+        Exception, match="rating|minInclusive|maxInclusive|VALUE_CONSTRAINT"
+    ):
         admin.rdf.add_triples(
-            turtle=annotation("urn:annotation:orders:5", "rating", f'cat:rating "6"^^<{xsd}integer>')
+            turtle=annotation(
+                "urn:annotation:orders:5", "rating", f'cat:rating "6"^^<{xsd}integer>'
+            )
         )
 
     # A trust flag reuses the steward path: one `SetTrustFlag` writes it and ranking reads it.
@@ -543,7 +642,12 @@ def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(
     support.stewardship(
         admin,
         graph,
-        {"op": "set_trust_flag", "asset": asset, "flag": "deprecation", "reason": "superseded"},
+        {
+            "op": "set_trust_flag",
+            "asset": asset,
+            "flag": "deprecation",
+            "reason": "superseded",
+        },
     )
     after = dict(_ranked(admin, "orders"))
     assert after[next(k for k in after if k.strip("<>") == asset)] < before[key]
@@ -584,11 +688,11 @@ def test_registered_catalog_queries_browse_search_and_detail_hide_unreadable_ass
         prompt = "urn:medulla:asset:prompt:refunds"
         owner.rdf.add_triples(
             turtle=(
-                f"{PREFIX}<{tool}> a cat:ToolAsset ; skos:prefLabel \"orders tool\" ;"
+                f'{PREFIX}<{tool}> a cat:ToolAsset ; skos:prefLabel "orders tool" ;'
                 " cat:hasOwner <urn:principal:data-team> .\n"
-                f"<{skill}> a cat:SkillAsset ; skos:prefLabel \"orders skill\" ;"
+                f'<{skill}> a cat:SkillAsset ; skos:prefLabel "orders skill" ;'
                 " cat:hasOwner <urn:principal:ops-team> .\n"
-                f"<{prompt}> a cat:PromptAsset ; skos:prefLabel \"refunds prompt\" ;"
+                f'<{prompt}> a cat:PromptAsset ; skos:prefLabel "refunds prompt" ;'
                 " cat:hasOwner <urn:principal:data-team> .\n"
                 f"<urn:annotation:orders:1> a cat:Annotation ; cat:annotates <{tool}> ;"
                 ' cat:annotationKind "rating" ; cat:annotationAuthor "agent-a" ;'
@@ -606,46 +710,65 @@ def test_registered_catalog_queries_browse_search_and_detail_hide_unreadable_ass
         # Browse: the kind counts and the rows come back in one result, filtered by kind/owner.
         browsed = _read(owner, graph, {"op": "browse"})
         counts = {entry["kind"]: entry["count"] for entry in browsed["kind_counts"]}
-        assert counts["ToolAsset"] == 1 and counts["SkillAsset"] == 1 and counts["PromptAsset"] == 1
+        assert (
+            counts["ToolAsset"] == 1
+            and counts["SkillAsset"] == 1
+            and counts["PromptAsset"] == 1
+        )
         assert {row["asset"] for row in browsed["rows"]} >= {tool, skill, prompt}
         only_tools = _read(owner, graph, {"op": "browse", "kind": "ToolAsset"})
         assert [row["asset"] for row in only_tools["rows"]] == [tool]
         data_team = _read(
-            owner, graph, {"op": "browse", "owner": "urn:principal:data-team", "kind": "PromptAsset"}
+            owner,
+            graph,
+            {"op": "browse", "owner": "urn:principal:data-team", "kind": "PromptAsset"},
         )
         assert [row["asset"] for row in data_team["rows"]] == [prompt]
 
         # Paging: a page of one carries the cursor of the next page.
         first = _read(owner, graph, {"op": "browse", "limit": 1})
         assert len(first["rows"]) == 1 and first["next_cursor"]
-        second = _read(owner, graph, {"op": "browse", "limit": 1, "cursor": first["next_cursor"]})
+        second = _read(
+            owner, graph, {"op": "browse", "limit": 1, "cursor": first["next_cursor"]}
+        )
         assert second["rows"][0]["asset"] != first["rows"][0]["asset"]
 
         # Search: ranked rows, narrowed by the kinds list.
         found = _read(owner, graph, {"op": "search", "text": "orders"})
         assert {row["asset"] for row in found["rows"]} == {tool, skill}
         assert all(row["score"] > 0 for row in found["rows"])
-        narrowed = _read(owner, graph, {"op": "search", "text": "orders", "kinds": ["SkillAsset"]})
+        narrowed = _read(
+            owner, graph, {"op": "search", "text": "orders", "kinds": ["SkillAsset"]}
+        )
         assert [row["asset"] for row in narrowed["rows"]] == [skill]
 
         # Detail: owners, rating count and mean, and the comment.
         detail = _read(owner, graph, {"op": "detail", "asset_id": tool})["detail"]
-        assert detail["kind"] == "ToolAsset" and detail["owners"] == ["urn:principal:data-team"]
+        assert detail["kind"] == "ToolAsset" and detail["owners"] == [
+            "urn:principal:data-team"
+        ]
         assert detail["rating_count"] == 1 and detail["rating_mean"] == 4.0
         assert [c["text"] for c in detail["comments"]] == ["check the totals"]
 
         # A caller who may read none of it sees no row and no count, and an asset it cannot
         # read answers like an unknown one.
         hidden = _read(stranger, graph, {"op": "browse"})
-        assert hidden["rows"] == [] and all(e["count"] == 0 for e in hidden["kind_counts"])
+        assert hidden["rows"] == [] and all(
+            e["count"] == 0 for e in hidden["kind_counts"]
+        )
         assert _read(stranger, graph, {"op": "search", "text": "orders"})["rows"] == []
         with pytest.raises(Exception, match="ASSET_NOT_FOUND") as unreadable:
             _read(stranger, graph, {"op": "detail", "asset_id": tool})
         with pytest.raises(Exception, match="ASSET_NOT_FOUND") as unknown:
-            _read(owner, graph, {"op": "detail", "asset_id": "urn:medulla:asset:tool:none"})
-        assert str(unreadable.value).split("ASSET_NOT_FOUND")[1] == str(unknown.value).split(
-            "ASSET_NOT_FOUND"
-        )[1]
+            _read(
+                owner,
+                graph,
+                {"op": "detail", "asset_id": "urn:medulla:asset:tool:none"},
+            )
+        assert (
+            str(unreadable.value).split("ASSET_NOT_FOUND")[1]
+            == str(unknown.value).split("ASSET_NOT_FOUND")[1]
+        )
 
         # The refusals: unknown kind, bad cursor, page size out of bounds, text over the knob.
         for op in (
@@ -679,14 +802,14 @@ def test_metric_formula_binds_terms_and_unknown_term_refuses(catalog_graph):
     def metric(node: str, formula: str, extra: str = "") -> str:
         escaped = formula.replace("\\", "\\\\").replace('"', '\\"')
         return (
-            f"{PREFIX}<{domain}> a cat:BusinessDomain ; skos:prefLabel \"finance\" .\n"
-            f"<{node}> a cat:Metric ; skos:prefLabel \"{node}\" ;\n"
-            f"  cat:metricName \"Net revenue\" ; cat:metricDomain <{domain}> ;\n"
-            f"  cat:metricUnit \"USD\" ; cat:metricFormula \"{escaped}\" .\n{extra}"
+            f'{PREFIX}<{domain}> a cat:BusinessDomain ; skos:prefLabel "finance" .\n'
+            f'<{node}> a cat:Metric ; skos:prefLabel "{node}" ;\n'
+            f'  cat:metricName "Net revenue" ; cat:metricDomain <{domain}> ;\n'
+            f'  cat:metricUnit "USD" ; cat:metricFormula "{escaped}" .\n{extra}'
         )
 
     term_turtle = (
-        f"{PREFIX}<{term}> a cat:CatalogGlossaryTerm ; skos:prefLabel \"Revenue\" ;\n"
+        f'{PREFIX}<{term}> a cat:CatalogGlossaryTerm ; skos:prefLabel "Revenue" ;\n'
         f"  cat:definesClass cat:Asset .\n"
     )
 
@@ -698,13 +821,22 @@ def test_metric_formula_binds_terms_and_unknown_term_refuses(catalog_graph):
     with pytest.raises(Exception, match="METRIC_TERM_UNRESOLVED"):
         admin.rdf.add_triples(turtle=metric("urn:metric:b", f"{{term:{term}}}"))
     # Another prefix, an unclosed brace and a property that is not an absolute IRI refuse.
-    for bad in ("{column:revenue}", "{term:Revenue", "{prop:has space}", "{prop:relative}"):
+    for bad in (
+        "{column:revenue}",
+        "{term:Revenue",
+        "{prop:has space}",
+        "{prop:relative}",
+    ):
         with pytest.raises(Exception, match="METRIC_TERM_UNRESOLVED"):
             admin.rdf.add_triples(turtle=metric("urn:metric:c", bad))
 
     # A term and its metric may arrive together; labels are trimmed and case-sensitive.
     admin.rdf.add_triples(
-        turtle=metric("urn:metric:both", "{term: Revenue } / {prop:http://schema.org/price}", term_turtle)
+        turtle=metric(
+            "urn:metric:both",
+            "{term: Revenue } / {prop:http://schema.org/price}",
+            term_turtle,
+        )
     )
     # A later metric resolves the stored term; a different case does not.
     admin.rdf.add_triples(turtle=metric("urn:metric:later", "{term:Revenue} * 2"))
