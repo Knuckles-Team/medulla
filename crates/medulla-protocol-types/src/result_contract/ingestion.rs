@@ -140,6 +140,10 @@ method_results! {
     TriageDefect(TriageDefect) => Raw<medulla_decision_types::decision::defect_triage::TriageDefectReceipt>;
     DeliveryStatus(DeliveryStatus) => Raw<medulla_source_types::delivery::DeliveryAnswer>;
     DeliveryList(DeliveryList) => Raw<medulla_source_types::delivery::DeliveryListAnswer>;
+    SchemaDriftList(SchemaDriftList) => Raw<medulla_source_types::schema_drift_methods::SchemaDriftListAnswer>;
+    SchemaDriftGet(SchemaDriftGet) => Raw<medulla_source_types::schema_drift_methods::DriftRecordView>;
+    SchemaRepairPropose(SchemaRepairPropose) => Raw<medulla_source_types::schema_drift_methods::SchemaRepairPreview>;
+    SchemaRepairApprove(SchemaRepairApprove) => Raw<medulla_source_types::schema_drift_methods::SchemaRepairApproved>;
     SpecStatus(SpecStatus) => Raw<medulla_source_types::lifecycle::SpecStatusAnswer>;
     SpecQuestion(SpecQuestion) => Raw<medulla_source_types::spec_question::SpecQuestionAnswer>;
     ProposalList(ProposalList) => Raw<Vec<medulla_source_types::lifecycle::ProposalListEntry>>;

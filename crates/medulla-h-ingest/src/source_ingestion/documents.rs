@@ -1083,6 +1083,8 @@ mod tests {
                 batch_id: &batch_id,
                 error: &DocumentIngestError::NormalizationFailed("no text".into()),
                 mapping_revision: 3,
+                dead_letter: None,
+                drift_evidence: None,
                 stream_object_id: crate::source_ingestion::source_marker_id("t", &batch).unwrap(),
                 previous_stream_digest: Some("prior-digest".into()),
                 prior_accepted_checkpoint: Some(batch.provider_checkpoint.clone()),

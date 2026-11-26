@@ -51,6 +51,7 @@ pub mod action_record;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod documents;
 pub mod drift_gate;
+pub mod drift_methods;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub mod facts;
 pub mod governance;
@@ -376,11 +377,13 @@ pub async fn prepare(
     {
         return prepared_replay(ctx, batch, batch_digest, record.envelope);
     }
-    let drift = drift_gate::check(
+    let detailed = drift_gate::check_detailed(
         &ctx.schema_sources,
         batch.records.as_slice(),
         medulla_server_api::knob_config::knobs().drift_sample_max as usize,
     )?;
+    let drift: Vec<medulla_source_types::source_ingestion::StreamDrift> =
+        detailed.iter().map(|(stream, _)| stream.clone()).collect();
     // A delivery that breaks an approved contract under the quarantine policy applies no
     // record: one dead-letter item with digests only is parked, the checkpoint does not
     // advance and the answer is SCHEMA_DRIFT_QUARANTINED (MEDULLA-TYPED-PACKS-R715).
@@ -417,6 +420,24 @@ pub async fn prepare(
             payload_digest: batch_digest,
         };
         let dead_letter = serde_json::to_value(&dead_letter).map_err(|e| e.to_string())?;
+        // The shape of each quarantined stream is kept beside its report: field names and
+        // JSON types only, so the repair candidate can be derived without any record.
+        let evidence = medulla_source_types::schema_drift_methods::DriftEvidenceRecord {
+            connector: batch.connector.clone(),
+            streams: detailed
+                .iter()
+                .filter(|(stream, _)| {
+                    stream.report.action
+                        == medulla_catalog_types::graph_schema::drift::DriftAction::Quarantined
+                })
+                .map(|(stream, shape)| medulla_source_types::schema_drift_methods::DriftEvidence {
+                    stream: stream.stream.clone(),
+                    report: stream.report.clone(),
+                    shape: shape.clone(),
+                })
+                .collect(),
+        };
+        let evidence = serde_json::to_value(&evidence).map_err(|e| e.to_string())?;
         let mut prepared = prepare_quarantine(
             &ctx,
             batch,
@@ -427,6 +448,7 @@ pub async fn prepare(
             &error,
             0,
             Some(dead_letter),
+            Some(evidence),
         )
         .await?;
         prepared.drift = drift;
@@ -486,6 +508,7 @@ pub async fn prepare(
                 &graph_fname,
                 &error,
                 resolved.entry_revision.unwrap_or(0),
+                None,
                 None,
             )
             .await;
@@ -3715,6 +3738,9 @@ struct QuarantineInputs<'a> {
     mapping_revision: u64,
     /// The parked `DeadLetterItem` of a drift quarantine (MEDULLA-TYPED-PACKS-R715).
     dead_letter: Option<serde_json::Value>,
+    /// The `DriftEvidenceRecord` of a drift quarantine: the report and inferred shape of each
+    /// quarantined stream (MEDULLA-TYPED-PACKS-R806).
+    drift_evidence: Option<serde_json::Value>,
     /// The stream's live-set marker id; the content version is keyed by it.
     stream_object_id: String,
     previous_stream_digest: Option<String>,
@@ -3783,6 +3809,7 @@ fn quarantine_prepared(
         error,
         mapping_revision,
         dead_letter,
+        drift_evidence,
         stream_object_id,
         previous_stream_digest,
         prior_accepted_checkpoint,
@@ -3808,6 +3835,15 @@ fn quarantine_prepared(
     });
     if let (Some(item), Some(map)) = (dead_letter, properties.as_object_mut()) {
         map.insert("dead_letter".into(), item);
+    }
+    // A drift quarantine is owned by its tenant and keeps the evidence the served repair
+    // methods derive their candidate from (MEDULLA-TYPED-PACKS-R806).
+    if let (Some(evidence), Some(map)) = (drift_evidence, properties.as_object_mut()) {
+        map.insert("tenant_id".into(), serde_json::json!(tenant));
+        map.insert(
+            medulla_source_types::schema_drift_methods::DRIFT_EVIDENCE_PROPERTY.into(),
+            evidence,
+        );
     }
     if let Some(map) = properties.as_object_mut() {
         for (key, value) in permissions::restricted_read_access(
@@ -3876,6 +3912,7 @@ async fn prepare_quarantine(
     error: &DocumentIngestError,
     mapping_revision: u64,
     dead_letter: Option<serde_json::Value>,
+    drift_evidence: Option<serde_json::Value>,
 ) -> Result<PreparedSourceIngestion, String> {
     let stream_object_id = source_marker_id(ctx.tenant_scope, batch)?;
     let prior_accepted_checkpoint = persistence
@@ -3908,6 +3945,7 @@ async fn prepare_quarantine(
             error,
             mapping_revision,
             dead_letter,
+            drift_evidence,
             stream_object_id,
             previous_stream_digest,
             prior_accepted_checkpoint,

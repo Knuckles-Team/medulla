@@ -1109,6 +1109,8 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::DeliveryStop { .. }
             | Method::DeliveryRetry { .. }
             | Method::TriageDefect { .. }
+            | Method::SchemaRepairPropose { .. }
+            | Method::SchemaRepairApprove { .. }
             | Method::FileDefect { .. }
             | Method::TransitionDefect { .. }
             | Method::ProposalDecide { .. }

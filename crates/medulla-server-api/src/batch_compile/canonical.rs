@@ -825,6 +825,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::TriageDefect { .. }
         | Method::DeliveryStatus { .. }
         | Method::DeliveryList { .. }
+        | Method::SchemaDriftList { .. }
+        | Method::SchemaDriftGet { .. }
         | Method::LifecycleTrace { .. }
         // MEDULLA-SDLC-R003.5: the defect read commits nothing.
         | Method::GetDefect { .. }

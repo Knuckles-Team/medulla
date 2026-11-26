@@ -1969,6 +1969,34 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DELIVERY_NOT_FOUND",
         ],
     ),
+    // MEDULLA-TYPED-PACKS-R806: the served schema drift methods.
+    (
+        "SchemaDriftList",
+        &["TENANT_SCOPE_REQUIRED"],
+    ),
+    (
+        "SchemaDriftGet",
+        &["TENANT_SCOPE_REQUIRED", "DRIFT_NOT_FOUND"],
+    ),
+    (
+        "SchemaRepairPropose",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DRIFT_NOT_FOUND",
+            "SCHEMA_REPAIR_SHADOW_VIOLATIONS",
+        ],
+    ),
+    (
+        "SchemaRepairApprove",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DRIFT_NOT_FOUND",
+            "REPAIR_APPROVAL_MISSING",
+            "REPAIR_DIGEST_MISMATCH",
+            "SCHEMA_REPAIR_SHADOW_MISSING",
+            "SCHEMA_REPAIR_SHADOW_VIOLATIONS",
+        ],
+    ),
     (
         "DeliveryRetry",
         &[

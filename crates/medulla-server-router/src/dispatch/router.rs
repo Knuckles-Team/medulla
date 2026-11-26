@@ -63,6 +63,7 @@ mod bookmark;
 mod bookmark_binding;
 #[cfg(all(feature = "ann-redb", feature = "query"))]
 mod graph_source;
+mod schema_drift;
 mod sdlc;
 mod service_control;
 #[cfg(feature = "security")]

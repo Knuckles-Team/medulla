@@ -197,6 +197,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "SpecStatus",
     "DeliveryStatus",
     "DeliveryList",
+    // `dispatch_catalog_admin_methods` serves the drift reads from the nodes `can_see_node` admits.
+    "SchemaDriftList",
+    "SchemaDriftGet",
     // `dispatch_sdlc_methods::lifecycle_trace` reads only nodes `can_see_node` admits.
     "LifecycleTrace",
     // `dispatch_sdlc_methods::get_defect` reads only a node `can_see_node` admits.

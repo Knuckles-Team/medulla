@@ -527,6 +527,27 @@ $($variants)*
     TriageDefect {
         request: Box<medulla_decision_types::decision::defect_triage::TriageDefectRequest>,
     },
+    /// List the quarantined schema drifts of the caller's tenant, optionally of one stream
+    /// (MEDULLA-TYPED-PACKS-R806). Reads only.
+    SchemaDriftList {
+        request: medulla_source_types::schema_drift_methods::SchemaDriftListRequest,
+    },
+    /// Read one quarantined schema drift of the caller's tenant with its report per stream.
+    /// An unknown id and another tenant's drift refuse `DRIFT_NOT_FOUND`. Reads only.
+    SchemaDriftGet {
+        request: medulla_source_types::schema_drift_methods::SchemaDriftRef,
+    },
+    /// Derive the repair candidate of one drifted stream and verify it on a shadow check of
+    /// the request graph. Applies nothing; answers the candidate and its digest.
+    SchemaRepairPropose {
+        request: medulla_source_types::schema_drift_methods::SchemaRepairTarget,
+    },
+    /// Activate the repair candidate of one drifted stream. Needs the approval receipt bound
+    /// to the candidate digest; refuses `REPAIR_APPROVAL_MISSING` and
+    /// `REPAIR_DIGEST_MISMATCH`. The activation commits through the graph schema gateway.
+    SchemaRepairApprove {
+        request: medulla_source_types::schema_drift_methods::SchemaRepairApproveRequest,
+    },
     /// Read the derived state of every requirement row of `repo` at the changeset `rev`
     /// (MEDULLA-SDLC-R005.3), from the `:Requirement`, changeset and test-binding records
     /// the caller can see in `graph`. `spec_id` keeps only the rows of that spec. A `rev` the

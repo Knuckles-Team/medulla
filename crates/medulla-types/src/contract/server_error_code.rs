@@ -880,6 +880,12 @@ closed_error_codes! {
         CapabilityUnsupported => "CAPABILITY_UNSUPPORTED",
         SchemaDrift => "SCHEMA_DRIFT",
         SchemaDriftQuarantined => "SCHEMA_DRIFT_QUARANTINED",
+        /// No quarantined drift of the caller's tenant has that id or names that stream (MEDULLA-TYPED-PACKS-R806).
+        DriftNotFound => "DRIFT_NOT_FOUND",
+        /// A repair activation names no approval receipt, or the approval is not a decided one binding the candidate (MEDULLA-TYPED-PACKS-R806).
+        RepairApprovalMissing => "REPAIR_APPROVAL_MISSING",
+        /// A repair activation's approved digest is not the digest of the candidate the drift derives (MEDULLA-TYPED-PACKS-R806).
+        RepairDigestMismatch => "REPAIR_DIGEST_MISMATCH",
         SqliteSnapshotUnstable => "SQLITE_SNAPSHOT_UNSTABLE",
         SqliteWatermarkInvalid => "SQLITE_WATERMARK_INVALID",
         StaleAgentLibraryRevision => "STALE_AGENT_LIBRARY_REVISION",

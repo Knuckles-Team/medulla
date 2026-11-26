@@ -19452,6 +19452,53 @@ class MedullaClient:
             raise TypeError(f"{method} returned a non-object result")
         return result
 
+    async def schema_drift_list(
+        self, graph: str | None = None, stream: str | None = None
+    ) -> dict[str, Any]:
+        """List the quarantined schema drifts of the tenant (R806)."""
+        return await self._drift(
+            "SchemaDriftList", {"request": {"stream": stream}}, graph
+        )
+
+    async def schema_drift_get(
+        self, drift_id: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read one quarantined drift; an unknown id refuses ``DRIFT_NOT_FOUND``."""
+        request = {"drift_id": drift_id}
+        return await self._drift("SchemaDriftGet", {"request": request}, graph)
+
+    async def schema_repair_propose(
+        self, drift_id: str, stream: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Derive and shadow-check the repair candidate of one drifted stream."""
+        request = {"drift_id": drift_id, "stream": stream}
+        return await self._drift("SchemaRepairPropose", {"request": request}, graph)
+
+    async def schema_repair_approve(
+        self,
+        drift_id: str,
+        stream: str,
+        proposal_digest: str,
+        approval_lease_id: str,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """Activate the repair candidate under its approval receipt."""
+        request = {
+            "drift_id": drift_id,
+            "stream": stream,
+            "proposal_digest": proposal_digest,
+            "approval_lease_id": approval_lease_id,
+        }
+        return await self._drift("SchemaRepairApprove", {"request": request}, graph)
+
+    async def _drift(
+        self, method: str, params: dict[str, Any], graph: str | None
+    ) -> dict[str, Any]:
+        result = await self._send(method, params, graph)
+        if not isinstance(result, dict):
+            raise TypeError(f"{method} returned a non-object result")
+        return result
+
     async def lifecycle_trace(
         self, request: dict[str, Any], graph: str | None = None
     ) -> dict[str, Any]:

@@ -33,6 +33,20 @@ pub fn check(
     records: &[SourceRecord],
     sample_max: usize,
 ) -> Result<Vec<StreamDrift>, String> {
+    Ok(check_detailed(sources, records, sample_max)?
+        .into_iter()
+        .map(|(drift, _)| drift)
+        .collect())
+}
+
+/// [`check`], with the inferred shape each report was classified from. A quarantine keeps the
+/// shape beside the report, so a repair candidate can be derived later without any record
+/// (MEDULLA-TYPED-PACKS-R806).
+pub fn check_detailed(
+    sources: &GraphSchemaSources,
+    records: &[SourceRecord],
+    sample_max: usize,
+) -> Result<Vec<(StreamDrift, InferredRecordShape)>, String> {
     let mut by_stream: BTreeMap<&ResourceId, Vec<serde_json::Value>> = BTreeMap::new();
     for record in records {
         let source_id = format!("{APPROVED_SOURCE_PREFIX}{}", record.stream.as_str());
@@ -60,10 +74,14 @@ pub fn check(
         };
         let shape = InferredRecordShape::infer(&samples)
             .map_err(|error| format!("SOURCE_DRIFT_SHAPE_INVALID: stream {stream:?}: {error}"))?;
-        reports.push(StreamDrift {
-            stream: stream.clone(),
-            report: classify_delivery(&source_id, contract, &shape, FIXED_POLICY),
-        });
+        let report = classify_delivery(&source_id, contract, &shape, FIXED_POLICY);
+        reports.push((
+            StreamDrift {
+                stream: stream.clone(),
+                report,
+            },
+            shape,
+        ));
     }
     Ok(reports)
 }

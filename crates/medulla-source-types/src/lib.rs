@@ -77,5 +77,7 @@ pub mod meeting_transcript;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod stored_query;
 // MEDULLA-BUSINESS-OPS-R003.1: the owner digest as stored queries.
+// MEDULLA-TYPED-PACKS-R806 - the served schema drift records and repair approval.
+pub mod schema_drift_methods;
 pub mod business_digest;
 pub mod catalog_queries;

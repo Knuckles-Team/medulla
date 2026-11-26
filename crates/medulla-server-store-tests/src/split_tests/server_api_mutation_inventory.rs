@@ -80,6 +80,8 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("DeliveryStop");
     covered.insert("DeliveryRetry");
     covered.insert("TriageDefect");
+    covered.insert("SchemaRepairPropose");
+    covered.insert("SchemaRepairApprove");
     covered.insert("TransitionDefect");
     covered.insert("ProposalDecide");
     covered.insert("ActionRegister");

@@ -667,6 +667,33 @@ async fn dispatch_catalog_admin_methods(
             })
             .await
         }
+        // MEDULLA-TYPED-PACKS-R806: the served schema drift records and repair approval.
+        Method::SchemaDriftList { request } => {
+            dispatch_boxed(super::schema_drift::drift_list(state, req, verified_context, request))
+                .await
+        }
+        Method::SchemaDriftGet { request } => {
+            dispatch_boxed(super::schema_drift::drift_get(state, req, verified_context, request))
+                .await
+        }
+        Method::SchemaRepairPropose { request } => {
+            dispatch_boxed(super::schema_drift::repair_propose(
+                state,
+                req,
+                verified_context,
+                request,
+            ))
+            .await
+        }
+        Method::SchemaRepairApprove { request } => {
+            dispatch_boxed(super::schema_drift::repair_approve(
+                state,
+                req,
+                verified_context,
+                request,
+            ))
+            .await
+        }
         Method::PublishSkillPackage { request } => {
             dispatch_boxed(async {
                 medulla_h_admin::admin::handle_publish_skill_package(
