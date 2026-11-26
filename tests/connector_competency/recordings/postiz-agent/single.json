@@ -1,0 +1,22 @@
+{
+  "source": "postiz-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "post": "post-1",
+      "scheduled_at": "scheduled_at-1",
+      "channel": "channel-1",
+      "joinKey": "postiz.q1-key-1",
+      "id": "postiz-agent-postiz.q1-1",
+      "label": "postiz-agent 1"
+    },
+    {
+      "post": "post-2",
+      "scheduled_at": "scheduled_at-2",
+      "channel": "channel-2",
+      "joinKey": "postiz.q1-key-2",
+      "id": "postiz-agent-postiz.q1-2",
+      "label": "postiz-agent 2"
+    }
+  ]
+}

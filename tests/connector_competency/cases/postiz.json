@@ -1,0 +1,35 @@
+{
+  "connector": "postiz",
+  "rollup": "MEDULLA-CQ-CONN-R049",
+  "vocabulary_module": "media-v1.ttl",
+  "terms": [
+    "SocialPost",
+    "postState",
+    "socialScheduledAt",
+    "PublishingChannel"
+  ],
+  "questions": [
+    {
+      "id": "postiz.q1",
+      "kind": "single",
+      "question": "Which scheduled posts failed to publish and on which channel?",
+      "uql": "FOREIGN SCAN 'postiz-agent'",
+      "sources": [
+        "postiz-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "postiz-agent": "mcp_tool"
+      },
+      "columns": [
+        "post",
+        "scheduled_at",
+        "channel"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "postiz-agent/single.json"
+      ]
+    }
+  ]
+}
