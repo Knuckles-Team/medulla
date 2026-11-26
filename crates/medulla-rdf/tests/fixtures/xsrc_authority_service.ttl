@@ -1,0 +1,57 @@
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix kg:  <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:  <urn:eg:fixture:service:> .
+
+# MEDULLA-CQ-XSRC-R003.1: the source-authority seed of :Service health and identity.
+# Health is a facet row: uptime rank 1 and lgtm rank 2 for infra:serviceStatus. Identity is
+# a facet row: the servicenow CMDB rank 1 for rdfs:label. Lower rank wins; no row sets
+# vg:allowFallback, so fallback is off.
+ex:uptime a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-uptime ;
+    vg:foreignSourceName "uptime-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-uptime vg:url "https://uptime.example.invalid/mcp" .
+ex:uptime-contract a vg:MetadataContract ; vg:contractSource ex:uptime ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000021" ;
+    vg:discoveredEntity "monitor" ; vg:discoveredField "monitor.id", "monitor.title", "monitor.status" .
+
+ex:lgtm a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-lgtm ;
+    vg:foreignSourceName "lgtm-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-lgtm vg:url "https://lgtm.example.invalid/mcp" .
+ex:lgtm-contract a vg:MetadataContract ; vg:contractSource ex:lgtm ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000022" ;
+    vg:discoveredEntity "service" ; vg:discoveredField "service.id", "service.title", "service.status" .
+
+ex:servicenow a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-servicenow ;
+    vg:foreignSourceName "servicenow-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-servicenow vg:url "https://servicenow.example.invalid/mcp" .
+ex:servicenow-contract a vg:MetadataContract ; vg:contractSource ex:servicenow ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000023" ;
+    vg:discoveredEntity "cmdb_ci_service" ; vg:discoveredField "cmdb_ci_service.id", "cmdb_ci_service.title" .
+
+ex:uptime-service-health a vg:VirtualMapping ; vg:mapsContract ex:uptime-contract ;
+    vg:mapsOntologyClass infra:Service ; vg:mapsEntity "monitor" ; vg:keyField "monitor.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:uptime-service-health-p0 .
+ex:uptime-service-health-p0 a vg:PredicateFieldPair ; vg:predicate infra:serviceStatus ; vg:field "monitor.status" .
+ex:service-uptime-health a vg:SourceAuthority ; vg:authoritativeSource ex:uptime ;
+    vg:authorityFor infra:Service ; vg:authorityMapping ex:uptime-service-health ;
+    vg:authorityFacet infra:serviceStatus ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+
+ex:lgtm-service-health a vg:VirtualMapping ; vg:mapsContract ex:lgtm-contract ;
+    vg:mapsOntologyClass infra:Service ; vg:mapsEntity "service" ; vg:keyField "service.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:lgtm-service-health-p0 .
+ex:lgtm-service-health-p0 a vg:PredicateFieldPair ; vg:predicate infra:serviceStatus ; vg:field "service.status" .
+ex:service-lgtm-health a vg:SourceAuthority ; vg:authoritativeSource ex:lgtm ;
+    vg:authorityFor infra:Service ; vg:authorityMapping ex:lgtm-service-health ;
+    vg:authorityFacet infra:serviceStatus ;
+    vg:authorityRank 2 ; vg:authorityContract "mcp" .
+
+ex:servicenow-service-identity a vg:VirtualMapping ; vg:mapsContract ex:servicenow-contract ;
+    vg:mapsOntologyClass infra:Service ; vg:mapsEntity "cmdb_ci_service" ; vg:keyField "cmdb_ci_service.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:servicenow-service-identity-p0 .
+ex:servicenow-service-identity-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "cmdb_ci_service.title" .
+ex:service-servicenow-identity a vg:SourceAuthority ; vg:authoritativeSource ex:servicenow ;
+    vg:authorityFor infra:Service ; vg:authorityMapping ex:servicenow-service-identity ;
+    vg:authorityFacet rdfs:label ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .

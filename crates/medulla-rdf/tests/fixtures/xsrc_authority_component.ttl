@@ -1,0 +1,54 @@
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix kg:  <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:  <urn:eg:fixture:component:> .
+
+# MEDULLA-CQ-XSRC-R002.6: the source-authority seed of software components and
+# vulnerabilities. The registry says what an image is (dockerhub rank 1); the code host
+# says what is wrong with it (gitlab rank 1, GitHub advisories rank 2). Lower rank wins;
+# no row sets vg:allowFallback, so fallback is off.
+ex:dockerhub a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-dockerhub ;
+    vg:foreignSourceName "dockerhub-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-dockerhub vg:url "https://dockerhub.example.invalid/mcp" .
+ex:dockerhub-contract a vg:MetadataContract ; vg:contractSource ex:dockerhub ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000011" ;
+    vg:discoveredEntity "image" ; vg:discoveredField "image.id", "image.title" .
+
+ex:gitlab a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-gitlab ;
+    vg:foreignSourceName "gitlab-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-gitlab vg:url "https://gitlab.example.invalid/mcp" .
+ex:gitlab-contract a vg:MetadataContract ; vg:contractSource ex:gitlab ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000012" ;
+    vg:discoveredEntity "vulnerability" ; vg:discoveredField "vulnerability.id", "vulnerability.title" .
+
+ex:github a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-github ;
+    vg:foreignSourceName "github-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-github vg:url "https://github.example.invalid/mcp" .
+ex:github-contract a vg:MetadataContract ; vg:contractSource ex:github ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000013" ;
+    vg:discoveredEntity "advisory" ; vg:discoveredField "advisory.id", "advisory.title" .
+
+ex:dockerhub-containerimage a vg:VirtualMapping ; vg:mapsContract ex:dockerhub-contract ;
+    vg:mapsOntologyClass infra:ContainerImage ; vg:mapsEntity "image" ; vg:keyField "image.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:dockerhub-containerimage-p0 .
+ex:dockerhub-containerimage-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "image.title" .
+ex:containerimage-dockerhub a vg:SourceAuthority ; vg:authoritativeSource ex:dockerhub ;
+    vg:authorityFor infra:ContainerImage ; vg:authorityMapping ex:dockerhub-containerimage ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+
+ex:gitlab-vulnerability a vg:VirtualMapping ; vg:mapsContract ex:gitlab-contract ;
+    vg:mapsOntologyClass kg:Vulnerability ; vg:mapsEntity "vulnerability" ; vg:keyField "vulnerability.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:gitlab-vulnerability-p0 .
+ex:gitlab-vulnerability-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "vulnerability.title" .
+ex:vulnerability-gitlab a vg:SourceAuthority ; vg:authoritativeSource ex:gitlab ;
+    vg:authorityFor kg:Vulnerability ; vg:authorityMapping ex:gitlab-vulnerability ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+
+ex:github-vulnerability a vg:VirtualMapping ; vg:mapsContract ex:github-contract ;
+    vg:mapsOntologyClass kg:Vulnerability ; vg:mapsEntity "advisory" ; vg:keyField "advisory.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:github-vulnerability-p0 .
+ex:github-vulnerability-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "advisory.title" .
+ex:vulnerability-github a vg:SourceAuthority ; vg:authoritativeSource ex:github ;
+    vg:authorityFor kg:Vulnerability ; vg:authorityMapping ex:github-vulnerability ;
+    vg:authorityRank 2 ; vg:authorityContract "mcp" .

@@ -9,12 +9,16 @@ use medulla_graph_core::graph::GraphSchemaSource;
 use medulla_graph_core::graph::GraphSchemaSources;
 use medulla_graph_core::graph::SchemaSourceOrigin;
 use medulla_virtual_graph::source_selection::{
-    audit_from, fixture_from_schema_sources, select_sources,
+    audit_from, fixture_from_schema_sources, select_sources, select_sources_with,
     AuthorityOrigin, AuthorityRow, CoverageFixture, CoverageResult, SelectionQuery,
 };
 
 const TEMPLATE: &str = include_str!("fixtures/source_authority_incident.ttl");
 const SUPPLIER_SEED: &str = include_str!("fixtures/xsrc_authority_supplier.ttl");
+const COMPONENT_SEED: &str = include_str!("fixtures/xsrc_authority_component.ttl");
+const SERVICE_SEED: &str = include_str!("fixtures/xsrc_authority_service.ttl");
+const WORKLOAD_SEED: &str = include_str!("fixtures/xsrc_authority_workload.ttl");
+const CAPABILITY_SEED: &str = include_str!("fixtures/xsrc_authority_capability.ttl");
 const SHAPES: &str = include_str!("../../medulla-core/ontology/virtual_graph-v1.shapes.ttl");
 const INCIDENT: &str = "https://knuckles-team.github.io/ontology/core#Incident";
 const SNOW_ROW: &str = "urn:eg:fixture:incident:incident-servicenow";
@@ -136,46 +140,167 @@ fn the_live_read_returns_the_same_verdict_as_the_fixture() {
     ));
 }
 
+const CORE: &str = "https://knuckles-team.github.io/ontology/core#";
+const INFRA: &str = "https://knuckles-team.github.io/ontology/infrastructure#";
+const RDFS_LABEL: &str = "http://www.w3.org/2000/01/rdf-schema#label";
+
+/// Validates a seed against the shapes, then reads its rows under `origin`.
+fn seed_fixture(seed: &str, origin: SchemaSourceOrigin) -> CoverageFixture {
+    let report = medulla_shacl::validate_turtle(SHAPES, seed).expect("validates");
+    assert!(report.conforms, "{:?}", report.results);
+    fixture_from_schema_sources(&attached_under(seed, origin)).expect("the seed attaches")
+}
+
+fn verdicts(
+    fixture: &CoverageFixture,
+    classes: &[String],
+    facets: &[(String, String)],
+) -> Vec<CoverageResult> {
+    let query = SelectionQuery {
+        facets: facets.to_vec(),
+        ..SelectionQuery::default()
+    };
+    select_sources_with(fixture, classes, 1, &query)
+}
+
+/// The (source, alternates) of the covered verdict for `class` and `facet`.
+fn covered(
+    verdicts: &[CoverageResult],
+    class: &str,
+    facet: Option<&str>,
+) -> (String, Vec<String>) {
+    verdicts
+        .iter()
+        .find_map(|v| match v {
+            CoverageResult::Covered {
+                class: c,
+                facet: f,
+                source,
+                alternates,
+                ..
+            } if c == class && f.as_deref() == facet => {
+                Some((source.clone(), alternates.clone()))
+            }
+            _ => None,
+        })
+        .unwrap_or_else(|| panic!("a covered verdict for {class} {facet:?}: {verdicts:?}"))
+}
+
+fn names(items: &[&str]) -> Vec<String> {
+    items.iter().map(|s| s.to_string()).collect()
+}
+
+/// A pack-origin read of the same seed only proposes: nothing is covered.
+fn assert_pack_proposes_only(seed: &str, classes: &[String]) {
+    let pack = SchemaSourceOrigin::Pack {
+        connector: "seed-pack".to_string(),
+        record_id: "pack-1".to_string(),
+        tenant: None,
+    };
+    let fixture = fixture_from_schema_sources(&attached_under(seed, pack)).unwrap();
+    assert!(select_sources(&fixture, classes, 1)
+        .iter()
+        .all(|v| !matches!(v, CoverageResult::Covered { .. })));
+}
+
 // spec: MEDULLA-CQ-XSRC-R002.5
 #[test]
 fn supplier_seed_passes_shape() {
-    const CORE: &str = "https://knuckles-team.github.io/ontology/core#";
-    let report = medulla_shacl::validate_turtle(SHAPES, SUPPLIER_SEED).expect("validates");
-    assert!(report.conforms, "{:?}", report.results);
-    let rows = authority_rows_from_turtle(SUPPLIER_SEED, AuthorityOrigin::Operator).unwrap();
-    assert_eq!(rows.len(), 6);
-    let fixture = rows
-        .into_iter()
-        .fold(CoverageFixture::new(), CoverageFixture::with_row);
+    let fixture = seed_fixture(SUPPLIER_SEED, SchemaSourceOrigin::Operator);
+    assert_eq!(fixture.rows().count(), 6);
     let classes: Vec<String> = ["Supplier", "SupplyChainItem", "RiskScenario", "PrivacyAssessment"]
         .iter()
         .map(|name| format!("{CORE}{name}"))
         .collect();
-    let verdicts = select_sources(&fixture, &classes, 1);
-    let covered = |class: &str| match verdicts
-        .iter()
-        .find(|v| v.class() == format!("{CORE}{class}"))
-        .unwrap_or_else(|| panic!("a {class} verdict"))
-    {
-        CoverageResult::Covered {
-            source, alternates, ..
-        } => (source.clone(), alternates.clone()),
-        other => panic!("expected {class} covered, got {other:?}"),
-    };
+    let got = verdicts(&fixture, &classes, &[]);
+    let supplier = format!("{CORE}Supplier");
+    let item = format!("{CORE}SupplyChainItem");
+    let risk = format!("{CORE}RiskScenario");
+    let privacy = format!("{CORE}PrivacyAssessment");
     // ERPNext ranks first for suppliers and items, LeanIX second.
-    assert_eq!(covered("Supplier"), ("erpnext-mcp".to_string(), vec!["leanix-mcp".to_string()]));
+    assert_eq!(covered(&got, &supplier, None), ("erpnext-mcp".into(), names(&["leanix-mcp"])));
+    assert_eq!(covered(&got, &item, None), ("erpnext-mcp".into(), names(&["leanix-mcp"])));
+    assert_eq!(covered(&got, &risk, None), ("ciso-assistant-mcp".into(), Vec::new()));
+    assert_eq!(covered(&got, &privacy, None), ("onetrust-mcp".into(), Vec::new()));
+    assert_pack_proposes_only(SUPPLIER_SEED, &classes);
+}
+
+// spec: MEDULLA-CQ-XSRC-R002.6
+#[test]
+fn component_seed_passes_shape() {
+    let fixture = seed_fixture(COMPONENT_SEED, SchemaSourceOrigin::Operator);
+    assert_eq!(fixture.rows().count(), 3);
+    let image = format!("{INFRA}ContainerImage");
+    let vulnerability = format!("{CORE}Vulnerability");
+    let classes = vec![image.clone(), vulnerability.clone()];
+    let got = verdicts(&fixture, &classes, &[]);
+    // The registry says what an image is; the code host says what is wrong with it.
+    assert_eq!(covered(&got, &image, None), ("dockerhub-mcp".into(), Vec::new()));
     assert_eq!(
-        covered("SupplyChainItem"),
-        ("erpnext-mcp".to_string(), vec!["leanix-mcp".to_string()])
+        covered(&got, &vulnerability, None),
+        ("gitlab-mcp".into(), names(&["github-mcp"]))
     );
-    assert_eq!(covered("RiskScenario"), ("ciso-assistant-mcp".to_string(), Vec::new()));
-    assert_eq!(covered("PrivacyAssessment"), ("onetrust-mcp".to_string(), Vec::new()));
-    // A pack-origin read of the same text proposes only: nothing is covered.
-    let proposed = authority_rows_from_turtle(SUPPLIER_SEED, AuthorityOrigin::Pack).unwrap();
-    let fixture = proposed
-        .into_iter()
-        .fold(CoverageFixture::new(), CoverageFixture::with_row);
-    assert!(select_sources(&fixture, &classes, 1)
-        .iter()
-        .all(|v| matches!(v, CoverageResult::Uncovered { .. })));
+    assert_pack_proposes_only(COMPONENT_SEED, &classes);
+}
+
+// spec: MEDULLA-CQ-XSRC-R003.1
+#[test]
+fn service_seed_passes_shape() {
+    let fixture = seed_fixture(SERVICE_SEED, SchemaSourceOrigin::Operator);
+    assert_eq!(fixture.rows().count(), 3);
+    let service = format!("{INFRA}Service");
+    let health = format!("{INFRA}serviceStatus");
+    let facets = vec![
+        (service.clone(), health.clone()),
+        (service.clone(), RDFS_LABEL.to_string()),
+    ];
+    let got = verdicts(&fixture, &[service.clone()], &facets);
+    // Health: uptime first, lgtm second. Identity: the CMDB.
+    assert_eq!(
+        covered(&got, &service, Some(&health)),
+        ("uptime-mcp".into(), names(&["lgtm-mcp"]))
+    );
+    assert_eq!(
+        covered(&got, &service, Some(RDFS_LABEL)),
+        ("servicenow-mcp".into(), Vec::new())
+    );
+    assert_pack_proposes_only(SERVICE_SEED, &[service]);
+}
+
+// spec: MEDULLA-CQ-XSRC-R003.2
+#[test]
+fn workload_seed_passes_shape() {
+    let fixture = seed_fixture(WORKLOAD_SEED, SchemaSourceOrigin::Operator);
+    assert_eq!(fixture.rows().count(), 5);
+    let image = format!("{INFRA}ContainerImage");
+    let host = format!("{INFRA}Host");
+    let temperature = format!("{INFRA}temperatureCelsius");
+    let classes = vec![image.clone(), host.clone()];
+    let facets = vec![(host.clone(), temperature.clone())];
+    let got = verdicts(&fixture, &classes, &facets);
+    let first = ("container-manager-mcp".to_string(), names(&["portainer-mcp"]));
+    assert_eq!(covered(&got, &image, None), first);
+    assert_eq!(covered(&got, &host, None), first);
+    // Hardware facts come from systems-manager as a facet row.
+    assert_eq!(
+        covered(&got, &host, Some(&temperature)),
+        ("systems-manager-mcp".into(), Vec::new())
+    );
+    assert_pack_proposes_only(WORKLOAD_SEED, &classes);
+}
+
+// spec: MEDULLA-CQ-XSRC-R003.3
+#[test]
+fn capability_seed_passes_shape() {
+    let fixture = seed_fixture(CAPABILITY_SEED, SchemaSourceOrigin::Operator);
+    assert_eq!(fixture.rows().count(), 2);
+    let capability = format!("{CORE}BusinessCapability");
+    let classes = vec![capability.clone()];
+    let got = verdicts(&fixture, &classes, &[]);
+    // LeanIX is the maintained catalogue, ArchiMate the modelled view.
+    assert_eq!(
+        covered(&got, &capability, None),
+        ("leanix-mcp".into(), names(&["archimate-mcp"]))
+    );
+    assert_pack_proposes_only(CAPABILITY_SEED, &classes);
 }

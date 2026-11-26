@@ -1,0 +1,38 @@
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix kg:  <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:  <urn:eg:fixture:capability:> .
+
+# MEDULLA-CQ-XSRC-R003.3: the source-authority seed of business capabilities. LeanIX is
+# the maintained catalogue (rank 1); ArchiMate is the modelled view (rank 2). Lower rank
+# wins; no row sets vg:allowFallback, so fallback is off.
+ex:leanix a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-leanix ;
+    vg:foreignSourceName "leanix-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-leanix vg:url "https://leanix.example.invalid/mcp" .
+ex:leanix-contract a vg:MetadataContract ; vg:contractSource ex:leanix ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000041" ;
+    vg:discoveredEntity "fact_sheet" ; vg:discoveredField "fact_sheet.id", "fact_sheet.title" .
+
+ex:archimate a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-archimate ;
+    vg:foreignSourceName "archimate-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-archimate vg:url "https://archimate.example.invalid/mcp" .
+ex:archimate-contract a vg:MetadataContract ; vg:contractSource ex:archimate ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000042" ;
+    vg:discoveredEntity "element" ; vg:discoveredField "element.id", "element.title" .
+
+ex:leanix-businesscapability a vg:VirtualMapping ; vg:mapsContract ex:leanix-contract ;
+    vg:mapsOntologyClass kg:BusinessCapability ; vg:mapsEntity "fact_sheet" ; vg:keyField "fact_sheet.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:leanix-businesscapability-p0 .
+ex:leanix-businesscapability-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "fact_sheet.title" .
+ex:businesscapability-leanix a vg:SourceAuthority ; vg:authoritativeSource ex:leanix ;
+    vg:authorityFor kg:BusinessCapability ; vg:authorityMapping ex:leanix-businesscapability ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+
+ex:archimate-businesscapability a vg:VirtualMapping ; vg:mapsContract ex:archimate-contract ;
+    vg:mapsOntologyClass kg:BusinessCapability ; vg:mapsEntity "element" ; vg:keyField "element.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:archimate-businesscapability-p0 .
+ex:archimate-businesscapability-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "element.title" .
+ex:businesscapability-archimate a vg:SourceAuthority ; vg:authoritativeSource ex:archimate ;
+    vg:authorityFor kg:BusinessCapability ; vg:authorityMapping ex:archimate-businesscapability ;
+    vg:authorityRank 2 ; vg:authorityContract "mcp" .

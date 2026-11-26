@@ -1,0 +1,71 @@
+@prefix vg:  <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix kg:  <https://knuckles-team.github.io/ontology/core#> .
+@prefix infra: <https://knuckles-team.github.io/ontology/infrastructure#> .
+@prefix ex:  <urn:eg:fixture:workload:> .
+
+# MEDULLA-CQ-XSRC-R003.2: the source-authority seed of deployed workloads, images and
+# hosts. container-manager ranks 1 and portainer ranks 2 for deployed images and host
+# placement; systems-manager is the rank-1 facet row for host hardware facts
+# (infra:temperatureCelsius). Lower rank wins; no row sets vg:allowFallback.
+ex:containermanager a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-containermanager ;
+    vg:foreignSourceName "container-manager-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-containermanager vg:url "https://containermanager.example.invalid/mcp" .
+ex:containermanager-contract a vg:MetadataContract ; vg:contractSource ex:containermanager ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000031" ;
+    vg:discoveredEntity "container" ; vg:discoveredField "container.id", "container.title", "container.host_name", "container.temperature" .
+
+ex:portainer a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-portainer ;
+    vg:foreignSourceName "portainer-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-portainer vg:url "https://portainer.example.invalid/mcp" .
+ex:portainer-contract a vg:MetadataContract ; vg:contractSource ex:portainer ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000032" ;
+    vg:discoveredEntity "container" ; vg:discoveredField "container.id", "container.title" .
+
+ex:systemsmanager a vg:SourceConnection ; vg:sourceKind "mcp" ; vg:endpointRef ex:ep-systemsmanager ;
+    vg:foreignSourceName "systems-manager-mcp" ; vg:sourceRole "live_truth" .
+ex:ep-systemsmanager vg:url "https://systemsmanager.example.invalid/mcp" .
+ex:systemsmanager-contract a vg:MetadataContract ; vg:contractSource ex:systemsmanager ; vg:schemaVersion "1" ;
+    vg:contentDigest "sha256:0000000000000000000000000000000000000000000000000000000000000033" ;
+    vg:discoveredEntity "machine" ; vg:discoveredField "machine.id", "machine.title", "machine.temperature" .
+
+ex:containermanager-containerimage a vg:VirtualMapping ; vg:mapsContract ex:containermanager-contract ;
+    vg:mapsOntologyClass infra:ContainerImage ; vg:mapsEntity "container" ; vg:keyField "container.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:containermanager-containerimage-p0 .
+ex:containermanager-containerimage-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "container.title" .
+ex:containerimage-containermanager a vg:SourceAuthority ; vg:authoritativeSource ex:containermanager ;
+    vg:authorityFor infra:ContainerImage ; vg:authorityMapping ex:containermanager-containerimage ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+
+ex:portainer-containerimage a vg:VirtualMapping ; vg:mapsContract ex:portainer-contract ;
+    vg:mapsOntologyClass infra:ContainerImage ; vg:mapsEntity "container" ; vg:keyField "container.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:portainer-containerimage-p0 .
+ex:portainer-containerimage-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "container.title" .
+ex:containerimage-portainer a vg:SourceAuthority ; vg:authoritativeSource ex:portainer ;
+    vg:authorityFor infra:ContainerImage ; vg:authorityMapping ex:portainer-containerimage ;
+    vg:authorityRank 2 ; vg:authorityContract "mcp" .
+
+ex:containermanager-host a vg:VirtualMapping ; vg:mapsContract ex:containermanager-contract ;
+    vg:mapsOntologyClass infra:Host ; vg:mapsEntity "container" ; vg:keyField "container.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:containermanager-host-p0 .
+ex:containermanager-host-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "container.title" .
+ex:host-containermanager a vg:SourceAuthority ; vg:authoritativeSource ex:containermanager ;
+    vg:authorityFor infra:Host ; vg:authorityMapping ex:containermanager-host ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
+
+ex:portainer-host a vg:VirtualMapping ; vg:mapsContract ex:portainer-contract ;
+    vg:mapsOntologyClass infra:Host ; vg:mapsEntity "container" ; vg:keyField "container.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:portainer-host-p0 .
+ex:portainer-host-p0 a vg:PredicateFieldPair ; vg:predicate rdfs:label ; vg:field "container.title" .
+ex:host-portainer a vg:SourceAuthority ; vg:authoritativeSource ex:portainer ;
+    vg:authorityFor infra:Host ; vg:authorityMapping ex:portainer-host ;
+    vg:authorityRank 2 ; vg:authorityContract "mcp" .
+
+ex:systemsmanager-host-hardware a vg:VirtualMapping ; vg:mapsContract ex:systemsmanager-contract ;
+    vg:mapsOntologyClass infra:Host ; vg:mapsEntity "machine" ; vg:keyField "machine.id" ;
+    vg:approved true ; vg:hasPredicateFieldPair ex:systemsmanager-host-hardware-p0 .
+ex:systemsmanager-host-hardware-p0 a vg:PredicateFieldPair ; vg:predicate infra:temperatureCelsius ; vg:field "machine.temperature" .
+ex:host-systemsmanager-hardware a vg:SourceAuthority ; vg:authoritativeSource ex:systemsmanager ;
+    vg:authorityFor infra:Host ; vg:authorityMapping ex:systemsmanager-host-hardware ;
+    vg:authorityFacet infra:temperatureCelsius ;
+    vg:authorityRank 1 ; vg:authorityContract "mcp" .
