@@ -41557,6 +41557,46 @@ class LifecycleTraceAnswer(BaseModel):
     truncated: bool
 
 
+class CapacityAdjustmentProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    available_headroom: Annotated[int, Field(ge=0)]
+    current_capacity: Annotated[int, Field(ge=0)]
+    max_capacity: Annotated[int, Field(ge=0)]
+    measured_load: Annotated[int, Field(ge=0)]
+    min_capacity: Annotated[int, Field(ge=0)]
+    policy_revision: Annotated[int, Field(ge=0)]
+    premise_revision: Annotated[int, Field(ge=0)]
+    proposal_digest: str
+    proposal_id: str
+    proposed_capacity: Annotated[int, Field(ge=0)]
+    resource_class_iri: str
+    tenant_id: str
+    unit: str
+    window_end_ms: Annotated[int, Field(ge=0)]
+    window_start_ms: Annotated[int, Field(ge=0)]
+
+
+class Observation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    available: Annotated[int, Field(ge=0)]
+    epoch: Annotated[int, Field(ge=0)]
+    unit: str
+
+
+class CapacityRefusalCode(str, Enum):
+    DIGEST_INVALID = "CAPACITY_PROPOSAL_DIGEST_INVALID"
+    TENANT_MISMATCH = "CAPACITY_TENANT_MISMATCH"
+    PREMISE_STALE = "CAPACITY_PREMISE_STALE"
+    MEASUREMENT_INVALID = "CAPACITY_MEASUREMENT_INVALID"
+    UNIT_MISMATCH = "CAPACITY_UNIT_MISMATCH"
+    WINDOW_INVALID = "CAPACITY_WINDOW_INVALID"
+    LIMIT_INVALID = "CAPACITY_LIMIT_INVALID"
+    LIMIT_EXCEEDED = "CAPACITY_LIMIT_EXCEEDED"
+    HEADROOM_EXCEEDED = "CAPACITY_HEADROOM_EXCEEDED"
+
+
 class MethodFileDefectParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -52146,6 +52186,9 @@ __all__ = [
     "DefectIntake",
     "DefectStatus",
     "Defect",
+    "CapacityAdjustmentProposal",
+    "CapacityRefusalCode",
+    "Observation",
     "FileDefectReceipt",
     "FileDefectRequest",
     "GetDefectReceipt",
