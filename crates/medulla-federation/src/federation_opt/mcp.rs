@@ -258,6 +258,10 @@ impl RemoteFetch for McpRemote {
         }
     }
 
+    fn protocol(&self) -> Option<super::capability::ConnectionProtocol> {
+        Some(super::capability::ConnectionProtocol::Mcp)
+    }
+
     fn identity(&self) -> &Identity {
         &self.identity
     }

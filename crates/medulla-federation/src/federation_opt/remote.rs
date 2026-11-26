@@ -29,6 +29,11 @@ pub trait RemoteFetch {
         self.identity().fingerprint
     }
     fn fetch(&self, request: &RemoteRequest) -> Result<RowSet, String>;
+    /// The connection protocol this source speaks, whose matrix row bounds what the planner
+    /// pushes into it (MEDULLA-FEDERATED-QUERY-R073.2). `None` when the spec names none.
+    fn protocol(&self) -> Option<super::capability::ConnectionProtocol> {
+        None
+    }
     /// The quota this source was registered under (MEDULLA-UNIFIED-DATA-PLANE-R031.2);
     /// `None` for an inline spec, which runs under the session's default quota.
     fn quota(&self) -> Option<SourceQuota> {
@@ -217,6 +222,9 @@ impl RemoteFetch for Quoted<'_> {
     }
     fn fetch(&self, request: &RemoteRequest) -> Result<RowSet, String> {
         self.inner.fetch(request)
+    }
+    fn protocol(&self) -> Option<super::capability::ConnectionProtocol> {
+        self.inner.protocol()
     }
     fn quota(&self) -> Option<SourceQuota> {
         self.quota

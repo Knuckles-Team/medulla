@@ -11,6 +11,7 @@ use super::budget::{
     RESULT_INCOMPLETE, SNAPSHOT_UNAVAILABLE, SOURCE_QUOTA_EXCEEDED, SOURCE_WRITE_FORBIDDEN,
 };
 use super::capability::{
+    in_matrix, require_in_matrix, PushdownKind,
     FullFetch, LimitPushdown, PageRequest, Paging, RemoteRequest, SourceCapabilities, SourceRate,
 };
 use super::http::PAGE_SIZE;
@@ -327,7 +328,10 @@ impl<'r, 's> Fragment<'r, 's> {
             ));
         }
         let started = Instant::now();
-        let wanted = hint.filter(|_| self.caps.limit == LimitPushdown::Native);
+        // The protocol's matrix row bounds the pushdown: a limit its row lacks is never sent.
+        let wanted = hint
+            .filter(|_| self.caps.limit == LimitPushdown::Native)
+            .filter(|_| in_matrix(self.remote.protocol(), PushdownKind::LimitOrder));
         // A kept plan that did not push the limit sends none, even when the source could take it.
         let limit = wanted.filter(|_| self.kept.as_ref().is_none_or(|kept| kept.limit_pushed));
         let mut trace = self.trace(source_strategy(limit, self.caps.paging));
@@ -527,6 +531,9 @@ impl<'r, 's> Fragment<'r, 's> {
         request: &RemoteRequest,
         trace: &mut FragmentTrace,
     ) -> Result<RowSet, String> {
+        if request.limit.is_some() {
+            require_in_matrix(self.remote.protocol(), PushdownKind::LimitOrder)?;
+        }
         match self.caps.paging {
             Paging::Single => self.round_trip(request, trace),
             Paging::Offset | Paging::Page => self.read_pages(request, trace),

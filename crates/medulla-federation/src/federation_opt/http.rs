@@ -176,6 +176,10 @@ impl RemoteFetch for HttpRemote<'_> {
         }
     }
 
+    fn protocol(&self) -> Option<super::capability::ConnectionProtocol> {
+        Some(super::capability::ConnectionProtocol::RestOpenApi)
+    }
+
     fn identity(&self) -> &Identity {
         &self.identity
     }

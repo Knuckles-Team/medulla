@@ -153,6 +153,10 @@ impl RemoteFetch for SqlRemote<'_> {
         }
     }
 
+    fn protocol(&self) -> Option<super::capability::ConnectionProtocol> {
+        Some(super::capability::ConnectionProtocol::Sql)
+    }
+
     fn identity(&self) -> &Identity {
         &self.identity
     }

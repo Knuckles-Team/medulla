@@ -445,6 +445,32 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
     },
 ];
 
+/// The refusal of a pushdown the connection protocol's matrix row does not permit
+/// (MEDULLA-FEDERATED-QUERY-R073.2).
+pub const PUSHDOWN_NOT_IN_MATRIX: &str = "PUSHDOWN_NOT_IN_MATRIX";
+
+/// Whether a source on `protocol` may be sent `kind`. A source whose protocol is not named
+/// (an inline or remote-engine spec) has no row to bound it.
+pub fn in_matrix(protocol: Option<ConnectionProtocol>, kind: PushdownKind) -> bool {
+    protocol.is_none_or(|protocol| {
+        connection_protocol_row(protocol).is_some_and(|row| row.allows(kind))
+    })
+}
+
+/// [`in_matrix`] as the typed refusal `PUSHDOWN_NOT_IN_MATRIX`: the chokepoint every request
+/// passes before it leaves the planner.
+pub fn require_in_matrix(
+    protocol: Option<ConnectionProtocol>,
+    kind: PushdownKind,
+) -> Result<(), String> {
+    if in_matrix(protocol, kind) {
+        return Ok(());
+    }
+    Err(format!(
+        "{PUSHDOWN_NOT_IN_MATRIX}: {kind:?} is not in the pushdown row of {protocol:?}"
+    ))
+}
+
 /// Find the single planner row for a connection protocol.
 pub fn connection_protocol_row(
     protocol: ConnectionProtocol,

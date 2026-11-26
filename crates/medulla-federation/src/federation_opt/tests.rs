@@ -12,7 +12,8 @@ use std::time::Duration;
 use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
 use super::capability::{
-    connection_protocol_row, ConnectionProtocol, ForeignSourceCapability, KeyLookup, LimitPushdown,
+    connection_protocol_row, in_matrix, require_in_matrix, ConnectionProtocol,
+    ForeignSourceCapability, KeyLookup, LimitPushdown,
     PushdownKind, RemoteRequest, SourceCapabilities, SourceCostModel, SourceRate,
     CONNECTION_PROTOCOL_MATRIX,
 };
@@ -223,6 +224,16 @@ fn protocol_matrix_bounds_pushdown() {
     let webhook = connection_protocol_row(ConnectionProtocol::Webhook).unwrap();
     assert!(webhook.pushdown.is_empty());
     assert!(!capability.proves_sound_for(ConnectionProtocol::Webhook, PushdownKind::Filter));
+
+    // The planner's chokepoint refuses a pushdown outside the row with the typed code, and
+    // permits one inside it; a source that names no protocol has no row to bound it.
+    let refused = require_in_matrix(Some(ConnectionProtocol::EventStream), PushdownKind::LimitOrder)
+        .unwrap_err();
+    assert!(refused.starts_with("PUSHDOWN_NOT_IN_MATRIX"), "{refused}");
+    assert!(require_in_matrix(Some(ConnectionProtocol::EventStream), PushdownKind::TimeRange).is_ok());
+    assert!(in_matrix(Some(ConnectionProtocol::Sql), PushdownKind::LimitOrder));
+    assert!(!in_matrix(Some(ConnectionProtocol::Webhook), PushdownKind::LimitOrder));
+    assert!(in_matrix(None, PushdownKind::LimitOrder));
 }
 
 // ── (E)+(B): HTTP through the executor ──────────────────────────────────────────

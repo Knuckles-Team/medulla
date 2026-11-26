@@ -58,7 +58,7 @@ pub use budget::{
 };
 pub use cache::{FragmentCacheScope, SourceWatermark};
 pub use capability::{
-    connection_protocol_row, ConnectionProtocol, ForeignSourceCapability, FullFetch, KeyLookup,
+    in_matrix, require_in_matrix, PUSHDOWN_NOT_IN_MATRIX, connection_protocol_row, ConnectionProtocol, ForeignSourceCapability, FullFetch, KeyLookup,
     LimitPushdown, PageRequest, Paging, ProtocolPushdownRow, ProtocolTransfer, PushdownKind,
     RemoteRequest, SearchPush, SourceCapabilities, SourceCostModel, SourceRate,
     CONNECTION_PROTOCOL_MATRIX,

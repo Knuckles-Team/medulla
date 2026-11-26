@@ -1985,6 +1985,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     (
         "Uql",
         &[
+            // MEDULLA-FEDERATED-QUERY-R073.2: a pushdown outside the connection protocol's row.
+            "PUSHDOWN_NOT_IN_MATRIX",
             "EVOLUTION_DIGEST_MISMATCH",
             "EVOLUTION_REVISION_UNKNOWN",
             "EVOLUTION_WINDOW_STALE",
