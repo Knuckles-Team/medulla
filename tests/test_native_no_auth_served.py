@@ -16,7 +16,21 @@ pytestmark = [
 ]
 
 
-def binary():
+def binary(features=()):
+    """The native server artifact for a served case.
+
+    A case that needs the `test-support` feature resolves the dedicated
+    `MEDULLA_TEST_SUPPORT_BINARY` artifact (a server built with that feature) and
+    never falls back to the production-featured one, which lacks its fixtures.
+    """
+    if "test-support" in features:
+        explicit = os.environ.get("MEDULLA_TEST_SUPPORT_BINARY", "").strip()
+        if not explicit:
+            pytest.skip("build the test-support native server before this served case")
+        path = os.path.abspath(explicit)
+        if not (os.path.isfile(path) and os.access(path, os.X_OK)):
+            pytest.fail("explicit test-support native server artifact did not validate")
+        return path
     from conftest import find_server_binary
 
     path = find_server_binary()
@@ -62,6 +76,21 @@ def test_binary_delegates_to_shared_resolver(monkeypatch):
         conftest, "find_server_binary", lambda: "/current/native-server"
     )
     assert binary() == "/current/native-server"
+
+
+def test_binary_test_support_resolves_dedicated_artifact(tmp_path, monkeypatch):
+    artifact = tmp_path / "test-support-server"
+    artifact.write_bytes(b"test support fixture")
+    artifact.chmod(0o700)
+    monkeypatch.setenv("MEDULLA_TEST_SUPPORT_BINARY", str(artifact))
+    monkeypatch.setenv("MEDULLA_TEST_BINARY", "/production/native-server")
+    assert binary(features=("test-support",)) == str(artifact)
+
+
+def test_binary_test_support_without_artifact_skips(monkeypatch):
+    monkeypatch.delenv("MEDULLA_TEST_SUPPORT_BINARY", raising=False)
+    with pytest.raises(pytest.skip.Exception, match="test-support"):
+        binary(features=("test-support",))
 
 
 def test_binary_without_available_artifact_skips(monkeypatch):
