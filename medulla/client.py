@@ -30,7 +30,16 @@ import threading
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from pathlib import PurePosixPath, PureWindowsPath
-from typing import TYPE_CHECKING, Any, Literal, NamedTuple, NoReturn, TypedDict, cast
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Literal,
+    NamedTuple,
+    NoReturn,
+    TypedDict,
+    cast,
+    overload,
+)
 
 import msgpack
 
@@ -57,7 +66,6 @@ if TYPE_CHECKING:
         DrainStatus,
         SearchTaskRejection,
         SparqlResult,
-        SparqlTerm,
         TaskAcked,
         TaskEnqueued,
         TaskRenewed,
@@ -14833,26 +14841,6 @@ class TimeSeriesClient:
         return dict(receipt or {})
 
 
-def _sparql_cell(term: SparqlTerm | None) -> str | None:
-    """The one-line text of a typed term: ``<iri>``, ``_:label`` or the lexical form."""
-    if term is None:
-        return None
-    if term.kind.value == "iri":
-        return f"<{term.value}>"
-    if term.kind.value == "bnode":
-        return f"_:{term.value}"
-    return term.value
-
-
-def _sparql_rows(result: SparqlResult) -> list[dict[str, str | None]]:
-    """One ``{var: text}`` dict per row of a typed ``SparqlResult``. Read the typed
-    terms (datatype and language) from :meth:`RdfClient.sparql_result`."""
-    return [
-        dict(zip(result.vars, (_sparql_cell(cell) for cell in row), strict=False))
-        for row in result.rows
-    ]
-
-
 class RdfClient:
     """CONCEPT:MEDULLA-KG.ontology.kg-native-rdf-sparql / KG-2.218 — Native RDF/SPARQL
     Namespace.
@@ -15064,7 +15052,33 @@ class RdfClient:
         """
         return await _gen.graph.send_drop_named_graph(self._client, graph=graph)
 
-    async def sparql_result(
+    @overload
+    async def sparql(
+        self,
+        query: str,
+        base_iri: str = "",
+        type_convention: str = "",
+        *,
+        explain: bool = False,
+        requires_packs: list[str] | None = None,
+        latency_class: Literal["interactive"] = "interactive",
+        graph_media_type: str | None = None,
+    ) -> SparqlResult: ...
+
+    @overload
+    async def sparql(
+        self,
+        query: str,
+        base_iri: str = "",
+        type_convention: str = "",
+        *,
+        explain: bool = False,
+        requires_packs: list[str] | None = None,
+        latency_class: Literal["analytical"],
+        graph_media_type: str | None = None,
+    ) -> dict[str, Any]: ...
+
+    async def sparql(
         self,
         query: str,
         base_iri: str = "",
@@ -15074,13 +15088,24 @@ class RdfClient:
         requires_packs: list[str] | None = None,
         latency_class: str = "interactive",
         graph_media_type: str | None = None,
-    ) -> SparqlResult:
+    ) -> SparqlResult | dict[str, Any]:
         """Run a SPARQL ``SELECT`` and return the engine's typed ``SparqlResult``
         (EH-377): ``vars``, ``rows`` aligned to them, and one witness proof per row
         when ``explain`` (EH-197). The payload is validated against the contract
         model, so a result the contract does not declare raises
         ``ContractViolation`` instead of reaching the caller as an untyped dict.
-        Arguments are those of :meth:`sparql`.
+        ``latency_class="analytical"`` submits the query as a durable job and returns
+        its job record (read the rows with ``AnalyticsJob`` ``Status``); every other
+        call returns the typed ``SparqlResult``.
+
+        Every cell is a typed ``SparqlTerm`` (``kind``, ``value``, ``datatype``,
+        ``language``), or ``None`` for an unbound variable; read the lexical form or
+        IRI from ``term.value``. ``base_iri`` + ``type_convention`` select the LPG to
+        RDF projection vocabulary
+        (CONCEPT:MEDULLA-KG.ontology.lpg-rdf-projection-vocabulary), both empty for
+        the identity projection. ``requires_packs`` names the connector packs the
+        question reads; one the tenant has not imported abstains
+        ``PACK_NOT_IMPORTED`` before any query runs.
 
         ``graph_media_type`` names one of the six RDF media types
         (``application/n-triples``, ``text/turtle``, ``application/n-quads``,
@@ -15105,64 +15130,9 @@ class RdfClient:
         if latency_class != "interactive":
             params["latency_class"] = latency_class
         sent = await _gen.reasoning.send_sparql(self._client, params)
-        return _gen.reasoning.decode_sparql(sent)
-
-    async def sparql(
-        self,
-        query: str,
-        base_iri: str = "",
-        type_convention: str = "",
-        *,
-        requires_packs: list[str] | None = None,
-        latency_class: str = "interactive",
-    ) -> list[dict[str, str | None]]:
-        """Run a SPARQL 1.1 ``SELECT`` over the connection's graph and return a list
-        of row dicts keyed by projected variable (``None`` for an unbound OPTIONAL
-        variable). SPARQL is included in the mandatory main build.
-
-        ``base_iri`` + ``type_convention`` select the LPG→RDF projection vocabulary
-        (CONCEPT:MEDULLA-KG.ontology.lpg-rdf-projection-vocabulary). Both default to
-        empty ⇒
-        the IDENTITY projection (node-type
-        and property keys emitted verbatim, no ``rdf:type`` synthesis), preserving the
-        prior behavior. A caller that passes ``base_iri`` (e.g. meristem's
-        ``https://knuckles-team.github.io/ontology/core#``) +
-        ``type_convention="camel"`` makes the engine project the live property
-        graph into that vocabulary, so a by-class query (``?s a kg:Agent``) resolves
-        natively — the engine, not rdflib, answers.
-
-        The engine's ``SparqlResult`` is validated against its contract model
-        (:meth:`sparql_result`) before each row is zipped to its vars.
-
-        ``requires_packs`` names the connector packs the question reads, by connector
-        id. When the tenant has not imported one, the read abstains with
-        ``PACK_NOT_IMPORTED`` naming the first missing id, before any query runs.
-
-        ``latency_class`` is ``"interactive"`` (the default: the query refuses
-        ``QUERY_BUDGET_EXCEEDED`` past the node budget) or ``"analytical"`` (the
-        query is submitted as a durable job and the call returns its job record;
-        read the rows with ``AnalyticsJob`` ``Status``).
-        """
         if latency_class == "analytical":
-            params: dict[str, Any] = {
-                "query": query,
-                "base_iri": base_iri,
-                "type_convention": type_convention,
-                "latency_class": "analytical",
-            }
-            if requires_packs:
-                params["requires_packs"] = list(requires_packs)
-            sent = await _gen.reasoning.send_sparql(self._client, params)
             return sent.payload
-        return _sparql_rows(
-            await self.sparql_result(
-                query,
-                base_iri,
-                type_convention,
-                requires_packs=requires_packs,
-                latency_class=latency_class,
-            )
-        )
+        return _gen.reasoning.decode_sparql(sent)
 
     async def sparql_explain(
         self,
@@ -15181,8 +15151,8 @@ class RdfClient:
         not certify (property paths, UNION, MINUS, aggregates, GRAPH, SERVICE, FROM)
         or the search hit its budget.
         """
-        result = await self.sparql_result(
-            query, base_iri, type_convention, explain=True
+        result = await self.sparql(
+            query, base_iri, type_convention, explain=True, latency_class="interactive"
         )
         return [
             {
@@ -15335,7 +15305,7 @@ class RdfClient:
         mapping: str,
         tables: list[str],
         external_sources: list[dict[str, str]] | None = None,
-    ) -> list[dict[str, str | None]]:
+    ) -> SparqlResult:
         """OBDA / R2RML VIRTUAL GRAPH query
         (CONCEPT:MEDULLA-KG.query.r2rml-virtual-graph /
         CONCEPT:MEDULLA-KG.query.obda-query-rewrite) — Ontology-Based Data Access: run a
@@ -15360,7 +15330,8 @@ class RdfClient:
         table columns, materializes ONLY the query-relevant triples into a transient
         view, and evaluates the SAME SPARQL engine over it — a real query-rewrite OBDA
         path, not an ETL/materialize step; the user table is never mutated and nothing
-        is persisted into any graph. Returns the same row-dict shape as :meth:`sparql`.
+        is persisted into any graph. Returns the typed ``SparqlResult`` of
+        :meth:`sparql`.
         OBDA, SPARQL, and query support are included in the mandatory main build.
         Read-only.
 
@@ -15384,7 +15355,7 @@ class RdfClient:
                 "external_sources": [dict(s) for s in (external_sources or [])],
             },
         )
-        return _sparql_rows(_gen.reasoning.decode_sparql_virtual(sent))
+        return _gen.reasoning.decode_sparql_virtual(sent)
 
 
 class ObdaClient:
@@ -15464,12 +15435,12 @@ class ObdaClient:
         self,
         query: str,
         source_name: str | None = None,
-    ) -> list[dict[str, str | None]]:
+    ) -> SparqlResult:
         """Run SPARQL ``query`` against the mapping :meth:`load`-ed for ``source_name``.
         ``source_name`` may be omitted only when exactly one mapping is currently
         loaded (the common single-connector case); with zero or more than one loaded
-        mapping it is required. Returns the same row-dict shape as
-        :meth:`RdfClient.sparql_virtual`/:meth:`RdfClient.sparql`.
+        mapping it is required. Returns the typed ``SparqlResult`` of
+        :meth:`RdfClient.sparql_virtual`.
 
         Raises ``KeyError`` for a ``source_name`` that was never :meth:`load`-ed (or
         when it is omitted and loaded-mapping count != 1) — the client-side half of

@@ -18,6 +18,7 @@ import pathlib
 import uuid
 
 import pytest
+from _sparql_solutions import solution_values
 from conftest import request_context
 from ontology_pack_support import connect, import_entries
 
@@ -228,7 +229,7 @@ async def _import_orders_pack(connector: str) -> dict:
 
 
 def _values(admin, query: str, name: str) -> set[str]:
-    return {row[name].strip("<>") for row in admin.rdf.sparql(query)}
+    return {row[name].strip("<>") for row in solution_values(admin.rdf.sparql(query))}
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R106.6")

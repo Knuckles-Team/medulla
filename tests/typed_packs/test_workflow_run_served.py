@@ -15,6 +15,7 @@ from typing import Any
 
 import msgpack
 import pytest
+from _sparql_solutions import solution_values
 from conftest import TEST_AGENT_ID, TEST_AUDIENCE, TEST_POLICY_VERSION, TEST_TENANT
 from decide.test_run_work_item_served import authenticated_plan_session
 from decide.test_runtime_quota_served import _claim, _extension, _traces
@@ -183,9 +184,11 @@ def test_commit_stamps_the_row_workflow_and_links_the_run_asset(
             identity["workflow_id"], identity["version"], identity["content_digest"]
         )
         definition = "urn:medulla:asset:workflow:" + workflow.replace(":", "%3A")
-        rows = client.rdf.sparql(
-            f"SELECT ?run ?def WHERE {{ ?run <{RDF_TYPE}> <{CATALOG}WorkflowRun> . "
-            f"?run <{PROV_USED}> ?def }}"
+        rows = solution_values(
+            client.rdf.sparql(
+                f"SELECT ?run ?def WHERE {{ ?run <{RDF_TYPE}> <{CATALOG}WorkflowRun> . "
+                f"?run <{PROV_USED}> ?def }}"
+            )
         )
         linked = {row["def"].strip("<>") for row in rows}
         assert definition in linked

@@ -28,6 +28,7 @@ from _commons_generation import connect as connect_engine, restartable_engine
 from ontology_pack_support import connect, import_entries
 
 from conftest import TEST_TENANT, request_context, tenant_request_context  # isort: skip
+from _sparql_solutions import solution_values
 from medulla import ConnectorPackEntryContent
 from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated.agent_component import (
@@ -433,11 +434,15 @@ async def _projected_revisions(
             **secret,
         )
         try:
-            rows = await reader.rdf.sparql(
-                "SELECT ?revision ?body WHERE { ?node a <" + CORE + "PromptRevision> ; "
-                "<" + CORE + 'componentId> "' + component_id + '" ; '
-                "<" + CORE + "entryRevision> ?revision ; "
-                "<" + CORE + "bodySha256> ?body }"
+            rows = solution_values(
+                await reader.rdf.sparql(
+                    "SELECT ?revision ?body WHERE { ?node a <"
+                    + CORE
+                    + "PromptRevision> ; "
+                    "<" + CORE + 'componentId> "' + component_id + '" ; '
+                    "<" + CORE + "entryRevision> ?revision ; "
+                    "<" + CORE + "bodySha256> ?body }"
+                )
             )
         except EngineResponseError:
             rows = []

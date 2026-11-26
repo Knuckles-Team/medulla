@@ -13,6 +13,7 @@ import threading
 import time
 
 import pytest
+from _sparql_solutions import solution_values
 
 from medulla.client import EngineResponseError
 
@@ -57,14 +58,16 @@ def test_fragments_share_one_snapshot(clean_graph, pg_source):
 
     writer = threading.Thread(target=late_writer)
     writer.start()
-    rows = clean_graph.rdf.sparql_virtual(
-        QUERY,
-        MAPPING,
-        [],
-        external_sources=[
-            {"name": "snap_a", "dsn": pg_source.dsn, "table": "snap_a"},
-            {"name": "snap_b", "dsn": pg_source.dsn, "table": "snap_b"},
-        ],
+    rows = solution_values(
+        clean_graph.rdf.sparql_virtual(
+            QUERY,
+            MAPPING,
+            [],
+            external_sources=[
+                {"name": "snap_a", "dsn": pg_source.dsn, "table": "snap_a"},
+                {"name": "snap_b", "dsn": pg_source.dsn, "table": "snap_b"},
+            ],
+        )
     )
     writer.join()
 

@@ -39,6 +39,7 @@ from _commons_generation import (
     publish_schema,
 )
 from _decision_resident_fixture import publish
+from _sparql_solutions import solution_values
 from conftest import TEST_TENANT
 from expansion_harness import ChatStub, served_engine
 from expansion_harness import connect as sync_connect
@@ -235,9 +236,11 @@ def test_probe_2(clean_graph) -> None:
 
 def _agent_versions(client) -> dict[str, str]:
     """The Agent Library's published revisions in the client's graph, by source record."""
-    rows = client.rdf.sparql(
-        f"SELECT ?n ?s WHERE {{ ?n <{RDF_TYPE}> <{CATALOG}AgentVersion> ; "
-        f"<{SOURCE_RECORD}> ?s }}"
+    rows = solution_values(
+        client.rdf.sparql(
+            f"SELECT ?n ?s WHERE {{ ?n <{RDF_TYPE}> <{CATALOG}AgentVersion> ; "
+            f"<{SOURCE_RECORD}> ?s }}"
+        )
     )
     return {row["s"]: row["n"] for row in rows}
 

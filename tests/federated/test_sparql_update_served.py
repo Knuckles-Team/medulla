@@ -14,6 +14,7 @@ dispatch, so it shares this one commit path; there is no second update path.
 from __future__ import annotations
 
 import pytest
+from _sparql_solutions import solution_values
 
 SPARQL_UPDATE_EVENT = "sparql_http_update_v1"
 
@@ -24,8 +25,8 @@ def _update(client, query: str) -> dict:
 
 
 def _canon(value: str) -> str:
-    """Canonicalize one row value to its bracketed IRI form: the engine returns
-    resource bindings bracketed and predicate (property-key) bindings bare."""
+    """Canonicalize one row value (a bare IRI, the term's ``value``) to its bracketed
+    IRI form."""
     return value if value.startswith("<") and value.endswith(">") else f"<{value}>"
 
 
@@ -36,8 +37,11 @@ def _triples(client) -> set[tuple[str, str, str]]:
     default graph (MEDULLA-MEDIA-VOCAB-R655), so the read names the subjects
     this test writes instead of listing every triple.
     """
-    rows = client.rdf.sparql(
-        "SELECT ?s ?p ?o WHERE { VALUES ?s { <http://ex/a> <http://ex/c> } ?s ?p ?o }"
+    rows = solution_values(
+        client.rdf.sparql(
+            "SELECT ?s ?p ?o WHERE "
+            "{ VALUES ?s { <http://ex/a> <http://ex/c> } ?s ?p ?o }"
+        )
     )
     return {(_canon(row["s"]), _canon(row["p"]), _canon(row["o"])) for row in rows}
 
@@ -53,8 +57,10 @@ def test_insert_then_select(clean_graph):
     assert report["operations"] == 1
     assert report["inserted"] == 1
 
-    rows = clean_graph.rdf.sparql("SELECT ?o WHERE { <http://ex/a> <http://ex/p> ?o }")
-    assert [row["o"] for row in rows] == ["<http://ex/b>"]
+    rows = solution_values(
+        clean_graph.rdf.sparql("SELECT ?o WHERE { <http://ex/a> <http://ex/p> ?o }")
+    )
+    assert [row["o"] for row in rows] == ["http://ex/b"]
 
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R707.2")
@@ -107,7 +113,9 @@ def test_update_refusals(clean_graph):
     for target in ("http://127.0.0.1/data.nt", "https://10.0.0.5/data.nt"):
         with pytest.raises(Exception) as refused:
             _update(clean_graph, f"LOAD <{target}> INTO GRAPH <http://ex/loaded>")
-        assert "federation" in str(refused.value).lower() or "LOAD" in str(refused.value)
+        assert "federation" in str(refused.value).lower() or "LOAD" in str(
+            refused.value
+        )
     assert _triples(clean_graph) == before
 
     # A caller that holds only read scope may not update.
@@ -152,5 +160,7 @@ def test_update_receipt_reads_back(clean_graph):
     # The same text is the same digest; different text is a different one.
     again = _update(clean_graph, query)
     assert again["request_sha256"] == report["request_sha256"]
-    other = _update(clean_graph, "INSERT DATA { <http://ex/c> <http://ex/p> <http://ex/d> }")
+    other = _update(
+        clean_graph, "INSERT DATA { <http://ex/c> <http://ex/p> <http://ex/d> }"
+    )
     assert other["request_sha256"] != report["request_sha256"]

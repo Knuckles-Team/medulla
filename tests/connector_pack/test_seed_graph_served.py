@@ -25,6 +25,8 @@ from ontology_pack_support import import_entries
 from test_pack_contract_served import _engine, _head
 
 from conftest import TEST_TENANT, request_context  # isort: skip
+from _sparql_solutions import solution_values
+
 from medulla import ConnectorPackEntryContent
 from medulla.client import MedullaClient
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
@@ -133,11 +135,13 @@ def test_seed_idempotent_and_partial_reimport(tmp_path: Path) -> None:
                 graph_name=graph,
             )
             try:
-                rows = await client.rdf.sparql(
-                    "SELECT ?subject WHERE { ?subject "
-                    "<https://knuckles-team.github.io/ontology/"
-                    "connector-seed#fromSeed> "
-                    f"<{revision}> }} ORDER BY ?subject"
+                rows = solution_values(
+                    await client.rdf.sparql(
+                        "SELECT ?subject WHERE { ?subject "
+                        "<https://knuckles-team.github.io/ontology/"
+                        "connector-seed#fromSeed> "
+                        f"<{revision}> }} ORDER BY ?subject"
+                    )
                 )
             except Exception:  # the projection has not landed yet
                 rows = []

@@ -20,6 +20,7 @@ import uuid
 
 import pytest
 import stewardship_support as support
+from _sparql_solutions import solution_values
 from conftest import TEST_TENANT, request_context
 
 from medulla.client import SyncMedullaClient
@@ -62,7 +63,9 @@ def catalog_graph():
 
 
 def _rows(client, subject: str, predicate: str) -> list[str]:
-    rows = client.rdf.sparql(f"SELECT ?o WHERE {{ <{subject}> <{predicate}> ?o }}")
+    rows = solution_values(
+        client.rdf.sparql(f"SELECT ?o WHERE {{ <{subject}> <{predicate}> ?o }}")
+    )
     return [row["o"] for row in rows]
 
 
@@ -311,9 +314,11 @@ def test_node_carries_source_owner_steward_revision_and_history(catalog_graph):
     _publish_agent(admin, graph, agent_id, 1, "1.1.0")
     second_node = _node_id(agent_id, 2)
     assert _rows(admin, second_node, SOURCE_RECORD) == [f"agent-library:{agent_id}:2"]
-    versions = admin.rdf.sparql(
-        f"SELECT ?n WHERE {{ ?n <{RDF_TYPE}> <{CATALOG}AgentVersion> ; "
-        f'<{SOURCE_RECORD}> ?s . FILTER(CONTAINS(?s, "{agent_id}:")) }}'
+    versions = solution_values(
+        admin.rdf.sparql(
+            f"SELECT ?n WHERE {{ ?n <{RDF_TYPE}> <{CATALOG}AgentVersion> ; "
+            f'<{SOURCE_RECORD}> ?s . FILTER(CONTAINS(?s, "{agent_id}:")) }}'
+        )
     )
     assert len(versions) == 2
 
@@ -403,8 +408,10 @@ def test_one_query_returns_agents_business_workflows_graphs_and_connector_assets
         admin.rdf.add_triples(turtle=batch.decode())
 
         # One query on the parent class returns every family and a connector asset.
-        rows = admin.rdf.sparql(
-            f"SELECT ?asset ?class WHERE {{ ?asset a ?class . ?asset <{SOURCE_RECORD}> ?s }}"
+        rows = solution_values(
+            admin.rdf.sparql(
+                f"SELECT ?asset ?class WHERE {{ ?asset a ?class . ?asset <{SOURCE_RECORD}> ?s }}"
+            )
         )
         classes = {row["class"].strip("<>") for row in rows}
         assert f"{CATALOG}AgentVersion" in classes
@@ -412,7 +419,9 @@ def test_one_query_returns_agents_business_workflows_graphs_and_connector_assets
         assert f"{CATALOG}Product" in classes
         all_assets = {
             row["a"].strip("<>")
-            for row in admin.rdf.sparql(f"SELECT ?a WHERE {{ ?a a <{ASSET}> }}")
+            for row in solution_values(
+                admin.rdf.sparql(f"SELECT ?a WHERE {{ ?a a <{ASSET}> }}")
+            )
         }
         assert _node_id(agent_id, 1) in all_assets
         assert any(a.startswith("urn:medulla:asset:workflow:") for a in all_assets)
@@ -420,9 +429,11 @@ def test_one_query_returns_agents_business_workflows_graphs_and_connector_assets
 
         # One question lists the agents and tools that serve a workflow step, and the step
         # is part of the workflow it was declared on.
-        step_rows = admin.rdf.sparql(
-            f"SELECT ?step ?served WHERE {{ ?step a <{CATALOG}WorkflowStepAsset> . "
-            f"?step <http://www.w3.org/ns/prov#used> ?served }}"
+        step_rows = solution_values(
+            admin.rdf.sparql(
+                f"SELECT ?step ?served WHERE {{ ?step a <{CATALOG}WorkflowStepAsset> . "
+                f"?step <http://www.w3.org/ns/prov#used> ?served }}"
+            )
         )
         served = {row["served"].strip("<>") for row in step_rows}
         assert served == {

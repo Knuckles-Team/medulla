@@ -9,6 +9,7 @@ reference with no `BASE` is an error value, so its variable stays unbound.
 from __future__ import annotations
 
 import pytest
+from _sparql_solutions import solution_values
 
 
 def _bare(value: str | None) -> str | None:
@@ -24,13 +25,15 @@ def test_identifier_building_query(clean_graph) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R742.2: the answer holds the IRI built from
     `CONCAT`, `ENCODE_FOR_URI` and `REPLACE`, and the reference `IRI` resolves under a
     `BASE`."""
-    rows = clean_graph.rdf.sparql(
-        "BASE <http://ex/dir/> "
-        "SELECT ?built ?resolved ?parent WHERE { "
-        'BIND(REPLACE("  Los Angeles/CA", "^ +", "") AS ?name) '
-        'BIND(IRI(CONCAT("http://ex/city/", ENCODE_FOR_URI(?name))) AS ?built) '
-        'BIND(IRI("child") AS ?resolved) '
-        'BIND(IRI("../up") AS ?parent) }'
+    rows = solution_values(
+        clean_graph.rdf.sparql(
+            "BASE <http://ex/dir/> "
+            "SELECT ?built ?resolved ?parent WHERE { "
+            'BIND(REPLACE("  Los Angeles/CA", "^ +", "") AS ?name) '
+            'BIND(IRI(CONCAT("http://ex/city/", ENCODE_FOR_URI(?name))) AS ?built) '
+            'BIND(IRI("child") AS ?resolved) '
+            'BIND(IRI("../up") AS ?parent) }'
+        )
     )
     assert len(rows) == 1, rows
     row = rows[0]
@@ -43,9 +46,11 @@ def test_identifier_building_query(clean_graph) -> None:
 def test_relative_reference_without_a_base_is_unbound(clean_graph) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R742.2: `IRI` of a relative reference with no
     `BASE` is an error value, so the variable is unbound and the absolute one is not."""
-    rows = clean_graph.rdf.sparql(
-        'SELECT ?relative ?absolute WHERE { BIND(IRI("child") AS ?relative) '
-        'BIND(IRI("http://ex/child") AS ?absolute) }'
+    rows = solution_values(
+        clean_graph.rdf.sparql(
+            'SELECT ?relative ?absolute WHERE { BIND(IRI("child") AS ?relative) '
+            'BIND(IRI("http://ex/child") AS ?absolute) }'
+        )
     )
     assert len(rows) == 1, rows
     assert rows[0].get("relative") is None

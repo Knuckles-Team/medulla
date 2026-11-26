@@ -10,6 +10,7 @@ a spatial index served it (R709.5).
 from __future__ import annotations
 
 import pytest
+from _sparql_solutions import solution_values
 
 from medulla.client import EngineResponseError
 
@@ -47,34 +48,36 @@ def within_query(polygon: str) -> str:
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R709.3")
 def test_within_query(clean_graph):
     seed_points(clean_graph)
-    rows = clean_graph.rdf.sparql(within_query(SQUARE))
+    rows = solution_values(clean_graph.rdf.sparql(within_query(SQUARE)))
     # A resource binding is the engine's canonical node id: the bracketed IRI.
-    assert sorted(row["f"] for row in rows) == ["<http://ex/a>", "<http://ex/b>"]
+    assert sorted(row["f"] for row in rows) == ["http://ex/a", "http://ex/b"]
 
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R709.4")
 def test_geo_refusals(clean_graph):
     seed_points(clean_graph)
     with pytest.raises(EngineResponseError) as malformed:
-        clean_graph.rdf.sparql(within_query("POLYGON((0 0, 10"))
+        solution_values(clean_graph.rdf.sparql(within_query("POLYGON((0 0, 10")))
     assert malformed.value.code == "GEO_LITERAL_INVALID"
 
     crs84 = f"<http://www.opengis.net/def/crs/OGC/1.3/CRS84> {SQUARE}"
     with pytest.raises(EngineResponseError) as foreign_crs:
-        clean_graph.rdf.sparql(within_query(crs84))
+        solution_values(clean_graph.rdf.sparql(within_query(crs84)))
     assert foreign_crs.value.code == "GEO_CRS_UNSUPPORTED"
 
     # EPSG:4326 named explicitly is the supported reference.
-    rows = clean_graph.rdf.sparql(within_query(f"<{EPSG_4326}> {SQUARE}"))
+    rows = solution_values(
+        clean_graph.rdf.sparql(within_query(f"<{EPSG_4326}> {SQUARE}"))
+    )
     assert len(rows) == 2
 
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R709.5")
 def test_explain_names_spatial_index(clean_graph):
     seed_points(clean_graph)
-    explained = clean_graph.rdf.sparql_result(within_query(SQUARE), explain=True)
+    explained = clean_graph.rdf.sparql(within_query(SQUARE), explain=True)
     assert [(use.function, use.index_used) for use in explained.spatial] == [
         ("sfWithin", False)
     ]
-    plain = clean_graph.rdf.sparql_result(within_query(SQUARE))
+    plain = clean_graph.rdf.sparql(within_query(SQUARE))
     assert plain.spatial == []

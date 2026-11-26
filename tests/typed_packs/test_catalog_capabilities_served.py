@@ -16,6 +16,7 @@ import uuid
 
 import pytest
 import stewardship_support as support
+from _sparql_solutions import solution_values
 from conftest import request_context
 
 from medulla.client import EngineResponseError, SyncMedullaClient
@@ -64,7 +65,7 @@ def catalog_graph():
 
 
 def _ranked(admin, text: str) -> list[tuple[str, float]]:
-    rows = admin.rdf.sparql(SEARCH.format(text=text))
+    rows = solution_values(admin.rdf.sparql(SEARCH.format(text=text)))
     return [(row["asset"], float(row["score"])) for row in rows]
 
 
@@ -82,9 +83,7 @@ def test_one_search_ranks_all_families_with_usage_and_endorsement_boost(catalog_
 
     # Every family is found through the one function.
     found = {asset for asset, _ in _ranked(admin, "orders")}
-    assert found == {
-        f"<urn:medulla:asset:{family}:orders>" for family in FAMILIES
-    } or found == {f"urn:medulla:asset:{family}:orders" for family in FAMILIES}
+    assert found == {f"urn:medulla:asset:{family}:orders" for family in FAMILIES}
 
     # An asset that matches nothing is not a hit.
     assert _ranked(admin, "zzz-no-such-asset") == []
@@ -139,21 +138,23 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
     )
     saved = "urn:medulla:asset:stored-query:sales-by-region%3A1"
     saved_node = f"<{saved}>"
-    found = admin.rdf.sparql(f"SELECT ?c WHERE {{ <{saved}> a ?c }}")
+    found = solution_values(admin.rdf.sparql(f"SELECT ?c WHERE {{ <{saved}> a ?c }}"))
     assert [row["c"].strip("<>") for row in found] == [f"{CATALOG}SavedQueryAsset"]
-    source = admin.rdf.sparql(
-        f"SELECT ?s WHERE {{ <{saved}> <{CATALOG}sourceRecord> ?s }}"
+    source = solution_values(
+        admin.rdf.sparql(f"SELECT ?s WHERE {{ <{saved}> <{CATALOG}sourceRecord> ?s }}")
     )
     assert [row["s"].strip('"') for row in source] == ["stored_query:sales-by-region:1"]
-    language = admin.rdf.sparql(
-        f"SELECT ?l WHERE {{ <{saved}> <{CATALOG}queryLanguage> ?l }}"
+    language = solution_values(
+        admin.rdf.sparql(f"SELECT ?l WHERE {{ <{saved}> <{CATALOG}queryLanguage> ?l }}")
     )
     assert [row["l"].strip('"') for row in language] == ["uql"]
-    parameters = admin.rdf.sparql(
-        f"SELECT ?p WHERE {{ <{saved}> <{CATALOG}parameterName> ?p }}"
+    parameters = solution_values(
+        admin.rdf.sparql(f"SELECT ?p WHERE {{ <{saved}> <{CATALOG}parameterName> ?p }}")
     )
     assert [row["p"].strip('"') for row in parameters] == ["region"]
-    stored_objects = admin.rdf.sparql(f"SELECT ?o WHERE {{ <{saved}> ?p ?o }}")
+    stored_objects = solution_values(
+        admin.rdf.sparql(f"SELECT ?o WHERE {{ <{saved}> ?p ?o }}")
+    )
     assert not any("region = $region" in str(row["o"]) for row in stored_objects)
 
     admin.rdf.add_triples(
@@ -182,9 +183,11 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
     )
     # Each reporting asset lists what it reads, and the one search ranks them with
     # the rest.
-    rows = admin.rdf.sparql(
-        f"SELECT ?asset WHERE {{ ?asset <{CATALOG}readsAsset> "
-        f"<urn:medulla:asset:resource:sales> }}"
+    rows = solution_values(
+        admin.rdf.sparql(
+            f"SELECT ?asset WHERE {{ ?asset <{CATALOG}readsAsset> "
+            f"<urn:medulla:asset:resource:sales> }}"
+        )
     )
     assert len(rows) == 3
     found = {asset.strip("<>") for asset, _ in _ranked(admin, "sales")}
@@ -202,8 +205,8 @@ def test_dashboard_report_saved_query_and_template_register_with_reads_and_usage
                 f"cat:hasOwner {owner} .\n"
             )
         )
-    assert not admin.rdf.sparql(
-        "SELECT ?t WHERE { <urn:medulla:asset:template:bare> a ?t }"
+    assert not solution_values(
+        admin.rdf.sparql("SELECT ?t WHERE { <urn:medulla:asset:template:bare> a ?t }")
     )
 
 
@@ -237,14 +240,18 @@ def test_model_asset_links_registry_ref_schemas_and_training_lineage_without_wei
     # The training lineage is the existing lineage property of the dataset.
     reached = {
         row["node"].strip("<>")
-        for row in admin.rdf.sparql(
-            f"SELECT ?node WHERE {{ <urn:medulla:asset:resource:train> "
-            f"<{CATALOG}lineageTo>+ ?node }}"
+        for row in solution_values(
+            admin.rdf.sparql(
+                f"SELECT ?node WHERE {{ <urn:medulla:asset:resource:train> "
+                f"<{CATALOG}lineageTo>+ ?node }}"
+            )
         )
     }
     assert reached == {"urn:medulla:asset:model:churn"}
-    trained = admin.rdf.sparql(
-        f"SELECT ?d WHERE {{ <urn:medulla:asset:model:churn> <{CATALOG}trainedOn> ?d }}"
+    trained = solution_values(
+        admin.rdf.sparql(
+            f"SELECT ?d WHERE {{ <urn:medulla:asset:model:churn> <{CATALOG}trainedOn> ?d }}"
+        )
     )
     assert len(trained) == 1
 
@@ -271,12 +278,16 @@ def test_model_asset_links_registry_ref_schemas_and_training_lineage_without_wei
     # carries no weights property.
     props = {
         row["p"].strip("<>")
-        for row in admin.rdf.sparql(
-            "SELECT ?p WHERE { <urn:medulla:asset:model:churn> ?p ?o }"
+        for row in solution_values(
+            admin.rdf.sparql(
+                "SELECT ?p WHERE { <urn:medulla:asset:model:churn> ?p ?o }"
+            )
         )
     }
     assert not any("weights" in p for p in props)
-    assert admin.rdf.sparql(f"SELECT ?m WHERE {{ ?m a <{CATALOG}ModelAsset> }}")
+    assert solution_values(
+        admin.rdf.sparql(f"SELECT ?m WHERE {{ ?m a <{CATALOG}ModelAsset> }}")
+    )
 
 
 def _turtle_literal(text: str) -> str:
@@ -341,12 +352,16 @@ def test_contract_harvest_stores_schema_keys_views_indexes_and_no_rows(catalog_g
         ("KeyAsset", 1),
         ("IndexAsset", 1),
     ):
-        rows = admin.rdf.sparql(f"SELECT ?n WHERE {{ ?n a <{CATALOG}{kind}> }}")
+        rows = solution_values(
+            admin.rdf.sparql(f"SELECT ?n WHERE {{ ?n a <{CATALOG}{kind}> }}")
+        )
         assert len(rows) == count, (kind, rows)
     unmapped = {
         row["n"].strip("<>")
-        for row in admin.rdf.sparql(
-            f'SELECT ?n WHERE {{ ?n <{CATALOG}flag> "field_unmapped" }}'
+        for row in solution_values(
+            admin.rdf.sparql(
+                f'SELECT ?n WHERE {{ ?n <{CATALOG}flag> "field_unmapped" }}'
+            )
         )
     }
     assert unmapped == {"urn:harvest:field:note"}
@@ -354,7 +369,9 @@ def test_contract_harvest_stores_schema_keys_views_indexes_and_no_rows(catalog_g
     # Medulla stores metadata only: no node carries a row or a package payload.
     predicates = {
         row["p"].strip("<>")
-        for row in admin.rdf.sparql("SELECT DISTINCT ?p WHERE { ?s ?p ?o }")
+        for row in solution_values(
+            admin.rdf.sparql("SELECT DISTINCT ?p WHERE { ?s ?p ?o }")
+        )
     }
     assert not any(p.endswith(("#row", "#rows", "#package")) for p in predicates)
 
@@ -392,8 +409,10 @@ def test_lineage_walks_source_operation_workflow_dashboard_agent_and_model(
     # One property path walks the whole platform from the source to the model.
     reached = {
         row["node"].strip("<>")
-        for row in admin.rdf.sparql(
-            f"SELECT ?node WHERE {{ <urn:lineage:source> <{CATALOG}lineageTo>+ ?node }}"
+        for row in solution_values(
+            admin.rdf.sparql(
+                f"SELECT ?node WHERE {{ <urn:lineage:source> <{CATALOG}lineageTo>+ ?node }}"
+            )
         )
     }
     assert reached == {downstream for _, _, downstream in chain}
@@ -401,9 +420,11 @@ def test_lineage_walks_source_operation_workflow_dashboard_agent_and_model(
     # The hop type reads from the lineage edge node and stays in the closed set.
     hops = {
         (row["from"].strip("<>"), row["to"].strip("<>")): row["hop"].strip('"')
-        for row in admin.rdf.sparql(
-            f"SELECT ?from ?to ?hop WHERE {{ ?e a <{CATALOG}LineageEdge> ; "
-            f"<{CATALOG}from> ?from ; <{CATALOG}to> ?to ; <{CATALOG}hop> ?hop }}"
+        for row in solution_values(
+            admin.rdf.sparql(
+                f"SELECT ?from ?to ?hop WHERE {{ ?e a <{CATALOG}LineageEdge> ; "
+                f"<{CATALOG}from> ?from ; <{CATALOG}to> ?to ; <{CATALOG}hop> ?hop }}"
+            )
         )
     }
     assert hops == {(upstream, downstream): hop for upstream, hop, downstream in chain}
@@ -623,7 +644,9 @@ def test_sensitivity_propagates_downstream_as_proposal_and_asset_names_its_polic
             f"cat:governedBy <{policy}> .\n"
         )
     )
-    rows = admin.rdf.sparql(f"SELECT ?o WHERE {{ <{asset}> <{CATALOG}governedBy> ?o }}")
+    rows = solution_values(
+        admin.rdf.sparql(f"SELECT ?o WHERE {{ <{asset}> <{CATALOG}governedBy> ?o }}")
+    )
     assert [row["o"].strip("<>") for row in rows] == [policy]
 
 
@@ -743,8 +766,10 @@ def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(
             f'cat:annotationText "done" ; cat:inReplyTo <{note}>',
         )
     )
-    rows = admin.rdf.sparql(
-        f"PREFIX cat: <{CATALOG}> SELECT ?a WHERE {{ ?a cat:annotates <{asset}> }}"
+    rows = solution_values(
+        admin.rdf.sparql(
+            f"PREFIX cat: <{CATALOG}> SELECT ?a WHERE {{ ?a cat:annotates <{asset}> }}"
+        )
     )
     assert len(rows) == 4
 
@@ -779,9 +804,11 @@ def test_annotations_attach_to_any_asset_and_trust_flags_reuse_the_steward_path(
     # independent nodes, so deleting the asset leaves every comment, tag and rating
     # readable with its author and revision.
     admin.rdf.remove_triples(turtle=asset_turtle)
-    thread = admin.rdf.sparql(
-        f"PREFIX cat: <{CATALOG}> "
-        "SELECT ?a ?revision WHERE { ?a a cat:Annotation ; cat:annotationRevision ?revision }"
+    thread = solution_values(
+        admin.rdf.sparql(
+            f"PREFIX cat: <{CATALOG}> "
+            "SELECT ?a ?revision WHERE { ?a a cat:Annotation ; cat:annotationRevision ?revision }"
+        )
     )
     assert len(thread) == 4
     assert all(str(row["revision"]).strip('"').startswith("1") for row in thread)

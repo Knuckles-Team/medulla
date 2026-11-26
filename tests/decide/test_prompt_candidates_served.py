@@ -25,6 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
 
 import pytest
 from _commons_generation import connect
+from _sparql_solutions import solution_values
 from conftest import TEST_TENANT, request_context
 from ontology_pack_support import attach_pack, import_entries, ontology_entry
 from test_connector_pack_planted import IMPORTER, _bind, _import
@@ -263,7 +264,7 @@ UQL = (
 async def test_system_prompt_query_lists_candidates_for_a_task() -> None:
     client = await _graph_with_both_packs()
     try:
-        sparql_rows = await client.sparql(SPARQL)
+        sparql_rows = solution_values(await client.rdf.sparql(SPARQL))
         uql = await client.query.uql(UQL, {"task": "urn:task:incident-triage"})
         sparql_set = {
             (row["prompt"], row["connector"], row["digest"]) for row in sparql_rows

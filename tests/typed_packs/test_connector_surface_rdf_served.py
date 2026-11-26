@@ -14,6 +14,7 @@ import time
 import uuid
 
 import pytest
+from _sparql_solutions import solution_values
 from ontology_pack_support import connect, import_entries, ontology_entry
 
 from medulla import ConnectorPackEntryContent
@@ -65,7 +66,7 @@ async def _active_tools(client, order: str, expected: set[str]) -> set[str]:
     )
     deadline = time.monotonic() + 180
     while True:
-        rows = await client.rdf.sparql(query)
+        rows = solution_values(await client.rdf.sparql(query))
         found = {row["id"] for row in rows}
         if found == expected:
             return found
@@ -74,9 +75,11 @@ async def _active_tools(client, order: str, expected: set[str]) -> set[str]:
 
 
 async def _component_ids(client, connector: str) -> dict[str, str]:
-    rows = await client.rdf.sparql(
-        f"PREFIX cp: <{CP}> SELECT ?t ?id WHERE {{ ?t cp:componentId ?id . "
-        f'FILTER(STRSTARTS(STR(?t), "tool://{connector}/")) }}'
+    rows = solution_values(
+        await client.rdf.sparql(
+            f"PREFIX cp: <{CP}> SELECT ?t ?id WHERE {{ ?t cp:componentId ?id . "
+            f'FILTER(STRSTARTS(STR(?t), "tool://{connector}/")) }}'
+        )
     )
     return {row["t"].strip("<>"): row["id"] for row in rows}
 

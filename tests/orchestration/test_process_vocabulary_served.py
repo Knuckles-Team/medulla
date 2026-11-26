@@ -11,6 +11,7 @@ from __future__ import annotations
 import uuid
 
 import pytest
+from _sparql_solutions import solution_values
 
 CORE = "https://knuckles-team.github.io/ontology/core#"
 
@@ -60,4 +61,6 @@ def test_bpmn_nodes_answer_core_class_queries(clean_graph) -> None:
                 f"  :flowSource <{task}> .\n"
             )
         )
-    assert not clean_graph.rdf.sparql(f"SELECT ?p WHERE {{ <{orphan}> ?p ?o }}")
+    assert not solution_values(
+        clean_graph.rdf.sparql(f"SELECT ?p WHERE {{ <{orphan}> ?p ?o }}")
+    )

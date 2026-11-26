@@ -12,6 +12,7 @@ import hashlib
 import os
 
 import pytest
+from _sparql_solutions import solution_values
 from conftest import register_commons_agents, request_context
 
 from medulla.client import EngineResponseError, SyncMedullaClient
@@ -112,13 +113,15 @@ def test_cypher_matches_sparql_over_sql_source(clean_graph, pg_source):
     )
     sparql = sorted(
         row["name"]
-        for row in clean_graph.rdf.sparql_virtual(
-            SPARQL,
-            MAPPING,
-            [],
-            external_sources=[
-                {"name": "gv_people", "dsn": pg_source.dsn, "table": "gv_people"}
-            ],
+        for row in solution_values(
+            clean_graph.rdf.sparql_virtual(
+                SPARQL,
+                MAPPING,
+                [],
+                external_sources=[
+                    {"name": "gv_people", "dsn": pg_source.dsn, "table": "gv_people"}
+                ],
+            )
         )
     )
     assert cypher == sparql == ["Ann", "Bob", "Cy"]

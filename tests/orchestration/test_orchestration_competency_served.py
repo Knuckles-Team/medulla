@@ -32,6 +32,7 @@ from _commons_generation import (
     publish_schema,
 )
 from _decision_resident_fixture import publish
+from _sparql_solutions import solution_values
 from conftest import TEST_TENANT, tenant_request_context
 from ontology_pack_support import attach_pack, import_entries, ontology_entry
 from test_usage_guidance_served import STEPS, _guide, _import_pack, _schema_body
@@ -280,7 +281,7 @@ def test_steps_carry_contract_params_results_and_refusals() -> None:
                 "SELECT ?c WHERE { ?c <https://knuckles-team.github.io/ontology/"
                 "surface-contract#forTask> ?t }"
             )
-            while not await client.rdf.sparql(probe):
+            while not solution_values(await client.rdf.sparql(probe)):
                 assert time.monotonic() < deadline, "the contracts were not projected"
                 await asyncio.sleep(0.5)
 
@@ -348,7 +349,7 @@ def test_step_names_linked_skill_and_agent_prompt() -> None:
                 "SELECT ?s WHERE { ?s <https://knuckles-team.github.io/ontology/"
                 "surface-contract#servesTask> ?t }"
             )
-            while not await client.rdf.sparql(probe):
+            while not solution_values(await client.rdf.sparql(probe)):
                 assert time.monotonic() < deadline, "the links were not projected"
                 await asyncio.sleep(0.5)
 
@@ -432,7 +433,7 @@ def _composed_seed() -> list[ConnectorPackEntryContent]:
 
 def _select(query: str):
     async def run(client: Any) -> list[dict[str, str | None]]:
-        return await client.rdf.sparql(query)
+        return solution_values(await client.rdf.sparql(query))
 
     return run
 
@@ -501,7 +502,7 @@ def test_fixture_ingest_produces_expected_part_rows() -> None:
             client = await connect(graph)
             try:
                 for name, (query, _expected) in queries.items():
-                    rows[name] = await client.rdf.sparql(query)
+                    rows[name] = solution_values(await client.rdf.sparql(query))
             except Exception:  # the projection has not landed yet
                 rows = {}
             finally:
@@ -646,7 +647,7 @@ def test_q11_seed_changes() -> None:
         while time.monotonic() < deadline:
             client = await connect(graph)
             try:
-                rows = await client.rdf.sparql(query)
+                rows = solution_values(await client.rdf.sparql(query))
                 found = {
                     _lexical(row["part"]): {k: _lexical(v) for k, v in row.items()}
                     for row in rows
@@ -824,7 +825,7 @@ def test_q11_downtime_next(clean_graph) -> None:
         "?e a dw:SelectionEntry ; dw:jobType ?job_type ; dw:priority ?priority ; dw:cpuMs ?budget . "
         "OPTIONAL { ?e dw:skipReason ?skip_reason } }"
     )
-    rows = clean_graph.rdf.sparql(query)
+    rows = solution_values(clean_graph.rdf.sparql(query))
     ranked = sorted(
         {
             (

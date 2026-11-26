@@ -18,6 +18,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
 
+from _sparql_solutions import solution_values
 from ontology_pack_support import (
     connect,
     import_entries,
@@ -76,9 +77,12 @@ def test_food_pack_import_answers_composition_query() -> None:
             # join the default graph once the projection is visible.
             deadline = time.monotonic() + 180
             while True:
-                rows = await client.rdf.sparql(
-                    "PREFIX : <https://knuckles-team.github.io/ontology/core#> "
-                    "SELECT ?id WHERE { ?amount a :NutrientAmount ; :nutrientId ?id }"
+                rows = solution_values(
+                    await client.rdf.sparql(
+                        "PREFIX : <https://knuckles-team.github.io/ontology/core#> "
+                        "SELECT ?id WHERE "
+                        "{ ?amount a :NutrientAmount ; :nutrientId ?id }"
+                    )
                 )
                 if any(row.get("id") == "1003" for row in rows):
                     break

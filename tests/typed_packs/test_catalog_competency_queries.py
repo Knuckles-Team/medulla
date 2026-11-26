@@ -15,6 +15,7 @@ import os
 import uuid
 
 import pytest
+from _sparql_solutions import solution_values
 from conftest import request_context
 
 from medulla.client import SyncMedullaClient
@@ -121,7 +122,8 @@ OF_CONNECTOR = f"{CONNECTOR_PACK}ofConnector"
 
 def _sparql_rows(client, query: str, *columns: str) -> set[tuple[str | None, ...]]:
     return {
-        tuple(row[column] for column in columns) for row in client.rdf.sparql(query)
+        tuple(row[column] for column in columns)
+        for row in solution_values(client.rdf.sparql(query))
     }
 
 

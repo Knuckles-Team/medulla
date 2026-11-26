@@ -14,6 +14,7 @@ from typing import Any
 import msgpack
 import pytest
 import stewardship_support as support
+from _sparql_solutions import solution_values
 from conftest import request_context
 from stewardship_support import DIGEST, REVIEWER, STRANGER
 
@@ -119,7 +120,8 @@ def test_principal_without_assignment_is_refused(served) -> None:
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.4")
 def test_stewardship_refusals(served) -> None:
-    """Verifies MEDULLA-TYPED-PACKS-R802.4: each code is refused and the request is unchanged."""
+    """Verifies MEDULLA-TYPED-PACKS-R802.4: each code is refused and the request is
+    unchanged."""
     graph, client = served
     me = request_context()["principal"]
     support.assign_stewards(client, graph, ASSET, me, support.principal(REVIEWER))
@@ -129,10 +131,16 @@ def test_stewardship_refusals(served) -> None:
     try:
         with pytest.raises(Exception, match="STEWARD_ROLE_MISSING"):
             support.stewardship(
-                stranger, graph, {"op": "review", "request_id": request_id, "approve": True}
+                stranger,
+                graph,
+                {"op": "review", "request_id": request_id, "approve": True},
             )
         with pytest.raises(Exception, match="SELF_APPROVAL_DENIED"):
-            _op(client, graph, {"op": "review", "request_id": request_id, "approve": True})
+            _op(
+                client,
+                graph,
+                {"op": "review", "request_id": request_id, "approve": True},
+            )
         # The target moves after the request was opened: the review is stale.
         client._send(
             "AddNode",
@@ -147,7 +155,9 @@ def test_stewardship_refusals(served) -> None:
         )
         with pytest.raises(Exception, match="CHANGE_REQUEST_STALE"):
             support.stewardship(
-                reviewer, graph, {"op": "review", "request_id": request_id, "approve": True}
+                reviewer,
+                graph,
+                {"op": "review", "request_id": request_id, "approve": True},
             )
     finally:
         stranger.close()
@@ -158,7 +168,8 @@ def test_stewardship_refusals(served) -> None:
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.5")
 def test_request_evidence_reads_back(served) -> None:
-    """Verifies MEDULLA-TYPED-PACKS-R802.5: digests, verdicts and the receipt are typed properties."""
+    """Verifies MEDULLA-TYPED-PACKS-R802.5: digests, verdicts and the receipt are typed
+    properties."""
     graph, client = served
     reviewer = support.connect(agent_id=REVIEWER)
     try:
@@ -178,7 +189,8 @@ def test_request_evidence_reads_back(served) -> None:
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.6")
 def test_change_request_journey_is_tenant_scoped(served) -> None:
-    """Verifies MEDULLA-TYPED-PACKS-R802.6: the served journey reads back, and a second tenant sees nothing."""
+    """Verifies MEDULLA-TYPED-PACKS-R802.6: the served journey reads back, and a second
+    tenant sees nothing."""
     from conftest import tenant_request_context
 
     graph, client = served
@@ -189,7 +201,11 @@ def test_change_request_journey_is_tenant_scoped(served) -> None:
         reviewer.close()
     _op(client, graph, {"op": "apply", "request_id": request_id})
     nodes = _decode(
-        client._send("GetNodesByLabel", {"label": "cat:ChangeRequest", "after": None, "limit": 10}, graph)
+        client._send(
+            "GetNodesByLabel",
+            {"label": "cat:ChangeRequest", "after": None, "limit": 10},
+            graph,
+        )
     )
     assert [node_id for node_id, _ in nodes] == [request_id]
 
@@ -200,7 +216,9 @@ def test_change_request_journey_is_tenant_scoped(served) -> None:
     )
     try:
         # The second tenant resolves no reviewers: it sees no assignment.
-        with pytest.raises(Exception, match="STEWARD_ROLE_MISSING|denied|DENIED|TENANT"):
+        with pytest.raises(
+            Exception, match="STEWARD_ROLE_MISSING|denied|DENIED|TENANT"
+        ):
             support.stewardship(
                 foreign,
                 graph,
@@ -284,15 +302,16 @@ SEARCH = (
 
 
 def _score(client: Any, asset: str, text: str) -> float:
-    rows = client.rdf.sparql(SEARCH.format(text=text))
+    rows = solution_values(client.rdf.sparql(SEARCH.format(text=text)))
     scores = [float(row["score"]) for row in rows if row["asset"].strip("<>") == asset]
     return scores[0] if scores else 0.0
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.7")
 def test_deprecation_lowers_rank_and_emits_event(served) -> None:
-    """Verifies MEDULLA-TYPED-PACKS-R802.7: a deprecation lowers the asset's rank, a caller holds
-    one flag per asset, and an unknown flag or a missing reason is refused."""
+    """Verifies MEDULLA-TYPED-PACKS-R802.7: a deprecation lowers the asset's rank, a
+    caller holds one flag per asset, and an unknown flag or a missing reason is
+    refused."""
     graph, client = served
     asset = f"urn:medulla:asset:product:{uuid.uuid4().hex[:8]}"
     client.rdf.add_triples(
@@ -307,16 +326,30 @@ def test_deprecation_lowers_rank_and_emits_event(served) -> None:
     assert plain > 0
 
     with pytest.raises(Exception, match="INVALID_ARGUMENT"):
-        _op(client, graph, {"op": "set_trust_flag", "asset": asset, "flag": "praise", "reason": "x"})
+        _op(
+            client,
+            graph,
+            {"op": "set_trust_flag", "asset": asset, "flag": "praise", "reason": "x"},
+        )
     with pytest.raises(Exception, match="INVALID_ARGUMENT"):
-        _op(client, graph, {"op": "set_trust_flag", "asset": asset, "flag": "warning", "reason": " "})
+        _op(
+            client,
+            graph,
+            {"op": "set_trust_flag", "asset": asset, "flag": "warning", "reason": " "},
+        )
 
     receipt = _op(
         client,
         graph,
-        {"op": "set_trust_flag", "asset": asset, "flag": "deprecation", "reason": "replaced by v2"},
+        {
+            "op": "set_trust_flag",
+            "asset": asset,
+            "flag": "deprecation",
+            "reason": "replaced by v2",
+        },
     )
-    flag_id = f"trust_flag:{request_context()['tenant']}:{asset}:{request_context()['agent_id']}"
+    context = request_context()
+    flag_id = f"trust_flag:{context['tenant']}:{asset}:{context['agent_id']}"
     assert receipt["id"] == flag_id
     assert _score(client, asset, "settlement") < plain
 
@@ -324,10 +357,19 @@ def test_deprecation_lowers_rank_and_emits_event(served) -> None:
     _op(
         client,
         graph,
-        {"op": "set_trust_flag", "asset": asset, "flag": "endorsement", "reason": "v2 is out"},
+        {
+            "op": "set_trust_flag",
+            "asset": asset,
+            "flag": "endorsement",
+            "reason": "v2 is out",
+        },
     )
     assert _score(client, asset, "settlement") > plain
     nodes = _decode(
-        client._send("GetNodesByLabel", {"label": "cat:TrustFlag", "after": None, "limit": 10}, graph)
+        client._send(
+            "GetNodesByLabel",
+            {"label": "cat:TrustFlag", "after": None, "limit": 10},
+            graph,
+        )
     )
     assert [node_id for node_id, _ in nodes] == [flag_id]

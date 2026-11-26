@@ -127,11 +127,16 @@ def test_decode_validates_a_result_against_its_contract_model() -> None:
     from medulla.generated import reasoning
 
     fields = models.SparqlResult.model_fields
-    payload: dict[str, Any] = {"vars": ["x"], "rows": [["1"]]}
+    payload: dict[str, Any] = {
+        "vars": ["x"],
+        "rows": [[{"kind": "literal", "value": "1"}]],
+    }
     payload.update({name: [] for name in fields if name not in payload})
     decoded = reasoning.decode_sparql(OpaqueResult("Sparql", payload))
     assert isinstance(decoded, models.SparqlResult)
-    assert decoded.rows == [["1"]]
+    assert decoded.rows == [
+        [models.SparqlTerm(kind=models.SparqlTermKind.LITERAL, value="1")]
+    ]
     with pytest.raises(ContractViolation):
         reasoning.decode_sparql(OpaqueResult("Sparql", {"vars": 1}))
     with pytest.raises(ValueError):

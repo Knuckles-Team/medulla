@@ -11,6 +11,7 @@ refuses with `POLICY_VIOLATION` and names the policy, never a claim value.
 from __future__ import annotations
 
 import pytest
+from _sparql_solutions import solution_values
 
 CORE = "https://knuckles-team.github.io/ontology/core#"
 SECRET_VALUE = "ssn-078-05-1120"
@@ -61,10 +62,12 @@ def _uql(client) -> list[str]:
 
 
 def _sparql(client) -> list[str]:
-    rows = client.rdf.sparql(
-        f"SELECT ?s WHERE {{ ?s a <{CORE}Claim> }}",
-        base_iri=CORE,
-        type_convention="camel",
+    rows = solution_values(
+        client.rdf.sparql(
+            f"SELECT ?s WHERE {{ ?s a <{CORE}Claim> }}",
+            base_iri=CORE,
+            type_convention="camel",
+        )
     )
     return sorted(_local(row["s"]) for row in rows)
 

@@ -17,6 +17,7 @@ from typing import Any
 
 import msgpack
 import pytest
+from _sparql_solutions import solution_values
 from conftest import TEST_AGENT_ID, request_context
 
 
@@ -467,6 +468,7 @@ _COMPONENTS = (
 def test_hit_components_listed(start_medulla_server) -> None:
     """Every hit lists its text, vector and usage components; they sum to the score."""
     import json
+
     from medulla.client import SyncMedullaClient
 
     graph = f"components-{uuid.uuid4().hex[:8]}"
@@ -482,8 +484,9 @@ def test_hit_components_listed(start_medulla_server) -> None:
             turtle=(
                 f"@prefix cat: <{_CATALOG}> .\n"
                 "@prefix skos: <http://www.w3.org/2004/02/skos/core#> .\n"
-                '<urn:medulla:asset:table:nodes> a cat:DataResource ; skos:prefLabel "nodes" .\n'
-                '<urn:medulla:asset:table:unused> a cat:DataResource ; '
+                "<urn:medulla:asset:table:nodes> a cat:DataResource ; "
+                'skos:prefLabel "nodes" .\n'
+                "<urn:medulla:asset:table:unused> a cat:DataResource ; "
                 'skos:prefLabel "nodes archive" .\n'
             )
         )
@@ -491,7 +494,7 @@ def test_hit_components_listed(start_medulla_server) -> None:
         for _ in range(5):
             _sql(client, graph, "SELECT count(*) AS n FROM nodes")
 
-        rows = client.rdf.sparql(_COMPONENTS)
+        rows = solution_values(client.rdf.sparql(_COMPONENTS))
         by_asset = {row["asset"].strip("<>"): row for row in rows}
         assert set(by_asset) == {
             "urn:medulla:asset:table:nodes",
@@ -520,21 +523,25 @@ _SKOS_LABEL = "http://www.w3.org/2004/02/skos/core#prefLabel"
 
 
 def _relevance_rows(client: Any, text: str) -> list[dict]:
-    return client.rdf.sparql(
-        f"PREFIX cat: <{_CATALOG}>\n"
-        "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n"
-        "SELECT ?asset ?score WHERE {\n"
-        "  ?asset skos:prefLabel ?name .\n"
-        f'  BIND(cat:relevance(?asset, "{text}") AS ?score)\n'
-        "  FILTER(?score > 0)\n"
-        "}"
+    return solution_values(
+        client.rdf.sparql(
+            f"PREFIX cat: <{_CATALOG}>\n"
+            "PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n"
+            "SELECT ?asset ?score WHERE {\n"
+            "  ?asset skos:prefLabel ?name .\n"
+            f'  BIND(cat:relevance(?asset, "{text}") AS ?score)\n'
+            "  FILTER(?score > 0)\n"
+            "}"
+        )
     )
 
 
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R764.4")
 def test_search_refusals(start_medulla_server) -> None:
-    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R764.4: three refusals, and no hit for a hidden asset."""
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R764.4: three refusals, and no hit for a
+    hidden asset."""
     from conftest import register_commons_agents
+
     from medulla.client import SyncMedullaClient
 
     tag = uuid.uuid4().hex[:8]
@@ -565,7 +572,7 @@ def test_search_refusals(start_medulla_server) -> None:
                     )
                 )
 
-        # An asset the caller cannot read is no hit, and the caller's total does not move.
+        # An asset the caller cannot read is no hit; the caller's total is unchanged.
         needle = f"hiddenasset{tag}"
         before = len(_relevance_rows(reader, needle))
         owner.nodes.add(f"urn:medulla:asset:hidden:{tag}", {_SKOS_LABEL: needle})
@@ -582,8 +589,8 @@ _PAGE = 100
 
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R764.6")
 def test_search_over_ten_thousand_assets(start_medulla_server) -> None:
-    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R764.6: ranking order and a stable page cursor
-    over a 10,000-asset catalog, and the refusal of text over the knob."""
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R764.6: ranking order and a stable page
+    cursor over a 10,000-asset catalog, and the refusal of text over the knob."""
     from medulla.client import SyncMedullaClient
 
     graph = f"search10k-{uuid.uuid4().hex[:8]}"
@@ -613,9 +620,11 @@ def test_search_over_ten_thousand_assets(start_medulla_server) -> None:
                 "@prefix dct: <http://purl.org/dc/terms/> .\n",
             ]
             for index in range(start, start + 1_000):
-                name = f"ledgerfact table {index}" if index % 10 == 0 else f"asset {index}"
+                name = (
+                    f"ledgerfact table {index}" if index % 10 == 0 else f"asset {index}"
+                )
                 lines.append(
-                    f'<urn:medulla:asset:table:{index:05d}> a cat:DataResource ; '
+                    f"<urn:medulla:asset:table:{index:05d}> a cat:DataResource ; "
                     f'skos:prefLabel "{name}"'
                 )
                 if index % 50 == 0:
@@ -625,7 +634,7 @@ def test_search_over_ten_thousand_assets(start_medulla_server) -> None:
 
         # Order: the best score comes first, and the description match ranks above a
         # name-only match.
-        first = client.rdf.sparql(ranked % (_PAGE, 0))
+        first = solution_values(client.rdf.sparql(ranked % (_PAGE, 0)))
         assert len(first) == _PAGE
         scores = [float(row["score"]) for row in first]
         assert scores == sorted(scores, reverse=True)
@@ -635,11 +644,11 @@ def test_search_over_ten_thousand_assets(start_medulla_server) -> None:
 
         # Cursor: the same request returns the same page, and consecutive pages share no
         # asset and together hold every matching asset exactly once.
-        assert client.rdf.sparql(ranked % (_PAGE, 0)) == first
+        assert solution_values(client.rdf.sparql(ranked % (_PAGE, 0))) == first
         seen: list[str] = []
         offset = 0
         while True:
-            page = client.rdf.sparql(ranked % (_PAGE, offset))
+            page = solution_values(client.rdf.sparql(ranked % (_PAGE, offset)))
             if not page:
                 break
             seen.extend(row["asset"].strip("<>") for row in page)

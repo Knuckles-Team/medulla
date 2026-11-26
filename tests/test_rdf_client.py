@@ -1,10 +1,10 @@
 """RDF namespace wire-contract tests.
 
-EH-377: the SPARQL reads decode through the contract model -- `sparql_result`
-returns the typed `SparqlResult`, and `sparql`, `sparql_explain` and
-`sparql_virtual` shape their rows from it, so a payload the contract does not
-declare raises `ContractViolation` instead of reaching a caller (meristem's
-`GraphComputeEngine.sparql`) as an untyped dict.
+EH-377: the SPARQL reads decode through the contract model -- `sparql` and
+`sparql_virtual` return the typed `SparqlResult` (every cell a `SparqlTerm`), and
+`sparql_explain` shapes its rows from it, so a payload the contract does not
+declare raises `ContractViolation` instead of reaching a caller as an untyped
+dict. `sparql` is the one read path: there is no text-row form.
 """
 
 from __future__ import annotations
@@ -147,15 +147,20 @@ async def test_generated_inline_validation_sender_sends_no_write_operation() -> 
     assert fake.sent == [("ShaclValidate", params)]
 
 
+XSD_STRING = "http://www.w3.org/2001/XMLSchema#string"
 WITNESS = {
     "subject": "http://example.org/alice",
     "predicate": "http://example.org/name",
     "object": "Alice",
     "object_kind": "literal",
 }
+ALICE = {"kind": "literal", "value": "Alice", "datatype": XSD_STRING}
+ALICE_TERM = models.SparqlTerm(
+    kind=models.SparqlTermKind.LITERAL, value="Alice", datatype=XSD_STRING
+)
 RESULT = {
     "vars": ["name", "nick"],
-    "rows": [["Alice", None]],
+    "rows": [[ALICE, None]],
     "proofs": [{"row": 0, "witnesses": [WITNESS], "coverage": "complete"}],
 }
 QUERY = "SELECT ?name ?nick WHERE { ?p <http://example.org/name> ?name }"
@@ -167,9 +172,9 @@ def _rdf(result: Any) -> tuple[RdfClient, _FakeClient]:
 
 
 @pytest.mark.asyncio
-async def test_sparql_result_is_the_typed_contract_model() -> None:
+async def test_sparql_is_the_typed_contract_model() -> None:
     rdf, low_level = _rdf(RESULT)
-    result = await rdf.sparql_result(QUERY)
+    result = await rdf.sparql(QUERY)
     assert isinstance(result, models.SparqlResult)
     assert result.proofs[0].coverage is models.SparqlProofCoverage.COMPLETE
     assert low_level.sent == [
@@ -178,9 +183,15 @@ async def test_sparql_result_is_the_typed_contract_model() -> None:
 
 
 @pytest.mark.asyncio
-async def test_sparql_rows_come_from_the_decoded_result() -> None:
+async def test_sparql_rows_are_typed_terms() -> None:
     rdf, _ = _rdf(RESULT)
-    assert await rdf.sparql(QUERY) == [{"name": "Alice", "nick": None}]
+    result = await rdf.sparql(QUERY)
+    assert result.vars == ["name", "nick"]
+    assert result.rows == [[ALICE_TERM, None]]
+    name = result.rows[0][0]
+    assert name is not None
+    assert name.kind is models.SparqlTermKind.LITERAL
+    assert (name.value, name.datatype) == ("Alice", XSD_STRING)
 
 
 @pytest.mark.asyncio
@@ -189,7 +200,7 @@ async def test_sparql_explain_asks_for_proofs_and_maps_them_per_row() -> None:
     explained = await rdf.sparql_explain(QUERY)
     assert explained == [
         {
-            "row": {"name": "Alice", "nick": None},
+            "row": {"name": ALICE_TERM, "nick": None},
             "witnesses": [WITNESS],
             "coverage": "complete",
         }
@@ -205,8 +216,8 @@ async def test_sparql_explain_asks_for_proofs_and_maps_them_per_row() -> None:
 @pytest.mark.asyncio
 async def test_sparql_virtual_rows_come_from_the_decoded_result() -> None:
     rdf, _ = _rdf(RESULT)
-    rows = await rdf.sparql_virtual(QUERY, "SOURCE people", ["people"])
-    assert rows == [{"name": "Alice", "nick": None}]
+    result = await rdf.sparql_virtual(QUERY, "SOURCE people", ["people"])
+    assert result.rows == [[ALICE_TERM, None]]
 
 
 @pytest.mark.asyncio
@@ -214,8 +225,8 @@ async def test_sparql_virtual_rows_come_from_the_decoded_result() -> None:
     "payload",
     [
         None,
-        {"vars": ["name"], "rows": [["Alice"]]},
-        {**RESULT, "rows": [[1]]},
+        {"vars": ["name"], "rows": [[ALICE]]},
+        {**RESULT, "rows": [["Alice", None]]},
         {**RESULT, "extra": True},
     ],
 )

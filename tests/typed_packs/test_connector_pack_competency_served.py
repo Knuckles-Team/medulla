@@ -32,6 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "decide"))
 
 from _commons_generation import connect as commons_connect
 from _commons_generation import establish_commons_generation, publish_schema
+from _sparql_solutions import solution_values
 from test_capability_designation_pack_served import _ask
 
 from medulla import ConnectorPackEntryContent
@@ -284,7 +285,9 @@ async def _sparql_once_visible(client, query: str, requires: list[str]) -> Any:
     deadline = time.monotonic() + 180
     while True:
         try:
-            return await client.rdf.sparql(query, requires_packs=requires)
+            return solution_values(
+                await client.rdf.sparql(query, requires_packs=requires)
+            )
         except EngineResponseError as error:
             if "PACK_NOT_IMPORTED" not in str(error):
                 raise
@@ -401,9 +404,11 @@ def test_pack_questions_end_to_end(question: str) -> None:
                 with pytest.raises(
                     EngineResponseError, match="PACK_NOT_IMPORTED"
                 ) as no:
-                    await client.rdf.sparql(
-                        _fixture(question, "query.rq", connector=connector),
-                        requires_packs=_requires(question, connector),
+                    solution_values(
+                        await client.rdf.sparql(
+                            _fixture(question, "query.rq", connector=connector),
+                            requires_packs=_requires(question, connector),
+                        )
                     )
                 assert connector in str(no.value), no.value
             imported = await import_entries(
@@ -435,8 +440,10 @@ def test_pack_question_abstains_when_its_pack_is_not_imported(question: str) -> 
             with pytest.raises(
                 EngineResponseError, match="PACK_NOT_IMPORTED"
             ) as refused:
-                await client.rdf.sparql(
-                    query, requires_packs=_requires(question, connector)
+                solution_values(
+                    await client.rdf.sparql(
+                        query, requires_packs=_requires(question, connector)
+                    )
                 )
             message = str(refused.value)
             assert "PACK_NOT_IMPORTED" in message, message

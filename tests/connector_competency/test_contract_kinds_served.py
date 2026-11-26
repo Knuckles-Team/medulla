@@ -38,6 +38,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from _sparql_solutions import solution_values
 from audit import stored_nodes
 from conftest import TEST_AGENT_ID, TEST_TENANT, request_context
 from fixture_source import FixtureSource
@@ -522,8 +523,10 @@ def test_5_virtual_graph(clean_graph, pg_source) -> None:
     external = [{"name": VG_TABLE, "dsn": pg_source.dsn, "table": VG_TABLE}]
 
     started = datetime.now(timezone.utc)
-    rows = clean_graph.rdf.sparql_virtual(
-        VG_QUERY, VG_MAPPING, [], external_sources=external
+    rows = solution_values(
+        clean_graph.rdf.sparql_virtual(
+            VG_QUERY, VG_MAPPING, [], external_sources=external
+        )
     )
     fetched = datetime.now(timezone.utc)
 
@@ -541,8 +544,10 @@ def test_5_virtual_graph(clean_graph, pg_source) -> None:
     # row reaches the caller.
     pg_source.execute(f"DROP TABLE {VG_TABLE}")
     with pytest.raises(Exception) as refused:
-        clean_graph.rdf.sparql_virtual(
-            VG_QUERY, VG_MAPPING, [], external_sources=external
+        solution_values(
+            clean_graph.rdf.sparql_virtual(
+                VG_QUERY, VG_MAPPING, [], external_sources=external
+            )
         )
     assert _named_refusal(503) == UNAVAILABLE_REFUSAL, refused.value
 

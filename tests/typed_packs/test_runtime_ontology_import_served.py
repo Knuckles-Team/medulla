@@ -13,6 +13,7 @@ import os
 import uuid
 
 import pytest
+from _sparql_solutions import solution_values
 from conftest import request_context
 from ontology_pack_support import connect
 
@@ -40,7 +41,9 @@ async def tenant_sees_class(tenant: str, iri: str, name: str) -> bool:
 
 
 async def sees_class(client: MedullaClient, iri: str, name: str) -> bool:
-    rows = await client.rdf.sparql(f"SELECT ?p ?o WHERE {{ <{iri}#{name}> ?p ?o }}")
+    rows = solution_values(
+        await client.rdf.sparql(f"SELECT ?p ?o WHERE {{ <{iri}#{name}> ?p ?o }}")
+    )
     return bool(rows)
 
 

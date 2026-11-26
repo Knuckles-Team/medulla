@@ -13,6 +13,7 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
+from _sparql_solutions import solution_values
 
 from medulla.client import MedullaClient, ObdaClient, RdfClient
 
@@ -66,7 +67,12 @@ def _sent_params(fake: _FakeClient) -> list[dict[str, Any]]:
     return [value for value in params if value is not None]
 
 
-RESULT_ONE_ROW = {"vars": ["name"], "rows": [["Alice"]], "proofs": []}
+ALICE = {
+    "kind": "literal",
+    "value": "Alice",
+    "datatype": "http://www.w3.org/2001/XMLSchema#string",
+}
+RESULT_ONE_ROW = {"vars": ["name"], "rows": [[ALICE]], "proofs": []}
 
 
 @pytest.mark.asyncio
@@ -79,7 +85,7 @@ async def test_evaluate_sends_sparql_virtual_scoped_to_the_loaded_source() -> No
         "PREFIX ex: <http://example.org/> SELECT ?name WHERE { ?p ex:name ?name }"
     )
 
-    assert rows == [{"name": "Alice"}]
+    assert solution_values(rows) == [{"name": "Alice"}]
     assert fake.low_level.sent == [
         (
             "SparqlVirtual",

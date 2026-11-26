@@ -1,7 +1,7 @@
 """Served dashboard catalog asset (MEDULLA-TYPED-PACKS-R109).
 
-Drives `DashboardAsset` through the real served surface as three registered agents: the owner,
-a member of a granted group and a stranger.
+Drives `DashboardAsset` through the real served surface as three registered
+agents: the owner, a member of a granted group and a stranger.
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from typing import Any
 
 import pytest
 import stewardship_support as support
+from _sparql_solutions import solution_values
 from conftest import request_context
 
 from medulla.client import SyncMedullaClient
@@ -49,12 +50,18 @@ def _body(*sources: str) -> dict[str, Any]:
 
 def _save(client: Any, graph: str, revision: int, *sources: str) -> dict[str, Any]:
     return _dash(
-        client, graph, {"op": "save", "id": DASH, "body": _body(*sources), "revision": revision}
+        client,
+        graph,
+        {"op": "save", "id": DASH, "body": _body(*sources), "revision": revision},
     )
 
 
-def _node(client: Any, graph: str, node_id: str) -> dict[str, Any] | None:
-    return support.decode(client._send("GetNodeProperties", {"node_id": node_id}, graph))
+def _node(client: Any, graph: str, node_id: str) -> dict[str, Any]:
+    node = support.decode(
+        client._send("GetNodeProperties", {"node_id": node_id}, graph)
+    )
+    assert node is not None, node_id
+    return node
 
 
 @pytest.fixture
@@ -96,10 +103,17 @@ def test_save_share_delete_restore_reach_the_handler_with_grant_checks(served):
     shared = _dash(
         owner,
         graph,
-        {"op": "share", "id": DASH, "grants": [{"principal_or_group": GROUP, "role": "view"}]},
+        {
+            "op": "share",
+            "id": DASH,
+            "grants": [{"principal_or_group": GROUP, "role": "view"}],
+        },
     )
     assert shared["grants"][0]["principal_or_group"] == GROUP
-    assert _dash(member, graph, {"op": "get", "id": DASH})["body"]["panels"][0]["source"] == "orders"
+    assert (
+        _dash(member, graph, {"op": "get", "id": DASH})["body"]["panels"][0]["source"]
+        == "orders"
+    )
     with pytest.raises(Exception, match="DASHBOARD_NOT_GRANTED"):
         _dash(stranger, graph, {"op": "get", "id": DASH})
 
@@ -156,7 +170,8 @@ def test_stale_revision_missing_grant_invalid_body_and_purged_asset_refuse(serve
         _dash(owner, graph, {"op": "save", "id": DASH, "body": huge, "revision": 2})
     assert _node(owner, graph, f"dashboard:{DASH}")["revision"] == 2
     # The purged read is proved on the real tick: `dashboard_purge_tick_tests` in
-    # `crates/medulla-h-jobs/src/jobs/schedule_tick.rs` drives `tick_pass` over a served state.
+    # `crates/medulla-h-jobs/src/jobs/schedule_tick.rs` drives `tick_pass` over a
+    # served state.
 
 
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R109.5")
@@ -170,12 +185,19 @@ def test_revision_grant_and_delete_history_and_usage_are_served(served):
     assert (first["revision"], first["prior_revision"]) == (1, 0)
     assert (second["revision"], second["prior_revision"]) == (2, 1)
     assert second["saved_by"] == support.principal(OWNER) and second["saved_at_ms"] > 0
-    assert second["body_sha256"].startswith("sha256:") and second["body_sha256"] != first["body_sha256"]
+    assert (
+        second["body_sha256"].startswith("sha256:")
+        and second["body_sha256"] != first["body_sha256"]
+    )
 
     _dash(
         owner,
         graph,
-        {"op": "share", "id": DASH, "grants": [{"principal_or_group": GROUP, "role": "view"}]},
+        {
+            "op": "share",
+            "id": DASH,
+            "grants": [{"principal_or_group": GROUP, "role": "view"}],
+        },
     )
     asset = _node(owner, graph, f"dashboard:{DASH}")
     assert asset["grants_by"] == support.principal(OWNER) and asset["grants_at_ms"] > 0
@@ -199,7 +221,8 @@ def test_dashboard_save_conflict_share_lineage_search_and_soft_delete(served):
     for source in ("orders", "refunds"):
         owner.rdf.add_triples(
             turtle=(
-                f"<{source}> <http://www.w3.org/2004/02/skos/core#prefLabel> \"{source}\" .\n"
+                f"<{source}> <http://www.w3.org/2004/02/skos/core#prefLabel> "
+                f'"{source}" .\n'
             )
         )
     first = _save(owner, graph, 0, "orders", "refunds")
@@ -209,15 +232,23 @@ def test_dashboard_save_conflict_share_lineage_search_and_soft_delete(served):
     _dash(
         owner,
         graph,
-        {"op": "share", "id": DASH, "grants": [{"principal_or_group": GROUP, "role": "view"}]},
+        {
+            "op": "share",
+            "id": DASH,
+            "grants": [{"principal_or_group": GROUP, "role": "view"}],
+        },
     )
-    assert _dash(member, graph, {"op": "get", "id": DASH})["revision"] == first["revision"]
+    assert (
+        _dash(member, graph, {"op": "get", "id": DASH})["revision"] == first["revision"]
+    )
     with pytest.raises(Exception, match="DASHBOARD_NOT_GRANTED"):
         _dash(stranger, graph, {"op": "get", "id": DASH})
 
     # The lineage of a panel reads back to its source.
-    rows = owner.rdf.sparql(
-        f"SELECT ?source WHERE {{ ?source <{CAT}lineageTo> <dashboard:{DASH}> }}"
+    rows = solution_values(
+        owner.rdf.sparql(
+            f"SELECT ?source WHERE {{ ?source <{CAT}lineageTo> <dashboard:{DASH}> }}"
+        )
     )
     assert {row["source"].strip("<>") for row in rows} == {"orders", "refunds"}
 
@@ -228,7 +259,11 @@ def test_dashboard_save_conflict_share_lineage_search_and_soft_delete(served):
         "SELECT ?asset ?score WHERE { ?asset skos:prefLabel ?name . "
         f'BIND(cat:relevance(?asset, "{DASH}") AS ?score) FILTER(?score > 0) }}'
     )
-    found = lambda: {row["asset"].strip("<>") for row in owner.rdf.sparql(search)}  # noqa: E731
+
+    def found() -> set[str]:
+        rows = solution_values(owner.rdf.sparql(search))
+        return {row["asset"].strip("<>") for row in rows}
+
     assert f"dashboard:{DASH}" in found()
     _dash(owner, graph, {"op": "delete", "id": DASH})
     assert f"dashboard:{DASH}" not in found()

@@ -22,6 +22,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from _sparql_solutions import solution_values
 from campaign_fault_restart import (
     AGENT_ID,
     AUDIENCE,
@@ -514,7 +515,7 @@ def _data_path_matrix(
             ),
             "topology": "private-row" not in peer.nodes.neighbors("public-row"),
             "rdf": not _contains_id(
-                peer.rdf.sparql("SELECT ?s ?p ?o WHERE { ?s ?p ?o }"),
+                solution_values(peer.rdf.sparql("SELECT ?s ?p ?o WHERE { ?s ?p ?o }")),
                 "private-row",
             ),
             "time_series": peer.timeseries.range("private-series", 0, 10) == [],

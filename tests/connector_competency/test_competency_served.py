@@ -31,6 +31,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+from _sparql_solutions import solution_values
 from audit import stored_nodes
 from cases import RECORDINGS_DIR, Case, load_cases
 from conftest import TEST_AGENT_ID, request_context, tenant_request_context
@@ -253,11 +254,15 @@ async def _terms_resolve(client: MedullaClient, case: Case) -> None:
     """Every term resolves in its module; the same local name elsewhere does not."""
     for term in case.terms:
         iri = _term_iri(case.vocabulary_module, term)
-        found = await client.rdf.sparql(f"SELECT ?kind WHERE {{ <{iri}> a ?kind }}")
+        found = solution_values(
+            await client.rdf.sparql(f"SELECT ?kind WHERE {{ <{iri}> a ?kind }}")
+        )
         assert found, f"{iri} does not resolve in {case.vocabulary_module}"
         base = iri.rpartition("#")[0]
         foreign = f"{base}-another-module#{term}"
-        none = await client.rdf.sparql(f"SELECT ?kind WHERE {{ <{foreign}> a ?kind }}")
+        none = solution_values(
+            await client.rdf.sparql(f"SELECT ?kind WHERE {{ <{foreign}> a ?kind }}")
+        )
         assert not none, f"{term} must not resolve in another module"
 
 

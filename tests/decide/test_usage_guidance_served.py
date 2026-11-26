@@ -24,6 +24,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "typed_packs"))
 import pytest
 from _commons_generation import connect
 from _decision_resident_fixture import publish
+from _sparql_solutions import solution_values
 from conftest import TEST_TENANT
 from ontology_pack_support import attach_pack, import_entries, ontology_entry
 
@@ -85,7 +86,7 @@ async def _wait_projected(client, connector: str) -> None:
         f"{{ <mcp-server://{connector}> cp:providesFeature ?f }}"
     )
     deadline = time.monotonic() + 180
-    while not await client.rdf.sparql(query):
+    while not solution_values(await client.rdf.sparql(query)):
         assert time.monotonic() < deadline, "the pack surface was not projected"
         await asyncio.sleep(0.5)
 

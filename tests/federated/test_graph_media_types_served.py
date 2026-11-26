@@ -71,7 +71,7 @@ def _write(client, media_type: str, body: str, mode: str = "replace") -> dict:
 
 
 def _read(client, media_type: str) -> str:
-    result = client.rdf.sparql_result(CONSTRUCT, graph_media_type=media_type)
+    result = client.rdf.sparql(CONSTRUCT, graph_media_type=media_type)
     assert result.graph_body is not None, media_type
     return result.graph_body
 
@@ -122,7 +122,7 @@ def test_refusals_leave_the_store_unchanged(clean_graph) -> None:
     with pytest.raises(Exception, match="RDF_PARSE_FAILED"):
         clean_graph.apply_mutation(RDF_WRITE_EVENT, "not json")
     with pytest.raises(Exception, match="RDF_MEDIA_TYPE_UNSUPPORTED"):
-        clean_graph.rdf.sparql_result(CONSTRUCT, graph_media_type="text/plain")
+        clean_graph.rdf.sparql(CONSTRUCT, graph_media_type="text/plain")
     assert _triples(clean_graph) == before
 
 
