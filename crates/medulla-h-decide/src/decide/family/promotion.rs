@@ -14,7 +14,7 @@
 //! record (`stat_promotion::qualified_champion`).
 
 use medulla_decision_outcome_types::decision::promotion::{
-    ChampionPointer, HeldOutEvidence, PromotionVerdict, RevisionSubject,
+    ChampionPointer, HeldOutEvidence, PromotionVerdict, ReceiptKind, RevisionSubject,
 };
 use medulla_decision_stats::decision::promotion::{regression_rollback, subject_gate, PromotionGate};
 use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
@@ -112,9 +112,16 @@ fn parse(request: &DecideRequest) -> Result<Ask, String> {
 }
 
 fn premise(fact: String, receipt: &str) -> FamilyPremise {
+    // The rollout premises keep their own `rollout.` namespace
+    // (MEDULLA-DECISION-ENGINE-R654.5).
+    let fact = if fact.starts_with("rollout.") {
+        fact
+    } else {
+        format!("{PREMISE_PREFIX}{fact}")
+    };
     FamilyPremise {
         subject: "promotion".into(),
-        fact: format!("{PREMISE_PREFIX}{fact}"),
+        fact,
         class: PremiseClass::Observation,
         source: FamilyPremiseSource::Observation(receipt.to_owned()),
     }
@@ -172,10 +179,18 @@ fn decided(
 }
 
 fn evidence_facts(evidence: &HeldOutEvidence) -> Vec<String> {
-    vec![
+    let mut facts = vec![
         format!("delta_ppm={}", evidence.delta_ppm),
         format!("case_count={}", evidence.case_count),
-    ]
+    ];
+    // A rollout set is cited by its pair count, the lower bootstrap bound of its
+    // mean difference and its own digest (MEDULLA-DECISION-ENGINE-R654.5).
+    if evidence.receipt_kind == ReceiptKind::RolloutSet {
+        facts.push(format!("rollout.pairs={}", evidence.case_count));
+        facts.push(format!("rollout.delta_lower_ppm={}", evidence.delta_ppm));
+        facts.push(format!("rollout.set_digest={}", evidence.receipt_digest));
+    }
+    facts
 }
 
 fn promote(

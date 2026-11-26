@@ -53,8 +53,19 @@ pub const MERGE_CLASS_MISMATCH: RefusalCode = RefusalCode::new("MERGE_CLASS_MISM
 /// A named pair of which a skill is not visible to the tenant. The refusal is
 /// the same for an absent skill, so it never confirms that one exists.
 pub const MERGE_PAIR_NOT_VISIBLE: RefusalCode = RefusalCode::new("MERGE_PAIR_NOT_VISIBLE");
+/// A rollout lacks the challenger score or the champion score, so its
+/// `(seed, task_id)` pair is incomplete (MEDULLA-DECISION-ENGINE-R654.4).
+pub const ROLLOUT_UNPAIRED: RefusalCode = RefusalCode::new("ROLLOUT_UNPAIRED");
+/// A rollout set holds fewer complete pairs than `knob promotion.min_cases`
+/// (MEDULLA-DECISION-ENGINE-R654.4).
+pub const ROLLOUT_TOO_FEW: RefusalCode = RefusalCode::new("ROLLOUT_TOO_FEW");
 /// The `SkillEvolution` family's refusal table.
-pub const REFUSALS: &[RefusalCode] = &[MERGE_CLASS_MISMATCH, MERGE_PAIR_NOT_VISIBLE];
+pub const REFUSALS: &[RefusalCode] = &[
+    MERGE_CLASS_MISMATCH,
+    MERGE_PAIR_NOT_VISIBLE,
+    ROLLOUT_UNPAIRED,
+    ROLLOUT_TOO_FEW,
+];
 /// Format identity of a [`RolloutSet`].
 pub const ROLLOUT_SET_SCHEMA_VERSION: u16 = 1;
 

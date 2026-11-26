@@ -8,7 +8,7 @@
 use super::*;
 use medulla_decision_types::decision::skill_evolution::{
     PARAM_CANDIDATE_TRACES, PARAM_EMBEDDING_GRAPH, PARAM_PAIR_A, PARAM_PAIR_B,
-    PARAM_REQUESTED_SKILLS, PARAM_SKILL_EMBEDDINGS, PARAM_USED_TERMS,
+    PARAM_REQUESTED_SKILLS, PARAM_SKILL_EMBEDDINGS, PARAM_USED_TERMS, RolloutSet,
 };
 use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
 use medulla_server_api::authority_context::VerifiedRequestContext;
@@ -440,4 +440,222 @@ fn skill_draft(
     draft.kind = AgentComponentKind::Skill;
     draft.declared_capabilities = capabilities.iter().map(|c| (*c).to_string()).collect();
     draft
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R654.4: a rollout set is refused before it is
+/// stored when a pair lacks a score, when it holds too few pairs, or when it names
+/// no champion and none is active; every refusal stores nothing.
+// spec: MEDULLA-DECISION-ENGINE-R654.4
+#[tokio::test]
+async fn rollout_and_spec_refusals() {
+    use super::promotion_tests::rollout_set;
+    use super::retrieval_tests::learn;
+    use medulla_decision_stats::decision::promotion::rollout_set_digest;
+    use medulla_decision_types::decision::skill_evolution::Rollout;
+    use medulla_decision_types::decision::statistical::retrieval::LearningWrite;
+    use super::super::stat_promotion::rollouts_key;
+
+    let h = Harness::new().await;
+    let record = |set: RolloutSet| {
+        learn(
+            &h,
+            "decider",
+            LearningWrite::RecordRollouts { set: Box::new(set) },
+        )
+    };
+    let stored = |set: &RolloutSet| {
+        h.store
+            .decision_artifact(TENANT, &rollouts_key(&rollout_set_digest(set)))
+            .unwrap()
+            .is_some()
+    };
+
+    // A pair missing its champion score.
+    let mut unpaired = rollout_set(150_000);
+    let mut rollouts: Vec<Rollout> = unpaired.rollouts.iter().cloned().collect();
+    rollouts[0].champion_score_ppm = None;
+    unpaired.rollouts = BoundedVec::new(rollouts).unwrap();
+    let error = record(unpaired.clone()).await.unwrap_err();
+    assert!(error.starts_with("ROLLOUT_UNPAIRED"), "{error}");
+    assert!(!stored(&unpaired));
+
+    // Fewer pairs than `knob promotion.min_cases`.
+    let mut few = rollout_set(150_000);
+    few.rollouts = BoundedVec::new(few.rollouts.iter().take(2).cloned().collect()).unwrap();
+    let error = record(few.clone()).await.unwrap_err();
+    assert!(error.starts_with("ROLLOUT_TOO_FEW"), "{error}");
+    assert!(!stored(&few));
+
+    // No champion named and no champion active.
+    let mut baseless = rollout_set(150_000);
+    baseless.champion_ref = None;
+    let error = record(baseless.clone()).await.unwrap_err();
+    assert!(error.starts_with("PROMOTION_NO_BASELINE"), "{error}");
+    assert!(!stored(&baseless));
+
+    // A well-formed set still records.
+    let fine = rollout_set(150_000);
+    record(fine.clone()).await.unwrap();
+    assert!(stored(&fine));
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R654.4: the spec-proposal chart refuses
+/// `start` before `approved` with `STATECHART_NO_TRANSITION` and leaves the
+/// instance where it was.
+// spec: MEDULLA-DECISION-ENGINE-R654.4
+#[cfg(feature = "statechart")]
+#[tokio::test]
+async fn spec_proposal_start_before_approval_refuses() {
+    use medulla_server_api::carrier::CarrierAuthority;
+    use medulla_work_types::statechart::StatechartOp;
+
+    let h = Harness::new().await;
+    let verified = VerifiedRequestContext::verified_for_test_with_scopes("decider", TENANT, &["*"]);
+    let authority = CarrierAuthority::from_verified(&verified).unwrap();
+    async fn send(
+        h: &Harness,
+        authority: &CarrierAuthority,
+        id: u64,
+        op: StatechartOp,
+    ) -> medulla_protocol_types::protocol::Response {
+        medulla_h_jobs::statechart::handle(&h.state, id, authority, op).await
+    }
+    let def = medulla_store::loop_statechart::spec_proposal_statechart_def();
+    let defined: serde_json::Value = decode(
+        send(
+            &h,
+            &authority,
+            1,
+            StatechartOp::Define {
+                def_msgpack: rmp_serde::to_vec_named(&def).unwrap(),
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    let def_id = defined["def_id"].as_str().unwrap().to_string();
+    let created: serde_json::Value = decode(
+        send(
+            &h,
+            &authority,
+            2,
+            StatechartOp::Instantiate {
+                def_id,
+                context: serde_json::Value::Null,
+            },
+        )
+        .await,
+    )
+    .unwrap();
+    let instance_id = created["instance_id"].as_str().unwrap().to_string();
+
+    let refused = send(
+        &h,
+        &authority,
+        3,
+        StatechartOp::SendEvent {
+            instance_id: instance_id.clone(),
+            event: "start".into(),
+            payload: serde_json::Value::Null,
+            expected_version: None,
+        },
+    )
+    .await;
+    let text = refused.refusal_text().expect("start before approved refuses");
+    assert!(text.starts_with("STATECHART_NO_TRANSITION"), "{text}");
+    let state: serde_json::Value = decode(send(&h, &authority, 4, StatechartOp::GetState { instance_id }).await).unwrap();
+    assert_eq!(state["configuration"]["active"], serde_json::json!(["drafted"]));
+    assert_eq!(state["version"], serde_json::json!(0));
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R654.5: the stored rollout set keeps every
+/// seed, pair and score and reads back field for field; a second principal's
+/// replay answers the same evidence; the `Promotion` record carries the rollout
+/// premises.
+// spec: MEDULLA-DECISION-ENGINE-R654.5
+#[tokio::test]
+async fn rollout_evidence_reads_back_field_for_field() {
+    use super::path_preference_tests::pins;
+    use super::promotion_tests::{commit, promotion_request, rollout_set};
+    use super::retrieval_tests::learn;
+    use medulla_decision_stats::decision::promotion::rollout_set_digest;
+    use medulla_decision_types::decision::statistical::retrieval::{
+        LearningRecorded, LearningWrite,
+    };
+    use super::super::stat_promotion::rollouts_key;
+    use medulla_persistence_records::decision_jobs::decode_artifact;
+
+    let h = Harness::new().await;
+    let set = rollout_set(150_000);
+    let digest = rollout_set_digest(&set);
+    let recorded = learn(
+        &h,
+        "decider",
+        LearningWrite::RecordRollouts {
+            set: Box::new(set.clone()),
+        },
+    )
+    .await
+    .unwrap();
+    let LearningRecorded::Rollouts(evidence) = recorded else {
+        panic!("rollouts answer their evidence");
+    };
+    assert_eq!(evidence.receipt_digest, digest);
+    assert_eq!(evidence.case_count, 60);
+
+    // The stored set keeps every seed, pair and score.
+    let bytes = h
+        .store
+        .decision_artifact(TENANT, &rollouts_key(&digest))
+        .unwrap()
+        .expect("the set is stored");
+    let stored: RolloutSet = decode_artifact(&bytes, "rollout set").unwrap();
+    assert_eq!(stored, set);
+    for (read, written) in stored.rollouts.iter().zip(set.rollouts.iter()) {
+        assert_eq!(read.seed, written.seed);
+        assert_eq!(read.task_id, written.task_id);
+        assert_eq!(read.challenger_score_ppm, written.challenger_score_ppm);
+        assert_eq!(read.champion_score_ppm, written.champion_score_ppm);
+        assert_eq!(read.trace_ref, written.trace_ref);
+    }
+
+    // A second principal's replay answers the same evidence.
+    let replay = learn(
+        &h,
+        "auditor",
+        LearningWrite::RecordRollouts {
+            set: Box::new(set.clone()),
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(replay, LearningRecorded::Rollouts(evidence.clone()));
+
+    // The promotion record seals the rollout premises.
+    let pinned = pins(&h, TENANT);
+    let record = decide(
+        &h,
+        promotion_request(
+            &pinned.0,
+            &medulla_decision_outcome_types::decision::promotion::RevisionSubject::Program {
+                program_ref: set.program_ref.clone(),
+            },
+            &digest,
+            &set.challenger_ref,
+        ),
+    )
+    .await
+    .unwrap()
+    .records
+    .as_slice()[0]
+        .clone();
+    commit(&h, &record).await;
+    let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+    for expected in [
+        format!("rollout.pairs={}", evidence.case_count),
+        format!("rollout.delta_lower_ppm={}", evidence.delta_ppm),
+        format!("rollout.set_digest={digest}"),
+    ] {
+        assert!(facts.contains(&expected.as_str()), "{expected} in {facts:?}");
+    }
 }

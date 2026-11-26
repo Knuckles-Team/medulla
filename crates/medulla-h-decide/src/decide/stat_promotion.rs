@@ -246,12 +246,67 @@ pub(super) fn record_rollouts(
     ctx: &ExecutionContext,
     set: RolloutSet,
 ) -> Result<HeldOutEvidence, String> {
+    check_rollout_set(ctx, &set)?;
     let digest = rollout_set_digest(&set);
     let stored = store_once(ctx, rollouts_key(&digest), "rollout set", set, |a, b| a == b)?;
     Ok(paired_rollout_evidence(
         &stored,
         &DecisionPolicy::engine_default(),
     ))
+}
+
+/// The refusals of a rollout set, each before anything is stored
+/// (MEDULLA-DECISION-ENGINE-R654.4): a rollout missing either score is
+/// `ROLLOUT_UNPAIRED`; fewer complete pairs than `knob promotion.min_cases` is
+/// `ROLLOUT_TOO_FEW`; a set with no `champion_ref` while no champion is active
+/// for its program has nothing to compare with, `PROMOTION_NO_BASELINE`.
+fn check_rollout_set(ctx: &ExecutionContext, set: &RolloutSet) -> Result<(), String> {
+    use medulla_decision_outcome_types::decision::promotion::{KNOBS, MIN_CASES};
+    use medulla_decision_types::decision::knobs::KnobValue;
+    use medulla_decision_types::decision::skill_evolution::{ROLLOUT_TOO_FEW, ROLLOUT_UNPAIRED};
+    if let Some(rollout) = set
+        .rollouts
+        .iter()
+        .find(|rollout| rollout.challenger_score_ppm.is_none() || rollout.champion_score_ppm.is_none())
+    {
+        return Err(format!(
+            "{}: task `{}` under seed {} lacks a challenger or a champion score",
+            ROLLOUT_UNPAIRED.as_str(),
+            rollout.task_id,
+            rollout.seed
+        ));
+    }
+    let policy = DecisionPolicy::engine_default();
+    let pairs = set
+        .rollouts
+        .iter()
+        .map(|rollout| (rollout.seed, rollout.task_id.as_str()))
+        .collect::<std::collections::BTreeSet<_>>()
+        .len() as u64;
+    let min_cases = match policy.knob(&KNOBS[MIN_CASES]) {
+        KnobValue::Integer(value) => u64::try_from(value).unwrap_or(0),
+        _ => u64::MAX,
+    };
+    if pairs < min_cases {
+        return Err(format!(
+            "{}: {pairs} pairs are fewer than the {min_cases} a promotion needs",
+            ROLLOUT_TOO_FEW.as_str()
+        ));
+    }
+    if set.champion_ref.is_none() {
+        let subject = RevisionSubject::Program {
+            program_ref: set.program_ref.clone(),
+        };
+        let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &subject.pointer_key())?;
+        if state.target().is_none() {
+            return Err(format!(
+                "{}: the set names no champion and no champion is active for `{}`",
+                medulla_decision_types::decision::codes::PROMOTION_NO_BASELINE.as_str(),
+                set.program_ref
+            ));
+        }
+    }
+    Ok(())
 }
 
 /// What a champion `Activate` is qualified by: `receipt_digest` names a
