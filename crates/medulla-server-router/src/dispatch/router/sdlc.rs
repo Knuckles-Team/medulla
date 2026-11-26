@@ -1,6 +1,7 @@
 use super::*;
 
 mod delivery;
+mod deploy;
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -116,6 +117,20 @@ pub async fn dispatch_sdlc_methods(
         }
         Method::RecordDeployment { deployment } => {
             dispatch_boxed(record_deployment(state, target, deployment)).await
+        }
+        // MEDULLA-SDLC-R002.7, R002.8: the deploy record write and its reads.
+        Method::DeployRecordPut { record } => {
+            dispatch_boxed(deploy::put(state, target, record)).await
+        }
+        Method::DeployRecordGet { plan_digest } => {
+            dispatch_boxed(deploy::get(state, target, plan_digest)).await
+        }
+        Method::DeployRecordList { limit, cursor } => {
+            dispatch_boxed(deploy::list(state, target, limit, cursor)).await
+        }
+        // MEDULLA-BUSINESS-OPS-R004: which approval gate applies to an operation.
+        Method::ApprovalGateResolve { request } => {
+            dispatch_boxed(deploy::approval_gate_resolve(state, target, request)).await
         }
         Method::GoalPut { goal } => dispatch_boxed(goal_put(state, target, goal)).await,
         Method::ProposalPut { proposal } => {

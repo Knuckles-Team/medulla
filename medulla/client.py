@@ -19616,6 +19616,92 @@ class MedullaClient:
             raise TypeError("RecordDeployment returned a non-object result")
         return result
 
+    async def deploy_record_put(
+        self, record: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Record one applied deployment plan (MEDULLA-SDLC-R002.7).
+
+        ``record`` carries ``plan_digest`` (``sha256:`` and 64 lowercase hex
+        digits, the key), ``target``, ``nodes`` (one ``{"node", "outcome",
+        "code"?}`` per node; ``outcome`` is ``succeeded``, ``failed``,
+        ``skipped`` or ``rolled_back``), ``image_digests`` and, optionally,
+        ``approver``, ``started_at_ms`` and ``finished_at_ms``. The engine adds
+        the verified actor and the time of its own clock. The same body again
+        replays the stored record (``replayed`` is true and nothing is written);
+        a different body for the same plan digest refuses
+        ``DEPLOY_RECORD_SEALED``; a field out of bounds refuses
+        ``DEPLOY_RECORD_INVALID``.
+        """
+        result = await self._send("DeployRecordPut", {"record": record}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("DeployRecordPut returned a non-object result")
+        return result
+
+    async def deploy_record_get(
+        self, plan_digest: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read the deploy record of one plan digest (MEDULLA-SDLC-R002.8).
+
+        A missing record, a record of another tenant and a malformed digest all
+        refuse the same ``DEPLOY_RECORD_NOT_FOUND``.
+        """
+        result = await self._send(
+            "DeployRecordGet", {"plan_digest": plan_digest}, graph
+        )
+        if not isinstance(result, dict):
+            raise TypeError("DeployRecordGet returned a non-object result")
+        return result
+
+    async def deploy_record_list(
+        self,
+        limit: int | None = None,
+        cursor: str | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """List deploy records, newest first (MEDULLA-SDLC-R002.8).
+
+        The answer holds ``records`` (``plan_digest``, ``target``, ``actor``,
+        ``recorded_at_ms``, ``node_count``, ``all_succeeded``) and
+        ``next_cursor``. ``limit`` is 1 to 100; pass ``next_cursor`` back as
+        ``cursor`` for the next page.
+        """
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = await self._send("DeployRecordList", params, graph)
+        if not isinstance(result, dict):
+            raise TypeError("DeployRecordList returned a non-object result")
+        return result
+
+    async def approval_gate_resolve(
+        self,
+        operation: str,
+        *,
+        graph: str,
+        amount_minor: int | None = None,
+        currency: str | None = None,
+    ) -> dict[str, Any]:
+        """Ask which approval gate applies to an operation (MEDULLA-BUSINESS-OPS-R004).
+
+        The answer holds ``gate`` (``none``, ``single``, ``two_person`` or
+        ``unresolved``), ``gate_class``, ``approver_roles``,
+        ``expires_after_ms``, ``rule_ids`` and ``policy_digest``, all read from
+        the ``ApprovalRule`` nodes of ``graph``. ``unresolved`` means no rule
+        covers the operation; it is not ``none``, and a caller applies its
+        strictest gate.
+        """
+        request: dict[str, Any] = {"operation": operation}
+        if amount_minor is not None:
+            request["amount_minor"] = amount_minor
+        if currency is not None:
+            request["currency"] = currency
+        result = await self._send("ApprovalGateResolve", {"request": request}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ApprovalGateResolve returned a non-object result")
+        return result
+
     async def goal_put(self, goal: dict[str, Any]) -> dict[str, Any]:
         """Record one goal of a project (MEDULLA-SDLC-R017.1).
 

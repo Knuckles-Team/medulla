@@ -790,6 +790,14 @@ closed_error_codes! {
         ReceiptNotFound => "RECEIPT_NOT_FOUND",
         ReleaseHeadUnknown => "RELEASE_HEAD_UNKNOWN",
         ReleaseSealed => "RELEASE_SEALED",
+        /// MEDULLA-SDLC-R002.7: a different deploy record is already stored for the plan digest.
+        DeployRecordSealed => "DEPLOY_RECORD_SEALED",
+        /// MEDULLA-SDLC-R002.8: no deploy record of the verified tenant has this plan digest; an absent and a foreign record answer alike.
+        DeployRecordNotFound => "DEPLOY_RECORD_NOT_FOUND",
+        /// MEDULLA-SDLC-R002.7: a deploy record field is out of bounds, or its list cursor is not usable.
+        DeployRecordInvalid => "DEPLOY_RECORD_INVALID",
+        /// MEDULLA-BUSINESS-OPS-R004: an approval gate question field is out of bounds.
+        ApprovalGateInvalid => "APPROVAL_GATE_INVALID",
         /// A skill package could not render: the graph holds no body for the skill (MEDULLA-TYPED-PACKS-R100.2).
         RenderBodyMissing => "RENDER_BODY_MISSING",
         /// A skill package could not render: it references an ontology term the graph does not define (MEDULLA-TYPED-PACKS-R100.4).

@@ -823,6 +823,16 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "lifecycle",
             medulla_source_types::lifecycle::REFUSALS.to_vec(),
         ),
+        // MEDULLA-SDLC-R002.7: the deploy record refusals.
+        (
+            "deploy_record",
+            medulla_source_types::deploy_record::REFUSALS.to_vec(),
+        ),
+        // MEDULLA-BUSINESS-OPS-R004: the approval gate question's refusal.
+        (
+            "approval_gate",
+            medulla_source_types::approval_gate::REFUSALS.to_vec(),
+        ),
         (
             "topology_enforcement",
             medulla_agent_types::agent_topology::enforcement::REFUSALS.to_vec(),

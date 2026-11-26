@@ -129,6 +129,12 @@ method_results! {
     // MEDULLA-SCM-R008: the gate verdict record.
     RecordGateVerdict(RecordGateVerdict) => Raw<medulla_source_types::gate_verdict::GateVerdictReceipt>;
     RecordDeployment(RecordDeployment) => Raw<medulla_source_types::lifecycle::DeploymentReceipt>;
+    // MEDULLA-SDLC-R002.7, R002.8: the deploy record write and its two reads.
+    DeployRecordPut(DeployRecordPut) => Raw<medulla_source_types::deploy_record::DeployRecordReceipt>;
+    DeployRecordGet(DeployRecordGet) => Raw<medulla_source_types::deploy_record::DeployRecord>;
+    DeployRecordList(DeployRecordList) => Raw<medulla_source_types::deploy_record::DeployRecordPage>;
+    // MEDULLA-BUSINESS-OPS-R004: the approval gate question.
+    ApprovalGateResolve(ApprovalGateResolve) => Raw<medulla_source_types::approval_gate::ApprovalGateAnswer>;
     // MEDULLA-SDLC-R017.1: the goal record.
     GoalPut(GoalPut) => Raw<medulla_source_types::lifecycle::GoalReceipt>;
     // MEDULLA-SDLC-R017.3: the proposal record.

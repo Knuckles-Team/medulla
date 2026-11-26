@@ -1989,6 +1989,28 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RELEASE_SEALED",
         ],
     ),
+    // MEDULLA-SDLC-R002.7, R002.8: the deploy record write and its reads.
+    (
+        "DeployRecordPut",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DEPLOY_RECORD_INVALID",
+            "DEPLOY_RECORD_SEALED",
+        ],
+    ),
+    (
+        "DeployRecordGet",
+        &["TENANT_SCOPE_REQUIRED", "DEPLOY_RECORD_NOT_FOUND"],
+    ),
+    (
+        "DeployRecordList",
+        &["TENANT_SCOPE_REQUIRED", "DEPLOY_RECORD_INVALID"],
+    ),
+    // MEDULLA-BUSINESS-OPS-R004: the approval gate question.
+    (
+        "ApprovalGateResolve",
+        &["TENANT_SCOPE_REQUIRED", "APPROVAL_GATE_INVALID"],
+    ),
     // MEDULLA-SCM-R008: the gate verdict record's refusals.
     (
         "RecordGateVerdict",

@@ -199,6 +199,13 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "IncidentRelatedClaims",
     // `dispatch_sdlc_methods::proposal_list` keeps only proposal nodes `can_see_node` admits.
     "ProposalList",
+    // `dispatch_sdlc_methods::deploy_record_get` and `deploy_record_list` read only a
+    // `DeployRecord` node `can_see_node` admits, of the verified tenant.
+    "DeployRecordGet",
+    "DeployRecordList",
+    // `dispatch_sdlc_methods::approval_gate_resolve` reads only an `ApprovalRule` node
+    // `can_see_node` admits, of the verified tenant.
+    "ApprovalGateResolve",
     // `dispatch_sdlc_methods::config_layers` reads only a node `can_see_node` admits.
     "ConfigLayers",
     // `dispatch_sdlc_methods::project_mode_get` reads only a node `can_see_node` admits.

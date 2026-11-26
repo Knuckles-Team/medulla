@@ -137,6 +137,11 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "RECORD_DEPLOYMENT|{}|{}",
             deployment.environment, deployment.workload
         )),
+        // MEDULLA-SDLC-R002.7: the line names the plan and its target, never a node outcome.
+        Method::DeployRecordPut { record } => Some(format!(
+            "DEPLOY_RECORD_PUT|{}|{}",
+            record.plan_digest, record.target
+        )),
         // MEDULLA-TYPED-PACKS-R652.3: the line names the op and the claim, never the evidence.
         Method::ClassificationClaim { op } => Some(match op {
             medulla_identity_types::classification::ClassificationClaimOp::Propose { claim } => {

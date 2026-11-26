@@ -48,6 +48,10 @@ pub mod source_path_grant;
 pub mod lifecycle;
 // MEDULLA-SCM-R008 — gate verdict records and the landing policy.
 pub mod gate_verdict;
+// MEDULLA-SDLC-R002.7 — the durable record of one applied deployment plan.
+pub mod deploy_record;
+// MEDULLA-BUSINESS-OPS-R004 — the approval gate question answered from the graph's approval rules.
+pub mod approval_gate;
 // MEDULLA-SCM-R009 — the bisect request and answer over the gate verdicts of a chain.
 pub mod source_bisect;
 // MEDULLA-IDENTITY-R740 — the layered configuration read.

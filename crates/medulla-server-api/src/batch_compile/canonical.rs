@@ -817,6 +817,12 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-SCM-R008: the gate verdict record self-translates likewise.
         | Method::RecordGateVerdict { .. }
         | Method::RecordDeployment { .. }
+        // MEDULLA-SDLC-R002.7: the deploy record self-translates likewise; its two reads and the
+        // approval gate question (MEDULLA-BUSINESS-OPS-R004) commit nothing.
+        | Method::DeployRecordPut { .. }
+        | Method::DeployRecordGet { .. }
+        | Method::DeployRecordList { .. }
+        | Method::ApprovalGateResolve { .. }
         // MEDULLA-SDLC-R017.1: the goal record self-translates into a request-graph `BatchUpdate`.
         | Method::GoalPut { .. }
         // MEDULLA-SDLC-R012.8: the project mode record self-translates likewise.

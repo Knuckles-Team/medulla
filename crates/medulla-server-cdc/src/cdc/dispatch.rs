@@ -292,6 +292,8 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         Method::RecordRelease { .. }
         | Method::RecordGateVerdict { .. }
         | Method::RecordDeployment { .. }
+        // MEDULLA-SDLC-R002.7: the deploy record self-translates likewise.
+        | Method::DeployRecordPut { .. }
         | Method::GoalPut { .. }
         | Method::ProjectModeSet { .. }
         | Method::ProposalPut { .. }

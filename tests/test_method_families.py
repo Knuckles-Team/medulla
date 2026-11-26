@@ -301,6 +301,7 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "DataPrepDeclare",
         "EncodeDocument",
         "RecordDeployment",
+        "DeployRecordPut",
         "RecordGateVerdict",
         "RecordRelease",
         "SemanticEnrich",

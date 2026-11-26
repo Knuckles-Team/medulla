@@ -975,6 +975,24 @@ decode_meeting_transcript_revision = contract_decoder(
 send_record_deployment = contract_sender(
     "RecordDeployment", "MethodRecordDeploymentParams"
 )
+send_deploy_record_put = contract_sender(
+    "DeployRecordPut", "MethodDeployRecordPutParams"
+)
+send_deploy_record_get = contract_sender(
+    "DeployRecordGet", "MethodDeployRecordGetParams"
+)
+send_deploy_record_list = contract_sender(
+    "DeployRecordList", "MethodDeployRecordListParams"
+)
+send_approval_gate_resolve = contract_sender(
+    "ApprovalGateResolve", "MethodApprovalGateResolveParams"
+)
+decode_deploy_record_put = contract_decoder("DeployRecordPut", "DeployRecordReceipt")
+decode_deploy_record_get = contract_decoder("DeployRecordGet", "DeployRecord")
+decode_deploy_record_list = contract_decoder("DeployRecordList", "DeployRecordPage")
+decode_approval_gate_resolve = contract_decoder(
+    "ApprovalGateResolve", "ApprovalGateAnswer"
+)
 send_record_gate_verdict = contract_sender(
     "RecordGateVerdict", "MethodRecordGateVerdictParams"
 )

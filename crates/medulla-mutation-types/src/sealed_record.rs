@@ -62,6 +62,8 @@ pub struct SealedClass {
 ///   the repository and version, so an overwrite is a changed release.
 /// * `GateVerdict` — a recorded gate verdict (MEDULLA-SCM-R008); its node id names the
 ///   changeset and the gate, so an overwrite is a changed verdict.
+/// * `DeployRecord` — the record of one applied deployment plan (MEDULLA-SDLC-R002.7); its
+///   node id names the tenant and the plan digest, so an overwrite is a changed record.
 /// * [`SEALED_TOMBSTONE_TYPE`] — what retirement leaves behind.
 pub const SEALED_RECORD_CLASSES: &[SealedClass] = &[
     SealedClass {
@@ -102,6 +104,15 @@ pub const SEALED_RECORD_CLASSES: &[SealedClass] = &[
         sealed_at_property: "recorded_at_ms",
         generic_create: true,
         overwrite_code: Some("GATE_VERDICT_SEALED"),
+    },
+    // MEDULLA-SDLC-R002.7: the record of one applied deployment plan; one per tenant and plan
+    // digest, so an overwrite is a changed record.
+    SealedClass {
+        name: "DeployRecord",
+        digest_property: "deploy_seal",
+        sealed_at_property: "recorded_at_ms",
+        generic_create: true,
+        overwrite_code: Some("DEPLOY_RECORD_SEALED"),
     },
     SealedClass {
         name: SEALED_TOMBSTONE_TYPE,

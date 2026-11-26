@@ -495,6 +495,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::RecordRelease { .. }
                 | Method::RecordGateVerdict { .. }
                 | Method::RecordDeployment { .. }
+                // MEDULLA-SDLC-R002.7: the deploy record of one applied plan.
+                | Method::DeployRecordPut { .. }
                 | Method::GoalPut { .. }
                 | Method::ProjectModeSet { .. }
                 | Method::ProposalPut { .. }

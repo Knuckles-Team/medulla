@@ -1145,6 +1145,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::RecordRelease { .. }
             | Method::RecordGateVerdict { .. }
             | Method::RecordDeployment { .. }
+            | Method::DeployRecordPut { .. }
             | Method::GoalPut { .. }
             | Method::ProjectModeSet { .. }
             | Method::ProposalPut { .. }

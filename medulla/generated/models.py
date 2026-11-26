@@ -17631,6 +17631,34 @@ class MethodRecordDeployment(BaseModel):
     params: MethodRecordDeploymentParams
 
 
+class MethodDeployRecordPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DeployRecordPut"]
+    params: MethodDeployRecordPutParams
+
+
+class MethodDeployRecordGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DeployRecordGet"]
+    params: MethodDeployRecordGetParams
+
+
+class MethodDeployRecordList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DeployRecordList"]
+    params: MethodDeployRecordListParams
+
+
+class MethodApprovalGateResolve(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ApprovalGateResolve"]
+    params: MethodApprovalGateResolveParams
+
+
 class MethodSourceCoverage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18563,6 +18591,10 @@ Method = Annotated[
         MethodRecordRelease,
         MethodRecordGateVerdict,
         MethodRecordDeployment,
+        MethodDeployRecordPut,
+        MethodDeployRecordGet,
+        MethodDeployRecordList,
+        MethodApprovalGateResolve,
         MethodSourceCoverage,
         MethodObservationState,
         MethodHarnessEdit,
@@ -38346,6 +38378,105 @@ class DeploymentOutcome(str, Enum):
     UNATTRIBUTED = "unattributed"
 
 
+class DeployNodeResult(str, Enum):
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    SKIPPED = "skipped"
+    ROLLED_BACK = "rolled_back"
+
+
+class DeployNodeOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: str | None = None
+    node: str
+    outcome: DeployNodeResult
+
+
+class DeployRecordInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver: str | None = None
+    finished_at_ms: Annotated[int, Field(ge=0)] | None = None
+    image_digests: list[str]
+    nodes: list[DeployNodeOutcome]
+    plan_digest: str
+    started_at_ms: Annotated[int, Field(ge=0)] | None = None
+    target: str
+
+
+class DeployRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+    record: DeployRecordInput
+    seal: str
+
+
+class DeployRecordReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    node_id: str
+    plan_digest: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+    replayed: bool
+    seal: str
+
+
+class DeployRecordSummary(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    all_succeeded: bool
+    node_count: Annotated[int, Field(ge=0)]
+    plan_digest: str
+    recorded_at_ms: Annotated[int, Field(ge=0)]
+    target: str
+
+
+class DeployRecordPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    next_cursor: str | None = None
+    records: list[DeployRecordSummary]
+
+
+class ApprovalGate(str, Enum):
+    NONE = "none"
+    SINGLE = "single"
+    TWO_PERSON = "two_person"
+    UNRESOLVED = "unresolved"
+
+
+class GateClass(str, Enum):
+    LEGAL_FILING = "legal_filing"
+    MONEY_MOVEMENT = "money_movement"
+    PUBLISHING = "publishing"
+    PRODUCTION_QA = "production_qa"
+
+
+class ApprovalGateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    amount_minor: Annotated[int, Field(ge=0)] | None = None
+    currency: str | None = None
+    operation: str
+
+
+class ApprovalGateAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver_roles: list[str]
+    expires_after_ms: Annotated[int, Field(ge=0)] | None = None
+    gate: ApprovalGate
+    gate_class: GateClass | None = None
+    operation: str
+    policy_digest: str
+    rule_ids: list[str]
+
+
 class DocumentAggregation(str, Enum):
     MEAN_CHUNKS = "mean_chunks"
 
@@ -40483,6 +40614,31 @@ class MethodRecordDeploymentParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     deployment: DeploymentInput
+
+
+class MethodDeployRecordPutParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record: DeployRecordInput
+
+
+class MethodDeployRecordGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    plan_digest: str
+
+
+class MethodDeployRecordListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodApprovalGateResolveParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: ApprovalGateRequest
 
 
 class MethodRecordGateVerdictParams(BaseModel):
@@ -50061,6 +50217,9 @@ __all__ = [
     "TaskPlan",
     "ContextSection",
     "TaskContext",
+    "ApprovalGate",
+    "ApprovalGateAnswer",
+    "ApprovalGateRequest",
     "ApprovalSpec",
     "BranchArm",
     "BranchComparison",
@@ -50519,8 +50678,16 @@ __all__ = [
     "DelegationQualityOutcome",
     "DelegationQualityRequest",
     "DelegationQualityWindow",
+    "DeployNodeOutcome",
+    "DeployNodeResult",
+    "DeployRecord",
+    "DeployRecordInput",
+    "DeployRecordPage",
+    "DeployRecordReceipt",
+    "DeployRecordSummary",
     "DeploymentInput",
     "DeploymentOutcome",
+    "GateClass",
     "DesignDifference",
     "DesignatedCapability",
     "DesignationAsk",
@@ -50868,6 +51035,14 @@ __all__ = [
     "MethodReadPathHistoryParams",
     "MethodReadSpan",
     "MethodReadSpanParams",
+    "MethodApprovalGateResolve",
+    "MethodApprovalGateResolveParams",
+    "MethodDeployRecordGet",
+    "MethodDeployRecordGetParams",
+    "MethodDeployRecordList",
+    "MethodDeployRecordListParams",
+    "MethodDeployRecordPut",
+    "MethodDeployRecordPutParams",
     "MethodRecordDeployment",
     "MethodRecordDeploymentParams",
     "MethodRecordGateVerdict",

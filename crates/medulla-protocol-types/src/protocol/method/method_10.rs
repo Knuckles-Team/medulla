@@ -489,6 +489,33 @@ $($variants)*
     RecordDeployment {
         deployment: medulla_source_types::lifecycle::DeploymentInput,
     },
+    /// Record one applied deployment plan (MEDULLA-SDLC-R002.7): a sealed `DeployRecord` node
+    /// keyed by the verified tenant and the plan digest, carrying the target, the outcome of every
+    /// node, the image digests, the verified actor and the engine-clock time. The same body again
+    /// replays the stored record and writes nothing; a different body for the same plan digest
+    /// refuses `DEPLOY_RECORD_SEALED`; a field out of bounds refuses `DEPLOY_RECORD_INVALID`.
+    DeployRecordPut {
+        record: medulla_source_types::deploy_record::DeployRecordInput,
+    },
+    /// Read the deploy record of one plan digest of the verified tenant (MEDULLA-SDLC-R002.8). A
+    /// missing, foreign or invisible record refuses the same `DEPLOY_RECORD_NOT_FOUND`. Reads only.
+    DeployRecordGet { plan_digest: String },
+    /// One cursor-paged, newest-first page of the verified tenant's deploy records
+    /// (MEDULLA-SDLC-R002.8). `limit` is 1..=100 (100 when absent); the cursor is opaque and bound
+    /// to the tenant it was minted for. Reads only.
+    DeployRecordList {
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+    /// Ask which approval gate applies to an operation (MEDULLA-BUSINESS-OPS-R004): `none`,
+    /// `single`, `two_person`, or `unresolved` when no `ApprovalRule` of the request graph covers
+    /// it, with the gate class, approver roles and expiry. The graph is the only authority.
+    /// Reads only.
+    ApprovalGateResolve {
+        request: medulla_source_types::approval_gate::ApprovalGateRequest,
+    },
     /// Record one goal of a project (MEDULLA-SDLC-R017.1): a `Goal` node and a
     /// `targetsGoal` edge from each target row or competency question. Refuses
     /// `GOAL_TARGET_REQUIRED` when the goal names no target.

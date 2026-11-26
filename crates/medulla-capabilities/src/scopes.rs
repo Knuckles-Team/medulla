@@ -204,7 +204,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("ledger:admin", Admin, "engine"),
     entry("ledger:read", User, "engine"),
     entry("ledger:write", User, "engine"),
-    // MEDULLA-SDLC-R002.3: release and deployment records.
+    // MEDULLA-SDLC-R002.3, R002.8: release and deployment records and their reads.
+    entry("lifecycle:read", User, "engine"),
     entry("lifecycle:write", User, "engine"),
     entry("loops:control", Admin, "graph-os"),
     entry("loops:read", User, "graph-os"),
