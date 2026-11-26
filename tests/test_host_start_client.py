@@ -29,6 +29,7 @@ def view() -> dict[str, Any]:
         "expires_at_ms": 2000,
         "hard_expires_at_ms": 2000,
         "revision": 1,
+        "updated_at_ms": 1000,
     }
 
 

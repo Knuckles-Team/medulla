@@ -91,6 +91,7 @@ pub fn apply_issue_control_lease_row(
     let pair =
         pending_call::registration(graph, request, &mut row, nodes, committed_at_ms, crypto)?;
     plan_pair::register(graph, request, &mut row, nodes, committed_at_ms, crypto)?;
+    row.insert("updated_at_ms".into(), committed_at_ms.into());
     write_work_item_props(nodes, transitions, graph, &request.lease_id, &mut row, crypto)?;
     let mut changed = pending_call::write_pair(graph, pair, nodes, transitions, crypto)?;
     changed.push(request.lease_id.clone());
@@ -156,6 +157,7 @@ pub fn apply_transition_control_lease_row(
     let pair = pending_call::transition(graph, request, &row, nodes, committed_at_ms, crypto)?;
     let plan = plan_pair::consume(graph, request, &row, nodes, committed_at_ms, crypto)?;
     row.insert("status".into(), next.as_stored().into());
+    row.insert("updated_at_ms".into(), committed_at_ms.into());
     write_work_item_props(nodes, transitions, graph, &request.lease_id, &mut row, crypto)?;
     let ended = ControlLeaseView::from_row(&request.lease_id, &row)?;
     let mut changed = pending_call::write_pair(graph, pair, nodes, transitions, crypto)?;

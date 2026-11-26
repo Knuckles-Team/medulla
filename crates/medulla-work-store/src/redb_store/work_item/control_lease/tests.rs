@@ -755,3 +755,39 @@ fn pending_worker_refuses_incomplete_fences_and_fractional_deadline() {
     fractional.insert("lease_expires_at".into(), serde_json::json!(2.0009));
     assert!(!pending_call::live_worker(&fractional, fence, 2_000));
 }
+
+// spec: MEDULLA-DURABLE-KERNEL-R039.6
+#[test]
+fn a_lease_view_carries_the_engine_clock_time_of_its_last_write() {
+    let temp = open("lease-updated-at");
+    let mut approval = issue("action_approval:u1", "tenant-a");
+    approval.kind = "action.approval".into();
+    let created = decode::<ControlLeaseIssued>(
+        native_call_at(
+            &temp.shard,
+            "u1",
+            &Method::IssueControlLease { request: approval },
+            2_000,
+        )
+        .unwrap(),
+    );
+    // The issue stamps the engine's committed time, not the caller's issued_at_ms.
+    assert_eq!(created.lease.unwrap().updated_at_ms, 2_000);
+
+    let mut decided = end("action_approval:u1", 1, ControlLeaseTarget::Consumed);
+    decided.decided_by = "principal:sha256:decider".into();
+    let consumed = decode::<ControlLeaseTransition>(
+        native_call_at(
+            &temp.shard,
+            "u1-decided",
+            &Method::TransitionControlLease { request: decided },
+            5_000,
+        )
+        .unwrap(),
+    );
+    assert_eq!(consumed.outcome, ControlLeaseTransitionOutcome::Applied);
+    let view = get(&temp.shard, "tenant-a", "action_approval:u1").unwrap();
+    assert_eq!(view.updated_at_ms, 5_000);
+    assert_eq!(view.decided_by.as_deref(), Some("principal:sha256:decider"));
+    assert_eq!(view.issued_at_ms, 1_000);
+}

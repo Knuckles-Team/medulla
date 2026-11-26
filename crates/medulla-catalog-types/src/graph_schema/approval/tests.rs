@@ -45,6 +45,7 @@ fn lease(status: ControlLeaseStatus, grant: Value) -> ControlLeaseView {
         status,
         grant,
         issued_at_ms: NOW - 1_000,
+        updated_at_ms: NOW - 1_000,
         expires_at_ms: NOW + 1_000,
         hard_expires_at_ms: NOW + 1_000,
         revision: 2,

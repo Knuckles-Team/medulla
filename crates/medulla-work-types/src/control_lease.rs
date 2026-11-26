@@ -311,6 +311,10 @@ pub struct ControlLeaseView {
     /// before the engine recorded it.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub decided_by: Option<String>,
+    /// The engine-clock time of the lease's last write: its issue, then each
+    /// transition. On a lease consumed or ended it is the decision time. A lease
+    /// stored before the engine recorded it answers its issue time.
+    pub updated_at_ms: u64,
     /// Native issuance provenance, absent on legacy and ordinary leases.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub host_start_provenance: Option<crate::host_start::HostStartProvenance>,
@@ -546,6 +550,10 @@ impl ControlLeaseView {
                 .cloned()
                 .unwrap_or_default(),
             issued_at_ms: number("issued_at_ms"),
+            updated_at_ms: row
+                .get("updated_at_ms")
+                .and_then(Value::as_u64)
+                .unwrap_or_else(|| number("issued_at_ms")),
             expires_at_ms: number("expires_at_ms"),
             hard_expires_at_ms: number("hard_expires_at_ms"),
             revision: number(WORK_ITEM_ROW_REVISION).max(1),

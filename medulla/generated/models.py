@@ -3709,6 +3709,7 @@ class ControlLeaseView(BaseModel):
     lease_id: str
     revision: Annotated[int, Field(ge=0)]
     status: ControlLeaseStatus
+    updated_at_ms: Annotated[int, Field(ge=0)]
 
 
 class ConvergenceGate(BaseModel):

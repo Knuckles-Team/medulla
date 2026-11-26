@@ -47,6 +47,7 @@ def _view(status: str) -> dict[str, object]:
         "lease_id": "l",
         "revision": 0,
         "status": status,
+        "updated_at_ms": 1,
     }
 
 

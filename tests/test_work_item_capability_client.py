@@ -149,6 +149,7 @@ async def test_host_start_grant_round_trip() -> None:
         "expires_at_ms": 61_000,
         "hard_expires_at_ms": 61_000,
         "revision": 1,
+        "updated_at_ms": 1_000,
         "host_start_provenance": {
             "schema_version": 1,
             "issuer_ref": "principal:sha256:" + "b" * 64,

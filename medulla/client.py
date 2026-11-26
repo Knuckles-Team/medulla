@@ -5448,6 +5448,7 @@ _CONTROL_LEASE_VIEW_FIELDS = frozenset(
         "expires_at_ms",
         "hard_expires_at_ms",
         "revision",
+        "updated_at_ms",
     }
 )
 

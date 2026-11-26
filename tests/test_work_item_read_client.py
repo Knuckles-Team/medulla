@@ -149,6 +149,7 @@ LEASE: dict[str, Any] = {
     "expires_at_ms": 301_000,
     "hard_expires_at_ms": 901_000,
     "revision": 1,
+    "updated_at_ms": 1_000,
 }
 
 
