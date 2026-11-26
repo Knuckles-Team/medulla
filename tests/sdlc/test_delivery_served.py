@@ -7,13 +7,23 @@ L3: every call goes through the running engine. Deliveries are opened through
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import os
+import sys
 import uuid
+from pathlib import Path
 
 import msgpack
 import pytest
-from conftest import request_context
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from _decision_resident_fixture import publication
+from conftest import TEST_TENANT, request_context
+
+from medulla import decision_client as dc
+from medulla import decision_stat as ds
 from medulla.client import MedullaClient
 
 
@@ -155,7 +165,200 @@ def test_failed_check_reaches_the_delivery():
             "summary": "ci failed",
             "observed_at": 1,
         }
+        receipt = _body(await client.delivery_feedback(event, graph))
+        assert receipt["delivered_to"] == [delivery_id] and not receipt["duplicate"]
+        again = _body(await client.delivery_feedback(event, graph))
+        assert again["duplicate"] and again["delivered_to"] == []
+        unknown = {**event, "event_id": "ev-2", "proposal_id": "pr-unknown"}
         with pytest.raises(Exception, match="FEEDBACK_PROPOSAL_UNKNOWN"):
-            await client.delivery_feedback(event, graph)
+            await client.delivery_feedback(unknown, graph)
+        stranger = {**event, "event_id": "ev-3", "connector": "unregistered"}
+        with pytest.raises(Exception, match="FEEDBACK_SOURCE_UNKNOWN"):
+            await client.delivery_feedback(stranger, graph)
+
+    asyncio.run(_with_graph(seed, body))
+
+
+CHANGESET = "c" * 64
+HEAD_OLD = "sha256:head-old"
+HEAD_NEW = "sha256:head-new"
+
+
+def _verdict_node(gate: str) -> dict:
+    record = {
+        "changeset": CHANGESET,
+        "gate_id": gate,
+        "input_digest": "a" * 64,
+        "verdict": "pass",
+        "evidence_digest": "b" * 64,
+        "duration_ms": 1,
+    }
+    text = json.dumps(record, separators=(",", ":"))
+    return {
+        "op": "upsert_node",
+        "id": f"gate_verdict:{CHANGESET}:{gate}",
+        "properties": {
+            "type": "GateVerdict",
+            "verdict_record": text,
+            "verdict_seal": hashlib.sha256(text.encode()).hexdigest(),
+        },
+    }
+
+
+def _node(node_id: str, **properties) -> dict:
+    return {"op": "upsert_node", "id": node_id, "properties": properties}
+
+
+def _arming_request(schema: dict, graph: str, delivery_id: str, lines: int) -> dict:
+    params = [
+        dc.param("graph", "text", graph),
+        dc.param("delivery_id", "text", delivery_id),
+        dc.param("proposal_id", "text", "pr-1"),
+        dc.param("head_commit", "text", HEAD_NEW),
+        dc.param("head_changeset", "text", CHANGESET),
+        dc.param("branch", "text", "main"),
+        dc.param("required_check", "text", "ci"),
+        dc.param("changed_lines", "int", lines),
+    ]
+    return dc.decide_request(
+        TEST_TENANT,
+        ("delivery.arming", "merge_arming", "ordinary"),
+        dc.declared([dc.DeclaredOption("merge_arming")]),
+        schema,
+        params=params,
+    )
+
+
+def _chosen(record: dict) -> str:
+    outcome = record["outcome"]
+    assert outcome["outcome"] == "advisory", outcome
+    return [s["option_id"] for s in outcome["scores"] if s["score"]["value"] != 0][0]
+
+
+async def _arm(client, graph: str, schema: dict, delivery_id: str) -> dict:
+    decision = dc.DecisionClient(client=client)
+    payload = await decision.decide(_arming_request(schema, graph, delivery_id, 10))
+    return payload["records"][0]
+
+
+# spec: MEDULLA-SDLC-R019.15
+@pytest.mark.spec("MEDULLA-SDLC-R019.15")
+def test_slice_to_merged_proposal_through_feedback():
+    seed = [
+        _node("connector:scm", type="Connector"),
+        _node(
+            "landing_policy:demo:main",
+            type="LandingPolicy",
+            policy_record=json.dumps(
+                {"repo": "demo", "branch": "main", "required_gates": ["unit"]},
+                separators=(",", ":"),
+            ),
+        ),
+        _verdict_node("unit"),
+        _verdict_node("ci"),
+        _node(
+            "review:0",
+            type="Review",
+            proposal_id="pr-1",
+            reviewer="alice",
+            head_commit=HEAD_OLD,
+            recorded_at_ms=1,
+            state="approved",
+        ),
+    ]
+
+    async def body(client, graph):
+        await _set_mode(client, graph, "development")
+        schema = await client._send(
+            "AgentComponent",
+            publication(
+                "r019-15-schema",
+                "feature_schema",
+                ds.feature_schema_body([ds.feature("v", ds.number("v"), impute=0)]),
+            ),
+            graph,
+        )
+        pin = {
+            "component_id": "r019-15-schema",
+            "kind": "feature_schema",
+            "definition_digest": _body(schema)["component"]["definition_digest"],
+        }
+        opened = _body(await client.delivery_open(_open_request(), graph))
+        delivery_id = opened["delivery"]["id"]
+        assignment = opened["delivery"]["assignments"][0]["id"]
+        report = {
+            "delivery_id": delivery_id,
+            "assignment_id": assignment,
+            "state": "ready",
+            "summary": "ready for review",
+            "proposal": "pr-1",
+            "question": None,
+            "evidence": [f"gate_verdict:{CHANGESET}:unit"],
+        }
+        ready = _body(await client.delivery_report(report, graph))
+        assert ready["stage"] == "person/review"
+        # A failed check arrives and becomes an input of the delivery.
+        failed = {
+            "event_id": "ev-check",
+            "connector": "scm",
+            "kind": "check_changed",
+            "source": "automation",
+            "proposal_id": "pr-1",
+            "failed": True,
+            "summary": "ci failed",
+            "observed_at": 1,
+        }
+        receipt = _body(await client.delivery_feedback(failed, graph))
+        assert receipt["delivered_to"] == [delivery_id]
+        # The head moved since the last review: the verdict is disarm.
+        record = await _arm(client, graph, pin, delivery_id)
+        assert _chosen(record) == "verdict:disarm"
+        # A pass and an owner approval on the new head arm.
+        await client._send(
+            "BatchUpdate",
+            {
+                "operations_msgpack": msgpack.packb(
+                    [
+                        _node(
+                            "review:1",
+                            type="Review",
+                            proposal_id="pr-1",
+                            reviewer="alice",
+                            head_commit=HEAD_NEW,
+                            recorded_at_ms=7,
+                            state="approved",
+                        ),
+                        _node(
+                            "approval:1",
+                            type="OwnerApproval",
+                            proposal_id="pr-1",
+                            head_commit=HEAD_NEW,
+                            recorded_at_ms=8,
+                        ),
+                    ],
+                    use_bin_type=True,
+                )
+            },
+            graph,
+        )
+        armed = await _arm(client, graph, pin, delivery_id)
+        assert _chosen(armed) == "verdict:arm"
+        # The decision is a record of the log and replays from it.
+        decision = dc.DecisionClient(client=client)
+        committed = await decision.log(dc.commit_op(armed))
+        assert committed["record_digest"] == armed["record_digest"]
+        # A merge event ends the delivery as merged.
+        merged = {
+            **failed,
+            "event_id": "ev-merge",
+            "kind": "proposal_merged",
+            "source": "person",
+            "failed": False,
+            "summary": "merged",
+        }
+        await client.delivery_feedback(merged, graph)
+        status = _body(await client.delivery_status(delivery_id, graph))
+        assert status["delivery"]["ended"] == "merged"
+        assert status["stage"] == "ended"
 
     asyncio.run(_with_graph(seed, body))
