@@ -1,0 +1,18 @@
+{
+  "source": "legal-peripherals-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "contract": "contract-1",
+      "joinKey": "legal-peripherals.q2-key-1",
+      "id": "legal-peripherals-mcp-legal-peripherals.q2-1",
+      "label": "legal-peripherals-mcp 1"
+    },
+    {
+      "contract": "contract-2",
+      "joinKey": "legal-peripherals.q2-key-2",
+      "id": "legal-peripherals-mcp-legal-peripherals.q2-2",
+      "label": "legal-peripherals-mcp 2"
+    }
+  ]
+}

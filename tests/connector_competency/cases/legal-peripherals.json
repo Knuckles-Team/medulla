@@ -3,8 +3,8 @@
   "rollup": "MEDULLA-CQ-CONN-R033",
   "vocabulary_module": "core-foundation-v1.ttl",
   "terms": [
-    "counterparty",
     "agreementExpiresAt",
+    "counterparty",
     "hasRenewalAction"
   ],
   "questions": [
@@ -28,6 +28,35 @@
       "min_rows": 1,
       "recordings": [
         "legal-peripherals-mcp/single.json"
+      ]
+    },
+    {
+      "id": "legal-peripherals.q2",
+      "kind": "cross",
+      "question": "Which expiring contracts have a scanned copy in Paperless-ngx and a matching OneTrust vendor assessment?",
+      "uql": "LET s0 = FOREIGN SCAN 'legal-peripherals-mcp'; LET s1 = FOREIGN SCAN 'paperless-ngx-mcp'; LET s2 = FOREIGN SCAN 'onetrust-api'; JOIN s0, s1, s2",
+      "sources": [
+        "legal-peripherals-mcp",
+        "paperless-ngx-mcp",
+        "onetrust-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "legal-peripherals-mcp": "mcp_tool",
+        "paperless-ngx-mcp": "mcp_tool",
+        "onetrust-api": "http_endpoint"
+      },
+      "columns": [
+        "contract",
+        "document",
+        "assessment"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "legal-peripherals-mcp/cross_paperless-ngx-mcp.json",
+        "paperless-ngx-mcp/cross_legal-peripherals-mcp.json",
+        "legal-peripherals-mcp/cross_onetrust-api.json",
+        "onetrust-api/cross_legal-peripherals-mcp.json"
       ]
     }
   ]

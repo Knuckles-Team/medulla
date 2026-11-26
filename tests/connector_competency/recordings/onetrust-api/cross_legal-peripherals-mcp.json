@@ -1,0 +1,18 @@
+{
+  "source": "onetrust-api",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "assessment": "assessment-1",
+      "joinKey": "legal-peripherals.q2-key-1",
+      "id": "onetrust-api-legal-peripherals.q2-1",
+      "label": "onetrust-api 1"
+    },
+    {
+      "assessment": "assessment-2",
+      "joinKey": "legal-peripherals.q2-key-2",
+      "id": "onetrust-api-legal-peripherals.q2-2",
+      "label": "onetrust-api 2"
+    }
+  ]
+}
