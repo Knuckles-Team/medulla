@@ -128,13 +128,52 @@ pub(super) fn promotion_support_refusal(
 }
 
 /// The node id of one record of one tenant.
-fn node_id(tenant: &str, memory_id: &str) -> String {
+pub fn node_id(tenant: &str, memory_id: &str) -> String {
     format!("memory:{tenant}:{memory_id}")
 }
 
 /// One stored record.
 struct Stored {
     record: MemoryRecord,
+}
+
+/// The session of the stored record `memory_id` of `tenant`, when the record is stored and names
+/// one (MEDULLA-DECISION-ENGINE-R651.11).
+pub fn session_of(core: &GraphCore, tenant: &str, memory_id: &str) -> Option<String> {
+    let blob = core.get_node_properties(&node_id(tenant, memory_id))?;
+    let record = decode(&blob, tenant)?.record;
+    record.session_id.map(|session| session.as_str().to_string())
+}
+
+/// One stored turn of a session: who spoke it and when (MEDULLA-DECISION-ENGINE-R651.11).
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct SessionTurn {
+    /// When the turn was spoken.
+    pub timestamp_ms: u64,
+    /// The memory record that holds the turn.
+    pub memory_id: String,
+    /// Who spoke it.
+    pub speaker: medulla_work_types::participant::ParticipantId,
+}
+
+/// The turns `tenant` holds for `session_id` that name a speaker, oldest first. A record of
+/// another tenant never counts, even when it names the same session id.
+pub fn session_turns(core: &GraphCore, tenant: &str, session_id: &str) -> Vec<SessionTurn> {
+    let mut turns: Vec<SessionTurn> = load(core, tenant, &TIERS)
+        .into_iter()
+        .map(|stored| stored.record)
+        .filter(|record| !record.forgotten)
+        .filter(|record| record.session_id.as_ref().is_some_and(|session| session.as_str() == session_id))
+        .filter_map(|record| {
+            Some(SessionTurn {
+                timestamp_ms: u64::try_from(record.timestamp_ms).unwrap_or(0),
+                memory_id: record.memory_id.as_str().to_string(),
+                speaker: record.speaker?,
+            })
+        })
+        .collect();
+    turns.sort();
+    turns
 }
 
 /// The id prefix of every memory node of `tenant`.

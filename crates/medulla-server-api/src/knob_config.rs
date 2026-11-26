@@ -459,6 +459,14 @@ knobs! {
     observe_lock_hold_warn_ms: u64 = "observe.lock_hold_warn_ms", U64(5_000), [100, 600_000], "ms", Tunable;
     /// Memory search-state size cap.
     memory_search_state_max_bytes: u64 = "memory.search_state_max_bytes", U64(1_048_576), [65_536, 1_048_576], "bytes", Tunable;
+    /// Turns after which a pending derivation range is due at once (MEDULLA-DECISION-ENGINE-R651.11).
+    memory_derive_batch_turns: u64 = "memory.derive_batch_turns", U64(8), [1, 64], "turns", Tunable;
+    /// Quiet time after the last turn before a pending derivation range is due (MEDULLA-DECISION-ENGINE-R651.11).
+    memory_derive_debounce: u64 = "memory.derive_debounce", U64(30_000), [1_000, 600_000], "ms", Tunable;
+    /// Pending derivation tasks one tenant may hold before new ones are skipped (MEDULLA-DECISION-ENGINE-R651.11).
+    memory_derive_max_pending: u64 = "memory.derive_max_pending", U64(10_000), [100, 1_000_000], "tasks", Tunable;
+    /// Conclusions one derive job keeps (MEDULLA-DECISION-ENGINE-R651.12).
+    memory_derive_max_conclusions: u64 = "memory.derive_max_conclusions", U64(8), [1, 32], "claims", Tunable;
     /// TOC line-index stride.
     toc_line_index_stride: u64 = "toc.line_index_stride", U64(64), [16, 1_024], "lines", Tunable;
     /// A source record without retention is refused (MEDULLA-INGEST-WORKER-R900.2).

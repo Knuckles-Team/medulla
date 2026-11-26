@@ -26,6 +26,9 @@ mod graph_access;
 mod graph_dispatch;
 mod ingest_readback;
 mod meeting_transcript;
+// MEDULLA-DECISION-ENGINE-R651.11 — a committed turn enqueues one derive job per key.
+#[cfg(feature = "jobs")]
+pub(crate) mod memory_derive;
 // MEDULLA-UNIFIED-DATA-PLANE-R702.3 — the served lineage drain.
 mod lineage_ingest;
 #[cfg(all(feature = "raft", feature = "modality-serving"))]
@@ -86,6 +89,8 @@ pub async fn dispatch_graph_op(
 ) -> Response {
     #[cfg(feature = "redb")]
     let counts_as_write = medulla_server_auth::access::requires_write(&method);
+    #[cfg(feature = "jobs")]
+    let remembered = memory_derive::fresh_memory_ids(state, graph_name, verified_context.tenant(), &method).await;
     let inner = dispatch_graph_op_inner(
         state,
         GraphOpContext {
@@ -104,14 +109,33 @@ pub async fn dispatch_graph_op(
     // (MEDULLA-IDENTITY-R700.7): the write-day bump is recorded in that commit's own
     // transaction, never as a commit of its own.
     #[cfg(feature = "redb")]
-    if counts_as_write {
-        return medulla_server_api::request_scope::with_writer(
+    let response = if counts_as_write {
+        medulla_server_api::request_scope::with_writer(
             verified_context.principal().to_string(),
             inner,
         )
+        .await
+    } else {
+        inner.await
+    };
+    #[cfg(not(feature = "redb"))]
+    let response = inner.await;
+    #[cfg(feature = "jobs")]
+    if !remembered.is_empty() && response.refusal_text().is_none() {
+        let outcome = memory_derive::enqueue_derivations(memory_derive::EnqueueRequest {
+            state,
+            graph_name,
+            req_id,
+            caller,
+            verified_context,
+            fresh: remembered,
+        })
         .await;
+        if !outcome.refused.is_empty() {
+            tracing::error!(codes = ?outcome.refused, "derive enqueue refused; the turn is committed");
+        }
     }
-    inner.await
+    response
 }
 
 /// Append one operation-audit event to a resident graph's chain through the

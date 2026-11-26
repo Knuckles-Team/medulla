@@ -161,6 +161,19 @@ pub trait JobsApi: Send + Sync {
         Err("this seam method is not built into the installed implementation".to_string())
     }
 
+    /// Whether task `task_id` of `tenant` is still waiting for a worker: stored and never
+    /// claimed. An unknown id, and another tenant's, read as not pending
+    /// (MEDULLA-DECISION-ENGINE-R651.11).
+    #[allow(unused_variables)]
+    fn task_pending(
+        &self,
+        persist_dir: &Option<String>,
+        tenant: &str,
+        task_id: &str,
+    ) -> Result<bool, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
+
     /// The queued count, running count and oldest enqueue time of one tenant
     /// task queue (MEDULLA-INGEST-WORKER-R001.4.1).
     #[allow(unused_variables)]

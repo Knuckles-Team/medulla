@@ -359,6 +359,17 @@ pub(super) fn observation_of(
         .unwrap_or_else(|| ObservationConfig::missing(session_id, participant_id.clone()))
 }
 
+/// The stored observation setting of one participant in one session, when one is stored.
+pub(super) fn observation_stored(
+    core: &GraphCore,
+    tenant_scope: &str,
+    session_id: &str,
+    participant_id: &ParticipantId,
+) -> Option<ObservationConfig> {
+    let node_id = observation_node_id(tenant_scope, session_id, participant_id);
+    read_stored(core, &node_id, OBSERVATION_LABEL, tenant_scope)
+}
+
 fn admit_observation(
     core: &GraphCore,
     tenant_scope: &str,

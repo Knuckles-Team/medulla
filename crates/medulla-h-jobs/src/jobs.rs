@@ -201,6 +201,21 @@ impl medulla_server_ops::api::ingest::JobsApi for JobsSeam {
             .map_err(|error| job_refusal(&error))
     }
 
+    fn task_pending(
+        &self,
+        persist_dir: &Option<String>,
+        tenant: &str,
+        task_id: &str,
+    ) -> Result<bool, String> {
+        let store = core::job_store(persist_dir.as_deref())?;
+        match store.get(task_id) {
+            Ok(job) => Ok(job.policy.tenant == tenant
+                && matches!(job.state, medulla_jobs::JobState::Submitted { .. })),
+            Err(medulla_jobs::JobError::NotFound(_)) => Ok(false),
+            Err(error) => Err(job_refusal(&error)),
+        }
+    }
+
     fn task_queue_load(
         &self,
         persist_dir: &Option<String>,

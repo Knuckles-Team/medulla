@@ -800,9 +800,54 @@ async fn remember_thread_of(
         materialization_manifest: ctx.materialization_manifest.as_ref(),
         write_coalescer: None,
     };
-    medulla_h_graph::graph_ops::memory_ingest::remember_thread(&mutation_ctx, conversation)
-        .await
-        .map(|_| ())
+    // The turns this call stores for the first time are the ones that enqueue a derive job
+    // (MEDULLA-DECISION-ENGINE-R651.11): a replay of the thread finds them stored and adds none.
+    #[cfg(feature = "jobs")]
+    let fresh = fresh_turns(ctx, conversation).await;
+    medulla_h_graph::graph_ops::memory_ingest::remember_thread(&mutation_ctx, conversation).await?;
+    #[cfg(feature = "jobs")]
+    if !fresh.is_empty() {
+        let outcome = super::memory_derive::enqueue_derivations(super::memory_derive::EnqueueRequest {
+            state: ctx.state,
+            graph_name: ctx.graph_name,
+            req_id: ctx.req_id,
+            caller: ctx.caller,
+            verified_context: ctx.verified_context,
+            fresh,
+        })
+        .await;
+        if !outcome.refused.is_empty() {
+            tracing::error!(codes = ?outcome.refused, "derive enqueue refused; the turns are committed");
+        }
+    }
+    Ok(())
+}
+
+/// The ids of the thread's turns that name a speaker and are not yet stored.
+#[cfg(feature = "jobs")]
+async fn fresh_turns(
+    ctx: &GraphOpRouting<'_>,
+    conversation: &medulla_work_types::memory::ConversationRecord,
+) -> std::collections::BTreeSet<String> {
+    let Ok(records) = conversation.to_memory_records() else {
+        return std::collections::BTreeSet::new();
+    };
+    let current = ctx.state.read().await;
+    let Some(entry) = current.registry.get(ctx.graph_name) else {
+        return std::collections::BTreeSet::new();
+    };
+    records
+        .into_iter()
+        .filter(|record| record.speaker.is_some())
+        .filter(|record| {
+            let node = medulla_h_graph::graph_ops::memory_surface::node_id(
+                ctx.tenant_scope,
+                record.memory_id.as_str(),
+            );
+            entry.core.get_node_properties(&node).is_none()
+        })
+        .map(|record| record.memory_id.as_str().to_string())
+        .collect()
 }
 
 enum SourceIngestionRoute {
