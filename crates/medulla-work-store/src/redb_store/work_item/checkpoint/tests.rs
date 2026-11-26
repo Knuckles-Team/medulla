@@ -41,7 +41,7 @@ fn seed_admission(
         row.insert("kind".into(), "orchestrator_task".into());
         row.insert("metadata".into(), metadata.clone());
         row.insert(
-            run_owner::ADMISSION_REQUEST.into(),
+            medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST.into(),
             serde_json::to_value(admitted).unwrap(),
         );
     });
@@ -316,7 +316,7 @@ fn checkpoint_rejects_missing_admission_and_non_work_item_owner_rows() {
             let mut row: Row = decode_durable(bytes.value())?;
             drop(bytes);
             if remove_admission {
-                row.remove(run_owner::ADMISSION_REQUEST);
+                row.remove(medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST);
             } else {
                 row.insert("node_type".into(), "Other".into());
             }

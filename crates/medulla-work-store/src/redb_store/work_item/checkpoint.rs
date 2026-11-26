@@ -33,7 +33,7 @@ fn history(row: &Row, head_reference: Option<&str>) -> Result<Vec<String>, Strin
 }
 
 fn admitted_context(row: &Row, graph: &str, tenant: &str, run_id: &str, context_id: &str) -> bool {
-    let Some(value) = row.get(run_owner::ADMISSION_REQUEST) else {
+    let Some(value) = row.get(medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST) else {
         return false;
     };
     let Ok(admission) = serde_json::from_value::<

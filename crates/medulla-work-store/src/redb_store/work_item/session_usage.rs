@@ -107,7 +107,7 @@ fn session_membership(
         return Ok(SessionMembership::Other);
     }
     // Missing original admission cannot be repaired with mutable metadata.
-    let Some(original) = row.get(run_owner::ADMISSION_REQUEST) else {
+    let Some(original) = row.get(medulla_work_types::work_item_read::RUN_ADMISSION_REQUEST) else {
         return Ok(SessionMembership::Unavailable);
     };
     let admission: SubmitWorkItemRequest = serde_json::from_value(original.clone())
