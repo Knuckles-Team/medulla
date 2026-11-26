@@ -1,5 +1,5 @@
 //! The refusal codes of the served program optimization job
-//! (MEDULLA-DECISION-ENGINE-R810.4, R804.4).
+//! (MEDULLA-DECISION-ENGINE-R810.4, R804.4, R813.4).
 //!
 //! `submit_job_program_optimize` (`crates/medulla-h-jobs/src/jobs/submit.rs`)
 //! rejects an invalid request with one of these codes before a job is stored,
@@ -23,12 +23,30 @@ pub const PROGRAM_OPTIMIZER_UNKNOWN: RefusalCode = RefusalCode::new("PROGRAM_OPT
 /// A budget field is above the optimizer's ceiling.
 pub const PROGRAM_BUDGET_EXCEEDED: RefusalCode = RefusalCode::new("PROGRAM_BUDGET_EXCEEDED");
 
+/// A stored `:Score` names a grader kind outside the five kinds
+/// (MEDULLA-DECISION-ENGINE-R813.4).
+pub const SCORE_GRADER_UNKNOWN: RefusalCode = RefusalCode::new("SCORE_GRADER_UNKNOWN");
+/// A stored `:Score` has a value outside `[range_min, range_max]`, no value or
+/// range, or a `range_max` that is not above `range_min`
+/// (MEDULLA-DECISION-ENGINE-R813.4).
+pub const SCORE_OUT_OF_RANGE: RefusalCode = RefusalCode::new("SCORE_OUT_OF_RANGE");
+/// A stored `:Score` does not decode or names an unknown split
+/// (MEDULLA-DECISION-ENGINE-R813.4).
+pub const SCORE_INVALID: RefusalCode = RefusalCode::new("SCORE_INVALID");
+/// The graph holds more scores than one corpus carries
+/// (MEDULLA-DECISION-ENGINE-R813.4).
+pub const SCORE_CORPUS_TOO_LARGE: RefusalCode = RefusalCode::new("SCORE_CORPUS_TOO_LARGE");
+
 /// The codes only the program job declares. [`EVAL_SET_NOT_INDEPENDENT`] is the
 /// promotion table's; the job reuses it.
 pub const REFUSALS: &[RefusalCode] = &[
     PROGRAM_HELDOUT_MISSING,
     PROGRAM_OPTIMIZER_UNKNOWN,
     PROGRAM_BUDGET_EXCEEDED,
+    SCORE_GRADER_UNKNOWN,
+    SCORE_OUT_OF_RANGE,
+    SCORE_INVALID,
+    SCORE_CORPUS_TOO_LARGE,
 ];
 
 #[cfg(test)]

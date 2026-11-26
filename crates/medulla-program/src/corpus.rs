@@ -1,12 +1,69 @@
 //! MEDULLA-DECISION-ENGINE-R813.2: a training corpus built from stored score
 //! rows. Writes nothing; the optimizer job stages the result.
 
+use medulla_decision_types::decision::program::{
+    SCORE_CORPUS_TOO_LARGE, SCORE_GRADER_UNKNOWN, SCORE_INVALID, SCORE_OUT_OF_RANGE,
+};
+use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_modality::{OpaqueRef, PolicyEnvelope, PrivacyAttestation};
 
 use crate::{
-    EvidenceBinding, ExampleOutcome, ExampleSplit, GraderKind, ProgramError, TrainingCorpus,
-    TrainingExample,
+    EvidenceBinding, ExampleOutcome, ExampleSplit, GraderKind, TrainingCorpus, TrainingExample,
 };
+
+/// Why a stored score cannot become a training example
+/// (MEDULLA-DECISION-ENGINE-R813.4). Each variant has one registered code; a
+/// refusal at submit stores no job.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ScoreRefusal {
+    /// The score node does not decode, or names an unknown split.
+    Invalid { node: String },
+    /// The score's `grader_kind` is outside the five kinds.
+    GraderUnknown { node: String },
+    /// The score has no value or range, a value outside
+    /// `[range_min, range_max]`, or a `range_max` not above `range_min`.
+    OutOfRange { node: String },
+    /// The graph holds more scores than one corpus carries.
+    CorpusTooLarge,
+}
+
+impl ScoreRefusal {
+    /// The refusal code of this variant.
+    pub fn code(&self) -> RefusalCode {
+        match self {
+            Self::Invalid { .. } => SCORE_INVALID,
+            Self::GraderUnknown { .. } => SCORE_GRADER_UNKNOWN,
+            Self::OutOfRange { .. } => SCORE_OUT_OF_RANGE,
+            Self::CorpusTooLarge => SCORE_CORPUS_TOO_LARGE,
+        }
+    }
+}
+
+impl std::fmt::Display for ScoreRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let code = self.code();
+        match self {
+            Self::Invalid { node } => {
+                write!(f, "{}: score '{node}' does not decode or names an unknown split", code.as_str())
+            }
+            Self::GraderUnknown { node } => {
+                write!(f, "{}: score '{node}' has no known grader kind", code.as_str())
+            }
+            Self::OutOfRange { node } => write!(
+                f,
+                "{}: score '{node}' has no value, or a value outside a range whose maximum is above its minimum",
+                code.as_str()
+            ),
+            Self::CorpusTooLarge => write!(
+                f,
+                "{}: the graph holds more scores than a corpus carries",
+                code.as_str()
+            ),
+        }
+    }
+}
+
+impl std::error::Error for ScoreRefusal {}
 
 /// One stored score row: the value, its range, the run it scores and who
 /// graded it.
@@ -73,11 +130,13 @@ pub struct ScoreCorpus {
 }
 
 /// The example score: `(value - range_min) / (range_max - range_min)`.
-fn normalised(row: &ScoreRow) -> Result<f64, ProgramError> {
+fn normalised(row: &ScoreRow) -> Result<f64, ScoreRefusal> {
     let span = row.range_max - row.range_min;
     let finite = row.value.is_finite() && row.range_min.is_finite() && row.range_max.is_finite();
     if !finite || span <= 0.0 || row.value < row.range_min || row.value > row.range_max {
-        return Err(ProgramError::InvalidExample);
+        return Err(ScoreRefusal::OutOfRange {
+            node: row.score_ref.as_str().to_string(),
+        });
     }
     Ok((row.value - row.range_min) / span)
 }
@@ -88,7 +147,7 @@ fn normalised(row: &ScoreRow) -> Result<f64, ProgramError> {
 pub fn corpus_from_scores(
     rows: &[ScoreRow],
     policy: &CorpusPolicy,
-) -> Result<ScoreCorpus, ProgramError> {
+) -> Result<ScoreCorpus, ScoreRefusal> {
     let mut examples = Vec::with_capacity(rows.len());
     let mut skipped_without_run = 0;
     let mut promotion_deciding = 0;
@@ -254,15 +313,17 @@ mod tests {
         assert!((built.corpus.examples[0].score - 1.0).abs() < 1e-12);
         assert_eq!(built.promotion_deciding, 0);
         // A value outside its range or a degenerate range is refused.
+        let hi = row("hi", GraderKind::Api, true, 6.0);
         assert_eq!(
-            corpus_from_scores(&[row("hi", GraderKind::Api, true, 6.0)], &policy()),
-            Err(ProgramError::InvalidExample)
+            corpus_from_scores(&[hi.clone()], &policy()),
+            Err(ScoreRefusal::OutOfRange {
+                node: hi.score_ref.as_str().to_string()
+            })
         );
         let mut flat = row("flat", GraderKind::Api, true, 1.0);
         flat.range_max = 1.0;
-        assert_eq!(
-            corpus_from_scores(&[flat], &policy()),
-            Err(ProgramError::InvalidExample)
-        );
+        let refused = corpus_from_scores(&[flat], &policy()).unwrap_err();
+        assert_eq!(refused.code(), SCORE_OUT_OF_RANGE);
+        assert!(refused.to_string().starts_with("SCORE_OUT_OF_RANGE: "));
     }
 }

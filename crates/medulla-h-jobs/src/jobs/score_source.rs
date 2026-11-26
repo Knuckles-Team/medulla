@@ -14,7 +14,7 @@ use super::prelude_std::*;
 use super::*;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_program::corpus::{StoredScore, StoredScoreSet};
+use medulla_program::corpus::{ScoreRefusal, StoredScore, StoredScoreSet};
 use medulla_program::{ExampleSplit, GraderKind, MAX_EXAMPLES};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::carrier::GraphReadAuthority;
@@ -72,7 +72,7 @@ pub(super) async fn program_score_rows(
     let snapshot_version = core.version();
     let projected = authority.project_core(&core);
     let scores = read_stored_scores(&projected)
-        .map_err(|error| Response::err(req_id, format!("INVALID_ARGUMENT: {error}")))?;
+        .map_err(|refusal| Response::err(req_id, refusal.to_string()))?;
     Ok(Some(StoredScoreSet {
         snapshot_version,
         scores,
@@ -94,12 +94,10 @@ fn text(props: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option
 /// A score whose properties do not decode, whose grader kind is outside the five
 /// kinds, or whose value or range is missing refuses the read; a score over the
 /// corpus ceiling refuses it too, so a corpus is never silently truncated.
-pub(super) fn read_stored_scores(core: &GraphCore) -> Result<Vec<StoredScore>, String> {
+pub(super) fn read_stored_scores(core: &GraphCore) -> Result<Vec<StoredScore>, ScoreRefusal> {
     let nodes = core.get_nodes_by_label(SCORE_LABEL, MAX_EXAMPLES + 1);
     if nodes.len() > MAX_EXAMPLES {
-        return Err(
-            "SCORE_CORPUS_TOO_LARGE: the graph holds more scores than a corpus carries".to_string(),
-        );
+        return Err(ScoreRefusal::CorpusTooLarge);
     }
     let mut runs: BTreeMap<String, String> = BTreeMap::new();
     for (source, target, blob) in core.get_edges() {
@@ -113,15 +111,15 @@ pub(super) fn read_stored_scores(core: &GraphCore) -> Result<Vec<StoredScore>, S
     let mut scores = Vec::with_capacity(nodes.len());
     for (node_id, blob) in nodes {
         let props = medulla_types::msgpack::decode_property_object(&blob)
-            .map_err(|_| format!("SCORE_INVALID: score '{node_id}' does not decode"))?;
+            .map_err(|_| ScoreRefusal::Invalid {
+                node: node_id.clone(),
+            })?;
         let (Some(value), Some(range_min), Some(range_max)) = (
             number(&props, "value"),
             number(&props, "range_min"),
             number(&props, "range_max"),
         ) else {
-            return Err(format!(
-                "SCORE_OUT_OF_RANGE: score '{node_id}' has no value or range"
-            ));
+            return Err(ScoreRefusal::OutOfRange { node: node_id });
         };
         let grader_kind: GraderKind = serde_json::from_value(
             props
@@ -129,12 +127,16 @@ pub(super) fn read_stored_scores(core: &GraphCore) -> Result<Vec<StoredScore>, S
                 .cloned()
                 .unwrap_or(serde_json::Value::Null),
         )
-        .map_err(|_| format!("SCORE_GRADER_UNKNOWN: score '{node_id}' has no known grader kind"))?;
+        .map_err(|_| ScoreRefusal::GraderUnknown {
+            node: node_id.clone(),
+        })?;
         let split =
             match props.get("split") {
                 None | Some(serde_json::Value::Null) => None,
                 Some(raw) => Some(serde_json::from_value::<ExampleSplit>(raw.clone()).map_err(
-                    |_| format!("SCORE_INVALID: score '{node_id}' has an unknown split"),
+                    |_| ScoreRefusal::Invalid {
+                        node: node_id.clone(),
+                    },
                 )?),
             };
         let run_id = runs.get(&node_id).cloned();

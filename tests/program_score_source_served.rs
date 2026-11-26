@@ -367,3 +367,78 @@ fn optimize_submit_refuses_client_examples_with_a_score_source() {
     .expect("start engine driver");
     medulla_server::join_engine_driver(driver).expect("engine driver failed");
 }
+
+/// A stored score the corpus cannot carry refuses the submit with its own code
+/// and stores no job: a grader kind outside the five kinds is
+/// `SCORE_GRADER_UNKNOWN`; a value outside its range, and a range whose maximum
+/// is not above its minimum, are `SCORE_OUT_OF_RANGE`.
+// spec: MEDULLA-DECISION-ENGINE-R813.4
+#[test]
+fn score_refusals() {
+    let driver = medulla_server::spawn_engine_driver(|| {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
+            .enable_all()
+            .build()
+            .expect("build runtime");
+        runtime.block_on(async {
+            let cases = [
+                (
+                    "SCORE_GRADER_UNKNOWN",
+                    serde_json::json!({
+                        "type": "Score", "value": 4.0, "range_min": 1.0,
+                        "range_max": 5.0, "grader_kind": "oracle", "split": "test",
+                    }),
+                ),
+                (
+                    "SCORE_OUT_OF_RANGE",
+                    serde_json::json!({
+                        "type": "Score", "value": 6.0, "range_min": 1.0,
+                        "range_max": 5.0, "grader_kind": "human", "split": "test",
+                    }),
+                ),
+                (
+                    "SCORE_OUT_OF_RANGE",
+                    serde_json::json!({
+                        "type": "Score", "value": 1.0, "range_min": 1.0,
+                        "range_max": 1.0, "grader_kind": "human", "split": "test",
+                    }),
+                ),
+            ];
+            for (index, (code, score)) in cases.into_iter().enumerate() {
+                let directory = tempfile::tempdir().expect("private persistence");
+                let dir = directory.path().to_string_lossy().into_owned();
+                let persistence: Arc<dyn PersistenceBackend> =
+                    Arc::new(RedbBackend::open(dir.clone(), 64).expect("open persistence"));
+                let state = test_support::state_with(
+                    SECRET,
+                    common::current_isolation(),
+                    Some(dir),
+                    Some(persistence),
+                );
+                let id = 100 * (index as u64 + 1);
+                put_node(
+                    &state,
+                    id,
+                    "run-a",
+                    serde_json::json!({"type": "ExperimentRun"}),
+                )
+                .await;
+                put_node(&state, id + 1, "score-a", score).await;
+                link_run(&state, id + 2, "score-a", "run-a").await;
+                let refused =
+                    Box::pin(test_support::dispatch(&state, submit(id + 3, &score_request())))
+                        .await;
+                let text = refusal(&refused);
+                assert!(text.starts_with(code), "{code}: {text}");
+                assert!(
+                    refused.result.is_none(),
+                    "a refused submit stages no job: {refused:?}"
+                );
+            }
+        });
+    })
+    .expect("start engine driver");
+    medulla_server::join_engine_driver(driver).expect("engine driver failed");
+}

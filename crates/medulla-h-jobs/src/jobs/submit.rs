@@ -578,7 +578,7 @@ fn fill_corpus_from_scores(
             envelope: envelope.clone(),
         },
     )
-    .map_err(|error| format!("program optimization request is invalid: {error}"))?;
+    .map_err(|refusal| refusal.to_string())?;
     request.corpus = built.corpus;
     Ok(())
 }
