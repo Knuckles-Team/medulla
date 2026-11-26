@@ -45,9 +45,17 @@ pub const FEEDBACK_EVENT_INVALID: &str = "FEEDBACK_EVENT_INVALID";
 /// A resume of an ended delivery failed a fact of its mandate (R019.6).
 pub const MANDATE_REVOKED: &str = "MANDATE_REVOKED";
 
+/// Arming needs an owner approval record and there is none (R019.10).
+pub const ARMING_APPROVAL_MISSING: &str = "ARMING_APPROVAL_MISSING";
+
+/// The owner approval names another commit than the head (R019.10).
+pub const ARMING_HEAD_MISMATCH: &str = "ARMING_HEAD_MISMATCH";
+
 /// Every refusal code of the delivery records.
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(MANDATE_REVOKED),
+    RefusalCode::new(ARMING_APPROVAL_MISSING),
+    RefusalCode::new(ARMING_HEAD_MISMATCH),
     RefusalCode::new(FEEDBACK_SOURCE_UNKNOWN),
     RefusalCode::new(FEEDBACK_PROPOSAL_UNKNOWN),
     RefusalCode::new(FEEDBACK_EVENT_INVALID),
@@ -530,4 +538,50 @@ pub struct ReviewRecord {
 pub enum RoundVerdict {
     Address,
     StopAddressing,
+}
+
+/// The facts a merge-arming verdict reads (R019.10).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ArmingFacts {
+    /// The delivery opened the proposal.
+    pub delivery_opened_proposal: bool,
+    /// Every required gate verdict (MEDULLA-SCM-R008) passed for the head changeset.
+    pub gates_passed: bool,
+    /// The required check passed on the head commit.
+    pub check_passed: bool,
+    /// The head commit digest now.
+    pub head_commit: String,
+    /// The head commit digest the last review and gate verdicts saw; a different value means
+    /// the head moved.
+    pub reviewed_head: String,
+    /// The head commit digest the owner approval record names, when one exists.
+    pub approval_commit: Option<String>,
+    /// A review requests changes.
+    pub changes_requested: bool,
+    /// The changed lines of the proposal.
+    pub changed_lines: u64,
+    /// The knob `sdlc.delivery.arm_max_changed_lines`.
+    pub max_changed_lines: u64,
+}
+
+/// A refused arming verdict.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+pub enum ArmingRefusal {
+    /// No owner approval record exists.
+    #[error("ARMING_APPROVAL_MISSING: {0}")]
+    ApprovalMissing(String),
+    /// The approval names another commit than the head.
+    #[error("ARMING_HEAD_MISMATCH: {0}")]
+    HeadMismatch(String),
+}
+
+impl ArmingRefusal {
+    /// The stable refusal code.
+    pub fn code(&self) -> &'static str {
+        match self {
+            Self::ApprovalMissing(_) => ARMING_APPROVAL_MISSING,
+            Self::HeadMismatch(_) => ARMING_HEAD_MISMATCH,
+        }
+    }
 }

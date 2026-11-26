@@ -6,3 +6,4 @@ pub mod feedback;
 pub mod open;
 pub mod mandate;
 pub mod rounds;
+pub mod arming;
