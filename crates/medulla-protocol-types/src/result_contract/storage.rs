@@ -74,6 +74,7 @@ method_results! {
     AgentTemplateCurrent(AgentTemplate / "current") => Raw<Option<AgentTemplateEntry>>;
     AgentTemplateHistory(AgentTemplate / "history") => Raw<Vec<AgentTemplateEntry>>;
     AgentTemplateInstantiate(AgentTemplate / "instantiate") => Raw<AgentLibraryEntryDraft>;
+    AgentTemplateList(AgentTemplate / "list") => Raw<medulla_agent_types::agent_template::AgentTemplateListPage>;
     AgentTemplatePublish(AgentTemplate / "publish") => Raw<AgentTemplateCommittedResult>;
     AgentTemplateRetire(AgentTemplate / "retire") => Raw<AgentTemplateCommittedResult>;
     AgentTemplateStatus(AgentTemplate / "status") => Raw<Option<AgentTemplateCommittedResult>>;

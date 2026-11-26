@@ -41,6 +41,89 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::agent_component::{AgentComponentKind, ComponentDependency};
 use crate::agent_library::{AgentLibraryEntryDraft, AgentLibraryLifecycle};
+use medulla_types::refusal_code::RefusalCode;
+use medulla_types::tenant_cursor::CursorFamily;
+
+/// An instantiate binding would give the instance more than its template
+/// allows: a parameter the template does not declare, a component of another
+/// kind than the parameter takes, or a change to the template's budget.
+const WIDENS_CODE: &str = "BINDING_WIDENS_TEMPLATE";
+pub const BINDING_WIDENS_TEMPLATE: RefusalCode = RefusalCode::new(WIDENS_CODE);
+
+/// The refusal table of the template surface.
+pub const REFUSALS: &[RefusalCode] = &[BINDING_WIDENS_TEMPLATE];
+
+/// Most templates one listing page may carry.
+pub const MAX_TEMPLATE_LIST_LIMIT: u32 = 256;
+/// Longest opaque template-listing cursor a caller may hand back.
+pub const MAX_TEMPLATE_LIST_CURSOR_BYTES: usize = 16 * 1024;
+
+const LIST_CURSOR: CursorFamily = CursorFamily {
+    domain: b"au-eg/agent-template-list-cursor/v1",
+    max_bytes: MAX_TEMPLATE_LIST_CURSOR_BYTES,
+    noun: "agent template list",
+};
+
+/// Mint the opaque cursor that resumes a template listing after `template_id`.
+pub fn encode_template_list_cursor(tenant_id: &str, template_id: &str) -> String {
+    LIST_CURSOR.encode(tenant_id, template_id)
+}
+
+/// Recover the resume template id from an opaque cursor, or refuse it by name.
+pub fn decode_template_list_cursor(tenant_id: &str, cursor: &str) -> Result<String, String> {
+    LIST_CURSOR.decode(tenant_id, cursor, |id| validate_text("cursor template_id", id).is_ok())
+}
+
+/// Read the tenant's current templates, one page at a time.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AgentTemplateListRequest {
+    pub tenant_id: String,
+    #[serde(default)]
+    pub limit: Option<u32>,
+    #[serde(default)]
+    pub cursor: Option<String>,
+}
+
+impl AgentTemplateListRequest {
+    /// Refuse a request outside its bounds.
+    pub fn validate(&self) -> Result<(), String> {
+        validate_text("tenant_id", &self.tenant_id)?;
+        if let Some(limit) = self.limit {
+            if limit == 0 || limit > MAX_TEMPLATE_LIST_LIMIT {
+                return Err(format!(
+                    "agent template list limit must be 1..={MAX_TEMPLATE_LIST_LIMIT}"
+                ));
+            }
+        }
+        if let Some(cursor) = &self.cursor {
+            if cursor.is_empty() || cursor.len() > MAX_TEMPLATE_LIST_CURSOR_BYTES {
+                return Err("agent template list cursor is outside its bound".to_string());
+            }
+        }
+        Ok(())
+    }
+
+    /// The page size this request asks for, defaulted and already bounded.
+    pub fn page_limit(&self) -> usize {
+        self.limit
+            .unwrap_or(MAX_TEMPLATE_LIST_LIMIT)
+            .min(MAX_TEMPLATE_LIST_LIMIT) as usize
+    }
+}
+
+/// One page of the tenant's templates, each as its head revision, in template
+/// id order. A retired head is listed with its lifecycle.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AgentTemplateListPage {
+    pub templates: Vec<AgentTemplateEntry>,
+    /// `Some` when more of the tenant remains; hand it back unmodified.
+    #[serde(default)]
+    pub next_cursor: Option<String>,
+}
 
 /// Advanced to 2 by the pre-freeze contract review. A template's digest folds
 /// in its base agent's own digest, and that digest's domain moved
@@ -286,7 +369,7 @@ impl AgentTemplateEntry {
         for name in bindings.keys() {
             if !declared.contains_key(name.as_str()) {
                 return Err(format!(
-                    "agent template '{}' declares no parameter '{name}'",
+                    "{WIDENS_CODE}: agent template '{}' declares no parameter '{name}'",
                     self.template_id
                 ));
             }
@@ -308,7 +391,7 @@ impl AgentTemplateEntry {
             };
             if binding.kind != param.kind {
                 return Err(format!(
-                    "agent template parameter '{}' takes a {} component, got {}",
+                    "{WIDENS_CODE}: agent template parameter '{}' takes a {} component, got {}",
                     param.name,
                     param.kind.as_str(),
                     binding.kind.as_str()
@@ -328,6 +411,20 @@ impl AgentTemplateEntry {
             definition_digest: self.definition_digest.clone(),
             bindings: bindings.clone(),
         });
+        // A binding replaces components one for one. The instance keeps the
+        // template's budget and its slot counts, so it can never hold more
+        // tools, skills or budget than the template granted.
+        if draft.runtime.usage_limits != self.base.runtime.usage_limits
+            || draft.runtime.retry_policy != self.base.runtime.retry_policy
+            || draft.runtime.model_settings != self.base.runtime.model_settings
+            || draft.tools.len() > self.base.tools.len()
+            || draft.skills.len() > self.base.skills.len()
+            || draft.runtime.toolset_refs.len() > self.base.runtime.toolset_refs.len()
+        {
+            return Err(format!(
+                "{WIDENS_CODE}: the bindings change the template's budget or slot counts"
+            ));
+        }
         // The substituted draft has to stand on its own -- a binding that
         // duplicates a component already in the same slot, for instance, is
         // caught here rather than at publish.
@@ -669,6 +766,10 @@ pub enum AgentTemplateOp {
     Instantiate {
         request: AgentTemplateInstantiateRequest,
     },
+    /// The tenant's current templates, one page at a time. A read.
+    List {
+        request: AgentTemplateListRequest,
+    },
 }
 
 impl AgentTemplateOp {
@@ -689,6 +790,7 @@ impl AgentTemplateOp {
             Self::Retire { request } => &request.context.tenant_id,
             Self::Status { request } => &request.context.tenant_id,
             Self::Instantiate { request } => &request.tenant_id,
+            Self::List { request } => &request.tenant_id,
             Self::Current { tenant_id, .. } | Self::History { tenant_id, .. } => tenant_id,
         }
     }
@@ -699,6 +801,8 @@ impl AgentTemplateOp {
             Self::Retire { request } => &request.template_id,
             Self::Status { request } => &request.template_id,
             Self::Instantiate { request } => &request.template_id,
+            // A listing names no single template.
+            Self::List { .. } => "",
             Self::Current { template_id, .. } | Self::History { template_id, .. } => template_id,
         }
     }
@@ -725,6 +829,7 @@ impl AgentTemplateOp {
                 validate_text("template_id", &request.template_id)
             }
             Self::Instantiate { request } => request.validate(),
+            Self::List { request } => request.validate(),
             Self::Current {
                 tenant_id,
                 template_id,
@@ -963,6 +1068,56 @@ mod tests {
             error.contains("declares no parameter 'nonexistent'"),
             "got: {error}"
         );
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R810.2
+    #[test]
+    fn a_widening_binding_refuses_with_its_declared_code() {
+        let unknown = template()
+            .instantiate(
+                "agent:x",
+                &BTreeMap::from([(
+                    "nonexistent".to_string(),
+                    dep("model:haiku", AgentComponentKind::ModelProfile, 'a'),
+                )]),
+            )
+            .expect_err("an undeclared parameter widens the template");
+        assert!(
+            unknown.starts_with("BINDING_WIDENS_TEMPLATE: "),
+            "got: {unknown}"
+        );
+        let wrong_kind = template()
+            .instantiate(
+                "agent:x",
+                &BTreeMap::from([(
+                    "model".to_string(),
+                    dep("tool:other", AgentComponentKind::Tool, 'a'),
+                )]),
+            )
+            .expect_err("a component of another kind widens the template");
+        assert!(wrong_kind.starts_with("BINDING_WIDENS_TEMPLATE: "));
+        assert!(REFUSALS.contains(&BINDING_WIDENS_TEMPLATE));
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R810.1
+    #[test]
+    fn a_template_list_cursor_resumes_only_for_its_tenant() {
+        let cursor = encode_template_list_cursor("tenant-a", "template-7");
+        assert_eq!(
+            decode_template_list_cursor("tenant-a", &cursor).unwrap(),
+            "template-7"
+        );
+        assert!(decode_template_list_cursor("tenant-b", &cursor).is_err());
+        let list = |limit, cursor: Option<&str>| AgentTemplateListRequest {
+            tenant_id: "tenant-a".into(),
+            limit,
+            cursor: cursor.map(str::to_string),
+        };
+        assert!(list(None, None).validate().is_ok());
+        assert!(list(Some(0), None).validate().is_err());
+        assert!(list(Some(MAX_TEMPLATE_LIST_LIMIT + 1), None).validate().is_err());
+        assert!(list(None, Some("")).validate().is_err());
+        assert_eq!(list(Some(5), None).page_limit(), 5);
     }
 
     #[test]

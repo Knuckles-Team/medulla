@@ -848,6 +848,11 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "approval_gate",
             medulla_source_types::approval_gate::REFUSALS.to_vec(),
         ),
+        // MEDULLA-ORCH-VOCAB-R810.2: the agent template instantiate refusals.
+        (
+            "agent_template",
+            medulla_agent_types::agent_template::REFUSALS.to_vec(),
+        ),
         (
             "topology_enforcement",
             medulla_agent_types::agent_topology::enforcement::REFUSALS.to_vec(),

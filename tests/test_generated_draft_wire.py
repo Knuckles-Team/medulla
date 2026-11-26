@@ -57,3 +57,18 @@ def test_attributes_refuse_a_null_the_engine_would_have_refused() -> None:
         AgentComponentDraft.model_validate(_draft(attributes=None))
     kept = AgentComponentDraft.model_validate(_draft(attributes={"k": "v"}))
     assert kept.model_dump(mode="json")["attributes"] == {"k": "v"}
+
+
+# spec: MEDULLA-ORCH-VOCAB-R810.1
+def test_template_list_op_round_trips_its_wire_shape() -> None:
+    from pydantic import TypeAdapter
+
+    from medulla.generated.models import AgentTemplateOp, AgentTemplateOpList
+
+    wire = {
+        "op": "list",
+        "request": {"tenant_id": "tenant-a", "limit": 10, "cursor": "abc"},
+    }
+    op = TypeAdapter(AgentTemplateOp).validate_python(wire)
+    assert isinstance(op, AgentTemplateOpList)
+    assert op.model_dump(mode="json") == wire

@@ -598,6 +598,7 @@ pub async fn handle_agent_template(
         } => template_history(&store, req_id, tenant_id, template_id),
         AgentTemplateOp::Status { request } => template_status(&store, req_id, verified, request),
         AgentTemplateOp::Instantiate { request } => template_instantiate(&store, req_id, request),
+        AgentTemplateOp::List { request } => template_list(&store, req_id, request),
     }
 }
 
@@ -731,6 +732,23 @@ fn template_status(
             ResultPayload::of_ref::<
                 medulla_protocol_types::result_contract::storage::AgentTemplateStatus,
             >(&result.map(|result| result.result)),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+#[cfg(feature = "redb")]
+fn template_list(
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
+    req_id: u64,
+    request: medulla_agent_types::agent_template::AgentTemplateListRequest,
+) -> Response {
+    match store.list_templates(&request) {
+        Ok(page) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentTemplateList,
+            >(&page),
         ),
         Err(error) => Response::err(req_id, error),
     }

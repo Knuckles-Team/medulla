@@ -1299,6 +1299,21 @@ class AgentTemplateInstantiateRequest(BaseModel):
     tenant_id: str
 
 
+class AgentTemplateListRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    tenant_id: str
+
+
+class AgentTemplateListPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    next_cursor: str | None = None
+    templates: list[AgentTemplateEntry]
+
+
 class AgentTemplateMutationKind(str, Enum):
     PUBLISH = "publish"
     RETIRE = "retire"
@@ -1348,13 +1363,21 @@ class AgentTemplateOpInstantiate(BaseModel):
     request: AgentTemplateInstantiateRequest
 
 
+class AgentTemplateOpList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["list"]
+    request: AgentTemplateListRequest
+
+
 AgentTemplateOp = Annotated[
     AgentTemplateOpPublish
     | AgentTemplateOpRetire
     | AgentTemplateOpCurrent
     | AgentTemplateOpHistory
     | AgentTemplateOpStatus
-    | AgentTemplateOpInstantiate,
+    | AgentTemplateOpInstantiate
+    | AgentTemplateOpList,
     Field(discriminator="op"),
 ]
 
@@ -46400,11 +46423,14 @@ __all__ = [
     "AgentTemplateDraft",
     "AgentTemplateEntry",
     "AgentTemplateInstantiateRequest",
+    "AgentTemplateListPage",
+    "AgentTemplateListRequest",
     "AgentTemplateMutationKind",
     "AgentTemplateOp",
     "AgentTemplateOpCurrent",
     "AgentTemplateOpHistory",
     "AgentTemplateOpInstantiate",
+    "AgentTemplateOpList",
     "AgentTemplateOpPublish",
     "AgentTemplateOpRetire",
     "AgentTemplateOpStatus",

@@ -697,3 +697,64 @@ fn a_template_whose_base_pins_another_tenants_component_is_refused() {
         "got: {error}"
     );
 }
+
+// spec: MEDULLA-ORCH-VOCAB-R810.1
+#[test]
+fn the_tenant_listing_pages_heads_in_id_order_and_never_crosses_tenants() {
+    use medulla_agent_types::agent_template::AgentTemplateListRequest;
+
+    let (_dir, store) = open_store();
+    for (index, id) in ["template:a", "template:b", "template:c"].iter().enumerate() {
+        publish(
+            &store,
+            &format!("list-{index}"),
+            (index + 1) as u8,
+            0,
+            template("tenant-a", id),
+        );
+    }
+    publish(
+        &store,
+        "list-other",
+        9,
+        0,
+        template("tenant-b", "template:foreign"),
+    );
+    let list = |cursor: Option<String>| {
+        store
+            .list_templates(&AgentTemplateListRequest {
+                tenant_id: "tenant-a".to_string(),
+                limit: Some(2),
+                cursor,
+            })
+            .unwrap()
+    };
+    let first = list(None);
+    let ids = |page: &medulla_agent_types::agent_template::AgentTemplateListPage| {
+        page.templates
+            .iter()
+            .map(|entry| entry.template_id.clone())
+            .collect::<Vec<_>>()
+    };
+    assert_eq!(ids(&first), ["template:a", "template:b"]);
+    let cursor = first.next_cursor.clone().expect("one head remains");
+    let second = list(Some(cursor.clone()));
+    assert_eq!(ids(&second), ["template:c"]);
+    assert_eq!(second.next_cursor, None);
+    // The cursor is bound to its tenant, and the other tenant's template
+    // never appears in this tenant's pages.
+    let foreign = store.list_templates(&AgentTemplateListRequest {
+        tenant_id: "tenant-b".to_string(),
+        limit: None,
+        cursor: Some(cursor),
+    });
+    assert!(foreign.is_err(), "a cursor is not transplantable");
+    let other = store
+        .list_templates(&AgentTemplateListRequest {
+            tenant_id: "tenant-b".to_string(),
+            limit: None,
+            cursor: None,
+        })
+        .unwrap();
+    assert_eq!(ids(&other), ["template:foreign"]);
+}

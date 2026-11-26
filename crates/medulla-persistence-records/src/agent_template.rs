@@ -190,6 +190,74 @@ impl AgentLibraryStore {
         )
     }
 
+    /// One page of the tenant's templates, in template id order, each as its
+    /// head revision. The scan is keyed by the request's tenant, so a cursor
+    /// never leaves the tenant prefix. A page stops at the caller's limit or
+    /// at the scan bound, and returns a cursor that resumes strictly after the
+    /// last head it consumed.
+    pub fn list_templates(
+        &self,
+        request: &medulla_agent_types::agent_template::AgentTemplateListRequest,
+    ) -> Result<medulla_agent_types::agent_template::AgentTemplateListPage, String> {
+        use medulla_agent_types::agent_template::{
+            decode_template_list_cursor, encode_template_list_cursor, AgentTemplateListPage,
+        };
+
+        /// Most heads one page may examine, whatever the limit.
+        const MAX_TEMPLATE_LIST_SCAN: usize = 4_096;
+        request.validate()?;
+        let tenant_id = request.tenant_id.as_str();
+        let resume_after = request
+            .cursor
+            .as_deref()
+            .map(|cursor| decode_template_list_cursor(tenant_id, cursor))
+            .transpose()?;
+        let limit = request.page_limit();
+        let read = self.read()?;
+        let heads = read.open_owner_table(medulla_storage::AGENT_TEMPLATE_HEADS)?;
+        let revisions = read.open_owner_table(medulla_storage::AGENT_TEMPLATE_REVISIONS)?;
+        let mut templates = Vec::new();
+        let mut scanned = 0usize;
+        let mut last_consumed: Option<String> = None;
+        let mut truncated = false;
+        for row in heads
+            .range((tenant_id, resume_after.as_deref().unwrap_or("")) ..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, head_revision) = row.map_err(|error| error.to_string())?;
+            let (row_tenant, template_id) = key.value();
+            if row_tenant != tenant_id {
+                break;
+            }
+            // The cursor is exclusive; the range start is inclusive.
+            if resume_after.as_deref() == Some(template_id) {
+                continue;
+            }
+            if templates.len() >= limit || scanned >= MAX_TEMPLATE_LIST_SCAN {
+                truncated = true;
+                break;
+            }
+            scanned += 1;
+            let head_revision = head_revision.value();
+            let value = revisions
+                .get((tenant_id, template_id, head_revision))
+                .map_err(|error| error.to_string())?
+                .ok_or_else(|| "agent template head points to a missing revision".to_string())?;
+            let entry = decode_revision::<TemplateLayer>(value.value())?;
+            require_physical_key::<TemplateLayer>(&entry, tenant_id, template_id, head_revision)?;
+            templates.push(entry);
+            last_consumed = Some(template_id.to_string());
+        }
+        let next_cursor = match (truncated, last_consumed) {
+            (true, Some(template_id)) => Some(encode_template_list_cursor(tenant_id, &template_id)),
+            _ => None,
+        };
+        Ok(AgentTemplateListPage {
+            templates,
+            next_cursor,
+        })
+    }
+
     /// Resolve a prior attempt's durable outcome without re-committing it.
     pub fn template_status(
         &self,
