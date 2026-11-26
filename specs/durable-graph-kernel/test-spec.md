@@ -785,3 +785,10 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 - `MEDULLA-DURABLE-KERNEL-R038.3`: `crates/medulla-server-blob/tests/kv_dispatch.rs::kv_ephemeral_namespace_is_served_from_memory_and_not_declared_over_durable_rows` (L3): an ephemeral namespace reads, writes and scans, loses its rows at restart and keeps its declaration; a namespace holding durable rows refuses to become ephemeral.
 - `MEDULLA-DURABLE-KERNEL-R038.3`: `crates/medulla-types/src/durability_class.rs::redeclaration_never_weakens_and_never_crosses_ephemeral` (L1).
 - `MEDULLA-DURABLE-KERNEL-R038.100`: `crates/medulla-types/src/deployment_profile.rs::profile_parses_its_two_values_and_refuses_the_rest` (L1).
+- `MEDULLA-DURABLE-KERNEL-R876`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::neighborhood_journey` (planned, L3): proves: One bounded neighborhood read serves interactive graph exploration (rollup)
+- `MEDULLA-DURABLE-KERNEL-R876.1`: `crates/medulla-types/src/types.rs::tests::neighborhood_result_round_trips_with_golden_vector` (planned, L1): proves: Model
+- `MEDULLA-DURABLE-KERNEL-R876.2`: `crates/medulla-graph/src/neighborhood.rs::tests::order_limits_and_hidden_counts_are_deterministic` (planned, L1): proves: Behavior
+- `MEDULLA-DURABLE-KERNEL-R876.3`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::read_is_classified_and_tenant_filtered` (planned, L3): proves: Wiring
+- `MEDULLA-DURABLE-KERNEL-R876.4`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::refusals_and_visibility` (planned, L3): proves: Refusal
+- `MEDULLA-DURABLE-KERNEL-R876.5`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::audit_line_carries_counts_only` (planned, L3): proves: Evidence
+- `MEDULLA-DURABLE-KERNEL-R876.6`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::hub_pages_to_completion` (planned, L3): proves: Hot-path proof and budget

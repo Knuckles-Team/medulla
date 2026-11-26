@@ -2217,3 +2217,59 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program
 - `MEDULLA-DECISION-ENGINE-R870.2`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_decision_reads_tests.rs::provenance_keeps_used_revision_and_hides_other_tenants` (planned, L3): proves: Read the provenance of one committed record
 - `MEDULLA-DECISION-ENGINE-R870.3`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_decision_reads_tests.rs::why_not_is_bounded_read_only_and_refuses_retired_inputs` (planned, L3): proves: Re-solve why one option was not chosen, within a bounded budget
 - `MEDULLA-DECISION-ENGINE-R870.4`: `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_decision_reads_tests.rs::decision_reads_end_to_end` (planned, L3): proves: Hot-path proof: list, explain and re-solve through the served op
+- `MEDULLA-DECISION-ENGINE-R708`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_flag_tests.rs::flag_journey` (planned, L3): proves: Any agent flags missing or wrong knowledge and the engine keeps the flag (rollup)
+- `MEDULLA-DECISION-ENGINE-R708.1`: `crates/medulla-decision-types/src/knowledge_flag.rs::tests::flag_types_round_trip_with_golden_vector` (planned, L1): proves: Model
+- `MEDULLA-DECISION-ENGINE-R708.2`: `crates/medulla-decision-stats/src/decision/knowledge_flag.rs::tests::dedup_key_and_machine_are_total` (planned, L1): proves: Behavior
+- `MEDULLA-DECISION-ENGINE-R708.3`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_flag_tests.rs::raise_writes_one_node_and_dedups` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R708.4`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_flag_tests.rs::each_refusal_writes_nothing` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R708.5`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_flag_tests.rs::flag_is_agent_asserted_and_linked_to_trace_and_correction` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R708.6`: `tests/decide/test_knowledge_flag_served.py::test_raise_dedup_resolve_list` (planned, L4): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R709`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_curation_tests.rs::curation_journey` (planned, L3): proves: A scheduled curation cycle turns flags, traces and source changes into non-contradicting knowledge updates (rollup)
+- `MEDULLA-DECISION-ENGINE-R709.1`: `crates/medulla-decision-types/src/knowledge_curation.rs::tests::curation_types_round_trip_with_golden_vector` (planned, L1): proves: Model
+- `MEDULLA-DECISION-ENGINE-R709.2`: `crates/medulla-decision-stats/src/decision/knowledge_curation.rs::tests::each_contradiction_code_fires_once` (planned, L1): proves: Behavior: contradiction check
+- `MEDULLA-DECISION-ENGINE-R709.3`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_curation_tests.rs::propose_records_an_evaluated_revision` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R709.4`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_curation_tests.rs::refusals_leave_flags_open` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R709.5`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_curation_tests.rs::adoption_closes_the_addressed_flags` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R709.6`: `tests/decide/test_knowledge_curation_served.py::test_flag_trace_to_fixed_skill_and_entry` (planned, L4): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R709.7`: `crates/medulla-h-decide/src/decide/stat_tests/knowledge_curation_tests.rs::metrics_report_recurrence_and_latency` (planned, L3): proves: Closed-loop measures
+- `MEDULLA-DECISION-ENGINE-R710`: `crates/medulla-h-decide/src/decide/stat_tests/friction_report_tests.rs::friction_journey` (planned, L3): proves: Friction reports are grouped by skill and move through one explicit state machine (rollup)
+- `MEDULLA-DECISION-ENGINE-R710.1`: `crates/medulla-decision-types/src/friction.rs::tests::friction_types_round_trip_with_golden_vector` (planned, L1): proves: Model
+- `MEDULLA-DECISION-ENGINE-R710.2`: `crates/medulla-store/src/loop_statechart.rs::tests::friction_machine_allows_only_the_listed_moves` (planned, L1): proves: Behavior
+- `MEDULLA-DECISION-ENGINE-R710.3`: `crates/medulla-h-decide/src/decide/stat_tests/friction_report_tests.rs::report_feeds_failure_patterns` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R710.4`: `crates/medulla-h-decide/src/decide/stat_tests/friction_report_tests.rs::refusals_write_nothing` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R710.5`: `crates/medulla-h-decide/src/decide/stat_tests/friction_report_tests.rs::steps_record_actor_and_evidence` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R710.6`: `tests/decide/test_friction_served.py::test_group_walks_the_whole_machine` (planned, L4): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R711`: `crates/medulla-h-decide/src/decide/stat_tests/skill_eval_tests.rs::skill_eval_journey` (planned, L3): proves: A skill eval suite mixes golden, trajectory and judged cases and scores outcome and trajectory apart (rollup)
+- `MEDULLA-DECISION-ENGINE-R711.1`: `crates/medulla-decision-types/src/skill_eval.rs::tests::eval_types_round_trip_with_golden_vector` (planned, L1): proves: Model
+- `MEDULLA-DECISION-ENGINE-R711.2`: `crates/medulla-decision-stats/src/decision/skill_eval.rs::tests::trajectory_and_outcome_score_apart` (planned, L1): proves: Behavior
+- `MEDULLA-DECISION-ENGINE-R711.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_eval_tests.rs::job_stores_results_and_report` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R711.4`: `crates/medulla-h-decide/src/decide/stat_tests/skill_eval_tests.rs::uncalibrated_judge_and_dirty_run_refused` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R711.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_eval_tests.rs::saturation_is_flagged_not_trusted` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R711.6`: `tests/decide/test_skill_eval_served.py::test_mix_band_and_judge_calibration` (planned, L4): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R712`: `crates/medulla-h-decide/src/decide/stat_tests/skill_ablation_tests.rs::ablation_canary_compile_journey` (planned, L3): proves: Skill ablation, canary rollout and per-model compilation are decisions of the revision lifecycle (rollup)
+- `MEDULLA-DECISION-ENGINE-R712.1`: `crates/medulla-decision-types/src/skill_eval.rs::tests::ablation_types_round_trip_and_hide_the_arm` (planned, L1): proves: Model
+- `MEDULLA-DECISION-ENGINE-R712.2`: `crates/medulla-decision-stats/src/decision/skill_eval.rs::tests::noise_band_and_canary_bucket_are_deterministic` (planned, L1): proves: Behavior
+- `MEDULLA-DECISION-ENGINE-R712.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_ablation_tests.rs::canary_decides_ramp_hold_or_rollback` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R712.4`: `crates/medulla-h-decide/src/decide/stat_tests/skill_ablation_tests.rs::refusal_codes` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R712.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_ablation_tests.rs::premises_name_band_and_split` (planned, L3): proves: Evidence
+- `MEDULLA-DECISION-ENGINE-R712.6`: `tests/decide/test_skill_ablation_served.py::test_effect_noise_canary_and_stale_compile` (planned, L4): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R702.7`: `crates/medulla-h-decide/src/decide/stat_tests/correction_tests.rs::review_sources_yield_eval_cases_with_digests_only` (planned, L3): proves: Review comments and rejections are correction sources
+- `MEDULLA-DECISION-ENGINE-R713`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::telemetry_journey` (planned, L3): proves: Skill usage telemetry carries no prompt text and yields twelve measures per skill (rollup)
+- `MEDULLA-DECISION-ENGINE-R713.1`: `crates/medulla-decision-types/src/skill_telemetry.rs::tests::invocation_has_no_free_text_and_measures_has_twelve_fields` (planned, L1): proves: Model
+- `MEDULLA-DECISION-ENGINE-R713.2`: `crates/medulla-decision-stats/src/decision/skill_telemetry.rs::tests::twelve_measures_match_golden_vectors` (planned, L1): proves: Behavior: measures
+- `MEDULLA-DECISION-ENGINE-R713.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::ingest_then_measures_round_trip` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R713.4`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::bad_event_refuses_whole_batch` (planned, L3): proves: Refusal
+- `MEDULLA-DECISION-ENGINE-R713.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::quality_orders_by_evals_then_runs` (planned, L3): proves: Quality score and rank
+- `MEDULLA-DECISION-ENGINE-R713.6`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::peers_never_named_and_small_cohort_refused` (planned, L3): proves: Peer recommendation
+- `MEDULLA-DECISION-ENGINE-R713.7`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::traces_by_eval_uses_the_edge_index` (planned, L3): proves: Traces indexed by eval
+- `MEDULLA-DECISION-ENGINE-R713.8`: `tests/decide/test_skill_telemetry_served.py::test_measures_rank_peers_and_traces` (planned, L4): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R714`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::tier_and_persona_journey` (planned, L3): proves: Skills carry a tier and personas select skill sets (rollup)
+- `MEDULLA-DECISION-ENGINE-R714.1`: `crates/medulla-decision-types/src/decision/promotion_tier.rs::tests::tier_types_round_trip` (planned, L1): proves: Model
+- `MEDULLA-DECISION-ENGINE-R714.2`: `crates/medulla-decision-stats/src/decision/promotion_tier.rs::tests::each_tier_needs_its_review` (planned, L1): proves: Behavior
+- `MEDULLA-DECISION-ENGINE-R714.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::promotion_and_load_set_apply_tiers` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R714.4`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::persona_set_marks_tiers` (planned, L3): proves: Persona sets
+- `MEDULLA-DECISION-ENGINE-R714.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::tier_refusals_and_premises` (planned, L3): proves: Refusal and evidence
+- `MEDULLA-DECISION-ENGINE-R714.6`: `tests/decide/test_skill_tier_served.py::test_tiers_and_persona_load_set` (planned, L4): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R715`: `crates/medulla-h-decide/src/decide/stat_tests/always_on_tools_tests.rs::every_subset_includes_the_knowledge_tools` (planned, L3): proves: The flag tool and the friction tool are always-on engine capabilities (rollup)
+- `MEDULLA-DECISION-ENGINE-R715.1`: `crates/medulla-h-decide/src/decide/stat_tests/always_on_tools_tests.rs::subset_and_load_set_append_the_two_tools` (planned, L3): proves: Behavior
+- `MEDULLA-DECISION-ENGINE-R715.2`: `tests/decide/test_always_on_tools_served.py::test_subset_and_load_set_keep_the_two_tools` (planned, L4): proves: Hot-path proof

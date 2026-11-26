@@ -169,3 +169,8 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T188 [US9] MEDULLA-ORCH-VOCAB-R815.9 WorkflowMachine: route the register upsert through WorkflowLifecycle::apply
 - [ ] T189 [US9] MEDULLA-ORCH-VOCAB-R816 Census debt of the incident wire mirror is closed (rollup)
 - [ ] T190 [US9] MEDULLA-ORCH-VOCAB-R816.1 Incident status wire parameters follow `IncidentStatus`: Python mirror follows the Rust machine
+- [ ] T193 [US9] MEDULLA-ORCH-VOCAB-R817 Knowledge-factory vocabulary rolls up to the core classes (rollup)
+- [ ] T194 [US9] MEDULLA-ORCH-VOCAB-R817.1 Add the seven classes
+- [ ] T195 [US9] MEDULLA-ORCH-VOCAB-R817.2 Add the object properties
+- [ ] T196 [US9] MEDULLA-ORCH-VOCAB-R817.3 Add the shapes
+- [ ] T197 [US9] MEDULLA-ORCH-VOCAB-R817.4 Served competency query

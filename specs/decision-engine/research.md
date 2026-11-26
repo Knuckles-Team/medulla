@@ -1379,3 +1379,53 @@ Answer-ranking premises name the retained set twice: inside the global-order pre
 The registry is in memory, so a restart emptied it and a plan scheduled before the restart could never match: every swap would have refused `SHARD_SWAP_CONFLICT`. The generation of a shard is therefore durable: one `DriftShardGeneration` graph node per shard, written in the batch that commits the swap. `DriftRegistry::swap_generations` takes the durable pointers read from that graph beside the plan's generations. Only when the node and the monitor are both absent does the plan's own generation stand as the current one. The write order is: verify, re-embed, swap the in-memory monitors, commit the pointer nodes; a failed commit leaves a swapped registry whose next restart reads the previous pointer, and a retry of the same plan answers `SHARD_SWAP_CONFLICT` only when the pointer already moved.
 
 Decided later: the refresh receipt is a graph node written in the same batch as the pointer nodes, so no failure side has to be chosen (neither exists without the other).
+
+
+## Knowledge factory and skill evaluation at scale: coverage record
+
+Two published articles set the bar for this section. The first describes a knowledge factory: agents flag missing or wrong knowledge, a scheduled curator agent fixes it, and storage stays format-agnostic. The second describes skill evaluation at one million invocations a month. The tables record, for each point, the rows that already covered it and the rows added by this change. Rows added here are R708 to R715, R702.7, MEDULLA-ORCH-VOCAB-R817, MEDULLA-DURABLE-KERNEL-R876 and the linked rows in the other owners.
+
+### Knowledge factory
+
+| Point | Covered before | Added |
+|---|---|---|
+| Skills, domain knowledge and data-access guidance as three kinds | R156, R160, R167, R100 of typed packs (`MEDULLA-TYPED-PACKS-R100`), `MEDULLA-TYPED-PACKS-R801` (glossary), R177 (connector usage guidance), R176 (load set), `MEDULLA-UNIFIED-DATA-PLANE` (sources as virtual graphs) | R708.1 `KnowledgeKind`; R709.3 subject kind `KnowledgeEntry` |
+| Agents flag missing or wrong knowledge with a suggested correction | R702 (human corrections only), R701 (failures to gaps), R703 (skill gaps) | R708 (flag record, dedup, state machine), R715 (always-on tool), MERISTEM-HARNESS-CYCLE-R093, ARBORA-OPS-R950, US-CONTENT-R012 |
+| A scheduled curator reads sources, traces and flags and updates without contradiction | R653 (loop lease and gap market), R805 (revision lifecycle), R810, R654 | R709 (inputs, contradiction check, proposal, adoption), ARBORA-OPS-R951 and R958, US-CONTENT-R014 |
+| Using agents only flag; the curator fixes | R129 (rules never contradict invariants) | R708.1 (flag is agent-asserted), R709.3 (only the curator proposes) |
+| Format-agnostic storage | README rule 5 (one engine), `MEDULLA-TYPED-PACKS-R019`, R651 (one memory record) | none needed |
+| Closed loop: doing the work reveals the missing knowledge | `ARBORA-ACCEPTANCE-R006.1` (closed loop on one node) | R709.7 (flag-to-fix latency and recurrence), R709.6 (served journey) |
+| A renamed column is flagged, a human fixes the text, the night run updates both skills | R702 (correction), R701 | R709.6 (proof of this exact case) |
+
+### Skill evaluation at scale
+
+| Point | Covered before | Added |
+|---|---|---|
+| Three-stage progressive loading | `US-CONTENT-R001.3`, R100 of typed packs, `PIPE-PAGES-R004` | US-CONTENT-R011, MERISTEM-HARNESS-CYCLE-R094 |
+| One repository, three tiers, about 100 always-on | `US-CONTENT-R001.2`, `US-CONTENT-R002` | R714, US-CONTENT-R011.2 |
+| One install path, layered configuration, personas | `ARBORA-HARNESS-PLUGINS-R001` to R011 (R002.3 one door per harness) | ARBORA-HARNESS-PLUGINS-R013, R014, R714.4 |
+| Find-skills, quality score, peer recommendations | R172, R829.1, `PIPE-PAGES-R023` (static grade) | R713.5, R713.6, ARBORA-OPS-R954, US-CONTENT-R013 |
+| Telemetry events with no prompt text and twelve measures | R125, R801, MERISTEM-HARNESS-CYCLE-R070 | R713, MERISTEM-HARNESS-CYCLE-R091, ARBORA-OPS-R953, ARBORA-HARNESS-PLUGINS-R012 |
+| Spec first, recompiled when the model changes | R156 | US-CONTENT-R009, R712.3 |
+| Skill linter: numbered steps, verification, recovery table | `PIPE-GATES-R016.115`, `PIPE-PAGES-R023` | US-CONTENT-R010, PIPE-GATES-R016.120, R016.121 |
+| Eval mix of 5, 80 and 15 percent | R813, R702, R053 (gold set) | R711.1, R711.2 (mix knobs) |
+| Healthy pass band, 100 percent suspicious | none | R711.2, R711.5 |
+| Judge calibrated against a human set | R024 (calibration utilities for classifiers) | R711.4 |
+| Outcome and trajectory scored apart | R140 (trajectory refinement) | R711.2, MERISTEM-HARNESS-CYCLE-R098 |
+| Clean-room sandbox | none | MERISTEM-HARNESS-CYCLE-R099, R711.4 |
+| Ablation with a blind judge and a noise band | R654 (paired rollouts) | R712, MERISTEM-HARNESS-CYCLE-R100 |
+| Cost per invocation as the session-cost delta | R801 (usage ledger) | MERISTEM-HARNESS-CYCLE-R092, R713.1 |
+| Cost levers: code over model, cheaper worker, load-time script, background polling, no connector file in skills | R135 (compiled programs), R039 (cost-aware routing), R137 (context budget), MERISTEM-RUN-R009 | MERISTEM-HARNESS-CYCLE-R095, R096, R097, US-CONTENT-R011.3, ARBORA-HARNESS-PLUGINS-R015 |
+| Papercuts: structured friction reports through a seven-step flow | R701 | R710 |
+| PR comments and rejections feed the eval set | R702 | R702.7 |
+| A/B and canary for skills | R805 (champion pointer), R805.2 (rollback) | R712 |
+| Per-model compilation | none | R712.3 |
+| Traces indexed by eval | R813 | R713.7 |
+| Task router | R134, R172, R044 | none needed |
+
+### Decisions
+
+- The engine never calls a model. The curator and the judge are worker agents that send records to the engine, as `MEDULLA-INGEST-WORKER-R002.3` already states for ontology proposals.
+- A flag is agent-asserted and never an independent outcome, so R016 (training on independent outcomes only) holds.
+- Retention in R713.2 uses two 14-day windows. A measured retention definition replaces it if the first production window shows another need.
+- The quality score of R713.5 shrinks the pass rate toward zero by a prior of 20 runs. The measured prior replaces the default.

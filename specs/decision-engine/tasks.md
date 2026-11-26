@@ -979,3 +979,59 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T973 [US7] MEDULLA-DECISION-ENGINE-R870.2 Read the provenance of one committed record
 - [ ] T974 [US7] MEDULLA-DECISION-ENGINE-R870.3 Re-solve why one option was not chosen, within a bounded budget
 - [ ] T975 [US7] MEDULLA-DECISION-ENGINE-R870.4 Hot-path proof: list, explain and re-solve through the served op
+- [ ] T976 [US9] MEDULLA-DECISION-ENGINE-R708 Any agent flags missing or wrong knowledge and the engine keeps the flag (rollup)
+- [ ] T977 [US9] MEDULLA-DECISION-ENGINE-R708.1 Model
+- [ ] T978 [US9] MEDULLA-DECISION-ENGINE-R708.2 Behavior
+- [ ] T979 [US9] MEDULLA-DECISION-ENGINE-R708.3 Wiring
+- [ ] T980 [US9] MEDULLA-DECISION-ENGINE-R708.4 Refusal
+- [ ] T981 [US9] MEDULLA-DECISION-ENGINE-R708.5 Evidence
+- [ ] T982 [US9] MEDULLA-DECISION-ENGINE-R708.6 Hot-path proof
+- [ ] T983 [US9] MEDULLA-DECISION-ENGINE-R709 A scheduled curation cycle turns flags, traces and source changes into non-contradicting knowledge updates (rollup)
+- [ ] T984 [US9] MEDULLA-DECISION-ENGINE-R709.1 Model
+- [ ] T985 [US9] MEDULLA-DECISION-ENGINE-R709.2 Behavior: contradiction check
+- [ ] T986 [US9] MEDULLA-DECISION-ENGINE-R709.3 Wiring
+- [ ] T987 [US9] MEDULLA-DECISION-ENGINE-R709.4 Refusal
+- [ ] T988 [US9] MEDULLA-DECISION-ENGINE-R709.5 Evidence
+- [ ] T989 [US9] MEDULLA-DECISION-ENGINE-R709.6 Hot-path proof
+- [ ] T990 [US9] MEDULLA-DECISION-ENGINE-R709.7 Closed-loop measures
+- [ ] T991 [US9] MEDULLA-DECISION-ENGINE-R710 Friction reports are grouped by skill and move through one explicit state machine (rollup)
+- [ ] T992 [US9] MEDULLA-DECISION-ENGINE-R710.1 Model
+- [ ] T993 [US9] MEDULLA-DECISION-ENGINE-R710.2 Behavior
+- [ ] T994 [US9] MEDULLA-DECISION-ENGINE-R710.3 Wiring
+- [ ] T995 [US9] MEDULLA-DECISION-ENGINE-R710.4 Refusal
+- [ ] T996 [US9] MEDULLA-DECISION-ENGINE-R710.5 Evidence
+- [ ] T997 [US9] MEDULLA-DECISION-ENGINE-R710.6 Hot-path proof
+- [ ] T998 [US9] MEDULLA-DECISION-ENGINE-R711 A skill eval suite mixes golden, trajectory and judged cases and scores outcome and trajectory apart (rollup)
+- [ ] T999 [US9] MEDULLA-DECISION-ENGINE-R711.1 Model
+- [ ] T1000 [US9] MEDULLA-DECISION-ENGINE-R711.2 Behavior
+- [ ] T1001 [US9] MEDULLA-DECISION-ENGINE-R711.3 Wiring
+- [ ] T1002 [US9] MEDULLA-DECISION-ENGINE-R711.4 Refusal
+- [ ] T1003 [US9] MEDULLA-DECISION-ENGINE-R711.5 Evidence
+- [ ] T1004 [US9] MEDULLA-DECISION-ENGINE-R711.6 Hot-path proof
+- [ ] T1005 [US9] MEDULLA-DECISION-ENGINE-R712 Skill ablation, canary rollout and per-model compilation are decisions of the revision lifecycle (rollup)
+- [ ] T1006 [US9] MEDULLA-DECISION-ENGINE-R712.1 Model
+- [ ] T1007 [US9] MEDULLA-DECISION-ENGINE-R712.2 Behavior
+- [ ] T1008 [US9] MEDULLA-DECISION-ENGINE-R712.3 Wiring
+- [ ] T1009 [US9] MEDULLA-DECISION-ENGINE-R712.4 Refusal
+- [ ] T1010 [US9] MEDULLA-DECISION-ENGINE-R712.5 Evidence
+- [ ] T1011 [US9] MEDULLA-DECISION-ENGINE-R712.6 Hot-path proof
+- [ ] T1012 [US9] MEDULLA-DECISION-ENGINE-R702.7 Review comments and rejections are correction sources
+- [ ] T1013 [US9] MEDULLA-DECISION-ENGINE-R713 Skill usage telemetry carries no prompt text and yields twelve measures per skill (rollup)
+- [ ] T1014 [US9] MEDULLA-DECISION-ENGINE-R713.1 Model
+- [ ] T1015 [US9] MEDULLA-DECISION-ENGINE-R713.2 Behavior: measures
+- [ ] T1016 [US9] MEDULLA-DECISION-ENGINE-R713.3 Wiring
+- [ ] T1017 [US9] MEDULLA-DECISION-ENGINE-R713.4 Refusal
+- [ ] T1018 [US9] MEDULLA-DECISION-ENGINE-R713.5 Quality score and rank
+- [ ] T1019 [US9] MEDULLA-DECISION-ENGINE-R713.6 Peer recommendation
+- [ ] T1020 [US9] MEDULLA-DECISION-ENGINE-R713.7 Traces indexed by eval
+- [ ] T1021 [US9] MEDULLA-DECISION-ENGINE-R713.8 Hot-path proof
+- [ ] T1022 [US9] MEDULLA-DECISION-ENGINE-R714 Skills carry a tier and personas select skill sets (rollup)
+- [ ] T1023 [US9] MEDULLA-DECISION-ENGINE-R714.1 Model
+- [ ] T1024 [US9] MEDULLA-DECISION-ENGINE-R714.2 Behavior
+- [ ] T1025 [US9] MEDULLA-DECISION-ENGINE-R714.3 Wiring
+- [ ] T1026 [US9] MEDULLA-DECISION-ENGINE-R714.4 Persona sets
+- [ ] T1027 [US9] MEDULLA-DECISION-ENGINE-R714.5 Refusal and evidence
+- [ ] T1028 [US9] MEDULLA-DECISION-ENGINE-R714.6 Hot-path proof
+- [ ] T1029 [US9] MEDULLA-DECISION-ENGINE-R715 The flag tool and the friction tool are always-on engine capabilities (rollup)
+- [ ] T1030 [US9] MEDULLA-DECISION-ENGINE-R715.1 Behavior
+- [ ] T1031 [US9] MEDULLA-DECISION-ENGINE-R715.2 Hot-path proof

@@ -291,3 +291,11 @@ Order: R829.1, R829.2, R829.3.
 - `MEDULLA-DECISION-ENGINE-R174.9.7` is retired. Drift refresh is `FreshnessRefresh` and Document supersession is `MEDULLA-UNIFIED-DATA-PLANE-R651.7.2`.
 - `MEDULLA-DECISION-ENGINE-R019.100.2` puts the receipt, the pure check and the knob in a new `approval.rs`. The check runs first in both commit functions.
 - `MEDULLA-DECISION-ENGINE-R148.4` states the wire form main uses: an abstained record carrying the code.
+
+## Knowledge factory
+
+Agents raise flags with `Method::KnowledgeFlag` (R708). The harness exposes the call as an always-on tool (R715, MERISTEM-HARNESS-CYCLE-R093). A human correction in the same session enters through `Method::CorrectionRecord` (R702) and links to the flag.
+
+A scheduled curator worker claims the curation loop (R653), reads `CurationOp::Inputs` (R709) and sends `Propose`. The engine checks contradictions, records an evaluated revision and leaves adoption to the revision lifecycle (R805). The engine calls no model. Skill content publishes through R160. Domain and data-access entries use subject kind `KnowledgeEntry`.
+
+Friction reports (R710) feed `FailureIngest` (R701) and walk one explicit state machine. Skill evaluation (R711), ablation and canary (R712), telemetry and measures (R713) and tiers (R714) share the revision lifecycle and the usage ledger. The vocabulary classes are in `MEDULLA-ORCH-VOCAB-R817`. The served operations are in `ARBORA-OPS-R950` to `ARBORA-OPS-R958`. The skill content is in `US-CONTENT-R009` to `US-CONTENT-R015`.

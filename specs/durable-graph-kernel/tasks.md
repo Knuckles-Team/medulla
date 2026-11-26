@@ -294,3 +294,10 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T293 MEDULLA-DURABLE-KERNEL-R875.5 SemanticIndexOutcome discriminator `status` is a result tag: rename, no machine
 - [ ] T294 MEDULLA-DURABLE-KERNEL-R875.6 Semantic index and audit wire mirrors follow their Rust machines: Python mirror follows the Rust machine
 - [x] T295 [US6] MEDULLA-DURABLE-KERNEL-R038.3 A KV namespace declares its durability class, and the class is read back (Depends: R038.1, R038.2, R102)
+- [ ] T306 [US6] MEDULLA-DURABLE-KERNEL-R876 One bounded neighborhood read serves interactive graph exploration (rollup)
+- [ ] T307 [US6] MEDULLA-DURABLE-KERNEL-R876.1 Model
+- [ ] T308 [US6] MEDULLA-DURABLE-KERNEL-R876.2 Behavior
+- [ ] T309 [US6] MEDULLA-DURABLE-KERNEL-R876.3 Wiring
+- [ ] T310 [US6] MEDULLA-DURABLE-KERNEL-R876.4 Refusal
+- [ ] T311 [US6] MEDULLA-DURABLE-KERNEL-R876.5 Evidence
+- [ ] T312 [US6] MEDULLA-DURABLE-KERNEL-R876.6 Hot-path proof and budget

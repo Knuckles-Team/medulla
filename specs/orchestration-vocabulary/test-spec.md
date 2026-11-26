@@ -189,3 +189,8 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-ORCH-VOCAB-R815.9`: `crates/medulla-work-types/src/orchestration/workflow_machine.rs::tests::every_legal_transition_applies`, `::tests::every_illegal_pair_is_refused_with_transition_refused`, `crates/medulla-h-graph/src/graph_ops/workflow_registry_tests.rs::reactivating_a_withdrawn_workflow_refuses` and `crates/medulla-rdf/tests/state_machine_vocabulary.rs::workflow_machine_matches_edge_table` (planned, L1).
 - `MEDULLA-ORCH-VOCAB-R816`: see each child (rollup).
 - `MEDULLA-ORCH-VOCAB-R816.1`: `tests/test_wire_mirror_state_words.py::test_incident_set_status_params_type_status_as_the_rust_enum` (planned, L1): proves: Incident status wire parameters follow `IncidentStatus`: Python mirror follows the Rust machine.
+- `MEDULLA-ORCH-VOCAB-R817`: `tests/typed_packs/test_connector_vocabulary_served.py::test_knowledge_factory_vocabulary` (planned, L4): proves: Knowledge-factory vocabulary rolls up to the core classes (rollup)
+- `MEDULLA-ORCH-VOCAB-R817.1`: `crates/medulla-core/tests/ontology_knowledge_factory.rs::seven_classes_roll_up_to_the_core_entity` (planned, L2): proves: Add the seven classes
+- `MEDULLA-ORCH-VOCAB-R817.2`: `crates/medulla-core/tests/ontology_knowledge_factory.rs::properties_have_domain_and_range` (planned, L2): proves: Add the object properties
+- `MEDULLA-ORCH-VOCAB-R817.3`: `crates/medulla-core/tests/ontology_knowledge_factory.rs::shapes_reject_free_text_on_an_invocation` (planned, L2): proves: Add the shapes
+- `MEDULLA-ORCH-VOCAB-R817.4`: `tests/typed_packs/test_connector_vocabulary_served.py::test_skill_health_query_joins_flags_friction_and_eval` (planned, L4): proves: Served competency query
