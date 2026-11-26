@@ -87,3 +87,10 @@ harness = false
 name = "schedule_tick"
 path = "benches/schedule_tick.rs"
 harness = false
+
+# MEDULLA-REPO-INGEST-R002.655 nightly hot-path proof: 1,000 dead-letter parks; p99 <= 2 ms.
+# Run: `cargo bench -p medulla-jobs --bench dead_letter_park`.
+[[bench]]
+name = "dead_letter_park"
+path = "benches/dead_letter_park.rs"
+harness = false
