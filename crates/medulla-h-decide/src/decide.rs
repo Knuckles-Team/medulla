@@ -11,6 +11,7 @@ pub(crate) mod assemble;
 pub(crate) mod belief_revise;
 pub(crate) mod claims;
 pub(crate) mod participant_ask;
+pub(crate) mod participant_card;
 pub(crate) mod commit;
 pub(crate) mod coverage;
 #[cfg(all(test, feature = "decide", feature = "redb"))]
@@ -247,6 +248,7 @@ pub use belief_revise::enqueue_touched;
 pub use belief_revise::handle_belief_revise;
 pub use claims::{handle_claims, handle_claims_planned, ClaimsServed};
 pub use participant_ask::handle_participant_ask;
+pub use participant_card::{handle_participant_card, plan_card_refresh};
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;
 pub use execution_answer::{handle_agent_execution_answer, read_contract_tools};

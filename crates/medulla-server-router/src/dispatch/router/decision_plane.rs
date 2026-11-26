@@ -553,6 +553,21 @@ async fn dispatch_decision_methods(
                 })
                 .await
             }
+            // MEDULLA-DECISION-ENGINE-R655.4: a card is filtered through the claim store.
+            medulla_decision_types::participant_memory::ParticipantReadOp::Card { subject, observer } => {
+                dispatch_boxed(async {
+                    medulla_h_decide::decide::handle_participant_card(
+                        state,
+                        req.id,
+                        &req.graph,
+                        verified_context,
+                        subject,
+                        observer,
+                    )
+                    .await
+                })
+                .await
+            }
             other => {
                 return ControlFlow::Continue(Method::ParticipantRead { op: Box::new(other) })
             }

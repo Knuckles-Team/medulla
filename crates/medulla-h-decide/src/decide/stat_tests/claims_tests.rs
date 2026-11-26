@@ -974,3 +974,157 @@ async fn ask_cites_claims_and_turns_or_abstains() {
         Err("INVALID_ARGUMENT".to_string())
     );
 }
+
+/// Store the operations a card refresh planned, as the router's batch would.
+async fn apply_planned(h: &Harness, operations: &[serde_json::Value]) {
+    let guard = h.state.read().await;
+    let core = guard.registry.get("default").expect("request graph").core.clone();
+    for operation in operations {
+        core.add_node(
+            operation["id"].as_str().unwrap().to_string(),
+            rmp_serde::to_vec_named(&operation["properties"]).unwrap(),
+        );
+    }
+}
+
+async fn card_as(
+    h: &Harness,
+    who: &str,
+    tenant: &str,
+    subject: &str,
+    observer: ObserverRef,
+) -> Result<medulla_decision_types::participant_memory::ParticipantCard, String> {
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, tenant);
+    decode(
+        crate::decide::handle_participant_card(
+            &h.state,
+            3,
+            "default",
+            &verified,
+            ParticipantId::new(subject).unwrap(),
+            observer,
+        )
+        .await,
+    )
+    .map_err(|text| text.split_once(':').map_or(text.as_str(), |(code, _)| code).to_string())
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R655.3
+#[tokio::test]
+async fn claim_change_refreshes_card_once() {
+    use medulla_decision_types::memory_events::MEMORY_EVENT_LABEL;
+    let h = Harness::new().await;
+    seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1"), ("bo", "bo-principal", "s2")]).await;
+    let ada = || ObserverRef::Participant(ParticipantId::new("ada").unwrap());
+    let subject = ParticipantId::new("ada").unwrap();
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("ada-principal", TENANT);
+    // No claim, no card.
+    assert_eq!(card_as(&h, "ada-principal", TENANT, "ada", ada()).await, Err("CARD_ABSENT".to_string()));
+
+    let mut propose_op = perspective_propose("c-tea", "ada", ada());
+    if let ClaimOp::Propose { perspective: Some(perspective), .. } = &mut propose_op {
+        perspective.statement = Some("Prefers green tea".to_string());
+    }
+    let _: ClaimRecord = call(&h, "ada-principal", TENANT, propose_op).await.unwrap();
+    let mut op = evidence("c-tea", "e1", Some(EvidenceChannel::Mined), true, 900_000);
+    if let ClaimOp::RecordEvidence { session_id, .. } = &mut op {
+        *session_id = Some("s1".to_string());
+    }
+    let _: ClaimRecord = call(&h, "ada-principal", TENANT, op).await.unwrap();
+
+    // The first refresh stores the card and announces it; the same instant again changes nothing.
+    let planned = crate::decide::plan_card_refresh(&h.state, "default", &verified, &subject, &ada(), 9_000)
+        .await
+        .unwrap()
+        .expect("a new card is stored");
+    assert_eq!(planned.len(), 2);
+    assert_eq!(planned[1]["properties"]["type"], MEMORY_EVENT_LABEL);
+    assert_eq!(planned[1]["properties"]["topic"], "memory.card.updated");
+    apply_planned(&h, &planned).await;
+    assert!(crate::decide::plan_card_refresh(&h.state, "default", &verified, &subject, &ada(), 9_000)
+        .await
+        .unwrap()
+        .is_none());
+
+    // The card read is a lookup of that card; another participant's view reads none of it.
+    let card = card_as(&h, "ada-principal", TENANT, "ada", ada()).await.unwrap();
+    assert_eq!(card.claims.len(), 1);
+    assert_eq!(card.claims[0].text, "Prefers green tea");
+    assert!(card.digest.starts_with("sha256:"));
+    assert_eq!(
+        card_as(&h, "bo-principal", TENANT, "ada", ada()).await,
+        Err("OBSERVER_NOT_PERMITTED".to_string())
+    );
+    assert_eq!(
+        card_as(&h, "ada-principal", TENANT, "ghost", ada()).await,
+        Err("PARTICIPANT_NOT_VISIBLE".to_string())
+    );
+    assert_eq!(
+        card_as(&h, "ada-principal", OTHER_TENANT, "ada", ada()).await,
+        Err("PARTICIPANT_NOT_VISIBLE".to_string())
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R655.5
+#[tokio::test]
+async fn participant_refusals_are_non_disclosing_and_change_no_state() {
+    use medulla_decision_types::participant_memory::{ParticipantAnswer, ParticipantCard, ParticipantQuestion};
+    let h = Harness::new().await;
+    seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1")]).await;
+    let ada = || ObserverRef::Participant(ParticipantId::new("ada").unwrap());
+    let snapshot = |h: &Harness| {
+        let state = h.state.clone();
+        async move {
+            let guard = state.read().await;
+            let core = guard.registry.get("default").unwrap().core.clone();
+            let mut ids = core.node_ids();
+            ids.sort();
+            ids.into_iter().map(|id| (core.get_node_properties(&id), id)).collect::<Vec<_>>()
+        }
+    };
+    let before = snapshot(&h).await;
+    let ask_text = |who: &str, tenant: &str, subject: &str| {
+        let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, tenant);
+        let question = ParticipantQuestion {
+            subject: ParticipantId::new(subject).unwrap(),
+            observer: ada(),
+            question: "tea".to_string(),
+            memory_scope: None,
+            as_of_ms: None,
+        };
+        let state = h.state.clone();
+        async move {
+            decode::<ParticipantAnswer>(
+                crate::decide::handle_participant_ask(&state, 3, "default", &verified, question).await,
+            )
+            .unwrap_err()
+        }
+    };
+    // A participant that does not exist and one another tenant holds read the same envelope,
+    // modulo the id the caller itself named.
+    let absent = ask_text("ada-principal", TENANT, "ghost").await;
+    let foreign = ask_text("ada-principal", OTHER_TENANT, "ada").await;
+    assert!(absent.starts_with("PARTICIPANT_NOT_VISIBLE: "), "{absent}");
+    assert_eq!(
+        absent.replace("ghost", "<id>"),
+        foreign.replace("ada", "<id>"),
+        "one envelope for absent and other-tenant participants"
+    );
+    let card_text = |tenant: &str, subject: &str| {
+        let verified = VerifiedRequestContext::verified_for_test_in_tenant("ada-principal", tenant);
+        let state = h.state.clone();
+        let subject = ParticipantId::new(subject).unwrap();
+        async move {
+            decode::<ParticipantCard>(
+                crate::decide::handle_participant_card(&state, 3, "default", &verified, subject, ObserverRef::System)
+                    .await,
+            )
+            .unwrap_err()
+        }
+    };
+    let absent_card = card_text(TENANT, "ghost").await;
+    let foreign_card = card_text(OTHER_TENANT, "ada").await;
+    assert_eq!(absent_card.replace("ghost", "<id>"), foreign_card.replace("ada", "<id>"));
+    // Every refusal above changed nothing stored.
+    assert_eq!(snapshot(&h).await, before);
+}

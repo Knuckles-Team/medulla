@@ -494,6 +494,26 @@ pub struct PrincipalView {
     pub sessions: BTreeSet<String>,
 }
 
+/// The sessions of every thread that holds a stored participant of `tenant_scope` with this slug,
+/// in any workspace (MEDULLA-DECISION-ENGINE-R655.3).
+pub fn sessions_of_participant(core: &GraphCore, tenant_scope: &str, slug: &ParticipantId) -> BTreeSet<String> {
+    stored_participants(core, tenant_scope)
+        .into_iter()
+        .filter(|(_, participant)| &participant.participant_id == slug)
+        .flat_map(|(iri, _)| sessions_of(core, &iri))
+        .collect()
+}
+
+/// The sessions of every thread that holds a participant the principal acts as: the sessions it
+/// may read about (MEDULLA-DECISION-ENGINE-R655.4).
+pub fn sessions_visible_to(core: &GraphCore, tenant_scope: &str, principal: &str) -> BTreeSet<String> {
+    stored_participants(core, tenant_scope)
+        .into_iter()
+        .filter(|(_, participant)| participant.acts_as.iter().any(|name| name == principal))
+        .flat_map(|(iri, _)| sessions_of(core, &iri))
+        .collect()
+}
+
 /// The sessions of every thread that holds the participant node `iri`.
 fn sessions_of(core: &GraphCore, iri: &str) -> BTreeSet<String> {
     core.get_predecessors(iri)
