@@ -6,7 +6,7 @@
 //! per producer.  Checkpoint identity is deliberately reused from `medulla-types`;
 //! this module does not create a second cursor contract.
 
-pub use medulla_source_types::source_ingestion::SourceCheckpoint;
+use medulla_source_types::source_ingestion::SourceCheckpoint;
 use medulla_types::contract::{Digest256, UtcUnixNanos};
 use serde::{Deserialize, Serialize};
 
