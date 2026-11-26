@@ -604,6 +604,11 @@ pub struct ForeignOperationCapabilities {
     /// (MEDULLA-UNIFIED-DATA-PLANE-R038.5.1). Registration validates it.
     #[serde(default)]
     pub search: Option<crate::search_source::SearchIndexCapability>,
+    /// The source declares `access_kind: raw`: it holds raw text the connector scans for the
+    /// engine through `raw_search`, `raw_read_span` and `raw_check_context`, each bounded by
+    /// the bytes it may scan (MEDULLA-FEDERATED-QUERY-R729).
+    #[serde(default)]
+    pub raw: bool,
 }
 
 /// A WRITE-side mirror target (MEDULLA-DURABLE-KERNEL-R024's mirror-target half,

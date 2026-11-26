@@ -7,7 +7,8 @@
 //! guard refuses is never contacted. A host that registers its own port with
 //! [`super::mcp::register_connector_row_source`] takes precedence over the gateway.
 //!
-//! Requests are `{"op": "declared_arguments" | "web_capability" | "rows", ...}`; rows answer
+//! Requests are `{"op": "declared_arguments" | "web_capability" | "rows" | "raw", ...}`; a raw
+//! call answers `{"rows": [...], "scan_bytes", "over_ceiling"}`; rows answer
 //! `{"source_label", "rows": [{"id", "score", "values", "texts"}], "truncated", "missing_source"}`.
 
 use std::collections::BTreeMap;
@@ -21,7 +22,7 @@ use serde_json::{json, Value};
 
 use super::mcp::{
     ConnectorAccessAnswer, ConnectorAccessCheck, ConnectorRowRequest, ConnectorRowSource,
-    ConnectorRows,
+    ConnectorRows, RawToolAnswer, RawToolCall,
 };
 
 /// The environment variable naming the gateway endpoint.
@@ -124,6 +125,36 @@ impl ConnectorRowSource for HttpConnectorGateway {
             .post(&json!({"op": "web_capability", "server": server, "tool": tool}))
             .ok()?;
         serde_json::from_value(reply.get("capability")?.clone()).ok()
+    }
+
+    fn raw_call(&self, request: &RawToolCall) -> Result<RawToolAnswer, String> {
+        let reply = self.post(&json!({
+            "op": "raw",
+            "request": {
+                "source_label": request.source_label,
+                "server": request.server,
+                "tool": request.tool,
+                "arguments": request.arguments,
+                "max_scan_bytes": request.max_scan_bytes,
+                "timeout_ms": request.timeout_ms,
+            },
+        }))?;
+        // The connector refuses rather than scan past the ceiling it was told.
+        if reply.get("error").and_then(Value::as_str) == Some("OVER_CEILING") {
+            return Ok(RawToolAnswer {
+                rows: RowSet::new(),
+                scan_bytes: 0,
+                over_ceiling: true,
+            });
+        }
+        Ok(RawToolAnswer {
+            rows: parse_rows(&reply)?.rows,
+            scan_bytes: reply
+                .get("scan_bytes")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| "the raw reply has no `scan_bytes`".to_string())?,
+            over_ceiling: false,
+        })
     }
 
     fn rows(&self, request: &ConnectorRowRequest) -> Result<ConnectorRows, String> {

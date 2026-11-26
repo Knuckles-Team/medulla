@@ -197,10 +197,52 @@ class WebGateway:
     denied_refs: set[str] = field(default_factory=set)
     # Seconds each access check waits before answering (zero: answer at once).
     access_delay_s: float = 0.0
+    # Raw-access tool calls (MEDULLA-FEDERATED-QUERY-R729): each call the engine
+    # posted, the bytes each tool reports scanning, and the ids the check refuses
+    # to clear.
+    raw_calls: list[dict] = field(default_factory=list)
+    raw_scan_bytes: dict[str, int] = field(
+        default_factory=lambda: {
+            "raw_search": 4096,
+            "raw_check_context": 1024,
+            "raw_read_span": 2048,
+        }
+    )
+    raw_uncleared: set[str] = field(default_factory=lambda: {"raw-doc-2"})
 
     @property
     def row_calls(self) -> int:
         return len(self.calls)
+
+
+RAW_SERVER = "docs-mcp"
+RAW_IDS = ["raw-doc-1", "raw-doc-2", "raw-doc-3"]
+
+
+def raw_reply(gateway: WebGateway, request: dict, scanned: int) -> dict[str, Any]:
+    """The loopback connector's answer to one raw tool call."""
+    tool = request["tool"]
+    if tool == "raw_search":
+        rows = [
+            {"id": doc, "score": 0.9 - 0.1 * index} for index, doc in enumerate(RAW_IDS)
+        ]
+    else:
+        asked = request["arguments"]["ids"]
+        cleared = [doc for doc in asked if doc not in gateway.raw_uncleared]
+        if tool == "raw_check_context":
+            rows = [{"id": doc, "score": None} for doc in cleared]
+        else:
+            rows = [
+                {"id": doc, "score": None, "texts": {"span": f"span of {doc}"}}
+                for doc in cleared
+            ]
+    return {
+        "source_label": request["source_label"],
+        "rows": rows,
+        "scan_bytes": scanned,
+        "truncated": False,
+        "missing_source": None,
+    }
 
 
 @pytest.fixture(scope="session")
@@ -239,6 +281,14 @@ def web_gateway() -> Iterator[WebGateway]:
                 }
             elif op == "web_capability":
                 reply = {"capability": RECORDED["capability"] if known else None}
+            elif op == "raw":
+                request = body["request"]
+                gateway.raw_calls.append(request)
+                scanned = gateway.raw_scan_bytes[request["tool"]]
+                if scanned > request["max_scan_bytes"]:
+                    reply = {"error": "OVER_CEILING"}
+                else:
+                    reply = raw_reply(gateway, request, scanned)
             elif op == "rows" and body["request"]["server"] == SEARCH_SERVER:
                 request = body["request"]
                 gateway.search_calls.append(request)

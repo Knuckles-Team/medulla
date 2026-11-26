@@ -157,6 +157,9 @@ pub struct FederationBudget {
     pub max_bind_keys: usize,
     /// Wall-clock milliseconds spent in remote fragments.
     pub max_wall_ms: u64,
+    /// Bytes a raw-access source may scan on this query's behalf, summed across its calls
+    /// (MEDULLA-FEDERATED-QUERY-R729). Each call is told the bytes still unspent.
+    pub max_scan_bytes: u64,
 }
 
 impl Default for FederationBudget {
@@ -166,13 +169,14 @@ impl Default for FederationBudget {
             max_rows: 250_000,
             max_bind_keys: 10_000,
             max_wall_ms: 60_000,
+            max_scan_bytes: 64 * 1024 * 1024,
         }
     }
 }
 
 impl FederationBudget {
     /// The server budget: the defaults, each overridable by
-    /// `MEDULLA_FEDERATION_MAX_{REQUESTS,ROWS,BIND_KEYS,WALL_MS}`.
+    /// `MEDULLA_FEDERATION_MAX_{REQUESTS,ROWS,BIND_KEYS,WALL_MS,SCAN_BYTES}`.
     pub fn from_env() -> Self {
         let d = Self::default();
         Self {
@@ -192,6 +196,10 @@ impl FederationBudget {
                 "MEDULLA_FEDERATION_MAX_WALL_MS",
                 d.max_wall_ms,
             ),
+            max_scan_bytes: medulla_types::runtime_limit::positive_from_env(
+                "MEDULLA_FEDERATION_MAX_SCAN_BYTES",
+                d.max_scan_bytes,
+            ),
         }
     }
 
@@ -202,6 +210,7 @@ impl FederationBudget {
             max_rows: self.max_rows.min(other.max_rows),
             max_bind_keys: self.max_bind_keys.min(other.max_bind_keys),
             max_wall_ms: self.max_wall_ms.min(other.max_wall_ms),
+            max_scan_bytes: self.max_scan_bytes.min(other.max_scan_bytes),
         }
     }
 }

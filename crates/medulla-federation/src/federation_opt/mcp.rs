@@ -55,6 +55,30 @@ pub struct ConnectorRows {
     pub missing_source: Option<String>,
 }
 
+/// One raw-access tool call handed to the provider (MEDULLA-FEDERATED-QUERY-R729).
+#[derive(Clone, Debug, PartialEq)]
+pub struct RawToolCall {
+    pub source_label: String,
+    pub server: String,
+    /// `raw_search`, `raw_read_span` or `raw_check_context`.
+    pub tool: String,
+    pub arguments: BTreeMap<String, Value>,
+    /// The bytes the connector may scan answering this call; the engine's unspent budget.
+    pub max_scan_bytes: u64,
+    pub timeout_ms: u64,
+}
+
+/// The provider's answer to one raw-access call.
+pub struct RawToolAnswer {
+    /// Result rows in the connector row contract; a span read carries the span in the text
+    /// channel `span`, a context check one row per readable id.
+    pub rows: RowSet,
+    /// The bytes the connector reports it scanned.
+    pub scan_bytes: u64,
+    /// The connector would have scanned past `max_scan_bytes` and answered `OVER_CEILING`.
+    pub over_ceiling: bool,
+}
+
 /// One read-time access check handed to the provider
 /// (MEDULLA-FEDERATED-QUERY-R703.3): which of `record_refs` may `principal` read.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -89,6 +113,12 @@ pub trait ConnectorRowSource: Send + Sync {
     fn declared_arguments(&self, server: &str, tool: &str) -> Option<Vec<String>>;
     /// Run the call; `Err` is any failure, timeout or non-row-list result.
     fn rows(&self, request: &ConnectorRowRequest) -> Result<ConnectorRows, String>;
+    /// One raw-access tool call (`raw_search`, `raw_read_span`, `raw_check_context`), run on the
+    /// provider side under the caller's identity (MEDULLA-FEDERATED-QUERY-R729). A provider
+    /// with no raw tools reports `Err`, and the caller fails closed.
+    fn raw_call(&self, _request: &RawToolCall) -> Result<RawToolAnswer, String> {
+        Err("this connector port serves no raw-access tools".to_string())
+    }
     /// The web metasearch capability the tool's declared schema carries, or `None` when the tool
     /// is not a web metasearch tool (MEDULLA-UNIFIED-DATA-PLANE-R038.7.1). A web tool answers
     /// with one row per result: the id is the URL, the text columns `title`, `snippet` and

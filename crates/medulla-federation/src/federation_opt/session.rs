@@ -46,6 +46,9 @@ struct SessionState {
     copy_knobs: CopyKnobs,
     /// Rows each source has returned to this query.
     source_rows: HashMap<Fingerprint, u64>,
+    /// Cost units one KiB a raw-access source scans is worth: the resolved
+    /// `federated.raw_scan_cost_per_kib` knob (MEDULLA-FEDERATED-QUERY-R729).
+    raw_scan_cost_per_kib: f64,
 }
 
 /// One federated query's optimizer state, bound on the `PlanCtx` with
@@ -73,6 +76,7 @@ impl FederationSession {
                 default_quota: None,
                 copy_knobs: CopyKnobs::default(),
                 source_rows: HashMap::new(),
+                raw_scan_cost_per_kib: 1.0,
             }),
         }
     }
@@ -121,6 +125,15 @@ impl FederationSession {
     /// route reads (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
     pub fn set_copy_knobs(&self, knobs: CopyKnobs) {
         self.lock().copy_knobs = knobs;
+    }
+
+    /// The resolved `federated.raw_scan_cost_per_kib` knob a raw-access scan prices its bytes by.
+    pub fn set_raw_scan_cost_per_kib(&self, cost_per_kib: f64) {
+        self.lock().raw_scan_cost_per_kib = cost_per_kib;
+    }
+
+    pub(super) fn raw_scan_cost_per_kib(&self) -> f64 {
+        self.lock().raw_scan_cost_per_kib
     }
 
     pub(super) fn copy_knobs(&self) -> CopyKnobs {
@@ -226,6 +239,13 @@ impl FederationSession {
             .iter()
             .find(|h| &h.op == op)
             .and_then(|h| h.limit)
+    }
+
+    /// Bind the text query a search or raw source `op` is fused with, as `prepare` does for the
+    /// `RankText` branch of an enclosing `FuseRrf`.
+    #[cfg(test)]
+    pub(crate) fn bind_search_text(&self, op: &Op, text: &str) {
+        self.lock().search_texts.push((op.clone(), text.to_string()));
     }
 
     /// The full-text query pushed into the search source `op`: the `RankText` query of the

@@ -216,6 +216,7 @@ impl<'a> Parser<'a> {
             max_rows: usize::MAX,
             max_bind_keys: usize::MAX,
             max_wall_ms: u64::MAX,
+            max_scan_bytes: u64::MAX,
         };
         let mut seen = BTreeSet::new();
         loop {
@@ -236,6 +237,7 @@ impl<'a> Parser<'a> {
                 "ROWS" => budget.max_rows = self.parse_number("row limit")?,
                 "BIND_KEYS" => budget.max_bind_keys = self.parse_number("bind-key limit")?,
                 "WALL_MS" => budget.max_wall_ms = self.parse_number("wall-time limit")?,
+                "SCAN_BYTES" => budget.max_scan_bytes = self.parse_number("scan-byte limit")?,
                 _ => {
                     return Err(UqlError::new(
                         UqlCode::UnexpectedToken,

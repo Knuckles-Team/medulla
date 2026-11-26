@@ -161,6 +161,7 @@ fn budget_hint_requires_bound_session_and_never_bypasses_server_cap() {
         max_rows: 7,
         max_bind_keys: 4,
         max_wall_ms: 100,
+        ..FederationBudget::default()
     });
     let federated = medulla_federation::federation_opt::FederatedExec::with_session(&session);
     let bound = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
@@ -211,6 +212,7 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
         mapping_digest: None,
         kept_plan: None,
         copy_refusal: None,
+        raw_scan: None,
     });
     let federated = medulla_federation::federation_opt::FederatedExec::with_session(&session);
     let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);

@@ -7384,6 +7384,7 @@ class ForeignOperationCapabilities(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     key_filter_pushdown: bool | None = None
+    raw: bool | None = None
     search: SearchIndexCapability | None = None
 
 

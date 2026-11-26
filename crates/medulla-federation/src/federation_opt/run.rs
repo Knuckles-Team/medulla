@@ -38,6 +38,14 @@ pub(crate) fn foreign_scan(
     registry: Option<&ForeignSourceRegistry>,
     session: Option<&FederationSession>,
 ) -> Result<RowSet, String> {
+    if let Some(raw) = super::enabled()
+        .then(|| super::raw::resolve_raw(source, registry))
+        .flatten()
+    {
+        return with_session(session, |session| {
+            super::raw::raw_scan(op, &input, join, &raw, session)
+        });
+    }
     if let Some(search) = super::enabled()
         .then(|| super::remote::resolve_search(source, registry))
         .flatten()

@@ -88,6 +88,22 @@ pub struct FragmentTrace {
     /// reader (MEDULLA-UNIFIED-DATA-PLANE-R038.2.2).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copy_refusal: Option<String>,
+    /// What a raw-access scan read and what it cost (MEDULLA-FEDERATED-QUERY-R729).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_scan: Option<RawScanReceipt>,
+}
+
+/// The cost report of one raw-access scan: the bytes the connector reported scanning across
+/// its `raw_search`, `raw_check_context` and `raw_read_span` calls, and their price in cost
+/// units under `federated.raw_scan_cost_per_kib`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
+pub struct RawScanReceipt {
+    /// Bytes the connector reported scanning, summed over the calls.
+    pub scan_bytes: u64,
+    /// `ceil(scan_bytes / 1024 × cost_per_kib)`.
+    pub cost_units: u64,
+    /// The connector calls the scan made.
+    pub calls: u32,
 }
 
 /// The receipt of one pushed search. The fragment's `source` label names the source; the
@@ -123,6 +139,7 @@ impl FragmentTrace {
             mapping_digest: None,
             kept_plan: None,
             copy_refusal: None,
+            raw_scan: None,
             keys_pushed: 0,
             limit_pushed: None,
             requests: 0,
@@ -183,7 +200,7 @@ pub fn render_trace(trace: &[FragmentTrace]) -> String {
         .iter()
         .map(|t| {
             format!(
-                "{} {:?} keys={} limit={:?} requests={} fetched={} kept={} ms={} estimate={:?} mode={}{}{}{}{}",
+                "{} {:?} keys={} limit={:?} requests={} fetched={} kept={} ms={} estimate={:?} mode={}{}{}{}{}{}",
                 redacted_label(&t.source),
                 t.strategy,
                 t.keys_pushed,
@@ -213,6 +230,13 @@ pub fn render_trace(trace: &[FragmentTrace]) -> String {
                 t.mapping_digest
                     .as_ref()
                     .map(|digest| format!(" mapping_digest={digest}"))
+                    .unwrap_or_default(),
+                t.raw_scan
+                    .as_ref()
+                    .map(|raw| format!(
+                        " scan_bytes={} cost_units={} calls={}",
+                        raw.scan_bytes, raw.cost_units, raw.calls
+                    ))
                     .unwrap_or_default()
             )
         })

@@ -142,10 +142,18 @@ pub fn statement_to_uql(stmt: &Statement) -> Result<String, UqlPrintError> {
 #[cfg(feature = "federation")]
 fn federation_budget_prefix(prefix: String, stmt: &Statement) -> String {
     match stmt.federation_budget {
-        Some(budget) => format!(
-            "{prefix}FEDERATION BUDGET (REQUESTS={}, ROWS={}, BIND_KEYS={}, WALL_MS={}) ",
-            budget.max_requests, budget.max_rows, budget.max_bind_keys, budget.max_wall_ms
-        ),
+        Some(budget) => {
+            // SCAN_BYTES prints only when the statement narrowed it (MEDULLA-FEDERATED-QUERY-R729).
+            let scan = if budget.max_scan_bytes == u64::MAX {
+                String::new()
+            } else {
+                format!(", SCAN_BYTES={}", budget.max_scan_bytes)
+            };
+            format!(
+                "{prefix}FEDERATION BUDGET (REQUESTS={}, ROWS={}, BIND_KEYS={}, WALL_MS={}{scan}) ",
+                budget.max_requests, budget.max_rows, budget.max_bind_keys, budget.max_wall_ms
+            )
+        }
         None => prefix,
     }
 }

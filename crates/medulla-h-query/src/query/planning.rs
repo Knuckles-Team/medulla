@@ -392,6 +392,8 @@ pub fn run_unified_with<T>(
             max_rows: knobs.foreign_default_quota_max_rows,
             max_wall_ms: knobs.foreign_default_quota_max_wall_ms,
         });
+        // MEDULLA-FEDERATED-QUERY-R729: the price of a KiB a raw-access source scans.
+        session.set_raw_scan_cost_per_kib(knobs.federated_raw_scan_cost_per_kib);
         // MEDULLA-UNIFIED-DATA-PLANE-R038.2.2: the copy route's row bound and watermark ttl.
         session.set_copy_knobs(medulla_federation::federation_opt::CopyKnobs {
             max_copy_rows: knobs.acceleration_max_copy_rows,

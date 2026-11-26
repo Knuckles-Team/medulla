@@ -67,6 +67,7 @@ pub(crate) struct BudgetMeter {
     budget: FederationBudget,
     requests: u32,
     rows: usize,
+    scan_bytes: u64,
     started: Instant,
 }
 
@@ -76,6 +77,7 @@ impl BudgetMeter {
             budget,
             requests: 0,
             rows: 0,
+            scan_bytes: 0,
             started: Instant::now(),
         }
     }
@@ -117,6 +119,21 @@ impl BudgetMeter {
     /// The refusal of a request that could not start before [`Self::deadline`].
     pub(crate) fn wall_refusal(&self) -> String {
         refusal("wall_ms", self.budget.max_wall_ms)
+    }
+
+    /// The bytes a raw-access source may still scan for this query
+    /// (MEDULLA-FEDERATED-QUERY-R729).
+    pub(crate) fn remaining_scan_bytes(&self) -> u64 {
+        self.budget.max_scan_bytes.saturating_sub(self.scan_bytes)
+    }
+
+    /// Account the bytes a raw-access source reports it scanned.
+    pub(crate) fn charge_scan_bytes(&mut self, bytes: u64) -> Result<(), String> {
+        self.scan_bytes = self.scan_bytes.saturating_add(bytes);
+        if self.scan_bytes > self.budget.max_scan_bytes {
+            return Err(refusal("scan_bytes", self.budget.max_scan_bytes));
+        }
+        Ok(())
     }
 
     /// Account rows received.

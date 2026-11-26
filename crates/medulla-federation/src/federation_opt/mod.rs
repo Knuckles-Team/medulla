@@ -35,6 +35,7 @@ mod obda_snapshot;
 pub(crate) mod oq2;
 pub mod plan_evolution;
 pub mod remote;
+mod raw;
 mod run;
 mod search;
 mod session;
@@ -80,7 +81,7 @@ pub use snapshot::{Consistency, SnapshotBound, SnapshotConn, SnapshotHandle};
 pub use stats::{stats_snapshot, SourceStats};
 pub use trace::{
     render_trace, EstimateProvenance, FetchStrategy, FragmentExecutionMode, FragmentTrace,
-    SearchReceipt,
+    RawScanReceipt, SearchReceipt,
 };
 pub use web::{web_candidates, web_entry_ttl_ms, web_read, WebQuery};
 

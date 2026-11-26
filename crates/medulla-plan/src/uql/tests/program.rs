@@ -43,6 +43,7 @@ fn federation_budget_hint_is_typed_and_cannot_disappear_in_pipeline_parse() {
             max_rows: 9,
             max_bind_keys: 3,
             max_wall_ms: 40,
+            max_scan_bytes: u64::MAX,
         })
     );
     assert_eq!(stmt(&statement_to_uql(&parsed).unwrap()), parsed);

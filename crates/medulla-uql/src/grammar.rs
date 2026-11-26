@@ -131,7 +131,7 @@ pub const PRODUCTIONS: &[Production] = &[
       "a typed argument bound to one stored-query parameter", ""),
     p("federation_budget", Aux, &["FEDERATION"], Some(Federation),
       "\"FEDERATION\" \"BUDGET\" \"(\" dimension \"=\" int { \",\" dimension \"=\" int } \")\"",
-      "per-query remote cap, narrowed against the server budget; dimensions: REQUESTS, ROWS, BIND_KEYS, WALL_MS", ""),
+      "per-query remote cap, narrowed against the server budget; dimensions: REQUESTS, ROWS, BIND_KEYS, WALL_MS, SCAN_BYTES", ""),
     p("annotations", Aux, &["WITH"], None, "\"WITH\" annotation { \",\" annotation }",
       "Annotations { proof, knowledge } (row annotations)", ""),
     p("annotation", Aux, &[], None,

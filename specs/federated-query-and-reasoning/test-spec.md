@@ -1102,7 +1102,7 @@ Each entry names the test the row binds once its code lands; the path is the pos
 | Planned | `MEDULLA-FEDERATED-QUERY-R725` | `tests/served_viewport_bins.rs::bins_match_independent_reference_and_obey_limits` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R726` | `crates/medulla-uql/src/parser/evaluate.rs::tests::parses_every_kernel_and_refuses_unknown` |
 | Retired | `MEDULLA-FEDERATED-QUERY-R727` | retired; `AtomContext` is proven by MEDULLA-INGEST-WORKER-R003.3 |
-| Planned | `MEDULLA-FEDERATED-QUERY-R729` | `tests/federated/test_raw_pushdown_served.py::test_raw_source_search_is_budgeted_and_refuses_over_ceiling` |
+| Planned | `MEDULLA-FEDERATED-QUERY-R729` | `tests/federation/test_raw_pushdown_served.py::test_raw_source_search_is_budgeted_and_refuses_over_ceiling` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R730` | `tests/test_unified_planner_gate.py::test_failed_gate_records_the_freeze_decision` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R731` | `tests/query/test_latency_classes_served.py::test_interactive_budget_refuses_and_analytical_runs_as_job` |
 | Behavior | `MEDULLA-FEDERATED-QUERY-R731` | `crates/medulla-exec/src/budget.rs::tests::interactive_meter_refuses_past_bound` |
