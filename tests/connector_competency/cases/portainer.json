@@ -1,0 +1,37 @@
+{
+  "connector": "portainer",
+  "rollup": "MEDULLA-CQ-CONN-R048",
+  "vocabulary_module": "infrastructure-v1.ttl",
+  "terms": [
+    "ContainerStack",
+    "desiredReplicas",
+    "runningReplicas",
+    "stackInEnvironment",
+    "ManagementEnvironment"
+  ],
+  "questions": [
+    {
+      "id": "portainer.q1",
+      "kind": "single",
+      "question": "Which stacks have services with fewer running replicas than desired, and on which endpoint?",
+      "uql": "FOREIGN SCAN 'portainer-agent'",
+      "sources": [
+        "portainer-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "portainer-agent": "mcp_tool"
+      },
+      "columns": [
+        "stack",
+        "desired",
+        "running",
+        "environment"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "portainer-agent/single.json"
+      ]
+    }
+  ]
+}
