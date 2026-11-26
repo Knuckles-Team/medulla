@@ -642,6 +642,7 @@ mod tests {
                 perspective: Some(ClaimPerspective {
                     subject: ParticipantId::new("ada").unwrap(),
                     observer,
+                    statement: None,
                 }),
                 state: ClaimState::Proposed,
                 log_odds_micro: 0,

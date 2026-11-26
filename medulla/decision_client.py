@@ -1125,12 +1125,17 @@ def claim_propose_op(
     *,
     subject: str | None = None,
     observer: str | dict[str, str] = "system",
+    statement: str | None = None,
 ) -> dict[str, Any]:
     """Create a claim in ``proposed``; with a ``subject`` it is about that
-    participant as seen by ``observer`` (R652.9)."""
+    participant as seen by ``observer`` (R652.9), and ``statement`` is the
+    sentence it states about them (R655.3)."""
     op: dict[str, Any] = {"op": "propose", "claim_id": claim_id}
     if subject is not None:
-        op["perspective"] = {"subject": subject, "observer": observer}
+        perspective: dict[str, Any] = {"subject": subject, "observer": observer}
+        if statement is not None:
+            perspective["statement"] = statement
+        op["perspective"] = perspective
     return op
 
 

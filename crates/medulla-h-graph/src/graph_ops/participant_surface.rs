@@ -326,7 +326,7 @@ fn admit_scope(
 /// another tenant's, is `SCOPE_NOT_FOUND`; a scope that exists but is neither the caller's nor
 /// shared with it is `SCOPE_NOT_VISIBLE`; a scope above `participant.scope_max_sessions` is
 /// `SCOPE_SESSION_LIMIT`. Every memory read that receives a `ScopeRef` calls this one function.
-pub(super) fn resolve_scope_ref(
+pub fn resolve_scope_ref(
     core: &GraphCore,
     tenant_scope: &str,
     agent_id: &str,

@@ -34965,6 +34965,7 @@ class ClaimPerspective(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     observer: ObserverRef
+    statement: str | None = None
     subject: str
 
 

@@ -111,7 +111,7 @@ pub async fn handle_claims_planned(
 /// The core of the request graph, or `None` when the server holds no such graph (which holds no
 /// participant either).
 #[cfg(feature = "statechart")]
-async fn participants_of(
+pub(super) async fn participants_of(
     state: &SharedState,
     graph: &str,
 ) -> Option<std::sync::Arc<medulla_graph_core::graph::GraphCore>> {
@@ -286,6 +286,7 @@ pub(super) mod served {
     fn perspective_of(context: &Context) -> Result<Option<ClaimPerspective>, String> {
         let subject: Option<String> = field(context, "subject")?;
         let observer: Option<String> = field(context, "observer")?;
+        let statement: Option<String> = field(context, "statement")?;
         match (subject, observer) {
             (None, None) => Ok(None),
             (Some(subject), Some(observer)) => Ok(Some(ClaimPerspective {
@@ -293,6 +294,7 @@ pub(super) mod served {
                 observer: ObserverRef::from_property(&observer).ok_or_else(|| {
                     format!("claim record observer {observer:?} is neither system nor a participant")
                 })?,
+                statement,
             })),
             _ => Err("claim record holds only one of subject and observer".to_string()),
         }
@@ -497,6 +499,13 @@ pub(super) mod served {
             if claim_id.is_empty() {
                 return Err(invalid("claim_id is empty"));
             }
+            if let Some(statement) = perspective.and_then(|p| p.statement.as_deref()) {
+                if statement.trim().is_empty()
+                    || statement.chars().count() > medulla_decision_types::claims::CLAIM_STATEMENT_MAX_CHARS
+                {
+                    return Err(invalid("a claim statement is empty or over its character limit"));
+                }
+            }
             if let Some(existing) = self.find("claim", claim_id)? {
                 return record_of(&existing);
             }
@@ -509,6 +518,7 @@ pub(super) mod served {
                     "claim_id": claim_id,
                     "subject": perspective.map(|p| p.subject.as_str()),
                     "observer": perspective.map(|p| p.observer.as_property()),
+                    "statement": perspective.and_then(|p| p.statement.as_deref()),
                     "transitions": [],
                     "evidence": [],
                     "log_odds_micro": 0,
@@ -789,6 +799,39 @@ pub(super) mod served {
             });
             rows.truncate(limit as usize);
             Ok(ProvenClaimsResult { claims: rows })
+        }
+
+        /// Every claim of the tenant that states something about `subject` as `observer` and that
+        /// `reader` may see, each with the instant it last changed, in claim-id order
+        /// (MEDULLA-DECISION-ENGINE-R655.2, R655.3). A claim with no statement is not about the
+        /// subject in words and is left out.
+        pub(in crate::decide) fn perspective_claims(
+            &self,
+            subject: &ParticipantId,
+            observer: &ObserverRef,
+            reader: &ReaderView,
+        ) -> Result<Vec<(ClaimRecord, i64)>, String> {
+            let mut rows = Vec::new();
+            for instance_id in self
+                .store
+                .list_instance_ids(Some(&self.claim_def))
+                .map_err(|error| error.to_string())?
+            {
+                let instance = match self.store.get_instance(&instance_id) {
+                    Ok(instance) if instance.tenant == self.tenant => instance,
+                    Ok(_) | Err(StatechartError::NotFound(_)) => continue,
+                    Err(error) => return Err(error.to_string()),
+                };
+                let record = record_of(&instance)?;
+                let about = record.perspective.as_ref().is_some_and(|p| {
+                    &p.subject == subject && &p.observer == observer && p.statement.is_some()
+                });
+                if about && record.state != ClaimState::Retired && claim_visible_to(&record, reader) {
+                    rows.push((record, instance.updated_at_ms));
+                }
+            }
+            rows.sort_by(|a, b| a.0.claim_id.cmp(&b.0.claim_id));
+            Ok(rows)
         }
 
         fn get(

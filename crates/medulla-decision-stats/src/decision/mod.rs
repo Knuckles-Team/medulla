@@ -67,6 +67,8 @@ pub mod legal_option_filter;
 pub mod memory;
 pub mod memory_benchmark;
 pub mod memory_rewrite;
+pub mod participant_ask;
+pub mod participant_card;
 pub mod participant_derive;
 pub mod session_note;
 pub mod nl;

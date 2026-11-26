@@ -511,6 +511,26 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        // MEDULLA-DECISION-ENGINE-R655.2: a question reads the claim store, which only the decide
+        // handler holds; every other participant read is a graph read and continues.
+        Method::ParticipantRead { op } => match *op {
+            medulla_decision_types::participant_memory::ParticipantReadOp::Ask { question } => {
+                dispatch_boxed(async {
+                    medulla_h_decide::decide::handle_participant_ask(
+                        state,
+                        req.id,
+                        &req.graph,
+                        verified_context,
+                        question,
+                    )
+                    .await
+                })
+                .await
+            }
+            other => {
+                return ControlFlow::Continue(Method::ParticipantRead { op: Box::new(other) })
+            }
+        },
         Method::Loops { op } => {
             dispatch_boxed(async {
                 medulla_h_decide::decide::handle_loops(state, req.id, verified_context, *op).await

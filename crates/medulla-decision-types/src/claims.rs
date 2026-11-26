@@ -58,7 +58,14 @@ impl ObserverRef {
 pub struct ClaimPerspective {
     pub subject: ParticipantId,
     pub observer: ObserverRef,
+    /// The sentence the claim states about the subject (a conclusion of a derive worker); the
+    /// participant card and an answer quote it (MEDULLA-DECISION-ENGINE-R655.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub statement: Option<String>,
 }
+
+/// The longest statement a perspective may carry, in characters.
+pub const CLAIM_STATEMENT_MAX_CHARS: usize = 1_000;
 
 /// Largest evidence weight, in parts per million.
 pub const WEIGHT_PPM_MAX: u32 = 1_000_000;

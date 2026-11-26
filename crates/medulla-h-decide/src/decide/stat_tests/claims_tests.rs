@@ -609,6 +609,7 @@ fn perspective_propose(claim_id: &str, subject: &str, observer: ObserverRef) -> 
         perspective: Some(ClaimPerspective {
             subject: ParticipantId::new(subject).unwrap(),
             observer,
+            statement: None,
         }),
     }
 }
@@ -896,4 +897,80 @@ async fn a_worker_proposes_conclusion_claims_with_turn_evidence() {
     assert!(record.evidence.iter().all(|e| e.channel == EvidenceChannel::Mined));
     let digests: Vec<&str> = record.evidence.iter().map(|e| e.source_digest.as_str()).collect();
     assert_eq!(digests, ["turn:t1", "turn:t4"]);
+}
+
+async fn ask_as(
+    h: &Harness,
+    who: &str,
+    tenant: &str,
+    subject: &str,
+    observer: ObserverRef,
+    text: &str,
+) -> Result<medulla_decision_types::participant_memory::ParticipantAnswer, String> {
+    use medulla_decision_types::participant_memory::ParticipantQuestion;
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, tenant);
+    let question = ParticipantQuestion {
+        subject: ParticipantId::new(subject).unwrap(),
+        observer,
+        question: text.to_string(),
+        memory_scope: None,
+        as_of_ms: None,
+    };
+    decode(crate::decide::handle_participant_ask(&h.state, 3, "default", &verified, question).await)
+        .map_err(|text| text.split_once(':').map_or(text.as_str(), |(code, _)| code).to_string())
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R655.2
+#[tokio::test]
+async fn ask_cites_claims_and_turns_or_abstains() {
+    let h = Harness::new().await;
+    seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1"), ("bo", "bo-principal", "s2")]).await;
+    let ada = || ObserverRef::Participant(ParticipantId::new("ada").unwrap());
+    let mut propose_op = perspective_propose("c-tea", "ada", ada());
+    if let ClaimOp::Propose { perspective: Some(perspective), .. } = &mut propose_op {
+        perspective.statement = Some("Prefers green tea".to_string());
+    }
+    let _: ClaimRecord = call(&h, "ada-principal", TENANT, propose_op).await.unwrap();
+    for (n, turn) in ["m1", "m4"].iter().enumerate() {
+        let mut op = evidence("c-tea", &format!("e{n}"), Some(EvidenceChannel::Mined), true, 400_000);
+        if let ClaimOp::RecordEvidence { session_id, source_digest, .. } = &mut op {
+            *session_id = Some("s1".to_string());
+            *source_digest = format!("turn:{turn}");
+        }
+        let _: ClaimRecord = call(&h, "ada-principal", TENANT, op).await.unwrap();
+    }
+
+    // A grounded question is answered with the claim and its turns.
+    let answer = ask_as(&h, "ada-principal", TENANT, "ada", ada(), "what tea does she prefer").await.unwrap();
+    assert_eq!(answer.text, "Prefers green tea.");
+    assert!(answer.abstained.is_none());
+    assert_eq!(answer.citations.len(), 1);
+    assert_eq!(answer.citations[0].claim_id, "c-tea");
+    assert_eq!(answer.citations[0].turn_ids, ["m1", "m4"]);
+
+    // A question nothing grounds abstains and names the code.
+    let none = ask_as(&h, "ada-principal", TENANT, "ada", ada(), "where was she born").await.unwrap();
+    assert!(none.text.is_empty() && none.citations.is_empty());
+    let reason = format!("{:?}", none.abstained.expect("an abstention"));
+    assert!(reason.contains("NO_GROUNDED_CLAIMS"), "{reason}");
+
+    // An absent subject and another tenant's caller read the same envelope.
+    assert_eq!(
+        ask_as(&h, "ada-principal", TENANT, "ghost", ada(), "tea").await,
+        Err("PARTICIPANT_NOT_VISIBLE".to_string())
+    );
+    assert_eq!(
+        ask_as(&h, "ada-principal", OTHER_TENANT, "ada", ada(), "tea").await,
+        Err("PARTICIPANT_NOT_VISIBLE".to_string())
+    );
+    // A caller that does not act as the observer is refused.
+    assert_eq!(
+        ask_as(&h, "bo-principal", TENANT, "ada", ada(), "tea").await,
+        Err("OBSERVER_NOT_PERMITTED".to_string())
+    );
+    // An empty question is an argument error.
+    assert_eq!(
+        ask_as(&h, "ada-principal", TENANT, "ada", ada(), "  ").await,
+        Err("INVALID_ARGUMENT".to_string())
+    );
 }
