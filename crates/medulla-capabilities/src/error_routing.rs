@@ -1858,6 +1858,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PROPOSAL_EVIDENCE_DIGEST_MISMATCH",
             "MODE_REFERENCE_NO_PROPOSALS",
             "MODE_ORIGIN_NOT_ADMITTED",
+            // MEDULLA-SDLC-R016.2: a research entry without its cited sources.
+            "RESEARCH_ENTRY_UNCITED",
         ],
     ),
     // MEDULLA-SDLC-R017.6: the proposal review list and decision.

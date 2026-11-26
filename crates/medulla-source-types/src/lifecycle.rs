@@ -164,6 +164,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("SPEC_STATUS_REV_UNKNOWN"),
     RefusalCode::new("SPEC_TREE_ABSENT"),
     RefusalCode::new("SCENARIO_RUN_INCOMPLETE"),
+    RefusalCode::new("RESEARCH_ENTRY_UNCITED"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -231,6 +232,8 @@ pub enum LifecycleRefusal {
     SpecTreeAbsent(String),
     #[error("SCENARIO_RUN_INCOMPLETE: {0}")]
     ScenarioRunIncomplete(String),
+    #[error("RESEARCH_ENTRY_UNCITED: {0}")]
+    ResearchEntryUncited(String),
 }
 
 impl LifecycleRefusal {
@@ -268,6 +271,7 @@ impl LifecycleRefusal {
             Self::SpecStatusRevUnknown(_) => "SPEC_STATUS_REV_UNKNOWN",
             Self::SpecTreeAbsent(_) => "SPEC_TREE_ABSENT",
             Self::ScenarioRunIncomplete(_) => "SCENARIO_RUN_INCOMPLETE",
+            Self::ResearchEntryUncited(_) => "RESEARCH_ENTRY_UNCITED",
         }
     }
 }

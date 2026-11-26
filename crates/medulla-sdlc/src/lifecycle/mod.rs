@@ -2,4 +2,5 @@
 
 pub mod delivery;
 pub mod proposals;
+pub mod research;
 pub mod scenario;

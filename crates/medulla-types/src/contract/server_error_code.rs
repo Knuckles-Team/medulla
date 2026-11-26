@@ -555,6 +555,8 @@ closed_error_codes! {
         SpecTreeAbsent => "SPEC_TREE_ABSENT",
         /// MEDULLA-SDLC-R013: a scenario run record names no phase, scenario or commit.
         ScenarioRunIncomplete => "SCENARIO_RUN_INCOMPLETE",
+        /// MEDULLA-SDLC-R016.2: a research entry cites no source, or its text holds no `Source:` line for one.
+        ResearchEntryUncited => "RESEARCH_ENTRY_UNCITED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",

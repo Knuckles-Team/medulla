@@ -1070,6 +1070,11 @@ async fn proposal_put(
             )
             .map_err(|e| e.to_string())?;
         }
+        // MEDULLA-SDLC-R016.2: a research entry is cited, before its evidence is resolved.
+        if medulla_sdlc::lifecycle::research::is_research_entry(&proposal) {
+            medulla_sdlc::lifecycle::research::check_research_entry(&proposal)
+                .map_err(|e| e.to_string())?;
+        }
         let resolved = resolve_evidence(state, &target, &proposal).await?;
         let write = handle_proposal_put(proposal, &resolved).map_err(|e| e.to_string())?;
         let operations = proposal_operations(&write, &target)?;
