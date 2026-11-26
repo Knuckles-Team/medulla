@@ -617,6 +617,13 @@ $($variants)*
     ProjectModeGet {
         request: medulla_source_types::lifecycle::ProjectModeGetRequest,
     },
+    /// Read the configuration layers of the verified caller (MEDULLA-IDENTITY-R740): the
+    /// company layer, the layer of every team the caller belongs to and the caller's own user
+    /// layer, each a `ConfigLayer` node of the verified tenant the caller may see. The request
+    /// names nothing; a layer that is absent, foreign or hidden is left out. Reads only.
+    ConfigLayers {
+        request: medulla_source_types::config_layers::ConfigLayersRequest,
+    },
     /// MEDULLA-SRC-AUTH-R004.6.1: which connected source is authoritative for each
     /// class (and facet) within the hop budget, with the premises behind every verdict
     /// and the authority audit built from them. A read; nothing is committed. Refuses

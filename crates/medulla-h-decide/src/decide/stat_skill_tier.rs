@@ -8,8 +8,12 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::promotion_tier::{
-    SkillTier, MEMBER_OF, PERSONA_CLASS, PERSONA_INCLUDES, TIER_KEY_PREFIX,
+    SkillTier, MEMBER_OF, PARAM_TIER_REVIEWER, PERSONA_CLASS, PERSONA_INCLUDES, SCOPE_REVIEW,
+    TIER_KEY_PREFIX, TIER_REVIEW_SCOPE_REQUIRED,
 };
+use medulla_decision_types::decision::statistical::{DecideRequest, TypedParam, TypedValue};
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::contract::BoundedVec;
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
@@ -79,6 +83,56 @@ pub(super) fn is_member(view: &GraphView, principal: &str, team: &str) -> bool {
     edges_named(view, MEMBER_OF)
         .iter()
         .any(|(source, target)| source == principal && target == team)
+}
+
+/// The review chokepoint of a tiered skill promotion (MEDULLA-IDENTITY-R739). A request that
+/// carries a `tier_review` needs the scope `skills:review`; the reviewer of a person is the
+/// verified caller, bound here as the parameter `tier_reviewer` whatever the request named, so a
+/// person cannot review as another principal. A service or agent keeps the approver its review
+/// names. Whether the reviewer reviews for the platform or for a team is then read from the
+/// graph by the promotion family, and the author is refused there.
+pub(super) fn bind_reviewer(
+    verified: &VerifiedRequestContext,
+    mut request: DecideRequest,
+) -> Result<DecideRequest, String> {
+    let mut params = request.params.as_slice().to_vec();
+    params.retain(|param| param.name != PARAM_TIER_REVIEWER);
+    if params.iter().any(|param| param.name == "tier_review") {
+        if !verified.allows_action(SCOPE_REVIEW) {
+            return Err(format!(
+                "{}: a tiered promotion needs the scope {SCOPE_REVIEW}",
+                TIER_REVIEW_SCOPE_REQUIRED.as_str()
+            ));
+        }
+        if !verified.is_loop_principal() {
+            params.push(TypedParam {
+                name: PARAM_TIER_REVIEWER.to_owned(),
+                value: TypedValue::Text(verified.agent_id().to_owned()),
+            });
+        }
+    }
+    request.params = BoundedVec::new(params).map_err(super::stat_support::invalid_parameter)?;
+    Ok(request)
+}
+
+/// Every team the graph shows `principal` as a member of, sorted.
+pub(super) fn teams_of(view: &GraphView, principal: &str) -> std::collections::BTreeSet<String> {
+    edges_named(view, MEMBER_OF)
+        .into_iter()
+        .filter(|(source, _)| source == principal)
+        .map(|(_, team)| team)
+        .collect()
+}
+
+/// Whether `principal` authored the skill revision node `skill_ref`: the node names it as its
+/// owner or author. A revision the view does not hold has no known author, so nobody is it.
+pub(super) fn is_author(view: &GraphView, skill_ref: &str, principal: &str) -> bool {
+    view.node_row_object(skill_ref).is_some_and(|row| {
+        ["_owner", "_owner_id", "authored_by"]
+            .iter()
+            .filter_map(|key| row.get(*key).and_then(|value| value.as_str()))
+            .any(|found| found == principal)
+    })
 }
 
 /// The tier a decision record promoted to: the value of its `tier:target=` premise.

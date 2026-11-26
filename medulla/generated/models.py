@@ -4081,6 +4081,74 @@ class DecisionEvalOpSkillEval(BaseModel):
     request: SkillEvalRequest
 
 
+class SkillEvalCaseAddRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case: SkillEvalCase
+    known_tools: list[str]
+    tenant_id: str
+
+
+class SkillEvalCaseAdded(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case_id: str
+    node_id: str
+    skill_ref: str
+
+
+class DecisionEvalOpSkillEvalCaseAdd(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["skill_eval_case_add"]
+    request: SkillEvalCaseAddRequest
+
+
+class SkillEvalReportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    skill_ref: str
+    tenant_id: str
+
+
+class SkillEvalReportAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calibration: JudgeCalibration | None = None
+    report: SuiteReport | None = None
+    skill_ref: str
+
+
+class DecisionEvalOpSkillEvalReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["skill_eval_report"]
+    request: SkillEvalReportRequest
+
+
+class SkillEvalCalibrateRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calibration: JudgeCalibration
+    skill_ref: str
+    tenant_id: str
+
+
+class SkillEvalCalibrated(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    admitted: bool
+    calibration: JudgeCalibration
+    skill_ref: str
+
+
+class DecisionEvalOpSkillEvalCalibrate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["skill_eval_calibrate"]
+    request: SkillEvalCalibrateRequest
+
+
 class DecisionEvalOpDelegationQuality(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -4329,6 +4397,9 @@ DecisionEvalOp = Annotated[
     | DecisionEvalOpTimeline
     | DecisionEvalOpDelegationQuality
     | DecisionEvalOpSkillEval
+    | DecisionEvalOpSkillEvalCaseAdd
+    | DecisionEvalOpSkillEvalReport
+    | DecisionEvalOpSkillEvalCalibrate
     | DecisionEvalOpMemoryChangeBenchmarkSubmit
     | DecisionEvalOpMemoryRewriteSubmit
     | DecisionEvalOpCertifyLocalSkill
@@ -51176,12 +51247,21 @@ __all__ = [
     "SourceChangeRef",
     "TraceRef",
     "DecisionEvalOpSkillEval",
+    "DecisionEvalOpSkillEvalCalibrate",
+    "DecisionEvalOpSkillEvalCaseAdd",
+    "DecisionEvalOpSkillEvalReport",
     "EnvironmentAttestation",
     "EvalCaseKind",
     "EvalCaseSource",
     "JudgeCalibration",
     "RefusedEvalCase",
+    "SkillEvalCalibrateRequest",
+    "SkillEvalCalibrated",
     "SkillEvalCase",
+    "SkillEvalCaseAddRequest",
+    "SkillEvalCaseAdded",
+    "SkillEvalReportAnswer",
+    "SkillEvalReportRequest",
     "SkillEvalOutcome",
     "SkillEvalRequest",
     "SkillEvalResult",

@@ -2200,6 +2200,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PROPOSAL_NOT_OPEN",
         ],
     ),
+    // MEDULLA-IDENTITY-R740: the layered configuration read's refusals.
+    ("ConfigLayers", &["TENANT_SCOPE_REQUIRED"]),
     // MEDULLA-SDLC-R012.9: the project mode read's refusals.
     (
         "ProjectModeGet",

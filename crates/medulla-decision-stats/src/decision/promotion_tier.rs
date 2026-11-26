@@ -7,13 +7,14 @@
 use medulla_decision_types::decision::codes::PROMOTION_EVAL_TOO_SMALL;
 use medulla_decision_types::decision::promotion_tier::{
     SkillTier, TierContext, TierKnobs, TierReview, ALWAYS_ON_CAPACITY_REACHED,
-    PLATFORM_TEAM, TIER_DOWNGRADE_NEEDS_REVIEW, TIER_REVIEW_MISSING,
+    PLATFORM_TEAM, TIER_DOWNGRADE_NEEDS_REVIEW, TIER_REVIEW_MISSING, TIER_SELF_REVIEW,
 };
 use medulla_decision_types::skill_eval::{SuiteBand, SuiteReport};
 use medulla_types::refusal_code::RefusalCode;
 
 /// Whether a revision may take `tier`.
 ///
+/// * A review by the author of the revision is refused first (`TIER_SELF_REVIEW`).
 /// * A move to a lower tier than `ctx.current` needs an approver and nothing else.
 /// * `Domain` needs a review whose approver sits in the reviewer team.
 /// * `Core` needs the same review from the platform team and a suite report that is `Healthy`
@@ -28,6 +29,9 @@ pub fn tier_gate(
     ctx: &TierContext,
     knobs: &TierKnobs,
 ) -> Result<(), RefusalCode> {
+    if review.is_some() && ctx.reviewer_is_author {
+        return Err(TIER_SELF_REVIEW);
+    }
     if ctx.current.is_some_and(|current| current > tier) {
         let approved = review.is_some_and(|review| {
             review.tier == tier && !review.approver_principal.is_empty() && ctx.approver_in_team
@@ -102,6 +106,7 @@ mod tests {
         TierContext {
             current,
             approver_in_team,
+            reviewer_is_author: false,
         }
     }
 
@@ -225,5 +230,33 @@ mod tests {
         assert_eq!(go(Some(&down), true), Ok(()));
         assert_eq!(go(None, true), Err(TIER_DOWNGRADE_NEEDS_REVIEW));
         assert_eq!(go(Some(&down), false), Err(TIER_DOWNGRADE_NEEDS_REVIEW));
+    }
+
+    // spec: MEDULLA-IDENTITY-R739
+    #[test]
+    fn the_author_never_reviews_its_own_revision() {
+        let ok = review(SkillTier::Domain, "support");
+        let own = TierContext {
+            reviewer_is_author: true,
+            ..ctx(None, true)
+        };
+        assert_eq!(
+            tier_gate(SkillTier::Domain, Some(&ok), None, 0, &own, &KNOBS),
+            Err(TIER_SELF_REVIEW)
+        );
+        // A downgrade by the author is refused too.
+        let own_down = TierContext {
+            reviewer_is_author: true,
+            ..ctx(Some(SkillTier::Core), true)
+        };
+        assert_eq!(
+            tier_gate(SkillTier::Domain, Some(&ok), None, 0, &own_down, &KNOBS),
+            Err(TIER_SELF_REVIEW)
+        );
+        // Another reviewer passes.
+        assert_eq!(
+            tier_gate(SkillTier::Domain, Some(&ok), None, 0, &ctx(None, true), &KNOBS),
+            Ok(())
+        );
     }
 }

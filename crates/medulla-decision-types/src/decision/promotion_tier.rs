@@ -42,8 +42,22 @@ pub const TIER_DOWNGRADE_NEEDS_REVIEW: RefusalCode = RefusalCode::new("TIER_DOWN
 /// `ALWAYS_ON_TOOL_REMOVED`: a tenant policy removes an always-on capability.
 pub const ALWAYS_ON_TOOL_REMOVED: RefusalCode = RefusalCode::new("ALWAYS_ON_TOOL_REMOVED");
 
+/// `TIER_SELF_REVIEW`: the reviewer is the author of the revision (the two-person rule,
+/// MEDULLA-IDENTITY-R739).
+pub const TIER_SELF_REVIEW: RefusalCode = RefusalCode::new("TIER_SELF_REVIEW");
+/// `TIER_REVIEW_SCOPE_REQUIRED`: a tiered promotion needs the scope [`SCOPE_REVIEW`].
+pub const TIER_REVIEW_SCOPE_REQUIRED: RefusalCode = RefusalCode::new("TIER_REVIEW_SCOPE_REQUIRED");
+/// The one engine scope that reviews a skill promotion; platform or team review is told apart
+/// by the reviewer's role in the graph, not by a second scope (MEDULLA-IDENTITY-R739).
+pub const SCOPE_REVIEW: &str = "skills:review";
+/// The request parameter the engine fills with the verified reviewer of a tiered promotion; a
+/// caller-supplied value is dropped.
+pub const PARAM_TIER_REVIEWER: &str = "tier_reviewer";
+
 /// The tier refusal table (MEDULLA-DECISION-ENGINE-R714.5, R715.1).
 pub const REFUSALS: &[RefusalCode] = &[
+    TIER_SELF_REVIEW,
+    TIER_REVIEW_SCOPE_REQUIRED,
     TIER_REVIEW_MISSING,
     ALWAYS_ON_CAPACITY_REACHED,
     PERSONA_UNKNOWN,
@@ -108,6 +122,8 @@ pub struct TierContext {
     pub current: Option<SkillTier>,
     /// Whether the graph shows the approver as a member of `reviewer_team`.
     pub approver_in_team: bool,
+    /// Whether the reviewer is the author of the revision; such a review is refused.
+    pub reviewer_is_author: bool,
 }
 
 /// The knobs the tier gate reads.

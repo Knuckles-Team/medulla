@@ -62,3 +62,21 @@ pub async fn handle_skill_eval(
         Err("DecisionEval requires the `decide` feature".to_string())
     }
 }
+
+/// Plan the `skill_eval_case_add` op of `DecisionEval` with its graph: the case node is the
+/// batch the router commits (MEDULLA-DECISION-ENGINE-R711.7).
+pub async fn handle_skill_eval_case_add(
+    verified: &VerifiedRequestContext,
+    graph: &str,
+    request: medulla_decision_types::skill_eval::SkillEvalCaseAddRequest,
+) -> Result<super::planned_write::PlannedWrite, String> {
+    #[cfg(feature = "decide")]
+    {
+        super::stat_jobs::plan_skill_eval_case_add(verified, graph, request).await
+    }
+    #[cfg(not(feature = "decide"))]
+    {
+        let _ = (verified, graph, request);
+        Err("DecisionEval requires the `decide` feature".to_string())
+    }
+}

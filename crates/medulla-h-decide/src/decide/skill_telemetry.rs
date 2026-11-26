@@ -486,13 +486,14 @@ mod served {
                     format!("{} carries an error code outside the closed form", row.invocation_id),
                 ));
             }
-            if row.invocation_id.is_empty()
-                || row.run_id.is_empty()
-                || row.principal_pseudonym.len() != 64
-                || !row.principal_pseudonym.bytes().all(|byte| byte.is_ascii_hexdigit())
-            {
+            // A person's pseudonym is derived below and never read from the event, so only a
+            // service caller has to send a well-formed one.
+            let pseudonym_ok = person.is_some()
+                || (row.principal_pseudonym.len() == 64
+                    && row.principal_pseudonym.bytes().all(|byte| byte.is_ascii_hexdigit()));
+            if row.invocation_id.is_empty() || row.run_id.is_empty() || !pseudonym_ok {
                 return Err(invalid_parameter(
-                    "an invocation names its id, its run and a 64-hex principal pseudonym",
+                    "an invocation names its id, its run and, from a service, a 64-hex principal pseudonym",
                 ));
             }
             if let Some(own) = &person {

@@ -696,6 +696,19 @@ pub enum DecisionEvalOp {
     SkillEval {
         request: Box<crate::skill_eval::SkillEvalRequest>,
     },
+    /// Add one case to a skill's suite (MEDULLA-DECISION-ENGINE-R711.7).
+    SkillEvalCaseAdd {
+        request: Box<crate::skill_eval::SkillEvalCaseAddRequest>,
+    },
+    /// Read the latest suite report and judge calibration of one skill
+    /// (MEDULLA-DECISION-ENGINE-R711.7).
+    SkillEvalReport {
+        request: crate::skill_eval::SkillEvalReportRequest,
+    },
+    /// Record the calibration of the judge of one skill's suite (MEDULLA-DECISION-ENGINE-R711.7).
+    SkillEvalCalibrate {
+        request: Box<crate::skill_eval::SkillEvalCalibrateRequest>,
+    },
 }
 
 impl DecisionEvalOp {
@@ -710,6 +723,8 @@ impl DecisionEvalOp {
                 | Self::GroundedAnswerSubmit { .. }
                 | Self::CertifyLocalSkill { .. }
                 | Self::SkillEval { .. }
+                | Self::SkillEvalCaseAdd { .. }
+                | Self::SkillEvalCalibrate { .. }
         )
     }
 
@@ -731,6 +746,9 @@ impl DecisionEvalOp {
             Self::GroundedAnswerSubmit { request } => &request.tenant_id,
             Self::CertifyLocalSkill { request } => &request.tenant_id,
             Self::SkillEval { request } => &request.tenant_id,
+            Self::SkillEvalCaseAdd { request } => &request.tenant_id,
+            Self::SkillEvalReport { request } => &request.tenant_id,
+            Self::SkillEvalCalibrate { request } => &request.tenant_id,
         }
     }
 }

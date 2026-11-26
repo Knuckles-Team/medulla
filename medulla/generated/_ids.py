@@ -11,6 +11,7 @@ METHOD_IDS = frozenset(
         "GoalPut",
         "ProjectModeSet",
         "ProjectModeGet",
+        "ConfigLayers",
         "ProposalPut",
         "ProposalList",
         "SpecQuestion",

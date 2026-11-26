@@ -321,6 +321,13 @@ pub(super) async fn serve(
     } else {
         request
     };
+    // A tiered `promotion` binds its reviewer to the verified caller and needs the review scope
+    // before anything is read (MEDULLA-IDENTITY-R739).
+    let request = if request.question.kind == QuestionKind::Promotion {
+        super::stat_skill_tier::bind_reviewer(verified, request)?
+    } else {
+        request
+    };
     // A `harness_contrast`, `recursion_mode` or `sub_call_admission` question
     // declares its candidates but still reads its evidence (held versions,
     // probe runs, stored contrasts, signal references, stored signatures) from

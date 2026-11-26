@@ -11,7 +11,8 @@ use medulla_work_types::orchestration::visual_observation::{
     VISUAL_OBSERVATION_NODE_TYPE, VISUAL_OBSERVATION_RECORD_PROPERTY,
 };
 use medulla_protocol_types::result_contract::ingestion::{
-    GoalPut as GoalPutResult, ProjectModeGet as ProjectModeGetResult,
+    ConfigLayers as ConfigLayersResult, GoalPut as GoalPutResult,
+    ProjectModeGet as ProjectModeGetResult,
     ProjectModeSet as ProjectModeSetResult,
     FileDefect as FileDefectResult, SpecStatus as SpecStatusResult, LifecycleTrace as LifecycleTraceResult, PutObservation as PutObservationResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
@@ -36,6 +37,10 @@ use medulla_source_types::lifecycle::{
     ProposalWrite, PullRequestError, PullRequestTarget, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
     DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
     ProjectModeGetRequest, ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
+};
+use medulla_source_types::config_layers::{
+    config_layer_node_id, config_layer_record, ConfigLayerKind, ConfigLayersAnswer,
+    ConfigLayersRequest,
 };
 use medulla_source_types::gate_verdict::{
     gate_verdict_node_id, handle_landing_policy_put, GateVerdictReceipt, GateVerdictRecord,
@@ -127,6 +132,9 @@ pub async fn dispatch_sdlc_methods(
         }
         Method::ProjectModeGet { request } => {
             dispatch_boxed(project_mode_get(state, target, request)).await
+        }
+        Method::ConfigLayers { request } => {
+            dispatch_boxed(config_layers(state, target, request)).await
         }
         Method::SpecQuestion {
             question,
@@ -1667,6 +1675,84 @@ async fn project_mode_get(
     }
     .await;
     typed_response::<ProjectModeGetResult>(target.req_id, result)
+}
+
+/// The teams `principals` are members of in `core`: the targets of their `memberOf` edges.
+fn member_teams(core: &GraphCore, principals: &[String]) -> BTreeSet<String> {
+    let relation_of = |blob: &[u8]| {
+        medulla_types::msgpack::decode_property_value(blob)
+            .ok()
+            .and_then(|props| {
+                props
+                    .get("relationship")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned)
+            })
+    };
+    let mut teams = BTreeSet::new();
+    for principal in principals {
+        for team in core.get_successors(principal).unwrap_or_default() {
+            let typed = core
+                .typed_edges_between(principal, &team)
+                .into_iter()
+                .any(|(relation, _)| relation == "memberOf");
+            let plain = core
+                .get_edge_properties(principal, &team)
+                .iter()
+                .any(|blob| relation_of(blob).as_deref() == Some("memberOf"));
+            if typed || plain {
+                teams.insert(team);
+            }
+        }
+    }
+    teams
+}
+
+/// `ConfigLayers` (MEDULLA-IDENTITY-R740): the company layer, the layer of every team the verified
+/// caller is a member of and the caller's own user layer, each a `ConfigLayer` node of the
+/// verified tenant that the caller may see. Nothing in the request names a team or a user, and a
+/// layer that is absent, foreign or hidden is left out alike. Reads only.
+async fn config_layers(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    _request: ConfigLayersRequest,
+) -> Response {
+    let result = async {
+        let tenant = target.verified.tenant().to_owned();
+        if tenant.trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        ensure_graph_resident(state, target.graph).await;
+        let (core, authority) = {
+            let current = timed_read(state).await;
+            authorized_graph_read(
+                &current,
+                target.graph,
+                target.verified,
+                &format!("GRAPH_NOT_FOUND: {}", target.graph),
+            )?
+        };
+        let user = target.verified.principal_persistence_id();
+        let principals = vec![target.verified.agent_id().to_owned(), user.clone()];
+        let read = |layer: ConfigLayerKind, scope: &str| {
+            let node_id = config_layer_node_id(&tenant, layer, scope);
+            let properties = core.get_node_properties(&node_id)?;
+            if !authority.can_see_node(&properties, core.is_schema_node(&node_id)) {
+                return None;
+            }
+            let node = medulla_types::msgpack::decode_property_value(&properties).ok()?;
+            config_layer_record(&tenant, layer, scope, &node)
+        };
+        let mut layers = Vec::new();
+        layers.extend(read(ConfigLayerKind::Company, ""));
+        for team in member_teams(&core, &principals) {
+            layers.extend(read(ConfigLayerKind::Team, &team));
+        }
+        layers.extend(read(ConfigLayerKind::User, &user));
+        Ok(ConfigLayersAnswer { layers })
+    }
+    .await;
+    typed_response::<ConfigLayersResult>(target.req_id, result)
 }
 
 /// The stored mode of `project` in the request graph, `reference` when no record

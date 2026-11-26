@@ -19641,6 +19641,22 @@ class MedullaClient:
             raise TypeError("ProjectModeGet returned a non-object result")
         return result
 
+    async def config_layers(self, graph: str | None = None) -> dict[str, Any]:
+        """Read the configuration layers of the verified caller (MEDULLA-IDENTITY-R740).
+
+        The answer holds ``layers``, in application order: the company layer, the
+        layer of every team the caller is a member of (by team id) and the caller's
+        own user layer. Each names ``layer`` (``company``, ``team`` or ``user``),
+        ``scope``, ``node_id``, ``revision`` and ``settings``. The request names no
+        team and no user: both come from the verified caller. A layer that is
+        absent, foreign or hidden is left out, so the read is no existence oracle.
+        Needs the scope ``policy:read``.
+        """
+        result = await self._send("ConfigLayers", {"request": {}}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ConfigLayers returned a non-object result")
+        return result
+
     async def spec_question(
         self, question: str, graph: str, subject: str | None = None
     ) -> dict[str, Any]:

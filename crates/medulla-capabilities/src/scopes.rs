@@ -293,6 +293,9 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("skills:author", User, "engine"),
     // MEDULLA-IDENTITY-R736: run, report, calibrate, ablate and decide a canary of a skill.
     entry("skills:eval", User, "engine"),
+    // MEDULLA-IDENTITY-R739: review a skill promotion; platform or team review is the reviewer's
+    // graph role, not a second scope.
+    entry("skills:review", User, "engine"),
     // MEDULLA-FEDERATED-QUERY-R085.2: the native source-query approval issuer.
     entry("source:approve-query", ServiceOnly, "engine"),
     entry("source:ingest", User, "engine"),

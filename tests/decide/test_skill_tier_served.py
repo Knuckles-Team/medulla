@@ -358,3 +358,78 @@ def test_a_skill_climbs_tiers_and_the_load_set_follows(clean_graph) -> None:
     assert all(tier == "always_on" for _, tier in tiered[:first_other]), tiered
     assert refs.index(skills["always_on"]) < first_other, tiered
     assert re.search(r"tier:always_on=\d+/100", out["load_facts"]), out["load_facts"]
+
+
+async def _review_journey(prefix: str) -> dict[str, Any]:
+    """A person reviews: the reviewer is the verified caller (MEDULLA-IDENTITY-R739)."""
+    admin_context = request_context()
+    person = f"reviewer-{prefix}"
+    # A person: the principal is its own effective agent, with no delegation.
+    person_context = request_context(agent_id=person, principal=person)
+    admin = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"], verified_context=admin_context
+    )
+    graph = f"review-{prefix}"
+    try:
+        schema = await publish_schema(admin)
+        await admin.tenants.create(graph)
+    finally:
+        await admin.close()
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=person_context,
+        graph_name=graph,
+    )
+    try:
+        decisions = dc.DecisionClient(client=client)
+        journey = _Journey(decisions, schema, graph)
+        own_skill = f"skill:{prefix}-own@1"
+        other_skill = f"skill:{prefix}-other@1"
+        support = f"team:{prefix}-support"
+        public = {"_visibility": "public"}
+        await client.lifecycle.batch_update(
+            [
+                _node(person, "Entity"),
+                _node(support, "Entity"),
+                _edge(person, support, "memberOf"),
+                {
+                    "op": "upsert_node",
+                    "id": own_skill,
+                    "properties": {"type": "Skill", **public},
+                },
+                {
+                    "op": "upsert_node",
+                    "id": other_skill,
+                    "properties": {
+                        "type": "Skill",
+                        "_owner": f"someone-else-{prefix}",
+                        **public,
+                    },
+                },
+            ]
+        )
+        # The review names another principal; the engine takes the caller instead.
+        review = _review("domain", support, f"principal:{prefix}-someone")
+        out: dict[str, Any] = {}
+        out["own"] = json.dumps(
+            (
+                await journey.ask(
+                    own_skill, "domain", "revision:one", "revision:zero", review
+                )
+            )["outcome"]
+        )
+        out["other"] = await journey.promote(
+            other_skill, "domain", "revision:one", "revision:zero", review
+        )
+        return out
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-IDENTITY-R739
+@pytest.mark.spec("MEDULLA-IDENTITY-R739")
+def test_a_person_reviews_as_the_caller_and_the_author_is_refused(clean_graph) -> None:
+    # spec: MEDULLA-IDENTITY-R739
+    out = asyncio.run(_review_journey(uuid.uuid4().hex[:8]))
+    assert "TIER_SELF_REVIEW" in out["own"], out["own"]
+    assert "tier:target=domain" in _facts(out["other"])

@@ -820,6 +820,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ProposalPut { .. }
         // MEDULLA-SDLC-R017.6: the review list commits nothing; the decision self-translates.
         | Method::ProposalList { .. }
+        // MEDULLA-IDENTITY-R740: the layered configuration read commits nothing.
+        | Method::ConfigLayers { .. }
         // MEDULLA-SDLC-R012.9: the project mode read commits nothing.
         | Method::ProjectModeGet { .. }
         // MEDULLA-SDLC-R014.6: the competency questions commit nothing.

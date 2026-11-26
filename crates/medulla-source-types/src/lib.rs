@@ -50,6 +50,8 @@ pub mod lifecycle;
 pub mod gate_verdict;
 // MEDULLA-SCM-R009 — the bisect request and answer over the gate verdicts of a chain.
 pub mod source_bisect;
+// MEDULLA-IDENTITY-R740 — the layered configuration read.
+pub mod config_layers;
 pub mod spec_question;
 pub mod stack_frame;
 // MEDULLA-SDLC-R019.2 — delivery records.
