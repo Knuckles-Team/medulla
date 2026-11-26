@@ -516,7 +516,7 @@ pub(super) const REASON_LOOPS_TENANT_STATE: &str =
 pub(super) const REASON_FEATURE_LEDGER_TENANT_STATE: &str =
     "FeatureLedger.Get reads the entries of the verified request tenant's ledger from the statecharts.redb instance keyed by that tenant alone (another tenant derives another key and finds none of these entries), behind agent:feature-ledger-read -- never a GraphView/core.analysis_snapshot() row read";
 pub(super) const REASON_CLAIMS_TENANT_STATE: &str =
-    "Claims.Get reads one claim or one sealed research artifact from the statecharts.redb instance keyed by the verified request tenant and the caller's id (another tenant derives another key and gets CLAIM_NOT_FOUND), behind agent:claim-read -- never a GraphView/core.analysis_snapshot() row read";
+    "Claims.Get reads one claim or one sealed research artifact, and Claims.ProvenClaims lists the claims holding a machine-checked receipt, from the statecharts.redb instances keyed by the verified request tenant and the caller's id (another tenant derives another key and gets CLAIM_NOT_FOUND, or is never listed), behind agent:claim-read -- never a GraphView/core.analysis_snapshot() row read";
 // EH-400: `FreshnessFeed` returns change METADATA, not rows: invalidation events are (version,
 // class names, edge-type names) straight from the dependency clock; the volatility policy is
 // annotations on schema classes (visible to every reader of the graph, see `RLS_SCHEMA_KEY`);

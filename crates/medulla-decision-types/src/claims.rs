@@ -429,6 +429,17 @@ pub enum ClaimOp {
         code_specs: Vec<String>,
         exploration_edges: Vec<(String, String)>,
     },
+    /// List the claims of the verified tenant that hold a machine-checked receipt, with the
+    /// axioms each receipt rests on (MEDULLA-DECISION-ENGINE-R652.13). A read.
+    ProvenClaims {
+        /// Keep only the rows whose receipt names this axiom.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        axiom: Option<String>,
+        /// The most rows to answer: [`PROVEN_CLAIMS_DEFAULT_LIMIT`] when absent, at most
+        /// [`PROVEN_CLAIMS_MAX_LIMIT`].
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        limit: Option<u32>,
+    },
     /// Read one claim or one sealed artifact (exactly one id). A claim is read in the view the
     /// verified principal holds: the participant it acts as (`acts_as`) and the sessions that
     /// participant belongs to. `as_observer` only chooses among the participants the principal
@@ -448,7 +459,7 @@ pub enum ClaimOp {
 impl ClaimOp {
     /// Whether this operation changes durable state.
     pub fn is_mutation(&self) -> bool {
-        !matches!(self, ClaimOp::Get { .. })
+        !matches!(self, ClaimOp::Get { .. } | ClaimOp::ProvenClaims { .. })
     }
 
     /// The authorization action this operation needs.
@@ -494,6 +505,35 @@ pub struct ClaimRecord {
     /// Derived from the evidence by `proof_standing`, never stored.
     #[serde(default)]
     pub proof_standing: ProofStanding,
+}
+
+/// Rows `ProvenClaims` answers when the request names no limit.
+pub const PROVEN_CLAIMS_DEFAULT_LIMIT: u32 = 100;
+/// The most rows one `ProvenClaims` answer may hold.
+pub const PROVEN_CLAIMS_MAX_LIMIT: u32 = 1000;
+
+/// One claim and receipt pair `ProvenClaims` answers (MEDULLA-DECISION-ENGINE-R652.13).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProvenClaim {
+    pub claim_id: String,
+    pub declaration: String,
+    pub checker_id: String,
+    pub toolchain_version: String,
+    pub artifact_digest: String,
+    /// The axioms the receipt rests on, sorted and deduplicated.
+    pub axioms: Vec<String>,
+    /// `proven` when the receipt meets the standing rule of R652.11, else `unproven`.
+    pub standing: ProofStanding,
+}
+
+/// The answer of `Claims.ProvenClaims`: rows sorted by `claim_id`, then `declaration`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProvenClaimsResult {
+    pub claims: Vec<ProvenClaim>,
 }
 
 /// The answer of `Claims.Get`: the claim or the artifact that was asked for.

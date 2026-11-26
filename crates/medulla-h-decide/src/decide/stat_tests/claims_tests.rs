@@ -669,3 +669,145 @@ async fn perspective_claims_hide_other_observers() {
         "PARTICIPANT_NOT_VISIBLE"
     );
 }
+
+fn receipt_of(declaration: &str, axioms: &[&str], has_sorry: bool, verdict: ProofVerdict) -> ProofReceipt {
+    ProofReceipt {
+        declaration: declaration.to_string(),
+        axioms: axioms.iter().map(|axiom| axiom.to_string()).collect(),
+        has_sorry,
+        verdict,
+        ..proof_receipt()
+    }
+}
+
+async fn record_receipt(h: &Harness, tenant: &str, claim: &str, evidence_id: &str, proof: ProofReceipt) {
+    let _: ClaimRecord = call(
+        h,
+        "claim-writer",
+        tenant,
+        receipt_evidence(claim, evidence_id, EvidenceChannel::Process, true, proof),
+    )
+    .await
+    .unwrap();
+}
+
+fn proven_op(axiom: Option<&str>, limit: Option<u32>) -> ClaimOp {
+    ClaimOp::ProvenClaims { axiom: axiom.map(str::to_string), limit }
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R652.13: `ProvenClaims` lists one row per claim and passing,
+/// sorry-free receipt, filters by axiom, sorts by claim id then declaration, bounds its limit and
+/// lists only the verified tenant's claims.
+// spec: MEDULLA-DECISION-ENGINE-R652.13
+#[tokio::test]
+async fn proven_claims_lists_checked_claims_with_axioms_and_isolates_tenants() {
+    use medulla_decision_types::claims::{ProofStanding, ProvenClaimsResult};
+    let h = Harness::new().await;
+    for claim in ["pc-b", "pc-a", "pc-sorry", "pc-fail"] {
+        let _: ClaimRecord = writer(&h, propose(claim)).await.unwrap();
+    }
+    let standard = ["Classical.choice", "Quot.sound", "propext"];
+    // Two receipts on one claim: one row each, sorted by declaration.
+    record_receipt(&h, TENANT, "pc-a", "e-a2", receipt_of("Z.last", &standard, false, ProofVerdict::Pass)).await;
+    record_receipt(&h, TENANT, "pc-a", "e-a1", receipt_of("A.first", &standard, false, ProofVerdict::Pass)).await;
+    // A non-standard axiom is listed, as `unproven`, and always shows its axioms.
+    record_receipt(&h, TENANT, "pc-b", "e-b", receipt_of("B.decl", &["Foo.axiom"], false, ProofVerdict::Pass)).await;
+    // A `sorry` and a failing receipt are recorded but never listed.
+    record_receipt(&h, TENANT, "pc-sorry", "e-s", receipt_of("S.decl", &[], true, ProofVerdict::Fail)).await;
+    record_receipt(&h, TENANT, "pc-fail", "e-f", receipt_of("F.decl", &[], false, ProofVerdict::Fail)).await;
+    // Another tenant's claim and receipt.
+    let _: ClaimRecord = call(&h, "claim-writer", OTHER_TENANT, propose("pc-other")).await.unwrap();
+    record_receipt(&h, OTHER_TENANT, "pc-other", "e-o", receipt_of("O.decl", &standard, false, ProofVerdict::Pass)).await;
+
+    let all: ProvenClaimsResult = writer(&h, proven_op(None, None)).await.unwrap();
+    let rows: Vec<(&str, &str, ProofStanding)> = all
+        .claims
+        .iter()
+        .map(|row| (row.claim_id.as_str(), row.declaration.as_str(), row.standing))
+        .collect();
+    assert_eq!(
+        rows,
+        [
+            ("pc-a", "A.first", ProofStanding::Proven),
+            ("pc-a", "Z.last", ProofStanding::Proven),
+            ("pc-b", "B.decl", ProofStanding::Unproven),
+        ]
+    );
+    assert_eq!(all.claims[2].axioms, ["Foo.axiom"]);
+    assert_eq!(all.claims[0].axioms, standard);
+    assert_eq!(all.claims[0].checker_id, "kernel-checker");
+
+    // The axiom filter keeps the rows whose receipt names the axiom.
+    let foo: ProvenClaimsResult = writer(&h, proven_op(Some("Foo.axiom"), None)).await.unwrap();
+    assert_eq!(foo.claims.len(), 1);
+    assert_eq!(foo.claims[0].claim_id, "pc-b");
+    let case: ProvenClaimsResult = writer(&h, proven_op(Some("foo.axiom"), None)).await.unwrap();
+    assert!(case.claims.is_empty(), "axiom names compare exactly");
+
+    // The limit cuts the answer; a larger one than the most is refused.
+    let one: ProvenClaimsResult = writer(&h, proven_op(None, Some(1))).await.unwrap();
+    assert_eq!(one.claims.len(), 1);
+    assert_eq!(
+        writer::<ProvenClaimsResult>(&h, proven_op(None, Some(1001))).await.unwrap_err(),
+        "PARAMETER_INVALID"
+    );
+
+    // A second tenant sees only its own claim, and the first sees none of it.
+    let other: ProvenClaimsResult = call(&h, "claim-writer", OTHER_TENANT, proven_op(None, None)).await.unwrap();
+    assert_eq!(other.claims.len(), 1);
+    assert_eq!(other.claims[0].claim_id, "pc-other");
+    assert!(all.claims.iter().all(|row| row.claim_id != "pc-other"));
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R652.14: the machine-checked standing journey. A passing receipt
+/// reads `proven`; a `sorry`, a malformed receipt and a non-standard axiom leave standing as it was;
+/// `ProvenClaims` filtered by axiom lists the non-standard receipt; a second tenant reads none.
+// spec: MEDULLA-DECISION-ENGINE-R652.14
+#[tokio::test]
+async fn proof_journey() {
+    use medulla_decision_types::claims::{ProofStanding, ProvenClaimsResult};
+    let h = Harness::new().await;
+    let id = "journey-claim";
+    let _: ClaimRecord = writer(&h, propose(id)).await.unwrap();
+    let standard = ["Classical.choice", "Quot.sound", "propext"];
+
+    record_receipt(&h, TENANT, id, "j1", receipt_of("Main.thm", &standard, false, ProofVerdict::Pass)).await;
+    assert_eq!(read_claim(&h, id).await.proof_standing, ProofStanding::Proven);
+
+    // A pass with `sorry`, and a malformed receipt, are refused and change nothing.
+    let before = read_claim(&h, id).await;
+    let refused_sorry: Result<ClaimRecord, String> = writer(
+        &h,
+        receipt_evidence(
+            id,
+            "j2",
+            EvidenceChannel::Process,
+            true,
+            receipt_of("Main.sorry", &[], true, ProofVerdict::Pass),
+        ),
+    )
+    .await;
+    assert_eq!(refused_sorry, Err("PROOF_SORRY_PRESENT".to_string()));
+    let mut malformed = receipt_of("Main.bad", &[], false, ProofVerdict::Pass);
+    malformed.artifact_digest = "xyz".to_string();
+    let refused_invalid: Result<ClaimRecord, String> =
+        writer(&h, receipt_evidence(id, "j3", EvidenceChannel::Process, true, malformed)).await;
+    assert_eq!(refused_invalid, Err("PROOF_RECEIPT_INVALID".to_string()));
+    assert_eq!(read_claim(&h, id).await, before);
+
+    // A non-standard axiom records without refusal; the claim keeps its standing.
+    record_receipt(&h, TENANT, id, "j4", receipt_of("Main.extra", &["Foo.axiom"], false, ProofVerdict::Pass)).await;
+    assert_eq!(read_claim(&h, id).await.proof_standing, ProofStanding::Proven);
+
+    // The list, filtered by axiom, shows the non-standard receipt as `unproven`.
+    let foo: ProvenClaimsResult = writer(&h, proven_op(Some("Foo.axiom"), None)).await.unwrap();
+    assert_eq!(foo.claims.len(), 1);
+    assert_eq!(foo.claims[0].declaration, "Main.extra");
+    assert_eq!(foo.claims[0].standing, ProofStanding::Unproven);
+    let all: ProvenClaimsResult = writer(&h, proven_op(None, None)).await.unwrap();
+    assert_eq!(all.claims.len(), 2);
+
+    // A second tenant reads none of it.
+    let other: ProvenClaimsResult = call(&h, "claim-writer", OTHER_TENANT, proven_op(None, None)).await.unwrap();
+    assert!(other.claims.is_empty());
+}

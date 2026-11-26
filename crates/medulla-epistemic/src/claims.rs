@@ -8,8 +8,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_types::claims::{
-    ArtifactSeal, ClaimRecord, ClaimState, Evidence, EvidenceChannel, ObserverRef, ProofStanding,
-    ProofVerdict, ResearchArtifact, Stance,
+    ArtifactSeal, ClaimRecord, ClaimState, Evidence, EvidenceChannel, ObserverRef, ProofReceipt,
+    ProofStanding, ProofVerdict, ProvenClaim, ResearchArtifact, Stance,
 };
 use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 use medulla_types::contract::ServerErrorCode;
@@ -27,19 +27,59 @@ pub const PROOF_STANDARD_AXIOMS: [&str; 3] = ["propext", "Classical.choice", "Qu
 /// axiom equal to one of [`PROOF_STANDARD_AXIOMS`]; otherwise `unproven`. A
 /// failing receipt, a `sorry` and a non-standard axiom never grant standing.
 pub fn proof_standing(evidence: &[Evidence]) -> ProofStanding {
-    let proven = evidence.iter().filter_map(|item| item.proof.as_ref()).any(|receipt| {
-        receipt.verdict == ProofVerdict::Pass
-            && !receipt.has_sorry
-            && receipt
-                .axioms
-                .iter()
-                .all(|axiom| PROOF_STANDARD_AXIOMS.contains(&axiom.as_str()))
-    });
+    let proven = evidence
+        .iter()
+        .filter_map(|item| item.proof.as_ref())
+        .any(|receipt| receipt_standing(receipt) == ProofStanding::Proven);
     if proven {
         ProofStanding::Proven
     } else {
         ProofStanding::Unproven
     }
+}
+
+/// The standing one receipt grants (MEDULLA-DECISION-ENGINE-R652.11): `proven` for a `pass`
+/// verdict with no `sorry` over the standard axioms only, else `unproven`.
+pub fn receipt_standing(receipt: &ProofReceipt) -> ProofStanding {
+    let proven = receipt.verdict == ProofVerdict::Pass
+        && !receipt.has_sorry
+        && receipt
+            .axioms
+            .iter()
+            .all(|axiom| PROOF_STANDARD_AXIOMS.contains(&axiom.as_str()));
+    if proven {
+        ProofStanding::Proven
+    } else {
+        ProofStanding::Unproven
+    }
+}
+
+/// The `ProvenClaims` rows of one claim (MEDULLA-DECISION-ENGINE-R652.13): one per receipt with
+/// verdict `pass` and no `sorry`, its standing derived from that receipt alone, ordered by
+/// `claim_id`, then `declaration` (then the rest of the row, so the order is total). A receipt
+/// recorded twice answers one row.
+pub fn proven_rows(record: &ClaimRecord) -> Vec<ProvenClaim> {
+    let mut rows: Vec<ProvenClaim> = record
+        .evidence
+        .iter()
+        .filter_map(|item| item.proof.as_ref())
+        .filter(|receipt| receipt.verdict == ProofVerdict::Pass && !receipt.has_sorry)
+        .map(|receipt| ProvenClaim {
+            claim_id: record.claim_id.clone(),
+            declaration: receipt.declaration.clone(),
+            checker_id: receipt.checker_id.clone(),
+            toolchain_version: receipt.toolchain_version.clone(),
+            artifact_digest: receipt.artifact_digest.clone(),
+            axioms: receipt.axioms.clone(),
+            standing: receipt_standing(receipt),
+        })
+        .collect();
+    rows.sort_by(|a, b| {
+        (&a.claim_id, &a.declaration, &a.artifact_digest, &a.checker_id)
+            .cmp(&(&b.claim_id, &b.declaration, &b.artifact_digest, &b.checker_id))
+    });
+    rows.dedup();
+    rows
 }
 
 /// Ppm denominator.

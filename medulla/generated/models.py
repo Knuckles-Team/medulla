@@ -34742,6 +34742,32 @@ class ClaimOpRecordEvidence(BaseModel):
     weight_ppm: Annotated[int, Field(ge=0)]
 
 
+class ClaimOpProvenClaims(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    axiom: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    op: Literal["proven_claims"]
+
+
+class ProvenClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    artifact_digest: str
+    axioms: list[str]
+    checker_id: str
+    claim_id: str
+    declaration: str
+    standing: ProofStanding
+    toolchain_version: str
+
+
+class ProvenClaimsResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claims: list[ProvenClaim]
+
+
 class ClaimRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -37110,6 +37136,7 @@ ClaimOp = Annotated[
     | ClaimOpAdvance
     | ClaimOpRecordEvidence
     | ClaimOpCompileArtifact
+    | ClaimOpProvenClaims
     | ClaimOpGet,
     Field(discriminator="op"),
 ]
@@ -44838,6 +44865,9 @@ __all__ = [
     "ClaimOpAdvance",
     "ClaimOpCompileArtifact",
     "ClaimOpGet",
+    "ClaimOpProvenClaims",
+    "ProvenClaim",
+    "ProvenClaimsResult",
     "ClaimOpPropose",
     "ClaimOpRecordEvidence",
     "ClaimProvenance",

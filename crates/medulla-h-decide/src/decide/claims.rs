@@ -32,9 +32,9 @@ pub async fn handle_claims(
         // A perspective names participants of the request graph; a read is judged in the view the
         // verified principal holds there (MEDULLA-DECISION-ENGINE-R652.9).
         let graph_view = match &op {
-            ClaimOp::Propose { perspective: Some(_), .. } | ClaimOp::Get { claim_id: Some(_), .. } => {
-                participants_of(state, graph).await
-            }
+            ClaimOp::Propose { perspective: Some(_), .. }
+            | ClaimOp::Get { claim_id: Some(_), .. }
+            | ClaimOp::ProvenClaims { .. } => participants_of(state, graph).await,
             _ => None,
         };
         let checked = match (&op, graph_view.as_ref()) {
@@ -49,6 +49,14 @@ pub async fn handle_claims(
         let reader = match &op {
             ClaimOp::Get { claim_id: Some(_), as_observer, .. } => {
                 match reader_view(graph_view.as_ref(), verified, as_observer.as_ref()) {
+                    Ok(view) => Some(view),
+                    Err(error) => return Response::err(req_id, error),
+                }
+            }
+            // A list is read in the view the verified principal holds, like a `Get`; the claims
+            // it may not see are omitted (MEDULLA-DECISION-ENGINE-R652.13).
+            ClaimOp::ProvenClaims { .. } => {
+                match reader_view(graph_view.as_ref(), verified, None) {
                     Ok(view) => Some(view),
                     Err(error) => return Response::err(req_id, error),
                 }
@@ -137,16 +145,18 @@ pub(super) mod served {
 
     use medulla_decision_types::claims::{
         ClaimGetResult, ClaimOp, ClaimRecord, ClaimState, Evidence, FeedGrade, LifecycleTransition,
-        ResearchArtifact, Stance, WEIGHT_PPM_MAX,
+        ProvenClaimsResult, ResearchArtifact, Stance, PROVEN_CLAIMS_DEFAULT_LIMIT,
+        PROVEN_CLAIMS_MAX_LIMIT, WEIGHT_PPM_MAX,
     };
     use medulla_epistemic::claims::{
         check_transition, claim_visible_to, combine_evidence, compile_artifact,
-        contradiction_pairs, feed_is_relevant, grade_feed, proof_standing, verify_seal, ClaimKnobs,
-        ReaderView,
+        contradiction_pairs, feed_is_relevant, grade_feed, proof_standing, proven_rows, verify_seal,
+        ClaimKnobs, ReaderView,
     };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
-        ClaimsAdvance, ClaimsCompileArtifact, ClaimsGet, ClaimsPropose, ClaimsRecordEvidence,
+        ClaimsAdvance, ClaimsCompileArtifact, ClaimsGet, ClaimsPropose, ClaimsProvenClaims,
+        ClaimsRecordEvidence,
     };
     use medulla_statechart::{
         instance_id_for_request, Context, EventInput, MachineInstance, StatechartError,
@@ -353,6 +363,9 @@ pub(super) mod served {
                     &code_specs,
                     &exploration_edges,
                 )?),
+                ClaimOp::ProvenClaims { axiom, limit } => payload_of::<ClaimsProvenClaims>(
+                    self.proven_claims(axiom.as_deref(), limit, reader)?,
+                ),
                 ClaimOp::Get { claim_id, artifact_id, as_observer: _ } => payload_of::<ClaimsGet>(
                     self.get(claim_id.as_deref(), artifact_id.as_deref(), reader)?,
                 ),
@@ -661,6 +674,52 @@ pub(super) mod served {
             self.find("claim", claim_id)?
                 .map(|instance| record_of(&instance))
                 .transpose()
+        }
+
+        /// The claims of this tenant that hold a passing, sorry-free receipt, one row per claim
+        /// and receipt, filtered by `axiom`, ordered by claim id then declaration and cut at
+        /// `limit` (MEDULLA-DECISION-ENGINE-R652.13). A claim another tenant holds derives
+        /// another instance and is never listed; a claim the reader's view excludes is omitted.
+        fn proven_claims(
+            &self,
+            axiom: Option<&str>,
+            limit: Option<u32>,
+            reader: Option<&ReaderView>,
+        ) -> Result<ProvenClaimsResult, String> {
+            let limit = limit.unwrap_or(PROVEN_CLAIMS_DEFAULT_LIMIT);
+            if limit > PROVEN_CLAIMS_MAX_LIMIT {
+                return Err(invalid(&format!(
+                    "limit {limit} is above the most a ProvenClaims answer holds ({PROVEN_CLAIMS_MAX_LIMIT})"
+                )));
+            }
+            let view = reader.ok_or_else(|| invalid("a claim list needs a reader view"))?;
+            let mut rows = Vec::new();
+            for instance_id in self
+                .store
+                .list_instance_ids(Some(&self.claim_def))
+                .map_err(|error| error.to_string())?
+            {
+                let instance = match self.store.get_instance(&instance_id) {
+                    Ok(instance) if instance.tenant == self.tenant => instance,
+                    Ok(_) | Err(StatechartError::NotFound(_)) => continue,
+                    Err(error) => return Err(error.to_string()),
+                };
+                let record = record_of(&instance)?;
+                if !claim_visible_to(&record, view) {
+                    continue;
+                }
+                rows.extend(
+                    proven_rows(&record)
+                        .into_iter()
+                        .filter(|row| axiom.is_none_or(|name| row.axioms.iter().any(|a| a == name))),
+                );
+            }
+            rows.sort_by(|a, b| {
+                (&a.claim_id, &a.declaration, &a.artifact_digest, &a.checker_id)
+                    .cmp(&(&b.claim_id, &b.declaration, &b.artifact_digest, &b.checker_id))
+            });
+            rows.truncate(limit as usize);
+            Ok(ProvenClaimsResult { claims: rows })
         }
 
         fn get(

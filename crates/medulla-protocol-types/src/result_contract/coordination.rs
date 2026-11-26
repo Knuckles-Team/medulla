@@ -284,6 +284,7 @@ method_results! {
     ClaimsRecordEvidence(Claims / "record_evidence") => Raw<medulla_decision_types::claims::ClaimRecord>;
     ClaimsCompileArtifact(Claims / "compile_artifact") => Raw<medulla_decision_types::claims::ResearchArtifact>;
     ClaimsGet(Claims / "get") => Raw<medulla_decision_types::claims::ClaimGetResult>;
+    ClaimsProvenClaims(Claims / "proven_claims") => Raw<medulla_decision_types::claims::ProvenClaimsResult>;
     LoopsClaim(Loops / "claim") => Raw<medulla_decision_types::loops::LoopView>;
     LoopsRelease(Loops / "release") => Raw<medulla_decision_types::loops::LoopView>;
     LoopsBeacon(Loops / "beacon") => Raw<medulla_decision_types::loops::LoopView>;

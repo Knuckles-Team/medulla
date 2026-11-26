@@ -1181,6 +1181,20 @@ def claim_get_op(
     return op
 
 
+def claim_proven_op(
+    *, axiom: str | None = None, limit: int | None = None
+) -> dict[str, Any]:
+    """List the claims that hold a machine-checked receipt, one row per claim and
+    receipt (R652.13). ``axiom`` keeps the rows whose receipt names it; ``limit``
+    defaults to 100 and is at most 1000."""
+    op: dict[str, Any] = {"op": "proven_claims"}
+    if axiom is not None:
+        op["axiom"] = axiom
+    if limit is not None:
+        op["limit"] = limit
+    return op
+
+
 def profile_share(role: str, action: str, effect: str = "Allow") -> dict[str, Any]:
     """One ``ProfileShare``: ``role`` may (or may not) ``action`` the object."""
     return {"role": role, "action": action, "effect": effect}
@@ -1989,6 +2003,7 @@ __all__ = [
     "claim_evidence_op",
     "capability_outcome_op",
     "claim_get_op",
+    "claim_proven_op",
     "claim_propose_op",
     "commit_op",
     "correction_get_op",
