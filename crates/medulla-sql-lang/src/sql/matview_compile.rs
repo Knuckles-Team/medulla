@@ -724,6 +724,7 @@ mod tests {
         compile_incremental_sql("v", sql, &types, &indexed).map_err(|refusal| refusal.construct)
     }
 
+    // proves R009.2: Refusal: name the first unsupported construct
     // spec: MEDULLA-INCREMENTAL-VIEWS-R009.2
     #[test]
     fn unsupported_constructs_name_the_first() {

@@ -679,6 +679,7 @@ async fn view_feed_gap_then_snapshot_resume() {
     send_in(&state, FEED_GRAPH, 26, dropped).await;
 }
 
+// proves R010.4: Served proof and arbora seam
 // spec: MEDULLA-INCREMENTAL-VIEWS-R010.4
 #[cfg(all(feature = "matview", feature = "redb"))]
 #[tokio::test(flavor = "multi_thread")]

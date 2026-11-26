@@ -330,6 +330,8 @@ fn join_group(store: &TableStore, rows: i64, n: &mut u64) -> bool {
     })
 }
 
+// proves R009.8: Nightly budget for SQL views
+// spec: MEDULLA-INCREMENTAL-VIEWS-R009.8
 /// The `groups` group: grouped count, sum and avg over `orders` (R009.8).
 fn groups(store: &TableStore, rows: i64, n: &mut u64, fresh: &mut i64) -> bool {
     orders_group(

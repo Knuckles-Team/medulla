@@ -160,6 +160,7 @@ mod tests {
     use super::*;
     use crate::transition_refused::TransitionRefusalReason;
 
+    // proves R016.1: The materialization status (Fresh, Stale, Retracted) is one explicit state ...
     // spec: MEDULLA-INCREMENTAL-VIEWS-R016.1
     #[test]
     fn every_legal_transition_applies() {

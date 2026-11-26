@@ -855,6 +855,7 @@ mod tests {
         expr.eval(&row()).unwrap()
     }
 
+    // proves R009.1: Model: the incremental view program
     // spec: MEDULLA-INCREMENTAL-VIEWS-R009.1
     #[test]
     fn row_expr_three_valued_logic() {
@@ -944,6 +945,7 @@ mod tests {
         assert_eq!(serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(), rows);
     }
 
+    // proves R013.1: Model: join program
     // spec: MEDULLA-INCREMENTAL-VIEWS-R013.1
     #[test]
     fn join_program_round_trips() {

@@ -254,6 +254,7 @@ mod tests {
         assert_eq!(check_view(&state, &stale_def).await, ShadowOutcome::Skipped);
     }
 
+    // proves R008.3: Wiring: the check task
     // spec: MEDULLA-INCREMENTAL-VIEWS-R008.3
     #[tokio::test(flavor = "multi_thread")]
     async fn tick_runs_due_checks_with_deadline() {
