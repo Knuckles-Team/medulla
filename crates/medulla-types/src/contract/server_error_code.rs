@@ -1299,6 +1299,7 @@ closed_error_codes! {
         WritebackProposalUnknown => "WRITEBACK_PROPOSAL_UNKNOWN",
         WritebackBelowQueueTier => "WRITEBACK_BELOW_QUEUE_TIER",
         WritebackQueueTooLarge => "WRITEBACK_QUEUE_TOO_LARGE",
+        WritebackSelfApproval => "WRITEBACK_SELF_APPROVAL",
         // MEDULLA-ORCH-VOCAB-R013.7.2: walkthrough manifest refusals.
         WalkthroughRevisionStale => "WALKTHROUGH_REVISION_STALE",
         WalkthroughRefOutsideSnapshot => "WALKTHROUGH_REF_OUTSIDE_SNAPSHOT",

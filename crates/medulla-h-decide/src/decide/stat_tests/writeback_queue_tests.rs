@@ -525,3 +525,49 @@ async fn release_and_refusal_leave_audit_rows() {
         .await
         .is_empty());
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R615.3
+#[tokio::test]
+async fn queuer_cannot_approve_its_own_change_set() {
+    let h = Harness::new().await;
+    let queue_id = "q:two-person";
+    writeback_as(
+        &h,
+        "queuer",
+        WritebackOp::Queue {
+            queue_id: queue_id.to_string(),
+            proposals: vec![queued("wp:tp", "ext:tp", RiskTier::High)],
+        },
+    )
+    .await
+    .unwrap();
+    let approve = || WritebackOp::Approve {
+        queue_id: queue_id.to_string(),
+        proposal_id: "wp:tp".to_string(),
+    };
+    let own = writeback_as(&h, "queuer", approve()).await.unwrap_err();
+    assert!(own.starts_with("WRITEBACK_SELF_APPROVAL"), "{own}");
+    // The refusal stored nothing: the queue is still unapproved and cannot release.
+    let early = writeback_as(
+        &h,
+        "queuer",
+        WritebackOp::Release {
+            queue_id: queue_id.to_string(),
+        },
+    )
+    .await
+    .unwrap_err();
+    assert!(early.starts_with("PROPOSAL_UNAPPROVED"), "{early}");
+    // A second principal approves and the set releases.
+    writeback_as(&h, "second", approve()).await.unwrap();
+    let released = writeback_as(
+        &h,
+        "queuer",
+        WritebackOp::Release {
+            queue_id: queue_id.to_string(),
+        },
+    )
+    .await
+    .unwrap();
+    assert!(matches!(released, WritebackOutcome::Released { .. }));
+}

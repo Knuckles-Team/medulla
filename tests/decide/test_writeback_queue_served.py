@@ -16,12 +16,13 @@ import uuid
 from typing import Any
 
 import pytest
-from conftest import TEST_AGENT_ID, TEST_TENANT, request_context
+from conftest import TEST_TENANT, request_context
 
 from medulla import decision_client as dc
 from medulla.client import MedullaClient
 
 AS_OF_MS = 1_700_000_000_000
+APPROVER_AGENT_ID = "writeback-approver"
 
 
 def _proposal(proposal_id: str, tier: str = "high", **sources: str) -> dict[str, Any]:
@@ -48,14 +49,22 @@ async def _journey(tag: str) -> dict[str, Any]:
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
         verified_context=request_context(),
     )
+    approver_client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(agent_id=APPROVER_AGENT_ID),
+    )
     try:
         decision = dc.DecisionClient(client=client)
+        second = dc.DecisionClient(client=approver_client)
 
         async def send(computation: dict[str, Any]) -> Any:
             return await decision.log(dc.writeback_op(TEST_TENANT, computation))
 
+        async def send_second(computation: dict[str, Any]) -> Any:
+            return await second.log(dc.writeback_op(TEST_TENANT, computation))
+
         queue_id = f"q:{tag}"
-        first, second = f"wp:{tag}:1", f"wp:{tag}:2"
+        first, other = f"wp:{tag}:1", f"wp:{tag}:2"
         below = await _refusal(
             send(dc.writeback_queue(f"{queue_id}:low", [_proposal(first, "low")]))
         )
@@ -67,18 +76,19 @@ async def _journey(tag: str) -> dict[str, Any]:
             )
         )
         queued = await send(
-            dc.writeback_queue(queue_id, [_proposal(first), _proposal(second)])
+            dc.writeback_queue(queue_id, [_proposal(first), _proposal(other)])
         )
         again = await _refusal(send(dc.writeback_queue(queue_id, [_proposal(first)])))
         early = await _refusal(send(dc.writeback_release(queue_id)))
-        approved = await send(dc.writeback_approve(queue_id, first))
-        unknown = await _refusal(send(dc.writeback_approve(queue_id, "wp:404")))
+        self_approval = await _refusal(send(dc.writeback_approve(queue_id, first)))
+        approved = await send_second(dc.writeback_approve(queue_id, first))
+        unknown = await _refusal(send_second(dc.writeback_approve(queue_id, "wp:404")))
         partial = await _refusal(send(dc.writeback_release(queue_id)))
-        repeat = await send(dc.writeback_approve(queue_id, first))
-        await send(dc.writeback_approve(queue_id, second))
+        repeat = await send_second(dc.writeback_approve(queue_id, first))
+        await send_second(dc.writeback_approve(queue_id, other))
         released = await send(dc.writeback_release(queue_id))
         replay = await send(dc.writeback_release(queue_id))
-        late = await _refusal(send(dc.writeback_approve(queue_id, second)))
+        late = await _refusal(send_second(dc.writeback_approve(queue_id, other)))
         missing = await _refusal(send(dc.writeback_release(f"{queue_id}:404")))
         return {
             "below": below,
@@ -86,6 +96,7 @@ async def _journey(tag: str) -> dict[str, Any]:
             "queued": queued,
             "again": again,
             "early": early,
+            "self_approval": self_approval,
             "approved": approved,
             "unknown": unknown,
             "partial": partial,
@@ -94,10 +105,11 @@ async def _journey(tag: str) -> dict[str, Any]:
             "replay": replay,
             "late": late,
             "missing": missing,
-            "ids": (first, second),
+            "ids": (first, other),
             "queue_id": queue_id,
         }
     finally:
+        await approver_client.close()
         await client.close()
 
 
@@ -116,13 +128,15 @@ def test_queue_approve_release(clean_graph):
     assert "PROPOSAL_UNAPPROVED" in outcome["early"]
     assert "WRITEBACK_PROPOSAL_UNKNOWN" in outcome["unknown"]
     assert "PROPOSAL_UNAPPROVED" in outcome["partial"]
+    # Two-person rule: the principal that queued the set cannot approve it.
+    assert "WRITEBACK_SELF_APPROVAL" in outcome["self_approval"]
 
     approval = outcome["approved"]["approval"]
     assert approval["proposal_id"] == first
     # The approver is the caller's opaque persistence id, never its raw name.
     assert (
         approval["approver"]
-        == "principal:sha256:" + hashlib.sha256(TEST_AGENT_ID.encode()).hexdigest()
+        == "principal:sha256:" + hashlib.sha256(APPROVER_AGENT_ID.encode()).hexdigest()
     )
     assert approval["approved_at_ms"] > 0
     assert outcome["repeat"]["approval"] == approval

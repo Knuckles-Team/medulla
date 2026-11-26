@@ -191,6 +191,8 @@ pub const WRITEBACK_QUEUE_EXISTS: &str = "WRITEBACK_QUEUE_EXISTS";
 pub const WRITEBACK_PROPOSAL_UNKNOWN: &str = "WRITEBACK_PROPOSAL_UNKNOWN";
 /// The stable code of a proposal whose tier does not need approval.
 pub const WRITEBACK_BELOW_QUEUE_TIER: &str = "WRITEBACK_BELOW_QUEUE_TIER";
+/// The stable code of an approval by the principal that queued the change set (two-person rule).
+pub const WRITEBACK_SELF_APPROVAL: &str = "WRITEBACK_SELF_APPROVAL";
 /// The stable code of a queue beyond `writeback.queue_max_proposals`.
 pub const WRITEBACK_QUEUE_TOO_LARGE: &str = "WRITEBACK_QUEUE_TOO_LARGE";
 

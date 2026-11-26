@@ -14,7 +14,7 @@ use medulla_decision_stats::decision::writeback::{
     creation_proposals, preflight, queue_transition, ticket_proposals, InventoryItem, Preflight,
     ProposalQueue, QueueEvent, QueueState, RiskFinding, WritebackError, WritebackProposal,
     WRITEBACK_BELOW_QUEUE_TIER, WRITEBACK_PROPOSAL_UNKNOWN, WRITEBACK_QUEUE_EXISTS,
-    WRITEBACK_QUEUE_TOO_LARGE, WRITEBACK_QUEUE_UNKNOWN,
+    WRITEBACK_QUEUE_TOO_LARGE, WRITEBACK_QUEUE_UNKNOWN, WRITEBACK_SELF_APPROVAL,
 };
 use medulla_decision_types::decision::statistical::writeback::{
     GovernedChangeSet, PreflightVerdict, ProposalInput, ProposalKind, ProposalRow,
@@ -33,6 +33,9 @@ use super::stat_log::LogReader;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct StoredQueue {
     queue: ProposalQueue,
+    /// The verified principal that queued the set. Two-person rule: it never approves
+    /// a proposal of its own queue.
+    queued_by: String,
     approvals: Vec<WritebackApproval>,
     state: QueueState,
 }
@@ -89,6 +92,7 @@ fn change_set(stored: &StoredQueue) -> GovernedChangeSet {
 
 fn queue(
     ctx: &ExecutionContext,
+    reader: &LogReader,
     tenant: &str,
     queue_id: &str,
     proposals: Vec<medulla_decision_types::decision::statistical::writeback::QueuedProposalInput>,
@@ -145,6 +149,7 @@ fn queue(
     }
     let stored = StoredQueue {
         queue,
+        queued_by: reader.principal.clone(),
         approvals: Vec::new(),
         state: QueueState::Pending,
     };
@@ -169,6 +174,13 @@ fn approve(
 ) -> Result<WritebackOutcome, String> {
     let (bytes, mut stored) = read_queue(ctx, tenant, queue_id)?;
     stored.state = queue_transition(stored.state, QueueEvent::Approve).map_err(refused)?;
+    // Two-person rule: the principal that queued a change set never approves it.
+    if stored.queued_by == reader.principal {
+        return Err(refused(WritebackError::refusal(
+            WRITEBACK_SELF_APPROVAL,
+            format!("the principal that queued {queue_id} cannot approve its proposals"),
+        )));
+    }
     if !stored
         .queue
         .proposals
@@ -340,6 +352,7 @@ pub(super) fn serve(
             proposals,
         } => queue(
             ctx,
+            reader,
             tenant,
             &queue_id,
             proposals,

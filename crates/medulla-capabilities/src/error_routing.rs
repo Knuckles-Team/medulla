@@ -516,6 +516,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "WRITEBACK_PROPOSAL_UNKNOWN",
             "WRITEBACK_BELOW_QUEUE_TIER",
             "WRITEBACK_QUEUE_TOO_LARGE",
+            "WRITEBACK_SELF_APPROVAL",
             // MEDULLA-SDLC-R013: a scenario run record without a phase, scenario or commit.
             "SCENARIO_RUN_INCOMPLETE",
         ],

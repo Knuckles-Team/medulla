@@ -347,21 +347,25 @@ impl SyncHarness {
             .collect()
     }
 
+    /// Send one write-back op. An approval comes from a second principal: the principal that
+    /// queued the change set never approves it (MEDULLA-DECISION-ENGINE-R615.3).
     pub(in crate::admin) async fn writeback(&self, op: WritebackOp) -> WritebackOutcome {
-        ok(
-            "Writeback",
+        let approver = matches!(op, WritebackOp::Approve { .. });
+        let method = Method::DecisionLog {
+            op: Box::new(DecisionLogOp::Writeback {
+                tenant_id: TENANT.to_string(),
+                computation: op,
+            }),
+        };
+        let key = unique("writeback");
+        let response = if approver {
             self.served
-                .call(
-                    &unique("writeback"),
-                    Method::DecisionLog {
-                        op: Box::new(DecisionLogOp::Writeback {
-                            tenant_id: TENANT.to_string(),
-                            computation: op,
-                        }),
-                    },
-                )
-                .await,
-        )
+                .call_as("pack-served-second-approver", &["*"], &key, method)
+                .await
+        } else {
+            self.served.call(&key, method).await
+        };
+        ok("Writeback", response)
     }
 
     /// The edges of the graph as `(source, target)` pairs.
