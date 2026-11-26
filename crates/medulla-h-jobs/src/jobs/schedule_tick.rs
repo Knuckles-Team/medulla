@@ -24,6 +24,7 @@ use medulla_jobs::schedule_run::{
     decide_window, finished_usage, ScheduleRun, TickOutcome, WindowFacts,
 };
 use medulla_protocol_types::protocol::Request;
+use medulla_types::clock::Clock;
 use serde_json::{json, Value};
 
 use super::prelude_jobs::*;
@@ -104,22 +105,41 @@ impl ScheduleCache {
     }
 }
 
-/// Start the tick task once per process.
+/// Start the tick task once per process, on the engine clock.
 pub(super) fn ensure_schedule_tick(state: Arc<RwLock<ServerState>>) {
+    spawn_schedule_tick(state, Arc::new(medulla_kernel::kernel::dispatch_support::EngineClock));
+}
+
+/// The tick task reading time from `clock`, the one engine clock seam
+/// (`medulla_types::clock::Clock`); a pass never reads the wall clock itself.
+fn spawn_schedule_tick(state: Arc<RwLock<ServerState>>, clock: Arc<dyn Clock>) {
     tokio::spawn(async move {
-        let host = format!("engine:{}:{}", std::process::id(), unix_ms());
+        let host = format!("engine:{}:{}", std::process::id(), clock.now_ms());
         let mut cache = ScheduleCache::default();
-        let mut last_ms = unix_ms() as u64;
+        let mut last_ms = clock.now_ms();
         loop {
             let poll_s = medulla_server_api::knob_config::knobs().jobs_schedule_poll_s;
             tokio::time::sleep(Duration::from_secs(poll_s)).await;
-            let now = unix_ms() as u64;
-            let from = std::mem::replace(&mut last_ms, now + 1);
-            if let Err(error) = tick_pass(&state, &host, &mut cache, from, now, poll_s).await {
-                eprintln!("schedule tick pass failed: {error}");
-            }
+            tick_once(&state, &host, &mut cache, &mut last_ms, clock.as_ref(), poll_s).await;
         }
     });
+}
+
+/// One wake of the tick task: read `clock` once, decide every window from the previous wake
+/// to that instant and move `last_ms` past it.
+async fn tick_once(
+    state: &Arc<RwLock<ServerState>>,
+    host: &str,
+    cache: &mut ScheduleCache,
+    last_ms: &mut u64,
+    clock: &dyn Clock,
+    poll_s: u64,
+) {
+    let now = clock.now_ms();
+    let from = std::mem::replace(last_ms, now + 1);
+    if let Err(error) = tick_pass(state, host, cache, from, now, poll_s).await {
+        eprintln!("schedule tick pass failed: {error}");
+    }
 }
 
 async fn tick_pass(
@@ -970,6 +990,286 @@ mod dashboard_purge_tick_tests {
             read.refusal_text().is_some_and(|e| e.contains("DASHBOARD_PURGED")),
             "{:?}",
             read.error
+        );
+    }
+}
+
+// MEDULLA-PLACEMENT-R751.759: the owned schedule lifecycle through the real tick task body. The
+// tick reads one injected clock (`tick_once`), so the test moves a `ManualClock` by whole windows
+// and never sleeps or polls. Schedules are created, paused, resumed and read through the served
+// `AnalyticsJob` methods; the resume instant and the work-item timestamps come from the engine
+// clock, which the test sets to the manual clock with `with_engine_clock_offset`.
+#[cfg(test)]
+mod schedule_lifecycle_tick_tests {
+    use super::*;
+    use medulla_kernel::kernel::dispatch_support::{
+        authoritative_now_ms, with_engine_clock_offset,
+    };
+    use medulla_persistence::redb_backend::RedbBackend;
+    use medulla_protocol_types::protocol::{GraphType, Method};
+    use medulla_protocol_types::result_contract::coordination::ScheduleTickList;
+    use medulla_server_auth::auth::{
+        dispatch_test_on_heap, scoped_test_request_on, ScopedTestCaller,
+    };
+    use medulla_types::clock::ManualClock;
+
+    const SECRET: &str = "schedule-lifecycle-tick-test-secret";
+    const ISSUER: &str = "schedule-lifecycle-tick-test-issuer";
+    const TENANT: &str = "tenant-schedule-lifecycle-tick";
+    const GRAPH: &str = "schedule-lifecycle-tick-test";
+    const EVERY_MS: u64 = 2_000;
+    const PERIOD_S: u64 = 12;
+    const POLL_S: u64 = 1;
+
+    fn next_nonce() -> u64 {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    }
+
+    /// The engine clock a served call reads: the manual clock, set as an offset from the wall.
+    fn engine_offset(clock: &ManualClock) -> u64 {
+        clock.now_ms().saturating_sub(authoritative_now_ms())
+    }
+
+    async fn call(
+        state: &Arc<RwLock<ServerState>>,
+        clock: &ManualClock,
+        method: Method,
+    ) -> Response {
+        let id = next_nonce() + 1;
+        let request = scoped_test_request_on(
+            SECRET,
+            id,
+            GRAPH,
+            method,
+            ScopedTestCaller {
+                principal: ISSUER,
+                tenant: TENANT,
+                scopes: &["*"],
+                nonce: &format!("schedule-lifecycle-nonce-{id}"),
+                idempotency_key: &format!("schedule-lifecycle-key-{id}"),
+            },
+        );
+        with_engine_clock_offset(engine_offset(clock), dispatch_test_on_heap(state, request)).await
+    }
+
+    fn body<T: serde::de::DeserializeOwned>(response: Response) -> T {
+        assert!(response.error.is_none(), "failed: {:?}", response.error);
+        match response.result {
+            Some(ResultPayload::Json(value)) => serde_json::from_value(value).expect("typed body"),
+            Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice(&bytes).expect("typed body"),
+            other => panic!("unexpected payload {other:?}"),
+        }
+    }
+
+    async fn job_op(state: &Arc<RwLock<ServerState>>, clock: &ManualClock, op: JobOp) -> Response {
+        call(state, clock, Method::AnalyticsJob { op }).await
+    }
+
+    async fn create(
+        state: &Arc<RwLock<ServerState>>,
+        clock: &ManualClock,
+        name: &str,
+        task_kind: &str,
+        budget: Option<(u64, u64, u64)>,
+    ) {
+        let start_ms = clock.now_ms();
+        let (max_run_s, max_tokens, period_s) = match budget {
+            Some((run_s, tokens, period)) => (Some(run_s), Some(tokens), Some(period)),
+            None => (None, None, None),
+        };
+        let created = job_op(
+            state,
+            clock,
+            JobOp::ScheduleCreate {
+                graph: GRAPH.into(),
+                name: name.into(),
+                spec: json!({"interval": {"every_ms": EVERY_MS, "start_ms": start_ms}}),
+                task_kind: task_kind.into(),
+                max_run_s,
+                max_tokens,
+                period_s,
+                exclusion_group: None,
+                min_spacing_s: None,
+            },
+        )
+        .await;
+        assert!(created.error.is_none(), "{:?}", created.error);
+    }
+
+    async fn ticks(
+        state: &Arc<RwLock<ServerState>>,
+        clock: &ManualClock,
+        name: &str,
+    ) -> ScheduleTickList {
+        body(
+            job_op(
+                state,
+                clock,
+                JobOp::ScheduleTicks {
+                    graph: GRAPH.into(),
+                    name: name.into(),
+                    limit: None,
+                },
+            )
+            .await,
+        )
+    }
+
+    /// Cancel the work item the schedule's newest fired tick submitted.
+    async fn finish_last_run(state: &Arc<RwLock<ServerState>>, clock: &ManualClock, name: &str) {
+        let list = ticks(state, clock, name).await;
+        let job_id = list
+            .ticks
+            .iter()
+            .rev()
+            .find_map(|tick| tick.work_item_id.clone())
+            .expect("a fired tick links its work item");
+        let cancelled = job_op(state, clock, JobOp::Cancel { job_id }).await;
+        assert!(cancelled.error.is_none(), "{:?}", cancelled.error);
+    }
+
+    /// One wake of the tick task at the manual clock's instant.
+    async fn wake(
+        state: &Arc<RwLock<ServerState>>,
+        cache: &mut ScheduleCache,
+        last_ms: &mut u64,
+        clock: &ManualClock,
+    ) {
+        with_engine_clock_offset(
+            engine_offset(clock),
+            tick_once(state, "engine:test", cache, last_ms, clock, POLL_S),
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    // spec: MEDULLA-PLACEMENT-R751.759
+    async fn an_owned_schedule_runs_pauses_skips_and_reports_on_an_injected_clock() {
+        let dir = tempfile::tempdir().unwrap();
+        let mut server = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(ISSUER),
+        );
+        server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
+        let backend =
+            RedbBackend::open(dir.path().join("graphs").to_string_lossy().into_owned(), 64)
+                .unwrap();
+        server.persistence = Some(Arc::new(backend));
+        std::mem::forget(dir);
+        let state = Arc::new(RwLock::new(server));
+
+        // The clock starts on a window boundary and every wake lands half a window after one,
+        // so no resume instant ever ties with a window.
+        let clock = ManualClock::new(authoritative_now_ms() / EVERY_MS * EVERY_MS);
+        let window0 = clock.now_ms();
+        let created = call(
+            &state,
+            &clock,
+            Method::CreateGraph {
+                graph_name: GRAPH.into(),
+                graph_type: GraphType::Global,
+            },
+        )
+        .await;
+        assert!(created.error.is_none(), "{:?}", created.error);
+        create(&state, &clock, "runs", "association.refresh", None).await;
+        create(
+            &state,
+            &clock,
+            "budget",
+            "association.refresh",
+            Some((1, 1_000_000, PERIOD_S)),
+        )
+        .await;
+        // The remote kind needs a worker capability no worker holds: its run stays active.
+        create(&state, &clock, "remote", "association.remote", None).await;
+
+        let mut cache = ScheduleCache::default();
+        let mut last_ms = clock.now_ms();
+
+        // Window 0: every schedule fires and links the work item it submitted.
+        clock.advance_ms(EVERY_MS / 4);
+        wake(&state, &mut cache, &mut last_ms, &clock).await;
+        for name in ["runs", "budget", "remote"] {
+            let list = ticks(&state, &clock, name).await;
+            assert_eq!(list.ticks.len(), 1, "{name}: {:?}", list.ticks);
+            assert_eq!(list.ticks[0].outcome, "fired", "{name}");
+            assert_eq!(list.ticks[0].window_start_ms, window0, "{name}");
+            assert!(list.ticks[0].work_item_id.is_some(), "{name} links its work item");
+            assert_eq!(list.ticks[0].reason, "", "{name}");
+        }
+
+        // Window 1: a run that finished charged the budget, so the budget schedule skips; the
+        // remote run is still active, so it skips for overlap; the finished run fires again.
+        finish_last_run(&state, &clock, "runs").await;
+        finish_last_run(&state, &clock, "budget").await;
+        clock.advance_ms(EVERY_MS);
+        wake(&state, &mut cache, &mut last_ms, &clock).await;
+        let runs = ticks(&state, &clock, "runs").await;
+        assert_eq!(runs.ticks.len(), 2, "{:?}", runs.ticks);
+        assert_eq!(runs.ticks[1].outcome, "fired");
+        let budget = ticks(&state, &clock, "budget").await;
+        assert_eq!(budget.ticks[1].outcome, "skipped", "{:?}", budget.ticks);
+        assert_eq!(budget.ticks[1].reason, "budget_exhausted");
+        assert!(budget.ticks[1].work_item_id.is_none());
+        assert!(budget.ticks[1].used_run_s >= 1);
+        let remote = ticks(&state, &clock, "remote").await;
+        assert_eq!(remote.ticks[1].outcome, "skipped", "{:?}", remote.ticks);
+        assert_eq!(remote.ticks[1].reason, "overlap");
+        assert!(remote.ticks[1].work_item_id.is_none());
+
+        // Pause: the window that comes due while paused is skipped and nothing fires late.
+        let paused = job_op(
+            &state,
+            &clock,
+            JobOp::SchedulePause {
+                graph: GRAPH.into(),
+                name: "runs".into(),
+            },
+        )
+        .await;
+        assert!(paused.error.is_none(), "{:?}", paused.error);
+        let paused_at_ms = clock.now_ms();
+        finish_last_run(&state, &clock, "runs").await;
+        clock.advance_ms(EVERY_MS);
+        wake(&state, &mut cache, &mut last_ms, &clock).await;
+        let runs = ticks(&state, &clock, "runs").await;
+        let skipped = runs.ticks.last().expect("a paused tick");
+        assert_eq!(skipped.outcome, "skipped", "{:?}", runs.ticks);
+        assert_eq!(skipped.reason, "paused");
+        assert!(skipped.window_start_ms >= paused_at_ms);
+        assert!(skipped.work_item_id.is_none());
+
+        // Resume: the schedule fires again from its next window, without backfill.
+        let resumed = job_op(
+            &state,
+            &clock,
+            JobOp::ScheduleResume {
+                graph: GRAPH.into(),
+                name: "runs".into(),
+            },
+        )
+        .await;
+        assert!(resumed.error.is_none(), "{:?}", resumed.error);
+        let resumed_ms = clock.now_ms();
+        clock.advance_ms(EVERY_MS);
+        wake(&state, &mut cache, &mut last_ms, &clock).await;
+
+        // The served history reports every outcome in time order with the budget used.
+        let history = ticks(&state, &clock, "runs").await;
+        assert_eq!(history.schedule, "runs");
+        let windows: Vec<u64> = history.ticks.iter().map(|tick| tick.window_start_ms).collect();
+        assert!(windows.windows(2).all(|pair| pair[0] < pair[1]), "{windows:?}");
+        let latest = history.ticks.last().expect("a tick after resume");
+        assert_eq!(latest.outcome, "fired", "{:?}", history.ticks);
+        assert!(latest.window_start_ms >= resumed_ms);
+        assert!(latest.work_item_id.is_some());
+        assert!(history.ticks.iter().any(|tick| tick.outcome == "skipped"));
+        assert_eq!(
+            windows.len(),
+            4,
+            "one tick per window, none backfilled: {windows:?}"
         );
     }
 }
