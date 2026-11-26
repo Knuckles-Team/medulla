@@ -1,0 +1,22 @@
+{
+  "source": "onetrust-api",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "assessment": "assessment-1",
+      "assessmentDueDate": "assessmentDueDate-1",
+      "processingActivity": "processingActivity-1",
+      "joinKey": "onetrust.q1-key-1",
+      "id": "onetrust-api-onetrust.q1-1",
+      "label": "onetrust-api 1"
+    },
+    {
+      "assessment": "assessment-2",
+      "assessmentDueDate": "assessmentDueDate-2",
+      "processingActivity": "processingActivity-2",
+      "joinKey": "onetrust.q1-key-2",
+      "id": "onetrust-api-onetrust.q1-2",
+      "label": "onetrust-api 2"
+    }
+  ]
+}

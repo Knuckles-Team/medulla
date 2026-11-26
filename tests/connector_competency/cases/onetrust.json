@@ -1,0 +1,37 @@
+{
+  "connector": "onetrust",
+  "rollup": "MEDULLA-CQ-CONN-R043",
+  "vocabulary_module": "government-v1.ttl",
+  "terms": [
+    "PrivacyAssessment",
+    "ProcessingActivity",
+    "assessmentCovers",
+    "assessmentDueDate",
+    "assessedVendor",
+    "assessmentStatus"
+  ],
+  "questions": [
+    {
+      "id": "onetrust.q1",
+      "kind": "single",
+      "question": "Which privacy assessments are overdue and which processing activities do they cover?",
+      "uql": "FOREIGN SCAN 'onetrust-api'",
+      "sources": [
+        "onetrust-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "onetrust-api": "http_endpoint"
+      },
+      "columns": [
+        "assessment",
+        "assessmentDueDate",
+        "processingActivity"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "onetrust-api/single.json"
+      ]
+    }
+  ]
+}
