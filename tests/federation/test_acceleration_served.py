@@ -143,8 +143,8 @@ def test_stale_watermark_reads_live(clean_graph, pg_source):
         source,
         acceleration={
             "source_supports_copy": True,
-            "hot_subset_predicate": "total > 0",
-            "freshness_watermark": "2020-01-01T00:00:00Z",
+            "hot_subset_predicate": "id < 10",
+            "freshness_watermark": "2000-01-01T00:00:00Z",
         },
     )
     assert len(_scan(clean_graph, "accel-stale")) == 2
