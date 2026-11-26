@@ -555,7 +555,8 @@ mod tests {
             .is_empty());
     }
 
-    // proves R040.1.4: a pin with no revision to compare against is unevaluable
+    // proves R040.1.4: a pin with no revision to compare against is unevaluable,
+    // refuses CONSTRAINT_UNEVALUABLE and ranks nothing
     // spec: MEDULLA-FEDERATED-QUERY-R040.1.4
     #[test]
     fn pin_without_a_revision_is_unevaluable_and_ranks_nothing() {
