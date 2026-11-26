@@ -22,15 +22,15 @@ use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
 #[cfg(feature = "owl")]
-use medulla_exec::algebra::Pred;
-#[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
-use medulla_exec::algebra::{Op, Plan};
-#[cfg(feature = "owl")]
 use medulla_exec::exec::execute;
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
 use medulla_exec::exec::PlanCtx;
 #[cfg(any(feature = "timeseries", feature = "tensor"))]
 use medulla_exec::exec::PlanExt;
+#[cfg(feature = "owl")]
+use medulla_query_types::wire::Pred;
+#[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
+use medulla_query_types::wire::{Op, Plan};
 
 #[cfg(any(feature = "owl", feature = "timeseries", feature = "tensor"))]
 fn blob(v: serde_json::Value) -> Vec<u8> {

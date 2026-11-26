@@ -354,11 +354,11 @@ async fn validate_commit_infer_reindex_under_concurrency_eg438() {
 
     // ── 3. INFERENCE CLOSURE: the committed axiom makes s1 an inferred Device ──
     // REASON with an EMPTY ontology reads the axiom from the committed TBox.
-    let reason = medulla_exec::algebra::Plan::new(vec![
-        medulla_exec::algebra::Op::Scan {
+    let reason = medulla_query_types::wire::Plan::new(vec![
+        medulla_query_types::wire::Op::Scan {
             label: "Sensor".into(),
         },
-        medulla_exec::algebra::Op::Reason {
+        medulla_query_types::wire::Op::Reason {
             target_class: "<http://ex/Device>".into(),
             ontology: String::new(),
         },

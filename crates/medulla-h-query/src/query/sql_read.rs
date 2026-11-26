@@ -465,7 +465,7 @@ where
 /// never share a cached answer (MEDULLA-FEDERATED-QUERY-R040.1.7).
 #[cfg(feature = "query")]
 pub(crate) fn unified_cache_payload(
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
     retrieval: Option<&medulla_index_types::retrieval_request::RetrievalRequest>,
 ) -> Result<Vec<u8>, String> {
     let mut payload = msgpack_bytes(plan)?;
@@ -479,7 +479,7 @@ pub(crate) fn unified_cache_payload(
 #[cfg(feature = "query")]
 pub(crate) async fn handle_unified_query(
     ctx: &QueryHandlerCtx<'_>,
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     foreign_execution: Option<medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
     foreign_executions: medulla_types::contract::BoundedVec<
         medulla_catalog_types::foreign_read::ForeignReadExecutionRef,
@@ -798,9 +798,9 @@ pub(super) async fn catalog_sql_response(
 #[cfg(all(test, feature = "query"))]
 mod retrieval_request_tests {
     use super::unified_cache_payload;
-    use medulla_exec::algebra::{Op, Plan};
     use medulla_index_types::retrieval_request::RetrievalRequest;
     use medulla_query_types::wire::{EntityPredicate, PredLiteral, RetrievalConstraints};
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_types::contract::BoundedVec;
 
     fn request(kind: &str) -> RetrievalRequest {

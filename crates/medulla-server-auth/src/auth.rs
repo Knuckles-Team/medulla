@@ -2090,7 +2090,7 @@ mod tests {
                 budget: None,
             },
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(vec![]),
+                plan: medulla_query_types::wire::Plan::new(vec![]),
                 foreign_execution: None,
                 foreign_executions: Default::default(),
                 code_map: None,

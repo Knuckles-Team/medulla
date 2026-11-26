@@ -12,10 +12,10 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_exec::algebra::{Op, Plan};
 use medulla_index_types::embedding::{EmbeddingSpaceRef, Modality, ModalityBinding};
 use medulla_index_types::retrieval_request::{ModalityPair, RetrievalRequest};
 use medulla_protocol_types::protocol::{GraphType, Method, Response};
+use medulla_query_types::wire::{Op, Plan};
 use medulla_server::query_encoders::register_query_encoders;
 use medulla_server_api::state::ServerState;
 use medulla_server_ops::api::query_txn::query_support::uql_text_encoder_identity;

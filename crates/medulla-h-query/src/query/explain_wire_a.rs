@@ -35,7 +35,7 @@ pub(crate) fn explain_snapshot(
 /// result rows (see `rank_op`'s candidate-allowlist doc in `medulla-plan/src/exec.rs`).
 #[cfg(feature = "query")]
 pub(crate) fn explain_plan(
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     view: &medulla_graph_core::graph::GraphView,
     semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<medulla_protocol_types::protocol::ExplainPlanResult, String> {
@@ -275,7 +275,7 @@ fn evidence_address_wire_runtime(
 #[cfg(feature = "query")]
 pub(crate) fn explain_provenance(
     request_id: u64,
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     view: &medulla_graph_core::graph::GraphView,
     semantic: &medulla_semantic_index::semantic::SemanticStore,
 ) -> Result<medulla_result_types::epistemic_operations::EvidenceBundle, String> {
@@ -335,7 +335,7 @@ pub(crate) fn explain_provenance_result(
             // Reuse the SAME `Op::EvidenceFor` resolution the plan-Op surface runs, as
             // its own tiny one-op plan — no private medulla-plan access needed.
             let evidence_plan =
-                medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::EvidenceFor {
+                medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::EvidenceFor {
                     claim_id: row.id.clone(),
                 }]);
             let source_refs = medulla_exec::exec::execute(&evidence_plan, _ctx)
@@ -413,7 +413,7 @@ pub(crate) fn explain_provenance_result(
 /// `policy_denied_ids` is always empty.
 #[cfg(feature = "query")]
 pub(crate) fn explain_policy(
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     full_view: &medulla_graph_core::graph::GraphView,
     filtered_view: &medulla_graph_core::graph::GraphView,
     semantic: &medulla_semantic_index::semantic::SemanticStore,

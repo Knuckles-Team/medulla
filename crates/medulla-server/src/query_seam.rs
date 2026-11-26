@@ -52,7 +52,7 @@ impl medulla_server_ops::api::query_txn::QueryApi for QuerySeam {
     #[cfg(feature = "query")]
     fn run_unified_staged_rows(
         &self,
-        plan: medulla_exec::algebra::Plan,
+        plan: medulla_query_types::wire::Plan,
         view: &medulla_graph_core::graph::GraphView,
         core: &Arc<medulla_graph_core::graph::GraphCore>,
         staged: &[(String, Vec<f32>)],

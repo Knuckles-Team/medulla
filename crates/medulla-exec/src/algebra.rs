@@ -18,7 +18,7 @@
 //! vector. A `Reason` (datalog fixpoint) op, blob/object source ops, cross-modal
 //! write ACID and cross-shard are explicit later increments (intentionally absent).
 
-pub use medulla_query_types::wire::{Op, Plan, Pred};
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 #[cfg(test)]
 mod tests {

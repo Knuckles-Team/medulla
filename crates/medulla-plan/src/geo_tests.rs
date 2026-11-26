@@ -13,9 +13,9 @@ use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
-use medulla_exec::algebra::{Op, Plan, Pred};
 use medulla_exec::exec::PlanCtx;
 use medulla_exec::exec::PlanExt;
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()
@@ -338,7 +338,6 @@ fn reproject_keeps_tagged_rows_drops_untagged() {
 
 #[test]
 fn spatial_op_buffer_and_intersection() {
-    use medulla_exec::algebra::Op;
     use medulla_query_types::wire::SpatialOpKind;
     let view = parcels();
     // Buffer succeeds for every parcel (derived geometry always exists).

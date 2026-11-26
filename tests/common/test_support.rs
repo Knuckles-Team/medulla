@@ -592,7 +592,7 @@ pub async fn unified_query(
     state: &SharedState,
     auth_secret: &str,
     id: u64,
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
 ) -> medulla_protocol_types::protocol::Response {
     dispatch(
         state,

@@ -7,9 +7,9 @@
 use medulla_query_types::wire::{ForeignSourceSpec, KeptPlanReport};
 
 use super::PlanCtx;
-use crate::algebra::Op;
 use crate::budget::FederationBudget;
 use crate::rowset::RowSet;
+use medulla_query_types::wire::Op;
 
 /// One remote fragment of the current query, as the UQL stage report shows it.
 #[derive(Clone, Debug, PartialEq)]

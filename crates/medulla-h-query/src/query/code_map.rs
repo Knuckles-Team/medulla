@@ -431,7 +431,7 @@ fn auth_scope_digest(ctx: &QueryHandlerCtx<'_>) -> String {
 /// counted or cursor-minted for a principal without current signed authority.
 pub(super) async fn serve(
     ctx: &QueryHandlerCtx<'_>,
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
     query: &CodeMapQuery,
 ) -> Response {
     let req_id = ctx.req_id;

@@ -104,12 +104,12 @@ pub fn enabled() -> bool {
 
 /// The plan-only source identity for EXPLAIN. This uses the same fingerprint as
 /// execution while omitting registered names, URLs, DSNs and credentials.
-pub fn explain_source(op: &medulla_exec::algebra::Op) -> Option<String> {
+pub fn explain_source(op: &medulla_query_types::wire::Op) -> Option<String> {
     let identity = match op {
-        medulla_exec::algebra::Op::Foreign { name } => {
+        medulla_query_types::wire::Op::Foreign { name } => {
             remote::Identity::of_spec(&ForeignSourceSpec::Named { name: name.clone() }, None)
         }
-        medulla_exec::algebra::Op::ForeignScan { source, .. } => {
+        medulla_query_types::wire::Op::ForeignScan { source, .. } => {
             remote::Identity::of_spec(source, None)
         }
         _ => return None,

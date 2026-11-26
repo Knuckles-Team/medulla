@@ -154,7 +154,7 @@ pub(crate) fn graphql_lifecycle_replay_is_live(
 /// re-deriving the same tenant/namespace scope a second time.
 #[cfg(all(feature = "query", feature = "tsdb"))]
 pub fn served_tsdb_scope(
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
     graph: &str,
     read_authority: Option<&GraphReadAuthority>,
 ) -> Result<Option<(String, String)>, String> {

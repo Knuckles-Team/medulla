@@ -13,10 +13,10 @@ use std::sync::Arc;
 use medulla_query_types::wire::{ForeignSourceSpec, Pred};
 
 use crate::federation::ForeignSourceRegistry;
-use medulla_exec::algebra::Op;
-use medulla_exec::algebra::Plan;
 use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::RowSet;
+use medulla_query_types::wire::Op;
+use medulla_query_types::wire::Plan;
 
 /// Build a `(String, Option<f32>)` row list from `(&str, Option<f32>)` pairs.
 fn rows(pairs: &[(&str, Option<f32>)]) -> Vec<(String, Option<f32>)> {

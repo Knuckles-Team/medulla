@@ -25,7 +25,7 @@
 //!     ≈ top_k/selectivity** candidates so enough survive the downstream filter.
 
 #[cfg(any(feature = "query", test))]
-use crate::algebra::Op;
+use medulla_query_types::wire::Op;
 
 #[cfg(feature = "query")]
 mod rowcount;
@@ -177,7 +177,7 @@ impl CostModel {
 #[cfg(feature = "query")]
 mod index_method {
     use super::{ModalityCardinality, DEFAULT_TOP_K};
-    use crate::algebra::Op;
+    use medulla_query_types::wire::Op;
 
     /// The seam's shared COST OUTPUT — mirrors turso's
     /// `IndexMethodCostEstimate{estimated_cost, estimated_rows}`. `estimated_cost` is the
@@ -811,8 +811,8 @@ impl ModalityCardinality {
     /// in a 2000..2029 column) reads as selective and reorders filter-first, while a broad one
     /// (`year > 2001`) stays; only when the column has NO numeric stats does it fall back to the
     /// fixed `RANGE_SEL_FALLBACK` heuristic. JSONPath / spatial estimates are unchanged.
-    fn filter_selectivity(&self, preds: &[crate::algebra::Pred]) -> f64 {
-        use crate::algebra::Pred;
+    fn filter_selectivity(&self, preds: &[medulla_query_types::wire::Pred]) -> f64 {
+        use medulla_query_types::wire::Pred;
         /// Conservative range estimate used only when the column has no statistics.
         const RANGE_SEL_FALLBACK: f64 = 0.33;
         /// Conservative equality estimate used only when the column has no distinct-value
@@ -1114,7 +1114,7 @@ pub trait Cardinality {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algebra::Pred;
+    use medulla_query_types::wire::Pred;
 
     /// The cost model picks filter-first vs vector-first by selectivity — the
     /// cross-modal reordering decision a unified planner exists to make.

@@ -79,12 +79,13 @@ async fn read_rows(
     source_name: &str,
     approval: &ConnectorPackSourceApprovalResult,
 ) -> Result<Vec<(String, Option<f32>)>, String> {
-    let plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::ForeignScan {
-        source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
-            name: source_name.to_string(),
-        }),
-        join: false,
-    }]);
+    let plan =
+        medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::ForeignScan {
+            source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
+                name: source_name.to_string(),
+            }),
+            join: false,
+        }]);
     let plan_digest = Digest256::sha256(&rmp_serde::to_vec_named(&plan).unwrap());
     let open = served
         .call(

@@ -24,7 +24,7 @@ enum Source {
     Library(LibraryCandidateScope),
     Graph {
         graph: String,
-        plan: medulla_exec::algebra::Plan,
+        plan: medulla_query_types::wire::Plan,
     },
 }
 

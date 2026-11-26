@@ -35,16 +35,16 @@ pub(crate) fn query_assets(method: &Method) -> Vec<String> {
 }
 
 /// The distinct scan labels of a plan, sorted.
-pub(super) fn plan_labels(plan: &medulla_exec::algebra::Plan) -> Vec<String> {
+pub(super) fn plan_labels(plan: &medulla_query_types::wire::Plan) -> Vec<String> {
     let mut labels: Vec<String> = plan
         .ops
         .iter()
         .filter_map(|op| match op {
-            medulla_exec::algebra::Op::Scan { label } => Some(label.clone()),
+            medulla_query_types::wire::Op::Scan { label } => Some(label.clone()),
             // A pack source read counts as a read of its catalog asset
             // (MEDULLA-FEDERATED-QUERY-R722.5).
             #[cfg(feature = "federation")]
-            medulla_exec::algebra::Op::ForeignScan { source, .. } => foreign_source_name(source),
+            medulla_query_types::wire::Op::ForeignScan { source, .. } => foreign_source_name(source),
             _ => None,
         })
         .collect();
@@ -156,7 +156,7 @@ pub(crate) async fn served_usage_leg(
     state: &Arc<RwLock<ServerState>>,
     graph_name: &str,
     read_authority: Option<&GraphReadAuthority>,
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
 ) -> Result<Option<Arc<dyn medulla_exec::exec::UsageSource>>, String> {
     if !super::planning::plan_needs_usage(&plan.ops) {
         return Ok(None);
@@ -191,7 +191,7 @@ pub(crate) async fn served_usage_leg(
     _state: &Arc<RwLock<ServerState>>,
     _graph_name: &str,
     _read_authority: Option<&GraphReadAuthority>,
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
 ) -> Result<Option<Arc<dyn medulla_exec::exec::UsageSource>>, String> {
     if super::planning::plan_needs_usage(&plan.ops) {
         return Err("USAGE: the usage log is unavailable in this build".to_string());
@@ -269,7 +269,7 @@ mod tests {
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R764.3.1
     #[test]
     fn unified_plan_scan_labels_are_the_assets() {
-        use medulla_exec::algebra::{Op, Plan};
+        use medulla_query_types::wire::{Op, Plan};
         let plan = Plan::new(vec![
             Op::Scan {
                 label: "Doc".into(),

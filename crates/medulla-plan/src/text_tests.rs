@@ -12,8 +12,8 @@ use medulla_semantic_index::semantic::SemanticStore;
 use medulla_text::TextIndex;
 use serde_json::json;
 
-use medulla_exec::algebra::{Op, Plan};
 use medulla_exec::exec::{PlanCtx, PlanExt};
+use medulla_query_types::wire::{Op, Plan};
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()
@@ -279,7 +279,7 @@ fn rank_text_finds_selective_candidates_behind_many_higher_scoring_noise_docs() 
             label: "Doc".into(),
         },
         Op::Filter {
-            preds: vec![medulla_exec::algebra::Pred::Eq {
+            preds: vec![medulla_query_types::wire::Pred::Eq {
                 prop: "keep".into(),
                 value: "yes".into(),
             }],
@@ -338,7 +338,7 @@ fn filtered_rank_text_equals_the_brute_force_restricted_ranking() {
                 label: "Doc".into(),
             },
             Op::Filter {
-                preds: vec![medulla_exec::algebra::Pred::Eq {
+                preds: vec![medulla_query_types::wire::Pred::Eq {
                     prop: "category".into(),
                     value: category.into(),
                 }],

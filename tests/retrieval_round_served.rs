@@ -13,9 +13,9 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
-use medulla_exec::algebra::{Op, Plan};
 use medulla_exec::exec::{HashEmbedder, TextEmbedder};
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
+use medulla_query_types::wire::{Op, Plan};
 use medulla_result_types::retrieval_arbitration::{
     AnswerGrounding, ArbitrationChoice, Candidate, Citation, Claim, SupportState,
     ARBITRATION_ABSTAIN,

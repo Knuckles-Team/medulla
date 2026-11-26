@@ -4,9 +4,9 @@
 //! any request, which the naive full-fetch path could not produce.
 
 use super::{run_unified_with, ServedIndexes};
-use medulla_exec::algebra::Op;
 use medulla_federation::federation::ForeignSourceRegistry;
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::wire::Op;
 use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_server_ops::api::query_txn::query_support::execute_rows;
@@ -32,7 +32,7 @@ fn run(
         ..ServedIndexes::default()
     };
     run_unified_with(
-        medulla_exec::algebra::Plan::new(ops),
+        medulla_query_types::wire::Plan::new(ops),
         &view,
         &semantic,
         served,

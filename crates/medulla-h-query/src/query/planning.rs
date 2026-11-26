@@ -24,7 +24,7 @@ use super::*;
 /// captures everything the query reads: a stale hit is a correctness bug.
 #[cfg(feature = "result-cache")]
 pub(crate) fn plan_dependency_set(
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
     embedding_generation: Option<u64>,
 ) -> Option<medulla_query_cache::dep_scope::DepSet> {
     let mut walk = DepWalk {
@@ -55,39 +55,39 @@ struct DepWalk {
 
 #[cfg(feature = "result-cache")]
 impl DepWalk {
-    fn ops(&mut self, ops: &[medulla_exec::algebra::Op]) -> Option<()> {
+    fn ops(&mut self, ops: &[medulla_query_types::wire::Op]) -> Option<()> {
         ops.iter().try_for_each(|op| self.op(op))
     }
 
-    fn op(&mut self, op: &medulla_exec::algebra::Op) -> Option<()> {
+    fn op(&mut self, op: &medulla_query_types::wire::Op) -> Option<()> {
         use medulla_query_cache::dep_scope::Dim;
         match op {
-            medulla_exec::algebra::Op::Scan { label } => self.source(label),
-            medulla_exec::algebra::Op::ScanAll {} => self.source(""),
-            medulla_exec::algebra::Op::Filter { .. } if self.rows_unscoped => {
+            medulla_query_types::wire::Op::Scan { label } => self.source(label),
+            medulla_query_types::wire::Op::ScanAll {} => self.source(""),
+            medulla_query_types::wire::Op::Filter { .. } if self.rows_unscoped => {
                 self.dims.push(Dim::AllNodes)
             }
-            medulla_exec::algebra::Op::Filter { .. }
-            | medulla_exec::algebra::Op::Limit { .. }
-            | medulla_exec::algebra::Op::Project { .. } => {}
-            medulla_exec::algebra::Op::Traverse { rel, .. } => {
+            medulla_query_types::wire::Op::Filter { .. }
+            | medulla_query_types::wire::Op::Limit { .. }
+            | medulla_query_types::wire::Op::Project { .. } => {}
+            medulla_query_types::wire::Op::Traverse { rel, .. } => {
                 self.dims.push(Dim::EdgeType(rel.clone()));
                 self.dims.push(Dim::RowVisibility);
                 self.rows_unscoped = true;
             }
-            medulla_exec::algebra::Op::RankNodeDistance { .. }
-            | medulla_exec::algebra::Op::RankMentions {} => {
+            medulla_query_types::wire::Op::RankNodeDistance { .. }
+            | medulla_query_types::wire::Op::RankMentions {} => {
                 self.dims.push(Dim::AllEdges);
                 self.dims.push(Dim::RowVisibility);
             }
-            medulla_exec::algebra::Op::Rank { .. }
-            | medulla_exec::algebra::Op::RankEmbed { .. }
-            | medulla_exec::algebra::Op::RankMmr { .. } => {
+            medulla_query_types::wire::Op::Rank { .. }
+            | medulla_query_types::wire::Op::RankEmbed { .. }
+            | medulla_query_types::wire::Op::RankMmr { .. } => {
                 self.dims
                     .push(Dim::EmbeddingGeneration(self.embedding_generation?));
             }
             #[cfg(feature = "text")]
-            medulla_exec::algebra::Op::FuseRrf { branches, .. } => self.fuse(branches)?,
+            medulla_query_types::wire::Op::FuseRrf { branches, .. } => self.fuse(branches)?,
             // Any op reading state outside the dependency clock's model ⇒ coarse fallback.
             _ => return None,
         }
@@ -108,7 +108,7 @@ impl DepWalk {
     /// Each branch runs over the SAME input rows; the fused rows are unscoped when any branch's
     /// are. A branch's own `Scan` does not make the plan sourced (the fused input is).
     #[cfg(feature = "text")]
-    fn fuse(&mut self, branches: &[Vec<medulla_exec::algebra::Op>]) -> Option<()> {
+    fn fuse(&mut self, branches: &[Vec<medulla_query_types::wire::Op>]) -> Option<()> {
         let input_unscoped = self.rows_unscoped;
         let has_source = self.has_source;
         let mut fused_unscoped = input_unscoped;
@@ -127,10 +127,10 @@ impl DepWalk {
 /// inside an `Op::FuseRrf` branch (CONCEPT:MEDULLA-KG.query.served-text-index-binding)? Drives whether
 /// `run_unified` builds+binds a served text index at all, so a non-text plan pays nothing.
 #[cfg(all(feature = "query", feature = "text"))]
-pub(crate) fn plan_needs_text(ops: &[medulla_exec::algebra::Op]) -> bool {
+pub(crate) fn plan_needs_text(ops: &[medulla_query_types::wire::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_exec::algebra::Op::RankText { .. } => true,
-        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+        medulla_query_types::wire::Op::RankText { .. } => true,
+        medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|b| plan_needs_text(b))
         }
         _ => false,
@@ -142,10 +142,10 @@ pub(crate) fn plan_needs_text(ops: &[medulla_exec::algebra::Op]) -> bool {
 /// Drives whether `run_unified` binds the served spatial index at all, so a non-spatial
 /// plan pays nothing.
 #[cfg(all(feature = "query", feature = "geo"))]
-pub(crate) fn plan_needs_spatial(ops: &[medulla_exec::algebra::Op]) -> bool {
+pub(crate) fn plan_needs_spatial(ops: &[medulla_query_types::wire::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_exec::algebra::Op::SpatialScan { .. } => true,
-        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+        medulla_query_types::wire::Op::SpatialScan { .. } => true,
+        medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|b| plan_needs_spatial(b))
         }
         _ => false,
@@ -155,11 +155,11 @@ pub(crate) fn plan_needs_spatial(ops: &[medulla_exec::algebra::Op]) -> bool {
 /// Does `ops` read the decision log — a `DECISIONS` source (EH-066), at the top level
 /// or inside an `Op::FuseRrf` branch? Only then is the caller's log bound to the plan.
 #[cfg(all(feature = "query", feature = "decide"))]
-pub(crate) fn plan_needs_decisions(ops: &[medulla_exec::algebra::Op]) -> bool {
+pub(crate) fn plan_needs_decisions(ops: &[medulla_query_types::wire::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_exec::algebra::Op::DecisionScan { .. } => true,
+        medulla_query_types::wire::Op::DecisionScan { .. } => true,
         #[cfg(feature = "text")]
-        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+        medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|b| plan_needs_decisions(b))
         }
         _ => false,
@@ -169,11 +169,11 @@ pub(crate) fn plan_needs_decisions(ops: &[medulla_exec::algebra::Op]) -> bool {
 /// Does `ops` read the caller's usage log — a `USAGE` source (MEDULLA-TYPED-PACKS-R108.8), at
 /// the top level or inside an `Op::FuseRrf` branch? Only then is the usage log bound to the plan.
 #[cfg(feature = "query")]
-pub(crate) fn plan_needs_usage(ops: &[medulla_exec::algebra::Op]) -> bool {
+pub(crate) fn plan_needs_usage(ops: &[medulla_query_types::wire::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_exec::algebra::Op::UsageScan { .. } => true,
+        medulla_query_types::wire::Op::UsageScan { .. } => true,
         #[cfg(feature = "text")]
-        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+        medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|b| plan_needs_usage(b))
         }
         _ => false,
@@ -183,17 +183,17 @@ pub(crate) fn plan_needs_usage(ops: &[medulla_exec::algebra::Op]) -> bool {
 /// Does `ops` hold a `SOURCE RELIABILITY` stage (EH-525), which learns from the caller's
 /// decision log when one can be bound — and keeps its belief-graph prior when not?
 #[cfg(all(feature = "query", feature = "decide"))]
-pub(crate) fn plan_reads_reputation(ops: &[medulla_exec::algebra::Op]) -> bool {
+pub(crate) fn plan_reads_reputation(ops: &[medulla_query_types::wire::Op]) -> bool {
     ops.iter().any(is_reliability_stage)
 }
 
 #[cfg(all(feature = "query", feature = "decide", feature = "epistemic"))]
-fn is_reliability_stage(op: &medulla_exec::algebra::Op) -> bool {
-    matches!(op, medulla_exec::algebra::Op::SourceReliability { .. })
+fn is_reliability_stage(op: &medulla_query_types::wire::Op) -> bool {
+    matches!(op, medulla_query_types::wire::Op::SourceReliability { .. })
 }
 
 #[cfg(all(feature = "query", feature = "decide", not(feature = "epistemic")))]
-fn is_reliability_stage(_op: &medulla_exec::algebra::Op) -> bool {
+fn is_reliability_stage(_op: &medulla_query_types::wire::Op) -> bool {
     false
 }
 
@@ -342,13 +342,13 @@ impl<'c> CoreIndexes<'c> {
 /// `plan` decides which legs are bound (every op of the statement).
 #[cfg(feature = "query")]
 pub fn run_unified_with<T>(
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     view: &medulla_graph_core::graph::GraphView,
     semantic: &medulla_semantic_index::semantic::SemanticStore,
     served: ServedIndexes<'_>,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
     retrieval: Option<&medulla_index_types::retrieval_request::RetrievalRequest>,
-    finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
+    finish: impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
 ) -> Result<T, String> {
     #[cfg(feature = "tsdb")]
     let TsdbLegBind {
@@ -520,7 +520,7 @@ pub fn run_unified_with<T>(
         }
         None => ctx,
     };
-    let result = finish(&medulla_exec::algebra::Plan::new(ops), &ctx);
+    let result = finish(&medulla_query_types::wire::Plan::new(ops), &ctx);
     #[cfg(feature = "federation")]
     log_federation_trace(federation.as_ref());
     result
@@ -533,7 +533,7 @@ pub fn run_unified_with<T>(
 #[cfg(feature = "geo")]
 pub(crate) fn run_unified_bind_spatial<'a>(
     ctx: medulla_exec::exec::PlanCtx<'a>,
-    ops: &[medulla_exec::algebra::Op],
+    ops: &[medulla_query_types::wire::Op],
     served_spatial: Option<&'a medulla_h_retrieve::secondary_indexes::ServedSpatialIndex>,
 ) -> medulla_exec::exec::PlanCtx<'a> {
     if !plan_needs_spatial(ops) {
@@ -548,11 +548,11 @@ pub(crate) fn run_unified_bind_spatial<'a>(
 /// Does `ops` read any foreign source (named or inline, top level or inside an
 /// `Op::FuseRrf` branch)? Such a plan runs under a federation-optimizer session (EH-563).
 #[cfg(all(feature = "query", feature = "federation"))]
-fn plan_touches_foreign(ops: &[medulla_exec::algebra::Op]) -> bool {
+fn plan_touches_foreign(ops: &[medulla_query_types::wire::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_exec::algebra::Op::Foreign { .. }
-        | medulla_exec::algebra::Op::ForeignScan { .. } => true,
-        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+        medulla_query_types::wire::Op::Foreign { .. }
+        | medulla_query_types::wire::Op::ForeignScan { .. } => true,
+        medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|b| plan_touches_foreign(b))
         }
         _ => false,
@@ -607,10 +607,10 @@ pub(crate) fn run_unified_bind_embedder(
 /// Does `ops` embed a query text (`Op::RankEmbed`), at the top level or inside an
 /// `Op::FuseRrf` branch? Only such a plan needs a modality encoder.
 #[cfg(feature = "query")]
-fn plan_needs_embedder(ops: &[medulla_exec::algebra::Op]) -> bool {
+fn plan_needs_embedder(ops: &[medulla_query_types::wire::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_exec::algebra::Op::RankEmbed { .. } => true,
-        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+        medulla_query_types::wire::Op::RankEmbed { .. } => true,
+        medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|b| plan_needs_embedder(b))
         }
         _ => false,
@@ -626,7 +626,7 @@ fn plan_needs_embedder(ops: &[medulla_exec::algebra::Op]) -> bool {
 #[cfg(feature = "query")]
 pub(crate) fn bind_modality_encoders<'a>(
     ctx: medulla_exec::exec::PlanCtx<'a>,
-    ops: &[medulla_exec::algebra::Op],
+    ops: &[medulla_query_types::wire::Op],
     pair: &medulla_index_types::retrieval_request::ModalityPair,
 ) -> Result<medulla_exec::exec::PlanCtx<'a>, String> {
     if !plan_needs_embedder(ops) {
@@ -812,7 +812,7 @@ impl ServedPlanLegs {
         state: &Arc<RwLock<ServerState>>,
         graph_name: &str,
         read_authority: Option<&GraphReadAuthority>,
-        plan: &medulla_exec::algebra::Plan,
+        plan: &medulla_query_types::wire::Plan,
         foreign_execution: Option<&medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
         foreign_executions: &[medulla_catalog_types::foreign_read::ForeignReadExecutionRef],
     ) -> Result<Self, String> {
@@ -885,7 +885,7 @@ impl ServedPlanLegs {
 
     /// Decide the watermark leg for `plan` against the queried graph's watermark nodes.
     #[cfg(feature = "result-cache")]
-    fn with_watermarks(mut self, core: &GraphCore, plan: &medulla_exec::algebra::Plan) -> Self {
+    fn with_watermarks(mut self, core: &GraphCore, plan: &medulla_query_types::wire::Plan) -> Self {
         self.watermarks = ForeignWatermarks::for_ops(core, &plan.ops);
         #[cfg(feature = "federation")]
         if let Some(foreign) = self.foreign.as_mut() {
@@ -931,7 +931,7 @@ impl ServedPlanLegs {
     }
 
     #[cfg(not(feature = "result-cache"))]
-    fn with_watermarks(self, _core: &GraphCore, _plan: &medulla_exec::algebra::Plan) -> Self {
+    fn with_watermarks(self, _core: &GraphCore, _plan: &medulla_query_types::wire::Plan) -> Self {
         self
     }
 
@@ -965,7 +965,7 @@ impl ServedPlanLegs {
 #[cfg(all(feature = "query", feature = "decide"))]
 async fn served_decision_leg(
     state: &Arc<RwLock<ServerState>>,
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
     read_authority: Option<&GraphReadAuthority>,
 ) -> Result<Option<Arc<dyn medulla_exec::exec::DecisionSource>>, String> {
     let required = plan_needs_decisions(&plan.ops);
@@ -1005,7 +1005,7 @@ pub(crate) async fn served_reputation_source(
 /// Parse UQL `text` into the `wire::Plan` every UQL front-end runs; a parse error is
 /// the caret-annotated refusal response.
 #[cfg(feature = "query")]
-pub(crate) fn parse_uql(req_id: u64, text: &str) -> Result<medulla_exec::algebra::Plan, Response> {
+pub(crate) fn parse_uql(req_id: u64, text: &str) -> Result<medulla_query_types::wire::Plan, Response> {
     medulla_uql::parse(text)
         .map_err(|e| Response::err(req_id, format!("{}: {}", e.code, e.render(text))))
 }
@@ -1074,7 +1074,7 @@ mod foreign_query_digest_tests {
 impl QueryHandlerCtx<'_> {
     pub(crate) async fn served_legs_with_foreign_executions(
         &self,
-        plan: &medulla_exec::algebra::Plan,
+        plan: &medulla_query_types::wire::Plan,
         foreign_execution: Option<&medulla_catalog_types::foreign_read::ForeignReadExecutionRef>,
         foreign_executions: &[medulla_catalog_types::foreign_read::ForeignReadExecutionRef],
     ) -> Result<ServedPlanLegs, Response> {
@@ -1119,7 +1119,7 @@ pub(crate) async fn run_unified_off_lock(
     req_id: u64,
     core: &Arc<GraphCore>,
     snap: Arc<medulla_graph_core::graph::GraphView>,
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     legs: ServedPlanLegs,
     scope: &ReadScope,
 ) -> UnifiedRunOutcome {
@@ -1136,7 +1136,7 @@ pub(crate) async fn run_unified_off_lock(
 #[cfg(feature = "query")]
 pub(crate) struct UnifiedRead {
     pub(crate) snap: Arc<medulla_graph_core::graph::GraphView>,
-    pub(crate) plan: medulla_exec::algebra::Plan,
+    pub(crate) plan: medulla_query_types::wire::Plan,
     pub(crate) legs: ServedPlanLegs,
     /// MEDULLA-FEDERATED-QUERY-R040.1.7: the served retrieval request, already validated.
     pub(crate) retrieval: Option<medulla_index_types::retrieval_request::RetrievalRequest>,
@@ -1154,7 +1154,7 @@ pub(crate) async fn run_unified_off_lock_with<T, F>(
 ) -> Result<Result<T, String>, Response>
 where
     T: Send + 'static,
-    F: FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>
+    F: FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>
         + Send
         + 'static,
 {
@@ -1251,8 +1251,8 @@ pub(crate) async fn bound_tsdb_leg(
 #[cfg(feature = "query")]
 fn with_usage_log<T>(
     log: Option<Arc<dyn medulla_exec::exec::UsageSource>>,
-    finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
-) -> impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String> {
+    finish: impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
+) -> impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String> {
     move |plan, ctx| match log.as_deref() {
         Some(log) => finish(plan, &ctx.clone().with_usage(log)),
         None => finish(plan, ctx),
@@ -1263,8 +1263,8 @@ fn with_usage_log<T>(
 #[cfg(all(feature = "query", feature = "decide"))]
 fn with_decision_log<T>(
     log: Option<Arc<dyn medulla_exec::exec::DecisionSource>>,
-    finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
-) -> impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String> {
+    finish: impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
+) -> impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String> {
     move |plan, ctx| match log.as_deref() {
         Some(log) => finish(plan, &ctx.clone().with_decisions(log)),
         None => finish(plan, ctx),
@@ -1328,7 +1328,7 @@ mod tensor_served_round_trip_tests {
     }
 
     fn call_run_unified(
-        plan: medulla_exec::algebra::Plan,
+        plan: medulla_query_types::wire::Plan,
     ) -> Result<Vec<(String, Option<f32>)>, String> {
         let view = frames_view();
         let semantic = SemanticStore::new();
@@ -1356,11 +1356,11 @@ mod tensor_served_round_trip_tests {
 
     #[test]
     fn served_tensor_scan_and_op_executes_instead_of_erroring() {
-        let plan = medulla_exec::algebra::Plan::new(vec![
-            medulla_exec::algebra::Op::TensorScan {
+        let plan = medulla_query_types::wire::Plan::new(vec![
+            medulla_query_types::wire::Op::TensorScan {
                 layer: "Frame".into(),
             },
-            medulla_exec::algebra::Op::TensorOp {
+            medulla_query_types::wire::Op::TensorOp {
                 kind: TensorOpKind::Reduce {
                     axis: 1,
                     kind: TensorReduceKind::Mean,
@@ -1381,11 +1381,11 @@ mod tensor_served_round_trip_tests {
     /// store" regardless of input — the gap this test closes.
     #[test]
     fn served_tensor_op_without_the_fix_would_have_errored() {
-        let plan = medulla_exec::algebra::Plan::new(vec![
-            medulla_exec::algebra::Op::TensorScan {
+        let plan = medulla_query_types::wire::Plan::new(vec![
+            medulla_query_types::wire::Op::TensorScan {
                 layer: "Frame".into(),
             },
-            medulla_exec::algebra::Op::TensorOp {
+            medulla_query_types::wire::Op::TensorOp {
                 kind: TensorOpKind::Elementwise {
                     op: medulla_query_types::wire::TensorElementwiseOp::Mul,
                     scalar: 2.0,
@@ -1410,7 +1410,7 @@ mod tensor_served_round_trip_tests {
 mod tenant_scope_served_tests {
     use super::{run_unified_off_lock_with, ServedPlanLegs, UnifiedRead};
     use crate::query::segment_filter::ReadScope;
-    use medulla_exec::algebra::{Op, Plan};
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_graph_core::graph::{GraphCore, GraphView};
     use medulla_identity_types::identity::UnitPrincipal;
     use medulla_identity_types::tenancy::TenantId;
@@ -1713,7 +1713,7 @@ mod tests {
     fn bound_by(view: &medulla_graph_core::graph::GraphView, retrieval: Option<&RetrievalRequest>) -> Bound {
         let semantic = SemanticStore::new();
         run_unified_with(
-            medulla_exec::algebra::Plan::new(Vec::new()),
+            medulla_query_types::wire::Plan::new(Vec::new()),
             view,
             &semantic,
             ServedIndexes::default(),
@@ -1793,7 +1793,7 @@ mod tests {
             .unwrap();
         let store = SemanticStore::new_in_space(space).unwrap();
         let view = GraphCore::new().analysis_snapshot();
-        let embed = [medulla_exec::algebra::Op::RankEmbed { text: "q".into() }];
+        let embed = [medulla_query_types::wire::Op::RankEmbed { text: "q".into() }];
         let pair = ModalityPair {
             query: Modality::Image,
             target: Modality::Text,

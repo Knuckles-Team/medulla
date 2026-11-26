@@ -21,8 +21,8 @@ mod test_support;
 
 use serde_json::json;
 
-use medulla_exec::{algebra::Op, algebra::Plan};
 use medulla_protocol_types::protocol::Method;
+use medulla_query_types::wire::{Op, Plan};
 use medulla_query_types::wire::{TensorElementwiseOp, TensorOpKind, TensorReduceKind};
 use medulla_server_router::dispatch::request_boundary::dispatch;
 use medulla_tensor::{Buffer, Tensor};

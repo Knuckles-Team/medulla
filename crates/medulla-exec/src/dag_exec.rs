@@ -124,9 +124,9 @@ pub(crate) fn join_inputs(node: &PlanNode, outputs: &[Option<RowSet>]) -> Result
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algebra::{Op, Plan};
     use crate::dag::PlanNode;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 

@@ -22,7 +22,7 @@ use std::collections::HashSet;
 use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 
-use crate::algebra::{Op, Plan, Pred};
+use medulla_query_types::wire::{Op, Plan, Pred};
 use crate::rowset::RowSet;
 use medulla_query_types::wire::TimeAxis;
 
@@ -889,7 +889,7 @@ impl<'a> PlanCtx<'a> {
 /// leaves the plan byte-for-byte as lowered and the list empty (the default ctx is
 /// unchanged); the rewrite is pure and writes nothing. `EXPLAIN` lists the same records,
 /// so the list a statement reports is the one its execution applies.
-pub fn mask_plan(plan: &Plan, ctx: &PlanCtx) -> (Plan, Vec<crate::policy_mask::AppliedPolicy>) {
+pub fn mask_plan(plan: &Plan, ctx: &PlanCtx) -> (Plan, Vec<medulla_query_types::wire::AppliedPolicy>) {
     let mut plan = plan.clone();
     let applied = match ctx.policies {
         Some(set) => {
@@ -899,9 +899,9 @@ pub fn mask_plan(plan: &Plan, ctx: &PlanCtx) -> (Plan, Vec<crate::policy_mask::A
             let mut applied = crate::policy_mask::apply_policies(&mut plan, set, &principal);
             // MEDULLA-FEDERATED-QUERY-R706.8: the shape policies rewrite no plan; `EXPLAIN`
             // lists them so a statement reports every policy its result is held to.
-            applied.extend(set.shapes.iter().map(|shape| crate::policy_mask::AppliedPolicy {
+            applied.extend(set.shapes.iter().map(|shape| medulla_query_types::wire::AppliedPolicy {
                 tag: shape.policy_id.clone(),
-                kind: crate::policy_mask::PolicyKind::Shape,
+                kind: medulla_query_types::wire::PolicyKind::Shape,
                 column: match shape.effect {
                     crate::policy_mask::ShapeEffect::Filter => "filter".to_string(),
                     crate::policy_mask::ShapeEffect::Refuse => "refuse".to_string(),

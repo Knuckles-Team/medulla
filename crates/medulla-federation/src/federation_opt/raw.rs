@@ -13,9 +13,9 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_exec::algebra::Op;
 use medulla_exec::rowset::{RowSet, TextChannels};
 use medulla_query_types::wire::ForeignSourceSpec;
+use medulla_query_types::wire::Op;
 use medulla_types::contract::ServerErrorCode;
 use serde_json::{json, Value};
 

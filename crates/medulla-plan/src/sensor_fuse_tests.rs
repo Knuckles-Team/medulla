@@ -13,9 +13,9 @@ use medulla_query_types::wire::{FuseClock, FuseInterp, FuseStream};
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
-use medulla_exec::algebra::{Op, Plan};
 use medulla_exec::exec::PlanCtx;
 use medulla_exec::exec::PlanExt;
+use medulla_query_types::wire::{Op, Plan};
 
 const NS: i64 = 1_000_000_000; // 1 second in ns
 

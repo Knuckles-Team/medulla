@@ -16,7 +16,8 @@
 mod common;
 
 use common::*;
-use medulla_exec::{algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx};
+use medulla_exec::exec::{execute, PlanCtx};
+use medulla_query_types::wire::{Op, Plan, Pred};
 use proptest::prelude::*;
 
 // ── a constrained generator of VALID UQL pipeline text ───────────────────────

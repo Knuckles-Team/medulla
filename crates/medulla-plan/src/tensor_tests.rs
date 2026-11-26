@@ -17,9 +17,9 @@ use medulla_tensor::{content_hash, Buffer, Tensor, TensorStore};
 use serde_json::json;
 use std::sync::Mutex;
 
-use medulla_exec::algebra::{Op, Plan};
 use medulla_exec::exec::PlanCtx;
 use medulla_exec::exec::PlanExt;
+use medulla_query_types::wire::{Op, Plan};
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()

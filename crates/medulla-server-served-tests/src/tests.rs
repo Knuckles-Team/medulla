@@ -677,7 +677,7 @@ async fn test_unified_query_matches_separate_surfaces_oracle() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_exec::{algebra::Op, algebra::Pred};
+    use medulla_query_types::wire::{Op, Pred};
     let state = test_state();
     build_unified_fixture(&state).await;
 
@@ -708,7 +708,7 @@ async fn test_unified_query_matches_separate_surfaces_oracle() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(plan),
+                plan: medulla_query_types::wire::Plan::new(plan),
                 foreign_execution: None,
 
                 foreign_executions: Default::default(),
@@ -805,7 +805,6 @@ async fn dispatch_drives_declared_clock_sensor_fusion_end_to_end() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_exec::algebra::Op;
     use medulla_query_types::wire::{FuseClock, FuseInterp, FuseStream};
 
     const NS: i64 = 1_000_000_000;
@@ -824,7 +823,7 @@ async fn dispatch_drives_declared_clock_sensor_fusion_end_to_end() {
     }
 
     let align = |interp| Method::UnifiedQuery {
-        plan: medulla_exec::algebra::Plan::new(vec![Op::SensorAlign {
+        plan: medulla_query_types::wire::Plan::new(vec![Op::SensorAlign {
             streams: vec![FuseStream {
                 layer: "imu".into(),
                 interp,
@@ -895,7 +894,7 @@ async fn dispatch_drives_declared_clock_sensor_fusion_end_to_end() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(vec![Op::SensorFuse {
+                plan: medulla_query_types::wire::Plan::new(vec![Op::SensorFuse {
                     streams: vec!["imu".into()],
                     tolerance_ns: (10 * NS) as u64,
                 }]),
@@ -929,7 +928,6 @@ async fn dispatch_drives_tumbling_window_sensor_fusion() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_exec::algebra::Op;
     use medulla_query_types::wire::{FuseClock, FuseInterp, FuseStream};
 
     const NS: i64 = 1_000_000_000;
@@ -952,7 +950,7 @@ async fn dispatch_drives_tumbling_window_sensor_fusion() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(vec![Op::SensorAlign {
+                plan: medulla_query_types::wire::Plan::new(vec![Op::SensorAlign {
                     streams: vec![FuseStream {
                         layer: "imu".into(),
                         interp: FuseInterp::AsofHold,
@@ -998,7 +996,6 @@ async fn test_uql_text_equals_structured_plan_and_oracle() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_exec::{algebra::Op, algebra::Pred};
     let state = test_state();
     build_unified_fixture(&state).await;
 
@@ -1030,7 +1027,7 @@ async fn test_uql_text_equals_structured_plan_and_oracle() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(plan),
+                plan: medulla_query_types::wire::Plan::new(plan),
                 foreign_execution: None,
 
                 foreign_executions: Default::default(),
@@ -1195,7 +1192,7 @@ async fn test_served_scan_reads_node_type_labels() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::Scan {
+                plan: medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::Scan {
                     label: "Paper".into(),
                 }]),
                 foreign_execution: None,
@@ -1403,7 +1400,6 @@ async fn test_federated_query_two_engines_equals_manual_join() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_exec::{algebra::Op, algebra::Pred};
 
     // ── engine B (the REMOTE), served over TCP ──
     let (_remote, remote_addr) = spawn_federation_remote().await;
@@ -1446,7 +1442,7 @@ async fn test_federated_query_two_engines_equals_manual_join() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(plan),
+                plan: medulla_query_types::wire::Plan::new(plan),
                 foreign_execution: None,
 
                 foreign_executions: Default::default(),
@@ -1566,7 +1562,6 @@ async fn test_registered_foreign_source_is_queryable_by_name() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_exec::{algebra::Op, algebra::Pred};
 
     let (_remote, remote_addr) = spawn_federation_remote().await;
     let local = test_state();
@@ -1620,7 +1615,7 @@ async fn test_registered_foreign_source_is_queryable_by_name() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(named_plan),
+                plan: medulla_query_types::wire::Plan::new(named_plan),
                 foreign_execution: None,
 
                 foreign_executions: Default::default(),
@@ -1649,7 +1644,7 @@ async fn test_registered_foreign_source_is_queryable_by_name() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(vec![
+                plan: medulla_query_types::wire::Plan::new(vec![
                     Op::Foreign {
                         name: "remote_docs".into(),
                     },
@@ -1689,7 +1684,6 @@ async fn test_unregistered_foreign_source_errors_cleanly() {
     // still for this whole body. READ guard: it excludes only a key MUTATOR, never
     // another opener. See `medulla_kernel::crypto::acquire_test_env_read_lock`'s doc.
     let _env_read_lock = medulla_kernel::crypto::acquire_test_env_read_lock().await;
-    use medulla_exec::{algebra::Op, algebra::Pred};
 
     let (_remote, remote_addr) = spawn_federation_remote().await;
     let local = test_state();
@@ -1719,7 +1713,7 @@ async fn test_unregistered_foreign_source_errors_cleanly() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(vec![
+                plan: medulla_query_types::wire::Plan::new(vec![
                     Op::Scan {
                         label: "Doc".into(),
                     },
@@ -1766,7 +1760,7 @@ async fn test_unregistered_foreign_source_errors_cleanly() {
             "__commons__",
             None,
             Method::UnifiedQuery {
-                plan: medulla_exec::algebra::Plan::new(vec![Op::Foreign {
+                plan: medulla_query_types::wire::Plan::new(vec![Op::Foreign {
                     name: "typo_docs".into(),
                 }]),
                 foreign_execution: None,

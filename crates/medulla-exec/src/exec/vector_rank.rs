@@ -27,9 +27,9 @@ use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::retrieval::{Shortfall, ShortfallReason};
 
-use crate::algebra::Op;
 use crate::exec::PlanCtx;
 use crate::rowset::RowSet;
+use medulla_query_types::wire::Op;
 
 /// The largest candidate set a top-`k` rank scores exactly. Above it the filtered ANN
 /// walk is cheaper; the crossover was measured with `benches/filtered_rank.rs` (see

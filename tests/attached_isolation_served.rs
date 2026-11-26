@@ -11,7 +11,7 @@ mod test_support;
 use std::sync::Arc;
 use std::time::Duration;
 
-use medulla_exec::algebra::{Op, Plan};
+use medulla_query_types::wire::{Op, Plan};
 use medulla_exec::rowset::RowSet;
 use medulla_federation::federation_opt::mcp::{
     register_connector_row_source, ConnectorRowRequest, ConnectorRowSource, ConnectorRows,

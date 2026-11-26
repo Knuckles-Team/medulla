@@ -25,8 +25,8 @@ use super::trace::{FetchStrategy, FragmentExecutionMode, FragmentTrace};
 use super::{fuse_foreign, stats};
 use crate::federation::ForeignSourceRegistry;
 use medulla_catalog_types::metadata_acceleration::SnapshotSemantics;
-use medulla_exec::algebra::Op;
 use medulla_exec::rowset::RowSet;
+use medulla_query_types::wire::Op;
 
 /// `Op::ForeignScan { source, join }`: a source read (`join == false`, or an empty input) or
 /// a foreign∩local join, optimized unless `MEDULLA_FEDERATION_OPT=0`.

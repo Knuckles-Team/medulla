@@ -25,10 +25,10 @@ mod test_support;
 
 use std::sync::Arc;
 
-use medulla_exec::{algebra::Op, algebra::Plan};
 use medulla_protocol_types::protocol::{
     AnomalyAlgorithm, Method, Response, ResultPayload, SvmKernel,
 };
+use medulla_query_types::wire::{Op, Plan};
 use medulla_tsdb::store::SeriesStore;
 
 const SECRET: &str = "served-mining-tsdb-scan-secret";

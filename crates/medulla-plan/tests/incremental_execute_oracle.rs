@@ -24,12 +24,12 @@
 
 use std::collections::BTreeMap;
 
-use medulla_exec::{
-    algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx, incremental::Circuit,
-    rowset::RowSet,
-};
+use medulla_exec::exec::{execute, PlanCtx};
+use medulla_exec::incremental::Circuit;
+use medulla_exec::rowset::RowSet;
 use medulla_graph_core::graph::GraphCore;
 use medulla_query_types::wire::TimeAxis;
+use medulla_query_types::wire::{Op, Plan, Pred};
 use medulla_semantic_index::semantic::SemanticStore;
 use medulla_types::delta::{Delta, ZRow};
 use proptest::prelude::*;

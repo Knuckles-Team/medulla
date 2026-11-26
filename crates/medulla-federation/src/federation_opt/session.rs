@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
-use medulla_exec::algebra::Op;
+use medulla_query_types::wire::Op;
 use medulla_catalog_types::consolidation_isolation::SourceQuota;
 
 use super::accel::CopyKnobs;

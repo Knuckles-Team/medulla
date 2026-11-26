@@ -5,11 +5,11 @@ use medulla_query_types::wire::{ForeignSourceSpec, KeptPlanReport};
 use super::session::FederationSession;
 use super::trace::{redacted_label, EstimateProvenance};
 use crate::federation::ForeignSourceRegistry;
-use medulla_exec::algebra::Op;
 use medulla_exec::budget::FederationBudget;
 use medulla_exec::exec::foreign::{ForeignExecutor, ForeignFragmentReport};
 use medulla_exec::exec::PlanCtx;
 use medulla_exec::rowset::RowSet;
+use medulla_query_types::wire::Op;
 
 /// What one query binds to reach foreign sources: the owner's registry and the per-query
 /// federation session (budget, LIMIT hints, fragment trace). Either may be absent.

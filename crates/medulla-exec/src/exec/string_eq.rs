@@ -22,7 +22,7 @@
 use medulla_graph_core::graph::GraphView;
 use serde_json::Value;
 
-use crate::algebra::Pred;
+use medulla_query_types::wire::Pred;
 
 /// Ids of the `candidates` (in their order) that satisfy every string equality in
 /// `preds`, or `None` when the SQL leg must decide.

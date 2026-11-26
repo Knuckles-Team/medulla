@@ -7,8 +7,8 @@
 
 use std::collections::BTreeMap;
 
-use medulla_exec::algebra::Op;
 use medulla_exec::rowset::RowSet;
+use medulla_query_types::wire::Op;
 use medulla_types::contract::ServerErrorCode;
 use sha2::{Digest, Sha256};
 

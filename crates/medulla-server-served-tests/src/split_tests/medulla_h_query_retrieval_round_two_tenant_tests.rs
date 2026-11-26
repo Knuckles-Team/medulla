@@ -12,8 +12,8 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
-use medulla_exec::algebra::{Op, Plan};
 use medulla_protocol_types::protocol::{GraphType, Method, Request, Response, ResultPayload};
+use medulla_query_types::wire::{Op, Plan};
 use medulla_result_types::retrieval_arbitration::{
     AnswerGrounding, ArbitrationChoice, Candidate, Citation, Claim, SupportState,
     ARBITRATION_ABSTAIN,

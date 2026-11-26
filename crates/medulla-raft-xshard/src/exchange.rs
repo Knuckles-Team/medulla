@@ -400,8 +400,9 @@ mod tests {
     //! separate physical node per CONCEPT:MEDULLA-KG.txn.harness-crash's documented
     //! cross-NODE-participant remainder).
     use super::*;
-    use medulla_exec::{algebra::Op, dag::PlanNode};
+    use medulla_exec::dag::PlanNode;
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::Op;
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 

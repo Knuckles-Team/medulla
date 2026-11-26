@@ -159,7 +159,7 @@ impl<'a> From<&'a str> for PrincipalRef<'a> {
 
 /// The `EXPLAIN` evidence record of one applied policy and its kind
 /// (MEDULLA-FEDERATED-QUERY-R706.5); the wire types live with `UqlResult`.
-pub use medulla_query_types::wire::{AppliedPolicy, PolicyKind};
+use medulla_query_types::wire::{AppliedPolicy, PolicyKind};
 
 /// The value-level mask (MEDULLA-FEDERATED-QUERY-R706.2): `null` gives `NULL`;
 /// `hash` gives lowercase SHA-256 hex; `partial` keeps the last 4 characters and

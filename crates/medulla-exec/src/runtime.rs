@@ -44,9 +44,9 @@
 //!    spilling (intermediates stay in RAM). A set budget makes any intermediate whose
 //!    footprint exceeds it spill through a disk round-trip.
 
-use crate::algebra::Op;
 use crate::exec::{Driver, PlanCtx, SerialDriver};
 use crate::rowset::RowSet;
+use medulla_query_types::wire::Op;
 
 /// Dispatch an (already `plan_optimize`-d) op list to a physical [`Driver`] chosen from the
 /// environment, returning the final [`RowSet`]. This is the single seam
@@ -432,11 +432,11 @@ mod tests {
     /// the PARALLEL driver's reopt wiring rather than its serial sibling.
     #[test]
     fn parallel_driver_runs_adaptive_reopt() {
-        use crate::algebra::{Op, Plan, Pred};
         use crate::cost::{Cardinality, ModalityCardinality, PlanStats};
         use crate::exec::{PlanCtx, PlanExt};
         use crate::optimizer::ADAPTIVE_REOPT_THRESHOLD;
         use medulla_graph_core::graph::GraphCore;
+        use medulla_query_types::wire::{Op, Plan, Pred};
         use medulla_semantic_index::semantic::SemanticStore;
         use serde_json::json;
 

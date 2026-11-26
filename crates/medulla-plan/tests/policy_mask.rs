@@ -3,11 +3,12 @@
 //! (MEDULLA-FEDERATED-QUERY-R706.2) — plus the served-language projection
 //! adapters (MEDULLA-FEDERATED-QUERY-R706.3).
 
-use medulla_exec::algebra::{Op, Plan, Pred};
 use medulla_exec::policy_mask::{
-    apply_policies, mask_expr, projection_plan, sparql_read_rewrite, sql_read_rewrite,
-    AppliedPolicy, MaskMethod, MaskPolicy, PolicyKind, PolicySet, PrincipalRef, RowFilterPolicy,
+    apply_policies, mask_expr, projection_plan, sparql_read_rewrite, sql_read_rewrite, MaskMethod,
+    MaskPolicy, PolicySet, PrincipalRef, RowFilterPolicy,
 };
+use medulla_query_types::wire::{AppliedPolicy, PolicyKind};
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 /// A canonical plan: source, a tenant filter, then the projection under test.
 fn plan_with_projection(channels: &[&str]) -> Plan {

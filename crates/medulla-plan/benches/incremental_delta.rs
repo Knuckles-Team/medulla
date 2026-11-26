@@ -11,8 +11,8 @@
 //!
 //! Run: `cargo bench -p medulla-plan --features query --bench incremental_delta`
 
-use medulla_exec::algebra::{Op, Plan, Pred};
 use medulla_exec::incremental::Circuit;
+use medulla_query_types::wire::{Op, Plan, Pred};
 use medulla_types::delta::{Delta, ZRow};
 use serde_json::{json, Map, Value};
 use std::hint::black_box;

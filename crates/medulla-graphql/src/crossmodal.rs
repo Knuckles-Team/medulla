@@ -780,7 +780,7 @@ mod tests {
     #[cfg(feature = "crossmodal-tsdb")]
     #[test]
     fn cross_modal_txn_measurement_staged_series_ryow() {
-        use medulla_exec::{algebra::Op, algebra::Plan};
+        use medulla_query_types::wire::{Op, Plan};
 
         let core = core_fixture();
         let reg = CrossModalTxnRegistry::new();

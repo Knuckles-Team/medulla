@@ -2614,10 +2614,10 @@ mod symmetric_scan_oracle {
     //! `Filter -> Rank -> Limit`. The two results MUST be byte-identical — the seam does
     //! not distinguish a locally-scanned source from a foreign one.
     use crate::federation::ForeignSourceRegistry;
-    use medulla_exec::algebra::Op;
-    use medulla_exec::algebra::Plan;
     use medulla_exec::exec::{execute, PlanCtx};
     use medulla_exec::rowset::Row;
+    use medulla_query_types::wire::Op;
+    use medulla_query_types::wire::Plan;
     use medulla_query_types::wire::{ForeignSourceSpec, Pred};
 
     /// The identical downstream applied to BOTH the internal and foreign leaf.

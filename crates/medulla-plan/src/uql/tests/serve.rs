@@ -377,9 +377,8 @@ fn a_program_profiles_and_returns_channels() {
 // spec: MEDULLA-FEDERATED-QUERY-R706.5
 #[test]
 fn explain_lists_the_applied_policies() {
-    use medulla_exec::policy_mask::{
-        AppliedPolicy, PolicyKind, PolicySet, RowFilterPolicy,
-    };
+    use medulla_query_types::wire::{AppliedPolicy, PolicyKind};
+    use medulla_exec::policy_mask::{PolicySet, RowFilterPolicy};
     let (view, semantic) = fixture();
     let set = PolicySet {
         row_filters: vec![RowFilterPolicy {

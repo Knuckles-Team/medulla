@@ -65,7 +65,7 @@ use std::collections::{HashMap, VecDeque};
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex, OnceLock, RwLock};
 
-use crate::algebra::Op;
+use medulla_query_types::wire::Op;
 
 /// Runtime opt-in switch (CONCEPT:MEDULLA-KG.query.adaptive-reoptimization). Checked fresh on every
 /// call — no caching — exactly like [`crate::optimizer::enabled`], so a test (or an

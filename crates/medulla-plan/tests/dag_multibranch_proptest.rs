@@ -13,10 +13,10 @@
 mod common;
 
 use common::*;
-use medulla_exec::{
-    algebra::Op, algebra::Plan, algebra::Pred, dag::PlanDag, dag::PlanNode, exec::PlanCtx,
-    rowset::RowSet,
-};
+use medulla_exec::dag::{PlanDag, PlanNode};
+use medulla_exec::exec::PlanCtx;
+use medulla_exec::rowset::RowSet;
+use medulla_query_types::wire::{Op, Plan, Pred};
 use proptest::prelude::*;
 
 /// Arbitrary ordered/deduplicated branch materializations, including ranked and unranked

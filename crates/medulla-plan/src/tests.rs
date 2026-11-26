@@ -1,10 +1,10 @@
 //! The planner's runnable proofs (`cargo test -p medulla-plan --features query`).
 
-use medulla_exec::algebra::{Op, Plan, Pred};
 use medulla_exec::cost::{CostModel, Order, Stats};
 use medulla_exec::exec::{PlanCtx, PlanExt};
 use medulla_exec::fixture::{build, query_vec};
 use medulla_exec::oracle::separate_surfaces;
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 /// THE oracle proof (non-negotiable): the fused single-plan execution returns the
 /// BYTE-IDENTICAL ordered id list as the three siloed surfaces done separately.
@@ -395,9 +395,9 @@ fn udf_op_without_registry_errs() {
 /// UQL `TRAVERSE -[:REL]->{m,n}` consumes the canonical `relationship` field.
 #[cfg(test)]
 mod relationship_traverse_tests {
-    use medulla_exec::algebra::{Op, Plan};
     use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
@@ -451,9 +451,9 @@ mod relationship_traverse_tests {
 /// zips to the shorter slice) result.
 #[cfg(test)]
 mod rank_dim_mismatch_tests {
-    use medulla_exec::algebra::{Op, Plan};
     use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
@@ -520,10 +520,10 @@ mod rank_dim_mismatch_tests {
 /// the RowSet by validity/transaction windows instead of passing rows through.
 #[cfg(test)]
 mod temporal_tests {
-    use medulla_exec::algebra::{Op, Plan};
     use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_graph_core::graph::GraphCore;
     use medulla_query_types::wire::TimeAxis;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
@@ -820,9 +820,9 @@ mod temporal_tests {
 /// Graph-native reranker proofs (CONCEPT:MEDULLA-KG.query.uql-parser-ops) — node-distance + mentions.
 #[cfg(test)]
 mod rerank_tests {
-    use medulla_exec::algebra::{Op, Plan};
     use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
@@ -1011,9 +1011,9 @@ mod rerank_tests {
 /// the rows through.
 #[cfg(feature = "timeseries")]
 mod timeseries_tests {
-    use medulla_exec::algebra::{Op, Plan};
     use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_graph_core::graph::GraphCore;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
@@ -1076,10 +1076,10 @@ mod timeseries_tests {
 /// `filter_op`): a lone `id = <id>` equality bypasses `sql_filter_ids`'s DataFusion round
 /// trip for an O(1) `HashMap` check, byte-identical in RESULT to the SQL path it replaces.
 mod point_lookup_tests {
-    use medulla_exec::algebra::{Op, Plan, Pred};
     use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_graph_core::graph::GraphCore;
     use medulla_graph_core::graph::GraphView;
+    use medulla_query_types::wire::{Op, Plan, Pred};
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 
@@ -1242,10 +1242,10 @@ mod point_lookup_tests {
 /// MEDULLA-DURABLE-KERNEL-R079: `AS OF` filters edge visibility, not only node rows.
 #[cfg(test)]
 mod as_of_edge_tests {
-    use medulla_exec::algebra::{Op, Plan};
     use medulla_exec::exec::{PlanCtx, PlanExt};
     use medulla_graph_core::graph::GraphCore;
     use medulla_query_types::wire::TimeAxis;
+    use medulla_query_types::wire::{Op, Plan};
     use medulla_semantic_index::semantic::SemanticStore;
     use serde_json::json;
 

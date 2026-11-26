@@ -9,8 +9,8 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
-use medulla_exec::algebra::{Op, Plan, Pred};
 use medulla_exec::exec::{bfs_reached, PlanCtx, PlanExt};
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 const DOCS: usize = 3_000;
 const DIM: usize = 16;

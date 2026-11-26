@@ -16,10 +16,10 @@ use std::net::TcpListener;
 use crate::test_guard::MockHttpAllowGuard;
 use medulla_query_types::wire::{ForeignSourceSpec, HttpFieldMap};
 
-use medulla_exec::algebra::Op;
-use medulla_exec::algebra::Plan;
 use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::RowSet;
+use medulla_query_types::wire::Op;
+use medulla_query_types::wire::Plan;
 
 /// Spawn a one-shot HTTP server on an ephemeral port that returns `body` (a JSON
 /// string) to the first GET, then exits. Returns its `http://host:port/` URL.

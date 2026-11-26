@@ -13,8 +13,8 @@
 //! placeholders, never the decision); nested under a connective they are refused, since
 //! no SQL fragment can stand in for them there.
 
-use crate::algebra::Pred;
 use crate::pred_eval::spatial_predicate;
+use medulla_query_types::wire::Pred;
 use medulla_query_types::wire::{CmpOp, PredLiteral};
 
 const MAX_FILTER_PREDICATES: usize = 256;

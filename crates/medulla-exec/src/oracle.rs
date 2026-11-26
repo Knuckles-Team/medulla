@@ -13,9 +13,9 @@ use std::collections::HashSet;
 use medulla_graph_core::graph::GraphView;
 use medulla_semantic_index::semantic::SemanticStore;
 
-use crate::algebra::Pred;
 use crate::exec::{bfs_reached, where_clause};
 use crate::rowset::RowSet;
+use medulla_query_types::wire::Pred;
 
 /// The canonical fused query — "nodes of `label` matching `preds` (relational),
 /// traverse `rel` for `min..=max` hops (graph), rank the reached set by similarity

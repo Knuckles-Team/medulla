@@ -13,9 +13,9 @@
 mod common;
 
 use common::{build_docs, ids_sorted, query_vec};
-use medulla_exec::{
-    algebra::Op, algebra::Plan, algebra::Pred, exec::execute, exec::PlanCtx, optimizer::optimize,
-};
+use medulla_exec::exec::{execute, PlanCtx};
+use medulla_exec::optimizer::optimize;
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 /// Render a plan's ops as a stable, reviewable multi-line string.
 fn render(ops: &[Op]) -> String {

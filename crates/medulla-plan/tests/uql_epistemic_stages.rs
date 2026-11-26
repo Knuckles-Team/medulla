@@ -3,9 +3,9 @@
 //! their refusals, parsed from UQL text and run through the executor.
 #![cfg(all(feature = "query", feature = "epistemic"))]
 
-use medulla_exec::algebra::{Op, Plan};
 use medulla_exec::exec::{PlanCtx, PlanExt};
 use medulla_graph_core::graph::{GraphCore, GraphView};
+use medulla_query_types::wire::{Op, Plan};
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 

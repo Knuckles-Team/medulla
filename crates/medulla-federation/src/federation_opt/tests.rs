@@ -22,11 +22,11 @@ use super::run::Fragment;
 use super::stats::fingerprint;
 use super::{FederationSession, FetchStrategy, BUDGET_EXCEEDED, REQUIRES_KEYS};
 use crate::test_guard::MockHttpAllowGuard;
-use medulla_exec::algebra::Op;
-use medulla_exec::algebra::Plan;
 use medulla_exec::budget::FederationBudget;
 use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::rowset::RowSet;
+use medulla_query_types::wire::Op;
+use medulla_query_types::wire::Plan;
 
 // ── a recording JSON API ─────────────────────────────────────────────────────────
 
@@ -666,9 +666,9 @@ mod snapshot_reads {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::{Arc, Mutex};
 
-    use medulla_exec::algebra::Op;
     use medulla_exec::rowset::RowSet;
     use medulla_query_types::wire::ForeignSourceSpec;
+    use medulla_query_types::wire::Op;
 
     use super::super::capability::{RemoteRequest, SourceCapabilities};
     use super::super::remote::{Identity, RemoteFetch};

@@ -111,7 +111,7 @@ async fn seeded_state() -> test_support::SharedState {
 /// One served report: `UnifiedQuery` with an empty plan and the `spec_report` body.
 async fn report(state: &test_support::SharedState, id: u64) {
     let method = Method::UnifiedQuery {
-        plan: medulla_exec::algebra::Plan::new(Vec::new()),
+        plan: medulla_query_types::wire::Plan::new(Vec::new()),
         foreign_execution: None,
         foreign_executions: Default::default(),
         code_map: None,

@@ -271,7 +271,7 @@ fn build(view: &GraphView, query: &SpecReportQuery) -> Result<SpecIntelligenceRe
 /// the report refuses `REPORT_READ_ONLY` before anything is read.
 pub(super) async fn serve(
     ctx: &QueryHandlerCtx<'_>,
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
     query: &SpecReportQuery,
     alongside: bool,
 ) -> Response {

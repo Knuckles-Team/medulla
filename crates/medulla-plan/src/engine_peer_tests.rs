@@ -16,13 +16,13 @@ use medulla_protocol_types::{
 };
 use medulla_query_types::wire::{ForeignSourceSpec, UqlResult};
 
-use medulla_exec::algebra::Op;
-use medulla_exec::algebra::Plan;
 use medulla_exec::budget::FederationBudget;
 use medulla_exec::exec::{execute, PlanCtx};
 use medulla_federation::federation_opt::{
     FederationSession, FetchStrategy, FragmentTrace, BUDGET_EXCEEDED,
 };
+use medulla_query_types::wire::Op;
+use medulla_query_types::wire::Plan;
 
 /// The registered statement: `d1`, `d2`, `d4` and `d5` of the fixture.
 const BASE: &str = "MATCH (:Doc) |> WHERE year > 2023";

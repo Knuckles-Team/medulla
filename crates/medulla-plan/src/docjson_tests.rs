@@ -14,9 +14,9 @@ use medulla_query_types::wire::JsonPathOp;
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 
-use medulla_exec::algebra::{Op, Plan, Pred};
 use medulla_exec::exec::PlanCtx;
 use medulla_exec::exec::PlanExt;
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 fn blob(v: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&v).unwrap()

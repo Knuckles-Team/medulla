@@ -55,16 +55,6 @@ use medulla_semantic_index::semantic::SemanticStore;
 ))]
 use serde_json::json;
 
-#[cfg(any(feature = "federation", feature = "geo"))]
-use medulla_exec::algebra::Pred;
-#[cfg(any(
-    feature = "owl",
-    feature = "federation",
-    feature = "geo",
-    feature = "tensor",
-    all(feature = "stream", feature = "timeseries"),
-))]
-use medulla_exec::algebra::{Op, Plan};
 #[cfg(any(
     feature = "owl",
     feature = "federation",
@@ -73,6 +63,16 @@ use medulla_exec::algebra::{Op, Plan};
     all(feature = "stream", feature = "timeseries"),
 ))]
 use medulla_exec::exec::{execute, PlanCtx};
+#[cfg(any(feature = "federation", feature = "geo"))]
+use medulla_query_types::wire::Pred;
+#[cfg(any(
+    feature = "owl",
+    feature = "federation",
+    feature = "geo",
+    feature = "tensor",
+    all(feature = "stream", feature = "timeseries"),
+))]
+use medulla_query_types::wire::{Op, Plan};
 
 #[cfg(any(
     feature = "owl",

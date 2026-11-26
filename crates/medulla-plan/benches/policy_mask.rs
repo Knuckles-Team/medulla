@@ -11,9 +11,10 @@
 // spec: MEDULLA-FEDERATED-QUERY-R706.6
 
 use criterion::{criterion_group, criterion_main, Criterion};
+use medulla_exec::exec::{execute, PlanCtx};
 use medulla_exec::policy_mask::{MaskMethod, MaskPolicy, PolicySet};
-use medulla_exec::{algebra::Op, algebra::Plan, exec::execute, exec::PlanCtx};
 use medulla_graph_core::graph::GraphCore;
+use medulla_query_types::wire::{Op, Plan};
 use medulla_semantic_index::semantic::SemanticStore;
 use serde_json::json;
 use std::hint::black_box;

@@ -76,7 +76,7 @@ pub(crate) struct NlPlanning {
 pub(crate) enum NlPlanned {
     Uql {
         uql: String,
-        plan: Box<medulla_exec::algebra::Plan>,
+        plan: Box<medulla_query_types::wire::Plan>,
         rewritten: Option<String>,
         certified: Vec<medulla_query_types::nl_query::CertifiedTermUse>,
         evidence: Box<NlPlanEvidence>,
@@ -639,7 +639,7 @@ fn plan_nl_only(
     planner: &dyn medulla_nlq::nl::NlPlanner,
     text: &str,
     req_id: u64,
-) -> Result<(String, medulla_exec::algebra::Plan), Response> {
+) -> Result<(String, medulla_query_types::wire::Plan), Response> {
     let candidate =
         medulla_nlq::nl::plan_only(planner, text, "", medulla_nlq::nl::NlQueryBudget::default())
             .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;

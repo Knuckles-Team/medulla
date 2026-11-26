@@ -274,7 +274,7 @@ pub struct TsdbLegBind<'a> {
 /// numeric values a source attached to a row as a third element (MEDULLA-CQ-XSRC-R002.7).
 #[cfg(feature = "query")]
 pub fn execute_rows(
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
     ctx: &medulla_exec::exec::PlanCtx,
 ) -> Result<Vec<medulla_types::unified_row::UnifiedRow>, String> {
     Ok(unified_rows(&medulla_exec::exec::execute(plan, ctx)?))
@@ -284,7 +284,7 @@ pub fn execute_rows(
 /// the same rows plus the typed `Shortfall` of a top-`k` rank that could not return `k`.
 #[cfg(feature = "query")]
 pub fn execute_ranked(
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
     ctx: &medulla_exec::exec::PlanCtx,
 ) -> Result<medulla_types::retrieval::RankedRows, String> {
     let result = medulla_exec::exec::execute(plan, ctx)?;
@@ -389,17 +389,17 @@ fn unified_rows(
 }
 
 #[cfg(all(feature = "query", feature = "tsdb"))]
-pub fn plan_needs_tsdb(ops: &[medulla_exec::algebra::Op]) -> bool {
+pub fn plan_needs_tsdb(ops: &[medulla_query_types::wire::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_exec::algebra::Op::TsScan { .. } => true,
+        medulla_query_types::wire::Op::TsScan { .. } => true,
         // MEDULLA-FEDERATED-QUERY-R078.7: the time-series rows of the company-context view
         // read the committed store, so every scan that can emit them binds it.
-        medulla_exec::algebra::Op::CompanyContextScan { category } => matches!(
+        medulla_query_types::wire::Op::CompanyContextScan { category } => matches!(
             category,
             None | Some(medulla_query_types::wire::CompanyCategory::TimeSeries)
         ),
         #[cfg(feature = "text")]
-        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+        medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|branch| plan_needs_tsdb(branch))
         }
         _ => false,
@@ -464,16 +464,16 @@ pub fn overlay_write_set(view: &mut medulla_graph_core::graph::GraphView, write_
 /// non-federated plan pays nothing. A self-describing (inline-spec)
 /// `Op::ForeignScan` resolves without a registry, so it does not need the binding.
 #[cfg(all(feature = "query", feature = "federation"))]
-pub fn plan_needs_foreign(ops: &[medulla_exec::algebra::Op]) -> bool {
+pub fn plan_needs_foreign(ops: &[medulla_query_types::wire::Op]) -> bool {
     ops.iter().any(|op| match op {
-        medulla_exec::algebra::Op::Foreign { .. } => true,
-        medulla_exec::algebra::Op::ForeignScan { source, .. } => {
+        medulla_query_types::wire::Op::Foreign { .. } => true,
+        medulla_query_types::wire::Op::ForeignScan { source, .. } => {
             matches!(
                 **source,
                 medulla_query_types::wire::ForeignSourceSpec::Named { .. }
             )
         }
-        medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+        medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
             branches.iter().any(|b| plan_needs_foreign(b))
         }
         _ => false,
@@ -482,18 +482,18 @@ pub fn plan_needs_foreign(ops: &[medulla_exec::algebra::Op]) -> bool {
 
 /// The distinct foreign source names a plan reads, in plan order (MEDULLA-CQ-CONN-R090).
 #[cfg(all(feature = "query", feature = "federation"))]
-pub fn plan_foreign_names(ops: &[medulla_exec::algebra::Op]) -> Vec<String> {
-    fn collect(ops: &[medulla_exec::algebra::Op], names: &mut Vec<String>) {
+pub fn plan_foreign_names(ops: &[medulla_query_types::wire::Op]) -> Vec<String> {
+    fn collect(ops: &[medulla_query_types::wire::Op], names: &mut Vec<String>) {
         for op in ops {
             let name = match op {
-                medulla_exec::algebra::Op::Foreign { name } => Some(name.as_str()),
-                medulla_exec::algebra::Op::ForeignScan { source, .. } => match source.as_ref() {
+                medulla_query_types::wire::Op::Foreign { name } => Some(name.as_str()),
+                medulla_query_types::wire::Op::ForeignScan { source, .. } => match source.as_ref() {
                     medulla_query_types::wire::ForeignSourceSpec::Named { name } => {
                         Some(name.as_str())
                     }
                     _ => None,
                 },
-                medulla_exec::algebra::Op::FuseRrf { branches, .. } => {
+                medulla_query_types::wire::Op::FuseRrf { branches, .. } => {
                     for branch in branches {
                         collect(branch, names);
                     }
@@ -517,7 +517,7 @@ pub fn plan_foreign_names(ops: &[medulla_exec::algebra::Op]) -> Vec<String> {
 /// in query-only builds without the federation feature.
 #[cfg(feature = "query")]
 pub fn canonical_plan_digest(
-    plan: &medulla_exec::algebra::Plan,
+    plan: &medulla_query_types::wire::Plan,
 ) -> Result<medulla_types::contract::Digest256, String> {
     let plan_bytes = rmp_serde::to_vec_named(plan)
         .map_err(|error| format!("INTERNAL: plan digest serialization failed: {error}"))?;

@@ -14,10 +14,10 @@
 mod common;
 
 use common::*;
-use medulla_exec::{
-    algebra::Op, algebra::Plan, algebra::Pred, dag::PlanDag, exec::execute, exec::PlanCtx,
-};
+use medulla_exec::dag::PlanDag;
+use medulla_exec::exec::{execute, PlanCtx};
 use medulla_query_types::wire::TimeAxis;
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 /// Run `ops` through BOTH `exec::execute` (over the linear `Plan`) and `dag_exec::execute_dag`
 /// (over the `PlanDag` converted from that SAME `Plan`), and assert byte-identical results —

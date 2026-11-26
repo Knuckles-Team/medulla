@@ -435,7 +435,7 @@ pub(super) async fn stage_construct(
 #[cfg(feature = "query")]
 pub(crate) fn plan_writeback_to_methods(
     core: &medulla_graph_core::graph::GraphCore,
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     anchor_id: &str,
     relationship: &str,
 ) -> Result<Vec<Method>, String> {
@@ -465,7 +465,7 @@ pub(crate) fn plan_writeback_to_methods(
 /// [`stage_plan_writeback`] stays under the clippy argument-count ceiling.
 #[cfg(feature = "query")]
 pub(super) struct PlanWritebackArgs {
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     anchor_id: String,
     relationship: String,
 }
@@ -473,7 +473,7 @@ pub(super) struct PlanWritebackArgs {
 #[cfg(feature = "query")]
 impl PlanWritebackArgs {
     pub(super) fn new(
-        plan: medulla_exec::algebra::Plan,
+        plan: medulla_query_types::wire::Plan,
         anchor_id: String,
         relationship: String,
     ) -> Self {

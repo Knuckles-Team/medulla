@@ -115,7 +115,7 @@ pub(crate) async fn run_unified_overlaid<M>(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,
     txn_id: &str,
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     read_authority: Option<&GraphReadAuthority>,
     caller: &str,
     #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
@@ -159,8 +159,8 @@ pub(crate) struct OverlaidTxn<'a> {
 #[cfg(feature = "query")]
 pub(crate) async fn run_unified_overlaid_with<T>(
     txn: OverlaidTxn<'_>,
-    plan: medulla_exec::algebra::Plan,
-    finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>
+    plan: medulla_query_types::wire::Plan,
+    finish: impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>
         + Send
         + 'static,
 ) -> Result<Result<T, String>, Response>
@@ -255,7 +255,7 @@ where
 /// The caller chooses the row projection through `finish`.
 #[cfg(feature = "query")]
 pub fn run_unified_with_staged_finish<T>(
-    plan: medulla_exec::algebra::Plan,
+    plan: medulla_query_types::wire::Plan,
     view: &medulla_graph_core::graph::GraphView,
     core: &Arc<GraphCore>,
     staged: &[(String, Vec<f32>)],
@@ -264,7 +264,7 @@ pub fn run_unified_with_staged_finish<T>(
     >,
     #[cfg(feature = "tsdb")] tsdb_ctx: TsdbLegBind<'_>,
     retrieval: Option<&medulla_index_types::retrieval_request::RetrievalRequest>,
-    finish: impl FnOnce(&medulla_exec::algebra::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
+    finish: impl FnOnce(&medulla_query_types::wire::Plan, &medulla_exec::exec::PlanCtx) -> Result<T, String>,
 ) -> Result<T, String> {
     let indexes = CoreIndexes::open(core);
     let mut served = indexes.served(

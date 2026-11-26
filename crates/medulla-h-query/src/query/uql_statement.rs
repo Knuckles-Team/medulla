@@ -384,7 +384,7 @@ fn served_plan_scope(
 #[cfg(feature = "query")]
 fn inject_served_scope(
     stmt: &mut medulla_uql::Statement,
-    binding: &mut medulla_exec::algebra::Plan,
+    binding: &mut medulla_query_types::wire::Plan,
     scope: &medulla_table_store::plan_scope::PlanScope,
 ) -> Result<(), medulla_table_store::plan_scope::PlanScopeError> {
     use medulla_table_store::plan_scope::inject_scope;

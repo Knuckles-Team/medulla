@@ -260,17 +260,17 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
     let adapter =
         medulla_server_ops::api::admin::served_adapter::ServedAdapter::for_body("d", &body)
             .unwrap();
-    let plan = medulla_exec::algebra::Plan::new(vec![
-        medulla_exec::algebra::Op::Scan {
+    let plan = medulla_query_types::wire::Plan::new(vec![
+        medulla_query_types::wire::Op::Scan {
             label: "Doc".to_string(),
         },
-        medulla_exec::algebra::Op::FuseRrf {
-            branches: vec![vec![medulla_exec::algebra::Op::Rank {
+        medulla_query_types::wire::Op::FuseRrf {
+            branches: vec![vec![medulla_query_types::wire::Op::Rank {
                 query: vec![1.0, 1.0],
             }]],
             k: 60.0,
         },
-        medulla_exec::algebra::Op::Rank {
+        medulla_query_types::wire::Op::Rank {
             query: vec![1.0, 1.0],
         },
     ]);
@@ -279,17 +279,17 @@ fn a_plan_rewrite_re_aims_every_vector_rank_only() {
         Some(Arc::new(adapter)),
         medulla_server_ops::api::query_txn::query_support::uql_text_embedder(),
     );
-    let expected = medulla_exec::algebra::Op::Rank {
+    let expected = medulla_query_types::wire::Op::Rank {
         query: vec![1.0, 1.5],
     };
     assert_eq!(rewritten.ops[2], expected);
-    let medulla_exec::algebra::Op::FuseRrf { branches, .. } = &rewritten.ops[1] else {
+    let medulla_query_types::wire::Op::FuseRrf { branches, .. } = &rewritten.ops[1] else {
         panic!("fuse")
     };
     assert_eq!(branches[0][0], expected);
     assert!(matches!(
         rewritten.ops[0],
-        medulla_exec::algebra::Op::Scan { .. }
+        medulla_query_types::wire::Op::Scan { .. }
     ));
 }
 

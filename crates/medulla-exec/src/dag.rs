@@ -57,7 +57,7 @@
 //! stayed a complete, mergeable E5 with X4 descoped; see the feat/medulla-planner-dag report
 //! + docs/north_star.md for the tracked row.
 
-use crate::algebra::{Op, Plan};
+use medulla_query_types::wire::{Op, Plan};
 use serde::{Deserialize, Serialize};
 
 /// A node's index into [`PlanDag::nodes`] — the DAG's edge currency (an edge from
@@ -249,7 +249,7 @@ impl From<&Plan> for PlanDag {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algebra::Pred;
+    use medulla_query_types::wire::Pred;
 
     fn sample_plan() -> Plan {
         Plan::new(vec![

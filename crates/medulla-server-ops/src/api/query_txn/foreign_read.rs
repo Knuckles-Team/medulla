@@ -528,7 +528,7 @@ impl ForeignReadSessions {
         &self,
         caller: &CarrierAuthority,
         executions: &[ForeignReadExecutionRef],
-        plan: &medulla_exec::algebra::Plan,
+        plan: &medulla_query_types::wire::Plan,
         plan_digest: Digest256,
         binding: ForeignBindingContext<'_>,
     ) -> Result<OwnedForeignRegistry, String> {
@@ -922,9 +922,10 @@ mod tests {
     #[cfg(feature = "query")]
     #[test]
     fn canonical_plan_digest_is_the_query_binding_pin() {
-        let plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::Scan {
-            label: "Issue".into(),
-        }]);
+        let plan =
+            medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::Scan {
+                label: "Issue".into(),
+            }]);
         let expected =
             Digest256::sha256(&rmp_serde::to_vec_named(&plan).expect("serialize query plan"));
         assert_eq!(canonical_plan_digest(&plan).expect("digest plan"), expected);

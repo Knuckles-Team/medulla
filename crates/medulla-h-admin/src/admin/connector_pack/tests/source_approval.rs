@@ -344,7 +344,7 @@ async fn foreign_read_four_phase_uses_authenticated_dispatch() {
         chunk_bytes: 512,
         deadline_ms: 10_000,
     };
-    let plan = medulla_exec::algebra::Plan::new(vec![medulla_exec::algebra::Op::ForeignScan {
+    let plan = medulla_query_types::wire::Plan::new(vec![medulla_query_types::wire::Op::ForeignScan {
         source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
             name: source_name.clone(),
         }),
@@ -829,11 +829,11 @@ async fn two_approved_sources_join_once_and_duplicate_refuses_atomically() {
         .iter()
         .map(|item| item.source_id.clone())
         .collect();
-    let plan = medulla_exec::algebra::Plan::new(
+    let plan = medulla_query_types::wire::Plan::new(
         names
             .iter()
             .enumerate()
-            .map(|(index, name)| medulla_exec::algebra::Op::ForeignScan {
+            .map(|(index, name)| medulla_query_types::wire::Op::ForeignScan {
                 source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
                     name: name.clone(),
                 }),
@@ -1504,11 +1504,11 @@ async fn uql_joins_two_approved_sources_in_one_query() {
         .collect();
     // One UQL statement names both sources; the join leg follows the first.
     let text = format!("FOREIGN SCAN '{}' |> FOREIGN SCAN '{}' JOIN", names[0], names[1]);
-    let plan = medulla_exec::algebra::Plan::new(
+    let plan = medulla_query_types::wire::Plan::new(
         names
             .iter()
             .enumerate()
-            .map(|(index, name)| medulla_exec::algebra::Op::ForeignScan {
+            .map(|(index, name)| medulla_query_types::wire::Op::ForeignScan {
                 source: Box::new(medulla_query_types::wire::ForeignSourceSpec::Named {
                     name: name.clone(),
                 }),

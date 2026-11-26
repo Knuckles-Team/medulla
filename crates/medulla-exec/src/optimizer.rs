@@ -52,9 +52,9 @@
 //! (byte-for-byte the pre-optimizer fold). The `cost-opt` cargo feature (implies `query`) is
 //! the facade tier selector — default-on in `full`.
 
-use crate::algebra::{Op, Plan, Pred};
 use crate::cost::{Cardinality, CostModel, ModalityCardinality, PlanStats, Stats, DEFAULT_TOP_K};
 use crate::exec::PlanCtx;
+use medulla_query_types::wire::{Op, Plan, Pred};
 
 /// Is the cross-modal optimizer active? True unless the runtime kill-switch
 /// `MEDULLA_COST_OPT=0` is set (CONCEPT:MEDULLA-KG.query.xmodal-cost-optimizer) — then
@@ -685,8 +685,8 @@ pub fn reoptimize_remaining(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::algebra::{Op, Plan, Pred};
     use crate::{exec::execute, exec::PlanCtx, rowset::RowSet};
+    use medulla_query_types::wire::{Op, Plan, Pred};
 
     fn sorted_ids(rs: &RowSet) -> Vec<String> {
         let mut v = rs.ids();
