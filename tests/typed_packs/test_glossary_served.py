@@ -108,6 +108,7 @@ def served():
             client.close()
 
 
+# proves R801.3: Wiring
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R801")
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R801.3")
 def test_import_scheme_and_bind_term(served) -> None:
@@ -328,7 +329,9 @@ def test_proposed_description_needs_review(served) -> None:
 CATALOG = "https://knuckles-team.github.io/ontology/catalog#"
 
 
+# proves R801: Business glossary as SKOS concept schemes
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R801.6")
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R801")
 def test_import_scheme_bind_term_and_review_lifecycle(served) -> None:
     """Verifies MEDULLA-TYPED-PACKS-R801.6: scheme, review lifecycle, bind and search."""
     graph, client = served
