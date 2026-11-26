@@ -10,7 +10,12 @@ use super::*;
 
 use std::collections::BTreeSet;
 
-use medulla_sdlc::lifecycle::delivery::ending::{end_if_done, EndTrigger};
+use medulla_sdlc::lifecycle::delivery::ending::{apply_proposal_event, end_if_done, EndTrigger};
+use medulla_sdlc::lifecycle::delivery::recovery::{recover_assignments, RecordedEffect};
+use medulla_sdlc::lifecycle::delivery::rounds::{record_round_verdict, review_round_verdict};
+use medulla_sdlc::lifecycle::delivery::superseded::{
+    record_superseded, superseded_verdict, BranchChangeset, CandidateProposal, SupersededVerdict,
+};
 use medulla_sdlc::lifecycle::delivery::feedback::{route_feedback, FeedbackContext};
 use medulla_sdlc::lifecycle::delivery::mandate::revalidate_mandate;
 use medulla_sdlc::lifecycle::delivery::open::{
@@ -21,7 +26,8 @@ use medulla_source_types::delivery::{
     decode_delivery, AssignmentState, Delivery, DeliveryAnswer, DeliveryAssignment,
     DeliveryFeedbackReceipt, DeliveryListAnswer, DeliveryListEntry, DeliveryListRequest,
     DeliveryOpenAnswer, DeliveryOpenRequest, DeliveryRef, DeliveryReportWrite,
-    DeliveryRetryRequest, MandateFacts, ScmFeedbackEvent, WouldDispatch, DELIVERY_NOT_FOUND,
+    DeliveryRetryRequest, FeedbackKind, InputSource, MandateFacts, ProposalEvent, ReviewRecord,
+    ReviewerKind, ScmFeedbackEvent, WouldDispatch, DELIVERY_NOT_FOUND,
     DELIVERY_RECORD_PROPERTY, DELIVERY_SCHEMA_VERSION, DELIVERY_TYPE,
 };
 use medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordStored;
@@ -219,6 +225,140 @@ fn sealed_gate_verdicts(
     sealed
 }
 
+/// Node type of a stored review (MEDULLA-SDLC-R019.9).
+const REVIEW_NODE_TYPE: &str = "Review";
+/// Node type of a changeset record (MEDULLA-SDLC-R019.12).
+const CHANGESET_NODE_TYPE: &str = "Changeset";
+/// Node type of an assignment's lane lease (MEDULLA-SDLC-R019.13).
+const LEASE_NODE_TYPE: &str = "AssignmentLease";
+/// Node type of an outside effect an assignment recorded (MEDULLA-SDLC-R019.13).
+const EFFECT_NODE_TYPE: &str = "AssignmentEffect";
+
+/// Every visible node row of one type, ordered by id.
+fn rows_of_type(
+    core: &GraphCore,
+    authority: &medulla_server_api::carrier::GraphReadAuthority,
+    tenant: &str,
+    label: &str,
+) -> Vec<(String, Map<String, Value>)> {
+    let mut rows: Vec<(String, Map<String, Value>)> = core
+        .get_nodes_by_label(label, MAX_DELIVERIES_READ)
+        .into_iter()
+        .filter_map(|(id, blob)| {
+            let node = decode_visible(core, authority, &id, &blob, tenant)?;
+            Some((id, node))
+        })
+        .collect();
+    rows.sort_by(|a, b| a.0.cmp(&b.0));
+    rows
+}
+
+fn string_of(row: &Map<String, Value>, key: &str) -> Option<String> {
+    row.get(key).and_then(Value::as_str).map(str::to_owned)
+}
+
+/// A `:Review` row as the round budget reads it; a row without a reviewer, a kind or a run key
+/// is not a countable round.
+fn review_record(row: &Map<String, Value>) -> Option<ReviewRecord> {
+    Some(ReviewRecord {
+        proposal_id: string_of(row, "proposal_id")?,
+        reviewer: string_of(row, "reviewer")?,
+        reviewer_kind: serde_json::from_value::<ReviewerKind>(Value::String(string_of(
+            row,
+            "reviewer_kind",
+        )?))
+        .ok()?,
+        run_key: string_of(row, "run_key")?,
+    })
+}
+
+/// The per-path content digests a changeset row carries (`path_digests`, a path to digest map).
+fn path_digests(row: &Map<String, Value>) -> std::collections::BTreeMap<String, String> {
+    row.get("path_digests")
+        .and_then(Value::as_object)
+        .map(|paths| {
+            paths
+                .iter()
+                .filter_map(|(path, digest)| Some((path.clone(), digest.as_str()?.to_owned())))
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+/// The changesets that belong to the proposals `proposal_ids`, by the `proposal_id` their
+/// changeset rows carry.
+fn changesets_of(
+    rows: &[(String, Map<String, Value>)],
+    proposal_ids: &[&str],
+) -> Vec<BranchChangeset> {
+    rows.iter()
+        .filter(|(_, row)| {
+            string_of(row, "proposal_id").is_some_and(|id| proposal_ids.contains(&id.as_str()))
+        })
+        .map(|(id, row)| BranchChangeset {
+            id: string_of(row, "changeset_id").unwrap_or_else(|| id.clone()),
+            path_digests: path_digests(row),
+        })
+        .collect()
+}
+
+fn proposal_event_of(kind: FeedbackKind) -> Option<ProposalEvent> {
+    match kind {
+        FeedbackKind::ProposalMerged => Some(ProposalEvent::Merged),
+        FeedbackKind::ProposalClosed => Some(ProposalEvent::Closed),
+        FeedbackKind::ProposalReopened => Some(ProposalEvent::Reopened),
+        _ => None,
+    }
+}
+
+fn follows_proposal(delivery: &Delivery, proposal: &str) -> bool {
+    delivery.proposals.iter().any(|p| p.id == proposal)
+        || delivery.follows.iter().any(|id| id == proposal)
+}
+
+/// The expired leases of running assignments and the outside effects assignments recorded,
+/// read from the `AssignmentLease` and `AssignmentEffect` rows of the graph.
+fn lease_facts(
+    core: &GraphCore,
+    authority: &medulla_server_api::carrier::GraphReadAuthority,
+    tenant: &str,
+    now: i64,
+) -> (BTreeSet<String>, Vec<RecordedEffect>) {
+    let expired = rows_of_type(core, authority, tenant, LEASE_NODE_TYPE)
+        .into_iter()
+        .filter(|(_, row)| {
+            row.get("expires_at_ms")
+                .and_then(Value::as_i64)
+                .is_some_and(|at| at < now)
+        })
+        .filter_map(|(_, row)| string_of(&row, "assignment_id"))
+        .collect();
+    let effects = rows_of_type(core, authority, tenant, EFFECT_NODE_TYPE)
+        .into_iter()
+        .filter_map(|(_, row)| {
+            Some(RecordedEffect {
+                assignment_id: string_of(&row, "assignment_id")?,
+                description: string_of(&row, "description")?,
+                receipt: string_of(&row, "receipt"),
+            })
+        })
+        .collect();
+    (expired, effects)
+}
+
+/// Recover the assignments of `delivery` whose lease expired (MEDULLA-SDLC-R019.13): the run
+/// trace of a replacement is derived from the ended assignment's id, so a second recovery finds
+/// the replacement already there.
+fn recovered(delivery: &Delivery, expired: &BTreeSet<String>, effects: &[RecordedEffect], now: i64) -> Delivery {
+    recover_assignments(
+        delivery,
+        expired,
+        effects,
+        &|assignment_id| format!("recovery:{assignment_id}"),
+        now,
+    )
+}
+
 fn find_delivery(deliveries: &[Delivery], id: &str) -> Result<Delivery, String> {
     deliveries
         .iter()
@@ -380,6 +520,73 @@ pub(super) async fn feedback(
                 defect_filed: false,
             });
         }
+        let now = now_ms();
+        let mut routed = routing.deliveries.clone();
+        // R019.13: a delivery that receives an event first recovers assignments whose lease
+        // expired, so the event reaches a live assignment and no effect repeats blindly.
+        let (expired, effects) = lease_facts(&core, &authority, &tenant, now);
+        for delivery in routed.iter_mut() {
+            *delivery = recovered(delivery, &expired, &effects, now);
+        }
+        // R019.11: a proposal merge, close or reopen fires the proposal machine, and the last
+        // close ends the delivery with its outcome.
+        if let Some(proposal_event) = proposal_event_of(event.kind) {
+            for delivery in routed.iter_mut() {
+                let applied = apply_proposal_event(delivery, &event.proposal_id, proposal_event)
+                    .map_err(|refused| refused.to_string())?;
+                *delivery = if proposal_event == ProposalEvent::Reopened {
+                    applied
+                } else {
+                    end_if_done(&applied, EndTrigger::ProposalClosed(proposal_event), now)
+                };
+            }
+        }
+        // R019.9: an automated review is one round of its proposal and reviewer; the verdict
+        // joins the delivery as an input.
+        if event.kind == FeedbackKind::ReviewSubmitted && event.source == InputSource::Automation {
+            let reviews: Vec<ReviewRecord> = rows_of_type(&core, &authority, &tenant, REVIEW_NODE_TYPE)
+                .into_iter()
+                .filter_map(|(_, row)| review_record(&row))
+                .collect();
+            let current = rows_of_type(&core, &authority, &tenant, REVIEW_NODE_TYPE)
+                .into_iter()
+                .find(|(_, row)| string_of(row, "event_id").as_deref() == Some(event.event_id.as_str()))
+                .and_then(|(_, row)| review_record(&row));
+            if let Some(current) = current {
+                let max_rounds = medulla_server_api::knob_config::knobs()
+                    .sdlc_delivery_max_automated_review_rounds;
+                let verdict = review_round_verdict(&reviews, &current, max_rounds);
+                for delivery in routed.iter_mut() {
+                    *delivery = record_round_verdict(delivery, &event.event_id, verdict);
+                }
+            }
+        }
+        // R019.12: a person's proposal that carries the delivery branch supersedes the delivery.
+        let mut superseded: Vec<Delivery> = Vec::new();
+        if matches!(event.kind, FeedbackKind::HeadPushed | FeedbackKind::ProposalMerged) {
+            let changesets = rows_of_type(&core, &authority, &tenant, CHANGESET_NODE_TYPE);
+            let held = changesets_of(&changesets, &[event.proposal_id.as_str()]);
+            let candidate = CandidateProposal {
+                proposal_id: event.proposal_id.clone(),
+                by_person: event.source == InputSource::Person,
+                changeset_ids: held.iter().map(|c| c.id.clone()).collect(),
+                path_digests: held
+                    .iter()
+                    .flat_map(|c| c.path_digests.clone())
+                    .collect(),
+            };
+            for delivery in deliveries
+                .iter()
+                .filter(|d| d.ended.is_none() && !follows_proposal(d, &event.proposal_id))
+            {
+                let ids: Vec<&str> = delivery.proposals.iter().map(|p| p.id.as_str()).collect();
+                let branch = changesets_of(&changesets, &ids);
+                if superseded_verdict(&branch, &candidate) == SupersededVerdict::CloseSuperseded {
+                    superseded.push(record_superseded(delivery, &event.event_id, &event.proposal_id));
+                }
+            }
+        }
+        routed.extend(superseded);
         let mut properties = Map::new();
         properties.insert("type".into(), FEEDBACK_EVENT_TYPE.into());
         properties.insert("event_id".into(), event.event_id.clone().into());
@@ -392,7 +599,7 @@ pub(super) async fn feedback(
         stamp(&mut properties, &target);
         let mut operations =
             vec![json!({"op": "upsert_node", "id": event_node, "properties": properties})];
-        for delivery in &routing.deliveries {
+        for delivery in &routed {
             operations.push(delivery_operation(delivery, &target)?);
         }
         if routing.file_defect {
@@ -413,7 +620,7 @@ pub(super) async fn feedback(
         commit(state, &target, operations).await?;
         Ok(DeliveryFeedbackReceipt {
             duplicate: false,
-            delivered_to: routing.deliveries.iter().map(|d| d.id.clone()).collect(),
+            delivered_to: routed.iter().map(|d| d.id.clone()).collect(),
             resumed: routing.resumed,
             defect_filed: routing.file_defect,
         })
@@ -532,6 +739,17 @@ pub(super) async fn retry(
             &load_deliveries(&core, &authority, target.verified.tenant()),
             &request.delivery_id,
         )?;
+        // R019.13: assignments whose lease expired end with `host_restarted` and are replaced
+        // by a pending one that carries the recovery note, so the retry never repeats an
+        // outside effect blindly. A second call finds the replacement already there.
+        let now = now_ms();
+        let (expired, effects) = lease_facts(&core, &authority, target.verified.tenant(), now);
+        let before = delivery.clone();
+        delivery = recovered(&delivery, &expired, &effects, now);
+        if delivery != before {
+            commit(state, &target, vec![delivery_operation(&delivery, &target)?]).await?;
+            return Ok(answer(delivery));
+        }
         let busy = delivery
             .assignments
             .iter()
