@@ -1,10 +1,11 @@
 """Query latency classes over the served wire (MEDULLA-FEDERATED-QUERY-R731).
 
-One engine runs with ``query.interactive_node_budget`` at its registry floor of 1,000 over a
-5,000-node fixture. An interactive ``UnifiedQuery`` and ``Sparql`` refuse
-``QUERY_BUDGET_EXCEEDED`` with the hint to resubmit as analytical; the same queries as
-``analytical`` answer a job record, and ``AnalyticsJob`` ``Status`` returns, once published,
-rows equal to the unbounded run. A second tenant's ``Status`` on that id is refused.
+One engine runs with ``query.interactive_node_budget`` at its registry floor of
+1,000 over a 5,000-node fixture. An interactive ``UnifiedQuery`` and ``Sparql``
+refuse ``QUERY_BUDGET_EXCEEDED`` with the hint to resubmit as analytical; the
+same queries as ``analytical`` answer a job record, and ``AnalyticsJob``
+``Status`` returns, once published, rows equal to the unbounded run. A second
+tenant's ``Status`` on that id is refused.
 """
 
 from __future__ import annotations
@@ -117,12 +118,12 @@ def test_interactive_budget_refuses_and_analytical_runs_as_job(budgeted_engine):
     assert "QUERY_BUDGET_EXCEEDED" in str(refused.value)
     assert "latency_class analytical" in str(refused.value)
     with pytest.raises(EngineResponseError) as refused:
-        client.query.sparql(_SPARQL)
+        client.rdf.sparql(_SPARQL)
     assert "QUERY_BUDGET_EXCEEDED" in str(refused.value)
 
     # The same queries as analytical answer a durable job record.
     unified_job = client.query.unified(_PLAN, latency_class="analytical")
-    sparql_job = client.query.sparql(_SPARQL, latency_class="analytical")
+    sparql_job = client.rdf.sparql(_SPARQL, latency_class="analytical")
     assert unified_job["job_id"] and sparql_job["job_id"]
 
     published = _wait_published(client, unified_job["job_id"])
