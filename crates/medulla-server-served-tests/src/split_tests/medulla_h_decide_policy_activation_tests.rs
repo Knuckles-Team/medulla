@@ -16,7 +16,9 @@ use medulla_types::policy_document::{
 use serde_json::json;
 
 const OTHER_TENANT: &str = "tenant-other";
-const GRAPH: &str = "__commons__";
+/// The graph the served harness registers and the review is recorded in: the registered
+/// commons graph constant, not a literal.
+const GRAPH: &str = medulla_identity_types::tenancy::COMMONS_GRAPH;
 const REPO: &str = "org/repo";
 const PATH: &str = ".specify/memory/constitution.md";
 const SCOPE: &str = "https://example.invalid/class/Repo";

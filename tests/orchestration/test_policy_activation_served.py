@@ -61,7 +61,9 @@ def test_index_yields_inactive_candidates_with_spans(clean_graph) -> None:
 
 _SCOPE = "https://example.invalid/class/Repo"
 _PATH = ".specify/memory/constitution.md"
-_GRAPH = "default"
+# The graph the engine registers and the candidates are indexed into: the client
+# default, the commons graph (every sibling served test names the same one).
+_GRAPH = "__commons__"
 _REVIEWABLE = (
     b"# Constitution\n\n"
     b"- MUST NOT commit secrets {scope=https://example.invalid/class/Repo}\n"
