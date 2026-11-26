@@ -6,6 +6,7 @@ are stored with ``AddEmbedding`` and the centroids are ``TopicCentroid`` nodes w
 ``AddNode``.
 """
 
+# ruff: noqa: E501
 from __future__ import annotations
 
 import uuid
@@ -76,7 +77,10 @@ def test_receipt_reproduces_final_score(start_medulla_server) -> None:
     cl = client()
     cl.tenants.create(graph)
     try:
-        assert cl.graph.declare_embedding_space(_space(), graph) == "pinned-test-space-digest"
+        assert (
+            cl.graph.declare_embedding_space(_space(), graph)
+            == "pinned-test-space-digest"
+        )
         docs = [
             ("d1", [1.0, 0.0, 0.0, 0.0]),
             ("d2", [0.9, 0.4, 0.0, 0.0]),
@@ -87,11 +91,22 @@ def test_receipt_reproduces_final_score(start_medulla_server) -> None:
             put(cl, graph, node_id, {"type": "Doc", "kind": "doc"}, embedding)
         # The nearest vector to the query is excluded by the constraint.
         put(cl, graph, "m1", {"type": "Doc", "kind": "memo"}, [1.0, 0.2, 0.0, 0.0])
-        for topic, centroid in (("sports", [1.0, 0.0, 0.0, 0.0]), ("finance", [0.0, 1.0, 0.0, 0.0])):
-            put(cl, graph, f"c-{topic}", {"type": "TopicCentroid", "topic": topic, "centroid": centroid})
+        for topic_name, centroid in (
+            ("sports", [1.0, 0.0, 0.0, 0.0]),
+            ("finance", [0.0, 1.0, 0.0, 0.0]),
+        ):
+            put(
+                cl,
+                graph,
+                f"c-{topic_name}",
+                {"type": "TopicCentroid", "topic": topic_name, "centroid": centroid},
+            )
 
         retrieval: dict[str, Any] = {
-            "constraints": {"graph_revision": 0, "entity_predicates": [_eq("kind", "doc")]},
+            "constraints": {
+                "graph_revision": 0,
+                "entity_predicates": [_eq("kind", "doc")],
+            },
             "topic": {
                 "top_topics": 2,
                 "min_weight": 0.0,
@@ -121,11 +136,18 @@ def test_receipt_reproduces_final_score(start_medulla_server) -> None:
 
         # The reproduction rule, in integer arithmetic with truncating division.
         for part in topic.component_scores:
-            expected = ((_MICROS - weight) * part.dense_micros + weight * part.topic_micros) // _MICROS
+            expected = (
+                (_MICROS - weight) * part.dense_micros + weight * part.topic_micros
+            ) // _MICROS
             assert abs(part.final_micros - expected) <= 1, part
-        finals = [(-part.final_micros, part.candidate_id) for part in topic.component_scores]
+        finals = [
+            (-part.final_micros, part.candidate_id) for part in topic.component_scores
+        ]
         assert finals == sorted(finals)
-        assert {entry.topic_id for entry in topic.responsibilities} <= {"sports", "finance"}
+        assert {entry.topic_id for entry in topic.responsibilities} <= {
+            "sports",
+            "finance",
+        }
     finally:
         cl.tenants.delete(graph)
         cl.close()
@@ -165,7 +187,10 @@ def test_topic_fusion_over_stored_centroids(start_medulla_server) -> None:
         cl.tenants.create(name)
     try:
         for name in (graph, foreign, bare):
-            assert cl.graph.declare_embedding_space(_space(), name) == "pinned-test-space-digest"
+            assert (
+                cl.graph.declare_embedding_space(_space(), name)
+                == "pinned-test-space-digest"
+            )
         # The nearest document by dense score is not the one with the strongest topic.
         docs = [
             ("d1", [0.8, 0.6, 0.0, 0.0]),
@@ -175,10 +200,23 @@ def test_topic_fusion_over_stored_centroids(start_medulla_server) -> None:
         for node_id, embedding in docs:
             put(cl, graph, node_id, {"type": "Doc"}, embedding)
             put(cl, bare, node_id, {"type": "Doc"}, embedding)
-        for topic, centroid in (("a", [1.0, 0.0, 0.0, 0.0]), ("b", [0.0, 1.0, 0.0, 0.0])):
-            put(cl, graph, f"c-{topic}", {"type": "TopicCentroid", "topic": topic, "centroid": centroid})
+        for topic, centroid in (
+            ("a", [1.0, 0.0, 0.0, 0.0]),
+            ("b", [0.0, 1.0, 0.0, 0.0]),
+        ):
+            put(
+                cl,
+                graph,
+                f"c-{topic}",
+                {"type": "TopicCentroid", "topic": topic, "centroid": centroid},
+            )
         # Another tenant's centroids, of the wrong width.
-        put(cl, foreign, "c-x", {"type": "TopicCentroid", "topic": "x", "centroid": [1.0, 0.0, 0.0]})
+        put(
+            cl,
+            foreign,
+            "c-x",
+            {"type": "TopicCentroid", "topic": "x", "centroid": [1.0, 0.0, 0.0]},
+        )
 
         query = [1.0, 0.0, 0.0, 0.0]
         plain = _ranked(cl, graph, query, 3, None)
@@ -193,11 +231,17 @@ def test_topic_fusion_over_stored_centroids(start_medulla_server) -> None:
 
         # A space pinned to another revision is not the retriever's space.
         other_space = {**_space(), "revision": "2"}
-        assert "TOPIC_SPACE_MISMATCH" in _refusal(cl, graph, _topic(other_space, revision))
+        assert "TOPIC_SPACE_MISMATCH" in _refusal(
+            cl, graph, _topic(other_space, revision)
+        )
         # A stale corpus revision.
-        assert "TOPIC_CORPUS_STALE" in _refusal(cl, graph, _topic(_space(), revision + 1))
+        assert "TOPIC_CORPUS_STALE" in _refusal(
+            cl, graph, _topic(_space(), revision + 1)
+        )
         # A tenant never reads another tenant's centroids: this graph holds none.
-        assert "TOPIC_BACKEND_UNAVAILABLE" in _refusal(cl, bare, _topic(_space(), revision))
+        assert "TOPIC_BACKEND_UNAVAILABLE" in _refusal(
+            cl, bare, _topic(_space(), revision)
+        )
         # A stored centroid of another width refuses.
         assert "3 dimensions" in _refusal(cl, foreign, _topic(_space(), revision))
     finally:
@@ -220,15 +264,34 @@ def test_document_responsibilities_change_order(start_medulla_server) -> None:
     cl = client()
     cl.tenants.create(graph)
     try:
-        assert cl.graph.declare_embedding_space(_space(), graph) == "pinned-test-space-digest"
+        assert (
+            cl.graph.declare_embedding_space(_space(), graph)
+            == "pinned-test-space-digest"
+        )
         put(cl, graph, "d1", {"type": "Doc", "kind": "doc"}, [1.0, 0.2, 0.0, 0.0])
         put(cl, graph, "d2", {"type": "Doc", "kind": "doc"}, [0.2, 1.0, 0.0, 0.0])
         put(cl, graph, "m1", {"type": "Doc", "kind": "memo"}, [1.0, 0.2, 0.0, 0.0])
-        for topic, centroid in (("a", [1.0, 0.0, 0.0, 0.0]), ("b", [0.0, 1.0, 0.0, 0.0])):
-            put(cl, graph, f"c-{topic}", {"type": "TopicCentroid", "topic": topic, "centroid": centroid})
+        for topic, centroid in (
+            ("a", [1.0, 0.0, 0.0, 0.0]),
+            ("b", [0.0, 1.0, 0.0, 0.0]),
+        ):
+            put(
+                cl,
+                graph,
+                f"c-{topic}",
+                {"type": "TopicCentroid", "topic": topic, "centroid": centroid},
+            )
         retrieval: dict[str, Any] = {
-            "constraints": {"graph_revision": 0, "entity_predicates": [_eq("kind", "doc")]},
-            "topic": {"top_topics": 2, "min_weight": 0.0, "corpus_revision": 0, "space": _space()},
+            "constraints": {
+                "graph_revision": 0,
+                "entity_predicates": [_eq("kind", "doc")],
+            },
+            "topic": {
+                "top_topics": 2,
+                "min_weight": 0.0,
+                "corpus_revision": 0,
+                "space": _space(),
+            },
         }
         retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
         query = [1.0, 0.2, 0.0, 0.0]
@@ -246,11 +309,18 @@ def test_document_responsibilities_change_order(start_medulla_server) -> None:
         assert [(t.candidate_id, t.topic_id) for t in first.assignments] == [
             (doc, topic) for doc in order for topic in ("a", "b")
         ]
-        by_doc = {(t.candidate_id, t.topic_id): t.responsibility_micros for t in first.assignments}
+        by_doc = {
+            (t.candidate_id, t.topic_id): t.responsibility_micros
+            for t in first.assignments
+        }
         for part in first.component_scores:
-            expected = sum(
-                query_weight[topic] * by_doc[(part.candidate_id, topic)] for topic in query_weight
-            ) / _MICROS
+            expected = (
+                sum(
+                    query_weight[topic] * by_doc[(part.candidate_id, topic)]
+                    for topic in query_weight
+                )
+                / _MICROS
+            )
             assert abs(part.topic_micros - expected) <= 2, part
 
         # Only d2's embedding changes: d1's entry is untouched, d2's topic term and the order change.
@@ -258,8 +328,14 @@ def test_document_responsibilities_change_order(start_medulla_server) -> None:
         retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
         second_answer, second = run()
         # The graph revision moved, so only the fusion parts are compared, not the generation.
-        assert _components(second)["d1"].topic_micros == _components(first)["d1"].topic_micros
-        assert _components(second)["d2"].topic_micros != _components(first)["d2"].topic_micros
+        assert (
+            _components(second)["d1"].topic_micros
+            == _components(first)["d1"].topic_micros
+        )
+        assert (
+            _components(second)["d2"].topic_micros
+            != _components(first)["d2"].topic_micros
+        )
         assert [row[0] for row in second_answer.rows] != order
 
         # A stored embedding older than the document's content refuses.
@@ -268,7 +344,9 @@ def test_document_responsibilities_change_order(start_medulla_server) -> None:
             {
                 "node_id": "d1",
                 "conditions_msgpack": msgpack.packb({"kind": "doc"}),
-                "updates_msgpack": msgpack.packb({"content_revision": 2, "embedded_revision": 1}),
+                "updates_msgpack": msgpack.packb(
+                    {"content_revision": 2, "embedded_revision": 1}
+                ),
             },
             graph,
         )
@@ -278,7 +356,12 @@ def test_document_responsibilities_change_order(start_medulla_server) -> None:
         assert "TOPIC_ASSIGNMENT_STALE" in str(refused.value)
 
         # A second centroid for topic `a` is a duplicate assignment.
-        put(cl, graph, "c-a2", {"type": "TopicCentroid", "topic": "a", "centroid": [0.0, 0.0, 1.0, 0.0]})
+        put(
+            cl,
+            graph,
+            "c-a2",
+            {"type": "TopicCentroid", "topic": "a", "centroid": [0.0, 0.0, 1.0, 0.0]},
+        )
         retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
         with pytest.raises(EngineResponseError) as duplicate:
             _ranked(cl, graph, query, 2, retrieval)
@@ -303,15 +386,31 @@ def test_fused_rank_candidate_without_embedding_refuses(start_medulla_server) ->
     cl = client()
     cl.tenants.create(graph)
     try:
-        assert cl.graph.declare_embedding_space(_space(), graph) == "pinned-test-space-digest"
+        assert (
+            cl.graph.declare_embedding_space(_space(), graph)
+            == "pinned-test-space-digest"
+        )
         put(cl, graph, "d1", {"type": "Doc", "text": "alpha"}, [1.0, 0.2, 0.0, 0.0])
         put(cl, graph, "d2", {"type": "Doc", "text": "alpha"}, [0.2, 1.0, 0.0, 0.0])
         # The text matches this document, which holds no embedding.
         put(cl, graph, "d3", {"type": "Doc", "text": "alpha needle"})
-        for topic, centroid in (("a", [1.0, 0.0, 0.0, 0.0]), ("b", [0.0, 1.0, 0.0, 0.0])):
-            put(cl, graph, f"c-{topic}", {"type": "TopicCentroid", "topic": topic, "centroid": centroid})
+        for topic, centroid in (
+            ("a", [1.0, 0.0, 0.0, 0.0]),
+            ("b", [0.0, 1.0, 0.0, 0.0]),
+        ):
+            put(
+                cl,
+                graph,
+                f"c-{topic}",
+                {"type": "TopicCentroid", "topic": topic, "centroid": centroid},
+            )
         retrieval: dict[str, Any] = {
-            "topic": {"top_topics": 2, "min_weight": 0.0, "corpus_revision": 0, "space": _space()}
+            "topic": {
+                "top_topics": 2,
+                "min_weight": 0.0,
+                "corpus_revision": 0,
+                "space": _space(),
+            }
         }
         retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
         query = [1.0, 0.2, 0.0, 0.0]
@@ -320,7 +419,10 @@ def test_fused_rank_candidate_without_embedding_refuses(start_medulla_server) ->
                 {"Scan": {"label": "Doc"}},
                 {
                     "FuseRrf": {
-                        "branches": [[{"Rank": {"query": query}}], [{"RankText": {"query": "needle"}}]],
+                        "branches": [
+                            [{"Rank": {"query": query}}],
+                            [{"RankText": {"query": "needle"}}],
+                        ],
                         "k": 0.0,
                     }
                 },
@@ -333,4 +435,63 @@ def test_fused_rank_candidate_without_embedding_refuses(start_medulla_server) ->
         assert refused.value.code == "TOPIC_ASSIGNMENT_MISSING"
     finally:
         cl.tenants.delete(graph)
+        cl.close()
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.4")
+def test_incompatible_topics_refuse_before_fusion(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.4: a topic weight out of range, a space the
+    retriever does not hold, a stale corpus revision and a graph with no centroid backend
+    each refuse with their registered code, and none returns rows."""
+    graph = f"topic-refuse-{uuid.uuid4().hex[:8]}"
+    bare = f"topic-refuse-bare-{uuid.uuid4().hex[:8]}"
+    cl = client()
+    for name in (graph, bare):
+        cl.tenants.create(name)
+    try:
+        for name in (graph, bare):
+            assert (
+                cl.graph.declare_embedding_space(_space(), name)
+                == "pinned-test-space-digest"
+            )
+        for node_id, embedding in (
+            ("d1", [0.8, 0.6, 0.0, 0.0]),
+            ("d2", [0.1, 0.0, 0.0, 0.995]),
+        ):
+            put(cl, graph, node_id, {"type": "Doc"}, embedding)
+            put(cl, bare, node_id, {"type": "Doc"}, embedding)
+        put(
+            cl,
+            graph,
+            "c-a",
+            {"type": "TopicCentroid", "topic": "a", "centroid": [1.0, 0.0, 0.0, 0.0]},
+        )
+        revision = _corpus_revision(cl, graph, _topic(_space(), 2**40)["retrieval"])
+
+        # A topic weight bound out of range refuses.
+        bad_weight = _topic(_space(), revision)
+        bad_weight["retrieval"]["topic"]["min_weight"] = 1.5
+        assert "TOPIC_WEIGHT_INVALID" in _refusal(cl, graph, bad_weight)
+        # A space the retriever does not hold: equal dimension alone is not compatible.
+        other_space = {**_space(), "revision": "2"}
+        assert "TOPIC_SPACE_MISMATCH" in _refusal(
+            cl, graph, _topic(other_space, revision)
+        )
+        # A corpus revision the centroids no longer match.
+        assert "TOPIC_CORPUS_STALE" in _refusal(
+            cl, graph, _topic(_space(), revision + 1)
+        )
+        # A graph that stores no centroids has no backend.
+        assert "TOPIC_BACKEND_UNAVAILABLE" in _refusal(
+            cl, bare, _topic(_space(), revision)
+        )
+
+        # The compatible request still ranks, so each refusal above came from the topic request.
+        ok = _ranked(
+            cl, graph, [1.0, 0.0, 0.0, 0.0], 2, _topic(_space(), revision)["retrieval"]
+        )
+        assert [row[0] for row in ok.rows]
+    finally:
+        for name in (graph, bare):
+            cl.tenants.delete(name)
         cl.close()
