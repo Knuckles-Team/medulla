@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import re
 import secrets
+from typing import Any
 
 import pytest
 from conftest import (
@@ -180,6 +181,7 @@ def _span_lines(log_path, analytic: str) -> list[str]:
     ]
 
 
+# proves R607.4: Refusal
 # spec: MEDULLA-FEDERATED-QUERY-R607.4
 def test_topology_refusals(capped_engine):
     client, _ = capped_engine
@@ -234,6 +236,7 @@ def test_topology_refusals(capped_engine):
     assert small["evidence"]["nodes"] == 3
 
 
+# proves R607.5: Evidence
 # spec: MEDULLA-FEDERATED-QUERY-R607.5
 def test_evidence_fields_after_success_and_refusal(capped_engine):
     client, log_path = capped_engine
@@ -285,13 +288,14 @@ def test_evidence_fields_after_success_and_refusal(capped_engine):
     assert any("nodes=6" in line for line in _span_lines(log_path, "mincut"))
 
 
+# proves R607.6: Hot-path proof
 # spec: MEDULLA-FEDERATED-QUERY-R607.6
 def test_each_analytic_is_served(clean_graph):
     """All five analytics answer over the wire on ONE fixture, each naming itself."""
     gc = clean_graph
     _seed(gc)
     candidates = [["tri-a1", "tri-a2"], ["tri-a1", "tri-b3"]]
-    requests = {
+    requests: dict[str, dict[str, Any]] = {
         "spectral": {"k": 2, "seed": 7},
         "mincut": {},
         "analogy": {"k": 4},

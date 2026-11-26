@@ -164,6 +164,7 @@ async fn round_with_no_parts_returns_rows_only() {
         .starts_with("RETRIEVAL_CONTRACT_INVALID"));
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R081.6
 // spec: MEDULLA-FEDERATED-QUERY-R081.3
 #[tokio::test(flavor = "multi_thread")]
 async fn served_round_returns_verdict_beside_rows() {
@@ -195,6 +196,7 @@ async fn served_round_returns_verdict_beside_rows() {
         .is_none());
 }
 
+// proves R081.5: Evidence
 // spec: MEDULLA-FEDERATED-QUERY-R081.5
 #[tokio::test(flavor = "multi_thread")]
 async fn sufficiency_premise_lists_all_six_fields() {

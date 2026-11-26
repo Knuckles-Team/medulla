@@ -80,6 +80,8 @@ async def _admit(client: MedullaClient, table: str, column: str) -> object:
     )
 
 
+# proves R077.2: Column vectorization: bind and unbind through the semantic index
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.2")
 def test_bind_text_refuse_integer(clean_graph):
     """MEDULLA-FEDERATED-QUERY-R077.2"""
     table = f"vec_{uuid.uuid4().hex[:10]}"

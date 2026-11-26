@@ -125,6 +125,7 @@ mod tests {
     use super::*;
     use crate::transition_refused::TransitionRefusalReason;
 
+    // proves R738.5: ContradictionRecord/ContradictionStatus is one explicit state machine, and ...
     // spec: MEDULLA-FEDERATED-QUERY-R738.5
     #[test]
     fn every_legal_transition_applies() {

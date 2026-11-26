@@ -710,6 +710,7 @@ mod tests {
         r.expect_err("must refuse").code
     }
 
+    // proves R040.5.1: Low-storage ANN: manifest and byte accounting
     // spec: MEDULLA-FEDERATED-QUERY-R040.5.1
     #[test]
     fn manifest_round_trip_and_sum() {

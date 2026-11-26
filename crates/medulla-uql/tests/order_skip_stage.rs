@@ -37,6 +37,7 @@ fn run(core: &GraphCore, text: &str) -> Result<RowSet, String> {
     execute(&plan, &ctx)
 }
 
+// proves R734: UQL orders and pages rows: the ORDER and SKIP stages
 // spec: MEDULLA-FEDERATED-QUERY-R734
 #[test]
 fn order_is_stable_with_row_id_tiebreak() {

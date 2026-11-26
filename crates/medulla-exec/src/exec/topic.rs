@@ -909,6 +909,7 @@ mod tests {
         core
     }
 
+    // proves R040.2.1: Topic fusion: model
     // spec: MEDULLA-FEDERATED-QUERY-R040.2.1
     #[test]
     fn two_backends_one_result_contract() {

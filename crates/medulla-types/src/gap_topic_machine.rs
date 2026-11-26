@@ -112,6 +112,7 @@ mod tests {
     use super::*;
     use crate::transition_refused::TransitionRefusalReason;
 
+    // proves R738.7: GapTopic/GapStatus is one explicit state machine, and every writer routes ...
     // spec: MEDULLA-FEDERATED-QUERY-R738.7
     #[test]
     fn every_legal_transition_applies() {

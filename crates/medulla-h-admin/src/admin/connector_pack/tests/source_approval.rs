@@ -1368,6 +1368,7 @@ async fn changed_or_revoked_approval_refuses() {
     assert!(error.contains("SOURCE_QUERY_APPROVAL_EXPIRED"), "{error}");
 }
 
+// proves R085.5: Wiring
 // spec: MEDULLA-FEDERATED-QUERY-R085.5
 #[cfg(feature = "federation-sql")]
 #[tokio::test]
@@ -1449,6 +1450,7 @@ async fn real_dispatch_issues_and_verifies_approval() {
     }
 }
 
+// proves R085.8: Evidence and hot-path proof
 // spec: MEDULLA-FEDERATED-QUERY-R085.8
 #[cfg(feature = "federation-sql")]
 #[tokio::test]

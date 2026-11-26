@@ -142,6 +142,7 @@ def test_one_port_serves_discover_and_feedback(stub_engine) -> None:
         client.tenants.delete(graph)
 
 
+# proves R651.5: Evidence
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R651.5")
 def test_analysis_and_expansion_evidence(stub_engine) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R651.5.
@@ -201,11 +202,13 @@ def test_analysis_and_expansion_evidence(stub_engine) -> None:
         client.tenants.delete(graph)
 
 
+# proves R651.6: Hot-path proof
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R651.6")
 def test_filters_intent_and_expansion(stub_engine) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R651.6: served `Discover` mode `deep` hot path.
 
-    One deep request returns the filters, the relational intent and the scripted expansions
+    One deep request returns the filters, the relational intent and the scripted
+    expansions
     together, asking the provider once.
     """
     sock, stub = stub_engine

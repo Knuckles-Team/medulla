@@ -43,6 +43,7 @@ async def _ids(client: MedullaClient, label: str) -> list[str]:
     return sorted(row["id"] for row in result["rows"])
 
 
+# proves R706.7: Policy load
 # spec: MEDULLA-FEDERATED-QUERY-R706.7
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R706.7")
 @pytest.mark.asyncio
@@ -109,6 +110,7 @@ async def test_cross_tenant_policy_not_applied() -> None:
         await tenant_b.close()
 
 
+# proves R706.5: Evidence
 # spec: MEDULLA-FEDERATED-QUERY-R706.5
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R706.5")
 @pytest.mark.asyncio

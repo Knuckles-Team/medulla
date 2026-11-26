@@ -120,6 +120,7 @@ mod tests {
         text
     }
 
+    // proves R726: UQL EVALUATE grammar
     // spec: MEDULLA-FEDERATED-QUERY-R726
     #[test]
     fn parses_every_kernel_and_refuses_unknown() {

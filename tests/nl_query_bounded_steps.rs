@@ -134,6 +134,7 @@ fn refusal(resp: &Response) -> String {
     format!("{:?} {:?}", resp.error, resp.error_detail)
 }
 
+// spec: MEDULLA-FEDERATED-QUERY-R058.4.2
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.1
 #[tokio::test]
 async fn second_step_corrects_parse_error() {

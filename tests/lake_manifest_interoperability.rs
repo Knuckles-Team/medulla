@@ -227,6 +227,7 @@ fn failure_before_metadata_publication_keeps_previous_snapshot_readable() {
     assert_eq!(before, after, "no partial snapshot became visible");
 }
 
+// proves R079.6: Iceberg publication: hot-path proof
 /// Seeds one table with committed rows, serves it on the lake REST listener and
 /// runs the independent Iceberg reader against it (MEDULLA-FEDERATED-QUERY-R079.6).
 // spec: MEDULLA-FEDERATED-QUERY-R079.6

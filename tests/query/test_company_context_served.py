@@ -1,7 +1,10 @@
-"""The governed company-context view over the served UQL wire (MEDULLA-FEDERATED-QUERY-R078.7).
+"""The governed company-context view over the served UQL wire
+(MEDULLA-FEDERATED-QUERY-R078.7).
 
-`COMPANY CONTEXT [CATEGORY name]` returns source-bound references to organization, role, data
-asset and permission nodes and to the latest committed point of a data asset's series, from
+`COMPANY CONTEXT [CATEGORY name]` returns source-bound references to organization,
+role, data
+asset and permission nodes and to the latest committed point of a data asset's
+series, from
 the caller's own tenant snapshot. A node whose `clearance` labels are not all among the
 caller's scopes is dropped before any time-series read, and no row carries a value.
 """
@@ -66,9 +69,7 @@ def _seed(client: SyncMedullaClient, tag: str) -> None:
         },
     )
     for series in (f"series-{tag}", f"series-fin-{tag}"):
-        client.timeseries.append(
-            series, [(SECOND_NS, [1.0]), (FUTURE_NS, [9.0])]
-        )
+        client.timeseries.append(series, [(SECOND_NS, [1.0]), (FUTURE_NS, [9.0])])
 
 
 def _rows(client: SyncMedullaClient, tag: str, text: str) -> dict[str, dict[str, Any]]:
@@ -76,9 +77,11 @@ def _rows(client: SyncMedullaClient, tag: str, text: str) -> dict[str, dict[str,
     return {row["id"]: row for row in result["rows"] if tag in row["id"]}
 
 
+# proves R078.7: Governed company-context logical view
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R078.7")
 def test_two_tenants_two_clearances(clean_graph) -> None:
-    """Each tenant reads its own references; a label the caller lacks drops the node and its series."""
+    """Each tenant reads its own references; a label the caller lacks drops the node
+    and its series."""
     tag = uuid.uuid4().hex[:8]
     other_tag = uuid.uuid4().hex[:8]
     seed_a = clean_graph
@@ -138,7 +141,9 @@ def test_two_tenants_two_clearances(clean_graph) -> None:
         ):
             rows = _rows(reader_a, tag, f"COMPANY CONTEXT CATEGORY {category}")
             assert set(rows) == expected, category
-            assert {row["provenance"]["category"] for row in rows.values()} == {category}
+            assert {row["provenance"]["category"] for row in rows.values()} == {
+                category
+            }
 
         # An unknown category refuses at parse time with its code.
         with pytest.raises(Exception, match="UQL_E_COMPANY_CATEGORY"):

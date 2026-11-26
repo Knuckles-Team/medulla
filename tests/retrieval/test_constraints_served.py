@@ -16,7 +16,11 @@ from _round_served import client, put
 
 from medulla.client import EngineResponseError
 
-_SCAN = [{"Scan": {"label": "Doc"}}, {"Rank": {"query": [1.0, 0.0]}}, {"Limit": {"k": 5}}]
+_SCAN: list[dict[str, Any]] = [
+    {"Scan": {"label": "Doc"}},
+    {"Rank": {"query": [1.0, 0.0]}},
+    {"Limit": {"k": 5}},
+]
 
 
 def _unified(cl: Any, graph: str, constraints: dict[str, Any]) -> Any:
@@ -46,7 +50,9 @@ def test_refusals_rank_nothing(start_medulla_server) -> None:
 
         # A malformed predicate is CONSTRAINT_INVALID and ranks nothing.
         with pytest.raises(EngineResponseError) as invalid:
-            _unified(cl, graph, {"graph_revision": 0, "entity_predicates": [_eq("", "x")]})
+            _unified(
+                cl, graph, {"graph_revision": 0, "entity_predicates": [_eq("", "x")]}
+            )
         assert "CONSTRAINT_INVALID" in str(invalid.value)
 
         # A revision pin that is not the revision the query reads is stale.
@@ -68,7 +74,9 @@ def test_refusals_rank_nothing(start_medulla_server) -> None:
         cl.close()
 
 
-def _ranked(cl: Any, graph: str, ops: list[dict[str, Any]], constraints: dict[str, Any]) -> Any:
+def _ranked(
+    cl: Any, graph: str, ops: list[dict[str, Any]], constraints: dict[str, Any]
+) -> Any:
     result = cl._send(
         "UnifiedQuery",
         {
@@ -100,7 +108,13 @@ def test_optimized_and_unoptimized_plans_agree(start_medulla_server) -> None:
             ("d6", "memo", 2025.0, [0.99, 0.01]),
         ]
         for node_id, kind, year, embedding in rows:
-            put(cl, graph, node_id, {"type": "Doc", "kind": kind, "year": year}, embedding)
+            put(
+                cl,
+                graph,
+                node_id,
+                {"type": "Doc", "kind": kind, "year": year},
+                embedding,
+            )
         constraints = {"graph_revision": 0, "entity_predicates": [_eq("kind", "doc")]}
         recent = {"Filter": {"preds": [{"GtNum": {"prop": "year", "n": 2024.0}}]}}
         scan, rank, limit = _SCAN[0], _SCAN[1], {"Limit": {"k": 10}}
@@ -120,7 +134,9 @@ def test_optimized_and_unoptimized_plans_agree(start_medulla_server) -> None:
 
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.1.4")
-def test_unsatisfiable_constraints_return_eligible_exhausted(start_medulla_server) -> None:
+def test_unsatisfiable_constraints_return_eligible_exhausted(
+    start_medulla_server,
+) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R040.1.4: a valid conjunction nothing satisfies
     answers zero rows and the R039 shortfall."""
     graph = f"constraints-none-{uuid.uuid4().hex[:8]}"
@@ -146,8 +162,10 @@ def test_unsatisfiable_constraints_return_eligible_exhausted(start_medulla_serve
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.1.5")
 def test_excluded_never_reappears(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R040.1.5: the receipt carries the constraint binding,
-    identical across plan shapes, and no excluded candidate appears in any ranking branch."""
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.1.5: the receipt carries the constraint
+    binding,
+    identical across plan shapes, and no excluded candidate appears in any ranking
+    branch."""
     graph = f"constraints-receipt-{uuid.uuid4().hex[:8]}"
     cl = client()
     cl.tenants.create(graph)
@@ -173,7 +191,9 @@ def test_excluded_never_reappears(start_medulla_server) -> None:
         assert len(traces[0]["constraint_digest"]) == 64
         assert traces[0]["graph_revision"] == 0
         assert traces[0]["authorized_exclusion_count"] == 2
-        assert traces[0]["per_predicate"] == [{"predicate_id": "entity[0]", "outcome": 3}]
+        assert traces[0]["per_predicate"] == [
+            {"predicate_id": "entity[0]", "outcome": 3}
+        ]
     finally:
         cl.tenants.delete(graph)
         cl.close()
@@ -200,9 +220,11 @@ def _cites_kind(kind: str, quantifier: str) -> dict[str, Any]:
     }
 
 
+# proves R040.1.6: Constraints: hot-path proof
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.1.6")
 def test_constraints_before_ranking(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R040.1.6: required and forbidden edge predicates,
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.1.6: required and forbidden edge
+    predicates,
     a contradictory conjunction, exact top-k replenishment, a stale revision and a
     cross-tenant negative, over edges loaded through the wire."""
     graph = f"constraints-hot-{uuid.uuid4().hex[:8]}"
@@ -230,7 +252,8 @@ def test_constraints_before_ranking(start_medulla_server) -> None:
         doc = _eq("kind", "doc")
         scan, rank = _SCAN[0], _SCAN[1]
 
-        # Forbidden edge: d1 cites the banned source, so it never ranks although it is nearest.
+        # Forbidden edge: d1 cites the banned source, so it never ranks although it
+        # is nearest.
         forbidden = {
             "graph_revision": 0,
             "entity_predicates": [doc],
@@ -249,13 +272,18 @@ def test_constraints_before_ranking(start_medulla_server) -> None:
             "entity_predicates": [doc],
             "relationship_predicates": [_cites_kind("good", "exists")],
         }
-        assert ids(_ranked(cl, graph, [scan, rank, {"Limit": {"k": 10}}], required)) == [
+        assert ids(
+            _ranked(cl, graph, [scan, rank, {"Limit": {"k": 10}}], required)
+        ) == [
             "d2",
             "d3",
         ]
 
         # A contradictory conjunction ranks nothing and says why.
-        contradictory = {"graph_revision": 0, "entity_predicates": [doc, _eq("kind", "memo")]}
+        contradictory = {
+            "graph_revision": 0,
+            "entity_predicates": [doc, _eq("kind", "memo")],
+        }
         none = _ranked(cl, graph, [scan, rank, {"Limit": {"k": 3}}], contradictory)
         assert none["rows"] == []
         assert none["shortfall"]["reason"] == "eligible_exhausted"

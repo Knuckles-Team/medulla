@@ -1405,6 +1405,7 @@ fn cep_attributes_are_grounded_against_event_attributes() {
     assert!(violation.to_string().contains("family: cep"));
 }
 
+// proves R058.4.2: NL planning context: behavior
 // spec: MEDULLA-FEDERATED-QUERY-R058.4.2
 #[test]
 fn linking_dialect_and_one_correction() {

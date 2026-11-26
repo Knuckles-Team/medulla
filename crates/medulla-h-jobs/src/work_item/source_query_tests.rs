@@ -147,6 +147,7 @@ fn request() -> ApproveSourceQueryRequest {
     }
 }
 
+// proves R085.2: Behavior: issue approval through a dedicated native issuer
 // spec: MEDULLA-FEDERATED-QUERY-R085.2
 #[tokio::test]
 async fn approval_requires_authority_and_native_commit() {

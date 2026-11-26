@@ -8,6 +8,7 @@ use medulla_uql::{parse_statement, parse_statement_at, Body, Params};
 /// The query time every parse here is handed: an engine-clock reading, in seconds.
 const NOW_SECS: f64 = 1_700_000_000.0;
 
+// proves R720.9: UQL union stage and valid-as-of window
 // spec: MEDULLA-FEDERATED-QUERY-R720.9
 /// Verifies MEDULLA-FEDERATED-QUERY-R720.9: both clauses lower into one linear plan.
 #[test]

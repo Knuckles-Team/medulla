@@ -132,6 +132,7 @@ async fn planned_statement_executes_only_with_predicate() {
     assert_eq!(rows.len(), 2, "both rows return: {run:?}");
 }
 
+// proves R078.4: Plan scope: refusal
 // spec: MEDULLA-FEDERATED-QUERY-R078.4
 #[tokio::test]
 async fn unverified_tenant_refused_zero_reads() {
@@ -179,6 +180,7 @@ async fn unverified_tenant_refused_zero_reads() {
     assert!(verified.error.is_none(), "{:?}", verified.error);
 }
 
+// proves R078.5: Plan scope: evidence
 // spec: MEDULLA-FEDERATED-QUERY-R078.5
 #[tokio::test]
 async fn trace_and_explain_show_scope() {
@@ -271,6 +273,7 @@ fn row_ids(response: &Response) -> Vec<String> {
     ids
 }
 
+// proves R078.6: Plan scope: hot-path proof
 // spec: MEDULLA-FEDERATED-QUERY-R078.6
 #[tokio::test]
 async fn only_own_rows_return() {

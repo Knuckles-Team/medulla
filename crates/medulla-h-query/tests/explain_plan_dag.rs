@@ -30,6 +30,7 @@ fn explain(src: &str) -> (u32, u32, usize) {
     }
 }
 
+// proves R720.8: EXPLAIN reports the plan DAG and root count
 // spec: MEDULLA-FEDERATED-QUERY-R720.8
 /// Verifies MEDULLA-FEDERATED-QUERY-R720.8: a multi-stage program is one plan, one root.
 #[test]

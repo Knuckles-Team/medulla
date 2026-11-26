@@ -188,6 +188,7 @@ fn decay_and_cluster_refusals() {
     assert!(mixed.unwrap_err().starts_with("UQL_E_CLUSTER_NO_VECTOR"));
 }
 
+// proves R720.7: UQL stage REQUIRE NONEMPTY with a caller-named refusal code
 // spec: MEDULLA-FEDERATED-QUERY-R720.7
 #[test]
 fn require_nonempty_refuses_with_code() {

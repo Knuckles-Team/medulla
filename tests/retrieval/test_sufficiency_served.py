@@ -29,6 +29,7 @@ def _body(round_number: int, round_limit: int | None) -> dict[str, Any]:
     return body
 
 
+# proves R081.6: Hot-path proof
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R081.6")
 def test_insufficient_returns_boost_k(start_medulla_server) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R081.6."""
@@ -46,7 +47,9 @@ def test_insufficient_returns_boost_k(start_medulla_server) -> None:
         verdict = first["sufficiency"]
         assert verdict["verdict"] == "insufficient"
         assert verdict["repair"] == {"kind": "boost_k", "k": 8}
-        premises = [p for p in first["premises"] if p["name"] == "retrieval.sufficiency"]
+        premises = [
+            p for p in first["premises"] if p["name"] == "retrieval.sufficiency"
+        ]
         assert len(premises) == 1, first["premises"]
         assert premises[0]["value"]["verdict"] == "insufficient"
 

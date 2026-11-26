@@ -122,6 +122,7 @@ def _kernel_expected_code_context() -> dict[str, Any]:
     }
 
 
+# proves R654.3: Wiring
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.3")
 def test_methods_reach_kernels(start_medulla_server) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R654.3: served output equals the kernels."""
@@ -166,6 +167,7 @@ def test_methods_reach_kernels(start_medulla_server) -> None:
     _with_graph(body)
 
 
+# proves R654.4: Refusal and degraded answers
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.4")
 def test_ambiguous_degraded_and_refusals(start_medulla_server) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R654.4: statuses, codes, no state change."""
@@ -232,6 +234,7 @@ def test_ambiguous_degraded_and_refusals(start_medulla_server) -> None:
     _with_graph(body)
 
 
+# proves R654.5: Evidence
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.5")
 def test_evidence_fields(start_medulla_server) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R654.5: hops, hub inputs, stage, evidence."""
@@ -264,6 +267,7 @@ def test_evidence_fields(start_medulla_server) -> None:
     _with_graph(body)
 
 
+# proves R654.6: Hot-path proof
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.6")
 def test_code_context_and_diagnose(start_medulla_server) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R654.6: the hot path answers both methods."""

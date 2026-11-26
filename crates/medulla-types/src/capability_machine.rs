@@ -112,6 +112,7 @@ mod tests {
     use super::*;
     use crate::transition_refused::TransitionRefusalReason;
 
+    // proves R738.1: CapabilityEntry/CapabilityStatus is one explicit state machine, and every ...
     // spec: MEDULLA-FEDERATED-QUERY-R738.1
     #[test]
     fn every_legal_transition_applies() {

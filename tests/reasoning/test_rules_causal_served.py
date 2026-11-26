@@ -157,6 +157,7 @@ async def test_both_methods_reach_the_kernels() -> None:
     ] == pytest.approx(bad_expected["y"], rel=1e-9)
 
 
+# proves R608.4: Refusal
 # spec: MEDULLA-FEDERATED-QUERY-R608.4
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R608.4")
 @pytest.mark.asyncio
@@ -201,6 +202,7 @@ def _leaf_rules(node: object) -> set[str]:
     return set().union(*(_leaf_rules(p) for p in premises))
 
 
+# proves R608.5: Evidence
 # spec: MEDULLA-FEDERATED-QUERY-R608.5
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R608.5")
 @pytest.mark.asyncio
@@ -233,6 +235,7 @@ async def test_evidence_after_success_and_bound() -> None:
         assert fit["limit"] > 0.0
 
 
+# proves R608.6: Hot-path proof
 # spec: MEDULLA-FEDERATED-QUERY-R608.6
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R608.6")
 @pytest.mark.asyncio

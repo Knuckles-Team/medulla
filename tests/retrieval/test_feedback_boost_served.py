@@ -33,7 +33,12 @@ def test_upvote_raises_rank(start_medulla_server) -> None:
     cl.tenants.create(graph)
     try:
         for node_id in ("doc-a", "doc-b"):
-            put(cl, graph, node_id, {"type": "Doc", "name": "feedback", "description": ""})
+            put(
+                cl,
+                graph,
+                node_id,
+                {"type": "Doc", "name": "feedback", "description": ""},
+            )
         before = _discover(cl, graph)
         assert before[:2] == ["doc-a", "doc-b"]
 
@@ -71,6 +76,7 @@ def _stored_events(cl: Any, graph: str) -> int:
     return len(rows)
 
 
+# proves R705.4: Refusal
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R705.4")
 def test_feedback_refusals(start_medulla_server) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R705.4: both refusal codes, and zero writes."""
@@ -121,6 +127,7 @@ def _discover_hits(cl: Any, graph: str) -> dict[str, dict[str, Any]]:
     return {hit["id"]: hit for hit in result["hits"]}
 
 
+# proves R705.5: Evidence
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R705.5")
 def test_boost_listed_per_hit(start_medulla_server) -> None:
     """Verifies MEDULLA-FEDERATED-QUERY-R705.5: a rank answer lists `boost` per hit and
@@ -130,7 +137,12 @@ def test_boost_listed_per_hit(start_medulla_server) -> None:
     cl.tenants.create(graph)
     try:
         for node_id in ("doc-a", "doc-b"):
-            put(cl, graph, node_id, {"type": "Doc", "name": "feedback", "description": ""})
+            put(
+                cl,
+                graph,
+                node_id,
+                {"type": "Doc", "name": "feedback", "description": ""},
+            )
         before = _discover_hits(cl, graph)
         assert all(hit.get("boost", 0.0) == 0.0 for hit in before.values())
 

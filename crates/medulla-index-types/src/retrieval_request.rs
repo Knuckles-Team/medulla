@@ -170,6 +170,7 @@ mod tests {
         }
     }
 
+    // proves R040.1.7: Served retrieval request: the one carrier of constraints, topic fusion and ...
     // spec: MEDULLA-FEDERATED-QUERY-R040.1.7
     #[test]
     fn request_round_trips_and_refuses_unknown_fields() {

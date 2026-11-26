@@ -34,6 +34,8 @@ def _advice(clean_graph, table: str) -> dict[str, dict]:
     return {r["column_name"]: r for r in rows if r["table_name"] == table}
 
 
+# proves R077.6.3: Column advice: usage recording and the advice relation
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.6.3")
 def test_advice_relation_reads_production_observations(clean_graph):
     """MEDULLA-FEDERATED-QUERY-R077.6.3"""
     table = _table(clean_graph)
@@ -48,6 +50,8 @@ def test_advice_relation_reads_production_observations(clean_graph):
     assert int(after["qty"]["sample_count"]) == 0
 
 
+# proves R077.6.4: Column advice: refusal scoped to the question
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.6.4")
 def test_unembeddable_types_refuse_without_side_effects(clean_graph):
     """MEDULLA-FEDERATED-QUERY-R077.6.4"""
     table = _table(clean_graph)
@@ -68,7 +72,8 @@ def test_unembeddable_types_refuse_without_side_effects(clean_graph):
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.6.2")
 def test_workload_changes_advice(clean_graph):
-    """MEDULLA-FEDERATED-QUERY-R077.6.2: the ranking follows the traffic, not the statistics."""
+    """MEDULLA-FEDERATED-QUERY-R077.6.2: the ranking follows the traffic, not the
+    statistics."""
     table = _table(clean_graph)
     idle = _advice(clean_graph, table)
     assert float(idle["body"]["score"]) == 0.0
@@ -107,9 +112,11 @@ def _index_names(clean_graph) -> list[str]:
     return sorted(r["index_name"] for r in rows)
 
 
+# proves R077.6.5: Column advice: evidence
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R077.6.5")
 def test_receipt_matches_observations_binding_unchanged(clean_graph):
-    """MEDULLA-FEDERATED-QUERY-R077.6.5: the receipt explains the score from the uses issued."""
+    """MEDULLA-FEDERATED-QUERY-R077.6.5: the receipt explains the score from the uses
+    issued."""
     table = _table(clean_graph)
     indexes_before = _index_names(clean_graph)
     for _ in range(40):
@@ -122,9 +129,9 @@ def test_receipt_matches_observations_binding_unchanged(clean_graph):
     assert int(body["sample_count"]) == 40
     assert int(title["sample_count"]) == 20
     for row in (body, title):
-        assert int(row["total_text_search_uses"]) == int(rows["body"]["sample_count"]) + int(
-            rows["title"]["sample_count"]
-        )
+        assert int(row["total_text_search_uses"]) == int(
+            rows["body"]["sample_count"]
+        ) + int(rows["title"]["sample_count"])
         assert row["policy_revision"].startswith("sql_advice/v1 min_samples=")
         parts = (
             float(row["demand_contribution"])
@@ -132,7 +139,9 @@ def test_receipt_matches_observations_binding_unchanged(clean_graph):
             + float(row["distinct_contribution"])
         )
         assert abs(parts - float(row["score"])) < 1e-9
-    assert float(body["demand_contribution"]) > float(title["demand_contribution"]) > 0.0
+    assert (
+        float(body["demand_contribution"]) > float(title["demand_contribution"]) > 0.0
+    )
     # a column that is not eligible carries zero contributions
     qty = rows["qty"]
     assert qty["eligibility"] == "unsupported_type"

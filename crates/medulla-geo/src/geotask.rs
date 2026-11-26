@@ -440,6 +440,7 @@ mod tests {
         assert_eq!(t, back);
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R738.8
     /// MEDULLA-FEDERATED-QUERY-R738.8
     #[test]
     fn status_moves_only_through_apply() {
