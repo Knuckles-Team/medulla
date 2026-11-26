@@ -2528,6 +2528,12 @@ harness = false
 required-features = ["server"]
 
 [[bench]]
+name = "definitions"
+path = "benches/definitions.rs"
+harness = false
+required-features = ["server"]
+
+[[bench]]
 name = "harness_lessons"
 path = "benches/harness_lessons.rs"
 harness = false
