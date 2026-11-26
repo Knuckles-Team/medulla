@@ -3,15 +3,15 @@
   "as_of": "2026-11-26T00:00:00Z",
   "items": [
     {
-      "person": "person-1",
-      "joinKey": "keycloak.q2-key-1",
-      "id": "keycloak-agent-keycloak.q2-1",
+      "role": "role-1",
+      "joinKey": "okta.q2-key-1",
+      "id": "keycloak-agent-okta.q2-1",
       "label": "keycloak-agent 1"
     },
     {
-      "person": "person-2",
-      "joinKey": "keycloak.q2-key-2",
-      "id": "keycloak-agent-keycloak.q2-2",
+      "role": "role-2",
+      "joinKey": "okta.q2-key-2",
+      "id": "keycloak-agent-okta.q2-2",
       "label": "keycloak-agent 2"
     }
   ]

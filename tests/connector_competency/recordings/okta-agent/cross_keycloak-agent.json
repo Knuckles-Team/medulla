@@ -3,15 +3,15 @@
   "as_of": "2026-11-26T00:00:00Z",
   "items": [
     {
-      "service": "service-1",
-      "joinKey": "keycloak.q2-key-1",
-      "id": "okta-agent-keycloak.q2-1",
+      "user": "user-1",
+      "joinKey": "okta.q2-key-1",
+      "id": "okta-agent-okta.q2-1",
       "label": "okta-agent 1"
     },
     {
-      "service": "service-2",
-      "joinKey": "keycloak.q2-key-2",
-      "id": "okta-agent-keycloak.q2-2",
+      "user": "user-2",
+      "joinKey": "okta.q2-key-2",
+      "id": "okta-agent-okta.q2-2",
       "label": "okta-agent 2"
     }
   ]

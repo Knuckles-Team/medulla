@@ -1,0 +1,18 @@
+{
+  "source": "servicenow-api",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "assignment": "assignment-1",
+      "joinKey": "okta.q2-key-1",
+      "id": "servicenow-api-okta.q2-1",
+      "label": "servicenow-api 1"
+    },
+    {
+      "assignment": "assignment-2",
+      "joinKey": "okta.q2-key-2",
+      "id": "servicenow-api-okta.q2-2",
+      "label": "servicenow-api 2"
+    }
+  ]
+}

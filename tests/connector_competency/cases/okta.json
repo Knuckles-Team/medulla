@@ -1,0 +1,39 @@
+{
+  "connector": "okta",
+  "rollup": "MEDULLA-CQ-CONN-R042",
+  "vocabulary_module": "identity-v1.ttl",
+  "terms": [
+    "accountStatus"
+  ],
+  "questions": [
+    {
+      "id": "okta.q2",
+      "kind": "cross",
+      "question": "Which Okta users were deactivated but still hold a Keycloak role or an open ServiceNow assignment?",
+      "uql": "LET s0 = FOREIGN SCAN 'okta-agent'; LET s1 = FOREIGN SCAN 'keycloak-agent'; LET s2 = FOREIGN SCAN 'servicenow-api'; JOIN s0, s1, s2",
+      "sources": [
+        "okta-agent",
+        "keycloak-agent",
+        "servicenow-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "okta-agent": "mcp_tool",
+        "keycloak-agent": "mcp_tool",
+        "servicenow-api": "http_endpoint"
+      },
+      "columns": [
+        "user",
+        "role",
+        "assignment"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "okta-agent/cross_keycloak-agent.json",
+        "keycloak-agent/cross_okta-agent.json",
+        "okta-agent/cross_servicenow-api.json",
+        "servicenow-api/cross_okta-agent.json"
+      ]
+    }
+  ]
+}
