@@ -321,6 +321,7 @@ METHOD_IDS = frozenset(
         "DecaySweep",
         "TouchNodes",
         "GetSubgraph",
+        "GetNeighborhood",
         "Fork",
         "DiffAgainst",
         "Reconcile",

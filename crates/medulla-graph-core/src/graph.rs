@@ -29,6 +29,7 @@ mod core_index_property;
 mod core_index_visibility;
 mod core_ledger;
 mod core_memory;
+mod core_neighborhood;
 mod core_neighbors;
 mod core_node_mutation;
 mod core_node_queries;

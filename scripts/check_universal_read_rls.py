@@ -486,6 +486,7 @@ def main() -> None:
         "GetContextView",
         "Vf2SubgraphMatch",
         "GetSubgraph",
+        "GetNeighborhood",
         "Fork",
         "UnionGetNodeProperties",
         "UnionGetNodesByLabel",

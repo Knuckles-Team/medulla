@@ -13527,6 +13527,13 @@ class MethodGetSubgraph(BaseModel):
     params: MethodGetSubgraphParams
 
 
+class MethodGetNeighborhood(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GetNeighborhood"]
+    params: MethodGetNeighborhoodParams
+
+
 class MethodFork(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17334,6 +17341,7 @@ Method = Annotated[
         MethodAuditReadEvent,
         MethodAuditProveInclusion,
         MethodGetSubgraph,
+        MethodGetNeighborhood,
         MethodFork,
         MethodDiffAgainst,
         MethodCompactNodesByType,
@@ -19558,6 +19566,18 @@ class MethodGetMatViewParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     name: str
+
+
+class MethodGetNeighborhoodParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    depth: Annotated[int, Field(ge=0)] = 0
+    edge_types: list[str] = Field(default_factory=list)
+    exclude: list[str] = Field(default_factory=list)
+    node_id: str
+    per_node_limit: Annotated[int, Field(ge=0)] = 0
+    total_limit: Annotated[int, Field(ge=0)] = 0
 
 
 class MethodGetNeighborsBatchParams(BaseModel):
@@ -28945,6 +28965,24 @@ class SubgraphResult(BaseModel):
 
     edges: list[SubgraphEdge]
     nodes: list[SubgraphNode]
+
+
+class HiddenCount(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    count: Annotated[int, Field(ge=0)]
+    node_id: str
+
+
+class NeighborhoodResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edges: list[SubgraphEdge]
+    graph_revision: Annotated[int, Field(ge=0)]
+    hidden: list[HiddenCount]
+    next_cursor: str | None = None
+    nodes: list[SubgraphNode]
+    truncated: bool
 
 
 class SubmitJobSpec(BaseModel):
@@ -43519,12 +43557,16 @@ __all__ = [
     "AdminResetIssue",
     "ApiKeyAdminIssue",
     "ApiKeyView",
+    "HiddenCount",
+    "MethodGetNeighborhood",
+    "MethodGetNeighborhoodParams",
     "MfaChallengeKind",
     "MfaChallengeConsume",
     "MfaChallengeIssue",
     "MfaChallengeView",
     "IssuerKeyRotate",
     "IssuerKeyView",
+    "NeighborhoodResult",
     "ScimClientCreate",
     "ScimClientUpdate",
     "ScimClientUse",

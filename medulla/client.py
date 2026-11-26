@@ -8402,6 +8402,37 @@ class GraphOperationsClient:
             await _gen.graph.send_get_subgraph(self._client, {"node_ids": node_ids})
         ).payload
 
+    async def get_neighborhood(
+        self,
+        node_id: str,
+        *,
+        depth: int,
+        per_node_limit: int,
+        total_limit: int,
+        edge_types: list[str] | None = None,
+        exclude: list[str] | None = None,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        """One bounded neighborhood read for interactive graph exploration.
+
+        Walks breadth-first from ``node_id`` to ``depth`` (1 to 3), keeping at most
+        ``per_node_limit`` neighbors per node and ``total_limit`` neighbors overall.
+        ``exclude`` lists ids the viewer already shows. Returns ``{"nodes", "edges",
+        "hidden", "next_cursor", "truncated", "graph_revision"}``; pass ``next_cursor``
+        back as ``cursor`` to page through the root's remaining neighbors.
+        """
+        params: dict[str, Any] = {
+            "node_id": node_id,
+            "depth": depth,
+            "per_node_limit": per_node_limit,
+            "total_limit": total_limit,
+            "edge_types": edge_types or [],
+            "exclude": exclude or [],
+        }
+        if cursor is not None:
+            params["cursor"] = cursor
+        return (await _gen.graph.send_get_neighborhood(self._client, params)).payload
+
     async def connected_components(self) -> list[list[str]]:
         return (await _gen.compute.send_connected_components(self._client)).payload
 

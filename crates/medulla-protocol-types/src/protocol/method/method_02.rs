@@ -370,6 +370,27 @@ $($variants)*
         node_ids: Vec<String>,
     },
 
+    /// MEDULLA-DURABLE-KERNEL-R876.1: one bounded neighborhood read for interactive graph
+    /// exploration. A breadth-first walk from `node_id` to `depth` (1 to 3), keeping at most
+    /// `per_node_limit` neighbors per node and `total_limit` nodes overall; `exclude` lists
+    /// ids the viewer already shows (at most 5,000). The answer reports how many neighbors
+    /// stay hidden and a cursor that resumes at the first dropped neighbor of the root.
+    GetNeighborhood {
+        node_id: String,
+        #[serde(default)]
+        depth: u32,
+        #[serde(default)]
+        edge_types: Vec<String>,
+        #[serde(default)]
+        per_node_limit: u32,
+        #[serde(default)]
+        total_limit: u32,
+        #[serde(default)]
+        exclude: Vec<String>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+
     Fork,
 
     DiffAgainst {

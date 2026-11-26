@@ -388,6 +388,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "GetIdentity": security.send_get_identity,
     "GetLedger": security.send_get_ledger,
     "GetMatView": cluster.send_get_mat_view,
+    "GetNeighborhood": graph.send_get_neighborhood,
     "GetNeighbors": graph.send_get_neighbors,
     "GetNeighborsBatch": graph.send_get_neighbors_batch,
     "GetNodeProperties": graph.send_get_node_properties,

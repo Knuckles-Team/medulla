@@ -2111,6 +2111,12 @@ name = "marking_propagate"
 path = "benches/marking_propagate.rs"
 harness = false
 
+# One bounded neighborhood read at 1,000,000 edges (MEDULLA-DURABLE-KERNEL-R876.6): nightly budget.
+[[bench]]
+name = "neighborhood"
+path = "benches/neighborhood.rs"
+harness = false
+
 # Data-prep declaration at writer concurrency (MEDULLA-INGEST-WORKER-R001.1011): nightly budget.
 [[bench]]
 name = "data_prep_declare"

@@ -171,6 +171,7 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "GetEdgesPage",
     "GetMatView",
     "GetNeighbors",
+    "GetNeighborhood",
     "GetNeighborsBatch",
     "GetNodeProperties",
     "GetNodePropertiesBatch",

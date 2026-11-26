@@ -255,6 +255,31 @@ pub struct SubgraphResult {
     pub edges: Vec<SubgraphEdge>,
 }
 
+/// How many neighbors of `node_id` a `Method::GetNeighborhood` walk left out
+/// (MEDULLA-DURABLE-KERNEL-R876.1). A viewer shows it as an expandable "+N".
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HiddenCount {
+    pub node_id: String,
+    pub count: u64,
+}
+
+/// The bounded neighborhood of one node (`Method::GetNeighborhood`,
+/// MEDULLA-DURABLE-KERNEL-R876.1): the nodes and edges within `depth` hops, the
+/// neighbors the walk left out, and the cursor that resumes at the first neighbor
+/// of the root it dropped.
+#[derive(Clone, Debug, Default, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct NeighborhoodResult {
+    pub nodes: Vec<SubgraphNode>,
+    pub edges: Vec<SubgraphEdge>,
+    pub hidden: Vec<HiddenCount>,
+    pub next_cursor: Option<String>,
+    pub truncated: bool,
+    /// The graph revision the answer was read at; a cursor is valid only at this revision.
+    pub graph_revision: u64,
+}
+
 // ── Graph Diff ───────────────────────────────────────────────────────────
 
 /// What another graph has relative to this one (`Method::DiffAgainst`): nodes and
@@ -372,5 +397,42 @@ mod bitemporal_tests {
         });
         let bytes = rmp_serde::to_vec_named(&retired).expect("encode retired shape");
         assert!(rmp_serde::from_slice::<EdgeData>(&bytes).is_err());
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R876.1
+    #[test]
+    fn neighborhood_result_round_trips_with_golden_vector() {
+        let result = NeighborhoodResult {
+            nodes: vec![SubgraphNode {
+                id: "hub".into(),
+                properties: serde_json::json!({"label": "Hub"}),
+            }],
+            edges: vec![SubgraphEdge {
+                source: "hub".into(),
+                target: "leaf-1".into(),
+                properties: serde_json::json!({"relationship": "LINKS"}),
+            }],
+            hidden: vec![HiddenCount {
+                node_id: "hub".into(),
+                count: 1950,
+            }],
+            next_cursor: Some("7.50".into()),
+            truncated: true,
+            graph_revision: 7,
+        };
+        let golden = serde_json::json!({
+            "nodes": [{"id": "hub", "properties": {"label": "Hub"}}],
+            "edges": [{"source": "hub", "target": "leaf-1", "properties": {"relationship": "LINKS"}}],
+            "hidden": [{"node_id": "hub", "count": 1950}],
+            "next_cursor": "7.50",
+            "truncated": true,
+            "graph_revision": 7
+        });
+        assert_eq!(serde_json::to_value(&result).expect("encode"), golden);
+        let back: NeighborhoodResult = serde_json::from_value(golden).expect("decode");
+        assert_eq!(back, result);
+        let bytes = rmp_serde::to_vec_named(&result).expect("msgpack encode");
+        let again: NeighborhoodResult = rmp_serde::from_slice(&bytes).expect("msgpack decode");
+        assert_eq!(again, result);
     }
 }

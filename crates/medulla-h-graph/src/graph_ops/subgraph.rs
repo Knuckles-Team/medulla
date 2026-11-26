@@ -57,6 +57,139 @@ fn handle_get_subgraph(req_id: u64, core: &Arc<GraphCore>, node_ids: &[String]) 
     )
 }
 
+fn neighborhood_refusal(code: medulla_types::contract::ServerErrorCode, detail: &str) -> String {
+    format!("{}: {detail}", code.as_str())
+}
+
+/// Whether an edge property blob names a relationship the walk follows.
+fn blob_follows(blob: &[u8], edge_types: &[String]) -> bool {
+    if edge_types.is_empty() {
+        return true;
+    }
+    let rels = medulla_graph_core::index::EdgeRels::from_blobs([blob]);
+    edge_types.iter().any(|kind| rels.types.contains(kind))
+}
+
+/// `GetNeighborhood` (MEDULLA-DURABLE-KERNEL-R876.3): one bounded breadth-first read over the
+/// caller's projected core, so a node the caller may not read is `NODE_NOT_FOUND` and a hidden
+/// count never includes a neighbor the caller may not read.
+fn handle_get_neighborhood(
+    req_id: u64,
+    core: &Arc<GraphCore>,
+    raw_core: &Arc<GraphCore>,
+    request: NeighborhoodRequest<'_>,
+) -> Response {
+    use medulla_graph_core::neighborhood::{self, NeighborhoodQuery};
+    use medulla_types::contract::ServerErrorCode;
+    let graph_revision = raw_core.version();
+    let skip = match request.cursor {
+        None => 0,
+        Some(cursor) => match neighborhood::decode_cursor(cursor) {
+            Some((revision, skip)) if revision == graph_revision => skip,
+            _ => {
+                return Response::err(
+                    req_id,
+                    neighborhood_refusal(
+                        ServerErrorCode::NeighborhoodCursorStale,
+                        "the graph revision moved since the cursor was issued",
+                    ),
+                )
+            }
+        },
+    };
+    let query = NeighborhoodQuery {
+        root: request.node_id,
+        depth: request.depth,
+        edge_types: request.edge_types,
+        per_node_limit: request.per_node_limit,
+        total_limit: request.total_limit,
+        exclude: request.exclude,
+        skip,
+    };
+    let walked = match neighborhood::walk(&**core, &query) {
+        Ok(walked) => walked,
+        Err(refusal) => {
+            return Response::err(
+                req_id,
+                neighborhood_refusal(refusal.code(), "the neighborhood read was refused"),
+            )
+        }
+    };
+    let nodes: Vec<_> = walked
+        .nodes
+        .iter()
+        .map(|id| medulla_types::types::SubgraphNode {
+            id: id.clone(),
+            properties: core
+                .get_node_properties(id)
+                .and_then(|blob| medulla_types::msgpack::decode_property_value(&blob).ok())
+                .unwrap_or(serde_json::Value::Null),
+        })
+        .collect();
+    let mut edges = Vec::with_capacity(walked.edges.len());
+    for edge in &walked.edges {
+        let Some(blobs) = core
+            .edge_properties
+            .get(&(edge.source.clone(), edge.target.clone()))
+        else {
+            continue;
+        };
+        for blob in blobs.iter().filter(|b| blob_follows(b, request.edge_types)) {
+            edges.push(medulla_types::types::SubgraphEdge {
+                source: edge.source.clone(),
+                target: edge.target.clone(),
+                properties: medulla_types::msgpack::decode_property_value(blob)
+                    .unwrap_or(serde_json::Value::Null),
+            });
+        }
+    }
+    let result = medulla_types::types::NeighborhoodResult {
+        nodes,
+        edges,
+        hidden: walked
+            .hidden
+            .iter()
+            .map(|(node_id, count)| medulla_types::types::HiddenCount {
+                node_id: node_id.clone(),
+                count: *count,
+            })
+            .collect(),
+        next_cursor: walked
+            .next_skip
+            .map(|next| neighborhood::encode_cursor(graph_revision, next)),
+        truncated: walked.truncated,
+        graph_revision,
+    };
+    tracing::info!(
+        target: "medulla::read_audit",
+        "{}",
+        neighborhood::audit_line(
+            request.node_id,
+            request.depth,
+            result.nodes.len(),
+            result.edges.len(),
+            result.truncated,
+        )
+    );
+    Response::ok(
+        req_id,
+        ResultPayload::of::<medulla_protocol_types::result_contract::graph::GetNeighborhood>(
+            result,
+        ),
+    )
+}
+
+/// The borrowed arguments of one `GetNeighborhood`.
+struct NeighborhoodRequest<'a> {
+    node_id: &'a str,
+    depth: u32,
+    edge_types: &'a [String],
+    per_node_limit: u32,
+    total_limit: u32,
+    exclude: &'a [String],
+    cursor: Option<&'a str>,
+}
+
 fn prepare_fork_value(
     snapshot: &medulla_graph_core::graph::GraphSnapshot,
 ) -> Result<serde_json::Value, String> {
@@ -200,9 +333,36 @@ pub(super) async fn try_handle_subgraph_reads(
     ctx: GraphOpsContext<'_>,
     method: Method,
 ) -> ControlFlow<Response, Method> {
-    let GraphOpsContext { req_id, core, .. } = ctx;
+    let GraphOpsContext {
+        req_id,
+        core,
+        raw_core,
+        ..
+    } = ctx;
     ControlFlow::Break(match method {
         Method::GetSubgraph { node_ids } => handle_get_subgraph(req_id, core, &node_ids),
+        Method::GetNeighborhood {
+            node_id,
+            depth,
+            edge_types,
+            per_node_limit,
+            total_limit,
+            exclude,
+            cursor,
+        } => handle_get_neighborhood(
+            req_id,
+            core,
+            raw_core,
+            NeighborhoodRequest {
+                node_id: &node_id,
+                depth,
+                edge_types: &edge_types,
+                per_node_limit,
+                total_limit,
+                exclude: &exclude,
+                cursor: cursor.as_deref(),
+            },
+        ),
         Method::Fork => handle_fork(req_id, core),
         other => return ControlFlow::Continue(other),
     })

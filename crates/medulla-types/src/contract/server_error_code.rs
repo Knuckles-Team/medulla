@@ -1308,5 +1308,17 @@ closed_error_codes! {
         TrustMarkDowngradeRefused => "TRUST_MARK_DOWNGRADE_REFUSED",
         /// MEDULLA-SRC-AUTH-R011.3: a write set a reserved trust-mark field without a valid mark.
         TrustMarkFieldsReserved => "TRUST_MARK_FIELDS_RESERVED",
+        /// MEDULLA-DURABLE-KERNEL-R876.4: a neighborhood depth outside 1 to 3.
+        NeighborhoodDepthExceeded => "NEIGHBORHOOD_DEPTH_EXCEEDED",
+        /// MEDULLA-DURABLE-KERNEL-R876.4: a missing or zero `per_node_limit` or `total_limit`.
+        NeighborhoodLimitRequired => "NEIGHBORHOOD_LIMIT_REQUIRED",
+        /// MEDULLA-DURABLE-KERNEL-R876.4: a `total_limit` above 5,000.
+        NeighborhoodLimitExceeded => "NEIGHBORHOOD_LIMIT_EXCEEDED",
+        /// MEDULLA-DURABLE-KERNEL-R876.4: an `exclude` list above 5,000 ids.
+        NeighborhoodExcludeTooLarge => "NEIGHBORHOOD_EXCLUDE_TOO_LARGE",
+        /// MEDULLA-DURABLE-KERNEL-R876.4: the graph revision moved since the cursor was issued.
+        NeighborhoodCursorStale => "NEIGHBORHOOD_CURSOR_STALE",
+        /// MEDULLA-DURABLE-KERNEL-R876.4: the node does not exist, or the caller may not read it.
+        NodeNotFound => "NODE_NOT_FOUND",
     }
 }

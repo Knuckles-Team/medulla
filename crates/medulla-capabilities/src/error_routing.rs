@@ -301,6 +301,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-UNIFIED-DATA-PLANE-R038.5.1: an out-of-range search capability.
     ("RegisterForeignSource", &["SEARCH_CAPABILITY_INVALID"]),
+    // MEDULLA-DURABLE-KERNEL-R876.4: the bounded neighborhood read's bound, cursor and visibility refusals.
+    (
+        "GetNeighborhood",
+        &[
+            "NEIGHBORHOOD_DEPTH_EXCEEDED",
+            "NEIGHBORHOOD_LIMIT_REQUIRED",
+            "NEIGHBORHOOD_LIMIT_EXCEEDED",
+            "NEIGHBORHOOD_EXCLUDE_TOO_LARGE",
+            "NEIGHBORHOOD_CURSOR_STALE",
+            "NODE_NOT_FOUND",
+        ],
+    ),
     // MEDULLA-UNIFIED-DATA-PLANE-R765: an invisible source and a non-owner share.
     ("GetForeignSource", &["SOURCE_NOT_FOUND"]),
     ("ProbeForeignSource", &["SOURCE_NOT_FOUND"]),

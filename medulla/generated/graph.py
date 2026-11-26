@@ -84,6 +84,7 @@ if TYPE_CHECKING:
     DecaySweepRequest = _models.MethodDecaySweepParams
     TouchNodesRequest = _models.MethodTouchNodesParams
     GetSubgraphRequest = _models.MethodGetSubgraphParams
+    GetNeighborhoodRequest = _models.MethodGetNeighborhoodParams
     DiffAgainstRequest = _models.MethodDiffAgainstParams
     ReconcileRequest = _models.MethodReconcileParams
     ApplyMutationRequest = _models.MethodApplyMutationParams
@@ -2410,6 +2411,7 @@ async def send_get_subgraph(
     models().MethodGetSubgraphParams.model_validate(params or {})
     payload = await client._send(
         "GetSubgraph",
+        "GetNeighborhood",
         params,
         graph,
         idempotency_key=idempotency_key,
@@ -2420,6 +2422,53 @@ async def send_get_subgraph(
 def decode_get_subgraph(result: OpaqueResult) -> _models.SubgraphResult:
     """Validate this method's result against its contract model."""
     return decode_result("GetSubgraph", models().SubgraphResult, result)
+
+
+async def send_get_neighborhood(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        GetNeighborhood
+    Authorization:
+        node:read
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Json
+    Result schema:
+        contract/schemas/result.graph.json
+        #/methods/GetNeighborhood
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - NEIGHBORHOOD_DEPTH_EXCEEDED
+        - NEIGHBORHOOD_LIMIT_REQUIRED
+        - NEIGHBORHOOD_LIMIT_EXCEEDED
+        - NEIGHBORHOOD_EXCLUDE_TOO_LARGE
+        - NEIGHBORHOOD_CURSOR_STALE
+        - NODE_NOT_FOUND
+    """
+    models().MethodGetNeighborhoodParams.model_validate(params or {})
+    payload = await client._send(
+        "GetNeighborhood",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("GetNeighborhood", payload)
+
+
+def decode_get_neighborhood(result: OpaqueResult) -> _models.NeighborhoodResult:
+    """Validate this method's result against its contract model."""
+    return decode_result("GetNeighborhood", models().NeighborhoodResult, result)
 
 
 class ForkRequest(BaseModel):
@@ -2790,6 +2839,7 @@ _REQUEST_METHODS = frozenset(
         "DecaySweep",
         "TouchNodes",
         "GetSubgraph",
+        "GetNeighborhood",
         "DiffAgainst",
         "Reconcile",
         "ApplyMutation",

@@ -9,7 +9,7 @@ use medulla_decision_outcome_types::{
 use medulla_query_types::rdf_report::LoadReport;
 use medulla_types::{
     types::CompactNodesResult, types::DecayStats, types::GraphDiff, types::GraphMetrics,
-    types::PropertyBlob, types::PruneStats, types::ScenePose, types::SubgraphResult,
+    types::NeighborhoodResult, types::PropertyBlob, types::PruneStats, types::ScenePose, types::SubgraphResult,
 };
 
 method_results! {
@@ -144,6 +144,8 @@ method_results! {
     Metrics(Metrics) => Json<GraphMetrics>;
     DecaySweep(DecaySweep) => Json<DecayStats>;
     GetSubgraph(GetSubgraph) => Json<SubgraphResult>;
+    // MEDULLA-DURABLE-KERNEL-R876.3: the bounded neighborhood read.
+    GetNeighborhood(GetNeighborhood) => Json<NeighborhoodResult>;
     // A JSON rendering of the forked graph snapshot, whose node and edge rows are the
     // property objects callers wrote.
     Fork(Fork) => Json<Dynamic> dynamic CallerProperties;

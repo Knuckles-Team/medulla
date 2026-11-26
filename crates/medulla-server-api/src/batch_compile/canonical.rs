@@ -601,6 +601,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FinanceSpreadReversion { .. }
         | Method::FinanceStressTest { .. }
         | Method::GetSubgraph { .. }
+        | Method::GetNeighborhood { .. }
         | Method::FinanceBlackLitterman { .. }
         | Method::UnionGetNeighbors { .. }
         | Method::FinanceOfiSeries { .. }
