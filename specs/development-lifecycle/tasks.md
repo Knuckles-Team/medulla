@@ -65,7 +65,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T057 [US1] MEDULLA-SDLC-R012.5 RETIRED: the next unblocked slice is a question of R014.6
 - [ ] T058 [US1] MEDULLA-SDLC-R012.6 Specs change through the graph.
 - [ ] T059 [US1] MEDULLA-SDLC-R012.7 Lifecycle evidence lives with the requirement: `judges` edge in `gate_verdict::record`, `requirement_evidence.uql` fixture, no new edge kind.
-- [ ] T060 [US4] MEDULLA-SDLC-R012.8 Project mode record.
+- [x] T060 [US4] MEDULLA-SDLC-R012.8 Project mode record.
 - [ ] T060a [US4] MEDULLA-SDLC-R012.9 Typed project mode read.
 - [ ] T061 [US5] MEDULLA-SDLC-R013 Scenario runs gate phases and release bundles.
 - [ ] T062 [US2] MEDULLA-SDLC-R014 Spec artifacts are graph records .
@@ -75,15 +75,15 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T066 [US2] MEDULLA-SDLC-R014.4 Contracts form the seam graph.
 - [x] T067 [P] [US2] MEDULLA-SDLC-R014.5 Spec-driven development ontology pack.
 - [ ] T068 [US2] MEDULLA-SDLC-R014.6 Competency questions over the artifact graph.
-- [ ] T068a [US2] MEDULLA-SDLC-R014.6.1 Task nodes and contract provider rows.
-- [ ] T068b [US2] MEDULLA-SDLC-R014.6.2 Constitution principles and governedBy.
-- [ ] T069 [US2] MEDULLA-SDLC-R014.7 Plan sections are records.
-- [ ] T070 [US2] MEDULLA-SDLC-R014.8 Wiring: spec artifacts ingest with the repository code graph.
+- [x] T068a [US2] MEDULLA-SDLC-R014.6.1 Task nodes and contract provider rows.
+- [x] T068b [US2] MEDULLA-SDLC-R014.6.2 Constitution principles and governedBy.
+- [x] T069 [US2] MEDULLA-SDLC-R014.7 Plan sections are records.
+- [x] T070 [US2] MEDULLA-SDLC-R014.8 Wiring: spec artifacts ingest with the repository code graph.
 - [ ] T071 [US2] MEDULLA-SDLC-R014.9 Hot-path proof: served artifact graph.
 - [ ] T071a [US2] MEDULLA-SDLC-R014.15 Context questions for a task, a plan section, a contract, a seam and a plan's goals.
 - [ ] T072 [US3] MEDULLA-SDLC-R015 Task-dispatch decision .
-- [ ] T074 [US3] MEDULLA-SDLC-R015.2 Run-context assembly.
-- [ ] T075 [US3] MEDULLA-SDLC-R015.3 Wiring: hand each task to an agent run.
+- [x] T074 [US3] MEDULLA-SDLC-R015.2 Run-context assembly.
+- [x] T075 [US3] MEDULLA-SDLC-R015.3 Wiring: hand each task to an agent run.
 - [ ] T076 [US3] MEDULLA-SDLC-R015.4 Results are accepted only through gates and landing.
 - [ ] T077 [US3] MEDULLA-SDLC-R015.5 Failures feed the evolution loop.
 - [ ] T078 [US3] MEDULLA-SDLC-R015.6 Hot-path proof: served dispatch.
@@ -95,11 +95,11 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T084 [P] [US3] MEDULLA-SDLC-R016.5 Hot-path proof: served research loop.
 - [ ] T085 [US4] MEDULLA-SDLC-R017 Goals and typed proposals .
 - [ ] T086 [US4] MEDULLA-SDLC-R017.1 Goal record.
-- [ ] T087 [P] [US4] MEDULLA-SDLC-R017.2 Proposal kinds.
-- [ ] T088 [US4] MEDULLA-SDLC-R017.3 Proposal evidence.
+- [x] T087 [P] [US4] MEDULLA-SDLC-R017.2 Proposal kinds.
+- [x] T088 [US4] MEDULLA-SDLC-R017.3 Proposal evidence.
 - [ ] T089 [US4] MEDULLA-SDLC-R017.4 Proposals land only as pull requests.
-- [ ] T090 [US4] MEDULLA-SDLC-R017.5 Proposals follow the project mode.
-- [ ] T091 [US4] MEDULLA-SDLC-R017.6 Proposals are reviewed in the interface and the spec-delivery page.
+- [x] T090 [US4] MEDULLA-SDLC-R017.5 Proposals follow the project mode.
+- [x] T091 [US4] MEDULLA-SDLC-R017.6 Proposals are reviewed in the interface and the spec-delivery page.
 - [ ] T092 [US4] MEDULLA-SDLC-R017.7 Hot-path proof: goal to pull request.
 - [ ] T092a [US4] MEDULLA-SDLC-R017.8 An approval opens the pull request through the connector gateway.
 - [ ] T093 [US2] MEDULLA-SDLC-R018 Release graph is ingested .
@@ -135,7 +135,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T127 MEDULLA-SDLC-R021.4 Move access control to medulla-identity-types. Size: S, 1 PR, 4 hours.
 - [ ] T128 MEDULLA-SDLC-R021.5 Move the domain modules into their owning slices. Size: L, 6 PRs, 2 days.
 - [ ] T129 MEDULLA-SDLC-R021.6 Create the finance and ingestion slices. Size: M, 2 PRs, 6 hours.
-- [ ] T130 MEDULLA-SDLC-R021.7 No crate re-exports another crate's items (16 lines, consumer edits listed in the row; compile lane). Size: M, 1 PR.
+- [x] T130 MEDULLA-SDLC-R021.7 No crate re-exports another crate's items (16 lines, consumer edits listed in the row; compile lane). Size: M, 1 PR.
 - [ ] T140 MEDULLA-SDLC-R021.8 No module of any crate re-exports another crate's items (about 120 lines in 47 crates, one commit per source crate; compile lane). Size: L, 47 commits.
 - [x] T131 [US1] MEDULLA-SDLC-R014.10 Row-level spec vocabulary in the SDD ontology.
 - [ ] T132 [US1] MEDULLA-SDLC-R014.11 SHACL shapes mirror the spec-standard row checks.

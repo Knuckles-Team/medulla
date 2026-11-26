@@ -64,7 +64,7 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-SDLC-R012.5` | Retired; see MEDULLA-SDLC-R014.6 and MEDULLA-SDLC-R015.1. | none |
 | `MEDULLA-SDLC-R012.6` | Specs change through the graph | `tests/sdlc/test_graph_native_development_served.py::test_concurrent_row_edits_refuse` (planned) |
 | `MEDULLA-SDLC-R012.7` | Lifecycle evidence lives with the requirement | `tests/sdlc/test_graph_native_development_served.py::test_requirement_links_gate_release_and_deployment_records` (planned), `crates/medulla-h-ingest/tests/gate_verdict_judges.rs::verdict_writes_one_judges_edge_and_refuses_unknown_changeset` (planned) |
-| `MEDULLA-SDLC-R012.8` | Project mode record | `tests/sdlc/test_project_mode_served.py::test_evolving_needs_operator_approval_and_defaults_to_reference` (planned) |
+| `MEDULLA-SDLC-R012.8` | Project mode record | `tests/sdlc/test_project_mode_served.py::test_evolving_needs_operator_approval_and_defaults_to_reference` |
 | `MEDULLA-SDLC-R012.9` | Typed project mode read | `tests/sdlc/test_project_mode_served.py::test_project_mode_get_reads_the_typed_record` (planned) |
 | `MEDULLA-SDLC-R013` | Scenario runs gate phases and release bundles | `tests/sdlc/test_scenario_runs_served.py::test_bundle_completes_when_rows_delivered_and_scenario_passed` (planned) |
 | `MEDULLA-SDLC-R014` | Spec artifacts are graph records (rollup) | `tests/sdlc/test_spec_artifact_graph_served.py::test_artifacts_ingest_and_answer_next_task` (planned) |
@@ -76,14 +76,14 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-SDLC-R014.6` | Competency questions over the artifact graph | `tests/sdlc/test_spec_competency_served.py::test_unreachable_requirements` (planned), `tests/sdlc/test_spec_competency_served.py::test_uncovered_code_items` (planned), `tests/sdlc/test_spec_competency_served.py::test_tasks_blocked_by_contract` (planned), `tests/sdlc/test_spec_competency_served.py::test_principles_a_change_breaks` (planned), `tests/sdlc/test_spec_competency_served.py::test_changes_advancing_goal` (planned), `tests/sdlc/test_spec_competency_served.py::test_next_unblocked_task_for_phase` (planned) |
 | `MEDULLA-SDLC-R014.6.1` | Task nodes and contract provider rows | `crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs::tests::tasks_project_to_nodes_with_phase_and_row_edge` (planned) | L1 |
 | `MEDULLA-SDLC-R014.6.2` | Constitution principles and governedBy | `crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs::tests::principles_project_and_rows_link_through_governed_by` (planned) | L1 |
-| `MEDULLA-SDLC-R014.7` | Plan sections are records | `crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs::tests::plan_sections_carry_phase_and_cover_rows_and_unknown_phase_refuses` (planned); `tests/sdlc/test_plan_records_served.py::test_plan_sections_become_records_with_phase_and_cover_edges` (planned) |
-| `MEDULLA-SDLC-R014.8` | Wiring: spec artifacts ingest with the repository code graph | `tests/sdlc/test_spec_artifact_graph_served.py::test_repository_ingest_includes_spec_artifacts` (planned) |
+| `MEDULLA-SDLC-R014.7` | Plan sections are records | `crates/medulla-h-ingest/src/source_ingestion/spec_projection.rs::tests::plan_sections_carry_phase_and_cover_rows_and_unknown_phase_refuses` (planned); `tests/sdlc/test_plan_records_served.py::test_plan_sections_become_records_with_phase_and_cover_edges` |
+| `MEDULLA-SDLC-R014.8` | Wiring: spec artifacts ingest with the repository code graph | `tests/sdlc/test_spec_artifact_graph_served.py::test_repository_ingest_includes_spec_artifacts` |
 | `MEDULLA-SDLC-R014.9` | Hot-path proof: served artifact graph | `tests/sdlc/test_spec_artifact_graph_served.py::test_artifacts_ingest_and_answer_next_task` (planned) |
 | `MEDULLA-SDLC-R014.15` | Context questions | `tests/sdlc/test_spec_context_served.py::test_context_questions_answer_from_the_stored_records` (planned) |
 | `MEDULLA-SDLC-R015` | Task-dispatch decision (rollup) | `tests/sdlc/test_task_dispatch_served.py::test_dispatch_runs_layers_and_lands_through_gates` (planned) |
 | `MEDULLA-SDLC-R015.1` | Retired; see MEDULLA-DECISION-ENGINE-R001.101. | none |
-| `MEDULLA-SDLC-R015.2` | Run-context assembly | `tests/sdlc/test_task_dispatch_served.py::test_context_holds_row_plan_contracts_and_neighbourhood` (planned) |
-| `MEDULLA-SDLC-R015.3` | Wiring: hand each task to an agent run | `tests/sdlc/test_task_dispatch_served.py::test_dispatch_hands_context_to_a_run_and_logs_it` (planned) |
+| `MEDULLA-SDLC-R015.2` | Run-context assembly | `tests/sdlc/test_task_dispatch_served.py::test_context_holds_row_plan_contracts_and_neighbourhood` |
+| `MEDULLA-SDLC-R015.3` | Wiring: hand each task to an agent run | `tests/sdlc/test_task_dispatch_served.py::test_dispatch_hands_context_to_a_run_and_logs_it` |
 | `MEDULLA-SDLC-R015.4` | Results are accepted only through gates and landing | `tests/sdlc/test_task_dispatch_served.py::test_result_counts_only_after_gates_and_landing` (planned) |
 | `MEDULLA-SDLC-R015.5` | Failures feed the evolution loop | `tests/sdlc/test_task_dispatch_served.py::test_failed_task_opens_defect_and_evidence_for_proposal` (planned) |
 | `MEDULLA-SDLC-R015.6` | Hot-path proof: served dispatch | `tests/sdlc/test_task_dispatch_served.py::test_dispatch_runs_layers_and_lands_through_gates` (planned) |
@@ -96,10 +96,10 @@ Governing spec: [spec.md](spec.md).
 | `MEDULLA-SDLC-R017` | Goals and typed proposals (rollup) | `tests/sdlc/test_proposals_served.py::test_goal_drives_typed_proposal_to_pull_request` (planned) |
 | `MEDULLA-SDLC-R017.1` | Goal record | `tests/sdlc/test_proposals_served.py::test_goal_needs_a_target` |
 | `MEDULLA-SDLC-R017.2` | Proposal kinds | `crates/medulla-types/tests/lifecycle_records.rs::proposal_kind_set_is_closed` |
-| `MEDULLA-SDLC-R017.3` | Proposal evidence | `tests/sdlc/test_proposals_served.py::test_proposal_without_evidence_is_refused` (planned) |
+| `MEDULLA-SDLC-R017.3` | Proposal evidence | `tests/sdlc/test_proposals_served.py::test_proposal_without_evidence_is_refused` |
 | `MEDULLA-SDLC-R017.4` | Proposals land only as pull requests | `tests/sdlc/test_proposals_served.py::test_proposal_lands_only_through_changeset_and_gates` (planned) |
-| `MEDULLA-SDLC-R017.5` | Proposals follow the project mode | `tests/sdlc/test_proposals_served.py::test_mode_gates_proposals` (planned) |
-| `MEDULLA-SDLC-R017.6` | Proposals are reviewed in the interface and the spec-delivery page | `tests/sdlc/test_proposals_served.py::test_review_list_and_decision_round_trip` (planned) |
+| `MEDULLA-SDLC-R017.5` | Proposals follow the project mode | `tests/sdlc/test_proposals_served.py::test_mode_gates_proposals` |
+| `MEDULLA-SDLC-R017.6` | Proposals are reviewed in the interface and the spec-delivery page | `tests/sdlc/test_proposals_served.py::test_review_list_and_decision_round_trip` |
 | `MEDULLA-SDLC-R017.7` | Hot-path proof: goal to pull request | `tests/sdlc/test_proposals_served.py::test_goal_drives_typed_proposal_to_pull_request` (planned) |
 | `MEDULLA-SDLC-R017.8` | An approval opens the pull request | `tests/sdlc/test_proposal_pull_request_served.py::test_accept_commits_and_a_failed_pull_request_is_a_typed_error` (planned) |
 | `MEDULLA-SDLC-R018` | Release graph is ingested (rollup) | See each child. |
