@@ -134,6 +134,8 @@ pub mod process_exchange;
 pub mod run_trace_export;
 // MEDULLA-ORCH-VOCAB-R811.1: the run metrics read (cost, tokens and solved count per run trace group).
 pub mod run_metrics;
+// MEDULLA-INGEST-WORKER-R003.21: the node body read (the stored body text of one node at a revision).
+pub mod node_body;
 // MEDULLA-CQ-ORCH-R705.2: architecture exchange records (ArchiMate Open Exchange Format).
 pub mod archimate_exchange;
 // MEDULLA-FEDERATED-QUERY-R738.1 — the capability matrix entry status (planned until its backend lands, then shipped) as an explicit state machine.

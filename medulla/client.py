@@ -8177,6 +8177,34 @@ class GraphOperationsClient:
             raise RuntimeError("RunMetrics must answer with an object")
         return result
 
+    async def node_body(
+        self,
+        tenant: str,
+        node_id: str,
+        *,
+        revision: int | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """The stored body text of one node at a revision
+        (MEDULLA-INGEST-WORKER-R003.21).
+
+        ``revision`` is the revision the caller read; a node at another revision is
+        refused ``NODE_BODY_STALE``, and with none the current one is answered.
+        Returns ``{node_id, revision, content_digest, body}``; ``content_digest``
+        is the digest an ingest readback receipt carries for the node. An invisible,
+        an absent and a bodiless node answer alike, ``NODE_BODY_UNAVAILABLE``.
+        Needs ``node:read``.
+        """
+        request: dict[str, Any] = {"tenant": tenant, "node_id": node_id}
+        if revision is not None:
+            request["revision"] = revision
+        result = await self._client._send(
+            "NodeBody", {"request": request}, graph, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("NodeBody must answer with an object")
+        return result
+
     async def run_trace_export(
         self,
         root_run_id: str,

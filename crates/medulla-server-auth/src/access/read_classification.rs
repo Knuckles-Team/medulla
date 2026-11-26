@@ -107,6 +107,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // MEDULLA-ORCH-VOCAB-R811.1: `handle_run_metrics` reads the run-trace nodes of the core
     // `read_authority.project_core` projected.
     "RunMetrics",
+    // MEDULLA-INGEST-WORKER-R003.21: `handle_node_body` reads the node of the core
+    // `read_authority.project_core` projected.
+    "NodeBody",
     "ReadSpan",
     // MEDULLA-INGEST-WORKER-R003.3: atoms listed from the core `read_authority` projected.
     "AtomContext",

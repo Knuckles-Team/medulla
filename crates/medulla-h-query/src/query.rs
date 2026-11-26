@@ -198,6 +198,8 @@ mod schema_context;
 #[cfg(feature = "query")]
 mod run_metrics;
 #[cfg(feature = "query")]
+mod node_body;
+#[cfg(feature = "query")]
 mod run_trace_export;
 #[cfg(feature = "query")]
 mod standards;

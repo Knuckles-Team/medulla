@@ -17529,6 +17529,13 @@ class MethodRunMetrics(BaseModel):
     params: MethodRunMetricsParams
 
 
+class MethodNodeBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["NodeBody"]
+    params: MethodNodeBodyParams
+
+
 class MethodRunTraceExport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18769,6 +18776,7 @@ Method = Annotated[
         MethodProcessDocumentExport,
         MethodRunTraceExport,
         MethodRunMetrics,
+        MethodNodeBody,
         MethodIndexHarnessSessionBatch,
         MethodProcessModelDeploy,
         MethodProcessModelExport,
@@ -39674,6 +39682,12 @@ class MethodRunMetricsParams(BaseModel):
     request: dict[str, Any]
 
 
+class MethodNodeBodyParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: dict[str, Any]
+
+
 class MethodRunTraceExportParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -51736,6 +51750,8 @@ __all__ = [
     "MethodProcessDocumentExportParams",
     "MethodRunMetrics",
     "MethodRunMetricsParams",
+    "MethodNodeBody",
+    "MethodNodeBodyParams",
     "MethodRunTraceExport",
     "MethodRunTraceExportParams",
     "MethodIndexHarnessSessionBatch",

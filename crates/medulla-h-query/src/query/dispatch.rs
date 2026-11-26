@@ -116,6 +116,10 @@ async fn dispatch_query_family(
         Method::RunMetrics { request } => {
             return Ok(super::run_metrics::handle_run_metrics(hctx, *request))
         }
+        // MEDULLA-INGEST-WORKER-R003.21: the stored body text of one node at a revision.
+        Method::NodeBody { request } => {
+            return Ok(super::node_body::handle_node_body(hctx, *request))
+        }
         // MEDULLA-ORCH-VOCAB-R009.100: one page of the records correlated to a root run.
         Method::RunTraceExport { request } => {
             return Ok(super::run_trace_export::handle_run_trace_export(hctx, *request))

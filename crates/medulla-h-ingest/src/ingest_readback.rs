@@ -104,22 +104,7 @@ impl std::fmt::Display for ReadbackRefusal {
     }
 }
 
-/// Digest and revision of a stored node-properties blob.
-///
-/// The digest is `Digest256::framed` under domain `eg/ingest-readback/node/v1`
-/// over the compact JSON of the decoded properties with keys sorted, so a
-/// client reproduces it from the properties it reads. A blob that does not
-/// decode digests its raw bytes.
-pub fn observe(blob: &[u8]) -> (Digest256, u64) {
-    let Ok(value) = medulla_types::msgpack::decode_property_value(blob) else {
-        return (Digest256::sha256(blob), 0);
-    };
-    let canonical = serde_json::to_string(&value).unwrap_or_default();
-    let digest = Digest256::framed(b"eg/ingest-readback/node/v1", &[canonical.as_bytes()])
-        .unwrap_or_else(|_| Digest256::sha256(canonical.as_bytes()));
-    let revision = value.get("revision").and_then(|v| v.as_u64()).unwrap_or(0);
-    (digest, revision)
-}
+pub use medulla_types::node_body::observe;
 
 /// Compare the write receipt with the caller's reads.
 ///

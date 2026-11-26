@@ -296,6 +296,15 @@ $($variants)*
         request: Box<medulla_types::run_metrics::RunMetricsRequest>,
     },
 
+    // ── Node body (MEDULLA-INGEST-WORKER-R003.21) ───────────────────────────
+    /// The stored body text of one node of the request graph at the revision the caller read,
+    /// with the digest of the node's content. A read of the caller's projected graph: an
+    /// invisible, an absent and a bodiless node answer alike (`NODE_BODY_UNAVAILABLE`), and a
+    /// node at another revision refuses `NODE_BODY_STALE`. Nothing is committed.
+    NodeBody {
+        request: Box<medulla_types::node_body::NodeBodyRequest>,
+    },
+
     // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
     /// Record one anomaly in the caller's tenant (from the verified carrier)
     /// and correlate it into an open incident over `window_ms`.
