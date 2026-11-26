@@ -105,6 +105,7 @@ mod served {
                         include_archived: false,
                         current_revision: None,
                         episode_scope: None,
+                        memory_scope: None,
                     }),
                 },
             )

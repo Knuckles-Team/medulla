@@ -1061,13 +1061,25 @@ fn annotate_recalled_notes(
 }
 
 /// Answer one recall for `tenant` as of `now_ms`.
+/// What narrows one recall beyond the filters its request carries. A narrowing only removes
+/// records; it never adds one.
+#[derive(Debug, Default, Clone)]
+pub(super) struct Narrowing {
+    /// The provenance keys of the resolved document sets (MEDULLA-DECISION-ENGINE-R656.3).
+    pub documents: Option<BTreeSet<String>>,
+    /// The sessions of the resolved memory scope (MEDULLA-DECISION-ENGINE-R651.9).
+    pub sessions: Option<BTreeSet<String>>,
+}
+
 pub(super) fn recall(
     core: &GraphCore,
     tenant: &str,
     now_ms: i64,
     request: &MemoryRecallRequest,
-    allowed: Option<&std::collections::BTreeSet<String>>,
+    narrowing: Option<&Narrowing>,
 ) -> Result<MemoryRecallResult, String> {
+    let allowed = narrowing.and_then(|narrowing| narrowing.documents.as_ref());
+    let scope_sessions = narrowing.and_then(|narrowing| narrowing.sessions.as_ref());
     check_embedding(&request.query_embedding, "the query embedding")?;
     if request.min_relevance.is_some_and(|min| !(0.0..=1.0).contains(&min)) {
         return Err(refuse(
@@ -1126,6 +1138,9 @@ pub(super) fn recall(
             episodes_visible_at(&sealed, tenant, as_of)
                 .into_iter()
                 .filter(|episode| request.scope.as_ref().is_none_or(|session| *session == episode.session_id))
+                .filter(|episode| {
+                    scope_sessions.is_none_or(|sessions| sessions.contains(episode.session_id.as_str()))
+                })
                 .cloned()
                 .collect()
         }
@@ -1135,6 +1150,17 @@ pub(super) fn recall(
         .iter()
         .flat_map(|episode| episode.record_ids.iter().map(ResourceId::as_str))
         .collect();
+    // MEDULLA-DECISION-ENGINE-R651.9: a resolved memory scope names the sessions searched; a
+    // record outside every named session, or in none, is not searched.
+    let in_memory_scope = |stored: &Stored| {
+        scope_sessions.is_none_or(|sessions| {
+            stored
+                .record
+                .session_id
+                .as_ref()
+                .is_some_and(|session| sessions.contains(session.as_str()))
+        })
+    };
     let in_episode_scope = |stored: &Stored| match request.episode_scope {
         None => true,
         Some(EpisodeScope::Episodes) => episode_members.contains(stored.record.memory_id.as_str()),
@@ -1146,6 +1172,7 @@ pub(super) fn recall(
     let searched_by_request = |stored: &Stored| {
         visible(stored)
             && in_document_set(stored)
+            && in_memory_scope(stored)
             && in_episode_scope(stored)
             && tiers.contains(&stored.record.tier)
             && request
@@ -1258,6 +1285,8 @@ pub(super) fn recall(
         episodes: episodes.iter().map(Episode::view).collect(),
         as_of_ms: as_of,
         episode_scope: request.episode_scope,
+        memory_scope: request.memory_scope.as_ref().map(|reference| reference.scope_id.clone()),
+        scope_session_count: scope_sessions.map(|sessions| u32::try_from(sessions.len()).unwrap_or(u32::MAX)),
     })
 }
 
@@ -1344,6 +1373,7 @@ fn recall_plan_digest(request: &MemoryRecallRequest, keywords: &[String]) -> Res
         "include_plan": request.include_plan,
         "include_media": request.include_media,
         "document_set_ids": request.document_set_ids,
+        "memory_scope": request.memory_scope.as_ref().map(|reference| reference.scope_id.as_str()),
         "knobs": {
             "memory.merge_cosine": knob_decimal(&kernel::MERGE_COSINE),
             "memory.memento_token_cap": knob_integer(&kernel::MEMENTO_TOKEN_CAP),
@@ -1408,6 +1438,26 @@ pub(super) fn export(
     })
 }
 
+/// The sessions the request's memory scope allows (MEDULLA-DECISION-ENGINE-R651.9); `None` when
+/// the request names no scope. The caller's own view is every session its tenant's memory holds,
+/// so the scope narrows that view and the tenant filter still decides what is stored there.
+fn resolve_memory_scope(
+    ctx: &GraphOpsContext<'_>,
+    tenant: &str,
+    request: &MemoryRecallRequest,
+) -> Result<Option<BTreeSet<String>>, String> {
+    let Some(reference) = &request.memory_scope else {
+        return Ok(None);
+    };
+    let agent_id = ctx.read_authority.verified_actor()?.to_string();
+    let visible: BTreeSet<String> = load(ctx.core, tenant, &TIERS)
+        .into_iter()
+        .filter_map(|stored| stored.record.session_id.map(|session| session.as_str().to_string()))
+        .collect();
+    super::participant_surface::resolve_scope_ref(ctx.raw_core, tenant, &agent_id, reference, &visible)
+        .map(Some)
+}
+
 /// Route the memory reads served from the graph.
 pub(super) async fn try_handle_memory_surface(
     ctx: GraphOpsContext<'_>,
@@ -1432,14 +1482,19 @@ pub(super) async fn try_handle_memory_surface(
     let answer = match &method {
         Method::MemoryRecall { request } => {
             let now_ms = i64::try_from(authoritative_now_ms()).unwrap_or(i64::MAX);
-            let allowed =
+            let documents =
                 match super::assistant_profile::resolve_document_sets(&ctx, &request.document_set_ids)
                     .await
                 {
                     Ok(allowed) => allowed,
                     Err(error) => return ControlFlow::Break(Response::err(ctx.req_id, error)),
                 };
-            recall(ctx.core, &tenant, now_ms, request, allowed.as_ref())
+            let sessions = match resolve_memory_scope(&ctx, &tenant, request) {
+                Ok(sessions) => sessions,
+                Err(error) => return ControlFlow::Break(Response::err(ctx.req_id, error)),
+            };
+            let narrowing = Narrowing { documents, sessions };
+            recall(ctx.core, &tenant, now_ms, request, Some(&narrowing))
                 .and_then(ResultPayload::of::<MemoryRecallResultKind>)
         }
         Method::MemoryExport { request } => {

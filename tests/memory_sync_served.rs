@@ -1206,6 +1206,7 @@ fn recall_notes(min_relevance: Option<f64>, current_revision: Option<u64>) -> Me
             include_archived: false,
             current_revision,
             episode_scope: None,
+            memory_scope: None,
         }),
     }
 }

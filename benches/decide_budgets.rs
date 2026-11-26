@@ -2734,6 +2734,13 @@ fn bench_memory_scaling(
                     prime_session: None,
                     include_plan: false,
                     include_media: false,
+                    previous_manifest_digest: None,
+                    document_set_ids: Vec::new(),
+                    min_relevance: None,
+                    include_archived: false,
+                    current_revision: None,
+                    episode_scope: None,
+                    memory_scope: None,
                 }),
             },
         ));

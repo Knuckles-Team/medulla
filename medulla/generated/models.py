@@ -40543,6 +40543,12 @@ class MemoryRememberResult(BaseModel):
     stored: bool
 
 
+class ScopeRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    scope_id: str
+
+
 class MemoryRecallRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -40554,6 +40560,7 @@ class MemoryRecallRequest(BaseModel):
     include_media: bool = False
     include_plan: bool = False
     keywords: list[str] = Field(default_factory=list)
+    memory_scope: ScopeRef | None = None
     min_relevance: float | None = None
     current_revision: Annotated[int, Field(ge=0)] | None = None
     previous_manifest_digest: str | None = None
@@ -40620,11 +40627,13 @@ class MemoryRecallResult(BaseModel):
     episode_scope: EpisodeScope | None = None
     episodes: list[EpisodeView] = Field(default_factory=list)
     hits: list[MemoryHit]
+    memory_scope: str | None = None
     mementos: list[Memento] = Field(default_factory=list)
     note_premises: list[str] = Field(default_factory=list)
     notes: list[NoteView] = Field(default_factory=list)
     plan: ConsolidationPlan | None = None
     plan_digest: str
+    scope_session_count: Annotated[int, Field(ge=0)] | None = None
     tokens_used: Annotated[int, Field(ge=0)]
 
 
@@ -47093,6 +47102,7 @@ __all__ = [
     "ModeTransition",
     "ModelHints",
     "MemoryScope",
+    "ScopeRef",
     "Membership",
     "ObservationConfig",
     "Participant",

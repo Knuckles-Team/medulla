@@ -859,6 +859,12 @@ pub struct MemoryRecallRequest {
     /// session filter `scope`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub episode_scope: Option<EpisodeScope>,
+    /// A named set of sessions that narrows the recall (MEDULLA-DECISION-ENGINE-R651.9). The
+    /// scope only ever narrows: the searched sessions are the scope's intersected with the
+    /// sessions the caller already sees, and only the owner or a principal the scope is shared
+    /// with may name it. Absent applies no scope.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_scope: Option<crate::memory_scope::ScopeRef>,
 }
 
 /// One recalled record with its relevance, Q16 fixed point in `[0, 65536]`.
@@ -905,6 +911,13 @@ pub struct MemoryRecallResult {
     /// Echo of the request's `episode_scope`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub episode_scope: Option<EpisodeScope>,
+    /// The id of the memory scope the recall was narrowed by, when the request named one
+    /// (MEDULLA-DECISION-ENGINE-R155.7).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_scope: Option<String>,
+    /// How many sessions the scope names after narrowing to what the caller sees.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub scope_session_count: Option<u32>,
 }
 
 /// `MemoryExport`: the durable tiers of the caller's memory

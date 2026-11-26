@@ -613,3 +613,143 @@ mod participant_surface_proofs {
         assert_eq!(foreign, refused);
     }
 }
+
+/// Memory scope proofs (MEDULLA-DECISION-ENGINE-R651.9, MEDULLA-DECISION-ENGINE-R155.7): a scope
+/// narrows recall to the sessions it names among the sessions the caller already sees, and the
+/// tenant filter keeps applying.
+mod scoped_recall_proofs {
+    use super::super::memory_surface::{recall, Narrowing};
+    use super::super::memory_surface_tests::{
+        episode_recall, ids, record, recall_request, seal, store, NOW,
+    };
+    use super::super::participant_surface::{admit, resolve_scope_ref};
+    use super::{SCOPE_A, SCOPE_B};
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_server_mutation::mutation::apply_coalescable_write;
+    use medulla_types::contract::ResourceId;
+    use medulla_work_types::memory::{EpisodeScope, MemoryRememberRequest, MemoryTier};
+    use medulla_work_types::memory_scope::{scope_node_id, MemoryScope};
+    use medulla_work_types::participant::ParticipantOp;
+    use std::collections::BTreeSet;
+
+    fn scope(id: &str, owner: &str, sessions: &[&str]) -> MemoryScope {
+        MemoryScope {
+            scope_id: id.into(),
+            tenant: "caller-supplied".into(),
+            name: "work".into(),
+            owner_principal: owner.into(),
+            session_ids: sessions.iter().map(|s| s.to_string()).collect(),
+            shared_with: BTreeSet::new(),
+            schema_version: 1,
+        }
+    }
+
+    fn put_scope(core: &GraphCore, tenant: &str, agent: &str, scope: MemoryScope) {
+        let admitted = admit(core, tenant, agent, &ParticipantOp::PutScope { scope }).unwrap();
+        apply_coalescable_write(core, admitted.write.as_ref().unwrap()).unwrap();
+    }
+
+    fn reference(id: &str) -> medulla_work_types::memory_scope::ScopeRef {
+        medulla_work_types::memory_scope::ScopeRef { scope_id: id.into() }
+    }
+
+    /// The sessions the caller's own view holds.
+    fn visible(_core: &GraphCore, _tenant: &str) -> BTreeSet<String> {
+        ["s1", "s2", "s3"].iter().map(|session| session.to_string()).collect()
+    }
+
+    fn in_session(tenant: &str, id: &str, session: &str) -> MemoryRememberRequest {
+        let mut item = record(tenant, id, MemoryTier::Episodic, "note of the session");
+        item.session_id = Some(ResourceId::new(session).unwrap());
+        MemoryRememberRequest { record: item, embedding: vec![], episode: None }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.9
+    #[test]
+    fn scope_narrows_recall_and_acl_still_applies() {
+        let core = GraphCore::new();
+        for (id, session) in [("m1", "s1"), ("m2", "s2"), ("m3", "s3")] {
+            store(&core, SCOPE_A, &in_session(SCOPE_A, id, session));
+        }
+        store(&core, SCOPE_B, &in_session(SCOPE_B, "foreign", "s1"));
+        put_scope(&core, SCOPE_A, "alice", scope("work", "alice", &["s1", "s3", "s9"]));
+
+        let search = |tenant: &str, sessions: BTreeSet<String>| {
+            let narrowing = Narrowing { documents: None, sessions: Some(sessions) };
+            recall(&core, tenant, NOW, &recall_request(vec![], &["note"], 1_000), Some(&narrowing)).unwrap()
+        };
+        // The scope intersects what the caller sees: s9 is named but not visible, s2 is visible
+        // but not named.
+        let allowed = resolve_scope_ref(&core, SCOPE_A, "alice", &reference("work"), &visible(&core, SCOPE_A))
+            .unwrap();
+        assert_eq!(allowed.iter().cloned().collect::<Vec<_>>(), ["s1", "s3"]);
+        let mut held = ids(&search(SCOPE_A, allowed.clone()).hits).into_iter().map(String::from).collect::<Vec<_>>();
+        held.sort();
+        assert_eq!(held, ["m1", "m3"]);
+        // A scope that names nothing the caller sees returns an empty answer and never widens.
+        put_scope(&core, SCOPE_A, "alice", scope("nowhere", "alice", &["s9"]));
+        let nothing = resolve_scope_ref(&core, SCOPE_A, "alice", &reference("nowhere"), &visible(&core, SCOPE_A)).unwrap();
+        assert!(nothing.is_empty());
+        assert!(search(SCOPE_A, nothing).hits.is_empty());
+        // The tenant filter still applies: the other tenant's record in s1 is never returned.
+        assert!(ids(&search(SCOPE_A, allowed).hits).iter().all(|id| *id != "foreign"));
+
+        // The three scope refusals.
+        let code = |result: Result<BTreeSet<String>, String>| result.unwrap_err();
+        let visible_now = visible(&core, SCOPE_A);
+        assert!(code(resolve_scope_ref(&core, SCOPE_A, "alice", &reference("absent"), &visible_now))
+            .starts_with("SCOPE_NOT_FOUND: "));
+        assert!(code(resolve_scope_ref(&core, SCOPE_A, "bob", &reference("work"), &visible_now))
+            .starts_with("SCOPE_NOT_VISIBLE: "));
+        // A stored scope above the knob limit refuses on read.
+        let over: Vec<String> = (0..=super::super::participant_surface::scope_max_sessions())
+            .map(|n| format!("x{n}"))
+            .collect();
+        let mut huge = scope("huge", "alice", &[]);
+        huge.session_ids = over.into_iter().collect();
+        huge.tenant = SCOPE_A.into();
+        core.add_node(
+            scope_node_id(SCOPE_A, "huge"),
+            rmp_serde::to_vec_named(&serde_json::json!({
+                "type": "MemoryScope",
+                "tenant_scope": SCOPE_A,
+                "json": serde_json::to_string(&huge).unwrap(),
+            }))
+            .unwrap(),
+        );
+        assert!(code(resolve_scope_ref(&core, SCOPE_A, "alice", &reference("huge"), &visible_now))
+            .starts_with("SCOPE_SESSION_LIMIT: "));
+        // Cross-tenant negative: the same scope id under another tenant is a different node, so
+        // the first tenant's scope is absent to it.
+        assert!(code(resolve_scope_ref(&core, SCOPE_B, "alice", &reference("work"), &visible_now))
+            .starts_with("SCOPE_NOT_FOUND: "));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R155.7
+    #[test]
+    fn scoped_recall_returns_only_scope_episodes() {
+        let core = GraphCore::new();
+        seal(&core, SCOPE_A, "ep:1", "s1", &[("e1", 100), ("e2", 200)]);
+        seal(&core, SCOPE_A, "ep:2", "s2", &[("f1", 300), ("f2", 400)]);
+        seal(&core, SCOPE_A, "ep:3", "s3", &[("g1", 500), ("g2", 600)]);
+        seal(&core, SCOPE_B, "ep:b", "s1", &[("h1", 150), ("h2", 250)]);
+        put_scope(&core, SCOPE_A, "alice", scope("two", "alice", &["s1", "s3"]));
+        let allowed =
+            resolve_scope_ref(&core, SCOPE_A, "alice", &reference("two"), &visible(&core, SCOPE_A)).unwrap();
+        let mut request = episode_recall(EpisodeScope::Episodes, 10_000);
+        request.memory_scope = Some(reference("two"));
+        let narrowing = Narrowing { documents: None, sessions: Some(allowed) };
+        let result = recall(&core, SCOPE_A, 20_000, &request, Some(&narrowing)).unwrap();
+        let mut episodes: Vec<&str> = result.episodes.iter().map(|e| e.episode_id.as_str()).collect();
+        episodes.sort();
+        assert_eq!(episodes, ["ep:1", "ep:3"]);
+        let mut held = ids(&result.hits).into_iter().map(String::from).collect::<Vec<_>>();
+        held.sort();
+        assert_eq!(held, ["e1", "e2", "g1", "g2"]);
+        // The result lists the scope id and the session count after narrowing.
+        assert_eq!(result.memory_scope.as_deref(), Some("two"));
+        assert_eq!(result.scope_session_count, Some(2));
+        // Cross-tenant negative: another tenant's episode of s1 never appears for tenant A.
+        assert!(result.episodes.iter().all(|e| e.episode_id.as_str() != "ep:b"));
+    }
+}

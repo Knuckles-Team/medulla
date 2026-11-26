@@ -12,9 +12,9 @@ use medulla_work_types::memory::{
     MemoryTier, MEMORY_RECORD_SCHEMA_VERSION,
 };
 
-const NOW: i64 = 1_000_000;
+pub(super) const NOW: i64 = 1_000_000;
 
-fn record(tenant: &str, id: &str, tier: MemoryTier, text: &str) -> MemoryRecord {
+pub(super) fn record(tenant: &str, id: &str, tier: MemoryTier, text: &str) -> MemoryRecord {
     MemoryRecord {
         memory_id: ResourceId::new(id).unwrap(),
         tenant: TenantId::new(tenant).unwrap(),
@@ -62,7 +62,7 @@ fn remember(record: MemoryRecord, embedding: Vec<f32>) -> MemoryRememberRequest 
     MemoryRememberRequest { record, embedding, episode: None }
 }
 
-fn store(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) {
+pub(super) fn store(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) {
     let Admitted::Write(write, embed, answer) = admit(core, tenant, request, &Default::default()).unwrap()
     else {
         panic!("a first remember writes");
@@ -78,7 +78,7 @@ fn store(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) {
     }
 }
 
-fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> MemoryRecallRequest {
+pub(super) fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> MemoryRecallRequest {
     MemoryRecallRequest {
         query_embedding: embedding,
         keywords: keywords.iter().map(|k| k.to_string()).collect(),
@@ -95,10 +95,11 @@ fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> Memory
         include_archived: false,
         current_revision: None,
         episode_scope: None,
+        memory_scope: None,
     }
 }
 
-fn ids(hits: &[medulla_work_types::memory::MemoryHit]) -> Vec<&str> {
+pub(super) fn ids(hits: &[medulla_work_types::memory::MemoryHit]) -> Vec<&str> {
     hits.iter().map(|hit| hit.record.memory_id.as_str()).collect()
 }
 
@@ -613,7 +614,7 @@ use medulla_work_types::memory::{
     ConversationMessage, ConversationRecord, Episode, EpisodeScope, EpisodeSpec, MemoryRememberResult, MessageRole,
 };
 
-fn episodic(tenant: &str, id: &str, session: &str, timestamp_ms: i64) -> MemoryRecord {
+pub(super) fn episodic(tenant: &str, id: &str, session: &str, timestamp_ms: i64) -> MemoryRecord {
     let mut item = record(tenant, id, MemoryTier::Episodic, "note of the session");
     item.session_id = Some(ResourceId::new(session).unwrap());
     item.timestamp_ms = timestamp_ms;
@@ -654,7 +655,7 @@ fn with_episode(
 }
 
 /// Remember the earlier records bare, then the last one with the episode spec.
-fn seal(
+pub(super) fn seal(
     core: &GraphCore,
     tenant: &str,
     episode_id: &str,
@@ -677,7 +678,7 @@ fn seal(
     .unwrap()
 }
 
-fn episode_recall(scope: EpisodeScope, as_of_ms: i64) -> MemoryRecallRequest {
+pub(super) fn episode_recall(scope: EpisodeScope, as_of_ms: i64) -> MemoryRecallRequest {
     let mut request = recall_request(vec![], &["note"], 10_000);
     request.episode_scope = Some(scope);
     request.as_of_ms = Some(as_of_ms);
