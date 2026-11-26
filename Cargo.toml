@@ -2159,6 +2159,13 @@ name = "ingest_source_governance"
 path = "benches/ingest_source_governance.rs"
 harness = false
 
+# Page task overhead of a chunked drain (MEDULLA-INGEST-WORKER-R605.6): nightly budget.
+[[bench]]
+name = "ingest_drain"
+path = "benches/ingest_drain.rs"
+harness = false
+required-features = ["jobs"]
+
 # Materialization at batch size (MEDULLA-INGEST-WORKER-R606.6): nightly budget.
 [[bench]]
 name = "ingest_materialize"

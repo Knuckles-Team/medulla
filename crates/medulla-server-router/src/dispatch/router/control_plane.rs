@@ -698,6 +698,10 @@ async fn dispatch_compute_and_media_methods_arm_0(
 
 #[cfg(feature = "jobs")]
 async fn dispatch_task_queue_arm(ctx: DispatchCtx<'_>, method: Method) -> Response {
+    // MEDULLA-INGEST-WORKER-R605.2: a page ack that carries a drain report.
+    if matches!(&method, Method::TaskQueueAck { drain: Some(_), .. }) {
+        return dispatch_boxed(super::source_ingest::ack_drain_page(ctx, method)).await;
+    }
     let DispatchCtx {
         state,
         req,

@@ -131,6 +131,8 @@ macro_rules! native_method_catalog {
             #[cfg(feature = "jobs")]
             record IngestEnqueue => AnalyticsJob,
             #[cfg(feature = "jobs")]
+            record StartSourceDrain => AnalyticsJob,
+            #[cfg(feature = "jobs")]
             record TaskQueueClaim => AnalyticsJob,
             #[cfg(feature = "jobs")]
             record SetSchedulerConfig => AnalyticsJob,

@@ -3098,6 +3098,14 @@ send_dead_letter_redrive = contract_sender(
 decode_dead_letter_redrive = contract_decoder("DeadLetterRedrive", "DeadLetterRedriven")
 send_task_queue_ack = contract_sender("TaskQueueAck", "MethodTaskQueueAckParams")
 decode_task_queue_ack = contract_decoder("TaskQueueAck", "TaskAcked")
+send_start_source_drain = contract_sender(
+    "StartSourceDrain", "MethodStartSourceDrainParams"
+)
+decode_start_source_drain = contract_decoder("StartSourceDrain", "DrainHandle")
+send_source_drain_status = contract_sender(
+    "SourceDrainStatus", "MethodSourceDrainStatusParams"
+)
+decode_source_drain_status = contract_decoder("SourceDrainStatus", "DrainStatus")
 send_ingest_enqueue = contract_sender("IngestEnqueue", "MethodIngestEnqueueParams")
 decode_ingest_enqueue = contract_decoder("IngestEnqueue", "IngestEnqueueReceipt")
 send_ingest_queue_depth = contract_sender(

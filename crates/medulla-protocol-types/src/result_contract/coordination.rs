@@ -83,6 +83,8 @@ method_results! {
     DeadLetterList(DeadLetterList) => Raw<medulla_ingestion_types::ingest_capabilities::DeadLetterListed>;
     DeadLetterRedrive(DeadLetterRedrive) => Raw<medulla_ingestion_types::ingest_capabilities::DeadLetterRedriven>;
     TaskQueueAck(TaskQueueAck) => Raw<medulla_work_types::task_queue::TaskAcked>;
+    StartSourceDrain(StartSourceDrain) => Raw<medulla_ingestion_types::ingest_drain::DrainHandle>;
+    SourceDrainStatus(SourceDrainStatus) => Raw<medulla_ingestion_types::ingest_drain::DrainStatus>;
     // MEDULLA-DURABLE-KERNEL-R076.2: the policy in force, and the policy just stored.
     GetSchedulerConfig(GetSchedulerConfig) => Raw<medulla_work_types::scheduler_config::SchedulerConfig>;
     SetSchedulerConfig(SetSchedulerConfig) => Raw<medulla_work_types::scheduler_config::SchedulerConfig>;

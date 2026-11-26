@@ -1742,6 +1742,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "INGEST_TENANT_MISMATCH",
         ],
     ),
+    // MEDULLA-INGEST-WORKER-R605.2, R605.5: the served drain refusals.
+    ("StartSourceDrain", &["INVALID_ARGUMENT"]),
+    ("SourceDrainStatus", &["DRAIN_UNKNOWN"]),
     // MEDULLA-INGEST-WORKER-R604.3, R604.4: the reserved-worker admission of a claim.
     (
         "TaskQueueClaim",
@@ -1771,7 +1774,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("SetSchedulerConfig", &["SCHEDULER_CONFIG_INVALID"]),
     (
         "TaskQueueAck",
-        &["TASK_ACK_LEASE_EXPIRED", "TASK_ACK_NOT_CLAIMED"],
+        &[
+            "DRAIN_CURSOR_STALE",
+            "TASK_ACK_LEASE_EXPIRED",
+            "TASK_ACK_NOT_CLAIMED",
+        ],
     ),
     (
         "ActionSubmit",

@@ -17068,6 +17068,20 @@ class MethodAdmitWorkerTask(BaseModel):
     params: MethodAdmitWorkerTaskParams
 
 
+class MethodStartSourceDrain(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["StartSourceDrain"]
+    params: MethodStartSourceDrainParams
+
+
+class MethodSourceDrainStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceDrainStatus"]
+    params: MethodSourceDrainStatusParams
+
+
 class MethodTaskQueueAck(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17764,6 +17778,8 @@ Method = Annotated[
         MethodAdmitWorkerTask,
         MethodDeadLetterList,
         MethodDeadLetterRedrive,
+        MethodStartSourceDrain,
+        MethodSourceDrainStatus,
         MethodTaskQueueAck,
         MethodIngestEnqueue,
         MethodIngestQueueDepth,
@@ -38235,10 +38251,72 @@ class DeadLetterRedriven(BaseModel):
     redriven: Annotated[int, Field(ge=0)]
 
 
+class IngestStage(str, Enum):
+    FETCH = "fetch"
+    EXTRACT = "extract"
+    EMBED = "embed"
+    INDEX = "index"
+
+
+class StageProfile(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    embeddings: Annotated[int, Field(ge=0)]
+    stage: IngestStage
+    tokens: Annotated[int, Field(ge=0)]
+    wall_ms: Annotated[int, Field(ge=0)]
+
+
+class DrainAck(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    items: Annotated[int, Field(ge=0)] = 0
+    next_cursor: str | None = Field(default=None)
+    profile: list[StageProfile] = Field(default_factory=list)
+
+
+class DrainHandle(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    drain_id: Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
+
+
+class DrainState(str, Enum):
+    RUNNING = "running"
+    COMPLETE = "complete"
+    FAILED = "failed"
+
+
+class DrainStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str
+    drain_id: str
+    items: Annotated[int, Field(ge=0)]
+    pages: Annotated[int, Field(ge=0)]
+    profile: list[StageProfile]
+    state: DrainState
+
+
+class MethodStartSourceDrainParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connector: str
+    mode: str
+    stream: str
+
+
+class MethodSourceDrainStatusParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    drain_id: str
+
+
 class MethodTaskQueueAckParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     detail: str = ""
+    drain: DrainAck | None = Field(default=None)
     outcome: TaskOutcome
     task_id: str
     worker_id: str
@@ -48385,6 +48463,16 @@ __all__ = [
     "MethodTaskQueueEnqueue",
     "MethodTaskQueueEnqueueParams",
     "DeadLetterItem",
+    "DrainAck",
+    "DrainHandle",
+    "DrainState",
+    "DrainStatus",
+    "IngestStage",
+    "MethodSourceDrainStatus",
+    "MethodSourceDrainStatusParams",
+    "MethodStartSourceDrain",
+    "MethodStartSourceDrainParams",
+    "StageProfile",
     "MethodWorkerRegister",
     "MethodWorkerRegisterParams",
     "MethodAdmitWorkerTask",

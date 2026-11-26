@@ -836,6 +836,8 @@ mod tests {
         #[cfg(feature = "jobs")]
         ("TaskQueueEnqueue", "MEDULLA-DURABLE-KERNEL-R072: native MutationBatch in jobs.redb, exactly like AnalyticsJob: one job of family task.<queue> plus its idempotency claim"),
         #[cfg(feature = "jobs")]
+        ("StartSourceDrain", "MEDULLA-INGEST-WORKER-R605.2: native MutationBatch in jobs.redb, exactly like IngestEnqueue (page 0 of the drain is one ingest task); the source_drain node is a separate ordinary graph BatchUpdate"),
+        #[cfg(feature = "jobs")]
         ("IngestEnqueue", "MEDULLA-INGEST-WORKER-R001.4.1: native MutationBatch in jobs.redb, exactly like TaskQueueEnqueue: one job of family task.<ingest queue> plus its idempotency claim"),
         #[cfg(feature = "jobs")]
         ("SetSchedulerConfig", "MEDULLA-DURABLE-KERNEL-R076.2: native MutationBatch in jobs.redb, exactly like AnalyticsJob: one settings row written as a maintenance batch"),

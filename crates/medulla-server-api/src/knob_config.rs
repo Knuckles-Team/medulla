@@ -481,6 +481,8 @@ knobs! {
     architecture_view_max_containers: u64 = "architecture_view.max_containers", U64(512), [16, 4_096], "containers", Tunable;
     /// Least property coverage an induced ontology proposal needs to be admitted (MEDULLA-INGEST-WORKER-R002.3).
     ingest_proposal_min_coverage: f64 = "ingest.proposal_min_coverage", F64(0.8), [0.5, 1.0], "ratio", Tunable;
+    /// Most records one drain page task holds (MEDULLA-INGEST-WORKER-R605.2).
+    ingest_drain_page_records: u64 = "ingest.drain_page_records", U64(500), [1, 1_024], "records", Tunable;
     /// Most class redundancy an induced ontology proposal may carry and still be admitted (MEDULLA-INGEST-WORKER-R002.3).
     ingest_proposal_max_redundancy: f64 = "ingest.proposal_max_redundancy", F64(0.1), [0.0, 0.5], "ratio", Tunable;
     /// TOC maximum served span.
@@ -1025,7 +1027,9 @@ pub fn load_knobs(
             ));
         };
         let name = name.trim();
-        if !ROOT_LIST_KEYS.contains(&name) && !KNOB_TABLE.iter().any(|spec| spec.name == name) {
+        if !ROOT_LIST_KEYS.contains(&name)
+            && name != DEFAULT_INGEST_GRAPH_KEY
+            && !KNOB_TABLE.iter().any(|spec| spec.name == name) {
             return Err(refusal(
                 ServerErrorCode::KnobUnknown,
                 name,
@@ -1057,6 +1061,56 @@ pub const FOREIGN_SQLITE_ALLOWED_ROOTS: &str = "foreign.sqlite.allowed_roots";
 /// The list-valued key naming the directories an attached DuckDB database file may live
 /// under (MEDULLA-UNIFIED-DATA-PLANE-R020.2.2); the default is the empty list.
 pub const FOREIGN_DUCKDB_ALLOWED_ROOTS: &str = "foreign.duckdb.allowed_roots";
+
+/// The string-valued server config key naming the graph an ingest is written to when no
+/// connector, repository or tenant routing record names one (MEDULLA-INGEST-WORKER-R605.2).
+pub const DEFAULT_INGEST_GRAPH_KEY: &str = "ingest.default_graph";
+
+/// The graph an ingest uses when nothing routes it elsewhere.
+pub const DEFAULT_INGEST_GRAPH_FALLBACK: &str = "main";
+
+static DEFAULT_INGEST_GRAPH: OnceLock<String> = OnceLock::new();
+
+/// Read `ingest.default_graph`: the last `--knob`, else `MEDULLA_INGEST_DEFAULT_GRAPH`, else
+/// `main`. A name outside `[A-Za-z0-9._:-]{1,128}` refuses startup with `KNOB_INVALID`.
+pub fn load_default_ingest_graph(
+    args: &[String],
+    env: impl Fn(&str) -> Option<String>,
+) -> Result<String, KnobRefusal> {
+    let from_cli = args.iter().rev().find_map(|arg| {
+        let (name, value) = arg.split_once('=')?;
+        (name.trim() == DEFAULT_INGEST_GRAPH_KEY).then(|| value.trim().to_string())
+    });
+    let raw = from_cli
+        .or_else(|| env("MEDULLA_INGEST_DEFAULT_GRAPH"))
+        .unwrap_or_else(|| DEFAULT_INGEST_GRAPH_FALLBACK.to_string());
+    let valid = !raw.is_empty()
+        && raw.len() <= 128
+        && raw
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'.' | b'_' | b':' | b'-'));
+    if valid {
+        Ok(raw)
+    } else {
+        Err(refusal(
+            ServerErrorCode::KnobInvalid,
+            DEFAULT_INGEST_GRAPH_KEY,
+            "graph must match [A-Za-z0-9._:-]{1,128}".to_string(),
+        ))
+    }
+}
+
+/// Hand the startup-loaded default ingest graph to the handlers; the first install wins.
+pub fn install_default_ingest_graph(graph: String) {
+    let _ = DEFAULT_INGEST_GRAPH.set(graph);
+}
+
+/// The graph an ingest uses when nothing routes it elsewhere; `main` until installed.
+pub fn default_ingest_graph() -> &'static str {
+    DEFAULT_INGEST_GRAPH
+        .get()
+        .map_or(DEFAULT_INGEST_GRAPH_FALLBACK, String::as_str)
+}
 
 /// Every list-valued path key, read beside the scalar table.
 pub const ROOT_LIST_KEYS: [&str; 2] = [FOREIGN_SQLITE_ALLOWED_ROOTS, FOREIGN_DUCKDB_ALLOWED_ROOTS];

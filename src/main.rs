@@ -352,6 +352,16 @@ async fn run_inner() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     }
+    // MEDULLA-INGEST-WORKER-R605.2: the graph an ingest uses when no routing record names one.
+    match medulla_server_api::knob_config::load_default_ingest_graph(&args.knob, |name| {
+        std::env::var(name).ok()
+    }) {
+        Ok(graph) => medulla_server_api::knob_config::install_default_ingest_graph(graph),
+        Err(refusal) => {
+            eprintln!("error: {refusal}");
+            std::process::exit(2);
+        }
+    }
     // MEDULLA-UNIFIED-DATA-PLANE-R020.2.2: warehouse and lake sources are read by the engine
     // reader, which re-checks a DuckDB path against the resolved allowlist at read time.
     #[cfg(feature = "federation")]

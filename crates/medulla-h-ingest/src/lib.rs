@@ -23,6 +23,9 @@ pub mod data_prep_declaration;
 /// Served ingest queue entry: enqueue maps onto the served task queue with
 /// deterministic ids (MEDULLA-INGEST-WORKER-R001.4).
 pub mod ingest_queue;
+/// Chunked source drains: a chain of bounded page tasks over the one task queue
+/// (MEDULLA-INGEST-WORKER-R605.2).
+pub mod ingest_drain;
 /// Independent readback of one ingest write (MEDULLA-REPO-INGEST-R002.100).
 pub mod ingest_readback;
 /// Per-span embedding admission (MEDULLA-DECISION-ENGINE-R079.2, R079.3).

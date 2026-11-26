@@ -672,6 +672,8 @@ METHOD_IDS = frozenset(
         "DeadLetterRedrive",
         "TaskQueueAck",
         "IngestEnqueue",
+        "StartSourceDrain",
+        "SourceDrainStatus",
         "IngestQueueDepth",
     }
 )

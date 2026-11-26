@@ -1131,6 +1131,11 @@ closed_error_codes! {
         /// MEDULLA-REPO-INGEST-R002.651.3: a non-ingest queue, a `limit` outside 1 to 1000, an empty
         /// `item_ids` or more than 1000 ids.
         DeadLetterRequestInvalid => "DEAD_LETTER_REQUEST_INVALID",
+        /// MEDULLA-INGEST-WORKER-R605.4: a drain page ack below the stored checkpoint, or of a closed
+        /// drain; nothing is enqueued or written.
+        DrainCursorStale => "DRAIN_CURSOR_STALE",
+        /// MEDULLA-INGEST-WORKER-R605.5: a drain id that names no drain of the verified tenant.
+        DrainUnknown => "DRAIN_UNKNOWN",
         EnvelopeSourceMissing => "ENVELOPE_SOURCE_MISSING",
         HydrationBindingMismatch => "HYDRATION_BINDING_MISMATCH",
         SkillCapabilityUnresolved => "SKILL_CAPABILITY_UNRESOLVED",

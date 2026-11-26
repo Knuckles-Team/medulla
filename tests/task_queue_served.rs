@@ -438,6 +438,7 @@ async fn served_methods_enqueue_claim_and_ack_behind_their_scopes() {
                     worker_id: "w1".into(),
                     outcome: TaskOutcome::Succeeded,
                     detail: String::new(),
+                    drain: None,
                 },
             ),
         )

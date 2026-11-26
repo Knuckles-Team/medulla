@@ -314,6 +314,32 @@ fn ingest_ack_decision(
     Ok(Some((decision, queue.to_string())))
 }
 
+/// What the drain-ack wrapper needs of one task before it acks: the payload (the ingest
+/// envelope) and whether the job is already failed for good. `None` when the task is unknown or
+/// belongs to another tenant, so the two read alike (MEDULLA-INGEST-WORKER-R605.2).
+pub async fn task_payload(
+    state: &Arc<RwLock<ServerState>>,
+    tenant: &str,
+    task_id: &str,
+) -> Result<Option<(String, bool)>, String> {
+    let store = crate::jobs::outbox_job_store(state).await?;
+    let Ok(job) = store.get(task_id) else {
+        return Ok(None);
+    };
+    if job.policy.tenant != tenant || !job.algo.family.starts_with(TASK_FAMILY_PREFIX) {
+        return Ok(None);
+    }
+    let payload = job
+        .input_payload
+        .as_deref()
+        .map(|bytes| String::from_utf8_lossy(bytes).into_owned())
+        .unwrap_or_default();
+    Ok(Some((
+        payload,
+        matches!(job.state, medulla_jobs::JobState::Failed { .. }),
+    )))
+}
+
 /// Serve `TaskQueueAck`: complete, fail or release a task the caller's worker
 /// holds under a live lease. A task of an ingest queue is acked by the decision of
 /// MEDULLA-INGEST-WORKER-R001.9 under `ingest_policy`, the policy in force; every other queue acks
@@ -521,11 +547,14 @@ pub async fn try_handle(
                 &policy,
             )
         }
+        // The drain report of a page task is applied by the router before this ack
+        // (MEDULLA-INGEST-WORKER-R605.2); the task itself acks as any other.
         Method::TaskQueueAck {
             task_id,
             worker_id,
             outcome,
             detail,
+            drain: _,
         } => {
             let policy = ingest_retry_policy(state).await;
             ack(

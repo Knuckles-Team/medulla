@@ -521,7 +521,21 @@ async fn route_source_ingestion_or_resources(
         Method::LineageIngest { events } => {
             return Ok(super::lineage_ingest::route_lineage_ingest(ctx, events).await)
         }
-        Method::SourceIngest { request } => SourceIngestionRoute::Ingest(request),
+        Method::SourceIngest { request } => {
+            // MEDULLA-INGEST-WORKER-R605.3: routing runs before graph resolution.
+            if let Some(graph) = ingest_reroute(&ctx, request.as_batch()).await {
+                return Ok(boxed(dispatch_graph_op(
+                    ctx.state,
+                    &graph,
+                    ctx.req_id,
+                    ctx.caller,
+                    ctx.verified_context,
+                    Method::SourceIngest { request },
+                ))
+                .await);
+            }
+            SourceIngestionRoute::Ingest(request)
+        }
         Method::SourceIngestStatus { connector, stream } => SourceIngestionRoute::Status(
             medulla_source_types::source_ingestion::SourceIngestStatusRequest { connector, stream },
         ),
@@ -535,6 +549,69 @@ async fn route_source_ingestion_or_resources(
         method => return route_native_typed_ops(ctx, method).await,
     };
     route_source_ingestion_dispatch(ctx, source_method).await
+}
+
+fn boxed<'a, T>(
+    future: impl std::future::Future<Output = T> + Send + 'a,
+) -> std::pin::Pin<Box<dyn std::future::Future<Output = T> + Send + 'a>> {
+    Box::pin(future)
+}
+
+/// The graph a source batch is routed to when it is not the request graph
+/// (MEDULLA-INGEST-WORKER-R605.2, R605.3). The connector and tenant routing records live in the
+/// control graph (`default_ingest_graph`); with none, the request graph is the default, so a
+/// batch addressed to a graph stays there. The one routing function is `route_ingest_graph`.
+async fn ingest_reroute(
+    ctx: &GraphOpRouting<'_>,
+    batch: &medulla_source_types::source_ingestion::SourceIngestionBatch,
+) -> Option<String> {
+    use medulla_ingestion_types::ingest_drain::{
+        route_ingest_graph, route_node_id, RouteInputs, RouteScope,
+    };
+    let control = medulla_server_api::knob_config::default_ingest_graph();
+    let target = super::super::graph_client::GraphTarget {
+        graph: control,
+        req_id: ctx.req_id,
+        caller: ctx.caller,
+        verified: ctx.verified_context,
+    };
+    let tenant = ctx.verified_context.tenant();
+    let mut named: [Option<String>; 2] = [None, None];
+    for (slot, (scope, key)) in [
+        (RouteScope::Source, batch.connector.as_str()),
+        (RouteScope::Tenant, tenant),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let Some(id) = route_node_id(scope, key) else {
+            continue;
+        };
+        let properties = boxed(super::super::graph_client::read_node(
+            ctx.state, &target, &id,
+        ))
+        .await
+        .ok()
+        .flatten();
+        named[slot] = properties
+            .filter(|properties| {
+                properties.get("tenant_id").and_then(serde_json::Value::as_str) == Some(tenant)
+            })
+            .and_then(|properties| {
+                properties
+                    .get("graph")
+                    .and_then(serde_json::Value::as_str)
+                    .map(str::to_string)
+            });
+    }
+    let route = route_ingest_graph(&RouteInputs {
+        source: named[0].as_deref(),
+        repository: None,
+        tenant: named[1].as_deref(),
+        default: ctx.graph_name,
+    })
+    .ok()?;
+    (route.graph() != ctx.graph_name).then(|| route.graph().to_string())
 }
 
 async fn route_source_ingestion_dispatch(

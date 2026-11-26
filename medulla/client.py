@@ -53,6 +53,8 @@ if TYPE_CHECKING:
     from .generated._runtime import OpaqueResult
     from .generated.models import (
         ClaimedTask,
+        DrainHandle,
+        DrainStatus,
         SearchTaskRejection,
         SparqlResult,
         TaskAcked,
@@ -5122,18 +5124,41 @@ class TaskQueueClient:
         worker_id: str,
         outcome: str,
         detail: str = "",
+        drain: dict[str, Any] | None = None,
     ) -> TaskAcked:
-        """Complete (``Succeeded``), fail (``Failed``) or release (``Retry``) a task."""
-        result = await _gen.coordination.send_task_queue_ack(
-            self._client,
-            {
-                "task_id": task_id,
-                "worker_id": worker_id,
-                "outcome": outcome,
-                "detail": detail,
-            },
-        )
+        """Complete (``Succeeded``), fail (``Failed``) or release (``Retry``) a task.
+
+        A drain page task passes ``drain`` (``items``, ``next_cursor``, ``profile``):
+        a cursor enqueues the next page, none closes the drain. A page below the
+        stored checkpoint refuses ``DRAIN_CURSOR_STALE``.
+        """
+        params: dict[str, Any] = {
+            "task_id": task_id,
+            "worker_id": worker_id,
+            "outcome": outcome,
+            "detail": detail,
+        }
+        if drain is not None:
+            params["drain"] = drain
+        result = await _gen.coordination.send_task_queue_ack(self._client, params)
         return cast("TaskAcked", _gen.coordination.decode_task_queue_ack(result))
+
+    async def start_source_drain(
+        self, *, connector: str, stream: str, mode: str
+    ) -> DrainHandle:
+        """Start a chunked drain of one source stream; page 0 is enqueued."""
+        result = await _gen.coordination.send_start_source_drain(
+            self._client,
+            {"connector": connector, "stream": stream, "mode": mode},
+        )
+        return cast("DrainHandle", _gen.coordination.decode_start_source_drain(result))
+
+    async def source_drain_status(self, *, drain_id: str) -> DrainStatus:
+        """Pages, items, cursor, state and stage totals of one drain."""
+        result = await _gen.coordination.send_source_drain_status(
+            self._client, {"drain_id": drain_id}
+        )
+        return cast("DrainStatus", _gen.coordination.decode_source_drain_status(result))
 
 
 class ControlLeaseClient:

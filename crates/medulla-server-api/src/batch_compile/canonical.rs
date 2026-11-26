@@ -97,6 +97,7 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         // the same jobs.redb store, so its writes commit in the analytics-job owner.
         Method::TaskQueueEnqueue { .. }
         | Method::IngestEnqueue { .. }
+        | Method::StartSourceDrain { .. }
         | Method::TaskQueueClaim { .. }
         | Method::TaskQueueAck { .. }
         | Method::DeadLetterRedrive { .. }
@@ -836,6 +837,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-DURABLE-KERNEL-R072: claimed by `owner_domain` (jobs.redb).
         | Method::TaskQueueEnqueue { .. }
         | Method::IngestEnqueue { .. }
+        | Method::StartSourceDrain { .. }
         | Method::TaskQueueClaim { .. }
         | Method::TaskQueueAck { .. }
         | Method::DeadLetterRedrive { .. }
@@ -844,6 +846,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::SetSchedulerConfig { .. }
         | Method::GetSchedulerConfig
         | Method::IngestQueueDepth { .. }
+        | Method::SourceDrainStatus { .. }
         | Method::DowntimeSelections { .. }
         | Method::WorkerRegister { .. }
         | Method::WorkerHeartbeat { .. }
@@ -1106,6 +1109,7 @@ pub fn surface_for(method: &Method) -> Option<MutationSurface> {
             _,
             Method::TaskQueueEnqueue { .. }
             | Method::IngestEnqueue { .. }
+            | Method::StartSourceDrain { .. }
             | Method::TaskQueueClaim { .. }
             | Method::TaskQueueAck { .. }
             | Method::DeadLetterRedrive { .. }

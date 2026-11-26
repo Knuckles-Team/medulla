@@ -472,6 +472,9 @@ pub(super) const REASON_SCHEDULER_CONFIG: &str =
 // MEDULLA-INGEST-WORKER-R001.11: the ingest queue depth is the verified tenant's own queue load.
 pub(super) const REASON_INGEST_QUEUE_DEPTH: &str =
     "source_ingest::ingest_queue_depth reads the verified tenant's queued and running task counts and oldest enqueue time of the reserved ingest queues from the jobs seam -- queue load of the caller's own tenant, never a GraphView/core.analysis_snapshot() row read; gated by task:enqueue in allows_method";
+// MEDULLA-INGEST-WORKER-R605.5: a drain's status is the verified tenant's own drain record.
+pub(super) const REASON_SOURCE_DRAIN_STATUS: &str =
+    "source_ingest::source_drain_status reads the one source_drain:<id> node of the verified tenant through the graph client under the caller's own graph read authority -- the drain record of the caller's own tenant, never a GraphView/core.analysis_snapshot() row read; gated by task:enqueue in allows_method";
 // MEDULLA-REPO-INGEST-R002.651.3: the dead-letter list is the verified tenant's own parked tasks.
 pub(super) const REASON_DEAD_LETTER_LIST: &str =
     "control_plane::dispatch_task_queue_arm routes DeadLetterList to medulla_h_jobs::task_queue, which lists only the dead-letter rows whose failed task row names the verified tenant -- queue state of the caller's own tenant, never a GraphView/core.analysis_snapshot() row read; gated by task:work in allows_method";
@@ -778,6 +781,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("GetSchedulerConfig", REASON_SCHEDULER_CONFIG),
     // REASON_INGEST_QUEUE_DEPTH
     ("IngestQueueDepth", REASON_INGEST_QUEUE_DEPTH),
+    // REASON_SOURCE_DRAIN_STATUS
+    ("SourceDrainStatus", REASON_SOURCE_DRAIN_STATUS),
     // REASON_DEAD_LETTER_LIST
     ("DeadLetterList", REASON_DEAD_LETTER_LIST),
     // REASON_DOWNTIME_SELECTIONS

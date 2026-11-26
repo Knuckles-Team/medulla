@@ -880,7 +880,24 @@ $($variants)*
         outcome: medulla_work_types::task_queue::TaskOutcome,
         #[serde(default)]
         detail: String,
+        /// What a drain page task reports: its record count, the next cursor and its stage
+        /// costs (MEDULLA-INGEST-WORKER-R605.2). Absent for every other task.
+        #[serde(default)]
+        drain: Option<medulla_ingestion_types::ingest_drain::DrainAck>,
     },
+    /// Start a chunked drain of one source stream (MEDULLA-INGEST-WORKER-R605.2): answers a
+    /// `DrainHandle` at once and enqueues page 0. `mode` is `full`, `delta` or `reconcile`.
+    /// Scope `task:enqueue`. Refusals: `INVALID_ARGUMENT`.
+    StartSourceDrain {
+        connector: String,
+        stream: String,
+        mode: String,
+    },
+    /// The totals of one drain of the verified tenant (MEDULLA-INGEST-WORKER-R605.5): pages,
+    /// items, the cursor of the next page, the state and the summed stage profile. Reads only.
+    /// Scope `task:enqueue`. An unknown drain and another tenant's drain answer alike
+    /// (`DRAIN_UNKNOWN`).
+    SourceDrainStatus { drain_id: String },
     /// The parked tasks of one ingest queue (MEDULLA-REPO-INGEST-R002.651.3): at most `limit`
     /// (1 to 1000) items, ordered by `parked_at_ms` then `item_id`. Scope `task:work`. Reads only.
     /// Refusal: `DEAD_LETTER_REQUEST_INVALID`.
