@@ -515,6 +515,38 @@ knobs! {
     failure_context_steps: u64 = "failure.context_steps", U64(2), [0, 8], "steps", Tunable;
     /// Records a failure pattern needs before it files a gap.
     failure_min_count: u64 = "failure.min_count", U64(3), [2, 1_000], "records", Tunable;
+    /// Most open knowledge flags one run may raise (MEDULLA-DECISION-ENGINE-R708.2).
+    flag_max_open_per_run: u64 = "flag.max_open_per_run", U64(20), [1, 200], "flags", Tunable;
+    /// Seconds between curation cycles; sets `due` (MEDULLA-DECISION-ENGINE-R709.7).
+    curation_cadence_seconds: u64 = "curation.cadence_seconds", U64(86_400), [300, 604_800], "seconds", Tunable;
+    /// Pass rate below which a skill suite is too low (MEDULLA-DECISION-ENGINE-R711.2).
+    eval_pass_band_low_ppm: u64 = "eval.pass_band.low_ppm", U64(700_000), [0, 1_000_000], "ppm", Tunable;
+    /// Pass rate above which a skill suite is suspiciously saturated.
+    eval_pass_band_high_ppm: u64 = "eval.pass_band.high_ppm", U64(900_000), [0, 1_000_000], "ppm", Tunable;
+    /// Wanted share of golden cases in a skill suite.
+    eval_mix_golden_ppm: u64 = "eval.mix.golden_ppm", U64(50_000), [0, 1_000_000], "ppm", Tunable;
+    /// Wanted share of real-prompt cases in a skill suite.
+    eval_mix_real_ppm: u64 = "eval.mix.real_ppm", U64(800_000), [0, 1_000_000], "ppm", Tunable;
+    /// Wanted share of author-judged cases in a skill suite.
+    eval_mix_judged_ppm: u64 = "eval.mix.judged_ppm", U64(150_000), [0, 1_000_000], "ppm", Tunable;
+    /// How far a suite share may sit from its wanted share.
+    eval_mix_tolerance_ppm: u64 = "eval.mix.tolerance_ppm", U64(100_000), [0, 1_000_000], "ppm", Tunable;
+    /// Fewest cases a skill suite needs before it counts.
+    eval_min_cases: u64 = "eval.min_cases", U64(20), [1, 10_000], "cases", Tunable;
+    /// Lowest judge agreement that lets a judged case count.
+    eval_judge_min_kappa_ppm: u64 = "eval.judge.min_kappa_ppm", U64(600_000), [0, 1_000_000], "ppm", Tunable;
+    /// Identical runs a noise band needs (MEDULLA-DECISION-ENGINE-R712.2).
+    eval_ablation_identical_runs: u64 = "eval.ablation.identical_runs", U64(5), [2, 20], "runs", Tunable;
+    /// Share of traffic a canary challenger takes.
+    canary_traffic_ppm: u64 = "canary.traffic_ppm", U64(50_000), [1_000, 500_000], "ppm", Tunable;
+    /// Eval runs of prior weight in the skill quality score (MEDULLA-DECISION-ENGINE-R713.5).
+    skill_quality_prior_runs: u64 = "skill.quality.prior_runs", U64(20), [1, 1_000], "runs", Tunable;
+    /// Fewest cohort principals before a peer recommendation answers (MEDULLA-DECISION-ENGINE-R713.6).
+    skill_peers_min_peers: u64 = "skill.peers.min_peers", U64(5), [3, 100], "principals", Tunable;
+    /// Salt of the principal pseudonym of a skill invocation (MEDULLA-DECISION-ENGINE-R713.1).
+    skill_pseudonym_salt: u64 = "skill.pseudonym_salt", U64(1), [0, 1_000_000_000_000], "salt", Tunable;
+    /// Most always-on skills per tenant (MEDULLA-DECISION-ENGINE-R714.2).
+    skills_always_on_max: u64 = "skills.always_on_max", U64(100), [1, 500], "skills", Tunable;
     /// Fewest outcomes a tool needs before its success rate orders usage guidance steps (MEDULLA-DECISION-ENGINE-R177.2).
     usage_min_trials: u64 = "usage.min_trials", U64(5), [1, 1_000], "outcomes", Tunable;
     /// Most sources a research citation walk reads (MEDULLA-DECISION-ENGINE-R705.2).
