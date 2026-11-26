@@ -155,6 +155,8 @@ pub use dispatch::try_handle;
 pub use dispatch::{try_handle_with_policy, PolicyAwareQuery};
 #[cfg(feature = "query")]
 mod code_map;
+#[cfg(feature = "query")]
+mod spec_intelligence;
 mod sql_read;
 pub(crate) use sql_read::*;
 #[cfg(feature = "query")]

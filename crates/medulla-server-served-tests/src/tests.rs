@@ -713,6 +713,7 @@ async fn test_unified_query_matches_separate_surfaces_oracle() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },
@@ -839,6 +840,7 @@ async fn dispatch_drives_declared_clock_sensor_fusion_end_to_end() {
 
         foreign_executions: Default::default(),
         code_map: None,
+        spec_report: None,
         retrieval: None,
         latency_class: Default::default(),
     };
@@ -901,6 +903,7 @@ async fn dispatch_drives_declared_clock_sensor_fusion_end_to_end() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },
@@ -964,6 +967,7 @@ async fn dispatch_drives_tumbling_window_sensor_fusion() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },
@@ -1031,6 +1035,7 @@ async fn test_uql_text_equals_structured_plan_and_oracle() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },
@@ -1194,6 +1199,7 @@ async fn test_served_scan_reads_node_type_labels() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },
@@ -1442,6 +1448,7 @@ async fn test_federated_query_two_engines_equals_manual_join() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },
@@ -1615,6 +1622,7 @@ async fn test_registered_foreign_source_is_queryable_by_name() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },
@@ -1648,6 +1656,7 @@ async fn test_registered_foreign_source_is_queryable_by_name() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },
@@ -1728,6 +1737,7 @@ async fn test_unregistered_foreign_source_errors_cleanly() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },
@@ -1760,6 +1770,7 @@ async fn test_unregistered_foreign_source_errors_cleanly() {
 
                 foreign_executions: Default::default(),
                 code_map: None,
+                spec_report: None,
                 retrieval: None,
                 latency_class: Default::default(),
             },

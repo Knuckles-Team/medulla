@@ -111,6 +111,11 @@ $($variants)*
         /// empty). The answer is a `CodeMapResult`.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         code_map: Option<Box<medulla_types::code_map::CodeMapQuery>>,
+        /// MEDULLA-SDLC-R014.13: serve the spec intelligence report (overlap clusters and
+        /// shape violations of the spec rows) instead of running `plan` (which must then be
+        /// empty). The answer is a `SpecIntelligenceReport`; the read writes nothing.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        spec_report: Option<Box<medulla_types::spec_report::SpecReportQuery>>,
         /// MEDULLA-FEDERATED-QUERY-R731: `interactive` (the default) runs within the
         /// node budget; `analytical` submits a durable job and answers its record.
         #[serde(default, skip_serializing_if = "medulla_query_types::wire::LatencyClass::is_interactive")]

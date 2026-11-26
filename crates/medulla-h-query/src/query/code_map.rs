@@ -30,7 +30,7 @@ use sha2::{Digest, Sha256};
 const BRANCH_PREFIX: &str = "branch:";
 const CURSOR_TAG: &str = "cm1";
 
-type Props = Map<String, Value>;
+pub(super) type Props = Map<String, Value>;
 
 fn sha256_label(bytes: &[u8]) -> String {
     format!("sha256:{}", hex::encode(Sha256::digest(bytes)))
@@ -41,7 +41,7 @@ fn short(label: &str) -> &str {
     &hex[..hex.len().min(16)]
 }
 
-fn text<'a>(props: &'a Props, key: &str) -> &'a str {
+pub(super) fn text<'a>(props: &'a Props, key: &str) -> &'a str {
     props.get(key).and_then(Value::as_str).unwrap_or("")
 }
 
@@ -50,7 +50,7 @@ fn number(props: &Props, key: &str) -> u32 {
 }
 
 /// `(target, relationship)` of every distinct out-edge of `id`.
-fn out_edges(view: &GraphView, id: &str) -> Vec<(String, String)> {
+pub(super) fn out_edges(view: &GraphView, id: &str) -> Vec<(String, String)> {
     let Some(&index) = view.node_map.get(id) else {
         return Vec::new();
     };

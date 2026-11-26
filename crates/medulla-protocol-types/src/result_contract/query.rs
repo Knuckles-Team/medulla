@@ -37,6 +37,7 @@ method_results! {
     UnifiedQuery(UnifiedQuery) => Raw<Vec<medulla_types::unified_row::UnifiedRow>>;
     // MEDULLA-REPO-INGEST-R006.3: one page of a revision-bound code map.
     UnifiedQueryCodeMap(UnifiedQuery / "code_map") => Raw<medulla_types::code_map::CodeMapResult>;
+    UnifiedQuerySpecReport(UnifiedQuery / "spec_report") => Raw<medulla_types::spec_report::SpecIntelligenceReport>;
     // MEDULLA-FEDERATED-QUERY-R039: the rows of a plan that sets `report_shortfall`, with the typed shortfall.
     UnifiedQueryShortfall(UnifiedQuery / "shortfall") => Raw<medulla_types::retrieval::RankedRows>;
     LiveArtifactPut(LiveArtifactPut) => Json<medulla_source_types::live_artifact::LiveArtifact>;

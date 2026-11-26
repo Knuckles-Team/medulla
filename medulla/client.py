@@ -13597,6 +13597,27 @@ class QueryClient:
         result = (await _gen.query.send_unified_query(self._client, body)).payload
         return CodeMapResult.model_validate(result)
 
+    async def spec_report(
+        self, *, resolution_micros: int = 1_000_000, seed: int = 0
+    ) -> Any:
+        """Read the spec intelligence report (MEDULLA-SDLC-R014.13).
+
+        The report is a read: it carries an empty plan and writes nothing. It lists
+        the ``overlaps`` (clusters of spec rows of two or more repositories that share
+        terms) and the ``violations`` (rows that break a shape of the spec standard,
+        each with the refusal code of the shape), and the number of ``rows`` it read.
+        ``resolution_micros`` is the clustering resolution in millionths (100000 to
+        10000000); a value outside it refuses ``SPEC_REPORT_INVALID``. A report sent
+        with a plan, or with another alternative body, refuses ``REPORT_READ_ONLY``."""
+        from .generated.models import SpecIntelligenceReport
+
+        body: dict[str, Any] = {
+            "plan": {"ops": []},
+            "spec_report": {"resolution_micros": resolution_micros, "seed": seed},
+        }
+        result = (await _gen.query.send_unified_query(self._client, body)).payload
+        return SpecIntelligenceReport.model_validate(result)
+
     async def uql(
         self,
         text: str,

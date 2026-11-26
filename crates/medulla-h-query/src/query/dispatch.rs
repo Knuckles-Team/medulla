@@ -329,9 +329,18 @@ async fn run_sql_query(ctx: &QueryHandlerCtx<'_>, method: Method) -> Result<Resp
             foreign_execution,
             foreign_executions,
             code_map,
+            spec_report,
             latency_class,
             retrieval,
         } => {
+            // MEDULLA-SDLC-R014.13: the report takes no other body, so it refuses first.
+            if let Some(query) = spec_report {
+                let alongside = code_map.is_some()
+                    || retrieval.is_some()
+                    || foreign_execution.is_some()
+                    || !foreign_executions.is_empty();
+                return Ok(super::spec_intelligence::serve(ctx, &plan, &query, alongside).await);
+            }
             if let Some(query) = code_map {
                 return Ok(super::code_map::serve(ctx, &plan, &query).await);
             }

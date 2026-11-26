@@ -3018,6 +3018,37 @@ class CodeMapResult(BaseModel):
     next_cursor: str | None = None
 
 
+class SpecReportQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    resolution_micros: Annotated[int, Field(ge=0)] = 1000000
+    seed: Annotated[int, Field(ge=0)] = 0
+
+
+class OverlapCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cluster_id: str
+    row_ids: list[str]
+    shared_terms: list[str]
+    repositories: list[str]
+
+
+class ShapeViolation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    row_id: str
+    code: str
+
+
+class SpecIntelligenceReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    overlaps: list[OverlapCandidate]
+    violations: list[ShapeViolation]
+    rows: Annotated[int, Field(ge=0)]
+
+
 class ClaimSource(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -21464,6 +21495,7 @@ class MethodUnifiedQueryParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     code_map: CodeMapQuery | None = None
+    spec_report: SpecReportQuery | None = None
     foreign_execution: ForeignReadExecutionRef | None = None
     foreign_executions: BoundedVec_ForeignReadExecutionRef_16 | None = None
     latency_class: LatencyClass | None = None
@@ -47977,6 +48009,8 @@ __all__ = [
     "ShaclValidationReport",
     "ShaclValidationResult",
     "ShapeKeep",
+    "ShapeViolation",
+    "OverlapCandidate",
     "ShardFanoutOutcome",
     "ShardFanoutOutcomeCommitted",
     "ShardFanoutOutcomeFailed",
@@ -48068,6 +48102,8 @@ __all__ = [
     "SpatialOpKindIntersectionBody",
     "SpatialOpKindSimplify",
     "SpatialOpKindSimplifyBody",
+    "SpecIntelligenceReport",
+    "SpecReportQuery",
     "SpatialOpKindUnion",
     "SpatialOpKindUnionBody",
     "SplitSpec",

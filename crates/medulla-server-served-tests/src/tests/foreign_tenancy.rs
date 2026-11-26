@@ -80,6 +80,7 @@ fn named_scan_plan() -> Method {
 
         foreign_executions: Default::default(),
         code_map: None,
+        spec_report: None,
         retrieval: None,
         latency_class: Default::default(),
     }

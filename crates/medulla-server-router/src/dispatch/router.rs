@@ -302,6 +302,7 @@ fn analytical_query_job(
             Method::UnifiedQuery {
                 plan,
                 code_map: None,
+                spec_report: None,
                 latency_class: LatencyClass::Analytical,
                 ..
             } => match rmp_serde::to_vec_named(plan) {
