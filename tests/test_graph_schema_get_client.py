@@ -58,3 +58,13 @@ def test_get_refuses_a_missing_key_and_extra_fields_before_sending() -> None:
         with pytest.raises(ValidationError):
             asyncio.run(reasoning.send_graph_schema_get(transport, params, "tenant"))
     assert not transport.sent
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R813.5")
+def test_get_decodes_the_redaction_marker_and_defaults_it_off() -> None:
+    plain = GraphSchemaSourceDocumentsView.model_validate(DOCUMENTS)
+    assert plain.source.provenance_redacted is False
+    source = dict(plain.source.model_dump(), provenance_redacted=True)
+    redacted_payload = {**DOCUMENTS, "source": source}
+    redacted = GraphSchemaSourceDocumentsView.model_validate(redacted_payload)
+    assert redacted.source.provenance_redacted is True

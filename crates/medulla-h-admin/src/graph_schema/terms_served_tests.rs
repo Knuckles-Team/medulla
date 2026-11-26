@@ -277,3 +277,95 @@ async fn get_serves_one_source_of_the_request_graph_and_refuses_the_rest() {
     assert!(foreign.error.is_some());
     assert!(foreign.result.is_none());
 }
+
+/// Verifies MEDULLA-TYPED-PACKS-R813.4: `GraphSchemaList` and `GraphSchemaGet` choose the view by
+/// the verified scope at the one builder. An `owl:read` caller sees the source key, version and
+/// digest with no approval lease id or importer principal; a `security:admin` caller sees both.
+// spec: MEDULLA-TYPED-PACKS-R813.4
+#[tokio::test]
+async fn schema_reads_redact_provenance_below_security_admin() {
+    use medulla_catalog_types::graph_schema::{
+        GraphSchemaSourceDocumentsView, SchemaSourceOriginView,
+    };
+    use medulla_server_api::authority_context::VerifiedRequestContext;
+
+    let state = state_with_two_graphs().await;
+    {
+        let guard = state.write().await;
+        let core = guard.registry.get("vocab-a").expect("resident").core.clone();
+        let approved = GraphSchemaSource::new(
+            SchemaSourceOrigin::Approved {
+                name: "ap".to_string(),
+                approval_lease_id: "action_approval:lease-1".to_string(),
+                shadow_report_digest: None,
+            },
+            None,
+            Some(Arc::from(
+                "<https://example.org/a#Ap> a <http://www.w3.org/2002/07/owl#Class> .\n",
+            )),
+            5,
+        )
+        .expect("a bounded approved source");
+        let mut dynamic = core.schema_sources().dynamic.clone();
+        dynamic.insert("approved:ap".to_string(), approved);
+        core.install_schema_sources(Arc::new(
+            GraphSchemaSources::with_dynamic(dynamic).expect("composes with the core"),
+        ));
+    }
+    let read_as = |scopes: &'static [&'static str], method: Method| {
+        let state = state.clone();
+        async move {
+            let request = medulla_protocol_types::protocol::Request {
+                id: 1,
+                graph: "vocab-a".to_string(),
+                auth_token: String::new(),
+                agent_id: Some(AGENT.to_string()),
+                method,
+                trace_id: None,
+            };
+            let context = VerifiedRequestContext::verified_for_test_with_scopes(AGENT, TENANT, scopes);
+            Box::pin(medulla_server_api::api::reentry::dispatch_verified_request(
+                &state, request, context,
+            ))
+            .await
+        }
+    };
+    let get = || Method::GraphSchemaGet {
+        source_id: "approved:ap".to_string(),
+    };
+    let lease_of = |origin: &SchemaSourceOriginView| match origin {
+        SchemaSourceOriginView::Approved {
+            approval_lease_id, ..
+        } => approval_lease_id.clone(),
+        other => panic!("expected an approved origin, got {other:?}"),
+    };
+
+    let reader: GraphSchemaSourceDocumentsView =
+        raw(&read_as(&["owl:read"], get()).await);
+    assert!(reader.source.provenance_redacted);
+    assert_eq!(lease_of(&reader.source.origin), "");
+    assert!(reader.ontology_ttl.is_some(), "the documents stay readable");
+
+    let admin: GraphSchemaSourceDocumentsView =
+        raw(&read_as(&["owl:read", "security:admin"], get()).await);
+    assert!(!admin.source.provenance_redacted);
+    assert_eq!(lease_of(&admin.source.origin), "action_approval:lease-1");
+    assert_eq!(reader.source.source_id, admin.source.source_id);
+    assert_eq!(reader.composed_digest, admin.composed_digest);
+
+    for (scopes, expected) in [
+        (&["owl:read"][..], ""),
+        (&["owl:read", "security:admin"][..], "action_approval:lease-1"),
+    ] {
+        let scopes: &'static [&'static str] = Box::leak(scopes.to_vec().into_boxed_slice());
+        let listed: GraphSchemaSourcesView =
+            raw(&read_as(scopes, Method::GraphSchemaList).await);
+        let source = listed
+            .dynamic_sources
+            .as_slice()
+            .iter()
+            .find(|source| source.source_id == "approved:ap")
+            .expect("the approved source is listed");
+        assert_eq!(lease_of(&source.origin), expected, "{scopes:?}");
+    }
+}

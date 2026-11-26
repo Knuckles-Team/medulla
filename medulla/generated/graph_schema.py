@@ -181,6 +181,7 @@ class GraphSchemaSourceView(BaseModel):
     ontology_bytes: Annotated[int, Field(ge=0)]
     ontology_sha256: str | None = None
     origin: SchemaSourceOriginView
+    provenance_redacted: bool = False
     shapes_bytes: Annotated[int, Field(ge=0)]
     shapes_sha256: str | None = None
     source_id: str

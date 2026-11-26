@@ -352,3 +352,5 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T352 [US8] MEDULLA-TYPED-PACKS-R813.1 `GraphSchemaList` is `owl:read`
 - [ ] T353 [US8] MEDULLA-TYPED-PACKS-R813.2 `GraphSchemaGet`: one source with its documents
 - [ ] T354 [US8] MEDULLA-TYPED-PACKS-R813.3 Python mirror: `GraphSchemaGet`
+- [ ] T355 [US8] MEDULLA-TYPED-PACKS-R813.4 Schema reads redact provenance below `security:admin`
+- [ ] T356 [US8] MEDULLA-TYPED-PACKS-R813.5 Python mirror: `GraphSchemaSourceView.provenance_redacted`

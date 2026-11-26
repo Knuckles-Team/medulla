@@ -469,6 +469,11 @@ pub struct GraphSchemaSourceView {
     pub shapes_bytes: u64,
     pub ontology_bytes: u64,
     pub attached_at_ms: u64,
+    /// True when the answering scope was below `security:admin` and the origin's importer
+    /// principals, approval lease ids and shadow-report digests were withheld
+    /// (MEDULLA-TYPED-PACKS-R813.4). Absent on the wire when false.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub provenance_redacted: bool,
 }
 
 /// One attached schema source with its documents (answer of `Method::GraphSchemaGet`,

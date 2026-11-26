@@ -46,7 +46,11 @@ fn attach(source_id: &str, ontology_ttl: &str) -> GraphSchemaOp {
 #[test]
 fn attach_list_and_detach_share_one_authoritative_source_set() {
     let core = GraphCore::new();
-    let initial = medulla_server_ops::api::admin::schema_read::list("g", &core).unwrap();
+    let initial = medulla_server_ops::api::admin::schema_read::list(
+        "g",
+        &core,
+        medulla_server_ops::api::admin::schema_read::ProvenanceView::Full,
+    ).unwrap();
     let core_ids: std::collections::BTreeSet<_> = initial
         .core_sources
         .iter()
@@ -123,7 +127,11 @@ fn attach_list_and_detach_share_one_authoritative_source_set() {
     }
     let ontology = "@prefix owl: <http://www.w3.org/2002/07/owl#> . @prefix ex: <http://example/> . ex:Local a owl:Class .";
     apply(&core, "g", &attach("admin:local", ontology)).unwrap();
-    let listed = medulla_server_ops::api::admin::schema_read::list("g", &core).unwrap();
+    let listed = medulla_server_ops::api::admin::schema_read::list(
+        "g",
+        &core,
+        medulla_server_ops::api::admin::schema_read::ProvenanceView::Full,
+    ).unwrap();
     assert!(listed
         .dynamic_sources
         .iter()

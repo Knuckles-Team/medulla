@@ -222,6 +222,18 @@ impl CarrierAuthority {
         &self.identity_actor
     }
 
+    /// Whether the verified token may read the full provenance of a schema source
+    /// (importer principals, approval lease ids, shadow-report digests): the
+    /// `security:admin` scope, its `security:*` wildcard, or an admin carrier
+    /// (MEDULLA-TYPED-PACKS-R813.4). Every other scope reads the redacted view.
+    pub fn reads_schema_provenance(&self) -> bool {
+        self.admin
+            || self
+                .scopes
+                .iter()
+                .any(|scope| scope == "security:admin" || scope == "security:*")
+    }
+
     /// Coarse read capability (`kg:read` or admin). See the field's doc
     /// comment in [`Self::from_verified`] for why this is `true` for every
     /// pre-existing carrier-minting site and only meaningfully varies for the

@@ -575,12 +575,22 @@ async fn try_handle_validation(
         )),
         #[cfg(feature = "shacl")]
         Method::GraphSchemaList => Some(
-            medulla_server_ops::api::admin::schema_read::handle_list(req_id, graph_name, core).await,
+            medulla_server_ops::api::admin::schema_read::handle_list(
+                req_id,
+                graph_name,
+                core,
+                medulla_server_ops::api::admin::schema_read::provenance_view_of(read_authority),
+            )
+            .await,
         ),
         #[cfg(feature = "shacl")]
         Method::GraphSchemaGet { source_id } => Some(
             medulla_server_ops::api::admin::schema_read::handle_get(
-                req_id, graph_name, core, source_id,
+                req_id,
+                graph_name,
+                core,
+                source_id,
+                medulla_server_ops::api::admin::schema_read::provenance_view_of(read_authority),
             )
             .await,
         ),
