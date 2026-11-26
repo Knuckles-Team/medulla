@@ -66,6 +66,7 @@ Compile slot: Medulla only, one cargo lane host-wide at a time.
 - [ ] T058 [US1] MEDULLA-SDLC-R012.6 Specs change through the graph.
 - [ ] T059 [US1] MEDULLA-SDLC-R012.7 Lifecycle evidence lives with the requirement: `judges` edge in `gate_verdict::record`, `requirement_evidence.uql` fixture, no new edge kind.
 - [ ] T060 [US4] MEDULLA-SDLC-R012.8 Project mode record.
+- [ ] T060a [US4] MEDULLA-SDLC-R012.9 Typed project mode read.
 - [ ] T061 [US5] MEDULLA-SDLC-R013 Scenario runs gate phases and release bundles.
 - [ ] T062 [US2] MEDULLA-SDLC-R014 Spec artifacts are graph records .
 - [ ] T063 [P] [US2] MEDULLA-SDLC-R014.1 Deterministic parser for spec artifacts.

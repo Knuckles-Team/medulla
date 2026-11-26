@@ -38,6 +38,11 @@ async def _set(client, project: str, mode: str, approval: dict | None = None) ->
     return _body(await client._send("ProjectModeSet", {"request": request}, GRAPH))
 
 
+async def _get(client, project: str) -> dict:
+    request = {"project": project}
+    return _body(await client._send("ProjectModeGet", {"request": request}, GRAPH))
+
+
 async def _stored_mode(client, node_id: str) -> str:
     raw = await client._send("GetNodeProperties", {"node_id": node_id}, GRAPH)
     return _body(raw)["mode"]
@@ -72,5 +77,43 @@ async def test_evolving_needs_operator_approval_and_defaults_to_reference(
         assert receipt["previous"] == "development"
         assert receipt["mode"] == "evolving"
         assert await _stored_mode(client, receipt["node_id"]) == "evolving"
+    finally:
+        await client.close()
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R012.9")
+@pytest.mark.asyncio
+async def test_project_mode_get_reads_the_typed_record(start_medulla_server) -> None:
+    client = await _connect()
+    try:
+        project = f"project-{uuid.uuid4().hex[:12]}"
+
+        absent = _body(
+            await client._send(
+                "ProjectModeGet", {"request": {"project": project}}, GRAPH
+            )
+        )
+        assert absent["mode"] == "reference"
+        assert absent["recorded"] is False
+        assert absent["node_id"].startswith("projectmode:")
+
+        approval = {
+            "approver": "operator",
+            "approved_at_ms": 1_700_000_000_000,
+            "reason": "goals reviewed",
+        }
+        await _set(client, project, "evolving", approval)
+        record = _body(
+            await client._send(
+                "ProjectModeGet", {"request": {"project": project}}, GRAPH
+            )
+        )
+        assert record["mode"] == "evolving"
+        assert record["recorded"] is True
+        assert record["approver"] == "operator"
+        assert record["approved_at_ms"] == 1_700_000_000_000
+
+        with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+            await client._send("ProjectModeGet", {"request": {"project": " "}}, GRAPH)
     finally:
         await client.close()

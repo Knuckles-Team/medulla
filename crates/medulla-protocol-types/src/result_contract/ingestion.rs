@@ -155,6 +155,8 @@ method_results! {
     ProposalDecide(ProposalDecide) => Raw<medulla_source_types::lifecycle::ProposalDecideReceipt>;
     // MEDULLA-SDLC-R012.8: the project mode record.
     ProjectModeSet(ProjectModeSet) => Raw<medulla_source_types::lifecycle::ProjectModeReceipt>;
+    // MEDULLA-SDLC-R012.9: the typed project mode read.
+    ProjectModeGet(ProjectModeGet) => Raw<medulla_source_types::lifecycle::ProjectModeRecord>;
     // MEDULLA-UNIFIED-DATA-PLANE-R702.3: edge, quarantine and replay counts.
     LineageIngest(LineageIngest) => Raw<medulla_catalog_types::lineage::LineageIngestReceipt>;
     // `(node_id, weighted_similarity)` pairs, best first.

@@ -19354,6 +19354,20 @@ class MedullaClient:
             raise TypeError("ProjectModeSet returned a non-object result")
         return result
 
+    async def project_mode_get(self, request: dict[str, Any]) -> dict[str, Any]:
+        """Read the mode record of one project (MEDULLA-SDLC-R012.9).
+
+        ``request`` carries ``project``. The answer names ``node_id``,
+        ``project``, ``mode`` and ``recorded`` and, when the record holds an
+        approval, ``approver``, ``reason`` and ``approved_at_ms``. A project with
+        no visible record answers ``reference`` with ``recorded`` false. A blank
+        project refuses ``INVALID_ARGUMENT``.
+        """
+        result = await self._send("ProjectModeGet", {"request": request}, None)
+        if not isinstance(result, dict):
+            raise TypeError("ProjectModeGet returned a non-object result")
+        return result
+
     async def spec_question(
         self, question: str, graph: str, subject: str | None = None
     ) -> dict[str, Any]:

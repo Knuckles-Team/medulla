@@ -628,6 +628,88 @@ pub fn project_mode_node_id(project: &str) -> String {
     format!("projectmode:{}", &sha256_hex(project.as_bytes())[..32])
 }
 
+/// `ProjectModeGet` request (MEDULLA-SDLC-R012.9): read the mode of one project.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProjectModeGetRequest {
+    pub project: String,
+}
+
+/// What `ProjectModeGet` answers. A project with no record of the verified
+/// tenant answers `mode: reference`, `recorded: false` and no approval, the same
+/// answer for an absent record and for a record the caller may not see.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ProjectModeRecord {
+    pub node_id: String,
+    pub project: String,
+    pub mode: ProjectMode,
+    pub recorded: bool,
+    #[serde(default)]
+    pub approver: Option<String>,
+    #[serde(default)]
+    pub reason: Option<String>,
+    #[serde(default)]
+    pub approved_at_ms: Option<u64>,
+}
+
+/// `ProjectModeGet` (MEDULLA-SDLC-R012.9): check the bounds of the request. A
+/// blank project refuses `INVALID_ARGUMENT`.
+pub fn handle_project_mode_get(
+    request: ProjectModeGetRequest,
+) -> Result<ProjectModeGetRequest, LifecycleRefusal> {
+    if request.project.trim().is_empty() {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a project mode read names its project".to_owned(),
+        ));
+    }
+    Ok(request)
+}
+
+/// The answer of `ProjectModeGet` from the stored `ProjectMode` node properties
+/// (`None` when no record of the verified tenant is visible).
+pub fn project_mode_record(
+    project: &str,
+    stored: Option<&serde_json::Value>,
+) -> ProjectModeRecord {
+    let node_id = project_mode_node_id(project);
+    let Some(node) = stored else {
+        return ProjectModeRecord {
+            node_id,
+            project: project.to_owned(),
+            mode: ProjectMode::default(),
+            recorded: false,
+            approver: None,
+            reason: None,
+            approved_at_ms: None,
+        };
+    };
+    let text = |key: &str| {
+        node.get(key)
+            .and_then(serde_json::Value::as_str)
+            .map(str::to_owned)
+    };
+    ProjectModeRecord {
+        node_id,
+        project: project.to_owned(),
+        mode: node
+            .get("mode")
+            .and_then(serde_json::Value::as_str)
+            .and_then(|name| {
+                serde_json::from_value(serde_json::Value::String(name.to_owned())).ok()
+            })
+            .unwrap_or_default(),
+        recorded: true,
+        approver: text("approver"),
+        reason: text("reason"),
+        approved_at_ms: node
+            .get("approved_at_ms")
+            .and_then(serde_json::Value::as_u64),
+    }
+}
+
 /// `ProjectModeSet` (MEDULLA-SDLC-R012.8): decide what one mode change writes,
 /// or refuse before anything is written. A blank project refuses
 /// `INVALID_ARGUMENT`; a move to `evolving` while `evolving_requires_approval`

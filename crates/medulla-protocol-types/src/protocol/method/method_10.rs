@@ -571,6 +571,12 @@ $($variants)*
     ProjectModeSet {
         request: medulla_source_types::lifecycle::ProjectModeSet,
     },
+    /// Read the mode record of one project (MEDULLA-SDLC-R012.9): the typed
+    /// counterpart of `ProjectModeSet`. A project with no visible record of the
+    /// verified tenant answers `reference` with `recorded: false`. Reads only.
+    ProjectModeGet {
+        request: medulla_source_types::lifecycle::ProjectModeGetRequest,
+    },
     /// MEDULLA-SRC-AUTH-R004.6.1: which connected source is authoritative for each
     /// class (and facet) within the hop budget, with the premises behind every verdict
     /// and the authority audit built from them. A read; nothing is committed. Refuses

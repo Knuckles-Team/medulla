@@ -11,7 +11,8 @@ use medulla_work_types::orchestration::visual_observation::{
     VISUAL_OBSERVATION_NODE_TYPE, VISUAL_OBSERVATION_RECORD_PROPERTY,
 };
 use medulla_protocol_types::result_contract::ingestion::{
-    GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
+    GoalPut as GoalPutResult, ProjectModeGet as ProjectModeGetResult,
+    ProjectModeSet as ProjectModeSetResult,
     FileDefect as FileDefectResult, SpecStatus as SpecStatusResult, LifecycleTrace as LifecycleTraceResult, PutObservation as PutObservationResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
     RecordGateVerdict as RecordGateVerdictResult, RecordRelease as RecordReleaseResult,
@@ -25,14 +26,14 @@ use medulla_server_graph::dispatch::shared::{
 use medulla_source_types::source_changeset::{commit_node_id, COMMIT_TYPE};
 use medulla_source_types::lifecycle::{
     deployment_node_id, handle_goal_put, handle_record_deployment, handle_record_release,
-    handle_project_mode_set, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
+    handle_project_mode_get, handle_project_mode_set, project_mode_record, handle_proposal_decide, handle_proposal_put, project_mode_node_id,
     handle_file_defect, handle_get_defect, handle_transition_defect, defect_node_id, defect_from_node,
     DefectFileOutcome, GetDefectReceipt, GetDefectRequest, TransitionDefectRequest, Defect, DefectWrite, FileDefectRequest,
     DEFECT_TYPE, LifecycleRefusal, Proposal, ProposalDecideReceipt, ProposalDecideRequest, ProposalEvidence,
     ProposalKind, ProposalListEntry, ProposalListRequest, ProposalReceipt, ProposalState,
     ProposalWrite, MAX_PROPOSAL_EVIDENCE, release_node_id, Deployment, DeploymentInput,
     DeploymentReceipt, Goal, GoalReceipt, GoalWrite, ProjectMode, ProjectModeReceipt,
-    ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
+    ProjectModeGetRequest, ProjectModeSet, ProjectModeWrite, Release, ReleaseReceipt,
 };
 use medulla_source_types::gate_verdict::{
     gate_verdict_node_id, handle_landing_policy_put, GateVerdictReceipt, GateVerdictRecord,
@@ -121,6 +122,9 @@ pub async fn dispatch_sdlc_methods(
         }
         Method::ProjectModeSet { request } => {
             dispatch_boxed(project_mode_set(state, target, request)).await
+        }
+        Method::ProjectModeGet { request } => {
+            dispatch_boxed(project_mode_get(state, target, request)).await
         }
         Method::SpecQuestion {
             question,
@@ -1306,6 +1310,27 @@ async fn project_mode_set(
     typed_response::<ProjectModeSetResult>(target.req_id, result)
 }
 
+/// `ProjectModeGet` (MEDULLA-SDLC-R012.9): the typed read of one project's mode
+/// record. A project with no visible record of the verified tenant answers
+/// `reference` with `recorded: false`. Reads only.
+async fn project_mode_get(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: ProjectModeGetRequest,
+) -> Response {
+    let result = async {
+        let tenant = target.verified.tenant();
+        if tenant.trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        let request = handle_project_mode_get(request).map_err(|e| e.to_string())?;
+        let stored = stored_project_mode_node(state, &target, &request.project).await?;
+        Ok(project_mode_record(&request.project, stored.as_ref()))
+    }
+    .await;
+    typed_response::<ProjectModeGetResult>(target.req_id, result)
+}
+
 /// The stored mode of `project` in the request graph, `reference` when no record
 /// of the verified tenant exists.
 async fn stored_project_mode(
@@ -1313,6 +1338,18 @@ async fn stored_project_mode(
     target: &SdlcTarget<'_>,
     project: &str,
 ) -> Result<ProjectMode, String> {
+    let stored = stored_project_mode_node(state, target, project).await?;
+    Ok(project_mode_record(project, stored.as_ref()).mode)
+}
+
+/// The decoded `ProjectMode` node of `project` that the verified tenant owns and
+/// the caller may see; `None` for an absent, foreign or hidden record, so a read
+/// is no existence oracle.
+async fn stored_project_mode_node(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    project: &str,
+) -> Result<Option<Value>, String> {
     ensure_graph_resident(state, target.graph).await;
     let (core, authority) = {
         let current = timed_read(state).await;
@@ -1325,22 +1362,18 @@ async fn stored_project_mode(
     };
     let node_id = project_mode_node_id(project);
     let Some(properties) = core.get_node_properties(&node_id) else {
-        return Ok(ProjectMode::default());
+        return Ok(None);
     };
     if !authority.can_see_node(&properties, core.is_schema_node(&node_id)) {
-        return Ok(ProjectMode::default());
+        return Ok(None);
     }
     let Ok(node) = medulla_types::msgpack::decode_property_value(&properties) else {
-        return Ok(ProjectMode::default());
+        return Ok(None);
     };
     if node.get("tenant_id").and_then(Value::as_str) != Some(target.verified.tenant()) {
-        return Ok(ProjectMode::default());
+        return Ok(None);
     }
-    Ok(node
-        .get("mode")
-        .and_then(Value::as_str)
-        .and_then(|name| serde_json::from_value(Value::String(name.to_owned())).ok())
-        .unwrap_or_default())
+    Ok(Some(node))
 }
 
 /// The one `ProjectMode` node; the approval properties only when one was given.

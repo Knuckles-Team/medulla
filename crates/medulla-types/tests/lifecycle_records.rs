@@ -417,6 +417,53 @@ fn project_mode_needs_approval_only_for_evolving() {
     assert_eq!(refusal.code(), "INVALID_ARGUMENT");
 }
 
+// spec: MEDULLA-SDLC-R012.9
+#[test]
+fn project_mode_get_reads_the_record_and_defaults_to_reference() {
+    use medulla_source_types::lifecycle::{
+        handle_project_mode_get, project_mode_node_id, project_mode_record, ProjectMode,
+        ProjectModeGetRequest,
+    };
+
+    let blank = handle_project_mode_get(ProjectModeGetRequest {
+        project: " ".into(),
+    })
+    .unwrap_err();
+    assert_eq!(blank.code(), "INVALID_ARGUMENT");
+    let named = handle_project_mode_get(ProjectModeGetRequest {
+        project: "medulla".into(),
+    })
+    .unwrap();
+    assert_eq!(named.project, "medulla");
+
+    let absent = project_mode_record("medulla", None);
+    assert_eq!(absent.mode, ProjectMode::Reference);
+    assert!(!absent.recorded);
+    assert_eq!(absent.node_id, project_mode_node_id("medulla"));
+    assert_eq!(absent.approver, None);
+    assert_eq!(absent.approved_at_ms, None);
+
+    let stored = serde_json::json!({
+        "type": "ProjectMode",
+        "project": "medulla",
+        "mode": "evolving",
+        "approver": "ops",
+        "reason": "goals reviewed",
+        "approved_at_ms": 1_700_000_000_000u64,
+    });
+    let record = project_mode_record("medulla", Some(&stored));
+    assert_eq!(record.mode, ProjectMode::Evolving);
+    assert!(record.recorded);
+    assert_eq!(record.approver.as_deref(), Some("ops"));
+    assert_eq!(record.reason.as_deref(), Some("goals reviewed"));
+    assert_eq!(record.approved_at_ms, Some(1_700_000_000_000));
+
+    let plain = serde_json::json!({"type": "ProjectMode", "mode": "development"});
+    let record = project_mode_record("medulla", Some(&plain));
+    assert_eq!(record.mode, ProjectMode::Development);
+    assert_eq!(record.approver, None);
+}
+
 // spec: MEDULLA-SDLC-R017.3
 #[test]
 fn proposal_evidence_is_required_resolved_and_matched() {

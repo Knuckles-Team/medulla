@@ -191,6 +191,8 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "IncidentRelatedClaims",
     // `dispatch_sdlc_methods::proposal_list` keeps only proposal nodes `can_see_node` admits.
     "ProposalList",
+    // `dispatch_sdlc_methods::project_mode_get` reads only a node `can_see_node` admits.
+    "ProjectModeGet",
     // `dispatch_sdlc_methods::spec_question` reads only nodes `can_see_node` admits.
     "SpecQuestion",
     // `dispatch_sdlc_methods::spec_status` reads only nodes `can_see_node` admits.

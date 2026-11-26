@@ -2040,6 +2040,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PROPOSAL_NOT_OPEN",
         ],
     ),
+    // MEDULLA-SDLC-R012.9: the project mode read's refusals.
+    (
+        "ProjectModeGet",
+        &["TENANT_SCOPE_REQUIRED", "INVALID_ARGUMENT"],
+    ),
     // MEDULLA-SDLC-R012.8: the project mode record's refusals.
     (
         "ProjectModeSet",
