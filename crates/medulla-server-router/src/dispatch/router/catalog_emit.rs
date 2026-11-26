@@ -49,22 +49,21 @@ pub(super) async fn commit_asset(
     }
 }
 
-/// How many catalog emits failed after their record committed, since the process started.
-static EMIT_FAILURES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
-
-/// The number of catalog emits that failed after their record committed.
+/// How many catalog emits failed after their record committed, read from the registered
+/// `medulla_catalog_emit_failures_total` series.
 #[cfg(feature = "rdf")]
 pub(super) fn emit_failures() -> u64 {
-    EMIT_FAILURES.load(std::sync::atomic::Ordering::Relaxed)
+    medulla_kernel::metrics::process().catalog_emit_failures()
 }
 
 /// Answer `response` unchanged. A committed write is never reported as a failure
 /// (MEDULLA-TYPED-PACKS-R108.3): a catalog emit that failed after its record committed is
-/// logged and counted, and the replayed request emits the nodes again.
+/// logged and counted on the registered `medulla_catalog_emit_failures_total` series, and the
+/// replayed request emits the nodes again.
 #[cfg(feature = "rdf")]
 pub(super) fn after_emit(response: Response, _req_id: u64, emitted: Result<(), String>) -> Response {
     if let Err(refusal) = emitted {
-        EMIT_FAILURES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        medulla_kernel::metrics::process().catalog_emit_failed();
         tracing::error!(target: "medulla::catalog", %refusal, "catalog emit failed after the record committed");
     }
     response
@@ -364,6 +363,7 @@ mod tests {
     use super::*;
 
     // spec: MEDULLA-TYPED-PACKS-R108.3
+    #[cfg(feature = "metrics")]
     #[test]
     fn a_failed_emit_after_a_committed_record_is_counted_and_never_fails_the_response() {
         let before = emit_failures();

@@ -93,6 +93,7 @@ pub struct KernelMetrics {
     pub(super) busy_rejections: IntCounter,
     pub(super) dispatch_deadline_exceeded: IntCounter,
     pub(super) asset_usage_dropped: IntCounter,
+    pub(super) catalog_emit_failures: IntCounter,
     pub(super) query_log_unparsed: IntCounter,
     pub(super) read_reserved_admitted: IntCounter,
     // ── W2.4 engine-native QoS lanes (CONCEPT:MEDULLA-KG.coordination.backpressure-busy-signal) ──
@@ -311,6 +312,11 @@ impl KernelMetrics {
             "medulla_asset_usage_dropped_total",
             "Asset usage points that could not be recorded after a served query \
              (MEDULLA-UNIFIED-DATA-PLANE-R764.3.1); the query itself still succeeded",
+        ),
+            catalog_emit_failures: counter(&registry,
+            "medulla_catalog_emit_failures_total",
+            "Catalog emits that failed after their source record committed \
+             (MEDULLA-TYPED-PACKS-R108.3); the record stayed committed and a replay emits again",
         ),
             query_log_unparsed: counter(&registry,
             "medulla_query_log_unparsed_total",

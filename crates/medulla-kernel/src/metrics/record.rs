@@ -70,6 +70,17 @@ impl KernelMetrics {
         self.asset_usage_dropped.inc();
     }
 
+    /// Count one catalog emit that failed after its source record committed
+    /// (MEDULLA-TYPED-PACKS-R108.3). The record stays committed and a replay emits again.
+    pub fn catalog_emit_failed(&self) {
+        self.catalog_emit_failures.inc();
+    }
+
+    /// How many catalog emits have failed since this value was built.
+    pub fn catalog_emit_failures(&self) -> u64 {
+        self.catalog_emit_failures.get()
+    }
+
     /// Count `count` source query log statements that did not parse
     /// (MEDULLA-UNIFIED-DATA-PLANE-R764.7).
     pub fn query_log_unparsed(&self, count: u64) {

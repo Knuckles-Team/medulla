@@ -11,6 +11,7 @@ fn test_render_contains_recorded_series() {
     m.auth_failure();
     m.access_denied();
     m.busy_rejected();
+    m.catalog_emit_failed();
     m.checkpoint_completed(0.02);
     // CONCEPT:MEDULLA-OS.observability.write-lock-gap-histogram — write-lock-gap histograms register + render.
     m.observe_write_lock_wait("agent:metrics-test", 0.003);
@@ -28,6 +29,7 @@ fn test_render_contains_recorded_series() {
         "medulla_auth_failures_total",
         "medulla_access_denied_total",
         "medulla_busy_rejections_total",
+        "medulla_catalog_emit_failures_total",
         "medulla_checkpoint_duration_seconds_count",
         "medulla_checkpoint_last_success_timestamp_seconds",
         "medulla_write_lock_wait_seconds_bucket",
