@@ -349,9 +349,44 @@ fn commit(
     // EH-395: a named evaluator's grant is written in the same transaction.
     let mut rows =
         super::stat_evaluator::grant_rows(ctx, &logged.record_id, &reader.principal, evaluator)?;
+    rows.extend(skill_program_rows(ctx, &logged)?);
     rows.push((key, encode_artifact(&entry)?));
     ctx.store.put_decision_artifacts(ctx.tenant_id, &rows)?;
     Ok(committed(false))
+}
+
+/// The program a committed `skill_workflow_compile` record stores, in the transaction that
+/// stores the record (MEDULLA-DECISION-ENGINE-R156.3): under the key `ProgramLookup` reads, so
+/// the same path as a program compiled from a run (R135.3). A program already stored under the
+/// skill document's signature with the same content stores nothing again; other content under
+/// it is a conflict, never an overwrite.
+fn skill_program_rows(
+    ctx: &ExecutionContext,
+    record: &StatisticalDecisionRecord,
+) -> Result<Vec<(String, Vec<u8>)>, String> {
+    use medulla_decision_types::decision::program_store::{program_key, CompiledProgram};
+    use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+    let Some(FamilyAnswer::SkillWorkflow(program)) = &record.answer else {
+        return Ok(Vec::new());
+    };
+    program.validate().map_err(|error| {
+        refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            format!("the compiled skill program is invalid: {error:?}"),
+        )
+    })?;
+    let key = program_key(&program.task_signature);
+    if let Some(bytes) = ctx.store.decision_artifact(ctx.tenant_id, &key)? {
+        let existing: CompiledProgram = decode_artifact(&bytes, "compiled program")?;
+        if existing == **program {
+            return Ok(Vec::new());
+        }
+        return Err(refusal(
+            StatisticalErrorCode::IdempotencyConflict,
+            "a program is stored under this skill document with other content",
+        ));
+    }
+    Ok(vec![(key, encode_artifact(&**program)?)])
 }
 
 /// An evaluation joins an executed statistical record, or a committed solved

@@ -551,6 +551,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::TaskPlan, super::task_plan::pairwise::REFUSALS),
     (QuestionKind::ProgramLookup, super::program_store::REFUSALS),
     (
+        QuestionKind::SkillWorkflowCompile,
+        super::skill_workflow::REFUSALS,
+    ),
+    (
         QuestionKind::FeedbackLoop,
         super::checker_feedback::REFUSALS,
     ),

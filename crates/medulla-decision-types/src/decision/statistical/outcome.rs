@@ -215,6 +215,9 @@ pub enum FamilyAnswer {
     HarnessConfig(Box<super::harness_config::HarnessConfigEvaluationEvidence>),
     /// The triage of one defect, or its abstention (MEDULLA-SDLC-R004.3).
     DefectTriage(Box<crate::decision::defect_triage::TriageDecision>),
+    /// The program a skill document's typed draft compiles to (MEDULLA-DECISION-ENGINE-R156.3).
+    /// Committing the record stores it under `skill:<document digest>`.
+    SkillWorkflow(Box<crate::decision::program_store::CompiledProgram>),
 }
 
 impl FamilyAnswer {

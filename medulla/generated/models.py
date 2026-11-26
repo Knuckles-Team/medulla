@@ -29577,6 +29577,13 @@ class FamilyAnswerDefectTriage(BaseModel):
     value: TriageDecision
 
 
+class FamilyAnswerSkillWorkflow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["skill_workflow"]
+    value: CompiledProgram
+
+
 FamilyAnswer = Annotated[
     FamilyAnswerTaskPlan
     | FamilyAnswerTopology
@@ -29601,7 +29608,8 @@ FamilyAnswer = Annotated[
     | FamilyAnswerAdmission
     | FamilyAnswerDisclosureEvent
     | FamilyAnswerHarnessConfig
-    | FamilyAnswerDefectTriage,
+    | FamilyAnswerDefectTriage
+    | FamilyAnswerSkillWorkflow,
     Field(discriminator="type"),
 ]
 
@@ -48315,6 +48323,7 @@ __all__ = [
     "FamilyAnswerLoadSet",
     "FamilyAnswerPlanningAdmission",
     "FamilyAnswerSkillUpgrade",
+    "FamilyAnswerSkillWorkflow",
     "FamilyAnswerThoughtSearch",
     "FamilyAnswerTopology",
     "FamilyAnswerUsageGuidance",

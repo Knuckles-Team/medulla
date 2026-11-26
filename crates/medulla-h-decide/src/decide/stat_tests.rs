@@ -1136,6 +1136,8 @@ mod insight_tests;
 mod tool_relevance_tests;
 mod promotion_tests;
 mod tool_necessity_tests;
+// MEDULLA-DECISION-ENGINE-R156.3 to R156.5: skill documents compile to programs, served.
+mod skill_workflow_tests;
 // MEDULLA-DECISION-ENGINE-R134.100: the served fan-out aggregation.
 mod fanout_tests;
 // MEDULLA-DECISION-ENGINE-R134.102: delegation admission over an outcome window.
