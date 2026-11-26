@@ -118,7 +118,7 @@ pub fn open_delivery(
     })
 }
 
-pub use medulla_source_types::delivery::WouldDispatch;
+use medulla_source_types::delivery::WouldDispatch;
 
 /// The decision of one slice: a run, or a recorded `would_dispatch`.
 #[derive(Clone, Debug, PartialEq, Eq)]
