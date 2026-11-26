@@ -33,6 +33,7 @@ pub mod failure_patterns;
 // MEDULLA-DECISION-ENGINE-R653.1 — improvement-loop records and the `Loops` op body.
 pub mod knowledge_curation;
 pub mod knowledge_flag;
+pub mod skill_eval;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod loops;
 /// Generated decision ontology and shapes (MEDULLA-DECISION-ENGINE-R054.1).

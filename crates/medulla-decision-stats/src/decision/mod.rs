@@ -60,6 +60,7 @@ pub mod importance_penalty;
 pub mod insight;
 pub mod knowledge_curation;
 pub mod knowledge_flag;
+pub mod skill_eval;
 pub mod instruction_disclosure;
 pub mod ladder;
 pub mod legal_option_filter;

@@ -715,6 +715,8 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ("correction", crate::correction::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R708.4: the knowledge flag refusals.
         ("knowledge_flag", crate::knowledge_flag::REFUSALS.to_vec()),
+        // MEDULLA-DECISION-ENGINE-R711.4: the skill evaluation refusals.
+        ("skill_eval", crate::skill_eval::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R709.2, R709.4: the knowledge curation refusals.
         (
             "knowledge_curation",
