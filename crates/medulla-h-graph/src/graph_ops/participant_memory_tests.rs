@@ -753,3 +753,99 @@ mod scoped_recall_proofs {
         assert!(result.episodes.iter().all(|e| e.episode_id.as_str() != "ep:b"));
     }
 }
+
+/// Observation flag proofs (MEDULLA-DECISION-ENGINE-R651.10): the stored settings of a session
+/// decide which perspectives its turns are derived from.
+mod observation_flag_proofs {
+    use super::super::participant_surface::{admit, observation_of};
+    use super::SCOPE_A;
+    use medulla_decision_stats::decision::participant_derive::{derivation_targets, DerivationInput};
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_server_mutation::mutation::apply_coalescable_write;
+    use medulla_types::contract::{ResourceId, TenantId};
+    use medulla_work_types::memory_scope::ObservationConfig;
+    use medulla_work_types::participant::{
+        Participant, ParticipantId, ParticipantKind, ParticipantOp, PARTICIPANT_SCHEMA_VERSION,
+    };
+
+    fn id(slug: &str) -> ParticipantId {
+        ParticipantId::new(slug).unwrap()
+    }
+
+    fn serve(core: &GraphCore, agent: &str, op: ParticipantOp) {
+        let admitted = admit(core, SCOPE_A, agent, &op).unwrap();
+        if let Some(write) = &admitted.write {
+            apply_coalescable_write(core, write).unwrap();
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.10
+    #[test]
+    fn observation_flags_decide_which_perspectives_exist() {
+        let core = GraphCore::new();
+        core.add_node(
+            "transcript-thread:chat-9".into(),
+            rmp_serde::to_vec_named(&serde_json::json!({
+                "type": "Transcript", "connector": "ws-main", "session_id": "chat-9",
+            }))
+            .unwrap(),
+        );
+        let members = [id("ada-1"), id("bo-2")];
+        for member in &members {
+            serve(
+                &core,
+                "alice",
+                ParticipantOp::Put {
+                    participant: Participant {
+                        participant_id: member.clone(),
+                        tenant: TenantId::new("caller").unwrap(),
+                        workspace: ResourceId::new("ws-main").unwrap(),
+                        kind: ParticipantKind::Person,
+                        display_name: member.as_str().to_string(),
+                        represents: Some(format!("person:{}", member.as_str())),
+                        acts_as: vec!["alice".into()],
+                        schema_version: PARTICIPANT_SCHEMA_VERSION,
+                    },
+                },
+            );
+        }
+        let count = |core: &GraphCore| {
+            let configs: Vec<ObservationConfig> =
+                members.iter().map(|member| observation_of(core, SCOPE_A, "chat-9", member)).collect();
+            derivation_targets(&DerivationInput {
+                scope_id: "",
+                session_id: "chat-9",
+                members: &members,
+                configs: &configs,
+            })
+            .len()
+        };
+        // Nothing stored: the system view of both speakers and each one's own view.
+        assert_eq!(count(&core), 4);
+        let set = |observe_self: bool, observe_others: bool| {
+            serve(
+                &core,
+                "alice",
+                ParticipantOp::SetObservation {
+                    config: ObservationConfig {
+                        session_id: "chat-9".into(),
+                        participant_id: id("ada-1"),
+                        observe_self,
+                        observe_others,
+                    },
+                },
+            );
+        };
+        // Flipping each flag of one member adds or removes exactly its perspectives.
+        set(true, true);
+        assert_eq!(count(&core), 5);
+        set(false, true);
+        assert_eq!(count(&core), 4);
+        set(false, false);
+        assert_eq!(count(&core), 3);
+        set(true, false);
+        assert_eq!(count(&core), 4);
+        // A setting of another session never applies to this one.
+        assert!(observation_of(&core, SCOPE_A, "other-session", &id("ada-1")).observe_self);
+    }
+}
