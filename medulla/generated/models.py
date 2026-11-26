@@ -30885,6 +30885,30 @@ class FamilyAnswerHeldItemAdmission(BaseModel):
     value: HeldItemAnswer
 
 
+class PromotionAnswerVerdict(str, Enum):
+    PROMOTE = "promote"
+    HOLD = "hold"
+    ROLLBACK = "rollback"
+    RAMP = "ramp"
+    ABSTAIN = "abstain"
+
+
+class PromotionAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    champion_ref: str | None = None
+    challenger_ref: str
+    reason: str | None = None
+    verdict: PromotionAnswerVerdict
+
+
+class FamilyAnswerPromotion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["promotion"]
+    value: PromotionAnswer
+
+
 FamilyAnswer = Annotated[
     FamilyAnswerTaskPlan
     | FamilyAnswerTopology
@@ -30913,7 +30937,8 @@ FamilyAnswer = Annotated[
     | FamilyAnswerSkillWorkflow
     | FamilyAnswerPaperAdmission
     | FamilyAnswerToolActionAdmission
-    | FamilyAnswerHeldItemAdmission,
+    | FamilyAnswerHeldItemAdmission
+    | FamilyAnswerPromotion,
     Field(discriminator="type"),
 ]
 
@@ -46449,6 +46474,7 @@ __all__ = [
     "CommunityDetectionView",
     "FamilyAnswerHeldItemAdmission",
     "FamilyAnswerPaperAdmission",
+    "FamilyAnswerPromotion",
     "FamilyAnswerToolActionAdmission",
     "HeldItemAnswer",
     "HeldItemOutcome",
@@ -46468,6 +46494,8 @@ __all__ = [
     "NodeScoreView",
     "PageRankView",
     "PaperAdmissionAnswer",
+    "PromotionAnswer",
+    "PromotionAnswerVerdict",
     "ScimClientCreate",
     "ScimClientUpdate",
     "ScimClientUse",

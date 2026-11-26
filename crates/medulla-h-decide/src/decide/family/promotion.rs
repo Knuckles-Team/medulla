@@ -31,7 +31,9 @@ use medulla_decision_types::skill_eval::{
 };
 use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_types::refusal_code::RefusalCode;
+use medulla_decision_types::decision::promotion_answer::{PromotionAnswer, PromotionAnswerVerdict};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind, StatisticalOutcome};
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_types::evidence_class::EvidenceClass;
@@ -39,7 +41,7 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::OpaqueId;
 
 use crate::decide::stat_executor::{
-    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+    Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,
 };
 use medulla_persistence_records::decision_jobs::read_pointer;
 use crate::decide::stat_promotion::{
@@ -196,6 +198,7 @@ fn decided(
     verdict: &str,
     extra: Vec<String>,
     chosen: Option<&str>,
+    champion: Option<&str>,
 ) -> Result<Executed, String> {
     let mut executed = match chosen {
         Some(id) => advisory(vec![id.to_owned()])?,
@@ -212,7 +215,47 @@ fn decided(
         .into_iter()
         .map(|fact| premise(fact, &ask.receipt))
         .collect();
+    executed.family = Some(answer_of(PromotionAnswer {
+        verdict: answer_verdict(verdict)?,
+        champion_ref: champion.map(str::to_owned),
+        challenger_ref: ask.option.clone(),
+        reason: None,
+    }));
     Ok(executed)
+}
+
+/// The typed verdict of the gate's own word for it (MEDULLA-DECISION-ENGINE-R805.14).
+fn answer_verdict(verdict: &str) -> Result<PromotionAnswerVerdict, String> {
+    match verdict {
+        "promote" => Ok(PromotionAnswerVerdict::Promote),
+        "hold" => Ok(PromotionAnswerVerdict::Hold),
+        "rollback" => Ok(PromotionAnswerVerdict::Rollback),
+        "ramp" => Ok(PromotionAnswerVerdict::Ramp),
+        other => Err(invalid(format!("`{other}` is not a promotion verdict"))),
+    }
+}
+
+/// The typed answer a promotion question seals in its record.
+fn answer_of(answer: PromotionAnswer) -> FamilyExecuted {
+    FamilyExecuted {
+        answer: Some(FamilyAnswer::Promotion(Box::new(answer))),
+        premises: Vec::new(),
+        resolution: None,
+        evidence: None,
+    }
+}
+
+/// An abstention that also seals the typed answer: the verdict `abstain` with the refusal code
+/// as its reason and no champion.
+fn refuse(ask: &Ask, refusal: &PromotionRefusal) -> Executed {
+    let mut executed = abstained(QuestionKind::Promotion, refusal);
+    executed.family = Some(answer_of(PromotionAnswer {
+        verdict: PromotionAnswerVerdict::Abstain,
+        champion_ref: None,
+        challenger_ref: ask.option.clone(),
+        reason: Some(refusal.0.as_str().to_owned()),
+    }));
+    executed
 }
 
 fn evidence_facts(evidence: &HeldOutEvidence) -> Vec<String> {
@@ -321,7 +364,7 @@ fn promote(
 ) -> Result<Executed, String> {
     let evidence = match resolve(ctx, graph, policy, &ask.subject, &ask.receipt)? {
         Ok(evidence) => evidence,
-        Err(refusal) => return Ok(abstained(QuestionKind::Promotion, &refusal)),
+        Err(refusal) => return Ok(refuse(ask, &refusal)),
     };
     if evidence.challenger_ref != ask.option {
         return Err(invalid(
@@ -336,8 +379,8 @@ fn promote(
             skill_ref,
         )? {
             if evidence.delta_ppm.unsigned_abs() <= noise.band_ppm {
-                return Ok(abstained(
-                    QuestionKind::Promotion,
+                return Ok(refuse(
+                    ask,
                     &PromotionRefusal(
                         ABLATION_WITHIN_NOISE,
                         format!(
@@ -358,7 +401,7 @@ fn promote(
     {
         match tier_verdict(ctx, graph, ask, skill_ref, *tier)? {
             Ok(facts) => tier_facts = facts,
-            Err(refusal) => return Ok(abstained(QuestionKind::Promotion, &refusal)),
+            Err(refusal) => return Ok(refuse(ask, &refusal)),
         }
     }
     // The champion active now is pinned in the record: a later move of the
@@ -371,13 +414,15 @@ fn promote(
         state.target().unwrap_or("none")
     ));
     match subject_gate(&ask.subject, &evidence, policy) {
-        PromotionGate::Promote => decided(ask, "promote", facts, Some(&ask.option)),
+        PromotionGate::Promote => {
+            decided(ask, "promote", facts, Some(&ask.option), state.target())
+        }
         PromotionGate::Hold { reason } => {
             facts.push(format!("hold_reason={reason}"));
-            decided(ask, "hold", facts, None)
+            decided(ask, "hold", facts, None, state.target())
         }
-        PromotionGate::Abstain(code) => Ok(abstained(
-            QuestionKind::Promotion,
+        PromotionGate::Abstain(code) => Ok(refuse(
+            ask,
             &PromotionRefusal(code, "the held-out evidence cannot decide a promotion".to_owned()),
         )),
     }
@@ -391,20 +436,34 @@ fn review(
 ) -> Result<Executed, String> {
     let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &ask.subject.pointer_key())?;
     let Some(active) = state.active.as_ref() else {
-        return decided(ask, "hold", vec!["hold_reason=no_champion".to_owned()], None);
+        return decided(
+            ask,
+            "hold",
+            vec!["hold_reason=no_champion".to_owned()],
+            None,
+            None,
+        );
     };
     let promoted_by = active.receipt_digest.clone().unwrap_or_default();
     let promoted_digest = crate::decide::stat_promotion::promoted_receipt(ctx.store, ctx.tenant_id, &promoted_by)?;
     let latest = match resolve(ctx, graph, policy, &ask.subject, &ask.receipt)? {
         Ok(evidence) => evidence,
-        Err(refusal) => return Ok(abstained(QuestionKind::Promotion, &refusal)),
+        Err(refusal) => return Ok(refuse(ask, &refusal)),
     };
     let promoted = match promoted_digest {
         Some(digest) => match resolve(ctx, graph, policy, &ask.subject, &digest)? {
             Ok(evidence) => evidence,
-            Err(refusal) => return Ok(abstained(QuestionKind::Promotion, &refusal)),
+            Err(refusal) => return Ok(refuse(ask, &refusal)),
         },
-        None => return decided(ask, "hold", vec!["hold_reason=promotion_evidence_missing".to_owned()], None),
+        None => {
+            return decided(
+                ask,
+                "hold",
+                vec!["hold_reason=promotion_evidence_missing".to_owned()],
+                None,
+                active.target.as_deref(),
+            )
+        }
     };
     let target = active.target.clone().unwrap_or_default();
     let pointer = ChampionPointer {
@@ -422,13 +481,13 @@ fn review(
         PromotionVerdict::Rollback(rollback) => {
             facts.push(format!("rollback_to={}", rollback.to_ref.as_str()));
             let chosen = format!("rollback:{}", rollback.to_ref.as_str());
-            decided(ask, "rollback", facts, Some(&chosen))
+            decided(ask, "rollback", facts, Some(&chosen), Some(target.as_str()))
         }
         PromotionVerdict::Hold { reason } => {
             facts.push(format!("hold_reason={reason}"));
-            decided(ask, "hold", facts, None)
+            decided(ask, "hold", facts, None, Some(target.as_str()))
         }
-        PromotionVerdict::Promote { .. } => decided(ask, "hold", facts, None),
+        PromotionVerdict::Promote { .. } => decided(ask, "hold", facts, None, Some(target.as_str())),
     }
 }
 
@@ -488,10 +547,7 @@ fn canary(
         return Err(invalid("a canary promotes a skill revision"));
     };
     let refused = |code, detail: &str| {
-        Ok(abstained(
-            QuestionKind::Promotion,
-            &PromotionRefusal(code, detail.to_owned()),
-        ))
+        Ok(refuse(ask, &PromotionRefusal(code, detail.to_owned())))
     };
     let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &ask.subject.pointer_key())?;
     if state.active.is_none() {
@@ -513,7 +569,7 @@ fn canary(
     };
     let evidence = match resolve(ctx, graph, policy, &ask.subject, &ask.receipt)? {
         Ok(evidence) => evidence,
-        Err(refusal) => return Ok(abstained(QuestionKind::Promotion, &refusal)),
+        Err(refusal) => return Ok(refuse(ask, &refusal)),
     };
     if evidence.challenger_ref != ask.option {
         return Err(invalid(
@@ -523,7 +579,7 @@ fn canary(
     let regression = match ask.regression.as_deref() {
         Some(receipt) => match regressed(ctx, graph, policy, ask, receipt)? {
             Ok(regressed) => regressed,
-            Err(refusal) => return Ok(abstained(QuestionKind::Promotion, &refusal)),
+            Err(refusal) => return Ok(refuse(ask, &refusal)),
         },
         None => false,
     };
@@ -542,7 +598,7 @@ fn canary(
             Some(format!("rollback:{}", ask.option))
         }
     };
-    decided(ask, verdict.as_str(), facts, chosen.as_deref())
+    decided(ask, verdict.as_str(), facts, chosen.as_deref(), state.target())
 }
 
 /// How many compiled rows of `skill_ref` are stale.

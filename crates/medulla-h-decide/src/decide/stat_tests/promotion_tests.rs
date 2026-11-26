@@ -1405,3 +1405,79 @@ async fn served_promotion_journey() {
         assert_eq!(count("rolled_back"), 1, "{rows:?}");
     }
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R805.14: a promotion record seals a typed answer naming the
+/// verdict, the champion that held the seat when it was decided and the challenger; a refusal
+/// seals the verdict `abstain` with its code, and reading the answer needs no premise facts.
+// spec: MEDULLA-DECISION-ENGINE-R805.14
+#[tokio::test]
+async fn a_promotion_record_seals_the_typed_verdict_champion_and_challenger() {
+    use medulla_decision_types::decision::promotion_answer::{
+        PromotionAnswer, PromotionAnswerVerdict,
+    };
+    use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+    let champion = PointerRef::Champion { subject: subject() };
+    let typed = |record: &StatisticalDecisionRecord| match &record.answer {
+        Some(FamilyAnswer::Promotion(answer)) => (**answer).clone(),
+        other => panic!("a typed promotion answer, got {other:?}"),
+    };
+    let mut seated: Option<String> = None;
+    for target in ["revision:one", "revision:two"] {
+        let set = RolloutSet {
+            challenger_ref: target.to_owned(),
+            ..rollout_set(150_000)
+        };
+        let digest = rollout_set_digest(&set);
+        learn(
+            &h,
+            "decider",
+            LearningWrite::RecordRollouts { set: Box::new(set) },
+        )
+        .await
+        .unwrap();
+        let record = decide(&h, promotion_request(&pins.0, &subject(), &digest, target))
+            .await
+            .unwrap()
+            .records
+            .as_slice()[0]
+            .clone();
+        // The first challenger meets an empty seat, the second the first challenger.
+        assert_eq!(
+            typed(&record),
+            PromotionAnswer {
+                verdict: PromotionAnswerVerdict::Promote,
+                champion_ref: seated.clone(),
+                challenger_ref: target.to_owned(),
+                reason: None,
+            }
+        );
+        commit(&h, &record).await;
+        pointer_state(&h, champion.clone(), activate(target, &record.record_id))
+            .await
+            .unwrap();
+        seated = Some(target.to_owned());
+    }
+
+    // A receipt no evaluation backs is refused: the verdict is `abstain` and names the code.
+    let refused = decide(
+        &h,
+        promotion_request(&pins.0, &subject(), "revision:absent", "revision:three"),
+    )
+    .await
+    .unwrap()
+    .records
+    .as_slice()[0]
+        .clone();
+    assert_eq!(
+        typed(&refused),
+        PromotionAnswer {
+            verdict: PromotionAnswerVerdict::Abstain,
+            champion_ref: None,
+            challenger_ref: "revision:three".to_owned(),
+            reason: Some(PROMOTION_UNEVALUATED.as_str().to_owned()),
+        }
+    );
+}

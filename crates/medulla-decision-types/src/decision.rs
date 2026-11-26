@@ -80,6 +80,7 @@ pub mod path_success;
 pub mod planner_cost_head;
 pub mod planning_admission;
 pub mod playbook;
+pub mod promotion_answer;
 pub mod policy;
 pub mod population;
 pub mod primitive;

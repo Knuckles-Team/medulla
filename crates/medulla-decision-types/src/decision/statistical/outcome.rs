@@ -225,6 +225,8 @@ pub enum FamilyAnswer {
     ToolActionAdmission(Box<crate::decision::tool_action::ToolActionAnswer>),
     /// The outcome of a `held_item_admission` question (MEDULLA-DECISION-ENGINE-R038.5).
     HeldItemAdmission(Box<crate::decision::held_item::HeldItemAnswer>),
+    /// The verdict, champion and challenger of a `promotion` question (MEDULLA-DECISION-ENGINE-R805.14).
+    Promotion(Box<crate::decision::promotion_answer::PromotionAnswer>),
 }
 
 impl FamilyAnswer {
