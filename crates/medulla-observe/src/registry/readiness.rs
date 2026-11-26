@@ -9,10 +9,12 @@ use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla_types::transition_refused::TransitionRefused;
+use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefused};
 use parking_lot::Mutex;
 
-use crate::machine::readiness::{DegradeReason, ReadinessEvent, ReadinessState};
+use crate::machine::readiness::{
+    DegradeReason, ReadinessEvent, ReadinessState, READINESS_MACHINE,
+};
 
 /// One graph's readiness row.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -82,7 +84,22 @@ impl ReadinessRegistry {
                 reason: None,
                 since_unix_ms: now_ms(),
             });
-        let next = row.state.apply(event)?;
+        let from = row.state;
+        let next = match from.apply(event) {
+            Ok(next) => next,
+            Err(refused) => {
+                crate::events::record_refused(graph, &refused);
+                return Err(refused);
+            }
+        };
+        crate::events::record_accepted(
+            READINESS_MACHINE.name,
+            graph,
+            from.stored(),
+            event.name(),
+            next.stored(),
+            None,
+        );
         self.sequence.fetch_add(1, Ordering::SeqCst);
         row.state = next;
         row.reason = if event == ReadinessEvent::Degrade {

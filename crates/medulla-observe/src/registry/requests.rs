@@ -19,10 +19,10 @@ use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::Instant;
 
-use medulla_types::transition_refused::TransitionRefused;
+use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefused};
 use parking_lot::Mutex;
 
-use crate::machine::request::{RequestEvent, RequestState};
+use crate::machine::request::{RequestEvent, RequestState, REQUEST_MACHINE};
 
 /// The in-flight bound before the server sets its own (`ServerState::max_in_flight`).
 pub const DEFAULT_MAX_IN_FLIGHT: usize = 65_536;
@@ -152,6 +152,7 @@ impl RequestRegistry {
                 shared: Arc::clone(&self.shared),
                 key,
                 request_id: request.request_id,
+                trace_id: request.trace_id.map(str::to_string),
                 phase,
             },
         }
@@ -231,6 +232,7 @@ pub struct RequestHandle {
     shared: Arc<Shared>,
     key: Option<u64>,
     request_id: u64,
+    trace_id: Option<String>,
     phase: Arc<Mutex<RequestState>>,
 }
 
@@ -249,7 +251,23 @@ impl RequestHandle {
     /// with the phase unchanged.
     pub fn apply(&self, event: RequestEvent) -> Result<RequestState, TransitionRefused> {
         let mut phase = self.phase.lock();
-        let next = phase.apply(event)?;
+        let from = *phase;
+        let subject = self.request_id.to_string();
+        let next = match from.apply(event) {
+            Ok(next) => next,
+            Err(refused) => {
+                crate::events::record_refused(&subject, &refused);
+                return Err(refused);
+            }
+        };
+        crate::events::record_accepted(
+            REQUEST_MACHINE.name,
+            &subject,
+            from.stored(),
+            event.name(),
+            next.stored(),
+            self.trace_id.as_deref(),
+        );
         *phase = next;
         if let Some(key) = self.key {
             if let Some(entry) = self.shared.entries.lock().get_mut(&key) {

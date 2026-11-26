@@ -20,10 +20,10 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
-use medulla_types::transition_refused::TransitionRefused;
+use medulla_types::transition_refused::{MachineEvent, MachineState, TransitionRefused};
 use parking_lot::Mutex;
 
-use crate::machine::task::{TaskEvent, TaskFailure, TaskState};
+use crate::machine::task::{TaskEvent, TaskFailure, TaskState, TASK_MACHINE};
 
 /// The live-entry capacity of the process-wide registry (`observe.task_registry_capacity`).
 pub const DEFAULT_TASK_REGISTRY_CAPACITY: usize = 4096;
@@ -277,9 +277,29 @@ impl TaskRegistry {
 }
 
 /// The one writer of a task's state: the next state comes from `TaskState::apply`.
+///
+/// An accepted transition appends to the event ring (MEDULLA-OBSERVE-R004.4); a refused one is
+/// recorded there and logged at WARN.
 fn apply_event(row: &mut TaskRow, event: TaskEvent) -> Result<(), TransitionRefused> {
-    row.state = row.state.apply(event)?;
-    Ok(())
+    let from = row.state;
+    match from.apply(event) {
+        Ok(next) => {
+            row.state = next;
+            crate::events::record_accepted(
+                TASK_MACHINE.name,
+                &row.name,
+                from.stored(),
+                event.name(),
+                next.stored(),
+                None,
+            );
+            Ok(())
+        }
+        Err(refused) => {
+            crate::events::record_refused(&row.name, &refused);
+            Err(refused)
+        }
+    }
 }
 
 fn unix_ms() -> u64 {
@@ -301,8 +321,10 @@ fn record_progress(
     } else {
         Ok(())
     };
-    if let Err(refused) = started.and_then(|()| apply_event(&mut row, TaskEvent::Progress)) {
-        tracing::warn!(target: "medulla::transition", task = %row.name, "{refused}");
+    if started
+        .and_then(|()| apply_event(&mut row, TaskEvent::Progress))
+        .is_err()
+    {
         return;
     }
     row.cursor = Some(match cursor {
@@ -384,9 +406,8 @@ impl TaskHandle {
                 }
                 Outcome::Cancelled => apply_event(&mut row, TaskEvent::Cancel),
             };
-            if let Err(refused) = result {
-                tracing::warn!(target: "medulla::transition", task = %row.name, "{refused}");
-            }
+            // A refused transition was recorded and logged by `apply_event`.
+            drop(result);
         }
         self.registry.end(&self.progress.cell, self.listed);
     }

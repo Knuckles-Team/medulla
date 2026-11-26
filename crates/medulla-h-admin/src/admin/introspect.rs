@@ -5,8 +5,8 @@
 //! id) and the `readiness` section reads the readiness registry (key: the graph name). The
 //! `requests` section reads the in-flight request registry (key: the registry key), the
 //! `locks` section the lock sites (key: the lock name) and the `runtime` section the runtime
-//! sampler (keys `global`, then `worker:<index>`). The `events` section answers an empty page
-//! until the event ring lands. Pure over
+//! sampler (keys `global`, then `worker:<index>`). The `events` section reads the transition
+//! event ring (key: the event's sequence number). Pure over
 //! `medulla_observe`: no durable substrate is read, so the method serves in every build.
 
 use medulla_observe::registry::tasks::{file_line, ProgressCursor, TaskRow};
@@ -88,12 +88,7 @@ fn read_section(
         IntrospectSection::Requests => requests_page(limit, cursor),
         IntrospectSection::Locks => Ok(locks_page(limit, cursor)),
         IntrospectSection::Runtime => Ok(runtime_page(limit, cursor)),
-        other => Ok(IntrospectPage {
-            section: other,
-            rows: Vec::new(),
-            next_cursor: None,
-            seq: 0,
-        }),
+        IntrospectSection::Events => events_page(limit, cursor),
     }
 }
 
@@ -413,4 +408,41 @@ fn runtime_page(limit: usize, cursor: Option<&str>) -> IntrospectPage {
         next_cursor,
         seq: 0,
     }
+}
+
+/// The `events` section: the accepted transitions the ring still holds, key the event's sequence
+/// number (MEDULLA-OBSERVE-R004.4).
+fn events_page(limit: usize, cursor: Option<&str>) -> Result<IntrospectPage, String> {
+    let after: Option<u64> = match cursor {
+        Some(value) => Some(value.parse().map_err(|_| {
+            "INTROSPECT_CURSOR_INVALID: an events cursor is an event sequence number".to_string()
+        })?),
+        None => None,
+    };
+    let ring = medulla_observe::events();
+    let seq = ring.sequence();
+    let (rows, next_cursor) = page_of(
+        ring.snapshot(),
+        limit,
+        |(key, _)| after.map_or(true, |last| *key > last),
+        |(key, _)| key.to_string(),
+        |(key, event)| {
+            json!({
+                "seq": key,
+                "machine": event.machine,
+                "subject": event.subject,
+                "from": event.from,
+                "event": event.event,
+                "to": event.to,
+                "at_unix_ms": event.at_unix_ms,
+                "trace_id": event.trace_id,
+            })
+        },
+    );
+    Ok(IntrospectPage {
+        section: IntrospectSection::Events,
+        rows,
+        next_cursor,
+        seq,
+    })
 }

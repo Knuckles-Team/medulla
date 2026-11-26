@@ -12,6 +12,7 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+pub mod events;
 pub mod machine;
 pub mod progress;
 pub mod registry;
@@ -28,6 +29,13 @@ use registry::tasks::TaskRegistry;
 pub fn global() -> &'static TaskRegistry {
     static GLOBAL: OnceLock<TaskRegistry> = OnceLock::new();
     GLOBAL.get_or_init(|| TaskRegistry::new(registry::tasks::DEFAULT_TASK_REGISTRY_CAPACITY))
+}
+
+/// The process-wide transition event ring (MEDULLA-OBSERVE-R004.4). Every machine's apply
+/// wrapper appends to it.
+pub fn events() -> &'static events::EventRing {
+    static GLOBAL: OnceLock<events::EventRing> = OnceLock::new();
+    GLOBAL.get_or_init(|| events::EventRing::new(events::DEFAULT_EVENT_RING_CAPACITY))
 }
 
 /// The process-wide readiness registry (MEDULLA-OBSERVE-R007.1). Tests build isolated
