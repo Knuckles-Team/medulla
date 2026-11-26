@@ -191,10 +191,11 @@ def test_other_principals_source_is_unconnected() -> None:
 def test_swapping_authority_rank_changes_sources_used() -> None:
     owner = _client(_agent("swap"))
     _register(owner, "servicenow-mcp", "pagerduty-mcp")
-    request = {"classes": [INCIDENT], "hop_budget": 0}
+    request: dict[str, Any] = {"classes": [INCIDENT], "hop_budget": 0}
     request_bytes = msgpack.packb(request)
 
-    # ServiceNow rank 1, PagerDuty rank 2: the audit names ServiceNow as the source used.
+    # ServiceNow rank 1, PagerDuty rank 2: the audit names ServiceNow as the source
+    # used.
     _attach_document(TWO_SOURCES)
     first = _coverage(owner, **request)
     assert [entry["source"] for entry in first["audit"]["used"]] == ["servicenow-mcp"]
@@ -215,6 +216,7 @@ def test_swapping_authority_rank_changes_sources_used() -> None:
     assert first["audit"]["used"] != second["audit"]["used"]
 
 
+# proves R007.4: Wire the audit into the report's sources_used
 @pytest.mark.spec("MEDULLA-SRC-AUTH-R007.4")
 def test_report_sources_used_equal_audit() -> None:
     owner = _client(_agent("report"))

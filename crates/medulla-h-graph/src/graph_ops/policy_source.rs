@@ -329,6 +329,7 @@ mod tests {
         result.expect_err("the bind is refused").code
     }
 
+    // proves R801: Reviewed policy source bound to the active policy
     // spec: MEDULLA-SRC-AUTH-R801
     #[test]
     fn bind_refuses_in_order() {

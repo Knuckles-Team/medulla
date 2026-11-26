@@ -1,7 +1,9 @@
 """Served trust mark (MEDULLA-SRC-AUTH-R011.3).
 
-The mutation gateway stamps the trust mark of content that enters through `AddNode`: a tool
-result is `untrusted`, a forged mark key is dropped, and the mark is sticky: lowering it to
+The mutation gateway stamps the trust mark of content that enters through `AddNode`:
+a tool
+result is `untrusted`, a forged mark key is dropped, and the mark is sticky: lowering
+it to
 `trusted` through `CompareAndSetNodeFields` needs an operator approval id.
 """
 
@@ -26,6 +28,7 @@ def _agent_client() -> SyncMedullaClient:
     )
 
 
+# proves R011.6: Hot-path proof for the trust mark
 @pytest.mark.spec("MEDULLA-SRC-AUTH-R011.3")
 @pytest.mark.spec("MEDULLA-SRC-AUTH-R011.6")
 def test_tool_result_is_untrusted_and_sticky() -> None:
