@@ -712,6 +712,7 @@ mod tests {
         (core, request)
     }
 
+    // proves R003.17.1: Evidence: transcript and quarantine reads enforce stored policy
     // spec: MEDULLA-INGEST-WORKER-R003.17.1
     #[test]
     fn transcript_read_enforces_the_stored_policy_action() {

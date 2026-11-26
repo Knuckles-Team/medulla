@@ -1,7 +1,10 @@
-"""Served transcript reads through `TranscriptRead`: MEDULLA-INGEST-WORKER-R003.17.1 and R003.18.
+"""Served transcript reads through `TranscriptRead`: MEDULLA-INGEST-WORKER-R003.17.1
+and R003.18.
 
-A stored thread is read back by its source identity under the verified tenant. The stored policy
-action `source:transcript:read` is held exactly: a same-tenant caller with a graph read grant but
+A stored thread is read back by its source identity under the verified tenant. The
+stored policy
+action `source:transcript:read` is held exactly: a same-tenant caller with a graph
+read grant but
 without it is refused and sees no text, and another tenant sees nothing.
 """
 
@@ -82,11 +85,14 @@ async def test_same_tenant_unauthorized_reads_are_denied() -> None:
         await _close(client, graph)
 
 
+# proves R003.18: Hot-path proof: transcripts through the wire method
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.18")
 @pytest.mark.asyncio
 async def test_thread_messages_are_shared_within_scope() -> None:
-    """Identical session ids across two connectors stay distinct (the other connector names no
-    stored thread), replay is idempotent, a second authorized agent reads timestamped messages
+    """Identical session ids across two connectors stay distinct (the other connector
+    names no
+    stored thread), replay is idempotent, a second authorized agent reads timestamped
+    messages
     and concept links, and another tenant reads nothing."""
     first, second = _connector(), _connector()
     concept = f"concept-{uuid.uuid4().hex[:8]}"

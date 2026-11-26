@@ -965,6 +965,7 @@ mod tests {
         assert_eq!(again.job.retry.attempts_made, 2);
     }
 
+    // proves R001.4.1: Wiring: the served ingest enqueue and the shared ingest queue stack
     // spec: MEDULLA-INGEST-WORKER-R001.4.1
     #[test]
     fn task_queue_load_counts_queued_running_and_oldest() {

@@ -3,7 +3,8 @@
 A document-class batch that fails `complete_document` is quarantined whole: the engine
 commits one restricted `SourceQuarantine` evidence node and nothing of the batch is
 projected. The quarantine keeps the stream's prior accepted checkpoint, a replay returns
-the stored receipt without a second record, and a same-tenant caller the stored policy does
+the stored receipt without a second record, and a same-tenant caller the stored
+policy does
 not name reads nothing. A failed quarantine commit never reporting a durable receipt is
 proven in `documents.rs` over a failable commit substrate.
 """
@@ -102,6 +103,7 @@ async def _projected(client: MedullaClient) -> tuple[list[str], list[str]]:
     return documents, atoms
 
 
+# proves R003.12: Hot-path proof: document normalization through the wire method
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.12")
 @pytest.mark.asyncio
 async def test_document_batch_is_atomic() -> None:
@@ -234,7 +236,9 @@ async def test_quarantine_reads_require_policy() -> None:
         holder = await _reader(graph, ["kg:read", "source:quarantine:read"])
         view = decode_quarantine_read(await send_quarantine_read(holder, params))
         assert view.quarantine is not None
-        assert view.quarantine.restricted_evidence_ref == receipt.restricted_evidence_ref
+        assert (
+            view.quarantine.restricted_evidence_ref == receipt.restricted_evidence_ref
+        )
         assert view.quarantine.rule_id == RULE_ID
         assert view.quarantine.reason is QuarantineReason.NORMALIZATION_FAILED
 

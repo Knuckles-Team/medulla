@@ -70,6 +70,7 @@ def _proposals_of(props: dict[str, Any]) -> dict[str, dict[str, Any]]:
     return {item["proposal_id"]: item for item in items}
 
 
+# proves R002.5: Evidence: the per-proposal receipt carries its scores
 # spec: MEDULLA-INGEST-WORKER-R002.5
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R002.5")
 @pytest.mark.asyncio
@@ -162,6 +163,7 @@ async def _proposal_client(
     return client, graph
 
 
+# proves R002.7: Behavior: instances populate only against admitted proposals
 # spec: MEDULLA-INGEST-WORKER-R002.7
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R002.7")
 @pytest.mark.asyncio
@@ -188,6 +190,7 @@ async def test_draft_proposal_takes_no_instances() -> None:
         await _close(client, graph)
 
 
+# proves R002.6: Hot-path proof: ontology induction through SourceIngest
 # spec: MEDULLA-INGEST-WORKER-R002.6
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R002.6")
 @pytest.mark.asyncio

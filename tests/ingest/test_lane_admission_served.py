@@ -1,7 +1,9 @@
 """Served claim admission: MEDULLA-INGEST-WORKER-R604.3.
 
-`TaskQueueClaim` runs the one reserved-worker admission rule before it leases anything: a
-worker the registry does not hold live is refused `WORKER_UNKNOWN`, and a registered worker is
+`TaskQueueClaim` runs the one reserved-worker admission rule before it leases
+anything: a
+worker the registry does not hold live is refused `WORKER_UNKNOWN`, and a registered
+worker is
 admitted whatever lane it serves. The runner never asks first; the claim alone decides.
 """
 
@@ -38,6 +40,7 @@ async def _claim(client: MedullaClient, worker: str) -> Any:
     )
 
 
+# proves R604.3: Wiring: admission is enforced inside the claim
 # spec: MEDULLA-INGEST-WORKER-R604.3
 @pytest.mark.asyncio
 async def test_claim_enforces_admission() -> None:
@@ -47,7 +50,11 @@ async def test_claim_enforces_admission() -> None:
     )
     try:
         current = await client._send("GetSchedulerConfig", {})
-        policy = {**current, "total_workers": 8, "lane_floors": {"general": 1, "hydration": 1}}
+        policy = {
+            **current,
+            "total_workers": 8,
+            "lane_floors": {"general": 1, "hydration": 1},
+        }
         await client._send("SetSchedulerConfig", {"config": policy})
         try:
             stem = uuid.uuid4().hex[:8]
@@ -57,7 +64,8 @@ async def test_claim_enforces_admission() -> None:
             with pytest.raises(Exception, match="WORKER_UNKNOWN"):
                 await _claim(client, general)
 
-            # Two registered workers over two lanes are admitted: the claim answers a task or
+            # Two registered workers over two lanes are admitted: the claim answers a
+            # task or
             # nil, never a refusal.
             for worker, lane in ((general, "general"), (hydration, "hydration")):
                 await client._send(
@@ -72,6 +80,7 @@ async def test_claim_enforces_admission() -> None:
         await client.close()
 
 
+# proves R604.4: Refusal: a claim that starves the reserve
 # spec: MEDULLA-INGEST-WORKER-R604.4
 @_R604_4
 @pytest.mark.asyncio
@@ -84,7 +93,8 @@ async def test_reserve_refusal_has_code_and_retry_hint() -> None:
     )
     try:
         current = await client._send("GetSchedulerConfig", {})
-        # One worker in the pool and a floor of one for the general lane: any grant starves the
+        # One worker in the pool and a floor of one for the general lane: any grant
+        # starves the
         # reserve, so only a lane with queued work and no running worker may claim.
         policy = {
             **current,

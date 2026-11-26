@@ -70,7 +70,10 @@ FIXTURES: tuple[tuple[str, str], ...] = (
         "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         "sample.pptx",
     ),
-    ("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "sample.xlsx"),
+    (
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "sample.xlsx",
+    ),
     ("message/rfc822", "sample.eml"),
     ("text/html", "sample.html"),
     ("text/csv", "sample.csv"),
@@ -121,6 +124,7 @@ async def _client(connector: str) -> tuple[MedullaClient, str]:
     return client, graph
 
 
+# proves R700.3: Wiring: readers run inside document normalization
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R700.3")
 @pytest.mark.asyncio
 async def test_text_formats_yield_document_atoms() -> None:
@@ -152,12 +156,17 @@ async def test_text_formats_yield_document_atoms() -> None:
             if record_id.startswith("reader-"):
                 documents[record_id.removeprefix("reader-")] = node_id
                 # The stored document names the digest of the file's own bytes.
-                assert props.get("source_raw_sha256") == hashlib.sha256(
-                    BODIES[record_id.removeprefix("reader-")][1]
-                ).hexdigest()
+                assert (
+                    props.get("source_raw_sha256")
+                    == hashlib.sha256(
+                        BODIES[record_id.removeprefix("reader-")][1]
+                    ).hexdigest()
+                )
         assert set(documents) == set(BODIES)
 
-        atoms = [node for node, _ in await client.nodes.list_by_label("KnowledgeAtom", 0)]
+        atoms = [
+            node for node, _ in await client.nodes.list_by_label("KnowledgeAtom", 0)
+        ]
         for kind, document_node in documents.items():
             linked = 0
             for atom in atoms:
@@ -168,6 +177,7 @@ async def test_text_formats_yield_document_atoms() -> None:
         await _close(client, graph)
 
 
+# proves R700.4: Refusal: oversize, encrypted, unsupported or corrupt input
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R700.4")
 @pytest.mark.asyncio
 async def test_reader_refusals_quarantine_without_projection() -> None:
@@ -175,7 +185,11 @@ async def test_reader_refusals_quarantine_without_projection() -> None:
     client, graph = await _client(connector)
     try:
         cases = {
-            "unsupported": ("application/x-unknown", b"opaque bytes", "READER_UNSUPPORTED_MEDIA_TYPE"),
+            "unsupported": (
+                "application/x-unknown",
+                b"opaque bytes",
+                "READER_UNSUPPORTED_MEDIA_TYPE",
+            ),
             "corrupt": ("text/html", b"\xff\xfe\xfd not utf-8", "READER_CORRUPT"),
         }
         documents_before = len(await client.nodes.list_by_label("Document", 0))
@@ -185,15 +199,20 @@ async def test_reader_refusals_quarantine_without_projection() -> None:
             record = batch["records"][0]
             record["record_id"] = f"refused-{kind}"
             record["provenance"]["source_uri"] = f"demo://reader/refused-{kind}"
-            record["payload"] = {"id": 1, "blob": f"cas:sha256:{digest}", "media": media_type}
+            record["payload"] = {
+                "id": 1,
+                "blob": f"cas:sha256:{digest}",
+                "media": media_type,
+            }
             batch["records"] = [record]
             payload = await client._send(
                 "SourceIngest",
                 {"request": copy.deepcopy(batch)},
                 idempotency_key=f"readers-refusal-{kind}:{uuid.uuid4().hex}",
             )
-            outcome = TypeAdapter(SourceIngestionOutcome).validate_python(payload)
-            # The file is never skipped: the batch is quarantined under the reader's code.
+            outcome: Any = TypeAdapter(SourceIngestionOutcome).validate_python(payload)
+            # The file is never skipped: the batch is quarantined under the reader's
+            # code.
             assert outcome.outcome == "quarantined", outcome
             assert outcome.receipt.rule_id == rule_id
             assert outcome.receipt.reason is QuarantineReason.NORMALIZATION_FAILED
@@ -226,7 +245,9 @@ async def test_each_format_yields_spanned_fragments() -> None:
             }
             records.append(record)
         batch["records"] = records
-        receipt = await _submit(client, batch, f"readers-fixtures-{uuid.uuid4().hex[:6]}")
+        receipt = await _submit(
+            client, batch, f"readers-fixtures-{uuid.uuid4().hex[:6]}"
+        )
         assert receipt.disposition is SourceIngestionDisposition.COMMITTED
 
         documents: dict[str, str] = {}
@@ -236,12 +257,17 @@ async def test_each_format_yields_spanned_fragments() -> None:
             if record_id.startswith("fixture-"):
                 assert record_id not in documents, f"{record_id} has two document nodes"
                 documents[record_id] = node_id
-                assert props.get("source_raw_sha256") == hashlib.sha256(
-                    (FIXTURE_DIR / record_id.removeprefix("fixture-")).read_bytes()
-                ).hexdigest()
+                assert (
+                    props.get("source_raw_sha256")
+                    == hashlib.sha256(
+                        (FIXTURE_DIR / record_id.removeprefix("fixture-")).read_bytes()
+                    ).hexdigest()
+                )
         assert set(documents) == {f"fixture-{name}" for _, name in FIXTURES}
 
-        atoms = [node for node, _ in await client.nodes.list_by_label("KnowledgeAtom", 0)]
+        atoms = [
+            node for node, _ in await client.nodes.list_by_label("KnowledgeAtom", 0)
+        ]
         for record_id, document_node in documents.items():
             linked = 0
             for atom in atoms:
