@@ -14,7 +14,8 @@ use medulla_jobs::schedule_run::ScheduleBudget;
 use medulla_protocol_types::protocol::Request;
 use medulla_protocol_types::result_contract::coordination::{
     JobScheduleCreate, JobScheduleDelete, JobScheduleGet, JobScheduleList, JobSchedulePause,
-    JobScheduleResume, JobScheduleTicks, JobScheduleUpdate, ScheduleRemoved, ScheduleTickList,
+    JobScheduleCalendar, JobScheduleResume, JobScheduleTicks, JobScheduleUpdate, ScheduleCalendar,
+    ScheduleCalendarEntry, ScheduleCalendarLog, ScheduleRemoved, ScheduleTickList,
     ScheduleTickView, ScheduleView, ScheduleViewList,
 };
 use medulla_protocol_types::result_contract::MethodResult;
@@ -383,4 +384,81 @@ pub(super) async fn ticks(
     }
     .await;
     typed::<JobScheduleTicks>(call.req_id, result)
+}
+
+/// The longest range one calendar read covers.
+const MAX_CALENDAR_RANGE_MS: u64 = 31 * 24 * 60 * 60 * 1_000;
+/// Most entries (and, separately, logs) one calendar read returns.
+const MAX_CALENDAR_ROWS: usize = 2_048;
+
+/// The calendar of the caller's tenant over `[from_ms, to_ms)`: the windows each enabled
+/// schedule fires in (a paused schedule fires none; its due windows record skipped ticks, which
+/// the logs show) and the ticks already recorded in the range. Reads only the graph core; a
+/// range over 31 days or an empty one refuses `INVALID_ARGUMENT`.
+pub(super) async fn calendar(
+    call: ScheduleCall<'_>,
+    graph: String,
+    from_ms: u64,
+    to_ms: u64,
+) -> Response {
+    let result = async {
+        if to_ms <= from_ms || to_ms - from_ms > MAX_CALENDAR_RANGE_MS {
+            return Err("INVALID_ARGUMENT: a schedule calendar range is 1 ms to 31 days".to_string());
+        }
+        let core = core_of(&call, &graph).await?;
+        let tenant = call.verified_context.tenant().to_string();
+        let prefix = ScheduleRecord::node_id(&tenant, "");
+        let ids = core
+            .nodes_by_property("type", NODE_TYPE)
+            .unwrap_or_else(|| core.node_ids());
+        let mut records = Vec::new();
+        for id in ids.iter().filter(|id| id.starts_with(&prefix)) {
+            if let Some(raw) = core.get_node_properties(id) {
+                records.push(decode(&raw)?);
+            }
+        }
+        records.sort_by(|a, b| a.name.cmp(&b.name));
+        let mut entries = Vec::new();
+        let mut logs = Vec::new();
+        for record in &records {
+            if record.state == ScheduleState::Enabled {
+                for at_ms in record.spec.due_windows(from_ms, to_ms).map_err(refuse)? {
+                    entries.push(ScheduleCalendarEntry {
+                        schedule_id: record.name.clone(),
+                        at_ms,
+                        agent_id: record.owner.clone(),
+                    });
+                }
+            }
+            let tick_prefix = format!("schedule-tick:{tenant}:{}:", record.name);
+            for id in core.node_ids().iter().filter(|id| id.starts_with(&tick_prefix)) {
+                let Some(raw) = core.get_node_properties(id) else {
+                    continue;
+                };
+                let Ok(fields) = medulla_types::msgpack::decode_property_value(&raw) else {
+                    continue;
+                };
+                let ours = fields.get("schedule").and_then(Value::as_str)
+                    == Some(record.name.as_str())
+                    && fields.get("tenant").and_then(Value::as_str) == Some(tenant.as_str());
+                let Some(tick) = ours.then(|| tick_view(&fields)).flatten() else {
+                    continue;
+                };
+                if (from_ms..to_ms).contains(&tick.window_start_ms) {
+                    logs.push(ScheduleCalendarLog {
+                        schedule_id: record.name.clone(),
+                        at_ms: tick.window_start_ms,
+                        outcome: tick.outcome,
+                    });
+                }
+            }
+        }
+        entries.sort_by(|a, b| (a.at_ms, &a.schedule_id).cmp(&(b.at_ms, &b.schedule_id)));
+        logs.sort_by(|a, b| (a.at_ms, &a.schedule_id).cmp(&(b.at_ms, &b.schedule_id)));
+        entries.truncate(MAX_CALENDAR_ROWS);
+        logs.truncate(MAX_CALENDAR_ROWS);
+        Ok(ScheduleCalendar { entries, logs })
+    }
+    .await;
+    typed::<JobScheduleCalendar>(call.req_id, result)
 }

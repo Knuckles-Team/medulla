@@ -589,6 +589,11 @@ pub async fn handle(
         JobOp::ScheduleTicks { graph, name, limit } => {
             schedules::ticks(schedule_call(), graph, name, limit).await
         }
+        JobOp::ScheduleCalendar {
+            graph,
+            from_ms,
+            to_ms,
+        } => schedules::calendar(schedule_call(), graph, from_ms, to_ms).await,
         JobOp::WorkerFail {
             job_id,
             worker_instance,

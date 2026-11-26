@@ -150,6 +150,14 @@ pub enum JobOp {
         #[serde(default)]
         limit: Option<u32>,
     },
+    /// The calendar of the caller's tenant over `[from_ms, to_ms)`: the windows each enabled
+    /// schedule fires in, and the ticks already recorded in the range with their outcomes.
+    /// A range over 31 days, or empty, refuses `INVALID_ARGUMENT`.
+    ScheduleCalendar {
+        graph: String,
+        from_ms: u64,
+        to_ms: u64,
+    },
 }
 
 fn default_lease_ms() -> u64 {

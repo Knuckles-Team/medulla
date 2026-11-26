@@ -17221,6 +17221,22 @@ class JobsClient:
             )
         ).payload
 
+    async def schedule_calendar(
+        self, graph: str, *, from_ms: int, to_ms: int
+    ) -> dict[str, Any]:
+        """The windows enabled schedules fire in, and the ticks recorded, over a range.
+
+        Returns ``{"entries": [{schedule_id, at_ms, agent_id}], "logs":
+        [{schedule_id, at_ms, outcome}]}`` for ``[from_ms, to_ms)``; the range is at
+        most 31 days.
+        """
+        body: dict[str, Any] = {"graph": graph, "from_ms": from_ms, "to_ms": to_ms}
+        return (
+            await _gen.coordination.send_analytics_job(
+                self._client, {"op": {"ScheduleCalendar": body}}
+            )
+        ).payload
+
 
 class KnowledgeStreamClient:
     """Current native Arrow result stream for every served query family.

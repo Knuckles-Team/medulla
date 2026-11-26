@@ -229,6 +229,38 @@ pub struct ScheduleViewList {
     pub schedules: Vec<ScheduleView>,
 }
 
+/// One window an enabled schedule fires in, inside a calendar range.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScheduleCalendarEntry {
+    pub schedule_id: String,
+    pub at_ms: u64,
+    /// The principal that owns the schedule, the agent its windows run as.
+    pub agent_id: String,
+}
+
+/// One tick already recorded inside a calendar range.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScheduleCalendarLog {
+    pub schedule_id: String,
+    pub at_ms: u64,
+    /// `fired`, `skipped` or `refused`.
+    pub outcome: String,
+}
+
+/// The windows and recorded ticks of a tenant's schedules over one range, each ordered by time
+/// then schedule.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScheduleCalendar {
+    pub entries: Vec<ScheduleCalendarEntry>,
+    pub logs: Vec<ScheduleCalendarLog>,
+}
+
 /// One recorded tick of a schedule (MEDULLA-PLACEMENT-R751.758).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

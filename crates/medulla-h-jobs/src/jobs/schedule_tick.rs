@@ -1272,4 +1272,95 @@ mod schedule_lifecycle_tick_tests {
             "one tick per window, none backfilled: {windows:?}"
         );
     }
+
+    // spec: MEDULLA-PLACEMENT-R751.760
+    #[tokio::test]
+    async fn the_calendar_lists_enabled_windows_and_recorded_ticks_for_a_bounded_range() {
+        use medulla_protocol_types::result_contract::coordination::ScheduleCalendar;
+
+        let dir = tempfile::tempdir().unwrap();
+        let mut server = medulla_server::seams_install::new_state_for_test(
+            SECRET,
+            ServerState::test_isolation(ISSUER),
+        );
+        server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
+        let backend =
+            RedbBackend::open(dir.path().join("graphs").to_string_lossy().into_owned(), 64)
+                .unwrap();
+        server.persistence = Some(Arc::new(backend));
+        std::mem::forget(dir);
+        let state = Arc::new(RwLock::new(server));
+        let clock = ManualClock::new(authoritative_now_ms() / EVERY_MS * EVERY_MS);
+        let window0 = clock.now_ms();
+        let created = call(
+            &state,
+            &clock,
+            Method::CreateGraph {
+                graph_name: GRAPH.into(),
+                graph_type: GraphType::Global,
+            },
+        )
+        .await;
+        assert!(created.error.is_none(), "{:?}", created.error);
+        create(&state, &clock, "runs", "association.refresh", None).await;
+        let mut cache = ScheduleCache::default();
+        let mut last_ms = clock.now_ms();
+        clock.advance_ms(EVERY_MS / 4);
+        wake(&state, &mut cache, &mut last_ms, &clock).await;
+
+        let calendar = |from_ms: u64, to_ms: u64| {
+            job_op(
+                &state,
+                &clock,
+                JobOp::ScheduleCalendar {
+                    graph: GRAPH.into(),
+                    from_ms,
+                    to_ms,
+                },
+            )
+        };
+        let read: ScheduleCalendar = body(calendar(window0, window0 + 3 * EVERY_MS).await);
+        assert_eq!(
+            read.entries
+                .iter()
+                .map(|entry| entry.at_ms)
+                .collect::<Vec<_>>(),
+            [window0, window0 + EVERY_MS, window0 + 2 * EVERY_MS]
+        );
+        assert!(read
+            .entries
+            .iter()
+            .all(|entry| entry.schedule_id == "runs" && !entry.agent_id.is_empty()));
+        assert_eq!(read.logs.len(), 1, "{:?}", read.logs);
+        assert_eq!(read.logs[0].at_ms, window0);
+        assert_eq!(read.logs[0].outcome, "fired");
+
+        // An empty range and a range over 31 days are refused.
+        for (from_ms, to_ms) in [(window0, window0), (window0, window0 + 32 * 86_400_000)] {
+            let refused = calendar(from_ms, to_ms).await;
+            assert!(
+                refused
+                    .error
+                    .as_deref()
+                    .is_some_and(|error| error.contains("INVALID_ARGUMENT")),
+                "{:?}",
+                refused.error
+            );
+        }
+
+        // A paused schedule has no windows ahead; its recorded tick stays in the logs.
+        let paused = job_op(
+            &state,
+            &clock,
+            JobOp::SchedulePause {
+                graph: GRAPH.into(),
+                name: "runs".into(),
+            },
+        )
+        .await;
+        assert!(paused.error.is_none(), "{:?}", paused.error);
+        let read: ScheduleCalendar = body(calendar(window0, window0 + 3 * EVERY_MS).await);
+        assert!(read.entries.is_empty());
+        assert_eq!(read.logs.len(), 1);
+    }
 }
