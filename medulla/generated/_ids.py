@@ -699,6 +699,7 @@ METHOD_IDS = frozenset(
         "SchemaContext",
         "SemanticEnrich",
         "SetPathGrant",
+        "ListPathGrants",
         "SourceCoverage",
         "CodeNavigation",
         "SourceSync",

@@ -804,6 +804,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("ReadPathHistory", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     // MEDULLA-SCM-R005.2: the blame rows are read from the tenant's own branch registry rows.
     ("ReadBlame", REASON_BRANCH_CHAIN_TENANT_SCOPED),
+    // MEDULLA-SCM-R007.1: the grants are read from the verified tenant's own registry rows.
+    ("ListPathGrants", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     // MEDULLA-SCM-R009: the window is read from the tenant's own branch chain and repository graph.
     ("BisectStep", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     // MEDULLA-SCM-R014: the pack is built from the tenant's own branch chain.

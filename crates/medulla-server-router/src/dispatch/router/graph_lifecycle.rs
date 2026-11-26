@@ -278,6 +278,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R007.1: the path grants of one principal.
+        Method::ListPathGrants { request } => {
+            dispatch_boxed(super::list_path_grants::handle_list_path_grants(
+                state,
+                req,
+                verified_context,
+                super::list_path_grants::ListPathGrantsFields { request },
+            ))
+            .await
+        }
         // MEDULLA-SCM-R007: one principal's path grant on a repository.
         Method::SetPathGrant { request } => {
             dispatch_boxed(super::set_path_grant::handle_set_path_grant(

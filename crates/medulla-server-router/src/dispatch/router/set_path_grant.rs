@@ -3,7 +3,8 @@
 //!
 //! The grant row is written into the branch registry through the admitted
 //! native mutation `path_grant`; the tenant is always the verified tenant. A
-//! grant with both bits false deletes the row. Source methods deny by default,
+//! grant with both bits false is stored as an explicit deny and never deleted, so
+//! it still wins as the longest matching prefix. Source methods deny by default,
 //! so a repository is unreadable and unwritable until a grant exists.
 
 use super::*;

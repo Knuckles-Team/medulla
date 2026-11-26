@@ -710,6 +710,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "StronglyConnectedComponents": compute.send_strongly_connected_components,
     "SubmitAdmittedRequest": coordination.send_submit_admitted_request,
     "SetPathGrant": cluster.send_set_path_grant,
+    "ListPathGrants": cluster.send_list_path_grants,
     "BisectStep": cluster.send_bisect_step,
     "SubmitSymbolEdit": cluster.send_submit_symbol_edit,
     "ReadBlame": cluster.send_read_blame,

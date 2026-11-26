@@ -151,6 +151,53 @@ impl SetPathGrantRequest {
     }
 }
 
+/// The closed request of `Method::ListPathGrants` (MEDULLA-SCM-R007.1): the grants of one
+/// principal in the verified tenant, optionally narrowed to one repository.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ListPathGrantsRequest {
+    /// The principal whose grants are read; the verified caller's own grants need only a read
+    /// scope, another principal's need `graph:admin`.
+    pub principal: String,
+    /// Only the grants on this repository; absent reads every repository.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub repo: Option<String>,
+}
+
+impl ListPathGrantsRequest {
+    /// Check the bounds `SetPathGrantRequest` holds for the same fields; a failure is
+    /// `PATH_GRANT_INVALID` with the field named.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.principal.is_empty() || self.principal.len() > 256 {
+            return Err("principal".to_string());
+        }
+        if let Some(repo) = &self.repo {
+            let repo_ok = !repo.is_empty()
+                && repo.chars().count() <= 128
+                && repo
+                    .chars()
+                    .all(|c| c.is_ascii_alphanumeric() || matches!(c, '.' | '_' | '/' | '-'))
+                && !repo.split('/').any(|segment| segment == "..");
+            if !repo_ok {
+                return Err("repo".to_string());
+            }
+        }
+        Ok(())
+    }
+}
+
+/// The served answer of `ListPathGrants`: the principal's grants ordered by repository, then
+/// prefix. A principal with no grants, a principal the tenant never granted and a repository
+/// with none all answer an empty list. A grant with both bits false is a stored explicit deny
+/// and lists like any other row.
+#[derive(Clone, Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PathGrantList {
+    pub grants: Vec<PathGrant>,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,5 +266,37 @@ mod tests {
         bad = ok;
         bad.prefix = String::new();
         assert!(bad.validate().is_ok());
+    }
+
+    // spec: MEDULLA-SCM-R007.1
+    #[test]
+    fn list_request_bounds_match_the_set_request() {
+        let ok = ListPathGrantsRequest {
+            principal: "alice".into(),
+            repo: Some("org/repo".into()),
+        };
+        assert_eq!(ok.validate(), Ok(()));
+        let any_repo = ListPathGrantsRequest {
+            principal: "alice".into(),
+            repo: None,
+        };
+        assert_eq!(any_repo.validate(), Ok(()));
+        let no_principal = ListPathGrantsRequest {
+            principal: String::new(),
+            repo: None,
+        };
+        assert_eq!(no_principal.validate(), Err("principal".to_string()));
+        let bad_repo = ListPathGrantsRequest {
+            principal: "alice".into(),
+            repo: Some("a/../b".into()),
+        };
+        assert_eq!(bad_repo.validate(), Err("repo".to_string()));
+        let wire: ListPathGrantsRequest = serde_json::from_str(r#"{"principal":"alice"}"#).unwrap();
+        assert_eq!(wire, any_repo);
+        assert!(serde_json::from_str::<ListPathGrantsRequest>(
+            r#"{"principal":"alice","tenant":"t"}"#
+        )
+        .is_err());
+        assert!(PathGrantList::default().grants.is_empty());
     }
 }

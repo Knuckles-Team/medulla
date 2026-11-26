@@ -24,6 +24,7 @@ method_results! {
     ReadTree(ReadTree) => Json<medulla_source_types::source_changeset::ReadTreeReceipt>;
     ReadPathHistory(ReadPathHistory) => Json<medulla_source_types::source_changeset::ReadPathHistoryReceipt>;
     SetPathGrant(SetPathGrant) => Json<medulla_source_types::source_path_grant::PathGrant>;
+    ListPathGrants(ListPathGrants) => Json<medulla_source_types::source_path_grant::PathGrantList>;
     BisectStep(BisectStep) => Json<medulla_source_types::source_bisect::BisectStepReceipt>;
     ReadBlame(ReadBlame) => Json<medulla_source_types::source_changeset::ReadBlameReceipt>;
     SubmitChangeset(SubmitChangeset) => Json<medulla_source_types::source_changeset::SubmitChangesetReceipt>;

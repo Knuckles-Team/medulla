@@ -699,27 +699,53 @@ impl BranchRegistry {
         Ok(grants)
     }
 
+    /// Every path grant of `principal` in `tenant`, on `repo` when given and on every
+    /// repository otherwise (MEDULLA-SCM-R007.1), ordered by repository then prefix. The scan is bounded to the
+    /// tenant's own `grant:` rows, and each row is matched on its decoded principal and
+    /// repository, never on a key fragment.
+    pub fn principal_path_grants(
+        &self,
+        tenant: &str,
+        principal: &str,
+        repo: Option<&str>,
+    ) -> Result<Vec<PathGrant>, String> {
+        let read = self.durable.read()?;
+        let table = read.open_owner_table(medulla_storage::BRANCH_REGISTRY)?;
+        let low = format!("grant:{}:{tenant}/", tenant.len());
+        let mut grants = Vec::new();
+        for entry in table
+            .range::<&str>(low.as_str()..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, value) = entry.map_err(|error| error.to_string())?;
+            if !key.value().starts_with(low.as_str()) {
+                break;
+            }
+            let grant = rmp_serde::from_slice::<PathGrant>(value.value())
+                .map_err(|error| error.to_string())?;
+            if grant.principal == principal && repo.is_none_or(|wanted| grant.repo == wanted) {
+                grants.push(grant);
+            }
+        }
+        // Key order puts a repository by name length first; the answer is by name.
+        grants.sort_by(|a, b| (&a.repo, &a.prefix).cmp(&(&b.repo, &b.prefix)));
+        Ok(grants)
+    }
+
     /// Write one path grant for `tenant` through the admitted native mutation
-    /// `path_grant` (MEDULLA-SCM-R007). A grant with both bits false deletes
-    /// its row.
+    /// `path_grant` (MEDULLA-SCM-R007). The row is always inserted or replaced, whatever
+    /// the bits: a grant with both bits false is a stored explicit deny, never a deletion,
+    /// so `resolve` still picks it as the longest match and denies.
     pub fn set_path_grant(&self, tenant: &str, grant: &PathGrant) -> Result<(), BranchCreateError> {
         let key = grant_row_key(tenant, &grant.repo, &grant.principal, &grant.prefix);
         let bytes = rmp_serde::to_vec_named(grant).map_err(|error| error.to_string())?;
-        let delete = !grant.read && !grant.write;
         self.durable
             .maintain("path_grant", |owner| {
                 let mut table = owner.open_table(medulla_storage::BRANCH_REGISTRY)?;
-                if delete {
-                    table
-                        .remove(key.as_str())
-                        .map(|_| ())
-                        .map_err(|error| error.to_string())
-                } else {
-                    table
-                        .insert(key.as_str(), bytes.as_slice())
-                        .map(|_| ())
-                        .map_err(|error| error.to_string())
-                }
+                table
+                    .insert(key.as_str(), bytes.as_slice())
+                    .map(|_| ())
+                    .map_err(|error| error.to_string())
             })
             .map_err(BranchCreateError::Store)
     }
@@ -1109,7 +1135,7 @@ mod tests {
 
     // spec: MEDULLA-SCM-R007
     #[test]
-    fn path_grants_are_scoped_to_tenant_repo_and_principal_and_a_dead_grant_deletes() {
+    fn path_grants_are_scoped_to_tenant_repo_and_principal_and_a_dead_grant_is_an_explicit_deny() {
         let dir = tempfile::tempdir().unwrap();
         let registry = BranchRegistry::open(dir.path().to_str().unwrap()).unwrap();
         let grant = |repo: &str, principal: &str, prefix: &str, read: bool, write: bool| PathGrant {
@@ -1139,11 +1165,69 @@ mod tests {
         assert!(alice.iter().all(|g| g.principal == "alice" && g.repo == "r"));
         assert_eq!(registry.path_grants("t", "r", "bob").unwrap().len(), 1);
         assert!(registry.path_grants("t", "r", "carol").unwrap().is_empty());
-        // A grant with both bits false deletes the row.
+        // A grant with both bits false replaces the row as an explicit deny; it is not deleted.
         registry
             .set_path_grant("t", &grant("r", "alice", "src/secret", false, false))
             .unwrap();
         let alice = registry.path_grants("t", "r", "alice").unwrap();
-        assert_eq!(alice.iter().map(|g| g.prefix.as_str()).collect::<Vec<_>>(), ["src"]);
+        assert_eq!(
+            alice.iter().map(|g| g.prefix.as_str()).collect::<Vec<_>>(),
+            ["src", "src/secret"]
+        );
+        let deny = alice.iter().find(|g| g.prefix == "src/secret").unwrap();
+        assert!(!deny.read && !deny.write);
+    }
+
+    // spec: MEDULLA-SCM-R007.1
+    #[test]
+    fn principal_path_grants_span_repositories_inside_one_tenant_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let registry = BranchRegistry::open(dir.path().to_str().unwrap()).unwrap();
+        let grant = |repo: &str, principal: &str, prefix: &str, read: bool, write: bool| PathGrant {
+            repo: repo.into(),
+            principal: principal.into(),
+            prefix: prefix.into(),
+            read,
+            write,
+        };
+        for (tenant, row) in [
+            ("t", grant("r", "alice", "src", true, true)),
+            ("t", grant("other", "alice", "", true, false)),
+            ("t", grant("r", "bob", "", true, false)),
+            ("t2", grant("r", "alice", "", true, true)),
+            ("t/x", grant("r", "alice", "", true, true)),
+        ] {
+            registry.set_path_grant(tenant, &row).unwrap();
+        }
+        let all = registry.principal_path_grants("t", "alice", None).unwrap();
+        let repos: Vec<&str> = all.iter().map(|g| g.repo.as_str()).collect();
+        assert_eq!(repos, ["other", "r"]);
+        assert!(all.iter().all(|g| g.principal == "alice"));
+        let one = registry
+            .principal_path_grants("t", "alice", Some("r"))
+            .unwrap();
+        assert_eq!(one.len(), 1);
+        assert_eq!(one[0].prefix, "src");
+        // An absent principal, an absent repository and a foreign tenant all read empty.
+        assert!(registry
+            .principal_path_grants("t", "carol", None)
+            .unwrap()
+            .is_empty());
+        assert!(registry
+            .principal_path_grants("t", "alice", Some("none"))
+            .unwrap()
+            .is_empty());
+        assert!(registry
+            .principal_path_grants("t3", "alice", None)
+            .unwrap()
+            .is_empty());
+        // A grant with both bits false is an explicit deny and lists with both bits false.
+        registry
+            .set_path_grant("t", &grant("r", "alice", "src", false, false))
+            .unwrap();
+        let after = registry.principal_path_grants("t", "alice", None).unwrap();
+        assert_eq!(after.len(), 2);
+        let denied = after.iter().find(|g| g.repo == "r").unwrap();
+        assert!(!denied.read && !denied.write);
     }
 }

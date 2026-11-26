@@ -18255,6 +18255,13 @@ class MethodMemoryExport(BaseModel):
     params: MethodMemoryExportParams
 
 
+class MethodListPathGrants(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ListPathGrants"]
+    params: MethodListPathGrantsParams
+
+
 Method = Annotated[
     Union[  # noqa: UP007
         MethodAddNode,
@@ -18936,6 +18943,7 @@ Method = Annotated[
         MethodBundleImport,
         MethodGitExportPack,
         MethodSetPathGrant,
+        MethodListPathGrants,
         MethodReadPathHistory,
         MethodBisectStep,
         MethodSubmitSymbolEdit,
@@ -46844,6 +46852,25 @@ class ContinuationRead(BaseModel):
     continuation: Continuation | None = None
 
 
+class ListPathGrantsRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    principal: str
+    repo: str | None = None
+
+
+class PathGrantList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    grants: list[PathGrant]
+
+
+class MethodListPathGrantsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: ListPathGrantsRequest
+
+
 __all__ = [
     "AdminResetIssue",
     "AdmittedPaper",
@@ -52872,6 +52899,10 @@ __all__ = [
     "StopReason",
     "Continuation",
     "ContinuationRead",
+    "MethodListPathGrants",
+    "ListPathGrantsRequest",
+    "PathGrantList",
+    "MethodListPathGrantsParams",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both

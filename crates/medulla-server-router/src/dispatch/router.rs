@@ -76,6 +76,7 @@ pub(crate) mod share;
 mod source_ingest;
 mod git_export_pack;
 mod import_git_history;
+mod list_path_grants;
 mod read_blame;
 mod source_bisect;
 mod revert_changeset;

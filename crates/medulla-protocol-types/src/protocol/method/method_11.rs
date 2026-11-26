@@ -659,10 +659,18 @@ $($variants)*
 
     /// Set one principal's access to the paths of a repository under a prefix
     /// (MEDULLA-SCM-R007). The source methods deny by default; the longest
-    /// matching prefix decides. `read` and `write` both false deletes the
-    /// grant. Refusal: `PATH_GRANT_INVALID`. Needs `graph:admin`.
+    /// matching prefix decides. `read` and `write` both false stores an explicit
+    /// deny that is never deleted. Refusal: `PATH_GRANT_INVALID`. Needs `graph:admin`.
     SetPathGrant {
         request: Box<medulla_source_types::source_path_grant::SetPathGrantRequest>,
+    },
+
+    /// Read the path grants of one principal in the verified tenant
+    /// (MEDULLA-SCM-R007.1), on one repository or on every repository. The caller's own
+    /// grants need `graph:read`; another principal's need `graph:admin`. A principal with
+    /// no grants answers an empty list. Refusal: `PATH_GRANT_INVALID`. Reads only.
+    ListPathGrants {
+        request: Box<medulla_source_types::source_path_grant::ListPathGrantsRequest>,
     },
 
     /// Read the history of one path (MEDULLA-SCM-R005.1): the changesets that
