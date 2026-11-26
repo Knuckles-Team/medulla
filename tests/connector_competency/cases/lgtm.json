@@ -29,6 +29,35 @@
       "recordings": [
         "lgtm-mcp/single.json"
       ]
+    },
+    {
+      "id": "lgtm.q2",
+      "kind": "cross",
+      "question": "Which firing Grafana alerts have no open ServiceNow incident, and which incidents have no alert?",
+      "uql": "LET s0 = FOREIGN SCAN 'lgtm-mcp'; LET s1 = FOREIGN SCAN 'uptime-kuma-agent'; LET s2 = FOREIGN SCAN 'servicenow-api'; JOIN s0, s1, s2",
+      "sources": [
+        "lgtm-mcp",
+        "uptime-kuma-agent",
+        "servicenow-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "lgtm-mcp": "mcp_tool",
+        "uptime-kuma-agent": "mcp_tool",
+        "servicenow-api": "http_endpoint"
+      },
+      "columns": [
+        "alert",
+        "service",
+        "incident"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "lgtm-mcp/cross_uptime-kuma-agent.json",
+        "uptime-kuma-agent/cross_lgtm-mcp.json",
+        "lgtm-mcp/cross_servicenow-api.json",
+        "servicenow-api/cross_lgtm-mcp.json"
+      ]
     }
   ]
 }
