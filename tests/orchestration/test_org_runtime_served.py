@@ -182,7 +182,11 @@ def test_recruit_allocate_twin_and_drain_journey(clean_graph):
     assert len(allocation["ranked"]) == 1
     assert allocation["ranked"][0]["gap_id"] == "gap:best"
     assert allocation["ranked"][0]["work_item_id"] == "wi:gap:best"
-    assert [gap for gap, _ in allocation["excluded"]] == ["gap:blocked", "gap:over"]
+    # `OfferExclusion` serializes as its SCREAMING_SNAKE_CASE code in a pair.
+    assert allocation["excluded"] == [
+        ["gap:blocked", "DEPENDENCY_OPEN"],
+        ["gap:over", "OVER_BUDGET"],
+    ]
 
     # Twin: agent:a is replayed at its pinned rev-1 only, and the answer reproduces.
     twin = {"agent_ref": "agent:a", "pinned_revisions": ["rev-1"]}

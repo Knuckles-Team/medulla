@@ -612,11 +612,12 @@ fn apply_entry_rows(
         .map_err(|error| error.to_string())?
         .is_some()
     {
-        // MEDULLA-ORCH-VOCAB-R800.3: the `DefinitionRefusal::RevisionPublished` code of
-        // `medulla_work_types::orchestration::definitions`; an edit creates a new revision.
+        // Unreachable through the wire: the head compare-and-set refuses first with
+        // `STALE_AGENT_LIBRARY_REVISION`. Kept as a storage invariant (MEDULLA-ORCH-VOCAB-R800.3):
+        // a stored revision is never rewritten.
         return Err(format!(
-            "DEFINITION_REVISION_PUBLISHED: {} revision {} is published",
-            entry.agent_id, entry.entry_revision
+            "agent library revision {} of {} is already stored",
+            entry.entry_revision, entry.agent_id
         ));
     }
     revisions

@@ -93,7 +93,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [x] T106 [US7] MEDULLA-ORCH-VOCAB-R800.1 Model: prompt template and workflow pattern
 - [ ] T107 [US7] MEDULLA-ORCH-VOCAB-R800.2 Behaviour: typed rendering (pattern selection retired)
 - [ ] T108 [US7] MEDULLA-ORCH-VOCAB-R800.3 Wiring: definitions are read by assembly and revised by version
-- [ ] T109 [US7] MEDULLA-ORCH-VOCAB-R800.4 Refusal: four definition faults
+- [ ] T109 [US7] MEDULLA-ORCH-VOCAB-R800.4 Refusal: three definition faults
 - [ ] T110 [US7] MEDULLA-ORCH-VOCAB-R800.5 Evidence: revision history and render digest
 - [ ] T111 [US7] MEDULLA-ORCH-VOCAB-R800.6 Hot-path proof: render budget
 - [ ] T112 [P] [US4] MEDULLA-ORCH-VOCAB-R009.18.1 Model: observation window record

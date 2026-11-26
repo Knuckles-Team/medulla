@@ -100,7 +100,7 @@ def test_assembly_renders_prompts_for_each_assigned_agent(clean_graph):
 
 
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R800.4")
-def test_four_faults_refuse_with_codes(clean_graph):
+def test_three_faults_refuse_with_codes(clean_graph):
     # spec: MEDULLA-ORCH-VOCAB-R800.4
     suffix = f"-{uuid.uuid4().hex[:8]}"
     publish_composed_library(clean_graph, suffix)
@@ -124,7 +124,7 @@ def test_four_faults_refuse_with_codes(clean_graph):
             "process_iri": f"process:faults{suffix}",
             "version": 1,
             "steps": json.dumps(["s1", "s9"]),
-            "workflowDigest": "ab" * 32,
+            "workflowDigest": "sha256:" + "ab" * 32,
             "canonical": json.dumps({"steps": [{"id": "s1"}, {"id": "s2"}]}),
             "preconditions": "[]",
         },
@@ -162,7 +162,7 @@ def test_edit_creates_new_revision_and_champion_selects_current(
         # An edit that reuses the published revision is refused and changes nothing.
         with pytest.raises(
             Exception,
-            match="DEFINITION_REVISION_PUBLISHED|STALE_AGENT_LIBRARY_REVISION",
+            match="STALE_AGENT_LIBRARY_REVISION",
         ):
             _publish_revision_sync(client, agent_id, 0, "v1-again")
         again = _history(client, agent_id)

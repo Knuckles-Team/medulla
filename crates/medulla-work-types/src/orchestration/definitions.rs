@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use super::workflows::WorkflowIdentity;
 
 closed_error_codes! {
-    /// The four definition faults (MEDULLA-ORCH-VOCAB-R800.4). Each refusal writes
+    /// The three definition faults (MEDULLA-ORCH-VOCAB-R800.4). Each refusal writes
     /// nothing. The set is registered in
     /// `medulla_protocol_types::error_registry::declared_error_code`.
     pub enum DefinitionRefusal {
@@ -24,8 +24,6 @@ closed_error_codes! {
         TemplateSlotType => "TEMPLATE_SLOT_TYPE",
         /// A pattern that names a workflow step the workflow does not register.
         PatternStepUnknown => "PATTERN_STEP_UNKNOWN",
-        /// An edit that reuses an already published revision.
-        RevisionPublished => "DEFINITION_REVISION_PUBLISHED",
     }
 }
 

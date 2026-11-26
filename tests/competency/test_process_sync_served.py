@@ -48,7 +48,7 @@ ARIS_CONNECTION = (
     "https://knuckles-team.github.io/ontology/source-record/process-sync#aris"
 )
 ARIS_AUTHORITY = (FIXTURES / "process_sync" / "aris_authority.ttl").read_text()
-ARIS_DEPLOY_OPERATION = "canonical_to_aml"
+ARIS_DEPLOY_OPERATION = "aris_import_canonical_workflow"
 ARIS_NOT_CONFIGURED = "ARIS_NOT_CONFIGURED"
 READ_LIMITS = {
     "max_rows": 10,
