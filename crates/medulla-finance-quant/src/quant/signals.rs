@@ -18,7 +18,7 @@ pub fn order_book_imbalance(v_bid: &[f64], v_ask: &[f64]) -> Vec<f64> {
         .collect()
 }
 
-pub use medulla_result_types::compute_result::finance::QueueSignal;
+use medulla_result_types::compute_result::finance::QueueSignal;
 
 pub fn queue_imbalance(
     bid_q: &[f64],
@@ -76,7 +76,7 @@ pub fn realized_vol_tick(mid: &[f64], window: usize) -> Vec<f64> {
     out
 }
 
-pub use medulla_result_types::compute_result::finance::SpreadReversion;
+use medulla_result_types::compute_result::finance::SpreadReversion;
 
 pub fn spread_reversion(bid_px: &[f64], ask_px: &[f64], window: usize) -> SpreadReversion {
     let n = bid_px.len().min(ask_px.len());
@@ -196,7 +196,7 @@ pub fn alpha_combination_engine(returns_matrix: &[Vec<f64>], lookback: usize) ->
     w
 }
 
-pub use medulla_result_types::compute_result::finance::ConvergenceGate;
+use medulla_result_types::compute_result::finance::ConvergenceGate;
 
 /// Conviction gate: require ≥ `min_agree` of N signals to STRONGLY agree on a
 /// direction (|strength| ≥ `strong_threshold`) before trading. This is the

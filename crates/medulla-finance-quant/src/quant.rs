@@ -33,21 +33,19 @@ mod signals;
 #[path = "quant/surveillance.rs"]
 mod surveillance;
 
-pub use market_making::{
+use market_making::{
     avellaneda_stoikov, breakeven_alpha, expected_pnl_rate, glosten_milgrom_spread, glt_quotes,
-    logit_space_quotes, Quote,
+    logit_space_quotes,
 };
 pub(super) use microstructure::nelder_mead_3;
-pub use microstructure::{
+use microstructure::{
     hardiman_bouchaud_branching_ratio, hawkes_mle, microprice_series, ofi_series, vpin_pm,
-    HawkesFit,
 };
-pub use signals::{
+use signals::{
     alpha_combination_engine, convergence_gate, empirical_kelly, order_book_imbalance,
-    queue_imbalance, realized_vol_tick, spread_reversion, ConvergenceGate, QueueSignal,
-    SpreadReversion,
+    queue_imbalance, realized_vol_tick, spread_reversion,
 };
-pub use surveillance::{kyle_lambda, surveillance_risk, SurveillanceRisk};
+use surveillance::{kyle_lambda, surveillance_risk};
 
 #[cfg(test)]
 mod tests {

@@ -4,11 +4,9 @@
 //! Pure compute over what the request carries; every op answers its declared
 //! result or a typed refusal rendered `"CODE: detail"`.
 
-use medulla_finance_quant::{
-    signal_models::bayes_fuse, signal_models::insider_equilibrium,
-    signal_models::FinanceSignalModelsOp,
-};
+use medulla_finance_quant::signal_models::{bayes_fuse, insider_equilibrium};
 use medulla_protocol_types::result_contract::compute as results;
+use medulla_result_types::compute_result::signal_models::FinanceSignalModelsOp;
 
 use super::market::answer;
 use medulla_protocol_types::protocol::Method;
