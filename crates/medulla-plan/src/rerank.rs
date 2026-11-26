@@ -371,7 +371,7 @@ pub fn rerank_with(
     RerankRun { hits, receipt }
 }
 
-pub use medulla_decision_types::decision::context_bundle::FallbackReason;
+use medulla_decision_types::decision::context_bundle::FallbackReason;
 
 /// What one rerank did.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

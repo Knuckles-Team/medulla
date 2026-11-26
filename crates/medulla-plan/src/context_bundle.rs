@@ -19,7 +19,7 @@ use medulla_types::contract::{BoundedVec, Digest256};
 use crate::rerank::{
     calibrate, rerank_with, CalibrationCurve, LexicalDoc, ModelBinding, RerankReceipt,
 };
-pub use medulla_decision_types::decision::context_bundle::*;
+use medulla_decision_types::decision::context_bundle::*;
 
 /// The registered knobs the compile reads (`context.*`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

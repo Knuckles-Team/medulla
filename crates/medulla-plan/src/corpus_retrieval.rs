@@ -12,7 +12,7 @@ use std::collections::{BTreeSet, VecDeque};
 
 use regex::RegexBuilder;
 
-pub use medulla_types::corpus_retrieval::*;
+use medulla_types::corpus_retrieval::*;
 
 /// Largest snippet a hit carries, in bytes.
 pub const SNIPPET_BYTES: usize = 200;

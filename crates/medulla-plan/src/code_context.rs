@@ -12,9 +12,9 @@ use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use medulla_graph_algos::{graph_algos::betweenness_centrality, graph_algos::AdjacencyGraph};
 use serde::{Deserialize, Serialize};
 
-pub use medulla_types::code_context::{
+use medulla_types::code_context::{
     CausalLink, CodeContextAnswer, CodeContextRequest, CodeContextStatus, CodeNode, CodeQuestion,
-    DiagnoseRequest, OpsCausalStage, RankedHub, SymptomDiagnosis,
+    OpsCausalStage, RankedHub, SymptomDiagnosis,
 };
 
 /// A directed caller-to-callee edge in a resolved code subgraph.

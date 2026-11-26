@@ -10,11 +10,12 @@
 use super::*;
 use medulla_graph_core::graph::{edge_weight, expand_hops, HopScope};
 use medulla_plan::corpus_retrieval::{
-    dispatch, CorpusError, CorpusRequestError, CorpusView, LineageHop, TextNode, TurnRecord,
-    WeightedNeighbour, LINEAGE_RELATIONSHIPS,
+    dispatch, CorpusError, CorpusView, TextNode, TurnRecord, WeightedNeighbour,
+    LINEAGE_RELATIONSHIPS,
 };
 use medulla_protocol_types::result_contract::query::CorpusRetrieve;
 use medulla_types::corpus_retrieval::CorpusRequest;
+use medulla_types::corpus_retrieval::{CorpusRequestError, LineageHop};
 
 /// Node type of one ingested transcript turn.
 const TRANSCRIPT_TURN: &str = "TranscriptTurn";

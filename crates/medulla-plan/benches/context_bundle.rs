@@ -7,10 +7,12 @@
 //! Run: `cargo bench -p medulla-plan --bench context_bundle`.
 
 use criterion::{criterion_group, criterion_main, Criterion};
+use medulla_decision_types::decision::context_bundle::{
+    Citation, ContextBundleRequest, ContextMode,
+};
 use medulla_decision_types::decision::context_package::ContextPackageBudget;
 use medulla_plan::context_bundle::{
-    compile, Citation, CompileInputs, ContextBundleRequest, ContextKnobs, ContextMode,
-    ResolutionSpan, SourceHit, SourceRanking,
+    compile, CompileInputs, ContextKnobs, ResolutionSpan, SourceHit, SourceRanking,
 };
 use std::hint::black_box;
 
