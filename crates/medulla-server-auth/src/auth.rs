@@ -3152,21 +3152,21 @@ mod tests {
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "pgwire",
-            "local-login",
+            "local-login", &medulla_identity_types::identity::default_wire_login_scopes()
         )
         .unwrap();
         let mysql = VerifiedRequestContext::authenticated_sql_wire_actor(
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "mysql-wire",
-            "local-login",
+            "local-login", &medulla_identity_types::identity::default_wire_login_scopes()
         )
         .unwrap();
         let other_key = VerifiedRequestContext::authenticated_sql_wire_actor(
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-b",
             "pgwire",
-            "local-login",
+            "local-login", &medulla_identity_types::identity::default_wire_login_scopes()
         )
         .unwrap();
 
@@ -3178,14 +3178,14 @@ mod tests {
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "unknown-wire",
-            "local-login"
+            "local-login", &medulla_identity_types::identity::default_wire_login_scopes()
         )
         .is_err());
         assert!(VerifiedRequestContext::authenticated_sql_wire_actor(
             &medulla_server_api::server_context::ServerContext::fixture(),
             "secret-a",
             "pgwire",
-            "",
+            "", &medulla_identity_types::identity::default_wire_login_scopes()
         )
         .is_err());
     }

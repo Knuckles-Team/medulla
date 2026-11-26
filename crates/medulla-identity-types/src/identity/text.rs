@@ -14,6 +14,22 @@ pub const MAX_TEXT_BYTES: usize = 4096;
 /// Longest caller-supplied high-entropy token.
 pub const MAX_TOKEN_CHARS: usize = 512;
 
+/// The agent id of the fixed engine service that writes the logical-replication slot rows
+/// (`service:<service>`, the shape of every fixed engine service actor). It is the one definition;
+/// `medulla_mutation_types::pg_replication` re-exports it.
+pub const REPLICATION_SLOT_AGENT: &str = "service:replication-slots";
+
+/// The agent ids the engine reserves for its own fixed service actors. No principal, token,
+/// API key or wire login can carry one: [`validate_principal_id`] refuses each at issuance, so the
+/// KV dispatch's admission of a service-only namespace cannot be reached through an issued
+/// credential.
+pub const RESERVED_AGENT_IDS: &[&str] = &[REPLICATION_SLOT_AGENT];
+
+/// Whether `agent_id` is one of the [`RESERVED_AGENT_IDS`].
+pub fn is_reserved_agent_id(agent_id: &str) -> bool {
+    RESERVED_AGENT_IDS.contains(&agent_id)
+}
+
 /// Normalize a username: trimmed, ASCII-lowercased, and restricted to
 /// `[a-z0-9._@+-]`. ASCII-only is deliberate: it removes the homoglyph and
 /// Unicode-normalization classes of account-confusion attacks entirely.
@@ -30,6 +46,9 @@ pub fn normalize_username(raw: &str) -> Result<String, IdentityRefusal> {
 /// control characters. Existing identity-provider subjects (e.g. Keycloak
 /// UUIDs) are valid principal ids verbatim (§4 homelab migration).
 pub fn validate_principal_id(principal_id: &str) -> Result<(), IdentityRefusal> {
+    if is_reserved_agent_id(principal_id) {
+        return Err(IdentityRefusal::InvalidRequest);
+    }
     let printable = principal_id
         .chars()
         .all(|c| !c.is_control() && !c.is_whitespace());

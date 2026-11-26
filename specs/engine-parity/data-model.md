@@ -20,7 +20,7 @@ This file describes the entities that the rows add or extend.
 
 ### WireLoginRecord and WireLoginKind
 
-- Fields: `WireLoginRecord{login, kind, verifier, principal, tenant, created_ms, revoked_ms}`; `WireLoginKind` is `Password`, `Certificate` or `Token`.
+- Fields: `WireLoginRecord{login, kind, verifier, principal, tenant, created_ms, revoked_ms, scopes}`; `WireLoginKind` is `Password`, `Certificate` or `Token`.
 - Owner: new `crates/medulla-identity-types/src/identity/wire_login.rs`. No secret is stored; the verifier is a stored key or a digest.
 
 ### SecondaryIndexSpec extension

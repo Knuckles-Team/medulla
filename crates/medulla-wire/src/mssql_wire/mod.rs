@@ -254,7 +254,11 @@ where
     let database = (!login.database.is_empty()).then(|| login.database.clone());
     session.resolve_startup(user, database);
     if let Err(error) = session
-        .bind_authenticated_sql_actor("mssql-wire", &login.user)
+        .bind_authenticated_sql_actor(
+            "mssql-wire",
+            &login.user,
+            &medulla_identity_types::identity::default_wire_login_scopes(),
+        )
         .await
     {
         write_tabular(&mut stream, &error_response(&error)).await?;

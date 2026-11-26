@@ -129,7 +129,7 @@ mod ne_004_ne_005_tests {
     async fn new_session(state: Arc<RwLock<ServerState>>, graph: &str) -> WireSession {
         let session = WireSession::new(state, graph.to_string());
         session
-            .bind_authenticated_sql_actor("pgwire", AGENT)
+            .bind_authenticated_sql_actor("pgwire", AGENT, &medulla_identity_types::identity::default_wire_login_scopes())
             .await
             .expect("bind test identity");
         session

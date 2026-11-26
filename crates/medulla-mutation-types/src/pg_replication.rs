@@ -18,8 +18,9 @@ pub const REPLICATION_SLOT_NAMESPACE: &str = "__pg_replication_slots__";
 pub const REPLICATION_SLOT_SERVICE: &str = "replication-slots";
 
 /// The agent id of the fixed service identity of [`REPLICATION_SLOT_SERVICE`]
-/// (`service:<service>`, the shape of every fixed engine service actor).
-pub const REPLICATION_SLOT_AGENT: &str = "service:replication-slots";
+/// (`service:<service>`, the shape of every fixed engine service actor). The identity registry
+/// reserves it, so no issued credential can carry it (`medulla_identity_types::identity::RESERVED_AGENT_IDS`).
+pub use medulla_identity_types::identity::REPLICATION_SLOT_AGENT;
 
 /// The refusal text prefix of a slot name outside `[a-z0-9_]{1,63}`.
 pub const REPLICATION_SLOT_NAME_INVALID: &str = "REPLICATION_SLOT_NAME_INVALID";
@@ -104,5 +105,17 @@ mod tests {
             .unwrap_err()
             .starts_with(REPLICATION_SLOT_NAME_INVALID));
         assert_eq!(REPLICATION_SLOT_NAMESPACE, "__pg_replication_slots__");
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R035.7.2
+    #[test]
+    fn the_slot_agent_is_the_reserved_service_id() {
+        assert_eq!(
+            REPLICATION_SLOT_AGENT,
+            format!("service:{REPLICATION_SLOT_SERVICE}")
+        );
+        assert!(medulla_identity_types::identity::is_reserved_agent_id(
+            REPLICATION_SLOT_AGENT
+        ));
     }
 }

@@ -4,18 +4,21 @@
 //! `IdentityOp::WireLogin`, inside the same identity write that appends its audit entry, and is
 //! never deleted: a revoke moves the `wire_login` machine to `Revoked`.
 
+use super::super::audit::AuditRecord;
 use super::super::ops::WireLoginOp;
 use super::super::requests_admin::{WireLoginGrant, WireLoginRevoke};
+use super::super::scope::ScopeClassifier;
 use super::super::stamp::IdentityStamp;
 use super::super::text::{bounded, MAX_NAME_BYTES};
+use super::super::validate_principal_id;
 use super::super::views::IdentityReply;
-use super::super::audit::AuditRecord;
 use super::super::wire_login::{
     verifier_is_well_formed, WireLoginEvent, WireLoginGranted, WireLoginKind, WireLoginRecord,
-    WireLoginRevoked,
+    WireLoginRevoked, MAX_WIRE_LOGIN_SCOPES,
 };
 use super::super::{IdentityEvent, IdentityRefusal};
-use super::IdentityStore;
+use super::{ApplyContext, IdentityStore};
+use std::collections::BTreeSet;
 
 /// Most wire logins (revoked ones included) one store holds.
 pub const MAX_WIRE_LOGINS: usize = 10_000;
@@ -37,11 +40,13 @@ impl IdentityStore {
         &mut self,
         op: &WireLoginOp,
         stamp: &IdentityStamp,
-        now_ms: u64,
+        ctx: &ApplyContext<'_>,
     ) -> Result<IdentityReply, IdentityRefusal> {
         match op {
-            WireLoginOp::Grant { request } => self.grant_wire_login(request, stamp, now_ms),
-            WireLoginOp::Revoke { request } => self.revoke_wire_login(request, stamp, now_ms),
+            WireLoginOp::Grant { request } => {
+                self.grant_wire_login(request, stamp, ctx.now_ms, ctx.classifier)
+            }
+            WireLoginOp::Revoke { request } => self.revoke_wire_login(request, stamp, ctx.now_ms),
         }
     }
 
@@ -50,9 +55,13 @@ impl IdentityStore {
         request: &WireLoginGrant,
         stamp: &IdentityStamp,
         now_ms: u64,
+        classifier: &dyn ScopeClassifier,
     ) -> Result<IdentityReply, IdentityRefusal> {
         bounded(&request.login, MAX_NAME_BYTES)?;
         bounded(&request.principal, MAX_NAME_BYTES)?;
+        // A login never maps to a reserved engine service agent id.
+        validate_principal_id(&request.principal)?;
+        let scopes = checked_scopes(&request.scopes, classifier)?;
         if !verifier_is_well_formed(request.kind, &request.verifier) {
             return Err(IdentityRefusal::InvalidRequest);
         }
@@ -64,7 +73,8 @@ impl IdentityStore {
         if let Some(existing) = self.wire_logins.get(&request.login) {
             let same = existing.principal == request.principal
                 && existing.kind == request.kind
-                && existing.verifier == request.verifier;
+                && existing.verifier == request.verifier
+                && existing.scopes == scopes;
             return if same {
                 Ok(IdentityReply::WireLoginGranted(existing.into()))
             } else {
@@ -81,7 +91,8 @@ impl IdentityStore {
             &request.principal,
             tenant,
             now_ms,
-        );
+        )
+        .with_scopes(scopes);
         let granted = WireLoginGranted::from(&record);
         let record_key = (request.login.clone(), request.kind);
         self.wire_logins.insert(request.login.clone(), record);
@@ -135,4 +146,27 @@ impl IdentityStore {
             revoked_ms: now_ms,
         }))
     }
+}
+
+/// The scopes of a grant, sorted and de-duplicated: non-empty, bounded in count and size, every
+/// one registered, and none of a class a bearer login cannot carry (administration and approvals).
+fn checked_scopes(
+    requested: &[String],
+    classifier: &dyn ScopeClassifier,
+) -> Result<Vec<String>, IdentityRefusal> {
+    if requested.is_empty() || requested.len() > MAX_WIRE_LOGIN_SCOPES {
+        return Err(IdentityRefusal::InvalidRequest);
+    }
+    let mut scopes = BTreeSet::new();
+    for scope in requested {
+        bounded(scope, MAX_NAME_BYTES)?;
+        let class = classifier
+            .class_of(scope)
+            .ok_or(IdentityRefusal::UnknownScope)?;
+        if !class.allows_api_key() {
+            return Err(IdentityRefusal::ClassViolation);
+        }
+        scopes.insert(scope.clone());
+    }
+    Ok(scopes.into_iter().collect())
 }

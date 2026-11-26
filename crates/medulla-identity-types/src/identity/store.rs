@@ -306,7 +306,7 @@ impl IdentityStore {
             IdentityOp::Idp(op) => self.apply_idp(op, stamp, ctx),
             IdentityOp::Delegation(op) => self.apply_delegation(op, stamp, ctx),
             IdentityOp::Policy(op) => self.apply_policy(op, stamp, ctx.now_ms),
-            IdentityOp::WireLogin(op) => self.apply_wire_login(op, stamp, ctx.now_ms),
+            IdentityOp::WireLogin(op) => self.apply_wire_login(op, stamp, ctx),
         }
     }
 

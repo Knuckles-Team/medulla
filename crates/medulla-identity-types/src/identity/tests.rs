@@ -20,11 +20,13 @@ mod sql_dump;
 mod tokens;
 mod user_status_machine;
 mod verdicts;
+mod wire_logins;
 
 /// A registry fixture with one scope of every class.
 pub(super) struct TestRegistry;
 
-const REGISTRY: [(&str, ScopeClass, Option<&str>); 16] = [
+const REGISTRY: [(&str, ScopeClass, Option<&str>); 17] = [
+    ("replication:read", ScopeClass::User, None),
     ("governance:read", ScopeClass::User, None),
     ("identity:provision", ScopeClass::ServiceOnly, None),
     ("kg:read", ScopeClass::User, None),

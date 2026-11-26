@@ -131,6 +131,10 @@ pub struct WireLoginGrant {
     pub kind: WireLoginKind,
     pub verifier: String,
     pub principal: String,
+    /// The scopes the login's connection carries. Omitted, it is `kg:read` and `kg:write`; an
+    /// administrator adds `replication:read` to let the login open a replication connection.
+    #[serde(default = "super::wire_login::default_wire_login_scopes")]
+    pub scopes: Vec<String>,
 }
 
 /// `revoke_wire_login` (MEDULLA-ENGINE-PARITY-R007.4).

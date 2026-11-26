@@ -929,8 +929,14 @@ impl EngineBackend {
         let actor = record
             .as_ref()
             .map_or_else(|| user.clone(), |record| record.principal.clone());
+        // The connection carries the login record's scopes (`kg:read` and `kg:write` unless the
+        // grant named others); an engine agent login carries the default pair.
+        let scopes = record.as_ref().map_or_else(
+            medulla_identity_types::identity::default_wire_login_scopes,
+            |record| record.scopes.clone(),
+        );
         self.session
-            .bind_authenticated_sql_actor("pgwire", &actor)
+            .bind_authenticated_sql_actor("pgwire", &actor, &scopes)
             .await
             .map_err(wire_err_to_pg)?;
         // MEDULLA-DURABLE-KERNEL-R035.3.2: register the session's activity row under the

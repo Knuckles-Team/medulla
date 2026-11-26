@@ -408,7 +408,7 @@ mod tests {
                 &medulla_server_api::server_context::ServerContext::fixture(),
                 "native-test-key",
                 "pgwire",
-                "actor-a",
+                "actor-a", &medulla_identity_types::identity::default_wire_login_scopes()
             )
             .unwrap(),
         )
@@ -418,7 +418,7 @@ mod tests {
                 &medulla_server_api::server_context::ServerContext::fixture(),
                 "native-test-key",
                 "mysql-wire",
-                "actor-a",
+                "actor-a", &medulla_identity_types::identity::default_wire_login_scopes()
             )
             .unwrap(),
         )

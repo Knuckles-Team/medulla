@@ -544,12 +544,15 @@ impl VerifiedRequestContext {
     /// loopback adapters therefore act as authenticated proxies: after SCRAM/HMAC
     /// verification they bind the authenticated ACL actor to the deployment's
     /// configured tenant/audience/policy.  The principal stored downstream is a
-    /// secret-keyed opaque reference, never the login name.
+    /// secret-keyed opaque reference, never the login name. `scopes` are the login's: the wire
+    /// login record's (`kg:read` and `kg:write` unless its grant names others), or the default
+    /// pair for an engine agent login.
     pub fn authenticated_sql_wire_actor(
         server: &ServerContext,
         secret: &str,
         protocol: &str,
         agent_id: &str,
+        scopes: &[String],
     ) -> Result<Self, String> {
         let protocol = match protocol {
             "pgwire" | "mysql-wire" | "mssql-wire" => protocol,
@@ -578,7 +581,7 @@ impl VerifiedRequestContext {
                 audience: policy.expected_audience.clone(),
                 agent_id: agent_id.to_string(),
                 roles: vec!["native-sql-client".to_string()],
-                scopes: vec!["kg:read".to_string(), "kg:write".to_string()],
+                scopes: scopes.to_vec(),
                 policy_version: policy.expected_policy_version.clone(),
                 delegation: Vec::new(),
                 node: None,

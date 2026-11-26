@@ -31783,6 +31783,7 @@ class WireLoginGrant(BaseModel):
     kind: WireLoginKind
     login: str
     principal: str
+    scopes: list[str] = Field(default_factory=lambda: ["kg:read", "kg:write"])
     verifier: str
 
 
@@ -31793,6 +31794,7 @@ class WireLoginGranted(BaseModel):
     kind: WireLoginKind
     login: str
     principal: str
+    scopes: list[str]
     tenant: str
 
 

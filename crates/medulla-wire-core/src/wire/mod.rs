@@ -1291,6 +1291,10 @@ pub struct WireSession {
     /// `mssql-wire`), latched by [`WireSession::bind_authenticated_sql_actor`]. It is what
     /// [`WireSession::dispatch_method`] needs to rebuild the login's verified context.
     native_protocol: parking_lot::Mutex<Option<String>>,
+    /// The scopes of the login [`WireSession::bind_authenticated_sql_actor`] bound: the wire
+    /// login record's, or the default pair for an engine agent login. Every verified context the
+    /// session rebuilds carries exactly these.
+    native_scopes: parking_lot::Mutex<Vec<String>>,
     /// The authenticated actor (engine `agent_id`) for this connection
     /// (CONCEPT:MEDULLA-KG.query.concept-13). `None` means no authenticated wire identity
     /// has been mapped. Latched only from a verified request or the server-owned
@@ -1505,6 +1509,7 @@ impl WireSession {
             startup_resolved: Default::default(),
             bound_mapping: Default::default(),
             native_protocol: Default::default(),
+            native_scopes: Default::default(),
             actor: Default::default(),
             authority: Default::default(),
             attempt_nonce: Default::default(),
@@ -1686,13 +1691,14 @@ impl WireSession {
         &self,
         protocol: &str,
         actor: &str,
+        scopes: &[String],
     ) -> WireResult<()> {
         let (secret, server) = {
             let state = self.state.read().await;
             (state.auth_secret.clone(), state.context.clone())
         };
         let context = medulla_server_api::authority_context::VerifiedRequestContext::authenticated_sql_wire_actor(
-            &server, &secret, protocol, actor,
+            &server, &secret, protocol, actor, scopes,
         )
         .map_err(|message| WireError {
             code: "28000".to_string(),
@@ -1704,6 +1710,7 @@ impl WireSession {
         })?;
         self.bind_authority(authority, context.agent_id())?;
         *self.native_protocol.lock() = Some(protocol.to_string());
+        *self.native_scopes.lock() = scopes.to_vec();
         // A native SQL login has no signed request nonce. Clear a nonce left by
         // an earlier signed request on a reused session before any SQL batch is
         // compiled, so the next native operation cannot inherit another request's
@@ -1885,13 +1892,14 @@ impl WireSession {
                 code: "28000".to_string(),
                 message: "a native SQL login is required".to_string(),
             })?;
+        let scopes = self.native_scopes.lock().clone();
         let (secret, server) = {
             let state = self.state.read().await;
             (state.auth_secret.clone(), state.context.clone())
         };
         let context =
             medulla_server_api::authority_context::VerifiedRequestContext::authenticated_sql_wire_actor(
-                &server, &secret, &protocol, &actor,
+                &server, &secret, &protocol, &actor, &scopes,
             )
             .map_err(|message| WireError {
                 code: "28000".to_string(),

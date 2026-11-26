@@ -134,16 +134,18 @@ pub use sql_dump::{parse_dump, render_dump, DumpRow, MAX_DUMP_BYTES};
 pub use stamp::{IdentityActor, IdentityStamp, PasswordCheck, Secret};
 pub use store::{ApplyContext, IdentityStore, RecoveryCode, ThrottleEntry, TOUCH_GRANULARITY_MS};
 pub use text::{
-    check_recovery_code, check_token, check_totp_secret, normalize_username, validate_principal_id,
-    MIN_RECOVERY_CODE_CHARS, MIN_TOTP_SECRET_CHARS,
+    check_recovery_code, check_token, check_totp_secret, is_reserved_agent_id, normalize_username,
+    validate_principal_id, MIN_RECOVERY_CODE_CHARS, MIN_TOTP_SECRET_CHARS, REPLICATION_SLOT_AGENT,
+    RESERVED_AGENT_IDS,
 };
 pub use views::{
     AuthenticateOutcome, AuthenticateResult, IdentityReply, ResetDelivery, SessionLiveness,
     SessionView, UserView, WebauthnCredentialView,
 };
 pub use wire_login::{
-    sha256_verifier, verifier_is_well_formed, WireLoginError, WireLoginEvent, WireLoginGranted,
-    WireLoginKind, WireLoginRecord, WireLoginRevoked, WireLoginState,
+    default_wire_login_scopes, sha256_verifier, verifier_is_well_formed, WireLoginError,
+    WireLoginEvent, WireLoginGranted, WireLoginKind, WireLoginRecord, WireLoginRevoked,
+    WireLoginState, DEFAULT_WIRE_LOGIN_SCOPES, MAX_WIRE_LOGIN_SCOPES, REPLICATION_READ_SCOPE,
 };
 
 /// The principal id of the built-in bootstrap user (§2.2.3).

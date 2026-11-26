@@ -13,6 +13,24 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
+/// The scopes a wire login holds when its grant names none: plain graph read and write.
+pub const DEFAULT_WIRE_LOGIN_SCOPES: [&str; 2] = ["kg:read", "kg:write"];
+
+/// The scope an administrator grants to let a login open a replication connection.
+pub const REPLICATION_READ_SCOPE: &str = "replication:read";
+
+/// The most scopes one wire login carries.
+pub const MAX_WIRE_LOGIN_SCOPES: usize = 16;
+
+/// [`DEFAULT_WIRE_LOGIN_SCOPES`] as owned strings; the serde default of a record or a grant that
+/// names no scopes.
+pub fn default_wire_login_scopes() -> Vec<String> {
+    DEFAULT_WIRE_LOGIN_SCOPES
+        .iter()
+        .map(|scope| (*scope).to_string())
+        .collect()
+}
+
 /// How a wire login proves itself.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -86,6 +104,11 @@ pub struct WireLoginRecord {
     pub state: WireLoginState,
     /// When the revoke transition ran; `None` while `Active`.
     pub revoked_ms: Option<u64>,
+    /// The scopes the login's connection carries: `kg:read` and `kg:write` unless the grant names
+    /// others. A walsender connection needs `replication:read` here. A record stored before the
+    /// field existed reads as the default.
+    #[serde(default = "default_wire_login_scopes")]
+    pub scopes: Vec<String>,
 }
 
 impl WireLoginRecord {
@@ -107,7 +130,14 @@ impl WireLoginRecord {
             created_ms,
             state: WireLoginState::Active,
             revoked_ms: None,
+            scopes: default_wire_login_scopes(),
         }
+    }
+
+    /// The record with `scopes` in place of the default.
+    pub fn with_scopes(mut self, scopes: Vec<String>) -> Self {
+        self.scopes = scopes;
+        self
     }
 
     /// The single transition function: the only writer of `state`.
@@ -141,6 +171,7 @@ pub struct WireLoginGranted {
     pub principal: String,
     pub tenant: String,
     pub created_ms: u64,
+    pub scopes: Vec<String>,
 }
 
 impl From<&WireLoginRecord> for WireLoginGranted {
@@ -151,6 +182,7 @@ impl From<&WireLoginRecord> for WireLoginGranted {
             principal: record.principal.clone(),
             tenant: record.tenant.clone(),
             created_ms: record.created_ms,
+            scopes: record.scopes.clone(),
         }
     }
 }
@@ -213,5 +245,24 @@ mod tests {
         assert_eq!(err.event, "Revoke");
         assert!(err.to_string().contains("wire_login"));
         assert_eq!(r.revoked_ms, Some(99), "a refused event changes nothing");
+    }
+
+    // spec: MEDULLA-ENGINE-PARITY-R007.1
+    #[test]
+    fn a_record_defaults_to_graph_read_and_write_and_old_records_decode_so() {
+        let r = record();
+        assert_eq!(
+            r.scopes,
+            vec!["kg:read".to_string(), "kg:write".to_string()]
+        );
+        let mut json = serde_json::to_value(&r).unwrap();
+        json.as_object_mut().unwrap().remove("scopes");
+        let old: WireLoginRecord = serde_json::from_value(json).unwrap();
+        assert_eq!(old.scopes, r.scopes);
+        let replicator = record().with_scopes(vec![REPLICATION_READ_SCOPE.to_string()]);
+        assert_eq!(
+            WireLoginGranted::from(&replicator).scopes,
+            replicator.scopes
+        );
     }
 }

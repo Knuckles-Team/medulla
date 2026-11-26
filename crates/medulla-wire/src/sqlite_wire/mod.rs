@@ -464,7 +464,7 @@ mod tests {
         let state = test_state();
         let creator = test_session(&state);
         creator
-            .bind_authenticated_sql_actor("pgwire", "system")
+            .bind_authenticated_sql_actor("pgwire", "system", &medulla_identity_types::identity::default_wire_login_scopes())
             .await
             .unwrap();
         creator
@@ -474,7 +474,7 @@ mod tests {
 
         let same_actor = test_session(&state);
         same_actor
-            .bind_authenticated_sql_actor("mysql-wire", "system")
+            .bind_authenticated_sql_actor("mysql-wire", "system", &medulla_identity_types::identity::default_wire_login_scopes())
             .await
             .unwrap();
         assert!(same_actor
@@ -483,7 +483,7 @@ mod tests {
             .is_ok());
 
         let peer = test_session(&state);
-        peer.bind_authenticated_sql_actor("mssql-wire", "peer")
+        peer.bind_authenticated_sql_actor("mssql-wire", "peer", &medulla_identity_types::identity::default_wire_login_scopes())
             .await
             .unwrap();
         assert!(peer.execute("SELECT value FROM owner_probe").await.is_err());

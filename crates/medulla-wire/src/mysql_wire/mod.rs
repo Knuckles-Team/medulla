@@ -308,7 +308,11 @@ where
     // (the SAME rules pgwire's first-query latch uses).
     session.resolve_startup(Some(resp.username.clone()), resp.database.clone());
     if let Err(error) = session
-        .bind_authenticated_sql_actor("mysql-wire", &resp.username)
+        .bind_authenticated_sql_actor(
+            "mysql-wire",
+            &resp.username,
+            &medulla_identity_types::identity::default_wire_login_scopes(),
+        )
         .await
     {
         write_packet(s, reply_seq, &wire_err_to_packet(&error)).await?;
