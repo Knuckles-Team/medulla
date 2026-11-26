@@ -335,6 +335,13 @@ method_results! {
     ParticipantAddMember(Participant / "add_member") => Raw<medulla_work_types::participant::Membership>;
     ParticipantPutScope(Participant / "put_scope") => Raw<medulla_work_types::memory_scope::MemoryScope>;
     ParticipantSetObservation(Participant / "set_observation") => Raw<medulla_work_types::memory_scope::ObservationConfig>;
+    ParticipantCompleteDerivation(Participant / "complete_derivation") => Raw<medulla_decision_types::memory_events::DerivationCompleted>;
+    ParticipantReadGet(ParticipantRead / "get") => Raw<medulla_work_types::participant::Participant>;
+    ParticipantReadList(ParticipantRead / "list") => Raw<Vec<medulla_work_types::participant::Participant>>;
+    ParticipantReadAsk(ParticipantRead / "ask") => Raw<medulla_decision_types::participant_memory::ParticipantAnswer>;
+    ParticipantReadCard(ParticipantRead / "card") => Raw<medulla_decision_types::participant_memory::ParticipantCard>;
+    ParticipantReadStatus(ParticipantRead / "status") => Raw<Vec<medulla_decision_types::participant_memory::DerivationStatus>>;
+    ParticipantReadDeriveInput(ParticipantRead / "derive_input") => Raw<medulla_decision_types::participant_memory::DeriveInput>;
     AssistantProfilePutProfile(AssistantProfile / "put_profile") => Raw<medulla_identity_types::assistant_profile::AssistantProfile>;
     AssistantProfilePutDocumentSet(AssistantProfile / "put_document_set") => Raw<medulla_identity_types::assistant_profile::DocumentSet>;
     AssistantProfileGetProfile(AssistantProfile / "get_profile") => Raw<medulla_identity_types::assistant_profile::AssistantProfile>;

@@ -25,6 +25,12 @@ $($variants)*
     Participant {
         op: Box<medulla_work_types::participant::ParticipantOp>,
     },
+    /// Participant reads: one participant, the list, a question about a participant, a stored
+    /// card, the derivation backlog and a derive task's input. Reads only
+    /// (MEDULLA-DECISION-ENGINE-R655.4).
+    ParticipantRead {
+        op: Box<medulla_decision_types::participant_memory::ParticipantReadOp>,
+    },
     PublishRunCheckpoint { request: medulla_work_types::run_checkpoint::PublishRunCheckpointRequest },
     GetRunCheckpoint { request: medulla_work_types::run_checkpoint::GetRunCheckpointRequest },
 

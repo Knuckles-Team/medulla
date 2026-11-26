@@ -855,3 +855,45 @@ async fn a_perspective_claim_transition_announces_one_event_after_commit() {
     assert!(planned(&h, "claim-writer", advance("c-plain", ClaimState::Supported)).await.events.is_empty());
     assert!(planned(&h, "claim-writer", get_claim("c-plain")).await.events.is_empty());
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R651.12
+#[tokio::test]
+async fn a_worker_proposes_conclusion_claims_with_turn_evidence() {
+    use medulla_decision_stats::decision::participant_derive::{conclusion_claim_id, DeriveKey};
+    let h = Harness::new().await;
+    seed_participants(&h, TENANT, &[("ada", "worker-principal", "s1")]).await;
+    let key = DeriveKey {
+        scope_id: String::new(),
+        session_id: "s1".into(),
+        subject: ParticipantId::new("ada").unwrap(),
+        observer: ObserverRef::System,
+    };
+    // Two derive jobs reach the same conclusion in different words; each cites its own turn.
+    let mut stored = Vec::new();
+    for (conclusion, turn) in [("Prefers  tea", "t1"), ("prefers TEA", "t4")] {
+        let claim_id = conclusion_claim_id(&key, conclusion);
+        let claim: ClaimRecord = call(
+            &h,
+            "worker-principal",
+            TENANT,
+            perspective_propose(&claim_id, "ada", ObserverRef::System),
+        )
+        .await
+        .unwrap();
+        let mut op = evidence(&claim_id, &format!("{claim_id}:{turn}"), Some(EvidenceChannel::Mined), true, 200_000);
+        if let ClaimOp::RecordEvidence { session_id, source_digest, .. } = &mut op {
+            *session_id = Some("s1".to_string());
+            *source_digest = format!("turn:{turn}");
+        }
+        let _: ClaimRecord = call(&h, "worker-principal", TENANT, op).await.unwrap();
+        stored.push((claim.claim_id, turn));
+    }
+    // One claim, two pieces of mined evidence, each citing its turn.
+    assert_eq!(stored[0].0, stored[1].0);
+    let got: ClaimGetResult = call(&h, "worker-principal", TENANT, get_claim(&stored[0].0)).await.unwrap();
+    let record = got.claim.unwrap();
+    assert_eq!(record.evidence.len(), 2);
+    assert!(record.evidence.iter().all(|e| e.channel == EvidenceChannel::Mined));
+    let digests: Vec<&str> = record.evidence.iter().map(|e| e.source_digest.as_str()).collect();
+    assert_eq!(digests, ["turn:t1", "turn:t4"]);
+}

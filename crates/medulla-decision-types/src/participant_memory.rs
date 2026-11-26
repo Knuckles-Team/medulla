@@ -90,6 +90,38 @@ pub struct DerivationStatus {
     pub oldest_pending_age_ms: u64,
 }
 
+/// One turn the derive worker reads (MEDULLA-DECISION-ENGINE-R651.12).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DeriveTurn {
+    /// The memory record that holds the turn; the evidence of a conclusion cites it.
+    pub turn_id: String,
+    pub speaker: ParticipantId,
+    pub text: String,
+    pub timestamp_ms: u64,
+}
+
+/// What a derive worker reads for one claimed task: the perspective to conclude for and the turns
+/// of the task's range that the perspective may see (MEDULLA-DECISION-ENGINE-R651.12).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct DeriveInput {
+    /// The memory scope the derivation runs under; empty over the whole view.
+    pub scope_id: String,
+    pub session_id: String,
+    /// The participant the conclusions are about.
+    pub subject: ParticipantId,
+    /// Whose view the conclusions belong to.
+    pub observer: ObserverRef,
+    pub first_turn_id: String,
+    pub last_turn_id: String,
+    pub turns: Vec<DeriveTurn>,
+    /// At most this many conclusions are kept (`memory.derive_max_conclusions`).
+    pub max_conclusions: u32,
+}
+
 /// One served read of the participant surface (`Method::ParticipantRead`).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
@@ -103,6 +135,10 @@ pub enum ParticipantReadOp {
     Ask { question: ParticipantQuestion },
     /// The stored card of a subject as one observer sees it.
     Card { subject: ParticipantId, observer: ObserverRef },
+    /// The turns and perspective of one claimed derive task (MEDULLA-DECISION-ENGINE-R651.12);
+    /// `payload_ref` is the payload the queue task names. A range that starts after the stored
+    /// checkpoint answers `DERIVE_ORDER_HELD`.
+    DeriveInput { payload_ref: String },
     /// The derivation backlog the caller may see, optionally narrowed to one scope.
     Status {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -196,6 +232,23 @@ mod tests {
             r#"{"op":"card","subject":"ada-1","observer":"system"}"#,
         );
         round_trip(&ParticipantReadOp::Status { memory_scope: None }, r#"{"op":"status"}"#);
+        round_trip(
+            &ParticipantReadOp::DeriveInput { payload_ref: "derive_payload:t:ab".into() },
+            r#"{"op":"derive_input","payload_ref":"derive_payload:t:ab"}"#,
+        );
+        round_trip(
+            &DeriveInput {
+                scope_id: String::new(),
+                session_id: "s1".into(),
+                subject: ada(),
+                observer: ObserverRef::System,
+                first_turn_id: "m1".into(),
+                last_turn_id: "m2".into(),
+                turns: vec![DeriveTurn { turn_id: "m1".into(), speaker: ada(), text: "hi".into(), timestamp_ms: 4 }],
+                max_conclusions: 8,
+            },
+            r#"{"scope_id":"","session_id":"s1","subject":"ada-1","observer":"system","first_turn_id":"m1","last_turn_id":"m2","turns":[{"turn_id":"m1","speaker":"ada-1","text":"hi","timestamp_ms":4}],"max_conclusions":8}"#,
+        );
         // An unknown field and an invalid slug are refused.
         assert!(serde_json::from_str::<ParticipantQuestion>(
             r#"{"subject":"ada-1","observer":"system","question":"q","extra":1}"#

@@ -217,6 +217,10 @@ pub enum ParticipantOp {
     PutScope { scope: crate::memory_scope::MemoryScope },
     /// Set a participant's observation flags in one session (MEDULLA-DECISION-ENGINE-R651.10).
     SetObservation { config: crate::memory_scope::ObservationConfig },
+    /// Finish one derive task: advance the checkpoint of its key to the payload's last turn and
+    /// announce it (MEDULLA-DECISION-ENGINE-R651.12). `claims_written` is how many conclusions
+    /// the worker proposed; more than `memory.derive_max_conclusions` is refused.
+    CompleteDerivation { payload_ref: String, claims_written: u32 },
 }
 
 #[derive(Deserialize)]

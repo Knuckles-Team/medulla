@@ -1362,6 +1362,20 @@ def set_observation_op(
     }
 
 
+def complete_derivation_op(payload_ref: str, claims_written: int) -> dict[str, Any]:
+    """Finish one derive task: advance the key's checkpoint (R651.12)."""
+    return {
+        "op": "complete_derivation",
+        "payload_ref": payload_ref,
+        "claims_written": claims_written,
+    }
+
+
+def derive_input_op(payload_ref: str) -> dict[str, Any]:
+    """Read the turns and perspective of one claimed derive task (R651.12)."""
+    return {"op": "derive_input", "payload_ref": payload_ref}
+
+
 def put_profile_op(profile: Mapping[str, Any]) -> dict[str, Any]:
     return {"op": "put_profile", "profile": dict(profile)}
 
@@ -1944,6 +1958,18 @@ class DecisionClient:
         )
         return _payload(result)
 
+    async def participant_read(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``ParticipantRead``: get or list participants, ask about one,
+        read a card or the derivation status, or read a derive task's input."""
+        from medulla.generated.coordination import send_participant_read
+
+        result = await send_participant_read(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
     async def semantic_enrich(
         self, op: Mapping[str, Any], *, idempotency_key: str | None = None
     ) -> Any:
@@ -2205,6 +2231,8 @@ __all__ = [
     "named_evaluator",
     "param",
     "participant_wire",
+    "complete_derivation_op",
+    "derive_input_op",
     "profile_share",
     "put_document_set_op",
     "put_participant_op",

@@ -3142,6 +3142,9 @@ decode_workflow_registry_register = contract_decoder(
     "WorkflowRegistry", "WorkflowRegistrationEntry", "register"
 )
 send_participant = contract_sender("Participant", "MethodParticipantParams")
+send_participant_read = contract_sender(
+    "ParticipantRead", "MethodParticipantReadParams"
+)
 decode_participant_put = contract_decoder("Participant", "Participant", "put")
 decode_participant_add_member = contract_decoder(
     "Participant", "Membership", "add_member"

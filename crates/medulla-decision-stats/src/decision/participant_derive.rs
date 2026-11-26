@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use medulla_decision_types::claims::{ObserverRef, ParticipantId};
+use medulla_decision_types::participant_memory::DeriveTurn;
 use medulla_work_types::memory_scope::ObservationConfig;
 
 /// One derivation: whose turns (`subject`), seen by whom (`observer`), in which session. `scope_id`
@@ -154,6 +155,85 @@ pub fn key_node_digest(key: &DeriveKey) -> String {
     key_digest(key, "")
 }
 
+/// How far a key's derivation has got (MEDULLA-DECISION-ENGINE-R651.12): the last turn a completed
+/// job covered. One node per key.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct DeriveCheckpoint {
+    /// The last turn the most recent completed job covered.
+    pub last_turn_id: String,
+    /// When that job completed.
+    pub completed_at_ms: u64,
+}
+
+/// The turns of `range` the key concludes from: those the key's subject spoke between the
+/// payload's first and last turn, inclusive, in stored order. `session_turns` is every turn of the
+/// session in stored order; a range whose ends are not in it selects nothing. When the key names a
+/// memory scope, `scope_allows` says whether the scope still holds the key's session.
+pub fn select_turns(
+    key: &DeriveKey,
+    first_turn_id: &str,
+    last_turn_id: &str,
+    session_turns: &[DeriveTurn],
+    scope_allows: bool,
+) -> Vec<DeriveTurn> {
+    if !scope_allows {
+        return Vec::new();
+    }
+    let position = |id: &str| session_turns.iter().position(|turn| turn.turn_id == id);
+    let (Some(first), Some(last)) = (position(first_turn_id), position(last_turn_id)) else {
+        return Vec::new();
+    };
+    if first > last {
+        return Vec::new();
+    }
+    session_turns[first..=last]
+        .iter()
+        .filter(|turn| turn.speaker == key.subject)
+        .cloned()
+        .collect()
+}
+
+/// Whether a job must wait: a turn of the key's subject sits between the checkpoint and the
+/// range's first turn that no job has covered (`DERIVE_ORDER_HELD`). No checkpoint holds nothing.
+pub fn derive_held(
+    subject: &ParticipantId,
+    session_turns: &[DeriveTurn],
+    checkpoint_last_turn_id: Option<&str>,
+    first_turn_id: &str,
+) -> bool {
+    let Some(checkpoint) = checkpoint_last_turn_id else {
+        return false;
+    };
+    let subject_turns: Vec<&str> = session_turns
+        .iter()
+        .filter(|turn| &turn.speaker == subject)
+        .map(|turn| turn.turn_id.as_str())
+        .collect();
+    let at = |id: &str| subject_turns.iter().position(|turn| *turn == id);
+    match (at(checkpoint), at(first_turn_id)) {
+        (Some(done), Some(first)) => first > done + 1,
+        _ => false,
+    }
+}
+
+/// The claim id of one conclusion: a digest of the key and the conclusion's whitespace-normalised,
+/// case-folded text, so a conclusion that repeats an existing one names the same claim.
+pub fn conclusion_claim_id(key: &DeriveKey, conclusion: &str) -> String {
+    let normalised = conclusion.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
+    let mut hasher = Sha256::new();
+    for part in [
+        key.scope_id.as_str(),
+        key.session_id.as_str(),
+        key.subject.as_str(),
+        &key.observer.as_property(),
+        normalised.as_str(),
+    ] {
+        hasher.update((part.len() as u64).to_be_bytes());
+        hasher.update(part.as_bytes());
+    }
+    format!("derived:{}", hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect::<String>())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -283,5 +363,52 @@ mod tests {
         assert_eq!(key_digest(&base, "t0"), key_digest(&base.clone(), "t0"));
         assert_eq!(key_node_digest(&base), key_digest(&base, ""));
         assert_eq!(key_digest(&base, "t0").len(), 64);
+    }
+
+    fn turn(id: &str, speaker: &str) -> DeriveTurn {
+        DeriveTurn { turn_id: id.into(), speaker: id_of(speaker), text: format!("text {id}"), timestamp_ms: 1 }
+    }
+
+    fn id_of(slug: &str) -> ParticipantId {
+        ParticipantId::new(slug).unwrap()
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.12
+    #[test]
+    fn select_turns_keeps_the_subjects_turns_of_the_range() {
+        let key = payload(1, 1).key;
+        let session = [turn("t0", "ada"), turn("t1", "bo"), turn("t2", "ada"), turn("t3", "ada")];
+        let picked = select_turns(&key, "t0", "t2", &session, true);
+        assert_eq!(picked.iter().map(|t| t.turn_id.as_str()).collect::<Vec<_>>(), vec!["t0", "t2"]);
+        // A scope that no longer holds the session, an unknown end and a reversed range select none.
+        assert!(select_turns(&key, "t0", "t2", &session, false).is_empty());
+        assert!(select_turns(&key, "t0", "zz", &session, true).is_empty());
+        assert!(select_turns(&key, "t2", "t0", &session, true).is_empty());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.12
+    #[test]
+    fn a_range_after_a_gap_is_held() {
+        let session = [turn("t0", "ada"), turn("t1", "bo"), turn("t2", "ada"), turn("t3", "ada")];
+        let ada = id_of("ada");
+        assert!(!derive_held(&ada, &session, None, "t3"));
+        // The checkpoint covers t0; t2 is the next of ada's turns, t3 skips it.
+        assert!(!derive_held(&ada, &session, Some("t0"), "t2"));
+        assert!(derive_held(&ada, &session, Some("t0"), "t3"));
+        // A checkpoint or first turn that is not ada's turn holds nothing.
+        assert!(!derive_held(&ada, &session, Some("zz"), "t3"));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.12
+    #[test]
+    fn a_repeated_conclusion_names_the_same_claim() {
+        let key = payload(1, 1).key;
+        let a = conclusion_claim_id(&key, "Prefers  tea");
+        assert_eq!(a, conclusion_claim_id(&key, "prefers tea"));
+        assert_ne!(a, conclusion_claim_id(&key, "prefers coffee"));
+        let mut other = key.clone();
+        other.observer = ObserverRef::Participant(id_of("bo"));
+        assert_ne!(a, conclusion_claim_id(&other, "prefers tea"));
+        assert!(a.starts_with("derived:"));
     }
 }

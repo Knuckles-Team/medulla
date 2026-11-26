@@ -16757,6 +16757,19 @@ class MethodParticipant(BaseModel):
     params: MethodParticipantParams
 
 
+class MethodParticipantReadParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: ParticipantReadOp
+
+
+class MethodParticipantRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ParticipantRead"]
+    params: MethodParticipantReadParams
+
+
 class MethodBatch(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18065,6 +18078,7 @@ Method = Annotated[
         MethodWalletKeyTrustGet,
         MethodAssistantProfile,
         MethodParticipant,
+        MethodParticipantRead,
         MethodWorkflowRegistry,
         MethodBatch,
         MethodFinanceAccountProject,
@@ -37364,11 +37378,95 @@ class ParticipantOpSetObservation(BaseModel):
     config: ObservationConfig
 
 
+class ParticipantOpCompleteDerivation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["complete_derivation"]
+    claims_written: Annotated[int, Field(ge=0, le=4294967295)]
+    payload_ref: str
+
+
 ParticipantOp = Annotated[
     ParticipantOpPut
     | ParticipantOpAddMember
     | ParticipantOpPutScope
-    | ParticipantOpSetObservation,
+    | ParticipantOpSetObservation
+    | ParticipantOpCompleteDerivation,
+    Field(discriminator="op"),
+]
+
+
+class DeriveTurn(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    speaker: str
+    text: str
+    timestamp_ms: Annotated[int, Field(ge=0)]
+    turn_id: str
+
+
+class DeriveInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    first_turn_id: str
+    last_turn_id: str
+    max_conclusions: Annotated[int, Field(ge=0, le=4294967295)]
+    observer: ObserverRef
+    scope_id: str
+    session_id: str
+    subject: str
+    turns: list[DeriveTurn]
+
+
+class ParticipantReadOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["get"]
+    participant_id: str
+
+
+class ParticipantReadOpList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["list"]
+
+
+class ParticipantReadOpAsk(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["ask"]
+    question: ParticipantQuestion
+
+
+class ParticipantReadOpCard(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["card"]
+    observer: ObserverRef
+    subject: str
+
+
+class ParticipantReadOpDeriveInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["derive_input"]
+    payload_ref: str
+
+
+class ParticipantReadOpStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["status"]
+    memory_scope: ScopeRef | None = None
+
+
+ParticipantReadOp = Annotated[
+    ParticipantReadOpGet
+    | ParticipantReadOpList
+    | ParticipantReadOpAsk
+    | ParticipantReadOpCard
+    | ParticipantReadOpDeriveInput
+    | ParticipantReadOpStatus,
     Field(discriminator="op"),
 ]
 
@@ -46840,6 +46938,8 @@ __all__ = [
     "MethodAssistantProfileParams",
     "MethodParticipant",
     "MethodParticipantParams",
+    "MethodParticipantRead",
+    "MethodParticipantReadParams",
     "MethodAuditAppend",
     "MethodAuditAppendParams",
     "MethodAuditProveInclusion",

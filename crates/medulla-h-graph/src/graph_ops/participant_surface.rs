@@ -32,7 +32,8 @@ use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_isolation::profile_access::read_stored;
 use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_protocol_types::result_contract::coordination::{
-    ParticipantAddMember, ParticipantPut, ParticipantPutScope, ParticipantSetObservation,
+    ParticipantAddMember, ParticipantCompleteDerivation, ParticipantPut, ParticipantPutScope,
+    ParticipantSetObservation,
 };
 use medulla_types::contract::ResourceId;
 use medulla_work_types::memory::ThreadAnchor;
@@ -91,6 +92,7 @@ pub(super) enum Out {
     Member(Membership),
     Scope(MemoryScope),
     Observation(ObservationConfig),
+    Derivation(medulla_decision_types::memory_events::DerivationCompleted),
 }
 
 fn invalid(detail: impl std::fmt::Display) -> String {
@@ -181,6 +183,17 @@ pub(super) fn admit(
         ParticipantOp::PutScope { scope } => admit_scope(core, tenant_scope, agent_id, scope),
         ParticipantOp::SetObservation { config } => {
             admit_observation(core, tenant_scope, agent_id, config)
+        }
+        ParticipantOp::CompleteDerivation { payload_ref, claims_written } => {
+            let at_ms = authoritative_now_ms();
+            let (write, completed) = super::participant_derive::advance_checkpoint(
+                core,
+                tenant_scope,
+                payload_ref,
+                *claims_written,
+                at_ms,
+            )?;
+            Ok(Admitted { write, out: Out::Derivation(completed) })
         }
     }
 }
@@ -431,6 +444,7 @@ fn payload(out: Out) -> Result<ResultPayload, String> {
         Out::Member(value) => ResultPayload::of::<ParticipantAddMember>(value),
         Out::Scope(value) => ResultPayload::of::<ParticipantPutScope>(value),
         Out::Observation(value) => ResultPayload::of::<ParticipantSetObservation>(value),
+        Out::Derivation(value) => ResultPayload::of::<ParticipantCompleteDerivation>(value),
     }
 }
 
@@ -452,6 +466,16 @@ fn stored_participants(core: &GraphCore, tenant_scope: &str) -> Vec<(String, Par
             read_stored::<Participant>(core, &id, PARTICIPANT_NODE_TYPE, tenant_scope)
                 .map(|participant| (id, participant))
         })
+        .collect()
+}
+
+/// Every participant of `tenant_scope` the principal acts as, in node-id order: the ones it may
+/// read (MEDULLA-DECISION-ENGINE-R655.4). A participant it does not act as reads as absent.
+pub fn readable_participants(core: &GraphCore, tenant_scope: &str, principal: &str) -> Vec<Participant> {
+    stored_participants(core, tenant_scope)
+        .into_iter()
+        .map(|(_, participant)| participant)
+        .filter(|participant| participant.acts_as.iter().any(|name| name == principal))
         .collect()
 }
 
@@ -554,6 +578,17 @@ pub(super) async fn handle(
     };
     let plan = MutationPlan::for_method(&write);
     let owned = write.clone();
+    // A derivation checkpoint is one batch (the checkpoint node and its event node), which the
+    // gateway applies like the memberships of an ingested thread.
+    if let Method::BatchUpdate { operations_msgpack } = write.clone() {
+        return Some(
+            medulla_server_ops::api::ingest::graph::commit_gateway(ctx, &plan, &write, move |core| {
+                medulla_graph_algos::algorithms::batch_update(core, &operations_msgpack)?;
+                payload(out)
+            })
+            .await,
+        );
+    }
     Some(
         super::gateway::commit_gateway_coalescable(ctx, &plan, &write, move |core| {
             medulla_server_mutation::mutation::apply_coalescable_write(core, &owned)?;

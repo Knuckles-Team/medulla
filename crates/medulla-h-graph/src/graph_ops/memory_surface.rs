@@ -154,6 +154,8 @@ pub struct SessionTurn {
     pub memory_id: String,
     /// Who spoke it.
     pub speaker: medulla_work_types::participant::ParticipantId,
+    /// What was said.
+    pub text: String,
 }
 
 /// The turns `tenant` holds for `session_id` that name a speaker, oldest first. A record of
@@ -169,6 +171,7 @@ pub fn session_turns(core: &GraphCore, tenant: &str, session_id: &str) -> Vec<Se
                 timestamp_ms: u64::try_from(record.timestamp_ms).unwrap_or(0),
                 memory_id: record.memory_id.as_str().to_string(),
                 speaker: record.speaker?,
+                text: record.text,
             })
         })
         .collect();

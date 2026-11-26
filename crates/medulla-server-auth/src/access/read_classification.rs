@@ -227,6 +227,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "MemoryExport",
     "MemoryRecall",
     "MineClassifyFit",
+    // MEDULLA-DECISION-ENGINE-R655.4: reads participants, claims' sessions and card nodes of the
+    // projected core, then keeps the verified tenant's.
+    "ParticipantRead",
     "ProcessConformance",
     "MineTopology",
     // t1-grounding-0802 follow-up audit: `medulla_h_graph::pipeline::try_handle` (module doc,

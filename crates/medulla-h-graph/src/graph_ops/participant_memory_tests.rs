@@ -914,3 +914,133 @@ fn profile_refusals_change_no_state() {
     // None of the refusals wrote anything.
     assert_eq!(snapshot(&core), before);
 }
+
+mod derive_worker_proofs {
+    use super::super::memory_surface_tests::{record, store};
+    use super::super::participant_derive::{
+        advance_checkpoint, derive_input, payload_node_id, payload_write, read_checkpoint,
+    };
+    use super::{SCOPE_A, SCOPE_B};
+    use medulla_decision_stats::decision::participant_derive::{DeriveKey, DerivePayload};
+    use medulla_decision_types::claims::ObserverRef;
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_protocol_types::protocol::Method;
+    use medulla_server_mutation::mutation::apply_coalescable_write;
+    use medulla_types::contract::ResourceId;
+    use medulla_work_types::memory::{MemoryRememberRequest, MemoryTier};
+    use medulla_work_types::participant::ParticipantId;
+
+    fn id(slug: &str) -> ParticipantId {
+        ParticipantId::new(slug).unwrap()
+    }
+
+    /// Four turns of session `s1`: ada, bo, ada, ada.
+    fn seed(core: &GraphCore, tenant: &str) {
+        for (n, (turn, speaker)) in [("t0", "ada"), ("t1", "bo"), ("t2", "ada"), ("t3", "ada")].iter().enumerate() {
+            let mut item = record(tenant, turn, MemoryTier::Episodic, &format!("said {turn}"));
+            item.session_id = Some(ResourceId::new("s1").unwrap());
+            item.speaker = Some(id(speaker));
+            item.timestamp_ms = 100 + n as i64;
+            store(core, tenant, &MemoryRememberRequest { record: item, embedding: vec![], episode: None });
+        }
+    }
+
+    fn payload(first: &str, last: &str, turns: u32) -> (DeriveKey, DerivePayload) {
+        let key = DeriveKey {
+            scope_id: String::new(),
+            session_id: "s1".into(),
+            subject: id("ada"),
+            observer: ObserverRef::System,
+        };
+        let payload = DerivePayload {
+            key: key.clone(),
+            first_turn_id: first.into(),
+            last_turn_id: last.into(),
+            turns,
+            task_id: format!("task-{first}"),
+            last_turn_ms: 103,
+            due_at_ms: 103,
+        };
+        (key, payload)
+    }
+
+    fn put_payload(core: &GraphCore, tenant: &str, payload: &DerivePayload) -> String {
+        let node_id = payload_node_id(tenant, &payload.key);
+        let write = payload_write(tenant, &node_id, payload).unwrap();
+        apply_coalescable_write(core, &write).unwrap();
+        node_id
+    }
+
+    fn apply(core: &GraphCore, write: &Method) {
+        let Method::BatchUpdate { operations_msgpack } = write else {
+            panic!("the checkpoint is one batch");
+        };
+        medulla_graph_algos::algorithms::batch_update(core, operations_msgpack).unwrap();
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.12
+    #[test]
+    fn derive_job_writes_claims_with_turn_evidence() {
+        let core = GraphCore::new();
+        seed(&core, SCOPE_A);
+        seed(&core, SCOPE_B);
+        let (key, first_range) = payload("t0", "t2", 2);
+        let node = put_payload(&core, SCOPE_A, &first_range);
+
+        // The worker reads only the subject's turns of the range, in order, with their ids.
+        let input = derive_input(&core, SCOPE_A, &node).unwrap();
+        assert_eq!(input.subject, id("ada"));
+        assert_eq!(input.observer, ObserverRef::System);
+        let ids: Vec<&str> = input.turns.iter().map(|turn| turn.turn_id.as_str()).collect();
+        assert_eq!(ids, ["t0", "t2"]);
+        assert!(input.max_conclusions >= 1);
+
+        // Completing the range writes the checkpoint and one event node in one batch.
+        let (write, completed) = advance_checkpoint(&core, SCOPE_A, &node, 2, 500).unwrap();
+        assert_eq!(completed.claims_written, 2);
+        assert_eq!(completed.last_turn_id, "t2");
+        apply(&core, write.as_ref().expect("a new range writes"));
+        assert_eq!(read_checkpoint(&core, SCOPE_A, &key).unwrap().last_turn_id, "t2");
+        let events: Vec<String> = core
+            .node_ids()
+            .into_iter()
+            .filter(|node| node.starts_with("memory-event:"))
+            .collect();
+        assert_eq!(events.len(), 1);
+        // Completing the same range again writes nothing.
+        assert!(advance_checkpoint(&core, SCOPE_A, &node, 2, 600).unwrap().0.is_none());
+        // More conclusions than the knob allows is refused and changes nothing.
+        let (_, next) = payload("t3", "t3", 1);
+        let next_node = put_payload(&core, SCOPE_A, &next);
+        let over = advance_checkpoint(&core, SCOPE_A, &next_node, u32::MAX, 700).unwrap_err();
+        assert!(over.starts_with("DERIVE_CONCLUSION_LIMIT: "), "{over}");
+        assert_eq!(read_checkpoint(&core, SCOPE_A, &key).unwrap().last_turn_id, "t2");
+
+        // Another tenant reads the payload as absent, on both operations.
+        let foreign = derive_input(&core, SCOPE_B, &node).unwrap_err();
+        assert!(foreign.starts_with("DERIVE_PAYLOAD_NOT_FOUND: "), "{foreign}");
+        assert!(advance_checkpoint(&core, SCOPE_B, &node, 1, 1).is_err());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R651.12
+    #[test]
+    fn a_range_after_a_gap_is_held_and_writes_nothing() {
+        let core = GraphCore::new();
+        seed(&core, SCOPE_A);
+        let (key, first) = payload("t0", "t0", 1);
+        let first_node = put_payload(&core, SCOPE_A, &first);
+        let (write, _) = advance_checkpoint(&core, SCOPE_A, &first_node, 1, 10).unwrap();
+        apply(&core, write.as_ref().unwrap());
+
+        // ada's next turn is t2; a range that starts at t3 skips it.
+        let (_, skipping) = payload("t3", "t3", 1);
+        let node = put_payload(&core, SCOPE_A, &skipping);
+        let before: Vec<String> = core.node_ids();
+        let held = derive_input(&core, SCOPE_A, &node).unwrap_err();
+        assert!(held.starts_with("DERIVE_ORDER_HELD: "), "{held}");
+        let held = advance_checkpoint(&core, SCOPE_A, &node, 1, 20).unwrap_err();
+        assert!(held.starts_with("DERIVE_ORDER_HELD: "), "{held}");
+        assert_eq!(core.node_ids().len(), before.len());
+        assert_eq!(read_checkpoint(&core, SCOPE_A, &key).unwrap().last_turn_id, "t0");
+    }
+}
