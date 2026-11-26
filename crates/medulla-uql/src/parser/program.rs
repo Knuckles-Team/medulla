@@ -15,9 +15,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_query_types::wire::{Op, Plan};
 
 use super::Parser;
-use crate::diag::{UqlCode, UqlError, UqlWarnCode, UqlWarning};
+use crate::diag::{UqlError, UqlWarnCode, UqlWarning};
 use crate::grammar::{role_of, Role};
 use crate::lexer::Tok;
+use medulla_types::contract::UqlCode;
 
 /// The only UQL language version this parser speaks.
 pub const UQL_VERSION: u32 = 1;

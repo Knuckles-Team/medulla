@@ -5,8 +5,9 @@
 use medulla_query_types::series_expr::{SeriesExpr, SeriesFunc};
 
 use super::Parser;
-use crate::diag::{UqlCode, UqlError};
+use crate::diag::UqlError;
 use crate::lexer::Tok;
+use medulla_types::contract::UqlCode;
 
 /// What a `DERIVE` column may read besides `v0..vk` and declared aliases.
 const SCORE_CHANNEL: &str = "score";

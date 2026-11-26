@@ -1,8 +1,9 @@
 //! Token cursor: lookahead, consumption, expectations and nesting depth.
 
 use super::{Parser, MAX_DEPTH};
-use crate::diag::{UqlCode, UqlError};
+use crate::diag::UqlError;
 use crate::lexer::Tok;
+use medulla_types::contract::UqlCode;
 
 impl Parser<'_> {
     pub(super) fn peek_kind(&self) -> Option<&Tok> {

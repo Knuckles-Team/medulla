@@ -9,7 +9,8 @@ use medulla_numeric::series::{apply, Rolling, Shift, Smoothing, Spec, State};
 use crate::uql::serve::run_statement;
 use medulla_exec::exec::PlanCtx;
 use medulla_exec::exec::StagedSeries;
-use medulla_uql::{parse_statement, Params, UqlCode};
+use medulla_types::contract::UqlCode;
+use medulla_uql::{parse_statement, Params};
 
 const ONE_S: i64 = 1_000_000_000;
 

@@ -4,8 +4,9 @@
 use medulla_query_types::wire::{EdgeDir, LayerWeight, Op, PropagateModel, RiskHistorySpec};
 
 use super::Parser;
-use crate::diag::{UqlCode, UqlError};
+use crate::diag::UqlError;
 use crate::lexer::Tok;
+use medulla_types::contract::UqlCode;
 
 /// `PROPAGATE` without `HOPS`.
 const PROPAGATE_DEFAULT_HOPS: usize = 8;
@@ -224,7 +225,8 @@ impl<'a> Parser<'a> {
 mod tests {
     use medulla_query_types::wire::{uql_op, LayerWeight, Op};
 
-    use crate::{parse, UqlCode};
+    use crate::parse;
+    use medulla_types::contract::UqlCode;
 
     const HISTORY: &str = "RISK HISTORY 'deploys' WINDOW 1700000000000 TO 1702592000000 \
                            LAYERS ('service' 1, 'os' 0.5, 'hardware' 0.25)";

@@ -114,7 +114,8 @@ mod served {
 #[cfg(not(feature = "numeric"))]
 #[test]
 fn a_build_without_numeric_refuses_the_stage_by_feature() {
-    use medulla_uql::{parse_statement, Params, UqlCode};
+    use medulla_types::contract::UqlCode;
+    use medulla_uql::{parse_statement, Params};
     let error = parse_statement(
         "MATCH (:Service) |> ATTRIBUTE SUM OF latency_ms LINEAR",
         &Params::new(),

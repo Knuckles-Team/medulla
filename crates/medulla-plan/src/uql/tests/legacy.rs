@@ -1,7 +1,8 @@
 //! The pre-UQL-01 UQL surface tests, kept as the compatibility contract.
 
 use medulla_query_types::wire::{EdgeDir, Op, Plan, Pred, TimeAxis};
-use medulla_uql::{parse, UqlCode};
+use medulla_types::contract::UqlCode;
+use medulla_uql::parse;
 
 /// THE faithfulness proof: the documented pipeline query parses to the BYTE-
 /// IDENTICAL Plan a hand-built test constructs — the same AST the oracle test in

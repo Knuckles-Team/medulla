@@ -10,8 +10,9 @@ use std::str::FromStr;
 use medulla_query_types::wire::{PredLiteral, UqlParam};
 
 use super::Parser;
-use crate::diag::{UqlCode, UqlError};
+use crate::diag::UqlError;
 use crate::lexer::Tok;
+use medulla_types::contract::UqlCode;
 
 /// A literal-position expectation, for parameter type errors.
 #[derive(Clone, Copy)]

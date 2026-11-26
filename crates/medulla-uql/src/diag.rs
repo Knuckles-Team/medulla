@@ -6,7 +6,7 @@ use super::lexer::{LexError, LexErrorKind};
 
 /// The closed diagnostic vocabulary is owned by the wire contract so the
 /// planner, response boundary, and generated API cannot drift.
-pub use medulla_types::contract::UqlCode;
+use medulla_types::contract::UqlCode;
 
 /// Every UQL diagnostic code, in canonical declaration order.
 pub const ALL_CODES: &[UqlCode] = UqlCode::ALL;

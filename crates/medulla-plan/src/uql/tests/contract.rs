@@ -10,9 +10,10 @@
 use std::collections::BTreeSet;
 
 use medulla_query_types::wire::{OpKind, UQL_RESERVED_WORDS};
+use medulla_types::contract::UqlCode;
 use medulla_uql::grammar::{self, Feature, PRODUCTIONS};
 use medulla_uql::parser::Parser;
-use medulla_uql::{parse_statement, Params, UqlCode, UqlError};
+use medulla_uql::{parse_statement, Params, UqlError};
 
 /// Variants with NO text spelling, each with the diagnostic a caller gets. EMPTY: every
 /// wire variant is expressible in UQL. (Credential-bearing `ForeignScan` SPECS are refused

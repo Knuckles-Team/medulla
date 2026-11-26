@@ -26,9 +26,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_query_types::wire::Op;
 
-use super::diag::{UqlCode, UqlError, UqlWarning};
+use super::diag::{UqlError, UqlWarning};
 use super::lexer::Token;
 use super::Params;
+use medulla_types::contract::UqlCode;
 
 /// Recognize a feature-gated parse method: the real body under the feature, a
 /// `UQL_FEATURE_NOT_IN_BUILD` refusal without it. One rule for every gated clause.

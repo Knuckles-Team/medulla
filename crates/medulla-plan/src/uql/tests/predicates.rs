@@ -1,7 +1,8 @@
 //! The predicate algebra (UQL-01): operators, precedence, typed literals.
 
 use medulla_query_types::wire::{CmpOp, JsonPathOp, Op, Pred, PredLiteral};
-use medulla_uql::{parse, UqlCode};
+use medulla_types::contract::UqlCode;
+use medulla_uql::parse;
 
 fn preds(where_body: &str) -> Vec<Pred> {
     match parse(&format!("MATCH () |> WHERE {where_body}"))

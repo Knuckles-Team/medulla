@@ -4,8 +4,9 @@
 use medulla_query_types::wire::{CompanyCategory, Op, TimeAxis, UsageView};
 
 use super::Parser;
-use crate::diag::{UqlCode, UqlError};
+use crate::diag::UqlError;
 use crate::lexer::Tok;
+use medulla_types::contract::UqlCode;
 
 /// `WINDOW` units → seconds, as (spellings, numerator, denominator): `secs = n * num / den`
 /// (a sub-second unit DIVIDES, so `5 ms` is the correctly-rounded `0.005`).
@@ -105,7 +106,7 @@ impl<'a> Parser<'a> {
         let word = self.name("a company category")?;
         let Some(category) = CompanyCategory::from_name(&word) else {
             return Err(UqlError::new(
-                crate::diag::UqlCode::CompanyCategory,
+                medulla_types::contract::UqlCode::CompanyCategory,
                 format!("`{word}` is not a company category"),
                 span,
             )
@@ -287,7 +288,7 @@ impl<'a> Parser<'a> {
             && chars.all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_');
         if !valid {
             return Err(UqlError::new(
-                crate::diag::UqlCode::RequireCodeInvalid,
+                medulla_types::contract::UqlCode::RequireCodeInvalid,
                 format!("`{code}` is not a refusal code"),
                 span,
             )

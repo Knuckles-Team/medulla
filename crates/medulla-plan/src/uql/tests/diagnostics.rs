@@ -1,6 +1,7 @@
 //! Structured diagnostics (UQL-02): codes, spans, expected sets, multi-line carets.
 
-use medulla_uql::{parse, UqlCode, ALL_CODES};
+use medulla_types::contract::UqlCode;
+use medulla_uql::{parse, ALL_CODES};
 
 // spec: MEDULLA-FEDERATED-QUERY-R064
 #[test]

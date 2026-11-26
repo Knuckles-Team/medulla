@@ -66,7 +66,7 @@ impl Parser<'_> {
             let word = self.name("an EVALUATE kernel")?;
             let Some(kernel) = evaluate_kernel(&word) else {
                 return Err(UqlError::new(
-                    crate::diag::UqlCode::EvaluateKernel,
+                    medulla_types::contract::UqlCode::EvaluateKernel,
                     format!("`{word}` is not an EVALUATE kernel"),
                     span,
                 )
@@ -102,7 +102,8 @@ mod tests {
     use medulla_query_types::series_expr::{EvaluateOp, EVALUATE_KERNELS};
     use medulla_query_types::wire::{uql_op, Op};
 
-    use crate::{parse, UqlCode};
+    use crate::parse;
+    use medulla_types::contract::UqlCode;
 
     fn spelling(kernel: &str) -> String {
         let k = EVALUATE_KERNELS.iter().find(|k| k.name == kernel).unwrap();

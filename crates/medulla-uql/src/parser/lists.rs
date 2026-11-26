@@ -4,8 +4,9 @@ use medulla_query_types::wire::{PredLiteral, UqlParam};
 
 use super::literal::Want;
 use super::Parser;
-use crate::diag::{UqlCode, UqlError};
+use crate::diag::UqlError;
 use crate::lexer::Tok;
+use medulla_types::contract::UqlCode;
 
 impl<'a> Parser<'a> {
     /// `"[" item { "," item } "]"` (possibly empty).

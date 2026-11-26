@@ -1,7 +1,8 @@
 //! Error positioning and warnings: spans, source text, typed diagnostics.
 
 use super::Parser;
-use crate::diag::{UqlCode, UqlError, UqlWarning};
+use crate::diag::{UqlError, UqlWarning};
+use medulla_types::contract::UqlCode;
 
 impl<'a> Parser<'a> {
     /// Span of the current token (or end of input).
