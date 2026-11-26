@@ -111,6 +111,7 @@ fn node_type(state: &test_support::SharedState, id: &str) -> Option<String> {
         .map(str::to_string)
 }
 
+// proves R702.9: Process document import wiring
 // spec: MEDULLA-CQ-ORCH-R702.9
 #[tokio::test(flavor = "multi_thread")]
 async fn import_writes_model_in_one_batch() {
@@ -163,6 +164,7 @@ async fn import_writes_model_in_one_batch() {
     assert_eq!(core_version(&state), version, "a refusal writes nothing");
 }
 
+// proves R702.10: BPMN export wiring
 // spec: MEDULLA-CQ-ORCH-R702.10
 #[tokio::test(flavor = "multi_thread")]
 async fn export_reads_model_and_workflow() {
@@ -305,6 +307,7 @@ async fn export_reads_model_and_workflow() {
     assert_eq!(core_version(&state), version);
 }
 
+// proves R702.11: DMN export wiring
 // spec: MEDULLA-CQ-ORCH-R702.11
 #[tokio::test(flavor = "multi_thread")]
 async fn dmn_export_reads_definitions() {
@@ -374,6 +377,7 @@ async fn dmn_export_reads_definitions() {
     }
 }
 
+// proves R702.12: Process document refusal
 // spec: MEDULLA-CQ-ORCH-R702.12
 #[tokio::test(flavor = "multi_thread")]
 async fn document_refusals_leave_state_unchanged() {
@@ -424,6 +428,7 @@ async fn document_refusals_leave_state_unchanged() {
     assert_eq!(core_version(&state), before, "a refusal writes nothing");
 }
 
+// proves R702.13: Process document evidence
 // spec: MEDULLA-CQ-ORCH-R702.13
 #[tokio::test(flavor = "multi_thread")]
 async fn model_keeps_document_and_canonical_digests() {

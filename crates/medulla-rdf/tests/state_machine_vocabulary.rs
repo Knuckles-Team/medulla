@@ -835,6 +835,7 @@ fn broker_message_machine_classes_extend_core() {
     sm::assert_extends_core("BrokerMessage");
 }
 
+// proves R811.2: Describe the analytics job machine in the ontology
 // spec: MEDULLA-CQ-ORCH-R811.2
 #[test]
 fn analytics_job_machine_matches_edge_table() {

@@ -189,6 +189,7 @@ def test_bpmn_round_trip_keeps_digest(clean_graph):
     assert second["document_digest"] == first["document_digest"]
 
 
+# proves R702.15: DMN round-trip hot-path proof
 @pytest.mark.spec("MEDULLA-CQ-ORCH-R702.15")
 def test_dmn_round_trip_keeps_digest(clean_graph):
     # spec: MEDULLA-CQ-ORCH-R702.15

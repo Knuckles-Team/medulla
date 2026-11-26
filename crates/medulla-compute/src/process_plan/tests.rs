@@ -203,6 +203,7 @@ fn assigned(tool: &str, rank: u32, relevance_micros: i64) -> AssignedTool {
     }
 }
 
+// proves R704.3: Ranked fallback for unbound steps
 // spec: MEDULLA-CQ-ORCH-R704.3
 #[test]
 fn ranked_fallback_respects_min_score() {

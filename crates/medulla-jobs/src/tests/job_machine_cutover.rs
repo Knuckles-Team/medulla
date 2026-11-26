@@ -15,6 +15,7 @@ fn writer_source(text: &str) -> &str {
 
 // spec: MEDULLA-CQ-ORCH-R811.3
 
+// proves R811.3: Route the sixteen job writers through step, site by site
 #[test]
 fn no_site_sets_state_outside_step() {
     for (name, text) in [

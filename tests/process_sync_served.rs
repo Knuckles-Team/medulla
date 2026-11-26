@@ -109,6 +109,7 @@ async fn import_model(state: &test_support::SharedState, id: u64) {
     );
 }
 
+// proves R703.3: Process sync and deploy wiring
 // spec: MEDULLA-CQ-ORCH-R703.3
 #[tokio::test(flavor = "multi_thread")]
 async fn deploy_queues_one_proposal_with_the_document_digest() {
@@ -169,6 +170,7 @@ async fn deploy_queues_one_proposal_with_the_document_digest() {
     assert_eq!(again.queued, report.queued);
 }
 
+// proves R703.4: Process sync refusal
 // spec: MEDULLA-CQ-ORCH-R703.4
 #[tokio::test(flavor = "multi_thread")]
 async fn sync_refusals_queue_nothing() {

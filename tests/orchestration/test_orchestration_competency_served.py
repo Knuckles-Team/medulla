@@ -438,6 +438,7 @@ def _select(query: str):
     return run
 
 
+# proves R008.4: Composed ingest fixture
 @pytest.mark.spec("MEDULLA-CQ-ORCH-R008.4")
 def test_fixture_ingest_produces_expected_part_rows() -> None:
     templates = json.loads((COMPOSED / "templates.json").read_text(encoding="utf-8"))
@@ -773,6 +774,7 @@ def _provision_declared_types(graph, tag: str) -> dict[str, tuple[int, bool]]:
     return types
 
 
+# proves R011.2: Downtime next-job question
 @pytest.mark.spec("MEDULLA-CQ-ORCH-R011.2")
 def test_q11_downtime_next(clean_graph) -> None:
     tag = uuid.uuid4().hex[:8]
@@ -878,6 +880,7 @@ def test_q11_best_plan(clean_graph, pg_source) -> None:  # noqa: F811
     assert _explain_kept(clean_graph, connector_b) == []
 
 
+# proves R011.6: Job, downtime and plan hot-path proof
 @pytest.mark.spec("MEDULLA-CQ-ORCH-R011.6")
 def test_q11_all_five_questions_after_connector_import(clean_graph, pg_source) -> None:  # noqa: F811
     """The five questions of R011.1 to R011.5, one session: each answer is non-empty and
