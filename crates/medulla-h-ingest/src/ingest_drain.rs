@@ -4,12 +4,17 @@
 //! page checkpoint, the sums of the acks, the state) is the graph node `source_drain:<id>`; this
 //! module holds the pure decisions and the node mapping, and the served handlers read and write
 //! the node through the graph client. Nothing here reads a clock or a store.
+//!
+//! The ack order is node, then task ack, then next-page enqueue (the node write is idempotent on
+//! the page cursor). A crash between two steps leaves a state the next step or the recovery pass
+//! completes: the worker's retry of the ack is a [`DrainAckOutcome::Replay`], and the scheduler
+//! tick re-enqueues the page of a Running drain that has no task (`medulla_source_types::ingest_job::recovery_page`).
 
 use medulla_ingestion_types::ingest_drain::{
     drain_node_id, DrainAck, DrainAckError, DrainHandle, DrainRecord, DrainState, DrainStatus,
     IngestDrainError, PageCheckpoint,
 };
-use medulla_source_types::ingest_job::{IngestJobEnvelope, IngestJobKind};
+use medulla_source_types::ingest_job::{drain_page_envelope, IngestJobEnvelope};
 use medulla_types::contract::Digest256;
 use serde_json::{json, Map, Value};
 
@@ -35,6 +40,9 @@ pub struct StartedDrain {
 pub enum DrainAckOutcome {
     /// The ack is below the stored checkpoint or the drain is closed: nothing is enqueued or written.
     Stale,
+    /// The node already holds this ack (the node was written, the task ack or the enqueue did not
+    /// finish): write nothing, ack the task and enqueue `next` when the drain is still Running.
+    Replay { next: Option<IngestJobEnvelope> },
     /// The drain moved to the next page: write `record`, enqueue `next`.
     Advanced {
         record: DrainRecord,
@@ -63,22 +71,6 @@ pub fn drain_id(tenant: &str, connector: &str, stream: &str, mode: &str, now_ms:
 
 fn blank(value: &str) -> bool {
     value.trim().is_empty() || value.contains('/')
-}
-
-/// The envelope of the page `checkpoint` of the drain `record` describes.
-pub fn page_envelope(
-    record: &DrainRecord,
-    checkpoint: PageCheckpoint,
-) -> IngestJobEnvelope {
-    IngestJobEnvelope {
-        job_id: format!("drain:{}:{}", record.drain_id, checkpoint.page_index()),
-        tenant: record.tenant.clone(),
-        corpus_key: record.connector.clone(),
-        kind: IngestJobKind::Document,
-        target: format!("drain:{}/{}/{}", record.connector, record.stream, record.mode),
-        attempt: 1,
-        page: Some(checkpoint),
-    }
 }
 
 /// Start a drain: the handle, the record at page 0 and the envelope of page 0. `graph` is the
@@ -117,7 +109,7 @@ pub fn start_drain(
         updated_at_ms: now_ms,
     };
     let checkpoint = record.checkpoint().map_err(|error| error.to_string())?;
-    let first_page = page_envelope(&record, checkpoint);
+    let first_page = drain_page_envelope(&record, checkpoint);
     Ok(StartedDrain {
         handle,
         record,
@@ -127,16 +119,20 @@ pub fn start_drain(
 
 /// Decide the ack of page `page` of `record`. A completed ack with `next_cursor` advances to page
 /// `page_index + 1` with that cursor, one without closes the drain. A page below the stored
-/// checkpoint is `Stale` (MEDULLA-INGEST-WORKER-R605.4). `max_items` is `ingest.drain_page_records`.
+/// checkpoint is `Stale` (MEDULLA-INGEST-WORKER-R605.4), unless the caller still holds the live
+/// lease of the page task (`lease_held`) and the ack is the one the node already holds: that is a
+/// retry after a crash between the node write and the task ack, and it is a `Replay`.
+/// `max_items` is `ingest.drain_page_records`.
 pub fn on_ingest_drain_ack(
     record: &DrainRecord,
     page: &PageCheckpoint,
     ack: &DrainAck,
     max_items: u64,
     now_ms: i64,
+    lease_held: bool,
 ) -> Result<DrainAckOutcome, IngestDrainError> {
     match record.after_ack(page.page_index(), ack, max_items, now_ms) {
-        Err(DrainAckError::Stale { .. }) => Ok(DrainAckOutcome::Stale),
+        Err(DrainAckError::Stale { .. }) => replay_of(record, page, ack, lease_held),
         Err(DrainAckError::Invalid(error)) => Err(error),
         Err(too_large @ DrainAckError::PageTooLarge { .. }) => {
             // Reported as an invalid ack by the handler; the model error has no cursor/graph fault.
@@ -144,7 +140,7 @@ pub fn on_ingest_drain_ack(
         }
         Ok(next) if next.state == DrainState::Running => {
             let checkpoint = next.checkpoint()?;
-            let envelope = page_envelope(&next, checkpoint);
+            let envelope = drain_page_envelope(&next, checkpoint);
             Ok(DrainAckOutcome::Advanced {
                 record: next,
                 next: envelope,
@@ -152,6 +148,83 @@ pub fn on_ingest_drain_ack(
         }
         Ok(next) => Ok(DrainAckOutcome::Closed { record: next }),
     }
+}
+
+/// One effect of a drain ack, in the order the handler runs them.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum DrainAckStep {
+    /// Store the record as the drain node (idempotent on the page cursor).
+    WriteNode(DrainRecord),
+    /// Ack the page task through the task-queue handler (its lease check refuses a foreign or
+    /// lapsed ack).
+    AckTask,
+    /// Enqueue the next page under its deterministic task id.
+    EnqueuePage(IngestJobEnvelope),
+}
+
+/// The ordered effects of an ack decision (MEDULLA-INGEST-WORKER-R605.2): node, then task ack,
+/// then next page. A caller that does not hold the lease acks the task first, so the task ack
+/// refuses it before any write. A `Stale` decision has no effect. A handler runs the steps in
+/// order and stops at the first failure; every prefix is a state the retry or the recovery pass
+/// completes.
+pub fn drain_ack_plan(outcome: &DrainAckOutcome, lease_held: bool) -> Vec<DrainAckStep> {
+    let ordered = |record: &DrainRecord, next: Option<&IngestJobEnvelope>| {
+        let mut steps = if lease_held {
+            vec![DrainAckStep::WriteNode(record.clone()), DrainAckStep::AckTask]
+        } else {
+            vec![DrainAckStep::AckTask, DrainAckStep::WriteNode(record.clone())]
+        };
+        if let Some(next) = next {
+            steps.push(DrainAckStep::EnqueuePage(next.clone()));
+        }
+        steps
+    };
+    match outcome {
+        DrainAckOutcome::Stale => Vec::new(),
+        DrainAckOutcome::Advanced { record, next } => ordered(record, Some(next)),
+        DrainAckOutcome::Closed { record } => ordered(record, None),
+        DrainAckOutcome::Replay { next } => {
+            let mut steps = vec![DrainAckStep::AckTask];
+            if let Some(next) = next {
+                steps.push(DrainAckStep::EnqueuePage(next.clone()));
+            }
+            steps
+        }
+    }
+}
+
+/// A stale ack is a replay when the page task is still leased to the caller and the node holds
+/// exactly this ack: the next cursor of a Running drain, the close of a Complete one.
+fn replay_of(
+    record: &DrainRecord,
+    page: &PageCheckpoint,
+    ack: &DrainAck,
+    lease_held: bool,
+) -> Result<DrainAckOutcome, IngestDrainError> {
+    if !lease_held || ack.validate().is_err() {
+        return Ok(DrainAckOutcome::Stale);
+    }
+    let index = page.page_index();
+    let recorded = match record.state {
+        DrainState::Running => {
+            index.saturating_add(1) == record.page_index
+                && ack.next_cursor.as_deref() == Some(record.cursor.as_str())
+        }
+        DrainState::Complete => {
+            index == record.page_index
+                && index.saturating_add(1) == record.pages
+                && ack.next_cursor.is_none()
+        }
+        _ => false,
+    };
+    if !recorded {
+        return Ok(DrainAckOutcome::Stale);
+    }
+    let next = match record.state {
+        DrainState::Running => Some(drain_page_envelope(record, record.checkpoint()?)),
+        _ => None,
+    };
+    Ok(DrainAckOutcome::Replay { next })
 }
 
 /// The `upsert_node` operation that stores `record` under `source_drain:<id>`, stamped with the
@@ -192,6 +265,7 @@ pub fn drain_status(record: &DrainRecord, tenant: &str) -> Option<DrainStatus> {
 mod tests {
     use super::*;
     use medulla_ingestion_types::ingest_drain::StageProfile;
+    use medulla_source_types::ingest_job::recovery_page;
     use medulla_types::ingest_throughput::IngestStage;
 
     fn started() -> StartedDrain {
@@ -222,7 +296,7 @@ mod tests {
             }],
         };
         let DrainAckOutcome::Advanced { record, next } =
-            on_ingest_drain_ack(&drain.record, &page0, &ack, 500, 2_000).unwrap()
+            on_ingest_drain_ack(&drain.record, &page0, &ack, 500, 2_000, true).unwrap()
         else {
             panic!("a cursor advances the drain");
         };
@@ -234,7 +308,7 @@ mod tests {
         );
         // The same ack again is stale and changes nothing.
         assert_eq!(
-            on_ingest_drain_ack(&record, &page0, &ack, 500, 2_001).unwrap(),
+            on_ingest_drain_ack(&record, &page0, &ack, 500, 2_001, false).unwrap(),
             DrainAckOutcome::Stale
         );
         // No cursor closes the drain.
@@ -244,12 +318,174 @@ mod tests {
             profile: Vec::new(),
         };
         let DrainAckOutcome::Closed { record } =
-            on_ingest_drain_ack(&record, &next_page, &close, 500, 3_000).unwrap()
+            on_ingest_drain_ack(&record, &next_page, &close, 500, 3_000, true).unwrap()
         else {
             panic!("no cursor closes the drain");
         };
         assert_eq!(record.state, DrainState::Complete);
         assert_eq!((record.pages, record.items), (2, 11));
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R605.2
+    /// Verifies MEDULLA-INGEST-WORKER-R605.2: a retry after a crash between the node write and the
+    /// task ack replays, and the recovery pass names the page a Running drain waits on.
+    #[test]
+    fn a_retry_of_a_recorded_ack_replays_and_a_running_drain_names_its_page() {
+        let drain = started();
+        let page0 = drain.first_page.page.clone().unwrap();
+        let ack = DrainAck {
+            items: 10,
+            next_cursor: Some("c1".into()),
+            profile: Vec::new(),
+        };
+        let DrainAckOutcome::Advanced { record, next } =
+            on_ingest_drain_ack(&drain.record, &page0, &ack, 500, 2_000, true).unwrap()
+        else {
+            panic!("a cursor advances the drain");
+        };
+        // The node holds the ack; the task ack never happened. The worker retries while it still
+        // holds the lease: replay, and the next page is the one the first attempt would enqueue.
+        assert_eq!(
+            on_ingest_drain_ack(&record, &page0, &ack, 500, 2_100, true).unwrap(),
+            DrainAckOutcome::Replay { next: Some(next.clone()) }
+        );
+        // Without the lease, or with a different cursor, the ack is stale.
+        assert_eq!(
+            on_ingest_drain_ack(&record, &page0, &ack, 500, 2_100, false).unwrap(),
+            DrainAckOutcome::Stale
+        );
+        let other = DrainAck { next_cursor: Some("c9".into()), ..ack.clone() };
+        assert_eq!(
+            on_ingest_drain_ack(&record, &page0, &other, 500, 2_100, true).unwrap(),
+            DrainAckOutcome::Stale
+        );
+        // The recovery pass names the same page task.
+        assert_eq!(recovery_page(&record).unwrap(), Some(next.clone()));
+        // A closed drain replays its closing ack with nothing to enqueue and has no recovery page.
+        let page1 = next.page.clone().unwrap();
+        let close = DrainAck { items: 1, next_cursor: None, profile: Vec::new() };
+        let DrainAckOutcome::Closed { record: closed } =
+            on_ingest_drain_ack(&record, &page1, &close, 500, 3_000, true).unwrap()
+        else {
+            panic!("no cursor closes the drain");
+        };
+        assert_eq!(
+            on_ingest_drain_ack(&closed, &page1, &close, 500, 3_100, true).unwrap(),
+            DrainAckOutcome::Replay { next: None }
+        );
+        assert_eq!(recovery_page(&closed).unwrap(), None);
+    }
+
+    /// The failable substrate of a drain: the node, the page tasks and the queue as the handler
+    /// sees them, with one step that can be made to fail (the crash).
+    struct Substrate {
+        node: DrainRecord,
+        /// Task ids with their state: `true` is acked, `false` is leased to the worker.
+        tasks: std::collections::BTreeMap<String, bool>,
+        steps_run: usize,
+        crash_at: Option<usize>,
+    }
+
+    impl Substrate {
+        fn new(drain: &StartedDrain) -> Self {
+            let mut tasks = std::collections::BTreeMap::new();
+            tasks.insert(medulla_source_types::ingest_job::task_id(&drain.first_page), false);
+            Self { node: drain.record.clone(), tasks, steps_run: 0, crash_at: None }
+        }
+
+        fn lease_held(&self, page: &IngestJobEnvelope) -> bool {
+            self.tasks.get(&medulla_source_types::ingest_job::task_id(page)) == Some(&false)
+        }
+
+        /// Run the plan of one ack; `Err` is the injected crash, after which nothing else runs.
+        fn run(&mut self, page: &IngestJobEnvelope, plan: &[DrainAckStep]) -> Result<(), ()> {
+            for step in plan {
+                if self.crash_at == Some(self.steps_run) {
+                    self.crash_at = None;
+                    return Err(());
+                }
+                self.steps_run += 1;
+                match step {
+                    DrainAckStep::WriteNode(record) => self.node = record.clone(),
+                    DrainAckStep::AckTask => {
+                        self.tasks.insert(medulla_source_types::ingest_job::task_id(page), true);
+                    }
+                    DrainAckStep::EnqueuePage(next) => {
+                        self.tasks
+                            .entry(medulla_source_types::ingest_job::task_id(next))
+                            .or_insert(false);
+                    }
+                }
+            }
+            Ok(())
+        }
+
+        /// The scheduler tick's recovery pass: enqueue the page a Running drain waits on.
+        fn recover(&mut self) {
+            if let Some(page) = recovery_page(&self.node).unwrap() {
+                self.tasks
+                    .entry(medulla_source_types::ingest_job::task_id(&page))
+                    .or_insert(false);
+            }
+        }
+    }
+
+    // spec: MEDULLA-INGEST-WORKER-R605.2
+    /// Verifies MEDULLA-INGEST-WORKER-R605.2 (the ack order and the recovery pass): a crash
+    /// injected before each step of a page ack never stalls the drain. Either the worker's retry
+    /// replays the ack or the recovery pass enqueues the page, and the drain ends Complete with
+    /// each page counted once.
+    #[test]
+    fn a_crash_between_ack_steps_never_stalls_the_drain() {
+        for crash_at in 0..3 {
+            for recover_before_retry in [false, true] {
+                let drain = started();
+                let mut world = Substrate::new(&drain);
+                let acks = [
+                    DrainAck { items: 10, next_cursor: Some("c1".into()), profile: Vec::new() },
+                    DrainAck { items: 5, next_cursor: None, profile: Vec::new() },
+                ];
+                let mut page = drain.first_page.clone();
+                for (index, ack) in acks.iter().enumerate() {
+                    let now_ms = 2_000 + index as i64 * 100;
+                    if index == 0 {
+                        world.crash_at = Some(crash_at);
+                    }
+                    let attempt = |world: &mut Substrate, now: i64| {
+                        let held = world.lease_held(&page);
+                        let outcome = on_ingest_drain_ack(
+                            &world.node,
+                            page.page.as_ref().unwrap(),
+                            ack,
+                            500,
+                            now,
+                            held,
+                        )
+                        .unwrap();
+                        let plan = drain_ack_plan(&outcome, held);
+                        world.run(&page, &plan)
+                    };
+                    if attempt(&mut world, now_ms).is_err() {
+                        // The crash: the engine restarts, the tick may run its recovery pass, and
+                        // the worker retries the ack while it still holds the lease.
+                        if recover_before_retry {
+                            world.recover();
+                        }
+                        attempt(&mut world, now_ms + 1).expect("the retry has no crash left");
+                    }
+                    // Whatever the crash point, the page the drain waits on has a task now.
+                    world.recover();
+                    if let Some(waiting) = recovery_page(&world.node).unwrap() {
+                        page = waiting;
+                        assert!(world.tasks.contains_key(&medulla_source_types::ingest_job::task_id(&page)));
+                    }
+                }
+                assert_eq!(world.node.state, DrainState::Complete, "crash {crash_at}");
+                assert_eq!((world.node.pages, world.node.items), (2, 15), "crash {crash_at}");
+                assert!(world.tasks.values().all(|acked| *acked), "every page task acked");
+                assert_eq!(world.tasks.len(), 2, "no duplicate page task");
+            }
+        }
     }
 
     // spec: MEDULLA-INGEST-WORKER-R605.2

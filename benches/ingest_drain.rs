@@ -81,7 +81,7 @@ fn main() {
             .expect("the page task is ready");
         let checkpoint = envelope.page.clone().expect("a drain page");
         let DrainAckOutcome::Advanced { record: next_record, next } =
-            on_ingest_drain_ack(&record, &checkpoint, &ack, 500, now_ms).expect("ack decision")
+            on_ingest_drain_ack(&record, &checkpoint, &ack, 500, now_ms, true).expect("ack decision")
         else {
             panic!("a cursor advances the drain");
         };

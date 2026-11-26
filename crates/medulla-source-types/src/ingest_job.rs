@@ -23,6 +23,19 @@ pub enum IngestJobKind {
     Extraction,
 }
 
+impl IngestJobKind {
+    /// The snake-case name of the kind, the `kind` of its task row.
+    pub fn task_kind(self) -> &'static str {
+        match self {
+            Self::Document => "document",
+            Self::Codebase => "codebase",
+            Self::SkillWorkflows => "skill_workflows",
+            Self::CapabilityHydration => "capability_hydration",
+            Self::Extraction => "extraction",
+        }
+    }
+}
+
 /// The queue lane a job kind runs on.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -75,6 +88,36 @@ pub struct IngestJobEnvelope {
     /// (MEDULLA-INGEST-WORKER-R605.1).
     #[serde(default)]
     pub page: Option<medulla_ingestion_types::ingest_drain::PageCheckpoint>,
+}
+
+/// The envelope of the page `checkpoint` of the drain `record` describes
+/// (MEDULLA-INGEST-WORKER-R605.2). The one definition: the start, the ack and the recovery pass
+/// all build the page task through it, so a page has one task id wherever it is enqueued.
+pub fn drain_page_envelope(
+    record: &medulla_ingestion_types::ingest_drain::DrainRecord,
+    checkpoint: medulla_ingestion_types::ingest_drain::PageCheckpoint,
+) -> IngestJobEnvelope {
+    IngestJobEnvelope {
+        job_id: format!("drain:{}:{}", record.drain_id, checkpoint.page_index()),
+        tenant: record.tenant.clone(),
+        corpus_key: record.connector.clone(),
+        kind: IngestJobKind::Document,
+        target: format!("drain:{}/{}/{}", record.connector, record.stream, record.mode),
+        attempt: 1,
+        page: Some(checkpoint),
+    }
+}
+
+/// The page task a Running drain is waiting on: the envelope of its stored checkpoint. The
+/// scheduler tick enqueues it when the queue holds no task for it (the drain's crash recovery,
+/// MEDULLA-INGEST-WORKER-R605.2); a closed drain has none.
+pub fn recovery_page(
+    record: &medulla_ingestion_types::ingest_drain::DrainRecord,
+) -> Result<Option<IngestJobEnvelope>, medulla_ingestion_types::ingest_drain::IngestDrainError> {
+    if record.state != medulla_ingestion_types::ingest_drain::DrainState::Running {
+        return Ok(None);
+    }
+    Ok(Some(drain_page_envelope(record, record.checkpoint()?)))
 }
 
 /// Why an ingest job envelope or retry policy is refused.

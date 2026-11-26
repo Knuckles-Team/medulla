@@ -652,6 +652,24 @@ impl JobStore {
         Ok(job)
     }
 
+    /// Whether `worker_ref` holds the live lease of a task of `tenant`, by the rule of
+    /// [`ack_task`](Self::ack_task) and without writing. A task of another tenant and an unknown
+    /// task read as not claimed (MEDULLA-INGEST-WORKER-R605.4).
+    pub fn check_task_lease(
+        &self,
+        tenant: &str,
+        task_id: &str,
+        worker_ref: &str,
+        now_ms: i64,
+    ) -> std::result::Result<(), TaskAckError> {
+        let job = match self.get(task_id) {
+            Ok(job) => job,
+            Err(JobError::NotFound(_)) => return Err(TaskAckError::NotClaimed),
+            Err(error) => return Err(error.into()),
+        };
+        require_task_lease(&job, tenant, worker_ref, now_ms).map(|_| ())
+    }
+
     /// Extend the live lease of a task `worker_ref` holds to `now_ms + lease_ms`
     /// in one fenced transition. The attempt count and the job state do not
     /// change. Ownership is the rule of [`ack_task`](Self::ack_task).

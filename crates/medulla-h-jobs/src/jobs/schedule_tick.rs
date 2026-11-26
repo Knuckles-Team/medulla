@@ -144,6 +144,9 @@ async fn tick_pass(
         .saturating_mul(1_000);
     for (graph, core) in graphs {
         purge_due_dashboards(state, &graph, &core, host, now_ms, poll_s).await?;
+        if graph == medulla_server_api::knob_config::default_ingest_graph() {
+            recover_drains(state, &graph, &core, &store, host, now_ms, poll_s).await?;
+        }
         relint_stored_queries(state, &graph, &core, cache, host, now_ms, poll_s).await?;
         let schedules = cache.schedules(&graph, &core, now_ms);
         let mut due = Vec::new();
@@ -254,6 +257,106 @@ async fn tick_pass(
             )
             .await?;
         }
+    }
+    Ok(())
+}
+
+/// The page tasks the Running drains of `core` are waiting on that the queue does not hold: a
+/// drain whose node advanced but whose next page was never enqueued (a crash between the task ack
+/// and the enqueue). A drain updated within one poll interval is in flight and is left alone.
+fn missing_drain_pages(
+    core: &GraphCore,
+    store: &JobStore,
+    now_ms: u64,
+    poll_s: u64,
+) -> Vec<medulla_source_types::ingest_job::IngestJobEnvelope> {
+    let grace_ms = i64::try_from(poll_s.saturating_mul(1_000)).unwrap_or(i64::MAX);
+    let now = i64::try_from(now_ms).unwrap_or(i64::MAX);
+    let mut missing = Vec::new();
+    for id in core
+        .nodes_by_property("type", "SourceDrain")
+        .unwrap_or_default()
+    {
+        let Some(Value::Object(properties)) = decode_node(core, &id) else {
+            continue;
+        };
+        let Some(body) = properties.get("drain_record").and_then(Value::as_str) else {
+            continue;
+        };
+        let Ok(record) = serde_json::from_str::<medulla_ingestion_types::ingest_drain::DrainRecord>(body)
+        else {
+            continue;
+        };
+        if now.saturating_sub(record.updated_at_ms) < grace_ms {
+            continue;
+        }
+        let Ok(Some(page)) = medulla_source_types::ingest_job::recovery_page(&record) else {
+            continue;
+        };
+        if matches!(
+            store.get(&medulla_source_types::ingest_job::task_id(&page)),
+            Err(medulla_jobs::JobError::NotFound(_))
+        ) {
+            missing.push(page);
+        }
+    }
+    missing
+}
+
+/// Enqueue the missing next page of every Running drain (MEDULLA-INGEST-WORKER-R605.2).
+///
+/// The drain ack writes the drain node first, then acks the page task, then enqueues the next
+/// page; a crash after the node write leaves a Running drain with no task for its cursor page.
+/// This pass, on the leader only, enqueues that page under its deterministic task id, so it
+/// cannot duplicate a page the ack handler enqueues concurrently.
+async fn recover_drains(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    core: &GraphCore,
+    store: &JobStore,
+    host: &str,
+    now_ms: u64,
+    poll_s: u64,
+) -> Result<(), String> {
+    let missing = missing_drain_pages(core, store, now_ms, poll_s);
+    if missing.is_empty() {
+        return Ok(());
+    }
+    if decode_node(core, LEASE_NODE_ID).is_none() {
+        commit(
+            state,
+            graph,
+            vec![upsert(LEASE_NODE_ID, LeaseRecord::default().to_fields())],
+        )
+        .await?;
+    }
+    let cell = GraphLeaseCell { core };
+    let ttl_ms = poll_s.max(1) * 3_000;
+    let Some(fence) = contend(&cell, host, now_ms, ttl_ms).map_err(|e| format!("{e:?}"))? else {
+        return Ok(());
+    };
+    cell.read()
+        .leadership()
+        .authorize(host, fence, now_ms)
+        .map_err(|e| e.to_string())?;
+    let at = i64::try_from(now_ms).unwrap_or(i64::MAX);
+    for page in missing {
+        let task = medulla_source_types::ingest_job::task_id(&page);
+        let payload = serde_json::to_string(&page).map_err(|error| error.to_string())?;
+        let spec = medulla_jobs::TaskSubmit {
+            tenant: page.tenant.clone(),
+            actor: SERVICE.to_string(),
+            tenant_capability: crate::task_queue::tenant_capability(&page.tenant),
+            queue: page.lane().queue_name().to_string(),
+            kind: page.kind.task_kind().to_string(),
+            payload_ref: payload,
+            idempotency_key: task.clone(),
+            priority: medulla_work_types::task_queue::default_priority(),
+            not_before_ms: 0,
+            job_id: Some(task),
+            max_attempts: Some(u32::MAX),
+        };
+        store.submit_task(spec, at).map_err(|e| e.to_string())?;
     }
     Ok(())
 }

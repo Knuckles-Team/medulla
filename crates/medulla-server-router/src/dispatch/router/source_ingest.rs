@@ -475,12 +475,12 @@ async fn source_drain_status(ctx: DispatchCtx<'_>, drain_id: String) -> Response
 /// Serve a `TaskQueueAck` that carries a drain report (MEDULLA-INGEST-WORKER-R605.2, R605.4).
 ///
 /// A page below the stored checkpoint is answered `DRAIN_CURSOR_STALE` and changes nothing.
-/// Otherwise the task acks through the one task-queue handler first (its lease check refuses a
-/// foreign or lapsed ack), then the drain node is rewritten and the next page is enqueued under
-/// its deterministic task id, so a repeat of either step is harmless.
+/// Otherwise the drain node is rewritten first, then the task acks through the one task-queue
+/// handler, then the next page is enqueued under its deterministic task id, so a repeat of any step
+/// is harmless (see [`run_drain_ack_plan`]). A caller without the live lease writes nothing.
 #[cfg(feature = "jobs")]
 pub(super) async fn ack_drain_page(ctx: DispatchCtx<'_>, method: Method) -> Response {
-    use medulla_h_ingest::ingest_drain::{on_ingest_drain_ack, DrainAckOutcome};
+    use medulla_h_ingest::ingest_drain::{drain_ack_plan, on_ingest_drain_ack, DrainAckOutcome};
     use medulla_work_types::task_queue::TaskOutcome;
     let req_id = ctx.req.id;
     let Method::TaskQueueAck {
@@ -502,6 +502,7 @@ pub(super) async fn ack_drain_page(ctx: DispatchCtx<'_>, method: Method) -> Resp
             ),
         )
     };
+    let worker = worker_id.clone();
     let plain = Method::TaskQueueAck {
         task_id: task_id.clone(),
         worker_id,
@@ -546,54 +547,82 @@ pub(super) async fn ack_drain_page(ctx: DispatchCtx<'_>, method: Method) -> Resp
         return acked;
     }
     let max_items = medulla_server_api::knob_config::knobs().ingest_drain_page_records;
+    let held = match medulla_h_jobs::task_queue::task_lease_held(
+        ctx.state,
+        ctx.verified_context,
+        &task_id,
+        &worker,
+    )
+    .await
+    {
+        Ok(held) => held,
+        Err(error) => return Response::err(req_id, error),
+    };
     let decision = on_ingest_drain_ack(
         &record,
         &page,
         &drain.unwrap_or_default(),
         max_items,
         now_ms,
+        held,
     );
-    match decision {
-        Err(error) => invalid(error.to_string()),
-        Ok(DrainAckOutcome::Stale) => {
-            medulla_kernel::metrics::process().record_job(
-                medulla_kernel::metrics::IngestJobOutcome::Stale,
-                medulla_source_types::ingest_job::IngestLane::General.queue_name(),
-            );
-            Response::err(
-                req_id,
-                format!(
-                    "{}: page {} is below the stored checkpoint of the drain",
-                    medulla_types::contract::ServerErrorCode::DrainCursorStale.as_str(),
-                    page.page_index()
-                ),
-            )
-        }
-        Ok(DrainAckOutcome::Closed { record }) => {
-            let acked = ack_plain(ctx, plain).await;
-            if acked.refusal_text().is_some() {
-                return acked;
+    let outcome = match decision {
+        Ok(outcome) => outcome,
+        Err(error) => return invalid(error.to_string()),
+    };
+    if outcome == DrainAckOutcome::Stale {
+        medulla_kernel::metrics::process().record_job(
+            medulla_kernel::metrics::IngestJobOutcome::Stale,
+            medulla_source_types::ingest_job::IngestLane::General.queue_name(),
+        );
+        return Response::err(
+            req_id,
+            format!(
+                "{}: page {} is below the stored checkpoint of the drain",
+                medulla_types::contract::ServerErrorCode::DrainCursorStale.as_str(),
+                page.page_index()
+            ),
+        );
+    }
+    run_drain_ack_plan(ctx, plain, drain_ack_plan(&outcome, held)).await
+}
+
+/// Run the steps of a drain ack in order and stop at the first failure
+/// (MEDULLA-INGEST-WORKER-R605.2). The answer is the task ack's. The order (node, task ack, next
+/// page) is `drain_ack_plan`'s: a crash after the node write leaves the task leased, so the
+/// worker's retry replays; a crash before the enqueue is recovered by the scheduler tick.
+#[cfg(feature = "jobs")]
+async fn run_drain_ack_plan(
+    ctx: DispatchCtx<'_>,
+    plain: Method,
+    plan: Vec<medulla_h_ingest::ingest_drain::DrainAckStep>,
+) -> Response {
+    use medulla_h_ingest::ingest_drain::DrainAckStep;
+    let req_id = ctx.req.id;
+    let mut answer = None;
+    for step in plan {
+        match step {
+            DrainAckStep::WriteNode(record) => {
+                if let Err(refusal) = write_drain(ctx, &record).await {
+                    return Response::err(req_id, refusal);
+                }
             }
-            match write_drain(ctx, &record).await {
-                Ok(()) => acked,
-                Err(refusal) => Response::err(req_id, refusal),
+            DrainAckStep::AckTask => {
+                let acked = ack_plain(ctx, plain.clone()).await;
+                if acked.refusal_text().is_some() {
+                    return acked;
+                }
+                answer = Some(acked);
             }
-        }
-        Ok(DrainAckOutcome::Advanced { record, next }) => {
-            let acked = ack_plain(ctx, plain).await;
-            if acked.refusal_text().is_some() {
-                return acked;
-            }
-            if let Err(refusal) = write_drain(ctx, &record).await {
-                return Response::err(req_id, refusal);
-            }
-            let enqueued = handle_ingest_enqueue(ctx, next).await;
-            match enqueued.refusal_text() {
-                Some(refusal) => Response::err(req_id, refusal),
-                None => acked,
+            DrainAckStep::EnqueuePage(next) => {
+                let enqueued = handle_ingest_enqueue(ctx, next).await;
+                if let Some(refusal) = enqueued.refusal_text() {
+                    return Response::err(req_id, refusal);
+                }
             }
         }
     }
+    answer.unwrap_or_else(|| Response::err(req_id, "INTERNAL: a drain ack plan holds no task ack"))
 }
 
 /// The task-queue handler's answer to `method`.

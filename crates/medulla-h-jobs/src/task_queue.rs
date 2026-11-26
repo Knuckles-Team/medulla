@@ -340,6 +340,37 @@ pub async fn task_payload(
     )))
 }
 
+/// Whether the caller's worker holds the live lease of `task_id` now, read without writing. The
+/// drain ack asks it before it writes the drain node, so a foreign or lapsed ack moves no drain
+/// (MEDULLA-INGEST-WORKER-R605.4). An unknown or foreign task is not held.
+pub async fn task_lease_held(
+    state: &Arc<RwLock<ServerState>>,
+    verified_context: &VerifiedRequestContext,
+    task_id: &str,
+    worker_id: &str,
+) -> Result<bool, String> {
+    if !worker_field_valid(worker_id) {
+        return Ok(false);
+    }
+    let store = crate::jobs::outbox_job_store(state).await?;
+    let call = TaskQueueCall {
+        req_id: 0,
+        tenant: verified_context.tenant(),
+        principal: verified_context.principal(),
+        now_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as i64,
+    };
+    match store.check_task_lease(
+        call.tenant,
+        task_id,
+        &worker_ref(&call, worker_id),
+        call.now_ms,
+    ) {
+        Ok(()) => Ok(true),
+        Err(TaskAckError::NotClaimed | TaskAckError::LeaseExpired) => Ok(false),
+        Err(TaskAckError::Store(error)) => Err(crate::jobs::job_refusal(&error)),
+    }
+}
+
 /// Serve `TaskQueueAck`: complete, fail or release a task the caller's worker
 /// holds under a live lease. A task of an ingest queue is acked by the decision of
 /// MEDULLA-INGEST-WORKER-R001.9 under `ingest_policy`, the policy in force; every other queue acks

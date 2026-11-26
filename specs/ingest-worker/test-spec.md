@@ -70,6 +70,7 @@ Each leaf row names its proof. A test marked `(planned)` in the row does not exi
 | `MEDULLA-INGEST-WORKER-R604.6` | `benches/ingest_claim_admit.rs` | L5 | exists |
 | `MEDULLA-INGEST-WORKER-R605.1` | `crates/medulla-ingestion-types/src/ingest_drain.rs::tests::types_round_trip_and_reject_bad_ids` | L1 | planned |
 | `MEDULLA-INGEST-WORKER-R605.2` | `crates/medulla-h-ingest/src/ingest_drain.rs::tests::ack_with_cursor_enqueues_next_page` | L3 | planned |
+| `MEDULLA-INGEST-WORKER-R605.2` | `crates/medulla-h-ingest/src/ingest_drain.rs::tests::a_crash_between_ack_steps_never_stalls_the_drain` | L3 | planned |
 | `MEDULLA-INGEST-WORKER-R605.3` | `tests/ingest/test_source_drain_served.py::test_ingest_lands_in_the_routed_graph` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R605.4` | `tests/ingest/test_source_drain_served.py::test_redelivered_page_is_dropped` | L4 | planned |
 | `MEDULLA-INGEST-WORKER-R605.5` | `tests/ingest/test_source_drain_served.py::test_drain_chains_pages_and_reports` | L4 | planned |

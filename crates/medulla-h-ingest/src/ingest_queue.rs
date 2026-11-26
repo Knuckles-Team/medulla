@@ -12,7 +12,7 @@ use std::sync::Arc;
 use medulla_server_ops::api::ingest::{IngestTaskWrite, JobsApi};
 use medulla_source_types::ingest_job::{
     partition_key, target_embeds_credentials, task_id, IngestEnqueueReceipt, IngestJobEnvelope,
-    IngestJobError, IngestJobKind, IngestQueueDepthReport, IngestQueueDepthRow, IngestRetryPolicy,
+    IngestJobError, IngestQueueDepthReport, IngestQueueDepthRow, IngestRetryPolicy,
     INGEST_TASK_PAYLOAD_MAX_BYTES,
 };
 use medulla_kernel::metrics::IngestJobOutcome;
@@ -49,17 +49,6 @@ pub struct IngestCaller {
     pub tenant: String,
     /// The principal of the verified request context.
     pub principal: String,
-}
-
-/// The snake-case name of a job kind, the `kind` of its task.
-fn kind_name(kind: IngestJobKind) -> &'static str {
-    match kind {
-        IngestJobKind::Document => "document",
-        IngestJobKind::Codebase => "codebase",
-        IngestJobKind::SkillWorkflows => "skill_workflows",
-        IngestJobKind::CapabilityHydration => "capability_hydration",
-        IngestJobKind::Extraction => "extraction",
-    }
 }
 
 /// Map one ingest job onto the served task queue.
@@ -159,7 +148,7 @@ fn enqueue_unrecorded(
         tenant: verified_tenant,
         actor: caller.principal.as_str(),
         queue,
-        kind: kind_name(envelope.kind),
+        kind: envelope.kind.task_kind(),
         task_id: &task,
         payload: &payload,
     };
