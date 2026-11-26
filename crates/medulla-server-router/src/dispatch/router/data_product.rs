@@ -52,10 +52,38 @@ pub async fn dispatch_data_product_methods(
             contract,
         } => {
             dispatch_boxed(async {
-                typed_response::<DataProductRegister>(
-                    req.id,
-                    register(state, req, verified_context, &tenant, product, contract).await,
-                )
+                let registered_as = (product.id.clone(), product.owner.clone());
+                let registered =
+                    register(state, req, verified_context, &tenant, product, contract).await;
+                // MEDULLA-TYPED-PACKS-R108.6: a registered product reaches the catalog through
+                // the one emitter, in the graph the request names.
+                #[cfg(feature = "rdf")]
+                let registered = match registered {
+                    Ok(done) => {
+                        match super::catalog_emit::commit_asset(
+                            state,
+                            req,
+                            verified_context,
+                            &req.graph,
+                            medulla_catalog::emit::AssetRecord::Product(
+                                medulla_catalog::emit::ProductRecord {
+                                    product_id: &registered_as.0,
+                                    owner: &registered_as.1,
+                                    version: &done.version,
+                                },
+                            ),
+                        )
+                        .await
+                        {
+                            Ok(()) => Ok(done),
+                            Err(refusal) => Err(refusal),
+                        }
+                    }
+                    Err(refusal) => Err(refusal),
+                };
+                #[cfg(not(feature = "rdf"))]
+                let _ = registered_as;
+                typed_response::<DataProductRegister>(req.id, registered)
             })
             .await
         }

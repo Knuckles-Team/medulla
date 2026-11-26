@@ -356,6 +356,30 @@ def test_one_query_returns_agents_business_workflows_graphs_and_connector_assets
         },
         graph,
     )
+    # A data product registration reaches the same emitter.
+    context = request_context()
+    product_id = f"orders-{uuid.uuid4().hex[:8]}"
+    admin._send(
+        "DataProductRegister",
+        {
+            "tenant": TEST_TENANT,
+            "product": {
+                "id": product_id,
+                "owner": context["agent_id"],
+                "version": "1.0.0",
+                "datasets": [f"orders_{product_id[-8:]}"],
+                "terms": [],
+                "ports": [{"name": "sql", "kind": "query"}],
+            },
+            "contract": {
+                "product": product_id,
+                "schema_digest": "sha256:" + "a" * 64,
+                "quality_rules": [],
+                "freshness_s": 3600,
+            },
+        },
+        graph,
+    )
     created = f"medulla-r1086-{uuid.uuid4().hex}"
     admin.tenants.create(created, graph_type="Global")
     try:
@@ -374,12 +398,14 @@ def test_one_query_returns_agents_business_workflows_graphs_and_connector_assets
         classes = {row["class"].strip("<>") for row in rows}
         assert f"{CATALOG}AgentVersion" in classes
         assert f"{CATALOG}WorkflowDefinitionAsset" in classes
+        assert f"{CATALOG}Product" in classes
         all_assets = {
             row["a"].strip("<>")
             for row in admin.rdf.sparql(f"SELECT ?a WHERE {{ ?a a <{ASSET}> }}")
         }
         assert _node_id(agent_id, 1) in all_assets
         assert any(a.startswith("urn:medulla:asset:workflow:") for a in all_assets)
+        assert f"urn:medulla:asset:product:{product_id}%401.0.0" in all_assets
         assert "urn:medulla:r1066:tool-list-orders" in all_assets
         assert "urn:medulla:r1066:resource-orders" in all_assets
 

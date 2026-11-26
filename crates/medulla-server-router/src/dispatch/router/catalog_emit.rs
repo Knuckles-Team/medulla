@@ -145,5 +145,11 @@ async fn asset_evidence(
         evidence.owner = first(StewardRole::Owner);
         evidence.steward = first(StewardRole::Steward);
     }
+    // A product names its owner when it is registered; the stewardship store answers first.
+    if evidence.owner.is_none() {
+        if let medulla_catalog::emit::AssetRecord::Product(product) = record {
+            evidence.owner = Some(principal_iri(product.owner));
+        }
+    }
     evidence
 }

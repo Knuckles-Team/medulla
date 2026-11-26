@@ -112,6 +112,18 @@ pub struct GraphRegistration<'a> {
     pub sources: &'a [&'a str],
 }
 
+/// One registered data product (MEDULLA-TYPED-PACKS-R108.6): the id, its declared owner and the
+/// version it was registered at. Datasets, terms and ports stay on the product record.
+#[derive(Debug, Clone, Copy)]
+pub struct ProductRecord<'a> {
+    /// The product id.
+    pub product_id: &'a str,
+    /// The principal that owns the product, as the registration declared it.
+    pub owner: &'a str,
+    /// The registered semantic version.
+    pub version: &'a str,
+}
+
 /// A record the engine already holds, by source family.
 #[derive(Debug, Clone, Copy)]
 pub enum AssetRecord<'a> {
@@ -128,6 +140,8 @@ pub enum AssetRecord<'a> {
     /// One published version of a stored query (MEDULLA-TYPED-PACKS-R108.14). The query text
     /// stays on its `stored_query:<name>:<version>` node and is never copied here.
     StoredQuery(&'a StoredQuery),
+    /// A registered data product (MEDULLA-TYPED-PACKS-R108.6).
+    Product(ProductRecord<'a>),
 }
 
 fn encode(raw: &str) -> String {
@@ -360,6 +374,19 @@ pub fn emit_asset(
                 out.push(literal(&saved, &format!("{CAT}parameterName"), parameter));
             }
         }
+        AssetRecord::Product(product) => {
+            let id = format!("{}@{}", product.product_id, product.version);
+            let node_id = node(
+                &mut out,
+                "Product",
+                "product",
+                &id,
+                &format!("data-product:{}", product.product_id),
+                links,
+                None,
+            )?;
+            out.push(literal(&node_id, SKOS_PREF_LABEL, product.product_id));
+        }
         AssetRecord::Graph(graph) => {
             let graph_node = node(
                 &mut out,
@@ -437,6 +464,36 @@ mod tests {
     use medulla_agent_types::agent_library::AgentLibraryEntryDraft;
     use medulla_work_types::orchestration::org::RoleSpec;
     use medulla_work_types::orchestration::workflows::WorkflowLifecycle;
+
+    // spec: MEDULLA-TYPED-PACKS-R108.6
+    #[test]
+    fn a_registered_product_emits_one_product_node_that_names_its_source() {
+        let links = AssetLinks {
+            owner: Some("urn:medulla:principal:alice"),
+            ..AssetLinks::default()
+        };
+        let triples = emit_asset(
+            AssetRecord::Product(ProductRecord {
+                product_id: "orders-product",
+                owner: "alice",
+                version: "1.2.0",
+            }),
+            &links,
+        )
+        .expect("a product emits");
+        let subject = asset_node("product", "orders-product@1.2.0");
+        assert!(triples.contains(&iri(&subject, RDF_TYPE, &format!("{CAT}Product"))));
+        assert!(triples.contains(&literal(
+            &subject,
+            &format!("{CAT}sourceRecord"),
+            "data-product:orders-product"
+        )));
+        assert!(triples.contains(&iri(
+            &subject,
+            &format!("{CAT}hasOwner"),
+            "urn:medulla:principal:alice"
+        )));
+    }
 
     fn digest(c: char) -> String {
         format!("sha256:{}", c.to_string().repeat(64))
