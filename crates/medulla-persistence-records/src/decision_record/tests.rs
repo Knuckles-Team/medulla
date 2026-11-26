@@ -914,9 +914,8 @@ fn topology_denial_allowance_consumption_survives_restart() {
     // The denial's allowance rides the coordinator's ABORT (same transaction): a crash between
     // the durable ABORT and the owners' resolution issues nothing yet, and the recovery that
     // applies the ABORT to the reservation applies the allowance in the same owner transaction.
-    use super::super::agent_library::admission::{
-        AdmissionEvent, AdmissionIntent, ADMISSION_NOT_RESERVED,
-    };
+    use super::super::agent_library::admission::{AdmissionIntent, ADMISSION_NOT_RESERVED};
+    use medulla_types::reservation_machine::ReservationEvent as AdmissionEvent;
     let intent = |txn: &str, denied: &str| AdmissionIntent {
         txn_id: txn.into(),
         profile_revision: "policy-v1".into(),

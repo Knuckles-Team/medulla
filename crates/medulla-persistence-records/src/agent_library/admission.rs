@@ -18,7 +18,7 @@
 use medulla_storage::{
     AGENT_COMPONENT_HEADS, AGENT_COMPONENT_REVISIONS, DECISION_ARTIFACTS, DECISION_RETRY_ALLOWANCES,
 };
-pub use medulla_types::reservation_machine::{
+use medulla_types::reservation_machine::{
     ReservationEvent as AdmissionEvent, ReservationState as AdmissionState, RESERVATION_MACHINE,
 };
 use redb::ReadableTable;

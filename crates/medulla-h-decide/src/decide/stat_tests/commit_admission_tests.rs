@@ -9,7 +9,6 @@ use medulla_decision_types::decision::{DecisionCommitRequest, DecisionCommitResu
 use medulla_isolation::isolation::IsolationLayer;
 use medulla_isolation::rbac_persist::RbacPolicyStore;
 use medulla_persistence::redb_backend::RedbBackend;
-use medulla_persistence_records::agent_library::admission::AdmissionState;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_record::tests::{
     commit_context, decided, seed_library, TENANT,
@@ -19,6 +18,7 @@ use medulla_raft_xshard::cross_shard_txn::certificate::{request_digest, OwnerDec
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
+use medulla_types::reservation_machine::ReservationState as AdmissionState;
 use medulla_types::reservation_machine::{ReservationEvent, ReservationState};
 use tokio::sync::RwLock;
 

@@ -8,12 +8,11 @@
 //! together with the same decision: COMMIT when the record is durable, ABORT when it is not.
 
 use medulla_decision_types::decision::DecisionRecord;
-use medulla_persistence_records::agent_library::admission::{
-    AdmissionEvent, AdmissionIntent, ComponentHead,
-};
+use medulla_persistence_records::agent_library::admission::{AdmissionIntent, ComponentHead};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_raft_xshard::cross_shard_txn::certificate::OwnerDecision;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::reservation_machine::ReservationEvent as AdmissionEvent;
 
 use super::super::SharedState;
 

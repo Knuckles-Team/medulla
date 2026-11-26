@@ -1,14 +1,17 @@
 //! MEDULLA-DECISION-ENGINE-R036.104: the Agent Library admission participant.
 
 use super::admission::{
-    AdmissionEvent, AdmissionIntent, AdmissionState, ComponentHead, ADMISSION_ABORTED,
-    ADMISSION_COMPONENT_WITHDRAWN, ADMISSION_HEAD_CHANGED, ADMISSION_INTENT_CHANGED,
-    ADMISSION_NOT_RESERVED, ADMISSION_WRITE_BLOCKED,
+    AdmissionIntent, ComponentHead, ADMISSION_ABORTED, ADMISSION_COMPONENT_WITHDRAWN,
+    ADMISSION_HEAD_CHANGED, ADMISSION_INTENT_CHANGED, ADMISSION_NOT_RESERVED,
+    ADMISSION_WRITE_BLOCKED,
 };
 use super::AgentLibraryStore;
 use crate::agent_fixtures::{mutation_context, open_agent_store};
 use crate::decision_record::tests::{decided, seed_library, TENANT};
 use medulla_agent_types::agent_component::AgentComponentRetireRequest;
+use medulla_types::reservation_machine::{
+    ReservationEvent as AdmissionEvent, ReservationState as AdmissionState,
+};
 
 fn heads(store: &AgentLibraryStore) -> Vec<ComponentHead> {
     let mut heads: Vec<ComponentHead> = decided(store, TENANT)
