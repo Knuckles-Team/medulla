@@ -48,6 +48,28 @@ SELECT ?step ?value WHERE {
   ?contract sc:forTask ?task ; :hasStep ?step . ?step sc:param ?value .
 }";
 
+/// The skills that serve the task and use a tool, by tool: `?tool ?skill`
+/// (MEDULLA-CQ-ORCH-R012.2). One value per row.
+#[cfg(feature = "decide")]
+const CONTRACT_SKILLS_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX sc: <https://knuckles-team.github.io/ontology/surface-contract#>
+SELECT ?tool ?value WHERE {
+  VALUES ?task { <TASK> }
+  ?value a :Skill ; sc:servesTask ?task ; sc:usesTool ?tool .
+}";
+
+/// The agent prompts that serve the task, with the agent kind and business role they declare
+/// (MEDULLA-CQ-ORCH-R012.2): `?prompt ?kind ?role`.
+#[cfg(feature = "decide")]
+const AGENT_PROMPTS_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX sc: <https://knuckles-team.github.io/ontology/surface-contract#>
+SELECT ?prompt ?kind ?role WHERE {
+  VALUES ?task { <TASK> }
+  ?prompt a :Prompt ; sc:servesTask ?task .
+  OPTIONAL { ?prompt sc:agentKind ?kind }
+  OPTIONAL { ?prompt sc:businessRole ?role }
+}";
+
 #[cfg(feature = "decide")]
 const CONTRACT_RESULTS_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
 PREFIX sc: <https://knuckles-team.github.io/ontology/surface-contract#>
@@ -437,8 +459,14 @@ async fn steps_and_workflow(
     .unwrap_or(usize::MAX);
     let read = |query: &str| query_part(&view, query, task_iri, (graph, graph_version), max_rows);
     let contracts = contract_steps(&view, task_iri, max_rows);
+    let prompts = agent_prompts(&view, task_iri, max_rows);
     Ok((
-        merge_contract_steps(read(STEPS_QUERY), contracts, (graph, graph_version)),
+        merge_contract_steps(
+            read(STEPS_QUERY),
+            contracts,
+            prompts,
+            (graph, graph_version),
+        ),
         read(WORKFLOW_QUERY),
     ))
 }
@@ -454,6 +482,45 @@ struct ContractStep {
     params: Vec<String>,
     result_fields: Vec<String>,
     refusal_codes: Vec<String>,
+    /// The skills that serve the task and use this step's tool.
+    skills: Vec<String>,
+}
+
+/// One agent prompt that serves the task: a staffing candidate (MEDULLA-CQ-ORCH-R012.2).
+#[cfg(feature = "decide")]
+struct AgentPrompt {
+    prompt: String,
+    agent_kind: Option<String>,
+    business_role: Option<String>,
+}
+
+/// The agent prompts that serve `task_iri`, by prompt IRI. A read that fails is an error.
+#[cfg(feature = "decide")]
+fn agent_prompts(
+    view: &medulla_graph_core::graph::GraphView,
+    task_iri: &str,
+    max_rows: usize,
+) -> Result<Vec<AgentPrompt>, String> {
+    let mut prompts: Vec<AgentPrompt> = Vec::new();
+    for row in select_rows(view, AGENT_PROMPTS_QUERY, task_iri)?.1 {
+        let cell = |index: usize| row.get(index).cloned().flatten().map(|v| lexical(&v));
+        let Some(prompt) = cell(0) else { continue };
+        if prompts.iter().any(|held| {
+            held.prompt == prompt
+                && held.agent_kind == cell(1)
+                && held.business_role == cell(2)
+        }) {
+            continue;
+        }
+        prompts.push(AgentPrompt {
+            prompt,
+            agent_kind: cell(1),
+            business_role: cell(2),
+        });
+    }
+    prompts.sort_by(|a, b| a.prompt.cmp(&b.prompt));
+    prompts.truncate(max_rows);
+    Ok(prompts)
 }
 
 /// The lexical form of one SPARQL term: a quoted literal loses its quotes and its
@@ -543,6 +610,8 @@ fn contract_steps(
     let mut params = values_by_step(view, CONTRACT_PARAMS_QUERY, task_iri)?;
     let mut results = values_by_step(view, CONTRACT_RESULTS_QUERY, task_iri)?;
     let mut refusals = values_by_step(view, CONTRACT_REFUSALS_QUERY, task_iri)?;
+    // Skills are keyed by the tool they use (the first column of the query).
+    let skills_by_tool = values_by_step(view, CONTRACT_SKILLS_QUERY, task_iri)?;
     let (_, rows) = select_rows(view, CONTRACT_STEPS_QUERY, task_iri)?;
     let mut steps: Vec<ContractStep> = Vec::new();
     for row in rows {
@@ -580,6 +649,12 @@ fn contract_steps(
             params: take(&mut params),
             result_fields: take(&mut results),
             refusal_codes: take(&mut refusals),
+            skills: {
+                let mut skills = skills_by_tool.get(&tool).cloned().unwrap_or_default();
+                skills.sort();
+                skills.dedup();
+                skills
+            },
             step,
         });
     }
@@ -597,6 +672,7 @@ fn contract_steps(
 fn merge_contract_steps(
     authored: Result<ExecutionAnswerPart, PartFault>,
     contracts: Result<Vec<ContractStep>, String>,
+    prompts: Result<Vec<AgentPrompt>, String>,
     (graph, graph_version): (&str, u64),
 ) -> Result<ExecutionAnswerPart, PartFault> {
     use medulla_decision_types::decision::record::{
@@ -605,6 +681,10 @@ fn merge_contract_steps(
 
     let contracts = match contracts {
         Ok(steps) => steps,
+        Err(error) => return Err(PartFault::NoSource(error)),
+    };
+    let prompts = match prompts {
+        Ok(prompts) => prompts,
         Err(error) => return Err(PartFault::NoSource(error)),
     };
     if contracts.is_empty() {
@@ -624,6 +704,14 @@ fn merge_contract_steps(
                 "params": step.params,
                 "result_fields": step.result_fields,
                 "refusal_codes": step.refusal_codes,
+                "skills": step.skills,
+                // A step whose tool no skill of the task uses abstains in its own entry
+                // (MEDULLA-CQ-ORCH-R012.2).
+                "skill_abstain": step.skills.is_empty().then(|| serde_json::json!({
+                    "family": "task_plan",
+                    "code": medulla_decision_types::decision::execution_part::ORCH_PART_EMPTY.as_str(),
+                    "detail": format!("no skill of {} uses tool {}", step.contract, step.tool),
+                })),
             })
         })
         .collect();
@@ -654,7 +742,30 @@ fn merge_contract_steps(
         other => return other,
     };
     value["contract_steps"] = serde_json::Value::Array(entries);
+    // The agent prompts that serve the task are staffing candidates.
+    value["agent_prompts"] = serde_json::Value::Array(
+        prompts
+            .iter()
+            .map(|prompt| {
+                serde_json::json!({
+                    "prompt": prompt.prompt,
+                    "agent_kind": prompt.agent_kind,
+                    "business_role": prompt.business_role,
+                })
+            })
+            .collect(),
+    );
     provenance.extend(contract_premises);
+    provenance.extend(prompts.iter().take(PART_PREMISES).map(|prompt| PremiseRef {
+        subject: prompt.prompt.clone(),
+        fact: format!("sc:servesTask {}", prompt.prompt),
+        class: PremiseClass::Claim,
+        provenance: PremiseProvenance::GraphRow {
+            graph: graph.to_string(),
+            graph_version,
+        },
+        trust_tier: None,
+    }));
     provenance.truncate(PART_PREMISES);
     Ok(ExecutionAnswerPart::Answer {
         value,

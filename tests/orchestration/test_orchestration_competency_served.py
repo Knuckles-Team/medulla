@@ -319,6 +319,77 @@ def test_steps_carry_contract_params_results_and_refusals() -> None:
     asyncio.run(exercise())
 
 
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R012.2")
+def test_step_names_linked_skill_and_agent_prompt() -> None:
+    from medulla.generated import storage
+
+    async def exercise() -> None:
+        suffix = uuid.uuid4().hex[:8]
+        graph = f"q12-skills-{suffix}"
+        admin = await connect()
+        try:
+            await admin.tenants.create(graph)
+        finally:
+            await admin.close()
+        client = await connect(graph)
+        try:
+            connector, entries = _fixture_packs(suffix)[1]  # q11-tickets
+            contracts = (PACKS / "tickets.contracts.ttl").read_text(encoding="utf-8")
+            entries.append(
+                ontology_entry(
+                    connector, "contracts", contracts.replace("{connector}", connector)
+                )
+            )
+            imported = await import_entries(client, connector, entries)
+            assert imported["result"] == "imported", imported
+            await attach_pack(client, connector)
+            deadline = time.monotonic() + 180
+            probe = (
+                "SELECT ?s WHERE { ?s <https://knuckles-team.github.io/ontology/"
+                "surface-contract#servesTask> ?t }"
+            )
+            while not await client.rdf.sparql(probe):
+                assert time.monotonic() < deadline, "the links were not projected"
+                await asyncio.sleep(0.5)
+
+            task = f"urn:scion:{connector}:task:close-ticket"
+            params = {
+                "request": {
+                    "task_iri": task,
+                    "assembly": {
+                        "tenant_id": TEST_TENANT,
+                        "policy": {"policy": "default"},
+                        "candidates": {"kinds": ["tool"]},
+                        "requirements": {},
+                    },
+                }
+            }
+            opaque = await storage.send_agent_execution_answer(client, params, graph)
+            steps = storage.decode_agent_execution_answer(opaque).parts.steps
+            assert steps.status == "answer", steps
+            ordered = sorted(steps.value["contract_steps"], key=lambda s: s["order"])
+            # The find step names the skill that uses its tool and serves the task.
+            assert ordered[0]["skills"] == [
+                f"urn:scion:{connector}:skill:ticket-triage"
+            ]
+            assert ordered[0]["skill_abstain"] is None
+            # The close step has no linked skill: it abstains in its own entry.
+            assert ordered[1]["skills"] == []
+            assert ordered[1]["skill_abstain"]["code"] == "ORCH_PART_EMPTY"
+            # The prompt that serves the task is a staffing candidate with its kind and role.
+            assert steps.value["agent_prompts"] == [
+                {
+                    "prompt": f"urn:scion:{connector}:prompt:support-agent",
+                    "agent_kind": "executor",
+                    "business_role": "support",
+                }
+            ]
+        finally:
+            await client.close()
+
+    asyncio.run(exercise())
+
+
 COMPOSED = Path(__file__).parent / "fixtures" / "composed"
 _CORE = "https://knuckles-team.github.io/ontology/core#"
 _SWARM = "https://knuckles-team.github.io/ontology/swarm#"

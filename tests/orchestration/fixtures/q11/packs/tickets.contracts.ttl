@@ -33,3 +33,15 @@
 <urn:scion:{connector}:refusal:already-closed> a sc:Refusal ;
     sc:refusalCode "TICKET_ALREADY_CLOSED" ;
     sc:refusalWhen "the ticket is already closed" .
+
+# Skills and agent prompts that serve the task (MEDULLA-CQ-ORCH-R012.2). The skill uses the
+# find tool only, so the close step has no skill and abstains in its own entry.
+<urn:scion:{connector}:skill:ticket-triage> a :Skill ;
+    sc:servesTask <urn:scion:{connector}:task:close-ticket> ;
+    sc:usesTool <urn:scion:{connector}:tool:find_ticket> .
+
+<urn:scion:{connector}:prompt:support-agent> a :Prompt ;
+    sc:servesTask <urn:scion:{connector}:task:close-ticket> ;
+    sc:usesTool <urn:scion:{connector}:tool:close_ticket> ;
+    sc:agentKind "executor" ;
+    sc:businessRole "support" .
