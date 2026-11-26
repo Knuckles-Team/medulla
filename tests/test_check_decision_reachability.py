@@ -30,6 +30,7 @@ def _tree(tmp_path: Path, caller: str) -> Path:
     return tmp_path
 
 
+# spec: MEDULLA-CONTRACT-R055
 def test_an_orphan_public_item_fails_the_gate(tmp_path: Path) -> None:
     # spec: MEDULLA-CONTRACT-R055
     root = _tree(

@@ -226,9 +226,9 @@ async fn digest_changed_since_uses_known_at() {
     // A window covering both writes lists the two digest labels, by label, and never the
     // node of an unlisted label.
     let wide = dispatch_on_heap(&state, send(window(first, second + 1))).await;
-    let mut ids = row_ids(&wide);
-    ids.sort();
-    assert_eq!(ids, vec!["incident:second", "order:first"]);
+    // Rows come back ordered by label then `tx_from`, so `Incident` precedes `Order` although
+    // the order was written first: the answer is compared unsorted.
+    assert_eq!(row_ids(&wide), vec!["incident:second", "order:first"]);
 
     // The window is half-open on the transaction time a node was recorded at: `to` equal
     // to the first stamp excludes it, and a window past the last stamp is empty.
@@ -316,6 +316,19 @@ async fn digest_hides_out_of_scope_nodes() {
     .await;
     // Only the caller's node contributes a row.
     assert_eq!(row_ids(&overdue), vec!["ob:mine"]);
+    // Every digest query narrows the same way: the changed-in-a-window query over the whole
+    // transaction-time range also lists only the caller's node.
+    let changed = send(Method::StoredQueryCall {
+        name: DIGEST_CHANGED_SINCE.to_string(),
+        version: None,
+        args: [
+            ("from".to_string(), serde_json::json!(0_i64)),
+            ("to".to_string(), serde_json::json!(i64::MAX)),
+        ]
+        .into(),
+    })
+    .await;
+    assert_eq!(row_ids(&changed), vec!["ob:mine"]);
 }
 
 /// The canonical `:ruleParameters` of the sales-tax recurrence rule.

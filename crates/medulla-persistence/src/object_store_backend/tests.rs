@@ -470,6 +470,7 @@ async fn two_nodes_read_identical_state() {
 // Secret references resolve from named environment variables; each refusal names its
 // code and happens before any request to the store. Variable names are unique per case,
 // so the test is safe under parallel tests.
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.2
 #[test]
 fn client_resolves_secret_refs_from_the_environment() {
     use crate::object_store_backend::resolve_object_store_client;
