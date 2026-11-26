@@ -6,6 +6,8 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+pub mod index_identity;
+
 /// EH-536 — cooperative interruption of long CPU-bound work on behalf of a
 /// served request whose client has gone.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

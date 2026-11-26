@@ -56,6 +56,7 @@ impl SemanticStore {
         idx.tombstones.clear();
         idx.dim = dim;
         idx.built_len = self.embeddings.len();
+        idx.compact = None;
     }
 
     /// Query the already-current HNSW index. `Metric::Cosine` returns a distance

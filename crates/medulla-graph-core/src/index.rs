@@ -459,7 +459,16 @@ impl SecondaryIndex for VectorIndexDescriptor {
     /// Explicit recovery compaction for the vector store. A clean compaction drops
     /// tombstones so the resident index reflects exactly the live embedding set.
     fn full_rebuild(&self, core: &GraphCore) -> Result<(), IndexError> {
-        core.semantic_store.read().force_compact();
+        let store = core.semantic_store.read();
+        store.force_compact();
+        // MEDULLA-FEDERATED-QUERY-R040.5.6: an index that owns an identity is also compacted
+        // to its low-storage artifact, from the manifest the index persisted.
+        #[cfg(not(feature = "ann"))]
+        if store.identity().is_some() {
+            store
+                .compact_low_storage()
+                .map_err(|e| IndexError::Failed(e.to_string()))?;
+        }
         Ok(())
     }
 }

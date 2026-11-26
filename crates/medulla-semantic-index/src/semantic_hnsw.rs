@@ -10,6 +10,10 @@
 // vectors. `compute::semantic` re-exports whichever backend is active.
 
 use super::{check_embedding_dimension, EmbeddingDimensionError, SemanticQueryError};
+use crate::index_identity::IndexIdentity;
+use medulla_ann::low_storage::{
+    LowStorageArtifact, LowStorageError, ManifestRequest, SegmentBinding, StorageAccounting,
+};
 use medulla_ann::{HnswIndex as NativeHnswIndex, Metric};
 use medulla_index_types::{embedding::EmbeddingSpaceRef, embedding::StampedVector};
 use parking_lot::RwLock;
@@ -67,6 +71,9 @@ struct HnswIndex {
     built_len: usize,
     /// Embedding dimensionality the index was built for.
     dim: usize,
+    /// The compact low-storage artifact the compaction worker produced for the current
+    /// rows; any write or rebuild clears it (MEDULLA-FEDERATED-QUERY-R040.5.6).
+    compact: Option<LowStorageArtifact>,
 }
 
 impl HnswIndex {
@@ -78,6 +85,7 @@ impl HnswIndex {
             tombstones: std::collections::HashSet::new(),
             built_len: 0,
             dim: 0,
+            compact: None,
         }
     }
 }
@@ -87,6 +95,10 @@ pub struct SemanticStore {
     /// Exact model/preprocessing coordinate space for model-produced queries.
     /// `None` preserves legacy raw-vector stores without inventing an identity.
     pub(super) space: Option<EmbeddingSpaceRef>,
+    /// Who built the index and from what, persisted with the store so the compaction
+    /// worker reads it from here (MEDULLA-FEDERATED-QUERY-R040.5.6). `None` until the
+    /// build declares it.
+    pub(super) identity: Option<IndexIdentity>,
     /// Incrementally-maintained HNSW index (Phase C-D). Skipped on (de)serialize
     /// and rebuilt lazily from `embeddings` on the first search after load — which
     /// also closes the pre-existing post-restore gap where the index metadata came
@@ -110,6 +122,7 @@ impl Clone for SemanticStore {
         Self {
             embeddings: self.embeddings.clone(),
             space,
+            identity: self.identity.clone(),
             index: RwLock::new(HnswIndex::empty()),
             generation,
         }
