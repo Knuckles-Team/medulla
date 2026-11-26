@@ -153,65 +153,105 @@ fn admit_training_run(run: &TrainingRun, lookup: &dyn RecordLookup) -> Result<()
 
 /// An evaluation names a revision that exists, and its held-out trajectories
 /// are disjoint from the captures the evaluated version's training run read: a
-/// version trained on a trajectory is never evaluated on it. A `ModelPolicy`
-/// revision is a `ModelPolicyVersion` record; a `KnobSet` revision is a
-/// published `DecisionPolicy` component revision, read through [`RecordLookup`].
+/// version trained on a trajectory is never evaluated on it. The champion it is
+/// compared with is held to the same split, so a comparison never favours a side
+/// that saw the held-out set. A `ModelPolicy` revision is a `ModelPolicyVersion`
+/// record; a `KnobSet` revision is a published `DecisionPolicy` component
+/// revision, read through [`RecordLookup`]. A `DecisionHead` or `Program`
+/// subject is not evaluated here.
 fn admit_evaluation(
     evaluation: &PolicyEvaluation,
     lookup: &dyn RecordLookup,
 ) -> Result<(), PolicyRefusal> {
-    let revisions = std::iter::once(&evaluation.revision_ref).chain(&evaluation.champion_revision_ref);
     let mut evaluated: Option<ModelPolicyVersion> = None;
+    let mut champion: Option<ModelPolicyVersion> = None;
     match &evaluation.subject {
         RevisionSubject::ModelPolicy { .. } => {
-            for revision_ref in revisions {
-                let version: ModelPolicyVersion =
-                    fetch(lookup, revision_ref.as_str(), record_missing)?;
-                if evaluated.is_none() {
-                    evaluated = Some(version);
-                }
+            evaluated = Some(fetch(
+                lookup,
+                evaluation.revision_ref.as_str(),
+                record_missing,
+            )?);
+            if let Some(champion_ref) = &evaluation.champion_revision_ref {
+                champion = Some(fetch(lookup, champion_ref.as_str(), record_missing)?);
             }
         }
         RevisionSubject::KnobSet { policy_id } => {
             let published = lookup.policy_component_digests(policy_id)?;
+            let revisions =
+                std::iter::once(&evaluation.revision_ref).chain(&evaluation.champion_revision_ref);
             for revision_ref in revisions {
                 if !published.iter().any(|digest| digest == revision_ref.as_str()) {
                     return Err(record_missing(revision_ref.as_str()));
                 }
             }
         }
+        RevisionSubject::DecisionHead { .. } | RevisionSubject::Program { .. } => {
+            return Err(PolicyRefusal::SubjectUnsupported(
+                subject_kind(&evaluation.subject).to_string(),
+            ));
+        }
         other => {
             return Err(PolicyRefusal::InvalidRecord(format!(
                 "a policy evaluation cannot name a {} subject",
-                other.pointer_key().split(':').nth(1).unwrap_or("unknown")
+                subject_kind(other)
             )));
         }
     }
     if evaluation.held_out_trajectory_ids.is_empty() {
         return Ok(());
     }
+    let held_out = |trajectory_id: &str| {
+        evaluation
+            .held_out_trajectory_ids
+            .iter()
+            .any(|held_out| held_out.as_str() == trajectory_id)
+    };
+    if let Some(overlap) = trained_on(evaluated.as_ref(), lookup)?
+        .into_iter()
+        .find(|trajectory_id| held_out(trajectory_id))
+    {
+        return Err(PolicyRefusal::EvaluationOverlapsTraining(overlap));
+    }
+    if let Some(overlap) = trained_on(champion.as_ref(), lookup)?
+        .into_iter()
+        .find(|trajectory_id| held_out(trajectory_id))
+    {
+        return Err(PolicyRefusal::SplitOverlap(overlap));
+    }
+    Ok(())
+}
+
+/// The snake_case kind of a subject, from its pointer key.
+fn subject_kind(subject: &RevisionSubject) -> String {
+    subject
+        .pointer_key()
+        .split(':')
+        .nth(1)
+        .unwrap_or("unknown")
+        .to_string()
+}
+
+/// The trajectories the training run behind `version` read; empty for a base
+/// version or none.
+fn trained_on(
+    version: Option<&ModelPolicyVersion>,
+    lookup: &dyn RecordLookup,
+) -> Result<Vec<String>, PolicyRefusal> {
     let Some(ModelPolicyVersion {
         origin: VersionOrigin::Trained { training_run_id },
         ..
-    }) = evaluated
+    }) = version
     else {
-        return Ok(());
+        return Ok(Vec::new());
     };
     let run: TrainingRun = fetch(lookup, training_run_id.as_str(), record_missing)?;
+    let mut trajectories = Vec::new();
     for capture_id in run.input_capture_ids.iter() {
         let capture: PolicyCapture = fetch(lookup, capture_id.as_str(), record_missing)?;
-        let trained_on = capture.trajectory_id.as_str();
-        if evaluation
-            .held_out_trajectory_ids
-            .iter()
-            .any(|held_out| held_out.as_str() == trained_on)
-        {
-            return Err(PolicyRefusal::EvaluationOverlapsTraining(
-                trained_on.to_string(),
-            ));
-        }
+        trajectories.push(capture.trajectory_id.as_str().to_string());
     }
-    Ok(())
+    Ok(trajectories)
 }
 
 #[cfg(test)]

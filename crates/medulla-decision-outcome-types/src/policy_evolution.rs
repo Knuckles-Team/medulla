@@ -296,6 +296,14 @@ pub enum PolicyRefusal {
     /// An evaluation names a held-out trajectory the evaluated version trained on;
     /// the detail is that trajectory id.
     EvaluationOverlapsTraining(String),
+    /// An evaluation names a held-out trajectory the champion revision it is
+    /// compared with trained on (MEDULLA-DECISION-ENGINE-R811.4); the detail is
+    /// that trajectory id.
+    SplitOverlap(String),
+    /// An evaluation names a `DecisionHead` or `Program` subject, which no
+    /// policy-evolution record evaluates (MEDULLA-DECISION-ENGINE-R811.4); the
+    /// detail is the subject kind.
+    SubjectUnsupported(String),
     /// A generic graph write touched a policy-evolution row: only
     /// `PolicyEvolution` (through the kernel's `PolicyEvolutionStore`) may.
     NativeAuthorityRequired,
@@ -323,6 +331,8 @@ impl PolicyRefusal {
             Self::CaptureIneligible(_) => "POLICY_CAPTURE_INELIGIBLE",
             Self::RecordTampered(_) => "POLICY_RECORD_TAMPERED",
             Self::EvaluationOverlapsTraining(_) => "POLICY_EVALUATION_OVERLAPS_TRAINING",
+            Self::SplitOverlap(_) => "POLICY_SPLIT_OVERLAP",
+            Self::SubjectUnsupported(_) => "POLICY_SUBJECT_UNSUPPORTED",
             Self::NativeAuthorityRequired => "POLICY_NATIVE_AUTHORITY_REQUIRED",
         }
     }
@@ -334,7 +344,9 @@ impl PolicyRefusal {
             | Self::RecordMissing(detail)
             | Self::CaptureIneligible(detail)
             | Self::RecordTampered(detail)
-            | Self::EvaluationOverlapsTraining(detail) => detail,
+            | Self::EvaluationOverlapsTraining(detail)
+            | Self::SplitOverlap(detail)
+            | Self::SubjectUnsupported(detail) => detail,
             Self::CapabilityMissing
             | Self::CaptureDisabled
             | Self::TrainDisabled

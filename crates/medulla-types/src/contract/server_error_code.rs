@@ -1038,6 +1038,8 @@ closed_error_codes! {
         PolicyCaptureIneligible => "POLICY_CAPTURE_INELIGIBLE",
         PolicyRecordTampered => "POLICY_RECORD_TAMPERED",
         PolicyEvaluationOverlapsTraining => "POLICY_EVALUATION_OVERLAPS_TRAINING",
+        PolicySplitOverlap => "POLICY_SPLIT_OVERLAP",
+        PolicySubjectUnsupported => "POLICY_SUBJECT_UNSUPPORTED",
         /// A `QueryPolicy` or promoted classification record in the tenant graph is malformed (MEDULLA-FEDERATED-QUERY-R706.7).
         PolicyRecordInvalid => "POLICY_RECORD_INVALID",
         /// A `QueryPolicy` names a tag the tenant has not registered as a `marking:<tag>` node (MEDULLA-FEDERATED-QUERY-R706.4).

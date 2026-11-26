@@ -351,3 +351,67 @@ fn knob_set_evaluation_names_its_policy_revision() {
     let version_id = base_version(&mut graph, 2);
     assert_eq!(admit(&evaluation_of(&version_id, &[]), &graph), Ok(()));
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R811.4
+#[test]
+fn champion_that_trained_on_the_held_out_set_refuses_as_split_overlap() {
+    let mut graph = graph_with_trajectory();
+    let (base_id, run) = training_run(&mut graph, true, succeeded());
+    let run_id = graph.put(PolicyEvolutionRecord::TrainingRun { record: run });
+    let trained_id = graph.put(trained_version(&run_id, &base_id, 12));
+    let record = |revision: &str, champion: &str, held_out: &[&str]| {
+        PolicyEvolutionRecord::PolicyEvaluation {
+            record: typed(json!({
+                "subject": model_subject(), "revision_ref": revision,
+                "champion_revision_ref": champion,
+                "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+                "evaluator_kind": "annotation", "held_out_trajectory_ids": held_out,
+                "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
+                            "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
+                            "trace_completeness_ppm": 0, "unsupported_replay_mass_ppm": 0},
+                "safety": "passed", "verdict": "accepted",
+            })),
+        }
+    };
+    let refusal = admit(&record(&base_id, &trained_id, &["trajectory:0001"]), &graph);
+    assert_eq!(
+        refusal,
+        Err(PolicyRefusal::SplitOverlap("trajectory:0001".into()))
+    );
+    assert_eq!(PolicyRefusal::SplitOverlap("t".into()).code(), "POLICY_SPLIT_OVERLAP");
+    // A held-out set the champion never read is admitted.
+    assert_eq!(
+        admit(&record(&base_id, &trained_id, &["trajectory:0002"]), &graph),
+        Ok(())
+    );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R811.4
+#[test]
+fn decision_head_and_program_subjects_refuse_as_unsupported() {
+    let graph = Graph::default();
+    for (subject, kind) in [
+        (json!({"kind": "decision_head", "component_id": "c"}), "decision_head"),
+        (json!({"kind": "program", "program_ref": "p"}), "program"),
+    ] {
+        let record = PolicyEvolutionRecord::PolicyEvaluation {
+            record: typed(json!({
+                "subject": subject, "revision_ref": "r",
+                "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+                "evaluator_kind": "annotation",
+                "metrics": {"task_success_ppm": 1, "baseline_task_success_ppm": 0, "cost_micros": 0,
+                            "latency_p50_ms": 0, "latency_p95_ms": 0, "gpu_seconds": 0,
+                            "trace_completeness_ppm": 0, "unsupported_replay_mass_ppm": 0},
+                "safety": "passed", "verdict": "accepted",
+            })),
+        };
+        assert_eq!(
+            admit(&record, &graph),
+            Err(PolicyRefusal::SubjectUnsupported(kind.into()))
+        );
+    }
+    assert_eq!(
+        PolicyRefusal::SubjectUnsupported("p".into()).code(),
+        "POLICY_SUBJECT_UNSUPPORTED"
+    );
+}

@@ -121,6 +121,12 @@ pub const POLICY_RECORD_TAMPERED: RefusalCode = RefusalCode::new("POLICY_RECORD_
 /// Policy-evolution refusal: a held-out trajectory is one the evaluated version trained on.
 pub const POLICY_EVALUATION_OVERLAPS_TRAINING: RefusalCode =
     RefusalCode::new("POLICY_EVALUATION_OVERLAPS_TRAINING");
+/// Policy-evolution refusal: a held-out trajectory is one the compared champion trained on
+/// (MEDULLA-DECISION-ENGINE-R811.4).
+pub const POLICY_SPLIT_OVERLAP: RefusalCode = RefusalCode::new("POLICY_SPLIT_OVERLAP");
+/// Policy-evolution refusal: an evaluation of a decision head or program subject
+/// (MEDULLA-DECISION-ENGINE-R811.4).
+pub const POLICY_SUBJECT_UNSUPPORTED: RefusalCode = RefusalCode::new("POLICY_SUBJECT_UNSUPPORTED");
 /// Policy-evolution refusal native authority required.
 pub const POLICY_NATIVE_AUTHORITY_REQUIRED: RefusalCode =
     RefusalCode::new("POLICY_NATIVE_AUTHORITY_REQUIRED");
@@ -213,6 +219,8 @@ pub const FOLDED: &[RefusalCode] = &[
     POLICY_CAPTURE_INELIGIBLE,
     POLICY_RECORD_TAMPERED,
     POLICY_EVALUATION_OVERLAPS_TRAINING,
+    POLICY_SPLIT_OVERLAP,
+    POLICY_SUBJECT_UNSUPPORTED,
     POLICY_NATIVE_AUTHORITY_REQUIRED,
     PRIMITIVE_EDGE_MISMATCH,
     PRIMITIVE_KIND_MISMATCH,

@@ -132,10 +132,18 @@ async fn write_and_replay(h: &Harness, scope: &str, name: &str, request: Value) 
     first["record_id"].as_str().expect("a record id").to_string()
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R811.3
-#[tokio::test]
-async fn capture_train_evaluate_and_promote() {
-    let h = Harness::with_isolation(ServerState::test_isolation(WRITER)).await;
+/// The records one served chain commits, in dependency order.
+struct Chain {
+    capability_id: String,
+    base_id: String,
+    capture_id: String,
+    run_id: String,
+    trained_id: String,
+}
+
+/// Commit a capability, a base version, one capture, a succeeded training run
+/// and the trained version, each written then replayed.
+async fn seed_chain(h: &Harness) -> Chain {
     h.seed_node(
         GRAPH,
         TRAJECTORY,
@@ -152,7 +160,7 @@ async fn capture_train_evaluate_and_promote() {
                      "train": {"enabled": true, "scope": "ops"}},
     });
     let capability_id =
-        write_and_replay(&h, "admin:policy-capability", "put_capability", capability).await;
+        write_and_replay(h, "admin:policy-capability", "put_capability", capability).await;
 
     // The capture names the version that sampled it, so the base version is
     // registered before the capture is committed.
@@ -161,16 +169,16 @@ async fn capture_train_evaluate_and_promote() {
         "artifact_ref": "artifacts:base", "origin": {"origin": "base"},
     });
     let base_id = write_and_replay(
-        &h,
+        h,
         "admin:model-policy-register",
         "register_model_policy_version",
         base,
     )
     .await;
 
-    let capture = capture_body(&h, &capability_id, &base_id).await;
+    let capture = capture_body(h, &capability_id, &base_id).await;
     let capture_id =
-        write_and_replay(&h, "policy:capture-write", "commit_capture", capture).await;
+        write_and_replay(h, "policy:capture-write", "commit_capture", capture).await;
 
     let run = json!({
         "capability_id": capability_id, "work_item_id": "work:1", "base_version_id": base_id,
@@ -181,7 +189,7 @@ async fn capture_train_evaluate_and_promote() {
         "status": {"status": "succeeded",
                    "output": {"artifact_digest": hex(12), "artifact_ref": "artifacts:v2"}},
     });
-    let run_id = write_and_replay(&h, "admin:training-run-write", "commit_training_run", run).await;
+    let run_id = write_and_replay(h, "admin:training-run-write", "commit_training_run", run).await;
 
     let trained = json!({
         "checkpoint_digest": hex(1), "adapter_digest": hex(12), "tokenizer_digest": hex(2),
@@ -189,23 +197,60 @@ async fn capture_train_evaluate_and_promote() {
         "origin": {"origin": "trained", "training_run_id": run_id},
     });
     let trained_id = write_and_replay(
-        &h,
+        h,
         "admin:model-policy-register",
         "register_model_policy_version",
         trained,
     )
     .await;
 
-    let evaluation = json!({
-        "subject": {"kind": "model_policy", "family_ref": "family:policy"},
-        "revision_ref": trained_id, "champion_revision_ref": base_id,
+    Chain {
+        capability_id,
+        base_id,
+        capture_id,
+        run_id,
+        trained_id,
+    }
+}
+
+fn evaluation_json(subject: Value, revision_ref: &str, champion: Option<&str>, held_out: &[&str]) -> Value {
+    json!({
+        "subject": subject,
+        "revision_ref": revision_ref, "champion_revision_ref": champion,
         "evaluation_set_digest": hex(20), "evaluator_digest": hex(21), "evaluator_kind": "annotation",
-        "held_out_trajectory_ids": ["trajectory:0002"],
+        "held_out_trajectory_ids": held_out,
         "metrics": {"task_success_ppm": 800_000, "baseline_task_success_ppm": 600_000,
                     "cost_micros": 10, "latency_p50_ms": 5, "latency_p95_ms": 9, "gpu_seconds": 1,
                     "trace_completeness_ppm": 1_000_000, "unsupported_replay_mass_ppm": 0},
         "safety": "passed", "verdict": "accepted",
-    });
+    })
+}
+
+fn model_subject() -> Value {
+    json!({"kind": "model_policy", "family_ref": "family:policy"})
+}
+
+async fn node_count(h: &Harness) -> usize {
+    let state = h.state.read().await;
+    state
+        .registry
+        .get(GRAPH)
+        .map_or(0, |entry| entry.core.node_count())
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R811.3
+#[tokio::test]
+async fn capture_train_evaluate_and_promote() {
+    let h = Harness::with_isolation(ServerState::test_isolation(WRITER)).await;
+    let chain = seed_chain(&h).await;
+    let (base_id, run_id, trained_id) = (&chain.base_id, &chain.run_id, &chain.trained_id);
+
+    let evaluation = evaluation_json(
+        model_subject(),
+        trained_id,
+        Some(base_id),
+        &["trajectory:0002"],
+    );
     write_and_replay(
         &h,
         "admin:policy-evaluation-write",
@@ -217,9 +262,9 @@ async fn capture_train_evaluate_and_promote() {
     let get = |record_id: &str| op("get", json!({"record_id": record_id}));
     let read = value_of(
         "get",
-        dispatch(&h, TENANT, &["policy:read"], get(&run_id)).await,
+        dispatch(&h, TENANT, &["policy:read"], get(run_id)).await,
     );
-    assert_eq!(read["record_id"], run_id);
+    assert_eq!(read["record_id"], *run_id);
     assert_eq!(read["record"]["kind"], "training_run");
     assert!(read["recorded_by"].as_str().is_some_and(|by| !by.is_empty()));
 
@@ -227,7 +272,82 @@ async fn capture_train_evaluate_and_promote() {
     // run is never returned.
     let other = value_of(
         "get under another tenant",
-        dispatch(&h, OTHER_TENANT, &["policy:read"], get(&run_id)).await,
+        dispatch(&h, OTHER_TENANT, &["policy:read"], get(run_id)).await,
     );
     assert!(other.is_null(), "another tenant saw the record: {other}");
+}
+
+/// Send one write that must be refused: answer its error text, and assert it
+/// left the graph exactly as it was (a refusal writes no receipt and no node).
+async fn refusal_of(h: &Harness, scope: &str, name: &str, request: Value) -> String {
+    let before = node_count(h).await;
+    let scopes = [scope];
+    let response = dispatch(h, TENANT, &scopes, op(name, request)).await;
+    let error = response
+        .error
+        .unwrap_or_else(|| panic!("{name} was admitted: {:?}", response.result));
+    assert_eq!(
+        node_count(h).await,
+        before,
+        "{name}: a refusal wrote a node"
+    );
+    error
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R811.4
+#[tokio::test]
+async fn policy_evolution_refusals() {
+    let h = Harness::with_isolation(ServerState::test_isolation(WRITER)).await;
+    let chain = seed_chain(&h).await;
+    let evaluate = "admin:policy-evaluation-write";
+
+    // A capture under a capability whose capture control is off.
+    let no_capture = json!({
+        "provider": "vllm", "endpoint_ref": "endpoint:gb10", "base_checkpoint_digest": hex(1),
+        "tokenizer_digest": hex(2), "decode_params_digest": hex(3),
+        "artifact_destination_ref": "artifacts:new", "probe_digest": hex(5), "probed_at_ms": 1,
+        "logprobs": {"chosen_token": true},
+        "controls": {"capture": {"enabled": false, "scope": null},
+                     "train": {"enabled": true, "scope": "ops"}},
+    });
+    let off_id = write_and_replay(&h, "admin:policy-capability", "put_capability", no_capture).await;
+    assert_ne!(off_id, chain.capability_id);
+    let capture = capture_body(&h, &off_id, &chain.base_id).await;
+    let error = refusal_of(&h, "policy:capture-write", "commit_capture", capture).await;
+    assert!(error.starts_with("POLICY_CAPTURE_DISABLED"), "{error}");
+
+    // The held-out set the trained version read is refused for that version,
+    // and for the champion it is compared with.
+    let trained_on_held_out = evaluation_json(
+        model_subject(),
+        &chain.trained_id,
+        Some(&chain.base_id),
+        &[TRAJECTORY],
+    );
+    let error = refusal_of(&h, evaluate, "commit_policy_evaluation", trained_on_held_out).await;
+    assert!(
+        error.starts_with("POLICY_EVALUATION_OVERLAPS_TRAINING"),
+        "{error}"
+    );
+    let champion_saw_it = evaluation_json(
+        model_subject(),
+        &chain.base_id,
+        Some(&chain.trained_id),
+        &[TRAJECTORY],
+    );
+    let error = refusal_of(&h, evaluate, "commit_policy_evaluation", champion_saw_it).await;
+    assert!(error.starts_with("POLICY_SPLIT_OVERLAP"), "{error}");
+    assert!(error.contains(TRAJECTORY), "{error}");
+
+    // A decision head or a program is not a subject an evaluation can name.
+    for subject in [
+        json!({"kind": "decision_head", "component_id": "component:head"}),
+        json!({"kind": "program", "program_ref": "program:main"}),
+    ] {
+        let kind = subject["kind"].as_str().expect("a kind").to_string();
+        let evaluation = evaluation_json(subject, &chain.trained_id, None, &[]);
+        let error = refusal_of(&h, evaluate, "commit_policy_evaluation", evaluation).await;
+        assert!(error.starts_with("POLICY_SUBJECT_UNSUPPORTED"), "{error}");
+        assert!(error.contains(&kind), "{error}");
+    }
 }

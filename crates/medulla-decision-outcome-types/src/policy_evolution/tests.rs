@@ -465,6 +465,8 @@ fn outcome_refusal_enums_map_to_folded_codes() {
         PolicyRefusal::CaptureIneligible("x".into()),
         PolicyRefusal::RecordTampered("x".into()),
         PolicyRefusal::EvaluationOverlapsTraining("x".into()),
+        PolicyRefusal::SplitOverlap("x".into()),
+        PolicyRefusal::SubjectUnsupported("x".into()),
         PolicyRefusal::NativeAuthorityRequired,
     ];
     let refs: Vec<&dyn DecisionRefusal> =
