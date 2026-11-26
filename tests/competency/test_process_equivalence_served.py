@@ -14,6 +14,7 @@ import os
 import uuid
 from pathlib import Path
 from typing import Any
+from xml.etree import ElementTree
 
 import pytest
 from _decision_resident_fixture import publish, schema_body
@@ -27,6 +28,29 @@ FIXTURES = (
     Path(__file__).resolve().parents[2]
     / "crates/medulla-core/tests/fixtures/process_equivalence"
 )
+
+
+_KINDS = ("call", "branch", "join", "decision", "approval")
+
+
+def _bpmn_process_element_id(document: bytes) -> str:
+    """The id of the BPMN process element, read from the imported document itself."""
+    for element in ElementTree.fromstring(document).iter():
+        if element.tag.rsplit("}", 1)[-1] == "process":
+            return element.attrib["id"]
+    raise AssertionError("the BPMN fixture has no process element")
+
+
+def _shape(plan: dict[str, Any]) -> list[tuple[str, str, list[str]]]:
+    """Per task: its id, its kind and its sorted dependencies."""
+    return [
+        (
+            task["task_id"],
+            next((kind for kind in _KINDS if task.get(kind) is not None), "prompt"),
+            sorted(task.get("depends_on", [])),
+        )
+        for task in plan["tasks"]
+    ]
 
 
 async def _connect(graph: str) -> MedullaClient:
@@ -43,18 +67,14 @@ async def _import_both(
     client = await _connect(graph)
     try:
         model_iri = f"urn:model:invoice-{suffix}"
+        document = (FIXTURES / "invoice-approval.bpmn").read_bytes()
         await client.graph.process_document_import(
-            {
-                "format": "bpmn20",
-                "document": (FIXTURES / "invoice_approval.bpmn").read_bytes(),
-            },
-            model_iri,
-            0,
+            {"format": "bpmn20", "document": document}, model_iri, 0
         )
-        process_iri = f"process:{model_iri}:invoice"
+        process_iri = f"process:{model_iri}:{_bpmn_process_element_id(document)}"
         bpmn = await client.graph.process_compile(process_iri, 0)
         epc_workflow = json.loads(
-            (FIXTURES / "invoice_approval.epc.canonical.json").read_text()
+            (FIXTURES / "invoice-approval.epc.canonical.json").read_text()
         )
         epc = await client.graph.process_model_import(
             epc_workflow, f"invoice-epc-{suffix}", 0
@@ -91,7 +111,7 @@ def test_bpmn_and_epc_plan_digests_match(clean_graph):
     schema = publish(
         clean_graph, f"r701-9-schema-{suffix}", "feature_schema", schema_body()
     )
-    golden = json.loads((FIXTURES / "invoice_approval.canonical.json").read_text())
+    golden = json.loads((FIXTURES / "invoice-approval.canonical.json").read_text())
 
     bpmn, epc, process_iri = asyncio.run(_import_both(graph, suffix))
     assert bpmn["workflow_digest"] == golden["digest"]
@@ -103,3 +123,4 @@ def test_bpmn_and_epc_plan_digests_match(clean_graph):
     )
     assert bpmn_plan["plan_digest"] == epc_plan["plan_digest"]
     assert len(bpmn_plan["tasks"]) == len(epc_plan["tasks"])
+    assert _shape(bpmn_plan) == _shape(epc_plan)

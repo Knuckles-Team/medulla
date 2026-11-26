@@ -21,10 +21,11 @@ const ENCRYPTION_KEY: &str = "process-import-served-key-0123456789abc";
 const GRAPH: &str = "processes";
 const WORKFLOW_ID: &str = "invoice-approval";
 
-const BPMN_SIDE: &str =
-    include_str!("../crates/medulla-core/tests/fixtures/process_equivalence/invoice_approval.canonical.json");
+const BPMN_SIDE: &str = include_str!(
+    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice-approval.canonical.json"
+);
 const EPC_SIDE: &str = include_str!(
-    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice_approval.epc.canonical.json"
+    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice-approval.epc.canonical.json"
 );
 
 async fn send(state: &test_support::SharedState, id: u64, method: Method) -> Response {
@@ -112,7 +113,11 @@ async fn import_stores_versioned_workflow_and_export_reads_it() {
     assert_eq!(first.version, 1);
     assert_eq!(first.workflow_id, "workflow:invoice-approval:v1");
     assert_eq!(first.workflow_digest, stated.digest);
-    assert_eq!(core_version(&state), before + 1, "one import commits one batch");
+    assert_eq!(
+        core_version(&state),
+        before + 1,
+        "one import commits one batch"
+    );
 
     // The EPC side of the same process carries the same digest and enters as version 2.
     let second: ProcessModelImported = payload(import(&state, 3, EPC_SIDE, Some(1)).await);
@@ -135,7 +140,10 @@ async fn import_stores_versioned_workflow_and_export_reads_it() {
         },
     )
     .await;
-    assert_eq!(refused.error.as_deref(), Some("PROCESS_IMPORT_DIGEST_MISMATCH"));
+    assert_eq!(
+        refused.error.as_deref(),
+        Some("PROCESS_IMPORT_DIGEST_MISMATCH")
+    );
     assert_eq!(core_version(&state), version, "a refusal writes nothing");
 
     // No target: the canonical form as stored, version 1.
@@ -163,7 +171,10 @@ async fn import_stores_versioned_workflow_and_export_reads_it() {
     assert!(!listed.workflow.losses.is_empty());
 
     let unknown = export(&state, 11, 9, None, false).await;
-    assert_eq!(unknown.error.as_deref(), Some("PROCESS_IMPORT_UNKNOWN_MODEL"));
+    assert_eq!(
+        unknown.error.as_deref(),
+        Some("PROCESS_IMPORT_UNKNOWN_MODEL")
+    );
 }
 
 fn node_properties(
@@ -204,7 +215,10 @@ async fn stored_steps_keep_source_ids() {
     assert!(!stated.annex.is_empty(), "the EPC side keeps an annex");
 
     for step in &stated.steps {
-        let stored = node_properties(&state, &format!("{}:step:{}", imported.workflow_id, step.id));
+        let stored = node_properties(
+            &state,
+            &format!("{}:step:{}", imported.workflow_id, step.id),
+        );
         assert_eq!(stored["sourceSystem"], "aris_epc");
         assert_eq!(stored["sourceModelId"], stated.source.model_id);
         assert_eq!(

@@ -16,7 +16,7 @@ use medulla_core::process_import::{
 use medulla_types::process_import::{CanonicalWorkflow, ProcessSourceSystem};
 
 const FIXTURES: &[&str] = &[
-    "invoice_approval",
+    "invoice-approval",
     "or_split_join",
     "event_based_wait",
     "boundary_event",
@@ -138,7 +138,7 @@ fn every_fixture_square_commutes() {
 // spec: MEDULLA-CQ-ORCH-R701.12
 #[test]
 fn a_broken_square_names_fixture_equality_and_digests() {
-    let name = "invoice_approval";
+    let name = "invoice-approval";
     let bytes = std::fs::read(dir().join(format!("{name}.bpmn"))).unwrap();
     let bpmn = from_bpmn_bytes(&bytes).unwrap();
     let text = String::from_utf8(bytes)
@@ -146,7 +146,7 @@ fn a_broken_square_names_fixture_equality_and_digests() {
         .replace("Approve invoice", "Reject invoice");
     let broken = from_bpmn_bytes(text.as_bytes()).unwrap();
     let defect = commutes(name, &broken, &bpmn).unwrap_err();
-    assert!(defect.contains("fixture invoice_approval"), "{defect}");
+    assert!(defect.contains("fixture invoice-approval"), "{defect}");
     assert!(defect.contains("equality (1) BPMN = EPC"), "{defect}");
     assert!(
         defect.contains(&broken.digest) && defect.contains(&bpmn.digest),

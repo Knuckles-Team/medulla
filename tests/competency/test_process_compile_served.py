@@ -43,10 +43,12 @@ def _process(prefix: str) -> tuple[str, list[dict[str, Any]]]:
     ids = [f"{prefix}:s{i:02d}" for i in range(12)]
     operations = [_node(process, "Process")]
     for index, node_id in enumerate(ids):
-        element = "startEvent" if index == 0 else "endEvent" if index == 11 else "userTask"
+        element = (
+            "startEvent" if index == 0 else "endEvent" if index == 11 else "userTask"
+        )
         operations.append(_node(node_id, element))
     operations.append(_edge(process, ids[0], "hasStep"))
-    for source, target in zip(ids, ids[1:]):
+    for source, target in zip(ids, ids[1:], strict=False):
         operations.append(_edge(source, target, "handsOffTo"))
     return process, operations
 
@@ -63,9 +65,9 @@ async def _compile_round_trip(prefix: str) -> tuple[dict[str, Any], dict[str, An
     client = await _connect()
     try:
         process, operations = _process(prefix)
-        await client.batch_update(operations)
-        first = await client.process_compile(process, 0)
-        second = await client.process_compile(process, first["version"])
+        await client.lifecycle.batch_update(operations)
+        first = await client.graph.process_compile(process, 0)
+        second = await client.graph.process_compile(process, first["version"])
         return first, second
     finally:
         await client.close()
@@ -75,7 +77,7 @@ async def _compile_cycle(prefix: str) -> str:
     client = await _connect()
     try:
         process = f"{prefix}:loop"
-        await client.batch_update(
+        await client.lifecycle.batch_update(
             [
                 _node(process, "Process"),
                 _node(f"{prefix}:a", "userTask"),
@@ -86,7 +88,7 @@ async def _compile_cycle(prefix: str) -> str:
             ]
         )
         try:
-            await client.process_compile(process)
+            await client.graph.process_compile(process)
         except Exception as error:  # the refusal is the answer under test
             return str(error)
         return ""

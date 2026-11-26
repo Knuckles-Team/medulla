@@ -60,7 +60,7 @@ fn core_version(state: &test_support::SharedState) -> u64 {
 const LIMITS_DMN: &[u8] =
     include_bytes!("../crates/medulla-core/tests/fixtures/process_exchange/limits.dmn");
 const WORKFLOW_JSON: &str = include_str!(
-    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice_approval.canonical.json"
+    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice-approval.canonical.json"
 );
 
 fn import_document(bytes: &[u8], format: ProcessDocumentFormat, iri: &str) -> Method {
@@ -130,7 +130,11 @@ async fn import_writes_model_in_one_batch() {
     assert_eq!(first.model_node_id, format!("processmodel:{MODEL_IRI}:v1"));
     assert!(first.nodes > 0 && first.edges > 0);
     assert_eq!(first.source_document_digest.len(), 64);
-    assert_eq!(core_version(&state), before + 1, "one import commits one batch");
+    assert_eq!(
+        core_version(&state),
+        before + 1,
+        "one import commits one batch"
+    );
 
     // The stored classes: the model node and the user task of the document.
     assert_eq!(
@@ -170,7 +174,8 @@ async fn export_reads_model_and_workflow() {
         GRAPH,
     )
     .await;
-    let _: ProcessDocumentImported = payload(send(&state, 2, import_method(EVERY_KIND, None)).await);
+    let _: ProcessDocumentImported =
+        payload(send(&state, 2, import_method(EVERY_KIND, None)).await);
 
     // A model exports as the document it was imported from, up to element order.
     let exported: ProcessDocumentExported = payload(
@@ -182,7 +187,10 @@ async fn export_reads_model_and_workflow() {
         .await,
     );
     assert_eq!(exported.document.format, ProcessDocumentFormat::Bpmn20);
-    assert_eq!(exported.document_digest, sha256_hex(&exported.document.document));
+    assert_eq!(
+        exported.document_digest,
+        sha256_hex(&exported.document.document)
+    );
     let original = parse_bpmn(EVERY_KIND, BpmnLimits::default()).unwrap();
     let written = parse_bpmn(&exported.document.document, BpmnLimits::default()).unwrap();
     assert_eq!(
@@ -195,7 +203,12 @@ async fn export_reads_model_and_workflow() {
     // version 1, and version 1 stays readable and unchanged.
     let slim = br#"<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="defs"><process id="p"><startEvent id="s"/><endEvent id="e"/><sequenceFlow id="f" sourceRef="s" targetRef="e"/></process></definitions>"#;
     let _: ProcessDocumentImported = payload(
-        send(&state, 4, import_document(slim, ProcessDocumentFormat::Bpmn20, MODEL_IRI)).await,
+        send(
+            &state,
+            4,
+            import_document(slim, ProcessDocumentFormat::Bpmn20, MODEL_IRI),
+        )
+        .await,
     );
     let replaced: ProcessDocumentExported = payload(
         send(
@@ -215,7 +228,10 @@ async fn export_reads_model_and_workflow() {
         Some("BpmnUserTask"),
         "an earlier version's nodes are never removed"
     );
-    assert_eq!(node_type(&state, &format!("process:{MODEL_IRI}:v2:user1")), None);
+    assert_eq!(
+        node_type(&state, &format!("process:{MODEL_IRI}:v2:user1")),
+        None
+    );
     let first_again: ProcessDocumentExported = payload(
         send(
             &state,
@@ -266,8 +282,7 @@ async fn export_reads_model_and_workflow() {
         )
         .await,
     );
-    let deployable =
-        parse_bpmn(&from_workflow.document.document, BpmnLimits::default()).unwrap();
+    let deployable = parse_bpmn(&from_workflow.document.document, BpmnLimits::default()).unwrap();
     let kinds: Vec<&str> = deployable.processes[0]
         .nodes
         .iter()
@@ -303,15 +318,28 @@ async fn dmn_export_reads_definitions() {
     .await;
     let iri = "urn:model:limits";
     let imported: ProcessDocumentImported = payload(
-        send(&state, 2, import_document(LIMITS_DMN, ProcessDocumentFormat::Dmn13, iri)).await,
+        send(
+            &state,
+            2,
+            import_document(LIMITS_DMN, ProcessDocumentFormat::Dmn13, iri),
+        )
+        .await,
     );
     assert_eq!(imported.format, ProcessDocumentFormat::Dmn13);
 
     let exported: ProcessDocumentExported = payload(
-        send(&state, 3, export_method(model(iri), ProcessDocumentFormat::Dmn13)).await,
+        send(
+            &state,
+            3,
+            export_method(model(iri), ProcessDocumentFormat::Dmn13),
+        )
+        .await,
     );
     assert_eq!(exported.document.format, ProcessDocumentFormat::Dmn13);
-    assert_eq!(exported.document_digest, sha256_hex(&exported.document.document));
+    assert_eq!(
+        exported.document_digest,
+        sha256_hex(&exported.document.document)
+    );
     let original = parse_dmn(LIMITS_DMN, XmlLimits::default()).unwrap();
     let written = parse_dmn(&exported.document.document, XmlLimits::default()).unwrap();
     assert_eq!(
@@ -321,9 +349,8 @@ async fn dmn_export_reads_definitions() {
     );
 
     // A BPMN model is not a DMN source, and a workflow is not either.
-    let _: ProcessDocumentImported = payload(
-        send(&state, 4, import_method(EVERY_KIND, None)).await,
-    );
+    let _: ProcessDocumentImported =
+        payload(send(&state, 4, import_method(EVERY_KIND, None)).await);
     for (id, source) in [
         (5, model(MODEL_IRI)),
         (
@@ -334,7 +361,12 @@ async fn dmn_export_reads_definitions() {
             },
         ),
     ] {
-        let refused = send(&state, id, export_method(source, ProcessDocumentFormat::Dmn13)).await;
+        let refused = send(
+            &state,
+            id,
+            export_method(source, ProcessDocumentFormat::Dmn13),
+        )
+        .await;
         assert!(refused
             .error
             .as_deref()
@@ -417,7 +449,10 @@ async fn model_keeps_document_and_canonical_digests() {
         (text("sourceDocumentDigest"), text("canonicalModelDigest"))
     };
     let is_hex = |text: &str| {
-        text.len() == 64 && text.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        text.len() == 64
+            && text
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
     };
     assert_eq!(document, imported.source_document_digest);
     assert!(is_hex(&canonical));
@@ -432,5 +467,8 @@ async fn model_keeps_document_and_canonical_digests() {
         .await,
     );
     assert_eq!(exported.canonical_model_digest, canonical);
-    assert_eq!(exported.document_digest, sha256_hex(&exported.document.document));
+    assert_eq!(
+        exported.document_digest,
+        sha256_hex(&exported.document.document)
+    );
 }

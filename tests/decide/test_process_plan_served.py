@@ -1,9 +1,10 @@
 """MEDULLA-CQ-ORCH-R704.8 served process plan over the wire client.
 
-The entry point is the served ``Decide`` method with the ``process_plan`` question kind.
-A canonical workflow with a tool step, two prompt steps, a business rule step, a user step and
-an exclusive gateway is stored through ``process_model_import``; the binding links of its
-step nodes are written through ``batch_update``. The plan answers one tool step, prompt
+The entry point is the served ``Decide`` method with the ``process_plan`` question
+kind. A canonical workflow with a tool step, two prompt steps, a business rule step,
+a user step and an exclusive gateway is stored through ``process_model_import``; the
+binding links of its step nodes are written through ``batch_update``. The plan
+answers one tool step, prompt
 steps, one decision step, one approval wait and one branch step with two arms, with one
 ``binding:`` premise per step. A workflow nobody stored is the family's abstention.
 """
@@ -141,14 +142,16 @@ async def _plan(schema: dict[str, Any], graph: str, workflow_id: str, version: i
         await client.close()
 
 
-async def _store(graph: str, workflow_id: str, workflow: dict[str, Any] | None = None) -> int:
+async def _store(
+    graph: str, workflow_id: str, workflow: dict[str, Any] | None = None
+) -> int:
     client = await _connect(graph)
     try:
         if workflow is not None:
-            imported = await client.process_model_import(workflow, workflow_id)
+            imported = await client.graph.process_model_import(workflow, workflow_id)
             return imported["version"]
-        imported = await client.process_model_import(_workflow(), workflow_id)
-        await client.batch_update(_bindings(imported["workflow_id"]))
+        imported = await client.graph.process_model_import(_workflow(), workflow_id)
+        await client.lifecycle.batch_update(_bindings(imported["workflow_id"]))
         return imported["version"]
     finally:
         await client.close()
@@ -159,7 +162,9 @@ def test_process_plan_binds_every_step_kind(clean_graph):
     # spec: MEDULLA-CQ-ORCH-R704.8
     suffix = uuid.uuid4().hex[:8]
     graph = _graph_name(clean_graph)
-    schema = publish(clean_graph, f"r704-8-schema-{suffix}", "feature_schema", schema_body())
+    schema = publish(
+        clean_graph, f"r704-8-schema-{suffix}", "feature_schema", schema_body()
+    )
     workflow_id = f"workflow:invoice-{suffix}"
     version = asyncio.run(_store(graph, workflow_id))
 
@@ -179,12 +184,18 @@ def test_process_plan_binds_every_step_kind(clean_graph):
     assert branch["default_arm"] == "s8"
     assert tasks["s9"]["join"]["branch_task_id"] == "s6"
     facts = [premise["fact"] for premise in record["premises"]]
-    assert any(f.startswith("binding:step=s2;target=tool:ledger-mcp/post_invoice") for f in facts)
+    assert any(
+        f.startswith("binding:step=s2;target=tool:ledger-mcp/post_invoice")
+        for f in facts
+    )
     assert sum(f.startswith("binding:step=") for f in facts) == 6
 
     # Evaluate-only: the same question seals the same plan.
     again = asyncio.run(_plan(schema, graph, workflow_id, version))
-    assert again["answer"]["value"]["plan_digest"] == record["answer"]["value"]["plan_digest"]
+    assert (
+        again["answer"]["value"]["plan_digest"]
+        == record["answer"]["value"]["plan_digest"]
+    )
 
     # A workflow nobody stored is the family's abstention.
     missing = asyncio.run(_plan(schema, graph, f"workflow:none-{suffix}", 1))
@@ -195,7 +206,9 @@ def test_process_plan_binds_every_step_kind(clean_graph):
 RANKED_TASK = "export the quarterly sales report to a file"
 
 
-def _publish_ranked_tool(client: Any, component_id: str, server: str, summary: str) -> None:
+def _publish_ranked_tool(
+    client: Any, component_id: str, server: str, summary: str
+) -> None:
     request = publication(component_id, "tool", {})
     component = request["op"]["request"]["component"]
     component["content_digest"] = DIGEST
@@ -213,11 +226,14 @@ def _publish_ranked_tool(client: Any, component_id: str, server: str, summary: s
 @pytest.mark.spec("MEDULLA-CQ-ORCH-R704.8")
 def test_process_plan_ranked_binding_is_a_claim(clean_graph):
     # spec: MEDULLA-CQ-ORCH-R704.8
-    """An agent step the graph does not bind takes the top ranked tool that has a registered
-    contract; the binding premise is a ranked claim, and its plan carries the tool call."""
+    """An agent step the graph does not bind takes the top ranked tool that has a
+    registered contract; the binding premise is a ranked claim, and its plan carries
+    the tool call."""
     suffix = uuid.uuid4().hex[:8]
     graph = _graph_name(clean_graph)
-    schema = publish(clean_graph, f"r704-8-ranked-schema-{suffix}", "feature_schema", schema_body())
+    schema = publish(
+        clean_graph, f"r704-8-ranked-schema-{suffix}", "feature_schema", schema_body()
+    )
     tool = f"export-report-{suffix}"
     server = f"reports-{suffix}"
     _publish_ranked_tool(clean_graph, tool, server, RANKED_TASK)
@@ -242,7 +258,7 @@ def test_process_plan_ranked_binding_is_a_claim(clean_graph):
     async def register_contract() -> None:
         client = await _connect(graph)
         try:
-            await client.batch_update(
+            await client.lifecycle.batch_update(
                 [
                     _node(
                         f"tool-node:{suffix}",

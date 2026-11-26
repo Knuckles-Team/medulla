@@ -4,9 +4,11 @@ use medulla_virtual_graph::process_sync::ProcessSyncAdapter;
 use medulla_virtual_graph::source_sync::{GraphEdge, GraphEdges, GraphNodes, SyncAdapter};
 use serde_json::{json, Value};
 
-const BPMN: &str = include_str!("../../medulla-core/tests/fixtures/process_equivalence/invoice_approval.bpmn");
-const EPC: &str =
-    include_str!("../../medulla-core/tests/fixtures/process_equivalence/invoice_approval.epc.canonical.json");
+const BPMN: &str =
+    include_str!("../../medulla-core/tests/fixtures/process_equivalence/invoice-approval.bpmn");
+const EPC: &str = include_str!(
+    "../../medulla-core/tests/fixtures/process_equivalence/invoice-approval.epc.canonical.json"
+);
 
 fn adapter() -> ProcessSyncAdapter {
     ProcessSyncAdapter {
@@ -36,9 +38,18 @@ fn process_adapter_keys_and_digests_are_stable() {
         Some("bpmn20:invoice:3")
     );
     // A record missing the system, the key or the version has no key.
-    assert_eq!(adapter.record_key(&json!({"model_key": "a", "version": "1"})), None);
-    assert_eq!(adapter.record_key(&json!({"system": "dmn", "version": "1"})), None);
-    assert_eq!(adapter.record_key(&json!({"system": "dmn", "model_key": "a"})), None);
+    assert_eq!(
+        adapter.record_key(&json!({"model_key": "a", "version": "1"})),
+        None
+    );
+    assert_eq!(
+        adapter.record_key(&json!({"system": "dmn", "version": "1"})),
+        None
+    );
+    assert_eq!(
+        adapter.record_key(&json!({"system": "dmn", "model_key": "a"})),
+        None
+    );
 
     // Equal documents give equal digests, a different version changes the key only.
     let digest = adapter.record_digest(&bpmn_record("3"));
@@ -53,10 +64,14 @@ fn process_adapter_keys_and_digests_are_stable() {
 #[test]
 fn unparseable_document_digests_as_invalid() {
     let adapter = adapter();
-    let broken = json!({"system": "bpmn20", "model_key": "x", "version": "1", "document": "<not-xml"});
+    let broken =
+        json!({"system": "bpmn20", "model_key": "x", "version": "1", "document": "<not-xml"});
     assert!(adapter.record_digest(&broken).starts_with("invalid:"));
     let unknown = json!({"system": "visio", "model_key": "x", "version": "1"});
-    assert_eq!(adapter.record_digest(&unknown), "invalid:PROCESS_SYNC_UNKNOWN_SYSTEM");
+    assert_eq!(
+        adapter.record_digest(&unknown),
+        "invalid:PROCESS_SYNC_UNKNOWN_SYSTEM"
+    );
     let mut bad_canonical = epc_record();
     bad_canonical["canonical"]["digest"] = json!("0".repeat(64));
     assert_eq!(
@@ -92,15 +107,18 @@ fn graph_records_rebuild_the_record_from_nodes_and_edges() {
             }
         })
         .collect();
-    assert!(!edges.is_empty(), "the structure of a process is held by edges");
+    assert!(
+        !edges.is_empty(),
+        "the structure of a process is held by edges"
+    );
     let rebuilt = adapter.graph_records(&nodes, &edges);
-    let back = rebuilt.get(&key).expect("the model is rebuilt under its key");
+    let back = rebuilt
+        .get(&key)
+        .expect("the model is rebuilt under its key");
     assert_eq!(adapter.record_digest(back), adapter.record_digest(&record));
     // Without its edges the model cannot be rebuilt to the same process.
     let without = adapter.graph_records(&nodes, &GraphEdges::new());
-    assert!(
-        without
-            .get(&key)
-            .is_none_or(|record| adapter.record_digest(record) != adapter.record_digest(&bpmn_record("3")))
-    );
+    assert!(without.get(&key).is_none_or(
+        |record| adapter.record_digest(record) != adapter.record_digest(&bpmn_record("3"))
+    ));
 }

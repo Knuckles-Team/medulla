@@ -35,13 +35,13 @@ const MODEL_IRI: &str = "urn:model:invoice-approval";
 const EPC_WORKFLOW_ID: &str = "invoice-approval-epc";
 
 const BPMN: &[u8] = include_bytes!(
-    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice_approval.bpmn"
+    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice-approval.bpmn"
 );
 const GOLDEN: &str = include_str!(
-    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice_approval.canonical.json"
+    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice-approval.canonical.json"
 );
 const EPC_SIDE: &str = include_str!(
-    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice_approval.epc.canonical.json"
+    "../crates/medulla-core/tests/fixtures/process_equivalence/invoice-approval.epc.canonical.json"
 );
 
 async fn send(state: &test_support::SharedState, id: u64, method: Method) -> Response {
@@ -133,13 +133,54 @@ fn plan_request(
     }
 }
 
+/// The task kinds and edges of a plan: `(task id, kind, sorted dependencies)` per task.
+type Shape = Vec<(String, &'static str, Vec<String>)>;
+
+fn shape(plan: &medulla_decision_types::decision::task_plan::TaskPlan) -> Shape {
+    plan.tasks
+        .as_slice()
+        .iter()
+        .map(|task| {
+            let kind = if task.call.is_some() {
+                "call"
+            } else if task.branch.is_some() {
+                "branch"
+            } else if task.join.is_some() {
+                "join"
+            } else if task.decision.is_some() {
+                "decision"
+            } else if task.approval.is_some() {
+                "approval"
+            } else {
+                "prompt"
+            };
+            let mut deps: Vec<String> = task.depends_on.as_slice().to_vec();
+            deps.sort();
+            (task.task_id.clone(), kind, deps)
+        })
+        .collect()
+}
+
+/// The id of the BPMN process element, read from the imported document itself so the test
+/// never hard-codes the node id the importer derives from it.
+fn bpmn_process_element_id() -> String {
+    let text = std::str::from_utf8(BPMN).expect("the BPMN fixture is UTF-8");
+    let start = text.find("<process ").expect("a process element");
+    let end = start + text[start..].find('>').expect("the end of the process tag");
+    let after = text[start..end]
+        .split("id=\"")
+        .nth(1)
+        .expect("a process id attribute");
+    after.split('"').next().expect("a closed id").to_string()
+}
+
 async fn plan_digest(
     state: &test_support::SharedState,
     id: u64,
     schema: &medulla_agent_types::agent_component::ComponentDependency,
     workflow_id: &str,
     version: u32,
-) -> (String, usize) {
+) -> (String, Shape) {
     let batch: DecisionBatch = payload(
         send(
             state,
@@ -153,7 +194,7 @@ async fn plan_digest(
     let plan = batch.records.as_slice()[0]
         .task_plan()
         .expect("the sealed record holds the plan");
-    (plan.plan_digest.clone(), plan.tasks.len())
+    (plan.plan_digest.clone(), shape(plan))
 }
 
 // spec: MEDULLA-CQ-ORCH-R701.9
@@ -186,7 +227,7 @@ async fn bpmn_and_epc_give_one_workflow_and_one_plan() {
     )
     .await;
     assert!(imported.error.is_none(), "refused: {:?}", imported.error);
-    let process_iri = format!("process:{MODEL_IRI}:invoice");
+    let process_iri = format!("process:{MODEL_IRI}:{}", bpmn_process_element_id());
     let bpmn: ProcessCompiled = payload(
         send(
             &state,
@@ -216,8 +257,14 @@ async fn bpmn_and_epc_give_one_workflow_and_one_plan() {
         .await,
     );
 
-    assert_eq!(bpmn.workflow_digest, golden.digest, "the BPMN side equals the golden");
-    assert_eq!(epc.workflow_digest, golden.digest, "one process, one workflow digest");
+    assert_eq!(
+        bpmn.workflow_digest, golden.digest,
+        "the BPMN side equals the golden"
+    );
+    assert_eq!(
+        epc.workflow_digest, golden.digest,
+        "one process, one workflow digest"
+    );
     assert_eq!(
         golden.steps.len(),
         12,
@@ -231,8 +278,8 @@ async fn bpmn_and_epc_give_one_workflow_and_one_plan() {
 
     // One plan digest for both workflows.
     let schema = feature_schema(&state).await;
-    let (bpmn_plan, bpmn_tasks) = plan_digest(&state, 4, &schema, &process_iri, bpmn.version).await;
-    let (epc_plan, epc_tasks) = plan_digest(&state, 5, &schema, EPC_WORKFLOW_ID, epc.version).await;
+    let (bpmn_plan, bpmn_shape) = plan_digest(&state, 4, &schema, &process_iri, bpmn.version).await;
+    let (epc_plan, epc_shape) = plan_digest(&state, 5, &schema, EPC_WORKFLOW_ID, epc.version).await;
     assert_eq!(bpmn_plan, epc_plan, "one process, one plan digest");
-    assert_eq!(bpmn_tasks, epc_tasks, "the same tasks");
+    assert_eq!(bpmn_shape, epc_shape, "the same task kinds and edges");
 }
