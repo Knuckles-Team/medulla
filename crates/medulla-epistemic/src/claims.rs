@@ -8,13 +8,39 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_types::claims::{
-    ArtifactSeal, ClaimState, Evidence, EvidenceChannel, ResearchArtifact, Stance,
+    ArtifactSeal, ClaimState, Evidence, EvidenceChannel, ProofStanding, ProofVerdict,
+    ResearchArtifact, Stance,
 };
 use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 use medulla_types::contract::ServerErrorCode;
 
 /// Digest domain of a sealed research artifact.
 pub const ARTIFACT_DIGEST_DOMAIN: &str = "research_artifact";
+
+/// The axioms a machine-checked proof may rest on and still grant standing
+/// (MEDULLA-DECISION-ENGINE-R652.11). A constant, not a knob: Lean names are
+/// case-sensitive and compare exactly, and the set changes with a release.
+pub const PROOF_STANDARD_AXIOMS: [&str; 3] = ["propext", "Classical.choice", "Quot.sound"];
+
+/// Rule `PROVEN_STANDING`: a claim is `proven` when at least one of its
+/// evidence records holds a receipt with verdict `pass`, no `sorry`, and every
+/// axiom equal to one of [`PROOF_STANDARD_AXIOMS`]; otherwise `unproven`. A
+/// failing receipt, a `sorry` and a non-standard axiom never grant standing.
+pub fn proof_standing(evidence: &[Evidence]) -> ProofStanding {
+    let proven = evidence.iter().filter_map(|item| item.proof.as_ref()).any(|receipt| {
+        receipt.verdict == ProofVerdict::Pass
+            && !receipt.has_sorry
+            && receipt
+                .axioms
+                .iter()
+                .all(|axiom| PROOF_STANDARD_AXIOMS.contains(&axiom.as_str()))
+    });
+    if proven {
+        ProofStanding::Proven
+    } else {
+        ProofStanding::Unproven
+    }
+}
 
 /// Ppm denominator.
 const PPM: i64 = 1_000_000;
@@ -453,6 +479,69 @@ mod tests {
         assert_eq!(
             verify_seal(&short),
             Err(ServerErrorCode::ArtifactSealViolation)
+        );
+    }
+
+    fn receipt_evidence(axioms: &[&str], has_sorry: bool, verdict: ProofVerdict) -> Evidence {
+        Evidence {
+            tenant_id: "t1".to_string(),
+            evidence_id: "e1".to_string(),
+            claim_id: "c1".to_string(),
+            channel: EvidenceChannel::Process,
+            supports: true,
+            weight_ppm: 0,
+            source_digest: "sha256:aa".to_string(),
+            proof: Some(medulla_decision_types::claims::ProofReceipt {
+                checker_id: "checker".to_string(),
+                toolchain_version: "1".to_string(),
+                declaration: "Decl.a".to_string(),
+                artifact_digest: "ab".repeat(32),
+                axioms: axioms.iter().map(|axiom| axiom.to_string()).collect(),
+                has_sorry,
+                verdict,
+            }),
+        }
+    }
+
+    /// Verifies MEDULLA-DECISION-ENGINE-R652.11: only a passing, sorry-free
+    /// receipt over the standard axioms grants standing.
+    // spec: MEDULLA-DECISION-ENGINE-R652.11
+    #[test]
+    fn proof_standing_needs_pass_no_sorry_and_standard_axioms() {
+        let standard = ["propext", "Classical.choice", "Quot.sound"];
+        assert_eq!(
+            proof_standing(&[receipt_evidence(&standard, false, ProofVerdict::Pass)]),
+            ProofStanding::Proven
+        );
+        assert_eq!(
+            proof_standing(&[receipt_evidence(&[], false, ProofVerdict::Pass)]),
+            ProofStanding::Proven
+        );
+        assert_eq!(
+            proof_standing(&[receipt_evidence(&standard, false, ProofVerdict::Fail)]),
+            ProofStanding::Unproven
+        );
+        assert_eq!(
+            proof_standing(&[receipt_evidence(&standard, true, ProofVerdict::Fail)]),
+            ProofStanding::Unproven
+        );
+        assert_eq!(
+            proof_standing(&[receipt_evidence(&["propext", "Foo.axiom"], false, ProofVerdict::Pass)]),
+            ProofStanding::Unproven
+        );
+        // Lean names are case-sensitive: lower-case `quot.sound` is not standard.
+        assert_eq!(
+            proof_standing(&[receipt_evidence(&["quot.sound"], false, ProofVerdict::Pass)]),
+            ProofStanding::Unproven
+        );
+        assert_eq!(proof_standing(&[]), ProofStanding::Unproven);
+        // One standard receipt among others is enough.
+        assert_eq!(
+            proof_standing(&[
+                receipt_evidence(&["Foo.axiom"], false, ProofVerdict::Pass),
+                receipt_evidence(&standard, false, ProofVerdict::Pass),
+            ]),
+            ProofStanding::Proven
         );
     }
 }

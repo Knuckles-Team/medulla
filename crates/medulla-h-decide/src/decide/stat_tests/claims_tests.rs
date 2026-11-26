@@ -71,7 +71,7 @@ fn proof_receipt() -> ProofReceipt {
         toolchain_version: "1.2.3".to_string(),
         declaration: "Mathlib.Foo.bar".to_string(),
         artifact_digest: "ab".repeat(32),
-        axioms: vec!["quot.sound".to_string(), "propext".to_string(), "propext".to_string()],
+        axioms: vec!["Quot.sound".to_string(), "propext".to_string(), "propext".to_string()],
         has_sorry: false,
         verdict: ProofVerdict::Pass,
     }
@@ -441,7 +441,7 @@ async fn proof_receipt_records_through_evidence_path_and_refusals_change_no_stat
     assert_eq!(recorded.log_odds_micro, 0);
     let stored = recorded.evidence.last().unwrap();
     let receipt = stored.proof.as_ref().expect("the receipt is stored on the evidence");
-    assert_eq!(receipt.axioms, ["propext", "quot.sound"]);
+    assert_eq!(receipt.axioms, ["Quot.sound", "propext"]);
     assert_eq!(receipt.verdict, ProofVerdict::Pass);
 
     let before = read_claim(&h, id).await;
@@ -491,4 +491,65 @@ async fn proof_receipt_records_through_evidence_path_and_refusals_change_no_stat
         assert_eq!(result, Err(code.to_string()));
     }
     assert_eq!(read_claim(&h, id).await, before, "a refusal changes no state");
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R652.11: standing is recomputed from the
+/// evidence on every read. A passing sorry-free receipt over the standard axioms
+/// makes the claim `proven`; a receipt with a non-standard axiom is recorded and
+/// readable but leaves the claim `unproven`, and standing never moves the state.
+// spec: MEDULLA-DECISION-ENGINE-R652.11
+#[tokio::test]
+async fn get_reports_proven_standing_from_receipt() {
+    use medulla_decision_types::claims::ProofStanding;
+    let h = Harness::new().await;
+
+    let plain = "standing-plain";
+    let proposed: ClaimRecord = writer(&h, propose(plain)).await.unwrap();
+    assert_eq!(proposed.proof_standing, ProofStanding::Unproven);
+
+    let extra = "standing-extra-axiom";
+    let _: ClaimRecord = writer(&h, propose(extra)).await.unwrap();
+    let non_standard = ProofReceipt {
+        axioms: vec!["Foo.axiom".to_string()],
+        ..proof_receipt()
+    };
+    let recorded: ClaimRecord = writer(
+        &h,
+        receipt_evidence(extra, "standing-e1", EvidenceChannel::Process, true, non_standard),
+    )
+    .await
+    .unwrap();
+    assert_eq!(recorded.proof_standing, ProofStanding::Unproven);
+    let kept = read_claim(&h, extra).await;
+    assert_eq!(kept.evidence.len(), 1, "the receipt stays recorded and readable");
+    assert_eq!(kept.proof_standing, ProofStanding::Unproven);
+
+    let proven = "standing-proven";
+    let _: ClaimRecord = writer(&h, propose(proven)).await.unwrap();
+    let state_before = read_claim(&h, proven).await.state;
+    let recorded: ClaimRecord = writer(
+        &h,
+        receipt_evidence(proven, "standing-e2", EvidenceChannel::Process, true, proof_receipt()),
+    )
+    .await
+    .unwrap();
+    assert_eq!(recorded.proof_standing, ProofStanding::Proven);
+    let read = read_claim(&h, proven).await;
+    assert_eq!(read.proof_standing, ProofStanding::Proven);
+    assert_eq!(read.state, state_before, "proven standing does not change the state");
+
+    // A failing receipt records without granting standing.
+    let failing = "standing-fail";
+    let _: ClaimRecord = writer(&h, propose(failing)).await.unwrap();
+    let failed = ProofReceipt {
+        verdict: ProofVerdict::Fail,
+        ..proof_receipt()
+    };
+    let _: ClaimRecord = writer(
+        &h,
+        receipt_evidence(failing, "standing-e3", EvidenceChannel::Process, true, failed),
+    )
+    .await
+    .unwrap();
+    assert_eq!(read_claim(&h, failing).await.proof_standing, ProofStanding::Unproven);
 }

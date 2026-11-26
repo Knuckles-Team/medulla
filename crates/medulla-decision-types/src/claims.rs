@@ -397,6 +397,18 @@ impl ClaimOp {
     }
 }
 
+/// Whether a claim holds machine-checked proof evidence under the standard
+/// axioms (MEDULLA-DECISION-ENGINE-R652.11). A derived value recomputed from
+/// the evidence on every read: no field stores it and no event moves it.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ProofStanding {
+    Proven,
+    #[default]
+    Unproven,
+}
+
 /// A claim as stored and as read back: state, logs, evidence and pairs.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -412,6 +424,9 @@ pub struct ClaimRecord {
     pub stances: BTreeMap<String, Stance>,
     pub contradiction_pairs: Vec<(String, String)>,
     pub feeds: Vec<FeedGrade>,
+    /// Derived from the evidence by `proof_standing`, never stored.
+    #[serde(default)]
+    pub proof_standing: ProofStanding,
 }
 
 /// The answer of `Claims.Get`: the claim or the artifact that was asked for.
@@ -448,7 +463,7 @@ mod tests {
             toolchain_version: "1.2.3".to_string(),
             declaration: "Mathlib.Foo.bar".to_string(),
             artifact_digest: "ab".repeat(32),
-            axioms: vec!["propext".to_string(), "quot.sound".to_string()],
+            axioms: vec!["propext".to_string(), "Quot.sound".to_string()],
             has_sorry: false,
             verdict: ProofVerdict::Pass,
         }

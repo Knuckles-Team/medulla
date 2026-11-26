@@ -33810,6 +33810,11 @@ class ClaimOpPropose(BaseModel):
     op: Literal["propose"]
 
 
+class ProofStanding(str, Enum):
+    PROVEN = "proven"
+    UNPROVEN = "unproven"
+
+
 class ProofVerdict(str, Enum):
     PASS = "pass"  # nosec B105 - verdict enum label, not a credential
     FAIL = "fail"
@@ -33850,6 +33855,7 @@ class ClaimRecord(BaseModel):
     evidence: list[Evidence]
     feeds: list[FeedGrade]
     log_odds_micro: int
+    proof_standing: ProofStanding = ProofStanding.UNPROVEN
     stances: dict[str, Stance]
     state: ClaimState
     tenant_id: str
@@ -46124,6 +46130,7 @@ __all__ = [
     "ProcessMiningResult",
     "ProductPort",
     "ProofReceipt",
+    "ProofStanding",
     "ProofVerdict",
     "ProductPortKind",
     "ProfileOp",

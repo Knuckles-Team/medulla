@@ -60,7 +60,7 @@ pub(super) mod served {
     };
     use medulla_epistemic::claims::{
         check_transition, combine_evidence, compile_artifact, contradiction_pairs,
-        feed_is_relevant, grade_feed, verify_seal, ClaimKnobs,
+        feed_is_relevant, grade_feed, proof_standing, verify_seal, ClaimKnobs,
     };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
@@ -143,16 +143,19 @@ pub(super) mod served {
 
     fn record_of(instance: &MachineInstance) -> Result<ClaimRecord, String> {
         let context = &instance.context;
+        let evidence: Vec<Evidence> = field(context, "evidence")?;
         Ok(ClaimRecord {
             tenant_id: field(context, "tenant_id")?,
             claim_id: field(context, "claim_id")?,
             state: state_of(instance)?,
             log_odds_micro: field(context, "log_odds_micro")?,
             transitions: field(context, "transitions")?,
-            evidence: field(context, "evidence")?,
             stances: field(context, "stances")?,
             contradiction_pairs: field(context, "contradiction_pairs")?,
             feeds: field(context, "feeds")?,
+            // Derived on every read (MEDULLA-DECISION-ENGINE-R652.11), never stored.
+            proof_standing: proof_standing(&evidence),
+            evidence,
         })
     }
 
