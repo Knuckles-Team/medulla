@@ -196,6 +196,7 @@ mod schema_projections;
 #[cfg(feature = "query")]
 mod schema_context;
 #[cfg(feature = "query")]
+mod run_metrics;
 mod run_trace_export;
 #[cfg(feature = "query")]
 mod standards;

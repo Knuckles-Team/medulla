@@ -3209,6 +3209,7 @@ send_process_document_export = contract_sender(
     "ProcessDocumentExport", "MethodProcessDocumentExportParams"
 )
 send_run_trace_export = contract_sender("RunTraceExport", "MethodRunTraceExportParams")
+send_run_metrics = contract_sender("RunMetrics", "MethodRunMetricsParams")
 send_index_harness_session_batch = contract_sender(
     "IndexHarnessSessionBatch", "MethodIndexHarnessSessionBatchParams"
 )

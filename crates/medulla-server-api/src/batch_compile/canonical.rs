@@ -626,6 +626,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::StandardsDrift { .. }
         // MEDULLA-ORCH-VOCAB-R009.100: a read of the caller's projection; it commits nothing.
         | Method::RunTraceExport { .. }
+        // MEDULLA-ORCH-VOCAB-R811.1: a read of the caller's projection; it commits nothing.
+        | Method::RunMetrics { .. }
         | Method::ReadSpan { .. }
         | Method::AtomContext { .. }
         // MEDULLA-CQ-ORCH-R705.6: an import commits as one request-graph

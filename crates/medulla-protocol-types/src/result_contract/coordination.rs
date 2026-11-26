@@ -338,6 +338,7 @@ method_results! {
     IndexHarnessSessionBatch(IndexHarnessSessionBatch) => Json<medulla_types::harness_session::IndexHarnessSessionBatchResult>;
     // MEDULLA-ORCH-VOCAB-R009.100: one page of the correlated run-trace export.
     RunTraceExport(RunTraceExport) => Json<medulla_types::run_trace_export::RunTraceExportPageV1>;
+    RunMetrics(RunMetrics) => Json<medulla_types::run_metrics::RunMetricsAnswer>;
     ProcessModelExport(ProcessModelExport) => Json<medulla_types::process_import::ProcessModelExported>;
     HarnessEditCreate(HarnessEdit / "create") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     HarnessEditTransition(HarnessEdit / "transition") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;

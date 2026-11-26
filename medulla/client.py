@@ -8058,6 +8058,35 @@ class GraphOperationsClient:
             raise RuntimeError("ProcessDocumentExport must answer with an object")
         return result
 
+    async def run_metrics(
+        self,
+        tenant: str,
+        query: str,
+        *,
+        group_by: str | None = None,
+        window: dict[str, int] | None = None,
+    ) -> dict[str, Any]:
+        """Cost, tokens or the solved count of the tenant's run traces
+        (MEDULLA-ORCH-VOCAB-R811.1).
+
+        ``query`` is ``cost`` or ``tokens`` (each per solved run) or ``solved``;
+        ``group_by`` is ``agent``, ``project`` or ``termination``; ``window`` is
+        ``{start_ms, end_ms}`` over the completion time. Returns ``{query, groups:
+        [{key, value, trace_count}], abstained}``; a population with no solved run
+        answers ``abstained`` with no groups, never a zero. Needs ``telemetry:read``.
+        """
+        request: dict[str, Any] = {"tenant": tenant, "query": query}
+        if group_by is not None:
+            request["group_by"] = group_by
+        if window is not None:
+            request["window"] = window
+        result = await self._client._send(
+            "RunMetrics", {"request": request}, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("RunMetrics must answer with an object")
+        return result
+
     async def run_trace_export(
         self,
         root_run_id: str,

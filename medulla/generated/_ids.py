@@ -654,6 +654,7 @@ METHOD_IDS = frozenset(
         "ProcessDocumentImport",
         "ProcessDocumentExport",
         "RunTraceExport",
+        "RunMetrics",
         "IndexHarnessSessionBatch",
         "ProcessModelDeploy",
         "ProcessModelExport",

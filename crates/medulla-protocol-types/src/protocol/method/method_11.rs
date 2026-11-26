@@ -287,6 +287,15 @@ $($variants)*
         request: Box<medulla_types::run_trace_export::RunTraceExportV1>,
     },
 
+    // ── Run metrics (MEDULLA-ORCH-VOCAB-R811.1) ────────────────────────────
+    /// Cost, tokens or the solved count of the caller's tenant's `:RunTrace` nodes, grouped by
+    /// agent, project or termination reason, optionally inside a completion window. Cost and
+    /// tokens are per solved run; a population that solved nothing answers `abstained` with no
+    /// groups, never a zero. Reads only, through the caller's graph view.
+    RunMetrics {
+        request: Box<medulla_types::run_metrics::RunMetricsRequest>,
+    },
+
     // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
     /// Record one anomaly in the caller's tenant (from the verified carrier)
     /// and correlate it into an open incident over `window_ms`.
