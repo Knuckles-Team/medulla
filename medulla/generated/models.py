@@ -34434,11 +34434,23 @@ class TopicReceipt(BaseModel):
     space_tuple: str
 
 
+class TraceAnn(BaseModel):
+    """The visit evidence of one top-``k`` vector rank: rows visited, whether the
+    index holds no tombstones, and whether ``4 * result_rows + 64`` was crossed."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    compacted: bool
+    examined: Annotated[int, Field(ge=0)]
+    visit_bound_hit: bool
+
+
 class RetrievalReceipt(BaseModel):
     """The evidence a ranked ``UnifiedQuery`` answer carries."""
 
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    ann: TraceAnn | None = None
     constraint: TraceConstraint | None = None
     modality: TraceModality | None = None
     topic: TopicReceipt | None = None

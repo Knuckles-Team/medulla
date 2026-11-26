@@ -198,6 +198,35 @@ pub struct RetrievalReceipt {
     /// (MEDULLA-FEDERATED-QUERY-R040.2.5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub topic: Option<TopicReceipt>,
+    /// Present when a top-`k` vector rank ran (MEDULLA-FEDERATED-QUERY-R040.5.6): how many
+    /// rows it visited and whether the visit bound held.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub ann: Option<TraceAnn>,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.5.6: the visit evidence of one top-`k` vector rank. It holds
+/// numbers and flags only.
+///
+/// The bound is `4 * result_rows + 64` rows visited ([`ann_visit_bound`]); a rank that visited
+/// more reports `visit_bound_hit`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct TraceAnn {
+    /// Rows the rank visited: every eligible candidate of an exact scan, or the candidate
+    /// window each widening round of the filtered walk asked of the index.
+    pub examined: u64,
+    /// Whether the index the walk read has been through compaction (the tombstones of its
+    /// deletes are dropped), so its rows are the live ones only.
+    pub compacted: bool,
+    /// Whether `examined` exceeded [`ann_visit_bound`] of the rows the rank returned.
+    pub visit_bound_hit: bool,
+}
+
+/// MEDULLA-FEDERATED-QUERY-R040.5: the most rows a top-`k` rank may visit to return
+/// `result_rows`: `4 * result_rows + 64`.
+pub fn ann_visit_bound(result_rows: u64) -> u64 {
+    result_rows.saturating_mul(4).saturating_add(64)
 }
 
 /// MEDULLA-FEDERATED-QUERY-R040.2.5: the topic evidence of one ranked answer. It holds ids and

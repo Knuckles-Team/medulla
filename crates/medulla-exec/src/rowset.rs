@@ -177,6 +177,9 @@ pub struct RowSet {
     /// component entry for every fused candidate. `limit` keeps it; `execute_ranked` trims it
     /// to the rows of the final answer.
     topic_receipt: Option<medulla_types::retrieval::TopicReceipt>,
+    /// MEDULLA-FEDERATED-QUERY-R040.5.6: the rows a top-`k` vector rank visited and whether
+    /// that stayed within `4 * result_rows + 64`. `limit` keeps it.
+    ann_visits: Option<medulla_types::retrieval::TraceAnn>,
 }
 
 impl RowSet {
@@ -202,7 +205,19 @@ impl RowSet {
             order: Vec::new(),
             shortfall: None,
             topic_receipt: None,
+            ann_visits: None,
         }
+    }
+
+    /// Record the visits of a top-`k` vector rank (MEDULLA-FEDERATED-QUERY-R040.5.6).
+    pub fn with_ann_visits(mut self, visits: Option<medulla_types::retrieval::TraceAnn>) -> Self {
+        self.ann_visits = visits;
+        self
+    }
+
+    /// The visits of a top-`k` vector rank, when one ran.
+    pub fn ann_visits(&self) -> Option<&medulla_types::retrieval::TraceAnn> {
+        self.ann_visits.as_ref()
     }
 
     /// Record why a top-`k` rank holds fewer than `k` rows (MEDULLA-FEDERATED-QUERY-R039).
@@ -577,6 +592,7 @@ impl RowSet {
             order: self.order.clone(),
             shortfall: None,
             topic_receipt: None,
+            ann_visits: None,
         }
         .retain_cells()
     }

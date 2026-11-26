@@ -347,13 +347,16 @@ pub fn execute_ranked(
             .collect();
         receipt
     });
-    let receipt = (constraint.is_some() || modality.is_some() || topic.is_some()).then_some(
-        medulla_types::retrieval::RetrievalReceipt {
+    // MEDULLA-FEDERATED-QUERY-R040.5.6: present when a top-`k` vector rank ran, with the rows
+    // it visited against the `4 * result_rows + 64` bound.
+    let ann = result.ann_visits().copied();
+    let receipt = (constraint.is_some() || modality.is_some() || topic.is_some() || ann.is_some())
+        .then_some(medulla_types::retrieval::RetrievalReceipt {
             constraint,
             modality,
             topic,
-        },
-    );
+            ann,
+        });
     Ok(medulla_types::retrieval::RankedRows {
         rows: unified_rows(&result),
         receipt,

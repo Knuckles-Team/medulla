@@ -3,6 +3,17 @@
 use super::*;
 
 impl SemanticStore {
+    /// Whether the resident index holds no tombstoned row: every row a walk reads is a live
+    /// one (MEDULLA-FEDERATED-QUERY-R040.5.6). A store with no index yet has nothing to
+    /// compact. The compaction worker (`force_compact`, and the threshold trigger of a
+    /// delete or an overwrite) drops the tombstones.
+    pub fn ann_compacted(&self) -> bool {
+        self.index
+            .read()
+            .as_ref()
+            .is_none_or(|ann| ann.tombstone_ratio() == 0.0)
+    }
+
     /// Raw stored embedding for `node_id`, if present.
     pub fn get_embedding(&self, node_id: &str) -> Option<Vec<f32>> {
         self.arena.get(node_id).map(|row| row.to_vec())

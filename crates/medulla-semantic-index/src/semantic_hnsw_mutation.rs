@@ -3,6 +3,13 @@
 use super::*;
 
 impl SemanticStore {
+    /// Whether the resident index holds no tombstoned (superseded) slot: every row a walk
+    /// reads is a live one (MEDULLA-FEDERATED-QUERY-R040.5.6). A rebuild or compaction
+    /// clears the tombstones.
+    pub fn ann_compacted(&self) -> bool {
+        self.index.read().tombstones.is_empty()
+    }
+
     /// Raw stored embedding for `node_id`, if present. The MMR reranker uses
     /// this owned value to compute pairwise diversity.
     pub fn get_embedding(&self, node_id: &str) -> Option<Vec<f32>> {

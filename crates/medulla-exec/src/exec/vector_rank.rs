@@ -64,6 +64,9 @@ pub struct Replenished {
     pub scored: Vec<(String, f32)>,
     /// `Some` exactly when `scored` holds fewer than `k` rows.
     pub shortfall: Option<Shortfall>,
+    /// Rows the rank visited (MEDULLA-FEDERATED-QUERY-R040.5.6): every candidate of an exact
+    /// scan, plus the window each widening round of the filtered walk asked of the index.
+    pub examined: u64,
 }
 
 /// The ids of `input` a ranking step may rank: all of them, narrowed to the compiled
@@ -166,7 +169,17 @@ fn rank_top(
     } else {
         found.shortfall
     };
-    Ok(RowSet::from_scored(found.scored).with_shortfall(shortfall))
+    // MEDULLA-FEDERATED-QUERY-R040.5.6: the rows this rank visited against the
+    // `4 * result_rows + 64` bound, and whether the index it read holds no tombstones.
+    let result_rows = found.scored.len() as u64;
+    let visits = medulla_types::retrieval::TraceAnn {
+        examined: found.examined,
+        compacted: ctx.semantic.ann_compacted(),
+        visit_bound_hit: found.examined > medulla_types::retrieval::ann_visit_bound(result_rows),
+    };
+    Ok(RowSet::from_scored(found.scored)
+        .with_shortfall(shortfall)
+        .with_ann_visits(Some(visits)))
 }
 
 /// The topic-fused path of [`rank_top`] (MEDULLA-FEDERATED-QUERY-R040.2.3): exact dense
@@ -285,13 +298,16 @@ pub fn replenish_until_k(
 ) -> Replenished {
     let want = k.min(candidates.len());
     let exact = || semantic.exact_rank_candidates(query, candidates.iter().copied(), want);
+    let mut examined = 0_u64;
     let scored = if candidates.len() <= exact_max || want >= candidates.len() {
+        examined = candidates.len() as u64;
         exact()
     } else {
         let allow = |id: &str| candidates.contains(id);
         let mut fetch = want.saturating_mul(policy.oversample.max(1));
         let mut walked = None;
         for _ in 0..policy.max_rounds.max(1) {
+            examined = examined.saturating_add(fetch as u64);
             let mut hits = semantic.semantic_search_filtered(query, fetch, allow);
             if hits.len() >= want {
                 hits.truncate(want);
@@ -300,7 +316,11 @@ pub fn replenish_until_k(
             }
             fetch = fetch.saturating_mul(2);
         }
-        walked.unwrap_or_else(exact)
+        walked.unwrap_or_else(|| {
+            // The exact top-up visits every candidate.
+            examined = examined.saturating_add(candidates.len() as u64);
+            exact()
+        })
     };
     let missing = candidates
         .iter()
@@ -316,7 +336,11 @@ pub fn replenish_until_k(
             ShortfallReason::EligibleExhausted
         },
     });
-    Replenished { scored, shortfall }
+    Replenished {
+        scored,
+        shortfall,
+        examined,
+    }
 }
 
 #[cfg(test)]
@@ -440,6 +464,38 @@ mod tests {
         let got = replenish_until_k(&semantic, &[1.0, 0.0], &all, 25, EXACT_RANK_MAX, policy);
         assert_eq!(got.shortfall.map(|s| s.reason), Some(ShortfallReason::EligibleExhausted));
         assert_eq!(got.shortfall.map(|s| s.missing), Some(0));
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R040.5.6
+    #[test]
+    fn visits_are_counted_against_the_four_times_result_rows_plus_sixty_four_bound() {
+        use medulla_types::retrieval::ann_visit_bound;
+        let semantic = store(300);
+        let ids: Vec<String> = (0..300).map(|index| format!("e{index}")).collect();
+        let all: HashSet<&str> = ids.iter().map(String::as_str).collect();
+        let policy = ReplenishPolicy::default();
+
+        // The bound is `4 * result_rows + 64`.
+        assert_eq!(ann_visit_bound(0), 64);
+        assert_eq!(ann_visit_bound(10), 104);
+
+        // The exact path visits every candidate: 300 of them for 10 rows breaks the bound.
+        let exact = replenish_until_k(&semantic, &[1.0, 0.0], &all, 10, EXACT_RANK_MAX, policy);
+        assert_eq!(exact.examined, 300);
+        assert!(exact.examined > ann_visit_bound(exact.scored.len() as u64));
+
+        // The filtered walk asks for `k * oversample` hits in its first window, which
+        // finds all 10 here: 40 visits, inside the bound.
+        let walked = replenish_until_k(&semantic, &[1.0, 0.0], &all, 10, 0, policy);
+        assert_eq!(walked.scored.len(), 10);
+        assert_eq!(walked.examined, 40);
+        assert!(walked.examined <= ann_visit_bound(walked.scored.len() as u64));
+
+        // A selective filter over a third of the corpus is still walked in one window.
+        let third: HashSet<&str> = ids.iter().step_by(3).map(String::as_str).collect();
+        let selective = replenish_until_k(&semantic, &[1.0, 0.0], &third, 10, 0, policy);
+        assert_eq!(selective.scored.len(), 10);
+        assert_eq!(selective.examined, 40);
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R039.1.4
