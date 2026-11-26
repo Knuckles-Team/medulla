@@ -13,6 +13,20 @@
 
 use serde::{Deserialize, Serialize};
 
+/// What the shadow ingest of a repair candidate found, as counts only (no node id, no value):
+/// how many current nodes of the candidate's record class it re-validated and how many of them
+/// break the candidate's contract. A candidate with violations is previewed with them and
+/// refused at activation (`SCHEMA_REPAIR_SHADOW_VIOLATIONS`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ShadowCheckSummary {
+    /// Current nodes re-validated under the candidate.
+    pub nodes_checked: u64,
+    /// Of those, the nodes that break the candidate's contract.
+    pub violations: u64,
+}
+
 /// One step of the schema-repair activation gate, in required order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

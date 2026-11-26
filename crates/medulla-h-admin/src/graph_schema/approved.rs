@@ -18,6 +18,7 @@
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
+pub use medulla_catalog_types::graph_schema::shadow_branch::ShadowCheckSummary;
 use medulla_catalog_types::graph_schema::GraphSchemaErrorCode;
 use medulla_catalog_types::graph_schema::GraphSchemaOp;
 use medulla_catalog_types::{
@@ -411,6 +412,14 @@ pub(super) struct ShadowIngestReport {
 }
 
 impl ShadowIngestReport {
+    /// The counts of this report, with no candidate identity.
+    fn summary(&self) -> ShadowCheckSummary {
+        ShadowCheckSummary {
+            nodes_checked: self.nodes_ingested,
+            violations: self.violations,
+        }
+    }
+
     fn digest(&self) -> String {
         let canonical = serde_json::to_string(self).unwrap_or_default();
         medulla_types::contract::Digest256::sha256(canonical.as_bytes()).to_hex()
@@ -419,6 +428,15 @@ impl ShadowIngestReport {
     fn node_id(candidate_digest: &str) -> String {
         format!("{SHADOW_REPORT_PREFIX}{candidate_digest}")
     }
+}
+
+/// The counts of the shadow check `ValidateRepair` stored for `candidate_digest`, or `None`
+/// when no check of that candidate is on the graph.
+pub fn shadow_check_summary(core: &GraphCore, candidate_digest: &str) -> Option<ShadowCheckSummary> {
+    core.get_node_properties(&ShadowIngestReport::node_id(candidate_digest))
+        .and_then(|bytes| rmp_serde::from_slice::<ShadowIngestReport>(&bytes).ok())
+        .filter(|report| report.candidate_digest == candidate_digest)
+        .map(|report| report.summary())
 }
 
 /// Whether `value` has one of the JSON types a field allows.

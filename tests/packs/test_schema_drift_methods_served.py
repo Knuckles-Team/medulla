@@ -86,6 +86,10 @@ async def test_propose_then_approve_activates_once() -> None:
         assert preview["candidate_digest"] == digest
         assert preview["source_id"] == DELIVERY_SOURCE_ID
         assert preview["applied"] is False
+        # The shadow check of the current data is shown as counts, never as values.
+        assert preview["shadow_check"]["violations"] == 0
+        assert preview["shadow_check"]["nodes_checked"] >= 1
+        assert set(preview["shadow_check"]) == {"nodes_checked", "violations"}
         before = await reasoning.send_graph_schema_list(client, {})
         assert _leases(before) == ["approval:delivery"]
         with pytest.raises(EngineResponseError, match="DRIFT_NOT_FOUND"):

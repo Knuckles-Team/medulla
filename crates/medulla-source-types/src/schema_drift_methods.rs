@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 
 use medulla_catalog_types::graph_schema::drift::{DriftReport, InferredRecordShape};
 use medulla_catalog_types::graph_schema::repair::RecordContract;
+use medulla_catalog_types::graph_schema::shadow_branch::ShadowCheckSummary;
 use medulla_types::contract::ResourceId;
 
 /// The node type of a quarantined delivery (MEDULLA-INGEST-WORKER-R003.10.1).
@@ -118,6 +119,9 @@ pub struct SchemaRepairPreview {
     pub candidate_digest: String,
     /// The composed schema digest after the shadow check: unchanged, nothing was applied.
     pub composed_digest: String,
+    /// What the shadow check found in the graph's current data, as counts: a candidate with
+    /// violations is shown with them here and refused at approval.
+    pub shadow_check: ShadowCheckSummary,
     pub applied: bool,
 }
 

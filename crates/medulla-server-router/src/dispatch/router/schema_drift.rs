@@ -172,6 +172,15 @@ pub(super) async fn repair_propose(
             },
         )
         .await?;
+        // The shadow check stored its report on the graph in its own commit: read its counts.
+        let shadow_check = {
+            let (core, _) = read_graph(state, req, verified).await?;
+            medulla_h_admin::graph_schema::shadow_check_summary(&core, &proposal.candidate_digest)
+                .ok_or_else(|| {
+                    "INVALID_ARGUMENT: the shadow check stored no report for the candidate"
+                        .to_string()
+                })?
+        };
         Ok(SchemaRepairPreview {
             drift_id: target.drift_id,
             stream: target.stream,
@@ -179,6 +188,7 @@ pub(super) async fn repair_propose(
             candidate: proposal.candidate,
             candidate_digest: proposal.candidate_digest,
             composed_digest: composed_digest_of(&response)?,
+            shadow_check,
             applied: false,
         })
     }
