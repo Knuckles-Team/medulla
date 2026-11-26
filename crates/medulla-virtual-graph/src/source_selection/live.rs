@@ -14,6 +14,7 @@ use super::{AuthorityOrigin, AuthorityRow, CoverageFixture, Materialisation, Sou
 use crate::source_sync::{RecordRole, SyncAuthority, SyncDirection};
 
 const VG: &str = medulla_types::ontology_iri!("virtual-graph#");
+const SC: &str = medulla_types::ontology_iri!("surface-contract#");
 const RDF_TYPE: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type";
 const RDFS_LABEL: &str = "http://www.w3.org/2000/01/rdf-schema#label";
 const RDFS_SUBCLASS: &str = "http://www.w3.org/2000/01/rdf-schema#subClassOf";
@@ -127,7 +128,71 @@ fn row_from(
             .vg(subject, "freshnessMaxAgeSeconds")
             .and_then(|v| v.parse().ok()),
         contract: index.vg(subject, "authorityContract").map(str::to_string),
+        route: None,
     })
+}
+
+/// The proposed rows one `sc:DataLocation` states (MEDULLA-SRC-AUTH-R013): one per held class,
+/// source = the connector and `sc:instance` (plus `sc:store`), contract kind `live_truth`,
+/// materialisation `virtual`, never approved. A location with no held class or no instance
+/// yields no row and a `DATA_LOCATION_INCOMPLETE` entry.
+fn rows_from_location(
+    index: &Index,
+    location: &str,
+    connector: Option<&str>,
+    origin: AuthorityOrigin,
+    generation: u64,
+) -> Result<Vec<AuthorityRow>, String> {
+    let sc = |local: &str| format!("{SC}{local}");
+    let classes = index.all(location, &sc("holdsClass"));
+    let Some(instance) = index.first(location, &sc("instance")) else {
+        return Err(format!(
+            "{}: {location} names no sc:instance",
+            super::DATA_LOCATION_INCOMPLETE
+        ));
+    };
+    if classes.is_empty() {
+        return Err(format!(
+            "{}: {location} holds no class",
+            super::DATA_LOCATION_INCOMPLETE
+        ));
+    }
+    let mut source = match connector {
+        Some(connector) => format!("{connector}:{instance}"),
+        None => instance.to_string(),
+    };
+    if let Some(store) = index.first(location, &sc("store")) {
+        source = format!("{source}:{store}");
+    }
+    let route = super::AuthorityRoute {
+        read_tool: index.first(location, &sc("readTool")).map(str::to_string),
+        route_param: index.first(location, &sc("routeParam")).map(str::to_string),
+        federation_key: index
+            .first(location, &sc("federationKey"))
+            .map(str::to_string),
+    };
+    Ok(classes
+        .iter()
+        .map(|class| AuthorityRow {
+            row: format!("{location}::{class}"),
+            source: source.clone(),
+            class: class.clone(),
+            mapping_name: location.to_string(),
+            facet: None,
+            rank: 1,
+            scope: None,
+            partition: None,
+            origin: origin.as_str().to_string(),
+            generation,
+            allow_fallback: false,
+            approved: false,
+            declared: true,
+            materialisation: Materialisation::Virtual,
+            freshness_max_age_seconds: None,
+            contract: Some("live_truth".to_string()),
+            route: Some(route.clone()),
+        })
+        .collect())
 }
 
 fn parse_role(value: &str) -> Option<SourceRole> {
@@ -139,6 +204,7 @@ fn absorb(
     mut fixture: CoverageFixture,
     triples: &[Triple],
     origin: AuthorityOrigin,
+    connector: Option<&str>,
     generation: u64,
 ) -> CoverageFixture {
     let index = Index::from_triples(triples);
@@ -166,6 +232,16 @@ fn absorb(
     for subject in index.subjects_of_type(&format!("{VG}SourceAuthority")) {
         if let Some(row) = row_from(&index, subject, origin, generation) {
             fixture = fixture.with_row(row);
+        }
+    }
+    for location in index.subjects_of_type(&format!("{SC}DataLocation")) {
+        match rows_from_location(&index, location, connector, origin, generation) {
+            Ok(rows) => {
+                for row in rows {
+                    fixture = fixture.with_row(row);
+                }
+            }
+            Err(entry) => fixture = fixture.with_audit(entry),
         }
     }
     fixture
@@ -200,6 +276,10 @@ pub fn fixture_from_schema_sources(
             fixture,
             &triples,
             origin_of(&source.origin),
+            match &source.origin {
+                SchemaSourceOrigin::Pack { connector, .. } => Some(connector.as_str()),
+                _ => None,
+            },
             source.attached_at_ms,
         );
     }

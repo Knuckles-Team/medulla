@@ -304,3 +304,61 @@ fn capability_seed_passes_shape() {
     );
     assert_pack_proposes_only(CAPABILITY_SEED, &classes);
 }
+
+const DATA_LOCATIONS: &str = r#"
+@prefix sc: <https://knuckles-team.github.io/ontology/surface-contract#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix ex: <urn:eg:fixture:locations:> .
+
+ex:orders-east a sc:DataLocation ;
+    sc:instance "east" ;
+    sc:store "orders-db" ;
+    sc:holdsClass <https://knuckles-team.github.io/ontology/core#Order> ,
+        <https://knuckles-team.github.io/ontology/core#Customer> ;
+    sc:readTool "list_orders" ;
+    sc:routeParam "region" ;
+    sc:federationKey "order_id" .
+
+ex:orders-nowhere a sc:DataLocation ;
+    sc:holdsClass <https://knuckles-team.github.io/ontology/core#Order> .
+"#;
+
+// spec: MEDULLA-SRC-AUTH-R013
+#[test]
+fn data_location_yields_a_proposed_pack_row() {
+    let pack = SchemaSourceOrigin::Pack {
+        connector: "orders-pack".to_string(),
+        record_id: "pack-1".to_string(),
+        tenant: None,
+    };
+    let fixture = fixture_from_schema_sources(&attached_under(DATA_LOCATIONS, pack)).unwrap();
+    let rows: Vec<&AuthorityRow> = fixture.rows().collect();
+    // One row per held class of the complete location; the incomplete one yields none.
+    assert_eq!(rows.len(), 2, "{rows:?}");
+    for row in &rows {
+        assert_eq!(row.origin, AuthorityOrigin::Pack.as_str());
+        assert_eq!(row.source, "orders-pack:east:orders-db");
+        assert_eq!(row.contract.as_deref(), Some("live_truth"));
+        assert!(!row.approved, "a pack row stays a proposal");
+        let route = row.route.as_ref().expect("the route is kept");
+        assert_eq!(route.read_tool.as_deref(), Some("list_orders"));
+        assert_eq!(route.route_param.as_deref(), Some("region"));
+        assert_eq!(route.federation_key.as_deref(), Some("order_id"));
+    }
+    let classes: std::collections::BTreeSet<&str> =
+        rows.iter().map(|row| row.class.as_str()).collect();
+    assert_eq!(
+        classes,
+        [
+            "https://knuckles-team.github.io/ontology/core#Customer",
+            "https://knuckles-team.github.io/ontology/core#Order",
+        ]
+        .into_iter()
+        .collect()
+    );
+    // The location with no instance is audited by name.
+    let audit = fixture.audit_entries();
+    assert_eq!(audit.len(), 1, "{audit:?}");
+    assert!(audit[0].starts_with("DATA_LOCATION_INCOMPLETE"), "{audit:?}");
+    assert!(audit[0].contains("orders-nowhere"), "{audit:?}");
+}

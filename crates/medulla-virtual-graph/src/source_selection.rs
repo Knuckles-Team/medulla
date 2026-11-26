@@ -303,7 +303,22 @@ pub struct AuthorityRow {
     pub freshness_max_age_seconds: Option<u64>,
     /// `vg:authorityContract`.
     pub contract: Option<String>,
+    /// The route a pack data location states (`sc:readTool`, `sc:routeParam`,
+    /// `sc:federationKey`), when the row came from one (MEDULLA-SRC-AUTH-R013).
+    pub route: Option<AuthorityRoute>,
 }
+
+/// The route of an imported data location: the tool that reads it, the parameter that
+/// selects the instance and the key federation joins records on.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct AuthorityRoute {
+    pub read_tool: Option<String>,
+    pub route_param: Option<String>,
+    pub federation_key: Option<String>,
+}
+
+/// The audit code of a data location that names no held class or no instance.
+pub const DATA_LOCATION_INCOMPLETE: &str = "DATA_LOCATION_INCOMPLETE";
 
 impl AuthorityRow {
     /// A declared, approved, unscoped, virtual row of fixture origin.
@@ -325,6 +340,7 @@ impl AuthorityRow {
             materialisation: Materialisation::Virtual,
             freshness_max_age_seconds: None,
             contract: None,
+            route: None,
         }
     }
 
@@ -447,9 +463,23 @@ pub struct CoverageFixture {
     copy_capable: BTreeSet<String>,
     copy_only: BTreeSet<String>,
     copy_watermarks: BTreeMap<String, u64>,
+    /// Audit entries recorded while the fixture was read, such as
+    /// [`DATA_LOCATION_INCOMPLETE`].
+    audit: Vec<String>,
 }
 
 impl CoverageFixture {
+    /// Record one audit entry of the read.
+    pub fn with_audit(mut self, entry: String) -> Self {
+        self.audit.push(entry);
+        self
+    }
+
+    /// The audit entries recorded while the fixture was read.
+    pub fn audit_entries(&self) -> &[String] {
+        &self.audit
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
