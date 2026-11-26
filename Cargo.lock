@@ -8580,6 +8580,7 @@ dependencies = [
  "datafusion",
  "iceberg",
  "medulla-cypher",
+ "medulla-exec",
  "medulla-graph-core",
  "medulla-mutation-types",
  "medulla-numeric",
