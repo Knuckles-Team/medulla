@@ -627,6 +627,7 @@ async def _verify(client: MedullaClient, receipt: Any) -> Any:
     )
 
 
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R002.10")
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R002.13")
 @pytest.mark.asyncio
 async def test_receipt_verdicts() -> None:
