@@ -1426,6 +1426,32 @@ jobs:
       - name: Perf/recall regression gate
         run: python3 scripts/bench_gate.py
 
+  # ── Nightly budget benches of the incremental-views spec (MEDULLA-INCREMENTAL-VIEWS-R015).
+  # The release gate runs every oracle test in the post-land `tests` set; these three
+  # benches state the service levels of R001.10, R009.8 and R011.7 and run on the nightly
+  # schedule only. A bench asserts its own budget, so a regression fails here; the job is
+  # a service level, never a release gate.
+  incremental-budget-benches:
+    timeout-minutes: 360
+    name: Incremental views budget benches
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - *medulla-gates-checkout
+      - *medulla-gates-toolchain
+      - uses: Swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # v2.9.2
+        with:
+          key: incremental-budget-benches
+          workspaces: ". -> target-isolated"
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+      - name: Plan view delta cost (R001.10)
+        run: cargo bench -p medulla-plan --features query --bench incremental_delta
+      - name: SQL view commit cost (R009.8)
+        run: cargo bench -p medulla-sql-tests --features sql --bench matview_incremental
+      - name: Ontology retraction cost (R011.7)
+        run: cargo bench -p medulla-reasoner --features owl --bench owl_retract
+
   # ── Warm compile cache for tag releases (MEDULLA-CONTRACT-R053.8). Builds the EXACT
   # release wheel configuration (.github/actions/folded-wheel: the medulla-pyengine
   # wheel, the numeric module and the release-server executable) for each published

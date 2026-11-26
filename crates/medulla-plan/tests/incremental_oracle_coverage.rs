@@ -106,13 +106,89 @@ fn gaps(accepted: &[&str], files: &[String]) -> Vec<String> {
     gaps
 }
 
+/// The nightly job of `.github/workflows/ci.yml` that runs the three budget benches.
+const NIGHTLY_JOB: &str = "incremental-budget-benches";
+
+/// The bench commands the release gate requires on the nightly schedule path (R001.10,
+/// R009.8, R011.7).
+const NIGHTLY_BENCHES: &[&str] = &[
+    "cargo bench -p medulla-plan --features query --bench incremental_delta",
+    "cargo bench -p medulla-sql-tests --features sql --bench matview_incremental",
+    "cargo bench -p medulla-reasoner --features owl --bench owl_retract",
+];
+
+/// What is missing from the nightly job in the workflow text: the job itself, its
+/// schedule-only condition, and each bench command inside the job's own block.
+fn nightly_bench_gaps(workflow: &str) -> Vec<String> {
+    let header = format!("\n  {NIGHTLY_JOB}:\n");
+    let Some(start) = workflow.find(&header) else {
+        return vec![format!("{NIGHTLY_JOB}: no such job")];
+    };
+    let rest = &workflow[start + header.len()..];
+    // The job ends at the next top-level key (two-space indent, then a name and a colon).
+    let end = rest
+        .lines()
+        .scan(0usize, |at, line| {
+            let here = *at;
+            *at += line.len() + 1;
+            Some((here, line))
+        })
+        .find(|(_, line)| {
+            line.starts_with("  ")
+                && !line.starts_with("   ")
+                && line.trim_end().ends_with(':')
+                && !line.trim_start().starts_with('#')
+        })
+        .map_or(rest.len(), |(at, _)| at);
+    let block = &rest[..end];
+    let mut gaps = Vec::new();
+    if !block.contains("if: github.event_name == 'schedule'") {
+        gaps.push(format!("{NIGHTLY_JOB}: not limited to the nightly schedule"));
+    }
+    for command in NIGHTLY_BENCHES {
+        if !block.contains(command) {
+            gaps.push(format!("{NIGHTLY_JOB}: no `{command}`"));
+        }
+    }
+    gaps
+}
+
 // spec: MEDULLA-INCREMENTAL-VIEWS-R004
+// spec: MEDULLA-INCREMENTAL-VIEWS-R015
 #[test]
 fn every_accepted_construct_has_an_oracle_case() {
     let files: Vec<String> = ORACLE_FILES.iter().map(|f| read(f)).collect();
     let accepted = accepted();
     let missing = gaps(&accepted, &files);
     assert!(missing.is_empty(), "oracle coverage gaps: {missing:?}");
+    // The release gate also requires the three budget benches on the nightly path.
+    let workflow = read("../../.github/workflows/ci.yml");
+    let nightly = nightly_bench_gaps(&workflow);
+    assert!(nightly.is_empty(), "nightly budget bench gaps: {nightly:?}");
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R015
+#[test]
+fn a_missing_nightly_bench_is_named() {
+    let found = nightly_bench_gaps("jobs:\n  other:\n    steps: []\n");
+    assert_eq!(
+        found,
+        vec![format!("{NIGHTLY_JOB}: no such job")],
+        "a workflow without the job names it"
+    );
+    let partial = format!(
+        "\n  {NIGHTLY_JOB}:\n    if: github.event_name == 'schedule'\n    steps:\n      - run: {}\n  next:\n    steps:\n      - run: {}\n",
+        NIGHTLY_BENCHES[0], NIGHTLY_BENCHES[1]
+    );
+    let found = nightly_bench_gaps(&partial);
+    assert_eq!(
+        found,
+        vec![
+            format!("{NIGHTLY_JOB}: no `{}`", NIGHTLY_BENCHES[1]),
+            format!("{NIGHTLY_JOB}: no `{}`", NIGHTLY_BENCHES[2]),
+        ],
+        "a command outside the job's own block does not count"
+    );
 }
 
 // spec: MEDULLA-INCREMENTAL-VIEWS-R004

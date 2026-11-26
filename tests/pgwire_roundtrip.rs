@@ -1885,6 +1885,7 @@ fn mixed_change(table: &str, n: i64, base: i64) -> String {
     }
 }
 
+// spec: MEDULLA-INCREMENTAL-VIEWS-R009.5
 // spec: MEDULLA-INCREMENTAL-VIEWS-R009.7
 #[cfg(feature = "matview")]
 #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
@@ -1920,6 +1921,17 @@ async fn matview_incremental_read_after_commit() {
         );
     }
     assert_incremental(&client, &view).await;
+    // The `Sql` family status row is published and stays fresh: the commits above never set
+    // the stale flag of a view that has a program, so no refresh was needed to read it.
+    let fresh = cells(
+        &client,
+        &format!(
+            "SELECT name FROM medulla_catalog.matviews \
+             WHERE name = '{view}' AND family = 'sql' AND stale = false"
+        ),
+    )
+    .await;
+    assert_eq!(fresh, vec![vec![Some(view.clone())]], "status row of {view}");
     // The view read is a table read, not a recompute: it stays far below the defining select.
     let read = std::time::Instant::now();
     cells(&client, &format!("SELECT * FROM {view}")).await;
@@ -1928,6 +1940,27 @@ async fn matview_incremental_read_after_commit() {
         "a view read took {:?} (worst commit {worst_commit:?})",
         read.elapsed()
     );
+    // REFRESH recomputes and replaces the rows: the view still equals its defining select.
+    client
+        .simple_query(&format!("REFRESH MATERIALIZED VIEW {view}"))
+        .await
+        .expect("REFRESH MATERIALIZED VIEW");
+    assert_eq!(
+        cells(&client, &format!("SELECT * FROM {view} ORDER BY region")).await,
+        cells(&client, &ordered).await,
+        "after refresh"
+    );
+    // Drop removes the published status row.
+    client
+        .simple_query(&format!("DROP MATERIALIZED VIEW {view}"))
+        .await
+        .expect("DROP MATERIALIZED VIEW");
+    let gone = cells(
+        &client,
+        &format!("SELECT name FROM medulla_catalog.matviews WHERE name = '{view}'"),
+    )
+    .await;
+    assert!(gone.is_empty(), "the status row of {view} outlived the drop: {gone:?}");
 }
 
 // spec: MEDULLA-INCREMENTAL-VIEWS-R012.5
