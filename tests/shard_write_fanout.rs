@@ -68,6 +68,7 @@ async fn durable_state_with_graphs() -> test_support::SharedState {
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R099.3
+// Proves the served arm returns one report per sub-batch and refuses a cross-tenant sub-batch.
 #[tokio::test]
 async fn served_arm_returns_one_report_per_sub_batch() {
     let state = durable_state_with_graphs().await;
@@ -127,6 +128,7 @@ async fn served_arm_returns_one_report_per_sub_batch() {
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R099.5
+// Proves the report lists one fanout entry per sub-batch and both shard-writer metrics are scraped.
 #[tokio::test]
 async fn report_and_metrics_name_every_sub_batch() {
     let state = durable_state_with_graphs().await;
@@ -205,6 +207,7 @@ fn many_batches_blob(count: usize) -> Vec<u8> {
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R099.4
+// Proves more than 256 sub-batches refuse INVALID_ARGUMENT with zero writes and a failed sub-batch reports its own code.
 #[tokio::test]
 async fn oversize_refused_and_failed_sub_batch_reported() {
     use medulla_protocol_types::mutation_batch::MAX_FANOUT_SUB_BATCHES;
