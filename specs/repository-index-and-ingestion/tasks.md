@@ -46,7 +46,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T039 [US2] MEDULLA-REPO-INGEST-R602.6 Hot-path proof
 - [ ] T040 [US2] MEDULLA-REPO-INGEST-R603.1 Model
 - [ ] T041 [US2] MEDULLA-REPO-INGEST-R603.2 Behavior
-- [ ] T042 [US2] MEDULLA-REPO-INGEST-R603.3 Wiring
+- [x] T042 [US2] MEDULLA-REPO-INGEST-R603.3 Wiring
 - [ ] T043 [US2] MEDULLA-REPO-INGEST-R603.4 Refusal
 - [ ] T044 [US2] MEDULLA-REPO-INGEST-R603.5 Evidence
 - [ ] T045 [US2] MEDULLA-REPO-INGEST-R603.6 Hot-path proof
@@ -88,7 +88,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T081 [US1] MEDULLA-REPO-INGEST-R603.7 Source-binding identity separates cosmetic from structural change RETIRED: a second classification route; served by R603.3
 - [ ] T082 [US2] MEDULLA-REPO-INGEST-R700.1 Model
 - [ ] T083 [US2] MEDULLA-REPO-INGEST-R700.2 Behavior
-- [ ] T084 [US2] MEDULLA-REPO-INGEST-R700.3 Wiring: CodeHealthSweep served read beside CodeContext
+- [x] T084 [US2] MEDULLA-REPO-INGEST-R700.3 Wiring: CodeHealthSweep served read beside CodeContext
 - [ ] T085 [US2] MEDULLA-REPO-INGEST-R700.4 Refusal
 - [ ] T086 [US2] MEDULLA-REPO-INGEST-R700.5 Evidence
 - [ ] T087 [US2] MEDULLA-REPO-INGEST-R700.6 Hot-path proof
