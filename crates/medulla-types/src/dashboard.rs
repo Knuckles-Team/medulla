@@ -208,9 +208,15 @@ pub enum DashboardAssetOp {
         grants: Vec<DashboardGrant>,
     },
     /// Soft delete: the body stays for `catalog.dashboard_retention_days`. Only the owner may.
+    /// A delete is not a view: it never raises `usage_count` or sets `last_viewed_ms`.
     Delete {
         /// The dashboard id.
         id: String,
+        /// The revision the caller read. When given and not current, the delete refuses
+        /// `DASHBOARD_REVISION_CONFLICT` and writes nothing. When absent the delete does not
+        /// check the revision.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        expected_revision: Option<u64>,
     },
     /// Bring a deleted dashboard back inside its retention. Only the owner may.
     Restore {

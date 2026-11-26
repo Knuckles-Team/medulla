@@ -517,6 +517,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 - `MEDULLA-TYPED-PACKS-R109.4`: `tests/typed_packs/test_dashboard_asset_served.py::test_stale_revision_missing_grant_invalid_body_and_purged_asset_refuse`; `crates/medulla-h-jobs/src/jobs/schedule_tick.rs::dashboard_purge_tick_tests::the_schedule_tick_purges_a_deleted_dashboard_after_its_retention_and_a_read_refuses_purged` (the real purge tick over a served state, retention knob at its one-day floor and a controlled clock, so the purged read is proved on a body the tick nulled, never one written as null).
 - `MEDULLA-TYPED-PACKS-R109.5`: `tests/typed_packs/test_dashboard_asset_served.py::test_revision_grant_and_delete_history_and_usage_are_served`.
 - `MEDULLA-TYPED-PACKS-R109.6`: `tests/typed_packs/test_dashboard_asset_served.py::test_dashboard_save_conflict_share_lineage_search_and_soft_delete`.
+- `MEDULLA-TYPED-PACKS-R109.7`: `crates/medulla-core/tests/dashboard_asset.rs::delete_with_expected_revision_refuses_a_mismatch_and_is_not_a_view`; `tests/typed_packs/test_dashboard_grants_served.py::test_delete_with_expected_revision_refuses_a_mismatch_and_is_not_a_view`.
 
 ## R085.7 original session reference inspection
 

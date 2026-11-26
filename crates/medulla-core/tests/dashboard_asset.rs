@@ -96,7 +96,7 @@ fn save_bumps_revision_rebuilds_links_and_delete_keeps_then_purges() {
     ));
 
     // Delete keeps the body; a restore inside the retention brings it back.
-    let removed = delete(&state, &owner, 100).unwrap();
+    let removed = delete(&state, &owner, 100, None).unwrap();
     state.removed_at_ms = Some(removed);
     assert!(!purge_due(&state, 100 + DAY_MS, DASHBOARD_RETENTION_DAYS_DEFAULT));
     assert_eq!(view(&state, &member, 101).unwrap_err(), DashboardRefusal::NotGranted);
@@ -115,4 +115,56 @@ fn save_bumps_revision_rebuilds_links_and_delete_keeps_then_purges() {
     state.purged = true;
     assert!(!purge_due(&state, after + DAY_MS, DASHBOARD_RETENTION_DAYS_DEFAULT));
     assert_eq!(view(&state, &owner, after + DAY_MS).unwrap_err(), DashboardRefusal::Purged);
+}
+
+// spec: MEDULLA-TYPED-PACKS-R109.7
+#[test]
+fn delete_with_expected_revision_refuses_a_mismatch_and_is_not_a_view() {
+    let owner = Caller { principal: "alice", groups: &[] };
+    let first = save(None, "d1", body(&["orders"], &[]), 0, &owner, 10).unwrap();
+    let second = save(
+        Some(&state_of(first)),
+        "d1",
+        body(&["orders", "refunds"], &[]),
+        1,
+        &owner,
+        20,
+    )
+    .unwrap();
+    let mut state = state_of(second);
+    state.usage_count = 3;
+    state.last_viewed_ms = Some(15);
+
+    // A mismatch names the current revision and decides nothing.
+    assert_eq!(
+        delete(&state, &owner, 100, Some(1)).unwrap_err(),
+        DashboardRefusal::RevisionConflict { current: 2 }
+    );
+    assert_eq!(
+        delete(&state, &owner, 100, Some(3)).unwrap_err(),
+        DashboardRefusal::RevisionConflict { current: 2 }
+    );
+    assert_eq!(
+        DashboardRefusal::RevisionConflict { current: 2 }.code(),
+        "DASHBOARD_REVISION_CONFLICT"
+    );
+
+    // A non-owner is refused before the revision is compared, so a stale number leaks nothing.
+    let stranger = Caller { principal: "eve", groups: &[] };
+    assert_eq!(
+        delete(&state, &stranger, 100, Some(1)).unwrap_err(),
+        DashboardRefusal::NotGranted
+    );
+
+    // The current revision, or none, deletes; neither touches the view counters.
+    assert_eq!(delete(&state, &owner, 100, Some(2)).unwrap(), 100);
+    assert_eq!(delete(&state, &owner, 101, None).unwrap(), 101);
+    assert_eq!((state.usage_count, state.last_viewed_ms), (3, Some(15)));
+
+    // A second delete of a deleted dashboard is still refused.
+    state.removed_at_ms = Some(100);
+    assert!(matches!(
+        delete(&state, &owner, 102, Some(2)).unwrap_err(),
+        DashboardRefusal::Invalid(_)
+    ));
 }

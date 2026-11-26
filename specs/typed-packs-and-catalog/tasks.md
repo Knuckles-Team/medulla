@@ -243,6 +243,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T230 [US4] MEDULLA-TYPED-PACKS-R109.4 Refusal
 - [ ] T231 [US4] MEDULLA-TYPED-PACKS-R109.5 Evidence
 - [ ] T232 [US4] MEDULLA-TYPED-PACKS-R109.6 Hot-path proof
+- [ ] T232a [US4] MEDULLA-TYPED-PACKS-R109.7 Delete checks the revision it read
 - [ ] T233 [US5] MEDULLA-TYPED-PACKS-R650.1 Model
 - [ ] T234 [US5] MEDULLA-TYPED-PACKS-R650.2 Behavior
 - [x] T235 [US5] MEDULLA-TYPED-PACKS-R650.3 Wiring

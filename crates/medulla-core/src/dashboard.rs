@@ -279,14 +279,25 @@ pub fn share(
     Ok(grants)
 }
 
-/// Soft delete: returns the `removed_at_ms` to store. Only the owner may.
+/// Soft delete: returns the `removed_at_ms` to store. Only the owner may. When
+/// `expected_revision` is given it must be the stored revision, else the delete refuses
+/// `RevisionConflict` naming the current one (MEDULLA-TYPED-PACKS-R109.7). A delete is not a
+/// view: it neither reads nor changes `usage_count` and `last_viewed_ms`.
 pub fn delete(
     state: &DashboardState,
     caller: &Caller<'_>,
     now_ms: u64,
+    expected_revision: Option<u64>,
 ) -> Result<u64, DashboardRefusal> {
     owner_only(state, caller)?;
     live_or_refuse(state)?;
+    if let Some(expected) = expected_revision {
+        if expected != state.asset.revision {
+            return Err(DashboardRefusal::RevisionConflict {
+                current: state.asset.revision,
+            });
+        }
+    }
     if state.removed_at_ms.is_some() {
         return Err(DashboardRefusal::Invalid(
             "the dashboard is already deleted".to_string(),

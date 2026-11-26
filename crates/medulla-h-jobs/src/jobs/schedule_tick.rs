@@ -911,7 +911,14 @@ mod dashboard_purge_tick_tests {
         )
         .await;
         assert!(kept.error.is_none(), "{:?}", kept.error);
-        let deleted = dashboard(&state, DashboardAssetOp::Delete { id: "purge-me".into() }).await;
+        let deleted = dashboard(
+            &state,
+            DashboardAssetOp::Delete {
+                id: "purge-me".into(),
+                expected_revision: None,
+            },
+        )
+        .await;
         assert!(deleted.error.is_none(), "{:?}", deleted.error);
 
         let core = core_of(&state).await;

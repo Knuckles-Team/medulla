@@ -35418,6 +35418,7 @@ class DashboardAssetOpDelete(BaseModel):
 
     op: Literal["delete"]
     id: str
+    expected_revision: Annotated[int, Field(ge=0)] | None = None
 
 
 class DashboardAssetOpRestore(BaseModel):

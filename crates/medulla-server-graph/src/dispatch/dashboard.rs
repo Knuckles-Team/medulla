@@ -163,9 +163,13 @@ async fn serve(
             commit(state, target, vec![operation(&dashboard_node_id(id), properties)]).await?;
             Ok(receipt(&next))
         }
-        DashboardAssetOp::Delete { id } => {
+        DashboardAssetOp::Delete {
+            id,
+            expected_revision,
+        } => {
             let (stored, _) = required(load(state, target, id).await?, id)?;
-            let removed = delete(&stored, &caller, now_ms).map_err(refused)?;
+            let removed =
+                delete(&stored, &caller, now_ms, *expected_revision).map_err(refused)?;
             let mut next = stored.clone();
             next.removed_at_ms = Some(removed);
             let mut properties = node_properties(&next, Some(&body_text(&next)?), tenant);

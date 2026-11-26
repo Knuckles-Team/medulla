@@ -167,6 +167,7 @@ fn dashboard_ops() -> Vec<(&'static str, medulla_types::dashboard::DashboardAsse
             "DashboardAsset.delete",
             DashboardAssetOp::Delete {
                 id: "dash-1".to_string(),
+                expected_revision: Some(1),
             },
         ),
         (
