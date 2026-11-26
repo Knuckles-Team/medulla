@@ -206,3 +206,17 @@ pub fn advance_checkpoint(
         .map_err(|error| format!("checkpoint batch encoding failed: {error}"))?;
     Ok((Some(Method::BatchUpdate { operations_msgpack }), completed))
 }
+
+/// Most derive payload nodes one status read scans.
+const PAYLOAD_SCAN_CAP: usize = 100_000;
+
+/// Every derive payload the tenant stores, in node-id order.
+pub fn stored_payloads(core: &GraphCore, tenant: &str) -> Vec<DerivePayload> {
+    let mut ids: Vec<String> = core
+        .get_nodes_by_label(PAYLOAD_LABEL, PAYLOAD_SCAN_CAP)
+        .into_iter()
+        .map(|(id, _)| id)
+        .collect();
+    ids.sort();
+    ids.into_iter().filter_map(|id| read_payload(core, tenant, &id)).collect()
+}

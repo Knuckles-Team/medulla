@@ -1384,6 +1384,49 @@ def complete_derivation_op(payload_ref: str, claims_written: int) -> dict[str, A
     }
 
 
+def participant_get_op(participant_id: str) -> dict[str, Any]:
+    """Read one participant the caller acts as (R655.4)."""
+    return {"op": "get", "participant_id": participant_id}
+
+
+def participant_list_op() -> dict[str, Any]:
+    """List the participants the caller acts as (R655.4)."""
+    return {"op": "list"}
+
+
+def ask_op(
+    subject: str,
+    question: str,
+    *,
+    observer: str | dict[str, str] = "system",
+    memory_scope: str | None = None,
+) -> dict[str, Any]:
+    """Ask about ``subject`` as ``observer`` sees them (R655.2)."""
+    body: dict[str, Any] = {
+        "subject": subject,
+        "observer": observer,
+        "question": question,
+    }
+    if memory_scope is not None:
+        body["memory_scope"] = {"scope_id": memory_scope}
+    return {"op": "ask", "question": body}
+
+
+def card_op(
+    subject: str, *, observer: str | dict[str, str] = "system"
+) -> dict[str, Any]:
+    """Read the stored card of ``subject`` as ``observer`` sees them (R655.3)."""
+    return {"op": "card", "subject": subject, "observer": observer}
+
+
+def status_op(memory_scope: str | None = None) -> dict[str, Any]:
+    """Read the derivation backlog the caller may see (R655.4)."""
+    op: dict[str, Any] = {"op": "status"}
+    if memory_scope is not None:
+        op["memory_scope"] = {"scope_id": memory_scope}
+    return op
+
+
 def derive_input_op(payload_ref: str) -> dict[str, Any]:
     """Read the turns and perspective of one claimed derive task (R651.12)."""
     return {"op": "derive_input", "payload_ref": payload_ref}
@@ -2244,8 +2287,13 @@ __all__ = [
     "named_evaluator",
     "param",
     "participant_wire",
+    "ask_op",
+    "card_op",
     "complete_derivation_op",
     "derive_input_op",
+    "participant_get_op",
+    "participant_list_op",
+    "status_op",
     "profile_share",
     "put_document_set_op",
     "put_participant_op",
