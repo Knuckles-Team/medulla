@@ -9,6 +9,7 @@ pattern, and a repeat ingest files none.
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import uuid
 from typing import Any
@@ -74,18 +75,54 @@ async def _seed_and_ingest(prefix: str) -> tuple[dict[str, Any], dict[str, Any]]
     )
     try:
         for index in range(3):
-            await client.batch_update(_run_operations(prefix, index))
+            await client.lifecycle.batch_update(_run_operations(prefix, index))
         decisions = dc.DecisionClient(client=client, graph=GRAPH)
         first = await decisions.failure_ingest(dc.failure_ingest_op(GRAPH))
         second = await decisions.failure_ingest(dc.failure_ingest_op(GRAPH))
+        # The Learn journey ends with the topic marked addressed by a source that
+        # covers it (R701.6).
+        (pattern,) = [
+            p
+            for p in first["patterns"]
+            if p["signature"].startswith(f"{prefix}_max_steps")
+        ]
+        topic_id = hashlib.sha256(pattern["signature"].encode("utf-8")).hexdigest()
+        assert topic_id in first["filed"]
+        topic = f"gap:{topic_id}"
+        await client.lifecycle.batch_update(
+            [
+                {
+                    "op": "upsert_node",
+                    "id": f"{prefix}-fix",
+                    "properties": {"kind": "document"},
+                },
+                {
+                    "op": "upsert_edge",
+                    "source": f"{prefix}-fix",
+                    "target": topic,
+                    "properties": {"relationship": "COVERS"},
+                },
+            ]
+        )
+        marked = await decisions.failure_ingest(
+            {
+                "op": "mark_addressed",
+                "graph": GRAPH,
+                "topic_id": topic_id,
+                "by": f"{prefix}-fix",
+            }
+        )
+        assert marked["id"] == topic_id
         return first, second
     finally:
         await client.close()
 
 
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R701.3")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R701.6")
 def test_ingest_served(clean_graph):
     # spec: MEDULLA-DECISION-ENGINE-R701.3
+    # spec: MEDULLA-DECISION-ENGINE-R701.6
     # Letters outside a-f only, so signature normalisation keeps the class text.
     prefix = "fp" + "".join(chr(103 + int(c, 16)) for c in uuid.uuid4().hex[:8])
     first, second = asyncio.run(_seed_and_ingest(prefix))

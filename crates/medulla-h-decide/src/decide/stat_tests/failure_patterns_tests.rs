@@ -205,3 +205,101 @@ async fn gap_links_back_to_its_member_runs() {
     let error = refused(plan(&h, "tenant-other", foreign).await);
     assert!(error.starts_with(TOPIC_NOT_FOUND.as_str()), "{error}");
 }
+
+/// Commit a planned batch to the core by hand, the way the router commits it
+/// (`medulla-h-decide` plans writes and cannot commit them).
+fn commit(core: &medulla_graph_core::graph::GraphCore, write: &PlannedWrite) {
+    for op in &write.operations {
+        match op["op"].as_str().unwrap() {
+            "upsert_node" => put(core, op["id"].as_str().unwrap(), op["properties"].clone()),
+            _ => link(
+                core,
+                op["source"].as_str().unwrap(),
+                op["target"].as_str().unwrap(),
+                op["properties"]["relationship"].as_str().unwrap(),
+            ),
+        }
+    }
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R701.6: the Learn-stage journey. Failed
+/// runs cluster into one pattern and file one gap; a repeat ingest plans
+/// nothing; the topic is marked addressed and is never reopened; the refusal
+/// paths hold and another tenant reads nothing.
+// spec: MEDULLA-DECISION-ENGINE-R701.6
+#[tokio::test]
+async fn failures_cluster_and_gap_is_idempotent() {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let core = core(&h).await;
+    for index in 0..3 {
+        seed_run(&core, index, Some(&format!("trace-{index}")));
+    }
+
+    // First ingest: one pattern of three runs, one gap filed.
+    let first = plan(&h, TENANT, ingest()).await.ok().expect("plans");
+    let result: FailureIngestResult = reply(&first);
+    let signature = Signature("max_steps|search|tool_call".into());
+    let topic_id = signature.topic_id();
+    assert_eq!(result.filed, vec![topic_id.clone()]);
+    let pattern = result
+        .patterns
+        .iter()
+        .find(|pattern| pattern.signature == signature)
+        .expect("the three runs cluster into one pattern");
+    assert_eq!(pattern.count, 3);
+    assert!(result.skipped.is_empty());
+    commit(&core, &first);
+
+    // A repeat ingest plans nothing and files nothing.
+    let second = plan(&h, TENANT, ingest()).await.ok().expect("plans");
+    assert!(second.operations.is_empty());
+    let repeat: FailureIngestResult = reply(&second);
+    assert!(repeat.filed.is_empty());
+    assert_eq!(core.get_nodes_by_label("FailureGap", 100).len(), 1);
+
+    // Marking addressed needs the COVERS edge, then moves the stored status.
+    put(&core, "doc:fix", json!({"kind": "document"}));
+    let mark = || FailureOp::MarkAddressed {
+        graph: GRAPH.into(),
+        topic_id: topic_id.clone(),
+        by: "doc:fix".into(),
+    };
+    let error = refused(plan(&h, TENANT, mark()).await);
+    assert!(error.starts_with(TOPIC_SOURCE_UNLINKED.as_str()), "{error}");
+    link(&core, "doc:fix", &format!("gap:{topic_id}"), "COVERS");
+    let marked = plan(&h, TENANT, mark()).await.ok().expect("marks");
+    assert_eq!(marked.operations.len(), 1);
+    assert_eq!(marked.operations[0]["properties"]["status"], "addressed");
+    assert_eq!(marked.operations[0]["properties"]["addressed_by"], "doc:fix");
+    commit(&core, &marked);
+
+    // An addressed gap is never reopened by a later ingest.
+    let third = plan(&h, TENANT, ingest()).await.ok().expect("plans");
+    assert!(third.operations.is_empty());
+    let get = FailureOp::Get {
+        graph: GRAPH.into(),
+        topic_id: topic_id.clone(),
+    };
+    let read = plan(&h, TENANT, get).await.ok().expect("reads");
+    let topic: GapTopic = reply(&read);
+    assert_eq!(topic.members, ["run-0", "run-1", "run-2"]);
+
+    // Refusals: an unknown topic, and a failed run with no run-trace id.
+    let unknown = FailureOp::Get {
+        graph: GRAPH.into(),
+        topic_id: "no-such-topic".into(),
+    };
+    let error = refused(plan(&h, TENANT, unknown).await);
+    assert!(error.starts_with(TOPIC_NOT_FOUND.as_str()), "{error}");
+    seed_run(&core, 3, None);
+    let error = refused(plan(&h, TENANT, ingest()).await);
+    assert!(error.starts_with(FAILURE_NO_RUN_TRACE.as_str()), "{error}");
+
+    // Cross-tenant negative: another tenant's read finds no such topic.
+    let foreign = FailureOp::Get {
+        graph: GRAPH.into(),
+        topic_id,
+    };
+    let error = refused(plan(&h, "tenant-other", foreign).await);
+    assert!(error.starts_with(TOPIC_NOT_FOUND.as_str()), "{error}");
+}

@@ -1922,6 +1922,102 @@ fn bench_entry_trust(
     report.insert(group_name, sampled_report(rt, &h, &asked));
 }
 
+/// Failed runs the `decide/failure_patterns` group seeds.
+const FAILURE_RUNS: u64 = 64;
+
+/// The `decide/failure_patterns` group (MEDULLA-DECISION-ENGINE-R701.6,
+/// R178.1): the served `FailureIngest` journey over `FAILURE_RUNS` failed
+/// `RunTrace` nodes of one signature, seeded through served `BatchUpdate`.
+/// The fixture ingests once (one gap filed), then each sample is the repeat
+/// ingest that plans nothing, so the group times the steady-state read and
+/// cluster path. Budgets: `group_budgets` in `benches/baselines/decide.json`.
+// spec: MEDULLA-DECISION-ENGINE-R701.6
+fn bench_failure_patterns(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_decision_types::failure_patterns::{FailureIngestResult, FailureOp};
+    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation("decider")));
+    let call = |method: Method| -> Response {
+        rt.block_on(Box::pin(
+            medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+                &h.state,
+                Request {
+                    id: 701,
+                    graph: "__commons__".into(),
+                    auth_token: String::new(),
+                    agent_id: Some("decider".into()),
+                    method,
+                    trace_id: None,
+                },
+                VerifiedRequestContext::verified_for_test_with_scopes("decider", TENANT, &["*"]),
+            ),
+        ))
+    };
+    let mut operations = vec![serde_json::json!({"op": "upsert_node", "id": "search",
+                                                  "properties": {"kind": "tool"}})];
+    for index in 0..FAILURE_RUNS {
+        let run = format!("run-{index}");
+        let plan = format!("{run}-plan");
+        let step = format!("{run}-call");
+        operations.push(serde_json::json!({"op": "upsert_node", "id": run, "properties": {
+            "node_type": "RunTrace",
+            "run_trace_id": format!("trace-{index}"),
+            "terminationReason": "max_steps",
+            "endMs": 1_700_000_000_000u64 + index,
+        }}));
+        operations.push(serde_json::json!({"op": "upsert_node", "id": plan,
+                                           "properties": {"kind": "plan"}}));
+        operations.push(serde_json::json!({"op": "upsert_node", "id": step,
+                                           "properties": {"kind": "tool_call"}}));
+        for (source, target, relationship) in [
+            (run.as_str(), plan.as_str(), "hasStep"),
+            (run.as_str(), step.as_str(), "hasStep"),
+            (plan.as_str(), step.as_str(), "precedes"),
+            (step.as_str(), "search", "usesTool"),
+        ] {
+            operations.push(serde_json::json!({"op": "upsert_edge", "source": source,
+                "target": target, "properties": {"relationship": relationship}}));
+        }
+    }
+    let seeded = call(Method::BatchUpdate {
+        operations_msgpack: rmp_serde::to_vec_named(&operations).expect("failure bench batch"),
+    });
+    assert!(seeded.refusal_text().is_none(), "{:?}", seeded.refusal_text());
+    let ingest = || {
+        call(Method::FailureIngest {
+            op: Box::new(FailureOp::Ingest {
+                graph: "__commons__".into(),
+                since_ms: None,
+            }),
+        })
+    };
+    let first: FailureIngestResult = decode(ingest()).expect("the first ingest is answered");
+    assert_eq!(first.filed.len(), 1);
+    let group_name = "decide/failure_patterns".to_string();
+    let mut group = c.benchmark_group(format!("{group_name}/served"));
+    group.bench_function("served", |b| b.iter(|| black_box(ingest())));
+    group.finish();
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            black_box(ingest());
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 /// A maximal frontier: `MAX_THOUGHT_LEAVES` leaves over four depths.
 fn widest_frontier() -> ReasoningState {
     let nodes = (0..MAX_THOUGHT_LEAVES as u32)
@@ -3025,6 +3121,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_distilled_rank(c, &rt, &mut report);
     bench_topology_admit(c, &mut report);
     bench_agent_loop(c, &rt, &mut report);
+    bench_failure_patterns(c, &rt, &mut report);
     bench_concentration_kernel(c, &mut report);
     bench_thought_search_kernel(c, &mut report);
     bench_served_kernels(c, &rt, &mut report);
