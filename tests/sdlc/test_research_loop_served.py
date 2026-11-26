@@ -30,6 +30,13 @@ from conftest import (
     TEST_TENANT,
     request_context,
 )
+from ingest.test_source_stream_versions_served import (
+    _batch,
+    _close,
+    _connector,
+    _ingest_client,
+    _submit,
+)
 
 from medulla import decision_client as dc
 from medulla import decision_stat as ds
@@ -341,3 +348,143 @@ async def test_a_graph_with_no_research_contract_names_no_tool(
         await client.tenants.delete(graph)
     finally:
         await client.close()
+
+
+class FixtureFleet:
+    """Stands in for arbora ``fleet.call``: the loop reaches a connector only through
+    it, and the fixture records every call."""
+
+    def __init__(self) -> None:
+        self.calls: list[tuple[str, str, dict]] = []
+
+    def call(self, server: str, tool: str, arguments: dict) -> dict:
+        self.calls.append((server, tool, arguments))
+        return {"title": "Fence handling", "text": "Parsers keep fences balanced."}
+
+
+def _claim_request(work_item_id: str, now_ms: int) -> dict:
+    return {
+        "schema_version": "1",
+        "tenant_ref": TEST_TENANT,
+        "work_item_id": work_item_id,
+        "queue_ref": None,
+        "resource_class": None,
+        "fairness_group": None,
+        "worker_ref": TEST_AGENT_ID,
+        "now_ms": now_ms,
+        "lease_ms": 60_000,
+        "max_tenant_in_flight": 8,
+    }
+
+
+async def _research_run(
+    client, graph: str, connector: str, fleet: FixtureFleet
+) -> tuple[str, str, dict]:
+    """One unknown, researched through the fleet: the work item, the ingested source and
+    the commit. Returns the unknown id, the source node id and the work item view."""
+    await _ingest_plan(client, graph)
+    await client._send(
+        "ProjectModeSet", {"request": {"project": graph, "mode": "development"}}, graph
+    )
+    answer = await client.spec_question("plan_unknowns", graph)
+    unknown = answer["rows"][0]
+    now_ms = int(time.time() * 1000)
+    item = await client.work_items.submit(
+        _research_item(unknown["unknown_id"], unknown["text"], now_ms)
+    )
+    # The loop reads the web search through arbora and ingests the result.
+    found = fleet.call("web-search", "web_search", {"query": unknown["text"]})
+    batch = _batch(connector, 2, None, found["title"])
+    batch["records"][0]["payload"]["text"] = found["text"]
+    await _submit(client, batch, "research")
+    sources = await client.nodes.list_by_label("Document", 0)
+    assert sources, "the ingested result is a source node"
+    source_id = sources[0][0]
+    claim = await client.work_items.claim(
+        _claim_request(item["work_item_id"], now_ms + 1),
+        idempotency_key=f"claim-{item['work_item_id']}",
+    )
+    assert claim["claimed"] is True, claim
+    await client.work_items.commit_result(
+        tenant=TEST_TENANT,
+        work_item_id=item["work_item_id"],
+        worker_id=TEST_AGENT_ID,
+        lease_epoch=claim["lease_epoch"],
+        fencing_token=claim["fencing_token"],
+        idempotency_key=f"commit-{item['work_item_id']}",
+        outcome="succeeded",
+        now_ms=now_ms + 2,
+        result_ref=source_id,
+    )
+    view = await client.work_items.get(
+        tenant=TEST_TENANT, work_item_id=item["work_item_id"]
+    )
+    return unknown["unknown_id"], source_id, view
+
+
+# spec: MEDULLA-SDLC-R016.3
+@pytest.mark.spec("MEDULLA-SDLC-R016.3")
+@pytest.mark.asyncio
+async def test_research_reaches_connectors_through_arbora(start_medulla_server) -> None:
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    fleet = FixtureFleet()
+    try:
+        unknown_id, source_id, view = await _research_run(
+            client, graph, connector, fleet
+        )
+        # The loop made one call, to the web-search connector, through the fleet.
+        assert [(server, tool) for server, tool, _ in fleet.calls] == [
+            ("web-search", "web_search")
+        ]
+        assert await client.nodes.properties(source_id) is not None
+        assert view is not None and view["status"] == "succeeded"
+        assert view["input_ref"] == unknown_id
+    finally:
+        await _close(client, graph)
+
+
+# spec: MEDULLA-SDLC-R016.5
+@pytest.mark.spec("MEDULLA-SDLC-R016.5")
+@pytest.mark.asyncio
+async def test_unknown_triggers_research_and_cited_entry_lands(
+    start_medulla_server,
+) -> None:
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    fleet = FixtureFleet()
+    try:
+        unknown_id, source_id, _ = await _research_run(client, graph, connector, fleet)
+        properties = await client.nodes.properties(source_id)
+        statement = f"Parsers keep fences balanced.\nSource: {source_id} (read at 1)"
+        receipt = _body(
+            await client._send(
+                "ProposalPut",
+                {
+                    "proposal": {
+                        "project": graph,
+                        "kind": "edit_plan_section",
+                        "target": f"research:{unknown_id}",
+                        "statement": statement,
+                        "evidence": [
+                            {
+                                "kind": "research_citation",
+                                "record_id": source_id,
+                                "digest": _content_digest(properties),
+                            }
+                        ],
+                    }
+                },
+                graph,
+            )
+        )
+        listed = _body(
+            await client._send("ProposalList", {"request": {"repo": graph}}, graph)
+        )
+        entry = next(row for row in listed if row["id"] == receipt["node_id"])
+        assert entry["target"] == f"research:{unknown_id}"
+        assert entry["evidence"][0]["kind"] == "research_citation"
+        assert entry["evidence"][0]["record_id"] == source_id
+        assert entry["state"] == "open"
+    finally:
+        await _close(client, graph)
