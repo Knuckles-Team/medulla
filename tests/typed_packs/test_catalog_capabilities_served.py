@@ -244,6 +244,89 @@ def _turtle_literal(text: str) -> str:
     return f'"{escaped}"'
 
 
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.7")
+def test_contract_harvest_stores_schema_keys_views_indexes_and_no_rows(catalog_graph):
+    # spec: MEDULLA-TYPED-PACKS-R108.7
+    admin = catalog_graph
+    cp = "https://knuckles-team.github.io/ontology/connector-pack#"
+    digest = "cd" * 32
+    owl_class = "http://www.w3.org/2002/07/owl#Class"
+
+    def asset(node: str, kind: str, label: str, flags: tuple[str, ...] = ()) -> str:
+        flag = "".join(f' ; cat:flag "{value}"' for value in flags)
+        return (
+            f'<{node}> a cat:{kind} ; skos:prefLabel "{label}"{flag} ; '
+            f'<{cp}ofConnector> <urn:harvest:connector> ; <{cp}digest> "{digest}" .\n'
+        )
+
+    turtle = (
+        f"{PREFIX}<urn:harvest:Order> a <{owl_class}> .\n"
+        f"<urn:harvest:connector> a <{cp}Connector> .\n"
+        '<urn:harvest:schema:sales> a cat:SchemaAsset ; skos:prefLabel "sales" ; '
+        'cat:flag "owner_missing" ; cat:schemaTable <urn:harvest:table:orders> .\n'
+        + asset(
+            "urn:harvest:table:orders", "DataResource", "orders", ("owner_missing",)
+        )
+        + f"<urn:harvest:table:orders> <{cp}servesClass> <urn:harvest:Order> ; "
+        "cat:hasField <urn:harvest:field:id> , <urn:harvest:field:note> .\n"
+        + asset("urn:harvest:field:id", "Field", "id", ("owner_missing",))
+        + asset(
+            "urn:harvest:field:note",
+            "Field",
+            "note",
+            ("owner_missing", "field_unmapped"),
+        )
+        + asset(
+            "urn:harvest:view:open_orders",
+            "ViewAsset",
+            "open orders",
+            ("owner_missing",),
+        )
+        + f"<urn:harvest:view:open_orders> <{cp}servesClass> <urn:harvest:Order> .\n"
+        '<urn:harvest:key:orders_pk> a cat:KeyAsset ; skos:prefLabel "orders pk" ; '
+        'cat:flag "owner_missing" ; cat:keyKind "primary" ; '
+        "cat:keyOf <urn:harvest:table:orders> ; cat:keyField <urn:harvest:field:id> .\n"
+        '<urn:harvest:index:orders_note> a cat:IndexAsset ; skos:prefLabel "orders note" ; '
+        'cat:flag "owner_missing" ; cat:indexOf <urn:harvest:table:orders> ; '
+        "cat:indexField <urn:harvest:field:note> .\n"
+    )
+    admin.rdf.add_triples(turtle=turtle)
+
+    # Schema, table, field, key, view and index are all nodes; a field with no ontology
+    # mapping committed flagged.
+    for kind, count in (
+        ("SchemaAsset", 1),
+        ("DataResource", 2),
+        ("Field", 2),
+        ("KeyAsset", 1),
+        ("IndexAsset", 1),
+    ):
+        rows = admin.rdf.sparql(f"SELECT ?n WHERE {{ ?n a <{CATALOG}{kind}> }}")
+        assert len(rows) == count, (kind, rows)
+    unmapped = {
+        row["n"].strip("<>")
+        for row in admin.rdf.sparql(
+            f'SELECT ?n WHERE {{ ?n <{CATALOG}flag> "field_unmapped" }}'
+        )
+    }
+    assert unmapped == {"urn:harvest:field:note"}
+
+    # Medulla stores metadata only: no node carries a row or a package payload.
+    predicates = {
+        row["p"].strip("<>")
+        for row in admin.rdf.sparql("SELECT DISTINCT ?p WHERE { ?s ?p ?o }")
+    }
+    assert not any(p.endswith(("#row", "#rows", "#package")) for p in predicates)
+
+    # A flag outside the closed set is refused and writes nothing.
+    with pytest.raises(EngineResponseError):
+        admin.rdf.add_triples(
+            turtle=(
+                f'{PREFIX}<urn:harvest:field:bad> a cat:Field ; cat:flag "mystery" .\n'
+            )
+        )
+
+
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.10")
 def test_lineage_walks_source_operation_workflow_dashboard_agent_and_model(
     catalog_graph,

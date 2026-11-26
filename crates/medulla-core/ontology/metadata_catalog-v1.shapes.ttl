@@ -122,8 +122,23 @@ cat:GlossaryTermShape a sh:NodeShape ;
 
 # The asset flag vocabulary is closed.
 cat:AssetFlagShape a sh:NodeShape ;
-    sh:targetClass cat:ToolAsset, cat:PromptAsset, cat:SkillAsset, cat:DataResource, cat:Field ;
-    sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" ) ] .
+    sh:targetClass cat:ToolAsset, cat:PromptAsset, cat:SkillAsset, cat:DataResource, cat:Field,
+        cat:SchemaAsset, cat:KeyAsset, cat:IndexAsset ;
+    sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" "field_unmapped" ) ] .
+
+# A key is primary, foreign or unique, and covers at least one field of one resource
+# (MEDULLA-TYPED-PACKS-R108.7).
+cat:KeyAssetShape a sh:NodeShape ;
+    sh:targetClass cat:KeyAsset ;
+    sh:property [ sh:path cat:keyKind ; sh:minCount 1 ; sh:maxCount 1 ; sh:in ( "primary" "foreign" "unique" ) ],
+    [ sh:path cat:keyOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
+    [ sh:path cat:keyField ; sh:minCount 1 ; sh:nodeKind sh:IRI ] .
+
+# An index covers at least one field of one resource (MEDULLA-TYPED-PACKS-R108.7).
+cat:IndexAssetShape a sh:NodeShape ;
+    sh:targetClass cat:IndexAsset ;
+    sh:property [ sh:path cat:indexOf ; sh:minCount 1 ; sh:maxCount 1 ; sh:nodeKind sh:IRI ],
+    [ sh:path cat:indexField ; sh:minCount 1 ; sh:nodeKind sh:IRI ] .
 
 # Each family asset names one owner or carries the owner_missing flag
 # (MEDULLA-TYPED-PACKS-R108.1).
@@ -132,7 +147,7 @@ cat:FamilyAssetOwnerShape a sh:NodeShape ;
         cat:TeamAsset, cat:PersonAsset, cat:RoleAsset, cat:BusinessDomain, cat:Product, cat:ServiceAsset,
         cat:WorkflowDefinitionAsset, cat:WorkflowRun, cat:WorkflowStepAsset, cat:KnowledgeGraph,
         cat:SpecialistPackage, cat:ProviderAsset, cat:DashboardAsset, cat:ReportAsset, cat:Article ;
-    sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" ) ],
+    sh:property [ sh:path cat:flag ; sh:datatype xsd:string ; sh:in ( "owner_missing" "deprecated" "field_unmapped" ) ],
     [ sh:path cat:hasOwner ; sh:maxCount 1 ; sh:nodeKind sh:IRI ] ;
     sh:or ( [ sh:path cat:hasOwner ; sh:minCount 1 ]
             [ sh:path cat:flag ; sh:hasValue "owner_missing" ] ) .

@@ -96,6 +96,57 @@ cp:servesProperty a owl:ObjectProperty ;
     rdfs:domain cat:Field ;
     rdfs:range rdf:Property .
 
+cat:SchemaAsset a owl:Class ;
+    rdfs:label "Schema Asset" ;
+    rdfs:comment "A database schema harvested from a pack contract or an attached source (MEDULLA-TYPED-PACKS-R108.7). It names the tables and views it holds with cat:schemaTable; metadata only, never rows." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:ViewAsset a owl:Class ;
+    rdfs:label "View Asset" ;
+    rdfs:comment "A view harvested from a contract: a data resource defined over other resources." ;
+    rdfs:subClassOf cat:DataResource .
+
+cat:KeyAsset a owl:Class ;
+    rdfs:label "Key Asset" ;
+    rdfs:comment "A primary, foreign or unique key of a data resource, naming the fields it covers." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:IndexAsset a owl:Class ;
+    rdfs:label "Index Asset" ;
+    rdfs:comment "An index of a data resource, naming the fields it covers." ;
+    rdfs:subClassOf cat:Asset .
+
+cat:schemaTable a owl:ObjectProperty ;
+    rdfs:label "schema table" ;
+    rdfs:domain cat:SchemaAsset ;
+    rdfs:range cat:DataResource .
+
+cat:keyKind a owl:DatatypeProperty ;
+    rdfs:label "key kind" ;
+    rdfs:comment "primary, foreign or unique." ;
+    rdfs:domain cat:KeyAsset ;
+    rdfs:range xsd:string .
+
+cat:keyOf a owl:ObjectProperty ;
+    rdfs:label "key of" ;
+    rdfs:domain cat:KeyAsset ;
+    rdfs:range cat:DataResource .
+
+cat:keyField a owl:ObjectProperty ;
+    rdfs:label "key field" ;
+    rdfs:domain cat:KeyAsset ;
+    rdfs:range cat:Field .
+
+cat:indexOf a owl:ObjectProperty ;
+    rdfs:label "index of" ;
+    rdfs:domain cat:IndexAsset ;
+    rdfs:range cat:DataResource .
+
+cat:indexField a owl:ObjectProperty ;
+    rdfs:label "index field" ;
+    rdfs:domain cat:IndexAsset ;
+    rdfs:range cat:Field .
+
 cat:hasField a owl:ObjectProperty ;
     rdfs:label "has field" ;
     rdfs:domain cat:DataResource ;
@@ -272,7 +323,7 @@ cat:sourceRecord a owl:DatatypeProperty ;
 
 cat:flag a owl:DatatypeProperty ;
     rdfs:label "flag" ;
-    rdfs:comment "A catalog quality flag on an asset, for example owner_missing." ;
+    rdfs:comment "A catalog quality flag on an asset: owner_missing, deprecated or field_unmapped (a harvested field with no ontology mapping, MEDULLA-TYPED-PACKS-R108.7)." ;
     rdfs:domain cat:Asset ;
     rdfs:range xsd:string .
 
