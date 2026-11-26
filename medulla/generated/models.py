@@ -17680,6 +17680,41 @@ class MethodApprovalGateResolve(BaseModel):
     params: MethodApprovalGateResolveParams
 
 
+class MethodGoalList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GoalList"]
+    params: MethodGoalListParams
+
+
+class MethodGoalIterations(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GoalIterations"]
+    params: MethodGoalIterationsParams
+
+
+class MethodGoalControl(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GoalControl"]
+    params: MethodGoalControlParams
+
+
+class MethodConnectorRuns(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ConnectorRuns"]
+    params: MethodConnectorRunsParams
+
+
+class MethodConnectorRunRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ConnectorRunRecord"]
+    params: MethodConnectorRunRecordParams
+
+
 class MethodSourceCoverage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18619,6 +18654,11 @@ Method = Annotated[
         MethodDeployRecordGet,
         MethodDeployRecordList,
         MethodApprovalGateResolve,
+        MethodGoalList,
+        MethodGoalIterations,
+        MethodGoalControl,
+        MethodConnectorRuns,
+        MethodConnectorRunRecord,
         MethodSourceCoverage,
         MethodObservationState,
         MethodHarnessEdit,
@@ -38520,6 +38560,152 @@ class ApprovalGateAnswer(BaseModel):
     rule_ids: list[str]
 
 
+class GoalState(str, Enum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class IterationOutcome(str, Enum):
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class GoalFinish(str, Enum):
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
+class AgentGoal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    created_ms: Annotated[int, Field(ge=0)]
+    goal_id: str
+    run_id: str | None = None
+    state: GoalState
+    tenant_id: str
+    title: str
+
+
+class GoalIteration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ended_ms: Annotated[int, Field(ge=0)] | None = None
+    goal_id: str
+    iteration: Annotated[int, Field(ge=0)]
+    outcome: IterationOutcome
+    run_id: str
+    started_ms: Annotated[int, Field(ge=0)]
+
+
+class GoalControlOpCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    operation: Literal["create"]
+    title: str
+
+
+class GoalControlOpRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    operation: Literal["run"]
+
+
+class GoalControlOpCancel(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    operation: Literal["cancel"]
+
+
+class GoalControlOpFinish(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    operation: Literal["finish"]
+    outcome: GoalFinish
+
+
+GoalControlOp = Annotated[
+    GoalControlOpCreate | GoalControlOpRun | GoalControlOpCancel | GoalControlOpFinish,
+    Field(discriminator="operation"),
+]
+
+
+class GoalControlReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+    iteration: Annotated[int, Field(ge=0)] | None = None
+    replayed: bool
+    run_id: str | None = None
+    state: GoalState
+
+
+class GoalPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goals: list[AgentGoal]
+    next_cursor: str | None = None
+
+
+class GoalIterations(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    iterations: list[GoalIteration]
+
+
+class RunState(str, Enum):
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    CANCELLED = "cancelled"
+
+
+class ConnectorRunInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    counts: dict[str, Annotated[int, Field(ge=0)]] = Field(default_factory=dict)
+    run_id: str
+    state: RunState
+
+
+class ConnectorRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    counts: dict[str, Annotated[int, Field(ge=0)]] = Field(default_factory=dict)
+    finished_ms: Annotated[int, Field(ge=0)] | None = None
+    run_id: str
+    started_ms: Annotated[int, Field(ge=0)]
+    state: RunState
+
+
+class ConnectorRunReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    finished_ms: Annotated[int, Field(ge=0)] | None = None
+    node_id: str
+    replayed: bool
+    run_id: str
+    started_ms: Annotated[int, Field(ge=0)]
+    state: RunState
+
+
+class ConnectorRunPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    next_cursor: str | None = None
+    runs: list[ConnectorRun]
+
+
 class DocumentAggregation(str, Enum):
     MEAN_CHUNKS = "mean_chunks"
 
@@ -40682,6 +40868,40 @@ class MethodApprovalGateResolveParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     request: ApprovalGateRequest
+
+
+class MethodGoalListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodGoalIterationsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    goal_id: str
+
+
+class MethodGoalControlParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: GoalControlOp
+
+
+class MethodConnectorRunsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str | None = None
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    state: RunState | None = None
+
+
+class MethodConnectorRunRecordParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    run: ConnectorRunInput
 
 
 class MethodRecordGateVerdictParams(BaseModel):
@@ -50269,6 +50489,24 @@ __all__ = [
     "ApprovalGate",
     "ApprovalGateAnswer",
     "ApprovalGateRequest",
+    "AgentGoal",
+    "GoalState",
+    "IterationOutcome",
+    "GoalFinish",
+    "GoalIteration",
+    "GoalControlOpCreate",
+    "GoalControlOpRun",
+    "GoalControlOpCancel",
+    "GoalControlOpFinish",
+    "GoalControlOp",
+    "GoalControlReceipt",
+    "GoalPage",
+    "GoalIterations",
+    "RunState",
+    "ConnectorRunInput",
+    "ConnectorRun",
+    "ConnectorRunReceipt",
+    "ConnectorRunPage",
     "ApprovalSpec",
     "BranchArm",
     "BranchComparison",
@@ -51086,6 +51324,16 @@ __all__ = [
     "MethodReadSpanParams",
     "MethodApprovalGateResolve",
     "MethodApprovalGateResolveParams",
+    "MethodGoalList",
+    "MethodGoalListParams",
+    "MethodGoalIterations",
+    "MethodGoalIterationsParams",
+    "MethodGoalControl",
+    "MethodGoalControlParams",
+    "MethodConnectorRuns",
+    "MethodConnectorRunsParams",
+    "MethodConnectorRunRecord",
+    "MethodConnectorRunRecordParams",
     "MethodDeployRecordGet",
     "MethodDeployRecordGetParams",
     "MethodDeployRecordList",

@@ -302,6 +302,8 @@ _UNCONDITIONAL_WRITES_AT_BASE = (
         "EncodeDocument",
         "RecordDeployment",
         "DeployRecordPut",
+        "GoalControl",
+        "ConnectorRunRecord",
         "RecordGateVerdict",
         "RecordRelease",
         "SemanticEnrich",

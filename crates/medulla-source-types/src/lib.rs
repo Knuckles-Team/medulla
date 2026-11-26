@@ -52,6 +52,10 @@ pub mod gate_verdict;
 pub mod deploy_record;
 // MEDULLA-BUSINESS-OPS-R004 — the approval gate question answered from the graph's approval rules.
 pub mod approval_gate;
+// MEDULLA-DECISION-ENGINE-R901 — agent goals, their iterations and the goal state machine.
+pub mod agent_goal;
+// MEDULLA-UNIFIED-DATA-PLANE-R790 — connector source-sync runs and the run list.
+pub mod connector_run;
 // MEDULLA-SCM-R009 — the bisect request and answer over the gate verdicts of a chain.
 pub mod source_bisect;
 // MEDULLA-IDENTITY-R740 — the layered configuration read.

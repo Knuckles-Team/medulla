@@ -135,6 +135,13 @@ method_results! {
     DeployRecordList(DeployRecordList) => Raw<medulla_source_types::deploy_record::DeployRecordPage>;
     // MEDULLA-BUSINESS-OPS-R004: the approval gate question.
     ApprovalGateResolve(ApprovalGateResolve) => Raw<medulla_source_types::approval_gate::ApprovalGateAnswer>;
+    // MEDULLA-DECISION-ENGINE-R901: the agent goal reads and control.
+    GoalList(GoalList) => Raw<medulla_source_types::agent_goal::GoalPage>;
+    GoalIterations(GoalIterations) => Raw<medulla_source_types::agent_goal::GoalIterations>;
+    GoalControl(GoalControl) => Raw<medulla_source_types::agent_goal::GoalControlReceipt>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R790: the connector run list and report.
+    ConnectorRuns(ConnectorRuns) => Raw<medulla_source_types::connector_run::ConnectorRunPage>;
+    ConnectorRunRecord(ConnectorRunRecord) => Raw<medulla_source_types::connector_run::ConnectorRunReceipt>;
     // MEDULLA-SDLC-R017.1: the goal record.
     GoalPut(GoalPut) => Raw<medulla_source_types::lifecycle::GoalReceipt>;
     // MEDULLA-SDLC-R017.3: the proposal record.

@@ -38,7 +38,7 @@ fn stored_record(node: &Value, tenant: &str) -> Option<DeployRecord> {
 }
 
 /// The nodes of `label` in the request graph that the caller can see, decoded, in id order.
-async fn visible_nodes_of(
+pub(super) async fn visible_nodes_of(
     state: &Arc<RwLock<ServerState>>,
     target: &SdlcTarget<'_>,
     label: &str,
@@ -67,7 +67,7 @@ async fn visible_nodes_of(
     Ok(nodes)
 }
 
-fn verified_tenant<'a>(target: &SdlcTarget<'a>) -> Result<&'a str, String> {
+pub(super) fn verified_tenant<'a>(target: &SdlcTarget<'a>) -> Result<&'a str, String> {
     let tenant = target.verified.tenant();
     if tenant.trim().is_empty() {
         return Err("TENANT_SCOPE_REQUIRED".to_string());

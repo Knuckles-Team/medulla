@@ -516,6 +516,44 @@ $($variants)*
     ApprovalGateResolve {
         request: medulla_source_types::approval_gate::ApprovalGateRequest,
     },
+    /// One cursor-paged, newest-first page of the verified tenant's agent goals
+    /// (MEDULLA-DECISION-ENGINE-R901). `limit` is 1..=100 (100 when absent); the cursor is opaque
+    /// and bound to the tenant it was minted for. Reads only.
+    GoalList {
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+    /// The iterations of one agent goal of the verified tenant, oldest first
+    /// (MEDULLA-DECISION-ENGINE-R901). A missing, foreign or invisible goal refuses the same
+    /// `GOAL_NOT_FOUND`. Reads only.
+    GoalIterations { goal_id: String },
+    /// Create, run, finish or cancel one agent goal (MEDULLA-DECISION-ENGINE-R901). The goal
+    /// moves only along the edges of the goal state machine; a refused event is
+    /// `TRANSITION_REFUSED` and writes nothing. A run opens a numbered iteration with a derived
+    /// run id. Every time is the engine clock.
+    GoalControl {
+        op: medulla_source_types::agent_goal::GoalControlOp,
+    },
+    /// One cursor-paged, newest-first page of the verified tenant's connector source-sync runs,
+    /// optionally of one connection and one state (MEDULLA-UNIFIED-DATA-PLANE-R790). A connection
+    /// no run of the tenant names refuses `CONNECTION_NOT_FOUND`. Reads only.
+    ConnectorRuns {
+        #[serde(default)]
+        connection_id: Option<String>,
+        #[serde(default)]
+        state: Option<medulla_source_types::connector_run::RunState>,
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+    /// Report one connector run as it starts or ends (MEDULLA-UNIFIED-DATA-PLANE-R790): the
+    /// engine stamps its start and end with its own clock; a finished run is sealed.
+    ConnectorRunRecord {
+        run: medulla_source_types::connector_run::ConnectorRunInput,
+    },
     /// Record one goal of a project (MEDULLA-SDLC-R017.1): a `Goal` node and a
     /// `targetsGoal` edge from each target row or competency question. Refuses
     /// `GOAL_TARGET_REQUIRED` when the goal names no target.

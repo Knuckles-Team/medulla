@@ -19733,6 +19733,117 @@ class MedullaClient:
             raise TypeError("ApprovalGateResolve returned a non-object result")
         return result
 
+    async def goal_list(
+        self,
+        limit: int | None = None,
+        cursor: str | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """List agent goals, newest first (MEDULLA-DECISION-ENGINE-R901).
+
+        The answer holds ``goals`` (``goal_id``, ``tenant_id``, ``title``,
+        ``run_id``, ``state``, ``created_ms``) and ``next_cursor``. ``limit`` is
+        1 to 100; pass ``next_cursor`` back as ``cursor`` for the next page.
+        Scope ``agent:library-read``.
+        """
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = await self._send("GoalList", params, graph)
+        if not isinstance(result, dict):
+            raise TypeError("GoalList returned a non-object result")
+        return result
+
+    async def goal_iterations(
+        self, goal_id: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read the iterations of one agent goal, oldest first.
+
+        Spec MEDULLA-DECISION-ENGINE-R901.
+
+        Each iteration holds ``goal_id``, ``iteration``, ``run_id``,
+        ``outcome``, ``started_ms`` and ``ended_ms``. A goal that is absent,
+        another tenant's or invisible refuses the same ``GOAL_NOT_FOUND``.
+        Scope ``agent:library-read``.
+        """
+        result = await self._send("GoalIterations", {"goal_id": goal_id}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("GoalIterations returned a non-object result")
+        return result
+
+    async def goal_control(
+        self, op: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Create, run, finish or cancel one agent goal.
+
+        Spec MEDULLA-DECISION-ENGINE-R901.
+
+        ``op`` is one of ``{"operation": "create", "goal_id", "title"}``,
+        ``{"operation": "run", "goal_id"}``, ``{"operation": "cancel",
+        "goal_id"}`` and ``{"operation": "finish", "goal_id", "outcome":
+        "succeeded" | "failed"}``. The goal moves along the edges of the goal
+        state machine (queued, running, succeeded, failed, cancelled); an event
+        the machine refuses is ``TRANSITION_REFUSED`` and writes nothing. A run
+        opens a numbered iteration and answers its ``run_id``; every time is the
+        engine clock. The answer holds ``goal_id``, ``state``, ``run_id``,
+        ``iteration`` and ``replayed``. Scope ``runs:control``.
+        """
+        result = await self._send("GoalControl", {"op": op}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("GoalControl returned a non-object result")
+        return result
+
+    async def connector_runs(
+        self,
+        connection_id: str | None = None,
+        state: str | None = None,
+        limit: int | None = None,
+        cursor: str | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """List connector source-sync runs, newest first.
+
+        Spec MEDULLA-UNIFIED-DATA-PLANE-R790.
+
+        The answer holds ``runs`` (``run_id``, ``connection_id``, ``state``,
+        ``started_ms``, ``finished_ms``, ``counts``) and ``next_cursor``.
+        ``state`` is ``running``, ``succeeded``, ``failed`` or ``cancelled``.
+        A connection no run of the tenant names refuses
+        ``CONNECTION_NOT_FOUND``. Scope ``ingest:read``.
+        """
+        params: dict[str, Any] = {}
+        if connection_id is not None:
+            params["connection_id"] = connection_id
+        if state is not None:
+            params["state"] = state
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = await self._send("ConnectorRuns", params, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ConnectorRuns returned a non-object result")
+        return result
+
+    async def connector_run_record(
+        self, run: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Report one connector run as it starts or ends.
+
+        Spec MEDULLA-UNIFIED-DATA-PLANE-R790.
+
+        ``run`` carries ``run_id``, ``connection_id``, ``state`` and optional
+        ``counts``. The engine stamps the start and the end with its own clock;
+        a finished run is sealed (``TRANSITION_REFUSED`` for any other report).
+        The same report again replays. Scope ``ingest:write``.
+        """
+        result = await self._send("ConnectorRunRecord", {"run": run}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ConnectorRunRecord returned a non-object result")
+        return result
+
     async def goal_put(self, goal: dict[str, Any]) -> dict[str, Any]:
         """Record one goal of a project (MEDULLA-SDLC-R017.1).
 

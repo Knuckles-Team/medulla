@@ -2014,6 +2014,39 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "ApprovalGateResolve",
         &["TENANT_SCOPE_REQUIRED", "APPROVAL_GATE_INVALID"],
     ),
+    // MEDULLA-DECISION-ENGINE-R901: the agent goal reads and control.
+    (
+        "GoalList",
+        &["TENANT_SCOPE_REQUIRED", "GOAL_INVALID"],
+    ),
+    (
+        "GoalIterations",
+        &["TENANT_SCOPE_REQUIRED", "GOAL_NOT_FOUND"],
+    ),
+    (
+        "GoalControl",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "GOAL_INVALID",
+            "GOAL_NOT_FOUND",
+        ],
+    ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R790: the connector run list and report.
+    (
+        "ConnectorRuns",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "CONNECTOR_RUN_INVALID",
+            "CONNECTION_NOT_FOUND",
+        ],
+    ),
+    (
+        "ConnectorRunRecord",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "CONNECTOR_RUN_INVALID",
+        ],
+    ),
     // MEDULLA-SCM-R008: the gate verdict record's refusals.
     (
         "RecordGateVerdict",
@@ -2756,6 +2789,10 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
 /// organization constitution Article XXXI). Each may answer the typed record
 /// `{code: TRANSITION_REFUSED, machine, from, event, reason}`.
 pub const MACHINE_METHODS: &[&str] = &[
+    // MEDULLA-DECISION-ENGINE-R901: `GoalControl` moves the goal machine.
+    "GoalControl",
+    // MEDULLA-UNIFIED-DATA-PLANE-R790: `ConnectorRunRecord` moves the connector run machine.
+    "ConnectorRunRecord",
     "FeatureLedger",
     // MEDULLA-DECISION-ENGINE-R701.3: `MarkAddressed` moves the gap-topic machine.
     "FailureIngest",

@@ -497,6 +497,9 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::RecordDeployment { .. }
                 // MEDULLA-SDLC-R002.7: the deploy record of one applied plan.
                 | Method::DeployRecordPut { .. }
+                // MEDULLA-DECISION-ENGINE-R901, MEDULLA-UNIFIED-DATA-PLANE-R790.
+                | Method::GoalControl { .. }
+                | Method::ConnectorRunRecord { .. }
                 | Method::GoalPut { .. }
                 | Method::ProjectModeSet { .. }
                 | Method::ProposalPut { .. }

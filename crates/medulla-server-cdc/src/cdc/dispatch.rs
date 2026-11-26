@@ -294,6 +294,10 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         | Method::RecordDeployment { .. }
         // MEDULLA-SDLC-R002.7: the deploy record self-translates likewise.
         | Method::DeployRecordPut { .. }
+        // MEDULLA-DECISION-ENGINE-R901, MEDULLA-UNIFIED-DATA-PLANE-R790: the goal control and the
+        // connector run report self-translate likewise.
+        | Method::GoalControl { .. }
+        | Method::ConnectorRunRecord { .. }
         | Method::GoalPut { .. }
         | Method::ProjectModeSet { .. }
         | Method::ProposalPut { .. }

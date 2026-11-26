@@ -804,6 +804,14 @@ closed_error_codes! {
         DeployRecordInvalid => "DEPLOY_RECORD_INVALID",
         /// MEDULLA-BUSINESS-OPS-R004: an approval gate question field is out of bounds.
         ApprovalGateInvalid => "APPROVAL_GATE_INVALID",
+        /// MEDULLA-DECISION-ENGINE-R901: no agent goal of the verified tenant has this id; an absent and a foreign goal answer alike.
+        GoalNotFound => "GOAL_NOT_FOUND",
+        /// MEDULLA-DECISION-ENGINE-R901: a goal field is out of bounds, a goal id is taken, or a goal list cursor is not usable.
+        GoalInvalid => "GOAL_INVALID",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R790: no connector run of the verified tenant names this connection; an absent and a foreign connection answer alike.
+        ConnectionNotFound => "CONNECTION_NOT_FOUND",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R790: a connector run field is out of bounds, a run changed its connection, or a run list cursor is not usable.
+        ConnectorRunInvalid => "CONNECTOR_RUN_INVALID",
         /// A skill package could not render: the graph holds no body for the skill (MEDULLA-TYPED-PACKS-R100.2).
         RenderBodyMissing => "RENDER_BODY_MISSING",
         /// A skill package could not render: it references an ontology term the graph does not define (MEDULLA-TYPED-PACKS-R100.4).

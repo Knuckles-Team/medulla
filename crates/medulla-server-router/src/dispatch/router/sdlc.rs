@@ -1,7 +1,9 @@
 use super::*;
 
 mod delivery;
+mod connector_runs;
 mod deploy;
+mod goals;
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -131,6 +133,34 @@ pub async fn dispatch_sdlc_methods(
         // MEDULLA-BUSINESS-OPS-R004: which approval gate applies to an operation.
         Method::ApprovalGateResolve { request } => {
             dispatch_boxed(deploy::approval_gate_resolve(state, target, request)).await
+        }
+        // MEDULLA-DECISION-ENGINE-R901: the agent goal reads and control.
+        Method::GoalList { limit, cursor } => {
+            dispatch_boxed(goals::list(state, target, limit, cursor)).await
+        }
+        Method::GoalIterations { goal_id } => {
+            dispatch_boxed(goals::iterations(state, target, goal_id)).await
+        }
+        Method::GoalControl { op } => dispatch_boxed(goals::control(state, target, op)).await,
+        // MEDULLA-UNIFIED-DATA-PLANE-R790: the connector run list and report.
+        Method::ConnectorRuns {
+            connection_id,
+            state: run_state,
+            limit,
+            cursor,
+        } => {
+            dispatch_boxed(connector_runs::list(
+                state,
+                target,
+                connection_id,
+                run_state,
+                limit,
+                cursor,
+            ))
+            .await
+        }
+        Method::ConnectorRunRecord { run } => {
+            dispatch_boxed(connector_runs::record(state, target, run)).await
         }
         Method::GoalPut { goal } => dispatch_boxed(goal_put(state, target, goal)).await,
         Method::ProposalPut { proposal } => {

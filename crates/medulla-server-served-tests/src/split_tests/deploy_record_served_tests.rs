@@ -50,7 +50,7 @@ fn body(plan: char) -> DeployRecordInput {
     }
 }
 
-fn refusal_text(response: &Response) -> String {
+pub(super) fn refusal_text(response: &Response) -> String {
     format!(
         "{} {}",
         response.error.clone().unwrap_or_default(),
@@ -74,7 +74,7 @@ fn list(limit: Option<u32>, cursor: Option<String>) -> Method {
 
 /// Admit `agent` as a regular identity with read, and optionally write, on the ingest graph, so a
 /// refusal of its requests can only come from the handler and not from the graph's access check.
-async fn admit(served: &Served, agent: &str, writable: bool) {
+pub(super) async fn admit(served: &Served, agent: &str, writable: bool) {
     use medulla_identity_types::acl::{
         AgentIdentity, AgentRole, Grant, GrantEffect, RbacAction, ResourceSelector, Role,
     };

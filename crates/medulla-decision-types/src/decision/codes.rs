@@ -828,6 +828,16 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "deploy_record",
             medulla_source_types::deploy_record::REFUSALS.to_vec(),
         ),
+        // MEDULLA-DECISION-ENGINE-R901: the agent goal refusals.
+        (
+            "agent_goal",
+            medulla_source_types::agent_goal::REFUSALS.to_vec(),
+        ),
+        // MEDULLA-UNIFIED-DATA-PLANE-R790: the connector run refusals.
+        (
+            "connector_run",
+            medulla_source_types::connector_run::REFUSALS.to_vec(),
+        ),
         // MEDULLA-BUSINESS-OPS-R004: the approval gate question's refusal.
         (
             "approval_gate",

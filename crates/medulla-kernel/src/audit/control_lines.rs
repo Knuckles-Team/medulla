@@ -142,6 +142,13 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "DEPLOY_RECORD_PUT|{}|{}",
             record.plan_digest, record.target
         )),
+        // MEDULLA-DECISION-ENGINE-R901: the line names the operation and the goal, never the title.
+        Method::GoalControl { op } => Some(format!("GOAL_CONTROL|{}|{}", op.name(), op.goal_id())),
+        // MEDULLA-UNIFIED-DATA-PLANE-R790: the line names the run and its connection, never a count.
+        Method::ConnectorRunRecord { run } => Some(format!(
+            "CONNECTOR_RUN_RECORD|{}|{}",
+            run.connection_id, run.run_id
+        )),
         // MEDULLA-TYPED-PACKS-R652.3: the line names the op and the claim, never the evidence.
         Method::ClassificationClaim { op } => Some(match op {
             medulla_identity_types::classification::ClassificationClaimOp::Propose { claim } => {

@@ -993,6 +993,20 @@ decode_deploy_record_list = contract_decoder("DeployRecordList", "DeployRecordPa
 decode_approval_gate_resolve = contract_decoder(
     "ApprovalGateResolve", "ApprovalGateAnswer"
 )
+send_goal_list = contract_sender("GoalList", "MethodGoalListParams")
+send_goal_iterations = contract_sender("GoalIterations", "MethodGoalIterationsParams")
+send_goal_control = contract_sender("GoalControl", "MethodGoalControlParams")
+send_connector_runs = contract_sender("ConnectorRuns", "MethodConnectorRunsParams")
+send_connector_run_record = contract_sender(
+    "ConnectorRunRecord", "MethodConnectorRunRecordParams"
+)
+decode_goal_list = contract_decoder("GoalList", "GoalPage")
+decode_goal_iterations = contract_decoder("GoalIterations", "GoalIterations")
+decode_goal_control = contract_decoder("GoalControl", "GoalControlReceipt")
+decode_connector_runs = contract_decoder("ConnectorRuns", "ConnectorRunPage")
+decode_connector_run_record = contract_decoder(
+    "ConnectorRunRecord", "ConnectorRunReceipt"
+)
 send_record_gate_verdict = contract_sender(
     "RecordGateVerdict", "MethodRecordGateVerdictParams"
 )

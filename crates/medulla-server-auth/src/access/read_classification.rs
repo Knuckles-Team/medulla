@@ -206,6 +206,13 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // `dispatch_sdlc_methods::approval_gate_resolve` reads only an `ApprovalRule` node
     // `can_see_node` admits, of the verified tenant.
     "ApprovalGateResolve",
+    // `dispatch_sdlc_methods::goal_list` and `goal_iterations` read only an `AgentGoal` or
+    // `AgentGoalIteration` node `can_see_node` admits, of the verified tenant.
+    "GoalList",
+    "GoalIterations",
+    // `dispatch_sdlc_methods::connector_runs` reads only a `ConnectorRun` node `can_see_node`
+    // admits, of the verified tenant.
+    "ConnectorRuns",
     // `dispatch_sdlc_methods::config_layers` reads only a node `can_see_node` admits.
     "ConfigLayers",
     // `dispatch_sdlc_methods::project_mode_get` reads only a node `can_see_node` admits.
