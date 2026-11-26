@@ -116,6 +116,9 @@ pub struct SyncAuthority {
     pub direction: Option<SyncDirection>,
     /// The `vg:conflictRule` literal; present on a federated secondary.
     pub conflict_rule: Option<String>,
+    /// `vg:deployOperation`: the connector operation a released outbound proposal of this row
+    /// is deployed with (MEDULLA-CQ-ORCH-R703.8).
+    pub deploy_operation: Option<String>,
 }
 
 /// One side of a record.

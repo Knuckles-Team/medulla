@@ -79,6 +79,24 @@ async def bind_connector(client: MedullaClient, connector: str) -> None:
     )
 
 
+class HostFetchRefused(Exception):
+    """The host's fetch of the source failed, so the read is never completed.
+
+    The host maps the failed fetch to ``SOURCE_UNAVAILABLE`` and attaches the
+    ``code`` the connector declares for that condition (``unavailable_code`` of
+    ``completed_read``). The read stays open: no row reached the engine.
+    """
+
+    def __init__(
+        self, status: int, code: str | None, execution: dict[str, Any]
+    ) -> None:
+        self.status = status
+        self.refusal = "SOURCE_UNAVAILABLE"
+        self.code = code
+        self.execution = execution
+        super().__init__(f"{self.refusal}: {code} (HTTP {status})")
+
+
 async def completed_read(
     client: MedullaClient,
     *,
@@ -90,13 +108,17 @@ async def completed_read(
     query_digest: str,
     approve: bool = True,
     limits: dict[str, int] | None = None,
+    unavailable_code: str | None = None,
 ) -> dict[str, Any]:
     """Run one host-driven read of ``fixture`` to completion; return its ``execution``.
 
     With ``approve=False`` the mapping stays held and the first lifecycle step that
     binds it raises the engine's ``SOURCE_APPROVAL_NOT_ADMITTED`` refusal. ``limits``
     replaces the default read bounds (``max_rows``, ``max_bytes``, ``chunk_rows``,
-    ``chunk_bytes``, ``deadline_ms``) for a source whose rows are larger.
+    ``chunk_bytes``, ``deadline_ms``) for a source whose rows are larger. A fetch the
+    source cannot answer with ``200`` raises ``HostFetchRefused`` after the read was
+    opened (``unavailable_code`` is the connector's declared code for that
+    condition, MEDULLA-CQ-ORCH-R703.8); nothing is chunked or completed.
     """
     contract_bytes = _contract_ttl(connector, kind, source_id).encode()
     contract_digest = hashlib.sha256(contract_bytes).hexdigest()
@@ -236,6 +258,8 @@ async def completed_read(
     execution = opened["execution"]
 
     status, payload = _host_fetch(fixture, kind)
+    if status != 200 and unavailable_code is not None:
+        raise HostFetchRefused(status, unavailable_code, execution)
     assert status == 200, (status, payload)
     items = json.loads(payload)["items"]
     fetch_time = datetime.now(timezone.utc).isoformat()

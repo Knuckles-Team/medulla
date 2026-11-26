@@ -4974,6 +4974,7 @@ class ProposalInput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     as_of_ms: int
+    connector_operation: str | None = None
     external_id: str
     id: str
     risk_tier: RiskTier

@@ -41,6 +41,10 @@ pub struct ProposalInput {
     pub system_of_record: String,
     pub risk_tier: RiskTier,
     pub as_of_ms: i64,
+    /// The connector operation the released proposal is deployed with (MEDULLA-CQ-ORCH-R703.8);
+    /// set by the sync queue from the deploy plan, absent for any other proposal.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connector_operation: Option<String>,
 }
 
 /// One reconciled inventory item.

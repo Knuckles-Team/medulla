@@ -444,14 +444,20 @@ fn stored_model_format(
 /// Refuse a deploy to a connection the authority rows do not declare a federated secondary for
 /// `:ProcessModel` (MEDULLA-CQ-ORCH-R703.4), before anything is read or queued.
 #[cfg(all(feature = "rdf", feature = "federation"))]
-fn require_deploy_secondary(core: &GraphCore, connection_iri: &str) -> Result<(), String> {
+fn require_deploy_secondary(
+    core: &GraphCore,
+    connection_iri: &str,
+) -> Result<Option<String>, String> {
     let authorities =
         medulla_virtual_graph::source_selection::sync_authorities(&core.schema_sources())?;
     medulla_virtual_graph::process_sync::require_deploy_secondary(&authorities, connection_iri)
 }
 
 #[cfg(not(all(feature = "rdf", feature = "federation")))]
-fn require_deploy_secondary(_core: &GraphCore, _connection_iri: &str) -> Result<(), String> {
+fn require_deploy_secondary(
+    _core: &GraphCore,
+    _connection_iri: &str,
+) -> Result<Option<String>, String> {
     Err("METHOD_NOT_YET_SERVED: ProcessModelDeploy needs the rdf and federation features".to_string())
 }
 
@@ -477,9 +483,10 @@ pub(super) async fn handle_process_model_deploy(
             refuse("PARAMETER_INVALID", "model_iri and connection_iri are required"),
         ));
     }
-    if let Err(error) = require_deploy_secondary(ctx.core, connection_iri) {
-        return Some(Response::err(ctx.req_id, error));
-    }
+    let connector_operation = match require_deploy_secondary(ctx.core, connection_iri) {
+        Ok(operation) => operation,
+        Err(error) => return Some(Response::err(ctx.req_id, error)),
+    };
     let tenant = ctx.tenant_scope;
     let exported = stored_model_format(ctx.core, tenant, model_iri).and_then(|format| {
         export_document(
@@ -497,6 +504,7 @@ pub(super) async fn handle_process_model_deploy(
             let report = medulla_virtual_graph::process_sync::deploy_report(
                 model_iri,
                 connection_iri,
+                connector_operation,
                 &exported,
             );
             match ResultPayload::of::<ProcessModelDeploy>(report) {

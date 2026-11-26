@@ -239,6 +239,7 @@ async fn queue_outbound(
                 system_of_record: graph.to_string(),
                 risk_tier: RiskTier::High,
                 as_of_ms,
+                connector_operation: draft.connector_operation.clone(),
             },
             source_values: std::collections::BTreeMap::new(),
         })

@@ -86,6 +86,9 @@ pub struct WritebackProposal {
     pub risk_tier: RiskTier,
     /// Milliseconds since the Unix epoch: the instant the proposal derives from.
     pub as_of_ms: i64,
+    /// The connector operation the released proposal is deployed with (MEDULLA-CQ-ORCH-R703.8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connector_operation: Option<String>,
 }
 
 impl WritebackProposal {
@@ -109,7 +112,15 @@ impl WritebackProposal {
             system_of_record,
             risk_tier,
             as_of_ms,
+            connector_operation: None,
         })
+    }
+
+    /// The proposal with the connector operation it is deployed with.
+    #[must_use]
+    pub fn with_connector_operation(mut self, operation: Option<String>) -> Self {
+        self.connector_operation = operation;
+        self
     }
 }
 

@@ -376,6 +376,7 @@ pub fn sync_authorities(sources: &GraphSchemaSources) -> Result<Vec<SyncAuthorit
                 role,
                 direction,
                 conflict_rule,
+                deploy_operation: index.vg(subject, "deployOperation").map(str::to_string),
             });
         }
     }

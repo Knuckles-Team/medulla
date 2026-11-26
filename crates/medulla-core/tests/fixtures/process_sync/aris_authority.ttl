@@ -31,4 +31,5 @@ ex:aris-process-authority a vg:SourceAuthority ;
     vg:recordRole "federated_secondary" ;
     vg:syncDirection "both" ;
     vg:conflictRule "system_of_record_wins" ;
+    vg:deployOperation "canonical_to_aml" ;
     :processSourceSystem "aris_epc" .

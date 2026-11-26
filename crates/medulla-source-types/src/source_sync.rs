@@ -59,6 +59,10 @@ pub struct OutboundDraft {
     pub record_key: String,
     /// The digest of the outbound payload.
     pub payload_digest: String,
+    /// The connector operation the released proposal is deployed with, from the authority row's
+    /// `vg:deployOperation`; `None` when the row declares none (MEDULLA-CQ-ORCH-R703.8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub connector_operation: Option<String>,
 }
 
 /// The reply of one `SourceSync`.

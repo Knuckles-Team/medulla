@@ -207,6 +207,7 @@ pub fn plan_sync(
                 report.outbound.push(OutboundDraft {
                     record_key: key.clone(),
                     payload_digest: Digest256::sha256(payload.to_string().as_bytes()).to_hex(),
+                    connector_operation: None,
                 });
                 report.proposed += 1;
             }

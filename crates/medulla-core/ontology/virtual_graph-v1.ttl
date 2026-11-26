@@ -193,6 +193,10 @@ vg:conflictRule a owl:DatatypeProperty ;
     rdfs:comment "What happens when both sides changed a record: system_of_record_wins (the graph value is proposed outbound) or hold_for_review (nothing is proposed). The set is closed." ;
     rdfs:domain vg:SourceAuthority ;
     rdfs:range xsd:string .
+vg:deployOperation a owl:DatatypeProperty ;
+    rdfs:comment "The connector operation a released outbound proposal of one federated-secondary SourceAuthority is deployed with. The engine names it on the proposal and never calls it." ;
+    rdfs:domain vg:SourceAuthority ;
+    rdfs:range xsd:string .
 vg:syncConnection a owl:ObjectProperty ;
     rdfs:comment "The SourceConnection one SyncState record was synced with." ;
     rdfs:domain vg:SyncState ;

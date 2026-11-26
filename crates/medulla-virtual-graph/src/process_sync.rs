@@ -53,6 +53,7 @@ const DMN: &str = "dmn";
 pub fn deploy_report(
     model_iri: &str,
     connection_iri: &str,
+    connector_operation: Option<String>,
     exported: &ProcessDocumentExported,
 ) -> SyncReport {
     SyncReport {
@@ -65,6 +66,7 @@ pub fn deploy_report(
         outbound: vec![OutboundDraft {
             record_key: model_iri.to_string(),
             payload_digest: exported.document_digest.clone(),
+            connector_operation,
         }],
         queued: Vec::new(),
         queue_id: None,
@@ -94,7 +96,7 @@ pub fn not_secondary(connection_iri: &str, class_iri: &str) -> String {
 pub fn require_deploy_secondary(
     authorities: &[SyncAuthority],
     connection_iri: &str,
-) -> Result<(), String> {
+) -> Result<Option<String>, String> {
     let secondary = authorities
         .iter()
         .find(|row| {
@@ -112,7 +114,7 @@ pub fn require_deploy_secondary(
             ServerErrorCode::SyncDirectionRefused.as_str()
         ));
     }
-    Ok(())
+    Ok(secondary.deploy_operation.clone())
 }
 
 /// The base of a core ontology class IRI.

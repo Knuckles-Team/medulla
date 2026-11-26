@@ -43,6 +43,7 @@ fn proposal(tier: RiskTier) -> ProposalInput {
         system_of_record: "sor:ledger".to_string(),
         risk_tier: tier,
         as_of_ms: 1_700_000_000_000,
+        connector_operation: None,
     }
 }
 
@@ -152,6 +153,7 @@ fn queued(id: &str, external: &str, tier: RiskTier) -> QueuedProposalInput {
             system_of_record: "sor:ledger".to_string(),
             risk_tier: tier,
             as_of_ms: 1_700_000_000_000,
+            connector_operation: None,
         },
         source_values: BTreeMap::new(),
     }

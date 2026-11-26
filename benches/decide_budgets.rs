@@ -524,6 +524,7 @@ fn bench_writeback_queue(
                         system_of_record: "sor:ledger".to_string(),
                         risk_tier: RiskTier::High,
                         as_of_ms: 1_700_000_000_000,
+                        connector_operation: None,
                     },
                     source_values: BTreeMap::new(),
                 }],

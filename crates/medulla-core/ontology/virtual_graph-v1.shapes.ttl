@@ -268,6 +268,10 @@ vg:SourceAuthorityShape a sh:NodeShape ;
         sh:path vg:conflictRule ; sh:maxCount 1 ; sh:in ( "system_of_record_wins" "hold_for_review" ) ;
         sh:message "conflictRule is system_of_record_wins or hold_for_review."
     ] ;
+    sh:property [
+        sh:path vg:deployOperation ; sh:maxCount 1 ; sh:minLength 1 ;
+        sh:message "deployOperation is one non-empty connector operation name."
+    ] ;
     sh:sparql [
         a sh:SPARQLConstraint ;
         sh:message "Only the native graph may hold system_of_record: its authoritativeSource must be vg:NativeGraph." ;

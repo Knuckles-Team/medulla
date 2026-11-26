@@ -255,6 +255,11 @@ async fn plan_and_batch(
         &edges,
         now_ms,
     )?;
+    // Every outbound draft names the connector operation its authority row deploys with
+    // (MEDULLA-CQ-ORCH-R703.8); the engine never calls it.
+    for draft in &mut plan.report.outbound {
+        draft.connector_operation = secondary.deploy_operation.clone();
+    }
     // A direction the authority row does not allow is refused whole: nothing
     // is written and nothing is proposed.
     if plan.report.applied > 0 && !direction.allows_inbound() {

@@ -66,6 +66,7 @@ fn input_of(proposal: &WritebackProposal) -> ProposalInput {
         system_of_record: proposal.system_of_record.as_str().to_string(),
         risk_tier: proposal.risk_tier,
         as_of_ms: proposal.as_of_ms,
+        connector_operation: proposal.connector_operation.clone(),
     }
 }
 
@@ -114,6 +115,7 @@ fn queue(
             p.risk_tier,
             p.as_of_ms,
         )
+        .map(|proposal| proposal.with_connector_operation(p.connector_operation))
         .map_err(refused)?;
         match preflight(&proposal, &queued.source_values, min_tier) {
             Preflight::Refuse(error) => return Err(refused(error)),
