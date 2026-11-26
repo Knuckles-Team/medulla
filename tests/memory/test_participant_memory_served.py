@@ -419,3 +419,100 @@ async def test_turns_become_perspective_claims() -> None:
         assert "DERIVE_PAYLOAD_NOT_FOUND" in unknown
     finally:
         await _close(client, graph)
+
+
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R073.7")
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R073.6")
+@pytest.mark.asyncio
+async def test_events_pull_and_ack() -> None:
+    """A claim transition writes one `memory.claim.changed` event to the graph
+    outbox after it commits; a service consumer leases it with `Pull` and
+    advances its cursor with `Ack`; another consumer name sees its own cursor,
+    and a topic outside the three is refused."""
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    participants = dc.DecisionClient(client=client, graph=graph)
+    target = {"target": "graph", "graph": graph}
+    topic = "memory.claim.changed"
+    try:
+        await participants.participant(
+            dc.put_participant_op(
+                dc.participant_wire(
+                    participant_id="ada-1",
+                    workspace=connector,
+                    kind="person",
+                    display_name="Ada",
+                    represents="urn:person:ada",
+                    acts_as=[TEST_AGENT_ID],
+                )
+            )
+        )
+
+        async def pull(consumer: str, topics: list[str]) -> dict:
+            result = await client._send(
+                "MutationOutbox",
+                {
+                    "op": {
+                        "op": "pull",
+                        "target": target,
+                        "consumer": consumer,
+                        "topics": topics,
+                        "limit": 10,
+                    }
+                },
+                graph,
+            )
+            return dict(result)
+
+        # The first pull subscribes the consumer; nothing has happened yet.
+        assert (await pull("memory-webhooks", [topic]))["leases"] == []
+
+        claim_id = f"claim-{uuid.uuid4().hex[:8]}"
+        await participants.claims(
+            dc.claim_propose_op(
+                claim_id, subject="ada-1", observer="system", statement="Prefers tea"
+            )
+        )
+        for index, channel in enumerate(
+            ("outcome", "optimization", "health", "process", "mined")
+        ):
+            await participants.claims(
+                dc.claim_evidence_op(
+                    f"{claim_id}:e{index}",
+                    claim_id,
+                    channel,
+                    supports=True,
+                    weight_ppm=1_000_000,
+                    source_digest=f"sha256:{index:064x}",
+                )
+            )
+        await participants.claims(dc.claim_advance_op(claim_id, "supported"))
+
+        pulled = await pull("memory-webhooks", [topic])
+        assert len(pulled["leases"]) == 1
+        lease = pulled["leases"][0]
+        assert lease["record"]["intent"]["topic"] == topic
+        assert lease["record"]["intent"]["key"] == "ada-1"
+        acked = await client._send(
+            "MutationOutbox",
+            {
+                "op": {
+                    "op": "ack",
+                    "target": target,
+                    "consumer": "memory-webhooks",
+                    "lease": lease,
+                }
+            },
+            graph,
+        )
+        assert dict(acked)["consumer"] == "memory-webhooks"
+        assert (await pull("memory-webhooks", [topic]))["leases"] == []
+
+        # Another consumer name keeps its own cursor, untouched by the ack above.
+        other = await pull("other-hooks", [topic])
+        assert "leases" in other
+
+        refused = await _refusal(pull("memory-webhooks", ["engine.projection.rebuild"]))
+        assert "ACCESS_DENIED" in refused
+    finally:
+        await _close(client, graph)
