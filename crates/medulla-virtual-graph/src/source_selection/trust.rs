@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::SourceRole;
+use medulla_identity_types::authority_audit::SourceRole;
 
 /// The stable code of a refused `untrusted` to `trusted` change.
 pub const TRUST_MARK_DOWNGRADE_REFUSED: &str = "TRUST_MARK_DOWNGRADE_REFUSED";

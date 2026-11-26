@@ -82,9 +82,9 @@ pub struct AcceptanceQuestion<'a> {
 pub fn assert_acceptance(questions: &[AcceptanceQuestion<'_>]) {
     use std::collections::BTreeMap;
 
-    use medulla_virtual_graph::{
-        source_selection::connected_sources_from_turtle, source_selection::question_abstention,
-        source_selection::NotUsedReason,
+    use medulla_identity_types::authority_audit::NotUsedReason;
+    use medulla_virtual_graph::source_selection::{
+        connected_sources_from_turtle, question_abstention,
     };
 
     let mut mapped: BTreeMap<&str, Vec<String>> = BTreeMap::new();
