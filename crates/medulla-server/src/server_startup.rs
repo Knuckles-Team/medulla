@@ -922,6 +922,9 @@ pub struct Transports {
 /// (MEDULLA-DECISION-ENGINE-R172.7.2).
 async fn spawn_post_bind_workers(state: SharedState) {
     medulla_h_admin::boot_maintenance::spawn_post_bind_maintenance(state.clone()).await;
+    // MEDULLA-SDLC-R019.13: an assignment that lost its lease while the engine was down is
+    // recovered once, now, and not only when a feedback event reaches its delivery.
+    crate::delivery_recovery::spawn(state.clone());
     #[cfg(all(feature = "redb", feature = "object-store"))]
     spawn_archiver(state.clone());
     #[cfg(all(feature = "decide", feature = "redb"))]

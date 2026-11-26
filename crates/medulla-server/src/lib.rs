@@ -24,6 +24,8 @@ pub mod memory_snapshot_consumer;
 
 /// The commons reconcile sweep (MEDULLA-IDENTITY-R023.13.7).
 pub mod commons_reconcile;
+/// The boot recovery of deliveries whose assignment lost its lease (MEDULLA-SDLC-R019.13).
+pub mod delivery_recovery;
 /// The boot registration of the six-hourly paper intake schedule
 /// (MEDULLA-REPO-INGEST-R006.6).
 #[cfg(feature = "jobs")]

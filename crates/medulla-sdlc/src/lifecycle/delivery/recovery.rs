@@ -26,6 +26,49 @@ pub struct RecordedEffect {
     pub receipt: Option<String>,
 }
 
+/// One lane lease as the lane store reports it (MEDULLA-SDLC-R019.13): the hold's work item id,
+/// its expiry and whether the hold is still active.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct LaneLease {
+    pub work_item_id: String,
+    pub expires_at_ms: i64,
+    pub active: bool,
+}
+
+/// The lane work item that runs `assignment` of `delivery`: the delivery id and the
+/// assignment's run trace id. This is how a lane lease maps back to its assignment.
+pub fn lane_work_item_id(delivery: &Delivery, assignment: &DeliveryAssignment) -> String {
+    format!("{}/{}", delivery.id, assignment.run_trace_id)
+}
+
+/// The ids of the running assignments whose lane lease has lapsed at `now_ms`: the lease is
+/// found by the delivery id and run trace in its work item id, and it lapsed when its hold is
+/// no longer active or its expiry passed. An assignment with no lane lease is not named: the
+/// lane store holds no lease for it, so there is nothing to lapse.
+pub fn expired_by_lane_leases(
+    deliveries: &[Delivery],
+    leases: &[LaneLease],
+    now_ms: i64,
+) -> BTreeSet<String> {
+    deliveries
+        .iter()
+        .flat_map(|delivery| {
+            delivery
+                .assignments
+                .iter()
+                .filter(|assignment| assignment.state == AssignmentState::Running)
+                .filter(move |assignment| {
+                    let work_item = lane_work_item_id(delivery, assignment);
+                    leases.iter().any(|lease| {
+                        lease.work_item_id == work_item
+                            && (!lease.active || lease.expires_at_ms < now_ms)
+                    })
+                })
+                .map(|assignment| assignment.id.clone())
+        })
+        .collect()
+}
+
 /// Recover the assignments of `delivery` whose lease is in `expired`. `mint_run_trace` maps
 /// the id of an ended assignment to the run trace id arbora minted for its replacement.
 /// A second call finds the replacement already there and changes nothing.

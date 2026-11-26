@@ -11,7 +11,9 @@ use super::*;
 use std::collections::BTreeSet;
 
 use medulla_sdlc::lifecycle::delivery::ending::{apply_proposal_event, end_if_done, EndTrigger};
-use medulla_sdlc::lifecycle::delivery::recovery::{recover_assignments, RecordedEffect};
+use medulla_sdlc::lifecycle::delivery::recovery::{
+    expired_by_lane_leases, recover_assignments, LaneLease, RecordedEffect,
+};
 use medulla_sdlc::lifecycle::delivery::rounds::{record_round_verdict, review_round_verdict};
 use medulla_sdlc::lifecycle::delivery::superseded::{
     record_superseded, superseded_verdict, BranchChangeset, CandidateProposal, SupersededVerdict,
@@ -357,6 +359,109 @@ fn recovered(delivery: &Delivery, expired: &BTreeSet<String>, effects: &[Recorde
         &|assignment_id| format!("recovery:{assignment_id}"),
         now,
     )
+}
+
+/// The lane leases of the verified tenant, read through the served `DevelopmentLaneStatus`
+/// under the caller's own authority (MEDULLA-SDLC-R019.13). Pages until the lane store reports
+/// the status complete.
+async fn lane_leases(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+) -> Result<Vec<LaneLease>, String> {
+    use medulla_protocol_types::protocol::{Method, Request, ResultPayload};
+    use medulla_result_types::epistemic_operations::{
+        DevelopmentLaneHoldState, DevelopmentLaneStatusRequest,
+        DevelopmentLaneStatusRequestSchemaVersion, DevelopmentLaneStatusResult,
+    };
+    const PAGE: u64 = 500;
+    const MAX_PAGES: usize = 1_000;
+    let mut leases = Vec::new();
+    let mut cursor: Option<String> = None;
+    for _ in 0..MAX_PAGES {
+        let request = Request {
+            id: target.req_id,
+            graph: target.graph.to_owned(),
+            auth_token: String::new(),
+            agent_id: target.caller.map(str::to_owned),
+            method: Method::DevelopmentLaneStatus {
+                request: DevelopmentLaneStatusRequest {
+                    schema_version: DevelopmentLaneStatusRequestSchemaVersion::V1,
+                    tenant_ref: target.verified.tenant().to_owned(),
+                    hold_id: None,
+                    lane_id: None,
+                    work_item_id: None,
+                    limit: PAGE,
+                    cursor: cursor.clone(),
+                    now_ms: 0,
+                },
+            },
+            trace_id: None,
+        };
+        let response = medulla_server_api::api::reentry::dispatch_verified_request(
+            state,
+            request,
+            target.verified.clone(),
+        )
+        .await;
+        if let Some(refusal) = response.refusal_text() {
+            return Err(refusal);
+        }
+        let Some(ResultPayload::Raw(bytes)) = response.result else {
+            return Err("the lane status answered an unexpected payload".to_string());
+        };
+        let page: DevelopmentLaneStatusResult = rmp_serde::from_slice(&bytes)
+            .map_err(|error| format!("the lane status is unreadable: {error}"))?;
+        leases.extend(page.holds.iter().map(|hold| LaneLease {
+            work_item_id: hold.work_item_id.clone(),
+            expires_at_ms: i64::try_from(hold.expires_at_ms).unwrap_or(i64::MAX),
+            active: hold.state == DevelopmentLaneHoldState::Active,
+        }));
+        match page.next_cursor {
+            Some(next) if !page.complete => cursor = Some(next),
+            _ => return Ok(leases),
+        }
+    }
+    Err("the lane status holds more pages than one recovery reads".to_string())
+}
+
+/// Recover the assignments of every delivery of the request graph whose lease lapsed
+/// (MEDULLA-SDLC-R019.13), once, at engine start. An assignment lapsed when the lane store's
+/// lease for it expired (mapped by delivery id and run trace) or its `AssignmentLease` row did.
+/// The ended assignments, their replacements and the moved inputs commit in one batch. Answers
+/// how many deliveries changed; a second run changes none.
+pub(in crate::dispatch::router) async fn recover_at_boot(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+) -> Result<u32, String> {
+    require_tenant(&target)?;
+    let tenant = target.verified.tenant().to_owned();
+    let (core, authority) = read_graph(state, &target).await?;
+    let deliveries = load_deliveries(&core, &authority, &tenant);
+    if !deliveries.iter().any(|delivery| {
+        delivery
+            .assignments
+            .iter()
+            .any(|assignment| assignment.state == AssignmentState::Running)
+    }) {
+        return Ok(0);
+    }
+    let now = now_ms();
+    let (mut expired, effects) = lease_facts(&core, &authority, &tenant, now);
+    let leases = lane_leases(state, &target).await?;
+    expired.extend(expired_by_lane_leases(&deliveries, &leases, now));
+    let mut operations = Vec::new();
+    for delivery in &deliveries {
+        let next = recovered(delivery, &expired, &effects, now);
+        if next != *delivery {
+            operations.push(delivery_operation(&next, &target)?);
+        }
+    }
+    if operations.is_empty() {
+        return Ok(0);
+    }
+    let changed = operations.len() as u32;
+    commit(state, &target, bounded(operations)?).await?;
+    Ok(changed)
 }
 
 fn find_delivery(deliveries: &[Delivery], id: &str) -> Result<Delivery, String> {

@@ -191,6 +191,23 @@ pub async fn dispatch_sdlc_methods(
     ControlFlow::Break(response)
 }
 
+/// Recover the deliveries of `graph` whose assignment lease lapsed (MEDULLA-SDLC-R019.13), once
+/// at engine start, under the verified context of the engine's service actor. Answers how many
+/// deliveries changed.
+pub async fn recover_deliveries_at_boot(
+    state: &Arc<RwLock<ServerState>>,
+    graph: &str,
+    verified: &VerifiedRequestContext,
+) -> Result<u32, String> {
+    let target = SdlcTarget {
+        graph,
+        req_id: 0,
+        caller: None,
+        verified,
+    };
+    delivery::recover_at_boot(state, target).await
+}
+
 struct SdlcTarget<'a> {
     graph: &'a str,
     req_id: u64,
