@@ -20,6 +20,7 @@ import asyncio
 import copy
 import json
 import os
+import re
 import shutil
 import sys
 import uuid
@@ -234,14 +235,30 @@ def _assert_rows(case: Case, answer: dict[str, Any]) -> None:
         assert covered.get(source, {}).get("used") is True, (source, answer)
 
 
+ONTOLOGY_DIR = (
+    Path(__file__).resolve().parents[2] / "crates" / "medulla-core" / "ontology"
+)
+
+
+def _term_iri(module: str, term: str) -> str:
+    """The IRI a module declares for ``term`` (its prefix resolved from the file)."""
+    text = (ONTOLOGY_DIR / module).read_text()
+    prefixes = dict(re.findall(r"^@prefix (\w*): <([^>]+)> \.", text, re.M))
+    declared = re.search(rf"^(\w*):{re.escape(term)}\s+a\s", text, re.M)
+    assert declared, f"{module} declares no term {term}"
+    return prefixes[declared.group(1)] + term
+
+
 async def _terms_resolve(client: MedullaClient, case: Case) -> None:
-    for iri in case.terms:
+    """Every term resolves in its module; the same local name elsewhere does not."""
+    for term in case.terms:
+        iri = _term_iri(case.vocabulary_module, term)
         found = await client.rdf.sparql(f"SELECT ?kind WHERE {{ <{iri}> a ?kind }}")
         assert found, f"{iri} does not resolve in {case.vocabulary_module}"
-        base, _, local = iri.rpartition("#")
-        foreign = f"{base}-another-module#{local}"
+        base = iri.rpartition("#")[0]
+        foreign = f"{base}-another-module#{term}"
         none = await client.rdf.sparql(f"SELECT ?kind WHERE {{ <{foreign}> a ?kind }}")
-        assert not none, f"{local} must not resolve in another module"
+        assert not none, f"{term} must not resolve in another module"
 
 
 @pytest.mark.spec("MEDULLA-CQ-CONN-R067.9")
