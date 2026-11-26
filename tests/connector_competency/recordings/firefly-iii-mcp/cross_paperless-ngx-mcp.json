@@ -1,0 +1,18 @@
+{
+  "source": "firefly-iii-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "amount": "amount-1",
+      "joinKey": "paperless-ngx.q2-key-1",
+      "id": "firefly-iii-mcp-paperless-ngx.q2-1",
+      "label": "firefly-iii-mcp 1"
+    },
+    {
+      "amount": "amount-2",
+      "joinKey": "paperless-ngx.q2-key-2",
+      "id": "firefly-iii-mcp-paperless-ngx.q2-2",
+      "label": "firefly-iii-mcp 2"
+    }
+  ]
+}

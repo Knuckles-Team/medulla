@@ -1,0 +1,18 @@
+{
+  "source": "erpnext-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "correspondent": "correspondent-1",
+      "joinKey": "paperless-ngx.q2-key-1",
+      "id": "erpnext-agent-paperless-ngx.q2-1",
+      "label": "erpnext-agent 1"
+    },
+    {
+      "correspondent": "correspondent-2",
+      "joinKey": "paperless-ngx.q2-key-2",
+      "id": "erpnext-agent-paperless-ngx.q2-2",
+      "label": "erpnext-agent 2"
+    }
+  ]
+}

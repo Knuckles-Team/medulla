@@ -3,9 +3,11 @@
   "rollup": "MEDULLA-CQ-CONN-R046",
   "vocabulary_module": "personal-v1.ttl",
   "terms": [
-    "Tag",
     "Correspondent",
-    "dueDate"
+    "PurchaseInvoice",
+    "Tag",
+    "dueDate",
+    "invoiceSupplier"
   ],
   "questions": [
     {
@@ -28,6 +30,35 @@
       "min_rows": 1,
       "recordings": [
         "paperless-ngx-mcp/single.json"
+      ]
+    },
+    {
+      "id": "paperless-ngx.q2",
+      "kind": "cross",
+      "question": "Which Paperless-ngx invoices have no matching ERPNext purchase invoice or Firefly III expense?",
+      "uql": "LET s0 = FOREIGN SCAN 'paperless-ngx-mcp'; LET s1 = FOREIGN SCAN 'erpnext-agent'; LET s2 = FOREIGN SCAN 'firefly-iii-mcp'; JOIN s0, s1, s2",
+      "sources": [
+        "paperless-ngx-mcp",
+        "erpnext-agent",
+        "firefly-iii-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "paperless-ngx-mcp": "mcp_tool",
+        "erpnext-agent": "mcp_tool",
+        "firefly-iii-mcp": "mcp_tool"
+      },
+      "columns": [
+        "document",
+        "correspondent",
+        "amount"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "paperless-ngx-mcp/cross_erpnext-agent.json",
+        "erpnext-agent/cross_paperless-ngx-mcp.json",
+        "paperless-ngx-mcp/cross_firefly-iii-mcp.json",
+        "firefly-iii-mcp/cross_paperless-ngx-mcp.json"
       ]
     }
   ]
