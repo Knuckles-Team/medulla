@@ -388,6 +388,62 @@ pub fn agent_instance_statechart_def() -> StatechartDef {
     }
 }
 
+/// Build the chart of one machine definition: its states, its events, one unguarded transition
+/// per edge, its initial state and its terminal states. Pure and deterministic.
+fn machine_statechart_def<S, E, G>(
+    name: &str,
+    machine: &medulla_types::transition_refused::MachineDef<S, E, G>,
+) -> StatechartDef
+where
+    S: medulla_types::transition_refused::MachineState,
+    E: medulla_types::transition_refused::MachineEvent,
+    G: 'static,
+{
+    use medulla_types::transition_refused::{MachineEvent, MachineState};
+    StatechartDef {
+        name: name.to_string(),
+        schema_version: 1,
+        states: machine
+            .states
+            .iter()
+            .map(|state| State::new(state.stored()))
+            .collect(),
+        alphabet: machine
+            .events
+            .iter()
+            .map(|event| event.name().to_string())
+            .collect(),
+        transitions: machine
+            .edges
+            .iter()
+            .map(|edge| {
+                Transition::new(edge.from.stored(), edge.event.name(), edge.to.stored())
+                    .with_guard(Guard::Always)
+            })
+            .collect(),
+        initial: machine.initial.stored().to_string(),
+        finals: machine
+            .terminals
+            .iter()
+            .map(|state| state.stored().to_string())
+            .collect(),
+        meta: Default::default(),
+    }
+}
+
+/// The chart name of a knowledge flag (MEDULLA-DECISION-ENGINE-R708.2).
+pub const KNOWLEDGE_FLAG_CHART: &str = "knowledge_flag";
+
+/// Build the knowledge-flag chart from `KNOWLEDGE_FLAG_MACHINE`: a flag starts `open`, `Adopt`
+/// makes it `curated`, `Dismiss` makes it `dismissed`, `Reraise` returns a curated flag to
+/// `open` and `ReraiseChanged` returns a dismissed one. Pure and deterministic.
+pub fn flag_statechart_def() -> StatechartDef {
+    machine_statechart_def(
+        KNOWLEDGE_FLAG_CHART,
+        &medulla_decision_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -930,5 +986,34 @@ mod tests {
         }
         assert!(def.is_final("rejected") && def.is_final("delivered"));
         assert!(!def.is_final("approved"));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R708.2
+    #[test]
+    fn flag_chart_matches_the_edge_table() {
+        use medulla_decision_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE;
+        use medulla_types::transition_refused::{MachineEvent, MachineState};
+        let chart = flag_statechart_def();
+        assert!(validate(&chart).is_ok(), "the chart is well formed");
+        assert_eq!(chart, flag_statechart_def(), "deterministic");
+        let from_chart: Vec<(String, String, String)> = chart
+            .transitions
+            .iter()
+            .map(|t| (t.from.clone(), t.event.clone(), t.to.clone()))
+            .collect();
+        let from_machine: Vec<(String, String, String)> = KNOWLEDGE_FLAG_MACHINE
+            .edges
+            .iter()
+            .map(|e| {
+                (
+                    e.from.stored().to_string(),
+                    e.event.name().to_string(),
+                    e.to.stored().to_string(),
+                )
+            })
+            .collect();
+        assert_eq!(from_chart, from_machine);
+        assert_eq!(chart.initial, "open");
+        assert!(chart.finals.is_empty());
     }
 }

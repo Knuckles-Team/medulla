@@ -9806,3 +9806,88 @@
     :toState :MaterializationMachine_Complete ;
     :guardedBy :MaterializationMachine_Guard_IndexesValid ;
     :firedBy :MaterializationMachine_Event_FinishMaterialization .
+
+# spec: MEDULLA-DECISION-ENGINE-R708.2
+# The Knowledge Flag machine: the lifecycle of one agent-raised knowledge flag. The Rust edge table KNOWLEDGE_FLAG_MACHINE is the same table.
+
+:KnowledgeFlagState a owl:Class ;
+    rdfs:label "Knowledge Flag State" ;
+    rdfs:comment "A state of the Knowledge Flag machine." ;
+    rdfs:subClassOf :State .
+
+:KnowledgeFlagTerminalState a owl:Class ;
+    rdfs:label "Knowledge Flag Terminal State" ;
+    rdfs:comment "A terminal state of the Knowledge Flag machine." ;
+    rdfs:subClassOf :TerminalState, :KnowledgeFlagState .
+
+:KnowledgeFlagTransition a owl:Class ;
+    rdfs:label "Knowledge Flag Transition" ;
+    rdfs:comment "A transition of the Knowledge Flag machine." ;
+    rdfs:subClassOf :Transition .
+
+:KnowledgeFlagEvent a owl:Class ;
+    rdfs:label "Knowledge Flag Event" ;
+    rdfs:comment "A event of the Knowledge Flag machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:KnowledgeFlagGuard a owl:Class ;
+    rdfs:label "Knowledge Flag Guard" ;
+    rdfs:comment "A guard of the Knowledge Flag machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:KnowledgeFlagMachine a :StateMachine ;
+    rdfs:label "Knowledge Flag machine" ;
+    :initialState :KnowledgeFlagMachine_Open ;
+    :hasState :KnowledgeFlagMachine_Open, :KnowledgeFlagMachine_Curated, :KnowledgeFlagMachine_Dismissed .
+
+:KnowledgeFlagMachine_Open a :KnowledgeFlagState ;
+    rdfs:label "Knowledge Flag Open" ;
+    :storedForm "open" .
+
+:KnowledgeFlagMachine_Curated a :KnowledgeFlagState ;
+    rdfs:label "Knowledge Flag Curated" ;
+    :storedForm "curated" .
+
+:KnowledgeFlagMachine_Dismissed a :KnowledgeFlagState ;
+    rdfs:label "Knowledge Flag Dismissed" ;
+    :storedForm "dismissed" .
+
+:KnowledgeFlagMachine_Event_Adopt a :KnowledgeFlagEvent ;
+    rdfs:label "Knowledge Flag Adopt" .
+
+:KnowledgeFlagMachine_Event_Dismiss a :KnowledgeFlagEvent ;
+    rdfs:label "Knowledge Flag Dismiss" .
+
+:KnowledgeFlagMachine_Event_Reraise a :KnowledgeFlagEvent ;
+    rdfs:label "Knowledge Flag Reraise" .
+
+:KnowledgeFlagMachine_Event_ReraiseChanged a :KnowledgeFlagEvent ;
+    rdfs:label "Knowledge Flag ReraiseChanged" .
+
+:KnowledgeFlagMachine_KF01 a :KnowledgeFlagTransition ;
+    rdfs:label "Knowledge Flag KF01" ;
+    :edgeId "KF01" ;
+    :fromState :KnowledgeFlagMachine_Open ;
+    :toState :KnowledgeFlagMachine_Curated ;
+    :firedBy :KnowledgeFlagMachine_Event_Adopt .
+
+:KnowledgeFlagMachine_KF02 a :KnowledgeFlagTransition ;
+    rdfs:label "Knowledge Flag KF02" ;
+    :edgeId "KF02" ;
+    :fromState :KnowledgeFlagMachine_Open ;
+    :toState :KnowledgeFlagMachine_Dismissed ;
+    :firedBy :KnowledgeFlagMachine_Event_Dismiss .
+
+:KnowledgeFlagMachine_KF03 a :KnowledgeFlagTransition ;
+    rdfs:label "Knowledge Flag KF03" ;
+    :edgeId "KF03" ;
+    :fromState :KnowledgeFlagMachine_Curated ;
+    :toState :KnowledgeFlagMachine_Open ;
+    :firedBy :KnowledgeFlagMachine_Event_Reraise .
+
+:KnowledgeFlagMachine_KF04 a :KnowledgeFlagTransition ;
+    rdfs:label "Knowledge Flag KF04" ;
+    :edgeId "KF04" ;
+    :fromState :KnowledgeFlagMachine_Dismissed ;
+    :toState :KnowledgeFlagMachine_Open ;
+    :firedBy :KnowledgeFlagMachine_Event_ReraiseChanged .

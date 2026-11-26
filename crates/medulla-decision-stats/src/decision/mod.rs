@@ -58,6 +58,7 @@ pub mod grounded_eval;
 pub mod head_eval;
 pub mod importance_penalty;
 pub mod insight;
+pub mod knowledge_flag;
 pub mod instruction_disclosure;
 pub mod ladder;
 pub mod legal_option_filter;

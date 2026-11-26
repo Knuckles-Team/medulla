@@ -1649,3 +1649,10 @@ fn materialization_machine_matches_edge_table() {
     sm::assert_matches(&medulla_core::materialization_machine::MATERIALIZATION_MACHINE);
     sm::assert_extends_core("Materialization");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R708.2
+#[test]
+fn knowledge_flag_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_decision_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE);
+    sm::assert_extends_core("KnowledgeFlag");
+}
