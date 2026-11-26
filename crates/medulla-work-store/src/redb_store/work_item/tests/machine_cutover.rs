@@ -239,7 +239,7 @@ fn status(shard: &Shard, id: &str) -> serde_json::Value {
 
 // spec: MEDULLA-ORCH-VOCAB-R812.4
 #[test]
-fn illegal_work_item_transitions_refuse_through_the_row_dispatch() {
+fn illegal_work_item_transitions_answer_typed_outcomes_through_the_row_dispatch() {
     let temp = open("r812-4-illegal-transitions");
     let shard = &temp.shard;
 
