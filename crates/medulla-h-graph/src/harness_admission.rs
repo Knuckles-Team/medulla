@@ -767,6 +767,45 @@ fn validate_run_trace_node(
     Ok(None)
 }
 
+/// MEDULLA-ORCH-VOCAB-R808 — an `AgentDefinition` node that carries a `knowledgeScope` must
+/// hold a well-formed scope whose knowledge sets are nodes of the writer's graph (and of its
+/// tenant, when both name one). A foreign tenant's set answers `SCOPE_SET_UNKNOWN`
+/// byte-identically to a missing one. A definition with no scope, and any other node, passes.
+fn validate_agent_definition_node(
+    view: &HarnessView<'_>,
+    node_id: &str,
+    props: &Props,
+) -> Result<(), String> {
+    use medulla_work_types::orchestration::knowledge_scope::{
+        parse_knowledge_scope, unknown_set, KNOWLEDGE_SCOPE_PROPERTY,
+    };
+    // An agent definition names its class as `type` (the retrieval read side) or `node_type`.
+    let class = props
+        .get("type")
+        .and_then(|value| value.as_str())
+        .or_else(|| node_type(props));
+    if class != Some("AgentDefinition") {
+        return Ok(());
+    }
+    let Some(raw) = props.get(KNOWLEDGE_SCOPE_PROPERTY) else {
+        return Ok(());
+    };
+    let scope = parse_knowledge_scope(node_id, raw)?;
+    let tenant = props.get("tenant_id").and_then(|value| value.as_str());
+    let holds = |set: &str| {
+        view.props(set).is_some_and(|stored| {
+            match (tenant, stored.get("tenant_id").and_then(|value| value.as_str())) {
+                (Some(writer), Some(owner)) => writer == owner,
+                _ => true,
+            }
+        })
+    };
+    match unknown_set(&scope, holds) {
+        Some(refusal) => Err(refusal),
+        None => Ok(()),
+    }
+}
+
 /// The result of the repository-index and blob checks the `AddNode` handler ran
 /// through the server-api read seams before admission (MEDULLA-ORCH-VOCAB-R013.7.2).
 /// Admission itself stays graph-only: it reads this argument, never a store.
@@ -1068,6 +1107,7 @@ fn harness_add_node_admission(
     walkthrough: WalkthroughChecks,
 ) -> Result<Option<Admission>, String> {
     validate_run_trace_node(props, walkthrough)?;
+    validate_agent_definition_node(view, node_id, props)?;
     if let Some(admission) = validate_run_observation(view, node_id, props)? {
         return Ok(Some(admission));
     }

@@ -2392,6 +2392,9 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
     // MEDULLA-SRC-AUTH-R011.3: the trust mark is stamped in the mutation gateway.
     if id == "AddNode" {
         codes.insert("CONTENT_ORIGIN_UNKNOWN");
+        // MEDULLA-ORCH-VOCAB-R808: an agent definition node names only knowledge sets the
+        // caller's graph holds.
+        codes.insert("SCOPE_SET_UNKNOWN");
     }
     if id == "CompareAndSetNodeFields" {
         codes.extend(["TRUST_MARK_DOWNGRADE_REFUSED", "TRUST_MARK_FIELDS_RESERVED"]);

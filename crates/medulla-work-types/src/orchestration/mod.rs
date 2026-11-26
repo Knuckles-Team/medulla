@@ -20,6 +20,7 @@ pub mod capability_gap;
 pub mod definitions;
 pub mod errors;
 pub mod improvement;
+pub mod knowledge_scope;
 pub mod org;
 pub mod teams;
 pub mod visual_observation;

@@ -131,6 +131,9 @@ def test_scope_refusals(start_medulla_server) -> None:
     cl.tenants.create(graph)
     try:
         _corpus(cl, graph)
+        # The write admits only sets the graph holds (R808); the set is removed after,
+        # so the read still refuses a scope whose set no node of the view holds.
+        put(cl, graph, "ks:theirs", {"type": "KnowledgeSet"})
         put(
             cl,
             graph,
@@ -140,6 +143,7 @@ def test_scope_refusals(start_medulla_server) -> None:
                 "knowledgeScope": {"knowledge_sets": ["ks:theirs"]},
             },
         )
+        cl._send("RemoveNode", {"node_id": "ks:theirs"}, graph)
         put(
             cl,
             graph,

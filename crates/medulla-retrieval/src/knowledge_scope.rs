@@ -6,58 +6,11 @@
 //! outside it. A scope only narrows: an empty scope is the caller's access
 //! alone.
 
-use serde::{Deserialize, Serialize};
-
-/// An agent's knowledge scope (MEDULLA-FEDERATED-QUERY-R704.1). Empty lists do not
-/// constrain that dimension.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct KnowledgeScope {
-    pub agent_ref: String,
-    #[serde(default)]
-    pub knowledge_sets: Vec<String>,
-    #[serde(default)]
-    pub container_refs: Vec<String>,
-    #[serde(default)]
-    pub source_kinds: Vec<String>,
-    /// Unix seconds; older candidates are out of scope.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub time_floor: Option<u64>,
-}
-
-/// What the scope tests on one candidate.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ScopedCandidate {
-    pub id: String,
-    pub knowledge_set: Option<String>,
-    pub container_ref: Option<String>,
-    pub source_kind: String,
-    pub timestamp: Option<u64>,
-}
-
-fn admits(allowed: &[String], value: Option<&str>) -> bool {
-    allowed.is_empty() || value.is_some_and(|v| allowed.iter().any(|a| a == v))
-}
-
-impl KnowledgeScope {
-    /// Whether the scope places no constraint.
-    pub fn is_empty(&self) -> bool {
-        self.knowledge_sets.is_empty()
-            && self.container_refs.is_empty()
-            && self.source_kinds.is_empty()
-            && self.time_floor.is_none()
-    }
-
-    /// Whether `candidate` lies inside the scope.
-    pub fn contains(&self, candidate: &ScopedCandidate) -> bool {
-        admits(&self.knowledge_sets, candidate.knowledge_set.as_deref())
-            && admits(&self.container_refs, candidate.container_ref.as_deref())
-            && admits(&self.source_kinds, Some(candidate.source_kind.as_str()))
-            && self
-                .time_floor
-                .is_none_or(|floor| candidate.timestamp.is_some_and(|t| t >= floor))
-    }
-}
+// The type, its candidate record and its parser live with the agent definition vocabulary
+// (MEDULLA-ORCH-VOCAB-R808); the read side here uses them unchanged.
+pub use medulla_work_types::orchestration::knowledge_scope::{
+    parse_knowledge_scope, unknown_set, KnowledgeScope, ScopedCandidate, KNOWLEDGE_SCOPE_PROPERTY,
+};
 
 /// Keep the top `k` scored candidates inside `scope` (MEDULLA-FEDERATED-QUERY-R704.2).
 /// `candidates` are what the caller may already read; the scope filters them
@@ -107,9 +60,6 @@ pub fn scope_digest(scope: Option<&KnowledgeScope>) -> String {
     medulla_types::retrieval::sha256_hex(text.as_bytes())
 }
 
-/// The property of an agent definition node that holds its knowledge scope
-/// (MEDULLA-ORCH-VOCAB-R808): a JSON object, or its text.
-pub const KNOWLEDGE_SCOPE_PROPERTY: &str = "knowledgeScope";
 /// The edge relationship from a source record to its container (MEDULLA-INGEST-WORKER-R904.1).
 const IN_CONTAINER: &str = "inContainer";
 
@@ -147,7 +97,6 @@ pub fn agent_scope(
     core: &medulla_graph_core::graph::GraphCore,
     agent_ref: &str,
 ) -> Result<Option<KnowledgeScope>, ScopeRefusal> {
-    use serde_json::Value;
     let Some(node) = node_props(core, agent_ref) else {
         return Err(refusal(
             "SCOPE_AGENT_UNKNOWN",
@@ -157,35 +106,19 @@ pub fn agent_scope(
     let Some(raw) = node.get(KNOWLEDGE_SCOPE_PROPERTY) else {
         return Ok(None);
     };
-    let mut object = match raw {
-        Value::String(text) => serde_json::from_str::<Value>(text),
-        other => Ok(other.clone()),
-    }
-    .map_err(|e| {
+    let scope = parse_knowledge_scope(agent_ref, raw).map_err(|text| {
+        // The parser's text is `INVALID_ARGUMENT: <detail>`.
         refusal(
             "INVALID_ARGUMENT",
-            format!("knowledgeScope of {agent_ref} is not JSON: {e}"),
-        )
-    })?;
-    if let Value::Object(fields) = &mut object {
-        fields.insert("agent_ref".into(), Value::String(agent_ref.to_string()));
-    }
-    let scope: KnowledgeScope = serde_json::from_value(object).map_err(|e| {
-        refusal(
-            "INVALID_ARGUMENT",
-            format!("knowledgeScope of {agent_ref} is malformed: {e}"),
+            text.trim_start_matches("INVALID_ARGUMENT: ").to_string(),
         )
     })?;
     // The projected view holds only the caller's tenant: a set with no node in it is unknown,
     // whether it is absent or another tenant's, with one code and one detail (no existence oracle).
-    if let Some(set) = scope
-        .knowledge_sets
-        .iter()
-        .find(|set| core.get_node_properties(set).is_none())
-    {
+    if let Some(text) = unknown_set(&scope, |set| core.get_node_properties(set).is_some()) {
         return Err(refusal(
             "SCOPE_SET_UNKNOWN",
-            format!("knowledge set {set} is unknown"),
+            text.trim_start_matches("SCOPE_SET_UNKNOWN: ").to_string(),
         ));
     }
     Ok((!scope.is_empty()).then_some(scope))

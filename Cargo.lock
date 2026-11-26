@@ -7480,6 +7480,7 @@ dependencies = [
  "medulla-query-types",
  "medulla-result-types",
  "medulla-types",
+ "medulla-work-types",
  "rmp-serde",
  "serde",
  "serde_json",
