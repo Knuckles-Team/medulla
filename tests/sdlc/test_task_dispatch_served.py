@@ -22,7 +22,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "decide"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from _decision_resident_fixture import publish, schema_body
-from _landing_fixture import LandingRepo
+from _landing_fixture import LandingRepo, body, content_digest
 from conftest import (
     TEST_AGENT_ID,
     TEST_SIGNER_KEY,
@@ -514,6 +514,95 @@ def test_dispatch_runs_layers_and_lands_through_gates(
                     landed.append(task)
             # spec: MEDULLA-SDLC-R015.6
             assert landed == ["a", "b", "c", "join"]
+        finally:
+            await repo.close()
+
+    _run(client, journey())
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R015.5")
+def test_failed_task_opens_defect_and_evidence_for_proposal(
+    authenticated_plan_client,  # noqa: F811
+) -> None:
+    """Three failed gates of one task open one defect and give the loop three sealed
+    verdicts to cite: the split proposal it raises carries them as gate results."""
+    client = authenticated_plan_client
+    graph = f"task-failures-{uuid.uuid4().hex[:8]}"
+
+    async def journey():
+        owner = client._client
+        repo = await LandingRepo.create(owner, graph)
+        try:
+            approval = {
+                "approver": "owner",
+                "approved_at_ms": 1_700_000_000_000,
+                "reason": "the owner promotes the project to evolving",
+            }
+            await owner._send(
+                "ProjectModeSet",
+                {
+                    "request": {
+                        "project": graph,
+                        "mode": "evolving",
+                        "approval": approval,
+                    }
+                },
+                graph,
+            )
+            verdicts = []
+            for attempt in range(3):
+                branch = f"result/t1-{attempt}"
+                await repo.branch(branch)
+                receipt = await repo.submit(
+                    owner,
+                    branch,
+                    "src/t1.py",
+                    f"print({attempt})\n".encode(),
+                    f"feat: T001 try {attempt}\n\nSpec: DEMO-R001",
+                )
+                verdicts.append((await repo.record(receipt, branch, "fail"))["node_id"])
+            assert len(set(verdicts)) == 3
+            defects = await owner._send(
+                "GetNodesByLabel",
+                {"label": "Defect", "after": None, "limit": 10},
+                graph,
+            )
+            assert defects, "a failed gate opens a defect"
+            evidence = []
+            for node_id in verdicts:
+                properties = body(
+                    await owner._send("GetNodeProperties", {"node_id": node_id}, graph)
+                )
+                evidence.append(
+                    {
+                        "kind": "gate_result",
+                        "record_id": node_id,
+                        "digest": content_digest(properties),
+                    }
+                )
+            raised = body(
+                await owner._send(
+                    "ProposalPut",
+                    {
+                        "proposal": {
+                            "project": graph,
+                            "kind": "task_split",
+                            "target": "T001",
+                            "statement": "T001 failed its gate three times: split it.",
+                            "evidence": evidence,
+                            "origin": "unprompted",
+                        }
+                    },
+                    graph,
+                )
+            )
+            listed = body(
+                await owner._send("ProposalList", {"request": {"repo": graph}}, graph)
+            )
+            entry = next(row for row in listed if row["id"] == raised["node_id"])
+            # spec: MEDULLA-SDLC-R015.5
+            assert [cited["record_id"] for cited in entry["evidence"]] == verdicts
+            assert {cited["kind"] for cited in entry["evidence"]} == {"gate_result"}
         finally:
             await repo.close()
 
