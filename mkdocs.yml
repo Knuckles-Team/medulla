@@ -40,6 +40,7 @@ nav:
       - Memory: interfaces/memory.md
       - Messaging and streams: interfaces/messaging.md
       - Key-value and blobs: interfaces/kv_blob.md
+      - Incremental views: interfaces/incremental-views.md
       - Observability: interfaces/observability.md
   - Architecture:
       - Architecture guide: architecture/index.md
