@@ -8,3 +8,4 @@ pub mod mandate;
 pub mod rounds;
 pub mod arming;
 pub mod ending;
+pub mod superseded;
