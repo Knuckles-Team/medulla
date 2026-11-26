@@ -416,7 +416,9 @@ pub(crate) mod served {
             let class = ["type", "node_type", "class"]
                 .iter()
                 .find_map(|key| row.get(*key).and_then(Value::as_str));
-            let named = row.get("correction_id").and_then(Value::as_str) == Some(correction_id)
+            let named = ["correction_id", "receipt_id"]
+                .iter()
+                .any(|key| row.get(*key).and_then(Value::as_str) == Some(correction_id))
                 || id == correction_id;
             let owned = ["tenant", "tenant_id"]
                 .iter()

@@ -4,7 +4,7 @@ L4: every call goes through the running engine over the wire client. A recorded 
 and a skill node are written to the caller's graph through ``BatchUpdate``.
 ``KnowledgeFlag`` raises a ``wrong`` flag with a suggested correction, raises the
 same flag again and finds one node with ``raise_count`` 2, resolves the flag with
-the human correction node and lists no open flags.
+a human correction recorded through ``CorrectionRecord`` and lists no open flags.
 """
 
 from __future__ import annotations
@@ -26,14 +26,13 @@ GRAPH = "__commons__"
 async def _journey(prefix: str) -> dict[str, Any]:
     client = await MedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
-        verified_context=request_context(),
+        verified_context=request_context(roles=["corrector"]),
         graph_name=GRAPH,
     )
     try:
         run_id = f"{prefix}-run"
         trace = f"{prefix}-trace"
         skill = f"skill:{prefix}-triage@3"
-        correction = f"correction:{prefix}"
         await client.lifecycle.batch_update(
             [
                 {
@@ -42,11 +41,6 @@ async def _journey(prefix: str) -> dict[str, Any]:
                     "properties": {"node_type": "RunTrace", "run_id": run_id},
                 },
                 {"op": "upsert_node", "id": skill, "properties": {"type": "Skill"}},
-                {
-                    "op": "upsert_node",
-                    "id": correction,
-                    "properties": {"type": "Correction", "correction_id": prefix},
-                },
             ]
         )
         decisions = dc.DecisionClient(client=client, graph=GRAPH)
