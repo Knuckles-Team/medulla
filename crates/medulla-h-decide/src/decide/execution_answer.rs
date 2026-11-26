@@ -574,16 +574,8 @@ fn select_rows(
     let QueryOutcome::Solutions(result) = outcome else {
         return Err("INTERNAL: the execution answer query did not answer a table".to_string());
     };
-    let (vars, typed_rows) = result.to_rows();
     // The answer reads each term as its one-line text (`<iri>` or the lexical form).
-    let mut rows: Vec<Vec<Option<String>>> = typed_rows
-        .into_iter()
-        .map(|row| {
-            row.into_iter()
-                .map(|cell| cell.map(|term| term.display_text()))
-                .collect()
-        })
-        .collect();
+    let (vars, mut rows) = result.to_text_rows();
     rows.sort();
     Ok((vars, rows))
 }

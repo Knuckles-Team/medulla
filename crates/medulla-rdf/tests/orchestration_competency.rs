@@ -118,7 +118,7 @@ fn answer(question: &Question) -> Vec<String> {
         panic!("expected solutions");
     };
     let mut rows: Vec<String> = table
-        .to_rows()
+        .to_text_rows()
         .1
         .iter()
         .map(|row| {
@@ -607,7 +607,7 @@ fn select_rows(view: &GraphView, query: &str) -> Vec<Vec<String>> {
         panic!("expected solutions");
     };
     table
-        .to_rows()
+        .to_text_rows()
         .1
         .iter()
         .map(|row| row.iter().map(cell_text).collect())

@@ -1687,7 +1687,7 @@ mod tests {
         let query = "SELECT ?s ?o WHERE { ?s <http://example.org/name> ?o } ORDER BY ?s LIMIT 2";
         let mut baseline = ObdaSourceRegistry::new();
         baseline.register_table("people", table.clone());
-        let expected = run_virtual(&vg, &baseline, query).unwrap().to_rows();
+        let expected = run_virtual(&vg, &baseline, query).unwrap().to_text_rows();
 
         let source = Arc::new(OrderedSource {
             table,
@@ -1696,13 +1696,13 @@ mod tests {
         });
         let mut optimized = ObdaSourceRegistry::new();
         optimized.register("people", source.clone());
-        let actual = run_virtual(&vg, &optimized, query).unwrap().to_rows();
+        let actual = run_virtual(&vg, &optimized, query).unwrap().to_text_rows();
         assert_eq!(actual, expected);
         assert_eq!(*source.shipped.lock().unwrap(), vec![2]);
         let all_query =
             "SELECT ?s ?o WHERE { ?s <http://example.org/name> ?o } ORDER BY ?s LIMIT 4";
-        let all_expected = run_virtual(&vg, &baseline, all_query).unwrap().to_rows();
-        let all_actual = run_virtual(&vg, &optimized, all_query).unwrap().to_rows();
+        let all_expected = run_virtual(&vg, &baseline, all_query).unwrap().to_text_rows();
+        let all_actual = run_virtual(&vg, &optimized, all_query).unwrap().to_text_rows();
         assert_eq!(all_actual, all_expected);
         assert_eq!(all_actual.1.len(), 3);
         assert_eq!(*source.shipped.lock().unwrap(), vec![2, 3]);
@@ -1731,7 +1731,7 @@ mod tests {
             "SELECT ?s ?o WHERE { ?s <http://example.org/name> ?o } ORDER BY ?s LIMIT 1 OFFSET 0";
         let mut baseline = ObdaSourceRegistry::new();
         baseline.register_table("people", table.clone());
-        let expected = run_virtual(&vg, &baseline, query).unwrap().to_rows();
+        let expected = run_virtual(&vg, &baseline, query).unwrap().to_text_rows();
         assert_eq!(expected.1.len(), 1);
         assert_eq!(
             expected.1[0][0].as_deref(),
@@ -1746,7 +1746,7 @@ mod tests {
         let mut optimized = ObdaSourceRegistry::new();
         optimized.register("people", source.clone());
         assert_eq!(
-            run_virtual(&vg, &optimized, query).unwrap().to_rows(),
+            run_virtual(&vg, &optimized, query).unwrap().to_text_rows(),
             expected
         );
         assert!(source.shipped.lock().unwrap().is_empty());
@@ -1772,7 +1772,7 @@ mod tests {
         let query = "SELECT (COUNT(*) AS ?n) WHERE { ?s <http://example.org/name> ?o }";
         let mut baseline = ObdaSourceRegistry::new();
         baseline.register_table("people", table.clone());
-        let expected = run_virtual(&vg, &baseline, query).unwrap().to_rows();
+        let expected = run_virtual(&vg, &baseline, query).unwrap().to_text_rows();
         assert_eq!(expected.1, vec![vec![Some("2".into())]]);
 
         let source = Arc::new(OrderedSource {
@@ -1782,7 +1782,7 @@ mod tests {
         });
         let mut optimized = ObdaSourceRegistry::new();
         optimized.register("people", source.clone());
-        let actual = run_virtual(&vg, &optimized, query).unwrap().to_rows();
+        let actual = run_virtual(&vg, &optimized, query).unwrap().to_text_rows();
         assert_eq!(actual, expected);
         assert_eq!(*source.counted.lock().unwrap(), vec![2]);
     }
@@ -1830,9 +1830,9 @@ mod tests {
             format!("SELECT ?s ?o WHERE {{ ?s <{RDF_TYPE_IRI}> ?o }} ORDER BY ?s LIMIT 2");
         let mut baseline = ObdaSourceRegistry::new();
         baseline.register_table("people", table.clone());
-        let expected_count = run_virtual(&vg, &baseline, &count_query).unwrap().to_rows();
+        let expected_count = run_virtual(&vg, &baseline, &count_query).unwrap().to_text_rows();
         let (expected_vars, mut expected_rows) =
-            run_virtual(&vg, &baseline, &page_query).unwrap().to_rows();
+            run_virtual(&vg, &baseline, &page_query).unwrap().to_text_rows();
         expected_rows.sort();
         assert_eq!(expected_rows.len(), 2);
 
@@ -1846,11 +1846,11 @@ mod tests {
         assert_eq!(
             run_virtual(&vg, &optimized, &count_query)
                 .unwrap()
-                .to_rows(),
+                .to_text_rows(),
             expected_count
         );
         let (actual_vars, mut actual_rows) =
-            run_virtual(&vg, &optimized, &page_query).unwrap().to_rows();
+            run_virtual(&vg, &optimized, &page_query).unwrap().to_text_rows();
         actual_rows.sort();
         assert_eq!(actual_vars, expected_vars);
         assert_eq!(actual_rows, expected_rows);

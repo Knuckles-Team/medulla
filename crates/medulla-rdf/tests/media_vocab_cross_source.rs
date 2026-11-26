@@ -68,7 +68,7 @@ fn select(view: &GraphView, query: &str) -> Vec<Row> {
         QueryOutcome::Solutions(table) => table,
         other => panic!("expected a SELECT solution table, got {other:?}"),
     };
-    let (vars, rows) = table.to_rows();
+    let (vars, rows) = table.to_text_rows();
     let mut keyed: Vec<Row> = rows
         .into_iter()
         .map(|row| {

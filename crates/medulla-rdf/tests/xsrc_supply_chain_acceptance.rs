@@ -67,7 +67,7 @@ fn select(view: &GraphView, query: &str) -> Vec<Vec<Option<String>>> {
         QueryOutcome::Solutions(table) => table,
         other => panic!("expected a SELECT solution table, got {other:?}"),
     };
-    let (_, rows) = table.to_rows();
+    let (_, rows) = table.to_text_rows();
     rows
 }
 

@@ -33,7 +33,7 @@ fn select(view: &GraphView, query: &str) -> (Vec<String>, Vec<Vec<String>>) {
         QueryOutcome::Solutions(table) => table,
         other => panic!("expected a SELECT solution table, got {other:?}"),
     };
-    let (vars, rows) = table.to_rows();
+    let (vars, rows) = table.to_text_rows();
     let rows = rows
         .into_iter()
         .map(|row| {

@@ -336,7 +336,7 @@ mod vocabulary {
 
     fn rows(view: &GraphView, query: &str) -> Vec<Vec<Option<String>>> {
         match outcome(view, query) {
-            QueryOutcome::Solutions(table) => table.to_rows().1,
+            QueryOutcome::Solutions(table) => table.to_text_rows().1,
             other => panic!("expected solutions, got {other:?}"),
         }
     }

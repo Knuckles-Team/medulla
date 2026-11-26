@@ -236,6 +236,24 @@ impl SparqlResult {
     }
 }
 
+/// The rows of a solution table as one-line text per term (`<iri>`, `_:label`, the lexical
+/// form of a literal), for assertions and diagnostics. The wire carries the typed terms.
+impl SparqlResult {
+    /// Like [`Self::to_rows`], with each term rendered by [`Binding::display_text`].
+    pub fn to_text_rows(&self) -> (Vec<String>, Vec<Vec<Option<String>>>) {
+        let (vars, rows) = self.to_rows();
+        let rows = rows
+            .into_iter()
+            .map(|row| {
+                row.into_iter()
+                    .map(|cell| cell.map(|term| term.display_text()))
+                    .collect()
+            })
+            .collect();
+        (vars, rows)
+    }
+}
+
 /// Parse a SPARQL 1.1 query string into the spargebra algebra.
 pub fn parse_query(q: &str) -> Result<Query, String> {
     SparqlParser::new()
