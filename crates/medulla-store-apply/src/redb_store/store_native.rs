@@ -1,5 +1,9 @@
 use super::*;
 use crate::redb_store::store_cleanup::clear_graph_rows;
+use medulla_mutation_types::mutation_scope::MutationOutboxIntent;
+use medulla_protocol_types::mutation_batch::{MutationBatch, MutationOperation};
+use medulla_protocol_types::protocol::Method;
+use medulla_storage::ScopedOwnerTableMut;
 use medulla_store::redb_store::store_prelude::*;
 
 /// GOC-19/GOC-20 (BUG-015 "B9"): a `CommitWorkItemResult` batch may

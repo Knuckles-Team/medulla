@@ -1,5 +1,6 @@
 use super::store_prelude::*;
 use super::*;
+use medulla_storage::GRAPH_SHARD_CONTROL_GRAPH as SHARD_CONTROL_GRAPH;
 
 pub fn reject_reserved_graph(graph: &str) -> Result<(), String> {
     if graph == SHARD_CONTROL_GRAPH || sanitize(graph) == SHARD_CONTROL_GRAPH {

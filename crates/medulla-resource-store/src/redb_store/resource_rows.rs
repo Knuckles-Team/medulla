@@ -1,5 +1,12 @@
 //! Durable resource row types and their snapshot projections.
 use super::resource::*;
+use medulla_result_types::epistemic_operations::{
+    ResourceCapacity, ResourceHostUpdateCapacitySnapshot, ResourceHostUpdateDiskPolicySnapshot,
+    ResourceHostUpdateSnapshot, ResourceReservationDiskPolicySnapshot,
+    ResourceReservationHostCapacitySnapshot, ResourceReservationHostSnapshot,
+    ResourceReservationRecord,
+};
+use medulla_storage::ScopedOwnerTableMut;
 use medulla_store::redb_store::store_prelude::*;
 use medulla_store::redb_store::*;
 

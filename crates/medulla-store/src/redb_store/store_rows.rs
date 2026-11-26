@@ -1,5 +1,6 @@
 use super::store_prelude::*;
 use super::*;
+use medulla_storage::ScopedOwnerTableMut;
 
 /// `Method::CompareAndSetNodeFields` row effect.  Evaluates and merges the CAS
 /// against the durable pre-image inside the held transaction; persisting

@@ -20,7 +20,7 @@ const GRAPH: &str = "restore-graph";
 /// Writes the least row the graph can own into every graph-scoped table but
 /// `nodes` and `edges`, so each table of the registry holds a row to carry.
 struct SeedFloorRows<'m, 'g> {
-    member: &'m medulla_store::redb_store::store_prelude::AdmittedOwnerWrite<
+    member: &'m medulla_transaction::AdmittedOwnerWrite<
         'g,
         medulla_storage::GraphShardOwner,
     >,

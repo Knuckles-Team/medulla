@@ -8,7 +8,9 @@
 //! these rows.
 
 use super::*;
+use medulla_storage::GraphShardOwner;
 use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
+use medulla_transaction::AdmittedOwnerWrite;
 
 /// The maintenance claim key for ONE ATTEMPT at a control-row write.
 ///

@@ -13,6 +13,8 @@ use std::sync::atomic::{AtomicU64, Ordering};
 use medulla_storage::ScopedOwnerTableMut;
 
 use super::*;
+use medulla_protocol_types::protocol::Method;
+use medulla_protocol_types::mutation_batch::{MutationBatch, VersionExpectation};
 use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 use medulla_store::redb_store::shard::DrainCommit;
 
@@ -378,7 +380,7 @@ pub fn apply_checkpoint(
 /// rows the pages carry for it. `nodes` and `edges` are restored by their own
 /// unsealed path.
 struct RestoreTables<'m, 'g> {
-    member: &'m medulla_store::redb_store::store_prelude::AdmittedOwnerWrite<'g, medulla_storage::GraphShardOwner>,
+    member: &'m medulla_transaction::AdmittedOwnerWrite<'g, medulla_storage::GraphShardOwner>,
     rows: &'m [medulla_storage::TableRows],
 }
 

@@ -1,6 +1,11 @@
 use super::store_prelude::*;
 use super::*;
+use medulla_mutation_types::mutation_scope::MutationOutboxRecord;
+use medulla_protocol_types::change_envelope::{ChangeCursor, ChangeEnvelopeRecord, ContentVersion};
+use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_protocol_types::protocol::MethodWriteFamily;
+use medulla_protocol_types::protocol::{GraphType, Method};
+use medulla_storage::ScopedOwnerTableMut;
 
 /// Methods whose complete authoritative effect is represented by the NODES/EDGES/
 /// LEDGER row transaction below.  Anything else must first be lowered by its

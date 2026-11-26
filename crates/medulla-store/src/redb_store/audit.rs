@@ -17,6 +17,8 @@
 use super::store_prelude::*;
 #[cfg(feature = "security")]
 use super::*;
+#[cfg(feature = "security")]
+use medulla_protocol_types::protocol::Method;
 
 #[cfg(feature = "security")]
 use medulla_storage::ScopedOwnerTableMut;

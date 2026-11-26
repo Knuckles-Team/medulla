@@ -9,6 +9,23 @@ use medulla_kernel::test_rendezvous::{join_bounded, meet};
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::MutationScopeIdentity;
 use medulla_mutation_types::mutation_scope::ScopeTenantId;
+#[cfg(any(test, feature = "test-support"))]
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+use medulla_mutation_types::mutation_scope::{
+    DurabilityDomain, LogicalName, MutationOutboxIntent, MutationSurface,
+};
+use medulla_protocol_types::mutation_batch::{
+    MutationBatch, MutationBatchCommit, MutationOperation, VersionExpectation,
+};
+use medulla_protocol_types::protocol::{GraphType, Method};
+use medulla_result_types::epistemic_operations::{
+    ResourceCapacity, ResourceHostUpdateRequest, ResourceHostUpdateRequestTargetKind,
+    ResourceHostUpdateResult, ResourceHostUpdateResultReason, ResourceRequirement,
+    ResourceReservationRecordState, ResourceReservationRequest,
+    ResourceReservationRequestTargetKind, ResourceReservationResult,
+    ResourceReservationResultDecision, ResourceReservationResultState,
+    ResourceReservationStatusRequest, ResourceReservationSummaryState,
+};
 use medulla_storage::{GraphShardOwner, ScopedRead};
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::shard::ShardWrite;

@@ -1,4 +1,9 @@
 use super::*;
+use medulla_protocol_types::change_envelope::{
+    ChangeCursor, ChangeEnvelope, ChangeEnvelopeRecord, MaterialOperation,
+};
+use medulla_protocol_types::mutation_batch::MutationBatch;
+use medulla_protocol_types::protocol::{GraphType, Method};
 use medulla_store::redb_store::store_prelude::*;
 
 /// The compact graph/control path can replace or remove a linked WorkItem

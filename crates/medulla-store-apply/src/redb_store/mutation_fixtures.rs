@@ -8,6 +8,11 @@ use medulla_mutation_types::mutation_scope::{
     MutationSurface, ScopeTenantId, MUTATION_BATCH_VERSION,
 };
 use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::mutation_batch::{
+    MutationBatch, MutationBatchCommit, VersionExpectation,
+};
+use medulla_protocol_types::protocol::Method;
+use medulla_result_types::epistemic_operations::ClaimWorkItemResult;
 
 pub fn open(path: &std::path::Path) -> Shard {
     let shard = Shard::open(path).unwrap();

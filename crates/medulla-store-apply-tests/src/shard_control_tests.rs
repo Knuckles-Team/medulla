@@ -9,12 +9,11 @@ use super::control::{
 use super::control::{put_matview, scan_matviews};
 use medulla_protocol_types::protocol::GraphType;
 use medulla_protocol_types::protocol::Method;
+use medulla_storage::GRAPH_SHARD_CONTROL_GRAPH as SHARD_CONTROL_GRAPH;
 use medulla_store::redb_store::shard::Shard;
 use medulla_store::redb_store::shard::ShardWrite;
-use medulla_store::{
-    redb_store::reject_reserved_graph, redb_store::sanitize,
-    redb_store::store_prelude::SHARD_CONTROL_GRAPH, redb_store::write_graph_meta_with_incarnation,
-    redb_store::DurableCrypto,
+use medulla_store::redb_store::{
+    reject_reserved_graph, sanitize, write_graph_meta_with_incarnation, DurableCrypto,
 };
 use medulla_store_apply::redb_store::store_cleanup::purge_graph_rows;
 use medulla_store_apply::redb_store::store_control::commit_ops;

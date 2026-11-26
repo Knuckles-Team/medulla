@@ -4,6 +4,8 @@
 
 use super::store_prelude::*;
 use super::*;
+use medulla_protocol_types::protocol::Method;
+use medulla_storage::ScopedOwnerTableMut;
 
 type NodeRows<'a> = ScopedOwnerTableMut<'a, (&'static str, &'static str), &'static [u8]>;
 

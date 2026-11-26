@@ -1,5 +1,6 @@
 use super::*;
 use medulla_kernel::test_rendezvous::{join_bounded, meet};
+use medulla_mutation_types::mutation_scope::CommittedVersion;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::IncarnationId;
 use medulla_mutation_types::mutation_scope::LogicalName;
@@ -16,7 +17,14 @@ use medulla_protocol_types::change_envelope::CursorPosition;
 use medulla_protocol_types::change_envelope::PolicyRecord;
 use medulla_protocol_types::change_envelope::PrivacyAttestation;
 use medulla_protocol_types::change_envelope::CHANGE_ENVELOPE_VERSION;
+use medulla_protocol_types::change_envelope::{ChangeEnvelopeCommit, MaterialOperation};
 use medulla_protocol_types::mutation_batch::MutationOperation;
+use medulla_protocol_types::mutation_batch::{
+    MutationBatch, MutationBatchCommit, MutationBatchRecord, MutationBatchStatus,
+    VersionExpectation,
+};
+use medulla_protocol_types::protocol::{GraphType, Method};
+use medulla_result_types::epistemic_operations::{ClaimWorkItemResult, ClaimWorkItemResultReason};
 use medulla_result_types::{
     outcome_bundle::CommitOutcomeBundle, outcome_bundle::OutcomeCompleteness,
     outcome_bundle::ReceiptNode, outcome_bundle::ReceiptNodeKind, outcome_bundle::RunEvent,

@@ -41,6 +41,7 @@
 //! "reopened"/"original" pair.
 
 use super::*;
+use medulla_protocol_types::protocol::Method;
 
 use medulla_storage::ScopedOwnerTableMut;
 

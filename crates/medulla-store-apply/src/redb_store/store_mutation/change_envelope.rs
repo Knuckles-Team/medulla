@@ -1,4 +1,5 @@
 use super::*;
+use medulla_protocol_types::change_envelope::ChangeEnvelopeCommit;
 
 /// Engine-native ChangeEnvelope commit. Graph rows, every material/governance
 /// projection, version/cursor fences, terminal batch/envelope records, and the

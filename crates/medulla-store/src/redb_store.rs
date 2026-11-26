@@ -26,6 +26,16 @@
 
 pub mod enrichment_top_up;
 pub mod store_prelude;
+#[cfg(any(test, feature = "test-support"))]
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+#[cfg(any(test, feature = "test-support", feature = "security"))]
+use medulla_mutation_types::mutation_scope::{DurabilityDomain, MutationSurface};
+#[cfg(any(test, feature = "test-support", feature = "security"))]
+use medulla_protocol_types::mutation_batch::{
+    MutationBatch, MutationOperation, VersionExpectation,
+};
+#[cfg(any(test, feature = "test-support", feature = "security"))]
+use medulla_protocol_types::protocol::Method;
 #[cfg(any(test, feature = "test-support", feature = "security"))]
 use store_prelude::*;
 

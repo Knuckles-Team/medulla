@@ -20,6 +20,7 @@ use medulla_store::redb_store::store_read::*;
 use redb::ReadableTable;
 
 use super::*;
+use medulla_protocol_types::protocol::GraphType;
 use medulla_store::{redb_store::shard::Shard, redb_store::shard::ShardWrite};
 
 /// One graph's rows in a table whose key is `(graph, key)`.

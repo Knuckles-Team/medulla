@@ -1,5 +1,8 @@
 use super::*;
+use medulla_result_types::epistemic_operations::ResourceReservationRecordState;
+use medulla_storage::ScopedOwnerTableMut;
 use medulla_store::redb_store::store_prelude::*;
+use medulla_transaction::OwnerPayloadWrite;
 
 pub fn clear_graph_rows(
     graph: &str,

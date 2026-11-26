@@ -1,6 +1,18 @@
 use super::*;
+#[cfg(any(test, feature = "test-support"))]
+use medulla_mutation_types::mutation_scope::MUTATION_BATCH_VERSION;
+use medulla_mutation_types::mutation_scope::{
+    DurabilityDomain, MutationOutboxIntent, MutationSurface,
+};
+use medulla_protocol_types::change_envelope::ChangeEnvelope;
+use medulla_protocol_types::mutation_batch::{
+    MutationBatch, MutationBatchCommit, MutationOperation, VersionExpectation,
+};
+use medulla_protocol_types::protocol::Method;
+use medulla_storage::{GraphShardOwner, OwnedStoreHandle};
 use medulla_store::redb_store::commit_publish::{CommitMaterial, CommitPublication};
 use medulla_store::redb_store::store_prelude::*;
+use medulla_transaction::{AdmittedGroup, Begin};
 
 /// Deterministic failure injection points around the authoritative batch commit.
 /// Production always calls with `None`; unit tests use these boundaries to prove

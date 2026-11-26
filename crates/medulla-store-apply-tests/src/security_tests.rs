@@ -4,6 +4,7 @@
 use super::*;
 use medulla_kernel::crypto::ValueCipher;
 use medulla_kernel::test_rendezvous::join_bounded;
+use medulla_protocol_types::protocol::Method;
 
 fn open_db(dir: &std::path::Path) -> Shard {
     let path = dir.join("graph-0.redb");

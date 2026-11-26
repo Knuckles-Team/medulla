@@ -1,5 +1,10 @@
 use super::store_prelude::*;
 use super::*;
+use medulla_mutation_types::mutation_scope::{
+    CommittedVersion, MutationOutboxRecord, MutationProjectionCursor, MutationScope,
+};
+use medulla_protocol_types::mutation_batch::{MutationBatchRecord, MutationBatchStatus};
+use medulla_storage::GraphShardOwner;
 
 pub fn decode_durable<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> Result<T, String> {
     medulla_types::msgpack::decode_bounded(bytes, durable_msgpack_limits())
