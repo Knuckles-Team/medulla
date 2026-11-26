@@ -120,6 +120,10 @@ pub struct DeriveInput {
     pub turns: Vec<DeriveTurn>,
     /// At most this many conclusions are kept (`memory.derive_max_conclusions`).
     pub max_conclusions: u32,
+    /// Every claim id the worker proposes starts with this prefix, followed by the digest of the
+    /// conclusion's whitespace-normalised, case-folded text; `CompleteDerivation` counts the
+    /// claims that carry it (MEDULLA-DECISION-ENGINE-R651.12).
+    pub claim_prefix: String,
 }
 
 /// One served read of the participant surface (`Method::ParticipantRead`).
@@ -246,8 +250,9 @@ mod tests {
                 last_turn_id: "m2".into(),
                 turns: vec![DeriveTurn { turn_id: "m1".into(), speaker: ada(), text: "hi".into(), timestamp_ms: 4 }],
                 max_conclusions: 8,
+                claim_prefix: "derived:ab:".into(),
             },
-            r#"{"scope_id":"","session_id":"s1","subject":"ada-1","observer":"system","first_turn_id":"m1","last_turn_id":"m2","turns":[{"turn_id":"m1","speaker":"ada-1","text":"hi","timestamp_ms":4}],"max_conclusions":8}"#,
+            r#"{"scope_id":"","session_id":"s1","subject":"ada-1","observer":"system","first_turn_id":"m1","last_turn_id":"m2","turns":[{"turn_id":"m1","speaker":"ada-1","text":"hi","timestamp_ms":4}],"max_conclusions":8,"claim_prefix":"derived:ab:"}"#,
         );
         // An unknown field and an invalid slug are refused.
         assert!(serde_json::from_str::<ParticipantQuestion>(

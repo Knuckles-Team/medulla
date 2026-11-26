@@ -834,6 +834,39 @@ pub(super) mod served {
             Ok(rows)
         }
 
+        /// How many claims of this tenant one derivation range wrote: the claims whose id carries
+        /// `prefix` (the derivation key) and that cite at least one of `turn_ids` as evidence
+        /// (MEDULLA-DECISION-ENGINE-R651.12). A claim a later range of the same key wrote cites
+        /// other turns and is not counted.
+        pub(in crate::decide) fn derived_claim_count(
+            &self,
+            prefix: &str,
+            turn_ids: &BTreeSet<&str>,
+        ) -> Result<u32, String> {
+            use medulla_decision_stats::decision::participant_derive::cited_turn;
+            let mut count = 0u32;
+            for instance_id in self
+                .store
+                .list_instance_ids(Some(&self.claim_def))
+                .map_err(|error| error.to_string())?
+            {
+                let instance = match self.store.get_instance(&instance_id) {
+                    Ok(instance) if instance.tenant == self.tenant => instance,
+                    Ok(_) | Err(StatechartError::NotFound(_)) => continue,
+                    Err(error) => return Err(error.to_string()),
+                };
+                let record = record_of(&instance)?;
+                let cites = record
+                    .evidence
+                    .iter()
+                    .any(|e| cited_turn(&e.source_digest).is_some_and(|turn| turn_ids.contains(turn)));
+                if record.claim_id.starts_with(prefix) && cites {
+                    count = count.saturating_add(1);
+                }
+            }
+            Ok(count)
+        }
+
         fn get(
             &self,
             claim_id: Option<&str>,

@@ -572,6 +572,33 @@ async fn dispatch_decision_methods(
                 return ControlFlow::Continue(Method::ParticipantRead { op: Box::new(other) })
             }
         },
+        // MEDULLA-DECISION-ENGINE-R651.12: the graph is the authority on how many claims a derive
+        // task wrote. The count is checked here, before the checkpoint batch the graph arm commits.
+        Method::Participant { op } => match *op {
+            medulla_work_types::participant::ParticipantOp::CompleteDerivation {
+                payload_ref,
+                claims_written,
+            } => {
+                if let Err(error) = medulla_h_decide::decide::check_derivation_count(
+                    state,
+                    &req.graph,
+                    verified_context,
+                    &payload_ref,
+                    claims_written,
+                )
+                .await
+                {
+                    return ControlFlow::Break(Response::err(req.id, error));
+                }
+                return ControlFlow::Continue(Method::Participant {
+                    op: Box::new(medulla_work_types::participant::ParticipantOp::CompleteDerivation {
+                        payload_ref,
+                        claims_written,
+                    }),
+                });
+            }
+            other => return ControlFlow::Continue(Method::Participant { op: Box::new(other) }),
+        },
         Method::Loops { op } => {
             dispatch_boxed(async {
                 medulla_h_decide::decide::handle_loops(state, req.id, verified_context, *op).await

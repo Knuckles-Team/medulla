@@ -1609,6 +1609,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DERIVE_ORDER_HELD",
             "DERIVE_CONCLUSION_LIMIT",
             "DERIVE_PAYLOAD_NOT_FOUND",
+            "DERIVATION_COUNT_MISMATCH",
         ],
     ),
     // MEDULLA-DECISION-ENGINE-R655.5: the participant reads' refusals.

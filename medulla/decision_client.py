@@ -15,6 +15,7 @@ float on the wire.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import uuid
 from collections.abc import Iterable, Mapping, Sequence
@@ -1430,6 +1431,17 @@ def status_op(memory_scope: str | None = None) -> dict[str, Any]:
 def derive_input_op(payload_ref: str) -> dict[str, Any]:
     """Read the turns and perspective of one claimed derive task (R651.12)."""
     return {"op": "derive_input", "payload_ref": payload_ref}
+
+
+def conclusion_claim_id(claim_prefix: str, conclusion: str) -> str:
+    """The claim id a derive worker proposes a conclusion under (R651.12).
+
+    ``claim_prefix`` is the ``claim_prefix`` of the task's ``derive_input``; the
+    rest is the SHA-256 of the conclusion's whitespace-normalised, case-folded
+    text, so a conclusion that repeats an existing one names the same claim.
+    """
+    normalised = " ".join(conclusion.split()).lower()
+    return claim_prefix + hashlib.sha256(normalised.encode("utf-8")).hexdigest()
 
 
 def put_profile_op(profile: Mapping[str, Any]) -> dict[str, Any]:

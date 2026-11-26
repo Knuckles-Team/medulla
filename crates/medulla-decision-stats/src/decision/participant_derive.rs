@@ -216,22 +216,28 @@ pub fn derive_held(
     }
 }
 
-/// The claim id of one conclusion: a digest of the key and the conclusion's whitespace-normalised,
-/// case-folded text, so a conclusion that repeats an existing one names the same claim.
+/// The prefix every claim id of one derivation key carries: `derived:` and the key's node digest.
+/// `CompleteDerivation` counts the stored claims that carry it (MEDULLA-DECISION-ENGINE-R651.12).
+pub fn conclusion_claim_prefix(key: &DeriveKey) -> String {
+    format!("derived:{}:", key_node_digest(key))
+}
+
+/// The claim id of one conclusion: the key's prefix and a digest of the conclusion's
+/// whitespace-normalised, case-folded text, so a conclusion that repeats an existing one names the
+/// same claim.
 pub fn conclusion_claim_id(key: &DeriveKey, conclusion: &str) -> String {
     let normalised = conclusion.split_whitespace().collect::<Vec<_>>().join(" ").to_lowercase();
-    let mut hasher = Sha256::new();
-    for part in [
-        key.scope_id.as_str(),
-        key.session_id.as_str(),
-        key.subject.as_str(),
-        &key.observer.as_property(),
-        normalised.as_str(),
-    ] {
-        hasher.update((part.len() as u64).to_be_bytes());
-        hasher.update(part.as_bytes());
-    }
-    format!("derived:{}", hasher.finalize().iter().map(|byte| format!("{byte:02x}")).collect::<String>())
+    let digest = Sha256::digest(normalised.as_bytes());
+    format!(
+        "{}{}",
+        conclusion_claim_prefix(key),
+        digest.iter().map(|byte| format!("{byte:02x}")).collect::<String>()
+    )
+}
+
+/// The turn id a piece of derived evidence cites: its `source_digest` is `turn:<turn id>`.
+pub fn cited_turn(source_digest: &str) -> Option<&str> {
+    source_digest.strip_prefix("turn:")
 }
 
 #[cfg(test)]
@@ -410,5 +416,9 @@ mod tests {
         other.observer = ObserverRef::Participant(id_of("bo"));
         assert_ne!(a, conclusion_claim_id(&other, "prefers tea"));
         assert!(a.starts_with("derived:"));
+        assert!(a.starts_with(&conclusion_claim_prefix(&key)));
+        assert!(!a.starts_with(&conclusion_claim_prefix(&other)));
+        assert_eq!(cited_turn("turn:t4"), Some("t4"));
+        assert_eq!(cited_turn("sha256:ab"), None);
     }
 }

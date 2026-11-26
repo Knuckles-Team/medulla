@@ -382,7 +382,13 @@ async def test_turns_become_perspective_claims() -> None:
         ]
         assert 1 <= task["max_conclusions"]
 
-        claim_id = f"derived-{uuid.uuid4().hex[:8]}"
+        claim_id = dc.conclusion_claim_id(task["claim_prefix"], "Prefers green tea")
+        # No claim exists yet, so a worker that reports one is refused: the
+        # claim store is the authority on the count.
+        early = await _refusal(
+            participants.participant(dc.complete_derivation_op(ref, 1))
+        )
+        assert "DERIVATION_COUNT_MISMATCH" in early
         await participants.claims(
             dc.claim_propose_op(
                 claim_id,
@@ -399,7 +405,7 @@ async def test_turns_become_perspective_claims() -> None:
                     "mined",
                     supports=True,
                     weight_ppm=200_000,
-                    source_digest=turn["turn_id"],
+                    source_digest=f"turn:{turn['turn_id']}",
                     session_id=session,
                 )
             )
@@ -409,6 +415,11 @@ async def test_turns_become_perspective_claims() -> None:
         assert done["last_turn_id"] == f"{session}-t2"
         again = await participants.participant(dc.complete_derivation_op(ref, 1))
         assert again == done
+        # A report that differs from the stored count is refused.
+        wrong = await _refusal(
+            participants.participant(dc.complete_derivation_op(ref, 2))
+        )
+        assert "DERIVATION_COUNT_MISMATCH" in wrong
         too_many = await _refusal(
             participants.participant(dc.complete_derivation_op(ref, 10_000))
         )

@@ -897,6 +897,22 @@ async fn a_worker_proposes_conclusion_claims_with_turn_evidence() {
     assert!(record.evidence.iter().all(|e| e.channel == EvidenceChannel::Mined));
     let digests: Vec<&str> = record.evidence.iter().map(|e| e.source_digest.as_str()).collect();
     assert_eq!(digests, ["turn:t1", "turn:t4"]);
+
+    // The claim store is the authority on how many claims a range wrote: the key's one claim is
+    // counted for a range that cites its turns, and not for a range that cites other turns.
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant("worker-principal", TENANT);
+    let persist_dir = { h.state.read().await.persist_dir.clone() };
+    let store = crate::decide::claims::served::ClaimStore::open(
+        persist_dir.as_deref(),
+        TENANT,
+        &verified.principal_persistence_id(),
+    )
+    .unwrap();
+    let prefix = medulla_decision_stats::decision::participant_derive::conclusion_claim_prefix(&key);
+    let range = |ids: &[&'static str]| ids.iter().copied().collect::<std::collections::BTreeSet<&str>>();
+    assert_eq!(store.derived_claim_count(&prefix, &range(&["t1", "t2"])).unwrap(), 1);
+    assert_eq!(store.derived_claim_count(&prefix, &range(&["t7"])).unwrap(), 0);
+    assert_eq!(store.derived_claim_count("derived:other:", &range(&["t1"])).unwrap(), 0);
 }
 
 async fn ask_as(

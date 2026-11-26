@@ -9,7 +9,7 @@
 use super::assistant_profile::node_blob;
 use super::*;
 use medulla_decision_stats::decision::participant_derive::{
-    derivation_targets, derive_held, key_node_digest, select_turns, DerivationInput, DeriveCheckpoint,
+    conclusion_claim_prefix, derivation_targets, derive_held, key_node_digest, select_turns, DerivationInput, DeriveCheckpoint,
     DeriveKey, DerivePayload,
 };
 use medulla_decision_types::memory_events::{DerivationCompleted, MemoryEvent};
@@ -151,6 +151,7 @@ pub fn derive_input(core: &GraphCore, tenant: &str, payload_ref: &str) -> Result
         last_turn_id: payload.last_turn_id.clone(),
         turns: select_turns(key, &payload.first_turn_id, &payload.last_turn_id, &session, allowed),
         max_conclusions: max_conclusions(),
+        claim_prefix: conclusion_claim_prefix(key),
     })
 }
 

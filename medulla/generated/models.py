@@ -37589,6 +37589,7 @@ class DeriveTurn(BaseModel):
 class DeriveInput(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    claim_prefix: str
     first_turn_id: str
     last_turn_id: str
     max_conclusions: Annotated[int, Field(ge=0, le=4294967295)]
