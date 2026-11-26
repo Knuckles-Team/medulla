@@ -283,6 +283,8 @@ mod tests {
     }
 
     // spec: MEDULLA-IDENTITY-R023.13.2
+    /// Revoking a share clears every grant and returns the node to the private scope
+    /// while the owner stays.
     #[test]
     fn revoke_clears_grants() {
         let shared =
