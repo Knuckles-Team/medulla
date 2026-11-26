@@ -156,8 +156,9 @@ async fn shield_declares_schema_and_digest_only() {
     use medulla_types::contract::BoundedVec;
     let h = harness().await;
     seed(&h.store, None);
+    state_edges(&h, &[(TASK, "hasStep", "urn:step:gather")]).await;
     let contract = shield_contract("urn:step:gather");
-    let mut asked = asking(&[]);
+    let mut asked = asking(&[TASK]);
     asked.step_contracts = BoundedVec::new(vec![contract.clone()]).unwrap();
     let result = assemble(&h, asked).await.expect("assembles");
     assert_eq!(result.step_shields.len(), 1);
@@ -170,7 +171,7 @@ async fn shield_declares_schema_and_digest_only() {
     );
     assert!(shield.projected_digest.starts_with("sha256:"));
     // The same contract yields the same digest; the answer holds no undeclared path.
-    let mut again = asking(&[]);
+    let mut again = asking(&[TASK]);
     again.step_contracts = BoundedVec::new(vec![contract.clone()]).unwrap();
     let second = assemble(&h, again).await.expect("assembles");
     assert_eq!(
@@ -183,10 +184,17 @@ async fn shield_declares_schema_and_digest_only() {
     // A schema that drifted from its source revision refuses and answers nothing.
     let mut stale = contract;
     stale.input_schema["properties"]["note"] = serde_json::json!({"type": "integer"});
-    let mut refused = asking(&[]);
+    let mut refused = asking(&[TASK]);
     refused.step_contracts = BoundedVec::new(vec![stale]).unwrap();
     let error = assemble(&h, refused).await.expect_err("refuses");
     assert!(error.starts_with("SHIELD_SCHEMA_STALE: "), "{error}");
+
+    // A contract naming a step no request task has refuses `INVALID_PARAMS`.
+    let mut foreign = asking(&[TASK]);
+    foreign.step_contracts =
+        BoundedVec::new(vec![shield_contract("urn:step:unknown")]).unwrap();
+    let error = assemble(&h, foreign).await.expect_err("refuses");
+    assert!(error.starts_with("INVALID_PARAMS: "), "{error}");
 }
 
 // spec: MEDULLA-ORCH-VOCAB-R007.4

@@ -156,6 +156,7 @@ pub(super) async fn assemble_for(
         ),
     )
     .await?;
+    super::assemble_shield::check_steps_exist(request.step_contracts.as_slice(), steps.as_slice())?;
     // MEDULLA-ORCH-VOCAB-R800.3: the definitions the request names are read and validated here;
     // the prompts are rendered once the solve is done.
     let prompts = request.prompts.clone();

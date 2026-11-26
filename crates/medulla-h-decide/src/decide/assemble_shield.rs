@@ -84,6 +84,26 @@ fn slot_digest(slot: &str) -> Vec<u8> {
     Digest256::sha256(slot.as_bytes()).as_bytes().to_vec()
 }
 
+/// Every contract must name a step of the request's tasks (the steps read from the graph).
+///
+/// An unknown step id refuses `INVALID_PARAMS`.
+pub(crate) fn check_steps_exist(
+    contracts: &[StepContract],
+    steps: &[medulla_decision_types::decision::AssemblyStep],
+) -> Result<(), String> {
+    let known: BTreeSet<&str> = steps.iter().map(|step| step.step.as_str()).collect();
+    match contracts
+        .iter()
+        .find(|contract| !known.contains(contract.step_id.as_str()))
+    {
+        Some(contract) => Err(format!(
+            "INVALID_PARAMS: step_contracts: step {} is not a step of the request's tasks",
+            contract.step_id
+        )),
+        None => Ok(()),
+    }
+}
+
 /// Declare the shield of every step contract. Pure: reads nothing, writes nothing.
 ///
 /// Refuses `SHIELD_SCHEMA_STALE` when a contract's `source_schema_digest` is not the digest of
