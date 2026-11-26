@@ -1208,6 +1208,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "MERGE_BLOB_UNREADABLE",
             "PATH_WRITE_DENIED",
             "REQUIREMENT_EDIT_CONFLICT",
+            // MEDULLA-SDLC-R017.4: a loop-authored spec edit without an approved proposal.
+            "PROPOSAL_DIRECT_WRITE_REFUSED",
             "RUN_TRACE_UNKNOWN",
             "SOURCE_CONFLICT",
         ],
@@ -1220,6 +1222,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "BRANCH_DELETED",
             "BRANCH_TENANT_DENIED",
             "BRANCH_UNKNOWN",
+            // MEDULLA-SDLC-R017.4: a loop-authored import that edits the spec tree.
+            "PROPOSAL_DIRECT_WRITE_REFUSED",
             "CHANGESET_INVALID",
             "GIT_GRAPH_MALFORMED",
             "GIT_MODE_UNSUPPORTED",
@@ -1878,6 +1882,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "MODE_ORIGIN_NOT_ADMITTED",
             // MEDULLA-SDLC-R016.2: a research entry without its cited sources.
             "RESEARCH_ENTRY_UNCITED",
+            // MEDULLA-SDLC-R017.4: a proposal whose target is a spec file path.
+            "PROPOSAL_DIRECT_WRITE_REFUSED",
         ],
     ),
     // MEDULLA-SDLC-R017.6: the proposal review list and decision.

@@ -165,6 +165,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("SPEC_TREE_ABSENT"),
     RefusalCode::new("SCENARIO_RUN_INCOMPLETE"),
     RefusalCode::new("RESEARCH_ENTRY_UNCITED"),
+    RefusalCode::new("PROPOSAL_DIRECT_WRITE_REFUSED"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -234,6 +235,8 @@ pub enum LifecycleRefusal {
     ScenarioRunIncomplete(String),
     #[error("RESEARCH_ENTRY_UNCITED: {0}")]
     ResearchEntryUncited(String),
+    #[error("PROPOSAL_DIRECT_WRITE_REFUSED: {0}")]
+    ProposalDirectWriteRefused(String),
 }
 
 impl LifecycleRefusal {
@@ -272,6 +275,7 @@ impl LifecycleRefusal {
             Self::SpecTreeAbsent(_) => "SPEC_TREE_ABSENT",
             Self::ScenarioRunIncomplete(_) => "SCENARIO_RUN_INCOMPLETE",
             Self::ResearchEntryUncited(_) => "RESEARCH_ENTRY_UNCITED",
+            Self::ProposalDirectWriteRefused(_) => "PROPOSAL_DIRECT_WRITE_REFUSED",
         }
     }
 }
@@ -918,6 +922,14 @@ pub fn handle_proposal_put(
             "a proposal names its project and a statement".to_owned(),
         ));
     }
+    // MEDULLA-SDLC-R017.4: a proposal names the row, section, task or knob it changes. One that
+    // names a spec file asks for a direct write of that file, which only a changeset may make.
+    if is_spec_file_path(&proposal.target) {
+        return Err(LifecycleRefusal::ProposalDirectWriteRefused(format!(
+            "{}: a proposal names a row, section, task or knob, never a spec file",
+            proposal.target
+        )));
+    }
     if proposal.evidence.len() > MAX_PROPOSAL_EVIDENCE {
         return Err(LifecycleRefusal::InvalidArgument(format!(
             "a proposal cites at most {MAX_PROPOSAL_EVIDENCE} records"
@@ -947,6 +959,31 @@ pub fn handle_proposal_put(
         node_id: proposal_node_id(&proposal),
         proposal,
     })
+}
+
+/// The path prefix of a repository's spec tree (MEDULLA-SDLC-R017.4).
+pub const SPEC_TREE_PREFIX: &str = "specs/";
+
+/// Whether `path` is a file of the spec tree: a spec, plan or task file lives under `specs/`.
+pub fn is_spec_file_path(path: &str) -> bool {
+    path.trim_start_matches("./").starts_with(SPEC_TREE_PREFIX)
+}
+
+/// The proposal ids a commit message names in its `Proposal:` trailers, in order. Only the last
+/// paragraph is read, as for the `Spec:` trailers; a blank id is dropped.
+pub fn proposal_trailers(message: &str) -> Vec<String> {
+    let Some(block) = message.trim_end().rsplit("\n\n").next() else {
+        return Vec::new();
+    };
+    block
+        .lines()
+        .filter_map(|line| line.split_once(':'))
+        .filter(|(key, _)| key.trim() == "Proposal")
+        .flat_map(|(_, value)| value.split(','))
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(str::to_owned)
+        .collect()
 }
 
 /// Where a proposal stands in review (MEDULLA-SDLC-R017.6). A proposal is

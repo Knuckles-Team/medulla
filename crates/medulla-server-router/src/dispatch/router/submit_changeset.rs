@@ -308,6 +308,21 @@ mod served {
             );
         }
 
+        // MEDULLA-SDLC-R017.4: a loop-authored edit of the spec tree lands only as the delivery
+        // of an approved proposal, before any blob is read and before any write.
+        if let Err(error) = super::super::sdlc::check_spec_edit_provenance(
+            state,
+            verified,
+            req.id,
+            &request.repo,
+            &touched,
+            &request.message,
+        )
+        .await
+        {
+            return Response::err(req.id, error);
+        }
+
         // Stage one: bounds and pairings, then the agent provenance of
         // MEDULLA-SCM-R012, before any blob is read and before any write.
         if let Err(refusal) = request.validate() {

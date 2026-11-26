@@ -1222,6 +1222,55 @@ async fn visible_proposals(
     Ok(proposals)
 }
 
+/// The provenance guard of `SubmitChangeset` (MEDULLA-SDLC-R017.4). A changeset the verified
+/// principal makes as a service or an agent that edits the spec tree must name, in its
+/// `Proposal:` trailers, approved proposals of its repository that the caller can see in the
+/// repository graph. Whether the submitter is the loop comes from the verified claims only.
+/// A person's changeset, and one that touches no spec file, are not read against the graph.
+pub(super) async fn check_spec_edit_provenance(
+    state: &Arc<RwLock<ServerState>>,
+    verified: &VerifiedRequestContext,
+    req_id: u64,
+    repo: &str,
+    touched: &[&str],
+    message: &str,
+) -> Result<(), String> {
+    let loop_authored = verified.is_loop_principal();
+    if !loop_authored || !medulla_sdlc::lifecycle::proposals::touches_spec_tree(touched.iter().copied())
+    {
+        return Ok(());
+    }
+    let named = medulla_source_types::lifecycle::proposal_trailers(message);
+    let target = SdlcTarget {
+        graph: repo,
+        req_id,
+        caller: None,
+        verified,
+    };
+    // A named proposal is read in the repository graph; an unnamed one needs no read.
+    let stored = if named.is_empty() {
+        Vec::new()
+    } else {
+        visible_proposals(state, &target).await?
+    };
+    let bindings: Vec<medulla_sdlc::lifecycle::proposals::StoredBinding<'_>> = stored
+        .iter()
+        .map(|held| medulla_sdlc::lifecycle::proposals::StoredBinding {
+            id: held.entry.id.as_str(),
+            project: held.project.as_str(),
+            state: held.entry.state,
+        })
+        .collect();
+    medulla_sdlc::lifecycle::proposals::check_changeset_provenance(
+        loop_authored,
+        repo,
+        touched,
+        &named,
+        &bindings,
+    )
+    .map_err(|refusal| refusal.to_string())
+}
+
 /// `ProposalList` (MEDULLA-SDLC-R017.6): the proposals of one project, narrowed by the
 /// optional state and kind. Reads only.
 async fn proposal_list(

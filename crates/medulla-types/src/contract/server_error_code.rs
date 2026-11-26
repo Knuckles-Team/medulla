@@ -561,6 +561,8 @@ closed_error_codes! {
         ScenarioRunIncomplete => "SCENARIO_RUN_INCOMPLETE",
         /// MEDULLA-SDLC-R016.2: a research entry cites no source, or its text holds no `Source:` line for one.
         ResearchEntryUncited => "RESEARCH_ENTRY_UNCITED",
+        /// MEDULLA-SDLC-R017.4: a spec, plan or task file is written by the loop without an approved proposal.
+        ProposalDirectWriteRefused => "PROPOSAL_DIRECT_WRITE_REFUSED",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",

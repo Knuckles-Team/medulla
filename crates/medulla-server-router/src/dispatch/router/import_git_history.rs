@@ -183,6 +183,21 @@ mod served {
             );
         }
 
+        // MEDULLA-SDLC-R017.4: an import names no proposal, so a loop-authored import that
+        // edits the spec tree is a direct write.
+        if let Err(error) = super::super::sdlc::check_spec_edit_provenance(
+            state,
+            verified,
+            req.id,
+            &request.repo,
+            &touched,
+            "",
+        )
+        .await
+        {
+            return Response::err(req.id, error);
+        }
+
         let author = verified.principal().to_string();
         let agent_identity: Option<String> =
             (verified.agent_id() != verified.principal()).then(|| verified.agent_id().to_string());

@@ -10,11 +10,17 @@ from __future__ import annotations
 
 import json
 import os
+import sys
 import uuid
+from pathlib import Path
 
 import msgpack
 import pytest
-from conftest import request_context
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from _landing_fixture import LandingRepo, cited_fact
+from conftest import TEST_AGENT_ID, request_context
 
 GRAPH = "__commons__"
 
@@ -113,7 +119,9 @@ async def _proposal(
     return _body(await client._send("ProposalPut", {"proposal": proposal}, GRAPH))
 
 
-async def _set_mode(client, project: str, mode: str, approval: dict | None = None) -> dict:
+async def _set_mode(
+    client, project: str, mode: str, approval: dict | None = None
+) -> dict:
     request: dict = {"project": project, "mode": mode}
     if approval is not None:
         request["approval"] = approval
@@ -147,7 +155,11 @@ async def test_proposal_without_evidence_is_refused(start_medulla_server) -> Non
         await _add_node(client, record_id, properties)
         digest = _content_digest(properties)
 
-        absent = {"kind": "code_graph_fact", "record_id": f"fact:absent-{suffix}", "digest": digest}
+        absent = {
+            "kind": "code_graph_fact",
+            "record_id": f"fact:absent-{suffix}",
+            "digest": digest,
+        }
         with pytest.raises(Exception, match="PROPOSAL_EVIDENCE_UNRESOLVED"):
             await _proposal(client, project, [absent])
         wrong = {"kind": "code_graph_fact", "record_id": record_id, "digest": "0" * 64}
@@ -181,7 +193,7 @@ async def test_mode_gates_proposals(start_medulla_server) -> None:
         with pytest.raises(Exception, match="MODE_REFERENCE_NO_PROPOSALS"):
             await _proposal(client, project, [cited])
 
-        # A development codebase takes a requested proposal and refuses an unprompted one.
+        # A development codebase takes a requested proposal, not an unprompted one.
         await _set_mode(client, project, "development")
         receipt = await _proposal(client, project, [cited], origin="requested")
         assert receipt["evidence"] == 1
@@ -280,3 +292,168 @@ async def test_review_list_and_decision_round_trip(start_medulla_server) -> None
         assert rejected["state"] == "rejected"
     finally:
         await client.close()
+
+
+LOOP_AGENT = "agent:spec-loop"
+SPEC_PATH = "specs/demo/requirements.md"
+
+
+async def _connect_as(agent_id: str, principal: str):
+    from medulla.client import MedullaClient
+
+    return await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(agent_id=agent_id, principal=principal),
+    )
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R017.4")
+@pytest.mark.asyncio
+async def test_proposal_lands_only_through_changeset_and_gates(
+    start_medulla_server,
+) -> None:
+    person = await _connect()
+    loop = await _connect_as(LOOP_AGENT, TEST_AGENT_ID)
+    suffix = uuid.uuid4().hex[:10]
+    graph = f"proposal-landing-{suffix}"
+    repo = None
+    try:
+        repo = await LandingRepo.create(person, graph, LOOP_AGENT)
+        await person._send(
+            "ProjectModeSet",
+            {"request": {"project": graph, "mode": "development"}},
+            graph,
+        )
+        cited = await cited_fact(person, graph, suffix)
+
+        # A proposal names a row, never a spec file.
+        with pytest.raises(Exception, match="PROPOSAL_DIRECT_WRITE_REFUSED"):
+            await person._send(
+                "ProposalPut",
+                {
+                    "proposal": {
+                        "project": graph,
+                        "kind": "row_update",
+                        "target": SPEC_PATH,
+                        "statement": "Rewrite the file.",
+                        "evidence": [cited],
+                    }
+                },
+                graph,
+            )
+        proposal = _body(
+            await person._send(
+                "ProposalPut",
+                {
+                    "proposal": {
+                        "project": graph,
+                        "kind": "row_update",
+                        "target": "DEMO-R001",
+                        "statement": "Tighten the row.",
+                        "evidence": [cited],
+                    }
+                },
+                graph,
+            )
+        )
+        proposal_id = proposal["node_id"]
+        spec = b"| `DEMO-R001` | one |\n"
+
+        # The loop writes no spec file directly: no proposal, an open one and an
+        # unknown one all refuse, and nothing lands.
+        message = "feat: edit the row\n\nSpec: MEDULLA-SDLC-R017.4"
+        await repo.branch("loop/direct")
+        for trailer in (
+            "",
+            f"\nProposal: {proposal_id}",
+            "\nProposal: proposal:absent",
+        ):
+            with pytest.raises(Exception, match="PROPOSAL_DIRECT_WRITE_REFUSED"):
+                await repo.submit(
+                    loop, "loop/direct", SPEC_PATH, spec, message + trailer
+                )
+        # A person edits the spec tree as any author does; the loop edits other
+        # paths freely.
+        await repo.branch("person/direct")
+        edited = await repo.submit(person, "person/direct", SPEC_PATH, spec, message)
+        assert edited["changeset"]["id"]
+        await repo.submit(loop, "loop/direct", "notes.txt", b"note", message)
+
+        # An approved proposal lets the loop deliver it as a changeset.
+        decided = _body(
+            await person._send(
+                "ProposalDecide",
+                {
+                    "request": {
+                        "id": proposal_id,
+                        "decision": "approve",
+                        "reviewer": "reviewer-1",
+                        "reason": "the evidence holds",
+                    }
+                },
+                graph,
+            )
+        )
+        assert decided["state"] == "approved"
+        delivery = (
+            f"feat: edit the row\n\nSpec: MEDULLA-SDLC-R017.4\nProposal: {proposal_id}"
+        )
+        await repo.branch("loop/delivery")
+        receipt = await repo.submit(loop, "loop/delivery", SPEC_PATH, spec, delivery)
+        assert receipt["changeset"]["author_principal"] == TEST_AGENT_ID
+
+        # The change reaches main only through the gate: no verdict, no landing.
+        with pytest.raises(Exception, match="LANDING_GATE_BLOCKED"):
+            await repo.merge("loop/delivery")
+        await repo.record(receipt, "loop/delivery")
+        merged = await repo.merge("loop/delivery")
+        assert merged["outcome"] == "fast_forward"
+
+        # The merge of its pull request lands the proposal, not the merge to main.
+        stored = _body(
+            await person._send("GetNodeProperties", {"node_id": proposal_id}, graph)
+        )
+        assert stored["status"] == "approved"
+        await person._send(
+            "BatchUpdate",
+            {
+                "operations_msgpack": msgpack.packb(
+                    [
+                        {
+                            "op": "upsert_node",
+                            "id": "connector:scm",
+                            "properties": {"type": "Connector"},
+                        }
+                    ],
+                    use_bin_type=True,
+                )
+            },
+            graph,
+        )
+        merged_event = {
+            "event_id": f"merged-{suffix}",
+            "connector": "scm",
+            "kind": "proposal_merged",
+            "source": "person",
+            "proposal_id": proposal_id,
+            "failed": False,
+            "summary": "merged",
+            "observed_at": 1,
+        }
+        await person.delivery_feedback(merged_event, graph)
+        stored = _body(
+            await person._send("GetNodeProperties", {"node_id": proposal_id}, graph)
+        )
+        # spec: MEDULLA-SDLC-R017.4
+        assert stored["status"] == "landed"
+        listed = _body(
+            await person._send(
+                "ProposalList", {"request": {"repo": graph, "state": "landed"}}, graph
+            )
+        )
+        assert [entry["id"] for entry in listed] == [proposal_id]
+    finally:
+        if repo is not None:
+            await repo.close()
+        await loop.close()
+        await person.close()

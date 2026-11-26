@@ -131,6 +131,22 @@ impl VerifiedRequestContext {
         &self.claims.principal
     }
 
+    /// Whether the verified submitter is a service or an agent rather than a person
+    /// (MEDULLA-SDLC-R017.4). Read only from the MAC-covered claims: a `service:` or `agent:`
+    /// principal, a request an agent makes on a principal's behalf (a delegation path, or an
+    /// effective agent that is not the principal). A request
+    /// field never decides it.
+    pub fn is_loop_principal(&self) -> bool {
+        if self.origin == AuthorityOrigin::AnonymousLocal {
+            return false;
+        }
+        let claims = &self.claims;
+        claims.principal.starts_with("service:")
+            || claims.principal.starts_with("agent:")
+            || !claims.delegation.is_empty()
+            || claims.agent_id != claims.principal
+    }
+
     /// The role names of the verified (MAC-covered) request context.
     pub fn roles(&self) -> &[String] {
         &self.claims.roles

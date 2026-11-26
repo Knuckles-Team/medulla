@@ -602,6 +602,26 @@ pub(super) async fn feedback(
         for delivery in &routed {
             operations.push(delivery_operation(delivery, &target)?);
         }
+        // MEDULLA-SDLC-R017.4: the merge of the pull request an approved proposal delivered
+        // moves that proposal to `landed`. Only an approved proposal moves; the write merges
+        // `status` and leaves the owner and the content as `ProposalPut` wrote them.
+        if event.kind == FeedbackKind::ProposalMerged {
+            let approved = visible_object(&core, &authority, &tenant, &event.proposal_id)
+                .is_some_and(|node| {
+                    node.get("type").and_then(Value::as_str) == Some(PROPOSAL_TYPE)
+                        && node.get("status").and_then(Value::as_str)
+                            == Some(ProposalState::Approved.stored())
+                });
+            if approved {
+                let mut landed = Map::new();
+                landed.insert("type".into(), PROPOSAL_TYPE.into());
+                landed.insert("tenant_id".into(), tenant.clone().into());
+                landed.insert("status".into(), ProposalState::Landed.stored().into());
+                operations.push(
+                    json!({"op": "upsert_node", "id": event.proposal_id, "properties": landed}),
+                );
+            }
+        }
         if routing.file_defect {
             let request = FileDefectRequest {
                 repo: target.graph.to_owned(),
