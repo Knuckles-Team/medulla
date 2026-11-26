@@ -268,6 +268,7 @@ METHOD_IDS = frozenset(
         "CorrectionRecord",
         "FailureIngest",
         "KnowledgeFlag",
+        "KnowledgeCuration",
         "PublishSkillPackage",
         "FeatureLedger",
         "Statechart",

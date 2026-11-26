@@ -275,6 +275,11 @@ method_results! {
     KnowledgeFlagResolve(KnowledgeFlag / "resolve") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagReceipt>;
     KnowledgeFlagGet(KnowledgeFlag / "get") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagView>;
     KnowledgeFlagListFlags(KnowledgeFlag / "list") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagList>;
+    // MEDULLA-DECISION-ENGINE-R709.3: knowledge curation inputs, propose, status and metrics.
+    KnowledgeCurationInputs(KnowledgeCuration / "inputs") => Raw<medulla_decision_types::knowledge_curation::CurationInputs>;
+    KnowledgeCurationPropose(KnowledgeCuration / "propose") => Raw<medulla_decision_types::knowledge_curation::CurationAdmitted>;
+    KnowledgeCurationStatus(KnowledgeCuration / "status") => Raw<medulla_decision_types::knowledge_curation::CurationStatus>;
+    KnowledgeCurationMetrics(KnowledgeCuration / "metrics") => Raw<medulla_decision_types::knowledge_curation::LoopMetrics>;
     // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger append and price put.
     UsageAppend(Usage / "append") => Raw<medulla_decision_types::usage::UsageAppended>;
     UsagePutPrice(Usage / "put_price") => Raw<medulla_decision_types::usage::UsagePriceStored>;

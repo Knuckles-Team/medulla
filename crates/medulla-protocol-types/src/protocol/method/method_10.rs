@@ -121,6 +121,12 @@ $($variants)*
     KnowledgeFlag {
         op: Box<medulla_decision_types::knowledge_flag::KnowledgeFlagOp>,
     },
+    /// The knowledge curation cycle (MEDULLA-DECISION-ENGINE-R709.3): serve the curation inputs,
+    /// check one proposal for contradiction and record it as an evaluated revision, close the
+    /// flags of an adopted proposal and measure the closed loop.
+    KnowledgeCuration {
+        op: Box<medulla_decision_types::knowledge_curation::CurationOp>,
+    },
     /// Failure-pattern mining (MEDULLA-DECISION-ENGINE-R701.3): read the failed
     /// runs of a caller graph, cluster them by signature and file one gap per
     /// recurring pattern; mark a gap addressed; read one gap. The

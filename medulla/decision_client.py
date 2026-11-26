@@ -1543,6 +1543,60 @@ def knowledge_flag_list_op(
     return op
 
 
+def knowledge_curation_inputs_op(
+    graph: str,
+    loop_id: str,
+    epoch: int,
+    force: bool = False,
+    cursor: str | None = None,
+    limit: int | None = None,
+) -> dict[str, Any]:
+    """A ``KnowledgeCuration`` read of the curation inputs (scope ``knowledge:curate``,
+    live lease of ``loop_id`` at ``epoch``)."""
+    op: dict[str, Any] = {
+        "op": "inputs",
+        "graph": graph,
+        "loop_id": loop_id,
+        "epoch": epoch,
+        "force": force,
+    }
+    if cursor is not None:
+        op["cursor"] = cursor
+    if limit is not None:
+        op["limit"] = limit
+    return op
+
+
+def knowledge_curation_propose_op(
+    graph: str,
+    loop_id: str,
+    epoch: int,
+    proposal: Mapping[str, Any],
+    body: str,
+) -> dict[str, Any]:
+    """A ``KnowledgeCuration`` proposal: the edit, the flags it answers and its body."""
+    return {
+        "op": "propose",
+        "graph": graph,
+        "loop_id": loop_id,
+        "epoch": epoch,
+        "proposal": dict(proposal),
+        "body": body,
+    }
+
+
+def knowledge_curation_status_op(graph: str, proposal_id: str) -> dict[str, Any]:
+    """A ``KnowledgeCuration`` status read; it closes an adopted proposal's flags."""
+    return {"op": "status", "graph": graph, "proposal_id": proposal_id}
+
+
+def knowledge_curation_metrics_op(
+    graph: str, from_ms: int, to_ms: int
+) -> dict[str, Any]:
+    """A ``KnowledgeCuration`` read of the closed-loop measures of a window."""
+    return {"op": "metrics", "graph": graph, "from_ms": from_ms, "to_ms": to_ms}
+
+
 def usage_append_op(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     """A ``Usage`` append of ``records`` (scope ``usage:write``)."""
     return {"op": "append", "records": [dict(record) for record in records]}
@@ -1745,6 +1799,17 @@ class DecisionClient:
         from medulla.generated.coordination import send_knowledge_flag
 
         result = await send_knowledge_flag(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
+    async def knowledge_curation(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``KnowledgeCuration`` (curation inputs, propose, status or metrics)."""
+        from medulla.generated.coordination import send_knowledge_curation
+
+        result = await send_knowledge_curation(
             self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
         )
         return _payload(result)
@@ -2039,6 +2104,10 @@ __all__ = [
     "get_document_set_op",
     "get_op",
     "get_profile_op",
+    "knowledge_curation_inputs_op",
+    "knowledge_curation_metrics_op",
+    "knowledge_curation_propose_op",
+    "knowledge_curation_status_op",
     "knowledge_flag_get_op",
     "knowledge_flag_list_op",
     "knowledge_flag_raise_op",

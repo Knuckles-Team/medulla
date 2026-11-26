@@ -38,7 +38,7 @@ pub async fn handle_knowledge_flag(
 }
 
 #[cfg(feature = "decide")]
-mod served {
+pub(crate) mod served {
     use std::collections::BTreeMap;
 
     use medulla_decision_stats::decision::knowledge_flag::{
@@ -82,11 +82,11 @@ mod served {
     /// The class of a correction node (R702).
     const CORRECTION_CLASS: &str = "Correction";
 
-    fn refused(refusal: FlagRefusal) -> String {
+    pub(in crate::decide) fn refused(refusal: FlagRefusal) -> String {
         format!("{}: {}", refusal.code.as_str(), refusal.reason)
     }
 
-    pub(super) async fn plan(
+    pub(in crate::decide) async fn plan(
         state: &SharedState,
         verified: &VerifiedRequestContext,
         op: KnowledgeFlagOp,
@@ -285,7 +285,12 @@ mod served {
         let decision = raise(&candidate, existing.as_ref(), run_open, &knobs).map_err(refused)?;
         let flag = decision.flag;
         let receipt_id = receipt_id_of(&flag);
-        let mut operations = vec![node_operation(&flag, &receipt_id)];
+        let mut operations = vec![node_operation(
+            &flag,
+            &receipt_id,
+            view.node_row_object(&flag.flag_id),
+            &[],
+        )];
         if decision.outcome == RaiseOutcome::Created {
             let principal = format!("principal:{}", flag.raised_by);
             if !view.node_properties.contains_key(&principal) {
@@ -332,7 +337,7 @@ mod served {
         let current = flag_by_id(view, verified.tenant(), flag_id)?;
         let flag = resolve(&current, resolution).map_err(refused)?;
         let receipt_id = receipt_id_of(&flag);
-        let mut operations = vec![node_operation(&flag, &receipt_id)];
+        let mut operations = resolution_operations(view, &flag, &receipt_id, resolution);
         if let Some(correction_id) = correction_id {
             let node = correction_node(view, verified.tenant(), correction_id).ok_or_else(|| {
                 invalid_parameter(format!("correction {correction_id} is not in the caller's graph"))
@@ -358,6 +363,49 @@ mod served {
         })
     }
 
+    /// The node upsert of a flag that left `Open` at the authoritative time: it records when,
+    /// and how many times a curation fixed it.
+    fn resolution_operations(
+        view: &GraphView,
+        flag: &KnowledgeFlag,
+        receipt_id: &str,
+        resolution: FlagResolution,
+    ) -> Vec<Value> {
+        let existing = view.node_row_object(&flag.flag_id);
+        let fixed_before = existing
+            .as_ref()
+            .and_then(|row| row.get("curated_times").and_then(Value::as_u64))
+            .unwrap_or(0);
+        let fixed = fixed_before + u64::from(resolution == FlagResolution::Adopt);
+        let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+        vec![node_operation(
+            flag,
+            receipt_id,
+            existing,
+            &[
+                ("resolved_at_ms", json!(now_ms)),
+                ("curated_times", json!(fixed)),
+            ],
+        )]
+    }
+
+    /// The operations that move one `Open` flag to `Curated` because the proposal node
+    /// `fixed_by` was adopted (R709.5): the node and its `knowledgeFixedBy` edge.
+    pub(in crate::decide) fn adopt_operations(
+        view: &GraphView,
+        tenant: &str,
+        flag_id: &str,
+        fixed_by: &str,
+    ) -> Result<Vec<Value>, String> {
+        let current = flag_by_id(view, tenant, flag_id)?;
+        let flag = resolve(&current, FlagResolution::Adopt).map_err(refused)?;
+        let receipt_id = receipt_id_of(&flag);
+        let mut operations =
+            resolution_operations(view, &flag, &receipt_id, FlagResolution::Adopt);
+        operations.push(edge_operation(&flag.flag_id, fixed_by, FIXED_BY, &receipt_id));
+        Ok(operations)
+    }
+
     /// The correction node of `correction_id` in `tenant`: a `Correction` node whose
     /// `correction_id` property matches, or the node of that id.
     fn correction_node(view: &GraphView, tenant: &str, correction_id: &str) -> Option<String> {
@@ -380,7 +428,7 @@ mod served {
 
     /// The receipt id every node and edge of one op shares: the digest of the flag id, its state
     /// and its raise count.
-    fn receipt_id_of(flag: &KnowledgeFlag) -> String {
+    pub(in crate::decide) fn receipt_id_of(flag: &KnowledgeFlag) -> String {
         let count = flag.raise_count.to_string();
         Digest256::framed(
             b"medulla.knowledge_flag.receipt.v1",
@@ -395,11 +443,21 @@ mod served {
         .to_hex()
     }
 
-    fn node_operation(flag: &KnowledgeFlag, receipt_id: &str) -> Value {
-        let mut properties = match serde_json::to_value(flag) {
-            Ok(Value::Object(map)) => map,
-            _ => Map::new(),
-        };
+    /// The node upsert of `flag`: the stored row of an existing flag keeps the properties the
+    /// flag type does not carry, and `extras` are written over it.
+    fn node_operation(
+        flag: &KnowledgeFlag,
+        receipt_id: &str,
+        existing: Option<Map<String, Value>>,
+        extras: &[(&str, Value)],
+    ) -> Value {
+        let mut properties = existing.unwrap_or_default();
+        if let Ok(Value::Object(map)) = serde_json::to_value(flag) {
+            properties.extend(map);
+        }
+        for (key, value) in extras {
+            properties.insert((*key).to_string(), value.clone());
+        }
         properties.insert("type".into(), KNOWLEDGE_FLAG_CLASS.into());
         properties.insert("node_type".into(), KNOWLEDGE_FLAG_CLASS.into());
         properties.insert("tenant".into(), flag.tenant_id.clone().into());
@@ -412,7 +470,7 @@ mod served {
         json!({"op": "upsert_node", "id": flag.flag_id, "properties": properties})
     }
 
-    fn edge_operation(source: &str, target: &str, relationship: &str, receipt_id: &str) -> Value {
+    pub(in crate::decide) fn edge_operation(source: &str, target: &str, relationship: &str, receipt_id: &str) -> Value {
         json!({
             "op": "upsert_edge",
             "source": source,
@@ -423,14 +481,14 @@ mod served {
 
     /// The flag stored under `flag_id`, as the caller sees it. A flag of another tenant, or one
     /// the caller's view hides, is not found.
-    fn flag_by_id(view: &GraphView, tenant: &str, flag_id: &str) -> Result<KnowledgeFlag, String> {
+    pub(in crate::decide) fn flag_by_id(view: &GraphView, tenant: &str, flag_id: &str) -> Result<KnowledgeFlag, String> {
         view.node_row_object(flag_id)
             .and_then(|row| flag_of_row(&row))
             .filter(|flag| flag.tenant_id == tenant)
             .ok_or_else(|| format!("{}: no flag {flag_id}", FLAG_NOT_FOUND.as_str()))
     }
 
-    fn all_flags(view: &GraphView, tenant: &str) -> Vec<KnowledgeFlag> {
+    pub(in crate::decide) fn all_flags(view: &GraphView, tenant: &str) -> Vec<KnowledgeFlag> {
         let mut ids: Vec<&String> = view.node_properties.keys().collect();
         ids.sort();
         ids.into_iter()

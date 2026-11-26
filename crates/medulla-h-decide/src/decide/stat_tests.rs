@@ -1090,6 +1090,8 @@ mod failure_patterns_tests;
 mod correction_tests;
 // MEDULLA-DECISION-ENGINE-R708.3, R708.4, R708.5: knowledge flags.
 mod knowledge_flag_tests;
+// MEDULLA-DECISION-ENGINE-R709.3 to R709.7: the knowledge curation cycle.
+mod knowledge_curation_tests;
 
 // MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
 mod context_budget_tests;

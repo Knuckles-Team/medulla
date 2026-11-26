@@ -438,6 +438,21 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        Method::KnowledgeCuration { op } => {
+            dispatch_boxed(async {
+                match medulla_h_decide::decide::knowledge_curation::handle_knowledge_curation(
+                    state,
+                    verified_context,
+                    *op,
+                )
+                .await
+                {
+                    Ok(plan) => commit_planned_write(state, req.id, verified_context, plan).await,
+                    Err(refusal) => Response::err(req.id, refusal),
+                }
+            })
+            .await
+        }
         Method::Usage { op } => {
             dispatch_boxed(async {
                 medulla_h_decide::usage::handle_usage(state, req.id, verified_context, *op).await

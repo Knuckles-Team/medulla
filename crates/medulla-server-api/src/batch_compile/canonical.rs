@@ -872,6 +872,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::FailureIngest { .. }
         // MEDULLA-DECISION-ENGINE-R708.3: flag nodes commit through the graph gateway.
         | Method::KnowledgeFlag { .. }
+        // MEDULLA-DECISION-ENGINE-R709.3: curation proposal nodes commit through the graph gateway.
+        | Method::KnowledgeCuration { .. }
         | Method::PublishSkillPackage { .. }
         | Method::Claims { .. }
         | Method::FeatureLedger { .. }

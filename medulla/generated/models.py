@@ -16809,6 +16809,13 @@ class MethodKnowledgeFlag(BaseModel):
     params: MethodKnowledgeFlagParams
 
 
+class MethodKnowledgeCuration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["KnowledgeCuration"]
+    params: MethodKnowledgeCurationParams
+
+
 class MethodPublishSkillPackage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17928,6 +17935,7 @@ Method = Annotated[
         MethodCorrectionRecord,
         MethodFailureIngest,
         MethodKnowledgeFlag,
+        MethodKnowledgeCuration,
         MethodPublishSkillPackage,
         MethodFeatureLedger,
         MethodArchitectureModelImport,
@@ -38617,6 +38625,166 @@ class KnowledgeFlagList(BaseModel):
     flags: list[KnowledgeFlag]
 
 
+class CurationEditOp(str, Enum):
+    UPDATE = "update"
+    CREATE = "create"
+    RETIRE = "retire"
+
+
+class CurationEdit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    after_digest: str | None = None
+    before_digest: str | None = None
+    body_digest: str
+    op: CurationEditOp
+    references: list[str] = Field(default_factory=list)
+    supersedes: bool = False
+
+
+class CurationProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edit: CurationEdit
+    evidence_digest: str
+    flag_ids: list[str]
+    knowledge_kind: KnowledgeKind
+    proposal_id: str
+    rationale_trace_ids: list[str] = Field(default_factory=list)
+    target_ref: str
+
+
+class CurationOpInputs(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    epoch: Annotated[int, Field(ge=0)]
+    force: bool = False
+    graph: str
+    limit: Annotated[int, Field(ge=0)] | None = None
+    loop_id: str
+    op: Literal["inputs"]
+
+
+class CurationOpPropose(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    body: str
+    epoch: Annotated[int, Field(ge=0)]
+    graph: str
+    loop_id: str
+    op: Literal["propose"]
+    proposal: CurationProposal
+
+
+class CurationOpStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    op: Literal["status"]
+    proposal_id: str
+
+
+class CurationOpMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    from_ms: Annotated[int, Field(ge=0)]
+    graph: str
+    op: Literal["metrics"]
+    to_ms: Annotated[int, Field(ge=0)]
+
+
+CurationOp = Annotated[
+    CurationOpInputs | CurationOpPropose | CurationOpStatus | CurationOpMetrics,
+    Field(discriminator="op"),
+]
+
+
+class MethodKnowledgeCurationParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: CurationOp
+
+
+class TraceRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    run_id: str
+    trace_node_id: str
+
+
+class CorrectionRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    correction_id: str
+    correction_node_id: str
+    target: str | None = None
+
+
+class PatternRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    count: Annotated[int, Field(ge=0)]
+    gap_node_id: str
+    signature: str
+
+
+class SourceChangeRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: Annotated[int, Field(ge=0)]
+    change_node_id: str
+    source_id: str
+
+
+class CurationInputs(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    corrections: list[CorrectionRef]
+    due: bool
+    flags: list[KnowledgeFlag]
+    next_cursor: str | None = None
+    patterns: list[PatternRef]
+    source_changes: list[SourceChangeRef]
+    traces: list[TraceRef]
+    watermark_ms: Annotated[int, Field(ge=0)]
+
+
+class CurationAdmitted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    proposal_id: str
+    receipt_id: str
+    revision_id: str
+    stage: str
+
+
+class FlagStateRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    flag_id: str
+    state: FlagState
+
+
+class CurationStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    adopted: list[str]
+    flags: list[FlagStateRow]
+    proposal_id: str
+    stage: str
+
+
+class LoopMetrics(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    flags_curated: Annotated[int, Field(ge=0)]
+    flags_dismissed: Annotated[int, Field(ge=0)]
+    flags_raised: Annotated[int, Field(ge=0)]
+    median_flag_to_fix_ms: Annotated[int, Field(ge=0)]
+    recurrence_ppm: Annotated[int, Field(ge=0)]
+
+
 class UsageAppended(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -49866,6 +50034,25 @@ __all__ = [
     "MethodKnowledgeFlag",
     "MethodKnowledgeFlagParams",
     "RaiseOutcome",
+    "CorrectionRef",
+    "CurationAdmitted",
+    "CurationEdit",
+    "CurationEditOp",
+    "CurationInputs",
+    "CurationOp",
+    "CurationOpInputs",
+    "CurationOpMetrics",
+    "CurationOpPropose",
+    "CurationOpStatus",
+    "CurationProposal",
+    "CurationStatus",
+    "FlagStateRow",
+    "LoopMetrics",
+    "MethodKnowledgeCuration",
+    "MethodKnowledgeCurationParams",
+    "PatternRef",
+    "SourceChangeRef",
+    "TraceRef",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both

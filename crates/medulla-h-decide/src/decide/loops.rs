@@ -46,6 +46,38 @@ pub async fn handle_loops(
     }
 }
 
+/// Whether the verified caller holds the live lease of `loop_id` at `epoch`
+/// (MEDULLA-DECISION-ENGINE-R709.4). A build without the `statechart` feature holds none.
+pub(super) async fn holds_live_lease(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    loop_id: &str,
+    epoch: u64,
+) -> bool {
+    #[cfg(feature = "statechart")]
+    {
+        let persist_dir = { state.read().await.persist_dir.clone() };
+        served::LoopStore::open(
+            persist_dir.as_deref(),
+            verified.tenant(),
+            &verified.principal_persistence_id(),
+        )
+        .map(|loops| {
+            loops.holds_live_lease(
+                loop_id,
+                epoch,
+                medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+            )
+        })
+        .unwrap_or(false)
+    }
+    #[cfg(not(feature = "statechart"))]
+    {
+        let _ = (state, verified, loop_id, epoch);
+        false
+    }
+}
+
 #[cfg(feature = "statechart")]
 pub(super) mod served {
     use std::sync::Arc;
@@ -618,6 +650,26 @@ pub(super) mod served {
         fn get(&self, loop_id: &str) -> Result<LoopView, String> {
             let (state_instance, record_instance) = self.require(loop_id)?;
             Self::view_of(&state_instance, &record_instance)
+        }
+
+        /// Whether this principal holds the live lease of `loop_id` at `epoch` at `now_ms`
+        /// (MEDULLA-DECISION-ENGINE-R709.4): the epoch matches, the loop is in a state a
+        /// holder acts in, the lease has not expired and its holder is the caller.
+        pub(in crate::decide) fn holds_live_lease(
+            &self,
+            loop_id: &str,
+            epoch: u64,
+            now_ms: u64,
+        ) -> bool {
+            let Ok(view) = self.get(loop_id) else {
+                return false;
+            };
+            fence(&view, epoch).is_ok()
+                && view
+                    .instance
+                    .lease
+                    .as_ref()
+                    .is_some_and(|lease| lease.holder == self.actor && lease.expires_at_ms > now_ms)
         }
     }
 
