@@ -189,13 +189,15 @@ const FAMILIES: &[QuestionKind] = &[
 
 /// The families with their own bench fixture instead of the generic one:
 /// `bench_topology_admit`, `bench_tool_relevance_cap`,
-/// `bench_capability_designation` and `bench_skill_evolution` (`ProgramLookup`
-/// is listed by `bench_program_lookup`).
+/// `bench_capability_designation`, `bench_skill_evolution`, `bench_merge_arming` and
+/// `bench_defect_triage` (`ProgramLookup` is listed by `bench_program_lookup`).
 const OWN_FIXTURE_FAMILIES: &[QuestionKind] = &[
     QuestionKind::Topology,
     QuestionKind::ToolRelevance,
     QuestionKind::CapabilityDesignation,
     QuestionKind::SkillEvolution,
+    QuestionKind::MergeArming,
+    QuestionKind::DefectTriage,
 ];
 
 /// The samples the budget report takes per group.
@@ -387,6 +389,330 @@ fn high_water_mib() -> f64 {
 fn percentile_ms(sorted: &[Duration], p: f64) -> f64 {
     let idx = ((sorted.len() as f64 - 1.0) * p).round() as usize;
     sorted[idx].as_secs_f64() * 1000.0
+}
+
+/// Time one served call as the Criterion group `group_name` and record its p50, p99 and peak
+/// resident growth in the budget report.
+fn time_group(
+    c: &mut Criterion,
+    group_name: &str,
+    report: &mut BTreeMap<String, serde_json::Value>,
+    mut call: impl FnMut() -> Response,
+) {
+    let mut group = c.benchmark_group(group_name);
+    group.bench_function("served", |b| b.iter(|| black_box(call())));
+    group.finish();
+
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            black_box(call());
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name.to_string(),
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
+/// The graph the `decide/merge_arming` fixture holds its delivery in.
+const ARMING_GRAPH: &str = "bench-delivery";
+/// The graph the `decide/defect_triage` fixture holds its defect and code graph in.
+const TRIAGE_GRAPH: &str = "bench-defect";
+
+/// The `decide/merge_arming` group (MEDULLA-SDLC-R019.10, R019.14): one delivery with an open
+/// proposal, its landing policy, two sealed passing gate verdicts, an owner approval of the head
+/// and an approving review, all read from the graph through the served `Decide` path. The
+/// verdict is `arm`.
+fn bench_merge_arming(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_source_types::delivery::{
+        AssignmentState, Delivery, DeliveryAssignment, DeliveryMandate, DeliveryProposal,
+        MandateStrength, ProposalState, DELIVERY_RECORD_PROPERTY, DELIVERY_SCHEMA_VERSION,
+    };
+    use medulla_source_types::gate_verdict::{
+        gate_verdict_node_id, gate_verdict_seal, landing_policy_node_id, GateVerdictRecord,
+        LandingPolicy, GATE_VERDICT_RECORD_PROPERTY, GATE_VERDICT_SEAL_PROPERTY,
+    };
+    use medulla_source_types::lifecycle::ProjectMode;
+    use medulla_work_types::step_verdict::VerificationVerdict;
+
+    const HEAD: &str = "sha256:head";
+    const PROPOSAL: &str = "pr-1";
+    let changeset = "c".repeat(64);
+    let (h, asked) = rt.block_on(fixture(QuestionKind::MergeArming));
+    let delivery = Delivery {
+        schema_version: DELIVERY_SCHEMA_VERSION,
+        id: "delivery:bench".to_string(),
+        tenant: TENANT.to_string(),
+        repo: "demo".to_string(),
+        slice_root: "R1".to_string(),
+        scope_rows: vec!["R1".to_string()],
+        mandate: DeliveryMandate {
+            schema_version: DELIVERY_SCHEMA_VERSION,
+            strength: MandateStrength::Explicit,
+            basis: "requested by person-1".to_string(),
+            policy_version: "p1".to_string(),
+            actor: "person-1".to_string(),
+            scope_rows: vec!["R1".to_string()],
+            project_mode: ProjectMode::Development,
+        },
+        seq: 0,
+        proposals: vec![DeliveryProposal {
+            id: PROPOSAL.to_string(),
+            state: ProposalState::Open,
+        }],
+        follows: Vec::new(),
+        assignments: vec![DeliveryAssignment {
+            schema_version: DELIVERY_SCHEMA_VERSION,
+            id: "assignment:bench".to_string(),
+            run_trace_id: "run-1".to_string(),
+            state: AssignmentState::Pending,
+            report: None,
+            started_at: None,
+            ended_at: None,
+            ended_reason: None,
+            recovery: None,
+        }],
+        inputs: Vec::new(),
+        attention: None,
+        ended: None,
+        created_at: 1,
+    };
+    rt.block_on(async {
+        h.state
+            .write()
+            .await
+            .registry
+            .create_graph(
+                ARMING_GRAPH,
+                medulla_protocol_types::protocol::GraphType::Team,
+                None,
+            )
+            .unwrap();
+        h.seed_node(
+            ARMING_GRAPH,
+            &delivery.id,
+            serde_json::json!({
+                "type": "Delivery",
+                DELIVERY_RECORD_PROPERTY: serde_json::to_string(&delivery).unwrap(),
+                "tenant_id": TENANT,
+            }),
+        )
+        .await;
+        let policy = LandingPolicy {
+            repo: "demo".into(),
+            branch: "main".into(),
+            required_gates: vec!["unit".into()],
+        };
+        h.seed_node(
+            ARMING_GRAPH,
+            &landing_policy_node_id("demo", "main"),
+            serde_json::json!({
+                "type": "LandingPolicy",
+                "policy_record": serde_json::to_string(&policy).unwrap(),
+            }),
+        )
+        .await;
+        for gate in ["unit", "ci"] {
+            let record = GateVerdictRecord {
+                changeset: changeset.clone(),
+                gate_id: gate.to_string(),
+                input_digest: "a".repeat(64),
+                verdict: VerificationVerdict::Pass,
+                evidence_digest: "b".repeat(64),
+                duration_ms: 1,
+            };
+            h.seed_node(
+                ARMING_GRAPH,
+                &gate_verdict_node_id(&changeset, gate),
+                serde_json::json!({
+                    "type": "GateVerdict",
+                    GATE_VERDICT_RECORD_PROPERTY: serde_json::to_string(&record).unwrap(),
+                    GATE_VERDICT_SEAL_PROPERTY: gate_verdict_seal(&record),
+                }),
+            )
+            .await;
+        }
+        h.seed_node(
+            ARMING_GRAPH,
+            "approval:1",
+            serde_json::json!({
+                "type": "OwnerApproval", "proposal_id": PROPOSAL,
+                "head_commit": HEAD, "recorded_at_ms": 5,
+            }),
+        )
+        .await;
+        h.seed_node(
+            ARMING_GRAPH,
+            "review:1",
+            serde_json::json!({
+                "type": "Review", "proposal_id": PROPOSAL, "reviewer": "alice",
+                "head_commit": HEAD, "recorded_at_ms": 6, "state": "approved",
+            }),
+        )
+        .await;
+    });
+    let text = |name: &str, value: &str| TypedParam {
+        name: name.to_string(),
+        value: TypedValue::Text(value.to_string()),
+    };
+    let mut asked = asked;
+    asked.question.question_id = "delivery.arming".to_string();
+    asked.candidates = CandidateSource::Declared {
+        options: BoundedVec::new(vec![DeclaredOption {
+            option_id: "merge_arming".to_string(),
+            classification: BoundedVec::default(),
+            numbers: BoundedVec::default(),
+            texts: BoundedVec::default(),
+        }])
+        .unwrap(),
+    };
+    asked.params = BoundedVec::new(vec![
+        text("graph", ARMING_GRAPH),
+        text("delivery_id", &delivery.id),
+        text("proposal_id", PROPOSAL),
+        text("head_commit", HEAD),
+        text("head_changeset", &changeset),
+        text("branch", "main"),
+        text("required_check", "ci"),
+        TypedParam {
+            name: "changed_lines".to_string(),
+            value: TypedValue::Int(10),
+        },
+    ])
+    .unwrap();
+    let response = decide(rt, &h, &asked);
+    assert!(
+        response.error.is_none(),
+        "merge_arming fixture: {response:?}"
+    );
+    time_group(c, "decide/merge_arming", report, || decide(rt, &h, &asked));
+}
+
+/// The `decide/defect_triage` group (MEDULLA-SDLC-R004.3, R019.14): a stored defect whose
+/// symptom frame names one symbol of the code graph, changed by one commit, triaged through the
+/// served `TriageDefect` method. The suspect is the symbol and the owner is the commit author.
+fn bench_defect_triage(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_decision_types::decision::defect_triage::TriageDefectRequest;
+    use medulla_source_types::lifecycle::{
+        defect_node_id, Defect, DefectIntake, DefectStatus, Severity, Symptom,
+        DEFECT_RECORD_PROPERTY,
+    };
+
+    let h = rt.block_on(async {
+        Harness::with_isolation(ServerState::test_isolation("decider")).await
+    });
+    let (pin, _) = publish_route_schema(&h);
+    let defect = Defect {
+        id: "d1".to_string(),
+        repo: "demo".to_string(),
+        title: "boom".to_string(),
+        intake: DefectIntake::Direct,
+        signature_digest: "sig-d1".to_string(),
+        severity: Severity::Medium,
+        status: DefectStatus::New,
+        symptoms: vec![Symptom {
+            intake: DefectIntake::Direct,
+            source_record_id: "src-1".to_string(),
+            observed_at: 1_000,
+            text: "at run (src/a.rs:15:3)".to_string(),
+        }],
+        created_at: 900,
+    };
+    rt.block_on(async {
+        h.state
+            .write()
+            .await
+            .registry
+            .create_graph(
+                TRIAGE_GRAPH,
+                medulla_protocol_types::protocol::GraphType::Team,
+                None,
+            )
+            .unwrap();
+        h.seed_node(
+            TRIAGE_GRAPH,
+            &defect_node_id(&defect.repo, &defect.id),
+            serde_json::json!({
+                "type": "Defect",
+                DEFECT_RECORD_PROPERTY: serde_json::to_string(&defect).unwrap(),
+                "repo": defect.repo,
+            }),
+        )
+        .await;
+        h.seed_node(
+            TRIAGE_GRAPH,
+            "symbol:a",
+            serde_json::json!({
+                "type": "SYMBOL", "file_path": "src/a.rs", "line": "10", "end_line": "20",
+                "qualified_symbol": "a::run",
+            }),
+        )
+        .await;
+        h.seed_node(
+            TRIAGE_GRAPH,
+            "commit:c1",
+            serde_json::json!({
+                "type": "Changeset", "changeset_id": "c1", "repo": "demo",
+                "author": "alice", "timestamp_ms": "500",
+            }),
+        )
+        .await;
+        let core = h
+            .state
+            .read()
+            .await
+            .registry
+            .get(TRIAGE_GRAPH)
+            .expect("graph exists")
+            .core
+            .clone();
+        core.add_edge(
+            "commit:c1".to_string(),
+            "symbol:a".to_string(),
+            rmp_serde::to_vec_named(&serde_json::json!({ "relationship": "changes" })).unwrap(),
+        )
+        .unwrap();
+    });
+    let asked = TriageDefectRequest {
+        tenant_id: TENANT.to_string(),
+        graph: TRIAGE_GRAPH.to_string(),
+        defect_id: defect.id.clone(),
+        as_of_ms: Some(1_000),
+        culprit: None,
+        path_owners: vec!["alice".to_string()],
+        feature_schema: pin,
+        policy: DecisionPolicyRef::Default,
+    };
+    let triage = || {
+        rt.block_on(dispatch(
+            &h,
+            Method::TriageDefect {
+                request: Box::new(asked.clone()),
+            },
+        ))
+    };
+    let response = triage();
+    assert!(
+        response.error.is_none(),
+        "defect_triage fixture: {response:?}"
+    );
+    time_group(c, "decide/defect_triage", report, triage);
 }
 
 /// Evidence items per claim the `decide/claims` group holds (R652.6).
@@ -3607,6 +3933,8 @@ fn bench_decide(c: &mut Criterion) {
         );
     }
     bench_claims(c, &rt, &mut report);
+    bench_merge_arming(c, &rt, &mut report);
+    bench_defect_triage(c, &rt, &mut report);
     bench_writeback_queue(c, &rt, &mut report);
     bench_task_plan_bounds(c, &rt, &mut report);
     bench_tool_relevance_cap(c, &rt, &mut report);
