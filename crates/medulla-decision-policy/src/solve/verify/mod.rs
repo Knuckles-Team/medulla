@@ -16,8 +16,8 @@ mod tree;
 
 pub use error::{StatusDefect, Verdict, VerifyError};
 
-use super::certificate::{BoundProof, Certificate, Incumbent};
 use super::model::Model;
+use medulla_decision_types::solve::certificate::{BoundProof, Certificate, Incumbent};
 
 /// Verify `certificate` against `model`.
 pub fn verify(model: &Model, certificate: &Certificate) -> Result<Verdict, VerifyError> {

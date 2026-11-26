@@ -22,12 +22,11 @@
 //! a certificate that fails either check refuses the question.
 
 use medulla_decision_outcome_types::decision::rapid_r056::StatisticalSolverCertificate;
-use medulla_decision_policy::{
-    solve::solve, solve::verify, solve::Model, solve::SolveStatus, solve::SolverConfig,
-};
+use medulla_decision_policy::solve::{solve, verify, Model};
 use medulla_decision_types::decision::record::outcome::RefusalOrigin;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::AbstainReason;
+use medulla_decision_types::solve::certificate::{SolveStatus, SolverConfig};
 use medulla_decision_types::{
     decision::statistical::tool_subset::ToolCoverageCandidate,
     decision::statistical::tool_subset::ToolSubsetRefusal,

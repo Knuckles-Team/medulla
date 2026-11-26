@@ -1,7 +1,7 @@
 //! Field-level validation of a [`ModelSpec`].
 
 use super::error::{Location, ModelError};
-use super::spec::{
+use medulla_decision_types::solve::spec::{
     Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, Term, VarId,
 };
 

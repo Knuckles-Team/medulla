@@ -15,17 +15,15 @@ mod validate;
 use serde::{Deserialize, Serialize};
 
 pub use error::{Location, ModelError};
-pub use objective::{LevelValue, ObjectiveValue, MAX_SCALAR_MAGNITUDE};
-pub use spec::{
-    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
-    Relation, RowId, Term, VarId,
-};
+use medulla_decision_types::solve::objective::ObjectiveValue;
+use medulla_decision_types::solve::spec::{ConstraintBody, ModelSpec, Relation, Term, VarId};
+use objective::MAX_SCALAR_MAGNITUDE;
 pub use validate::{
     MAX_ABS_COEFFICIENT, MAX_ABS_RHS, MAX_CONSTRAINTS, MAX_LABEL_BYTES, MAX_OBJECTIVE_LEVELS,
     MAX_VARIABLES,
 };
 
-use crate::solve::scalar::Sha256Digest;
+use medulla_query_types::solve_scalar::Sha256Digest;
 
 /// Domain tag of the model digest.
 const MODEL_DIGEST_DOMAIN: &str = "eg-solve/model/v1";

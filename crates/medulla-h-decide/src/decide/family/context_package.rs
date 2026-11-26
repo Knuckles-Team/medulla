@@ -13,7 +13,7 @@
 use std::collections::BTreeSet;
 
 use medulla_decision_policy::solve::context_package::{select_with, PackageRefusal};
-use medulla_decision_policy::solve::{Certificate, Model, SolverConfig};
+use medulla_decision_policy::solve::Model;
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::context_package::{
     ContextPackageErrorCode, ContextPackageRequest, RemainingBudget, NONE_ADMISSIBLE,
@@ -28,6 +28,7 @@ use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::decision::{
     EvidenceClass, PremiseClass, PremiseRef, QuantScaleTag, QuantisedValue, ResolutionKind,
 };
+use medulla_decision_types::solve::certificate::{Certificate, SolverConfig};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
 
@@ -259,7 +260,7 @@ fn kernel_refusal(refusal: PackageRefusal) -> Result<Executed, String> {
             incumbent: exhaustion.incumbent.map(String::from),
             lower_bound: exhaustion
                 .lower_bound
-                .unwrap_or(medulla_decision_policy::solve::Scalar::new(i128::MIN)),
+                .unwrap_or(medulla_query_types::solve_scalar::Scalar::new(i128::MIN)),
         }],
     )
 }
@@ -616,7 +617,8 @@ pub(in crate::decide) mod overrides {
     use std::collections::BTreeMap;
     use std::sync::{Mutex, OnceLock};
 
-    use medulla_decision_policy::solve::{Certificate, Model, SolverConfig};
+    use medulla_decision_policy::solve::Model;
+    use medulla_decision_types::solve::certificate::{Certificate, SolverConfig};
 
     /// A replacement solver.
     pub(in crate::decide) type SolverFn = fn(&Model, &SolverConfig) -> Certificate;

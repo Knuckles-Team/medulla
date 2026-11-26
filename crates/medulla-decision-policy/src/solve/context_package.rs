@@ -16,14 +16,15 @@ use medulla_decision_types::decision::context_package::{
 };
 use medulla_types::contract::BoundedVec;
 
-use super::{
-    model::{
-        Coefficient, ConstraintBody, ConstraintSpec, ObjectiveLevelSpec, ObjectiveTerm, Relation,
-        Term, VarId,
-    },
-    verify, Certificate, Model, ModelSpec, Scalar, SolveStatus, SolverConfig, SolverConfigSpec,
-    Verdict,
+use super::{verify, Model, Verdict};
+use medulla_decision_types::solve::certificate::{
+    Certificate, SolveStatus, SolverConfig, SolverConfigSpec,
 };
+use medulla_decision_types::solve::spec::{
+    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
+    Relation, Term, VarId,
+};
+use medulla_query_types::solve_scalar::Scalar;
 
 /// A typed refusal of the package kernel: the closed code and a detail.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -226,7 +227,8 @@ pub fn select_with(
         .map_err(|error| PackageRefusal::invalid(format!("model refused: {error}")))?;
     let config = SolverConfig::try_from(SolverConfigSpec {
         node_budget: u64::from(request.node_budget),
-        max_certificate_leaves: super::certificate::DEFAULT_CERTIFICATE_LEAVES,
+        max_certificate_leaves:
+            medulla_decision_types::solve::certificate::DEFAULT_CERTIFICATE_LEAVES,
         bound_denominator: 1,
         accepted_gap: Scalar::new(0),
     })
@@ -307,7 +309,7 @@ pub fn select_with(
                 .unwrap_or(0),
         )
         .unwrap_or(i64::MIN),
-        input_digest: String::from(super::Sha256Digest::of_json(
+        input_digest: String::from(medulla_query_types::solve_scalar::Sha256Digest::of_json(
             "medulla/context-package/input/v1",
             request,
         )),

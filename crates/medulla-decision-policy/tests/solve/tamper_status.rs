@@ -1,11 +1,13 @@
 //! The verifier rejects status claims the evidence does not support.
 
-use medulla_decision_policy::{solve::model::Model, solve::model::ModelSpec};
-use medulla_decision_policy::{
-    solve::BoundProof, solve::Certificate, solve::Incumbent, solve::LagrangeDual, solve::LeafProof,
-    solve::ProofNode, solve::Scalar, solve::SolveStatus, solve::SolverConfig, solve::StatusDefect,
-    solve::VerifyError,
+use medulla_decision_policy::solve::model::Model;
+use medulla_decision_policy::solve::{StatusDefect, VerifyError};
+use medulla_decision_types::solve::certificate::{
+    BoundProof, Certificate, Incumbent, LagrangeDual, LeafProof, ProofNode, SolveStatus,
+    SolverConfig,
 };
+use medulla_decision_types::solve::spec::ModelSpec;
+use medulla_query_types::solve_scalar::Scalar;
 
 use super::support::{
     config, model, odd_cycle_cover, parity_equality, rejection, solve_and_verify,
@@ -57,7 +59,7 @@ fn infeasibility_claims_need_the_exact_core_and_true_infeasible_leaves() {
         &base,
         &fake,
         VerifyError::RowViolated {
-            row: medulla_decision_policy::solve::model::RowId(0),
+            row: medulla_decision_types::solve::spec::RowId(0),
         },
     );
     let BoundProof::Tree { nodes } = &base.1.proof else {

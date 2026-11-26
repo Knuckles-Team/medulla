@@ -2,8 +2,8 @@
 
 use std::fmt;
 
-use crate::solve::scalar::Scalar;
-use crate::{solve::model::RowId, solve::model::VarId};
+use medulla_decision_types::solve::spec::{RowId, VarId};
+use medulla_query_types::solve_scalar::Scalar;
 
 /// What a certificate was verified to establish.
 #[derive(Debug, Clone, PartialEq, Eq)]

@@ -1,7 +1,8 @@
 //! Row checks over explicit assignments, recomputed term by term.
 
 use super::error::VerifyError;
-use crate::{solve::model::Model, solve::model::Relation, solve::model::Row, solve::model::RowId};
+use crate::solve::model::{Model, Row};
+use medulla_decision_types::solve::spec::{Relation, RowId};
 
 /// Check a full selection against every row and the claimed objective.
 pub(super) fn check_selection(model: &Model, selected: &[bool]) -> Result<(), VerifyError> {

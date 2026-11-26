@@ -22,8 +22,8 @@ use propagate::{fix_and_queue, propagate, RowQueue};
 use record::Recorder;
 use state::SearchState;
 
-use super::certificate::{Certificate, LagrangeDual, SolverConfig};
 use super::model::Model;
+use medulla_decision_types::solve::certificate::{Certificate, LagrangeDual, SolverConfig};
 
 /// Solve `model` to proven optimality, proven infeasibility or the node budget.
 pub fn solve(model: &Model, config: &SolverConfig) -> Certificate {

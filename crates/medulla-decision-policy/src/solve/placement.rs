@@ -32,12 +32,15 @@ use medulla_decision_types::decision::statistical::placement_plan::{
 use medulla_decision_types::decision::AbstainReason;
 use medulla_types::contract::BoundedVec;
 
-use super::certificate::{SolveStatus, SolverConfig, SolverConfigSpec, DEFAULT_CERTIFICATE_LEAVES};
-use super::model::{
-    Coefficient, ConstraintBody, ConstraintSpec, Model, ModelSpec, ObjectiveLevelSpec,
-    ObjectiveTerm, Relation, Term, VarId, MAX_VARIABLES,
+use super::model::{Model, MAX_VARIABLES};
+use medulla_decision_types::solve::certificate::{
+    SolveStatus, SolverConfig, SolverConfigSpec, DEFAULT_CERTIFICATE_LEAVES,
 };
-use super::scalar::{Scalar, Sha256Digest};
+use medulla_decision_types::solve::spec::{
+    Coefficient, ConstraintBody, ConstraintSpec, ModelSpec, ObjectiveLevelSpec, ObjectiveTerm,
+    Relation, Term, VarId,
+};
+use medulla_query_types::solve_scalar::{Scalar, Sha256Digest};
 
 /// Digest domain of a plan in which every service stays (no program is built).
 const STAY_PLAN_DOMAIN: &str = "medulla/placement-plan/stay/v1";

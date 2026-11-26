@@ -1,7 +1,8 @@
 //! Equal inputs give byte-identical certificates and digests.
 
 use medulla_decision_policy::solve::model::Model;
-use medulla_decision_policy::{solve::solve, solve::Certificate, solve::SolverConfig};
+use medulla_decision_policy::solve::solve;
+use medulla_decision_types::solve::certificate::{Certificate, SolverConfig};
 
 use super::generators::{planted_assembly, AssemblyShape};
 use super::support::model;

@@ -591,13 +591,13 @@ fn hard_pool() -> Vec<ContextPackageCandidate> {
 /// has (or lacks) an incumbent.
 fn exhausted_certificate(
     model: &medulla_decision_policy::solve::Model,
-    config: &medulla_decision_policy::solve::SolverConfig,
+    config: &medulla_decision_types::solve::certificate::SolverConfig,
     with_incumbent: bool,
-) -> medulla_decision_policy::solve::Certificate {
-    use medulla_decision_policy::solve::certificate::DEFAULT_CERTIFICATE_LEAVES;
-    use medulla_decision_policy::solve::{
-        solve, Scalar, SolveStatus, SolverConfig, SolverConfigSpec,
-    };
+) -> medulla_decision_types::solve::certificate::Certificate {
+    use medulla_decision_policy::solve::solve;
+    use medulla_decision_types::solve::certificate::DEFAULT_CERTIFICATE_LEAVES;
+    use medulla_decision_types::solve::certificate::{SolveStatus, SolverConfig, SolverConfigSpec};
+    use medulla_query_types::solve_scalar::Scalar;
     let full = solve(model, config);
     let mut budget = 1_u64;
     while budget < full.nodes_expanded {
@@ -624,15 +624,15 @@ fn exhausted_certificate(
 
 fn exhausting_with_incumbent(
     model: &medulla_decision_policy::solve::Model,
-    config: &medulla_decision_policy::solve::SolverConfig,
-) -> medulla_decision_policy::solve::Certificate {
+    config: &medulla_decision_types::solve::certificate::SolverConfig,
+) -> medulla_decision_types::solve::certificate::Certificate {
     exhausted_certificate(model, config, true)
 }
 
 fn exhausting_without_incumbent(
     model: &medulla_decision_policy::solve::Model,
-    config: &medulla_decision_policy::solve::SolverConfig,
-) -> medulla_decision_policy::solve::Certificate {
+    config: &medulla_decision_types::solve::certificate::SolverConfig,
+) -> medulla_decision_types::solve::certificate::Certificate {
     // The real solver seeds a greedy incumbent before its first node, so on this
     // pool no budget leaves it without one. A search that found no package is
     // the exhausted certificate with no incumbent claimed: its bound proof does
@@ -645,11 +645,11 @@ fn exhausting_without_incumbent(
 /// A solver whose certificate is bound to another model: the verifier must reject it.
 fn rebinding_solver(
     model: &medulla_decision_policy::solve::Model,
-    config: &medulla_decision_policy::solve::SolverConfig,
-) -> medulla_decision_policy::solve::Certificate {
+    config: &medulla_decision_types::solve::certificate::SolverConfig,
+) -> medulla_decision_types::solve::certificate::Certificate {
     let mut certificate = medulla_decision_policy::solve::solve(model, config);
     certificate.model_digest =
-        medulla_decision_policy::solve::Sha256Digest::of_json("test/other-model", &"other");
+        medulla_query_types::solve_scalar::Sha256Digest::of_json("test/other-model", &"other");
     certificate
 }
 

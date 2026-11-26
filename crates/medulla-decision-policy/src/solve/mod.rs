@@ -20,11 +20,6 @@ pub mod scalar;
 mod search;
 pub mod verify;
 
-pub use certificate::{
-    Algorithm, BoundProof, Certificate, ConfigError, DualEntry, Incumbent, LagrangeDual, LeafProof,
-    ProofNode, SolveStatus, SolverConfig, SolverConfigSpec,
-};
-pub use model::{Model, ModelError, ModelSpec};
-pub use scalar::{Scalar, Sha256Digest};
+use model::{Model, ModelError};
 pub use search::solve;
 pub use verify::{verify, StatusDefect, Verdict, VerifyError};

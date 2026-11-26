@@ -6,7 +6,7 @@
 //! carry it as a checkable `Forced` node.
 
 use super::state::SearchState;
-use crate::solve::model::Relation;
+use medulla_decision_types::solve::spec::Relation;
 
 /// Rows waiting to be re-examined, without repeats.
 pub(super) struct RowQueue {

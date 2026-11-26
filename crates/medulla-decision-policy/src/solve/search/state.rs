@@ -1,6 +1,7 @@
 //! The partial assignment of a search node, with per-row activity caches.
 
-use crate::{solve::model::Model, solve::model::RowId, solve::model::VarId};
+use crate::solve::model::Model;
+use medulla_decision_types::solve::spec::{RowId, VarId};
 
 /// The partial assignment plus, per row, the fixed activity and the extreme
 /// contributions still available from free variables. Fixes are undone in

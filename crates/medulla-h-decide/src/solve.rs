@@ -21,7 +21,8 @@ fn refuse(
 /// Solve one model and answer its verified certificate.
 #[cfg(feature = "solve")]
 pub async fn handle_solve(req_id: u64, request: SolveRequest) -> Response {
-    use medulla_decision_policy::{solve::solve, solve::verify, solve::Model, solve::SolverConfig};
+    use medulla_decision_policy::solve::{solve, verify, Model};
+    use medulla_decision_types::solve::certificate::SolverConfig;
     use medulla_decision_types::{
         solve::SolveErrorCode, solve::SolveResult, solve::SOLVE_RESULT_SCHEMA_VERSION,
     };
