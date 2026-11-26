@@ -1362,6 +1362,77 @@ pub fn link_history_to_rows(input: &SpecHistoryInput<'_>) -> Result<RequirementP
     })
 }
 
+/// The node id of one glossary term: no repository, so one word is one node.
+pub fn term_node_id(token: &str) -> String {
+    format!("term:{token}")
+}
+
+/// The terms of one row text (MEDULLA-SDLC-R014.12.1): each distinct backticked token that is
+/// `[A-Za-z][A-Za-z0-9_]{3,63}` in full and holds an underscore or both letter cases.
+fn row_term_tokens(text: &str) -> BTreeSet<String> {
+    ticked(text)
+        .into_iter()
+        .filter(|token| {
+            let mut chars = token.chars();
+            let well_formed = (4..=64).contains(&token.len())
+                && chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+                && chars.all(|c| c.is_ascii_alphanumeric() || c == '_');
+            well_formed
+                && (token.contains('_')
+                    || (token.chars().any(|c| c.is_ascii_lowercase())
+                        && token.chars().any(|c| c.is_ascii_uppercase())))
+        })
+        .map(str::to_owned)
+        .collect()
+}
+
+/// Project the glossary terms of rows (MEDULLA-SDLC-R014.12.1). `rows` is `(row id, row text)`
+/// of every row of the changed files: one `GlossaryTerm` node per distinct term and one
+/// `usesTerm` edge per (row, term).
+pub fn project_row_terms(repo: &str, rows: &[(String, String)]) -> RequirementProjection {
+    let (mut nodes, mut links) = (Vec::new(), Vec::new());
+    let mut seen: BTreeSet<String> = BTreeSet::new();
+    for (row_id, text) in rows {
+        for token in row_term_tokens(text) {
+            if seen.insert(token.clone()) {
+                nodes.push(node(
+                    &term_node_id(&token),
+                    serde_json::json!({"type": "GlossaryTerm", "name": token}),
+                ));
+            }
+            links.push(edge(
+                &requirement_node_id(repo, row_id),
+                &term_node_id(&token),
+                "usesTerm",
+            ));
+        }
+    }
+    let (count_nodes, count_edges) = (nodes.len() as u32, links.len() as u32);
+    nodes.extend(links);
+    RequirementProjection {
+        operations: nodes,
+        nodes: count_nodes,
+        edges: count_edges,
+    }
+}
+
+/// The `row:term` list a file node stores.
+fn encode_row_terms(terms: &[(String, String)]) -> String {
+    terms
+        .iter()
+        .map(|(row, term)| format!("{row}:{term}"))
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn decode_row_terms(stored: &str) -> Vec<(String, String)> {
+    stored
+        .split(',')
+        .filter_map(|pair| pair.split_once(':'))
+        .map(|(row, term)| (row.to_owned(), term.to_owned()))
+        .collect()
+}
+
 /// The artifact entry whose records are `row=STATE`: the `rowStatus` last written per row,
 /// which a delta pass compares with the status it derives (MEDULLA-SDLC-R014.12).
 pub const ROW_STATUS_ARTIFACT: &str = "rowstatus";
@@ -1372,6 +1443,9 @@ pub const ROW_STATUS_ARTIFACT: &str = "rowstatus";
 pub struct StoredArtifact {
     pub digest: String,
     pub records: Vec<String>,
+    /// The `(row id, term)` pairs the file's last ingest wrote as `usesTerm` edges
+    /// (MEDULLA-SDLC-R014.12.1).
+    pub terms: Vec<(String, String)>,
 }
 
 /// The graph write of one incremental re-ingest.
@@ -1513,6 +1587,30 @@ fn reingest_in(
             task_operations.extend(project_principles(repo, name, text).operations);
         }
         task_operations.extend(governed_by_edges(repo, &projection.operations, &known_principles)?);
+        let rows: Vec<(String, String)> = projection
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "Requirement")
+            .map(|op| {
+                (
+                    op["properties"]["rowId"].as_str().unwrap_or_default().to_string(),
+                    op["properties"]["text"].as_str().unwrap_or_default().to_string(),
+                )
+            })
+            .collect();
+        let term_projection = project_row_terms(repo, &rows);
+        let terms: Vec<(String, String)> = term_projection
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_edge")
+            .filter_map(|op| {
+                let source = op["source"].as_str()?;
+                let row = source.strip_prefix(&requirement_prefix)?;
+                let term = op["target"].as_str()?.strip_prefix("term:")?;
+                Some((row.to_string(), term.to_string()))
+            })
+            .collect();
+        task_operations.extend(term_projection.operations);
         let mut records = Vec::new();
         for op in projection
             .operations
@@ -1543,6 +1641,19 @@ fn reingest_in(
                     .filter(|id| !records.contains(id))
                     .map(|id| serde_json::json!({"op": "remove_node", "id": id})),
             );
+            // A row that no longer writes a term loses its `usesTerm` edge.
+            removals.extend(
+                old.terms
+                    .iter()
+                    .filter(|pair| !terms.contains(pair))
+                    .map(|(row, term)| {
+                        serde_json::json!({
+                            "op": "remove_edge",
+                            "source": requirement_node_id(repo, row),
+                            "target": term_node_id(term),
+                        })
+                    }),
+            );
         }
         writes.push(node(
             &artifact_node_id(repo, name),
@@ -1552,6 +1663,7 @@ fn reingest_in(
                 "file": name,
                 "digest": digest,
                 "records": records.join(","),
+                "terms": encode_row_terms(&terms),
             }),
         ));
         reingested.push(name.to_string());
@@ -1596,6 +1708,7 @@ pub fn stored_artifacts(
                             .filter(|id| !id.is_empty())
                             .map(str::to_owned)
                             .collect(),
+                        terms: decode_row_terms(&text("terms").unwrap_or_default()),
                     },
                 )
             })
@@ -2096,6 +2209,61 @@ mod tests {
 | `DEMO-R002` | **Second.** Caller chain: `serve_second` → `Second::run`. Depends: DEMO-R001, OTHER-R009. | Test: `crates/demo/tests/second.rs::runs` (L2). |\n\
 | `DEMO-R003` | **Third.** Caller chain: `serve_third`. Depends: R002. | Test: `tests/demo/test_third.py::test_third` (L3). |\n";
 
+    // spec: MEDULLA-SDLC-R014.12.1
+    #[test]
+    fn row_terms_project_to_shared_nodes_and_edges() {
+        let text = "Uses `UnifiedQuery`, `row_id` and `REPORT_READ_ONLY` but not `Decide`, \
+                    `crates/x.rs`, `R014.2` or `MEDULLA-SDLC-R014.2`; `row_id` twice `row_id`.";
+        let rows = vec![("A-R1".to_string(), text.to_string())];
+        let one = project_row_terms("one", &rows);
+        let terms: BTreeSet<&str> = one
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_node")
+            .map(|op| op["properties"]["name"].as_str().unwrap())
+            .collect();
+        assert_eq!(terms, BTreeSet::from(["REPORT_READ_ONLY", "UnifiedQuery", "row_id"]));
+        assert_eq!((one.nodes, one.edges), (3, 3));
+        let two = project_row_terms("two", &rows);
+        let ids = |p: &RequirementProjection| -> BTreeSet<String> {
+            p.operations
+                .iter()
+                .filter(|op| op["op"] == "upsert_node")
+                .map(|op| op["id"].as_str().unwrap().to_string())
+                .collect()
+        };
+        assert_eq!(ids(&one), ids(&two), "one node per word across repositories");
+        assert!(one.operations.iter().any(|op| op["op"] == "upsert_edge"
+            && op["source"] == "requirement:one:A-R1"
+            && op["target"] == "term:row_id"
+            && op["properties"]["relationship"] == "usesTerm"));
+        // A re-ingest of the row without `row_id` removes that stale edge.
+        let first = reingest_changed_artifacts(
+            "demo",
+            &[("requirements.md", REQUIREMENTS)],
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+        )
+        .expect("ingests");
+        let mut stored = BTreeMap::new();
+        stored_after(&first, &mut stored);
+        let artifact = stored.get_mut("requirements.md").expect("stored");
+        artifact.digest = "stale".to_string();
+        artifact.terms.push(("DEMO-R001".to_string(), "gone_term".to_string()));
+        let second = reingest_changed_artifacts(
+            "demo",
+            &[("requirements.md", REQUIREMENTS)],
+            &stored,
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+        )
+        .expect("re-ingests");
+        assert!(second.operations.iter().any(|op| op["op"] == "remove_edge"
+            && op["source"] == "requirement:demo:DEMO-R001"
+            && op["target"] == "term:gone_term"));
+    }
+
     fn triples() -> Vec<RdfTriple> {
         parse_spec_file("requirements.md", REQUIREMENTS).expect("fixture parses")
     }
@@ -2331,6 +2499,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
                             .filter(|id| !id.is_empty())
                             .map(str::to_string)
                             .collect(),
+                        terms: decode_row_terms(props["terms"].as_str().unwrap_or_default()),
                     },
                 );
             }
