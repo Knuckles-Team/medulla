@@ -1,0 +1,18 @@
+{
+  "source": "servicenow-api",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "incident": "incident-1",
+      "joinKey": "keycloak.q2-key-1",
+      "id": "servicenow-api-keycloak.q2-1",
+      "label": "servicenow-api 1"
+    },
+    {
+      "incident": "incident-2",
+      "joinKey": "keycloak.q2-key-2",
+      "id": "servicenow-api-keycloak.q2-2",
+      "label": "servicenow-api 2"
+    }
+  ]
+}

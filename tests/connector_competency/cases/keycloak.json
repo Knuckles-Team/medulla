@@ -1,0 +1,40 @@
+{
+  "connector": "keycloak",
+  "rollup": "MEDULLA-CQ-CONN-R030",
+  "vocabulary_module": "identity-v1.ttl",
+  "terms": [
+    "OidcClient",
+    "roleGrantsAccessTo"
+  ],
+  "questions": [
+    {
+      "id": "keycloak.q2",
+      "kind": "cross",
+      "question": "Which people have access to a service that has an open security incident?",
+      "uql": "LET s0 = FOREIGN SCAN 'keycloak-agent'; LET s1 = FOREIGN SCAN 'okta-agent'; LET s2 = FOREIGN SCAN 'servicenow-api'; JOIN s0, s1, s2",
+      "sources": [
+        "keycloak-agent",
+        "okta-agent",
+        "servicenow-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "keycloak-agent": "mcp_tool",
+        "okta-agent": "mcp_tool",
+        "servicenow-api": "http_endpoint"
+      },
+      "columns": [
+        "person",
+        "service",
+        "incident"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "keycloak-agent/cross_okta-agent.json",
+        "okta-agent/cross_keycloak-agent.json",
+        "keycloak-agent/cross_servicenow-api.json",
+        "servicenow-api/cross_keycloak-agent.json"
+      ]
+    }
+  ]
+}
