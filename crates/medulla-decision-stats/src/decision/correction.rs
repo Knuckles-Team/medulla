@@ -27,6 +27,16 @@ fn node(id: &str, class: &'static str, entries: Vec<(&str, Value)>) -> Correctio
     }
 }
 
+/// The digest of one rule candidate: SHA-256 hex of the canonical JSON array
+/// `[task_class, corrected value]` (MEDULLA-DECISION-ENGINE-R702.2). The task class is part of
+/// the digest, so one corrected value under two task classes is two candidates, and a JSON array
+/// has no separator the two fields could be confused across.
+pub fn rule_digest(task_class: &str, value: &str) -> String {
+    let canonical = serde_json::to_vec(&[task_class, value])
+        .expect("two strings serialize as a JSON array");
+    Digest256::sha256(&canonical).to_hex()
+}
+
 /// Plan the commit of one correction: validate it, derive the receipt id from
 /// its serialized bytes, and derive every node and edge from the correction and
 /// the receipt id alone.
@@ -34,9 +44,10 @@ pub fn commit_correction(correction: &Correction) -> Result<CorrectionCommit, Co
     correction.validate()?;
     let bytes = serde_json::to_vec(correction).expect("a correction of plain fields serializes");
     let receipt_id = Digest256::sha256(&bytes).to_hex();
-    // The rule id is the digest of the canonical rule text (the corrected value), so equal rules
-    // share one id and an invariant can name it; the node id stays receipt-keyed.
-    let text_digest = Digest256::sha256(correction.after.as_bytes()).to_hex();
+    // The rule id is the digest of the canonical `(task_class, corrected value)`, so equal rules
+    // of one task class share one id and an invariant can name it; the node id stays
+    // receipt-keyed.
+    let text_digest = rule_digest(&correction.task_class, &correction.after);
     let rule_node = format!("rule:{receipt_id}");
     let effect = CorrectionEffect {
         receipt_id: receipt_id.clone(),
@@ -236,7 +247,7 @@ mod tests {
         // candidate carries the task class of the corrected action.
         assert_eq!(
             commit.effect.rule_candidate.rule_id,
-            format!("sha256:{}", Digest256::sha256(b"right").to_hex())
+            format!("sha256:{}", rule_digest("action_kind:tool_call", "right"))
         );
         assert_eq!(commit.effect.rule_candidate.task_class, "action_kind:tool_call");
         assert_eq!(commit.nodes[1].properties["task_class"], "action_kind:tool_call");
