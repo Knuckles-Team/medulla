@@ -913,9 +913,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T894 [US6] MEDULLA-DECISION-ENGINE-R820 Process remediation verdict
 - [ ] T895 [US6] MEDULLA-DECISION-ENGINE-R821 Retrieval strategy adoption and per-source trust posterior
 - [x] T896 [US4] MEDULLA-DECISION-ENGINE-R822 Rerank calibration head fitted from outcomes
-- [ ] T897 [US6] MEDULLA-DECISION-ENGINE-R823 Reasoning-paradigm choice family
+- [x] T897 [US6] MEDULLA-DECISION-ENGINE-R823 Reasoning-paradigm choice family
 - [ ] T898 [US6] MEDULLA-DECISION-ENGINE-R824 Capacity adjustment question and verdict
-- [ ] T899 [US6] MEDULLA-DECISION-ENGINE-R825 Model capacity question
+- [x] T899 [US6] MEDULLA-DECISION-ENGINE-R825 Model capacity question
 - [ ] T900 [US6] MEDULLA-DECISION-ENGINE-R826 Ingest shortfall allocation family
 - [ ] T901 [US6] MEDULLA-DECISION-ENGINE-R827 Revert or fix-forward family
 - [ ] T902 [US6] MEDULLA-DECISION-ENGINE-R828 ResolveConflict family and the ConflictDecider seam that BRANCH-MERGE-R005 calls
@@ -972,11 +972,11 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T958 [US7] MEDULLA-DECISION-ENGINE-R173.8 The mutation compiler refuses every caller write of editStatus; HarnessEdit gains Create
 - [ ] T969 [US7] MEDULLA-DECISION-ENGINE-R869 Action and decision provenance is queryable (rollup)
 - [ ] T970 [US7] MEDULLA-DECISION-ENGINE-R869.1 ActionRecord model: `:ActionRecord`, `:FactUse`, `:RuleUse` and their properties in `action-v1.ttl`; new `action-v1.shapes.ttl` wired into the `action` CoreSpec; test `crates/medulla-core/tests/action_provenance.rs::action_record_terms_and_shape`.
-- [ ] T959 [US7] MEDULLA-DECISION-ENGINE-R869.2 Write path and refusals: `SourceBatchExtension::ActionRecords`, `source_action_record.rs` types, `source_ingestion/action_record.rs` validator, four `ServerErrorCode` variants; test `medulla_h_ingest_action_record_tests.rs::refusals_and_idempotent_replay`.
+- [x] T959 [US7] MEDULLA-DECISION-ENGINE-R869.2 Write path and refusals: `SourceBatchExtension::ActionRecords`, `source_action_record.rs` types, `source_ingestion/action_record.rs` validator, four `ServerErrorCode` variants; test `medulla_h_ingest_action_record_tests.rs::refusals_and_idempotent_replay`.
 - [ ] T960 [US7] MEDULLA-DECISION-ENGINE-R869.3 The why chain: stored query `why_action` over `TRAVERSE -[*]->{1,8} WITH PROOF`; test `medulla_h_ingest_action_record_tests.rs::why_chain_shows_facts_at_used_revision`.
 - [ ] T961 [US7] MEDULLA-DECISION-ENGINE-R869.4 Hot-path proof: why did we reorder
 - [ ] T971 [US7] MEDULLA-DECISION-ENGINE-R870 Committed decisions are listed, explained and re-solved on demand (rollup)
-- [ ] T972 [US7] MEDULLA-DECISION-ENGINE-R870.1 List committed records of a tenant
+- [x] T972 [US7] MEDULLA-DECISION-ENGINE-R870.1 List committed records of a tenant
 - [ ] T973 [US7] MEDULLA-DECISION-ENGINE-R870.2 Read the provenance of one committed record
 - [ ] T974 [US7] MEDULLA-DECISION-ENGINE-R870.3 Re-solve why one option was not chosen, within a bounded budget
 - [ ] T975 [US7] MEDULLA-DECISION-ENGINE-R870.4 Hot-path proof: list, explain and re-solve through the served op
