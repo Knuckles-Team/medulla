@@ -555,8 +555,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T545 [US8] MEDULLA-DECISION-ENGINE-R172.10 Designation latency and recall budgets
 - [x] T546 [US8] MEDULLA-DECISION-ENGINE-R172.11 Designation served journey
 - [x] T547 [US8] MEDULLA-DECISION-ENGINE-R172.12.1 Pack surface fields
-- [ ] T548 [US8] MEDULLA-DECISION-ENGINE-R172.12.2 Target-class subsumption
-- [ ] T549 [US8] MEDULLA-DECISION-ENGINE-R172.12.3 Pack projection upserts index records
+- [x] T548 [US8] MEDULLA-DECISION-ENGINE-R172.12.2 Target-class subsumption
+- [x] T549 [US8] MEDULLA-DECISION-ENGINE-R172.12.3 Pack projection upserts index records
 - [ ] T550 [US8] MEDULLA-DECISION-ENGINE-R172.12.4 Pack target refusals
 - [ ] T551 [US8] MEDULLA-DECISION-ENGINE-R172.12.5 Pack designation evidence
 - [x] T552 [US8] MEDULLA-DECISION-ENGINE-R172.12.6 Pack designation served journey
@@ -654,10 +654,10 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T642 [US6] MEDULLA-DECISION-ENGINE-R615.5 Write-back release evidence
 - [x] T643 [US6] MEDULLA-DECISION-ENGINE-R615.6 Hot-path proof for the write-back queue
 - [ ] T644 [US8] MEDULLA-DECISION-ENGINE-R617.1 Model
-- [ ] T645 [US8] MEDULLA-DECISION-ENGINE-R617.2.1 Behavior: layered project rules
-- [ ] T646 [US8] MEDULLA-DECISION-ENGINE-R617.2.2 Behavior: retention prune plan
-- [ ] T647 [US8] MEDULLA-DECISION-ENGINE-R617.2.3 Behavior: create, read and expire through one surface
-- [ ] T648 [US8] MEDULLA-DECISION-ENGINE-R617.2.4 Behavior: smallest covering set under a context budget
+- [x] T645 [US8] MEDULLA-DECISION-ENGINE-R617.2.1 Behavior: layered project rules
+- [x] T646 [US8] MEDULLA-DECISION-ENGINE-R617.2.2 Behavior: retention prune plan
+- [x] T647 [US8] MEDULLA-DECISION-ENGINE-R617.2.3 Behavior: create, read and expire through one surface
+- [x] T648 [US8] MEDULLA-DECISION-ENGINE-R617.2.4 Behavior: smallest covering set under a context budget
 - [ ] T649 [US8] MEDULLA-DECISION-ENGINE-R617.3 Wiring
 - [ ] T650 [US8] MEDULLA-DECISION-ENGINE-R617.4 Refusal
 - [ ] T651 [US8] MEDULLA-DECISION-ENGINE-R617.5 Evidence
@@ -702,13 +702,13 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T690 [US8] MEDULLA-DECISION-ENGINE-R650.4 Descriptor refusals
 - [ ] T691 [US8] MEDULLA-DECISION-ENGINE-R650.5 Descriptor evidence
 - [ ] T692 [US8] MEDULLA-DECISION-ENGINE-R650.6 Descriptor designation hot path
-- [ ] T693 [US8] MEDULLA-DECISION-ENGINE-R651.1 Model
-- [ ] T694 [US8] MEDULLA-DECISION-ENGINE-R651.2.1 Behavior: mementos and session priming
-- [ ] T695 [US8] MEDULLA-DECISION-ENGINE-R651.2.2 Behavior: embedding drift report
-- [ ] T696 [US8] MEDULLA-DECISION-ENGINE-R651.2.3 Behavior: trajectory pruning
+- [x] T693 [US8] MEDULLA-DECISION-ENGINE-R651.1 Model
+- [x] T694 [US8] MEDULLA-DECISION-ENGINE-R651.2.1 Behavior: mementos and session priming
+- [x] T695 [US8] MEDULLA-DECISION-ENGINE-R651.2.2 Behavior: embedding drift report
+- [x] T696 [US8] MEDULLA-DECISION-ENGINE-R651.2.3 Behavior: trajectory pruning
 - [ ] T697 [US8] MEDULLA-DECISION-ENGINE-R651.3 Wiring
-- [ ] T698 [US8] MEDULLA-DECISION-ENGINE-R651.4 Refusal
-- [ ] T699 [US8] MEDULLA-DECISION-ENGINE-R651.5 Evidence
+- [x] T698 [US8] MEDULLA-DECISION-ENGINE-R651.4 Refusal
+- [x] T699 [US8] MEDULLA-DECISION-ENGINE-R651.5 Evidence
 - [ ] T700 [US8] MEDULLA-DECISION-ENGINE-R651.6 Hot-path proof
 - [ ] T701 [US8] MEDULLA-DECISION-ENGINE-R652.1 Model
 - [ ] T702 [US8] MEDULLA-DECISION-ENGINE-R652.2 Behavior: lifecycle and evidence combination
@@ -731,7 +731,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T714 [US7] MEDULLA-DECISION-ENGINE-R653.5 Evidence
 - [ ] T715 [US7] MEDULLA-DECISION-ENGINE-R653.6 Hot-path proof
 - [ ] T716 [US7] MEDULLA-DECISION-ENGINE-R653.7 Behavior: gap settlement and offer rate
-- [ ] T717 [US7] MEDULLA-DECISION-ENGINE-R653.8 Behavior: failure-sequence miner and capability ratchet
+- [x] T717 [US7] MEDULLA-DECISION-ENGINE-R653.8 Behavior: failure-sequence miner and capability ratchet
 - [ ] T718 [US8] MEDULLA-DECISION-ENGINE-R654.1 Model: rollout set and spec-proposal chart
 - [ ] T719 [US8] MEDULLA-DECISION-ENGINE-R654.2 Behaviour: paired rollout evidence and legal spec transitions
 - [ ] T720 [US8] MEDULLA-DECISION-ENGINE-R654.3 Wiring: record rollouts and promote through the champion pointer
@@ -779,7 +779,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T762 [US8] MEDULLA-DECISION-ENGINE-R704.3 Wiring
 - [ ] T763 [US8] MEDULLA-DECISION-ENGINE-R704.4 Refusal
 - [ ] T764 [US8] MEDULLA-DECISION-ENGINE-R704.5 Evidence
-- [ ] T765 [US8] MEDULLA-DECISION-ENGINE-R704.6 Hot-path proof
+- [x] T765 [US8] MEDULLA-DECISION-ENGINE-R704.6 Hot-path proof
 - [ ] T766 [US8] MEDULLA-DECISION-ENGINE-R705.1 Model
 - [ ] T767 [US8] MEDULLA-DECISION-ENGINE-R705.2 Behavior
 - [ ] T768 [US8] MEDULLA-DECISION-ENGINE-R705.3 Wiring
@@ -833,11 +833,11 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T816 [US4] MEDULLA-DECISION-ENGINE-R810.7 Held-out evidence on the evaluated program revision
 - [ ] T817 [US4] MEDULLA-DECISION-ENGINE-R811.1 Model: policy evolution operations and receipts
 - [ ] T818 [US4] MEDULLA-DECISION-ENGINE-R811.2 Behaviour: capture gate and held-out split isolation
-- [ ] T819 [US4] MEDULLA-DECISION-ENGINE-R811.3 Wiring: served policy evolution path
+- [x] T819 [US4] MEDULLA-DECISION-ENGINE-R811.3 Wiring: served policy evolution path
 - [ ] T820 [US4] MEDULLA-DECISION-ENGINE-R811.4 Refusal: policy evolution codes
 - [ ] T821 [US4] MEDULLA-DECISION-ENGINE-R811.5 Evidence: receipt fields
 - [ ] T822 [US4] MEDULLA-DECISION-ENGINE-R811.6 Hot-path proof: served capture, training and evaluation
-- [ ] T823 [US4] MEDULLA-DECISION-ENGINE-R811.7 Evaluation receipts name a revision subject
+- [x] T823 [US4] MEDULLA-DECISION-ENGINE-R811.7 Evaluation receipts name a revision subject
 - [ ] T824 [US4] MEDULLA-DECISION-ENGINE-R811.8 Policy evaluation maps into held-out evidence
 - [ ] T825 [US4] MEDULLA-DECISION-ENGINE-R812.2 Behaviour: challenger beats champion by a margin
 - [ ] T826 [US4] MEDULLA-DECISION-ENGINE-R813.1 Model: one grader kind
@@ -925,8 +925,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T906 [US7] MEDULLA-DECISION-ENGINE-R134.111.17 Control step schema and digest
 - [ ] T907 [US7] MEDULLA-DECISION-ENGINE-R134.111.18 Control step hot-path proof
 - [ ] T908 [US7] MEDULLA-DECISION-ENGINE-R180.1 Process decision model
-- [ ] T909 [US7] MEDULLA-DECISION-ENGINE-R180.2 Decision table evaluation
-- [ ] T910 [US7] MEDULLA-DECISION-ENGINE-R180.3 Branch selection
+- [x] T909 [US7] MEDULLA-DECISION-ENGINE-R180.2 Decision table evaluation
+- [x] T910 [US7] MEDULLA-DECISION-ENGINE-R180.3 Branch selection
 - [ ] T911 [US7] MEDULLA-DECISION-ENGINE-R180.4 Process decision family wiring
 - [ ] T912 [US7] MEDULLA-DECISION-ENGINE-R180.5 Process decision refusal
 - [ ] T913 [US7] MEDULLA-DECISION-ENGINE-R180.6 Process decision evidence
