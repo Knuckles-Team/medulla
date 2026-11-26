@@ -25,6 +25,7 @@ fn record_op(work_item_id: &str, tenant: &str) -> IdentityOp {
                 tool: IDENTITY_ADMIN_SCOPE.to_string(),
                 expires_at: u64::MAX,
                 revoked_at: None,
+                ..DelegationRecord::default()
             },
         },
     })

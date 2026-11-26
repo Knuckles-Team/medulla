@@ -503,3 +503,135 @@ pub fn check_submit_work_item_context(
     }
     Ok(())
 }
+
+/// MEDULLA-IDENTITY-R742: a WorkItem that names an agent-run delegation in its `delegation_id`
+/// metadata runs only while that delegation is active. A submit naming a revoked, expired or
+/// no-longer-held delegation, and a reclaim (a `ClaimWorkItem` naming the item) of an item whose
+/// delegation has since lapsed, refuse `DELEGATION_INVALID` before anything is written. The record
+/// is read tenant-keyed: a record of another tenant and an id with no record both leave the item
+/// ungated, so the refusal is no existence oracle. A `delegation_id` with no agent-run record is
+/// another delegation family's identifier and is not this gate's concern.
+pub async fn check_agent_run_delegation(
+    state: &Arc<RwLock<ServerState>>,
+    req: &Request,
+    verified_context: &VerifiedRequestContext,
+    authority: DispatchAuthority,
+) -> Result<(), Response> {
+    if authority.state_machine_authorized || authority.identity_bootstrap {
+        return Ok(());
+    }
+    let mut named: Vec<(String, String)> = Vec::new();
+    match &req.method {
+        Method::SubmitWorkItem { request } => {
+            named.extend(submitted_delegation(request));
+        }
+        Method::SubmitWorkItems { request } => {
+            named.extend(request.requests.iter().filter_map(submitted_delegation));
+        }
+        Method::ClaimWorkItem { request } => {
+            if let Some(work_item_id) = request.work_item_id.as_ref() {
+                named.extend(
+                    item_delegation(
+                        state,
+                        req,
+                        verified_context,
+                        &request.tenant_ref,
+                        work_item_id,
+                    )
+                    .await,
+                );
+            }
+        }
+        _ => {}
+    }
+    for (tenant, delegation_id) in named {
+        if agent_run_lapsed(state, &tenant, &delegation_id).await {
+            return Err(Response::err(
+                req.id,
+                "DELEGATION_INVALID: the agent-run delegation is not active",
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// `(tenant, delegation_id)` a submitted item names in its metadata.
+fn submitted_delegation(
+    request: &medulla_work_types::native_control::SubmitWorkItemRequest,
+) -> Option<(String, String)> {
+    let delegation_id = request.metadata.get("delegation_id")?.as_str()?;
+    Some((request.context.tenant_id.clone(), delegation_id.to_string()))
+}
+
+/// `(tenant, delegation_id)` of a stored item, read through the served `GetWorkItem` under the
+/// caller's own identity. An item the caller cannot read names no delegation here; the claim
+/// itself then applies its own rules.
+async fn item_delegation(
+    state: &Arc<RwLock<ServerState>>,
+    req: &Request,
+    verified_context: &VerifiedRequestContext,
+    tenant: &str,
+    work_item_id: &str,
+) -> Option<(String, String)> {
+    use medulla_protocol_types::protocol::ResultPayload;
+    let response = medulla_server_graph::dispatch::graph_pipeline::dispatch_graph_op(
+        state,
+        &req.graph,
+        req.id,
+        req.agent_id.as_deref(),
+        verified_context,
+        Method::GetWorkItem {
+            tenant: tenant.to_string(),
+            work_item_id: work_item_id.to_string(),
+        },
+    )
+    .await;
+    let Some(ResultPayload::Raw(bytes)) = response.result else {
+        return None;
+    };
+    let view =
+        rmp_serde::from_slice::<Option<medulla_work_types::work_item_read::WorkItemView>>(&bytes)
+            .ok()
+            .flatten()?;
+    let delegation_id = view.metadata.get("delegation_id")?.as_str()?.to_string();
+    Some((tenant.to_string(), delegation_id))
+}
+
+/// Whether `delegation_id` is an agent-run record of `tenant` that is no longer active: revoked,
+/// expired on the engine clock, its principal inactive, or an operation the principal no longer
+/// holds.
+#[cfg(feature = "security")]
+async fn agent_run_lapsed(
+    state: &Arc<RwLock<ServerState>>,
+    tenant: &str,
+    delegation_id: &str,
+) -> bool {
+    use medulla_identity_types::identity::{DelegationKind, DelegationStanding};
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+    let found = timed_read(state)
+        .await
+        .isolation
+        .rbac()
+        .identity_store()
+        .delegation_state(
+            delegation_id,
+            tenant,
+            now_ms,
+            &medulla_capabilities::scopes::ScopeRegistry,
+        );
+    found.is_some_and(|delegation| {
+        delegation.record.kind == DelegationKind::AgentRun
+            && !(delegation.standing == DelegationStanding::Active
+                && delegation.principal_active
+                && delegation.holds_tool_scope)
+    })
+}
+
+#[cfg(not(feature = "security"))]
+async fn agent_run_lapsed(
+    _state: &Arc<RwLock<ServerState>>,
+    _tenant: &str,
+    _delegation_id: &str,
+) -> bool {
+    false
+}

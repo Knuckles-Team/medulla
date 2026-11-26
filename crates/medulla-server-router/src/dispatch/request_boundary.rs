@@ -20,7 +20,8 @@ pub mod method_errors;
 pub mod saga;
 
 pub(super) use authorization::{
-    check_scope_and_admin_authority, check_submit_work_item_context, DispatchAuthority,
+    check_agent_run_delegation, check_scope_and_admin_authority, check_submit_work_item_context,
+    DispatchAuthority,
 };
 
 impl DispatchAuthority {
@@ -531,6 +532,7 @@ async fn dispatch_preamble_checks(
     preflight_commit_owner(state, req.id, &req, verified_context).await?;
 
     check_submit_work_item_context(&req, verified_context, authority)?;
+    check_agent_run_delegation(state, &req, verified_context, authority).await?;
 
     // Cluster writes cross consensus at the authenticated request boundary. The
     // complete mutation inventory is partitioned between graph commands and typed

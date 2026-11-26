@@ -9,6 +9,7 @@ mod access;
 mod approval_keys;
 mod auth;
 mod credentials;
+mod delegation_agent_run;
 mod factors;
 mod mfa_totp;
 mod modes;

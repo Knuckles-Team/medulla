@@ -1,7 +1,8 @@
 //! Delegation records for background work (MEDULLA-IDENTITY-R701).
 
 use super::super::delegation::{
-    DelegationRecord, DelegationRecordWrite, DelegationStanding, DelegationState,
+    DelegationKind, DelegationRecord, DelegationRecordWrite, DelegationStanding, DelegationState,
+    MAX_DELEGATION_OPERATIONS,
 };
 use super::super::ops::DelegationOp;
 use super::super::requests_admin::ObjectRef;
@@ -14,6 +15,24 @@ use super::{ApplyContext, IdentityStore};
 
 /// Most delegation records retained; a write past it is refused.
 pub const MAX_DELEGATIONS: usize = 100_000;
+
+/// An agent-run record names its run and a bounded, non-empty operation set, no tool scope, and
+/// expires in the future of the engine clock.
+fn agent_run_shape(record: &DelegationRecord, now_ms: u64) -> Result<(), IdentityRefusal> {
+    let run_id = record.run_id.as_deref().ok_or(IdentityRefusal::InvalidRequest)?;
+    bounded(run_id, MAX_NAME_BYTES)?;
+    if !record.tool.is_empty()
+        || record.operations.is_empty()
+        || record.operations.len() > MAX_DELEGATION_OPERATIONS
+        || record.expires_at <= now_ms
+    {
+        return Err(IdentityRefusal::InvalidRequest);
+    }
+    for operation in &record.operations {
+        bounded(operation, MAX_NAME_BYTES)?;
+    }
+    Ok(())
+}
 
 impl IdentityStore {
     pub(super) fn apply_delegation(
@@ -37,13 +56,20 @@ impl IdentityStore {
         identifier(&request.work_item_id)?;
         let record = &request.record;
         bounded(&record.tenant, MAX_NAME_BYTES)?;
-        bounded(&record.tool, MAX_NAME_BYTES)?;
         if record.tenant.is_empty()
-            || record.tool.is_empty()
             || record.revoked_at.is_some()
             || !self.users.contains_key(&record.principal)
         {
             return Err(IdentityRefusal::InvalidRequest);
+        }
+        match record.kind {
+            DelegationKind::ToolTask => {
+                bounded(&record.tool, MAX_NAME_BYTES)?;
+                if record.run_id.is_some() || !record.operations.is_empty() {
+                    return Err(IdentityRefusal::InvalidRequest);
+                }
+            }
+            DelegationKind::AgentRun => agent_run_shape(record, now_ms)?,
         }
         if self.delegations.contains_key(&request.work_item_id) {
             return Err(IdentityRefusal::Collision);
@@ -109,7 +135,13 @@ impl IdentityStore {
         let holds_tool_scope = principal_active
             && self
                 .resolve(&record.principal, classifier)
-                .is_ok_and(|resolved| resolved.scopes.contains(&record.tool));
+                .is_ok_and(|resolved| match record.kind {
+                    DelegationKind::ToolTask => resolved.scopes.contains(&record.tool),
+                    DelegationKind::AgentRun => record
+                        .operations
+                        .iter()
+                        .all(|operation| resolved.scopes.contains(operation)),
+                });
         Some(DelegationState {
             record: record.clone(),
             standing,

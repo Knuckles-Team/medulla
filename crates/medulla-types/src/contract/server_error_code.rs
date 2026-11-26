@@ -245,6 +245,9 @@ closed_error_codes! {
         /// A plan view has an op with no incremental form, so it recomputes (MEDULLA-INCREMENTAL-VIEWS-R005.5).
         MatviewNotIncremental => "MATVIEW_NOT_INCREMENTAL",
         DelegationUnknown => "DELEGATION_UNKNOWN",
+        /// MEDULLA-IDENTITY-R742: a WorkItem names an agent-run delegation that is revoked,
+        /// expired, or whose principal no longer holds its operations.
+        DelegationInvalid => "DELEGATION_INVALID",
         // MEDULLA-IDENTITY-R704.2: the refusal reasons of a resource access decision.
         ResourceUnknown => "RESOURCE_UNKNOWN",
         ResourceGrantMissing => "RESOURCE_GRANT_MISSING",

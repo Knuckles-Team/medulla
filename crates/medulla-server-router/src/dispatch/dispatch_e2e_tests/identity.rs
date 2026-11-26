@@ -22,6 +22,7 @@ use super::super::test_support::{
     bootstrapped_state as state, send as send_method, state as unbootstrapped_state, verified,
 };
 
+mod agent_run_delegation;
 mod approval_keys;
 mod client_session;
 mod data_product;

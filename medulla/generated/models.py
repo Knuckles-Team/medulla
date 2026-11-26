@@ -36009,12 +36009,20 @@ class DatasetRef(BaseModel):
     namespace: str
 
 
+class DelegationKind(str, Enum):
+    TOOL_TASK = "tool_task"
+    AGENT_RUN = "agent_run"
+
+
 class DelegationRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     expires_at: Annotated[int, Field(ge=0)]
+    kind: DelegationKind = DelegationKind.TOOL_TASK
+    operations: list[str] = Field(default_factory=list)
     principal: str
     revoked_at: Annotated[int, Field(ge=0)] | None = None
+    run_id: str | None = None
     tenant: str
     tool: str
 
@@ -47493,6 +47501,7 @@ __all__ = [
     "DeclaredText",
     "DegreeCentralityAllResult",
     "DegreeCentralityAllResultValueItem",
+    "DelegationKind",
     "DelegationRecord",
     "DelegationStanding",
     "DelegationState",

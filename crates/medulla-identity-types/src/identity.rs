@@ -75,7 +75,8 @@ pub use credentials::{
     MAX_MFA_CHALLENGES, MAX_SCIM_CLIENTS, MFA_CHALLENGE_TTL_MS, SESSION_HANDLE_CHARS,
 };
 pub use delegation::{
-    DelegationRecord, DelegationRecordWrite, DelegationStanding, DelegationState,
+    DelegationKind, DelegationRecord, DelegationRecordWrite, DelegationStanding, DelegationState,
+    MAX_DELEGATION_OPERATIONS,
 };
 pub use denials::{DenialSample, DenialSampler, MAX_DENIAL_SAMPLES};
 pub use metadata::{

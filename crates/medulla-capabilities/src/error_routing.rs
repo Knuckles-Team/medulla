@@ -1743,6 +1743,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CHILD_TARGET_TERMINAL",
             // MEDULLA-DURABLE-KERNEL-R750.752: a moved conversation head.
             "CONVERSATION_CONFLICT",
+            // MEDULLA-IDENTITY-R742: the agent-run delegation the item names is not active.
+            "DELEGATION_INVALID",
             "ENVELOPE_FIELD_MISSING",
             "IDEMPOTENCY_CONFLICT",
             "REPLAY_NONCE_CONSUMED",
@@ -1759,9 +1761,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     // MEDULLA-TYPED-PACKS-R108.6: a batch names registered workflows exactly as one item does.
     (
         "SubmitWorkItems",
-        &["WORKFLOW_IDENTITY_UNKNOWN", "WORKFLOW_UNAUTHORIZED"],
+        &[
+            "DELEGATION_INVALID",
+            "WORKFLOW_IDENTITY_UNKNOWN",
+            "WORKFLOW_UNAUTHORIZED",
+        ],
     ),
-    ("ClaimWorkItem", &["REPLAY_NONCE_CONSUMED"]),
+    // MEDULLA-IDENTITY-R742: a reclaim of an item whose agent-run delegation has lapsed.
+    (
+        "ClaimWorkItem",
+        &["DELEGATION_INVALID", "REPLAY_NONCE_CONSUMED"],
+    ),
     // MEDULLA-DURABLE-KERNEL-R028.1.2.2: a checkpoint names only existing memory revisions.
     (
         "PublishRunCheckpoint",
