@@ -1259,6 +1259,24 @@ mod tests {
         assert_eq!(config.validate(), Ok(()));
     }
 
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.3
+    #[test]
+    fn acceleration_watermark_ttl_knob_default_and_range() {
+        let spec = KNOB_TABLE
+            .iter()
+            .find(|spec| spec.name == "acceleration.watermark_ttl_ms")
+            .expect("the watermark knob is registered");
+        assert_eq!(spec.default, KnobValue::U64(300_000));
+        assert_eq!(spec.min, KnobValue::U64(1_000));
+        assert_eq!(spec.max, KnobValue::U64(86_400_000));
+        assert_eq!(spec.unit, "ms");
+        assert_eq!(spec.class, KnobClass::Tunable);
+        let none = |_: &str| None;
+        assert_eq!(load_knobs(&[], none).unwrap().acceleration_watermark_ttl_ms, 300_000);
+        let below = vec!["acceleration.watermark_ttl_ms=999".to_string()];
+        assert!(load_knobs(&below, none).is_err(), "below the range refuses at startup");
+    }
+
     // spec: MEDULLA-DECISION-ENGINE-R036.105.2
     #[test]
     fn decision_deadline_knob_bounds() {

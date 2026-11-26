@@ -16,6 +16,12 @@ from typing import Any
 import pytest
 from _decision_resident_fixture import publish, schema_body
 from conftest import TEST_TENANT, request_context
+from ingest.test_source_stream_versions_served import (
+    STREAM,
+    _close,
+    _connector,
+    _ingest_client,
+)
 from pydantic import TypeAdapter
 
 from medulla.client import EngineResponseError, MedullaClient, SyncMedullaClient
@@ -23,13 +29,6 @@ from medulla.decision_client import param, task_plan_request
 from medulla.generated.source_ingestion import (
     SourceIngestionDisposition,
     SourceIngestionOutcome,
-)
-
-from ingest.test_source_stream_versions_served import (
-    STREAM,
-    _close,
-    _connector,
-    _ingest_client,
 )
 
 DIRECTORY = "skills/inspect"
@@ -93,6 +92,7 @@ async def _ingest(client: MedullaClient, batch: dict[str, Any]) -> None:
         idempotency_key=f"skills-{uuid.uuid4().hex}",
     )
     outcome = TypeAdapter(SourceIngestionOutcome).validate_python(payload)
+    assert outcome.outcome == "accepted", outcome
     assert outcome.receipt.disposition is SourceIngestionDisposition.COMMITTED, outcome
 
 
@@ -118,7 +118,9 @@ async def test_changed_document_marks_binding_stale() -> None:
         await _ingest(client, _batch(connector, first_text, 1))
         node_id, first = await _compilation(client)
         assert first["revision"] == 1
-        assert first["document_digest"] == hashlib.sha256(first_text.encode()).hexdigest()
+        assert (
+            first["document_digest"] == hashlib.sha256(first_text.encode()).hexdigest()
+        )
         # The graph holds the digests and the directory reference, never the text.
         assert "Read the node" not in json.dumps(first)
 
@@ -167,4 +169,75 @@ async def test_changed_document_marks_binding_stale() -> None:
         assert fresh["records"], fresh
     finally:
         sync.close()
+        await _close(client, graph)
+
+
+def _raw_document(*step_lines: str) -> str:
+    return "# Inspect\n\n## Steps\n" + "\n".join(step_lines) + "\n"
+
+
+REFUSED_DOCUMENTS = {
+    "SKILL_STEP_ID_MISSING": _raw_document("- : no id here"),
+    "SKILL_STEP_ID_DUPLICATE": _raw_document("- a: one", "- a: two"),
+    "SKILL_DEPENDENCY_UNRESOLVED": _raw_document("- a: one", "  after: ghost"),
+    "SKILL_CYCLE": _raw_document("- a: one", "  after: b", "- b: two", "  after: a"),
+    "SKILL_CAPABILITY_UNRESOLVED": _raw_document(
+        "- a: one", "  capability: NoSuchCapability"
+    ),
+    "SKILL_TYPE_UNSUPPORTED": _raw_document("- a: one", "  colour: red"),
+    "SKILL_SPAN_MISSING": "# Inspect\n\nNo steps section at all.\n",
+}
+
+
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R002.1.4")
+@pytest.mark.asyncio
+async def test_skill_plan_refusals() -> None:
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    try:
+        for page, (code, text) in enumerate(REFUSED_DOCUMENTS.items(), start=1):
+            with pytest.raises(EngineResponseError, match=code):
+                await client._send(
+                    "SourceIngest",
+                    {"request": _batch(connector, text, page)},
+                    idempotency_key=f"skill-refusal-{code}-{uuid.uuid4().hex}",
+                )
+        # A refusal writes nothing: no compilation node exists after all seven.
+        assert await client.nodes.list_by_label("SkillCompilation", 0) == []
+    finally:
+        await _close(client, graph)
+
+
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R002.1.5")
+@pytest.mark.asyncio
+async def test_skill_compilation_reads_back_without_document_copy() -> None:
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    second = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        graph_name=graph,
+    )
+    try:
+        text = _document("Report it")
+        await _ingest(client, _batch(connector, text, 1))
+        node_id, written = await _compilation(client)
+        read = await second.nodes.properties(node_id) or {}
+        assert read == written
+        for field in (
+            "document_digest",
+            "plan_digest",
+            "capability_digest",
+            "type_digest",
+        ):
+            assert len(read[field]) == 64, field
+        assert read["directory_ref"] == DIRECTORY
+        # No node of the graph holds the document text.
+        for label in ("SkillCompilation", "SkillDirectory"):
+            for other_id, _ in await second.nodes.list_by_label(label, 0):
+                body = json.dumps(await second.nodes.properties(other_id))
+                assert "Read the node" not in body, other_id
+                assert "# Inspect" not in body, other_id
+    finally:
+        await second.close()
         await _close(client, graph)
