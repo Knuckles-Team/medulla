@@ -16587,6 +16587,20 @@ class MethodDeadLetterRedrive(BaseModel):
     params: MethodDeadLetterRedriveParams
 
 
+class MethodWorkerRegister(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["WorkerRegister"]
+    params: MethodWorkerRegisterParams
+
+
+class MethodAdmitWorkerTask(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["AdmitWorkerTask"]
+    params: MethodAdmitWorkerTaskParams
+
+
 class MethodTaskQueueAck(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17278,6 +17292,8 @@ Method = Annotated[
         MethodTaskQueueEnqueue,
         MethodTaskQueueClaim,
         MethodTaskQueueRenew,
+        MethodWorkerRegister,
+        MethodAdmitWorkerTask,
         MethodDeadLetterList,
         MethodDeadLetterRedrive,
         MethodTaskQueueAck,
@@ -37599,6 +37615,69 @@ class MethodTaskQueueRenewParams(BaseModel):
     worker_id: str
 
 
+class WorkerRegistration(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cores: Annotated[int, Field(ge=0)]
+    host_iri: str
+    lanes_supported: list[str]
+    memory_bytes: Annotated[int, Field(ge=0)]
+    worker_id: str
+
+
+class WorkerRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cores: Annotated[int, Field(ge=0)]
+    expires_at_ms: Annotated[int, Field(ge=0)]
+    host_iri: str
+    lanes_supported: list[str]
+    last_heartbeat_ms: Annotated[int, Field(ge=0)]
+    memory_bytes: Annotated[int, Field(ge=0)]
+    worker_id: str
+
+
+class WorkerGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    grant_id: str
+    lease_seconds: Annotated[int, Field(ge=0)]
+    reserved_lane: str
+    retry_after_seconds: Annotated[int, Field(ge=0)]
+    slots: Annotated[int, Field(ge=0)]
+
+
+class WorkerAdmissionGranted(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Granted: WorkerGrant
+
+
+class WorkerAdmissionRefused(BaseModel):
+    """A typed refusal: ``ADMIT_HELD_FOR_RESERVE``, ``WORKER_UNKNOWN`` or
+    ``WORKER_CAPACITY_ZERO``, as the engine serialized the closed enum."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    Refused: Any
+
+
+WorkerAdmission = WorkerAdmissionGranted | WorkerAdmissionRefused
+
+
+class MethodWorkerRegisterParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    registration: WorkerRegistration
+
+
+class MethodAdmitWorkerTaskParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    requested_max: Annotated[int, Field(ge=0)]
+    worker_id: str
+
+
 class MethodDeadLetterListParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -47720,6 +47799,16 @@ __all__ = [
     "MethodTaskQueueEnqueue",
     "MethodTaskQueueEnqueueParams",
     "DeadLetterItem",
+    "MethodWorkerRegister",
+    "MethodWorkerRegisterParams",
+    "MethodAdmitWorkerTask",
+    "MethodAdmitWorkerTaskParams",
+    "WorkerAdmission",
+    "WorkerAdmissionGranted",
+    "WorkerAdmissionRefused",
+    "WorkerGrant",
+    "WorkerRecord",
+    "WorkerRegistration",
     "DeadLetterListed",
     "DeadLetterRedriven",
     "MethodDeadLetterList",

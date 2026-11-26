@@ -58,6 +58,8 @@ if TYPE_CHECKING:
         TaskAcked,
         TaskEnqueued,
         TaskRenewed,
+        WorkerAdmission,
+        WorkerRecord,
     )
 
 logger = logging.getLogger(__name__)
@@ -4994,6 +4996,51 @@ class TaskQueueClient:
             idempotency_key=idempotency_key,
         )
         return cast("TaskEnqueued", _gen.coordination.decode_task_queue_enqueue(result))
+
+    async def register_worker(
+        self,
+        *,
+        worker_id: str,
+        host_iri: str,
+        cores: int,
+        memory_bytes: int,
+        lanes_supported: list[str],
+    ) -> WorkerRecord:
+        """Register one worker under the verified principal (INGEST-WORKER-R001.14).
+
+        A claim is admitted only for a registered, live worker. A live worker id is
+        refused ``WORKER_ALREADY_REGISTERED``.
+        """
+        result = await _gen.coordination.send_worker_register(
+            self._client,
+            {
+                "registration": {
+                    "worker_id": worker_id,
+                    "host_iri": host_iri,
+                    "cores": cores,
+                    "memory_bytes": memory_bytes,
+                    "lanes_supported": sorted(lanes_supported),
+                }
+            },
+        )
+        return cast("WorkerRecord", _gen.coordination.decode_worker_register(result))
+
+    async def admit_worker_task(
+        self, *, worker_id: str, requested_max: int
+    ) -> WorkerAdmission:
+        """Ask for a slot grant for ``worker_id`` (MEDULLA-INGEST-WORKER-R001.14).
+
+        The answer is a grant (``slots``, ``reserved_lane``, ``grant_id``) or a typed
+        refusal such as ``ADMIT_HELD_FOR_RESERVE``. A refusal is a signal to back
+        off, never to try another lane.
+        """
+        result = await _gen.coordination.send_admit_worker_task(
+            self._client,
+            {"worker_id": worker_id, "requested_max": requested_max},
+        )
+        return cast(
+            "WorkerAdmission", _gen.coordination.decode_admit_worker_task(result)
+        )
 
     async def claim(
         self, *, worker_id: str, grant_id: str, lease_ms: int

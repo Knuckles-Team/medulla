@@ -3037,6 +3037,12 @@ send_task_queue_claim = contract_sender("TaskQueueClaim", "MethodTaskQueueClaimP
 decode_task_queue_claim = contract_decoder("TaskQueueClaim", "TaskQueueClaimResult")
 send_task_queue_renew = contract_sender("TaskQueueRenew", "MethodTaskQueueRenewParams")
 decode_task_queue_renew = contract_decoder("TaskQueueRenew", "TaskRenewed")
+send_worker_register = contract_sender("WorkerRegister", "MethodWorkerRegisterParams")
+decode_worker_register = contract_decoder("WorkerRegister", "WorkerRecord")
+send_admit_worker_task = contract_sender(
+    "AdmitWorkerTask", "MethodAdmitWorkerTaskParams"
+)
+decode_admit_worker_task = contract_decoder("AdmitWorkerTask", "WorkerAdmission")
 send_dead_letter_list = contract_sender("DeadLetterList", "MethodDeadLetterListParams")
 decode_dead_letter_list = contract_decoder("DeadLetterList", "DeadLetterListed")
 send_dead_letter_redrive = contract_sender(
