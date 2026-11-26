@@ -122,6 +122,34 @@ impl StewardshipAssignment {
         text("scope", self.scope.id())?;
         text("principal", &self.principal)
     }
+
+    /// An assignment read back from the typed properties of its
+    /// `cat:StewardshipAssignment` node (`scope_kind`, `scope_id`, `role`, `principal`), the
+    /// one decoder the stewardship writer and the catalog reads share. `None` when a field is
+    /// absent or names no scope kind or role.
+    pub fn from_properties(
+        properties: &serde_json::Map<String, serde_json::Value>,
+    ) -> Option<Self> {
+        let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
+        let id = text("scope_id")?.to_string();
+        let scope = match text("scope_kind")? {
+            "asset" => StewardshipScope::Asset(id),
+            "concept_scheme" => StewardshipScope::ConceptScheme(id),
+            "domain" => StewardshipScope::Domain(id),
+            _ => return None,
+        };
+        let role = match text("role")? {
+            "owner" => StewardRole::Owner,
+            "steward" => StewardRole::Steward,
+            "custodian" => StewardRole::Custodian,
+            _ => return None,
+        };
+        Some(Self {
+            scope,
+            role,
+            principal: text("principal")?.to_string(),
+        })
+    }
 }
 
 impl ChangeRequest {

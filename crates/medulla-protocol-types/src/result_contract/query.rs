@@ -109,6 +109,9 @@ method_results! {
     CatalogReadBrowse(CatalogRead / "browse") => Raw<medulla_catalog_types::catalog_read::CatalogReadAnswer>;
     CatalogReadSearch(CatalogRead / "search") => Raw<medulla_catalog_types::catalog_read::CatalogReadAnswer>;
     CatalogReadDetail(CatalogRead / "detail") => Raw<medulla_catalog_types::catalog_read::CatalogReadAnswer>;
+    // MEDULLA-TYPED-PACKS-R108.18: the owners and stewards of a target, and one page of curation work.
+    CatalogReadGovernance(CatalogRead / "governance") => Raw<medulla_catalog_types::catalog_read::CatalogReadAnswer>;
+    CatalogReadProposals(CatalogRead / "proposals") => Raw<medulla_catalog_types::catalog_read::CatalogReadAnswer>;
     // MEDULLA-UNIFIED-DATA-PLANE-R029.2: what one attached table is, joins to, maps to and impacts.
     SchemaContext(SchemaContext) => Raw<medulla_catalog_types::schema_context::SchemaContextAnswer>;
     #[cfg(feature = "query")]

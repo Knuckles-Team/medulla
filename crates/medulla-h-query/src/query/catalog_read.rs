@@ -26,14 +26,14 @@ use super::stored_query::handle_stored_call;
 use super::*;
 
 /// One validated page request.
-struct Page {
-    limit: u64,
-    offset: u64,
+pub(super) struct Page {
+    pub(super) limit: u64,
+    pub(super) offset: u64,
     /// Where the glossary leg of a search resumes (zero until the asset leg is exhausted).
-    glossary_offset: u64,
+    pub(super) glossary_offset: u64,
 }
 
-fn invalid(detail: impl std::fmt::Display) -> String {
+pub(super) fn invalid(detail: impl std::fmt::Display) -> String {
     format!("{CATALOG_INVALID_ARGUMENT}: {detail}")
 }
 
@@ -43,7 +43,7 @@ fn not_found() -> String {
 
 /// The page size and the offset of a request: the size at most `catalog.search_page_max`, the
 /// cursor the decimal offset a previous page returned.
-fn page_of(limit: Option<u32>, cursor: Option<&str>) -> Result<Page, String> {
+pub(super) fn page_of(limit: Option<u32>, cursor: Option<&str>) -> Result<Page, String> {
     let max = CATALOG_SEARCH_PAGE_MAX.value();
     let limit = match limit {
         None => max,
@@ -160,6 +160,8 @@ async fn browse(
         rows,
         next_cursor,
         detail: None,
+        governance: None,
+        proposals: Vec::new(),
     })
 }
 
@@ -257,6 +259,8 @@ async fn search(
         rows,
         next_cursor,
         detail: None,
+        governance: None,
+        proposals: Vec::new(),
     })
 }
 
@@ -332,6 +336,8 @@ async fn detail(ctx: &QueryHandlerCtx<'_>, asset_id: String) -> Result<CatalogRe
         rows: Vec::new(),
         next_cursor: None,
         detail: Some(out),
+        governance: None,
+        proposals: Vec::new(),
     })
 }
 
@@ -351,11 +357,25 @@ pub(crate) async fn handle_catalog_read(ctx: &QueryHandlerCtx<'_>, op: CatalogRe
             cursor,
         } => (search(ctx, text, kinds, limit, cursor).await, 1),
         CatalogReadOp::Detail { asset_id } => (detail(ctx, asset_id).await, 2),
+        CatalogReadOp::Governance { target } => {
+            (super::catalog_governance::governance(ctx, &target), 3)
+        }
+        CatalogReadOp::Proposals {
+            state,
+            target,
+            limit,
+            cursor,
+        } => (
+            super::catalog_governance::proposals(ctx, state, target, limit, cursor),
+            4,
+        ),
     };
     let payload = answer.and_then(|answer| match kind {
         0 => ResultPayload::of::<results::CatalogReadBrowse>(answer),
         1 => ResultPayload::of::<results::CatalogReadSearch>(answer),
-        _ => ResultPayload::of::<results::CatalogReadDetail>(answer),
+        2 => ResultPayload::of::<results::CatalogReadDetail>(answer),
+        3 => ResultPayload::of::<results::CatalogReadGovernance>(answer),
+        _ => ResultPayload::of::<results::CatalogReadProposals>(answer),
     });
     match payload {
         Ok(payload) => Response::ok(ctx.req_id, payload),

@@ -36365,6 +36365,31 @@ class CatalogAssetDetail(BaseModel):
     comments: list[CatalogComment]
 
 
+class CatalogGovernance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    owners: list[str]
+    stewards: list[str]
+
+
+class CatalogProposalKind(str, Enum):
+    DESCRIPTION = "description"
+    CHANGE_REQUEST = "change_request"
+
+
+class CatalogProposalRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    kind: CatalogProposalKind
+    target: str
+    state: str
+    opened_by: str | None = None
+    reviewers: list[str] = Field(default_factory=list)
+    text: str | None = None
+    change_request: str | None = None
+
+
 class CatalogReadAnswer(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -36372,6 +36397,8 @@ class CatalogReadAnswer(BaseModel):
     rows: list[CatalogAssetRow]
     next_cursor: str | None = None
     detail: CatalogAssetDetail | None = None
+    governance: CatalogGovernance | None = None
+    proposals: list[CatalogProposalRow] = Field(default_factory=list)
 
 
 class CatalogReadOpBrowse(BaseModel):
@@ -36401,8 +36428,29 @@ class CatalogReadOpDetail(BaseModel):
     asset_id: str
 
 
+class CatalogReadOpGovernance(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["governance"]
+    target: StewardshipTarget
+
+
+class CatalogReadOpProposals(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["proposals"]
+    state: str | None = None
+    target: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+    cursor: str | None = None
+
+
 CatalogReadOp = Annotated[
-    CatalogReadOpBrowse | CatalogReadOpSearch | CatalogReadOpDetail,
+    CatalogReadOpBrowse
+    | CatalogReadOpSearch
+    | CatalogReadOpDetail
+    | CatalogReadOpGovernance
+    | CatalogReadOpProposals,
     Field(discriminator="op"),
 ]
 
@@ -48010,6 +48058,8 @@ __all__ = [
     "MethodGraphSchemaClasses",
     "MethodGraphSchemaClassesParams",
     "MethodGraphSchemaList",
+    "MethodGraphSchemaGet",
+    "MethodGraphSchemaGetParams",
     "MethodGraphSchemaParams",
     "MethodGuardrailEntailment",
     "MethodGuardrailEntailmentParams",
@@ -48058,8 +48108,6 @@ __all__ = [
     "GlossaryOpReviewDescription",
     "DescriptionState",
     "DescriptionInputs",
-    "MethodGraphSchemaGet",
-    "MethodGraphSchemaGetParams",
     "DescriptionProposal",
     "MethodStewardship",
     "MethodStewardshipParams",
@@ -48090,11 +48138,16 @@ __all__ = [
     "CatalogAssetRow",
     "CatalogComment",
     "CatalogAssetDetail",
+    "CatalogGovernance",
+    "CatalogProposalKind",
+    "CatalogProposalRow",
     "CatalogReadAnswer",
     "CatalogReadOp",
     "CatalogReadOpBrowse",
     "CatalogReadOpSearch",
     "CatalogReadOpDetail",
+    "CatalogReadOpGovernance",
+    "CatalogReadOpProposals",
     "DashboardRole",
     "DashboardGrant",
     "DashboardPanel",

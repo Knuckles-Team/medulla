@@ -343,6 +343,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T330 [US1] MEDULLA-TYPED-PACKS-R001.11 The enum parity gate fails on drift
 - [ ] T331 [US1] MEDULLA-TYPED-PACKS-R001.12 An unknown violation code never discards a rejection
 - [ ] T338 [US4] MEDULLA-TYPED-PACKS-R108.17 Registered catalog read queries for browse, search and asset detail
+- [ ] T350 [US4] MEDULLA-TYPED-PACKS-R108.18 Governance reads: the owners and stewards of a target, and the curation queue
 - [ ] T346 [US8] MEDULLA-TYPED-PACKS-R812 A class term of `GraphSchemaClasses` carries its direct superclasses (rollup)
 - [ ] T347 [US8] MEDULLA-TYPED-PACKS-R812.1 Model and behavior: `GraphSchemaTermView.superclasses`
 - [ ] T348 [US8] MEDULLA-TYPED-PACKS-R812.2 Wiring: the served page carries the superclasses

@@ -1939,6 +1939,12 @@ decode_catalog_read_search = contract_decoder(
 decode_catalog_read_detail = contract_decoder(
     "CatalogRead", "CatalogReadAnswer", "detail"
 )
+decode_catalog_read_governance = contract_decoder(
+    "CatalogRead", "CatalogReadAnswer", "governance"
+)
+decode_catalog_read_proposals = contract_decoder(
+    "CatalogRead", "CatalogReadAnswer", "proposals"
+)
 send_column_lineage = contract_sender("ColumnLineage", "MethodColumnLineageParams")
 send_context_compile = contract_sender("ContextCompile", "MethodContextCompileParams")
 send_corpus_retrieve = contract_sender("CorpusRetrieve", "MethodCorpusRetrieveParams")

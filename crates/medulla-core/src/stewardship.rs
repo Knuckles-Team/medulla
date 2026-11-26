@@ -29,6 +29,36 @@ pub struct TargetScopes {
     pub domain: Option<String>,
 }
 
+impl TargetScopes {
+    /// The scopes a wire target names.
+    pub fn of_target(target: &medulla_catalog_types::stewardship::StewardshipTarget) -> Self {
+        Self {
+            asset: target.asset.clone(),
+            concept_scheme: target.concept_scheme.clone(),
+            domain: target.domain.clone(),
+        }
+    }
+}
+
+/// The owners and the stewards that govern `target`, each sorted and without repeats: the
+/// roles a caller reads to decide whom to admit (MEDULLA-TYPED-PACKS-R802.3, R108.18).
+pub fn governing(
+    assignments: &[StewardshipAssignment],
+    target: &TargetScopes,
+) -> (Vec<String>, Vec<String>) {
+    let pick = |role: StewardRole| {
+        let mut names: Vec<String> = resolve(assignments, target)
+            .into_iter()
+            .filter(|a| a.role == role)
+            .map(|a| a.principal.clone())
+            .collect();
+        names.sort();
+        names.dedup();
+        names
+    };
+    (pick(StewardRole::Owner), pick(StewardRole::Steward))
+}
+
 /// Why a stewardship operation was refused.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StewardshipError {

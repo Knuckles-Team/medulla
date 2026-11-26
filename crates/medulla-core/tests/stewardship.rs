@@ -171,3 +171,50 @@ fn review_refuses_missing_role_self_approval_and_a_moved_target() {
         Ok(())
     );
 }
+
+/// Verifies MEDULLA-TYPED-PACKS-R108.18: the owners and stewards a catalog read answers are the
+/// ones the most specific assignment level holds, sorted, and a custodian is neither.
+// spec: MEDULLA-TYPED-PACKS-R108.18
+#[test]
+fn governing_names_the_owners_and_stewards_of_the_most_specific_level() {
+    use medulla_catalog_types::stewardship::StewardshipTarget;
+    use medulla_core::stewardship::governing;
+
+    let all = vec![
+        assign(
+            StewardshipScope::Domain("finance".into()),
+            StewardRole::Owner,
+            "domain-owner",
+        ),
+        assign(
+            StewardshipScope::Asset("table:orders".into()),
+            StewardRole::Steward,
+            "zed",
+        ),
+        assign(
+            StewardshipScope::Asset("table:orders".into()),
+            StewardRole::Steward,
+            "amy",
+        ),
+        assign(
+            StewardshipScope::Asset("table:orders".into()),
+            StewardRole::Custodian,
+            "ops",
+        ),
+    ];
+    let target = TargetScopes::of_target(&StewardshipTarget {
+        asset: Some("table:orders".into()),
+        concept_scheme: None,
+        domain: Some("finance".into()),
+    });
+    let (owners, stewards) = governing(&all, &target);
+    assert!(owners.is_empty(), "the asset level holds no owner and shadows the domain");
+    assert_eq!(stewards, ["amy", "zed"]);
+
+    let domain_only = TargetScopes::of_target(&StewardshipTarget {
+        asset: None,
+        concept_scheme: None,
+        domain: Some("finance".into()),
+    });
+    assert_eq!(governing(&all, &domain_only), (vec!["domain-owner".to_string()], vec![]));
+}

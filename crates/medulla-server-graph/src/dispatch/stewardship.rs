@@ -25,8 +25,8 @@ use medulla_catalog_types::stewardship::{
     StewardshipReceipt, StewardshipScope, StewardshipTarget,
 };
 use medulla_core::stewardship::{
-    authorize_review, certify, open_change_request, resolve, reviewers, transition, ReviewRefusal,
-    TargetScopes, CERTIFICATION_TTL_DAYS_DEFAULT,
+    authorize_review, certify, governing, open_change_request, reviewers, transition,
+    ReviewRefusal, TargetScopes, CERTIFICATION_TTL_DAYS_DEFAULT,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_protocol_types::result_contract::ingestion::{
@@ -84,14 +84,6 @@ fn role_missing(detail: &str) -> String {
     format!("{}: {detail}", ServerErrorCode::StewardRoleMissing.as_str())
 }
 
-fn scopes_of(target: &StewardshipTarget) -> TargetScopes {
-    TargetScopes {
-        asset: target.asset.clone(),
-        concept_scheme: target.concept_scheme.clone(),
-        domain: target.domain.clone(),
-    }
-}
-
 fn scopes_of_assignment(assignment: &StewardshipAssignment) -> TargetScopes {
     let mut scopes = TargetScopes {
         asset: None,
@@ -120,34 +112,6 @@ fn scope_parts(scope: &StewardshipScope) -> (&'static str, &str) {
         StewardshipScope::ConceptScheme(id) => ("concept_scheme", id),
         StewardshipScope::Domain(id) => ("domain", id),
     }
-}
-
-fn scope_from(kind: &str, id: &str) -> Option<StewardshipScope> {
-    match kind {
-        "asset" => Some(StewardshipScope::Asset(id.to_string())),
-        "concept_scheme" => Some(StewardshipScope::ConceptScheme(id.to_string())),
-        "domain" => Some(StewardshipScope::Domain(id.to_string())),
-        _ => None,
-    }
-}
-
-fn role_from(role: &str) -> Option<StewardRole> {
-    match role {
-        "owner" => Some(StewardRole::Owner),
-        "steward" => Some(StewardRole::Steward),
-        "custodian" => Some(StewardRole::Custodian),
-        _ => None,
-    }
-}
-
-/// An assignment read back from its typed node properties.
-fn assignment_from(properties: &Properties) -> Option<StewardshipAssignment> {
-    let text = |key: &str| properties.get(key).and_then(serde_json::Value::as_str);
-    Some(StewardshipAssignment {
-        scope: scope_from(text("scope_kind")?, text("scope_id")?)?,
-        role: role_from(text("role")?)?,
-        principal: text("principal")?.to_string(),
-    })
 }
 
 fn role_key(role: StewardRole) -> &'static str {
@@ -202,7 +166,7 @@ pub async fn load_assignments(
             {
                 continue;
             }
-            if let Some(assignment) = assignment_from(&properties) {
+            if let Some(assignment) = StewardshipAssignment::from_properties(&properties) {
                 found.push(assignment);
             }
         }
@@ -225,20 +189,6 @@ pub async fn holds_review_role(
     Ok(reviewers(&assignments, scopes)
         .iter()
         .any(|reviewer| reviewer == principal))
-}
-
-fn governing(assignments: &[StewardshipAssignment], scopes: &TargetScopes) -> (Vec<String>, Vec<String>) {
-    let pick = |role: StewardRole| {
-        let mut names: Vec<String> = resolve(assignments, scopes)
-            .into_iter()
-            .filter(|a| a.role == role)
-            .map(|a| a.principal.clone())
-            .collect();
-        names.sort();
-        names.dedup();
-        names
-    };
-    (pick(StewardRole::Owner), pick(StewardRole::Steward))
 }
 
 async fn receipt(
@@ -345,7 +295,7 @@ async fn open(
     scopes: &StewardshipTarget,
 ) -> Result<StewardshipReceipt, String> {
     let assignments = load_assignments(state, target).await?;
-    let scopes = scopes_of(scopes);
+    let scopes = TargetScopes::of_target(scopes);
     let request = open_change_request(asset, proposed_digest, &assignments, &scopes)
         .map_err(|error| role_missing(&error.to_string()))?;
     let (id, request) = persist_request(state, target, asset, proposed_digest, request).await?;

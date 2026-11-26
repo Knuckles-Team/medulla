@@ -373,3 +373,68 @@ def test_deprecation_lowers_rank_and_emits_event(served) -> None:
         )
     )
     assert [node_id for node_id, _ in nodes] == [flag_id]
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.18")
+def test_governance_read_names_the_stored_roles_without_writing(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R108.18: `governance` reads the stored roles.
+
+    The owners and stewards come from the most specific assignment level, and
+    nothing is written.
+    """
+    graph, client = served
+    other = support.principal(REVIEWER)
+    support.assign_stewards(client, graph, ASSET, other)
+    target = {"op": "governance", "target": {"asset": ASSET}}
+    answer = _decode(client._send("CatalogRead", {"op": target}, graph))
+    assert answer["governance"] == {"owners": [], "stewards": [other]}
+    before = _decode(
+        client._send(
+            "GetNodesByLabel",
+            {"label": "cat:ChangeRequest", "after": None, "limit": 10},
+            graph,
+        )
+    )
+    assert before == []
+    # A target no assignment governs answers empty roles, not a refusal.
+    unowned = _decode(
+        client._send(
+            "CatalogRead",
+            {"op": {"op": "governance", "target": {"asset": "col:none"}}},
+            graph,
+        )
+    )
+    assert unowned["governance"] == {"owners": [], "stewards": []}
+    # An empty target is refused by code.
+    with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+        client._send("CatalogRead", {"op": {"op": "governance", "target": {}}}, graph)
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.18")
+def test_proposals_read_lists_change_requests_by_state(served) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R108.18: `proposals` pages the curation work.
+
+    Rows are the tenant's, filtered by state and target and ordered by id.
+    """
+    graph, client = served
+    me = request_context()["principal"]
+    other = support.principal(REVIEWER)
+    support.assign_stewards(client, graph, ASSET, me, other)
+    request_id = support.open_request(client, graph, ASSET)
+
+    def listed(**filters: Any) -> dict[str, Any]:
+        op = {"op": "proposals", **filters}
+        return _decode(client._send("CatalogRead", {"op": op}, graph))
+
+    open_rows = listed(state="open")["proposals"]
+    assert [row["id"] for row in open_rows] == [request_id]
+    assert open_rows[0]["kind"] == "change_request"
+    assert open_rows[0]["target"] == ASSET
+    assert open_rows[0]["state"] == "open"
+    assert sorted(open_rows[0]["reviewers"]) == sorted([me, other])
+    assert listed(state="applied")["proposals"] == []
+    assert listed(target="col:other")["proposals"] == []
+    page = listed(limit=1)
+    assert len(page["proposals"]) == 1 and "next_cursor" not in page
+    with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+        listed(state="bogus")
