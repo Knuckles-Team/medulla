@@ -1,8 +1,10 @@
 """Served standards drift (MEDULLA-UNIFIED-DATA-PLANE-R701.3).
 
-`StandardsDrift` reads the verified tenant's `Standard` and `StandardsAsset` nodes, scores
+`StandardsDrift` reads the verified tenant's `Standard` and `StandardsAsset` nodes,
+scores
 every asset against its standard, groups the assets into capability cohorts and proposes
-consolidations. A recommendation is only a proposal: the call writes nothing, and another
+consolidations. A recommendation is only a proposal: the call writes nothing, and
+another
 tenant's nodes are never read.
 """
 
@@ -79,7 +81,8 @@ def test_cross_application_recommendation_is_a_proposal(clean_graph) -> None:
     before = clean_graph.admin.audit_verify()["entries"]
     answer = _standards_drift(clean_graph)
 
-    # One proposal naming only this tenant's two assets, and no score for the other tenant's.
+    # One proposal naming only this tenant's two assets, and no score for the other
+    # tenant's.
     assert len(answer["recommendations"]) == 1
     recommendation = answer["recommendations"][0]
     assert recommendation["proposal_only"] is True
@@ -103,6 +106,7 @@ def test_cross_application_recommendation_is_a_proposal(clean_graph) -> None:
     assert clean_graph.admin.audit_verify()["entries"] == before
 
 
+# proves R701.6: Hot-path proof: a missing standard scores unscored, never zero
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R701.6")
 def test_missing_standard_is_not_zero(clean_graph) -> None:
     scope = carrier_scope(TEST_TENANT)

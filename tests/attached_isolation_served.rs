@@ -94,6 +94,7 @@ fn ids(response: &Response) -> Vec<String> {
     ids
 }
 
+// proves R031.2: Per-source quota metering and fault isolation
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R031.2
 #[tokio::test]
 async fn quota_breach_and_failure_do_not_degrade_other_source() {

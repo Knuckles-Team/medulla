@@ -399,6 +399,7 @@ fn id_at_least(value: i64) -> StripePredicate {
     }
 }
 
+// proves R038.4.2.2: ORC scans skip stripes by stripe statistics
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.2
 #[test]
 fn orc_stripe_pruning_skips_non_matching_stripes() {

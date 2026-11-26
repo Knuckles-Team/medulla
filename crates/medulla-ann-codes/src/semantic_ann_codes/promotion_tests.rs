@@ -204,6 +204,7 @@ fn regressed_image_config(fixture: &S6Fixture) -> SemanticModelConfig {
     config
 }
 
+// proves R040.6: Hot-path proof: a regressed image check blocks a served promotion
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R040.6
 #[test]
 fn regressed_image_blocks_promotion_and_keeps_prior_live() {

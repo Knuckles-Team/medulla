@@ -114,6 +114,7 @@ fn watermark_poll_emits_each_change_once() {
     }
 }
 
+// proves R015.2.2.3: Register, read and conformance for a SQLite file source
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R015.2.2.3
 #[test]
 fn live_file_reads_and_capture_under_concurrent_writer() {

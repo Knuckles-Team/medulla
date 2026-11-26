@@ -20,6 +20,7 @@ def _contracts(clean_graph) -> list[tuple[str, dict]]:
     ]
 
 
+# proves R038.2.1: Discovery writes one MetadataContract per registered source kind
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.2.1")
 def test_registration_writes_contract_only(clean_graph, pg_source):
     pg_source.execute("DROP TABLE IF EXISTS accel_orders")
@@ -172,6 +173,7 @@ def test_predicate_without_copy_capability_is_refused(clean_graph, pg_source):
         _scan(clean_graph, "accel-nocopy")
 
 
+# proves R038.2.2.2: Register validates and stores the policy
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.2.2.2")
 def test_copy_policy_without_capability_is_refused(clean_graph, pg_source):
     source = _orders_source(pg_source)

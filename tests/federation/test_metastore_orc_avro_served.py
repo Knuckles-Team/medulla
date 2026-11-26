@@ -46,7 +46,11 @@ def _write_orc_facts(root) -> HmsTable:
     return table
 
 
-EVENTS = {"mon": [(10, "open"), (11, "close")], "tue": [(12, "open")], "wed": [(13, "open")]}
+EVENTS = {
+    "mon": [(10, "open"), (11, "close")],
+    "tue": [(12, "open")],
+    "wed": [(13, "open")],
+}
 
 
 def _avro_long(value: int) -> bytes:
@@ -65,7 +69,8 @@ def _avro_bytes(value: bytes) -> bytes:
 
 
 def _avro_file(rows: list[tuple[int, str]]) -> bytes:
-    """An Avro object container file (null codec) of `{id: long, kind: string}` records."""
+    """An Avro object container file (null codec) of `{id: long, kind: string}`
+    records."""
     schema = json.dumps(
         {
             "type": "record",
@@ -86,7 +91,15 @@ def _avro_file(rows: list[tuple[int, str]]) -> bytes:
         + _avro_long(0)
     )
     body = b"".join(_avro_long(i) + _avro_bytes(kind.encode()) for i, kind in rows)
-    return b"Obj\x01" + meta + sync + _avro_long(len(rows)) + _avro_long(len(body)) + body + sync
+    return (
+        b"Obj\x01"
+        + meta
+        + sync
+        + _avro_long(len(rows))
+        + _avro_long(len(body))
+        + body
+        + sync
+    )
 
 
 def _write_avro_events(root) -> HmsTable:
@@ -138,6 +151,7 @@ def _receipt(warnings: list[str]) -> dict:
     return json.loads(entry[len(prefix) :])
 
 
+# proves R038.4.3: Wiring: the hive() table function and discovery
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.4.3")
 def test_hive_function_registered_and_scoped(clean_graph, metastore, hms_port):
     clean_graph.query.register_foreign_source("hive-a", _source(hms_port))
@@ -214,6 +228,7 @@ def test_served_scan_receipt_counts_what_the_scan_opened(
     assert _receipt(full)["files_read"] == 3
 
 
+# proves R038.4.6: Hot-path proof: a pruned scan over a recorded metastore
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.4.6")
 def test_partition_pruned_scan(clean_graph, metastore, hms_port):
     """A predicate on the partition key reads only matching partitions, and every

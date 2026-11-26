@@ -437,6 +437,7 @@ fn differences(p1: &[Value], p2: &[Value]) -> Vec<Value> {
         .collect()
 }
 
+// proves R026.2.2: Live P0 to P2 on the synthetic family-tree fixture
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.2.2
 #[tokio::test(flavor = "multi_thread")]
 async fn p0_p1_p2_exit_artifacts() {
@@ -689,6 +690,7 @@ fn plain(cell: &str) -> String {
         .to_string()
 }
 
+// proves R026.3.2: Live P4 restore and P5 schema understanding
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R026.3.2
 #[tokio::test(flavor = "multi_thread")]
 async fn p4_restore_and_p5_schema() {
