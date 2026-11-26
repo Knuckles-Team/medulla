@@ -14,6 +14,7 @@ fn task(id: &str, deps: &[&str]) -> TaskPlanTask {
         approval: None,
         duration_ms: None,
         priority_weight: None,
+        foreach: None,
     }
 }
 
@@ -200,6 +201,7 @@ fn maximum_bounded_chain_is_valid() {
             approval: None,
             duration_ms: None,
             priority_weight: None,
+            foreach: None,
         })
         .collect();
     let input = TaskPlanProposal {
@@ -279,7 +281,8 @@ fn the_canonical_task_plan_feature_schema_is_valid_and_stable() {
             "task_position",
             "task_call",
             "task_call_bindings",
-            "task_step_kind"
+            "task_step_kind",
+            "task_foreach"
         ]
     );
     let digest = crate::decision::statistical::body::encode_body(&body)
@@ -1227,4 +1230,205 @@ fn final_artifact_is_covered_by_the_digest_and_validated() {
             .unwrap_err()
             .starts_with("invalid_final_artifact"));
     }
+}
+
+fn foreach_spec(source: &str, max_items: u32) -> TaskPlanForeach {
+    TaskPlanForeach {
+        source: ForeachSource {
+            reference: source.into(),
+        },
+        max_items,
+    }
+}
+
+/// `a` produces an array; `b` maps one call over its items.
+fn foreach_plan(max_items: u32) -> TaskPlanProposal {
+    let mut proposal = mixed(serde_json::json!({
+        "number": reference("item.number"),
+        "position": reference("item_index"),
+        "label": "fixed",
+    }));
+    let mut tasks = proposal.tasks.as_slice().to_vec();
+    tasks[1].foreach = Some(foreach_spec("steps.a.output.items", max_items));
+    proposal.tasks = BoundedVec::new(tasks).unwrap();
+    proposal
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.111.19
+#[test]
+fn foreach_round_trips_and_digest_covers_it() {
+    let proposal = foreach_plan(3);
+    let wire = serde_json::to_value(&proposal).unwrap();
+    assert_eq!(
+        wire["tasks"][1]["foreach"],
+        serde_json::json!({ "source": { "$ref": "steps.a.output.items" }, "max_items": 3 })
+    );
+    assert!(wire["tasks"][0].get("foreach").is_none(), "a plain step keeps its form");
+    assert_eq!(
+        serde_json::from_value::<TaskPlanProposal>(wire).unwrap(),
+        proposal
+    );
+    let plan = plan_explicit_tasks(&proposal).unwrap();
+    let step = &plan.tasks.as_slice()[1];
+    assert_eq!(step.foreach, proposal.tasks.as_slice()[1].foreach);
+    // Item references stay in the arguments, are no binding and add no edge.
+    assert_eq!(
+        step.call.as_ref().unwrap().arguments["number"],
+        reference("item.number")
+    );
+    assert_eq!(
+        step.call.as_ref().unwrap().arguments["position"],
+        reference("item_index")
+    );
+    assert!(task_bindings(step).is_empty());
+    assert_eq!(step.depends_on.as_slice(), ["a"]);
+    assert_eq!(
+        serde_json::from_value::<TaskPlan>(serde_json::to_value(&plan).unwrap()).unwrap(),
+        plan
+    );
+    // The plan digest covers `foreach`: a changed bound, a changed source and no foreach all
+    // digest differently, and one source written two ways digests the same.
+    let digest = |p: &TaskPlanProposal| plan_explicit_tasks(p).unwrap().plan_digest;
+    assert_ne!(digest(&foreach_plan(3)), digest(&foreach_plan(4)));
+    let mut elsewhere = foreach_plan(3);
+    let mut tasks = elsewhere.tasks.as_slice().to_vec();
+    tasks[1].foreach = Some(foreach_spec("steps.a.output.rows", 3));
+    elsewhere.tasks = BoundedVec::new(tasks).unwrap();
+    assert_ne!(digest(&foreach_plan(3)), digest(&elsewhere));
+    let mut padded = foreach_plan(3);
+    let mut tasks = padded.tasks.as_slice().to_vec();
+    tasks[1].foreach = Some(foreach_spec(" steps.a.output.items ", 3));
+    padded.tasks = BoundedVec::new(tasks).unwrap();
+    assert_eq!(digest(&foreach_plan(3)), digest(&padded));
+    // An unknown field of the foreach object is refused.
+    let mut unknown = serde_json::to_value(foreach_plan(3)).unwrap();
+    unknown["tasks"][1]["foreach"]["limit"] = serde_json::json!(1);
+    assert!(serde_json::from_value::<TaskPlanProposal>(unknown).is_err());
+}
+
+fn foreach_refusal(proposal: TaskPlanProposal) -> String {
+    plan_explicit_tasks(&proposal).unwrap_err()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.111.20
+#[test]
+fn refuses_each_foreach_defect() {
+    // foreach_without_call: the task has foreach and no call.
+    let mut no_call = foreach_plan(3);
+    let mut tasks = no_call.tasks.as_slice().to_vec();
+    tasks[1].call = None;
+    no_call.tasks = BoundedVec::new(tasks).unwrap();
+    assert_eq!(
+        foreach_refusal(no_call),
+        "FOREACH_WITHOUT_CALL: task=b pointer=/foreach"
+    );
+
+    // foreach_source_invalid: not a binding, or not in the direct depends_on.
+    let set_source = |source: &str| {
+        let mut p = foreach_plan(3);
+        let mut tasks = p.tasks.as_slice().to_vec();
+        tasks[1].foreach = Some(foreach_spec(source, 3));
+        p.tasks = BoundedVec::new(tasks).unwrap();
+        p
+    };
+    assert_eq!(
+        foreach_refusal(set_source("not a reference")),
+        "FOREACH_SOURCE_INVALID: task=b pointer=/foreach/source"
+    );
+    assert_eq!(
+        foreach_refusal(set_source("steps.b.output.items")),
+        "FOREACH_SOURCE_INVALID: task=b pointer=/foreach/source"
+    );
+    assert_eq!(
+        foreach_refusal(set_source("steps.zz.output")),
+        "FOREACH_SOURCE_INVALID: task=b pointer=/foreach/source"
+    );
+    let mut not_direct = foreach_plan(3);
+    let mut tasks = not_direct.tasks.as_slice().to_vec();
+    tasks.push(task("c", &[]));
+    tasks[0].depends_on = BoundedVec::new(vec!["c".into()]).unwrap();
+    tasks[1].foreach = Some(foreach_spec("steps.c.output.items", 3));
+    not_direct.tasks = BoundedVec::new(tasks).unwrap();
+    not_direct.max_steps = 3;
+    assert_eq!(
+        foreach_refusal(not_direct),
+        "FOREACH_SOURCE_INVALID: task=b pointer=/foreach/source"
+    );
+
+    // foreach_bounds: max_items outside 1 to 256, and each count of R134.111.19.
+    for bad in [0, MAX_FOREACH_ITEMS + 1] {
+        assert_eq!(
+            foreach_refusal(foreach_plan(bad)),
+            "FOREACH_BOUNDS: task=b pointer=/foreach/max_items"
+        );
+    }
+    assert!(plan_explicit_tasks(&foreach_plan(1)).is_ok());
+    assert!(plan_explicit_tasks(&foreach_plan(MAX_FOREACH_ITEMS)).is_ok());
+    // Five foreach steps of 256 expand to 1,280 calls, past the plan bound of 1,024.
+    let wide = |count: usize| {
+        let mut tasks = vec![task("a", &[])];
+        let ids: Vec<String> = (0..count).map(|i| format!("f{i}")).collect();
+        for id in &ids {
+            tasks.push(TaskPlanTask {
+                foreach: Some(foreach_spec("steps.a.output.items", MAX_FOREACH_ITEMS)),
+                ..tool(id, &["a"], serde_json::json!({ "n": reference("item.n") }))
+            });
+        }
+        tasks.push(task("out", &ids.iter().map(String::as_str).collect::<Vec<_>>()));
+        TaskPlanProposal {
+            output_task_id: "out".into(),
+            max_concurrency: 8,
+            max_steps: 64,
+            final_artifact: None,
+            tasks: BoundedVec::new(tasks).unwrap(),
+        }
+    };
+    assert!(plan_explicit_tasks(&wide(4)).is_ok(), "4 x 256 = 1,024 is the ceiling");
+    assert!(foreach_refusal(wide(5)).starts_with("FOREACH_BOUNDS: task=f4 pointer=/foreach"));
+    // More than eight foreach steps refuse even with small bounds.
+    let many = {
+        let mut p = wide(9);
+        let tasks: Vec<TaskPlanTask> = p
+            .tasks
+            .as_slice()
+            .iter()
+            .cloned()
+            .map(|mut t| {
+                if let Some(f) = &mut t.foreach {
+                    f.max_items = 1;
+                }
+                t
+            })
+            .collect();
+        p.tasks = BoundedVec::new(tasks).unwrap();
+        p
+    };
+    assert!(foreach_refusal(many).starts_with("FOREACH_BOUNDS: task=f8 pointer=/foreach"));
+
+    // item_ref_outside_foreach: `item.` or `item_index` in a task without foreach.
+    for arguments in [
+        serde_json::json!({ "n": reference("item.number") }),
+        serde_json::json!({ "n": { "deep": [reference("item_index")] } }),
+    ] {
+        let error = foreach_refusal(mixed(arguments));
+        assert!(
+            error.starts_with("ITEM_REF_OUTSIDE_FOREACH: task=b pointer=/n"),
+            "{error}"
+        );
+    }
+
+    // foreach_nested: the source reads another foreach step's expanded output.
+    let mut nested = foreach_plan(3);
+    let mut tasks = nested.tasks.as_slice().to_vec();
+    tasks.push(TaskPlanTask {
+        foreach: Some(foreach_spec("steps.b.output.rows", 2)),
+        ..tool("c", &["b"], serde_json::json!({ "n": reference("item.n") }))
+    });
+    nested.tasks = BoundedVec::new(tasks).unwrap();
+    nested.output_task_id = "c".into();
+    nested.max_steps = 3;
+    assert_eq!(
+        foreach_refusal(nested),
+        "FOREACH_NESTED: task=c pointer=/foreach/source"
+    );
 }

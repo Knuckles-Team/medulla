@@ -28,6 +28,7 @@ pub(super) fn task_request(pin: &ComponentDependency) -> DecideRequest {
         approval: None,
         duration_ms: None,
         priority_weight: None,
+        foreach: None,
     })
     .collect();
     DecideRequest {
@@ -1710,4 +1711,71 @@ async fn long_plan_splits_and_checkpoints_reconcile() {
         .await
         .unwrap_err();
     assert!(err.starts_with("ACCESS_DENIED"), "{err}");
+}
+
+/// Make the `join` task a foreach tool step over `source`.
+fn with_foreach(request: &mut DecideRequest, source: &str, max_items: u32) {
+    use medulla_decision_types::decision::task_plan::{
+        ForeachSource, TaskPlanCall, TaskPlanForeach,
+    };
+    let mut params = request.params.as_slice().to_vec();
+    let TypedValue::TaskPlan(proposal) = &mut params[0].value else {
+        unreachable!()
+    };
+    let mut tasks = proposal.tasks.as_slice().to_vec();
+    tasks[3].call = Some(TaskPlanCall {
+        server: "github".into(),
+        tool: "create_issue".into(),
+        arguments: serde_json::json!({
+            "title": { "$ref": "item.title" },
+            "position": { "$ref": "item_index" },
+        }),
+    });
+    tasks[3].foreach = Some(TaskPlanForeach {
+        source: ForeachSource {
+            reference: source.into(),
+        },
+        max_items,
+    });
+    proposal.tasks = BoundedVec::new(tasks).unwrap();
+    request.params = BoundedVec::new(params).unwrap();
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R134.111.21
+#[tokio::test]
+async fn decide_routes_task_plan_with_foreach() {
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let mut request = task_request(&pin);
+    with_foreach(&mut request, "steps.c.output.items", 5);
+    let batch = decide(&h, request).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    let plan = record.task_plan().unwrap();
+    let join = plan.tasks.iter().find(|t| t.task_id == "join").unwrap();
+    let foreach = join.foreach.as_ref().expect("the typed plan carries the foreach step");
+    assert_eq!(foreach.source.reference, "steps.c.output.items");
+    assert_eq!(foreach.max_items, 5);
+    assert_eq!(
+        join.call.as_ref().unwrap().arguments["title"],
+        serde_json::json!({ "$ref": "item.title" })
+    );
+    // One claim premise names the source reference and the bound.
+    assert!(record.premises.iter().any(|p| {
+        p.subject == "join"
+            && p.class == medulla_decision_types::decision::PremiseClass::Claim
+            && p.fact == "task_plan_foreach:source=steps.c.output.items;max_items=5"
+    }));
+    assert_eq!(
+        medulla_decision_types::decision::digest::statistical_record_digest(record),
+        record.record_digest
+    );
+    // A source outside the direct dependencies refuses with the task and the pointer.
+    let mut request = task_request(&pin);
+    with_foreach(&mut request, "steps.b.output.items", 5);
+    assert_invalid(
+        &h,
+        request,
+        "FOREACH_SOURCE_INVALID: task=join pointer=/foreach/source",
+    )
+    .await;
 }

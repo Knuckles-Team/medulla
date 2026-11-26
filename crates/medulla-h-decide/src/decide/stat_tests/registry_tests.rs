@@ -128,6 +128,7 @@ pub(super) fn task_request(pin: &ComponentDependency) -> DecideRequest {
             approval: None,
             duration_ms: None,
             priority_weight: None,
+            foreach: None,
         })
         .collect();
     DecideRequest {

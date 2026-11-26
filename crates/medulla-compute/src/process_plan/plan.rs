@@ -432,6 +432,7 @@ fn task_of(
         approval: None,
         duration_ms: None,
         priority_weight: None,
+        foreach: None,
     };
     match (kind, &node.target) {
         (StepKind::Agent, Some(BindingTarget::Tool { server, tool, .. })) => {

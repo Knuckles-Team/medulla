@@ -920,6 +920,7 @@ fn maximum_plan_request(asked: &DecideRequest) -> DecideRequest {
             approval: None,
             duration_ms: None,
             priority_weight: None,
+            foreach: None,
         })
         .collect();
     let options = tasks

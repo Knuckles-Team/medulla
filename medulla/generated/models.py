@@ -30061,6 +30061,19 @@ class TaskPlanCall(BaseModel):
     tool: str
 
 
+class ForeachSource(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    ref: str = Field(..., alias="$ref")
+
+
+class TaskPlanForeach(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    max_items: Annotated[int, Field(ge=0)]
+    source: ForeachSource
+
+
 class TaskPlanProposal(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -30148,6 +30161,7 @@ class TaskPlanTask(BaseModel):
     decision: DecisionSpec | None = None
     depends_on: BoundedVec_string_64 = Field(default_factory=list)
     duration_ms: Annotated[int, Field(ge=0)] | None = None
+    foreach: TaskPlanForeach | None = None
     join: JoinSpec | None = None
     priority_weight: Annotated[int, Field(ge=0)] | None = None
     prompt: str
@@ -49269,6 +49283,8 @@ __all__ = [
     "TaskPlanBranchKind",
     "TaskPlanCompareOp",
     "TaskPlanCall",
+    "ForeachSource",
+    "TaskPlanForeach",
     "TaskPlanProposal",
     "TaskPlanTask",
     "TelemetryDeriveReceipt",

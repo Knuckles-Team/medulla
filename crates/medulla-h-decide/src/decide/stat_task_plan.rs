@@ -650,6 +650,17 @@ fn call_premises(task: &TaskPlanTask) -> Vec<PremiseRef> {
             "params.task_plan.tasks.call.arguments",
         )
     }));
+    // One premise per foreach step names the source reference and the bound
+    // (MEDULLA-DECISION-ENGINE-R134.111.21).
+    if let Some(foreach) = &task.foreach {
+        out.push(claim(
+            format!(
+                "task_plan_foreach:source={};max_items={}",
+                foreach.source.reference, foreach.max_items
+            ),
+            "params.task_plan.tasks.foreach",
+        ));
+    }
     out
 }
 

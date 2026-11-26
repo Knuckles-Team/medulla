@@ -532,6 +532,99 @@ def test_tool_step_bindings_end_to_end(authenticated_plan_client):
         client.close()
 
 
+def _foreach_proposal(source: str, max_items: int = 5, **call_arguments: Any):
+    """The explicit plan whose `join` step maps one tool call over an array output of a
+    task it depends on. Item references name the current item and its index."""
+    proposal = _proposal()
+    join = next(task for task in proposal["tasks"] if task["task_id"] == "join")
+    join["call"] = {
+        "server": "github",
+        "tool": "create_issue",
+        "arguments": call_arguments
+        or {"title": {"$ref": "item.title"}, "position": {"$ref": "item_index"}},
+    }
+    join["foreach"] = {"source": {"$ref": source}, "max_items": max_items}
+    return proposal
+
+
+# spec: MEDULLA-DECISION-ENGINE-R134.111.22
+def test_foreach_step_end_to_end(authenticated_plan_client):
+    client = authenticated_plan_client
+    try:
+        pin = publish(
+            client,
+            "task-plan-schema-" + uuid.uuid4().hex,
+            "feature_schema",
+            schema_body(),
+        )
+        proposal = _foreach_proposal("steps.c.output.items")
+        asked = task_plan_request(TEST_TENANT, "fixture-foreach", proposal, pin)
+        record = client._send("Decide", {"request": asked})["records"][0]
+        plan = record["answer"]["value"]
+
+        # The foreach step round-trips with its source and bound, and the receipt
+        # verifies: the plan digest is bound to the foreach.
+        by_id = {task["task_id"]: task for task in plan["tasks"]}
+        assert by_id["join"]["foreach"] == {
+            "source": {"$ref": "steps.c.output.items"},
+            "max_items": 5,
+        }
+        assert all(t.get("foreach") is None for i, t in by_id.items() if i != "join")
+        claims = {p["fact"] for p in record["premises"] if p["subject"] == "join"}
+        assert "task_plan_foreach:source=steps.c.output.items;max_items=5" in claims
+        assert (
+            verify_task_plan_receipt(record, asked, expected_principal=TEST_AGENT_ID)
+            == plan
+        )
+        _persist_and_read(client, proposal, plan)
+        other = client._send(
+            "Decide",
+            {
+                "request": task_plan_request(
+                    TEST_TENANT,
+                    "fixture-foreach-changed",
+                    _foreach_proposal("steps.c.output.items", max_items=6),
+                    pin,
+                )
+            },
+        )["records"][0]["answer"]["value"]
+        assert other["plan_digest"] != plan["plan_digest"]
+
+        # Each defect of R134.111.20 returns its typed refusal and no plan.
+        no_call = _foreach_proposal("steps.c.output.items")
+        del next(t for t in no_call["tasks"] if t["task_id"] == "join")["call"]
+        outside = _proposal()
+        next(t for t in outside["tasks"] if t["task_id"] == "join")["call"] = {
+            "server": "github",
+            "tool": "create_issue",
+            "arguments": {"title": {"$ref": "item.title"}},
+        }
+        nested = _foreach_proposal("steps.c.output.items")
+        c_task = next(t for t in nested["tasks"] if t["task_id"] == "c")
+        c_task["call"] = {
+            "server": "github",
+            "tool": "list_issues",
+            "arguments": {"n": {"$ref": "item.n"}},
+        }
+        c_task["foreach"] = {"source": {"$ref": "steps.b.output.rows"}, "max_items": 2}
+        cases = {
+            "FOREACH_WITHOUT_CALL": no_call,
+            "FOREACH_SOURCE_INVALID": _foreach_proposal("steps.b.output.items"),
+            "FOREACH_BOUNDS": _foreach_proposal("steps.c.output.items", max_items=257),
+            "ITEM_REF_OUTSIDE_FOREACH": outside,
+            "FOREACH_NESTED": nested,
+        }
+        for code, defective in cases.items():
+            refused = task_plan_request(
+                TEST_TENANT, "fixture-foreach-" + code.lower(), defective, pin
+            )
+            with pytest.raises(Exception, match=code) as refusal:
+                client._send("Decide", {"request": refused})
+            assert "records" not in str(refusal.value)
+    finally:
+        client.close()
+
+
 # spec: MEDULLA-DECISION-ENGINE-R134.111.18
 def test_control_steps_served(authenticated_plan_client):
     client = authenticated_plan_client

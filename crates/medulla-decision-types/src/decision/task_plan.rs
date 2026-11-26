@@ -33,8 +33,11 @@ pub use aggregation::{
     AggregationOp, TaskPlanAggregation, PLAN_AGGREGATION_INVALID, PLAN_AGGREGATION_NOT_OUTPUT,
 };
 pub use call::{
-    task_bindings, TaskPlanBinding, TaskPlanCall, BINDING_KEY, MAX_BINDINGS_PER_CALL,
-    MAX_BINDING_PATH_BYTES, MAX_BINDING_PATH_SEGMENTS, MAX_CALL_ARGUMENT_BYTES, MAX_TOOL_STEPS,
+    task_bindings, ForeachSource, TaskPlanBinding, TaskPlanCall, TaskPlanForeach, BINDING_KEY,
+    FOREACH_BOUNDS, FOREACH_NESTED, FOREACH_SOURCE_INVALID, FOREACH_WITHOUT_CALL,
+    ITEM_INDEX_REFERENCE, ITEM_REF_OUTSIDE_FOREACH, MAX_BINDINGS_PER_CALL, MAX_BINDING_PATH_BYTES,
+    MAX_BINDING_PATH_SEGMENTS, MAX_CALL_ARGUMENT_BYTES, MAX_FOREACH_ITEMS, MAX_FOREACH_STEPS,
+    MAX_PLAN_EXPANDED_CALLS, MAX_TOOL_STEPS,
 };
 pub use control::{
     control_fact, ApprovalSpec, BranchArm, BranchComparison, BranchCondition,
@@ -71,7 +74,8 @@ pub const TASK_PLAN_FEATURE_SCHEMA_COMPONENT_ID: &str = "task-plan-features";
 /// reads each task's declared position and abstains when it is absent. Two
 /// more describe a tool step's call and its binding count
 /// (MEDULLA-DECISION-ENGINE-R134.111.12). The last names the step kind: a
-/// prompt, call, branch, join, decision or approval (R134.111.17).
+/// prompt, call, branch, join, decision or approval (R134.111.17). The fifth
+/// reads a tool step's foreach bound (R134.111.21).
 pub fn task_plan_feature_schema() -> super::statistical::features::FeatureSchemaBody {
     use super::statistical::features::{
         FeatureKind, FeatureSchemaBody, FeatureSpec, MissingValue, FEATURE_SCHEMA_VERSION,
@@ -84,6 +88,7 @@ pub fn task_plan_feature_schema() -> super::statistical::features::FeatureSchema
                 "task_call",
                 "task_call_bindings",
                 "task_step_kind",
+                "task_foreach",
             ]
             .into_iter()
             .map(|name| FeatureSpec {
@@ -95,7 +100,7 @@ pub fn task_plan_feature_schema() -> super::statistical::features::FeatureSchema
             })
             .collect(),
         )
-        .expect("four features are within the schema bound"),
+        .expect("five features are within the schema bound"),
     }
 }
 pub const MAX_TASKS: u16 = 64;
@@ -123,6 +128,10 @@ pub struct TaskPlanTask {
     /// The component id of the chosen skill or specialist (R134.1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub assignee: Option<String>,
+    /// A tool step that maps its call over an array output of a direct dependency
+    /// (R134.111.19). It needs `call`; the engine validates the bounds and never runs a step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub foreach: Option<TaskPlanForeach>,
     /// A branch step: its arms become ready when their condition holds
     /// (R134.111.14). At most one of `call`, `branch`, `join`, `decision` and
     /// `approval` is set.
@@ -264,6 +273,11 @@ pub const TASK_PLAN_REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("BINDING_UNKNOWN_TASK"),
     RefusalCode::new("BINDING_CYCLE"),
     RefusalCode::new("BINDING_NOT_DEPENDENCY"),
+    RefusalCode::new(FOREACH_WITHOUT_CALL),
+    RefusalCode::new(FOREACH_SOURCE_INVALID),
+    RefusalCode::new(FOREACH_BOUNDS),
+    RefusalCode::new(ITEM_REF_OUTSIDE_FOREACH),
+    RefusalCode::new(FOREACH_NESTED),
     RefusalCode::new(skill_plan::NO_SKILL_FOR_SUBTASK),
     RefusalCode::new(NO_SPECIALIST_FOR_SUBTASK),
     RefusalCode::new(skill_plan::EMPTY_SKILL_INDEX),
@@ -315,10 +329,13 @@ fn canonical_task(task: &TaskPlanTask, bytes: &mut usize) -> Result<TaskPlanTask
         return Err(error("PLAN_TEXT_BOUNDS", &task.task_id));
     }
     control::check_kind(task)?;
+    call::check_foreach_has_call(task)?;
     let mut canonical = task.clone();
     control::canonicalize(task, &mut canonical)?;
+    canonical.foreach = call::canonical_foreach(task)?;
     if let Some(raw) = &task.call {
-        let (call, _, call_bytes) = call::canonical_call(&task.task_id, raw)?;
+        let (call, _, call_bytes) =
+            call::canonical_call(&task.task_id, raw, task.foreach.is_some())?;
         *bytes += call_bytes;
         if *bytes > MAX_TOTAL_PROMPT_BYTES {
             return Err(error("PLAN_TEXT_BOUNDS", &task.task_id));
@@ -412,6 +429,7 @@ pub fn plan_explicit_tasks(proposal: &TaskPlanProposal) -> Result<TaskPlan, Stri
     let tasks = index(proposal)?;
     let canonical = ordered(&tasks)?;
     call::check_bindings(&tasks)?;
+    call::check_foreach(&tasks)?;
     control::check_control(&tasks)?;
     check_output(&tasks, &proposal.output_task_id)?;
     if let Some(decl) = &proposal.final_artifact {

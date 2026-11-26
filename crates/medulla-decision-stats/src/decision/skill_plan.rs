@@ -260,6 +260,7 @@ pub fn plan_over_skills(
                 approval: None,
                 duration_ms: None,
                 priority_weight: None,
+                foreach: None,
             });
         }
     }

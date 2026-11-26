@@ -170,6 +170,7 @@ pub fn decompose_task(
             approval: None,
             duration_ms: None,
             priority_weight: None,
+            foreach: None,
         });
     }
     let independent = independent_ids(&tasks);

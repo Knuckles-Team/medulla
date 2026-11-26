@@ -236,7 +236,8 @@ def task_plan_request(
     # ``TaskPlanTask::call`` carries ``skip_serializing_if = "Option::is_none"``
     # on the engine side, so an absent call is an absent key -- never ``null``.
     # The generated senders dump the same way (``exclude_none=True``).
-    body = typed.model_dump(mode="json", exclude_none=True)
+    # ``by_alias`` keeps a foreach source's wire key ``$ref``.
+    body = typed.model_dump(mode="json", exclude_none=True, by_alias=True)
     return decide_request(
         tenant_id,
         (question_id, "task_plan", "ordinary"),
@@ -380,6 +381,13 @@ def _task_plan_task(task: Mapping[str, Any]) -> dict[str, Any]:
             body["aggregation"]["reducer_id"] = aggregation["reducer_id"]
     if task.get("assignee") is not None:
         body["assignee"] = task["assignee"]
+    foreach = task.get("foreach")
+    if foreach is not None:
+        # Rust declaration order: ``source`` then ``max_items``.
+        body["foreach"] = {
+            "source": {"$ref": foreach["source"]["$ref"]},
+            "max_items": foreach["max_items"],
+        }
     _add_control_steps(body, task)
     for key in ("duration_ms", "priority_weight"):
         if task.get(key) is not None:

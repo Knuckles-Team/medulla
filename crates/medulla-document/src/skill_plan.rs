@@ -186,6 +186,7 @@ fn task_of(step: &ParsedStep<'_>) -> Result<TaskPlanTask, SkillPlanRefusal> {
         approval: None,
         duration_ms: None,
         priority_weight: None,
+        foreach: None,
     })
 }
 

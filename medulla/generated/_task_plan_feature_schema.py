@@ -57,12 +57,22 @@ _BODY = """
       "missing": {
         "missing": "abstain"
       }
+    },
+    {
+      "name": "task_foreach",
+      "kind": {
+        "feature": "number",
+        "key": "task_foreach"
+      },
+      "missing": {
+        "missing": "abstain"
+      }
     }
   ]
 }
 """
 
-_DIGEST_HEX = "7919354d37a5657c616ab2c3e5543d6f4330bf2902afeb026df15b1dc9678408"
+_DIGEST_HEX = "a7e48379bf6f5e14677013cceff43be895050f21ee0cbf84ded95f75f7709017"
 
 TASK_PLAN_FEATURE_SCHEMA: Final[dict[str, Any]] = {
     "component_id": "task-plan-features",
