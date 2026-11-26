@@ -30,6 +30,7 @@ mod council;
 mod curriculum_promotion;
 mod delegation_admission;
 mod edit_concentration;
+mod merge_arming;
 mod enrichment_schedule;
 mod evolution_round;
 mod fanout_aggregate;
@@ -106,6 +107,7 @@ pub(in crate::decide) use command_config::command_view;
 pub(in crate::decide) use graph_intake::intake_view;
 pub(in crate::decide) use fanout_aggregate::fanout_view;
 pub(in crate::decide) use held_item_admission::held_item_view;
+pub(in crate::decide) use merge_arming::arming_view;
 pub(in crate::decide) use instruction_disclosure::{disclosure_view, event_premise_fact};
 use medulla_decision_stats::decision::candidate::CandidateView;
 pub(in crate::decide) use paper_admission::with_similarity;
@@ -306,6 +308,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         usage_guidance::UsageGuidanceFamily;
     static BRANCHOUTCOMEFAMILY: branch_outcome::BranchOutcomeFamily =
         branch_outcome::BranchOutcomeFamily;
+    static MERGEARMINGFAMILY: merge_arming::MergeArmingFamily = merge_arming::MergeArmingFamily;
     static EDITCONCENTRATIONFAMILY: edit_concentration::EditConcentrationFamily =
         edit_concentration::EditConcentrationFamily;
     static THOUGHTSEARCHFAMILY: thought_search::ThoughtSearchFamily =
@@ -508,6 +511,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::Recruit => &RECRUITFAMILY,
         QuestionKind::ResolveConflict => &RESOLVECONFLICTFAMILY,
         QuestionKind::CouncilCoordination => &COUNCILFAMILY,
+        QuestionKind::MergeArming => &MERGEARMINGFAMILY,
         QuestionKind::Promotion => &PROMOTIONFAMILY,
     }
 }
@@ -612,6 +616,7 @@ mod tests {
             QuestionKind::Recruit,
             QuestionKind::ResolveConflict,
             QuestionKind::CouncilCoordination,
+            QuestionKind::MergeArming,
             QuestionKind::Promotion,
         ];
         let exhaustive = match kinds[0] {
@@ -695,6 +700,7 @@ mod tests {
             | QuestionKind::Recruit
             | QuestionKind::ResolveConflict
             | QuestionKind::CouncilCoordination
+            | QuestionKind::MergeArming
             | QuestionKind::Promotion
             | QuestionKind::RewardDecomposition
             | QuestionKind::CurriculumPromotion

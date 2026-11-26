@@ -2291,6 +2291,7 @@ QuestionKind = (
     | Literal["recruit"]
     | Literal["resolve_conflict"]
     | Literal["council_coordination"]
+    | Literal["merge_arming"]
     | Literal["promotion"]
     | Literal["reasoning_paradigm"]
     | Literal["model_capacity"]

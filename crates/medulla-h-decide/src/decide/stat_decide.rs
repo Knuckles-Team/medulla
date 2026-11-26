@@ -347,6 +347,10 @@ async fn serve(
                 super::stat_concentration::concentration_view(state, verified.agent_id(), &request)
                     .await
                     .map(|view| Some((view, 0)))
+            } else if request.question.kind == QuestionKind::MergeArming {
+                super::family::arming_view(state, verified.agent_id(), &request)
+                    .await
+                    .map(|view| Some((view, 0)))
             } else if request.question.kind == QuestionKind::HeldItemAdmission {
                 super::family::held_item_view(state, verified.agent_id(), &request)
                     .await
@@ -1056,6 +1060,7 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         }
         QuestionKind::ResolveConflict => medulla_decision_types::decision::resolve_conflict::KNOBS,
         QuestionKind::CouncilCoordination => medulla_decision_types::decision::council::KNOBS,
+        QuestionKind::MergeArming => medulla_decision_types::decision::lifecycle::KNOBS,
         QuestionKind::Promotion => medulla_decision_outcome_types::decision::promotion::KNOBS,
         QuestionKind::CriterionReview => {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS

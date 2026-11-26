@@ -354,6 +354,10 @@ pub enum QuestionKind {
     /// option a quorum selects, or an abstention (MEDULLA-DECISION-ENGINE-R106.1).
     /// Evaluate-only. See `decision::council`.
     CouncilCoordination,
+    /// Whether a delivery's proposal may be armed for the owner's merge, disarmed or held
+    /// (MEDULLA-SDLC-R019.10). Evaluate-only: the engine never merges. See
+    /// `decision::merge_arming`.
+    MergeArming,
     /// Whether a challenger revision wins its subject's champion pointer, or
     /// the champion regressed and rolls back (MEDULLA-DECISION-ENGINE-R805.3).
     /// Advisory: the pointer moves only through `DecisionLog`. See

@@ -64,6 +64,7 @@ pub mod jobs;
 pub mod knob_families;
 pub mod knobs;
 pub mod lifecycle;
+pub mod merge_arming;
 pub mod limit_types;
 pub mod local_certification;
 pub mod load_set;

@@ -66,6 +66,7 @@ medulla-sql = { path = "../medulla-sql" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-sdlc = { path = "../medulla-sdlc" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-storage = { path = "../medulla-storage", optional = true }

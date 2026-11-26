@@ -1260,6 +1260,7 @@ mod replay_tests;
 
 mod comparative_analysis_tests;
 mod concentration_tests;
+mod merge_arming_tests;
 mod memory_change_tests;
 mod planning_admission_tests;
 mod probe_verdict_tests;

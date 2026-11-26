@@ -383,6 +383,14 @@ pub(super) async fn replay_view(
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     record: &StatisticalDecisionRecord,
 ) -> Result<Option<GraphView>, String> {
+    // A `merge_arming` answer re-reads the delivery, verdicts and approvals it concluded from.
+    if matches!(record.outcome, StatisticalOutcome::Advisory { .. })
+        && record.question.kind == QuestionKind::MergeArming
+    {
+        return super::family::arming_view(state, verified.agent_id(), &replay_request(record))
+            .await
+            .map(Some);
+    }
     if !matches!(record.outcome, StatisticalOutcome::Advisory { .. })
         || record.question.kind != QuestionKind::FanoutAggregate
     {

@@ -5961,6 +5961,7 @@ dependencies = [
  "medulla-reasoner",
  "medulla-resource",
  "medulla-retrieval",
+ "medulla-sdlc",
  "medulla-semantic-index",
  "medulla-server-api",
  "medulla-server-auth",

@@ -306,6 +306,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::ResolveConflict => "resolve_conflict",
         // Needs pinned positions and evidence heads, so it has its own fixture.
         QuestionKind::CouncilCoordination => "council_coordination",
+        // Needs a delivery, its gate verdicts and an owner approval, so it has its own fixture.
+        QuestionKind::MergeArming => "merge_arming",
     }
 }
 
