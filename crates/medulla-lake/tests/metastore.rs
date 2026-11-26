@@ -235,6 +235,7 @@ fn metastore_spec_round_trips() {
 }
 
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1
+// Proves a pushed predicate on partition keys reads only the matching partitions.
 #[test]
 fn partition_pruning_reads_only_matching_partitions() {
     let client = FakeMetastore::new(sample_table(LakeFileFormat::Orc, plain_paths()));
@@ -263,6 +264,7 @@ fn partition_pruning_reads_only_matching_partitions() {
 }
 
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.4.2.1
+// Proves metastore listing pages at the knob size.
 #[test]
 fn listing_pages_at_the_knob_size() {
     let client = FakeMetastore::new(sample_table(LakeFileFormat::Orc, plain_paths()));
@@ -343,6 +345,7 @@ fn metastore_refusals() {
 }
 
 // spec: MEDULLA-UNIFIED-DATA-PLANE-R038.4.5
+// Proves the scan receipt counts partitions, files, stripes and bytes exactly as the scan opened them.
 #[test]
 fn receipt_counts_match() {
     let client = FakeMetastore::new(sample_table(LakeFileFormat::Orc, plain_paths()));

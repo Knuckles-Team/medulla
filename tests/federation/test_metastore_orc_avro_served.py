@@ -207,6 +207,7 @@ def test_unreachable_metastore_registers_nothing(clean_graph, dead_port):
 
 
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R038.4.5")
+# The served warnings carry the hive scan receipt that counts what the scan opened.
 def test_served_scan_receipt_counts_what_the_scan_opened(
     clean_graph, metastore, hms_port
 ):
