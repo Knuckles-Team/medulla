@@ -211,8 +211,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T198 [US4] MEDULLA-TYPED-PACKS-R106.1 Model
 - [x] T199 [US4] MEDULLA-TYPED-PACKS-R106.2 Behavior
 - [ ] T200 [US4] MEDULLA-TYPED-PACKS-R106.3 Wiring
-- [ ] T201 [US4] MEDULLA-TYPED-PACKS-R106.4 Refusal
-- [ ] T202 [US4] MEDULLA-TYPED-PACKS-R106.5 Evidence
+- [x] T201 [US4] MEDULLA-TYPED-PACKS-R106.4 Refusal
+- [x] T202 [US4] MEDULLA-TYPED-PACKS-R106.5 Evidence
 - [ ] T203 [US4] MEDULLA-TYPED-PACKS-R106.6 Hot-path proof
 - [x] T204 [US4] MEDULLA-TYPED-PACKS-R106.7 Competency queries
 - [ ] T205 [US4] MEDULLA-TYPED-PACKS-R107.1 Model
@@ -220,7 +220,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T207 [US4] MEDULLA-TYPED-PACKS-R107.3 Wiring
 - [ ] T208 [US4] MEDULLA-TYPED-PACKS-R107.4 Refusal
 - [x] T209 [US4] MEDULLA-TYPED-PACKS-R107.5 Release evidence on the import answer
-- [ ] T210 [US4] MEDULLA-TYPED-PACKS-R107.6 Hot-path proof
+- [x] T210 [US4] MEDULLA-TYPED-PACKS-R107.6 Hot-path proof
 - [ ] T211 [US4] MEDULLA-TYPED-PACKS-R108.1 Model
 - [ ] T212 [US4] MEDULLA-TYPED-PACKS-R108.2 Behavior
 - [ ] T213 [US4] MEDULLA-TYPED-PACKS-R108.3 Wiring
@@ -229,9 +229,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T216 [US4] MEDULLA-TYPED-PACKS-R108.6 Hot-path proof
 - [ ] T217 [US4] MEDULLA-TYPED-PACKS-R108.7 Technical metadata from contracts
 - [x] T218 [US4] MEDULLA-TYPED-PACKS-R108.8 Operational metadata from provenance
-- [ ] T219 [US4] MEDULLA-TYPED-PACKS-R108.9 Sensitivity propagation and policy link
+- [x] T219 [US4] MEDULLA-TYPED-PACKS-R108.9 Sensitivity propagation and policy link
 - [ ] T220 [US4] MEDULLA-TYPED-PACKS-R108.10 End-to-end lineage across the platform
-- [ ] T221 [US4] MEDULLA-TYPED-PACKS-R108.11 Metric and KPI definitions
+- [x] T221 [US4] MEDULLA-TYPED-PACKS-R108.11 Metric and KPI definitions
 - [ ] T222 [US4] MEDULLA-TYPED-PACKS-R108.12 Annotations: comments, tags, ratings and threads
 - [ ] T223 [US4] MEDULLA-TYPED-PACKS-R108.13 Curated articles and guides
 - [ ] T224 [US4] MEDULLA-TYPED-PACKS-R108.14 Dashboards, reports, saved queries and templates: `cat:SavedQueryAsset`, `cat:usesStoredQuery`, `AssetRecord::StoredQuery`
@@ -260,9 +260,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T244 [US5] MEDULLA-TYPED-PACKS-R651.6 Hot-path proof
 - [x] T245 [US5] MEDULLA-TYPED-PACKS-R652.1 Model
 - [x] T246 [US5] MEDULLA-TYPED-PACKS-R652.2 Behavior
-- [ ] T247 [US5] MEDULLA-TYPED-PACKS-R652.3 Wiring
-- [ ] T248 [US5] MEDULLA-TYPED-PACKS-R652.4 Refusal
-- [ ] T249 [US5] MEDULLA-TYPED-PACKS-R652.5 Evidence
+- [x] T247 [US5] MEDULLA-TYPED-PACKS-R652.3 Wiring
+- [x] T248 [US5] MEDULLA-TYPED-PACKS-R652.4 Refusal
+- [x] T249 [US5] MEDULLA-TYPED-PACKS-R652.5 Evidence
 - [ ] T250 [US5] MEDULLA-TYPED-PACKS-R652.6 Hot-path proof
 - [ ] T251 [US6] MEDULLA-TYPED-PACKS-R700.1 Model
 - [ ] T252 [US6] MEDULLA-TYPED-PACKS-R700.2 Behavior
@@ -296,7 +296,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T280 [US7] MEDULLA-TYPED-PACKS-R802.5 Evidence
 - [ ] T281 [US7] MEDULLA-TYPED-PACKS-R802.6 Hot-path proof
 - [ ] T282 [US7] MEDULLA-TYPED-PACKS-R802.7 Trust flags on assets
-- [ ] T283 [US7] MEDULLA-TYPED-PACKS-R802.8 Critical data elements
+- [x] T283 [US7] MEDULLA-TYPED-PACKS-R802.8 Critical data elements
 - [ ] T284 [US7] MEDULLA-TYPED-PACKS-R803.1 BUILD: add `ChecksumAlgorithm`, `DetectorRule`, `SensitiveDetector.rule`, `Detection.sample_size`/`scanned_at_ms`, `InvalidDetector`, `SensitiveDetector::validate`, `DEFAULT_THRESHOLD` and `builtin_detectors()` to `crates/medulla-query-types/src/sensitive_detect.rs`; test `detector_rules_round_trip_and_validate`
 - [x] T285 [US7] MEDULLA-TYPED-PACKS-R803.2 Add `crates/medulla-core/src/sensitive_scan.rs` (`ScanLimits`, `DetectorResources`, `NoResources`, `ScanError`, `scan_values`, `passing`), the `regex` dependency and the `DETECTOR_RESOURCE_MISSING` / `SCAN_LIMITS_INVALID` codes; test `scan_values_counts_hits_without_values`
 - [ ] T286 [US7] MEDULLA-TYPED-PACKS-R803.3 Job wiring
