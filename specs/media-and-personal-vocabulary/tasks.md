@@ -107,7 +107,7 @@ Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shape
 - [ ] T101 [P] [US4] MEDULLA-MEDIA-VOCAB-R031 Per-engine result counts and unresponsive engines belong to searxng-mcp (pointer)
 - [ ] T102 [P] [US4] MEDULLA-MEDIA-VOCAB-R032 The connector :Episode rename belongs to arr-mcp (pointer)
 - [ ] T103 [P] [US4] MEDULLA-MEDIA-VOCAB-R033 Retiring the connector :Author declarations belongs to jellyfin-mcp and audiobookshelf-mcp (pointer)
-- [ ] T104 [US7] MEDULLA-MEDIA-VOCAB-R650.1 Model
+- [x] T104 [US7] MEDULLA-MEDIA-VOCAB-R650.1 Model
 - [ ] T105 [US7] MEDULLA-MEDIA-VOCAB-R650.2 Behavior
 - [ ] T106 [US7] MEDULLA-MEDIA-VOCAB-R650.3 Wiring
 - [ ] T107 [US7] MEDULLA-MEDIA-VOCAB-R650.4 Refusal
