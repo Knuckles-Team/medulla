@@ -5293,7 +5293,10 @@ impl WireSession {
     /// committed series only.
     #[cfg(feature = "query")]
     async fn exec_uql(&self, graph: &str, text: &str, in_txn: bool) -> WireResult<WireOutcome> {
-        let plan = medulla_uql::parse(text).map_err(|e| user_err(e.render(text)))?;
+        // The query time is the engine clock's reading for this request, handed to the parser
+        // so `VALID AS OF <n> <unit>` is a function of the text and that reading.
+        let now_secs = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as f64 / 1_000.0;
+        let plan = medulla_uql::parse_at(text, now_secs).map_err(|e| user_err(e.render(text)))?;
         #[cfg(feature = "tsdb")]
         let tsdb_scope =
             if medulla_server_ops::api::query_txn::query_support::plan_needs_tsdb(&plan.ops) {

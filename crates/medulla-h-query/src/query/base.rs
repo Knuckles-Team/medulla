@@ -186,6 +186,9 @@ pub(crate) struct QueryHandlerCtx<'a> {
     pub(crate) graph_name: &'a str,
     pub(crate) read_authority: Option<&'a GraphReadAuthority>,
     pub(crate) caller: &'a str,
+    /// The engine clock's reading for this request, in seconds since the epoch: the query time
+    /// a UQL `VALID AS OF <n> <unit>` window is measured back from.
+    pub(crate) now_secs: f64,
     pub(crate) core: &'a Arc<GraphCore>,
     #[cfg(feature = "security")]
     pub(crate) rls: &'a Arc<medulla_isolation::isolation::IsolationLayer>,

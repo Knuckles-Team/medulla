@@ -58,6 +58,7 @@ async fn try_handle_inner(
         graph_name,
         read_authority,
         caller,
+        now_secs: medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as f64 / 1_000.0,
         core: &core,
         #[cfg(feature = "security")]
         rls,

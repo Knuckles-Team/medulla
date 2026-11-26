@@ -82,6 +82,9 @@ pub struct Parser<'a> {
     end: usize,
     src: &'a str,
     params: &'a Params,
+    /// The query time in seconds since the epoch, supplied by the caller from the engine
+    /// clock; `None` for a parse that has no clock (MEDULLA-FEDERATED-QUERY-R720.9).
+    now_secs: Option<f64>,
     used_params: BTreeSet<String>,
     depth: usize,
     warnings: Vec<UqlWarning>,
@@ -105,6 +108,7 @@ impl<'a> Parser<'a> {
             end: src.len(),
             src,
             params,
+            now_secs: None,
             used_params: BTreeSet::new(),
             depth: 0,
             warnings: Vec::new(),
@@ -114,6 +118,12 @@ impl<'a> Parser<'a> {
             derived: BTreeSet::new(),
             free_channels: false,
         }
+    }
+
+    /// Parse with the query time `now_secs` (seconds since the epoch) from the engine clock.
+    pub(super) fn with_now(mut self, now_secs: f64) -> Self {
+        self.now_secs = Some(now_secs);
+        self
     }
 
     /// A series value channel: `v0..vk` (a `TSSCAN` field, EH-521) or a declared

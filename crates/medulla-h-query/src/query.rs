@@ -75,8 +75,9 @@ fn bind_served_statement(
     req_id: u64,
     text: &str,
     params: &UqlParams,
+    now_secs: f64,
 ) -> Result<(medulla_uql::Statement, medulla_query_types::wire::Plan), Response> {
-    let statement = medulla_uql::parse_statement(text, params).map_err(|error| {
+    let statement = medulla_uql::parse_statement_at(text, params, now_secs).map_err(|error| {
         Response::err(req_id, format!("{}: {}", error.code, error.render(text)))
     })?;
     let binding = medulla_plan::uql::serve::binding_plan(&statement);

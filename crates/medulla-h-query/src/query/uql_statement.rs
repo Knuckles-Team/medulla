@@ -72,7 +72,7 @@ pub(crate) async fn handle_uql(
     if let Err(error) = check_foreign_executions(foreign_executions.as_slice(), &query_digest) {
         return Ok(Response::err(req_id, error));
     }
-    let (mut stmt, mut binding) = match bind_served_statement(req_id, &text, &params) {
+    let (mut stmt, mut binding) = match bind_served_statement(req_id, &text, &params, ctx.now_secs) {
         Ok(bound) => bound,
         Err(response) => return Ok(response),
     };

@@ -336,7 +336,7 @@ pub(crate) fn handle_stored_put(
     query.validate(medulla_server_api::knob_config::knobs().stored_query_min_period_s)?;
     match query.language {
         StoredQueryLanguage::Uql => {
-            medulla_uql::parse_statement(&query.text, &placeholder_params(&query))
+            medulla_uql::parse_statement_at(&query.text, &placeholder_params(&query), ctx.now_secs)
                 .map_err(|error| refuse(STORED_QUERY_INVALID, error.render(&query.text)))?;
         }
         StoredQueryLanguage::Sql | StoredQueryLanguage::Sparql => {

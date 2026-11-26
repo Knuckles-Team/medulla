@@ -21,7 +21,7 @@ pub(crate) async fn handle_txn_uql(
         #[cfg(feature = "security")]
         rls: ctx.rls,
     };
-    let (stmt, binding) = match bind_served_statement(req_id, &text, &params) {
+    let (stmt, binding) = match bind_served_statement(req_id, &text, &params, ctx.now_secs) {
         Ok(bound) => bound,
         Err(response) => return Ok(response),
     };
@@ -604,7 +604,7 @@ pub(crate) async fn handle_nl_query_plan_only(
         Ok(value) => value,
         Err(response) => return Ok(response),
     };
-    let (uql, plan) = match plan_nl_only(planner.as_ref(), &text, req_id) {
+    let (uql, plan) = match plan_nl_only(planner.as_ref(), &text, req_id, ctx.now_secs) {
         Ok(value) => value,
         Err(response) => return Ok(response),
     };
@@ -639,12 +639,13 @@ fn plan_nl_only(
     planner: &dyn medulla_nlq::nl::NlPlanner,
     text: &str,
     req_id: u64,
+    now_secs: f64,
 ) -> Result<(String, medulla_query_types::wire::Plan), Response> {
     let candidate =
         medulla_nlq::nl::plan_only(planner, text, "", medulla_nlq::nl::NlQueryBudget::default())
             .map_err(|e| Response::err(req_id, nl_refusal(&e)))?;
     let params = UqlParams::default();
-    let statement = medulla_uql::parse_statement(&candidate.uql, &params)
+    let statement = medulla_uql::parse_statement_at(&candidate.uql, &params, now_secs)
         .map_err(|e| Response::err(req_id, format!("{}: {}", e.code, e.render(&candidate.uql))))?;
     let plan = medulla_plan::uql::serve::binding_plan(&statement);
     Ok((candidate.uql, plan))
@@ -877,7 +878,7 @@ mod nl_plan_only_tests {
     // spec: MEDULLA-FEDERATED-QUERY-R058.1
     #[test]
     fn served_plan_helper_uses_the_view_free_typed_seam() {
-        let (uql, plan) = super::plan_nl_only(&PurePlanner, "MATCH (:Doc)", 1).expect("plan");
+        let (uql, plan) = super::plan_nl_only(&PurePlanner, "MATCH (:Doc)", 1, 1_700_000_000.0).expect("plan");
         assert_eq!(uql, "MATCH (:Doc)");
         assert_eq!(plan.ops.len(), 1);
     }

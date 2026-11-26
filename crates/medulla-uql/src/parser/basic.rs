@@ -166,9 +166,12 @@ impl<'a> Parser<'a> {
                 return Err(self.err_here("expected a duration unit (`s`, `m`, `h`, `d`, …)"));
             };
             let secs = n * UNITS[i].1 / UNITS[i].2;
-            let now = std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map_or(0.0, |d| d.as_secs_f64());
+            let Some(now) = self.now_secs else {
+                return Err(self.err_at(
+                    self.prev_start(),
+                    "a valid-time window needs the query time; parse with `parse_statement_at`",
+                ));
+            };
             if !secs.is_finite() || secs < 0.0 {
                 return Err(
                     self.err_at(self.prev_start(), "the valid-time window is not a duration")

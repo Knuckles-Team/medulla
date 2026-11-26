@@ -74,6 +74,21 @@ pub fn parse_statement(src: &str, params: &Params) -> Result<Statement, UqlError
     parser::Parser::new(src, &tokens, params).statement()
 }
 
+/// [`parse_statement`] with the query time `now_secs` (seconds since the epoch), read by the
+/// caller from the engine clock. `VALID AS OF <n> <unit>` lowers to the instant `n` units
+/// before it, so a parse is a pure function of its text, parameters and `now_secs`
+/// (MEDULLA-FEDERATED-QUERY-R720.9); [`parse_statement`] has no clock and refuses that form.
+pub fn parse_statement_at(
+    src: &str,
+    params: &Params,
+    now_secs: f64,
+) -> Result<Statement, UqlError> {
+    let tokens = lexer::lex(src)?;
+    parser::Parser::new(src, &tokens, params)
+        .with_now(now_secs)
+        .statement()
+}
+
 /// Parse a `CALL STORED name[@version](arg = literal, …)` statement (the stored-query call).
 /// `None` when the text is not a `CALL STORED` statement at all, so any other text goes on to
 /// [`parse_statement`]; `Some(Err(..))` when it starts as one and is malformed.
@@ -99,7 +114,16 @@ pub fn parse_call_stored(src: &str) -> Option<Result<CallStored, UqlError>> {
 /// `EXPLAIN`/`PROFILE`, DAG programs and `WITH …` annotations are refused
 /// (`UQL_STATEMENT_NOT_PIPELINE`) — use [`parse_statement`] for those.
 pub fn parse_with(src: &str, params: &Params) -> Result<Plan, UqlError> {
-    let stmt = parse_statement(src, params)?;
+    pipeline_plan(parse_statement(src, params)?, src)
+}
+
+/// [`parse_with`] with the query time `now_secs` from the engine clock (see
+/// [`parse_statement_at`]).
+pub fn parse_with_at(src: &str, params: &Params, now_secs: f64) -> Result<Plan, UqlError> {
+    pipeline_plan(parse_statement_at(src, params, now_secs)?, src)
+}
+
+fn pipeline_plan(stmt: Statement, src: &str) -> Result<Plan, UqlError> {
     #[cfg(feature = "federation")]
     reject_pipeline_federation_budget(&stmt, src)?;
     match (stmt.mode, stmt.body, stmt.annotations.any()) {
@@ -140,4 +164,9 @@ pub fn parse_series_expr(
 /// Parse a plain pipeline (no parameters) into the [`Plan`] AST.
 pub fn parse(src: &str) -> Result<Plan, UqlError> {
     parse_with(src, &Params::new())
+}
+
+/// [`parse`] with the query time `now_secs` from the engine clock (see [`parse_statement_at`]).
+pub fn parse_at(src: &str, now_secs: f64) -> Result<Plan, UqlError> {
+    parse_with_at(src, &Params::new(), now_secs)
 }

@@ -3,7 +3,10 @@
 #![cfg(feature = "text")]
 
 use medulla_query_types::wire::{Op, TimeAxis};
-use medulla_uql::{parse_statement, Body, Params};
+use medulla_uql::{parse_statement, parse_statement_at, Body, Params};
+
+/// The query time every parse here is handed: an engine-clock reading, in seconds.
+const NOW_SECS: f64 = 1_700_000_000.0;
 
 // spec: MEDULLA-FEDERATED-QUERY-R720.9
 /// Verifies MEDULLA-FEDERATED-QUERY-R720.9: both clauses lower into one linear plan.
@@ -11,11 +14,7 @@ use medulla_uql::{parse_statement, Body, Params};
 fn union_and_valid_as_of_window_compile_into_one_plan() {
     let src = "MATCH (:Incident) |> UNION [MATCH (:Incident)] [MATCH (:Alert)] \
                |> VALID AS OF 1 h |> LIMIT 5";
-    let before = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .unwrap()
-        .as_secs_f64();
-    let statement = parse_statement(src, &Params::new()).expect("the program parses");
+    let statement = parse_statement_at(src, &Params::new(), NOW_SECS).expect("the program parses");
     let Body::Pipeline(plan) = statement.body else {
         panic!("a union program is one linear plan, not a second plan");
     };
@@ -41,10 +40,11 @@ fn union_and_valid_as_of_window_compile_into_one_plan() {
             _ => None,
         })
         .expect("the window lowers to a valid-time AsOf");
+    assert_eq!(window, NOW_SECS - 3_600.0, "the instant is exactly one hour before the query time");
     assert!(
-        (before - 3_600.0 - 5.0..=before - 3_600.0 + 5.0).contains(&window),
-        "the instant is one hour before now: {window}"
+        parse_statement_at("MATCH (:A) |> VALID AS OF 1 parsecs", &Params::new(), NOW_SECS).is_err()
     );
-    assert!(parse_statement("MATCH (:A) |> VALID AS OF 1 parsecs", &Params::new()).is_err());
+    // A parse without a query time refuses the duration form instead of reading a clock.
+    assert!(parse_statement("MATCH (:A) |> VALID AS OF 1 h", &Params::new()).is_err());
     assert!(matches!(plan.ops.last(), Some(Op::Limit { .. })));
 }
