@@ -131,6 +131,21 @@ mod served {
         ))
     }
 
+    /// Whether the producer of the corrected output is the verified corrector. Both ids go
+    /// through the one identity helper (`principal_fingerprint`, the fingerprint an approval
+    /// lease stamps), never a raw string compare, so a producer written as a raw principal and
+    /// one written as its `principal:sha256:` pseudonym are the same producer. The producer is
+    /// checked against the corrector's principal and its agent id.
+    fn is_self_report(
+        verified: &VerifiedRequestContext,
+        produced_by: &str,
+    ) -> Result<bool, String> {
+        use medulla_server_api::batch_compile::principal_fingerprint;
+        let producer = principal_fingerprint(produced_by)?;
+        Ok(producer == principal_fingerprint(verified.principal())?
+            || producer == principal_fingerprint(verified.agent_id())?)
+    }
+
     async fn record(
         state: &SharedState,
         verified: &VerifiedRequestContext,
@@ -153,7 +168,7 @@ mod served {
                 .ok_or_else(target_not_found)?
         };
         let actor = verified.agent_id().to_string();
-        if actor == produced_by {
+        if is_self_report(verified, &produced_by)? {
             return Err(format!(
                 "{}: the actor of a correction cannot be the producer of the corrected output",
                 OUTCOME_SELF_REPORTED.as_str()
