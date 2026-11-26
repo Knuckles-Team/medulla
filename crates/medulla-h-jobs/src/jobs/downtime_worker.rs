@@ -14,6 +14,13 @@ use medulla_server_api::downtime::{
     downtime_body, DowntimeStep, DowntimeStepInput, FOREGROUND_ACTIVITY,
 };
 
+/// Milliseconds on the process's monotonic clock: the production step clock of
+/// [`run_downtime_claim`], which a test replaces with a virtual one.
+fn monotonic_ms() -> u64 {
+    static START: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
+    START.get_or_init(Instant::now).elapsed().as_millis() as u64
+}
+
 /// Whether foreground load asks downtime work to yield now.
 fn foreground_preempts() -> bool {
     let knobs = medulla_server_api::knob_config::knobs();
@@ -61,6 +68,7 @@ pub(super) async fn downtime_worker_loop(
                     timing.lease_ms,
                     &foreground_preempts,
                     step_deadline_ms,
+                    &monotonic_ms,
                 )
                 .await
                 .is_err()
@@ -74,13 +82,15 @@ pub(super) async fn downtime_worker_loop(
 }
 
 /// Run one claimed downtime job until it finishes, spends its budget or yields.
-/// `preempt` is asked at every step boundary.
+/// `preempt` is asked at every step boundary; `clock_ms` is the monotonic clock that meters
+/// each step's cost against the job's CPU budget.
 pub(super) async fn run_downtime_claim(
     store: &JobStore,
     claim: WorkerClaim,
     lease_ms: u64,
     preempt: &(dyn Fn() -> bool + Sync),
     step_deadline_ms: u64,
+    clock_ms: &(dyn Fn() -> u64 + Sync),
 ) -> Result<(), String> {
     let job = claim.job;
     let job_id = job.job_id.clone();
@@ -115,7 +125,7 @@ pub(super) async fn run_downtime_claim(
                 .map_err(|error| error.to_string())?;
             return Ok(());
         }
-        let started = Instant::now();
+        let started = clock_ms();
         let (step_body, step_job, step_blob) = (body.clone(), job.clone(), state_blob.clone());
         let step = tokio::task::spawn_blocking(move || {
             step_body.step(DowntimeStepInput {
@@ -126,7 +136,7 @@ pub(super) async fn run_downtime_claim(
         })
         .await
         .map_err(|error| error.to_string())??;
-        used_cpu_ms = used_cpu_ms.saturating_add(started.elapsed().as_millis() as u64);
+        used_cpu_ms = used_cpu_ms.saturating_add(clock_ms().saturating_sub(started));
         let working_bytes = match &step {
             DowntimeStep::Continue { working_bytes, .. }
             | DowntimeStep::Done { working_bytes, .. } => *working_bytes,
@@ -200,15 +210,17 @@ mod tests {
 
     const INTENT: &str = "test_downtime_steps_r101_7";
 
-    /// A body of `total` steps of 30 ms each; its state is the count of steps done.
+    /// A body of `total` steps of 30 ms each on a virtual clock; its state is the count of
+    /// steps done.
     struct SteppedBody {
         total: u8,
         done: Arc<AtomicUsize>,
+        clock: Arc<std::sync::atomic::AtomicU64>,
     }
 
     impl DowntimeBody for SteppedBody {
         fn step(&self, input: DowntimeStepInput<'_>) -> Result<DowntimeStep, String> {
-            std::thread::sleep(Duration::from_millis(30));
+            self.clock.fetch_add(30, std::sync::atomic::Ordering::SeqCst);
             let before = input.state_blob.and_then(|blob| blob.first()).copied().unwrap_or(0);
             let after = before + 1;
             self.done.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
@@ -284,19 +296,23 @@ mod tests {
     #[tokio::test]
     async fn budget_stop_and_preempt_yield() {
         let done = Arc::new(AtomicUsize::new(0));
+        let virtual_clock = Arc::new(std::sync::atomic::AtomicU64::new(0));
+        let virtual_clock_reader = virtual_clock.clone();
         install_downtime_body(
             INTENT,
             Arc::new(SteppedBody {
                 total: 5,
                 done: done.clone(),
+                clock: virtual_clock.clone(),
             }),
         );
+        let clock_ms = move || virtual_clock_reader.load(std::sync::atomic::Ordering::SeqCst);
         let dir = tempfile::tempdir().unwrap();
         let store = super::super::core::open_job_store(dir.path()).expect("job store opens");
 
         // A 60 ms budget over 30 ms steps stops the job with the budget code and no later step.
         let spent = submit(&store, 60);
-        run_downtime_claim(&store, claim(&store), 60_000, &|| false, 125)
+        run_downtime_claim(&store, claim(&store), 60_000, &|| false, 125, &clock_ms)
             .await
             .unwrap();
         let JobState::Failed { reason, .. } = store.get(&spent).unwrap().state else {
@@ -316,6 +332,7 @@ mod tests {
             60_000,
             &move || seen.load(std::sync::atomic::Ordering::SeqCst) >= 2,
             125,
+            &clock_ms,
         )
         .await
         .unwrap();
@@ -332,7 +349,7 @@ mod tests {
             &resumed.job.state,
             JobState::Running { checkpoint, .. } if checkpoint.state_blob.as_deref() == Some(&[2u8][..])
         ));
-        run_downtime_claim(&store, resumed, 60_000, &|| false, 125)
+        run_downtime_claim(&store, resumed, 60_000, &|| false, 125, &clock_ms)
             .await
             .unwrap();
         let finished = store.get(&job_id).unwrap();
