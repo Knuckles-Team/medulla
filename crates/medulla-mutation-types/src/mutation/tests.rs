@@ -2,6 +2,7 @@ use super::budget::{BudgetedVecSeed, StructuralBudget};
 use super::payload::recompute_egress_authorization_digest;
 use super::receipt::result_matches_request;
 use super::*;
+use medulla_types::contract::{MutationDisposition, MutationDomain, RequestedMutationResult};
 use serde::de::DeserializeSeed;
 use serde::ser::SerializeMap;
 use serde::Serialize;

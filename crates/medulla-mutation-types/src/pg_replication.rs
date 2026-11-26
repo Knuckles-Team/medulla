@@ -20,7 +20,7 @@ pub const REPLICATION_SLOT_SERVICE: &str = "replication-slots";
 /// The agent id of the fixed service identity of [`REPLICATION_SLOT_SERVICE`]
 /// (`service:<service>`, the shape of every fixed engine service actor). The identity registry
 /// reserves it, so no issued credential can carry it (`medulla_identity_types::identity::RESERVED_AGENT_IDS`).
-pub use medulla_identity_types::identity::REPLICATION_SLOT_AGENT;
+use medulla_identity_types::identity::REPLICATION_SLOT_AGENT;
 
 /// The refusal text prefix of a slot name outside `[a-z0-9_]{1,63}`.
 pub const REPLICATION_SLOT_NAME_INVALID: &str = "REPLICATION_SLOT_NAME_INVALID";

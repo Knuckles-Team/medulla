@@ -47,6 +47,7 @@ medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-federation = { path = "../medulla-federation" }
 
 object_store = { version = "0.14.2", optional = true, features = ["aws"] }
+medulla-identity-types = { path = "../medulla-identity-types" }
 
 [features]
 alignment = ["blob", "dep:medulla-modality", "dep:medulla-alignment", "medulla-server-api/alignment"]

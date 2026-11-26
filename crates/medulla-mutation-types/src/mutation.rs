@@ -16,9 +16,6 @@ mod targets;
 
 pub use effects::{MutationEffect, RecordMutation};
 pub use envelope::{MutationPayload, MutationRequestEnvelope, MutationRequestEnvelopeParts};
-pub use medulla_types::{
-    contract::MutationDisposition, contract::MutationDomain, contract::RequestedMutationResult,
-};
 pub use outbox_decode::ProvenanceBinding;
 pub use receipt::{MutationReceipt, MutationResult};
 pub use targets::{MutationPrecondition, RecordTarget};

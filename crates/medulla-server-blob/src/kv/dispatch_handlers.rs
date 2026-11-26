@@ -189,7 +189,7 @@ pub(super) fn refuse_reserved_namespace(method: &Method, agent_id: &str) -> Resu
         _ => return Ok(()),
     };
     if namespace == medulla_mutation_types::pg_replication::REPLICATION_SLOT_NAMESPACE
-        && agent_id != medulla_mutation_types::pg_replication::REPLICATION_SLOT_AGENT
+        && agent_id != medulla_identity_types::identity::REPLICATION_SLOT_AGENT
     {
         return Err(format!(
             "{}: the namespace {namespace} is reserved",
