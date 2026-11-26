@@ -44,3 +44,10 @@ medulla-types = { path = "../medulla-types", features = ["test-support"] }
 medulla-query-types = { path = "../medulla-query-types", features = ["test-support"] }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
+
+# Nightly budget for SQL views (MEDULLA-INCREMENTAL-VIEWS-R009.8); a service level, never a gate.
+[[bench]]
+name = "matview_incremental"
+path = "benches/matview_incremental.rs"
+harness = false
+required-features = ["sql"]
