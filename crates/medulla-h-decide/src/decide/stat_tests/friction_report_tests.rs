@@ -12,11 +12,12 @@ use medulla_decision_types::failure_patterns::{FailureIngestResult, FailureOp};
 use medulla_decision_types::friction::{
     FrictionFiled, FrictionGroupView, FrictionGroups, FrictionMoved, FrictionOp, FrictionReport,
     FrictionState, FrictionTransition, FRICTION_APPROVAL_ROLE_REQUIRED,
-    FRICTION_EVIDENCE_REQUIRED, FRICTION_SKILL_UNKNOWN, FRICTION_TEXT_TOO_LARGE,
+    FRICTION_EVIDENCE_REQUIRED, FRICTION_EVIDENCE_UNKNOWN, FRICTION_SELF_APPROVED,
+    FRICTION_SKILL_UNKNOWN, FRICTION_TEXT_TOO_LARGE,
     FRICTION_TRANSITION_ILLEGAL,
 };
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
-use medulla_persistence_records::decision_jobs::encode_artifact;
+use medulla_persistence_records::decision_jobs::{encode_artifact, receipt_key, record_key};
 use medulla_protocol_types::protocol::ResultPayload;
 use serde_json::{json, Value};
 
@@ -25,6 +26,23 @@ const SKILL: &str = "skill:triage@3";
 
 fn all_scopes() -> VerifiedRequestContext {
     VerifiedRequestContext::verified_for_test_with_scopes("agent-7", TENANT, &["*"])
+}
+
+/// A second human: it holds every scope and neither reports nor moves a group.
+fn approver() -> VerifiedRequestContext {
+    VerifiedRequestContext::verified_for_test_with_scopes("agent-9", TENANT, &["*"])
+}
+
+/// A harness that knows both callers.
+async fn two_callers() -> Harness {
+    let mut isolation = ServerState::test_isolation("agent-7");
+    isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+        agent_id: "agent-9".into(),
+        role: medulla_identity_types::acl::AgentRole::System,
+        teams: Vec::new(),
+        roles: Vec::new(),
+    });
+    Harness::with_isolation(isolation).await
 }
 
 fn without_approve() -> VerifiedRequestContext {
@@ -256,7 +274,7 @@ async fn refusals_write_nothing() {
 // spec: MEDULLA-DECISION-ENGINE-R710.5
 #[tokio::test]
 async fn steps_record_actor_and_evidence() {
-    let h = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
+    let h = two_callers().await;
     let core = seed(&h).await;
     put(&core, "gap:g1", json!({"type": "FailureGap", "tenant_id": TENANT}));
     let store = h.state.write().await.ensure_agent_library().unwrap();
@@ -270,30 +288,39 @@ async fn steps_record_actor_and_evidence() {
         created_ms: 1,
     };
     store
-        .put_decision_artifacts(TENANT, &[(revision.key(), encode_artifact(&revision).unwrap())])
+        .put_decision_artifacts(
+            TENANT,
+            &[
+                (revision.key(), encode_artifact(&revision).unwrap()),
+                (receipt_key("sha256:held-out"), b"receipt".to_vec()),
+                (record_key("verdict:ok"), b"record".to_vec()),
+            ],
+        )
         .unwrap();
     let who = all_scopes();
+    let second = approver();
     let filed = file_three(&h, &core, &who).await;
     let group_ref = filed.group.group_ref.clone();
-    let approver = who.principal_persistence_id();
+    let approver_id = second.principal_persistence_id();
 
     let walk: [(FrictionState, Option<String>); 8] = [
         (FrictionState::Triaged, None),
         (FrictionState::RootCaused, Some("gap:g1".into())),
         (FrictionState::Fixed, Some("rev:1".into())),
         (FrictionState::Evaluated, Some("sha256:held-out".into())),
-        (FrictionState::Approved, Some(approver.clone())),
+        (FrictionState::Approved, Some(approver_id.clone())),
         (FrictionState::Measured, Some("window:1,window:2".into())),
         (FrictionState::RegressionChecked, Some("verdict:ok".into())),
         (FrictionState::Closed, None),
     ];
     for (index, (to, evidence)) in walk.iter().enumerate() {
-        let write = run(&h, &who, move_op(&group_ref, *to, evidence.as_deref(), 100 + index as u64))
+        let caller = if *to == FrictionState::Approved { &second } else { &who };
+        let write = run(&h, caller, move_op(&group_ref, *to, evidence.as_deref(), 100 + index as u64))
             .await
             .unwrap_or_else(|error| panic!("{to:?}: {error}"));
         let moved: FrictionMoved = reply(&write);
         assert_eq!(moved.group.state, *to);
-        assert_eq!(moved.step.actor, approver);
+        assert_eq!(moved.step.actor, caller.principal_persistence_id());
         assert_eq!(moved.step.evidence_ref, *evidence);
         commit(&core, &write);
     }
@@ -326,4 +353,105 @@ async fn steps_record_actor_and_evidence() {
     let groups: FrictionGroups = reply(&run(&h, &who, group_op()).await.unwrap());
     assert_eq!(groups.groups[0].report_count, 3);
     assert_eq!(groups.groups[1].report_count, 1);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R710.4
+#[tokio::test]
+async fn approval_is_two_person_and_receipts_resolve_in_the_tenant() {
+    let h = two_callers().await;
+    let core = seed(&h).await;
+    put(&core, "gap:g1", json!({"type": "FailureGap", "tenant_id": TENANT}));
+    let store = h.state.write().await.ensure_agent_library().unwrap();
+    let revision = RevisionRow {
+        id: "rev:1".into(),
+        subject_kind: "skill".into(),
+        subject_ref: SKILL.into(),
+        stage: RevisionStage::Evaluated,
+        digest: "d".into(),
+        evaluation_receipt_id: None,
+        created_ms: 1,
+    };
+    store
+        .put_decision_artifacts(TENANT, &[(revision.key(), encode_artifact(&revision).unwrap())])
+        .unwrap();
+    // A receipt and a verdict that belong to another tenant.
+    store
+        .put_decision_artifacts(
+            "other-tenant",
+            &[
+                (receipt_key("sha256:foreign"), b"receipt".to_vec()),
+                (record_key("verdict:foreign"), b"record".to_vec()),
+            ],
+        )
+        .unwrap();
+    let who = all_scopes();
+    let second = approver();
+    let group_ref = file_three(&h, &core, &who).await.group.group_ref;
+    for (index, (to, evidence)) in [
+        (FrictionState::Triaged, None),
+        (FrictionState::RootCaused, Some("gap:g1")),
+        (FrictionState::Fixed, Some("rev:1")),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let write = run(&h, &who, move_op(&group_ref, to, evidence, 100 + index as u64))
+            .await
+            .expect("moves");
+        commit(&core, &write);
+    }
+    let refuse = |result: Result<PlannedWrite, String>| result.err().expect("must refuse");
+
+    // A missing receipt and another tenant's receipt refuse alike: no existence oracle.
+    let missing = refuse(
+        run(&h, &who, move_op(&group_ref, FrictionState::Evaluated, Some("sha256:none"), 110)).await,
+    );
+    let foreign = refuse(
+        run(&h, &who, move_op(&group_ref, FrictionState::Evaluated, Some("sha256:foreign"), 110)).await,
+    );
+    assert!(missing.starts_with(FRICTION_EVIDENCE_UNKNOWN.as_str()), "{missing}");
+    assert_eq!(
+        missing.replace("sha256:none", ""),
+        foreign.replace("sha256:foreign", ""),
+        "a missing and a foreign receipt answer alike"
+    );
+    // A non-empty string is no longer enough, for the verdict either.
+    let fixed = run(&h, &who, move_op(&group_ref, FrictionState::Evaluated, Some("x"), 110)).await;
+    assert!(fixed.err().unwrap().starts_with(FRICTION_EVIDENCE_UNKNOWN.as_str()));
+    store
+        .put_decision_artifacts(TENANT, &[(receipt_key("sha256:held-out"), b"receipt".to_vec())])
+        .unwrap();
+    let evaluated = run(
+        &h,
+        &who,
+        move_op(&group_ref, FrictionState::Evaluated, Some("sha256:held-out"), 111),
+    )
+    .await
+    .expect("a stored receipt resolves");
+    commit(&core, &evaluated);
+
+    // The reporter and the earlier mover cannot approve; a second person can.
+    let own = who.principal_persistence_id();
+    let error = refuse(
+        run(&h, &who, move_op(&group_ref, FrictionState::Approved, Some(&own), 112)).await,
+    );
+    assert!(error.starts_with(FRICTION_SELF_APPROVED.as_str()), "{error}");
+    let other = second.principal_persistence_id();
+    let approved = run(&h, &second, move_op(&group_ref, FrictionState::Approved, Some(&other), 113))
+        .await
+        .expect("a second principal approves");
+    commit(&core, &approved);
+    let measured = run(
+        &h,
+        &who,
+        move_op(&group_ref, FrictionState::Measured, Some("window:1,window:2"), 114),
+    )
+    .await
+    .expect("measures");
+    commit(&core, &measured);
+    let error = refuse(
+        run(&h, &who, move_op(&group_ref, FrictionState::RegressionChecked, Some("verdict:foreign"), 115))
+            .await,
+    );
+    assert!(error.starts_with(FRICTION_EVIDENCE_UNKNOWN.as_str()), "{error}");
 }

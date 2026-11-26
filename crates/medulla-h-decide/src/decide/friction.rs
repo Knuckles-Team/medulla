@@ -46,13 +46,13 @@ mod served {
         required_evidence, EvidenceKind, FrictionFiled, FrictionGroup, FrictionGroupView,
         FrictionGroups, FrictionMoved, FrictionOp, FrictionReport, FrictionState,
         FrictionStepRow, FrictionTransition, FRICTION_APPROVAL_ROLE_REQUIRED,
-        FRICTION_EVIDENCE_REQUIRED, FRICTION_GROUP_CLASS, FRICTION_GROUP_LIST_MAX,
-        FRICTION_GROUP_NOT_FOUND, FRICTION_REPORT_CLASS, FRICTION_SKILL_UNKNOWN,
+        FRICTION_EVIDENCE_REQUIRED, FRICTION_EVIDENCE_UNKNOWN, FRICTION_GROUP_CLASS, FRICTION_GROUP_LIST_MAX,
+        FRICTION_GROUP_NOT_FOUND, FRICTION_REPORT_CLASS, FRICTION_SELF_APPROVED, FRICTION_SKILL_UNKNOWN,
         FRICTION_STEP_CLASS, FRICTION_TEXT_TOO_LARGE, FRICTION_TRANSITION_ILLEGAL, SCOPE_APPROVE,
     };
     use medulla_graph_core::graph::GraphView;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
-    use medulla_persistence_records::decision_jobs::decode_artifact;
+    use medulla_persistence_records::decision_jobs::{decode_artifact, receipt_key, record_key};
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
         FrictionReportFile, FrictionReportGet, FrictionReportGroup, FrictionReportMove,
@@ -65,6 +65,7 @@ mod served {
     use super::{SCOPE_REPORT, SCOPE_TRANSITION};
     use crate::decide::knowledge_flag::served::{edge_operation, run_trace_of};
     use crate::decide::planned_write::PlannedWrite;
+    use crate::decide::stat_promotion::rollouts_key;
     use crate::decide::stat_support::{filtered_view_versioned, invalid_parameter};
     use crate::decide::SharedState;
 
@@ -119,7 +120,21 @@ mod served {
                     .filter_map(|(_, bytes)| decode_artifact::<RevisionRow>(&bytes, "revision").ok())
                     .map(|row| row.id)
                     .collect();
-                advance(graph, &view, verified, transition, at_ms, &revisions)
+                // The held-out receipt and the regression verdict resolve in this tenant's
+                // decision store; a missing and a foreign reference both stay absent here.
+                let mut stored: BTreeSet<String> = BTreeSet::new();
+                if let Some(reference) = transition.evidence_ref.as_deref() {
+                    for key in [receipt_key(reference), rollouts_key(reference), record_key(reference)] {
+                        if store.decision_artifact(tenant, &key)?.is_some() {
+                            stored.insert(key);
+                        }
+                    }
+                }
+                let known = Known {
+                    revisions,
+                    stored,
+                };
+                advance(graph, &view, verified, transition, at_ms, &known)
             }
             FrictionOp::Group {
                 skill_ref, limit, ..
@@ -159,6 +174,13 @@ mod served {
                 ))
             }
         }
+    }
+
+    /// What the decision store holds that a move's evidence may name.
+    struct Known {
+        revisions: BTreeSet<String>,
+        /// The store keys, among the evidence's candidates, that exist for the caller's tenant.
+        stored: BTreeSet<String>,
     }
 
     fn read_only(graph: String, reply: ResultPayload) -> PlannedWrite {
@@ -401,36 +423,58 @@ mod served {
         })
     }
 
-    /// Whether `evidence` satisfies what the move into `to` requires.
+    /// Whether `evidence` satisfies what the move into `to` requires: the refusal and its detail.
     fn evidence_error(
         to: FrictionState,
         evidence: Option<&str>,
         view: &GraphView,
         verified: &VerifiedRequestContext,
-        revisions: &BTreeSet<String>,
-    ) -> Option<String> {
+        known: &Known,
+    ) -> Option<(medulla_types::refusal_code::RefusalCode, String)> {
         let kind = required_evidence(to);
         if kind == EvidenceKind::None {
             return None;
         }
         let Some(evidence) = evidence.filter(|text| !text.is_empty()) else {
-            return Some(format!("moving to {} needs an evidence_ref", to.stored()));
+            return Some((
+                FRICTION_EVIDENCE_REQUIRED,
+                format!("moving to {} needs an evidence_ref", to.stored()),
+            ));
         };
-        let bad = match kind {
-            EvidenceKind::FailurePattern => !view.node_properties.contains_key(evidence),
-            EvidenceKind::Revision => !revisions.contains(evidence),
-            EvidenceKind::HumanPrincipal => evidence != verified.principal_persistence_id(),
-            EvidenceKind::MeasureWindows => {
-                let windows: Vec<&str> = evidence.split(',').collect();
-                windows.len() != 2
-                    || windows.iter().any(|window| window.is_empty())
-                    || windows[0] == windows[1]
+        let resolves = |key: String| known.stored.contains(&key);
+        match kind {
+            // A receipt or a verdict the tenant does not hold answers one code, whether it is
+            // missing or belongs to another tenant, so the refusal is no existence oracle.
+            EvidenceKind::HeldOutReceipt => {
+                let held = resolves(receipt_key(evidence)) || resolves(rollouts_key(evidence));
+                (!held).then(|| (FRICTION_EVIDENCE_UNKNOWN, "the evidence_ref names no held-out receipt".to_string()))
             }
-            EvidenceKind::HeldOutReceipt | EvidenceKind::RegressionVerdict | EvidenceKind::None => {
-                false
+            EvidenceKind::RegressionVerdict => (!resolves(record_key(evidence))).then(|| {
+                (FRICTION_EVIDENCE_UNKNOWN, "the evidence_ref names no regression verdict".to_string())
+            }),
+            _ => {
+                let bad = match kind {
+                    EvidenceKind::FailurePattern => !view.node_properties.contains_key(evidence),
+                    EvidenceKind::Revision => !known.revisions.contains(evidence),
+                    EvidenceKind::HumanPrincipal => evidence != verified.principal_persistence_id(),
+                    EvidenceKind::MeasureWindows => {
+                        let windows: Vec<&str> = evidence.split(',').collect();
+                        windows.len() != 2
+                            || windows.iter().any(|window| window.is_empty())
+                            || windows[0] == windows[1]
+                    }
+                    EvidenceKind::HeldOutReceipt
+                    | EvidenceKind::RegressionVerdict
+                    | EvidenceKind::None => false,
+                };
+                bad.then(|| {
+                    (
+                        FRICTION_EVIDENCE_REQUIRED,
+                        format!("the evidence_ref {evidence} does not satisfy {kind:?}"),
+                    )
+                })
             }
-        };
-        bad.then(|| format!("the evidence_ref {evidence} does not satisfy {kind:?}"))
+        }
     }
 
     fn advance(
@@ -439,7 +483,7 @@ mod served {
         verified: &VerifiedRequestContext,
         transition: FrictionTransition,
         at_ms: u64,
-        revisions: &BTreeSet<String>,
+        known: &Known,
     ) -> Result<PlannedWrite, String> {
         let tenant = verified.tenant();
         let group = group_by_ref(view, tenant, &transition.group_ref)?;
@@ -449,14 +493,31 @@ mod served {
                 format!("{} cannot move to {}", group.state.stored(), transition.to.stored()),
             ));
         };
-        if let Some(detail) = evidence_error(
+        // Two-person approval: the approver is the verified caller, and the caller neither
+        // reported the group nor made an earlier move on it.
+        if transition.to == FrictionState::Approved {
+            let approver = verified.principal_persistence_id();
+            let reported = report_rows(view, tenant, &group.group_ref)
+                .iter()
+                .any(|row| string(row, "reported_by") == approver);
+            let moved_earlier = step_rows(view, tenant, &group.group_ref)
+                .iter()
+                .any(|step| step.actor == approver);
+            if reported || moved_earlier {
+                return Err(refuse(
+                    FRICTION_SELF_APPROVED,
+                    "the approver reported this group or moved it before approval",
+                ));
+            }
+        }
+        if let Some((code, detail)) = evidence_error(
             transition.to,
             transition.evidence_ref.as_deref(),
             view,
             verified,
-            revisions,
+            known,
         ) {
-            return Err(refuse(FRICTION_EVIDENCE_REQUIRED, detail));
+            return Err(refuse(code, detail));
         }
         let next = group
             .state

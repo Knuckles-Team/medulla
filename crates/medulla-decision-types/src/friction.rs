@@ -43,6 +43,12 @@ pub const FRICTION_TEXT_TOO_LARGE: RefusalCode = RefusalCode::new("FRICTION_TEXT
 /// `FRICTION_GROUP_NOT_FOUND`: no group of that reference is visible to the caller.
 pub const FRICTION_GROUP_NOT_FOUND: RefusalCode = RefusalCode::new("FRICTION_GROUP_NOT_FOUND");
 
+/// `FRICTION_SELF_APPROVED`: the approver reported the group or moved it earlier.
+pub const FRICTION_SELF_APPROVED: RefusalCode = RefusalCode::new("FRICTION_SELF_APPROVED");
+/// `FRICTION_EVIDENCE_UNKNOWN`: a held-out receipt or regression verdict that the caller's tenant
+/// does not hold. A missing and a foreign reference answer alike.
+pub const FRICTION_EVIDENCE_UNKNOWN: RefusalCode = RefusalCode::new("FRICTION_EVIDENCE_UNKNOWN");
+
 /// The `friction` table of registered refusal codes.
 pub const REFUSALS: &[RefusalCode] = &[
     FRICTION_SKILL_UNKNOWN,
@@ -51,6 +57,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     FRICTION_APPROVAL_ROLE_REQUIRED,
     FRICTION_TEXT_TOO_LARGE,
     FRICTION_GROUP_NOT_FOUND,
+    FRICTION_SELF_APPROVED,
+    FRICTION_EVIDENCE_UNKNOWN,
 ];
 
 /// The closed state set of `FrictionMachine`.
@@ -241,7 +249,8 @@ pub enum EvidenceKind {
     Revision,
     /// A held-out evidence receipt of R805.9.
     HeldOutReceipt,
-    /// The human principal that approved.
+    /// The human principal that approved: the verified caller, who is neither a reporter of the
+    /// group nor the actor of an earlier move.
     HumanPrincipal,
     /// Two measure windows of R713, comma separated.
     MeasureWindows,
