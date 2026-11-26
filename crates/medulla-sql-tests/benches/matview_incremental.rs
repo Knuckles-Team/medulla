@@ -330,6 +330,18 @@ fn join_group(store: &TableStore, rows: i64, n: &mut u64) -> bool {
     })
 }
 
+/// The `groups` group: grouped count, sum and avg over `orders` (R009.8).
+fn groups(store: &TableStore, rows: i64, n: &mut u64, fresh: &mut i64) -> bool {
+    orders_group(
+        store,
+        "groups",
+        "SELECT region, count(*) AS n, sum(qty) AS total, avg(qty) AS mean FROM orders WHERE qty > 0 GROUP BY region",
+        rows,
+        n,
+        fresh,
+    )
+}
+
 fn main() {
     let rows = table_rows();
     let mut n = 0_u64;
@@ -382,16 +394,13 @@ fn main() {
         ("eval", "SELECT id, qty * 2 + 1 AS q FROM orders"),
         ("rows", "SELECT id, region, qty FROM orders WHERE qty > 3"),
         (
-            "groups",
-            "SELECT region, count(*) AS n, sum(qty) AS total, avg(qty) AS mean FROM orders WHERE qty > 0 GROUP BY region",
-        ),
-        (
             "extremes",
             "SELECT region, min(qty) AS lo, max(qty) AS hi FROM orders GROUP BY region",
         ),
     ] {
         breached |= orders_group(&store, group, select, rows, &mut n, &mut fresh);
     }
+    breached |= groups(&store, rows, &mut n, &mut fresh);
     breached |= join_group(&store, rows, &mut n);
     if breached {
         eprintln!("matview_incremental: a budget was breached");

@@ -968,4 +968,35 @@ mod tests {
         let old: IncrementalViewProgram = serde_json::from_value(value).unwrap();
         assert_eq!(old.join, None);
     }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R012.1
+    #[test]
+    fn distinct_and_extremes_serialize() {
+        let extremes = IncrementalViewProgram {
+            view: "bounds".into(),
+            table: "orders".into(),
+            join: None,
+            filter: None,
+            output: ViewOutput::Groups {
+                keys: vec![("region".into(), RowExpr::Column("region".into()))],
+                aggs: vec![
+                    ("lo".into(), ExactAgg::Min(RowExpr::Column("amount".into()))),
+                    ("hi".into(), ExactAgg::Max(RowExpr::Column("amount".into()))),
+                ],
+            },
+        };
+        let distinct = IncrementalViewProgram {
+            view: "regions".into(),
+            output: ViewOutput::Distinct(vec![("region".into(), RowExpr::Column("region".into()))]),
+            ..extremes.clone()
+        };
+        for program in [extremes, distinct] {
+            let bytes = rmp_serde::to_vec_named(&program).unwrap();
+            assert_eq!(rmp_serde::from_slice::<IncrementalViewProgram>(&bytes).unwrap(), program);
+            let json = serde_json::to_string(&program).unwrap();
+            assert_eq!(serde_json::from_str::<IncrementalViewProgram>(&json).unwrap(), program);
+        }
+        // A distinct view stores one group per output tuple with the hidden weight column.
+        assert_eq!(MV_COUNT, "__mv_count");
+    }
 }

@@ -72,7 +72,7 @@ File: `crates/medulla-table-store/src/tables/matview_incremental.rs`.
 | `ViewRowChanges` | `{ view, deleted: Vec<Row>, inserted: Vec<Row> }` |
 | `NotIncremental` | `{ construct: String }`, code `MATVIEW_NOT_INCREMENTAL` |
 
-Grouped and distinct result rows add the hidden column `__count` of type bigint.
+Grouped and distinct result rows add the hidden column `__mv_count` of type bigint.
 
 ## Codes added to `ServerErrorCode`
 
