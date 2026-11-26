@@ -195,6 +195,8 @@ mod tests {
             vulnerability: Some("CVE-2021-23017".to_string()),
             impact_kind: medulla_source_types::supply_chain_report::ImpactKind::RuntimeChain,
             source: "gitlab-mcp".to_string(),
+            mapping: None,
+            read_at_ms: None,
         }];
         let report = supply_chain_impact(&fixture, &roots, 2, &rows, &[], &[]).expect("the report assembles");
         let encoded = serde_json::to_string(&report).expect("the report encodes");
@@ -230,6 +232,8 @@ mod tests {
             vulnerability: None,
             impact_kind: medulla_source_types::supply_chain_report::ImpactKind::RuntimeChain,
             source: source.to_string(),
+            mapping: None,
+            read_at_ms: None,
         };
         let rows = vec![row("v-from-github", "github-mcp"), row("v-from-erp", "erpnext-mcp")];
         let report = supply_chain_impact(&fixture, &roots, 0, &rows, &[], &[])

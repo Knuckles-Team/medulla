@@ -35,6 +35,18 @@ const MAX_SERVICES: usize = 1000;
 /// The node property that names the source that served a component version.
 const SOURCE_PROPERTY: &str = "source";
 
+/// The node property that names the mapping that produced a component version's facts
+/// (MEDULLA-CQ-XSRC-R012.1).
+const MAPPING_PROPERTY: &str = "mappingRef";
+
+/// The node property that holds the time a component version's source was read, in
+/// milliseconds since the epoch (MEDULLA-CQ-XSRC-R012.1).
+const READ_AT_PROPERTY: &str = "readAtMs";
+
+/// The relation of an approved entity link: `ApproveEntityLink` is the only writer
+/// (MEDULLA-CQ-XSRC-R004.5), so the edge existing is the approval.
+const SAME_AS: &str = "owl:sameAs";
+
 /// The relationship of the curated contract-to-service edge (MEDULLA-SUPPLY-VOCAB-R005.9).
 const COVERS_SERVICE: &str = "coversService";
 
@@ -68,6 +80,11 @@ fn text_property(properties: &serde_json::Map<String, serde_json::Value>, name: 
         .and_then(serde_json::Value::as_str)
         .unwrap_or_default()
         .to_string()
+}
+
+/// `None` for a blank text, so a missing provenance property is absent, never an empty string.
+fn non_blank(text: String) -> Option<String> {
+    (!text.trim().is_empty()).then_some(text)
 }
 
 /// The relation an edge blob carries: `relationship`, else `type`, else `label`.
@@ -155,6 +172,18 @@ fn impact_rows(
             }
         }
     }
+    // target id -> the ids that link to it by an approved `owl:sameAs` edge.
+    let mut same_as_inbound: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for ((relation, from), linked) in &out {
+        if relation == SAME_AS {
+            for target in linked {
+                same_as_inbound
+                    .entry(target.clone())
+                    .or_default()
+                    .insert(from.clone());
+            }
+        }
+    }
     let mut rows = Vec::new();
     for (service, _) in core.get_nodes_by_label("Service", MAX_SERVICES) {
         if !visible(&service) {
@@ -173,9 +202,27 @@ fn impact_rows(
                     "CQ_XSRC_ITEM_WITHOUT_SOURCE: component version {version} names no source"
                 ));
             }
+            let mapping = non_blank(text_property(&properties, MAPPING_PROPERTY));
+            let read_at_ms = properties
+                .get(READ_AT_PROPERTY)
+                .and_then(serde_json::Value::as_u64);
+            // A publisher joins the records of another source only across an approved
+            // `owl:sameAs` edge, read in either direction (MEDULLA-CQ-XSRC-R012.1); an
+            // unapproved pair has no edge, so it adds no row.
             let suppliers: BTreeSet<String> = targets("supplyChainVersionOf", &version)
                 .iter()
                 .flat_map(|component| targets("publishedBy", component))
+                .flat_map(|supplier| {
+                    let mut linked = targets(SAME_AS, &supplier);
+                    linked.extend(
+                        same_as_inbound
+                            .get(&supplier)
+                            .into_iter()
+                            .flat_map(|ids| ids.iter().cloned()),
+                    );
+                    linked.push(supplier);
+                    linked
+                })
                 .filter(|supplier| visible(supplier))
                 .collect();
             let vulnerabilities: Vec<Option<String>> = match affecting.get(&version) {
@@ -191,6 +238,8 @@ fn impact_rows(
                         vulnerability: vulnerability.clone(),
                         impact_kind: ImpactKind::RuntimeChain,
                         source: source.clone(),
+                        mapping: mapping.clone(),
+                        read_at_ms,
                     });
                 }
             }
@@ -312,6 +361,49 @@ mod tests {
             rmp_serde::to_vec_named(&properties).expect("encode edge"),
         )
         .expect("add edge");
+    }
+
+    fn version_node(core: &GraphCore, id: &str, source: &str) {
+        let properties = serde_json::json!({
+            "type": "ComponentVersion",
+            "source": source,
+            "mappingRef": "vm:leanix-components",
+            "readAtMs": 1_700_000_000_123_u64,
+        });
+        core.add_node(
+            id.to_string(),
+            rmp_serde::to_vec_named(&properties).expect("encode node"),
+        );
+    }
+
+    // spec: MEDULLA-CQ-XSRC-R012.1
+    #[test]
+    fn impact_rows_carry_provenance_and_join_only_across_an_approved_link() {
+        let core = GraphCore::new();
+        node(&core, "svc-a", "Service");
+        version_node(&core, "ver-1", "leanix-mcp");
+        node(&core, "cmp-1", "SoftwareComponent");
+        node(&core, "leanix:fs-1", "Supplier");
+        node(&core, "erpnext:SUP-1", "Supplier");
+        link(&core, "svc-a", "usesComponent", "ver-1");
+        link(&core, "ver-1", "supplyChainVersionOf", "cmp-1");
+        link(&core, "cmp-1", "publishedBy", "leanix:fs-1");
+
+        // Before the approval no edge exists, so the other source's record joins no row.
+        let before = impact_rows(&core, None).expect("rows read");
+        let suppliers: Vec<&str> = before.iter().map(|row| row.supplier.as_str()).collect();
+        assert_eq!(suppliers, ["leanix:fs-1"]);
+
+        // The approved link joins the second connector's supplier, in either direction.
+        link(&core, "erpnext:SUP-1", "owl:sameAs", "leanix:fs-1");
+        let after = impact_rows(&core, None).expect("rows read");
+        let suppliers: Vec<&str> = after.iter().map(|row| row.supplier.as_str()).collect();
+        assert_eq!(suppliers, ["erpnext:SUP-1", "leanix:fs-1"]);
+        for row in &after {
+            assert_eq!(row.source, "leanix-mcp");
+            assert_eq!(row.mapping.as_deref(), Some("vm:leanix-components"));
+            assert_eq!(row.read_at_ms, Some(1_700_000_000_123));
+        }
     }
 
     // spec: MEDULLA-SUPPLY-VOCAB-R005.9

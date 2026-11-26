@@ -99,6 +99,14 @@ pub struct ServiceImpactItem {
     pub impact_kind: ImpactKind,
     /// The source that served this item's facts.
     pub source: String,
+    /// The mapping reference that produced the fact (MEDULLA-CQ-XSRC-R012.1); absent when the
+    /// source node carries none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mapping: Option<String>,
+    /// The time the source was read, in milliseconds since the epoch
+    /// (MEDULLA-CQ-XSRC-R012.1); absent when the source node carries none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub read_at_ms: Option<u64>,
 }
 
 /// Why a report could not be built from the planned rows.
@@ -139,6 +147,8 @@ impl ServiceImpactItem {
         vulnerability: Option<&str>,
         impact_kind: ImpactKind,
         source: &str,
+        mapping: Option<&str>,
+        read_at_ms: Option<u64>,
     ) -> Result<Self, ReportError> {
         if source.trim().is_empty() {
             return Err(ReportError::MissingItemSource);
@@ -149,15 +159,18 @@ impl ServiceImpactItem {
             vulnerability: vulnerability.map(str::to_string),
             impact_kind,
             source: source.to_string(),
+            mapping: mapping.map(str::to_string),
+            read_at_ms,
         })
     }
 
-    fn sort_key(&self) -> (u8, String, String, String) {
+    fn sort_key(&self) -> (u8, String, String, String, String) {
         (
             self.impact_kind.sort_key(),
             self.supplier.clone(),
             self.component_version.clone(),
             self.vulnerability.clone().unwrap_or_default(),
+            self.source.clone(),
         )
     }
 }
@@ -305,6 +318,10 @@ pub struct ImpactRow {
     pub impact_kind: ImpactKind,
     /// The source that served this row's facts (blank rows are refused).
     pub source: String,
+    /// The mapping reference that produced the row's facts, when the source node names one.
+    pub mapping: Option<String>,
+    /// The source read time in milliseconds since the epoch, when the source node names one.
+    pub read_at_ms: Option<u64>,
 }
 
 /// One authority premise read at plan time.
@@ -343,6 +360,8 @@ pub fn assemble_supply_chain_report(
             row.vulnerability.as_deref(),
             row.impact_kind,
             &row.source,
+            row.mapping.as_deref(),
+            row.read_at_ms,
         )?;
         by_service
             .entry(row.service.clone())
@@ -402,6 +421,8 @@ mod tests {
             vulnerability: None,
             impact_kind: ImpactKind::RuntimeChain,
             source: source.to_string(),
+            mapping: None,
+            read_at_ms: None,
         }
     }
 
@@ -468,9 +489,29 @@ mod tests {
                 None,
                 ImpactKind::DirectDependency,
                 "   ",
+                None,
+                None,
             ),
             Err(ReportError::MissingItemSource)
         );
+    }
+
+    // spec: MEDULLA-CQ-XSRC-R012.1
+    #[test]
+    fn an_item_carries_its_mapping_and_read_time_and_omits_them_when_absent() {
+        let mut with = row("svc", "supplier", "version", "leanix-mcp");
+        with.mapping = Some("vm:leanix-components".to_string());
+        with.read_at_ms = Some(1_700_000_000_123);
+        let without = row("svc-b", "supplier", "version", "erpnext-mcp");
+        let report = assemble_supply_chain_report(&[with, without], &[], &[]).unwrap();
+        let item = &report.service_impacts[0].items[0];
+        assert_eq!(item.mapping.as_deref(), Some("vm:leanix-components"));
+        assert_eq!(item.read_at_ms, Some(1_700_000_000_123));
+        let encoded = serde_json::to_value(&report).unwrap();
+        let plain = &encoded["service_impacts"][1]["items"][0];
+        assert!(plain.get("mapping").is_none() && plain.get("read_at_ms").is_none());
+        let decoded: SupplyChainImpactReport = serde_json::from_value(encoded).unwrap();
+        assert_eq!(decoded, report);
     }
 
     // spec: MEDULLA-CQ-XSRC-R006.4

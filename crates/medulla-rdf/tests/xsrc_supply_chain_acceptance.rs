@@ -140,6 +140,8 @@ fn the_recorded_responses_answer_the_impact_question_with_provenance() {
             vulnerability,
             impact_kind: ImpactKind::RuntimeChain,
             source: source.clone(),
+            mapping: None,
+            read_at_ms: None,
         });
         item_provenance.push((source.clone(), identifier.clone(), date.clone()));
     }

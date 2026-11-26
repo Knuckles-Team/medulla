@@ -44,6 +44,33 @@ xsrole:software-component-github a vg:SourceAuthority ;
 """
 
 
+# The join scenario: the procurement system serves suppliers, the architecture
+# system serves software components, both as live truth.
+JOIN_SEED = """\
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix vg: <https://knuckles-team.github.io/ontology/virtual-graph#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix xsjoin: <https://knuckles-team.github.io/ontology/source-record/join-seed#> .
+
+xsjoin:erpnext a vg:SourceConnection ; rdfs:label "erpnext-mcp" ;
+    vg:sourceRole "live_truth" .
+xsjoin:leanix a vg:SourceConnection ; rdfs:label "leanix-mcp" ;
+    vg:sourceRole "live_truth" .
+
+xsjoin:supplier-erpnext a vg:SourceAuthority ;
+    vg:authoritativeSource xsjoin:erpnext ;
+    vg:authorityFor :Supplier ;
+    vg:authorityRank 1 .
+
+xsjoin:software-component-leanix a vg:SourceAuthority ;
+    vg:authoritativeSource xsjoin:leanix ;
+    vg:authorityFor :SoftwareComponent ;
+    vg:authorityRank 1 .
+"""
+
+READ_AT_MS = 1_764_000_000_123
+
+
 def _client() -> Any:
     from medulla.client import SyncMedullaClient
 
@@ -173,3 +200,122 @@ def test_unreadable_source_is_excluded_and_named_in_coverage(
             caller.close()
         system.tenants.delete(graph)
         system.close()
+
+
+def _supplier_ids(report: dict[str, Any]) -> list[str]:
+    return sorted(
+        {
+            item["supplier"]
+            for impact in report["service_impacts"]
+            for item in impact["items"]
+        }
+    )
+
+
+@pytest.mark.spec("MEDULLA-CQ-XSRC-R012.1")
+def test_join_across_two_virtual_graphs_carries_provenance(
+    start_medulla_server,
+) -> None:
+    """Verifies MEDULLA-CQ-XSRC-R012.1: the supplier of the first connector joins the
+    component version of the second only across an approved `owl:sameAs` link, and every
+    fact of the non-empty answer names its source, its mapping and its read time."""
+    tag = uuid.uuid4().hex[:8]
+    graph = f"cross-connector-join-{tag}"
+    system = _client()
+    system.tenants.create(graph)
+    agent = f"xsrc-join-{tag}"
+    caller = None
+    erpnext_supplier = f"erpnext:SUP-{tag}"
+    leanix_supplier = f"leanix:fs-{tag}"
+    try:
+        system._send(
+            "GraphSchema",
+            {
+                "op": {
+                    "op": "attach",
+                    "source_id": f"admin:join-seed-{tag}",
+                    "ontology_ttl": JOIN_SEED,
+                }
+            },
+            graph,
+            idempotency_key=f"attach-{uuid.uuid4().hex}",
+        )
+        _add_node(system, graph, "svc-billing", {"type": "Service"})
+        _add_node(
+            system,
+            graph,
+            "ver-leanix",
+            {
+                "type": "ComponentVersion",
+                "source": "leanix-mcp",
+                "mappingRef": "vm:leanix-components",
+                "readAtMs": READ_AT_MS,
+            },
+        )
+        _add_node(system, graph, "cmp-nginx", {"type": "SoftwareComponent"})
+        for supplier, name in (
+            (erpnext_supplier, "Acme Corp"),
+            (leanix_supplier, "Acme Corp"),
+        ):
+            _add_node(
+                system,
+                graph,
+                supplier,
+                {"type": "Supplier", "name": name, "host": "acme.example"},
+            )
+        _add_edge(system, graph, "svc-billing", "usesComponent", "ver-leanix")
+        _add_edge(system, graph, "ver-leanix", "supplyChainVersionOf", "cmp-nginx")
+        _add_edge(system, graph, "cmp-nginx", "publishedBy", leanix_supplier)
+
+        register_commons_agents(agent, graph=graph)
+        from medulla.client import SyncMedullaClient
+
+        caller = SyncMedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=request_context(agent_id=agent),
+        )
+        for name in ("erpnext-mcp", "leanix-mcp"):
+            caller._send(
+                "RegisterForeignSource",
+                {"name": name, "source": SOURCE},
+                None,
+                idempotency_key=f"register-{name}-{uuid.uuid4().hex}",
+            )
+
+        params = {"roots": ["Supplier", "SoftwareComponent"]}
+        # Before the approval the first connector's supplier joins no row.
+        before = _decode(caller._send("SupplyChainImpact", params, graph))
+        assert _supplier_ids(before) == [leanix_supplier], before
+
+        system._send(
+            "ApproveEntityLink",
+            {
+                "left": {"application": "erpnext", "entity_id": f"SUP-{tag}"},
+                "right": {"application": "leanix", "entity_id": f"fs-{tag}"},
+            },
+            graph,
+        )
+        after = _decode(caller._send("SupplyChainImpact", params, graph))
+        assert _supplier_ids(after) == [erpnext_supplier, leanix_supplier], after
+        items = [
+            item for impact in after["service_impacts"] for item in impact["items"]
+        ]
+        assert items, after
+        for item in items:
+            assert item["source"] == "leanix-mcp", item
+            assert item["mapping"] == "vm:leanix-components", item
+            assert item["read_at_ms"] == READ_AT_MS, item
+    finally:
+        if caller is not None:
+            caller.close()
+        system.tenants.delete(graph)
+        system.close()
+
+
+@pytest.mark.spec("MEDULLA-CQ-XSRC-R012")
+def test_join_and_coverage_for_the_final_phase_scenario(start_medulla_server) -> None:
+    """Verifies MEDULLA-CQ-XSRC-R012: the final phase scenario's engine side, the joined
+    answer with its provenance (`.1`) and the coverage block naming an unreadable source
+    (`.2`), each over its own graph through the served `SupplyChainImpact`."""
+    test_join_across_two_virtual_graphs_carries_provenance(start_medulla_server)
+    test_unreadable_source_is_excluded_and_named_in_coverage(start_medulla_server)
