@@ -101,3 +101,20 @@ fn trace_respects_depth_and_budget() {
     let small = lifecycle_trace(&store, &request("r", 8, vec![]), LIMITS);
     assert!(!small.truncated);
 }
+
+// spec: MEDULLA-SDLC-R006.5
+#[test]
+fn edges_carry_rule_and_version() {
+    let mut store = LifecycleStore::default();
+    store.add_node("r", K::Requirement);
+    store.add_node("c1", K::Changeset);
+    let mut derived = edge(E::CitesRequirement, "c1", "r");
+    derived.rule = "cites.spec_trailer".into();
+    derived.rule_version = 3;
+    store.apply_derived(vec![derived]).unwrap();
+    let answer = lifecycle_trace(&store, &request("r", 1, vec![]), LIMITS);
+    assert_eq!(answer.edges.len(), 1);
+    assert_eq!(answer.edges[0].rule, "cites.spec_trailer");
+    assert_eq!(answer.edges[0].rule_version, 3);
+    assert!(!answer.truncated);
+}

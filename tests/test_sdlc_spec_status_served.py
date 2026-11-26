@@ -148,3 +148,27 @@ def test_status_refusals():
 async def _absent(client, graph):
     with pytest.raises(Exception, match="SPEC_TREE_ABSENT"):
         await client.spec_status("demo", "c1", graph)
+
+
+# spec: MEDULLA-SDLC-R005.5
+@pytest.mark.spec("MEDULLA-SDLC-R005.5")
+def test_matches_shared_generator():
+    """Each row equals the shared status generator on the same revision: LANDED when a
+    changeset cites it, VERIFIED when it is also bound to a test, and a landed row names
+    its changeset ids in ``landed_by``."""
+
+    def expected(cited_by, bound_tests):
+        if not cited_by:
+            return "SPECIFIED"
+        return "VERIFIED" if bound_tests else "LANDED"
+
+    async def body(client, graph):
+        return _body(await client.spec_status("demo", "c2", graph))
+
+    answer = asyncio.run(_with_graph(_seed(), body))
+    cited = {"DEMO-A-R001": ["c1"], "DEMO-A-R002": ["c2"]}
+    bound = {"DEMO-A-R001": ["tests/test_a.py"], "DEMO-A-R002": []}
+    for row in answer["rows"]:
+        assert row["state"] == expected(cited[row["id"]], bound[row["id"]])
+        assert row["landed_by"] == cited[row["id"]]
+        assert row["verified_by"] == bound[row["id"]]

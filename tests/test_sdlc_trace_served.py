@@ -123,3 +123,43 @@ def test_trace_walks_from_a_requirement():
     ids = {r["id"] for r in answer["records"]}
     assert {"requirement:d:R1", "symbol:s", "commit:c1", "release:d:1"} <= ids
     assert answer["policy_digest"] and answer["truncated"] is False
+
+
+# spec: MEDULLA-SDLC-R006.5
+@pytest.mark.spec("MEDULLA-SDLC-R006.5")
+def test_edges_name_rules():
+    async def body(client, graph):
+        return _body(
+            await client.lifecycle_trace(
+                {"anchor": "requirement:d:R1", "depth": 1}, graph
+            )
+        )
+
+    answer = asyncio.run(_with_graph(body))
+    assert answer["edges"], "the verifiedBy edge is reached at depth one"
+    assert all(
+        edge["rule"] == "r1" and edge["rule_version"] == 1 for edge in answer["edges"]
+    )
+    assert answer["policy_digest"]
+
+
+# spec: MEDULLA-SDLC-R006.4
+@pytest.mark.spec("MEDULLA-SDLC-R006.4")
+def test_trace_refusals():
+    async def body(client, graph):
+        with pytest.raises(Exception, match="LIFECYCLE_DEPTH_INVALID"):
+            await client.lifecycle_trace(
+                {"anchor": "requirement:d:R1", "depth": 17}, graph
+            )
+        with pytest.raises(Exception, match="LIFECYCLE_DEPTH_INVALID"):
+            await client.lifecycle_trace(
+                {"anchor": "requirement:d:R1", "depth": 0}, graph
+            )
+        return _body(
+            await client.lifecycle_trace(
+                {"anchor": "requirement:other:none", "depth": 2}, graph
+            )
+        )
+
+    absent = asyncio.run(_with_graph(body))
+    assert absent["records"] == [] and absent["edges"] == []

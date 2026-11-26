@@ -98,3 +98,23 @@ fn rules_match_the_standard() {
     let order: Vec<&str> = rows.iter().map(|r| r.id.as_str()).collect();
     assert_eq!(order, all.iter().map(String::as_str).collect::<Vec<_>>());
 }
+
+// spec: MEDULLA-SDLC-R005.5
+#[test]
+fn rows_name_changesets_and_tests() {
+    let all = ids(&["R1", "R2", "R3"]);
+    let chain = [cs("c1", &["R1", "R2"], &[]), cs("c2", &["R1"], &[])];
+    let bindings = [bind("R1", "t1b"), bind("R1", "t1a"), bind("R3", "t3")];
+    let answer = derive_spec_status("medulla", "c2", &all, &chain, &bindings);
+    let rows = &answer.rows;
+    // A row in state Landed or Verified names every changeset that cites it, in chain order.
+    assert_eq!(row(rows, "R1").state, SpecState::Verified);
+    assert_eq!(row(rows, "R1").landed_by, ["c1", "c2"]);
+    assert_eq!(row(rows, "R1").verified_by, ["t1a", "t1b"]);
+    assert_eq!(row(rows, "R2").state, SpecState::Landed);
+    assert_eq!(row(rows, "R2").landed_by, ["c1"]);
+    assert!(row(rows, "R2").verified_by.is_empty());
+    // A bound test of a row nothing landed names no test: the state stays SPECIFIED.
+    assert_eq!(row(rows, "R3").state, SpecState::Specified);
+    assert!(row(rows, "R3").landed_by.is_empty() && row(rows, "R3").verified_by.is_empty());
+}
