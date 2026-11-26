@@ -26496,6 +26496,10 @@ class ResourceProtocol(str, Enum):
     MCP = "mcp"
     A2A = "a2a"
     KNOWLEDGE = "knowledge"
+    SSH = "ssh"
+    DATABASE = "database"
+    WEB = "web"
+    RDP = "rdp"
 
 
 class ResourceAccessDecision(BaseModel):

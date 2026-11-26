@@ -85,6 +85,19 @@ mod tests {
         )
     }
 
+    fn protocol_grant(resource: &str, protocol: ResourceProtocol) -> ResourceGrant {
+        ResourceGrant::new(
+            alice(),
+            resource.to_string(),
+            protocol,
+            "connect".to_string(),
+            Vec::new(),
+            1,
+            2,
+        )
+        .expect("a valid grant")
+    }
+
     fn alice() -> ResourceGrantSubject {
         ResourceGrantSubject::Principal("usr:alice".to_string())
     }
@@ -210,5 +223,105 @@ mod tests {
         assert_eq!(ledger.remove(&valid.grant_id), Some(valid.clone()));
         assert_eq!(ledger.remove(&valid.grant_id), None);
         assert!(ledger.is_empty());
+    }
+
+    // spec: MEDULLA-IDENTITY-R704.3
+    #[test]
+    fn ssh_protocol_grants_match_only_their_own_protocol() {
+        assert_eq!(
+            serde_json::to_value(ResourceProtocol::Ssh).unwrap(),
+            serde_json::json!("ssh")
+        );
+        let granted = protocol_grant("ssh-resource", ResourceProtocol::Ssh);
+        let other = protocol_grant("ssh-resource", ResourceProtocol::Mcp);
+        // The protocol is part of the grant id, so no two protocols share one.
+        assert_ne!(granted.grant_id, other.grant_id);
+        let mut ledger = ResourceGrantLedger::default();
+        ledger.insert(granted);
+        let subjects = [alice()];
+        let hits = |protocol| {
+            ledger
+                .matching(&subjects, "ssh-resource", protocol, "connect")
+                .count()
+        };
+        assert_eq!(hits(ResourceProtocol::Ssh), 1);
+        assert_eq!(hits(ResourceProtocol::Mcp), 0);
+        assert_eq!(hits(ResourceProtocol::A2a), 0);
+        assert_eq!(hits(ResourceProtocol::Knowledge), 0);
+    }
+
+    // spec: MEDULLA-IDENTITY-R704.4
+    #[test]
+    fn database_protocol_grants_match_only_their_own_protocol() {
+        assert_eq!(
+            serde_json::to_value(ResourceProtocol::Database).unwrap(),
+            serde_json::json!("database")
+        );
+        let granted = protocol_grant("database-resource", ResourceProtocol::Database);
+        let other = protocol_grant("database-resource", ResourceProtocol::Mcp);
+        // The protocol is part of the grant id, so no two protocols share one.
+        assert_ne!(granted.grant_id, other.grant_id);
+        let mut ledger = ResourceGrantLedger::default();
+        ledger.insert(granted);
+        let subjects = [alice()];
+        let hits = |protocol| {
+            ledger
+                .matching(&subjects, "database-resource", protocol, "connect")
+                .count()
+        };
+        assert_eq!(hits(ResourceProtocol::Database), 1);
+        assert_eq!(hits(ResourceProtocol::Mcp), 0);
+        assert_eq!(hits(ResourceProtocol::A2a), 0);
+        assert_eq!(hits(ResourceProtocol::Knowledge), 0);
+    }
+
+    // spec: MEDULLA-IDENTITY-R704.5
+    #[test]
+    fn web_protocol_grants_match_only_their_own_protocol() {
+        assert_eq!(
+            serde_json::to_value(ResourceProtocol::Web).unwrap(),
+            serde_json::json!("web")
+        );
+        let granted = protocol_grant("web-resource", ResourceProtocol::Web);
+        let other = protocol_grant("web-resource", ResourceProtocol::Mcp);
+        // The protocol is part of the grant id, so no two protocols share one.
+        assert_ne!(granted.grant_id, other.grant_id);
+        let mut ledger = ResourceGrantLedger::default();
+        ledger.insert(granted);
+        let subjects = [alice()];
+        let hits = |protocol| {
+            ledger
+                .matching(&subjects, "web-resource", protocol, "connect")
+                .count()
+        };
+        assert_eq!(hits(ResourceProtocol::Web), 1);
+        assert_eq!(hits(ResourceProtocol::Mcp), 0);
+        assert_eq!(hits(ResourceProtocol::A2a), 0);
+        assert_eq!(hits(ResourceProtocol::Knowledge), 0);
+    }
+
+    // spec: MEDULLA-IDENTITY-R704.6
+    #[test]
+    fn rdp_protocol_grants_match_only_their_own_protocol() {
+        assert_eq!(
+            serde_json::to_value(ResourceProtocol::Rdp).unwrap(),
+            serde_json::json!("rdp")
+        );
+        let granted = protocol_grant("rdp-resource", ResourceProtocol::Rdp);
+        let other = protocol_grant("rdp-resource", ResourceProtocol::Mcp);
+        // The protocol is part of the grant id, so no two protocols share one.
+        assert_ne!(granted.grant_id, other.grant_id);
+        let mut ledger = ResourceGrantLedger::default();
+        ledger.insert(granted);
+        let subjects = [alice()];
+        let hits = |protocol| {
+            ledger
+                .matching(&subjects, "rdp-resource", protocol, "connect")
+                .count()
+        };
+        assert_eq!(hits(ResourceProtocol::Rdp), 1);
+        assert_eq!(hits(ResourceProtocol::Mcp), 0);
+        assert_eq!(hits(ResourceProtocol::A2a), 0);
+        assert_eq!(hits(ResourceProtocol::Knowledge), 0);
     }
 }

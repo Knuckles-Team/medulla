@@ -339,6 +339,14 @@ pub enum ResourceProtocol {
     /// A knowledge set of the engine, read by `Discover` and `ContextCompile`
     /// (MEDULLA-FEDERATED-QUERY-R704.4).
     Knowledge,
+    /// A host reached over a secure shell session (MEDULLA-IDENTITY-R704.3).
+    Ssh,
+    /// A database reached over its wire protocol (MEDULLA-IDENTITY-R704.4).
+    Database,
+    /// A web application or HTTP service (MEDULLA-IDENTITY-R704.5).
+    Web,
+    /// A remote desktop session (MEDULLA-IDENTITY-R704.6).
+    Rdp,
 }
 
 impl ResourceProtocol {
@@ -347,6 +355,10 @@ impl ResourceProtocol {
             Self::Mcp => b"mcp",
             Self::A2a => b"a2a",
             Self::Knowledge => b"knowledge",
+            Self::Ssh => b"ssh",
+            Self::Database => b"database",
+            Self::Web => b"web",
+            Self::Rdp => b"rdp",
         }
     }
 }

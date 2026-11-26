@@ -122,3 +122,85 @@ async fn check_resource_access_default_denies() {
     assert_eq!(after.reason_code.as_deref(), Some("RESOURCE_GRANT_MISSING"));
     assert!(after.revocation_revision >= allowed.revocation_revision);
 }
+
+/// One principal grant on `protocol` allows exactly that protocol and no other, through the
+/// served handler.
+async fn protocol_grant_allows_only_its_protocol(protocol: ResourceProtocol, resource: &str) {
+    let state = state();
+    let granted = ResourceGrant::new(
+        ResourceGrantSubject::Principal(AGENT.to_string()),
+        resource.to_string(),
+        protocol,
+        "connect".to_string(),
+        vec!["kg:read".to_string()],
+        1,
+        NOW_FAR_MS,
+    )
+    .expect("a valid grant");
+    state
+        .write()
+        .await
+        .isolation
+        .try_grant_resource(granted.clone())
+        .expect("record the grant");
+    let ask = |asked: ResourceProtocol| {
+        let state = state.clone();
+        let resource = resource.to_string();
+        async move {
+            let response = send_method(
+                &state,
+                checker(),
+                Method::CheckResourceAccess {
+                    agent_id: AGENT.to_string(),
+                    resource_ref: resource,
+                    protocol: asked,
+                    operation: "connect".to_string(),
+                },
+            )
+            .await;
+            assert!(response.error.is_none(), "{:?}", response.error);
+            match response.result.as_ref() {
+                Some(ResultPayload::Json(value)) => {
+                    serde_json::from_value::<ResourceAccessDecision>(value.clone())
+                        .expect("resource access decision")
+                }
+                other => panic!("expected a JSON decision, got {other:?}"),
+            }
+        }
+    };
+    let allowed = ask(protocol).await;
+    assert!(allowed.allow);
+    assert_eq!(allowed.grant_id.as_deref(), Some(granted.grant_id.as_str()));
+    let other = if protocol == ResourceProtocol::Mcp {
+        ResourceProtocol::A2a
+    } else {
+        ResourceProtocol::Mcp
+    };
+    let refused = ask(other).await;
+    assert!(!refused.allow);
+    assert_eq!(refused.reason_code.as_deref(), Some("RESOURCE_GRANT_MISSING"));
+}
+
+// spec: MEDULLA-IDENTITY-R704.3
+#[tokio::test]
+async fn check_resource_access_ssh_protocol() {
+    protocol_grant_allows_only_its_protocol(ResourceProtocol::Ssh, "bastion-host").await;
+}
+
+// spec: MEDULLA-IDENTITY-R704.4
+#[tokio::test]
+async fn check_resource_access_database_protocol() {
+    protocol_grant_allows_only_its_protocol(ResourceProtocol::Database, "orders-db").await;
+}
+
+// spec: MEDULLA-IDENTITY-R704.5
+#[tokio::test]
+async fn check_resource_access_web_protocol() {
+    protocol_grant_allows_only_its_protocol(ResourceProtocol::Web, "wiki-site").await;
+}
+
+// spec: MEDULLA-IDENTITY-R704.6
+#[tokio::test]
+async fn check_resource_access_rdp_protocol() {
+    protocol_grant_allows_only_its_protocol(ResourceProtocol::Rdp, "build-desktop").await;
+}
