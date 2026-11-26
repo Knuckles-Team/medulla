@@ -324,6 +324,17 @@ async fn route_work_item_reads(
             tenant,
             work_item_id,
         },
+        Method::ListWorkItemTransitions {
+            tenant,
+            work_item_id,
+            cursor,
+            limit,
+        } => medulla_h_jobs::work_item_read::WorkItemRead::Transitions {
+            tenant,
+            work_item_id,
+            cursor,
+            limit,
+        },
         Method::ListWorkItems {
             tenant,
             cursor,

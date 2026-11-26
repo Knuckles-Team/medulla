@@ -45,6 +45,18 @@ $($variants)*
         tenant: String,
         work_item_id: String,
     },
+    /// One page of a WorkItem's state-transition ledger, in ascending
+    /// `lifecycle_revision` (commit order), or `null` when no row with this id is visible to
+    /// `tenant` (MEDULLA-DURABLE-KERNEL-R028.2.1). `limit` is in `[1, 200]`; `next_cursor` is
+    /// the decimal `lifecycle_revision` of the last entry when more exist. Scope `work:read`.
+    ListWorkItemTransitions {
+        tenant: String,
+        work_item_id: String,
+        #[serde(default)]
+        cursor: Option<String>,
+        #[serde(default = "default_transition_page")]
+        limit: u32,
+    },
     /// Record, under the live claim, that the worker is about to cause an
     /// external effect (MEDULLA-DURABLE-KERNEL-R820.3). Scope `work:write`.
     MarkWorkItemEffectStarted {

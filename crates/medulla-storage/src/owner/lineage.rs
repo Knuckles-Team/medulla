@@ -578,6 +578,37 @@ pub const GRAPH_SHARD_BEFORE_WRITE_LEDGER: LayoutPredecessor = LayoutPredecessor
     file_name: "graph-*.redb",
 };
 
+// Frozen census of the last layout before the WorkItem transition ledger
+// (MEDULLA-DURABLE-KERNEL-R028.2.1).
+const GRAPH_SHARD_TABLES_BEFORE_WORK_ITEM_TRANSITIONS: &[&str] = super::graph_shard::graph_shard_table_names!(
+    "repository_enrichment_budgets",
+    "repository_enrichment_policy_revisions",
+    "repository_enrichment_supersessions",
+    "repository_enrichment_parks",
+    "audit_requests",
+    "work_item_current_plans",
+    "work_item_run_checkpoints",
+    "work_item_effect_receipts",
+    "work_item_admitted_requests",
+    "xshard_decision_certificate",
+    "write_days",
+    "graph_creator",
+);
+/// The digest every graph shard carried before the transition ledger: the GraphShard digest of
+/// the parent commit. LAYOUT-REGEN needed: the compile lane reads it with the lineage test
+/// (`every_layout_digest_is_pinned` reports the parent commit's compiled value) and replaces
+/// this placeholder; no digest is computed by hand.
+pub const GRAPH_SHARD_PRE_WORK_ITEM_TRANSITIONS_DIGEST: [u8; 32] = [0; 32];
+/// A graph shard file from before the WorkItem transition ledger. The offline upgrade creates the
+/// table empty, so history starts at the first write after the upgrade.
+pub const GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS: LayoutPredecessor = LayoutPredecessor {
+    layout: OwnerLayout::GraphShard,
+    label: "graph shard before the WorkItem transition ledger",
+    owner_tables: GRAPH_SHARD_TABLES_BEFORE_WORK_ITEM_TRANSITIONS,
+    data_lost: "none; run `store-upgrade` (the explicit offline layout upgrade). Normal open refuses this predecessor.",
+    file_name: "graph-*.redb",
+};
+
 /// Earlier graph-shard layout before the node-payload scrub cursor (EH-384).
 const GRAPH_SHARD_TABLES_BEFORE_STORAGE_SCRUB: &[&str] = GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT
     .split_at(GRAPH_SHARD_TABLES_BEFORE_ENRICHMENT.len() - 1)
@@ -891,6 +922,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
             GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
             GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL,
             GRAPH_SHARD_BEFORE_WRITE_LEDGER,
+            GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS,
         ],
     }
 }

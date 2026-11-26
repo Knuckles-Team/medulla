@@ -6,7 +6,7 @@ use super::*;
 use medulla_work_types::control_lease::ControlLeaseStatus;
 use medulla_work_types::control_lease::ControlLeaseTarget;
 
-use super::super::test_shard::{open, with_nodes, GRAPH};
+use super::super::test_shard::{open, with_node_rows, GRAPH};
 
 fn issue(lease_id: &str, tenant: &str) -> IssueControlLeaseRequest {
     let mut grant = serde_json::Map::new();
@@ -73,6 +73,7 @@ fn native_call_at(
             GRAPH,
             method,
             &mut rows.nodes,
+            &mut rows.work_item_transitions,
             &rows.native_work_items,
             now_ms,
             DurableCrypto::none(),
@@ -280,6 +281,7 @@ fn native_record_consumption_checks_commit_time_and_preserves_expired_rows() {
                         batch_id: "lease-expiry-test",
                         method: &method,
                         nodes: &mut rows.nodes,
+                        transitions: &mut rows.work_item_transitions,
                         native_work_items: &rows.native_work_items,
                         edges: &mut rows.edges,
                         command_sequences: &mut rows.command_sequences,
@@ -357,7 +359,7 @@ fn pending_nodes_fixture(shard: &Shard) -> IssueControlLeaseRequest {
         control_lease::PendingCallFence, control_lease::PendingCallRegistration,
         control_lease::PENDING_CALL_KIND,
     };
-    with_nodes(shard, "seed-pending-work", |nodes| {
+    with_node_rows(shard, "seed-pending-work", |nodes, transitions| {
         let mut work = serde_json::json!({
             "node_type": "WorkItem", "tenant": "tenant-a", "status": "running",
             "lease_owner": "worker-a", "lease_epoch": 2, "fencing_token": 3,
@@ -367,7 +369,7 @@ fn pending_nodes_fixture(shard: &Shard) -> IssueControlLeaseRequest {
         .as_object()
         .unwrap()
         .clone();
-        write_work_item_props(nodes, GRAPH, "work-a", &mut work, DurableCrypto::none())
+        write_work_item_props(nodes, transitions, GRAPH, "work-a", &mut work, DurableCrypto::none())
     });
     let mut request = issue("pending-a", "tenant-a");
     request.kind = PENDING_CALL_KIND.into();
@@ -486,11 +488,12 @@ fn pending_registration_refuses_stale_worker_without_writing_either_row() {
         .expected_lease
         .fencing_token = 99;
     let before = stored_work(&temp.shard);
-    let result = with_nodes(&temp.shard, "refused-register", |nodes| {
+    let result = with_node_rows(&temp.shard, "refused-register", |nodes, transitions| {
         Ok(apply_issue_control_lease_row(
             GRAPH,
             &request,
             nodes,
+            transitions,
             1_000,
             DurableCrypto::none(),
         ))
@@ -533,11 +536,12 @@ fn pending_consume_refuses_missing_fence_changed_envelope_or_metadata_atomically
         .expected_revision = 1;
     cases.push(changed_revision);
     for (index, consume) in cases.iter().enumerate() {
-        let result = with_nodes(&temp.shard, &format!("refuse-{index}"), |nodes| {
+        let result = with_node_rows(&temp.shard, &format!("refuse-{index}"), |nodes, transitions| {
             Ok(apply_transition_control_lease_row(
                 GRAPH,
                 consume,
                 nodes,
+                transitions,
                 1_500,
                 DurableCrypto::none(),
             ))
@@ -556,11 +560,12 @@ fn pending_expiry_preserves_pair_and_revocation_clears_it() {
     let lease = get(&temp.shard, "tenant-a", "pending-a");
     let consume = pending_consume(&request);
     let result: ControlLeaseTransition =
-        decode(with_nodes(&temp.shard, "expired-consume", |nodes| {
+        decode(with_node_rows(&temp.shard, "expired-consume", |nodes, transitions| {
             apply_transition_control_lease_row(
                 GRAPH,
                 &consume,
                 nodes,
+                transitions,
                 request.expires_at_ms,
                 DurableCrypto::none(),
             )
@@ -588,14 +593,14 @@ fn pending_consume_refuses_a_reclaimed_worker_even_with_fresh_row_revision() {
         });
         let request = pending_fixture(&temp.shard);
         issued(&temp.shard, "register", request.clone());
-        with_nodes(&temp.shard, "reclaim", |nodes| {
+        with_node_rows(&temp.shard, "reclaim", |nodes, transitions| {
             let mut work = load_row(nodes, GRAPH, "work-a", DurableCrypto::none())?.unwrap();
             if expired {
                 work.insert("lease_expires_at".into(), 1.5.into());
             } else {
                 work.insert("fencing_token".into(), 4.into());
             }
-            write_work_item_props(nodes, GRAPH, "work-a", &mut work, DurableCrypto::none())
+            write_work_item_props(nodes, transitions, GRAPH, "work-a", &mut work, DurableCrypto::none())
         });
         let before = stored_work(&temp.shard);
         let mut consume = pending_consume(&request);
@@ -605,11 +610,12 @@ fn pending_consume_refuses_a_reclaimed_worker_even_with_fresh_row_revision() {
             .unwrap()
             .work_item
             .expected_revision = 3;
-        let result = with_nodes(&temp.shard, "reclaimed-consume", |nodes| {
+        let result = with_node_rows(&temp.shard, "reclaimed-consume", |nodes, transitions| {
             Ok(apply_transition_control_lease_row(
                 GRAPH,
                 &consume,
                 nodes,
+                transitions,
                 1_500,
                 DurableCrypto::none(),
             ))

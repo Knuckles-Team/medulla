@@ -1,5 +1,5 @@
 //! Fenced metadata writes use the mutation clock inside the durable row boundary.
-use super::super::test_shard::{open, with_nodes, GRAPH};
+use super::super::test_shard::{open, with_node_rows, with_nodes, GRAPH};
 use super::*;
 use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataLeaseFence;
 use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
@@ -53,18 +53,26 @@ fn fenced_metadata_cas_uses_mutation_time_and_preserves_refused_rows() {
         if let Some(expiry) = expiry {
             props.insert("lease_expires_at".into(), serde_json::json!(expiry));
         }
-        with_nodes(&temp.shard, "seed", |nodes| {
-            write_work_item_props(nodes, GRAPH, "work-a", &mut props, DurableCrypto::none())
+        with_node_rows(&temp.shard, "seed", |nodes, transitions| {
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                "work-a",
+                &mut props,
+                DurableCrypto::none(),
+            )
         });
         let before = with_nodes(&temp.shard, "before", |nodes| {
             Ok(nodes.get((GRAPH, "work-a"))?.unwrap().value().to_vec())
         });
-        let payload = with_nodes(&temp.shard, "cas", |nodes| {
+        let payload = with_node_rows(&temp.shard, "cas", |nodes, transitions| {
             apply_cas_work_item_metadata_row(
                 GRAPH,
                 &request(fenced),
                 now_ms,
                 nodes,
+                transitions,
                 DurableCrypto::none(),
             )
         })

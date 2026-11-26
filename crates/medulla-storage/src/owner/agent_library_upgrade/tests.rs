@@ -147,6 +147,7 @@ const GRAPH_GENERATIONS: [GraphGeneration; 2] = [
             "xshard_decision_certificate",
             "write_days",
             "graph_creator",
+            "work_item_transitions",
         ],
     },
     GraphGeneration {
@@ -161,6 +162,7 @@ const GRAPH_GENERATIONS: [GraphGeneration; 2] = [
             "xshard_decision_certificate",
             "write_days",
             "graph_creator",
+            "work_item_transitions",
         ],
     },
 ];

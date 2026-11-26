@@ -100,6 +100,7 @@ fn the_graph_shard_census_is_exact_and_carries_no_private_mutation_ledger() {
         ("xshard_decision_certificate", "&str", "&[u8]"),
         ("write_days", "(&str,&str,u32)", "u64"),
         ("graph_creator", "&str", "&str"),
+        ("work_item_transitions", "(&str,&str,u64)", "&[u8]"),
         ("development_lane_holds", "(&str,&str)", "&[u8]"),
         ("development_lane_tenant_index", "(&str,&str,&str)", "&str"),
         ("development_lane_lane_index", "(&str,&str,&str)", "&str"),

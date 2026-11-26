@@ -124,7 +124,11 @@ fn the_canonical_bootstrap_matches_the_declared_shard_census() {
     // `work_item_admitted_requests` (MEDULLA-DURABLE-KERNEL-R820.1).
     // 63 -> 64: the coordinator-decision certificate table
     // `xshard_decision_certificate` (MEDULLA-DECISION-ENGINE-R036.105.1).
-    assert_eq!(declared.len(), 64);
+    // 64 -> 66: the per-graph write ledger `write_days` and `graph_creator`
+    // (MEDULLA-IDENTITY-R700.7).
+    // 66 -> 67: the WorkItem transition ledger `work_item_transitions`
+    // (MEDULLA-DURABLE-KERNEL-R028.2.1).
+    assert_eq!(declared.len(), 67);
 
     for retired in [
         "mutation_batches",

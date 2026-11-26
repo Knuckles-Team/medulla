@@ -39,8 +39,13 @@ pub fn supports_atomic_batch_rows(method: &Method) -> bool {
 /// `medulla_work_types::work_item_read::WORK_ITEM_ROW_REVISION` one past the revision it
 /// was read at (1 for a new row). `GetWorkItem`/`ListWorkItems` project it as
 /// the caller-visible `version`.
+///
+/// MEDULLA-DURABLE-KERNEL-R028.2.1: a WorkItem row that is new or whose status changed also
+/// appends one `WorkItemTransitionEntry` to `transitions`, keyed by the row's new
+/// `lifecycle_revision`, in the same transaction. A write that keeps the status appends nothing.
 pub fn write_work_item_props(
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
     graph: &str,
     node_id: &str,
     props: &mut serde_json::Map<String, serde_json::Value>,
@@ -77,6 +82,44 @@ pub fn write_work_item_props(
     let sealed = crypto.seal(&bytes);
     nodes
         .insert((graph, node_id), sealed.as_ref())
+        .map_err(|e| e.to_string())?;
+    if prior_status.is_none() || transitioned {
+        append_work_item_transition(transitions, graph, node_id, props, lifecycle, crypto)?;
+    }
+    Ok(())
+}
+
+/// Append the transition ledger entry of a WorkItem row's new or changed status. A row of
+/// another node type (a control lease, a policy record) shares the writer but has no lifecycle
+/// ledger, so it appends nothing, nor does a row with no status; a WorkItem row whose status
+/// names no lifecycle state is a typed error and the write fails.
+fn append_work_item_transition(
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
+    graph: &str,
+    node_id: &str,
+    props: &serde_json::Map<String, serde_json::Value>,
+    lifecycle_revision: u64,
+    crypto: DurableCrypto<'_>,
+) -> Result<(), String> {
+    use medulla_work_types::work_item_read::{
+        WorkItemStatus, WorkItemTransitionEntry, WORK_ITEM_ROW_REVISION,
+    };
+    // A row that is not a WorkItem, or carries no status at all, has no lifecycle to record.
+    if property_string(props, "node_type") != "WorkItem" || !props.contains_key("status") {
+        return Ok(());
+    }
+    let status = property_string(props, "status");
+    let state = WorkItemStatus::from_stored(status)
+        .ok_or_else(|| format!("WorkItem status '{status}' names no lifecycle state"))?;
+    let entry = WorkItemTransitionEntry {
+        state,
+        at_ms: (property_f64(props, "updated_at") * 1000.0).max(0.0) as u64,
+        revision: property_u64(props, WORK_ITEM_ROW_REVISION),
+    };
+    let bytes = rmp_serde::to_vec_named(&entry).map_err(|e| e.to_string())?;
+    let sealed = crypto.seal(&bytes);
+    transitions
+        .insert((graph, node_id, lifecycle_revision), sealed.as_ref())
         .map_err(|e| e.to_string())?;
     Ok(())
 }
@@ -469,15 +512,36 @@ pub fn remove_durable_edge_scoped(
     Ok(())
 }
 
+/// MEDULLA-DURABLE-KERNEL-R028.2.1: a removed WorkItem row removes its transition ledger entries
+/// in the same transaction, so a later row under the same id starts a fresh history.
+pub fn remove_work_item_transitions(
+    graph: &str,
+    node_id: &str,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
+) -> Result<(), String> {
+    let revisions: Vec<u64> = transitions
+        .range_inclusive((graph, node_id, 0), (graph, node_id, u64::MAX))?
+        .map(|row| {
+            row.map(|(key, _)| key.value().2)
+                .map_err(|error| error.to_string())
+        })
+        .collect::<Result<_, String>>()?;
+    for revision in revisions {
+        transitions.remove((graph, node_id, revision))?;
+    }
+    Ok(())
+}
+
 pub fn remove_durable_node(
     graph: &str,
     node_id: &str,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
     edges: &mut ScopedOwnerTableMut<'_, (&str, &str, &str, u32), &[u8]>,
     semantic: &mut ScopedOwnerTableMut<'_, &str, &[u8]>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
-    remove_durable_node_rows(graph, node_id, nodes, edges)?;
+    remove_durable_node_rows(graph, node_id, nodes, transitions, edges)?;
     remove_durable_embedding(semantic, graph, node_id, crypto)
 }
 
@@ -485,11 +549,13 @@ pub fn remove_durable_node_rows(
     graph: &str,
     node_id: &str,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
     edges: &mut ScopedOwnerTableMut<'_, (&str, &str, &str, u32), &[u8]>,
 ) -> Result<(), String> {
     nodes
         .remove((graph, node_id))
         .map_err(|error| error.to_string())?;
+    remove_work_item_transitions(graph, node_id, transitions)?;
     // The edge key is `(graph, source, target, ordinal)`: outgoing edges form a
     // prefix, while incoming edges require one bounded scan of this graph.
     let incident: Vec<(String, String, u32)> = edges

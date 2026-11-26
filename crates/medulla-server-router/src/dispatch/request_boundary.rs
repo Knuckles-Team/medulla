@@ -87,6 +87,7 @@ pub fn append_native_work_item_ops(ops: &mut Vec<&'static str>, available: bool)
             "GetSessionUsage",
             "GetShardWriterWidth",
             "GetWorkItem",
+            "ListWorkItemTransitions",
             "ListWorkItems",
             "GetWorkItemOutcome",
             // MEDULLA-DURABLE-KERNEL-R820.3: the uncertain-effect protocol.
@@ -640,6 +641,7 @@ mod native_resource_capability_tests {
                 "GetSessionUsage",
                 "GetShardWriterWidth",
                 "GetWorkItem",
+                "ListWorkItemTransitions",
                 "ListWorkItems",
                 "GetWorkItemOutcome",
                 "IssueHostStartGrant",

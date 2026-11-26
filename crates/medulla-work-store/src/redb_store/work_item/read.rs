@@ -7,9 +7,11 @@
 
 use medulla_types::keyset_page::{KeysetListing, KeysetPage, KeysetScan};
 use medulla_work_types::{
-    work_item_read::validate_work_item_get, work_item_read::CommittedOutcomeRefs,
+    work_item_read::validate_work_item_get, work_item_read::validate_work_item_transitions,
+    work_item_read::CommittedOutcomeRefs,
     work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView,
-    work_item_read::WorkItemPage, work_item_read::WorkItemView,
+    work_item_read::WorkItemPage, work_item_read::WorkItemTransitionEntry,
+    work_item_read::WorkItemTransitionPage, work_item_read::WorkItemView,
 };
 
 use super::*;
@@ -44,6 +46,65 @@ pub fn snapshot_row(
     let nodes = read.scoped_owner_table(NODES)?;
     let row = stored_row(&nodes, graph, node_id, crypto)?;
     Ok((nodes, row))
+}
+
+/// One page of `work_item_id`'s transition ledger (MEDULLA-DURABLE-KERNEL-R028.2.1), in ascending
+/// `lifecycle_revision` (commit order). `None` when no row with this id is a WorkItem of
+/// `tenant`, exactly as [`read_work_item`] answers, so a cross-tenant read learns nothing. The row
+/// check and the ledger scan share one read snapshot, and the read writes nothing. `cursor` is the
+/// decimal `lifecycle_revision` of the last entry of the previous page.
+pub fn list_work_item_transitions(
+    shard: &Shard,
+    graph: &str,
+    tenant: &str,
+    work_item_id: &str,
+    cursor: Option<&str>,
+    limit: u32,
+    crypto: DurableCrypto<'_>,
+) -> Result<Option<WorkItemTransitionPage>, String> {
+    let after = validate_work_item_transitions(tenant, work_item_id, cursor, limit)?;
+    let handle = shard.graph(graph)?;
+    let read = shard.read(&handle)?;
+    let nodes = read.scoped_owner_table(NODES)?;
+    let Some(row) = stored_row(&nodes, graph, work_item_id, crypto)? else {
+        return Ok(None);
+    };
+    if WorkItemView::from_tenant_row(work_item_id, &row, tenant)?.is_none() {
+        return Ok(None);
+    }
+    let ledger = read.scoped_owner_table(WORK_ITEM_TRANSITIONS)?;
+    let start = after.map_or(Ok(0), |revision| {
+        revision
+            .checked_add(1)
+            .ok_or_else(|| "ListWorkItemTransitions cursor is past the last revision".to_string())
+    })?;
+    let wanted = usize::try_from(limit).map_err(|error| error.to_string())? + 1;
+    let mut entries = Vec::with_capacity(wanted);
+    let mut revisions = Vec::with_capacity(wanted);
+    for stored in ledger.range_inclusive(
+        (graph, work_item_id, start),
+        (graph, work_item_id, u64::MAX),
+    )? {
+        let (key, value) = stored.map_err(|error| error.to_string())?;
+        let entry: WorkItemTransitionEntry = decode_durable(&crypto.unseal(value.value())?)?;
+        revisions.push(key.value().2);
+        entries.push(entry);
+        if entries.len() == wanted {
+            break;
+        }
+    }
+    let more = entries.len() == wanted;
+    if more {
+        entries.pop();
+        revisions.pop();
+    }
+    let next_cursor = more
+        .then(|| revisions.last().map(u64::to_string))
+        .flatten();
+    Ok(Some(WorkItemTransitionPage {
+        entries,
+        next_cursor,
+    }))
 }
 
 /// The caller's view of one WorkItem, `None` when no row with this id is a

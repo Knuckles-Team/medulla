@@ -81,6 +81,11 @@ pub struct DurableOutboxDelivery {
 }
 
 pub const NODES: TableDefinition<(&str, &str), &[u8]> = TableDefinition::new("nodes");
+/// The WorkItem state-transition ledger, keyed `(graph, work_item_id, lifecycle_revision)`; the
+/// value is the sealed MessagePack of `WorkItemTransitionEntry`
+/// (MEDULLA-DURABLE-KERNEL-R028.2.1).
+pub const WORK_ITEM_TRANSITIONS: TableDefinition<(&str, &str, u64), &[u8]> =
+    TableDefinition::new("work_item_transitions");
 pub const EDGES: TableDefinition<(&str, &str, &str, u32), &[u8]> = TableDefinition::new("edges");
 pub const LEDGER: TableDefinition<(&str, u64), &str> = TableDefinition::new("ledger");
 pub const SEMANTIC: TableDefinition<&str, &[u8]> = TableDefinition::new("semantic_store");

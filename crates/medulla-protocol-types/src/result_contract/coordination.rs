@@ -121,6 +121,7 @@ method_results! {
     AdmitWorkerTask(AdmitWorkerTask) => Raw<medulla_work_types::worker_registry::WorkerAdmission>;
     GetRunWorkItem(GetRunWorkItem) => Raw<Option<medulla_work_types::work_item_read::RunWorkItemView>>;
     GetWorkItem(GetWorkItem) => Raw<Option<WorkItemView>>;
+    ListWorkItemTransitions(ListWorkItemTransitions) => Raw<Option<medulla_work_types::work_item_read::WorkItemTransitionPage>>;
     // MEDULLA-DURABLE-KERNEL-R820.3 uncertain-effect protocol. Reads are
     // `null` when absent or not visible to the verified tenant (and session).
     MarkWorkItemEffectStarted(MarkWorkItemEffectStarted) => Raw<medulla_work_types::work_item_read::EffectWriteResult>;

@@ -223,6 +223,7 @@ METHOD_IDS = frozenset(
         "GetSessionUsage",
         "DowntimeSelections",
         "GetWorkItem",
+        "ListWorkItemTransitions",
         "ListWorkItems",
         "GetWorkItemOutcome",
         "IssueHostStartGrant",

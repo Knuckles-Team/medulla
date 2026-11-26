@@ -11,7 +11,8 @@ use medulla_work_types::{
 };
 use medulla_work_types::{
     work_item_read::WorkItemListRequest, work_item_read::WorkItemOutcomeView,
-    work_item_read::WorkItemPage, work_item_read::WorkItemView,
+    work_item_read::WorkItemPage, work_item_read::WorkItemTransitionPage,
+    work_item_read::WorkItemView,
 };
 use medulla_work_types::{work_market::GapListRequest, work_market::GapPage, work_market::GapView};
 
@@ -63,6 +64,35 @@ impl RedbBackend {
         let read: TenantPointRead<_> = medulla_work_store::redb_store::work_item::read_work_item;
         self.tenant_point_read(graph_fname, tenant, work_item_id, read)
             .await
+    }
+
+    /// `ListWorkItemTransitions`: one page of the transition ledger of `tenant`'s WorkItem,
+    /// `None` when no such WorkItem belongs to `tenant` (MEDULLA-DURABLE-KERNEL-R028.2.1).
+    pub async fn list_work_item_transitions(
+        &self,
+        graph_fname: &str,
+        tenant: &str,
+        work_item_id: &str,
+        cursor: Option<String>,
+        limit: u32,
+    ) -> Result<Option<WorkItemTransitionPage>, String> {
+        let (graph, tenant, work_item_id) = (
+            graph_fname.to_owned(),
+            tenant.to_owned(),
+            work_item_id.to_owned(),
+        );
+        self.read_snapshot(graph_fname, move |shard, crypto| {
+            medulla_work_store::redb_store::work_item::list_work_item_transitions(
+                shard,
+                &graph,
+                &tenant,
+                &work_item_id,
+                cursor.as_deref(),
+                limit,
+                crypto,
+            )
+        })
+        .await
     }
 
     /// `GetWorkItemOutcome`: a WorkItem of `tenant` and its committed provenance.

@@ -328,6 +328,8 @@ struct ClaimWorkItemApply<'args, 'table, 'crypto> {
     pub props: serde_json::Map<String, serde_json::Value>,
     pub changed_work_item_ids: Vec<String>,
     pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub transitions:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static [u8]>,
     pub native_work_items:
         &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub crypto: DurableCrypto<'crypto>,
@@ -337,10 +339,11 @@ fn write_exhausted_claim_rows(
     graph: &str,
     exhausted: Vec<(String, serde_json::Map<String, serde_json::Value>)>,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
     for (node_id, mut props) in exhausted {
-        write_work_item_props(nodes, graph, &node_id, &mut props, crypto)?;
+        write_work_item_props(nodes, transitions, graph, &node_id, &mut props, crypto)?;
     }
     Ok(())
 }
@@ -367,6 +370,7 @@ fn apply_claimed_work_item(
         mut props,
         mut changed_work_item_ids,
         nodes,
+        transitions,
         native_work_items,
         crypto,
     } = input;
@@ -375,7 +379,7 @@ fn apply_claimed_work_item(
     let kind = property_string(&props, "kind").to_string();
     let payload_ref = property_string(&props, "payload_ref").to_string();
     let max_attempts = property_u64(&props, "max_attempts").max(1);
-    write_work_item_props(nodes, graph, &node_id, &mut props, crypto)?;
+    write_work_item_props(nodes, transitions, graph, &node_id, &mut props, crypto)?;
     work_item_capability::record_native_claim_in_wtx(
         native_work_items,
         graph,
@@ -409,6 +413,7 @@ pub fn apply_claim_work_item_row<'txn, 'crypto>(
     graph: &str,
     request: &medulla_result_types::epistemic_operations::ClaimWorkItemRequest,
     nodes: &mut ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
+    transitions: &mut ScopedOwnerTableMut<'txn, (&'static str, &'static str, u64), &'static [u8]>,
     native_work_items: &mut ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
     crypto: DurableCrypto<'crypto>,
 ) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
@@ -433,7 +438,7 @@ pub fn apply_claim_work_item_row<'txn, 'crypto>(
         exhausted,
         changed_work_item_ids,
     } = scan_claim_work_item_candidates(graph, request, now_s, nodes, crypto)?;
-    write_exhausted_claim_rows(graph, exhausted, nodes, crypto)?;
+    write_exhausted_claim_rows(graph, exhausted, nodes, transitions, crypto)?;
     if inflight >= tenant_in_flight_limit {
         return Ok(Some(claim_not_claimed_payload(
             ClaimWorkItemResultReason::TenantQuota,
@@ -460,6 +465,7 @@ pub fn apply_claim_work_item_row<'txn, 'crypto>(
         props,
         changed_work_item_ids,
         nodes: &mut *nodes,
+        transitions: &mut *transitions,
         native_work_items: &mut *native_work_items,
         crypto,
     })?))

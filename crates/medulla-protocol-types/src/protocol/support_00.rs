@@ -430,3 +430,9 @@ pub(super) fn default_sample_size() -> usize {
 pub(super) fn default_nu() -> f64 {
     0.1
 }
+
+/// serde default page size of [`Method::ListWorkItemTransitions`]
+/// (MEDULLA-DURABLE-KERNEL-R028.2.1).
+pub(super) fn default_transition_page() -> u32 {
+    medulla_work_types::work_item_read::DEFAULT_TRANSITION_PAGE
+}

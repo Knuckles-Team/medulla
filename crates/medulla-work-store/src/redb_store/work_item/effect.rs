@@ -206,6 +206,7 @@ fn tenant_row(
 /// back by one first: each effect write moves the revision by exactly one.
 fn write_bumped_row(
     nodes: &mut ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
+    transitions: &mut EffectTable<'_>,
     graph: &str,
     work_item_id: &str,
     row: &mut Row,
@@ -216,7 +217,7 @@ fn write_bumped_row(
         WORK_ITEM_ROW_REVISION.into(),
         serde_json::Value::from(bumped.saturating_sub(1)),
     );
-    write_work_item_props(nodes, graph, work_item_id, row, crypto)
+    write_work_item_props(nodes, transitions, graph, work_item_id, row, crypto)
 }
 
 fn decode_record<T: serde::de::DeserializeOwned>(
@@ -246,6 +247,7 @@ pub fn apply_mark_effect_started_row(
     graph: &str,
     request: &MarkWorkItemEffectStartedRequest,
     nodes: &mut ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
+    transitions: &mut EffectTable<'_>,
     committed_at_ms: u64,
     crypto: DurableCrypto<'_>,
 ) -> Result<EffectWriteResult, String> {
@@ -262,7 +264,14 @@ pub fn apply_mark_effect_started_row(
         .map_err(|refusal| refusal.to_wire())?;
     let replayed = revision == before;
     if !replayed {
-        write_bumped_row(nodes, graph, &request.work_item_id, &mut row, crypto)?;
+        write_bumped_row(
+            nodes,
+            transitions,
+            graph,
+            &request.work_item_id,
+            &mut row,
+            crypto,
+        )?;
     }
     Ok(EffectWriteResult {
         changed_work_item_ids: if replayed {
@@ -286,6 +295,7 @@ pub fn apply_record_effect_receipt_row(
     graph: &str,
     request: &RecordEffectReceiptRequest,
     nodes: &mut ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
+    transitions: &mut EffectTable<'_>,
     receipts: &mut EffectTable<'_>,
     admitted: &EffectTable<'_>,
     committed_at_ms: u64,
@@ -320,7 +330,14 @@ pub fn apply_record_effect_receipt_row(
         ReceiptWrite::Replay(receipt) => (receipt, true),
         ReceiptWrite::Store(receipt) => {
             put_record(receipts, key, &receipt, crypto)?;
-            write_bumped_row(nodes, graph, &request.work_item_id, &mut row, crypto)?;
+            write_bumped_row(
+                nodes,
+                transitions,
+                graph,
+                &request.work_item_id,
+                &mut row,
+                crypto,
+            )?;
             (receipt, false)
         }
     };

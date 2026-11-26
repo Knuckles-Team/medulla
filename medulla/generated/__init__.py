@@ -469,6 +469,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "ListMemorySnapshots": graph.send_list_memory_snapshots,
     "ListRegisteredServers": cluster.send_list_registered_servers,
     "ListTriggers": messaging.send_list_triggers,
+    "ListWorkItemTransitions": coordination.send_list_work_item_transitions,
     "ListWorkItems": coordination.send_list_work_items,
     "LiveArtifactGet": query.send_live_artifact_get,
     "LiveArtifactPut": query.send_live_artifact_put,

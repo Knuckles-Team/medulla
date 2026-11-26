@@ -7,6 +7,8 @@ pub struct RenewWorkItemLeaseInput<'args, 'table, 'crypto> {
     pub now_ms: u64,
     pub lease_ms: u64,
     pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub transitions:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static [u8]>,
     pub crypto: DurableCrypto<'crypto>,
 }
 
@@ -26,6 +28,7 @@ pub fn apply_renew_work_item_lease_row(
         now_ms,
         lease_ms,
         nodes,
+        transitions,
         crypto,
     } = input;
     let decode = |bytes: &[u8]| -> Result<serde_json::Map<String, serde_json::Value>, String> {
@@ -83,7 +86,7 @@ pub fn apply_renew_work_item_lease_row(
         "lease_expires_at".into(),
         serde_json::Value::from(now_s + lease_ms as f64 / 1000.0),
     );
-    write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
+    write_work_item_props(nodes, transitions, graph, work_item_id, &mut props, crypto)?;
     lease_renewed(
         work_item_id,
         lease_epoch,
@@ -314,6 +317,7 @@ pub fn apply_cas_work_item_metadata_row(
     request: &medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataRequest,
     authoritative_now_ms: u64,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
     crypto: DurableCrypto<'_>,
 ) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     use medulla_result_types::epistemic_operations_ext::CasWorkItemMetadataOutcome;
@@ -355,7 +359,7 @@ pub fn apply_cas_work_item_metadata_row(
 
     let now_s = now_ms as f64 / 1000.0;
     props.insert("updated_at".into(), serde_json::Value::from(now_s));
-    write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
+    write_work_item_props(nodes, transitions, graph, work_item_id, &mut props, crypto)?;
     respond(
         CasWorkItemMetadataOutcome::Applied,
         vec![work_item_id.clone()],

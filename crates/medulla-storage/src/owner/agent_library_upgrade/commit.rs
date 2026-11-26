@@ -9,7 +9,7 @@ use crate::owner::graph_shard::{
     ADMITTED_REQUESTS, AUDIT_REQUESTS, CURRENT_PLANS, EFFECT_RECEIPTS,
     REPOSITORY_ENRICHMENT_BUDGETS, REPOSITORY_ENRICHMENT_PARKS,
     REPOSITORY_ENRICHMENT_POLICY_REVISIONS, REPOSITORY_ENRICHMENT_SUPERSESSIONS, RUN_CHECKPOINTS,
-    GRAPH_CREATOR, WRITE_DAYS, XSHARD_DECISION_CERTIFICATE,
+    GRAPH_CREATOR, WORK_ITEM_TRANSITIONS, WRITE_DAYS, XSHARD_DECISION_CERTIFICATE,
 };
 use crate::owner::registry::{
     predecessor_evidence, CAPABILITY_REWARD, CONCEPT_IDS, CONCEPT_LINEAGE_EDGES,
@@ -196,6 +196,9 @@ fn open_graph_shard_tables(
         .map_err(|error| error.to_string())?;
     write
         .open_table(GRAPH_CREATOR)
+        .map_err(|error| error.to_string())?;
+    write
+        .open_table(WORK_ITEM_TRANSITIONS)
         .map_err(|error| error.to_string())?;
     write
         .open_table(XSHARD_DECISION_CERTIFICATE)

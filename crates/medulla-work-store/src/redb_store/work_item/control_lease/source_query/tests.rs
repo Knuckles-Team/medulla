@@ -1,6 +1,6 @@
 use super::*;
 use crate::redb_store::work_item::test_shard::open;
-use crate::redb_store::work_item::test_shard::with_nodes;
+use crate::redb_store::work_item::test_shard::with_node_rows;
 use crate::redb_store::work_item::test_shard::GRAPH;
 use medulla_result_types::source_query::{
     SourceQueryDialect, SourceQueryLimits, SourceQueryRequest,
@@ -53,9 +53,9 @@ fn request() -> ApproveSourceQueryRequest {
 #[test]
 fn native_issuer_writes_one_lease_whose_grant_holds_digests_only() {
     let temp = open("source-query-native");
-    with_nodes(&temp.shard, "source-query-issuer", |nodes| {
+    with_node_rows(&temp.shard, "source-query-issuer", |nodes, transitions| {
         // No admitted actor, or no admission, refuses and writes nothing.
-        assert!(issue(GRAPH, &request(), None, nodes, DurableCrypto::none(), 1_000).is_err());
+        assert!(issue(GRAPH, &request(), None, nodes, transitions, DurableCrypto::none(), 1_000).is_err());
         let mut bare = request();
         bare.admission = None;
         let denied = issue(
@@ -63,6 +63,7 @@ fn native_issuer_writes_one_lease_whose_grant_holds_digests_only() {
             &bare,
             Some("native-actor"),
             nodes,
+            transitions,
             DurableCrypto::none(),
             1_000,
         )
@@ -76,6 +77,7 @@ fn native_issuer_writes_one_lease_whose_grant_holds_digests_only() {
             &request(),
             Some("native-actor"),
             nodes,
+            transitions,
             DurableCrypto::none(),
             1_000,
         )?;
@@ -102,6 +104,7 @@ fn native_issuer_writes_one_lease_whose_grant_holds_digests_only() {
             &request(),
             Some("other-actor"),
             nodes,
+            transitions,
             DurableCrypto::none(),
             1_001,
         )?;

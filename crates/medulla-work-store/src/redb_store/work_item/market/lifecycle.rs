@@ -22,6 +22,7 @@ pub struct GapLifecycleWrite<'args, 'table, 'crypto> {
     pub graph: &'args str,
     pub method: &'args Method,
     pub nodes: &'args mut NodeRows<'table>,
+    pub transitions: &'args mut TransitionRows<'table>,
     pub now_ms: u64,
     pub crypto: DurableCrypto<'crypto>,
 }
@@ -93,7 +94,14 @@ fn rewrite_gap<R>(
             changed_work_item_ids: Vec::new(),
         }));
     }
-    let gap = store_gap(write.nodes, write.graph, tenant, &gap, write.crypto)?;
+    let gap = store_gap(
+        write.nodes,
+        write.transitions,
+        write.graph,
+        tenant,
+        &gap,
+        write.crypto,
+    )?;
     let changed_work_item_ids = vec![gap_row_key(tenant, &gap.gap_id)];
     Ok(Some(Rewrite {
         verdict,

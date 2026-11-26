@@ -358,6 +358,7 @@ pub fn publish(
     row.insert("updated_at".into(), (now_ms as f64 / 1000.0).into());
     write_work_item_props(
         &mut tables.nodes,
+        &mut tables.work_item_transitions,
         graph,
         &request.work_item_id,
         &mut row,

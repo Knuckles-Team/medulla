@@ -193,6 +193,7 @@ fn shared_plan_has_one_winner_and_losing_pending_pair_is_unchanged() {
         work.remove("row_revision");
         write_work_item_props(
             &mut rows.nodes,
+            &mut rows.work_item_transitions,
             GRAPH,
             "work-b",
             &mut work,
@@ -234,7 +235,7 @@ fn persisted_plan_drift_refuses_before_any_paired_write() {
     for field in ["row_revision", "expires_at_ms", "kind", "grant"] {
         let (temp, pending) = fixture(field);
         issued(&temp.shard, "register", pending.clone());
-        with_nodes(&temp.shard, "drift-plan", |nodes| {
+        with_node_rows(&temp.shard, "drift-plan", |nodes, transitions| {
             let mut plan = load_row(nodes, GRAPH, "plan-a", DurableCrypto::none())?.unwrap();
             let value = match field {
                 "row_revision" => serde_json::json!(99),
@@ -248,7 +249,7 @@ fn persisted_plan_drift_refuses_before_any_paired_write() {
             if field != "row_revision" {
                 plan.insert("row_revision".into(), 0.into());
             }
-            write_work_item_props(nodes, GRAPH, "plan-a", &mut plan, DurableCrypto::none())
+            write_work_item_props(nodes, transitions, GRAPH, "plan-a", &mut plan, DurableCrypto::none())
         });
         let before = snapshot(&temp.shard);
         assert!(native_call(

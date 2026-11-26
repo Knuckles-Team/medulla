@@ -27,7 +27,7 @@ use super::lineage::{
     GRAPH_SHARD_BEFORE_CURRENT_PLANS, GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES,
     GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS, GRAPH_SHARD_BEFORE_ENRICHMENT,
     GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
-    GRAPH_SHARD_BEFORE_WRITE_LEDGER,
+    GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS, GRAPH_SHARD_BEFORE_WRITE_LEDGER,
     KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_DATA_PRODUCTS, RBAC_BEFORE_PROFILE_GRANTS,
     JOBS_BEFORE_JOB_MACHINE, JOBS_BEFORE_TASK_DEAD_LETTER, JOBS_BEFORE_TASK_QUEUE, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
     SQL_BEFORE_MATVIEWS, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
@@ -348,6 +348,17 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
             integrity,
             options,
             GraphShardSource::BeforeWriteLedger
+        ),
+        upgrade_graph_shard
+    ),
+    offline_upgrade!(
+        GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS,
+        |path, identity, integrity, options| inspect_graph_shard_upgrade(
+            path,
+            identity,
+            integrity,
+            options,
+            GraphShardSource::BeforeWorkItemTransitions
         ),
         upgrade_graph_shard
     ),

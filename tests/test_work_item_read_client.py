@@ -92,6 +92,52 @@ def test_list_refuses_a_limit_outside_the_engine_bound(limit: int) -> None:
     assert engine.sent == []
 
 
+# spec: MEDULLA-DURABLE-KERNEL-R028.2.1
+def test_list_transitions_sends_the_typed_request_and_returns_the_page() -> None:
+    entry = {"state": "ready", "at_ms": 1_000, "revision": 1}
+    engine = FakeEngine({"entries": [entry], "next_cursor": "0"})
+    page = asyncio.run(
+        _work_items(engine).list_transitions(
+            tenant="tenant-a", work_item_id="wi-1", cursor="c0", limit=1
+        )
+    )
+
+    assert page == {"entries": [entry], "next_cursor": "0"}
+    assert engine.sent == [
+        (
+            "ListWorkItemTransitions",
+            {
+                "tenant": "tenant-a",
+                "work_item_id": "wi-1",
+                "cursor": "c0",
+                "limit": 1,
+            },
+        )
+    ]
+
+
+def test_list_transitions_answers_none_for_an_invisible_item() -> None:
+    engine = FakeEngine(None)
+    assert (
+        asyncio.run(
+            _work_items(engine).list_transitions(tenant="tenant-a", work_item_id="x")
+        )
+        is None
+    )
+
+
+@pytest.mark.parametrize("limit", [0, 201])
+def test_list_transitions_refuses_a_limit_outside_the_engine_bound(limit: int) -> None:
+    engine = FakeEngine({"entries": [], "next_cursor": None})
+    with pytest.raises(ValueError):
+        asyncio.run(
+            _work_items(engine).list_transitions(
+                tenant="tenant-a", work_item_id="wi-1", limit=limit
+            )
+        )
+    assert engine.sent == []
+
+
 # -- graph-os MEDULLA-2 native control leases -------------------------------------
 
 LEASE: dict[str, Any] = {

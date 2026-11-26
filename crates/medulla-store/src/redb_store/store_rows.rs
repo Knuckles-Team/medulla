@@ -412,6 +412,7 @@ pub fn apply_batch_rows(
     graph: &str,
     operations_msgpack: &[u8],
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
     edges: &mut ScopedOwnerTableMut<'_, (&str, &str, &str, u32), &[u8]>,
     semantic: &mut ScopedOwnerTableMut<'_, &str, &[u8]>,
     crypto: DurableCrypto<'_>,
@@ -457,7 +458,7 @@ pub fn apply_batch_rows(
                 )?;
             }
             BatchOperation::RemoveNode { id } => {
-                remove_durable_node_rows(graph, &id, nodes, edges)?;
+                remove_durable_node_rows(graph, &id, nodes, transitions, edges)?;
                 semantic_dirty |= semantic_store.remove_embedding(&id);
             }
             BatchOperation::AddEdge {

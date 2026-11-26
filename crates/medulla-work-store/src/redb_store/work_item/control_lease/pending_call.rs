@@ -192,12 +192,13 @@ pub fn write_pair(
     graph: &str,
     pair: Option<(String, NodeRow)>,
     nodes: &mut NativeNodeRows<'_>,
+    transitions: &mut NativeTransitionRows<'_>,
     crypto: DurableCrypto<'_>,
 ) -> Result<Vec<String>, String> {
     match pair {
         None => Ok(Vec::new()),
         Some((id, mut row)) => {
-            write_work_item_props(nodes, graph, &id, &mut row, crypto)?;
+            write_work_item_props(nodes, transitions, graph, &id, &mut row, crypto)?;
             Ok(vec![id])
         }
     }

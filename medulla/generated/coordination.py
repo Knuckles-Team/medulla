@@ -47,6 +47,7 @@ if TYPE_CHECKING:
     GetSessionUsageRequest = _models.MethodGetSessionUsageParams
     DowntimeSelectionsRequest = _models.MethodDowntimeSelectionsParams
     GetWorkItemRequest = _models.MethodGetWorkItemParams
+    ListWorkItemTransitionsRequest = _models.MethodListWorkItemTransitionsParams
     ListWorkItemsRequest = _models.MethodListWorkItemsParams
     GetWorkItemOutcomeRequest = _models.MethodGetWorkItemOutcomeParams
     ApproveSourceQueryRequest = _models.MethodApproveSourceQueryParams
@@ -1303,6 +1304,51 @@ async def send_get_work_item(
 def decode_get_work_item(result: OpaqueResult) -> _models.GetWorkItemResult:
     """Validate this method's result against its contract model."""
     return decode_result("GetWorkItem", models().GetWorkItemResult, result)
+
+
+async def send_list_work_item_transitions(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        ListWorkItemTransitions
+    Authorization:
+        work:read
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Result schema:
+        contract/schemas/result.coordination.json
+        #/methods/ListWorkItemTransitions
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+    """
+    models().MethodListWorkItemTransitionsParams.model_validate(params or {})
+    payload = await client._send(
+        "ListWorkItemTransitions",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("ListWorkItemTransitions", payload)
+
+
+def decode_list_work_item_transitions(
+    result: OpaqueResult,
+) -> _models.ListWorkItemTransitionsResult:
+    """Validate this method's result against its contract model."""
+    return decode_result(
+        "ListWorkItemTransitions", models().ListWorkItemTransitionsResult, result
+    )
 
 
 async def send_list_work_items(
@@ -2943,6 +2989,7 @@ _REQUEST_METHODS = frozenset(
         "GetSessionUsage",
         "DowntimeSelections",
         "GetWorkItem",
+        "ListWorkItemTransitions",
         "ListWorkItems",
         "GetWorkItemOutcome",
         "IssueHostStartGrant",

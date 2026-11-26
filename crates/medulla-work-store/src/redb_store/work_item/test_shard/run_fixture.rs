@@ -42,6 +42,13 @@ pub fn seed_claim(
         work_item_capability::record_native_claim_in_wtx(
             &mut rows.native_work_items, GRAPH, &id, &row, 1000, DurableCrypto::none(),
         )?;
-        write_work_item_props(&mut rows.nodes, GRAPH, &id, &mut row, DurableCrypto::none())
+        write_work_item_props(
+            &mut rows.nodes,
+            &mut rows.work_item_transitions,
+            GRAPH,
+            &id,
+            &mut row,
+            DurableCrypto::none(),
+        )
     }).unwrap();
 }

@@ -182,6 +182,11 @@ pub(crate) const WRITE_DAYS: TableDefinition<'static, (&str, &str, u32), u64> =
 pub(crate) const GRAPH_CREATOR: TableDefinition<'static, &str, &str> =
     TableDefinition::new("graph_creator");
 
+/// The WorkItem state-transition ledger, one sealed entry per
+/// `(graph, work_item_id, lifecycle_revision)` (MEDULLA-DURABLE-KERNEL-R028.2.1).
+pub(crate) const WORK_ITEM_TRANSITIONS: TableDefinition<'static, (&str, &str, u64), &[u8]> =
+    TableDefinition::new("work_item_transitions");
+
 // -- development lane -----------------------------------------------------
 pub(crate) const DEVELOPMENT_LANE_HOLDS: TableDefinition<'static, (&str, &str), &[u8]> =
     TableDefinition::new("development_lane_holds");
@@ -283,6 +288,7 @@ macro_rules! visit_graph_shard_tables {
         $visit!(shard::XSHARD_DECISION_CERTIFICATE);
         $visit!(shard::WRITE_DAYS);
         $visit!(shard::GRAPH_CREATOR);
+        $visit!(shard::WORK_ITEM_TRANSITIONS);
         $visit!(shard::WORK_ITEM_CLAIM_CAPABILITIES);
         $visit!(shard::WORK_ITEM_CLAIM_CAPABILITY_INVOCATIONS);
         $visit!(shard::NATIVE_WORK_ITEM_AUTHORITY);
@@ -389,6 +395,7 @@ pub(crate) const GRAPH_SHARD_TABLES: &[&str] = graph_shard_table_names!(
     "xshard_decision_certificate",
     "write_days",
     "graph_creator",
+    "work_item_transitions",
 );
 
 /// The eight tables of the shard's retired private mutation ledger.
@@ -448,7 +455,8 @@ fn key_type_scalar_or_narrow_tuple(name: &str) -> Option<&'static str> {
         "resource_reservation_attempts"
         | "development_lane_work_item_index"
         | "work_item_effect_receipts"
-        | "work_item_admitted_requests" => Some("(&str,&str,u64)"),
+        | "work_item_admitted_requests"
+        | "work_item_transitions" => Some("(&str,&str,u64)"),
         _ => None,
     }
 }

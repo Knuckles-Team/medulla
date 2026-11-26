@@ -1,5 +1,5 @@
 use super::super::test_shard::run_fixture::{seed_claim, with_rows};
-use super::super::test_shard::{open, with_nodes, GRAPH};
+use super::super::test_shard::{open, with_node_rows, GRAPH};
 use super::*;
 
 mod attachment;
@@ -72,13 +72,13 @@ fn current_plan_publication_readback() {
     assert_eq!(read(shard, "owner", 2000), Some(next.snapshot));
     assert!(read(shard, "other", 2000).is_none());
     assert!(read(shard, "owner", 9000).is_none());
-    with_nodes(shard, "supersede", |nodes| {
+    with_node_rows(shard, "supersede", |nodes, transitions| {
         let id = run_owner::work_item_id(GRAPH, "tenant", "run")?;
         let bytes = nodes.get((GRAPH, id.as_str()))?.unwrap();
         let mut row: Row = decode_durable(bytes.value())?;
         drop(bytes);
         row.insert("fencing_token".into(), 3.into());
-        write_work_item_props(nodes, GRAPH, &id, &mut row, DurableCrypto::none())
+        write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
     });
     assert!(read(shard, "owner", 2000).is_none());
 }
@@ -129,13 +129,13 @@ fn renewal_does_not_extend_snapshot_and_generic_nodes_carry_no_plan() {
     assert!(apply(shard, "too-long", &too_long, "owner", 2000).is_err());
     apply(shard, "zero", &request(0), "owner", 2000).unwrap();
     let id = run_owner::work_item_id(GRAPH, "tenant", "run").unwrap();
-    with_nodes(shard, "renew", |nodes| {
+    with_node_rows(shard, "renew", |nodes, transitions| {
         let bytes = nodes.get((GRAPH, id.as_str()))?.unwrap();
         let mut row: Row = decode_durable(bytes.value())?;
         drop(bytes);
         assert!(!row.contains_key("current_plan"));
         row.insert("lease_expires_at".into(), 20.0.into());
-        write_work_item_props(nodes, GRAPH, &id, &mut row, DurableCrypto::none())
+        write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
     });
     assert!(read(shard, "owner", 9000).is_none());
 }

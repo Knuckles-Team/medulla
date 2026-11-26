@@ -599,6 +599,55 @@ impl CommittedOutcomeRefs {
     }
 }
 
+/// Default page size of `ListWorkItemTransitions` (MEDULLA-DURABLE-KERNEL-R028.2.1).
+pub const DEFAULT_TRANSITION_PAGE: u32 = 100;
+/// Most entries one `ListWorkItemTransitions` page may return.
+pub const MAX_TRANSITION_PAGE: u32 = 200;
+
+/// One state transition of a WorkItem, as the transition ledger stores it
+/// (MEDULLA-DURABLE-KERNEL-R028.2.1). `state` is the row's status after the write, `at_ms` the
+/// row's `updated_at` seconds times 1 000, `revision` the row's `row_revision` after the write.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WorkItemTransitionEntry {
+    pub state: WorkItemStatus,
+    pub at_ms: u64,
+    pub revision: u64,
+}
+
+/// One page of a WorkItem's transition ledger, in ascending `lifecycle_revision` (commit order).
+/// `next_cursor` is the decimal `lifecycle_revision` of the last entry when more exist.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WorkItemTransitionPage {
+    pub entries: Vec<WorkItemTransitionEntry>,
+    pub next_cursor: Option<String>,
+}
+
+/// Validate a `ListWorkItemTransitions` request's own fields and decode its cursor: the
+/// `lifecycle_revision` the page starts strictly after (`None` starts at the first entry).
+pub fn validate_work_item_transitions(
+    tenant: &str,
+    work_item_id: &str,
+    cursor: Option<&str>,
+    limit: u32,
+) -> Result<Option<u64>, String> {
+    validate_work_item_get(tenant, work_item_id)?;
+    if limit == 0 || limit > MAX_TRANSITION_PAGE {
+        return Err(format!(
+            "INVALID_PARAMS: ListWorkItemTransitions limit must be 1..={MAX_TRANSITION_PAGE}"
+        ));
+    }
+    cursor
+        .map(|text| {
+            text.parse::<u64>()
+                .map_err(|_| "INVALID_PARAMS: ListWorkItemTransitions cursor is malformed".to_string())
+        })
+        .transpose()
+}
+
 /// Validate a `GetWorkItem` request's own fields.
 pub fn validate_work_item_get(tenant: &str, work_item_id: &str) -> Result<(), String> {
     bounded("tenant", tenant, MAX_WORK_ITEM_ID_BYTES)?;

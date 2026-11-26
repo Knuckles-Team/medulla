@@ -4929,7 +4929,56 @@ class WorkItemClient:
             "next_cursor": value.get("next_cursor"),
         }
 
+    async def list_transitions(
+        self,
+        *,
+        tenant: str,
+        work_item_id: str,
+        cursor: str | None = None,
+        limit: int = 100,
+    ) -> dict[str, Any] | None:
+        """Return one page ``{"entries": [...], "next_cursor": ...}`` of the
+        WorkItem's state-transition ledger in commit order, or ``None`` when no
+        WorkItem with this id is visible to ``tenant``.
 
+        Each entry is ``{"state", "at_ms", "revision"}``: the status the row had
+        after the write, the row's ``updated_at`` in milliseconds and its row
+        revision. ``limit`` is 1..=200; ``next_cursor`` is ``None`` on the last
+        page and is handed back unmodified to continue.
+        """
+        value = (
+            await _gen.coordination.send_list_work_item_transitions(
+                self._client,
+                {
+                    "tenant": _string("ListWorkItemTransitions.tenant", tenant),
+                    "work_item_id": _string(
+                        "ListWorkItemTransitions.work_item_id", work_item_id
+                    ),
+                    "cursor": cursor,
+                    "limit": _integer(
+                        "ListWorkItemTransitions.limit", limit, minimum=1, maximum=200
+                    ),
+                },
+            )
+        ).payload
+        if value is None:
+            return None
+        if not isinstance(value, dict) or not isinstance(value.get("entries"), list):
+            raise RuntimeError("ListWorkItemTransitions returned a malformed page")
+        if len(value["entries"]) > limit:
+            raise ValueError("ListWorkItemTransitions page exceeds the requested limit")
+        for entry in value["entries"]:
+            if (
+                not isinstance(entry, dict)
+                or set(entry) != _WORK_ITEM_TRANSITION_FIELDS
+            ):
+                raise RuntimeError(
+                    "WorkItem transition does not match the typed contract"
+                )
+        return {"entries": value["entries"], "next_cursor": value.get("next_cursor")}
+
+
+_WORK_ITEM_TRANSITION_FIELDS = frozenset({"state", "at_ms", "revision"})
 _WORK_ITEM_OUTCOME_FIELDS = frozenset(
     {
         "work_item",

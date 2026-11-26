@@ -153,14 +153,14 @@ fn terminal_or_superseded_lease_hides_but_does_not_erase_attachment() {
         seed(shard);
         apply(shard, "attach", &attached_request(0), "owner", 2000).unwrap();
         let private_before = stored_plan(shard);
-        with_nodes(shard, "lifecycle", |nodes| {
+        with_node_rows(shard, "lifecycle", |nodes, transitions| {
             let id = run_owner::work_item_id(GRAPH, "tenant", "run")?;
             let bytes = nodes.get((GRAPH, id.as_str()))?.unwrap();
             let mut row: Row = decode_durable(bytes.value())?;
             drop(bytes);
             assert!(!row.contains_key("task_plan"));
             row.insert(field.into(), value);
-            write_work_item_props(nodes, GRAPH, &id, &mut row, DurableCrypto::none())
+            write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
         });
         assert!(read(shard, "owner", 2000).is_none());
         assert!(apply(

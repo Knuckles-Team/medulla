@@ -590,6 +590,7 @@ pub fn update_submit_work_item_downstream_row(
     work_item_id: &str,
     dependency: &str,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
     let mut parent: serde_json::Map<String, serde_json::Value> = {
@@ -601,7 +602,7 @@ pub fn update_submit_work_item_downstream_row(
     let insert_downstream =
         insert_submit_work_item_downstream_id(&mut parent, dependency, work_item_id)?;
     if insert_downstream {
-        write_work_item_props(nodes, graph, dependency, &mut parent, crypto)?;
+        write_work_item_props(nodes, transitions, graph, dependency, &mut parent, crypto)?;
     }
     Ok(())
 }
@@ -611,13 +612,21 @@ pub fn update_submit_work_item_downstream_index(
     work_item_id: &str,
     dependency_rows: &[(String, bool)],
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
     for (dependency, pending) in dependency_rows {
         if !pending {
             continue;
         }
-        update_submit_work_item_downstream_row(graph, work_item_id, dependency, nodes, crypto)?;
+        update_submit_work_item_downstream_row(
+            graph,
+            work_item_id,
+            dependency,
+            nodes,
+            transitions,
+            crypto,
+        )?;
     }
     Ok(())
 }
@@ -634,6 +643,8 @@ pub struct SubmitWorkItemWrite<'args, 'table, 'crypto> {
     pub pending_dependencies: usize,
     pub owner: Option<serde_json::Value>,
     pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub transitions:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static [u8]>,
     pub edges: &'args mut ScopedOwnerTableMut<
         'table,
         (&'static str, &'static str, &'static str, u32),
@@ -657,6 +668,7 @@ pub fn write_submit_work_item_node_and_edges(
         pending_dependencies,
         owner,
         nodes,
+        transitions,
         edges,
         crypto,
     } = input;
@@ -677,7 +689,7 @@ pub fn write_submit_work_item_node_and_edges(
             serde_json::to_value(request).map_err(|error| error.to_string())?,
         );
     }
-    write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
+    write_work_item_props(nodes, transitions, graph, work_item_id, &mut props, crypto)?;
     write_submit_work_item_dependency_edges(
         graph,
         work_item_id,
@@ -686,7 +698,14 @@ pub fn write_submit_work_item_node_and_edges(
         edges,
         crypto,
     )?;
-    update_submit_work_item_downstream_index(graph, work_item_id, dependency_rows, nodes, crypto)?;
+    update_submit_work_item_downstream_index(
+        graph,
+        work_item_id,
+        dependency_rows,
+        nodes,
+        transitions,
+        crypto,
+    )?;
     Ok(())
 }
 
@@ -748,6 +767,7 @@ pub fn apply_submit_work_item_rows<'txn, 'crypto>(
     graph: &str,
     request: &medulla_work_types::native_control::SubmitWorkItemRequest,
     nodes: &mut ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
+    transitions: &mut ScopedOwnerTableMut<'txn, (&'static str, &'static str, u64), &'static [u8]>,
     edges: &mut ScopedOwnerTableMut<
         'txn,
         (&'static str, &'static str, &'static str, u32),
@@ -802,6 +822,7 @@ pub fn apply_submit_work_item_rows<'txn, 'crypto>(
         pending_dependencies,
         owner,
         nodes: &mut *nodes,
+        transitions: &mut *transitions,
         edges: &mut *edges,
         crypto,
     })?;
@@ -825,6 +846,7 @@ pub fn apply_submit_work_items_rows<'txn, 'crypto>(
     graph: &str,
     request: &medulla_work_types::native_control::SubmitWorkItemsRequest,
     nodes: &mut ScopedOwnerTableMut<'txn, (&'static str, &'static str), &'static [u8]>,
+    transitions: &mut ScopedOwnerTableMut<'txn, (&'static str, &'static str, u64), &'static [u8]>,
     edges: &mut ScopedOwnerTableMut<
         'txn,
         (&'static str, &'static str, &'static str, u32),
@@ -872,6 +894,7 @@ pub fn apply_submit_work_items_rows<'txn, 'crypto>(
             graph,
             child,
             nodes,
+            transitions,
             edges,
             command_sequences,
             WorkItemCommitScope {

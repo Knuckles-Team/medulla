@@ -22,18 +22,20 @@ pub fn apply_policy_record_rows(
     graph: &str,
     method: &Method,
     nodes: &mut NativeNodeRows<'_>,
+    transitions: &mut NativeTransitionRows<'_>,
     crypto: DurableCrypto<'_>,
 ) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
     let Method::PolicyEvolutionStore { request } = method else {
         return Ok(None);
     };
-    store_policy_record_row(graph, request, nodes, crypto).map(Some)
+    store_policy_record_row(graph, request, nodes, transitions, crypto).map(Some)
 }
 
 fn store_policy_record_row(
     graph: &str,
     request: &StoredPolicyRecord,
     nodes: &mut NativeNodeRows<'_>,
+    transitions: &mut NativeTransitionRows<'_>,
     crypto: DurableCrypto<'_>,
 ) -> Result<medulla_protocol_types::protocol::ResultPayload, String> {
     request
@@ -42,7 +44,7 @@ fn store_policy_record_row(
     let created = nodes.get((graph, request.record_id.as_str()))?.is_none();
     if created {
         let mut row = request.row()?;
-        write_work_item_props(nodes, graph, &request.record_id, &mut row, crypto)?;
+        write_work_item_props(nodes, transitions, graph, &request.record_id, &mut row, crypto)?;
     }
     medulla_protocol_types::protocol::ResultPayload::of::<PolicyEvolutionStore>(
         PolicyRecordStored {

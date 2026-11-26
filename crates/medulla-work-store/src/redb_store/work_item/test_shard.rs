@@ -58,6 +58,26 @@ pub fn with_nodes<R>(
     .unwrap()
 }
 
+/// Run `write` against `GRAPH`'s node table and its WorkItem transition ledger in one committed
+/// transaction: the pair `write_work_item_props` takes (MEDULLA-DURABLE-KERNEL-R028.2.1).
+pub fn with_node_rows<R>(
+    shard: &Shard,
+    tag: &str,
+    write: impl FnOnce(
+        &mut ScopedOwnerTableMut<'_, (&'static str, &'static str), &'static [u8]>,
+        &mut ScopedOwnerTableMut<'_, (&'static str, &'static str, u64), &'static [u8]>,
+    ) -> Result<R, String>,
+) -> R {
+    let op_id = format!("work-item-rows-test/{tag}");
+    with_write(shard, &op_id, 0, |admitted| {
+        let member = admitted.graph(GRAPH).unwrap();
+        let mut nodes = member.open_scoped_table(NODES).unwrap();
+        let mut transitions = member.open_scoped_table(WORK_ITEM_TRANSITIONS).unwrap();
+        write(&mut nodes, &mut transitions)
+    })
+    .unwrap()
+}
+
 pub fn check_guard(shard: &Shard, tag: &str, method: Method) -> Result<(), String> {
     with_nodes(shard, tag, |nodes| {
         Ok(super::row_guard::refuse_generic_native_row_write(
@@ -90,6 +110,7 @@ pub fn apply(
             batch_id: tag,
             method: &method,
             nodes: &mut graph.nodes,
+            transitions: &mut graph.work_item_transitions,
             holds: &mut holds,
             work_item_index: &index,
             counters: &mut counters,
@@ -137,6 +158,7 @@ pub fn submit_run_rows(
         GRAPH,
         request,
         &mut rows.nodes,
+        &mut rows.work_item_transitions,
         &mut rows.edges,
         &mut rows.command_sequences,
         WorkItemCommitScope {

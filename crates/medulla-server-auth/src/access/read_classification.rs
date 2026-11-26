@@ -758,6 +758,7 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("QueryDevelopmentLane", REASON_NATIVE_DEVELOPMENT_LANE_READ),
     // REASON_NATIVE_WORK_ITEM_TENANT_READ
     ("GetWorkItem", REASON_NATIVE_WORK_ITEM_TENANT_READ),
+    ("ListWorkItemTransitions", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("GetEffectReceipt", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("GetAdmittedRequest", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("TraceCritique", REASON_NATIVE_WORK_ITEM_TENANT_READ),

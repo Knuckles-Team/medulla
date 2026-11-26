@@ -197,7 +197,7 @@ fn is_work_item_row(row: &NodeMap) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::super::test_shard::{check_guard as check, open, with_nodes, GRAPH};
+    use super::super::test_shard::{check_guard as check, open, with_node_rows, GRAPH};
     use super::*;
 
     fn msgpack(value: serde_json::Value) -> Vec<u8> {
@@ -210,8 +210,15 @@ mod tests {
         let mut lease = serde_json::Map::new();
         lease.insert("node_type".into(), "ControlLease".into());
         lease.insert("status".into(), "revoked".into());
-        with_nodes(&temp.shard, "seed", |nodes| {
-            write_work_item_props(nodes, GRAPH, "lease-1", &mut lease, DurableCrypto::none())
+        with_node_rows(&temp.shard, "seed", |nodes, transitions| {
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                "lease-1",
+                &mut lease,
+                DurableCrypto::none(),
+            )
         });
 
         let reactivate = Method::CompareAndSetNodeFields {
@@ -231,8 +238,15 @@ mod tests {
         assert!(check(&temp.shard, "forge", forge).is_err());
         let mut work_item = serde_json::Map::new();
         work_item.insert("node_type".into(), "WorkItem".into());
-        with_nodes(&temp.shard, "seed-item", |nodes| {
-            write_work_item_props(nodes, GRAPH, "wi-1", &mut work_item, DurableCrypto::none())
+        with_node_rows(&temp.shard, "seed-item", |nodes, transitions| {
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                "wi-1",
+                &mut work_item,
+                DurableCrypto::none(),
+            )
         });
         let rewind = Method::CompareAndSetNodeFields {
             node_id: "wi-1".into(),
@@ -276,10 +290,11 @@ mod tests {
     #[test]
     fn run_owner_binding_survives_generic_removal_and_opaque_replacement() {
         let temp = open("run-owner-guard");
-        with_nodes(&temp.shard, "seed-run", |nodes| {
+        with_node_rows(&temp.shard, "seed-run", |nodes, transitions| {
             let mut props = serde_json::json!({"node_type": "WorkItem", "run_owner_binding": {"run_id": "run"}}).as_object().unwrap().clone();
             write_work_item_props(
                 nodes,
+                transitions,
                 GRAPH,
                 "run-work-item",
                 &mut props,
@@ -359,12 +374,19 @@ mod tests {
         {
             assert!(check(&temp.shard, &format!("plant-variant-{index}"), method).is_err());
         }
-        with_nodes(&temp.shard, "seed-snapshot", |nodes| {
+        with_node_rows(&temp.shard, "seed-snapshot", |nodes, transitions| {
             let mut props = serde_json::json!({"run_admission_request":{}})
                 .as_object()
                 .unwrap()
                 .clone();
-            write_work_item_props(nodes, GRAPH, "plain", &mut props, DurableCrypto::none())
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                "plain",
+                &mut props,
+                DurableCrypto::none(),
+            )
         });
         for (index, method) in [
             Method::RemoveNode {

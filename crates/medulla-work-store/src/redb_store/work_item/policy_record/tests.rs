@@ -1,7 +1,7 @@
 //! Store-level proof over a real shard: the kernel is the sole writer of a
 //! policy-evolution row, and a store is create-only.
 
-use super::super::test_shard::{check_guard as check, open, with_nodes, GRAPH};
+use super::super::test_shard::{check_guard as check, open, with_node_rows, GRAPH};
 use super::*;
 use medulla_decision_outcome_types::policy_evolution::PolicyEvolutionRecord;
 
@@ -31,11 +31,12 @@ fn store(
     let method = Method::PolicyEvolutionStore {
         request: Box::new(request),
     };
-    let payload = with_nodes(shard, tag, |nodes| {
+    let payload = with_node_rows(shard, tag, |nodes, transitions| {
         Ok(apply_policy_record_rows(
             GRAPH,
             &method,
             nodes,
+            transitions,
             DurableCrypto::none(),
         ))
     })?;

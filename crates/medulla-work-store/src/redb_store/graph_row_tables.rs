@@ -17,6 +17,9 @@ pub struct GraphRowTables<'g> {
     pub run_checkpoints: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
     pub current_plans: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
     pub nodes: ScopedOwnerTableMut<'g, (&'static str, &'static str), &'static [u8]>,
+    /// The WorkItem state-transition ledger (MEDULLA-DURABLE-KERNEL-R028.2.1).
+    pub work_item_transitions:
+        ScopedOwnerTableMut<'g, (&'static str, &'static str, u64), &'static [u8]>,
     pub edges:
         ScopedOwnerTableMut<'g, (&'static str, &'static str, &'static str, u32), &'static [u8]>,
     pub ledger: ScopedOwnerTableMut<'g, (&'static str, u64), &'static str>,
@@ -40,6 +43,8 @@ where
     'w: 'a,
 {
     pub nodes: &'a mut ScopedOwnerTableMut<'n, (&'static str, &'static str), &'static [u8]>,
+    pub work_item_transitions:
+        &'a mut ScopedOwnerTableMut<'n, (&'static str, &'static str, u64), &'static [u8]>,
     pub edges: &'a mut ScopedOwnerTableMut<
         'e,
         (&'static str, &'static str, &'static str, u32),
@@ -58,6 +63,7 @@ impl<'g> GraphRowTables<'g> {
     ) -> Result<Self, String> {
         Ok(Self {
             nodes: member.open_scoped_table(NODES)?,
+            work_item_transitions: member.open_scoped_table(WORK_ITEM_TRANSITIONS)?,
             effect_receipts: member.open_scoped_table(super::work_item::effect::EFFECT_RECEIPTS)?,
             admitted_requests: member
                 .open_scoped_table(super::work_item::effect::ADMITTED_REQUESTS)?,

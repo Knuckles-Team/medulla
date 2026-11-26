@@ -7,6 +7,9 @@ pub struct WorkItemApplyRequest<'args, 'table, 'crypto> {
     pub batch_id: &'args str,
     pub method: &'args Method,
     pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    /// The WorkItem transition ledger (MEDULLA-DURABLE-KERNEL-R028.2.1).
+    pub transitions:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static [u8]>,
     pub holds: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub work_item_index:
         &'args ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static str>,
@@ -46,6 +49,7 @@ pub fn apply_work_item_rows(
         batch_id,
         method,
         nodes,
+        transitions,
         holds,
         work_item_index,
         counters,
@@ -67,6 +71,7 @@ pub fn apply_work_item_rows(
                 graph,
                 request,
                 nodes,
+                transitions,
                 committed_at_ms,
                 crypto,
             ))
@@ -78,6 +83,7 @@ pub fn apply_work_item_rows(
                 graph,
                 request,
                 nodes,
+                transitions,
                 effect_receipts,
                 admitted_requests,
                 committed_at_ms,
@@ -96,7 +102,7 @@ pub fn apply_work_item_rows(
             ))
         }
         Method::ClaimWorkItem { request } => {
-            apply_claim_work_item_row(graph, request, nodes, native_work_items, crypto)
+            apply_claim_work_item_row(graph, request, nodes, transitions, native_work_items, crypto)
         }
         Method::RenewWorkItemLease {
             tenant,
@@ -118,10 +124,11 @@ pub fn apply_work_item_rows(
             now_ms: *now_ms,
             lease_ms: *lease_ms,
             nodes: &mut *nodes,
+            transitions: &mut *transitions,
             crypto,
         }),
         Method::CasWorkItemMetadata { request } => {
-            apply_cas_work_item_metadata_row(graph, request, committed_at_ms, nodes, crypto)
+            apply_cas_work_item_metadata_row(graph, request, committed_at_ms, nodes, transitions, crypto)
         }
         Method::CommitWorkItemResult {
             tenant,
@@ -160,6 +167,7 @@ pub fn apply_work_item_rows(
             run_completion: run_completion.as_deref(),
             batch_id,
             nodes: &mut *nodes,
+            transitions: &mut *transitions,
             edges: &mut *edges,
             holds: &mut *holds,
             work_item_index,
@@ -181,6 +189,7 @@ pub fn apply_work_item_rows(
             reason_ref,
             now_ms: *now_ms,
             nodes: &mut *nodes,
+            transitions: &mut *transitions,
             holds: &mut *holds,
             work_item_index,
             counters: &mut *counters,
@@ -211,6 +220,7 @@ pub fn apply_work_item_rows(
             reason_ref,
             now_ms: *now_ms,
             nodes: &mut *nodes,
+            transitions: &mut *transitions,
             crypto,
         }),
         // EH-558 sealed-record retirement shares this kernel.
@@ -220,13 +230,14 @@ pub fn apply_work_item_rows(
         // graph-os MEDULLA-2 control-lease and EH-348 work-market writes share this
         // kernel; EH-346 policy-evolution records are its other row writer;
         // anything else is not a WorkItem-family row transition and answers `None`.
-        other => match apply_policy_record_rows(graph, other, nodes, crypto)? {
+        other => match apply_policy_record_rows(graph, other, nodes, transitions, crypto)? {
             Some(result) => Ok(Some(result)),
             None => apply_native_record_rows(NativeRecordRequest {
                 graph,
                 batch_id,
                 method: other,
                 nodes,
+                transitions,
                 native_work_items,
                 edges,
                 command_sequences,

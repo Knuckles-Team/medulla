@@ -87,6 +87,7 @@ pub fn visit_graph_scoped_tables<V: GraphTableVisitor>(visitor: &mut V) -> Resul
     visitor.visit(shard::ADMITTED_REQUESTS)?;
     visitor.visit(shard::WRITE_DAYS)?;
     visitor.visit(shard::GRAPH_CREATOR)?;
+    visitor.visit(shard::WORK_ITEM_TRANSITIONS)?;
     visitor.visit(shard::WORK_ITEM_CLAIM_CAPABILITIES)?;
     visitor.visit(shard::WORK_ITEM_CLAIM_CAPABILITY_INVOCATIONS)?;
     visitor.visit(shard::NATIVE_WORK_ITEM_AUTHORITY)?;

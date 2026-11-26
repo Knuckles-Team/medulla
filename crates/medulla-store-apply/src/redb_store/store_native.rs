@@ -402,6 +402,7 @@ fn apply_native_publication(
             request,
             actor,
             &mut tables.graph.nodes,
+            &mut tables.graph.work_item_transitions,
             crypto,
             committed_at_ms,
         )?;
@@ -424,6 +425,7 @@ fn apply_native_publication(
             request,
             actor,
             &mut tables.graph.nodes,
+            &mut tables.graph.work_item_transitions,
             crypto,
             committed_at_ms,
         )?;
@@ -506,6 +508,7 @@ pub(crate) fn apply_native_work_item_family_operation(
             batch_id: batch.batch_id.as_str(),
             method,
             nodes: &mut tables.graph.nodes,
+            transitions: &mut tables.graph.work_item_transitions,
             holds: &mut tables.lane_holds,
             work_item_index: &tables.lane_work_item_index,
             counters: &mut tables.lane_counters,
@@ -628,6 +631,7 @@ fn apply_one_native_operation_row(
                     graph_fname,
                     request,
                     &mut tables.graph.nodes,
+                    &mut tables.graph.work_item_transitions,
                     &mut tables.graph.edges,
                     &mut tables.graph.command_sequences,
                     commit_scope,
@@ -649,6 +653,7 @@ fn apply_one_native_operation_row(
                     graph_fname,
                     request,
                     &mut tables.graph.nodes,
+                    &mut tables.graph.work_item_transitions,
                     &mut tables.graph.edges,
                     &mut tables.graph.command_sequences,
                     commit_scope,
@@ -693,6 +698,7 @@ fn apply_one_native_operation_row(
         method => {
             let mut tables = GraphRowTablesRef {
                 nodes: &mut tables.graph.nodes,
+                work_item_transitions: &mut tables.graph.work_item_transitions,
                 edges: &mut tables.graph.edges,
                 ledger: &mut tables.graph.ledger,
                 semantic: &mut tables.graph.semantic,

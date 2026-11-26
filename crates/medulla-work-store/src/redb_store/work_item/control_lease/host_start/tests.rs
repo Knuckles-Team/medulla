@@ -1,6 +1,6 @@
 use super::*;
 use crate::redb_store::work_item::test_shard::open;
-use crate::redb_store::work_item::test_shard::with_nodes;
+use crate::redb_store::work_item::test_shard::with_node_rows;
 use crate::redb_store::work_item::test_shard::GRAPH;
 use medulla_work_types::host_start::HostStartInterfaces;
 
@@ -15,14 +15,15 @@ fn request() -> IssueHostStartGrantRequest {
 #[test]
 fn native_writer_requires_issuer_and_stamps_immutable_top_level_provenance() {
     let temp = open("host-start-native");
-    with_nodes(&temp.shard, "host-issuer", |nodes| {
-        assert!(issue(GRAPH, &request(), None, nodes, DurableCrypto::none(), 1_000).is_err());
+    with_node_rows(&temp.shard, "host-issuer", |nodes, transitions| {
+        assert!(issue(GRAPH, &request(), None, nodes, transitions, DurableCrypto::none(), 1_000).is_err());
         assert!(load_row(nodes, GRAPH, "host-grant", DurableCrypto::none())?.is_none());
         let result = issue(
             GRAPH,
             &request(),
             Some("native-actor"),
             nodes,
+            transitions,
             DurableCrypto::none(),
             1_000,
         )?;
@@ -37,6 +38,7 @@ fn native_writer_requires_issuer_and_stamps_immutable_top_level_provenance() {
             &request(),
             Some("other-actor"),
             nodes,
+            transitions,
             DurableCrypto::none(),
             1_001,
         )?;
@@ -63,12 +65,13 @@ fn generic_transition_can_revoke_but_cannot_consume_host_grants() {
         control_lease::TransitionControlLeaseRequest,
     };
     let temp = open("host-start-transitions");
-    with_nodes(&temp.shard, "host-transitions", |nodes| {
+    with_node_rows(&temp.shard, "host-transitions", |nodes, transitions| {
         issue(
             GRAPH,
             &request(),
             Some("native-actor"),
             nodes,
+            transitions,
             DurableCrypto::none(),
             1_000,
         )?;
@@ -84,6 +87,7 @@ fn generic_transition_can_revoke_but_cannot_consume_host_grants() {
             GRAPH,
             &transition,
             nodes,
+            transitions,
             1_001,
             DurableCrypto::none()
         )
@@ -93,6 +97,7 @@ fn generic_transition_can_revoke_but_cannot_consume_host_grants() {
             GRAPH,
             &transition,
             nodes,
+            transitions,
             1_002,
             DurableCrypto::none(),
         )?;

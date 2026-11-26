@@ -4,7 +4,7 @@ use medulla_work_store::redb_store::work_item::run_owner::*;
 use medulla_work_store::redb_store::work_item::test_shard::run_request as request;
 use medulla_work_store::{
     redb_store::work_item::test_shard::apply, redb_store::work_item::test_shard::open,
-    redb_store::work_item::test_shard::with_nodes, redb_store::work_item::test_shard::with_write,
+    redb_store::work_item::test_shard::with_node_rows, redb_store::work_item::test_shard::with_write,
     redb_store::work_item::test_shard::GRAPH,
 };
 use medulla_work_types::native_control::SubmitWorkItemRequest;
@@ -35,12 +35,19 @@ fn read(
 }
 
 fn change(shard: &Shard, id: &str, tag: &str, update: impl FnOnce(&mut Row)) {
-    with_nodes(shard, tag, |nodes| {
+    with_node_rows(shard, tag, |nodes, transitions| {
         let bytes = nodes.get((GRAPH, id))?.unwrap();
         let mut row: Row = decode_durable(bytes.value())?;
         drop(bytes);
         update(&mut row);
-        write_work_item_props(nodes, GRAPH, id, &mut row, DurableCrypto::none())
+        write_work_item_props(
+            nodes,
+            transitions,
+            GRAPH,
+            id,
+            &mut row,
+            DurableCrypto::none(),
+        )
     });
 }
 
@@ -898,14 +905,21 @@ fn session_inventory_uses_original_context_and_marks_missing_admission_partial()
 #[test]
 fn session_inventory_bound_counts_unrelated_rows() {
     let temp = open("session-bound");
-    with_nodes(&temp.shard, "inventory", |nodes| {
+    with_node_rows(&temp.shard, "inventory", |nodes, transitions| {
         for n in 0..=medulla_work_types::run_usage::MAX_SESSION_USAGE_RUNS {
             let id = format!("unrelated:{n:05}");
             let mut row = serde_json::json!({"node_type":"Other","tenant":"tenant"})
                 .as_object()
                 .unwrap()
                 .clone();
-            write_work_item_props(nodes, GRAPH, &id, &mut row, DurableCrypto::none())?;
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                &id,
+                &mut row,
+                DurableCrypto::none(),
+            )?;
         }
         Ok(())
     });

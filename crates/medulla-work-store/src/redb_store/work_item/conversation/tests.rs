@@ -1,4 +1,4 @@
-use super::super::test_shard::{check_guard, open, with_nodes, with_write, GRAPH};
+use super::super::test_shard::{check_guard, open, with_node_rows, with_write, GRAPH};
 use super::*;
 
 fn request(run: &str, revision: u64, predecessor: Option<&str>) -> SubmitWorkItemRequest {
@@ -29,14 +29,14 @@ fn admit(shard: &Shard, request: &SubmitWorkItemRequest, owner: &str) -> Result<
 
 fn state(shard: &Shard, run: &str, status: &str) {
     let id = super::super::run_owner::work_item_id(GRAPH, "tenant", run).unwrap();
-    with_nodes(shard, &format!("state-{run}-{status}"), |nodes| {
+    with_node_rows(shard, &format!("state-{run}-{status}"), |nodes, transitions| {
         let bytes = nodes.get((GRAPH, id.as_str()))?.unwrap();
         let mut row: serde_json::Map<String, serde_json::Value> = decode_durable(bytes.value())?;
         drop(bytes);
         row.insert("status".into(), status.into());
         // Deliberately reverse wall-clock order: it must not decide continuity.
         row.insert("updated_at".into(), 0.into());
-        write_work_item_props(nodes, GRAPH, &id, &mut row, DurableCrypto::none())
+        write_work_item_props(nodes, transitions, GRAPH, &id, &mut row, DurableCrypto::none())
     });
 }
 

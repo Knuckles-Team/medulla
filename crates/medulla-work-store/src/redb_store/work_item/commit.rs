@@ -138,6 +138,7 @@ pub fn commit_work_item_release_downstream(
     props: &serde_json::Map<String, serde_json::Value>,
     now_s: f64,
     nodes: &mut ScopedOwnerTableMut<'_, (&str, &str), &[u8]>,
+    transitions: &mut ScopedOwnerTableMut<'_, (&str, &str, u64), &[u8]>,
     crypto: DurableCrypto<'_>,
     changed: &mut Vec<String>,
 ) -> Result<(), String> {
@@ -171,7 +172,7 @@ pub fn commit_work_item_release_downstream(
             )?;
         }
         child_props.insert("updated_at".into(), serde_json::Value::from(now_s));
-        write_work_item_props(nodes, graph, child, &mut child_props, crypto)?;
+        write_work_item_props(nodes, transitions, graph, child, &mut child_props, crypto)?;
         changed.push(child.to_string());
     }
     Ok(())
@@ -194,6 +195,8 @@ pub struct CommitWorkItemResultInput<'args, 'table, 'crypto> {
     pub run_completion: Option<&'args medulla_work_types::run_completion::RunCompletionInput>,
     pub batch_id: &'args str,
     pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub transitions:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static [u8]>,
     /// The edge rows the terminal commit links its run trace through (R133.8).
     pub edges: &'args mut NativeEdgeRows<'table>,
     pub holds: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
@@ -323,6 +326,7 @@ pub fn apply_commit_work_item_result_row(
     }
     write_work_item_props(
         input.nodes,
+        input.transitions,
         input.graph,
         input.work_item_id,
         &mut props,
@@ -336,6 +340,7 @@ pub fn apply_commit_work_item_result_row(
             &props,
             now_s,
             input.nodes,
+            input.transitions,
             input.crypto,
             &mut changed,
         )?;
@@ -821,7 +826,7 @@ fn validate_ordinary_completion(
 mod tests {
     use super::*;
     use crate::redb_store::graph_row_tables::GraphRowTables;
-    use crate::redb_store::work_item::test_shard::{apply, open, with_nodes, with_write, GRAPH};
+    use crate::redb_store::work_item::test_shard::{apply, open, with_node_rows, with_write, GRAPH};
     use medulla_result_types::outcome_bundle::{
         CommitOutcomeBundle, OutcomeCompleteness, ReceiptNode, ReceiptNodeKind, RunEvent,
         TerminalOutcomeExtension, OUTCOME_BUNDLE_VERSION,
@@ -1024,8 +1029,15 @@ mod tests {
         .as_object()
         .unwrap()
         .clone();
-        with_nodes(shard, "seed", |nodes| {
-            write_work_item_props(nodes, GRAPH, ITEM, &mut row, DurableCrypto::none())
+        with_node_rows(shard, "seed", |nodes, transitions| {
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                ITEM,
+                &mut row,
+                DurableCrypto::none(),
+            )
         });
     }
 

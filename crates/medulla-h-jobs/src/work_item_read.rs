@@ -51,6 +51,13 @@ pub enum WorkItemRead {
         tenant: String,
         work_item_id: String,
     },
+    /// MEDULLA-DURABLE-KERNEL-R028.2.1: one page of a WorkItem's transition ledger.
+    Transitions {
+        tenant: String,
+        work_item_id: String,
+        cursor: Option<String>,
+        limit: u32,
+    },
     List(WorkItemListRequest),
     /// graph-os MEDULLA-3: a terminal WorkItem and its committed provenance.
     Outcome {
@@ -91,6 +98,7 @@ impl WorkItemRead {
                 ..
             }
             | Self::Get { tenant, .. }
+            | Self::Transitions { tenant, .. }
             | Self::Outcome { tenant, .. } => tenant,
             Self::CurrentPlan { tenant, .. }
             | Self::RunAdmission { tenant, .. }
@@ -118,6 +126,23 @@ pub async fn answer(
     {
         medulla_kernel::metrics::process().access_denied();
         return Response::err(req_id, denied);
+    }
+    // A page bound outside its range is refused at the door, before any store is touched.
+    if let WorkItemRead::Transitions {
+        tenant,
+        work_item_id,
+        cursor,
+        limit,
+    } = &read
+    {
+        if let Err(invalid) = medulla_work_types::work_item_read::validate_work_item_transitions(
+            tenant,
+            work_item_id,
+            cursor.as_deref(),
+            *limit,
+        ) {
+            return Response::err(req_id, invalid);
+        }
     }
     let graph = medulla_kernel::persist::sanitize(graph_name);
     let checkpoint = matches!(&read, WorkItemRead::Checkpoint { .. });
@@ -161,6 +186,7 @@ async fn serve_native(
         result_contract::coordination::GetControlLease, result_contract::coordination::GetWorkItem,
         result_contract::coordination::GetWorkItemOutcome,
         result_contract::coordination::ListControlLeases,
+        result_contract::coordination::ListWorkItemTransitions,
         result_contract::coordination::ListWorkItems,
     };
     let backend = persistence
@@ -218,6 +244,16 @@ async fn serve_native(
         } => ResultPayload::of::<GetWorkItem>(
             backend
                 .read_work_item(graph, &tenant, &work_item_id)
+                .await?,
+        ),
+        WorkItemRead::Transitions {
+            tenant,
+            work_item_id,
+            cursor,
+            limit,
+        } => ResultPayload::of::<ListWorkItemTransitions>(
+            backend
+                .list_work_item_transitions(graph, &tenant, &work_item_id, cursor, limit)
                 .await?,
         ),
         WorkItemRead::List(request) => {

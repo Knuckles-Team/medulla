@@ -24,6 +24,8 @@ pub use read::{list_gaps, read_gap};
 
 type NodeRow = serde_json::Map<String, serde_json::Value>;
 type NodeRows<'table> = ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>;
+type TransitionRows<'table> =
+    ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static [u8]>;
 
 /// The rows and commit scope a native record write (control lease or work
 /// market) may touch: the node table, plus the edge and command-sequence
@@ -33,6 +35,7 @@ pub struct NativeRecordRequest<'args, 'table, 'crypto> {
     pub batch_id: &'args str,
     pub method: &'args Method,
     pub nodes: &'args mut NodeRows<'table>,
+    pub transitions: &'args mut TransitionRows<'table>,
     pub native_work_items: &'args NodeRows<'table>,
     pub edges: &'args mut NativeEdgeRows<'table>,
     pub command_sequences: &'args mut NativeSequenceRows<'table>,
@@ -49,6 +52,7 @@ pub fn apply_native_record_rows(
         request.graph,
         request.method,
         request.nodes,
+        request.transitions,
         request.native_work_items,
         request.committed_at_ms,
         request.crypto,
@@ -62,6 +66,7 @@ pub fn apply_native_record_rows(
             upsert::GapUpsertTables {
                 graph: request.graph,
                 nodes: request.nodes,
+                transitions: request.transitions,
                 edges: request.edges,
                 command_sequences: request.command_sequences,
             },
@@ -77,6 +82,7 @@ pub fn apply_native_record_rows(
             graph: request.graph,
             method,
             nodes: request.nodes,
+            transitions: request.transitions,
             now_ms: request.committed_at_ms,
             crypto: request.crypto,
         }),
@@ -109,6 +115,7 @@ fn load_gap(
 /// revision).
 fn store_gap(
     nodes: &mut NodeRows<'_>,
+    transitions: &mut TransitionRows<'_>,
     graph: &str,
     tenant: &str,
     gap: &GapView,
@@ -121,7 +128,7 @@ fn store_gap(
         gap.revision.into(),
     );
     gap.to_row(tenant, &mut row)?;
-    write_work_item_props(nodes, graph, &key, &mut row, crypto)?;
+    write_work_item_props(nodes, transitions, graph, &key, &mut row, crypto)?;
     GapView::from_row(&row)
 }
 

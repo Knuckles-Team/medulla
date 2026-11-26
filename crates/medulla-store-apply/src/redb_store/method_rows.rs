@@ -14,6 +14,7 @@ pub fn apply_method_rows(
 ) -> Result<(), String> {
     let mut tables = GraphRowTablesRef {
         nodes: &mut tables.nodes,
+        work_item_transitions: &mut tables.work_item_transitions,
         edges: &mut tables.edges,
         ledger: &mut tables.ledger,
         semantic: &mut tables.semantic,
@@ -30,6 +31,7 @@ pub fn apply_method_rows_ref(
 ) -> Result<(), String> {
     let GraphRowTablesRef {
         nodes,
+        work_item_transitions,
         edges,
         ledger,
         semantic,
@@ -51,7 +53,15 @@ pub fn apply_method_rows_ref(
                 .map_err(|e| e.to_string())?;
         }
         Method::RemoveNode { node_id } => {
-            remove_durable_node(graph, node_id, nodes, edges, semantic, crypto)?;
+            remove_durable_node(
+                graph,
+                node_id,
+                nodes,
+                work_item_transitions,
+                edges,
+                semantic,
+                crypto,
+            )?;
         }
         Method::CompareAndSetNodeFields {
             node_id,
@@ -97,7 +107,15 @@ pub fn apply_method_rows_ref(
             )?;
         }
         Method::BatchUpdate { operations_msgpack } => {
-            apply_batch_rows(graph, operations_msgpack, nodes, edges, semantic, crypto)?;
+            apply_batch_rows(
+                graph,
+                operations_msgpack,
+                nodes,
+                work_item_transitions,
+                edges,
+                semantic,
+                crypto,
+            )?;
         }
         // ClearGraph and DeleteGraph share one arm because their row effect is
         // byte-identical.  For DeleteGraph the lifecycle caller performs the

@@ -15288,6 +15288,13 @@ class MethodGetWorkItem(BaseModel):
     params: MethodGetWorkItemParams
 
 
+class MethodListWorkItemTransitions(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ListWorkItemTransitions"]
+    params: MethodListWorkItemTransitionsParams
+
+
 class MethodListWorkItems(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17142,6 +17149,7 @@ Method = Annotated[
         MethodDowntimeSelections,
         MethodGetRunWorkItem,
         MethodGetWorkItem,
+        MethodListWorkItemTransitions,
         MethodListWorkItems,
         MethodGetWorkItemOutcome,
         MethodIssueHostStartGrant,
@@ -19444,6 +19452,15 @@ class MethodListTriggersParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     graph: str
+
+
+class MethodListWorkItemTransitionsParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] = 100
+    tenant: str
+    work_item_id: str
 
 
 class MethodListWorkItemsParams(BaseModel):
@@ -31331,6 +31348,21 @@ class WorkItemPage(BaseModel):
     next_cursor: str | None = None
 
 
+class WorkItemTransitionEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: Annotated[int, Field(ge=0)]
+    revision: Annotated[int, Field(ge=0)]
+    state: WorkItemStatus
+
+
+class WorkItemTransitionPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entries: list[WorkItemTransitionEntry]
+    next_cursor: str | None = None
+
+
 class WorkItemTransition_WorkItemCancelOutcome(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -32672,6 +32704,9 @@ ListGraphsResult = list[GraphListing]
 
 
 ListTriggersResult = list[TriggerInfo]
+
+
+ListWorkItemTransitionsResult = WorkItemTransitionPage | None
 
 
 EvictBelowResultItem0 = list[str]
@@ -44650,6 +44685,7 @@ __all__ = [
     "ListGraphsResult",
     "ListQuery",
     "ListTriggersResult",
+    "ListWorkItemTransitionsResult",
     "LiveArtifact",
     "LiveArtifactView",
     "LoadReport",
@@ -45441,6 +45477,8 @@ __all__ = [
     "MethodListRegisteredServersParams",
     "MethodListTriggers",
     "MethodListTriggersParams",
+    "MethodListWorkItemTransitions",
+    "MethodListWorkItemTransitionsParams",
     "MethodListWorkItems",
     "MethodListWorkItemsParams",
     "MethodLiveArtifactGet",
@@ -47269,6 +47307,8 @@ __all__ = [
     "WorkItemLeaseRenewal",
     "WorkItemOutcomeView",
     "WorkItemPage",
+    "WorkItemTransitionEntry",
+    "WorkItemTransitionPage",
     "WorkItemStatus",
     "WorkItemTransition_WorkItemCancelOutcome",
     "WorkItemTransition_WorkItemCommitOutcome",

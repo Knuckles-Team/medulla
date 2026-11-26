@@ -14,6 +14,8 @@ use medulla_storage::ScopedOwnerTableMut;
 use super::*;
 
 type NativeNodeRows<'a> = ScopedOwnerTableMut<'a, (&'static str, &'static str), &'static [u8]>;
+type NativeTransitionRows<'a> =
+    ScopedOwnerTableMut<'a, (&'static str, &'static str, u64), &'static [u8]>;
 type NativeEdgeRows<'a> =
     ScopedOwnerTableMut<'a, (&'static str, &'static str, &'static str, u32), &'static [u8]>;
 type NativeSequenceRows<'a> = ScopedOwnerTableMut<'a, &'static str, u64>;
@@ -98,7 +100,9 @@ pub use dispatch::*;
 pub use lease::*;
 pub use market::{apply_native_record_rows, list_gaps, read_gap, NativeRecordRequest};
 pub use policy_record::apply_policy_record_rows;
-pub use read::{list_work_items, read_work_item, read_work_item_outcome};
+pub use read::{
+    list_work_item_transitions, list_work_items, read_work_item, read_work_item_outcome,
+};
 pub use row_guard::refuse_generic_native_row_write;
 pub use sealed_record::apply_retire_sealed_record_row;
 pub use submit::*;

@@ -49,6 +49,7 @@ pub fn apply_control_lease_rows(
     graph: &str,
     method: &Method,
     nodes: &mut NativeNodeRows<'_>,
+    transitions: &mut NativeTransitionRows<'_>,
     native_work_items: &NativeNodeRows<'_>,
     committed_at_ms: u64,
     crypto: DurableCrypto<'_>,
@@ -56,10 +57,10 @@ pub fn apply_control_lease_rows(
     pending_call::require_claim(graph, method, native_work_items, crypto)?;
     match method {
         Method::IssueControlLease { request } => {
-            apply_issue_control_lease_row(graph, request, nodes, committed_at_ms, crypto)
+            apply_issue_control_lease_row(graph, request, nodes, transitions, committed_at_ms, crypto)
         }
         Method::TransitionControlLease { request } => {
-            apply_transition_control_lease_row(graph, request, nodes, committed_at_ms, crypto)
+            apply_transition_control_lease_row(graph, request, nodes, transitions, committed_at_ms, crypto)
         }
         _ => Ok(None),
     }
@@ -71,6 +72,7 @@ pub fn apply_issue_control_lease_row(
     graph: &str,
     request: &IssueControlLeaseRequest,
     nodes: &mut NativeNodeRows<'_>,
+    transitions: &mut NativeTransitionRows<'_>,
     committed_at_ms: u64,
     crypto: DurableCrypto<'_>,
 ) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
@@ -89,8 +91,8 @@ pub fn apply_issue_control_lease_row(
     let pair =
         pending_call::registration(graph, request, &mut row, nodes, committed_at_ms, crypto)?;
     plan_pair::register(graph, request, &mut row, nodes, committed_at_ms, crypto)?;
-    write_work_item_props(nodes, graph, &request.lease_id, &mut row, crypto)?;
-    let mut changed = pending_call::write_pair(graph, pair, nodes, crypto)?;
+    write_work_item_props(nodes, transitions, graph, &request.lease_id, &mut row, crypto)?;
+    let mut changed = pending_call::write_pair(graph, pair, nodes, transitions, crypto)?;
     changed.push(request.lease_id.clone());
     medulla_protocol_types::protocol::ResultPayload::of::<IssueControlLease>(ControlLeaseIssued {
         outcome: ControlLeaseIssueOutcome::Issued,
@@ -106,6 +108,7 @@ pub fn apply_transition_control_lease_row(
     graph: &str,
     request: &TransitionControlLeaseRequest,
     nodes: &mut NativeNodeRows<'_>,
+    transitions: &mut NativeTransitionRows<'_>,
     committed_at_ms: u64,
     crypto: DurableCrypto<'_>,
 ) -> Result<Option<medulla_protocol_types::protocol::ResultPayload>, String> {
@@ -142,10 +145,16 @@ pub fn apply_transition_control_lease_row(
     let pair = pending_call::transition(graph, request, &row, nodes, committed_at_ms, crypto)?;
     let plan = plan_pair::consume(graph, request, &row, nodes, committed_at_ms, crypto)?;
     row.insert("status".into(), next.as_stored().into());
-    write_work_item_props(nodes, graph, &request.lease_id, &mut row, crypto)?;
+    write_work_item_props(nodes, transitions, graph, &request.lease_id, &mut row, crypto)?;
     let ended = ControlLeaseView::from_row(&request.lease_id, &row)?;
-    let mut changed = pending_call::write_pair(graph, pair, nodes, crypto)?;
-    changed.extend(pending_call::write_pair(graph, plan, nodes, crypto)?);
+    let mut changed = pending_call::write_pair(graph, pair, nodes, transitions, crypto)?;
+    changed.extend(pending_call::write_pair(
+        graph,
+        plan,
+        nodes,
+        transitions,
+        crypto,
+    )?);
     changed.push(request.lease_id.clone());
     medulla_protocol_types::protocol::ResultPayload::of::<TransitionControlLease>(
         ControlLeaseTransition {

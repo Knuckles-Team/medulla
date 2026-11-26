@@ -87,7 +87,8 @@ fn historical_graph_shard_tables_preserve_introduction_boundaries() {
                 || predecessor.label == GRAPH_SHARD_BEFORE_EFFECT_RECEIPTS.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL.label
-                || predecessor.label == GRAPH_SHARD_BEFORE_WRITE_LEDGER.label,
+                || predecessor.label == GRAPH_SHARD_BEFORE_WRITE_LEDGER.label
+                || predecessor.label == GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS.label,
             "{}",
             predecessor.label
         );
@@ -100,6 +101,7 @@ fn historical_graph_shard_tables_preserve_introduction_boundaries() {
                 || predecessor.label == GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_WRITE_LEDGER.label
+                || predecessor.label == GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS.label
         );
         assert_eq!(
             predecessor
@@ -109,6 +111,7 @@ fn historical_graph_shard_tables_preserve_introduction_boundaries() {
                 || predecessor.label == GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_WRITE_LEDGER.label
+                || predecessor.label == GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS.label
         );
         assert_eq!(
             predecessor
@@ -117,6 +120,7 @@ fn historical_graph_shard_tables_preserve_introduction_boundaries() {
             predecessor.label == GRAPH_SHARD_BEFORE_DECISION_CERTIFICATES.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_WRITE_LEDGER.label
+                || predecessor.label == GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS.label
         );
         assert_eq!(
             predecessor
@@ -124,6 +128,7 @@ fn historical_graph_shard_tables_preserve_introduction_boundaries() {
                 .contains(&"xshard_decision_certificate"),
             predecessor.label == GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL.label
                 || predecessor.label == GRAPH_SHARD_BEFORE_WRITE_LEDGER.label
+                || predecessor.label == GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS.label
         );
         assert!(!predecessor.owner_tables.contains(&"work_item_run_events"));
     }

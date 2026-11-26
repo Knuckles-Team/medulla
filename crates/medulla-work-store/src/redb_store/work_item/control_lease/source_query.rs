@@ -11,6 +11,7 @@ pub fn issue(
     request: &ApproveSourceQueryRequest,
     admitted_actor: Option<&str>,
     nodes: &mut NativeNodeRows<'_>,
+    transitions: &mut NativeTransitionRows<'_>,
     crypto: DurableCrypto<'_>,
     committed_at_ms: u64,
 ) -> Result<SourceQueryApprovalIssued, String> {
@@ -24,7 +25,7 @@ pub fn issue(
         });
     }
     let mut row = lease.row();
-    write_work_item_props(nodes, graph, &lease.lease_id, &mut row, crypto)?;
+    write_work_item_props(nodes, transitions, graph, &lease.lease_id, &mut row, crypto)?;
     Ok(SourceQueryApprovalIssued {
         outcome: ControlLeaseIssueOutcome::Issued,
         approved: Some(approved),

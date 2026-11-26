@@ -579,6 +579,32 @@ fn graph_shard_before_write_ledger_is_a_frozen_predecessor() {
     assert!(error.contains("store-upgrade"), "{error}");
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R028.2.1
+#[test]
+fn graph_shard_before_work_item_transitions_is_a_frozen_predecessor() {
+    let predecessor = &GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS;
+    // The current census without the transition ledger, which closes it.
+    let current = owner_table_names(OwnerLayout::GraphShard);
+    assert_eq!(predecessor.owner_tables, &current[..current.len() - 1]);
+    assert!(!predecessor.owner_tables.contains(&"work_item_transitions"));
+    assert!(current.contains(&"work_item_transitions"));
+    // The write-ledger generation stays in the list: every earlier predecessor remains.
+    assert!(predecessor.owner_tables.contains(&"write_days"));
+    assert_ne!(
+        GRAPH_SHARD_PRE_WORK_ITEM_TRANSITIONS_DIGEST,
+        OwnerLayout::GraphShard.digest()
+    );
+    let manifest = predecessor_manifest(predecessor);
+    assert_eq!(
+        manifest.layout_digest,
+        GRAPH_SHARD_PRE_WORK_ITEM_TRANSITIONS_DIGEST
+    );
+    let error = validate_against_lineage(&manifest).unwrap_err();
+    assert!(error.starts_with("GRAPH_SHARD_FORMAT_UPGRADE_REQUIRED:"));
+    assert!(error.contains(predecessor.label));
+    assert!(error.contains("store-upgrade"), "{error}");
+}
+
 // spec: MEDULLA-INGEST-WORKER-R001.4.1
 #[test]
 fn jobs_before_task_queue_is_a_frozen_predecessor() {

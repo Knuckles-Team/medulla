@@ -168,6 +168,8 @@ pub enum GraphShardSource {
     BeforeReservationTombstoneRemoval,
     /// Before the per-graph write ledger and creator tables (MEDULLA-IDENTITY-R700.7).
     BeforeWriteLedger,
+    /// Before the WorkItem transition ledger (MEDULLA-DURABLE-KERNEL-R028.2.1).
+    BeforeWorkItemTransitions,
 }
 
 impl GraphShardSource {
@@ -204,6 +206,10 @@ impl GraphShardSource {
             Self::BeforeWriteLedger => (
                 &super::lineage::GRAPH_SHARD_BEFORE_WRITE_LEDGER,
                 super::lineage::GRAPH_SHARD_PRE_WRITE_LEDGER_DIGEST,
+            ),
+            Self::BeforeWorkItemTransitions => (
+                &super::lineage::GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS,
+                super::lineage::GRAPH_SHARD_PRE_WORK_ITEM_TRANSITIONS_DIGEST,
             ),
         }
     }

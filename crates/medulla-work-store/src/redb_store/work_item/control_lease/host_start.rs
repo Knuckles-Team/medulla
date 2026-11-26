@@ -8,6 +8,7 @@ pub fn issue(
     request: &IssueHostStartGrantRequest,
     admitted_actor: Option<&str>,
     nodes: &mut NativeNodeRows<'_>,
+    transitions: &mut NativeTransitionRows<'_>,
     crypto: DurableCrypto<'_>,
     committed_at_ms: u64,
 ) -> Result<ControlLeaseIssued, String> {
@@ -30,7 +31,7 @@ pub fn issue(
         "host_start_provenance".into(),
         serde_json::to_value(provenance).map_err(|e| e.to_string())?,
     );
-    write_work_item_props(nodes, graph, &lease.lease_id, &mut row, crypto)?;
+    write_work_item_props(nodes, transitions, graph, &lease.lease_id, &mut row, crypto)?;
     Ok(ControlLeaseIssued {
         outcome: ControlLeaseIssueOutcome::Issued,
         lease: Some(ControlLeaseView::from_row(&lease.lease_id, &row)?),

@@ -5,7 +5,7 @@
 use super::*;
 use medulla_work_types::work_item_read::WorkItemStatus;
 
-use super::super::test_shard::{open, with_nodes, GRAPH};
+use super::super::test_shard::{open, with_node_rows, with_nodes, GRAPH};
 
 pub fn work_item(
     tenant: &str,
@@ -31,9 +31,16 @@ fn write_rows(
     tag: &str,
     rows: Vec<(&str, serde_json::Map<String, serde_json::Value>)>,
 ) {
-    with_nodes(shard, tag, |nodes| {
+    with_node_rows(shard, tag, |nodes, transitions| {
         for (id, mut props) in rows {
-            write_work_item_props(nodes, GRAPH, id, &mut props, DurableCrypto::none())?;
+            write_work_item_props(
+                nodes,
+                transitions,
+                GRAPH,
+                id,
+                &mut props,
+                DurableCrypto::none(),
+            )?;
         }
         Ok(())
     });
@@ -349,4 +356,134 @@ fn a_generic_write_cannot_forge_the_outcome_digest_of_a_bound_item() {
         read().unwrap().is_some(),
         "the refusal leaves the committed outcome binding intact"
     );
+}
+
+/// One item driven through submit, claim, two renewals and a terminal commit.
+fn drive_one_item(shard: &Shard) -> String {
+    use super::super::test_shard::{apply, run_request, submit_run_rows, with_write};
+    use medulla_protocol_types::protocol::{Method, ResultPayload};
+    use medulla_result_types::epistemic_operations::{
+        ClaimWorkItemRequest, ClaimWorkItemRequestSchemaVersion, ClaimWorkItemResult,
+    };
+
+    let mut request = run_request();
+    request.idempotency_key = "ledger-key".to_string();
+    request.run_id = None;
+    let id = with_write(shard, "submit/ledger", 1_000, |admitted| {
+        submit_run_rows(admitted, &request, "owner")
+    })
+    .expect("the work item submits")
+    .work_item_id;
+    let claim = Method::ClaimWorkItem {
+        request: ClaimWorkItemRequest {
+            schema_version: ClaimWorkItemRequestSchemaVersion::V1,
+            tenant_ref: "tenant".into(),
+            work_item_id: Some(id.clone()),
+            queue_ref: None,
+            resource_class: None,
+            fairness_group: None,
+            worker_ref: "worker-1".into(),
+            now_ms: 2_000,
+            lease_ms: 60_000,
+            max_tenant_in_flight: 64,
+        },
+    };
+    let held: ClaimWorkItemResult = match apply(shard, "claim/ledger", claim, 2_000).unwrap() {
+        ResultPayload::Raw(bytes) => decode_durable(&bytes).unwrap(),
+        other => panic!("ClaimWorkItem answers a bin-encoded result, got {other:?}"),
+    };
+    let (epoch, token) = (held.lease_epoch.unwrap(), held.fencing_token.unwrap());
+    // The first renewal starts the work; the second keeps `running` and appends nothing.
+    for (index, now_ms) in [2_100_u64, 2_200].into_iter().enumerate() {
+        let renew = Method::RenewWorkItemLease {
+            tenant: "tenant".into(),
+            work_item_id: id.clone(),
+            worker_id: "worker-1".into(),
+            lease_epoch: epoch,
+            fencing_token: token,
+            now_ms,
+            lease_ms: 60_000,
+        };
+        apply(shard, &format!("renew/ledger-{index}"), renew, now_ms).unwrap();
+    }
+    let commit = Method::CommitWorkItemResult {
+        tenant: "tenant".into(),
+        work_item_id: id.clone(),
+        worker_id: "worker-1".into(),
+        lease_epoch: epoch,
+        fencing_token: token,
+        idempotency_key: "commit-ledger".into(),
+        outcome: "succeeded".into(),
+        result_ref: Some("cas:result:ledger".into()),
+        error_ref: None,
+        retryable: false,
+        now_ms: 3_000,
+        outcome_extension: None,
+        run_completion: None,
+    };
+    apply(shard, "commit/ledger", commit, 3_000).unwrap();
+    id
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R028.2.1
+#[test]
+fn transition_ledger_appends_on_status_change_only() {
+    let temp = open("transition-ledger");
+    let id = drive_one_item(&temp.shard);
+    let page = |tenant: &str, cursor: Option<&str>, limit: u32| {
+        list_work_item_transitions(
+            &temp.shard,
+            GRAPH,
+            tenant,
+            &id,
+            cursor,
+            limit,
+            DurableCrypto::none(),
+        )
+    };
+
+    // Exactly ready, leased, running, succeeded: the second renewal added none.
+    let whole = page("tenant", None, 100).unwrap().expect("the item has a ledger");
+    assert_eq!(whole.next_cursor, None);
+    let states: Vec<_> = whole.entries.iter().map(|entry| entry.state).collect();
+    assert_eq!(
+        states,
+        [
+            WorkItemStatus::Ready,
+            WorkItemStatus::Leased,
+            WorkItemStatus::Running,
+            WorkItemStatus::Succeeded,
+        ]
+    );
+    let revisions: Vec<_> = whole.entries.iter().map(|entry| entry.revision).collect();
+    assert!(
+        revisions.windows(2).all(|pair| pair[0] < pair[1]),
+        "revisions ascend in commit order: {revisions:?}"
+    );
+
+    // `limit 2` pages with a cursor and rejoins to the whole ledger.
+    let first = page("tenant", None, 2).unwrap().unwrap();
+    assert_eq!(first.entries, whole.entries[..2]);
+    let cursor = first.next_cursor.expect("more entries remain");
+    let second = page("tenant", Some(&cursor), 2).unwrap().unwrap();
+    assert_eq!(second.entries, whole.entries[2..]);
+    assert_eq!(second.next_cursor, None);
+
+    // Another tenant, and an absent item, read `None`; a bound outside [1, 200] is refused.
+    assert_eq!(page("tenant-b", None, 100).unwrap(), None);
+    assert_eq!(
+        list_work_item_transitions(
+            &temp.shard,
+            GRAPH,
+            "tenant",
+            "absent",
+            None,
+            100,
+            DurableCrypto::none()
+        )
+        .unwrap(),
+        None
+    );
+    assert!(page("tenant", None, 0).unwrap_err().starts_with("INVALID_PARAMS"));
+    assert!(page("tenant", None, 201).unwrap_err().starts_with("INVALID_PARAMS"));
 }

@@ -9,6 +9,8 @@ pub struct CancelWorkItemInput<'args, 'table, 'crypto> {
     pub reason_ref: &'args Option<String>,
     pub now_ms: u64,
     pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub transitions:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static [u8]>,
     pub holds: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
     pub work_item_index:
         &'args ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static str>,
@@ -166,6 +168,7 @@ pub fn apply_cancel_work_item_row(
         reason_ref,
         now_ms,
         nodes,
+        transitions,
         holds,
         work_item_index,
         counters,
@@ -195,7 +198,7 @@ pub fn apply_cancel_work_item_row(
             == medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::InFlight
             && stamp_cancel_request(&mut props, now_ms)?
         {
-            write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
+            write_work_item_props(nodes, transitions, graph, work_item_id, &mut props, crypto)?;
             return cancel_transition_result(
                 medulla_protocol_types::result_contract::coordination::WorkItemTransition {
                     outcome: status,
@@ -229,7 +232,7 @@ pub fn apply_cancel_work_item_row(
         policies,
         crypto,
     )?;
-    write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
+    write_work_item_props(nodes, transitions, graph, work_item_id, &mut props, crypto)?;
     cancel_transition_result(
         medulla_protocol_types::result_contract::coordination::WorkItemTransition {
             outcome: medulla_protocol_types::result_contract::coordination::WorkItemCancelOutcome::Cancelled,
@@ -248,6 +251,8 @@ pub struct DeferWorkItemInput<'args, 'table, 'crypto> {
     pub reason_ref: &'args Option<String>,
     pub now_ms: u64,
     pub nodes: &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str), &'static [u8]>,
+    pub transitions:
+        &'args mut ScopedOwnerTableMut<'table, (&'static str, &'static str, u64), &'static [u8]>,
     pub crypto: DurableCrypto<'crypto>,
 }
 
@@ -328,6 +333,7 @@ pub fn apply_defer_work_item_row(
         reason_ref,
         now_ms,
         nodes,
+        transitions,
         crypto,
     } = input;
     if next_retry_at_ms < now_ms {
@@ -351,7 +357,7 @@ pub fn apply_defer_work_item_row(
     }
     let (next_epoch, next_fencing_token, attempts, defer_count) =
         apply_deferred_work_item_props(&mut props, reason_ref, next_retry_at_ms, now_s)?;
-    write_work_item_props(nodes, graph, work_item_id, &mut props, crypto)?;
+    write_work_item_props(nodes, transitions, graph, work_item_id, &mut props, crypto)?;
     deferral_result(
         medulla_protocol_types::result_contract::coordination::WorkItemDeferral {
             status: medulla_protocol_types::result_contract::coordination::WorkItemDeferStatus::Deferred,

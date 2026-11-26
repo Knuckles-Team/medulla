@@ -37,6 +37,7 @@ const GAP_MARKET_POLICY: &str = "eg/work-market/v1";
 pub struct GapUpsertTables<'args, 'table> {
     pub graph: &'args str,
     pub nodes: &'args mut NodeRows<'table>,
+    pub transitions: &'args mut TransitionRows<'table>,
     pub edges: &'args mut ScopedOwnerTableMut<
         'table,
         (&'static str, &'static str, &'static str, u32),
@@ -55,6 +56,7 @@ pub fn apply_gap_upsert_rows(
     let GapUpsertTables {
         graph,
         nodes,
+        transitions,
         edges,
         command_sequences,
     } = tables;
@@ -88,13 +90,14 @@ pub fn apply_gap_upsert_rows(
             graph,
             &submission,
             nodes,
+            transitions,
             edges,
             command_sequences,
             scope,
         )?;
         changed.extend(admitted.changed_work_item_ids);
     }
-    gap = store_gap(nodes, graph, tenant, &gap, crypto)?;
+    gap = store_gap(nodes, transitions, graph, tenant, &gap, crypto)?;
     encode(outcome, gap, changed)
 }
 

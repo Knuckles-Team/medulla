@@ -290,6 +290,55 @@ fn graph_shard_upgrade_creates_empty_write_ledger_tables() {
     ordinary_open(&path, predecessor.layout).unwrap();
 }
 
+// spec: MEDULLA-DURABLE-KERNEL-R028.2.1
+#[test]
+fn graph_shard_upgrade_creates_empty_work_item_transitions_table() {
+    use crate::owner::graph_shard::{NODES, WORK_ITEM_TRANSITIONS};
+    use redb::{ReadableDatabase, ReadableTableMetadata};
+
+    let predecessor = &GRAPH_SHARD_BEFORE_WORK_ITEM_TRANSITIONS;
+    let upgrade = registered_offline_upgrade(predecessor).expect("a registered upgrade");
+    let directory = private_local_tempdir();
+    let path = directory.path().join("graph-upgrade");
+    create_predecessor_owner_file(&path, identity(), predecessor).unwrap();
+    {
+        let database = redb::Database::open(&path).unwrap();
+        let write = database.begin_write().unwrap();
+        write
+            .open_table(NODES)
+            .unwrap()
+            .insert(("graph-a", "node-a"), b"kept node".as_slice())
+            .unwrap();
+        write.commit().unwrap();
+    }
+    let inspected = upgrade
+        .inspect(&path, identity(), None, options(&path))
+        .unwrap();
+    inspected.apply().unwrap();
+    let database = redb::Database::open(&path).unwrap();
+    let read = database.begin_read().unwrap();
+    assert_eq!(
+        read.open_table(NODES)
+            .unwrap()
+            .get(("graph-a", "node-a"))
+            .unwrap()
+            .unwrap()
+            .value(),
+        b"kept node"
+    );
+    // History starts at the first write after the upgrade: the table is created empty.
+    assert_eq!(
+        read.open_table(WORK_ITEM_TRANSITIONS)
+            .unwrap()
+            .len()
+            .unwrap(),
+        0
+    );
+    drop(read);
+    drop(database);
+    ordinary_open(&path, predecessor.layout).unwrap();
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R113.3.1.1
 #[test]
 fn agent_library_upgrade_creates_empty_retry_allowance_table() {
