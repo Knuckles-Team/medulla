@@ -435,3 +435,112 @@ pub async fn foreign_status(
     ))
     .await
 }
+
+/// A request whose corpus the server builds from the `:Score` nodes of
+/// [`GRAPH`] the caller can see: the fixture program and budget with no client
+/// examples and a score source (MEDULLA-DECISION-ENGINE-R813.3).
+pub fn score_source_request(label: &str) -> OptimizationRequest {
+    let mut request = program_request(label, Vec::new());
+    request.corpus.examples.clear();
+    request.score_source = Some(medulla_program::ScoreSource {
+        graph: GRAPH.to_string(),
+    });
+    request
+}
+
+fn scoped_request(
+    state_secret: &str,
+    id: u64,
+    tenant: Option<&str>,
+    method: Method,
+) -> Request {
+    match tenant {
+        None => crate::test_support::request(state_secret, id, GRAPH, method),
+        Some(tenant) => {
+            let mut context = crate::common::context_for(crate::common::TEST_AGENT);
+            context.tenant = tenant.to_string();
+            crate::common::signed_request_with_context(state_secret, id, GRAPH, context, method)
+        }
+    }
+}
+
+/// Write one node as the fixture caller (`tenant` `None`) or as a caller of
+/// another tenant.
+pub async fn put_node_as(
+    state: &crate::test_support::SharedState,
+    id: u64,
+    tenant: Option<&str>,
+    node: &str,
+    props: serde_json::Value,
+) {
+    let response = Box::pin(crate::test_support::dispatch(
+        state,
+        scoped_request(
+            SECRET,
+            id,
+            tenant,
+            Method::AddNode {
+                node_id: node.to_string(),
+                properties_msgpack: rmp_serde::to_vec_named(&props).expect("encode node"),
+            },
+        ),
+    ))
+    .await;
+    assert!(response.error.is_none(), "seed node failed: {:?}", response.error);
+}
+
+/// Link `score` to the run it evaluates, as [`put_node_as`] writes.
+pub async fn link_score_run_as(
+    state: &crate::test_support::SharedState,
+    id: u64,
+    tenant: Option<&str>,
+    score: &str,
+    run: &str,
+) {
+    let response = Box::pin(crate::test_support::dispatch(
+        state,
+        scoped_request(
+            SECRET,
+            id,
+            tenant,
+            Method::AddEdge {
+                source_id: score.to_string(),
+                target_id: run.to_string(),
+                properties_msgpack: rmp_serde::to_vec_named(
+                    &serde_json::json!({"relationship": "scoresRun"}),
+                )
+                .expect("encode edge"),
+            },
+        ),
+    ))
+    .await;
+    assert!(response.error.is_none(), "seed edge failed: {:?}", response.error);
+}
+
+/// One stored score and the run it evaluates: a `:Score` node valued `value` on
+/// a 1 to 5 range, graded by `grader` ("human", "model_judge", ...) in `split`
+/// ("train", "validation" or "test").
+pub async fn seed_score(
+    state: &crate::test_support::SharedState,
+    id: u64,
+    tenant: Option<&str>,
+    name: &str,
+    value: f64,
+    grader: &str,
+    split: &str,
+) {
+    let run = format!("run-{name}");
+    put_node_as(state, id, tenant, &run, serde_json::json!({"type": "ExperimentRun"})).await;
+    put_node_as(
+        state,
+        id + 1,
+        tenant,
+        name,
+        serde_json::json!({
+            "type": "Score", "value": value, "range_min": 1.0, "range_max": 5.0,
+            "grader_kind": grader, "split": split,
+        }),
+    )
+    .await;
+    link_score_run_as(state, id + 2, tenant, name, &run).await;
+}
