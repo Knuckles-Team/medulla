@@ -358,6 +358,10 @@ pub enum QuestionKind {
     /// (MEDULLA-SDLC-R019.10). Evaluate-only: the engine never merges. See
     /// `decision::merge_arming`.
     MergeArming,
+    /// The triage of one defect: its severity, suspected symbols, owner and duplicate link
+    /// (MEDULLA-SDLC-R004.3). Evaluate-only: `TriageDefect` commits the record and writes the
+    /// `affects` edges. See `decision::defect_triage`.
+    DefectTriage,
     /// Whether a challenger revision wins its subject's champion pointer, or
     /// the champion regressed and rolls back (MEDULLA-DECISION-ENGINE-R805.3).
     /// Advisory: the pointer moves only through `DecisionLog`. See
@@ -802,6 +806,17 @@ mod question_kind_declared_tests {
     fn resolve_entity_is_declared() {
         assert_eq!(QuestionKind::ResolveEntity, QuestionKind::ResolveEntity);
         assert_ne!(QuestionKind::ResolveEntity, QuestionKind::Route);
+    }
+
+    // spec: MEDULLA-SDLC-R004.3
+    #[test]
+    fn defect_triage_kind_serialises_snake_case() {
+        let wire = serde_json::to_string(&QuestionKind::DefectTriage).unwrap();
+        assert_eq!(wire, "\"defect_triage\"");
+        assert_eq!(
+            serde_json::from_str::<QuestionKind>(&wire).unwrap(),
+            QuestionKind::DefectTriage
+        );
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R033.1

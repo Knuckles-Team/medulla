@@ -147,7 +147,7 @@ fn conflict_schema_pin(
         })
 }
 
-async fn serve(
+pub(super) async fn serve(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
     request: DecideRequest,
@@ -518,6 +518,55 @@ async fn serve(
         super::stat_recommend::read_for_question(state, verified.agent_id(), &request),
     )
     .await?;
+    // A `defect_triage` question reads its defect, frames, symbols, blame and the open defects
+    // of the repository from the graph its `graph` param names, under the ordinary read ACL
+    // (MEDULLA-SDLC-R004.3). The family never reads the graph itself.
+    let defect_triage = telemetry::stage_async(
+        telemetry::Stage::Visibility,
+        &family,
+        verified.tenant(),
+        async {
+            if request.question.kind != QuestionKind::DefectTriage {
+                return Ok(None);
+            }
+            let text = |name: &str| {
+                request.params.iter().find_map(|p| match (&p.name, &p.value) {
+                    (n, medulla_decision_types::decision::statistical::TypedValue::Text(v))
+                        if n == name && !v.is_empty() =>
+                    {
+                        Some(v.clone())
+                    }
+                    _ => None,
+                })
+            };
+            let graph = text("graph").ok_or_else(|| {
+                super::stat_support::invalid_parameter(
+                    "a defect_triage question needs the graph param naming the graph that holds the defect",
+                )
+            })?;
+            let defect_id = match &request.candidates {
+                medulla_decision_types::decision::statistical::CandidateSource::Declared {
+                    options,
+                } => match options.as_slice() {
+                    [only] => only.option_id.clone(),
+                    _ => {
+                        return Err(super::stat_support::invalid_parameter(
+                            "a defect_triage question declares exactly one option, the defect id",
+                        ))
+                    }
+                },
+                _ => {
+                    return Err(super::stat_support::invalid_parameter(
+                        "a defect_triage question declares its defect as the one option",
+                    ))
+                }
+            };
+            super::triage_read::read_triage_facts(state, &graph, verified, &defect_id)
+                .await
+                .map(Some)
+        },
+    )
+    .await?;
     let principal = verified.principal_persistence_id();
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
@@ -548,6 +597,7 @@ async fn serve(
                         .as_ref()
                         .map(|view| view.schema_sources.composed_digest()),
                     recommend_catalog: recommend_catalog.as_ref(),
+                    defect_triage: defect_triage.as_ref(),
                 };
                 decide_blocking(
                     &ctx,
@@ -1061,6 +1111,9 @@ fn knob_premises(sealing: &Sealing) -> Vec<PremiseRef> {
         QuestionKind::ResolveConflict => medulla_decision_types::decision::resolve_conflict::KNOBS,
         QuestionKind::CouncilCoordination => medulla_decision_types::decision::council::KNOBS,
         QuestionKind::MergeArming => medulla_decision_types::decision::lifecycle::KNOBS,
+        QuestionKind::DefectTriage => {
+            medulla_decision_outcome_types::decision::defect_triage::KNOBS
+        }
         QuestionKind::Promotion => medulla_decision_outcome_types::decision::promotion::KNOBS,
         QuestionKind::CriterionReview => {
             medulla_decision_types::decision::knob_families::criterion_review::KNOBS

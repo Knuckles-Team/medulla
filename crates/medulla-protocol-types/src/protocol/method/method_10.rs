@@ -520,6 +520,13 @@ $($variants)*
     DeliveryRetry {
         request: medulla_source_types::delivery::DeliveryRetryRequest,
     },
+    /// Triage one defect of the tenant graph (MEDULLA-SDLC-R004.3): the engine reads the defect,
+    /// its stack frames, their symbols and blame, decides through the `defect_triage` question
+    /// family, commits the sealed record through `DecisionLog` and writes the `affects` edges.
+    /// An unknown defect refuses `DEFECT_UNKNOWN` and a closed one `DEFECT_CLOSED`.
+    TriageDefect {
+        request: Box<medulla_decision_types::decision::defect_triage::TriageDefectRequest>,
+    },
     /// Read the derived state of every requirement row of `repo` at the changeset `rev`
     /// (MEDULLA-SDLC-R005.3), from the `:Requirement`, changeset and test-binding records
     /// the caller can see in `graph`. `spec_id` keeps only the rows of that spec. A `rev` the

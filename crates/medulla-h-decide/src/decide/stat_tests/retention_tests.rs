@@ -61,6 +61,7 @@ async fn compact_at(
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     };
     super::super::stat_retention::compact(
         &ctx,

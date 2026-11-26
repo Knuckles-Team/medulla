@@ -63,6 +63,7 @@ pub mod item_recommendation;
 pub mod jobs;
 pub mod knob_families;
 pub mod knobs;
+pub mod defect_triage;
 pub mod lifecycle;
 pub mod merge_arming;
 pub mod limit_types;

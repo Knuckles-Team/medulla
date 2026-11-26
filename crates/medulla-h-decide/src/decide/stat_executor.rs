@@ -77,6 +77,10 @@ pub(super) struct ExecutionContext<'a> {
     /// serving path from the graph its request names under the caller's access
     /// (MEDULLA-DECISION-ENGINE-R175.3); `None` for every other kind.
     pub(super) recommend_catalog: Option<&'a super::stat_recommend::CatalogRead>,
+    /// The facts a `defect_triage` question reads before the executor (the defect, its frames,
+    /// their symbols and blame, the open defects), by `triage_read::read_triage_facts`
+    /// (MEDULLA-SDLC-R004.3); `None` for every other kind.
+    pub(super) defect_triage: Option<&'a super::triage_read::TriageFacts>,
 }
 
 /// The pinned inputs of one decision.

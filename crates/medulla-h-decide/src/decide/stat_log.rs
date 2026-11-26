@@ -1170,6 +1170,7 @@ async fn serve(
             observation_windows: None,
             type_digest: None,
             recommend_catalog: None,
+            defect_triage: None,
         };
         match op {
             DecisionLogOp::RunRecord { record, .. } => super::run_record::stage(

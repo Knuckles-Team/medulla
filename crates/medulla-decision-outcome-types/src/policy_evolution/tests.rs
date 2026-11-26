@@ -391,7 +391,7 @@ fn refusals_render_their_stable_code_first() {
 fn outcome_refusal_enums_map_to_folded_codes() {
     use crate::decision::answer_ranking::AnswerRankingRefusal as Ranking;
     use crate::decision::context_budget::{ContextBudgetLimit, ContextBudgetRefusal as Budget};
-    use crate::decision::defect_triage::TriageAbstainReason as Triage;
+    use medulla_decision_types::decision::defect_triage::TriageAbstainReason as Triage;
     use crate::decision::rapid_r056::CertificateRefusal as Certificate;
     use medulla_decision_types::decision::codes;
     use medulla_decision_types::decision::record::outcome::DecisionRefusal;

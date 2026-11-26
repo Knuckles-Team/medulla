@@ -213,6 +213,8 @@ pub enum FamilyAnswer {
     /// the `harness_config` family (MEDULLA-DECISION-ENGINE-R128.12). The record
     /// seals it as `inputs.harness_evaluation`, not as `answer`.
     HarnessConfig(Box<super::harness_config::HarnessConfigEvaluationEvidence>),
+    /// The triage of one defect, or its abstention (MEDULLA-SDLC-R004.3).
+    DefectTriage(Box<crate::decision::defect_triage::TriageDecision>),
 }
 
 impl FamilyAnswer {

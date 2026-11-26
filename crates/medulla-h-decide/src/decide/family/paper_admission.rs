@@ -256,6 +256,7 @@ pub(in crate::decide) async fn with_similarity(
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     };
     let pinned = pinned_inputs(&ctx, &request.feature_schema, None)?;
     let staged = graph_vectors(state, verified.agent_id(), &source).await?;

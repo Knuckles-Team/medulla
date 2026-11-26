@@ -115,6 +115,7 @@ pub(super) fn grant(h: &Harness, record_id: &str, evaluator: &str, span: (u64, u
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     };
     let named = medulla_decision_types::decision::statistical::log::NamedEvaluator {
         principal: Some(principal_of(evaluator)),

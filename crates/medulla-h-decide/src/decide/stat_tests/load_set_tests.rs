@@ -230,6 +230,7 @@ fn decide_with_runtime(
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     };
     crate::decide::stat_decide::decide_blocking(
         &ctx,

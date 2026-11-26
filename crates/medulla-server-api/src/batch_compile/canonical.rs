@@ -822,6 +822,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DeliveryReport { .. }
         | Method::DeliveryStop { .. }
         | Method::DeliveryRetry { .. }
+        | Method::TriageDefect { .. }
         | Method::DeliveryStatus { .. }
         | Method::DeliveryList { .. }
         | Method::LifecycleTrace { .. }

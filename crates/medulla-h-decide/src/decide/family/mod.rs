@@ -30,6 +30,7 @@ mod council;
 mod curriculum_promotion;
 mod delegation_admission;
 mod edit_concentration;
+mod defect_triage;
 mod merge_arming;
 mod enrichment_schedule;
 mod evolution_round;
@@ -308,6 +309,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         usage_guidance::UsageGuidanceFamily;
     static BRANCHOUTCOMEFAMILY: branch_outcome::BranchOutcomeFamily =
         branch_outcome::BranchOutcomeFamily;
+    static DEFECTTRIAGEFAMILY: defect_triage::DefectTriageFamily = defect_triage::DefectTriageFamily;
     static MERGEARMINGFAMILY: merge_arming::MergeArmingFamily = merge_arming::MergeArmingFamily;
     static EDITCONCENTRATIONFAMILY: edit_concentration::EditConcentrationFamily =
         edit_concentration::EditConcentrationFamily;
@@ -512,6 +514,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ResolveConflict => &RESOLVECONFLICTFAMILY,
         QuestionKind::CouncilCoordination => &COUNCILFAMILY,
         QuestionKind::MergeArming => &MERGEARMINGFAMILY,
+        QuestionKind::DefectTriage => &DEFECTTRIAGEFAMILY,
         QuestionKind::Promotion => &PROMOTIONFAMILY,
     }
 }
@@ -617,6 +620,7 @@ mod tests {
             QuestionKind::ResolveConflict,
             QuestionKind::CouncilCoordination,
             QuestionKind::MergeArming,
+            QuestionKind::DefectTriage,
             QuestionKind::Promotion,
         ];
         let exhaustive = match kinds[0] {
@@ -701,6 +705,7 @@ mod tests {
             | QuestionKind::ResolveConflict
             | QuestionKind::CouncilCoordination
             | QuestionKind::MergeArming
+            | QuestionKind::DefectTriage
             | QuestionKind::Promotion
             | QuestionKind::RewardDecomposition
             | QuestionKind::CurriculumPromotion

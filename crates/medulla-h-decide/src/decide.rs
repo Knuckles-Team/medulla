@@ -221,6 +221,8 @@ mod definitions_read;
 #[cfg(feature = "decide")]
 mod steps_read;
 #[cfg(feature = "decide")]
+mod triage;
+mod triage_read;
 mod windows_read;
 #[cfg(feature = "decide")]
 mod topology_read;
@@ -242,6 +244,7 @@ pub use log::handle_decision_log;
 pub use loops::handle_loops;
 pub use stat_proposals::handle_revision_proposal_list;
 pub use statistical::handle_decide;
+pub use triage::{handle_triage_defect, TriageDefectOutcome};
 
 /// The caller's read-only SQL relations — the decision record views (EH-066) — when
 /// `query` can see them; `None` otherwise, or in a build without the Decide layer.

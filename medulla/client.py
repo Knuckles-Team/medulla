@@ -19426,6 +19426,24 @@ class MedullaClient:
         request = {"delivery_id": delivery_id, "run_trace_id": run_trace_id}
         return await self._delivery("DeliveryRetry", {"request": request}, graph)
 
+    async def triage_defect(
+        self, request: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Triage one defect of the tenant graph (MEDULLA-SDLC-R004.3).
+
+        ``request`` carries ``tenant_id``, ``graph``, ``defect_id``, the pinned
+        ``feature_schema`` and ``policy``, and optionally ``as_of_ms``, ``culprit``
+        (the changeset a bisect named) and ``path_owners`` (the principals read from
+        the repository's ownership file, highest priority first). The answer holds
+        the committed ``record_id``, the ``decision`` and ``edges_written``. An
+        unknown defect refuses ``DEFECT_UNKNOWN``; a closed, rejected or verified
+        one ``DEFECT_CLOSED``.
+        """
+        result = await self._send("TriageDefect", {"request": request}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("TriageDefect returned a non-object result")
+        return result
+
     async def _delivery(
         self, method: str, params: dict[str, Any], graph: str
     ) -> dict[str, Any]:

@@ -185,6 +185,7 @@ async fn a_role_grant_admits_its_holders_but_never_the_committer() {
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     };
     let committer = principal_of("decider");
     let rows = super::super::stat_evaluator::grant_rows(

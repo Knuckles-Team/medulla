@@ -366,6 +366,10 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        Method::TriageDefect { request } => {
+            dispatch_boxed(triage_defect(state, req.id, req.agent_id.as_deref(), verified_context, *request))
+                .await
+        }
         Method::DecisionFit { op } => {
             dispatch_boxed(async {
                 medulla_h_decide::decide::handle_decision_fit(state, req.id, verified_context, *op)
@@ -735,4 +739,68 @@ async fn activate_held_pack_release(
         Err(refusal) if refusal.starts_with("PACK_RELEASE_NOT_HELD") => applied,
         Err(refusal) => Response::err(req.id, refusal),
     }
+}
+
+/// `Method::TriageDefect` (MEDULLA-SDLC-R004.3): triage and commit the record through the
+/// decision family, then write one `affects` edge from the defect to each suspected symbol in
+/// one gateway-routed batch against the request's graph. A triage that abstained writes no edge
+/// and never changes the defect's status.
+async fn triage_defect(
+    state: &std::sync::Arc<tokio::sync::RwLock<medulla_server_api::state::ServerState>>,
+    req_id: u64,
+    caller: Option<&str>,
+    verified: &VerifiedRequestContext,
+    request: medulla_decision_types::decision::defect_triage::TriageDefectRequest,
+) -> Response {
+    use medulla_decision_types::decision::defect_triage::TriageDefectReceipt;
+    use medulla_protocol_types::result_contract::ingestion::TriageDefect as TriageDefectResult;
+    let graph = request.graph.clone();
+    let result = async {
+        let outcome = medulla_h_decide::decide::handle_triage_defect(state, req_id, verified, request)
+            .await?;
+        let mut edges_written = 0u32;
+        if outcome.decision.abstain_reason.is_none() {
+            let operations: Vec<serde_json::Value> = outcome
+                .decision
+                .affects_edges()
+                .into_iter()
+                .map(|(_, symbol)| {
+                    serde_json::json!({
+                        "op": "upsert_edge",
+                        "source": outcome.defect_node_id,
+                        "target": symbol,
+                        "properties": {
+                            "relationship": "affects",
+                            "tenant_id": verified.tenant(),
+                            "_owner": verified.agent_id(),
+                        },
+                    })
+                })
+                .collect();
+            if !operations.is_empty() {
+                let operations_msgpack = rmp_serde::to_vec_named(&operations)
+                    .map_err(|_| "triage batch encoding failed".to_string())?;
+                let response = dispatch_graph_op(
+                    state,
+                    &graph,
+                    req_id,
+                    caller,
+                    verified,
+                    Method::BatchUpdate { operations_msgpack },
+                )
+                .await;
+                if let Some(refusal) = response.refusal_text() {
+                    return Err(refusal);
+                }
+                edges_written = u32::try_from(operations.len()).unwrap_or(u32::MAX);
+            }
+        }
+        Ok(TriageDefectReceipt {
+            record_id: outcome.record_id,
+            decision: outcome.decision,
+            edges_written,
+        })
+    }
+    .await;
+    medulla_server_graph::dispatch::shared::typed_response::<TriageDefectResult>(req_id, result)
 }

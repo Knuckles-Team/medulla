@@ -11,6 +11,7 @@ use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_types::decision::defect_triage::{TriageAbstainReason, TriageDecision};
 use medulla_source_types::lifecycle::Severity;
 
 /// A triage that names a defect the engine does not hold.
@@ -105,49 +106,6 @@ impl TriageKnobs {
             duplicate_min_overlap_micros: overlap,
         }
     }
-}
-
-/// Why a triage abstained.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "snake_case")]
-pub enum TriageAbstainReason {
-    NoSymbolMatch,
-    NoOwner,
-    InsufficientEvidence,
-}
-
-impl medulla_decision_types::decision::record::outcome::DecisionRefusal for TriageAbstainReason {
-    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
-        match self {
-            Self::NoSymbolMatch => medulla_decision_types::decision::codes::TRIAGE_NO_SYMBOL_MATCH,
-            Self::NoOwner => medulla_decision_types::decision::codes::TRIAGE_NO_OWNER,
-            Self::InsufficientEvidence => {
-                medulla_decision_types::decision::codes::TRIAGE_INSUFFICIENT_EVIDENCE
-            }
-        }
-    }
-
-    fn detail(&self) -> String {
-        match self {
-            Self::NoSymbolMatch => "no symbol matches the symptom",
-            Self::NoOwner => "no owner for the suspected symbols",
-            Self::InsufficientEvidence => "not enough evidence to triage",
-        }
-        .to_string()
-    }
-}
-
-/// The triage of one defect.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct TriageDecision {
-    pub defect_id: String,
-    pub severity: Option<Severity>,
-    pub suspected_symbols: Vec<String>,
-    pub owner_principal: Option<String>,
-    pub duplicate_of: Option<String>,
-    pub abstain_reason: Option<TriageAbstainReason>,
-    pub evidence_refs: Vec<String>,
 }
 
 /// A code symbol named by a symptom frame, with its blame.
@@ -309,17 +267,6 @@ pub fn decide_triage(
         duplicate_of,
         abstain_reason: abstain,
         evidence_refs,
-    }
-}
-
-impl TriageDecision {
-    /// The `affects` edges (defect to symbol) this decision sets. The
-    /// `introducedBy` edge comes from the `introduced.bisect` derivation rule.
-    pub fn affects_edges(&self) -> Vec<(String, String)> {
-        self.suspected_symbols
-            .iter()
-            .map(|symbol| (self.defect_id.clone(), symbol.clone()))
-            .collect()
     }
 }
 

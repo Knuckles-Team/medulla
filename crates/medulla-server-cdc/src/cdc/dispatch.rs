@@ -302,6 +302,7 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         | Method::DeliveryReport { .. }
         | Method::DeliveryStop { .. }
         | Method::DeliveryRetry { .. }
+        | Method::TriageDefect { .. }
         | Method::FileDefect { .. }
         | Method::TransitionDefect { .. }
         | Method::ProposalDecide { .. } => Some("__lifecycle"),

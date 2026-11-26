@@ -289,6 +289,7 @@ fn decide_contrast_in(
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     };
     let batch = super::super::stat_decide::decide_blocking(
         &ctx,

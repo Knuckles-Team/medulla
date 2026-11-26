@@ -110,6 +110,7 @@ fn decide_team(
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

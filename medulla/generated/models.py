@@ -29498,6 +29498,59 @@ class FamilyAnswerHarnessConfig(BaseModel):
     value: HarnessConfigEvaluationEvidence
 
 
+class Severity(str, Enum):
+    critical = "critical"
+    high = "high"
+    medium = "medium"
+    low = "low"
+
+
+class TriageAbstainReason(str, Enum):
+    no_symbol_match = "no_symbol_match"
+    no_owner = "no_owner"
+    insufficient_evidence = "insufficient_evidence"
+
+
+class TriageDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    abstain_reason: TriageAbstainReason | None = None
+    defect_id: str
+    duplicate_of: str | None = None
+    evidence_refs: list[str]
+    owner_principal: str | None = None
+    severity: Severity | None = None
+    suspected_symbols: list[str]
+
+
+class TriageDefectRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    as_of_ms: Annotated[int, Field(ge=0)] | None = None
+    culprit: str | None = None
+    defect_id: str
+    feature_schema: ComponentDependency
+    graph: str
+    path_owners: list[str] = []
+    policy: DecisionPolicyRef
+    tenant_id: str
+
+
+class TriageDefectReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    decision: TriageDecision
+    edges_written: Annotated[int, Field(ge=0)]
+    record_id: str
+
+
+class FamilyAnswerDefectTriage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["defect_triage"]
+    value: TriageDecision
+
+
 FamilyAnswer = Annotated[
     FamilyAnswerTaskPlan
     | FamilyAnswerTopology
@@ -29521,7 +29574,8 @@ FamilyAnswer = Annotated[
     | FamilyAnswerStepVerdict
     | FamilyAnswerAdmission
     | FamilyAnswerDisclosureEvent
-    | FamilyAnswerHarnessConfig,
+    | FamilyAnswerHarnessConfig
+    | FamilyAnswerDefectTriage,
     Field(discriminator="type"),
 ]
 
@@ -44861,6 +44915,12 @@ __all__ = [
     "HarnessLesson",
     "HarnessLessonQuery",
     "HarnessLessonsFound",
+    "FamilyAnswerDefectTriage",
+    "Severity",
+    "TriageAbstainReason",
+    "TriageDecision",
+    "TriageDefectReceipt",
+    "TriageDefectRequest",
     "LifecycleRecordKind",
     "LifecycleRecordQuery",
     "LifecycleRecordStored",

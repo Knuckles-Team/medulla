@@ -1901,6 +1901,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-SDLC-R005.3 and R005.4: the served status refusals.
     // MEDULLA-SDLC-R019.14: the served delivery methods.
+    // MEDULLA-SDLC-R004.3 and R004.4: the defect triage refusals.
+    (
+        "TriageDefect",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DEFECT_UNKNOWN",
+            "DEFECT_CLOSED",
+            "PARAMETER_INVALID",
+            "ACCESS_DENIED",
+        ],
+    ),
     (
         "DeliveryOpen",
         &[

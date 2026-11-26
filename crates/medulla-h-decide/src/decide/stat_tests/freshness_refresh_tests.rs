@@ -135,6 +135,7 @@ fn ctx<'a>(h: &'a Harness, tenant: &'a str) -> ExecutionContext<'a> {
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     }
 }
 

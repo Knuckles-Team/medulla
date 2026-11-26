@@ -325,6 +325,7 @@ async fn plan_record_replays_from_inputs() {
         observation_windows: None,
         type_digest: None,
         recommend_catalog: None,
+        defect_triage: None,
     };
     let replayed = super::super::stat_replay::replay(&ctx, record).unwrap();
     assert_eq!(replayed.outcome, record.outcome);
