@@ -181,7 +181,7 @@ async fn resolve_cross_modal_target(
     ),
     String,
 > {
-    let (core, persistence, graph_type, owner) = {
+    let (core, persistence, graph_type, owner, importing) = {
         let s = state.read().await;
         let entry = s
             .registry
@@ -192,6 +192,7 @@ async fn resolve_cross_modal_target(
             s.persistence.clone(),
             entry.graph_type,
             entry.owner.clone(),
+            entry.importing.clone(),
         )
     };
     if !consensus_apply_is_authorized() {
@@ -202,6 +203,7 @@ async fn resolve_cross_modal_target(
             &txn.graph,
             graph_type,
             owner.as_deref(),
+            importing.as_deref(),
             AccessLevel::Write,
         )?;
     }

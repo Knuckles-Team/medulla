@@ -36,6 +36,8 @@ pub struct MutationCtx<'a> {
     pub graph_name: &'a str,
     pub graph_type: GraphType,
     pub owner: Option<&'a str>,
+    /// The import still writing this graph, from its registry entry (MEDULLA-DURABLE-KERNEL-R877.3).
+    pub importing: Option<&'a str>,
     pub isolation: &'a IsolationLayer,
     pub core: &'a Arc<GraphCore>,
     pub persistence: Option<&'a Arc<dyn PersistenceBackend>>,
@@ -565,6 +567,7 @@ mod response_dedup_scope_tests {
             graph_name: "shared-graph",
             graph_type: GraphType::Commons,
             owner: None,
+            importing: None,
             isolation: &isolation,
             core: &core,
             persistence: None,

@@ -473,6 +473,7 @@ async fn commit_served_modality(
         graph_name,
         graph_type: *graph_type,
         owner: owner.as_deref(),
+        importing: None,
         isolation,
         core: &core,
         persistence: persistence.as_ref(),

@@ -268,6 +268,7 @@ pub async fn handle_list_registered_servers(
             REGISTRY_GRAPH,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Read,
         ) {
             return Response::err(req_id, error);

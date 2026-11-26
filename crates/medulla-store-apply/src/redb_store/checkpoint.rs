@@ -222,15 +222,21 @@ fn apply_checkpoint_dump(
         .map_err(|e| e.to_string())?;
     drop(tables);
 
+    // A restore keeps the import marker the row already carries: a graph still being imported
+    // stays hidden through a checkpoint (MEDULLA-DURABLE-KERNEL-R877.3).
+    let mut catalog = write.control().open_table(GRAPH_META)?;
+    let importing = match catalog.get(graph).map_err(|e| e.to_string())? {
+        Some(existing) => decode_meta_record(graph, existing.value())?.importing,
+        None => None,
+    };
     let encoded = encode_meta_record(
         &dump.name,
         dump.graph_type,
         &dump.incarnation_id,
         dump.schema_sources.as_ref(),
+        importing.as_deref(),
     )?;
-    write
-        .control()
-        .open_table(GRAPH_META)?
+    catalog
         .insert(graph, encoded.as_slice())
         .map_err(|e| e.to_string())?;
     Ok(())

@@ -592,6 +592,7 @@ pub fn encode_meta_with_incarnation(
         gtype,
         incarnation_id,
         &medulla_graph_core::graph::GraphSchemaSources::default(),
+        None,
     )
 }
 
@@ -600,6 +601,7 @@ pub fn encode_meta_record(
     graph_type: GraphType,
     incarnation_id: &str,
     schema_sources: &medulla_graph_core::graph::GraphSchemaSources,
+    importing: Option<&str>,
 ) -> Result<Vec<u8>, String> {
     if name.trim().is_empty() || incarnation_id.trim().is_empty() {
         return Err("graph metadata identity fields must not be empty".to_string());
@@ -611,6 +613,7 @@ pub fn encode_meta_record(
         graph_type,
         incarnation_id: incarnation_id.to_string(),
         schema_sources: std::sync::Arc::new(schema_sources.clone()),
+        importing: importing.map(str::to_string),
     })
     .map_err(|error| format!("encode graph metadata: {error}"))
 }
@@ -700,6 +703,10 @@ pub struct GraphMetaRecord {
     pub incarnation_id: String,
     /// Required current graph schema authority.
     pub schema_sources: std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>,
+    /// The knowledge-bundle import still writing this graph (MEDULLA-DURABLE-KERNEL-R877.3).
+    /// Absent once the import is `ready`; a row without the field decodes as not importing.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub importing: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -710,6 +717,8 @@ pub struct GraphMetaRecordCurrent {
     pub graph_type: GraphType,
     pub incarnation_id: String,
     pub schema_sources: std::sync::Arc<medulla_graph_core::graph::GraphSchemaSources>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub importing: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -751,6 +760,7 @@ impl<'de> serde::Deserialize<'de> for GraphMetaRecord {
                     graph_type: value.graph_type,
                     incarnation_id: value.incarnation_id,
                     schema_sources,
+                    importing: value.importing,
                 })
             }
             GraphMetaRecordWire::V2(value) if value.schema_version == 2 => Ok(Self {
@@ -762,6 +772,7 @@ impl<'de> serde::Deserialize<'de> for GraphMetaRecord {
                     value.integrity_policy,
                 )
                 .map_err(D::Error::custom)?,
+                importing: None,
             }),
             GraphMetaRecordWire::Current(value) => Err(D::Error::custom(format!(
                 "{}: unsupported graph metadata schema version {}",
@@ -854,6 +865,7 @@ pub fn decode_legacy_meta_record(graph: &str, blob: &[u8]) -> Option<GraphMetaRe
         schema_sources: std::sync::Arc::new(
             medulla_graph_core::graph::GraphSchemaSources::default(),
         ),
+        importing: None,
     })
     .inspect(|_| {
         tracing::info!(

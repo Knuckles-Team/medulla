@@ -322,6 +322,7 @@ fn visible_to_authority(
             &entry.name,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             medulla_isolation::isolation::AccessLevel::Read,
         )
         .is_ok()

@@ -705,6 +705,7 @@ pub(super) async fn authorize_txn_plan(
             &graph,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Write,
         )?;
     }

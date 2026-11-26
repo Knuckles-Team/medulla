@@ -107,6 +107,8 @@ use incident::dispatch_incident_methods;
 #[cfg(feature = "security")]
 use lifecycle::apply_rbac_admin;
 pub(in crate::dispatch) use lifecycle::{create_graph, GraphLifecycleRequest};
+#[cfg(feature = "redb")]
+pub(in crate::dispatch) use lifecycle::mark_graph_ready;
 use lifecycle::{delete_graph, dispatch_get_identity, index_kind_label, index_validity_label};
 use quality::dispatch_quality_methods;
 use resource_cost::dispatch_resource_cost_methods;

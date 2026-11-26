@@ -91,6 +91,7 @@ async fn writable(state: &Arc<RwLock<ServerState>>, principal: &str) -> bool {
         GRAPH,
         GraphType::Global,
         None,
+        None,
         AccessLevel::Write,
     )
     .is_ok()

@@ -214,6 +214,7 @@ pub fn check_graph_op_access(
             graph_name,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             access,
         ) {
             return Err(Response::err(req_id, denied));

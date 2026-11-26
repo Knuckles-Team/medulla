@@ -189,6 +189,7 @@ pub(in crate::decide) async fn check_ledger_access(
         capacity_graph,
         entry.graph_type,
         entry.owner.as_deref(),
+        entry.importing.as_deref(),
         medulla_isolation::isolation::AccessLevel::Write,
     )
 }

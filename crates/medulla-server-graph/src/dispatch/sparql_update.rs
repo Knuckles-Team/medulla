@@ -298,6 +298,7 @@ async fn check_sparql_update_graph_access(
             graph,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Write,
         ) {
             return Err(Response::err(

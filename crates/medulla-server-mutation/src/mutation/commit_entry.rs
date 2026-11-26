@@ -53,6 +53,7 @@ pub(super) fn commit_prepare(
             ctx.graph_name,
             ctx.graph_type,
             ctx.owner,
+            ctx.importing,
             AccessLevel::Write,
         ) {
             return Err(Response::err(ctx.req_id, denied));

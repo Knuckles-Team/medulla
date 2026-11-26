@@ -792,6 +792,7 @@ async fn remember_thread_of(
         graph_name: ctx.graph_name,
         graph_type: *graph_type,
         owner: owner.as_deref(),
+        importing: None,
         isolation,
         core: ctx.core,
         persistence: ctx.persistence.as_ref(),

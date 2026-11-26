@@ -128,6 +128,7 @@ pub(super) mod served {
                     graph,
                     entry.graph_type,
                     entry.owner.as_deref(),
+                    entry.importing.as_deref(),
                     AccessLevel::Write,
                 )?;
                 Some(entry.core.clone())

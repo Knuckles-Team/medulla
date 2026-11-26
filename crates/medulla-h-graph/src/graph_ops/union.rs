@@ -28,6 +28,7 @@ async fn resolve_union_cores(
             name,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Read,
         )?;
         cores.push(entry.core.clone());
@@ -84,6 +85,7 @@ async fn handle_diff_against(
         &other_graph,
         other_entry.graph_type,
         other_entry.owner.as_deref(),
+        other_entry.importing.as_deref(),
         AccessLevel::Read,
     ) {
         return Response::err(req_id, denied);

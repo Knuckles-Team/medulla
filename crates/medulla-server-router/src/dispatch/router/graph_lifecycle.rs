@@ -411,6 +411,7 @@ async fn list_graphs(
                     name,
                     entry.graph_type,
                     entry.owner.as_deref(),
+                    entry.importing.as_deref(),
                     AccessLevel::Read,
                 ) {
                     Ok(()) => true,

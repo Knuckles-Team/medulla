@@ -190,6 +190,7 @@ async fn gather_shards(
                     name,
                     entry.graph_type,
                     entry.owner.as_deref(),
+                    entry.importing.as_deref(),
                     AccessLevel::Read,
                 )?;
                 cores.push(entry.core.clone());

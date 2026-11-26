@@ -62,6 +62,7 @@ pub(super) async fn commit_multi_graph(
                     &graph_name,
                     entry.graph_type,
                     entry.owner.as_deref(),
+                    entry.importing.as_deref(),
                     AccessLevel::Write,
                 ) {
                     return Response::err(req_id, denied);
@@ -111,6 +112,7 @@ pub async fn commit_coordinated_graph_methods_with_nonce(
                     &graph_name,
                     entry.graph_type,
                     entry.owner.as_deref(),
+                    entry.importing.as_deref(),
                     AccessLevel::Write,
                 ) {
                     return Response::err(req_id, denied);

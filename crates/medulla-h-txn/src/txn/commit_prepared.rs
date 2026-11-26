@@ -30,6 +30,7 @@ pub(super) fn commit_prepared_authorize(
             &txn.graph,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Write,
         ) {
             return Err(Response::err(req_id, denied));

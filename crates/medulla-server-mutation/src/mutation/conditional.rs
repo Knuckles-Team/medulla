@@ -167,6 +167,7 @@ where
             ctx.graph_name,
             ctx.graph_type,
             ctx.owner,
+            ctx.importing,
             AccessLevel::Read,
         ) {
             return Response::err(ctx.req_id, denied);
@@ -347,6 +348,7 @@ where
             ctx.graph_name,
             ctx.graph_type,
             ctx.owner,
+            ctx.importing,
             AccessLevel::Read,
         ) {
             return Response::err(ctx.req_id, denied);

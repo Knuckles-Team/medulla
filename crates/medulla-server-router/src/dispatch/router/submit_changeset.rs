@@ -115,6 +115,7 @@ mod served {
             repo,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             medulla_isolation::isolation::AccessLevel::Read,
         )?;
         Ok(Some(RepoGraph {

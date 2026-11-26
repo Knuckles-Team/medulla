@@ -21,7 +21,34 @@ impl RedbBackend {
                 count += 1;
             }
         }
+        self.load_importing_flags(state).await?;
         Ok(count)
+    }
+
+    /// Put the durable import marker of every registry row onto its registry entry. Runs inside
+    /// startup load, before the server answers a request, so a graph a crash left `importing`
+    /// is hidden by `check_graph_access` before any recovery pass runs
+    /// (MEDULLA-DURABLE-KERNEL-R877.3).
+    async fn load_importing_flags(
+        &self,
+        state: &Arc<RwLock<ServerState>>,
+    ) -> Result<(), String> {
+        let mut tasks = Vec::with_capacity(self.shards.len());
+        for writer in &self.shards {
+            let shard = writer
+                .shard
+                .upgrade()
+                .ok_or_else(|| "redb writer thread is gone".to_string())?;
+            tasks.push(move || {
+                medulla_store_apply::redb_store::dump::read_importing_graphs(&shard)
+            });
+        }
+        let rows = join_blocking_in_order(tasks).await?;
+        let mut s = state.write().await;
+        for (graph, import_id) in rows.into_iter().flatten() {
+            s.registry.set_importing(&graph, Some(import_id));
+        }
+        Ok(())
     }
 
     // PARALLEL cross-shard read fan-out (CONCEPT:AU-KG.backend.roadmap-f-parallel-cross,
@@ -151,6 +178,8 @@ impl RedbBackend {
                 incarnation_id,
             );
         }
+        drop(s);
+        self.load_importing_flags(state).await?;
         Ok(count)
     }
 

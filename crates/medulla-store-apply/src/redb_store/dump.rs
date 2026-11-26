@@ -636,6 +636,7 @@ mod keyset_page_tests {
             GraphType::Global,
             "incarnation:test:current",
             &sources,
+            None,
         )
         .unwrap();
         let decoded = decode_meta_record("graph", &encoded).unwrap();
@@ -812,6 +813,43 @@ pub fn read_all_graph_meta(
         .collect())
 }
 
+/// Every graph of `shard` whose durable registry row still names an import, as
+/// `(logical graph name, import id)` (MEDULLA-DURABLE-KERNEL-R877.3). A restart reads this before
+/// any request is served, so an `importing` graph is hidden without a recovery pass.
+pub fn read_importing_graphs(shard: &Shard) -> Result<Vec<(String, String)>, String> {
+    Ok(read_graph_catalog(shard)?
+        .into_iter()
+        .filter_map(|(_, record)| record.importing.map(|import| (record.name, import)))
+        .collect())
+}
+
+/// Set (`Some`) or clear (`None`) the import marker on the durable registry row of `graph_fname`,
+/// in one control-only catalog commit. Clearing is the `ready` flip of one graph; a row that does
+/// not exist is an error, so a marker never lands on a graph the catalog does not know.
+pub fn set_graph_importing(
+    shard: &Shard,
+    graph_fname: &str,
+    importing: Option<&str>,
+) -> Result<(), String> {
+    let record = read_graph_catalog(shard)?
+        .into_iter()
+        .find(|(key, _)| key == graph_fname)
+        .map(|(_, record)| record)
+        .ok_or_else(|| format!("graph '{graph_fname}' has no registry row"))?;
+    let encoded = encode_meta_record(
+        &record.name,
+        record.graph_type,
+        &record.incarnation_id,
+        record.schema_sources.as_ref(),
+        importing,
+    )?;
+    commit_catalog_rows(
+        shard,
+        "graph_importing",
+        &[(graph_fname.to_string(), encoded)],
+    )
+}
+
 /// A per-ATTEMPT operation id for one control-only catalog write.
 ///
 /// Unique per attempt, deliberately, exactly as `Shard`'s own `drain_batch`
@@ -903,6 +941,7 @@ pub fn upgrade_legacy_graph_meta(shard: &Shard) -> Result<usize, String> {
                 record.graph_type,
                 &record.incarnation_id,
                 record.schema_sources.as_ref(),
+                record.importing.as_deref(),
             )?;
             stale.push((key, encoded));
         }

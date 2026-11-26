@@ -3,10 +3,13 @@
 //! The handlers live in `medulla_h_admin::knowledge_bundle`. The export answers from there. The
 //! import is verified there and committed here: each target graph is created through the graph
 //! lifecycle path, its triples commit through the `AddTriples` gateway, and its provenance rows
-//! and embeddings commit as one `BatchUpdate`. The import is one `importing` control-graph record:
-//! its graphs are hidden from every read until one write sets the record `ready`, and a refused
-//! step deletes every graph this import created. A crash leaves the record `importing`, and the
-//! leader tick (`medulla_h_jobs`, bundle import recovery) deletes the graphs it names.
+//! and embeddings commit as one `BatchUpdate`. The import is one `importing` control-graph record
+//! and each graph it creates carries the import id on its durable registry row, written with the
+//! creation: `check_graph_access` hides the graph until the import clears that marker, and the
+//! import's own steps run under the import id (`importing::within_import`). The record is set
+//! `ready` last. A refused step deletes every graph this import created. A crash leaves the record
+//! `importing` and the marked graphs hidden, in this process and after a restart, and the leader
+//! tick (`medulla_h_jobs`, bundle import recovery) deletes the graphs the record names.
 
 use super::*;
 #[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]
@@ -105,15 +108,28 @@ pub(super) async fn serve_bundle_import(
         if let Err(refusal) = write_record(record.clone()).await {
             return Response::err(req.id, refusal);
         }
-        importing::hide(targets.iter().cloned());
         importing::mark_live(&record.import_id);
-        let scope: std::collections::BTreeSet<String> = targets.iter().cloned().collect();
-        let outcome = importing::within_import(scope.clone(), async {
+        let outcome = importing::within_import(record.import_id.clone(), async {
             let mut created: Vec<String> = Vec::new();
-            let committed = commit_plan(state, req, verified, &plan, &mut created).await;
+            let committed =
+                commit_plan(state, req, verified, &plan, &record.import_id, &mut created).await;
+            // Every graph's marker clears first and the record is set `ready` last, so a crash
+            // between the two finds the record `importing` and the recovery pass deletes the
+            // whole import, never a part of it.
             let committed = match committed {
-                // The one write that makes every graph of the import readable.
-                Ok(()) => write_record(record.with_state(ImportState::Ready)).await,
+                Ok(()) => {
+                    let mut cleared = Ok(());
+                    for graph in &targets {
+                        if let Err(error) = mark_graph_ready(state, graph).await {
+                            cleared = Err(error);
+                            break;
+                        }
+                    }
+                    match cleared {
+                        Ok(()) => write_record(record.with_state(ImportState::Ready)).await,
+                        Err(refusal) => Err(refusal),
+                    }
+                }
                 Err(refusal) => Err(refusal),
             };
             if committed.is_err() {
@@ -128,7 +144,6 @@ pub(super) async fn serve_bundle_import(
             committed
         })
         .await;
-        importing::reveal(targets.iter());
         importing::mark_done(&record.import_id);
         match outcome {
             Ok(()) => {
@@ -185,10 +200,11 @@ async fn commit_plan(
     req: &DispatchHeader,
     verified: &VerifiedRequestContext,
     plan: &medulla_h_admin::knowledge_bundle::ImportPlan,
+    import_id: &str,
     created: &mut Vec<String>,
 ) -> Result<(), String> {
     for graph in plan.graphs.iter().filter(|graph| !graph.skip) {
-        let request = graph_request(req, verified, "create", &graph.target)?;
+        let request = graph_request(req, verified, "create", &graph.target)?.importing(import_id);
         let response = dispatch_boxed(create_graph(
             state,
             request,

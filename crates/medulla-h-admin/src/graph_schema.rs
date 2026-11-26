@@ -253,6 +253,7 @@ where
         graph_name,
         graph_type: entry.graph_type,
         owner: entry.owner.as_deref(),
+        importing: entry.importing.as_deref(),
         isolation: &isolation,
         core: &entry.core,
         persistence: persistence.as_ref(),

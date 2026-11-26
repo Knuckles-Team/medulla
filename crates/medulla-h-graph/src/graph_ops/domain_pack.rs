@@ -153,6 +153,7 @@ pub async fn handle_domain_pack(
             graph,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Read,
         ) {
             return Response::err(req_id, denied);

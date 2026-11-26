@@ -243,6 +243,13 @@ pub enum Cmd {
         principal: String,
         reply: std::sync::mpsc::SyncSender<Result<(), String>>,
     },
+    /// Set or clear the knowledge-bundle import marker on the graph's durable registry row
+    /// (MEDULLA-DURABLE-KERNEL-R877.3).
+    SetGraphImporting {
+        graph: String,
+        importing: Option<String>,
+        reply: std::sync::mpsc::SyncSender<Result<(), String>>,
+    },
     /// TEST-ONLY tamper of one audit entry (see `test_tamper_audit_entry`).
     #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
     TestTamperAudit {

@@ -253,6 +253,7 @@ async fn dispatch_check_access(
         &graph,
         entry.graph_type,
         owner,
+        entry.importing.as_deref(),
         medulla_isolation::isolation::AccessLevel::Read,
     ) {
         return Response::err(req_id, denied);

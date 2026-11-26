@@ -67,6 +67,7 @@ async fn open_graph(
         graph,
         entry.graph_type,
         entry.owner.as_deref(),
+        entry.importing.as_deref(),
         level,
     )?;
     Ok((Arc::clone(&entry.core), guard.isolation.clone()))

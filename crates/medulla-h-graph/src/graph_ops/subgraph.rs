@@ -276,6 +276,7 @@ pub(super) async fn handle_vf2_subgraph_match(
             &pattern_graph_name,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Read,
         ) {
             return Response::err(req_id, denied);

@@ -49,6 +49,7 @@ async fn gateway_mutation_context<'a>(
         graph_name: ctx.graph_name,
         graph_type: *gtype,
         owner: owner.as_deref(),
+        importing: None,
         isolation: iso,
         core: &ctx.core,
         persistence: ctx.persistence.as_ref(),

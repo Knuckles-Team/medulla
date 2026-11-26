@@ -374,6 +374,7 @@ struct BoltGraphContext {
         Option<Arc<std::sync::RwLock<medulla_core::registry::MaterializationManifest>>>,
     graph_type: medulla_protocol_types::protocol::GraphType,
     owner: Option<String>,
+    importing: Option<String>,
     isolation: medulla_isolation::isolation::IsolationLayer,
     persistence: Option<Arc<dyn medulla_server_api::api::persistence::PersistenceBackend>>,
     #[cfg(feature = "streaming")]
@@ -402,6 +403,7 @@ async fn graph_context(session: &BoltSession) -> Result<(String, BoltGraphContex
             materialization_manifest,
             graph_type: entry.graph_type,
             owner: entry.owner.clone(),
+            importing: entry.importing.clone(),
             isolation: state.isolation.clone(),
             persistence: state.persistence.clone(),
             #[cfg(feature = "streaming")]
@@ -444,6 +446,7 @@ fn authorize_cypher(
         graph,
         context.graph_type,
         context.owner.as_deref(),
+        context.importing.as_deref(),
         level,
     )
     .map_err(|_| {
@@ -596,6 +599,7 @@ async fn commit_writes(
         graph_name: &graph,
         graph_type: graph_context.graph_type,
         owner: graph_context.owner.as_deref(),
+        importing: graph_context.importing.as_deref(),
         isolation: &graph_context.isolation,
         core: &graph_context.core,
         persistence: graph_context.persistence.as_ref(),

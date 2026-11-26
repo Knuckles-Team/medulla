@@ -55,6 +55,7 @@ pub(super) async fn begin_txn(
             &graph_name,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Write,
         ) {
             return Response::err(req_id, denied);

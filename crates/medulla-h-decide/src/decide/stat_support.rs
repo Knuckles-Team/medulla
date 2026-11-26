@@ -181,6 +181,7 @@ pub(super) async fn graph_at_level(
         graph,
         entry.graph_type,
         entry.owner.as_deref(),
+        entry.importing.as_deref(),
         level,
     )?;
     Ok((Arc::clone(&entry.core), guard.isolation.clone()))

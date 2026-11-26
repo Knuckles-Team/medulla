@@ -260,6 +260,7 @@ pub(super) async fn handle_owl_reason_distributed(
                 name,
                 entry.graph_type,
                 entry.owner.as_deref(),
+                entry.importing.as_deref(),
                 AccessLevel::Read,
             ) {
                 return Response::err(req_id, denied);

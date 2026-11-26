@@ -115,6 +115,7 @@ pub fn check_graph_access(
     graph_name: &str,
     graph_type: medulla_protocol_types::protocol::GraphType,
     graph_owner: Option<&str>,
+    importing: Option<&str>,
     access: AccessLevel,
 ) -> Result<(), String> {
     check_graph_access_with_policy(
@@ -123,6 +124,7 @@ pub fn check_graph_access(
         graph_name,
         graph_type,
         graph_owner,
+        importing,
         access,
     )
 }
@@ -133,12 +135,15 @@ fn check_graph_access_with_policy(
     graph_name: &str,
     graph_type: medulla_protocol_types::protocol::GraphType,
     graph_owner: Option<&str>,
+    importing: Option<&str>,
     access: AccessLevel,
 ) -> Result<(), String> {
     let agent = require_verified_caller(caller)?;
     require_provisioned_policy(isolation)?;
-    // MEDULLA-DURABLE-KERNEL-R877.3: a graph an import is still writing answers as any denied graph.
-    if importing::hidden_from_current(graph_name) {
+    // MEDULLA-DURABLE-KERNEL-R877.3: a graph an import is still writing answers as any denied
+    // graph. `importing` is the durable marker of the graph's registry entry; only work running
+    // under that import's own id passes.
+    if importing::hides(importing) {
         return Err(format!(
             "ACCESS_DENIED: verified principal lacks {access:?} access to graph '{graph_name}'"
         ));
@@ -1231,6 +1236,7 @@ mod universal_row_read_tests {
             "agent:alice",
             medulla_protocol_types::protocol::GraphType::Agent,
             Some("agent:alice"),
+            None,
             AccessLevel::Write,
         )
         .is_ok());
@@ -1245,6 +1251,7 @@ mod universal_row_read_tests {
             "agent:alice",
             medulla_protocol_types::protocol::GraphType::Agent,
             Some("agent:alice"),
+            None,
             AccessLevel::Write,
         );
         assert!(denied.is_err());

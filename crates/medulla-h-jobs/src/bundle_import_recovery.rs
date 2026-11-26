@@ -1,14 +1,15 @@
 //! The recovery pass of knowledge-bundle imports (MEDULLA-DURABLE-KERNEL-R877.3).
 //!
 //! An import writes one `BundleImport` record in the control graph in the `importing` state before
-//! it creates any target graph, hides those graphs from every read, and sets the record `ready`
-//! in one write after the last step. A process that stopped in between leaves the record
-//! `importing`. This pass, run by the leader tick, finds such records: it hides the graphs they
-//! name again (a restart emptied the in-process set), and for a record older than its grace that
-//! this process is not running, deletes the graphs and records the import `aborted`. It is
-//! idempotent: a second pass finds the record `aborted` and does nothing. The clock is an input.
+//! it creates any target graph. Each graph it creates carries the import id on its durable
+//! registry row, so `check_graph_access` hides it from every read, and the import sets the record
+//! `ready` after the last step. A process that stopped in between leaves the record `importing`
+//! and the graphs marked: they stay hidden after a restart with no help from this pass, because
+//! the marker is loaded with the registry. This pass, run by the leader tick, finds such records
+//! and, for one older than its grace that this process is not running, deletes the graphs and
+//! records the import `aborted`. It is idempotent: a second pass finds the record `aborted` and
+//! does nothing. The clock is an input.
 
-use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use medulla_protocol_types::protocol::{Method, Request};
@@ -102,7 +103,8 @@ fn importing_records(core: &medulla_graph_core::graph::GraphCore) -> Vec<ImportR
 }
 
 /// Delete the graphs of every `importing` import that is stale at `now_ms` and record it
-/// `aborted`; return how many imports were aborted. Graphs of an `importing` import stay hidden.
+/// `aborted`; return how many imports were aborted. Graphs of an `importing` import stay hidden
+/// by their registry marker.
 pub async fn recover_bundle_imports(
     state: &Arc<RwLock<ServerState>>,
     now_ms: u64,
@@ -120,14 +122,11 @@ pub async fn recover_bundle_imports(
         if importing::is_live(&record.import_id) {
             continue;
         }
-        // A restart emptied the set: the half-written graphs are hidden again before anything else.
-        importing::hide(record.graphs.iter().cloned());
         if !record.is_stale(now_ms) {
             continue;
         }
-        let scope: BTreeSet<String> = record.graphs.iter().cloned().collect();
         let session = format!("{SERVICE}:{}", record.import_id);
-        importing::within_import(scope, async {
+        importing::within_import(record.import_id.clone(), async {
             for graph in record.graphs.iter().rev() {
                 medulla_server_api::api::reentry::ensure_graph_resident(state, graph).await;
                 if !state.read().await.registry.exists(graph) {
@@ -158,7 +157,6 @@ pub async fn recover_bundle_imports(
             Method::BatchUpdate { operations_msgpack },
         )
         .await?;
-        importing::reveal(record.graphs.iter());
         aborted += 1;
     }
     Ok(aborted)

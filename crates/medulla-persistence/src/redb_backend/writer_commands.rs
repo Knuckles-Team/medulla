@@ -204,6 +204,20 @@ macro_rules! writer_command_arms {
             let _ = reply.send(result);
             false
         }
+        Cmd::SetGraphImporting {
+            graph,
+            importing,
+            reply,
+        } => {
+            flush(pending);
+            let result = medulla_store_apply::redb_store::dump::set_graph_importing(
+                shard,
+                &graph,
+                importing.as_deref(),
+            );
+            let _ = reply.send(result);
+            false
+        }
         #[cfg(all(any(test, feature = "test-support"), feature = "security"))]
         Cmd::TestTamperAudit { graph, seq, reply } => {
             flush(pending);

@@ -272,6 +272,7 @@ pub(super) async fn resolve_submit_graph_core(
         graph,
         entry.graph_type,
         entry.owner.as_deref(),
+        entry.importing.as_deref(),
         AccessLevel::Read,
     ) {
         return Err(Response::err(req_id, error));

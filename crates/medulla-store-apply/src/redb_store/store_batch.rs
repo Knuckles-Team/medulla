@@ -561,6 +561,7 @@ pub(crate) fn resolve_default_graph_meta_update(
                 record.graph_type,
                 &record.incarnation_id,
                 sources.as_ref(),
+                record.importing.as_deref(),
             )?)
         }
         (Some(_), None) => None,
@@ -575,6 +576,7 @@ pub(crate) fn resolve_default_graph_meta_update(
                 GraphType::Global,
                 &batch.batch_id,
                 sources.map(std::sync::Arc::as_ref).unwrap_or(&defaults),
+                None,
             )?)
         }
     };
@@ -600,6 +602,7 @@ pub(crate) fn write_mutation_batch_graph_meta_row(
                 graph_type,
                 &batch.batch_id,
                 schema_sources_update.as_deref().unwrap_or(&defaults),
+                None,
             )?;
             meta.insert(graph_fname, encoded.as_slice())
                 .map_err(|e| e.to_string())?;

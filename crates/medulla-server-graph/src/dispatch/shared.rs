@@ -107,6 +107,7 @@ pub fn authorized_graph_read(
         graph,
         entry.graph_type,
         entry.owner.as_deref(),
+        entry.importing.as_deref(),
         AccessLevel::Read,
     )?;
     let authority = GraphReadAuthority::from_verified(verified, &state.isolation)?;

@@ -200,6 +200,7 @@ pub async fn try_handle_gateway(
         graph_name,
         graph_type: *graph_type,
         owner: owner.as_deref(),
+        importing: None,
         isolation,
         core,
         persistence,

@@ -105,6 +105,7 @@ async fn authorize_graph(
         graph,
         entry.graph_type,
         entry.owner.as_deref(),
+        entry.importing.as_deref(),
         access,
     )
 }

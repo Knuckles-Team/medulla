@@ -59,6 +59,7 @@ pub(super) async fn program_score_rows(
             &source.graph,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Read,
         )
         .is_err()

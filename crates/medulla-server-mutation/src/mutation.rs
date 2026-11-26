@@ -279,6 +279,7 @@ mod tests {
             graph_name: "agent:owner",
             graph_type: medulla_protocol_types::protocol::GraphType::Agent,
             owner: Some("owner"),
+            importing: None,
             isolation: &isolation,
             core: &core,
             persistence: None,

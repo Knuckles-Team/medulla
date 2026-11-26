@@ -54,6 +54,10 @@ pub struct GraphEntry {
     pub graph_type: GraphType,
     pub core: Arc<GraphCore>,
     pub owner: Option<String>,
+    /// The id of the knowledge-bundle import still writing this graph, while there is one
+    /// (MEDULLA-DURABLE-KERNEL-R877.3). The durable `importing` row of the graph's own shard is
+    /// the authority; this is its loaded face, and `check_graph_access` reads it from here.
+    pub importing: Option<String>,
     /// Immutable identity of this create/delete incarnation.  A same-name
     /// recreate always receives a different value, so an asynchronous opener or
     /// cached handle can be fenced before it publishes into the new graph.
@@ -70,6 +74,7 @@ pub struct CatalogRecord {
     pub name: String,
     pub graph_type: GraphType,
     pub owner: Option<String>,
+    pub importing: Option<String>,
     pub incarnation_id: String,
     cancellation: Arc<AtomicBool>,
 }
@@ -377,6 +382,7 @@ pub struct LazyOpenTicket {
     name: String,
     graph_type: GraphType,
     owner: Option<String>,
+    importing: Option<String>,
     incarnation_id: String,
     cancellation: Arc<AtomicBool>,
     materializer: Option<Arc<dyn GraphMaterializer>>,
@@ -489,6 +495,7 @@ impl GraphRegistry {
                 graph_type: GraphType::Commons,
                 core: Arc::new(GraphCore::new()),
                 owner: None,
+                importing: None,
                 incarnation_id: commons_incarnation.clone(),
                 cancellation: commons_cancel.clone(),
             },
@@ -500,6 +507,7 @@ impl GraphRegistry {
                 name: "__commons__".to_string(),
                 graph_type: GraphType::Commons,
                 owner: None,
+                importing: None,
                 incarnation_id: commons_incarnation.clone(),
                 cancellation: commons_cancel,
             },
@@ -653,6 +661,7 @@ impl GraphRegistry {
                 name: name.to_string(),
                 graph_type,
                 owner: owner.clone(),
+                importing: None,
                 incarnation_id: incarnation_id.clone(),
                 cancellation: cancellation.clone(),
             },
@@ -671,6 +680,7 @@ impl GraphRegistry {
                 graph_type,
                 core,
                 owner,
+                importing: None,
                 incarnation_id,
                 cancellation,
             },
@@ -721,6 +731,7 @@ impl GraphRegistry {
                 name: name.to_string(),
                 graph_type,
                 owner: owner.clone(),
+                importing: None,
                 incarnation_id: incarnation_id.clone(),
                 cancellation: cancellation.clone(),
             },
@@ -739,6 +750,7 @@ impl GraphRegistry {
                 graph_type,
                 core: core.clone(),
                 owner,
+                importing: None,
                 incarnation_id,
                 cancellation,
             },
@@ -783,6 +795,7 @@ impl GraphRegistry {
                 name: name.to_string(),
                 graph_type,
                 owner,
+                importing: None,
                 incarnation_id: incarnation_id.clone(),
                 cancellation,
             },
@@ -805,6 +818,7 @@ impl GraphRegistry {
                 name: entry.name.clone(),
                 graph_type: entry.graph_type,
                 owner: entry.owner.clone(),
+                importing: entry.importing.clone(),
                 incarnation_id: entry.incarnation_id.clone(),
                 cancellation: entry.cancellation.clone(),
                 materializer: self.materializer.clone(),
@@ -815,6 +829,7 @@ impl GraphRegistry {
             name: record.name,
             graph_type: record.graph_type,
             owner: record.owner,
+            importing: record.importing,
             incarnation_id: record.incarnation_id,
             cancellation: record.cancellation,
             materializer: self.materializer.clone(),
@@ -1012,6 +1027,7 @@ impl GraphRegistry {
                 graph_type: ticket.graph_type,
                 core,
                 owner: ticket.owner.clone(),
+                importing: ticket.importing.clone(),
                 incarnation_id: ticket.incarnation_id.clone(),
                 cancellation: ticket.cancellation.clone(),
             },
@@ -1408,6 +1424,18 @@ impl GraphRegistry {
     /// first (see `dispatch_graph_op`).
     pub fn get(&self, name: &str) -> Option<&GraphEntry> {
         self.graphs.get(name)
+    }
+
+    /// Set or clear the import that is still writing `name` (MEDULLA-DURABLE-KERNEL-R877.3), on the
+    /// catalog row and on the resident entry together. The caller has just written the durable
+    /// `importing` row of the graph; this is the loaded face `check_graph_access` reads.
+    pub fn set_importing(&mut self, name: &str, importing: Option<String>) {
+        if let Some(mut record) = self.catalog.get_mut(name) {
+            record.importing = importing.clone();
+        }
+        if let Some(entry) = self.graphs.get_mut(name) {
+            entry.importing = importing;
+        }
     }
 
     /// Get a mutable reference to a graph entry. Resident-only (see `get`).

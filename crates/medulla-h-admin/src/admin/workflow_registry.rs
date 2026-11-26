@@ -52,6 +52,7 @@ pub async fn handle_workflow_registry_read(
             graph,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
             AccessLevel::Read,
         ) {
             return Response::err(req_id, denied);

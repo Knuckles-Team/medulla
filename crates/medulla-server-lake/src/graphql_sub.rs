@@ -397,6 +397,7 @@ async fn authorized_snapshot(
             graph,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
         )?;
         (entry.core.clone(), entry.incarnation_id.clone())
     };
@@ -418,6 +419,7 @@ async fn authorized_snapshot(
             graph,
             entry.graph_type,
             entry.owner.as_deref(),
+            entry.importing.as_deref(),
         )?
     };
     authority.filter_view(&mut view);
@@ -434,6 +436,7 @@ fn graph_read_authority(
     graph: &str,
     graph_type: GraphType,
     owner: Option<&str>,
+    importing: Option<&str>,
 ) -> Result<GraphReadAuthority, GraphAccessError> {
     check_graph_access(
         isolation,
@@ -441,6 +444,7 @@ fn graph_read_authority(
         graph,
         graph_type,
         owner,
+        importing,
         AccessLevel::Read,
     )
     .map_err(|_| GraphAccessError::Denied)?;
@@ -992,6 +996,7 @@ mod tests {
             "agent:actor-b",
             GraphType::Agent,
             Some("actor-b"),
+            None,
         )
         .is_err());
     }
@@ -1005,6 +1010,7 @@ mod tests {
             &context,
             "__commons__",
             GraphType::Commons,
+            None,
             None,
         )
         .unwrap();
@@ -1059,6 +1065,7 @@ mod tests {
             &context,
             "__commons__",
             GraphType::Commons,
+            None,
             None,
         )
         .unwrap();

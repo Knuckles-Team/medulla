@@ -1032,6 +1032,7 @@ async fn try_handle_reasoning_policy(
                 ctx.graph_name,
                 ctx.graph_type,
                 ctx.owner,
+                ctx.importing,
                 AccessLevel::Write,
             )
             .is_ok();

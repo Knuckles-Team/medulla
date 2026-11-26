@@ -78,6 +78,9 @@ pub struct GraphLifecycleRequest {
     tenant_scope: String,
     /// The verified principal, recorded as the graph's creator (MEDULLA-IDENTITY-R700.7).
     principal: String,
+    /// The knowledge-bundle import this creation belongs to (MEDULLA-DURABLE-KERNEL-R877.3): the
+    /// new graph's registry row and entry carry the id until the import marks it ready.
+    importing: Option<String>,
 }
 
 impl GraphLifecycleRequest {
@@ -97,6 +100,7 @@ impl GraphLifecycleRequest {
             idempotency_key,
             tenant_scope: carrier.tenant_scope().to_string(),
             principal: verified.principal().to_string(),
+            importing: None,
         })
     }
 }
@@ -112,6 +116,15 @@ impl GraphLifecycleRequest {
 }
 
 impl GraphLifecycleRequest {
+    /// Create the graph in the `importing` state of import `import_id`: hidden from every read
+    /// by `check_graph_access` from the moment it is published, until [`mark_graph_ready`].
+    pub fn importing(mut self, import_id: &str) -> Self {
+        self.importing = Some(import_id.to_string());
+        self
+    }
+}
+
+impl GraphLifecycleRequest {
     /// Commit under its own attempt nonce. An engine-internal lifecycle step
     /// (for example a projection worker creating its reserved graph) is a
     /// separate durable operation from the caller's write that follows it; it
@@ -122,6 +135,30 @@ impl GraphLifecycleRequest {
         self
     }
 }
+/// End the `importing` state of `graph_name` (MEDULLA-DURABLE-KERNEL-R877.3): clear the marker on
+/// its durable registry row, then on its registry entry, so the graph answers reads again. The
+/// durable row goes first: a crash between the two leaves the graph hidden, never half-visible.
+#[cfg(feature = "redb")]
+pub async fn mark_graph_ready(
+    state: &Arc<RwLock<ServerState>>,
+    graph_name: &str,
+) -> Result<(), String> {
+    use medulla_persistence::AsRedb;
+    let backend = timed_read(state).await.persistence.clone();
+    let Some(backend) = backend else {
+        return Err("ENGINE_UNAVAILABLE: ending an import requires durable persistence".to_string());
+    };
+    if let Some(redb) = backend.as_redb() {
+        redb.set_graph_importing(&medulla_kernel::persist::sanitize(graph_name), None)
+            .await?;
+    }
+    timed_write(state)
+        .await
+        .registry
+        .set_importing(graph_name, None);
+    Ok(())
+}
+
 pub async fn create_graph(
     state: &Arc<RwLock<ServerState>>,
     request: GraphLifecycleRequest,
@@ -182,6 +219,7 @@ async fn create_declared_graph(
         idempotency_key,
         tenant_scope,
         principal,
+        importing,
     } = request;
     // Lifecycle shares the same per-graph serialization lane as ordinary
     // MutationBatch/txn writes.  The durable identity must land before the
@@ -270,8 +308,26 @@ async fn create_declared_graph(
             }
         }
     }
+    // The import marker lands on the graph's durable registry row before the registry publishes
+    // the graph, so no reader and no restart ever sees it unmarked.
+    #[cfg(feature = "redb")]
+    if let Some(import_id) = importing.as_deref() {
+        use medulla_persistence::AsRedb;
+        if let Some(redb) = backend.as_redb() {
+            if let Err(error) = redb.set_graph_importing(&graph_fname, Some(import_id)).await {
+                return Response::err(
+                    req_id,
+                    medulla_protocol_types::error_registry::classify_refusal(
+                        "INTERNAL",
+                        "durable graph import marker failed: ",
+                        &error,
+                    ),
+                );
+            }
+        }
+    }
     #[cfg(not(feature = "redb"))]
-    let _ = &principal;
+    let _ = (&principal, &importing);
     let committed_version = match read_committed_graph_version(&backend, &graph_fname, req_id).await
     {
         Ok(version) => version,
@@ -299,6 +355,7 @@ async fn create_declared_graph(
         committed_version,
     ) {
         Ok(()) => {
+            s.registry.set_importing(&graph_name, importing);
             medulla_kernel::metrics::process().set_graph_size(&graph_name, 0, 0);
             // Close the CreateGraph RBAC-provisioning gap (P0 tenant-graph
             // fix): a tenant graph's `owner` field is otherwise dead under
@@ -407,6 +464,7 @@ async fn delete_declared_graph(
         idempotency_key,
         tenant_scope,
         principal: _,
+        importing: _,
     } = request;
     // Fence gateway/txn writes for this graph across durable purge and RAM
     // teardown.  A retry after a crash at that boundary reconciles from the
@@ -427,6 +485,7 @@ async fn delete_declared_graph(
                     graph_name,
                     record.graph_type,
                     record.owner.as_deref(),
+                    record.importing.as_deref(),
                     AccessLevel::Write,
                 )
                 .err()
@@ -527,6 +586,7 @@ async fn teardown_deleted_graph_in_memory(
                 graph_name,
                 entry.graph_type,
                 entry.owner.as_deref(),
+                entry.importing.as_deref(),
                 AccessLevel::Write,
             ) {
                 return Response::err(req_id, denied);

@@ -49,6 +49,30 @@ impl RedbBackend {
             .map_err(|error| format!("record_graph_creator join error: {error}"))??
     }
 
+    /// Set (`Some(import id)`) or clear (`None`) the import marker on the durable registry row of
+    /// `graph_fname`; the registry entry loads it back at the next start
+    /// (MEDULLA-DURABLE-KERNEL-R877.3).
+    pub async fn set_graph_importing(
+        &self,
+        graph_fname: &str,
+        importing: Option<&str>,
+    ) -> Result<(), String> {
+        let (reply, rx) = std::sync::mpsc::sync_channel(1);
+        self.enqueue(
+            graph_fname,
+            Cmd::SetGraphImporting {
+                graph: graph_fname.to_string(),
+                importing: importing.map(str::to_string),
+                reply,
+            },
+            "set_graph_importing",
+        )
+        .await?;
+        tokio::task::spawn_blocking(move || await_writer_reply(&rx, "set_graph_importing"))
+            .await
+            .map_err(|error| format!("set_graph_importing join error: {error}"))??
+    }
+
     /// The writes per principal on `graph_fname` for ledger days `>= since_day`, highest count
     /// first, then principal id, at most 256 entries.
     pub async fn write_days(
