@@ -662,11 +662,6 @@ knobs! {
     enrichment_topic_min_confidence_bp: u64 = "enrichment.topic_min_confidence_bp", U64(3_000), [0, 10_000], "basis points", Tunable;
     /// Most nodes one `Project` call reads (MEDULLA-DECISION-ENGINE-R614.2.4).
     enrichment_projection_batch: u64 = "enrichment.projection_batch", U64(10_000), [100, 100_000], "nodes", Tunable;
-    /// Most sessions (records plus unavailable entries) one `IndexHarnessSessionBatch` carries
-    /// (MEDULLA-ORCH-VOCAB-R009.101.1).
-    session_batch_max: u64 = "orchestration_limits.session_batch_max", U64(500), [1, 5_000], "sessions", Tunable;
-    /// Most rows one harness session search page returns (MEDULLA-ORCH-VOCAB-R009.101.2).
-    session_page_size_max: u64 = "orchestration_limits.page_size_max", U64(100), [1, 1_000], "rows", Tunable;
     /// Longest `instructions` text of an assistant profile
     /// (MEDULLA-DECISION-ENGINE-R656.1).
     profile_instructions_max_chars: u64 = "profile.instructions_max_chars", U64(8000), [200, 64_000], "characters", Tunable;
@@ -918,6 +913,8 @@ knobs! {
     ontology_naming_mode: u64 = "ontology.naming_mode", U64(0), [0, 1], "mode", Tunable;
     /// Orchestration statement page size: the ceiling a request's `page_size` is held to (MEDULLA-ORCH-VOCAB-R010.101).
     orchestration_limits_page_size_max: u64 = "orchestration_limits.page_size_max", U64(100), [1, 1_000], "rows", Tunable;
+    /// Most sessions (records plus unavailable entries) one `IndexHarnessSessionBatch` carries (MEDULLA-ORCH-VOCAB-R009.101.1).
+    orchestration_limits_session_batch_max: u64 = "orchestration_limits.session_batch_max", U64(500), [1, 5_000], "sessions", Tunable;
     /// Fraction of the answer-name tokens a search-task clue may expose (MEDULLA-FEDERATED-QUERY-R702.2).
     search_task_expose_overlap: f64 = "search_task.expose_overlap", F64(0.5), [0.1, 1.0], "ratio", Tunable;
     /// Answer-node degree that trips the prior-knowledge shortcut detector (MEDULLA-FEDERATED-QUERY-R702.2).

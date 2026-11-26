@@ -124,3 +124,100 @@ def test_replay_is_idempotent_and_changed_content_refuses(clean_graph) -> None:
             other.graph.index_harness_session_batch(foreign)
     finally:
         other.close()
+
+
+def _search(client: Any, **params: Any) -> dict[str, Any]:
+    return client.query.uql("harness_session_search", params)
+
+
+def _summary(result: dict[str, Any]) -> dict[str, str]:
+    row = result["rows"][0]
+    assert row["id"] == "summary", result
+    return row["provenance"]
+
+
+def _two_session_batch(client: Any, first: str, second: str, **extra: Any) -> dict:
+    batch = _batch(client, first, **extra)
+    other = _batch(client, second)["records"][0]
+    other["source_session_id"] = "session-b"
+    other["source_sequence"] = 3
+    batch["records"].append(other)
+    return batch
+
+
+# Verifies MEDULLA-ORCH-VOCAB-R009.101.2: the search covers the full manifest.
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.101.2")
+def test_search_covers_manifest_with_unavailable_third_source(clean_graph) -> None:
+    client = clean_graph
+    first, second = "run:search-1", "run:search-2"
+    _seed_trace(client, first)
+    _seed_trace(client, second)
+    batch = _two_session_batch(client, first, second, declared_total=3)
+    client.graph.index_harness_session_batch(batch)
+
+    summary = _summary(_search(client))
+    assert [
+        summary[name]
+        for name in ("declared", "received", "indexed", "unavailable", "pending")
+    ] == ["3", "3", "2", "1", "0"]
+    entries = [row["provenance"] for row in _search(client)["rows"][1:]]
+    assert [entry["source_session_id"] for entry in entries] == [
+        "session-1",
+        "session-b",
+        "session-2",
+    ]
+    assert entries[2]["status"] == "unavailable"
+    assert entries[2]["reason"] == "transcript unreadable"
+
+    # A second batch declaring 4 leaves one declared session pending.
+    later = _two_session_batch(
+        client,
+        first,
+        second,
+        declared_total=4,
+        sync_receipt_id="receipt-2",
+        sync_receipt_digest="ee" * 32,
+        source_cursor="cursor-2",
+    )
+    client.graph.index_harness_session_batch(later)
+    after = _summary(_search(client))
+    assert (after["declared"], after["received"], after["pending"]) == ("4", "3", "1")
+    assert after["watermark"] == "cursor-2"
+    # Filters narrow the entries; the text matches the session id and the harness.
+    narrowed = _search(client, text="SESSION-B")
+    assert [row["id"] for row in narrowed["rows"][1:]] == [
+        "harnesssession:" + batch["tenant_id"] + ":claude-code:session-b"
+    ]
+
+
+# Verifies MEDULLA-ORCH-VOCAB-R009.101.2: unknown cost is not zero; stale cursors.
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.101.2")
+def test_cost_totals_report_unknown_not_zero(clean_graph) -> None:
+    client = clean_graph
+    first, second = "run:cost-1", "run:cost-2"
+    _seed_trace(client, first)
+    _seed_trace(client, second)
+    client.graph.index_harness_session_batch(_two_session_batch(client, first, second))
+    summary = _summary(_search(client))
+    assert summary["cost_status"] == "unknown"
+    assert summary["cost_reason"] in {"price_missing", "attribution_missing"}
+    assert "cost_minor" not in summary
+
+    # A cursor minted before a new batch refuses once the index moved.
+    page = _search(client, page_size=1)
+    cursor = next(
+        warning.removeprefix("next_cursor: ")
+        for warning in page["warnings"]
+        if warning.startswith("next_cursor: ")
+    )
+    client.graph.index_harness_session_batch(
+        _two_session_batch(
+            client,
+            first,
+            second,
+            sync_receipt_id="receipt-9",
+            sync_receipt_digest="99" * 32,
+        )
+    )
+    with pytest.raises(Exception, match="SESSION_CURSOR_STALE"):
+        _search(client, page_size=1, cursor=cursor)

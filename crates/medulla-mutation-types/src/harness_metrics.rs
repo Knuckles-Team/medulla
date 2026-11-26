@@ -111,6 +111,13 @@ pub const HARNESS_QUERIES: &[HarnessQuery] = &[
         groups: &[],
         columns: &USAGE_COLUMNS,
     },
+    // MEDULLA-ORCH-VOCAB-R009.101.2: the harness session search over the index nodes; its rows
+    // are text, so it has its own pure function in `crate::harness_session_search`.
+    HarnessQuery {
+        name: crate::harness_session_search::HARNESS_SESSION_SEARCH,
+        groups: &[],
+        columns: &crate::harness_session_search::SESSION_SEARCH_COLUMNS,
+    },
     // MEDULLA-ORCH-VOCAB-R004.6.3: capability gaps of a task class, by exact or descendant
     // match; the rows are nodes, so the statement has its own pure function.
     HarnessQuery {

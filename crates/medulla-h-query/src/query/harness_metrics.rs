@@ -10,6 +10,9 @@ use super::*;
 use medulla_mutation_types::evolution_metrics::{
     evolution_trace_metrics, EvolutionTraceQuery, EVOLUTION_TRACE_METRICS,
 };
+use medulla_mutation_types::harness_session_search::{
+    harness_session_search, SessionSearchQuery, HARNESS_SESSION_SEARCH,
+};
 use medulla_mutation_types::harness_metrics::{
     capability_gaps_by_task_class, harness_config_evidence, task_class_closure,
     CapabilityGapQuery, CAPABILITY_GAPS_BY_TASK_CLASS, SUB_TASK_CLASS_OF, price_table_from_node, run_harness_query, run_trace_usage,
@@ -35,6 +38,9 @@ pub(crate) fn handle_harness_metric(
     }
     if query.name == CAPABILITY_GAPS_BY_TASK_CLASS {
         return handle_capability_gaps(ctx, query, params);
+    }
+    if query.name == HARNESS_SESSION_SEARCH {
+        return handle_harness_session_search(ctx, query, params);
     }
     let (snap, version) = sql_read_snapshot(
         ctx.core,
@@ -423,6 +429,83 @@ fn handle_capability_gaps(
         columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
         rows,
         warnings: page.warnings,
+        snapshot_revision: version,
+        knowledge_revision: 0,
+        source_coverage: Vec::new(),
+        historical_risk: Vec::new(),
+    };
+    served_response::<query_results::Uql>(
+        ctx.req_id,
+        Ok(Ok(result)),
+        "UQL",
+        #[cfg(feature = "result-cache")]
+        ctx.core,
+        #[cfg(feature = "result-cache")]
+        None,
+    )
+}
+
+/// MEDULLA-ORCH-VOCAB-R009.101.2: the harness session search over the index nodes of the
+/// caller's RLS-filtered snapshot and the run traces they link. A foreign tenant's sessions,
+/// receipts and traces are outside the snapshot, so they affect no count and no row. A row's id
+/// is its session node id (`summary` for the first row); its columns travel as provenance text.
+/// The page size is held to the registry knob `orchestration_limits.page_size_max`. The statement
+/// writes nothing.
+#[cfg(feature = "query")]
+fn handle_harness_session_search(
+    ctx: &QueryHandlerCtx<'_>,
+    query: &HarnessQuery,
+    params: &UqlParams,
+) -> Response {
+    let page_size_max = medulla_server_api::knob_config::knobs().orchestration_limits_page_size_max;
+    let request = match SessionSearchQuery::from_params(
+        |name| text_param(params, name),
+        |name| number_param(params, name),
+        page_size_max,
+    ) {
+        Ok(request) => request,
+        Err(refusal) => return Response::err(ctx.req_id, refusal),
+    };
+    let (snap, version) = sql_read_snapshot(
+        ctx.core,
+        #[cfg(feature = "security")]
+        ctx.caller,
+        #[cfg(feature = "security")]
+        ctx.rls,
+    );
+    let nodes: Vec<(String, serde_json::Map<String, serde_json::Value>)> = snap
+        .node_map
+        .keys()
+        .filter_map(|id| snap.node_row_object(id).map(|props| (id.clone(), props)))
+        .collect();
+    let page = match harness_session_search(&request, &nodes) {
+        Ok(page) => page,
+        Err(refusal) => return Response::err(ctx.req_id, refusal),
+    };
+    let mut warnings = page.warnings;
+    if let Some(cursor) = page.next_cursor {
+        warnings.push(format!("next_cursor: {cursor}"));
+    }
+    let rows = page
+        .rows
+        .into_iter()
+        .map(|row| medulla_query_types::wire::UqlRow {
+            id: row.id,
+            score: None,
+            channels: Vec::new(),
+            knowledge: None,
+            proof: None,
+            provenance: row
+                .columns
+                .into_iter()
+                .map(|(name, value)| (name.to_string(), value))
+                .collect(),
+        })
+        .collect();
+    let result = medulla_query_types::wire::UqlResult::Rows {
+        columns: query.columns.iter().map(|c| (*c).to_string()).collect(),
+        rows,
+        warnings,
         snapshot_revision: version,
         knowledge_revision: 0,
         source_coverage: Vec::new(),
