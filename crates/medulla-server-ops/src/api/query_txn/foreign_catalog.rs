@@ -127,6 +127,9 @@ pub struct PriorRegistration(Option<OwnedSpec>);
 pub struct ForeignSourceCatalog {
     entries: DashMap<CatalogKey, OwnedSpec>,
     views: GraphViewCatalog,
+    /// Woken whenever a catalog probe job ends, so a served completion barrier
+    /// (MEDULLA-DURABLE-KERNEL-R878) waits on the probe instead of polling it.
+    probe_ended: tokio::sync::Notify,
 }
 
 /// One registered SQLite file source the capture poll reads
@@ -884,6 +887,11 @@ impl ForeignSourceCatalog {
             .map(|entry| entry.value().probe.state())
     }
 
+    /// The signal woken each time a catalog probe job ends.
+    pub fn probe_ended(&self) -> &tokio::sync::Notify {
+        &self.probe_ended
+    }
+
     /// The catalog the probe of `owner`'s source `name` read. A source whose schema moved off
     /// its baseline is refused `SCHEMA_DRIFT` (re-registering the source takes a new baseline);
     /// a failed or not yet finished probe is refused `SOURCE_UNAVAILABLE`.
@@ -1024,6 +1032,8 @@ impl ForeignSourceCatalog {
             }
             Err(_) => entry.probe.finish_error(),
         };
+        drop(entry);
+        self.probe_ended.notify_waiters();
         outcome.map_err(|refused| {
             format!(
                 "{}: {} {} on {}",

@@ -346,6 +346,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::CatalogUsage { .. }
         | Method::CatalogRead { .. }
         | Method::SchemaContext { .. }
+        | Method::AwaitWatermark { .. }
         | Method::ExplainPolicy { .. } => default_mutation_domain(surface),
         // Wire-unconditional, same reason as `datascience` above: `full` does not
         // list plain `rdf` (only `rdf-xml`/`sparql-*`/etc.), but `medulla-capabilities`

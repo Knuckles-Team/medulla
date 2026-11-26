@@ -77,6 +77,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // MEDULLA-TYPED-PACKS-R108.17: every op runs a registered stored query through the served
     // SPARQL read, which narrows each row to the caller's read grants.
     "CatalogRead",
+    // MEDULLA-DURABLE-KERNEL-R878: `streaming::try_handle` fails the whole carrier closed under
+    // active RLS (a watermark reveals the rate of filtered rows) before it answers.
+    "AwaitWatermark",
     "CdcRead",
     "CommunityDetectEphemeral",
     "CommunityDetection",

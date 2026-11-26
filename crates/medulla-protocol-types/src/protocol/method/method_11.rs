@@ -1038,6 +1038,19 @@ $($variants)*
         object: String,
         intent: medulla_catalog_types::schema_context::SchemaContextIntent,
     },
+    /// MEDULLA-DURABLE-KERNEL-R878: the served completion barrier. Answers once the named
+    /// asynchronous work has settled, so a caller never sleeps and polls. `resource` is
+    /// `graph:<name>` (the committed-change watermark of a graph the caller may read) or
+    /// `catalog:<source>` (0 until the catalog probe of a source the caller registered has
+    /// settled, then 1); `at_least` is the watermark to wait for; `deadline_ms` is the longest
+    /// wait, measured on the engine clock. The answer carries the watermark held when the wait
+    /// ended and whether it reached `at_least`. A read; writes nothing. Refuses
+    /// `INVALID_ARGUMENT` for a resource that names neither kind.
+    AwaitWatermark {
+        resource: String,
+        at_least: u64,
+        deadline_ms: u64,
+    },
 
     /// Store one run-bound visual observation (MEDULLA-ORCH-VOCAB-R810). The record names the
     /// caller's tenant and a run the tenant holds, or the write refuses `OBSERVATION_SCOPE_UNKNOWN`;

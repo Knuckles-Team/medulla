@@ -15798,6 +15798,13 @@ class MethodWatch(BaseModel):
     params: MethodWatchParams
 
 
+class MethodAwaitWatermark(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["AwaitWatermark"]
+    params: MethodAwaitWatermarkParams
+
+
 class MethodRegisterTrigger(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18211,6 +18218,7 @@ Method = Annotated[
         MethodReadContinuousQuery,
         MethodDropContinuousQuery,
         MethodWatch,
+        MethodAwaitWatermark,
         MethodRegisterTrigger,
         MethodDropTrigger,
         MethodListTriggers,
@@ -22165,6 +22173,14 @@ class MethodWatchParams(BaseModel):
     graph: str
     label: str | None = None
     timeout_ms: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodAwaitWatermarkParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_least: Annotated[int, Field(ge=0)]
+    deadline_ms: Annotated[int, Field(ge=0)]
+    resource: str
 
 
 class MethodWhatChangedParams(BaseModel):
@@ -32506,6 +32522,13 @@ class WatchBatch(BaseModel):
     head_seq: Annotated[int, Field(ge=0)] | None = None
     next_seq: Annotated[int, Field(ge=0)]
     watermark: Annotated[int, Field(ge=0)] | None = None
+
+
+class WatermarkAwaited(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    reached: bool
+    watermark: Annotated[int, Field(ge=0)]
 
 
 class WebCandidate(BaseModel):
@@ -48649,6 +48672,8 @@ __all__ = [
     "MethodVizParams",
     "MethodWalletKeyTrustGet",
     "MethodWalletKeyTrustGetParams",
+    "MethodAwaitWatermark",
+    "MethodAwaitWatermarkParams",
     "MethodWatch",
     "MethodWatchParams",
     "MethodWhatChanged",
@@ -50050,6 +50075,7 @@ __all__ = [
     "WalkForward",
     "WalletKeyTrust",
     "WatchBatch",
+    "WatermarkAwaited",
     "WebCandidate",
     "WebauthnCredential",
     "WebauthnCredentialView",

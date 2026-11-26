@@ -359,6 +359,7 @@ pub async fn dispatch_streaming_methods(
             | Method::ReadContinuousQuery { .. }
             | Method::DropContinuousQuery { .. }
             | Method::Watch { .. }
+            | Method::AwaitWatermark { .. }
             | Method::RegisterTrigger { .. }
             | Method::DropTrigger { .. }
             | Method::ListTriggers { .. }
@@ -399,6 +400,7 @@ async fn dispatch_streaming_methods_arm_0(ctx: DispatchCtx<'_>, method: Method) 
         | Method::ReadContinuousQuery { .. }
         | Method::DropContinuousQuery { .. }
         | Method::Watch { .. }
+        | Method::AwaitWatermark { .. }
         | Method::RegisterTrigger { .. }
         | Method::DropTrigger { .. }
         | Method::ListTriggers { .. }

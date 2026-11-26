@@ -386,6 +386,7 @@ METHOD_IDS = frozenset(
         "ReadContinuousQuery",
         "DropContinuousQuery",
         "Watch",
+        "AwaitWatermark",
         "RegisterTrigger",
         "DropTrigger",
         "ListTriggers",

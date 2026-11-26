@@ -308,3 +308,4 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T316 [US1] MEDULLA-DURABLE-KERNEL-R877.3 Refusal: bundle codes.
 - [ ] T317 [US1] MEDULLA-DURABLE-KERNEL-R877.4 Wiring: the two methods reach the admin handler.
 - [ ] T318 [US1] MEDULLA-DURABLE-KERNEL-R877.5 Hot-path proof: a bundle moves between two tenants.
+- [ ] T319 [US1] MEDULLA-DURABLE-KERNEL-R878 A served completion barrier replaces polling waits.

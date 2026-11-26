@@ -114,6 +114,8 @@ pub mod schema_boundary;
 // data; wiring the real query entry point is a later child.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod schema_context;
+// MEDULLA-DURABLE-KERNEL-R878 — the served completion barrier's resource names and answer.
+pub mod await_watermark;
 // MEDULLA-UNIFIED-DATA-PLANE-R004 — bounded, policy-gated column-sampling budget
 // for deterministic schema inference.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)

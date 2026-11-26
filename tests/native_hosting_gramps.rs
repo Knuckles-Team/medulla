@@ -765,27 +765,35 @@ async fn p4_restore_and_p5_schema() {
         object: "person".to_string(),
         intent,
     };
-    let waited = std::time::Instant::now();
-    loop {
-        let probe = native
-            .call(
-                TABLE_GRAPH,
-                &context,
-                schema_context(SchemaContextIntent::Definition),
-                None,
-            )
-            .await;
-        let unavailable = format!("{:?}", probe.error).contains("SOURCE_UNAVAILABLE");
-        if !unavailable {
-            assert!(probe.error.is_none(), "schema context: {:?}", probe.error);
-            break;
+    // The catalog probe runs after registration. The engine answers once it has settled
+    // (MEDULLA-DURABLE-KERNEL-R878), so the test neither sleeps nor polls.
+    let settled = native
+        .ok(
+            TABLE_GRAPH,
+            &context,
+            Method::AwaitWatermark {
+                resource: format!("catalog:{SOURCE_ID}"),
+                at_least: 1,
+                deadline_ms: 30_000,
+            },
+        )
+        .await;
+    let settled: medulla_catalog_types::await_watermark::WatermarkAwaited = match settled {
+        Some(ResultPayload::Raw(bytes)) => {
+            rmp_serde::from_slice(&bytes).expect("the watermark answer decodes")
         }
-        assert!(
-            waited.elapsed() < std::time::Duration::from_secs(30),
-            "the catalog probe did not finish within 30 seconds"
-        );
-        tokio::time::sleep(std::time::Duration::from_millis(250)).await;
-    }
+        other => panic!("AwaitWatermark answered {other:?}"),
+    };
+    assert!(settled.reached, "the catalog probe did not settle within 30 seconds");
+    let probe = native
+        .call(
+            TABLE_GRAPH,
+            &context,
+            schema_context(SchemaContextIntent::Definition),
+            None,
+        )
+        .await;
+    assert!(probe.error.is_none(), "schema context: {:?}", probe.error);
     let answer = |response: medulla_protocol_types::protocol::Response| match response.result {
         Some(ResultPayload::Raw(bytes)) => {
             rmp_serde::from_slice::<SchemaContextAnswer>(&bytes).expect("schema context answer")

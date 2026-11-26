@@ -1521,6 +1521,47 @@ def decode_watch(result: OpaqueResult) -> _models.WatchBatch:
     return decode_result("Watch", models().WatchBatch, result)
 
 
+async def send_await_watermark(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        AwaitWatermark
+    Authorization:
+        cdc:read
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw
+    Result schema:
+        contract/schemas/result.messaging.json
+        #/methods/AwaitWatermark
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+    """
+    models().MethodAwaitWatermarkParams.model_validate(params or {})
+    payload = await client._send(
+        "AwaitWatermark",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("AwaitWatermark", payload)
+
+
+def decode_await_watermark(result: OpaqueResult) -> _models.WatermarkAwaited:
+    """Validate this method's result against its contract model."""
+    return decode_result("AwaitWatermark", models().WatermarkAwaited, result)
+
+
 async def send_register_trigger(
     client: Any,
     params: dict[str, Any] | None = None,
@@ -1882,6 +1923,7 @@ _REQUEST_METHODS = frozenset(
         "ReadContinuousQuery",
         "DropContinuousQuery",
         "Watch",
+        "AwaitWatermark",
         "RegisterTrigger",
         "DropTrigger",
         "ListTriggers",

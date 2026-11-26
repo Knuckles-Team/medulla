@@ -107,6 +107,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "ArchitectureModelExport": graph.send_architecture_model_export,
     "ArchitectureModelImport": graph.send_architecture_model_import,
     "ArchitectureView": graph.send_architecture_view,
+    "AwaitWatermark": messaging.send_await_watermark,
     "DomainPack": graph.send_domain_pack,
     "ProjectionRead": query.send_projection_read,
     "BookmarkSemanticSearch": query.send_bookmark_semantic_search,

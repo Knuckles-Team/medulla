@@ -346,6 +346,59 @@ impl<'a> StreamingRequest<'a> {
         Response::ok(self.req_id, ResultPayload::of_ref::<results::Watch>(&batch))
     }
 
+    /// `AwaitWatermark` (MEDULLA-DURABLE-KERNEL-R878): answer once the named resource's
+    /// watermark reaches `at_least`, or when `deadline_ms` has passed on the engine clock.
+    async fn await_watermark(&self, resource: String, at_least: u64, deadline_ms: u64) -> Response {
+        use medulla_catalog_types::await_watermark::{WatermarkAwaited, WatermarkResource};
+        let Some(kind) = WatermarkResource::parse(&resource) else {
+            return Response::err(
+                self.req_id,
+                "INVALID_ARGUMENT: a watermark resource is `graph:<name>` or `catalog:<source>`",
+            );
+        };
+        let clock = medulla_kernel::kernel::dispatch_support::EngineClock;
+        let outcome = match kind {
+            WatermarkResource::Graph(graph) => {
+                let hub = match authorized_hub(self.state, self.req_id, self.carrier, &graph).await
+                {
+                    Ok(hub) => hub,
+                    Err(response) => return response,
+                };
+                let notify = hub.notifier(&graph);
+                wait_for_watermark(&clock, deadline_ms, at_least, &notify, || {
+                    hub.head_seq(&graph)
+                })
+                .await
+            }
+            WatermarkResource::Catalog(source) => {
+                use medulla_server_ops::api::query_txn::ForeignStateExt;
+                let catalog = self.state.read().await.foreign_sources();
+                if catalog.probe_state(self.carrier, &source).is_none() {
+                    return Response::err(
+                        self.req_id,
+                        format!("INVALID_ARGUMENT: no source '{source}' is registered"),
+                    );
+                }
+                wait_for_watermark(&clock, deadline_ms, at_least, catalog.probe_ended(), || {
+                    u64::from(matches!(
+                        catalog.probe_state(self.carrier, &source),
+                        Some(
+                            medulla_catalog_types::probe_machine::ProbeState::Baselined
+                                | medulla_catalog_types::probe_machine::ProbeState::Drifted
+                                | medulla_catalog_types::probe_machine::ProbeState::ProbeFailed
+                        )
+                    ))
+                })
+                .await
+            }
+        };
+        let (watermark, reached) = outcome;
+        Response::ok(
+            self.req_id,
+            ResultPayload::of::<results::AwaitWatermark>(WatermarkAwaited { watermark, reached }),
+        )
+    }
+
     async fn register_trigger(
         &self,
         name: String,
@@ -482,6 +535,11 @@ pub async fn try_handle(
             label,
             timeout_ms,
         } => Ok(request.watch(graph, from_seq, label, timeout_ms).await),
+        Method::AwaitWatermark {
+            resource,
+            at_least,
+            deadline_ms,
+        } => Ok(request.await_watermark(resource, at_least, deadline_ms).await),
         Method::RegisterTrigger {
             name,
             graph,
@@ -502,6 +560,33 @@ pub async fn try_handle(
     }
 }
 
+/// Wait until `read()` reaches `at_least`, woken by `notify`, for at most `deadline_ms` measured
+/// on `clock`. Answers the last watermark read and whether it reached `at_least`. The waiter is
+/// armed before each read, so a change landing between the read and the wait still wakes it.
+async fn wait_for_watermark(
+    clock: &dyn medulla_types::clock::Clock,
+    deadline_ms: u64,
+    at_least: u64,
+    notify: &tokio::sync::Notify,
+    read: impl Fn() -> u64,
+) -> (u64, bool) {
+    let deadline = clock.now_ms().saturating_add(deadline_ms);
+    loop {
+        let notified = notify.notified();
+        tokio::pin!(notified);
+        notified.as_mut().enable();
+        let watermark = read();
+        if watermark >= at_least {
+            return (watermark, true);
+        }
+        let remaining = deadline.saturating_sub(clock.now_ms());
+        if remaining == 0 {
+            return (watermark, false);
+        }
+        let _ = tokio::time::timeout(Duration::from_millis(remaining), notified).await;
+    }
+}
+
 /// Streaming cursors have no actor-stable cursor ownership, so active RLS fails
 /// the whole carrier closed except for an explicit admin — `Err` is the final
 /// routing/error outcome `try_handle` should return as-is (a streaming method
@@ -518,4 +603,52 @@ fn admit_streaming_under_rls(
         ))));
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod await_watermark_tests {
+    use super::wait_for_watermark;
+    use std::sync::atomic::{AtomicU64, Ordering};
+    use std::sync::Arc;
+
+    // spec: MEDULLA-DURABLE-KERNEL-R878
+    #[tokio::test]
+    async fn the_barrier_answers_on_the_watermark_or_the_engine_clock_deadline() {
+        let notify = Arc::new(tokio::sync::Notify::new());
+        let mark = Arc::new(AtomicU64::new(0));
+        let clock = medulla_types::clock::ManualClock::new(1_000);
+
+        // A watermark already at the target answers at once.
+        mark.store(3, Ordering::Relaxed);
+        let reading = Arc::clone(&mark);
+        let at_target = wait_for_watermark(&clock, 60_000, 3, &notify, move || {
+            reading.load(Ordering::Relaxed)
+        })
+        .await;
+        assert_eq!(at_target, (3, true));
+
+        // A deadline of zero on the engine clock answers the unmet watermark without waiting.
+        mark.store(1, Ordering::Relaxed);
+        let reading = Arc::clone(&mark);
+        let expired = wait_for_watermark(&clock, 0, 3, &notify, move || {
+            reading.load(Ordering::Relaxed)
+        })
+        .await;
+        assert_eq!(expired, (1, false));
+
+        // A change that lands while the barrier waits wakes it with the new watermark.
+        mark.store(0, Ordering::Relaxed);
+        let reading = Arc::clone(&mark);
+        let waiter_notify = Arc::clone(&notify);
+        let waiter = tokio::spawn(async move {
+            wait_for_watermark(&medulla_types::clock::SystemClock, 60_000, 2, &waiter_notify, move || {
+                reading.load(Ordering::Relaxed)
+            })
+            .await
+        });
+        tokio::task::yield_now().await;
+        mark.store(2, Ordering::Relaxed);
+        notify.notify_waiters();
+        assert_eq!(waiter.await.expect("the barrier task ends"), (2, true));
+    }
 }
