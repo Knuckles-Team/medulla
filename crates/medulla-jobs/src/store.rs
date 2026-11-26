@@ -2793,6 +2793,20 @@ fn decode_job_result(record: &MutationBatchRecord) -> Result<AnalyticsJob> {
     decode_job(bytes)
 }
 
+/// Read one job through the owner write of a maintenance batch.
+fn read_job_in_wtx_owner(
+    wtx: &AdmittedOwnerWrite<'_, JobsOwner>,
+    job_id: &str,
+) -> Result<AnalyticsJob> {
+    let table = wtx.open_table(JOBS).map_err(redb_err)?;
+    let row = table
+        .get(job_id)
+        .map_err(redb_err)?
+        .ok_or_else(|| JobError::NotFound(job_id.to_string()))?;
+    let job = decode_job(row.value());
+    job
+}
+
 fn read_job_in_wtx(wtx: &AdmittedMutation<'_, JobsOwner>, job_id: &str) -> Result<AnalyticsJob> {
     let table = wtx.open_read_table(JOBS).map_err(redb_err)?;
     let row = table
@@ -2880,8 +2894,6 @@ enum JobSideRow<'a> {
     Result(&'a str, &'a [u8]),
     /// The parked ingest task, keyed by task id (MEDULLA-INGEST-WORKER-R001.9).
     DeadLetter(&'a str, &'a [u8]),
-    /// Delete the parked ingest task of this id (MEDULLA-REPO-INGEST-R002.651.3).
-    DeadLetterDelete(&'a str),
 }
 
 fn write_job_transition(
@@ -2930,13 +2942,6 @@ fn write_job_transition(
                             .open_table(TASK_DEAD_LETTERS)
                             .map_err(redb_err)?
                             .insert(task_id, item_bytes)
-                            .map_err(redb_err)?;
-                    }
-                    Some(JobSideRow::DeadLetterDelete(task_id)) => {
-                        owner_write
-                            .open_table(TASK_DEAD_LETTERS)
-                            .map_err(redb_err)?
-                            .remove(task_id)
                             .map_err(redb_err)?;
                     }
                     None => {}

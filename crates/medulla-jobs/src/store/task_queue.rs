@@ -399,9 +399,9 @@ impl JobStore {
             }
             parked.push(job);
         }
-        let mut redriven = 0u32;
-        for failed in parked {
-            let fresh = AnalyticsJob {
+        let fresh_jobs: Vec<AnalyticsJob> = parked
+            .into_iter()
+            .map(|failed| AnalyticsJob {
                 state: JobState::Submitted { checkpoint: None },
                 retry: RetryPolicy {
                     attempts_made: 0,
@@ -411,19 +411,34 @@ impl JobStore {
                 last_worker_ref: String::new(),
                 updated_at_ms: now_ms,
                 ..failed
-            };
-            let expected_version = self.live_version()?;
-            let write = self.mutations.open_write(&self.owner).map_err(redb_err)?;
-            let (batch, _next_version) = write_job_transition(
-                self,
-                &write,
-                &fresh,
-                expected_version,
-                Some(JobSideRow::DeadLetterDelete(fresh.job_id.as_str())),
-            )?;
-            self.mutations.commit(write, &batch).map_err(redb_err)?;
-            redriven += 1;
-        }
+            })
+            .collect();
+        // All-or-nothing (fail-closed): every replacement job and every dead-letter row removal
+        // lands in ONE jobs-store write transaction, so a store fault leaves none redriven. The
+        // closure re-reads each parked job inside the write, so a job that changed after the
+        // check above refuses the whole call instead of being overwritten.
+        let redriven = self
+            .maintain("dead-letter-redrive", |wtx| {
+                for fresh in &fresh_jobs {
+                    let current = read_job_in_wtx_owner(wtx, fresh.job_id.as_str())?;
+                    if current.policy.tenant != tenant
+                        || !matches!(current.state, JobState::Failed { .. })
+                    {
+                        return Err(JobError::NotFound(fresh.job_id.clone()));
+                    }
+                    let bytes = encode_job(fresh)?;
+                    persist_job_image(wtx, fresh, bytes.as_slice())?;
+                    wtx.open_table(TASK_DEAD_LETTERS)
+                        .map_err(redb_err)?
+                        .remove(fresh.job_id.as_str())
+                        .map_err(redb_err)?;
+                }
+                Ok(fresh_jobs.len() as u32)
+            })
+            .map_err(|error| match error {
+                JobError::NotFound(item_id) => RedriveError::Unknown { item_id },
+                other => RedriveError::Store(other),
+            })?;
         Ok(RedriveOutcome { redriven })
     }
 
@@ -873,6 +888,31 @@ mod tests {
             Err(RedriveError::Unknown { .. })
         ));
         assert_eq!(store.live_version().unwrap(), again);
+    }
+
+    // spec: MEDULLA-REPO-INGEST-R002.651.3
+    #[test]
+    fn a_redrive_that_fails_midway_redrives_none_and_one_commit_redrives_all() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let first = park(&store, "a", 1_000);
+        let second = park(&store, "b", 5_000);
+        // The second occurrence of one id finds the job already replaced inside the write,
+        // so the whole transaction rolls back: neither id is redriven.
+        let before = store.live_version().unwrap();
+        let refused = store
+            .redrive_dead_letters("acme", &[first.clone(), first.clone()], 20_000)
+            .unwrap_err();
+        assert!(matches!(refused, RedriveError::Unknown { .. }));
+        assert_eq!(store.live_version().unwrap(), before);
+        assert_eq!(store.list_dead_letters("acme", "ingest", 10).unwrap().len(), 2);
+        // Both ids in one call commit as one version step.
+        let done = store
+            .redrive_dead_letters("acme", &[first, second], 21_000)
+            .unwrap();
+        assert_eq!(done.redriven, 2);
+        assert_eq!(store.live_version().unwrap(), before + 1);
+        assert!(store.list_dead_letters("acme", "ingest", 10).unwrap().is_empty());
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.9
