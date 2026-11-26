@@ -1,0 +1,22 @@
+{
+  "source": "openbao-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "secretPath": "secretPath-1",
+      "lastRotatedAt": "lastRotatedAt-1",
+      "policy": "policy-1",
+      "joinKey": "openbao.q1-key-1",
+      "id": "openbao-mcp-openbao.q1-1",
+      "label": "openbao-mcp 1"
+    },
+    {
+      "secretPath": "secretPath-2",
+      "lastRotatedAt": "lastRotatedAt-2",
+      "policy": "policy-2",
+      "joinKey": "openbao.q1-key-2",
+      "id": "openbao-mcp-openbao.q1-2",
+      "label": "openbao-mcp 2"
+    }
+  ]
+}

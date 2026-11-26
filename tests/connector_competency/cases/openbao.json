@@ -1,0 +1,35 @@
+{
+  "connector": "openbao",
+  "rollup": "MEDULLA-CQ-CONN-R044",
+  "vocabulary_module": "data_platform-v1.ttl",
+  "terms": [
+    "SecretPath",
+    "lastRotatedAt",
+    "PolicyPathGrant",
+    "grantsCapability"
+  ],
+  "questions": [
+    {
+      "id": "openbao.q1",
+      "kind": "single",
+      "question": "Which secret paths have not been rotated in 180 days, and which policies grant read on them?",
+      "uql": "FOREIGN SCAN 'openbao-mcp'",
+      "sources": [
+        "openbao-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "openbao-mcp": "mcp_tool"
+      },
+      "columns": [
+        "secretPath",
+        "lastRotatedAt",
+        "policy"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "openbao-mcp/single.json"
+      ]
+    }
+  ]
+}
