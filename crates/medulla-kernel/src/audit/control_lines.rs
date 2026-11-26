@@ -198,6 +198,13 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             Some(match op.as_ref() {
                 DashboardAssetOp::Save { id, .. } => format!("DASHBOARD|save|{id}"),
                 DashboardAssetOp::Share { id, .. } => format!("DASHBOARD|share|{id}"),
+                DashboardAssetOp::Grant { id, grant } => {
+                    format!("DASHBOARD|grant|{id}|{}", grant.principal_or_group)
+                }
+                DashboardAssetOp::Revoke {
+                    id,
+                    principal_or_group,
+                } => format!("DASHBOARD|revoke|{id}|{principal_or_group}"),
                 DashboardAssetOp::Delete { id, .. } => format!("DASHBOARD|delete|{id}"),
                 DashboardAssetOp::Restore { id } => format!("DASHBOARD|restore|{id}"),
                 DashboardAssetOp::Get { id } => format!("DASHBOARD|get|{id}"),

@@ -105,3 +105,47 @@ def test_delete_with_expected_revision_refuses_a_mismatch_and_is_not_a_view(
     after = _node(owner, graph, f"dashboard:{DASH}")
     assert after["usage_count"] == before["usage_count"]
     assert after["last_viewed_ms"] == before["last_viewed_ms"]
+
+
+def _grants(receipt: dict[str, Any]) -> dict[str, str]:
+    return {g["principal_or_group"]: g["role"] for g in receipt["grants"]}
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R109.8")
+def test_grant_and_revoke_change_one_grantee_without_a_whole_list_share(
+    served: tuple[str, Any, Any, Any],
+) -> None:
+    # spec: MEDULLA-TYPED-PACKS-R109.8
+    graph, owner, member, stranger = served
+    _save(owner, graph, 0)
+
+    def grant(principal: str, role: str) -> dict[str, Any]:
+        grant = {"principal_or_group": principal, "role": role}
+        return _dash(owner, graph, {"op": "grant", "id": DASH, "grant": grant})
+
+    # Two grants for different grantees both stay; neither carries the other's list.
+    assert _grants(grant(GROUP, "view")) == {GROUP: "view"}
+    assert _grants(grant("group:ops", "edit")) == {GROUP: "view", "group:ops": "edit"}
+    # Granting again changes only that grantee's role.
+    both = _grants(grant(GROUP, "edit"))
+    assert both == {GROUP: "edit", "group:ops": "edit"}
+    stored = _node(owner, graph, f"dashboard:{DASH}")
+    assert stored["grants_by"] == support.principal(OWNER)
+    assert stored["grants_at_ms"] > 0
+
+    # The member holds the group grant now, and a stranger still holds none.
+    assert _dash(member, graph, {"op": "get", "id": DASH})["id"] == DASH
+    with pytest.raises(Exception, match="DASHBOARD_NOT_GRANTED"):
+        _dash(stranger, graph, {"op": "get", "id": DASH})
+
+    # A revoke removes one grantee; revoking a grantee with no grant succeeds.
+    revoke = {"op": "revoke", "id": DASH, "principal_or_group": "group:ops"}
+    assert _grants(_dash(owner, graph, revoke)) == {GROUP: "edit"}
+    assert _grants(_dash(owner, graph, revoke)) == {GROUP: "edit"}
+
+    # Only the owner changes a grant.
+    grant_op = {"principal_or_group": GROUP, "role": "view"}
+    with pytest.raises(Exception, match="DASHBOARD_NOT_GRANTED"):
+        _dash(member, graph, {"op": "grant", "id": DASH, "grant": grant_op})
+    with pytest.raises(Exception, match="DASHBOARD_NOT_GRANTED"):
+        _dash(member, graph, {**revoke, "principal_or_group": GROUP})

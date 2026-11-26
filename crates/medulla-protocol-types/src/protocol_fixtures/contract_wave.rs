@@ -164,6 +164,23 @@ fn dashboard_ops() -> Vec<(&'static str, medulla_types::dashboard::DashboardAsse
             },
         ),
         (
+            "DashboardAsset.grant",
+            DashboardAssetOp::Grant {
+                id: "dash-1".to_string(),
+                grant: DashboardGrant {
+                    principal_or_group: "group:ops".to_string(),
+                    role: DashboardRole::Edit,
+                },
+            },
+        ),
+        (
+            "DashboardAsset.revoke",
+            DashboardAssetOp::Revoke {
+                id: "dash-1".to_string(),
+                principal_or_group: "group:ops".to_string(),
+            },
+        ),
+        (
             "DashboardAsset.delete",
             DashboardAssetOp::Delete {
                 id: "dash-1".to_string(),

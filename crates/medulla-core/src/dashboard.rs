@@ -279,6 +279,66 @@ pub fn share(
     Ok(grants)
 }
 
+fn grantable(state: &DashboardState, caller: &Caller<'_>) -> Result<(), DashboardRefusal> {
+    owner_only(state, caller)?;
+    live_or_refuse(state)?;
+    if state.removed_at_ms.is_some() {
+        return Err(DashboardRefusal::Invalid(
+            "the dashboard is deleted; restore it before changing grants".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+/// Set one grantee's role (MEDULLA-TYPED-PACKS-R109.8): the stored grants with the grant of
+/// `grant.principal_or_group` replaced in place, or appended when there is none. Only the owner
+/// may; the grantee must be named. The result is a pure function of the stored grants and the
+/// one grant, so concurrent calls for different grantees commute.
+pub fn grant(
+    state: &DashboardState,
+    grant: DashboardGrant,
+    caller: &Caller<'_>,
+) -> Result<Vec<DashboardGrant>, DashboardRefusal> {
+    grantable(state, caller)?;
+    if grant.principal_or_group.trim().is_empty() {
+        return Err(DashboardRefusal::Invalid(
+            "a grant needs a principal or group, once".to_string(),
+        ));
+    }
+    let mut grants = state.asset.grants.clone();
+    match grants
+        .iter_mut()
+        .find(|stored| stored.principal_or_group == grant.principal_or_group)
+    {
+        Some(stored) => stored.role = grant.role,
+        None => grants.push(grant),
+    }
+    Ok(grants)
+}
+
+/// Remove one grantee's grant (MEDULLA-TYPED-PACKS-R109.8): the stored grants without the grant
+/// of `principal_or_group`. A grantee with no grant leaves the list as stored. Only the owner
+/// may; the grantee must be named.
+pub fn revoke(
+    state: &DashboardState,
+    principal_or_group: &str,
+    caller: &Caller<'_>,
+) -> Result<Vec<DashboardGrant>, DashboardRefusal> {
+    grantable(state, caller)?;
+    if principal_or_group.trim().is_empty() {
+        return Err(DashboardRefusal::Invalid(
+            "a revoke needs a principal or group".to_string(),
+        ));
+    }
+    Ok(state
+        .asset
+        .grants
+        .iter()
+        .filter(|stored| stored.principal_or_group != principal_or_group)
+        .cloned()
+        .collect())
+}
+
 /// Soft delete: returns the `removed_at_ms` to store. Only the owner may. When
 /// `expected_revision` is given it must be the stored revision, else the delete refuses
 /// `RevisionConflict` naming the current one (MEDULLA-TYPED-PACKS-R109.7). A delete is not a

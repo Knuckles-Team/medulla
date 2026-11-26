@@ -10,6 +10,9 @@
 //!   lineage links (`cat:lineageTo` from each panel's data source, with its `cat:LineageEdge`
 //!   node) and the term links (`definesAsset`) in the same batch. A source or term with no node
 //!   in the graph gets no link.
+//! * `Grant` and `Revoke` change one grantee's grant and leave the others as stored. They commit
+//!   as a compare-and-set on the stored grants and re-decide on a lost race, so two callers
+//!   changing different grantees both land and no caller has to read-modify-write the list.
 //! * `Share` replaces the grants, `Delete` soft-deletes, `Restore` brings a deleted dashboard back
 //!   inside its retention; each needs the owner.
 //! * `Get` checks the grant, counts the view and answers the body.
@@ -21,24 +24,27 @@
 use std::sync::Arc;
 
 use medulla_core::dashboard::{
-    delete, node_properties, restore, retention_ends_ms, save, share, state_from_properties, view,
-    Caller, DashboardRefusal, DashboardState,
+    delete, grant, node_properties, restore, retention_ends_ms, revoke, save, share,
+    state_from_properties, view, Caller, DashboardRefusal, DashboardState,
 };
-use medulla_protocol_types::protocol::Response;
+use medulla_protocol_types::protocol::{Method, Response};
 use medulla_protocol_types::result_contract::ingestion::{
-    DashboardAssetDelete, DashboardAssetGet, DashboardAssetRestore, DashboardAssetSave,
+    DashboardAssetDelete, DashboardAssetGet, DashboardAssetGrant, DashboardAssetRestore,
+    DashboardAssetRevoke, DashboardAssetSave,
     DashboardAssetShare,
 };
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::dashboard::{
     dashboard_node_id, dashboard_retention_days, dashboard_revision_node_id, DashboardAssetOp,
-    DashboardReceipt, DASHBOARD_REVISION_LABEL,
+    DashboardGrant, DashboardReceipt, DASHBOARD_REVISION_LABEL,
 };
 use serde_json::{json, Value};
 use tokio::sync::RwLock;
 
-use super::graph_client::{read_node, write_batch, GraphTarget, Properties, TENANT_PROPERTY};
+use super::graph_client::{
+    encode, read_node, took_effect, write, write_batch, GraphTarget, Properties, TENANT_PROPERTY,
+};
 use super::shared::typed_response;
 
 const CAT_LINEAGE_TO: &str = "https://knuckles-team.github.io/ontology/catalog#lineageTo";
@@ -59,6 +65,8 @@ pub async fn dispatch_dashboard(
     match op {
         DashboardAssetOp::Save { .. } => typed_response::<DashboardAssetSave>(req_id, result),
         DashboardAssetOp::Share { .. } => typed_response::<DashboardAssetShare>(req_id, result),
+        DashboardAssetOp::Grant { .. } => typed_response::<DashboardAssetGrant>(req_id, result),
+        DashboardAssetOp::Revoke { .. } => typed_response::<DashboardAssetRevoke>(req_id, result),
         DashboardAssetOp::Delete { .. } => typed_response::<DashboardAssetDelete>(req_id, result),
         DashboardAssetOp::Restore { .. } => {
             typed_response::<DashboardAssetRestore>(req_id, result)
@@ -163,6 +171,21 @@ async fn serve(
             commit(state, target, vec![operation(&dashboard_node_id(id), properties)]).await?;
             Ok(receipt(&next))
         }
+        DashboardAssetOp::Grant { id, grant: one } => {
+            change_grants(state, target, &caller, id, now_ms, |stored| {
+                grant(stored, one.clone(), &caller)
+            })
+            .await
+        }
+        DashboardAssetOp::Revoke {
+            id,
+            principal_or_group,
+        } => {
+            change_grants(state, target, &caller, id, now_ms, |stored| {
+                revoke(stored, principal_or_group, &caller)
+            })
+            .await
+        }
         DashboardAssetOp::Delete {
             id,
             expected_revision,
@@ -205,6 +228,64 @@ async fn serve(
             Ok(receipt(&next))
         }
     }
+}
+
+/// How many times a `Grant` or `Revoke` re-reads and re-decides after losing the compare-and-set
+/// to a concurrent change of the same dashboard's grants.
+const MAX_GRANT_ATTEMPTS: usize = 8;
+
+/// Change the grants of one dashboard by `decide`, a pure function of the stored state. The
+/// write is a compare-and-set on the `grants` and `removed_at_ms` the decision was made from: a
+/// concurrent change makes it lose, and the call reads again and decides again. A decision that
+/// leaves the grants as stored writes nothing.
+async fn change_grants(
+    state: &Arc<RwLock<ServerState>>,
+    target: &GraphTarget<'_>,
+    caller: &Caller<'_>,
+    id: &str,
+    now_ms: u64,
+    decide: impl Fn(&DashboardState) -> Result<Vec<DashboardGrant>, DashboardRefusal>,
+) -> Result<DashboardReceipt, String> {
+    for _ in 0..MAX_GRANT_ATTEMPTS {
+        let (stored, properties) = required(load(state, target, id).await?, id)?;
+        let grants = decide(&stored).map_err(refused)?;
+        if grants == stored.asset.grants {
+            return Ok(receipt(&stored));
+        }
+        let mut conditions = Properties::new();
+        conditions.insert(TENANT_PROPERTY.into(), target.verified.tenant().into());
+        for key in ["grants", "removed_at_ms"] {
+            conditions.insert(
+                key.into(),
+                properties.get(key).cloned().unwrap_or(Value::Null),
+            );
+        }
+        let mut updates = Properties::new();
+        updates.insert(
+            "grants".into(),
+            serde_json::to_string(&grants).map_err(invalid)?.into(),
+        );
+        updates.insert("grants_by".into(), caller.principal.into());
+        updates.insert("grants_at_ms".into(), now_ms.into());
+        let committed = write(
+            state,
+            target,
+            Method::CompareAndSetNodeFields {
+                node_id: dashboard_node_id(id),
+                conditions_msgpack: encode(&conditions)?,
+                updates_msgpack: encode(&updates)?,
+            },
+        )
+        .await?;
+        if took_effect(&committed) {
+            let mut next = stored;
+            next.asset.grants = grants;
+            return Ok(receipt(&next));
+        }
+    }
+    Err(invalid(format!(
+        "the grants of '{id}' kept changing; retry the call"
+    )))
 }
 
 /// An unknown dashboard reads as no grant: the caller learns nothing about ids it cannot read.

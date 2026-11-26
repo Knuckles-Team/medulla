@@ -518,6 +518,7 @@ requires an error response with no result. Canonical artifact freshness passes. 
 - `MEDULLA-TYPED-PACKS-R109.5`: `tests/typed_packs/test_dashboard_asset_served.py::test_revision_grant_and_delete_history_and_usage_are_served`.
 - `MEDULLA-TYPED-PACKS-R109.6`: `tests/typed_packs/test_dashboard_asset_served.py::test_dashboard_save_conflict_share_lineage_search_and_soft_delete`.
 - `MEDULLA-TYPED-PACKS-R109.7`: `crates/medulla-core/tests/dashboard_asset.rs::delete_with_expected_revision_refuses_a_mismatch_and_is_not_a_view`; `tests/typed_packs/test_dashboard_grants_served.py::test_delete_with_expected_revision_refuses_a_mismatch_and_is_not_a_view`.
+- `MEDULLA-TYPED-PACKS-R109.8`: `crates/medulla-core/tests/dashboard_asset.rs::grant_and_revoke_change_one_grantee_and_commute_with_the_others`; `tests/typed_packs/test_dashboard_grants_served.py::test_grant_and_revoke_change_one_grantee_without_a_whole_list_share`.
 
 ## R085.7 original session reference inspection
 

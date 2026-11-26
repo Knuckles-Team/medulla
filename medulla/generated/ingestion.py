@@ -931,6 +931,12 @@ decode_dashboard_asset_save = contract_decoder(
 decode_dashboard_asset_share = contract_decoder(
     "DashboardAsset", "DashboardReceipt", "share"
 )
+decode_dashboard_asset_grant = contract_decoder(
+    "DashboardAsset", "DashboardReceipt", "grant"
+)
+decode_dashboard_asset_revoke = contract_decoder(
+    "DashboardAsset", "DashboardReceipt", "revoke"
+)
 decode_dashboard_asset_delete = contract_decoder(
     "DashboardAsset", "DashboardReceipt", "delete"
 )

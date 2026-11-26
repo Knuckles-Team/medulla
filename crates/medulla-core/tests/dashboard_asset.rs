@@ -1,7 +1,7 @@
 //! Dashboard asset rules (MEDULLA-TYPED-PACKS-R109.2).
 
 use medulla_core::dashboard::{
-    access_of, delete, links_of, purge_due, restore, save, share, view, Access, Caller,
+    access_of, delete, grant, links_of, purge_due, restore, revoke, save, share, view, Access, Caller,
     DashboardRefusal, DashboardState,
 };
 use medulla_types::dashboard::{
@@ -167,4 +167,80 @@ fn delete_with_expected_revision_refuses_a_mismatch_and_is_not_a_view() {
         delete(&state, &owner, 102, Some(2)).unwrap_err(),
         DashboardRefusal::Invalid(_)
     ));
+}
+
+// spec: MEDULLA-TYPED-PACKS-R109.8
+#[test]
+fn grant_and_revoke_change_one_grantee_and_commute_with_the_others() {
+    let owner = Caller { principal: "alice", groups: &[] };
+    let member = Caller { principal: "bob", groups: &[] };
+    let first = save(None, "d1", body(&["orders"], &[]), 0, &owner, 10).unwrap();
+    let mut state = state_of(first);
+    let sales = |role| DashboardGrant { principal_or_group: "group:sales".into(), role };
+    let ops = |role| DashboardGrant { principal_or_group: "group:ops".into(), role };
+
+    // A grant adds one grantee; granting again replaces that grantee's role in place.
+    state.asset.grants = grant(&state, sales(DashboardRole::View), &owner).unwrap();
+    assert_eq!(state.asset.grants, vec![sales(DashboardRole::View)]);
+    state.asset.grants = grant(&state, ops(DashboardRole::Edit), &owner).unwrap();
+    state.asset.grants = grant(&state, sales(DashboardRole::Edit), &owner).unwrap();
+    assert_eq!(
+        state.asset.grants,
+        vec![sales(DashboardRole::Edit), ops(DashboardRole::Edit)]
+    );
+
+    // Two grants for different grantees land in either order: the list does not depend on
+    // which caller read it first.
+    let mut a = state_of(save(None, "d1", body(&["orders"], &[]), 0, &owner, 10).unwrap());
+    let mut b = a.clone();
+    a.asset.grants = grant(&a, sales(DashboardRole::View), &owner).unwrap();
+    a.asset.grants = grant(&a, ops(DashboardRole::Edit), &owner).unwrap();
+    b.asset.grants = grant(&b, ops(DashboardRole::Edit), &owner).unwrap();
+    b.asset.grants = grant(&b, sales(DashboardRole::View), &owner).unwrap();
+    let mut left = a.asset.grants.clone();
+    let mut right = b.asset.grants.clone();
+    left.sort_by(|x, y| x.principal_or_group.cmp(&y.principal_or_group));
+    right.sort_by(|x, y| x.principal_or_group.cmp(&y.principal_or_group));
+    assert_eq!(left, right);
+
+    // A revoke removes one grantee, leaves the rest, and a missing grantee changes nothing.
+    let rest = revoke(&state, "group:sales", &owner).unwrap();
+    assert_eq!(rest, vec![ops(DashboardRole::Edit)]);
+    assert_eq!(revoke(&state, "group:nobody", &owner).unwrap(), state.asset.grants);
+
+    // Only the owner changes grants, and a blank grantee is invalid.
+    assert_eq!(
+        grant(&state, sales(DashboardRole::View), &member).unwrap_err(),
+        DashboardRefusal::NotGranted
+    );
+    assert_eq!(
+        revoke(&state, "group:sales", &member).unwrap_err(),
+        DashboardRefusal::NotGranted
+    );
+    let blank = DashboardGrant { principal_or_group: " ".into(), role: DashboardRole::View };
+    assert!(matches!(
+        grant(&state, blank, &owner).unwrap_err(),
+        DashboardRefusal::Invalid(_)
+    ));
+    assert!(matches!(
+        revoke(&state, " ", &owner).unwrap_err(),
+        DashboardRefusal::Invalid(_)
+    ));
+
+    // A deleted dashboard takes no grant change until it is restored.
+    state.removed_at_ms = Some(100);
+    assert!(matches!(
+        grant(&state, sales(DashboardRole::View), &owner).unwrap_err(),
+        DashboardRefusal::Invalid(_)
+    ));
+    assert!(matches!(
+        revoke(&state, "group:sales", &owner).unwrap_err(),
+        DashboardRefusal::Invalid(_)
+    ));
+    state.removed_at_ms = None;
+    state.purged = true;
+    assert_eq!(
+        grant(&state, sales(DashboardRole::View), &owner).unwrap_err(),
+        DashboardRefusal::Purged
+    );
 }

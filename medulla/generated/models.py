@@ -35413,6 +35413,22 @@ class DashboardAssetOpShare(BaseModel):
     grants: list[DashboardGrant]
 
 
+class DashboardAssetOpGrant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["grant"]
+    id: str
+    grant: DashboardGrant
+
+
+class DashboardAssetOpRevoke(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["revoke"]
+    id: str
+    principal_or_group: str
+
+
 class DashboardAssetOpDelete(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -35438,6 +35454,8 @@ class DashboardAssetOpGet(BaseModel):
 DashboardAssetOp = Annotated[
     DashboardAssetOpSave
     | DashboardAssetOpShare
+    | DashboardAssetOpGrant
+    | DashboardAssetOpRevoke
     | DashboardAssetOpDelete
     | DashboardAssetOpRestore
     | DashboardAssetOpGet,
@@ -46194,6 +46212,8 @@ __all__ = [
     "DashboardAssetOp",
     "DashboardAssetOpSave",
     "DashboardAssetOpShare",
+    "DashboardAssetOpGrant",
+    "DashboardAssetOpRevoke",
     "DashboardAssetOpDelete",
     "DashboardAssetOpRestore",
     "DashboardAssetOpGet",

@@ -118,6 +118,8 @@ method_results! {
     // MEDULLA-TYPED-PACKS-R109.3: every dashboard op answers one receipt.
     DashboardAssetSave(DashboardAsset / "save") => Raw<medulla_types::dashboard::DashboardReceipt>;
     DashboardAssetShare(DashboardAsset / "share") => Raw<medulla_types::dashboard::DashboardReceipt>;
+    DashboardAssetGrant(DashboardAsset / "grant") => Raw<medulla_types::dashboard::DashboardReceipt>;
+    DashboardAssetRevoke(DashboardAsset / "revoke") => Raw<medulla_types::dashboard::DashboardReceipt>;
     DashboardAssetDelete(DashboardAsset / "delete") => Raw<medulla_types::dashboard::DashboardReceipt>;
     DashboardAssetRestore(DashboardAsset / "restore") => Raw<medulla_types::dashboard::DashboardReceipt>;
     DashboardAssetGet(DashboardAsset / "get") => Raw<medulla_types::dashboard::DashboardReceipt>;

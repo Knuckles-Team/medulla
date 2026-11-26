@@ -207,6 +207,22 @@ pub enum DashboardAssetOp {
         /// The grants that replace the stored ones.
         grants: Vec<DashboardGrant>,
     },
+    /// Set the role of one grantee, leaving every other grant as stored. The grantee's grant is
+    /// replaced when it exists and added when it does not. Only the owner may.
+    Grant {
+        /// The dashboard id.
+        id: String,
+        /// The grant to set for its principal or group.
+        grant: DashboardGrant,
+    },
+    /// Remove the grant of one grantee, leaving every other grant as stored. Removing a grantee
+    /// that holds no grant succeeds and changes nothing. Only the owner may.
+    Revoke {
+        /// The dashboard id.
+        id: String,
+        /// The principal or group whose grant is removed.
+        principal_or_group: String,
+    },
     /// Soft delete: the body stays for `catalog.dashboard_retention_days`. Only the owner may.
     /// A delete is not a view: it never raises `usage_count` or sets `last_viewed_ms`.
     Delete {
