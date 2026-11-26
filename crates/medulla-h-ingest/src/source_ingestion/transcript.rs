@@ -135,6 +135,57 @@ pub(super) fn decode_transcript_items(items: &[SourceJson]) -> Result<DecodedTra
     })
 }
 
+/// An identifier the memory record id alphabet accepts: the source's own spelling when it is
+/// valid, else the SHA-256 identity of it under `domain`.
+fn memory_identifier(raw: &str, domain: &[u8]) -> Result<medulla_types::contract::ResourceId, String> {
+    if let Ok(id) = medulla_types::contract::ResourceId::new(raw) {
+        return Ok(id);
+    }
+    let hex = Digest256::framed(domain, &[raw.as_bytes()])?.to_hex();
+    medulla_types::contract::ResourceId::new(hex)
+}
+
+/// The conversation a transcripts batch carries, ready for the memory projection
+/// (MEDULLA-DECISION-ENGINE-R617.3): `Ok(None)` for any other batch kind. Messages keep the
+/// order they were sent in; the session id is the conversation id.
+pub fn conversation_of(
+    tenant: &str,
+    request: &SourceIngestionRequest,
+) -> Result<Option<medulla_work_types::memory::ConversationRecord>, String> {
+    use medulla_source_types::source_ingestion::batch_kind::SourceBatchExtension;
+    use medulla_source_types::source_transcript::TranscriptRole;
+    use medulla_work_types::memory::{ConversationMessage, ConversationRecord, MessageRole};
+    let Some(SourceBatchExtension::Transcripts(items)) = request.as_batch().extension.as_ref() else {
+        return Ok(None);
+    };
+    let decoded = decode_transcript_items(items.as_slice())?;
+    let conversation = memory_identifier(&decoded.thread.session_id, b"eg/transcript-conversation")?;
+    let messages = decoded
+        .messages
+        .iter()
+        .map(|message| {
+            Ok(ConversationMessage {
+                message_id: memory_identifier(&message.message_id, b"eg/transcript-memory-message")?,
+                role: match message.role {
+                    TranscriptRole::System => MessageRole::System,
+                    TranscriptRole::User => MessageRole::User,
+                    TranscriptRole::Assistant => MessageRole::Assistant,
+                    TranscriptRole::Tool => MessageRole::Tool,
+                },
+                provenance_key: memory_identifier(
+                    &message.provenance.source_record_id,
+                    b"eg/transcript-memory-provenance",
+                )?,
+                timestamp_ms: message.event_time_ms,
+                text: message.text.clone(),
+            })
+        })
+        .collect::<Result<Vec<_>, String>>()?;
+    ConversationRecord::new(tenant, conversation.as_str(), messages)
+        .map(Some)
+        .map_err(invalid)
+}
+
 /// The methods of one validated transcripts batch, in write order.
 #[derive(Debug, Default)]
 pub(super) struct TranscriptAdmission {

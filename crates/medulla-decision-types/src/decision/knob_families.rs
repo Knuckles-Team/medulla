@@ -7,6 +7,7 @@ pub mod context;
 pub mod context_search;
 pub mod criterion_review;
 pub mod decision_reads;
+pub mod episodes;
 pub mod fanout;
 pub mod grounded;
 pub mod indexless;
@@ -40,6 +41,7 @@ pub const REGISTRY: &[&[KnobSpec]] = &[
     context::KNOBS,
     criterion_review::KNOBS,
     decision_reads::KNOBS,
+    episodes::KNOBS,
     fanout::KNOBS,
     indexless::KNOBS,
     context_search::KNOBS,

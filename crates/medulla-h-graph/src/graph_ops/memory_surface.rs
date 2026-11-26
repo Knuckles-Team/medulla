@@ -36,8 +36,10 @@ use medulla_protocol_types::result_contract::graph::{
 };
 use medulla_modality::media_memory::match_derivation;
 use medulla_types::contract::ResourceId;
+use medulla_decision_memory::memory::episodes::{episodes_visible_at, first_session_overlap, valid_episode, RecordStamp};
 use medulla_work_types::memory::{
-    MemoryDriftReport, MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
+    Episode, EpisodeScope, EpisodeSpec, EPISODE_BOUNDARY_MISSING, EPISODE_IMMUTABLE, EPISODE_OVERLAP,
+    EPISODE_ORDER_UNKNOWN, MemoryDriftReport, MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
     MemoryRecallResult, MemoryRecord, MemoryRememberRequest, MemoryRememberResult, MemoryTier,
     MEMORY_ENTRY_TOO_LARGE, MEMORY_RECORD_SCHEMA_VERSION, MEMORY_SUPPORT_BELOW_THRESHOLD,
     MEMORY_TENANT_QUOTA_EXCEEDED, NOTE_RELEVANCE_OUT_OF_RANGE, NOTE_UNAUTHORIZED,
@@ -185,6 +187,155 @@ fn decode(blob: &[u8], tenant: &str) -> Option<Stored> {
 
 fn read_stored(core: &GraphCore, tenant: &str, memory_id: &str) -> Option<Stored> {
     decode(&core.get_node_properties(&node_id(tenant, memory_id))?, tenant)
+}
+
+/// The node type of a sealed episode (MEDULLA-DECISION-ENGINE-R155.1).
+const EPISODE_TYPE: &str = "Episode";
+/// The edge from an episode node to each record it holds.
+const CONTAINS: &str = "CONTAINS";
+
+/// The id of the episode a run of turns opens with `first`: `episode:` and the first record's id.
+pub(super) fn episode_id_for(first: &MemoryRecord) -> Result<ResourceId, String> {
+    ResourceId::new(format!("episode:{}", first.memory_id.as_str())).map_err(invalid)
+}
+
+/// The node id of one episode of one tenant.
+fn episode_node_id(tenant: &str, episode_id: &str) -> String {
+    format!("episode:{tenant}:{episode_id}")
+}
+
+/// One stored episode of `tenant`; anything else reads as absent. The sealed body is
+/// re-validated on read, so a node whose digest no longer matches its body is dropped.
+fn decode_episode(blob: &[u8], tenant: &str) -> Option<Episode> {
+    let mut props = medulla_types::msgpack::decode_property_object(blob).ok()?;
+    if props.remove(TENANT_KEY)?.as_str()? != tenant {
+        return None;
+    }
+    props.remove("type");
+    props.remove("_owner");
+    let episode: Episode = serde_json::from_value(serde_json::Value::Object(props)).ok()?;
+    (episode.tenant.as_str() == tenant).then_some(episode)
+}
+
+fn read_episode(core: &GraphCore, tenant: &str, episode_id: &str) -> Option<Episode> {
+    decode_episode(&core.get_node_properties(&episode_node_id(tenant, episode_id))?, tenant)
+}
+
+/// Every episode of `tenant`.
+fn load_episodes(core: &GraphCore, tenant: &str) -> Vec<Episode> {
+    core.get_nodes_by_label(EPISODE_TYPE, SCAN_CAP_PER_TIER)
+        .into_iter()
+        .filter_map(|(_, blob)| decode_episode(&blob, tenant))
+        .collect()
+}
+
+/// What sealing one episode writes (MEDULLA-DECISION-ENGINE-R155.3): the sealed episode and the
+/// batch operations that store it; no operations when the very same episode is already sealed.
+struct EpisodePlan {
+    episode: Episode,
+    operations: Vec<serde_json::Value>,
+}
+
+/// Plan the episode a remember of `record` seals under `spec`, writing nothing. The episode holds
+/// the record and the earlier records the spec names, in time order. Refusals come before any
+/// write: `EPISODE_BOUNDARY_MISSING` (no session, or a record outside it), `EPISODE_ORDER_UNKNOWN`
+/// (a record without a timestamp), `EPISODE_IMMUTABLE` (the id is sealed with another digest) and
+/// `EPISODE_OVERLAP` (the window overlaps another episode of the session).
+fn plan_episode(core: &GraphCore, tenant: &str, record: &MemoryRecord, spec: &EpisodeSpec) -> Result<EpisodePlan, String> {
+    let Some(session) = spec.session_id.as_ref() else {
+        return Err(refuse(EPISODE_BOUNDARY_MISSING.as_str(), "an episode spec needs a session_id"));
+    };
+    let outside = |id: &ResourceId| {
+        refuse(
+            EPISODE_BOUNDARY_MISSING.as_str(),
+            format!("record {} is not an episodic record of session {}", id.as_str(), session.as_str()),
+        )
+    };
+    if record.session_id.as_ref() != Some(session) || record.tier != MemoryTier::Episodic {
+        return Err(outside(&record.memory_id));
+    }
+    let mut stamps = vec![RecordStamp {
+        record_id: record.memory_id.as_str().to_string(),
+        timestamp_ms: record.timestamp_ms,
+    }];
+    for id in &spec.preceding {
+        if stamps.iter().any(|stamp| stamp.record_id == id.as_str()) {
+            continue;
+        }
+        let held = read_stored(core, tenant, id.as_str()).ok_or_else(|| absent_record(id.as_str()))?;
+        if held.record.session_id.as_ref() != Some(session) || held.record.tier != MemoryTier::Episodic {
+            return Err(outside(id));
+        }
+        stamps.push(RecordStamp {
+            record_id: id.as_str().to_string(),
+            timestamp_ms: held.record.timestamp_ms,
+        });
+    }
+    if let Some(stamp) = stamps.iter().find(|stamp| stamp.timestamp_ms <= 0) {
+        return Err(refuse(
+            EPISODE_ORDER_UNKNOWN.as_str(),
+            format!("record {} has no timestamp_ms", stamp.record_id),
+        ));
+    }
+    stamps.sort_by(|a, b| (a.timestamp_ms, a.record_id.as_str()).cmp(&(b.timestamp_ms, b.record_id.as_str())));
+    let episode = Episode::seal(
+        spec.episode_id.as_str(),
+        tenant,
+        session.as_str(),
+        stamps[0].timestamp_ms,
+        stamps[stamps.len() - 1].timestamp_ms,
+        stamps.iter().map(|stamp| stamp.record_id.clone()).collect(),
+    )
+    .map_err(invalid)?;
+    valid_episode(&episode, &stamps).map_err(|fault| invalid(format!("episode is not valid: {fault:?}")))?;
+    match read_episode(core, tenant, spec.episode_id.as_str()) {
+        Some(sealed) if sealed.digest == episode.digest => {
+            return Ok(EpisodePlan { episode, operations: Vec::new() });
+        }
+        Some(sealed) => {
+            return Err(refuse(
+                EPISODE_IMMUTABLE.as_str(),
+                format!(
+                    "episode {} is sealed with digest {}; it cannot be written with digest {}",
+                    spec.episode_id.as_str(),
+                    sealed.digest,
+                    episode.digest
+                ),
+            ));
+        }
+        None => {}
+    }
+    let mut all = load_episodes(core, tenant);
+    all.push(episode.clone());
+    if first_session_overlap(&all).is_some_and(|(a, b)| a.episode_id == episode.episode_id || b.episode_id == episode.episode_id) {
+        return Err(refuse(
+            EPISODE_OVERLAP.as_str(),
+            format!("episode {} overlaps another episode of session {}", spec.episode_id.as_str(), session.as_str()),
+        ));
+    }
+    let id = episode_node_id(tenant, spec.episode_id.as_str());
+    let serde_json::Value::Object(mut props) = serde_json::to_value(&episode).map_err(invalid)? else {
+        return Err(invalid("an episode serializes as an object"));
+    };
+    props.insert("type".into(), EPISODE_TYPE.into());
+    props.insert(TENANT_KEY.into(), tenant.into());
+    let mut operations = vec![serde_json::json!({"op": "add_node", "id": id, "properties": props})];
+    for record_id in &episode.record_ids {
+        operations.push(serde_json::json!({
+            "op": "add_edge",
+            "source": id,
+            "target": node_id(tenant, record_id.as_str()),
+            "properties": {"relationship": CONTAINS},
+        }));
+    }
+    Ok(EpisodePlan { episode, operations })
+}
+
+/// The one batch of operations, as the gateway commits it.
+fn batch_of(operations: Vec<serde_json::Value>) -> Result<Method, String> {
+    let operations_msgpack = rmp_serde::to_vec_named(&serde_json::Value::Array(operations))
+        .map_err(|error| refuse("PARAMETER_INVALID", format!("record encoding failed: {error}")))?;
+    Ok(Method::BatchUpdate { operations_msgpack })
 }
 
 /// Every record of `tenant` in the named tiers, in `memory_id` order per tier.
@@ -370,10 +521,18 @@ pub(super) fn admit_remember(
             ),
         ));
     }
+    let episode_plan = request
+        .episode
+        .as_ref()
+        .map(|spec| plan_episode(core, tenant, record, spec))
+        .transpose()?;
+    let episode_view = episode_plan.as_ref().map(|plan| plan.episode.view());
+    let episode_ops = episode_plan.map(|plan| plan.operations).unwrap_or_default();
     let id = node_id(tenant, record.memory_id.as_str());
     let answer = |stored| MemoryRememberResult {
         memory_id: record.memory_id.clone(),
         stored,
+        episode: episode_view.clone(),
     };
     let embed = |embedding: &[f32]| {
         (!embedding.is_empty()).then(|| {
@@ -384,7 +543,7 @@ pub(super) fn admit_remember(
         })
     };
     let Some(existing) = read_stored(core, tenant, record.memory_id.as_str()) else {
-        let write = admitted_batch(core, tenant, &id, request, (blob.len() as u64, tenant_max_bytes))?;
+        let write = admitted_batch(core, tenant, &id, request, (blob.len() as u64, tenant_max_bytes), episode_ops)?;
         return Ok(Admitted::Write(Box::new(write), embed(&request.embedding), answer(true)));
     };
     let indexed = core.semantic_store.read().get_embedding(&id);
@@ -400,14 +559,27 @@ pub(super) fn admit_remember(
     if !same_identity(&existing.record, record) {
         return Err(conflict());
     }
+    // The record is already stored: only a still-unsealed episode and a still-missing vector
+    // are written.
+    let unchanged = |stored: bool| -> Result<Admitted, String> {
+        if episode_ops.is_empty() {
+            Ok(Admitted::Same(answer(stored)))
+        } else {
+            Ok(Admitted::Write(Box::new(batch_of(episode_ops.clone())?), None, answer(stored)))
+        }
+    };
     match (indexed, request.embedding.is_empty()) {
-        (_, true) => Ok(Admitted::Same(answer(false))),
-        (Some(stored), false) if vectors_agree(&stored, &request.embedding) => Ok(Admitted::Same(answer(false))),
+        (_, true) => unchanged(false),
+        (Some(stored), false) if vectors_agree(&stored, &request.embedding) => unchanged(false),
         (Some(_), false) => Err(conflict()),
-        (None, false) => Ok(Admitted::Embed(
-            embed(&request.embedding).expect("a non-empty embedding"),
-            answer(true),
-        )),
+        (None, false) => {
+            let embed = embed(&request.embedding).expect("a non-empty embedding");
+            if episode_ops.is_empty() {
+                Ok(Admitted::Embed(embed, answer(true)))
+            } else {
+                Ok(Admitted::Write(Box::new(batch_of(episode_ops.clone())?), Some(embed), answer(true)))
+            }
+        }
     }
 }
 
@@ -424,6 +596,7 @@ fn admitted_batch(
     id: &str,
     request: &MemoryRememberRequest,
     (blob_len, max_tenant): (u64, u64),
+    episode_ops: Vec<serde_json::Value>,
 ) -> Result<Method, String> {
     let replaced = core.get_node_properties(id).map_or(0, |stored| stored.len() as u64);
     let project = |total: u64| total.saturating_sub(replaced).saturating_add(blob_len);
@@ -436,13 +609,12 @@ fn admitted_batch(
             ),
         ));
     }
-    let operations = serde_json::json!([
-        {"op": "add_node", "id": id, "properties": node_props(tenant, request)},
-        {"op": "add_node", "id": usage_node_id(tenant), "properties": usage_props(tenant, projected)},
-    ]);
-    let operations_msgpack = rmp_serde::to_vec_named(&operations)
-        .map_err(|error| refuse("PARAMETER_INVALID", format!("record encoding failed: {error}")))?;
-    Ok(Method::BatchUpdate { operations_msgpack })
+    let mut operations = vec![
+        serde_json::json!({"op": "add_node", "id": id, "properties": node_props(tenant, request)}),
+        serde_json::json!({"op": "add_node", "id": usage_node_id(tenant), "properties": usage_props(tenant, projected)}),
+    ];
+    operations.extend(episode_ops);
+    batch_of(operations)
 }
 
 /// The attachment digests of a `MemoryRemember` that the caller's owner scope holds in the blob
@@ -775,7 +947,7 @@ pub fn stage_session_note(
     let record = note
         .to_record(tenant, now_ms)
         .map_err(|error| refuse("PARAMETER_INVALID", error))?;
-    let mut methods = stage_remember(core, tenant, &MemoryRememberRequest { record, embedding })?;
+    let mut methods = stage_remember(core, tenant, &MemoryRememberRequest { record, embedding, episode: None })?;
     if core.get_node_properties(&sidecar).is_none() {
         let serde_json::Value::Object(mut props) =
             serde_json::to_value(note).map_err(|error| refuse("PARAMETER_INVALID", error))?
@@ -946,9 +1118,35 @@ pub(super) fn recall(
                 .is_some_and(|key| set.contains(key.as_str()))
         })
     };
+    // MEDULLA-DECISION-ENGINE-R155.3: the episodes the recall sees are the ones sealed by `as_of`
+    // (end at or below it), of the session the request names when it names one.
+    let episodes: Vec<Episode> = match request.episode_scope {
+        Some(EpisodeScope::Episodes | EpisodeScope::Both) => {
+            let sealed = load_episodes(core, tenant);
+            episodes_visible_at(&sealed, tenant, as_of)
+                .into_iter()
+                .filter(|episode| request.scope.as_ref().is_none_or(|session| *session == episode.session_id))
+                .cloned()
+                .collect()
+        }
+        _ => Vec::new(),
+    };
+    let episode_members: BTreeSet<&str> = episodes
+        .iter()
+        .flat_map(|episode| episode.record_ids.iter().map(ResourceId::as_str))
+        .collect();
+    let in_episode_scope = |stored: &Stored| match request.episode_scope {
+        None => true,
+        Some(EpisodeScope::Episodes) => episode_members.contains(stored.record.memory_id.as_str()),
+        Some(EpisodeScope::Live) => stored.record.tier == MemoryTier::Working,
+        Some(EpisodeScope::Both) => {
+            episode_members.contains(stored.record.memory_id.as_str()) || stored.record.tier == MemoryTier::Working
+        }
+    };
     let searched_by_request = |stored: &Stored| {
         visible(stored)
             && in_document_set(stored)
+            && in_episode_scope(stored)
             && tiers.contains(&stored.record.tier)
             && request
                 .scope
@@ -1057,6 +1255,9 @@ pub(super) fn recall(
         drift,
         notes,
         note_premises,
+        episodes: episodes.iter().map(Episode::view).collect(),
+        as_of_ms: as_of,
+        episode_scope: request.episode_scope,
     })
 }
 
@@ -1132,7 +1333,7 @@ fn manifest_digest(records: &[MemoryRecord]) -> Result<String, String> {
 /// and the knob values the recall reads. `previous_manifest_digest` is a
 /// comparison input, not part of the plan.
 fn recall_plan_digest(request: &MemoryRecallRequest, keywords: &[String]) -> Result<String, String> {
-    let plan = serde_json::json!({
+    let mut plan = serde_json::json!({
         "query_embedding": request.query_embedding,
         "keywords": keywords,
         "tiers": request.tiers,
@@ -1150,6 +1351,9 @@ fn recall_plan_digest(request: &MemoryRecallRequest, keywords: &[String]) -> Res
             "memory.export_max_records": knob_integer(&kernel::EXPORT_MAX_RECORDS),
         },
     });
+    if let Some(scope) = request.episode_scope {
+        plan["episode_scope"] = serde_json::json!(scope);
+    }
     let canonical = serde_json::to_vec(&plan)
         .map_err(|error| refuse("INTERNAL", format!("plan encoding: {error}")))?;
     Ok(hex_digest(RECALL_PLAN_DIGEST_DOMAIN, &canonical))

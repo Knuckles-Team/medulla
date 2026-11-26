@@ -6004,6 +6004,7 @@ dependencies = [
  "medulla-catalog-types",
  "medulla-compute",
  "medulla-core",
+ "medulla-decision-memory",
  "medulla-decision-outcome-types",
  "medulla-decision-stats",
  "medulla-decision-types",

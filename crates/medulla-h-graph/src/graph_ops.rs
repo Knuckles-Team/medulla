@@ -90,6 +90,7 @@ mod hierarchy;
 mod memory;
 mod memory_cursor;
 pub mod memory_surface;
+pub mod memory_ingest;
 pub mod memory_snapshot;
 mod nl_correction;
 mod nodes;

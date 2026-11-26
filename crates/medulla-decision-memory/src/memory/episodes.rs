@@ -107,6 +107,24 @@ pub fn episodes_visible_at<'a>(
     visible
 }
 
+/// Split time-ordered `timestamps_ms` into the runs a quiet period of more than `gap_ms` separates
+/// (MEDULLA-DECISION-ENGINE-R155.3). Each run is a half-open index range into the input; every
+/// run but the last is closed by a later turn. Cost is O(n).
+pub fn split_by_gap(timestamps_ms: &[i64], gap_ms: i64) -> Vec<std::ops::Range<usize>> {
+    let mut runs = Vec::new();
+    let mut start = 0;
+    for index in 1..timestamps_ms.len() {
+        if timestamps_ms[index].saturating_sub(timestamps_ms[index - 1]) > gap_ms {
+            runs.push(start..index);
+            start = index;
+        }
+    }
+    if start < timestamps_ms.len() {
+        runs.push(start..timestamps_ms.len());
+    }
+    runs
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -192,5 +210,15 @@ mod tests {
         let found = first_session_overlap(&crossing).unwrap();
         assert_eq!(found.0.session_id, found.1.session_id);
         assert!(first_session_overlap(&[a, same_window]).is_some());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R155.3
+    #[test]
+    fn split_by_gap_closes_runs_after_a_quiet_period() {
+        assert!(split_by_gap(&[], 10).is_empty());
+        assert_eq!(split_by_gap(&[5], 10), vec![0..1]);
+        // A gap equal to the knob does not split; a larger one does.
+        assert_eq!(split_by_gap(&[0, 10, 20], 10), vec![0..3]);
+        assert_eq!(split_by_gap(&[0, 10, 21, 22, 100], 10), vec![0..2, 2..4, 4..5]);
     }
 }

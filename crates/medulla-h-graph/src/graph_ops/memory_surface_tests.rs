@@ -58,7 +58,7 @@ fn apply_batch(core: &GraphCore, write: &Method) {
 }
 
 fn remember(record: MemoryRecord, embedding: Vec<f32>) -> MemoryRememberRequest {
-    MemoryRememberRequest { record, embedding }
+    MemoryRememberRequest { record, embedding, episode: None }
 }
 
 fn store(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) {
@@ -93,6 +93,7 @@ fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> Memory
         min_relevance: None,
         include_archived: false,
         current_revision: None,
+        episode_scope: None,
     }
 }
 
@@ -603,4 +604,332 @@ fn remember_refuses_over_tenant_capacity() {
     let other = remember(record("tenant-b", "m:1", MemoryTier::Semantic, "first"), vec![]);
     let other_len = node_blob("tenant-b", &other).unwrap().len() as u64;
     assert!(admit_remember(&core, "tenant-b", &other, &known, used.max(other_len)).is_ok());
+}
+
+// ---- MEDULLA-DECISION-ENGINE-R155: episodes and cross-session recall ----
+
+use medulla_work_types::memory::{
+    ConversationMessage, ConversationRecord, Episode, EpisodeScope, EpisodeSpec, MemoryRememberResult, MessageRole,
+};
+
+fn episodic(tenant: &str, id: &str, session: &str, timestamp_ms: i64) -> MemoryRecord {
+    let mut item = record(tenant, id, MemoryTier::Episodic, "note of the session");
+    item.session_id = Some(ResourceId::new(session).unwrap());
+    item.timestamp_ms = timestamp_ms;
+    item
+}
+
+fn episode_spec(episode_id: &str, session: Option<&str>, preceding: &[&str]) -> medulla_work_types::memory::EpisodeSpec {
+    EpisodeSpec {
+        episode_id: ResourceId::new(episode_id).unwrap(),
+        session_id: session.map(|session| ResourceId::new(session).unwrap()),
+        preceding: preceding.iter().map(|id| ResourceId::new(*id).unwrap()).collect(),
+    }
+}
+
+/// Admit one remember and commit what it writes, as the served handler does.
+fn commit(core: &GraphCore, tenant: &str, request: &MemoryRememberRequest) -> Result<MemoryRememberResult, String> {
+    match admit(core, tenant, request, &Default::default())? {
+        Admitted::Write(write, embed, answer) => {
+            apply_batch(core, &write);
+            if let Some(embed) = embed {
+                let Method::AddEmbedding { node_id, embedding } = *embed else {
+                    panic!("the vector write is an AddEmbedding");
+                };
+                core.semantic_store.write().add_embedding(node_id, embedding).unwrap();
+            }
+            Ok(answer)
+        }
+        Admitted::Embed(_, answer) | Admitted::Same(answer) => Ok(answer),
+    }
+}
+
+fn with_episode(
+    mut request: MemoryRememberRequest,
+    spec: medulla_work_types::memory::EpisodeSpec,
+) -> MemoryRememberRequest {
+    request.episode = Some(spec);
+    request
+}
+
+/// Remember the earlier records bare, then the last one with the episode spec.
+fn seal(
+    core: &GraphCore,
+    tenant: &str,
+    episode_id: &str,
+    session: &str,
+    stamps: &[(&str, i64)],
+) -> MemoryRememberResult {
+    let (last, earlier) = stamps.split_last().unwrap();
+    for (id, at) in earlier {
+        commit(core, tenant, &remember(episodic(tenant, id, session, *at), vec![])).unwrap();
+    }
+    let preceding: Vec<&str> = earlier.iter().map(|(id, _)| *id).collect();
+    commit(
+        core,
+        tenant,
+        &with_episode(
+            remember(episodic(tenant, last.0, session, last.1), vec![]),
+            episode_spec(episode_id, Some(session), &preceding),
+        ),
+    )
+    .unwrap()
+}
+
+fn episode_recall(scope: EpisodeScope, as_of_ms: i64) -> MemoryRecallRequest {
+    let mut request = recall_request(vec![], &["note"], 10_000);
+    request.episode_scope = Some(scope);
+    request.as_of_ms = Some(as_of_ms);
+    request
+}
+
+fn contained(core: &GraphCore, episode_node: &str) -> usize {
+    core.get_edges()
+        .into_iter()
+        .filter(|(source, target, _)| source == episode_node && target.starts_with("memory:"))
+        .count()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R155.3
+#[test]
+fn remember_seals_an_episode_and_recall_filters_by_time() {
+    let core = GraphCore::new();
+    let sealed = seal(&core, "tenant-a", "ep:1", "s1", &[("e1", 100), ("e2", 200), ("e3", 300)]);
+    let view = sealed.episode.expect("the remember reports the episode it sealed");
+    assert_eq!((view.start_ms, view.end_ms, view.record_count), (100, 300, 3));
+    assert_eq!(view.digest.len(), 64);
+    // A later session's episode, ending after the as-of instant of the first recall.
+    seal(&core, "tenant-a", "ep:2", "s2", &[("f1", 1_000)]);
+    let mut live = record("tenant-a", "w1", MemoryTier::Working, "note held live");
+    live.timestamp_ms = 50;
+    commit(&core, "tenant-a", &remember(live, vec![])).unwrap();
+    // The episode is one node with a CONTAINS edge per record.
+    assert_eq!(contained(&core, "episode:tenant-a:ep:1"), 3);
+
+    let episodes = recall(&core, "tenant-a", 5_000, &episode_recall(EpisodeScope::Episodes, 500), None).unwrap();
+    assert_eq!(
+        episodes.episodes.iter().map(|e| e.episode_id.as_str()).collect::<Vec<_>>(),
+        ["ep:1"],
+        "the episode ending after the as-of time is hidden"
+    );
+    let mut held = ids(&episodes.hits);
+    held.sort();
+    assert_eq!(held, ["e1", "e2", "e3"], "only records of visible episodes");
+
+    let live_only = recall(&core, "tenant-a", 5_000, &episode_recall(EpisodeScope::Live, 500), None).unwrap();
+    assert_eq!(ids(&live_only.hits), ["w1"]);
+    assert!(live_only.episodes.is_empty());
+
+    let both = recall(&core, "tenant-a", 5_000, &episode_recall(EpisodeScope::Both, 500), None).unwrap();
+    assert_eq!(both.hits.len(), 4);
+
+    let later = recall(&core, "tenant-a", 5_000, &episode_recall(EpisodeScope::Episodes, 2_000), None).unwrap();
+    assert_eq!(later.episodes.len(), 2);
+
+    // Another tenant sees no episode, and cannot seal one over this tenant's records.
+    let foreign = recall(&core, "tenant-b", 5_000, &episode_recall(EpisodeScope::Both, 2_000), None).unwrap();
+    assert!(foreign.episodes.is_empty() && foreign.hits.is_empty());
+    let nodes = core.node_count();
+    let rival = with_episode(
+        remember(episodic("tenant-b", "g1", "s1", 400), vec![]),
+        episode_spec("ep:rival", Some("s1"), &["e1"]),
+    );
+    let refusal = commit(&core, "tenant-b", &rival).err().unwrap();
+    assert_eq!(refusal, absent_record("e1"));
+    assert_eq!(core.node_count(), nodes);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R155.4
+#[test]
+fn episode_refusals() {
+    let core = GraphCore::new();
+    seal(&core, "tenant-a", "ep:1", "s1", &[("e1", 100), ("e2", 200)]);
+    let nodes = core.node_count();
+    let edges = core.get_edges().len();
+    let refused = |request: MemoryRememberRequest| commit(&core, "tenant-a", &request).err().unwrap();
+
+    // No session on the spec, and a record outside the spec's session.
+    let no_session = with_episode(remember(episodic("tenant-a", "x1", "s9", 900), vec![]), episode_spec("ep:x", None, &[]));
+    assert!(refused(no_session).starts_with("EPISODE_BOUNDARY_MISSING"));
+    let other_session = with_episode(
+        remember(episodic("tenant-a", "x2", "s9", 900), vec![]),
+        episode_spec("ep:x", Some("s8"), &[]),
+    );
+    assert!(refused(other_session).starts_with("EPISODE_BOUNDARY_MISSING"));
+    // A record without a timestamp has no place in an episode.
+    let no_time = with_episode(
+        remember(episodic("tenant-a", "x3", "s1", 0), vec![]),
+        episode_spec("ep:y", Some("s1"), &[]),
+    );
+    assert!(refused(no_time).starts_with("EPISODE_ORDER_UNKNOWN"));
+    // A window inside another episode of the session.
+    let overlapping = with_episode(
+        remember(episodic("tenant-a", "x4", "s1", 150), vec![]),
+        episode_spec("ep:z", Some("s1"), &[]),
+    );
+    assert!(refused(overlapping).starts_with("EPISODE_OVERLAP"));
+    // A sealed id written again with a different body.
+    let again = with_episode(
+        remember(episodic("tenant-a", "x5", "s1", 300), vec![]),
+        episode_spec("ep:1", Some("s1"), &["e1", "e2"]),
+    );
+    assert!(refused(again).starts_with("EPISODE_IMMUTABLE"));
+
+    // Every refusal came before any write.
+    assert_eq!(core.node_count(), nodes);
+    assert_eq!(core.get_edges().len(), edges);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R155.5
+#[test]
+fn recall_result_binds_episode_digests() {
+    let core = GraphCore::new();
+    seal(&core, "tenant-a", "ep:1", "s1", &[("e1", 100), ("e2", 200), ("e3", 300)]);
+    seal(&core, "tenant-a", "ep:2", "s2", &[("f1", 400), ("f2", 500)]);
+    let nodes = core.node_count();
+    let result = recall(&core, "tenant-a", 9_000, &episode_recall(EpisodeScope::Episodes, 600), None).unwrap();
+    assert_eq!((result.as_of_ms, result.episode_scope), (600, Some(EpisodeScope::Episodes)));
+    assert_eq!(result.episodes.len(), 2);
+    for view in &result.episodes {
+        // The digest is the one the stored records seal to.
+        let mut members: Vec<(i64, String)> = result
+            .hits
+            .iter()
+            .filter(|hit| hit.record.session_id.as_ref() == Some(&view.session_id))
+            .map(|hit| (hit.record.timestamp_ms, hit.record.memory_id.as_str().to_string()))
+            .collect();
+        members.sort();
+        let again = Episode::seal(
+            view.episode_id.as_str(),
+            "tenant-a",
+            view.session_id.as_str(),
+            view.start_ms,
+            view.end_ms,
+            members.iter().map(|(_, id)| id.clone()).collect(),
+        )
+        .unwrap();
+        assert_eq!(again.digest, view.digest);
+        assert_eq!(usize::try_from(view.record_count).unwrap(), members.len());
+        assert_eq!(members.first().unwrap().0, view.start_ms);
+        assert_eq!(members.last().unwrap().0, view.end_ms);
+    }
+    // A read seals nothing.
+    assert_eq!(core.node_count(), nodes);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R155.1, MEDULLA-DECISION-ENGINE-R155.2, MEDULLA-DECISION-ENGINE-R155.6
+#[test]
+fn later_session_recalls_earlier_episode_in_order() {
+    let core = GraphCore::new();
+    // Three sessions sealed out of order; a fourth ends in the future.
+    seal(&core, "tenant-a", "ep:b", "s2", &[("b1", 2_000), ("b2", 2_100)]);
+    seal(&core, "tenant-a", "ep:a", "s1", &[("a1", 1_000), ("a2", 1_100)]);
+    seal(&core, "tenant-a", "ep:c", "s3", &[("c1", 3_000)]);
+    seal(&core, "tenant-a", "ep:future", "s4", &[("d1", 90_000)]);
+    let result = recall(&core, "tenant-a", 10_000, &episode_recall(EpisodeScope::Episodes, 5_000), None).unwrap();
+    let order: Vec<&str> = result.episodes.iter().map(|e| e.episode_id.as_str()).collect();
+    assert_eq!(order, ["ep:a", "ep:b", "ep:c"], "by start time, the future episode hidden");
+    assert!(!ids(&result.hits).contains(&"d1"));
+
+    // A sealed episode is immutable: the same write is found again, another body is refused.
+    let replay = seal_again(&core, "ep:a", "s1", &[("a1", 1_000), ("a2", 1_100)]);
+    assert!(!replay.stored, "nothing is written the second time");
+    assert_eq!(replay.episode.unwrap().digest, result.episodes[0].digest);
+    let changed = with_episode(
+        remember(episodic("tenant-a", "a3", "s1", 1_200), vec![]),
+        episode_spec("ep:a", Some("s1"), &["a1", "a2"]),
+    );
+    assert!(commit(&core, "tenant-a", &changed).err().unwrap().starts_with("EPISODE_IMMUTABLE"));
+
+    // A session scope narrows the episodes to that session.
+    let mut one = episode_recall(EpisodeScope::Episodes, 5_000);
+    one.scope = Some(ResourceId::new("s2").unwrap());
+    let narrowed = recall(&core, "tenant-a", 10_000, &one, None).unwrap();
+    assert_eq!(narrowed.episodes.len(), 1);
+    assert_eq!(narrowed.episodes[0].episode_id.as_str(), "ep:b");
+}
+
+/// The last write of `seal` again, against a store that already holds everything.
+fn seal_again(core: &GraphCore, episode_id: &str, session: &str, stamps: &[(&str, i64)]) -> MemoryRememberResult {
+    let (last, earlier) = stamps.split_last().unwrap();
+    let preceding: Vec<&str> = earlier.iter().map(|(id, _)| *id).collect();
+    commit(
+        core,
+        "tenant-a",
+        &with_episode(
+            remember(episodic("tenant-a", last.0, session, last.1), vec![]),
+            episode_spec(episode_id, Some(session), &preceding),
+        ),
+    )
+    .unwrap()
+}
+
+fn chat(tenant: &str, turns: &[(&str, MessageRole, i64)]) -> ConversationRecord {
+    ConversationRecord::new(
+        tenant,
+        "chat:1",
+        turns
+            .iter()
+            .map(|(id, role, at)| ConversationMessage {
+                message_id: ResourceId::new(*id).unwrap(),
+                role: *role,
+                provenance_key: ResourceId::new(format!("src:{id}")).unwrap(),
+                timestamp_ms: *at,
+                text: format!("note {id}"),
+            })
+            .collect(),
+    )
+    .unwrap()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R617.3
+#[test]
+fn source_ingest_transcript_becomes_episodic_memory() {
+    const MINUTE: i64 = 60_000;
+    let core = GraphCore::new();
+    // Two runs of turns an hour apart, and a tool turn between them.
+    let thread = chat(
+        "tenant-a",
+        &[
+            ("m1", MessageRole::User, MINUTE),
+            ("m2", MessageRole::Assistant, 2 * MINUTE),
+            ("m3", MessageRole::Tool, 3 * MINUTE),
+            ("m4", MessageRole::User, 90 * MINUTE),
+            ("m5", MessageRole::Assistant, 91 * MINUTE),
+        ],
+    );
+    let embeddings = vec![vec![1.0, 0.0]; 5];
+    let requests = super::memory_ingest::thread_requests(&thread, embeddings.clone(), 30 * MINUTE).unwrap();
+    assert_eq!(requests.len(), 5);
+    let sealing: Vec<_> = requests.iter().filter_map(|request| request.episode.as_ref()).collect();
+    assert_eq!(sealing.len(), 1, "the closed run seals; the open run stays open");
+    assert_eq!(sealing[0].preceding.len(), 1);
+    for request in &requests {
+        commit(&core, "tenant-a", request).unwrap();
+    }
+    // Replaying the thread writes nothing new.
+    let nodes = core.node_count();
+    for request in &requests {
+        commit(&core, "tenant-a", request).unwrap();
+    }
+    assert_eq!(core.node_count(), nodes);
+
+    let mut ask = recall_request(vec![], &["note"], 10_000);
+    ask.episode_scope = Some(EpisodeScope::Episodes);
+    let recalled = recall(&core, "tenant-a", 200 * MINUTE, &ask, None).unwrap();
+    assert_eq!(recalled.episodes.len(), 1);
+    assert_eq!(recalled.episodes[0].record_count, 2);
+    let mut held = ids(&recalled.hits);
+    held.sort();
+    assert_eq!(held, ["chat:1:m1", "chat:1:m2"]);
+    // Without the episode rule every turn is recallable; the tool turn is procedural.
+    let all = recall(&core, "tenant-a", 200 * MINUTE, &recall_request(vec![], &["note"], 10_000), None).unwrap();
+    assert_eq!(all.hits.len(), 5);
+    let tool = all.hits.iter().find(|hit| hit.record.memory_id.as_str() == "chat:1:m3").unwrap();
+    assert_eq!(tool.record.tier, MemoryTier::Procedural);
+    assert!(all.hits.iter().all(|hit| hit.record.session_id.as_ref().map(ResourceId::as_str) == Some("chat:1")));
+
+    // Another tenant recalls none of it.
+    let foreign = recall(&core, "tenant-b", 200 * MINUTE, &ask, None).unwrap();
+    assert!(foreign.hits.is_empty() && foreign.episodes.is_empty());
 }

@@ -103,6 +103,7 @@ mod served {
                         min_relevance: None,
                         include_archived: false,
                         current_revision: None,
+                        episode_scope: None,
                     }),
                 },
             )
@@ -167,6 +168,7 @@ mod served {
                         request: Box::new(MemoryRememberRequest {
                             record: memory(&format!("m-{document}"), document),
                             embedding: vec![0.0, 1.0],
+                            episode: None,
                         }),
                     },
                 )

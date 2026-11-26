@@ -40042,16 +40042,40 @@ class MemoryRecord(BaseModel):
     topics: list[str] = Field(default_factory=list)
 
 
+EpisodeScope = Literal["episodes", "live", "both"]
+
+
+class EpisodeSpec(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    episode_id: str
+    preceding: list[str] = Field(default_factory=list)
+    session_id: str | None = None
+
+
+class EpisodeView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    end_ms: int
+    episode_id: str
+    record_count: Annotated[int, Field(ge=0)]
+    session_id: str
+    start_ms: int
+
+
 class MemoryRememberRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     embedding: list[float] = Field(default_factory=list)
+    episode: EpisodeSpec | None = None
     record: MemoryRecord
 
 
 class MemoryRememberResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    episode: EpisodeView | None = None
     memory_id: str
     stored: bool
 
@@ -40062,6 +40086,7 @@ class MemoryRecallRequest(BaseModel):
     as_of_ms: int | None = None
     budget: Annotated[int, Field(ge=0)]
     document_set_ids: list[str] = Field(default_factory=list)
+    episode_scope: EpisodeScope | None = None
     include_archived: bool = False
     include_media: bool = False
     include_plan: bool = False
@@ -40127,7 +40152,10 @@ class MemoryDriftReport(BaseModel):
 class MemoryRecallResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    as_of_ms: int = 0
     drift: MemoryDriftReport | None = None
+    episode_scope: EpisodeScope | None = None
+    episodes: list[EpisodeView] = Field(default_factory=list)
     hits: list[MemoryHit]
     mementos: list[Memento] = Field(default_factory=list)
     note_premises: list[str] = Field(default_factory=list)

@@ -66,6 +66,16 @@ pub const NOTE_UNAUTHORIZED: RefusalCode = RefusalCode::new("NOTE_UNAUTHORIZED")
 /// A note whose run has no receipt or whose outcome failed.
 pub const NOTE_RUN_NOT_SUCCESSFUL: RefusalCode = RefusalCode::new("NOTE_RUN_NOT_SUCCESSFUL");
 
+/// A remember sealing an episode whose records have no usable `timestamp_ms`
+/// (MEDULLA-DECISION-ENGINE-R155.4).
+pub const EPISODE_ORDER_UNKNOWN: RefusalCode = RefusalCode::new("EPISODE_ORDER_UNKNOWN");
+/// An episode spec with no session, or records outside the spec's session.
+pub const EPISODE_BOUNDARY_MISSING: RefusalCode = RefusalCode::new("EPISODE_BOUNDARY_MISSING");
+/// An episode whose window overlaps another episode of the same session.
+pub const EPISODE_OVERLAP: RefusalCode = RefusalCode::new("EPISODE_OVERLAP");
+/// A second write to a sealed `episode_id` with a different digest.
+pub const EPISODE_IMMUTABLE: RefusalCode = RefusalCode::new("EPISODE_IMMUTABLE");
+
 /// A hard removal that left a node a live node still references
 /// (MEDULLA-DECISION-ENGINE-R651.4). It is reported by `EvictBelow` and `Maintain` in their
 /// `live_referenced` list, not answered as a request refusal.
@@ -91,6 +101,10 @@ pub const REFUSALS: &[RefusalCode] = &[
     NOTE_RELEVANCE_OUT_OF_RANGE,
     NOTE_UNAUTHORIZED,
     NOTE_RUN_NOT_SUCCESSFUL,
+    EPISODE_ORDER_UNKNOWN,
+    EPISODE_BOUNDARY_MISSING,
+    EPISODE_OVERLAP,
+    EPISODE_IMMUTABLE,
 ];
 
 /// `knob media.max_blob_bytes`: largest attached blob.
@@ -159,6 +173,8 @@ pub enum MessageRole {
     User,
     Assistant,
     System,
+    /// A tool turn; it projects to a procedural record (MEDULLA-DECISION-ENGINE-R155.3).
+    Tool,
 }
 
 /// One ordered, provenance-keyed message of an engine-held conversation.
@@ -210,6 +226,48 @@ impl ConversationRecord {
             conversation_id,
             messages,
         })
+    }
+
+    /// The memory records of the conversation (MEDULLA-DECISION-ENGINE-R617.2), one per message
+    /// in source order. The `session_id` is the conversation id; the `timestamp_ms` and the
+    /// `provenance_key` come from the message. A tool turn is `Procedural` and every other turn is
+    /// `Episodic` (MEDULLA-DECISION-ENGINE-R155.3). The id of a record joins the conversation id and
+    /// the message id. Cost is O(messages).
+    pub fn to_memory_records(&self) -> Result<Vec<MemoryRecord>, MemoryError> {
+        self.messages
+            .iter()
+            .map(|message| {
+                Ok(MemoryRecord {
+                    memory_id: identifier(
+                        format!("{}:{}", self.conversation_id.as_str(), message.message_id.as_str()),
+                        "memory_id",
+                    )?,
+                    tenant: self.tenant.clone(),
+                    kind: MemoryKind::ConversationTurn,
+                    tier: match message.role {
+                        MessageRole::Tool => MemoryTier::Procedural,
+                        MessageRole::User | MessageRole::Assistant | MessageRole::System => MemoryTier::Episodic,
+                    },
+                    text: message.text.clone(),
+                    provenance_key: Some(message.provenance_key.clone()),
+                    session_id: Some(self.conversation_id.clone()),
+                    timestamp_ms: message.timestamp_ms,
+                    topics: Vec::new(),
+                    pattern_key: None,
+                    importance: 1.0,
+                    access_count: 0,
+                    last_access_ms: 0,
+                    last_decay_ms: 0,
+                    forgotten: false,
+                    legal_hold: false,
+                    expires_at_ms: None,
+                    support_count: 0,
+                    token_estimate: u32::try_from(message.text.len().div_ceil(4).max(1)).unwrap_or(u32::MAX),
+                    attachments: Vec::new(),
+                    schema_version: MEMORY_RECORD_SCHEMA_VERSION,
+                })
+            })
+            .collect()
     }
 }
 
@@ -689,6 +747,10 @@ pub struct MemoryRememberRequest {
     /// The record's embedding; empty when it is recalled by keyword only.
     #[serde(default)]
     pub embedding: Vec<f32>,
+    /// Seal this record, with the earlier records the spec names, into one episode
+    /// (MEDULLA-DECISION-ENGINE-R155.3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub episode: Option<EpisodeSpec>,
 }
 
 /// The answer to `MemoryRemember`.
@@ -697,8 +759,11 @@ pub struct MemoryRememberRequest {
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct MemoryRememberResult {
     pub memory_id: ResourceId,
-    /// False when the very same record was already stored and nothing was written.
+    /// False when the very same record was already stored and no episode was sealed.
     pub stored: bool,
+    /// The episode this remember sealed or found sealed (MEDULLA-DECISION-ENGINE-R155.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub episode: Option<EpisodeView>,
 }
 
 /// `MemoryRecall`: rank the caller's memory by cosine on stored embeddings and
@@ -754,6 +819,11 @@ pub struct MemoryRecallRequest {
     /// another is stale. Absent uses the newest revision the recalled notes name.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub current_revision: Option<u64>,
+    /// Which memory the recall reads: sealed episodes, live working records or both
+    /// (MEDULLA-DECISION-ENGINE-R155.3). Absent applies no episode rule. This is not the
+    /// session filter `scope`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub episode_scope: Option<EpisodeScope>,
 }
 
 /// One recalled record with its relevance, Q16 fixed point in `[0, 65536]`.
@@ -790,6 +860,16 @@ pub struct MemoryRecallResult {
     /// The evidence premises of the applied session notes.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub note_premises: Vec<String>,
+    /// The episodes the recall sees, by `start_ms` then `episode_id`
+    /// (MEDULLA-DECISION-ENGINE-R155.5); empty unless the request set `episode_scope`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub episodes: Vec<EpisodeView>,
+    /// The instant the recall read the memory as of.
+    #[serde(default)]
+    pub as_of_ms: i64,
+    /// Echo of the request's `episode_scope`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub episode_scope: Option<EpisodeScope>,
 }
 
 /// `MemoryExport`: the durable tiers of the caller's memory
@@ -1166,6 +1246,62 @@ impl<'de> Deserialize<'de> for Episode {
         };
         episode.validate().map_err(serde::de::Error::custom)?;
         Ok(episode)
+    }
+}
+
+/// The episode a `MemoryRemember` seals (MEDULLA-DECISION-ENGINE-R155.3). The episode holds the
+/// remembered record and the records of `preceding`, in time order.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EpisodeSpec {
+    pub episode_id: ResourceId,
+    /// The session the episode belongs to; absent refuses `EPISODE_BOUNDARY_MISSING`.
+    #[serde(default)]
+    pub session_id: Option<ResourceId>,
+    /// Earlier records of the same session the episode also holds.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub preceding: Vec<ResourceId>,
+}
+
+/// Which memory a recall reads (MEDULLA-DECISION-ENGINE-R155.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum EpisodeScope {
+    /// Only records of sealed episodes visible at the as-of time.
+    Episodes,
+    /// Only the live working-tier records.
+    Live,
+    /// Both of the above.
+    Both,
+}
+
+/// One episode as a recall or a remember reports it (MEDULLA-DECISION-ENGINE-R155.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct EpisodeView {
+    pub episode_id: ResourceId,
+    pub session_id: ResourceId,
+    /// SHA-256 over the canonical body, 64 lowercase hex characters.
+    pub digest: String,
+    pub start_ms: i64,
+    pub end_ms: i64,
+    pub record_count: u32,
+}
+
+impl Episode {
+    /// The report of this episode.
+    pub fn view(&self) -> EpisodeView {
+        EpisodeView {
+            episode_id: self.episode_id.clone(),
+            session_id: self.session_id.clone(),
+            digest: self.digest.clone(),
+            start_ms: self.start_ms,
+            end_ms: self.end_ms,
+            record_count: u32::try_from(self.record_ids.len()).unwrap_or(u32::MAX),
+        }
     }
 }
 
@@ -1576,6 +1712,31 @@ mod tests {
             .unwrap_err()
             .to_string();
         assert!(refusal.starts_with("SEARCH_STATE_REVISION_MISMATCH"));
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R617.2
+    #[test]
+    fn conversation_projects_to_ordered_episodic_records() {
+        let mut tool = message("m2");
+        tool.role = MessageRole::Tool;
+        tool.timestamp_ms += 5;
+        let mut first = message("m1");
+        first.role = MessageRole::User;
+        let mut last = message("m3");
+        last.timestamp_ms += 9;
+        let conversation = ConversationRecord::new("tenant-a", "conv:1", vec![first, tool, last]).unwrap();
+        let records = conversation.to_memory_records().unwrap();
+        let ids: Vec<&str> = records.iter().map(|record| record.memory_id.as_str()).collect();
+        assert_eq!(ids, ["conv:1:m1", "conv:1:m2", "conv:1:m3"], "source order");
+        for record in &records {
+            assert_eq!(record.session_id.as_ref().unwrap().as_str(), "conv:1");
+            assert_eq!(record.tenant.as_str(), "tenant-a");
+            assert_eq!(record.kind, MemoryKind::ConversationTurn);
+            assert!(record.provenance_key.as_ref().unwrap().as_str().starts_with("prov:m"));
+        }
+        assert_eq!(records[0].tier, MemoryTier::Episodic);
+        assert_eq!(records[1].tier, MemoryTier::Procedural, "a tool turn is procedural");
+        assert_eq!(records[2].timestamp_ms, 1_700_000_000_009);
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R155.1

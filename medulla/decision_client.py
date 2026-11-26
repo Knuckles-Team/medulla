@@ -1567,18 +1567,22 @@ class DecisionClient:
         record: Mapping[str, Any],
         embedding: Sequence[float] = (),
         *,
+        episode: Mapping[str, Any] | None = None,
         idempotency_key: str | None = None,
     ) -> Any:
         """Send ``MemoryRemember``: store one memory record and the embedding it is
-        recalled by under the verified tenant."""
+        recalled by under the verified tenant. ``episode`` (``episode_id``,
+        ``session_id`` and the ``preceding`` record ids) seals the record and the
+        preceding ones into one immutable episode."""
+        request: dict[str, Any] = {
+            "record": dict(record),
+            "embedding": [float(v) for v in embedding],
+        }
+        if episode is not None:
+            request["episode"] = dict(episode)
         result = await self.client._send(
             "MemoryRemember",
-            {
-                "request": {
-                    "record": dict(record),
-                    "embedding": [float(v) for v in embedding],
-                }
-            },
+            {"request": request},
             self.graph,
             idempotency_key=idempotency_key,
         )

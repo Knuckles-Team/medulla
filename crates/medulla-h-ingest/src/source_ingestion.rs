@@ -247,6 +247,19 @@ pub async fn status(
     )
 }
 
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub use transcript::conversation_of;
+
+/// The conversation a transcripts batch carries: a build without redb and blob support
+/// ingests no batch, so it has none (MEDULLA-DECISION-ENGINE-R617.3).
+#[cfg(not(all(feature = "redb", feature = "blob")))]
+pub fn conversation_of(
+    _tenant: &str,
+    _request: &SourceIngestionRequest,
+) -> Result<Option<medulla_work_types::memory::ConversationRecord>, String> {
+    Ok(None)
+}
+
 #[cfg(not(all(feature = "redb", feature = "blob")))]
 pub async fn prepare(
     _ctx: PrepareContext<'_>,

@@ -689,6 +689,11 @@ async fn route_source_ingestion_request(
         },
         None => ctx.core.version(),
     };
+    // A transcripts batch also becomes engine memory once its thread is committed
+    // (MEDULLA-DECISION-ENGINE-R617.3). The projection is read before the request moves; an
+    // error in it surfaces only after the thread commit, so a malformed batch keeps the refusal
+    // `prepare` gives it.
+    let conversation = medulla_h_ingest::source_ingestion::conversation_of(ctx.tenant_scope, &request);
     let prepared = match medulla_h_ingest::source_ingestion::prepare(
         medulla_h_ingest::source_ingestion::PrepareContext {
             state: ctx.state,
@@ -726,7 +731,55 @@ async fn route_source_ingestion_request(
         ),
         _ => response,
     };
-    medulla_h_ingest::source_ingestion::finish(prepared, response)
+    let response = medulla_h_ingest::source_ingestion::finish(prepared, response);
+    if response.error.is_some() {
+        return response;
+    }
+    let conversation = match conversation {
+        Ok(Some(conversation)) => conversation,
+        Ok(None) => return response,
+        Err(error) => return Response::err(ctx.req_id, error),
+    };
+    match remember_thread_of(&ctx, &conversation).await {
+        Ok(()) => response,
+        Err(error) => Response::err(ctx.req_id, error),
+    }
+}
+
+/// Write the memory of a committed transcript thread through the memory surface
+/// (MEDULLA-DECISION-ENGINE-R617.3). The writes are their own commits under the request's
+/// tenant and principal; replaying the batch writes nothing new.
+async fn remember_thread_of(
+    ctx: &GraphOpRouting<'_>,
+    conversation: &medulla_work_types::memory::ConversationRecord,
+) -> Result<(), String> {
+    let Some((isolation, graph_type, owner)) = ctx.gateway_authz_ctx.as_ref() else {
+        return Err("ACCESS_DENIED: a transcript thread needs a resolved graph authority".to_string());
+    };
+    let principal = ctx.verified_context.principal_persistence_id();
+    let mutation_ctx = medulla_server_mutation::mutation::MutationCtx {
+        status_writer: medulla_types::edit_machine::StatusWriter::Caller,
+        anonymous: !ctx.verified_context.is_authenticated(),
+        req_id: ctx.req_id,
+        caller: ctx.caller,
+        principal: Some(principal.as_str()),
+        attempt_nonce: None,
+        idempotency_key: ctx.verified_context.idempotency_key(),
+        tenant_scope: ctx.tenant_scope,
+        graph_name: ctx.graph_name,
+        graph_type: *graph_type,
+        owner: owner.as_deref(),
+        isolation,
+        core: ctx.core,
+        persistence: ctx.persistence.as_ref(),
+        #[cfg(feature = "streaming")]
+        cdc: ctx.cdc.as_ref(),
+        materialization_manifest: ctx.materialization_manifest.as_ref(),
+        write_coalescer: None,
+    };
+    medulla_h_graph::graph_ops::memory_ingest::remember_thread(&mutation_ctx, conversation)
+        .await
+        .map(|_| ())
 }
 
 enum SourceIngestionRoute {

@@ -104,6 +104,7 @@ mod served {
                 request: Box::new(MemoryRememberRequest {
                     record,
                     embedding: vec![0.0, 1.0],
+                    episode: None,
                 }),
             };
             if tenant == TENANT {
@@ -130,6 +131,7 @@ mod served {
                     min_relevance: None,
                     include_archived: false,
                     current_revision: None,
+                    episode_scope: None,
                 }),
             };
             let response = if tenant == TENANT {
@@ -302,6 +304,7 @@ mod served {
                     min_relevance: None,
                     include_archived: false,
                     current_revision: None,
+                    episode_scope: None,
                     }),
                 },
             )
