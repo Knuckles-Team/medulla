@@ -97,6 +97,60 @@ pub(crate) fn sql_read_snapshot(
     }
 }
 
+/// The shape policies a SQL read is held to, and where the record of their evaluation goes
+/// (MEDULLA-FEDERATED-QUERY-R706.12).
+#[cfg(feature = "query")]
+pub(super) struct SqlShapeGate {
+    pub(super) policies: medulla_exec::policy_mask::PolicySet,
+    pub(super) principal: String,
+    pub(super) log: Arc<medulla_exec::policy_mask::PolicyEvaluationLog>,
+}
+
+/// Hold a typed SQL result to the shape policies (MEDULLA-FEDERATED-QUERY-R706.12).
+///
+/// A SQL row is a node when it names one: its `id` column holds the id of a node of `view`,
+/// the key of the `nodes` relation. A row of a table that names no node, such as a user table
+/// with no mapping to a graph class, is not shape-checked. A `filtered` row leaves the
+/// result; a `violation` refuses the request with `POLICY_VIOLATION`. The evaluation is
+/// recorded once, answered or refused.
+#[cfg(feature = "query")]
+fn apply_sql_shapes(
+    typed: &mut medulla_sql_lang::sql::typed_result::TypedQueryResult,
+    gate: &SqlShapeGate,
+    view: &medulla_graph_core::graph::GraphView,
+) -> Result<(), String> {
+    use medulla_exec::policy_mask::PolicyAuditSink as _;
+    let id_column = typed
+        .columns
+        .iter()
+        .position(|column| column.name.eq_ignore_ascii_case("id"));
+    let row_nodes: Vec<Vec<String>> = typed
+        .rows
+        .iter()
+        .map(|row| {
+            id_column
+                .and_then(|index| row.get(index))
+                .and_then(serde_json::Value::as_str)
+                .filter(|id| view.node_properties.contains_key(*id))
+                .map(|id| vec![id.to_string()])
+                .unwrap_or_default()
+        })
+        .collect();
+    let verdicts = medulla_exec::policy_mask::judge_rows(&gate.policies, view, &row_nodes)?;
+    gate.log
+        .record(medulla_exec::policy_mask::PolicyEvaluation {
+            policy_digest: medulla_exec::policy_mask::policy_digest(&gate.policies),
+            principal: gate.principal.clone(),
+            counts: verdicts.counts,
+        });
+    if let Some(policy_id) = verdicts.violated_policy {
+        return Err(medulla_exec::policy_mask::violation_refusal(&policy_id));
+    }
+    let mut keep = verdicts.keep.iter();
+    typed.rows.retain(|_| keep.next().copied().unwrap_or(true));
+    Ok(())
+}
+
 #[cfg(feature = "query")]
 async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
     let SqlReadScope {
@@ -152,6 +206,14 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         name: graph_name.to_string(),
         core: Arc::clone(core),
     };
+    // MEDULLA-FEDERATED-QUERY-R706.12: a tenant that holds shape policies has the result of
+    // its SQL read held to them like a UQL result.
+    let gate = policies.has_shapes().then(|| SqlShapeGate {
+        principal: caller.to_string(),
+        policies,
+        log: Arc::new(medulla_exec::policy_mask::PolicyEvaluationLog::default()),
+    });
+    let evaluations = gate.as_ref().map(|gate| Arc::clone(&gate.log));
     let response = catalog_sql_response(
         state,
         req_id,
@@ -160,8 +222,15 @@ async fn handle_sql_read(scope: SqlReadScope<'_>, query: String) -> Response {
         persist_dir.to_path_buf(),
         query,
         graph,
+        gate,
     )
     .await;
+    // MEDULLA-FEDERATED-QUERY-R706.11: one record per evaluation, answered or refused.
+    for evaluation in evaluations.iter().flat_map(|log| log.take()) {
+        if let Err(code) = read_scope.audit_policy_evaluation(req_id, &evaluation) {
+            return Response::err(req_id, code.as_str());
+        }
+    }
     // MEDULLA-IDENTITY-R023.5: the read ran, so its audit outcome is owed.
     match read_scope.close(response.error.is_none()) {
         Ok(()) => response,
@@ -650,6 +719,7 @@ pub(super) async fn catalog_sql_response(
     persist_dir: std::path::PathBuf,
     query: String,
     graph: medulla_server_auth::sql_catalog_acl::RequestGraph,
+    shapes: Option<SqlShapeGate>,
 ) -> Response {
     // MEDULLA-TYPED-PACKS-R108.16: a statement that ranks assets gets the caller's usage counts
     // from the one usage store as the third argument of each `catalog_relevance` call.
@@ -693,13 +763,19 @@ pub(super) async fn catalog_sql_response(
             &graph,
             nearest.as_ref(),
         )?;
-        medulla_sql::sql::exec_sql_typed_with_tables_hive(
+        let mut typed = medulla_sql::sql::exec_sql_typed_with_tables_hive(
             &snap,
             authorized.store(),
             &query,
             &cancel_for_task,
             hive_for_task,
-        )
+        )?;
+        // MEDULLA-FEDERATED-QUERY-R706.12: the shape policies rewrite the result after the
+        // read ran, over the caller's own view.
+        if let Some(gate) = &shapes {
+            apply_sql_shapes(&mut typed, gate, &snap)?;
+        }
+        Ok::<_, String>(typed)
     })
     .await
     {

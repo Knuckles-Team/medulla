@@ -6,6 +6,10 @@
 #![forbid(unsafe_code)]
 #![deny(missing_docs)]
 
+/// The audit record of one shape-policy evaluation, shared by every query language
+/// (MEDULLA-FEDERATED-QUERY-R706.11, R706.12).
+#[cfg(all(feature = "security", feature = "redb"))]
+pub mod policy_audit;
 /// The served cross-source competency questions (MEDULLA-CQ-XSRC-R008.4).
 #[cfg(feature = "rdf")]
 pub mod cross_source_question;

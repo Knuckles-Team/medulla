@@ -181,45 +181,13 @@ impl ReadScope {
         req_id: u64,
         evaluation: &medulla_exec::policy_mask::PolicyEvaluation,
     ) -> Result<(), ServerErrorCode> {
-        use sha2::{Digest, Sha256};
-
-        let Some(persistence) = self.persistence.clone() else {
-            return Ok(());
-        };
-        let counts = evaluation.counts;
-        let line = serde_json::json!({
-            "policy_digest": evaluation.policy_digest,
-            "principal": evaluation.principal,
-            "tenant": self.caller.principal.tenant,
-            "allowed": counts.allowed,
-            "filtered": counts.filtered,
-            "violation": counts.violation,
-        });
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0, |d| d.as_nanos());
-        let event = medulla_store::redb_store::OperationAuditEvent {
-            tenant: self.caller.principal.tenant.clone(),
-            principal: self.caller.principal.id.clone(),
-            op: format!(
-                "policy_evaluation.allowed-{}.filtered-{}.violation-{}",
-                counts.allowed, counts.filtered, counts.violation
-            ),
-            surface: "read".to_owned(),
-            params_sha256: hex::encode(Sha256::digest(line.to_string().as_bytes())),
-            status: medulla_store::redb_store::audit_status::AuditStatus::settled(
-                medulla_store::redb_store::audit_machine::AuditEvent::Succeed,
-            ),
-            request_id: format!("policy-{req_id}-{nanos}"),
-            audit_class: "event".to_owned(),
-            subject_iri: None,
-            policy_iri: None,
-        };
-        let chain = medulla_store::redb_store::read_audit_chain_scope(
-            &event.tenant,
-            &medulla_kernel::persist::sanitize(&self.graph_name),
-        );
-        enqueue_append(persistence, chain, event)
+        medulla_h_sparql::policy_audit::append_policy_evaluation(
+            self.persistence.clone(),
+            &self.caller,
+            &self.graph_name,
+            req_id,
+            evaluation,
+        )
     }
 
     #[cfg(not(all(feature = "security", feature = "redb")))]

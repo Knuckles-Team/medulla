@@ -638,6 +638,173 @@ pub fn violation_refusal(policy_id: &str) -> String {
 #[cfg(feature = "owl")]
 const SHAPE_PROJECTION_BASE: &str = medulla_types::ontology_base::CORE_NAMESPACE;
 
+/// The shape policies evaluated once over a graph snapshot (MEDULLA-FEDERATED-QUERY-R706.9):
+/// for each shape, the projected nodes it reports. A result of any query language is judged
+/// against it by node id, so every language reaches the one `medulla_shacl::validate` run.
+#[cfg(feature = "owl")]
+pub struct ShapeJudge<'s> {
+    projection: medulla_rdf::sparql::Projection,
+    shapes: &'s [ShapePolicy],
+    /// The nodes each shape reports, by projected IRI, in `shapes` order.
+    reported: Vec<std::collections::HashSet<String>>,
+}
+
+#[cfg(feature = "owl")]
+impl<'s> ShapeJudge<'s> {
+    /// Validate the graph `view` against each shape of `set`. `Err` only when a shape
+    /// cannot be evaluated (`POLICY_SHAPE_INVALID`, naming the policy).
+    pub fn new(
+        set: &'s PolicySet,
+        view: &medulla_graph_core::graph::GraphView,
+    ) -> Result<Self, String> {
+        let projection = medulla_rdf::sparql::Projection::from_wire(SHAPE_PROJECTION_BASE, "");
+        let triples = medulla_rdf::mapping::export_view_projected(view, &projection).map_err(
+            |error| format!("{}: project the graph to RDF: {error}", shape_invalid_code()),
+        )?;
+        let mut data = medulla_rdf::oxrdf::Graph::new();
+        for triple in &triples {
+            data.insert(triple);
+        }
+        let mut reported = Vec::with_capacity(set.shapes.len());
+        for shape in &set.shapes {
+            let invalid = |detail: &str| {
+                format!(
+                    "{}: policy {} {detail}",
+                    shape_invalid_code(),
+                    shape.policy_id
+                )
+            };
+            let shapes =
+                shapes_graph(&shape.shape_turtle).map_err(|_| invalid("does not parse"))?;
+            let report = medulla_shacl::validate(&shapes, &data)
+                .map_err(|_| invalid("cannot be evaluated"))?;
+            reported.push(
+                report
+                    .results
+                    .into_iter()
+                    .map(|result| result.focus_node)
+                    .collect(),
+            );
+        }
+        Ok(Self {
+            projection,
+            shapes: &set.shapes,
+            reported,
+        })
+    }
+
+    /// The outcome of node `node_id`: the worst verdict of any shape that reports it, and
+    /// the first `refuse` policy (in set order) that rejects it.
+    pub fn judge(&self, node_id: &str) -> (PolicyOutcome, Option<&str>) {
+        let iri = self.projection.node_iri(node_id);
+        let mut outcome = PolicyOutcome::Allowed;
+        let mut violated: Option<&str> = None;
+        for (shape, nodes) in self.shapes.iter().zip(&self.reported) {
+            if !nodes.contains(&iri) {
+                continue;
+            }
+            match shape.effect {
+                ShapeEffect::Refuse => {
+                    outcome = PolicyOutcome::Violation;
+                    violated.get_or_insert(shape.policy_id.as_str());
+                }
+                ShapeEffect::Filter if outcome == PolicyOutcome::Allowed => {
+                    outcome = PolicyOutcome::Filtered;
+                }
+                ShapeEffect::Filter => {}
+            }
+        }
+        (outcome, violated)
+    }
+}
+
+/// The verdict of the shape policies over the rows of one result (MEDULLA-FEDERATED-QUERY-R706.12):
+/// which rows stay, the outcome counts (one outcome per row), and the first policy a row violated.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct RowVerdicts {
+    /// One flag per input row, in order: `false` for a `filtered` or `violation` row.
+    pub keep: Vec<bool>,
+    pub counts: OutcomeCounts,
+    /// The first policy (in row order, then set order) a row violated; its presence
+    /// refuses the request.
+    pub violated_policy: Option<String>,
+}
+
+/// Judge each row of a result of any query language against the shape policies. `row_nodes[i]`
+/// is the ids of the graph nodes row `i` carries: a UQL row is its own node, a SPARQL solution
+/// is every node bound in it (MEDULLA-FEDERATED-QUERY-R706.12), and a SQL row is a node when
+/// it names one. A row that carries no node is `allowed`; a row takes the worst outcome of
+/// its nodes. A set with no shape judges every row `allowed` without reading the graph.
+#[cfg(feature = "owl")]
+pub fn judge_rows(
+    set: &PolicySet,
+    view: &medulla_graph_core::graph::GraphView,
+    row_nodes: &[Vec<String>],
+) -> Result<RowVerdicts, String> {
+    let mut verdicts = RowVerdicts {
+        keep: Vec::with_capacity(row_nodes.len()),
+        counts: OutcomeCounts::default(),
+        violated_policy: None,
+    };
+    if set.shapes.is_empty() || row_nodes.iter().all(Vec::is_empty) {
+        verdicts.keep = vec![true; row_nodes.len()];
+        verdicts.counts.allowed = row_nodes.len() as u64;
+        return Ok(verdicts);
+    }
+    let judge = ShapeJudge::new(set, view)?;
+    for nodes in row_nodes {
+        let mut outcome = PolicyOutcome::Allowed;
+        for node in nodes {
+            let (node_outcome, violated) = judge.judge(node);
+            if let Some(policy) = violated {
+                verdicts
+                    .violated_policy
+                    .get_or_insert_with(|| policy.to_string());
+            }
+            outcome = match (outcome, node_outcome) {
+                (PolicyOutcome::Violation, _) | (_, PolicyOutcome::Violation) => {
+                    PolicyOutcome::Violation
+                }
+                (PolicyOutcome::Filtered, _) | (_, PolicyOutcome::Filtered) => {
+                    PolicyOutcome::Filtered
+                }
+                _ => PolicyOutcome::Allowed,
+            };
+        }
+        match outcome {
+            PolicyOutcome::Allowed => verdicts.counts.allowed += 1,
+            PolicyOutcome::Filtered => verdicts.counts.filtered += 1,
+            PolicyOutcome::Violation => verdicts.counts.violation += 1,
+        }
+        verdicts.keep.push(outcome == PolicyOutcome::Allowed);
+    }
+    Ok(verdicts)
+}
+
+/// A build without `owl` has no SHACL engine: a bound shape policy cannot be evaluated, so the
+/// request is refused rather than answered unchecked (the load refused it already).
+#[cfg(not(feature = "owl"))]
+pub fn judge_rows(
+    set: &PolicySet,
+    _view: &medulla_graph_core::graph::GraphView,
+    row_nodes: &[Vec<String>],
+) -> Result<RowVerdicts, String> {
+    if set.has_shapes() {
+        return Err(format!(
+            "{}: this build has no SHACL engine",
+            medulla_types::contract::ServerErrorCode::PolicyShapeInvalid.as_str()
+        ));
+    }
+    Ok(RowVerdicts {
+        keep: vec![true; row_nodes.len()],
+        counts: OutcomeCounts {
+            allowed: row_nodes.len() as u64,
+            ..OutcomeCounts::default()
+        },
+        violated_policy: None,
+    })
+}
+
 /// Give each result node one of the three outcomes (MEDULLA-FEDERATED-QUERY-R706.9) by
 /// validating the graph against each shape policy with `medulla_shacl::validate`. A node a
 /// shape reports is `filtered` under the `filter` effect and a `violation` under `refuse`;
@@ -650,80 +817,19 @@ pub fn apply_shape_policies(
     set: &PolicySet,
     view: &medulla_graph_core::graph::GraphView,
 ) -> Result<ShapeEvaluation, String> {
-    if set.shapes.is_empty() || rows.is_empty() {
-        let allowed = rows.len() as u64;
-        return Ok(ShapeEvaluation {
-            rows,
-            counts: OutcomeCounts {
-                allowed,
-                ..OutcomeCounts::default()
-            },
-            violated_policy: None,
-        });
-    }
-    let projection = medulla_rdf::sparql::Projection::from_wire(SHAPE_PROJECTION_BASE, "");
-    let triples = medulla_rdf::mapping::export_view_projected(view, &projection)
-        .map_err(|error| format!("{}: project the graph to RDF: {error}", shape_invalid_code()))?;
-    let mut data = medulla_rdf::oxrdf::Graph::new();
-    for triple in &triples {
-        data.insert(triple);
-    }
-    // The nodes each shape reports, by projected IRI.
-    let mut reported: Vec<std::collections::HashSet<String>> = Vec::new();
-    for shape in &set.shapes {
-        let invalid = |detail: &str| {
-            format!(
-                "{}: policy {} {detail}",
-                shape_invalid_code(),
-                shape.policy_id
-            )
-        };
-        let shapes = shapes_graph(&shape.shape_turtle).map_err(|_| invalid("does not parse"))?;
-        let report = medulla_shacl::validate(&shapes, &data)
-            .map_err(|_| invalid("cannot be evaluated"))?;
-        reported.push(
-            report
-                .results
-                .into_iter()
-                .map(|result| result.focus_node)
-                .collect(),
-        );
-    }
-    let mut counts = OutcomeCounts::default();
-    let mut violated_policy: Option<String> = None;
-    let mut kept: std::collections::HashSet<String> = Default::default();
-    for row in rows.rows() {
-        let iri = projection.node_iri(&row.id);
-        let mut outcome = PolicyOutcome::Allowed;
-        for (shape, nodes) in set.shapes.iter().zip(&reported) {
-            if !nodes.contains(&iri) {
-                continue;
-            }
-            match shape.effect {
-                ShapeEffect::Refuse => {
-                    outcome = PolicyOutcome::Violation;
-                    violated_policy.get_or_insert_with(|| shape.policy_id.clone());
-                }
-                ShapeEffect::Filter if outcome == PolicyOutcome::Allowed => {
-                    outcome = PolicyOutcome::Filtered;
-                }
-                ShapeEffect::Filter => {}
-            }
-        }
-        match outcome {
-            PolicyOutcome::Allowed => {
-                counts.allowed += 1;
-                kept.insert(row.id.clone());
-            }
-            PolicyOutcome::Filtered => counts.filtered += 1,
-            PolicyOutcome::Violation => counts.violation += 1,
-        }
-    }
-    let keep: std::collections::HashSet<&str> = kept.iter().map(String::as_str).collect();
+    let row_nodes: Vec<Vec<String>> = rows.rows().iter().map(|row| vec![row.id.clone()]).collect();
+    let verdicts = judge_rows(set, view, &row_nodes)?;
+    let keep: std::collections::HashSet<&str> = rows
+        .rows()
+        .iter()
+        .zip(&verdicts.keep)
+        .filter(|(_, kept)| **kept)
+        .map(|(row, _)| row.id.as_str())
+        .collect();
     Ok(ShapeEvaluation {
         rows: rows.intersect_keep_order(&keep),
-        counts,
-        violated_policy,
+        counts: verdicts.counts,
+        violated_policy: verdicts.violated_policy,
     })
 }
 

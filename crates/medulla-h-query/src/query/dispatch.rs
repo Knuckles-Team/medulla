@@ -813,6 +813,7 @@ async fn handle_sql_with_lease(
         std::path::PathBuf::from(persist_dir),
         query,
         graph,
+        None,
     )
     .await;
     // MEDULLA-IDENTITY-R023.5: the read ran, so its audit outcome is owed.

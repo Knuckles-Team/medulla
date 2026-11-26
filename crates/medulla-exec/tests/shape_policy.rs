@@ -222,3 +222,47 @@ fn evaluation_appends_one_audit_record_with_counts_only() {
     assert!(execute(&plan, &plain).is_ok());
     assert!(log.take().is_empty());
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R706.12
+#[test]
+fn rows_of_any_language_take_the_worst_outcome_of_their_nodes() {
+    use medulla_exec::policy_mask::judge_rows;
+
+    let view = graph();
+    let policies = set(vec![
+        shape("policy:no-drafts", "draft", ShapeEffect::Filter),
+        shape("policy:no-secrets", "secret", ShapeEffect::Refuse),
+    ]);
+    let nodes = |ids: &[&str]| ids.iter().map(ToString::to_string).collect::<Vec<_>>();
+
+    // A SPARQL-style row binds several nodes and takes the worst verdict among them; a row
+    // that binds no node (a SQL row of an unmapped table, a solution of literals) stays.
+    let rows = vec![
+        nodes(&["claim-ok"]),
+        nodes(&["claim-ok", "claim-draft"]),
+        nodes(&[]),
+        nodes(&["claim-ok", "claim-draft", "claim-secret"]),
+    ];
+    let verdicts = judge_rows(&policies, &view, &rows).unwrap();
+    assert_eq!(verdicts.keep, vec![true, false, true, false]);
+    assert_eq!(verdicts.counts.allowed, 2);
+    assert_eq!(verdicts.counts.filtered, 1);
+    assert_eq!(verdicts.counts.violation, 1);
+    assert_eq!(verdicts.violated_policy.as_deref(), Some("policy:no-secrets"));
+
+    // The same nodes through UQL's row set give the same verdicts: one function judges both.
+    let uql = apply_shape_policies(all_claims(), &policies, &view).unwrap();
+    let single: Vec<Vec<String>> = all_claims()
+        .ids()
+        .into_iter()
+        .map(|id| vec![id])
+        .collect();
+    let by_rows = judge_rows(&policies, &view, &single).unwrap();
+    assert_eq!(uql.counts, by_rows.counts);
+    assert_eq!(uql.violated_policy, by_rows.violated_policy);
+
+    // No shape judges every row allowed without reading the graph.
+    let none = judge_rows(&PolicySet::default(), &view, &rows).unwrap();
+    assert_eq!(none.keep, vec![true; 4]);
+    assert_eq!(none.counts.allowed, 4);
+}

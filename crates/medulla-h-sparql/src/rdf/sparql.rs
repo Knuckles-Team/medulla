@@ -24,6 +24,90 @@ impl SparqlProofMode {
     }
 }
 
+/// The shape policies a SPARQL read is held to, and where the record of their evaluation goes
+/// (MEDULLA-FEDERATED-QUERY-R706.12).
+pub(super) struct SparqlShapeGate {
+    pub(super) policies: medulla_exec::policy_mask::PolicySet,
+    pub(super) principal: String,
+    pub(super) log: Arc<medulla_exec::policy_mask::PolicyEvaluationLog>,
+}
+
+/// The graph node a bound cell names, if any: the cell itself, the cell without its angle
+/// brackets, or the node a projected IRI of the core ontology namespace stands for.
+fn node_of_cell(view: &GraphView, cell: &str) -> Option<String> {
+    let bare = cell
+        .strip_prefix('<')
+        .and_then(|inner| inner.strip_suffix('>'))
+        .unwrap_or(cell);
+    let local = bare.strip_prefix(medulla_types::ontology_base::CORE_NAMESPACE);
+    [
+        Some(cell.to_string()),
+        Some(bare.to_string()),
+        Some(format!("<{bare}>")),
+        local.map(str::to_string),
+    ]
+    .into_iter()
+    .flatten()
+    .find(|candidate| view.node_properties.contains_key(candidate.as_str()))
+}
+
+/// Hold a SPARQL result to the shape policies (MEDULLA-FEDERATED-QUERY-R706.12).
+///
+/// A SPARQL solution's nodes are every graph node bound in it: each bound IRI that names a
+/// node of `view`. A solution is filtered, or the request refused, when any of its nodes
+/// violates a shape; a solution that binds no node (only literals) is not shape-checked. The
+/// witness proofs of the rows that stay are renumbered to their new row. The evaluation is
+/// recorded once, answered or refused.
+fn apply_sparql_shapes(
+    wire: &mut medulla_protocol_types::protocol::SparqlResult,
+    gate: &SparqlShapeGate,
+    view: &GraphView,
+) -> Result<(), String> {
+    use medulla_exec::policy_mask::PolicyAuditSink as _;
+    let row_nodes: Vec<Vec<String>> = wire
+        .rows
+        .iter()
+        .map(|row| {
+            let mut nodes: Vec<String> = row
+                .iter()
+                .flatten()
+                .filter_map(|cell| node_of_cell(view, cell))
+                .collect();
+            nodes.sort();
+            nodes.dedup();
+            nodes
+        })
+        .collect();
+    let verdicts = medulla_exec::policy_mask::judge_rows(&gate.policies, view, &row_nodes)?;
+    gate.log.record(medulla_exec::policy_mask::PolicyEvaluation {
+        policy_digest: medulla_exec::policy_mask::policy_digest(&gate.policies),
+        principal: gate.principal.clone(),
+        counts: verdicts.counts,
+    });
+    if let Some(policy_id) = verdicts.violated_policy {
+        return Err(medulla_exec::policy_mask::violation_refusal(&policy_id));
+    }
+    // Old row index -> new row index of the rows that stay.
+    let mut renumbered: std::collections::HashMap<u64, u64> = std::collections::HashMap::new();
+    let mut next = 0_u64;
+    for (old, kept) in verdicts.keep.iter().enumerate() {
+        if *kept {
+            renumbered.insert(old as u64, next);
+            next += 1;
+        }
+    }
+    let mut keep = verdicts.keep.iter();
+    wire.rows.retain(|_| keep.next().copied().unwrap_or(true));
+    wire.proofs.retain_mut(|proof| match renumbered.get(&proof.row) {
+        Some(new) => {
+            proof.row = *new;
+            true
+        }
+        None => false,
+    });
+    Ok(())
+}
+
 /// Evaluate a SPARQL SELECT against the caller-visible graph snapshot, its default
 /// graph unioned with the caller-filtered view of each of the tenant's visible pack
 /// graphs in `packs` (MEDULLA-MEDIA-VOCAB-R655). `proj` is the
@@ -39,6 +123,7 @@ pub(super) async fn handle_sparql(
     mode: SparqlProofMode,
     max_solutions: usize,
     graph_media_type: Option<&'static str>,
+    shapes: Option<SparqlShapeGate>,
     #[cfg(feature = "security")] caller: &str,
     #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Response {
@@ -103,9 +188,13 @@ pub(super) async fn handle_sparql(
         #[cfg(feature = "security")]
         caller,
     );
+    // MEDULLA-FEDERATED-QUERY-R706.12: a request under shape policies is evaluated, so its
+    // record is owed and its answer is never cached or served from the cache.
     #[cfg(feature = "result-cache")]
-    if let Some(response) = sparql_cache_hit(&core, req_id, hash) {
-        return response;
+    if shapes.is_none() {
+        if let Some(response) = sparql_cache_hit(&core, req_id, hash) {
+            return response;
+        }
     }
     #[cfg(feature = "result-cache")]
     let (snap, version) = sparql_snapshot(
@@ -127,6 +216,7 @@ pub(super) async fn handle_sparql(
         req_id,
         (snap, pack_views),
         (query, proj, mode, max_solutions, graph_media_type),
+        shapes,
         #[cfg(feature = "result-cache")]
         core,
         #[cfg(feature = "result-cache")]
@@ -273,23 +363,31 @@ async fn evaluate_sparql(
         usize,
         Option<&'static str>,
     ),
+    shapes: Option<SparqlShapeGate>,
     #[cfg(feature = "result-cache")] core: Arc<GraphCore>,
     #[cfg(feature = "result-cache")] hash: u128,
     #[cfg(feature = "result-cache")] version: u64,
 ) -> Response {
+    #[cfg(feature = "result-cache")]
+    let has_shapes = shapes.is_some();
     match compute_off_lock(req_id, move || {
         let merged = (!pack_views.is_empty()).then(|| {
             medulla_rdf::sparql::merge_views(
                 std::iter::once(&*snap).chain(pack_views.iter().map(|view| &**view)),
             )
         });
-        run_sparql(
-            &medulla_rdf::sparql::Dataset::new(merged.as_ref().unwrap_or(&snap), Vec::new()),
+        let view = merged.as_ref().unwrap_or(&snap);
+        let mut wire = run_sparql(
+            &medulla_rdf::sparql::Dataset::new(view, Vec::new()),
             &query,
             &proj,
             mode,
             (max_solutions, graph_media_type),
-        )
+        )?;
+        if let Some(gate) = &shapes {
+            apply_sparql_shapes(&mut wire, gate, view)?;
+        }
+        Ok::<_, String>(wire)
     })
     .await
     {
@@ -299,12 +397,14 @@ async fn evaluate_sparql(
             ) {
                 Ok(payload) => {
                     #[cfg(feature = "result-cache")]
-                    medulla_query_cache::result_cache::cache_result(
-                        core.result_cache(),
-                        hash,
-                        version,
-                        &payload,
-                    );
+                    if !has_shapes {
+                        medulla_query_cache::result_cache::cache_result(
+                            core.result_cache(),
+                            hash,
+                            version,
+                            &payload,
+                        );
+                    }
                     Response::ok(req_id, payload)
                 }
                 Err(error) => Response::err(req_id, error),

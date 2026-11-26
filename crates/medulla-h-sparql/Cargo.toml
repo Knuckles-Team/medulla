@@ -48,6 +48,7 @@ medulla-exec = { path = "../medulla-exec" }
 medulla-federation = { path = "../medulla-federation" }
 medulla-nlq = { path = "../medulla-nlq" }
 medulla-persistence = { path = "../medulla-persistence" }
+medulla-store = { path = "../medulla-store" }
 medulla-result-types = { path = "../medulla-result-types" }
 medulla-work-types = { path = "../medulla-work-types" }
 

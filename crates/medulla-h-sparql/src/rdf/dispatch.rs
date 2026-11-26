@@ -250,7 +250,20 @@ async fn try_handle_sparql(
                             )
                             .await;
                         }
-                        super::sparql::handle_sparql(
+                        // MEDULLA-FEDERATED-QUERY-R706.12: a tenant that holds shape
+                        // policies has the result of its SPARQL read held to them like a UQL
+                        // result.
+                        #[cfg(feature = "security")]
+                        let shape_principal = caller.to_string();
+                        #[cfg(not(feature = "security"))]
+                        let shape_principal = String::new();
+                        let gate = policies.has_shapes().then(|| super::sparql::SparqlShapeGate {
+                            policies: policies.clone(),
+                            principal: shape_principal,
+                            log: Arc::new(medulla_exec::policy_mask::PolicyEvaluationLog::default()),
+                        });
+                        let evaluations = gate.as_ref().map(|gate| Arc::clone(&gate.log));
+                        let response = super::sparql::handle_sparql(
                             req_id,
                             (core, packs),
                             query.clone(),
@@ -263,12 +276,37 @@ async fn try_handle_sparql(
                             )
                             .unwrap_or(usize::MAX),
                             graph_media_type,
+                            gate,
                             #[cfg(feature = "security")]
                             caller,
                             #[cfg(feature = "security")]
                             rls,
                         )
-                        .await
+                        .await;
+                        // MEDULLA-FEDERATED-QUERY-R706.11: one record per evaluation,
+                        // answered or refused.
+                        #[cfg(all(feature = "security", feature = "redb"))]
+                        if let Some(evaluations) = evaluations {
+                            let persistence = state.read().await.persistence.clone();
+                            let reader = medulla_server_api::read_scope::ReadCaller::from_authority(
+                                read_authority,
+                                graph_name,
+                            );
+                            for evaluation in evaluations.take() {
+                                if let Err(code) = crate::policy_audit::append_policy_evaluation(
+                                    persistence.clone(),
+                                    &reader,
+                                    graph_name,
+                                    req_id,
+                                    &evaluation,
+                                ) {
+                                    return Some(Response::err(req_id, code.as_str()));
+                                }
+                            }
+                        }
+                        #[cfg(not(all(feature = "security", feature = "redb")))]
+                        let _ = evaluations;
+                        response
                     }
                 },
             )

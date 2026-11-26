@@ -6383,6 +6383,7 @@ dependencies = [
  "medulla-shex",
  "medulla-source-types",
  "medulla-storage",
+ "medulla-store",
  "medulla-tables",
  "medulla-test-ambient-auth",
  "medulla-transaction",
