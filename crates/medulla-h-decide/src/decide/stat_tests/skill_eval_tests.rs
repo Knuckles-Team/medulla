@@ -193,3 +193,49 @@ async fn saturation_is_flagged_not_trusted() {
     let flagged = run(&store, &skewed).expect("runs");
     assert!(flagged.premises.contains(&"eval:mix_out_of_band".to_string()));
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R711.3
+#[tokio::test]
+async fn report_is_a_graph_node_with_counts_and_a_receipt_digest() {
+    use super::super::stat_skill_eval::report_operations;
+    let h = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
+    let store = store(&h).await;
+    let core = h
+        .state
+        .read()
+        .await
+        .registry
+        .get("__commons__")
+        .expect("graph exists")
+        .core
+        .clone();
+    core.add_node(
+        SKILL.to_string(),
+        rmp_serde::to_vec_named(&serde_json::json!({"type": "Skill", "tenant_id": TENANT})).unwrap(),
+    );
+    let who = VerifiedRequestContext::verified_for_test_with_scopes("agent-7", TENANT, &["*"]);
+    let req = request(4, 700_000);
+    let outcome = run(&store, &req).expect("runs");
+    let operations = report_operations(&h.state, &who, "__commons__", &req, &outcome, 77)
+        .await
+        .expect("plans");
+    let node = &operations[0];
+    assert_eq!(node["op"], "upsert_node");
+    let props = &node["properties"];
+    assert_eq!(props["type"], "SkillEvalReport");
+    assert_eq!(props["evaluated_skill"], SKILL);
+    assert_eq!(props["pass_count"], 16);
+    assert_eq!(props["fail_count"], 4);
+    assert_eq!(props["evaluated_ms"], 77);
+    assert!(props["receipt_digest"].as_str().unwrap().starts_with("sha256:"));
+    assert!(props["suite"].as_str().unwrap().starts_with("sha256:"));
+    // The report links to the skill revision it evaluated.
+    assert_eq!(operations[1]["op"], "upsert_edge");
+    assert_eq!(operations[1]["target"], SKILL);
+    // The same suite run again plans the same node.
+    let again = run(&store, &req).expect("reruns");
+    let repeat = report_operations(&h.state, &who, "__commons__", &req, &again, 99)
+        .await
+        .expect("plans");
+    assert_eq!(repeat[0]["id"], node["id"]);
+}

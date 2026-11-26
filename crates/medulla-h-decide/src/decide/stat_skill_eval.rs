@@ -20,7 +20,18 @@ use medulla_decision_types::skill_eval::{
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::encode_artifact;
 
-use super::stat_support::invalid_parameter;
+use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::contract::Digest256;
+use serde_json::{json, Value};
+
+use super::knowledge_flag::served::edge_operation;
+use super::stat_support::{filtered_view_versioned, invalid_parameter};
+use super::SharedState;
+
+/// The graph class of a suite report node (vocabulary R817.4).
+const SKILL_EVAL_REPORT_CLASS: &str = "SkillEvalReport";
+/// The link from a suite report to the skill revision it evaluated.
+const EVALUATES: &str = "evaluates";
 
 const PPM: u64 = 1_000_000;
 /// The store key prefix of one stored result.
@@ -198,4 +209,75 @@ fn band_text(band: SuiteBand) -> &'static str {
         SuiteBand::TooLow => "too_low",
         SuiteBand::Saturated => "saturated",
     }
+}
+
+/// The batch that records one suite run in the graph: a `SkillEvalReport` node holding the suite,
+/// the skill revision, the pass and fail counts and the receipt digest, linked to the skill node
+/// with `evaluates` when the caller's view holds it (MEDULLA-ORCH-VOCAB-R817.4).
+///
+/// The node id carries the receipt digest, so rerunning an unchanged suite upserts the same node
+/// and a changed suite adds a newer one; the latest report of a skill is the one with the largest
+/// `evaluated_ms`.
+pub(super) async fn report_operations(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    graph: &str,
+    request: &SkillEvalRequest,
+    outcome: &SkillEvalOutcome,
+    now_ms: u64,
+) -> Result<Vec<Value>, String> {
+    let mut case_ids: Vec<&str> = request.cases.iter().map(|case| case.case_id.as_str()).collect();
+    case_ids.sort_unstable();
+    let ids: Vec<&[u8]> = case_ids.iter().map(|id| id.as_bytes()).collect();
+    let suite = format!(
+        "sha256:{}",
+        Digest256::framed(b"medulla.skill_eval.suite.v1", &ids)?.to_hex()
+    );
+    let passed = outcome.results.iter().filter(|row| row.result.passed).count() as u64;
+    let admitted = outcome.results.len() as u64;
+    let report_bytes = encode_artifact(&outcome.report)?;
+    let receipt_digest = format!(
+        "sha256:{}",
+        Digest256::framed(
+            b"medulla.skill_eval.report.v1",
+            &[
+                request.skill_ref.as_bytes(),
+                suite.as_bytes(),
+                report_bytes.as_slice(),
+            ],
+        )?
+        .to_hex()
+    );
+    let node = format!("skill-eval-report:{}:{}", request.skill_ref, &receipt_digest[7..23]);
+    let mut operations = vec![json!({
+        "op": "upsert_node",
+        "id": node,
+        "properties": {
+            "type": SKILL_EVAL_REPORT_CLASS,
+            "node_type": SKILL_EVAL_REPORT_CLASS,
+            "tenant_id": request.tenant_id,
+            "evaluated_skill": request.skill_ref,
+            "suite": suite,
+            "pass_count": passed,
+            "fail_count": admitted - passed,
+            "case_count": outcome.report.case_count,
+            "pass_rate_ppm": outcome.report.pass_rate_ppm,
+            "band": band_text(outcome.report.band),
+            "receipt_digest": receipt_digest,
+            "evaluated_ms": now_ms,
+            "receipt_id": receipt_digest,
+        },
+    })];
+    let (view, _) = filtered_view_versioned(state, verified.agent_id(), graph).await?;
+    let skill_known = view.node_row_object(&request.skill_ref).is_some_and(|row| {
+        row.get("type").and_then(Value::as_str) == Some("Skill")
+            && row
+                .get("tenant_id")
+                .and_then(Value::as_str)
+                .is_none_or(|owner| owner == request.tenant_id)
+    });
+    if skill_known {
+        operations.push(edge_operation(&node, &request.skill_ref, EVALUATES, &receipt_digest));
+    }
+    Ok(operations)
 }

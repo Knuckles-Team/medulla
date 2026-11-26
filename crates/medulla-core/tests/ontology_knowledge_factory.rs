@@ -131,3 +131,47 @@ fn shapes_reject_free_text_on_an_invocation() {
     let friction = report("ex:r a eg:FrictionReport .");
     assert!(!friction.conforms, "a friction report needs one :about");
 }
+
+// spec: MEDULLA-ORCH-VOCAB-R817.4
+#[test]
+fn skill_health_terms_are_declared() {
+    let sources = GraphSchemaSources::default();
+    let document = registered(&sources, SOURCE);
+    let (declared, parents) = declared_and_parents(&document);
+    let hierarchy = hierarchy(&sources);
+    for class in ["SkillEvalReport", "FrictionGroup"] {
+        let iri = format!("{KG}{class}");
+        assert!(declared.contains(&iri), "class {class} is declared");
+        assert!(
+            parents
+                .get(&iri)
+                .is_some_and(|set| set.contains(&format!("{BFO}0000001"))),
+            "class {class} extends bfo:0000001"
+        );
+        assert!(hierarchy.reaches_core(&iri), "class {class} reaches core");
+    }
+    for property in ["evaluates", "frictionOf"] {
+        let start = document
+            .find(&format!(":{property} a owl:ObjectProperty"))
+            .unwrap_or_else(|| panic!("property {property} is declared"));
+        let block = &document[start..start + document[start..].find(" .\n").unwrap()];
+        assert!(block.contains("rdfs:domain :") && block.contains("rdfs:range "));
+    }
+    for property in [
+        "flagStatus",
+        "evaluated_skill",
+        "suite",
+        "pass_count",
+        "fail_count",
+        "case_count",
+        "pass_rate_ppm",
+        "band",
+        "receipt_digest",
+        "evaluated_ms",
+    ] {
+        assert!(
+            document.contains(&format!(":{property} a owl:DatatypeProperty")),
+            "datatype property {property} is declared"
+        );
+    }
+}

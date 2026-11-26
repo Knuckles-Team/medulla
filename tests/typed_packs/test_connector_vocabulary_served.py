@@ -437,3 +437,143 @@ async def test_record_lacking_the_property_stores_no_value() -> None:
     finally:
         await client.tenants.delete(graph)
         await client.close()
+
+
+def _skill_suite(skill: str, failing: int) -> dict[str, Any]:
+    """One suite of golden and author-judged cases with their clean-room runs."""
+    cases: list[dict[str, Any]] = []
+    runs: list[dict[str, Any]] = []
+    for index in range(20):
+        kind = "golden" if index < 17 else "author_judged"
+        ok = index >= failing
+        case_id = f"{skill}-case-{index}"
+        cases.append(
+            {
+                "case_id": case_id,
+                "skill_ref": skill,
+                "kind": kind,
+                "input_digest": f"in-{index}",
+                "expected_digest": f"out-{index}",
+                "expected_trajectory": [],
+                "source": "authored",
+            }
+        )
+        runs.append(
+            {
+                "case_id": case_id,
+                "actual_digest": f"out-{index}" if ok else "wrong",
+                "actual_trajectory": [],
+                "judged_passed": ok,
+                "attestation": {
+                    "sandbox_digest": "sandbox",
+                    "env_digest": "env",
+                    "host_paths_read": 0,
+                },
+                "run_trace_id": None,
+            }
+        )
+    return {
+        "tenant_id": request_context()["tenant"],
+        "skill_ref": skill,
+        "cases": cases,
+        "runs": runs,
+        "calibration": {
+            "judge_ref": "judge-1",
+            "annotated_set_ref": "set-1",
+            "kappa_ppm": 700_000,
+            "n": 60,
+        },
+        "known_tools": [],
+    }
+
+
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R817.4")
+@pytest.mark.asyncio
+async def test_skill_health_query_joins_flags_friction_and_eval() -> None:
+    """One served UQL answer: a skill's open flags, friction groups, latest report."""
+    from medulla import decision_client as dc
+
+    graph_name = "__commons__"
+    prefix = "sh" + uuid.uuid4().hex[:8]
+    skill = f"skill:{prefix}-triage@3"
+    other = f"skill:{prefix}-other@1"
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(roles=["corrector"]),
+        graph_name=graph_name,
+    )
+    try:
+        await client.lifecycle.batch_update(
+            [
+                {
+                    "op": "upsert_node",
+                    "id": f"{prefix}-trace",
+                    "properties": {"node_type": "RunTrace", "run_id": f"{prefix}-run"},
+                },
+                {"op": "upsert_node", "id": skill, "properties": {"type": "Skill"}},
+                {"op": "upsert_node", "id": other, "properties": {"type": "Skill"}},
+            ]
+        )
+        decisions = dc.DecisionClient(client=client, graph=graph_name)
+        # Two open flags on the skill and one on another skill.
+        for index, target in enumerate((skill, skill, other)):
+            await decisions.knowledge_flag(
+                dc.knowledge_flag_raise_op(
+                    graph_name,
+                    "skill",
+                    "wrong",
+                    target,
+                    f"observation {index}",
+                    f"{prefix}-run",
+                    1_700_000_000_000 + index,
+                    trace_node_id=f"{prefix}-trace",
+                )
+            )
+        # One friction group on the skill.
+        await decisions.friction_report(
+            dc.friction_report_op(
+                graph_name,
+                {
+                    "report_id": f"{prefix}-r1",
+                    "tenant_id": "ignored",
+                    "skill_ref": skill,
+                    "skill_version": "3",
+                    "tried": "asked for the order",
+                    "expected": "an order id",
+                    "happened": "an empty answer",
+                    "proposed_fix": None,
+                    "run_id": f"{prefix}-run",
+                    "reported_by": "ignored",
+                    "at_ms": 10,
+                },
+            )
+        )
+        # Two suite runs; only the latest report is wanted.
+        await decisions.skill_eval(_skill_suite(skill, 4))
+        await decisions.skill_eval(_skill_suite(skill, 2))
+
+        answer = await client.query.uql(
+            "UQL 1;\n"
+            "LET flags = MATCH (:KnowledgeFlag) |> WHERE target_ref = $skill "
+            "|> WHERE flagStatus = 'open';\n"
+            "LET groups = MATCH (:FrictionGroup) |> WHERE skill_ref = $skill;\n"
+            "LET reports = MATCH (:SkillEvalReport) |> WHERE evaluated_skill = $skill "
+            "|> ORDER BY evaluated_ms DESC |> LIMIT 1;\n"
+            "LET health = MATCH () |> UNION (flags, groups, reports);\n"
+            "FROM health |> LIMIT 100",
+            {"skill": skill},
+        )
+        rows = answer["rows"]
+        assert sorted(row.get("type") for row in rows) == [
+            "FrictionGroup",
+            "KnowledgeFlag",
+            "KnowledgeFlag",
+            "SkillEvalReport",
+        ], rows
+        report = next(row for row in rows if row.get("type") == "SkillEvalReport")
+        # The latest suite run: 18 of 20 passed.
+        assert report["pass_count"] == 18 and report["fail_count"] == 2, report
+        assert report["receipt_digest"].startswith("sha256:")
+        assert report["evaluated_skill"] == skill
+    finally:
+        await client.close()

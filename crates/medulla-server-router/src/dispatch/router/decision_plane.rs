@@ -380,8 +380,34 @@ async fn dispatch_decision_methods(
         }
         Method::DecisionEval { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_decision_eval(state, req.id, verified_context, *op)
-                    .await
+                match *op {
+                    // The suite report is a graph node: the job plans it and the router commits it
+                    // (MEDULLA-DECISION-ENGINE-R711.3).
+                    medulla_decision_types::decision::DecisionEvalOp::SkillEval { request } => {
+                        match medulla_h_decide::decide::handle_skill_eval(
+                            state,
+                            verified_context,
+                            &req.graph,
+                            *request,
+                        )
+                        .await
+                        {
+                            Ok(plan) => {
+                                commit_planned_write(state, req.id, verified_context, plan).await
+                            }
+                            Err(refusal) => Response::err(req.id, refusal),
+                        }
+                    }
+                    op => {
+                        medulla_h_decide::decide::handle_decision_eval(
+                            state,
+                            req.id,
+                            verified_context,
+                            op,
+                        )
+                        .await
+                    }
+                }
             })
             .await
         }

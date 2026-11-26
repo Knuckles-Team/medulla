@@ -464,6 +464,8 @@ pub(crate) mod served {
         properties.insert("node_type".into(), KNOWLEDGE_FLAG_CLASS.into());
         properties.insert("tenant".into(), flag.tenant_id.clone().into());
         properties.insert("evidence_class".into(), EVIDENCE_AGENT_ASSERTED.into());
+        // The machine state as the vocabulary names it (`flagStatus`, MEDULLA-ORCH-VOCAB-R817.4).
+        properties.insert("flagStatus".into(), flag.state.stored().into());
         properties.insert(
             "evidence_digest".into(),
             evidence_digest(&flag.what_observed).into(),

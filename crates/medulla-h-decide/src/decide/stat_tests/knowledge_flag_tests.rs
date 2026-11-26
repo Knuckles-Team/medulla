@@ -142,6 +142,13 @@ async fn raise_writes_one_node_and_dedups() {
         .filter(|op| op["op"] == "upsert_node" && op["id"] == receipt.flag.flag_id.as_str())
         .count();
     assert_eq!(nodes, 1);
+    // The machine state is written as the vocabulary's `flagStatus`.
+    let node_op = first
+        .operations
+        .iter()
+        .find(|op| op["op"] == "upsert_node" && op["id"] == receipt.flag.flag_id.as_str())
+        .expect("the flag node");
+    assert_eq!(node_op["properties"]["flagStatus"], "open");
     commit(&core, &first);
 
     // The same flag again keeps one node and adds one to the count.

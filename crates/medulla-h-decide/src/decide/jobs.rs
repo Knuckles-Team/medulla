@@ -43,3 +43,22 @@ pub async fn handle_decision_eval(
         Response::err(req_id, "DecisionEval requires the `decide` feature")
     }
 }
+
+/// Plan the `skill_eval` job of `DecisionEval` with its graph: the suite report node is the batch
+/// the router commits (MEDULLA-DECISION-ENGINE-R711.3, MEDULLA-ORCH-VOCAB-R817.4).
+pub async fn handle_skill_eval(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    graph: &str,
+    request: medulla_decision_types::skill_eval::SkillEvalRequest,
+) -> Result<super::planned_write::PlannedWrite, String> {
+    #[cfg(feature = "decide")]
+    {
+        super::stat_jobs::plan_skill_eval(state, verified, graph, request).await
+    }
+    #[cfg(not(feature = "decide"))]
+    {
+        let _ = (state, verified, graph, request);
+        Err("DecisionEval requires the `decide` feature".to_string())
+    }
+}

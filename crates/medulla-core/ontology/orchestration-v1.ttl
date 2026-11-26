@@ -53,6 +53,17 @@
     rdfs:comment "The named set of skill revisions one role receives (MEDULLA-DECISION-ENGINE-R714)." ;
     rdfs:subClassOf bfo:0000001 .
 
+# MEDULLA-ORCH-VOCAB-R817.4: the report one skill suite run leaves and the group friction reports fall into.
+:SkillEvalReport a owl:Class ;
+    rdfs:label "Skill Eval Report" ;
+    rdfs:comment "The suite report of one skill_eval run: the suite, the skill revision, the pass and fail counts and the receipt digest (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:subClassOf bfo:0000001 .
+
+:FrictionGroup a owl:Class ;
+    rdfs:label "Friction Group" ;
+    rdfs:comment "The friction reports of one skill revision, moving along the friction machine (MEDULLA-DECISION-ENGINE-R710.3)." ;
+    rdfs:subClassOf bfo:0000001 .
+
 # MEDULLA-ORCH-VOCAB-R817.2: the knowledge-factory links. Each has a declared domain and range.
 :flags a owl:ObjectProperty ;
     rdfs:label "flags" ;
@@ -112,6 +123,18 @@
     rdfs:label "includes" ;
     rdfs:comment "A persona includes a skill revision." ;
     rdfs:domain :Persona ;
+    rdfs:range :Skill .
+
+:evaluates a owl:ObjectProperty ;
+    rdfs:label "evaluates" ;
+    rdfs:comment "The skill revision a suite report evaluated." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range :Skill .
+
+:frictionOf a owl:ObjectProperty ;
+    rdfs:label "frictionOf" ;
+    rdfs:comment "The skill revision a friction group collects reports about." ;
+    rdfs:domain :FrictionGroup ;
     rdfs:range :Skill .
 
 # MEDULLA-ORCH-VOCAB-R817.3: the datatype properties the shapes constrain.
@@ -222,6 +245,66 @@
     rdfs:comment "Where a skill eval case came from: authored, trace, correction or review_signal (MEDULLA-DECISION-ENGINE-R711.1)." ;
     rdfs:domain :SkillEvalCase ;
     rdfs:range xsd:string .
+
+:flagStatus a owl:DatatypeProperty ;
+    rdfs:label "flagStatus" ;
+    rdfs:comment "The machine state of a flag, written by the flag handler from its state machine: open, curated or dismissed (MEDULLA-DECISION-ENGINE-R708)." ;
+    rdfs:domain :KnowledgeFlag ;
+    rdfs:range xsd:string .
+
+:evaluated_skill a owl:DatatypeProperty ;
+    rdfs:label "evaluated_skill" ;
+    rdfs:comment "The skill revision a suite report evaluated, as its reference text. A property of :SkillEvalReport (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range xsd:string .
+
+:suite a owl:DatatypeProperty ;
+    rdfs:label "suite" ;
+    rdfs:comment "The digest of the sorted case ids of the suite a report ran. A property of :SkillEvalReport (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range xsd:string .
+
+:pass_count a owl:DatatypeProperty ;
+    rdfs:label "pass_count" ;
+    rdfs:comment "How many admitted cases passed. A property of :SkillEvalReport (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range xsd:integer .
+
+:fail_count a owl:DatatypeProperty ;
+    rdfs:label "fail_count" ;
+    rdfs:comment "How many admitted cases failed. A property of :SkillEvalReport (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range xsd:integer .
+
+:case_count a owl:DatatypeProperty ;
+    rdfs:label "case_count" ;
+    rdfs:comment "How many cases the suite admitted. A property of :SkillEvalReport (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range xsd:integer .
+
+:pass_rate_ppm a owl:DatatypeProperty ;
+    rdfs:label "pass_rate_ppm" ;
+    rdfs:comment "The share of passed cases, in ppm. A property of :SkillEvalReport (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range xsd:integer .
+
+:band a owl:DatatypeProperty ;
+    rdfs:label "band" ;
+    rdfs:comment "The band of the pass rate: healthy, too_low or saturated. A property of :SkillEvalReport (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range xsd:string .
+
+:receipt_digest a owl:DatatypeProperty ;
+    rdfs:label "receipt_digest" ;
+    rdfs:comment "The sha256 digest that names the report. A property of :SkillEvalReport (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range xsd:string .
+
+:evaluated_ms a owl:DatatypeProperty ;
+    rdfs:label "evaluated_ms" ;
+    rdfs:comment "When the suite ran, Unix milliseconds. A property of :SkillEvalReport (MEDULLA-DECISION-ENGINE-R711.3)." ;
+    rdfs:domain :SkillEvalReport ;
+    rdfs:range xsd:integer .
 
 :AnalyticsJob a owl:Class ;
     rdfs:label "AnalyticsJob" ;

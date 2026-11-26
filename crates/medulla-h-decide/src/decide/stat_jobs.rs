@@ -745,7 +745,6 @@ async fn serve_eval(
 ) -> Result<ResultPayload, String> {
     use medulla_protocol_types::{
         result_contract::coordination::DecisionEvalDelegationQuality,
-        result_contract::coordination::DecisionEvalSkillEval,
         result_contract::coordination::DecisionEvalCertifyLocalSkill,
         result_contract::coordination::DecisionEvalGroundedAnswerSubmit,
         result_contract::coordination::DecisionEvalRetrievalRankingSubmit,
@@ -874,13 +873,10 @@ async fn serve_eval(
         DecisionEvalOp::Receipt { request } => serve_eval_receipt(&store, &request),
         DecisionEvalOp::Receipts { request } => serve_eval_receipts(&store, &request),
         DecisionEvalOp::Timeline { request } => serve_eval_timeline(&store, &request),
-        DecisionEvalOp::SkillEval { request } => {
-            let outcome = medulla_server_api::api::dispatch_support::blocking_task(
-                BLOCKING_TASK,
-                move || super::stat_skill_eval::run(&store, &request),
-            )
-            .await?;
-            ResultPayload::of::<DecisionEvalSkillEval>(outcome)
+        // The suite report is also a graph node, so the op is planned with its graph by
+        // `plan_skill_eval` and never answered here (MEDULLA-DECISION-ENGINE-R711.3).
+        DecisionEvalOp::SkillEval { .. } => {
+            return Err("INVALID_ARGUMENT: skill_eval is planned with its graph".to_string())
         }
         DecisionEvalOp::DelegationQuality { request } => {
             let outcome = medulla_server_api::api::dispatch_support::blocking_task(
@@ -1111,6 +1107,50 @@ async fn handle_decision_job(
     .instrument(span)
     .await;
     respond(req_id, method, result)
+}
+
+/// Plan one `DecisionEval` op `skill_eval`: run the suite, store its results and report in the
+/// decision store, and plan the `SkillEvalReport` node the router commits to `graph`.
+pub(super) async fn plan_skill_eval(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    graph: &str,
+    request: medulla_decision_types::skill_eval::SkillEvalRequest,
+) -> Result<super::planned_write::PlannedWrite, String> {
+    use medulla_protocol_types::result_contract::coordination::DecisionEvalSkillEval;
+
+    if request.tenant_id != verified.tenant() {
+        let error = tenant_refusal("DecisionEval");
+        telemetry::refused("DecisionEval", &error);
+        return Err(error);
+    }
+    let span = telemetry::span("DecisionEval", verified.tenant());
+    async {
+        let (store, now_ms) = store_and_now(state).await?;
+        let job_request = request.clone();
+        let outcome = medulla_server_api::api::dispatch_support::blocking_task(
+            BLOCKING_TASK,
+            move || super::stat_skill_eval::run(&store, &job_request),
+        )
+        .await?;
+        let operations = super::stat_skill_eval::report_operations(
+            state,
+            verified,
+            graph,
+            &request,
+            &outcome,
+            now_ms,
+        )
+        .await?;
+        Ok(super::planned_write::PlannedWrite {
+            graph: graph.to_string(),
+            operations,
+            reply: ResultPayload::of::<DecisionEvalSkillEval>(outcome)?,
+        })
+    }
+    .instrument(span)
+    .await
+    .inspect_err(|error| telemetry::refused("DecisionEval", error))
 }
 
 /// Serve one `DecisionFit` op.
