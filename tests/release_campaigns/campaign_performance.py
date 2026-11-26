@@ -1939,12 +1939,13 @@ def _validate_pagerank_row(row: Any) -> tuple[str, float]:
 
 
 def _validate_pagerank(value: Any, node_ids: set[str]) -> None:
-    if not isinstance(value, list) or len(value) != len(node_ids):
+    scores = getattr(value, "scores", None)
+    if not isinstance(scores, list) or len(scores) != len(node_ids):
         raise CertificationError("invalid_analytics_result")
     observed: set[str] = set()
     score_sum = 0.0
-    for row in value:
-        node_id, score = _validate_pagerank_row(row)
+    for row in scores:
+        node_id, score = _validate_pagerank_row((row.node_id, row.score))
         observed.add(node_id)
         score_sum += score
     if observed != node_ids or not 0.999_999 <= score_sum <= 1.000_001:

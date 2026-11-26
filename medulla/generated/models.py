@@ -3200,6 +3200,13 @@ class ClassifyPrediction(BaseModel):
     written_back: Annotated[int, Field(ge=0)]
 
 
+class AlgorithmScopeView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    in_scope: Annotated[int, Field(ge=0)]
+    requested: Annotated[int, Field(ge=0)]
+
+
 class ClusterAlgorithm(str, Enum):
     DBSCAN = "dbscan"
     HIERARCHICAL = "hierarchical"
@@ -3415,6 +3422,13 @@ class CommittedVersionNativeBody(BaseModel):
 class CommunityAlgorithm(str, Enum):
     LOUVAIN = "louvain"
     LABELPROP = "labelprop"
+
+
+class CommunityDetectionView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    communities: list[list[str]]
+    scope: AlgorithmScopeView | None = None
 
 
 class CommunityMiningResult(BaseModel):
@@ -3914,6 +3928,27 @@ class EvalCaseSource(str, Enum):
     TRACE = "trace"
     CORRECTION = "correction"
     REVIEW_SIGNAL = "review_signal"
+
+
+class NodeScoreView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_id: str
+    score: float
+
+
+class PageRankView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    scope: AlgorithmScopeView | None = None
+    scores: list[NodeScoreView]
+
+
+class ShortestPathView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    path: list[str] | None = None
+    scope: AlgorithmScopeView | None = None
 
 
 class TrajectoryKind(str, Enum):
@@ -18952,6 +18987,7 @@ class MethodCommunityDetectEphemeralParams(BaseModel):
 class MethodCommunityDetectionParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    node_ids: list[str] | None = None
     resolution: float
 
 
@@ -20282,6 +20318,7 @@ class DowntimeSelections(BaseModel):
 class MethodGetShortestPathParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    node_ids: list[str] | None = None
     source_id: str
     target_id: str
 
@@ -21000,6 +21037,7 @@ class MethodPageRankParams(BaseModel):
 
     damping: float
     iterations: Annotated[int, Field(ge=0)]
+    node_ids: list[str] | None = None
 
 
 class MethodParseFileParams(BaseModel):
@@ -33167,9 +33205,6 @@ CommittedVersion = (
 CommunityDetectEphemeralResult = list[list[str]]
 
 
-CommunityDetectionResult = list[list[str]]
-
-
 ComputeSimilarityEdgesResultValueItem = Annotated[
     tuple[str, str, float],
     Field(
@@ -33744,9 +33779,6 @@ GetRunCheckpointResult = RunCheckpointRead | None
 
 
 GetRunWorkItemResult = RunWorkItemView | None
-
-
-GetShortestPathResult = list[str] | None
 
 
 GetWorkItemOutcomeResult = WorkItemOutcomeView | None
@@ -34433,18 +34465,6 @@ OperationEnvelopeVerifiedCapabilitiesItem = MutationCapability
 
 
 OperationEnvelopeVerifiedCapabilities = list[OperationEnvelopeVerifiedCapabilitiesItem]
-
-
-PageRankResultValueItem = Annotated[
-    tuple[str, float],
-    Field(
-        min_length=2,
-        max_length=2,
-    ),
-]
-
-
-PageRankResult = list[PageRankResultValueItem]
 
 
 ParseFilesResult = list[ParseResult]
@@ -45206,8 +45226,10 @@ class RelationalIntent(BaseModel):
 
 __all__ = [
     "AdminResetIssue",
+    "AlgorithmScopeView",
     "ApiKeyAdminIssue",
     "ApiKeyView",
+    "CommunityDetectionView",
     "HiddenCount",
     "MethodGetNeighborhood",
     "MethodGetNeighborhoodParams",
@@ -45218,6 +45240,8 @@ __all__ = [
     "IssuerKeyRotate",
     "IssuerKeyView",
     "NeighborhoodResult",
+    "NodeScoreView",
+    "PageRankView",
     "ScimClientCreate",
     "ScimClientUpdate",
     "ScimClientUse",
@@ -45809,6 +45833,7 @@ __all__ = [
     "DriftRefreshed",
     "ShardGenerationNode",
     "ShardSwap",
+    "ShortestPathView",
     "Signature",
     "SkillCandidateRow",
     "SkillMergeCandidate",
@@ -46014,7 +46039,6 @@ __all__ = [
     "CommittedVersionNativeBody",
     "CommunityAlgorithm",
     "CommunityDetectEphemeralResult",
-    "CommunityDetectionResult",
     "CommunityMiningResult",
     "CommunityQualityFunction",
     "CompanyCategory",
@@ -46725,7 +46749,6 @@ __all__ = [
     "GetRunCheckpointRequest",
     "GetRunCheckpointResult",
     "GetRunWorkItemResult",
-    "GetShortestPathResult",
     "GetTelemetrySnapshotResult",
     "GetWorkItemOutcomeResult",
     "GetWorkItemResult",
@@ -48783,8 +48806,6 @@ __all__ = [
     "PackWarning",
     "PackWarningCode",
     "PackWriteErrorCode",
-    "PageRankResult",
-    "PageRankResultValueItem",
     "PairsSignalResult",
     "ParallelRelationRow",
     "ParamType",

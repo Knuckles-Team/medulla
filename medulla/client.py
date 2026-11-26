@@ -62,9 +62,15 @@ if TYPE_CHECKING:
     from .generated._runtime import OpaqueResult
     from .generated.models import (
         ClaimedTask,
+        ClusterExpansion,
+        ClusterHierarchySummary,
+        ClusterLevelView,
+        CommunityDetectionView,
         DrainHandle,
         DrainStatus,
+        PageRankView,
         SearchTaskRejection,
+        ShortestPathView,
         SparqlResult,
         TaskAcked,
         TaskEnqueued,
@@ -8417,12 +8423,25 @@ class GraphOperationsClient:
     async def find_cycle(self) -> list[str] | None:
         return (await _gen.compute.send_find_cycle(self._client)).payload
 
-    async def shortest_path(self, source_id: str, target_id: str) -> list[str] | None:
-        return (
-            await _gen.compute.send_get_shortest_path(
-                self._client, {"source_id": source_id, "target_id": target_id}
-            )
-        ).payload
+    async def shortest_path(
+        self,
+        source_id: str,
+        target_id: str,
+        node_ids: list[str] | None = None,
+    ) -> ShortestPathView:
+        """Shortest path between two nodes (MEDULLA-FEDERATED-QUERY-R743).
+
+        ``node_ids`` limits the search to the subgraph induced by those ids,
+        within the caller's visible set; a node the caller cannot see answers
+        exactly as an unknown id does. ``ShortestPathView.scope`` echoes what
+        the scope selected and is ``None`` when no scope was sent.
+        """
+        params: dict[str, Any] = {"source_id": source_id, "target_id": target_id}
+        if node_ids is not None:
+            params["node_ids"] = node_ids
+        return _gen.compute.decode_get_shortest_path(
+            await _gen.compute.send_get_shortest_path(self._client, params)
+        )
 
     async def blast_radius(self, node_id: str, max_depth: int) -> list[str]:
         return (
@@ -8491,12 +8510,17 @@ class GraphOperationsClient:
         service."""
         return (await _gen.compute.send_minimum_spanning_tree(self._client)).payload
 
-    async def community_detection(self, resolution: float = 1.0) -> list[list[str]]:
-        return (
-            await _gen.compute.send_community_detection(
-                self._client, {"resolution": resolution}
-            )
-        ).payload
+    async def community_detection(
+        self, resolution: float = 1.0, node_ids: list[str] | None = None
+    ) -> CommunityDetectionView:
+        """Leiden communities of the visible graph, or of the subgraph induced by
+        ``node_ids`` within the caller's visible set (MEDULLA-FEDERATED-QUERY-R743)."""
+        params: dict[str, Any] = {"resolution": resolution}
+        if node_ids is not None:
+            params["node_ids"] = node_ids
+        return _gen.compute.decode_community_detection(
+            await _gen.compute.send_community_detection(self._client, params)
+        )
 
     async def community_detect_ephemeral(
         self,
@@ -8573,7 +8597,7 @@ class GraphOperationsClient:
         label: str | None = None,
         resolution: float = 1.0,
         seed: int = 0,
-    ) -> dict:
+    ) -> ClusterHierarchySummary:
         """(Re)compute + durably cache this graph's hierarchical Leiden cluster
         tree (VIZ-1, CONCEPT:MEDULLA-KG.compute.leiden-hierarchy) — server-side
         clustering
@@ -8584,46 +8608,47 @@ class GraphOperationsClient:
 
         Call this once (or on a refresh cadence); ``cluster_hierarchy_clusters``/
         ``cluster_hierarchy_expand`` serve the cached result until the next call —
-        never recomputed per read. Returns a summary
-        ``{levels, base_node_count, base_edge_count, top_level_clusters, cached}``.
+        never recomputed per read. Returns a ``ClusterHierarchySummary``
+        (``levels``, ``base_node_count``, ``base_edge_count``,
+        ``top_level_clusters``, ``cached``).
         """
-        return (
+        return _gen.compute.decode_cluster_hierarchy_refresh(
             await _gen.compute.send_cluster_hierarchy_refresh(
                 self._client, {"label": label, "resolution": resolution, "seed": seed}
             )
-        ).payload
+        )
 
     async def cluster_hierarchy_clusters(
         self, level: int, parent_cluster_id: str | None = None
-    ) -> dict:
+    ) -> ClusterLevelView:
         """One level of the cached cluster hierarchy (VIZ-1) — ``GET
         clusters(graph, level, parent_cluster_id?)`` from the shared contract.
         ``level`` 1 is the finest computed level; pass ``parent_cluster_id`` to
         get only that cluster's children at ``level``. Returns
-        ``{level, clusters: [{id, label, node_count, edge_count, top_node_types}],
-        inter_cluster_edges: [{src_idx, dst_idx, weight}]}`` with array-local
-        indices. Raises if no hierarchy is cached yet — call
-        ``cluster_hierarchy_refresh`` first.
+        the published ``ClusterLevelView`` (``level``, ``clusters``,
+        ``inter_cluster_edges`` with array-local indices; MEDULLA-FEDERATED-QUERY-R744).
+        Raises if no hierarchy is cached yet — call ``cluster_hierarchy_refresh`` first.
         """
-        return (
+        return _gen.compute.decode_cluster_hierarchy_clusters(
             await _gen.compute.send_cluster_hierarchy_clusters(
                 self._client, {"level": level, "parent_cluster_id": parent_cluster_id}
             )
-        ).payload
+        )
 
-    async def cluster_hierarchy_expand(self, cluster_id: str) -> dict:
+    async def cluster_hierarchy_expand(self, cluster_id: str) -> ClusterExpansion:
         """Expand one cluster one level down (VIZ-1) — ``GET expand(graph,
         cluster_id)``. For a level-1 cluster: its real member nodes/edges, read
-        live off the graph (``{nodes, edges, child_clusters: []}``). For a
+        live off the graph (``nodes``, ``edges``, empty ``child_clusters``). For a
         coarser cluster: its immediate child clusters, one level finer
-        (``{nodes: [], edges: [], child_clusters: [...]}``) — call again on a
-        child to keep drilling toward level 1.
+        (empty ``nodes`` and ``edges``) — call again on a child to keep drilling
+        toward level 1. The result is the published ``ClusterExpansion``
+        (MEDULLA-FEDERATED-QUERY-R744).
         """
-        return (
+        return _gen.compute.decode_cluster_hierarchy_expand(
             await _gen.compute.send_cluster_hierarchy_expand(
                 self._client, {"cluster_id": cluster_id}
             )
-        ).payload
+        )
 
 
 class AnalyticsClient:
@@ -8645,13 +8670,19 @@ class AnalyticsClient:
         return (await _gen.compute.send_betweenness_centrality(self._client)).payload
 
     async def pagerank(
-        self, damping: float = 0.85, iterations: int = 100
-    ) -> list[list[Any]]:
-        return (
-            await _gen.compute.send_page_rank(
-                self._client, {"damping": damping, "iterations": iterations}
-            )
-        ).payload
+        self,
+        damping: float = 0.85,
+        iterations: int = 100,
+        node_ids: list[str] | None = None,
+    ) -> PageRankView:
+        """PageRank of the visible graph, or of the subgraph induced by ``node_ids``
+        within the caller's visible set (MEDULLA-FEDERATED-QUERY-R743)."""
+        params: dict[str, Any] = {"damping": damping, "iterations": iterations}
+        if node_ids is not None:
+            params["node_ids"] = node_ids
+        return _gen.compute.decode_page_rank(
+            await _gen.compute.send_page_rank(self._client, params)
+        )
 
     async def personalized_pagerank(
         self,

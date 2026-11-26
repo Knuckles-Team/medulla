@@ -3543,18 +3543,20 @@ async fn test_offloaded_algorithms_round_trip() {
             Method::PageRank {
                 damping: 0.85,
                 iterations: 20,
+                node_ids: None,
             },
         ),
     )
     .await;
     assert_ok(&pagerank);
-    // Compact encoding (Phase C-D): pagerank returns a Raw msgpack blob that
-    // decodes to the exact same typed result.
-    let Some(ResultPayload::Raw(bytes)) = pagerank.result else {
-        panic!("expected Raw pagerank result");
+    // MEDULLA-FEDERATED-QUERY-R743.1: pagerank returns the typed `PageRankView`.
+    let Some(ResultPayload::Json(value)) = pagerank.result else {
+        panic!("expected Json pagerank result");
     };
-    let scores: Vec<(String, f64)> = rmp_serde::from_slice(&bytes).unwrap();
-    assert_eq!(scores.len(), 3);
+    let view: medulla_result_types::compute_result::algorithms::PageRankView =
+        serde_json::from_value(value).unwrap();
+    assert_eq!(view.scores.len(), 3);
+    assert!(view.scope.is_none());
 
     let communities = dispatch_on_heap(
         &state,
@@ -3562,7 +3564,10 @@ async fn test_offloaded_algorithms_round_trip() {
             11,
             "agent:algo",
             None,
-            Method::CommunityDetection { resolution: 1.0 },
+            Method::CommunityDetection {
+                resolution: 1.0,
+                node_ids: None,
+            },
         ),
     )
     .await;

@@ -72,6 +72,12 @@ $($variants)*
     GetShortestPath {
         source_id: String,
         target_id: String,
+        /// Optional scope: run on the subgraph induced by these node ids, limited to the
+        /// caller's visible set. A node the caller cannot see answers exactly as an unknown
+        /// id does; `Some(empty)` scopes to nothing. Absent runs on the whole visible graph
+        /// (MEDULLA-FEDERATED-QUERY-R743.1).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        node_ids: Option<Vec<String>>,
     },
 
     GetBlastRadius {
@@ -90,6 +96,12 @@ $($variants)*
     PageRank {
         damping: f64,
         iterations: usize,
+        /// Optional scope: run on the subgraph induced by these node ids, limited to the
+        /// caller's visible set. A node the caller cannot see answers exactly as an unknown
+        /// id does; `Some(empty)` scopes to nothing. Absent runs on the whole visible graph
+        /// (MEDULLA-FEDERATED-QUERY-R743.1).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        node_ids: Option<Vec<String>>,
     },
 
     PersonalizedPageRank {
@@ -106,6 +118,12 @@ $($variants)*
 
     CommunityDetection {
         resolution: f64,
+        /// Optional scope: run on the subgraph induced by these node ids, limited to the
+        /// caller's visible set. A node the caller cannot see answers exactly as an unknown
+        /// id does; `Some(empty)` scopes to nothing. Absent runs on the whole visible graph
+        /// (MEDULLA-FEDERATED-QUERY-R743.1).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        node_ids: Option<Vec<String>>,
     },
 
     /// Stateless community detection over a call graph passed inline — NO tenant

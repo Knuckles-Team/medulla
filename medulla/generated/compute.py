@@ -299,9 +299,9 @@ async def send_get_shortest_path(
     return OpaqueResult("GetShortestPath", payload)
 
 
-def decode_get_shortest_path(result: OpaqueResult) -> _models.GetShortestPathResult:
+def decode_get_shortest_path(result: OpaqueResult) -> _models.ShortestPathView:
     """Validate this method's result against its contract model."""
-    return decode_result("GetShortestPath", models().GetShortestPathResult, result)
+    return decode_result("GetShortestPath", models().ShortestPathView, result)
 
 
 async def send_get_blast_radius(
@@ -519,7 +519,7 @@ async def send_page_rank(
     Replay:
         NotReplayable
     Result:
-        ResultPayload::Raw
+        ResultPayload::Json
     Result schema:
         contract/schemas/result.compute.json
         #/methods/PageRank
@@ -537,9 +537,9 @@ async def send_page_rank(
     return OpaqueResult("PageRank", payload)
 
 
-def decode_page_rank(result: OpaqueResult) -> _models.PageRankResult:
+def decode_page_rank(result: OpaqueResult) -> _models.PageRankView:
     """Validate this method's result against its contract model."""
-    return decode_result("PageRank", models().PageRankResult, result)
+    return decode_result("PageRank", models().PageRankView, result)
 
 
 async def send_personalized_page_rank(
@@ -787,7 +787,7 @@ async def send_community_detection(
     Replay:
         NotReplayable
     Result:
-        ResultPayload::Raw
+        ResultPayload::Json
     Result schema:
         contract/schemas/result.compute.json
         #/methods/CommunityDetection
@@ -807,11 +807,9 @@ async def send_community_detection(
 
 def decode_community_detection(
     result: OpaqueResult,
-) -> _models.CommunityDetectionResult:
+) -> _models.CommunityDetectionView:
     """Validate this method's result against its contract model."""
-    return decode_result(
-        "CommunityDetection", models().CommunityDetectionResult, result
-    )
+    return decode_result("CommunityDetection", models().CommunityDetectionView, result)
 
 
 async def send_community_detect_ephemeral(

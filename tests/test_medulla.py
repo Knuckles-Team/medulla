@@ -130,12 +130,12 @@ def test_shortest_path_bfs(clean_graph):
 
     # Shortest path from 1 to 4 should be 1 -> 3 -> 4 (length 3 nodes) rather than 1 ->
     # 2 -> 3 -> 4
-    path = clean_graph.graph.shortest_path("1", "4")
+    path = clean_graph.graph.shortest_path("1", "4").path
     assert path == ["1", "3", "4"]
 
     # Try unconnected node
     clean_graph.nodes.add("unconnected", "{}")
-    assert clean_graph.graph.shortest_path("1", "unconnected") is None
+    assert clean_graph.graph.shortest_path("1", "unconnected").path is None
 
 
 @pytest.mark.concept("CONCEPT:AU-KG.query.object-graph-mapper")

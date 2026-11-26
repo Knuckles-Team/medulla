@@ -29,6 +29,16 @@ from medulla.client import GraphOperationsClient, MedullaClient
 pytestmark = pytest.mark.no_engine
 
 
+_SUMMARY = {
+    "graph": "g1",
+    "levels": 1,
+    "base_node_count": 1,
+    "base_edge_count": 0,
+    "top_level_clusters": 1,
+    "cached": False,
+}
+
+
 class _FakeClient(MedullaClient):
     def __init__(self, ret: Any = None) -> None:
         self.sent: list[tuple[str, dict[str, Any] | None]] = []
@@ -66,13 +76,13 @@ async def test_refresh_sends_label_resolution_and_seed() -> None:
             {"label": "Doc", "resolution": 1.2, "seed": 7},
         )
     ]
-    assert out["levels"] == 3
-    assert out["cached"] is True
+    assert out.levels == 3
+    assert out.cached is True
 
 
 @pytest.mark.asyncio
 async def test_refresh_defaults_no_label_resolution_one_seed_zero() -> None:
-    fake = _FakeClient(ret={})
+    fake = _FakeClient(ret=_SUMMARY)
     gc = GraphOperationsClient(fake)
     await gc.cluster_hierarchy_refresh()
     assert fake.sent == [
@@ -80,13 +90,20 @@ async def test_refresh_defaults_no_label_resolution_one_seed_zero() -> None:
     ]
 
 
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R744.2")
 @pytest.mark.asyncio
 async def test_clusters_sends_level_and_optional_parent() -> None:
     fake = _FakeClient(
         ret={
             "level": 2,
             "clusters": [
-                {"id": "L2-0", "label": "x", "node_count": 10, "edge_count": 20.0}
+                {
+                    "id": "L2-0",
+                    "label": "x",
+                    "node_count": 10,
+                    "edge_count": 20.0,
+                    "top_node_types": [["Doc", 10]],
+                }
             ],
             "inter_cluster_edges": [],
         }
@@ -96,8 +113,8 @@ async def test_clusters_sends_level_and_optional_parent() -> None:
     assert fake.sent == [
         ("ClusterHierarchyClusters", {"level": 2, "parent_cluster_id": None})
     ]
-    assert out["level"] == 2
-    assert out["clusters"][0]["id"] == "L2-0"
+    assert out.level == 2
+    assert out.clusters[0].id == "L2-0"
 
 
 @pytest.mark.asyncio
@@ -110,10 +127,17 @@ async def test_clusters_with_parent_scopes_to_that_parents_children() -> None:
     ]
 
 
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R744.2")
 @pytest.mark.asyncio
 async def test_expand_sends_cluster_id() -> None:
-    fake = _FakeClient(ret={"nodes": [{"id": "n1"}], "edges": [], "child_clusters": []})
+    fake = _FakeClient(
+        ret={
+            "nodes": [{"id": "n1", "properties": {"type": "Doc"}}],
+            "edges": [],
+            "child_clusters": [],
+        }
+    )
     gc = GraphOperationsClient(fake)
     out = await gc.cluster_hierarchy_expand("L1-0")
     assert fake.sent == [("ClusterHierarchyExpand", {"cluster_id": "L1-0"})]
-    assert out["nodes"][0]["id"] == "n1"
+    assert out.nodes[0].id == "n1"

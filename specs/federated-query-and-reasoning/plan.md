@@ -1332,3 +1332,16 @@ Call paths. Each row names its entry point, the functions on the path and the at
 Reuse inventory. R740 reuses `medulla_rdf::mapping` parsers and serializers, `jsonld.rs` and `rdfxml.rs`. R706.8 reuses `QueryPolicy` records and `medulla-shacl`. R741 reuses `expand_hops`. No new store, planner or selector exists.
 
 Decisions. A graph store write that holds quads must name the target graph or the default graph, because one request writes one graph. A shape policy has two effects, `filter` and `refuse`, because a hidden row and a refused request are different answers for a caller.
+
+## Graph visualization reads (R743, R744)
+
+Call paths. Each row names its entry point, the functions on the path and the attach point.
+
+- R743: served `PageRank`, `GetShortestPath` and `CommunityDetection` → `graph_ops::try_handle` (`crates/medulla-h-graph/src/graph_ops/terminal.rs`, which swaps in the row-visible projection) → `try_handle_graph_algorithms` and `try_handle_community_algorithms` (`algorithms.rs`) → `scoped_topology` → `GraphView::restrict_to_nodes` (`crates/medulla-graph-core/src/graph/view.rs`) → the unchanged kernels in `crates/medulla-graph-algos/src/algorithms/`. The scope is the second filter after row-level security and only narrows it.
+- R743.1: the three result declarations in `result_contract/compute.rs` become `Json<...View>`; the views live beside `ClusterLevelView` in `crates/medulla-result-types/src/compute_result/algorithms.rs`.
+- R743.5: `medulla/generated/models.py`, `medulla/generated/compute.py` and `AnalyticsClient` / `GraphOperationsClient` in `medulla/client.py` move in the same change.
+- R744: served `ClusterHierarchyClusters` and `ClusterHierarchyExpand` → `try_handle_hierarchy_visualization` (`crates/medulla-h-graph/src/graph_ops/hierarchy.rs`) → the cached hierarchy of `ClusterHierarchyRefresh`. The result types already exist; the rows bind them as the one published contract and give the Python client typed returns.
+
+Reuse inventory. R743 reuses `MAX_BATCH_IDS`, the row-visible projection and `topology_snapshot`; no second visibility check, kernel or request type exists. R744 reuses the existing result types.
+
+Decisions. `node_ids` absent means the whole visible graph and `Some([])` means nothing, because an empty list that silently widened to everything would turn a filtered view into a full read. The scope reports `requested` and `in_scope` only, because the pair is the same for a hidden id and an unknown id.

@@ -396,6 +396,6 @@ def test_service_algorithms(service, client_factory):
 
         # PageRank.
         ranks = await client.analytics.pagerank(damping=0.85, iterations=10)
-        assert len(ranks) > 0
+        assert len(ranks.scores) > 0
 
     asyncio.run(_test())

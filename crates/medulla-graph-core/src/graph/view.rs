@@ -262,6 +262,30 @@ impl GraphView {
         }
     }
 
+    /// Restrict this snapshot to the subgraph induced by `keep` (MEDULLA-FEDERATED-QUERY-R743.2):
+    /// every node outside `keep`, its properties and every edge incident to it are dropped in one
+    /// pass. An id in `keep` that the view does not hold is ignored, so a caller cannot tell an
+    /// unknown id from one the view's projection already hid. Returns how many nodes remain.
+    pub fn restrict_to_nodes(&mut self, keep: &std::collections::HashSet<String>) -> usize {
+        let dropped: Vec<String> = self
+            .node_map
+            .keys()
+            .filter(|id| !keep.contains(*id))
+            .cloned()
+            .collect();
+        for id in &dropped {
+            if let Some(idx) = self.node_map.remove(id) {
+                self.node_properties.remove(id);
+                self.graph.remove_node(idx);
+            }
+        }
+        if !dropped.is_empty() {
+            self.edge_properties
+                .retain(|(src, dst), _| keep.contains(src) && keep.contains(dst));
+        }
+        self.node_map.len()
+    }
+
     /// Overlay a buffered compare-and-set onto this snapshot (mirrors
     /// `GraphTxn::compare_and_set_fields`): when every `(field, expected)` in
     /// `conditions` matches the node's current value (a MISSING field reads as
@@ -383,5 +407,54 @@ impl GraphView {
                 self.graph.remove_edge(e);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod restrict_tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    fn chain() -> GraphView {
+        let mut view = GraphView::default();
+        for id in ["a", "b", "c", "d"] {
+            view.overlay_add_node(id.to_string(), Vec::new());
+        }
+        for (source, target) in [("a", "b"), ("b", "c"), ("c", "d")] {
+            assert!(view.overlay_add_edge(source.to_string(), target.to_string(), Vec::new()));
+        }
+        view
+    }
+
+    fn keep(ids: &[&str]) -> HashSet<String> {
+        ids.iter().map(|id| id.to_string()).collect()
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R743.2
+    #[test]
+    fn restricting_keeps_the_induced_subgraph_and_drops_incident_edges() {
+        let mut view = chain();
+        let kept = view.restrict_to_nodes(&keep(&["a", "b", "d"]));
+        assert_eq!(kept, 3);
+        assert!(view.has_node("a") && view.has_node("b") && view.has_node("d"));
+        assert!(!view.has_node("c"));
+        assert!(view.has_edge("a", "b"));
+        assert!(!view.has_edge("b", "c") && !view.has_edge("c", "d"));
+        assert_eq!(view.graph.edge_count(), 1);
+        assert!(view
+            .edge_properties
+            .keys()
+            .all(|(s, t)| s != "c" && t != "c"));
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R743.2
+    #[test]
+    fn an_id_the_view_does_not_hold_is_ignored_and_an_empty_keep_clears_the_view() {
+        let mut view = chain();
+        assert_eq!(view.restrict_to_nodes(&keep(&["a", "ghost"])), 1);
+        assert!(!view.has_node("ghost"));
+        assert_eq!(view.restrict_to_nodes(&HashSet::new()), 0);
+        assert_eq!(view.graph.node_count(), 0);
+        assert!(view.edge_properties.is_empty());
     }
 }

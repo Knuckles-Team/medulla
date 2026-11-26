@@ -43,17 +43,17 @@ method_results! {
     // ── graph algorithms ──
     TopologicalSort(TopologicalSort) => Raw<Vec<String>>;
     FindCycle(FindCycle) => Json<Option<Vec<String>>>;
-    GetShortestPath(GetShortestPath) => Json<Option<Vec<String>>>;
+    GetShortestPath(GetShortestPath) => Json<algorithms::ShortestPathView>;
     GetBlastRadius(GetBlastRadius) => Json<Vec<String>>;
     DegreeCentrality(DegreeCentrality) => Float<f64>;
     DegreeCentralityAll(DegreeCentralityAll) => Json<Vec<(String, f64)>>;
     BetweennessCentrality(BetweennessCentrality) => Raw<Vec<(String, f64)>>;
-    PageRank(PageRank) => Raw<Vec<(String, f64)>>;
+    PageRank(PageRank) => Json<algorithms::PageRankView>;
     PersonalizedPageRank(PersonalizedPageRank) => Raw<Vec<(String, f64)>>;
     ConnectedComponents(ConnectedComponents) => Json<Vec<Vec<String>>>;
     StronglyConnectedComponents(StronglyConnectedComponents) => Json<Vec<Vec<String>>>;
     MinimumSpanningTree(MinimumSpanningTree) => Raw<Vec<(String, String, f64)>>;
-    CommunityDetection(CommunityDetection) => Raw<Vec<Vec<String>>>;
+    CommunityDetection(CommunityDetection) => Json<algorithms::CommunityDetectionView>;
     CommunityDetectEphemeral(CommunityDetectEphemeral) => Raw<Vec<Vec<String>>>;
     MineTopology(MineTopology) => Json<medulla_query_types::topology::TopologyResult>;
     GraphColoring(GraphColoring) => Json<Vec<(String, usize)>>;

@@ -12,6 +12,9 @@ use medulla_query_types::topology::{
     AnalogyMatch, HyperedgeScore, Partition, SynergyBridge, TopologyAnalytic, TopologyEvidence,
     TopologyResult, TOPOLOGY_K_MAX, TOPOLOGY_K_MIN,
 };
+use medulla_result_types::compute_result::algorithms::{
+    AlgorithmScopeView, CommunityDetectionView, NodeScoreView, PageRankView, ShortestPathView,
+};
 
 /// EH-314: wire (`medulla_protocol_types::protocol::CommunityQualityFunction`) → kernel
 /// (`medulla_graph_algos::graph_algos::QualityFunction`) — the same split
@@ -24,6 +27,40 @@ fn to_quality_function(quality: CommunityQualityFunction) -> QualityFunction {
         CommunityQualityFunction::Modularity => QualityFunction::Modularity,
         CommunityQualityFunction::Cpm => QualityFunction::Cpm,
     }
+}
+
+/// The topology an algorithm runs on, optionally restricted to a `node_ids` scope
+/// (MEDULLA-FEDERATED-QUERY-R743.2). `core` is already the caller's row-visible projection
+/// (`terminal::try_handle`), so intersecting the scope with it is the visibility limit: a node
+/// the caller cannot see is absent from the view exactly as an unknown id is, and contributes
+/// to neither the topology nor `in_scope`. `Some(empty)` scopes to nothing.
+fn scoped_topology(
+    core: &GraphCore,
+    node_ids: Option<Vec<String>>,
+) -> Result<
+    (
+        medulla_graph_core::graph::GraphView,
+        Option<AlgorithmScopeView>,
+    ),
+    String,
+> {
+    let mut view = core.topology_snapshot();
+    let Some(node_ids) = node_ids else {
+        return Ok((view, None));
+    };
+    if node_ids.len() > MAX_BATCH_IDS {
+        return Err(invalid_argument(&format!(
+            "node_ids names {} ids (max {MAX_BATCH_IDS})",
+            node_ids.len()
+        )));
+    }
+    let requested: std::collections::HashSet<String> = node_ids.into_iter().collect();
+    let in_scope = view.restrict_to_nodes(&requested) as u64;
+    let scope = AlgorithmScopeView {
+        requested: requested.len() as u64,
+        in_scope,
+    };
+    Ok((view, Some(scope)))
 }
 
 /// A graph-algorithm refusal names the caller's input (an unknown node id, a
@@ -171,12 +208,12 @@ async fn handle_personalized_page_rank(
     }
 }
 
-/// `CommunityDetection`: pure extract-method from `try_handle`'s match arm,
-/// byte-identical behaviour, no signature change.
+/// `CommunityDetection`, optionally scoped by `node_ids` (MEDULLA-FEDERATED-QUERY-R743.2).
 async fn handle_community_detection(
     req_id: u64,
     core: &Arc<GraphCore>,
     resolution: f64,
+    node_ids: Option<Vec<String>>,
 ) -> Response {
     // Louvain — NOT label propagation, as this comment used to claim: the method
     // routes to `algorithms::community_detection`, which is the Louvain kernel,
@@ -190,13 +227,22 @@ async fn handle_community_detection(
     //
     // That budget used to burn entirely UNDER the read lock, stalling every
     // writer on the graph. Snapshot topology, compute off-lock (KG-2.51).
-    let snap = { core.topology_snapshot() };
+    let (snap, scope) = match scoped_topology(core, node_ids) {
+        Ok(scoped) => scoped,
+        Err(error) => return Response::err(req_id, error),
+    };
     match compute_off_lock(req_id, move || {
         medulla_graph_algos::algorithms::community_detection(&snap, resolution)
     })
     .await
     {
-        Ok(v) => Response::ok(req_id, ResultPayload::of::<results::CommunityDetection>(v)),
+        Ok(communities) => Response::ok(
+            req_id,
+            ResultPayload::of::<results::CommunityDetection>(CommunityDetectionView {
+                communities,
+                scope,
+            }),
+        ),
         Err(resp) => resp,
     }
 }
@@ -276,22 +322,34 @@ fn handle_topological_sort(req_id: u64, core: &Arc<GraphCore>) -> Response {
     }
 }
 
-/// `PageRank`: pure extract-method from `try_handle`'s match arm, byte-identical
-/// behaviour, no signature change.
+/// `PageRank`, optionally scoped by `node_ids` (MEDULLA-FEDERATED-QUERY-R743.2).
 async fn handle_page_rank(
     req_id: u64,
     core: &Arc<GraphCore>,
     damping: f64,
     iterations: usize,
+    node_ids: Option<Vec<String>>,
 ) -> Response {
     // O(iterations·E) — snapshot topology, compute off-lock (KG-2.51).
-    let snap = { core.topology_snapshot() };
+    let (snap, scope) = match scoped_topology(core, node_ids) {
+        Ok(scoped) => scoped,
+        Err(error) => return Response::err(req_id, error),
+    };
     match compute_off_lock(req_id, move || {
         medulla_graph_algos::algorithms::pagerank(&snap, damping, iterations)
     })
     .await
     {
-        Ok(v) => Response::ok(req_id, ResultPayload::of::<results::PageRank>(v)),
+        Ok(ranked) => Response::ok(
+            req_id,
+            ResultPayload::of::<results::PageRank>(PageRankView {
+                scores: ranked
+                    .into_iter()
+                    .map(|(node_id, score)| NodeScoreView { node_id, score })
+                    .collect(),
+                scope,
+            }),
+        ),
         Err(resp) => resp,
     }
 }
@@ -692,19 +750,24 @@ pub(super) async fn try_handle_graph_algorithms(
         Method::GetShortestPath {
             source_id,
             target_id,
-        } => {
-            let g = core.topology_snapshot();
-            Response::ok(
+            node_ids,
+        } => match scoped_topology(core, node_ids) {
+            Ok((g, scope)) => Response::ok(
                 req_id,
-                ResultPayload::of::<results::GetShortestPath>(
-                    medulla_graph_algos::algorithms::get_shortest_path(&g, &source_id, &target_id),
-                ),
-            )
-        }
+                ResultPayload::of::<results::GetShortestPath>(ShortestPathView {
+                    path: medulla_graph_algos::algorithms::get_shortest_path(
+                        &g, &source_id, &target_id,
+                    ),
+                    scope,
+                }),
+            ),
+            Err(error) => Response::err(req_id, error),
+        },
         Method::PageRank {
             damping,
             iterations,
-        } => handle_page_rank(req_id, core, damping, iterations).await,
+            node_ids,
+        } => handle_page_rank(req_id, core, damping, iterations, node_ids).await,
         Method::ConnectedComponents => {
             let g = core.topology_snapshot();
             Response::ok(
@@ -794,9 +857,10 @@ pub(super) async fn try_handle_community_algorithms(
 ) -> ControlFlow<Response, Method> {
     let GraphOpsContext { req_id, core, .. } = ctx;
     ControlFlow::Break(match method {
-        Method::CommunityDetection { resolution } => {
-            handle_community_detection(req_id, core, resolution).await
-        }
+        Method::CommunityDetection {
+            resolution,
+            node_ids,
+        } => handle_community_detection(req_id, core, resolution, node_ids).await,
         // Stateless community detection over an inline call graph — no tenant load,
         // no persistence, no graph lock. Builds a throwaway in-memory graph from the
         // passed nodes/edges and runs detection off-reactor. Replaces the prior

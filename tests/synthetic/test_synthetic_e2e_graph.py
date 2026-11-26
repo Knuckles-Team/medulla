@@ -177,7 +177,10 @@ def test_analytics_and_timeseries_read_back_match_planted_values(clean_graph):
     for spoke in spokes:
         assert degrees[spoke] == corpus.analytics.expected_spoke_centrality
 
-    ranks = dict(gc.analytics.pagerank(damping=0.85, iterations=100))
+    ranks = {
+        row.node_id: row.score
+        for row in gc.analytics.pagerank(damping=0.85, iterations=100).scores
+    }
     assert all(ranks[hub] > ranks[spoke] for spoke in spokes), (
         "the fan-in hub must outrank every one of its own spokes",
         ranks,

@@ -567,12 +567,14 @@ fn test_method_pagerank_roundtrip() {
     let method = Method::PageRank {
         damping: 0.85,
         iterations: 100,
+        node_ids: None,
     };
     let json = serde_json::to_string(&method).unwrap();
     let parsed: Method = serde_json::from_str(&json).unwrap();
     if let Method::PageRank {
         damping,
         iterations,
+        node_ids: None,
     } = parsed
     {
         assert!((damping - 0.85).abs() < f64::EPSILON);

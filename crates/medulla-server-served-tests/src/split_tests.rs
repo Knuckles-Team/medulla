@@ -144,6 +144,8 @@ mod medulla_h_query_nl_sparql_tenant_tests;
 #[cfg(all(test, feature = "query", feature = "redb", feature = "security"))]
 mod medulla_h_query_retrieval_round_two_tenant_tests;
 mod harness_edit_served_tests;
+mod cluster_hierarchy_served_tests;
+mod graph_algorithm_scope_tests;
 mod neighborhood_tests;
 mod tenant_separation_tests;
 #[cfg(all(test, feature = "query", feature = "ann-redb"))]

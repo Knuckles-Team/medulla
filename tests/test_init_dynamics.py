@@ -22,5 +22,5 @@ def test_initial_graph_dynamics(clean_graph):
     # Verify algorithms handle empty graph gracefully
     assert clean_graph.graph.topological_sort() == []
     assert clean_graph.graph.find_cycle() is None
-    assert clean_graph.graph.shortest_path("A", "B") is None
+    assert clean_graph.graph.shortest_path("A", "B").path is None
     assert clean_graph.graph.blast_radius("A", 2) == []
