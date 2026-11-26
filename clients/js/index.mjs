@@ -35,6 +35,8 @@ const CONTEXT_FIELDS = new Set([
   "policy_version",
   "delegation",
 ]);
+// Optional claims: absent, the envelope bytes are unchanged (MEDULLA-IDENTITY-R744).
+const OPTIONAL_CONTEXT_FIELDS = new Set(["delegation_id"]);
 const MAX_RESPONSE_BYTES = 64 * 1024 * 1024;
 
 function assertContextShape(context) {
@@ -46,7 +48,9 @@ function assertContextShape(context) {
   if (missing.length) {
     throw new Error(`verifiedContext is missing required claims: ${missing.join(", ")}`);
   }
-  const unsupported = fields.filter((field) => !CONTEXT_FIELDS.has(field));
+  const unsupported = fields.filter(
+    (field) => !CONTEXT_FIELDS.has(field) && !OPTIONAL_CONTEXT_FIELDS.has(field),
+  );
   if (unsupported.length) {
     throw new Error(`verifiedContext contains unsupported claims: ${unsupported.join(", ")}`);
   }
@@ -89,6 +93,12 @@ function buildValidatedContext(context) {
     policy_version: context.policy_version,
     delegation: Object.freeze([...context.delegation]),
   };
+  if (context.delegation_id !== undefined && context.delegation_id !== null) {
+    if (typeof context.delegation_id !== "string" || !context.delegation_id.trim()) {
+      throw new Error("verifiedContext.delegation_id must be a non-empty string");
+    }
+    value.delegation_id = context.delegation_id.trim();
+  }
   return value;
 }
 
@@ -359,6 +369,13 @@ export class MedullaThinClient {
     parts.push(timestampBytes);
     appendText(parts, nonce);
     appendText(parts, idempotencyKey);
+    // MEDULLA-IDENTITY-R744: the delegation the request acts under, the THIRD optional
+    // trailer (tag byte 3); absent, the bytes are unchanged. Node (1) and priority (2)
+    // are not claims of this client.
+    if (this.verifiedContext.delegation_id) {
+      parts.push(Buffer.from([3]));
+      appendText(parts, this.verifiedContext.delegation_id);
+    }
     const mac = crypto
       .createHmac("sha256", this.authSecret)
       .update(Buffer.concat(parts))

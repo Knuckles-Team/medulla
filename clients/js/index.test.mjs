@@ -366,3 +366,18 @@ test("method body vectors", async () => {
     );
   }
 });
+
+test("delegation_id is a MAC-covered tag-3 trailer", () => {
+  const sign = (ctx) =>
+    client({ verifiedContext: ctx })._seal(1, "g", "Ping", Buffer.from("b"), "k", {
+      timestamp: 1,
+      nonce: "n",
+    });
+  const mac = (token) => JSON.parse(Buffer.from(token.slice(4), "hex").toString("utf8"));
+  const plain = mac(sign(context()));
+  const delegated = mac(sign({ ...context(), delegation_id: "deleg:1" }));
+  assert.equal(delegated.context.delegation_id, "deleg:1");
+  assert.equal(plain.context.delegation_id, undefined);
+  assert.notEqual(plain.mac, delegated.mac);
+  assert.throws(() => validateRequestContext({ ...context(), delegation_id: " " }), /delegation_id/);
+});

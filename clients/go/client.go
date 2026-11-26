@@ -64,6 +64,9 @@ type RequestContextClaims struct {
 	Scopes        []string `json:"scopes"`
 	PolicyVersion string   `json:"policy_version"`
 	Delegation    []string `json:"delegation"`
+	// DelegationID is the optional agent-run delegation the request acts under
+	// (MEDULLA-IDENTITY-R744); absent, the envelope bytes are unchanged.
+	DelegationID string `json:"delegation_id,omitempty"`
 }
 
 // Options configures a Dial.
@@ -140,6 +143,7 @@ func validateRequestContext(context *RequestContextClaims) (RequestContextClaims
 	} else if len(value.Delegation) < 2 || value.Delegation[0] != value.Principal || value.Delegation[len(value.Delegation)-1] != value.AgentID {
 		return RequestContextClaims{}, fmt.Errorf("delegation must run from principal to effective agent")
 	}
+	value.DelegationID = strings.TrimSpace(value.DelegationID)
 	value.Roles = append([]string{}, value.Roles...)
 	value.Scopes = append([]string{}, value.Scopes...)
 	value.Delegation = append([]string{}, value.Delegation...)
@@ -241,6 +245,12 @@ func (c *Client) seal(id int64, graph, method string, body []byte, idempotencyKe
 	canonical = append(canonical, timestampBytes[:]...)
 	canonical = appendText(canonical, nonce)
 	canonical = appendText(canonical, idempotencyKey)
+	// MEDULLA-IDENTITY-R744: the delegation trailer, tag byte 3 (node and priority, tags 1
+	// and 2, are not claims of this client).
+	if c.context.DelegationID != "" {
+		canonical = append(canonical, 3)
+		canonical = appendText(canonical, c.context.DelegationID)
+	}
 	mac := hmac.New(sha256.New, []byte(c.authSecret))
 	_, _ = mac.Write(canonical)
 	envelope := signedEnvelope{

@@ -161,3 +161,34 @@ func TestValidateResourceSelector(t *testing.T) {
 		})
 	}
 }
+
+func TestDelegationIDIsMacCoveredTrailer(t *testing.T) {
+	macOf := func(delegationID string) string {
+		claims := testContext()
+		claims.DelegationID = delegationID
+		context, err := validateRequestContext(claims)
+		if err != nil {
+			t.Fatal(err)
+		}
+		client := &Client{authSecret: "test-envelope-secret", context: context, graph: "graph:test"}
+		token, err := client.seal(1, "graph:test", "Ping", []byte("b"), "k", envelopeSeal{Timestamp: 1, Nonce: "n"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		payload, err := hex.DecodeString(strings.TrimPrefix(token, "eg2."))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var envelope signedEnvelope
+		if err := json.Unmarshal(payload, &envelope); err != nil {
+			t.Fatal(err)
+		}
+		return envelope.MAC
+	}
+	if macOf("") == macOf("deleg:1") {
+		t.Fatal("delegation_id did not change the MAC")
+	}
+	if macOf("deleg:1") != macOf(" deleg:1 ") {
+		t.Fatal("delegation_id is not trimmed before signing")
+	}
+}
