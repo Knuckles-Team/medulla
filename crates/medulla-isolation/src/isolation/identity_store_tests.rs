@@ -3,9 +3,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Arc;
 
-use super::{
-    AccessLevel, AgentIdentity, AgentRole, AuditActor, IdentityStoreError, IsolationLayer,
-};
+use super::{AccessLevel, AuditActor, IdentityStoreError, IsolationLayer};
+use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use crate::rbac::RbacPolicy;
 use crate::rbac_persist::{
     IdentityBootstrapState, RbacAuthoritySnapshot, RbacPersistError, RbacPolicyStore,

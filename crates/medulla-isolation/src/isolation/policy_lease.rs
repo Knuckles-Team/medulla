@@ -1,6 +1,7 @@
 #![cfg(feature = "security")]
 
-use super::{row_visibility, AccessLevel, AgentIdentity, AgentRole, IsolationLayer, RowVisibility};
+use super::{row_visibility, AccessLevel, IsolationLayer, RowVisibility};
+use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use std::collections::HashSet;
 
 mod accessors;

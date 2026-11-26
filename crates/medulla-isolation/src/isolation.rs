@@ -79,8 +79,8 @@ pub fn stamp_owner_id_if_absent(blob: &[u8], caller_agent_id: &str) -> Option<Ve
 /// enum's `RegisterIdentity` carries `AgentRole` over the wire, and `protocol`
 /// sits below `isolation` in the DAG); re-exported here so `IsolationLayer` and
 /// every call site reference `crate::isolation::AgentRole` unchanged.
-pub use medulla_identity_types::acl::AgentIdentity;
-pub use medulla_identity_types::acl::AgentRole;
+use medulla_identity_types::acl::AgentIdentity;
+use medulla_identity_types::acl::AgentRole;
 
 #[cfg(feature = "security")]
 mod policy_lease;

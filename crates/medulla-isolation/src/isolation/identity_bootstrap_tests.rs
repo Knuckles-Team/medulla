@@ -10,7 +10,8 @@
 use std::collections::BTreeMap;
 
 use super::identity_store_tests::{agent, apply, bootstrapped, seeded, stamp, SYSTEM_AGENT};
-use super::{AgentIdentity, AgentRole, IdentityStoreError, IsolationLayer};
+use super::{IdentityStoreError, IsolationLayer};
+use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use medulla_identity_types::identity::*;
 
 fn initialize(layer: &mut IsolationLayer, mode: AuthMode) -> Result<(), IdentityStoreError> {

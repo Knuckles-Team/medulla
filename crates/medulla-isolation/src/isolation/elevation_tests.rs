@@ -1,9 +1,9 @@
 //! EH-404: the access chokepoint consults just-in-time elevations.
 
 use super::{
-    access_clock_ms, AccessBasis, AccessLevel, AccessQuery, AgentIdentity, AgentRole,
-    ElevationError, IsolationLayer,
+    access_clock_ms, AccessBasis, AccessLevel, AccessQuery, ElevationError, IsolationLayer,
 };
+use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 use medulla_identity_types::{
     rbac_elevation::ElevationAction, rbac_elevation::ElevationActor,

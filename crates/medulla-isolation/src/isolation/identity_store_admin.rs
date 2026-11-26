@@ -21,7 +21,8 @@ use medulla_identity_types::{
     identity::ScopeClassifier, identity::RBAC_ROLE_PREFIX,
 };
 
-use super::{AgentIdentity, AgentRole, IsolationLayer};
+use super::IsolationLayer;
+use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 
 /// The agent a System-identity repair names, if `op` is one.
 fn system_repair_target(op: &IdentityOp) -> Option<&str> {

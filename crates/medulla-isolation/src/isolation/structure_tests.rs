@@ -1,4 +1,5 @@
-use super::{AccessLevel, AgentIdentity, AgentRole, IsolationLayer};
+use super::{AccessLevel, IsolationLayer};
+use medulla_identity_types::acl::{AgentIdentity, AgentRole};
 use medulla_identity_types::acl::{Grant, GrantEffect, RbacAction, ResourceSelector, Role};
 use medulla_protocol_types::protocol::GraphType;
 
