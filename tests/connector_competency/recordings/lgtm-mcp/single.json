@@ -1,0 +1,22 @@
+{
+  "source": "lgtm-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "alert": "alert-1",
+      "alertSeverity": "alertSeverity-1",
+      "firingSince": "firingSince-1",
+      "joinKey": "lgtm.q1-key-1",
+      "id": "lgtm-mcp-lgtm.q1-1",
+      "label": "lgtm-mcp 1"
+    },
+    {
+      "alert": "alert-2",
+      "alertSeverity": "alertSeverity-2",
+      "firingSince": "firingSince-2",
+      "joinKey": "lgtm.q1-key-2",
+      "id": "lgtm-mcp-lgtm.q1-2",
+      "label": "lgtm-mcp 2"
+    }
+  ]
+}

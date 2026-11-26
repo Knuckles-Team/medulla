@@ -1,0 +1,34 @@
+{
+  "connector": "lgtm",
+  "rollup": "MEDULLA-CQ-CONN-R034",
+  "vocabulary_module": "infrastructure-v1.ttl",
+  "terms": [
+    "alertSeverity",
+    "alertState",
+    "firingSince"
+  ],
+  "questions": [
+    {
+      "id": "lgtm.q1",
+      "kind": "single",
+      "question": "Which alerts are firing right now, with what severity and for how long?",
+      "uql": "FOREIGN SCAN 'lgtm-mcp'",
+      "sources": [
+        "lgtm-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "lgtm-mcp": "mcp_tool"
+      },
+      "columns": [
+        "alert",
+        "alertSeverity",
+        "firingSince"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "lgtm-mcp/single.json"
+      ]
+    }
+  ]
+}
