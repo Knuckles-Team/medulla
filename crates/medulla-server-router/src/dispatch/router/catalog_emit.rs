@@ -49,13 +49,25 @@ pub(super) async fn commit_asset(
     }
 }
 
-/// Answer `response` unchanged when the catalog nodes committed, else the emit refusal.
+/// How many catalog emits failed after their record committed, since the process started.
+static EMIT_FAILURES: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// The number of catalog emits that failed after their record committed.
 #[cfg(feature = "rdf")]
-pub(super) fn after_emit(response: Response, req_id: u64, emitted: Result<(), String>) -> Response {
-    match emitted {
-        Ok(()) => response,
-        Err(refusal) => Response::err(req_id, refusal),
+pub(super) fn emit_failures() -> u64 {
+    EMIT_FAILURES.load(std::sync::atomic::Ordering::Relaxed)
+}
+
+/// Answer `response` unchanged. A committed write is never reported as a failure
+/// (MEDULLA-TYPED-PACKS-R108.3): a catalog emit that failed after its record committed is
+/// logged and counted, and the replayed request emits the nodes again.
+#[cfg(feature = "rdf")]
+pub(super) fn after_emit(response: Response, _req_id: u64, emitted: Result<(), String>) -> Response {
+    if let Err(refusal) = emitted {
+        EMIT_FAILURES.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        tracing::error!(target: "medulla::catalog", %refusal, "catalog emit failed after the record committed");
     }
+    response
 }
 
 /// What a node carries beyond its source record id: who owns and stewards it, the graph
@@ -308,5 +320,23 @@ mod run_trace_tests {
         assert!(found[1].definition.is_none());
         assert!(found[2].definition.is_none());
         assert!(run_traces_of(&Method::GraphSchemaList).is_none());
+    }
+}
+
+#[cfg(all(test, feature = "rdf"))]
+mod tests {
+    use super::*;
+
+    // spec: MEDULLA-TYPED-PACKS-R108.3
+    #[test]
+    fn a_failed_emit_after_a_committed_record_is_counted_and_never_fails_the_response() {
+        let before = emit_failures();
+        let ok = Response::ok(7, medulla_protocol_types::protocol::ResultPayload::Raw(Vec::new()));
+        let answered = after_emit(ok, 7, Err("CATALOG_EMIT_FAILED: boom".to_string()));
+        assert!(answered.error.is_none());
+        assert_eq!(emit_failures(), before + 1);
+        let again = after_emit(answered, 7, Ok(()));
+        assert!(again.error.is_none());
+        assert_eq!(emit_failures(), before + 1);
     }
 }
