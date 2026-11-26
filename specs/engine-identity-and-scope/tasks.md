@@ -56,7 +56,7 @@ One task per leaf row of `requirements.md`, producers first: issuer trust and RB
 - [ ] T048 [US6] MEDULLA-IDENTITY-R700.4 Refusal: unsafe ownership plans
 - [ ] T049 [US6] MEDULLA-IDENTITY-R700.5 Evidence: stored plan and rollback record
 - [ ] T050 [US6] MEDULLA-IDENTITY-R700.6 Hot-path journey: apply then rollback
-- [ ] T050a [US6] MEDULLA-IDENTITY-R700.7 Model and wiring: the per-graph write ledger and creator
+- [x] T050a [US6] MEDULLA-IDENTITY-R700.7 Model and wiring: the per-graph write ledger and creator
 - [ ] T051 [US6] MEDULLA-IDENTITY-R701 Delegation record read for background work
 - [ ] T052 [US6] MEDULLA-IDENTITY-R702 Policy rule bundle: validate, bind and enforce (`IdentityOp::Policy`, lowered into `idm:policy:` roles and grants by `rbac_projection`)
 - [ ] T054 [US6] MEDULLA-IDENTITY-R704 Resource-scoped access decision method

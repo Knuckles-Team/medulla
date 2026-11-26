@@ -87,7 +87,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T462 [US1] MEDULLA-FEDERATED-QUERY-R039.1.7 Multimodal space: served declaration
 - [ ] T082 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.1 Model of Hard entity and relationship constraints
 - [x] T083 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.2 Constraints: behavior (L2 compiler test only; served carrier is R040.1.7)
-- [ ] T083a [US1] MEDULLA-FEDERATED-QUERY-R040.1.7 Served retrieval request: add `RetrievalRequest`/`TopicRequest`/`ModalityPair` in `crates/medulla-index-types/src/retrieval_request.rs`, the `retrieval` field on `Method::UnifiedQuery`, validation and cache-key salting in `handle_unified_query`, and the `PlanCtx` binding in `run_unified_with`; register `CONSTRAINT_INVALID` and `TOPIC_WEIGHT_INVALID`
+- [x] T083a [US1] MEDULLA-FEDERATED-QUERY-R040.1.7 Served retrieval request: add `RetrievalRequest`/`TopicRequest`/`ModalityPair` in `crates/medulla-index-types/src/retrieval_request.rs`, the `retrieval` field on `Method::UnifiedQuery`, validation and cache-key salting in `handle_unified_query`, and the `PlanCtx` binding in `run_unified_with`; register `CONSTRAINT_INVALID` and `TOPIC_WEIGHT_INVALID`
 - [ ] T084 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.3 Constraints: wiring
 - [ ] T085 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.4 Constraints: refusal
 - [ ] T086 [P] [US1] MEDULLA-FEDERATED-QUERY-R040.1.5 Constraints: evidence
@@ -164,7 +164,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T153 [P] [US1] MEDULLA-FEDERATED-QUERY-R058.4.7.2.5 Grounding of embedded RDF and SPARQL identifiers
 - [ ] T154 [US1] MEDULLA-FEDERATED-QUERY-R072.2 Retired: source selection is the served `SourceCoverage` answer (MEDULLA-SRC-AUTH-R004.6.1); no task
 - [ ] T155 [US1] MEDULLA-FEDERATED-QUERY-R073.3 Bind operation-bound Mcp sources to a connector call through the outbound guard
-- [ ] T156 [US1] MEDULLA-FEDERATED-QUERY-R720.7 UQL stage REQUIRE NONEMPTY with a caller-named refusal code
+- [x] T156 [US1] MEDULLA-FEDERATED-QUERY-R720.7 UQL stage REQUIRE NONEMPTY with a caller-named refusal code
 - [ ] T158 [US1] MEDULLA-FEDERATED-QUERY-R724 Authorization-segmented schema projections method
 - [ ] T159 [P] [US1] MEDULLA-FEDERATED-QUERY-R725 Viewport bins and selection resolve methods
 - [x] T160 [US1] MEDULLA-FEDERATED-QUERY-R726 UQL EVALUATE grammar
@@ -293,7 +293,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T275 [US2] MEDULLA-FEDERATED-QUERY-R651.3 Wiring: the expansion port of Query understanding and the one expansion port
 - [ ] T276 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.4 Refusal of Query understanding and the one expansion port
 - [x] T277 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.5 Evidence of Query understanding and the one expansion port
-- [ ] T278 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.6 Hot-path proof of Query understanding and the one expansion port
+- [x] T278 [P] [US2] MEDULLA-FEDERATED-QUERY-R651.6 Hot-path proof of Query understanding and the one expansion port
 - [ ] T279 [P] [US2] MEDULLA-FEDERATED-QUERY-R652.1 Model of Reranking and calibrated scores
 - [ ] T280 [US2] MEDULLA-FEDERATED-QUERY-R652.2 Behavior: lexical scoring and calibration of Reranking and calibrated scores
 - [ ] T281 [US2] MEDULLA-FEDERATED-QUERY-R652.3 Wiring of Reranking and calibrated scores
@@ -312,7 +312,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T294 [US2] MEDULLA-FEDERATED-QUERY-R654.3 Wiring of Code, operations and deployment context
 - [ ] T295 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.4 Refusal and degraded answers
 - [ ] T296 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.5 Evidence of Code, operations and deployment context
-- [ ] T297 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.6 Hot-path proof of Code, operations and deployment context
+- [x] T297 [P] [US2] MEDULLA-FEDERATED-QUERY-R654.6 Hot-path proof of Code, operations and deployment context
 - [ ] T298 [P] [US2] MEDULLA-FEDERATED-QUERY-R704.1 Model of Agent knowledge scope
 - [ ] T299 [P] [US2] MEDULLA-FEDERATED-QUERY-R704.2 Behavior of Agent knowledge scope
 - [ ] T300 [US2] MEDULLA-FEDERATED-QUERY-R704.3 Wiring of Agent knowledge scope
@@ -322,8 +322,8 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T304 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.1 Model of Feedback-adjusted document rank
 - [ ] T305 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.2 Behavior of Feedback-adjusted document rank
 - [ ] T306 [US2] MEDULLA-FEDERATED-QUERY-R705.3 Wiring of Feedback-adjusted document rank: gateway-routed `RetrievalFeedbackRecord` with a verified `FeedbackStamp`, `load_feedback` in `plan_discover`, implicit events read from stored retrieval outcomes
-- [ ] T307 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.4 Refusal of Feedback-adjusted document rank
-- [ ] T308 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.5 Evidence of Feedback-adjusted document rank
+- [x] T307 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.4 Refusal of Feedback-adjusted document rank
+- [x] T308 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.5 Evidence of Feedback-adjusted document rank
 - [ ] T309 [P] [US2] MEDULLA-FEDERATED-QUERY-R705.6 Hot-path proof of Feedback-adjusted document rank
 - [ ] T310 [P] [US2] MEDULLA-FEDERATED-QUERY-R079.2.1 Iceberg publication: append, compaction and copy-on-write deletion
 - [ ] T311 [P] [US2] MEDULLA-FEDERATED-QUERY-R081.11 Served retrieval round method
@@ -356,7 +356,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T334 [US3] MEDULLA-FEDERATED-QUERY-R607.3 Wiring of Topology analytics find partitions, analogies, synergy and hyperedge scores
 - [x] T335 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.4 Refusal of Topology analytics find partitions, analogies, synergy and hyperedge scores
 - [x] T336 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.5 Evidence of Topology analytics find partitions, analogies, synergy and hyperedge scores
-- [ ] T337 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.6 Hot-path proof of Topology analytics find partitions, analogies, synergy and hyperedge scores
+- [x] T337 [P] [US3] MEDULLA-FEDERATED-QUERY-R607.6 Hot-path proof of Topology analytics find partitions, analogies, synergy and hyperedge scores
 - [ ] T338 [P] [US3] MEDULLA-FEDERATED-QUERY-R608.1 Model of Rule fixpoint bound and causal verification on the served reasoning methods
 - [ ] T339 [US3] MEDULLA-FEDERATED-QUERY-R608.2 Behavior: fixpoint bound and causal fit of Rule fixpoint bound and causal verification on the served reasoning methods
 - [ ] T340 [US3] MEDULLA-FEDERATED-QUERY-R608.3 Wiring of Rule fixpoint bound and causal verification on the served reasoning methods
@@ -371,7 +371,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T349 [P] [US3] MEDULLA-FEDERATED-QUERY-R700.6 Hot-path proof of Argument maps with a Dung projection
 - [ ] T350 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.1 Model of Search-task synthesis with shortcut-risk diagnostics
 - [ ] T351 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.2 Behavior: detectors and refinement of Search-task synthesis with shortcut-risk diagnostics
-- [ ] T352 [US3] MEDULLA-FEDERATED-QUERY-R702.3 Wiring of Search-task synthesis with shortcut-risk diagnostics
+- [x] T352 [US3] MEDULLA-FEDERATED-QUERY-R702.3 Wiring of Search-task synthesis with shortcut-risk diagnostics
 - [x] T353 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.4 Refusal of Search-task synthesis with shortcut-risk diagnostics
 - [x] T354 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.5 Evidence of Search-task synthesis with shortcut-risk diagnostics
 - [x] T355 [P] [US3] MEDULLA-FEDERATED-QUERY-R702.6 Hot-path proof of Search-task synthesis with shortcut-risk diagnostics
@@ -383,12 +383,12 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 
 - [ ] T359 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.1 Model of Medulla approves immutable source queries for bounded connector execution
 - [x] T360 [US4] MEDULLA-FEDERATED-QUERY-R085.2 Behavior: admit in `source_query_approval::try_handle` (`source_query_authority`, `verify_registered_for`, framed digests) and issue through the dedicated native issuer `source_query::issue`; register `ApproveSourceQuery` at the twelve native work-item sites (r1)-(r12) beside `IssueHostStartGrant`, including the `approve_source_query` client
-- [ ] T361 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.3 Behavior: `verify_source_query_approval` in `foreign_source_handlers.rs` re-derives digests and authority, reads the lease by `approval_id` and rechecks the source receipt
+- [x] T361 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.3 Behavior: `verify_source_query_approval` in `foreign_source_handlers.rs` re-derives digests and authority, reads the lease by `approval_id` and rechecks the source receipt
 - [x] T362 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.4 Behavior: read-only SQL of Medulla approves immutable source queries for bounded connector execution
-- [ ] T363 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.5 Wiring: issue through `route_native_lifecycle_ops` and the native work-item route, verify through the foreign-source handler; register both methods at every `IssueHostStartGrant` site
+- [x] T363 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.5 Wiring: issue through `route_native_lifecycle_ops` and the native work-item route, verify through the foreign-source handler; register both methods at every `IssueHostStartGrant` site
 - [ ] T364 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.6 Behavior: install `SourceQueryKnobs` at startup and clamp in `admit_source_query`; served proof `bounded_stream_preserves_approval`
 - [ ] T365 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.7 Refusal: `SourceQueryError::code` (`SOURCE_QUERY_*`) registered for both methods
-- [ ] T366 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.8 Evidence and hot-path proof
+- [x] T366 [P] [US4] MEDULLA-FEDERATED-QUERY-R085.8 Evidence and hot-path proof
 - [ ] T367 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.1 Model of Query-time access check for dynamic-access sources
 - [ ] T368 [P] [US4] MEDULLA-FEDERATED-QUERY-R703.2 Behavior of Query-time access check for dynamic-access sources
 - [ ] T369 [US4] MEDULLA-FEDERATED-QUERY-R703.3 Wiring of Query-time access check for dynamic-access sources
@@ -399,7 +399,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T374 [US4] MEDULLA-FEDERATED-QUERY-R706.2 Behavior of Tag-based column masking and row filters
 - [ ] T375 [US4] MEDULLA-FEDERATED-QUERY-R706.3 Wiring of Tag-based column masking and row filters
 - [ ] T376 [US4] MEDULLA-FEDERATED-QUERY-R706.4 Refusal of Tag-based column masking and row filters
-- [ ] T377 [US4] MEDULLA-FEDERATED-QUERY-R706.5 Evidence of Tag-based column masking and row filters
+- [x] T377 [US4] MEDULLA-FEDERATED-QUERY-R706.5 Evidence of Tag-based column masking and row filters
 - [ ] T378 [US4] MEDULLA-FEDERATED-QUERY-R706.6 Hot-path proof of Tag-based column masking and row filters
 - [ ] T379 [P] [US4] MEDULLA-FEDERATED-QUERY-R722.1 Model of Connector data resources register as virtual-graph sources at pack import
 - [x] T380 [US4] MEDULLA-FEDERATED-QUERY-R722.2 Registration and digest behavior
