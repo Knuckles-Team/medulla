@@ -210,6 +210,40 @@ pub fn signed_request_with_context(
     request
 }
 
+/// A request signed with a caller-chosen `nonce` and `idempotency_key`: a fresh envelope (new
+/// nonce) under a previous request's key is the replay MEDULLA-DURABLE-KERNEL-R043.101 proves.
+#[allow(dead_code)]
+pub fn signed_request_with_key(
+    secret: &str,
+    id: u64,
+    graph: &str,
+    method: Method,
+    nonce: &str,
+    idempotency_key: &str,
+) -> Request {
+    configure_authority();
+    let context = context_for(TEST_AGENT);
+    let mut request = Request {
+        id,
+        graph: graph.to_string(),
+        auth_token: String::new(),
+        agent_id: Some(TEST_AGENT.to_string()),
+        method,
+        trace_id: None,
+    };
+    request.auth_token = compute_verified_envelope_token(
+        secret,
+        &request,
+        &VerifiedEnvelopeParams {
+            context: &context,
+            timestamp: now_secs(),
+            nonce,
+            idempotency_key,
+        },
+    );
+    request
+}
+
 /// Node-bound variant of [`signed_request`] (ADR-3 / W1.9,
 /// `reports/wave1/ADR-scale-trio.md`): mints the SAME kind of request but
 /// with an explicit `node` claim, so a caller can exercise node-binding
