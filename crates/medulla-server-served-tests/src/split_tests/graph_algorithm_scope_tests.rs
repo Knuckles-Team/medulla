@@ -95,6 +95,16 @@ impl Served {
     }
 
     async fn read_as(&self, tenant: &str, method: serde_json::Value) -> Response {
+        self.read_with_scopes(tenant, &["kg:read", "compute:graph-algo"], method)
+            .await
+    }
+
+    async fn read_with_scopes(
+        &self,
+        tenant: &str,
+        scopes: &[&str],
+        method: serde_json::Value,
+    ) -> Response {
         let method: Method = serde_json::from_value(method).expect("a wire method");
         let request = Request {
             id: next_id(),
@@ -107,7 +117,7 @@ impl Served {
         let verified = VerifiedRequestContext::verified_for_test_with_scopes(
             ADMIN,
             tenant,
-            &["kg:read", "compute:graph-algo"],
+            scopes,
         );
         Box::pin(
             medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
@@ -299,5 +309,44 @@ async fn a_scope_above_the_batch_bound_is_refused_whole() {
         let text = response.refusal_text().expect("a refusal");
         assert!(text.starts_with("INVALID_ARGUMENT"), "{method}: {text}");
         assert!(response.result.is_none(), "{method}: no partial result");
+    }
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R743.7
+#[tokio::test(flavor = "multi_thread")]
+async fn a_graph_read_principal_is_allowed_a_scoped_call_and_refused_a_whole_graph_call() {
+    let served = Served::seeded().await;
+    let scopes = ["compute:graph-read"];
+    for (name, scoped, whole) in [
+        (
+            "PageRank",
+            page_rank(Some(&["a", "b", "c"])),
+            page_rank(None),
+        ),
+        (
+            "GetShortestPath",
+            shortest_path(Some(&["a", "b", "c", "d"])),
+            shortest_path(None),
+        ),
+        (
+            "CommunityDetection",
+            communities(Some(&["a", "b", "c"])),
+            communities(None),
+        ),
+    ] {
+        let allowed = served.read_with_scopes(TENANT, &scopes, scoped).await;
+        assert!(
+            allowed.error.is_none(),
+            "{name} scoped refused: {:?}",
+            allowed.refusal_text()
+        );
+        let refused = served.read_with_scopes(TENANT, &scopes, whole).await;
+        let text = refused
+            .refusal_text()
+            .unwrap_or_else(|| panic!("{name} whole-graph call was allowed"));
+        assert!(
+            text.contains("ACCESS_DENIED") && text.contains("compute:graph-algo"),
+            "{name}: {text}"
+        );
     }
 }

@@ -694,7 +694,41 @@ fn kv_shared_write_policy(method: &Method) -> Option<MethodPolicy> {
         })
 }
 
+/// The scope a graph algorithm needs is chosen by the request shape, here and nowhere else
+/// (MEDULLA-FEDERATED-QUERY-R743.7). `PageRank`, `GetShortestPath` and `CommunityDetection` carrying
+/// `node_ids` run on a bounded, visibility-limited subgraph and need `compute:graph-read`; the
+/// same methods without `node_ids` run on the whole visible graph and keep the ledger row's
+/// `compute:graph-algo`.
+fn scoped_graph_algorithm_policy(method: &Method) -> Option<MethodPolicy> {
+    let scoped = matches!(
+        method,
+        Method::PageRank {
+            node_ids: Some(_),
+            ..
+        } | Method::GetShortestPath {
+            node_ids: Some(_),
+            ..
+        } | Method::CommunityDetection {
+            node_ids: Some(_),
+            ..
+        }
+    );
+    if !scoped {
+        return None;
+    }
+    let method_name: &'static str = method.into();
+    method_policy_entries()
+        .find(|(name, _, _)| *name == method_name)
+        .map(|(_, policy, _)| MethodPolicy {
+            authz_action: "compute:graph-read",
+            ..policy
+        })
+}
+
 fn policy_for_method(method: &Method) -> MethodPolicy {
+    if let Some(policy) = scoped_graph_algorithm_policy(method) {
+        return policy;
+    }
     if let Some(policy) = agent_family_policy(method)
         .or_else(|| connector_family_policy(method))
         .or_else(|| registry_family_policy(method))

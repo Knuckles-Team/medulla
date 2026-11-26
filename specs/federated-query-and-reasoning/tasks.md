@@ -505,6 +505,7 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T505 [US5] MEDULLA-FEDERATED-QUERY-R743.4 Refusal: a scope above the batch bound
 - [ ] T506 [US5] MEDULLA-FEDERATED-QUERY-R743.5 Python mirror: the typed views and the `node_ids` argument
 - [ ] T507 [US5] MEDULLA-FEDERATED-QUERY-R743.6 Hot-path proof: a hidden node and an unknown node answer identically through the served client
+- [ ] T507a [US5] MEDULLA-FEDERATED-QUERY-R743.7 Wiring: the scope of a graph algorithm follows the request shape
 - [ ] T508 [US5] MEDULLA-FEDERATED-QUERY-R744 The cluster hierarchy reads answer the published `ClusterLevelView` and `ClusterExpansion` (rollup)
 - [ ] T509 [US5] MEDULLA-FEDERATED-QUERY-R744.1 Model: the published views compare and round-trip
 - [ ] T510 [US5] MEDULLA-FEDERATED-QUERY-R744.2 Python mirror: the client returns the published views

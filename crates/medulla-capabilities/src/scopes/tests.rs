@@ -266,7 +266,75 @@ fn web_interface_scopes_are_user_class_and_bind_the_compute_reads() {
     ] {
         assert_eq!(action(method), "compute:graph-read", "{method}");
     }
-    for method in ["ClusterHierarchyRefresh", "PageRank", "GetShortestPath"] {
+    for method in [
+        "ClusterHierarchyRefresh",
+        "PageRank",
+        "GetShortestPath",
+        "CommunityDetection",
+    ] {
         assert_eq!(action(method), "compute:graph-algo", "{method}");
     }
+}
+
+/// The three visualizer algorithms pick their scope by request shape: with `node_ids` they are
+/// bounded, visibility-limited reads (`compute:graph-read`); without it they run on the whole
+/// visible graph and stay `compute:graph-algo`.
+// spec: MEDULLA-FEDERATED-QUERY-R743.7
+#[test]
+fn a_graph_algorithm_scope_is_chosen_by_whether_the_request_names_node_ids() {
+    let ids = || Some(vec!["a".to_string()]);
+    let scoped = [
+        Method::PageRank {
+            damping: 0.85,
+            iterations: 20,
+            node_ids: ids(),
+        },
+        Method::GetShortestPath {
+            source_id: "a".into(),
+            target_id: "b".into(),
+            node_ids: ids(),
+        },
+        Method::CommunityDetection {
+            resolution: 1.0,
+            node_ids: ids(),
+        },
+        // `Some([])` is a scope of nothing, still a scoped call.
+        Method::PageRank {
+            damping: 0.85,
+            iterations: 20,
+            node_ids: Some(Vec::new()),
+        },
+    ];
+    for method in &scoped {
+        assert_eq!(
+            crate::policy(method).authz_action,
+            "compute:graph-read",
+            "{method:?}"
+        );
+    }
+    let whole_graph = [
+        Method::PageRank {
+            damping: 0.85,
+            iterations: 20,
+            node_ids: None,
+        },
+        Method::GetShortestPath {
+            source_id: "a".into(),
+            target_id: "b".into(),
+            node_ids: None,
+        },
+        Method::CommunityDetection {
+            resolution: 1.0,
+            node_ids: None,
+        },
+    ];
+    for method in &whole_graph {
+        assert_eq!(
+            crate::policy(method).authz_action,
+            "compute:graph-algo",
+            "{method:?}"
+        );
+    }
+    // Only the scope moves: the method stays a non-mutating read.
+    assert!(scoped.iter().all(|m| !crate::policy(m).mutates));
 }
