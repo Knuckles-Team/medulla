@@ -121,7 +121,26 @@ pub(crate) async fn project_head(
         Ok(committed) => committed,
         Err(error) => return Err(record_projection_failure(store, &context, plan, &error)),
     };
-    finish_projection(store, context, plan, committed, facts)
+    let receipt = finish_projection(store, context, plan, committed, facts)?;
+    wake_projection_waiters(state, &receipt).await;
+    Ok(receipt)
+}
+
+/// Wake every `AwaitWatermark` waiting on the pack graph this projection just applied
+/// (MEDULLA-DURABLE-KERNEL-R878): the visibility flip lands after the graph commit that
+/// already woke the graph's change feed, so the waiter is woken again once it is readable.
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+async fn wake_projection_waiters(
+    state: &Arc<RwLock<ServerState>>,
+    receipt: &medulla_catalog_types::connector_pack::PackImportReceipt,
+) {
+    use medulla_server_cdc::cdc::CdcStateExt;
+    let PackProjectionState::Applied { graph, .. } = &receipt.projection else {
+        return;
+    };
+    if let Some(hub) = state.read().await.cdc_hub() {
+        hub.notifier(graph).notify_waiters();
+    }
 }
 
 /// A `system` prompt that names no class or capability serves no task: the head is refused

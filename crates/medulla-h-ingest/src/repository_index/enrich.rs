@@ -680,6 +680,7 @@ mod worker {
     use medulla_server_api::api::persistence::PersistenceBackend;
     use medulla_server_api::authority_context::VerifiedRequestContext;
     use medulla_server_api::state::ServerState;
+    use medulla_server_cdc::cdc::CdcStateExt;
     use tokio::sync::RwLock;
 
     use super::{
@@ -782,6 +783,11 @@ mod worker {
                 Ok(()) => {
                     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
                     persistence.ack_mutation_outbox(&fname, &lease, now).await?;
+                    // Wake `AwaitWatermark` waiters on this consumer's acknowledged version
+                    // (MEDULLA-DURABLE-KERNEL-R878).
+                    if let Some(hub) = state.read().await.cdc_hub() {
+                        hub.notifier(graph).notify_waiters();
+                    }
                     progressed = true;
                 }
                 Err(error) => {

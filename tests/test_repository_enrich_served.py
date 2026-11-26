@@ -13,7 +13,6 @@ batch with ``LAYER_CYCLE``.
 from __future__ import annotations
 
 import hashlib
-import time
 from typing import Any
 
 import pytest
@@ -21,7 +20,10 @@ import pytest
 from medulla.generated.index_repository import IndexRepositoryScope
 
 _REVISION = "c" * 40
-_WAIT_S = 30.0
+# The longest the engine waits for one enrichment, in milliseconds, on its own clock.
+_WAIT_MS = 30_000
+# The outbox consumer whose acknowledged graph version is the enrichment watermark.
+_ENRICH_CONSUMER = "repository-enrich-code-v1"
 
 
 def _scope(
@@ -73,13 +75,24 @@ def _ids(client: Any, query: str) -> list[str]:
     return sorted(row["id"] for row in client.query.uql(query)["rows"])
 
 
-def _wait_for_runs(client: Any, count: int) -> list[str]:
-    deadline = time.monotonic() + _WAIT_S
-    runs = _ids(client, "MATCH (:RepositoryEnrichmentRun)")
-    while len(runs) < count and time.monotonic() < deadline:
-        time.sleep(0.25)
-        runs = _ids(client, "MATCH (:RepositoryEnrichmentRun)")
-    return runs
+def _enrich_resource(client: Any) -> str:
+    return f"projection:{_ENRICH_CONSUMER}@{client._client._graph_name}"
+
+
+def _enrich_mark(client: Any) -> int:
+    """The graph version the enrichment consumer has acknowledged through now."""
+    return client.await_watermark(_enrich_resource(client), 0, deadline_ms=0)[
+        "watermark"
+    ]
+
+
+def _await_enrichment(client: Any, after: int) -> int:
+    """Wait on the engine until the consumer acknowledges past ``after``."""
+    answer = client.await_watermark(
+        _enrich_resource(client), after + 1, deadline_ms=_WAIT_MS
+    )
+    assert answer["reached"], f"enrichment did not complete: {answer}"
+    return answer["watermark"]
 
 
 _CALLS_A = [
@@ -99,22 +112,24 @@ _CALLS_B = [
 # Verifies MEDULLA-REPO-INGEST-R600.3: Wiring.
 @pytest.mark.spec("MEDULLA-REPO-INGEST-R600.3")
 def test_enrich_runs_once_after_index_commit(clean_graph) -> None:
+    mark = _enrich_mark(clean_graph)
     first = _index(clean_graph, "repo-enrich", _CALLS_A)
     assert first.files_parsed == 1
 
-    runs = _wait_for_runs(clean_graph, 1)
+    mark = _await_enrichment(clean_graph, mark)
+    runs = _ids(clean_graph, "MATCH (:RepositoryEnrichmentRun)")
     assert len(runs) == 1, f"one enrichment envelope per index envelope, got {runs}"
     assert runs[0].startswith("repository-enrich-run:")
 
     # Replaying the same index batch commits nothing new: the follow-on work
-    # item and its envelope are keyed by the index digest.
+    # item and its envelope are keyed by the index digest. The next envelope is
+    # claimed after any replayed item, so its completion is the barrier for both.
     _index(clean_graph, "repo-enrich", _CALLS_A)
-    time.sleep(2.0)
-    assert _ids(clean_graph, "MATCH (:RepositoryEnrichmentRun)") == runs
 
     # A second, different index envelope gets exactly one more run.
     _index(clean_graph, "repo-enrich", _CALLS_B)
-    second = _wait_for_runs(clean_graph, 2)
+    mark = _await_enrichment(clean_graph, mark)
+    second = _ids(clean_graph, "MATCH (:RepositoryEnrichmentRun)")
     assert len(second) == 2, f"one run per index envelope, got {second}"
     assert set(runs) < set(second)
 
@@ -186,27 +201,21 @@ def _commit(number: int, paths: list[str]) -> dict[str, Any]:
 _HISTORY = [_commit(n, ["pkg/a.py", "pkg/b.py"]) for n in (1, 2, 3)]
 
 
-def _wait_for_ids(client: Any, query: str, count: int) -> list[str]:
-    deadline = time.monotonic() + _WAIT_S
-    ids = _ids(client, query)
-    while len(ids) < count and time.monotonic() < deadline:
-        time.sleep(0.25)
-        ids = _ids(client, query)
-    return ids
-
-
 # Verifies MEDULLA-REPO-INGEST-R601.3: Wiring.
 @pytest.mark.spec("MEDULLA-REPO-INGEST-R601.3")
 def test_second_hydration_skips_stored_commits(clean_graph) -> None:
+    mark = _enrich_mark(clean_graph)
     _index(clean_graph, "repo-history", _CALLS_A, _HISTORY)
-    applied = _wait_for_ids(clean_graph, "MATCH (:CommitHistory)", 3)
+    mark = _await_enrichment(clean_graph, mark)
+    applied = _ids(clean_graph, "MATCH (:CommitHistory)")
     assert len(applied) == 3, applied
     assert _ids(clean_graph, 'MATCH (:RepositoryHookRun) WHERE commits_added = "3"')
 
     # The second hydration sends the stored commits again plus one new commit.
     more = [*_HISTORY, _commit(4, ["pkg/a.py"])]
     _index(clean_graph, "repo-history", _CALLS_B, more)
-    assert len(_wait_for_ids(clean_graph, "MATCH (:CommitHistory)", 4)) == 4
+    _await_enrichment(clean_graph, mark)
+    assert len(_ids(clean_graph, "MATCH (:CommitHistory)")) == 4
     skipped = _ids(
         clean_graph,
         'MATCH (:RepositoryHookRun) WHERE commits_skipped = "3"',
@@ -231,8 +240,10 @@ _OWNED = [
 # Verifies MEDULLA-REPO-INGEST-R602.3: Wiring.
 @pytest.mark.spec("MEDULLA-REPO-INGEST-R602.3")
 def test_link_pass_runs_after_features(clean_graph) -> None:
+    mark = _enrich_mark(clean_graph)
     _index(clean_graph, "repo-links", _OWNED)
-    assert len(_wait_for_runs(clean_graph, 1)) == 1
+    _await_enrichment(clean_graph, mark)
+    assert len(_ids(clean_graph, "MATCH (:RepositoryEnrichmentRun)")) == 1
     assert _ids(clean_graph, "MATCH (:CodeFeature)"), "features come first"
 
     for node_type in ("HttpRoute", "IacResource"):
@@ -249,7 +260,10 @@ _TWO_FILES_BEFORE = [
         b"def ping():\n    value = 1\n    return pong(value)\n\n"
         b"def pong(value):\n    return ping()\n",
     ),
-    ("pkg/b.py", b"def left():\n    return right()\n\ndef right():\n    return left()\n"),
+    (
+        "pkg/b.py",
+        b"def left():\n    return right()\n\ndef right():\n    return left()\n",
+    ),
 ]
 # A whitespace-only edit inside the body of `ping`: the signatures are unchanged.
 _TWO_FILES_AFTER = [
@@ -264,12 +278,15 @@ _TWO_FILES_AFTER = [
 
 @pytest.mark.spec("MEDULLA-REPO-INGEST-R603.3")
 def test_cosmetic_change_skips_enrichment(clean_graph) -> None:
+    mark = _enrich_mark(clean_graph)
     _index(clean_graph, "repo-fingerprint", _TWO_FILES_BEFORE)
-    first = _wait_for_runs(clean_graph, 1)
+    mark = _await_enrichment(clean_graph, mark)
+    first = _ids(clean_graph, "MATCH (:RepositoryEnrichmentRun)")
     assert len(first) == 1
 
     _index(clean_graph, "repo-fingerprint", _TWO_FILES_AFTER)
-    runs = _wait_for_runs(clean_graph, 2)
+    _await_enrichment(clean_graph, mark)
+    runs = _ids(clean_graph, "MATCH (:RepositoryEnrichmentRun)")
     assert len(runs) == 2, f"one run per index envelope, got {runs}"
     (second,) = sorted(set(runs) - set(first))
     properties = clean_graph.nodes.properties(second)

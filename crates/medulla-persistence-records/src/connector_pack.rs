@@ -326,6 +326,46 @@ impl AgentLibraryStore {
         Ok(graphs)
     }
 
+    /// The applied projection revision of the pack graph `graph` of `tenant_id`
+    /// (MEDULLA-DURABLE-KERNEL-R878): the binding revision of the head when the graph
+    /// exposes that head's record, and one below it while the head is still projecting.
+    /// `None` when no connector of the tenant projects into `graph`.
+    pub fn connector_pack_projection_watermark(
+        &self,
+        tenant_id: &str,
+        graph: &str,
+    ) -> Result<Option<u64>, String> {
+        let read = self.read()?;
+        let heads = read.open_owner_table(medulla_storage::CONNECTOR_PACK_HEADS)?;
+        for row in heads
+            .range((tenant_id, "")..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, value) = row.map_err(|error| error.to_string())?;
+            let (row_tenant, connector) = key.value();
+            if row_tenant != tenant_id {
+                break;
+            }
+            let connector = ResourceId::new(connector).map_err(|error| error.to_string())?;
+            let named = medulla_catalog_types::connector_pack::ids::pack_projection_graph_name(
+                tenant_id, &connector,
+            )?;
+            if named != graph {
+                continue;
+            }
+            let head: ConnectorPackHeadRow =
+                undecodable::decode_stored(value.value(), "connector pack head")?;
+            let applied =
+                head.head.visible_record_id.as_deref() == Some(head.head.record_id.as_str());
+            return Ok(Some(if applied {
+                head.head.binding_revision
+            } else {
+                head.head.binding_revision.saturating_sub(1)
+            }));
+        }
+        Ok(None)
+    }
+
     /// The first connector id in `required` whose pack the tenant has not imported
     /// visibly (MEDULLA-CQ-CONN-R084.7), or `None` when every required pack is
     /// visible. A connector id that cannot name a pack is as absent as one with no

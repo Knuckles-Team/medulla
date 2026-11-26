@@ -350,10 +350,12 @@ impl<'a> StreamingRequest<'a> {
     /// watermark reaches `at_least`, or when `deadline_ms` has passed on the engine clock.
     async fn await_watermark(&self, resource: String, at_least: u64, deadline_ms: u64) -> Response {
         use medulla_catalog_types::await_watermark::{WatermarkAwaited, WatermarkResource};
+        use medulla_catalog_types::probe_machine::ProbeState;
         let Some(kind) = WatermarkResource::parse(&resource) else {
             return Response::err(
                 self.req_id,
-                "INVALID_ARGUMENT: a watermark resource is `graph:<name>` or `catalog:<source>`",
+                "INVALID_ARGUMENT: a watermark resource is `graph:<name>`, `catalog:<source>`, \
+                 `projection:<graph>` or `projection:<consumer>@<graph>`",
             );
         };
         let clock = medulla_kernel::kernel::dispatch_support::EngineClock;
@@ -365,8 +367,8 @@ impl<'a> StreamingRequest<'a> {
                     Err(response) => return response,
                 };
                 let notify = hub.notifier(&graph);
-                wait_for_watermark(&clock, deadline_ms, at_least, &notify, || {
-                    hub.head_seq(&graph)
+                wait_for_watermark(&clock, deadline_ms, at_least, &notify, || async {
+                    Ok(hub.head_seq(&graph))
                 })
                 .await
             }
@@ -379,24 +381,85 @@ impl<'a> StreamingRequest<'a> {
                         format!("INVALID_ARGUMENT: no source '{source}' is registered"),
                     );
                 }
-                wait_for_watermark(&clock, deadline_ms, at_least, catalog.probe_ended(), || {
-                    u64::from(matches!(
+                wait_for_watermark(&clock, deadline_ms, at_least, catalog.probe_ended(), || async {
+                    Ok(u64::from(matches!(
                         catalog.probe_state(self.carrier, &source),
                         Some(
-                            medulla_catalog_types::probe_machine::ProbeState::Baselined
-                                | medulla_catalog_types::probe_machine::ProbeState::Drifted
-                                | medulla_catalog_types::probe_machine::ProbeState::ProbeFailed
+                            ProbeState::Baselined | ProbeState::Drifted | ProbeState::ProbeFailed
                         )
-                    ))
+                    )))
+                })
+                .await
+            }
+            WatermarkResource::Projection { consumer, graph } => {
+                // A consumer's cursor is read on a graph the caller may read; a pack graph is
+                // keyed by the verified tenant alone and may not exist before its first projection.
+                if consumer.is_some() {
+                    if let Err(error) =
+                        authorize_graph(self.state, self.carrier, &graph, AccessLevel::Read).await
+                    {
+                        return Response::err(self.req_id, error);
+                    }
+                }
+                let hub = match hub_of(self.state, self.req_id).await {
+                    Ok(hub) => hub,
+                    Err(response) => return response,
+                };
+                let notify = hub.notifier(&graph);
+                wait_for_watermark(&clock, deadline_ms, at_least, &notify, || {
+                    self.projection_watermark(consumer.as_deref(), &graph)
                 })
                 .await
             }
         };
-        let (watermark, reached) = outcome;
-        Response::ok(
-            self.req_id,
-            ResultPayload::of::<results::AwaitWatermark>(WatermarkAwaited { watermark, reached }),
-        )
+        match outcome {
+            Ok((watermark, reached)) => Response::ok(
+                self.req_id,
+                ResultPayload::of::<results::AwaitWatermark>(WatermarkAwaited {
+                    watermark,
+                    reached,
+                }),
+            ),
+            Err(error) => Response::err(self.req_id, error),
+        }
+    }
+
+    /// The applied revision of the projection into `graph`: the named outbox consumer's
+    /// acknowledged graph version, or the verified tenant's pack projection of that graph.
+    async fn projection_watermark(
+        &self,
+        consumer: Option<&str>,
+        graph: &str,
+    ) -> Result<u64, String> {
+        if let Some(consumer) = consumer {
+            use medulla_mutation_types::mutation_scope::CommittedVersion;
+            use medulla_server_api::api::persistence::PersistenceBackend;
+            let persistence = self
+                .state
+                .read()
+                .await
+                .persistence
+                .clone()
+                .ok_or("UNAVAILABLE: projection cursors need durable persistence")?;
+            let cursor = persistence
+                .read_mutation_projection_cursor(&medulla_kernel::persist::sanitize(graph), consumer)
+                .await?;
+            return Ok(match cursor.map(|cursor| cursor.committed_version) {
+                Some(CommittedVersion::Graph { target, .. })
+                | Some(CommittedVersion::Native { target, .. }) => target,
+                Some(CommittedVersion::None) | None => 0,
+            });
+        }
+        let store = medulla_persistence_records::agent_library::shared_agent_library(self.state)
+            .await?;
+        let tenant = self.carrier.log_owner().0.to_string();
+        let named = graph.to_string();
+        tokio::task::spawn_blocking(move || {
+            store.connector_pack_projection_watermark(&tenant, &named)
+        })
+        .await
+        .map_err(|error| format!("INTERNAL: projection watermark task failed: {error}"))??
+        .ok_or_else(|| format!("INVALID_ARGUMENT: no pack of this tenant projects into '{graph}'"))
     }
 
     async fn register_trigger(
@@ -563,25 +626,29 @@ pub async fn try_handle(
 /// Wait until `read()` reaches `at_least`, woken by `notify`, for at most `deadline_ms` measured
 /// on `clock`. Answers the last watermark read and whether it reached `at_least`. The waiter is
 /// armed before each read, so a change landing between the read and the wait still wakes it.
-async fn wait_for_watermark(
+async fn wait_for_watermark<F, Fut>(
     clock: &dyn medulla_types::clock::Clock,
     deadline_ms: u64,
     at_least: u64,
     notify: &tokio::sync::Notify,
-    read: impl Fn() -> u64,
-) -> (u64, bool) {
+    read: F,
+) -> Result<(u64, bool), String>
+where
+    F: Fn() -> Fut,
+    Fut: std::future::Future<Output = Result<u64, String>>,
+{
     let deadline = clock.now_ms().saturating_add(deadline_ms);
     loop {
         let notified = notify.notified();
         tokio::pin!(notified);
         notified.as_mut().enable();
-        let watermark = read();
+        let watermark = read().await?;
         if watermark >= at_least {
-            return (watermark, true);
+            return Ok((watermark, true));
         }
         let remaining = deadline.saturating_sub(clock.now_ms());
         if remaining == 0 {
-            return (watermark, false);
+            return Ok((watermark, false));
         }
         let _ = tokio::time::timeout(Duration::from_millis(remaining), notified).await;
     }
@@ -611,6 +678,11 @@ mod await_watermark_tests {
     use std::sync::atomic::{AtomicU64, Ordering};
     use std::sync::Arc;
 
+    fn reader(mark: &Arc<AtomicU64>) -> impl Fn() -> std::future::Ready<Result<u64, String>> {
+        let mark = Arc::clone(mark);
+        move || std::future::ready(Ok(mark.load(Ordering::Relaxed)))
+    }
+
     // spec: MEDULLA-DURABLE-KERNEL-R878
     #[tokio::test]
     async fn the_barrier_answers_on_the_watermark_or_the_engine_clock_deadline() {
@@ -620,35 +692,32 @@ mod await_watermark_tests {
 
         // A watermark already at the target answers at once.
         mark.store(3, Ordering::Relaxed);
-        let reading = Arc::clone(&mark);
-        let at_target = wait_for_watermark(&clock, 60_000, 3, &notify, move || {
-            reading.load(Ordering::Relaxed)
-        })
-        .await;
-        assert_eq!(at_target, (3, true));
+        let at_target = wait_for_watermark(&clock, 60_000, 3, &notify, reader(&mark)).await;
+        assert_eq!(at_target, Ok((3, true)));
 
         // A deadline of zero on the engine clock answers the unmet watermark without waiting.
         mark.store(1, Ordering::Relaxed);
-        let reading = Arc::clone(&mark);
-        let expired = wait_for_watermark(&clock, 0, 3, &notify, move || {
-            reading.load(Ordering::Relaxed)
+        let expired = wait_for_watermark(&clock, 0, 3, &notify, reader(&mark)).await;
+        assert_eq!(expired, Ok((1, false)));
+
+        // A failing read ends the wait with its refusal.
+        let failed = wait_for_watermark(&clock, 60_000, 3, &notify, || {
+            std::future::ready(Err("UNAVAILABLE: no cursor".to_string()))
         })
         .await;
-        assert_eq!(expired, (1, false));
+        assert_eq!(failed, Err("UNAVAILABLE: no cursor".to_string()));
 
         // A change that lands while the barrier waits wakes it with the new watermark.
         mark.store(0, Ordering::Relaxed);
-        let reading = Arc::clone(&mark);
+        let read = reader(&mark);
         let waiter_notify = Arc::clone(&notify);
         let waiter = tokio::spawn(async move {
-            wait_for_watermark(&medulla_types::clock::SystemClock, 60_000, 2, &waiter_notify, move || {
-                reading.load(Ordering::Relaxed)
-            })
-            .await
+            wait_for_watermark(&medulla_types::clock::SystemClock, 60_000, 2, &waiter_notify, read)
+                .await
         });
         tokio::task::yield_now().await;
         mark.store(2, Ordering::Relaxed);
         notify.notify_waiters();
-        assert_eq!(waiter.await.expect("the barrier task ends"), (2, true));
+        assert_eq!(waiter.await.expect("the barrier task ends"), Ok((2, true)));
     }
 }

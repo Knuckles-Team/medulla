@@ -14,8 +14,9 @@ the row (``max_tools`` 1) is proven at L3 by
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import struct
 import sys
-import time
 import uuid
 from pathlib import Path
 from typing import Any
@@ -57,6 +58,21 @@ def _question(
     return question
 
 
+def _pack_graph(tenant: str, connector: str) -> str:
+    """The physical pack graph name: ``Digest256::framed`` over tenant and connector."""
+    domain = b"eg/connector-pack-projection-graph/v1"
+    hasher = hashlib.sha256()
+    hasher.update(b"eg/framed-sha256/v1\0")
+    hasher.update(struct.pack(">I", len(domain)))
+    hasher.update(domain)
+    fields = [tenant.encode(), connector.encode()]
+    hasher.update(struct.pack(">I", len(fields)))
+    for field in fields:
+        hasher.update(struct.pack(">Q", len(field)))
+        hasher.update(field)
+    return f"pack__{hasher.hexdigest()}"
+
+
 async def _ask(
     decision: dc.DecisionClient,
     schema: dict[str, Any],
@@ -95,19 +111,18 @@ def test_load_set_keeps_the_two_tools_and_a_policy_cannot_remove_them() -> None:
             for connector, entries in make_packs(count=1, tools=30):
                 imported = await import_entries(client, connector, entries)
                 assert imported["result"] == "imported", imported
+                # The import settles asynchronously: the engine answers once the pack
+                # projection has applied this import's binding revision.
+                awaited = await client.await_watermark(
+                    f"projection:{_pack_graph(TEST_TENANT, connector)}",
+                    imported["receipt"]["binding_revision"],
+                    deadline_ms=240_000,
+                )
+                assert awaited["reached"], awaited
 
-            deadline = time.monotonic() + 240
-            while True:
-                try:
-                    record = await _ask(decision, schema, graph, space)
-                except Exception as error:  # the feed has not indexed the pack yet
-                    assert time.monotonic() < deadline, error
-                else:
-                    answer = (record.get("answer") or {}).get("value") or {}
-                    if answer.get("tools"):
-                        break
-                    assert time.monotonic() < deadline, record
-                await asyncio.sleep(0.5)
+            record = await _ask(decision, schema, graph, space)
+            answer = (record.get("answer") or {}).get("value") or {}
+            assert answer.get("tools"), record
 
             # The ranked tools stay inside max_tools; the two capabilities follow them.
             assert answer["tools"][-2:] == ALWAYS_ON, answer["tools"]

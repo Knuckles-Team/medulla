@@ -13295,6 +13295,9 @@ _HEAVY_RPC_METHODS = frozenset(
         "ParseFile",
         "ParseFiles",
         "IndexRepository",
+        # A completion barrier waits on the engine up to its own deadline
+        # (MEDULLA-DURABLE-KERNEL-R878).
+        "AwaitWatermark",
         "CommunityDetection",
         "CommunityDetectEphemeral",
         "ComputeSimilarityEdges",
@@ -19305,6 +19308,35 @@ class MedullaClient:
         _validate_write_admission(binding.claims, required, binding.admission)
         return binding
 
+    async def await_watermark(
+        self,
+        resource: str,
+        at_least: int,
+        *,
+        deadline_ms: int,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """Wait on the engine until ``resource`` reaches the watermark ``at_least``.
+
+        ``resource`` is ``graph:<name>``, ``catalog:<source>``,
+        ``projection:<graph>`` (a connector pack's applied binding revision) or
+        ``projection:<consumer>@<graph>`` (the graph version an outbox consumer has
+        acknowledged through). The engine answers once the watermark is reached or
+        ``deadline_ms`` has passed on its own clock, so the caller neither sleeps nor
+        polls. Returns ``{"watermark": int, "reached": bool}``; ``deadline_ms`` must
+        stay inside the heavy RPC read budget.
+        """
+        result = await _gen.messaging.send_await_watermark(
+            self,
+            {
+                "resource": resource,
+                "at_least": int(at_least),
+                "deadline_ms": int(deadline_ms),
+            },
+            graph,
+        )
+        return _gen.messaging.decode_await_watermark(result).model_dump()
+
     async def call(
         self,
         method: str,
@@ -20138,6 +20170,23 @@ class SyncMedullaClient:
         # is `-> None` and drops it too, so the synchronous wrapper must not
         # leak a different result shape.
         future.result()
+
+    def await_watermark(
+        self,
+        resource: str,
+        at_least: int,
+        *,
+        deadline_ms: int,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """Synchronously wait on the completion barrier (see the async twin)."""
+        future = asyncio.run_coroutine_threadsafe(
+            self._client.await_watermark(
+                resource, at_least, deadline_ms=deadline_ms, graph=graph
+            ),
+            self._loop,
+        )
+        return future.result()
 
     def supports(self, op: str) -> bool:
         """Synchronously negotiate one advertised operation.

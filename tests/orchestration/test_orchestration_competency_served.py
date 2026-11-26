@@ -638,28 +638,17 @@ def test_q11_seed_changes() -> None:
         f"<{_SEED}digest> ?digest ; <{_SEED}graphRevision> ?revision }} ORDER BY ?part"
     )
 
-    async def receipt_rows(
-        graph: str, want: dict[str, str]
-    ) -> dict[str, dict[str, str]]:
-        """Poll the pack graph (the projection is asynchronous) until the outcomes match."""
-        deadline = time.monotonic() + 120
-        found: dict[str, dict[str, str]] = {}
-        while time.monotonic() < deadline:
-            client = await connect(graph)
-            try:
-                rows = solution_values(await client.rdf.sparql(query))
-                found = {
-                    _lexical(row["part"]): {k: _lexical(v) for k, v in row.items()}
-                    for row in rows
-                }
-            except Exception:  # the projection has not landed yet
-                found = {}
-            finally:
-                await client.close()
-            if {part: row["outcome"] for part, row in found.items()} == want:
-                return found
-            await asyncio.sleep(1)
-        return found
+    async def receipt_rows(graph: str) -> dict[str, dict[str, str]]:
+        """Read the receipts of the pack graph once the projection has been applied."""
+        client = await connect(graph)
+        try:
+            rows = solution_values(await client.rdf.sparql(query))
+        finally:
+            await client.close()
+        return {
+            _lexical(row["part"]): {k: _lexical(v) for k, v in row.items()}
+            for row in rows
+        }
 
     async def exercise() -> None:
         connector = f"seedchg-{uuid.uuid4().hex[:8]}"
@@ -685,13 +674,18 @@ def test_q11_seed_changes() -> None:
             ]
             second = await import_entries(admin, connector, changed, expected_head=head)
             assert second["result"] == "imported", second
+            # The projection is asynchronous: the engine answers once it has applied the
+            # second import's binding revision.
+            awaited = await admin.await_watermark(
+                f"projection:{graph}",
+                second["receipt"]["binding_revision"],
+                deadline_ms=120_000,
+            )
+            assert awaited["reached"], awaited
         finally:
             await admin.close()
 
-        rows = await receipt_rows(
-            graph,
-            {"catalog": "replaced", "identity": "unchanged", "references": "unchanged"},
-        )
+        rows = await receipt_rows(graph)
         assert {part: row["outcome"] for part, row in rows.items()} == {
             "catalog": "replaced",
             "identity": "unchanged",

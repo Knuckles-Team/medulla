@@ -122,34 +122,35 @@ def test_seed_idempotent_and_partial_reimport(tmp_path: Path) -> None:
             }, seed
             assert seed["graph_revision"] != state["first_revision"]
             revision = seed["graph_revision"]
+            # The projection is asynchronous: the engine answers once the pack graph has
+            # applied the binding revision this import committed. The restarted engine
+            # needs no sleep before the read.
+            awaited = await admin.await_watermark(
+                f"projection:{_pack_graph(TEST_TENANT, connector)}",
+                changed["receipt"]["binding_revision"],
+                deadline_ms=120_000,
+            )
+            assert awaited["reached"], awaited
         finally:
             await admin.close()
 
         graph = _pack_graph(TEST_TENANT, connector)
-        deadline = asyncio.get_running_loop().time() + 120
-        rows: list[dict[str, str | None]] = []
-        while asyncio.get_running_loop().time() < deadline:
-            client = await MedullaClient.connect(
-                socket_path=socket_path,
-                verified_context=request_context(),
-                graph_name=graph,
-            )
-            try:
-                rows = solution_values(
-                    await client.rdf.sparql(
-                        "SELECT ?subject WHERE { ?subject "
-                        "<https://knuckles-team.github.io/ontology/"
-                        "connector-seed#fromSeed> "
-                        f"<{revision}> }} ORDER BY ?subject"
-                    )
+        client = await MedullaClient.connect(
+            socket_path=socket_path,
+            verified_context=request_context(),
+            graph_name=graph,
+        )
+        try:
+            rows = solution_values(
+                await client.rdf.sparql(
+                    "SELECT ?subject WHERE { ?subject "
+                    "<https://knuckles-team.github.io/ontology/"
+                    "connector-seed#fromSeed> "
+                    f"<{revision}> }} ORDER BY ?subject"
                 )
-            except Exception:  # the projection has not landed yet
-                rows = []
-            finally:
-                await client.close()
-            if rows:
-                break
-            await asyncio.sleep(1)
+            )
+        finally:
+            await client.close()
         assert [row["subject"] for row in rows] == [
             "urn:seed:instance",
             "urn:seed:item",

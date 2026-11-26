@@ -64,6 +64,7 @@ medulla-source-types = { path = "../medulla-source-types" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
+medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 
