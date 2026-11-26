@@ -43,7 +43,7 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T037 [US2] MEDULLA-CQ-ORCH-R008.2 Composed assemble wiring: `AgentExecutionAnswer` variant, request type, registration sites and `handle_agent_execution_answer`
 - [ ] T038 [US2] MEDULLA-CQ-ORCH-R008.3 Composed typed abstention per part
 - [ ] T039 [US2] MEDULLA-CQ-ORCH-R008.4 Composed ingest fixture
-- [ ] T040 [US2] MEDULLA-CQ-ORCH-R008.5 Composed acceptance test
+- [x] T040 [US2] MEDULLA-CQ-ORCH-R008.5 Composed acceptance test
 - [ ] T041 [US3] MEDULLA-CQ-ORCH-R009.1 Probe 1: node counts by label
 - [ ] T042 [US3] MEDULLA-CQ-ORCH-R009.2 Probe 2: deploy a container
 - [ ] T043 [US3] MEDULLA-CQ-ORCH-R009.3 Probe 3: agents in the Agent Library
@@ -60,8 +60,8 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T054 [US5] MEDULLA-CQ-ORCH-R011.2 Downtime next-job question
 - [ ] T055 [US5] MEDULLA-CQ-ORCH-R011.3 Best virtual query plan question
 - [x] T056 [US5] MEDULLA-CQ-ORCH-R011.4 Connector usage guidance question
-- [ ] T057 [US5] MEDULLA-CQ-ORCH-R011.5 Connector seed changes question
-- [ ] T058 [US5] MEDULLA-CQ-ORCH-R011.6 Job, downtime and plan hot-path proof
+- [x] T057 [US5] MEDULLA-CQ-ORCH-R011.5 Connector seed changes question
+- [x] T058 [US5] MEDULLA-CQ-ORCH-R011.6 Job, downtime and plan hot-path proof
 - [ ] T059 [US6] MEDULLA-CQ-ORCH-R700.2 Process compile behaviour
 - [ ] T060 [US6] MEDULLA-CQ-ORCH-R700.3 Process compile wiring and version store
 - [ ] T061 [US6] MEDULLA-CQ-ORCH-R700.4 Process compile refusal
@@ -88,24 +88,24 @@ Producer first: ontology terms, shapes and authority mappings, then fixtures and
 - [ ] T076 [US7] MEDULLA-CQ-ORCH-R702.6 BPMN 2.0 writer
 - [ ] T077 [US7] MEDULLA-CQ-ORCH-R702.7 DMN writer
 - [ ] T078 [US7] MEDULLA-CQ-ORCH-R702.8 Stored workflow to deployable BPMN
-- [ ] T079 [US7] MEDULLA-CQ-ORCH-R702.9 Process document import wiring
-- [ ] T080 [US7] MEDULLA-CQ-ORCH-R702.10 BPMN export wiring
-- [ ] T081 [US7] MEDULLA-CQ-ORCH-R702.11 DMN export wiring
-- [ ] T082 [US7] MEDULLA-CQ-ORCH-R702.12 Process document refusal
-- [ ] T083 [US7] MEDULLA-CQ-ORCH-R702.13 Process document evidence
+- [x] T079 [US7] MEDULLA-CQ-ORCH-R702.9 Process document import wiring
+- [x] T080 [US7] MEDULLA-CQ-ORCH-R702.10 BPMN export wiring
+- [x] T081 [US7] MEDULLA-CQ-ORCH-R702.11 DMN export wiring
+- [x] T082 [US7] MEDULLA-CQ-ORCH-R702.12 Process document refusal
+- [x] T083 [US7] MEDULLA-CQ-ORCH-R702.13 Process document evidence
 - [ ] T084 [US7] MEDULLA-CQ-ORCH-R702.14 BPMN round-trip hot-path proof
-- [ ] T085 [US7] MEDULLA-CQ-ORCH-R702.15 DMN round-trip hot-path proof
+- [x] T085 [US7] MEDULLA-CQ-ORCH-R702.15 DMN round-trip hot-path proof
 - [ ] T086 [US7] MEDULLA-CQ-ORCH-R703.1 Process engine data location
 - [ ] T087 [US7] MEDULLA-CQ-ORCH-R703.2 Process sync adapter in `crates/medulla-virtual-graph/src/process_sync.rs`
-- [ ] T088 [US7] MEDULLA-CQ-ORCH-R703.3 Process sync and deploy wiring
-- [ ] T089 [US7] MEDULLA-CQ-ORCH-R703.4 Process sync refusal
+- [x] T088 [US7] MEDULLA-CQ-ORCH-R703.3 Process sync and deploy wiring
+- [x] T089 [US7] MEDULLA-CQ-ORCH-R703.4 Process sync refusal
 - [ ] T090 [US7] MEDULLA-CQ-ORCH-R703.5 Process sync evidence
 - [ ] T091 [US7] MEDULLA-CQ-ORCH-R703.6 Process sync conflict proof
 - [ ] T092 [US7] MEDULLA-CQ-ORCH-R703.7 Process sync and deploy hot-path proof
 - [ ] T115 [US7] MEDULLA-CQ-ORCH-R703.8 ARIS repository sync hot-path proof
 - [x] T093 [US8] MEDULLA-CQ-ORCH-R704.1 Process plan request and binding records
 - [ ] T094 [US8] MEDULLA-CQ-ORCH-R704.2 Explicit step bindings from the graph
-- [ ] T095 [US8] MEDULLA-CQ-ORCH-R704.3 Ranked fallback for unbound steps
+- [x] T095 [US8] MEDULLA-CQ-ORCH-R704.3 Ranked fallback for unbound steps
 - [ ] T096 [US8] MEDULLA-CQ-ORCH-R704.4 Workflow to task plan
 - [ ] T097 [US8] MEDULLA-CQ-ORCH-R704.5 Process plan family wiring
 - [ ] T098 [US8] MEDULLA-CQ-ORCH-R704.6 Process plan refusal
