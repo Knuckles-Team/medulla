@@ -30771,6 +30771,73 @@ class FamilyAnswerSkillWorkflow(BaseModel):
     value: CompiledProgram
 
 
+class AdmittedPaper(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_ids: list[str]
+    paper_id: str
+    relevance_micros: Annotated[int, Field(ge=0)]
+
+
+class PaperAdmissionAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    admitted: list[AdmittedPaper]
+
+
+class ToolActionAnswerVerdict(str, Enum):
+    ADMIT = "admit"
+    DENY = "deny"
+    ABSTAIN = "abstain"
+
+
+class ToolActionAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approval_ref: str
+    decision_ref: str
+    reason: str | None = None
+    verdict: ToolActionAnswerVerdict
+
+
+class HeldItemOutcome(str, Enum):
+    ADMITTED = "admitted"
+    REJECTED = "rejected"
+    ABSTAINED = "abstained"
+
+
+class HeldItemAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    compiler: str | None = None
+    outcome: HeldItemOutcome
+    reason: str | None = None
+    verdict_ref: str
+    verification_ref: str | None = None
+    verifier: str | None = None
+
+
+class FamilyAnswerPaperAdmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["paper_admission"]
+    value: PaperAdmissionAnswer
+
+
+class FamilyAnswerToolActionAdmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["tool_action_admission"]
+    value: ToolActionAnswer
+
+
+class FamilyAnswerHeldItemAdmission(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    type: Literal["held_item_admission"]
+    value: HeldItemAnswer
+
+
 FamilyAnswer = Annotated[
     FamilyAnswerTaskPlan
     | FamilyAnswerTopology
@@ -30796,7 +30863,10 @@ FamilyAnswer = Annotated[
     | FamilyAnswerDisclosureEvent
     | FamilyAnswerHarnessConfig
     | FamilyAnswerDefectTriage
-    | FamilyAnswerSkillWorkflow,
+    | FamilyAnswerSkillWorkflow
+    | FamilyAnswerPaperAdmission
+    | FamilyAnswerToolActionAdmission
+    | FamilyAnswerHeldItemAdmission,
     Field(discriminator="type"),
 ]
 
@@ -46318,10 +46388,16 @@ class RelationalIntent(BaseModel):
 
 __all__ = [
     "AdminResetIssue",
+    "AdmittedPaper",
     "AlgorithmScopeView",
     "ApiKeyAdminIssue",
     "ApiKeyView",
     "CommunityDetectionView",
+    "FamilyAnswerHeldItemAdmission",
+    "FamilyAnswerPaperAdmission",
+    "FamilyAnswerToolActionAdmission",
+    "HeldItemAnswer",
+    "HeldItemOutcome",
     "HiddenCount",
     "MethodGetNeighborhood",
     "MethodGetNeighborhoodParams",
@@ -46334,6 +46410,7 @@ __all__ = [
     "NeighborhoodResult",
     "NodeScoreView",
     "PageRankView",
+    "PaperAdmissionAnswer",
     "ScimClientCreate",
     "ScimClientUpdate",
     "ScimClientUse",
@@ -46951,6 +47028,8 @@ __all__ = [
     "StoredRunTrace",
     "SummaryAccount",
     "TierEvaluation",
+    "ToolActionAnswer",
+    "ToolActionAnswerVerdict",
     "ToolSubsetRefusal",
     "TopologyCommitOutcome",
     "TraceCritiqueNode",

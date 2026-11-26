@@ -4,6 +4,8 @@
 //! relevance reaches `enrichment.relevance_min`. The refusals, the knob and the
 //! parameter names the family and its callers share live here.
 
+use serde::{Deserialize, Serialize};
+
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
 use super::record::outcome::DecisionRefusal;
@@ -19,6 +21,39 @@ pub const PARAM_OBSERVED_VERSION: &str = "paper.observed_graph_version";
 pub const TEXT_CONTENT_DIGEST: &str = "paper.content_digest";
 /// Candidate text: the paper's claim ids, comma separated.
 pub const TEXT_CLAIM_IDS: &str = "paper.claim_ids";
+
+/// One admitted paper: its calibrated relevance in millionths and the claim
+/// ids it carries.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct AdmittedPaper {
+    pub paper_id: String,
+    pub relevance_micros: u64,
+    pub claim_ids: Vec<String>,
+}
+
+/// The typed answer of an advisory `paper_admission` question
+/// (MEDULLA-DECISION-ENGINE-R031.101): the admitted papers in score order,
+/// each with its claim ids, so a caller never reads claim ids back out of the
+/// premise facts. The record's own `record_digest` identifies the decision.
+/// A refused batch (stale snapshot, duplicate digest, uncalibrated head)
+/// carries no answer: its outcome is the abstention.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PaperAdmissionAnswer {
+    pub admitted: Vec<AdmittedPaper>,
+}
+
+/// The claim ids of a comma-separated candidate text, empty entries dropped.
+pub fn split_claim_ids(text: &str) -> Vec<String> {
+    text.split(',')
+        .map(str::trim)
+        .filter(|id| !id.is_empty())
+        .map(str::to_string)
+        .collect()
+}
 
 /// The `enrichment.*` decision-policy knobs of paper admission.
 pub const KNOBS: &[KnobSpec] = &[KnobSpec {

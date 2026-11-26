@@ -218,6 +218,13 @@ pub enum FamilyAnswer {
     /// The program a skill document's typed draft compiles to (MEDULLA-DECISION-ENGINE-R156.3).
     /// Committing the record stores it under `skill:<document digest>`.
     SkillWorkflow(Box<crate::decision::program_store::CompiledProgram>),
+    /// The admitted papers, each with its claim ids, of an advisory
+    /// `paper_admission` question (MEDULLA-DECISION-ENGINE-R031.101).
+    PaperAdmission(Box<crate::decision::paper_admission::PaperAdmissionAnswer>),
+    /// The verdict of a `tool_action_admission` question (MEDULLA-DECISION-ENGINE-R038.4).
+    ToolActionAdmission(Box<crate::decision::tool_action::ToolActionAnswer>),
+    /// The outcome of a `held_item_admission` question (MEDULLA-DECISION-ENGINE-R038.5).
+    HeldItemAdmission(Box<crate::decision::held_item::HeldItemAnswer>),
 }
 
 impl FamilyAnswer {

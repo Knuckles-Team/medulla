@@ -60,6 +60,36 @@ impl ToolActionVerdict {
 }
 
 /// Why the gate cannot answer.
+/// The verdict of a `tool_action_admission` question as a caller reads it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ToolActionAnswerVerdict {
+    Admit,
+    Deny,
+    /// The question was refused (no readable trust mark); `reason` names the code.
+    Abstain,
+}
+
+/// The typed answer of a `tool_action_admission` question
+/// (MEDULLA-DECISION-ENGINE-R038.4). The answer is advisory: a denied action
+/// still needs a human decision on the pending call, and the engine grants
+/// none.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ToolActionAnswer {
+    pub verdict: ToolActionAnswerVerdict,
+    /// The pending call the verdict governs: the reference a human approval of
+    /// this action is keyed to.
+    pub approval_ref: String,
+    /// The decision record that sealed this answer.
+    pub decision_ref: String,
+    /// The refusal code when the verdict is `abstain`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ToolActionRefusal {
     /// The referenced content carries no readable trust mark in the caller's view.

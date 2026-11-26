@@ -15,9 +15,11 @@ use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_stats::decision::quant::q32;
 use medulla_decision_types::decision::codes::UNCALIBRATED_CANDIDATE;
 use medulla_decision_types::decision::paper_admission::{
-    nearest_neighbour_param, relevance_min_micros, PaperAdmissionRefusal, PARAM_GRAPH_VERSION,
-    PARAM_OBSERVED_VERSION, TEXT_CLAIM_IDS, TEXT_CONTENT_DIGEST,
+    nearest_neighbour_param, relevance_min_micros, split_claim_ids, AdmittedPaper,
+    PaperAdmissionAnswer, PaperAdmissionRefusal, PARAM_GRAPH_VERSION, PARAM_OBSERVED_VERSION,
+    TEXT_CLAIM_IDS, TEXT_CONTENT_DIGEST,
 };
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::features::FeatureKind;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedParam,
@@ -32,7 +34,8 @@ use medulla_types::evidence_class::EvidenceClass;
 use tokio::sync::RwLock;
 
 use crate::decide::stat_executor::{
-    pinned_inputs, Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource, Pinned,
+    pinned_inputs, Executed, ExecutionContext, FamilyExecuted, FamilyPremise,
+    FamilyPremiseSource, Pinned,
 };
 use crate::decide::stat_vectors::graph_vectors;
 
@@ -154,6 +157,7 @@ impl DecisionFamily for PaperAdmissionFamily {
             matches!(kind, FeatureKind::NearestNeighbourSimilarity { .. })
         });
         let mut admitted = Vec::new();
+        let mut answers = Vec::new();
         let mut premises = Vec::new();
         for (index, scored) in scores.iter().enumerate() {
             let mut scored = scored.clone();
@@ -198,10 +202,25 @@ impl DecisionFamily for PaperAdmissionFamily {
                 PremiseClass::Claim,
                 FamilyPremiseSource::Request("candidates.paper.claim_ids"),
             ));
+            answers.push(AdmittedPaper {
+                paper_id: id,
+                relevance_micros: u64::try_from(relevance).unwrap_or(0),
+                claim_ids: split_claim_ids(&claims),
+            });
             admitted.push(scored);
         }
         executed.ladder.outcome = StatisticalOutcome::advisory(BoundedVec::new(admitted)?, true);
         executed.family_premises = premises;
+        // The typed answer: the admitted papers with their claim ids, so no
+        // caller reads claim ids back out of the premise facts.
+        executed.family = Some(FamilyExecuted {
+            answer: Some(FamilyAnswer::PaperAdmission(Box::new(
+                PaperAdmissionAnswer { admitted: answers },
+            ))),
+            premises: Vec::new(),
+            resolution: None,
+            evidence: None,
+        });
         Ok(executed)
     }
 

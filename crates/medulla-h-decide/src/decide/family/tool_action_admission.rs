@@ -10,14 +10,16 @@
 
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind};
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::tool_action::{
-    ActionClass, ToolActionRefusal, ToolActionVerdict,
+    ActionClass, ToolActionAnswer, ToolActionAnswerVerdict, ToolActionRefusal, ToolActionVerdict,
 };
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 
 use crate::decide::stat_executor::{
-    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+    Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,
 };
 use crate::decide::stat_support::filtered_view;
 
@@ -114,15 +116,32 @@ fn admit(request: &DecideRequest, view: Option<&GraphView>) -> Result<Executed, 
             .get("trust_mark")
             .and_then(|v| v.as_str().map(str::to_string))
     });
+    // The pending call the verdict governs; the decision ref is the sealing
+    // record's id, filled in when the record is sealed.
+    let approval_ref = required(request, "pending_call_id")?.to_string();
     let Some(verdict) = mark.as_deref().and_then(ToolActionVerdict::for_mark) else {
-        return Ok(abstained(
-            QuestionKind::ToolActionAdmission,
-            &ToolActionRefusal::TrustMarkMissing {
-                content_ref: content_ref.to_string(),
-            },
-        ));
+        let refusal = ToolActionRefusal::TrustMarkMissing {
+            content_ref: content_ref.to_string(),
+        };
+        let mut executed = abstained(QuestionKind::ToolActionAdmission, &refusal);
+        executed.family = Some(answer_of(ToolActionAnswer {
+            verdict: ToolActionAnswerVerdict::Abstain,
+            approval_ref,
+            decision_ref: String::new(),
+            reason: Some(refusal.code().as_str().to_string()),
+        }));
+        return Ok(executed);
     };
     let mut executed = advisory(vec![verdict.option_id().to_string()])?;
+    executed.family = Some(answer_of(ToolActionAnswer {
+        verdict: match verdict {
+            ToolActionVerdict::Admit => ToolActionAnswerVerdict::Admit,
+            ToolActionVerdict::Deny => ToolActionAnswerVerdict::Deny,
+        },
+        approval_ref,
+        decision_ref: String::new(),
+        reason: None,
+    }));
     executed.family_premises = vec![FamilyPremise {
         subject: "tool_action".into(),
         fact: format!("trust_mark:{content_ref}"),
@@ -130,4 +149,14 @@ fn admit(request: &DecideRequest, view: Option<&GraphView>) -> Result<Executed, 
         source: FamilyPremiseSource::Observation(content_ref.to_string()),
     }];
     Ok(executed)
+}
+
+/// The typed answer a question seals; the decision ref is set with the record.
+fn answer_of(answer: ToolActionAnswer) -> FamilyExecuted {
+    FamilyExecuted {
+        answer: Some(FamilyAnswer::ToolActionAdmission(Box::new(answer))),
+        premises: Vec::new(),
+        resolution: None,
+        evidence: None,
+    }
 }

@@ -45,7 +45,16 @@ fn verdict(batch: &DecisionBatch) -> String {
     }
 }
 
+fn typed(batch: &DecisionBatch) -> medulla_decision_types::decision::tool_action::ToolActionAnswer {
+    use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+    match &batch.records.as_slice()[0].answer {
+        Some(FamilyAnswer::ToolActionAdmission(answer)) => (**answer).clone(),
+        other => panic!("a typed tool action answer, got {other:?}"),
+    }
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R038.2
+// spec: MEDULLA-DECISION-ENGINE-R038.4
 #[tokio::test]
 async fn untrusted_follow_up_is_denied() {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
@@ -81,6 +90,14 @@ async fn untrusted_follow_up_is_denied() {
             .unwrap();
         assert_eq!(verdict(&batch), "deny", "{class}");
         let record = &batch.records.as_slice()[0];
+        let answer = typed(&batch);
+        assert_eq!(
+            answer.verdict,
+            medulla_decision_types::decision::tool_action::ToolActionAnswerVerdict::Deny
+        );
+        assert_eq!(answer.approval_ref, "call-1");
+        assert_eq!(answer.decision_ref, record.record_id);
+        assert_eq!(answer.reason, None);
         assert_eq!(record.evidence_class, EvidenceClass::Observation);
         let premise = record
             .premises
@@ -106,6 +123,12 @@ async fn untrusted_follow_up_is_denied() {
             .await
             .unwrap();
         assert_eq!(verdict(&batch), "abstained:TRUST_MARK_MISSING", "{missing}");
+        let answer = typed(&batch);
+        assert_eq!(
+            answer.verdict,
+            medulla_decision_types::decision::tool_action::ToolActionAnswerVerdict::Abstain
+        );
+        assert_eq!(answer.reason.as_deref(), Some("TRUST_MARK_MISSING"));
     }
 
     // An unknown class refuses as an invalid parameter naming its code.

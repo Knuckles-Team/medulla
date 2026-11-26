@@ -283,6 +283,7 @@ fn refusal_code(record: &StatisticalDecisionRecord) -> String {
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R031.100
+// spec: MEDULLA-DECISION-ENGINE-R031.101
 #[tokio::test]
 async fn only_relevant_papers_are_admitted_with_claims() {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
@@ -344,6 +345,19 @@ async fn only_relevant_papers_are_admitted_with_claims() {
     );
     assert_eq!(record.evidence_class, EvidenceClass::Observation);
 
+    // The typed answer names the admitted paper with its claim ids and its
+    // relevance, so no caller reads claim ids back out of the premise facts.
+    let Some(medulla_decision_types::decision::statistical::outcome::FamilyAnswer::PaperAdmission(
+        answer,
+    )) = &record.answer
+    else {
+        panic!("a typed paper admission answer, got {:?}", record.answer)
+    };
+    assert_eq!(answer.admitted.len(), 1);
+    assert_eq!(answer.admitted[0].paper_id, "paper-both");
+    assert_eq!(answer.admitted[0].claim_ids, ["claim-1", "claim-2"]);
+    assert!(answer.admitted[0].relevance_micros >= 600_000);
+
     // Below the threshold: a floor of 1.0 admits nothing, not even the paper
     // that was admitted at the default floor.
     let strict = decide(
@@ -358,6 +372,11 @@ async fn only_relevant_papers_are_admitted_with_claims() {
     .await
     .unwrap();
     assert!(admitted(&strict.records.as_slice()[0]).is_empty());
+    assert!(matches!(
+        &strict.records.as_slice()[0].answer,
+        Some(medulla_decision_types::decision::statistical::outcome::FamilyAnswer::PaperAdmission(answer))
+            if answer.admitted.is_empty()
+    ));
 
     // A stale snapshot: the named version differs from the graph's (R031.100).
     // Staging nodes need not advance the version, which may be 0, so name a

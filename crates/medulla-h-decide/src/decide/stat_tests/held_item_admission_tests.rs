@@ -87,7 +87,16 @@ fn proposal(verdict: &str, critique_digest: &str) -> serde_json::Value {
     })
 }
 
+fn typed(batch: &DecisionBatch) -> medulla_decision_types::decision::held_item::HeldItemAnswer {
+    use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+    match &batch.records.as_slice()[0].answer {
+        Some(FamilyAnswer::HeldItemAdmission(answer)) => (**answer).clone(),
+        other => panic!("a typed held item answer, got {other:?}"),
+    }
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R038.3
+// spec: MEDULLA-DECISION-ENGINE-R038.5
 #[tokio::test]
 async fn program_needs_independent_verifier_and_passes() {
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
@@ -139,6 +148,16 @@ async fn program_needs_independent_verifier_and_passes() {
         .unwrap();
     assert_eq!(answer(&batch), "admitted");
     let record = &batch.records.as_slice()[0];
+    let typed_answer = typed(&batch);
+    assert_eq!(
+        typed_answer.outcome,
+        medulla_decision_types::decision::held_item::HeldItemOutcome::Admitted
+    );
+    assert_eq!(typed_answer.verdict_ref, record.record_id);
+    assert_eq!(typed_answer.verification_ref.as_deref(), Some("verif-1"));
+    assert_eq!(typed_answer.verifier.as_deref(), Some("verifier"));
+    assert_eq!(typed_answer.compiler.as_deref(), Some("compiler"));
+    assert_eq!(typed_answer.reason, None);
     assert_eq!(record.evidence_class, EvidenceClass::Observation);
     let premise = record
         .premises
@@ -204,10 +223,21 @@ async fn program_needs_independent_verifier_and_passes() {
         .premises
         .iter()
         .any(|p| p.fact == "critique:crit-1"));
+    let rejected = decide(&h, proposal_request("prop-reject")).await.unwrap();
+    assert_eq!(answer(&rejected), "rejected");
+    let typed_rejection = typed(&rejected);
     assert_eq!(
-        answer(&decide(&h, proposal_request("prop-reject")).await.unwrap()),
-        "rejected"
+        typed_rejection.outcome,
+        medulla_decision_types::decision::held_item::HeldItemOutcome::Rejected
     );
+    assert_eq!(typed_rejection.verification_ref.as_deref(), Some("crit-1"));
+    let unbound = decide(&h, proposal_request("prop-unbound")).await.unwrap();
+    let typed_refusal = typed(&unbound);
+    assert_eq!(
+        typed_refusal.outcome,
+        medulla_decision_types::decision::held_item::HeldItemOutcome::Abstained
+    );
+    assert_eq!(typed_refusal.reason.as_deref(), Some("CRITIQUE_MISSING"));
     assert_eq!(
         answer(&decide(&h, proposal_request("prop-unbound")).await.unwrap()),
         "abstained:CRITIQUE_MISSING"

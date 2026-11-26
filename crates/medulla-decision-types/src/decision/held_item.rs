@@ -8,6 +8,8 @@
 //! critique verdict a proposal carries and the digest that verdict is bound
 //! to. Admission is advisory and writes nothing.
 
+use serde::{Deserialize, Serialize};
+
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
 use super::record::outcome::DecisionRefusal;
@@ -87,6 +89,41 @@ impl HeldItemVerdict {
 }
 
 /// The decision-policy knob of held-item admission (DE-R059.1-KNOBS).
+/// How a `held_item_admission` question concluded, as a caller reads it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum HeldItemOutcome {
+    Admitted,
+    Rejected,
+    /// The question was refused; `reason` names the code.
+    Abstained,
+}
+
+/// The typed answer of a `held_item_admission` question
+/// (MEDULLA-DECISION-ENGINE-R038.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HeldItemAnswer {
+    pub outcome: HeldItemOutcome,
+    /// The decision record that sealed this answer.
+    pub verdict_ref: String,
+    /// The verification (a program) or the critique (a proposal) the outcome
+    /// rests on; absent when the question was refused before reading one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verification_ref: Option<String>,
+    /// Who verified a program.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub verifier: Option<String>,
+    /// Who compiled a program.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub compiler: Option<String>,
+    /// The refusal code when the outcome is `abstained`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
+}
+
 pub const KNOBS: &[KnobSpec] = &[KnobSpec {
     name: "held_item.min_passes",
     unit: "count",

@@ -1523,6 +1523,18 @@ fn seal(
     {
         answer.premises = record.premises.as_slice().to_vec();
     }
+    // A tool-action or held-item answer names the record that sealed it
+    // (MEDULLA-DECISION-ENGINE-R038.4, R038.5); the id is fixed by the inputs,
+    // not by the digest, so it is known before the record is sealed.
+    match record.answer.as_mut() {
+        Some(FamilyAnswer::ToolActionAdmission(answer)) => {
+            answer.decision_ref = record.record_id.clone();
+        }
+        Some(FamilyAnswer::HeldItemAdmission(answer)) => {
+            answer.verdict_ref = record.record_id.clone();
+        }
+        _ => {}
+    }
     record.record_digest = statistical_record_digest(&record);
     Ok(record)
 }

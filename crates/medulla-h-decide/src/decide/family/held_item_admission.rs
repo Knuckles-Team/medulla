@@ -10,12 +10,15 @@
 //! writes nothing.
 
 use medulla_decision_types::decision::held_item::{
-    is_digest, min_passes, HeldItemKind, HeldItemRefusal, HeldItemVerdict, PARAM_CONTENT_DIGEST,
+    is_digest, min_passes, HeldItemAnswer, HeldItemKind, HeldItemOutcome, HeldItemRefusal,
+    HeldItemVerdict, PARAM_CONTENT_DIGEST,
     PARAM_GRAPH, PARAM_ITEM_KIND, PARAM_ITEM_REF, ROW_COMPILED_BY, ROW_CONTENT_DIGEST,
     ROW_CRITIQUE_DIGEST, ROW_CRITIQUE_REF, ROW_CRITIQUE_VERDICT, ROW_ITEM_KIND, ROW_LIFECYCLE,
     ROW_VERIFICATION_PASSES, ROW_VERIFICATION_REF, ROW_VERIFIED_BY,
 };
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
+use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
@@ -24,7 +27,7 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{
-    Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,
+    Executed, ExecutionContext, FamilyExecuted, FamilyPremise, FamilyPremiseSource,
 };
 use crate::decide::stat_support::filtered_view;
 
@@ -110,7 +113,27 @@ impl DecisionFamily for HeldItemAdmissionFamily {
 }
 
 fn refused(refusal: HeldItemRefusal) -> Result<Executed, String> {
-    Ok(abstained(QuestionKind::HeldItemAdmission, &refusal))
+    let mut executed = abstained(QuestionKind::HeldItemAdmission, &refusal);
+    executed.family = Some(answer_of(HeldItemAnswer {
+        outcome: HeldItemOutcome::Abstained,
+        verdict_ref: String::new(),
+        verification_ref: None,
+        verifier: None,
+        compiler: None,
+        reason: Some(refusal.code().as_str().to_string()),
+    }));
+    Ok(executed)
+}
+
+/// The typed answer a question seals; the verdict ref is the sealing record's
+/// id, filled in when the record is sealed.
+fn answer_of(answer: HeldItemAnswer) -> FamilyExecuted {
+    FamilyExecuted {
+        answer: Some(FamilyAnswer::HeldItemAdmission(Box::new(answer))),
+        premises: Vec::new(),
+        resolution: None,
+        evidence: None,
+    }
 }
 
 fn premise(fact: String, item_ref: &str) -> FamilyPremise {
@@ -159,7 +182,8 @@ fn admit(
                 });
             }
             let verification = text(ROW_VERIFICATION_REF);
-            let independent = match (text(ROW_VERIFIED_BY), text(ROW_COMPILED_BY)) {
+            let (verifier, compiler) = (text(ROW_VERIFIED_BY), text(ROW_COMPILED_BY));
+            let independent = match (&verifier, &compiler) {
                 (Some(verifier), Some(compiler)) => verifier != compiler,
                 _ => false,
             };
@@ -178,8 +202,18 @@ fn admit(
                 return refused(HeldItemRefusal::PassesInsufficient { passes, required });
             }
             let mut executed = advisory(vec![HeldItemVerdict::Admitted.option_id().to_string()])?;
-            executed.family_premises =
-                vec![premise(format!("verification:{verification}"), item_ref)];
+            executed.family_premises = vec![premise(
+                format!("verification:{verification}"),
+                item_ref,
+            )];
+            executed.family = Some(answer_of(HeldItemAnswer {
+                outcome: HeldItemOutcome::Admitted,
+                verdict_ref: String::new(),
+                verification_ref: Some(verification),
+                verifier,
+                compiler,
+                reason: None,
+            }));
             Ok(executed)
         }
         HeldItemKind::RunOutputProposal => {
@@ -201,6 +235,17 @@ fn admit(
             };
             let mut executed = advisory(vec![verdict.option_id().to_string()])?;
             executed.family_premises = vec![premise(format!("critique:{critique}"), item_ref)];
+            executed.family = Some(answer_of(HeldItemAnswer {
+                outcome: match verdict {
+                    HeldItemVerdict::Admitted => HeldItemOutcome::Admitted,
+                    HeldItemVerdict::Rejected => HeldItemOutcome::Rejected,
+                },
+                verdict_ref: String::new(),
+                verification_ref: Some(critique),
+                verifier: None,
+                compiler: None,
+                reason: None,
+            }));
             Ok(executed)
         }
     }
