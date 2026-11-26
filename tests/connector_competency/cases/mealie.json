@@ -1,0 +1,35 @@
+{
+  "connector": "mealie",
+  "rollup": "MEDULLA-CQ-CONN-R037",
+  "vocabulary_module": "nutrition-v1.ttl",
+  "terms": [
+    "Recipe",
+    "usesIngredient",
+    "ShoppingListItem",
+    "MealPlanEntry"
+  ],
+  "questions": [
+    {
+      "id": "mealie.q1",
+      "kind": "single",
+      "question": "Which recipes use an ingredient that is also on the current shopping list?",
+      "uql": "FOREIGN SCAN 'mealie-mcp'",
+      "sources": [
+        "mealie-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "mealie-mcp": "mcp_tool"
+      },
+      "columns": [
+        "recipe",
+        "ingredient",
+        "shoppingListItem"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "mealie-mcp/single.json"
+      ]
+    }
+  ]
+}

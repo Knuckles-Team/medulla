@@ -1,0 +1,22 @@
+{
+  "source": "mealie-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "recipe": "recipe-1",
+      "ingredient": "ingredient-1",
+      "shoppingListItem": "shoppingListItem-1",
+      "joinKey": "mealie.q1-key-1",
+      "id": "mealie-mcp-mealie.q1-1",
+      "label": "mealie-mcp 1"
+    },
+    {
+      "recipe": "recipe-2",
+      "ingredient": "ingredient-2",
+      "shoppingListItem": "shoppingListItem-2",
+      "joinKey": "mealie.q1-key-2",
+      "id": "mealie-mcp-mealie.q1-2",
+      "label": "mealie-mcp 2"
+    }
+  ]
+}
