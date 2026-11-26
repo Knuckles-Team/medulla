@@ -907,3 +907,210 @@ async fn harness_component_current_is_the_champion() {
         "{refused}"
     );
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R805.12: a harness component version and a
+/// per-task adoption are revisions of `Definition` subjects. The component
+/// promotes from its paired rollout set, the adoption from the stored
+/// `HarnessContrast` records of its agent and task class, each under its
+/// `champion:definition:<kind>:<ref>` pointer, both roll back, and another
+/// tenant resolves the adoption's receipt as absent.
+// spec: MEDULLA-DECISION-ENGINE-R805.12
+#[tokio::test]
+async fn harness_definitions_promote_and_roll_back() {
+    use super::harness_contrast_tests::{decide_contrast, graph_view, BASELINE};
+    use medulla_decision_outcome_types::decision::promotion::RevisionStage;
+    use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
+    use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
+    use medulla_work_types::orchestration::improvement::{AdoptedHarness, HarnessContrast};
+
+    const AGENT: &str = "agent:deployer";
+    const CLASS: &str = "eg:taskclass/deploy";
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+
+    // The component: two versions promote in turn from their rollout sets.
+    let component = RevisionSubject::Definition {
+        definition_kind: DefinitionKind::HarnessComponent,
+        definition_ref: "comp:prompt".to_owned(),
+    };
+    assert_eq!(
+        component.pointer_key(),
+        "champion:definition:harness_component:comp:prompt"
+    );
+    let component_pointer = PointerRef::Champion {
+        subject: component.clone(),
+    };
+    let versions: Vec<String> = ["blob:v1", "blob:v2"]
+        .iter()
+        .map(|content| {
+            format!(
+                "harness-component:comp:prompt:{}",
+                medulla_work_types::orchestration::HarnessComponentVersion::content_digest(content)
+            )
+        })
+        .collect();
+    for target in &versions {
+        let set = RolloutSet {
+            challenger_ref: target.clone(),
+            ..rollout_set(150_000)
+        };
+        let digest = rollout_set_digest(&set);
+        learn(
+            &h,
+            "decider",
+            LearningWrite::RecordRollouts { set: Box::new(set) },
+        )
+        .await
+        .unwrap();
+        let record = decide(&h, promotion_request(&pins.0, &component, &digest, target))
+            .await
+            .unwrap()
+            .records
+            .as_slice()[0]
+            .clone();
+        let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+        assert!(facts.contains(&"promotion.verdict=promote"), "{facts:?}");
+        commit(&h, &record).await;
+        let state = pointer_state(
+            &h,
+            component_pointer.clone(),
+            activate(target, &record.record_id),
+        )
+        .await
+        .unwrap();
+        assert_eq!(state.target(), Some(target.as_str()));
+    }
+    let back = pointer_state(&h, component_pointer, PointerMovement::Rollback)
+        .await
+        .unwrap();
+    assert_eq!(back.target(), Some(versions[0].as_str()));
+
+    // The adoption: fifty stored contrasts of one agent and task class, each
+    // behind its own adoption revision, all measured against one scored baseline.
+    let bundle = RevisionSubject::Definition {
+        definition_kind: DefinitionKind::HarnessBundle,
+        definition_ref: format!("{AGENT}:{CLASS}"),
+    };
+    assert_eq!(
+        bundle.pointer_key(),
+        format!("champion:definition:harness_bundle:{AGENT}:{CLASS}")
+    );
+    let (subject_kind, subject_ref) = RevisionRow::subject_of(&bundle.pointer_key()).unwrap();
+    let delta_q32 = (100_000i64 << 32) / 1_000_000;
+    let mut rows: Vec<(String, Vec<u8>)> = Vec::new();
+    let mut adoptions: Vec<String> = Vec::new();
+    for index in 0..50u64 {
+        let contrast = HarnessContrast {
+            task_ref: format!("task:{index}"),
+            conditions_digest: format!("sha256:conditions-{index:02}"),
+            run_a_trace_id: BASELINE.to_owned(),
+            run_b_trace_id: format!("trace:b-{index}"),
+            retry_delta: 0,
+            tool_selection_delta: 0,
+            eval_score_delta: delta_q32,
+            cost_delta: 0,
+        };
+        let adopted = AdoptedHarness {
+            agent_ref: AGENT.to_owned(),
+            task_class: CLASS.to_owned(),
+            component_version_refs: BoundedVec::new(vec![format!("harness-component:p:{index}")])
+                .unwrap(),
+            decision_ref: format!("decision:{index}"),
+            contrast_ref: Some(contrast.node_id()),
+        };
+        let id = adopted.node_id();
+        rows.push((
+            format!("harness-adopted:{index:020}:{id}"),
+            encode_artifact(&adopted).unwrap(),
+        ));
+        rows.push((
+            format!("harness-contrast:{}", contrast.node_id()),
+            encode_artifact(&contrast).unwrap(),
+        ));
+        let revision = RevisionRow {
+            id: id.clone(),
+            subject_kind: subject_kind.clone(),
+            subject_ref: subject_ref.clone(),
+            stage: RevisionStage::Evaluated,
+            digest: format!("sha256:decision-{index}"),
+            evaluation_receipt_id: Some(adopted.decision_ref.clone()),
+            created_ms: index,
+        };
+        rows.push((revision.key(), encode_artifact(&revision).unwrap()));
+        adoptions.push(id);
+    }
+    h.store.put_decision_artifacts(TENANT, &rows).unwrap();
+    let view = graph_view(&[], &[], &[(BASELINE, 0.5, "human")]);
+
+    let policy = DecisionPolicy::engine_default();
+    let evidence = held_out_evidence(
+        &EvidenceSources {
+            store: &h.store,
+            tenant: TENANT,
+            graph: Some(&view),
+            policy: &policy,
+        },
+        &bundle,
+        &adoptions[0],
+    )
+    .unwrap();
+    assert_eq!(evidence.receipt_kind, ReceiptKind::HarnessContrast);
+    assert_eq!(evidence.case_count, 50);
+    assert_eq!(evidence.champion_score_ppm, Some(500_000));
+    assert_eq!(evidence.challenger_score_ppm, 599_999);
+    assert!(evidence.independent);
+
+    // A model judge's baseline score is not independent: the gate refuses it.
+    let judged = graph_view(&[], &[], &[(BASELINE, 0.5, "model_judge")]);
+    assert_eq!(
+        held_out_evidence(
+            &EvidenceSources {
+                store: &h.store,
+                tenant: TENANT,
+                graph: Some(&judged),
+                policy: &policy,
+            },
+            &bundle,
+            &adoptions[0],
+        ),
+        Err(EvidenceError::Refused(PROMOTION_UNEVALUATED))
+    );
+
+    let bundle_pointer = PointerRef::Champion {
+        subject: bundle.clone(),
+    };
+    for target in &adoptions[..2] {
+        let record = decide_contrast(&h, &promotion_request(&pins.0, &bundle, target, target), &view);
+        let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+        assert!(facts.contains(&"promotion.verdict=promote"), "{facts:?}");
+        assert!(facts.contains(&"promotion.case_count=50"), "{facts:?}");
+        commit(&h, &record).await;
+        let state = pointer_state(
+            &h,
+            bundle_pointer.clone(),
+            activate(target, &record.record_id),
+        )
+        .await
+        .unwrap();
+        assert_eq!(state.target(), Some(target.as_str()));
+    }
+    let back = pointer_state(&h, bundle_pointer, PointerMovement::Rollback)
+        .await
+        .unwrap();
+    assert_eq!(back.target(), Some(adoptions[0].as_str()));
+
+    // Another tenant holds no adoption: the receipt resolves as absent.
+    assert_eq!(
+        held_out_evidence(
+            &EvidenceSources {
+                store: &h.store,
+                tenant: OTHER,
+                graph: Some(&view),
+                policy: &policy,
+            },
+            &bundle,
+            &adoptions[0],
+        ),
+        Err(EvidenceError::Refused(PROMOTION_UNEVALUATED))
+    );
+}

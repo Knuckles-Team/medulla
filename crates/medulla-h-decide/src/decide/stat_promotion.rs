@@ -26,8 +26,11 @@ use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, receipt_key, record_key};
 use medulla_types::refusal_code::RefusalCode;
+use medulla_work_types::orchestration::improvement::{AdoptedHarness, HarnessContrast};
 
 use super::stat_executor::ExecutionContext;
+use super::stat_harness_adoption::{ADOPTED_PREFIX, CONTRAST_PREFIX};
+use super::stat_harness_contrast::run_scores_graded;
 use super::stat_log::store_once;
 use super::stat_pointer::{read_pointer, Qualified};
 
@@ -91,6 +94,11 @@ pub(super) fn held_out_evidence(
         }
         // A paired run on a pinned set is the receipt of a definition or of a
         // retrieval strategy (R805.10, R821): the evidence names that subject.
+        // A harness bundle's receipt is its stored contrasts (R805.12).
+        RevisionSubject::Definition {
+            definition_kind: DefinitionKind::HarnessBundle,
+            definition_ref,
+        } => bundle_evidence(sources, subject, definition_ref, receipt_digest),
         RevisionSubject::Definition { .. } | RevisionSubject::RetrievalStrategy { .. } => {
             rollout_evidence(sources, subject, receipt_digest)
         }
@@ -197,6 +205,118 @@ fn rollout_evidence(
         return Err(unevaluated());
     }
     Ok(evidence)
+}
+
+/// The most adoption rows a harness bundle's evidence is read from.
+const MAX_ADOPTIONS: usize = 100_000;
+
+/// The domain of the digest that names a bundle's evaluation set.
+const BUNDLE_SET_DOMAIN: &str = "eg/harness-bundle-evaluation-set/v1";
+
+/// A Q32 contrast delta as millionths.
+fn q32_to_micros(q32: i64) -> i64 {
+    i64::try_from((i128::from(q32) * 1_000_000) >> 32).unwrap_or(i64::MAX)
+}
+
+/// The evidence of a harness bundle, `Definition { HarnessBundle,
+/// <agent_ref>:<task_class> }` (MEDULLA-DECISION-ENGINE-R805.12). The receipt
+/// is the id of the adoption the challenger is (an `Evaluated` revision of the
+/// bundle). The evidence is read from the stored `HarnessContrast` of every
+/// adoption of that agent and task class: the challenger scores the mean of
+/// the baseline runs' `:Score` values plus the mean `eval_score_delta`, the
+/// champion (when the pointer names one) scores the baseline mean, the case
+/// count is the number of contrasts and the evaluation set is the digest of
+/// the sorted conditions digests. It is independent only when every score of
+/// every baseline run has a grader kind that may decide a promotion.
+fn bundle_evidence(
+    sources: &EvidenceSources,
+    subject: &RevisionSubject,
+    definition_ref: &str,
+    adoption_id: &str,
+) -> Result<HeldOutEvidence, EvidenceError> {
+    let graph = sources.graph.ok_or_else(unevaluated)?;
+    let mut challenger_known = false;
+    let mut contrasts: Vec<HarnessContrast> = Vec::new();
+    for (_, bytes) in sources.store.decision_artifacts_with_prefix(
+        sources.tenant,
+        ADOPTED_PREFIX,
+        MAX_ADOPTIONS,
+    )? {
+        let adopted: AdoptedHarness = decode_artifact(&bytes, "adopted harness")?;
+        if format!("{}:{}", adopted.agent_ref, adopted.task_class) != definition_ref {
+            continue;
+        }
+        challenger_known |= adopted.node_id() == adoption_id;
+        let Some(contrast_ref) = &adopted.contrast_ref else {
+            continue;
+        };
+        let Some(bytes) = sources
+            .store
+            .decision_artifact(sources.tenant, &format!("{CONTRAST_PREFIX}{contrast_ref}"))?
+        else {
+            continue;
+        };
+        let contrast: HarnessContrast = decode_artifact(&bytes, "harness contrast")?;
+        if !contrasts.contains(&contrast) {
+            contrasts.push(contrast);
+        }
+    }
+    if !challenger_known || contrasts.is_empty() {
+        return Err(unevaluated());
+    }
+    let mut baseline_runs: Vec<&str> = contrasts
+        .iter()
+        .map(|contrast| contrast.run_a_trace_id.as_str())
+        .collect();
+    baseline_runs.sort_unstable();
+    baseline_runs.dedup();
+    let scores: Vec<(i64, bool)> = baseline_runs
+        .iter()
+        .flat_map(|run| run_scores_graded(graph, run))
+        .collect();
+    let independent_scores: Vec<i64> = scores
+        .iter()
+        .filter_map(|(ppm, independent)| independent.then_some(*ppm))
+        .collect();
+    if independent_scores.is_empty() {
+        return Err(unevaluated());
+    }
+    let baseline_mean =
+        independent_scores.iter().sum::<i64>() / i64::try_from(independent_scores.len()).unwrap_or(1);
+    let delta_mean = contrasts
+        .iter()
+        .map(|contrast| q32_to_micros(contrast.eval_score_delta))
+        .sum::<i64>()
+        / i64::try_from(contrasts.len()).unwrap_or(1);
+    let challenger = (baseline_mean + delta_mean).clamp(0, 1_000_000);
+    let (_, state) = read_pointer(sources.store, sources.tenant, &subject.pointer_key())?;
+    let champion_ref = state.target().map(str::to_owned);
+    // The baseline run of every contrast is the incumbent harness, so its
+    // mean score is the champion's score whether or not a pointer is seated.
+    let champion_score = Some(baseline_mean);
+    let mut digests: Vec<&str> = contrasts
+        .iter()
+        .map(|contrast| contrast.conditions_digest.as_str())
+        .collect();
+    digests.sort_unstable();
+    let set_digest = medulla_query_types::solve_scalar::digest_text(BUNDLE_SET_DOMAIN, &digests);
+    Ok(HeldOutEvidence {
+        schema_version: HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+        subject: subject.clone(),
+        challenger_ref: adoption_id.to_owned(),
+        champion_ref,
+        receipt_kind: ReceiptKind::HarnessContrast,
+        receipt_digest: set_digest.clone(),
+        evaluation_set_digest: set_digest,
+        challenger_score_ppm: challenger,
+        champion_score_ppm: champion_score,
+        delta_ppm: challenger - baseline_mean,
+        case_count: contrasts.len() as u64,
+        independent: scores.iter().all(|(_, independent)| *independent),
+        grader_kind: GraderKind::Human,
+        measurement: None,
+        review: None,
+    })
 }
 
 fn program_evidence(

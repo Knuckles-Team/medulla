@@ -117,6 +117,8 @@ pub enum ReceiptKind {
     RolloutSet,
     MeasurementRun,
     ReviewApproval,
+    /// The stored behavioral contrasts of a harness bundle (R805.12).
+    HarnessContrast,
 }
 
 /// Who graded a score. Only a model judge never decides a promotion (R813.1).
@@ -186,4 +188,3 @@ pub struct HeldOutEvidence {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub review: Option<ReviewApproval>,
 }
-

@@ -146,7 +146,22 @@ const SCORES_RUN: &str = "scoresRun";
 /// (MEDULLA-DECISION-ENGINE-R803.7). `scoresRun` is an object property, so it is
 /// read as an edge, never as a literal on the score node.
 fn run_scores_ppm(view: &medulla_graph_core::graph::GraphView, run_id: &str) -> Vec<i64> {
-    let mut rows: Vec<(&String, i64)> = Vec::new();
+    run_scores_graded(view, run_id)
+        .into_iter()
+        .filter_map(|(ppm, independent)| independent.then_some(ppm))
+        .collect()
+}
+
+/// Every `:Score` of one run in the view as `(ppm, independent)`, in score id
+/// order: `independent` is whether the score's grader kind may decide a
+/// promotion. A score with no grader kind is not independent. The bundle
+/// promotion evidence (MEDULLA-DECISION-ENGINE-R805.12) reads the same
+/// scores and requires every one of them independent.
+pub(super) fn run_scores_graded(
+    view: &medulla_graph_core::graph::GraphView,
+    run_id: &str,
+) -> Vec<(i64, bool)> {
+    let mut rows: Vec<(&String, i64, bool)> = Vec::new();
     for ((score_id, target), blobs) in &view.edge_properties {
         if target != run_id
             || !blobs.iter().any(|blob| {
@@ -188,14 +203,16 @@ fn run_scores_ppm(view: &medulla_graph_core::graph::GraphView, run_id: &str) -> 
         else {
             continue;
         };
-        if !independent || max <= min {
+        if max <= min {
             continue;
         }
         let ppm = ((value - min) / (max - min) * 1_000_000.0).round() as i64;
-        rows.push((score_id, ppm.clamp(0, 1_000_000)));
+        rows.push((score_id, ppm.clamp(0, 1_000_000), independent));
     }
     rows.sort();
-    rows.into_iter().map(|(_, ppm)| ppm).collect()
+    rows.into_iter()
+        .map(|(_, ppm, independent)| (ppm, independent))
+        .collect()
 }
 
 fn refusal_text(

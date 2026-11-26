@@ -32,9 +32,9 @@ use super::stat_log::{visible_entries, LogReader};
 
 /// The most rows of one record family a tenant's library read returns.
 const MAX_LIBRARY_ROWS: usize = 100_000;
-const ADOPTED_PREFIX: &str = "harness-adopted:";
+pub(super) const ADOPTED_PREFIX: &str = "harness-adopted:";
 const LESSON_PREFIX: &str = "harness-lesson:";
-const CONTRAST_PREFIX: &str = "harness-contrast:";
+pub(super) const CONTRAST_PREFIX: &str = "harness-contrast:";
 const LESSON_EDGE_PREFIX: &str = "harness-supersession:lesson:";
 const WRITE_PREFIX: &str = "harness-adoption-write:";
 
