@@ -2,7 +2,7 @@
   "compiled": {
     "process_revision": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
     "version": 2,
-    "workflow_digest": "d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
+    "workflow_digest": "sha256:d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
     "workflow_id": "workflow:process:invoice:v2"
   },
   "exported": {
@@ -96,7 +96,7 @@
   },
   "imported": {
     "version": 1,
-    "workflow_digest": "d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
+    "workflow_digest": "sha256:d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
     "workflow_id": "workflow:or-split-join:v1"
   },
   "process_compile": {
