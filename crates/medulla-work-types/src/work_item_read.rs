@@ -59,7 +59,11 @@ pub const WORK_ITEM_CHECKPOINT_HISTORY: &str = "run_checkpoint_history";
 /// The WorkItem-row property that records where the item's external effect
 /// stands (MEDULLA-DURABLE-KERNEL-R820.1).
 pub const WORK_ITEM_EFFECT_PHASE: &str = "effect_phase";
-pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 18] = [
+/// The WorkItem-row property that records the registered workflow definition the item was
+/// submitted for (MEDULLA-TYPED-PACKS-R108.6): a [`WorkflowIdentity`](crate::orchestration::workflows::WorkflowIdentity)
+/// object, written by the native submit and read by the terminal commit's run-trace stamp.
+pub const WORK_ITEM_ROW_WORKFLOW: &str = "workflow";
+pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 19] = [
     crate::native_control::WORK_ITEM_LIFECYCLE_REVISION,
     RUN_ADMISSION_REQUEST,
     WORK_ITEM_CHECKPOINT_REF,
@@ -78,6 +82,7 @@ pub const NATIVE_WORK_ITEM_ROW_KEYS: [&str; 18] = [
     WORK_ITEM_TRACE_REF,
     WORK_ITEM_TOOL_CALL_REFS,
     WORK_ITEM_EFFECT_PHASE,
+    WORK_ITEM_ROW_WORKFLOW,
 ];
 
 /// `SubmitWorkItem`'s own bound on a WorkItem id, reused for the tenant.
@@ -438,6 +443,10 @@ pub struct WorkItemView {
     /// The receipt of the current attempt, `None` until one exists.
     #[serde(default)]
     pub effect_receipt: Option<ReceiptId>,
+    /// The registered workflow definition the item was submitted for, as its row records it
+    /// (MEDULLA-TYPED-PACKS-R108.6); `None` for an item of no workflow.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workflow: Option<crate::orchestration::workflows::WorkflowIdentity>,
 }
 
 impl WorkItemView {
@@ -477,6 +486,9 @@ impl WorkItemView {
                 .map_err(|error| format!("WorkItem '{work_item_id}': {error}"))?,
             // The receipt lives in its own table; the store reader fills it in.
             effect_receipt: None,
+            workflow: row
+                .get(WORK_ITEM_ROW_WORKFLOW)
+                .and_then(|value| serde_json::from_value(value.clone()).ok()),
         }))
     }
 }

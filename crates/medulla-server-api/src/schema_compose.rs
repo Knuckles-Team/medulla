@@ -956,7 +956,10 @@ ex:parent a owl:ReflexiveProperty .
         // +74 (MEDULLA-DURABLE-KERNEL-R874.14): the :ParentTransactionMachine block (five
         // states, three events, four edges) in state-machines-v1.ttl. The participant
         // machine's four edge ids are renamed E01-E04 to T01-T04 (R874.15), no count change.
-        assert_eq!(composed.ontology.len(), 24_924);
+        // +15 (MEDULLA-TYPED-PACKS-R108.6): the run trace's `workflow_id`, `workflow_version`
+        // and `workflow_content_digest` datatype properties (five triples each) in
+        // orchestration-v1.ttl.
+        assert_eq!(composed.ontology.len(), 24_939);
 
         let ontology_subjects: BTreeSet<String> = composed
             .ontology

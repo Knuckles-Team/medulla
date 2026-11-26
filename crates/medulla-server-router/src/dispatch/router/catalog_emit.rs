@@ -166,82 +166,103 @@ async fn asset_evidence(
     evidence
 }
 
-/// One run a terminal commit records: the run id and the workflow definition its run trace
-/// names, when it does (MEDULLA-TYPED-PACKS-R108.6).
+/// One run a terminal commit records: the run id, the work item that ran it and, once read
+/// back from the work item row, the workflow definition it executed (MEDULLA-TYPED-PACKS-R108.6).
 #[cfg(feature = "rdf")]
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(super) struct RunTraceAsset {
     pub run_id: String,
+    pub tenant: String,
+    pub work_item_id: String,
     pub definition: Option<medulla_work_types::orchestration::workflows::WorkflowIdentity>,
 }
 
-/// The run-trace property names that carry the workflow definition identity a run executed.
-#[cfg(feature = "rdf")]
-const RUN_WORKFLOW_ID: &str = "workflow_id";
-#[cfg(feature = "rdf")]
-const RUN_WORKFLOW_VERSION: &str = "workflow_version";
-#[cfg(feature = "rdf")]
-const RUN_WORKFLOW_DIGEST: &str = "workflow_content_digest";
-
 /// The runs a terminal commit records: one per `RunTrace` receipt node of its outcome
 /// extension, in node order. `None` for any method that is not a terminal commit whose
-/// extension holds a run trace.
+/// extension holds a run trace. The definition each run executed is not read from the trace the
+/// caller sent: the commit stamps it from the work item row, and [`commit_runs`] reads it back
+/// from that row.
 #[cfg(feature = "rdf")]
 pub(super) fn run_traces_of(method: &Method) -> Option<Vec<RunTraceAsset>> {
     let Method::CommitWorkItemResult {
+        tenant,
+        work_item_id,
         outcome_extension: Some(extension),
         ..
     } = method
     else {
         return None;
     };
-    let runs = run_traces(&extension.receipt_nodes);
+    let runs = run_traces(&extension.receipt_nodes, tenant, work_item_id);
     (!runs.is_empty()).then_some(runs)
 }
 
-/// One run per `RunTrace` receipt node. A trace that names a valid workflow identity (all
-/// three properties, a well-formed digest) links its run asset to that definition; any other
-/// trace still records the run.
+/// One run per `RunTrace` receipt node.
 #[cfg(feature = "rdf")]
-fn run_traces(nodes: &[medulla_result_types::outcome_bundle::ReceiptNode]) -> Vec<RunTraceAsset> {
+fn run_traces(
+    nodes: &[medulla_result_types::outcome_bundle::ReceiptNode],
+    tenant: &str,
+    work_item_id: &str,
+) -> Vec<RunTraceAsset> {
     use medulla_result_types::outcome_bundle::ReceiptNodeKind;
     nodes
         .iter()
         .filter(|node| node.kind == ReceiptNodeKind::RunTrace)
-        .map(|node| {
-            let properties: std::collections::BTreeMap<String, serde_json::Value> =
-                rmp_serde::from_slice(&node.properties_msgpack).unwrap_or_default();
-            let text = |key: &str| {
-                properties
-                    .get(key)
-                    .and_then(serde_json::Value::as_str)
-                    .map(str::to_string)
-            };
-            let definition = match (
-                text(RUN_WORKFLOW_ID),
-                text(RUN_WORKFLOW_VERSION),
-                text(RUN_WORKFLOW_DIGEST),
-            ) {
-                (Some(workflow_id), Some(version), Some(content_digest)) => {
-                    Some(medulla_work_types::orchestration::workflows::WorkflowIdentity {
-                        workflow_id,
-                        version,
-                        content_digest,
-                    })
-                    .filter(|identity| identity.validate().is_ok())
-                }
-                _ => None,
-            };
-            RunTraceAsset {
-                run_id: node.run_id.clone(),
-                definition,
-            }
+        .map(|node| RunTraceAsset {
+            run_id: node.run_id.clone(),
+            tenant: tenant.to_string(),
+            work_item_id: work_item_id.to_string(),
+            definition: None,
         })
         .collect()
 }
 
-/// Catalog every run of a committed terminal result. The first refusal stops the rest; a
-/// replay of the same commit emits them all again (the triples are idempotent).
+/// The definition a work item row names: its recorded workflow, when the identity is whole and
+/// valid. Any other row (no workflow, a malformed digest) still records the run, with no link.
+#[cfg(feature = "rdf")]
+fn definition_of(
+    view: Option<&medulla_work_types::work_item_read::WorkItemView>,
+) -> Option<medulla_work_types::orchestration::workflows::WorkflowIdentity> {
+    view.and_then(|view| view.workflow.clone())
+        .filter(|identity| identity.validate().is_ok())
+}
+
+/// Read one work item row back through the served `GetWorkItem` read, under the committing
+/// caller's identity. A row that cannot be read names no definition.
+#[cfg(feature = "rdf")]
+async fn read_work_item(
+    state: &Arc<RwLock<ServerState>>,
+    req: &DispatchHeader,
+    verified_context: &VerifiedRequestContext,
+    graph: &str,
+    run: &RunTraceAsset,
+) -> Option<medulla_work_types::work_item_read::WorkItemView> {
+    use medulla_protocol_types::protocol::ResultPayload;
+    let response = dispatch_graph_op(
+        state,
+        graph,
+        req.id,
+        req.agent_id.as_deref(),
+        verified_context,
+        Method::GetWorkItem {
+            tenant: run.tenant.clone(),
+            work_item_id: run.work_item_id.clone(),
+        },
+    )
+    .await;
+    match response.result {
+        Some(ResultPayload::Raw(bytes)) => rmp_serde::from_slice::<
+            Option<medulla_work_types::work_item_read::WorkItemView>,
+        >(&bytes)
+        .ok()
+        .flatten(),
+        _ => None,
+    }
+}
+
+/// Catalog every run of a committed terminal result. Each run links to the definition its work
+/// item row recorded at submit. The first refusal stops the rest; a replay of the same commit
+/// emits them all again (the triples are idempotent).
 #[cfg(feature = "rdf")]
 pub(super) async fn commit_runs(
     state: &Arc<RwLock<ServerState>>,
@@ -251,6 +272,8 @@ pub(super) async fn commit_runs(
     runs: &[RunTraceAsset],
 ) -> Result<(), String> {
     for run in runs {
+        let view = read_work_item(state, req, verified_context, graph, run).await;
+        let definition = definition_of(view.as_ref());
         commit_asset(
             state,
             req,
@@ -259,7 +282,7 @@ pub(super) async fn commit_runs(
             medulla_catalog::emit::AssetRecord::WorkflowRun(
                 medulla_catalog::emit::WorkflowRunRecord {
                     run_id: &run.run_id,
-                    definition: run.definition.as_ref(),
+                    definition: definition.as_ref(),
                 },
             ),
         )
@@ -272,8 +295,10 @@ pub(super) async fn commit_runs(
 mod run_trace_tests {
     use super::*;
     use medulla_result_types::outcome_bundle::{ReceiptNode, ReceiptNodeKind};
+    use medulla_work_types::orchestration::workflows::WorkflowIdentity;
+    use medulla_work_types::work_item_read::WorkItemView;
 
-    fn trace_node(run_id: &str, properties: serde_json::Value) -> ReceiptNode {
+    fn trace_node(run_id: &str) -> ReceiptNode {
         ReceiptNode {
             node_id: format!("trace:{run_id}"),
             kind: ReceiptNodeKind::RunTrace,
@@ -285,40 +310,51 @@ mod run_trace_tests {
             outbox_id: "outbox".into(),
             payload_ref: "payload".into(),
             payload_digest: "digest".into(),
-            properties_msgpack: rmp_serde::to_vec_named(&properties).unwrap(),
+            // A caller's own claim of a workflow is never the link.
+            properties_msgpack: rmp_serde::to_vec_named(&serde_json::json!({
+                "workflow_id": "forged",
+                "workflow_version": "9",
+                "workflow_content_digest": format!("sha256:{}", "f".repeat(64)),
+            }))
+            .unwrap(),
         }
+    }
+
+    fn view(workflow: Option<WorkflowIdentity>) -> WorkItemView {
+        let row = serde_json::json!({
+            "node_type": "WorkItem", "tenant": "t", "status": "succeeded", "kind": "run",
+            "payload_ref": "p",
+        });
+        let mut view = WorkItemView::from_tenant_row("wi", row.as_object().unwrap(), "t")
+            .unwrap()
+            .unwrap();
+        view.workflow = workflow;
+        view
     }
 
     // spec: MEDULLA-TYPED-PACKS-R108.6
     #[test]
-    fn a_run_trace_names_its_definition_only_with_a_whole_valid_identity() {
-        let digest = format!("sha256:{}", "a".repeat(64));
-        let named = trace_node(
-            "run-1",
-            serde_json::json!({
-                RUN_WORKFLOW_ID: "summarize",
-                RUN_WORKFLOW_VERSION: "1.2.0",
-                RUN_WORKFLOW_DIGEST: digest,
-            }),
-        );
-        let partial = trace_node("run-2", serde_json::json!({ RUN_WORKFLOW_ID: "summarize" }));
-        let badly_digested = trace_node(
-            "run-3",
-            serde_json::json!({
-                RUN_WORKFLOW_ID: "summarize",
-                RUN_WORKFLOW_VERSION: "1.2.0",
-                RUN_WORKFLOW_DIGEST: "not-a-digest",
-            }),
-        );
-        let found = run_traces(&[named, partial, badly_digested]);
-        assert_eq!(found.len(), 3);
-        assert_eq!(found[0].run_id, "run-1");
-        assert_eq!(
-            found[0].definition.as_ref().map(|d| d.workflow_id.as_str()),
-            Some("summarize")
-        );
-        assert!(found[1].definition.is_none());
-        assert!(found[2].definition.is_none());
+    fn a_run_names_its_definition_only_from_a_whole_valid_row_identity() {
+        let runs = run_traces(&[trace_node("run-1")], "t", "wi");
+        assert_eq!(runs.len(), 1);
+        assert_eq!(runs[0].run_id, "run-1");
+        assert_eq!((runs[0].tenant.as_str(), runs[0].work_item_id.as_str()), ("t", "wi"));
+        // The trace the caller sent names a definition; the run does not take it.
+        assert!(runs[0].definition.is_none());
+
+        let valid = WorkflowIdentity {
+            workflow_id: "summarize".into(),
+            version: "1.2.0".into(),
+            content_digest: format!("sha256:{}", "a".repeat(64)),
+        };
+        assert_eq!(definition_of(Some(&view(Some(valid.clone())))), Some(valid.clone()));
+        assert!(definition_of(Some(&view(None))).is_none());
+        assert!(definition_of(None).is_none());
+        let badly_digested = WorkflowIdentity {
+            content_digest: "not-a-digest".into(),
+            ..valid
+        };
+        assert!(definition_of(Some(&view(Some(badly_digested)))).is_none());
         assert!(run_traces_of(&Method::GraphSchemaList).is_none());
     }
 }

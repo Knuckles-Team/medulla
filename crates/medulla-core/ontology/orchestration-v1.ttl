@@ -1088,6 +1088,26 @@
     rdfs:domain :RunTrace ;
     rdfs:range xsd:decimal .
 
+# MEDULLA-TYPED-PACKS-R108.6: the registered workflow definition a run executed. The terminal
+# commit stamps the three properties from the work item row's recorded workflow identity.
+:workflow_id a owl:DatatypeProperty ;
+    rdfs:label "workflow_id" ;
+    rdfs:comment "The id of the registered workflow definition a run executed (MEDULLA-TYPED-PACKS-R108.6)." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:string .
+
+:workflow_version a owl:DatatypeProperty ;
+    rdfs:label "workflow_version" ;
+    rdfs:comment "The version of the registered workflow definition a run executed (MEDULLA-TYPED-PACKS-R108.6)." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:string .
+
+:workflow_content_digest a owl:DatatypeProperty ;
+    rdfs:label "workflow_content_digest" ;
+    rdfs:comment "The canonical sha256 digest of the workflow content a run executed (MEDULLA-TYPED-PACKS-R108.6)." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:string .
+
 # MEDULLA-ORCH-VOCAB-R010.101: usage attribution and the four disjoint token
 # counters of an immutable trace, read by the `run_trace_usage` statement.
 :projectId a owl:DatatypeProperty ;

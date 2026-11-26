@@ -1676,7 +1676,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             // MEDULLA-UNIFIED-DATA-PLANE-R766: a kind outside the closed registry.
             "WORK_ITEM_KIND_UNKNOWN",
             "WORK_QUEUE_FULL",
+            // MEDULLA-TYPED-PACKS-R108.6: the workflow a work item names is read from the
+            // workflow registry before the row is written.
+            "WORKFLOW_IDENTITY_UNKNOWN",
+            "WORKFLOW_UNAUTHORIZED",
         ],
+    ),
+    // MEDULLA-TYPED-PACKS-R108.6: a batch names registered workflows exactly as one item does.
+    (
+        "SubmitWorkItems",
+        &["WORKFLOW_IDENTITY_UNKNOWN", "WORKFLOW_UNAUTHORIZED"],
     ),
     ("ClaimWorkItem", &["REPLAY_NONCE_CONSUMED"]),
     // MEDULLA-DURABLE-KERNEL-R028.1.2.2: a checkpoint names only existing memory revisions.

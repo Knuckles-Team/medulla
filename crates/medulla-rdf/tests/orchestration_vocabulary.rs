@@ -133,6 +133,7 @@ mod run_trace {
     // spec: MEDULLA-ORCH-VOCAB-R009.6
     // spec: MEDULLA-ORCH-VOCAB-R009.7
     // spec: MEDULLA-ORCH-VOCAB-R009.8
+    // spec: MEDULLA-TYPED-PACKS-R108.6
     #[test]
     fn run_trace_properties_have_declared_domain_and_datatype() {
         let core = GraphCore::new();
@@ -142,6 +143,12 @@ mod run_trace {
             .iter()
             .map(|p| (*p, "integer"))
             .chain([("terminationReason", "string"), ("costUsd", "decimal")])
+            // MEDULLA-TYPED-PACKS-R108.6: the workflow identity the commit stamps from the row.
+            .chain([
+                ("workflow_id", "string"),
+                ("workflow_version", "string"),
+                ("workflow_content_digest", "string"),
+            ])
         {
             let query = format!(
                 "PREFIX : <{KG}> PREFIX owl: <http://www.w3.org/2002/07/owl#> \

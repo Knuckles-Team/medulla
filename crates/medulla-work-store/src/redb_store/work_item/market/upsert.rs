@@ -141,6 +141,7 @@ fn gap_submission(
     ]);
     SubmitWorkItemRequest {
         child_input: None,
+        workflow: None,
         conversation: None,
         run_id: None,
         schema_version: NativeControlSchemaVersion::V1,

@@ -86,6 +86,7 @@ fn submit_method() -> Method {
             conversation: None,
             run_id: None,
             child_input: None,
+            workflow: None,
             schema_version: NativeControlSchemaVersion::V1,
             context: request_context("client-submit-request", "client-submit-trace"),
             work_item_id: Some(WORK_ITEM.to_string()),

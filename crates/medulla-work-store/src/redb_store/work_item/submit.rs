@@ -487,6 +487,16 @@ fn insert_submit_work_item_identity_metadata_props(
         "model_digest".into(),
         serde_json::Value::String(request.model_digest.clone()),
     );
+    // MEDULLA-TYPED-PACKS-R108.6: the registered workflow the item runs is a property of the
+    // row from its submit; the terminal commit stamps it on the run trace it writes.
+    if let Some(workflow) = &request.workflow {
+        if let Ok(value) = serde_json::to_value(workflow) {
+            props.insert(
+                medulla_work_types::work_item_read::WORK_ITEM_ROW_WORKFLOW.into(),
+                value,
+            );
+        }
+    }
 }
 
 fn insert_submit_work_item_provenance_props(

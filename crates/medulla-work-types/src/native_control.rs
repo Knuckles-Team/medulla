@@ -314,6 +314,11 @@ pub struct SubmitWorkItemRequest {
     /// Optional run identity; native admission binds its verified owner atomically.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub run_id: Option<String>,
+    /// The registered workflow definition this item runs (MEDULLA-TYPED-PACKS-R108.6). The row
+    /// records it at submit; the terminal commit stamps it on the run trace it writes, so the
+    /// run asset links to its definition from the row and never from the caller's trace.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub workflow: Option<crate::orchestration::workflows::WorkflowIdentity>,
     pub schema_version: NativeControlSchemaVersion,
     pub context: RequestContext,
     pub work_item_id: Option<String>,

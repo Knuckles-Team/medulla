@@ -29207,6 +29207,7 @@ class SubmitWorkItemRequest(BaseModel):
     run_id: str | None = None
     schema_version: NativeControlSchemaVersion
     work_item_id: str | None = None
+    workflow: WorkflowIdentity | None = None
 
 
 class SubmitWorkItemResult(BaseModel):
@@ -32194,6 +32195,7 @@ class WorkItemView(BaseModel):
     updated_at_ms: Annotated[int, Field(ge=0)]
     version: Annotated[int, Field(ge=0)]
     work_item_id: str
+    workflow: WorkflowIdentity | None = None
 
 
 class WorkOffer(BaseModel):

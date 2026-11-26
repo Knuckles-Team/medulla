@@ -803,8 +803,54 @@ async fn dispatch_catalog_admin_methods(
             })
             .await
         }
+        // MEDULLA-TYPED-PACKS-R108.6: a work item that names a workflow runs a registered one.
+        // The identity is read from the workflow registry before the row is written, so an
+        // unknown definition refuses `WORKFLOW_IDENTITY_UNKNOWN` and records nothing.
+        Method::SubmitWorkItem { request } => {
+            let named: Vec<_> = request.workflow.iter().cloned().collect();
+            if let Some(refusal) = unregistered_workflow(ctx, named).await {
+                return ControlFlow::Break(refusal);
+            }
+            return ControlFlow::Continue(Method::SubmitWorkItem { request });
+        }
+        Method::SubmitWorkItems { request } => {
+            let named: Vec<_> = request
+                .requests
+                .iter()
+                .filter_map(|item| item.workflow.clone())
+                .collect();
+            if let Some(refusal) = unregistered_workflow(ctx, named).await {
+                return ControlFlow::Break(refusal);
+            }
+            return ControlFlow::Continue(Method::SubmitWorkItems { request });
+        }
         other => return ControlFlow::Continue(other),
     })
+}
+
+/// The refusal of the first named workflow identity the registry does not hold for the caller,
+/// or `None` when every one is registered (MEDULLA-TYPED-PACKS-R108.6).
+async fn unregistered_workflow(
+    ctx: DispatchCtx<'_>,
+    identities: Vec<medulla_work_types::orchestration::workflows::WorkflowIdentity>,
+) -> Option<Response> {
+    for identity in identities {
+        let response = dispatch_boxed(async {
+            medulla_h_admin::admin::handle_workflow_registry_read(
+                ctx.state,
+                ctx.req.id,
+                &ctx.req.graph,
+                ctx.verified_context,
+                identity,
+            )
+            .await
+        })
+        .await;
+        if response.refusal_text().is_some() {
+            return Some(response);
+        }
+    }
+    None
 }
 
 /// Activate the pack release held behind the change request just applied, when it holds one.

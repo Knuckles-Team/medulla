@@ -355,6 +355,9 @@ pub fn apply_commit_work_item_result_row(
                     lease_epoch: input.lease_epoch,
                     committed_status,
                     receipt_nodes: &extension.receipt_nodes,
+                    workflow: props
+                        .get(medulla_work_types::work_item_read::WORK_ITEM_ROW_WORKFLOW)
+                        .and_then(|value| serde_json::from_value(value.clone()).ok()),
                 },
                 input.nodes,
                 input.edges,
@@ -585,6 +588,8 @@ struct ReceiptRowsInput<'a> {
     lease_epoch: u64,
     committed_status: &'a str,
     receipt_nodes: &'a [medulla_result_types::outcome_bundle::ReceiptNode],
+    /// The workflow the work item row recorded at submit (MEDULLA-TYPED-PACKS-R108.6).
+    workflow: Option<medulla_work_types::orchestration::workflows::WorkflowIdentity>,
 }
 
 /// The property of a `RunTrace` receipt node that carries its [`RunTraceRecord`]
@@ -714,9 +719,11 @@ fn apply_receipt_rows(
     let graph = input.graph;
     for receipt in input.receipt_nodes {
         let stored = match receipt.kind {
-            ReceiptNodeKind::RunTrace => {
-                stamp_class(&receipt.properties_msgpack, input.tenant, "RunTrace")?
-            }
+            ReceiptNodeKind::RunTrace => stamp_run_trace(
+                &receipt.properties_msgpack,
+                input.tenant,
+                input.workflow.as_ref(),
+            )?,
             ReceiptNodeKind::RecursiveTraceNode => stamp_class(
                 &receipt.properties_msgpack,
                 input.tenant,
@@ -770,6 +777,42 @@ fn stamp_class(properties_msgpack: &[u8], tenant: &str, class: &str) -> Result<V
         rmp_serde::from_slice(properties_msgpack).map_err(|error| error.to_string())?;
     properties.insert("node_type".into(), class.into());
     properties.insert("tenant".into(), tenant.into());
+    rmp_serde::to_vec_named(&properties).map_err(|error| error.to_string())
+}
+
+/// The run-trace properties that name the workflow definition a run executed
+/// (MEDULLA-TYPED-PACKS-R108.6). The commit writes them from the work item row, never from the
+/// caller's trace.
+pub const RUN_TRACE_WORKFLOW_ID: &str = "workflow_id";
+pub const RUN_TRACE_WORKFLOW_VERSION: &str = "workflow_version";
+pub const RUN_TRACE_WORKFLOW_DIGEST: &str = "workflow_content_digest";
+
+/// Stamp a `RunTrace` receipt node: its class and tenant, and the three workflow identity
+/// properties from the row. A row with no workflow leaves none: whatever identity the caller's
+/// trace claimed is removed, so the definition link comes from the row alone.
+fn stamp_run_trace(
+    properties_msgpack: &[u8],
+    tenant: &str,
+    workflow: Option<&medulla_work_types::orchestration::workflows::WorkflowIdentity>,
+) -> Result<Vec<u8>, String> {
+    let stamped = stamp_class(properties_msgpack, tenant, "RunTrace")?;
+    let mut properties: std::collections::BTreeMap<String, serde_json::Value> =
+        rmp_serde::from_slice(&stamped).map_err(|error| error.to_string())?;
+    match workflow {
+        Some(identity) => {
+            properties.insert(RUN_TRACE_WORKFLOW_ID.into(), identity.workflow_id.clone().into());
+            properties.insert(RUN_TRACE_WORKFLOW_VERSION.into(), identity.version.clone().into());
+            properties.insert(
+                RUN_TRACE_WORKFLOW_DIGEST.into(),
+                identity.content_digest.clone().into(),
+            );
+        }
+        None => {
+            for key in [RUN_TRACE_WORKFLOW_ID, RUN_TRACE_WORKFLOW_VERSION, RUN_TRACE_WORKFLOW_DIGEST] {
+                properties.remove(key);
+            }
+        }
+    }
     rmp_serde::to_vec_named(&properties).map_err(|error| error.to_string())
 }
 

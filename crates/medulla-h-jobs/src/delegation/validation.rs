@@ -158,6 +158,7 @@ pub(crate) fn lower_work_item(
 ) -> SubmitWorkItemRequest {
     SubmitWorkItemRequest {
         child_input: None,
+        workflow: None,
         conversation: None,
         run_id: None,
         schema_version: NativeControlSchemaVersion::V1,
