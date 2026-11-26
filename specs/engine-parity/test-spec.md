@@ -23,7 +23,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R006.1` | `crates/medulla-wire-core/src/wire/sqlstate.rs::tests::table_is_closed_and_unique`; `tests/pgwire_roundtrip.rs::extended_query_prepared_and_copy` | planned |
 | `MEDULLA-ENGINE-PARITY-R006.2` | `tests/pgwire_roundtrip.rs::unsupported_message_refuses_0a000` | bound |
 | `MEDULLA-ENGINE-PARITY-R006.3` | `tests/pgwire_roundtrip.rs::prepared_point_read_plan_cache_hits`; bench group `engine_parity/pgwire_prepared_read` | planned |
-| `MEDULLA-ENGINE-PARITY-R006.4` | `crates/medulla-wire/src/pgwire/plan_cache.rs::tests::second_execute_of_one_template_is_a_hit`; `tests/pgwire_roundtrip.rs::prepared_point_read_plan_cache_hits` | planned |
+| `MEDULLA-ENGINE-PARITY-R006.4` | `crates/medulla-wire/src/pgwire/plan_cache.rs::tests::second_execute_of_one_template_is_a_hit`; `tests/pgwire_roundtrip.rs::prepared_point_read_plan_cache_hits` | bound |
 | `MEDULLA-ENGINE-PARITY-R007.1` | `crates/medulla-wire/src/pgwire/auth.rs::tests::three_login_kinds_resolve_one_principal`; `tests/pgwire_roundtrip.rs::wire_rls_equals_native_rls` | planned |
 | `MEDULLA-ENGINE-PARITY-R007.2` | `tests/pgwire_roundtrip.rs::wire_rls_equals_native_rls`; `Method::Uql` | existing |
 | `MEDULLA-ENGINE-PARITY-R007.3` | `tests/pgwire_roundtrip.rs::login_maps_to_principal`; `tests/pgwire_roundtrip.rs::certificate_login_maps_to_principal`; bench group `engine_parity/pgwire_login` | existing |

@@ -1,7 +1,8 @@
+// spec: MEDULLA-SCM-R013.7
 //! MEDULLA-SCM-R013.7 hot-path receipt: one symbol edit in a 5,000-line file, including the
 //! re-parse.
 //!
-//! Budget (spec): p99 at most 30 ms per edit. Each measured op is the engine's own pre-accept
+//! Budget (spec): p99 at most 30 ms per edit and resident growth at most 32 MiB. Each measured op is the engine's own pre-accept
 //! path, `medulla_h_ingest::source_symbol_edit::prepare`: projection of the edit to file bytes,
 //! the round-trip re-parse of the base and the projected file, and the changeset request build.
 //! The accept path itself is the `SubmitChangeset` bench's subject.
@@ -24,6 +25,8 @@ use medulla_source_types::source_symbol_edit::{SymbolEdit, SymbolEditKind, Symbo
 
 /// The spec budget: p99 at most 30 ms.
 const BUDGET_P99_NS: u128 = 30_000_000;
+/// The spec budget: peak memory growth at most 32 MiB.
+const BUDGET_PEAK_MIB: f64 = 32.0;
 const RUNS: usize = 200;
 const FUNCTIONS: usize = 1_000;
 
@@ -91,12 +94,14 @@ fn edit_one_symbol_in_5000_lines() {
         },
     );
     let mut latencies_ns = Vec::with_capacity(RUNS);
+    let memory_before = high_water_mib();
     for _ in 0..RUNS {
         let began = std::time::Instant::now();
         let prepared = prepare(&edit, "bench", 1, &resolver, &blobs).expect("the edit prepares");
         latencies_ns.push(began.elapsed().as_nanos());
         assert_eq!(prepared.request.paths.len(), 1);
     }
+    let growth_mib = (high_water_mib() - memory_before).max(0.0);
     latencies_ns.sort_unstable();
     let p50 = latencies_ns[RUNS / 2];
     let p99 = latencies_ns[(RUNS as f64 * 0.99) as usize];
@@ -107,7 +112,25 @@ fn edit_one_symbol_in_5000_lines() {
         println!("  FAIL (budget: p99 at most {BUDGET_P99_NS} ns)");
         std::process::exit(1);
     }
+    if growth_mib > BUDGET_PEAK_MIB {
+        println!("  FAIL (budget: peak growth at most {BUDGET_PEAK_MIB} MiB, saw {growth_mib} MiB)");
+        std::process::exit(1);
+    }
     println!("  PASS (budget: p99 at most {BUDGET_P99_NS} ns)");
+}
+
+/// Resident high-water mark in MiB (`VmHWM`), 0 where procfs is absent.
+fn high_water_mib() -> f64 {
+    std::fs::read_to_string("/proc/self/status")
+        .ok()
+        .and_then(|status| {
+            status
+                .lines()
+                .find(|line| line.starts_with("VmHWM:"))
+                .and_then(|line| line.split_whitespace().nth(1))
+                .and_then(|kib| kib.parse::<f64>().ok())
+        })
+        .map_or(0.0, |kib| kib / 1024.0)
 }
 
 fn main() {

@@ -1,3 +1,4 @@
+// spec: MEDULLA-SRC-AUTH-R012.10
 //! Source sync core at 10,000 records (MEDULLA-SRC-AUTH-R012.10).
 //!
 //! Nightly bench group `source_sync`: 10,000 synthetic records, a quarter in each

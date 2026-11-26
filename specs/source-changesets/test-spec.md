@@ -114,7 +114,7 @@ Each entry marked planned names a test or file that does not exist in the tree y
 | `MEDULLA-SCM-R013.4` | `tests/test_scm_symbol_edit_served.py::test_symbol_edit_lands_and_reindexes` | L4 | planned |
 | `MEDULLA-SCM-R013.5` | `tests/test_scm_symbol_edit_served.py::test_symbol_edit_refusals` | L4 | planned |
 | `MEDULLA-SCM-R013.6` | `tests/test_scm_symbol_edit_served.py::test_symbol_edit_evidence_reads_back` | L4 | planned |
-| `MEDULLA-SCM-R013.7` | `benches/source_symbol_edit.rs::edit_one_symbol_in_5000_lines` | L6 | planned |
+| `MEDULLA-SCM-R013.7` | `benches/source_symbol_edit.rs::edit_one_symbol_in_5000_lines` | L6 | bound |
 | `MEDULLA-SCM-R013.1` | `crates/medulla-types/tests/source_symbol_edit.rs::edit_round_trips_and_kinds_are_closed` | L2 | existing |
 | `MEDULLA-SCM-R013.2` | `crates/medulla-compute/tests/source_symbol_edit.rs::bytes_outside_spans_are_unchanged` | L2 | existing |
 | `MEDULLA-SCM-R013.4` | `tests/scm_symbol_edit_served.rs::accept_path_runs_after_projection` | L3 | planned |

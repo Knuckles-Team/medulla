@@ -3916,6 +3916,7 @@ async fn pg_dump_then_pg_restore_round_trips_two_tables() {
 }
 
 // spec: MEDULLA-ENGINE-PARITY-R006.3
+// spec: MEDULLA-ENGINE-PARITY-R006.4
 /// A prepared point read executed 10,000 times returns the seeded value for every id
 /// and is served from the connection's plan cache: the process counter rises by at
 /// least one hit per execution after the first. The 1 ms p99 budget runs only in the

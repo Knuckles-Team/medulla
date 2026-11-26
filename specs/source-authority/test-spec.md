@@ -61,7 +61,7 @@ Each entry below is planned. The test file or function does not exist in the tre
 - `MEDULLA-SRC-AUTH-R012.7`: `crates/medulla-h-admin/src/admin/connector_pack/tests/source_sync.rs::sync_refusals_leave_state_unchanged` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SRC-AUTH-R012.8`: `crates/medulla-h-admin/src/admin/connector_pack/tests/source_sync.rs::report_lists_conflicts_with_both_digests` (planned, L3): the test does not exist yet; the owning change adds it at this exact path.
 - `MEDULLA-SRC-AUTH-R012.9`: `crates/medulla-h-admin/src/admin/connector_pack/tests/source_sync.rs::two_way_sync_applies_proposes_and_records_conflicts` (L3): one sync after a source-only, a graph-only and a two-sided change gives one applied, two proposed and one conflict; the graph value stands.
-- `MEDULLA-SRC-AUTH-R012.10`: `benches/source_sync.rs::bench_source_sync` group `source_sync` (planned, nightly bench, never gates a PR).
+- `MEDULLA-SRC-AUTH-R012.10`: `benches/source_sync.rs::bench_source_sync` group `source_sync` (nightly bench, never gates a PR).
 
 ### MEDULLA-SRC-AUTH-R013 tests
 
