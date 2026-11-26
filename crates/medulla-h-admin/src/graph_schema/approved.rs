@@ -18,7 +18,7 @@
 use medulla_persistence::AsRedb;
 use std::sync::Arc;
 
-pub use medulla_catalog_types::graph_schema::shadow_branch::ShadowCheckSummary;
+use medulla_catalog_types::graph_schema::shadow_branch::ShadowCheckSummary;
 use medulla_catalog_types::graph_schema::GraphSchemaErrorCode;
 use medulla_catalog_types::graph_schema::GraphSchemaOp;
 use medulla_catalog_types::{

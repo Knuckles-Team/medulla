@@ -13,7 +13,7 @@
 //! ordering rather than maintaining a second control-plane commit path.
 
 mod approved;
-pub use approved::{shadow_check_summary, ShadowCheckSummary};
+use approved::shadow_check_summary;
 pub(crate) mod attach_pack;
 #[cfg(all(test, feature = "shacl"))]
 mod authority_attach_tests;
