@@ -19,6 +19,9 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("CARD_ABSENT"),
     RefusalCode::new("DERIVE_BACKLOG_FULL"),
     RefusalCode::new("DERIVE_ORDER_HELD"),
+    RefusalCode::new("DERIVE_CONCLUSION_LIMIT"),
+    RefusalCode::new("DERIVE_PAYLOAD_NOT_FOUND"),
+    RefusalCode::new("MEMORY_EVENT_TOPIC_UNKNOWN"),
     RefusalCode::new("PROFILE_NOT_FOUND"),
     RefusalCode::new("PROFILE_NOT_VISIBLE"),
     RefusalCode::new("PROFILE_REVISION_CONFLICT"),
@@ -33,10 +36,10 @@ mod tests {
 
     #[test]
     fn the_table_names_every_participant_code_once() {
-        assert_eq!(REFUSALS.len(), 17);
+        assert_eq!(REFUSALS.len(), 20);
         let mut codes: Vec<&str> = REFUSALS.iter().map(|c| c.as_str()).collect();
         codes.sort_unstable();
         codes.dedup();
-        assert_eq!(codes.len(), 17);
+        assert_eq!(codes.len(), 20);
     }
 }

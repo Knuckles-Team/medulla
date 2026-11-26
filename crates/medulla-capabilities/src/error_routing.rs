@@ -1606,6 +1606,26 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "OBSERVER_NOT_PERMITTED",
             "SCOPE_NOT_VISIBLE",
             "SCOPE_SESSION_LIMIT",
+            "DERIVE_ORDER_HELD",
+            "DERIVE_CONCLUSION_LIMIT",
+            "DERIVE_PAYLOAD_NOT_FOUND",
+        ],
+    ),
+    // MEDULLA-DECISION-ENGINE-R655.5: the participant reads' refusals.
+    (
+        "ParticipantRead",
+        &[
+            "PARTICIPANT_NOT_VISIBLE",
+            "OBSERVER_NOT_PERMITTED",
+            "NO_GROUNDED_CLAIMS",
+            "CARD_ABSENT",
+            "SCOPE_NOT_FOUND",
+            "SCOPE_NOT_VISIBLE",
+            "SCOPE_SESSION_LIMIT",
+            "DERIVE_ORDER_HELD",
+            "DERIVE_PAYLOAD_NOT_FOUND",
+            "INVALID_ARGUMENT",
+            "ENGINE_UNAVAILABLE",
         ],
     ),
     // MEDULLA-DECISION-ENGINE-R656.2: the assistant profile store's refusals.
