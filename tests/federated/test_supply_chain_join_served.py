@@ -30,9 +30,7 @@ def _ref(application: str, entity_id: str) -> dict:
     return {"application": application, "entity_id": entity_id}
 
 
-async def _supplier(
-    client: MedullaClient, ref: dict, name: str, host: str
-) -> None:
+async def _supplier(client: MedullaClient, ref: dict, name: str, host: str) -> None:
     await client.nodes.add(
         f"{ref['application']}:{ref['entity_id']}",
         {"type": "Supplier", "name": name, "host": host},
@@ -40,9 +38,7 @@ async def _supplier(
 
 
 async def _linked_ids(client: MedullaClient, start: str) -> set[str]:
-    text = (
-        f"MATCH (:Supplier) |> WHERE id = '{start}' |> TRAVERSE -[:{SAME_AS}]-"
-    )
+    text = f"MATCH (:Supplier) |> WHERE id = '{start}' |> TRAVERSE -[:{SAME_AS}]-"
     result = await client.query.uql(text)
     assert result["kind"] == "rows", result
     return {row["id"] for row in result["rows"]} - {start}
@@ -51,6 +47,7 @@ async def _linked_ids(client: MedullaClient, start: str) -> set[str]:
 @pytest.mark.spec("MEDULLA-CQ-XSRC-R004.5")
 @pytest.mark.asyncio
 async def test_join_needs_approved_same_as():
+    """No link, then a refused pair, adds no edge; an approved pair joins the record."""
     tag = uuid.uuid4().hex[:8]
     client = await _connect()
     try:
@@ -67,9 +64,7 @@ async def test_join_needs_approved_same_as():
 
         # A pair refused LINK_NOT_APPROVABLE adds no edge; the traversal stays empty.
         with pytest.raises(Exception, match="LINK_NOT_APPROVABLE"):
-            await query.send_approve_entity_link(
-                client, {"left": left, "right": other}
-            )
+            await query.send_approve_entity_link(client, {"left": left, "right": other})
         assert await _linked_ids(client, start) == set()
 
         # After the approval the join returns the second source's record.
