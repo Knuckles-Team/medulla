@@ -3176,6 +3176,9 @@ decode_assistant_profile_list_document_sets = contract_decoder(
 send_batch = contract_sender("Batch", "MethodBatchParams")
 send_belief_revise = contract_sender("BeliefRevise", "MethodBeliefReviseParams")
 send_usage = contract_sender("Usage", "MethodUsageParams")
+send_correction_record = contract_sender(
+    "CorrectionRecord", "MethodCorrectionRecordParams"
+)
 send_failure_ingest = contract_sender("FailureIngest", "MethodFailureIngestParams")
 send_publish_skill_package = contract_sender(
     "PublishSkillPackage", "MethodPublishSkillPackageParams"

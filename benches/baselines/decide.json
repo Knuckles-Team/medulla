@@ -55,6 +55,10 @@
       "p99_ms": 50.0,
       "peak_mib": 64.0
     },
+    "decide/correction": {
+      "p99_ms": 50.0,
+      "peak_mib": 64.0
+    },
     "decide/agent_loop": {
       "p99_ms": 2.0,
       "peak_mib": 16.0

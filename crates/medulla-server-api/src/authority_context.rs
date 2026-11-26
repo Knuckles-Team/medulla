@@ -288,6 +288,25 @@ impl VerifiedRequestContext {
         )
     }
 
+    /// Same shape as [`Self::verified_for_test_in_tenant`] but carrying the given
+    /// verified `roles`, for surfaces that gate on a role (MEDULLA-DECISION-ENGINE-R702.4).
+    #[cfg(any(test, feature = "test-support"))]
+    pub fn verified_for_test_with_roles(agent_id: &str, tenant: &str, roles: &[&str]) -> Self {
+        Self::from_verified_claims(
+            RequestContextClaims {
+                principal: format!("principal:{agent_id}"),
+                tenant: tenant.to_string(),
+                agent_id: agent_id.to_string(),
+                audience: "medulla".to_string(),
+                policy_version: "policy-test".to_string(),
+                scopes: vec!["*".to_string()],
+                roles: roles.iter().map(|r| r.to_string()).collect(),
+                ..RequestContextClaims::default()
+            },
+            format!("test:{agent_id}"),
+        )
+    }
+
     /// Same shape as [`Self::verified_for_test_in_tenant`] but with an explicit
     /// IDEMPOTENCY KEY, for fixtures that issue more than one request of the SAME
     /// method tag under one identity.

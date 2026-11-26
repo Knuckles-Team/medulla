@@ -274,6 +274,8 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "Claims",
     // `requires_write_decision_surface` delegates to `LoopOp::is_mutation()`.
     "Loops",
+    // MEDULLA-DECISION-ENGINE-R702.3: `Record` writes; `Nearest` and `Get` read.
+    "CorrectionRecord",
     // MEDULLA-DECISION-ENGINE-R701.3: `Get` reads; `Ingest` and `MarkAddressed` write.
     "FailureIngest",
     "ConnectorPack",

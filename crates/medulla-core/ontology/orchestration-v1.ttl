@@ -1506,6 +1506,16 @@
     rdfs:subClassOf bfo:0000001 ;
     rdfs:comment "A recurring failure pattern filed as a gap (MEDULLA-DECISION-ENGINE-R701.3). Not a CapabilityGap: it names a failure signature, not a capability, task class and domain." .
 
+:RuleCandidate a owl:Class ;
+    rdfs:label "RuleCandidate" ;
+    rdfs:subClassOf bfo:0000001 ;
+    rdfs:comment "A rule proposed by a human correction; it reaches the rule library only through the promotion gate (MEDULLA-DECISION-ENGINE-R702.2)." .
+
+:CorrectionOutcome a owl:Class ;
+    rdfs:label "CorrectionOutcome" ;
+    rdfs:subClassOf bfo:0000001 ;
+    rdfs:comment "The independent outcome a human correction records: value 0.0, a human verdict and never the engine's own score (MEDULLA-DECISION-ENGINE-R702.2)." .
+
 :DesiredEnhancement a owl:Class ;
     rdfs:label "DesiredEnhancement" ;
     rdfs:subClassOf bfo:0000001 ;

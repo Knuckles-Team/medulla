@@ -107,6 +107,14 @@ $($variants)*
     DecisionLog {
         op: Box<medulla_decision_types::decision::statistical::log::DecisionLogOp>,
     },
+    /// Human corrections (MEDULLA-DECISION-ENGINE-R702.3): record one correction
+    /// with its rule candidate, independent outcome and eval case in one atomic
+    /// graph batch, read the nearest prior corrections, or read one correction
+    /// by receipt id. The `CorrectionRecord` handler is the single writer of
+    /// correction state.
+    CorrectionRecord {
+        op: Box<medulla_decision_types::correction::CorrectionOp>,
+    },
     /// Failure-pattern mining (MEDULLA-DECISION-ENGINE-R701.3): read the failed
     /// runs of a caller graph, cluster them by signature and file one gap per
     /// recurring pattern; mark a gap addressed; read one gap. The

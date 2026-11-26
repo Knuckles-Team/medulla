@@ -261,6 +261,10 @@ method_results! {
     FeatureLedgerGet(FeatureLedger / "get") => Raw<medulla_decision_types::decision::feature_match::FeatureLedgerView>;
     BeliefRevise(BeliefRevise) => Raw<medulla_decision_types::belief_revision::BeliefPassResult>;
     PublishSkillPackage(PublishSkillPackage) => Raw<medulla_decision_types::decision::package_validation::PublicationReceipt>;
+    // MEDULLA-DECISION-ENGINE-R702.3: a recorded correction, its nearest neighbours and a read by receipt.
+    CorrectionRecordRun(CorrectionRecord / "record") => Raw<medulla_decision_types::correction::CorrectionRecorded>;
+    CorrectionRecordNearest(CorrectionRecord / "nearest") => Raw<medulla_decision_types::correction::CorrectionNearest>;
+    CorrectionRecordGet(CorrectionRecord / "get") => Raw<medulla_decision_types::correction::CorrectionRead>;
     // MEDULLA-DECISION-ENGINE-R701.3: failure-pattern ingest, mark-addressed and get.
     FailureIngestRun(FailureIngest / "ingest") => Raw<medulla_decision_types::failure_patterns::FailureIngestResult>;
     FailureMarkAddressed(FailureIngest / "mark_addressed") => Raw<medulla_decision_types::failure_patterns::GapTopic>;

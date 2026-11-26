@@ -8,6 +8,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use medulla_types::refusal_code::RefusalCode;
+
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 
 /// The knob tables of the correction surface (MEDULLA-DECISION-ENGINE-R702.2):
@@ -21,10 +23,34 @@ pub const KNOBS: &[KnobSpec] = &[KnobSpec {
     safety: KnobSafety::Tunable,
 }];
 
+/// The verified role an actor needs to record a correction
+/// (MEDULLA-DECISION-ENGINE-R702.4).
+pub const CORRECTOR_ROLE: &str = "corrector";
+
+/// The actor lacks the verified role `corrector`.
+pub const CORRECTION_ROLE_REQUIRED: RefusalCode = RefusalCode::new("CORRECTION_ROLE_REQUIRED");
+/// The actor of a correction is the producer of the corrected output: a
+/// self-reported outcome never enters calibration.
+pub const OUTCOME_SELF_REPORTED: RefusalCode = RefusalCode::new("OUTCOME_SELF_REPORTED");
+/// No correction of that receipt id is visible to the caller; a correction of
+/// another tenant reads as absent.
+pub const CORRECTION_NOT_FOUND: RefusalCode = RefusalCode::new("CORRECTION_NOT_FOUND");
+
+/// The `correction` table of registered refusal codes
+/// (MEDULLA-DECISION-ENGINE-R702.4). `RULE_CONTRADICTS_INVARIANT` is the code
+/// the promotion gate already registers (R129.5); the correction handler
+/// reuses it and does not declare it twice.
+pub const REFUSALS: &[RefusalCode] = &[
+    CORRECTION_ROLE_REQUIRED,
+    OUTCOME_SELF_REPORTED,
+    CORRECTION_NOT_FOUND,
+];
+
 /// Upper bound on `Correction::before` and `Correction::after`, in bytes.
 pub const CORRECTION_VALUE_MAX_BYTES: usize = 8 * 1024;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct Correction {
     pub correction_id: String,
@@ -56,6 +82,7 @@ impl Correction {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct RuleCandidate {
     pub rule_id: String,
@@ -64,12 +91,14 @@ pub struct RuleCandidate {
 
 /// The only outcome tag a correction may carry.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum OutcomeTag {
     Independent,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct CorrectionOutcome {
     pub outcome_id: String,
@@ -78,6 +107,7 @@ pub struct CorrectionOutcome {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct EvalCase {
     pub case_id: String,
@@ -87,6 +117,7 @@ pub struct EvalCase {
 
 /// The three effects of one committed correction; every effect shares `receipt_id`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct CorrectionEffect {
     pub receipt_id: String,
@@ -123,6 +154,7 @@ pub struct CorrectionCommit {
 
 /// Body of `Method::CorrectionRecord`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 pub enum CorrectionOp {
     /// Record one correction and commit its three effects atomically.
@@ -131,6 +163,46 @@ pub enum CorrectionOp {
     Nearest { target: String },
     /// Every node sharing `receipt_id`.
     Get { receipt_id: String },
+}
+
+impl CorrectionOp {
+    /// Whether the op writes: `Record` does, `Nearest` and `Get` do not.
+    pub fn is_mutation(&self) -> bool {
+        matches!(self, Self::Record { .. })
+    }
+}
+
+/// What `CorrectionOp::Record` answers once its batch committed
+/// (MEDULLA-DECISION-ENGINE-R702.3).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CorrectionRecorded {
+    /// The receipt id every node of the correction shares.
+    pub receipt_id: String,
+    /// The rule candidate, outcome and eval case the correction yielded.
+    pub effect: CorrectionEffect,
+}
+
+/// What `CorrectionOp::Nearest` answers: the node ids of the nearest prior
+/// corrections of the caller's tenant, best first.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CorrectionNearest {
+    pub node_ids: Vec<String>,
+}
+
+/// What `CorrectionOp::Get` answers: the correction and its three effects,
+/// read back from the four nodes that share one receipt id
+/// (MEDULLA-DECISION-ENGINE-R702.5).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CorrectionRead {
+    pub receipt_id: String,
+    pub correction: Correction,
+    pub effect: CorrectionEffect,
 }
 
 #[cfg(test)]

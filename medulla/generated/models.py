@@ -16670,6 +16670,13 @@ class MethodUsage(BaseModel):
     params: MethodUsageParams
 
 
+class MethodCorrectionRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["CorrectionRecord"]
+    params: MethodCorrectionRecordParams
+
+
 class MethodFailureIngest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17793,6 +17800,7 @@ Method = Annotated[
         MethodLoops,
         MethodBeliefRevise,
         MethodUsage,
+        MethodCorrectionRecord,
         MethodFailureIngest,
         MethodPublishSkillPackage,
         MethodFeatureLedger,
@@ -38175,6 +38183,108 @@ FailureOp = Annotated[
 ]
 
 
+class Correction(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    after: str
+    at_ms: Annotated[int, Field(ge=0)]
+    before: str
+    correction_id: str
+    produced_by: str
+    target: str
+
+
+class CorrectionOpRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    correction: Correction
+    op: Literal["record"]
+
+
+class CorrectionOpNearest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["nearest"]
+    target: str
+
+
+class CorrectionOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["get"]
+    receipt_id: str
+
+
+CorrectionOp = Annotated[
+    CorrectionOpRecord | CorrectionOpNearest | CorrectionOpGet,
+    Field(discriminator="op"),
+]
+
+
+class MethodCorrectionRecordParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: CorrectionOp
+
+
+class RuleCandidate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    rule_id: str
+    text_digest: str
+
+
+class OutcomeTag(str, Enum):
+    INDEPENDENT = "independent"
+
+
+class CorrectionOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    outcome_id: str
+    tag: OutcomeTag
+    value: float
+
+
+class EvalCase(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case_id: str
+    expected_digest: str
+    input_digest: str
+
+
+class CorrectionEffect(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    eval_case: EvalCase
+    outcome: CorrectionOutcome
+    receipt_id: str
+    rule_candidate: RuleCandidate
+
+
+class CorrectionRecorded(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    effect: CorrectionEffect
+    receipt_id: str
+
+
+class CorrectionNearest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    node_ids: list[str]
+
+
+class CorrectionRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    correction: Correction
+    effect: CorrectionEffect
+    receipt_id: str
+
+
 class MethodFailureIngestParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -48791,6 +48901,21 @@ __all__ = [
     "MethodEncodeDocumentParams",
     "MethodEncodedDocumentSearch",
     "MethodEncodedDocumentSearchParams",
+    "MethodCorrectionRecord",
+    "MethodCorrectionRecordParams",
+    "Correction",
+    "CorrectionEffect",
+    "CorrectionNearest",
+    "CorrectionOp",
+    "CorrectionOpGet",
+    "CorrectionOpNearest",
+    "CorrectionOpRecord",
+    "CorrectionOutcome",
+    "CorrectionRead",
+    "CorrectionRecorded",
+    "EvalCase",
+    "OutcomeTag",
+    "RuleCandidate",
     "MethodFailureIngest",
     "MethodFailureIngestParams",
     "MethodFeatureLedger",

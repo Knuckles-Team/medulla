@@ -2030,6 +2030,88 @@ fn bench_failure_patterns(
     );
 }
 
+/// The `decide/correction` group (MEDULLA-DECISION-ENGINE-R702.6, R178.1): the
+/// served `CorrectionRecord` hot path. The fixture records one correction and
+/// reads the nearest corrections once; each sample is a repeat `Record` of the
+/// same correction, which embeds the text and commits the four nodes, three
+/// edges and the vector as one batch under the receipt id the content fixes.
+/// Budgets: `group_budgets` in `benches/baselines/decide.json`.
+// spec: MEDULLA-DECISION-ENGINE-R702.6
+fn bench_correction(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_decision_types::correction::{
+        Correction, CorrectionNearest, CorrectionOp, CorrectionRecorded,
+    };
+    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation("decider")));
+    let call = |op: CorrectionOp| -> Response {
+        rt.block_on(Box::pin(
+            medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+                &h.state,
+                Request {
+                    id: 702,
+                    graph: "__commons__".into(),
+                    auth_token: String::new(),
+                    agent_id: Some("decider".into()),
+                    method: Method::CorrectionRecord { op: Box::new(op) },
+                    trace_id: None,
+                },
+                VerifiedRequestContext::verified_for_test_with_roles(
+                    "decider",
+                    TENANT,
+                    &["corrector"],
+                ),
+            ),
+        ))
+    };
+    let correction = Correction {
+        correction_id: "bench-correction".into(),
+        target: "answer:bench".into(),
+        before: "the wrong answer".into(),
+        after: "the right answer".into(),
+        produced_by: "agent:planner".into(),
+        actor: "user:ada".into(),
+        at_ms: 1_700_000_000_000,
+    };
+    let record = || {
+        call(CorrectionOp::Record {
+            correction: correction.clone(),
+        })
+    };
+    let recorded: CorrectionRecorded = decode(record()).expect("the correction is recorded");
+    let nearest: CorrectionNearest = decode(call(CorrectionOp::Nearest {
+        target: "answer:bench".into(),
+    }))
+    .expect("the nearest corrections are answered");
+    assert_eq!(
+        nearest.node_ids,
+        vec![format!("correction:{}", recorded.receipt_id)]
+    );
+    let group_name = "decide/correction".to_string();
+    let mut group = c.benchmark_group(format!("{group_name}/served"));
+    group.bench_function("served", |b| b.iter(|| black_box(record())));
+    group.finish();
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            black_box(record());
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 /// A maximal frontier: `MAX_THOUGHT_LEAVES` leaves over four depths.
 fn widest_frontier() -> ReasoningState {
     let nodes = (0..MAX_THOUGHT_LEAVES as u32)
@@ -3398,6 +3480,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_topology_admit(c, &mut report);
     bench_agent_loop(c, &rt, &mut report);
     bench_failure_patterns(c, &rt, &mut report);
+    bench_correction(c, &rt, &mut report);
     bench_concentration_kernel(c, &mut report);
     bench_thought_search_kernel(c, &mut report);
     bench_served_kernels(c, &rt, &mut report);

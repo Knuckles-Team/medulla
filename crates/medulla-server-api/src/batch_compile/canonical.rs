@@ -866,6 +866,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::DecisionLog { .. }
         // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger commits in the control owner.
         | Method::Usage { .. }
+        // MEDULLA-DECISION-ENGINE-R702.3: correction nodes commit through the graph gateway.
+        | Method::CorrectionRecord { .. }
         // MEDULLA-DECISION-ENGINE-R701.3: gap nodes commit through the graph gateway.
         | Method::FailureIngest { .. }
         | Method::PublishSkillPackage { .. }

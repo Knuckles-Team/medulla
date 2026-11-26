@@ -129,6 +129,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "BeginTxn": transactions.send_begin_txn,
     "BeliefRevise": coordination.send_belief_revise,
     "Usage": coordination.send_usage,
+    "CorrectionRecord": coordination.send_correction_record,
     "FailureIngest": coordination.send_failure_ingest,
     "PublishSkillPackage": coordination.send_publish_skill_package,
     "FeatureLedger": coordination.send_feature_ledger,

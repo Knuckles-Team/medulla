@@ -1367,6 +1367,41 @@ def usage_record(
     }
 
 
+def correction_record_op(
+    correction_id: str,
+    target: str,
+    before: str,
+    after: str,
+    produced_by: str,
+    actor: str,
+    at_ms: int,
+) -> dict[str, Any]:
+    """A ``CorrectionRecord`` record of one human correction of ``target`` (the verified
+    role ``corrector`` is required)."""
+    return {
+        "op": "record",
+        "correction": {
+            "correction_id": correction_id,
+            "target": target,
+            "before": before,
+            "after": after,
+            "produced_by": produced_by,
+            "actor": actor,
+            "at_ms": at_ms,
+        },
+    }
+
+
+def correction_nearest_op(target: str) -> dict[str, Any]:
+    """A ``CorrectionRecord`` read of the nearest prior corrections to ``target``."""
+    return {"op": "nearest", "target": target}
+
+
+def correction_get_op(receipt_id: str) -> dict[str, Any]:
+    """A ``CorrectionRecord`` read of one correction by ``receipt_id``."""
+    return {"op": "get", "receipt_id": receipt_id}
+
+
 def failure_ingest_op(graph: str, since_ms: int | None = None) -> dict[str, Any]:
     """A ``FailureIngest`` ingest of the failed runs in ``graph`` (optionally since
     ``since_ms``)."""
@@ -1543,6 +1578,18 @@ class DecisionClient:
         from medulla.generated.coordination import send_usage
 
         result = await send_usage(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
+    async def correction_record(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``CorrectionRecord`` (record a human correction with its three effects,
+        read the nearest corrections, or read one by receipt id)."""
+        from medulla.generated.coordination import send_correction_record
+
+        result = await send_correction_record(
             self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
         )
         return _payload(result)
@@ -1832,6 +1879,9 @@ __all__ = [
     "claim_get_op",
     "claim_propose_op",
     "commit_op",
+    "correction_get_op",
+    "correction_nearest_op",
+    "correction_record_op",
     "decide_request",
     "document_set_wire",
     "declared",

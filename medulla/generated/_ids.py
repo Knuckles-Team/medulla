@@ -265,6 +265,7 @@ METHOD_IDS = frozenset(
         "DecisionEval",
         "DecisionLog",
         "Usage",
+        "CorrectionRecord",
         "FailureIngest",
         "PublishSkillPackage",
         "FeatureLedger",

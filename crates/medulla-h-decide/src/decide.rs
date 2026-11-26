@@ -17,6 +17,7 @@ mod execution_answer_tests;
 pub(crate) mod execution_answer;
 #[cfg(all(test, feature = "decide"))]
 mod coverage_tests;
+pub mod correction;
 pub mod failure_ingest;
 pub(crate) mod feature_ledger;
 pub(crate) mod guardrail;

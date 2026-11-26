@@ -392,6 +392,22 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        Method::CorrectionRecord { op } => {
+            dispatch_boxed(async {
+                match medulla_h_decide::decide::correction::handle_correction_record(
+                    state,
+                    verified_context,
+                    &req.graph,
+                    *op,
+                )
+                .await
+                {
+                    Ok(plan) => commit_planned_write(state, req.id, verified_context, plan).await,
+                    Err(refusal) => Response::err(req.id, refusal),
+                }
+            })
+            .await
+        }
         Method::FailureIngest { op } => {
             dispatch_boxed(async {
                 match medulla_h_decide::decide::failure_ingest::handle_failure_ingest(
