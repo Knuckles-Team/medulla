@@ -52,19 +52,19 @@ The first slice is the unblocked frontier: rows whose dependencies are delivered
 - [ ] T033 [P] [US3] MEDULLA-INCREMENTAL-VIEWS-R008.1 Model: the check schedule. Implement it with its tests.
 - [ ] T034 [US3] MEDULLA-INCREMENTAL-VIEWS-R008.2 Compare and demote. Implement it with its tests.
 - [x] T035 [US3] MEDULLA-INCREMENTAL-VIEWS-R008.3 Wiring: the check task. Implement it with its tests.
-- [ ] T036 [US3] MEDULLA-INCREMENTAL-VIEWS-R008.4 Served proof of shadow verification. Implement it with its tests.
+- [x] T036 [US3] MEDULLA-INCREMENTAL-VIEWS-R008.4 Served proof of shadow verification. Implement it with its tests.
 
 ## SQL views
 
 - [ ] T037 [US2] MEDULLA-INCREMENTAL-VIEWS-R009 SQL views over one table are maintained in the commit (rollup). Check the root test.
-- [ ] T038 [P] [US2] MEDULLA-INCREMENTAL-VIEWS-R009.1 Model: the incremental view program. Implement it with its tests.
-- [ ] T039 [US2] MEDULLA-INCREMENTAL-VIEWS-R009.2 Refusal: name the first unsupported construct. Implement it with its tests.
+- [x] T038 [P] [US2] MEDULLA-INCREMENTAL-VIEWS-R009.1 Model: the incremental view program. Implement it with its tests.
+- [x] T039 [US2] MEDULLA-INCREMENTAL-VIEWS-R009.2 Refusal: name the first unsupported construct. Implement it with its tests.
 - [ ] T040 [US2] MEDULLA-INCREMENTAL-VIEWS-R009.3 Behavior: linear maintenance in the commit. Implement it with its tests.
 - [ ] T041 [US2] MEDULLA-INCREMENTAL-VIEWS-R009.4 Behavior: grouped exact aggregates. Implement it with its tests.
 - [ ] T042 [US2] MEDULLA-INCREMENTAL-VIEWS-R009.5 Wiring: create, skip the stale flag, publish status. Implement it with its tests.
 - [ ] T043 [US2] MEDULLA-INCREMENTAL-VIEWS-R009.6 SQL differential oracle. Implement it with its tests.
 - [ ] T044 [US2] MEDULLA-INCREMENTAL-VIEWS-R009.7 Served hot-path proof for SQL views. Implement it with its tests.
-- [ ] T045 [US2] MEDULLA-INCREMENTAL-VIEWS-R009.8 Nightly budget for SQL views. Implement it with its tests.
+- [x] T045 [US2] MEDULLA-INCREMENTAL-VIEWS-R009.8 Nightly budget for SQL views. Implement it with its tests.
 
 ## View change feed
 
@@ -94,7 +94,7 @@ The first slice is the unblocked frontier: rows whose dependencies are delivered
 - [ ] T063 [US2] MEDULLA-INCREMENTAL-VIEWS-R012.4 Oracle cases. Implement it with its tests.
 - [ ] T064 [US2] MEDULLA-INCREMENTAL-VIEWS-R012.5 Served proof. Implement it with its tests.
 - [ ] T065 [US2] MEDULLA-INCREMENTAL-VIEWS-R013 SQL views over a two-table inner equi-join (rollup). Check the root test.
-- [ ] T066 [P] [US2] MEDULLA-INCREMENTAL-VIEWS-R013.1 Model: join program. Implement it with its tests.
+- [x] T066 [P] [US2] MEDULLA-INCREMENTAL-VIEWS-R013.1 Model: join program. Implement it with its tests.
 - [ ] T067 [US2] MEDULLA-INCREMENTAL-VIEWS-R013.2 Behavior: the join delta from post-commit tables. Implement it with its tests.
 - [ ] T068 [US2] MEDULLA-INCREMENTAL-VIEWS-R013.3 Wiring and refusal: the compiler accepts one indexed equi-join. Implement it with its tests.
 - [ ] T069 [US2] MEDULLA-INCREMENTAL-VIEWS-R013.4 Oracle case. Implement it with its tests.

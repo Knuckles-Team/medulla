@@ -60,7 +60,7 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-INCREMENTAL-VIEWS-R008.1` | Model: the check schedule | `crates/medulla-server-cdc/src/matview/manager.rs::tests::check_becomes_due_after_knob_changes` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R008.2` | Compare and demote | `crates/medulla-h-txn/src/matview_shadow.rs::tests::mismatch_demotes_and_match_keeps_mode` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R008.3` | Wiring: the check task | `crates/medulla-h-txn/src/matview_shadow.rs::tests::tick_runs_due_checks_with_deadline` (existing) |
-| `MEDULLA-INCREMENTAL-VIEWS-R008.4` | Served proof of shadow verification | `crates/medulla-server-served-tests/src/split_tests/incremental_views.rs::corrupted_state_is_caught_and_demoted` (planned) |
+| `MEDULLA-INCREMENTAL-VIEWS-R008.4` | Served proof of shadow verification | `crates/medulla-server-served-tests/src/split_tests/incremental_views.rs::corrupted_state_is_caught_and_demoted` |
 | `MEDULLA-INCREMENTAL-VIEWS-R009` | SQL views over one table are maintained in the commit (rollup) | `tests/pgwire_roundtrip.rs::matview_incremental_read_after_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R009.1` | Model: the incremental view program | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::row_expr_three_valued_logic` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R009.2` | Refusal: name the first unsupported construct | `crates/medulla-sql-lang/src/sql/matview_compile.rs::tests::unsupported_constructs_name_the_first` (planned) |
@@ -69,7 +69,7 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-INCREMENTAL-VIEWS-R009.5` | Wiring: create, skip the stale flag, publish status | `tests/pgwire_roundtrip.rs::matview_incremental_read_after_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R009.6` | SQL differential oracle | `crates/medulla-sql-tests/tests/matview_oracle.rs::supported_shapes_agree_after_every_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R009.7` | Served hot-path proof for SQL views | `tests/pgwire_roundtrip.rs::matview_incremental_read_after_commit` (planned) |
-| `MEDULLA-INCREMENTAL-VIEWS-R009.8` | Nightly budget for SQL views | `crates/medulla-sql-tests/benches/matview_incremental.rs::groups` (planned) |
+| `MEDULLA-INCREMENTAL-VIEWS-R009.8` | Nightly budget for SQL views | `crates/medulla-sql-tests/benches/matview_incremental.rs::groups` |
 | `MEDULLA-INCREMENTAL-VIEWS-R010` | View changes ride the one change feed (rollup) | `crates/medulla-server-served-tests/src/split_tests/incremental_views.rs::view_delta_feed_matches_result_difference` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R010.1` | Plan views publish their output delta | `crates/medulla-server-cdc/src/cdc.rs::tests::view_output_rows_reach_their_feed` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R010.2` | SQL views publish their output delta | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::maintain_views_reports_view_row_changes` (planned) |
