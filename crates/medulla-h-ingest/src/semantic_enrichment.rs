@@ -48,6 +48,15 @@ fn node(id: &str, properties: Value) -> Result<Method, String> {
     })
 }
 
+/// One whole-document node write: `AddNode` stores `properties` as the node's complete property
+/// document, so a node already stored under `id` loses every property the new document does not
+/// name. This is the replace form, as opposed to a merge (`BatchUpdate` `upsert_node`, or
+/// `CompareAndSetNodeFields`, which keep the fields they do not name). A writer that must not
+/// leave a stale field behind calls this and never `node`.
+fn replace_node(id: &str, properties: Value) -> Result<Method, String> {
+    node(id, properties)
+}
+
 fn edge(source: &str, target: &str, relationship: &str) -> Result<Method, String> {
     Ok(Method::AddEdge {
         source_id: source.to_string(),
@@ -187,7 +196,9 @@ pub fn lower_fit(
 ) -> Result<Option<IndexWriteSet>, String> {
     let mut methods = Vec::with_capacity(fit.topics.len() * 2);
     for topic in &fit.topics {
-        methods.push(node(
+        // A refit of one taxonomy replaces the stored topic document whole: a field the first
+        // fit wrote and this one does not (a floor, a hold-out count) cannot survive it.
+        methods.push(replace_node(
             topic.topic.as_str(),
             json!({
                 "type": TOPIC_TYPE,
@@ -237,4 +248,56 @@ pub fn stored_topics(
     }
     topics.sort_by(|a, b| a.topic.cmp(&b.topic));
     Ok(topics)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fitted(floor_bp: u32) -> FittedTopics {
+        FittedTopics {
+            holdout_bp: 2000,
+            topics: vec![medulla_enrich::semantic::FittedTopic {
+                topic: Id::new("topic:billing").unwrap(),
+                centroid: vec![1.0, 0.0],
+                holdout_precision_bp: 9000,
+                floor_bp,
+                train_examples: 8,
+                holdout_examples: vec![Id::new("e1").unwrap()],
+            }],
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R614.2.6
+    #[test]
+    fn a_refit_writes_the_topic_as_one_whole_document_replace() {
+        let first = lower_fit(&fitted(7000), "billing", "sched-1").unwrap().unwrap();
+        let second = lower_fit(&fitted(8000), "billing", "sched-2").unwrap().unwrap();
+        let document = |set: &IndexWriteSet| match &set.methods()[0] {
+            Method::AddNode {
+                node_id,
+                properties_msgpack,
+            } => (
+                node_id.clone(),
+                rmp_serde::from_slice::<Value>(properties_msgpack).unwrap(),
+            ),
+            other => panic!("the topic is written by one AddNode, got {other:?}"),
+        };
+        let (first_id, first_doc) = document(&first);
+        let (second_id, second_doc) = document(&second);
+        // Both fits address the same node id, so the second replaces the first.
+        assert_eq!(first_id, second_id);
+        assert_eq!(first_doc["floor_bp"], 7000);
+        assert_eq!(second_doc["floor_bp"], 8000);
+        // The document is complete: the same property keys under both fits.
+        let keys = |doc: &Value| {
+            doc.as_object().unwrap().keys().cloned().collect::<Vec<_>>()
+        };
+        assert_eq!(keys(&first_doc), keys(&second_doc));
+        // The centroid follows the node write as its embedding.
+        assert!(matches!(
+            second.methods()[1],
+            Method::AddEmbedding { .. }
+        ));
+    }
 }
