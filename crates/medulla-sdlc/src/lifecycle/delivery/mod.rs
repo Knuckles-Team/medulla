@@ -7,3 +7,4 @@ pub mod open;
 pub mod mandate;
 pub mod rounds;
 pub mod arming;
+pub mod ending;
