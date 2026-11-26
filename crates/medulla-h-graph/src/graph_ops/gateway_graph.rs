@@ -1325,6 +1325,127 @@ mod tests {
         }
     }
 
+    fn component_write(content_ref: &str, valid_from: u64) -> Method {
+        use medulla_work_types::orchestration::HarnessComponentVersion;
+        let version = HarnessComponentVersion {
+            component_id: "comp:gateway-prompt".into(),
+            kind: medulla_work_types::orchestration::HarnessComponentKind::SystemPrompt,
+            content_ref: content_ref.into(),
+            content_digest: HarnessComponentVersion::content_digest(content_ref),
+            valid_from,
+            confidence: 0.8,
+            evidence_run_id: format!("run:{valid_from}"),
+            applied_to_id: Some("agent:gateway".into()),
+        };
+        let mut props = serde_json::to_value(&version).unwrap();
+        props["_harness_component"] = true.into();
+        Method::AddNode {
+            node_id: version.node_id(),
+            properties_msgpack: rmp_serde::to_vec_named(&props).unwrap(),
+        }
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R801.3
+    #[test]
+    fn harness_component_write_stamps_and_links() {
+        use crate::harness_admission::direct_add_node;
+        let core = GraphCore::new();
+        let first = component_write("blob:v1", 10);
+        let Method::AddNode {
+            node_id: first_id,
+            properties_msgpack: written,
+        } = &first
+        else {
+            panic!("an AddNode");
+        };
+        // The direct AddNode path stamps the transaction time and nothing else: a component
+        // version carries no supersession pointer and no closed window (current is the champion
+        // pointer move, R801.7).
+        let admitted = direct_add_node(&first, &core, 7, Some("alice")).unwrap();
+        let Method::AddNode {
+            properties_msgpack: stamped,
+            ..
+        } = &admitted
+        else {
+            panic!("AddNode came back");
+        };
+        let stored = medulla_types::msgpack::decode_property_object(stamped).unwrap();
+        assert_eq!(stored["tx_from"], 7);
+        assert_eq!(stored["_harness_component"], true);
+        for absent in ["supersedes_id", "valid_to", "tx_to"] {
+            assert!(!stored.contains_key(absent), "{absent} must not be stamped");
+        }
+        let sent = medulla_types::msgpack::decode_property_object(written).unwrap();
+        for (key, value) in &sent {
+            assert_eq!(stored[key], *value, "{key} passes through unchanged");
+        }
+
+        // The stored version replays byte for byte, and a second version is admitted beside it
+        // without touching the first.
+        core.add_node(first_id.clone(), stamped.clone());
+        let replay = direct_add_node(&first, &core, 99, Some("alice")).unwrap();
+        let Method::AddNode {
+            properties_msgpack: replayed,
+            ..
+        } = &replay
+        else {
+            panic!("AddNode came back");
+        };
+        assert_eq!(replayed, stamped, "a replay answers the stored blob");
+        let second = component_write("blob:v2", 20);
+        let Method::AddNode {
+            node_id: second_id, ..
+        } = &second
+        else {
+            panic!("an AddNode");
+        };
+        assert_ne!(second_id, first_id, "another content is another version");
+        let Method::AddNode {
+            properties_msgpack: second_blob,
+            ..
+        } = direct_add_node(&second, &core, 8, Some("alice")).unwrap()
+        else {
+            panic!("AddNode came back");
+        };
+        let second_props = medulla_types::msgpack::decode_property_object(&second_blob).unwrap();
+        assert_eq!(second_props["tx_from"], 8);
+        assert!(!second_props.contains_key("supersedes_id"));
+        let first_after = medulla_types::msgpack::decode_property_object(
+            &core.get_node_properties(first_id).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(first_after, stored, "the first version is untouched");
+
+        // A digest that does not recompute from the content is refused and nothing is written.
+        let Method::AddNode {
+            node_id,
+            properties_msgpack,
+        } = component_write("blob:v3", 30)
+        else {
+            panic!("an AddNode");
+        };
+        let mut forged = medulla_types::msgpack::decode_property_object(&properties_msgpack).unwrap();
+        forged["content_ref"] = "blob:other".into();
+        let refusal = direct_add_node(
+            &Method::AddNode {
+                node_id: node_id.clone(),
+                properties_msgpack: rmp_serde::to_vec_named(&forged).unwrap(),
+            },
+            &core,
+            9,
+            None,
+        )
+        .unwrap_err();
+        assert!(
+            refusal.starts_with(
+                medulla_work_types::orchestration::HarnessComponentRefusal::ContentDigestMismatch
+                    .code()
+            ),
+            "{refusal}"
+        );
+        assert!(!core.has_node(&node_id));
+    }
+
     // spec: MEDULLA-ORCH-VOCAB-R013.3
     #[test]
     fn add_run_trace_checks_step_digests() {
