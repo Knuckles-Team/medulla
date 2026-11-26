@@ -1,9 +1,8 @@
 //! The index build holds no store lock (MEDULLA-CLUSTER-R011.1, R011.2, R011.4, R009.3).
 #![cfg(feature = "ann")]
 
-use medulla_semantic_index::semantic::{
-    build_off_lock, BuildHooks, BuildOutcome, CancelToken, Progress, ProgressSink, SemanticStore,
-};
+use medulla_numeric::cluster::{CancelToken, Progress, ProgressSink};
+use medulla_semantic_index::semantic::{build_off_lock, BuildHooks, BuildOutcome, SemanticStore};
 use parking_lot::RwLock;
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;

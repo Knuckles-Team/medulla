@@ -38,7 +38,7 @@ pub enum BatchOperation {
     },
     /// MEDULLA-FEDERATED-QUERY-R039.1.7: declare the graph's pinned embedding space.
     DeclareEmbeddingSpace {
-        space: medulla_semantic_index::semantic::EmbeddingSpaceRef,
+        space: medulla_index_types::embedding::EmbeddingSpaceRef,
     },
 }
 
@@ -166,7 +166,7 @@ fn decode_batch_space_op(
     operation: &serde_json::Value,
     index: usize,
 ) -> Result<BatchOperation, String> {
-    let space: medulla_semantic_index::semantic::EmbeddingSpaceRef = operation
+    let space: medulla_index_types::embedding::EmbeddingSpaceRef = operation
         .get("space")
         .cloned()
         .ok_or_else(|| format!("BatchUpdate op[{index}] requires 'space'"))
@@ -461,7 +461,7 @@ pub fn batch_update_preview(
 /// a local `enum` there, unchanged.
 enum SemanticAction {
     Upsert(String, Vec<f32>),
-    Declare(medulla_semantic_index::semantic::EmbeddingSpaceRef),
+    Declare(medulla_index_types::embedding::EmbeddingSpaceRef),
     Remove(String),
 }
 

@@ -72,7 +72,7 @@ medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 
-medulla-numeric = { path = "../medulla-numeric", optional = true }
+medulla-numeric = { path = "../medulla-numeric" }
 
 medulla-plan = { path = "../medulla-plan", optional = true }
 
@@ -97,7 +97,7 @@ blob = ["redb", "server", "medulla-h-graph/blob", "medulla-h-ingest/blob", "medu
 compute-dist = ["streaming", "raft", "medulla-h-txn/compute-dist", "medulla-persistence/compute-dist", "medulla-protocol-types/compute-dist", "medulla-raft/compute-dist", "medulla-result-types/compute-dist", "medulla-server-api/compute-dist", "medulla-server-ops/compute-dist", "medulla-store-apply/compute-dist", "medulla-store/compute-dist", "medulla-types/compute-dist"]
 cypher = ["medulla-h-graph/cypher", "medulla-h-ingest/cypher", "medulla-h-jobs/cypher", "medulla-h-query/cypher", "medulla-h-txn/cypher", "medulla-kernel/cypher", "medulla-persistence/cypher", "medulla-server-api/cypher", "medulla-server-auth/cypher", "medulla-server-mutation/cypher"]
 datascience = ["medulla-compute/datascience", "medulla-h-compute/datascience", "medulla-kernel/datascience", "medulla-protocol-types/datascience", "medulla-result-types/datascience", "medulla-types/datascience", "medulla-query-types/datascience"]
-decide = ["redb", "dep:medulla-numeric", "medulla-numeric/decision", "medulla-capabilities/decide", "jobs", "shacl", "medulla-compute/decide", "medulla-h-graph/decide", "medulla-h-ingest/decide", "medulla-h-jobs/decide", "medulla-h-query/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "sparql"]
+decide = ["redb", "medulla-numeric/decision", "medulla-capabilities/decide", "jobs", "shacl", "medulla-compute/decide", "medulla-h-graph/decide", "medulla-h-ingest/decide", "medulla-h-jobs/decide", "medulla-h-query/decide", "medulla-persistence-records/decide", "medulla-persistence/decide", "medulla-raft/decide", "medulla-server-api/decide", "medulla-server-ops/decide", "sparql"]
 epistemic = ["dep:medulla-plan", "medulla-plan/epistemic", "dep:medulla-modality", "query", "medulla-h-graph/epistemic", "medulla-h-ingest/epistemic", "medulla-h-jobs/epistemic", "medulla-h-mining/epistemic", "medulla-h-query/epistemic", "medulla-h-txn/epistemic", "medulla-kernel/epistemic", "medulla-protocol-types/epistemic", "medulla-raft/epistemic", "medulla-server-api/epistemic", "medulla-server-auth/epistemic", "medulla-server-cdc/epistemic", "medulla-server-mutation/epistemic", "medulla-server-ops/epistemic", "medulla-types/epistemic", "medulla-query-types/epistemic"]
 federation-sql = ["federation", "medulla-h-jobs/federation-sql"]
 federation = ["query", "dep:medulla-plan", "medulla-plan/federation", "server", "medulla-graphql?/federation", "medulla-h-jobs/federation", "medulla-h-mining/federation", "medulla-h-query/federation", "medulla-h-sparql/federation", "medulla-h-txn/federation", "medulla-protocol-types/federation", "medulla-raft/federation", "medulla-server-api/federation", "medulla-server-auth/federation", "medulla-server-ops/federation", "medulla-types/federation", "medulla-query-types/federation"]

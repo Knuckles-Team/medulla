@@ -26,6 +26,7 @@ tracing = "0.1"
 medulla-modality = { path = "../medulla-modality", optional = true }
 medulla-graph-core = { path = "../medulla-graph-core" }
 medulla-semantic-index = { path = "../medulla-semantic-index" }
+medulla-index-types = { path = "../medulla-index-types" }
 
 [features]
 contract = ["dep:medulla-modality", "medulla-compute/contract", "medulla-core/contract", "medulla-graph-core/contract"]

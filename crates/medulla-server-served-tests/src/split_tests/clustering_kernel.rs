@@ -75,7 +75,7 @@ mod activation {
     use super::*;
     use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
     use medulla_decision_types::decision::DecisionPolicy;
-    use medulla_semantic_index::semantic::{Progress, ProgressSink};
+    use medulla_numeric::cluster::{Progress, ProgressSink};
     use medulla_server_graph::semantic_activation::{
         activate_one, cancel_all_builds, cluster_config, sweep_resident_graphs_with,
     };

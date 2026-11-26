@@ -429,7 +429,7 @@ pub fn upsert_durable_embedding(
 pub fn declare_durable_embedding_space(
     semantic: &mut ScopedOwnerTableMut<'_, &str, &[u8]>,
     graph: &str,
-    space: &medulla_semantic_index::semantic::EmbeddingSpaceRef,
+    space: &medulla_index_types::embedding::EmbeddingSpaceRef,
     crypto: DurableCrypto<'_>,
 ) -> Result<(), String> {
     let mut store = read_semantic_store(semantic, graph, crypto)?.unwrap_or_default();

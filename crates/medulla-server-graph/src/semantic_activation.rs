@@ -38,9 +38,8 @@ use std::sync::Arc;
 use tokio::sync::RwLock;
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_semantic_index::semantic::{
-    build_off_lock, BuildHooks, BuildOutcome, ClusterConfig, ProgressSink,
-};
+use medulla_numeric::cluster::{ClusterConfig, ProgressSink};
+use medulla_semantic_index::semantic::{build_off_lock, BuildHooks, BuildOutcome};
 use medulla_semantic_index::semantic_ann::ANN_BUILD_THRESHOLD;
 use medulla_server_api::state::ServerState;
 
@@ -157,7 +156,7 @@ pub fn activate_with(
 
 /// Cancellation tokens and progress of the running builds (MEDULLA-CLUSTER-R011.4).
 mod builds {
-    use medulla_semantic_index::semantic::{CancelToken, Progress, ProgressSink};
+    use medulla_numeric::cluster::{CancelToken, Progress, ProgressSink};
     use std::sync::Mutex;
 
     static RUNNING: Mutex<Vec<(String, CancelToken)>> = Mutex::new(Vec::new());
