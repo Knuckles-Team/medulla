@@ -1,0 +1,15 @@
+{
+  "connector": "probe-container-manager",
+  "tools": [
+    {
+      "name": "list_containers",
+      "description": "list docker containers",
+      "provides": "cap:list-containers"
+    },
+    {
+      "name": "start_container",
+      "description": "start a docker container",
+      "provides": "cap:start-container"
+    }
+  ]
+}

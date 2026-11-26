@@ -36,9 +36,17 @@ SECRET = "test-expansion-secret"  # sanitizer:ignore
 class ChatStub:
     """A chat-completions endpoint that answers a scripted list and counts calls."""
 
-    def __init__(self, answer: list[str] | None, status: int = 200) -> None:
+    def __init__(
+        self,
+        answer: list[str] | None,
+        status: int = 200,
+        raw: str | None = None,
+    ) -> None:
         self.answer = answer
         self.status = status
+        # When set, the completion text is this string verbatim (a planner that
+        # answers one bare query) instead of the JSON list `answer`.
+        self.raw = raw
         self.calls = 0
         stub = self
 
@@ -47,12 +55,11 @@ class ChatStub:
                 length = int(self.headers.get("Content-Length", "0"))
                 self.rfile.read(length)
                 stub.calls += 1
+                content = (
+                    stub.raw if stub.raw is not None else json.dumps(stub.answer or [])
+                )
                 body = json.dumps(
-                    {
-                        "choices": [
-                            {"message": {"content": json.dumps(stub.answer or [])}}
-                        ]
-                    }
+                    {"choices": [{"message": {"content": content}}]}
                 ).encode()
                 self.send_response(stub.status)
                 self.send_header("Content-Type", "application/json")

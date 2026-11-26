@@ -1,0 +1,10 @@
+{
+  "connector": "probe-mail",
+  "tools": [
+    {
+      "name": "send_email",
+      "description": "send an email message",
+      "provides": "cap:send-email"
+    }
+  ]
+}
