@@ -38,6 +38,7 @@ from medulla.generated.agent_component import (
     AgentComponentOpRecordSourceEffect,
     AgentComponentOpVerifyRender,
     BlueprintImportRequest,
+    BlueprintProposalRequest,
     PromptRenderRequest,
 )
 from medulla.generated.connector_pack import (
@@ -52,6 +53,7 @@ from medulla.generated.storage import (
     send_agent_component_import_blueprint,
     send_agent_component_record_source_effect,
     send_agent_component_render,
+    send_agent_component_store_proposal,
     send_agent_component_verify_render,
 )
 
@@ -991,6 +993,87 @@ def test_blueprint_roundtrip_restart(tmp_path: Path) -> None:
         asyncio.run(run_one(engine))
     with restartable_engine(tmp_path, "run2", bootstrap=False) as engine:
         asyncio.run(run_two(engine))
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.6")
+@pytest.mark.asyncio
+async def test_prompt_proposal_has_no_authority() -> None:
+    client = await connect()
+    component_id = f"prompt:native-{uuid.uuid4().hex[:12]}"
+    original = json.dumps(
+        {"task": "summarise the ticket", "schema_revision": 1},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    proposed = original.replace("summarise", "classify").encode()
+    payload_digest = "sha256:" + hashlib.sha256(proposed).hexdigest()
+
+    def request(**proposal_changes: Any) -> BlueprintProposalRequest:
+        proposal = {
+            "source_revision": 1,
+            "payload_digest": payload_digest,
+            "comparison": "classify scored 0.82 against 0.78 on the held-out set",
+            **proposal_changes,
+        }
+        return BlueprintProposalRequest.model_validate(
+            {
+                "context": _publish_context(1),
+                "component_id": component_id,
+                "proposal": proposal,
+            }
+        )
+
+    try:
+        await _publish_prompt(
+            client,
+            component_id,
+            original,
+            hashlib.sha256(original.encode()).hexdigest(),
+            0,
+        )
+        before = await _content(client, component_id, 1)
+        key = f"blueprint-proposal-{uuid.uuid4().hex}"
+
+        # The proposal is recorded; the same proposal again writes nothing.
+        stored = await send_agent_component_store_proposal(
+            client, request(), idempotency_key=key
+        )
+        assert stored.recorded is True
+        assert stored.source_revision == 1
+        assert stored.payload_digest == payload_digest
+        again = await send_agent_component_store_proposal(
+            client, request(), idempotency_key=key
+        )
+        assert again.recorded is False
+
+        # It carries no authority: the head, the history and the body are unchanged.
+        assert await _head(client, component_id) == 1
+        history = await _history(client, component_id)
+        assert [entry.entry_revision for entry in history] == [1]
+        assert await _content(client, component_id, 1) == before
+
+        # A proposal that supplies its own approval, actor scope or permission is refused.
+        for field, value in (
+            ("approval", "approved"),
+            ("actor_scope", "admin"),
+            ("permission", "agent:component-write"),
+        ):
+            with pytest.raises(EngineResponseError, match="PROPOSAL_SELF_APPROVED"):
+                await send_agent_component_store_proposal(
+                    client,
+                    request(**{field: value}),
+                    idempotency_key=f"blueprint-proposal-{uuid.uuid4().hex}",
+                )
+        # A proposal against a revision that does not exist is refused.
+        with pytest.raises(EngineResponseError, match="COMPONENT_REVISION_UNKNOWN"):
+            await send_agent_component_store_proposal(
+                client,
+                request(source_revision=9),
+                idempotency_key=f"blueprint-proposal-{uuid.uuid4().hex}",
+            )
+        assert await _head(client, component_id) == 1
+    finally:
+        await client.close()
 
 
 async def _refused_for_tenant_b(

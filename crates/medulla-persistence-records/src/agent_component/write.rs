@@ -201,6 +201,71 @@ impl AgentLibraryStore {
         })
     }
 
+    /// Store one optimization proposal against a component revision
+    /// (MEDULLA-TYPED-PACKS-R094.6).
+    ///
+    /// The proposal is a record only: it lives in the tenant-scoped write-back idempotency
+    /// table keyed by component, source revision and payload digest, so it never touches the
+    /// component head, a revision, a body holder or an outbox event. The same proposal again
+    /// writes nothing.
+    pub fn store_proposal(
+        &self,
+        tenant_id: &str,
+        component_id: &str,
+        proposal: &medulla_agent_types::agent_component::BlueprintProposal,
+    ) -> Result<medulla_agent_types::agent_component::BlueprintProposalResult, String> {
+        proposal.validate()?;
+        medulla_agent_types::agent_library::validate_key(tenant_id, component_id)?;
+        let revision_exists = {
+            let read = self.read()?;
+            let revisions = read.open_owner_table(medulla_storage::AGENT_COMPONENT_REVISIONS)?;
+            let found = revisions
+                .get((tenant_id, component_id, proposal.source_revision))
+                .map_err(|error| error.to_string())?
+                .is_some();
+            found
+        };
+        if !revision_exists {
+            return Err(
+                "COMPONENT_REVISION_UNKNOWN: the tenant has no such source revision of the \
+                 component"
+                    .to_string(),
+            );
+        }
+        let (source_revision, payload_digest, comparison) = proposal.stored_form();
+        let encoded = rmp_serde::to_vec_named(&(source_revision, payload_digest, comparison))
+            .map_err(|error| error.to_string())?;
+        let key = proposal.key(component_id);
+        let mut recorded = false;
+        self.maintain_control_rows(tenant_id, "agent_component_proposal", |owner| {
+            let mut table = owner.open_table(medulla_storage::WRITE_BACK_IDEMPOTENCY)?;
+            let existing = table
+                .get((tenant_id, key.as_str()))
+                .map_err(|error| error.to_string())?
+                .map(|row| row.value().to_vec());
+            match existing {
+                Some(stored) if stored == encoded => Ok(()),
+                Some(_) => Err(
+                    "IDEMPOTENCY_CONFLICT: the proposal is recorded with other evidence"
+                        .to_string(),
+                ),
+                None => {
+                    table
+                        .insert((tenant_id, key.as_str()), encoded.as_slice())
+                        .map_err(|error| error.to_string())?;
+                    recorded = true;
+                    Ok(())
+                }
+            }
+        })?;
+        Ok(medulla_agent_types::agent_component::BlueprintProposalResult {
+            component_id: component_id.to_string(),
+            source_revision,
+            payload_digest: payload_digest.to_string(),
+            recorded,
+        })
+    }
+
     /// Retain the current component revision as a durable tombstone.
     pub fn retire_component(
         &self,

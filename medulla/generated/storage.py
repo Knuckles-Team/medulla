@@ -32,6 +32,8 @@ from .agent_component import (
     AgentComponentSearchRequest,
     BlueprintExport,
     BlueprintImportRequest,
+    BlueprintProposalRequest,
+    BlueprintProposalResult,
     PromptReceiptVerdict,
     PromptRenderRequest,
     PromptRenderResult,
@@ -631,6 +633,32 @@ async def send_agent_component_import_blueprint(
         idempotency_key=idempotency_key,
     )
     return AgentComponentCommittedResult.model_validate(payload)
+
+
+async def send_agent_component_store_proposal(
+    client: Any,
+    request: BlueprintProposalRequest,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> BlueprintProposalResult:
+    """Send typed AgentComponent.store_proposal."""
+    request = BlueprintProposalRequest.model_validate(request)
+    params = {
+        "op": {
+            "op": "store_proposal",
+            "request": request.model_dump(
+                mode="json", exclude_unset=True, exclude_none=True
+            ),
+        },
+    }
+    payload = await client._send(
+        "AgentComponent",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return BlueprintProposalResult.model_validate(payload)
 
 
 async def send_agent_component_render(

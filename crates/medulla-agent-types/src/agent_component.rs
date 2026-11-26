@@ -52,6 +52,7 @@ pub mod capability_descriptor;
 pub mod content;
 pub mod facts;
 pub mod input_capabilities;
+pub mod proposal;
 pub mod red_team;
 pub mod search;
 pub mod skill_admission;
@@ -72,6 +73,9 @@ pub use facts::{
     PROMPT_SCHEMA_REVISION,
 };
 pub use input_capabilities::{ModelInputCapabilities, ModelInputMediaType};
+pub use proposal::{
+    BlueprintProposal, BlueprintProposalRequest, BlueprintProposalResult, PROPOSAL_SELF_APPROVED,
+};
 pub use search::{
     decode_search_cursor, encode_search_cursor, AgentComponentSearchPage,
     AgentComponentSearchRequest, AgentComponentStatusRequest,
@@ -1393,6 +1397,9 @@ pub enum AgentComponentOp {
     /// Import one edited blueprint as the next revision of a native prompt
     /// (MEDULLA-TYPED-PACKS-R094.3). Boxed: the envelope carries a whole entry and a body.
     ImportBlueprint { request: Box<BlueprintImportRequest> },
+    /// Store one optimization proposal against a component, with no authority
+    /// (MEDULLA-TYPED-PACKS-R094.6). Boxed like the import carrier.
+    StoreProposal { request: Box<BlueprintProposalRequest> },
     /// Render one pinned prompt revision with its variables and return the bytes with a
     /// receipt (MEDULLA-TYPED-PACKS-R002.9).
     Render { request: PromptRenderRequest },
@@ -1422,6 +1429,7 @@ impl AgentComponentOp {
                 | Self::AdmitSkillUpgrade { .. }
                 | Self::RecordSourceEffect { .. }
                 | Self::ImportBlueprint { .. }
+                | Self::StoreProposal { .. }
         )
     }
 
@@ -1436,6 +1444,7 @@ impl AgentComponentOp {
             Self::ImportBlueprint { request } => request.envelope.entry.kind.publish_authz_action(),
             Self::Retire { .. }
             | Self::AdmitSkillUpgrade { .. }
+            | Self::StoreProposal { .. }
             | Self::RecordSourceEffect { .. } => "agent:component-write",
             Self::Current { .. }
             | Self::History { .. }
@@ -1524,6 +1533,7 @@ impl AgentComponentOp {
                 }
                 Ok(())
             }
+            Self::StoreProposal { request } => request.validate(),
             Self::VerifyRender { receipt } => {
                 validate_text("tenant_id", &receipt.identity.tenant_id)?;
                 validate_text("component_id", &receipt.identity.component_id)
@@ -1570,6 +1580,7 @@ fn component_op_tenant_id(op: &AgentComponentOp) -> &str {
         AgentComponentOp::Content { request } => &request.tenant_id,
         AgentComponentOp::ExportBlueprint { request } => &request.tenant_id,
         AgentComponentOp::ImportBlueprint { request } => &request.context.tenant_id,
+        AgentComponentOp::StoreProposal { request } => &request.context.tenant_id,
         AgentComponentOp::Render { request } => &request.tenant_id,
         AgentComponentOp::VerifyRender { receipt } => &receipt.identity.tenant_id,
         AgentComponentOp::RecordSourceEffect { tenant_id, .. } => tenant_id,

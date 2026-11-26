@@ -111,6 +111,34 @@ class BlueprintImportRequest(BaseModel):
     envelope: BlueprintExport
 
 
+class BlueprintProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor_scope: str | None = None
+    approval: str | None = None
+    comparison: str
+    payload_digest: str
+    permission: str | None = None
+    source_revision: Annotated[int, Field(ge=0)]
+
+
+class BlueprintProposalRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    component_id: str
+    context: AgentLibraryMutationContext
+    proposal: BlueprintProposal
+
+
+class BlueprintProposalResult(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    component_id: str
+    payload_digest: str
+    recorded: bool
+    source_revision: Annotated[int, Field(ge=0)]
+
+
 class PromptRenderRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -298,6 +326,13 @@ class AgentComponentOpImportBlueprint(BaseModel):
     request: BlueprintImportRequest
 
 
+class AgentComponentOpStoreProposal(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["store_proposal"]
+    request: BlueprintProposalRequest
+
+
 class AgentComponentOpRender(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -337,6 +372,7 @@ AgentComponentOp = Annotated[
     | AgentComponentOpAdmitSkillUpgrade
     | AgentComponentOpExportBlueprint
     | AgentComponentOpImportBlueprint
+    | AgentComponentOpStoreProposal
     | AgentComponentOpRender
     | AgentComponentOpVerifyRender
     | AgentComponentOpRecordSourceEffect,
@@ -405,6 +441,12 @@ BlueprintExport.model_rebuild()
 
 BlueprintImportRequest.model_rebuild()
 
+BlueprintProposal.model_rebuild()
+
+BlueprintProposalRequest.model_rebuild()
+
+BlueprintProposalResult.model_rebuild()
+
 AgentComponentDraft.model_rebuild()
 
 AgentComponentOpPublish.model_rebuild()
@@ -424,6 +466,8 @@ AgentComponentOpContent.model_rebuild()
 AgentComponentOpAdmitSkillUpgrade.model_rebuild()
 
 AgentComponentOpExportBlueprint.model_rebuild()
+
+AgentComponentOpStoreProposal.model_rebuild()
 
 AgentComponentOpRender.model_rebuild()
 
@@ -466,6 +510,10 @@ __all__ = [
     "AgentComponentBlueprintExportRequest",
     "AgentComponentOpExportBlueprint",
     "AgentComponentOpImportBlueprint",
+    "AgentComponentOpStoreProposal",
+    "BlueprintProposal",
+    "BlueprintProposalRequest",
+    "BlueprintProposalResult",
     "BlueprintImportRequest",
     "AgentComponentOpRender",
     "AgentComponentOpVerifyRender",

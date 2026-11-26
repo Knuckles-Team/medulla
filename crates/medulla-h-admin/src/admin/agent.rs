@@ -145,6 +145,21 @@ pub async fn handle_agent_component(
             )
             .await
         }
+        AgentComponentOp::StoreProposal { request } => {
+            match store.store_proposal(
+                &request.context.tenant_id,
+                &request.component_id,
+                &request.proposal,
+            ) {
+                Ok(result) => Response::ok(
+                    req_id,
+                    ResultPayload::of_ref::<
+                        medulla_protocol_types::result_contract::storage::AgentComponentStoreProposal,
+                    >(&result),
+                ),
+                Err(error) => Response::err(req_id, error),
+            }
+        }
         AgentComponentOp::Render { request } => {
             super::component_content::serve_prompt_render(state, &store, req_id, verified, request)
                 .await
