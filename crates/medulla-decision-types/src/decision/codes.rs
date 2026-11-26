@@ -684,6 +684,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     ),
     (QuestionKind::CouncilCoordination, super::council::REFUSALS),
     (QuestionKind::MergeArming, super::merge_arming::REFUSALS),
+    (
+        QuestionKind::RevertOrFixForward,
+        super::revert_or_fix_forward::REFUSALS,
+    ),
 ];
 
 /// The `REFUSALS` table of every module that declares one in a crate below the

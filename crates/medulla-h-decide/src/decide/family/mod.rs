@@ -32,6 +32,7 @@ mod delegation_admission;
 mod edit_concentration;
 mod defect_triage;
 mod merge_arming;
+mod revert_or_fix_forward;
 mod enrichment_schedule;
 mod evolution_round;
 mod fanout_aggregate;
@@ -311,6 +312,8 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         branch_outcome::BranchOutcomeFamily;
     static DEFECTTRIAGEFAMILY: defect_triage::DefectTriageFamily = defect_triage::DefectTriageFamily;
     static MERGEARMINGFAMILY: merge_arming::MergeArmingFamily = merge_arming::MergeArmingFamily;
+    static REVERTORFIXFORWARDFAMILY: revert_or_fix_forward::RevertOrFixForwardFamily =
+        revert_or_fix_forward::RevertOrFixForwardFamily;
     static EDITCONCENTRATIONFAMILY: edit_concentration::EditConcentrationFamily =
         edit_concentration::EditConcentrationFamily;
     static THOUGHTSEARCHFAMILY: thought_search::ThoughtSearchFamily =
@@ -514,6 +517,7 @@ pub fn for_kind(kind: QuestionKind) -> &'static dyn DecisionFamily {
         QuestionKind::ResolveConflict => &RESOLVECONFLICTFAMILY,
         QuestionKind::CouncilCoordination => &COUNCILFAMILY,
         QuestionKind::MergeArming => &MERGEARMINGFAMILY,
+        QuestionKind::RevertOrFixForward => &REVERTORFIXFORWARDFAMILY,
         QuestionKind::DefectTriage => &DEFECTTRIAGEFAMILY,
         QuestionKind::Promotion => &PROMOTIONFAMILY,
     }
@@ -620,6 +624,7 @@ mod tests {
             QuestionKind::ResolveConflict,
             QuestionKind::CouncilCoordination,
             QuestionKind::MergeArming,
+            QuestionKind::RevertOrFixForward,
             QuestionKind::DefectTriage,
             QuestionKind::Promotion,
         ];
@@ -705,6 +710,7 @@ mod tests {
             | QuestionKind::ResolveConflict
             | QuestionKind::CouncilCoordination
             | QuestionKind::MergeArming
+            | QuestionKind::RevertOrFixForward
             | QuestionKind::DefectTriage
             | QuestionKind::Promotion
             | QuestionKind::RewardDecomposition

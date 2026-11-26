@@ -98,6 +98,7 @@ pub mod reputation;
 pub mod request;
 pub mod research_voi;
 pub mod resolve_conflict;
+pub mod revert_or_fix_forward;
 pub mod reward;
 pub mod run_adjustment;
 pub mod run_governance;

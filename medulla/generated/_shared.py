@@ -2310,6 +2310,7 @@ QuestionKind = (
     | Literal["resolve_conflict"]
     | Literal["council_coordination"]
     | Literal["merge_arming"]
+    | Literal["revert_or_fix_forward"]
     | Literal["defect_triage"]
     | Literal["promotion"]
     | Literal["reasoning_paradigm"]

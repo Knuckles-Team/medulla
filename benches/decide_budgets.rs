@@ -308,6 +308,8 @@ fn family_name(kind: QuestionKind) -> &'static str {
         QuestionKind::CouncilCoordination => "council_coordination",
         // Needs a delivery, its gate verdicts and an owner approval, so it has its own fixture.
         QuestionKind::MergeArming => "merge_arming",
+        // Needs a culprit, its dependents and recorded verdicts, so it has its own fixture.
+        QuestionKind::RevertOrFixForward => "revert_or_fix_forward",
         // Needs a stored defect, symbols and blame, so it has its own bench fixture.
         QuestionKind::DefectTriage => "defect_triage",
     }

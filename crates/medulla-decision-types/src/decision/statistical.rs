@@ -358,6 +358,10 @@ pub enum QuestionKind {
     /// (MEDULLA-SDLC-R019.10). Evaluate-only: the engine never merges. See
     /// `decision::merge_arming`.
     MergeArming,
+    /// How to remove a culprit changeset the bisect named: `revert` or `fix_forward`, ranked over
+    /// the legal set (MEDULLA-DECISION-ENGINE-R827). Evaluate-only. See
+    /// `decision::revert_or_fix_forward`.
+    RevertOrFixForward,
     /// The triage of one defect: its severity, suspected symbols, owner and duplicate link
     /// (MEDULLA-SDLC-R004.3). Evaluate-only: `TriageDefect` commits the record and writes the
     /// `affects` edges. See `decision::defect_triage`.
