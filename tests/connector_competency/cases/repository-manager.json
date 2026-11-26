@@ -3,9 +3,12 @@
   "rollup": "MEDULLA-CQ-CONN-R052",
   "vocabulary_module": "sdlc_lifecycle-v1.ttl",
   "terms": [
+    "CodeChangeProposal",
     "Worktree",
-    "worktreeState",
-    "tracksBranch"
+    "proposalBranch",
+    "proposalState",
+    "tracksBranch",
+    "worktreeState"
   ],
   "questions": [
     {
@@ -28,6 +31,35 @@
       "min_rows": 1,
       "recordings": [
         "repository-manager/single.json"
+      ]
+    },
+    {
+      "id": "repository-manager.q2",
+      "kind": "cross",
+      "question": "Which local worktrees track a branch whose pull request has already been merged on GitHub or GitLab?",
+      "uql": "LET s0 = FOREIGN SCAN 'repository-manager'; LET s1 = FOREIGN SCAN 'github-agent'; LET s2 = FOREIGN SCAN 'gitlab_api'; JOIN s0, s1, s2",
+      "sources": [
+        "repository-manager",
+        "github-agent",
+        "gitlab_api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "repository-manager": "mcp_tool",
+        "github-agent": "mcp_tool",
+        "gitlab_api": "http_endpoint"
+      },
+      "columns": [
+        "worktree",
+        "branch",
+        "proposal"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "repository-manager/cross_repository-manager.json",
+        "github-agent/cross_repository-manager.json",
+        "repository-manager/cross_repository-manager.json",
+        "gitlab_api/cross_repository-manager.json"
       ]
     }
   ]

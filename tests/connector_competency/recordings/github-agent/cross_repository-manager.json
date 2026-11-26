@@ -1,0 +1,18 @@
+{
+  "source": "github-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "branch": "branch-1",
+      "joinKey": "repository-manager.q2-key-1",
+      "id": "github-agent-repository-manager.q2-1",
+      "label": "github-agent 1"
+    },
+    {
+      "branch": "branch-2",
+      "joinKey": "repository-manager.q2-key-2",
+      "id": "github-agent-repository-manager.q2-2",
+      "label": "github-agent 2"
+    }
+  ]
+}
