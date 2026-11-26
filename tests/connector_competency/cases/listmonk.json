@@ -31,6 +31,35 @@
       "recordings": [
         "listmonk-api/single.json"
       ]
+    },
+    {
+      "id": "listmonk.q2",
+      "kind": "cross",
+      "question": "Which subscribers on a Listmonk list have no matching Twenty contact, and which contacts are unsubscribed?",
+      "uql": "LET s0 = FOREIGN SCAN 'listmonk-api'; LET s1 = FOREIGN SCAN 'twenty-mcp'; LET s2 = FOREIGN SCAN 'postiz-agent'; JOIN s0, s1, s2",
+      "sources": [
+        "listmonk-api",
+        "twenty-mcp",
+        "postiz-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "listmonk-api": "http_endpoint",
+        "twenty-mcp": "mcp_tool",
+        "postiz-agent": "mcp_tool"
+      },
+      "columns": [
+        "subscriber",
+        "contact",
+        "unsubscribed"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "listmonk-api/cross_twenty-mcp.json",
+        "twenty-mcp/cross_listmonk-api.json",
+        "listmonk-api/cross_postiz-agent.json",
+        "postiz-agent/cross_listmonk-api.json"
+      ]
     }
   ]
 }

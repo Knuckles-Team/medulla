@@ -1,0 +1,18 @@
+{
+  "source": "postiz-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "unsubscribed": "unsubscribed-1",
+      "joinKey": "listmonk.q2-key-1",
+      "id": "postiz-agent-listmonk.q2-1",
+      "label": "postiz-agent 1"
+    },
+    {
+      "unsubscribed": "unsubscribed-2",
+      "joinKey": "listmonk.q2-key-2",
+      "id": "postiz-agent-listmonk.q2-2",
+      "label": "postiz-agent 2"
+    }
+  ]
+}
