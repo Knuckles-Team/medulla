@@ -26,6 +26,7 @@ mod approval_keys;
 mod client_session;
 mod data_product;
 mod delegation_record;
+mod mfa_totp;
 mod policy_bundle;
 mod refusal_contract;
 mod resource_access;

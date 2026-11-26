@@ -10,6 +10,7 @@ mod approval_keys;
 mod auth;
 mod credentials;
 mod factors;
+mod mfa_totp;
 mod modes;
 mod policy_bundle;
 mod provision;

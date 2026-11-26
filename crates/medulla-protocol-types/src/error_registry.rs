@@ -110,7 +110,7 @@ mod tests {
         // (MEDULLA-IDENTITY-R003.4 mode transitions, R709 session liveness,
         // R003.6 stale session epoch, R702 policy bundle binding, MEDULLA-ENGINE-PARITY-R007.4
         // wire login grant and revoke).
-        const NAMED_OUTSIDE_FAMILY: [&str; 10] = [
+        const NAMED_OUTSIDE_FAMILY: [&str; 14] = [
             "MODE_TRANSITION_FORBIDDEN",
             "SESSION_REFERENCE_UNKNOWN",
             "SESSION_EPOCH_STALE",
@@ -121,6 +121,10 @@ mod tests {
             "OWNERSHIP_LAST_ADMIN",
             "OWNERSHIP_WIDENS_TENANT",
             "OWNERSHIP_NO_ROLLBACK",
+            "MFA_CODE_REPLAYED",
+            "MFA_CODE_INVALID",
+            "MFA_LOCKED",
+            "MFA_ENROLLMENT_REQUIRED",
         ];
         for refusal in medulla_identity_types::identity::IdentityRefusal::ALL {
             let code = refusal.to_string();

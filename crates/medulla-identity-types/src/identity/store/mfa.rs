@@ -24,11 +24,22 @@ impl IdentityStore {
             | MfaOp::WebauthnCredentials { .. }
             | MfaOp::VerifyWebauthn { .. }
             | MfaOp::RemoveWebauthn { .. } => self.apply_webauthn(op, stamp, ctx),
-            MfaOp::EnrollTotp { .. } => self.enroll_totp(stamp, ctx.now_ms),
-            MfaOp::ConfirmTotp { .. } => self.confirm_totp(stamp, ctx.now_ms),
-            MfaOp::VerifyTotp { .. } => Ok(IdentityReply::Authenticate(
-                self.verify_totp(stamp, ctx.now_ms)?,
-            )),
+            MfaOp::Enroll { request } => self.enroll_totp(&request.tenant, stamp, ctx.now_ms),
+            MfaOp::Confirm { request } => Ok(IdentityReply::Authenticate(self.confirm_totp(
+                &request.tenant,
+                stamp,
+                ctx.now_ms,
+            )?)),
+            MfaOp::Verify { request } => Ok(IdentityReply::Authenticate(self.verify_totp(
+                &request.tenant,
+                stamp,
+                ctx.now_ms,
+            )?)),
+            MfaOp::Disable { request } => Ok(IdentityReply::Authenticate(self.disable_totp(
+                &request.tenant,
+                stamp,
+                ctx.now_ms,
+            )?)),
             MfaOp::SetRecoveryCodes { .. } => self.set_recovery_codes(stamp, ctx.now_ms),
             MfaOp::ConsumeRecoveryCode { .. } => Ok(IdentityReply::Authenticate(
                 self.consume_recovery(stamp, ctx.now_ms)?,
@@ -42,10 +53,11 @@ impl IdentityStore {
     /// silently replaced.
     fn enroll_totp(
         &mut self,
+        tenant: &str,
         stamp: &IdentityStamp,
         now_ms: u64,
     ) -> Result<IdentityReply, IdentityRefusal> {
-        let principal = self.session_subject(stamp, now_ms, PendingSession::AllowEnrollment)?;
+        let principal = self.mfa_subject(tenant, stamp, now_ms, PendingSession::AllowEnrollment)?;
         let sealed = stamp
             .sealed_secret
             .clone()
@@ -80,25 +92,106 @@ impl IdentityStore {
             return Err(IdentityRefusal::Unstamped);
         }
         if step <= record.last_step {
-            return Err(IdentityRefusal::Replay);
+            return Err(IdentityRefusal::MfaCodeReplayed);
         }
         record.last_step = step;
         Ok(())
     }
 
-    fn confirm_totp(
-        &mut self,
+    /// The principal of the session in `stamp`, provided the session was opened under `tenant`.
+    /// An absent, dead or foreign-tenant session answers the same refusal, so the answer is no
+    /// oracle. A session with no recorded tenant is bound to the deployment tenant the boundary
+    /// stamped.
+    fn mfa_subject(
+        &self,
+        tenant: &str,
         stamp: &IdentityStamp,
         now_ms: u64,
-    ) -> Result<IdentityReply, IdentityRefusal> {
-        let principal = self.session_subject(stamp, now_ms, PendingSession::AllowEnrollment)?;
-        let step = stamp.totp_step.ok_or(IdentityRefusal::BadCredential)?;
-        self.accept_step(&principal, stamp, step)?;
+        pending: PendingSession,
+    ) -> Result<String, IdentityRefusal> {
+        self.mfa_tenant_guard(tenant, stamp)?;
+        self.session_subject(stamp, now_ms, pending)
+    }
+
+    fn mfa_tenant_guard(&self, tenant: &str, stamp: &IdentityStamp) -> Result<(), IdentityRefusal> {
+        let session = self
+            .sessions
+            .get(stamp.token_hash(0)?)
+            .ok_or(IdentityRefusal::NotAuthorized)?;
+        let bound = session
+            .session_tenant
+            .as_deref()
+            .or(stamp.session_tenant.as_deref());
+        if bound == Some(tenant) {
+            Ok(())
+        } else {
+            Err(IdentityRefusal::NotAuthorized)
+        }
+    }
+
+    /// Check the stamped code of `principal`: the already-built throttled outcome while the
+    /// principal's backoff runs, a counted failure for a wrong code, and otherwise the accepted
+    /// step (a replayed one is refused and changes nothing). `Ok(None)` means the code was
+    /// accepted.
+    fn check_totp_code(
+        &mut self,
+        principal: &str,
+        stamp: &IdentityStamp,
+        now_ms: u64,
+    ) -> Result<Option<AuthenticateResult>, IdentityRefusal> {
+        if let Some(throttled) = self.second_factor_throttled(principal, now_ms) {
+            return Ok(Some(throttled));
+        }
+        let Some(step) = stamp.totp_step else {
+            return Ok(Some(self.second_factor_failed(stamp, principal, now_ms)));
+        };
+        self.accept_step(principal, stamp, step)?;
+        Ok(None)
+    }
+
+    fn confirm_totp(
+        &mut self,
+        tenant: &str,
+        stamp: &IdentityStamp,
+        now_ms: u64,
+    ) -> Result<AuthenticateResult, IdentityRefusal> {
+        let principal = self.mfa_subject(tenant, stamp, now_ms, PendingSession::AllowEnrollment)?;
+        if self.totp_confirmed(&principal) {
+            return Err(IdentityRefusal::Collision);
+        }
+        if !self.totp.contains_key(&principal) {
+            return Err(IdentityRefusal::MfaEnrollmentRequired);
+        }
+        if let Some(refused) = self.check_totp_code(&principal, stamp, now_ms)? {
+            return Ok(refused);
+        }
         if let Some(record) = self.totp.get_mut(&principal) {
             record.confirmed_at_ms.get_or_insert(now_ms);
         }
+        self.clear_throttle(&account_key(&principal));
         self.audit_event(stamp, now_ms, IdentityEvent::MfaVerified, Some(&principal));
-        Ok(IdentityReply::Done { changed: true })
+        Ok(self.second_factor_ok(principal))
+    }
+
+    /// Remove the confirmed factor of the session's principal. The session must be complete and
+    /// the code a fresh step (one later than every accepted step).
+    fn disable_totp(
+        &mut self,
+        tenant: &str,
+        stamp: &IdentityStamp,
+        now_ms: u64,
+    ) -> Result<AuthenticateResult, IdentityRefusal> {
+        let principal = self.mfa_subject(tenant, stamp, now_ms, PendingSession::Refuse)?;
+        if !self.totp_confirmed(&principal) {
+            return Err(IdentityRefusal::MfaEnrollmentRequired);
+        }
+        if let Some(refused) = self.check_totp_code(&principal, stamp, now_ms)? {
+            return Ok(refused);
+        }
+        self.totp.remove(&principal);
+        self.clear_throttle(&account_key(&principal));
+        self.audit_event(stamp, now_ms, IdentityEvent::MfaRemoved, Some(&principal));
+        Ok(self.second_factor_ok(principal))
     }
 
     /// The principal of a live session still owing its second factor.
@@ -179,12 +272,16 @@ impl IdentityStore {
 
     fn verify_totp(
         &mut self,
+        tenant: &str,
         stamp: &IdentityStamp,
         now_ms: u64,
     ) -> Result<AuthenticateResult, IdentityRefusal> {
+        self.mfa_tenant_guard(tenant, stamp)?;
         self.with_second_factor_gate(stamp, now_ms, |store, hash, principal| {
-            let confirmed = store.totp_confirmed(&principal);
-            let Some(step) = stamp.totp_step.filter(|_| confirmed) else {
+            if !store.totp_confirmed(&principal) {
+                return Err(IdentityRefusal::MfaEnrollmentRequired);
+            }
+            let Some(step) = stamp.totp_step else {
                 return Ok(store.second_factor_failed(stamp, &principal, now_ms));
             };
             store.accept_step(&principal, stamp, step)?;

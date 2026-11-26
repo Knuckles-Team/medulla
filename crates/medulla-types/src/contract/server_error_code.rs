@@ -1357,6 +1357,14 @@ closed_error_codes! {
         OwnershipWidensTenant => "OWNERSHIP_WIDENS_TENANT",
         /// MEDULLA-IDENTITY-R700.4: no rollback record can be stored, or none is live.
         OwnershipNoRollback => "OWNERSHIP_NO_ROLLBACK",
+        /// MEDULLA-IDENTITY-R741: a TOTP code's time step was already accepted.
+        MfaCodeReplayed => "MFA_CODE_REPLAYED",
+        /// MEDULLA-IDENTITY-R741: a TOTP code does not match the engine-held secret.
+        MfaCodeInvalid => "MFA_CODE_INVALID",
+        /// MEDULLA-IDENTITY-R741: too many failed codes; the detail names `retry_at_ms`.
+        MfaLocked => "MFA_LOCKED",
+        /// MEDULLA-IDENTITY-R741: the principal holds no TOTP enrolment the op can act on.
+        MfaEnrollmentRequired => "MFA_ENROLLMENT_REQUIRED",
         /// MEDULLA-SRC-AUTH-R011.3: a node write named a `content_origin` that is not a known origin.
         ContentOriginUnknown => "CONTENT_ORIGIN_UNKNOWN",
         /// MEDULLA-SRC-AUTH-R011.3: an untrusted-to-trusted change had no operator approval id.

@@ -26,6 +26,7 @@ use medulla_server_api::identity_view::identity_actor;
 use medulla_server_api::state::ServerState;
 
 pub mod exposure;
+pub mod mfa_totp;
 #[cfg(any(test, feature = "test-support"))]
 pub mod pause;
 pub mod resolution_context;
@@ -109,6 +110,7 @@ pub async fn dispatch_identity(
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let outcome =
         resolution_context::apply_and_compose(&mut guard, &op, &stamp, context, authority, now_ms);
+    let outcome = mfa_totp::finish(&guard, &op, &stamp, now_ms, outcome);
     guard.publish_identity_view();
     drop(guard);
     respond(req_id, &op, &stamp, outcome)

@@ -8,12 +8,11 @@
 
 use medulla_identity_types::{
     identity::check_password, identity::check_recovery_code, identity::check_token,
-    identity::check_totp_secret, identity::normalize_username, identity::ConfigOp,
-    identity::CredentialOp, identity::IdentityOp, identity::IdentityRefusal,
-    identity::IdentityStamp, identity::IdentityStore, identity::InitializeRequest,
-    identity::IdpOp, identity::MfaOp,
-    identity::PasswordCheck, identity::PasswordCredential, identity::Secret, identity::SessionOp,
-    identity::TokenOp, identity::UserOp, identity::DEFAULT_PASSWORD_MIN_CHARS,
+    identity::normalize_username, identity::ConfigOp, identity::CredentialOp, identity::IdentityOp,
+    identity::IdentityRefusal, identity::IdentityStamp, identity::IdentityStore, identity::IdpOp,
+    identity::InitializeRequest, identity::MfaOp, identity::PasswordCheck,
+    identity::PasswordCredential, identity::Secret, identity::SessionOp, identity::TokenOp,
+    identity::UserOp, identity::DEFAULT_PASSWORD_MIN_CHARS,
 };
 
 use super::secrets;
@@ -168,12 +167,8 @@ pub fn stamp_initialize(
 ) -> Derived {
     let username = request.admin_username.clone().unwrap_or_default();
     let name = normalize_username(&username).unwrap_or(username);
-    stamp.password_hash = new_password(
-        &mut request.admin_password,
-        (&name, None),
-        None,
-        min_chars,
-    )?;
+    stamp.password_hash =
+        new_password(&mut request.admin_password, (&name, None), None, min_chars)?;
     Ok(())
 }
 
@@ -406,15 +401,16 @@ fn derive_mfa(op: &mut MfaOp, stamp: &mut IdentityStamp, env: &StampEnv<'_>) -> 
         | MfaOp::WebauthnCredentials { .. }
         | MfaOp::VerifyWebauthn { .. }
         | MfaOp::RemoveWebauthn { .. } => return derive_webauthn(op, stamp),
-        MfaOp::EnrollTotp { request } => {
-            stamp.token_hashes = vec![take_token(&mut request.session_token, Floor::Lookup)?];
-            let secret = request.secret_base32.take();
-            check_totp_secret(&secret)?;
+        // The engine generates the TOTP secret here and seals it; the plaintext leaves only in the
+        // provisioning URI the boundary builds after the apply (MEDULLA-IDENTITY-R741).
+        MfaOp::Enroll { request } => {
+            stamp.token_hashes = vec![take_token(&mut request.session, Floor::Lookup)?];
+            let secret = secrets::base32_encode(&secrets::new_totp_secret());
             stamp.sealed_secret =
                 Some(secrets::seal(secret.as_bytes(), env.service_secret).map_err(internal)?);
         }
-        MfaOp::ConfirmTotp { request } | MfaOp::VerifyTotp { request } => {
-            let session = take_token(&mut request.session_token, Floor::Lookup)?;
+        MfaOp::Confirm { request } | MfaOp::Verify { request } | MfaOp::Disable { request } => {
+            let session = take_token(&mut request.session, Floor::Lookup)?;
             let verified = totp_step_for(env, &session, &request.code.take());
             stamp.totp_step = verified.as_ref().map(|(step, _)| *step);
             stamp.sealed_secret = verified.map(|(_, sealed)| sealed);

@@ -113,13 +113,47 @@ async fn a_password_change_verified_against_a_replaced_password_changes_nothing(
     assert_eq!(authenticate_outcome(&kept), AuthenticateOutcome::Ok);
 }
 
-fn enroll_totp(secret: &str) -> IdentityOp {
-    IdentityOp::Mfa(MfaOp::EnrollTotp {
-        request: TotpEnroll {
-            session_token: Secret::new(SESSION),
-            secret_base32: Secret::new(secret),
+fn session_tenant() -> String {
+    medulla_server_identity::dispatch::identity_store::resolution_context::record_tenant(
+        &medulla_server_api::server_context::ServerContext::fixture(),
+        &broker(),
+    )
+    .expect("configured test policy binds the session tenant")
+}
+
+fn enroll_totp() -> IdentityOp {
+    IdentityOp::Mfa(MfaOp::Enroll {
+        request: MfaEnrollRequest {
+            tenant: session_tenant(),
+            session: Secret::new(SESSION),
         },
     })
+}
+
+fn mfa_code(confirm: bool, code: &str) -> IdentityOp {
+    let request = MfaCodeRequest {
+        tenant: session_tenant(),
+        session: Secret::new(SESSION),
+        code: Secret::new(code),
+    };
+    IdentityOp::Mfa(if confirm {
+        MfaOp::Confirm { request }
+    } else {
+        MfaOp::Verify { request }
+    })
+}
+
+/// The base32 secret the engine generated and sealed for the bootstrap principal.
+async fn engine_secret(state: &Arc<RwLock<ServerState>>) -> String {
+    let guard = state.read().await;
+    let sealed = guard
+        .isolation
+        .rbac()
+        .identity_store()
+        .sealed_totp_of(BOOTSTRAP_PRINCIPAL)
+        .unwrap()
+        .to_string();
+    String::from_utf8(secrets::unseal(&sealed, &guard.auth_secret).unwrap()).unwrap()
 }
 
 fn current_totp(secret: &str) -> String {
@@ -130,35 +164,28 @@ fn current_totp(secret: &str) -> String {
     )
 }
 
+// spec: MEDULLA-IDENTITY-R741
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
 async fn a_totp_confirmation_verified_before_secret_replacement_is_refused() {
-    // Deliberately synthetic base32 keys, constructed only for this test.
-    let original = "A".repeat(32);
-    let replacement_secret = "B".repeat(32);
     let state = state();
-    for op in [
-        initialize(PASSWORD),
-        sign_in(PASSWORD, SESSION),
-        enroll_totp(&original),
-    ] {
+    for op in [initialize(PASSWORD), sign_in(PASSWORD, SESSION)] {
         let response = send(&state, broker(), op).await;
         assert!(response.error.is_none(), "{:?}", response.error);
     }
+    let enrolled = send(&state, broker(), enroll_totp()).await;
+    assert!(enrolled.error.is_none(), "{:?}", enrolled.error);
+    let original = engine_secret(&state).await;
     let held = pause::arm(&state);
-    let op = IdentityOp::Mfa(MfaOp::ConfirmTotp {
-        request: SessionTouch {
-            refresh: None,
-            session_token: Secret::new(SESSION),
-            code: Secret::new(current_totp(&original)),
-        },
-    });
+    let op = mfa_code(true, &current_totp(&original));
     let racing = tokio::spawn({
         let state = Arc::clone(&state);
         async move { send(&state, broker(), op).await }
     });
     tokio::task::block_in_place(|| held.derived());
-    let replaced = send(&state, broker(), enroll_totp(&replacement_secret)).await;
+    let replaced = send(&state, broker(), enroll_totp()).await;
     assert!(replaced.error.is_none(), "{:?}", replaced.error);
+    let replacement_secret = engine_secret(&state).await;
+    assert_ne!(replacement_secret, original, "each enrolment draws a new secret");
     let before =
         serde_json::to_value(state.read().await.isolation.rbac().identity_store()).unwrap();
     held.release();
@@ -171,29 +198,25 @@ async fn a_totp_confirmation_verified_before_secret_replacement_is_refused() {
         serde_json::to_value(state.read().await.isolation.rbac().identity_store()).unwrap(),
         before
     );
-    let fresh = IdentityOp::Mfa(MfaOp::ConfirmTotp {
-        request: SessionTouch {
-            refresh: None,
-            session_token: Secret::new(SESSION),
-            code: Secret::new(current_totp(&replacement_secret)),
-        },
-    });
-    let accepted = send(&state, broker(), fresh).await;
+    let accepted = send(
+        &state,
+        broker(),
+        mfa_code(true, &current_totp(&replacement_secret)),
+    )
+    .await;
     assert!(accepted.error.is_none(), "{:?}", accepted.error);
 }
 
 #[tokio::test]
 async fn stamped_totp_methods_keep_only_the_sealed_binding_and_clear_plaintext() {
     let state = state();
-    let secret = "A".repeat(32);
-    for op in [
-        initialize(PASSWORD),
-        sign_in(PASSWORD, SESSION),
-        enroll_totp(&secret),
-    ] {
+    for op in [initialize(PASSWORD), sign_in(PASSWORD, SESSION)] {
         let response = send(&state, broker(), op).await;
         assert!(response.error.is_none(), "{:?}", response.error);
     }
+    let enrolled = send(&state, broker(), enroll_totp()).await;
+    assert!(enrolled.error.is_none(), "{:?}", enrolled.error);
+    let secret = engine_secret(&state).await;
     let sealed = state
         .read()
         .await
@@ -205,18 +228,8 @@ async fn stamped_totp_methods_keep_only_the_sealed_binding_and_clear_plaintext()
         .to_string();
     for confirm in [true, false] {
         let code = current_totp(&secret);
-        let request = SessionTouch {
-            refresh: None,
-            session_token: Secret::new(SESSION),
-            code: Secret::new(&code),
-        };
-        let op = if confirm {
-            MfaOp::ConfirmTotp { request }
-        } else {
-            MfaOp::VerifyTotp { request }
-        };
         let mut method = Method::Identity {
-            op: IdentityOp::Mfa(op),
+            op: mfa_code(confirm, &code),
             stamp: None,
         };
         stamp_identity(
@@ -235,10 +248,10 @@ async fn stamped_totp_methods_keep_only_the_sealed_binding_and_clear_plaintext()
             panic!("expected a stamped MFA method");
         };
         let request = match op {
-            MfaOp::ConfirmTotp { request } | MfaOp::VerifyTotp { request } => request,
+            MfaOp::Confirm { request } | MfaOp::Verify { request } => request,
             _ => panic!("expected the original TOTP operation"),
         };
-        assert!(request.session_token.is_empty());
+        assert!(request.session.is_empty());
         assert!(request.code.is_empty());
         assert!(stamp.totp_step.is_some());
         assert_eq!(stamp.sealed_secret.as_deref(), Some(sealed.as_str()));

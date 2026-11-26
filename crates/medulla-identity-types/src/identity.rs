@@ -71,9 +71,8 @@ pub use credentials::{
     AdminResetIssue, ApiKeyAdminIssue, ApiKeyView, IssuerKeyRecord, IssuerKeyRotate, IssuerKeyView,
     MfaChallengeConsume, MfaChallengeIssue, MfaChallengeKind, MfaChallengeRecord, MfaChallengeView,
     ScimClientCreate, ScimClientRecord, ScimClientUpdate, ScimClientUse, ScimClientView,
-    SessionHandleRef,
-    ISSUER_KEY_ALGORITHMS, ISSUER_KEY_GRACE_MS, MAX_ISSUER_KEYS, MAX_MFA_CHALLENGES,
-    MAX_SCIM_CLIENTS, MFA_CHALLENGE_TTL_MS, SESSION_HANDLE_CHARS,
+    SessionHandleRef, ISSUER_KEY_ALGORITHMS, ISSUER_KEY_GRACE_MS, MAX_ISSUER_KEYS,
+    MAX_MFA_CHALLENGES, MAX_SCIM_CLIENTS, MFA_CHALLENGE_TTL_MS, SESSION_HANDLE_CHARS,
 };
 pub use delegation::{
     DelegationRecord, DelegationRecordWrite, DelegationStanding, DelegationState,
@@ -102,9 +101,9 @@ pub use ownership::{
 };
 pub use password_policy::check_password;
 pub use policy_bundle::{
-    compile as compile_policy_bundle, lower as lower_policy_bundle, CompiledPolicy,
-    PolicyBundleOp, PolicyBundleScope, PolicyRule, PolicyRuleBundle, MAX_POLICY_BUNDLES,
-    MAX_POLICY_RULES, POLICY_BUNDLE_SCHEMA_VERSION,
+    compile as compile_policy_bundle, lower as lower_policy_bundle, CompiledPolicy, PolicyBundleOp,
+    PolicyBundleScope, PolicyRule, PolicyRuleBundle, MAX_POLICY_BUNDLES, MAX_POLICY_RULES,
+    POLICY_BUNDLE_SCHEMA_VERSION,
 };
 pub use projection::{
     rbac_role_name, PrincipalResolution, RbacProjection, SessionRecordProjection,
@@ -112,9 +111,9 @@ pub use projection::{
 pub use relations::{SqlRelation, SqlType};
 pub use requests::{
     ApiKeyIssue, ApiKeyUse, AuthenticateRequest, CreateUserRequest, ExternalLogin,
-    InitializeRequest, LinkRequest, OneTimeTokenIssue, PasswordChange, PasswordResetIssue,
-    PasswordSet, RecoveryCodesSet, SessionTouch, TokenRedeem, TotpEnroll, UserStatusChange,
-    UserUpdate, WebauthnCredential, WebauthnUse,
+    InitializeRequest, LinkRequest, MfaCodeRequest, MfaEnrollRequest, OneTimeTokenIssue,
+    PasswordChange, PasswordResetIssue, PasswordSet, RecoveryCodesSet, SessionTouch, TokenRedeem,
+    UserStatusChange, UserUpdate, WebauthnCredential, WebauthnUse,
 };
 pub use requests_admin::{
     BindingChange, GroupMembershipChange, GroupUpsert, ListQuery, ObjectRef, PolicyUpdate,
@@ -134,13 +133,12 @@ pub use sql_dump::{parse_dump, render_dump, DumpRow, MAX_DUMP_BYTES};
 pub use stamp::{IdentityActor, IdentityStamp, PasswordCheck, Secret};
 pub use store::{ApplyContext, IdentityStore, RecoveryCode, ThrottleEntry, TOUCH_GRANULARITY_MS};
 pub use text::{
-    check_recovery_code, check_token, check_totp_secret, is_reserved_agent_id, normalize_username,
-    validate_principal_id, MIN_RECOVERY_CODE_CHARS, MIN_TOTP_SECRET_CHARS, REPLICATION_SLOT_AGENT,
-    RESERVED_AGENT_IDS,
+    check_recovery_code, check_token, is_reserved_agent_id, normalize_username,
+    validate_principal_id, MIN_RECOVERY_CODE_CHARS, REPLICATION_SLOT_AGENT, RESERVED_AGENT_IDS,
 };
 pub use views::{
-    AuthenticateOutcome, AuthenticateResult, IdentityReply, ResetDelivery, SessionLiveness,
-    SessionView, UserView, WebauthnCredentialView,
+    AuthenticateOutcome, AuthenticateResult, IdentityReply, MfaProvisioning, ResetDelivery,
+    SessionLiveness, SessionView, UserView, WebauthnCredentialView,
 };
 pub use wire_login::{
     default_wire_login_scopes, sha256_verifier, verifier_is_well_formed, WireLoginError,
@@ -260,8 +258,17 @@ medulla_types::closed_error_codes! {
         StaleCredential => "IDENTITY_STALE_CREDENTIAL",
         /// The token was already used, has expired, or was revoked.
         TokenSpent => "IDENTITY_TOKEN_SPENT",
-        /// A TOTP step was already used (replay).
+        /// A WebAuthn counter did not move forward (a cloned authenticator).
         Replay => "IDENTITY_REPLAY",
+        /// A TOTP code's time step was already accepted (MEDULLA-IDENTITY-R741).
+        MfaCodeReplayed => "MFA_CODE_REPLAYED",
+        /// The code does not match the engine-held secret (MEDULLA-IDENTITY-R741).
+        MfaCodeInvalid => "MFA_CODE_INVALID",
+        /// Too many failed codes for the principal; try again at `retry_at_ms`
+        /// (MEDULLA-IDENTITY-R741).
+        MfaLocked => "MFA_LOCKED",
+        /// The principal holds no TOTP enrolment this op can act on (MEDULLA-IDENTITY-R741).
+        MfaEnrollmentRequired => "MFA_ENROLLMENT_REQUIRED",
         /// The principal's kind does not allow this (e.g. an API key for a
         /// service-only scope held by a human).
         KindMismatch => "IDENTITY_KIND_MISMATCH",

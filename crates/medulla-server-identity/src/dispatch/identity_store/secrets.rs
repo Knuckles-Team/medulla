@@ -152,6 +152,58 @@ pub fn base32_decode(text: &str) -> Option<Vec<u8>> {
     Some(out)
 }
 
+/// RFC 4648 base32 (no padding, upper case) of `bytes`.
+pub fn base32_encode(bytes: &[u8]) -> String {
+    const ALPHABET: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+    let mut out = String::with_capacity(bytes.len() * 8 / 5 + 1);
+    let mut bits: u32 = 0;
+    let mut width = 0u32;
+    for byte in bytes {
+        bits = (bits << 8) | u32::from(*byte);
+        width += 8;
+        while width >= 5 {
+            width -= 5;
+            out.push(char::from(ALPHABET[((bits >> width) & 0x1f) as usize]));
+        }
+        bits &= (1 << width) - 1;
+    }
+    if width > 0 {
+        out.push(char::from(
+            ALPHABET[((bits << (5 - width)) & 0x1f) as usize],
+        ));
+    }
+    out
+}
+
+/// A fresh 160-bit TOTP secret (RFC 4226 section 4).
+pub fn new_totp_secret() -> Vec<u8> {
+    let mut secret = vec![0u8; 20];
+    rand::RngCore::fill_bytes(&mut rand::thread_rng(), &mut secret);
+    secret
+}
+
+/// Percent-encode `text` for one `otpauth://` URI component.
+fn uri_component(text: &str) -> String {
+    text.bytes()
+        .map(|byte| {
+            if byte.is_ascii_alphanumeric() || b"-._~".contains(&byte) {
+                char::from(byte).to_string()
+            } else {
+                format!("%{byte:02X}")
+            }
+        })
+        .collect()
+}
+
+/// The `otpauth://totp` provisioning URI of `secret_base32` for `account` under `issuer`.
+pub fn provisioning_uri(secret_base32: &str, issuer: &str, account: &str) -> String {
+    let (issuer, account) = (uri_component(issuer), uri_component(account));
+    format!(
+        "otpauth://totp/{issuer}:{account}?secret={secret_base32}&issuer={issuer}\
+         &algorithm=SHA1&digits=6&period={STEP_SECS}"
+    )
+}
+
 /// RFC 6238 step length.
 const STEP_SECS: u64 = 30;
 

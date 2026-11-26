@@ -239,15 +239,27 @@ pub struct ApiKeyUse {
     pub secret: Secret,
 }
 
-/// `enroll_totp`: the broker generates the base32 secret for the principal
-/// of `session_token`, shows it to the user once, and sends it here to be
-/// sealed.
+/// `mfa enroll`: the engine generates the TOTP secret for the principal of `session`, seals it,
+/// and answers the provisioning URI once (MEDULLA-IDENTITY-R741). `tenant` is the tenant the
+/// session was opened under.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct TotpEnroll {
-    pub session_token: Secret,
-    pub secret_base32: Secret,
+pub struct MfaEnrollRequest {
+    pub tenant: String,
+    pub session: Secret,
+}
+
+/// `mfa confirm`, `mfa verify`, `mfa disable`: a TOTP code checked against the secret the engine
+/// holds for the principal of `session` (MEDULLA-IDENTITY-R741).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MfaCodeRequest {
+    pub tenant: String,
+    pub session: Secret,
+    #[serde(default)]
+    pub code: Secret,
 }
 
 /// `set_recovery_codes`: the broker generates a new set for the principal

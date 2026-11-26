@@ -1575,6 +1575,27 @@ class MfaChallengeView(BaseModel):
     kind: MfaChallengeKind
 
 
+class MfaCodeRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    code: Secret | None = None
+    session: Secret
+    tenant: str
+
+
+class MfaEnrollRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    session: Secret
+    tenant: str
+
+
+class MfaProvisioning(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    provisioning_uri: str
+
+
 class IssuerKeyRotate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -9646,28 +9667,36 @@ IdentityOpToken = Annotated[
 ]
 
 
-class IdentityOpMfaEnrollTotp(BaseModel):
+class IdentityOpMfaEnroll(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     family: Literal["mfa"]
-    op: Literal["enroll_totp"]
-    request: TotpEnroll
+    op: Literal["enroll"]
+    request: MfaEnrollRequest
 
 
-class IdentityOpMfaConfirmTotp(BaseModel):
+class IdentityOpMfaConfirm(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     family: Literal["mfa"]
-    op: Literal["confirm_totp"]
-    request: SessionTouch
+    op: Literal["confirm"]
+    request: MfaCodeRequest
 
 
-class IdentityOpMfaVerifyTotp(BaseModel):
+class IdentityOpMfaVerify(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     family: Literal["mfa"]
-    op: Literal["verify_totp"]
-    request: SessionTouch
+    op: Literal["verify"]
+    request: MfaCodeRequest
+
+
+class IdentityOpMfaDisable(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["mfa"]
+    op: Literal["disable"]
+    request: MfaCodeRequest
 
 
 class IdentityOpMfaSetRecoveryCodes(BaseModel):
@@ -9735,9 +9764,10 @@ class IdentityOpMfaConsumeChallenge(BaseModel):
 
 
 IdentityOpMfa = Annotated[
-    IdentityOpMfaEnrollTotp
-    | IdentityOpMfaConfirmTotp
-    | IdentityOpMfaVerifyTotp
+    IdentityOpMfaEnroll
+    | IdentityOpMfaConfirm
+    | IdentityOpMfaVerify
+    | IdentityOpMfaDisable
     | IdentityOpMfaSetRecoveryCodes
     | IdentityOpMfaConsumeRecoveryCode
     | IdentityOpMfaRegisterWebauthn
@@ -10151,6 +10181,13 @@ class IdentityReplyMfaChallenge(BaseModel):
     value: MfaChallengeView
 
 
+class IdentityReplyMfaProvisioning(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["mfa_provisioning"]
+    value: MfaProvisioning
+
+
 class IdentityReplyWireLoginGranted(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -10193,7 +10230,8 @@ IdentityReply = Annotated[
     | IdentityReplyIssuerKeys
     | IdentityReplyScimClients
     | IdentityReplyScimClient
-    | IdentityReplyMfaChallenge,
+    | IdentityReplyMfaChallenge
+    | IdentityReplyMfaProvisioning,
     Field(discriminator="kind"),
 ]
 
@@ -31266,13 +31304,6 @@ class TopicTerms(BaseModel):
     topic_id: Annotated[int, Field(ge=0)]
 
 
-class TotpEnroll(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
-
-    secret_base32: Secret
-    session_token: Secret
-
-
 class TradeFill(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -46420,6 +46451,9 @@ __all__ = [
     "MfaChallengeConsume",
     "MfaChallengeIssue",
     "MfaChallengeView",
+    "MfaCodeRequest",
+    "MfaEnrollRequest",
+    "MfaProvisioning",
     "IssuerKeyRotate",
     "IssuerKeyView",
     "NeighborhoodResult",
@@ -46450,6 +46484,7 @@ __all__ = [
     "IdentityReplyScimClients",
     "IdentityReplyScimClient",
     "IdentityReplyMfaChallenge",
+    "IdentityReplyMfaProvisioning",
     "AbstainReason",
     "AbstainReasonBudgetExhausted",
     "AbstainReasonIneligibleExternalAgent",
@@ -48130,13 +48165,14 @@ __all__ = [
     "IdentityOpIdpUnlink",
     "IdentityOpIdpUpsert",
     "IdentityOpMfa",
-    "IdentityOpMfaConfirmTotp",
+    "IdentityOpMfaConfirm",
     "IdentityOpMfaConsumeRecoveryCode",
-    "IdentityOpMfaEnrollTotp",
+    "IdentityOpMfaDisable",
+    "IdentityOpMfaEnroll",
     "IdentityOpMfaRegisterWebauthn",
     "IdentityOpMfaRemoveWebauthn",
     "IdentityOpMfaSetRecoveryCodes",
-    "IdentityOpMfaVerifyTotp",
+    "IdentityOpMfaVerify",
     "IdentityOpMfaVerifyWebauthn",
     "IdentityOpMfaWebauthnCredentials",
     "IdentityOpSession",
@@ -51031,7 +51067,6 @@ __all__ = [
     "TopologyPlan",
     "TopologyPolicy",
     "TopologyRequirements",
-    "TotpEnroll",
     "TraceFidelity",
     "TraceFidelityFullStep",
     "TraceFidelityLevel",

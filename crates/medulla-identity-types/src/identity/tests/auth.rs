@@ -460,43 +460,65 @@ fn a_forced_change_opens_no_session_until_a_new_password_is_supplied() {
     assert!(!store.credential_of(&alice).unwrap().must_change);
 }
 
+pub(super) const MFA_TENANT: &str = "tenant-a";
+
+/// A broker stamp for an MFA op on `session`, under the tenant the sessions here are bound to.
+pub(super) fn mfa_stamp(session: &str) -> IdentityStamp {
+    let mut stamp = broker();
+    stamp.token_hashes = vec![session.to_string()];
+    stamp.session_tenant = Some(MFA_TENANT.to_string());
+    stamp
+}
+
+pub(super) fn mfa_enroll() -> IdentityOp {
+    IdentityOp::Mfa(MfaOp::Enroll {
+        request: MfaEnrollRequest {
+            tenant: MFA_TENANT.to_string(),
+            session: Secret::default(),
+        },
+    })
+}
+
+pub(super) fn mfa_code_request() -> MfaCodeRequest {
+    MfaCodeRequest {
+        tenant: MFA_TENANT.to_string(),
+        session: Secret::default(),
+        code: Secret::default(),
+    }
+}
+
+pub(super) fn mfa_confirm() -> IdentityOp {
+    IdentityOp::Mfa(MfaOp::Confirm {
+        request: mfa_code_request(),
+    })
+}
+
+pub(super) fn mfa_disable() -> IdentityOp {
+    IdentityOp::Mfa(MfaOp::Disable {
+        request: mfa_code_request(),
+    })
+}
+
 fn totp_session(store: &mut IdentityStore, alice: &str) {
     open_session(store, "alice", alice, "enrol-session");
-    let mut enroll = broker();
-    enroll.token_hashes = vec!["enrol-session".to_string()];
+    let mut enroll = mfa_stamp("enrol-session");
     enroll.sealed_secret = Some("sealed".to_string());
-    let op = IdentityOp::Mfa(MfaOp::EnrollTotp {
-        request: TotpEnroll {
-            session_token: Secret::default(),
-            secret_base32: Secret::default(),
-        },
-    });
-    apply_kept(store, &op, &enroll, NOW).unwrap();
-    let mut confirm = broker();
-    confirm.token_hashes = vec!["enrol-session".to_string()];
+    apply_kept(store, &mfa_enroll(), &enroll, NOW).unwrap();
+    let mut confirm = mfa_stamp("enrol-session");
     confirm.totp_step = Some(100);
     confirm.sealed_secret = Some("sealed".to_string());
-    let op = IdentityOp::Mfa(MfaOp::ConfirmTotp {
-        request: SessionTouch {
-            refresh: None,
-            session_token: Secret::default(),
-            code: Secret::default(),
-        },
-    });
-    apply_kept(store, &op, &confirm, NOW).unwrap();
+    assert_eq!(
+        outcome(apply_kept(store, &mfa_confirm(), &confirm, NOW).unwrap()).outcome,
+        AuthenticateOutcome::Ok
+    );
 }
 
 fn verify(step: Option<u64>) -> (IdentityOp, IdentityStamp) {
-    let mut stamp = broker();
-    stamp.token_hashes = vec!["mfa-session".to_string()];
+    let mut stamp = mfa_stamp("mfa-session");
     stamp.totp_step = step;
     stamp.sealed_secret = Some("sealed".to_string());
-    let op = IdentityOp::Mfa(MfaOp::VerifyTotp {
-        request: SessionTouch {
-            refresh: None,
-            session_token: Secret::default(),
-            code: Secret::default(),
-        },
+    let op = IdentityOp::Mfa(MfaOp::Verify {
+        request: mfa_code_request(),
     });
     (op, stamp)
 }
@@ -519,7 +541,7 @@ fn an_enrolled_factor_holds_the_session_until_a_fresh_step_verifies() {
     let (op, replayed) = verify(Some(100));
     assert_eq!(
         apply_kept(&mut store, &op, &replayed, NOW),
-        Err(IdentityRefusal::Replay),
+        Err(IdentityRefusal::MfaCodeReplayed),
         "the enrolment step cannot be replayed"
     );
     let (op, wrong) = verify(None);
@@ -625,27 +647,15 @@ fn a_totp_verdict_cannot_confirm_a_replacement_secret() {
     let mut store = store_in(AuthMode::Local);
     let alice = with_password(&mut store, "alice");
     open_session(&mut store, "alice", &alice, "enrol-session");
-    let enroll = IdentityOp::Mfa(MfaOp::EnrollTotp {
-        request: TotpEnroll {
-            session_token: Secret::default(),
-            secret_base32: Secret::default(),
-        },
-    });
-    let mut stamp = broker();
-    stamp.token_hashes = vec!["enrol-session".to_string()];
+    let enroll = mfa_enroll();
+    let mut stamp = mfa_stamp("enrol-session");
     stamp.sealed_secret = Some("sealed-original".to_string());
     apply_kept(&mut store, &enroll, &stamp, NOW).unwrap();
     let mut old_verdict = stamp.clone();
     old_verdict.totp_step = Some(100);
     stamp.sealed_secret = Some("sealed-replacement".to_string());
     apply_kept(&mut store, &enroll, &stamp, NOW).unwrap();
-    let confirm = IdentityOp::Mfa(MfaOp::ConfirmTotp {
-        request: SessionTouch {
-            refresh: None,
-            session_token: Secret::default(),
-            code: Secret::default(),
-        },
-    });
+    let confirm = mfa_confirm();
     let before = serde_json::to_value(&store).unwrap();
     assert_eq!(
         store.apply(&confirm, &old_verdict, &ctx_at(NOW)),

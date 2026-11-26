@@ -2643,6 +2643,13 @@ fn add_owner_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static str>) {
         codes.extend(["POLICY_SCOPE_BOUND", "POLICY_SELF_AUTHORIZATION"]);
         // MEDULLA-ENGINE-PARITY-R007.4: granting or revoking a wire login refuses these two.
         codes.extend(["WIRE_LOGIN_EXISTS", "WIRE_LOGIN_UNKNOWN"]);
+        // MEDULLA-IDENTITY-R741: the engine-held TOTP ops refuse these four.
+        codes.extend([
+            "MFA_CODE_REPLAYED",
+            "MFA_CODE_INVALID",
+            "MFA_LOCKED",
+            "MFA_ENROLLMENT_REQUIRED",
+        ]);
     }
     // MEDULLA-SRC-AUTH-R011.3: the trust mark is stamped in the mutation gateway.
     if id == "AddNode" {

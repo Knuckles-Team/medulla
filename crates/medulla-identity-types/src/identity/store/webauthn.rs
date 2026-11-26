@@ -68,9 +68,10 @@ impl IdentityStore {
                 self.verify_webauthn(request, stamp, now_ms)?,
             )),
             MfaOp::RemoveWebauthn { request } => self.remove_webauthn(request, stamp, ctx),
-            MfaOp::EnrollTotp { .. }
-            | MfaOp::ConfirmTotp { .. }
-            | MfaOp::VerifyTotp { .. }
+            MfaOp::Enroll { .. }
+            | MfaOp::Confirm { .. }
+            | MfaOp::Verify { .. }
+            | MfaOp::Disable { .. }
             | MfaOp::SetRecoveryCodes { .. }
             | MfaOp::ConsumeRecoveryCode { .. } => Err(IdentityRefusal::InvalidRequest),
         }

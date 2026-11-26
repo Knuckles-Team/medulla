@@ -16,9 +16,9 @@ use super::delegation::DelegationRecordWrite;
 use super::policy_bundle::PolicyBundleOp;
 use super::requests::{
     ApiKeyIssue, ApiKeyUse, AuthenticateRequest, CreateUserRequest, ExternalLogin,
-    InitializeRequest, LinkRequest, OneTimeTokenIssue, PasswordChange, PasswordResetIssue,
-    PasswordSet, RecoveryCodesSet, SessionTouch, TokenRedeem, TotpEnroll, UserStatusChange,
-    UserUpdate, WebauthnCredential, WebauthnUse,
+    InitializeRequest, LinkRequest, MfaCodeRequest, MfaEnrollRequest, OneTimeTokenIssue,
+    PasswordChange, PasswordResetIssue, PasswordSet, RecoveryCodesSet, SessionTouch, TokenRedeem,
+    UserStatusChange, UserUpdate, WebauthnCredential, WebauthnUse,
 };
 use super::requests_admin::{
     GroupMembershipChange, GroupUpsert, ListQuery, ObjectRef, PolicyUpdate, RoleUpsert, SqlDump,
@@ -331,14 +331,22 @@ pub enum TokenOp {
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum MfaOp {
-    EnrollTotp {
-        request: TotpEnroll,
+    /// Generate and seal the TOTP secret engine-side; the reply carries the provisioning URI once
+    /// (MEDULLA-IDENTITY-R741).
+    Enroll {
+        request: MfaEnrollRequest,
     },
-    ConfirmTotp {
-        request: SessionTouch,
+    /// Activate the enrolment with a first valid code.
+    Confirm {
+        request: MfaCodeRequest,
     },
-    VerifyTotp {
-        request: SessionTouch,
+    /// Step the session up with a valid code.
+    Verify {
+        request: MfaCodeRequest,
+    },
+    /// Remove the confirmed factor; needs a fresh code.
+    Disable {
+        request: MfaCodeRequest,
     },
     SetRecoveryCodes {
         request: RecoveryCodesSet,
@@ -620,9 +628,10 @@ impl TokenOp {
 impl MfaOp {
     fn meta(&self) -> OpMeta {
         match self {
-            Self::EnrollTotp { .. } => meta("enroll_totp", true, OpAuthority::Broker),
-            Self::ConfirmTotp { .. } => meta("confirm_totp", true, OpAuthority::Broker),
-            Self::VerifyTotp { .. } => meta("verify_totp", true, OpAuthority::Broker),
+            Self::Enroll { .. } => meta("enroll_mfa", true, OpAuthority::Broker),
+            Self::Confirm { .. } => meta("confirm_mfa", true, OpAuthority::Broker),
+            Self::Verify { .. } => meta("verify_mfa", true, OpAuthority::Broker),
+            Self::Disable { .. } => meta("disable_mfa", true, OpAuthority::Broker),
             Self::SetRecoveryCodes { .. } => meta("set_recovery_codes", true, OpAuthority::Broker),
             Self::ConsumeRecoveryCode { .. } => {
                 meta("consume_recovery_code", true, OpAuthority::Broker)

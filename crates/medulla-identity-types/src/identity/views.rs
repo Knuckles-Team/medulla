@@ -174,6 +174,14 @@ impl AuthenticateResult {
     }
 }
 
+/// The answer to `mfa enroll`: an `otpauth://` URI carrying the engine-generated secret.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct MfaProvisioning {
+    pub provisioning_uri: String,
+}
+
 /// A WebAuthn credential as the broker needs it to verify an assertion.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -260,6 +268,10 @@ pub enum IdentityReply<C = ()> {
     ScimClient(super::credentials::ScimClientView),
     /// `consume_mfa_challenge` (MEDULLA-IDENTITY-R735).
     MfaChallenge(super::credentials::MfaChallengeView),
+    /// `mfa enroll`: the provisioning URI of the engine-held TOTP secret, answered once
+    /// (MEDULLA-IDENTITY-R741). The store never builds it; the request boundary does, after the
+    /// apply, from the sealed record.
+    MfaProvisioning(MfaProvisioning),
     /// `validate_policy`: the RBAC roles and grants a policy bundle lowers to
     /// (MEDULLA-IDENTITY-R702).
     PolicyCompiled {
@@ -312,6 +324,7 @@ impl IdentityReply {
             Self::ScimClients(value) => IdentityReply::ScimClients(value),
             Self::ScimClient(value) => IdentityReply::ScimClient(value),
             Self::MfaChallenge(value) => IdentityReply::MfaChallenge(value),
+            Self::MfaProvisioning(value) => IdentityReply::MfaProvisioning(value),
             Self::PolicyCompiled { roles, grants } => {
                 IdentityReply::PolicyCompiled { roles, grants }
             }
