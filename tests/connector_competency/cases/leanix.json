@@ -1,0 +1,34 @@
+{
+  "connector": "leanix",
+  "rollup": "MEDULLA-CQ-CONN-R032",
+  "vocabulary_module": "enterprise-v1.ttl",
+  "terms": [
+    "factSheetType",
+    "lifecyclePhase",
+    "activeUserCount"
+  ],
+  "questions": [
+    {
+      "id": "leanix.q1",
+      "kind": "single",
+      "question": "Which fact sheets of type application have lifecycle phase end-of-life but still have active users?",
+      "uql": "FOREIGN SCAN 'leanix-agent'",
+      "sources": [
+        "leanix-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "leanix-agent": "mcp_tool"
+      },
+      "columns": [
+        "factSheet",
+        "lifecyclePhase",
+        "activeUserCount"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "leanix-agent/single.json"
+      ]
+    }
+  ]
+}
