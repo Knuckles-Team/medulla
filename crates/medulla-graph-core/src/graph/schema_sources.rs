@@ -1768,7 +1768,11 @@ mod tests {
         }
         // The classes the process vocabulary answers queries over are in the composed text.
         let composed: String = sources.ontologies().map(|(_, text)| text).collect();
-        for class in [":BpmnUserTask", ":BpmnExclusiveGateway", ":DmnDecisionTable"] {
+        for class in [
+            ":BpmnUserTask",
+            ":BpmnExclusiveGateway",
+            ":DmnDecisionTable",
+        ] {
             assert!(composed.contains(class), "{class} is composed");
         }
     }
