@@ -698,6 +698,7 @@ METHOD_IDS = frozenset(
         "SemanticEnrich",
         "SetPathGrant",
         "SourceCoverage",
+        "CodeNavigation",
         "SourceSync",
         "StoredQueryCall",
         "StoredQueryGet",

@@ -168,7 +168,7 @@ def test_methods_reach_kernels(start_medulla_server) -> None:
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.4")
 def test_ambiguous_degraded_and_refusals(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R654.4: statuses, both codes and no state change."""
+    """Verifies MEDULLA-FEDERATED-QUERY-R654.4: statuses, codes, no state change."""
 
     def body(client: Any, graph: str) -> None:
         before = _call(
@@ -216,9 +216,7 @@ def test_ambiguous_degraded_and_refusals(start_medulla_server) -> None:
             with pytest.raises(Exception) as refused:
                 _call(client, graph, "CodeContext", request)
             expected = (
-                "CODE_DEPTH_EXCEEDED"
-                if request.get("depth")
-                else "CODE_ANCHOR_UNKNOWN"
+                "CODE_DEPTH_EXCEEDED" if request.get("depth") else "CODE_ANCHOR_UNKNOWN"
             )
             assert expected in str(refused.value)
         with pytest.raises(Exception) as unknown:
@@ -236,7 +234,7 @@ def test_ambiguous_degraded_and_refusals(start_medulla_server) -> None:
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.5")
 def test_evidence_fields(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R654.5: hop counts, hub inputs, causal stage and evidence."""
+    """Verifies MEDULLA-FEDERATED-QUERY-R654.5: hops, hub inputs, stage, evidence."""
 
     def body(client: Any, graph: str) -> None:
         served = _call(
@@ -268,7 +266,7 @@ def test_evidence_fields(start_medulla_server) -> None:
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.6")
 def test_code_context_and_diagnose(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R654.6: the served hot path answers both methods."""
+    """Verifies MEDULLA-FEDERATED-QUERY-R654.6: the hot path answers both methods."""
 
     def body(client: Any, graph: str) -> None:
         impact = _call(
@@ -285,5 +283,70 @@ def test_code_context_and_diagnose(start_medulla_server) -> None:
         assert impact["usages"] == []
         diagnosis = _call(client, graph, "Diagnose", {"symptom": "anom"})
         assert diagnosis["chain"][-1]["node_id"] == "anom"
+
+    _with_graph(body)
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R654.8")
+def test_code_navigation_reads_the_index(start_medulla_server) -> None:
+    """Verifies MEDULLA-FEDERATED-QUERY-R654.8: nav and instances answer the index."""
+
+    def body(client: Any, graph: str) -> None:
+        _node(
+            client,
+            graph,
+            "sym-cli",
+            {
+                "type": "Symbol",
+                "symbol_type": "function",
+                "qualified_name": "repo/c.rs::cli",
+                "path": "c.rs",
+                "line": 12,
+            },
+        )
+        _edge(client, graph, "sym-cli", "sym-run", relationship="calls")
+
+        nav = _call(
+            client, graph, "CodeNavigation", {"action": "nav", "symbol": "::main"}
+        )
+        assert nav == {
+            "items": [
+                {
+                    "symbol": _SYMBOLS["sym-main"],
+                    "path": "",
+                    "line": 0,
+                    "kind": "function",
+                }
+            ]
+        }
+        callers = _call(
+            client, graph, "CodeNavigation", {"action": "instances", "symbol": "::run"}
+        )
+        assert callers["items"] == [
+            {"symbol": "repo/c.rs::cli", "path": "c.rs", "line": 12, "kind": "function"}
+        ]
+        listing = _call(client, graph, "CodeNavigation", {"action": "nav", "limit": 2})
+        assert len(listing["items"]) == 2
+
+        # An unknown symbol answers no items, as an absent one would; the request
+        # shapes that cannot be answered refuse.
+        unknown = _call(
+            client, graph, "CodeNavigation", {"action": "nav", "symbol": "::absent"}
+        )
+        assert unknown == {"items": []}
+        for bad in ({"action": "instances"}, {"action": "nav", "symbol": " "}):
+            with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+                _call(client, graph, "CodeNavigation", bad)
+
+        # The graph is the caller's: a second tenant's graph does not see these rows.
+        other = f"code-{uuid.uuid4().hex[:8]}"
+        client.tenants.create(other)
+        try:
+            empty = _call(
+                client, other, "CodeNavigation", {"action": "nav", "symbol": "::main"}
+            )
+            assert empty == {"items": []}
+        finally:
+            client.tenants.delete(other)
 
     _with_graph(body)

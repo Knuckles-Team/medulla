@@ -82,6 +82,53 @@ pub struct CodeContextAnswer {
     pub missing_repositories: Vec<String>,
 }
 
+/// Which code navigation question a request asks (MEDULLA-FEDERATED-QUERY-R654.8).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum CodeNavAction {
+    /// Where the symbol is defined; with no symbol, the symbols of the index.
+    Nav,
+    /// The symbols that call the symbol, each at its definition.
+    Instances,
+}
+
+/// A served `CodeNavigation` request.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CodeNavigationRequest {
+    pub action: CodeNavAction,
+    /// Qualified symbol name, or a suffix of one. `instances` requires it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub symbol: Option<String>,
+    /// Item cap; `None` takes `knob code.max_nodes`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub limit: Option<u32>,
+}
+
+/// One symbol with where the index recorded it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CodeLocation {
+    pub symbol: String,
+    /// The file the symbol is parsed from; empty when the index holds none.
+    pub path: String,
+    /// One-based start line; 0 when the index holds none.
+    pub line: u32,
+    /// The index's `symbol_type` of the symbol.
+    pub kind: String,
+}
+
+/// The served `CodeNavigation` answer.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct CodeNavigationAnswer {
+    pub items: Vec<CodeLocation>,
+}
+
 /// The closed set of operations causal stages.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

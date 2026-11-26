@@ -144,6 +144,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "BookmarkSemanticSearch",
     "BookmarkRelations",
     "CodeHealthSweep",
+    // MEDULLA-FEDERATED-QUERY-R654.8: `handle_code_navigation` reads the code index of the core
+    // `read_authority.project_core` projected.
+    "CodeNavigation",
     "Diagnose",
     "ViewportQuery",
     "ResolveViewportSelection",

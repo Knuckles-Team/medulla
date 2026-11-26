@@ -20,8 +20,13 @@ use medulla_plan::code_context::{
 use medulla_ingestion_types::code_health::{
     sweep, CodeGraph, CodeHealthReport, CodeHealthSweepRequest,
 };
-use medulla_protocol_types::result_contract::query::{CodeContext, CodeHealthSweep, Diagnose};
-use medulla_types::code_context::{CodeContextRequest, DiagnoseRequest};
+use medulla_protocol_types::result_contract::query::{
+    CodeContext, CodeHealthSweep, CodeNavigation, Diagnose,
+};
+use medulla_types::code_context::{
+    CodeContextRequest, CodeLocation, CodeNavAction, CodeNavigationAnswer,
+    CodeNavigationRequest, DiagnoseRequest,
+};
 use std::collections::BTreeSet;
 
 pub(super) type Props = serde_json::Map<String, serde_json::Value>;
@@ -111,6 +116,179 @@ fn code_index(core: &GraphCore) -> CodeIndex {
         symbols: names.into_values().collect(),
         edges,
         missing_repositories: known.difference(&live).cloned().collect(),
+    }
+}
+
+/// One symbol of the code index with where the index recorded it.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct CodeSite {
+    id: String,
+    location: CodeLocation,
+}
+
+/// A numeric property, stored as a number or as its text.
+fn line_of(props: &Props, key: &str) -> u32 {
+    match props.get(key) {
+        Some(serde_json::Value::Number(number)) => {
+            number.as_u64().and_then(|n| u32::try_from(n).ok()).unwrap_or(0)
+        }
+        Some(serde_json::Value::String(text)) => text.parse().unwrap_or(0),
+        _ => 0,
+    }
+}
+
+/// The symbols of the caller's projected core with their definition sites, and the `calls`
+/// edges between them as `(caller id, callee id)`. A symbol's file is the file version whose
+/// blob `IMPLEMENTS` it; a symbol no file version reaches falls back to its own `path` or
+/// `file_path` property, else an empty path.
+fn code_sites(core: &GraphCore) -> (Vec<CodeSite>, Vec<(String, String)>) {
+    let mut ids = core.node_ids();
+    ids.sort();
+    let mut file_of: std::collections::BTreeMap<String, String> = Default::default();
+    let mut symbols: std::collections::BTreeMap<String, Props> = Default::default();
+    for id in &ids {
+        let Some(props) = props_of(core, id) else {
+            continue;
+        };
+        if !text(&props, "symbol_type").is_empty() {
+            symbols.insert(id.clone(), props);
+        } else if !text(&props, "path").is_empty() {
+            let path = text(&props, "path");
+            for (blob, edge) in out_edges(core, id) {
+                if relationship(&edge) != "hasBlob" {
+                    continue;
+                }
+                for (symbol, edge) in out_edges(core, &blob) {
+                    if relationship(&edge) == "IMPLEMENTS" {
+                        file_of.entry(symbol).or_insert_with(|| path.clone());
+                    }
+                }
+            }
+        }
+    }
+    let mut sites = Vec::new();
+    let mut calls = Vec::new();
+    for (id, props) in &symbols {
+        let path = file_of.get(id).cloned().unwrap_or_else(|| {
+            [text(props, "path"), text(props, "file_path")]
+                .into_iter()
+                .find(|path| !path.is_empty())
+                .unwrap_or_default()
+        });
+        sites.push(CodeSite {
+            id: id.clone(),
+            location: CodeLocation {
+                symbol: qualified(props, id),
+                path,
+                line: line_of(props, "line"),
+                kind: text(props, "symbol_type"),
+            },
+        });
+        for (target, edge) in out_edges(core, id) {
+            if relationship(&edge) == "calls" && symbols.contains_key(&target) {
+                calls.push((id.clone(), target));
+            }
+        }
+    }
+    (sites, calls)
+}
+
+/// Whether `name` names `symbol`: the whole qualified name, or a suffix that starts at a
+/// qualifier boundary.
+fn names_symbol(symbol: &str, name: &str) -> bool {
+    match symbol.strip_suffix(name) {
+        Some("") => true,
+        Some(head) => head.ends_with([':', '.', '/', '#']),
+        None => false,
+    }
+}
+
+/// The locations a `CodeNavigation` request answers over one code index, at most `limit`, in
+/// symbol, path, line order. An unknown symbol answers none: the answer never tells a symbol
+/// that is absent from one that the caller cannot read.
+fn navigate(
+    sites: &[CodeSite],
+    calls: &[(String, String)],
+    request: &CodeNavigationRequest,
+    limit: usize,
+) -> Result<Vec<CodeLocation>, String> {
+    let symbol = request.symbol.as_deref().map(str::trim);
+    if symbol == Some("") {
+        return Err("INVALID_ARGUMENT: a code navigation symbol must not be empty".into());
+    }
+    let mut found: Vec<CodeLocation> = match (request.action, symbol) {
+        (CodeNavAction::Instances, None) => {
+            return Err("INVALID_ARGUMENT: instances needs a symbol".into());
+        }
+        (CodeNavAction::Nav, None) => sites.iter().map(|site| site.location.clone()).collect(),
+        (CodeNavAction::Nav, Some(name)) => sites
+            .iter()
+            .filter(|site| names_symbol(&site.location.symbol, name))
+            .map(|site| site.location.clone())
+            .collect(),
+        (CodeNavAction::Instances, Some(name)) => {
+            let targets: BTreeSet<&str> = sites
+                .iter()
+                .filter(|site| names_symbol(&site.location.symbol, name))
+                .map(|site| site.id.as_str())
+                .collect();
+            let callers: BTreeSet<&str> = calls
+                .iter()
+                .filter(|(_, callee)| targets.contains(callee.as_str()))
+                .map(|(caller, _)| caller.as_str())
+                .collect();
+            sites
+                .iter()
+                .filter(|site| callers.contains(site.id.as_str()))
+                .map(|site| site.location.clone())
+                .collect()
+        }
+    };
+    found.sort_by(|a, b| {
+        (&a.symbol, &a.path, a.line).cmp(&(&b.symbol, &b.path, b.line))
+    });
+    found.dedup();
+    found.truncate(limit);
+    Ok(found)
+}
+
+/// Serve one `CodeNavigation` (MEDULLA-FEDERATED-QUERY-R654.8) over the code index
+/// `CodeContext` reads. Rows the caller cannot read are not in the projected core, so the
+/// answer never reaches them. Nothing is stored.
+pub(crate) async fn handle_code_navigation(
+    ctx: &QueryHandlerCtx<'_>,
+    request: CodeNavigationRequest,
+) -> Response {
+    let req_id = ctx.req_id;
+    let cap = medulla_server_api::knob_config::knobs().code_max_nodes;
+    let limit = match request.limit {
+        Some(limit) if limit == 0 || u64::from(limit) > cap => {
+            return Response::err(
+                req_id,
+                format!("INVALID_ARGUMENT: limit must be within [1, {cap}]"),
+            );
+        }
+        Some(limit) => limit as usize,
+        None => usize::try_from(cap).unwrap_or(usize::MAX),
+    };
+    let core = Arc::clone(ctx.core);
+    let outcome = compute_off_lock(req_id, move || {
+        let (sites, calls) = code_sites(&core);
+        navigate(&sites, &calls, &request, limit)
+    })
+    .await;
+    match outcome {
+        Err(response) => response,
+        Ok(Err(error)) => Response::err(req_id, error),
+        Ok(Ok(items)) => served_response::<CodeNavigation>(
+            req_id,
+            Ok(Ok(CodeNavigationAnswer { items })),
+            "CodeNavigation",
+            #[cfg(feature = "result-cache")]
+            ctx.core,
+            #[cfg(feature = "result-cache")]
+            None,
+        ),
     }
 }
 
@@ -299,5 +477,84 @@ pub(crate) async fn handle_diagnose(
             #[cfg(feature = "result-cache")]
             None,
         ),
+    }
+}
+
+#[cfg(test)]
+mod navigation_tests {
+    use super::*;
+
+    fn site(id: &str, symbol: &str, path: &str, line: u32) -> CodeSite {
+        CodeSite {
+            id: id.into(),
+            location: CodeLocation {
+                symbol: symbol.into(),
+                path: path.into(),
+                line,
+                kind: "function".into(),
+            },
+        }
+    }
+
+    fn request(action: CodeNavAction, symbol: Option<&str>) -> CodeNavigationRequest {
+        CodeNavigationRequest {
+            action,
+            symbol: symbol.map(str::to_string),
+            limit: None,
+        }
+    }
+
+    fn index() -> (Vec<CodeSite>, Vec<(String, String)>) {
+        let sites = vec![
+            site("run", "repo::a::run", "a.rs", 3),
+            site("main", "repo::a::main", "a.rs", 9),
+            site("parse", "repo::b::parse", "b.rs", 1),
+            site("xparse", "repo::b::xparse", "b.rs", 20),
+        ];
+        let calls = vec![
+            ("run".to_string(), "main".to_string()),
+            ("main".to_string(), "parse".to_string()),
+            ("run".to_string(), "parse".to_string()),
+        ];
+        (sites, calls)
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R654.8
+    #[test]
+    fn nav_answers_the_definition_of_a_suffix_at_a_qualifier_boundary() {
+        let (sites, calls) = index();
+        let items =
+            navigate(&sites, &calls, &request(CodeNavAction::Nav, Some("parse")), 10).unwrap();
+        assert_eq!(
+            items,
+            vec![CodeLocation {
+                symbol: "repo::b::parse".into(),
+                path: "b.rs".into(),
+                line: 1,
+                kind: "function".into()
+            }]
+        );
+        let all = navigate(&sites, &calls, &request(CodeNavAction::Nav, None), 3).unwrap();
+        assert_eq!(all.len(), 3, "the limit caps the listing");
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R654.8
+    #[test]
+    fn instances_answer_the_callers_and_an_unknown_symbol_answers_nothing() {
+        let (sites, calls) = index();
+        let items = navigate(
+            &sites,
+            &calls,
+            &request(CodeNavAction::Instances, Some("repo::b::parse")),
+            10,
+        )
+        .unwrap();
+        let names: Vec<&str> = items.iter().map(|item| item.symbol.as_str()).collect();
+        assert_eq!(names, ["repo::a::main", "repo::a::run"]);
+        let none =
+            navigate(&sites, &calls, &request(CodeNavAction::Instances, Some("nope")), 10).unwrap();
+        assert!(none.is_empty());
+        assert!(navigate(&sites, &calls, &request(CodeNavAction::Instances, None), 10).is_err());
+        assert!(navigate(&sites, &calls, &request(CodeNavAction::Nav, Some(" ")), 10).is_err());
     }
 }

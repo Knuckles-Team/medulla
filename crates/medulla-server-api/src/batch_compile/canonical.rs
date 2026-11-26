@@ -694,6 +694,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::BookmarkSemanticSearch { .. }
         | Method::BookmarkRelations { .. }
         | Method::CodeHealthSweep { .. }
+        | Method::CodeNavigation { .. }
         | Method::Diagnose { .. }
         | Method::EncodedDocumentSearch { .. }
         | Method::ProjectionRead { .. }

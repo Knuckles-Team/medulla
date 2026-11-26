@@ -213,6 +213,9 @@ async fn dispatch_query_family(
         Method::CodeHealthSweep { request } => {
             return Ok(handle_code_health_sweep(hctx, *request).await)
         }
+        Method::CodeNavigation { request } => {
+            return Ok(handle_code_navigation(hctx, *request).await)
+        }
         Method::Diagnose { request } => return Ok(handle_diagnose(hctx, *request).await),
         other => other,
     };

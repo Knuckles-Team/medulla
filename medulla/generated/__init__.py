@@ -678,6 +678,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "Shutdown": cluster.send_shutdown,
     "Solve": compute.send_solve,
     "SourceCoverage": query.send_source_coverage,
+    "CodeNavigation": query.send_code_navigation,
     "SourceIngest": ingestion.send_source_ingest,
     "SourceIngestStatus": ingestion.send_source_ingest_status,
     "SourceSync": graph.send_source_sync,

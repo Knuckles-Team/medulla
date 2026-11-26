@@ -197,6 +197,7 @@ mod schema_projections;
 mod schema_context;
 #[cfg(feature = "query")]
 mod run_metrics;
+#[cfg(feature = "query")]
 mod run_trace_export;
 #[cfg(feature = "query")]
 mod standards;
@@ -207,7 +208,9 @@ pub use column_lineage::derive_lineage;
 #[cfg(feature = "query")]
 pub(crate) use column_lineage::handle_column_lineage;
 #[cfg(feature = "query")]
-pub(crate) use code_context::{handle_code_context, handle_code_health_sweep, handle_diagnose};
+pub(crate) use code_context::{
+    handle_code_context, handle_code_health_sweep, handle_code_navigation, handle_diagnose,
+};
 #[cfg(feature = "query")]
 pub(crate) use context_compile::handle_context_compile;
 #[cfg(feature = "query")]

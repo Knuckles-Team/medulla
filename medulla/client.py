@@ -7760,6 +7760,35 @@ class GraphOperationsClient:
             raise RuntimeError("CodeContext must answer with an object")
         return result
 
+    async def code_navigation(
+        self,
+        action: str,
+        symbol: str | None = None,
+        *,
+        limit: int | None = None,
+    ) -> dict[str, Any]:
+        """Where a code symbol is defined, or who calls it
+        (MEDULLA-FEDERATED-QUERY-R654.8).
+
+        ``action`` is ``nav`` (the definitions of ``symbol``, or the index's
+        symbols when it is ``None``) or ``instances`` (the symbols that call
+        ``symbol``; it is required). Returns ``{items: [{symbol, path, line,
+        kind}]}``; an unknown symbol answers no items. Needs ``node:read``.
+        """
+        request: dict[str, Any] = {"action": action}
+        if symbol is not None:
+            request["symbol"] = symbol
+        if limit is not None:
+            request["limit"] = limit
+        result = await self._client._send(
+            "CodeNavigation", {"request": request}, None, idempotency_key=None
+        )
+        if isinstance(result, (bytes, bytearray)):
+            result = msgpack.unpackb(result, raw=False)
+        if not isinstance(result, dict):
+            raise RuntimeError("CodeNavigation must answer with an object")
+        return result
+
     async def diagnose(self, symptom: str) -> dict[str, Any]:
         """The ordered causal chain behind one operations symptom
         (MEDULLA-FEDERATED-QUERY-R654.3).

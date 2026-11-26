@@ -839,6 +839,13 @@ $($variants)*
         request: Box<medulla_types::code_context::CodeContextRequest>,
     },
 
+    /// MEDULLA-FEDERATED-QUERY-R654.8: where a code symbol is defined, or the symbols that
+    /// call it, each with its path, line and kind, over the same code index `CodeContext`
+    /// reads. A read; nothing is committed.
+    CodeNavigation {
+        request: Box<medulla_types::code_context::CodeNavigationRequest>,
+    },
+
     /// MEDULLA-REPO-INGEST-R700.3: the symbols the caller's declared entry points do
     /// not reach, over the same code index `CodeContext` reads. A read; nothing is
     /// committed.

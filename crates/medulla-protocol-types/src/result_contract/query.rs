@@ -97,6 +97,8 @@ method_results! {
     CodeContext(CodeContext) => Raw<medulla_types::code_context::CodeContextAnswer>;
     // MEDULLA-REPO-INGEST-R700.3: the findings of one code-health sweep.
     CodeHealthSweep(CodeHealthSweep) => Raw<medulla_ingestion_types::code_health::CodeHealthReport>;
+    // MEDULLA-FEDERATED-QUERY-R654.8: symbol locations of the code index.
+    CodeNavigation(CodeNavigation) => Raw<medulla_types::code_context::CodeNavigationAnswer>;
     Diagnose(Diagnose) => Raw<medulla_types::code_context::SymptomDiagnosis>;
     // MEDULLA-MEDIA-VOCAB-R001.102.2, R001.102.3: bookmark search and relations.
     BookmarkSemanticSearch(BookmarkSemanticSearch) => Raw<medulla_types::bookmark_query::BookmarkSearchResult>;

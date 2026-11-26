@@ -1011,6 +1011,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ("ProcessConformance", &["PROCESS_MODEL_UNKNOWN"]),
     // MEDULLA-REPO-INGEST-R700.3: a step budget outside its range.
     ("CodeHealthSweep", &["INVALID_ARGUMENT"]),
+    // MEDULLA-FEDERATED-QUERY-R654.8: an empty symbol, an `instances` with none, a limit out of range.
+    ("CodeNavigation", &["INVALID_ARGUMENT"]),
     ("Diagnose", &["CODE_DEPTH_EXCEEDED", "CODE_ANCHOR_UNKNOWN"]),
     (
         "CorpusRetrieve",

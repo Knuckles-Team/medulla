@@ -17836,6 +17836,13 @@ class MethodSourceCoverage(BaseModel):
     params: MethodSourceCoverageParams
 
 
+class MethodCodeNavigation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["CodeNavigation"]
+    params: MethodCodeNavigationParams
+
+
 class MethodObservationState(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18789,6 +18796,7 @@ Method = Annotated[
         MethodSourceMappingGet,
         MethodSourceMappingControl,
         MethodSourceCoverage,
+        MethodCodeNavigation,
         MethodObservationState,
         MethodHarnessEdit,
         MethodMemoryRemember,
@@ -41254,6 +41262,12 @@ class MethodSemanticEnrichParams(BaseModel):
     op: SemanticEnrichOp
 
 
+class MethodCodeNavigationParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: dict[str, Any]
+
+
 class MethodSourceCoverageParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -51718,6 +51732,8 @@ __all__ = [
     "MethodSetPathGrantParams",
     "MethodSourceCoverage",
     "MethodSourceCoverageParams",
+    "MethodCodeNavigation",
+    "MethodCodeNavigationParams",
     "MethodSourceSync",
     "MethodSourceSyncParams",
     "MethodStoredQueryCall",
