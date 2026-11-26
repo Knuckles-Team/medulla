@@ -165,6 +165,9 @@ medulla-finance-types = { path = "../medulla-finance-types" }
 # The WorkItem machine edge table the state-machine ontology test compares with
 # (MEDULLA-ORCH-VOCAB-R812.3).
 medulla-work-types = { path = "../medulla-work-types" }
+# The task, readiness and request machine edge tables of the runtime observability registries
+# (MEDULLA-OBSERVE-R004.5).
+medulla-observe = { path = "../medulla-observe" }
 # The clustering kernel's run machine edge table (MEDULLA-CLUSTER-R004.5).
 medulla-numeric = { path = "../medulla-numeric" }
 # The Schedule machine edge table the state-machine ontology test compares with

@@ -7375,6 +7375,7 @@ dependencies = [
  "medulla-modality",
  "medulla-mutation-types",
  "medulla-numeric",
+ "medulla-observe",
  "medulla-protocol-types",
  "medulla-quantum-hardware",
  "medulla-query-types",

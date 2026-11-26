@@ -611,15 +611,25 @@ mod sm {
     pub(super) fn assert_matches<S: MachineState + std::fmt::Debug, E: MachineEvent, G>(
         machine: &MachineDef<S, E, G>,
     ) {
+        assert_matches_as(machine, machine.name);
+    }
+
+    /// As [`assert_matches`], for a machine whose ontology instance carries another name than
+    /// its Rust `MachineDef`: `ontology_name` is the local name of the `:StateMachine`
+    /// instance, and the IRIs of its states, events and transitions begin with it.
+    pub(super) fn assert_matches_as<S: MachineState + std::fmt::Debug, E: MachineEvent, G>(
+        machine: &MachineDef<S, E, G>,
+        ontology_name: &str,
+    ) {
         let triples = triples();
         assert_eq!(
-            turtle_edges(&triples, machine.name),
+            turtle_edges(&triples, ontology_name),
             rust_edges(machine),
             "{} Turtle edges differ from the Rust edge table",
             machine.name
         );
         let has_state = kg("hasState");
-        let subject = NamedNode::new(kg(machine.name)).unwrap();
+        let subject = NamedNode::new(kg(ontology_name)).unwrap();
         let declared: BTreeSet<String> = triples
             .iter()
             .filter(|t| t.subject == subject.clone().into() && t.predicate.as_str() == has_state)
@@ -633,13 +643,13 @@ mod sm {
             .map(|s| s.stored().to_owned())
             .collect();
         assert_eq!(declared, rust, "{} states differ", machine.name);
-        let initial = iri(object_of(&triples, &kg(machine.name), &kg("initialState")).unwrap());
+        let initial = iri(object_of(&triples, &kg(ontology_name), &kg("initialState")).unwrap());
         assert_eq!(
             initial,
-            kg(&format!("{}_{:?}", machine.name, machine.initial))
+            kg(&format!("{ontology_name}_{:?}", machine.initial))
         );
         for &terminal in machine.terminals {
-            let state = kg(&format!("{}_{:?}", machine.name, terminal));
+            let state = kg(&format!("{ontology_name}_{terminal:?}"));
             let ty = iri(object_of(&triples, &state, RDF_TYPE).unwrap());
             assert!(
                 ty.ends_with("TerminalState"),
@@ -1707,4 +1717,24 @@ fn source_mapping_machine_matches_edge_table() {
 #[test]
 fn source_mapping_machine_classes_extend_core() {
     sm::assert_extends_core("SourceMapping");
+}
+
+// spec: MEDULLA-OBSERVE-R004.5
+#[test]
+fn observe_machines_match_edge_tables() {
+    // The ontology instances carry the prefix Observe: `:TaskMachine` already names the
+    // lifecycle of a work-plan task, and a second instance of that name would merge the two.
+    sm::assert_matches_as(&medulla_observe::machine::task::TASK_MACHINE, "ObserveTaskMachine");
+    sm::assert_matches_as(
+        &medulla_observe::machine::readiness::READINESS_MACHINE,
+        "ObserveReadinessMachine",
+    );
+    sm::assert_matches_as(
+        &medulla_observe::machine::request::REQUEST_MACHINE,
+        "ObserveRequestMachine",
+    );
+    for prefix in ["ObserveTask", "ObserveReadiness", "ObserveRequest"] {
+        sm::assert_extends_core(prefix);
+    }
+    assert!(!MACHINES.contains("owl:imports"));
 }

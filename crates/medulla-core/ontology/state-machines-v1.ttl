@@ -10476,3 +10476,533 @@
     :fromState :SourceMappingMachine_Approved ;
     :toState :SourceMappingMachine_Proposed ;
     :firedBy :SourceMappingMachine_Event_Propose .
+
+# spec: MEDULLA-OBSERVE-R004.5
+# The runtime machines of the engine observability registries. The Rust edge tables
+# TASK_MACHINE, READINESS_MACHINE and REQUEST_MACHINE in crates/medulla-observe/src/machine/ are
+# the same tables; the ontology test asserts equal edge sets. The names carry the prefix Observe
+# because :TaskMachine already names the lifecycle of a work-plan task.
+
+:ObserveTaskState a owl:Class ;
+    rdfs:label "Observe task state" ;
+    rdfs:comment "A state of the observe task machine." ;
+    rdfs:subClassOf :State .
+
+:ObserveTaskTerminalState a owl:Class ;
+    rdfs:label "Observe task terminal state" ;
+    rdfs:comment "A terminal state of the observe task machine." ;
+    rdfs:subClassOf :TerminalState, :ObserveTaskState .
+
+:ObserveTaskTransition a owl:Class ;
+    rdfs:label "Observe task transition" ;
+    rdfs:comment "A transition of the observe task machine." ;
+    rdfs:subClassOf :Transition .
+
+:ObserveTaskEvent a owl:Class ;
+    rdfs:label "Observe task event" ;
+    rdfs:comment "An event of the observe task machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ObserveTaskGuard a owl:Class ;
+    rdfs:label "Observe task guard" ;
+    rdfs:comment "A guard of the observe task machine; the machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ObserveTaskMachine a :StateMachine ;
+    rdfs:label "Observe task machine" ;
+    rdfs:comment "The lifecycle of one registered background job: seven states, three terminal, edges T01 to T17." ;
+    :initialState :ObserveTaskMachine_Registered ;
+    :hasState :ObserveTaskMachine_Registered, :ObserveTaskMachine_Running, :ObserveTaskMachine_Progressing, :ObserveTaskMachine_Stalled, :ObserveTaskMachine_Completed, :ObserveTaskMachine_Failed, :ObserveTaskMachine_Cancelled .
+
+:ObserveTaskMachine_Registered a :ObserveTaskState ;
+    rdfs:label "Observe task Registered" ;
+    :storedForm "registered" .
+
+:ObserveTaskMachine_Running a :ObserveTaskState ;
+    rdfs:label "Observe task Running" ;
+    :storedForm "running" .
+
+:ObserveTaskMachine_Progressing a :ObserveTaskState ;
+    rdfs:label "Observe task Progressing" ;
+    :storedForm "progressing" .
+
+:ObserveTaskMachine_Stalled a :ObserveTaskState ;
+    rdfs:label "Observe task Stalled" ;
+    :storedForm "stalled" .
+
+:ObserveTaskMachine_Completed a :ObserveTaskTerminalState ;
+    rdfs:label "Observe task Completed" ;
+    :storedForm "completed" .
+
+:ObserveTaskMachine_Failed a :ObserveTaskTerminalState ;
+    rdfs:label "Observe task Failed" ;
+    :storedForm "failed" .
+
+:ObserveTaskMachine_Cancelled a :ObserveTaskTerminalState ;
+    rdfs:label "Observe task Cancelled" ;
+    :storedForm "cancelled" .
+
+:ObserveTaskMachine_Event_Start a :ObserveTaskEvent ;
+    rdfs:label "Observe task event Start" .
+
+:ObserveTaskMachine_Event_Progress a :ObserveTaskEvent ;
+    rdfs:label "Observe task event Progress" .
+
+:ObserveTaskMachine_Event_StallDetected a :ObserveTaskEvent ;
+    rdfs:label "Observe task event StallDetected" .
+
+:ObserveTaskMachine_Event_Finish a :ObserveTaskEvent ;
+    rdfs:label "Observe task event Finish" .
+
+:ObserveTaskMachine_Event_Fail a :ObserveTaskEvent ;
+    rdfs:label "Observe task event Fail" .
+
+:ObserveTaskMachine_Event_Cancel a :ObserveTaskEvent ;
+    rdfs:label "Observe task event Cancel" .
+
+:ObserveTaskMachine_T01 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T01" ;
+    :edgeId "T01" ;
+    :fromState :ObserveTaskMachine_Registered ;
+    :toState :ObserveTaskMachine_Running ;
+    :firedBy :ObserveTaskMachine_Event_Start .
+
+:ObserveTaskMachine_T02 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T02" ;
+    :edgeId "T02" ;
+    :fromState :ObserveTaskMachine_Running ;
+    :toState :ObserveTaskMachine_Progressing ;
+    :firedBy :ObserveTaskMachine_Event_Progress .
+
+:ObserveTaskMachine_T03 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T03" ;
+    :edgeId "T03" ;
+    :fromState :ObserveTaskMachine_Progressing ;
+    :toState :ObserveTaskMachine_Progressing ;
+    :firedBy :ObserveTaskMachine_Event_Progress .
+
+:ObserveTaskMachine_T04 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T04" ;
+    :edgeId "T04" ;
+    :fromState :ObserveTaskMachine_Running ;
+    :toState :ObserveTaskMachine_Stalled ;
+    :firedBy :ObserveTaskMachine_Event_StallDetected .
+
+:ObserveTaskMachine_T05 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T05" ;
+    :edgeId "T05" ;
+    :fromState :ObserveTaskMachine_Progressing ;
+    :toState :ObserveTaskMachine_Stalled ;
+    :firedBy :ObserveTaskMachine_Event_StallDetected .
+
+:ObserveTaskMachine_T06 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T06" ;
+    :edgeId "T06" ;
+    :fromState :ObserveTaskMachine_Stalled ;
+    :toState :ObserveTaskMachine_Progressing ;
+    :firedBy :ObserveTaskMachine_Event_Progress .
+
+:ObserveTaskMachine_T07 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T07" ;
+    :edgeId "T07" ;
+    :fromState :ObserveTaskMachine_Running ;
+    :toState :ObserveTaskMachine_Completed ;
+    :firedBy :ObserveTaskMachine_Event_Finish .
+
+:ObserveTaskMachine_T08 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T08" ;
+    :edgeId "T08" ;
+    :fromState :ObserveTaskMachine_Progressing ;
+    :toState :ObserveTaskMachine_Completed ;
+    :firedBy :ObserveTaskMachine_Event_Finish .
+
+:ObserveTaskMachine_T09 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T09" ;
+    :edgeId "T09" ;
+    :fromState :ObserveTaskMachine_Stalled ;
+    :toState :ObserveTaskMachine_Completed ;
+    :firedBy :ObserveTaskMachine_Event_Finish .
+
+:ObserveTaskMachine_T10 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T10" ;
+    :edgeId "T10" ;
+    :fromState :ObserveTaskMachine_Registered ;
+    :toState :ObserveTaskMachine_Failed ;
+    :firedBy :ObserveTaskMachine_Event_Fail .
+
+:ObserveTaskMachine_T11 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T11" ;
+    :edgeId "T11" ;
+    :fromState :ObserveTaskMachine_Running ;
+    :toState :ObserveTaskMachine_Failed ;
+    :firedBy :ObserveTaskMachine_Event_Fail .
+
+:ObserveTaskMachine_T12 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T12" ;
+    :edgeId "T12" ;
+    :fromState :ObserveTaskMachine_Progressing ;
+    :toState :ObserveTaskMachine_Failed ;
+    :firedBy :ObserveTaskMachine_Event_Fail .
+
+:ObserveTaskMachine_T13 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T13" ;
+    :edgeId "T13" ;
+    :fromState :ObserveTaskMachine_Stalled ;
+    :toState :ObserveTaskMachine_Failed ;
+    :firedBy :ObserveTaskMachine_Event_Fail .
+
+:ObserveTaskMachine_T14 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T14" ;
+    :edgeId "T14" ;
+    :fromState :ObserveTaskMachine_Registered ;
+    :toState :ObserveTaskMachine_Cancelled ;
+    :firedBy :ObserveTaskMachine_Event_Cancel .
+
+:ObserveTaskMachine_T15 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T15" ;
+    :edgeId "T15" ;
+    :fromState :ObserveTaskMachine_Running ;
+    :toState :ObserveTaskMachine_Cancelled ;
+    :firedBy :ObserveTaskMachine_Event_Cancel .
+
+:ObserveTaskMachine_T16 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T16" ;
+    :edgeId "T16" ;
+    :fromState :ObserveTaskMachine_Progressing ;
+    :toState :ObserveTaskMachine_Cancelled ;
+    :firedBy :ObserveTaskMachine_Event_Cancel .
+
+:ObserveTaskMachine_T17 a :ObserveTaskTransition ;
+    rdfs:label "Observe task T17" ;
+    :edgeId "T17" ;
+    :fromState :ObserveTaskMachine_Stalled ;
+    :toState :ObserveTaskMachine_Cancelled ;
+    :firedBy :ObserveTaskMachine_Event_Cancel .
+
+:ObserveReadinessState a owl:Class ;
+    rdfs:label "Observe readiness state" ;
+    rdfs:comment "A state of the observe readiness machine." ;
+    rdfs:subClassOf :State .
+
+:ObserveReadinessTerminalState a owl:Class ;
+    rdfs:label "Observe readiness terminal state" ;
+    rdfs:comment "A terminal state of the observe readiness machine." ;
+    rdfs:subClassOf :TerminalState, :ObserveReadinessState .
+
+:ObserveReadinessTransition a owl:Class ;
+    rdfs:label "Observe readiness transition" ;
+    rdfs:comment "A transition of the observe readiness machine." ;
+    rdfs:subClassOf :Transition .
+
+:ObserveReadinessEvent a owl:Class ;
+    rdfs:label "Observe readiness event" ;
+    rdfs:comment "An event of the observe readiness machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ObserveReadinessGuard a owl:Class ;
+    rdfs:label "Observe readiness guard" ;
+    rdfs:comment "A guard of the observe readiness machine; the machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ObserveReadinessMachine a :StateMachine ;
+    rdfs:label "Observe readiness machine" ;
+    rdfs:comment "The readiness of one graph: five states, none terminal, edges D01 to D12." ;
+    :initialState :ObserveReadinessMachine_Opening ;
+    :hasState :ObserveReadinessMachine_Opening, :ObserveReadinessMachine_Migrating, :ObserveReadinessMachine_Materializing, :ObserveReadinessMachine_Ready, :ObserveReadinessMachine_Degraded .
+
+:ObserveReadinessMachine_Opening a :ObserveReadinessState ;
+    rdfs:label "Observe readiness Opening" ;
+    :storedForm "opening" .
+
+:ObserveReadinessMachine_Migrating a :ObserveReadinessState ;
+    rdfs:label "Observe readiness Migrating" ;
+    :storedForm "migrating" .
+
+:ObserveReadinessMachine_Materializing a :ObserveReadinessState ;
+    rdfs:label "Observe readiness Materializing" ;
+    :storedForm "materializing" .
+
+:ObserveReadinessMachine_Ready a :ObserveReadinessState ;
+    rdfs:label "Observe readiness Ready" ;
+    :storedForm "ready" .
+
+:ObserveReadinessMachine_Degraded a :ObserveReadinessState ;
+    rdfs:label "Observe readiness Degraded" ;
+    :storedForm "degraded" .
+
+:ObserveReadinessMachine_Event_BeginMigrate a :ObserveReadinessEvent ;
+    rdfs:label "Observe readiness event BeginMigrate" .
+
+:ObserveReadinessMachine_Event_BeginMaterialize a :ObserveReadinessEvent ;
+    rdfs:label "Observe readiness event BeginMaterialize" .
+
+:ObserveReadinessMachine_Event_Materialized a :ObserveReadinessEvent ;
+    rdfs:label "Observe readiness event Materialized" .
+
+:ObserveReadinessMachine_Event_Degrade a :ObserveReadinessEvent ;
+    rdfs:label "Observe readiness event Degrade" .
+
+:ObserveReadinessMachine_Event_Reopen a :ObserveReadinessEvent ;
+    rdfs:label "Observe readiness event Reopen" .
+
+:ObserveReadinessMachine_D01 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D01" ;
+    :edgeId "D01" ;
+    :fromState :ObserveReadinessMachine_Opening ;
+    :toState :ObserveReadinessMachine_Migrating ;
+    :firedBy :ObserveReadinessMachine_Event_BeginMigrate .
+
+:ObserveReadinessMachine_D02 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D02" ;
+    :edgeId "D02" ;
+    :fromState :ObserveReadinessMachine_Opening ;
+    :toState :ObserveReadinessMachine_Materializing ;
+    :firedBy :ObserveReadinessMachine_Event_BeginMaterialize .
+
+:ObserveReadinessMachine_D03 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D03" ;
+    :edgeId "D03" ;
+    :fromState :ObserveReadinessMachine_Opening ;
+    :toState :ObserveReadinessMachine_Ready ;
+    :firedBy :ObserveReadinessMachine_Event_Materialized .
+
+:ObserveReadinessMachine_D04 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D04" ;
+    :edgeId "D04" ;
+    :fromState :ObserveReadinessMachine_Migrating ;
+    :toState :ObserveReadinessMachine_Materializing ;
+    :firedBy :ObserveReadinessMachine_Event_BeginMaterialize .
+
+:ObserveReadinessMachine_D05 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D05" ;
+    :edgeId "D05" ;
+    :fromState :ObserveReadinessMachine_Materializing ;
+    :toState :ObserveReadinessMachine_Ready ;
+    :firedBy :ObserveReadinessMachine_Event_Materialized .
+
+:ObserveReadinessMachine_D06 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D06" ;
+    :edgeId "D06" ;
+    :fromState :ObserveReadinessMachine_Opening ;
+    :toState :ObserveReadinessMachine_Degraded ;
+    :firedBy :ObserveReadinessMachine_Event_Degrade .
+
+:ObserveReadinessMachine_D07 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D07" ;
+    :edgeId "D07" ;
+    :fromState :ObserveReadinessMachine_Migrating ;
+    :toState :ObserveReadinessMachine_Degraded ;
+    :firedBy :ObserveReadinessMachine_Event_Degrade .
+
+:ObserveReadinessMachine_D08 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D08" ;
+    :edgeId "D08" ;
+    :fromState :ObserveReadinessMachine_Materializing ;
+    :toState :ObserveReadinessMachine_Degraded ;
+    :firedBy :ObserveReadinessMachine_Event_Degrade .
+
+:ObserveReadinessMachine_D09 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D09" ;
+    :edgeId "D09" ;
+    :fromState :ObserveReadinessMachine_Ready ;
+    :toState :ObserveReadinessMachine_Degraded ;
+    :firedBy :ObserveReadinessMachine_Event_Degrade .
+
+:ObserveReadinessMachine_D10 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D10" ;
+    :edgeId "D10" ;
+    :fromState :ObserveReadinessMachine_Degraded ;
+    :toState :ObserveReadinessMachine_Opening ;
+    :firedBy :ObserveReadinessMachine_Event_Reopen .
+
+:ObserveReadinessMachine_D11 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D11" ;
+    :edgeId "D11" ;
+    :fromState :ObserveReadinessMachine_Ready ;
+    :toState :ObserveReadinessMachine_Opening ;
+    :firedBy :ObserveReadinessMachine_Event_Reopen .
+
+:ObserveReadinessMachine_D12 a :ObserveReadinessTransition ;
+    rdfs:label "Observe readiness D12" ;
+    :edgeId "D12" ;
+    :fromState :ObserveReadinessMachine_Degraded ;
+    :toState :ObserveReadinessMachine_Degraded ;
+    :firedBy :ObserveReadinessMachine_Event_Degrade .
+
+:ObserveRequestState a owl:Class ;
+    rdfs:label "Observe request state" ;
+    rdfs:comment "A state of the observe request machine." ;
+    rdfs:subClassOf :State .
+
+:ObserveRequestTerminalState a owl:Class ;
+    rdfs:label "Observe request terminal state" ;
+    rdfs:comment "A terminal state of the observe request machine." ;
+    rdfs:subClassOf :TerminalState, :ObserveRequestState .
+
+:ObserveRequestTransition a owl:Class ;
+    rdfs:label "Observe request transition" ;
+    rdfs:comment "A transition of the observe request machine." ;
+    rdfs:subClassOf :Transition .
+
+:ObserveRequestEvent a owl:Class ;
+    rdfs:label "Observe request event" ;
+    rdfs:comment "An event of the observe request machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:ObserveRequestGuard a owl:Class ;
+    rdfs:label "Observe request guard" ;
+    rdfs:comment "A guard of the observe request machine; the machine has none." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:ObserveRequestMachine a :StateMachine ;
+    rdfs:label "Observe request machine" ;
+    rdfs:comment "The phase of one in-flight request: eight states, two terminal, edges Q01 to Q13." ;
+    :initialState :ObserveRequestMachine_Received ;
+    :hasState :ObserveRequestMachine_Received, :ObserveRequestMachine_Admitted, :ObserveRequestMachine_Authorized, :ObserveRequestMachine_Handling, :ObserveRequestMachine_WaitingLock, :ObserveRequestMachine_Responding, :ObserveRequestMachine_Done, :ObserveRequestMachine_Refused .
+
+:ObserveRequestMachine_Received a :ObserveRequestState ;
+    rdfs:label "Observe request Received" ;
+    :storedForm "received" .
+
+:ObserveRequestMachine_Admitted a :ObserveRequestState ;
+    rdfs:label "Observe request Admitted" ;
+    :storedForm "admitted" .
+
+:ObserveRequestMachine_Authorized a :ObserveRequestState ;
+    rdfs:label "Observe request Authorized" ;
+    :storedForm "authorized" .
+
+:ObserveRequestMachine_Handling a :ObserveRequestState ;
+    rdfs:label "Observe request Handling" ;
+    :storedForm "handling" .
+
+:ObserveRequestMachine_WaitingLock a :ObserveRequestState ;
+    rdfs:label "Observe request WaitingLock" ;
+    :storedForm "waiting_lock" .
+
+:ObserveRequestMachine_Responding a :ObserveRequestState ;
+    rdfs:label "Observe request Responding" ;
+    :storedForm "responding" .
+
+:ObserveRequestMachine_Done a :ObserveRequestTerminalState ;
+    rdfs:label "Observe request Done" ;
+    :storedForm "done" .
+
+:ObserveRequestMachine_Refused a :ObserveRequestTerminalState ;
+    rdfs:label "Observe request Refused" ;
+    :storedForm "refused" .
+
+:ObserveRequestMachine_Event_Admit a :ObserveRequestEvent ;
+    rdfs:label "Observe request event Admit" .
+
+:ObserveRequestMachine_Event_Refuse a :ObserveRequestEvent ;
+    rdfs:label "Observe request event Refuse" .
+
+:ObserveRequestMachine_Event_Authorize a :ObserveRequestEvent ;
+    rdfs:label "Observe request event Authorize" .
+
+:ObserveRequestMachine_Event_Handle a :ObserveRequestEvent ;
+    rdfs:label "Observe request event Handle" .
+
+:ObserveRequestMachine_Event_WaitLock a :ObserveRequestEvent ;
+    rdfs:label "Observe request event WaitLock" .
+
+:ObserveRequestMachine_Event_Acquire a :ObserveRequestEvent ;
+    rdfs:label "Observe request event Acquire" .
+
+:ObserveRequestMachine_Event_Respond a :ObserveRequestEvent ;
+    rdfs:label "Observe request event Respond" .
+
+:ObserveRequestMachine_Event_Complete a :ObserveRequestEvent ;
+    rdfs:label "Observe request event Complete" .
+
+:ObserveRequestMachine_Q01 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q01" ;
+    :edgeId "Q01" ;
+    :fromState :ObserveRequestMachine_Received ;
+    :toState :ObserveRequestMachine_Admitted ;
+    :firedBy :ObserveRequestMachine_Event_Admit .
+
+:ObserveRequestMachine_Q02 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q02" ;
+    :edgeId "Q02" ;
+    :fromState :ObserveRequestMachine_Received ;
+    :toState :ObserveRequestMachine_Refused ;
+    :firedBy :ObserveRequestMachine_Event_Refuse .
+
+:ObserveRequestMachine_Q03 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q03" ;
+    :edgeId "Q03" ;
+    :fromState :ObserveRequestMachine_Admitted ;
+    :toState :ObserveRequestMachine_Authorized ;
+    :firedBy :ObserveRequestMachine_Event_Authorize .
+
+:ObserveRequestMachine_Q04 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q04" ;
+    :edgeId "Q04" ;
+    :fromState :ObserveRequestMachine_Admitted ;
+    :toState :ObserveRequestMachine_Refused ;
+    :firedBy :ObserveRequestMachine_Event_Refuse .
+
+:ObserveRequestMachine_Q05 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q05" ;
+    :edgeId "Q05" ;
+    :fromState :ObserveRequestMachine_Authorized ;
+    :toState :ObserveRequestMachine_Handling ;
+    :firedBy :ObserveRequestMachine_Event_Handle .
+
+:ObserveRequestMachine_Q06 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q06" ;
+    :edgeId "Q06" ;
+    :fromState :ObserveRequestMachine_Authorized ;
+    :toState :ObserveRequestMachine_Refused ;
+    :firedBy :ObserveRequestMachine_Event_Refuse .
+
+:ObserveRequestMachine_Q07 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q07" ;
+    :edgeId "Q07" ;
+    :fromState :ObserveRequestMachine_Handling ;
+    :toState :ObserveRequestMachine_WaitingLock ;
+    :firedBy :ObserveRequestMachine_Event_WaitLock .
+
+:ObserveRequestMachine_Q08 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q08" ;
+    :edgeId "Q08" ;
+    :fromState :ObserveRequestMachine_WaitingLock ;
+    :toState :ObserveRequestMachine_Handling ;
+    :firedBy :ObserveRequestMachine_Event_Acquire .
+
+:ObserveRequestMachine_Q09 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q09" ;
+    :edgeId "Q09" ;
+    :fromState :ObserveRequestMachine_Handling ;
+    :toState :ObserveRequestMachine_Responding ;
+    :firedBy :ObserveRequestMachine_Event_Respond .
+
+:ObserveRequestMachine_Q10 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q10" ;
+    :edgeId "Q10" ;
+    :fromState :ObserveRequestMachine_Handling ;
+    :toState :ObserveRequestMachine_Refused ;
+    :firedBy :ObserveRequestMachine_Event_Refuse .
+
+:ObserveRequestMachine_Q11 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q11" ;
+    :edgeId "Q11" ;
+    :fromState :ObserveRequestMachine_WaitingLock ;
+    :toState :ObserveRequestMachine_Refused ;
+    :firedBy :ObserveRequestMachine_Event_Refuse .
+
+:ObserveRequestMachine_Q12 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q12" ;
+    :edgeId "Q12" ;
+    :fromState :ObserveRequestMachine_Responding ;
+    :toState :ObserveRequestMachine_Done ;
+    :firedBy :ObserveRequestMachine_Event_Complete .
+
+:ObserveRequestMachine_Q13 a :ObserveRequestTransition ;
+    rdfs:label "Observe request Q13" ;
+    :edgeId "Q13" ;
+    :fromState :ObserveRequestMachine_Responding ;
+    :toState :ObserveRequestMachine_Refused ;
+    :firedBy :ObserveRequestMachine_Event_Refuse .
