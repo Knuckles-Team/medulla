@@ -118,15 +118,7 @@ pub fn open_delivery(
     })
 }
 
-/// What an unprompted slice recorded in place of a run (MEDULLA-SDLC-R019.4).
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct WouldDispatch {
-    pub slice_root: String,
-    pub rows: Vec<String>,
-    pub evidence_digests: Vec<String>,
-    pub dispatch_decision_id: String,
-    pub mode: ProjectMode,
-}
+pub use medulla_source_types::delivery::WouldDispatch;
 
 /// The decision of one slice: a run, or a recorded `would_dispatch`.
 #[derive(Clone, Debug, PartialEq, Eq)]

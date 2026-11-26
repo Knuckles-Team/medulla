@@ -1,5 +1,7 @@
 use super::*;
 
+mod delivery;
+
 use std::collections::BTreeSet;
 use std::sync::Arc;
 
@@ -126,6 +128,27 @@ pub async fn dispatch_sdlc_methods(
                 ..target
             };
             dispatch_boxed(spec_question(state, target, question, subject)).await
+        }
+        Method::DeliveryOpen { request } => {
+            dispatch_boxed(delivery::open(state, target, request)).await
+        }
+        Method::DeliveryFeedback { event } => {
+            dispatch_boxed(delivery::feedback(state, target, event)).await
+        }
+        Method::DeliveryReport { write } => {
+            dispatch_boxed(delivery::report(state, target, write)).await
+        }
+        Method::DeliveryStatus { request } => {
+            dispatch_boxed(delivery::status(state, target, request)).await
+        }
+        Method::DeliveryList { request } => {
+            dispatch_boxed(delivery::list(state, target, request)).await
+        }
+        Method::DeliveryStop { request } => {
+            dispatch_boxed(delivery::stop(state, target, request)).await
+        }
+        Method::DeliveryRetry { request } => {
+            dispatch_boxed(delivery::retry(state, target, request)).await
         }
         Method::LifecycleTrace { request } => {
             dispatch_boxed(lifecycle_trace(state, target, request)).await

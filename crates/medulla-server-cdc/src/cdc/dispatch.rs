@@ -296,6 +296,11 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         | Method::ProjectModeSet { .. }
         | Method::ProposalPut { .. }
         | Method::LandingPolicyPut { .. }
+        | Method::DeliveryOpen { .. }
+        | Method::DeliveryFeedback { .. }
+        | Method::DeliveryReport { .. }
+        | Method::DeliveryStop { .. }
+        | Method::DeliveryRetry { .. }
         | Method::FileDefect { .. }
         | Method::TransitionDefect { .. }
         | Method::ProposalDecide { .. } => Some("__lifecycle"),

@@ -815,6 +815,13 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         // MEDULLA-SDLC-R014.6: the competency questions commit nothing.
         | Method::SpecQuestion { .. }
         | Method::SpecStatus { .. }
+        | Method::DeliveryOpen { .. }
+        | Method::DeliveryFeedback { .. }
+        | Method::DeliveryReport { .. }
+        | Method::DeliveryStop { .. }
+        | Method::DeliveryRetry { .. }
+        | Method::DeliveryStatus { .. }
+        | Method::DeliveryList { .. }
         | Method::LifecycleTrace { .. }
         // MEDULLA-SDLC-R003.5: the defect read commits nothing.
         | Method::GetDefect { .. }

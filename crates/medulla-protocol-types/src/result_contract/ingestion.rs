@@ -131,6 +131,13 @@ method_results! {
     ProposalPut(ProposalPut) => Raw<medulla_source_types::lifecycle::ProposalReceipt>;
     // MEDULLA-SDLC-R017.6: the proposal review list and decision.
     LifecycleTrace(LifecycleTrace) => Raw<medulla_source_types::lifecycle::LifecycleTraceAnswer>;
+    DeliveryOpen(DeliveryOpen) => Raw<medulla_source_types::delivery::DeliveryOpenAnswer>;
+    DeliveryFeedback(DeliveryFeedback) => Raw<medulla_source_types::delivery::DeliveryFeedbackReceipt>;
+    DeliveryReport(DeliveryReport) => Raw<medulla_source_types::delivery::DeliveryAnswer>;
+    DeliveryStop(DeliveryStop) => Raw<medulla_source_types::delivery::DeliveryAnswer>;
+    DeliveryRetry(DeliveryRetry) => Raw<medulla_source_types::delivery::DeliveryAnswer>;
+    DeliveryStatus(DeliveryStatus) => Raw<medulla_source_types::delivery::DeliveryAnswer>;
+    DeliveryList(DeliveryList) => Raw<medulla_source_types::delivery::DeliveryListAnswer>;
     SpecStatus(SpecStatus) => Raw<medulla_source_types::lifecycle::SpecStatusAnswer>;
     SpecQuestion(SpecQuestion) => Raw<medulla_source_types::spec_question::SpecQuestionAnswer>;
     ProposalList(ProposalList) => Raw<Vec<medulla_source_types::lifecycle::ProposalListEntry>>;

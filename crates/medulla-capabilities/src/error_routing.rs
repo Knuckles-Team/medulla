@@ -1859,6 +1859,64 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     // MEDULLA-SDLC-R005.3 and R005.4: the served status refusals.
+    // MEDULLA-SDLC-R019.14: the served delivery methods.
+    (
+        "DeliveryOpen",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INVALID_ARGUMENT",
+            "DELIVERY_SCOPE_EMPTY",
+            "MODE_REFERENCE_NO_PROPOSALS",
+        ],
+    ),
+    (
+        "DeliveryFeedback",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "FEEDBACK_SOURCE_UNKNOWN",
+            "FEEDBACK_PROPOSAL_UNKNOWN",
+            "FEEDBACK_EVENT_INVALID",
+        ],
+    ),
+    (
+        "DeliveryReport",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DELIVERY_NOT_FOUND",
+            "ASSIGNMENT_UNKNOWN",
+            "ASSIGNMENT_ENDED",
+            "REPORT_EVIDENCE_MISSING",
+            "QUESTION_TOO_LONG",
+        ],
+    ),
+    (
+        "DeliveryStatus",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DELIVERY_NOT_FOUND",
+        ],
+    ),
+    (
+        "DeliveryList",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+        ],
+    ),
+    (
+        "DeliveryStop",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DELIVERY_NOT_FOUND",
+        ],
+    ),
+    (
+        "DeliveryRetry",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "DELIVERY_NOT_FOUND",
+            "INVALID_ARGUMENT",
+        ],
+    ),
     (
         "LifecycleTrace",
         &[

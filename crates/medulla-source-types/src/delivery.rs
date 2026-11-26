@@ -51,8 +51,13 @@ pub const ARMING_APPROVAL_MISSING: &str = "ARMING_APPROVAL_MISSING";
 /// The owner approval names another commit than the head (R019.10).
 pub const ARMING_HEAD_MISMATCH: &str = "ARMING_HEAD_MISMATCH";
 
+/// A delivery id names no delivery of the caller's tenant (R019.14). Non-disclosing: another
+/// tenant's delivery refuses the same way.
+pub const DELIVERY_NOT_FOUND: &str = "DELIVERY_NOT_FOUND";
+
 /// Every refusal code of the delivery records.
 pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(DELIVERY_NOT_FOUND),
     RefusalCode::new(MANDATE_REVOKED),
     RefusalCode::new(ARMING_APPROVAL_MISSING),
     RefusalCode::new(ARMING_HEAD_MISMATCH),
@@ -616,4 +621,107 @@ impl ArmingRefusal {
             Self::HeadMismatch(_) => ARMING_HEAD_MISMATCH,
         }
     }
+}
+
+/// The node type of a stored delivery (R019.14).
+pub const DELIVERY_TYPE: &str = "Delivery";
+
+/// The property of a delivery node that holds the canonical JSON of the record.
+pub const DELIVERY_RECORD_PROPERTY: &str = "delivery_record";
+
+/// What an unprompted slice recorded in place of a run (R019.4).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WouldDispatch {
+    pub slice_root: String,
+    pub rows: Vec<String>,
+    pub evidence_digests: Vec<String>,
+    pub dispatch_decision_id: String,
+    pub mode: crate::lifecycle::ProjectMode,
+}
+
+/// `DeliveryOpen`: the slice a dispatch opens one delivery for (R019.3, R019.4). The actor,
+/// the project mode, the tenant and the clock come from the engine, never the request.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryOpenRequest {
+    pub repo: String,
+    pub slice_root: String,
+    pub scope_rows: Vec<String>,
+    pub dispatch_decision_id: String,
+    pub policy_version: String,
+    pub origin: crate::lifecycle::ProposalOrigin,
+    /// The run trace id arbora minted for the first assignment.
+    pub run_trace_id: String,
+    #[serde(default)]
+    pub evidence_digests: Vec<String>,
+}
+
+/// The answer of `DeliveryOpen`: the delivery, or the recorded `would_dispatch`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryOpenAnswer {
+    pub delivery: Option<Delivery>,
+    pub would_dispatch: Option<WouldDispatch>,
+    /// The key was seen before and the first delivery is returned unchanged.
+    pub reopened: bool,
+}
+
+/// The receipt of `DeliveryFeedback` (R019.5).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryFeedbackReceipt {
+    pub duplicate: bool,
+    pub delivered_to: Vec<String>,
+    pub resumed: Vec<String>,
+    pub defect_filed: bool,
+}
+
+/// A delivery with its derived stage (R019.7); the stage is computed on each read.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryAnswer {
+    pub delivery: Delivery,
+    pub stage: String,
+}
+
+/// `DeliveryStatus` and `DeliveryStop` name one delivery.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryRef {
+    pub delivery_id: String,
+}
+
+/// `DeliveryRetry`: a new pending assignment on a live delivery whose assignments all ended.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryRetryRequest {
+    pub delivery_id: String,
+    pub run_trace_id: String,
+}
+
+/// `DeliveryList`: the deliveries of the tenant, optionally of one repository.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryListRequest {
+    #[serde(default)]
+    pub repo: Option<String>,
+}
+
+/// One row of the delivery list.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryListEntry {
+    pub id: String,
+    pub repo: String,
+    pub slice_root: String,
+    pub stage: String,
+    pub ended: Option<DeliveryOutcome>,
+}
+
+/// The answer of `DeliveryList`, ordered by delivery id.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct DeliveryListAnswer {
+    pub deliveries: Vec<DeliveryListEntry>,
 }

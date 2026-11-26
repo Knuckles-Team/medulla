@@ -19256,6 +19256,63 @@ class MedullaClient:
             raise TypeError("SpecQuestion returned a non-object result")
         return result
 
+    async def delivery_open(
+        self, request: dict[str, Any], graph: str
+    ) -> dict[str, Any]:
+        """Open one delivery for a dispatched slice (MEDULLA-SDLC-R019.3).
+
+        ``request`` carries ``repo``, ``slice_root``, ``scope_rows``,
+        ``dispatch_decision_id``, ``policy_version``, ``origin`` (``requested`` or
+        ``unprompted``), ``run_trace_id`` and optional ``evidence_digests``. An
+        unprompted slice in ``development`` mode answers ``would_dispatch`` and starts
+        nothing.
+        """
+        return await self._delivery("DeliveryOpen", {"request": request}, graph)
+
+    async def delivery_feedback(
+        self, event: dict[str, Any], graph: str
+    ) -> dict[str, Any]:
+        """Route one source-control feedback event to its deliveries (R019.5)."""
+        return await self._delivery("DeliveryFeedback", {"event": event}, graph)
+
+    async def delivery_report(
+        self, write: dict[str, Any], graph: str
+    ) -> dict[str, Any]:
+        """Apply one agent report to a delivery (R019.7)."""
+        return await self._delivery("DeliveryReport", {"write": write}, graph)
+
+    async def delivery_status(self, delivery_id: str, graph: str) -> dict[str, Any]:
+        """Read one delivery with its derived stage; another tenant's refuses
+        ``DELIVERY_NOT_FOUND``."""
+        request = {"delivery_id": delivery_id}
+        return await self._delivery("DeliveryStatus", {"request": request}, graph)
+
+    async def delivery_list(
+        self, graph: str, repo: str | None = None
+    ) -> dict[str, Any]:
+        """List the deliveries of the tenant, optionally of one repository."""
+        return await self._delivery("DeliveryList", {"request": {"repo": repo}}, graph)
+
+    async def delivery_stop(self, delivery_id: str, graph: str) -> dict[str, Any]:
+        """Stop one delivery: it ends ``stopped``."""
+        request = {"delivery_id": delivery_id}
+        return await self._delivery("DeliveryStop", {"request": request}, graph)
+
+    async def delivery_retry(
+        self, delivery_id: str, run_trace_id: str, graph: str
+    ) -> dict[str, Any]:
+        """Open a new pending assignment on a live delivery whose assignments ended."""
+        request = {"delivery_id": delivery_id, "run_trace_id": run_trace_id}
+        return await self._delivery("DeliveryRetry", {"request": request}, graph)
+
+    async def _delivery(
+        self, method: str, params: dict[str, Any], graph: str
+    ) -> dict[str, Any]:
+        result = await self._send(method, params, graph)
+        if not isinstance(result, dict):
+            raise TypeError(f"{method} returned a non-object result")
+        return result
+
     async def lifecycle_trace(
         self, request: dict[str, Any], graph: str | None = None
     ) -> dict[str, Any]:

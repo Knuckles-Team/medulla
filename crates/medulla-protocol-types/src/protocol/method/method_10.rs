@@ -486,6 +486,40 @@ $($variants)*
     LifecycleTrace {
         request: medulla_source_types::lifecycle::LifecycleTraceRequest,
     },
+    /// Open one delivery for a dispatched slice (MEDULLA-SDLC-R019.3), or record the
+    /// `would_dispatch` of an unprompted slice in `development` mode (MEDULLA-SDLC-R019.4).
+    /// Refuses `DELIVERY_SCOPE_EMPTY` and `MODE_REFERENCE_NO_PROPOSALS`.
+    DeliveryOpen {
+        request: medulla_source_types::delivery::DeliveryOpenRequest,
+    },
+    /// Route one source-control feedback event to the deliveries that follow its proposal
+    /// (MEDULLA-SDLC-R019.5). Refuses `FEEDBACK_SOURCE_UNKNOWN`, `FEEDBACK_PROPOSAL_UNKNOWN`
+    /// and `FEEDBACK_EVENT_INVALID`.
+    DeliveryFeedback {
+        event: medulla_source_types::delivery::ScmFeedbackEvent,
+    },
+    /// Apply one agent report to a delivery (MEDULLA-SDLC-R019.7). Refuses
+    /// `ASSIGNMENT_UNKNOWN`, `ASSIGNMENT_ENDED`, `REPORT_EVIDENCE_MISSING`, `QUESTION_TOO_LONG`.
+    DeliveryReport {
+        write: medulla_source_types::delivery::DeliveryReportWrite,
+    },
+    /// Read one delivery with its derived stage. Another tenant's delivery refuses
+    /// `DELIVERY_NOT_FOUND`. Reads only.
+    DeliveryStatus {
+        request: medulla_source_types::delivery::DeliveryRef,
+    },
+    /// List the deliveries of the tenant with their derived stage. Reads only.
+    DeliveryList {
+        request: medulla_source_types::delivery::DeliveryListRequest,
+    },
+    /// Stop one delivery: it ends `stopped` and receives no further feedback.
+    DeliveryStop {
+        request: medulla_source_types::delivery::DeliveryRef,
+    },
+    /// Open a new pending assignment on a live delivery whose assignments all ended.
+    DeliveryRetry {
+        request: medulla_source_types::delivery::DeliveryRetryRequest,
+    },
     /// Read the derived state of every requirement row of `repo` at the changeset `rev`
     /// (MEDULLA-SDLC-R005.3), from the `:Requirement`, changeset and test-binding records
     /// the caller can see in `graph`. `spec_id` keeps only the rows of that spec. A `rev` the
