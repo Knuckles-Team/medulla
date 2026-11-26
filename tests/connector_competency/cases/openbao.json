@@ -3,10 +3,10 @@
   "rollup": "MEDULLA-CQ-CONN-R044",
   "vocabulary_module": "data_platform-v1.ttl",
   "terms": [
-    "SecretPath",
-    "lastRotatedAt",
     "PolicyPathGrant",
-    "grantsCapability"
+    "SecretPath",
+    "grantsCapability",
+    "lastRotatedAt"
   ],
   "questions": [
     {
@@ -29,6 +29,35 @@
       "min_rows": 1,
       "recordings": [
         "openbao-mcp/single.json"
+      ]
+    },
+    {
+      "id": "openbao.q2",
+      "kind": "cross",
+      "question": "Which services running in container-manager read a secret path that has no recent rotation?",
+      "uql": "LET s0 = FOREIGN SCAN 'openbao-mcp'; LET s1 = FOREIGN SCAN 'keycloak-agent'; LET s2 = FOREIGN SCAN 'container-manager-mcp'; JOIN s0, s1, s2",
+      "sources": [
+        "openbao-mcp",
+        "keycloak-agent",
+        "container-manager-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "openbao-mcp": "mcp_tool",
+        "keycloak-agent": "mcp_tool",
+        "container-manager-mcp": "mcp_tool"
+      },
+      "columns": [
+        "service",
+        "secretPath",
+        "lastRotatedAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "openbao-mcp/cross_keycloak-agent.json",
+        "keycloak-agent/cross_openbao-mcp.json",
+        "openbao-mcp/cross_container-manager-mcp.json",
+        "container-manager-mcp/cross_openbao-mcp.json"
       ]
     }
   ]

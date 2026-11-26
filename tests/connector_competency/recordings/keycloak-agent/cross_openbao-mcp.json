@@ -1,0 +1,18 @@
+{
+  "source": "keycloak-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "secretPath": "secretPath-1",
+      "joinKey": "openbao.q2-key-1",
+      "id": "keycloak-agent-openbao.q2-1",
+      "label": "keycloak-agent 1"
+    },
+    {
+      "secretPath": "secretPath-2",
+      "joinKey": "openbao.q2-key-2",
+      "id": "keycloak-agent-openbao.q2-2",
+      "label": "keycloak-agent 2"
+    }
+  ]
+}
