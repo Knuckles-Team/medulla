@@ -14,7 +14,7 @@ pub(super) const SELECT_FORMS: &[&str] = &[
 
 /// Candidate CONSTRUCT/DESCRIBE output media types, DEFAULT (N-Triples) first: the six RDF
 /// media types the engine reads and writes (MEDULLA-FEDERATED-QUERY-R740).
-pub use medulla_rdf::graph_media::{serialize_graph, GRAPH_MEDIA_TYPES as GRAPH_FORMS};
+use medulla_rdf::graph_media::{serialize_graph, GRAPH_MEDIA_TYPES as GRAPH_FORMS};
 
 /// Serialize a query outcome in the negotiated media type: solutions and booleans
 /// as SPARQL results, a constructed graph as RDF.

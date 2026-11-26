@@ -50,7 +50,7 @@ pub use graph_store::{
     RdfWriteMode, RDF_BODY_MAX_TRIPLES,
 };
 use negotiation::{choose_ct, render_query_outcome};
-pub use negotiation::{serialize_graph, GRAPH_FORMS};
+use medulla_rdf::graph_media::{serialize_graph, GRAPH_MEDIA_TYPES as GRAPH_FORMS};
 #[cfg(test)]
 use negotiation::{negotiate, SELECT_FORMS};
 pub use update_plan::{plan_update, update_graphs, update_uses_variable_graph, PlannedGraphUpdate};

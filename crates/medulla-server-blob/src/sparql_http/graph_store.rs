@@ -7,10 +7,8 @@ use medulla_graph_core::graph::GraphCore;
 use medulla_server_api::http1::HttpMessage;
 use medulla_server_api::state::ServerState;
 
-use super::{
-    choose_ct, parse_form, percent_decode, serialize_graph, signed_request, DEFAULT_GRAPH_ENV,
-    GRAPH_FORMS,
-};
+use super::{choose_ct, parse_form, percent_decode, signed_request, DEFAULT_GRAPH_ENV};
+use medulla_rdf::graph_media::{serialize_graph, GRAPH_MEDIA_TYPES as GRAPH_FORMS};
 use medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT;
 
 /// W3C SPARQL 1.1 Graph Store HTTP Protocol: route reads and signed writes for one graph.
