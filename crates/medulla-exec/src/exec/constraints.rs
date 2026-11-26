@@ -403,6 +403,8 @@ mod tests {
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R040.1.2
+    /// A failed hard constraint removes the nearest candidate before ranking, checked
+    /// against an independent graph oracle.
     #[test]
     fn failed_constraint_excludes_top_candidate() {
         let fixture = fixture();
