@@ -187,6 +187,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("kg:read", User, "engine"),
     entry("kg:write", User, "engine"),
     // MEDULLA-DECISION-ENGINE-R708.3: resolve a knowledge flag and run the curation cycle.
+    // MEDULLA-DECISION-ENGINE-R710.3: approve a friction group.
+    entry("knowledge:approve", User, "engine"),
     entry("knowledge:curate", User, "engine"),
     // MEDULLA-DECISION-ENGINE-R708.3: raise a knowledge flag.
     entry("knowledge:flag", User, "engine"),

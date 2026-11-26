@@ -876,6 +876,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::KnowledgeFlag { .. }
         // MEDULLA-DECISION-ENGINE-R709.3: curation proposal nodes commit through the graph gateway.
         | Method::KnowledgeCuration { .. }
+        // MEDULLA-DECISION-ENGINE-R710.3: friction nodes commit through the graph gateway.
+        | Method::FrictionReport { .. }
         | Method::PublishSkillPackage { .. }
         | Method::Claims { .. }
         | Method::FeatureLedger { .. }

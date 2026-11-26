@@ -283,6 +283,11 @@ method_results! {
     KnowledgeCurationPropose(KnowledgeCuration / "propose") => Raw<medulla_decision_types::knowledge_curation::CurationAdmitted>;
     KnowledgeCurationStatus(KnowledgeCuration / "status") => Raw<medulla_decision_types::knowledge_curation::CurationStatus>;
     KnowledgeCurationMetrics(KnowledgeCuration / "metrics") => Raw<medulla_decision_types::knowledge_curation::LoopMetrics>;
+    // MEDULLA-DECISION-ENGINE-R710.3: friction report, transition, group and get.
+    FrictionReportFile(FrictionReport / "report") => Raw<medulla_decision_types::friction::FrictionFiled>;
+    FrictionReportMove(FrictionReport / "transition") => Raw<medulla_decision_types::friction::FrictionMoved>;
+    FrictionReportGroup(FrictionReport / "group") => Raw<medulla_decision_types::friction::FrictionGroups>;
+    FrictionReportGet(FrictionReport / "get") => Raw<medulla_decision_types::friction::FrictionGroupView>;
     // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger append and price put.
     UsageAppend(Usage / "append") => Raw<medulla_decision_types::usage::UsageAppended>;
     UsagePutPrice(Usage / "put_price") => Raw<medulla_decision_types::usage::UsagePriceStored>;

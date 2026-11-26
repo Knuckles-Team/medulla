@@ -431,6 +431,19 @@ where
     }
 }
 
+/// The chart name of a friction group (MEDULLA-DECISION-ENGINE-R710.2).
+pub const FRICTION_CHART: &str = "friction";
+
+/// Build the friction chart from `FRICTION_MACHINE`: a group starts `reported` and moves through
+/// triage, root cause, fix, evaluation, approval, measurement and regression check to `closed`;
+/// any state before `approved` may move to `rejected`. Pure and deterministic.
+pub fn friction_statechart_def() -> StatechartDef {
+    machine_statechart_def(
+        FRICTION_CHART,
+        &medulla_decision_types::friction::FRICTION_MACHINE,
+    )
+}
+
 /// The chart name of a knowledge flag (MEDULLA-DECISION-ENGINE-R708.2).
 pub const KNOWLEDGE_FLAG_CHART: &str = "knowledge_flag";
 
@@ -1015,5 +1028,35 @@ mod tests {
         assert_eq!(from_chart, from_machine);
         assert_eq!(chart.initial, "open");
         assert!(chart.finals.is_empty());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R710.2
+    #[test]
+    fn friction_machine_allows_only_the_listed_moves() {
+        use medulla_decision_types::friction::{FrictionState, FRICTION_MACHINE};
+        use medulla_types::transition_refused::{MachineEvent, MachineState};
+        let chart = friction_statechart_def();
+        assert!(validate(&chart).is_ok(), "the chart is well formed");
+        assert_eq!(chart, friction_statechart_def(), "deterministic");
+        let from_chart: Vec<(String, String, String)> = chart
+            .transitions
+            .iter()
+            .map(|t| (t.from.clone(), t.event.clone(), t.to.clone()))
+            .collect();
+        let from_machine: Vec<(String, String, String)> = FRICTION_MACHINE
+            .edges
+            .iter()
+            .map(|e| {
+                (
+                    e.from.stored().to_string(),
+                    e.event.name().to_string(),
+                    e.to.stored().to_string(),
+                )
+            })
+            .collect();
+        assert_eq!(from_chart, from_machine);
+        assert_eq!(chart.initial, "reported");
+        assert!(chart.is_final("closed") && chart.is_final("rejected"));
+        assert!(!chart.is_final(FrictionState::Approved.stored()));
     }
 }

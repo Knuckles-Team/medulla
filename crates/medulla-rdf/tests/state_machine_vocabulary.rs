@@ -1656,3 +1656,10 @@ fn knowledge_flag_machine_matches_edge_table() {
     sm::assert_matches(&medulla_decision_types::knowledge_flag::KNOWLEDGE_FLAG_MACHINE);
     sm::assert_extends_core("KnowledgeFlag");
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R710.2
+#[test]
+fn friction_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_decision_types::friction::FRICTION_MACHINE);
+    sm::assert_extends_core("Friction");
+}

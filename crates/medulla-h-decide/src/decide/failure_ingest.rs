@@ -62,6 +62,8 @@ mod served {
 
     /// The `node_type` of a run's trace node.
     const RUN_TRACE: &str = "RunTrace";
+    /// The `node_type` of a friction report, which is one failure record (R710.3).
+    const FRICTION_REPORT: &str = "FrictionReport";
     /// The termination reason of a run that answered.
     const FINAL_ANSWER: &str = "final_answer";
     /// The `type` of a gap node this handler writes.
@@ -337,6 +339,31 @@ mod served {
             let Some(row) = view.node_row_object(id) else {
                 continue;
             };
+            // A friction report is one failure record of its skill (MEDULLA-DECISION-ENGINE-R710.3).
+            if row.get("node_type").and_then(Value::as_str) == Some(FRICTION_REPORT) {
+                let run_trace_id = row
+                    .get("run_trace_id")
+                    .and_then(Value::as_str)
+                    .filter(|trace| !trace.is_empty())
+                    .ok_or_else(|| {
+                        format!(
+                            "{}: friction report {id} names no run",
+                            FAILURE_NO_RUN_TRACE.as_str()
+                        )
+                    })?;
+                records.push(FailureRecord {
+                    record_id: id.clone(),
+                    run_trace_id: run_trace_id.to_string(),
+                    error_class: "friction".to_string(),
+                    tool: String::new(),
+                    step_kind: "skill".to_string(),
+                    steps: BoundedVec::new(vec!["skill".to_string()])
+                        .map_err(|error| invalid_parameter(format!("report {id}: {error}")))?,
+                    failing_index: 0,
+                    at_ms: row.get("at_ms").and_then(Value::as_u64).unwrap_or(0),
+                });
+                continue;
+            }
             if row.get("node_type").and_then(Value::as_str) != Some(RUN_TRACE) {
                 continue;
             }

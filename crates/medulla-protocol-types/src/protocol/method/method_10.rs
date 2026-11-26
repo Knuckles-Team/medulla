@@ -127,6 +127,12 @@ $($variants)*
     KnowledgeCuration {
         op: Box<medulla_decision_types::knowledge_curation::CurationOp>,
     },
+    /// Friction reports (MEDULLA-DECISION-ENGINE-R710.3): agents file what they tried, expected
+    /// and saw while using a skill; the engine groups the reports by skill and moves each group
+    /// along the friction machine, every move naming its evidence.
+    FrictionReport {
+        op: Box<medulla_decision_types::friction::FrictionOp>,
+    },
     /// Failure-pattern mining (MEDULLA-DECISION-ENGINE-R701.3): read the failed
     /// runs of a caller graph, cluster them by signature and file one gap per
     /// recurring pattern; mark a gap addressed; read one gap. The

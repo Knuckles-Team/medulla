@@ -228,7 +228,7 @@ pub(crate) mod served {
     }
 
     /// The id of the `RunTrace` node recording `run_id` in `tenant`, when the view holds one.
-    fn run_trace_of(view: &GraphView, tenant: &str, run_id: &str) -> Option<String> {
+    pub(in crate::decide) fn run_trace_of(view: &GraphView, tenant: &str, run_id: &str) -> Option<String> {
         let mut ids: Vec<&String> = view.node_properties.keys().collect();
         ids.sort();
         ids.into_iter().find_map(|id| {

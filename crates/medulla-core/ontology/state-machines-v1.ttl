@@ -9891,3 +9891,194 @@
     :fromState :KnowledgeFlagMachine_Dismissed ;
     :toState :KnowledgeFlagMachine_Open ;
     :firedBy :KnowledgeFlagMachine_Event_ReraiseChanged .
+
+# spec: MEDULLA-DECISION-ENGINE-R710.2
+# The Friction machine: the lifecycle of one group of friction reports of a skill. The Rust edge table FRICTION_MACHINE is the same table.
+
+:FrictionState a owl:Class ;
+    rdfs:label "Friction State" ;
+    rdfs:comment "A state of the Friction machine." ;
+    rdfs:subClassOf :State .
+
+:FrictionTerminalState a owl:Class ;
+    rdfs:label "Friction Terminal State" ;
+    rdfs:comment "A terminal state of the Friction machine." ;
+    rdfs:subClassOf :TerminalState, :FrictionState .
+
+:FrictionTransition a owl:Class ;
+    rdfs:label "Friction Transition" ;
+    rdfs:comment "A transition of the Friction machine." ;
+    rdfs:subClassOf :Transition .
+
+:FrictionEvent a owl:Class ;
+    rdfs:label "Friction Event" ;
+    rdfs:comment "A event of the Friction machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:FrictionGuard a owl:Class ;
+    rdfs:label "Friction Guard" ;
+    rdfs:comment "A guard of the Friction machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:FrictionMachine a :StateMachine ;
+    rdfs:label "Friction machine" ;
+    :initialState :FrictionMachine_Reported ;
+    :hasState :FrictionMachine_Reported, :FrictionMachine_Triaged, :FrictionMachine_RootCaused, :FrictionMachine_Fixed, :FrictionMachine_Evaluated, :FrictionMachine_Approved, :FrictionMachine_Measured, :FrictionMachine_RegressionChecked, :FrictionMachine_Closed, :FrictionMachine_Rejected .
+
+:FrictionMachine_Reported a :FrictionState ;
+    rdfs:label "Friction Reported" ;
+    :storedForm "reported" .
+
+:FrictionMachine_Triaged a :FrictionState ;
+    rdfs:label "Friction Triaged" ;
+    :storedForm "triaged" .
+
+:FrictionMachine_RootCaused a :FrictionState ;
+    rdfs:label "Friction RootCaused" ;
+    :storedForm "root_caused" .
+
+:FrictionMachine_Fixed a :FrictionState ;
+    rdfs:label "Friction Fixed" ;
+    :storedForm "fixed" .
+
+:FrictionMachine_Evaluated a :FrictionState ;
+    rdfs:label "Friction Evaluated" ;
+    :storedForm "evaluated" .
+
+:FrictionMachine_Approved a :FrictionState ;
+    rdfs:label "Friction Approved" ;
+    :storedForm "approved" .
+
+:FrictionMachine_Measured a :FrictionState ;
+    rdfs:label "Friction Measured" ;
+    :storedForm "measured" .
+
+:FrictionMachine_RegressionChecked a :FrictionState ;
+    rdfs:label "Friction RegressionChecked" ;
+    :storedForm "regression_checked" .
+
+:FrictionMachine_Closed a :FrictionTerminalState ;
+    rdfs:label "Friction Closed" ;
+    :storedForm "closed" .
+
+:FrictionMachine_Rejected a :FrictionTerminalState ;
+    rdfs:label "Friction Rejected" ;
+    :storedForm "rejected" .
+
+:FrictionMachine_Event_Triage a :FrictionEvent ;
+    rdfs:label "Friction Triage" .
+
+:FrictionMachine_Event_RootCause a :FrictionEvent ;
+    rdfs:label "Friction RootCause" .
+
+:FrictionMachine_Event_Fix a :FrictionEvent ;
+    rdfs:label "Friction Fix" .
+
+:FrictionMachine_Event_Evaluate a :FrictionEvent ;
+    rdfs:label "Friction Evaluate" .
+
+:FrictionMachine_Event_Approve a :FrictionEvent ;
+    rdfs:label "Friction Approve" .
+
+:FrictionMachine_Event_Measure a :FrictionEvent ;
+    rdfs:label "Friction Measure" .
+
+:FrictionMachine_Event_CheckRegression a :FrictionEvent ;
+    rdfs:label "Friction CheckRegression" .
+
+:FrictionMachine_Event_Close a :FrictionEvent ;
+    rdfs:label "Friction Close" .
+
+:FrictionMachine_Event_Reject a :FrictionEvent ;
+    rdfs:label "Friction Reject" .
+
+:FrictionMachine_FR01 a :FrictionTransition ;
+    rdfs:label "Friction FR01" ;
+    :edgeId "FR01" ;
+    :fromState :FrictionMachine_Reported ;
+    :toState :FrictionMachine_Triaged ;
+    :firedBy :FrictionMachine_Event_Triage .
+
+:FrictionMachine_FR02 a :FrictionTransition ;
+    rdfs:label "Friction FR02" ;
+    :edgeId "FR02" ;
+    :fromState :FrictionMachine_Triaged ;
+    :toState :FrictionMachine_RootCaused ;
+    :firedBy :FrictionMachine_Event_RootCause .
+
+:FrictionMachine_FR03 a :FrictionTransition ;
+    rdfs:label "Friction FR03" ;
+    :edgeId "FR03" ;
+    :fromState :FrictionMachine_RootCaused ;
+    :toState :FrictionMachine_Fixed ;
+    :firedBy :FrictionMachine_Event_Fix .
+
+:FrictionMachine_FR04 a :FrictionTransition ;
+    rdfs:label "Friction FR04" ;
+    :edgeId "FR04" ;
+    :fromState :FrictionMachine_Fixed ;
+    :toState :FrictionMachine_Evaluated ;
+    :firedBy :FrictionMachine_Event_Evaluate .
+
+:FrictionMachine_FR05 a :FrictionTransition ;
+    rdfs:label "Friction FR05" ;
+    :edgeId "FR05" ;
+    :fromState :FrictionMachine_Evaluated ;
+    :toState :FrictionMachine_Approved ;
+    :firedBy :FrictionMachine_Event_Approve .
+
+:FrictionMachine_FR06 a :FrictionTransition ;
+    rdfs:label "Friction FR06" ;
+    :edgeId "FR06" ;
+    :fromState :FrictionMachine_Approved ;
+    :toState :FrictionMachine_Measured ;
+    :firedBy :FrictionMachine_Event_Measure .
+
+:FrictionMachine_FR07 a :FrictionTransition ;
+    rdfs:label "Friction FR07" ;
+    :edgeId "FR07" ;
+    :fromState :FrictionMachine_Measured ;
+    :toState :FrictionMachine_RegressionChecked ;
+    :firedBy :FrictionMachine_Event_CheckRegression .
+
+:FrictionMachine_FR08 a :FrictionTransition ;
+    rdfs:label "Friction FR08" ;
+    :edgeId "FR08" ;
+    :fromState :FrictionMachine_RegressionChecked ;
+    :toState :FrictionMachine_Closed ;
+    :firedBy :FrictionMachine_Event_Close .
+
+:FrictionMachine_FR09 a :FrictionTransition ;
+    rdfs:label "Friction FR09" ;
+    :edgeId "FR09" ;
+    :fromState :FrictionMachine_Reported ;
+    :toState :FrictionMachine_Rejected ;
+    :firedBy :FrictionMachine_Event_Reject .
+
+:FrictionMachine_FR10 a :FrictionTransition ;
+    rdfs:label "Friction FR10" ;
+    :edgeId "FR10" ;
+    :fromState :FrictionMachine_Triaged ;
+    :toState :FrictionMachine_Rejected ;
+    :firedBy :FrictionMachine_Event_Reject .
+
+:FrictionMachine_FR11 a :FrictionTransition ;
+    rdfs:label "Friction FR11" ;
+    :edgeId "FR11" ;
+    :fromState :FrictionMachine_RootCaused ;
+    :toState :FrictionMachine_Rejected ;
+    :firedBy :FrictionMachine_Event_Reject .
+
+:FrictionMachine_FR12 a :FrictionTransition ;
+    rdfs:label "Friction FR12" ;
+    :edgeId "FR12" ;
+    :fromState :FrictionMachine_Fixed ;
+    :toState :FrictionMachine_Rejected ;
+    :firedBy :FrictionMachine_Event_Reject .
+
+:FrictionMachine_FR13 a :FrictionTransition ;
+    rdfs:label "Friction FR13" ;
+    :edgeId "FR13" ;
+    :fromState :FrictionMachine_Evaluated ;
+    :toState :FrictionMachine_Rejected ;
+    :firedBy :FrictionMachine_Event_Reject .

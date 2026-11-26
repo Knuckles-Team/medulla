@@ -1610,6 +1610,49 @@ def knowledge_curation_metrics_op(
     return {"op": "metrics", "graph": graph, "from_ms": from_ms, "to_ms": to_ms}
 
 
+def friction_report_op(graph: str, report: Mapping[str, Any]) -> dict[str, Any]:
+    """A ``FrictionReport`` report of one skill's friction (scope ``knowledge:flag``);
+    the engine overwrites ``tenant_id`` and ``reported_by`` with the verified caller."""
+    return {"op": "report", "graph": graph, "report": dict(report)}
+
+
+def friction_transition_op(
+    graph: str,
+    group_ref: str,
+    to: str,
+    at_ms: int,
+    evidence_ref: str | None = None,
+) -> dict[str, Any]:
+    """A ``FrictionReport`` move of a group (scope ``knowledge:curate``, or
+    ``knowledge:approve`` into ``approved``)."""
+    transition: dict[str, Any] = {"group_ref": group_ref, "to": to}
+    if evidence_ref is not None:
+        transition["evidence_ref"] = evidence_ref
+    return {
+        "op": "transition",
+        "graph": graph,
+        "transition": transition,
+        "at_ms": at_ms,
+    }
+
+
+def friction_group_op(
+    graph: str, skill_ref: str | None = None, limit: int | None = None
+) -> dict[str, Any]:
+    """A ``FrictionReport`` list of groups by report count, most first."""
+    op: dict[str, Any] = {"op": "group", "graph": graph}
+    if skill_ref is not None:
+        op["skill_ref"] = skill_ref
+    if limit is not None:
+        op["limit"] = limit
+    return op
+
+
+def friction_get_op(graph: str, group_ref: str) -> dict[str, Any]:
+    """A ``FrictionReport`` read of one group with its reports and steps."""
+    return {"op": "get", "graph": graph, "group_ref": group_ref}
+
+
 def usage_append_op(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     """A ``Usage`` append of ``records`` (scope ``usage:write``)."""
     return {"op": "append", "records": [dict(record) for record in records]}
@@ -1837,6 +1880,17 @@ class DecisionClient:
         from medulla.generated.coordination import send_knowledge_curation
 
         result = await send_knowledge_curation(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
+    async def friction_report(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``FrictionReport`` (file a report, move, list or read a group)."""
+        from medulla.generated.coordination import send_friction_report
+
+        result = await send_friction_report(
             self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
         )
         return _payload(result)
@@ -2132,6 +2186,10 @@ __all__ = [
     "get_document_set_op",
     "get_op",
     "get_profile_op",
+    "friction_get_op",
+    "friction_group_op",
+    "friction_report_op",
+    "friction_transition_op",
     "knowledge_curation_inputs_op",
     "knowledge_curation_metrics_op",
     "knowledge_curation_propose_op",

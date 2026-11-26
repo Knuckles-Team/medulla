@@ -282,6 +282,8 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "KnowledgeFlag",
     // MEDULLA-DECISION-ENGINE-R709.3: `Inputs` and `Metrics` read; `Propose` and `Status` write.
     "KnowledgeCuration",
+    // MEDULLA-DECISION-ENGINE-R710.3: `Group` and `Get` read; `Report` and `Transition` write.
+    "FrictionReport",
     "ConnectorPack",
     "DecisionEval",
     "DecisionFit",

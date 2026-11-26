@@ -16960,6 +16960,13 @@ class MethodKnowledgeCuration(BaseModel):
     params: MethodKnowledgeCurationParams
 
 
+class MethodFrictionReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FrictionReport"]
+    params: MethodFrictionReportParams
+
+
 class MethodPublishSkillPackage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18087,6 +18094,7 @@ Method = Annotated[
         MethodFailureIngest,
         MethodKnowledgeFlag,
         MethodKnowledgeCuration,
+        MethodFrictionReport,
         MethodPublishSkillPackage,
         MethodFeatureLedger,
         MethodArchitectureModelImport,
@@ -39031,6 +39039,140 @@ class LoopMetrics(BaseModel):
     recurrence_ppm: Annotated[int, Field(ge=0)]
 
 
+class FrictionState(str, Enum):
+    REPORTED = "reported"
+    TRIAGED = "triaged"
+    ROOT_CAUSED = "root_caused"
+    FIXED = "fixed"
+    EVALUATED = "evaluated"
+    APPROVED = "approved"
+    MEASURED = "measured"
+    REGRESSION_CHECKED = "regression_checked"
+    CLOSED = "closed"
+    REJECTED = "rejected"
+
+
+class FrictionReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: Annotated[int, Field(ge=0)]
+    expected: str
+    happened: str
+    proposed_fix: str | None = None
+    report_id: str
+    reported_by: str
+    run_id: str
+    skill_ref: str
+    skill_version: str
+    tenant_id: str
+    tried: str
+
+
+class FrictionTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence_ref: str | None = None
+    group_ref: str
+    to: FrictionState
+
+
+class FrictionOpReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    op: Literal["report"]
+    report: FrictionReport
+
+
+class FrictionOpTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: Annotated[int, Field(ge=0)]
+    graph: str
+    op: Literal["transition"]
+    transition: FrictionTransition
+
+
+class FrictionOpGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    limit: Annotated[int, Field(ge=0)] | None = None
+    op: Literal["group"]
+    skill_ref: str | None = None
+
+
+class FrictionOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    group_ref: str
+    op: Literal["get"]
+
+
+FrictionOp = Annotated[
+    FrictionOpReport | FrictionOpTransition | FrictionOpGroup | FrictionOpGet,
+    Field(discriminator="op"),
+]
+
+
+class MethodFrictionReportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: FrictionOp
+
+
+class FrictionGroup(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    distinct_runs: Annotated[int, Field(ge=0)]
+    first_ms: Annotated[int, Field(ge=0)]
+    group_ref: str
+    last_ms: Annotated[int, Field(ge=0)]
+    report_count: Annotated[int, Field(ge=0)]
+    skill_ref: str
+    state: FrictionState
+
+
+class FrictionFiled(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    counted: bool
+    group: FrictionGroup
+    receipt_id: str
+
+
+class FrictionStepRow(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actor: str
+    at_ms: Annotated[int, Field(ge=0)]
+    evidence_ref: str | None = None
+    step_id: str
+    to: FrictionState
+
+
+class FrictionMoved(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    group: FrictionGroup
+    step: FrictionStepRow
+
+
+class FrictionGroups(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    groups: list[FrictionGroup]
+
+
+class FrictionGroupView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    group: FrictionGroup
+    report_ids: list[str]
+    steps: list[FrictionStepRow]
+
+
 class UsageAppended(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -50322,6 +50464,22 @@ __all__ = [
     "ToolMock",
     "TrajectoryKind",
     "TrajectoryStep",
+    "FrictionFiled",
+    "FrictionGroup",
+    "FrictionGroupView",
+    "FrictionGroups",
+    "FrictionMoved",
+    "FrictionOp",
+    "FrictionOpGet",
+    "FrictionOpGroup",
+    "FrictionOpReport",
+    "FrictionOpTransition",
+    "FrictionReport",
+    "FrictionState",
+    "FrictionStepRow",
+    "FrictionTransition",
+    "MethodFrictionReport",
+    "MethodFrictionReportParams",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both

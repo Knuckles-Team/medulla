@@ -437,6 +437,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "KnowledgeCuration",
         &["CANDIDATE_PLAN_REFUSED", "PARAMETER_INVALID"],
     ),
+    // MEDULLA-DECISION-ENGINE-R710.4: a malformed op, an unreadable graph and the friction refusals.
+    (
+        "FrictionReport",
+        &["CANDIDATE_PLAN_REFUSED", "PARAMETER_INVALID"],
+    ),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R040.4: a blocked embedding-model promotion.
     // MEDULLA-FEDERATED-QUERY-R039.2.2/R039.2.4: the chunk-encoding recipe the
@@ -2628,6 +2633,14 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     if id == "Solve" {
         codes.extend(typed_codes(SolveErrorCode::ALL, SolveErrorCode::as_str));
     }
+    if id == "FrictionReport" {
+        // MEDULLA-DECISION-ENGINE-R710.4: the friction refusal table.
+        codes.extend(
+            medulla_decision_types::friction::REFUSALS
+                .iter()
+                .map(|code| code.as_str()),
+        );
+    }
     if id == "KnowledgeCuration" {
         // MEDULLA-DECISION-ENGINE-R709.4: the curation refusal table.
         codes.extend(
@@ -2666,6 +2679,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "KnowledgeFlag",
     // MEDULLA-DECISION-ENGINE-R709.5: `Status` moves each addressed flag with the adopt event.
     "KnowledgeCuration",
+    // MEDULLA-DECISION-ENGINE-R710.3: `Transition` moves the friction machine.
+    "FrictionReport",
     "SubmitWorkItem",
     "ClaimWorkItem",
     "CancelWorkItem",

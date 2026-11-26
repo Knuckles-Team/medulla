@@ -133,6 +133,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "FailureIngest": coordination.send_failure_ingest,
     "KnowledgeFlag": coordination.send_knowledge_flag,
     "KnowledgeCuration": coordination.send_knowledge_curation,
+    "FrictionReport": coordination.send_friction_report,
     "PublishSkillPackage": coordination.send_publish_skill_package,
     "FeatureLedger": coordination.send_feature_ledger,
     "BestTrajectory": graph.send_best_trajectory,

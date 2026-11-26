@@ -784,6 +784,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "KnowledgeFlag",
     // MEDULLA-DECISION-ENGINE-R709.3: curation proposals commit through the graph gateway.
     "KnowledgeCuration",
+    // MEDULLA-DECISION-ENGINE-R710.3: friction reports commit through the graph gateway.
+    "FrictionReport",
     "PublishSkillPackage",
     "MutationOutbox",
     "EdgeIndex",
@@ -887,6 +889,7 @@ fn native_local_only_decision_method_name(m: &Method) -> Option<&'static str> {
         Method::FailureIngest { .. } => Some("FailureIngest"),
         Method::KnowledgeFlag { .. } => Some("KnowledgeFlag"),
         Method::KnowledgeCuration { .. } => Some("KnowledgeCuration"),
+        Method::FrictionReport { .. } => Some("FrictionReport"),
         Method::PublishSkillPackage { .. } => Some("PublishSkillPackage"),
         Method::MutationOutbox { .. } => Some("MutationOutbox"),
         Method::EdgeIndex { .. } => Some("EdgeIndex"),
