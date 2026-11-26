@@ -122,6 +122,17 @@
             owl:onProperty :influenced ],
         bfo:0000031 .
 
+:PlatformGoal a owl:Class ;
+    rdfs:label "Platform Goal" ;
+    rdfs:comment "MEDULLA-REPO-INGEST-R006.6: a goal of the platform itself, held in the commons graph; the paper intake schedule reads the ids of these nodes to name the goals a cycle serves." ;
+    rdfs:subClassOf :Goal .
+
+:platformGoalId a owl:DatatypeProperty ;
+    rdfs:label "platform goal id" ;
+    rdfs:comment "MEDULLA-REPO-INGEST-R006.6: the stable identifier of a :PlatformGoal." ;
+    rdfs:domain :PlatformGoal ;
+    rdfs:range xsd:string .
+
 :GlossaryTerm a owl:Class ;
     rdfs:label "Glossary Term" ;
     rdfs:comment "R074.2: a governed business term of a domain glossary; a :Concept so it federates with the SKOS taxonomy." ;

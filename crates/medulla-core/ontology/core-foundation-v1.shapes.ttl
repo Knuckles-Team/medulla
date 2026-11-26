@@ -1,5 +1,6 @@
 @prefix : <https://knuckles-team.github.io/ontology/core#> .
 @prefix sh: <http://www.w3.org/ns/shacl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
 
 # Core-foundation ABox shapes (MEDULLA-CQ-CONN-R074.x): an agreement must name its
 # counterparty, so a legal-peripherals record without one is incomplete.
@@ -11,3 +12,13 @@
             sh:message "An agreement must name at least one counterparty." ;
             sh:path :counterparty ] ;
     sh:targetClass :Agreement .
+
+:PlatformGoalShape a sh:NodeShape ;
+    sh:description "A platform goal carries exactly one identifier." ;
+    sh:name "Platform Goal Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "A platform goal must carry exactly one platformGoalId." ;
+            sh:minCount 1 ;
+            sh:path :platformGoalId ] ;
+    sh:targetClass :PlatformGoal .
