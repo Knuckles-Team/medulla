@@ -208,6 +208,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             ))
             .await
         }
+        // MEDULLA-SCM-R009: the inverse of one changeset, appended as a new changeset.
+        Method::RevertChangeset { request } => {
+            dispatch_boxed(super::revert_changeset::handle_revert_changeset(
+                state,
+                req,
+                verified_context,
+                super::revert_changeset::RevertChangesetFields { request },
+            ))
+            .await
+        }
         // MEDULLA-SCM-R010: the first-parent line of a git history on a branch.
         Method::ImportGitHistory { request } => {
             dispatch_boxed(super::import_git_history::handle_import_git_history(

@@ -547,6 +547,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::BranchMerge { .. }
                 // MEDULLA-SCM-R002: a source changeset on a branch.
                 | Method::SubmitChangeset { .. }
+                // MEDULLA-SCM-R009: a revert lands one inverse changeset.
+                | Method::RevertChangeset { .. }
                 // MEDULLA-SCM-R010: the first-parent line of a git history on a branch.
                 | Method::ImportGitHistory { .. }
                 // MEDULLA-SCM-R013.4: a symbol edit lands one source changeset.

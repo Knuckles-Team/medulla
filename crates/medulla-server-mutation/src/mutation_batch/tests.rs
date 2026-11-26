@@ -502,6 +502,7 @@ const CLASSIFICATION_GOLDEN: &[(&str, &str)] = &[
     ("BranchMerge", "ControlPlane"),
     ("SubmitChangeset", "ControlPlane"),
     ("ImportGitHistory", "ControlPlane"),
+    ("RevertChangeset", "ControlPlane"),
     ("SubmitSymbolEdit", "ControlPlane"),
     ("SetPathGrant", "ControlPlane"),
     ("MultiGraphBatchUpdate", "MultiGraph"),

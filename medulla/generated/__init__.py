@@ -706,6 +706,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "SubmitSymbolEdit": cluster.send_submit_symbol_edit,
     "ReadBlame": cluster.send_read_blame,
     "ReadPathHistory": cluster.send_read_path_history,
+    "RevertChangeset": cluster.send_revert_changeset,
     "SubmitChangeset": cluster.send_submit_changeset,
     "ImportGitHistory": cluster.send_import_git_history,
     "GitExportPack": cluster.send_git_export_pack,

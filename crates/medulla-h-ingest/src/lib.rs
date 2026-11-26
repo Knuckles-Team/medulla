@@ -76,6 +76,8 @@ pub mod source_changeset;
 #[cfg(feature = "blob")]
 pub mod source_tree;
 pub mod source_bisect;
+// MEDULLA-SCM-R009.1: the plan that inverts one changeset of a branch chain.
+pub mod source_revert;
 
 /// Projection, round-trip check and request build of a served `SubmitSymbolEdit`
 /// (MEDULLA-SCM-R013.4).

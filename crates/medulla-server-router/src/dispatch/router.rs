@@ -78,6 +78,7 @@ mod git_export_pack;
 mod import_git_history;
 mod read_blame;
 mod source_bisect;
+mod revert_changeset;
 mod submit_symbol_edit;
 mod read_path_history;
 mod read_tree;

@@ -683,6 +683,7 @@ METHOD_IDS = frozenset(
         "OpenGraphSnapshot",
         "GraphLiveLimits",
         "BisectStep",
+        "RevertChangeset",
         "SubmitSymbolEdit",
         "ReadBlame",
         "ReadGraphChanges",

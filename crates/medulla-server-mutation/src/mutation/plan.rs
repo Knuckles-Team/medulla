@@ -858,6 +858,8 @@ pub const LOCAL_ONLY_METHODS: &[&str] = &[
     "SubmitChangeset",
     // Each imported git commit is one such payload (MEDULLA-SCM-R010).
     "ImportGitHistory",
+    // A revert is one such changeset (MEDULLA-SCM-R009).
+    "RevertChangeset",
     // A symbol edit is one such changeset (MEDULLA-SCM-R013.4).
     "SubmitSymbolEdit",
     // A path grant is one row in the same owner file (MEDULLA-SCM-R007).
@@ -960,6 +962,7 @@ fn branch_registry_method_name(m: &Method) -> Option<&'static str> {
         Method::BranchMerge { .. } => Some("BranchMerge"),
         Method::SubmitChangeset { .. } => Some("SubmitChangeset"),
         Method::ImportGitHistory { .. } => Some("ImportGitHistory"),
+        Method::RevertChangeset { .. } => Some("RevertChangeset"),
         Method::SubmitSymbolEdit { .. } => Some("SubmitSymbolEdit"),
         Method::SetPathGrant { .. } => Some("SetPathGrant"),
         _ => None,

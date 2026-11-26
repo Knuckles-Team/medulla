@@ -1255,6 +1255,18 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "SOURCE_CONFLICT",
         ],
     ),
+    // MEDULLA-SCM-R009: the revert refusals, all before the chain changes.
+    (
+        "RevertChangeset",
+        &[
+            "BRANCH_DELETED",
+            "BRANCH_TENANT_DENIED",
+            "BRANCH_UNKNOWN",
+            "CHANGESET_INVALID",
+            "REVERT_HAS_DEPENDENTS",
+            "REVISION_NOT_ON_CHAIN",
+        ],
+    ),
     // MEDULLA-SCM-R002: the changeset refusals, all before the chain changes.
     (
         "SubmitChangeset",

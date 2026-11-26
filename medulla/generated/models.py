@@ -17899,6 +17899,13 @@ class MethodBranchReadAt(BaseModel):
     params: MethodBranchReadAtParams
 
 
+class MethodRevertChangeset(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["RevertChangeset"]
+    params: MethodRevertChangesetParams
+
+
 class MethodSubmitChangeset(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18794,6 +18801,7 @@ Method = Annotated[
         MethodBranchDiff,
         MethodBranchMerge,
         MethodBranchReadAt,
+        MethodRevertChangeset,
         MethodSubmitChangeset,
         MethodImportGitHistory,
         MethodBundleExport,
@@ -41331,6 +41339,12 @@ class MethodReadPathHistoryParams(BaseModel):
     request: ReadPathHistoryRequest
 
 
+class MethodRevertChangesetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: RevertChangesetRequest
+
+
 class MethodSubmitChangesetParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -42349,6 +42363,14 @@ class ReadPathHistoryRequest(BaseModel):
     path: str
     repo: str
     rev: str
+
+
+class RevertChangesetRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch: str
+    changeset: str
+    repo: str
 
 
 class SubmitChangesetRequest(BaseModel):
@@ -51708,6 +51730,8 @@ __all__ = [
     "MethodStoredQueryPutParams",
     "MethodStoredQueryRetire",
     "MethodStoredQueryRetireParams",
+    "MethodRevertChangeset",
+    "MethodRevertChangesetParams",
     "MethodSubmitChangeset",
     "MethodSubmitChangesetParams",
     "MethodSupplyChainImpact",
@@ -51997,6 +52021,7 @@ __all__ = [
     "ChangesetIndexRefused",
     "ChangesetIndex",
     "SubmitChangesetReceipt",
+    "RevertChangesetRequest",
     "SubmitChangesetRequest",
     "SubmittedBlobRef",
     "SubmittedPath",

@@ -8058,6 +8058,31 @@ class GraphOperationsClient:
             raise RuntimeError("ProcessDocumentExport must answer with an object")
         return result
 
+    async def revert_changeset(
+        self,
+        repo: str,
+        branch: str,
+        changeset: str,
+        *,
+        idempotency_key: str | None = None,
+    ) -> dict[str, Any]:
+        """Append the inverse of one changeset to its branch (MEDULLA-SCM-R009).
+
+        Returns the receipt of the revert changeset (``{changeset, branch_head,
+        replayed, index}``). A revert already on the chain answers its own receipt with
+        ``replayed`` true. A changeset whose paths later changesets touch refuses
+        ``REVERT_HAS_DEPENDENTS``: fix forward instead.
+        """
+        result = await self._client._send(
+            "RevertChangeset",
+            {"request": {"repo": repo, "branch": branch, "changeset": changeset}},
+            None,
+            idempotency_key=idempotency_key,
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("RevertChangeset must answer with an object")
+        return result
+
     async def run_metrics(
         self,
         tenant: str,

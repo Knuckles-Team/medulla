@@ -353,6 +353,25 @@ pub struct SubmitChangesetRequest {
     pub run_trace_id: Option<String>,
 }
 
+/// The closed request of `Method::RevertChangeset` (MEDULLA-SCM-R009): append the inverse of
+/// `changeset` to `branch` as one new changeset. The answer is the receipt of that revert
+/// changeset, so a replay of the same request answers the same receipt.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct RevertChangesetRequest {
+    pub repo: String,
+    pub branch: String,
+    /// The id of the changeset to revert.
+    pub changeset: String,
+}
+
+/// The first line of the message of the changeset that reverts `changeset`. A revert is found on
+/// the chain by this line, so asking for the same revert twice appends one changeset.
+pub fn revert_subject(changeset: &str) -> String {
+    format!("Revert changeset {changeset}")
+}
+
 /// The served receipt of an accepted (or replayed) changeset.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

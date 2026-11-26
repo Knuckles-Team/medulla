@@ -1563,6 +1563,9 @@ send_read_blame = contract_sender("ReadBlame", "MethodReadBlameParams")
 send_read_path_history = contract_sender(
     "ReadPathHistory", "MethodReadPathHistoryParams"
 )
+send_revert_changeset = contract_sender(
+    "RevertChangeset", "MethodRevertChangesetParams"
+)
 send_submit_changeset = contract_sender(
     "SubmitChangeset", "MethodSubmitChangesetParams"
 )

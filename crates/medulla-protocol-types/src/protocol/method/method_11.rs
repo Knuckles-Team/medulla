@@ -586,6 +586,16 @@ $($variants)*
         request: Box<medulla_source_types::source_changeset::SubmitChangesetRequest>,
     },
 
+    /// Revert one changeset of a branch (MEDULLA-SCM-R009): the inverse of `changeset` is
+    /// appended as one new changeset through the `SubmitChangeset` accept path, and the answer
+    /// is that changeset's receipt. A revert already on the chain answers its own receipt, so
+    /// the request is idempotent. Refusals: `REVERT_HAS_DEPENDENTS` (a later changeset touches
+    /// the same paths: fix forward instead), `REVISION_NOT_ON_CHAIN`, `CHANGESET_INVALID`, plus
+    /// those of `SubmitChangeset`; a refusal leaves the chain unchanged.
+    RevertChangeset {
+        request: Box<medulla_source_types::source_changeset::RevertChangesetRequest>,
+    },
+
     /// Edit code by symbol (MEDULLA-SCM-R013.4): each op names a symbol and its new
     /// text; the engine projects the edit to file bytes, re-parses to confirm the
     /// round trip, then appends one changeset through the `SubmitChangeset` accept
