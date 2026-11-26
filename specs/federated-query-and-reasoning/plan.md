@@ -1327,6 +1327,7 @@ Call paths. Each row names its entry point, the functions on the path and the at
 - R741: `discover` (`crates/medulla-h-graph/src/graph_ops/semantic.rs:222`) → `plan_discover` (`discover_plan.rs:100`) → `expand_seeds` (`discover_plan.rs:27`) → `expand_hops` (`crates/medulla-graph-core/src/graph/core_expand.rs:79`). Row-level security already limits the core that the walk reads. The filter only narrows it.
 - R706.8 to R706.12: `execute` (`crates/medulla-exec/src/exec.rs:910`) → `apply_policies` (`policy_mask.rs:228`) → new `apply_shape_policies` → `medulla_shacl::validate` (`crates/medulla-shacl/src/validate.rs:40`). The audit record uses `audit_append` (`crates/medulla-persistence/src/redb_backend/backend_audit.rs:30`).
 - R742: `Method::Sparql` → evaluator → `expression.rs`. The row adds tests and one stated error rule, not a second evaluator.
+- R742.3: `Binding` in `crates/medulla-rdf/src/sparql.rs` becomes the typed RDF term. The parser output (`spargebra` literals), the graph read (`graph_match.rs`), the evaluator, the builtins, the aggregates, the `SERVICE` client, the OBDA rows and the result serializers move to it in one cutover, layer by layer; the wire `SparqlResult.rows` carries `SparqlTerm`, mirrored in `medulla/generated/models.py`, and the result-cache key carries the result shape revision.
 
 Reuse inventory. R740 reuses `medulla_rdf::mapping` parsers and serializers, `jsonld.rs` and `rdfxml.rs`. R706.8 reuses `QueryPolicy` records and `medulla-shacl`. R741 reuses `expand_hops`. No new store, planner or selector exists.
 

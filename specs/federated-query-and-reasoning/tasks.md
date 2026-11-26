@@ -497,3 +497,4 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [ ] T487 [US5] MEDULLA-FEDERATED-QUERY-R742 The SPARQL evaluator implements the complete SPARQL 1.1 builtin function set (rollup).
 - [ ] T488 [US5] MEDULLA-FEDERATED-QUERY-R742.1 Behavior: the builtin set and its error rule.
 - [ ] T489 [US5] MEDULLA-FEDERATED-QUERY-R742.2 Hot-path proof: an identifier-building query through the served method.
+- [ ] T489A [US5] MEDULLA-FEDERATED-QUERY-R742.3 Behavior: a solution binding carries an RDF term.
