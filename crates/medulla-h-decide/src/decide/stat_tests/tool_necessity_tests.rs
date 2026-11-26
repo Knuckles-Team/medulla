@@ -162,6 +162,54 @@ async fn necessity_journey() {
     assert_eq!(options[1], "agreement:true");
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R165.5
+#[tokio::test]
+async fn mismatch_links_to_the_model_call() {
+    let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
+    let pins = pins(&h, TENANT);
+    publish_known(&h, true, true);
+    let mut rows = trace_rows(0, 30, true, true);
+    rows.extend(trace_rows(30, 6, false, true));
+    rows.extend(trace_rows(36, 24, false, false));
+    seed(&h, "kg-premises", rows).await;
+
+    let skipped = decide(&h, necessity_request(&pins.0, "kg-premises", false))
+        .await
+        .unwrap();
+    let premises = &skipped.records.as_slice()[0].premises;
+    for subject in [
+        "tool_necessity.score",
+        "tool_necessity.samples_with",
+        "tool_necessity.samples_without",
+        "tool_necessity.provenance_digest",
+        "tool_necessity.comparison",
+    ] {
+        assert!(
+            premises.iter().any(|p| p.subject == subject),
+            "{subject} missing from {premises:?}"
+        );
+    }
+    let mismatch = premises
+        .iter()
+        .find(|p| p.subject == "tool_necessity.mismatch:missed_tool")
+        .expect("the mismatch premise");
+    assert_eq!(mismatch.fact, "call:1");
+    assert!(matches!(
+        &mismatch.provenance,
+        medulla_decision_types::decision::PremiseProvenance::Request { field }
+            if field == "model_call_id"
+    ));
+
+    // A model that agrees records no mismatch premise.
+    let called = decide(&h, necessity_request(&pins.0, "kg-premises", true))
+        .await
+        .unwrap();
+    assert!(!called.records.as_slice()[0]
+        .premises
+        .iter()
+        .any(|p| p.subject.starts_with("tool_necessity.mismatch")));
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R165.3
 #[tokio::test]
 async fn too_few_runs_abstain() {

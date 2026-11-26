@@ -22,10 +22,10 @@ use medulla_decision_types::decision::tool_necessity::{
     ToolNecessityKnobs, MODEL_UNKNOWN, STALE_MEASUREMENT, TOOL_UNKNOWN,
 };
 pub use medulla_decision_types::decision::tool_necessity::REFUSALS;
-use medulla_decision_types::decision::DecisionPolicy;
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 
-use crate::decide::stat_executor::{Executed, ExecutionContext};
+use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};
 use crate::decide::SharedState;
 
 use super::support::{abstained, advisory, invalid, param, single_option, text_param};
@@ -160,16 +160,47 @@ fn conclude_necessity(
         format!("necessity:{}", comparison.necessity_q32),
         format!("agreement:{}", comparison.agreement),
     ];
+    // The measurement is one recorded fact: its premises name it by its provenance digest.
+    let measurement = format!("tool_necessity:{}", necessity.provenance_digest);
+    let observed = |subject: &'static str, fact: String| FamilyPremise {
+        subject: subject.into(),
+        fact,
+        class: PremiseClass::Observation,
+        source: FamilyPremiseSource::Observation(measurement.clone()),
+    };
+    let mut premises = vec![
+        observed("tool_necessity.score", comparison.necessity_q32.to_string()),
+        observed(
+            "tool_necessity.samples_with",
+            necessity.samples_with.to_string(),
+        ),
+        observed(
+            "tool_necessity.samples_without",
+            necessity.samples_without.to_string(),
+        ),
+        observed(
+            "tool_necessity.provenance_digest",
+            necessity.provenance_digest.to_string(),
+        ),
+        observed("tool_necessity.comparison", comparison.agreement.to_string()),
+    ];
     if let Some(mismatch) = comparison.mismatch(model_call_id) {
-        options.push(format!(
-            "mismatch:{}",
-            match mismatch.reason {
-                MismatchReason::MissedTool => "missed_tool",
-                MismatchReason::UnneededTool => "unneeded_tool",
-            }
-        ));
+        let reason = match mismatch.reason {
+            MismatchReason::MissedTool => "missed_tool",
+            MismatchReason::UnneededTool => "unneeded_tool",
+        };
+        options.push(format!("mismatch:{reason}"));
+        // The mismatch links to the model call that disagreed with the measurement.
+        premises.push(FamilyPremise {
+            subject: format!("tool_necessity.mismatch:{reason}").into(),
+            fact: mismatch.model_call_id,
+            class: PremiseClass::Observation,
+            source: FamilyPremiseSource::Request("model_call_id"),
+        });
     }
-    advisory(options)
+    let mut executed = advisory(options)?;
+    executed.family_premises = premises;
+    Ok(executed)
 }
 
 impl DecisionFamily for ToolNecessityFamily {
@@ -189,5 +220,18 @@ impl DecisionFamily for ToolNecessityFamily {
         graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some(conclude_necessity(ctx, request, policy, graph_view))
+    }
+
+    fn premises(
+        &self,
+        _request: &DecideRequest,
+        executed: &Executed,
+        policy_digest: &str,
+    ) -> Vec<PremiseRef> {
+        executed
+            .family_premises
+            .iter()
+            .map(|premise| premise.seal(policy_digest))
+            .collect()
     }
 }
