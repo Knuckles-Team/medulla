@@ -7,14 +7,16 @@ changeset nodes and test bindings of one repository with a batch, then reads the
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import uuid
 
 import msgpack
 import pytest
-from conftest import request_context
+from conftest import TEST_AGENT_ID, request_context
 
 from medulla.client import MedullaClient
+from medulla.generated.index_repository import IndexRepositoryScope
 
 
 def _body(payload):
@@ -177,47 +179,99 @@ def test_matches_shared_generator():
 ROWS = 2_000
 LANDED_ROWS = 1_000
 VERIFIED_ROWS = 500
-BATCH = 500
+MODE = 0o100644
+SPEC_PATH = "specs/demo/requirements.md"
+TEST_PATH = "tests/test_journey.py"
 
 
-def _journey_seed() -> list[dict]:
-    """2,000 rows; one changeset cites 1,000; a test binds the first 500."""
-    rows = [f"DEMO-J-R{n:04d}" for n in range(1, ROWS + 1)]
-    seed = [
-        _node(f"requirement:demo:{row}", "Requirement", repo="demo", rowId=row)
-        for row in rows
-    ]
-    seed.append(
-        _node(
-            "changeset:demo:c1",
-            "Changeset",
-            repo="demo",
-            changeset_id="c1",
-            created_at="1",
-        )
+def _row_ids() -> list[str]:
+    return [f"DEMO-J-R{n:04d}" for n in range(1, ROWS + 1)]
+
+
+def _journey_files() -> list[tuple[str, bytes]]:
+    """A generated tree: 2,000 rows and a test file that binds the first 500."""
+    rows = "".join(
+        f"| `{row}` | **Row.** Caller chain: `serve` -> `src/demo.py:1`. | "
+        f"Test: `tests/test_journey.py::test_row` (L3). |\n"
+        for row in _row_ids()
     )
-    seed.append(
-        _node(
-            "testfile:demo:tests/test_j.py",
-            "TestFile",
-            repo="demo",
-            path="tests/test_j.py",
-        )
+    spec = (
+        "# Requirements\n\n| ID | Requirement | Acceptance |\n|----|----|----|\n" + rows
     )
-    for row in rows[:LANDED_ROWS]:
-        seed.append(
-            _edge("changeset:demo:c1", "citesRequirement", f"requirement:demo:{row}")
-        )
-    for row in rows[:VERIFIED_ROWS]:
-        seed.append(
-            _edge(
-                f"requirement:demo:{row}", "boundTest", "testfile:demo:tests/test_j.py"
-            )
-        )
-    return seed
+    tests = "".join(f"# spec: {row}\n" for row in _row_ids()[:VERIFIED_ROWS])
+    return [(SPEC_PATH, spec.encode()), (TEST_PATH, tests.encode())]
 
 
-async def _with_chunked_graph(seed: list[dict], body):
+async def _land_journey_tree(client, graph: str, files) -> str:
+    """Land the tree and one changeset that cites the first 1,000 rows through
+    ``SubmitChangeset``, then ingest the same tree through ``IndexRepository``.
+    Returns the id of the changeset."""
+    await client._send(
+        "SetPathGrant",
+        {
+            "request": {
+                "repo": graph,
+                "principal": TEST_AGENT_ID,
+                "prefix": "",
+                "read": True,
+                "write": True,
+            }
+        },
+    )
+    cited = ", ".join(_row_ids()[:LANDED_ROWS])
+    paths = []
+    for path, data in files:
+        digest = await client.blob.store(data)
+        paths.append(
+            {
+                "path": path,
+                "op": "add",
+                "blob": {"digest": digest, "size": len(data)},
+                "mode": MODE,
+                "renamed_from": None,
+            }
+        )
+    receipt = await client._send(
+        "SubmitChangeset",
+        {
+            "request": {
+                "repo": graph,
+                "branch": "main",
+                "base_head": None,
+                "message": f"feat: the journey rows\n\nSpec: {cited}",
+                "paths": paths,
+                "trailers": None,
+                "run_trace_id": None,
+            }
+        },
+        idempotency_key=f"{graph}-journey",
+    )
+    scope = IndexRepositoryScope.model_validate(
+        {
+            "repository_id": graph,
+            "commits": [],
+            "refs": [
+                {
+                    "ref_name": "refs/heads/main",
+                    "revision_id": "e" * 40,
+                    "status": "live",
+                }
+            ],
+            "file_versions": [
+                {
+                    "ref_name": "refs/heads/main",
+                    "path": path,
+                    "blob_digest": "sha256:" + hashlib.sha256(data).hexdigest(),
+                }
+                for path, data in files
+            ],
+        }
+    )
+    await client.graph.index_repository(files, scope=scope, graph=graph)
+    return receipt["changeset"]["id"]
+
+
+async def _journey(body):
     graph = f"sdlc-status-{uuid.uuid4().hex[:8]}"
     client = await MedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
@@ -226,22 +280,9 @@ async def _with_chunked_graph(seed: list[dict], body):
     )
     try:
         await client.tenants.create(graph, "Global")
-        # Nodes first, then edges, so no edge names a node a later chunk writes.
-        ordered = [op for op in seed if op["op"] == "upsert_node"] + [
-            op for op in seed if op["op"] == "upsert_edge"
-        ]
-        for start in range(0, len(ordered), BATCH):
-            await client._send(
-                "BatchUpdate",
-                {
-                    "operations_msgpack": msgpack.packb(
-                        ordered[start : start + BATCH], use_bin_type=True
-                    )
-                },
-                graph,
-            )
         try:
-            return await body(client, graph)
+            changeset = await _land_journey_tree(client, graph, _journey_files())
+            return await body(client, graph, changeset)
         finally:
             await client.tenants.delete(graph)
     finally:
@@ -251,18 +292,18 @@ async def _with_chunked_graph(seed: list[dict], body):
 # spec: MEDULLA-SDLC-R005.6
 @pytest.mark.spec("MEDULLA-SDLC-R005.6")
 def test_status_journey_over_2000_rows():
-    async def body(client, graph):
-        return _body(await client.spec_status("demo", "c1", graph))
+    async def body(client, graph, changeset):
+        return _body(await client.spec_status(graph, changeset, graph))
 
-    answer = asyncio.run(_with_chunked_graph(_journey_seed(), body))
+    answer = asyncio.run(_journey(body))
     rows = {row["id"]: row for row in answer["rows"]}
     assert len(rows) == ROWS
-    for n in range(1, ROWS + 1):
-        row = rows[f"DEMO-J-R{n:04d}"]
+    for n, row_id in enumerate(_row_ids(), start=1):
+        row = rows[row_id]
         if n <= VERIFIED_ROWS:
             assert row["state"] == "VERIFIED"
-            assert row["landed_by"] == ["c1"]
-            assert row["verified_by"] == ["tests/test_j.py"]
+            assert len(row["landed_by"]) == 1
+            assert row["verified_by"] == [TEST_PATH]
         elif n <= LANDED_ROWS:
             assert row["state"] == "LANDED" and row["verified_by"] == []
         else:
