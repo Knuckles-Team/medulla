@@ -268,6 +268,8 @@ fn abstention_text(batch: &DecisionBatch) -> String {
     format!("{reasons:?}")
 }
 
+// proves R009.18.3: Wiring: producer and consumer of windows
+// spec: MEDULLA-ORCH-VOCAB-R009.18.3
 // spec: MEDULLA-DECISION-ENGINE-R158.7
 #[tokio::test]
 async fn windows_drive_model_and_width_and_refuse_mid_run_widening() {

@@ -37,7 +37,9 @@ def test_invalid_trace_refused_and_not_stored(clean_graph):
     assert clean_graph.nodes.has("trace-invalid") is False
 
 
+# proves R009: Harness run-trace vocabulary
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.17")
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009")
 def test_client_ingest_round_trips_harness_properties(clean_graph):
     traces = _traces()
     # One trace per termination reason plus the over-budget overflow, the same

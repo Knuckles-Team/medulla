@@ -116,7 +116,9 @@ def test_window_round_trips_with_unknowns(clean_graph):
     clean_graph.nodes.add("window-w", window)  # an equal re-send is idempotent
 
 
+# proves R009.18: Run observation window for model and width adjustment
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.18.3")
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.18")
 def test_window_to_adjustment_through_meristem_fixture(clean_graph):
     """The run loop's windows (written through ``add_node``) drive the
     adjustment: a noisy run moves up a tier and narrows, a stale run and a run
