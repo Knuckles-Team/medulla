@@ -423,6 +423,12 @@ mod tests {
             RevisionSubject::RetrievalStrategy {
                 strategy_ref: "strategy-a".to_owned(),
             },
+            RevisionSubject::Skill {
+                skill_ref: "skill:triage@3".to_owned(),
+            },
+            RevisionSubject::KnowledgeEntry {
+                entry_ref: "term:orders.amount".to_owned(),
+            },
         ] {
             assert_eq!(
                 RevisionSubject::from_pointer_key(&subject.pointer_key()),

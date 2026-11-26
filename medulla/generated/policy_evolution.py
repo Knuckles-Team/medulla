@@ -261,6 +261,20 @@ class RevisionSubjectRetrievalStrategy(BaseModel):
     strategy_ref: str
 
 
+class RevisionSubjectSkill(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["skill"]
+    skill_ref: str
+
+
+class RevisionSubjectKnowledgeEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    entry_ref: str
+    kind: Literal["knowledge_entry"]
+
+
 RevisionSubject = Annotated[
     RevisionSubjectDecisionHead
     | RevisionSubjectProgram
@@ -270,7 +284,9 @@ RevisionSubject = Annotated[
     | RevisionSubjectGovernedSet
     | RevisionSubjectMeasuredFact
     | RevisionSubjectRerankCalibration
-    | RevisionSubjectRetrievalStrategy,
+    | RevisionSubjectRetrievalStrategy
+    | RevisionSubjectSkill
+    | RevisionSubjectKnowledgeEntry,
     Field(discriminator="kind"),
 ]
 
@@ -700,7 +716,9 @@ __all__ = [
     "RevisionSubjectModelPolicy",
     "RevisionSubjectProgram",
     "RevisionSubjectRerankCalibration",
+    "RevisionSubjectKnowledgeEntry",
     "RevisionSubjectRetrievalStrategy",
+    "RevisionSubjectSkill",
     "RewardEvidenceSource",
     "RewardRecord",
     "SafetyOutcome",
