@@ -12,8 +12,8 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use super::record::outcome::RefusalCode;
 use super::record::premise::{PremiseClass, PremiseProvenance, PremiseRef};
+use medulla_types::refusal_code::RefusalCode;
 
 /// Most streams one request may name.
 pub const MAX_EVIDENCE_STREAMS: usize = 16;

@@ -7,6 +7,7 @@
 use super::kernel_family_support::{decide_as_other_tenant, facts};
 use super::trajectory_join_tests::{entry, join};
 use super::*;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::safety::{
     BoundComparison, SafetyBound, SafetyMeasurement, DEFAULT_MAX_MEASUREMENT_AGE_MS,
     SAFETY_BOUND_EXCEEDED, SAFETY_MEASUREMENT_MISSING, SAFETY_MEASUREMENT_STALE,
@@ -14,10 +15,10 @@ use medulla_decision_types::decision::safety::{
 };
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, DecisionPolicyRef, EvidenceClass, PremiseClass,
-    PremiseProvenance,
+    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance,
 };
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 const BOUND: &str = "latency-p95";
 

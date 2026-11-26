@@ -4,8 +4,8 @@
 //! must not repeat one of these, nor another family's code, so one code names
 //! one refusal across the whole decision surface.
 
-use super::record::outcome::RefusalCode;
 use super::statistical::QuestionKind;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The caller may not read or act on what the request names.
 pub const ACCESS_DENIED: RefusalCode = RefusalCode::new("ACCESS_DENIED");

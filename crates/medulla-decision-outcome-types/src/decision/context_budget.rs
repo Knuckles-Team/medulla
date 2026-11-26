@@ -111,7 +111,7 @@ pub enum ContextBudgetRefusal {
 }
 
 impl medulla_decision_types::decision::record::outcome::DecisionRefusal for ContextBudgetRefusal {
-    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         match self {
             Self::BudgetExhausted { .. } => {
                 medulla_decision_types::decision::codes::CONTEXT_BUDGET_EXHAUSTED
@@ -407,7 +407,7 @@ pub enum SignalRefusal {
 
 impl SignalRefusal {
     /// The registered code (`decision::codes`).
-    pub fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+    pub fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         use medulla_decision_types::decision::codes;
         match self {
             Self::Invalid { .. } => codes::SIGNAL_INVALID,

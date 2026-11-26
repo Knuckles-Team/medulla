@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::QuantisedValue;
 use super::policy::DecisionPolicy;
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// One stage of a curriculum.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

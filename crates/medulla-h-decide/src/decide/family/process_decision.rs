@@ -22,14 +22,16 @@ use medulla_decision_types::decision::process_decision::{
     BRANCH_NO_ARM, DMN_ANY_CONFLICT, DMN_EXPRESSION_UNSUPPORTED, DMN_INPUT_MISSING,
     DMN_NO_RULE_MATCHED, DMN_UNIQUE_VIOLATED, PLAN_UNKNOWN,
 };
-use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
 use medulla_decision_types::decision::task_plan::{BranchCondition, BranchKind, BranchSpec};
-use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};
 use crate::decide::stat_log::visible_entries;

@@ -5,7 +5,7 @@
 //! with it. `CONTEXT_BUDGET_MISSING` is the one code `ContextCompile` also
 //! answers (a bundle with no window), so both entry points name this constant.
 
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// A source is named twice.
 pub const CONTEXT_SOURCE_DUPLICATE: RefusalCode = RefusalCode::new("CONTEXT_SOURCE_DUPLICATE");

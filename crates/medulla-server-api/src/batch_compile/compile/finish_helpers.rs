@@ -303,9 +303,10 @@ pub(super) fn compiled_outbox(
 #[cfg(test)]
 mod memory_event_tests {
     use super::*;
-    use medulla_decision_types::claims::{ClaimState, ObserverRef, ParticipantId};
+    use medulla_decision_types::claims::{ClaimState, ObserverRef};
     use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
     use medulla_protocol_types::protocol::Method;
+    use medulla_work_types::participant::ParticipantId;
 
     fn batch_of(operations: Vec<serde_json::Value>) -> Method {
         Method::BatchUpdate { operations_msgpack: rmp_serde::to_vec_named(&operations).unwrap() }

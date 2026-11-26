@@ -22,10 +22,9 @@ use medulla_decision_types::decision::recruit::{
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
-};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_work_types::work_market::selection::allocate_offer;
 
 use crate::decide::stat_executor::{

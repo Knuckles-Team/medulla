@@ -8,9 +8,8 @@
 
 use super::*;
 use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::{
-    AbstainReason, EvidenceClass, PremiseClass, PremiseProvenance,
-};
+use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
+use medulla_types::evidence_class::EvidenceClass;
 
 const GRAPH: &str = "held-items";
 

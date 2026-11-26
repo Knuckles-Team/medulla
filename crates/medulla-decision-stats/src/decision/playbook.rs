@@ -200,7 +200,7 @@ mod tests {
     use super::*;
     use medulla_agent_types::agent_ontology::CAPABILITY_ROOT;
     use medulla_decision_types::decision::playbook::ProposedStep;
-    use medulla_decision_types::decision::EvidenceClass;
+    use medulla_types::evidence_class::EvidenceClass;
 
     const LIMITS: CorrelatorLimits = CorrelatorLimits {
         window_ms: 10_000,

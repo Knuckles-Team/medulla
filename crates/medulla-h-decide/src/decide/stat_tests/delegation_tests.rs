@@ -14,8 +14,8 @@ use medulla_decision_types::decision::statistical::log::{
     DecisionLogEntry, DecisionOutcomeEvaluation, EntryInputs, RecordVisibility, StoredEvaluation,
     DECISION_LOG_SCHEMA_VERSION,
 };
-use medulla_decision_types::decision::EvidenceClass;
 use medulla_persistence_records::decision_jobs::{encode_artifact, evaluation_key, record_key};
+use medulla_types::evidence_class::EvidenceClass;
 
 const DAY_MS: u64 = 86_400_000;
 

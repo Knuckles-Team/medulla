@@ -775,7 +775,7 @@ fn transfer_estimate(
         .collect();
     let mut estimate = robust_transfer(&evidence, request, &knobs).map_err(|r| r.render())?;
     let class = match estimate.evidence_class {
-        medulla_decision_types::decision::EvidenceClass::Proof => PremiseClass::Proof,
+        medulla_types::evidence_class::EvidenceClass::Proof => PremiseClass::Proof,
         _ => PremiseClass::Observation,
     };
     let evidence_key = format!("transfer:{}", request.skill_key);

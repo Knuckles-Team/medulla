@@ -23,14 +23,16 @@ use medulla_decision_types::decision::item_recommendation::{
     encoder_key, encoder_prefix, DIMENSION_MISMATCH, EMPTY_CATALOG, ENCODER_MISSING, ENCODER_STALE,
 };
 use medulla_decision_types::decision::knob_families::recommend::RecommendKnobs;
-use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
-use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::decision_jobs::decode_artifact;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};
 use crate::decide::stat_recommend::PARAM_RECOMMEND;

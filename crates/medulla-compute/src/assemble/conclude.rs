@@ -8,16 +8,14 @@ use medulla_decision_outcome_types::{
     decision::derivation::weakest, decision::derivation::RequiredCapability,
 };
 use medulla_decision_types::decision::request::effective_solver_budget;
-use medulla_decision_types::solve::ModelSpec;
-use medulla_decision_types::{
-    decision::AbstainReason, decision::CandidateFacts, decision::CoverageDerivation,
-    decision::DecisionErrorCode, decision::DecisionInputs, decision::DecisionOutcome,
-    decision::Elimination, decision::EvidenceClass, decision::PremiseRef, decision::ResolutionKind,
-    decision::SlotAssignment, decision::TemplateFacts, decision::UniquenessProof,
-    decision::UnknownCostRule, decision::Violation, decision::WhyNot,
-    decision::MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
+use medulla_decision_types::decision::{
+    AbstainReason, CandidateFacts, CoverageDerivation, DecisionErrorCode, DecisionInputs,
+    DecisionOutcome, Elimination, PremiseRef, ResolutionKind, SlotAssignment, TemplateFacts,
+    UniquenessProof, UnknownCostRule, Violation, WhyNot, MAX_ASSEMBLY_REQUIRED_CAPABILITIES,
 };
+use medulla_decision_types::solve::ModelSpec;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::admit_topology;
 use super::eliminate::Screened;

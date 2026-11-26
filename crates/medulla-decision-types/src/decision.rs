@@ -172,24 +172,24 @@ pub use policy::{
     ColdStart, DecisionPolicy, ExplorationBudget, ObjectiveLevelKind, ObjectiveOrder,
     StatisticalPolicy, TraceFidelityLevel, UnknownCostRule, WeightedLevel,
 };
-pub use record::{
-    AbstainReason, AssemblyStep, CandidateFacts, CandidateSourceRecord, CoverageDerivation, DecisionInputs,
-    PromptSelection, SelectedPromptFacts, DecisionOutcome, DecisionQuestion, DecisionRecord, DerivationClass, DerivationEdge, EdgeSource,
-    Elimination, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
-    SlotAssignment, SolverIdentity, TemplateFacts, TraceFidelity, UniquenessProof, UniquenessScope,
-    Violation, WhyNot,
+use record::{
+    AbstainReason, AssemblyStep, CandidateFacts, CandidateSourceRecord, CoverageDerivation,
+    DecisionInputs, PromptSelection, SelectedPromptFacts, DecisionOutcome, DecisionQuestion,
+    DecisionRecord, DerivationClass, DerivationEdge, EdgeSource, Elimination, PremiseClass,
+    PremiseProvenance, PremiseRef, ResolutionKind, SlotAssignment, SolverIdentity, TemplateFacts,
+    TraceFidelity, UniquenessProof, UniquenessScope, Violation, WhyNot,
 };
 pub use replay::{
     EvalMode, EvaluationRun, FeaturePowerReport, IcInterval, ReplaySpec, MAX_FEATURE_POWER_REPORTS,
     MAX_IC_DECAY_LAGS,
 };
-pub use request::{
+use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
-    ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult, DecisionPolicyRef,
+    ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult,
     LibraryCandidateScope, PrimitiveEdge, PrimitiveReplacement, PromptAssignment, RenderedPrompt,
-    SolverBudget, SourceSlotMap, StepContract, StepShield,
-    TopologyCommitEvidence, TopologyCommitOutcome, ASSEMBLY_RESULT_SCHEMA_VERSION,
-    DECISION_COMMIT_RESULT_SCHEMA_VERSION, DECISION_COMPONENT_ID_PREFIX,
+    SolverBudget, SourceSlotMap, StepContract, StepShield, TopologyCommitEvidence,
+    TopologyCommitOutcome, ASSEMBLY_RESULT_SCHEMA_VERSION, DECISION_COMMIT_RESULT_SCHEMA_VERSION,
+    DECISION_COMPONENT_ID_PREFIX,
 };
 pub use statistical::{
     CalibrationMethod, CalibrationStatement, CandidatePool, CandidateSource, DecideRequest,

@@ -14,13 +14,14 @@ use medulla_decision_types::decision::transfer::{
     TRANSFER_TOO_FEW_BACKBONES,
 };
 use medulla_decision_types::decision::{
-    EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, TraceFidelityLevel,
+    PremiseClass, PremiseProvenance, PremiseRef, TraceFidelityLevel,
 };
 use medulla_numeric::{
     risk::pool_hierarchy, risk::BetaDistribution, risk::ConcentrationBounds, risk::GroupCounts,
     risk::PoolTree,
 };
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::aggregate::{label_use, LabelUse};
 use super::quant::q32;
@@ -270,7 +271,7 @@ mod tests {
     use medulla_decision_types::decision::statistical::dataset::OutcomeFidelity;
     use medulla_decision_types::decision::statistical::log::DecisionOutcomeEvaluation;
     use medulla_decision_types::decision::transfer::BackboneBinding;
-    use medulla_decision_types::decision::EvidenceClass;
+    use medulla_types::evidence_class::EvidenceClass;
 
     const SKILL: &str = "a";
 

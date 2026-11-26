@@ -10,13 +10,12 @@ use medulla_decision_types::decision::statistical::placement::{
     cpu_cell, memory_cell, PlacementConstraints, PlacementQuestion, PlacementRead,
     PlacementRequestBody, PlacementSubject, PlacementTarget, PLACEMENT_PARAM,
 };
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionOutcome, EvidenceClass, ResolutionKind, Violation,
-};
+use medulla_decision_types::decision::{AbstainReason, DecisionOutcome, ResolutionKind, Violation};
 use medulla_mutation_types::capacity_lease::{CapacityCell, CapacityResourceClass, LeasePriority};
 use medulla_persistence::redb_backend::RedbBackend;
 use medulla_protocol_types::protocol::Method;
 use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_work_types::native_control::{CapacityCellUpdateRequest, NativeControlSchemaVersion};
 
 use super::assemble_tests as library;

@@ -18,7 +18,6 @@
 //! with an unknown error rate abstains `RATE_UNKNOWN`; every other refusal is a
 //! `PARAMETER_INVALID` request refusal naming its code.
 
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::run_adjustment::{
     decide_adjustment, error_rate_q32, latency_p95, AdjustmentRefusal, Current, ErrorWindow,
     ModelTier, Observed, WidthKnobs, INSUFFICIENT_SAMPLES, LATENCY_UNKNOWN, RATE_UNKNOWN,
@@ -31,6 +30,7 @@ use medulla_decision_types::decision::statistical::{
 use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 use medulla_work_types::run_observation::{Measured, RunObservationWindow};
 
 use crate::decide::stat_executor::{

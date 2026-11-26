@@ -1,9 +1,9 @@
 //! Lifecycle record models (MEDULLA-SDLC-R002.1, R002.2, R003.1, R005.1,
 //! R006.1, R006.7).
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::knobs::{KnobSafety, KnobValue};
 use medulla_decision_types::decision::lifecycle::KNOBS;
-use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_source_types::{
     lifecycle::record_deployment, lifecycle::release_range, lifecycle::Defect,
     lifecycle::DefectIntake, lifecycle::DefectStatus, lifecycle::Deployment,

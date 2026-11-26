@@ -18,8 +18,8 @@ use super::knob_families::indexless::{
 };
 use super::knobs::{KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
-use super::record::outcome::RefusalCode;
-use super::request::DecisionPolicyRef;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The stable refusals of the `indexless` family.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

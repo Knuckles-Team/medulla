@@ -80,7 +80,7 @@ pub enum RunRecord {
     /// live on this request, never in the stored program body.
     CompiledProgram {
         trace: RunTraceRecord,
-        policy: crate::decision::request::DecisionPolicyRef,
+        policy: medulla_agent_types::agent_component::DecisionPolicyRef,
         /// The `RunTrace` node the program is linked to with `compiled_from`
         /// (MEDULLA-DECISION-ENGINE-R135.5).
         source: TraceSource,
@@ -108,7 +108,7 @@ pub enum RunRecord {
     /// partition under `policy` and refuses a checkpoint of another revision.
     HorizonCheckpoint {
         plan: Box<super::task_plan::TaskPlan>,
-        policy: crate::decision::request::DecisionPolicyRef,
+        policy: medulla_agent_types::agent_component::DecisionPolicyRef,
         checkpoint: super::task_plan::HorizonCheckpoint,
     },
     /// Store one branch's outcome (MEDULLA-DECISION-ENGINE-R134.14).

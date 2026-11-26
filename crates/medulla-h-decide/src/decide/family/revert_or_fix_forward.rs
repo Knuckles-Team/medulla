@@ -15,8 +15,9 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome,
 };
-use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_work_types::step_verdict::VerificationVerdict;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};

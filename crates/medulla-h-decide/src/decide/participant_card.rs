@@ -9,12 +9,13 @@ use super::SharedState;
 use medulla_decision_stats::decision::participant_card::{
     card_digest, confidence_ppm, rank_card, token_estimate, CardBudget, CardInput,
 };
-use medulla_decision_types::claims::{ClaimRecord, ObserverRef, ParticipantId};
+use medulla_decision_types::claims::{ClaimRecord, ObserverRef};
 use medulla_decision_types::decision::knob_families::participant::default_u64;
 use medulla_decision_types::participant_memory::ParticipantCard;
 use medulla_protocol_types::protocol::{Response, ResultPayload};
 use medulla_protocol_types::result_contract::coordination::ParticipantReadCard;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_work_types::participant::ParticipantId;
 
 #[cfg(feature = "statechart")]
 fn budget(now_ms: i64) -> CardBudget {

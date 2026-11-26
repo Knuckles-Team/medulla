@@ -7,7 +7,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Refusal code: the question names no base or no head revision.
 pub const REVIEW_REVISION_MISSING: RefusalCode = RefusalCode::new("REVIEW_REVISION_MISSING");

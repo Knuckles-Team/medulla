@@ -2,6 +2,7 @@
 //! answer, its premises and its sealed outcome (MEDULLA-DECISION-ENGINE-R128).
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_component::{
     MeasuredFact, ObservationRef, ShellProficiency, StoppingBehaviour,
 };
@@ -17,8 +18,7 @@ use medulla_decision_types::decision::statistical::{
     StatisticalDecisionRecord, StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
 };
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, DecisionPolicyRef, EvidenceClass, PremiseClass,
-    PremiseProvenance, PremiseRef, ResolutionKind,
+    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
 };
 use medulla_h_decide::decide::stat_test_support::{
     decode, publish_route_schema, request, Harness, TENANT,
@@ -27,6 +27,7 @@ use medulla_protocol_types::protocol::{Method, Request, Response};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 async fn dispatch(h: &Harness, method: Method) -> Response {
     let method = rmp_serde::from_slice(&rmp_serde::to_vec_named(&method).unwrap()).unwrap();

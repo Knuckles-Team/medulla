@@ -4,7 +4,7 @@
 //! Each of the seven parts of `AgentExecutionAnswer` answers or abstains on its own. An
 //! abstained part carries one of these codes inside `AbstainReason::Family`.
 
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The part's concept has no connected authority, so its source could not be read.
 pub const ORCH_PART_NO_SOURCE: RefusalCode = RefusalCode::new("ORCH_PART_NO_SOURCE");

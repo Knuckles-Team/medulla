@@ -20,11 +20,11 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::{
-    codes, DecisionPolicy, EvidenceClass, LibraryCandidateScope, PremiseClass, PremiseRef,
-    ResolutionKind,
+    codes, DecisionPolicy, LibraryCandidateScope, PremiseClass, PremiseRef, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::candidates::library_candidates;
 use crate::decide::stat_executor::{

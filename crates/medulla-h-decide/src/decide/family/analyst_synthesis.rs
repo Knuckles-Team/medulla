@@ -12,10 +12,9 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
-use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
-};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

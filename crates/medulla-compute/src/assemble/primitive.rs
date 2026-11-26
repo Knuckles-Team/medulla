@@ -10,12 +10,13 @@
 
 use medulla_decision_types::decision::primitive::PrimitiveContract;
 use medulla_decision_types::decision::record::outcome::{
-    AbstainReason, DecisionRefusal, RefusalCode, RefusalOrigin,
+    AbstainReason, DecisionRefusal, RefusalOrigin,
 };
 use medulla_decision_types::decision::{
     CandidateFacts, DecisionErrorCode, DecisionInputs, Elimination, PremiseClass,
     PremiseProvenance, PremiseRef, Violation,
 };
+use medulla_types::refusal_code::RefusalCode;
 
 use super::AssembleError;
 

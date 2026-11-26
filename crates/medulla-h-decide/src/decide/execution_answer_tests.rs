@@ -167,7 +167,8 @@ async fn other_tenant_assembly_is_access_denied() {
 
 /// The `Family` abstention an abstained part carries: its code, and the premise the part cites.
 fn family_abstention(part: &ExecutionAnswerPart, name: &str) -> String {
-    use medulla_decision_types::decision::record::{AbstainReason, EvidenceClass};
+    use medulla_decision_types::decision::record::AbstainReason;
+    use medulla_types::evidence_class::EvidenceClass;
     let ExecutionAnswerPart::Abstain {
         reason: AbstainReason::Family { code, .. },
         provenance,

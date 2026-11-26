@@ -11,8 +11,8 @@ use serde::{Deserialize, Deserializer, Serialize};
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::QuantisedValue;
 use super::policy::DecisionPolicy;
-use super::record::outcome::RefusalCode;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Refusal code: a space, vector, result or candidate revision differs from the visible state.
 pub const COMPARATIVE_STALE_INPUT: RefusalCode = RefusalCode::new("COMPARATIVE_STALE_INPUT");

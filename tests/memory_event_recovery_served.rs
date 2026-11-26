@@ -14,10 +14,11 @@ mod test_support;
 use std::collections::BTreeMap;
 
 use medulla_decision_types::claims::{
-    ClaimOp, ClaimPerspective, ClaimState, EvidenceChannel, ObserverRef, ParticipantId,
+    ClaimOp, ClaimPerspective, ClaimState, EvidenceChannel, ObserverRef,
 };
 use medulla_h_jobs::memory_event_publisher::publish_claim_events;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_work_types::participant::ParticipantId;
 use medulla_work_types::participant::{Participant, ParticipantKind};
 
 const SECRET: &str = "memory-event-recovery-secret";

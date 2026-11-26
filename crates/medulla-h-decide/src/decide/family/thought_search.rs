@@ -9,8 +9,9 @@
 
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::statistical::{DecideRequest, StatisticalOutcome};
-use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, ResolutionKind};
+use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
 

@@ -167,7 +167,7 @@ mod tests {
             token_count: tokens,
             metric_id: "memory_fidelity_set_overlap".into(),
             policy: "c".repeat(64),
-            policy_ref: medulla_decision_types::decision::DecisionPolicyRef::Default,
+            policy_ref: medulla_agent_types::agent_component::DecisionPolicyRef::Default,
             history: RewriteHistory::sealed(Vec::new()).unwrap(),
         }
     }

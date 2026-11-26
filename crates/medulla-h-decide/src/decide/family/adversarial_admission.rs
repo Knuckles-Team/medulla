@@ -15,11 +15,10 @@ use medulla_decision_types::decision::statistical::{
 use medulla_decision_types::decision::trajectory_verdict::{
     AdmissionRequest, AdmissionVerdict, ProbeVerdict, VerifyKnobs, PROBE_COMPROMISED,
 };
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, EvidenceClass, ResolutionKind,
-};
+use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;

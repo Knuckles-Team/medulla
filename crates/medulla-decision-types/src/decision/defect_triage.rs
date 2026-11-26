@@ -9,8 +9,9 @@ use medulla_agent_types::agent_component::ComponentDependency;
 use medulla_source_types::lifecycle::Severity;
 use serde::{Deserialize, Serialize};
 
-use super::record::outcome::{DecisionRefusal, RefusalCode};
-use super::request::DecisionPolicyRef;
+use super::record::outcome::DecisionRefusal;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Most owners a triage request names.
 pub const MAX_PATH_OWNERS: usize = 64;

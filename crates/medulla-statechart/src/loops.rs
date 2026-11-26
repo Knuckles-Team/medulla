@@ -10,10 +10,10 @@ use std::cmp::Ordering;
 use std::collections::{BTreeMap, BinaryHeap};
 
 use medulla_decision_types::loops::{
-    Gap, GapState, ImprovementSample, LoopLease, MinedPattern, RatchetEvidence, RatchetVerdict,
-    PPM_MAX,
+    Gap, ImprovementSample, LoopLease, MinedPattern, RatchetEvidence, RatchetVerdict, PPM_MAX,
 };
 use medulla_types::gap_machine::GapEvent;
+use medulla_types::gap_machine::GapState;
 
 /// The loop knobs, each inside its declared range.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

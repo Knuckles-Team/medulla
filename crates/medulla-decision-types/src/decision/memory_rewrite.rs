@@ -245,7 +245,7 @@ pub struct MemoryRewriteProposal {
     pub policy: String,
     /// Where the policy comes from; the resolved policy's digest must equal
     /// `policy`, and its `memory_rewrite.*` knobs are the thresholds.
-    pub policy_ref: super::DecisionPolicyRef,
+    pub policy_ref: medulla_agent_types::agent_component::DecisionPolicyRef,
     pub history: RewriteHistory,
 }
 

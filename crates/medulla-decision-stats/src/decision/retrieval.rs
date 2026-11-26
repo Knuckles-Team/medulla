@@ -11,13 +11,14 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::statistical::log::StoredEvaluation;
+use medulla_decision_types::decision::TraceFidelityLevel;
 use medulla_decision_types::{
     decision::statistical::retrieval::ClassUsage, decision::statistical::retrieval::HardNegative,
     decision::statistical::retrieval::ProvenPath,
     decision::statistical::retrieval::RetrievalOutcome,
     decision::statistical::retrieval::RetrievalPathTemplate,
 };
-use medulla_decision_types::{decision::EvidenceClass, decision::TraceFidelityLevel};
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::admission::{fidelity_rank, floor_rank};
 

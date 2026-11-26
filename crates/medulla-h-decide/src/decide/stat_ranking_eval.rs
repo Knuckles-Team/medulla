@@ -7,12 +7,13 @@
 //! are those of every `DecisionEval` job (`stat_jobs::submit_job`); a run that
 //! the kernel refuses never reaches a receipt.
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_stats::decision::ranking_eval::evaluate_ranking;
 use medulla_decision_types::decision::knob_families::ranking_eval::{RankingEvalKnobs, KNOBS};
 use medulla_decision_types::decision::statistical::ranking_eval::{
     AlgorithmScore, RetrievalRankingReceipt, RetrievalRankingRequest,
 };
-use medulla_decision_types::decision::{DecisionJobOutput, DecisionPolicyRef};
+use medulla_decision_types::decision::DecisionJobOutput;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 
 use super::stat_jobs::JobRun;

@@ -10,7 +10,7 @@ use std::collections::BTreeMap;
 
 use serde::{Deserialize, Serialize};
 
-use crate::decision::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// One typed value of a decision input or output.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

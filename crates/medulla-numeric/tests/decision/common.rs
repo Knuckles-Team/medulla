@@ -1,5 +1,10 @@
 //! Fixtures shared by the decision tests.
 
+use medulla_decision_types::decision::{
+    ColdStart, DecisionPolicy, ObjectiveLevelKind, ObjectiveOrder, QuantScaleTag, QuantisedValue,
+    RecordWindow, StatisticalPolicy, TraceFidelityLevel, UnitRationalWire, UnknownCostRule,
+    DECISION_POLICY_SCHEMA_VERSION,
+};
 use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
     decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
@@ -9,15 +14,9 @@ use medulla_decision_types::{
     decision::statistical::dataset::PropensitySource,
     decision::statistical::dataset::LABELLED_DATASET_SCHEMA_VERSION,
 };
-use medulla_decision_types::{
-    decision::ColdStart, decision::DecisionPolicy, decision::EvidenceClass,
-    decision::ObjectiveLevelKind, decision::ObjectiveOrder, decision::QuantScaleTag,
-    decision::QuantisedValue, decision::RecordWindow, decision::StatisticalPolicy,
-    decision::TraceFidelityLevel, decision::UnitRationalWire, decision::UnknownCostRule,
-    decision::DECISION_POLICY_SCHEMA_VERSION,
-};
 use medulla_query_types::solve_scalar::Scalar;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 pub const OPTIONS: usize = 3;
 pub const FEATURES: [&str; 2] = ["quality", "noise"];

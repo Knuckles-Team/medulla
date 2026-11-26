@@ -249,8 +249,8 @@ pub enum HarnessContrastRefusal {
 }
 
 impl crate::decision::record::outcome::DecisionRefusal for HarnessContrastRefusal {
-    fn code(&self) -> crate::decision::record::outcome::RefusalCode {
-        crate::decision::record::outcome::RefusalCode::new(HarnessContrastRefusal::code(*self))
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
+        medulla_types::refusal_code::RefusalCode::new(HarnessContrastRefusal::code(*self))
     }
 
     fn detail(&self) -> String {
@@ -259,8 +259,8 @@ impl crate::decision::record::outcome::DecisionRefusal for HarnessContrastRefusa
 }
 
 impl crate::decision::record::outcome::DecisionRefusal for HarnessContrastAbstainReason {
-    fn code(&self) -> crate::decision::record::outcome::RefusalCode {
-        crate::decision::record::outcome::RefusalCode::new(
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
+        medulla_types::refusal_code::RefusalCode::new(
             match self {
                 Self::NoImprovement => HarnessContrastErrorCode::NoImprovement,
                 Self::TraceMismatch => HarnessContrastErrorCode::TraceMismatch,
@@ -686,10 +686,12 @@ mod tests {
     };
     use crate::decision::CandidateSourceRecord;
     use crate::decision::{
-        DecisionPolicyRef, EvidenceClass, PremiseRef, ResolutionKind, StatisticalOutcome,
-        TraceFidelity, UnitRationalWire, STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
+        PremiseRef, ResolutionKind, StatisticalOutcome, TraceFidelity, UnitRationalWire,
+        STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
     };
+    use medulla_agent_types::agent_component::DecisionPolicyRef;
     use medulla_query_types::solve_scalar::digest_text;
+    use medulla_types::evidence_class::EvidenceClass;
     use medulla_work_types::orchestration::improvement::HarnessProbeRun;
 
     /// The input-digest domain the server's `seal` uses for statistical

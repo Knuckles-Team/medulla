@@ -237,7 +237,7 @@ async fn missing_task_class_answers_defaults() {
     assert_eq!(missing.class, PremiseClass::Claim);
     assert_eq!(
         record.evidence_class,
-        medulla_decision_types::decision::EvidenceClass::Claim
+        medulla_types::evidence_class::EvidenceClass::Claim
     );
 
     // No task class named at all: the same answer and the same premise.

@@ -13,9 +13,9 @@ use serde::{Deserialize, Serialize};
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::QuantisedValue;
 use super::policy::DecisionPolicy;
-use super::record::outcome::RefusalCode;
-use super::record::EvidenceClass;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Most trajectories one join may take.
 pub const MAX_TRAJECTORIES: usize = 256;

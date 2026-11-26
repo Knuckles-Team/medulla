@@ -10,8 +10,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use crate::decision::policy::DecisionPolicy;
-use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use crate::decision::record::outcome::DecisionRefusal;
 use medulla_types::contract::Digest256;
+use medulla_types::refusal_code::RefusalCode;
 
 const fn knob(
     name: &'static str,

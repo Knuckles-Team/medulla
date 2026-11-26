@@ -8,13 +8,13 @@
 //! outcome answers the stored trace and applies nothing twice; the same
 //! `decision_id` with another outcome is an idempotency conflict.
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_memory::memory::capability_index::CapabilityIndex;
 use medulla_decision_types::decision::capability_designation::{
     apply_capability_outcome, capability_outcome_key, CapabilityOutcomeApplied,
     CapabilityOutcomeTrace, CapabilityReward, DesignationKnobs, ObservedOutcome, RewardPolicy,
     DESIGNATION_OUTCOME_VALUE_CONFLICT, DESIGNATION_OUTCOME_VALUE_MISSING,
 };
-use medulla_decision_types::decision::request::DecisionPolicyRef;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::{BoundedVec, OpaqueId, TenantId};

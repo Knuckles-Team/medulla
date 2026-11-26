@@ -11,7 +11,7 @@
 //! the promotion table; this module re-exports it so the program job names it
 //! beside its own codes, and does not list it a second time in [`REFUSALS`].
 
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 pub use super::codes::EVAL_SET_NOT_INDEPENDENT;
 

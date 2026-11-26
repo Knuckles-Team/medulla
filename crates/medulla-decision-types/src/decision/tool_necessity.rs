@@ -11,7 +11,7 @@ use medulla_types::contract::Digest256;
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
 use super::run_adjustment::INSUFFICIENT_SAMPLES;
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 use super::run_governance::{RunOutcome, RunTraceRecord, StepKind};
 
 const DAY_MS: u64 = 86_400_000;

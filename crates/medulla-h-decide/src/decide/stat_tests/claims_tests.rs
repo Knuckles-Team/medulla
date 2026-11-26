@@ -8,8 +8,9 @@ use super::*;
 use crate::decide::claims::handle_claims;
 use medulla_decision_types::claims::{
     ClaimGetResult, ClaimOp, ClaimPerspective, ClaimRecord, ClaimState, EvidenceChannel,
-    ObserverRef, ParticipantId, ProofReceipt, ProofVerdict, ResearchArtifact, Stance,
+    ObserverRef, ProofReceipt, ProofVerdict, ResearchArtifact, Stance,
 };
+use medulla_work_types::participant::ParticipantId;
 
 const OTHER_TENANT: &str = "tenant-claims-other";
 

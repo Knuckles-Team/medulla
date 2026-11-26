@@ -99,10 +99,10 @@ impl DecisionFamily for ToolActionAdmissionFamily {
     fn evidence_class(
         &self,
         outcome: &medulla_decision_types::decision::statistical::StatisticalOutcome,
-    ) -> Option<medulla_decision_types::decision::EvidenceClass> {
+    ) -> Option<medulla_types::evidence_class::EvidenceClass> {
         use medulla_decision_types::decision::statistical::StatisticalOutcome;
         matches!(outcome, StatisticalOutcome::Advisory { .. })
-            .then_some(medulla_decision_types::decision::EvidenceClass::Observation)
+            .then_some(medulla_types::evidence_class::EvidenceClass::Observation)
     }
 }
 

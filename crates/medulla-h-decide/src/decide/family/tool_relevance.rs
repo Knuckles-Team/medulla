@@ -19,11 +19,10 @@ use medulla_decision_types::decision::tool_relevance::{
     max_tools_from_policy, rrf_k_from_policy, AssignedTool, ToolAssignmentRequest, ToolRankingKnobs,
     ToolRelevanceRefusal, CATALOG_TOO_LARGE, UNKNOWN_ROLE,
 };
-use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
-};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 

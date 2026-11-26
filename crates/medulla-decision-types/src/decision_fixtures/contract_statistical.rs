@@ -3,13 +3,14 @@
 use crate::decision::{
     CalibrationMethod, CalibrationStatement, CandidatePool, CandidateSource, DecideRequest,
     DecisionEvalOp, DecisionEvalRequest, DecisionFitOp, DecisionFitRequest,
-    DecisionJobStatusRequest, DecisionPolicyRef, EvalCandidate, ExplorationRecord,
-    FeatureMatrixRef, HeadKind, LabelRegime, LibraryCandidateScope, OpeEstimatorKind,
-    OptimiserSpec, QuantScaleTag, QuantisedValue, QuestionKind, QuestionSafety, RecordWindow,
-    RiskMethod, RiskStatement, ScoredOption, ShortlistProvenance, StatisticalOutcome,
-    StatisticalQuestion, TypedParam, TypedValue,
+    DecisionJobStatusRequest, EvalCandidate, ExplorationRecord, FeatureMatrixRef, HeadKind,
+    LabelRegime, LibraryCandidateScope, OpeEstimatorKind, OptimiserSpec, QuantScaleTag,
+    QuantisedValue, QuestionKind, QuestionSafety, RecordWindow, RiskMethod, RiskStatement,
+    ScoredOption, ShortlistProvenance, StatisticalOutcome, StatisticalQuestion, TypedParam,
+    TypedValue,
 };
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 
 use crate::decision::jobs::DatasetSource;
 use crate::decision::replay::{
@@ -20,7 +21,7 @@ use crate::decision::statistical::dataset::{
     ItemLabel, LabelSource, LabelledDataset, LabelledItem, LoggedOutcome, OutcomeEvaluation,
     OutcomeFidelity, PropensitySource, LABELLED_DATASET_SCHEMA_VERSION,
 };
-use crate::decision::EvidenceClass;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::contract_decision::{dependency, every_abstain_reason, unit_rational};
 use medulla_types::{test_support::wave::bounded, test_support::wave::digest_text};

@@ -193,10 +193,10 @@ pub const NO_CAPABLE_HOST: &str = "NO_CAPABLE_HOST";
 /// The `placement` family's refusal table (MEDULLA-PLACEMENT-R001.10), registered in
 /// `codes::FAMILY_TABLES`. The abstentions (`INFEASIBLE`, `UNKNOWN_FACT`,
 /// `POLICY_LOOSENING`) are the fixed `AbstainReason` codes.
-pub const REFUSALS: &[crate::decision::record::outcome::RefusalCode] = &[
-    crate::decision::record::outcome::RefusalCode::new(PLACEMENT_FACTS_INVALID),
-    crate::decision::record::outcome::RefusalCode::new(CAPACITY_UNAVAILABLE),
-    crate::decision::record::outcome::RefusalCode::new(NO_CAPABLE_HOST),
+pub const REFUSALS: &[medulla_types::refusal_code::RefusalCode] = &[
+    medulla_types::refusal_code::RefusalCode::new(PLACEMENT_FACTS_INVALID),
+    medulla_types::refusal_code::RefusalCode::new(CAPACITY_UNAVAILABLE),
+    medulla_types::refusal_code::RefusalCode::new(NO_CAPABLE_HOST),
 ];
 
 fn eliminate(

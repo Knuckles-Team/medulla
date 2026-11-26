@@ -11,7 +11,8 @@ use serde::{Deserialize, Serialize};
 use medulla_types::contract::BoundedVec;
 use medulla_types::evidence_class::EvidenceClass;
 
-use super::record::outcome::{DecisionRefusal, RefusalCode};
+use super::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Most steps one playbook may propose.
 pub const MAX_PLAYBOOK_STEPS: usize = medulla_agent_types::agent_component::PLAYBOOK_MAX_STEPS;

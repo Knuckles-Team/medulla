@@ -87,7 +87,8 @@ mod served {
         LearningRecorded, LearningWrite,
     };
     use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-    use medulla_decision_types::decision::{EvidenceClass, PremiseClass};
+    use medulla_decision_types::decision::PremiseClass;
+    use medulla_types::evidence_class::EvidenceClass;
 
     const CATALOG: &str = "catalog-items";
 

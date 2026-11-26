@@ -361,8 +361,8 @@ impl PolicyRefusal {
 }
 
 impl medulla_decision_types::decision::record::outcome::DecisionRefusal for PolicyRefusal {
-    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
-        medulla_decision_types::decision::record::outcome::RefusalCode::new(PolicyRefusal::code(
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
+        medulla_types::refusal_code::RefusalCode::new(PolicyRefusal::code(
             self,
         ))
     }

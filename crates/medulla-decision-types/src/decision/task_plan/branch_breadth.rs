@@ -16,8 +16,8 @@ use medulla_query_types::solve_scalar::digest_text;
 use super::trajectory_refusal::{request_premise, TrajectoryRefusal};
 use crate::decision::knob_families::trajectory as knobs;
 use crate::decision::policy::DecisionPolicy;
-use crate::decision::record::outcome::RefusalCode;
 use crate::decision::{PremiseClass, PremiseRef};
+use medulla_types::refusal_code::RefusalCode;
 
 /// A history ref names an outcome at a revision or digest the store has moved past.
 pub const BREADTH_HISTORY_STALE: RefusalCode = RefusalCode::new("BREADTH_HISTORY_STALE");

@@ -28,10 +28,11 @@ use medulla_decision_types::decision::tool_relevance::{
     AssignedTool, ToolAssignmentRequest, MAX_TOP_K, TOOL_RELEVANCE_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
+    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::process_import::{workflow_node_id, CanonicalWorkflow};
 use medulla_types::refusal_code::RefusalCode;
 

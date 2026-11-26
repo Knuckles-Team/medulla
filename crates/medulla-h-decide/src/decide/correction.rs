@@ -43,6 +43,7 @@ pub(in crate::decide) use served::independent_outcomes;
 
 #[cfg(feature = "decide")]
 mod served {
+    use medulla_agent_types::agent_component::DecisionPolicyRef;
     use medulla_agent_types::agent_guardrail::{
         check_rule_against_invariants, GuardrailRule, RulePromotionVerdict,
     };
@@ -56,7 +57,6 @@ mod served {
         OUTCOME_SELF_REPORTED,
     };
     use medulla_decision_types::decision::knobs::KnobValue;
-    use medulla_decision_types::decision::DecisionPolicyRef;
     use medulla_graph_core::graph::GraphView;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_protocol_types::protocol::ResultPayload;

@@ -7,8 +7,8 @@ use serde::{Deserialize, Serialize};
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use crate::decision::policy::DecisionPolicy;
-use crate::decision::record::outcome::RefusalCode;
 use medulla_types::contract::Digest256;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Abstention code: fewer runs than `width.min_runs`.
 pub const INSUFFICIENT_SAMPLES: &str = "INSUFFICIENT_SAMPLES";

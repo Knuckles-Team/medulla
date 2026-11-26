@@ -97,8 +97,8 @@ impl std::error::Error for AssembleError {}
 /// the `AgentAssemble` caller folds it under `RefusalOrigin::ASSEMBLE`
 /// (MEDULLA-DECISION-ENGINE-R010.100.2).
 impl medulla_decision_types::decision::record::outcome::DecisionRefusal for AssembleError {
-    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
-        medulla_decision_types::decision::record::outcome::RefusalCode::new(self.code.as_str())
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
+        medulla_types::refusal_code::RefusalCode::new(self.code.as_str())
     }
 
     fn detail(&self) -> String {

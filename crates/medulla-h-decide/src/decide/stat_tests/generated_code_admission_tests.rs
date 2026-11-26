@@ -10,9 +10,10 @@ use medulla_decision_types::decision::verifier_receipt::{
     VerifierCase, VerifierCaseState, VerifierReceipt,
 };
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, EvidenceClass, PremiseClass, ResolutionKind,
+    AbstainReason, DecisionPolicy, PremiseClass, ResolutionKind,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::evidence_class::EvidenceClass;
 
 const ARTIFACT: &str = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
 const OTHER_ARTIFACT: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";

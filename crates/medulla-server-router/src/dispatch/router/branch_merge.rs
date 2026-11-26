@@ -19,7 +19,7 @@ pub type BranchMergeFields = (
     String,
     String,
     Option<String>,
-    Option<medulla_decision_types::decision::DecisionPolicyRef>,
+    Option<medulla_agent_types::agent_component::DecisionPolicyRef>,
 );
 
 /// Serve `Method::BranchMerge`.

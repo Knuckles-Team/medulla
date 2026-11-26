@@ -335,7 +335,8 @@ async fn candidate_cites_traces_and_library_rows() {
 // spec: MEDULLA-DECISION-ENGINE-R703.6
 #[tokio::test]
 async fn candidates_are_proposals_only() {
-    use medulla_decision_types::decision::{EvidenceClass, ResolutionKind};
+    use medulla_decision_types::decision::ResolutionKind;
+    use medulla_types::evidence_class::EvidenceClass;
     // The embedding graph is read through the graph ACL, which needs a provisioned caller.
     let h = Harness::with_isolation(ServerState::test_isolation("decider")).await;
     let (schema, _) = publish_route_schema(&h);

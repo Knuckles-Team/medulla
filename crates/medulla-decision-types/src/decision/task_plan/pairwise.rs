@@ -18,8 +18,8 @@ use super::trajectory_refusal::{request_premise, TrajectoryRefusal};
 use crate::decision::codes::PARAMETER_INVALID;
 use crate::decision::knob_families::trajectory as knobs;
 use crate::decision::policy::DecisionPolicy;
-use crate::decision::record::outcome::RefusalCode;
 use crate::decision::{PremiseClass, PremiseRef};
+use medulla_types::refusal_code::RefusalCode;
 
 /// The request does not pin the `pairwise_copeland` policy at revision 1.
 pub const PAIRWISE_POLICY_UNPINNED: RefusalCode = RefusalCode::new("PAIRWISE_POLICY_UNPINNED");

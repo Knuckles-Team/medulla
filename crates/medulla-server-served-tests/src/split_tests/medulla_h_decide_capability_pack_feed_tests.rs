@@ -495,12 +495,12 @@ async fn projection_commit_upserts_pack_records() {
 /// The ranked tool ids, the index revision and the catalog digest a served
 /// `ToolRelevance` answer carries.
 async fn tool_ranking(served: &Served, task: &str) -> (Vec<String>, u64, String) {
+    use medulla_agent_types::agent_component::DecisionPolicyRef;
     use medulla_decision_types::decision::statistical::{
         DecideRequest, DecisionBatch, QuestionKind, QuestionSafety, StatisticalOutcome, TypedParam,
         TypedValue,
     };
     use medulla_decision_types::decision::tool_relevance::ToolAssignmentRequest;
-    use medulla_decision_types::decision::DecisionPolicyRef;
     use medulla_h_decide::decide::stat_test_support::{publish_route_schema_in, request, Harness};
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_protocol_types::protocol::Request;

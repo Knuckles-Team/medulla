@@ -13,7 +13,8 @@ use medulla_decision_types::decision::program_store::{
     program_node_id, RunRecord, RunRecordStored, StoredRun,
 };
 use medulla_decision_types::decision::run_governance::RunOutcome;
-use medulla_decision_types::decision::{EvidenceClass, ResolutionKind};
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_decision_types::decision::ResolutionKind;
 use medulla_decision_types::decision::StatisticalOutcome;
 use medulla_persistence_records::decision_jobs::decode_artifact;
 

@@ -17,7 +17,7 @@ use medulla_decision_types::decision::item_recommendation::{
 };
 use medulla_decision_types::decision::knob_families::recommend::RecommendKnobs;
 use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind};
-use medulla_decision_types::decision::DecisionPolicyRef;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_outcome_types::decision::recommend::RecommendRequest;
 use medulla_persistence_records::decision_jobs::encode_artifact;
 

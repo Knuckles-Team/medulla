@@ -16,8 +16,8 @@ use super::trajectory_refusal::{request_premise, TrajectoryRefusal};
 use crate::decision::codes::PARAMETER_INVALID;
 use crate::decision::knob_families::trajectory as knobs;
 use crate::decision::policy::DecisionPolicy;
-use crate::decision::record::outcome::RefusalCode;
 use crate::decision::{PremiseClass, PremiseRef};
+use medulla_types::refusal_code::RefusalCode;
 
 /// A scorer weight or feature is absent for a feature or weight the other names.
 pub const TRAJECTORY_FEATURE_MISSING: RefusalCode = RefusalCode::new("TRAJECTORY_FEATURE_MISSING");

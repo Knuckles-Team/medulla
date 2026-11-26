@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
-use super::record::outcome::{DecisionRefusal, RefusalCode};
+use super::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The window holds fewer counted outcomes than `delegation.min_samples`.
 pub const DELEGATION_INSUFFICIENT_SAMPLES: RefusalCode =

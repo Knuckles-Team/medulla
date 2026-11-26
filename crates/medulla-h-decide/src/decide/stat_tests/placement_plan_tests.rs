@@ -8,9 +8,8 @@ use medulla_decision_types::decision::statistical::placement_plan::{
     PlacementPlanQuestion, PlacementPlanRead, PlacementPlanRequestBody, ServiceSpec,
     PLACEMENT_PLAN_OPTION, PLACEMENT_PLAN_PARAM,
 };
-use medulla_decision_types::decision::{
-    AbstainReason, EvidenceClass, PremiseClass, ResolutionKind,
-};
+use medulla_decision_types::decision::{AbstainReason, PremiseClass, ResolutionKind};
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::*;
 

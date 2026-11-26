@@ -9,7 +9,7 @@
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Text parameter: the run the question is about.
 pub const PARAM_RUN_ID: &str = "run_id";

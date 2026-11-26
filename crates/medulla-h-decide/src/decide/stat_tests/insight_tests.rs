@@ -8,10 +8,9 @@ use medulla_decision_types::decision::program_store::insight::{
     insight_key, Insight, INSIGHT_SCHEMA_VERSION,
 };
 use medulla_decision_types::decision::program_store::{RunRecord, RunRecordStored, StoredRun};
-use medulla_decision_types::decision::{
-    AbstainReason, EvidenceClass, PremiseClass, ResolutionKind,
-};
+use medulla_decision_types::decision::{AbstainReason, PremiseClass, ResolutionKind};
 use medulla_persistence_records::decision_jobs::encode_artifact;
+use medulla_types::evidence_class::EvidenceClass;
 
 const FOREIGN: &str = "tenant-foreign";
 

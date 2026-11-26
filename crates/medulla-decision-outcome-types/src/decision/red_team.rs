@@ -50,7 +50,7 @@ impl RedTeamPolicy {
 
 /// The registered refusal codes of the `probe_verdict` family
 /// (MEDULLA-DECISION-ENGINE-R138.4), in declaration order.
-pub const REFUSALS: &[medulla_decision_types::decision::record::outcome::RefusalCode] =
+pub const REFUSALS: &[medulla_types::refusal_code::RefusalCode] =
     medulla_decision_types::decision::codes::PROBE_VERDICT;
 
 /// Why a probe verdict is refused or abstained (MEDULLA-DECISION-ENGINE-R138.4).
@@ -67,7 +67,7 @@ pub enum ProbeRefusal {
 }
 
 impl medulla_decision_types::decision::record::outcome::DecisionRefusal for ProbeRefusal {
-    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         use medulla_decision_types::decision::codes;
         match self {
             Self::NoScorerForCategory { .. } => codes::NO_SCORER_FOR_CATEGORY,

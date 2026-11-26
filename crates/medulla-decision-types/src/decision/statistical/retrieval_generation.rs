@@ -24,8 +24,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::retrieval::MAX_QUERY_DIMENSIONS;
-use crate::decision::record::outcome::RefusalCode;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Format identity of a generation receipt.
 pub const GENERATION_RECEIPT_SCHEMA_VERSION: u16 = 1;

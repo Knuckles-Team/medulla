@@ -17,18 +17,18 @@ use medulla_decision_stats::decision::verifier_receipt::{check_verifier_receipt,
 use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::context_package::is_sha256_hex;
 use medulla_decision_types::decision::digest::verifier_receipt_digest;
-use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome,
 };
 use medulla_decision_types::decision::verifier_receipt::{
     VerifierCase, VerifierCaseState, VerifierReceipt,
 };
-use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
-};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

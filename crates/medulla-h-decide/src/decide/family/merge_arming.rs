@@ -19,9 +19,8 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
-use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef,
-};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_graph_core::graph::GraphView;
 use medulla_sdlc::lifecycle::delivery::arming::arming_verdict;

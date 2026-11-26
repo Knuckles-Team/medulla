@@ -15,8 +15,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::super::numeric::{QuantScaleTag, UnitRationalWire};
-use super::super::record::EvidenceClass;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 /// Format identity of a labelled dataset.
 pub const LABELLED_DATASET_SCHEMA_VERSION: u16 = 1;

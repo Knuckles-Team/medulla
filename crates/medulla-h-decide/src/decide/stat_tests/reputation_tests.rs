@@ -183,7 +183,7 @@ fn foreign_dense_history(
     use medulla_decision_types::decision::statistical::log::{
         DecisionOutcomeEvaluation, StoredEvaluation,
     };
-    use medulla_decision_types::decision::EvidenceClass;
+    use medulla_types::evidence_class::EvidenceClass;
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     for i in 0..n {
         let id = format!("foreign-{option}-{i}");

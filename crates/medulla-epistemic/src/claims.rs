@@ -631,7 +631,8 @@ mod tests {
     // spec: MEDULLA-DECISION-ENGINE-R652.9
     #[test]
     fn observer_sees_own_and_visible_system_claims_only() {
-        use medulla_decision_types::claims::{ClaimPerspective, ParticipantId};
+        use medulla_decision_types::claims::ClaimPerspective;
+        use medulla_work_types::participant::ParticipantId;
 
         let ada = ObserverRef::Participant(ParticipantId::new("ada").unwrap());
         let bob = ObserverRef::Participant(ParticipantId::new("bob").unwrap());

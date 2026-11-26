@@ -28,12 +28,12 @@ use medulla_decision_types::decision::codes::{
 use medulla_decision_types::skill_eval::{
     CompileState, ModelCompile, CANARY_TRAFFIC_MAX_PPM, CANARY_TRAFFIC_MIN_PPM,
 };
-use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{DecideRequest, QuestionKind, StatisticalOutcome};
-use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
-};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::OpaqueId;
 

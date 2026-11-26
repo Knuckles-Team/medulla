@@ -23,11 +23,12 @@ use medulla_decision_types::decision::statistical::{
 };
 use medulla_decision_types::decision::trajectory_verdict::ProbeVerdict;
 use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, LibraryCandidateScope, PremiseClass, PremiseRef, QuantScaleTag,
-    QuantisedValue, ResolutionKind,
+    DecisionPolicy, LibraryCandidateScope, PremiseClass, PremiseRef, QuantScaleTag, QuantisedValue,
+    ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::candidates::library_candidates;
 use crate::decide::stat_executor::{

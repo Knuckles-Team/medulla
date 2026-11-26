@@ -9,11 +9,11 @@ use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
 };
 use medulla_decision_outcome_types::decision::derivation::verify_record;
-use medulla_decision_types::{
-    decision::AbstainReason, decision::CostBudget, decision::DecisionErrorCode,
-    decision::DecisionOutcome, decision::EvidenceClass, decision::PremiseClass,
-    decision::SolverBudget, decision::Violation,
+use medulla_decision_types::decision::{
+    AbstainReason, CostBudget, DecisionErrorCode, DecisionOutcome, PremiseClass, SolverBudget,
+    Violation,
 };
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::super::model::{build, Building};
 use super::super::search::{search, SolveContext};

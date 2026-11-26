@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Domain of the benchmark receipt digest.
 pub const MEMORY_BENCHMARK_DIGEST_DOMAIN: &str = "eg/memory-change-benchmark/v1";
@@ -176,7 +176,7 @@ pub struct MemoryChangeBenchmarkRequest {
     pub dataset: BenchmarkDataset,
     pub k: u32,
     pub evaluator_revision: String,
-    pub policy: super::DecisionPolicyRef,
+    pub policy: medulla_agent_types::agent_component::DecisionPolicyRef,
     pub baseline_results: RunResults,
     pub candidate_results: RunResults,
 }

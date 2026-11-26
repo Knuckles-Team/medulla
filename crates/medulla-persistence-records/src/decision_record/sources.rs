@@ -191,7 +191,7 @@ pub(super) fn check_sources(txn: &Write<'_>, record: &DecisionRecord) -> Result<
             ));
         }
     }
-    let medulla_decision_types::decision::DecisionPolicyRef::Pinned { component } =
+    let medulla_agent_types::agent_component::DecisionPolicyRef::Pinned { component } =
         &record.inputs.request.policy
     else {
         return Ok(());

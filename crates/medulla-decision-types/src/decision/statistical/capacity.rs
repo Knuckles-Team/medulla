@@ -9,7 +9,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::decision::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Text parameter: the graph whose capacity ledger holds the cell.
 pub const PARAM_GRAPH: &str = "graph";

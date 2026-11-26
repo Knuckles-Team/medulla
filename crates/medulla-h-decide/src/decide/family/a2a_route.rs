@@ -12,10 +12,9 @@ use medulla_decision_types::decision::a2a_route::A2aRouteRefusal;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, StatisticalOutcome,
 };
-use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
-};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::candidates::library_candidates;
 use crate::decide::stat_executor::{

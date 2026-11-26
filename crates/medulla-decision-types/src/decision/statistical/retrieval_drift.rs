@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::BoundedVec;
 
-use crate::decision::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Format identity of a drift signal and a refresh plan.
 pub const RETRIEVAL_DRIFT_SCHEMA_VERSION: u16 = 1;

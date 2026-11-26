@@ -10,15 +10,14 @@
 //! admitted unless an LLM resolved it. The two regimes never mix.
 
 use medulla_decision_types::decision::jobs::LabelExclusions;
+use medulla_decision_types::decision::{RecordWindow, TraceFidelityLevel};
 use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
     decision::statistical::dataset::LabelledDataset, decision::statistical::dataset::LabelledItem,
     decision::statistical::dataset::LoggedOutcome, decision::statistical::dataset::OutcomeFidelity,
     decision::statistical::dataset::PropensitySource,
 };
-use medulla_decision_types::{
-    decision::EvidenceClass, decision::RecordWindow, decision::TraceFidelityLevel,
-};
+use medulla_types::evidence_class::EvidenceClass;
 
 /// Which regime a job reads.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -5,6 +5,7 @@
 //! MEDULLA-ORCH-VOCAB-R801.7), and each refusal writes nothing.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
 use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
 use medulla_decision_types::decision::statistical::log::{
@@ -12,7 +13,6 @@ use medulla_decision_types::decision::statistical::log::{
     HarnessLessonQuery, HarnessLessonsFound,
 };
 use medulla_decision_types::decision::statistical::StatisticalDecisionRecord;
-use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::orchestration::improvement::{
     AdoptedHarness, HarnessContrast, HarnessLesson, ImprovementLibraryRefusal,

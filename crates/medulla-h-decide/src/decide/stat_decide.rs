@@ -16,6 +16,10 @@ use tracing::Instrument;
 use medulla_decision_types::decision::digest::statistical_record_digest;
 use medulla_decision_types::decision::statistical::keyed::seed_commitment;
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
+use medulla_decision_types::decision::{
+    PremiseClass, PremiseProvenance, PremiseRef, QuantScaleTag, ResolutionKind, TraceFidelity,
+    STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
+};
 use medulla_decision_types::{
     decision::statistical::nl::NlBinding, decision::statistical::nl::NlChoiceSource,
 };
@@ -28,13 +32,9 @@ use medulla_decision_types::{
     decision::statistical::StatisticalInputs, decision::statistical::StatisticalOutcome,
     decision::statistical::declared::MAX_DECLARED_OPTIONS,
 };
-use medulla_decision_types::{
-    decision::EvidenceClass, decision::PremiseClass, decision::PremiseProvenance,
-    decision::PremiseRef, decision::QuantScaleTag, decision::ResolutionKind,
-    decision::TraceFidelity, decision::STATISTICAL_DECISION_RECORD_SCHEMA_VERSION,
-};
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::candidates::{read_candidates, ReadCandidates};
 use super::stat_belief::{live_slices, Slices};

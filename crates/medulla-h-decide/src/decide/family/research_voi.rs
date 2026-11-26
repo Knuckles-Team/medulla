@@ -35,10 +35,11 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, ScoredOption, StatisticalOutcome,
 };
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, EvidenceClass, QuantScaleTag, QuantisedValue, ResolutionKind,
+    AbstainReason, DecisionPolicy, QuantScaleTag, QuantisedValue, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};

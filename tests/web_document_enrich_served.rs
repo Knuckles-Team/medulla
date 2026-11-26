@@ -1089,6 +1089,7 @@ async fn enrich_wide(
 /// replay). Returns the record id.
 async fn committed_executed_retrieval_record(state: &test_support::SharedState) -> String {
     use medulla_agent_types::agent_component::AgentComponentKind;
+    use medulla_agent_types::agent_component::DecisionPolicyRef;
     use medulla_decision_types::decision::statistical::body::encode_body;
     use medulla_decision_types::decision::statistical::declared::{DeclaredNumber, DeclaredOption};
     use medulla_decision_types::decision::statistical::features::{
@@ -1101,7 +1102,7 @@ async fn committed_executed_retrieval_record(state: &test_support::SharedState) 
         CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
         StatisticalOutcome, StatisticalQuestion,
     };
-    use medulla_decision_types::decision::{DecisionPolicyRef, UnitRationalWire};
+    use medulla_decision_types::decision::UnitRationalWire;
     use medulla_h_decide::decide::stat_test_support::Harness;
     use medulla_persistence_records::agent_component::test_component_draft;
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;

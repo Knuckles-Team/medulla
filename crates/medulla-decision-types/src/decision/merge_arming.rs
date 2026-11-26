@@ -9,7 +9,8 @@
 
 use medulla_source_types::delivery::{ArmingRefusal, ArmingVerdict};
 
-use super::record::outcome::{DecisionRefusal, RefusalCode};
+use super::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Text parameter: the graph holding the delivery and its records.
 pub const PARAM_GRAPH: &str = "graph";

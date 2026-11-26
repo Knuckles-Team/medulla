@@ -13,13 +13,13 @@ use super::importance_penalty::{ImportanceFeatures, PenaltyObjective, PenaltyRec
 use super::numeric::{QuantisedValue, UnitRationalWire};
 use super::rapid_r015::{HeadKindRefusal, StatisticalHeadKind};
 use super::replay::{EvalMode, EvaluationRun};
-use super::request::DecisionPolicyRef;
 use super::statistical::dataset::LabelledDataset;
 use super::statistical::grounded_eval::{GroundedAnswerRequest, GroundedEvalReceipt};
 use super::statistical::head::DecisionHeadBody;
 use super::statistical::ranking_eval::{RetrievalRankingReceipt, RetrievalRankingRequest};
 use super::statistical::CalibrationMethod;
 use super::statistical::CalibrationStatement;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 
 pub use super::statistical::head::HeadKind;
 use medulla_agent_types::agent_component::ComponentDependency;

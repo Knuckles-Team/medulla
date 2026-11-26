@@ -7,15 +7,16 @@
 use super::kernel_family_support::decide_as_other_tenant;
 use super::trajectory_join_tests::{entry, join};
 use super::*;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::limit_types::{
     GuardedAction, LimitMetric, LimitObservation, LimitRule, RequestedBound, LIMIT_BREACH,
 };
 use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, DecisionPolicyRef, EvidenceClass, PremiseClass,
-    PremiseProvenance,
+    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance,
 };
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 const RULE: &str = "max-position";
 const SCOPE: &str = "account:a";

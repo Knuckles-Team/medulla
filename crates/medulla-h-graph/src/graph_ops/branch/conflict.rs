@@ -17,6 +17,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 use medulla_agent_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::resolve_conflict::{
     CONFLICT_OPTION, PARAM_CONFLICT, WINNER_A, WINNER_B,
 };
@@ -27,7 +28,7 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalOutcome,
     StatisticalQuestion, TypedParam, TypedValue,
 };
-use medulla_decision_types::decision::{AbstainReason, DecisionPolicyRef};
+use medulla_decision_types::decision::AbstainReason;
 use medulla_mutation_types::branch::{
     ConflictOutcome, ConflictRecord, ConflictSide, CONFLICT_PROVENANCE_KEYS,
 };

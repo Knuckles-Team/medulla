@@ -4,16 +4,15 @@
 //! and calls one pure kernel of `medulla-decision-stats`; none of them reads a
 //! store, so a request never reaches another tenant's data.
 
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::AbstainReason;
-use medulla_decision_types::decision::{
-    EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
-};
+use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_support::invalid_parameter;
 

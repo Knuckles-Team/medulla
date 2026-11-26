@@ -23,13 +23,12 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome, TypedParam,
     TypedValue,
 };
-use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef,
-};
+use medulla_decision_types::decision::{AbstainReason, DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 use tokio::sync::RwLock;
 
 use crate::decide::stat_executor::{

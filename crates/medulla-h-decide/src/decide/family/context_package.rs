@@ -26,11 +26,12 @@ use medulla_decision_types::decision::statistical::{
 };
 use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::decision::{
-    EvidenceClass, PremiseClass, PremiseRef, QuantScaleTag, QuantisedValue, ResolutionKind,
+    PremiseClass, PremiseRef, QuantScaleTag, QuantisedValue, ResolutionKind,
 };
 use medulla_decision_types::solve::certificate::{Certificate, SolverConfig};
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

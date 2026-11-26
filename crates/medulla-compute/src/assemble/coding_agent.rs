@@ -16,10 +16,11 @@ use medulla_decision_types::decision::coding_agent::{
 };
 use medulla_decision_types::decision::primitive::{PrimitiveContract, PrimitiveKind};
 use medulla_decision_types::decision::record::outcome::{
-    AbstainReason, DecisionRefusal, RefusalCode, RefusalOrigin,
+    AbstainReason, DecisionRefusal, RefusalOrigin,
 };
 use medulla_decision_types::decision::{DecisionErrorCode, DecisionInputs};
 use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
+use medulla_types::refusal_code::RefusalCode;
 
 use super::primitive::edge_type_checks;
 use super::AssembleError;

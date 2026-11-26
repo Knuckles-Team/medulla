@@ -17,9 +17,8 @@ use medulla_decision_types::decision::trace_fix_binding::{
     check_receipt_pattern, CorrectionBinding, RevisionOutcome,
 };
 use medulla_types::contract::Digest256;
-use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
-};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_graph_core::graph::GraphView;
 
 use crate::decide::stat_executor::{

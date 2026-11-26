@@ -4,7 +4,8 @@
 //! that graph only when the tenant's visible published graphs hold it; the
 //! typed refusal says why a request routes nowhere.
 
-use super::record::outcome::{DecisionRefusal, RefusalCode};
+use super::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Why an inbound task routes to no graph.
 #[derive(Debug, Clone, PartialEq, Eq)]

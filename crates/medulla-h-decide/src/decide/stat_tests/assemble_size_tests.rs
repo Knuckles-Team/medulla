@@ -5,6 +5,7 @@
 //! eliminated when the request requires adequacy, and under the lexicographic
 //! `ArtifactBytes` objective the smallest remaining component is chosen.
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_component::{
     AgentComponentKind, AgentComponentPublishRequest, ComponentDependency,
 };
@@ -13,8 +14,7 @@ use medulla_decision_types::decision::size::{
     SIZE_REVISION_ATTRIBUTE,
 };
 use medulla_decision_types::decision::{
-    DecisionOutcome, DecisionPolicy, DecisionPolicyRef, ObjectiveLevelKind, ObjectiveOrder,
-    UnknownCostRule,
+    DecisionOutcome, DecisionPolicy, ObjectiveLevelKind, ObjectiveOrder, UnknownCostRule,
 };
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;

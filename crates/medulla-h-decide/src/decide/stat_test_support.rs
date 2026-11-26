@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
     agent_component::ComponentDependency,
@@ -23,7 +24,7 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalQuestion, TypedParam,
     TypedValue,
 };
-use medulla_decision_types::decision::{DecisionPolicyRef, LibraryCandidateScope};
+use medulla_decision_types::decision::LibraryCandidateScope;
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;

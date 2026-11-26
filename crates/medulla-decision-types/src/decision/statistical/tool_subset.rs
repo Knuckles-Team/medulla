@@ -46,7 +46,7 @@ pub enum ToolSubsetRefusal {
 }
 
 impl crate::decision::record::outcome::DecisionRefusal for ToolSubsetRefusal {
-    fn code(&self) -> crate::decision::record::outcome::RefusalCode {
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         match self {
             Self::CapabilityUncoverable => {
                 crate::decision::codes::TOOL_SUBSET_CAPABILITY_UNCOVERABLE

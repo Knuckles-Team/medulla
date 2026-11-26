@@ -4,7 +4,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::decision::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Abstention: the catalog graph holds no embedded item.
 pub const EMPTY_CATALOG: RefusalCode = RefusalCode::new("EMPTY_CATALOG");

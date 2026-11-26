@@ -512,12 +512,12 @@ impl medulla_decision_policy::policy::PolicyLibrary for LibraryHandle {
 async fn trace_limits(
     state: &Arc<RwLock<ServerState>>,
     tenant: &str,
-    reference: &medulla_decision_types::decision::DecisionPolicyRef,
+    reference: &medulla_agent_types::agent_component::DecisionPolicyRef,
 ) -> Result<(medulla_source_types::lifecycle::TraceLimits, String), String> {
     use medulla_decision_types::decision::knobs::KnobValue;
     use medulla_decision_types::decision::lifecycle::KNOBS;
     let resolved = match reference {
-        medulla_decision_types::decision::DecisionPolicyRef::Default => {
+        medulla_agent_types::agent_component::DecisionPolicyRef::Default => {
             medulla_decision_policy::policy::resolve_policy(&NoPolicyLibrary, tenant, reference)?
         }
         pinned => {

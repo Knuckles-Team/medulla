@@ -6,8 +6,9 @@
 use serde::{Deserialize, Serialize};
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use crate::decision::record::outcome::DecisionRefusal;
 use crate::decision::DecisionPolicy;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The most segments a path may have.
 pub const MAX_PATH_SEGMENTS: usize = 8;

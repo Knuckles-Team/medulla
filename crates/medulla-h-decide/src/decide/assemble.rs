@@ -586,7 +586,8 @@ fn resolve_policy(
     store: &medulla_persistence_records::agent_library::AgentLibraryStore,
     request: &AssemblyRequest,
 ) -> Result<medulla_decision_types::decision::DecisionPolicy, String> {
-    use medulla_decision_types::{decision::DecisionPolicy, decision::DecisionPolicyRef};
+    use medulla_agent_types::agent_component::DecisionPolicyRef;
+    use medulla_decision_types::decision::DecisionPolicy;
     match &request.policy {
         DecisionPolicyRef::Default => Ok(DecisionPolicy::engine_default()),
         DecisionPolicyRef::Pinned { component } => {

@@ -6,15 +6,14 @@ use medulla_decision_stats::{
     decision::admission::AdmissionRules, decision::admission::Exclusion,
     decision::admission::Regime,
 };
+use medulla_decision_types::decision::{RecordWindow, TraceFidelityLevel};
 use medulla_decision_types::{
     decision::statistical::dataset::ItemLabel, decision::statistical::dataset::LabelSource,
     decision::statistical::dataset::LabelledItem, decision::statistical::dataset::LoggedOutcome,
     decision::statistical::dataset::OutcomeFidelity,
     decision::statistical::dataset::PropensitySource,
 };
-use medulla_decision_types::{
-    decision::EvidenceClass, decision::RecordWindow, decision::TraceFidelityLevel,
-};
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::common::{gold_item, logged_item, rational};
 

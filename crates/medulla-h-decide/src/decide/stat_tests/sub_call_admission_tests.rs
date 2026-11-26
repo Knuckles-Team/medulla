@@ -4,6 +4,7 @@
 
 use std::time::Instant;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalDecisionRecord, StatisticalOutcome, TypedParam,
     TypedValue,
@@ -11,7 +12,8 @@ use medulla_decision_types::decision::statistical::{
 use medulla_decision_types::decision::sub_call::{
     tool_set_digest, SubCallRequest, SubCallSignature, SUB_CALL_SIGNATURE_MARKER,
 };
-use medulla_decision_types::decision::{AbstainReason, DecisionPolicyRef, EvidenceClass};
+use medulla_decision_types::decision::AbstainReason;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::super::stat_executor::ExecutionContext;
 use super::*;

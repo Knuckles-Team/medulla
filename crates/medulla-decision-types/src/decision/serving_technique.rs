@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Text parameter: the technique asked about.
 pub const PARAM_TECHNIQUE: &str = "technique";

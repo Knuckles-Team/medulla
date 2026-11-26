@@ -6,7 +6,8 @@
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
-use super::record::outcome::{DecisionRefusal, RefusalCode};
+use super::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Text parameter naming the platform goals the BM25 feature reads.
 pub const PARAM_GOALS: &str = "platform.goals";

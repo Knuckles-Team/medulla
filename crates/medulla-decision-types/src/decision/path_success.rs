@@ -9,8 +9,8 @@ use sha2::{Digest, Sha256};
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
 use crate::decision::policy::DecisionPolicy;
-use crate::decision::record::outcome::RefusalCode;
 use medulla_types::contract::Digest256;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The path has no evaluation (MEDULLA-DECISION-ENGINE-R159.4).
 pub const PATH_UNMEASURED: &str = "PATH_UNMEASURED";

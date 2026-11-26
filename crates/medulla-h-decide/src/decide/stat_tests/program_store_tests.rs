@@ -11,9 +11,10 @@ use medulla_decision_types::decision::program_store::{
 use medulla_decision_types::decision::run_governance::{
     RunOutcome, RunTraceRecord, StepKind, StepOutcome, TraceArgument, TraceScalar, TraceStep,
 };
-use medulla_decision_types::decision::{EvidenceClass, PremiseClass, ResolutionKind};
+use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
 use medulla_persistence_records::decision_jobs::encode_artifact;
 use medulla_server_api::api::persistence::PersistenceBackend;
+use medulla_types::evidence_class::EvidenceClass;
 
 const FOREIGN: &str = "tenant-foreign";
 const SIGNATURE: &str = "summarize-report";

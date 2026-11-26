@@ -78,7 +78,7 @@ async fn derived_classes_select_candidates_as_claims_under_a_pinned_rule_set() {
     );
     assert_eq!(
         record.evidence_class,
-        medulla_decision_types::decision::EvidenceClass::Claim
+        medulla_types::evidence_class::EvidenceClass::Claim
     );
 }
 
@@ -239,7 +239,7 @@ async fn graph_claim_and_evidence_control_answer_class() {
     );
     assert_eq!(
         evidence.evidence_class,
-        medulla_decision_types::decision::EvidenceClass::Observation,
+        medulla_types::evidence_class::EvidenceClass::Observation,
         "only observations feed the answer, so it is an observation"
     );
 
@@ -261,7 +261,7 @@ async fn graph_claim_and_evidence_control_answer_class() {
     );
     assert_eq!(
         claim.evidence_class,
-        medulla_decision_types::decision::EvidenceClass::Claim,
+        medulla_types::evidence_class::EvidenceClass::Claim,
         "a claim row never lifts the answer, whatever its properties say"
     );
 

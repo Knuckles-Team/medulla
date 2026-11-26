@@ -14,10 +14,10 @@ use medulla_decision_types::decision::comparative_analysis::{
     ComparativeKnobs, ComparativeStageBudget, COMPARATIVE_BUDGET_INVALID,
     COMPARATIVE_IMPORTANCE_INVALID, COMPARATIVE_STAGE_EXCEEDS_TOTAL, COMPARATIVE_THRESHOLD_ORDER,
 };
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::{QuantScaleTag, QuantisedValue};
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The domain of a plan digest.
 pub const PLAN_DIGEST_DOMAIN: &str = "eg/comparative-analysis-plan/v1";

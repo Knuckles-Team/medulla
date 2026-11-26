@@ -32,7 +32,7 @@ pub enum CertificateRefusal {
 }
 
 impl medulla_decision_types::decision::record::outcome::DecisionRefusal for CertificateRefusal {
-    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         match self {
             Self::ModelDigestMismatch { .. } => {
                 medulla_decision_types::decision::codes::CERTIFICATE_MODEL_DIGEST_MISMATCH

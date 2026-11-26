@@ -61,7 +61,7 @@ pub fn join(entries: &[TrajectoryEntry]) -> Result<DistilledTrajectory, String> 
 mod tests {
     use super::*;
     use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
-    use medulla_decision_types::decision::record::EvidenceClass;
+    use medulla_types::evidence_class::EvidenceClass;
 
     fn entry(id: &str, evidence: EvidenceClass, score: i64) -> TrajectoryEntry {
         TrajectoryEntry::new(

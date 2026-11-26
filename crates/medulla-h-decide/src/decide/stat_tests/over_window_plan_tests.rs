@@ -6,8 +6,9 @@
 use super::*;
 use medulla_agent_types::agent_component::{AgentComponentFacts, AgentComponentKind};
 use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
-use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass};
+use medulla_decision_types::decision::DecisionPolicy;
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::evidence_class::EvidenceClass;
 
 fn int(name: &str, value: i64) -> TypedParam {
     TypedParam {

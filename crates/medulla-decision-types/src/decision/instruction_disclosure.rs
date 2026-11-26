@@ -10,9 +10,9 @@ use serde::{Deserialize, Serialize};
 use super::context_package::is_sha256_hex;
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
-use super::record::outcome::RefusalCode;
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The domain of an instruction text hash.
 pub const INSTRUCTION_DISCLOSURE_DOMAIN: &str = "instruction_disclosure";

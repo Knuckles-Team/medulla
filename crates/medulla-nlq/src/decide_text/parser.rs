@@ -2,18 +2,18 @@
 
 use std::collections::BTreeMap;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::ComponentDependency,
+};
+use medulla_decision_types::decision::{
+    AssemblyConstraints, AssemblyRequest, AssemblyRequirements, LibraryCandidateScope,
 };
 use medulla_decision_types::{
     decision::statistical::CandidateSource, decision::statistical::DecideRequest,
     decision::statistical::QuestionKind, decision::statistical::QuestionSafety,
     decision::statistical::StatisticalQuestion, decision::statistical::TypedParam,
     decision::statistical::TypedValue,
-};
-use medulla_decision_types::{
-    decision::AssemblyConstraints, decision::AssemblyRequest, decision::AssemblyRequirements,
-    decision::DecisionPolicyRef, decision::LibraryCandidateScope,
 };
 use medulla_types::contract::BoundedVec;
 

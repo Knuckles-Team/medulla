@@ -19,10 +19,10 @@ use medulla_decision_types::decision::AbstainReason;
 use medulla_decision_types::decision::DecisionErrorCode;
 use medulla_decision_types::decision::DecisionOutcome;
 use medulla_decision_types::decision::DecisionPolicy;
-use medulla_decision_types::decision::EvidenceClass;
 use medulla_decision_types::decision::TemplateFacts;
 use medulla_decision_types::decision::TOPOLOGY_DECISION_RECORD_SCHEMA_VERSION;
 use medulla_mutation_types::capacity_lease::CapacityResourceClass;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::super::admit_topology;
 use super::super::{assemble, inputs as build_inputs, replay_check, AssembleError, Assembly};

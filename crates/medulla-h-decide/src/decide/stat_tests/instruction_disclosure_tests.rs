@@ -327,7 +327,8 @@ use medulla_decision_types::decision::instruction_disclosure::{
 };
 use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
 use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
-use medulla_decision_types::decision::{EvidenceClass, ResolutionKind};
+use medulla_decision_types::decision::ResolutionKind;
+use medulla_types::evidence_class::EvidenceClass;
 
 const SET: &str = "set-events";
 

@@ -7,8 +7,8 @@
 use serde::{Deserialize, Serialize};
 
 use super::numeric::QuantisedValue;
-use super::record::outcome::RefusalCode;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Format identity of a [`TransferEstimate`].
 pub const TRANSFER_SCHEMA_VERSION: u16 = 1;
@@ -125,7 +125,7 @@ pub struct TransferEstimate {
     pub min_backbone_id: String,
     /// The weakest class among the labels behind the estimate: an estimate is
     /// never stronger than its weakest label.
-    pub evidence_class: super::record::EvidenceClass,
+    pub evidence_class: medulla_types::evidence_class::EvidenceClass,
     /// `transfer.robust_rate`, `transfer.min_backbone` and one `knob:<name>=<value>`
     /// per knob the read used.
     #[serde(default)]
@@ -218,7 +218,7 @@ mod tests {
                 value: 3,
             },
             min_backbone_id: "backbone-b".to_string(),
-            evidence_class: crate::decision::EvidenceClass::Observation,
+            evidence_class: medulla_types::evidence_class::EvidenceClass::Observation,
             premises: BoundedVec::default(),
         };
         let json = serde_json::to_string(&estimate).unwrap();

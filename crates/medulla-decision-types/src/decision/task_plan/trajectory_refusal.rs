@@ -1,8 +1,8 @@
 //! The refusal and premise vocabulary shared by the trajectory decisions
 //! (MEDULLA-DECISION-ENGINE-R140.100 to R140.103).
 
-use crate::decision::record::outcome::RefusalCode;
 use crate::decision::{PremiseClass, PremiseProvenance, PremiseRef};
+use medulla_types::refusal_code::RefusalCode;
 
 /// Why a trajectory decision was refused: a registered code and a detail.
 #[derive(Debug, Clone, PartialEq, Eq)]

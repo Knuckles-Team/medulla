@@ -156,7 +156,7 @@ pub struct LoopInstance {
 
 /// The settlement state of a gap: the closed state of `GapMachine`
 /// (MEDULLA-DECISION-ENGINE-R830.5).
-pub use medulla_types::gap_machine::GapState;
+use medulla_types::gap_machine::GapState;
 
 /// A capability gap a loop filed.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

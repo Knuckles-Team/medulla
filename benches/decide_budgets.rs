@@ -33,6 +33,7 @@ mod program_job_support;
 
 use criterion::{criterion_group, Criterion};
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_component::{
     MeasuredFact, ObservationRef, ShellProficiency, StoppingBehaviour,
 };
@@ -93,7 +94,6 @@ use medulla_decision_types::decision::trajectory_verdict::{
     MAX_TRAJECTORIES,
 };
 use medulla_decision_types::decision::DecisionPolicy;
-use medulla_decision_types::decision::{DecisionPolicyRef, EvidenceClass};
 use medulla_h_decide::decide::stat_test_support::{
     declared_request, decode, publish_route_schema, request, Harness, TENANT,
 };
@@ -104,6 +104,7 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
 use medulla_types::edit_machine::EditStatus;
+use medulla_types::evidence_class::EvidenceClass;
 use std::hint::black_box;
 use tokio::runtime::{Builder, Runtime};
 

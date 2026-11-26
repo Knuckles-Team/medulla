@@ -13,7 +13,7 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::refusal_code::RefusalCode;
-pub use medulla_work_types::participant::ParticipantId;
+use medulla_work_types::participant::ParticipantId;
 
 /// The property value of the shared observer (MEDULLA-DECISION-ENGINE-R652.9).
 pub const OBSERVER_SYSTEM: &str = "system";

@@ -13,8 +13,10 @@
 //! entry and every row joined to it are deleted (R066.4). Library-sourced
 //! entries are kept for ever (R066.1).
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::knob_families::retention;
 use medulla_decision_types::decision::knobs::KnobValue;
+use medulla_decision_types::decision::StatisticalPolicy;
 use medulla_decision_types::{
     decision::statistical::body::canonical_body_bytes,
     decision::statistical::body::content_digest_of,
@@ -28,7 +30,6 @@ use medulla_decision_types::{
     decision::statistical::FeatureMatrixRef, decision::statistical::StatisticalDecisionRecord,
     decision::statistical::StatisticalErrorCode,
 };
-use medulla_decision_types::{decision::DecisionPolicyRef, decision::StatisticalPolicy};
 use medulla_persistence_records::decision_jobs::{evaluation_key, record_key};
 use medulla_server_blob::blob::BlobStateExt;
 

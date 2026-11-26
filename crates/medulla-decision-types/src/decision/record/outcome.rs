@@ -116,7 +116,7 @@ pub trait DecisionRefusal {
     fn detail(&self) -> String;
 }
 
-pub use medulla_types::refusal_code::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Decode a wire string into a registered code; any other string is refused.
 pub(crate) fn deserialize_registered<'de, D: serde::Deserializer<'de>>(

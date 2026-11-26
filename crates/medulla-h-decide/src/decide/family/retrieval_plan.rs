@@ -6,7 +6,6 @@
 
 use medulla_agent_types::agent_component::{AgentComponentKind, ComponentDependency};
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::retrieval_plan::{
     is_prefixed_sha256, RetrievalPlanKind, RetrievalProviderBinding, COMMAND_CONFIG_DIGEST_PARAM,
@@ -17,6 +16,7 @@ use medulla_decision_types::decision::statistical::retrieval_plan::{
 use medulla_decision_types::decision::statistical::{
     DecideRequest, StatisticalErrorCode, TypedValue,
 };
+use medulla_types::refusal_code::RefusalCode;
 
 use medulla_decision_types::decision::{PremiseClass, PremiseRef};
 

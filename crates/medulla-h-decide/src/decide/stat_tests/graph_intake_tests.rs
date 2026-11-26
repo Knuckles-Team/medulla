@@ -6,7 +6,8 @@
 
 use super::*;
 use medulla_decision_types::decision::graph_intake::{GraphReference, IntakeSource};
-use medulla_decision_types::decision::{EvidenceClass, PremiseClass, PremiseProvenance, ResolutionKind};
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, ResolutionKind};
 use medulla_types::contract::Digest256;
 
 const GRAPH: &str = "kg-graph-intake";
@@ -315,7 +316,7 @@ async fn mixed_source_resolution() {
     let record = &batch.records.as_slice()[0];
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
     assert!(matches!(record.outcome, StatisticalOutcome::Advisory { .. }));
-    assert_eq!(record.evidence_class, medulla_decision_types::decision::EvidenceClass::Claim);
+    assert_eq!(record.evidence_class, medulla_types::evidence_class::EvidenceClass::Claim);
     let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
     assert!(facts.contains(&format!("intake:graph={AUTHORITY}/paper:1@12#{}", digest.to_hex()).as_str()));
     assert!(facts.contains(&format!("intake:file=docs/a.md#{}", file_digest.to_hex()).as_str()));

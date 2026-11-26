@@ -7,11 +7,11 @@
 use serde::{Deserialize, Serialize};
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::record::outcome::RefusalCode;
-use crate::decision::request::DecisionPolicyRef;
 use crate::decision::statistical::StatisticalErrorCode;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_types::contract::{BoundedVec, Digest256};
 use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The largest micro-unit score.
 pub const MICRO_ONE: u32 = 1_000_000;

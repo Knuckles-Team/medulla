@@ -15,7 +15,7 @@ use medulla_decision_types::decision::statistical::feedback::{
     FEEDBACK_JOIN_INCOMPLETE, FEEDBACK_SOURCE_STALE, KNOBS,
 };
 use medulla_decision_types::decision::knobs::KnobValue;
-use medulla_decision_types::decision::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 use medulla_decision_types::decision::DecisionPolicy;
 
 use super::stat_executor::ExecutionContext;

@@ -14,8 +14,8 @@
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_catalog_types::graph_schema::shadow_branch::SchemaRepairActivation;
-use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_mutation_types::branch::{
     merge_replay_key, BranchCommit, BranchMergeReceipt, BranchRef, ConflictOutcome,
     ConflictRecord, ConflictSide, MergeChange, MergeOutcome, MergePublication,

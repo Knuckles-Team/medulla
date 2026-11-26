@@ -125,8 +125,9 @@ use medulla_decision_types::decision::statistical::retrieval_plan::RetrievalProv
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome,
 };
-use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, PremiseRef, ResolutionKind};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::stat_executor::{Executed, ExecutionContext, Pinned};
 

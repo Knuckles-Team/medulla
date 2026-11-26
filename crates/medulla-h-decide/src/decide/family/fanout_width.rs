@@ -14,8 +14,9 @@ use medulla_decision_types::decision::statistical::outcome::FamilyAnswer;
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
-use medulla_decision_types::decision::{DecisionPolicy, EvidenceClass, ResolutionKind};
+use medulla_decision_types::decision::{DecisionPolicy, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};
 use crate::decide::stat_support::invalid_parameter;

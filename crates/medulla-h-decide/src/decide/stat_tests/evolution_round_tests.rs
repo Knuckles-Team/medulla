@@ -6,9 +6,10 @@
 use super::*;
 use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, EvidenceClass, PremiseClass, ResolutionKind,
+    AbstainReason, DecisionPolicy, PremiseClass, ResolutionKind,
 };
 use medulla_server_api::authority_context::VerifiedRequestContext;
+use medulla_types::evidence_class::EvidenceClass;
 
 fn json_param(name: &str, value: serde_json::Value) -> TypedParam {
     TypedParam {

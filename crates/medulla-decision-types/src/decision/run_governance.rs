@@ -9,8 +9,9 @@
 use serde::{Deserialize, Serialize};
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
-use super::record::outcome::{DecisionRefusal, RefusalCode};
+use super::record::outcome::DecisionRefusal;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The most steps one run trace carries.
 pub const MAX_TRACE_STEPS: usize = 256;

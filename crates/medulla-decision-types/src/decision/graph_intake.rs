@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::Digest256;
 
-use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use crate::decision::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The request param carrying the intake sources (a typed `intake_sources`).
 pub const PARAM_SOURCES: &str = "intake_sources";

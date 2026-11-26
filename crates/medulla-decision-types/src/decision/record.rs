@@ -70,7 +70,7 @@ pub enum ResolutionKind {
 
 /// The weakest class of evidence the conclusion rests on; defined in
 /// `medulla-types` so the `ContextFacts` wire facts can cite it too.
-pub use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::evidence_class::EvidenceClass;
 
 /// How the derivation itself was produced. Only checkable derivations are
 /// admitted in this wave, so the enum has one arm and a name.

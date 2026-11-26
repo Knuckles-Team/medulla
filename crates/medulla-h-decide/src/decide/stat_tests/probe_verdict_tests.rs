@@ -318,7 +318,8 @@ async fn missing_scorer_abstains() {
 // spec: MEDULLA-DECISION-ENGINE-R138.5
 #[tokio::test]
 async fn premises_name_scorers_and_scores() {
-    use medulla_decision_types::decision::{EvidenceClass, PremiseClass, PremiseProvenance};
+    use medulla_decision_types::decision::{PremiseClass, PremiseProvenance};
+    use medulla_types::evidence_class::EvidenceClass;
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     publish_red_team(&h);
@@ -391,7 +392,7 @@ async fn premises_name_scorers_and_scores() {
 // spec: MEDULLA-DECISION-ENGINE-R138.6
 #[tokio::test]
 async fn probe_verdict_journey() {
-    use medulla_decision_types::decision::{EvidenceClass, PremiseClass};
+    use medulla_decision_types::decision::PremiseClass;
     let h = Harness::new().await;
     let (pin, _) = publish_route_schema(&h);
     // Publish one attack, one transform and two scorers through the harness.

@@ -6,7 +6,8 @@
 //! shape. Wiring the A2A task-submission entry point to construct one of
 //! these per inbound task is a later `.2` slice.
 
-use medulla_decision_types::{decision::record::EvidenceClass, decision::record::ResolutionKind};
+use medulla_decision_types::decision::record::ResolutionKind;
+use medulla_types::evidence_class::EvidenceClass;
 
 /// The routing outcome for one inbound A2A task.
 #[derive(Debug, Clone, PartialEq, Eq)]

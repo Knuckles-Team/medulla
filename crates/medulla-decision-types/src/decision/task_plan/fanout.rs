@@ -13,8 +13,9 @@ use sha2::{Digest, Sha256};
 use super::{plan_explicit_tasks, AggregationOp, TaskPlan, TaskPlanAggregation, TaskPlanProposal};
 use crate::decision::delegation::digest_parts;
 use crate::decision::knob_families::fanout::FanoutKnobs;
-use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use crate::decision::record::outcome::DecisionRefusal;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The most subtasks one fan-out aggregates.
 pub const MAX_FANOUT_TASKS: usize = 64;

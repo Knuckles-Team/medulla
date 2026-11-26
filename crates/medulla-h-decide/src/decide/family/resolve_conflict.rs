@@ -11,6 +11,7 @@
 //! `CONFLICT_NONFINITE`. Evaluate-only: the `BranchMerge` handler, reached
 //! through the `ConflictDecider` seam, writes the resolution.
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::resolve_conflict::{
     min_margin, recency_tiebreak, ConflictRefusal, CONFLICT_NONFINITE, CONFLICT_OPTION,
     CONFLICT_POLICY_MISSING, CONFLICT_UNRESOLVED, PARAM_CONFLICT, WINNER_A, WINNER_B,
@@ -21,10 +22,9 @@ use medulla_decision_types::decision::statistical::declared::{
 use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, StatisticalOutcome, TypedValue,
 };
-use medulla_decision_types::decision::{
-    DecisionPolicy, DecisionPolicyRef, EvidenceClass, PremiseClass, PremiseRef, ResolutionKind,
-};
+use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef, ResolutionKind};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

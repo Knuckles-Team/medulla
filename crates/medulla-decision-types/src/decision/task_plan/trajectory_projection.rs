@@ -18,8 +18,8 @@ use sha2::{Digest, Sha256};
 use medulla_query_types::solve_scalar::digest_text;
 
 use super::trajectory_refusal::{request_premise, TrajectoryRefusal};
-use crate::decision::record::outcome::RefusalCode;
 use crate::decision::{PremiseClass, PremiseRef};
+use medulla_types::refusal_code::RefusalCode;
 
 /// A removed or retained range is empty, reversed or beyond the trace.
 pub const PROJECTION_RANGE_INVALID: RefusalCode = RefusalCode::new("PROJECTION_RANGE_INVALID");

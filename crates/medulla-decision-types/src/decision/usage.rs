@@ -4,7 +4,7 @@
 //! question kind; `codes::resolve` reads it beside the shared codes. A code is
 //! returned before any ledger row is written.
 
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// A record `tenant` differs from the verified tenant.
 pub const USAGE_UNKNOWN_TENANT: RefusalCode = RefusalCode::new("USAGE_UNKNOWN_TENANT");

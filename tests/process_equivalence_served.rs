@@ -13,6 +13,7 @@ mod common;
 mod test_support;
 
 use medulla_agent_types::agent_component::AgentComponentKind;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::statistical::body::encode_body;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::features::{
@@ -22,7 +23,6 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
     StatisticalQuestion, TypedParam, TypedValue,
 };
-use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
 use medulla_types::contract::BoundedVec;
 use medulla_types::process_exchange::{ProcessDocument, ProcessDocumentFormat};

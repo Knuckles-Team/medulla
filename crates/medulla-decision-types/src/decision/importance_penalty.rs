@@ -12,7 +12,7 @@ use sha2::{Digest, Sha256};
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::{QuantScaleTag, QuantisedValue};
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Version of the serialized penalty types.
 pub const IMPORTANCE_SCHEMA_VERSION: u32 = 1;

@@ -14,6 +14,7 @@ use super::segment_filter::ReadScope;
 use super::sql_read::sql_read_snapshot;
 use super::*;
 use medulla_agent_types::agent_component::AgentComponentEntry;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_stats::decision::context_cursor::{self, CursorState};
 use medulla_decision_stats::decision::context_search::{index_text, query_ngrams, search_document};
 use medulla_decision_types::decision::knob_families::context_search::{ContextSearchKnobs, KNOBS};
@@ -22,7 +23,7 @@ use medulla_decision_types::decision::statistical::context_search::{
     sha256_hex, ContextSpan, RetrievalContextSearchRequest, RetrievalContextSearchResult,
     CONTEXT_SEARCH_SCHEMA_VERSION,
 };
-use medulla_decision_types::decision::{DecisionPolicy, DecisionPolicyRef};
+use medulla_decision_types::decision::DecisionPolicy;
 use medulla_protocol_types::result_contract::query::RetrievalContextSearch;
 
 /// Node type whose `text` property is searched.

@@ -5,9 +5,8 @@
 //! caller's access check: a stranger and a foreign tenant are refused.
 
 use super::*;
-use medulla_decision_types::decision::{
-    AbstainReason, EvidenceClass, PremiseClass, PremiseProvenance,
-};
+use medulla_decision_types::decision::{AbstainReason, PremiseClass, PremiseProvenance};
+use medulla_types::evidence_class::EvidenceClass;
 
 const GRAPH: &str = "content-graph";
 

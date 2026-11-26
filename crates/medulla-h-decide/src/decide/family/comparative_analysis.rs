@@ -14,16 +14,16 @@ use medulla_decision_types::decision::comparative_analysis::{
     ComparativeAnalysisPlan, ComparativeAnalysisRequest, ComparativeAnalysisStage,
     ComparativeKnobs, COMPARATIVE_CANDIDATE_INVALID, COMPARATIVE_STALE_INPUT,
 };
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::{
-    DecisionPolicy, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, QuantisedValue,
-    ResolutionKind,
+    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, QuantisedValue, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
 use crate::decide::stat_support::invalid_parameter;

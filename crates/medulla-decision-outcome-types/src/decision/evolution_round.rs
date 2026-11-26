@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 
 use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::numeric::UnitRationalWire;
-use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The named default round count.
 pub const DEFAULT_EVOLUTION_ROUNDS: u32 = 1;

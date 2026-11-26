@@ -12,10 +12,11 @@
 
 use super::context_search::resolve_policy;
 use super::*;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::indexless_retrieval::{
     ceiling_premises, clamp_budget, tenant_ceiling, unit_costs, BudgetMeter,
 };
-use medulla_decision_types::decision::{DecisionPolicy, DecisionPolicyRef};
+use medulla_decision_types::decision::DecisionPolicy;
 use medulla_query_types::indexless_cost::{CostReport, IndexlessBudget};
 
 /// Parse and run one UQL statement.

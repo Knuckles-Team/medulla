@@ -19,12 +19,12 @@ use serde::{Deserialize, Serialize};
 
 use super::super::jobs::RecordWindow;
 use super::super::numeric::QuantisedValue;
-use super::super::record::EvidenceClass;
 use super::dataset::OutcomeFidelity;
 use super::StatisticalDecisionRecord;
-use crate::decision::request::DecisionPolicyRef;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_guardrail::{GuardrailRule, RulePromotionVerdict};
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 /// Format identity of a decision-log body.
 pub const DECISION_LOG_SCHEMA_VERSION: u16 = 1;

@@ -11,13 +11,14 @@ use medulla_decision_stats::decision::features::FeatureMatrix;
 use serde::de::DeserializeOwned;
 use std::sync::Arc;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::{
     agent_component::AgentComponentEntry, agent_component::AgentComponentKind,
     agent_component::ComponentDependency,
 };
 use medulla_decision_types::decision::statistical::body::decode_body;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
-use medulla_decision_types::decision::{DecisionPolicy, DecisionPolicyRef, StatisticalPolicy};
+use medulla_decision_types::decision::{DecisionPolicy, StatisticalPolicy};
 
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 

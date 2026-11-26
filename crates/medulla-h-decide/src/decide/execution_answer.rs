@@ -239,8 +239,9 @@ pub(super) fn part_or_abstain(
         ORCH_PART_ASSEMBLY_ABSTAINED, ORCH_PART_EMPTY, ORCH_PART_NO_SOURCE,
     };
     use medulla_decision_types::decision::record::{
-        AbstainReason, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
+        AbstainReason, PremiseClass, PremiseProvenance, PremiseRef,
     };
+    use medulla_types::evidence_class::EvidenceClass;
 
     let (code, detail) = match outcome {
         Ok(part) | Err(PartFault::Own(part)) => return part,
@@ -380,7 +381,7 @@ async fn coverage_answer(
 
     let evidence_class = assembly
         .map(|assembly| assembly.record.evidence_class)
-        .unwrap_or(medulla_decision_types::decision::record::EvidenceClass::Claim);
+        .unwrap_or(medulla_types::evidence_class::EvidenceClass::Claim);
     let coverage = super::coverage::coverage_for(
         state,
         verified,
@@ -432,7 +433,7 @@ async fn guardrails_answer(
         value: serde_json::to_value(&guardrails)
             .map_err(|error| PartFault::NoSource(error.to_string()))?,
         provenance: Default::default(),
-        evidence_class: medulla_decision_types::decision::record::EvidenceClass::Claim,
+        evidence_class: medulla_types::evidence_class::EvidenceClass::Claim,
     })
 }
 
@@ -676,9 +677,7 @@ fn merge_contract_steps(
     prompts: Result<Vec<AgentPrompt>, String>,
     (graph, graph_version): (&str, u64),
 ) -> Result<ExecutionAnswerPart, PartFault> {
-    use medulla_decision_types::decision::record::{
-        EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
-    };
+    use medulla_decision_types::decision::record::{PremiseClass, PremiseProvenance, PremiseRef};
 
     let contracts = match contracts {
         Ok(steps) => steps,
@@ -790,9 +789,7 @@ fn query_part(
     (graph, graph_version): (&str, u64),
     max_rows: usize,
 ) -> Result<ExecutionAnswerPart, PartFault> {
-    use medulla_decision_types::decision::record::{
-        EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
-    };
+    use medulla_decision_types::decision::record::{PremiseClass, PremiseProvenance, PremiseRef};
     use medulla_rdf::sparql::{Dataset, Projection, QueryOutcome};
 
     let text = query.replace("<TASK>", &format!("<{task_iri}>"));

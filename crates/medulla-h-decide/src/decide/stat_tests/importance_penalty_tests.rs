@@ -263,7 +263,7 @@ async fn penalty_evidence() {
     assert_eq!(receipt.importance_scale, quantised(5_000_000));
     assert_eq!(
         receipt.evidence_class,
-        medulla_decision_types::decision::EvidenceClass::Observation
+        medulla_types::evidence_class::EvidenceClass::Observation
     );
     let sealed = medulla_decision_types::decision::importance_penalty::PenaltyReceipt::seal(
         &PenaltyObjective {

@@ -21,18 +21,19 @@ use medulla_decision_types::decision::path_success::{
     PathPreferenceRule, SuccessRateEvidence, PATH_OUTCOME_MISSING, PATH_UNMEASURED,
     PATH_WINDOW_STALE,
 };
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::log::OutcomeAggregateRequest;
 use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome,
 };
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, EvidenceClass, PremiseClass, PremiseRef, QuantScaleTag,
-    QuantisedValue, ResolutionKind,
+    AbstainReason, DecisionPolicy, PremiseClass, PremiseRef, QuantScaleTag, QuantisedValue,
+    ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{
     Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource,

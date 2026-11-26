@@ -8,6 +8,7 @@
 
 use std::sync::Arc;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::{
     agent_component::AgentComponentKind, agent_component::AgentComponentPublishRequest,
     agent_component::ComponentDependency,
@@ -16,7 +17,11 @@ use medulla_decision_types::decision::statistical::body::encode_body;
 use medulla_decision_types::decision::statistical::dataset::OutcomeFidelity;
 use medulla_decision_types::decision::statistical::FeatureMatrixRef;
 use medulla_decision_types::decision::statistical::StatisticalDecisionRecord;
-use medulla_decision_types::decision::EvidenceClass;
+use medulla_decision_types::decision::{
+    ColdStart, DecisionEvalOp, DecisionEvalRequest, DecisionFitOp, DecisionFitRequest,
+    DecisionJobRecord, ExplorationBudget, HeadKind, LibraryCandidateScope, QuantScaleTag,
+    QuantisedValue, UnitRationalWire,
+};
 use medulla_decision_types::{
     decision::jobs::DatasetSource, decision::jobs::DecisionJobOutput,
     decision::jobs::DecisionJobOutcome, decision::jobs::EvalCandidate, decision::jobs::LabelRegime,
@@ -48,14 +53,8 @@ use medulla_decision_types::{
     decision::statistical::StatisticalQuestion, decision::statistical::TypedParam,
     decision::statistical::TypedValue,
 };
-use medulla_decision_types::{
-    decision::ColdStart, decision::DecisionEvalOp, decision::DecisionEvalRequest,
-    decision::DecisionFitOp, decision::DecisionFitRequest, decision::DecisionJobRecord,
-    decision::DecisionPolicyRef, decision::ExplorationBudget, decision::HeadKind,
-    decision::LibraryCandidateScope, decision::QuantScaleTag, decision::QuantisedValue,
-    decision::UnitRationalWire,
-};
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::stat_test_support::*;
 use medulla_persistence_records::agent_component::test_component_draft;

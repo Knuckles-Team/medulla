@@ -73,7 +73,7 @@ pub enum AnswerRankingRefusal {
 }
 
 impl medulla_decision_types::decision::record::outcome::DecisionRefusal for AnswerRankingRefusal {
-    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         use medulla_decision_types::decision::codes;
         match self {
             Self::VerifierNamed { .. } => codes::ANSWER_RANKING_VERIFIER_NAMED,

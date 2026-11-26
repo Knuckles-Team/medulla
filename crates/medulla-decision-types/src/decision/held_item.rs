@@ -10,7 +10,8 @@
 
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::policy::DecisionPolicy;
-use super::record::outcome::{DecisionRefusal, RefusalCode};
+use super::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Text parameter: the kind of the held item.
 pub const PARAM_ITEM_KIND: &str = "item_kind";

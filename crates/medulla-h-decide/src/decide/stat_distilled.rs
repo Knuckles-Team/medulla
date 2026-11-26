@@ -16,6 +16,7 @@
 
 use std::collections::BTreeMap;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_stats::decision::candidate::CandidateView;
 use medulla_decision_stats::decision::distilled::{rank_stored, MissingScore};
 use medulla_decision_types::decision::knobs::KnobValue;
@@ -27,7 +28,7 @@ use medulla_decision_types::decision::statistical::{
     StatisticalOutcome, TypedValue,
 };
 use medulla_decision_types::decision::{
-    DecisionPolicy, DecisionPolicyRef, PremiseClass, QuantScaleTag, QuantisedValue,
+    DecisionPolicy, PremiseClass, QuantScaleTag, QuantisedValue,
 };
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};

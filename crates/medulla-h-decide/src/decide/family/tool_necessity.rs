@@ -12,7 +12,7 @@
 //! an arm abstain `INSUFFICIENT_SAMPLES`. `Decide` writes nothing.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
-use medulla_decision_types::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use medulla_decision_types::decision::record::outcome::DecisionRefusal;
 use medulla_decision_types::decision::run_adjustment::INSUFFICIENT_SAMPLES;
 use medulla_decision_types::decision::run_governance::RunTraceRecord;
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
@@ -24,6 +24,7 @@ use medulla_decision_types::decision::tool_necessity::{
 pub use medulla_decision_types::decision::tool_necessity::REFUSALS;
 use medulla_decision_types::decision::{DecisionPolicy, PremiseClass, PremiseRef};
 use medulla_graph_core::graph::GraphView;
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyPremise, FamilyPremiseSource};
 use crate::decide::SharedState;

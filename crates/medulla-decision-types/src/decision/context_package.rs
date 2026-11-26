@@ -9,9 +9,9 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use crate::decision::record::outcome::RefusalCode;
 use medulla_types::closed_error_codes;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The most candidates one context-package request carries.
 pub const MAX_CONTEXT_PACKAGE_CANDIDATES: usize = 64;

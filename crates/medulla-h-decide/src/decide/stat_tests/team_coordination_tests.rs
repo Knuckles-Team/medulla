@@ -5,6 +5,7 @@
 
 use std::time::Instant;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::statistical::{
@@ -13,7 +14,7 @@ use medulla_decision_types::decision::statistical::{
 };
 use medulla_decision_types::decision::team_coordination::ChannelSignal;
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, DecisionPolicyRef, PremiseClass, ResolutionKind,
+    AbstainReason, DecisionPolicy, PremiseClass, ResolutionKind,
 };
 use medulla_types::contract::{BoundedVec, OpaqueId};
 
@@ -363,7 +364,7 @@ async fn team_evidence_names_signal_and_members() {
     // The record class is the weakest premise.
     assert_eq!(
         record.evidence_class,
-        medulla_decision_types::decision::EvidenceClass::Claim
+        medulla_types::evidence_class::EvidenceClass::Claim
     );
 }
 

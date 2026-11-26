@@ -674,10 +674,11 @@ mod topology_question {
         TopologyQuestion, TOPOLOGY_PARAM, TOPOLOGY_SCHEMA_UNAVAILABLE,
     };
     use medulla_decision_types::decision::statistical::{TypedParam, TypedValue};
-    use medulla_decision_types::decision::{AbstainReason, EvidenceClass, ResolutionKind};
+    use medulla_decision_types::decision::{AbstainReason, ResolutionKind};
     use medulla_mutation_types::capacity_lease::CapacityResourceClass;
     use medulla_persistence_records::agent_graph::tests::publish_topology_template;
     use medulla_server_api::authority_context::VerifiedRequestContext;
+    use medulla_types::evidence_class::EvidenceClass;
 
     fn read(available: u64) -> TopologyInputs {
         TopologyInputs {

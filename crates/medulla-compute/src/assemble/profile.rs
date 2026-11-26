@@ -10,12 +10,13 @@
 
 use medulla_agent_types::agent_ontology::is_a;
 use medulla_decision_types::decision::record::outcome::{
-    AbstainReason, DecisionRefusal, RefusalCode, RefusalOrigin,
+    AbstainReason, DecisionRefusal, RefusalOrigin,
 };
 use medulla_decision_types::decision::{
     DecisionInputs, DecisionOutcome, PremiseClass, PremiseProvenance, PremiseRef,
 };
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 use super::conclude::Decided;
 

@@ -6,8 +6,9 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use crate::decision::record::outcome::DecisionRefusal;
 use medulla_types::contract::{Digest256, OpaqueId};
+use medulla_types::refusal_code::RefusalCode;
 
 /// Refusal: the trace names no failure point.
 pub const BINDING_TRACE_ABSENT: &str = "BINDING_TRACE_ABSENT";

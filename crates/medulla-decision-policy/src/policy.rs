@@ -8,6 +8,7 @@
 //! the crate DAG while any handler layer can reach the seam without a
 //! sibling-handler edge.
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_component::{
     AgentComponentEntry, AgentComponentKind, ComponentDependency,
 };
@@ -15,8 +16,8 @@ use medulla_decision_types::decision::digest::policy_digest;
 use medulla_decision_types::decision::policy::policy_from_attributes;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::{
-    DecisionPolicy, DecisionPolicyRef, QuantScaleTag, QuantisedValue, StatisticalPolicy,
-    TraceFidelityLevel, UnitRationalWire,
+    DecisionPolicy, QuantScaleTag, QuantisedValue, StatisticalPolicy, TraceFidelityLevel,
+    UnitRationalWire,
 };
 use medulla_types::contract::BoundedVec;
 

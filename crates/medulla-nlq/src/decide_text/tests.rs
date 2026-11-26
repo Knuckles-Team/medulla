@@ -3,7 +3,7 @@
 
 use std::collections::BTreeMap;
 
-use medulla_decision_types::decision::DecisionPolicyRef;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::{
     decision::statistical::CandidateSource, decision::statistical::QuestionKind,
     decision::statistical::QuestionSafety, decision::statistical::TypedValue,

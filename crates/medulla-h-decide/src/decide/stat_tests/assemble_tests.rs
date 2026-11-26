@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 use tokio::sync::RwLock;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_component::{
     AgentComponentFacts, AgentComponentKind, AgentComponentPublishRequest, ModalityFacts,
     ModelInputCapabilities, ModelInputMediaType, PromptMode,
@@ -20,9 +21,8 @@ use medulla_decision_types::decision::primitive::{
     EFFECTS_ATTRIBUTE, INPUT_SCHEMA_ATTRIBUTE, OUTPUT_SCHEMA_ATTRIBUTE,
 };
 use medulla_decision_types::decision::{
-    AssemblyRequest, AssemblyRequirements, AssemblyResult, DecisionOutcome, DecisionPolicyRef,
-    EvidenceClass, LibraryCandidateScope, PremiseClass, PrimitiveEdge, PrimitiveReplacement,
-    ResolutionKind, Violation,
+    AssemblyRequest, AssemblyRequirements, AssemblyResult, DecisionOutcome, LibraryCandidateScope,
+    PremiseClass, PrimitiveEdge, PrimitiveReplacement, ResolutionKind, Violation,
 };
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
@@ -31,6 +31,7 @@ use medulla_protocol_types::protocol::ResultPayload;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 pub(in crate::decide) const TENANT: &str = "tenant-media";
 pub(in crate::decide) const ASKER: &str = "asker";

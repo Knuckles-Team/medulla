@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::decision::numeric::UnitRationalWire;
-use crate::decision::request::DecisionPolicyRef;
 use crate::decision::statistical::ranking_eval::{hex_digest, PinnedSet};
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 
 /// The reach of the corpus a grounded answer may draw on.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]

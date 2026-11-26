@@ -52,12 +52,12 @@ use serde::{Deserialize, Serialize};
 
 use super::errors::DecisionErrorCode;
 use super::numeric::{QuantScaleTag, UnitRationalWire};
-use super::record::{
-    CandidateSourceRecord, EvidenceClass, PremiseRef, ResolutionKind, TraceFidelity,
-};
-use super::request::{DecisionPolicyRef, LibraryCandidateScope};
+use super::record::{CandidateSourceRecord, PremiseRef, ResolutionKind, TraceFidelity};
+use super::request::LibraryCandidateScope;
 use medulla_agent_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 pub use errors::StatisticalErrorCode;
 pub use outcome::{

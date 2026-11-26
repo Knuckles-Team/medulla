@@ -34,7 +34,7 @@ impl Refusal {
 
     /// A refusal under a family's registered `REFUSALS` table.
     pub fn registered(
-        code: medulla_decision_types::decision::record::outcome::RefusalCode,
+        code: medulla_types::refusal_code::RefusalCode,
         detail: impl Into<String>,
     ) -> Self {
         Self {

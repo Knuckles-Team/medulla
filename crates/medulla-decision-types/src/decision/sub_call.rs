@@ -11,8 +11,9 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-use super::record::outcome::{DecisionRefusal, RefusalCode};
+use super::record::outcome::DecisionRefusal;
 use medulla_query_types::solve_scalar::digest_text;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The domain of a tool-set digest.
 pub const SUB_CALL_TOOL_SET_DOMAIN: &str = "sub_call_tool_set";

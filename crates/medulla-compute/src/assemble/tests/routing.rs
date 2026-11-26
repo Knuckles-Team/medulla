@@ -5,10 +5,10 @@
 
 use std::collections::BTreeSet;
 
-use medulla_decision_types::{
-    decision::AbstainReason, decision::CostBudget, decision::DecisionOutcome,
-    decision::EvidenceClass, decision::ResolutionKind,
+use medulla_decision_types::decision::{
+    AbstainReason, CostBudget, DecisionOutcome, ResolutionKind,
 };
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::super::{assemble, replay_check, Assembly};
 use super::fixture::*;

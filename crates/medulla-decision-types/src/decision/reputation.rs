@@ -8,7 +8,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// A visible subject has fewer independent outcomes than `reputation.min_support`.
 pub const REPUTATION_INSUFFICIENT_HISTORY: RefusalCode =

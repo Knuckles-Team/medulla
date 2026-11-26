@@ -23,7 +23,7 @@ use medulla_types::contract::BoundedVec;
 /// Which policy decides this request: re-exported from the agent-component
 /// vocabulary it wraps, so the `decision::DecisionPolicyRef` path is kept
 /// (MEDULLA-SDLC-R006.7).
-pub use medulla_agent_types::agent_component::DecisionPolicyRef;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 
 /// How a free-text task was mapped onto native task IRIs, and by what.
 ///

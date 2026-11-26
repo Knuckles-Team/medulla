@@ -18,8 +18,8 @@
 //! run RETURNED and CITED after the fact; this module fixes what a request
 //! may choose BEFORE that decision runs.
 
-use crate::decision::record::outcome::RefusalCode;
 use medulla_agent_types::agent_component::ComponentDependency;
+use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
 
 /// The parameter naming the retrieval provider a plan is bound to: a JSON

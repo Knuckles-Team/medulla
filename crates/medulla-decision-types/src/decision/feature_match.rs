@@ -11,7 +11,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 use medulla_types::transition_refused::{
     transition, Edge, MachineDef, MachineEvent, MachineState, TransitionRefused,

@@ -34,11 +34,11 @@ use medulla_decision_types::decision::statistical::{
     DecideRequest, QuestionKind, ScoredOption, StatisticalOutcome,
 };
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
-    ResolutionKind,
+    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, OpaqueId, ResourceId};
+use medulla_types::evidence_class::EvidenceClass;
 use medulla_types::refusal_code::RefusalCode;
 
 use crate::decide::stat_designation::{coded, question_of, DesignationRuntime};

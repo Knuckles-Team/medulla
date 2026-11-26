@@ -6,8 +6,8 @@
 use serde::{Deserialize, Serialize};
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::record::outcome::RefusalCode;
 use medulla_types::contract::{BoundedVec, Digest256};
+use medulla_types::refusal_code::RefusalCode;
 
 /// Refusal code: a score is out of range or its fidelity bounds are inverted.
 pub const DISTILLED_SCORE_INVALID: &str = "DISTILLED_SCORE_INVALID";

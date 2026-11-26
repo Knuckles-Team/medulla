@@ -33,7 +33,7 @@ pub enum EncodeRefusal {
 }
 
 impl medulla_decision_types::decision::record::outcome::DecisionRefusal for EncodeRefusal {
-    fn code(&self) -> medulla_decision_types::decision::record::outcome::RefusalCode {
+    fn code(&self) -> medulla_types::refusal_code::RefusalCode {
         match self {
             Self::TooManyCapabilities { .. } => {
                 medulla_decision_types::decision::codes::ENCODE_TOO_MANY_CAPABILITIES

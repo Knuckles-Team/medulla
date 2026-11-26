@@ -10,7 +10,7 @@ use medulla_types::contract::{BoundedVec, Digest256};
 use serde::{Deserialize, Serialize};
 
 use super::program_store::MAX_PROGRAM_STEPS;
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Most input or output types one step may declare.
 pub const MAX_STEP_TYPES: usize = 16;

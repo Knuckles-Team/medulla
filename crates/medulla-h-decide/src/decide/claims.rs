@@ -192,7 +192,8 @@ pub(super) mod served {
     };
     use medulla_store::claim_statechart::{claim_statechart_def, research_artifact_statechart_def};
     use medulla_types::contract::ServerErrorCode;
-    use medulla_decision_types::claims::{ClaimPerspective, ObserverRef, ParticipantId};
+    use medulla_decision_types::claims::{ClaimPerspective, ObserverRef};
+    use medulla_work_types::participant::ParticipantId;
     use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
 
     /// Domain of the instance keys.

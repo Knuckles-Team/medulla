@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::BoundedVec;
 
-use super::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Most rollouts one set may carry.
 pub const MAX_ROLLOUTS: usize = 4096;

@@ -4,7 +4,8 @@
 //! and a foreign tenant's graph is never visible.
 
 use super::*;
-use medulla_decision_types::decision::{AbstainReason, EvidenceClass, PremiseProvenance};
+use medulla_decision_types::decision::{AbstainReason, PremiseProvenance};
+use medulla_types::evidence_class::EvidenceClass;
 
 const OTHER_TENANT: &str = "tenant-other";
 

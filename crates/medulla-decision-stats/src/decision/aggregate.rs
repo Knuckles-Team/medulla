@@ -13,12 +13,13 @@
 use std::collections::BTreeMap;
 
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+use medulla_decision_types::decision::TraceFidelityLevel;
 use medulla_decision_types::{
     decision::statistical::log::FidelityCounts, decision::statistical::log::OptionAggregate,
     decision::statistical::log::StoredEvaluation,
 };
-use medulla_decision_types::{decision::EvidenceClass, decision::TraceFidelityLevel};
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::admission::{fidelity_rank, floor_rank};
 use super::quant::q32;

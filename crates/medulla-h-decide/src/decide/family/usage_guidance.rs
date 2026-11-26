@@ -23,11 +23,11 @@ use medulla_decision_types::decision::usage_guidance::{
     USAGE_GUIDANCE_UNKNOWN_CONNECTOR,
 };
 use medulla_decision_types::decision::{
-    AbstainReason, DecisionPolicy, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
-    ResolutionKind,
+    AbstainReason, DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
 };
 use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, OpaqueId, TenantId};
+use medulla_types::evidence_class::EvidenceClass;
 
 use crate::decide::stat_designation::{coded, DesignationRuntime};
 use crate::decide::stat_executor::{Executed, ExecutionContext, FamilyExecuted};

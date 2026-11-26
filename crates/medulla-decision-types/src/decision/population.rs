@@ -10,9 +10,9 @@ use serde::{Deserialize, Serialize};
 use super::knobs::{KnobSafety, KnobSpec, KnobValue};
 use super::numeric::{QuantScaleTag, QuantisedValue};
 use super::policy::DecisionPolicy;
-use super::record::outcome::RefusalCode;
 use super::statistical::StatisticalErrorCode;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Abstention code: either drift window is empty; there is no distance to
 /// read, and a zero distance is never invented.

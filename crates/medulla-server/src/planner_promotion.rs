@@ -14,6 +14,7 @@ use std::collections::BTreeMap;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_component::{
     AgentComponentDraft, AgentComponentKind, AgentComponentOp, AgentComponentPublishRequest,
     ComponentDependency, DraftPublication, DraftSubject,
@@ -41,7 +42,6 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, DecisionBatch, QuestionKind, QuestionSafety,
     StatisticalQuestion, TypedParam, TypedValue,
 };
-use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_exec::learned_cost::{CostHeadRevision, PlanRecordStore, ShadowComparison};
 use medulla_persistence_records::agent_library::AgentLibraryStateExt;
 use medulla_persistence_records::decision_jobs::decode_artifact;

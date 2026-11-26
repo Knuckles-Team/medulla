@@ -83,9 +83,10 @@ pub(super) mod served {
     use std::sync::Arc;
 
     use medulla_decision_types::loops::{
-        Gap, GapState, ImprovementLedger, LoopInstance, LoopOp, LoopState, LoopTransition,
-        LoopView, OfferEvidence, StageBeacon, PPM_MAX,
+        Gap, ImprovementLedger, LoopInstance, LoopOp, LoopState, LoopTransition, LoopView,
+        OfferEvidence, StageBeacon, PPM_MAX,
     };
+    use medulla_types::gap_machine::GapState;
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_types::gap_machine::GapEvent;
     use medulla_protocol_types::result_contract::coordination::{

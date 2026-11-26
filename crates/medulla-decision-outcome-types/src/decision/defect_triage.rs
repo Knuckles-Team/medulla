@@ -9,10 +9,10 @@ use serde::{Deserialize, Serialize};
 
 use medulla_decision_types::decision::codes;
 use medulla_decision_types::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_decision_types::decision::defect_triage::{TriageAbstainReason, TriageDecision};
 use medulla_source_types::lifecycle::Severity;
+use medulla_types::refusal_code::RefusalCode;
 
 /// A triage that names a defect the engine does not hold.
 pub const DEFECT_UNKNOWN: RefusalCode = RefusalCode::new("DEFECT_UNKNOWN");

@@ -8,7 +8,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::record::outcome::{DecisionRefusal, RefusalCode};
+use super::record::outcome::DecisionRefusal;
+use medulla_types::refusal_code::RefusalCode;
 
 /// The classes of action the admission gate lists.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

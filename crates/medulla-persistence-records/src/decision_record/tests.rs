@@ -2,6 +2,7 @@
 //! DECIDE-LAYER-DESIGN §11.1 and the outcome link of §4.6 (EH-070).
 
 use medulla_agent_types::agent_component::ComponentDependency;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_graph::AgentGraphPublishRequest;
 use medulla_agent_types::agent_library::AgentLibraryPublishRequest;
 use medulla_agent_types::{
@@ -12,9 +13,8 @@ use medulla_agent_types::{
 use medulla_compute::assemble::{assemble, inputs, replay_check, Assembly, RecordIdentity};
 #[cfg(test)]
 use medulla_decision_types::decision::DecisionOutcome;
-use medulla_decision_types::{
-    decision::AssemblyRequest, decision::AssemblyRequirements, decision::DecisionPolicy,
-    decision::DecisionPolicyRef, decision::LibraryCandidateScope,
+use medulla_decision_types::decision::{
+    AssemblyRequest, AssemblyRequirements, DecisionPolicy, LibraryCandidateScope,
 };
 use medulla_types::contract::BoundedVec;
 

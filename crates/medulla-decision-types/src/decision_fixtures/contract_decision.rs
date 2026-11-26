@@ -7,15 +7,16 @@
 use crate::decision::{
     AbstainReason, AssemblyConstraints, AssemblyRequest, AssemblyRequirements, CandidateFacts,
     CandidateSourceRecord, ColdStart, CoverageDerivation, DecideRequest, DecisionCommitRequest,
-    DecisionInputs, DecisionOutcome, DecisionPolicy, DecisionPolicyRef, DecisionQuestion,
-    DecisionRecord, DerivationClass, DerivationEdge, EdgeSource, Elimination, EvidenceClass,
-    LibraryCandidateScope, ObjectiveLevelKind, ObjectiveOrder, PremiseClass, PremiseProvenance,
-    PremiseRef, ResolutionKind, SlotAssignment, SolverIdentity, TraceFidelity, UnitRationalWire,
+    DecisionInputs, DecisionOutcome, DecisionPolicy, DecisionQuestion, DecisionRecord,
+    DerivationClass, DerivationEdge, EdgeSource, Elimination, LibraryCandidateScope,
+    ObjectiveLevelKind, ObjectiveOrder, PremiseClass, PremiseProvenance, PremiseRef,
+    ResolutionKind, SlotAssignment, SolverIdentity, TraceFidelity, UnitRationalWire,
     UnknownCostRule, Violation, WhyNot, DECISION_POLICY_SCHEMA_VERSION,
     DECISION_RECORD_SCHEMA_VERSION,
 };
 use crate::solve::Algorithm;
 use crate::solve::ObjectiveValue;
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_agent_types::agent_fixtures::agent_library::mutation_context;
 use medulla_agent_types::agent_library::AgentLibraryLifecycle;
 use medulla_agent_types::{
@@ -23,6 +24,7 @@ use medulla_agent_types::{
     agent_component::ComponentDependency,
 };
 use medulla_query_types::solve_scalar::Scalar;
+use medulla_types::evidence_class::EvidenceClass;
 
 use super::contract_solver as solver;
 use medulla_types::{test_support::wave::bounded, test_support::wave::digest_text};

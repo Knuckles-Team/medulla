@@ -8,7 +8,8 @@ use medulla_decision_types::decision::context_package::{
     ContextPackageBudget, ContextPackageCandidate, ContextPackageRequest, RemainingBudget,
 };
 use medulla_decision_types::decision::statistical::declared::DeclaredOption;
-use medulla_decision_types::decision::{EvidenceClass, ResolutionKind};
+use medulla_decision_types::decision::ResolutionKind;
+use medulla_types::evidence_class::EvidenceClass;
 
 const SOURCES: &str = "pkg-sources";
 const FOREIGN: &str = "pkg-foreign";

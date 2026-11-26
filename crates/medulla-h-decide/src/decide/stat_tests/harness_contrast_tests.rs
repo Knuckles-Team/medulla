@@ -4,6 +4,7 @@
 
 use std::time::Instant;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::harness_contrast::HarnessContrastAbstainReason;
 use medulla_decision_types::decision::knobs::{KnobName, KnobValue};
 use medulla_decision_types::decision::statistical::declared::{DeclaredOption, DeclaredText};
@@ -14,7 +15,7 @@ use medulla_decision_types::decision::statistical::{
     CandidateSource, DecideRequest, QuestionKind, QuestionSafety, StatisticalDecisionRecord,
     StatisticalOutcome, StatisticalQuestion, TypedParam, TypedValue,
 };
-use medulla_decision_types::decision::{DecisionPolicy, DecisionPolicyRef};
+use medulla_decision_types::decision::DecisionPolicy;
 use medulla_types::contract::BoundedVec;
 
 use super::super::stat_executor::ExecutionContext;

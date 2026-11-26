@@ -4,8 +4,8 @@
 use medulla_decision_types::decision::program::{
     SCORE_CORPUS_TOO_LARGE, SCORE_GRADER_UNKNOWN, SCORE_INVALID, SCORE_OUT_OF_RANGE,
 };
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_modality::{OpaqueRef, PolicyEnvelope, PrivacyAttestation};
+use medulla_types::refusal_code::RefusalCode;
 
 use crate::{
     EvidenceBinding, ExampleOutcome, ExampleSplit, GraderKind, TrainingCorpus, TrainingExample,

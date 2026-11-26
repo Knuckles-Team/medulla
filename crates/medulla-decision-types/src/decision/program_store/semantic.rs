@@ -8,8 +8,9 @@
 
 use super::super::run_governance::{RunTraceRecord, StepKind, TraceScalar};
 use super::{literal_walk, CompiledProgram, ProgramError, ProgramParameterKind};
-use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use crate::decision::record::outcome::DecisionRefusal;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 use serde::{Deserialize, Serialize};
 
 /// Current wire schema version of [`ProgramMatchIndex`] and [`ProgramMatch`].

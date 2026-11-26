@@ -6,11 +6,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use medulla_decision_types::{
-    decision::record::AbstainReason, decision::record::EvidenceClass, decision::record::PremiseRef,
-};
+use medulla_decision_types::decision::record::{AbstainReason, PremiseRef};
 use medulla_query_types::solve_scalar::digest_text;
 use medulla_types::contract::BoundedVec;
+use medulla_types::evidence_class::EvidenceClass;
 
 /// Format identity of the composed orchestration answer envelope.
 pub const EXECUTION_ANSWER_SCHEMA_VERSION: u16 = 1;

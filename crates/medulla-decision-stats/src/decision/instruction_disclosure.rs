@@ -11,7 +11,7 @@ use medulla_decision_types::decision::instruction_disclosure::{
     DISCLOSURE_PRIOR_MISSING, DISCLOSURE_PRIOR_UNEXPECTED, DISCLOSURE_SET_MISMATCH,
     DISCLOSURE_TIMEOUT_NOT_ELAPSED,
 };
-use medulla_decision_types::decision::record::outcome::RefusalCode;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Why no next event could be built: the registered code and a detail.
 #[derive(Debug, Clone, PartialEq, Eq)]

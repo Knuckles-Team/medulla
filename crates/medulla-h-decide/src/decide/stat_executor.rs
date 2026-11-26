@@ -132,7 +132,7 @@ pub(super) struct FamilyExecuted {
     pub(super) resolution: Option<medulla_decision_types::decision::ResolutionKind>,
     /// The evidence class the family seals its answer with, when the answer
     /// itself decides it; `None` keeps the claim rule of the record stage.
-    pub(super) evidence: Option<medulla_decision_types::decision::EvidenceClass>,
+    pub(super) evidence: Option<medulla_types::evidence_class::EvidenceClass>,
 }
 
 impl Executed {

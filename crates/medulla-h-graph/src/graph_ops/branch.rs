@@ -155,7 +155,7 @@ pub struct BranchMergeRequest {
     /// The base commit the caller planned against, if it pinned one.
     pub merge_base: Option<String>,
     /// The policy the conflicts resolve under; `None` is the engine default.
-    pub policy: Option<medulla_decision_types::decision::DecisionPolicyRef>,
+    pub policy: Option<medulla_agent_types::agent_component::DecisionPolicyRef>,
 }
 
 /// The classified heads of one merge, before anything is written.

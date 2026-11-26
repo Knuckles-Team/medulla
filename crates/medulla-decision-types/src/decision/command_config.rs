@@ -10,8 +10,9 @@ use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 use serde::{Deserialize, Serialize};
 
 use crate::decision::knobs::{KnobSafety, KnobSpec, KnobValue};
-use crate::decision::record::outcome::{DecisionRefusal, RefusalCode};
+use crate::decision::record::outcome::DecisionRefusal;
 use medulla_types::contract::Digest256;
+use medulla_types::refusal_code::RefusalCode;
 
 /// Refusal code: no mode matches the request or the default ordinal.
 pub const MODE_UNKNOWN: &str = "MODE_UNKNOWN";

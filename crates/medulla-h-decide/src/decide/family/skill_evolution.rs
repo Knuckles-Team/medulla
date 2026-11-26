@@ -36,7 +36,6 @@ use medulla_decision_stats::decision::skill_evolution::{
     merge_candidates, MergeParams, SkillEntry,
 };
 use medulla_decision_types::decision::knob_families::skill::{integer, NEOLOGISM_MIN_USES};
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_decision_types::decision::skill_evolution::{
     SkillGap, SkillMergeCandidate, SkillNeologism, MAX_MERGE_EVIDENCE, MERGE_CLASS_MISMATCH,
     MERGE_PAIR_NOT_VISIBLE, PARAM_CANDIDATE_TRACES, PARAM_EMBEDDING_GRAPH, PARAM_PAIR_A,
@@ -51,6 +50,7 @@ use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_types::contract::BoundedVec;
+use medulla_types::refusal_code::RefusalCode;
 use tokio::sync::RwLock;
 
 use crate::decide::candidates::library_candidates;

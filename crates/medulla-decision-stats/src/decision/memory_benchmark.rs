@@ -16,8 +16,8 @@ use medulla_decision_types::decision::memory_benchmark::{
     MEMORY_METRIC_UNRESOLVED, MEMORY_REVISION_STALE, MEMORY_SNAPSHOT_MISMATCH, RECALL_BELOW_MIN,
     REGRESSION_ABOVE_MAX,
 };
-use medulla_decision_types::decision::record::outcome::RefusalCode;
 use medulla_types::contract::Digest256;
+use medulla_types::refusal_code::RefusalCode;
 use unicode_normalization::UnicodeNormalization;
 
 const PPM: u128 = 1_000_000;
@@ -238,10 +238,10 @@ pub fn benchmark(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use medulla_agent_types::agent_component::DecisionPolicyRef;
     use medulla_decision_types::decision::memory_benchmark::{
         BenchmarkDataset, ChangeKind, QueryResult, RevisionRef, MEMORY_BENCHMARK_SCHEMA_VERSION,
     };
-    use medulla_decision_types::decision::DecisionPolicyRef;
 
     fn rev(revision: u64) -> RevisionRef {
         RevisionRef {

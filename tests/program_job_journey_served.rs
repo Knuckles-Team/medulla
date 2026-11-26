@@ -23,6 +23,7 @@ mod program_job_support;
 #[path = "common/test_support.rs"]
 mod test_support;
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_outcome_types::decision::promotion::ChampionPointer;
 use medulla_decision_types::decision::held_out::RevisionSubject;
 use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
@@ -32,7 +33,6 @@ use medulla_decision_types::decision::statistical::retrieval::{
 use medulla_decision_types::decision::statistical::{
     DecisionBatch, QuestionKind, TypedParam, TypedValue,
 };
-use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_h_decide::decide::stat_test_support::{
     declared_request, publish_route_schema_in, Harness,
 };

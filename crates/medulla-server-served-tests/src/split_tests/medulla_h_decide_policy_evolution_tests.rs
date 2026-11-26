@@ -2,6 +2,7 @@
 //! through the real request boundary in dependency order, replayed, and read
 //! back under another tenant (MEDULLA-DECISION-ENGINE-R811).
 
+use medulla_agent_types::agent_component::DecisionPolicyRef;
 use medulla_decision_types::decision::held_out::RevisionSubject;
 use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
 use medulla_decision_types::decision::statistical::retrieval::{
@@ -10,7 +11,6 @@ use medulla_decision_types::decision::statistical::retrieval::{
 use medulla_decision_types::decision::statistical::{
     DecisionBatch, QuestionKind, TypedParam, TypedValue,
 };
-use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_h_decide::decide::stat_test_support::{
     declared_request, decode, publish_route_schema, Harness,
 };

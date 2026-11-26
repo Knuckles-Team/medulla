@@ -10,7 +10,8 @@
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
-use crate::claims::{ClaimState, ObserverRef, ParticipantId};
+use crate::claims::{ClaimState, ObserverRef};
+use medulla_work_types::participant::ParticipantId;
 
 /// The `type` property of the node that carries one memory event.
 pub const MEMORY_EVENT_LABEL: &str = "MemoryEvent";
