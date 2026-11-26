@@ -194,6 +194,7 @@ fn program_promotion_methods(
         "candidate_record": &identity.candidate_record,
         "held_out": &identity.held_out,
         "dev_score": identity.dev_score,
+        "front_digest": identity.front_digest,
     });
     // MEDULLA-DECISION-ENGINE-R810.5: the candidate record's optimizer, seed and
     // corpus binding, and the stage, are restated flat on the revision node.

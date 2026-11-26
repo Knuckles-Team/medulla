@@ -724,14 +724,13 @@ fn compile_reads_train_for_candidates_and_validation_only_for_scoring() {
     assert_eq!(result, NativeCompiler::compile(&request).expect("rerun"));
 }
 
-/// Verifies MEDULLA-DECISION-ENGINE-R800.3: the reflective optimizer builds a
+/// The reflective compile (the L2 of MEDULLA-DECISION-ENGINE-R800.3): the optimizer builds a
 /// Pareto front over the evaluated candidates (objective 0 `aggregate_score`,
 /// objective 1 `benchmark_score`, cost `cost_micro_usd`) and reports its digest,
 /// its scoreboard and the next parent; one seed reproduces the digest; any other
 /// optimizer reports no front.
-// spec: MEDULLA-DECISION-ENGINE-R800.3
 #[test]
-fn reflective_job_reports_front_and_next_parent() {
+fn reflective_compile_builds_front_and_next_parent() {
     let mut request = request(OptimizerKind::Gepa);
     request.optimizer_artifacts.push(OptimizerArtifact {
         artifact_ref: opaque("reflection", "gepa-reflection"),

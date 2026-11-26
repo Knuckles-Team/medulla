@@ -320,6 +320,11 @@ pub struct ProgramRevisionIdentity {
     /// validation example (MEDULLA-DECISION-ENGINE-R810.5).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub dev_score: Option<i64>,
+    /// The digest of the Pareto front of a reflective job, stored as the
+    /// `front_digest` property of the node; absent for an optimizer that builds
+    /// no front (MEDULLA-DECISION-ENGINE-R800.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub front_digest: Option<String>,
 }
 
 /// The stage a stored `ProgramRevision` node is written at: an evaluated
@@ -365,6 +370,12 @@ impl ProgramRevisionIdentity {
     /// The identity carrying the mean validation score of its corpus in ppm.
     pub fn with_dev_score(mut self, dev_score: Option<i64>) -> Self {
         self.dev_score = dev_score;
+        self
+    }
+
+    /// The identity carrying the digest of the front its job built.
+    pub fn with_front_digest(mut self, front_digest: Option<String>) -> Self {
+        self.front_digest = front_digest;
         self
     }
 }
@@ -466,6 +477,7 @@ impl ProgramRevisionIdentity {
             candidate_record,
             held_out: None,
             dev_score: None,
+            front_digest: None,
         };
         identity.validate()?;
         Ok(identity)

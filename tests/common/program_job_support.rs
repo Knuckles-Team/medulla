@@ -189,6 +189,79 @@ pub fn sized_program_request(
     }
 }
 
+/// A reflective (`Gepa`) request over the fixture corpus: it names one reflection
+/// artifact, so the optimizer has something to materialize candidates from
+/// (MEDULLA-DECISION-ENGINE-R800.3).
+pub fn reflective_request(
+    label: &str,
+    evaluations: Vec<EvaluationSummary>,
+) -> OptimizationRequest {
+    let mut request = sized_program_request(
+        label,
+        evaluations,
+        (TRAIN_EXAMPLES, TEST_EXAMPLES as usize),
+        OptimizerKind::Gepa,
+    );
+    request
+        .optimizer_artifacts
+        .push(medulla_program::OptimizerArtifact {
+            artifact_ref: opaque("reflection", "gepa-reflection"),
+            kind: medulla_program::OptimizerArtifactKind::Reflection,
+            source_ref: request.program.program_ref.clone(),
+            modalities: ProgramModality::ALL.into_iter().collect(),
+            score: 0.8,
+            evidence_refs: vec![opaque("evidence", "gepa-reflection")],
+            access_policy_ref: request.program.policy.access_policy_ref.clone(),
+        });
+    request
+}
+
+/// The evaluation of one candidate with its benchmark score and cost, so the
+/// front trades accuracy against both.
+pub fn front_evaluation_of(
+    candidate_ref: &str,
+    score: f64,
+    benchmark_score: f64,
+    cost_micro_usd: u64,
+) -> EvaluationSummary {
+    EvaluationSummary {
+        benchmark_score: Some(benchmark_score),
+        cost_micro_usd,
+        subject_ref: OpaqueRef::new(candidate_ref.to_string()).expect("candidate ref"),
+        aggregate_score: score,
+        modality_scores: ProgramModality::ALL
+            .into_iter()
+            .map(|modality| (modality, score))
+            .collect(),
+        evidence_refs: vec![opaque("evaluation", &format!("front-{candidate_ref}"))],
+    }
+}
+
+/// Every distinct string under `value` that starts with `prefix`, sorted.
+pub fn strings_with_prefix(value: &serde_json::Value, prefix: &str) -> Vec<String> {
+    fn walk(value: &serde_json::Value, prefix: &str, found: &mut std::collections::BTreeSet<String>) {
+        match value {
+            serde_json::Value::String(text) if text.starts_with(prefix) => {
+                found.insert(text.clone());
+            }
+            serde_json::Value::Array(items) => items.iter().for_each(|item| walk(item, prefix, found)),
+            serde_json::Value::Object(map) => map.values().for_each(|item| walk(item, prefix, found)),
+            _ => {}
+        }
+    }
+    let mut found = std::collections::BTreeSet::new();
+    walk(value, prefix, &mut found);
+    found.into_iter().collect()
+}
+
+/// The result rows of a job status, in stored order.
+pub fn result_rows(status: &serde_json::Value) -> Vec<serde_json::Value> {
+    status["output"]["rows"]
+        .as_array()
+        .cloned()
+        .unwrap_or_default()
+}
+
 /// The program the fixture optimizes.
 pub fn program_ref() -> OpaqueRef {
     opaque("program", "program")

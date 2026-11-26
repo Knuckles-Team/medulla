@@ -134,6 +134,7 @@ async fn program_promotion_identity(
                 identity
                     .with_held_out(optimization.held_out.clone())
                     .with_dev_score(corpus.dev_score_ppm())
+                    .with_front_digest(optimization.front.as_ref().map(|front| front.digest.clone()))
             })
         })
         .transpose()

@@ -124,7 +124,10 @@ fn program_candidate_row(
             ),
         ),
         ("promotion_identity".to_string(), promotion_value),
-    ]))
+    ])
+    .into_iter()
+    .chain(program_front_columns(optimization, Some(candidate)))
+    .collect())
 }
 
 #[cfg(feature = "program-optimization")]
@@ -295,6 +298,64 @@ fn program_plan_step_row(
         ("selected".to_string(), serde_json::json!(false)),
         ("promotion_identity".to_string(), serde_json::Value::Null),
     ])
+    .into_iter()
+    .chain(program_front_columns(optimization, None))
+    .collect()
+}
+
+/// The front columns of one result row (MEDULLA-DECISION-ENGINE-R800.5): the front
+/// digest, the evaluation-set digest and, for a candidate on the front, its place
+/// on the scoreboard. A plan-step row and a candidate off the front carry nulls.
+#[cfg(feature = "program-optimization")]
+fn program_front_columns(
+    optimization: &medulla_program::OptimizationResult,
+    candidate: Option<&medulla_program::ProgramCandidate>,
+) -> BTreeMap<String, serde_json::Value> {
+    let front = optimization.front.as_ref();
+    let placed = candidate.zip(front).and_then(|(candidate, front)| {
+        front
+            .scoreboard
+            .iter()
+            .enumerate()
+            .find(|(_, row)| row.candidate_ref == candidate.candidate_ref.as_str())
+    });
+    let next_parent = candidate
+        .zip(front.and_then(|front| front.next_parent_ref.as_deref()))
+        .is_some_and(|(candidate, parent)| candidate.candidate_ref.as_str() == parent);
+    BTreeMap::from([
+        (
+            "front_digest".to_string(),
+            front.map_or(serde_json::Value::Null, |front| {
+                serde_json::json!(front.digest)
+            }),
+        ),
+        (
+            "front_rank".to_string(),
+            placed.map_or(serde_json::Value::Null, |(rank, _)| serde_json::json!(rank)),
+        ),
+        (
+            "front_score".to_string(),
+            placed.map_or(serde_json::Value::Null, |(_, row)| {
+                serde_json::json!(f64::from(row.score))
+            }),
+        ),
+        (
+            "front_cost_micro_usd".to_string(),
+            placed.map_or(serde_json::Value::Null, |(_, row)| {
+                serde_json::json!(row.cost_micro_usd)
+            }),
+        ),
+        ("front_next_parent".to_string(), serde_json::json!(next_parent)),
+        (
+            "evaluation_set_digest".to_string(),
+            optimization
+                .held_out
+                .as_ref()
+                .map_or(serde_json::Value::Null, |evidence| {
+                    serde_json::json!(evidence.evaluation_set_digest)
+                }),
+        ),
+    ])
 }
 
 #[cfg(feature = "program-optimization")]
@@ -354,6 +415,12 @@ fn program_result_columns() -> Vec<ResultColumn> {
         ("max_operations", "uint64", true),
         ("selected", "bool", false),
         ("promotion_identity", "object", true),
+        ("front_digest", "string", true),
+        ("front_rank", "uint64", true),
+        ("front_score", "float64", true),
+        ("front_cost_micro_usd", "uint64", true),
+        ("front_next_parent", "bool", false),
+        ("evaluation_set_digest", "string", true),
     ]
     .into_iter()
     .map(|(name, logical_type, nullable)| ResultColumn {
