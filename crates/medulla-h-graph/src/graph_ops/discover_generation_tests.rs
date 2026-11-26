@@ -80,6 +80,8 @@ fn concurrent_readers_see_one_generation() {
         allowed: None,
         scope: None,
         scope_digest: "",
+        seeds: &[],
+        hop_filter: &Default::default(),
     };
 
     let stop = AtomicBool::new(false);

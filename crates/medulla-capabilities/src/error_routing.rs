@@ -2516,6 +2516,12 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
         ]);
         if d.id.as_str() == "Discover" {
             codes.insert(DISCOVER_PLANNER_UNCONFIGURED);
+            // MEDULLA-FEDERATED-QUERY-R741.2: the seed and hop-filter refusals.
+            codes.extend([
+                medulla_ingestion_types::ingestion_wire::SEED_NOT_VISIBLE,
+                medulla_ingestion_types::ingestion_wire::SEED_LIMIT_EXCEEDED,
+                medulla_ingestion_types::ingestion_wire::HOP_FILTER_INVALID,
+            ]);
         }
     }
     let id = d.id.as_str();

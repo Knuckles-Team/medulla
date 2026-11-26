@@ -216,6 +216,11 @@ pub(super) struct DiscoverCall<'a> {
     pub(super) scope: Option<&'a medulla_retrieval::knowledge_scope::ResolvedScope>,
     /// The digest of the knowledge scope applied (MEDULLA-FEDERATED-QUERY-R704.5).
     pub(super) scope_digest: &'a str,
+    /// Caller seeds that replace arm retrieval (MEDULLA-FEDERATED-QUERY-R741.1); empty
+    /// ranks the arms as before.
+    pub(super) seeds: &'a [String],
+    /// The per-hop restriction of the neighbour walk (MEDULLA-FEDERATED-QUERY-R741.3).
+    pub(super) hop_filter: &'a medulla_ingestion_types::ingestion_wire::HopFilter,
 }
 
 #[cfg(feature = "query")]
@@ -422,6 +427,17 @@ fn discover_pass(
         ranked.truncate(scope_window);
         ranked = scope.top_k(core, ranked, scope_window);
     }
+    // MEDULLA-FEDERATED-QUERY-R741.1: caller seeds replace the ranked arms. Each seed scores
+    // 1.0 and keeps the given order; a repeated seed counts once.
+    if !call.seeds.is_empty() {
+        let mut seen = std::collections::HashSet::new();
+        ranked = call
+            .seeds
+            .iter()
+            .filter(|id| seen.insert(id.as_str()))
+            .map(|id| (id.clone(), 1.0_f32))
+            .collect();
+    }
     // MEDULLA-FEDERATED-QUERY-R703.7: a record whose source is checked at read cannot
     // be vetted without a remote call, so `Discover` drops it and counts the drop.
     let mut unchecked_excluded = 0_u64;
@@ -433,7 +449,11 @@ fn discover_pass(
     ranked.truncate(k);
 
     // MEDULLA-FEDERATED-QUERY-R090.8: neighbour expansion of the top-k hits.
-    let mut planned = super::discover_plan::expand_seeds(core, ranked, call.hops, k);
+    let scope = medulla_graph_core::graph::HopScope {
+        filter: call.hop_filter,
+        graph_name: call.graph_name,
+    };
+    let mut planned = super::discover_plan::expand_seeds(core, ranked, call.hops, k, &scope);
     if let Some(allowed) = call.allowed {
         planned.retain(|hit| allowed.contains(&hit.id));
     }
@@ -601,6 +621,8 @@ async fn handle_discover(
     allowed: Option<std::collections::BTreeSet<String>>,
     scope: Option<medulla_retrieval::knowledge_scope::ResolvedScope>,
     scope_digest: String,
+    seed_ids: Vec<String>,
+    hop_filter: Option<medulla_ingestion_types::ingestion_wire::HopFilter>,
 ) -> Response {
     let (tenant, adapter) = served;
     let request = medulla_ingestion_types::ingestion_wire::DiscoverPlanRequest {
@@ -608,6 +630,8 @@ async fn handle_discover(
         mode,
         as_of,
         hops,
+        seed_ids: seed_ids.clone(),
+        hop_filter: hop_filter.clone(),
     };
     let expansions = medulla_server_api::knob_config::knobs().discover_expansions as usize;
     let planned_core = Arc::clone(core);
@@ -631,9 +655,16 @@ async fn handle_discover(
         Ok(deep) => deep,
         Err(refusal) => return Response::err(req_id, refusal.message()),
     };
+    // `plan_discover` has bounded the seed count and the filter. The seeds are then read
+    // through the caller's projected core, so a hidden seed refuses like an absent one
+    // (MEDULLA-FEDERATED-QUERY-R741.2), before any retrieval runs.
+    if let Err(refusal) = super::discover_plan::check_seeds(core, &seed_ids) {
+        return Response::err(req_id, refusal.message());
+    }
     // The request's own vector was adapted once before dispatch; the planned expansion
     // vectors get the same scoped adapter here (MEDULLA-FEDERATED-QUERY-R090.7).
     adapt_expansions(&mut deep, adapter.as_ref());
+    let hop_filter = hop_filter.unwrap_or_default();
     discover(
         core,
         &DiscoverCall {
@@ -650,6 +681,8 @@ async fn handle_discover(
             allowed: allowed.as_ref(),
             scope: scope.as_ref(),
             scope_digest: &scope_digest,
+            seeds: &seed_ids,
+            hop_filter: &hop_filter,
         },
         deep,
         req_id,
@@ -738,6 +771,8 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             capability,
             document_set_ids,
             agent_ref,
+            seed_ids,
+            hop_filter,
         } => Method::Discover {
             keywords,
             query_embedding: adapted_query(
@@ -758,6 +793,8 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             capability,
             document_set_ids,
             agent_ref,
+            seed_ids,
+            hop_filter,
         },
         other => other,
     }
@@ -857,6 +894,8 @@ pub(super) async fn try_handle_semantic_compute(
             capability,
             document_set_ids,
             agent_ref,
+            seed_ids,
+            hop_filter,
         } => {
             let allowed =
                 match super::assistant_profile::resolve_document_sets(&ctx, &document_set_ids)
@@ -905,6 +944,8 @@ pub(super) async fn try_handle_semantic_compute(
                 allowed,
                 scope,
                 scope_digest,
+                seed_ids,
+                hop_filter,
             )
             .await
         }

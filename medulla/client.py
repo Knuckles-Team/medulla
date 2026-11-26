@@ -7363,6 +7363,8 @@ class GraphOperationsClient:
         capability: str | None = None,
         document_set_ids: list[str] | None = None,
         agent_ref: str | None = None,
+        seed_ids: list[str] | None = None,
+        hop_filter: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """One-round-trip hybrid discovery
         (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery).
@@ -7381,6 +7383,12 @@ class GraphOperationsClient:
         de-duplicated token set; ``query_embedding`` may be empty (embedder/vLLM
         unavailable), degrading to a bounded keyword-only scan. Gate on
         :meth:`supports` (``"Discover"``) against an engine built before this op.
+
+        ``seed_ids`` (at most 64 node ids) replaces arm retrieval: each seed scores
+        1.0 and keeps the given order, and an absent or hidden seed refuses
+        ``SEED_NOT_VISIBLE``. ``hop_filter`` restricts each ``hops`` step by
+        ``node_labels``, ``edge_labels``, ``graph`` and ``language``; it only
+        narrows what the caller may already read.
         """
         return (
             await _gen.ingestion.send_discover(
@@ -7405,6 +7413,8 @@ class GraphOperationsClient:
                         else {}
                     ),
                     **({"agent_ref": agent_ref} if agent_ref is not None else {}),
+                    **({"seed_ids": seed_ids} if seed_ids else {}),
+                    **({"hop_filter": hop_filter} if hop_filter else {}),
                 },
             )
         ).payload

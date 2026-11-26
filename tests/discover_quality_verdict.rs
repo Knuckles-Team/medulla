@@ -79,6 +79,10 @@ async fn verdict_under(
             as_of: None,
             perspectives: None,
             capability: None,
+            document_set_ids: Vec::new(),
+            agent_ref: None,
+            seed_ids: Vec::new(),
+            hop_filter: None,
         },
     )
     .await;
@@ -208,6 +212,10 @@ async fn discover_raw(
             as_of: None,
             perspectives: None,
             capability: None,
+            document_set_ids: Vec::new(),
+            agent_ref: None,
+            seed_ids: Vec::new(),
+            hop_filter: None,
         },
     );
     Box::pin(dispatch(state, request)).await

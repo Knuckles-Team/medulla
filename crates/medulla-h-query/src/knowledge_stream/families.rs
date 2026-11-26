@@ -259,6 +259,8 @@ async fn execute_vector(
                 capability: None,
                 document_set_ids: Vec::new(),
                 agent_ref: None,
+                seed_ids: Vec::new(),
+                hop_filter: None,
             },
         )
         .await;

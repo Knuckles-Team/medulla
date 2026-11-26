@@ -18625,6 +18625,15 @@ class DiscoverMode(str, Enum):
     DEEP = "deep"
 
 
+class HopFilter(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edge_labels: list[str] = Field(default_factory=list)
+    graph: str | None = None
+    language: str | None = None
+    node_labels: list[str] = Field(default_factory=list)
+
+
 class MethodDiscoverParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18632,6 +18641,7 @@ class MethodDiscoverParams(BaseModel):
     as_of: int | None = None
     capability: str | None = None
     document_set_ids: list[str] = Field(default_factory=list)
+    hop_filter: HopFilter | None = None
     hops: Annotated[int, Field(ge=0)] = Field(default=0)
     k: Annotated[int, Field(ge=0)]
     keywords: list[str]
@@ -18640,6 +18650,7 @@ class MethodDiscoverParams(BaseModel):
     quality_policy_ref: str | None = None
     query_embedding: list[float]
     query_text: str | None = None
+    seed_ids: list[str] = Field(default_factory=list)
 
 
 class MethodDistributedComputeParams(BaseModel):

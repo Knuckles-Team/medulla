@@ -1241,6 +1241,12 @@ closed_error_codes! {
         ProfileRevisionConflict => "PROFILE_REVISION_CONFLICT",
         ProposalCursorInvalid => "PROPOSAL_CURSOR_INVALID",
         QueryTextTooLong => "QUERY_TEXT_TOO_LONG",
+        /// A `Discover` seed is absent or hidden from the caller; one code for both causes (MEDULLA-FEDERATED-QUERY-R741.2).
+        SeedNotVisible => "SEED_NOT_VISIBLE",
+        /// A `Discover` request names more than 64 seeds (MEDULLA-FEDERATED-QUERY-R741.2).
+        SeedLimitExceeded => "SEED_LIMIT_EXCEEDED",
+        /// A `Discover` hop filter has an oversized list, an empty entry or a language that is not a BCP 47 tag (MEDULLA-FEDERATED-QUERY-R741.2).
+        HopFilterInvalid => "HOP_FILTER_INVALID",
         RerankKExceeded => "RERANK_K_EXCEEDED",
         RerankScorerVersionMismatch => "RERANK_SCORER_VERSION_MISMATCH",
         SourceCoverageHopBudgetInvalid => "SOURCE_COVERAGE_HOP_BUDGET_INVALID",

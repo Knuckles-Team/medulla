@@ -44,6 +44,8 @@ mod memory_surface_tests;
 mod memory_snapshot_tests;
 #[cfg(all(test, feature = "query"))]
 mod discover_generation_tests;
+#[cfg(all(test, feature = "query"))]
+mod discover_seed_tests;
 #[cfg(test)]
 mod observation_state_tests;
 #[cfg(test)]

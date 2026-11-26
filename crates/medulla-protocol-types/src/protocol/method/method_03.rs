@@ -431,6 +431,16 @@ $($variants)*
         /// is the caller's access alone.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         agent_ref: Option<String>,
+        /// Caller seeds that replace arm retrieval (MEDULLA-FEDERATED-QUERY-R741.1): up to
+        /// 64 node ids, each 1 to 512 bytes. A seed absent or hidden from the caller
+        /// refuses `SEED_NOT_VISIBLE`. Each seed scores 1.0 and keeps the given order.
+        #[serde(default, skip_serializing_if = "Vec::is_empty")]
+        seed_ids: Vec<String>,
+        /// The per-hop restriction of the neighbour walk (MEDULLA-FEDERATED-QUERY-R741.1):
+        /// node labels, edge labels, named graph and language. It only narrows what
+        /// row-level security already allows.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        hop_filter: Option<medulla_ingestion_types::ingestion_wire::HopFilter>,
     },
 
     /// MEDULLA-DECISION-ENGINE-R100.100.4: find the matches of a query's n-grams

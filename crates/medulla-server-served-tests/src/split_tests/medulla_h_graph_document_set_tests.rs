@@ -127,6 +127,8 @@ mod served {
                     capability: None,
                     document_set_ids: document_set_ids.iter().map(|s| s.to_string()).collect(),
                     agent_ref: None,
+                    seed_ids: Vec::new(),
+                    hop_filter: None,
                 },
             )
             .await

@@ -18,17 +18,19 @@
 //! list truncates to `k`. The walk writes nothing.
 
 pub(crate) use medulla_graph_core::graph::ExpandedHit;
-use medulla_graph_core::graph::{expand_hops, GraphCore};
+use medulla_graph_core::graph::{expand_hops, GraphCore, HopScope};
 
 /// Expand a `Discover` result: the fused top-k seeds plus their neighbours.
 ///
 /// `fanout` and `decay` come from the registered knobs `discover.hop_fanout`
-/// and `discover.hop_decay`.
+/// and `discover.hop_decay`. `scope` is the request's hop filter
+/// (MEDULLA-FEDERATED-QUERY-R741.3), handed to the one `expand_hops` call.
 pub(crate) fn expand_seeds(
     core: &GraphCore,
     seeds: Vec<(String, f32)>,
     hops: u32,
     k: usize,
+    scope: &HopScope<'_>,
 ) -> Vec<ExpandedHit> {
     if hops == 0 {
         return seeds
@@ -43,7 +45,7 @@ pub(crate) fn expand_seeds(
     }
     let knobs = medulla_server_api::knob_config::knobs();
     let fanout = usize::try_from(knobs.discover_hop_fanout).unwrap_or(usize::MAX);
-    expand_hops(core, &seeds, hops, fanout, knobs.discover_hop_decay, k)
+    expand_hops(core, &seeds, hops, fanout, knobs.discover_hop_decay, k, scope)
 }
 
 use medulla_ingestion_types::ingestion_wire::{
@@ -129,6 +131,10 @@ pub(crate) fn plan_discover(
                 detail: format!("perspectives {asked} is below {PERSPECTIVES_MIN}"),
             });
         }
+    }
+    // R741.1: caller seeds replace arm retrieval, so no provider is asked and no arm runs.
+    if !request.seed_ids.is_empty() {
+        return Ok(DeepArms::default());
     }
     if request.mode == DiscoverMode::Standard {
         return Ok(DeepArms::default());
@@ -254,6 +260,26 @@ pub(crate) fn plan_discover(
         }
     }
     Ok(arms)
+}
+
+/// Check that every caller seed is a node the caller may read (MEDULLA-FEDERATED-QUERY-R741.2).
+///
+/// `core` is the caller's row-projected core, so a hidden node is absent from it. An absent,
+/// a hidden, an empty and an oversized seed all refuse with the same code and the same
+/// detail, which names no id, so a caller cannot probe which ids exist.
+pub(crate) fn check_seeds(core: &GraphCore, seed_ids: &[String]) -> Result<(), PlanRefusal> {
+    let unreadable = seed_ids.iter().any(|id| {
+        id.is_empty()
+            || id.len() > medulla_ingestion_types::ingestion_wire::DISCOVER_SEED_MAX_BYTES
+            || core.get_node_properties(id).is_none()
+    });
+    if unreadable {
+        return Err(PlanRefusal {
+            code: medulla_ingestion_types::ingestion_wire::SEED_NOT_VISIBLE,
+            detail: "a seed is absent or hidden from the caller".into(),
+        });
+    }
+    Ok(())
 }
 
 /// One retrieval arm's ranking, best first.

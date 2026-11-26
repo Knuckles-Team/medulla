@@ -751,6 +751,8 @@ async fn discovered_for(
             capability: capability.map(str::to_string),
             document_set_ids: Vec::new(),
                 agent_ref: None,
+            seed_ids: Vec::new(),
+            hop_filter: None,
         },
     )
     .await;

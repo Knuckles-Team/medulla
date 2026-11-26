@@ -59,7 +59,7 @@ use analysis_support::apply_decay;
 pub use analysis_support::{
     match_props, vf2_match_views, DEFAULT_VF2_MAX_RESULTS, DEFAULT_VF2_MAX_STEPS,
 };
-pub use core_expand::{edge_weight, edge_weight_in_view, expand_hops, ExpandedHit};
+pub use core_expand::{edge_weight, edge_weight_in_view, expand_hops, ExpandedHit, HopScope};
 use core_helpers::{edge_endpoint_not_found, push_ledger_impl, HexLedger};
 pub use node_history::{
     install_node_history_limit, NodeHistory, NodeHistoryError, DEFAULT_NODE_HISTORY_REVISIONS,

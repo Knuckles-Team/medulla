@@ -8,7 +8,7 @@
 //! projected core, so no mode reaches them. Nothing here writes.
 
 use super::*;
-use medulla_graph_core::graph::{edge_weight, expand_hops};
+use medulla_graph_core::graph::{edge_weight, expand_hops, HopScope};
 use medulla_plan::corpus_retrieval::{
     dispatch, CorpusError, CorpusRequestError, CorpusView, LineageHop, TextNode, TurnRecord,
     WeightedNeighbour, LINEAGE_RELATIONSHIPS,
@@ -93,6 +93,7 @@ impl CorpusView for CoreView<'_> {
             fanout,
             knobs.discover_hop_decay,
             WALK_CAP,
+            &HopScope::unrestricted(),
         );
         hits.into_iter()
             .filter(|hit| hit.id != entity)

@@ -394,6 +394,105 @@ pub const EXPANSION_PROVIDER_UNCONFIGURED: &str = "EXPANSION_PROVIDER_UNCONFIGUR
 /// Wire code of a provider failure; the message carries its error text (R651.4).
 pub const EXPANSION_PROVIDER_FAILED: &str = "EXPANSION_PROVIDER_FAILED";
 
+/// Wire code of a seed that is absent or hidden from the caller; the one code for both
+/// causes, so a caller cannot probe hidden ids (MEDULLA-FEDERATED-QUERY-R741.2).
+pub const SEED_NOT_VISIBLE: &str = "SEED_NOT_VISIBLE";
+/// Wire code of a request with more than [`DISCOVER_SEEDS_MAX`] seeds (R741.2).
+pub const SEED_LIMIT_EXCEEDED: &str = "SEED_LIMIT_EXCEEDED";
+/// Wire code of a hop filter with an oversized list, an empty entry or a language that is
+/// not a BCP 47 tag (R741.2).
+pub const HOP_FILTER_INVALID: &str = "HOP_FILTER_INVALID";
+/// Most caller seeds one `Discover` request names (R741.1).
+pub const DISCOVER_SEEDS_MAX: usize = 64;
+/// Longest seed id or filter entry, in bytes (R741.1).
+pub const DISCOVER_SEED_MAX_BYTES: usize = 512;
+/// Most entries one list of a [`HopFilter`] holds (R741.1).
+pub const HOP_FILTER_LIST_MAX: usize = 32;
+
+/// A per-hop restriction of the neighbour walk (MEDULLA-FEDERATED-QUERY-R741.1). Each axis
+/// only narrows what row-level security already allows; an empty list or an absent value
+/// restricts nothing on that axis.
+#[derive(Serialize, Deserialize, Debug, Clone, Default, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct HopFilter {
+    /// Node labels (the node `type`) a neighbour may carry.
+    #[serde(default)]
+    pub node_labels: Vec<String>,
+    /// Edge labels (the edge `relationship`) a hop may follow.
+    #[serde(default)]
+    pub edge_labels: Vec<String>,
+    /// The named graph a neighbour must belong to.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graph: Option<String>,
+    /// The BCP 47 language tag a literal neighbour must carry; a literal with no tag stays.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub language: Option<String>,
+}
+
+/// Whether `tag` is a well-formed BCP 47 language tag: one to eight alphanumeric characters
+/// per hyphen-separated subtag, the first subtag two to eight letters.
+pub fn is_bcp47_tag(tag: &str) -> bool {
+    let mut subtags = tag.split('-');
+    let Some(primary) = subtags.next() else {
+        return false;
+    };
+    if !(2..=8).contains(&primary.len()) || !primary.bytes().all(|b| b.is_ascii_alphabetic()) {
+        return false;
+    }
+    subtags.all(|subtag| {
+        (1..=8).contains(&subtag.len()) && subtag.bytes().all(|b| b.is_ascii_alphanumeric())
+    })
+}
+
+impl HopFilter {
+    /// Whether the filter restricts no axis.
+    pub fn is_empty(&self) -> bool {
+        self.node_labels.is_empty()
+            && self.edge_labels.is_empty()
+            && self.graph.is_none()
+            && self.language.is_none()
+    }
+
+    /// Check every bound of the filter; the error is the detail of `HOP_FILTER_INVALID`.
+    pub fn validate(&self) -> Result<(), String> {
+        for (axis, list) in [
+            ("node_labels", &self.node_labels),
+            ("edge_labels", &self.edge_labels),
+        ] {
+            if list.len() > HOP_FILTER_LIST_MAX {
+                return Err(format!(
+                    "{axis} holds {} entries; the limit is {HOP_FILTER_LIST_MAX}",
+                    list.len()
+                ));
+            }
+            if list
+                .iter()
+                .any(|entry| entry.is_empty() || entry.len() > DISCOVER_SEED_MAX_BYTES)
+            {
+                return Err(format!(
+                    "{axis} holds an empty entry or one above {DISCOVER_SEED_MAX_BYTES} bytes"
+                ));
+            }
+        }
+        if self
+            .graph
+            .as_ref()
+            .is_some_and(|graph| graph.is_empty() || graph.len() > DISCOVER_SEED_MAX_BYTES)
+        {
+            return Err("graph is empty or above the entry limit".into());
+        }
+        if self
+            .language
+            .as_deref()
+            .is_some_and(|language| !is_bcp47_tag(language))
+        {
+            return Err("language is not a BCP 47 tag".into());
+        }
+        Ok(())
+    }
+}
+
 /// How a `Discover` request plans its arms (R090.1).
 #[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, Default)]
 #[serde(rename_all = "snake_case")]
@@ -513,6 +612,10 @@ pub struct DiscoverPlanRequest {
     pub mode: DiscoverMode,
     pub as_of: Option<i64>,
     pub hops: u32,
+    /// Caller seeds that replace arm retrieval (MEDULLA-FEDERATED-QUERY-R741.1).
+    pub seed_ids: Vec<String>,
+    /// The per-hop restriction of the neighbour walk (R741.1).
+    pub hop_filter: Option<HopFilter>,
 }
 
 /// A planner field outside its bound; the wire code names it.
@@ -522,6 +625,11 @@ pub enum DiscoverRefusal {
     InvalidArgument { detail: String },
     /// `QUERY_TEXT_TOO_LONG`: `query_text` above [`DISCOVER_QUERY_TEXT_MAX_BYTES`].
     QueryTextTooLong { bytes: usize },
+    /// `SEED_LIMIT_EXCEEDED`: more than [`DISCOVER_SEEDS_MAX`] seeds (R741.2).
+    SeedLimitExceeded { count: usize },
+    /// `HOP_FILTER_INVALID`: an oversized list, an empty entry or a language that is not a
+    /// BCP 47 tag (R741.2).
+    HopFilterInvalid { detail: String },
 }
 
 impl DiscoverRefusal {
@@ -530,6 +638,8 @@ impl DiscoverRefusal {
         match self {
             Self::InvalidArgument { .. } => "INVALID_ARGUMENT",
             Self::QueryTextTooLong { .. } => QUERY_TEXT_TOO_LONG,
+            Self::SeedLimitExceeded { .. } => SEED_LIMIT_EXCEEDED,
+            Self::HopFilterInvalid { .. } => HOP_FILTER_INVALID,
         }
     }
 }
@@ -542,6 +652,10 @@ impl std::fmt::Display for DiscoverRefusal {
                 f,
                 "query_text is {bytes} bytes; the limit is {DISCOVER_QUERY_TEXT_MAX_BYTES}"
             ),
+            Self::SeedLimitExceeded { count } => {
+                write!(f, "{count} seeds; the limit is {DISCOVER_SEEDS_MAX}")
+            }
+            Self::HopFilterInvalid { detail } => write!(f, "{detail}"),
         }
     }
 }
@@ -563,6 +677,16 @@ impl DiscoverPlanRequest {
             if text.len() > DISCOVER_QUERY_TEXT_MAX_BYTES {
                 return Err(DiscoverRefusal::QueryTextTooLong { bytes: text.len() });
             }
+        }
+        if self.seed_ids.len() > DISCOVER_SEEDS_MAX {
+            return Err(DiscoverRefusal::SeedLimitExceeded {
+                count: self.seed_ids.len(),
+            });
+        }
+        if let Some(filter) = &self.hop_filter {
+            filter
+                .validate()
+                .map_err(|detail| DiscoverRefusal::HopFilterInvalid { detail })?;
         }
         Ok(())
     }

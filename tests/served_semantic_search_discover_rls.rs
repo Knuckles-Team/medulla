@@ -524,6 +524,10 @@ async fn served_discover_never_returns_another_agents_private_node() {
                 as_of: None,
                 perspectives: None,
                 capability: None,
+                document_set_ids: Vec::new(),
+                agent_ref: None,
+                seed_ids: Vec::new(),
+                hop_filter: None,
             },
         ),
     ))
@@ -553,6 +557,10 @@ async fn served_discover_never_returns_another_agents_private_node() {
                 as_of: None,
                 perspectives: None,
                 capability: None,
+                document_set_ids: Vec::new(),
+                agent_ref: None,
+                seed_ids: Vec::new(),
+                hop_filter: None,
             },
         ),
     ))

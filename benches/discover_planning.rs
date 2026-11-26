@@ -133,6 +133,10 @@ fn standard(query: Vec<f32>) -> Method {
         as_of: None,
         perspectives: None,
         capability: None,
+        document_set_ids: Vec::new(),
+        agent_ref: None,
+        seed_ids: Vec::new(),
+        hop_filter: None,
     }
 }
 
@@ -148,6 +152,10 @@ fn deep(query: Vec<f32>) -> Method {
         as_of: Some(1_000_000),
         perspectives: Some(3),
         capability: None,
+        document_set_ids: Vec::new(),
+        agent_ref: None,
+        seed_ids: Vec::new(),
+        hop_filter: None,
     }
 }
 

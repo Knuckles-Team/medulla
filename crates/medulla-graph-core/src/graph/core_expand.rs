@@ -11,6 +11,8 @@
 
 use std::collections::HashMap;
 
+use medulla_ingestion_types::ingestion_wire::HopFilter;
+
 use super::GraphCore;
 
 /// One hit after expansion: its score and the seed-to-hit node ids.
@@ -62,6 +64,97 @@ pub fn edge_weight_in_view(view: &super::GraphView, a: &str, b: &str) -> f64 {
     best.unwrap_or(1.0)
 }
 
+/// The restriction of one walk (MEDULLA-FEDERATED-QUERY-R741.1): a [`HopFilter`] and the
+/// name of the graph the walked core serves. An empty filter restricts nothing.
+#[derive(Debug, Clone, Copy)]
+pub struct HopScope<'a> {
+    pub filter: &'a HopFilter,
+    /// The graph the core belongs to; a neighbour with no `graph` property of its own is a
+    /// member of it.
+    pub graph_name: &'a str,
+}
+
+fn property_str<'o>(
+    object: &'o serde_json::Map<String, serde_json::Value>,
+    keys: &[&str],
+) -> Option<&'o str> {
+    keys.iter()
+        .filter_map(|key| object.get(*key).and_then(serde_json::Value::as_str))
+        .find(|value| !value.is_empty())
+}
+
+static NO_FILTER: HopFilter = HopFilter {
+    node_labels: Vec::new(),
+    edge_labels: Vec::new(),
+    graph: None,
+    language: None,
+};
+
+impl HopScope<'static> {
+    /// A walk with no restriction on any axis, for a caller with no filter to apply.
+    pub fn unrestricted() -> Self {
+        Self {
+            filter: &NO_FILTER,
+            graph_name: "",
+        }
+    }
+}
+
+impl HopScope<'_> {
+    /// Whether the walk may step from `from` to `neighbour`: the neighbour matches every
+    /// axis the filter names. A literal neighbour carrying another language tag is dropped;
+    /// one with no tag stays.
+    fn admits(&self, core: &GraphCore, from: &str, neighbour: &str) -> bool {
+        let filter = self.filter;
+        if filter.is_empty() {
+            return true;
+        }
+        if !filter.edge_labels.is_empty() {
+            let labelled = [(from, neighbour), (neighbour, from)]
+                .iter()
+                .flat_map(|(src, tgt)| core.get_edge_properties(src, tgt))
+                .any(|blob| {
+                    let object = medulla_types::msgpack::decode_property_object(&blob)
+                        .unwrap_or_default();
+                    property_str(&object, &["relationship", "type", "edge_type"])
+                        .is_some_and(|label| filter.edge_labels.iter().any(|l| l == label))
+                });
+            if !labelled {
+                return false;
+            }
+        }
+        let needs_node = !filter.node_labels.is_empty()
+            || filter.graph.is_some()
+            || filter.language.is_some();
+        if !needs_node {
+            return true;
+        }
+        let object = core
+            .get_node_properties(neighbour)
+            .map(|blob| medulla_types::msgpack::decode_property_object(&blob).unwrap_or_default())
+            .unwrap_or_default();
+        if !filter.node_labels.is_empty()
+            && !property_str(&object, &["type", "node_type"])
+                .is_some_and(|label| filter.node_labels.iter().any(|l| l == label))
+        {
+            return false;
+        }
+        if let Some(graph) = &filter.graph {
+            if property_str(&object, &["graph"]).unwrap_or(self.graph_name) != graph {
+                return false;
+            }
+        }
+        if let Some(language) = &filter.language {
+            if property_str(&object, &["lang", "language"])
+                .is_some_and(|tag| !tag.eq_ignore_ascii_case(language))
+            {
+                return false;
+            }
+        }
+        true
+    }
+}
+
 fn better(candidate: &ExpandedHit, held: &ExpandedHit) -> bool {
     candidate
         .score
@@ -75,7 +168,9 @@ fn better(candidate: &ExpandedHit, held: &ExpandedHit) -> bool {
 /// Breadth-first neighbour expansion of `seeds` (id, fused score) by `hops`.
 ///
 /// With `hops == 0` the seeds come back ranked and truncated to `k`. The
-/// returned list is ordered by score descending then id.
+/// returned list is ordered by score descending then id. `scope` drops every neighbour
+/// the hop filter does not admit before the fan-out cut, so a filtered walk still fills
+/// its fan-out from matching neighbours (MEDULLA-FEDERATED-QUERY-R741.1).
 pub fn expand_hops(
     core: &GraphCore,
     seeds: &[(String, f32)],
@@ -83,6 +178,7 @@ pub fn expand_hops(
     fanout: usize,
     decay: f64,
     k: usize,
+    scope: &HopScope<'_>,
 ) -> Vec<ExpandedHit> {
     let mut best: HashMap<String, ExpandedHit> = HashMap::new();
     let mut frontier: Vec<String> = Vec::new();
@@ -118,6 +214,7 @@ pub fn expand_hops(
                 .unwrap_or(parent.score);
             let mut weighted: Vec<(f64, String)> = neighbours
                 .into_iter()
+                .filter(|n| scope.admits(core, &from, n))
                 .map(|n| (edge_weight(core, &from, &n), n))
                 .collect();
             weighted.sort_by(|a, b| {
@@ -204,21 +301,21 @@ mod tests {
         let seeds = vec![("s".to_string(), 1.0_f32)];
 
         // Fan-out 2 keeps the two heaviest edges; the tie breaks on node id.
-        let one = expand_hops(&core, &seeds, 1, 2, 0.5, 10);
+        let one = expand_hops(&core, &seeds, 1, 2, 0.5, 10, &HopScope::unrestricted());
         let ids: Vec<&str> = one.iter().map(|h| h.id.as_str()).collect();
         assert_eq!(ids, vec!["s", "a", "b"]);
         assert!((one[1].score - 0.5).abs() < 1e-6, "seed x decay^1");
         assert_eq!(one[1].path, vec!["s", "a"]);
 
         // Two hops reach z with seed x decay^2 and the full path.
-        let two = expand_hops(&core, &seeds, 2, 2, 0.5, 10);
+        let two = expand_hops(&core, &seeds, 2, 2, 0.5, 10, &HopScope::unrestricted());
         let z = two.iter().find(|h| h.id == "z").expect("z reached");
         assert!((z.score - 0.25).abs() < 1e-6);
         assert_eq!(z.path, vec!["s", "a", "z"]);
 
         // hops == 0 returns the seeds only; k truncates.
-        assert_eq!(expand_hops(&core, &seeds, 0, 2, 0.5, 10).len(), 1);
-        assert_eq!(expand_hops(&core, &seeds, 2, 32, 0.5, 2).len(), 2);
+        assert_eq!(expand_hops(&core, &seeds, 0, 2, 0.5, 10, &HopScope::unrestricted()).len(), 1);
+        assert_eq!(expand_hops(&core, &seeds, 2, 32, 0.5, 2, &HopScope::unrestricted()).len(), 2);
 
         // A node reachable twice appears once with the better score.
         let dup = expand_hops(
@@ -228,6 +325,7 @@ mod tests {
             32,
             0.5,
             20,
+            &HopScope::unrestricted(),
         );
         assert_eq!(dup.iter().filter(|h| h.id == "a").count(), 1);
         assert!((dup.iter().find(|h| h.id == "a").unwrap().score - 0.9).abs() < 1e-6);

@@ -3340,6 +3340,8 @@ async fn test_discover_blends_keyword_and_semantic() {
                 capability: None,
                 document_set_ids: Vec::new(),
                 agent_ref: None,
+                seed_ids: Vec::new(),
+                hop_filter: None,
             },
         ),
     )
@@ -3380,6 +3382,8 @@ async fn test_discover_blends_keyword_and_semantic() {
                 capability: None,
                 document_set_ids: Vec::new(),
                 agent_ref: None,
+                seed_ids: Vec::new(),
+                hop_filter: None,
             },
         ),
     )
@@ -3453,6 +3457,8 @@ async fn test_discover_verdict_ratio_counts_only_the_callers_graph() {
                         capability: None,
                 document_set_ids: Vec::new(),
                 agent_ref: None,
+                        seed_ids: Vec::new(),
+                        hop_filter: None,
                     },
                 ),
             )
