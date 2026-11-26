@@ -10,11 +10,12 @@
 use medulla_ingestion_types::ingest_rules::{draft_from_profile, IngestRefusal};
 use medulla_ingestion_types::ingestion_wire::InstanceProfile;
 use medulla_ingestion_types::ontology_proposal::{
-    score_proposal, ProposalProvenance, ProposalState, ProposalThresholds,
+    score_proposal, ProposalProvenance, ProposalThresholds,
 };
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::{ProposalSubmission, SourceJson, MAX_OBSERVED_TERMS};
 use medulla_types::contract::ServerErrorCode;
+use medulla_types::ontology_proposal_machine::ProposalState;
 use serde::Serialize;
 
 /// Most submissions one batch carries.

@@ -9,8 +9,9 @@ use medulla_ingestion_types::ingest_rules::{
 };
 use medulla_ingestion_types::ingestion_wire::InstanceProfile;
 use medulla_ingestion_types::ontology_proposal::{
-    ProposalCheck, ProposalProvenance, ProposalState, ProposalThresholds,
+    ProposalCheck, ProposalProvenance, ProposalThresholds,
 };
+use medulla_types::ontology_proposal_machine::ProposalState;
 
 fn fact(subject: &str, predicate: &str, object: &str) -> ExtractedFact {
     ExtractedFact {

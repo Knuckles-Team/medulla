@@ -9,7 +9,7 @@ use std::collections::BTreeSet;
 
 use serde::{Deserialize, Serialize};
 
-pub use medulla_types::ontology_proposal_machine::ProposalState;
+use medulla_types::ontology_proposal_machine::ProposalState;
 
 /// One induced class and the property names it carries.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]

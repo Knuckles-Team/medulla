@@ -10,10 +10,11 @@ use crate::extracted_fact::{CandidateClaim, ExtractedFact, GroundingResult};
 use crate::knowledge_atom::KnowledgeAtom;
 use crate::ingestion_wire::{InstanceProfile, ProfileDatatypeProperty, ProfileObjectProperty};
 use crate::ontology_proposal::{
-    score_proposal, OntologyProposal, ProposalCheck, ProposalProvenance, ProposalState,
-    ProposalThresholds, ProposedClass, ProposedProperty,
+    score_proposal, OntologyProposal, ProposalCheck, ProposalProvenance, ProposalThresholds,
+    ProposedClass, ProposedProperty,
 };
 use crate::source_governance::{Classification, RecordGovernance, SourceContainer, SourceGroup};
+use medulla_types::ontology_proposal_machine::ProposalState;
 
 /// Deepest container nesting a source tree may carry.
 pub const MAX_CONTAINER_DEPTH: usize = 32;

@@ -3,8 +3,9 @@
 #![cfg(all(feature = "redb", feature = "blob"))]
 
 use medulla_h_ingest::source_ingestion::proposals::{admit_proposals, decode_proposals};
-use medulla_ingestion_types::ontology_proposal::{ProposalState, ProposalThresholds};
+use medulla_ingestion_types::ontology_proposal::ProposalThresholds;
 use medulla_source_types::source_ingestion::SourceJson;
+use medulla_types::ontology_proposal_machine::ProposalState;
 
 fn item(value: serde_json::Value) -> SourceJson {
     SourceJson::new(value).unwrap()

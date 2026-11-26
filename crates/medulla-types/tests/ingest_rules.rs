@@ -10,10 +10,10 @@ use medulla_ingestion_types::ingest_rules::{
 };
 use medulla_ingestion_types::knowledge_atom::{AtomKind, KnowledgeAtom};
 use medulla_ingestion_types::ontology_proposal::{
-    OntologyProposal, ProposalCheck, ProposalProvenance, ProposalState, ProposalThresholds,
-    ProposedClass,
+    OntologyProposal, ProposalCheck, ProposalProvenance, ProposalThresholds, ProposedClass,
 };
 use medulla_ingestion_types::source_governance::{RecordGovernance, SourceContainer, SourceGroup};
+use medulla_types::ontology_proposal_machine::ProposalState;
 use serde_json::json;
 
 fn set(items: &[&str]) -> BTreeSet<String> {
