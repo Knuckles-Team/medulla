@@ -1,0 +1,18 @@
+{
+  "source": "keycloak-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "document": "document-1",
+      "joinKey": "nextcloud.q2-key-1",
+      "id": "keycloak-agent-nextcloud.q2-1",
+      "label": "keycloak-agent 1"
+    },
+    {
+      "document": "document-2",
+      "joinKey": "nextcloud.q2-key-2",
+      "id": "keycloak-agent-nextcloud.q2-2",
+      "label": "keycloak-agent 2"
+    }
+  ]
+}

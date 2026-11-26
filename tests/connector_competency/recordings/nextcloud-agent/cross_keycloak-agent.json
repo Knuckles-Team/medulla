@@ -1,0 +1,18 @@
+{
+  "source": "nextcloud-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "file": "file-1",
+      "joinKey": "nextcloud.q2-key-1",
+      "id": "nextcloud-agent-nextcloud.q2-1",
+      "label": "nextcloud-agent 1"
+    },
+    {
+      "file": "file-2",
+      "joinKey": "nextcloud.q2-key-2",
+      "id": "nextcloud-agent-nextcloud.q2-2",
+      "label": "nextcloud-agent 2"
+    }
+  ]
+}

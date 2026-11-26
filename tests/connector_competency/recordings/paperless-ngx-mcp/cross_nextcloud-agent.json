@@ -1,0 +1,18 @@
+{
+  "source": "paperless-ngx-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "owner": "owner-1",
+      "joinKey": "nextcloud.q2-key-1",
+      "id": "paperless-ngx-mcp-nextcloud.q2-1",
+      "label": "paperless-ngx-mcp 1"
+    },
+    {
+      "owner": "owner-2",
+      "joinKey": "nextcloud.q2-key-2",
+      "id": "paperless-ngx-mcp-nextcloud.q2-2",
+      "label": "paperless-ngx-mcp 2"
+    }
+  ]
+}

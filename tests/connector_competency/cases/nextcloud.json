@@ -4,9 +4,9 @@
   "vocabulary_module": "personal-v1.ttl",
   "terms": [
     "FileShare",
-    "sharesFile",
     "isPublicLink",
-    "shareExpiresAt"
+    "shareExpiresAt",
+    "sharesFile"
   ],
   "questions": [
     {
@@ -29,6 +29,35 @@
       "min_rows": 1,
       "recordings": [
         "nextcloud-agent/single.json"
+      ]
+    },
+    {
+      "id": "nextcloud.q2",
+      "kind": "cross",
+      "question": "Which publicly shared Nextcloud files also exist as Paperless-ngx documents tagged confidential?",
+      "uql": "LET s0 = FOREIGN SCAN 'nextcloud-agent'; LET s1 = FOREIGN SCAN 'keycloak-agent'; LET s2 = FOREIGN SCAN 'paperless-ngx-mcp'; JOIN s0, s1, s2",
+      "sources": [
+        "nextcloud-agent",
+        "keycloak-agent",
+        "paperless-ngx-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "nextcloud-agent": "mcp_tool",
+        "keycloak-agent": "mcp_tool",
+        "paperless-ngx-mcp": "mcp_tool"
+      },
+      "columns": [
+        "file",
+        "document",
+        "owner"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "nextcloud-agent/cross_keycloak-agent.json",
+        "keycloak-agent/cross_nextcloud-agent.json",
+        "nextcloud-agent/cross_paperless-ngx-mcp.json",
+        "paperless-ngx-mcp/cross_nextcloud-agent.json"
       ]
     }
   ]
