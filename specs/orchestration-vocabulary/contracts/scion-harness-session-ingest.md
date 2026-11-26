@@ -13,7 +13,7 @@ The connector sync sends `IndexHarnessSessionBatch` with a manifest (`manifest_i
 
 ## Run trace digest
 
-`trace_digest` is the lowercase hex SHA-256 (no prefix) of the canonical JSON of the stored `RunTrace` node's property map with the keys `node_type`, `tenant` and `run_revision` removed: object keys sorted at every depth, no whitespace, JSON scalars as `serde_json` writes them. Medulla computes it with `run_trace_digest` in `crates/medulla-h-ingest/src/harness_session.rs`, and a connector computes the same function over the same node. The record's `run_trace_revision` is the node's stored `run_revision` (a trace that stores none counts as revision 1). A record whose revision or digest differs from the stored trace is refused `SESSION_CONTENT_CHANGED`.
+`trace_digest` is the lowercase hex SHA-256 (no prefix) of the canonical JSON of the canonical submitted `RunTrace` record, the property map the connector wrote when it created the node (never properties read back from the engine), with the keys `node_type`, `tenant` and `run_revision` removed: object keys sorted at every depth, no whitespace, JSON scalars as `serde_json` writes them. Medulla computes it with `run_trace_digest` in `crates/medulla-h-ingest/src/harness_session.rs`, and a connector computes the same function over the record it submitted. The record's `run_trace_revision` is the node's stored `run_revision` (a trace that stores none counts as revision 1). A record whose revision or digest differs from the stored trace is refused `SESSION_CONTENT_CHANGED`.
 
 ## Authoritative types
 

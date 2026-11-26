@@ -37,8 +37,17 @@ def _trace_digest(properties: dict[str, Any]) -> str:
     return hashlib.sha256(_canonical(kept).encode()).hexdigest()
 
 
+# The RunTrace record exactly as the connector submits it. The digest is defined over
+# this submitted record, never over properties read back from the engine.
+_SUBMITTED_TRACE: dict[str, Any] = {
+    "node_type": "RunTrace",
+    "status": "completed",
+    "goal": "ship",
+}
+
+
 def _batch(client: Any, trace_id: str, **overrides: Any) -> dict[str, Any]:
-    properties = client.nodes.properties(trace_id)
+    del client  # the digest comes from the submitted record, not from a read-back
     batch: dict[str, Any] = {
         "tenant_id": TEST_TENANT,
         "manifest_id": "manifest-1",
@@ -55,7 +64,7 @@ def _batch(client: Any, trace_id: str, **overrides: Any) -> dict[str, Any]:
                 "source_session_id": "session-1",
                 "run_trace_id": trace_id,
                 "run_trace_revision": 1,
-                "trace_digest": _trace_digest(properties),
+                "trace_digest": _trace_digest(_SUBMITTED_TRACE),
                 "source_sequence": 5,
             }
         ],
@@ -72,9 +81,7 @@ def _batch(client: Any, trace_id: str, **overrides: Any) -> dict[str, Any]:
 
 
 def _seed_trace(client: Any, trace_id: str) -> None:
-    client.nodes.add(
-        trace_id, {"node_type": "RunTrace", "status": "completed", "goal": "ship"}
-    )
+    client.nodes.add(trace_id, dict(_SUBMITTED_TRACE))
     client.nodes.add(f"{trace_id}:step-1", {"node_type": "RunTraceStep", "index": 0})
     client.nodes.add(f"{trace_id}:step-2", {"node_type": "RunTraceStep", "index": 1})
     client.edges.add(trace_id, f"{trace_id}:step-1", {"relationship": "hasStep"})
