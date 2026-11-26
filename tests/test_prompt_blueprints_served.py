@@ -5,6 +5,7 @@ record at one pinned revision plus its body bytes, which travel verified and
 never parsed. Each test imports a prompt through the served connector-pack
 import and reads the blueprint back over the wire.
 """
+# ruff: noqa: E501, I001
 
 from __future__ import annotations
 
@@ -420,7 +421,9 @@ async def _projected_revisions(
     deadline = asyncio.get_running_loop().time() + timeout_s
     found: dict[int, str] = {}
     while asyncio.get_running_loop().time() < deadline:
-        secret = {} if auth_secret is None else {"auth_secret": auth_secret}
+        secret: dict[str, Any] = (
+            {} if auth_secret is None else {"auth_secret": auth_secret}
+        )
         reader = await MedullaClient.connect(
             socket_path=socket_path or os.environ["GRAPH_SERVICE_SOCKET"],
             verified_context=request_context(),
@@ -430,7 +433,7 @@ async def _projected_revisions(
         try:
             rows = await reader.rdf.sparql(
                 "SELECT ?revision ?body WHERE { ?node a <" + CORE + "PromptRevision> ; "
-                "<" + CORE + "componentId> \"" + component_id + "\" ; "
+                "<" + CORE + 'componentId> "' + component_id + '" ; '
                 "<" + CORE + "entryRevision> ?revision ; "
                 "<" + CORE + "bodySha256> ?body }"
             )
@@ -438,7 +441,7 @@ async def _projected_revisions(
             rows = []
         finally:
             await reader.close()
-        found = {int(row["revision"]): str(row["body"]) for row in rows}
+        found = {int(str(row["revision"])): str(row["body"]) for row in rows}
         if len(found) >= want:
             return found
         await asyncio.sleep(0.5)
@@ -683,7 +686,9 @@ _SERVER_OWNED = {
 }
 
 
-def _edited_envelope(exported: Any, body: bytes, **entry_changes: Any) -> dict[str, Any]:
+def _edited_envelope(
+    exported: Any, body: bytes, **entry_changes: Any
+) -> dict[str, Any]:
     """The export envelope with `body` and the pins that follow it applied."""
     pin = hashlib.sha256(body).hexdigest()
     envelope = exported.model_dump(mode="json")
@@ -700,14 +705,17 @@ async def _import_blueprint(
     envelope: dict[str, Any],
     expected_revision: int,
     tenant: str = TEST_TENANT,
+    idempotency_key: str | None = None,
 ) -> Any:
     context = _publish_context(expected_revision)
     context["tenant_id"] = tenant
     envelope["entry"]["tenant_id"] = tenant
     return await send_agent_component_import_blueprint(
         client,
-        BlueprintImportRequest.model_validate({"context": context, "envelope": envelope}),
-        idempotency_key=f"blueprint-import-{uuid.uuid4().hex}",
+        BlueprintImportRequest.model_validate(
+            {"context": context, "envelope": envelope}
+        ),
+        idempotency_key=idempotency_key or f"blueprint-import-{uuid.uuid4().hex}",
     )
 
 
@@ -760,13 +768,9 @@ async def test_modified_blueprint_import() -> None:
         }
         assert changed == {"content_digest", "facts"}, changed
         assert {
-            key: value
-            for key, value in before["facts"].items()
-            if key != "body_sha256"
+            key: value for key, value in before["facts"].items() if key != "body_sha256"
         } == {
-            key: value
-            for key, value in after["facts"].items()
-            if key != "body_sha256"
+            key: value for key, value in after["facts"].items() if key != "body_sha256"
         }
 
         # Every refusal leaves the head at 2.
@@ -774,11 +778,21 @@ async def test_modified_blueprint_import() -> None:
             await _import_blueprint(
                 client, _edited_envelope(first, edited), expected_revision=1
             )
-        for change in ({"kind": "tool"}, {"provenance": {"origin": "source_package",
-                "package_id": "other", "package_version": "1"}}):
+        for change in (
+            {"kind": "tool"},
+            {
+                "provenance": {
+                    "origin": "source_package",
+                    "package_id": "other",
+                    "package_version": "1",
+                }
+            },
+        ):
             with pytest.raises(EngineResponseError, match="BLUEPRINT_IDENTITY_CHANGED"):
                 await _import_blueprint(
-                    client, _edited_envelope(first, edited, **change), expected_revision=1
+                    client,
+                    _edited_envelope(first, edited, **change),
+                    expected_revision=1,
                 )
         disagreeing = _edited_envelope(first, edited)
         disagreeing["content_digest"] = "sha256:" + "0" * 64
@@ -807,7 +821,181 @@ async def test_modified_blueprint_import() -> None:
         await client.close()
 
 
-async def _refused_for_tenant_b(client: MedullaClient, component_id: str, secrets: list[str]) -> None:
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.4")
+@pytest.mark.asyncio
+async def test_blueprint_retry_identity() -> None:
+    client = await connect()
+    component_id = f"prompt:native-{uuid.uuid4().hex[:12]}"
+    original = json.dumps(
+        {"task": "summarise the ticket", "schema_revision": 1},
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    edited = original.replace("summarise", "classify").encode()
+    other = original.replace("summarise", "route").encode()
+    key = f"blueprint-retry-{uuid.uuid4().hex}"
+    try:
+        await _publish_prompt(
+            client,
+            component_id,
+            original,
+            hashlib.sha256(original.encode()).hexdigest(),
+            0,
+        )
+        first = await _export(client, component_id, 1)
+        committed = await _import_blueprint(
+            client,
+            _edited_envelope(first, edited),
+            expected_revision=1,
+            idempotency_key=key,
+        )
+        assert committed.component.entry_revision == 2
+        content_before = await _content(client, component_id, 2)
+
+        # The same request under the same key, with a fresh attempt nonce, replays
+        # the recorded receipt and creates no revision.
+        replayed = await _import_blueprint(
+            client,
+            _edited_envelope(first, edited),
+            expected_revision=1,
+            idempotency_key=key,
+        )
+        assert replayed.component.entry_revision == committed.component.entry_revision
+        assert (
+            replayed.component.definition_digest
+            == committed.component.definition_digest
+        )
+        history = await _history(client, component_id)
+        assert sorted(entry.entry_revision for entry in history) == [1, 2]
+        assert await _content(client, component_id, 2) == content_before
+
+        # The same key with different content is an idempotency conflict.
+        with pytest.raises(EngineResponseError, match="IDEMPOTENCY_CONFLICT"):
+            await _import_blueprint(
+                client,
+                _edited_envelope(first, other),
+                expected_revision=1,
+                idempotency_key=key,
+            )
+        assert await _head(client, component_id) == 2
+        assert await _content(client, component_id, 2) == content_before
+    finally:
+        await client.close()
+
+
+async def _history(client: MedullaClient, component_id: str) -> list[Any]:
+    return TypeAdapter(list[AgentComponentEntry]).validate_python(
+        await client._send(
+            "AgentComponent",
+            {
+                "op": {
+                    "op": "history",
+                    "tenant_id": TEST_TENANT,
+                    "component_id": component_id,
+                }
+            },
+            None,
+        )
+    )
+
+
+async def _content(client: MedullaClient, component_id: str, revision: int) -> bytes:
+    content = await send_agent_component_content(
+        client,
+        AgentComponentContentRequest(
+            tenant_id=TEST_TENANT, component_id=component_id, entry_revision=revision
+        ),
+    )
+    return bytes(content.body)
+
+
+_NATIVE_LOSSLESS = (
+    Path(__file__).parent / "fixtures" / "blueprint" / "native_lossless.json"
+)
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.5")
+@pytest.mark.no_engine
+def test_blueprint_roundtrip_restart(tmp_path: Path) -> None:
+    component_id = f"prompt:roundtrip-{uuid.uuid4().hex[:12]}"
+    fixture = _NATIVE_LOSSLESS.read_bytes()
+    pin = hashlib.sha256(fixture).hexdigest()
+    assert fixture.count(b'"summarise"') == 1
+    edited = fixture.replace(b'"summarise"', b'"summarise-edited"')
+    context_b = tenant_request_context("tenant-restart-b")
+
+    def comparable(exported: Any) -> dict[str, Any]:
+        envelope = exported.model_dump(mode="json")
+        for key in _SERVER_OWNED:
+            envelope["entry"].pop(key, None)
+        for key in ("content_digest", "body"):
+            envelope.pop(key)
+        envelope["entry"].pop("content_digest")
+        envelope["entry"]["facts"].pop("body_sha256")
+        return envelope
+
+    async def run_one(engine: Any) -> None:
+        client = await connect_engine(engine=engine)
+        try:
+            await _publish_prompt(client, component_id, fixture.decode(), pin, 0)
+            first = await _export(client, component_id, 1)
+            assert bytes(first.body) == fixture
+            committed = await _import_blueprint(
+                client, _edited_envelope(first, edited), expected_revision=1
+            )
+            assert committed.component.entry_revision == 2
+        finally:
+            await client.close()
+
+    async def run_two(engine: Any) -> None:
+        client = await connect_engine(engine=engine)
+        other = await connect_engine(engine=engine, context=context_b)
+        try:
+            second_bytes = await _content(client, component_id, 2)
+            first_bytes = await _content(client, component_id, 1)
+            assert second_bytes == edited
+            assert first_bytes == fixture
+            span = len(b"-edited")
+            prefix = 0
+            while fixture[prefix] == edited[prefix]:
+                prefix += 1
+            suffix = 0
+            while fixture[-1 - suffix] == edited[-1 - suffix]:
+                suffix += 1
+            assert (
+                prefix + suffix == len(fixture) and len(edited) - len(fixture) == span
+            )
+            first = await _export(client, component_id, 1)
+            second = await _export(client, component_id, 2)
+            assert comparable(first) == comparable(second)
+
+            # A stale import and a cross-tenant import refuse and change nothing.
+            with pytest.raises(
+                EngineResponseError, match="STALE_AGENT_LIBRARY_REVISION"
+            ):
+                await _import_blueprint(
+                    client, _edited_envelope(first, edited), expected_revision=1
+                )
+            with pytest.raises(EngineResponseError, match="ACCESS_DENIED"):
+                await _import_blueprint(
+                    other, _edited_envelope(first, edited), expected_revision=1
+                )
+            history = await _history(client, component_id)
+            assert sorted(entry.entry_revision for entry in history) == [1, 2]
+            assert await _head(client, component_id) == 2
+        finally:
+            await other.close()
+            await client.close()
+
+    with restartable_engine(tmp_path, "run1", bootstrap=True) as engine:
+        asyncio.run(run_one(engine))
+    with restartable_engine(tmp_path, "run2", bootstrap=False) as engine:
+        asyncio.run(run_two(engine))
+
+
+async def _refused_for_tenant_b(
+    client: MedullaClient, component_id: str, secrets: list[str]
+) -> None:
     """Tenant B reads nothing of tenant A: ``ACCESS_DENIED`` naming A, and an unknown
     revision naming B; neither error text carries a blueprint byte or the summary."""
     with pytest.raises(EngineResponseError, match="ACCESS_DENIED") as denied:
@@ -837,8 +1025,12 @@ async def _refused_for_tenant_b(client: MedullaClient, component_id: str, secret
 @pytest.mark.no_engine
 def test_prompt_restart_readback(tmp_path: Path) -> None:
     component_id = f"prompt:restart-{uuid.uuid4().hex[:12]}"
-    first = json.dumps({"task": "restart one", "schema_revision": 1}, separators=(",", ":"))
-    second = json.dumps({"task": "restart two", "schema_revision": 1}, separators=(",", ":"))
+    first = json.dumps(
+        {"task": "restart one", "schema_revision": 1}, separators=(",", ":")
+    )
+    second = json.dumps(
+        {"task": "restart two", "schema_revision": 1}, separators=(",", ":")
+    )
     pins = {
         1: hashlib.sha256(first.encode()).hexdigest(),
         2: hashlib.sha256(second.encode()).hexdigest(),
@@ -862,7 +1054,11 @@ def test_prompt_restart_readback(tmp_path: Path) -> None:
             await _publish_prompt(client, component_id, first, pins[1], 0)
             await _publish_prompt(client, component_id, second, pins[2], 1)
             projected = await _projected_revisions(
-                graph, component_id, 2, socket_path=engine.socket, auth_secret=engine.secret
+                graph,
+                component_id,
+                2,
+                socket_path=engine.socket,
+                auth_secret=engine.secret,
             )
             assert projected == pins
             await stale_refused(client)
@@ -902,7 +1098,11 @@ def test_prompt_restart_readback(tmp_path: Path) -> None:
                 assert content.body == body.encode()
                 assert content.content_digest == "sha256:" + pins[revision]
             projected = await _projected_revisions(
-                graph, component_id, 2, socket_path=engine.socket, auth_secret=engine.secret
+                graph,
+                component_id,
+                2,
+                socket_path=engine.socket,
+                auth_secret=engine.secret,
             )
             assert projected == pins
             await stale_refused(client)

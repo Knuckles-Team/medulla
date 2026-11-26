@@ -1,0 +1,1 @@
+{"extensions":{"big":9007199254740993,"float":0.1000000000000000055511151231257827,"list":[{"k":"v"},[1,2]],"nothing":null},"instructions":["collect","summarise"],"role":"analyste décisionnel 🧭","schema_revision":1,"task":"summarise the incoming report","variables":[]}
