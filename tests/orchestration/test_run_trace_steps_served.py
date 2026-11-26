@@ -69,3 +69,38 @@ def test_stored_steps_read_in_order_with_actor(clean_graph):
     assert len(actors) == 1
     (actor,) = actors
     assert actor and actor != "mallory"
+
+
+def _digests(step: dict) -> tuple[str, str, str]:
+    """The three digests that identify one step's behavior."""
+    return (
+        step["model_request_digest"],
+        step["tool_args_digest"],
+        step["result_digest"],
+    )
+
+
+def first_divergence(stored: list[dict], replayed: list[dict]) -> int | None:
+    """The index of the first step whose digests differ, or ``None`` when they agree."""
+    for index, (left, right) in enumerate(zip(stored, replayed, strict=False)):
+        if _digests(left) != _digests(right):
+            return index
+    return None if len(stored) == len(replayed) else min(len(stored), len(replayed))
+
+
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R013.6")
+def test_first_divergence_is_step_two(clean_graph):
+    steps = [_step(0), _step(1, "d" * 64), _step(2, "e" * 64)]
+    clean_graph.nodes.add("trace-steps-divergence", _trace(steps))
+    stored = clean_graph.nodes.properties("trace-steps-divergence")["steps"]
+    assert [step["step_index"] for step in stored] == [0, 1, 2]
+
+    # A replayed copy that agrees on steps zero and one and differs at step two.
+    replayed = [_step(0), _step(1, "d" * 64), _step(2, "f" * 64)]
+    assert first_divergence(stored, replayed) == 2
+
+    # An identical replay never diverges; a replay that differs earlier names that step.
+    same = [_step(0), _step(1, "d" * 64), _step(2, "e" * 64)]
+    earlier = [_step(0), _step(1, "9" * 64), _step(2, "e" * 64)]
+    assert first_divergence(stored, same) is None
+    assert first_divergence(stored, earlier) == 1
