@@ -1076,7 +1076,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R803`: `tests/decide/test_harness_co
 | Wiring | `MEDULLA-DECISION-ENGINE-R810.3` | `tests/program_optimize_job_served.rs::program_optimize_job_end_to_end` |
 | Refusal | `MEDULLA-DECISION-ENGINE-R810.4` | `tests/program_optimize_job_served.rs::program_job_refusals` |
 | Evidence | `MEDULLA-DECISION-ENGINE-R810.5` | `tests/program_optimize_job_served.rs::rerun_with_one_seed_gives_one_revision_digest` |
-| Hot-path proof | `MEDULLA-DECISION-ENGINE-R810.6` | `tests/program_optimize_job_served.rs::served_program_job_journey` |
+| Hot-path proof | `MEDULLA-DECISION-ENGINE-R810.6` | `tests/program_job_journey_served.rs::served_program_job_journey` |
 | Model | `MEDULLA-DECISION-ENGINE-R811.1` | `crates/medulla-decision-outcome-types/src/policy_evolution/tests.rs::every_policy_operation_and_receipt_round_trips`; `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_policy_evolution_tests.rs::capture_train_evaluate_and_promote` |
 | Behavior | `MEDULLA-DECISION-ENGINE-R811.2` | `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs::evaluation_overlapping_training_refuses`; `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_policy_evolution_tests.rs::capture_train_evaluate_and_promote` |
 | Wiring | `MEDULLA-DECISION-ENGINE-R811.3` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_policy_evolution_tests.rs::capture_train_evaluate_and_promote` |
@@ -2083,7 +2083,7 @@ Every row below has a planned test at its exact post-split path; the row text na
 | `MEDULLA-DECISION-ENGINE-R810.2` | `crates/medulla-program/tests/native_program.rs::cancel_stops_within_one_candidate`; `crates/medulla-program/tests/native_program.rs::compile_reads_train_for_candidates_and_validation_only_for_scoring` |
 | `MEDULLA-DECISION-ENGINE-R810.4` | `tests/program_optimize_job_served.rs::program_job_refusals` |
 | `MEDULLA-DECISION-ENGINE-R810.5` | `tests/program_optimize_job_served.rs::rerun_with_one_seed_gives_one_revision_digest` |
-| `MEDULLA-DECISION-ENGINE-R810.6` | `tests/program_optimize_job_served.rs::served_program_job_journey` |
+| `MEDULLA-DECISION-ENGINE-R810.6` | `tests/program_job_journey_served.rs::served_program_job_journey` |
 | `MEDULLA-DECISION-ENGINE-R811.2` | `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs::evaluation_overlapping_training_refuses`; `crates/medulla-server-graph/src/dispatch/policy_evolution/gate/tests.rs::held_out_list_is_bounded_at_4096` |
 | `MEDULLA-DECISION-ENGINE-R811.4` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_policy_evolution_tests.rs::policy_evolution_refusals` |
 | `MEDULLA-DECISION-ENGINE-R811.5` | `crates/medulla-server-served-tests/src/split_tests/medulla_h_decide_policy_evolution_tests.rs::receipts_read_back_field_for_field` |

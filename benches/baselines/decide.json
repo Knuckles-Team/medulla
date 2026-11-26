@@ -7,6 +7,11 @@
   },
   "regression_tolerance": 0.1,
   "group_budgets": {
+    "decide/program": {
+      "p50_ms": 30000.0,
+      "p99_ms": 30000.0,
+      "peak_mib": 512.0
+    },
     "decide/process_plan": {
       "p99_ms": 30.0
     },

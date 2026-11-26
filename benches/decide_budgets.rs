@@ -25,6 +25,11 @@ use std::time::{Duration, Instant};
 mod common;
 #[path = "../tests/common/test_support.rs"]
 mod test_support;
+// The program fixtures of the served program job tests: the `decide/program` group compiles
+// the same 200-example corpus (MEDULLA-DECISION-ENGINE-R810.6).
+#[allow(dead_code, unused_imports)]
+#[path = "../tests/common/program_job_support.rs"]
+mod program_job_support;
 
 use criterion::{criterion_group, Criterion};
 use medulla_agent_types::agent_component::AgentComponentKind;
@@ -2866,6 +2871,33 @@ fn widest_evidence() -> HarnessConfigEvaluationEvidence {
     .expect("the widest evidence fixture decodes")
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R810.6
+/// The `decide/program` group (MEDULLA-DECISION-ENGINE-R810.6): one program compiled from a
+/// 200-example corpus (140 train, 60 test) with `bootstrap_few_shot_with_random_search`. Budget
+/// in `group_budgets`: wall time at most 30 s, resident growth at most 512 MiB. A benchmark
+/// never gates a PR.
+fn bench_program_compile(c: &mut Criterion, report: &mut BTreeMap<String, serde_json::Value>) {
+    use medulla_program::{NativeCompiler, OptimizerKind};
+    let request = program_job_support::sized_program_request(
+        "bench",
+        Vec::new(),
+        (140, 60),
+        OptimizerKind::BootstrapFewShotWithRandomSearch,
+    );
+    let compile = || {
+        black_box(NativeCompiler::compile(black_box(&request)).expect("the bench corpus compiles"));
+    };
+    compile();
+    let mut group = c.benchmark_group("decide/program");
+    group.sample_size(10);
+    group.bench_function("compile", |b| b.iter(compile));
+    group.finish();
+    report.insert(
+        "decide/program".to_string(),
+        report_entry(REPORT_SAMPLES, compile),
+    );
+}
+
 /// One report entry from `samples` timings of `work`.
 fn report_entry(samples: usize, mut work: impl FnMut()) -> serde_json::Value {
     let before = high_water_mib();
@@ -3134,6 +3166,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_trajectory_join_kernel(c, &mut report);
     bench_harness_evidence_codec(c, &mut report);
     bench_process_plan(c, &mut report);
+    bench_program_compile(c, &mut report);
     bench_harness_config_replay(c, &rt, &mut report);
     if let Ok(path) = std::env::var("DECIDE_BUDGETS_REPORT") {
         let body = serde_json::to_vec_pretty(&serde_json::json!({ "groups": report })).unwrap();

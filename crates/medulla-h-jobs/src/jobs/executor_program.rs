@@ -101,8 +101,13 @@ async fn program_promotion_identity(
         return Ok(None);
     }
     let active_revision_ref =
-        current_program_active_revision_ref(state, &job.input_snapshot.graph, &program.program_ref)
-            .await?;
+        current_program_active_revision_ref(
+            state,
+            &job.policy.tenant,
+            &job.input_snapshot.graph,
+            &program.program_ref,
+        )
+        .await?;
     let promotion_result_ref = OpaqueRef::new(job.result_ref())
         .map_err(|_| "program promotion result identity is invalid".to_string())?;
     optimization
@@ -245,7 +250,7 @@ fn program_stop_reason(
     }
 }
 
-/// The champion revision of `program_ref` in the graph's tenant: the target of
+/// The champion revision of `program_ref` in the job's tenant: the target of
 /// the governed pointer `champion:program:<program_ref>`, read through the one
 /// pointer read the decide handlers also use (MEDULLA-DECISION-ENGINE-R805.8).
 /// `None` while no champion has been moved in; the named revision must resolve
@@ -253,6 +258,7 @@ fn program_stop_reason(
 #[cfg(feature = "program-optimization")]
 pub(super) async fn current_program_active_revision_ref(
     state: &Arc<RwLock<ServerState>>,
+    tenant: &str,
     graph: &str,
     program_ref: &OpaqueRef,
 ) -> Result<Option<OpaqueRef>, String> {
@@ -265,7 +271,7 @@ pub(super) async fn current_program_active_revision_ref(
     };
     let (_, pointer) = medulla_persistence_records::decision_jobs::read_pointer(
         &store,
-        medulla_persistence::cost::tenant_of(graph),
+        tenant,
         &subject.pointer_key(),
     )?;
     let Some(target) = pointer.target() else {

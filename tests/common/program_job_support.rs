@@ -59,8 +59,12 @@ pub fn test_example_refs() -> Vec<String> {
     refs
 }
 
-/// One graph-modality example: six train examples and `TEST_EXAMPLES` test examples.
-fn example(index: usize, policy: &PolicyEnvelope) -> TrainingExample {
+/// Train examples of the fixture corpus.
+pub const TRAIN_EXAMPLES: usize = 6;
+
+/// One graph-modality example: the first `train` indices are train examples and
+/// the rest test examples.
+fn example(index: usize, train: usize, policy: &PolicyEnvelope) -> TrainingExample {
     let artifact = ArtifactId::from_token(&token(&format!("artifact:{index}"))).expect("artifact");
     TrainingExample {
         example_ref: opaque("example", &format!("example:{index}")),
@@ -69,7 +73,7 @@ fn example(index: usize, policy: &PolicyEnvelope) -> TrainingExample {
         observed_output_ref: Some(opaque("content", &format!("observed:{index}"))),
         feedback_ref: Some(opaque("feedback", &format!("feedback:{index}"))),
         trace_ref: Some(opaque("trace", &format!("example-trace:{index}"))),
-        split: if index < 6 {
+        split: if index < train {
             ExampleSplit::Train
         } else {
             ExampleSplit::Test
@@ -78,7 +82,7 @@ fn example(index: usize, policy: &PolicyEnvelope) -> TrainingExample {
         score_ref: None,
         author: None,
         outcome: ExampleOutcome::Success,
-        score: 0.7 + (index as f64 / 100.0),
+        score: 0.7 + ((index % 20) as f64 / 100.0),
         weight: 1.0,
         evidence: vec![EvidenceBinding {
             modality: ProgramModality::Graph,
@@ -101,6 +105,23 @@ fn example(index: usize, policy: &PolicyEnvelope) -> TrainingExample {
 /// A request over the fixture corpus. `evaluations` are the candidate evaluations
 /// the caller read back from an earlier job's result.
 pub fn program_request(label: &str, evaluations: Vec<EvaluationSummary>) -> OptimizationRequest {
+    sized_program_request(
+        label,
+        evaluations,
+        (TRAIN_EXAMPLES, TEST_EXAMPLES as usize),
+        OptimizerKind::LabeledFewShot,
+    )
+}
+
+/// A request over a corpus of `train` train and `test` test examples under
+/// `optimizer` (MEDULLA-DECISION-ENGINE-R810.6 runs 200 examples through the
+/// bootstrap random search).
+pub fn sized_program_request(
+    label: &str,
+    evaluations: Vec<EvaluationSummary>,
+    (train, test): (usize, usize),
+    optimizer: OptimizerKind,
+) -> OptimizationRequest {
     let policy = policy();
     let program_ref = opaque("program", "program");
     let field = |name: &str, role| FieldSpec {
@@ -140,11 +161,11 @@ pub fn program_request(label: &str, evaluations: Vec<EvaluationSummary>) -> Opti
                 raw_pii_persisted: false,
                 local_identifiers_persisted: false,
             },
-            examples: (0..(6 + TEST_EXAMPLES as usize))
-                .map(|index| example(index, &policy))
+            examples: (0..(train + test))
+                .map(|index| example(index, train, &policy))
                 .collect(),
         },
-        optimizer: OptimizerKind::LabeledFewShot,
+        optimizer,
         budget: OptimizationBudget {
             max_candidates: 8,
             max_demonstrations: ProgramModality::ALL.len(),
@@ -331,7 +352,7 @@ pub fn first_string_with_prefix(value: &serde_json::Value, prefix: &str) -> Opti
     }
 }
 
-/// The champion revision of the fixture program in the caller's tenant: the
+/// The champion revision of the fixture program in the test tenant: the
 /// target of its governed pointer, absent until a `MovePointer` activates one
 /// (MEDULLA-DECISION-ENGINE-R805.8).
 pub async fn champion_target(state: &crate::test_support::SharedState) -> Option<String> {
@@ -343,7 +364,7 @@ pub async fn champion_target(state: &crate::test_support::SharedState) -> Option
     };
     let (_, pointer) = medulla_persistence_records::decision_jobs::read_pointer(
         &store,
-        medulla_persistence::cost::tenant_of(GRAPH),
+        crate::common::TEST_TENANT,
         &subject.pointer_key(),
     )
     .expect("read the champion pointer");
