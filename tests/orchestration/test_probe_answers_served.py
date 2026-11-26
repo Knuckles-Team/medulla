@@ -70,10 +70,6 @@ PACKS = Path(__file__).parent / "fixtures" / "probes" / "packs"
 CONTAINER_STEPS = ("pull_image", "create_container", "start_container")
 
 
-def _spec_marker(row: str) -> pytest.MarkDecorator:
-    return pytest.mark.spec(f"MEDULLA-CQ-ORCH-{row}")
-
-
 # --------------------------------------------------------------------------- probe 1
 
 NODE_COUNT_UQL = "MATCH () |> GROUP BY label AGGREGATE COUNT AS count |> LIMIT 100000"
@@ -89,7 +85,8 @@ def planner_engine(tmp_path_factory):
     stub.close()
 
 
-@_spec_marker("R009.1")
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R009")
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R009.1")
 def test_probe_1(planner_engine) -> None:
     """How many nodes does the graph hold, by label?"""
     sock, stub = planner_engine
@@ -185,7 +182,7 @@ async def _usage_guidance(schema, graph: str, connector: str, job: str) -> dict:
         await client.close()
 
 
-@_spec_marker("R009.2")
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R009.2")
 def test_probe_2(clean_graph) -> None:
     """How can I deploy a container with container-manager?"""
     suffix = uuid.uuid4().hex[:8]
@@ -245,7 +242,7 @@ def _agent_versions(client) -> dict[str, str]:
     return {row["s"]: row["n"] for row in rows}
 
 
-@_spec_marker("R009.3")
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R009.3")
 def test_probe_3(catalog_graph) -> None:  # noqa: F811
     """Which agents are in the Agent Library?"""
     graph_a, admin_a = catalog_graph
@@ -298,7 +295,7 @@ SPEC_PAGES = {
 }
 
 
-@_spec_marker("R009.4")
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R009.4")
 def test_probe_4(clean_graph) -> None:
     """Why does Arbora use the intent surface?"""
     for node_id, (title, text) in SPEC_PAGES.items():
@@ -419,7 +416,7 @@ async def _load_set(job_text: str, required: list[str]) -> tuple[dict[str, Any],
         await client.close()
 
 
-@_spec_marker("R009.5")
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R009.5")
 def test_probe_5() -> None:
     """Find a tool that lists Docker containers."""
     record, suffix = asyncio.run(_load_set("list docker containers", []))
@@ -435,7 +432,7 @@ def test_probe_5() -> None:
         )
 
 
-@_spec_marker("R009.5")
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R009.5")
 def test_probe_5_no_matching_capability() -> None:
     """No tool covers the capability: the load set refuses by name."""
 
@@ -479,7 +476,7 @@ def test_probe_5_no_matching_capability() -> None:
     assert "LOAD_SET_NO_DESIGNATED_COMPONENT" in json.dumps(refused["outcome"])
 
 
-@_spec_marker("R009.6")
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R009.6")
 def test_probe_6() -> None:
     """Delegate: list running containers."""
     record, _ = asyncio.run(_load_set("list running containers", []))

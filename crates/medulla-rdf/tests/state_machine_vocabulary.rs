@@ -833,6 +833,7 @@ fn membership_shrink_machine_classes_extend_core() {
     sm::assert_extends_core("MembershipShrink");
 }
 
+// proves R810.2: Describe the broker message machine in the ontology
 // spec: MEDULLA-CQ-ORCH-R810.2
 // spec: MEDULLA-CQ-ORCH-R810.5
 #[test]

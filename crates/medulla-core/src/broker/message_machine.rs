@@ -530,6 +530,8 @@ mod tests {
     // spec: MEDULLA-CQ-ORCH-R810.1
 
     #[test]
+    // proves R810: Broker message is one explicit state machine
+    // spec: MEDULLA-CQ-ORCH-R810
     fn every_transition_and_refusal_is_covered() {
         let machine = &BROKER_MESSAGE_MACHINE;
         assert_eq!(machine.edges.len(), 10);
