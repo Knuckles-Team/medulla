@@ -438,7 +438,13 @@ pub fn run_unified_with<T>(
             medulla_server_api::knob_config::knobs().retrieval_oversample_factor,
         )
         .unwrap_or(usize::MAX),
-    });
+    })
+    // MEDULLA-CQ-XSRC-R009.3: a `DECAY HALF_LIFE` stage measures age against the engine
+    // clock, never the process wall clock, so a replica and a test clock offset agree.
+    .with_now_ms(
+        i64::try_from(medulla_kernel::kernel::dispatch_support::authoritative_now_ms())
+            .unwrap_or(i64::MAX),
+    );
     #[cfg(feature = "text")]
     let need_text = plan_needs_text(&ops);
     #[cfg(feature = "text")]

@@ -67,7 +67,7 @@ Each leaf row binds the tests below. A test marked `(planned)` does not exist ye
 | Serve the three generalization questions as Method::CrossSourceQuestion | `MEDULLA-CQ-XSRC-R008.4` | `tests/federated/test_cross_source_questions_served.py::test_unknown_question_refuses` (planned); `crates/medulla-source-types/src/cross_source_report.rs::tests::report_round_trips` (planned) |
 | Query fixture: claims that touch the report | `MEDULLA-CQ-XSRC-R009.1` | `tests/test_cq_xsrc_r009.py::test_fixture_compiles_to_one_plan` |
 | Evidence clustering | `MEDULLA-CQ-XSRC-R009.2` | `tests/test_cq_xsrc_r009.py::test_evidence_clusters_by_embedding` |
-| Contradiction decay analysis | `MEDULLA-CQ-XSRC-R009.3` | `tests/test_cq_xsrc_r009.py::test_contradiction_weights_decay_by_age`; `crates/medulla-plan/src/epistemic_tests.rs::contradicts_runs_once_per_input_row` (L1) |
+| Contradiction decay analysis | `MEDULLA-CQ-XSRC-R009.3` | `tests/uql_decay_engine_clock.rs::decay_weight_follows_the_engine_clock` (L4, engine clock moved one half-life); `tests/test_cq_xsrc_r009.py::test_contradiction_weights_decay_by_age`; `crates/medulla-plan/src/epistemic_tests.rs::contradicts_runs_once_per_input_row` (L1) |
 | Served acceptance through arbora | `MEDULLA-CQ-XSRC-R009.4` | `tests/test_cq_xsrc_r009.py::test_agent_claims_against_report_one_plan` (planned) |
 | Refusal | `MEDULLA-CQ-XSRC-R009.5` | `tests/test_cq_xsrc_r009.py::test_unknown_report_refuses`; `tests/test_cq_xsrc_r009.py::test_empty_window_is_empty_result` |
 | Serve the supply-chain impact report as a Medulla method | `MEDULLA-CQ-XSRC-R011` | `tests/federated/test_supply_chain_impact_served.py::test_method_returns_typed_report` (planned) |
