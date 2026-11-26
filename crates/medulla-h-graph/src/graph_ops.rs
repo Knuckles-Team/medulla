@@ -77,6 +77,7 @@ mod finance_accounting;
 mod finance_performance;
 mod finance_alerts;
 mod finance_factors;
+mod finance_receipts;
 #[cfg(feature = "finance")]
 mod finance_order_limit_check;
 mod finance_order_proposal;

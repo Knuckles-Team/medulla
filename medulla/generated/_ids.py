@@ -560,6 +560,8 @@ METHOD_IDS = frozenset(
         "FinanceOrderStage",
         "FinancePatternClassify",
         "FinanceProfitAttribution",
+        "FinanceReceiptList",
+        "FinanceReceiptTransition",
         "FinanceRecordGet",
         "FinanceRecordPut",
         "GetAdmittedRequest",

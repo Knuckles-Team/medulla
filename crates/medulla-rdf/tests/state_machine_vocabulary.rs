@@ -1663,3 +1663,14 @@ fn friction_machine_matches_edge_table() {
     sm::assert_matches(&medulla_decision_types::friction::FRICTION_MACHINE);
     sm::assert_extends_core("Friction");
 }
+
+// spec: MEDULLA-FINANCE-PRIMITIVES-R011.5
+#[test]
+fn finance_receipt_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_finance_types::finance_receipt::FINANCE_RECEIPT_MACHINE);
+}
+// spec: MEDULLA-FINANCE-PRIMITIVES-R011.5
+#[test]
+fn finance_receipt_machine_classes_extend_core() {
+    sm::assert_extends_core("FinanceReceipt");
+}

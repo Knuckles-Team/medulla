@@ -1661,8 +1661,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "FinanceAlertRaise",
         &["ALERT_ENVELOPE_INVALID", "ALERT_REVISION_CONFLICT"],
     ),
-    // MEDULLA-FINANCE-PRIMITIVES-R011.4: an empty receipt idempotency key.
-    ("CreateNodeIfAbsent", &["RECEIPT_KEY_INVALID"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R011.4, R011.5: an empty receipt idempotency key, or a new
+    // receipt that does not start due at attempt 1.
+    ("CreateNodeIfAbsent", &["RECEIPT_KEY_INVALID", "RECEIPT_STATE_INVALID"]),
+    // MEDULLA-FINANCE-PRIMITIVES-R011.5: the receipt transition's refusals (its machine's own
+    // `TRANSITION_REFUSED` is added through `MACHINE_METHODS`).
+    (
+        "FinanceReceiptTransition",
+        &["RECEIPT_NOT_FOUND", "RECEIPT_STATE_INVALID"],
+    ),
+
     ("GetNodes", &["RESULT_TOO_LARGE"]),
     ("GetEdges", &["RESULT_TOO_LARGE"]),
     (
@@ -2730,6 +2738,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "BrokerAckTag",
     "BrokerNackTag",
     "Decide",
+    // MEDULLA-FINANCE-PRIMITIVES-R011.5: `FinanceReceiptTransition` moves the receipt machine.
+    "FinanceReceiptTransition",
     // MEDULLA-DECISION-ENGINE-R173.7: the edit lifecycle machine.
     "HarnessEdit",
     // MEDULLA-DECISION-ENGINE-R830.6: the loop statechart and `GapMachine` refusals.

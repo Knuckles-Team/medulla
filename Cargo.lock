@@ -7351,6 +7351,7 @@ dependencies = [
  "medulla-decision-outcome-types",
  "medulla-decision-types",
  "medulla-direct-state",
+ "medulla-finance-types",
  "medulla-geo",
  "medulla-graph-core",
  "medulla-h-ingest",

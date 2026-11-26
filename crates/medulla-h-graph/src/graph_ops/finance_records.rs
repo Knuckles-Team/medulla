@@ -248,6 +248,9 @@ pub(super) async fn handle_record(
     if matches!(method, Method::FinanceFactorRecord { .. }) {
         return super::finance_factors::record(ctx, tenant_id, method).await;
     }
+    if matches!(method, Method::FinanceReceiptTransition { .. }) {
+        return super::finance_receipts::transition(ctx, method).await;
+    }
     if matches!(
         method,
         Method::FinanceOrderStage { .. } | Method::FinanceOrderPromote { .. }
@@ -287,39 +290,6 @@ pub(super) async fn handle_record(
             "METHOD_NOT_YET_SERVED: FinanceRecordPut needs the finance and shacl features",
         ))
     }
-}
-
-/// MEDULLA-FINANCE-PRIMITIVES-R011.4: a `FinanceReceipt` written through
-/// `CreateNodeIfAbsent` must carry a non-empty `idempotencyKey` (the
-/// `FinanceReceiptShape` rule); an empty or missing key refuses
-/// `RECEIPT_KEY_INVALID` and writes nothing. Any other node is not this rule's
-/// concern.
-pub(super) fn refuse_invalid_receipt(req_id: u64, method: &Method) -> Option<Response> {
-    let Method::CreateNodeIfAbsent {
-        properties_msgpack, ..
-    } = method
-    else {
-        return None;
-    };
-    let props = medulla_types::msgpack::decode_property_object(properties_msgpack).ok()?;
-    let is_receipt = [props.get("type"), props.get("finance_kind")]
-        .into_iter()
-        .flatten()
-        .any(|class| class.as_str() == Some("FinanceReceipt"));
-    if !is_receipt {
-        return None;
-    }
-    let key_present = props
-        .get("idempotencyKey")
-        .and_then(|value| value.as_str())
-        .is_some_and(|key| !key.trim().is_empty());
-    if key_present {
-        return None;
-    }
-    Some(Response::err(
-        req_id,
-        "RECEIPT_KEY_INVALID: a FinanceReceipt needs a non-empty idempotencyKey",
-    ))
 }
 
 /// Admit one put, then commit it: the one `AddNode` upsert for a finance record,

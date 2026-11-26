@@ -516,16 +516,16 @@
     sh:targetClass :LeverageTerms .
 
 :FinanceReceiptShape a sh:NodeShape ;
-    sh:description "A finance receipt names one closed receipt kind, one claimed or completed state, a tenant key, a non-empty idempotency key and the time it was recorded." ;
+    sh:description "A finance receipt names one closed receipt kind, one delivery state of FinanceReceiptMachine, a tenant key, a non-empty idempotency key, an event id, a mode, a channel, an attempt from 1 and the time it was recorded." ;
     sh:name "Finance Receipt Shape" ;
     sh:property [ sh:in ( "alert_delivery" "schedule_run" "dca_proposal" ) ;
             sh:maxCount 1 ;
             sh:message "receiptKind is alert_delivery, schedule_run or dca_proposal." ;
             sh:minCount 1 ;
             sh:path :receiptKind ],
-        [ sh:in ( "claimed" "completed" ) ;
+        [ sh:in ( "due" "claimed" "delivered" "completed" "missed" "failed" ) ;
             sh:maxCount 1 ;
-            sh:message "receiptState is claimed or completed." ;
+            sh:message "receiptState is due, claimed, delivered, completed, missed or failed." ;
             sh:minCount 1 ;
             sh:path :receiptState ],
         [ sh:datatype xsd:string ;
@@ -543,7 +543,32 @@
             sh:maxCount 1 ;
             sh:message "FinanceReceipt must have exactly one recordedAt." ;
             sh:minCount 1 ;
-            sh:path :recordedAt ] ;
+            sh:path :recordedAt ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "FinanceReceipt must have exactly one non-empty receiptEventId." ;
+            sh:minCount 1 ;
+            sh:minLength 1 ;
+            sh:path :receiptEventId ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "FinanceReceipt must have exactly one non-empty receiptMode." ;
+            sh:minCount 1 ;
+            sh:minLength 1 ;
+            sh:path :receiptMode ],
+        [ sh:datatype xsd:string ;
+            sh:maxCount 1 ;
+            sh:message "FinanceReceipt must have exactly one non-empty receiptChannel." ;
+            sh:minCount 1 ;
+            sh:minLength 1 ;
+            sh:path :receiptChannel ],
+        [ sh:datatype xsd:integer ;
+            sh:maxCount 1 ;
+            sh:message "FinanceReceipt must have exactly one receiptAttempt from 1 to 5." ;
+            sh:minCount 1 ;
+            sh:minInclusive 1 ;
+            sh:maxInclusive 5 ;
+            sh:path :receiptAttempt ] ;
     sh:targetClass :FinanceReceipt .
 
 # MEDULLA-CQ-CONN-R084.5: the finance method vocabulary is selected through declared

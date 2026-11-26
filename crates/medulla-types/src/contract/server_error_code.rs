@@ -778,6 +778,10 @@ closed_error_codes! {
         RaftRetryBudgetExhausted => "RAFT_RETRY_BUDGET_EXHAUSTED",
         ReasoningProjectionRejectFailed => "REASONING_PROJECTION_REJECT_FAILED",
         ReceiptKeyInvalid => "RECEIPT_KEY_INVALID",
+        /// A finance receipt does not start due at attempt 1, or its stored state is no state of its machine (MEDULLA-FINANCE-PRIMITIVES-R011.5).
+        ReceiptStateInvalid => "RECEIPT_STATE_INVALID",
+        /// No receipt of the verified tenant has this id; an absent and a foreign receipt answer alike (MEDULLA-FINANCE-PRIMITIVES-R011.5).
+        ReceiptNotFound => "RECEIPT_NOT_FOUND",
         ReleaseHeadUnknown => "RELEASE_HEAD_UNKNOWN",
         ReleaseSealed => "RELEASE_SEALED",
         /// A skill package could not render: the graph holds no body for the skill (MEDULLA-TYPED-PACKS-R100.2).

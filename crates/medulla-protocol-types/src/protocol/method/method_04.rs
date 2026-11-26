@@ -621,6 +621,31 @@ $($variants)*
         record_id: String,
     },
 
+    // ── Served finance receipts (MEDULLA-FINANCE-PRIMITIVES-R011.5) ─────────
+    /// Fire one event of `FinanceReceiptMachine` on the receipt `receipt_id` of the
+    /// verified tenant. Answers the receipt after the step; a `Retry` raises its
+    /// `attempt` by one in the same write. An absent or foreign receipt refuses
+    /// `RECEIPT_NOT_FOUND`; an event no edge accepts refuses `TRANSITION_REFUSED`.
+    #[cfg(feature = "finance")]
+    FinanceReceiptTransition {
+        receipt_id: String,
+        event: medulla_finance_types::finance_receipt::FinanceReceiptEvent,
+    },
+
+    /// List the receipts of the verified tenant under `tenant_key`, oldest `recorded_at`
+    /// first, optionally narrowed to one `state` or one `kind`; at most `limit` (default
+    /// 100, largest 1000). Writes nothing.
+    #[cfg(feature = "finance")]
+    FinanceReceiptList {
+        tenant_key: String,
+        #[serde(default)]
+        state: Option<medulla_finance_types::finance_receipt::FinanceReceiptState>,
+        #[serde(default)]
+        kind: Option<String>,
+        #[serde(default)]
+        limit: Option<u32>,
+    },
+
     // ── Served accounting projection (MEDULLA-FINANCE-PRIMITIVES-R013.2.6) ───
     /// Project one account's lots, corporate actions and valuation at
     /// `(as_of, known_at)` under `basis_policy` (`fifo`, `lifo` or

@@ -10082,3 +10082,142 @@
     :fromState :FrictionMachine_Evaluated ;
     :toState :FrictionMachine_Rejected ;
     :firedBy :FrictionMachine_Event_Reject .
+
+# spec: MEDULLA-FINANCE-PRIMITIVES-R011.5
+# The FinanceReceipt delivery machine. The Rust edge table FINANCE_RECEIPT_MACHINE in
+# crates/medulla-finance-types/src/finance_receipt.rs is the same table; the ontology test
+# asserts equal edge sets. A retry (F07, F08) raises the receipt's attempt in the same step.
+
+:FinanceReceiptState a owl:Class ;
+    rdfs:label "FinanceReceipt State" ;
+    rdfs:comment "A state of the FinanceReceipt machine." ;
+    rdfs:subClassOf :State .
+
+:FinanceReceiptTerminalState a owl:Class ;
+    rdfs:label "FinanceReceipt Terminal State" ;
+    rdfs:comment "A terminal state of the FinanceReceipt machine." ;
+    rdfs:subClassOf :TerminalState, :FinanceReceiptState .
+
+:FinanceReceiptTransition a owl:Class ;
+    rdfs:label "FinanceReceipt Transition" ;
+    rdfs:comment "A transition of the FinanceReceipt machine." ;
+    rdfs:subClassOf :Transition .
+
+:FinanceReceiptEvent a owl:Class ;
+    rdfs:label "FinanceReceipt Event" ;
+    rdfs:comment "A event of the FinanceReceipt machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:FinanceReceiptGuard a owl:Class ;
+    rdfs:label "FinanceReceipt Guard" ;
+    rdfs:comment "A guard of the FinanceReceipt machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:FinanceReceiptMachine a :StateMachine ;
+    rdfs:label "FinanceReceipt machine" ;
+    :initialState :FinanceReceiptMachine_Due ;
+    :hasState :FinanceReceiptMachine_Due, :FinanceReceiptMachine_Claimed, :FinanceReceiptMachine_Delivered, :FinanceReceiptMachine_Completed, :FinanceReceiptMachine_Missed, :FinanceReceiptMachine_Failed .
+
+:FinanceReceiptMachine_Due a :FinanceReceiptState ;
+    rdfs:label "FinanceReceipt Due" ;
+    :storedForm "due" .
+
+:FinanceReceiptMachine_Claimed a :FinanceReceiptState ;
+    rdfs:label "FinanceReceipt Claimed" ;
+    :storedForm "claimed" .
+
+:FinanceReceiptMachine_Delivered a :FinanceReceiptState ;
+    rdfs:label "FinanceReceipt Delivered" ;
+    :storedForm "delivered" .
+
+:FinanceReceiptMachine_Completed a :FinanceReceiptTerminalState ;
+    rdfs:label "FinanceReceipt Completed" ;
+    :storedForm "completed" .
+
+:FinanceReceiptMachine_Missed a :FinanceReceiptState ;
+    rdfs:label "FinanceReceipt Missed" ;
+    :storedForm "missed" .
+
+:FinanceReceiptMachine_Failed a :FinanceReceiptState ;
+    rdfs:label "FinanceReceipt Failed" ;
+    :storedForm "failed" .
+
+:FinanceReceiptMachine_Event_Claim a :FinanceReceiptEvent ;
+    rdfs:label "FinanceReceipt Claim" .
+
+:FinanceReceiptMachine_Event_Deliver a :FinanceReceiptEvent ;
+    rdfs:label "FinanceReceipt Deliver" .
+
+:FinanceReceiptMachine_Event_Complete a :FinanceReceiptEvent ;
+    rdfs:label "FinanceReceipt Complete" .
+
+:FinanceReceiptMachine_Event_Miss a :FinanceReceiptEvent ;
+    rdfs:label "FinanceReceipt Miss" .
+
+:FinanceReceiptMachine_Event_Fail a :FinanceReceiptEvent ;
+    rdfs:label "FinanceReceipt Fail" .
+
+:FinanceReceiptMachine_Event_Retry a :FinanceReceiptEvent ;
+    rdfs:label "FinanceReceipt Retry" .
+
+:FinanceReceiptMachine_Guard_UnderAttemptLimit a :FinanceReceiptGuard ;
+    rdfs:label "FinanceReceipt UnderAttemptLimit" ;
+    rdfs:comment "Guard: the receipt's attempt is below the attempt limit." .
+
+:FinanceReceiptMachine_F01 a :FinanceReceiptTransition ;
+    rdfs:label "FinanceReceipt F01" ;
+    :edgeId "F01" ;
+    :fromState :FinanceReceiptMachine_Due ;
+    :toState :FinanceReceiptMachine_Claimed ;
+    :firedBy :FinanceReceiptMachine_Event_Claim .
+
+:FinanceReceiptMachine_F02 a :FinanceReceiptTransition ;
+    rdfs:label "FinanceReceipt F02" ;
+    :edgeId "F02" ;
+    :fromState :FinanceReceiptMachine_Claimed ;
+    :toState :FinanceReceiptMachine_Delivered ;
+    :firedBy :FinanceReceiptMachine_Event_Deliver .
+
+:FinanceReceiptMachine_F03 a :FinanceReceiptTransition ;
+    rdfs:label "FinanceReceipt F03" ;
+    :edgeId "F03" ;
+    :fromState :FinanceReceiptMachine_Delivered ;
+    :toState :FinanceReceiptMachine_Completed ;
+    :firedBy :FinanceReceiptMachine_Event_Complete .
+
+:FinanceReceiptMachine_F04 a :FinanceReceiptTransition ;
+    rdfs:label "FinanceReceipt F04" ;
+    :edgeId "F04" ;
+    :fromState :FinanceReceiptMachine_Due ;
+    :toState :FinanceReceiptMachine_Missed ;
+    :firedBy :FinanceReceiptMachine_Event_Miss .
+
+:FinanceReceiptMachine_F05 a :FinanceReceiptTransition ;
+    rdfs:label "FinanceReceipt F05" ;
+    :edgeId "F05" ;
+    :fromState :FinanceReceiptMachine_Claimed ;
+    :toState :FinanceReceiptMachine_Failed ;
+    :firedBy :FinanceReceiptMachine_Event_Fail .
+
+:FinanceReceiptMachine_F06 a :FinanceReceiptTransition ;
+    rdfs:label "FinanceReceipt F06" ;
+    :edgeId "F06" ;
+    :fromState :FinanceReceiptMachine_Delivered ;
+    :toState :FinanceReceiptMachine_Failed ;
+    :firedBy :FinanceReceiptMachine_Event_Fail .
+
+:FinanceReceiptMachine_F07 a :FinanceReceiptTransition ;
+    rdfs:label "FinanceReceipt F07" ;
+    :edgeId "F07" ;
+    :fromState :FinanceReceiptMachine_Failed ;
+    :toState :FinanceReceiptMachine_Due ;
+    :guardedBy :FinanceReceiptMachine_Guard_UnderAttemptLimit ;
+    :firedBy :FinanceReceiptMachine_Event_Retry .
+
+:FinanceReceiptMachine_F08 a :FinanceReceiptTransition ;
+    rdfs:label "FinanceReceipt F08" ;
+    :edgeId "F08" ;
+    :fromState :FinanceReceiptMachine_Missed ;
+    :toState :FinanceReceiptMachine_Due ;
+    :guardedBy :FinanceReceiptMachine_Guard_UnderAttemptLimit ;
+    :firedBy :FinanceReceiptMachine_Event_Retry .

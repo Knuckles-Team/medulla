@@ -307,6 +307,8 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "FinanceFactorRank": compute.send_finance_factor_rank,
     "FinanceFactorRecord": graph.send_finance_factor_record,
     "FinanceOrderLimitCheck": compute.send_finance_order_limit_check,
+    "FinanceReceiptList": graph.send_finance_receipt_list,
+    "FinanceReceiptTransition": graph.send_finance_receipt_transition,
     "FinanceOrderPromote": graph.send_finance_order_promote,
     "FinanceOrderStage": graph.send_finance_order_stage,
     "FinanceForensicReport": compute.send_finance_forensic_report,

@@ -58,6 +58,7 @@ pub(super) async fn try_handle_graph_domains(
     method = super::memory::try_handle_ledger(ctx, method).await?;
     method = super::subgraph::try_handle_subgraph_reads(ctx, method).await?;
     method = super::finance_records::handle_record_get(ctx, method).await?;
+    method = super::finance_receipts::handle_receipt_list(ctx, method).await?;
     #[cfg(feature = "finance")]
     {
         method = super::finance_accounting::handle_project(ctx, method).await?;

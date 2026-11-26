@@ -7,6 +7,8 @@
 // the finance outbox topic family.
 #[cfg(feature = "finance")]
 pub mod finance_event_envelope;
+// MEDULLA-FINANCE-PRIMITIVES-R011.5 — the FinanceReceipt delivery machine and its served wire types.
+pub mod finance_receipt;
 // MEDULLA-FINANCE-PRIMITIVES-R751.750 — the strategy research record types.
 #[cfg(feature = "finance")]
 pub mod finance_order;

@@ -10966,6 +10966,35 @@ class FinanceClient:
             self._client, {"kind": kind, "record_id": record_id}
         )
 
+    # ── Served finance receipts (MEDULLA-FINANCE-PRIMITIVES-R011.5) ──
+    async def receipt_transition(self, receipt_id: str, event: str) -> Any:
+        """Fire one event (claim, deliver, complete, miss, fail, retry) on a receipt.
+
+        Answers the receipt after the step; a retry raises its ``attempt`` by one.
+        """
+        sent = await _gen.graph.send_finance_receipt_transition(
+            self._client, {"receipt_id": receipt_id, "event": event}
+        )
+        return _gen.graph.decode_finance_receipt_transition(sent)
+
+    async def receipts_list(
+        self,
+        tenant_key: str,
+        state: str | None = None,
+        kind: str | None = None,
+        limit: int | None = None,
+    ) -> Any:
+        """List the caller tenant's receipts under ``tenant_key``, oldest first."""
+        params: dict[str, Any] = {"tenant_key": tenant_key}
+        if state is not None:
+            params["state"] = state
+        if kind is not None:
+            params["kind"] = kind
+        if limit is not None:
+            params["limit"] = limit
+        sent = await _gen.graph.send_finance_receipt_list(self._client, params)
+        return _gen.graph.decode_finance_receipt_list(sent)
+
     # ── Served performance (MEDULLA-FINANCE-PRIMITIVES-R005.3.4) ──
     async def finance_performance(
         self,

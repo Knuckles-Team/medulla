@@ -2886,6 +2886,18 @@ send_finance_factor_record = contract_sender(
 decode_finance_factor_record = contract_decoder(
     "FinanceFactorRecord", "FinanceFactorRecordResult"
 )
+send_finance_receipt_transition = contract_sender(
+    "FinanceReceiptTransition", "MethodFinanceReceiptTransitionParams"
+)
+decode_finance_receipt_transition = contract_decoder(
+    "FinanceReceiptTransition", "FinanceReceiptTransitionResult"
+)
+send_finance_receipt_list = contract_sender(
+    "FinanceReceiptList", "MethodFinanceReceiptListParams"
+)
+decode_finance_receipt_list = contract_decoder(
+    "FinanceReceiptList", "FinanceReceiptListResult"
+)
 send_finance_order_stage = contract_sender(
     "FinanceOrderStage", "MethodFinanceOrderStageParams"
 )

@@ -27,8 +27,8 @@ This file describes the entities the finance rows add or extend. Classes and sha
 
 ### FinanceReceipt
 
-- Fields: `idempotencyKey`, tenant, subject, outcome digest.
-- Rule: written once through `Method::CreateNodeIfAbsent`; an empty key returns `RECEIPT_KEY_INVALID`.
+- Fields: `receiptKind`, `receiptState`, `tenantKey`, `idempotencyKey`, `receiptEventId`, `receiptMode`, `receiptChannel`, `receiptAttempt`, `recordedAt`.
+- Rule: created once through `Method::CreateNodeIfAbsent` in state `due` at attempt 1; an empty key returns `RECEIPT_KEY_INVALID`. The state then moves only through `FinanceReceiptMachine` (`MEDULLA-FINANCE-PRIMITIVES-R011.5`); a retry raises `receiptAttempt`.
 
 ### Factor
 

@@ -159,6 +159,7 @@ fn is_finance_record(method: &Method) -> bool {
         Method::FinanceRecordPut { .. }
             | Method::FinanceAlertRaise { .. }
             | Method::FinanceFactorRecord { .. }
+            | Method::FinanceReceiptTransition { .. }
             | Method::FinanceOrderStage { .. }
             | Method::FinanceOrderPromote { .. }
     )
@@ -474,12 +475,21 @@ async fn try_handle_node_state(
             node_id,
             properties_msgpack,
         } => {
-            if let Some(refused) =
-                super::super::finance_records::refuse_invalid_receipt(ctx.req_id, method)
+            // MEDULLA-FINANCE-PRIMITIVES-R011.4, R011.5: a receipt is admitted in its initial
+            // state with the tenant scope stamped; the stamped write is what is logged.
+            let stamped = match super::super::finance_receipts::admit_create(ctx.tenant_scope, method)
             {
-                return Some(refused);
-            }
-            let (node_id, properties_msgpack) = (node_id.clone(), properties_msgpack.clone());
+                Some(Err(refusal)) => return Some(Response::err(ctx.req_id, refusal)),
+                Some(Ok(write)) => Some(write),
+                None => None,
+            };
+            let (method, node_id, properties_msgpack) = match &stamped {
+                Some(Method::CreateNodeIfAbsent {
+                    node_id,
+                    properties_msgpack,
+                }) => (stamped.as_ref().unwrap_or(method), node_id.clone(), properties_msgpack.clone()),
+                _ => (method, node_id.clone(), properties_msgpack.clone()),
+            };
             commit_gateway(ctx, plan, method, move |core| {
                 Ok(ResultPayload::Bool(
                     core.create_node_if_absent(node_id, properties_msgpack),

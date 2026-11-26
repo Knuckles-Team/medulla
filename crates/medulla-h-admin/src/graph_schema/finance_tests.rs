@@ -899,7 +899,7 @@ mod shapes {
         }
     }
 
-    // spec: MEDULLA-FINANCE-PRIMITIVES-R011.4
+    // spec: MEDULLA-FINANCE-PRIMITIVES-R011.4, MEDULLA-FINANCE-PRIMITIVES-R011.5
     #[test]
     fn finance_receipt_shape_acceptance() {
         assert_matrix(
@@ -913,12 +913,21 @@ mod shapes {
                 ),
                 field(
                     "receiptState",
-                    "\"claimed\"",
+                    "\"due\"",
                     "\"completed\"",
                     "\"pending\"",
                 ),
                 field("tenantKey", "\"tenant-1\"", "\"tenant-2\"", "5"),
                 field("idempotencyKey", "\"key-1\"", "\"key-2\"", "\"\""),
+                field("receiptEventId", "\"event-1\"", "\"event-2\"", "\"\""),
+                field("receiptMode", "\"live\"", "\"dry_run\"", "\"\""),
+                field("receiptChannel", "\"email\"", "\"chat\"", "\"\""),
+                field(
+                    "receiptAttempt",
+                    "\"1\"^^xsd:integer",
+                    "\"5\"^^xsd:integer",
+                    "\"0\"^^xsd:integer",
+                ),
                 field(
                     "recordedAt",
                     "\"2026-09-24T00:00:00Z\"^^xsd:dateTime",
@@ -931,7 +940,10 @@ mod shapes {
                     "receiptKind",
                     &["alert_delivery", "schedule_run", "dca_proposal"],
                 ),
-                ("receiptState", &["claimed", "completed"]),
+                (
+                    "receiptState",
+                    &["due", "claimed", "delivered", "completed", "missed", "failed"],
+                ),
             ],
         );
     }

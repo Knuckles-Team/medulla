@@ -558,6 +558,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::FinanceRecordPut { .. }
                 | Method::FinanceAlertRaise { .. }
                 | Method::FinanceFactorRecord { .. }
+                | Method::FinanceReceiptTransition { .. }
                 // MEDULLA-FINANCE-PRIMITIVES-R015.1: order proposal snapshots,
                 // pointers and receipts commit graph nodes through the gateway.
                 | Method::FinanceOrderStage { .. }

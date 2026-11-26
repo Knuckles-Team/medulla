@@ -107,6 +107,12 @@ method_results! {
     // The event id of a raised finance alert.
     #[cfg(feature = "finance")]
     FinanceAlertRaise(FinanceAlertRaise) => Text<String>;
+    // The receipt after one machine step (MEDULLA-FINANCE-PRIMITIVES-R011.5).
+    #[cfg(feature = "finance")]
+    FinanceReceiptTransition(FinanceReceiptTransition) => Raw<medulla_finance_types::finance_receipt::FinanceReceiptView>;
+    // The receipts of the caller's tenant under one tenant key (MEDULLA-FINANCE-PRIMITIVES-R011.5).
+    #[cfg(feature = "finance")]
+    FinanceReceiptList(FinanceReceiptList) => Raw<medulla_finance_types::finance_receipt::FinanceReceiptPage>;
     // The ranked factors of a served factor record, strongest first.
     #[cfg(feature = "finance")]
     FinanceFactorRecord(FinanceFactorRecord) => Raw<Vec<medulla_result_types::compute_result::finance::FactorRecordResult>>;

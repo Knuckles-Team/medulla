@@ -133,6 +133,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T125 [US5] MEDULLA-FINANCE-PRIMITIVES-R010.2 Served order limit verification through the Decide limit guard
 - [ ] T126 [US6] MEDULLA-FINANCE-PRIMITIVES-R011.2.3 Served FinanceAlertRaise door
 - [ ] T127 [US6] MEDULLA-FINANCE-PRIMITIVES-R011.4 FinanceReceipt idempotency record
+- [ ] T167 [US6] MEDULLA-FINANCE-PRIMITIVES-R011.5 FinanceReceipt delivery machine, retry transition and tenant list
 - [ ] T128 [US2] MEDULLA-FINANCE-PRIMITIVES-R013.2.6 Served accounting projection entry for golden figures
 - [ ] T129 [US5] MEDULLA-FINANCE-PRIMITIVES-R015.1.1 FinanceOrderProposal.Stage
 - [ ] T130 [US5] MEDULLA-FINANCE-PRIMITIVES-R015.1.2 FinanceOrderProposal.Promote

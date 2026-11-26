@@ -16401,6 +16401,61 @@ class FinanceRecord(BaseModel):
     fields: dict[str, str]
 
 
+class FinanceReceiptState(str, Enum):
+    DUE = "due"
+    CLAIMED = "claimed"
+    DELIVERED = "delivered"
+    COMPLETED = "completed"
+    MISSED = "missed"
+    FAILED = "failed"
+
+
+class FinanceReceiptEvent(str, Enum):
+    CLAIM = "claim"
+    DELIVER = "deliver"
+    COMPLETE = "complete"
+    MISS = "miss"
+    FAIL = "fail"
+    RETRY = "retry"
+
+
+class FinanceReceiptView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    receipt_id: str
+    receipt_kind: str
+    receipt_state: FinanceReceiptState
+    tenant_key: str
+    idempotency_key: str
+    event_id: str
+    mode: str
+    channel: str
+    attempt: int = Field(ge=0)
+    recorded_at: str
+
+
+class FinanceReceiptPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    receipts: list[FinanceReceiptView]
+
+
+class MethodFinanceReceiptTransitionParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    receipt_id: str
+    event: FinanceReceiptEvent
+
+
+class MethodFinanceReceiptListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    tenant_key: str
+    state: FinanceReceiptState | None = None
+    kind: str | None = None
+    limit: int | None = Field(default=None, ge=0)
+
+
 class MethodFinanceRecordPutParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -16583,6 +16638,20 @@ class MethodFinanceProfitAttribution(BaseModel):
 
     method: Literal["FinanceProfitAttribution"]
     params: MethodFinanceProfitAttributionParams
+
+
+class MethodFinanceReceiptTransition(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceReceiptTransition"]
+    params: MethodFinanceReceiptTransitionParams
+
+
+class MethodFinanceReceiptList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["FinanceReceiptList"]
+    params: MethodFinanceReceiptListParams
 
 
 class MethodFinanceRecordGet(BaseModel):
@@ -18194,6 +18263,8 @@ Method = Annotated[
         MethodFinanceOrderStage,
         MethodFinancePatternClassify,
         MethodFinanceProfitAttribution,
+        MethodFinanceReceiptList,
+        MethodFinanceReceiptTransition,
         MethodFinanceRecordGet,
         MethodFinanceRecordPut,
         MethodGetAdmittedRequest,
@@ -37722,6 +37793,12 @@ EffectKind = Annotated[
 FinanceFactorRecordResult = list[FactorRecordResult]
 
 
+FinanceReceiptTransitionResult = FinanceReceiptView
+
+
+FinanceReceiptListResult = FinanceReceiptPage
+
+
 FinancePatternClassifyResult = list[PatternMatch]
 
 
@@ -46448,6 +46525,12 @@ __all__ = [
     "FinancePatternClassifyResult",
     "FinancePurgedCpcvResult",
     "FinanceRealizedVolTickResult",
+    "FinanceReceiptEvent",
+    "FinanceReceiptListResult",
+    "FinanceReceiptPage",
+    "FinanceReceiptState",
+    "FinanceReceiptTransitionResult",
+    "FinanceReceiptView",
     "FinanceRecord",
     "FinanceRecordKind",
     "FinanceSabrSmileResult",
@@ -47649,6 +47732,10 @@ __all__ = [
     "MethodFinanceQueueImbalanceParams",
     "MethodFinanceRealizedVolTick",
     "MethodFinanceRealizedVolTickParams",
+    "MethodFinanceReceiptList",
+    "MethodFinanceReceiptListParams",
+    "MethodFinanceReceiptTransition",
+    "MethodFinanceReceiptTransitionParams",
     "MethodFinanceRecordGet",
     "MethodFinanceRecordGetParams",
     "MethodFinanceRecordPut",

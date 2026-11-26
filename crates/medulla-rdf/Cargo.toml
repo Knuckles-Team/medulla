@@ -160,6 +160,8 @@ medulla-transaction = { path = "../medulla-transaction" }
 # behaviour be exercised from `cargo test -p medulla-rdf --features sparql`.
 medulla-shacl = { path = "../medulla-shacl" }
 medulla-reasoner = { path = "../medulla-reasoner", features = ["owl", "sparql-star"] }
+# The FinanceReceipt delivery machine edge table (MEDULLA-FINANCE-PRIMITIVES-R011.5).
+medulla-finance-types = { path = "../medulla-finance-types" }
 # The WorkItem machine edge table the state-machine ontology test compares with
 # (MEDULLA-ORCH-VOCAB-R812.3).
 medulla-work-types = { path = "../medulla-work-types" }
