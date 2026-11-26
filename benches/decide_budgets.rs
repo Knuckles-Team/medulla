@@ -2368,6 +2368,201 @@ fn bench_paired_rollouts(c: &mut Criterion, report: &mut BTreeMap<String, serde_
     );
 }
 
+/// Captures the `decide/policy_evolution` journey records.
+const POLICY_EVOLUTION_CAPTURES: usize = 100;
+
+/// Send one JSON-shaped method as a principal holding every scope.
+async fn dispatch_policy_json(h: &Harness, method: serde_json::Value) -> serde_json::Value {
+    let method: Method = serde_json::from_value(method).expect("a well-formed method");
+    let response = Box::pin(
+        medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+            &h.state,
+            Request {
+                id: 811,
+                graph: "__commons__".into(),
+                auth_token: String::new(),
+                agent_id: Some("trainer".into()),
+                method,
+                trace_id: None,
+            },
+            VerifiedRequestContext::verified_for_test_with_scopes("trainer", TENANT, &["*"]),
+        ),
+    )
+    .await;
+    assert!(response.error.is_none(), "policy bench refused: {response:?}");
+    match response.result {
+        Some(medulla_protocol_types::protocol::ResultPayload::Raw(bytes)) => {
+            rmp_serde::from_slice(&bytes).expect("a msgpack result")
+        }
+        Some(medulla_protocol_types::protocol::ResultPayload::Json(value)) => value,
+        other => panic!("policy bench answered {other:?}"),
+    }
+}
+
+/// Upload `bytes` and answer the blob digest.
+async fn policy_blob(h: &Harness, bytes: &[u8]) -> String {
+    let cursor = dispatch_policy_json(
+        h,
+        serde_json::json!({"method": "BlobBegin", "params": {"chunk_size": 1 << 20}}),
+    )
+    .await;
+    dispatch_policy_json(
+        h,
+        serde_json::json!({"method": "BlobChunkPut", "params": {"cursor": cursor, "data": bytes}}),
+    )
+    .await;
+    let digest = dispatch_policy_json(
+        h,
+        serde_json::json!({"method": "BlobCommit", "params": {"cursor": cursor}}),
+    )
+    .await;
+    digest.as_str().expect("a blob digest").to_string()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R811.6
+/// The `decide/policy_evolution` group (MEDULLA-DECISION-ENGINE-R811.6, R178.1): one
+/// served journey of 100 captures, one training run, the trained version and one
+/// evaluation through `PolicyEvolution`. The journey is timed once, as a whole;
+/// its budget (10 s) is `group_budgets` in `benches/baselines/decide.json`.
+fn bench_policy_evolution(rt: &Runtime, report: &mut BTreeMap<String, serde_json::Value>) {
+    use serde_json::json;
+    let hex = |byte: u8| format!("{byte:02x}").repeat(32);
+    let op = |name: &str, request: serde_json::Value| {
+        json!({"method": "PolicyEvolution", "params": {"op": {"op": name, "request": request}}})
+    };
+    let before = high_water_mib();
+    let started = Instant::now();
+    rt.block_on(async {
+        let h = Harness::with_isolation(ServerState::test_isolation("trainer")).await;
+        let record_id = |receipt: serde_json::Value| {
+            receipt["record_id"].as_str().expect("a record id").to_string()
+        };
+        let capability = dispatch_policy_json(
+            &h,
+            op(
+                "put_capability",
+                json!({
+                    "provider": "vllm", "endpoint_ref": "endpoint:gb10",
+                    "base_checkpoint_digest": hex(1), "tokenizer_digest": hex(2),
+                    "decode_params_digest": hex(3), "artifact_destination_ref": "artifacts:new",
+                    "probe_digest": hex(4), "probed_at_ms": 1, "logprobs": {"chosen_token": true},
+                    "controls": {"capture": {"enabled": true, "scope": "ops"},
+                                 "train": {"enabled": true, "scope": "ops"}},
+                }),
+            ),
+        )
+        .await;
+        let capability_id = record_id(capability);
+        let base = dispatch_policy_json(
+            &h,
+            op(
+                "register_model_policy_version",
+                json!({"checkpoint_digest": hex(1), "tokenizer_digest": hex(2),
+                       "artifact_ref": "artifacts:base", "origin": {"origin": "base"}}),
+            ),
+        )
+        .await;
+        let base_id = record_id(base);
+        let token_ids: Vec<u8> = [1_u32, 2, 7, 9, 11, 40]
+            .into_iter()
+            .flat_map(u32::to_le_bytes)
+            .collect();
+        let log_q: Vec<u8> = [-0.25_f32, -1.5].into_iter().flat_map(f32::to_le_bytes).collect();
+        let mask = [0_u8, 0, 1, 1, 0, 0];
+        let held = |digest: String, bytes: usize, encoding: &str, elements: u32| {
+            json!({"digest": digest, "length": bytes, "encoding": encoding, "elements": elements})
+        };
+        let token_ids_ref = held(policy_blob(&h, &token_ids).await, token_ids.len(), "u32_le", 6);
+        let log_q_ref = held(policy_blob(&h, &log_q).await, log_q.len(), "f32_le", 2);
+        let mask_ref = held(policy_blob(&h, &mask).await, mask.len(), "u8_mask", 6);
+        let mut capture_ids = Vec::with_capacity(POLICY_EVOLUTION_CAPTURES);
+        for index in 0..POLICY_EVOLUTION_CAPTURES {
+            let trajectory = format!("trajectory:{index:04}");
+            h.seed_node(
+                "__commons__",
+                &trajectory,
+                json!({"type": "Trajectory", "step_count": 3}),
+            )
+            .await;
+            let receipt = dispatch_policy_json(
+                &h,
+                op(
+                    "commit_capture",
+                    json!({
+                        "capability_id": capability_id, "sampler_version_id": base_id,
+                        "trajectory_id": trajectory, "trajectory_steps": 3, "completion": "terminal",
+                        "token_count": 6, "policy_token_count": 2,
+                        "token_ids": token_ids_ref, "log_q": log_q_ref, "action_mask": mask_ref,
+                        "reward": {"value_micros": 1_000_000, "verifier_id": "bench",
+                                   "verifier_digest": hex(9), "evidence": "independent_verifier"},
+                        "purpose": "training", "trace_fidelity": "full", "captured_at_ms": 5,
+                    }),
+                ),
+            )
+            .await;
+            capture_ids.push(record_id(receipt));
+        }
+        let run = dispatch_policy_json(
+            &h,
+            op(
+                "commit_training_run",
+                json!({
+                    "capability_id": capability_id, "work_item_id": "work:1",
+                    "base_version_id": base_id, "input_capture_ids": capture_ids,
+                    "method": {"method": "klpo", "estimator": {"estimator": "sampled_token"}},
+                    "adapter": {"adapter": "lora", "rank": 8},
+                    "trainer_image_digest": hex(10), "hyperparameters_digest": hex(11),
+                    "status": {"status": "succeeded",
+                               "output": {"artifact_digest": hex(12), "artifact_ref": "artifacts:v2"}},
+                }),
+            ),
+        )
+        .await;
+        let run_id = record_id(run);
+        let trained = dispatch_policy_json(
+            &h,
+            op(
+                "register_model_policy_version",
+                json!({"checkpoint_digest": hex(1), "adapter_digest": hex(12),
+                       "tokenizer_digest": hex(2), "artifact_ref": "artifacts:v2",
+                       "parent_version_id": base_id,
+                       "origin": {"origin": "trained", "training_run_id": run_id}}),
+            ),
+        )
+        .await;
+        let trained_id = record_id(trained);
+        let evaluation = dispatch_policy_json(
+            &h,
+            op(
+                "commit_policy_evaluation",
+                json!({
+                    "subject": {"kind": "model_policy", "family_ref": "family:policy"},
+                    "revision_ref": trained_id, "champion_revision_ref": base_id,
+                    "evaluation_set_digest": hex(20), "evaluator_digest": hex(21),
+                    "evaluator_kind": "annotation",
+                    "held_out_trajectory_ids": ["heldout:0001"],
+                    "metrics": {"task_success_ppm": 800_000, "baseline_task_success_ppm": 600_000,
+                                "cost_micros": 10, "latency_p50_ms": 5, "latency_p95_ms": 9,
+                                "gpu_seconds": 1, "trace_completeness_ppm": 1_000_000,
+                                "unsupported_replay_mass_ppm": 0},
+                    "safety": "passed", "verdict": "accepted",
+                }),
+            ),
+        )
+        .await;
+        assert_eq!(evaluation["disposition"], "written");
+    });
+    let elapsed = started.elapsed().as_secs_f64() * 1_000.0;
+    report.insert(
+        "decide/policy_evolution".to_string(),
+        json!({
+            "p50_ms": elapsed,
+            "p99_ms": elapsed,
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 /// Facts the `decide/memory_scaling` group loads at its smallest size (N).
 const MEMORY_SCALING_BASE: usize = 100_000;
 /// Recalls timed at each corpus size.
@@ -3208,6 +3403,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_belief_revision(c, &rt, &mut report);
     bench_skill_evolution(c, &rt, &mut report);
     bench_paired_rollouts(c, &mut report);
+    bench_policy_evolution(&rt, &mut report);
     bench_memory_scaling(c, &rt, &mut report);
     bench_trajectory_served(c, &rt, &mut report);
     bench_trajectory_join_kernel(c, &mut report);

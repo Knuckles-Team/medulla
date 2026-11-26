@@ -2,7 +2,18 @@
 //! through the real request boundary in dependency order, replayed, and read
 //! back under another tenant (MEDULLA-DECISION-ENGINE-R811).
 
-use medulla_h_decide::decide::stat_test_support::Harness;
+use medulla_decision_types::decision::held_out::RevisionSubject;
+use medulla_decision_types::decision::statistical::log::{DecisionLogCommitted, DecisionLogOp};
+use medulla_decision_types::decision::statistical::retrieval::{
+    LearningRecorded, LearningWrite, PointerMovement, PointerRef,
+};
+use medulla_decision_types::decision::statistical::{
+    DecisionBatch, QuestionKind, TypedParam, TypedValue,
+};
+use medulla_decision_types::decision::DecisionPolicyRef;
+use medulla_h_decide::decide::stat_test_support::{
+    declared_request, decode, publish_route_schema, Harness,
+};
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
@@ -415,4 +426,221 @@ async fn receipts_read_back_field_for_field() {
         assert_eq!(view["record_id"], json!(id));
         assert_eq!(view["record"]["kind"], kind);
     }
+}
+
+/// Captures the journey records, each over its own trajectory.
+const JOURNEY_CAPTURES: usize = 100;
+/// Held-out trajectories of the journey's evaluation: more than
+/// `promotion.min_cases` (50).
+const JOURNEY_HELD_OUT: usize = 60;
+
+/// Send one DecisionLog or Decide method as the deciding principal.
+async fn decider(h: &Harness, method: Method) -> Response {
+    let method = rmp_serde::from_slice(&rmp_serde::to_vec_named(&method).unwrap()).unwrap();
+    Box::pin(
+        medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+            &h.state,
+            Request {
+                id: 8115,
+                graph: GRAPH.into(),
+                auth_token: String::new(),
+                agent_id: Some("decider".into()),
+                method,
+                trace_id: None,
+            },
+            VerifiedRequestContext::verified_for_test_with_scopes(
+                "decider",
+                TENANT,
+                &["kg:read", "agent:decision-write", "agent:decision-read"],
+            ),
+        ),
+    )
+    .await
+}
+
+/// The 100-capture journey: capture, one training run, one evaluation, then a
+/// `Promotion` decision whose committed `promote` record moves the model-policy
+/// champion pointer to the trained version.
+// spec: MEDULLA-DECISION-ENGINE-R811.6
+#[tokio::test]
+async fn served_policy_evolution_journey() {
+    let h = Harness::with_isolation(ServerState::test_isolation(WRITER)).await;
+    let capability = json!({
+        "provider": "vllm", "endpoint_ref": "endpoint:gb10", "base_checkpoint_digest": hex(1),
+        "tokenizer_digest": hex(2), "decode_params_digest": hex(3),
+        "artifact_destination_ref": "artifacts:new", "probe_digest": hex(4), "probed_at_ms": 1,
+        "logprobs": {"chosen_token": true},
+        "controls": {"capture": {"enabled": true, "scope": "ops"},
+                     "train": {"enabled": true, "scope": "ops"}},
+    });
+    let capability_id =
+        write_and_replay(&h, "admin:policy-capability", "put_capability", capability).await;
+    let base = json!({
+        "checkpoint_digest": hex(1), "tokenizer_digest": hex(2),
+        "artifact_ref": "artifacts:base", "origin": {"origin": "base"},
+    });
+    let base_id = write_and_replay(
+        &h,
+        "admin:model-policy-register",
+        "register_model_policy_version",
+        base,
+    )
+    .await;
+
+    // 100 captures, one per trajectory; the blobs are uploaded once and shared.
+    let template = capture_body(&h, &capability_id, &base_id).await;
+    let mut capture_ids = Vec::with_capacity(JOURNEY_CAPTURES);
+    for index in 0..JOURNEY_CAPTURES {
+        let trajectory = format!("trajectory:{index:04}");
+        h.seed_node(
+            GRAPH,
+            &trajectory,
+            json!({"type": "Trajectory", "step_count": TRAJECTORY_STEPS}),
+        )
+        .await;
+        let mut capture = template.clone();
+        capture["trajectory_id"] = json!(trajectory);
+        let receipt = value_of(
+            "commit_capture",
+            dispatch(
+                &h,
+                TENANT,
+                &["policy:capture-write"],
+                op("commit_capture", capture),
+            )
+            .await,
+        );
+        assert_eq!(receipt["disposition"], "written", "capture {index}");
+        capture_ids.push(receipt["record_id"].as_str().expect("an id").to_string());
+    }
+    assert_eq!(capture_ids.len(), JOURNEY_CAPTURES);
+
+    let run = json!({
+        "capability_id": capability_id, "work_item_id": "work:1", "base_version_id": base_id,
+        "input_capture_ids": capture_ids,
+        "method": {"method": "klpo", "estimator": {"estimator": "sampled_token"}},
+        "adapter": {"adapter": "lora", "rank": 8},
+        "trainer_image_digest": hex(10), "hyperparameters_digest": hex(11),
+        "status": {"status": "succeeded",
+                   "output": {"artifact_digest": hex(12), "artifact_ref": "artifacts:v2"}},
+    });
+    let run_id = write_and_replay(&h, "admin:training-run-write", "commit_training_run", run).await;
+    let trained = json!({
+        "checkpoint_digest": hex(1), "adapter_digest": hex(12), "tokenizer_digest": hex(2),
+        "artifact_ref": "artifacts:v2", "parent_version_id": base_id,
+        "origin": {"origin": "trained", "training_run_id": run_id},
+    });
+    let trained_id = write_and_replay(
+        &h,
+        "admin:model-policy-register",
+        "register_model_policy_version",
+        trained,
+    )
+    .await;
+
+    let held_out: Vec<String> = (0..JOURNEY_HELD_OUT)
+        .map(|index| format!("heldout:{index:04}"))
+        .collect();
+    let held_refs: Vec<&str> = held_out.iter().map(String::as_str).collect();
+    let evaluation_id = write_and_replay(
+        &h,
+        "admin:policy-evaluation-write",
+        "commit_policy_evaluation",
+        evaluation_json(model_subject(), &trained_id, Some(&base_id), &held_refs),
+    )
+    .await;
+
+    // The promotion decision judges that evaluation and promotes the trained version.
+    let subject = RevisionSubject::ModelPolicy {
+        family_ref: "family:policy".to_string(),
+    };
+    let (schema_pin, _) = publish_route_schema(&h);
+    let text = |name: &str, value: String| TypedParam {
+        name: name.to_string(),
+        value: TypedValue::Text(value),
+    };
+    let asked = declared_request(
+        &schema_pin,
+        TENANT,
+        QuestionKind::Promotion,
+        &trained_id,
+        DecisionPolicyRef::Default,
+        vec![
+            text("mode", "promote".to_string()),
+            text("receipt_digest", evaluation_id.clone()),
+            text("subject", serde_json::to_string(&subject).unwrap()),
+        ],
+    );
+    let batch: DecisionBatch = decode(
+        decider(
+            &h,
+            Method::Decide {
+                request: Box::new(asked),
+            },
+        )
+        .await,
+    )
+    .expect("a served promotion decision");
+    let record = batch.records.as_slice()[0].clone();
+    let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
+    assert!(facts.contains(&"promotion.verdict=promote"), "{facts:?}");
+    let _: DecisionLogCommitted = decode(
+        decider(
+            &h,
+            Method::DecisionLog {
+                op: Box::new(DecisionLogOp::Commit {
+                    record: Box::new(record.clone()),
+                    evaluator: None,
+                    approval: None,
+                }),
+            },
+        )
+        .await,
+    )
+    .expect("the promote record commits");
+
+    let moved: LearningRecorded = decode(
+        decider(
+            &h,
+            Method::DecisionLog {
+                op: Box::new(DecisionLogOp::Learn {
+                    tenant_id: TENANT.to_string(),
+                    write: LearningWrite::MovePointer {
+                        pointer: PointerRef::Champion {
+                            subject: subject.clone(),
+                        },
+                        movement: PointerMovement::Activate {
+                            target: trained_id.clone(),
+                            receipt_digest: record.record_id.clone(),
+                        },
+                    },
+                }),
+            },
+        )
+        .await,
+    )
+    .expect("the champion pointer moves");
+    match moved {
+        LearningRecorded::Pointer(state) => {
+            assert_eq!(state.target(), Some(trained_id.as_str()));
+        }
+        other => panic!("pointer state expected: {other:?}"),
+    }
+
+    // The promoted model-policy champion reads back through the served pointer read.
+    let champion = value_of(
+        "pointer",
+        decider(
+            &h,
+            Method::DecisionLog {
+                op: Box::new(DecisionLogOp::Pointer {
+                    tenant_id: TENANT.to_string(),
+                    pointer_key: subject.pointer_key(),
+                }),
+            },
+        )
+        .await,
+    );
+    assert_eq!(champion["revision_ref"], json!(trained_id));
+    assert_eq!(champion["subject"]["kind"], "model_policy");
 }
