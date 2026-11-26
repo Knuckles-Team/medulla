@@ -133,22 +133,24 @@ def test_usage_read_is_tenant_scoped(clean_graph):
     assert first["next_cursor"]
     rest = asyncio.run(
         _usage(
-            dc.usage_read_op(
-                base, base + 2000, "records", cursor=first["next_cursor"]
-            ),
+            dc.usage_read_op(base, base + 2000, "records", cursor=first["next_cursor"]),
             scopes=human,
         )
     )
     assert len(rest["records"]) == 1
     assert rest["next_cursor"] is None
 
-    rollup = asyncio.run(_usage(dc.usage_read_op(base, base + 2000, "rollup"), scopes=human))
+    rollup = asyncio.run(
+        _usage(dc.usage_read_op(base, base + 2000, "rollup"), scopes=human)
+    )
     assert rollup["view"] == "rollup"
     assert sum(day["calls"] for day in rollup["days"]) >= 1001
 
     # A service-only caller without `usage:read` cannot read.
     with pytest.raises(Exception, match="ACCESS_DENIED"):
-        asyncio.run(_usage(dc.usage_read_op(base, base + 2000, "records"), scopes=service))
+        asyncio.run(
+            _usage(dc.usage_read_op(base, base + 2000, "records"), scopes=service)
+        )
 
     # A forged cursor of the other tenant refuses before any read.
     forged = f"usage:{TENANT_B}/{0:020d}/{0:010d}".encode().hex()
@@ -164,6 +166,72 @@ def test_usage_read_is_tenant_scoped(clean_graph):
         asyncio.run(
             _usage(
                 dc.usage_read_op(base, base + 2000, "records"),
+                scopes=human,
+                tenant=TENANT_B,
+            )
+        )
+
+
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R801.6")
+def test_append_then_read_cost_end_to_end(clean_graph):
+    # spec: MEDULLA-DECISION-ENGINE-R801.6
+    suffix = uuid.uuid4().hex[:8]
+    model = f"m-{suffix}"
+    child = f"usage-{suffix}"
+    day = 46_000 + uuid.uuid4().int % 1_000
+    base = day * 86_400_000 + 3_600_000
+    service = ["usage:write"]
+    human = ["usage:read", "kg:write"]
+    price = {
+        "schema_version": 1,
+        "model_key": model,
+        "valid_from_ms": 1,
+        "in_per_mtok_micro": 3_000_000,
+        "out_per_mtok_micro": 15_000_000,
+        "cached_per_mtok_micro": 300_000,
+    }
+    stored = asyncio.run(
+        _usage(dc.usage_put_price_op({"entries": [price]}), scopes=service)
+    )
+    assert stored["entries"] == 1
+
+    # Three calls of one million tokens in and 200,000 out, each priced at
+    # 3,000,000 + 3,000,000 micro-units: the day's bucket costs their sum.
+    records = [
+        dc.usage_record(
+            TEST_TENANT,
+            child,
+            OPERATION,
+            f"{child}-run-{i}",
+            base + i,
+            model_key=model,
+            tokens_in=1_000_000,
+            tokens_out=200_000,
+        )
+        for i in range(3)
+    ]
+    appended = asyncio.run(_usage(dc.usage_append_op(records), scopes=service))
+    assert appended["appended"] == 3
+
+    rollup = asyncio.run(
+        _usage(
+            dc.usage_read_op(base, base + 10, "rollup", model_key=model),
+            scopes=human,
+        )
+    )
+    assert rollup["view"] == "rollup"
+    (bucket,) = [d for d in rollup["days"] if d["model_key"] == model]
+    assert bucket["day"] == day
+    assert (bucket["calls"], bucket["errors"]) == (3, 0)
+    assert bucket["tokens_in"] == 3_000_000
+    assert bucket["tokens_out"] == 600_000
+    assert bucket["cost_micro"] == 18_000_000
+
+    # A caller of another tenant is never admitted to this ledger.
+    with pytest.raises(Exception, match="AUTH_TENANT_MISMATCH"):
+        asyncio.run(
+            _usage(
+                dc.usage_read_op(base, base + 10, "rollup", model_key=model),
                 scopes=human,
                 tenant=TENANT_B,
             )

@@ -2233,6 +2233,14 @@ path = "benches/redb_write_latency_bench.rs"
 harness = false
 required-features = ["full"]
 
+# Usage ledger nightly budget (MEDULLA-DECISION-ENGINE-R801.6): 1,000,000 appended records
+# through the served `Usage` handler, then a 30-day rollup.
+[[bench]]
+name = "usage_ledger"
+path = "benches/usage_ledger.rs"
+harness = false
+required-features = ["full"]
+
 # Execution-kernel latency budget (MEDULLA-FINANCE-PRIMITIVES-R613.6): a 1000-slice
 # schedule solve and a 1_000_000-bar regime fit through the signed dispatch entry,
 # gated by scripts/bench_gate.py.
