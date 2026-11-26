@@ -59,6 +59,11 @@
       "p99_ms": 50.0,
       "peak_mib": 64.0
     },
+    "decide/memory_consolidate": {
+      "p50_ms": 25.0,
+      "p99_ms": 120.0,
+      "peak_mib": 96.0
+    },
     "decide/agent_loop": {
       "p99_ms": 2.0,
       "peak_mib": 16.0

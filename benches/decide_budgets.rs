@@ -2119,6 +2119,136 @@ fn bench_correction(
     );
 }
 
+/// Entries the `decide/memory_consolidate` group seeds, and their vector width.
+const MEMORY_ENTRIES: u64 = 10_000;
+const MEMORY_DIMS: usize = 384;
+
+/// The `decide/memory_consolidate` group (MEDULLA-DECISION-ENGINE-R651.6, R178.1): the served
+/// `MemoryRecall` with `include_plan` over `MEMORY_ENTRIES` stored memories of `MEMORY_DIMS`
+/// dimensions, seeded through the served `MemoryRemember`. Each sample is the recall that plans
+/// the merges and promotions; it writes nothing. Budget (p50 25 ms, p99 120 ms, peak 96 MiB):
+/// `group_budgets` in `benches/baselines/decide.json`.
+// spec: MEDULLA-DECISION-ENGINE-R651.6
+fn bench_memory_consolidate(
+    c: &mut Criterion,
+    rt: &Runtime,
+    report: &mut BTreeMap<String, serde_json::Value>,
+) {
+    use medulla_types::contract::{ResourceId, TenantId};
+    use medulla_work_types::memory::{
+        MemoryKind, MemoryRecallRequest, MemoryRecord, MemoryRememberRequest, MemoryTier,
+        MEMORY_RECORD_SCHEMA_VERSION,
+    };
+    let h = rt.block_on(Harness::with_isolation(ServerState::test_isolation("decider")));
+    let call = |method: Method| -> Response {
+        rt.block_on(Box::pin(
+            medulla_server_router::dispatch::request_boundary::dispatch_verified_request(
+                &h.state,
+                Request {
+                    id: 651,
+                    graph: "__commons__".into(),
+                    auth_token: String::new(),
+                    agent_id: Some("decider".into()),
+                    method,
+                    trace_id: None,
+                },
+                VerifiedRequestContext::verified_for_test_with_scopes("decider", TENANT, &["*"]),
+            ),
+        ))
+    };
+    // A deterministic unit-ish vector per entry: no clock, no RNG.
+    let vector = |seed: u64| -> Vec<f32> {
+        let mut state = seed.wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1;
+        (0..MEMORY_DIMS)
+            .map(|_| {
+                state ^= state << 13;
+                state ^= state >> 7;
+                state ^= state << 17;
+                (state % 2_000) as f32 / 1_000.0 - 1.0
+            })
+            .collect()
+    };
+    for n in 0..MEMORY_ENTRIES {
+        let episodic = n % 2 == 0;
+        let record = MemoryRecord {
+            memory_id: ResourceId::new(format!("m:{n:05}")).unwrap(),
+            tenant: TenantId::new(TENANT).unwrap(),
+            kind: MemoryKind::Fact,
+            tier: if episodic { MemoryTier::Episodic } else { MemoryTier::Semantic },
+            text: format!("memory entry {n} about topic {}", n % 97),
+            provenance_key: None,
+            session_id: None,
+            timestamp_ms: 10 + n as i64,
+            topics: Vec::new(),
+            pattern_key: episodic.then(|| format!("pattern-{}", n % 41)),
+            importance: 1.0,
+            access_count: 0,
+            last_access_ms: 0,
+            last_decay_ms: 0,
+            forgotten: false,
+            legal_hold: false,
+            expires_at_ms: None,
+            support_count: 0,
+            token_estimate: 10,
+            attachments: Vec::new(),
+            speaker: None,
+            schema_version: MEMORY_RECORD_SCHEMA_VERSION,
+        };
+        let stored = call(Method::MemoryRemember {
+            request: Box::new(MemoryRememberRequest {
+                record,
+                embedding: vector(n),
+                episode: None,
+            }),
+        });
+        assert!(stored.refusal_text().is_none(), "{:?}", stored.refusal_text());
+    }
+    let plan = || {
+        call(Method::MemoryRecall {
+            request: Box::new(MemoryRecallRequest {
+                query_embedding: vector(7),
+                keywords: Vec::new(),
+                tiers: Vec::new(),
+                scope: None,
+                as_of_ms: None,
+                budget: 4_000,
+                prime_session: None,
+                include_plan: true,
+                include_media: false,
+                previous_manifest_digest: None,
+                document_set_ids: Vec::new(),
+                min_relevance: None,
+                include_archived: false,
+                current_revision: None,
+                episode_scope: None,
+            }),
+        })
+    };
+    let first = plan();
+    assert!(first.refusal_text().is_none(), "{:?}", first.refusal_text());
+    let group_name = "decide/memory_consolidate".to_string();
+    let mut group = c.benchmark_group(format!("{group_name}/served"));
+    group.bench_function("served", |b| b.iter(|| black_box(plan())));
+    group.finish();
+    let before = high_water_mib();
+    let mut samples: Vec<Duration> = (0..REPORT_SAMPLES)
+        .map(|_| {
+            let start = Instant::now();
+            black_box(plan());
+            start.elapsed()
+        })
+        .collect();
+    samples.sort();
+    report.insert(
+        group_name,
+        serde_json::json!({
+            "p50_ms": percentile_ms(&samples, 0.50),
+            "p99_ms": percentile_ms(&samples, 0.99),
+            "peak_mib": (high_water_mib() - before).max(0.0),
+        }),
+    );
+}
+
 /// A maximal frontier: `MAX_THOUGHT_LEAVES` leaves over four depths.
 fn widest_frontier() -> ReasoningState {
     let nodes = (0..MAX_THOUGHT_LEAVES as u32)
@@ -3498,6 +3628,7 @@ fn bench_decide(c: &mut Criterion) {
     bench_agent_loop(c, &rt, &mut report);
     bench_failure_patterns(c, &rt, &mut report);
     bench_correction(c, &rt, &mut report);
+    bench_memory_consolidate(c, &rt, &mut report);
     bench_concentration_kernel(c, &mut report);
     bench_thought_search_kernel(c, &mut report);
     bench_served_kernels(c, &rt, &mut report);

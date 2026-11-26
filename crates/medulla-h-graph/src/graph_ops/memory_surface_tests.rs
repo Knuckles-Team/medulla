@@ -1013,3 +1013,45 @@ fn prune_report_records_examined_removed_held() {
     core.evict_below(&["memory:tenant-a:m:high".to_string()], 0.5, false);
     assert_eq!(report_nodes(&core).len(), 2);
 }
+
+fn importance_of(core: &GraphCore, node: &str) -> f64 {
+    let blob = core.get_node_properties(node).expect("the memory node exists");
+    let properties: serde_json::Value = rmp_serde::from_slice(&blob).unwrap();
+    properties["importance"].as_f64().expect("a stored importance")
+}
+
+/// Reinforce adds its weight below `knob memory.importance_cap` and stops at it; decay halves
+/// the importance every half-life; both go through the one `importance_update`.
+// spec: MEDULLA-DECISION-ENGINE-R651.8
+#[test]
+fn reinforce_then_decay_matches_the_half_life() {
+    let core = GraphCore::new();
+    store(
+        &core,
+        "tenant-a",
+        &remember(record("tenant-a", "m:imp", MemoryTier::Episodic, "ran the build"), vec![]),
+    );
+    let node = "memory:tenant-a:m:imp";
+    assert_eq!(importance_of(&core, node), 1.0);
+
+    // Reinforcement adds the weight: 1.0 + 2.0.
+    assert!(core.reinforce(node, 500, 2.0));
+    assert_eq!(importance_of(&core, node), 3.0);
+
+    // Decay halves every half-life of the time since `last_decay_ms` (0 for a new record):
+    // 2000 ms over a 1000 ms half-life is two halvings.
+    assert_eq!(core.decay_memories(2_000, 1_000, &[node.to_string()]), 1);
+    assert_eq!(importance_of(&core, node), 0.75);
+    // A second pass at the same instant sees no elapsed time and changes nothing.
+    assert_eq!(core.decay_memories(2_000, 1_000, &[node.to_string()]), 1);
+    assert_eq!(importance_of(&core, node), 0.75);
+    // One more half-life later it halves once more.
+    core.decay_memories(3_000, 1_000, &[node.to_string()]);
+    assert_eq!(importance_of(&core, node), 0.375);
+
+    // Reinforcement never lifts importance past the default cap of 10.0.
+    assert!(core.reinforce(node, 4_000, 100.0));
+    assert_eq!(importance_of(&core, node), 10.0);
+    assert!(core.reinforce(node, 4_001, 1.0));
+    assert_eq!(importance_of(&core, node), 10.0);
+}

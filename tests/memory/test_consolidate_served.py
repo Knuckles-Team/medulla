@@ -110,3 +110,47 @@ def test_episodes_promote_to_semantic_fact(clean_graph):
             )
         )
         assert edge["relationship"] == "CONSOLIDATES", edge
+
+
+# spec: MEDULLA-DECISION-ENGINE-R651.8
+def test_reinforce_and_decay_share_importance(clean_graph):
+    """Reinforce adds its weight up to the importance cap and decay halves the
+    importance every half-life; both change the one ``importance`` property."""
+    client = clean_graph
+    node = "memory:importance-1"
+    client._send(
+        "AddNode",
+        {
+            "node_id": node,
+            "properties_msgpack": msgpack.packb(
+                {
+                    "type": "EpisodicMemory",
+                    "importance": 1.0,
+                    "access_count": 0,
+                    "last_access_ms": 0,
+                    "last_decay_ms": 0,
+                }
+            ),
+        },
+    )
+
+    def importance() -> float:
+        props = _body(client._send("GetNodeProperties", {"node_id": node}))
+        return float(props["importance"])
+
+    assert client._send("Reinforce", {"node_id": node, "now_ms": 500, "weight": 2.0})
+    assert importance() == 3.0
+    # 2000 ms since `last_decay_ms` over a 1000 ms half-life: two halvings.
+    assert (
+        client._send(
+            "DecayMemories",
+            {"now_ms": 2_000, "half_life_ms": 1_000, "ids": [node]},
+        )
+        == 1
+    )
+    assert importance() == 0.75
+    # Reinforcement stops at the default cap of 10.0.
+    assert client._send(
+        "Reinforce", {"node_id": node, "now_ms": 3_000, "weight": 100.0}
+    )
+    assert importance() == 10.0
