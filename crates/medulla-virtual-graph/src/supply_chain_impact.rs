@@ -257,6 +257,7 @@ mod tests {
         ));
     }
 
+    // proves R005.9: Curated contract-to-service link, and the contract coverage read of the ...
     // spec: MEDULLA-SUPPLY-VOCAB-R005.9
     #[test]
     fn contract_without_edge_is_contract_uncovered() {
