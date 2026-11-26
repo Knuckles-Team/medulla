@@ -3,10 +3,15 @@
   "rollup": "MEDULLA-CQ-CONN-R049",
   "vocabulary_module": "media-v1.ttl",
   "terms": [
+    "EmailCampaign",
+    "EngagementMetric",
+    "PublishingChannel",
     "SocialPost",
+    "clickCount",
+    "engagementMetricName",
+    "engagementMetricValue",
     "postState",
-    "socialScheduledAt",
-    "PublishingChannel"
+    "socialScheduledAt"
   ],
   "questions": [
     {
@@ -29,6 +34,31 @@
       "min_rows": 1,
       "recordings": [
         "postiz-agent/single.json"
+      ]
+    },
+    {
+      "id": "postiz.q2",
+      "kind": "cross",
+      "question": "Which Postiz posts promote a campaign that Listmonk also sent, and which got the better engagement?",
+      "uql": "LET s0 = FOREIGN SCAN 'postiz-agent'; LET s1 = FOREIGN SCAN 'listmonk-api'; JOIN s0, s1",
+      "sources": [
+        "postiz-agent",
+        "listmonk-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "postiz-agent": "mcp_tool",
+        "listmonk-api": "http_endpoint"
+      },
+      "columns": [
+        "post",
+        "campaign",
+        "better"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "postiz-agent/cross_listmonk-api.json",
+        "listmonk-api/cross_postiz-agent.json"
       ]
     }
   ]

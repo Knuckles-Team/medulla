@@ -3,15 +3,17 @@
   "as_of": "2026-11-26T00:00:00Z",
   "items": [
     {
-      "unsubscribed": "unsubscribed-1",
-      "joinKey": "listmonk.q2-key-1",
-      "id": "postiz-agent-listmonk.q2-1",
+      "post": "post-1",
+      "better": "better-1",
+      "joinKey": "postiz.q2-key-1",
+      "id": "postiz-agent-postiz.q2-1",
       "label": "postiz-agent 1"
     },
     {
-      "unsubscribed": "unsubscribed-2",
-      "joinKey": "listmonk.q2-key-2",
-      "id": "postiz-agent-listmonk.q2-2",
+      "post": "post-2",
+      "better": "better-2",
+      "joinKey": "postiz.q2-key-2",
+      "id": "postiz-agent-postiz.q2-2",
       "label": "postiz-agent 2"
     }
   ]
