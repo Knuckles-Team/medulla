@@ -4,8 +4,8 @@
   "vocabulary_module": "media-v1.ttl",
   "terms": [
     "MessageChannel",
-    "memberCount",
-    "lastPostAt"
+    "lastPostAt",
+    "memberCount"
   ],
   "questions": [
     {
@@ -28,6 +28,35 @@
       "min_rows": 1,
       "recordings": [
         "mattermost-mcp/single.json"
+      ]
+    },
+    {
+      "id": "mattermost.q2",
+      "kind": "cross",
+      "question": "Which Mattermost members have no active identity-provider account, and which people lack a Mattermost account?",
+      "uql": "LET s0 = FOREIGN SCAN 'mattermost-mcp'; LET s1 = FOREIGN SCAN 'keycloak-agent'; LET s2 = FOREIGN SCAN 'okta-agent'; JOIN s0, s1, s2",
+      "sources": [
+        "mattermost-mcp",
+        "keycloak-agent",
+        "okta-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "mattermost-mcp": "mcp_tool",
+        "keycloak-agent": "mcp_tool",
+        "okta-agent": "mcp_tool"
+      },
+      "columns": [
+        "member",
+        "person",
+        "account"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "mattermost-mcp/cross_keycloak-agent.json",
+        "keycloak-agent/cross_mattermost-mcp.json",
+        "mattermost-mcp/cross_okta-agent.json",
+        "okta-agent/cross_mattermost-mcp.json"
       ]
     }
   ]

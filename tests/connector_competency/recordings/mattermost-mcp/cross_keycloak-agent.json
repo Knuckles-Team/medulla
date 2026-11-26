@@ -1,0 +1,18 @@
+{
+  "source": "mattermost-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "member": "member-1",
+      "joinKey": "mattermost.q2-key-1",
+      "id": "mattermost-mcp-mattermost.q2-1",
+      "label": "mattermost-mcp 1"
+    },
+    {
+      "member": "member-2",
+      "joinKey": "mattermost.q2-key-2",
+      "id": "mattermost-mcp-mattermost.q2-2",
+      "label": "mattermost-mcp 2"
+    }
+  ]
+}
