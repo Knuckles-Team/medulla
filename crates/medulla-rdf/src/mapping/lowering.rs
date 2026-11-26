@@ -1,4 +1,5 @@
 use super::*;
+use medulla_query_types::rdf_report::LoadReport;
 
 /// Canonical lossless property-graph rows lowered from an RDF triple stream.
 /// Every server surface consumes this representation so literal multiplicity,

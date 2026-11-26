@@ -5350,7 +5350,7 @@ ex:bob   a ex:Person ; ex:name "Bob"@en .
     )
     .await;
     assert_ok(&r);
-    let report: medulla_rdf::mapping::LoadReport = match r.result {
+    let report: medulla_query_types::rdf_report::LoadReport = match r.result {
         Some(ResultPayload::Raw(b)) => rmp_serde::from_slice(&b).unwrap(),
         other => panic!("expected Raw(LoadReport), got {other:?}"),
     };

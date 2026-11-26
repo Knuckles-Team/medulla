@@ -129,7 +129,7 @@ struct SparqlRecoveryPlan {
     /// the same `ApplyMutation` report as the attempt that planned it. A plan sealed
     /// before this field existed decodes with zero counts.
     #[serde(default)]
-    counts: medulla_rdf::update::UpdateReport,
+    counts: medulla_query_types::rdf_report::UpdateReport,
     /// SHA-256 of the request text the plan answers (MEDULLA-FEDERATED-QUERY-R707.5), sealed
     /// with the plan so a resumed saga reports the same digest. Empty on a plan sealed before
     /// the field existed and on a compensation marker.
@@ -603,7 +603,7 @@ async fn try_sparql_forward_commit(
     let marker_plan = SparqlRecoveryPlan {
         schema_version: 1,
         graphs: Vec::new(),
-        counts: medulla_rdf::update::UpdateReport::default(),
+        counts: medulla_query_types::rdf_report::UpdateReport::default(),
         request_sha256: String::new(),
     };
     match begin_sealed_sparql_saga(
@@ -1014,7 +1014,7 @@ mod coordinator_restart_tests {
                 before_msgpack: vec![0x91, 0x01],
                 after_msgpack: vec![0x91, 0x02],
             }],
-            counts: medulla_rdf::update::UpdateReport::default(),
+            counts: medulla_query_types::rdf_report::UpdateReport::default(),
             request_sha256: String::new(),
         };
         let (digest, encrypted) =
@@ -1067,7 +1067,7 @@ mod coordinator_restart_tests {
         let parent_plan = SparqlRecoveryPlan {
             schema_version: 1,
             graphs: Vec::new(),
-            counts: medulla_rdf::update::UpdateReport::default(),
+            counts: medulla_query_types::rdf_report::UpdateReport::default(),
             request_sha256: String::new(),
         };
         let (parent_digest, parent_encrypted) =

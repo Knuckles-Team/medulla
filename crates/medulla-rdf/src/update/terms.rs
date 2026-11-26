@@ -9,7 +9,7 @@ use crate::sparql::{Binding, Solution};
 
 use super::store::GraphStore;
 use super::triples::{delete_triple, insert_triple};
-use super::UpdateReport;
+use medulla_query_types::rdf_report::UpdateReport;
 
 // ── ground-data ops (INSERT DATA / DELETE DATA) ─────────────────────────────────
 

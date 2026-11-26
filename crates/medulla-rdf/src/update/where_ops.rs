@@ -9,7 +9,7 @@ use crate::sparql::{Dataset, Projection, Solution};
 use super::store::GraphStore;
 use super::terms::{apply_resolved_quad, instantiate};
 use super::triples::insert_triples;
-use super::UpdateReport;
+use medulla_query_types::rdf_report::UpdateReport;
 
 // ── DELETE/INSERT … WHERE ───────────────────────────────────────────────────────
 

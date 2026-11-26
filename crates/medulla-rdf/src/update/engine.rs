@@ -11,7 +11,7 @@ use super::store::{GraphStore, MapStore};
 use super::terms::{apply_resolved_quad, apply_to_target, GroundQuadData};
 use super::triples::insert_triples;
 use super::where_ops::{exec_delete_insert, export_graph_triples};
-use super::UpdateReport;
+use medulla_query_types::rdf_report::UpdateReport;
 
 /// Parse + execute a SPARQL 1.1 UPDATE under the mandatory write guard.
 pub fn execute_str(
