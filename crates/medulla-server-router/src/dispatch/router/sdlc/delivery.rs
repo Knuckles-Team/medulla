@@ -25,6 +25,10 @@ use medulla_source_types::delivery::{
     DELIVERY_RECORD_PROPERTY, DELIVERY_SCHEMA_VERSION, DELIVERY_TYPE,
 };
 use medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordStored;
+use medulla_source_types::gate_verdict::{
+    gate_verdict_seal, GateVerdictRecord, GATE_VERDICT_RECORD_PROPERTY,
+    GATE_VERDICT_SEAL_PROPERTY,
+};
 use medulla_source_types::lifecycle::{DefectIntake, FileDefectRequest};
 use medulla_protocol_types::result_contract::ingestion::{
     DeliveryFeedback as DeliveryFeedbackResult, DeliveryList as DeliveryListResult,
@@ -143,6 +147,78 @@ fn load_deliveries(
     deliveries
 }
 
+/// A visible node's decoded properties, by the blob the core holds for it.
+fn decode_visible(
+    core: &GraphCore,
+    authority: &medulla_server_api::carrier::GraphReadAuthority,
+    id: &str,
+    blob: &[u8],
+    tenant: &str,
+) -> Option<Map<String, Value>> {
+    if !authority.can_see_node(blob, core.is_schema_node(id)) {
+        return None;
+    }
+    let Ok(Value::Object(node)) = medulla_types::msgpack::decode_property_value(blob) else {
+        return None;
+    };
+    node.get("tenant_id")
+        .and_then(Value::as_str)
+        .is_none_or(|owner| owner == tenant)
+        .then_some(node)
+}
+
+/// The connectors the caller can see in the connector registry: every visible `Connector` node,
+/// by its `name` and by its id with a `connector:` prefix or any path or fragment removed.
+fn registered_connectors(
+    core: &GraphCore,
+    authority: &medulla_server_api::carrier::GraphReadAuthority,
+    tenant: &str,
+) -> BTreeSet<String> {
+    let mut names = BTreeSet::new();
+    for (id, blob) in core.get_nodes_by_label(CONNECTOR_TYPE, MAX_DELIVERIES_READ) {
+        let Some(node) = decode_visible(core, authority, &id, &blob, tenant) else {
+            continue;
+        };
+        if let Some(name) = node.get("name").and_then(Value::as_str) {
+            names.insert(name.to_owned());
+        }
+        let bare = id.strip_prefix("connector:").unwrap_or(&id);
+        names.insert(bare.to_owned());
+        if let Some(tail) = bare.rsplit(['/', '#']).next() {
+            names.insert(tail.to_owned());
+        }
+    }
+    names
+}
+
+/// The sealed gate verdicts the caller can see: the node id of every `GateVerdict` whose record
+/// decodes and whose stored seal equals the seal of that record. A node without a valid seal
+/// is not evidence.
+fn sealed_gate_verdicts(
+    core: &GraphCore,
+    authority: &medulla_server_api::carrier::GraphReadAuthority,
+    tenant: &str,
+) -> Vec<(String, GateVerdictRecord)> {
+    let mut sealed = Vec::new();
+    for (id, blob) in core.get_nodes_by_label(GATE_VERDICT_TYPE, MAX_DELIVERIES_READ) {
+        let Some(node) = decode_visible(core, authority, &id, &blob, tenant) else {
+            continue;
+        };
+        let record = node
+            .get(GATE_VERDICT_RECORD_PROPERTY)
+            .and_then(Value::as_str)
+            .and_then(|text| serde_json::from_str::<GateVerdictRecord>(text).ok());
+        let seal = node.get(GATE_VERDICT_SEAL_PROPERTY).and_then(Value::as_str);
+        if let (Some(record), Some(seal)) = (record, seal) {
+            if gate_verdict_seal(&record) == seal {
+                sealed.push((id, record));
+            }
+        }
+    }
+    sealed.sort_by(|a, b| a.0.cmp(&b.0));
+    sealed
+}
+
 fn find_delivery(deliveries: &[Delivery], id: &str) -> Result<Delivery, String> {
     deliveries
         .iter()
@@ -249,19 +325,15 @@ pub(super) async fn feedback(
         let deliveries = load_deliveries(&core, &authority, &tenant);
         let event_node = format!("feedback:{}", event.event_id);
         let already_stored = visible_object(&core, &authority, &tenant, &event_node).is_some();
-        let connector_node = format!("connector:{}", event.connector);
-        let registered: BTreeSet<String> = visible_object(&core, &authority, &tenant, &connector_node)
-            .filter(|node| node.get("type").and_then(Value::as_str) == Some(CONNECTOR_TYPE))
-            .map(|_| event.connector.clone())
-            .into_iter()
-            .collect();
+        let registered = registered_connectors(&core, &authority, &tenant);
         let proposal_known = deliveries.iter().any(|delivery| {
             delivery.proposals.iter().any(|p| p.id == event.proposal_id)
                 || delivery.follows.iter().any(|id| id == &event.proposal_id)
         }) || visible_object(&core, &authority, &tenant, &event.proposal_id)
             .is_some_and(|node| node.get("type").and_then(Value::as_str) == Some(PROPOSAL_TYPE));
         // A person's event may resume an ended delivery whose mandate still holds. The
-        // actor's `source:write` is the admission of this very call: the method needs it.
+        // actor's `source:write` is read from the verified scopes of this call.
+        let actor_can_write = target.verified.allows_method("source:write", true);
         let mut revalidated = BTreeSet::new();
         for delivery in deliveries.iter().filter(|d| d.ended.is_some()) {
             let mode = stored_project_mode(state, &target, &delivery.repo).await?;
@@ -282,7 +354,7 @@ pub(super) async fn feedback(
             let facts = MandateFacts {
                 mode,
                 rows_open,
-                actor_can_write: true,
+                actor_can_write,
                 policy_version: delivery.mandate.policy_version.clone(),
             };
             if revalidate_mandate(delivery, &facts).is_ok() {
@@ -362,10 +434,8 @@ pub(super) async fn report(
         let tenant = target.verified.tenant().to_owned();
         let (core, authority) = read_graph(state, &target).await?;
         let delivery = find_delivery(&load_deliveries(&core, &authority, &tenant), &write.delivery_id)?;
-        let known_verdicts: BTreeSet<String> = core
-            .get_nodes_by_label(GATE_VERDICT_TYPE, MAX_DELIVERIES_READ)
+        let known_verdicts: BTreeSet<String> = sealed_gate_verdicts(&core, &authority, &tenant)
             .into_iter()
-            .filter(|(id, blob)| authority.can_see_node(blob, core.is_schema_node(id)))
             .map(|(id, _)| id)
             .collect();
         let recorded =
