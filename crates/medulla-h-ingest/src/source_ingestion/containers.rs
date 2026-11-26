@@ -24,6 +24,8 @@ pub struct ContainerAdmission {
     pub methods: Vec<Method>,
     /// The container nodes written: each takes one policy record.
     pub node_ids: Vec<String>,
+    /// What the batch wrote (MEDULLA-INGEST-WORKER-R904.5).
+    pub report: medulla_ingestion_types::source_governance::ContainerReport,
 }
 
 fn encode(value: &Value) -> Result<Vec<u8>, String> {
@@ -94,9 +96,16 @@ pub fn admit_containers(
     tenant: &str,
     containers: &[SourceContainer],
     held: &BTreeMap<String, Value>,
+    synced_at: u64,
 ) -> Result<ContainerAdmission, String> {
-    let plan = source_hierarchy::plan_containers(tenant, containers, held).map_err(wire)?;
+    let plan =
+        source_hierarchy::plan_containers(tenant, containers, held, synced_at).map_err(wire)?;
     let mut admission = ContainerAdmission::default();
+    admission.report = medulla_ingestion_types::source_governance::ContainerReport {
+        containers_upserted: plan.nodes.len() as u64,
+        edges_written: plan.edges.len() as u64,
+        edges_removed: plan.removed_edges.len() as u64,
+    };
     for node in &plan.nodes {
         admission.methods.push(Method::AddNode {
             node_id: node.node_id.clone(),
@@ -142,7 +151,7 @@ mod tests {
             container("docs", Some("root")),
             container("api", Some("docs")),
         ];
-        let admission = admit_containers("t1", &tree, &BTreeMap::new()).expect("admits");
+        let admission = admit_containers("t1", &tree, &BTreeMap::new(), 7).expect("admits");
         assert_eq!(admission.node_ids.len(), 3);
         let kinds: Vec<&str> = admission
             .methods
@@ -154,6 +163,28 @@ mod tests {
             })
             .collect();
         assert_eq!(kinds, ["node", "node", "node", "edge", "edge"]);
+        // spec: MEDULLA-INGEST-WORKER-R904.5
+        assert_eq!(
+            (
+                admission.report.containers_upserted,
+                admission.report.edges_written,
+                admission.report.edges_removed
+            ),
+            (3, 2, 0)
+        );
+        let api = admission
+            .methods
+            .iter()
+            .find_map(|m| match m {
+                Method::AddNode { properties_msgpack, .. } => {
+                    let node: Value = rmp_serde::from_slice(properties_msgpack).unwrap();
+                    (node["container_id"] == "api").then_some(node)
+                }
+                _ => None,
+            })
+            .expect("the api node");
+        assert_eq!(api["source_path"], "root/docs/api");
+        assert_eq!(api["synced_at"], 7);
     }
 
     // spec: MEDULLA-INGEST-WORKER-R904.3
@@ -164,16 +195,16 @@ mod tests {
         let api = source_hierarchy::container_node_id("t1", "wiki", "api").unwrap();
         let guide = source_hierarchy::container_node_id("t1", "wiki", "guide").unwrap();
         assert!(ids.contains(&docs) && ids.contains(&api));
-        let refused = admit_containers("t1", &[container("api", Some("docs"))], &BTreeMap::new())
+        let refused = admit_containers("t1", &[container("api", Some("docs"))], &BTreeMap::new(), 0)
             .expect_err("docs is neither in the batch nor held");
         assert!(refused.starts_with("SOURCE_CONTAINER_INVALID"), "{refused}");
         let held = BTreeMap::from([
-            (docs, json!({})),
+            (docs, json!({ "source_path": "docs" })),
             (guide, json!({})),
             (api, json!({ "parent_id": "guide" })),
         ]);
         let admission =
-            admit_containers("t1", &[container("api", Some("docs"))], &held).expect("admits");
+            admit_containers("t1", &[container("api", Some("docs"))], &held, 0).expect("admits");
         assert!(admission
             .methods
             .iter()

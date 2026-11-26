@@ -38,6 +38,7 @@ fn an_agent_scope_narrows_by_container_subtree_and_source_kind() {
         &core,
         "t1",
         &[container("space", None), container("folder", Some("space")), container("other", None)],
+        0,
     )
     .unwrap();
     record(&core, "doc-top", json!({"source_kind": "confluence"}), Some("space"));

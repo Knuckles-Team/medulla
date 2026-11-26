@@ -142,6 +142,46 @@ pub fn held_ids(
     Ok(ids)
 }
 
+/// The `source_path` of one container: its parent's path plus `/` plus its own id. The batch
+/// is acyclic (`held_ids` checked it), so the recursion ends at a root or a held parent.
+fn source_path_of(
+    tenant: &str,
+    container: &SourceContainer,
+    by_key: &BTreeMap<(&str, &str), &SourceContainer>,
+    held: &BTreeMap<String, Value>,
+    paths: &mut BTreeMap<(String, String), String>,
+) -> Result<String, ContainerError> {
+    let key = (container.source.clone(), container.container_id.clone());
+    if let Some(path) = paths.get(&key) {
+        return Ok(path.clone());
+    }
+    let path = match container.parent_id.as_deref() {
+        None => container.container_id.clone(),
+        Some(parent) => {
+            let parent_path = match by_key.get(&(container.source.as_str(), parent)) {
+                Some(in_batch) => source_path_of(tenant, in_batch, by_key, held, paths)?,
+                None => held
+                    .get(&container_node_id(tenant, &container.source, parent)?)
+                    .and_then(|p| p.get("source_path"))
+                    .and_then(Value::as_str)
+                    .map(str::to_string)
+                    .ok_or_else(|| {
+                        refuse(
+                            "CONTAINER_PARENT_UNKNOWN",
+                            format!(
+                                "held parent '{parent}' of container '{}' has no source_path; send the parent again",
+                                container.container_id
+                            ),
+                        )
+                    })?,
+            };
+            format!("{parent_path}/{}", container.container_id)
+        }
+    };
+    paths.insert(key, path.clone());
+    Ok(path)
+}
+
 /// Plan the writes of `containers` of `tenant`. `held` maps the node id of every node
 /// [`held_ids`] names that already exists to its properties; a missing key is an absent
 /// node. Nothing is written here: the caller applies the plan to a [`GraphCore`]
@@ -150,10 +190,18 @@ pub fn held_ids(
 /// A parent outside the batch must be a held container node of the same source,
 /// otherwise the batch is refused with `CONTAINER_PARENT_UNKNOWN`. A container whose
 /// parent changed loses its old `containedIn` edge.
+///
+/// Each node carries `source_path` (the container ids from the root down to the container,
+/// joined by `/`: a root's path is its own id) and `synced_at` (the caller's clock reading,
+/// Unix milliseconds; the planner reads no clock). A parent in the batch gives its path from
+/// the batch, a parent outside gives the `source_path` of its held node; a held parent with
+/// no `source_path` is refused `CONTAINER_PARENT_UNKNOWN` (the connector heals it by sending
+/// that parent again) (MEDULLA-INGEST-WORKER-R904.5).
 pub fn plan_containers(
     tenant: &str,
     containers: &[SourceContainer],
     held: &BTreeMap<String, Value>,
+    synced_at: u64,
 ) -> Result<ContainerPlan, ContainerError> {
     held_ids(tenant, containers)?;
     let in_batch: BTreeSet<(&str, &str)> = containers
@@ -176,6 +224,14 @@ pub fn plan_containers(
         }
     }
 
+    let by_key: BTreeMap<(&str, &str), &SourceContainer> = containers
+        .iter()
+        .map(|c| ((c.source.as_str(), c.container_id.as_str()), c))
+        .collect();
+    let mut paths: BTreeMap<(String, String), String> = BTreeMap::new();
+    for container in containers {
+        source_path_of(tenant, container, &by_key, held, &mut paths)?;
+    }
     let mut plan = ContainerPlan::default();
     for container in containers {
         let id = container_node_id(tenant, &container.source, &container.container_id)?;
@@ -193,6 +249,8 @@ pub fn plan_containers(
                 "container_id": container.container_id,
                 "parent_id": container.parent_id,
                 "title": container.title,
+                "source_path": paths[&(container.source.clone(), container.container_id.clone())],
+                "synced_at": synced_at,
             }),
         });
         if let Some(old) = old_parent {
@@ -223,6 +281,7 @@ pub fn upsert_containers(
     core: &GraphCore,
     tenant: &str,
     containers: &[SourceContainer],
+    synced_at: u64,
 ) -> Result<ContainerUpsert, ContainerError> {
     let mut held = BTreeMap::new();
     for id in held_ids(tenant, containers)? {
@@ -230,7 +289,7 @@ pub fn upsert_containers(
             held.insert(id.clone(), props(core, &id).unwrap_or_else(|| json!({})));
         }
     }
-    let plan = plan_containers(tenant, containers, &held)?;
+    let plan = plan_containers(tenant, containers, &held, synced_at)?;
     for node in &plan.nodes {
         core.add_node(node.node_id.clone(), blob(&node.properties));
     }

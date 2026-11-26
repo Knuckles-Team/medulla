@@ -240,6 +240,14 @@ class AccessReport(BaseModel):
     updated: Annotated[int, Field(ge=0)]
 
 
+class ContainerReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    containers_upserted: Annotated[int, Field(ge=0)]
+    edges_removed: Annotated[int, Field(ge=0)]
+    edges_written: Annotated[int, Field(ge=0)]
+
+
 class ReconcileReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -442,6 +450,7 @@ class SourceIngestionReceipt(BaseModel):
     batch_digest: Digest256
     classes: Annotated[list[ClassReport], Field(max_length=1024)]
     column_exclusions: list[ColumnExclusion] = Field(default_factory=list)
+    containers: ContainerReport | None = None
     committed_graph_version: Annotated[int, Field(ge=0)]
     content_hash: Digest256 | None = None
     disposition: SourceIngestionDisposition
@@ -919,6 +928,7 @@ __all__ = [
     "ClassReport",
     "ColumnExclusionReason",
     "ColumnExclusion",
+    "ContainerReport",
     "EmbeddingSetEntry",
     "TranscriptReceipt",
     "SourceIngestionReceipt",

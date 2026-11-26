@@ -68,6 +68,8 @@ pub enum SourceGovernanceError {
     BlankIdentifier { field: &'static str },
     #[error("container {0} names itself as its parent")]
     SelfParent(String),
+    #[error("{field} must not contain '/': it joins the container path")]
+    SlashInContainerId { field: &'static str },
 }
 
 fn check_set(field: &'static str, set: &BTreeSet<String>) -> Result<(), SourceGovernanceError> {
@@ -259,8 +261,16 @@ impl SourceContainer {
     pub fn validate(&self) -> Result<(), SourceGovernanceError> {
         check_id("source", &self.source)?;
         check_id("container_id", &self.container_id)?;
+        if self.container_id.contains('/') {
+            return Err(SourceGovernanceError::SlashInContainerId {
+                field: "container_id",
+            });
+        }
         if let Some(parent) = &self.parent_id {
             check_id("parent_id", parent)?;
+            if parent.contains('/') {
+                return Err(SourceGovernanceError::SlashInContainerId { field: "parent_id" });
+            }
             if parent == &self.container_id {
                 return Err(SourceGovernanceError::SelfParent(self.container_id.clone()));
             }
@@ -269,10 +279,42 @@ impl SourceContainer {
     }
 }
 
+/// What one `containers` batch wrote (MEDULLA-INGEST-WORKER-R904.5): the container nodes
+/// upserted and the `containedIn` edges written and removed. Observation evidence: not part
+/// of the receipt digest, because the batch digest already covers the container content.
+#[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ContainerReport {
+    pub containers_upserted: u64,
+    pub edges_written: u64,
+    pub edges_removed: u64,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    // spec: MEDULLA-INGEST-WORKER-R904.5
+    #[test]
+    fn a_container_id_with_a_slash_is_refused() {
+        let container = |id: &str, parent: Option<&str>| SourceContainer {
+            source: "wiki".into(),
+            container_id: id.into(),
+            parent_id: parent.map(str::to_string),
+            title: "t".into(),
+        };
+        assert!(container("docs", Some("root")).validate().is_ok());
+        assert_eq!(
+            container("a/b", None).validate(),
+            Err(SourceGovernanceError::SlashInContainerId { field: "container_id" })
+        );
+        assert_eq!(
+            container("b", Some("a/c")).validate(),
+            Err(SourceGovernanceError::SlashInContainerId { field: "parent_id" })
+        );
+    }
 
     // spec: MEDULLA-INGEST-WORKER-R900.1
     #[test]

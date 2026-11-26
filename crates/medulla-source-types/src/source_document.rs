@@ -373,6 +373,7 @@ mod tests {
             facts: Default::default(),
             access: None,
             reconcile: None,
+            containers: None,
             transcript: None,
             report: Default::default(),
             classes: BoundedVec::new(Vec::new()).unwrap(),

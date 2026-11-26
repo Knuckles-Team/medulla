@@ -540,6 +540,11 @@ pub struct SourceIngestionReceipt {
     /// every other kind.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reconcile: Option<ReconcileReport>,
+    /// Containers upserted and edges written and removed by a `containers` batch
+    /// (MEDULLA-INGEST-WORKER-R904.5); absent for every other kind. Observation evidence: not
+    /// part of the receipt digest.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub containers: Option<medulla_ingestion_types::source_governance::ContainerReport>,
     /// The thread, message and concept-link counts of a `transcripts` batch
     /// (MEDULLA-INGEST-WORKER-R003.17); absent for every other kind.
     #[serde(default, skip_serializing_if = "Option::is_none")]

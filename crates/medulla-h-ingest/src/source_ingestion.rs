@@ -130,6 +130,8 @@ pub struct PreparedSourceIngestion {
     access: Option<medulla_ingestion_types::source_governance::AccessReport>,
     /// Evidence of an `enumeration` batch (R903.5); `None` for every other kind.
     reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport>,
+    /// Evidence of a `containers` batch (R904.5); `None` for every other kind.
+    containers: Option<medulla_ingestion_types::source_governance::ContainerReport>,
     /// Evidence of a `transcripts` batch (R003.17); `None` for every other kind.
     transcript: Option<medulla_source_types::source_transcript::TranscriptReceipt>,
     /// What the batch did to each ontology class, keyed by label (MEDULLA-INGEST-WORKER-R606.5).
@@ -746,6 +748,7 @@ pub async fn prepare(
         facts: Default::default(),
         access: None,
         reconcile: None,
+        containers: None,
         transcript: None,
         committed_graph_version: ctx.graph_version.saturating_add(1),
         quarantine: None,
@@ -789,6 +792,8 @@ async fn prepare_extension_batch(
     #[allow(unused_mut)]
     let mut reconcile: Option<medulla_ingestion_types::source_governance::ReconcileReport> = None;
     let mut transcript_receipt: Option<medulla_source_types::source_transcript::TranscriptReceipt> =
+        None;
+    let mut container_report: Option<medulla_ingestion_types::source_governance::ContainerReport> =
         None;
     match batch.extension.as_ref() {
         Some(SourceBatchExtension::Access(items)) => {
@@ -1007,7 +1012,11 @@ async fn prepare_extension_batch(
                 &containers::held_ids(ctx.tenant_scope, &found)?,
             )
             .await?;
-            let admission = containers::admit_containers(ctx.tenant_scope, &found, &held)?;
+            // One clock reading per batch, passed down: the planner reads no clock (R904.5).
+            let synced_at = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+            let admission =
+                containers::admit_containers(ctx.tenant_scope, &found, &held, synced_at)?;
+            container_report = Some(admission.report.clone());
             for node_id in &admission.node_ids {
                 policies.push(policy(node_id, ctx.tenant_scope, &policy_subject, 0));
             }
@@ -1098,6 +1107,7 @@ async fn prepare_extension_batch(
         &action_records,
         access,
         reconcile.as_ref(),
+        container_report.as_ref(),
         transcript_receipt.as_ref(),
         &fact_report,
     )?);
@@ -1149,6 +1159,7 @@ async fn prepare_extension_batch(
         facts: fact_report,
         access,
         reconcile,
+        containers: container_report,
         transcript: transcript_receipt,
         drift: Vec::new(),
         quarantine: None,
@@ -1458,6 +1469,7 @@ fn permission_receipt_method(
     action_records: &[String],
     access: Option<medulla_ingestion_types::source_governance::AccessReport>,
     reconcile: Option<&medulla_ingestion_types::source_governance::ReconcileReport>,
+    containers: Option<&medulla_ingestion_types::source_governance::ContainerReport>,
     transcript: Option<&medulla_source_types::source_transcript::TranscriptReceipt>,
     facts: &medulla_ingestion_types::extracted_fact::FactReport,
 ) -> Result<Method, String> {
@@ -1486,6 +1498,10 @@ fn permission_receipt_method(
     if let Some(reconcile) = reconcile {
         properties["reconcile"] = serde_json::to_value(reconcile)
             .map_err(|error| format!("reconcile receipt encoding failed: {error}"))?;
+    }
+    if let Some(containers) = containers {
+        properties["containers"] = serde_json::to_value(containers)
+            .map_err(|error| format!("containers receipt encoding failed: {error}"))?;
     }
     if let Some(transcript) = transcript {
         properties["transcript"] = serde_json::to_value(transcript)
@@ -3627,6 +3643,7 @@ fn build_terminal_receipt(
         facts: prepared.facts,
         access: prepared.access,
         reconcile: prepared.reconcile,
+        containers: prepared.containers,
         transcript: prepared.transcript,
         report: if prepared.class_reports.is_empty() {
             medulla_types::ingest_materialize::IngestBatchReport {
@@ -3739,6 +3756,7 @@ impl PreparedSourceIngestion {
             facts: Default::default(),
             access: None,
             reconcile: None,
+            containers: None,
             transcript: None,
             committed_graph_version: receipt.committed_graph_version,
             quarantine: Some(receipt),
@@ -4061,6 +4079,15 @@ fn prepared_replay(
             .map(|value| {
                 serde_json::from_value(value.clone())
                     .map_err(|error| format!("SOURCE_INGESTION_REPLAY_INVALID: access: {error}"))
+            })
+            .transpose()?,
+        containers: receipt
+            .get("containers")
+            .filter(|value| !value.is_null())
+            .map(|value| {
+                serde_json::from_value(value.clone()).map_err(|error| {
+                    format!("SOURCE_INGESTION_REPLAY_INVALID: containers: {error}")
+                })
             })
             .transpose()?,
         reconcile: receipt

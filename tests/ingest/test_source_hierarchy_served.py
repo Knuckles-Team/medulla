@@ -160,3 +160,47 @@ async def test_record_in_container_is_admitted_with_its_edge() -> None:
         assert receipt.affected_count == 1
     finally:
         await _close(client, graph)
+
+
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R904.5")
+@pytest.mark.asyncio
+async def test_container_tree_reads_back() -> None:
+    connector = _connector()
+    client, graph = await _ingest_client(connector)
+    reader = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(principal="principal:second-reader"),
+        graph_name=graph,
+    )
+    try:
+        tree = [("root", None), ("docs", "root"), ("api", "docs")]
+        receipt = await _submit(
+            client, _containers_batch(connector, 1, None, tree), "evidence"
+        )
+        assert receipt.containers is not None
+        assert receipt.containers.containers_upserted == 3
+        assert receipt.containers.edges_written == 2
+        assert receipt.containers.edges_removed == 0
+
+        # A separately authorized principal reads the written tree back: the nodes and
+        # each node's source_path equal the path derived from the written parents.
+        paths: dict[str, str] = {}
+        for node_id, _ in await reader.nodes.list_by_label("SourceContainer", 0):
+            props = await reader.nodes.properties(node_id) or {}
+            paths[props["container_id"]] = props["source_path"]
+            assert props["synced_at"] > 0
+        assert paths == {
+            "root": "root",
+            "docs": "root/docs",
+            "api": "root/docs/api",
+        }
+        # An id with a slash cannot join a path: refused whole.
+        with pytest.raises(EngineResponseError, match="SOURCE_CONTAINER_INVALID"):
+            await _submit(
+                client,
+                _containers_batch(connector, 2, 1, [("a/b", None)]),
+                "slash",
+            )
+    finally:
+        await reader.close()
+        await _close(client, graph)
