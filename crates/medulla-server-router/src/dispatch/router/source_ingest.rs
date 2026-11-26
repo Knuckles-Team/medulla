@@ -34,7 +34,7 @@ pub async fn dispatch_source_ingest_methods(
         // MEDULLA-INGEST-WORKER-R001.4.1: the served ingest enqueue.
         #[cfg(feature = "jobs")]
         Method::IngestEnqueue { envelope } => {
-            dispatch_boxed(ingest_enqueue(ctx, *envelope)).await
+            dispatch_boxed(handle_ingest_enqueue(ctx, *envelope)).await
         }
         // MEDULLA-INGEST-WORKER-R001.11: the served backpressure read.
         #[cfg(feature = "jobs")]
@@ -112,7 +112,7 @@ async fn ingest_queue_depth(ctx: DispatchCtx<'_>, queue: Option<String>) -> Resp
 /// Serve `IngestEnqueue`: read the policy and the queue load, then map the job
 /// onto its reserved task queue through the one producer.
 #[cfg(feature = "jobs")]
-async fn ingest_enqueue(
+async fn handle_ingest_enqueue(
     ctx: DispatchCtx<'_>,
     envelope: medulla_source_types::ingest_job::IngestJobEnvelope,
 ) -> Response {
