@@ -5,9 +5,6 @@ use serde::{Deserialize, Serialize};
 // The numeric-kernel result shapes live in `medulla-types` with the served
 // `NumericEvaluate` wire types (MEDULLA-FINANCE-PRIMITIVES-R002.2.5); re-exported
 // so every existing path keeps resolving to the one definition.
-pub use medulla_types::numeric_kernel::{
-    AdfResult, CvSplit, DieboldMariano, KalmanState, OuParams, OuThresholds, RegimeResult,
-};
 
 /// A mean-variance / risk-parity / Black-Litterman portfolio.
 #[derive(Serialize, Deserialize, Debug, Clone)]
