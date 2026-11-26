@@ -1,12 +1,11 @@
-"""Served topic fusion over stored centroids (MEDULLA-FEDERATED-QUERY-R040.2.5, R040.2.6).
+"""Served topic fusion over stored centroids (MEDULLA-FEDERATED-QUERY-R040.2.5,
+R040.2.6).
 
 The topic request rides on ``UnifiedQuery.retrieval.topic``. The graph declares one
-single-modality space through the served ``DeclareEmbeddingSpace`` write, document vectors
-are stored with ``AddEmbedding`` and the centroids are ``TopicCentroid`` nodes written with
-``AddNode``.
-"""
+single-modality space through the served ``DeclareEmbeddingSpace`` write, document
+vectors are stored with ``AddEmbedding`` and the centroids are ``TopicCentroid`` nodes
+written with ``AddNode``."""
 
-# ruff: noqa: E501
 from __future__ import annotations
 
 import uuid
@@ -59,7 +58,7 @@ def _ranked(
 
 
 def _corpus_revision(cl: Any, graph: str, retrieval: dict[str, Any]) -> int:
-    """The graph revision the query reads, a structured field of the stale-corpus refusal."""
+    """The graph revision the query reads, a field of the stale-corpus refusal."""
     stale = {**retrieval, "topic": {**retrieval["topic"], "corpus_revision": 2**40}}
     with pytest.raises(TopicCorpusStaleError) as refused:
         _ranked(cl, graph, [1.0, 0.0, 0.0, 0.0], 1, stale)
@@ -70,9 +69,9 @@ def _corpus_revision(cl: Any, graph: str, retrieval: dict[str, Any]) -> int:
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.5")
 def test_receipt_reproduces_final_score(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.5: every final score is recomputed from the
-    receipt's dense and topic parts by the reproduction rule, the entries follow the final
-    order, and a candidate the constraints excluded never appears."""
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.5: every final score is recomputed from
+    the receipt's dense and topic parts by the reproduction rule, the entries follow the
+    final order, and a candidate the constraints excluded never appears."""
     graph = f"topic-receipt-{uuid.uuid4().hex[:8]}"
     cl = client()
     cl.tenants.create(graph)
@@ -175,8 +174,8 @@ def _refusal(cl: Any, graph: str, retrieval: dict[str, Any]) -> str:
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.2")
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.6")
 def test_topic_fusion_over_stored_centroids(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.6: topic fusion over stored centroid nodes
-    changes the order the dense score alone gives, and an incompatible space, an
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.6: topic fusion over stored centroid
+    nodes changes the order the dense score alone gives, and an incompatible space, an
     incompatible centroid, a stale corpus revision and another tenant's centroids each
     refuse before anything is ranked."""
     graph = f"topic-hot-{uuid.uuid4().hex[:8]}"
@@ -256,10 +255,11 @@ def _components(topic: Any) -> dict[str, Any]:
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.7")
 def test_document_responsibilities_change_order(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.7: each topic component is recomputed from the
-    receipt's assignments and the query responsibilities; replacing one document's embedding
-    changes only that document's component and the order; a missing embedding, a duplicate
-    topic, a stale embedding and another space each refuse and return no rows."""
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.7: each topic component is recomputed
+    from the receipt's assignments and the query responsibilities; replacing one
+    document's embedding changes only that document's component and the order; a missing
+    embedding, a duplicate topic, a stale embedding and another space each refuse and
+    return no rows."""
     graph = f"topic-docs-{uuid.uuid4().hex[:8]}"
     cl = client()
     cl.tenants.create(graph)
@@ -323,11 +323,13 @@ def test_document_responsibilities_change_order(start_medulla_server) -> None:
             )
             assert abs(part.topic_micros - expected) <= 2, part
 
-        # Only d2's embedding changes: d1's entry is untouched, d2's topic term and the order change.
+        # Only d2's embedding changes: d1's entry is untouched, d2's topic term and the
+        # order change.
         put(cl, graph, "d2", {"type": "Doc", "kind": "doc"}, [1.0, 0.2, 0.0, 0.0])
         retrieval["topic"]["corpus_revision"] = _corpus_revision(cl, graph, retrieval)
         second_answer, second = run()
-        # The graph revision moved, so only the fusion parts are compared, not the generation.
+        # The graph revision moved, so only the fusion parts are compared, not the
+        # generation.
         assert (
             _components(second)["d1"].topic_micros
             == _components(first)["d1"].topic_micros
@@ -379,9 +381,9 @@ def test_document_responsibilities_change_order(start_medulla_server) -> None:
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.7")
 def test_fused_rank_candidate_without_embedding_refuses(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.7: a text-ranked row with no stored embedding
-    reaches topic fusion through ``FuseRrf`` and refuses ``TOPIC_ASSIGNMENT_MISSING``
-    without returning rows."""
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.7: a text-ranked row with no stored
+    embedding reaches topic fusion through ``FuseRrf`` and refuses
+    ``TOPIC_ASSIGNMENT_MISSING`` without returning rows."""
     graph = f"topic-unembedded-{uuid.uuid4().hex[:8]}"
     cl = client()
     cl.tenants.create(graph)
@@ -440,9 +442,9 @@ def test_fused_rank_candidate_without_embedding_refuses(start_medulla_server) ->
 
 @pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R040.2.4")
 def test_incompatible_topics_refuse_before_fusion(start_medulla_server) -> None:
-    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.4: a topic weight out of range, a space the
-    retriever does not hold, a stale corpus revision and a graph with no centroid backend
-    each refuse with their registered code, and none returns rows."""
+    """Verifies MEDULLA-FEDERATED-QUERY-R040.2.4: a topic weight out of range, a space
+    the retriever does not hold, a stale corpus revision and a graph with no centroid
+    backend each refuse with their registered code, and none returns rows."""
     graph = f"topic-refuse-{uuid.uuid4().hex[:8]}"
     bare = f"topic-refuse-bare-{uuid.uuid4().hex[:8]}"
     cl = client()
@@ -486,7 +488,8 @@ def test_incompatible_topics_refuse_before_fusion(start_medulla_server) -> None:
             cl, bare, _topic(_space(), revision)
         )
 
-        # The compatible request still ranks, so each refusal above came from the topic request.
+        # The compatible request still ranks, so each refusal above came from the topic
+        # request.
         ok = _ranked(
             cl, graph, [1.0, 0.0, 0.0, 0.0], 2, _topic(_space(), revision)["retrieval"]
         )

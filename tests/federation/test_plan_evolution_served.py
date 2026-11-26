@@ -1,13 +1,13 @@
-"""MEDULLA-FEDERATED-QUERY-R091.3 served acceptance: a kept plan is read by a later query.
+"""MEDULLA-FEDERATED-QUERY-R091.3 served acceptance: a kept plan is read by a later
+query.
 
-A served query over a registered foreign source records one observation of its shape under
-the verified owner. The downtime tick submits the ``plan_evolution`` job, the engine runs it
-in process (replaying the baseline and the candidate plan against the source), keeps the
-candidate that fetches fewer rows with the same results, and completes the job. A later join
-over the same source then reads the kept plan: its PROFILE fragment names the kept digest.
-"""
+A served query over a registered foreign source records one observation of its shape
+under the verified owner. The downtime tick submits the ``plan_evolution`` job, the
+engine runs it in process (replaying the baseline and the candidate plan against the
+source), keeps the candidate that fetches fewer rows with the same results, and
+completes the job. A later join over the same source then reads the kept plan: its
+PROFILE fragment names the kept digest."""
 
-# ruff: noqa: E501
 from __future__ import annotations
 
 import os
@@ -20,8 +20,8 @@ from conftest import tenant_request_context
 
 from medulla.client import SyncMedullaClient
 
-# The knobs resolve from the environment of the server process, which the session fixture
-# starts from this process's environment: name them at collection time.
+# The knobs resolve from the environment of the server process, which the session
+# fixture starts from this process's environment: name them at collection time.
 os.environ.setdefault("MEDULLA_DOWNTIME_TICK_SECS", "1")
 os.environ.setdefault("MEDULLA_DOWNTIME_IDLE_QUIET_SECS", "10")
 os.environ.setdefault("MEDULLA_FEDERATION_MIN_REPLAYS", "5")
@@ -36,7 +36,7 @@ def _scan(name: str, join: bool) -> dict[str, object]:
 
 
 def _provision_downtime(graph) -> None:
-    """One idle ``plan_evolution`` job type and the two capacity cells its lease draws on."""
+    """One idle ``plan_evolution`` job type and the two capacity cells it leases."""
     graph.nodes.add(
         "dw:plan-evolution",
         {
@@ -85,7 +85,7 @@ def _fragment(graph, name: str) -> str:
 
 
 def _register_table(graph, pg_source, query: str | None = None) -> tuple[str, str]:
-    """A fresh table of ``ROWS`` rows registered as a named SQL source; ``(table, name)``."""
+    """A fresh table of ``ROWS`` rows as a named SQL source; ``(table, name)``."""
     table = f"pe_items_{uuid.uuid4().hex[:8]}"
     pg_source.execute(f"CREATE TABLE {table} (id int primary key, name text)")
     pg_source.execute(
@@ -106,7 +106,7 @@ def _register_table(graph, pg_source, query: str | None = None) -> tuple[str, st
 
 
 def _observe_shape(graph, name: str, joins: int = 7, reads: int = 12) -> None:
-    """Record one source's shape: joins first (bind join), whole reads after (the baseline)."""
+    """Record one source's shape: joins first (bind join), then whole reads."""
     join = [{"Scan": {"label": "PeDoc"}}, _scan(name, True)]
     for _ in range(joins):
         assert len(graph.query.unified(join)) == LOCAL_IDS
@@ -151,15 +151,16 @@ def test_served_query_records_and_later_query_reads_kept_plan(clean_graph, pg_so
     _seed_locals(clean_graph)
     _provision_downtime(clean_graph)
 
-    # Joins first, while the source is unobserved: the cost model picks the bind join. Whole
-    # reads after: the baseline plan is the one a shape runs most often.
+    # Joins first, while the source is unobserved: the cost model picks the bind join.
+    # Whole reads after: the baseline plan is the one a shape runs most often.
     _observe_shape(clean_graph, name)
 
     # The shape was recorded, so its fragment shows no kept plan yet.
     assert "kept_plan=" not in _fragment(clean_graph, name)
 
-    # The downtime tick runs the plan-evolution job, which keeps the bind join (fewer rows
-    # fetched, equal results); the next join over the same source reads the kept plan.
+    # The downtime tick runs the plan-evolution job, which keeps the bind join (fewer
+    # rows fetched, equal results); the next join over the same source reads the kept
+    # plan.
     kept = _kept_digest(clean_graph, name)
     assert len(kept) == 64 and all(c in "0123456789abcdef" for c in kept), kept
 
@@ -182,8 +183,8 @@ def test_explain_names_kept_plan_and_receipt(clean_graph, pg_source):
     for field in ("p50_before_us", "p50_after_us", "bytes_before", "bytes_after"):
         assert isinstance(report[field], int) and report[field] >= 0
 
-    # The evidence is kept with the plan under the owner: another tenant lists none, even
-    # over a source registered under the same name.
+    # The evidence is kept with the plan under the owner: another tenant lists none,
+    # even over a source registered under the same name.
     other = SyncMedullaClient.connect(
         socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
         verified_context=tenant_request_context("tenant:plan-evolution-other"),
@@ -224,7 +225,9 @@ def test_kept_plan_measurably_faster_and_mismatch_reverts(clean_graph, pg_source
         {
             "Sql": {
                 "dsn": pg_source.dsn,
-                "query": f"SELECT id::text AS id FROM {table} ORDER BY random() LIMIT 10",
+                "query": (
+                    f"SELECT id::text AS id FROM {table} ORDER BY random() LIMIT 10"
+                ),
                 "id_field": "id",
             }
         },
@@ -262,7 +265,9 @@ def test_evolution_refusals(clean_graph, pg_source):
         {
             "Sql": {
                 "dsn": pg_source.dsn,
-                "query": f"SELECT id::text AS id FROM {table} ORDER BY random() LIMIT 10",
+                "query": (
+                    f"SELECT id::text AS id FROM {table} ORDER BY random() LIMIT 10"
+                ),
                 "id_field": "id",
             }
         },
