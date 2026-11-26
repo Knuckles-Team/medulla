@@ -102,6 +102,12 @@ method_results! {
     BlobUnref(BlobUnref) => Count<u64>;
     // `(blobs_reclaimed, chunks_reclaimed)`.
     BlobGc(BlobGc) => Raw<(u64, u64)>;
+    // The lowercase hex SHA-256 of a stored media object (MEDULLA-MEDIA-VOCAB-R657.1).
+    MediaPut(MediaPut) => Text<String>;
+    // One media object of the caller's tenant, as a MessagePack `bin` (MEDULLA-MEDIA-VOCAB-R657.2).
+    MediaGet(MediaGet) => Raw<Dynamic> dynamic CallerBytes;
+    // Whether the tenant's hold was released (MEDULLA-MEDIA-VOCAB-R657.3).
+    MediaTombstone(MediaTombstone) => Bool<bool>;
     // The stored value bytes and their version, or null when the key is absent.
     KvGet(KvGet) => Raw<Option<KvEntry>>;
     KvPut(KvPut) => Raw<KvWriteReceipt>;

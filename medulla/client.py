@@ -16022,6 +16022,37 @@ class BlobClient:
         blobs, chunks = (await _gen.storage.send_blob_gc(self._client)).payload
         return int(blobs), int(chunks)
 
+    # ── Tenant-scoped media objects (MEDULLA-MEDIA-VOCAB-R657) ──
+    async def media_put(self, media_type: str, data: bytes) -> str:
+        """Store one media object for the caller's tenant.
+
+        Returns its lowercase hex SHA-256. Identical bytes give the same digest and
+        repeating the put changes nothing. Refuses ``MEDIA_INVALID`` (no bytes, or a
+        media type that is not ``type/subtype``) and ``MEDIA_TOO_LARGE`` (over the
+        ``media.max_bytes`` knob).
+        """
+        return await _gen.storage.send_media_put(
+            self._client, {"media_type": media_type, "data": data}
+        )
+
+    async def media_get(self, digest: str) -> bytes:
+        """Read one media object of the caller's tenant by digest.
+
+        A missing, foreign, tombstoned or malformed digest all refuse
+        ``MEDIA_NOT_FOUND``.
+        """
+        out = (
+            await _gen.storage.send_media_get(self._client, {"digest": digest})
+        ).payload
+        return bytes(out)
+
+    async def media_tombstone(self, digest: str) -> bool:
+        """Release the caller tenant's hold of a media object.
+
+        Answers ``False`` when the tenant held none.
+        """
+        return await _gen.storage.send_media_tombstone(self._client, {"digest": digest})
+
 
 def _as_bytes(value: Any) -> Any:
     """Normalize a msgpack-decoded byte payload to ``bytes``.

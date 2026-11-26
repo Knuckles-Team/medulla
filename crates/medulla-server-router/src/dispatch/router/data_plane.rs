@@ -136,6 +136,9 @@ pub async fn dispatch_store_methods(
             | Method::BlobFetchEnd { .. }
             | Method::BlobRef { .. }
             | Method::BlobUnref { .. }
+            | Method::MediaPut { .. }
+            | Method::MediaGet { .. }
+            | Method::MediaTombstone { .. }
             | Method::BlobGc) => dispatch_store_methods_arm_0(ctx, method).await,
 
             // ── Key→Value (CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface) ───────────────────────────────
@@ -209,6 +212,9 @@ async fn dispatch_store_methods_arm_0(ctx: DispatchCtx<'_>, method: Method) -> R
         | Method::BlobFetchEnd { .. }
         | Method::BlobRef { .. }
         | Method::BlobUnref { .. }
+        | Method::MediaPut { .. }
+        | Method::MediaGet { .. }
+        | Method::MediaTombstone { .. }
         | Method::BlobGc) => {
             dispatch_boxed(async {
                 let req_id = req.id;

@@ -768,6 +768,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("BlobChunkGet", REASON_BLOB_OWNER_SCOPED),
     ("BlobFetchBegin", REASON_BLOB_OWNER_SCOPED),
     ("BlobFetchEnd", REASON_BLOB_OWNER_SCOPED),
+    // MEDULLA-MEDIA-VOCAB-R657.2: the read checks the caller tenant's own media holder.
+    ("MediaGet", REASON_BLOB_OWNER_SCOPED),
     // REASON_BRANCH_CHAIN_TENANT_SCOPED (MEDULLA-BRANCH-MERGE-R006)
     ("BranchDiff", REASON_BRANCH_CHAIN_TENANT_SCOPED),
     ("BranchReadAt", REASON_BRANCH_CHAIN_TENANT_SCOPED),

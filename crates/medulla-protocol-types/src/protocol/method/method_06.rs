@@ -488,6 +488,35 @@ $($variants)*
     #[cfg(feature = "blob")]
     BlobGc,
 
+    /// Store one media object for the verified tenant (MEDULLA-MEDIA-VOCAB-R657.1). The
+    /// answer is the lowercase hex SHA-256 of `data`; identical bytes give the same digest and
+    /// repeating the put changes nothing. Refusals: `MEDIA_INVALID` (no bytes, or `media_type`
+    /// is not `type/subtype`) and `MEDIA_TOO_LARGE` (over the `media.max_bytes` knob).
+    #[cfg(feature = "blob")]
+    MediaPut {
+        media_type: String,
+        #[cfg_attr(feature = "contract-schema", schemars(with = "Vec<u8>"))]
+        #[serde(with = "serde_bytes")]
+        data: Vec<u8>,
+    },
+
+    /// Read one media object of the verified tenant by its SHA-256 digest, as raw bytes
+    /// (MEDULLA-MEDIA-VOCAB-R657.2). A digest that was never stored, one only another tenant
+    /// holds, a tombstoned one and a malformed one all refuse `MEDIA_NOT_FOUND`. Writes nothing.
+    #[cfg(feature = "blob")]
+    MediaGet {
+        digest: String,
+    },
+
+    /// Tombstone the verified tenant's hold of one media object (MEDULLA-MEDIA-VOCAB-R657.3).
+    /// Answers whether a hold was released; repeating it, or naming a digest the tenant does not
+    /// hold, answers `false`. The bytes are reclaimed by the next `BlobGc` once no tenant holds
+    /// them.
+    #[cfg(feature = "blob")]
+    MediaTombstone {
+        digest: String,
+    },
+
 
     // ── Key→Value (CONCEPT:MEDULLA-KG.storage.namespaced-kv-surface — generic namespaced KV surface) ──────
     // A drop-in KV store keyed by `(namespace, key)`, layered over the SAME durable

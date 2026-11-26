@@ -74,6 +74,8 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         | Method::BlobCommit { .. }
         | Method::BlobRef { .. }
         | Method::BlobUnref { .. }
+        | Method::MediaPut { .. }
+        | Method::MediaTombstone { .. }
         | Method::BlobGc => DurabilityDomain::BlobStore,
         // Wire-unconditional, same reason as `blob` just above: `medulla-capabilities`
         // forces `medulla-types/kv` on unconditionally too (EH-319).
@@ -1029,6 +1031,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::BlobCommit { .. }
         | Method::BlobRef { .. }
         | Method::BlobUnref { .. }
+        | Method::MediaPut { .. }
+        | Method::MediaTombstone { .. }
         | Method::BlobGc => owner_domain(method)
             .unwrap_or_else(|| unreachable!("{method:?} is claimed by owner_domain")),
         // Wire-unconditional (`medulla-capabilities` forces `medulla-types/kv` on

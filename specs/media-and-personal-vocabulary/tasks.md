@@ -125,3 +125,7 @@ Tasks mirror the leaf rows of requirements.md, producer first: vocabulary, shape
 - [ ] T119 [US7] MEDULLA-MEDIA-VOCAB-R656.4 RETIRED: `PhaseExitArtifact.phase` is a record label; progress is derived
 - [ ] T120 [US7] MEDULLA-MEDIA-VOCAB-R656.5 RETIRED: `TranscriptState` is a struct, not a state set
 - [ ] T121 [US7] MEDULLA-MEDIA-VOCAB-R656.6 RETIRED: `TtsResult.status` is fixed at construction
+- [ ] T122 [US7] MEDULLA-MEDIA-VOCAB-R657 Tenant-scoped content-addressed media store (rollup)
+- [ ] T123 [US7] MEDULLA-MEDIA-VOCAB-R657.1 Put
+- [ ] T124 [US7] MEDULLA-MEDIA-VOCAB-R657.2 Get without an existence oracle
+- [ ] T125 [US7] MEDULLA-MEDIA-VOCAB-R657.3 Retention tombstone

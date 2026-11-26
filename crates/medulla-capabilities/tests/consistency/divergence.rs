@@ -164,6 +164,8 @@ pub(crate) const ACCESS_RS_COVERAGE_GAP: &[(&str, &str, &str)] = &[
     ("BlobGc", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("BlobRef", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("BlobUnref", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
+    ("MediaPut", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
+    ("MediaTombstone", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("CatalogAssign", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("CatalogReassign", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),
     ("CatalogRemove", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),

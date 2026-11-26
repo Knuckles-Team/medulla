@@ -1312,6 +1312,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-SCM-R007: a path grant that is out of bounds.
     ("SetPathGrant", &["PATH_GRANT_INVALID"]),
+    // MEDULLA-MEDIA-VOCAB-R657: the served media refusals.
+    ("MediaPut", &["MEDIA_INVALID", "MEDIA_TOO_LARGE"]),
+    ("MediaGet", &["MEDIA_NOT_FOUND"]),
     // MEDULLA-SCM-R004: the tree read refusals.
     (
         "ReadTree",

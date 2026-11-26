@@ -139,6 +139,12 @@ closed_error_codes! {
         PathWriteDenied => "PATH_WRITE_DENIED",
         /// MEDULLA-SCM-R007: a path grant request out of bounds.
         PathGrantInvalid => "PATH_GRANT_INVALID",
+        /// MEDULLA-MEDIA-VOCAB-R657.1: a media put with no bytes or a media type that is not `type/subtype`.
+        MediaInvalid => "MEDIA_INVALID",
+        /// MEDULLA-MEDIA-VOCAB-R657.1: a media put over the `media.max_bytes` knob.
+        MediaTooLarge => "MEDIA_TOO_LARGE",
+        /// MEDULLA-MEDIA-VOCAB-R657.2: a media digest the caller's tenant does not hold.
+        MediaNotFound => "MEDIA_NOT_FOUND",
         /// MEDULLA-SCM-R005.2: the blamed path is deleted or has no blame row at the revision.
         BlamePathAbsent => "BLAME_PATH_ABSENT",
         Busy => "BUSY",

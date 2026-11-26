@@ -829,6 +829,8 @@ mod tests {
         ("BlobGc", "native MutationBatch in blob.redb: GC rows + exact result/coordinator metadata in one WTX"),
         ("BlobRef", "native MutationBatch in blob.redb: refcount + coordinator metadata in one WTX"),
         ("BlobUnref", "native MutationBatch in blob.redb: refcount + coordinator metadata in one WTX"),
+        ("MediaPut", "MEDULLA-MEDIA-VOCAB-R657.1: native MutationBatch in blob.redb: the tenant's media holder + coordinator metadata in one WTX, after the content-addressed chunk is stored"),
+        ("MediaTombstone", "MEDULLA-MEDIA-VOCAB-R657.3: native MutationBatch in blob.redb: the release of the tenant's media holder + coordinator metadata in one WTX"),
         ("KvPut", "native MutationBatch in kv.redb: KV row + status/fence/idempotency/outbox in one WTX"),
         ("KvDelete", "native MutationBatch in kv.redb: KV row + status/fence/idempotency/outbox in one WTX"),
         ("KvCas", "native MutationBatch in kv.redb: CAS decision/row + exact result/coordinator metadata in one WTX"),

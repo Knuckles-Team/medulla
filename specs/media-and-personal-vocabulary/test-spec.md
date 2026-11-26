@@ -74,3 +74,10 @@ Focused: `cargo test -p medulla-core --test media_vocab_a`, `cargo test -p medul
 - `MEDULLA-MEDIA-VOCAB-R656.4`: retired (no lifecycle; see the row's reason).
 - `MEDULLA-MEDIA-VOCAB-R656.5`: retired (no lifecycle; see the row's reason).
 - `MEDULLA-MEDIA-VOCAB-R656.6`: retired (no lifecycle; see the row's reason).
+
+## Tenant-scoped media store rows
+
+- `MEDULLA-MEDIA-VOCAB-R657`: `tests/test_media_store_served.py::test_media_put_get_tombstone_are_tenant_scoped_and_have_no_existence_oracle` (L3).
+- `MEDULLA-MEDIA-VOCAB-R657.1`: `crates/medulla-server-blob/src/blob/media.rs::tests::identical_bytes_share_one_digest_and_one_holder` (L1).
+- `MEDULLA-MEDIA-VOCAB-R657.2`: `crates/medulla-server-blob/src/blob/media.rs::tests::a_foreign_missing_and_malformed_digest_refuse_alike` (L1).
+- `MEDULLA-MEDIA-VOCAB-R657.3`: `crates/medulla-server-blob/src/blob/media.rs::tests::a_tombstone_makes_the_digest_read_as_missing_and_is_idempotent` (L1).

@@ -100,6 +100,9 @@ if TYPE_CHECKING:
     BlobFetchEndRequest = _models.MethodBlobFetchEndParams
     BlobRefRequest = _models.MethodBlobRefParams
     BlobUnrefRequest = _models.MethodBlobUnrefParams
+    MediaPutRequest = _models.MethodMediaPutParams
+    MediaGetRequest = _models.MethodMediaGetParams
+    MediaTombstoneRequest = _models.MethodMediaTombstoneParams
     KvGetRequest = _models.MethodKvGetParams
     KvPutRequest = _models.MethodKvPutParams
     KvDeleteRequest = _models.MethodKvDeleteParams
@@ -2149,6 +2152,126 @@ def decode_blob_gc(result: OpaqueResult) -> _models.BlobGcResult:
     return decode_result("BlobGc", models().BlobGcResult, result)
 
 
+async def send_media_put(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> str:
+    """Send one engine-contract request.
+
+    Method:
+        MediaPut
+    Authorization:
+        blob:write
+    Durability:
+        BlobRedb
+    Replay:
+        OperationIdentity
+    Result:
+        ResultPayload::String
+    Result schema:
+        contract/schemas/result.storage.json
+        #/methods/MediaPut
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - MEDIA_INVALID
+        - MEDIA_TOO_LARGE
+        - CONFLICT
+        - IDEMPOTENCY_CONFLICT
+        - REDIRECTED
+        - READ_ONLY
+    """
+    models().MethodMediaPutParams.model_validate(params or {})
+    payload = await client._send(
+        "MediaPut",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return expect_string("MediaPut", payload)
+
+
+async def send_media_get(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> OpaqueResult:
+    """Send one engine-contract request.
+
+    Method:
+        MediaGet
+    Authorization:
+        blob:read
+    Durability:
+        None
+    Replay:
+        NotReplayable
+    Result:
+        ResultPayload::Raw, caller-shaped: opaque bytes the caller wrote or a
+        caller-supplied program produced
+    Result schema:
+        contract/schemas/result.storage.json
+        #/methods/MediaGet
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - MEDIA_NOT_FOUND
+    """
+    models().MethodMediaGetParams.model_validate(params or {})
+    payload = await client._send(
+        "MediaGet",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return OpaqueResult("MediaGet", payload)
+
+
+async def send_media_tombstone(
+    client: Any,
+    params: dict[str, Any] | None = None,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> bool:
+    """Send one engine-contract request.
+
+    Method:
+        MediaTombstone
+    Authorization:
+        blob:write
+    Durability:
+        BlobRedb
+    Replay:
+        OperationIdentity
+    Result:
+        ResultPayload::Bool
+    Result schema:
+        contract/schemas/result.storage.json
+        #/methods/MediaTombstone
+    Errors:
+        - INVALID_ARGUMENT
+        - ACCESS_DENIED
+        - CONFLICT
+        - IDEMPOTENCY_CONFLICT
+        - REDIRECTED
+        - READ_ONLY
+    """
+    models().MethodMediaTombstoneParams.model_validate(params or {})
+    payload = await client._send(
+        "MediaTombstone",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return expect_bool("MediaTombstone", payload)
+
+
 async def send_kv_get(
     client: Any,
     params: dict[str, Any] | None = None,
@@ -2609,6 +2732,9 @@ _REQUEST_METHODS = frozenset(
         "BlobFetchEnd",
         "BlobRef",
         "BlobUnref",
+        "MediaPut",
+        "MediaGet",
+        "MediaTombstone",
         "KvGet",
         "KvPut",
         "KvDelete",

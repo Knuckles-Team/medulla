@@ -15695,6 +15695,27 @@ class MethodBlobGc(BaseModel):
     method: Literal["BlobGc"]
 
 
+class MethodMediaPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MediaPut"]
+    params: MethodMediaPutParams
+
+
+class MethodMediaGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MediaGet"]
+    params: MethodMediaGetParams
+
+
+class MethodMediaTombstone(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["MediaTombstone"]
+    params: MethodMediaTombstoneParams
+
+
 class MethodKvGet(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18342,6 +18363,9 @@ Method = Annotated[
         MethodBlobRef,
         MethodBlobUnref,
         MethodBlobGc,
+        MethodMediaPut,
+        MethodMediaGet,
+        MethodMediaTombstone,
         MethodKvGet,
         MethodKvPut,
         MethodKvDelete,
@@ -18907,6 +18931,25 @@ class MethodBlobRefParams(BaseModel):
 
 
 class MethodBlobUnrefParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+
+
+class MethodMediaPutParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    media_type: str
+    data: _EgOctets
+
+
+class MethodMediaGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+
+
+class MethodMediaTombstoneParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     digest: str
@@ -47918,6 +47961,12 @@ __all__ = [
     "MethodBlobRefParams",
     "MethodBlobUnref",
     "MethodBlobUnrefParams",
+    "MethodMediaGet",
+    "MethodMediaGetParams",
+    "MethodMediaPut",
+    "MethodMediaPutParams",
+    "MethodMediaTombstone",
+    "MethodMediaTombstoneParams",
     "MethodBrokerAck",
     "MethodBrokerAckParams",
     "MethodBrokerAckTag",

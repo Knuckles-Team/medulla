@@ -14,6 +14,7 @@
 //!   pattern.
 
 pub mod engine_bodies;
+pub mod media;
 pub mod store;
 
 // Content-defined chunking (CONCEPT:MEDULLA-KG.storage.backward-manifest-read): the Gear/FastCDC rolling-hash splitter
