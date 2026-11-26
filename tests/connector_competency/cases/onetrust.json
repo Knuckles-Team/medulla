@@ -5,9 +5,9 @@
   "terms": [
     "PrivacyAssessment",
     "ProcessingActivity",
+    "assessedVendor",
     "assessmentCovers",
     "assessmentDueDate",
-    "assessedVendor",
     "assessmentStatus"
   ],
   "questions": [
@@ -31,6 +31,35 @@
       "min_rows": 1,
       "recordings": [
         "onetrust-api/single.json"
+      ]
+    },
+    {
+      "id": "onetrust.q2",
+      "kind": "cross",
+      "question": "Which vendors with an overdue OneTrust assessment have open ERPNext purchase orders?",
+      "uql": "LET s0 = FOREIGN SCAN 'onetrust-api'; LET s1 = FOREIGN SCAN 'ciso-assistant-api'; LET s2 = FOREIGN SCAN 'erpnext-agent'; JOIN s0, s1, s2",
+      "sources": [
+        "onetrust-api",
+        "ciso-assistant-api",
+        "erpnext-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "onetrust-api": "http_endpoint",
+        "ciso-assistant-api": "http_endpoint",
+        "erpnext-agent": "mcp_tool"
+      },
+      "columns": [
+        "vendor",
+        "assessment",
+        "purchaseOrder"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "onetrust-api/cross_onetrust.json",
+        "ciso-assistant-api/cross_onetrust.json",
+        "onetrust-api/cross_onetrust.json",
+        "erpnext-agent/cross_onetrust.json"
       ]
     }
   ]

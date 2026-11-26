@@ -1,0 +1,18 @@
+{
+  "source": "erpnext-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "purchaseOrder": "purchaseOrder-1",
+      "joinKey": "onetrust.q2-key-1",
+      "id": "erpnext-agent-onetrust.q2-1",
+      "label": "erpnext-agent 1"
+    },
+    {
+      "purchaseOrder": "purchaseOrder-2",
+      "joinKey": "onetrust.q2-key-2",
+      "id": "erpnext-agent-onetrust.q2-2",
+      "label": "erpnext-agent 2"
+    }
+  ]
+}

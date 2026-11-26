@@ -1,0 +1,18 @@
+{
+  "source": "ciso-assistant-api",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "assessment": "assessment-1",
+      "joinKey": "onetrust.q2-key-1",
+      "id": "ciso-assistant-api-onetrust.q2-1",
+      "label": "ciso-assistant-api 1"
+    },
+    {
+      "assessment": "assessment-2",
+      "joinKey": "onetrust.q2-key-2",
+      "id": "ciso-assistant-api-onetrust.q2-2",
+      "label": "ciso-assistant-api 2"
+    }
+  ]
+}

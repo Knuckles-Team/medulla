@@ -1,0 +1,18 @@
+{
+  "source": "onetrust-api",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "vendor": "vendor-1",
+      "joinKey": "onetrust.q2-key-1",
+      "id": "onetrust-api-onetrust.q2-1",
+      "label": "onetrust-api 1"
+    },
+    {
+      "vendor": "vendor-2",
+      "joinKey": "onetrust.q2-key-2",
+      "id": "onetrust-api-onetrust.q2-2",
+      "label": "onetrust-api 2"
+    }
+  ]
+}
