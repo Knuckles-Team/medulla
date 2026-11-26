@@ -1,0 +1,35 @@
+@prefix : <https://knuckles-team.github.io/ontology/core#> .
+@prefix sc: <https://knuckles-team.github.io/ontology/surface-contract#> .
+
+# One tool-use contract for the task "close a ticket": find the ticket, then close it.
+# `{connector}` is replaced by the pack's connector name.
+<urn:scion:{connector}:task:close-ticket> a :Task .
+<urn:scion:{connector}:tool:find_ticket> a :Tool .
+<urn:scion:{connector}:tool:close_ticket> a :Tool .
+
+<urn:scion:{connector}:contract:close-ticket> a sc:ToolUseContract ;
+    sc:forTask <urn:scion:{connector}:task:close-ticket> ;
+    :hasStep <urn:scion:{connector}:step:find>, <urn:scion:{connector}:step:close> .
+
+<urn:scion:{connector}:step:find> a sc:ToolStep ;
+    sc:stepOrder 1 ;
+    sc:callsTool <urn:scion:{connector}:tool:find_ticket> ;
+    sc:param "ticket_id" ;
+    sc:resultField "status" ;
+    sc:refusal <urn:scion:{connector}:refusal:not-found> ;
+    :precedes <urn:scion:{connector}:step:close> .
+
+<urn:scion:{connector}:step:close> a sc:ToolStep ;
+    sc:stepOrder 2 ;
+    sc:callsTool <urn:scion:{connector}:tool:close_ticket> ;
+    sc:param "ticket_id", "resolution" ;
+    sc:resultField "closed_at" ;
+    sc:refusal <urn:scion:{connector}:refusal:already-closed> .
+
+<urn:scion:{connector}:refusal:not-found> a sc:Refusal ;
+    sc:refusalCode "TICKET_NOT_FOUND" ;
+    sc:refusalWhen "the ticket does not exist" .
+
+<urn:scion:{connector}:refusal:already-closed> a sc:Refusal ;
+    sc:refusalCode "TICKET_ALREADY_CLOSED" ;
+    sc:refusalWhen "the ticket is already closed" .

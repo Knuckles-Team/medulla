@@ -26,6 +26,45 @@ SELECT ?step ?next ?source WHERE {
   OPTIONAL { ?step :precedes ?next }
 }";
 
+/// The tool-use contract steps an imported connector pack names for the task
+/// (MEDULLA-CQ-ORCH-R012.1): each step's contract, tool, order and successor.
+#[cfg(feature = "decide")]
+const CONTRACT_STEPS_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX sc: <https://knuckles-team.github.io/ontology/surface-contract#>
+SELECT ?contract ?step ?tool ?order ?next WHERE {
+  VALUES ?task { <TASK> }
+  ?contract sc:forTask ?task ; :hasStep ?step .
+  ?step sc:callsTool ?tool ; sc:stepOrder ?order .
+  OPTIONAL { ?step :precedes ?next }
+}";
+
+/// The params, result fields and refusal codes of those steps. One value per row:
+/// a multi-valued step never multiplies the rows of another list.
+#[cfg(feature = "decide")]
+const CONTRACT_PARAMS_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX sc: <https://knuckles-team.github.io/ontology/surface-contract#>
+SELECT ?step ?value WHERE {
+  VALUES ?task { <TASK> }
+  ?contract sc:forTask ?task ; :hasStep ?step . ?step sc:param ?value .
+}";
+
+#[cfg(feature = "decide")]
+const CONTRACT_RESULTS_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX sc: <https://knuckles-team.github.io/ontology/surface-contract#>
+SELECT ?step ?value WHERE {
+  VALUES ?task { <TASK> }
+  ?contract sc:forTask ?task ; :hasStep ?step . ?step sc:resultField ?value .
+}";
+
+#[cfg(feature = "decide")]
+const CONTRACT_REFUSALS_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
+PREFIX sc: <https://knuckles-team.github.io/ontology/surface-contract#>
+SELECT ?step ?value WHERE {
+  VALUES ?task { <TASK> }
+  ?contract sc:forTask ?task ; :hasStep ?step .
+  ?step sc:refusal ?refusal . ?refusal sc:refusalCode ?value .
+}";
+
 /// The workflow hand-offs between the task's steps, each with its source.
 #[cfg(feature = "decide")]
 const WORKFLOW_QUERY: &str = "PREFIX : <https://knuckles-team.github.io/ontology/core#>
@@ -94,8 +133,8 @@ async fn answer_for(
     let task_iri = request.task_iri.as_str();
 
     // (2) One assembly. Its failure or abstention is shared by the three parts that read it.
-    let assembly = super::assemble::assemble_for(state, graph, verified, request.assembly.clone())
-        .await;
+    let assembly =
+        super::assemble::assemble_for(state, graph, verified, request.assembly.clone()).await;
     let (staffing_part, bindings_part, dag_part, certificate_digest) = match &assembly {
         Err(error) => {
             let fault = || PartFault::AssemblyAbstained(error.clone());
@@ -201,8 +240,7 @@ fn part_or_abstain(
             code,
             detail,
         },
-        provenance: medulla_types::contract::BoundedVec::new(vec![premise])
-            .unwrap_or_default(),
+        provenance: medulla_types::contract::BoundedVec::new(vec![premise]).unwrap_or_default(),
         evidence_class: EvidenceClass::Claim,
     }
 }
@@ -212,14 +250,27 @@ fn part_or_abstain(
 fn solved_parts(
     assembly: &medulla_decision_types::decision::AssemblyResult,
     task_iri: &str,
-) -> Result<(ExecutionAnswerPart, ExecutionAnswerPart, ExecutionAnswerPart, String), String> {
+) -> Result<
+    (
+        ExecutionAnswerPart,
+        ExecutionAnswerPart,
+        ExecutionAnswerPart,
+        String,
+    ),
+    String,
+> {
     use medulla_decision_types::decision::DecisionOutcome;
 
     let record = &assembly.record;
     let evidence_class = record.evidence_class;
     let premises = || -> Result<_, String> {
         medulla_types::contract::BoundedVec::new(
-            record.premises.iter().take(PART_PREMISES).cloned().collect(),
+            record
+                .premises
+                .iter()
+                .take(PART_PREMISES)
+                .cloned()
+                .collect(),
         )
     };
     match &record.outcome {
@@ -235,7 +286,12 @@ fn solved_parts(
                     Err(PartFault::AssemblyAbstained(copied.clone())),
                 )
             };
-            Ok((part("staffing"), part("bindings"), part("dag"), String::new()))
+            Ok((
+                part("staffing"),
+                part("bindings"),
+                part("dag"),
+                String::new(),
+            ))
         }
         DecisionOutcome::Solved { slots, .. } => {
             let staffing: Vec<serde_json::Value> = slots
@@ -330,10 +386,9 @@ async fn coverage_answer(
         }),
         CapabilityCoverageOutcome::Abstained { reasons } => {
             Err(PartFault::Own(ExecutionAnswerPart::Abstain {
-                reason: reasons
-                    .first()
-                    .cloned()
-                    .unwrap_or(medulla_decision_types::decision::record::AbstainReason::InsufficientConfidence),
+                reason: reasons.first().cloned().unwrap_or(
+                    medulla_decision_types::decision::record::AbstainReason::InsufficientConfidence,
+                ),
                 provenance: Default::default(),
                 evidence_class,
             }))
@@ -381,7 +436,232 @@ async fn steps_and_workflow(
     )
     .unwrap_or(usize::MAX);
     let read = |query: &str| query_part(&view, query, task_iri, (graph, graph_version), max_rows);
-    Ok((read(STEPS_QUERY), read(WORKFLOW_QUERY)))
+    let contracts = contract_steps(&view, task_iri, max_rows);
+    Ok((
+        merge_contract_steps(read(STEPS_QUERY), contracts, (graph, graph_version)),
+        read(WORKFLOW_QUERY),
+    ))
+}
+
+/// One step of an imported tool-use contract (MEDULLA-CQ-ORCH-R012.1).
+#[cfg(feature = "decide")]
+struct ContractStep {
+    contract: String,
+    step: String,
+    tool: String,
+    order: u64,
+    next: Option<String>,
+    params: Vec<String>,
+    result_fields: Vec<String>,
+    refusal_codes: Vec<String>,
+}
+
+/// The lexical form of one SPARQL term: a quoted literal loses its quotes and its
+/// datatype or language tag; an IRI stays as is.
+#[cfg(feature = "decide")]
+fn lexical(term: &str) -> String {
+    let term = term.trim();
+    match term.strip_prefix('"') {
+        Some(rest) => rest
+            .rsplit_once('"')
+            .map(|(value, _)| value)
+            .unwrap_or(rest)
+            .to_string(),
+        None => term.trim_matches(['<', '>']).to_string(),
+    }
+}
+
+/// The last segment of an individual's IRI, the tool's name.
+#[cfg(feature = "decide")]
+fn local_name(iri: &str) -> &str {
+    iri.rsplit([':', '#', '/']).next().unwrap_or(iri)
+}
+
+/// The connector of a contract individual `urn:scion:<connector>:<kind>:<name>`.
+#[cfg(feature = "decide")]
+fn connector_of(contract: &str) -> String {
+    contract
+        .strip_prefix("urn:scion:")
+        .and_then(|rest| rest.split(':').next())
+        .unwrap_or_default()
+        .to_string()
+}
+
+/// Run one SELECT for `task_iri` over the caller's view: its variables and its rows,
+/// sorted so the same graph answers the same bytes.
+#[cfg(feature = "decide")]
+fn select_rows(
+    view: &medulla_graph_core::graph::GraphView,
+    query: &str,
+    task_iri: &str,
+) -> Result<(Vec<String>, Vec<Vec<Option<String>>>), String> {
+    use medulla_rdf::sparql::{Dataset, Projection, QueryOutcome};
+
+    let text = query.replace("<TASK>", &format!("<{task_iri}>"));
+    let outcome = medulla_rdf::sparql::execute(
+        &Dataset::new(view, Vec::new()),
+        &text,
+        &Projection::default(),
+        None,
+    )?;
+    let QueryOutcome::Solutions(result) = outcome else {
+        return Err("INTERNAL: the execution answer query did not answer a table".to_string());
+    };
+    let (vars, mut rows) = result.to_rows();
+    rows.sort();
+    Ok((vars, rows))
+}
+
+/// The values one step carries in a `?step ?value` list query, by step.
+#[cfg(feature = "decide")]
+fn values_by_step(
+    view: &medulla_graph_core::graph::GraphView,
+    query: &str,
+    task_iri: &str,
+) -> Result<std::collections::BTreeMap<String, Vec<String>>, String> {
+    let mut by_step: std::collections::BTreeMap<String, Vec<String>> = Default::default();
+    for row in select_rows(view, query, task_iri)?.1 {
+        if let (Some(Some(step)), Some(Some(value))) = (row.first(), row.get(1)) {
+            by_step
+                .entry(lexical(step))
+                .or_default()
+                .push(lexical(value));
+        }
+    }
+    Ok(by_step)
+}
+
+/// The tool-use contract steps of `task_iri`, in contract then step order. An empty list
+/// means no imported contract names the task. A read that fails is an error, never an
+/// empty list.
+#[cfg(feature = "decide")]
+fn contract_steps(
+    view: &medulla_graph_core::graph::GraphView,
+    task_iri: &str,
+    max_rows: usize,
+) -> Result<Vec<ContractStep>, String> {
+    let mut params = values_by_step(view, CONTRACT_PARAMS_QUERY, task_iri)?;
+    let mut results = values_by_step(view, CONTRACT_RESULTS_QUERY, task_iri)?;
+    let mut refusals = values_by_step(view, CONTRACT_REFUSALS_QUERY, task_iri)?;
+    let (_, rows) = select_rows(view, CONTRACT_STEPS_QUERY, task_iri)?;
+    let mut steps: Vec<ContractStep> = Vec::new();
+    for row in rows {
+        let cell = |index: usize| row.get(index).cloned().flatten().map(|v| lexical(&v));
+        let (Some(contract), Some(step), Some(tool), Some(order)) =
+            (cell(0), cell(1), cell(2), cell(3))
+        else {
+            continue;
+        };
+        let Ok(order) = order.parse::<u64>() else {
+            continue;
+        };
+        let take = |lists: &mut std::collections::BTreeMap<String, Vec<String>>| {
+            let mut values = lists.get(&step).cloned().unwrap_or_default();
+            values.sort();
+            values.dedup();
+            values
+        };
+        let next = cell(4);
+        if let Some(held) = steps
+            .iter_mut()
+            .find(|held| held.step == step && held.tool == tool && held.order == order)
+        {
+            // An optional successor repeats the row once per successor.
+            if held.next.is_none() {
+                held.next = next;
+            }
+            continue;
+        }
+        steps.push(ContractStep {
+            contract,
+            tool,
+            order,
+            next,
+            params: take(&mut params),
+            result_fields: take(&mut results),
+            refusal_codes: take(&mut refusals),
+            step,
+        });
+    }
+    steps.sort_by(|a, b| (&a.contract, a.order, &a.step).cmp(&(&b.contract, b.order, &b.step)));
+    steps.truncate(max_rows);
+    Ok(steps)
+}
+
+/// The steps part with the contract steps added (MEDULLA-CQ-ORCH-R012.1): the authored
+/// steps keep their rows, and each contract step is one entry of `contract_steps` with
+/// its connector, tool, order, params, result fields and refusal codes. A task that has
+/// no authored row but has a contract is answered from the contract; a task with
+/// neither stays `ORCH_PART_EMPTY`. A contract read that fails is no source for the part.
+#[cfg(feature = "decide")]
+fn merge_contract_steps(
+    authored: Result<ExecutionAnswerPart, PartFault>,
+    contracts: Result<Vec<ContractStep>, String>,
+    (graph, graph_version): (&str, u64),
+) -> Result<ExecutionAnswerPart, PartFault> {
+    use medulla_decision_types::decision::record::{
+        EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef,
+    };
+
+    let contracts = match contracts {
+        Ok(steps) => steps,
+        Err(error) => return Err(PartFault::NoSource(error)),
+    };
+    if contracts.is_empty() {
+        return authored;
+    }
+    let entries: Vec<serde_json::Value> = contracts
+        .iter()
+        .map(|step| {
+            serde_json::json!({
+                "contract": step.contract,
+                "connector": connector_of(&step.contract),
+                "step": step.step,
+                "tool": local_name(&step.tool),
+                "tool_iri": step.tool,
+                "order": step.order,
+                "next": step.next.as_deref().map(lexical),
+                "params": step.params,
+                "result_fields": step.result_fields,
+                "refusal_codes": step.refusal_codes,
+            })
+        })
+        .collect();
+    let mut seen = std::collections::BTreeSet::new();
+    let contract_premises: Vec<PremiseRef> = contracts
+        .iter()
+        .filter(|step| seen.insert(step.contract.clone()))
+        .take(PART_PREMISES)
+        .map(|step| PremiseRef {
+            subject: step.step.clone(),
+            fact: format!("sc:ToolUseContract {}", step.contract),
+            class: PremiseClass::Claim,
+            provenance: PremiseProvenance::GraphRow {
+                graph: graph.to_string(),
+                graph_version,
+            },
+            trust_tier: None,
+        })
+        .collect();
+    let (mut value, mut provenance) = match authored {
+        Ok(ExecutionAnswerPart::Answer {
+            value, provenance, ..
+        }) => (value, provenance.as_slice().to_vec()),
+        Err(PartFault::Empty) => (
+            serde_json::json!({ "vars": [], "rows": [], "truncated": false }),
+            Vec::new(),
+        ),
+        other => return other,
+    };
+    value["contract_steps"] = serde_json::Value::Array(entries);
+    provenance.extend(contract_premises);
+    provenance.truncate(PART_PREMISES);
+    Ok(ExecutionAnswerPart::Answer {
+        value,
+        provenance: medulla_types::contract::BoundedVec::new(provenance)
+            .map_err(PartFault::NoSource)?,
+        evidence_class: EvidenceClass::Claim,
+    })
 }
 
 #[cfg(feature = "decide")]

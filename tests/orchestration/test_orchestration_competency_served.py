@@ -5,6 +5,8 @@ through the served ``Decide`` path; the fixture packs of
 ``fixtures/q11/packs/`` are imported through ``ConnectorPack.Import``.
 """
 
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import asyncio
@@ -31,9 +33,8 @@ from _commons_generation import (
 )
 from _decision_resident_fixture import publish
 from conftest import TEST_TENANT, tenant_request_context
-from ontology_pack_support import import_entries
-from test_usage_guidance_served import STEPS, _guide, _import_pack
-from test_usage_guidance_served import _schema_body
+from ontology_pack_support import attach_pack, import_entries, ontology_entry
+from test_usage_guidance_served import STEPS, _guide, _import_pack, _schema_body
 
 from medulla import ConnectorPackEntryContent
 from medulla import decision_client as dc
@@ -41,8 +42,8 @@ from medulla.client import EngineResponseError, SyncMedullaClient
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind, PackHeadRef
 from tests.federation.conftest import pg_source  # noqa: F401  (a fixture)
 from tests.federation.test_plan_evolution_served import (
-    _explain_kept,
     _explain_baseline,
+    _explain_kept,
     _kept_digest,
     _observe_shape,
     _provision_downtime,
@@ -147,9 +148,9 @@ def test_q11_load_set() -> None:
             assert "LOAD_SET_NO_DESIGNATED_COMPONENT" in json.dumps(
                 refused["outcome"]
             ), refused["outcome"]
-            assert "cap:q11-uncovered-capability" in json.dumps(
+            assert "cap:q11-uncovered-capability" in json.dumps(refused["outcome"]), (
                 refused["outcome"]
-            ), refused["outcome"]
+            )
         finally:
             await client.close()
 
@@ -170,9 +171,9 @@ def test_q11_usage_guidance(clean_graph) -> None:
     record = asyncio.run(_guide(schema, graph, connector, job))
     guidance = (record.get("answer") or {}).get("value") or {}
     tools = [step["tool"] for step in guidance["steps"]]
-    assert sorted(tools) == sorted(
-        f"mcp:{connector}/tool/{name}" for name in STEPS
-    ), guidance
+    assert sorted(tools) == sorted(f"mcp:{connector}/tool/{name}" for name in STEPS), (
+        guidance
+    )
     # label has two predecessors, so it comes last.
     assert tools[-1] == f"mcp:{connector}/tool/label", guidance
     facts = [premise["fact"] for premise in record["premises"]]
@@ -185,7 +186,6 @@ def test_q11_usage_guidance(clean_graph) -> None:
     with pytest.raises(EngineResponseError) as unknown:
         asyncio.run(_guide(schema, graph, f"q11-unknown-{suffix}", job))
     assert "USAGE_GUIDANCE_UNKNOWN_CONNECTOR" in str(unknown.value)
-
 
 
 @pytest.mark.spec("MEDULLA-CQ-ORCH-R008.2")
@@ -231,6 +231,90 @@ def test_envelope_assembled_by_graph_assemble() -> None:
             "coverage",
         ):
             assert getattr(answer.parts, part) is not None, part
+
+    asyncio.run(exercise())
+
+
+@pytest.mark.spec("MEDULLA-CQ-ORCH-R012.1")
+def test_steps_carry_contract_params_results_and_refusals() -> None:
+    from medulla.generated import storage
+
+    async def answer_for(client: Any, graph: str, task: str) -> Any:
+        params = {
+            "request": {
+                "task_iri": task,
+                "assembly": {
+                    "tenant_id": TEST_TENANT,
+                    "policy": {"policy": "default"},
+                    "candidates": {"kinds": ["tool"]},
+                    "requirements": {},
+                },
+            }
+        }
+        opaque = await storage.send_agent_execution_answer(client, params, graph)
+        return storage.decode_agent_execution_answer(opaque)
+
+    async def exercise() -> None:
+        suffix = uuid.uuid4().hex[:8]
+        graph = f"q12-contracts-{suffix}"
+        admin = await connect()
+        try:
+            await admin.tenants.create(graph)
+        finally:
+            await admin.close()
+        client = await connect(graph)
+        try:
+            connector, entries = _fixture_packs(suffix)[1]  # q11-tickets
+            assert connector.startswith("q11-tickets"), connector
+            contracts = (PACKS / "tickets.contracts.ttl").read_text(encoding="utf-8")
+            entries.append(
+                ontology_entry(
+                    connector, "contracts", contracts.replace("{connector}", connector)
+                )
+            )
+            imported = await import_entries(client, connector, entries)
+            assert imported["result"] == "imported", imported
+            await attach_pack(client, connector)
+            deadline = time.monotonic() + 180
+            probe = (
+                "SELECT ?c WHERE { ?c <https://knuckles-team.github.io/ontology/"
+                "surface-contract#forTask> ?t }"
+            )
+            while not await client.rdf.sparql(probe):
+                assert time.monotonic() < deadline, "the contracts were not projected"
+                await asyncio.sleep(0.5)
+
+            task = f"urn:scion:{connector}:task:close-ticket"
+            answer = await answer_for(client, graph, task)
+            steps = answer.parts.steps
+            assert steps.status == "answer", steps
+            ordered = sorted(steps.value["contract_steps"], key=lambda s: s["order"])
+            assert [step["tool"] for step in ordered] == [
+                "find_ticket",
+                "close_ticket",
+            ], ordered
+            assert [step["order"] for step in ordered] == [1, 2]
+            assert {step["connector"] for step in ordered} == {connector}
+            assert ordered[0]["params"] == ["ticket_id"]
+            assert ordered[0]["result_fields"] == ["status"]
+            assert ordered[0]["refusal_codes"] == ["TICKET_NOT_FOUND"]
+            assert ordered[0]["next"] == f"urn:scion:{connector}:step:close"
+            assert ordered[1]["params"] == ["resolution", "ticket_id"]
+            assert ordered[1]["result_fields"] == ["closed_at"]
+            assert ordered[1]["refusal_codes"] == ["TICKET_ALREADY_CLOSED"]
+            assert ordered[1]["next"] is None
+            assert any(
+                "sc:ToolUseContract" in premise.fact for premise in steps.provenance
+            ), steps.provenance
+
+            # A task no contract names abstains its steps part with ORCH_PART_EMPTY.
+            unnamed = await answer_for(
+                client, graph, f"urn:scion:{connector}:task:none"
+            )
+            assert unnamed.parts.steps.status == "abstain", unnamed.parts.steps
+            assert "ORCH_PART_EMPTY" in unnamed.parts.steps.model_dump_json()
+        finally:
+            await client.close()
 
     asyncio.run(exercise())
 
@@ -295,7 +379,9 @@ def test_fixture_ingest_produces_expected_part_rows() -> None:
     for key in ("identity", "catalog", "references"):
         triples = [
             line
-            for line in (COMPOSED / f"seed_{key}.ttl").read_text(encoding="utf-8").splitlines()
+            for line in (COMPOSED / f"seed_{key}.ttl")
+            .read_text(encoding="utf-8")
+            .splitlines()
             if line.strip() and not line.startswith(("@prefix", "#"))
         ]
         assert len(triples) < 5000
@@ -393,7 +479,9 @@ def test_composed_answer_has_seven_parts_with_provenance(clean_graph) -> None:
     second = clean_graph._send("AgentExecutionAnswer", params)
     assert first["task_iri"] == "urn:task:xyz"
     assert first == second, "the answer is stable over two calls"
-    sealed = clean_graph._send("AgentAssemble", {"request": params["request"]["assembly"]})
+    sealed = clean_graph._send(
+        "AgentAssemble", {"request": params["request"]["assembly"]}
+    )
     assert first["certificate_digest"] == sealed["record"]["record_digest"], (
         "certificate_digest is the digest of the sealed AgentAssemble record"
     )
@@ -414,8 +502,8 @@ def test_composed_answer_has_seven_parts_with_provenance(clean_graph) -> None:
 @pytest.mark.spec("MEDULLA-CQ-ORCH-R008.5")
 def test_composed_answer_cross_tenant_abstains(clean_graph) -> None:
     from composed_support import load_seed_into_request_graph
-
     from conftest import tenant_request_context
+
     from medulla.client import SyncMedullaClient
 
     load_seed_into_request_graph(clean_graph)
@@ -429,7 +517,10 @@ def test_composed_answer_cross_tenant_abstains(clean_graph) -> None:
     finally:
         foreign.close()
     for name in _PARTS:
-        assert answer["parts"][name]["status"] == "abstain", (name, answer["parts"][name])
+        assert answer["parts"][name]["status"] == "abstain", (
+            name,
+            answer["parts"][name],
+        )
 
 
 @pytest.mark.spec("MEDULLA-CQ-ORCH-R008.3")
@@ -458,6 +549,7 @@ def test_missing_source_abstains_one_part(clean_graph) -> None:
     for name in ("steps", "workflow", "guardrails"):
         assert parts[name]["status"] == "answer", (name, parts[name])
 
+
 _SEED = "https://knuckles-team.github.io/ontology/connector-seed#"
 
 
@@ -474,7 +566,9 @@ def test_q11_seed_changes() -> None:
         f"<{_SEED}digest> ?digest ; <{_SEED}graphRevision> ?revision }} ORDER BY ?part"
     )
 
-    async def receipt_rows(graph: str, want: dict[str, str]) -> dict[str, dict[str, str]]:
+    async def receipt_rows(
+        graph: str, want: dict[str, str]
+    ) -> dict[str, dict[str, str]]:
         """Poll the pack graph (the projection is asynchronous) until the outcomes match."""
         deadline = time.monotonic() + 120
         found: dict[str, dict[str, str]] = {}
@@ -523,7 +617,8 @@ def test_q11_seed_changes() -> None:
             await admin.close()
 
         rows = await receipt_rows(
-            graph, {"catalog": "replaced", "identity": "unchanged", "references": "unchanged"}
+            graph,
+            {"catalog": "replaced", "identity": "unchanged", "references": "unchanged"},
         )
         assert {part: row["outcome"] for part, row in rows.items()} == {
             "catalog": "replaced",
@@ -531,7 +626,10 @@ def test_q11_seed_changes() -> None:
             "references": "unchanged",
         }, rows
         revision = (
-            "urn:medulla:seed:" + connector + ":" + second["receipt"]["seed"]["content_digest"]
+            "urn:medulla:seed:"
+            + connector
+            + ":"
+            + second["receipt"]["seed"]["content_digest"]
         )
         for part, row in rows.items():
             assert row["digest"].startswith("sha256:"), (part, row)
@@ -579,7 +677,10 @@ def _provision_declared_types(graph, tag: str) -> dict[str, tuple[int, bool]]:
         graph.edges.add(iri, f"{iri}-budget", {"relationship": "hasBudget"})
         graph.nodes.add(
             f"{iri}-precondition",
-            {"type": "Precondition", "query": "ASK { }" if holds else "ASK { FILTER(false) }"},
+            {
+                "type": "Precondition",
+                "query": "ASK { }" if holds else "ASK { FILTER(false) }",
+            },
         )
         graph.edges.add(iri, f"{iri}-precondition", {"relationship": "hasPrecondition"})
     now_ms = int(time.time() * 1000)
@@ -634,7 +735,9 @@ def test_q11_downtime_next(clean_graph) -> None:
             break
         time.sleep(1)
     assert record, "no tick recorded the three declared job types"
-    assert _downtime_answer({"selections": [record], "next_after": None})["premises"] == []
+    assert (
+        _downtime_answer({"selections": [record], "next_after": None})["premises"] == []
+    )
 
     # The selection is chosen in priority order and the false precondition is skipped.
     chosen = [item["iri"] for item in record["chosen"] if item["iri"] in mine]
@@ -653,9 +756,15 @@ def test_q11_downtime_next(clean_graph) -> None:
     rows = clean_graph.rdf.sparql(query)
     ranked = sorted(
         {
-            (int(_lexical(row["priority"])), _lexical(row["job_type"]), _lexical(row.get("skip_reason")))
+            (
+                int(_lexical(row["priority"])),
+                _lexical(row["job_type"]),
+                _lexical(row.get("skip_reason")),
+            )
             for row in rows
-            if _lexical(row["job_type"]).endswith(tuple(f"q11-{tag}-{n}" for n in ("high", "low", "blocked")))
+            if _lexical(row["job_type"]).endswith(
+                tuple(f"q11-{tag}-{n}" for n in ("high", "low", "blocked"))
+            )
         },
         reverse=True,
     )
