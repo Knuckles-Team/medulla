@@ -7,8 +7,9 @@
 
 use std::time::Instant;
 
+use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
 use medulla_federation::federation_opt::plan_evolution::{observe, ReplayInput};
-use medulla_federation::federation_opt::{FetchStrategy, FragmentExecutionMode, FragmentTrace};
+use medulla_federation::federation_opt::{FetchStrategy, FragmentTrace};
 
 const RUNS: usize = 10_000;
 

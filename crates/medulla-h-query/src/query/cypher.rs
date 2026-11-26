@@ -257,9 +257,8 @@ fn view_explain_result(
     plan: &medulla_catalog_types::virtual_graph_view::ViewPlan,
     pushed: &[(String, String)],
 ) -> Result<medulla_protocol_types::protocol::QueryResult, String> {
-    use medulla_federation::federation_opt::{
-        render_trace, FetchStrategy, FragmentExecutionMode, FragmentTrace,
-    };
+    use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
+    use medulla_federation::federation_opt::{render_trace, FetchStrategy, FragmentTrace};
     let columns = vec![
         "fragment".to_string(),
         "pushed_statement".to_string(),

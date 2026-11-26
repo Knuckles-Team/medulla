@@ -81,9 +81,8 @@ pub use search::{
 pub use session::FederationSession;
 pub use snapshot::{Consistency, SnapshotBound, SnapshotConn, SnapshotHandle};
 pub use stats::{stats_snapshot, SourceStats};
-pub use trace::{
-    render_trace, EstimateProvenance, FetchStrategy, FragmentExecutionMode, FragmentTrace,
-    RawScanReceipt, SearchReceipt,
+use trace::{
+    render_trace, EstimateProvenance, FetchStrategy, FragmentTrace, RawScanReceipt, SearchReceipt,
 };
 pub use web::{web_candidates, web_entry_ttl_ms, web_read, WebQuery};
 

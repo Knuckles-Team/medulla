@@ -26,8 +26,9 @@ use super::mcp::McpRemote;
 use super::remote::Identity;
 use super::search::REMOTE_CHANNEL;
 use super::session::FederationSession;
-use super::trace::{FetchStrategy, FragmentExecutionMode, FragmentTrace};
+use super::trace::{FetchStrategy, FragmentTrace};
 use crate::federation::ForeignSourceRegistry;
+use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
 
 /// The arguments of one web query: the text and the optional narrowing the tool declares.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]

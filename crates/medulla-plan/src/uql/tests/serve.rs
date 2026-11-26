@@ -200,7 +200,7 @@ fn profile_remote_fragment_has_redacted_golden_output_and_provenance() {
             samples: 8,
             rows: 12.5,
         },
-        mode: medulla_federation::federation_opt::FragmentExecutionMode::Live,
+        mode: medulla_catalog_types::metadata_acceleration::FragmentExecutionMode::Live,
         watermark: None,
         copy_rows: None,
         snapshot: None,

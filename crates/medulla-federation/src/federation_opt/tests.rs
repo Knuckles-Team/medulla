@@ -676,9 +676,10 @@ mod snapshot_reads {
     use super::super::snapshot::{Consistency, SnapshotBound, SnapshotConn};
     use super::super::stats::fingerprint;
     use super::super::{
-        render_trace, FederationSession, FetchStrategy, FragmentExecutionMode, FragmentTrace,
-        REPLICA_LAG_EXCEEDED, SNAPSHOT_UNAVAILABLE, SOURCE_WRITE_FORBIDDEN,
+        render_trace, FederationSession, FetchStrategy, FragmentTrace, REPLICA_LAG_EXCEEDED,
+        SNAPSHOT_UNAVAILABLE, SOURCE_WRITE_FORBIDDEN,
     };
+    use medulla_catalog_types::metadata_acceleration::FragmentExecutionMode;
     use medulla_catalog_types::metadata_acceleration::{SnapshotIsolation, SnapshotSemantics};
 
     fn spec() -> ForeignSourceSpec {
