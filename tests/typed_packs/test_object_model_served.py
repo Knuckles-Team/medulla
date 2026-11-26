@@ -346,3 +346,40 @@ def test_class_terms_list_direct_superclasses_for_core_rollup() -> None:
             await client.close()
 
     asyncio.run(exercise())
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R650.8")
+def test_class_rows_mark_interfaces_and_list_what_their_implementers_implement() -> (
+    None
+):
+    """An interface is a class row marked `interface`; its implementers list it."""
+
+    async def exercise() -> None:
+        tag = uuid.uuid4().hex[:8]
+        connector = f"iface-rows-{tag}"
+        base = f"https://example.org/{connector}"
+        graph = f"iface-rows-{tag}"
+        client = await _import_and_attach(connector, base, graph)
+        try:
+            rows = {}
+            cursor = None
+            while True:
+                page = await reasoning.send_graph_schema_classes(
+                    client, {"kind": "class", "cursor": cursor, "limit": 1000}
+                )
+                rows.update({term.iri: term for term in page.terms})
+                cursor = page.next_cursor
+                if cursor is None:
+                    break
+            named = rows[f"{base}#Named"]
+            assert named.interface is True and list(named.implements) == []
+            person = rows[f"{base}#Person"]
+            assert person.interface is False
+            assert list(person.implements) == [f"{base}#Named"]
+            asset = rows[f"{base}#Asset"]
+            assert asset.interface is False and list(asset.implements) == []
+        finally:
+            await client.tenants.delete(graph)
+            await client.close()
+
+    asyncio.run(exercise())

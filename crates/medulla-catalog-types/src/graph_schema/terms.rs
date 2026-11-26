@@ -125,6 +125,15 @@ pub struct GraphSchemaTermView {
     /// and for a class that declares none.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub superclasses: Vec<String>,
+    /// For a class: true when the composed schema declares it an `:Interface`, an abstract shape
+    /// that concrete classes implement (MEDULLA-TYPED-PACKS-R650.8). False for every other term.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub interface: bool,
+    /// For a class: the IRIs of the interfaces it declares with `:implementsInterface`, sorted
+    /// and deduplicated (MEDULLA-TYPED-PACKS-R650.8). Absent for any other term kind and for a
+    /// class that implements none.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub implements: Vec<String>,
 }
 
 /// One class that declares `:implementsInterface`, with the required members
