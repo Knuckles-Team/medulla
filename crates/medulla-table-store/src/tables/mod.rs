@@ -56,7 +56,8 @@ pub use embedding_binding::{
 };
 pub use index_plan::{IndexColumnPlan, IndexPlan};
 pub use matview::{
-    create_matview_txn, drop_matview_txn, refresh_matview_txn, MatViewSpec, MATVIEW_EXISTS,
+    create_incremental_matview_txn, create_matview_txn, drop_matview_txn, refresh_matview_txn,
+    MatViewSpec, MATVIEW_EXISTS,
     MATVIEW_UNKNOWN,
 };
 pub use property_graph::{

@@ -65,6 +65,7 @@ mod deferred_fk;
 #[cfg(any(test, feature = "dev-scope-grant"))]
 pub mod dev_scope_grant;
 mod edge_durable;
+mod matview_maintain;
 mod occ;
 mod outbox;
 mod row_insert;
@@ -2446,6 +2447,17 @@ impl TableStore {
                     reads: accum.reads,
                     writes: accum.writes.clone(),
                 })?;
+            }
+            // MEDULLA-INCREMENTAL-VIEWS-R009.3: the view rows change in this same write
+            // transaction, so a rolled-back commit leaves every view unchanged.
+            let programs = matview_maintain::load_programs(wtx)?;
+            if !programs.is_empty() {
+                matview_maintain::maintain_views(
+                    wtx,
+                    self.index_scope(),
+                    &accum.changes,
+                    &programs,
+                )?;
             }
             mark_matviews_stale_in(wtx, txn)?;
             recorded = self.occ.record(accum.writes);

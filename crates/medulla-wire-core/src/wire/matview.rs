@@ -11,7 +11,7 @@ use medulla_federation::sql_analysis::referenced_tables;
 use medulla_sql_lang::sql::classify::CreateMatViewPlan;
 use medulla_sql_lang::sql::typed_result::{matview_result_schema, PgColType};
 use medulla_table_store::tables::{
-    create_matview_txn, drop_matview_txn, refresh_matview_txn, MatViewSpec, TableStore,
+    create_incremental_matview_txn, create_matview_txn, drop_matview_txn, refresh_matview_txn, MatViewSpec, TableStore, TableTxn, TxnOp,
     MATVIEW_EXISTS, MATVIEW_UNKNOWN,
 };
 use medulla_tables::schema::ColumnType;
@@ -121,25 +121,14 @@ impl WireSession {
                 .flatten()
                 .and_then(|schema| schema.column(column).map(|found| found.ty.clone()))
         };
-        if let Err(refusal) = medulla_sql_lang::sql::matview_compile::compile_incremental_sql(
+        let compiled = medulla_sql_lang::sql::matview_compile::compile_incremental_sql(
             &name,
             &plan.select_sql,
             &column_type,
-        ) {
-            medulla_core::view_status::publish(medulla_core::view_status::ViewStatus {
-                name: name.clone(),
-                family: medulla_core::view_status::ViewFamily::Sql,
-                graph: graph.to_string(),
-                mode: medulla_core::view_status::ViewMode::Recompute,
-                reason_code: Some(refusal.code().as_str().to_string()),
-                reason: Some(refusal.construct),
-                state_bytes: 0,
-                applied_changes: 0,
-                shadow_checks: 0,
-                shadow_mismatches: 0,
-            });
-        }
+        );
         let seq = store.commit_seq();
+        // The typed read gives the visible columns; an incremental view takes its rows from the
+        // delta arithmetic over the source table, not from this read.
         let result = self.run_read(graph, plan.select_sql.clone()).await?;
         let (authority, _) = self.catalog_authority().await?;
         let spec = MatViewSpec {
@@ -149,10 +138,30 @@ impl WireSession {
             owner: authority.actor_scope().to_string(),
             refreshed_seq: seq,
             stale: false,
+            program: None,
         };
         let schema = matview_result_schema(&name, &result.columns);
-        let col_order = result.columns.iter().map(|c| c.name.clone()).collect();
-        let txn = create_matview_txn(spec, schema, col_order, result.rows);
+        let txn = match compiled {
+            Ok(program) => {
+                let txn = create_incremental_matview_txn(&store, spec, &schema, program)
+                    .map_err(user_err)?;
+                publish_sql_status(&name, graph, medulla_core::view_status::ViewMode::Incremental, None, None);
+                txn
+            }
+            Err(refusal) => {
+                // MEDULLA-INCREMENTAL-VIEWS-R009.2: a defining query outside the incremental
+                // forms stays a recompute view of R014.2 and publishes the first construct.
+                publish_sql_status(
+                    &name,
+                    graph,
+                    medulla_core::view_status::ViewMode::Recompute,
+                    Some(refusal.code().as_str().to_string()),
+                    Some(refusal.construct),
+                );
+                let col_order = result.columns.iter().map(|c| c.name.clone()).collect();
+                create_matview_txn(spec, schema, col_order, result.rows)
+            }
+        };
         self.commit_table_txn(graph, sql, txn).await?;
         Ok(WireOutcome::command("CREATE MATERIALIZED VIEW"))
     }
@@ -174,8 +183,25 @@ impl WireSession {
         spec.refreshed_seq = seq;
         spec.stale = false;
         let schema = matview_result_schema(&name, &result.columns);
-        let col_order = result.columns.iter().map(|c| c.name.clone()).collect();
-        let txn = refresh_matview_txn(spec, schema, col_order, result.rows);
+        let txn = match spec.program.clone() {
+            // An incremental view is recomputed from its source rows by the same delta
+            // arithmetic, replacing its result table in one transaction (R009.5).
+            Some(program) => {
+                let mut txn = TableTxn::new();
+                txn.push(TxnOp::DropTable {
+                    name: name.clone(),
+                    if_exists: false,
+                });
+                let create = create_incremental_matview_txn(&store, spec, &schema, program)
+                    .map_err(user_err)?;
+                txn.ops.extend(create.ops);
+                txn
+            }
+            None => {
+                let col_order = result.columns.iter().map(|c| c.name.clone()).collect();
+                refresh_matview_txn(spec, schema, col_order, result.rows)
+            }
+        };
         self.commit_table_txn(graph, sql, txn).await?;
         Ok(WireOutcome::command("REFRESH MATERIALIZED VIEW"))
     }
@@ -201,4 +227,26 @@ impl WireSession {
         medulla_core::view_status::remove(&name);
         Ok(WireOutcome::command("DROP MATERIALIZED VIEW"))
     }
+}
+
+/// Publishes the `Sql` family status row of a view (MEDULLA-INCREMENTAL-VIEWS-R009.5).
+fn publish_sql_status(
+    name: &str,
+    graph: &str,
+    mode: medulla_core::view_status::ViewMode,
+    reason_code: Option<String>,
+    reason: Option<String>,
+) {
+    medulla_core::view_status::publish(medulla_core::view_status::ViewStatus {
+        name: name.to_string(),
+        family: medulla_core::view_status::ViewFamily::Sql,
+        graph: graph.to_string(),
+        mode,
+        reason_code,
+        reason,
+        state_bytes: 0,
+        applied_changes: 0,
+        shadow_checks: 0,
+        shadow_mismatches: 0,
+    });
 }

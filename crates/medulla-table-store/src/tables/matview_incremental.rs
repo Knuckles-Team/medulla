@@ -49,6 +49,11 @@ pub enum ExactAgg {
     Count,
     Sum(RowExpr),
     Avg(RowExpr),
+    /// The smallest non-NULL value (R012.1). It needs no subtraction, so it accepts every
+    /// ordered column type, floats included.
+    Min(RowExpr),
+    /// The largest non-NULL value (R012.1).
+    Max(RowExpr),
 }
 
 /// What the view stores per source row or per group.
@@ -59,6 +64,9 @@ pub enum ViewOutput {
         keys: Vec<(String, RowExpr)>,
         aggs: Vec<(String, ExactAgg)>,
     },
+    /// One stored row per distinct output tuple, with `__mv_count` the number of source rows
+    /// (R012.1).
+    Distinct(Vec<(String, RowExpr)>),
 }
 
 /// An equi-join of the program's table with a second table (MEDULLA-INCREMENTAL-VIEWS-R013.1).
@@ -298,6 +306,447 @@ impl RowExpr {
             Some(order) => Scalar::Bool(holds(order)),
             None => Scalar::Null,
         })
+    }
+}
+
+/// The hidden primary-key column of an incremental view's result table (R009.3).
+pub const MV_KEY: &str = "__mv_key";
+/// The hidden row-count column of a grouped view (R009.4).
+pub const MV_COUNT: &str = "__mv_count";
+
+/// The hidden exact-sum column of the aggregate named `agg` (R009.4).
+pub fn mv_sum_column(agg: &str) -> String {
+    format!("__mv_sum_{agg}")
+}
+
+/// The hidden non-null counter column of the aggregate named `agg`. `sum` and `avg` ignore NULL
+/// arguments, so a group needs the number of arguments that were not NULL to give NULL for an
+/// all-NULL sum and the right divisor for an average.
+pub fn mv_nonnull_column(agg: &str) -> String {
+    format!("__mv_nn_{agg}")
+}
+
+/// Whether `column` is hidden from the visible view.
+pub fn is_hidden_column(column: &str) -> bool {
+    column.starts_with("__mv_")
+}
+
+/// The rows a view changed in one commit (MEDULLA-INCREMENTAL-VIEWS-R010.2). Output columns
+/// only; the hidden `__mv_*` columns are not part of the visible view.
+#[derive(Debug, Clone, PartialEq, Default)]
+pub struct ViewRowChanges {
+    pub view: String,
+    pub deleted: Vec<Row>,
+    pub inserted: Vec<Row>,
+}
+
+/// The primary key of `row` rendered as text: the `pk_columns` values joined by `,`, or every
+/// cell in column order when the table has no primary key. It is the rendering of
+/// `RowChange.key`.
+pub fn row_key_text(pk_columns: &[String], row: &Row) -> String {
+    let render = |value: &Value| match value {
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    };
+    if pk_columns.is_empty() {
+        return row.values().map(render).collect::<Vec<_>>().join(",");
+    }
+    pk_columns
+        .iter()
+        .filter_map(|column| row.get(column))
+        .map(render)
+        .collect::<Vec<_>>()
+        .join(",")
+}
+
+fn weight_overflow() -> String {
+    "DELTA_WEIGHT_OVERFLOW: a grouped view accumulator exceeds its exact range".to_string()
+}
+
+fn round_half_even_div(numerator: i128, denominator: i128) -> Result<i128, String> {
+    if denominator == 0 {
+        return Err("ROW_EXPR_DIVIDE_BY_ZERO".to_string());
+    }
+    let quotient = numerator / denominator;
+    let remainder = numerator % denominator;
+    let twice = remainder.unsigned_abs().checked_mul(2).ok_or_else(weight_overflow)?;
+    let divisor = denominator.unsigned_abs();
+    let away = if numerator.signum() * denominator.signum() < 0 { -1 } else { 1 };
+    let bump = match twice.cmp(&divisor) {
+        Ordering::Greater => true,
+        Ordering::Equal => quotient % 2 != 0,
+        Ordering::Less => false,
+    };
+    Ok(if bump { quotient + away } else { quotient })
+}
+
+impl RowExpr {
+    /// The exact number the expression has over `row`; `None` for NULL. A text operand is read
+    /// as a decimal.
+    pub fn eval_number(&self, row: &Row) -> Result<Option<(i128, u32)>, String> {
+        number(self.scalar(row)?)
+    }
+
+    /// Whether the expression is true over `row` (a filter keeps a row only then).
+    pub fn holds(&self, row: &Row) -> Result<bool, String> {
+        Ok(self.eval(row)? == Value::Bool(true))
+    }
+}
+
+/// An exact decimal accumulator: `unscaled / 10^scale`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct ExactSum {
+    unscaled: i128,
+    scale: u32,
+}
+
+impl ExactSum {
+    /// Adds `weight * value`.
+    pub fn add_weighted(&mut self, weight: i64, value: (i128, u32)) -> Result<(), String> {
+        let scale = self.scale.max(value.1);
+        let current = rescale(self.unscaled, self.scale, scale).map_err(|_| weight_overflow())?;
+        let term = rescale(value.0, value.1, scale)
+            .map_err(|_| weight_overflow())?
+            .checked_mul(i128::from(weight))
+            .ok_or_else(weight_overflow)?;
+        self.unscaled = current.checked_add(term).ok_or_else(weight_overflow)?;
+        self.scale = scale;
+        Ok(())
+    }
+
+    /// The canonical decimal string of the sum.
+    pub fn canonical(&self) -> String {
+        format_decimal(self.unscaled, self.scale)
+    }
+
+    /// The sum as a JSON value: an integer when it has no fraction, else its decimal string.
+    pub fn to_value(&self) -> Value {
+        if self.scale == 0 {
+            if let Ok(int) = i64::try_from(self.unscaled) {
+                return Value::from(int);
+            }
+        }
+        Value::String(self.canonical())
+    }
+
+    /// Reads a stored canonical decimal string.
+    pub fn parse(text: &str) -> Result<Self, String> {
+        match parse_decimal(text)? {
+            Scalar::Num { unscaled, scale } => Ok(Self { unscaled, scale }),
+            _ => Err("ROW_EXPR_NOT_DECIMAL".to_string()),
+        }
+    }
+
+    /// `self / count` with 6 fractional digits, rounded half to even.
+    pub fn average(&self, count: i64) -> Result<String, String> {
+        let numerator = self.unscaled.checked_mul(1_000_000).ok_or_else(weight_overflow)?;
+        let denominator = pow10(self.scale)?
+            .checked_mul(i128::from(count))
+            .ok_or_else(weight_overflow)?;
+        Ok(format_decimal(round_half_even_div(numerator, denominator)?, 6))
+    }
+}
+
+/// The accumulated state of one group of a grouped view (R009.4).
+#[derive(Debug, Clone, PartialEq)]
+pub struct GroupState {
+    pub keys: Vec<Value>,
+    pub count: i64,
+    /// One entry per aggregate: the exact sum and the number of non-NULL arguments.
+    pub sums: Vec<(ExactSum, i64)>,
+    /// One entry per aggregate: the current `min` or `max` (`None` for NULL or another aggregate).
+    pub extremes: Vec<Option<Value>>,
+    /// Aggregates whose stored extreme was retracted and must be recomputed from the group's rows.
+    pub stale_extremes: Vec<bool>,
+}
+
+impl GroupState {
+    /// An empty group with the key values `keys`.
+    pub fn new(keys: Vec<Value>, aggs: usize) -> Self {
+        Self {
+            keys,
+            count: 0,
+            sums: vec![(ExactSum::default(), 0); aggs],
+            extremes: vec![None; aggs],
+            stale_extremes: vec![false; aggs],
+        }
+    }
+
+    /// Reads the group the stored result `row` holds.
+    pub fn from_stored(
+        keys: &[(String, RowExpr)],
+        aggs: &[(String, ExactAgg)],
+        row: &Row,
+    ) -> Result<Self, String> {
+        let stored = |column: &str| {
+            row.get(column)
+                .ok_or_else(|| format!("MATVIEW_STATE_CORRUPT: `{column}` missing"))
+        };
+        let count = stored(MV_COUNT)?
+            .as_i64()
+            .ok_or_else(|| "MATVIEW_STATE_CORRUPT: count".to_string())?;
+        let mut group = Self::new(
+            keys.iter()
+                .map(|(name, _)| stored(name).cloned())
+                .collect::<Result<_, _>>()?,
+            aggs.len(),
+        );
+        group.count = count;
+        for (index, (name, agg)) in aggs.iter().enumerate() {
+            if let ExactAgg::Min(_) | ExactAgg::Max(_) = agg {
+                group.extremes[index] = match stored(name)? {
+                    Value::Null => None,
+                    other => Some(other.clone()),
+                };
+                continue;
+            }
+            if matches!(agg, ExactAgg::Count) {
+                continue;
+            }
+            let slot = &mut group.sums[index];
+            let sum = stored(&mv_sum_column(name))?;
+            *slot = (
+                match sum {
+                    Value::String(text) => ExactSum::parse(text)?,
+                    Value::Null => ExactSum::default(),
+                    other => ExactSum::parse(&other.to_string())?,
+                },
+                stored(&mv_nonnull_column(name))?
+                    .as_i64()
+                    .ok_or_else(|| "MATVIEW_STATE_CORRUPT: non-null count".to_string())?,
+            );
+        }
+        Ok(group)
+    }
+
+    /// Adds one source row of `weight` (`+1` entering, `-1` leaving).
+    pub fn apply(
+        &mut self,
+        aggs: &[(String, ExactAgg)],
+        weight: i64,
+        row: &Row,
+    ) -> Result<(), String> {
+        self.count = self.count.checked_add(weight).ok_or_else(weight_overflow)?;
+        for (index, (_, agg)) in aggs.iter().enumerate() {
+            match agg {
+                ExactAgg::Sum(expr) | ExactAgg::Avg(expr) => {
+                    if let Some(value) = expr.eval_number(row)? {
+                        let slot = &mut self.sums[index];
+                        slot.0.add_weighted(weight, value)?;
+                        slot.1 = slot.1.checked_add(weight).ok_or_else(weight_overflow)?;
+                    }
+                }
+                ExactAgg::Min(expr) | ExactAgg::Max(expr) => {
+                    let value = expr.eval(row)?;
+                    if value.is_null() {
+                        continue;
+                    }
+                    let decimal = matches!(expr, RowExpr::Decimal(_));
+                    let is_min = matches!(agg, ExactAgg::Min(_));
+                    let current = self.extremes[index].clone();
+                    if weight > 0 {
+                        let better = match &current {
+                            None => true,
+                            Some(held) => {
+                                let order = compare_values(decimal, &value, held)?;
+                                if is_min { order == Ordering::Less } else { order == Ordering::Greater }
+                            }
+                        };
+                        if better {
+                            self.extremes[index] = Some(value);
+                        }
+                    } else if current.as_ref().is_some_and(|held| {
+                        compare_values(decimal, &value, held).is_ok_and(|o| o == Ordering::Equal)
+                    }) {
+                        self.stale_extremes[index] = true;
+                    }
+                }
+                ExactAgg::Count => {}
+            }
+        }
+        Ok(())
+    }
+
+    /// Whether a retraction removed a stored extreme that must be recomputed.
+    pub fn needs_recompute(&self) -> bool {
+        self.stale_extremes.iter().any(|stale| *stale)
+    }
+
+    /// Recomputes every retracted extreme from `members`, the rows of this group in the
+    /// post-commit table (R012.2 `recompute_group_extreme`).
+    pub fn recompute_extremes(
+        &mut self,
+        aggs: &[(String, ExactAgg)],
+        members: &[&Row],
+    ) -> Result<(), String> {
+        for (index, (_, agg)) in aggs.iter().enumerate() {
+            if !self.stale_extremes[index] {
+                continue;
+            }
+            let (ExactAgg::Min(expr) | ExactAgg::Max(expr)) = agg else {
+                continue;
+            };
+            let decimal = matches!(expr, RowExpr::Decimal(_));
+            let is_min = matches!(agg, ExactAgg::Min(_));
+            let mut best: Option<Value> = None;
+            for row in members {
+                let value = expr.eval(row)?;
+                if value.is_null() {
+                    continue;
+                }
+                let better = match &best {
+                    None => true,
+                    Some(held) => {
+                        let order = compare_values(decimal, &value, held)?;
+                        if is_min { order == Ordering::Less } else { order == Ordering::Greater }
+                    }
+                };
+                if better {
+                    best = Some(value);
+                }
+            }
+            self.extremes[index] = best;
+            self.stale_extremes[index] = false;
+        }
+        Ok(())
+    }
+
+    /// The stored result row of the group: the key values, the aggregate outputs, the hidden
+    /// accumulators and `__mv_key`.
+    pub fn to_row(
+        &self,
+        keys: &[(String, RowExpr)],
+        aggs: &[(String, ExactAgg)],
+        key: &str,
+    ) -> Result<Row, String> {
+        let mut row = Row::new();
+        for ((name, _), value) in keys.iter().zip(&self.keys) {
+            row.insert(name.clone(), value.clone());
+        }
+        for (index, ((name, agg), (sum, nonnull))) in aggs.iter().zip(&self.sums).enumerate() {
+            let output = match agg {
+                ExactAgg::Count => Value::from(self.count),
+                ExactAgg::Sum(_) if *nonnull == 0 => Value::Null,
+                ExactAgg::Sum(_) => sum.to_value(),
+                ExactAgg::Avg(_) if *nonnull == 0 => Value::Null,
+                ExactAgg::Avg(_) => Value::String(sum.average(*nonnull)?),
+                ExactAgg::Min(_) | ExactAgg::Max(_) => self.extremes[index].clone().unwrap_or(Value::Null),
+            };
+            row.insert(name.clone(), output);
+            if matches!(agg, ExactAgg::Sum(_) | ExactAgg::Avg(_)) {
+                row.insert(mv_sum_column(name), Value::String(sum.canonical()));
+                row.insert(mv_nonnull_column(name), Value::from(*nonnull));
+            }
+        }
+        row.insert(MV_COUNT.to_string(), Value::from(self.count));
+        row.insert(MV_KEY.to_string(), Value::String(key.to_string()));
+        Ok(row)
+    }
+}
+
+/// Orders two non-NULL values of one column. A `decimal` operand compares by exact value, other
+/// numbers by value (floats included), text as text and booleans false before true.
+fn compare_values(decimal: bool, left: &Value, right: &Value) -> Result<Ordering, String> {
+    if decimal {
+        let read = |value: &Value| -> Result<(i128, u32), String> {
+            number(from_value(value)?)?.ok_or_else(|| "ROW_EXPR_NOT_DECIMAL".to_string())
+        };
+        return compare_numbers(read(left)?, read(right)?);
+    }
+    match (left, right) {
+        (Value::Number(a), Value::Number(b)) => match (a.as_i64(), b.as_i64()) {
+            (Some(a), Some(b)) => Ok(a.cmp(&b)),
+            _ => a
+                .as_f64()
+                .partial_cmp(&b.as_f64())
+                .ok_or_else(|| "ROW_EXPR_TYPE: a NaN does not order".to_string()),
+        },
+        (Value::String(a), Value::String(b)) => Ok(a.cmp(b)),
+        (Value::Bool(a), Value::Bool(b)) => Ok(a.cmp(b)),
+        _ => Err("ROW_EXPR_TYPE: values of different types do not order".to_string()),
+    }
+}
+
+/// The `__mv_key` of a group: the compact JSON array of its key values, `null` for a NULL.
+pub fn group_key_text(values: &[Value]) -> String {
+    Value::Array(values.to_vec()).to_string()
+}
+
+impl IncrementalViewProgram {
+    /// Whether a source `row` enters the view: the filter is true over it.
+    pub fn admits(&self, row: &Row) -> Result<bool, String> {
+        match &self.filter {
+            Some(filter) => filter.holds(row),
+            None => Ok(true),
+        }
+    }
+
+    /// The visible output row of a `Rows` view over source `row`.
+    pub fn project(&self, row: &Row, key: &str) -> Result<Row, String> {
+        let ViewOutput::Rows(columns) = &self.output else {
+            return Err("MATVIEW_PROGRAM: not a rows view".to_string());
+        };
+        let mut out = Row::new();
+        for (name, expr) in columns {
+            out.insert(name.clone(), expr.eval(row)?);
+        }
+        out.insert(MV_KEY.to_string(), Value::String(key.to_string()));
+        Ok(out)
+    }
+
+    /// The key columns and aggregates of a grouped view; a `Distinct` view is a grouped view
+    /// of its output tuple with no aggregate.
+    pub fn group_shape(&self) -> (Vec<(String, RowExpr)>, Vec<(String, ExactAgg)>) {
+        match &self.output {
+            ViewOutput::Groups { keys, aggs } => (keys.clone(), aggs.clone()),
+            ViewOutput::Distinct(columns) => (columns.clone(), Vec::new()),
+            ViewOutput::Rows(_) => (Vec::new(), Vec::new()),
+        }
+    }
+
+    /// The group key values of a `Groups` view over source `row`.
+    pub fn group_values(&self, row: &Row) -> Result<Vec<Value>, String> {
+        let (ViewOutput::Groups { keys, .. } | ViewOutput::Distinct(keys)) = &self.output else {
+            return Err("MATVIEW_PROGRAM: not a groups view".to_string());
+        };
+        keys.iter().map(|(_, expr)| expr.eval(row)).collect()
+    }
+
+    /// Folds the source `rows` (each as `(primary key text, row)`) into the stored result rows
+    /// of a view that starts empty. It is the same arithmetic as the delta path, applied as one
+    /// batch of `Insert` changes (R009.5).
+    pub fn initial_rows(&self, rows: &[(String, Row)]) -> Result<Vec<Row>, String> {
+        match &self.output {
+            ViewOutput::Rows(_) => {
+                let mut out = Vec::new();
+                for (key, row) in rows {
+                    if self.admits(row)? {
+                        out.push(self.project(row, key)?);
+                    }
+                }
+                Ok(out)
+            }
+            ViewOutput::Groups { .. } | ViewOutput::Distinct(_) => {
+                let (keys, aggs) = self.group_shape();
+                let (keys, aggs) = (&keys[..], &aggs[..]);
+                let mut groups: std::collections::BTreeMap<String, GroupState> =
+                    std::collections::BTreeMap::new();
+                for (_, row) in rows {
+                    if !self.admits(row)? {
+                        continue;
+                    }
+                    let values = self.group_values(row)?;
+                    groups
+                        .entry(group_key_text(&values))
+                        .or_insert_with(|| GroupState::new(values, aggs.len()))
+                        .apply(aggs, 1, row)?;
+                }
+                groups
+                    .iter()
+                    .map(|(key, group)| group.to_row(keys, aggs, key))
+                    .collect()
+            }
+        }
     }
 }
 

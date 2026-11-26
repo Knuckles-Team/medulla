@@ -694,6 +694,8 @@ pub(crate) struct UserTableProvider {
     /// equality this provider resolved (or the resolved point-get missed or failed
     /// re-verification).
     full: RwLock<Option<RecordBatch>>,
+    /// The indices of the visible columns: every column except the hidden `__mv_*` ones.
+    visible: Vec<usize>,
 }
 
 /// The rows of a covering partial index and the index's name.
@@ -703,12 +705,20 @@ impl UserTableProvider {
     pub fn new(store: TableStore, schema: TableSchema) -> Self {
         let arrow_schema = arrow_schema(&schema);
         let serial_col = schema.columns().iter().position(|c| c.serial);
+        let visible = schema
+            .columns()
+            .iter()
+            .enumerate()
+            .filter(|(_, c)| !c.name.starts_with("__mv_"))
+            .map(|(index, _)| index)
+            .collect();
         Self {
             schema,
             arrow_schema,
             store,
             serial_col,
             full: RwLock::new(None),
+            visible,
         }
     }
 
@@ -788,7 +798,14 @@ impl UserTableProvider {
 #[async_trait]
 impl TableProvider for UserTableProvider {
     fn schema(&self) -> SchemaRef {
-        self.arrow_schema.clone()
+        // The visible columns: the hidden `__mv_*` columns of an incremental view's result
+        // table never appear (MEDULLA-INCREMENTAL-VIEWS-R009.3).
+        let fields: Vec<_> = self
+            .visible
+            .iter()
+            .map(|index| self.arrow_schema.field(*index).clone())
+            .collect();
+        Arc::new(Schema::new(fields))
     }
 
     fn table_type(&self) -> TableType {
@@ -812,6 +829,23 @@ impl TableProvider for UserTableProvider {
     }
 
     async fn scan(
+        &self,
+        state: &dyn Session,
+        projection: Option<&Vec<usize>>,
+        filters: &[Expr],
+        limit: Option<usize>,
+    ) -> ScanPlan {
+        let mapped: Vec<usize> = match projection {
+            Some(wanted) => wanted.iter().map(|index| self.visible[*index]).collect(),
+            None => self.visible.clone(),
+        };
+        self.scan_full(state, Some(&mapped), filters, limit).await
+    }
+}
+
+impl UserTableProvider {
+    /// The scan over the full stored columns; `projection` indexes them.
+    async fn scan_full(
         &self,
         state: &dyn Session,
         projection: Option<&Vec<usize>>,

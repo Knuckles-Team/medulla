@@ -8,7 +8,7 @@
 //!
 //! The refusals are checked in this order, and the first one found is the one named:
 //! (1) a second table, a join or a subquery; (2) a window function, `DISTINCT`, `ORDER BY`,
-//! `LIMIT` or `HAVING`; (3) a volatile function; (4) `min` or `max`; (5) a column or a literal
+//! `LIMIT` or `HAVING` (plain `DISTINCT` is maintained); (3) a volatile function; (5) a column or a literal
 //! the exact arithmetic cannot hold (a float column, or `sum` / `avg` over one). Then every
 //! remaining shape the program has no node for is refused by name.
 //!
@@ -23,7 +23,7 @@
 //! `SELECT *` has no column list here and is refused.
 
 use datafusion::sql::sqlparser::ast::{
-    BinaryOperator, Expr, FunctionArg, FunctionArgExpr, FunctionArguments, GroupByExpr, Query,
+    BinaryOperator, Distinct, Expr, FunctionArg, FunctionArgExpr, FunctionArguments, GroupByExpr, Query,
     SelectItem, SetExpr, TableFactor, UnaryOperator, Value as SqlValue,
 };
 use datafusion::sql::sqlparser::dialect::PostgreSqlDialect;
@@ -139,8 +139,9 @@ pub fn compile_incremental(
             return Err(Refusal::new("window function"));
         }
     }
-    if select.distinct.is_some() {
-        return Err(Refusal::new("DISTINCT"));
+    // Plain `DISTINCT` is maintained (R012.3); `DISTINCT ON` is not.
+    if matches!(&select.distinct, Some(distinct) if !matches!(distinct, Distinct::Distinct)) {
+        return Err(Refusal::new("DISTINCT ON"));
     }
     if query.order_by.is_some() {
         return Err(Refusal::new("ORDER BY"));
@@ -159,14 +160,6 @@ pub fn compile_incremental(
             return Err(Refusal::new(format!("volatile function {}", function_name(f))));
         }
     }
-    // (4) min or max.
-    for expr in &exprs {
-        if let Some(Expr::Function(f)) = find(expr, &|e| {
-            matches!(e, Expr::Function(f) if matches!(function_name(f).as_str(), "min" | "max"))
-        }) {
-            return Err(Refusal::new(format!("{} aggregate", function_name(f))));
-        }
-    }
     // (5) The shapes the program has no node for, and float columns.
     let ctx = Ctx {
         table: &table,
@@ -177,7 +170,13 @@ pub fn compile_incremental(
         .as_ref()
         .map(|expr| ctx.expr(expr))
         .transpose()?;
-    let output = ctx.output(select)?;
+    let mut output = ctx.output(select)?;
+    if select.distinct.is_some() {
+        output = match output {
+            ViewOutput::Rows(columns) => ViewOutput::Distinct(columns),
+            _ => return Err(Refusal::new("DISTINCT with an aggregate or GROUP BY")),
+        };
+    }
     Ok(IncrementalViewProgram {
         view: name.to_string(),
         table,
@@ -414,7 +413,7 @@ impl Ctx<'_> {
             }
         }
         let is_aggregate = |expr: &Expr| {
-            matches!(expr, Expr::Function(f) if matches!(function_name(f).as_str(), "count" | "sum" | "avg"))
+            matches!(expr, Expr::Function(f) if matches!(function_name(f).as_str(), "count" | "sum" | "avg" | "min" | "max"))
         };
         let grouped = !group_keys.is_empty() || items.iter().any(|(expr, _)| is_aggregate(expr));
         if !grouped {
@@ -467,6 +466,23 @@ impl Ctx<'_> {
         Ok(ViewOutput::Groups { keys, aggs })
     }
 
+    /// The bare column `arg` names when it is a float or double column of the source table.
+    fn float_column(&self, arg: &Expr) -> Option<RowExpr> {
+        let name = match arg {
+            Expr::Identifier(ident) => ident.value.clone(),
+            Expr::CompoundIdentifier(parts) => match parts.as_slice() {
+                [table, column] if table.value == self.table => column.value.clone(),
+                _ => return None,
+            },
+            _ => return None,
+        };
+        matches!(
+            (self.column_type)(self.table, &name),
+            Some(ColumnType::Float | ColumnType::Double)
+        )
+        .then(|| RowExpr::Column(name))
+    }
+
     fn aggregate(
         &self,
         function: &datafusion::sql::sqlparser::ast::Function,
@@ -487,6 +503,18 @@ impl Ctx<'_> {
             ("count", [FunctionArgExpr::Wildcard]) => Ok(ExactAgg::Count),
             ("count", [FunctionArgExpr::Expr(Expr::Value(_))]) => Ok(ExactAgg::Count),
             ("count", _) => Err(Refusal::new("count over an expression")),
+            ("min" | "max", [FunctionArgExpr::Expr(arg)]) => {
+                // An extreme needs no subtraction, so a float column is accepted.
+                let arg = match self.float_column(arg) {
+                    Some(column) => column,
+                    None => self.expr_in(arg, Some(name.as_str()))?,
+                };
+                Ok(if name == "min" {
+                    ExactAgg::Min(arg)
+                } else {
+                    ExactAgg::Max(arg)
+                })
+            }
             ("sum" | "avg", [FunctionArgExpr::Expr(arg)]) => {
                 let arg = self.expr_in(arg, Some(name.as_str()))?;
                 Ok(if name == "sum" {
@@ -587,7 +615,7 @@ mod tests {
             "SELECT id, row_number() OVER (ORDER BY id) FROM orders",
             "window function",
         );
-        refused("SELECT DISTINCT id FROM orders", "DISTINCT");
+        refused("SELECT DISTINCT ON (id) id FROM orders", "DISTINCT ON");
         refused("SELECT id FROM orders ORDER BY id", "ORDER BY");
         refused("SELECT id FROM orders LIMIT 5", "LIMIT");
         refused(
@@ -595,10 +623,6 @@ mod tests {
             "HAVING",
         );
         refused("SELECT id FROM orders WHERE now() > now()", "volatile function now");
-        refused(
-            "SELECT region, max(qty) FROM orders GROUP BY region",
-            "max aggregate",
-        );
         refused(
             "SELECT region, sum(ratio) FROM orders GROUP BY region",
             "sum over a float column",
@@ -613,7 +637,7 @@ mod tests {
         );
         refused(
             "SELECT DISTINCT region, max(qty) FROM orders GROUP BY region",
-            "DISTINCT",
+            "DISTINCT with an aggregate or GROUP BY",
         );
         // The code and text of the refusal.
         let error = compile_incremental_sql("v", "SELECT id FROM orders LIMIT 1", &types).unwrap_err();
@@ -658,6 +682,33 @@ mod tests {
                 ("n".to_string(), ExactAgg::Count),
                 ("total".to_string(), ExactAgg::Sum(amount())),
                 ("mean".to_string(), ExactAgg::Avg(amount())),
+            ]
+        );
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R012.3
+    #[test]
+    fn distinct_min_max_compile() {
+        let distinct = compile("SELECT DISTINCT region FROM orders").unwrap();
+        assert_eq!(
+            distinct.output,
+            ViewOutput::Distinct(vec![("region".to_string(), RowExpr::Column("region".into()))])
+        );
+        let extremes = compile(
+            "SELECT region, min(amount) AS lo, max(ratio) AS hi FROM orders GROUP BY region",
+        )
+        .unwrap();
+        let ViewOutput::Groups { aggs, .. } = &extremes.output else {
+            panic!("min and max are a Groups view");
+        };
+        assert_eq!(
+            aggs,
+            &[
+                (
+                    "lo".to_string(),
+                    ExactAgg::Min(RowExpr::Decimal(boxed(RowExpr::Column("amount".into()))))
+                ),
+                ("hi".to_string(), ExactAgg::Max(RowExpr::Column("ratio".into()))),
             ]
         );
     }

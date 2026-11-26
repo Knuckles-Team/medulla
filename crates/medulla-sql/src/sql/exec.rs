@@ -982,6 +982,7 @@ fn build_ctx_with(
     for entry in user_tables {
         match entry {
             UserTable::Eager(name, schema, batch) => {
+                let (schema, batch) = hide_view_state_columns(schema, batch)?;
                 let table = NodesTableProvider::new(schema.clone(), batch);
                 ctx.register_table(name.as_str(), Arc::new(table))
                     .map_err(|e| format!("register user table `{name}`: {e}"))?;
@@ -989,6 +990,19 @@ fn build_ctx_with(
             }
             UserTable::Lazy(name, schema, store) => {
                 let arrow_schema = crate::provider::arrow_schema(&schema);
+                let arrow_schema = Arc::new(
+                    arrow_schema
+                        .project(
+                            &arrow_schema
+                                .fields()
+                                .iter()
+                                .enumerate()
+                                .filter(|(_, f)| !f.name().starts_with("__mv_"))
+                                .map(|(i, _)| i)
+                                .collect::<Vec<_>>(),
+                        )
+                        .map_err(|e| format!("project user table `{name}`: {e}"))?,
+                );
                 let table = crate::provider::UserTableProvider::new(store, schema);
                 ctx.register_table(name.as_str(), Arc::new(table))
                     .map_err(|e| format!("register user table `{name}`: {e}"))?;
@@ -2038,4 +2052,28 @@ mod medulla_embed_ann_pushdown_tests {
         .expect("batch");
         Arc::new(MemTable::try_new(schema, vec![vec![batch]]).expect("memtable"))
     }
+}
+
+
+/// Removes the hidden `__mv_*` columns of an incremental view's result table from an eagerly
+/// materialized table, so `SELECT *` on the view returns its output columns only
+/// (MEDULLA-INCREMENTAL-VIEWS-R009.3).
+fn hide_view_state_columns(
+    schema: SchemaRef,
+    batch: arrow::record_batch::RecordBatch,
+) -> Result<(SchemaRef, arrow::record_batch::RecordBatch), String> {
+    let visible: Vec<usize> = schema
+        .fields()
+        .iter()
+        .enumerate()
+        .filter(|(_, field)| !field.name().starts_with("__mv_"))
+        .map(|(index, _)| index)
+        .collect();
+    if visible.len() == schema.fields().len() {
+        return Ok((schema, batch));
+    }
+    let projected = batch
+        .project(&visible)
+        .map_err(|e| format!("hide view state columns: {e}"))?;
+    Ok((projected.schema(), projected))
 }

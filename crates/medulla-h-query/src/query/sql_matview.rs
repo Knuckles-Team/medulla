@@ -66,6 +66,7 @@ fn matview_txn(
                 owner: owner.to_string(),
                 refreshed_seq: seq,
                 stale: false,
+            program: None,
             };
             let schema = medulla_sql_lang::sql::typed_result::matview_result_schema(
                 &name,
