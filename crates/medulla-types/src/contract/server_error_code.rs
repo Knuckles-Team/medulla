@@ -869,6 +869,7 @@ closed_error_codes! {
         DuckdbFileDenied => "DUCKDB_FILE_DENIED",
         CapabilityUnsupported => "CAPABILITY_UNSUPPORTED",
         SchemaDrift => "SCHEMA_DRIFT",
+        SchemaDriftQuarantined => "SCHEMA_DRIFT_QUARANTINED",
         SqliteSnapshotUnstable => "SQLITE_SNAPSHOT_UNSTABLE",
         SqliteWatermarkInvalid => "SQLITE_WATERMARK_INVALID",
         StaleAgentLibraryRevision => "STALE_AGENT_LIBRARY_REVISION",

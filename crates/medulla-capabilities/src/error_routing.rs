@@ -1057,6 +1057,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "READER_ENCRYPTED",
             "READER_TOO_LARGE",
             "READER_UNSUPPORTED_MEDIA_TYPE",
+            // MEDULLA-TYPED-PACKS-R715: a delivery that breaks an approved contract under
+            // the quarantine policy parks and is refused.
+            "SCHEMA_DRIFT_QUARANTINED",
             "TRANSCRIPT_DUPLICATE_MESSAGE_CONFLICT",
             "TRANSCRIPT_FOREIGN_CONCEPT",
             "TRANSCRIPT_INVALID",

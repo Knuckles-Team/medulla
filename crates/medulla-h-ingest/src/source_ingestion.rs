@@ -379,6 +379,57 @@ pub async fn prepare(
         batch.records.as_slice(),
         medulla_server_api::knob_config::knobs().drift_sample_max as usize,
     )?;
+    // A delivery that breaks an approved contract under the quarantine policy applies no
+    // record: one dead-letter item with digests only is parked, the checkpoint does not
+    // advance and the answer is SCHEMA_DRIFT_QUARANTINED (MEDULLA-TYPED-PACKS-R715).
+    let quarantined: Vec<&medulla_source_types::source_ingestion::StreamDrift> = drift
+        .iter()
+        .filter(|stream| {
+            stream.report.action
+                == medulla_catalog_types::graph_schema::drift::DriftAction::Quarantined
+        })
+        .collect();
+    if !quarantined.is_empty() {
+        let detail = quarantined
+            .iter()
+            .map(|stream| {
+                format!(
+                    "stream {} shape {} against contract {}",
+                    stream.stream.as_str(),
+                    stream.report.shape_digest,
+                    stream.report.approved_digest
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("; ");
+        let error = DocumentIngestError::SchemaDrift(detail.clone());
+        let dead_letter = medulla_ingestion_types::ingest_capabilities::DeadLetterItem {
+            schema_version:
+                medulla_ingestion_types::ingest_capabilities::INGEST_CAPABILITIES_SCHEMA_VERSION,
+            item_id: batch_id.clone(),
+            queue: "source-ingestion".to_string(),
+            reason: "schema_drift".to_string(),
+            attempts: 1,
+            last_error: format!("SCHEMA_DRIFT_QUARANTINED: {detail}"),
+            parked_at_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+            payload_digest: batch_digest,
+        };
+        let dead_letter = serde_json::to_value(&dead_letter).map_err(|e| e.to_string())?;
+        let mut prepared = prepare_quarantine(
+            &ctx,
+            batch,
+            batch_digest,
+            &batch_id,
+            persistence.as_ref(),
+            &graph_fname,
+            &error,
+            0,
+            Some(dead_letter),
+        )
+        .await?;
+        prepared.drift = drift;
+        return Ok(prepared);
+    }
     let resources = load_resources(&ctx).await?;
     authorize_empty_reconciliation(&ctx, batch)?;
     let resolved = resolve_mappings(&ctx, batch, &resources)?;
@@ -433,6 +484,7 @@ pub async fn prepare(
                 &graph_fname,
                 &error,
                 resolved.entry_revision.unwrap_or(0),
+                None,
             )
             .await;
         }
@@ -3461,6 +3513,18 @@ pub fn finish(prepared: PreparedSourceIngestion, response: Response) -> Response
         SourceIngestionDisposition::Committed
     };
     let outcome = match prepared.quarantine.clone() {
+        // A drifted delivery is refused with its report; the dead-letter item is committed.
+        Some(receipt)
+            if receipt.reason
+                == medulla_source_types::source_document::QuarantineReason::SchemaDrift =>
+        {
+            Err(format!(
+                "{}: {}",
+                medulla_types::contract::ServerErrorCode::SchemaDriftQuarantined.as_str(),
+                serde_json::to_string(&prepared.drift)
+                    .unwrap_or_else(|_| receipt.source_digest.to_hex())
+            ))
+        }
         Some(receipt) => Ok(SourceIngestionOutcome::Quarantined(Box::new(receipt))),
         None => build_terminal_receipt(prepared, disposition)
             .map(|receipt| SourceIngestionOutcome::Accepted(Box::new(receipt))),
@@ -3632,6 +3696,8 @@ struct QuarantineInputs<'a> {
     batch_id: &'a str,
     error: &'a DocumentIngestError,
     mapping_revision: u64,
+    /// The parked `DeadLetterItem` of a drift quarantine (MEDULLA-TYPED-PACKS-R715).
+    dead_letter: Option<serde_json::Value>,
     /// The stream's live-set marker id; the content version is keyed by it.
     stream_object_id: String,
     previous_stream_digest: Option<String>,
@@ -3698,6 +3764,7 @@ fn quarantine_prepared(
         batch_id,
         error,
         mapping_revision,
+        dead_letter,
         stream_object_id,
         previous_stream_digest,
         prior_accepted_checkpoint,
@@ -3721,6 +3788,9 @@ fn quarantine_prepared(
         "replay": replay,
         "prior_accepted_checkpoint": prior_accepted_checkpoint,
     });
+    if let (Some(item), Some(map)) = (dead_letter, properties.as_object_mut()) {
+        map.insert("dead_letter".into(), item);
+    }
     if let Some(map) = properties.as_object_mut() {
         for (key, value) in permissions::restricted_read_access(
             medulla_source_types::source_document::QUARANTINE_READ_ACTION,
@@ -3787,6 +3857,7 @@ async fn prepare_quarantine(
     graph_fname: &str,
     error: &DocumentIngestError,
     mapping_revision: u64,
+    dead_letter: Option<serde_json::Value>,
 ) -> Result<PreparedSourceIngestion, String> {
     let stream_object_id = source_marker_id(ctx.tenant_scope, batch)?;
     let prior_accepted_checkpoint = persistence
@@ -3818,6 +3889,7 @@ async fn prepare_quarantine(
             batch_id,
             error,
             mapping_revision,
+            dead_letter,
             stream_object_id,
             previous_stream_digest,
             prior_accepted_checkpoint,

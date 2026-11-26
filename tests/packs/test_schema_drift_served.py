@@ -15,6 +15,8 @@ attach-approved / shadow validate) against the session engine:
   activated, and data that breaks the candidate keeps it out.
 """
 
+# ruff: noqa: E501, I001
+
 from __future__ import annotations
 
 import json
@@ -347,16 +349,87 @@ async def test_delivery_reports_drift_class() -> None:
         assert conforming.drift[0].report.class_ is DriftClass.COMPATIBLE
         assert conforming.drift[0].report.action is DriftAction.ACCEPTED
 
-        # 4. A drifted delivery (a required field retyped, another missing) is
-        # classified breaking and quarantined by the fixed default policy.
-        drifted = await submit_delivery(
-            client,
-            delivery_batch(connector, 4, 3, {"name": 7}),
+    finally:
+        try:
+            await client.tenants.delete(graph)
+        finally:
+            await client.close()
+
+
+async def _approved_delivery_client(connector: str, graph: str) -> MedullaClient:
+    """A client on a graph whose delivery stream has an approved baseline contract."""
+    admin = await connect()
+    try:
+        await import_entries(admin, connector, [delivery_declaration(connector)])
+        await admin.tenants.create(graph)
+    finally:
+        await admin.close()
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        graph_name=graph,
+    )
+    await client.nodes.add(
+        "delivery-record", {"type": DELIVERY_CLASS, **{"id": 1, "name": "alpha"}}
+    )
+    lease = "approval:delivery"
+    await issue_approval_lease(
+        client,
+        lease,
+        candidate_digest(BASELINE, DELIVERY_SOURCE_ID),
+        DELIVERY_SOURCE_ID,
+    )
+    await consume_approval_lease(client, lease)
+    await validate_repair(client, BASELINE["fields"], DELIVERY_SOURCE_ID)
+    await attach_approved(client, lease, BASELINE["fields"], DELIVERY_SOURCE_ID)
+    return client
+
+
+async def _count(client: MedullaClient, node_type: str) -> int:
+    result = await client.query.uql(f"MATCH () WHERE type = '{node_type}'")
+    return len(result["rows"])
+
+
+# spec: MEDULLA-TYPED-PACKS-R712
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R715")
+@pytest.mark.asyncio
+async def test_breaking_delivery_is_quarantined() -> None:
+    connector = f"drift-{uuid.uuid4().hex[:10]}"
+    graph = f"drift-quarantine-{uuid.uuid4().hex[:8]}"
+    client = await _approved_delivery_client(connector, graph)
+    try:
+        # The baseline delivery is accepted and advances the checkpoint to page 2.
+        accepted = await submit_delivery(
+            client, delivery_batch(connector, 2, None, {"id": 2, "name": "beta"})
         )
-        assert len(drifted.drift) == 1
-        report = drifted.drift[0].report
-        assert report.class_ is DriftClass.BREAKING
-        assert report.action is DriftAction.QUARANTINED
+        assert accepted.drift[0].report.action is DriftAction.ACCEPTED
+        records_before = await _count(client, DELIVERY_CLASS)
+
+        # A drifted delivery (a required field retyped, another missing) is refused with its
+        # report; no record is applied.
+        with pytest.raises(
+            EngineResponseError, match="SCHEMA_DRIFT_QUARANTINED"
+        ) as refused:
+            await submit_delivery(client, delivery_batch(connector, 3, 2, {"name": 7}))
+        assert "breaking" in str(refused.value).lower()
+        assert await _count(client, DELIVERY_CLASS) == records_before
+
+        # One dead-letter item is parked, with digests only and no record body.
+        quarantined = await client.query.uql("MATCH () WHERE type = 'SourceQuarantine'")
+        assert len(quarantined["rows"]) == 1, quarantined
+        stored = await client.nodes.properties(quarantined["rows"][0]["id"])
+        assert stored is not None
+        item = stored["dead_letter"]
+        assert item["reason"] == "schema_drift"
+        assert item["queue"] == "source-ingestion"
+        assert item["payload_digest"].startswith("sha256:")
+        assert "alpha" not in json.dumps(stored) and "beta" not in json.dumps(stored)
+
+        # The checkpoint did not advance: the next delivery names page 2 as its base.
+        resumed = await submit_delivery(
+            client, delivery_batch(connector, 3, 2, {"id": 3, "name": "gamma"})
+        )
+        assert resumed.drift[0].report.action is DriftAction.ACCEPTED
     finally:
         try:
             await client.tenants.delete(graph)

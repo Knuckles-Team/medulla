@@ -116,6 +116,9 @@ pub enum QuarantineReason {
     NormalizationFailed,
     MissingProvenance,
     MappingRevisionMismatch,
+    /// The delivery breaks an approved contract under the quarantine policy
+    /// (MEDULLA-TYPED-PACKS-R715).
+    SchemaDrift,
 }
 
 /// Why one document of a batch fails ingestion (MEDULLA-INGEST-WORKER-R003.10). Each
@@ -137,6 +140,10 @@ pub enum DocumentIngestError {
     /// `<code>: <detail>` with `code` one of [`READER_REFUSAL_CODES`]; the code is the rule id.
     #[error("{0}")]
     ReaderRefused(String),
+    /// A stream of the delivery breaks its approved contract and the policy is quarantine
+    /// (MEDULLA-TYPED-PACKS-R715). The text names the report digests, never a record.
+    #[error("SCHEMA_DRIFT_QUARANTINED: {0}")]
+    SchemaDrift(String),
 }
 
 /// The closed reader refusal codes of MEDULLA-INGEST-WORKER-R700.4. Each is the rule id of the
@@ -168,6 +175,7 @@ impl DocumentIngestError {
             Self::MissingProvenance(_) => QuarantineReason::MissingProvenance,
             Self::MappingRevisionMismatch(_) => QuarantineReason::MappingRevisionMismatch,
             Self::ReaderRefused(_) => QuarantineReason::NormalizationFailed,
+            Self::SchemaDrift(_) => QuarantineReason::SchemaDrift,
         }
     }
 
@@ -181,6 +189,7 @@ impl DocumentIngestError {
             Self::NormalizationFailed(_) => "DOCUMENT_NORMALIZATION_FAILED",
             Self::MissingProvenance(_) => "ATOM_PROVENANCE_MISSING",
             Self::MappingRevisionMismatch(_) => "MAPPING_REVISION_MISMATCH",
+            Self::SchemaDrift(_) => "SCHEMA_DRIFT_QUARANTINED",
         }
     }
 }
