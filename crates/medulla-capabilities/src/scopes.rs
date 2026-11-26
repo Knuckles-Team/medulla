@@ -334,6 +334,9 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("usage:write", ServiceOnly, "engine"),
     entry("validation:read", User, "engine"),
     entry("viz:render", User, "engine"),
+    // MEDULLA-IDENTITY-R743: the door's webhook subscription operations (memory event delivery);
+    // domain class, so a person or a service may hold it.
+    entry("webhook:manage", Domain, "graph-os"),
     entry("webui:admin", Admin, "graph-os"),
     entry("webui:maintainer", User, "graph-os"),
     entry("webui:reader", User, "graph-os"),

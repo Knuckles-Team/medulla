@@ -67,3 +67,24 @@ fn telemetry_write_is_user_class_so_a_person_may_hold_it() {
         VerifiedRequestContext::verified_for_test_with_scopes("agent-1", "tenant-a", &["telemetry:read"]);
     assert!(!without.allows_action("telemetry:write"));
 }
+
+// spec: MEDULLA-IDENTITY-R743
+#[test]
+fn webhook_manage_is_a_domain_scope_of_the_door_that_a_person_or_a_service_may_hold() {
+    let entry = scope_entry("webhook:manage").expect("registered");
+    assert_eq!(entry.class, ScopeClass::Domain);
+    assert_eq!(entry.owner, "graph-os");
+    assert!(entry.class.allows_kind(UserKind::Human));
+    assert!(entry.class.allows_kind(UserKind::Service));
+    assert_eq!(ScopeRegistry.approver_group_of("webhook:manage"), None);
+    let without =
+        VerifiedRequestContext::verified_for_test_with_scopes("agent-1", "tenant-a", &["memory:read"]);
+    assert!(!without.allows_action("webhook:manage"));
+    let with = VerifiedRequestContext::verified_for_test_with_scopes(
+        "agent-1",
+        "tenant-a",
+        &["webhook:manage"],
+    );
+    assert!(with.allows_action("webhook:manage"));
+    assert!(!with.allows_action("memory:events"));
+}
