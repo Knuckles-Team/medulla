@@ -34,7 +34,7 @@ mod served {
     use std::collections::{BTreeMap, BTreeSet};
 
     use medulla_decision_stats::decision::skill_telemetry::{
-        measures, peer_skills, rank_skills, RankInput,
+        cohort_of, measures, peer_skills, rank_skills, RankInput,
     };
     use medulla_decision_types::skill_telemetry::{
         principal_pseudonym, ChosenBy, EvalOutcome, IngestReceipt, InvocationOutcome,
@@ -143,7 +143,7 @@ mod served {
                     ResultPayload::of::<SkillTelemetryRank>(RankAnswer { skills })?,
                 ))
             }
-            SkillTelemetryOp::Peers { cohort, window, .. } => {
+            SkillTelemetryOp::Peers { window, .. } => {
                 let knobs = medulla_server_api::knob_config::knobs();
                 let caller = principal_pseudonym(
                     &tenant,
@@ -155,7 +155,7 @@ mod served {
                     .filter(|row| window.contains(row.started_ms))
                     .map(|row| (row.principal_pseudonym, row.skill_ref))
                     .collect();
-                let cohort: BTreeSet<String> = cohort.into_iter().collect();
+                let cohort = cohort_of(&uses, &caller);
                 let skills = peer_skills(&uses, &cohort, &caller, knobs.skill_peers_min_peers)
                     .map_err(|code| {
                         debug_assert_eq!(code, PEER_COHORT_TOO_SMALL);

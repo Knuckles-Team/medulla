@@ -2253,6 +2253,14 @@ path = "benches/usage_ledger.rs"
 harness = false
 required-features = ["full"]
 
+# Skill telemetry nightly budget (MEDULLA-DECISION-ENGINE-R713.8): 1,000,000 ingested invocations
+# through the served `SkillTelemetry` handler, then the twelve measures of one skill.
+[[bench]]
+name = "skill_telemetry"
+path = "benches/skill_telemetry.rs"
+harness = false
+required-features = ["full"]
+
 # Execution-kernel latency budget (MEDULLA-FINANCE-PRIMITIVES-R613.6): a 1000-slice
 # schedule solve and a 1_000_000-bar regime fit through the signed dispatch entry,
 # gated by scripts/bench_gate.py.

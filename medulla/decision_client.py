@@ -1783,15 +1783,13 @@ def skill_telemetry_rank_op(
     return op
 
 
-def skill_telemetry_peers_op(
-    graph: str, cohort: list[str], start_ms: int, end_ms: int
-) -> dict[str, Any]:
-    """A ``SkillTelemetry`` read of the skills a cohort used and the caller did not;
-    a cohort under the floor of ``skill.peers.min_peers`` is refused."""
+def skill_telemetry_peers_op(graph: str, start_ms: int, end_ms: int) -> dict[str, Any]:
+    """A ``SkillTelemetry`` read of the skills the caller's cohort used and the caller
+    did not. The engine computes the cohort from its own telemetry; a cohort under the
+    floor of ``skill.peers.min_peers`` is refused."""
     return {
         "op": "peers",
         "graph": graph,
-        "cohort": list(cohort),
         "window": {"start_ms": start_ms, "end_ms": end_ms},
     }
 

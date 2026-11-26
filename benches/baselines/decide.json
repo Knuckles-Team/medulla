@@ -158,6 +158,9 @@
       "rollup_p99_ms": 20.0,
       "peak_mib": 128.0
     },
+    "decide/skill_telemetry": {
+      "measures_p95_ms": 50.0
+    },
     "standards_drift": {
       "p50_ms": 4.0,
       "p99_ms": 30.0,

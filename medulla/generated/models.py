@@ -39468,7 +39468,6 @@ class SkillTelemetryOpRank(BaseModel):
 class SkillTelemetryOpPeers(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
-    cohort: list[str]
     graph: str
     op: Literal["peers"]
     window: TelemetryWindow

@@ -251,12 +251,12 @@ pub enum SkillTelemetryOp {
         #[serde(default)]
         limit: Option<u32>,
     },
-    /// Skills the caller's cohort used and the caller did not. Scope `telemetry:read`.
+    /// Skills the caller's cohort used and the caller did not. The engine computes the cohort
+    /// itself: every principal of the caller's tenant with telemetry of the same skill class in
+    /// the window. Scope `telemetry:read`.
     Peers {
         /// The graph.
         graph: String,
-        /// The pseudonyms of the cohort: the caller's persona set or team.
-        cohort: Vec<String>,
         /// The window.
         window: Window,
     },

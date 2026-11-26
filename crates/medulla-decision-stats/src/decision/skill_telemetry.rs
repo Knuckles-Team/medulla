@@ -151,6 +151,22 @@ pub fn rank_skills(inputs: &[RankInput], prior_runs: u64) -> Vec<RankedSkill> {
     ranked
 }
 
+/// The cohort of `caller` (MEDULLA-DECISION-ENGINE-R713.6): every other principal that used, in
+/// the window, at least one skill revision of the class the caller used. `uses` are the
+/// `(principal_pseudonym, skill_ref)` pairs of the window. The engine computes the cohort from its
+/// own telemetry; the caller never supplies one.
+pub fn cohort_of(uses: &[(String, String)], caller: &str) -> BTreeSet<String> {
+    let class: BTreeSet<&str> = uses
+        .iter()
+        .filter(|(user, _)| user == caller)
+        .map(|(_, skill)| skill.as_str())
+        .collect();
+    uses.iter()
+        .filter(|(user, skill)| user != caller && class.contains(skill.as_str()))
+        .map(|(user, _)| user.clone())
+        .collect()
+}
+
 /// Skills that at least `min_peers` principals of `cohort` used and `caller` did not, by distinct
 /// cohort users descending then `skill_ref` (MEDULLA-DECISION-ENGINE-R713.6). `uses` are the
 /// `(principal_pseudonym, skill_ref)` pairs of the window. A cohort of fewer than `min_peers`
@@ -289,6 +305,19 @@ mod tests {
         let order: Vec<&str> = ranked.iter().map(|row| row.skill_ref.as_str()).collect();
         // a: 800000; b: 500000; d: pass 0 with runs; c: no runs, last.
         assert_eq!(order, ["a", "b", "d", "c"]);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R713.6
+    #[test]
+    fn the_cohort_is_computed_from_the_callers_class() {
+        let uses: Vec<(String, String)> = [("me", "s1"), ("p1", "s1"), ("p2", "s1"), ("p2", "s9"), ("q", "s9")]
+            .iter()
+            .map(|(u, s)| (u.to_string(), s.to_string()))
+            .collect();
+        let cohort = cohort_of(&uses, "me");
+        assert_eq!(cohort, ["p1", "p2"].iter().map(|u| u.to_string()).collect::<BTreeSet<_>>());
+        // A caller with no telemetry has an empty cohort.
+        assert!(cohort_of(&uses, "nobody").is_empty());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R713.6

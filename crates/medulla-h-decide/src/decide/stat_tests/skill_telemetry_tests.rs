@@ -258,47 +258,44 @@ async fn quality_orders_by_evals_then_runs() {
 // spec: MEDULLA-DECISION-ENGINE-R713.6
 #[tokio::test]
 async fn peers_never_named_and_small_cohort_refused() {
-    let h = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
-    let core = seed(&h).await;
     let caller = who();
     let me = principal_pseudonym(TENANT, &caller.principal_persistence_id(), 1);
-    let peers: Vec<String> = (1..=5).map(|n| principal_pseudonym(TENANT, &format!("peer-{n}"), 1)).collect();
-    let mut events = vec![event("m1", SKILL, "ignored", 1, "run-a", false)];
-    events[0]["principal_pseudonym"] = me.clone().into();
-    for (index, peer) in peers.iter().enumerate() {
-        let mut shared = event(&format!("p{index}"), "skill:other@1", "x", 2, "run-a", false);
-        shared["principal_pseudonym"] = peer.clone().into();
-        events.push(shared);
-    }
-    commit(&core, &run(&h, &caller, ingest_op(events)).await.unwrap());
-    let mut cohort = peers.clone();
-    cohort.push(me.clone());
+    // The caller and `count` peers share the skill `SKILL`; every peer also used `skill:other@1`.
+    let ingest_for = |count: usize| {
+        let mut events = vec![event("m1", SKILL, "ignored", 1, "run-a", false)];
+        events[0]["principal_pseudonym"] = me.clone().into();
+        for n in 1..=count {
+            events.push(event(&format!("s{n}"), SKILL, &format!("peer-{n}"), 2, "run-a", false));
+            events.push(event(&format!("o{n}"), "skill:other@1", &format!("peer-{n}"), 2, "run-a", false));
+        }
+        events
+    };
+
+    let h = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
+    let core = seed(&h).await;
+    commit(&core, &run(&h, &caller, ingest_op(ingest_for(5))).await.unwrap());
+    // The caller names no cohort: the engine computes it from the telemetry of the same class.
     let answer: PeersAnswer = reply(
-        &run(
-            &h,
-            &caller,
-            SkillTelemetryOp::Peers { graph: GRAPH.into(), cohort: cohort.clone(), window: window() },
-        )
-        .await
-        .unwrap(),
+        &run(&h, &caller, SkillTelemetryOp::Peers { graph: GRAPH.into(), window: window() })
+            .await
+            .unwrap(),
     );
     assert_eq!(answer.skills.len(), 1);
     assert_eq!(answer.skills[0].skill_ref, "skill:other@1");
     assert_eq!(answer.skills[0].cohort_users, 5);
-    // No pseudonym of the cohort appears in the answer.
+    // No pseudonym appears in the answer.
     let text = serde_json::to_string(&answer).unwrap();
-    assert!(peers.iter().all(|peer| !text.contains(peer.as_str())));
+    assert!((1..=5).all(|n| !text.contains(&principal_pseudonym(TENANT, &format!("peer-{n}"), 1))));
+    assert!(!text.contains(&me));
 
-    // A cohort of four peers is under the floor of five.
-    let small: Vec<String> = peers.iter().take(4).cloned().chain([me]).collect();
-    let error = run(
-        &h,
-        &caller,
-        SkillTelemetryOp::Peers { graph: GRAPH.into(), cohort: small, window: window() },
-    )
-    .await
-    .err()
-    .expect("refuses");
+    // A class with four other principals is under the floor of five.
+    let small = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
+    let small_core = seed(&small).await;
+    commit(&small_core, &run(&small, &caller, ingest_op(ingest_for(4))).await.unwrap());
+    let error = run(&small, &caller, SkillTelemetryOp::Peers { graph: GRAPH.into(), window: window() })
+        .await
+        .err()
+        .expect("refuses");
     assert!(error.starts_with(PEER_COHORT_TOO_SMALL.as_str()), "{error}");
 }
 

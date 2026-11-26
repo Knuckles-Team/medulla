@@ -4,12 +4,14 @@ L4: every call goes through the running engine over the wire client. A service
 ingests 1,000 invocations from 30 pseudonyms, a mix of agent and user choice, in
 batches of 500. The twelve measures of the skill match the figures computed from
 the same events. Three skills rank, the run traces of a skill list by eval outcome,
-and a cohort of 4 asks for peers and is refused with ``PEER_COHORT_TOO_SMALL``.
+and a caller whose computed cohort is 4 asks for peers and is refused with
+``PEER_COHORT_TOO_SMALL``.
 """
 
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import os
 import uuid
 from typing import Any
@@ -22,6 +24,11 @@ from medulla.client import EngineResponseError, MedullaClient
 
 GRAPH = "__commons__"
 DAY = 24 * 60 * 60 * 1000
+
+
+def caller_principal_id(principal: object) -> str:
+    """The persistence id the engine derives from a verified principal."""
+    return "principal:sha256:" + hashlib.sha256(str(principal).encode()).hexdigest()
 
 
 def _event(
@@ -103,8 +110,14 @@ async def _journey(prefix: str) -> dict[str, Any]:
             )
             stored += receipt["stored"]
         extra = [_event(tenant, skills[1], n, n % 5, runs[0]) for n in range(10)] + [
-            _event(tenant, skills[2], n, n % 5, runs[1]) for n in range(10)
+            _event(tenant, skills[2], n, n % 4, runs[1]) for n in range(10)
         ]
+        # The caller used the third skill too, so four others share its class.
+        caller = _event(tenant, skills[2], 10, 0, runs[1])
+        caller["principal_pseudonym"] = dc.skill_pseudonym(
+            tenant, caller_principal_id(request_context()["principal"])
+        )
+        extra.append(caller)
         await telemetry.skill_telemetry(dc.skill_telemetry_ingest_op(GRAPH, extra))
 
         end = 31 * DAY
@@ -117,12 +130,9 @@ async def _journey(prefix: str) -> dict[str, Any]:
         failed = await telemetry.skill_telemetry(
             dc.skill_telemetry_traces_op(GRAPH, skills[0], "fail")
         )
-        cohort = [dc.skill_pseudonym(tenant, f"cohort-{n}") for n in range(4)]
         refused = None
         try:
-            await telemetry.skill_telemetry(
-                dc.skill_telemetry_peers_op(GRAPH, cohort, 0, end)
-            )
+            await telemetry.skill_telemetry(dc.skill_telemetry_peers_op(GRAPH, 0, end))
         except EngineResponseError as error:
             refused = str(error)
         return {
@@ -167,5 +177,6 @@ def test_measures_rank_peers_and_traces(clean_graph):
     # Only the failing run of the skill lists as failed.
     assert out["failed"]["trace_ids"] == [out["trace"]]
 
-    # A cohort of 4 is under the floor.
+    # The engine computes the cohort itself: four other principals share the caller's
+    # skill class, which is under the floor.
     assert out["refused"] is not None and "PEER_COHORT_TOO_SMALL" in out["refused"]
