@@ -3,10 +3,10 @@
   "rollup": "MEDULLA-CQ-CONN-R037",
   "vocabulary_module": "nutrition-v1.ttl",
   "terms": [
+    "MealPlanEntry",
     "Recipe",
-    "usesIngredient",
     "ShoppingListItem",
-    "MealPlanEntry"
+    "usesIngredient"
   ],
   "questions": [
     {
@@ -29,6 +29,35 @@
       "min_rows": 1,
       "recordings": [
         "mealie-mcp/single.json"
+      ]
+    },
+    {
+      "id": "mealie.q2",
+      "kind": "cross",
+      "question": "Which planned Mealie meals exceed the daily calorie target set in wger, and what did the groceries cost in Firefly III?",
+      "uql": "LET s0 = FOREIGN SCAN 'mealie-mcp'; LET s1 = FOREIGN SCAN 'wger-agent'; LET s2 = FOREIGN SCAN 'firefly-iii-mcp'; JOIN s0, s1, s2",
+      "sources": [
+        "mealie-mcp",
+        "wger-agent",
+        "firefly-iii-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "mealie-mcp": "mcp_tool",
+        "wger-agent": "mcp_tool",
+        "firefly-iii-mcp": "mcp_tool"
+      },
+      "columns": [
+        "meal",
+        "calories",
+        "groceryCost"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "mealie-mcp/cross_wger-agent.json",
+        "wger-agent/cross_mealie-mcp.json",
+        "mealie-mcp/cross_firefly-iii-mcp.json",
+        "firefly-iii-mcp/cross_mealie-mcp.json"
       ]
     }
   ]

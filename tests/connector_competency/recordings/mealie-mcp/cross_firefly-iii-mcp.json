@@ -1,0 +1,18 @@
+{
+  "source": "mealie-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "meal": "meal-1",
+      "joinKey": "mealie.q2-key-1",
+      "id": "mealie-mcp-mealie.q2-1",
+      "label": "mealie-mcp 1"
+    },
+    {
+      "meal": "meal-2",
+      "joinKey": "mealie.q2-key-2",
+      "id": "mealie-mcp-mealie.q2-2",
+      "label": "mealie-mcp 2"
+    }
+  ]
+}
