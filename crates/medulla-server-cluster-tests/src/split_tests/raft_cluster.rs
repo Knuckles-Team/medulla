@@ -2981,8 +2981,8 @@ mod dist_compute {
     use super::*;
     use medulla_identity_types::acl::{AgentIdentity, AgentRole};
     use medulla_protocol_types::protocol::{DistAlgo, GraphType};
-    use medulla_protocol_types::result_contract::cluster::DistResult;
     use medulla_raft_xshard::pregel;
+    use medulla_result_types::compute_result::distributed::DistResult;
     use medulla_server_api::carrier::GraphReadAuthority;
 
     fn props(n: &str) -> Vec<u8> {
@@ -3263,7 +3263,7 @@ mod dist_compute {
 mod matview {
     use super::*;
     use medulla_protocol_types::protocol::DistAlgo;
-    use medulla_protocol_types::result_contract::cluster::DistResult;
+    use medulla_result_types::compute_result::distributed::DistResult;
     use medulla_server_api::api::persistence::MatView;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
