@@ -4,12 +4,11 @@ use super::{
     writeback::*,
 };
 use medulla_graph_algos::community;
-use medulla_mining::{
-    mining::anomaly, mining::association, mining::causal_impact, mining::classify,
-    mining::classify::FittedClassifier, mining::cluster, mining::entity_resolution,
-    mining::forecast, mining::ontology_gap, mining::process_mining, mining::reduce,
-    mining::retrieval_quality, mining::sequence, mining::subgraph, mining::text,
+use medulla_mining::mining::{
+    anomaly, association, causal_impact, classify, cluster, entity_resolution, forecast,
+    ontology_gap, process_mining, reduce, retrieval_quality, sequence, subgraph, text,
 };
+use medulla_query_types::wire::FittedClassifier;
 
 /// Re-run mining write-back operations during WAL replay. Deterministic explicit
 /// inputs are reused, while graph-derived inputs are projected from current state.

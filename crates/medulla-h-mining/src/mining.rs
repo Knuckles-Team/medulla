@@ -74,7 +74,7 @@ pub(crate) use vector::{
 pub use writeback::WritebackOptions;
 
 #[cfg(test)]
-use medulla_mining::mining::classify::FittedClassifier;
+use medulla_query_types::wire::FittedClassifier;
 
 /// Handle a `Mine*` method. `Err(method)` hands a non-mining method back to the
 /// dispatcher (routing fall-through). (CONCEPT:MEDULLA-KG.query.dispatch-convention.)

@@ -1,10 +1,8 @@
 use super::*;
 use super::{input::*, writeback::*};
-use medulla_mining::{
-    mining::anomaly, mining::classify, mining::classify::FittedClassifier, mining::cluster,
-    mining::reduce,
-};
+use medulla_mining::mining::{anomaly, classify, cluster, reduce};
 use medulla_protocol_types::result_contract::compute as results;
+use medulla_query_types::wire::FittedClassifier;
 use medulla_result_types::{
     compute_result::mining::AnomalyMiningResult, compute_result::mining::AnomalyRow,
     compute_result::mining::ClassificationMiningResult, compute_result::mining::ClassifiedRow,
