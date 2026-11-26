@@ -220,6 +220,53 @@ fn compile_pattern(
         .map_err(|error| invalid(error.to_string()))
 }
 
+/// Resolve every detector to its matcher: every pattern compiles and every `Dictionary` and
+/// `Model` resource resolves before anything is scanned. `probe` is a value a `Model` rule's
+/// set is asked about, so a set the caller does not hold is refused up front.
+fn compile_matchers<'a>(
+    detectors: &'a [SensitiveDetector],
+    limits: &ScanLimits,
+    resources: &'a dyn DetectorResources,
+    probe: Option<&str>,
+) -> Result<Vec<Matcher<'a>>, ScanError> {
+    let mut matchers = Vec::with_capacity(detectors.len());
+    for detector in detectors {
+        let missing = || ScanError::ResourceMissing {
+            detector: detector.id.clone(),
+        };
+        matchers.push(match &detector.rule {
+            DetectorRule::Pattern { regex } => {
+                Matcher::Pattern(compile_pattern(detector, regex, limits)?)
+            }
+            DetectorRule::Checksum { algorithm } => Matcher::Checksum(*algorithm),
+            DetectorRule::Dictionary { terms_digest } => {
+                Matcher::Dictionary(resources.dictionary(terms_digest).ok_or_else(missing)?)
+            }
+            DetectorRule::Model { exemplar_set } => {
+                // A set the caller does not hold answers `None` for any value.
+                if let Some(first) = probe {
+                    resources
+                        .max_exemplar_cosine(exemplar_set, first)
+                        .ok_or_else(missing)?;
+                }
+                Matcher::Model(exemplar_set)
+            }
+        });
+    }
+    Ok(matchers)
+}
+
+/// Whether one whole value hits a non-`Model` matcher: the one definition of each rule.
+/// `Model` matchers score the sampled values and are handled by the caller.
+fn value_hits(matcher: &Matcher<'_>, value: &str) -> bool {
+    match matcher {
+        Matcher::Pattern(regex) => regex.is_match(value.trim()),
+        Matcher::Checksum(algorithm) => checksum_hit(*algorithm, value),
+        Matcher::Dictionary(terms) => terms.contains(&value.trim().to_lowercase()),
+        Matcher::Model(_) => false,
+    }
+}
+
 /// Scan one column. `values` are the column in profile read order; the sample is the first
 /// `max_sample_values` non-null ones. Order: the limits, then every detector, then every
 /// pattern compiles, then every `Dictionary` and `Model` resource resolves; nothing is
@@ -243,55 +290,11 @@ pub fn scan_values(
         .copied()
         .take(limits.max_sample_values)
         .collect();
-    let mut matchers = Vec::with_capacity(detectors.len());
-    for detector in detectors {
-        let missing = || ScanError::ResourceMissing {
-            detector: detector.id.clone(),
-        };
-        matchers.push(match &detector.rule {
-            DetectorRule::Pattern { regex } => {
-                Matcher::Pattern(compile_pattern(detector, regex, limits)?)
-            }
-            DetectorRule::Checksum { algorithm } => Matcher::Checksum(*algorithm),
-            DetectorRule::Dictionary { terms_digest } => {
-                Matcher::Dictionary(resources.dictionary(terms_digest).ok_or_else(missing)?)
-            }
-            DetectorRule::Model { exemplar_set } => {
-                // A set the caller does not hold answers `None` for any value.
-                if let Some(first) = sample.first() {
-                    resources
-                        .max_exemplar_cosine(exemplar_set, first)
-                        .ok_or_else(missing)?;
-                }
-                Matcher::Model(exemplar_set)
-            }
-        });
-    }
+    let matchers = compile_matchers(detectors, limits, resources, sample.first().copied())?;
 
     let mut detections = Vec::with_capacity(detectors.len());
     for (detector, matcher) in detectors.iter().zip(&matchers) {
         let (hits, scanned) = match matcher {
-            Matcher::Pattern(regex) => (
-                sample
-                    .iter()
-                    .filter(|value| regex.is_match(value.trim()))
-                    .count(),
-                sample.len(),
-            ),
-            Matcher::Checksum(algorithm) => (
-                sample
-                    .iter()
-                    .filter(|value| checksum_hit(*algorithm, value))
-                    .count(),
-                sample.len(),
-            ),
-            Matcher::Dictionary(terms) => (
-                sample
-                    .iter()
-                    .filter(|value| terms.contains(&value.trim().to_lowercase()))
-                    .count(),
-                sample.len(),
-            ),
             Matcher::Model(exemplar_set) => {
                 let scored = &sample[..sample.len().min(limits.model_sample_values)];
                 let threshold = detector.threshold as f32;
@@ -305,6 +308,101 @@ pub fn scan_values(
                     .count();
                 (hits, scored.len())
             }
+            other => (
+                sample.iter().filter(|value| value_hits(other, value)).count(),
+                sample.len(),
+            ),
+        };
+        detections.push(Detection {
+            asset: asset.to_string(),
+            detector: detector.id.clone(),
+            sample_hits: hits as u64,
+            ratio: if scanned == 0 {
+                0.0
+            } else {
+                hits as f64 / scanned as f64
+            },
+            sample_size: scanned as u64,
+            scanned_at_ms: now_ms,
+        });
+    }
+    Ok(detections)
+}
+
+/// The characters trimmed from both ends of a chunk token before it is a candidate.
+const CHUNK_TRIM: &[char] = &[
+    '.', ',', ';', ':', '!', '?', '(', ')', '[', ']', '{', '}', '"', '\'', '<', '>',
+];
+
+/// The candidate values of one chunk (MEDULLA-TYPED-PACKS-R803.7): the chunk text split on
+/// Unicode whitespace, each token trimmed of [`CHUNK_TRIM`], then every token and every run of
+/// 2 to 4 consecutive tokens joined by single spaces.
+pub fn chunk_candidates(chunk: &str) -> Vec<String> {
+    let tokens: Vec<&str> = chunk
+        .split_whitespace()
+        .map(|token| token.trim_matches(CHUNK_TRIM))
+        .filter(|token| !token.is_empty())
+        .collect();
+    let mut candidates = Vec::new();
+    for start in 0..tokens.len() {
+        for length in 1..=4usize {
+            if start + length > tokens.len() {
+                break;
+            }
+            candidates.push(tokens[start..start + length].join(" "));
+        }
+    }
+    candidates
+}
+
+/// Scan the chunks of one Document (MEDULLA-TYPED-PACKS-R803.7). At most `max_chunks` chunks
+/// are scanned. A chunk hits a detector when at least one candidate of the chunk hits it under
+/// the whole-value rules of [`scan_values`]; a `Model` detector scores the whole chunk text and
+/// only the first `model_sample_values` chunks. `sample_hits` counts hit chunks and `ratio` is
+/// hit chunks over scanned chunks. The same validation order as [`scan_values`] holds.
+pub fn scan_chunks(
+    asset: &str,
+    chunks: &[&str],
+    detectors: &[SensitiveDetector],
+    limits: &ScanLimits,
+    max_chunks: usize,
+    resources: &dyn DetectorResources,
+    now_ms: i64,
+) -> Result<Vec<Detection>, ScanError> {
+    limits.validate()?;
+    for detector in detectors {
+        detector.validate()?;
+    }
+    let scanned_chunks = &chunks[..chunks.len().min(max_chunks)];
+    let matchers = compile_matchers(detectors, limits, resources, scanned_chunks.first().copied())?;
+    let candidates: Vec<Vec<String>> = scanned_chunks
+        .iter()
+        .map(|chunk| chunk_candidates(chunk))
+        .collect();
+
+    let mut detections = Vec::with_capacity(detectors.len());
+    for (detector, matcher) in detectors.iter().zip(&matchers) {
+        let (hits, scanned) = match matcher {
+            Matcher::Model(exemplar_set) => {
+                let scored = &scanned_chunks[..scanned_chunks.len().min(limits.model_sample_values)];
+                let threshold = detector.threshold as f32;
+                let hits = scored
+                    .iter()
+                    .filter(|chunk| {
+                        resources
+                            .max_exemplar_cosine(exemplar_set, chunk)
+                            .is_some_and(|cosine| cosine >= threshold)
+                    })
+                    .count();
+                (hits, scored.len())
+            }
+            other => (
+                candidates
+                    .iter()
+                    .filter(|chunk| chunk.iter().any(|candidate| value_hits(other, candidate)))
+                    .count(),
+                scanned_chunks.len(),
+            ),
         };
         detections.push(Detection {
             asset: asset.to_string(),

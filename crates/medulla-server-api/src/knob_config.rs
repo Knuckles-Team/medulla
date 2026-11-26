@@ -636,6 +636,8 @@ knobs! {
     sensitive_regex_size_limit: u64 = "sensitive.regex_size_limit", U64(1_048_576), [65_536, 16_777_216], "bytes", Tunable;
     /// Values a model detector compares per column (MEDULLA-TYPED-PACKS-R803.2).
     sensitive_model_sample_values: u64 = "sensitive.model_sample_values", U64(200), [10, 5_000], "values", Tunable;
+    /// Chunks of one Document the sensitive scan reads (MEDULLA-TYPED-PACKS-R803.7).
+    sensitive_max_chunks: u64 = "sensitive.max_chunks", U64(500), [10, 10_000], "chunks", Tunable;
     /// Rows the reservoir of a sampled column profile keeps (MEDULLA-UNIFIED-DATA-PLANE-R761.2).
     profile_sample_rows: u64 = "profile.sample_rows", U64(100_000), [1_000, 10_000_000], "rows", Tunable;
     /// Most frequent values one column profile keeps (MEDULLA-UNIFIED-DATA-PLANE-R761.2).

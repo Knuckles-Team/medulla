@@ -16,7 +16,7 @@ use medulla_catalog_types::profile::{ColumnProfile, HistogramBucket, ProfileMeth
 use medulla_compute::sketch::{HyperLogLog, HLL_DEFAULT_PRECISION};
 
 use super::data_plane_write::{commit_job_methods, edge_method, node_method};
-use super::dataset_profile::{propose_claims, SensitiveScan};
+use super::dataset_profile::SensitiveScan;
 use super::prelude_jobs::*;
 use super::prelude_server::*;
 use super::prelude_std::*;
@@ -817,7 +817,13 @@ pub(super) async fn execute_profile_claim(
         }
     };
     let mut methods = profile_methods(&core, &target, &profiles)?;
-    methods.extend(propose_claims(&core, &target, &scan, &detections)?);
+    methods.extend(super::sensitive_claims::claim_methods(
+        &core,
+        &target.tenant,
+        &target.agent,
+        &scan.detectors,
+        &detections,
+    )?);
     commit_job_methods(state, job, "dataset-profile", methods).await?;
     let now = unix_ms();
     store

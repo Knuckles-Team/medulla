@@ -7,6 +7,8 @@ sample size, hit ratio and scan time and never a matched value. A detector that
 fails validation fails the job before any scan and writes no claim.
 """
 
+# ruff: noqa: E501
+
 from __future__ import annotations
 
 import json
@@ -60,10 +62,10 @@ def _claims(client: Any, graph: str) -> list[dict]:
 
 def _table(client: Any, graph: str) -> str:
     table = f"scan_{uuid.uuid4().hex[:8]}"
-    client.query.sql(f"CREATE TABLE {table} (id int primary key, card text, email text)")
-    rows = ", ".join(
-        f"({n}, '{CARD}', 'person{n}@example.test')" for n in range(1, 21)
+    client.query.sql(
+        f"CREATE TABLE {table} (id int primary key, card text, email text)"
     )
+    rows = ", ".join(f"({n}, '{CARD}', 'person{n}@example.test')" for n in range(1, 21))
     client.query.sql(f"INSERT INTO {table} VALUES {rows}")
     return table
 
@@ -153,6 +155,90 @@ def test_claim_evidence_reads_back(start_medulla_server) -> None:
         assert provenance["sample_size"] == 20
         assert provenance["hit_ratio"] == 1.0
         assert provenance["scanned_at_ms"] > 0
+    finally:
+        client.tenants.delete(graph)
+        client.close()
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R803.7")
+def test_enrich_proposes_claim_for_sensitive_document(start_medulla_server) -> None:
+    """Verifies MEDULLA-TYPED-PACKS-R803.7: card numbers in chunks yield one proposed claim."""
+    client = _client()
+    graph = f"scan-doc-{uuid.uuid4().hex[:8]}"
+    client.tenants.create(graph)
+    try:
+        # Card numbers written as one token and as four tokens, in several chunks.
+        paragraph = (
+            "The customer paid with card 4111 1111 1111 1111 on the first order "
+            "and with card 4111111111111111 on the second order. "
+        )
+        text = "# Orders\n\n" + (paragraph * 6 + "\n\n") * 4
+        document_id = f"doc:cards-{uuid.uuid4().hex[:8]}"
+        client._send(
+            "AddNode",
+            {
+                "node_id": document_id,
+                "properties_msgpack": msgpack.packb(
+                    {
+                        "type": "Document",
+                        "title": "Orders",
+                        "text": text,
+                        "url": "https://example.invalid/orders",
+                    },
+                    use_bin_type=True,
+                ),
+            },
+            graph,
+        )
+        receipt = _decode(
+            client._send(
+                "EnrichDocument",
+                {
+                    "request": {
+                        "document_id": document_id,
+                        "max_chunk_bytes": 600,
+                        "overlap_bytes": 80,
+                    }
+                },
+                graph,
+            )
+        )
+        assert len(receipt["chunk_ids"]) > 1
+
+        # One proposed claim for the payment-card detector, naming the Document, no raw value.
+        claims = [
+            claim for claim in _claims(client, graph) if claim["asset"] == document_id
+        ]
+        assert [claim["categories"] for claim in claims] == [["payment_card"]]
+        claim = claims[0]
+        assert claim["state"] == "proposed"
+        assert claim["tenant_id"] == TEST_TENANT
+        assert CARD not in str(claim) and "4111 1111" not in str(claim)
+
+        # A document with no card number yields no claim.
+        clean_id = f"doc:clean-{uuid.uuid4().hex[:8]}"
+        client._send(
+            "AddNode",
+            {
+                "node_id": clean_id,
+                "properties_msgpack": msgpack.packb(
+                    {
+                        "type": "Document",
+                        "title": "Plain",
+                        "text": "# Plain\n\nNothing sensitive is written here. " * 20,
+                        "url": "https://example.invalid/plain",
+                    },
+                    use_bin_type=True,
+                ),
+            },
+            graph,
+        )
+        client._send(
+            "EnrichDocument",
+            {"request": {"document_id": clean_id, "max_chunk_bytes": 600}},
+            graph,
+        )
+        assert not [c for c in _claims(client, graph) if c["asset"] == clean_id]
     finally:
         client.tenants.delete(graph)
         client.close()

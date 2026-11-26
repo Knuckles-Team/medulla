@@ -153,6 +153,45 @@ async fn enrich(
             Err(error) => return Response::err(req_id, error),
         }
     };
+    // The chunk scan: one `proposed` claim per passing detector, written with the chunks
+    // (MEDULLA-TYPED-PACKS-R803.7). The detector set is validated before the first chunk.
+    let claims = {
+        use medulla_core::sensitive_scan::{scan_chunks, NoResources};
+        use medulla_h_jobs::jobs::sensitive_claims::{claim_methods, load_detectors};
+        let (detectors, limits) = match load_detectors(ctx.core, ctx.verified_context.tenant()) {
+            Ok(loaded) => loaded,
+            Err(refusal) => {
+                return Response::err(req_id, format!("{}: {}", refusal.code, refusal.detail))
+            }
+        };
+        let chunk_texts: Vec<&str> = spans
+            .iter()
+            .map(|span| span.text(&document.text))
+            .collect();
+        let detections = match scan_chunks(
+            &doc_id,
+            &chunk_texts,
+            &detectors,
+            &limits,
+            medulla_server_api::knob_config::knobs().sensitive_max_chunks as usize,
+            &NoResources,
+            i64::try_from(medulla_kernel::kernel::dispatch_support::authoritative_now_ms())
+                .unwrap_or(i64::MAX),
+        ) {
+            Ok(detections) => detections,
+            Err(error) => return Response::err(req_id, format!("{}: {error}", error.code())),
+        };
+        match claim_methods(
+            ctx.core,
+            ctx.verified_context.tenant(),
+            ctx.verified_context.agent_id(),
+            &detectors,
+            &detections,
+        ) {
+            Ok(methods) => methods,
+            Err(error) => return Response::err(req_id, error),
+        }
+    };
     let plan = web::EnrichmentPlan {
         document_id: &doc_id,
         document: &document,
@@ -171,6 +210,7 @@ async fn enrich(
         tree_check,
         links,
         fact_supersession,
+        claims,
     };
     match web::lower(plan) {
         Ok((write_set, receipt)) => {

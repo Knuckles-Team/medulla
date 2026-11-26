@@ -1,6 +1,8 @@
 //! Column scan for sensitive values (MEDULLA-TYPED-PACKS-R803.2).
 
-use medulla_core::sensitive_scan::{passing, scan_values, NoResources, ScanError, ScanLimits};
+use medulla_core::sensitive_scan::{
+    chunk_candidates, passing, scan_chunks, scan_values, NoResources, ScanError, ScanLimits,
+};
 use medulla_query_types::sensitive_detect::{
     builtin_detectors, DetectorRule, SensitiveDetectionMethod, SensitiveDetector,
 };
@@ -141,4 +143,36 @@ fn scan_values_counts_hits_without_values() {
     {
         assert!(!debug.contains(value), "{value} leaked into the output");
     }
+}
+
+// spec: MEDULLA-TYPED-PACKS-R803.7
+#[test]
+fn chunk_scan_counts_hit_chunks_over_candidates_without_values() {
+    // A card written as four tokens is one candidate of the chunk.
+    let candidates = chunk_candidates("Paid with (4111 1111 1111 1111), thanks.");
+    assert!(candidates.contains(&"4111 1111 1111 1111".to_string()));
+    assert!(candidates.contains(&"thanks".to_string()));
+    assert!(!candidates.iter().any(|candidate| candidate.contains(',')));
+
+    let detectors = builtin_detectors();
+    let limits = ScanLimits::default();
+    let chunks = [
+        "first order paid with 4111 1111 1111 1111 today",
+        "nothing sensitive in this chunk",
+        "second order card 4111111111111111.",
+        "also nothing here",
+    ];
+    let detections = scan_chunks("doc:1", &chunks, &detectors, &limits, 500, &NoResources, 7).unwrap();
+    let card = detections
+        .iter()
+        .find(|detection| passing(std::slice::from_ref(detection), &detectors).len() == 1)
+        .expect("the card detector passes");
+    assert_eq!(card.sample_hits, 2);
+    assert_eq!(card.sample_size, 4);
+    assert!((card.ratio - 0.5).abs() < f64::EPSILON);
+    assert!(!format!("{card:?}").contains("4111"));
+
+    // Only the first `max_chunks` chunks are scanned.
+    let capped = scan_chunks("doc:1", &chunks, &detectors, &limits, 2, &NoResources, 7).unwrap();
+    assert!(capped.iter().all(|detection| detection.sample_size == 2));
 }

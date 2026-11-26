@@ -334,6 +334,9 @@ pub struct EnrichmentPlan<'a> {
     /// The writes that supersede the facts grounded in the chunks of `prior`
     /// (`supersede_removed_chunks`, MEDULLA-UNIFIED-DATA-PLANE-R651.7.7).
     pub fact_supersession: Vec<Method>,
+    /// The `proposed` classification claims of the chunk scan, in the same envelope as the
+    /// chunks (MEDULLA-TYPED-PACKS-R803.7).
+    pub claims: Vec<Method>,
 }
 
 /// The writes that supersede the claims grounded in the chunks the `prior` enrichments
@@ -544,6 +547,7 @@ pub fn lower(plan: EnrichmentPlan<'_>) -> Result<(IndexWriteSet, EnrichDocumentR
         chunk_ids.push(id);
     }
     methods.extend(link_methods(&plan, digest_hex)?);
+    methods.extend(plan.claims.iter().cloned());
     let write_set =
         IndexWriteSet::from_methods(ENVELOPE_PREFIX, b"eg/document-enrichment", methods)?;
     let receipt = EnrichDocumentReceipt {

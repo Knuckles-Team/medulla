@@ -94,6 +94,7 @@ mod executor_loop;
 mod host_capabilities;
 mod executor_usage_cluster;
 mod dataset_profile;
+pub mod sensitive_claims;
 mod executor_profile;
 #[cfg(feature = "program-optimization")]
 mod executor_program;

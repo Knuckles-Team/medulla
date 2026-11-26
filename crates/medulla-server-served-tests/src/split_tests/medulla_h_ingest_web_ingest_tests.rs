@@ -54,6 +54,7 @@ fn plan_for<'a>(
         tree_check: medulla_document::processing::SectionTreeCheck::Valid,
         links: Vec::new(),
         fact_supersession: Vec::new(),
+        claims: Vec::new(),
     }
 }
 
