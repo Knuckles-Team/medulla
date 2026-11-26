@@ -81,7 +81,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T075 [US5] MEDULLA-DECISION-ENGINE-R066.1 Preserve library inputs
 - [ ] T076 [US5] MEDULLA-DECISION-ENGINE-R066.2 Expire graph inputs
 - [ ] T077 [US5] MEDULLA-DECISION-ENGINE-R066.3 Evaluate without persistence
-- [ ] T078 [US5] MEDULLA-DECISION-ENGINE-R066.4 Expire graph summaries on a policy window
+- [x] T078 [US5] MEDULLA-DECISION-ENGINE-R066.4 Expire graph summaries on a policy window
 - [ ] T079 [US5] MEDULLA-DECISION-ENGINE-R067 Decision record versioning stays decodable
 - [ ] T080 [US5] MEDULLA-DECISION-ENGINE-R068 Outcome link via the existing synthesis-evidence pin
 - [ ] T081 [US2] MEDULLA-DECISION-ENGINE-R069 DecisionShape enforcement inside the commit handler
@@ -279,7 +279,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [x] T270 [US7] MEDULLA-DECISION-ENGINE-R139.5 Evidence
 - [ ] T271 [US7] MEDULLA-DECISION-ENGINE-R139.6 Served acceptance
 - [ ] T272 [US4] MEDULLA-DECISION-ENGINE-R100.101.1 Grounded topic coverage
-- [ ] T273 [US4] MEDULLA-DECISION-ENGINE-R100.101.2 Soft-label unsupported-claim Brier score
+- [x] T273 [US4] MEDULLA-DECISION-ENGINE-R100.101.2 Soft-label unsupported-claim Brier score
 - [ ] T274 [US4] MEDULLA-DECISION-ENGINE-R100.101.3 Grounded evaluation wiring, scorer isolation and evidence
 - [x] T275 [US1] MEDULLA-DECISION-ENGINE-R001.100.1 Safety bound types and evaluator
 - [x] T276 [US1] MEDULLA-DECISION-ENGINE-R001.100.2 Served safety bound check and refusals
@@ -301,8 +301,8 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T292 [US3] MEDULLA-DECISION-ENGINE-R059.1.3 Wiring, refusals and evidence of the served transfer read
 - [x] T293 [US3] MEDULLA-DECISION-ENGINE-R059.2 Skill candidates from repeated independent successes
 - [ ] T294 [US7] MEDULLA-DECISION-ENGINE-R134.12.1 Paired-comparison verdict record
-- [ ] T295 [US7] MEDULLA-DECISION-ENGINE-R134.13 Cited analyst synthesis with required abstention
-- [ ] T296 [US6] MEDULLA-DECISION-ENGINE-R029.1 Committed retrieval provider binding with no substitution
+- [x] T295 [US7] MEDULLA-DECISION-ENGINE-R134.13 Cited analyst synthesis with required abstention
+- [x] T296 [US6] MEDULLA-DECISION-ENGINE-R029.1 Committed retrieval provider binding with no substitution
 - [ ] T297 [US7] MEDULLA-DECISION-ENGINE-R134.14 Branch outcome records and fusion receipt
 - [ ] T298 [US1] MEDULLA-DECISION-ENGINE-R020.1.1 Context digest sealed and matched against prior records
 - [ ] T299 [US1] MEDULLA-DECISION-ENGINE-R020.1.2 Exploitation pool gates exploration
@@ -371,7 +371,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T362 [US7] MEDULLA-DECISION-ENGINE-R149.5 Search-state evidence
 - [ ] T363 [US7] MEDULLA-DECISION-ENGINE-R149.6 Search-state served proof
 - [ ] T364 [US7] MEDULLA-DECISION-ENGINE-R150.1 Session-note model
-- [ ] T365 [US7] MEDULLA-DECISION-ENGINE-R150.2 Session-note rules
+- [x] T365 [US7] MEDULLA-DECISION-ENGINE-R150.2 Session-note rules
 - [ ] T366 [US7] MEDULLA-DECISION-ENGINE-R150.3 Session-note capture and recall wiring
 - [ ] T367 [US7] MEDULLA-DECISION-ENGINE-R150.4 Session-note refusals
 - [ ] T368 [US7] MEDULLA-DECISION-ENGINE-R150.5 Session-note evidence
@@ -395,7 +395,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T386 [US7] MEDULLA-DECISION-ENGINE-R141.100 Fidelity-gated memory rewrite evaluation
 - [ ] T387 [US7] MEDULLA-DECISION-ENGINE-R141.101 Memory-change benchmark receipt
 - [ ] T388 [US7] MEDULLA-DECISION-ENGINE-R141.102 Memory-change evaluation wiring
-- [ ] T389 [US7] MEDULLA-DECISION-ENGINE-R141.103 Memory-change served proof
+- [x] T389 [US7] MEDULLA-DECISION-ENGINE-R141.103 Memory-change served proof
 - [ ] T390 [US7] MEDULLA-DECISION-ENGINE-R141.104 Admission gate on memory mutations
 - [ ] T391 [US7] MEDULLA-DECISION-ENGINE-R142.100 Local-model certification attestation: types, `certify` and digest in `local_certification.rs` (BUILD, no wire; the wire is R142.101)
 - [ ] T392 [US7] MEDULLA-DECISION-ENGINE-R142.101 Wire certification into DecisionEval with refusals and evidence
@@ -420,10 +420,10 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T410 [US7] MEDULLA-DECISION-ENGINE-R146.4 Temporal basis refusals
 - [ ] T411 [US7] MEDULLA-DECISION-ENGINE-R146.5 Temporal basis evidence
 - [ ] T412 [US7] MEDULLA-DECISION-ENGINE-R146.6 Temporal basis served proof
-- [ ] T413 [US4] MEDULLA-DECISION-ENGINE-R100.100.1 Ranking evaluation request and hits-at-k kernel
-- [ ] T414 [US4] MEDULLA-DECISION-ENGINE-R100.100.2 Ranking evaluation wiring, receipt and evidence
-- [ ] T415 [US4] MEDULLA-DECISION-ENGINE-R100.100.3 Context search model and offset kernel
-- [ ] T416 [US4] MEDULLA-DECISION-ENGINE-R100.100.4 Context search method, authorization and served proof
+- [x] T413 [US4] MEDULLA-DECISION-ENGINE-R100.100.1 Ranking evaluation request and hits-at-k kernel
+- [x] T414 [US4] MEDULLA-DECISION-ENGINE-R100.100.2 Ranking evaluation wiring, receipt and evidence
+- [x] T415 [US4] MEDULLA-DECISION-ENGINE-R100.100.3 Context search model and offset kernel
+- [x] T416 [US4] MEDULLA-DECISION-ENGINE-R100.100.4 Context search method, authorization and served proof
 - [ ] T417 [US7] MEDULLA-DECISION-ENGINE-R152.1 Model
 - [ ] T418 [US7] MEDULLA-DECISION-ENGINE-R152.2 Behavior
 - [ ] T419 [US7] MEDULLA-DECISION-ENGINE-R152.3 Wiring
@@ -435,9 +435,9 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T425 [US5] MEDULLA-DECISION-ENGINE-R153.3 Wiring
 - [ ] T426 [US5] MEDULLA-DECISION-ENGINE-R153.4 Refusal
 - [ ] T427 [US5] MEDULLA-DECISION-ENGINE-R153.5 Evidence
-- [ ] T428 [US5] MEDULLA-DECISION-ENGINE-R153.6 Hot-path proof
+- [x] T428 [US5] MEDULLA-DECISION-ENGINE-R153.6 Hot-path proof
 - [ ] T429 [US5] MEDULLA-DECISION-ENGINE-R154.1 Model
-- [ ] T430 [US5] MEDULLA-DECISION-ENGINE-R154.2 Behavior
+- [x] T430 [US5] MEDULLA-DECISION-ENGINE-R154.2 Behavior
 - [ ] T431 [US5] MEDULLA-DECISION-ENGINE-R154.4 Refusal
 - [ ] T432 [US5] MEDULLA-DECISION-ENGINE-R154.6 Hot-path proof
 - [ ] T433 [US7] MEDULLA-DECISION-ENGINE-R155.1 Model
@@ -554,7 +554,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T544 [US8] MEDULLA-DECISION-ENGINE-R172.9 Designation evidence
 - [ ] T545 [US8] MEDULLA-DECISION-ENGINE-R172.10 Designation latency and recall budgets
 - [x] T546 [US8] MEDULLA-DECISION-ENGINE-R172.11 Designation served journey
-- [ ] T547 [US8] MEDULLA-DECISION-ENGINE-R172.12.1 Pack surface fields
+- [x] T547 [US8] MEDULLA-DECISION-ENGINE-R172.12.1 Pack surface fields
 - [ ] T548 [US8] MEDULLA-DECISION-ENGINE-R172.12.2 Target-class subsumption
 - [ ] T549 [US8] MEDULLA-DECISION-ENGINE-R172.12.3 Pack projection upserts index records
 - [ ] T550 [US8] MEDULLA-DECISION-ENGINE-R172.12.4 Pack target refusals
@@ -961,11 +961,11 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T946 [US6] MEDULLA-DECISION-ENGINE-R831.11 Python mirrors follow the Rust outcome types: TrainingRunStatus becomes TrainingRunOutcome
 - [ ] T948 [US7] MEDULLA-DECISION-ENGINE-R135.16.1 Model: phrasings, match index and bound match
 - [ ] T949 [US7] MEDULLA-DECISION-ENGINE-R135.16.2 Behavior: index build, slot binding and nearest-program selection
-- [ ] T950 [US7] MEDULLA-DECISION-ENGINE-R135.16.3 Wiring: vectors at commit, candidates before conclude
-- [ ] T951 [US7] MEDULLA-DECISION-ENGINE-R135.16.4 Refusal: phrasings, thresholds and matches
-- [ ] T952 [US7] MEDULLA-DECISION-ENGINE-R135.16.5 Evidence: match premises
+- [x] T950 [US7] MEDULLA-DECISION-ENGINE-R135.16.3 Wiring: vectors at commit, candidates before conclude
+- [x] T951 [US7] MEDULLA-DECISION-ENGINE-R135.16.4 Refusal: phrasings, thresholds and matches
+- [x] T952 [US7] MEDULLA-DECISION-ENGINE-R135.16.5 Evidence: match premises
 - [ ] T953 [US7] MEDULLA-DECISION-ENGINE-R135.16.6 Hot-path proof: paraphrase match served end to end
-- [ ] T954 [US7] MEDULLA-DECISION-ENGINE-R135.17.1 Replay record model and commit
+- [x] T954 [US7] MEDULLA-DECISION-ENGINE-R135.17.1 Replay record model and commit
 - [ ] T955 [US7] MEDULLA-DECISION-ENGINE-R135.17.2 Demotion at lookup, its refusal and its evidence
 - [ ] T956 [US7] MEDULLA-DECISION-ENGINE-R135.17.3 Hot-path proof: reported fallbacks demote a program
 - [ ] T957 [US7] MEDULLA-DECISION-ENGINE-R173.7 The engine moves core:editStatus: HarnessEdit serves the edit lifecycle through EditMachine

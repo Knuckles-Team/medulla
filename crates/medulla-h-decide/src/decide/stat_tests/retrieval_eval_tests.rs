@@ -126,7 +126,7 @@ fn refusal_of(job: &DecisionJobRecord) -> &str {
     }
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R100.100.2
+// spec: MEDULLA-DECISION-ENGINE-R100.100.2, MEDULLA-DECISION-ENGINE-R100.100.1
 #[tokio::test]
 async fn ranking_evaluation_is_sealed_and_readable() {
     let h = Harness::new().await;

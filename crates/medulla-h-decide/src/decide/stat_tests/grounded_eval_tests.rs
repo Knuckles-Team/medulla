@@ -169,7 +169,7 @@ async fn assert_refused(h: &Harness, code: &str, request: GroundedAnswerRequest)
     assert!(matches!(stored.outcome, DecisionJobOutcome::Failed { .. }));
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R100.101.3
+// spec: MEDULLA-DECISION-ENGINE-R100.101.3, MEDULLA-DECISION-ENGINE-R100.101.2
 #[tokio::test]
 async fn grounded_evaluation_is_sealed_with_scorer_isolation() {
     let h = Harness::new().await;

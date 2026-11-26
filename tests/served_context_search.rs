@@ -173,7 +173,7 @@ async fn publish_policy(
     }
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R100.100.4
+// spec: MEDULLA-DECISION-ENGINE-R100.100.4, MEDULLA-DECISION-ENGINE-R100.100.3
 #[tokio::test(flavor = "multi_thread")]
 async fn context_search_is_authorized_and_bounded() {
     let state = state();

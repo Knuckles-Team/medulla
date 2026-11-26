@@ -1224,7 +1224,7 @@ async fn session_note_state(label: &str) -> (tempfile::TempDir, test_support::Sh
     (dir, state)
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R150.3
+// spec: MEDULLA-DECISION-ENGINE-R150.3, MEDULLA-DECISION-ENGINE-R150.2
 #[tokio::test(flavor = "multi_thread")]
 async fn session_notes_recalled_with_flags() {
     let (_dir, state) = session_note_state("memory-sync-session-notes").await;
