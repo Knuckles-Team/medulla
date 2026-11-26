@@ -300,3 +300,10 @@ Agents raise flags with `Method::KnowledgeFlag` (R708). The harness exposes the 
 A scheduled curator worker claims the curation loop (R653), reads `CurationOp::Inputs` (R709) and sends `Propose`. The engine checks contradictions, records an evaluated revision and leaves adoption to the revision lifecycle (R805). The engine calls no model. Skill content publishes through R160. Domain and data-access entries use subject kind `KnowledgeEntry`.
 
 Friction reports (R710) feed `FailureIngest` (R701) and walk one explicit state machine. Skill evaluation (R711), ablation and canary (R712), telemetry and measures (R713) and tiers (R714) share the revision lifecycle and the usage ledger. The vocabulary classes are in `MEDULLA-ORCH-VOCAB-R817`. The served operations are in `ARBORA-OPS-R950` to `ARBORA-OPS-R958`. The skill content is in `US-CONTENT-R009` to `US-CONTENT-R015`.
+
+## Foreach task steps and fitted topics (R134.111.19 to R134.111.22, R614.2.5 to R614.2.7)
+
+- Foreach: `Method::Decide` → `handle_decide` → `task_plan` (`crates/medulla-h-decide/src/decide/stat_task_plan.rs:503`) → `plan_explicit_tasks` (`crates/medulla-decision-types/src/decision/task_plan.rs:411`). The engine validates the bounds and the bindings. The engine never runs a step. Arbora runs the expansion (`ARBORA-RELEASE-R003.4.14`).
+- Fitted topics: `Method::SemanticEnrich` op `FitTopics` → `crates/medulla-server-graph/src/dispatch/graph_pipeline/semantic_enrichment.rs` → `fit_topics` in `crates/medulla-enrich/src/semantic.rs`, beside `classify` (`:353`).
+
+Decisions. A foreach step has a fixed maximum, because the engine must prove a bound before any run. A data-dependent loop has no static bound, so it is not adopted. The hold-out floor replaces a fixed confidence cut of R614.2.3 only when a fit exists.

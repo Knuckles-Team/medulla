@@ -2273,3 +2273,13 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program
 - `MEDULLA-DECISION-ENGINE-R715`: `crates/medulla-h-decide/src/decide/stat_tests/always_on_tools_tests.rs::every_subset_includes_the_knowledge_tools` (planned, L3): proves: The flag tool and the friction tool are always-on engine capabilities (rollup)
 - `MEDULLA-DECISION-ENGINE-R715.1`: `crates/medulla-h-decide/src/decide/stat_tests/always_on_tools_tests.rs::subset_and_load_set_append_the_two_tools` (planned, L3): proves: Behavior
 - `MEDULLA-DECISION-ENGINE-R715.2`: `tests/decide/test_always_on_tools_served.py::test_subset_and_load_set_keep_the_two_tools` (planned, L4): proves: Hot-path proof
+
+## Foreach task steps and fitted topics (R134.111.19 to R134.111.22, R614.2.5 to R614.2.7)
+
+- `MEDULLA-DECISION-ENGINE-R134.111.19`: `crates/medulla-decision-types/src/decision/task_plan/tests.rs::foreach_round_trips_and_digest_covers_it` (planned, L1): proves foreach step model and static checks. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.111.20`: `crates/medulla-decision-types/src/decision/task_plan/tests.rs::refuses_each_foreach_defect` (planned, L1): proves foreach refusals. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.111.21`: `crates/medulla-h-decide/src/decide/stat_tests/task_plan_tests.rs::decide_routes_task_plan_with_foreach` (planned, L3): proves foreach wiring and schema. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R134.111.22`: `tests/decide/test_task_plan_served.py::test_foreach_step_end_to_end` (planned, L4): proves hot-path proof: foreach steps served. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R614.2.5`: `crates/medulla-enrich/tests/fit_topics.rs::centroids_floor_and_refusals_on_fixed_examples` (planned, L1): proves fit topic centroids from labelled examples. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R614.2.6`: `crates/medulla-server-graph/tests/semantic_enrichment_fit.rs::fit_writes_topics_and_classify_reads_floor` (planned, L3): proves wiring: fitted topics persist as topic nodes. The owning change adds it at this exact path.
+- `MEDULLA-DECISION-ENGINE-R614.2.7`: `tests/decide/test_semantic_enrichment_served.py::test_fit_topics_then_classify_journey` (planned, L4): proves hot-path proof: fit then classify through the served method. The owning change adds it at this exact path.

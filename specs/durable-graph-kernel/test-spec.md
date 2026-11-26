@@ -792,3 +792,12 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 - `MEDULLA-DURABLE-KERNEL-R876.4`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::refusals_and_visibility` (planned, L3): proves: Refusal
 - `MEDULLA-DURABLE-KERNEL-R876.5`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::audit_line_carries_counts_only` (planned, L3): proves: Evidence
 - `MEDULLA-DURABLE-KERNEL-R876.6`: `crates/medulla-server-served-tests/src/split_tests/neighborhood_tests.rs::hub_pages_to_completion` (planned, L3): proves: Hot-path proof and budget
+
+## Knowledge bundle (R877)
+
+- `MEDULLA-DURABLE-KERNEL-R877`: `tests/durable/test_bundle_served.py::test_export_import_round_trip_between_tenants` (planned, L4): proves a knowledge bundle moves one scoped dataset between deployments (rollup). The owning change adds it at this exact path.
+- `MEDULLA-DURABLE-KERNEL-R877.1`: `crates/medulla-types/src/knowledge_bundle.rs::tests::manifest_round_trips_and_digest_covers_every_part` (planned, L1): proves model: the bundle manifest and parts. The owning change adds it at this exact path.
+- `MEDULLA-DURABLE-KERNEL-R877.2`: `crates/medulla-h-admin/tests/knowledge_bundle.rs::export_hides_rls_nodes_and_import_is_atomic` (planned, L3): proves behavior: export reads one snapshot, import commits one batch. The owning change adds it at this exact path.
+- `MEDULLA-DURABLE-KERNEL-R877.3`: `crates/medulla-h-admin/tests/knowledge_bundle.rs::each_refusal_names_its_code_and_writes_nothing` (planned, L2): proves refusal: bundle codes. The owning change adds it at this exact path.
+- `MEDULLA-DURABLE-KERNEL-R877.4`: `crates/medulla-server-store-tests/src/split_tests/server_api_mutation_inventory.rs::bundle_import_is_classified_as_a_write` (planned, L3): proves wiring: the two methods reach the admin handler. The owning change adds it at this exact path.
+- `MEDULLA-DURABLE-KERNEL-R877.5`: `tests/durable/test_bundle_served.py::test_export_import_round_trip_between_tenants` (planned, L4): proves hot-path proof: a bundle moves between two tenants. The owning change adds it at this exact path.

@@ -301,3 +301,9 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T310 [US6] MEDULLA-DURABLE-KERNEL-R876.4 Refusal
 - [ ] T311 [US6] MEDULLA-DURABLE-KERNEL-R876.5 Evidence
 - [ ] T312 [US6] MEDULLA-DURABLE-KERNEL-R876.6 Hot-path proof and budget
+- [ ] T313 [US5] MEDULLA-DURABLE-KERNEL-R877 A knowledge bundle moves one scoped dataset between deployments (rollup).
+- [ ] T314 [US1] MEDULLA-DURABLE-KERNEL-R877.1 Model: the bundle manifest and parts.
+- [ ] T315 [US1] MEDULLA-DURABLE-KERNEL-R877.2 Behavior: export reads one snapshot, import commits one batch.
+- [ ] T316 [US1] MEDULLA-DURABLE-KERNEL-R877.3 Refusal: bundle codes.
+- [ ] T317 [US1] MEDULLA-DURABLE-KERNEL-R877.4 Wiring: the two methods reach the admin handler.
+- [ ] T318 [US1] MEDULLA-DURABLE-KERNEL-R877.5 Hot-path proof: a bundle moves between two tenants.

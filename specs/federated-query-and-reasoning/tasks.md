@@ -479,3 +479,21 @@ Check boxes describe work remaining. They do not certify acceptance. Each line n
 - [x] T454 [US1] MEDULLA-FEDERATED-QUERY-R739.1 ShardMonitor/ShardMonitorState state machine: holder-level transition delegating to ShardMonitorState::apply
 - [x] T455 [US1] MEDULLA-FEDERATED-QUERY-R739.2 SourceQueryFailure/SourceQueryStage is a failure position, not a lifecycle: rename, no machine
 - [x] T456 [US1] MEDULLA-FEDERATED-QUERY-R739.3 UqlProofStep discriminator `stage` is a variant tag, not a lifecycle: rename, no machine
+- [ ] T472 [US5] MEDULLA-FEDERATED-QUERY-R740 The engine reads and writes each graph in six RDF media types (rollup).
+- [ ] T473 [US1] MEDULLA-FEDERATED-QUERY-R740.1 Behavior: write parses by exact media type.
+- [ ] T474 [US1] MEDULLA-FEDERATED-QUERY-R740.2 Behavior: graph reads serialize in the requested media type.
+- [ ] T475 [US1] MEDULLA-FEDERATED-QUERY-R740.3 Wiring: one write path for the HTTP route and the served event.
+- [ ] T476 [US1] MEDULLA-FEDERATED-QUERY-R740.4 Hot-path proof: each media type round-trips through the served entry.
+- [ ] T477 [US5] MEDULLA-FEDERATED-QUERY-R741 Discover accepts caller seeds and per-hop restrictions (rollup).
+- [ ] T478 [US1] MEDULLA-FEDERATED-QUERY-R741.1 Model and behavior: seeds and hop filter.
+- [ ] T479 [US1] MEDULLA-FEDERATED-QUERY-R741.2 Refusal: seed and filter errors.
+- [ ] T480 [US1] MEDULLA-FEDERATED-QUERY-R741.3 Wiring: the walk takes the filter at the one expansion call.
+- [ ] T481 [US1] MEDULLA-FEDERATED-QUERY-R741.4 Hot-path proof: a seeded, filtered walk through served `Discover`.
+- [ ] T482 [US1] MEDULLA-FEDERATED-QUERY-R706.8 Model: a query policy may be a shape with a closed effect.
+- [ ] T483 [US1] MEDULLA-FEDERATED-QUERY-R706.9 Behavior: each result node gets one of three outcomes.
+- [ ] T484 [US1] MEDULLA-FEDERATED-QUERY-R706.10 Refusal: invalid shapes and violations.
+- [ ] T485 [US1] MEDULLA-FEDERATED-QUERY-R706.11 Evidence: one audit record per evaluation.
+- [ ] T486 [US1] MEDULLA-FEDERATED-QUERY-R706.12 Wiring and hot-path proof: shape policies apply to every query language.
+- [ ] T487 [US5] MEDULLA-FEDERATED-QUERY-R742 The SPARQL evaluator implements the complete SPARQL 1.1 builtin function set (rollup).
+- [ ] T488 [US5] MEDULLA-FEDERATED-QUERY-R742.1 Behavior: the builtin set and its error rule.
+- [ ] T489 [US5] MEDULLA-FEDERATED-QUERY-R742.2 Hot-path proof: an identifier-building query through the served method.

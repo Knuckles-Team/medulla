@@ -1238,3 +1238,11 @@ Amendment, 2026-11-20. New row `MEDULLA-DURABLE-KERNEL-R072.1` owns the served `
 Ingest rows R001.12 and R001.14 renew task leases, but main serves only enqueue, claim and ack.
 They cited the path-grant row R870 for that, which was wrong. They now depend on R072.1.
 Renewal reuses the ack ownership rule and the two ack refusal codes, so no second lease rule exists.
+
+## Knowledge bundle (R877)
+
+Call path. `Method::BundleExport` and `Method::BundleImport` (new, `crates/medulla-protocol-types/src/protocol/method/method_11.rs`) → `dispatch_request_method` (`crates/medulla-server-router/src/dispatch/router.rs:269`) → new `crates/medulla-h-admin/src/knowledge_bundle.rs`. Export reads one snapshot of the row-projected store and stores the bundle through `BlobBegin`, `BlobChunkPut` and `BlobCommit`. Import reads the blob, verifies every digest, then commits one `MutationBatch`.
+
+Reuse inventory. The triple part reuses the canonical N-Quads of MEDULLA-TYPED-PACKS-R104.2. The document part reuses the content-addressed blob store (R050, R059). Arbora serves the transfer through `ARBORA-OPS-R923`.
+
+Decisions. A bundle is not an archive of the store. The offline archive of R007.1 restores a whole store to a point in time. A bundle moves chosen graphs between tenants or deployments and re-runs target admission.

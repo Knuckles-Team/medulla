@@ -29,3 +29,26 @@ The enumeration run and the plan are nodes written through the durable mutation 
 - **A containers batch is planned once and compiled to methods (R904.3).** `plan_containers` in `source_hierarchy.rs` holds the rules (validation, cycle and depth check, unknown-parent refusal, dropped old edge); `upsert_containers` applies its plan to a graph core and `admit_containers` compiles the same plan into `AddNode`, `RemoveEdge` and `AddEdge` methods of the served batch, so there is one implementation. A record's container is named by its mapped `container_id` property and resolved under the record's own connector as the container source. The planner's refusals keep their codes; a code not yet on the wire is reported as the registered `SOURCE_CONTAINER_INVALID`. R904.3 is proved by the served container write and its receipt. The scoped search over a subtree is the proof of MEDULLA-FEDERATED-QUERY-R704.3, so R904.3 does not wait on that read.
 
 - **A container path is ids joined by `/`, and the counts are observation evidence (R904.5).** `source_path` holds container ids from the root down, never titles, because titles repeat and change; `/` is the separator and an id holding `/` is refused at `SourceContainer::validate`, so a path splits without ambiguity. The path is a write-time value computed by `plan_containers` from the batch or the held parent, not a derived read, so a scope check reads one property. `ContainerReport` follows `AccessReport` and `ReconcileReport`: stored in the receipt properties, restored on replay, outside the receipt digest. The rejected options were titles (not unique), an array property (a prefix test then needs a second index) and a side table. The served `subtree` read is owned by `MEDULLA-FEDERATED-QUERY-R704.3`; this row does not add a second route to it.
+
+## Comparison with a public ontology-guided extraction pipeline (rows R701.8 to R701.10, R913, R002.8 to R002.10)
+
+The comparison project is TrustGraph. Its ontology extraction selects the relevant part of the ontology for each chunk, bypasses selection for small ontologies, and rejects triples that break domain, range or subclass rules. Web-Algebra has operations that induce an ontology from instance data (`ExtractClasses`, `ExtractDatatypeProperties`, `ExtractObjectProperties`, `ExtractOntology`).
+
+| Capability | Spec row | State |
+|---|---|---|
+| Ontology-guided fact extraction with evidence spans | `MEDULLA-INGEST-WORKER-R701` | Covered |
+| Reject facts that break domain and range, with direction repair | `MEDULLA-INGEST-WORKER-R701.2`, `R701.4` | Covered |
+| Domain and range checks that honor the subclass hierarchy | `MEDULLA-INGEST-WORKER-R701.8` to `R701.10` | New. The grounder compared classes by equality. |
+| Per-chunk ontology slice and the small-ontology bypass | `MEDULLA-INGEST-WORKER-R913` | New |
+| Ontology induction from text, held as a draft until checks pass | `MEDULLA-INGEST-WORKER-R002` | Covered |
+| Ontology induction from instance data of a SPARQL endpoint | `MEDULLA-INGEST-WORKER-R002.8` to `R002.10`, `SCION-CENTRALIZED-CAPABILITIES-R053` | New |
+| Document readers for PDF, office, HTML, delimited text; OCR | `MEDULLA-INGEST-WORKER-R700`, `SCION-SOURCE-INGEST-R908` | Covered |
+| Extraction lineage from document to chunk to fact | `MEDULLA-INGEST-WORKER-R003.19`, `R700`, `MEDULLA-REPO-INGEST-R652` | Covered |
+| Document removal leaves no orphan vectors or triples | `MEDULLA-UNIFIED-DATA-PLANE-R651` | Covered |
+| Document library: register, list, processing state | `MEDULLA-INGEST-WORKER-R003`, `R910`, `R904`, `ARBORA-RELEASE-R003.2` (`ingest.jobs.status`) | Covered |
+| Collections that partition documents | `MEDULLA-INGEST-WORKER-R904` | Covered |
+| User-wired processing flows from blueprints | none | Not adopted. See below. |
+
+Rejected: user-defined flow blueprints. The project lets an operator wire processors into named flows. Here the ingest stages, lanes and tiers are fixed by `MEDULLA-INGEST-WORKER-R604` and `R605`, and the order of work is an engine decision. A second wiring layer would be a second planner, which the spec standard forbids.
+
+Starting defaults. The thresholds of 2 instances and 2 usages in R002.8, and the slice cap of 32 classes in R913.1, are starting defaults. A measurement on this platform replaces them.

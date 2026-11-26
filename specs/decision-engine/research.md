@@ -1429,3 +1429,22 @@ Two published articles set the bar for this section. The first describes a knowl
 - A flag is agent-asserted and never an independent outcome, so R016 (training on independent outcomes only) holds.
 - Retention in R713.2 uses two 14-day windows. A measured retention definition replaces it if the first production window shows another need.
 - The quality score of R713.5 shrinks the pass rate toward zero by a prior of 20 runs. The measured prior replaces the default.
+
+## Comparison with composable operation programs and trained classifiers (rows R134.111.19 to R134.111.22, R614.2.5 to R614.2.7)
+
+Web-Algebra composes operations as JSON programs with variables, a per-row iteration (`ForEach`), a bounded loop (`Iterate`, capped at 1,000 iterations) and a rule that two iterations must not update one URI. TrustGraph offers decision scoring (pick an option, score on an ordered scale, or give a yes or no with confidence), a classifier trained from labelled examples (Cloze), and agent patterns (ReAct, plan then execute, supervisor).
+
+| Capability | Spec row | State |
+|---|---|---|
+| A program as a DAG of tool steps with bindings between steps | `MEDULLA-DECISION-ENGINE-R134.111.8` to `R134.111.13`, `ARBORA-RELEASE-R003.4.6` to `R003.4.10` | Covered |
+| Per-item iteration over a step output | `MEDULLA-DECISION-ENGINE-R134.111.19` to `R134.111.22`, `ARBORA-RELEASE-R003.4.14` to `R003.4.17` | New |
+| Two iterations must not write one target | `ARBORA-RELEASE-R003.4.15` (equal canonical arguments of a write tool) | New. The target is the argument set, because a tool does not declare its target. |
+| Bounded data-dependent loop | none | Not adopted. A loop has no static bound, so the engine cannot validate it before the run. |
+| Plan then execute, supervisor, fan-out | `MEDULLA-DECISION-ENGINE-R134.100`, `R135`, `R752`, `ARBORA-RELEASE-R003.4` | Covered |
+| Pick an option, rank, calibrated scores | `MEDULLA-DECISION-ENGINE-R822`, `R174.7`, `MEDULLA-FEDERATED-QUERY-R652` | Covered |
+| Classifier trained from labelled examples with a confidence floor | `MEDULLA-DECISION-ENGINE-R614.2.5` to `R614.2.7` | New. The existing classifier used stored centroids only. |
+| Per-step effects and an ordering guarantee | `ARBORA-RELEASE-R003.4.14` (item order, one call at a time) | New |
+
+Decisions. Items run one at a time in item order. The project leaves cross-iteration order unspecified, but a sequential order makes the effect journal and replay exact. The cost is lower throughput, which a later measurement may justify changing. The bounds of 256 items per step and 1,024 per plan are starting defaults.
+
+Residual owner row. The harness that runs a plan lives in the meristem repository. Arbora runs the expansion inside its own step executor, so the harness sees one tool step. A harness-side iteration primitive is not needed for these rows.

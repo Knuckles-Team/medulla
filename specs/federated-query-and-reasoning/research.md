@@ -462,3 +462,37 @@ than leaving terms silently unreconciled.
 - `RetrievalConstraints` lists are `BoundedVec` with named bounds (`MAX_RETRIEVAL_PREDICATES`, `MAX_PREDICATE_VALUES`); an unknown operator or quantifier fails at decode, so no later stage can weaken it.
 - `compile_constraints` evaluates entity predicates with the engine's row-predicate logic (`pred_eval`), so a missing or differently typed property never satisfies a predicate, and follows edges with the traversal edge filter, so a constraint sees the same edges `Expand` does. The set is bound to the declared graph revision; refusing a stale revision belongs to R040.1.4.
 - Topic backends share one weighing function (clipped cosine, normalized, cut by `TopicRankingPolicy`), so the fixture and the stored-centroid backend cannot disagree. The policy has no built-in default; the caller supplies both bounds from its resolved settings.
+
+## Comparison with two public projects (rows R740, R741, R706.8 to R706.12, R742)
+
+This section compares the platform with two public projects: TrustGraph (a graph and agent platform) and Web-Algebra (an algebra of Linked Data operations exposed as tools). Spec rows name neither project. The table maps their query and retrieval capabilities to spec rows. The ingest, bundle and decision rows have their own research sections.
+
+| Capability of the project | Spec row | State |
+|---|---|---|
+| GraphRAG: entity-centric neighbourhood retrieval | `MEDULLA-FEDERATED-QUERY-R090`, `R653`, `R651` | Covered |
+| GraphRAG: sufficiency check and repair round | `MEDULLA-FEDERATED-QUERY-R081`, `R082` | Covered |
+| Context sized to a token budget | `MEDULLA-FEDERATED-QUERY-R650` | Covered |
+| DocumentRAG: lexical plus vector retrieval | `MEDULLA-FEDERATED-QUERY-R008`, `R040`, `MEDULLA-DECISION-ENGINE-R134.110.2` | Covered |
+| Reranking and calibrated scores | `MEDULLA-FEDERATED-QUERY-R652`, `MEDULLA-DECISION-ENGINE-R822` | Covered |
+| Guided traversal: grounding seeds, per-hop restrictions by type, relationship, graph and language | `MEDULLA-FEDERATED-QUERY-R741` | New |
+| Policy filtering with Allowed, Filtered and Violation outcomes and an audit event | `MEDULLA-FEDERATED-QUERY-R706` (masks and row filters), `R706.8` to `R706.12` (shape policies) | Extended |
+| Row visibility, tenant predicates, per-agent scope | `MEDULLA-FEDERATED-QUERY-R078`, `R703`, `R704` | Covered |
+| Query-time explanation and proof | `MEDULLA-FEDERATED-QUERY-R006`, `R044`, `R068`, `R653` | Covered |
+| SPARQL 1.1 query, update and Graph Store | `MEDULLA-FEDERATED-QUERY-R707`, `R709`, `ARBORA-OPS-R857` | Covered |
+| Turtle, TriG, N-Quads, JSON-LD and RDF/XML import and export | `MEDULLA-FEDERATED-QUERY-R740` | New |
+| SPARQL builtin functions (the project lists 30 or more) | `MEDULLA-FEDERATED-QUERY-R742` | New |
+| SPARQL federation to a remote endpoint | `MEDULLA-FEDERATED-QUERY-R050`, `R054` | Covered |
+| Natural-language to structured query | `MEDULLA-FEDERATED-QUERY-R058` | Covered |
+| GraphQL over structured data | `MEDULLA-FEDERATED-QUERY-R073`, `R720` (one UQL plan across modalities) | Covered by design: UQL is the one query language |
+| Named stored queries | `MEDULLA-FEDERATED-QUERY-R708` | Covered |
+| Web-Algebra: `SELECT`, `CONSTRUCT`, `DESCRIBE` | `MEDULLA-FEDERATED-QUERY-R707`, `R055` | Covered |
+| Web-Algebra: `Substitute` and `Values` (bind a term or rows into a query) | `MEDULLA-FEDERATED-QUERY-R025` (typed parameter binding) | Covered |
+| Web-Algebra: `SPARQLString` (a model writes the query) | `MEDULLA-FEDERATED-QUERY-R058` | Covered, and stricter: the query is disclosed and read-only |
+| Web-Algebra: `Str`, `Concat`, `Replace`, `EncodeForURI`, `StrUUID`, `Now`, `URI`, `ResolveURI` | `MEDULLA-FEDERATED-QUERY-R742` | New |
+| Web-Algebra: `Merge` (graph union) | `MEDULLA-FEDERATED-QUERY-R707.2` (merge write of one graph) | Covered |
+
+Decisions and rejected options.
+
+- The write path parses by exact media type. The old write path parsed every type except N-Triples as Turtle, so a wrong type gave a parse error or loaded wrong triples. The engine now refuses an unknown type (`RDF_MEDIA_TYPE_UNSUPPORTED`).
+- Shape policies run after the plan, on result nodes. Evaluating them inside every pushdown would need a shape engine in each foreign source. The tag-based rewrite of R706 already covers pushdown.
+- Rejected: a fourth outcome for partial results. A request either returns the allowed rows or refuses; a partial answer hides the policy from the caller.

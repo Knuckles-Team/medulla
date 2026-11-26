@@ -135,3 +135,14 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T125 [US3] MEDULLA-INGEST-WORKER-R700.8 Office Open XML reader: wordprocessing and presentation
 - [ ] T126 [US3] MEDULLA-INGEST-WORKER-R700.9 Spreadsheet reader
 - [ ] T127 [US3] MEDULLA-INGEST-WORKER-R700.10 Email reader
+- [ ] T128 [US1] MEDULLA-INGEST-WORKER-R701.8 Behavior: grounding accepts a subclass of the domain or range.
+- [ ] T129 [US1] MEDULLA-INGEST-WORKER-R701.9 Wiring: the cache builder fills the hierarchy.
+- [ ] T130 [US1] MEDULLA-INGEST-WORKER-R701.10 Hot-path proof: a subclass fact grounds through the wire method.
+- [ ] T131 [US5] MEDULLA-INGEST-WORKER-R913 The engine serves the ontology slice that one extraction unit needs (rollup).
+- [ ] T132 [US1] MEDULLA-INGEST-WORKER-R913.1 Model and behavior: the slice request and the selection rule.
+- [ ] T133 [US1] MEDULLA-INGEST-WORKER-R913.2 Refusal: slice errors.
+- [ ] T134 [US1] MEDULLA-INGEST-WORKER-R913.3 Wiring: the served read and the SDK worker call.
+- [ ] T135 [US1] MEDULLA-INGEST-WORKER-R913.4 Hot-path proof: slice then extract through the wire.
+- [ ] T136 [US1] MEDULLA-INGEST-WORKER-R002.8 Model and behavior: induction from instance data.
+- [ ] T137 [US1] MEDULLA-INGEST-WORKER-R002.9 Refusal and wiring: profile limits and the admission call.
+- [ ] T138 [US1] MEDULLA-INGEST-WORKER-R002.10 Hot-path proof: instance profile to admitted ontology.

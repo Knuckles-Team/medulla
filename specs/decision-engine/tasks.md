@@ -1035,3 +1035,10 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T1029 [US9] MEDULLA-DECISION-ENGINE-R715 The flag tool and the friction tool are always-on engine capabilities (rollup)
 - [ ] T1030 [US9] MEDULLA-DECISION-ENGINE-R715.1 Behavior
 - [ ] T1031 [US9] MEDULLA-DECISION-ENGINE-R715.2 Hot-path proof
+- [ ] T1032 [US7] MEDULLA-DECISION-ENGINE-R134.111.19 Foreach step model and static checks.
+- [ ] T1033 [US7] MEDULLA-DECISION-ENGINE-R134.111.20 Foreach refusals.
+- [ ] T1034 [US7] MEDULLA-DECISION-ENGINE-R134.111.21 Foreach wiring and schema.
+- [ ] T1035 [US7] MEDULLA-DECISION-ENGINE-R134.111.22 Hot-path proof: foreach steps served.
+- [ ] T1036 [US7] MEDULLA-DECISION-ENGINE-R614.2.5 Fit topic centroids from labelled examples.
+- [ ] T1037 [US7] MEDULLA-DECISION-ENGINE-R614.2.6 Wiring: fitted topics persist as Topic nodes.
+- [ ] T1038 [US7] MEDULLA-DECISION-ENGINE-R614.2.7 Hot-path proof: fit then classify through the served method.

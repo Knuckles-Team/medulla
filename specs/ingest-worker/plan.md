@@ -177,3 +177,13 @@ none
 - Source batch kinds from connectors: `MEDULLA-INGEST-WORKER-R902.3.1` provides, `SCION-SOURCE-INGEST-R805.1` consumes. Contract: [scion-source-batch-kinds.md](contracts/scion-source-batch-kinds.md).
 - Data-prep declaration: `MEDULLA-INGEST-WORKER-R001.1008` provides, `ARBORA-FLEET-R058` consumes. Contract: [arbora-data-prep-declaration.md](contracts/arbora-data-prep-declaration.md).
 - Document and transcript batches: `MEDULLA-INGEST-WORKER-R003.8` provides, `SCION-SOURCE-INGEST-R010` consumes. Contract: [scion-document-transcript-ingest.md](contracts/scion-document-transcript-ingest.md).
+
+## Subclass grounding, ontology slice and induction from instance data (R701.8 to R701.10, R913, R002.8 to R002.10)
+
+- R701.8 and R701.9: `admit_facts` builds `GroundingCache` once per batch. The builder reads the `rdfs:subClassOf` closure from the warm reasoner of MEDULLA-INCREMENTAL-VIEWS-R011. `ground` (`crates/medulla-ingestion-types/src/ingest_rules.rs:221`) tests the superclass set instead of equality.
+- R913: new `Method::OntologySlice` → router arm beside the ingest arms → new `crates/medulla-h-ingest/src/ontology_slice.rs::slice_for_unit`. The SDK worker calls it once per unit before its model call.
+- R002.8 to R002.10: the SDK worker sends `InstanceProfile` in a `proposals` batch. `SourceIngest` prepare routes it to `judge_proposal` (`ingest_rules.rs:331`). The draft rule of R002.2 is unchanged.
+
+Reuse inventory. The slice reuses the one text embedder of the Uql path and candidate-local BM25 (`medulla-decision-stats`). It adds no index. The profile reuses the proposal types of R002.1.
+
+Decisions. The engine selects the slice, so the worker holds no ranking rule. A tenant with at most `max_classes` classes gets the whole ontology, because selection adds cost and no value there.

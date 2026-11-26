@@ -1317,3 +1317,17 @@ Order: R733, then R734 and R735 in parallel.
 - `MEDULLA-FEDERATED-QUERY-R077.5` is specified to main. Reason: a semantic owner opens per binding, so a column's binding id is canonical (`binding:{table}.{column}`); the query text embeds through the R039.1.3 encoder registry (no other engine encoder is pinned to a binding's space); a per-statement `nearest` UDF keeps nearest-first order over the narrowed rows.
 - `MEDULLA-FEDERATED-QUERY-R077.6.5` is specified to main. Reason: `rank_columns` returns rows, so the receipt is a field of each row and reaches the response as relation columns.
 - `MEDULLA-FEDERATED-QUERY-R085.2`, `R085.3`, `R085.5` and `R085.6` are specified to main. Reason: issue needs the native durable write and verify is an owner-scoped read, so issue rides the native work-item route through an admission handler that holds `ServerState`, and verify rides the foreign-source handler; both methods carry the source-approval receipt that `verify_registered_for` needs. The lease grant holds identity and digests, not SQL or parameter values, because lease reads serve grants to `lease:read` holders. `R085.1`, `R085.7` and `R085.8` caller chains follow, and `R085.7` gains its wire codes.
+
+## Graph media types, guided retrieval, shape policies and builtins (R740, R741, R706.8 to R706.12, R742)
+
+Call paths. Each row names its entry point, the functions on the path and the attach point.
+
+- R740 write: `handle_graph_store` (`crates/medulla-server-blob/src/sparql_http/graph_store.rs:17`) → `graph_write` (`:99`) → `parse_rdf_body` (`:187`). The served event `RDF_GRAPH_WRITE_EVENT` reaches the same parse function through a router arm beside `router.rs:117` and `coordinated_rdf_graph_write` beside `sparql_update.rs:806`. One parse function serves both entries.
+- R740 read: `Method::Sparql` gains `graph_media_type`. The result holds `graph_body` from `serialize_graph` (`negotiation.rs:35`). The six media types are the list `GRAPH_FORMS` of `negotiation.rs:17`.
+- R741: `discover` (`crates/medulla-h-graph/src/graph_ops/semantic.rs:222`) → `plan_discover` (`discover_plan.rs:100`) → `expand_seeds` (`discover_plan.rs:27`) → `expand_hops` (`crates/medulla-graph-core/src/graph/core_expand.rs:79`). Row-level security already limits the core that the walk reads. The filter only narrows it.
+- R706.8 to R706.12: `execute` (`crates/medulla-exec/src/exec.rs:910`) → `apply_policies` (`policy_mask.rs:228`) → new `apply_shape_policies` → `medulla_shacl::validate` (`crates/medulla-shacl/src/validate.rs:40`). The audit record uses `audit_append` (`crates/medulla-persistence/src/redb_backend/backend_audit.rs:30`).
+- R742: `Method::Sparql` → evaluator → `expression.rs`. The row adds tests and one stated error rule, not a second evaluator.
+
+Reuse inventory. R740 reuses `medulla_rdf::mapping` parsers and serializers, `jsonld.rs` and `rdfxml.rs`. R706.8 reuses `QueryPolicy` records and `medulla-shacl`. R741 reuses `expand_hops`. No new store, planner or selector exists.
+
+Decisions. A graph store write that holds quads must name the target graph or the default graph, because one request writes one graph. A shape policy has two effects, `filter` and `refuse`, because a hidden row and a refused request are different answers for a caller.

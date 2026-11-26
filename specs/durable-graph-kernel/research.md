@@ -237,3 +237,16 @@ Open item for the gate: `LAYOUT-REGEN` is not needed (no stored layout changed);
 - R099.5: `MultiGraphBatchReport.fanout` (serde default empty, so stored saga results from before the field still decode) holds one `ShardFanoutReport` per sub-batch in request order; the shard tasks return the request index and the report sorts on it, because group order is by shard. A failed sub-batch's code is the registered code in front of its refusal text, or the internal code when the answer carried none. Metrics are `medulla_shard_writer_inflight{shard}` and `medulla_shard_writer_commit_seconds{shard}`, labelled by shard index (bounded by k), recorded around each dispatch. The hand-maintained `models.py` gains `ShardFanoutReport` and `ShardFanoutOutcome`; the wire vectors need a refresh (WIRE-REGEN: `MEDULLA_WRITE_VECTORS=1 cargo test -p medulla-capabilities --test wire_vectors`). The R099.3 cross-tenant case sends the request as a verified caller of another tenant and asserts nothing lands in the graphs and every sub-batch reports a failure.
 - R099.4: the decoder returns plain text, so the served arm `multi_graph_batch_update` prefixes every decode refusal with the registered `INVALID_ARGUMENT` code (count over the cap, duplicate or invalid graph identifier); the wire never carried an uncoded refusal before. A failed sub-batch keeps `failed_outcome`'s stable code from R099.5.
 - R099.6: the served test sets the shard count through the existing `MEDULLA_REDB_SHARDS` topology variable before the backend opens (as the shard-writer-width test does), seeds 64 graphs of 5,000 nodes, picks one graph per shard from the replies' `shard_index`, and asserts the summed `commit_us` exceeds 1.5 times the request wall time (integer percent arithmetic, no float). The nightly bench `benches/multi_graph_fanout.rs` drives the same served request for 30 samples and asserts p99 under 500 ms.
+
+## Comparison with portable knowledge packages (row R877)
+
+TrustGraph packages knowledge into context cores that carry triples, embeddings, provenance and source documents between deployments. It also moves whole workspaces as one portable bundle. The nearest existing rows are the offline archive and restore of the whole store (`MEDULLA-DURABLE-KERNEL-R007.1`, `R862`) and the workflow RDF export (`MEDULLA-ORCH-VOCAB-R809`). Neither moves a scoped dataset with its embeddings and documents.
+
+| Capability | Spec row | State |
+|---|---|---|
+| Move a scoped dataset with triples, embeddings, provenance and documents | `MEDULLA-DURABLE-KERNEL-R877` | New |
+| Restore a whole store to a point in time | `MEDULLA-DURABLE-KERNEL-R007.1`, `R862` | Covered |
+| Lossless export of workflow RDF | `MEDULLA-ORCH-VOCAB-R809` | Covered |
+| Import a connector seed graph by content digest | `MEDULLA-TYPED-PACKS-R104` | Covered |
+
+Decisions. The bundle uses one tar stream with a digest manifest, and no extra store. Export reads the caller's row-projected snapshot, so a bundle never carries a node the caller cannot read. Rejected: bundle export that bypasses row-level security for an admin. An admin who needs the full store uses the offline archive.
