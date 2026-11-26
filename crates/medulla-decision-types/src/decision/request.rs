@@ -209,6 +209,47 @@ pub struct AssemblyRequest {
     /// when empty.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub prompts: BoundedVec<PromptAssignment, 8>,
+    /// The declared input contract of each step the request names, with the schema digest of
+    /// the source revision it was read at (MEDULLA-ORCH-VOCAB-R005.100). Absent when empty, so
+    /// a request without them keeps its bytes.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub step_contracts: BoundedVec<StepContract, 64>,
+}
+
+/// The source slot that supplies one declared field of a step's input schema
+/// (MEDULLA-ORCH-VOCAB-R005.100). `field_path` is the dotted path of a leaf of `input_schema`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SourceSlotMap {
+    pub field_path: String,
+    pub source_slot: String,
+}
+
+/// One step's input contract: the JSON Schema of its input, one [`SourceSlotMap`] per declared
+/// field, and the `sha256:<hex>` schema digest of the source revision the schema was read at
+/// (MEDULLA-ORCH-VOCAB-R005.100).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StepContract {
+    pub step_id: String,
+    pub input_schema: serde_json::Value,
+    pub source_slots: BoundedVec<SourceSlotMap, 64>,
+    pub source_schema_digest: String,
+}
+
+/// What the assembly declares about one step's shielded input: the schema digest, the declared
+/// field paths, and the digest the receiving harness checks its projection against. The
+/// projection itself is applied before dispatch, never here (MEDULLA-ORCH-VOCAB-R005.100).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct StepShield {
+    pub step_id: String,
+    pub schema_digest: String,
+    pub declared_paths: BoundedVec<String, 64>,
+    pub projected_digest: String,
 }
 
 /// One typed value for a named slot of a prompt template (MEDULLA-ORCH-VOCAB-R800.3).
@@ -283,6 +324,10 @@ pub struct AssemblyResult {
     /// empty.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub rendered_prompts: BoundedVec<RenderedPrompt, 8>,
+    /// The shield declaration of every step contract the request carried
+    /// (MEDULLA-ORCH-VOCAB-R005.100). Absent when empty.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub step_shields: BoundedVec<StepShield, 64>,
 }
 
 /// Commit one assembly record as a durable `DecisionRecord` component.

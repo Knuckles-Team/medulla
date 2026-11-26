@@ -154,6 +154,7 @@ fn request(tenant: &str) -> AssemblyRequest {
         evidence_streams: Default::default(),
         patterns: Default::default(),
         prompts: Default::default(),
+        step_contracts: Default::default(),
     }
 }
 

@@ -55,7 +55,7 @@ pub(super) async fn assemble_for(
     const FAMILY: &str = "assembly";
     let tenant = verified.tenant();
 
-    let (store, policy) = telemetry::stage_async(Stage::Admit, FAMILY, tenant, async {
+    let (store, policy, shields) = telemetry::stage_async(Stage::Admit, FAMILY, tenant, async {
         if request.tenant_id != verified.tenant() {
             return Err(
                 "ACCESS_DENIED: assembly tenant must match the verified request tenant".to_string(),
@@ -69,9 +69,12 @@ pub(super) async fn assemble_for(
             request.evidence_streams.as_slice(),
         )
         .map_err(|refused| refused.message())?;
+        // The step shield is declared before anything is read: a stale schema sends nothing
+        // (MEDULLA-ORCH-VOCAB-R005.100).
+        let shields = super::assemble_shield::shield_step_schema(request.step_contracts.as_slice())?;
         let store = state.write().await.ensure_agent_library()?;
         let policy = resolve_policy(&store, &request)?;
-        Ok::<_, String>((store, policy))
+        Ok::<_, String>((store, policy, shields))
     })
     .await?;
     let entries = telemetry::stage(Stage::Candidates, FAMILY, tenant, || {
@@ -206,6 +209,8 @@ pub(super) async fn assemble_for(
             model_input,
             coding_agent_plan,
             rendered_prompts: medulla_types::contract::BoundedVec::new(rendered_prompts)
+                .map_err(|error| error.to_string())?,
+            step_shields: medulla_types::contract::BoundedVec::new(shields)
                 .map_err(|error| error.to_string())?,
         })
     })?;

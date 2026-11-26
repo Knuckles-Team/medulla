@@ -362,6 +362,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "SCOPE_POLICY_UNREADABLE",
             // MEDULLA-ORCH-VOCAB-R007.1: a `:precedes` cycle between steps.
             "STEP_ORDER_CYCLE",
+            // MEDULLA-ORCH-VOCAB-R005.100: a stale step input schema.
+            "SHIELD_SCHEMA_STALE",
         ],
     ),
     // MEDULLA-PLACEMENT-R750.753: the job store's typed refusals

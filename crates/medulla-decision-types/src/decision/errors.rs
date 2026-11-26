@@ -34,6 +34,9 @@ closed_error_codes! {
         /// MEDULLA-ORCH-VOCAB-R007.1: the `:precedes` edges between the steps
         /// of a request's tasks form a cycle, so no step order exists.
         StepOrderCycle => "STEP_ORDER_CYCLE",
+        /// MEDULLA-ORCH-VOCAB-R005.100: a step contract's schema no longer matches the
+        /// schema digest of the source revision it was read at.
+        ShieldSchemaStale => "SHIELD_SCHEMA_STALE",
         /// The integer programme built from valid inputs was refused by the
         /// solver's own model validation (a coefficient outside its range).
         AssemblyModelInvalid => "ASSEMBLY_MODEL_INVALID",

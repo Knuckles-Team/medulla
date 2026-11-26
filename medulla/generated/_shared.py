@@ -414,6 +414,22 @@ class AssemblyConstraints(BaseModel):
     require_adequacy: bool = False
 
 
+class SourceSlotMap(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    field_path: str
+    source_slot: str
+
+
+class StepContract(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    input_schema: Any
+    source_schema_digest: str
+    source_slots: Annotated[list[SourceSlotMap], Field(max_length=64)]
+    step_id: str
+
+
 class AssemblyRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -427,6 +443,7 @@ class AssemblyRequest(BaseModel):
     replacements: BoundedVec_PrimitiveReplacement_64 | None = None
     requirements: AssemblyRequirements
     solver: SolverBudget | None = None
+    step_contracts: Annotated[list[StepContract], Field(max_length=64)] | None = None
     templates: BoundedVec_AgentGraphEntryRef_8 = Field(default_factory=list)
     tenant_id: str
     evidence_streams: Annotated[list[EvidenceStreamRef], Field(max_length=16)] = Field(
@@ -2866,6 +2883,8 @@ __all__ = [
     "Algorithm",
     "AssemblyConstraints",
     "AssemblyRequest",
+    "SourceSlotMap",
+    "StepContract",
     "AssemblyRequirements",
     "AssemblyStep",
     "BoundProof",

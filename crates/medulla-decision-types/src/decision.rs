@@ -183,7 +183,7 @@ pub use request::{
     AssemblyConstraints, AssemblyRequest, AssemblyRequirements, AssemblyResult, ClaimProvenance,
     ClaimedTaskMapping, CostBudget, DecisionCommitRequest, DecisionCommitResult, DecisionPolicyRef,
     LibraryCandidateScope, PrimitiveEdge, PrimitiveReplacement, PromptAssignment, RenderedPrompt,
-    SolverBudget,
+    SolverBudget, SourceSlotMap, StepContract, StepShield,
     TopologyCommitEvidence, TopologyCommitOutcome, ASSEMBLY_RESULT_SCHEMA_VERSION,
     DECISION_COMMIT_RESULT_SCHEMA_VERSION, DECISION_COMPONENT_ID_PREFIX,
 };

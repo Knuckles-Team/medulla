@@ -374,6 +374,15 @@ class RenderedPrompt(BaseModel):
     text: str
 
 
+class StepShield(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    declared_paths: Annotated[list[str], Field(max_length=64)]
+    projected_digest: str
+    schema_digest: str
+    step_id: str
+
+
 class AssemblyResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -383,6 +392,7 @@ class AssemblyResult(BaseModel):
     record: DecisionRecord
     rendered_prompts: list[RenderedPrompt] | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
+    step_shields: list[StepShield] | None = None
     model_revision: str | None = None
     model_input: ModelInputCapabilities | None = None
     coding_agent_plan: CodingAgentPlan | None = None
@@ -470,6 +480,7 @@ __all__ = [
     "AssemblyRequirements",
     "AssemblyResult",
     "RenderedPrompt",
+    "StepShield",
     "BoundProof",
     "BoundProofRoot",
     "BoundProofRootBody",

@@ -457,6 +457,7 @@ impl<'a> Parser<'a> {
             evidence_streams: Default::default(),
             patterns: Default::default(),
             prompts: Default::default(),
+            step_contracts: Default::default(),
         })))
     }
 }

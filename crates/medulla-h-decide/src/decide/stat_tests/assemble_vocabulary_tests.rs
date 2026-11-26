@@ -117,6 +117,78 @@ async fn step_cycle_refuses_step_order_cycle() {
     assert!(error.starts_with("STEP_ORDER_CYCLE: "), "{error}");
 }
 
+/// A step contract over a nested input schema: `customer.name` and `note` are declared,
+/// each with one source slot.
+fn shield_contract(step_id: &str) -> medulla_decision_types::decision::StepContract {
+    use medulla_decision_types::decision::{SourceSlotMap, StepContract};
+    let schema = serde_json::json!({
+        "type": "object",
+        "properties": {
+            "customer": {
+                "type": "object",
+                "properties": {"name": {"type": "string"}},
+            },
+            "note": {"type": "string"},
+        },
+    });
+    let slot = |field: &str, source: &str| SourceSlotMap {
+        field_path: field.to_string(),
+        source_slot: source.to_string(),
+    };
+    StepContract {
+        step_id: step_id.to_string(),
+        source_schema_digest: super::super::assemble_shield::schema_digest(&schema),
+        input_schema: schema,
+        source_slots: medulla_types::contract::BoundedVec::new(vec![
+            slot("customer.name", "slot:customer-name"),
+            slot("note", "slot:note"),
+        ])
+        .unwrap(),
+    }
+}
+
+// spec: MEDULLA-ORCH-VOCAB-R005.100
+/// Verifies MEDULLA-ORCH-VOCAB-R005.100: the answer declares the schema digest, the declared
+/// field paths and one projected digest; an undeclared nested field never appears in it; and a
+/// schema that no longer matches its source revision refuses `SHIELD_SCHEMA_STALE`.
+#[tokio::test]
+async fn shield_declares_schema_and_digest_only() {
+    use medulla_types::contract::BoundedVec;
+    let h = harness().await;
+    seed(&h.store, None);
+    let contract = shield_contract("urn:step:gather");
+    let mut asked = asking(&[]);
+    asked.step_contracts = BoundedVec::new(vec![contract.clone()]).unwrap();
+    let result = assemble(&h, asked).await.expect("assembles");
+    assert_eq!(result.step_shields.len(), 1);
+    let shield = &result.step_shields.as_slice()[0];
+    assert_eq!(shield.step_id, "urn:step:gather");
+    assert_eq!(shield.schema_digest, contract.source_schema_digest);
+    assert_eq!(
+        shield.declared_paths.as_slice(),
+        ["customer.name".to_string(), "note".to_string()]
+    );
+    assert!(shield.projected_digest.starts_with("sha256:"));
+    // The same contract yields the same digest; the answer holds no undeclared path.
+    let mut again = asking(&[]);
+    again.step_contracts = BoundedVec::new(vec![contract.clone()]).unwrap();
+    let second = assemble(&h, again).await.expect("assembles");
+    assert_eq!(
+        second.step_shields.as_slice()[0].projected_digest,
+        shield.projected_digest
+    );
+    let served = serde_json::to_string(&result).unwrap();
+    assert!(!served.contains("customer.ssn"), "{served}");
+
+    // A schema that drifted from its source revision refuses and answers nothing.
+    let mut stale = contract;
+    stale.input_schema["properties"]["note"] = serde_json::json!({"type": "integer"});
+    let mut refused = asking(&[]);
+    refused.step_contracts = BoundedVec::new(vec![stale]).unwrap();
+    let error = assemble(&h, refused).await.expect_err("refuses");
+    assert!(error.starts_with("SHIELD_SCHEMA_STALE: "), "{error}");
+}
+
 // spec: MEDULLA-ORCH-VOCAB-R007.4
 /// Verifies MEDULLA-ORCH-VOCAB-R007.4: a slot that requires an agent kind excludes an
 /// executor-only candidate, accepts a verifier, and refuses `NO_CANDIDATE_OF_KIND` when no

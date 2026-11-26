@@ -212,6 +212,8 @@ mod telemetry;
 #[cfg(feature = "decide")]
 mod capacity_premise;
 #[cfg(feature = "decide")]
+mod assemble_shield;
+#[cfg(feature = "decide")]
 mod definitions_read;
 #[cfg(feature = "decide")]
 mod steps_read;

@@ -200,6 +200,7 @@ pub(in crate::decide) fn request(required: Vec<ModelInputMediaType>) -> Assembly
         evidence_streams: Default::default(),
         patterns: Default::default(),
         prompts: Default::default(),
+        step_contracts: Default::default(),
     }
 }
 

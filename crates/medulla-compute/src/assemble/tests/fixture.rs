@@ -194,6 +194,7 @@ pub fn request(tasks: &[&str], capabilities: &[&str]) -> AssemblyRequest {
         evidence_streams: Default::default(),
         patterns: Default::default(),
         prompts: Default::default(),
+        step_contracts: Default::default(),
     }
 }
 
