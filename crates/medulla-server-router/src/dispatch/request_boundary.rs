@@ -14,6 +14,7 @@ use medulla_server_graph::dispatch::sparql_update::{
 };
 
 pub mod authorization;
+pub mod delegated_actor;
 #[cfg(feature = "raft")]
 pub mod consensus;
 pub mod method_errors;
@@ -587,6 +588,14 @@ async fn dispatch_inner(
             return Response::err(req.id, refusal);
         }
     }
+    // MEDULLA-IDENTITY-R744: an envelope that names an agent-run delegation runs as the
+    // delegation's principal, bounded to its operations. Resolved once here, before the scope
+    // gate and every later check, so none of them ever sees the host's wider authority.
+    let verified_context =
+        match delegated_actor::resolve_delegated_actor(state, &req, verified_context).await {
+            Ok(context) => context,
+            Err(refusal) => return refusal,
+        };
     req.agent_id = Some(verified_context.agent_id().to_string());
 
     #[cfg(feature = "raft")]

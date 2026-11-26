@@ -213,6 +213,13 @@ pub fn build_envelope_v2_bytes(
         buf.push(2);
         put(&mut buf, priority);
     }
+    // MEDULLA-IDENTITY-R744: the agent-run delegation the request acts under, MAC-covered as a
+    // THIRD optional trailer with its own tag byte (`3`), so the three trailers stay mutually
+    // unambiguous and an envelope without a delegation encodes byte-for-byte as before.
+    if let Some(delegation_id) = claims.delegation_id.as_deref() {
+        buf.push(3);
+        put(&mut buf, delegation_id);
+    }
     buf
 }
 

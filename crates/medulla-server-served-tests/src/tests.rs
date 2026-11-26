@@ -1380,6 +1380,7 @@ fn federation_remote_spec(endpoint: String) -> medulla_query_types::wire::Foreig
             delegation: vec![],
             node: None,
             priority: None,
+            delegation_id: None,
         }),
         uql: "MATCH (:Doc) WHERE year > 2024 |> TRAVERSE -[:CITES]->{1,2}".into(),
         cypher: String::new(),

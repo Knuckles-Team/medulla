@@ -339,3 +339,14 @@ fn a_graph_algorithm_scope_is_chosen_by_whether_the_request_names_node_ids() {
     // Only the scope moves: the method stays a non-mutating read.
     assert!(scoped.iter().all(|m| !crate::policy(m).mutates));
 }
+
+// spec: MEDULLA-IDENTITY-R744
+#[test]
+fn acting_under_a_delegation_is_a_service_only_scope_a_human_never_holds() {
+    use medulla_identity_types::identity::UserKind;
+    let entry = scope_entry("identity:delegate").expect("delegation host scope");
+    assert_eq!(entry.class, ScopeClass::ServiceOnly);
+    assert_eq!(entry.owner, "engine");
+    assert!(!entry.class.allows_kind(UserKind::Human));
+    assert!(entry.class.allows_kind(UserKind::Service));
+}

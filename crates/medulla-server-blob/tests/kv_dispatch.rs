@@ -74,6 +74,7 @@ fn signed(id: u64, how: &Signed<'_>, method: Method) -> Request {
         delegation: Vec::new(),
         node: None,
         priority: None,
+        delegation_id: None,
     };
     let timestamp = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

@@ -132,7 +132,9 @@ pub use segment::{
 };
 pub use sql_dump::{parse_dump, render_dump, DumpRow, MAX_DUMP_BYTES};
 pub use stamp::{IdentityActor, IdentityStamp, PasswordCheck, Secret};
-pub use store::{ApplyContext, IdentityStore, RecoveryCode, ThrottleEntry, TOUCH_GRANULARITY_MS};
+pub use store::{
+    ApplyContext, DelegatedActor, IdentityStore, RecoveryCode, ThrottleEntry, TOUCH_GRANULARITY_MS,
+};
 pub use text::{
     check_recovery_code, check_token, is_reserved_agent_id, normalize_username,
     validate_principal_id, MIN_RECOVERY_CODE_CHARS, REPLICATION_SLOT_AGENT, RESERVED_AGENT_IDS,

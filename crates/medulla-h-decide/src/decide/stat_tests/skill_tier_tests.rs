@@ -43,6 +43,7 @@ fn reviewer() -> VerifiedRequestContext {
             delegation: Vec::new(),
             node: None,
             priority: None,
+            delegation_id: None,
         },
         format!("test:{REVIEWER}"),
     )

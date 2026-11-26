@@ -3,7 +3,7 @@
 use super::*;
 use crate::{acl::GrantEffect, acl::RbacAction, acl::ResourceSelector};
 
-fn role(role_id: &str, scopes: &[&str]) -> IdentityOp {
+pub(super) fn role(role_id: &str, scopes: &[&str]) -> IdentityOp {
     IdentityOp::Access(AccessOp::UpsertRole {
         request: RoleUpsert {
             role_id: role_id.to_string(),
@@ -19,7 +19,7 @@ fn role(role_id: &str, scopes: &[&str]) -> IdentityOp {
     })
 }
 
-fn bind(principal: &str, role_id: &str, change: BindingChange) -> IdentityOp {
+pub(super) fn bind(principal: &str, role_id: &str, change: BindingChange) -> IdentityOp {
     IdentityOp::Access(AccessOp::ChangeUserRole {
         request: UserRoleChange {
             principal_id: principal.to_string(),

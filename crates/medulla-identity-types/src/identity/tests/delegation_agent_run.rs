@@ -110,3 +110,74 @@ fn an_agent_run_delegation_expires_and_is_revoked_on_the_engine_clock_and_is_ten
         Some((DelegationKind::AgentRun, DelegationStanding::Revoked))
     );
 }
+
+// spec: MEDULLA-IDENTITY-R744
+#[test]
+fn a_usable_agent_run_delegation_names_the_actor_and_every_other_state_names_none() {
+    use super::access::{bind, role};
+    let mut store = store_in(AuthMode::Local);
+    apply_kept(&mut store, &role("reader", &["kg:read"]), &admin(), NOW).unwrap();
+    let alice = create(&mut store, "alice", UserKind::Human).unwrap();
+    let bob = create(&mut store, "bob", UserKind::Human).unwrap();
+    apply_kept(
+        &mut store,
+        &bind(&alice, "reader", BindingChange::Add),
+        &admin(),
+        NOW,
+    )
+    .unwrap();
+    let mut held = agent_run(&alice);
+    held.operations = ["kg:read".to_string()].into_iter().collect();
+    apply_kept(&mut store, &record(DELEGATION, held), &admin(), NOW).unwrap();
+    // Bob holds no role, so a delegation over `kg:read` for him is not usable.
+    let mut unheld = agent_run(&bob);
+    unheld.operations = ["kg:read".to_string()].into_iter().collect();
+    apply_kept(
+        &mut store,
+        &record("delegation:unheld", unheld),
+        &admin(),
+        NOW,
+    )
+    .unwrap();
+    // A tool-task record is another delegation family and never names an actor here.
+    let tool_task = DelegationRecord {
+        tenant: TENANT.to_string(),
+        principal: alice.clone(),
+        tool: "kg:read".to_string(),
+        expires_at: NOW + 60_000,
+        ..DelegationRecord::default()
+    };
+    apply_kept(&mut store, &record("work:task", tool_task), &admin(), NOW).unwrap();
+
+    let actor =
+        |id: &str, tenant: &str, now: u64| store.delegated_actor(id, tenant, now, &TestRegistry);
+    let found = actor(DELEGATION, TENANT, NOW).expect("an active, held delegation names its actor");
+    assert_eq!(found.principal, alice);
+    assert_eq!(found.operations, ["kg:read"]);
+    assert_eq!(found.roles, ["reader"]);
+
+    // Every way a delegation is unusable answers the same absence.
+    assert_eq!(actor("delegation:unheld", TENANT, NOW), None);
+    assert_eq!(actor("work:task", TENANT, NOW), None);
+    assert_eq!(actor("delegation:unknown", TENANT, NOW), None);
+    assert_eq!(
+        actor(DELEGATION, "tenant-b", NOW),
+        None,
+        "another tenant's record is absent"
+    );
+    assert_eq!(
+        actor(DELEGATION, TENANT, NOW + 60_000),
+        None,
+        "expired on the engine clock"
+    );
+    let revoke = IdentityOp::Delegation(DelegationOp::Revoke {
+        request: ObjectRef {
+            id: DELEGATION.to_string(),
+        },
+    });
+    apply_kept(&mut store, &revoke, &admin(), NOW + 1).unwrap();
+    assert_eq!(
+        store.delegated_actor(DELEGATION, TENANT, NOW + 1, &TestRegistry),
+        None
+    );
+}

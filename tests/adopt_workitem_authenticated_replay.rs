@@ -164,6 +164,7 @@ fn signed_request_with_agent(
         },
         node: None,
         priority: None,
+        delegation_id: None,
     };
     let mut request = Request {
         id,

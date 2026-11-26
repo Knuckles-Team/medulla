@@ -175,6 +175,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("host:issue-start", ServiceOnly, "graph-os"),
     entry("identity:admin", Admin, "engine"),
     entry("identity:authenticate", ServiceOnly, "engine"),
+    // MEDULLA-IDENTITY-R744: a host that signs a request acting under an agent-run delegation.
+    entry("identity:delegate", ServiceOnly, "engine"),
     entry("identity:provision", ServiceOnly, "engine"),
     entry("identity:read", Admin, "engine"),
     entry("identity:self", User, "engine"),

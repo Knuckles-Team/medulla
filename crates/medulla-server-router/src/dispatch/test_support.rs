@@ -44,6 +44,7 @@ pub fn verified_as(
             delegation: delegation.iter().map(|hop| hop.to_string()).collect(),
             node: None,
             priority: None,
+            delegation_id: None,
         },
         format!("dispatch-test-{key}"),
     )

@@ -38,6 +38,7 @@ pub(super) fn validate_context_claims(
         return Err("request agent_id does not match verified context".to_string());
     }
     validate_delegation_chain(claims)?;
+    validate_delegation_id(claims)?;
     validate_deployment_binding(claims, policy)?;
 
     // ── ADR-3 / W1.9: node-bound envelopes ──────────────────────────────
@@ -86,6 +87,27 @@ fn validate_delegation_chain(claims: &RequestContextClaims) -> Result<(), String
         && chain.last() == Some(&claims.agent_id);
     if !runs_principal_to_agent {
         return Err("delegation chain must run from principal to effective agent".to_string());
+    }
+    Ok(())
+}
+
+/// The longest `delegation_id` claim, in bytes: the bound of an agent-run delegation id.
+const MAX_DELEGATION_ID_BYTES: usize = 256;
+
+/// A present agent-run delegation claim is a bounded, printable id (MEDULLA-IDENTITY-R744). It
+/// names a record the engine looks up at the dispatch chokepoint, so only its shape is checked
+/// here and nothing about whether such a record exists.
+fn validate_delegation_id(claims: &RequestContextClaims) -> Result<(), String> {
+    let Some(id) = claims.delegation_id.as_deref() else {
+        return Ok(());
+    };
+    if id.trim().is_empty()
+        || id.len() > MAX_DELEGATION_ID_BYTES
+        || id.chars().any(char::is_control)
+    {
+        return Err(format!(
+            "request context delegation_id must be 1 to {MAX_DELEGATION_ID_BYTES} printable bytes"
+        ));
     }
     Ok(())
 }
@@ -167,6 +189,7 @@ mod tests {
             delegation: vec![],
             node: None,
             priority: None,
+            delegation_id: None,
         }
     }
 
@@ -211,6 +234,26 @@ mod tests {
                     .is_some_and(|detail| detail.contains("request context")),
                 "{field} refusal lost its descriptive detail"
             );
+        }
+    }
+
+    // spec: MEDULLA-IDENTITY-R744
+    #[test]
+    fn a_delegation_id_claim_is_a_bounded_printable_id() {
+        let mut candidate = claims();
+        assert!(validate_delegation_id(&candidate).is_ok());
+        candidate.delegation_id = Some("delegation:run-1".into());
+        assert!(validate_delegation_id(&candidate).is_ok());
+        candidate.delegation_id = Some("d".repeat(MAX_DELEGATION_ID_BYTES));
+        assert!(validate_delegation_id(&candidate).is_ok());
+        for bad in [
+            String::new(),
+            "  ".to_string(),
+            "x".repeat(MAX_DELEGATION_ID_BYTES + 1),
+            "a\nb".to_string(),
+        ] {
+            candidate.delegation_id = Some(bad.clone());
+            assert!(validate_delegation_id(&candidate).is_err(), "{bad:?}");
         }
     }
 }

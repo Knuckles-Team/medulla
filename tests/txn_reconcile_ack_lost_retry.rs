@@ -186,6 +186,7 @@ fn signed_fixed_request(
         delegation: Vec::new(),
         node: None,
         priority: None,
+        delegation_id: None,
     };
     let mut request = Request {
         id,

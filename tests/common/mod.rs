@@ -132,6 +132,7 @@ pub fn context_for(agent_id: &str) -> RequestContextClaims {
         delegation: Vec::new(),
         node: None,
         priority: None,
+        delegation_id: None,
     }
 }
 

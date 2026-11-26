@@ -860,6 +860,7 @@ mod tests {
             delegation: Vec::new(),
             node: None,
             priority: None,
+            delegation_id: None,
         };
         request.auth_token = compute_verified_envelope_token(
             "graphql-test-secret",

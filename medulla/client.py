@@ -241,11 +241,19 @@ class RequestContextClaims(_RequiredRequestContextClaims, total=False):
     meristem delegation layer sets it from the ambient
     ``SpawnDelegation.oidc_token`` (``GraphSession._apply_spawn_delegation``);
     absent, the envelope is unchanged from before this claim existed.
+
+    ``delegation_id`` (MEDULLA-IDENTITY-R744) names an agent-run delegation of the
+    tenant. The engine verifies it at the dispatch chokepoint and runs the request as
+    the delegation's principal, bounded to the delegation's operations, with the
+    signing host recorded as the actor on behalf of that principal. The signing host
+    must hold ``identity:delegate``. It is MAC-covered as a tag-``3`` trailer, so an
+    envelope without it encodes byte-for-byte as before.
     """
 
     node: str
     priority: str
     oidc_token: str
+    delegation_id: str
 
 
 _REQUIRED_REQUEST_CONTEXT_FIELDS = frozenset(
@@ -254,7 +262,7 @@ _REQUIRED_REQUEST_CONTEXT_FIELDS = frozenset(
 _ALLOWED_REQUEST_CONTEXT_FIELDS = frozenset(RequestContextClaims.__annotations__)
 
 
-_OPTIONAL_REQUEST_CONTEXT_CLAIMS = ("node", "priority", "oidc_token")
+_OPTIONAL_REQUEST_CONTEXT_CLAIMS = ("node", "priority", "oidc_token", "delegation_id")
 _SCALAR_REQUEST_CONTEXT_CLAIMS = (
     "principal",
     "tenant",
@@ -13106,6 +13114,7 @@ class _EnvelopeV2(NamedTuple):
     idempotency_key: str
     node_id: str | None
     priority: str | None
+    delegation_id: str | None = None
 
 
 def _derive_rpc_idempotency_key(
@@ -13176,6 +13185,11 @@ def _envelope_v2_bytes(env: _EnvelopeV2) -> bytes:
     if env.priority:
         canonical.append(2)
         _put_v2_text(canonical, env.priority)
+    # MEDULLA-IDENTITY-R744: the agent-run delegation the request acts under, a THIRD
+    # optional trailer with its own tag byte (`3`); absent, the bytes are unchanged.
+    if env.delegation_id:
+        canonical.append(3)
+        _put_v2_text(canonical, env.delegation_id)
     return bytes(canonical)
 
 
@@ -13196,6 +13210,8 @@ def _envelope_v2_context_payload(env: _EnvelopeV2) -> dict[str, Any]:
         payload["node"] = env.node_id
     if env.priority:
         payload["priority"] = env.priority
+    if env.delegation_id:
+        payload["delegation_id"] = env.delegation_id
     return payload
 
 
@@ -19028,6 +19044,7 @@ class MedullaClient:
             ),
             node_id=_envelope_node_id(context, self._node_id),
             priority=_stripped_claim(context, "priority"),
+            delegation_id=_stripped_claim(context, "delegation_id"),
         )
         mac = hmac.new(
             self._auth_secret.encode("utf-8"),
@@ -19042,7 +19059,7 @@ class MedullaClient:
             "mac": mac,
         }
         # ADR-4 decision 5: the optional OIDC bearer/assertion. Deliberately NOT
-        # folded into the canonical MAC bytes (no tag-3 trailer) -- it rides as
+        # folded into the canonical MAC bytes (no trailer of its own) -- it rides as
         # a SIBLING top-level envelope field, matching the Rust decode shape
         # (`Envelope.oidc_token`) and its own documented rationale: the
         # token's own RSA/JWKS signature is the trust anchor, and the engine's

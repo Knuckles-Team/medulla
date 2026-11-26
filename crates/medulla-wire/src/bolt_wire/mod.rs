@@ -1153,6 +1153,7 @@ mod tests {
             delegation: Vec::new(),
             node: None,
             priority: None,
+            delegation_id: None,
         };
         let timestamp = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

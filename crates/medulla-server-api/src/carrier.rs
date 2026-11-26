@@ -37,6 +37,9 @@ pub struct CarrierAuthority {
     /// compile the kernel-owned mutation envelope.
     attempt_nonce: Option<Nonce>,
     idempotency_key: String,
+    /// The persistence id of the host that signed the request when it acts under an agent-run
+    /// delegation (MEDULLA-IDENTITY-R744); the actor above is then the delegation's principal.
+    acting_host_scope: Option<String>,
     admin: bool,
     can_read: bool,
     can_write: bool,
@@ -97,6 +100,9 @@ impl CarrierAuthority {
         roles.sort();
         let mut sorted_scopes = context.claims().scopes.clone();
         sorted_scopes.sort();
+        let acting_host_scope = context.acting_host().map(|host| {
+            crate::mutation_batch::identity_metadata::principal_persistence_id(&host.principal)
+        });
         let mut authority_fields: Vec<&[u8]> = vec![
             tenant.as_bytes(),
             principal.as_bytes(),
@@ -108,6 +114,11 @@ impl CarrierAuthority {
         ];
         authority_fields.extend(roles.iter().map(String::as_bytes));
         authority_fields.extend(sorted_scopes.iter().map(String::as_bytes));
+        if let Some(host) = acting_host_scope.as_deref() {
+            // Bound only when present, so a request that acts as itself keeps its digest.
+            authority_fields.push(b"eg/carrier-acting-host/v1");
+            authority_fields.push(host.as_bytes());
+        }
         let authority_digest = Digest256::framed(b"eg/carrier-authority/v1", &authority_fields)?;
         let scopes = &context.claims().scopes;
         let admin = scopes
@@ -138,6 +149,7 @@ impl CarrierAuthority {
             authority_digest,
             attempt_nonce: context.attempt_nonce(),
             idempotency_key: context.idempotency_key().to_string(),
+            acting_host_scope,
             admin,
             can_read,
             can_write,
@@ -178,6 +190,12 @@ impl CarrierAuthority {
     /// separate from `actor_scope`, which is the durable principal catalog key.
     pub fn effective_actor_scope(&self) -> &str {
         &self.agent_id
+    }
+
+    /// The persistence id of the host acting on behalf of [`Self::actor_scope`] under an
+    /// agent-run delegation, or `None` when the request acts as itself.
+    pub fn acting_host_scope(&self) -> Option<&str> {
+        self.acting_host_scope.as_deref()
     }
 
     pub fn delegation_digest(&self) -> Digest256 {

@@ -55,6 +55,10 @@ const SHARED_SERVER_ERRORS: &[&str] = &[
     "OBJECT_PUBLISH_STALE",
     // So can a write over a graph with no catalog row to publish under.
     "OBJECT_GRAPH_IDENTITY_MISSING",
+    // Any request can name an agent-run delegation in its signed envelope and meet the one
+    // refusal for an unusable delegation, or a queue that cannot audit it (MEDULLA-IDENTITY-R744).
+    "DELEGATION_INVALID",
+    "AUDIT_UNAVAILABLE",
     // A restore from the object root refuses a graph sealed under a key this store lacks.
     "OBJECT_SEAL_KEY_MISSING",
 ];

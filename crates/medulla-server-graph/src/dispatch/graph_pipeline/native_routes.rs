@@ -1048,6 +1048,15 @@ async fn route_graph_audit_and_modality(
                 Ok(status) => status,
                 Err(error) => return Ok(Response::err(ctx.req_id, error)),
             };
+            // MEDULLA-IDENTITY-R744: a request acting under an agent-run delegation records the
+            // host that signed it beside the principal it acts for, whatever the caller sent.
+            let mut evidence = evidence;
+            if let Some(host) = authority.acting_host_scope() {
+                evidence.insert("acting_host".to_string(), host.to_string());
+            } else {
+                // The key is the engine's own: a caller never states a host it is not acting as.
+                evidence.remove("acting_host");
+            }
             let event = medulla_store::redb_store::OperationAuditEvent {
                 tenant: authority.tenant_scope().to_string(),
                 principal: authority.actor_scope().to_string(),

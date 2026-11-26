@@ -50,6 +50,7 @@ mod verdict;
 mod webauthn;
 mod wire_logins;
 
+pub use delegation::DelegatedActor;
 pub use throttle::ThrottleEntry;
 
 /// Session and API-key "last used" stamps move at most once per minute, so a

@@ -34,6 +34,20 @@ pub struct VerifiedRequestContext {
     wire_nonce: Option<Nonce>,
     scope_index: HashSet<String>,
     scope_wildcard_domains: HashSet<String>,
+    /// The host that signed the request when it acts under an agent-run delegation
+    /// (MEDULLA-IDENTITY-R744); `None` for every request that acts as itself. Set only by
+    /// [`VerifiedRequestContext::acting_under_delegation`], never caller-set.
+    acting_host: Option<ActingHost>,
+}
+
+/// The signer of a request that acts for another principal under an agent-run delegation: the
+/// identity the audit records as the actor on behalf of the delegation's principal.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ActingHost {
+    /// The authenticated principal of the signing host.
+    pub principal: String,
+    /// The effective agent the signing host presented.
+    pub agent_id: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -64,6 +78,7 @@ impl VerifiedRequestContext {
                 delegation: Vec::new(),
                 node: None,
                 priority: None,
+                delegation_id: None,
             },
             idempotency_key.unwrap_or_else(|| format!("anonymous:{}", nonce.to_hex())),
             Some(nonce),
@@ -96,6 +111,7 @@ impl VerifiedRequestContext {
                 delegation: Vec::new(),
                 node: None,
                 priority: None,
+                delegation_id: None,
             },
             idempotency_key,
             Some(nonce),
@@ -131,7 +147,55 @@ impl VerifiedRequestContext {
             wire_nonce,
             scope_index,
             scope_wildcard_domains,
+            acting_host: None,
         }
+    }
+
+    /// The agent-run delegation the signed envelope names, if any (MEDULLA-IDENTITY-R744). A
+    /// claim only: the dispatch chokepoint verifies it against the identity store and replaces
+    /// this context with [`Self::acting_under_delegation`].
+    pub fn delegation_claim(&self) -> Option<&str> {
+        self.claims.delegation_id.as_deref()
+    }
+
+    /// The host that signed this request, when it acts under a verified delegation.
+    pub fn acting_host(&self) -> Option<&ActingHost> {
+        self.acting_host.as_ref()
+    }
+
+    /// The context a verified agent-run delegation runs a request under (MEDULLA-IDENTITY-R744):
+    /// the principal and effective agent are the delegation's principal, the roles are the roles
+    /// that principal holds, and the scopes are exactly the delegation's operations, so nothing
+    /// outside them passes the method gate. The signing host is kept as [`Self::acting_host`].
+    /// Tenant, audience, policy version, idempotency key and nonce are the signed request's.
+    /// A context already acting under a delegation cannot be delegated again.
+    pub fn acting_under_delegation(
+        &self,
+        principal: &str,
+        roles: Vec<String>,
+        operations: Vec<String>,
+    ) -> Option<Self> {
+        if self.acting_host.is_some() {
+            return None;
+        }
+        let mut claims = self.claims.clone();
+        let host = ActingHost {
+            principal: claims.principal.clone(),
+            agent_id: claims.agent_id.clone(),
+        };
+        claims.principal = principal.to_string();
+        claims.agent_id = principal.to_string();
+        claims.roles = roles;
+        claims.scopes = operations;
+        claims.delegation = Vec::new();
+        let mut acting = Self::from_verified_claims_with_nonce(
+            claims,
+            self.idempotency_key.clone(),
+            self.wire_nonce,
+        );
+        acting.origin = self.origin;
+        acting.acting_host = Some(host);
+        Some(acting)
     }
 
     /// Reconstruct the privacy-safe authority carried by a committed Raft entry.
@@ -157,6 +221,7 @@ impl VerifiedRequestContext {
                 delegation: Vec::new(),
                 node: None,
                 priority: None,
+                delegation_id: None,
             },
             authority.batch_id.clone(),
             authority.attempt_nonce,
@@ -424,6 +489,7 @@ impl VerifiedRequestContext {
                 delegation: Vec::new(),
                 node: None,
                 priority: None,
+                delegation_id: None,
             },
             format!("broker-request:{request_id}"),
         ))
@@ -457,6 +523,7 @@ impl VerifiedRequestContext {
                 delegation: Vec::new(),
                 node: None,
                 priority: None,
+                delegation_id: None,
             },
             format!("resp-request:{request_id}"),
         ))
@@ -483,6 +550,7 @@ impl VerifiedRequestContext {
                 delegation: Vec::new(),
                 node: None,
                 priority: None,
+                delegation_id: None,
             },
             format!("local-query:{request_id}"),
         ))
@@ -514,6 +582,7 @@ impl VerifiedRequestContext {
                 delegation: Vec::new(),
                 node: None,
                 priority: None,
+                delegation_id: None,
             },
             format!("{service}-session"),
         ))
@@ -607,6 +676,7 @@ impl VerifiedRequestContext {
                 delegation: Vec::new(),
                 node: None,
                 priority: None,
+                delegation_id: None,
             },
             format!("iceberg-rest-session:{subject}"),
         ))
@@ -661,6 +731,7 @@ impl VerifiedRequestContext {
                 delegation: Vec::new(),
                 node: None,
                 priority: None,
+                delegation_id: None,
             },
             idempotency_key,
         ))
@@ -683,6 +754,7 @@ pub fn signed_test_claims(agent: &str) -> RequestContextClaims {
         delegation: Vec::new(),
         node: None,
         priority: None,
+        delegation_id: None,
     }
 }
 

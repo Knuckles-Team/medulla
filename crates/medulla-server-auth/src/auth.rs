@@ -711,6 +711,7 @@ fn sign_test_request_with_context(
         delegation: Vec::new(),
         node: None,
         priority: None,
+        delegation_id: None,
     };
     let nonce = format!(
         "rust-unit-{}-{}",
@@ -2046,6 +2047,7 @@ mod tests {
             delegation: vec![],
             node: None,
             priority: None,
+            delegation_id: None,
         }
     }
 
@@ -3319,6 +3321,7 @@ mod tests {
                 delegation: vec![],
                 node: None,
                 priority: None,
+                delegation_id: None,
             }
         }
 

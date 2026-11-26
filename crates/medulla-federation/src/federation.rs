@@ -2708,6 +2708,7 @@ mod envelope_signer_tests {
             delegation: vec![],
             node: None,
             priority: None,
+            delegation_id: None,
         }
     }
 

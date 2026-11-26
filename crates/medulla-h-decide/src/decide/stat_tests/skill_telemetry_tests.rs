@@ -481,6 +481,7 @@ fn person(name: &str, tenant: &str, scopes: &[&str]) -> VerifiedRequestContext {
             delegation: Vec::new(),
             node: None,
             priority: None,
+            delegation_id: None,
         },
         format!("test:{name}"),
     )

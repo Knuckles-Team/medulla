@@ -26024,6 +26024,7 @@ class RequestContextClaims(BaseModel):
     agent_id: str
     audience: str
     delegation: list[str]
+    delegation_id: str | None = None
     node: str | None = None
     policy_version: str
     principal: str

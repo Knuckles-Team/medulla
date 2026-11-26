@@ -417,6 +417,7 @@ async fn cluster_members_reports_topology_and_tracks_leader_failover() {
             delegation: Vec::new(),
             node: None,
             priority: None,
+            delegation_id: None,
         };
         let mut request = Request {
             id,
@@ -932,6 +933,7 @@ mod placement_admin_wire_rpc {
             delegation: Vec::new(),
             node: None,
             priority: None,
+            delegation_id: None,
         };
         let mut request = medulla_protocol_types::protocol::Request {
             id,

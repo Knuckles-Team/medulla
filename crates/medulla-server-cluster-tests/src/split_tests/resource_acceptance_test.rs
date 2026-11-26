@@ -536,6 +536,7 @@ fn signed_request_as(request_id: u64, agent_id: &str, method: Method) -> Request
         delegation: Vec::new(),
         node: None,
         priority: None,
+        delegation_id: None,
     };
     let mut request = Request {
         id: request_id,

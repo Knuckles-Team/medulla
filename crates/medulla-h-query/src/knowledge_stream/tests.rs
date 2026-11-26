@@ -30,6 +30,7 @@ fn verified_authority_exposes_only_keyed_opaque_references() {
         ],
         node: None,
         priority: None,
+        delegation_id: None,
     };
     let authority = KnowledgeStreamAuthority::from_verified("server-secret", &claims).unwrap();
     for reference in [&authority.tenant_ref, &authority.access_policy_ref] {

@@ -34,6 +34,17 @@ fn agent_run_shape(record: &DelegationRecord, now_ms: u64) -> Result<(), Identit
     Ok(())
 }
 
+/// Who a request acts as under an agent-run delegation (MEDULLA-IDENTITY-R744).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DelegatedActor {
+    /// The principal the run acts for.
+    pub principal: String,
+    /// The roles the principal holds right now.
+    pub roles: Vec<String>,
+    /// The operations the delegation bounds the run to, sorted.
+    pub operations: Vec<String>,
+}
+
 impl IdentityStore {
     pub(super) fn apply_delegation(
         &mut self,
@@ -147,6 +158,34 @@ impl IdentityStore {
             standing,
             principal_active,
             holds_tool_scope,
+        })
+    }
+
+    /// The actor an agent-run delegation lets a host act as, or `None` for every reason the
+    /// delegation cannot be used: no such record in `tenant` (a record of another tenant reads
+    /// as absent), a record of another kind, a revoked or expired delegation, an inactive
+    /// principal, or an operation the principal no longer holds. The one answer for every
+    /// refusal keeps the read from being an existence oracle (MEDULLA-IDENTITY-R744).
+    pub fn delegated_actor(
+        &self,
+        delegation_id: &str,
+        tenant: &str,
+        now_ms: u64,
+        classifier: &dyn ScopeClassifier,
+    ) -> Option<DelegatedActor> {
+        let state = self.delegation_state(delegation_id, tenant, now_ms, classifier)?;
+        let usable = state.record.kind == DelegationKind::AgentRun
+            && state.standing == DelegationStanding::Active
+            && state.principal_active
+            && state.holds_tool_scope;
+        if !usable {
+            return None;
+        }
+        let resolved = self.resolve(&state.record.principal, classifier).ok()?;
+        Some(DelegatedActor {
+            principal: state.record.principal,
+            roles: resolved.roles.into_iter().collect(),
+            operations: state.record.operations.into_iter().collect(),
         })
     }
 }

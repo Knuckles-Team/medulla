@@ -65,6 +65,15 @@ pub struct RequestContextClaims {
     /// identical to before (absent, not a hard error) — fully additive.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub priority: Option<String>,
+    /// The agent-run delegation this request acts under (MEDULLA-IDENTITY-R744): the id of a
+    /// `DelegationKind::AgentRun` record of the tenant. When present the engine verifies the
+    /// delegation at the dispatch chokepoint and runs the request as the delegation's principal,
+    /// bounded to the delegation's operations, with the signing host recorded as the actor on
+    /// behalf of that principal. It is **MAC-covered** (a distinct tag-`3` optional trailer of
+    /// `build_envelope_v2_bytes`, after the node and priority trailers), so a captured envelope
+    /// cannot gain or drop a delegation. Absent encodes byte-for-byte as before.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub delegation_id: Option<String>,
 }
 
 /// Role of an agent in the system hierarchy.

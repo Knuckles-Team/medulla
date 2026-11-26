@@ -12,6 +12,7 @@ fn node_binding_fixture_claims() -> medulla_identity_types::acl::RequestContextC
         delegation: vec![],
         node: None,
         priority: None,
+        delegation_id: None,
     }
 }
 
@@ -146,6 +147,62 @@ fn envelope_v2_bytes_cover_the_priority_claim_without_node_collision() {
     let both_bytes = build_envelope_v2_bytes(7, "g", "Ping", "hash", &both, 111, "nonce", "idem");
     assert_ne!(both_bytes, node_only);
     assert_ne!(both_bytes, prio_only2);
+}
+
+// spec: MEDULLA-IDENTITY-R744
+// The delegation claim is additive and MAC-covered: absent it encodes as before, present it
+// changes the bytes, and its tag keeps it distinct from the node and priority trailers.
+#[test]
+fn envelope_v2_bytes_cover_the_delegation_claim_without_trailer_collision() {
+    let base = node_binding_fixture_claims();
+    let absent = build_envelope_v2_bytes(7, "g", "Ping", "hash", &base, 111, "nonce", "idem");
+
+    let mut delegated = base.clone();
+    delegated.delegation_id = Some("delegation:1".into());
+    let with = build_envelope_v2_bytes(7, "g", "Ping", "hash", &delegated, 111, "nonce", "idem");
+    assert_ne!(
+        absent, with,
+        "a present delegation id must change the MAC-covered bytes"
+    );
+    assert!(
+        with.starts_with(&absent),
+        "the trailer is appended, never interleaved"
+    );
+    assert_eq!(with[absent.len()], 3, "the delegation trailer is tag 3");
+
+    let mut other = base.clone();
+    other.delegation_id = Some("delegation:2".into());
+    let other_bytes = build_envelope_v2_bytes(7, "g", "Ping", "hash", &other, 111, "nonce", "idem");
+    assert_ne!(
+        with, other_bytes,
+        "different delegations must not share an encoding"
+    );
+
+    // The same value under the node, priority and delegation claims never collides.
+    let mut node_x = base.clone();
+    node_x.node = Some("X".into());
+    let mut prio_x = base.clone();
+    prio_x.priority = Some("X".into());
+    let mut deleg_x = base.clone();
+    deleg_x.delegation_id = Some("X".into());
+    let bytes = [&node_x, &prio_x, &deleg_x]
+        .map(|c| build_envelope_v2_bytes(7, "g", "Ping", "hash", c, 111, "nonce", "idem"));
+    assert_ne!(bytes[0], bytes[2]);
+    assert_ne!(bytes[1], bytes[2]);
+
+    // All three trailers present: node, then priority, then delegation.
+    let mut all = base.clone();
+    all.node = Some("X".into());
+    all.priority = Some("interactive".into());
+    all.delegation_id = Some("X".into());
+    let all_bytes = build_envelope_v2_bytes(7, "g", "Ping", "hash", &all, 111, "nonce", "idem");
+    let node_prio = {
+        let mut c = base.clone();
+        c.node = Some("X".into());
+        c.priority = Some("interactive".into());
+        build_envelope_v2_bytes(7, "g", "Ping", "hash", &c, 111, "nonce", "idem")
+    };
+    assert!(all_bytes.starts_with(&node_prio));
 }
 
 #[test]

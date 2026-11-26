@@ -172,6 +172,7 @@ pub fn compose_resolution(
         delegation: Vec::new(),
         node: None,
         priority: None,
+        delegation_id: None,
     };
     validate_policy(&claims, policy)?;
     Ok(resolution.with_request_context(claims))

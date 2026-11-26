@@ -51,6 +51,7 @@ fn signed_graphql_request(id: u64, query: &str, nonce: &str, idempotency_key: &s
         delegation: Vec::new(),
         node: None,
         priority: None,
+        delegation_id: None,
     };
     let mut request = Request {
         id,
