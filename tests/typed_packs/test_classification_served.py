@@ -122,6 +122,7 @@ def served():
             admin.close()
 
 
+# proves R652.3: Wiring
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R652")
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R652.3")
 def test_methods_reach_handler_and_promotion_stamps_marking(served) -> None:
@@ -135,7 +136,11 @@ def test_methods_reach_handler_and_promotion_stamps_marking(served) -> None:
     promoted = _op(
         client,
         graph,
-        {"op": "promote", "claim_id": _claim_id(asset, "pii"), "evidence": ["review:1"]},
+        {
+            "op": "promote",
+            "claim_id": _claim_id(asset, "pii"),
+            "evidence": ["review:1"],
+        },
     )
     assert promoted["record"]["claim"]["state"] == "promoted"
     assert promoted["record"]["after_markings"] == ["pii"]
@@ -143,11 +148,14 @@ def test_methods_reach_handler_and_promotion_stamps_marking(served) -> None:
 
     _node(client, graph, "marking:secret", {"type": "Marking"})
     _op(client, graph, {"op": "propose", "claim": _claim(asset, "secret")})
-    rejected = _op(client, graph, {"op": "reject", "claim_id": _claim_id(asset, "secret")})
+    rejected = _op(
+        client, graph, {"op": "reject", "claim_id": _claim_id(asset, "secret")}
+    )
     assert rejected["record"]["claim"]["state"] == "rejected"
     assert _props(client, graph, asset)["_markings"] == ["pii"]
 
 
+# proves R652.4: Refusal
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R652.4")
 def test_missing_evidence_illegal_state_and_unknown_marking_refuse(served) -> None:
     """Verifies MEDULLA-TYPED-PACKS-R652.4: each refusal code, and no change."""
@@ -167,25 +175,36 @@ def test_missing_evidence_illegal_state_and_unknown_marking_refuse(served) -> No
     plain = _connect(None, roles=["test"])
     try:
         with pytest.raises(Exception, match="STEWARD_ROLE_MISSING"):
-            _op(plain, graph, {"op": "promote", "claim_id": claim_id, "evidence": ["x"]})
+            _op(
+                plain, graph, {"op": "promote", "claim_id": claim_id, "evidence": ["x"]}
+            )
     finally:
         plain.close()
 
-    _op(client, graph, {"op": "promote", "claim_id": claim_id, "evidence": ["review:1"]})
+    _op(
+        client, graph, {"op": "promote", "claim_id": claim_id, "evidence": ["review:1"]}
+    )
     with pytest.raises(Exception, match="CLAIM_STATE_ILLEGAL"):
         _op(client, graph, {"op": "reject", "claim_id": claim_id})
     with pytest.raises(Exception, match="CLAIM_STATE_ILLEGAL"):
         _op(client, graph, {"op": "promote", "claim_id": claim_id, "evidence": ["y"]})
 
 
+# proves R652.5: Evidence
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R652.5")
 def test_marking_sets_and_promoter_read_back(served) -> None:
     """Verifies MEDULLA-TYPED-PACKS-R652.5: the claim node records the evidence."""
     graph, client = served
     asset = "col:orders.email"
     claim_id = _claim_id(asset, "pii")
-    _op(client, graph, {"op": "propose", "claim": _claim(asset, "pii", evidence=["scan:1"])})
-    _op(client, graph, {"op": "promote", "claim_id": claim_id, "evidence": ["review:1"]})
+    _op(
+        client,
+        graph,
+        {"op": "propose", "claim": _claim(asset, "pii", evidence=["scan:1"])},
+    )
+    _op(
+        client, graph, {"op": "promote", "claim_id": claim_id, "evidence": ["review:1"]}
+    )
 
     node = _props(client, graph, claim_id)
     assert node["state"] == "promoted"
@@ -200,6 +219,7 @@ def _readable_ids(client: Any, label: str) -> list[str]:
     return sorted(row["id"] for row in result["rows"])
 
 
+# proves R652.6: Hot-path proof
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R652.6")
 def test_claim_propose_propagate_promote_and_redacted_read(served) -> None:
     """Verifies MEDULLA-TYPED-PACKS-R652.6: promotion proposes claims downstream; a
@@ -218,7 +238,11 @@ def test_claim_propose_propagate_promote_and_redacted_read(served) -> None:
     result = _op(
         client,
         graph,
-        {"op": "promote", "claim_id": _claim_id(asset, "pii"), "evidence": ["review:1"]},
+        {
+            "op": "promote",
+            "claim_id": _claim_id(asset, "pii"),
+            "evidence": ["review:1"],
+        },
     )
     downstream = {record["claim"]["asset"]: record for record in result["propagated"]}
     assert set(downstream) == {"view:orders_v", "dash:orders_d"}

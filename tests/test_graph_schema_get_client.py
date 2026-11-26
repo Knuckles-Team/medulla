@@ -62,6 +62,7 @@ def test_get_refuses_a_missing_key_and_extra_fields_before_sending() -> None:
     assert not transport.sent
 
 
+# proves R813.5: Python mirror: GraphSchemaSourceView.provenance_redacted
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R813.5")
 def test_get_decodes_the_redaction_marker_and_defaults_it_off() -> None:
     plain = GraphSchemaSourceDocumentsView.model_validate(DOCUMENTS)

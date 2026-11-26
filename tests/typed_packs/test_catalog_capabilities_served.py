@@ -571,6 +571,7 @@ def _classification(client, graph: str, op: dict) -> dict:
     )
 
 
+# proves R108.9: Sensitivity propagation and policy link
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.9")
 def test_sensitivity_propagates_downstream_as_proposal_and_asset_names_its_policy(
     catalog_graph,
@@ -942,6 +943,7 @@ def test_registered_catalog_queries_browse_search_and_detail_hide_unreadable_ass
             admin.close()
 
 
+# proves R108.11: Metric and KPI definitions
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.11")
 def test_metric_formula_binds_terms_and_unknown_term_refuses(catalog_graph):
     """Verifies MEDULLA-TYPED-PACKS-R108.11: a metric formula names glossary terms by label."""

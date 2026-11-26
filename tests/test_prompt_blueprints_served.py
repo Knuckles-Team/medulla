@@ -155,6 +155,7 @@ async def _record(client: MedullaClient, effect: AgentComponentOpRecordSourceEff
     )
 
 
+# proves R094.8: Record the source-effect receipt on the component revision
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.8")
 @pytest.mark.asyncio
 async def test_source_effect_receipt_is_recorded_once() -> None:
@@ -224,6 +225,7 @@ class _LoopbackRepositoryConnector:
         }
 
 
+# proves R094.7: Approved repository-source effect dependency
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.7")
 @pytest.mark.asyncio
 async def test_approved_source_effect_dependency() -> None:
@@ -738,6 +740,7 @@ async def _head(client: MedullaClient, component_id: str) -> int:
     return current.entry_revision
 
 
+# proves R094.3: Modified native blueprint import
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R094.3")
 @pytest.mark.asyncio
 async def test_modified_blueprint_import() -> None:
@@ -1110,6 +1113,7 @@ async def _refused_for_tenant_b(
             assert secret not in str(error.value)
 
 
+# proves R002.11: Durable prompt restart proof
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R002.11")
 @pytest.mark.no_engine
 def test_prompt_restart_readback(tmp_path: Path) -> None:

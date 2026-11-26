@@ -56,6 +56,7 @@ async fn import_body(served: &Served, connector: &str, body: &Value) -> PackImpo
     ok("Import", import(served, &pack, None).await)
 }
 
+// proves R097.2.7.3: External schema import wiring and refusals
 // spec: MEDULLA-TYPED-PACKS-R097.2.7.3
 #[tokio::test]
 async fn refusals_leave_head_and_schema_unchanged() {

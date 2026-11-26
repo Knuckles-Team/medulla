@@ -70,6 +70,7 @@ def _table(client: Any, graph: str) -> str:
     return table
 
 
+# proves R803.3: Job wiring
 # spec: MEDULLA-TYPED-PACKS-R803.6
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R803")
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R803.3")
@@ -98,6 +99,7 @@ def test_profile_job_proposes_claim_without_values(start_medulla_server) -> None
         client.close()
 
 
+# proves R803.4: Refusals
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R803.4")
 def test_detector_and_promotion_refusals(start_medulla_server) -> None:
     """Verifies MEDULLA-TYPED-PACKS-R803.4: an invalid detector fails the job, no claim."""

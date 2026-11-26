@@ -320,7 +320,8 @@ def test_shape_and_freshness_scored(start_medulla_server) -> None:
 
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R762.6")
 def test_hundred_rules_over_a_native_dataset(start_medulla_server) -> None:
-    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R762.6: 100 rules over 100,000 native rows."""
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R762.6: 100 rules over 100,000 native
+    rows."""
     client = _client()
     graph = f"quality-{uuid.uuid4().hex[:8]}"
     table = f"q100_{uuid.uuid4().hex[:8]}"
@@ -344,19 +345,22 @@ def test_hundred_rules_over_a_native_dataset(start_medulla_server) -> None:
             receipt = _decode(client._send("QualityRulePut", {"rule": rule}, graph))
             assert receipt["rule_id"] == rule["id"]
 
-        rows = _evaluate(client, graph, table)
-        assert len(rows) == 100
-        assert sorted(row["rule"] for row in rows) == [f"r{n:03d}" for n in range(100)]
-        assert all(isinstance(row["passed"], bool) for row in rows)
+        evaluated = _evaluate(client, graph, table)
+        assert len(evaluated) == 100
+        assert sorted(row["rule"] for row in evaluated) == [
+            f"r{n:03d}" for n in range(100)
+        ]
+        assert all(isinstance(row["passed"], bool) for row in evaluated)
         # `v >= N` holds for at least half the rows only when N <= 50.
-        assert sum(1 for row in rows if row["passed"]) == 51
+        assert sum(1 for row in evaluated if row["passed"]) == 51
     finally:
         client.tenants.delete(graph)
         client.close()
 
 
 def _outside_declaration(connector: str) -> Any:
-    """A `QualityScore` mapping: `checker`, `rule` and `score` name the score's properties."""
+    """A `QualityScore` mapping: `checker`, `rule` and `score` name the score's
+    properties."""
     from medulla import ConnectorPackEntryContent
     from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
 
@@ -386,7 +390,9 @@ def _outside_declaration(connector: str) -> Any:
     )
 
 
-def _outside_batch(connector: str, page: int, previous: int | None, payload: dict) -> dict:
+def _outside_batch(
+    connector: str, page: int, previous: int | None, payload: dict
+) -> dict:
     stream = "scores"
     checkpoint = lambda n: {  # noqa: E731
         "stream": stream,
@@ -418,14 +424,17 @@ def _outside_batch(connector: str, page: int, previous: int | None, payload: dic
         "relationships": [],
         "withdrawals": [],
         "provider_checkpoint": checkpoint(page),
-        "expected_previous_checkpoint": None if previous is None else checkpoint(previous),
+        "expected_previous_checkpoint": None
+        if previous is None
+        else checkpoint(previous),
     }
 
 
 @pytest.mark.spec("MEDULLA-UNIFIED-DATA-PLANE-R762.8")
 @pytest.mark.asyncio
 async def test_outside_scores_open_incident(start_medulla_server) -> None:
-    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R762.8: three failing outside scores open one incident."""
+    """Verifies MEDULLA-UNIFIED-DATA-PLANE-R762.8: three failing outside scores open
+    one incident."""
     import sys
     from pathlib import Path
 
@@ -460,7 +469,10 @@ async def test_outside_scores_open_incident(start_medulla_server) -> None:
 
         async def submit(page: int, previous: int | None, **payload: Any) -> Any:
             batch = _outside_batch(
-                connector, page, previous, {"id": page, "checker": "outside-dq", **payload}
+                connector,
+                page,
+                previous,
+                {"id": page, "checker": "outside-dq", **payload},
             )
             return await client._send(
                 "SourceIngest",
@@ -482,7 +494,9 @@ async def test_outside_scores_open_incident(start_medulla_server) -> None:
         incidents = await client.nodes.list_by_label("Incident", 0)
         assert len(incidents) == 1
         incident_id = incidents[0][0]
-        record = _decode(await client._send("IncidentEvidence", {"incident_id": incident_id}))
+        record = _decode(
+            await client._send("IncidentEvidence", {"incident_id": incident_id})
+        )
         assert record["tenant"] == TEST_TENANT
 
         scores = [
@@ -498,9 +512,11 @@ async def test_outside_scores_open_incident(start_medulla_server) -> None:
         await client.close()
 
 
+# proves R805.5: Evidence
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R805.5")
 def test_violation_evidence_reads_back(start_medulla_server) -> None:
-    """Verifies MEDULLA-TYPED-PACKS-R805.5: a broken quality promise leaves a violation node."""
+    """Verifies MEDULLA-TYPED-PACKS-R805.5: a broken quality promise leaves a
+    violation node."""
     client = _client()
     graph = f"quality-{uuid.uuid4().hex[:8]}"
     table = f"orders_{uuid.uuid4().hex[:8]}"

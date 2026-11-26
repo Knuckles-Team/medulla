@@ -35,7 +35,6 @@ from test_connector_pack_planted import (
 from test_connector_pack_planted import (
     _bind,
     _check,
-    _context,
     _import,
     _pack_op,
 )
@@ -43,6 +42,7 @@ from test_connector_pack_planted import (
 from medulla import ConnectorPackEntryContent
 from medulla.client import EngineResponseError, MedullaClient
 from medulla.fleet_catalog import FleetCatalogClient
+from medulla.generated import reasoning
 from medulla.generated.connector_pack import (
     ConformanceEvidence,
     PackAnnotations,
@@ -50,19 +50,18 @@ from medulla.generated.connector_pack import (
     PackHeadRef,
     PackRef,
 )
-from medulla.generated import reasoning
+from medulla.generated.fleet_catalog import (
+    DiscoveryCounts,
+    DiscoveryOutcomeReachable,
+    DiscoveryScopeTenantLocal,
+    FleetDiscoveryRecordRequest,
+)
 from medulla.testing.synthetic.packs import content as synthetic_content
 from medulla.testing.synthetic.packs.malformed import (
     added,
     base_spec,
     case,
     first,
-)
-from medulla.generated.fleet_catalog import (
-    DiscoveryCounts,
-    DiscoveryOutcomeReachable,
-    DiscoveryScopeTenantLocal,
-    FleetDiscoveryRecordRequest,
 )
 
 ABSENT = "CONFORMANCE_EVIDENCE_ABSENT"
@@ -80,7 +79,9 @@ def _file(graph: str, path: str, text: str) -> ConnectorPackEntryContent:
         media_type="application/json" if path.endswith(".json") else "text/markdown",
         body=text.encode(),
         annotations=PackAnnotations(),
-        references=(PackRef(kind=PackEntryKind.SKILL, uri=f"skill://{graph}/SKILL.md"),),
+        references=(
+            PackRef(kind=PackEntryKind.SKILL, uri=f"skill://{graph}/SKILL.md"),
+        ),
     )
 
 
@@ -91,7 +92,10 @@ def _graph_entries(
     with_index: bool = True,
     ghost_path: bool = False,
 ) -> list[ConnectorPackEntryContent]:
-    skill_md = f"---\nname: {graph}\ndescription: A graph skill.\nskill_type: graph\n---\n# {graph}\n"
+    skill_md = (
+        f"---\nname: {graph}\ndescription: A graph skill.\n"
+        f"skill_type: graph\n---\n# {graph}\n"
+    )
     reference = "reference one\n"
     index = json.dumps({"sections": [{"path": "reference/one.md"}]})
     declared = {
@@ -269,7 +273,9 @@ def _plain_skill(name: str) -> ConnectorPackEntryContent:
         uri=f"skill://{name}/SKILL.md",
         name=name,
         media_type="text/markdown",
-        body=f"---\nname: {name}\ndescription: A plain skill.\n---\n# {name}\n".encode(),
+        body=(
+            f"---\nname: {name}\ndescription: A plain skill.\n---\n# {name}\n"
+        ).encode(),
         annotations=PackAnnotations(),
     )
 
@@ -299,6 +305,7 @@ async def test_bad_hash_refused_and_conformant_pack_imports() -> None:
         await client.close()
 
 
+# proves R700.8: Graph reference files import as skill files
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R700.8")
 @pytest.mark.asyncio
 async def test_graph_files_import_and_limit_refuses() -> None:
@@ -359,6 +366,7 @@ def _layer_turtle(iri: str) -> str:
     )
 
 
+# proves R701.3: Wiring
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R701.3")
 @pytest.mark.asyncio
 async def test_layer_classes_read_through_core_class() -> None:
@@ -383,6 +391,7 @@ async def test_layer_classes_read_through_core_class() -> None:
         await client.close()
 
 
+# proves R701.4: Refusal
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R701.4")
 @pytest.mark.asyncio
 async def test_layer_refusals_leave_state_unchanged() -> None:
@@ -431,6 +440,7 @@ async def test_layer_refusals_leave_state_unchanged() -> None:
         await client.close()
 
 
+# proves R701.5: Hot-path proof
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R701.5")
 @pytest.mark.asyncio
 async def test_layered_graph_imports_and_orphan_layer_refuses() -> None:
@@ -477,7 +487,9 @@ async def test_layered_graph_imports_and_orphan_layer_refuses() -> None:
             _graph_entries(graph)
             + [ontology_entry(importing, f"skillgraph/{graph}", core_turtle)],
         )
-        assert "ONTOLOGY_PACK_IMPORTS_CORE" in violation_codes(refused_core), refused_core
+        assert "ONTOLOGY_PACK_IMPORTS_CORE" in violation_codes(refused_core), (
+            refused_core
+        )
 
         for connector in (orphan, importing):
             with pytest.raises(EngineResponseError, match=ABSENT):

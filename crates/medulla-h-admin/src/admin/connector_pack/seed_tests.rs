@@ -370,6 +370,7 @@ mod served {
         assert_eq!(pack_graph_rdf(&served, "seed:second").await, projected);
     }
 
+    // proves R104.5: Seed graph receipt
     // spec: MEDULLA-TYPED-PACKS-R104.5
     #[tokio::test]
     async fn receipt_names_part_outcomes() {

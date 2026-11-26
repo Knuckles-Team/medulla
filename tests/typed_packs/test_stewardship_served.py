@@ -307,6 +307,7 @@ def _score(client: Any, asset: str, text: str) -> float:
     return scores[0] if scores else 0.0
 
 
+# proves R802.7: Trust flags on assets
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R802.7")
 def test_deprecation_lowers_rank_and_emits_event(served) -> None:
     """Verifies MEDULLA-TYPED-PACKS-R802.7: a deprecation lowers the asset's rank, a

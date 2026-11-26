@@ -83,6 +83,7 @@ def _entry(connector: str, body: dict) -> ConnectorPackEntryContent:
     )
 
 
+# proves R097.2.7.4: External schema import hot-path proof
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R097.2.7.4")
 def test_mapped_and_unmapped_terms_of_every_kind() -> None:
     async def exercise() -> None:

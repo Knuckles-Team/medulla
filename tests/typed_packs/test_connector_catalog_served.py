@@ -132,6 +132,7 @@ def test_catalog_batch_is_validated_by_the_guard_and_found_by_query(catalog_grap
     assert _tool_ids(admin) == {TOOL}
 
 
+# proves R106.4: Refusal
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R106.4")
 def test_unresolved_class_unowned_resource_unpaired_edge_and_oversize_batch_refuse(
     catalog_graph,
@@ -163,6 +164,7 @@ def test_unresolved_class_unowned_resource_unpaired_edge_and_oversize_batch_refu
     assert _tool_ids(admin) == {TOOL}
 
 
+# proves R106.5: Evidence
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R106.5")
 def test_asset_carries_digest_version_revision_and_class_counts(catalog_graph):
     """Verifies MEDULLA-TYPED-PACKS-R106.5: the asset keeps its digest and pack version, and

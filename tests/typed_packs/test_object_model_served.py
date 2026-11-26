@@ -94,6 +94,7 @@ async def _import_and_attach(
     return client
 
 
+# proves R650.3: Wiring
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R650.3")
 def test_import_compiles_shapes_and_graph_schema_classes_reports_interfaces() -> None:
     async def exercise() -> None:
@@ -143,6 +144,7 @@ async def _add(client: MedullaClient, base: str, body: str) -> None:
     await client.rdf.add_triples(turtle=DATA.format(base=base) + body)
 
 
+# proves R650.4: Refusal
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R650.4")
 def test_value_link_and_interface_violations_refuse_with_unchanged_state() -> None:
     async def exercise() -> None:
@@ -209,6 +211,7 @@ def test_value_link_and_interface_violations_refuse_with_unchanged_state() -> No
     asyncio.run(exercise())
 
 
+# proves R650.5: Evidence
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R650.5")
 def test_refusal_carries_rule_path_and_value_digest() -> None:
     async def exercise() -> None:
@@ -245,6 +248,7 @@ def test_refusal_carries_rule_path_and_value_digest() -> None:
     asyncio.run(exercise())
 
 
+# proves R650.6: Hot-path proof
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R650.6")
 def test_pack_value_link_interface_declarations_are_enforced_on_write() -> None:
     async def exercise() -> None:

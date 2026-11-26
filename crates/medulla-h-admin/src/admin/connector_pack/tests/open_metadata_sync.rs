@@ -70,6 +70,7 @@ fn terms() -> Vec<Value> {
     ]
 }
 
+// proves R110.7: Open metadata evidence on every synced node
 // spec: MEDULLA-TYPED-PACKS-R110.7
 #[tokio::test]
 async fn nodes_keep_guid_version_and_source() {
@@ -97,6 +98,7 @@ async fn nodes_keep_guid_version_and_source() {
     assert_eq!((again.unchanged, again.applied, again.proposed), (2, 0, 0));
 }
 
+// proves R110.8: Open metadata conflict proof: a store version raised under a catalog edit
 // spec: MEDULLA-TYPED-PACKS-R110.8
 #[tokio::test]
 async fn concurrent_term_edit_is_a_conflict_and_catalog_wins() {

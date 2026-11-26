@@ -248,6 +248,7 @@ def test_status_history_reads_back(served) -> None:
     )
 
 
+# proves R801.7: Proposed descriptions for terms and assets
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R801.7")
 def test_proposed_description_needs_review(served) -> None:
     """Verifies MEDULLA-TYPED-PACKS-R801.7: a proposal becomes the description only once reviewed."""

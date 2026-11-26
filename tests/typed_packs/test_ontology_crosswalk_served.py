@@ -12,12 +12,14 @@ import copy
 import sys
 import uuid
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from _commons_generation import connect as connect_engine, restartable_engine
+from _commons_generation import connect as connect_engine
+from _commons_generation import restartable_engine
 from ontology_pack_support import (
     FIXTURE_SHA256,
     attach_pack,
@@ -451,6 +453,7 @@ async def _committed_classes(client) -> set[str]:
             return found
 
 
+# proves R097.2.6: Crosswalk coverage hot-path proof
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R097.2.6")
 @pytest.mark.no_engine
 def test_domain_coverage_and_refusals(tmp_path: Path) -> None:
@@ -479,7 +482,7 @@ def test_domain_coverage_and_refusals(tmp_path: Path) -> None:
         client = await connect_engine(engine=engine)
         try:
             revision = (await inspect_committed(client)).composed_digest
-            reports: dict[str, object] = {}
+            reports: dict[str, Any] = {}
             for name in DOMAINS:
                 fixture = fixtures[name]
                 connector = _connector(f"xwalk-{name}")
@@ -561,7 +564,9 @@ def test_domain_coverage_and_refusals(tmp_path: Path) -> None:
             )
             wrong_category = copy.deepcopy(patient)
             wrong_category["target_category"] = "process"
-            await refuse(client, revision, wrong_category, "CROSSWALK_CATEGORY_CONFLICT")
+            await refuse(
+                client, revision, wrong_category, "CROSSWALK_CATEGORY_CONFLICT"
+            )
             broad = copy.deepcopy(patient)
             broad["relation"] = "skos_broad_match"
             await refuse(client, revision, broad, "CROSSWALK_CONFLICT")

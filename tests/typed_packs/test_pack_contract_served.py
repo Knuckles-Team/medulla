@@ -274,7 +274,7 @@ async def _foreign_view(connector: str) -> object:
                     if status.head is None
                     else (status.head.binding_revision, str(status.head.pack_digest))
                 )
-            except Exception as refusal:  # noqa: BLE001 - the refusal text is the view
+            except Exception as refusal:
                 views.append(f"refused:{type(refusal).__name__}")
         assert all(
             view is None or str(view).startswith("refused:") for view in views
@@ -295,6 +295,7 @@ def _typed_ontology(base: str, range_type: str) -> str:
     )
 
 
+# proves R107.6: Hot-path proof
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R107.6")
 def test_breaking_release_waits_for_approval_then_serves() -> None:
     """Verifies MEDULLA-TYPED-PACKS-R107.6: release 3 retypes a property and waits; the
@@ -345,17 +346,25 @@ def test_breaking_release_waits_for_approval_then_serves() -> None:
         reviewer = support.connect(agent_id=support.REVIEWER)
         try:
             support.assign_stewards(
-                client, graph, target, support.principal(), support.principal(support.REVIEWER)
+                client,
+                graph,
+                target,
+                support.principal(),
+                support.principal(support.REVIEWER),
             )
             request_id = support.open_request(
                 client, graph, target, held["held"]["change_request"]["proposed_digest"]
             )
             support.stewardship(
-                reviewer, graph, {"op": "review", "request_id": request_id, "approve": True}
+                reviewer,
+                graph,
+                {"op": "review", "request_id": request_id, "approve": True},
             )
         finally:
             reviewer.close()
-        applied = support.stewardship(client, graph, {"op": "apply", "request_id": request_id})
+        applied = support.stewardship(
+            client, graph, {"op": "apply", "request_id": request_id}
+        )
         assert applied["change_request"]["state"] == "applied"
     finally:
         try:
