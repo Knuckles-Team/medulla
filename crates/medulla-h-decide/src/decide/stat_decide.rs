@@ -495,6 +495,16 @@ async fn serve(
         },
     )
     .await?;
+    // An `item_recommendation` question ranks the embedded nodes of the graph its
+    // `recommend` param names, under the same ACL and RLS filter
+    // (MEDULLA-DECISION-ENGINE-R175.3).
+    let recommend_catalog = telemetry::stage_async(
+        telemetry::Stage::Visibility,
+        &family,
+        verified.tenant(),
+        super::stat_recommend::read_for_question(state, verified.agent_id(), &request),
+    )
+    .await?;
     let principal = verified.principal_persistence_id();
     let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
     let started = Instant::now();
@@ -524,6 +534,7 @@ async fn serve(
                     type_digest: graph_view
                         .as_ref()
                         .map(|view| view.schema_sources.composed_digest()),
+                    recommend_catalog: recommend_catalog.as_ref(),
                 };
                 decide_blocking(
                     &ctx,

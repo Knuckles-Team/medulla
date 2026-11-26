@@ -498,6 +498,10 @@ pub const FAMILY_TABLES: &[(QuestionKind, &[RefusalCode])] = &[
     (QuestionKind::CommandConfig, super::command_config::REFUSALS),
     (QuestionKind::GraphIntake, super::graph_intake::REFUSALS),
     (QuestionKind::ToolNecessity, super::tool_necessity::REFUSALS),
+    (
+        QuestionKind::ItemRecommendation,
+        super::item_recommendation::REFUSALS,
+    ),
     (QuestionKind::RunAdjustment, super::run_adjustment::REFUSALS),
     (QuestionKind::PathPreference, super::path_success::REFUSALS),
     (

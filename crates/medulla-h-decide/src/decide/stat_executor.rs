@@ -73,6 +73,10 @@ pub(super) struct ExecutionContext<'a> {
     /// type-registry comparison of a skill binding (MEDULLA-REPO-INGEST-R002.1.3);
     /// `None` skips only that comparison.
     pub(super) type_digest: Option<medulla_types::contract::Digest256>,
+    /// The item catalog an `item_recommendation` question ranks, read by the
+    /// serving path from the graph its request names under the caller's access
+    /// (MEDULLA-DECISION-ENGINE-R175.3); `None` for every other kind.
+    pub(super) recommend_catalog: Option<&'a super::stat_recommend::CatalogRead>,
 }
 
 /// The pinned inputs of one decision.

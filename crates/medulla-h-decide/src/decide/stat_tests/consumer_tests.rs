@@ -748,6 +748,7 @@ mod topology_question {
             assistant_profile: None,
             observation_windows: None,
             type_digest: None,
+            recommend_catalog: None,
         };
         crate::decide::stat_decide::decide_blocking(
             &ctx,

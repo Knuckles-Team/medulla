@@ -393,6 +393,10 @@ pub enum LearningWrite {
     RecordRollouts {
         set: Box<crate::decision::skill_evolution::RolloutSet>,
     },
+    /// Fit the residual-quantization encoder of one item catalog: the embedded
+    /// nodes of the graph `catalog_ref` names, as the caller may see them
+    /// (MEDULLA-DECISION-ENGINE-R175.8).
+    FitCatalogEncoder { catalog_ref: String },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -413,6 +417,7 @@ impl LearningWrite {
             Self::FitAdapter { .. }
             | Self::MonitorAdapter { .. }
             | Self::FitCalibration { .. }
+            | Self::FitCatalogEncoder { .. }
             | Self::EvaluateGeneration { .. }
             | Self::RunGenerationCycle { .. }
             | Self::RefreshFreshness { .. }
@@ -456,6 +461,8 @@ pub enum LearningRecorded {
     PackageRun(Box<crate::decision::package_validation::RunHistoryEntry>),
     /// The held-out evidence of the rollout set a `RecordRollouts` write stored.
     Rollouts(Box<crate::decision::held_out::HeldOutEvidence>),
+    /// The encoder a `FitCatalogEncoder` write stored.
+    CatalogEncoder(Box<crate::decision::item_recommendation::CatalogEncoderFitted>),
 }
 
 #[cfg(test)]

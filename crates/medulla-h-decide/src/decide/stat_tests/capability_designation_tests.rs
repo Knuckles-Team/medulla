@@ -314,6 +314,7 @@ fn decide_with_runtime(
         assistant_profile: None,
         observation_windows: None,
         type_digest: None,
+        recommend_catalog: None,
     };
     crate::decide::stat_decide::decide_blocking(
         &ctx,

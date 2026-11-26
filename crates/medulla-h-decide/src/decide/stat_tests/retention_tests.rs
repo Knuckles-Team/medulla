@@ -60,6 +60,7 @@ async fn compact_at(
         assistant_profile: None,
         observation_windows: None,
         type_digest: None,
+        recommend_catalog: None,
     };
     super::super::stat_retention::compact(
         &ctx,

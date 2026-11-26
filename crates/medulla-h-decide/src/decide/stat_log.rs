@@ -1153,6 +1153,7 @@ async fn serve(
             assistant_profile: None,
             observation_windows: None,
             type_digest: None,
+            recommend_catalog: None,
         };
         match op {
             DecisionLogOp::RunRecord { record, .. } => super::run_record::stage(

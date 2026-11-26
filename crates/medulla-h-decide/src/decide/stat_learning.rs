@@ -154,6 +154,12 @@ impl Serving<'_> {
         Ok(LearningRecorded::Monitored(Box::new(monitored)))
     }
 
+    fn fit_catalog(&self, catalog_ref: &str) -> Result<LearningRecorded, String> {
+        let catalog = super::stat_recommend::CatalogRead::read(self.graph(0)?);
+        let fitted = super::stat_recommend::fit_catalog_encoder(self.ctx, catalog_ref, &catalog)?;
+        Ok(LearningRecorded::CatalogEncoder(Box::new(fitted)))
+    }
+
     fn calibrate(&self, request: &CalibrationFitRequest) -> Result<LearningRecorded, String> {
         let fitted = fit_calibration(self.ctx, self.reader, request, self.tenant())?;
         Ok(LearningRecorded::Calibration(Box::new(fitted)))
@@ -628,6 +634,8 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         // and a graph with no source refuses SEARCH_SOURCE_UNREGISTERED (R174.9.4).
         // A drift refresh executes against the materialized graph it re-embeds.
         LearningWrite::RefreshDrift { logical_graph, .. } => vec![logical_graph.as_str()],
+        // A catalog encoder is fitted on the embedded nodes of the catalog graph.
+        LearningWrite::FitCatalogEncoder { catalog_ref } => vec![catalog_ref.as_str()],
         LearningWrite::RefreshFreshness { .. }
         | LearningWrite::RecordOutcome { .. }
         | LearningWrite::FitCalibration { .. }
@@ -896,6 +904,7 @@ pub(super) fn dispatch(
         LearningWrite::FitAdapter { request } => s.fit(&request),
         LearningWrite::MonitorAdapter { request } => s.monitor(&request),
         LearningWrite::FitCalibration { request } => s.calibrate(&request),
+        LearningWrite::FitCatalogEncoder { catalog_ref } => s.fit_catalog(&catalog_ref),
         LearningWrite::EvaluateGeneration { request } => s.evaluate(&request),
         LearningWrite::RunGenerationCycle { request } => s.cycle(&request),
         LearningWrite::RefreshFreshness { request } => {

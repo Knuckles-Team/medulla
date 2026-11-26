@@ -127,6 +127,7 @@ fn decide_view(
         assistant_profile: None,
         observation_windows: None,
         type_digest: None,
+        recommend_catalog: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,
@@ -401,6 +402,7 @@ fn decide_event(
         assistant_profile: None,
         observation_windows: None,
         type_digest: None,
+        recommend_catalog: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

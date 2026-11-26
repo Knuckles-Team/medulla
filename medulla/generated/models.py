@@ -11034,6 +11034,13 @@ class LearningWriteFitCalibration(BaseModel):
     write: Literal["fit_calibration"]
 
 
+class LearningWriteFitCatalogEncoder(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    catalog_ref: str
+    write: Literal["fit_catalog_encoder"]
+
+
 class CalibrationKnot(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -11407,12 +11414,24 @@ class LearningRecordedPackageRun(BaseModel):
     run_id: Annotated[str, Field(min_length=1)]
 
 
+class LearningRecordedCatalogEncoder(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    catalog_digest: str
+    catalog_ref: str
+    dimension: Annotated[int, Field(ge=0)]
+    items: Annotated[int, Field(ge=0)]
+    levels: Annotated[int, Field(ge=0, le=255)]
+    recorded: Literal["catalog_encoder"]
+
+
 LearningRecorded = Annotated[
     LearningRecordedOutcome
     | LearningRecordedFitted
     | LearningRecordedGeneration
     | LearningRecordedPointer
     | LearningRecordedRollouts
+    | LearningRecordedCatalogEncoder
     | LearningRecordedRun
     | LearningRecordedMonitored
     | LearningRecordedCalibration
@@ -11675,7 +11694,8 @@ LearningWrite = Annotated[
     | LearningWritePackageRun
     | LearningWriteRecordFeedback
     | LearningWriteRecordRollouts
-    | LearningWriteFitCalibration,
+    | LearningWriteFitCalibration
+    | LearningWriteFitCatalogEncoder,
     Field(discriminator="write"),
 ]
 
@@ -44368,6 +44388,7 @@ __all__ = [
     "LeafProofInfeasible",
     "LeafProofInfeasibleBody",
     "LearningRecorded",
+    "LearningRecordedCatalogEncoder",
     "LearningRecordedFitted",
     "LearningRecordedGeneration",
     "LearningRecordedOutcome",
@@ -44377,6 +44398,7 @@ __all__ = [
     "LearningWrite",
     "LearningWriteEvaluateGeneration",
     "LearningWriteFitAdapter",
+    "LearningWriteFitCatalogEncoder",
     "LearningWriteMovePointer",
     "LearningWriteRecordOutcome",
     "LearningWriteRecordRollouts",

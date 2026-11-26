@@ -101,6 +101,7 @@ fn run(
         assistant_profile: None,
         observation_windows: None,
         type_digest: None,
+        recommend_catalog: None,
     };
     super::super::stat_decide::decide_blocking(
         &ctx,

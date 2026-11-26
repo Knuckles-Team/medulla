@@ -104,6 +104,8 @@ mod stat_penalty;
 mod stat_pointer;
 mod stat_promotion;
 mod stat_proposals;
+#[cfg(feature = "decide")]
+mod stat_recommend;
 // MEDULLA-DECISION-ENGINE-R142.101: the served local-skill certification.
 #[cfg(feature = "decide")]
 mod stat_certification;

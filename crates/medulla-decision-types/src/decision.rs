@@ -59,6 +59,7 @@ pub mod indexless_retrieval;
 pub mod ingest_shortfall;
 pub mod ingestion_admission;
 pub mod instruction_disclosure;
+pub mod item_recommendation;
 pub mod jobs;
 pub mod knob_families;
 pub mod knobs;

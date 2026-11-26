@@ -91,7 +91,6 @@ const MATRIX_KINDS: &[QuestionKind] = &[
     QuestionKind::ConnectorEventTriage,
     QuestionKind::ConnectorToolChoice,
     QuestionKind::ConnectorWriteBack,
-    QuestionKind::ItemRecommendation,
 ];
 
 /// Kinds that left the shared ladder for a family of their own (placement
@@ -110,6 +109,7 @@ const SPECIALIZED_KINDS: &[QuestionKind] = &[
     QuestionKind::ComparativeAnalysisPlan,
     QuestionKind::CurriculumPromotion,
     QuestionKind::AutonomyVerdict,
+    QuestionKind::ItemRecommendation,
 ];
 
 pub(super) fn task_request(pin: &ComponentDependency) -> DecideRequest {
