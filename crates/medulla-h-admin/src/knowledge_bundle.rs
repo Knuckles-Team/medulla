@@ -230,7 +230,7 @@ pub async fn handle_bundle_export(
     }
 }
 
-async fn export_bundle(
+pub async fn export_bundle(
     state: &Arc<RwLock<ServerState>>,
     verified: &VerifiedRequestContext,
     graphs: Vec<String>,
@@ -581,11 +581,14 @@ mod tests {
     }
 
     async fn served() -> (Arc<RwLock<ServerState>>, tempfile::TempDir) {
+        served_with(ServerState::test_isolation("bundle-agent")).await
+    }
+
+    async fn served_with(
+        isolation: medulla_isolation::isolation::IsolationLayer,
+    ) -> (Arc<RwLock<ServerState>>, tempfile::TempDir) {
         let dir = tempfile::tempdir().unwrap();
-        let mut server = ServerState::new_for_test(
-            "bundle-test-secret",
-            ServerState::test_isolation("bundle-agent"),
-        );
+        let mut server = ServerState::new_for_test("bundle-test-secret", isolation);
         server.persist_dir = Some(dir.path().to_string_lossy().into_owned());
         server.set_blob_cursors(Some(medulla_server_ops::api::ingest::cursors_for_test(
             dir.path().to_str().unwrap(),
@@ -731,6 +734,83 @@ mod tests {
         let error = export_bundle(&state, &verified(), many, false, false).await.err().unwrap();
         assert!(error.starts_with(BUNDLE_TOO_LARGE), "{error}");
         assert_eq!(MANIFEST_ENTRY, "manifest.json");
+    }
+
+    /// An isolation layer whose only agent is an ordinary one: it sees the rows it owns and the
+    /// public ones, never another principal's private row.
+    #[cfg(feature = "security")]
+    fn limited_isolation(agent: &str) -> medulla_isolation::isolation::IsolationLayer {
+        let mut isolation = medulla_isolation::isolation::IsolationLayer::new();
+        isolation.register_agent(medulla_identity_types::acl::AgentIdentity {
+            agent_id: agent.to_string(),
+            role: medulla_identity_types::acl::AgentRole::Agent,
+            teams: Vec::new(),
+            roles: Vec::new(),
+        });
+        isolation
+    }
+
+    // spec: MEDULLA-DURABLE-KERNEL-R877.2
+    #[cfg(feature = "security")]
+    #[tokio::test]
+    async fn export_hides_rls_nodes_and_import_is_atomic() {
+        let (state, _dir) = served_with(limited_isolation("limited-agent")).await;
+        let caller = VerifiedRequestContext::verified_for_test_with_scopes("limited-agent", TENANT, &["*"]);
+        let core = state.read().await.registry.get(SOURCE).unwrap().core.clone();
+        let row = |owner: &str, visibility: &str| {
+            rmp_serde::to_vec_named(&json!({
+                "type": "Note", "_owner": owner, "_visibility": visibility, "text": "row",
+            }))
+            .unwrap()
+        };
+        core.add_node("note-mine".to_string(), row("limited-agent", "private"));
+        core.add_node("note-theirs".to_string(), row("another-agent", "private"));
+        {
+            let mut store = core.semantic_store.write();
+            store.add_embedding("note-mine".to_string(), vec![1.0, 0.0]).unwrap();
+            store.add_embedding("note-theirs".to_string(), vec![0.0, 1.0]).unwrap();
+        }
+
+        let receipt = export_bundle(&state, &caller, vec![SOURCE.to_string()], true, true)
+            .await
+            .expect("an ordinary caller exports what it can read");
+        let (store, owner) = blob_store(&state, &caller).await.unwrap();
+        let archive = read_owned_blob(&*store, &owner, &receipt.bundle_ref, 1 << 24).unwrap();
+        let bundle = Bundle::unpack(&archive).unwrap();
+        let part = &bundle.manifest.parts[0];
+        // A hidden row never enters the bundle: not as a provenance row, not as an embedding.
+        let provenance = String::from_utf8(bundle.entries[&part.provenance.entry].clone()).unwrap();
+        assert!(provenance.contains("note-mine"), "{provenance}");
+        assert!(!provenance.contains("note-theirs"), "{provenance}");
+        let embeddings: EmbeddingsPart =
+            serde_json::from_slice(&bundle.entries[&part.embeddings.as_ref().unwrap().entry]).unwrap();
+        let ids: Vec<&str> = embeddings.records.iter().map(|r| r.vector_id.as_str()).collect();
+        assert_eq!(ids, ["note-mine"]);
+
+        // The import is atomic: a bundle with one bad part plans nothing, and no target graph
+        // exists afterwards.
+        let mut bad: EmbeddingsPart = embeddings.clone();
+        bad.records[0].model_id = "another-model".to_string();
+        let bytes = serde_json::to_vec(&bad).unwrap();
+        let reference = part.embeddings.clone().unwrap();
+        let mut manifest = bundle.manifest.clone();
+        manifest.parts[0].embeddings = Some(part_ref(&reference.entry, &bytes));
+        let mut entries = bundle.entries.clone();
+        entries.insert(reference.entry.clone(), bytes);
+        let blob = stream_blob_put_owned(&*store, Cursor::new(Bundle::pack(&manifest.seal(), &entries)), 0, &owner)
+            .unwrap();
+        let error = plan_import(
+            &state,
+            &caller,
+            &format!("{CAS_PREFIX}{}", blob.digest),
+            "atomic-",
+            BundleOnConflict::Refuse,
+        )
+        .await
+        .err()
+        .expect("a bad part refuses the whole import");
+        assert!(error.starts_with(BUNDLE_EMBEDDING_MODEL_UNKNOWN), "{error}");
+        assert!(!state.read().await.registry.exists(&format!("atomic-{SOURCE}")));
     }
 
     // spec: MEDULLA-DURABLE-KERNEL-R877.2
