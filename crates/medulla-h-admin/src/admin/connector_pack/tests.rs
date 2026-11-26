@@ -50,6 +50,8 @@ mod outbox;
 mod orphan_policy;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod pack_source;
+#[cfg(all(feature = "owl", feature = "shacl"))]
+mod process_sync;
 mod scale;
 mod self_served_catalog;
 #[cfg(all(feature = "owl", feature = "shacl"))]
@@ -58,6 +60,8 @@ mod skill_package_render;
 mod source_approval;
 #[cfg(all(feature = "owl", feature = "shacl"))]
 mod source_sync;
+#[cfg(all(feature = "owl", feature = "shacl"))]
+mod sync_harness;
 mod sql_columns;
 mod storage_acceptance;
 #[cfg(all(feature = "owl", feature = "shacl"))]

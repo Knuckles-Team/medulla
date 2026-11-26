@@ -7,33 +7,18 @@
 //! once, plans the whole sync and commits one batch. Outbound changes come back
 //! as drafts that the router queues as write-back proposals.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::collections::BTreeSet;
 
-use serde_json::{json, Map, Value};
+use serde_json::{json, Value};
 
-use medulla_catalog_types::connector_pack::{ConnectorPackSourceApprovalResult, PackEntryKind};
-use medulla_catalog_types::foreign_read::{
-    ForeignReadChunkRequest, ForeignReadChunkResult, ForeignReadCompleteRequest,
-    ForeignReadCompleteResult, ForeignReadExecutionRef, ForeignReadLimits, ForeignReadOpenRequest,
-    ForeignReadOpenResult, ForeignReadRow, FOREIGN_READ_SCHEMA_VERSION,
-};
-use medulla_decision_types::decision::statistical::log::DecisionLogOp;
 use medulla_decision_types::decision::statistical::writeback::{WritebackOp, WritebackOutcome};
-use medulla_graph_core::graph::{GraphSchemaSource, GraphSchemaSources, SchemaSourceOrigin};
-use medulla_protocol_types::protocol::{GraphType, Method, Response};
-use medulla_source_types::source_sync::SyncReport;
+use medulla_protocol_types::protocol::Method;
 use medulla_types::contract::Digest256;
 use medulla_virtual_graph::architecture_sync::ArchitectureSyncAdapter;
-use medulla_virtual_graph::source_sync::{
-    sync_plan_digest, SyncAdapter, SYNC_CONFLICT_CLASS, SYNC_STATE_CLASS,
-};
+use medulla_virtual_graph::source_sync::{SyncAdapter, SYNC_CONFLICT_CLASS, SYNC_STATE_CLASS};
 
-use super::{
-    approve_source, bind, build_pack, head_of, imported, ok, refused, tool, Content, Served, ADMIN,
-    TENANT,
-};
+use super::sync_harness::{unique, SyncHarness, SyncSpec};
+use super::{ok, refused};
 
 const CONNECTOR: &str = "r012-sync";
 const GRAPH: &str = "architecture-sync";
@@ -160,318 +145,46 @@ fn adapter() -> ArchitectureSyncAdapter {
     }
 }
 
-fn unique(label: &str) -> String {
-    static NEXT: AtomicU64 = AtomicU64::new(1);
-    format!("r012:{label}:{}", NEXT.fetch_add(1, Ordering::Relaxed))
+fn spec() -> SyncSpec {
+    SyncSpec {
+        connector: CONNECTOR,
+        graph: GRAPH,
+        connection: CONNECTION,
+        entity: "elements",
+        key_field: "identifier",
+        contract_class: "urn:ArchitectureElement",
+        operation: "export_elements",
+        authority: authority_turtle(),
+        scope: Some(MODEL),
+        row_id: |record| record["identifier"].as_str().unwrap().to_string(),
+    }
 }
 
-/// One served engine, an approved pack source, and a durable graph holding the
-/// imported model with the authority rows installed.
-struct Harness {
-    served: Served,
-    _env: medulla_kernel::crypto::TestEnvReadGuard,
-    approved: ConnectorPackSourceApprovalResult,
-    source_name: String,
-}
-
-impl Harness {
-    async fn new() -> Self {
-        let served = Served::new();
-        let env = served.with_graph_persistence().await;
-        bind(&served, CONNECTOR, ADMIN).await;
-        let pack = build_pack(
-            CONNECTOR,
-            &[
-                tool(CONNECTOR, "a", "A."),
-                Content {
-                    kind: PackEntryKind::Resource,
-                    uri: format!("contract://{CONNECTOR}"),
-                    name: "source-contract".to_string(),
-                    media_type: "text/turtle",
-                    body: format!(
-                        r#"@prefix ac: <https://knuckles-team.github.io/ontology/access#> .
-<data://{CONNECTOR}/elements#access> a ac:AccessContract ;
- ac:classIri "urn:ArchitectureElement" ; ac:sourceId "{CONNECTOR}/elements" ;
- ac:entity "elements" ; ac:keyField "identifier" ; ac:accessKind "mcp_tool" ;
- ac:operation "export_elements" ; ac:pagination "none" ."#
-                    )
-                    .into_bytes(),
-                    input_schema: None,
-                    annotations: Default::default(),
-                    references: Vec::new(),
+/// The shared sync engine, holding the imported ArchiMate model.
+async fn harness() -> SyncHarness {
+    let harness = SyncHarness::new(spec()).await;
+    let imported: Value = ok(
+        "import the model",
+        harness
+            .served
+            .call_on(
+                GRAPH,
+                &unique("import"),
+                Method::ArchitectureModelImport {
+                    document: DOC.to_string(),
+                    expected_version: None,
                 },
-            ],
-        );
-        let first = imported(&served, &pack, None).await;
-        let connector_id = medulla_types::contract::ResourceId::new(CONNECTOR).unwrap();
-        let store = {
-            use medulla_persistence_records::agent_library::AgentLibraryStateExt;
-            served.state.write().await.ensure_agent_library().unwrap()
-        };
-        let member = store
-            .connector_pack_members(TENANT, &connector_id)
-            .unwrap()
-            .into_iter()
-            .find(|member| !member.source_registrations.is_empty())
-            .expect("source registration");
-        let registration = member.source_registrations[0].clone();
-        let approved: ConnectorPackSourceApprovalResult = ok(
-            "approve the sync source",
-            approve_source(
-                &served,
-                CONNECTOR,
-                &registration.contract_iri,
-                &registration.resource_uri,
-                head_of(&first),
-                member.body_sha256,
             )
             .await,
-        );
-        let source_name = registration.source_id.clone();
-        let registered: String = ok(
-            "register the foreign source",
-            served
-                .call(
-                    &unique("register"),
-                    Method::RegisterForeignSource {
-                        name: source_name.clone(),
-                        source: medulla_query_types::wire::ForeignSourceSpec::Mcp {
-                            server: CONNECTOR.to_string(),
-                            tool: "export_elements".to_string(),
-                            capabilities: Default::default(),
-                        },
-                        quota: None,
-                        acceleration: None,
-                    },
-                )
-                .await,
-        );
-        assert_eq!(registered, source_name);
-
-        let created = served
-            .call_on(
-                GRAPH,
-                &unique("create"),
-                Method::CreateGraph {
-                    graph_name: GRAPH.to_string(),
-                    graph_type: GraphType::Global,
-                },
-            )
-            .await;
-        assert!(created.error.is_none(), "{created:?}");
-        {
-            let state = served.state.read().await;
-            let core = state.registry.get(GRAPH).expect("resident").core.clone();
-            let mut sources = GraphSchemaSources::with_dynamic(BTreeMap::new()).unwrap();
-            let source = GraphSchemaSource::new(
-                SchemaSourceOrigin::Operator,
-                None,
-                Some(Arc::from(authority_turtle().as_str())),
-                0,
-            )
-            .expect("a bounded operator source");
-            sources
-                .attach_dynamic("operator".to_string(), source)
-                .expect("the operator source attaches");
-            core.install_schema_sources(Arc::new(sources));
-        }
-        let harness = Self {
-            served,
-            _env: env,
-            approved,
-            source_name,
-        };
-        let imported: Value = ok(
-            "import the model",
-            harness
-                .served
-                .call_on(
-                    GRAPH,
-                    &unique("import"),
-                    Method::ArchitectureModelImport {
-                        document: DOC.to_string(),
-                        expected_version: None,
-                    },
-                )
-                .await,
-        );
-        assert!(imported.get("model_digest").is_some(), "{imported}");
-        harness
-    }
-
-    /// Open, fill and (when `complete`) complete one approved read pinned to
-    /// the sync plan digest of `connection` and `class`.
-    async fn read(
-        &self,
-        connection: &str,
-        class: &str,
-        records: &[Value],
-        complete: bool,
-    ) -> ForeignReadExecutionRef {
-        let digest = sync_plan_digest(connection, class);
-        let opened: ForeignReadOpenResult = ok(
-            "open the sync read",
-            self.served
-                .call(
-                    &unique("open"),
-                    Method::ForeignReadOpen {
-                        request: ForeignReadOpenRequest {
-                            schema_version: FOREIGN_READ_SCHEMA_VERSION,
-                            submission: None,
-                            source_name: self.source_name.clone(),
-                            approval: self.approved.clone(),
-                            plan_digest: digest,
-                            query_digest: digest,
-                            limits: ForeignReadLimits {
-                                max_rows: 1000,
-                                max_bytes: 4 * 1024 * 1024,
-                                chunk_rows: 1000,
-                                chunk_bytes: 1024 * 1024,
-                                deadline_ms: 60_000,
-                            },
-                        },
-                    },
-                )
-                .await,
-        );
-        let rows: Vec<ForeignReadRow> = records
-            .iter()
-            .map(|record| ForeignReadRow {
-                id: record["identifier"].as_str().unwrap().to_string(),
-                score: None,
-                columns: record
-                    .as_object()
-                    .unwrap()
-                    .iter()
-                    .map(|(name, value)| (name.clone(), value.clone()))
-                    .collect(),
-                provenance: vec![format!("fixture:{}", record["identifier"])],
-            })
-            .collect();
-        let chunked: ForeignReadChunkResult = ok(
-            "fill the sync read",
-            self.served
-                .call(
-                    &unique("chunk"),
-                    Method::ForeignReadChunk {
-                        request: ForeignReadChunkRequest {
-                            execution: opened.execution,
-                            sequence: 0,
-                            source_identity: opened.source_identity.clone(),
-                            rows,
-                        },
-                    },
-                )
-                .await,
-        );
-        assert_eq!(chunked.accepted_rows as usize, records.len());
-        if complete {
-            let _: ForeignReadCompleteResult = ok(
-                "complete the sync read",
-                self.served
-                    .call(
-                        &unique("complete"),
-                        Method::ForeignReadComplete {
-                            request: ForeignReadCompleteRequest {
-                                execution: opened.execution,
-                                sequence: 1,
-                            },
-                        },
-                    )
-                    .await,
-            );
-        }
-        opened.execution
-    }
-
-    async fn sync_execution(
-        &self,
-        connection: &str,
-        class: &str,
-        execution: ForeignReadExecutionRef,
-    ) -> Response {
-        self.served
-            .call_on(
-                GRAPH,
-                &unique("sync"),
-                Method::SourceSync {
-                    connection_iri: connection.to_string(),
-                    class_iri: class.to_string(),
-                    foreign_execution: execution,
-                    scope: Some(MODEL.to_string()),
-                },
-            )
-            .await
-    }
-
-    async fn sync_response(&self, connection: &str, class: &str, records: &[Value]) -> Response {
-        let execution = self.read(connection, class, records, true).await;
-        self.sync_execution(connection, class, execution).await
-    }
-
-    async fn sync(&self, class: &str, records: &[Value]) -> SyncReport {
-        ok(
-            "SourceSync",
-            self.sync_response(CONNECTION, class, records).await,
-        )
-    }
-
-    async fn version(&self) -> u64 {
-        self.served
-            .state
-            .read()
-            .await
-            .registry
-            .get(GRAPH)
-            .unwrap()
-            .core
-            .version()
-    }
-
-    async fn nodes(&self) -> BTreeMap<String, Map<String, Value>> {
-        let state = self.served.state.read().await;
-        let core = state.registry.get(GRAPH).unwrap().core.clone();
-        core.get_nodes()
-            .into_iter()
-            .filter_map(
-                |(id, bytes)| match medulla_types::msgpack::decode_property_value(&bytes) {
-                    Ok(Value::Object(map)) => Some((id, map)),
-                    _ => None,
-                },
-            )
-            .collect()
-    }
-
-    async fn nodes_of(&self, class: &str) -> Vec<Map<String, Value>> {
-        self.nodes()
-            .await
-            .into_values()
-            .filter(|props| props.get("type").and_then(Value::as_str) == Some(class))
-            .collect()
-    }
-
-    async fn writeback(&self, op: WritebackOp) -> WritebackOutcome {
-        ok(
-            "Writeback",
-            self.served
-                .call(
-                    &unique("writeback"),
-                    Method::DecisionLog {
-                        op: Box::new(DecisionLogOp::Writeback {
-                            tenant_id: TENANT.to_string(),
-                            computation: op,
-                        }),
-                    },
-                )
-                .await,
-        )
-    }
+    );
+    assert!(imported.get("model_digest").is_some(), "{imported}");
+    harness
 }
 
 // spec: MEDULLA-SRC-AUTH-R012.5
 #[tokio::test]
 async fn outbound_change_queues_one_proposal() {
-    let h = Harness::new().await;
+    let h = harness().await;
     // The source no longer lists id-cap: the graph holds a record the source
     // lacks, so the change goes outbound.
     let records = without(&model_records(), "id-cap");
@@ -542,7 +255,7 @@ async fn outbound_change_queues_one_proposal() {
 // spec: MEDULLA-SRC-AUTH-R012.6
 #[tokio::test]
 async fn sync_applies_inbound_and_writes_state_once() {
-    let h = Harness::new().await;
+    let h = harness().await;
     let new_record = element("id-new", "ApplicationComponent", "Ledger", vec![]);
     let mut records = model_records();
     records.push(new_record.clone());
@@ -610,7 +323,7 @@ async fn sync_applies_inbound_and_writes_state_once() {
 // spec: MEDULLA-SRC-AUTH-R012.7
 #[tokio::test]
 async fn sync_refusals_leave_state_unchanged() {
-    let h = Harness::new().await;
+    let h = harness().await;
     let version = h.version().await;
     let node_ids: BTreeSet<String> = h.nodes().await.into_keys().collect();
     let records = model_records();
@@ -672,7 +385,7 @@ async fn sync_refusals_leave_state_unchanged() {
 // spec: MEDULLA-SRC-AUTH-R012.8
 #[tokio::test]
 async fn report_lists_conflicts_with_both_digests() {
-    let h = Harness::new().await;
+    let h = harness().await;
     let base = model_records();
     let graph_digest = adapter().record_digest(&base[2]);
 
@@ -743,7 +456,7 @@ async fn report_lists_conflicts_with_both_digests() {
 // spec: MEDULLA-SRC-AUTH-R012.9
 #[tokio::test]
 async fn two_way_sync_applies_proposes_and_records_conflicts() {
-    let h = Harness::new().await;
+    let h = harness().await;
     let base = model_records();
 
     // Sync 1 writes the base of the three records.
