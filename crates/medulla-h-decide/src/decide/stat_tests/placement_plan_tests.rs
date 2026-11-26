@@ -98,6 +98,7 @@ pub(super) fn plan_request(
     }
 }
 
+// proves R700.3: Wiring: the placement_plan question in Decide reads its host budgets from the ...
 // spec: MEDULLA-PLACEMENT-R700.3
 #[tokio::test]
 async fn plan_request_returns_sealed_plan() {
@@ -177,6 +178,7 @@ async fn add_host(h: &Harness, iri: &str, capabilities: &[&str]) {
     core.add_node(iri.to_string(), rmp_serde::to_vec_named(&props).unwrap());
 }
 
+// proves R700.6: Hot-path journey: capability gap abstains, feasible plan solves
 // spec: MEDULLA-PLACEMENT-R700.6
 #[tokio::test]
 async fn capability_gap_abstains_and_plan_solves() {
@@ -231,6 +233,7 @@ async fn capability_gap_abstains_and_plan_solves() {
     plan.check().unwrap();
 }
 
+// proves R700.4: Refusal: capability gap and capacity overrun
 // spec: MEDULLA-PLACEMENT-R700.4
 #[tokio::test]
 async fn plan_refusals_by_reason() {

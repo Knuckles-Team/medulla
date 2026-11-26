@@ -286,6 +286,7 @@ mod tests {
             .any(|code| code.as_str() == NO_CAPABLE_HOST));
     }
 
+    // proves R004.3: BUILD: every production claim carries the heavy capabilities its host ...
     // spec: MEDULLA-PLACEMENT-R004.3
     #[tokio::test]
     async fn declared_for_reads_the_commons_host_node() {

@@ -229,6 +229,7 @@ mod tests {
         breaker
     }
 
+    // proves R784.1: CircuitBreaker is one explicit state machine over a payload-free state kind, ...
     // spec: MEDULLA-PLACEMENT-R784.1
     #[test]
     fn every_legal_transition_applies() {

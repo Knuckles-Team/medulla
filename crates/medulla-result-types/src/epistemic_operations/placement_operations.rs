@@ -261,6 +261,7 @@ pub struct OperationRedirect {
 mod tests {
     use super::*;
 
+    // proves R784.2: OperationResult.status is a set-once outcome, not a lifecycle: it leaves the ...
     // spec: MEDULLA-PLACEMENT-R784.2
     #[test]
     fn outcome_field_keeps_the_status_wire_name() {

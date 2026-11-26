@@ -580,6 +580,7 @@ mod tests {
         }
     }
 
+    // proves R784.3: ReadLeg.status is a set-once outcome, not a lifecycle: it leaves the census ...
     // spec: MEDULLA-PLACEMENT-R784.3
     #[test]
     fn outcome_field_keeps_the_status_wire_name() {

@@ -229,6 +229,7 @@ mod tests {
         PartitionMoveJournal::new(&entry, 2, vec!["graph-a".to_string()]).unwrap()
     }
 
+    // proves R783.8: BUILD: the move journal stage MoveStage is its own explicit state machine, ...
     // spec: MEDULLA-PLACEMENT-R783.8
     #[test]
     fn every_legal_transition_applies() {

@@ -320,6 +320,7 @@ mod admit_served {
         }
     }
 
+    // proves R002.4: BUILD: served AdmitWorkerTask returns a grant sized from the engine's own ...
     // spec: MEDULLA-PLACEMENT-R002.4
     #[tokio::test(flavor = "multi_thread", worker_threads = 4)]
     async fn served_admit_worker_task_grants_general_lane_and_reads_lane_load() {
