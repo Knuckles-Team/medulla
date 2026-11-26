@@ -15,9 +15,8 @@ use medulla_decision_outcome_types::policy_evolution::{
     EvaluationMetrics, EvaluationVerdict, PolicyEvaluation, PolicyEvolutionRecord, SafetyOutcome,
     StoredPolicyRecord,
 };
-use medulla_graph_core::graph::GraphView;
-use medulla_types::contract::{Digest256, OpaqueId};
 use medulla_decision_stats::decision::promotion::{paired_rollout_evidence, rollout_set_digest};
+use medulla_decision_types::decision::jobs::{FullLabelMetrics, LabelExclusions};
 use medulla_decision_types::decision::skill_evolution::{
     Rollout, RolloutSet, ROLLOUT_SET_SCHEMA_VERSION,
 };
@@ -30,8 +29,9 @@ use medulla_decision_types::decision::{
     CalibrationMethod, CalibrationStatement, DecisionEvalReceipt, DecisionPolicy, QuantScaleTag,
     QuantisedValue, UnitRationalWire,
 };
-use medulla_decision_types::decision::jobs::{FullLabelMetrics, LabelExclusions};
+use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::decision_jobs::{encode_artifact, receipt_key};
+use medulla_types::contract::{Digest256, OpaqueId};
 
 use super::super::stat_promotion::{
     held_out_evidence, rollouts_key, EvidenceError, EvidenceSources,
@@ -140,7 +140,10 @@ pub(super) fn promotion_request(
     request
 }
 
-pub(super) async fn commit(h: &Harness, record: &StatisticalDecisionRecord) -> DecisionLogCommitted {
+pub(super) async fn commit(
+    h: &Harness,
+    record: &StatisticalDecisionRecord,
+) -> DecisionLogCommitted {
     let decider = context("decider", TENANT);
     decode(
         super::super::log::handle_decision_log(
@@ -243,7 +246,10 @@ async fn every_receipt_kind_resolves_to_held_out_evidence() {
         .unwrap();
     let evidence = held_out_evidence(&sources(TENANT), &head, "sha256:receipt").unwrap();
     assert_eq!(evidence.receipt_kind, ReceiptKind::DecisionEval);
-    assert_eq!((evidence.challenger_score_ppm, evidence.case_count), (950_000, 100));
+    assert_eq!(
+        (evidence.challenger_score_ppm, evidence.case_count),
+        (950_000, 100)
+    );
     assert!(evidence.independent && evidence.champion_score_ppm.is_none());
 
     let set = rollout_set(150_000);
@@ -293,7 +299,11 @@ async fn every_receipt_kind_resolves_to_held_out_evidence() {
     let knob_set = held_out_evidence(&graph_sources(TENANT, view), &knobs, &policy_id).unwrap();
     assert_eq!(knob_set.receipt_kind, ReceiptKind::PolicyEvaluation);
     assert_eq!(
-        (knob_set.challenger_score_ppm, knob_set.champion_score_ppm, knob_set.case_count),
+        (
+            knob_set.challenger_score_ppm,
+            knob_set.champion_score_ppm,
+            knob_set.case_count
+        ),
         (900_000, Some(850_000), 2)
     );
     assert_eq!(knob_set.subject, knobs);
@@ -415,7 +425,10 @@ async fn paired_rollouts_promote_a_skill_revision() {
     .await
     .unwrap();
     let record = batch.records.as_slice()[0].clone();
-    assert!(matches!(record.outcome, StatisticalOutcome::Advisory { .. }));
+    assert!(matches!(
+        record.outcome,
+        StatisticalOutcome::Advisory { .. }
+    ));
     let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
     assert!(facts.contains(&"promotion.verdict=promote"), "{facts:?}");
     commit(&h, &record).await;
@@ -446,7 +459,10 @@ async fn paired_rollouts_promote_a_skill_revision() {
     )
     .await
     .unwrap_err();
-    assert!(refused.starts_with("PROMOTION_RECEIPT_MISMATCH"), "{refused}");
+    assert!(
+        refused.starts_with("PROMOTION_RECEIPT_MISMATCH"),
+        "{refused}"
+    );
     let wrong_target = pointer_state(&h, champion, activate("revision:other", &record.record_id))
         .await
         .unwrap_err();
@@ -482,7 +498,12 @@ async fn promotion_refusals() {
         // Both are decided while the seat is empty.
         let record = decide(
             &h,
-            promotion_request(&pins.0, &subject(), &rollout_set_digest(set), &set.challenger_ref),
+            promotion_request(
+                &pins.0,
+                &subject(),
+                &rollout_set_digest(set),
+                &set.challenger_ref,
+            ),
         )
         .await
         .unwrap()
@@ -496,23 +517,38 @@ async fn promotion_refusals() {
     let unknown = pointer_state(&h, champion.clone(), activate("revision:two", "absent"))
         .await
         .unwrap_err();
-    assert!(unknown.starts_with("PROMOTION_RECEIPT_MISMATCH"), "{unknown}");
+    assert!(
+        unknown.starts_with("PROMOTION_RECEIPT_MISMATCH"),
+        "{unknown}"
+    );
     // The first seat taker moves; the second's pinned champion is gone.
-    let moved = pointer_state(&h, champion.clone(), activate("revision:two", &records[0].record_id))
-        .await
-        .unwrap();
-    let conflict = pointer_state(&h, champion.clone(), activate("revision:four", &records[1].record_id))
-        .await
-        .unwrap_err();
+    let moved = pointer_state(
+        &h,
+        champion.clone(),
+        activate("revision:two", &records[0].record_id),
+    )
+    .await
+    .unwrap();
+    let conflict = pointer_state(
+        &h,
+        champion.clone(),
+        activate("revision:four", &records[1].record_id),
+    )
+    .await
+    .unwrap_err();
     assert!(conflict.starts_with("PROMOTION_CAS_CONFLICT"), "{conflict}");
     // With no earlier champion a rollback has nowhere to go; the pointer stays.
     let no_parent = pointer_state(&h, champion.clone(), PointerMovement::Rollback)
         .await
         .unwrap_err();
     assert!(no_parent.starts_with("ROLLBACK_NO_PARENT"), "{no_parent}");
-    let unchanged = pointer_state(&h, champion, activate("revision:two", &records[0].record_id))
-        .await
-        .unwrap();
+    let unchanged = pointer_state(
+        &h,
+        champion,
+        activate("revision:two", &records[0].record_id),
+    )
+    .await
+    .unwrap();
     assert_eq!(unchanged, moved);
 }
 
@@ -550,20 +586,15 @@ async fn promote_then_roll_back_every_subject_kind() {
             learn(
                 &h,
                 "decider",
-                LearningWrite::RecordRollouts {
-                    set: Box::new(set),
-                },
+                LearningWrite::RecordRollouts { set: Box::new(set) },
             )
             .await
             .unwrap();
-            let record = decide(
-                &h,
-                promotion_request(&pins.0, subject, &digest, &target),
-            )
-            .await
-            .unwrap()
-            .records
-            .as_slice()[0]
+            let record = decide(&h, promotion_request(&pins.0, subject, &digest, &target))
+                .await
+                .unwrap()
+                .records
+                .as_slice()[0]
                 .clone();
             let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
             assert!(
@@ -571,13 +602,9 @@ async fn promote_then_roll_back_every_subject_kind() {
                 "{subject:?}: {facts:?}"
             );
             commit(&h, &record).await;
-            let state = pointer_state(
-                &h,
-                champion.clone(),
-                activate(&target, &record.record_id),
-            )
-            .await
-            .unwrap();
+            let state = pointer_state(&h, champion.clone(), activate(&target, &record.record_id))
+                .await
+                .unwrap();
             assert_eq!(state.target(), Some(target.as_str()), "{subject:?}");
             promoted.push((target, record.record_id));
         }
@@ -601,7 +628,9 @@ async fn promote_then_roll_back_every_subject_kind() {
             .await,
         );
         assert!(
-            theirs.unwrap_err().starts_with("PROMOTION_RECEIPT_MISMATCH"),
+            theirs
+                .unwrap_err()
+                .starts_with("PROMOTION_RECEIPT_MISMATCH"),
             "{subject:?}"
         );
 
@@ -729,5 +758,152 @@ async fn pointer_history_replays() {
     assert_eq!(
         encode_artifact(&replayed).unwrap(),
         stored_bytes.expect("the pointer is stored")
+    );
+}
+
+/// Verifies MEDULLA-ORCH-VOCAB-R801.7: a harness component version is current only by a champion
+/// pointer move. Two versions are admitted with no supersession, promoted in turn, listed as two
+/// `Champion` revision rows, rolled back, and a target of another component is refused.
+// spec: MEDULLA-ORCH-VOCAB-R801.7
+#[tokio::test]
+async fn harness_component_current_is_the_champion() {
+    use medulla_decision_outcome_types::decision::promotion::RevisionStage;
+    use medulla_decision_outcome_types::decision::revision_list::RevisionRow;
+    use medulla_decision_types::decision::statistical::retrieval::PointerMovement;
+    use medulla_decision_types::decision::statistical::retrieval_pointer::PointerTransition;
+    use medulla_work_types::orchestration::{
+        register_version, HarnessComponentKind, HarnessComponentVersion,
+    };
+
+    const COMPONENT: &str = "comp:prompt";
+    let version = |content_ref: &str, valid_from: u64| HarnessComponentVersion {
+        component_id: COMPONENT.to_string(),
+        kind: HarnessComponentKind::SystemPrompt,
+        content_ref: content_ref.to_string(),
+        content_digest: HarnessComponentVersion::content_digest(content_ref),
+        valid_from,
+        confidence: 0.8,
+        evidence_run_id: format!("run-{valid_from}"),
+        applied_to_id: None,
+    };
+
+    // Admission: two versions, no supersession, neither window closed.
+    let mut versions = Vec::new();
+    register_version(&mut versions, version("blob:v1", 10)).unwrap();
+    register_version(&mut versions, version("blob:v2", 20)).unwrap();
+    assert_eq!(versions.len(), 2);
+    let first = versions[0].node_id();
+    let second = versions[1].node_id();
+
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+    let subject = RevisionSubject::Definition {
+        definition_kind: DefinitionKind::HarnessComponent,
+        definition_ref: COMPONENT.to_owned(),
+    };
+    assert_eq!(
+        subject.pointer_key(),
+        format!("champion:definition:harness_component:{COMPONENT}")
+    );
+    let champion = PointerRef::Champion {
+        subject: subject.clone(),
+    };
+
+    // Promote the first, then the second.
+    for target in [&first, &second] {
+        let set = RolloutSet {
+            challenger_ref: target.clone(),
+            ..rollout_set(150_000)
+        };
+        let digest = rollout_set_digest(&set);
+        learn(
+            &h,
+            "decider",
+            LearningWrite::RecordRollouts { set: Box::new(set) },
+        )
+        .await
+        .unwrap();
+        let record = decide(&h, promotion_request(&pins.0, &subject, &digest, target))
+            .await
+            .unwrap()
+            .records
+            .as_slice()[0]
+            .clone();
+        commit(&h, &record).await;
+        let state = pointer_state(&h, champion.clone(), activate(target, &record.record_id))
+            .await
+            .unwrap();
+        assert_eq!(state.target(), Some(target.as_str()));
+    }
+
+    // The pointer shows the second active with both in its history, in order.
+    let state = pointer_state(&h, champion.clone(), PointerMovement::Rollback)
+        .await
+        .unwrap();
+    assert_eq!(
+        state.target(),
+        Some(first.as_str()),
+        "rolled back to the first"
+    );
+    let activated: Vec<&str> = state
+        .history
+        .iter()
+        .filter(|event| event.transition == PointerTransition::Activated)
+        .filter_map(|event| event.target.as_deref())
+        .collect();
+    assert_eq!(activated, [first.as_str(), second.as_str()]);
+
+    // Two `Champion` revision rows, one per promoted version.
+    let rows: Vec<RevisionRow> = h
+        .store
+        .decision_artifacts_with_prefix(TENANT, "revision:", 100)
+        .unwrap()
+        .iter()
+        .map(|(_, bytes)| {
+            medulla_persistence_records::decision_jobs::decode_artifact(bytes, "revision row")
+                .unwrap()
+        })
+        .collect();
+    let champions: Vec<&str> = rows
+        .iter()
+        .filter(|row| row.stage == RevisionStage::Champion)
+        .map(|row| row.id.as_str())
+        .collect();
+    assert!(champions.contains(&first.as_str()) && champions.contains(&second.as_str()));
+    assert_eq!(champions.len(), 2, "{rows:?}");
+
+    // A target of another component refuses, even under a valid promote record.
+    let other_target = format!(
+        "harness-component:comp:other:{}",
+        HarnessComponentVersion::content_digest("blob:other")
+    );
+    let set = RolloutSet {
+        challenger_ref: other_target.clone(),
+        ..rollout_set(150_000)
+    };
+    let digest = rollout_set_digest(&set);
+    learn(
+        &h,
+        "decider",
+        LearningWrite::RecordRollouts { set: Box::new(set) },
+    )
+    .await
+    .unwrap();
+    let record = decide(
+        &h,
+        promotion_request(&pins.0, &subject, &digest, &other_target),
+    )
+    .await
+    .unwrap()
+    .records
+    .as_slice()[0]
+        .clone();
+    commit(&h, &record).await;
+    let refused = pointer_state(&h, champion, activate(&other_target, &record.record_id))
+        .await
+        .unwrap_err();
+    assert!(
+        refused.starts_with("EVALUATION_RECEIPT_MISMATCH"),
+        "{refused}"
     );
 }

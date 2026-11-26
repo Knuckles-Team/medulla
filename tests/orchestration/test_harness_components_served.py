@@ -1,13 +1,10 @@
-"""MEDULLA-ORCH-VOCAB-R801.6 served receipt: two versions, supersession, bitemporal
-read.
+"""MEDULLA-ORCH-VOCAB-R801.6 served receipt: two versions admitted and readable.
 
 The entry point is the generated client write through
 ``ApplyChangeEnvelopes`` (``changes.apply_batch`` compiles to it): one
-envelope publishes version v1, the next publishes v2 naming v1 in
-``supersedes_id`` alongside the real ``:supersedes`` edge and the
-head-window-close CAS. The versions are then read back through the node
-property reads, and the current version is picked by validity window at
-each time — v1 until its window closes at v2's ``valid_from``, v2 after.
+envelope publishes version v1, the next publishes v2. Both are admitted and
+read back with no window close and no ``supersedes_id``; currency is the
+champion pointer move of R801.7.
 """
 
 from __future__ import annotations
@@ -39,7 +36,6 @@ def version_props(
     content_ref: str,
     valid_from: int,
     tx_from: int,
-    supersedes_id: str | None = None,
     confidence: float = 0.8,
 ) -> dict[str, Any]:
     """One published version as the writer composes it: the record's fields
@@ -56,20 +52,18 @@ def version_props(
         "applied_to_id": "agent:served",
         "tx_from": tx_from,
     }
-    if supersedes_id is not None:
-        props["supersedes_id"] = supersedes_id
     return props
 
 
 # spec: MEDULLA-ORCH-VOCAB-R801.6
-def test_two_versions_and_bitemporal_read(clean_graph):
+def test_two_versions_are_admitted_and_readable(clean_graph):
     graph = _graph_name(clean_graph)
     v1_id = version_node_id("blob:v1")
     v2_id = version_node_id("blob:v2")
 
-    # v1 is the component's first version; v2 supersedes it by edge — the
-    # new version names the current one in `supersedes_id`, the SUPERSEDES
-    # edge links the two, and the CAS closes v1's window at v2's valid_from.
+    # Two versions of one component, each its own envelope: no supersedes
+    # pointer, no edge and no window-close CAS. Currency is the champion
+    # pointer move of R801.7, not a write-time supersession.
     first = _envelope(
         graph,
         v1_id,
@@ -100,72 +94,53 @@ def test_two_versions_and_bitemporal_read(clean_graph):
                 {
                     "node_id": v2_id,
                     "properties_msgpack": msgpack.packb(
-                        version_props(
-                            "blob:v2",
-                            valid_from=20,
-                            tx_from=200,
-                            supersedes_id=v1_id,
-                        )
+                        version_props("blob:v2", valid_from=20, tx_from=200)
                     ),
                 },
-            ),
-            op(
-                1,
-                "AddEdge",
-                {
-                    "source_id": v2_id,
-                    "target_id": v1_id,
-                    "properties_msgpack": msgpack.packb(
-                        {"relationship": "supersedes", "valid_from": 20, "tx_from": 200}
-                    ),
-                },
-            ),
-            op(
-                2,
-                "CompareAndSetNodeFields",
-                {
-                    "node_id": v1_id,
-                    "conditions_msgpack": msgpack.packb({"valid_to": None}),
-                    "updates_msgpack": msgpack.packb({"valid_to": 20, "tx_to": 200}),
-                },
-            ),
+            )
         ],
     )
 
     results = clean_graph.changes.apply_batch([first, second])
     assert [result["result"] for result in results] == ["applied", "applied"], results
 
-    # Both versions stay readable; v1's window is closed at v2's valid_from,
-    # v2 names v1, and the supersession edge is in place (newer to older).
+    # Both versions stay readable exactly as written: no window closed on v1
+    # and neither names the other.
     props_first = clean_graph.nodes.properties(v1_id)
     props_second = clean_graph.nodes.properties(v2_id)
-    assert props_first is not None and props_first["valid_to"] == 20, props_first
-    assert props_second is not None and props_second["supersedes_id"] == v1_id, (
-        props_second
+    assert props_first is not None and props_second is not None
+    for props in (props_first, props_second):
+        assert "valid_to" not in props, props
+        assert "supersedes_id" not in props, props
+    assert props_first["valid_from"] == 10 and props_second["valid_from"] == 20
+    assert clean_graph.edges.properties(v2_id, v1_id) == []
+
+    # A compare-and-set that would close v1's window refuses: a published
+    # version never changes.
+    close_window = _envelope(
+        graph,
+        v1_id,
+        "h2-r801:v1-close",
+        3,
+        [
+            op(
+                0,
+                "CompareAndSetNodeFields",
+                {
+                    "node_id": v1_id,
+                    "conditions_msgpack": msgpack.packb({"confidence": 0.8}),
+                    "updates_msgpack": msgpack.packb({"confidence": 0.1}),
+                },
+            )
+        ],
     )
-    edges = clean_graph.edges.properties(v2_id, v1_id)
-    assert len(edges) == 1 and edges[0]["relationship"] == "supersedes", edges
-
-    # The bitemporal read: the current version at each time is the newest
-    # whose validity window covers it — nothing before the component was
-    # published, v1 until its window closes, v2 after.
-    def current_at(as_of: int) -> str | None:
-        current_id: str | None = None
-        current_from: int | None = None
-        for node_id, props in [(v1_id, props_first), (v2_id, props_second)]:
-            valid_from = props["valid_from"]
-            valid_to = props.get("valid_to")
-            if valid_from <= as_of and (valid_to is None or as_of < valid_to):
-                if current_from is None or valid_from > current_from:
-                    current_id, current_from = node_id, valid_from
-        return current_id
-
-    assert current_at(5) is None, "no version is current before the component existed"
-    assert current_at(10) == v1_id
-    assert current_at(15) == v1_id, "v1 stays current inside its open window"
-    assert current_at(19) == v1_id
-    assert current_at(20) == v2_id, "the window closed at v2's valid_from"
-    assert current_at(99) == v2_id, "v2's window stays open"
+    try:
+        clean_graph.changes.apply(close_window)
+    except EngineResponseError as error:
+        assert error.code == "HarnessVersionImmutable", error.code
+    else:
+        raise AssertionError("a compare-and-set on a published version must refuse")
+    assert clean_graph.nodes.properties(v1_id)["confidence"] == 0.8
 
     # A write that would mutate the published v1 refuses with the
     # vocabulary's immutability code, and nothing is written.

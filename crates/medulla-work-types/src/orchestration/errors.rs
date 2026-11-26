@@ -14,7 +14,7 @@ use medulla_types::closed_error_codes;
 
 closed_error_codes! {
     /// Every refusal a harness-component write, an improvement-library write
-    /// or read, or a supersession can report.
+    /// or read, or a lesson supersession can report.
     pub enum HarnessVocabularyErrorCode {
         /// A component version without an `evidence_run_id`.
         VersionWithoutEvidence => "HarnessVersionWithoutEvidence",
@@ -28,12 +28,6 @@ closed_error_codes! {
         IdentityMissing => "HarnessIdentityMissing",
         /// A content digest that does not recompute from the content reference.
         ContentDigestMismatch => "HarnessContentDigestMismatch",
-        /// A valid interval that runs backwards or is zero.
-        ValidIntervalInverted => "HarnessValidIntervalInverted",
-        /// A supersession that names a version the store does not hold.
-        SupersessionUnknown => "HarnessSupersessionUnknown",
-        /// A supersession that names an older version instead of the current one.
-        SupersessionStale => "HarnessSupersessionStale",
         /// A version written without its transaction-time stamp.
         WithoutStamp => "HarnessVersionWithoutStamp",
         /// A version record that does not decode to the vocabulary's shape.
@@ -46,6 +40,11 @@ closed_error_codes! {
         LessonConfidenceInvalid => "LessonConfidenceInvalid",
         /// A contrast whose conditions digest differs from its runs.
         ContrastConditionsMismatch => "ContrastConditionsMismatch",
+        /// A lesson supersession that names an older lesson instead of the
+        /// current one. Lessons are claim histories and keep their pointer.
+        LessonSupersessionStale => "LessonSupersessionStale",
+        /// A lesson supersession that names a lesson the store does not hold.
+        LessonSupersessionUnknown => "LessonSupersessionUnknown",
         /// An adopted harness without a decision reference.
         AdoptedHarnessNoDecision => "AdoptedHarnessNoDecision",
         /// The library query matched nothing; the read abstains, it does not fail.

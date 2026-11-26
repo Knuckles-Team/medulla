@@ -9,9 +9,10 @@
 //! rollout set under [`rollouts_key`] and answers its evidence.
 
 use medulla_decision_outcome_types::decision::promotion::{
-    GraderKind, HeldOutEvidence, ReceiptKind, RevisionSubject, HELD_OUT_EVIDENCE_SCHEMA_VERSION,
-    PROMOTION_UNEVALUATED,
+    DefinitionKind, GraderKind, HeldOutEvidence, ReceiptKind, RevisionStage, RevisionSubject,
+    HELD_OUT_EVIDENCE_SCHEMA_VERSION, PROMOTION_UNEVALUATED,
 };
+use medulla_decision_outcome_types::decision::revision_list::{RevisionRow, REVISION_KEY_PREFIX};
 use medulla_decision_outcome_types::policy_evolution::{
     is_policy_evolution_row, PolicyEvolutionRecord, StoredPolicyRecord,
 };
@@ -19,6 +20,7 @@ use medulla_decision_stats::decision::promotion::{paired_rollout_evidence, rollo
 use medulla_decision_types::decision::jobs::DecisionEvalReceipt;
 use medulla_decision_types::decision::skill_evolution::RolloutSet;
 use medulla_decision_types::decision::statistical::log::DecisionLogEntry;
+use medulla_decision_types::decision::statistical::StatisticalErrorCode;
 use medulla_decision_types::decision::DecisionPolicy;
 use medulla_graph_core::graph::GraphView;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
@@ -81,7 +83,9 @@ pub(super) fn held_out_evidence(
         RevisionSubject::DecisionHead { .. } => decision_evidence(sources, subject, receipt_digest),
         RevisionSubject::Program { program_ref } => {
             match rollout_evidence(sources, subject, receipt_digest) {
-                Err(EvidenceError::Refused(_)) => program_evidence(sources, program_ref, receipt_digest),
+                Err(EvidenceError::Refused(_)) => {
+                    program_evidence(sources, program_ref, receipt_digest)
+                }
                 other => other,
             }
         }
@@ -248,7 +252,9 @@ pub(super) fn record_rollouts(
 ) -> Result<HeldOutEvidence, String> {
     check_rollout_set(ctx, &set)?;
     let digest = rollout_set_digest(&set);
-    let stored = store_once(ctx, rollouts_key(&digest), "rollout set", set, |a, b| a == b)?;
+    let stored = store_once(ctx, rollouts_key(&digest), "rollout set", set, |a, b| {
+        a == b
+    })?;
     Ok(paired_rollout_evidence(
         &stored,
         &DecisionPolicy::engine_default(),
@@ -312,7 +318,9 @@ fn check_rollout_set(ctx: &ExecutionContext, set: &RolloutSet) -> Result<(), Str
 /// What a champion `Activate` is qualified by: `receipt_digest` names a
 /// committed `Promotion` record of this tenant whose verdict is `promote` for
 /// `target` on `subject` (MEDULLA-DECISION-ENGINE-R805.3). Any other record
-/// refuses `PROMOTION_RECEIPT_MISMATCH`.
+/// refuses `PROMOTION_RECEIPT_MISMATCH`. A harness subject also checks that
+/// the target is a revision of that subject (MEDULLA-ORCH-VOCAB-R801.7):
+/// otherwise `EVALUATION_RECEIPT_MISMATCH`.
 pub(super) fn qualified_champion(
     store: &AgentLibraryStore,
     tenant: &str,
@@ -320,6 +328,7 @@ pub(super) fn qualified_champion(
     target: &str,
     receipt_digest: &str,
 ) -> Result<Qualified, String> {
+    harness_target_belongs(store, tenant, subject, target)?;
     let mismatch = |detail: &str| {
         format!(
             "{}: {detail}",
@@ -332,9 +341,12 @@ pub(super) fn qualified_champion(
     let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
     let record = &entry.record;
     if record.tenant_id != tenant
-        || record.question.kind != medulla_decision_types::decision::statistical::QuestionKind::Promotion
+        || record.question.kind
+            != medulla_decision_types::decision::statistical::QuestionKind::Promotion
     {
-        return Err(mismatch("the record is not a promotion decision of this tenant"));
+        return Err(mismatch(
+            "the record is not a promotion decision of this tenant",
+        ));
     }
     let facts: Vec<&str> = record.premises.iter().map(|p| p.fact.as_str()).collect();
     let has = |fact: String| facts.contains(&fact.as_str());
@@ -365,6 +377,65 @@ pub(super) fn qualified_champion(
     })
 }
 
+/// The most revision rows a harness bundle target is searched in.
+const MAX_REVISION_ROWS: usize = 100_000;
+
+/// The subject checks of a harness champion (MEDULLA-ORCH-VOCAB-R801.7). A
+/// `HarnessComponent` target is a version node id of that component,
+/// `harness-component:<component_id>:sha256:<hex>`. A `HarnessBundle` target
+/// is the id of a stored revision row of that subject at stage `Evaluated`
+/// or `Retired`, so only an adoption the engine wrote (or one that held the
+/// pointer before) can take it. Other subjects pass.
+fn harness_target_belongs(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    subject: &RevisionSubject,
+    target: &str,
+) -> Result<(), String> {
+    let RevisionSubject::Definition {
+        definition_kind,
+        definition_ref,
+    } = subject
+    else {
+        return Ok(());
+    };
+    let mismatch = |detail: &str| StatisticalErrorCode::EvaluationReceiptMismatch.refusal(detail);
+    match definition_kind {
+        DefinitionKind::HarnessComponent => {
+            let prefix = format!("harness-component:{definition_ref}:sha256:");
+            if target.starts_with(&prefix) {
+                Ok(())
+            } else {
+                Err(mismatch(&format!(
+                    "the target is not a version of harness component '{definition_ref}'"
+                )))
+            }
+        }
+        DefinitionKind::HarnessBundle => {
+            let wanted = RevisionRow::subject_of(&subject.pointer_key());
+            let held = store
+                .decision_artifacts_with_prefix(tenant, REVISION_KEY_PREFIX, MAX_REVISION_ROWS)?
+                .into_iter()
+                .map(|(_, bytes)| decode_artifact::<RevisionRow>(&bytes, "revision row"))
+                .collect::<Result<Vec<_>, _>>()?
+                .into_iter()
+                .any(|row| {
+                    row.id == target
+                        && Some((row.subject_kind.clone(), row.subject_ref.clone())) == wanted
+                        && matches!(row.stage, RevisionStage::Evaluated | RevisionStage::Retired)
+                });
+            if held {
+                Ok(())
+            } else {
+                Err(mismatch(&format!(
+                    "the target is not an evaluated adoption of harness bundle '{definition_ref}'"
+                )))
+            }
+        }
+        _ => Ok(()),
+    }
+}
+
 /// The receipt a committed `Promotion` record promoted on: the value of its
 /// `promotion.receipt_digest` premise. `None` when the record is absent or is
 /// not a promotion decision of this tenant.
@@ -379,7 +450,8 @@ pub(super) fn promoted_receipt(
     let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
     let record = &entry.record;
     if record.tenant_id != tenant
-        || record.question.kind != medulla_decision_types::decision::statistical::QuestionKind::Promotion
+        || record.question.kind
+            != medulla_decision_types::decision::statistical::QuestionKind::Promotion
     {
         return Ok(None);
     }

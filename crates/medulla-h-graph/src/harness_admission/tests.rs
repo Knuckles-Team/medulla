@@ -1,7 +1,7 @@
 //! Direct AddNode admission of versioned harness-component writes
 //! (MEDULLA-ORCH-VOCAB-R801.3).
 
-use super::{decode_props, direct_add_node};
+use super::{decode_props, direct_add_node, HarnessBoundaryState};
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::Method;
 
@@ -56,16 +56,15 @@ fn admitted_blob(method: &Method, core: &GraphCore, tx_now: u64) -> Vec<u8> {
     properties_msgpack
 }
 
-// spec: MEDULLA-ORCH-VOCAB-R801.3
+// spec: MEDULLA-ORCH-VOCAB-R801.7
 #[test]
-fn harness_component_write_stamps_and_links() {
+fn component_version_admits_without_supersession_and_refuses_cas() {
     let core = GraphCore::new();
     let component = "comp:prompt";
     let v1_id = harness_node_id(component, "blob:v1");
     let v2_id = harness_node_id(component, "blob:v2");
 
-    // The first version is admitted, stamped with the transaction time,
-    // and carries no supersedes pointer (nothing to supersede).
+    // The first version is admitted and stamped with the transaction time.
     let first = add_node(
         v1_id.clone(),
         &harness_version_props(component, "system_prompt", "blob:v1", 10, 0.8),
@@ -76,8 +75,8 @@ fn harness_component_write_stamps_and_links() {
     assert!(stamped.get("supersedes_id").is_none());
     core.add_node(v1_id.clone(), properties_msgpack.clone());
 
-    // The second version is stamped and LINKED: the engine fills the
-    // supersedes pointer with the current version.
+    // The second version is stamped and NOT linked: the engine fills no
+    // supersedes pointer, because currency is the champion pointer.
     let second = add_node(
         v2_id.clone(),
         &harness_version_props(component, "system_prompt", "blob:v2", 20, 0.9),
@@ -85,7 +84,8 @@ fn harness_component_write_stamps_and_links() {
     let properties_msgpack = &admitted_blob(&second, &core, 2000);
     let stamped = decode_props(properties_msgpack);
     assert_eq!(stamped["tx_from"], serde_json::json!(2000));
-    assert_eq!(stamped["supersedes_id"], serde_json::json!(v1_id));
+    assert!(stamped.get("supersedes_id").is_none());
+    assert!(stamped.get("valid_to").is_none());
     core.add_node(v2_id.clone(), properties_msgpack.clone());
     let v2_blob = properties_msgpack.clone();
 
@@ -111,17 +111,30 @@ fn harness_component_write_stamps_and_links() {
         "got: {error}"
     );
 
-    // A stale supersession claim refuses: v3 names v1 while v2 is
-    // current.
+    // A record that still carries a retired field does not decode.
     let v3_id = harness_node_id(component, "blob:v3");
-    let mut stale = harness_version_props(component, "system_prompt", "blob:v3", 30, 0.9);
-    stale.insert("supersedes_id".into(), serde_json::json!(v1_id));
-    let stale_write = add_node(v3_id, &stale);
-    let error = direct_add_node(&stale_write, &core, 5000, None).unwrap_err();
-    assert!(
-        error.starts_with("HarnessSupersessionStale:"),
-        "got: {error}"
+    let mut retired = harness_version_props(component, "system_prompt", "blob:v3", 30, 0.9);
+    retired.insert("supersedes_id".into(), serde_json::json!(v1_id));
+    let error = direct_add_node(&add_node(v3_id.clone(), &retired), &core, 5000, None).unwrap_err();
+    assert!(error.starts_with("HarnessRecordMalformed:"), "got: {error}");
+    let mut retired = harness_version_props(component, "system_prompt", "blob:v3", 30, 0.9);
+    retired.insert("valid_to".into(), serde_json::json!(40));
+    let error = direct_add_node(&add_node(v3_id, &retired), &core, 5000, None).unwrap_err();
+    assert!(error.starts_with("HarnessRecordMalformed:"), "got: {error}");
+
+    // A compare-and-set on a stored component version refuses.
+    let close_window = rmp_serde::to_vec_named(&serde_json::json!({"valid_to": 20})).unwrap();
+    let error = HarnessBoundaryState::default()
+        .check_cas(&v1_id, &close_window, &core)
+        .unwrap_err();
+    assert_eq!(
+        error,
+        format!("HarnessVersionImmutable: harness component version '{v1_id}' is immutable")
     );
+    // A compare-and-set on a node that is not a harness record passes through.
+    HarnessBoundaryState::default()
+        .check_cas("some:other:node", &close_window, &core)
+        .unwrap();
 
     // A non-harness AddNode passes through untouched.
     let mut plain = serde_json::Map::new();

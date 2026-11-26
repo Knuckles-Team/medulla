@@ -4413,7 +4413,6 @@ class HarnessAdoptionStored(BaseModel):
     contrast_ref: str
     lesson_ref: str
     replayed: bool
-    supersedes_ref: str | None = None
 
 
 class HarnessLessonQuery(BaseModel):

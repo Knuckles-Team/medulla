@@ -7,26 +7,27 @@
 //!
 //! * The direct `AddNode` path (the graph-ops gateway) may mutate: the engine
 //!   stamps the transaction time (`tx_from`, MEDULLA-DURABLE-KERNEL-R078/R081) and
-//!   fills the `supersedes_id` pointer when the writer left it absent (versions
-//!   and lessons). The mutation happens before the durable commit and before
+//!   fills the `supersedes_id` pointer of a lesson when the writer left it absent. The mutation happens before the durable commit and before
 //!   the apply closure clones the method, so durable and serving state cannot
 //!   diverge.
 //! * The `ChangeEnvelope` path is byte-stable for replay (the replay check
 //!   compares reserialized bytes) and its digest covers the operations, so the
 //!   engine only VERIFIES: the generated client stamps `tx_from` itself
-//!   (MEDULLA-DURABLE-KERNEL-R081) and composes the real supersession edge and the
-//!   head-window-close ops, naming the superseded record in `supersedes_id`.
-//!   A supersession that leaves the pointer absent while a current record
-//!   exists is refused, because such a record would supersede nothing.
+//!   (MEDULLA-DURABLE-KERNEL-R081) and a lesson names the lesson it supersedes
+//!   in `supersedes_id`. A lesson that leaves the pointer absent while a
+//!   current one exists is refused, because it would supersede nothing. A
+//!   component version has no supersession at all (R801.7): it becomes current
+//!   only by a champion pointer move.
 //!
 //! The shared rules: the record decodes strictly (the closed kind sets, the
 //! typed evidence and interval checks), the node id is the record's own
 //! identity (content address for versions, lessons, adoptions and contrasts;
 //! the trace id for probe runs), a published record never mutates (the same
 //! writer fields are an idempotent replay; anything else is
-//! `HarnessVersionImmutable` / `HarnessRecordImmutable`), a supersession
-//! names the CURRENT record (`HarnessSupersessionStale` when it names an
-//! older one, `HarnessSupersessionUnknown` when it names nothing the graph
+//! `HarnessVersionImmutable` / `HarnessRecordImmutable`; a compare-and-set on
+//! a component version is `HarnessVersionImmutable`), a lesson supersession
+//! names the CURRENT lesson (`LessonSupersessionStale` when it names an
+//! older one, `LessonSupersessionUnknown` when it names nothing the graph
 //! holds), and a contrast agrees with its probe runs (same trace ids, same
 //! conditions digest — `ContrastConditionsMismatch` otherwise).
 //!
@@ -84,24 +85,6 @@ fn tx_stamp(props: &Props) -> Option<u64> {
         .filter(|stamp| *stamp > 0)
 }
 
-/// The three fields the component-version head-scan reads off every
-/// candidate — nothing else. Decoding them off the raw msgpack blob (instead
-/// of the full property map) keeps the 1k-version chain scan at a fraction
-/// of a millisecond (MEDULLA-ORCH-VOCAB-R801.6 budget). Unknown fields are
-/// skipped; every engine-admitted node decodes fully, so a probe that decodes
-/// is a real record.
-#[derive(serde::Deserialize, Default)]
-#[serde(default)]
-struct ComponentHeadProbe {
-    /// The engine-owned write marker on the node's property object.
-    #[serde(rename = "_harness_component")]
-    marker: bool,
-    /// Valid time: from when the version is current.
-    valid_from: u64,
-    /// Valid time: until when; absent while the version is still current.
-    valid_to: Option<u64>,
-}
-
 /// The fields the lesson head-scan reads off every candidate: the marker,
 /// the identity the head is scoped by, and the transaction stamp the head
 /// orders by.
@@ -156,25 +139,6 @@ impl<'a> HarnessView<'a> {
             .and_then(|stored| rmp_serde::from_slice::<T>(&stored).ok())
     }
 
-    /// The effective `(marker, valid_from, valid_to)` of one candidate
-    /// component version.
-    fn component_probe(&self, node_id: &str) -> Option<ComponentHeadProbe> {
-        if let Some(props) = self.pending.get(node_id) {
-            return Some(ComponentHeadProbe {
-                marker: props
-                    .get("_harness_component")
-                    .and_then(|value| value.as_bool())
-                    .unwrap_or(false),
-                valid_from: props
-                    .get("valid_from")
-                    .and_then(|value| value.as_u64())
-                    .unwrap_or(0),
-                valid_to: props.get("valid_to").and_then(|value| value.as_u64()),
-            });
-        }
-        self.probe(node_id)
-    }
-
     /// The effective `(marker, task_class, deficiency, tx_from)` of one
     /// candidate lesson.
     fn lesson_probe(&self, node_id: &str) -> Option<LessonHeadProbe> {
@@ -212,43 +176,6 @@ impl<'a> HarnessView<'a> {
         let node_id = format!("harness-probe-run:{trace_id}");
         self.props(&node_id)
             .and_then(|props| decode_harness_probe_run_write(&props).ok())
-    }
-
-    /// The current (window-open) version node id of one harness component, by
-    /// newest `valid_from` — the supersession target of a new version
-    /// (R801.2).
-    fn component_head(&self, component_id: &str) -> Option<String> {
-        let prefix = format!("harness-component:{component_id}:");
-        let mut best: Option<(u64, String)> = None;
-        for node_id in self
-            .core
-            .node_ids()
-            .into_iter()
-            .chain(self.pending.keys().cloned())
-        {
-            let Some(rest) = node_id.strip_prefix(&prefix) else {
-                continue;
-            };
-            // The node id is `harness-component:<id>:<content digest>`; a
-            // digest always starts with `sha256:`, which keeps a component id
-            // that is a prefix of another from aliasing its versions.
-            if !rest.starts_with("sha256:") {
-                continue;
-            }
-            let Some(probe) = self.component_probe(&node_id) else {
-                continue;
-            };
-            if !probe.marker || probe.valid_to.is_some() {
-                continue;
-            }
-            if best
-                .as_ref()
-                .is_none_or(|(valid_from, _)| probe.valid_from >= *valid_from)
-            {
-                best = Some((probe.valid_from, node_id));
-            }
-        }
-        best.map(|(_, node_id)| node_id)
     }
 
     /// The current lesson of one task class and deficiency, by newest
@@ -368,7 +295,6 @@ fn component_admission(
     view: &HarnessView<'_>,
     node_id: &str,
     props: &Props,
-    engine_fills_pointer: bool,
 ) -> Result<Admission, String> {
     let record = decode_component_write(props).map_err(|refusal| {
         refuse_component(refusal, "harness component version record".to_string())
@@ -400,46 +326,9 @@ fn component_admission(
         Some(false) => unreachable!("stored_record refuses a mutable rewrite"),
         None => {}
     }
-    // The supersession pointer names the current version, or nothing when the
-    // component is new.
-    let head = view.component_head(&record.component_id);
-    match record.supersedes_id.as_deref() {
-        Some(superseded) => match head.as_deref() {
-            Some(current) if current == superseded => {}
-            Some(current) => {
-                return Err(refuse_component(
-                    HarnessComponentRefusal::SupersessionStale,
-                    format!(
-                        "component '{}' is current at version '{current}', not '{superseded}'",
-                        record.component_id
-                    ),
-                ))
-            }
-            None => {
-                if !view.has(superseded) {
-                    return Err(refuse_component(
-                        HarnessComponentRefusal::SupersessionUnknown,
-                        format!(
-                            "component '{}' supersedes version '{superseded}' the graph does not hold",
-                            record.component_id
-                        ),
-                    ));
-                }
-            }
-        },
-        None if !engine_fills_pointer && head.is_some() => {
-            return Err(refuse_component(
-                HarnessComponentRefusal::SupersessionStale,
-                format!(
-                    "component '{}' is current at version '{}'; a new version must name it in `supersedes_id`",
-                    record.component_id,
-                    head.expect("head is Some")
-                ),
-            ));
-        }
-        None => {}
-    }
-    Ok(Admission::New { head })
+    // A version is current only by a champion pointer move (R801.7), so the
+    // write is related to no other version.
+    Ok(Admission::New { head: None })
 }
 
 /// The graph-relative admission of one harness-lesson write (R802.4).
@@ -1186,12 +1075,7 @@ fn harness_add_node_admission(
         return Ok(Some(admission));
     }
     if is_harness_component_write(props) {
-        return Ok(Some(component_admission(
-            view,
-            node_id,
-            props,
-            engine_fills_pointer,
-        )?));
+        return Ok(Some(component_admission(view, node_id, props)?));
     }
     if is_harness_lesson_write(props) {
         return Ok(Some(lesson_admission(
@@ -1218,12 +1102,11 @@ fn harness_add_node_admission(
 
 /// The stamped, re-encoded blob of one admitted `Admission::New` harness
 /// write (MEDULLA-ORCH-VOCAB-R801.3/R802.4): the transaction time is stamped, and
-/// when the writer left the `supersedes_id` pointer absent the new record is
-/// linked to the current one. The record already decoded and validated in
+/// when a lesson's writer left the `supersedes_id` pointer absent the new
+/// lesson is linked to the current one. The record already decoded and validated in
 /// the admission; `tx_from` is an engine-owned key the decoders strip, so
 /// the stamped object decodes to the same record.
 fn stamp_new_record(props: &Props, head: Option<&str>, tx_now: u64) -> Result<Vec<u8>, String> {
-    let component = is_harness_component_write(props);
     let lesson = is_harness_lesson_write(props);
     let mut stamped = props.clone();
     stamped.insert("tx_from".into(), serde_json::json!(tx_now));
@@ -1239,17 +1122,13 @@ fn stamp_new_record(props: &Props, head: Option<&str>, tx_now: u64) -> Result<Ve
                 .map_err(|err| format!("HarnessRecordMalformed: {err}"))?,
         );
     }
-    if component || lesson {
+    // A lesson links to the current one of its claim history; a component
+    // record carries no pointer (R801.7).
+    if lesson {
         if let Some(pointer_target) = head {
-            let pointer_absent = if component {
-                decode_component_write(&stamped)
-                    .map(|record| record.supersedes_id.is_none())
-                    .unwrap_or(false)
-            } else {
-                decode_lesson_write(&stamped)
-                    .map(|record| record.supersedes_id.is_none())
-                    .unwrap_or(false)
-            };
+            let pointer_absent = decode_lesson_write(&stamped)
+                .map(|record| record.supersedes_id.is_none())
+                .unwrap_or(false);
             if pointer_absent {
                 stamped.insert("supersedes_id".into(), serde_json::json!(pointer_target));
             }
@@ -1391,29 +1270,42 @@ impl HarnessBoundaryState {
         Ok(())
     }
 
-    /// The envelope `CompareAndSetNodeFields` op: a head-window-close (or
-    /// any field merge) on a harness record must be visible to the
-    /// supersession checks of the write's later ops. Non-harness nodes pass
-    /// through.
-    fn check_cas(&mut self, node_id: &str, updates_msgpack: &[u8], core: &GraphCore) {
+    /// The envelope `CompareAndSetNodeFields` op: a field merge on a harness
+    /// record must be visible to the supersession checks of the write's later
+    /// ops, except on a component version, which refuses (R801.7). Non-harness
+    /// nodes pass through.
+    fn check_cas(
+        &mut self,
+        node_id: &str,
+        updates_msgpack: &[u8],
+        core: &GraphCore,
+    ) -> Result<(), String> {
         let base = match self.pending.get(node_id) {
             Some(props) => props.clone(),
             None => {
                 let Some(stored) = core.get_node_properties(node_id) else {
-                    return;
+                    return Ok(());
                 };
                 let stored = decode_props(&stored);
                 if !Self::is_harness_record(&stored) {
-                    return;
+                    return Ok(());
                 }
                 stored
             }
         };
+        // A published version never changes: currency is the champion pointer,
+        // so no compare-and-set may close a window on a component node (R801.7).
+        if is_harness_component_write(&base) {
+            return Err(format!(
+                "HarnessVersionImmutable: harness component version '{node_id}' is immutable"
+            ));
+        }
         let mut merged = base;
         for (key, value) in &decode_props(updates_msgpack) {
             merged.insert(key.clone(), value.clone());
         }
         self.pending.insert(node_id.to_string(), merged);
+        Ok(())
     }
 
     /// MEDULLA-ORCH-VOCAB-R801.3/R802.4 — check one envelope's harness-record
@@ -1439,7 +1331,7 @@ impl HarnessBoundaryState {
                     node_id,
                     updates_msgpack,
                     ..
-                } => self.check_cas(node_id, updates_msgpack, core),
+                } => self.check_cas(node_id, updates_msgpack, core)?,
                 _ => {}
             }
         }

@@ -6,7 +6,6 @@
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::orchestration::HarnessComponentKind;
 use medulla_work_types::{
-    orchestration::improvement::current_adopted_harness,
     orchestration::improvement::register_adoption, orchestration::improvement::register_lesson,
     orchestration::improvement::retrieve_lessons, orchestration::improvement::AdoptedHarness,
     orchestration::improvement::HarnessContrast, orchestration::improvement::HarnessLesson,
@@ -497,76 +496,18 @@ fn supersession_keeps_old_readable() {
     .unwrap();
     assert_eq!(after, vec![&lessons[1]]);
 
-    // Adoptions: the new adoption supersedes the previous adoption of the
-    // same agent and task class by edge; the previous one stays readable.
+    // Adoptions: an adoption is a revision of its `HarnessBundle` subject and
+    // becomes current only by a champion pointer move (R801.7), so admission
+    // writes no edge and both adoptions stay stored as written.
     let mut adoptions = Vec::new();
-    let mut adoption_supersessions = Vec::new();
     let previous = adoption(&["harness-component:comp:prompt:sha256:a"]);
-    register_adoption(
-        &mut adoptions,
-        &mut adoption_supersessions,
-        previous.clone(),
-        10,
-        10,
-    )
-    .unwrap();
+    register_adoption(&mut adoptions, previous.clone()).unwrap();
     let next = adoption(&["harness-component:comp:prompt:sha256:b"]);
-    register_adoption(
-        &mut adoptions,
-        &mut adoption_supersessions,
-        next.clone(),
-        20,
-        20,
-    )
-    .unwrap();
-
+    register_adoption(&mut adoptions, next.clone()).unwrap();
+    assert_eq!(adoptions, vec![previous.clone(), next.clone()]);
+    // A replay of the same adoption is an idempotent no-op.
+    register_adoption(&mut adoptions, next).unwrap();
     assert_eq!(adoptions.len(), 2);
-    assert_eq!(adoption_supersessions.len(), 2);
-    assert_eq!(adoption_supersessions[0].new_version, previous.node_id());
-    assert_eq!(adoption_supersessions[0].superseded_version, String::new());
-    assert_eq!(adoption_supersessions[1].new_version, next.node_id());
-    assert_eq!(
-        adoption_supersessions[1].superseded_version,
-        previous.node_id()
-    );
-    assert!(adoptions.iter().any(|a| a.node_id() == previous.node_id()));
-    assert!(current_adopted_harness(
-        &adoptions,
-        &adoption_supersessions,
-        "agent:demo",
-        "task:demo",
-        5
-    )
-    .is_none());
-    assert_eq!(
-        current_adopted_harness(
-            &adoptions,
-            &adoption_supersessions,
-            "agent:demo",
-            "task:demo",
-            15
-        ),
-        Some(&adoptions[0])
-    );
-    assert_eq!(
-        current_adopted_harness(
-            &adoptions,
-            &adoption_supersessions,
-            "agent:demo",
-            "task:demo",
-            25
-        ),
-        Some(&adoptions[1])
-    );
-    // A different agent or task class is untouched.
-    assert!(current_adopted_harness(
-        &adoptions,
-        &adoption_supersessions,
-        "agent:other",
-        "task:demo",
-        25
-    )
-    .is_none());
 }
 
 // spec: MEDULLA-ORCH-VOCAB-R802.5
@@ -638,17 +579,10 @@ fn evidence_and_condition_refusals() {
 
     // An adopted harness without a decision reference refuses.
     let mut adoptions = Vec::new();
-    let mut adoption_supersessions = Vec::new();
     let mut no_decision = adoption(&["harness-component:comp:prompt:sha256:a"]);
     no_decision.decision_ref = String::new();
     assert_eq!(
-        register_adoption(
-            &mut adoptions,
-            &mut adoption_supersessions,
-            no_decision,
-            10,
-            10
-        ),
+        register_adoption(&mut adoptions, no_decision),
         Err(ImprovementLibraryRefusal::AdoptedHarnessNoDecision)
     );
     assert!(adoptions.is_empty());

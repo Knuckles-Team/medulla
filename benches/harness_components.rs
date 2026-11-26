@@ -39,10 +39,8 @@ fn version_write(index: usize, tx_now: u64) -> (String, Method) {
         content_ref: content_ref.clone(),
         content_digest: HarnessComponentVersion::content_digest(&content_ref),
         valid_from: index as u64 * 10,
-        valid_to: None,
         confidence: 0.5 + (index as f64 / 10_000.0),
         evidence_run_id: format!("run-{COMPONENT}-{index:04}"),
-        supersedes_id: None,
         applied_to_id: Some("agent:bench".to_string()),
     };
     let mut props = serde_json::Map::new();
@@ -76,8 +74,9 @@ fn main() {
     let core = GraphCore::new();
     let mut latencies_ns = Vec::with_capacity(CHAIN);
 
-    // The 1k-version chain: each write supersedes the current version (the
-    // engine fills the pointer) and projects into the same graph.
+    // The 1k-version component: every write is admitted with no window close
+    // and no supersession (currency is the champion pointer, R801.7) and
+    // projects into the same graph.
     for index in 1..=CHAIN {
         let (_node_id, method) = version_write(index, index as u64 * 1_000);
         latencies_ns.push(harness_bench::admit_and_project(
@@ -88,21 +87,17 @@ fn main() {
         ));
     }
 
-    // The chain is what the spec measures: 1,000 versions, each linked to
-    // the previous, the newest current.
+    // What the spec measures: 1,000 versions of one component, each stored as
+    // written, none naming another.
     let (last_id, _) = version_write(CHAIN, CHAIN as u64 * 1_000);
-    let (previous_id, _) = version_write(CHAIN - 1, 0);
     let head = core
         .get_node_properties(&last_id)
         .expect("the newest version is stored");
     let head_props =
         medulla_types::msgpack::decode_property_object(&head).expect("the stored head decodes");
-    assert_eq!(
-        head_props
-            .get("supersedes_id")
-            .and_then(|value| value.as_str()),
-        Some(previous_id.as_str()),
-        "the newest version links the previous one"
+    assert!(
+        head_props.get("supersedes_id").is_none() && head_props.get("valid_to").is_none(),
+        "admission links no version and closes no window"
     );
 
     harness_bench::report(

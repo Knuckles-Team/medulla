@@ -795,8 +795,6 @@ pub struct HarnessAdoptionStored {
     pub adopted_harness_ref: String,
     pub contrast_ref: String,
     pub lesson_ref: String,
-    /// The adoption this one superseded, when the agent and task class held one.
-    pub supersedes_ref: Option<String>,
     /// Whether this answer is a repeat of an earlier identical write.
     pub replayed: bool,
 }

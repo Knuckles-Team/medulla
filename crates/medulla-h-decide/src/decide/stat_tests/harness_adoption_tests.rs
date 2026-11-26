@@ -1,7 +1,8 @@
 //! `DecisionLog.harness_adoption` served (MEDULLA-DECISION-ENGINE-R803.8): the
 //! adopted harness, its contrast and its lesson commit together from one
 //! committed contrast decision, a repeat answers the stored refs, a second
-//! adoption supersedes the first by edge, and each refusal writes nothing.
+//! adoption writes no supersession edge (currency is the champion pointer,
+//! MEDULLA-ORCH-VOCAB-R801.7), and each refusal writes nothing.
 
 use medulla_agent_types::agent_component::AgentComponentKind;
 use medulla_decision_outcome_types::decision::promotion::RevisionStage;
@@ -14,7 +15,7 @@ use medulla_decision_types::decision::statistical::StatisticalDecisionRecord;
 use medulla_decision_types::decision::DecisionPolicyRef;
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::orchestration::improvement::{
-    AdoptedHarness, AdoptionSupersession, HarnessContrast, HarnessLesson, ImprovementLibraryRefusal,
+    AdoptedHarness, HarnessContrast, HarnessLesson, ImprovementLibraryRefusal,
 };
 use medulla_work_types::orchestration::HarnessComponentKind;
 
@@ -136,9 +137,9 @@ async fn adoption_contrast_and_lesson_commit_together() {
 
     let stored = adopt(&h, write.clone()).await.unwrap();
     assert!(!stored.replayed);
-    assert_eq!(stored.supersedes_ref, None);
-    // One adoption, one contrast, one lesson, one head edge each, one write row.
-    assert_eq!(counts(&h), [1, 1, 1, 1, 1, 1]);
+    // One adoption, one contrast, one lesson, one lesson head edge, one write
+    // row, and no adoption edge.
+    assert_eq!(counts(&h), [1, 1, 1, 0, 1, 1]);
     // The adoption is an Evaluated revision of the agent's harness bundle.
     let revisions = h
         .store
@@ -186,30 +187,48 @@ async fn adoption_contrast_and_lesson_commit_together() {
     assert!(repeat.replayed);
     assert_eq!(repeat.adopted_harness_ref, stored.adopted_harness_ref);
     assert_eq!(repeat.lesson_ref, stored.lesson_ref);
-    assert_eq!(counts(&h), [1, 1, 1, 1, 1, 1]);
+    assert_eq!(counts(&h), [1, 1, 1, 0, 1, 1]);
 
-    // A later adoption of the same agent and task class supersedes the first by
-    // edge; the first stays readable.
+    // A later adoption of the same agent and task class is another stored
+    // revision; the first stays readable and no edge links them.
     let second = committed_contrast(&h, 0.30, 0.10).await;
     let mut next = write_for(&second, A);
     next.evidence_run_ids =
         BoundedVec::new(vec![BASELINE.to_string(), "trace:a".to_string()]).unwrap();
     next.what_changed = "the prompt names the retry budget".to_string();
-    let superseding = adopt(&h, next).await.unwrap();
-    assert_eq!(
-        superseding.supersedes_ref.as_deref(),
-        Some(stored.adopted_harness_ref.as_str())
-    );
+    let later = adopt(&h, next).await.unwrap();
+    assert_ne!(later.adopted_harness_ref, stored.adopted_harness_ref);
     assert_eq!(counts(&h)[0], 2);
-    let edges = h
+    assert_eq!(counts(&h)[3], 0);
+}
+
+/// Verifies MEDULLA-ORCH-VOCAB-R801.7: an adoption writes no supersession edge.
+// spec: MEDULLA-ORCH-VOCAB-R801.7
+#[tokio::test]
+async fn adoption_writes_no_supersession_edge() {
+    let h = Harness::new().await;
+    let first = committed_contrast(&h, 0.05, 0.10).await;
+    adopt(&h, write_for(&first, B)).await.unwrap();
+    let second = committed_contrast(&h, 0.30, 0.10).await;
+    let mut next = write_for(&second, A);
+    next.evidence_run_ids =
+        BoundedVec::new(vec![BASELINE.to_string(), "trace:a".to_string()]).unwrap();
+    next.what_changed = "the prompt names the retry budget".to_string();
+    adopt(&h, next).await.unwrap();
+
+    assert_eq!(rows(&h, "harness-adopted:"), 2);
+    assert_eq!(rows(&h, "harness-supersession:adoption:"), 0);
+    // Each adoption is an Evaluated revision of the bundle subject, and none is
+    // a Champion: only a pointer move makes one current.
+    let revisions = h
         .store
-        .decision_artifacts_with_prefix(TENANT, "harness-supersession:adoption:", 10)
+        .decision_artifacts_with_prefix(TENANT, "revision:", 10)
         .unwrap();
-    assert!(edges.iter().any(|(_, bytes)| {
-        let edge: AdoptionSupersession = decode_stored(bytes);
-        edge.new_version == superseding.adopted_harness_ref
-            && edge.superseded_version == stored.adopted_harness_ref
-    }));
+    assert_eq!(revisions.len(), 2);
+    for (_, bytes) in &revisions {
+        let revision: RevisionRow = decode_stored(bytes);
+        assert_eq!(revision.stage, RevisionStage::Evaluated);
+    }
 }
 
 fn decode_stored<T: serde::de::DeserializeOwned>(bytes: &[u8]) -> T {

@@ -5,14 +5,15 @@
 //! A harness component is one of the eight editable pieces of an agent's
 //! harness: system_prompt, guardrails, memory, tool_guidance, subagent,
 //! skill, script or plugin. Each version carries a content digest, a valid
-//! time, a confidence and an evidence link. A new version supersedes the
-//! older one by edge; a published version never mutates.
+//! time, a confidence and an evidence link. A published version never
+//! mutates, and a version becomes current only by a champion pointer move
+//! (R801.7): the pointer's `Activated` events are the supersession history.
 //!
 //! This module is the typed vocabulary and the pure rules over it. The
 //! durable write (the ChangeEnvelope/AddNode path, R801.3) stamps the
-//! versions bitemporally and links the `:supersedes` edges; the served reads
-//! (R078/R081) walk them. The records themselves are plain data: one
-//! vocabulary, one writer.
+//! versions bitemporally; currency is read through the `decision_pointers`
+//! relation. The records themselves are plain data: one vocabulary, one
+//! writer.
 
 pub mod agent_lifecycle_machine;
 pub mod capability_gap;
@@ -100,12 +101,6 @@ pub enum HarnessComponentRefusal {
     IdentityMissing,
     /// A content digest that does not recompute from the content reference.
     ContentDigestMismatch,
-    /// A valid interval that runs backwards or is zero.
-    ValidIntervalInverted,
-    /// A supersession that names a version the store does not hold.
-    SupersessionUnknown,
-    /// A supersession that names an older version instead of the current one.
-    SupersessionStale,
     /// A version written without its transaction-time stamp.
     WithoutStamp,
     /// A version record that does not decode to the vocabulary's shape.
@@ -122,9 +117,6 @@ impl HarnessComponentRefusal {
             Self::VersionImmutable => HarnessVocabularyErrorCode::VersionImmutable,
             Self::IdentityMissing => HarnessVocabularyErrorCode::IdentityMissing,
             Self::ContentDigestMismatch => HarnessVocabularyErrorCode::ContentDigestMismatch,
-            Self::ValidIntervalInverted => HarnessVocabularyErrorCode::ValidIntervalInverted,
-            Self::SupersessionUnknown => HarnessVocabularyErrorCode::SupersessionUnknown,
-            Self::SupersessionStale => HarnessVocabularyErrorCode::SupersessionStale,
             Self::WithoutStamp => HarnessVocabularyErrorCode::WithoutStamp,
             Self::RecordMalformed => HarnessVocabularyErrorCode::RecordMalformed,
         }
@@ -148,17 +140,10 @@ pub struct HarnessComponentVersion {
     pub content_digest: String,
     /// Valid time: from when this version is current (bitemporal, R078/R081).
     pub valid_from: u64,
-    /// Valid time: until when; absent while the version is still current.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub valid_to: Option<u64>,
     /// How much the writer trusts this version; 0 to 1.
     pub confidence: f64,
     /// The evaluation run that produced it; never empty (R801.4).
     pub evidence_run_id: String,
-    /// The version this one supersedes, by node id; the engine sets it when
-    /// the writer leaves it absent.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub supersedes_id: Option<String>,
     /// The agent or task scope the version is applied to.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub applied_to_id: Option<String>,
@@ -186,8 +171,7 @@ impl HarnessComponentVersion {
     }
 
     /// The admission check over the fields the writer can still get wrong:
-    /// identity, evidence, confidence, digest integrity and the valid
-    /// interval (R801.4). The kind is the closed set itself; an unknown kind
+    /// identity, evidence, confidence and digest integrity (R801.4). The kind is the closed set itself; an unknown kind
     /// refuses at decode, and the write path reports it as
     /// [`HarnessComponentRefusal::KindUnknown`].
     pub fn validate(&self) -> Result<(), HarnessComponentRefusal> {
@@ -203,19 +187,11 @@ impl HarnessComponentVersion {
         if self.content_digest != Self::content_digest(&self.content_ref) {
             return Err(HarnessComponentRefusal::ContentDigestMismatch);
         }
-        if let Some(valid_to) = self.valid_to {
-            if valid_to <= self.valid_from {
-                return Err(HarnessComponentRefusal::ValidIntervalInverted);
-            }
-        }
         Ok(())
     }
 
     /// Whether two records of the same content carry the same writer-supplied
-    /// metadata. The comparison is over the writer's fields only:
-    /// `supersedes_id` and `valid_to` are engine state (filled and closed by
-    /// the write path), so they never turn a replay into a "mutation"
-    /// (R801.4).
+    /// metadata (R801.4).
     pub fn same_writer_fields(&self, other: &Self) -> bool {
         self.component_id == other.component_id
             && self.kind == other.kind
@@ -240,9 +216,8 @@ pub fn is_harness_component_write(props: &serde_json::Map<String, serde_json::Va
 /// The engine-owned keys of a harness-component node's property object: the
 /// write marker, the transaction-time stamp (the engine stamps it on the
 /// direct AddNode path; the generated client stamps it on the
-/// ChangeEnvelope path), the window-close transaction stamp the
-/// bitemporal kernel adds when the version stops being current, and the
-/// owner-id stamp the gateway applies to every native write. A record
+/// ChangeEnvelope path), the transaction-end stamp the bitemporal kernel
+/// carries, and the owner-id stamp the gateway applies to every native write. A record
 /// decoded from the object ignores exactly these.
 const ENGINE_OWNED_HARNESS_KEYS: &[&str] = &["_harness_component", "tx_from", "tx_to", "_owner_id"];
 
@@ -281,149 +256,30 @@ pub fn component_tx_stamp(props: &serde_json::Map<String, serde_json::Value>) ->
         .filter(|stamp| *stamp > 0)
 }
 
-/// One `:supersedes` edge between two versions, stamped bitemporally (R078/
-/// R081): the edge is the validity window by which the older version stops
-/// being current, and it is what an `AS OF` read walks.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct HarnessSupersession {
-    /// The newer version, by node id.
-    pub new_version: String,
-    /// The version it supersedes, by node id.
-    pub superseded_version: String,
-    /// Valid time: from when the newer version is current.
-    pub valid_at: u64,
-    /// Transaction time: when the write that made it was stamped.
-    pub tx_now: u64,
-}
-
-/// Resolve the `supersedes_id` of one new version before it is admitted
-/// (R801.2): a writer-named pointer must name the component's current
-/// version, or an existing version of the component when no current window
-/// is open; an absent pointer is filled with the current version's node id —
-/// never the version's own id, since a version never supersedes itself.
-fn resolve_supersedes_pointer(
-    new: &mut HarnessComponentVersion,
-    component: Option<&HarnessComponentVersion>,
-    versions: &[HarnessComponentVersion],
-) -> Result<(), HarnessComponentRefusal> {
-    match new.supersedes_id.as_deref() {
-        Some(superseded) => match component {
-            Some(head) if head.node_id() == superseded => {}
-            Some(_) => return Err(HarnessComponentRefusal::SupersessionStale),
-            None => {
-                if !versions
-                    .iter()
-                    .any(|v| v.node_id() == superseded && v.component_id == new.component_id)
-                {
-                    return Err(HarnessComponentRefusal::SupersessionUnknown);
-                }
-            }
-        },
-        None => {
-            // A version never supersedes itself: when the writer is naming
-            // the only existing version of the component, there is nothing
-            // to supersede.
-            new.supersedes_id = component
-                .filter(|head| head.node_id() != new.node_id())
-                .map(|head| head.node_id());
-        }
-    }
-    Ok(())
-}
-
-/// Close the superseded version's validity window and record the
-/// `:supersedes` edge (R801.2): the window closes at the newer version's
-/// `valid_from`, and the edge is stamped with the write's transaction time
-/// (R078/R081). A version never closes its own window.
-fn record_supersession(
-    versions: &mut [HarnessComponentVersion],
-    supersessions: &mut Vec<HarnessSupersession>,
-    new: &HarnessComponentVersion,
-    tx_now: u64,
-) {
-    if let Some(head) = &new.supersedes_id {
-        if head != &new.node_id() {
-            if versions
-                .iter()
-                .find(|v| v.node_id() == *head)
-                .and_then(|v| v.valid_to)
-                .is_none()
-            {
-                for v in versions.iter_mut().filter(|v| v.node_id() == *head) {
-                    if v.valid_to.is_none() {
-                        v.valid_to = Some(new.valid_from);
-                    }
-                }
-            }
-            supersessions.push(HarnessSupersession {
-                new_version: new.node_id(),
-                superseded_version: head.clone(),
-                valid_at: new.valid_from,
-                tx_now,
-            });
-        }
-    }
-}
-
-/// Admit one new version into the store's vocabulary (R801.2).
-///
-/// A new version supersedes the current one by edge: the older version's
-/// validity window closes at the newer one's `valid_from`, and the newer one
-/// names it in `supersedes_id` (the engine fills the pointer when the writer
-/// leaves it absent). The older version stays readable in `versions` —
-/// nothing about it is deleted, only its window closes.
+/// Admit one new version into the store's vocabulary (R801.7).
 ///
 /// A published version never mutates: the same `(component_id,
-/// content_digest)` with any other writer-supplied metadata is refused
-/// [`HarnessComponentRefusal::VersionImmutable`]; a replay of the same write
-/// is admitted as an idempotent no-op. The comparison is over the writer's
-/// fields only — `supersedes_id` and `valid_to` are engine state (filled and
-/// closed here), so they never turn a replay into a "mutation".
+/// content_digest)` node id with the same writer fields is an idempotent
+/// replay, and with any other writer field is refused
+/// [`HarnessComponentRefusal::VersionImmutable`]. Admission closes no window
+/// and writes no edge: a version becomes current only when the champion
+/// pointer of its component moves to it.
 pub fn register_version(
     versions: &mut Vec<HarnessComponentVersion>,
-    supersessions: &mut Vec<HarnessSupersession>,
-    mut new: HarnessComponentVersion,
-    tx_now: u64,
+    new: HarnessComponentVersion,
 ) -> Result<(), HarnessComponentRefusal> {
     new.validate()?;
-    // Replay and mutation are judged before the engine normalizes anything:
-    // a stored version already carries the engine-filled supersedes pointer
-    // and (once superseded) a closed window, so the comparison must run
-    // against the writer's own fields only.
     match versions.iter().find(|v| v.node_id() == new.node_id()) {
-        Some(published) if published.same_writer_fields(&new) => return Ok(()),
-        Some(_) => return Err(HarnessComponentRefusal::VersionImmutable),
-        None => {}
+        Some(published) if published.same_writer_fields(&new) => Ok(()),
+        Some(_) => Err(HarnessComponentRefusal::VersionImmutable),
+        None => {
+            versions.push(new);
+            Ok(())
+        }
     }
-    let component = versions
-        .iter()
-        .filter(|v| v.component_id == new.component_id)
-        .max_by_key(|v| (v.valid_from, v.node_id().clone()));
-    resolve_supersedes_pointer(&mut new, component, versions)?;
-    record_supersession(versions, supersessions, &new, tx_now);
-    versions.push(new);
-    Ok(())
 }
 
-/// The newest version of `component_id` valid at `as_of` (R801.2), or `None`
-/// when no version is valid then: the component was not yet current, or its
-/// intervals carry a gap at that time. Every older version stays readable in
-/// `versions`.
-pub fn current_harness_component<'a>(
-    component_id: &str,
-    versions: &'a [HarnessComponentVersion],
-    as_of: u64,
-) -> Option<&'a HarnessComponentVersion> {
-    versions
-        .iter()
-        .filter(|v| v.component_id == component_id)
-        .filter(|v| v.valid_from <= as_of && v.valid_to.is_none_or(|to| to > as_of))
-        .max_by_key(|v| (v.valid_from, v.node_id().clone()))
-}
-
-/// One node of the supersession chain, with the evidence it carries and the
+/// One node of the champion chain, with the evidence it carries and the
 /// content digest recomputed from its content reference (R801.5).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -432,7 +288,8 @@ pub struct HarnessVersionEntry {
     /// The version itself: its evidence run id, confidence and valid
     /// interval ride here.
     pub version: HarnessComponentVersion,
-    /// The version this one supersedes, by node id (the chain's next hop).
+    /// The previous champion, by node id (the chain's next hop); absent for
+    /// the first champion.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub supersedes_id: Option<String>,
     /// The content digest recomputed from `version.content_ref`; equals
@@ -440,49 +297,31 @@ pub struct HarnessVersionEntry {
     pub content_digest_recomputed: String,
 }
 
-/// The full supersession chain of one component, newest first (R801.5). The
-/// walk follows each version's `supersedes_id` pointer, falling back to the
-/// edge table when a record does not carry one; a pointer that names a
-/// version the store does not hold stops the walk there rather than
-/// inventing a hop.
+/// The champion chain of one component, newest first (R801.5, R801.7).
+/// `champions` are the targets of the component subject pointer's `Activated`
+/// events, oldest first. Each entry's `supersedes_id` is the previous
+/// champion. A champion naming a version the store does not hold is skipped
+/// rather than invented.
 pub fn version_history(
     component_id: &str,
     versions: &[HarnessComponentVersion],
-    supersessions: &[HarnessSupersession],
+    champions: &[String],
 ) -> Vec<HarnessVersionEntry> {
     let mut out = Vec::new();
-    let mut cursor = versions
-        .iter()
-        .filter(|v| v.component_id == component_id)
-        .max_by_key(|v| (v.valid_from, v.node_id().clone()));
-    while let Some(version) = cursor {
-        if out
+    for (index, champion) in champions.iter().enumerate().rev() {
+        let Some(version) = versions
             .iter()
-            .any(|e: &HarnessVersionEntry| e.version.node_id() == version.node_id())
-        {
-            break;
-        }
+            .find(|v| v.component_id == component_id && v.node_id() == *champion)
+        else {
+            continue;
+        };
         out.push(HarnessVersionEntry {
             version: version.clone(),
-            supersedes_id: version.supersedes_id.clone(),
+            supersedes_id: index.checked_sub(1).map(|prior| champions[prior].clone()),
             content_digest_recomputed: HarnessComponentVersion::content_digest(
                 &version.content_ref,
             ),
         });
-        cursor = version
-            .supersedes_id
-            .as_deref()
-            .and_then(|target| versions.iter().find(|v| v.node_id() == target))
-            .or_else(|| {
-                supersessions
-                    .iter()
-                    .find(|e| e.new_version == version.node_id())
-                    .and_then(|e| {
-                        versions
-                            .iter()
-                            .find(|v| v.node_id() == e.superseded_version)
-                    })
-            });
     }
     out
 }

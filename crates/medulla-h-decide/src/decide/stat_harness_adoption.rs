@@ -4,10 +4,12 @@
 //! The write names a committed `HarnessContrast` decision by its record
 //! digest. The handler reads the contrast deltas from that decision (the
 //! request never carries them), checks that the decision adopted the named
-//! version under the named conditions, then writes the three records, their
-//! supersession edges and the idempotency row as ONE owner write
-//! (`put_decision_artifacts`). The adoption supersedes the previous adoption
-//! of the same agent and task class by edge; both stay readable.
+//! version under the named conditions, then writes the three records, the
+//! lesson's supersession edges and the idempotency row as ONE owner write
+//! (`put_decision_artifacts`). An adoption writes no supersession edge: it is
+//! an `Evaluated` revision of its `HarnessBundle` subject and becomes current
+//! only by a champion pointer move (MEDULLA-ORCH-VOCAB-R801.7); every adoption
+//! stays readable.
 
 use medulla_decision_outcome_types::decision::promotion::{
     DefinitionKind, RevisionStage, RevisionSubject,
@@ -20,9 +22,8 @@ use medulla_decision_types::decision::statistical::QuestionKind;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::BoundedVec;
 use medulla_work_types::orchestration::improvement::{
-    register_adoption, register_lesson, retrieve_lessons, AdoptedHarness, AdoptionSupersession,
-    HarnessContrast, HarnessLesson, HarnessProbeRun, ImprovementLibraryRefusal, LessonEvidence,
-    LessonSupersession,
+    register_adoption, register_lesson, retrieve_lessons, AdoptedHarness, HarnessContrast,
+    HarnessLesson, HarnessProbeRun, ImprovementLibraryRefusal, LessonEvidence, LessonSupersession,
 };
 use serde::de::DeserializeOwned;
 
@@ -34,7 +35,6 @@ const MAX_LIBRARY_ROWS: usize = 100_000;
 const ADOPTED_PREFIX: &str = "harness-adopted:";
 const LESSON_PREFIX: &str = "harness-lesson:";
 const CONTRAST_PREFIX: &str = "harness-contrast:";
-const ADOPTION_EDGE_PREFIX: &str = "harness-supersession:adoption:";
 const LESSON_EDGE_PREFIX: &str = "harness-supersession:lesson:";
 const WRITE_PREFIX: &str = "harness-adoption-write:";
 
@@ -187,31 +187,18 @@ pub(super) fn adopt(
         )
     })?;
     let mut adoptions: Vec<AdoptedHarness> = load(ctx, ADOPTED_PREFIX, "adopted harness")?;
-    let mut adoption_edges: Vec<AdoptionSupersession> =
-        load(ctx, ADOPTION_EDGE_PREFIX, "adoption supersession")?;
-    let (adoptions_before, adoption_edges_before) = (adoptions.len(), adoption_edges.len());
-    register_adoption(
-        &mut adoptions,
-        &mut adoption_edges,
-        adopted,
-        ctx.now_ms,
-        ctx.now_ms,
-    )
-    .map_err(|refusal| refuse(refusal, "the adoption is not admitted"))?;
+    let adoptions_before = adoptions.len();
+    register_adoption(&mut adoptions, adopted)
+        .map_err(|refusal| refuse(refusal, "the adoption is not admitted"))?;
 
-    let supersedes_ref = adoption_edges[adoption_edges_before..]
-        .iter()
-        .find(|edge| edge.new_version == adopted_ref && !edge.superseded_version.is_empty())
-        .map(|edge| edge.superseded_version.clone());
     let stored = HarnessAdoptionStored {
         adopted_harness_ref: adopted_ref.clone(),
         contrast_ref: contrast.node_id(),
         lesson_ref: lesson_ref.clone(),
-        supersedes_ref,
         replayed: false,
     };
 
-    // One owner write: the three records, the new edges and the idempotency row.
+    // One owner write: the three records, the new lesson edges and the idempotency row.
     let mut rows: Vec<(String, Vec<u8>)> = vec![(
         format!("{CONTRAST_PREFIX}{}", contrast.node_id()),
         encode_artifact(&contrast)?,
@@ -233,12 +220,6 @@ pub(super) fn adopt(
             created_ms: ctx.now_ms,
         };
         rows.push((revision.key(), encode_artifact(&revision)?));
-    }
-    for edge in &adoption_edges[adoption_edges_before..] {
-        rows.push((
-            format!("{ADOPTION_EDGE_PREFIX}{}", edge.new_version),
-            encode_artifact(edge)?,
-        ));
     }
     if lessons.len() > lessons_before {
         rows.push((

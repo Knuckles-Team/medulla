@@ -169,8 +169,8 @@ impl ImprovementLibraryRefusal {
             Self::ContentDigestMismatch => Code::ContentDigestMismatch,
             Self::ContrastConditionsMismatch => Code::ContrastConditionsMismatch,
             Self::AdoptedHarnessNoDecision => Code::AdoptedHarnessNoDecision,
-            Self::SupersessionStale => Code::SupersessionStale,
-            Self::SupersessionUnknown => Code::SupersessionUnknown,
+            Self::SupersessionStale => Code::LessonSupersessionStale,
+            Self::SupersessionUnknown => Code::LessonSupersessionUnknown,
             Self::NoLessons => Code::NoLessons,
             Self::RecordMalformed => Code::RecordMalformed,
             Self::WithoutStamp => Code::RecordWithoutStamp,
@@ -423,20 +423,6 @@ pub struct LessonSupersession {
     pub tx_now: u64,
 }
 
-/// One `:supersedes` edge between two adoptions of the same agent and task
-/// class, stamped bitemporally (R802.4).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
-pub struct AdoptionSupersession {
-    pub new_version: String,
-    pub superseded_version: String,
-    /// Valid time: from when the newer adoption is current.
-    pub valid_at: u64,
-    /// Transaction time: when the write that made it was stamped.
-    pub tx_now: u64,
-}
-
 /// The measured evidence behind one lesson (R802.5): its contrast and the
 /// two probe runs it compares.
 pub struct LessonEvidence<'a> {
@@ -527,15 +513,13 @@ pub fn register_lesson(
     Ok(())
 }
 
-/// Admit one adopted harness (R802.4). An adopted harness supersedes the
-/// previous adoption of the same agent and task class by edge; the previous
-/// adoption stays readable. The byte-identical write is an idempotent no-op.
+/// Admit one adopted harness (R801.7). An adoption is a revision of its
+/// `HarnessBundle` subject; it becomes current only when the champion pointer
+/// of that subject moves to it, so admission writes no edge. The
+/// byte-identical write is an idempotent no-op.
 pub fn register_adoption(
     adoptions: &mut Vec<AdoptedHarness>,
-    supersessions: &mut Vec<AdoptionSupersession>,
     new: AdoptedHarness,
-    valid_at: u64,
-    tx_now: u64,
 ) -> Result<(), ImprovementLibraryRefusal> {
     new.validate()?;
     if replayed_or_immutable(
@@ -543,28 +527,6 @@ pub fn register_adoption(
         &new,
     )? {
         return Ok(());
-    }
-    let head = adoptions
-        .iter()
-        .rev()
-        .find(|a| a.agent_ref == new.agent_ref && a.task_class == new.task_class);
-    if let Some(head) = head {
-        supersessions.push(AdoptionSupersession {
-            new_version: new.node_id(),
-            superseded_version: head.node_id(),
-            valid_at,
-            tx_now,
-        });
-    } else {
-        // The first adoption of this agent and task class is current from its
-        // own write time; the head-edge (an empty superseded version) records
-        // that, so the bitemporal read returns nothing before the write.
-        supersessions.push(AdoptionSupersession {
-            new_version: new.node_id(),
-            superseded_version: String::new(),
-            valid_at,
-            tx_now,
-        });
     }
     adoptions.push(new);
     Ok(())
@@ -645,26 +607,4 @@ pub fn retrieve_lessons<'a>(
             .then_with(|| a.node_id().cmp(&b.node_id()))
     });
     Ok(ranked)
-}
-
-/// The current adoption of one agent and task class at `as_of` (R802.4), or
-/// `None` when no adoption is current then. Every older adoption stays
-/// readable in `adoptions`.
-pub fn current_adopted_harness<'a>(
-    adoptions: &'a [AdoptedHarness],
-    supersessions: &[AdoptionSupersession],
-    agent_ref: &str,
-    task_class: &str,
-    as_of: u64,
-) -> Option<&'a AdoptedHarness> {
-    let edges = supersession_edges(
-        supersessions
-            .iter()
-            .map(|e| (&e.new_version, &e.superseded_version, e.valid_at)),
-    );
-    adoptions.iter().rev().find(|a| {
-        a.agent_ref == agent_ref
-            && a.task_class == task_class
-            && edge_current_at(&a.node_id(), &edges, as_of)
-    })
 }
