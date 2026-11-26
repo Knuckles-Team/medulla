@@ -1,0 +1,8 @@
+UQL 1;
+LET claims = MATCH (:Claim) |> VALID AS OF 30 d |> WHERE agent_id = $agent_id |> CONFIDENCE 0.8;
+LET mentioning = MATCH (:ExternalReport) |> WHERE id = $report_id |> REQUIRE NONEMPTY 'CQ_REPORT_NOT_FOUND' |> TRAVERSE <-[:mentions]-;
+LET similar = MATCH (:Claim) |> WHERE agent_id = $agent_id |> RANK BY ~$report_vec |> SCORE AT LEAST 0.75;
+LET touching = MATCH (:Claim) |> UNION (mentioning, similar);
+LET selected = JOIN claims, touching;
+LET contradicted = FROM selected |> CONTRADICTS EACH |> DECAY HALF_LIFE 604800;
+FROM contradicted |> LIMIT 1000

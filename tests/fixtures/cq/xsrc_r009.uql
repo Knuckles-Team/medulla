@@ -1,7 +1,8 @@
 UQL 1;
-LET report = MATCH (:ExternalReport) |> WHERE id = $report_id |> REQUIRE NONEMPTY 'CQ_REPORT_NOT_FOUND';
-LET claims = MATCH (:Claim) |> WHERE agent_id = $agent_id |> CONFIDENCE 0.8 |> VALID AS OF 30 d;
-LET touching = FROM report |> TRAVERSE <-[:mentions]-;
+LET claims = MATCH (:Claim) |> VALID AS OF 30 d |> WHERE agent_id = $agent_id |> CONFIDENCE 0.8;
+LET mentioning = MATCH (:ExternalReport) |> WHERE id = $report_id |> REQUIRE NONEMPTY 'CQ_REPORT_NOT_FOUND' |> TRAVERSE <-[:mentions]-;
+LET similar = MATCH (:Claim) |> WHERE agent_id = $agent_id |> RANK BY ~$report_vec |> SCORE AT LEAST 0.75;
+LET touching = MATCH (:Claim) |> UNION (mentioning, similar);
 LET selected = JOIN claims, touching;
 LET clustered = FROM selected |> EVIDENCE EACH |> CLUSTER BY EMBEDDING K 3;
 FROM clustered |> LIMIT 1000
