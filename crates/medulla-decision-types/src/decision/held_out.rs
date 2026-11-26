@@ -19,6 +19,8 @@ pub enum DefinitionKind {
     Team,
     HarnessComponent,
     HarnessBundle,
+    /// A rule candidate of the correction loop, named by its `sha256:` rule id (R060, R702.8).
+    Rule,
 }
 
 impl DefinitionKind {
@@ -30,6 +32,7 @@ impl DefinitionKind {
             Self::Team => "team",
             Self::HarnessComponent => "harness_component",
             Self::HarnessBundle => "harness_bundle",
+            Self::Rule => "rule",
         }
     }
 }
@@ -136,6 +139,7 @@ impl RevisionSubject {
                     "team" => DefinitionKind::Team,
                     "harness_component" => DefinitionKind::HarnessComponent,
                     "harness_bundle" => DefinitionKind::HarnessBundle,
+                    "rule" => DefinitionKind::Rule,
                     _ => return None,
                 };
                 Self::Definition {
@@ -175,6 +179,8 @@ pub enum ReceiptKind {
     ReviewApproval,
     /// The stored behavioral contrasts of a harness bundle (R805.12).
     HarnessContrast,
+    /// The independent correction outcomes of a rule candidate (R060, R702.8).
+    CorrectionOutcomes,
 }
 
 /// Who graded a score. Only a model judge never decides a promotion (R813.1).

@@ -522,3 +522,93 @@ async fn aggregate_joins_the_independent_correction_outcomes() {
     .await;
     assert_eq!(one.correction_labels.len(), 1);
 }
+
+/// The gated promotion of R060 takes its held-out label from `independent_outcomes`: a rule
+/// candidate resolves to `HeldOutEvidence` whose `independent` is true, whose case count is the
+/// independent outcome count, and whose receipt is the digest of that set. A receipt quoted for
+/// another set, an unknown rule and another tenant resolve as absent, and with no champion the
+/// guard has no baseline, so the rule does not win.
+// spec: MEDULLA-DECISION-ENGINE-R060
+#[tokio::test]
+async fn a_rule_candidate_promotes_on_its_independent_correction_outcomes() {
+    use medulla_decision_outcome_types::decision::promotion::{
+        DefinitionKind, ReceiptKind, RevisionSubject, PROMOTION_UNEVALUATED,
+    };
+    use medulla_decision_stats::decision::promotion::challenger_wins;
+    use medulla_decision_types::decision::DecisionPolicy;
+
+    use super::super::stat_promotion::{
+        correction_set_digest, held_out_evidence, EvidenceError, EvidenceSources,
+    };
+
+    let h = harness().await;
+    let core = core(&h).await;
+    seed_action(&core, ACTION, TENANT, PRODUCER);
+    seed_action(&core, "action:8", TENANT, PRODUCER);
+    for input in [
+        correction("c1", ACTION, "right"),
+        correction("c2", "action:8", "right"),
+    ] {
+        let write = plan(&h, &corrector(TENANT), record(input)).await.ok().expect("plans");
+        commit(&core, &write);
+    }
+    let read = plan(&h, &corrector(TENANT), CorrectionOp::Outcomes { rule_id: None })
+        .await
+        .ok()
+        .expect("reads");
+    let outcomes = reply::<CorrectionOutcomes>(&read).candidates;
+    assert_eq!(outcomes.len(), 1, "equal rule text is one candidate");
+    let rule_id = outcomes[0].rule_id.clone();
+    assert_eq!(outcomes[0].independent, 2);
+
+    let (view, _) = super::super::stat_support::filtered_view_versioned(&h.state, "decider", GRAPH)
+        .await
+        .expect("the view reads");
+    let policy = DecisionPolicy::engine_default();
+    let subject = RevisionSubject::Definition {
+        definition_kind: DefinitionKind::Rule,
+        definition_ref: rule_id.clone(),
+    };
+    assert_eq!(
+        subject.pointer_key(),
+        format!("champion:definition:rule:{rule_id}")
+    );
+    assert_eq!(
+        RevisionSubject::from_pointer_key(&subject.pointer_key()),
+        Some(subject.clone())
+    );
+    let resolve = |tenant: &str, subject: &RevisionSubject, receipt: &str| {
+        held_out_evidence(
+            &EvidenceSources {
+                store: &h.store,
+                tenant,
+                graph: Some(&view),
+                policy: &policy,
+            },
+            subject,
+            receipt,
+        )
+    };
+
+    let receipt = correction_set_digest(&rule_id, 2, 0);
+    let evidence = resolve(TENANT, &subject, &receipt).expect("the rule resolves");
+    assert_eq!(evidence.receipt_kind, ReceiptKind::CorrectionOutcomes);
+    assert!(evidence.independent);
+    assert_eq!(evidence.case_count, 2);
+    assert_eq!(evidence.challenger_ref, rule_id);
+    assert_eq!(evidence.champion_score_ppm, None);
+    assert_ne!(
+        challenger_wins(&evidence, &policy),
+        medulla_decision_stats::decision::promotion::PromotionGate::Promote,
+        "a rule with no champion has no baseline"
+    );
+
+    let unevaluated = Err(EvidenceError::Refused(PROMOTION_UNEVALUATED));
+    assert_eq!(resolve(TENANT, &subject, &correction_set_digest(&rule_id, 3, 0)), unevaluated);
+    let unknown = RevisionSubject::Definition {
+        definition_kind: DefinitionKind::Rule,
+        definition_ref: "sha256:unknown".to_owned(),
+    };
+    assert_eq!(resolve(TENANT, &unknown, &receipt), unevaluated);
+    assert_eq!(resolve("tenant-other", &subject, &receipt), unevaluated);
+}

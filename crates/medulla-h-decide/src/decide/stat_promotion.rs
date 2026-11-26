@@ -101,6 +101,11 @@ pub(super) fn held_out_evidence(
             definition_ref,
         } => bundle_evidence(sources, subject, definition_ref, receipt_digest),
         // A skill revision is promoted on the paired rollouts of its challenger (R712.3).
+        // A rule candidate is promoted on its independent correction outcomes (R060, R702.8).
+        RevisionSubject::Definition {
+            definition_kind: DefinitionKind::Rule,
+            definition_ref,
+        } => correction_evidence(sources, subject, definition_ref, receipt_digest),
         RevisionSubject::Definition { .. }
         | RevisionSubject::RetrievalStrategy { .. }
         | RevisionSubject::Skill { .. } => rollout_evidence(sources, subject, receipt_digest),
@@ -331,6 +336,78 @@ fn bundle_evidence(
         delta_ppm: challenger - baseline_mean,
         case_count: contrasts.len() as u64,
         independent: scores.iter().all(|(_, independent)| *independent),
+        grader_kind: GraderKind::Human,
+        measurement: None,
+        review: None,
+    })
+}
+
+/// The domain of the digest that names a rule candidate's independent outcome set.
+const CORRECTION_SET_DOMAIN: &str = "eg/correction-outcome-set/v1";
+
+/// A mean value in `[0, 1]` as millionths.
+fn mean_micros(mean: f64) -> i64 {
+    (mean.clamp(0.0, 1.0) * 1_000_000.0).round() as i64
+}
+
+/// The digest that names the independent outcomes of one rule candidate: the receipt a caller
+/// quotes to promote that rule (MEDULLA-DECISION-ENGINE-R060). It changes whenever a new
+/// independent outcome joins, so a receipt quoted earlier no longer resolves.
+pub(super) fn correction_set_digest(rule_id: &str, independent: u64, mean_micros: i64) -> String {
+    medulla_query_types::solve_scalar::digest_text(
+        CORRECTION_SET_DOMAIN,
+        &(rule_id, independent, mean_micros),
+    )
+}
+
+/// The evidence of a rule candidate, `Definition { Rule, <rule_id> }` (R060). The one read of
+/// `CorrectionOutcome` nodes is `independent_outcomes` (R702.8); this adds no second read.
+/// Only outcomes tagged `independent` are read, so the evidence is independent exactly when it
+/// exists. The score is the mean outcome value; the champion (when the pointer names a rule)
+/// scores its own mean over its independent outcomes, and without one there is no baseline.
+/// `receipt_digest` must be [`correction_set_digest`] of what the graph shows now.
+fn correction_evidence(
+    sources: &EvidenceSources,
+    subject: &RevisionSubject,
+    rule_id: &str,
+    receipt_digest: &str,
+) -> Result<HeldOutEvidence, EvidenceError> {
+    let graph = sources.graph.ok_or_else(unevaluated)?;
+    let challenger = super::correction::independent_outcomes(graph, sources.tenant, Some(rule_id))
+        .into_iter()
+        .find(|candidate| candidate.rule_id == rule_id && candidate.independent > 0)
+        .ok_or_else(unevaluated)?;
+    let challenger_ppm = mean_micros(challenger.mean_value);
+    let set_digest = correction_set_digest(rule_id, challenger.independent, challenger_ppm);
+    if set_digest != receipt_digest {
+        return Err(unevaluated());
+    }
+    let (_, state) = read_pointer(sources.store, sources.tenant, &subject.pointer_key())?;
+    let champion_ref = state.target().map(str::to_owned);
+    let champion_score = match &champion_ref {
+        Some(champion) => super::correction::independent_outcomes(
+            graph,
+            sources.tenant,
+            Some(champion.as_str()),
+        )
+        .into_iter()
+        .find(|candidate| &candidate.rule_id == champion && candidate.independent > 0)
+        .map(|candidate| mean_micros(candidate.mean_value)),
+        None => None,
+    };
+    Ok(HeldOutEvidence {
+        schema_version: HELD_OUT_EVIDENCE_SCHEMA_VERSION,
+        subject: subject.clone(),
+        challenger_ref: rule_id.to_owned(),
+        champion_ref: champion_ref.filter(|_| champion_score.is_some()),
+        receipt_kind: ReceiptKind::CorrectionOutcomes,
+        receipt_digest: set_digest.clone(),
+        evaluation_set_digest: set_digest,
+        challenger_score_ppm: challenger_ppm,
+        champion_score_ppm: champion_score,
+        delta_ppm: champion_score.map_or(0, |champion| challenger_ppm - champion),
+        case_count: challenger.independent,
+        independent: true,
         grader_kind: GraderKind::Human,
         measurement: None,
         review: None,

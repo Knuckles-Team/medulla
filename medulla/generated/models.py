@@ -11551,6 +11551,7 @@ class ReceiptKind(str, Enum):
     MEASUREMENT_RUN = "measurement_run"
     REVIEW_APPROVAL = "review_approval"
     HARNESS_CONTRAST = "harness_contrast"
+    CORRECTION_OUTCOMES = "correction_outcomes"
 
 
 class MeasurementWindow(BaseModel):
