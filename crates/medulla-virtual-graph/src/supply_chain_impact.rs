@@ -2,7 +2,7 @@
 //!
 //! Per the registry rule, Arbora exposes the intent tool over its registry;
 //! this module is the method body Medulla serves: it plans the question's
-//! ontology classes through [`source_selection::select_sources`] (sources
+//! ontology classes through [`source_selection::select_sources_with`] (sources
 //! come from the ontology's `vg:SourceAuthority` rows, never from the query
 //! text) and assembles the typed [`SupplyChainImpactReport`] from the planned
 //! rows, authority premises and abstentions. The served surface itself is
@@ -19,7 +19,8 @@ use medulla_source_types::{
 };
 
 use crate::source_selection::{
-    audit_from, select_sources, AbstainReason, CoverageFixture, CoverageResult,
+    audit_from, select_sources_with, AbstainReason, CoverageFixture, CoverageResult,
+    SelectionQuery,
 };
 
 /// Plan `roots` (the question's ontology classes) against the authority
@@ -36,11 +37,32 @@ pub fn supply_chain_impact(
     contracts: &[String],
     covers: &[(String, String)],
 ) -> Result<SupplyChainImpactReport, ReportError> {
-    let results = select_sources(fixture, roots, hop_budget);
+    // An impact report answers a question about the present, so a source whose role is
+    // inspiration cannot serve it (MEDULLA-SRC-AUTH-R010.4).
+    let query = SelectionQuery {
+        needs_current_state: true,
+        ..SelectionQuery::default()
+    };
+    let results = select_sources_with(fixture, roots, hop_budget, &query);
     // `sources_used` is the authority audit of the same verdicts, entry for entry
     // (MEDULLA-SRC-AUTH-R007.4): there is no second builder.
     let audit = audit_from(&results);
     let mut abstentions = abstentions_from(&results);
+    // A source the report names `RoleInsufficient` contributes no fact: its rows are excluded
+    // and the abstention is the only trace of it (MEDULLA-CQ-XSRC-R012.2).
+    let excluded: BTreeSet<&str> = abstentions
+        .iter()
+        .filter_map(|abstention| match abstention {
+            ReportAbstention::RoleInsufficient { source, .. } => Some(source.as_str()),
+            _ => None,
+        })
+        .collect();
+    let rows: Vec<ImpactRow> = rows
+        .iter()
+        .filter(|row| !excluded.contains(row.source.as_str()))
+        .cloned()
+        .collect();
+    let rows = rows.as_slice();
     let (coverage, contract_abstentions) = contract_coverage(contracts, covers);
     abstentions.extend(contract_abstentions);
     let mut report = assemble_supply_chain_report(rows, &[], &abstentions)?;
@@ -132,6 +154,8 @@ pub fn abstentions_from(results: &[CoverageResult]) -> Vec<ReportAbstention> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::source_selection::select_sources;
+    use medulla_identity_types::authority_audit::SourceRole;
 
     // spec: MEDULLA-CQ-XSRC-R006.5
     #[test]
@@ -189,6 +213,44 @@ mod tests {
             ReportAbstention::Unconnected { source, class }
                 if source == "dockerhub-mcp" && class == "ContainerImage"
         )));
+    }
+
+    // spec: MEDULLA-CQ-XSRC-R012.2
+    #[test]
+    fn a_role_insufficient_source_contributes_no_fact_and_is_named() {
+        let fixture = CoverageFixture::new()
+            .with_authority("SoftwareComponent", "gh-components", "github-mcp", 1, 1)
+            .with_authority("Supplier", "erp-suppliers", "erpnext-mcp", 2, 1)
+            .with_source_role("github-mcp", SourceRole::Inspiration);
+        let roots = vec!["SoftwareComponent".to_string(), "Supplier".to_string()];
+        let row = |version: &str, source: &str| ImpactRow {
+            service: "svc".to_string(),
+            supplier: "supplier-acme".to_string(),
+            component_version: version.to_string(),
+            vulnerability: None,
+            impact_kind: medulla_source_types::supply_chain_report::ImpactKind::RuntimeChain,
+            source: source.to_string(),
+        };
+        let rows = vec![row("v-from-github", "github-mcp"), row("v-from-erp", "erpnext-mcp")];
+        let report = supply_chain_impact(&fixture, &roots, 0, &rows, &[], &[])
+            .expect("the answer is returned, not refused");
+        let sources: Vec<&str> = report
+            .service_impacts
+            .iter()
+            .flat_map(|impact| impact.items.iter().map(|item| item.source.as_str()))
+            .collect();
+        assert_eq!(sources, ["erpnext-mcp"], "no fact of the excluded source");
+        let named: Vec<&ReportAbstention> = report
+            .abstentions
+            .iter()
+            .filter(|a| matches!(a, ReportAbstention::RoleInsufficient { .. }))
+            .collect();
+        assert_eq!(named.len(), 1, "the excluded source is named exactly once");
+        assert!(matches!(
+            named[0],
+            ReportAbstention::RoleInsufficient { source, class }
+                if source == "github-mcp" && class == "SoftwareComponent"
+        ));
     }
 
     // spec: MEDULLA-SUPPLY-VOCAB-R005.9
