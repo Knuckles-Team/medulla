@@ -16,6 +16,7 @@ pub mod events;
 pub mod machine;
 pub mod progress;
 pub mod registry;
+pub mod report;
 pub mod runtime_stats;
 pub mod settings;
 pub mod spawn;

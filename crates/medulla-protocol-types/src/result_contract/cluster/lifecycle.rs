@@ -85,6 +85,10 @@ pub struct GraphLifecycleHealth {
     pub all_resident_materializations_valid: bool,
 }
 
+pub use medulla_types::readiness_report::{
+    Blocker, GraphReadiness, ReadinessReport, MAX_HEALTH_BLOCKERS,
+};
+
 /// `Health`: liveness plus the served-operation set clients negotiate against.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -98,6 +102,9 @@ pub struct HealthReport {
     pub build_profile: String,
     pub graph_lifecycle: GraphLifecycleHealth,
     pub ops: Vec<String>,
+    /// Readiness and blockers (MEDULLA-OBSERVE-R007.2); absent from an engine that predates it.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub readiness: Option<ReadinessReport>,
 }
 
 #[cfg(test)]
@@ -121,9 +128,11 @@ mod tests {
                 all_resident_materializations_valid: true,
             },
             ops: Vec::new(),
+            readiness: None,
         };
         let value = serde_json::to_value(&report).unwrap();
         assert!(value.get("status").is_none(), "{value}");
+        assert!(value.get("readiness").is_none(), "an absent readiness is omitted: {value}");
         assert!(value.get("version").is_some());
     }
 }

@@ -9133,6 +9133,33 @@ class HeadKind(str, Enum):
     OPTION_ATTENTION = "option_attention"
 
 
+class Blocker(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    reason_code: str
+    since_unix_ms: Annotated[int, Field(ge=0)]
+    state: str
+    task: str | None = None
+
+
+class GraphReadiness(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    reason_code: str | None = None
+    since_unix_ms: Annotated[int, Field(ge=0)]
+    state: str
+
+
+class ReadinessReport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    blockers: list[Blocker]
+    graphs: list[GraphReadiness]
+    ready: bool
+
+
 class HealthReport(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -9140,6 +9167,7 @@ class HealthReport(BaseModel):
     graph_lifecycle: GraphLifecycleHealth
     mem_bytes: Annotated[int, Field(ge=0)]
     ops: list[str]
+    readiness: ReadinessReport | None = None
     uptime_s: Annotated[int, Field(ge=0)]
     version: str
 
@@ -48545,6 +48573,9 @@ __all__ = [
     "HawkesFit",
     "HeadCalibration",
     "HeadKind",
+    "Blocker",
+    "GraphReadiness",
+    "ReadinessReport",
     "HealthReport",
     "EngineCapabilities",
     "RuleUseItem",

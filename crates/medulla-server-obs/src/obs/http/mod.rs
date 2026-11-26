@@ -362,7 +362,70 @@ fn control_response(method: &str, path: &str) -> Option<(&'static str, &'static 
     if path == "/healthz" || path == "/" && method == "GET" {
         return Some(("200 OK", "text/plain", "ok".to_string()));
     }
+    // MEDULLA-OBSERVE-R007.4: `/readyz` answers readiness; `/healthz` stays liveness. The
+    // report comes from the readiness registry alone, so the probe answers while the server
+    // state lock is held, within `observe.health_deadline_ms`. The body holds graph names,
+    // state names and reason codes only.
+    if path == "/readyz" && method == "GET" {
+        let report = medulla_observe::report::readiness_report(None);
+        let status = if report.ready {
+            "200 OK"
+        } else {
+            "503 Service Unavailable"
+        };
+        let body = serde_json::to_string(&report)
+            .unwrap_or_else(|_| "{\"ready\":false,\"graphs\":[],\"blockers\":[]}".to_string());
+        return Some((status, "application/json", body));
+    }
     None
+}
+
+#[cfg(test)]
+mod readyz_tests {
+    use super::*;
+    use medulla_observe::machine::readiness::ReadinessEvent;
+    use medulla_types::readiness_report::ReadinessReport;
+
+    // spec: MEDULLA-OBSERVE-R007.4
+    #[test]
+    fn readyz_is_503_with_blockers_until_ready() {
+        let graph = "readyz-test:graph";
+        medulla_observe::readiness().open(graph);
+
+        let (status, content_type, body) = control_response("GET", "/readyz").expect("served");
+        assert_eq!(status, "503 Service Unavailable");
+        assert_eq!(content_type, "application/json");
+        let report: ReadinessReport = serde_json::from_str(&body).expect("a readiness report");
+        assert!(!report.ready);
+        let blocker = report
+            .blockers
+            .iter()
+            .find(|blocker| blocker.graph == graph)
+            .expect("the opening graph blocks");
+        assert_eq!(blocker.state, "opening");
+        assert_eq!(blocker.reason_code, "OPENING");
+        // The body is the report and nothing else: no token, no payload.
+        let value: serde_json::Value = serde_json::from_str(&body).unwrap();
+        let mut keys: Vec<&str> = value.as_object().unwrap().keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["blockers", "graphs", "ready"]);
+
+        // Liveness keeps its meaning: it answers ok while the graph is not ready.
+        let (status, _, body) = control_response("GET", "/healthz").expect("served");
+        assert_eq!((status, body.as_str()), ("200 OK", "ok"));
+
+        // Once the graph is ready the probe answers 200 and lists no blocker for it.
+        medulla_observe::readiness()
+            .apply(graph, ReadinessEvent::Materialized, None)
+            .expect("Opening materializes");
+        let (status, _, body) = control_response("GET", "/readyz").expect("served");
+        assert_eq!(status, "200 OK");
+        let report: ReadinessReport = serde_json::from_str(&body).unwrap();
+        assert!(report.ready);
+        assert!(report.blockers.is_empty());
+        assert!(report.graphs.iter().any(|row| row.graph == graph && row.state == "ready"));
+        medulla_observe::readiness().remove(graph);
+    }
 }
 
 /// The literal 403 response body for a denied observability request — per-operation

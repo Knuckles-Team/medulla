@@ -18,6 +18,7 @@ arrow = { version = "58.4", optional = true }
 dashmap = "6.2"
 hex = "0.4"
 medulla-kernel = { path = "../medulla-kernel" }
+medulla-observe = { path = "../medulla-observe" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-text = { path = "../medulla-text", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }

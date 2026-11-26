@@ -1,3 +1,7 @@
+//! Service-level methods: ping, capabilities, health and shutdown. `Health` carries the readiness
+//! report (MEDULLA-OBSERVE-R007.2) and answers within `observe.health_deadline_ms`
+//! (MEDULLA-OBSERVE-R007.3).
+
 use super::*;
 use medulla_server_graph::dispatch::shared::timed_read;
 
@@ -75,14 +79,21 @@ pub async fn dispatch_service_control_methods(
 }
 
 /// `Health`: liveness, graph materialization counts, and the served operation set.
-async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Response {
+pub async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Response {
+    // MEDULLA-OBSERVE-R007.3: the report never waits for the state without bound. A read that
+    // does not come within `observe.health_deadline_ms` answers a report whose readiness holds
+    // the blocker `STATE_LOCK_BUSY` and names the holder of the lock.
+    let deadline =
+        std::time::Duration::from_millis(medulla_observe::settings::health_deadline_ms());
+    let Ok(state) = tokio::time::timeout(deadline, timed_read(state)).await else {
+        return busy_health_response(req_id);
+    };
     let (
         lifecycle,
         native_resource_ops_available,
         native_capacity_ops_available,
         native_work_item_ops_available,
     ) = {
-        let state = timed_read(state).await;
         let manifests = state.registry.materialization_manifests();
         let complete = manifests.iter().filter(|manifest| manifest.valid()).count();
         let partial = manifests
@@ -120,6 +131,8 @@ async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Respo
                 .is_some_and(|backend| backend.supports_native_work_item_submission()),
         )
     };
+    // The state is read; the rest of the report needs no lock.
+    drop(state);
     let uptime_s = 0; // you can capture start time in ServerState
     let mem_bytes = 0;
     let mut served_ops = registry_served_ops();
@@ -139,6 +152,39 @@ async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Respo
                 build_profile: build_profile().to_string(),
                 graph_lifecycle: lifecycle,
                 ops: served_ops.into_iter().map(str::to_string).collect(),
+                readiness: Some(medulla_observe::report::readiness_report(None)),
+            },
+        ),
+    )
+}
+
+/// The `Health` answer of a call that could not read the state within the deadline: no counts
+/// of the graph lifecycle, and a readiness report with the blocker `STATE_LOCK_BUSY` that names
+/// the holder of the lock (MEDULLA-OBSERVE-R007.3).
+fn busy_health_response(req_id: u64) -> Response {
+    let holder = medulla_observe::locks()
+        .snapshot()
+        .into_iter()
+        .find(|site| site.name == "server_state")
+        .and_then(|site| site.holder);
+    Response::ok(
+        req_id,
+        ResultPayload::of::<medulla_protocol_types::result_contract::cluster::Health>(
+            medulla_protocol_types::result_contract::cluster::HealthReport {
+                uptime_s: 0,
+                mem_bytes: 0,
+                version: medulla_version::VERSION.to_string(),
+                build_profile: build_profile().to_string(),
+                graph_lifecycle: medulla_protocol_types::result_contract::cluster::GraphLifecycleHealth {
+                    catalog_graphs: 0,
+                    resident_graphs: 0,
+                    complete_graphs: 0,
+                    partial_graphs: 0,
+                    failed_graphs: 0,
+                    all_resident_materializations_valid: false,
+                },
+                ops: Vec::new(),
+                readiness: Some(medulla_observe::report::readiness_report(Some(holder))),
             },
         ),
     )

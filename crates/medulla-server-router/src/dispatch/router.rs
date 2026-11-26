@@ -70,7 +70,7 @@ mod graph_source;
 mod schema_drift;
 mod sdlc;
 pub use sdlc::recover_deliveries_at_boot;
-mod service_control;
+pub mod service_control;
 #[cfg(feature = "security")]
 pub(crate) mod share;
 mod source_ingest;

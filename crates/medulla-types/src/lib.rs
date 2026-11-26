@@ -64,6 +64,7 @@ pub mod viewport;
 pub mod contract;
 pub mod contract_catalog;
 pub mod introspect;
+pub mod readiness_report;
 // MEDULLA-INCREMENTAL-VIEWS-R002.1 — the signed-row Z-set delta of incremental views.
 pub mod delta;
 // MEDULLA-DURABLE-KERNEL-R038 — the declared durability class (ephemeral/async/sync)

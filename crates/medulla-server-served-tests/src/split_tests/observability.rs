@@ -1,6 +1,7 @@
-//! MEDULLA-OBSERVE-R006.1 to R006.4, R003.3 and R007.1: the served `Introspect` read answers every
-//! section by its refusals and pages, shows the lazy-paging task with its keyset cursor, and
-//! shows a graph's readiness follow open, eviction and materialization.
+//! MEDULLA-OBSERVE-R006.1 to R006.5, R003.3, R005.3, R007.1 to R007.3, R008.4 and R009.2: the
+//! served `Introspect` read answers every section by its refusals and pages, shows the
+//! lazy-paging task with its keyset cursor, shows a graph's readiness follow open, eviction and
+//! materialization, and the `Health` report names the blocking graph and the reason.
 //!
 //! Every request goes through the real verified dispatch.
 
@@ -53,6 +54,11 @@ impl Served {
 
     /// One request as `PRINCIPAL` on `graph`, through the verified dispatch.
     async fn call(&self, graph: &str, method: Method) -> Response {
+        self.call_as(graph, method, vec!["*".to_string()]).await
+    }
+
+    /// One request as `PRINCIPAL` holding exactly `scopes`.
+    async fn call_as(&self, graph: &str, method: Method, scopes: Vec<String>) -> Response {
         let id = next_id();
         let claims = RequestContextClaims {
             principal: PRINCIPAL.to_string(),
@@ -60,7 +66,7 @@ impl Served {
             tenant: TENANT.to_string(),
             audience: "medulla-test".to_string(),
             policy_version: "policy-test".to_string(),
-            scopes: vec!["*".to_string()],
+            scopes,
             ..RequestContextClaims::default()
         };
         let mut nonce = [0u8; 32];
@@ -149,6 +155,11 @@ impl Served {
 }
 
 fn page_of(label: &str, response: Response) -> IntrospectPage {
+    decoded(label, response)
+}
+
+/// The typed result of an answered call.
+fn decoded<T: serde::de::DeserializeOwned>(label: &str, response: Response) -> T {
     assert!(
         response.error.is_none(),
         "{label} was refused: {response:?}"
@@ -436,4 +447,316 @@ async fn held_graph_lock_shows_holder_and_waiter() {
     assert!(row["holder"].is_null());
     assert_eq!(row["waiters"], 0);
     assert!(row["longest_wait_ms"].as_u64().is_some());
+}
+
+/// The readiness report `Health` answers.
+async fn health(served: &Served) -> medulla_protocol_types::result_contract::cluster::HealthReport {
+    decoded("Health", served.call("__commons__", Method::Health).await)
+}
+
+// spec: MEDULLA-OBSERVE-R007.2
+#[tokio::test(flavor = "multi_thread")]
+async fn health_names_the_blocking_graph_and_reason() {
+    use medulla_observe::machine::readiness::DegradeReason;
+    let served = Served::new().await;
+    let opening = "observe:health-opening";
+    let degraded = "observe:health-degraded";
+    medulla_observe::readiness().open(opening);
+    medulla_observe::readiness()
+        .degrade(
+            degraded,
+            DegradeReason {
+                code: "NO_PROGRESS".to_string(),
+                task: Some("lazy-page-in:observe:health-degraded".to_string()),
+                detail: "the paging cursor stopped".to_string(),
+            },
+        )
+        .expect("a new graph degrades from opening");
+
+    let report = health(&served).await;
+    let readiness = report.readiness.expect("Health carries readiness");
+    assert!(!readiness.ready, "a blocked graph makes the engine not ready");
+    let blocker = |graph: &str| {
+        readiness
+            .blockers
+            .iter()
+            .find(|blocker| blocker.graph == graph)
+            .unwrap_or_else(|| panic!("no blocker for {graph}"))
+    };
+    assert_eq!(blocker(opening).state, "opening");
+    assert_eq!(blocker(opening).reason_code, "OPENING");
+    assert_eq!(blocker(degraded).state, "degraded");
+    assert_eq!(blocker(degraded).reason_code, "NO_PROGRESS");
+    assert_eq!(
+        blocker(degraded).task.as_deref(),
+        Some("lazy-page-in:observe:health-degraded")
+    );
+    assert!(blocker(degraded).since_unix_ms > 0);
+    // Every catalog graph the registry knows is listed with its state.
+    assert!(readiness
+        .graphs
+        .iter()
+        .any(|row| row.graph == degraded && row.reason_code.as_deref() == Some("NO_PROGRESS")));
+    assert!(readiness.blockers.len() <= medulla_types::readiness_report::MAX_HEALTH_BLOCKERS);
+
+    // A graph that finished materializing no longer blocks.
+    medulla_observe::readiness()
+        .apply(
+            opening,
+            medulla_observe::machine::readiness::ReadinessEvent::Materialized,
+            None,
+        )
+        .expect("opening graph materializes");
+    let report = health(&served).await;
+    let readiness = report.readiness.unwrap();
+    assert!(readiness.blockers.iter().all(|blocker| blocker.graph != opening));
+    medulla_observe::readiness().remove(opening);
+    medulla_observe::readiness().remove(degraded);
+}
+
+// spec: MEDULLA-OBSERVE-R007.3
+#[tokio::test(flavor = "multi_thread")]
+async fn health_answers_degraded_when_state_lock_is_held() {
+    let served = Served::new().await;
+    let previous = medulla_observe::settings::health_deadline_ms();
+    medulla_observe::settings::set_health_deadline_ms(100);
+    // Hold the write lock through the instrumented site, so the lock registry names the holder.
+    let held = medulla_server_api::state::timed_write(&served.state).await;
+    let started = std::time::Instant::now();
+    let response = medulla_server_router::dispatch::router::service_control::health_response(
+        &served.state,
+        next_id(),
+    )
+    .await;
+    let waited = started.elapsed();
+    drop(held);
+    medulla_observe::settings::set_health_deadline_ms(previous);
+
+    let report: medulla_protocol_types::result_contract::cluster::HealthReport =
+        decoded("Health", response);
+    let readiness = report.readiness.expect("the busy answer carries readiness");
+    assert!(!readiness.ready);
+    let blocker = readiness
+        .blockers
+        .iter()
+        .find(|blocker| blocker.reason_code == "STATE_LOCK_BUSY")
+        .expect("the busy state lock is a blocker");
+    assert_eq!(blocker.graph, "", "the blocker belongs to the process");
+    assert!(blocker.task.is_some(), "the holder of the lock is named");
+    assert!(
+        waited < std::time::Duration::from_secs(5),
+        "the call answered at its deadline, not when the lock freed: {waited:?}"
+    );
+    // The report has no status field (MEDULLA-CONTRACT-R062.3): readiness is the signal.
+    let value = serde_json::to_value(&readiness).unwrap();
+    assert!(value.get("status").is_none());
+
+    // With the lock free the same call answers the full report.
+    let report = health(&served).await;
+    assert!(report.readiness.is_some_and(|readiness| readiness
+        .blockers
+        .iter()
+        .all(|blocker| blocker.reason_code != "STATE_LOCK_BUSY")));
+}
+
+// spec: MEDULLA-OBSERVE-R005.3
+#[tokio::test(flavor = "multi_thread")]
+async fn stalled_materialization_degrades_graph_readiness() {
+    use medulla_observe::registry::tasks::{ProgressCursor, TaskKind, TaskRegistry, TaskSpec};
+    let served = Served::new().await;
+    let graph = "observe:stalled";
+    medulla_observe::readiness().open(graph);
+    // An isolated task registry keeps the scan to this test's own task; the readiness registry
+    // is the process-wide one `Introspect` and `Health` read.
+    let tasks = TaskRegistry::new(8);
+    let paging = tasks.register(TaskSpec {
+        name: format!("lazy-page-in:{graph}"),
+        owner: "registry".to_string(),
+        kind: TaskKind::Materialization,
+    });
+    paging.progress(ProgressCursor::Counter(1), 1);
+    let progressed = paging.row().last_progress_unix_ms;
+    let stalled = medulla_observe::watchdog::scan(
+        &tasks,
+        medulla_observe::readiness(),
+        progressed + 10_001,
+        10_000,
+    );
+    assert_eq!(stalled.len(), 1);
+    assert_eq!(stalled[0].degraded_graph.as_deref(), Some(graph));
+
+    let page = served.page(IntrospectSection::Readiness).await;
+    let row = page
+        .rows
+        .iter()
+        .find(|row| row["graph"] == graph)
+        .expect("the graph has a readiness row");
+    assert_eq!(row["state"], "degraded");
+    assert_eq!(row["reason_code"], "NO_PROGRESS");
+    assert_eq!(row["reason_task"], format!("lazy-page-in:{graph}"));
+    let report = health(&served).await.readiness.unwrap();
+    assert!(!report.ready);
+    assert!(report
+        .blockers
+        .iter()
+        .any(|blocker| blocker.graph == graph
+            && blocker.task.as_deref() == Some(format!("lazy-page-in:{graph}").as_str())));
+    medulla_observe::readiness().remove(graph);
+    drop(paging);
+}
+
+// spec: MEDULLA-OBSERVE-R008.4
+#[tokio::test(flavor = "multi_thread")]
+async fn startup_report_lists_every_step_with_outcome() {
+    let served = Served::new().await;
+    let graph = "observe:startup";
+    medulla_observe::startup().step("test_step_ok", graph).ok();
+    medulla_observe::startup()
+        .step("test_step_skipped", graph)
+        .skipped("nothing to do");
+    medulla_observe::startup()
+        .step("test_step_refused", graph)
+        .refused("MIGRATION_REFUSED");
+    medulla_observe::startup()
+        .step("test_step_failed", graph)
+        .failed("MATVIEW_RELOAD_FAILED");
+
+    let page = served.page(IntrospectSection::Startup).await;
+    let mine: Vec<_> = page
+        .rows
+        .iter()
+        .filter(|row| row["graph"] == graph)
+        .collect();
+    assert_eq!(mine.len(), 4);
+    let outcome = |name: &str| {
+        let row = mine
+            .iter()
+            .find(|row| row["name"] == name)
+            .unwrap_or_else(|| panic!("step {name} is not listed"));
+        (
+            row["outcome"].as_str().unwrap().to_string(),
+            row["detail"].as_str().map(str::to_string),
+        )
+    };
+    assert_eq!(outcome("test_step_ok"), ("Ok".to_string(), None));
+    assert_eq!(
+        outcome("test_step_skipped"),
+        ("Skipped".to_string(), Some("nothing to do".to_string()))
+    );
+    assert_eq!(
+        outcome("test_step_refused"),
+        ("Refused".to_string(), Some("MIGRATION_REFUSED".to_string()))
+    );
+    assert_eq!(
+        outcome("test_step_failed"),
+        ("Failed".to_string(), Some("MATVIEW_RELOAD_FAILED".to_string()))
+    );
+    // The page is ascending by start time: the steps of the whole page never go backwards.
+    let starts: Vec<u64> = page
+        .rows
+        .iter()
+        .map(|row| row["started_unix_ms"].as_u64().unwrap())
+        .collect();
+    assert!(starts.windows(2).all(|pair| pair[0] <= pair[1]));
+    assert!(page.rows.iter().all(|row| row["duration_ms"].is_u64()));
+}
+
+// spec: MEDULLA-OBSERVE-R009.2
+#[tokio::test(flavor = "multi_thread")]
+async fn build_section_reports_version_sha_build_id_features() {
+    let served = Served::new().await;
+    let page = served.page(IntrospectSection::Build).await;
+    assert_eq!(page.rows.len(), 1);
+    let row = &page.rows[0];
+    let info = &*medulla_version::BUILD_INFO;
+    assert_eq!(row["key"], "build");
+    assert_eq!(row["version"], info.version);
+    assert_eq!(row["git_sha"], info.git_sha);
+    assert_eq!(row["profile"], info.profile);
+    assert_eq!(row["build_id"].as_str().map(str::to_string), info.build_id);
+    let features: Vec<&str> = row["features"]
+        .as_array()
+        .expect("the feature list")
+        .iter()
+        .map(|feature| feature.as_str().unwrap())
+        .collect();
+    assert_eq!(features, info.features);
+    // The startup log line names the same build: it runs without a subscriber and without panic.
+    medulla_h_admin::admin::introspect::log_build_identity();
+}
+
+// spec: MEDULLA-OBSERVE-R006.5
+#[tokio::test(flavor = "multi_thread")]
+async fn introspect_rows_carry_no_token_or_payload() {
+    let served = Served::new().await;
+    let graph = "observe:private";
+    let created = served
+        .call(
+            graph,
+            Method::CreateGraph {
+                graph_name: graph.to_string(),
+                graph_type: GraphType::Agent,
+            },
+        )
+        .await;
+    assert!(created.error.is_none(), "{:?}", created.error);
+    let added = served
+        .call(
+            graph,
+            Method::AddNode {
+                node_id: "private-node".to_string(),
+                properties_msgpack: rmp_serde::to_vec(
+                    &serde_json::json!({"secret_field": "PAYLOAD-MARKER-4f1c"}),
+                )
+                .unwrap(),
+            },
+        )
+        .await;
+    assert!(added.error.is_none(), "{:?}", added.error);
+    let catalog_before = served.state.read().await.registry.catalog_len();
+
+    // Every section, whole, as text: none holds the principal, the signing secret, a payload
+    // value or the name of a property.
+    let mut text = String::new();
+    for section in [
+        IntrospectSection::Requests,
+        IntrospectSection::Tasks,
+        IntrospectSection::Runtime,
+        IntrospectSection::Locks,
+        IntrospectSection::Readiness,
+        IntrospectSection::Startup,
+        IntrospectSection::Build,
+        IntrospectSection::Events,
+    ] {
+        let page = page_of(
+            "Introspect",
+            served.introspect(section, Some(500), None).await,
+        );
+        text.push_str(&serde_json::to_string(&page.rows).unwrap());
+    }
+    for forbidden in [
+        PRINCIPAL,
+        "observability-fixture-secret",
+        "PAYLOAD-MARKER-4f1c",
+        "secret_field",
+        "private-node",
+    ] {
+        assert!(!text.contains(forbidden), "an Introspect row holds `{forbidden}`");
+    }
+    // A caller without `observe:read` is refused and the refusal names no graph.
+    let denied = served
+        .call_as(
+            "__commons__",
+            Method::Introspect {
+                section: IntrospectSection::Readiness,
+                limit: None,
+                cursor: None,
+            },
+            vec!["node:read".to_string()],
+        )
+        .await;
+    let denial = denied.error.expect("a caller without observe:read is refused");
+    assert!(!denial.contains(graph), "the refusal names a graph: {denial}");
+    // The call writes nothing: the catalog is unchanged.
+    assert_eq!(served.state.read().await.registry.catalog_len(), catalog_before);
 }
