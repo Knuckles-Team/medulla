@@ -615,10 +615,13 @@ impl ReadBlameRequest {
     }
 }
 
-/// The served answer of `ReadTree`: entries sorted by path.
+/// The served answer of `ReadTree`: entries sorted by path. `head_revision` is the branch
+/// commit the tree was read at (the request's `rev`, confirmed to lie on the branch chain), so
+/// a changeset built from this read names the head it read as its base.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct ReadTreeReceipt {
+    pub head_revision: String,
     pub entries: Vec<TreeEntry>,
 }
 

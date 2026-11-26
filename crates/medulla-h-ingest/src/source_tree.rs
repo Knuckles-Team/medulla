@@ -8,9 +8,11 @@
 //! `tree_checkpoint_interval` long, it returns the full tree snapshot that
 //! commits with that changeset.
 
-use medulla_compute::source_tree::{checkpoint_due, encode_checkpoint, replay, tree_at, TreeChain, TreeError};
+use medulla_compute::source_tree::{
+    checkpoint_due, encode_checkpoint, replay, tree_at, TreeChain, TreeError,
+};
 use medulla_source_types::source_changeset::{
-    ChangesetRefusal, Changeset, ReadTreeReceipt, ReadTreeRequest, SubmitRefusal,
+    Changeset, ChangesetRefusal, ReadTreeReceipt, ReadTreeRequest, SubmitRefusal,
 };
 
 use crate::source_changeset::ChainView;
@@ -29,7 +31,10 @@ pub fn read_tree(
         Err(refusal) => return Ok(Err(refusal)),
     };
     match tree_at(chain, &request.rev, &prefix, request.depth) {
-        Ok(entries) => Ok(Ok(ReadTreeReceipt { entries })),
+        Ok(entries) => Ok(Ok(ReadTreeReceipt {
+            head_revision: request.rev.clone(),
+            entries,
+        })),
         Err(TreeError::NotOnChain) => Ok(Err(SubmitRefusal::new(
             ChangesetRefusal::RevisionNotOnChain,
             "rev is not a changeset of the branch",
@@ -140,6 +145,10 @@ mod tests {
         };
         let receipt = read_tree(&mem, &request).unwrap().unwrap();
         assert_eq!(receipt.entries.len(), 20);
+        assert_eq!(
+            receipt.head_revision, mem.head,
+            "the receipt names the commit the tree was read at"
+        );
         let mut missing = request.clone();
         missing.rev = "0".repeat(64);
         let refusal = read_tree(&mem, &missing).unwrap().unwrap_err();
