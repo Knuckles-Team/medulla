@@ -16671,6 +16671,13 @@ class MethodActionSubmit(BaseModel):
     params: MethodActionSubmitParams
 
 
+class MethodActionList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ActionList"]
+    params: MethodActionListParams
+
+
 class MethodBusHeartbeat(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17715,6 +17722,48 @@ class MethodConnectorRunRecord(BaseModel):
     params: MethodConnectorRunRecordParams
 
 
+class MethodConnectorRunGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["ConnectorRunGet"]
+    params: MethodConnectorRunGetParams
+
+
+class MethodSourceConnectionGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceConnectionGet"]
+    params: MethodSourceConnectionGetParams
+
+
+class MethodSourceConnectionList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceConnectionList"]
+    params: MethodSourceConnectionListParams
+
+
+class MethodSourceConnectionControl(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceConnectionControl"]
+    params: MethodSourceConnectionControlParams
+
+
+class MethodSourceMappingGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceMappingGet"]
+    params: MethodSourceMappingGetParams
+
+
+class MethodSourceMappingControl(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SourceMappingControl"]
+    params: MethodSourceMappingControlParams
+
+
 class MethodSourceCoverage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18523,6 +18572,7 @@ Method = Annotated[
         MethodAccessRequestOpen,
         MethodActionRegister,
         MethodActionSubmit,
+        MethodActionList,
         MethodBusHeartbeat,
         MethodBusRegister,
         MethodBusRoster,
@@ -18659,6 +18709,12 @@ Method = Annotated[
         MethodGoalControl,
         MethodConnectorRuns,
         MethodConnectorRunRecord,
+        MethodConnectorRunGet,
+        MethodSourceConnectionGet,
+        MethodSourceConnectionList,
+        MethodSourceConnectionControl,
+        MethodSourceMappingGet,
+        MethodSourceMappingControl,
         MethodSourceCoverage,
         MethodObservationState,
         MethodHarnessEdit,
@@ -36952,6 +37008,10 @@ class MethodActionSubmitParams(BaseModel):
     params: dict[str, ParamValue]
 
 
+class MethodActionListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+
 class MethodBusHeartbeatParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38704,6 +38764,127 @@ class ConnectorRunPage(BaseModel):
 
     next_cursor: str | None = None
     runs: list[ConnectorRun]
+
+
+class ConnectionState(str, Enum):
+    ACTIVE = "active"
+    PAUSED = "paused"
+
+
+class SourceConnectionInput(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    credential_ref: str
+    label: str
+    provider: str
+    settings: dict[str, Any] = Field(default_factory=dict)
+    state: ConnectionState | None = None
+
+
+class SourceConnection(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    credential_ref: str
+    label: str
+    provider: str
+    settings: dict[str, Any]
+    state: ConnectionState
+    tenant_id: str
+
+
+class SourceConnectionPage(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connections: list[SourceConnection]
+    next_cursor: str | None = None
+
+
+class SourceConnectionReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    deleted: bool
+    replayed: bool
+
+
+class SourceConnectionOpPut(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection: SourceConnectionInput
+    operation: Literal["put"]
+
+
+class SourceConnectionOpDelete(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    operation: Literal["delete"]
+
+
+SourceConnectionOp = Annotated[
+    SourceConnectionOpPut | SourceConnectionOpDelete,
+    Field(discriminator="operation"),
+]
+
+
+class MappingState(str, Enum):
+    PROPOSED = "proposed"
+    APPROVED = "approved"
+
+
+class SourceMapping(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    digest: str
+    mapping: dict[str, Any]
+    state: MappingState
+
+
+class SourceMappingOpPropose(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    mapping: dict[str, Any]
+    operation: Literal["propose"]
+
+
+class SourceMappingOpApprove(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+    mapping_digest: str
+    operation: Literal["approve"]
+
+
+SourceMappingOp = Annotated[
+    SourceMappingOpPropose | SourceMappingOpApprove,
+    Field(discriminator="operation"),
+]
+
+
+class SourceMappingOutcome(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    digest: str
+    mapping: dict[str, Any]
+    replayed: bool
+    state: MappingState
+
+
+class ActionListEntry(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    name: str
+    params_schema: Any
+
+
+class ActionList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    actions: list[ActionListEntry]
 
 
 class DocumentAggregation(str, Enum):
@@ -40902,6 +41083,43 @@ class MethodConnectorRunRecordParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     run: ConnectorRunInput
+
+
+class MethodConnectorRunGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    run_id: str
+
+
+class MethodSourceConnectionGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+
+
+class MethodSourceConnectionListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    cursor: str | None = None
+    limit: Annotated[int, Field(ge=0)] | None = None
+
+
+class MethodSourceConnectionControlParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: SourceConnectionOp
+
+
+class MethodSourceMappingGetParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connection_id: str
+
+
+class MethodSourceMappingControlParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: SourceMappingOp
 
 
 class MethodRecordGateVerdictParams(BaseModel):
@@ -50507,6 +50725,22 @@ __all__ = [
     "ConnectorRun",
     "ConnectorRunReceipt",
     "ConnectorRunPage",
+    "ConnectionState",
+    "SourceConnectionInput",
+    "SourceConnection",
+    "SourceConnectionPage",
+    "SourceConnectionReceipt",
+    "SourceConnectionOpPut",
+    "SourceConnectionOpDelete",
+    "SourceConnectionOp",
+    "MappingState",
+    "SourceMapping",
+    "SourceMappingOpPropose",
+    "SourceMappingOpApprove",
+    "SourceMappingOp",
+    "SourceMappingOutcome",
+    "ActionListEntry",
+    "ActionList",
     "ApprovalSpec",
     "BranchArm",
     "BranchComparison",
@@ -51334,6 +51568,20 @@ __all__ = [
     "MethodConnectorRunsParams",
     "MethodConnectorRunRecord",
     "MethodConnectorRunRecordParams",
+    "MethodConnectorRunGet",
+    "MethodConnectorRunGetParams",
+    "MethodSourceConnectionGet",
+    "MethodSourceConnectionGetParams",
+    "MethodSourceConnectionList",
+    "MethodSourceConnectionListParams",
+    "MethodSourceConnectionControl",
+    "MethodSourceConnectionControlParams",
+    "MethodSourceMappingGet",
+    "MethodSourceMappingGetParams",
+    "MethodSourceMappingControl",
+    "MethodSourceMappingControlParams",
+    "MethodActionList",
+    "MethodActionListParams",
     "MethodDeployRecordGet",
     "MethodDeployRecordGetParams",
     "MethodDeployRecordList",

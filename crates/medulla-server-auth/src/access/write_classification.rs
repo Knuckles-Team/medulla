@@ -500,6 +500,9 @@ pub fn requires_write(method: &Method) -> bool {
                 // MEDULLA-DECISION-ENGINE-R901, MEDULLA-UNIFIED-DATA-PLANE-R790.
                 | Method::GoalControl { .. }
                 | Method::ConnectorRunRecord { .. }
+                // MEDULLA-UNIFIED-DATA-PLANE-R791.
+                | Method::SourceConnectionControl { .. }
+                | Method::SourceMappingControl { .. }
                 | Method::GoalPut { .. }
                 | Method::ProjectModeSet { .. }
                 | Method::ProposalPut { .. }

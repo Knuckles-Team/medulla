@@ -554,6 +554,35 @@ $($variants)*
     ConnectorRunRecord {
         run: medulla_source_types::connector_run::ConnectorRunInput,
     },
+    /// Read one connector run of the verified tenant (MEDULLA-UNIFIED-DATA-PLANE-R790). An
+    /// absent, foreign or invisible run refuses the same `CONNECTOR_RUN_NOT_FOUND`. Reads only.
+    ConnectorRunGet { run_id: String },
+    /// Read one source connection of the verified tenant (MEDULLA-UNIFIED-DATA-PLANE-R791). An
+    /// absent, foreign or invisible connection refuses the same `CONNECTION_NOT_FOUND`. Reads
+    /// only.
+    SourceConnectionGet { connection_id: String },
+    /// One cursor-paged page of the verified tenant's source connections, by connection id
+    /// (MEDULLA-UNIFIED-DATA-PLANE-R791). `limit` is 1..=100 (100 when absent). Reads only.
+    SourceConnectionList {
+        #[serde(default)]
+        limit: Option<u32>,
+        #[serde(default)]
+        cursor: Option<String>,
+    },
+    /// Put or delete one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791). The credential is
+    /// a locator (`env://` or `openbao://`), never a value.
+    SourceConnectionControl {
+        op: medulla_source_types::source_connection::SourceConnectionOp,
+    },
+    /// Read the mapping of one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791): the mapping,
+    /// its digest and whether it is proposed or approved. Reads only.
+    SourceMappingGet { connection_id: String },
+    /// Propose a mapping for a source connection, or approve the stored one at the digest the
+    /// approver reviewed (MEDULLA-UNIFIED-DATA-PLANE-R791). A stale digest refuses
+    /// `MAPPING_CHANGED`.
+    SourceMappingControl {
+        op: medulla_source_types::source_connection::SourceMappingOp,
+    },
     /// Record one goal of a project (MEDULLA-SDLC-R017.1): a `Goal` node and a
     /// `targetsGoal` edge from each target row or competency question. Refuses
     /// `GOAL_TARGET_REQUIRED` when the goal names no target.

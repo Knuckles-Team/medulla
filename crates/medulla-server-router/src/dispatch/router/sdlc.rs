@@ -4,6 +4,7 @@ mod delivery;
 mod connector_runs;
 mod deploy;
 mod goals;
+mod source_connections;
 
 use std::collections::BTreeSet;
 use std::sync::Arc;
@@ -161,6 +162,25 @@ pub async fn dispatch_sdlc_methods(
         }
         Method::ConnectorRunRecord { run } => {
             dispatch_boxed(connector_runs::record(state, target, run)).await
+        }
+        Method::ConnectorRunGet { run_id } => {
+            dispatch_boxed(connector_runs::get(state, target, run_id)).await
+        }
+        // MEDULLA-UNIFIED-DATA-PLANE-R791: the source connection and mapping reads and controls.
+        Method::SourceConnectionGet { connection_id } => {
+            dispatch_boxed(source_connections::get(state, target, connection_id)).await
+        }
+        Method::SourceConnectionList { limit, cursor } => {
+            dispatch_boxed(source_connections::list(state, target, limit, cursor)).await
+        }
+        Method::SourceConnectionControl { op } => {
+            dispatch_boxed(source_connections::control(state, target, op)).await
+        }
+        Method::SourceMappingGet { connection_id } => {
+            dispatch_boxed(source_connections::mapping_get(state, target, connection_id)).await
+        }
+        Method::SourceMappingControl { op } => {
+            dispatch_boxed(source_connections::mapping_control(state, target, op)).await
         }
         Method::GoalPut { goal } => dispatch_boxed(goal_put(state, target, goal)).await,
         Method::ProposalPut { proposal } => {

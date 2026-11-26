@@ -213,6 +213,15 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // `dispatch_sdlc_methods::connector_runs` reads only a `ConnectorRun` node `can_see_node`
     // admits, of the verified tenant.
     "ConnectorRuns",
+    // `dispatch_sdlc_methods::connector_run_get`, `source_connection_get`, `source_connection_list`
+    // and `source_mapping_get` read only a node `can_see_node` admits, of the verified tenant.
+    "ConnectorRunGet",
+    "SourceConnectionGet",
+    "SourceConnectionList",
+    "SourceMappingGet",
+    // `action::handle_action_list` reads only `ActionSpec` nodes of the verified tenant (or with
+    // no tenant stamp) in the graph the request gate already authorized for reading.
+    "ActionList",
     // `dispatch_sdlc_methods::config_layers` reads only a node `can_see_node` admits.
     "ConfigLayers",
     // `dispatch_sdlc_methods::project_mode_get` reads only a node `can_see_node` admits.

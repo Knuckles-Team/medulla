@@ -10,7 +10,15 @@ use medulla_source_types::agent_goal::{
     IterationOutcome,
 };
 use medulla_source_types::connector_run::{
-    ConnectorRunInput, ConnectorRunPage, ConnectorRunReceipt, RunState,
+    ConnectorRun, ConnectorRunInput, ConnectorRunPage, ConnectorRunReceipt, RunState,
+};
+use medulla_source_types::source_connection::{
+    ConnectionState, MappingState, SourceConnection, SourceConnectionInput, SourceConnectionOp,
+    SourceConnectionPage, SourceConnectionReceipt, SourceMapping, SourceMappingOp,
+    SourceMappingOutcome,
+};
+use medulla_work_types::action_spec::{
+    ActionList, ActionParameter, ActionSpec, ParamType,
 };
 
 use super::connector_pack_harness::{ok, Served, GRAPH, OTHER_TENANT, TENANT};
@@ -326,5 +334,255 @@ async fn another_tenants_connection_refuses_exactly_like_an_absent_one_and_scope
         .await;
     assert!(by_reader.error.is_some(), "a read scope must not report: {by_reader:?}");
     let by_writer = served.verified(TENANT, INGEST_WRITE, runs(None, None)).await;
+    assert!(by_writer.error.is_some(), "a write scope must not list: {by_writer:?}");
+}
+
+fn connection_input(id: &str, credential: &str) -> SourceConnectionInput {
+    SourceConnectionInput {
+        connection_id: id.to_string(),
+        provider: "github".to_string(),
+        label: "Main".to_string(),
+        settings: serde_json::json!({"org": "acme"}).as_object().cloned().expect("object"),
+        credential_ref: credential.to_string(),
+        state: None,
+    }
+}
+
+fn put_connection(id: &str, credential: &str) -> Method {
+    Method::SourceConnectionControl {
+        op: SourceConnectionOp::Put {
+            connection: connection_input(id, credential),
+        },
+    }
+}
+
+fn get_connection(id: &str) -> Method {
+    Method::SourceConnectionGet {
+        connection_id: id.to_string(),
+    }
+}
+
+fn propose(id: &str, title: &str) -> Method {
+    Method::SourceMappingControl {
+        op: SourceMappingOp::Propose {
+            connection_id: id.to_string(),
+            mapping: serde_json::json!({"title": title}).as_object().cloned().expect("object"),
+        },
+    }
+}
+
+fn approve(id: &str, digest: &str) -> Method {
+    Method::SourceMappingControl {
+        op: SourceMappingOp::Approve {
+            connection_id: id.to_string(),
+            mapping_digest: digest.to_string(),
+        },
+    }
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R791
+#[tokio::test]
+async fn a_connection_keeps_a_locator_lists_by_id_and_deleting_it_removes_its_mapping() {
+    let served = served().await;
+    // A credential value is refused and nothing is stored.
+    let value = served
+        .verified(TENANT, INGEST_WRITE, put_connection("c1", "ghp_0123456789abcdef"))
+        .await;
+    assert!(refusal_text(&value).contains("SOURCE_CONNECTION_INVALID"), "{value:?}");
+    let missing = served.verified(TENANT, INGEST_READ, get_connection("c1")).await;
+    assert!(refusal_text(&missing).contains("CONNECTION_NOT_FOUND"), "{missing:?}");
+
+    let first: SourceConnectionReceipt = ok(
+        "put",
+        served.verified(TENANT, INGEST_WRITE, put_connection("c1", "openbao://kv/github")).await,
+    );
+    assert!(!first.replayed && !first.deleted);
+    let again: SourceConnectionReceipt = ok(
+        "put again",
+        served.verified(TENANT, INGEST_WRITE, put_connection("c1", "openbao://kv/github")).await,
+    );
+    assert!(again.replayed, "the same body replays");
+    let _: SourceConnectionReceipt = ok(
+        "second",
+        served.verified(TENANT, INGEST_WRITE, put_connection("c0", "env://GITHUB_TOKEN")).await,
+    );
+    let read: SourceConnection = ok("get", served.verified(TENANT, INGEST_READ, get_connection("c1")).await);
+    assert_eq!((read.state, read.credential_ref.as_str()), (ConnectionState::Active, "openbao://kv/github"));
+    assert_eq!(read.tenant_id, TENANT);
+    let page: SourceConnectionPage = ok(
+        "list",
+        served
+            .verified(TENANT, INGEST_READ, Method::SourceConnectionList { limit: None, cursor: None })
+            .await,
+    );
+    assert_eq!(
+        page.connections.iter().map(|c| c.connection_id.as_str()).collect::<Vec<_>>(),
+        ["c0", "c1"]
+    );
+
+    // A mapping is proposed and read back; deleting the connection removes it.
+    let proposed: SourceMappingOutcome = ok("propose", served.verified(TENANT, INGEST_WRITE, propose("c1", "name")).await);
+    assert_eq!(proposed.state, MappingState::Proposed);
+    let deleted: SourceConnectionReceipt = ok(
+        "delete",
+        served
+            .verified(
+                TENANT,
+                INGEST_WRITE,
+                Method::SourceConnectionControl {
+                    op: SourceConnectionOp::Delete { connection_id: "c1".to_string() },
+                },
+            )
+            .await,
+    );
+    assert!(deleted.deleted);
+    let gone = served.verified(TENANT, INGEST_READ, get_connection("c1")).await;
+    assert!(refusal_text(&gone).contains("CONNECTION_NOT_FOUND"), "{gone:?}");
+    let no_mapping = served
+        .verified(TENANT, INGEST_READ, Method::SourceMappingGet { connection_id: "c1".to_string() })
+        .await;
+    assert!(refusal_text(&no_mapping).contains("CONNECTION_NOT_FOUND"), "{no_mapping:?}");
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R791
+#[tokio::test]
+async fn a_mapping_is_approved_only_at_the_digest_that_was_reviewed() {
+    let served = served().await;
+    let _: SourceConnectionReceipt = ok(
+        "put",
+        served.verified(TENANT, INGEST_WRITE, put_connection("c1", "env://TOKEN")).await,
+    );
+    let none = served
+        .verified(TENANT, INGEST_READ, Method::SourceMappingGet { connection_id: "c1".to_string() })
+        .await;
+    assert!(refusal_text(&none).contains("MAPPING_NOT_FOUND"), "{none:?}");
+
+    let first: SourceMappingOutcome = ok("propose", served.verified(TENANT, INGEST_WRITE, propose("c1", "name")).await);
+    // The mapping is replaced before the approver acts: the reviewed digest is stale.
+    let second: SourceMappingOutcome = ok("repropose", served.verified(TENANT, INGEST_WRITE, propose("c1", "headline")).await);
+    assert_ne!(first.digest, second.digest);
+    let stale = served.verified(TENANT, INGEST_WRITE, approve("c1", &first.digest)).await;
+    assert!(refusal_text(&stale).contains("MAPPING_CHANGED"), "{stale:?}");
+    let approved: SourceMappingOutcome = ok("approve", served.verified(TENANT, INGEST_WRITE, approve("c1", &second.digest)).await);
+    assert_eq!(approved.state, MappingState::Approved);
+    let read: SourceMapping = ok(
+        "get",
+        served
+            .verified(TENANT, INGEST_READ, Method::SourceMappingGet { connection_id: "c1".to_string() })
+            .await,
+    );
+    assert_eq!((read.state, read.digest), (MappingState::Approved, second.digest.clone()));
+    // The same proposal keeps it approved; a changed one proposes again.
+    let same: SourceMappingOutcome = ok("same", served.verified(TENANT, INGEST_WRITE, propose("c1", "headline")).await);
+    assert!(same.replayed && same.state == MappingState::Approved);
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R791
+#[tokio::test]
+async fn another_tenants_connection_and_mapping_refuse_exactly_like_absent_ones() {
+    let served = served().await;
+    admit(&served, OTHER_PRINCIPAL, true).await;
+    let _: SourceConnectionReceipt = ok(
+        "put",
+        served.verified(TENANT, INGEST_WRITE, put_connection("c1", "env://TOKEN")).await,
+    );
+    let foreign = served
+        .verified_as(OTHER_PRINCIPAL, OTHER_TENANT, INGEST_READ, get_connection("c1"))
+        .await;
+    let absent = served
+        .verified_as(OTHER_PRINCIPAL, OTHER_TENANT, INGEST_READ, get_connection("ghost"))
+        .await;
+    assert!(refusal_text(&foreign).contains("CONNECTION_NOT_FOUND"), "{foreign:?}");
+    assert_eq!(refusal_text(&foreign), refusal_text(&absent));
+    let foreign_map = served
+        .verified_as(OTHER_PRINCIPAL, OTHER_TENANT, INGEST_WRITE, propose("c1", "x"))
+        .await;
+    assert!(refusal_text(&foreign_map).contains("CONNECTION_NOT_FOUND"), "{foreign_map:?}");
+    let page: SourceConnectionPage = ok(
+        "list as the other tenant",
+        served
+            .verified_as(
+                OTHER_PRINCIPAL,
+                OTHER_TENANT,
+                INGEST_READ,
+                Method::SourceConnectionList { limit: None, cursor: None },
+            )
+            .await,
+    );
+    assert!(page.connections.is_empty(), "{page:?}");
+    let by_reader = served
+        .verified(TENANT, INGEST_READ, put_connection("c2", "env://TOKEN"))
+        .await;
+    assert!(by_reader.error.is_some(), "a read scope must not write: {by_reader:?}");
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R790
+#[tokio::test]
+async fn a_run_reads_back_by_id_and_a_foreign_run_refuses_like_an_absent_one() {
+    let served = served().await;
+    admit(&served, OTHER_PRINCIPAL, false).await;
+    let _: ConnectorRunReceipt = ok(
+        "start",
+        served.verified(TENANT, INGEST_WRITE, report("r1", "c1", RunState::Running, 4)).await,
+    );
+    let get = |id: &str| Method::ConnectorRunGet { run_id: id.to_string() };
+    let read: ConnectorRun = ok("get", served.verified(TENANT, INGEST_READ, get("r1")).await);
+    assert_eq!((read.state, read.counts["records"]), (RunState::Running, 4));
+    // Cancelling is reporting the run cancelled.
+    let cancelled: ConnectorRunReceipt = ok(
+        "cancel",
+        served.verified(TENANT, INGEST_WRITE, report("r1", "c1", RunState::Cancelled, 4)).await,
+    );
+    assert_eq!(cancelled.state, RunState::Cancelled);
+    let foreign = served.verified_as(OTHER_PRINCIPAL, OTHER_TENANT, INGEST_READ, get("r1")).await;
+    let absent = served.verified_as(OTHER_PRINCIPAL, OTHER_TENANT, INGEST_READ, get("ghost")).await;
+    assert!(refusal_text(&foreign).contains("CONNECTOR_RUN_NOT_FOUND"), "{foreign:?}");
+    assert_eq!(refusal_text(&foreign), refusal_text(&absent));
+}
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R792
+#[tokio::test]
+async fn the_action_list_names_each_registered_action_with_its_parameter_schema() {
+    let served = served().await;
+    let empty: ActionList = ok(
+        "list none",
+        served.verified(TENANT, &["actions:read"], Method::ActionList {}).await,
+    );
+    assert!(empty.actions.is_empty());
+    for name in ["zeta", "alpha"] {
+        let registered = served
+            .verified(
+                TENANT,
+                &["actions:write"],
+                Method::ActionRegister {
+                    spec: ActionSpec {
+                        name: name.to_string(),
+                        params: vec![ActionParameter {
+                            name: "amount".to_string(),
+                            ty: ParamType::Integer,
+                            required: true,
+                        }],
+                        criteria: Vec::new(),
+                        effects: Vec::new(),
+                    },
+                },
+            )
+            .await;
+        assert!(registered.error.is_none(), "{registered:?}");
+    }
+    let listed: ActionList = ok(
+        "list",
+        served.verified(TENANT, &["actions:read"], Method::ActionList {}).await,
+    );
+    assert_eq!(
+        listed.actions.iter().map(|action| action.name.as_str()).collect::<Vec<_>>(),
+        ["alpha", "zeta"]
+    );
+    assert_eq!(
+        listed.actions[0].params_schema["properties"]["amount"]["type"],
+        serde_json::json!("integer")
+    );
+    assert_eq!(listed.actions[0].params_schema["required"], serde_json::json!(["amount"]));
+    let by_writer = served.verified(TENANT, &["actions:write"], Method::ActionList {}).await;
     assert!(by_writer.error.is_some(), "a write scope must not list: {by_writer:?}");
 }

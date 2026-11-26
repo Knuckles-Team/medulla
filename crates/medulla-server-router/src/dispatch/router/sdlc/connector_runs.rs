@@ -10,10 +10,11 @@ use super::deploy::{verified_tenant, visible_nodes_of};
 use super::*;
 
 use medulla_protocol_types::result_contract::ingestion::{
-    ConnectorRunRecord as ConnectorRunRecordResult, ConnectorRuns as ConnectorRunsResult,
+    ConnectorRunGet as ConnectorRunGetResult, ConnectorRunRecord as ConnectorRunRecordResult,
+    ConnectorRuns as ConnectorRunsResult,
 };
 use medulla_source_types::connector_run::{
-    connector_run_node_id, handle_connector_run_record, handle_connector_runs, ConnectorRun,
+    connector_run_node_id, handle_connector_run_get, handle_connector_run_record, handle_connector_runs, ConnectorRun,
     ConnectorRunInput, RunState, CONNECTOR_RUN_COUNTS_PROPERTY, CONNECTOR_RUN_TYPE,
 };
 use medulla_types::transition_refused::MachineState;
@@ -95,4 +96,22 @@ pub(super) async fn record(
     }
     .await;
     typed_response::<ConnectorRunRecordResult>(target.req_id, result)
+}
+
+/// `ConnectorRunGet`: the stored run of one id. An absent, foreign, invisible or malformed run id
+/// refuses alike.
+pub(super) async fn get(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    run_id: String,
+) -> Response {
+    let result = async {
+        let tenant = verified_tenant(&target)?;
+        let stored = visible_node(state, &target, &connector_run_node_id(tenant, &run_id))
+            .await?
+            .and_then(|node| ConnectorRun::from_node(&node, tenant));
+        handle_connector_run_get(stored, &run_id).map_err(|e| e.to_string())
+    }
+    .await;
+    typed_response::<ConnectorRunGetResult>(target.req_id, result)
 }

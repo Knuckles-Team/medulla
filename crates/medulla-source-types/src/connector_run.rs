@@ -31,6 +31,8 @@ pub const CONNECTOR_RUN_COUNTS_PROPERTY: &str = "counts";
 /// No run of the verified tenant names the connection. An absent connection and a foreign one
 /// answer alike.
 pub const CONNECTION_NOT_FOUND: &str = "CONNECTION_NOT_FOUND";
+/// No run of the verified tenant has this id. An absent run and a foreign one answer alike.
+pub const CONNECTOR_RUN_NOT_FOUND: &str = "CONNECTOR_RUN_NOT_FOUND";
 /// A run field is out of bounds, a run changed its connection, or a cursor is unusable.
 pub const CONNECTOR_RUN_INVALID: &str = "CONNECTOR_RUN_INVALID";
 
@@ -39,6 +41,7 @@ pub const CONNECTOR_RUN_INVALID: &str = "CONNECTOR_RUN_INVALID";
 pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new(CONNECTION_NOT_FOUND),
     RefusalCode::new(CONNECTOR_RUN_INVALID),
+    RefusalCode::new(CONNECTOR_RUN_NOT_FOUND),
 ];
 
 /// Longest run id or connection id, in bytes.
@@ -69,6 +72,9 @@ pub enum RunRefusal {
     /// No run of the verified tenant names the connection.
     #[error("CONNECTION_NOT_FOUND: {0}")]
     ConnectionNotFound(String),
+    /// No run of the verified tenant has the id.
+    #[error("CONNECTOR_RUN_NOT_FOUND: {0}")]
+    RunNotFound(String),
     /// The run machine refuses the event in the run's current state.
     #[error("{0}")]
     Transition(TransitionRefused),
@@ -80,8 +86,14 @@ impl RunRefusal {
         match self {
             Self::Invalid(_) => CONNECTOR_RUN_INVALID,
             Self::ConnectionNotFound(_) => CONNECTION_NOT_FOUND,
+            Self::RunNotFound(_) => CONNECTOR_RUN_NOT_FOUND,
             Self::Transition(_) => medulla_types::transition_refused::TRANSITION_REFUSED,
         }
+    }
+
+    /// The one refusal of a read that cannot find its run.
+    pub fn run_not_found() -> Self {
+        Self::RunNotFound("no run with this id".to_owned())
     }
 
     /// The one refusal of a list that names a connection with no run.
@@ -417,6 +429,18 @@ pub fn handle_connector_run_record(
     })
 }
 
+/// `ConnectorRunGet`: the stored run, or the one not-found refusal for an absent, foreign,
+/// invisible or malformed run id.
+pub fn handle_connector_run_get(
+    stored: Option<ConnectorRun>,
+    run_id: &str,
+) -> Result<ConnectorRun, RunRefusal> {
+    match stored {
+        Some(run) if id_ok(run_id) => Ok(run),
+        _ => Err(RunRefusal::run_not_found()),
+    }
+}
+
 /// The resume key of a run in the newest-first order: the inverted start time, then the id.
 fn resume_key(run: &ConnectorRun) -> String {
     format!("{:020}|{}", u64::MAX - run.started_ms, run.run_id)
@@ -612,6 +636,16 @@ mod tests {
             .expect_err("unknown");
         assert_eq!(unknown, RunRefusal::connection_not_found());
         assert_eq!(unknown.code(), CONNECTION_NOT_FOUND);
+    }
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R790
+    #[test]
+    fn get_answers_one_refusal_for_an_absent_and_a_malformed_run_id() {
+        let held = run("r1", "c1", RunState::Running, 1);
+        assert_eq!(handle_connector_run_get(Some(held.clone()), "r1"), Ok(held.clone()));
+        let absent = handle_connector_run_get(None, "r1").expect_err("absent");
+        assert_eq!(absent.code(), CONNECTOR_RUN_NOT_FOUND);
+        assert_eq!(handle_connector_run_get(Some(held), "bad id"), Err(absent));
     }
 
     // spec: MEDULLA-UNIFIED-DATA-PLANE-R790

@@ -149,6 +149,18 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "CONNECTOR_RUN_RECORD|{}|{}",
             run.connection_id, run.run_id
         )),
+        // MEDULLA-UNIFIED-DATA-PLANE-R791: the lines name the operation and the connection, never
+        // a setting, a credential locator or a mapping.
+        Method::SourceConnectionControl { op } => Some(format!(
+            "SOURCE_CONNECTION_CONTROL|{}|{}",
+            op.name(),
+            op.connection_id()
+        )),
+        Method::SourceMappingControl { op } => Some(format!(
+            "SOURCE_MAPPING_CONTROL|{}|{}",
+            op.name(),
+            op.connection_id()
+        )),
         // MEDULLA-TYPED-PACKS-R652.3: the line names the op and the claim, never the evidence.
         Method::ClassificationClaim { op } => Some(match op {
             medulla_identity_types::classification::ClassificationClaimOp::Propose { claim } => {

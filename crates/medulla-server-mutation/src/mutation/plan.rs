@@ -1148,6 +1148,8 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::DeployRecordPut { .. }
             | Method::GoalControl { .. }
             | Method::ConnectorRunRecord { .. }
+            | Method::SourceConnectionControl { .. }
+            | Method::SourceMappingControl { .. }
             | Method::GoalPut { .. }
             | Method::ProjectModeSet { .. }
             | Method::ProposalPut { .. }

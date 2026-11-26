@@ -812,6 +812,14 @@ closed_error_codes! {
         ConnectionNotFound => "CONNECTION_NOT_FOUND",
         /// MEDULLA-UNIFIED-DATA-PLANE-R790: a connector run field is out of bounds, a run changed its connection, or a run list cursor is not usable.
         ConnectorRunInvalid => "CONNECTOR_RUN_INVALID",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R790: no connector run of the verified tenant has this id; an absent and a foreign run answer alike.
+        ConnectorRunNotFound => "CONNECTOR_RUN_NOT_FOUND",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R791: a source connection or mapping field is out of bounds, a credential reference is not a locator, or a connection list cursor is not usable.
+        SourceConnectionInvalid => "SOURCE_CONNECTION_INVALID",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R791: the connection has no mapping yet.
+        MappingNotFound => "MAPPING_NOT_FOUND",
+        /// MEDULLA-UNIFIED-DATA-PLANE-R791: the digest an approval names is no longer the digest of the stored mapping.
+        MappingChanged => "MAPPING_CHANGED",
         /// A skill package could not render: the graph holds no body for the skill (MEDULLA-TYPED-PACKS-R100.2).
         RenderBodyMissing => "RENDER_BODY_MISSING",
         /// A skill package could not render: it references an ontology term the graph does not define (MEDULLA-TYPED-PACKS-R100.4).

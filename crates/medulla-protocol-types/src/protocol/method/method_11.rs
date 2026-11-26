@@ -370,6 +370,10 @@ $($variants)*
         action: String,
         params: std::collections::BTreeMap<String, medulla_work_types::action_spec::ParamValue>,
     },
+    /// List the actions registered in the request graph, by name, each with the JSON schema of
+    /// its parameters (MEDULLA-UNIFIED-DATA-PLANE-R792). A spec of another tenant is left out.
+    /// Reads only.
+    ActionList {},
 
     // ── Dataset lineage (MEDULLA-UNIFIED-DATA-PLANE-R702.3) ─────────────────
     /// Drain lineage run events into the request graph: each event maps to

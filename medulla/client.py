@@ -19844,6 +19844,115 @@ class MedullaClient:
             raise TypeError("ConnectorRunRecord returned a non-object result")
         return result
 
+    async def connector_run_get(
+        self, run_id: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read one connector run (MEDULLA-UNIFIED-DATA-PLANE-R790).
+
+        An absent, foreign or invisible run refuses the same
+        ``CONNECTOR_RUN_NOT_FOUND``. Cancel a run by reporting it ``cancelled``
+        with ``connector_run_record``. Scope ``ingest:read``.
+        """
+        result = await self._send("ConnectorRunGet", {"run_id": run_id}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ConnectorRunGet returned a non-object result")
+        return result
+
+    async def source_connection_get(
+        self, connection_id: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        The answer holds ``connection_id``, ``tenant_id``, ``provider``,
+        ``label``, ``settings``, ``credential_ref`` and ``state``. An absent or
+        foreign connection refuses the same ``CONNECTION_NOT_FOUND``. Scope
+        ``ingest:read``.
+        """
+        result = await self._send(
+            "SourceConnectionGet", {"connection_id": connection_id}, graph
+        )
+        if not isinstance(result, dict):
+            raise TypeError("SourceConnectionGet returned a non-object result")
+        return result
+
+    async def source_connection_list(
+        self,
+        limit: int | None = None,
+        cursor: str | None = None,
+        graph: str | None = None,
+    ) -> dict[str, Any]:
+        """List source connections by id (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        The answer holds ``connections`` and ``next_cursor``. ``limit`` is 1 to
+        100. Scope ``ingest:read``.
+        """
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        result = await self._send("SourceConnectionList", params, graph)
+        if not isinstance(result, dict):
+            raise TypeError("SourceConnectionList returned a non-object result")
+        return result
+
+    async def source_connection_control(
+        self, op: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Put or delete one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        ``op`` is ``{"operation": "put", "connection": {...}}`` with
+        ``connection_id``, ``provider``, ``label``, ``settings``,
+        ``credential_ref`` (an ``env://`` or ``openbao://`` locator, never a
+        value) and optional ``state`` (``active`` or ``paused``), or
+        ``{"operation": "delete", "connection_id"}``. Scope ``ingest:write``.
+        """
+        result = await self._send("SourceConnectionControl", {"op": op}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("SourceConnectionControl returned a non-object result")
+        return result
+
+    async def source_mapping_get(
+        self, connection_id: str, graph: str | None = None
+    ) -> dict[str, Any]:
+        """Read the mapping of one source connection (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        The answer holds ``connection_id``, ``mapping``, ``digest`` and
+        ``state`` (``proposed`` or ``approved``). Scope ``ingest:read``.
+        """
+        result = await self._send(
+            "SourceMappingGet", {"connection_id": connection_id}, graph
+        )
+        if not isinstance(result, dict):
+            raise TypeError("SourceMappingGet returned a non-object result")
+        return result
+
+    async def source_mapping_control(
+        self, op: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Propose or approve a source mapping (MEDULLA-UNIFIED-DATA-PLANE-R791).
+
+        ``op`` is ``{"operation": "propose", "connection_id", "mapping"}`` or
+        ``{"operation": "approve", "connection_id", "mapping_digest"}``. An
+        approval of a digest that is no longer the stored one refuses
+        ``MAPPING_CHANGED``. Scope ``ingest:write``.
+        """
+        result = await self._send("SourceMappingControl", {"op": op}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("SourceMappingControl returned a non-object result")
+        return result
+
+    async def action_list(self, graph: str | None = None) -> dict[str, Any]:
+        """List the registered actions (MEDULLA-UNIFIED-DATA-PLANE-R792).
+
+        The answer holds ``actions``: one ``{"name", "params_schema"}`` per
+        action registered in the graph, by name. Scope ``actions:read``.
+        """
+        result = await self._send("ActionList", {}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("ActionList returned a non-object result")
+        return result
+
     async def goal_put(self, goal: dict[str, Any]) -> dict[str, Any]:
         """Record one goal of a project (MEDULLA-SDLC-R017.1).
 

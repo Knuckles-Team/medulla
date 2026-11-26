@@ -1007,6 +1007,38 @@ decode_connector_runs = contract_decoder("ConnectorRuns", "ConnectorRunPage")
 decode_connector_run_record = contract_decoder(
     "ConnectorRunRecord", "ConnectorRunReceipt"
 )
+send_connector_run_get = contract_sender(
+    "ConnectorRunGet", "MethodConnectorRunGetParams"
+)
+send_source_connection_get = contract_sender(
+    "SourceConnectionGet", "MethodSourceConnectionGetParams"
+)
+send_source_connection_list = contract_sender(
+    "SourceConnectionList", "MethodSourceConnectionListParams"
+)
+send_source_connection_control = contract_sender(
+    "SourceConnectionControl", "MethodSourceConnectionControlParams"
+)
+send_source_mapping_get = contract_sender(
+    "SourceMappingGet", "MethodSourceMappingGetParams"
+)
+send_source_mapping_control = contract_sender(
+    "SourceMappingControl", "MethodSourceMappingControlParams"
+)
+decode_connector_run_get = contract_decoder("ConnectorRunGet", "ConnectorRun")
+decode_source_connection_get = contract_decoder(
+    "SourceConnectionGet", "SourceConnection"
+)
+decode_source_connection_list = contract_decoder(
+    "SourceConnectionList", "SourceConnectionPage"
+)
+decode_source_connection_control = contract_decoder(
+    "SourceConnectionControl", "SourceConnectionReceipt"
+)
+decode_source_mapping_get = contract_decoder("SourceMappingGet", "SourceMapping")
+decode_source_mapping_control = contract_decoder(
+    "SourceMappingControl", "SourceMappingOutcome"
+)
 send_record_gate_verdict = contract_sender(
     "RecordGateVerdict", "MethodRecordGateVerdictParams"
 )

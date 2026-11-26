@@ -298,6 +298,8 @@ fn telemetry_derive_marker_event_id(method: &Method) -> Option<&'static str> {
         // connector run report self-translate likewise.
         | Method::GoalControl { .. }
         | Method::ConnectorRunRecord { .. }
+        | Method::SourceConnectionControl { .. }
+        | Method::SourceMappingControl { .. }
         | Method::GoalPut { .. }
         | Method::ProjectModeSet { .. }
         | Method::ProposalPut { .. }

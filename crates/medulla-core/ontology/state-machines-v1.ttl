@@ -10408,3 +10408,71 @@
     :fromState :ConnectorRunMachine_Running ;
     :toState :ConnectorRunMachine_Cancelled ;
     :firedBy :ConnectorRunMachine_Event_Cancel .
+
+# spec: MEDULLA-UNIFIED-DATA-PLANE-R791
+# The SourceMapping machine. The Rust edge table is the same table; the ontology test asserts equal edge sets.
+
+:SourceMappingState a owl:Class ;
+    rdfs:label "SourceMapping State" ;
+    rdfs:comment "A state of the SourceMapping machine." ;
+    rdfs:subClassOf :State .
+
+:SourceMappingTerminalState a owl:Class ;
+    rdfs:label "SourceMapping Terminal State" ;
+    rdfs:comment "A terminal state of the SourceMapping machine." ;
+    rdfs:subClassOf :TerminalState, :SourceMappingState .
+
+:SourceMappingTransition a owl:Class ;
+    rdfs:label "SourceMapping Transition" ;
+    rdfs:comment "A transition of the SourceMapping machine." ;
+    rdfs:subClassOf :Transition .
+
+:SourceMappingEvent a owl:Class ;
+    rdfs:label "SourceMapping Event" ;
+    rdfs:comment "An event of the SourceMapping machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:SourceMappingGuard a owl:Class ;
+    rdfs:label "SourceMapping Guard" ;
+    rdfs:comment "A guard of the SourceMapping machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:SourceMappingMachine a :StateMachine ;
+    rdfs:label "SourceMapping machine" ;
+    :initialState :SourceMappingMachine_Proposed ;
+    :hasState :SourceMappingMachine_Proposed, :SourceMappingMachine_Approved .
+
+:SourceMappingMachine_Proposed a :SourceMappingState ;
+    rdfs:label "SourceMapping Proposed" ;
+    :storedForm "proposed" .
+
+:SourceMappingMachine_Approved a :SourceMappingState ;
+    rdfs:label "SourceMapping Approved" ;
+    :storedForm "approved" .
+
+:SourceMappingMachine_Event_Propose a :SourceMappingEvent ;
+    rdfs:label "SourceMapping Propose" .
+
+:SourceMappingMachine_Event_Approve a :SourceMappingEvent ;
+    rdfs:label "SourceMapping Approve" .
+
+:SourceMappingMachine_M01 a :SourceMappingTransition ;
+    rdfs:label "SourceMapping M01" ;
+    :edgeId "M01" ;
+    :fromState :SourceMappingMachine_Proposed ;
+    :toState :SourceMappingMachine_Proposed ;
+    :firedBy :SourceMappingMachine_Event_Propose .
+
+:SourceMappingMachine_M02 a :SourceMappingTransition ;
+    rdfs:label "SourceMapping M02" ;
+    :edgeId "M02" ;
+    :fromState :SourceMappingMachine_Proposed ;
+    :toState :SourceMappingMachine_Approved ;
+    :firedBy :SourceMappingMachine_Event_Approve .
+
+:SourceMappingMachine_M03 a :SourceMappingTransition ;
+    rdfs:label "SourceMapping M03" ;
+    :edgeId "M03" ;
+    :fromState :SourceMappingMachine_Approved ;
+    :toState :SourceMappingMachine_Proposed ;
+    :firedBy :SourceMappingMachine_Event_Propose .

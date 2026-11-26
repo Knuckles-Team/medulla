@@ -15,11 +15,13 @@ use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::protocol::{Method, Request, Response, ResultPayload};
-use medulla_protocol_types::result_contract::coordination::{ActionRegister, ActionSubmit};
+use medulla_protocol_types::result_contract::coordination::{
+    ActionList as ActionListResult, ActionRegister, ActionSubmit,
+};
 use medulla_server_api::authority_context::VerifiedRequestContext;
 use medulla_server_api::state::ServerState;
 use medulla_work_types::action_spec::{
-    ActionRefusal, ActionRun, ActionSpec, ActionStatus, EffectDisposition, EffectKind, ParamValue,
+    ActionList, ActionRefusal, ActionRun, ActionSpec, ActionStatus, EffectDisposition, EffectKind, ParamValue,
     ResolvedEffect,
 };
 use serde_json::{json, Map, Value};
@@ -29,6 +31,8 @@ use tokio::sync::RwLock;
 const SPEC_PREFIX: &str = "action-spec:";
 const SPEC_BODY: &str = "spec_body";
 const RUN_BODY: &str = "action_run";
+/// Most action specs one `ActionList` reads.
+const MAX_ACTIONS_LISTED: usize = 10_000;
 
 /// Already-authorized graph and caller context for one action call.
 pub struct HandleContext<'a> {
@@ -52,6 +56,8 @@ pub async fn try_handle(ctx: HandleContext<'_>, method: Method) -> Result<Respon
             id,
             handle_action_submit(&ctx, &action, params).await,
         )),
+        // MEDULLA-UNIFIED-DATA-PLANE-R792: the registered actions, by name.
+        Method::ActionList {} => Ok(typed::<ActionListResult>(id, handle_action_list(&ctx))),
         other => Err(other),
     }
 }
@@ -88,6 +94,31 @@ async fn handle_action_register(
     let node = upsert_node(ctx, format!("{SPEC_PREFIX}{}", spec.name), properties);
     commit(ctx, vec![node]).await?;
     Ok(spec.name)
+}
+
+/// `ActionList`: every action spec registered in the request graph for the verified tenant (a
+/// spec stamped for another tenant is left out), sorted by name, with the schema of its
+/// parameters. A node that does not decode as a spec is left out, never an error.
+fn handle_action_list(ctx: &HandleContext<'_>) -> Result<ActionList, String> {
+    let tenant = ctx.verified_context.tenant();
+    let mut actions: Vec<_> = ctx
+        .core
+        .get_nodes_by_label("ActionSpec", MAX_ACTIONS_LISTED)
+        .into_iter()
+        .filter_map(|(_, blob)| medulla_types::msgpack::decode_property_value(&blob).ok())
+        .filter(|node| {
+            node.get("tenant_id")
+                .and_then(Value::as_str)
+                .is_none_or(|owner| owner == tenant)
+        })
+        .filter_map(|node| {
+            let body = node.get(SPEC_BODY)?.as_str()?.to_owned();
+            serde_json::from_str::<ActionSpec>(&body).ok()
+        })
+        .map(|spec| spec.list_entry())
+        .collect();
+    actions.sort_by(|left, right| left.name.cmp(&right.name));
+    Ok(ActionList { actions })
 }
 
 async fn handle_action_submit(

@@ -158,6 +158,67 @@ pub struct ActionSpec {
     pub effects: Vec<ActionEffectSpec>,
 }
 
+/// One registered action as `ActionList` answers it: its name and the JSON schema of its
+/// parameters (MEDULLA-UNIFIED-DATA-PLANE-R792).
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ActionListEntry {
+    /// The action name.
+    pub name: String,
+    /// A JSON schema object: one property per declared parameter, the required ones listed.
+    pub params_schema: serde_json::Value,
+}
+
+/// What `ActionList` answers: every action registered in the request graph, by name.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ActionList {
+    /// The registered actions, sorted by name.
+    pub actions: Vec<ActionListEntry>,
+}
+
+impl ActionSpec {
+    /// The JSON schema of this action's parameters: an object that allows no other property,
+    /// one property per declared parameter typed `string`, `integer`, `number` or `boolean`, and
+    /// the required parameters listed (sorted).
+    pub fn params_schema(&self) -> serde_json::Value {
+        let mut properties = serde_json::Map::new();
+        let mut required = Vec::new();
+        for parameter in &self.params {
+            let json_type = match parameter.ty {
+                ParamType::String => "string",
+                ParamType::Integer => "integer",
+                ParamType::Float => "number",
+                ParamType::Boolean => "boolean",
+            };
+            properties.insert(
+                parameter.name.clone(),
+                serde_json::json!({ "type": json_type }),
+            );
+            if parameter.required {
+                required.push(parameter.name.clone());
+            }
+        }
+        required.sort();
+        serde_json::json!({
+            "type": "object",
+            "properties": properties,
+            "required": required,
+            "additionalProperties": false,
+        })
+    }
+
+    /// This action as one `ActionList` entry.
+    pub fn list_entry(&self) -> ActionListEntry {
+        ActionListEntry {
+            name: self.name.clone(),
+            params_schema: self.params_schema(),
+        }
+    }
+}
+
 /// Where one action run ended.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -406,6 +467,32 @@ pub type ActionRegistry = BTreeMap<String, ActionSpec>;
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-UNIFIED-DATA-PLANE-R792
+    #[test]
+    fn the_params_schema_types_each_parameter_and_lists_the_required_ones() {
+        let mut action = spec();
+        action.params.push(ActionParameter {
+            name: "note".to_string(),
+            ty: ParamType::String,
+            required: false,
+        });
+        let entry = action.list_entry();
+        assert_eq!(entry.name, "approve_refund");
+        assert_eq!(
+            entry.params_schema,
+            serde_json::json!({
+                "type": "object",
+                "properties": {
+                    "order": {"type": "string"},
+                    "amount": {"type": "integer"},
+                    "note": {"type": "string"},
+                },
+                "required": ["amount", "order"],
+                "additionalProperties": false,
+            })
+        );
+    }
 
     fn spec() -> ActionSpec {
         ActionSpec {

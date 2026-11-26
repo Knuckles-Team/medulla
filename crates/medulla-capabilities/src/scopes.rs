@@ -53,6 +53,8 @@ pub const APPROVER_GROUPS: &[(&str, &str)] = &[
 /// The registry, sorted by scope.
 pub const SCOPES: &[ScopeEntry] = &[
     // MEDULLA-UNIFIED-DATA-PLANE-R700.3: register and submit typed actions.
+    // MEDULLA-UNIFIED-DATA-PLANE-R792: list the registered actions.
+    entry("actions:read", User, "engine"),
     entry("actions:write", User, "engine"),
     entry("admin:backup", Admin, "engine"),
     entry("admin:cluster", Admin, "engine"),

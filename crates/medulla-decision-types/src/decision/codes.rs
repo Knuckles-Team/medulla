@@ -838,6 +838,11 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "connector_run",
             medulla_source_types::connector_run::REFUSALS.to_vec(),
         ),
+        // MEDULLA-UNIFIED-DATA-PLANE-R791: the source connection and mapping refusals.
+        (
+            "source_connection",
+            medulla_source_types::source_connection::REFUSALS.to_vec(),
+        ),
         // MEDULLA-BUSINESS-OPS-R004: the approval gate question's refusal.
         (
             "approval_gate",

@@ -142,6 +142,13 @@ method_results! {
     // MEDULLA-UNIFIED-DATA-PLANE-R790: the connector run list and report.
     ConnectorRuns(ConnectorRuns) => Raw<medulla_source_types::connector_run::ConnectorRunPage>;
     ConnectorRunRecord(ConnectorRunRecord) => Raw<medulla_source_types::connector_run::ConnectorRunReceipt>;
+    ConnectorRunGet(ConnectorRunGet) => Raw<medulla_source_types::connector_run::ConnectorRun>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R791: the source connection and mapping reads and controls.
+    SourceConnectionGet(SourceConnectionGet) => Raw<medulla_source_types::source_connection::SourceConnection>;
+    SourceConnectionList(SourceConnectionList) => Raw<medulla_source_types::source_connection::SourceConnectionPage>;
+    SourceConnectionControl(SourceConnectionControl) => Raw<medulla_source_types::source_connection::SourceConnectionReceipt>;
+    SourceMappingGet(SourceMappingGet) => Raw<medulla_source_types::source_connection::SourceMapping>;
+    SourceMappingControl(SourceMappingControl) => Raw<medulla_source_types::source_connection::SourceMappingOutcome>;
     // MEDULLA-SDLC-R017.1: the goal record.
     GoalPut(GoalPut) => Raw<medulla_source_types::lifecycle::GoalReceipt>;
     // MEDULLA-SDLC-R017.3: the proposal record.

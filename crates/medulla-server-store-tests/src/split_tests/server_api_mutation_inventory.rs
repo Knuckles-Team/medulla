@@ -72,6 +72,8 @@ fn clustered_mutation_inventory_is_complete() {
     covered.insert("DeployRecordPut");
     covered.insert("GoalControl");
     covered.insert("ConnectorRunRecord");
+    covered.insert("SourceConnectionControl");
+    covered.insert("SourceMappingControl");
     covered.insert("GoalPut");
     covered.insert("ProjectModeSet");
     covered.insert("ProposalPut");

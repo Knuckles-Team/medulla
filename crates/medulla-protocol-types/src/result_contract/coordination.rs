@@ -94,6 +94,8 @@ method_results! {
     // MEDULLA-DURABLE-KERNEL-R101.3: the latest downtime tick's decision.
     DowntimeSelections(DowntimeSelections) => Raw<medulla_work_types::downtime::DowntimeSelections>;
     ActionSubmit(ActionSubmit) => Raw<medulla_work_types::action_spec::ActionRun>;
+    // MEDULLA-UNIFIED-DATA-PLANE-R792: the registered actions with their parameter schemas.
+    ActionList(ActionList) => Raw<medulla_work_types::action_spec::ActionList>;
     AcquireCapacity(AcquireCapacity) => Raw<CapacityAcquireResult>;
     RenewCapacity(RenewCapacity) => Raw<CapacityMutationResult>;
     ReleaseCapacity(ReleaseCapacity) => Raw<CapacityMutationResult>;

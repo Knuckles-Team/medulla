@@ -2041,6 +2041,45 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     (
+        "ConnectorRunGet",
+        &["TENANT_SCOPE_REQUIRED", "CONNECTOR_RUN_NOT_FOUND"],
+    ),
+    // MEDULLA-UNIFIED-DATA-PLANE-R791: the source connection and mapping reads and controls.
+    (
+        "SourceConnectionGet",
+        &["TENANT_SCOPE_REQUIRED", "CONNECTION_NOT_FOUND"],
+    ),
+    (
+        "SourceConnectionList",
+        &["TENANT_SCOPE_REQUIRED", "SOURCE_CONNECTION_INVALID"],
+    ),
+    (
+        "SourceConnectionControl",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "SOURCE_CONNECTION_INVALID",
+            "CONNECTION_NOT_FOUND",
+        ],
+    ),
+    (
+        "SourceMappingGet",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "CONNECTION_NOT_FOUND",
+            "MAPPING_NOT_FOUND",
+        ],
+    ),
+    (
+        "SourceMappingControl",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "SOURCE_CONNECTION_INVALID",
+            "CONNECTION_NOT_FOUND",
+            "MAPPING_NOT_FOUND",
+            "MAPPING_CHANGED",
+        ],
+    ),
+    (
         "ConnectorRunRecord",
         &[
             "TENANT_SCOPE_REQUIRED",
@@ -2793,6 +2832,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "GoalControl",
     // MEDULLA-UNIFIED-DATA-PLANE-R790: `ConnectorRunRecord` moves the connector run machine.
     "ConnectorRunRecord",
+    // MEDULLA-UNIFIED-DATA-PLANE-R791: `SourceMappingControl` moves the source mapping machine.
+    "SourceMappingControl",
     "FeatureLedger",
     // MEDULLA-DECISION-ENGINE-R701.3: `MarkAddressed` moves the gap-topic machine.
     "FailureIngest",

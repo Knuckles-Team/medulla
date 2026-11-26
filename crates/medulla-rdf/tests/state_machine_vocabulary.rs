@@ -1696,3 +1696,14 @@ fn connector_run_machine_matches_edge_table() {
 fn connector_run_machine_classes_extend_core() {
     sm::assert_extends_core("ConnectorRun");
 }
+
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R791
+#[test]
+fn source_mapping_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_source_types::source_connection::SOURCE_MAPPING_MACHINE);
+}
+// spec: MEDULLA-UNIFIED-DATA-PLANE-R791
+#[test]
+fn source_mapping_machine_classes_extend_core() {
+    sm::assert_extends_core("SourceMapping");
+}

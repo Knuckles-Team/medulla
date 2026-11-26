@@ -56,6 +56,8 @@ pub mod approval_gate;
 pub mod agent_goal;
 // MEDULLA-UNIFIED-DATA-PLANE-R790 — connector source-sync runs and the run list.
 pub mod connector_run;
+// MEDULLA-UNIFIED-DATA-PLANE-R791 — source connections and their approved field mappings.
+pub mod source_connection;
 // MEDULLA-SCM-R009 — the bisect request and answer over the gate verdicts of a chain.
 pub mod source_bisect;
 // MEDULLA-IDENTITY-R740 — the layered configuration read.

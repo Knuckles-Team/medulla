@@ -832,6 +832,16 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::GoalControl { .. }
         | Method::ConnectorRuns { .. }
         | Method::ConnectorRunRecord { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R790, R791: the run read, the connection and mapping reads
+        // commit nothing; the two controls self-translate likewise.
+        | Method::ConnectorRunGet { .. }
+        | Method::SourceConnectionGet { .. }
+        | Method::SourceConnectionList { .. }
+        | Method::SourceConnectionControl { .. }
+        | Method::SourceMappingGet { .. }
+        | Method::SourceMappingControl { .. }
+        // MEDULLA-UNIFIED-DATA-PLANE-R792: the action list commits nothing.
+        | Method::ActionList { .. }
         // MEDULLA-SDLC-R017.1: the goal record self-translates into a request-graph `BatchUpdate`.
         | Method::GoalPut { .. }
         // MEDULLA-SDLC-R012.8: the project mode record self-translates likewise.
