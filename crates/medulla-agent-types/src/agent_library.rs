@@ -291,7 +291,7 @@ pub struct AgentLibraryEntryDraft {
     /// How this agent RUNS -- output/deps contracts, model settings, budgets.
     /// See [`AgentRuntimeContract`]. An empty contract is a plain-text agent
     /// with engine-default budgets.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "crate::agent_component::null_as_default")]
     pub runtime: AgentRuntimeContract,
     /// Which template produced this agent, if any (RF-ADR-008 item C).
     ///
@@ -1220,7 +1220,7 @@ fn validate_dependencies(
             return Ok(());
         }
         return Err(format!(
-            "agent library {field} must name at least one component"
+            "INVALID_ARGUMENT: agent library {field} must name at least one component"
         ));
     }
     if dependencies.len() > MAX_REFERENCE_COUNT {
@@ -1310,6 +1310,24 @@ mod tests {
             kind,
             definition_digest: digest(seed),
         }
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R800
+    #[test]
+    fn a_draft_with_a_null_runtime_decodes_as_the_default_contract() {
+        let draft = draft();
+        let mut wire = serde_json::to_value(&draft).unwrap();
+        wire["runtime"] = serde_json::Value::Null;
+        let decoded: AgentLibraryEntryDraft = serde_json::from_value(wire).unwrap();
+        assert_eq!(decoded.runtime, AgentRuntimeContract::default());
+    }
+
+    #[test]
+    fn empty_dependency_slots_refuse_as_invalid_argument() {
+        let error = validate_dependencies("skills", &[], AgentComponentKind::Skill, false)
+            .expect_err("a skill slot may not be empty");
+        assert!(error.starts_with("INVALID_ARGUMENT: "), "{error}");
+        assert!(error.contains("skills must name at least one component"));
     }
 
     fn draft() -> AgentLibraryEntryDraft {

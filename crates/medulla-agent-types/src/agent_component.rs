@@ -48,6 +48,18 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use crate::agent_library::AgentLibraryLifecycle;
 
+/// Decode a `#[serde(default)]` field that a client may send as an explicit
+/// `null`: an absent value and a `null` both mean the field's default. Without
+/// it a buffered request frame (`Request` flattens `Method`) refuses the
+/// `null` with "invalid request encoding".
+pub fn null_as_default<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de> + Default,
+{
+    Ok(Option::<T>::deserialize(deserializer)?.unwrap_or_default())
+}
+
 pub mod capability_descriptor;
 pub mod content;
 pub mod facts;
@@ -531,7 +543,7 @@ pub struct AgentComponentDraft {
     pub declared_required_capabilities: Vec<String>,
     /// Extension point. New facts belong here until they earn a typed field,
     /// so the vocabulary can grow without a wire break.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "null_as_default")]
     pub attributes: BTreeMap<String, String>,
     pub tenant_id: String,
     pub actor_scope: String,
@@ -2427,6 +2439,36 @@ mod tests {
 
     fn digest(seed: char) -> String {
         format!("sha256:{}", seed.to_string().repeat(64))
+    }
+
+    /// A request frame flattens its method body, so serde buffers the frame
+    /// before the body decodes: the shape a wire `null` was refused in.
+    #[derive(Debug, Deserialize)]
+    struct Framed<T> {
+        id: u64,
+        #[serde(flatten)]
+        body: T,
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R800
+    #[test]
+    fn a_draft_with_null_attributes_decodes_as_the_default_through_a_buffered_frame() {
+        let draft = draft("prompt:null-attributes", AgentComponentKind::SystemPrompt);
+        let mut wire = serde_json::to_value(&draft).unwrap();
+        wire["attributes"] = serde_json::Value::Null;
+        wire["id"] = serde_json::json!(7);
+        let decoded: Framed<AgentComponentDraft> = serde_json::from_value(wire.clone()).unwrap();
+        assert_eq!(decoded.id, 7);
+        assert!(decoded.body.attributes.is_empty());
+        assert_eq!(decoded.body, draft);
+        // The same frame as MessagePack, the engine's own transport encoding.
+        let packed = rmp_serde::to_vec_named(&wire).unwrap();
+        let unpacked: Framed<AgentComponentDraft> = rmp_serde::from_slice(&packed).unwrap();
+        assert_eq!(unpacked.body, draft);
+        // An omitted key and an empty map decode to the same draft.
+        wire.as_object_mut().unwrap().remove("attributes");
+        let omitted: Framed<AgentComponentDraft> = serde_json::from_value(wire).unwrap();
+        assert_eq!(omitted.body, draft);
     }
 
     fn draft(component_id: &str, kind: AgentComponentKind) -> AgentComponentDraft {

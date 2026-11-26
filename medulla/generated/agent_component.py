@@ -186,7 +186,7 @@ class AgentComponentDraft(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     actor_scope: str
-    attributes: dict[str, str] | None = None
+    attributes: dict[str, str] = Field(default_factory=dict)
     classification: list[str] = Field(default_factory=list)
     component_id: str
     content_digest: str
