@@ -163,3 +163,36 @@ def test_trace_refusals():
 
     absent = asyncio.run(_with_graph(body))
     assert absent["records"] == [] and absent["edges"] == []
+
+
+# spec: MEDULLA-SDLC-R006.6
+@pytest.mark.spec("MEDULLA-SDLC-R006.6")
+def test_trace_journey_depth_four():
+    """Depth four from a requirement reaches the symbol, the changeset, the release and
+    the deployment of the four fixtures of R006.3, and the walk is not truncated; a
+    shallower walk reaches fewer records."""
+
+    async def body(client, graph):
+        deep = _body(
+            await client.lifecycle_trace(
+                {"anchor": "requirement:d:R1", "depth": 4}, graph
+            )
+        )
+        shallow = _body(
+            await client.lifecycle_trace(
+                {"anchor": "requirement:d:R1", "depth": 1}, graph
+            )
+        )
+        return deep, shallow
+
+    deep, shallow = asyncio.run(_with_graph(body))
+    reached = {record["id"] for record in deep["records"]}
+    assert {
+        "requirement:d:R1",
+        "symbol:s",
+        "commit:c1",
+        "release:d:1",
+        "deployment:d1",
+    } <= reached
+    assert deep["truncated"] is False
+    assert len(shallow["records"]) < len(deep["records"])

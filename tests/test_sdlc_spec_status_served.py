@@ -172,3 +172,98 @@ def test_matches_shared_generator():
         assert row["state"] == expected(cited[row["id"]], bound[row["id"]])
         assert row["landed_by"] == cited[row["id"]]
         assert row["verified_by"] == bound[row["id"]]
+
+
+ROWS = 2_000
+LANDED_ROWS = 1_000
+VERIFIED_ROWS = 500
+BATCH = 500
+
+
+def _journey_seed() -> list[dict]:
+    """2,000 rows; one changeset cites 1,000; a test binds the first 500."""
+    rows = [f"DEMO-J-R{n:04d}" for n in range(1, ROWS + 1)]
+    seed = [
+        _node(f"requirement:demo:{row}", "Requirement", repo="demo", rowId=row)
+        for row in rows
+    ]
+    seed.append(
+        _node(
+            "changeset:demo:c1",
+            "Changeset",
+            repo="demo",
+            changeset_id="c1",
+            created_at="1",
+        )
+    )
+    seed.append(
+        _node(
+            "testfile:demo:tests/test_j.py",
+            "TestFile",
+            repo="demo",
+            path="tests/test_j.py",
+        )
+    )
+    for row in rows[:LANDED_ROWS]:
+        seed.append(
+            _edge("changeset:demo:c1", "citesRequirement", f"requirement:demo:{row}")
+        )
+    for row in rows[:VERIFIED_ROWS]:
+        seed.append(
+            _edge(
+                f"requirement:demo:{row}", "boundTest", "testfile:demo:tests/test_j.py"
+            )
+        )
+    return seed
+
+
+async def _with_chunked_graph(seed: list[dict], body):
+    graph = f"sdlc-status-{uuid.uuid4().hex[:8]}"
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        timeout=120,
+    )
+    try:
+        await client.tenants.create(graph, "Global")
+        # Nodes first, then edges, so no edge names a node a later chunk writes.
+        ordered = [op for op in seed if op["op"] == "upsert_node"] + [
+            op for op in seed if op["op"] == "upsert_edge"
+        ]
+        for start in range(0, len(ordered), BATCH):
+            await client._send(
+                "BatchUpdate",
+                {
+                    "operations_msgpack": msgpack.packb(
+                        ordered[start : start + BATCH], use_bin_type=True
+                    )
+                },
+                graph,
+            )
+        try:
+            return await body(client, graph)
+        finally:
+            await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-SDLC-R005.6
+@pytest.mark.spec("MEDULLA-SDLC-R005.6")
+def test_status_journey_over_2000_rows():
+    async def body(client, graph):
+        return _body(await client.spec_status("demo", "c1", graph))
+
+    answer = asyncio.run(_with_chunked_graph(_journey_seed(), body))
+    rows = {row["id"]: row for row in answer["rows"]}
+    assert len(rows) == ROWS
+    for n in range(1, ROWS + 1):
+        row = rows[f"DEMO-J-R{n:04d}"]
+        if n <= VERIFIED_ROWS:
+            assert row["state"] == "VERIFIED"
+            assert row["landed_by"] == ["c1"]
+            assert row["verified_by"] == ["tests/test_j.py"]
+        elif n <= LANDED_ROWS:
+            assert row["state"] == "LANDED" and row["verified_by"] == []
+        else:
+            assert row["state"] == "SPECIFIED" and row["landed_by"] == []
