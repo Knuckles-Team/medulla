@@ -89,11 +89,14 @@ async def completed_read(
     plan_digest: str,
     query_digest: str,
     approve: bool = True,
+    limits: dict[str, int] | None = None,
 ) -> dict[str, Any]:
     """Run one host-driven read of ``fixture`` to completion; return its ``execution``.
 
     With ``approve=False`` the mapping stays held and the first lifecycle step that
-    binds it raises the engine's ``SOURCE_APPROVAL_NOT_ADMITTED`` refusal.
+    binds it raises the engine's ``SOURCE_APPROVAL_NOT_ADMITTED`` refusal. ``limits``
+    replaces the default read bounds (``max_rows``, ``max_bytes``, ``chunk_rows``,
+    ``chunk_bytes``, ``deadline_ms``) for a source whose rows are larger.
     """
     contract_bytes = _contract_ttl(connector, kind, source_id).encode()
     contract_digest = hashlib.sha256(contract_bytes).hexdigest()
@@ -218,7 +221,8 @@ async def completed_read(
                 "approval": approval,
                 "plan_digest": plan_digest,
                 "query_digest": query_digest,
-                "limits": {
+                "limits": limits
+                or {
                     "max_rows": 10,
                     "max_bytes": 4096,
                     "chunk_rows": 8,
