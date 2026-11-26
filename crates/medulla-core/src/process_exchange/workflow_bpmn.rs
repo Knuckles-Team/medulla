@@ -3,7 +3,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_types::process_import::{
-    CanonicalStep, CanonicalWorkflow, GateKind, StepKind, ANNEX_BPMN_PRESERVED_XML,
+    workflow_digest_hex, CanonicalStep, CanonicalWorkflow, GateKind, StepKind,
+    ANNEX_BPMN_PRESERVED_XML,
 };
 
 use super::{
@@ -96,7 +97,10 @@ pub fn workflow_to_bpmn(
     let mut process = BpmnProcess {
         id: xml_id(&format!(
             "process_{}",
-            &workflow.digest[..workflow.digest.len().min(12)]
+            {
+                let hex = workflow_digest_hex(&workflow.digest);
+                &hex[..hex.len().min(12)]
+            }
         )),
         name: workflow.name.clone(),
         ..BpmnProcess::default()
@@ -201,7 +205,10 @@ pub fn workflow_to_bpmn(
     Ok(BpmnDocument {
         id: xml_id(&format!(
             "definitions_{}",
-            &workflow.digest[..workflow.digest.len().min(12)]
+            {
+                let hex = workflow_digest_hex(&workflow.digest);
+                &hex[..hex.len().min(12)]
+            }
         )),
         processes: vec![process],
         collaborations: Vec::new(),

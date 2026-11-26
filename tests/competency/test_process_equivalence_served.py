@@ -114,8 +114,8 @@ def test_bpmn_and_epc_plan_digests_match(clean_graph):
     golden = json.loads((FIXTURES / "invoice-approval.canonical.json").read_text())
 
     bpmn, epc, process_iri = asyncio.run(_import_both(graph, suffix))
-    assert bpmn["workflow_digest"] == "sha256:" + golden["digest"]
-    assert epc["workflow_digest"] == "sha256:" + golden["digest"]
+    assert bpmn["workflow_digest"] == golden["digest"]
+    assert epc["workflow_digest"] == golden["digest"]
 
     bpmn_plan = asyncio.run(_plan(schema, graph, process_iri, bpmn["version"]))
     epc_plan = asyncio.run(

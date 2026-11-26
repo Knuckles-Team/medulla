@@ -112,7 +112,7 @@ async fn import_stores_versioned_workflow_and_export_reads_it() {
     let first: ProcessModelImported = payload(import(&state, 2, BPMN_SIDE, Some(0)).await);
     assert_eq!(first.version, 1);
     assert_eq!(first.workflow_id, "workflow:invoice-approval:v1");
-    assert_eq!(first.workflow_digest, format!("sha256:{}", stated.digest));
+    assert_eq!(first.workflow_digest, stated.digest.clone());
     assert_eq!(
         core_version(&state),
         before + 1,
@@ -122,7 +122,7 @@ async fn import_stores_versioned_workflow_and_export_reads_it() {
     // The EPC side of the same process carries the same digest and enters as version 2.
     let second: ProcessModelImported = payload(import(&state, 3, EPC_SIDE, Some(1)).await);
     assert_eq!(second.version, 2);
-    assert_eq!(second.workflow_digest, format!("sha256:{}", stated.digest));
+    assert_eq!(second.workflow_digest, stated.digest.clone());
 
     let version = core_version(&state);
     let stale = import(&state, 4, BPMN_SIDE, Some(1)).await;
@@ -209,7 +209,7 @@ async fn stored_steps_keep_source_ids() {
     let node = node_properties(&state, &imported.workflow_id);
     assert_eq!(
         node["workflowDigest"],
-        format!("sha256:{}", stated.digest)
+        stated.digest.clone()
     );
     assert_eq!(node["importedFrom"], stated.source.model_id);
     let annex: serde_json::Value =

@@ -21,7 +21,9 @@ use medulla_decision_types::decision::task_plan::{
     TaskPlanTask, MAX_CONCURRENCY, MAX_DECISION_IRI_BYTES, MAX_TASKS,
 };
 use medulla_types::contract::BoundedVec;
-use medulla_types::process_import::{CanonicalStep, CanonicalWorkflow, GateKind, StepKind};
+use medulla_types::process_import::{
+    workflow_digest_hex, CanonicalStep, CanonicalWorkflow, GateKind, StepKind,
+};
 
 /// The prefix of the decision IRI a flow condition becomes; the digest of the workflow that
 /// holds the flow and the flow id (`f<n>`, the 1-based position of the flow) follow.
@@ -168,7 +170,7 @@ fn flatten(
                     condition: flow.condition.as_ref().map(|text| ConditionQuestion {
                         decision_iri: format!(
                             "{CONDITION_IRI_PREFIX}{}:f{}",
-                            workflow.digest,
+                            workflow_digest_hex(&workflow.digest),
                             position + 1
                         ),
                         text: text.clone(),
@@ -491,7 +493,7 @@ pub fn plan_from_workflow(
 ) -> Result<PlanFromWorkflow, ProcessPlanRefusal> {
     let mut graph = flatten(workflow, bindings, "", 0, max_call_depth, callee)?;
     contract_anchors(&mut graph);
-    lower_boundaries(&mut graph, &workflow.digest);
+    lower_boundaries(&mut graph, workflow_digest_hex(&workflow.digest));
     let order = match topological(&graph) {
         Ok(order) => order,
         Err(cycle) => {

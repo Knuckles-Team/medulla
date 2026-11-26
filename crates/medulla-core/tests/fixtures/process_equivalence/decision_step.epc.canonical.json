@@ -42,7 +42,7 @@
       "default": false
     }
   ],
-  "digest": "47e45d2d912b1e15d09b3be1c08f6e5a2518b4471523c96e5c249afb66f1c638",
+  "digest": "sha256:47e45d2d912b1e15d09b3be1c08f6e5a2518b4471523c96e5c249afb66f1c638",
   "source": {
     "schema_version": 1,
     "system": "aris_epc",

@@ -62,7 +62,7 @@
       "default": false
     }
   ],
-  "digest": "a8490c179aff3409078b363dba2c37dfba2e83045ac8e80d38aa89c8568dda99",
+  "digest": "sha256:a8490c179aff3409078b363dba2c37dfba2e83045ac8e80d38aa89c8568dda99",
   "source": {
     "schema_version": 1,
     "system": "aris_epc",

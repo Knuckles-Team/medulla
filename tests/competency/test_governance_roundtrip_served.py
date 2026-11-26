@@ -107,7 +107,7 @@ def test_roundtrip_preserves_gates(clean_graph):
     # spec: MEDULLA-CQ-ORCH-R701.6
     workflow, imported, exported = asyncio.run(_round_trip())
     assert imported["version"] == 1
-    assert imported["workflow_digest"] == "sha256:" + workflow["digest"]
+    assert imported["workflow_digest"] == workflow["digest"]
     back = exported["workflow"]
     assert back["digest"] == workflow["digest"]
     assert [(s["id"], s.get("gate")) for s in back["steps"]] == [

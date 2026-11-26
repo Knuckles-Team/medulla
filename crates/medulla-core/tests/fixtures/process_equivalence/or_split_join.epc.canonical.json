@@ -70,7 +70,7 @@
       "default": false
     }
   ],
-  "digest": "d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
+  "digest": "sha256:d4d8dc8aa0f4e44e7e34cf6e2e588bf4f7510de599fb2447c413c197c26e32d5",
   "source": {
     "schema_version": 1,
     "system": "aris_epc",

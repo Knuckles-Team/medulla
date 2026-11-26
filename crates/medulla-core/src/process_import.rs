@@ -19,6 +19,7 @@ use medulla_types::process_import::{
     ProcessLoss, ProcessSourceSystem, SourceGraph, SourceNode, SourceTrace, StepKind, ANNEX_EPC_STATE_EVENT,
     LOSS_ANNEX_NOT_HELD, PROCESS_CANONICAL_SCHEMA, PROCESS_IMPORT_SCHEMA_VERSION,
 };
+use medulla_types::process_import::workflow_digest_of_hex;
 use serde_json::Value;
 use unicode_normalization::UnicodeNormalization;
 
@@ -244,7 +245,7 @@ pub fn canonical_json(value: &Value, out: &mut String) {
     }
 }
 
-/// Rule 5: SHA-256 hex of the canonical JSON of `schema`, `steps` and `flows`.
+/// Rule 5: `sha256:` and the SHA-256 hex of the canonical JSON of `schema`, `steps` and `flows`.
 pub fn workflow_digest(steps: &[CanonicalStep], flows: &[CanonicalFlow]) -> String {
     let value = serde_json::json!({
         "schema": PROCESS_CANONICAL_SCHEMA,
@@ -253,7 +254,7 @@ pub fn workflow_digest(steps: &[CanonicalStep], flows: &[CanonicalFlow]) -> Stri
     });
     let mut text = String::new();
     canonical_json(&value, &mut text);
-    Digest256::sha256(text.as_bytes()).to_hex()
+    workflow_digest_of_hex(&Digest256::sha256(text.as_bytes()).to_hex())
 }
 
 /// Lower: the source graph to [`LoweredProcess`]. Each node takes its kind

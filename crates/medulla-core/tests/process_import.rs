@@ -157,10 +157,12 @@ fn canonical_ids_and_digest_are_stable() {
             flows.clone(),
         )
         .unwrap();
-        assert_eq!(first.digest.len(), 64);
+        assert!(first.digest.starts_with("sha256:"));
+        assert_eq!(first.digest.len(), 7 + 64);
         assert!(first
             .digest
             .bytes()
+            .skip(7)
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
         assert_eq!(first.steps[0].id, "s1");
         assert_eq!(first.steps.len(), n);
@@ -206,7 +208,7 @@ fn admission_refuses_a_non_canonical_or_misdigested_document() {
     assert_eq!(admit_canonical(&workflow).unwrap(), workflow);
 
     let mut wrong_digest = workflow.clone();
-    wrong_digest.digest = "0".repeat(64);
+    wrong_digest.digest = format!("sha256:{}", "0".repeat(64));
     assert!(matches!(
         admit_canonical(&wrong_digest),
         Err(ImportError::DigestMismatch { .. })

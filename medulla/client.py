@@ -8008,7 +8008,8 @@ class GraphOperationsClient:
         ``{"kind": "workflow", "workflow_id": ..., "version": ...}``; ``format`` is
         ``"bpmn20"`` or ``"dmn13"``. Returns ``{document, document_digest,
         canonical_model_digest}`` where
-        ``document`` is ``{format, document: <bytes>}``.
+        ``document`` is ``{format, document: <bytes>}``. A workflow source answers its
+        ``sha256:<hex>`` workflow digest as ``canonical_model_digest``.
         """
         params: dict[str, Any] = {"source": source, "format": format}
         result = await self._client._send(

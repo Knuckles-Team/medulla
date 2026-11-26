@@ -33,7 +33,7 @@ use medulla_protocol_types::result_contract::coordination::{
 use medulla_server_api::knob_config::knobs;
 use medulla_types::process_import::{
     CanonicalWorkflow, ImportError, ProcessCompiled, ProcessModelExported, ProcessModelImported,
-    ProcessSourceSystem, stored_workflow_digest, PROCESS_EXPORT_NOT_DEPLOYABLE,
+    ProcessSourceSystem, PROCESS_EXPORT_NOT_DEPLOYABLE,
     WORKFLOW_VERSION_CONFLICT,
 };
 
@@ -163,7 +163,7 @@ fn workflow_node(
         "process_iri": key,
         "version": version,
         "steps": steps,
-        "workflowDigest": stored_workflow_digest(&workflow.digest),
+        "workflowDigest": workflow.digest.clone(),
         "canonical": canonical,
         // MEDULLA-ORCH-VOCAB-R800.3: the JSON text of the preconditions; not part of the digest.
         "preconditions": preconditions,
@@ -273,7 +273,7 @@ pub(super) fn admit_compile(
                 "relationship": "compiledFromProcess",
                 "processRevision": process_revision,
                 "compilerId": COMPILER_ID,
-                "workflowDigest": stored_workflow_digest(&workflow.digest),
+                "workflowDigest": workflow.digest.clone(),
             },
         }),
     ];
@@ -282,7 +282,7 @@ pub(super) fn admit_compile(
         answer: ProcessCompiled {
             workflow_id,
             version,
-            workflow_digest: stored_workflow_digest(&workflow.digest),
+            workflow_digest: workflow.digest.clone(),
             process_revision,
         },
         stored,
@@ -355,7 +355,7 @@ pub(super) fn admit_import(
         answer: ProcessModelImported {
             workflow_id: workflow_node_id(workflow_id, version),
             version,
-            workflow_digest: stored_workflow_digest(&admitted.digest),
+            workflow_digest: admitted.digest.clone(),
         },
         stored,
     })

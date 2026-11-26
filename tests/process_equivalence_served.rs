@@ -259,12 +259,12 @@ async fn bpmn_and_epc_give_one_workflow_and_one_plan() {
 
     assert_eq!(
         bpmn.workflow_digest,
-        format!("sha256:{}", golden.digest),
+        golden.digest.clone(),
         "the BPMN side equals the golden"
     );
     assert_eq!(
         epc.workflow_digest,
-        format!("sha256:{}", golden.digest),
+        golden.digest.clone(),
         "one process, one workflow digest"
     );
     assert_eq!(

@@ -72,7 +72,7 @@ async fn seed_workflows(h: &Harness, workflows: &[(&str, u32, CanonicalWorkflow)
             "type": "WorkflowPattern",
             "tenant_id": TENANT,
             "version": version,
-            "workflowDigest": medulla_types::process_import::stored_workflow_digest(&workflow.digest),
+            "workflowDigest": workflow.digest,
             "canonical": serde_json::to_string(workflow).unwrap(),
         });
         core.add_node(

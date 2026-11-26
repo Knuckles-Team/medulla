@@ -83,7 +83,7 @@
       "default": false
     }
   ],
-  "digest": "3502ae3e78c741a8bbfb0c4527868a4829626adaf9a883242427dc3d93555af6",
+  "digest": "sha256:3502ae3e78c741a8bbfb0c4527868a4829626adaf9a883242427dc3d93555af6",
   "source": {
     "schema_version": 1,
     "system": "bpmn20",

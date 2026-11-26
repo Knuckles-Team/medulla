@@ -26,14 +26,20 @@ pub fn workflow_node_id(process_iri: &str, version: u32) -> String {
     format!("workflow:{process_iri}:v{version}")
 }
 
-/// The prefix of a stored workflow digest. A stored `workflowDigest` (node property, edge
-/// property and compile or import answer) is always `sha256:<64 hex>`; the bare hex digest of
-/// the canonical document is the input to [`stored_workflow_digest`], never a stored form.
+/// The prefix of a workflow digest. `CanonicalWorkflow::digest`, a stored `workflowDigest`
+/// (node property, edge property) and every compile or import answer are all
+/// `sha256:<64 hex>`: one digest form, so a stored and a canonical digest compare by string.
 pub const WORKFLOW_DIGEST_PREFIX: &str = "sha256:";
 
-/// The stored form of the canonical workflow digest `hex`.
-pub fn stored_workflow_digest(hex: &str) -> String {
+/// The form of the canonical workflow digest whose SHA-256 hex is `hex`.
+pub fn workflow_digest_of_hex(hex: &str) -> String {
     format!("{WORKFLOW_DIGEST_PREFIX}{hex}")
+}
+
+/// The 64 hex digits of a workflow digest, for the places that embed them in an identifier
+/// (an XML id, a decision IRI). A value without the prefix is returned unchanged.
+pub fn workflow_digest_hex(digest: &str) -> &str {
+    digest.strip_prefix(WORKFLOW_DIGEST_PREFIX).unwrap_or(digest)
 }
 
 /// Whether `stored` is a well formed stored workflow digest: the prefix and 64 hex digits.
@@ -249,7 +255,8 @@ pub struct ProcessLoss {
     pub treatment: String,
 }
 
-/// The canonical workflow. Only `schema`, `steps` and `flows` enter `digest`.
+/// The canonical workflow. Only `schema`, `steps` and `flows` enter `digest`, which is
+/// `sha256:<hex>` ([`workflow_digest_of_hex`]).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -496,7 +503,7 @@ mod tests {
                 {"source": "s3", "target": "s5"},
                 {"source": "s4", "target": "s5"}
             ],
-            "digest": "0".repeat(64),
+            "digest": workflow_digest_of_hex(&"0".repeat(64)),
             "source": {"system": "aris_epc", "model_id": "m1", "elements": {"s1": "e1"}},
             "annex": [{"construct": "epc-state-event", "element_id": "e9", "after": "s2"}],
             "losses": []
