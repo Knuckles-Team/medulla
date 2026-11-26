@@ -225,31 +225,31 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T219 [P] [US1] MEDULLA-CQ-CONN-R039.1 microsoft single-source question
 - [ ] T220 [P] [US2] MEDULLA-CQ-CONN-R039.2 microsoft cross-source question
 - [x] T221 [P] [US1] MEDULLA-CQ-CONN-R040.1 nextcloud single-source question
-- [ ] T222 [P] [US2] MEDULLA-CQ-CONN-R040.2 nextcloud cross-source question
+- [x] T222 [P] [US2] MEDULLA-CQ-CONN-R040.2 nextcloud cross-source question
 - [ ] T223 [P] [US1] MEDULLA-CQ-CONN-R041.1 objectstore single-source question
 - [ ] T224 [P] [US2] MEDULLA-CQ-CONN-R041.2 objectstore cross-source question
 - [ ] T225 [P] [US1] MEDULLA-CQ-CONN-R042.1 okta single-source question
-- [ ] T226 [P] [US2] MEDULLA-CQ-CONN-R042.2 okta cross-source question
-- [ ] T227 [P] [US1] MEDULLA-CQ-CONN-R043.1 onetrust single-source question
-- [ ] T228 [P] [US2] MEDULLA-CQ-CONN-R043.2 onetrust cross-source question
-- [ ] T229 [P] [US1] MEDULLA-CQ-CONN-R044.1 openbao single-source question
-- [ ] T230 [P] [US2] MEDULLA-CQ-CONN-R044.2 openbao cross-source question
+- [x] T226 [P] [US2] MEDULLA-CQ-CONN-R042.2 okta cross-source question
+- [x] T227 [P] [US1] MEDULLA-CQ-CONN-R043.1 onetrust single-source question
+- [x] T228 [P] [US2] MEDULLA-CQ-CONN-R043.2 onetrust cross-source question
+- [x] T229 [P] [US1] MEDULLA-CQ-CONN-R044.1 openbao single-source question
+- [x] T230 [P] [US2] MEDULLA-CQ-CONN-R044.2 openbao cross-source question
 - [ ] T231 [P] [US1] MEDULLA-CQ-CONN-R045.1 owncast single-source question
-- [ ] T232 [P] [US2] MEDULLA-CQ-CONN-R045.2 owncast cross-source question
-- [ ] T233 [P] [US1] MEDULLA-CQ-CONN-R046.1 paperless-ngx single-source question
-- [ ] T234 [P] [US2] MEDULLA-CQ-CONN-R046.2 paperless-ngx cross-source question
-- [ ] T235 [P] [US1] MEDULLA-CQ-CONN-R047.1 plane single-source question
-- [ ] T236 [P] [US2] MEDULLA-CQ-CONN-R047.2 plane cross-source question
-- [ ] T237 [P] [US1] MEDULLA-CQ-CONN-R048.1 portainer single-source question
-- [ ] T238 [P] [US2] MEDULLA-CQ-CONN-R048.2 portainer cross-source question
-- [ ] T239 [P] [US1] MEDULLA-CQ-CONN-R049.1 postiz single-source question
-- [ ] T240 [P] [US2] MEDULLA-CQ-CONN-R049.2 postiz cross-source question
+- [x] T232 [P] [US2] MEDULLA-CQ-CONN-R045.2 owncast cross-source question
+- [x] T233 [P] [US1] MEDULLA-CQ-CONN-R046.1 paperless-ngx single-source question
+- [x] T234 [P] [US2] MEDULLA-CQ-CONN-R046.2 paperless-ngx cross-source question
+- [x] T235 [P] [US1] MEDULLA-CQ-CONN-R047.1 plane single-source question
+- [x] T236 [P] [US2] MEDULLA-CQ-CONN-R047.2 plane cross-source question
+- [x] T237 [P] [US1] MEDULLA-CQ-CONN-R048.1 portainer single-source question
+- [x] T238 [P] [US2] MEDULLA-CQ-CONN-R048.2 portainer cross-source question
+- [x] T239 [P] [US1] MEDULLA-CQ-CONN-R049.1 postiz single-source question
+- [x] T240 [P] [US2] MEDULLA-CQ-CONN-R049.2 postiz cross-source question
 - [ ] T241 [P] [US1] MEDULLA-CQ-CONN-R050.1 pulselink single-source question
 - [ ] T242 [P] [US2] MEDULLA-CQ-CONN-R050.2 pulselink cross-source question
 - [ ] T243 [P] [US1] MEDULLA-CQ-CONN-R051.1 qbittorrent single-source question
 - [ ] T244 [P] [US2] MEDULLA-CQ-CONN-R051.2 qbittorrent cross-source question
-- [ ] T245 [P] [US1] MEDULLA-CQ-CONN-R052.1 repository-manager single-source question
-- [ ] T246 [P] [US2] MEDULLA-CQ-CONN-R052.2 repository-manager cross-source question
+- [x] T245 [P] [US1] MEDULLA-CQ-CONN-R052.1 repository-manager single-source question
+- [x] T246 [P] [US2] MEDULLA-CQ-CONN-R052.2 repository-manager cross-source question
 - [ ] T247 [P] [US1] MEDULLA-CQ-CONN-R053.1 rom-manager single-source question
 - [ ] T248 [P] [US2] MEDULLA-CQ-CONN-R053.2 rom-manager cross-source question
 - [ ] T249 [P] [US1] MEDULLA-CQ-CONN-R054.1 salesforce single-source question
