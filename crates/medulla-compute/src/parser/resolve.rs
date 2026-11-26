@@ -16,9 +16,8 @@
 // deliberately conservative: an ambiguous callee with no stronger signal is left
 // UNRESOLVED rather than guessed, so we never emit a false edge.
 
-use super::tree_sitter::{
-    decode_call_sites, DecodedSite, ExtractedEdge, ExtractedNode, ParseResult,
-};
+use super::tree_sitter::{decode_call_sites, DecodedSite};
+use medulla_ingestion_types::ingestion_wire::{ExtractedEdge, ExtractedNode, ParseResult};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 
 #[path = "resolve_imports.rs"]
@@ -27,7 +26,7 @@ mod imports;
 use imports::family_of;
 use imports::{call_family, resolve_import, split_csv};
 
-pub use medulla_ingestion_types::ingestion_wire::IndexResult;
+use medulla_ingestion_types::ingestion_wire::IndexResult;
 
 /// The deterministic cost ladder's provenance is persisted on every emitted
 /// repository edge, rather than inferred later from its relationship name.

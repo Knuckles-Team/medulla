@@ -22,7 +22,7 @@
 //!   graph to instead ask "who (transitively) calls this" — the complementary
 //!   "what could break if I change this" direction.
 
-use crate::parser::resolve::IndexResult;
+use medulla_ingestion_types::ingestion_wire::IndexResult;
 use std::collections::{HashMap, HashSet, VecDeque};
 
 /// A directed graph over node ids (symbol ids or `file:`-prefixed file ids),

@@ -16,7 +16,7 @@ use std::collections::HashMap;
 
 use serde::Deserialize;
 
-pub use medulla_ingestion_types::ingestion_wire::{
+use medulla_ingestion_types::ingestion_wire::{
     ExtractedEdge, ExtractedNode, ScreenObservationResult,
 };
 

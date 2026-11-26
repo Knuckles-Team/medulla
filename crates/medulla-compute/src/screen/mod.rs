@@ -3,6 +3,4 @@
 //! entities. See `observe.rs`. Always compiled (dep-free).
 pub mod observe;
 
-pub use observe::{
-    observe_screen, ScreenObservationInput, ScreenObservationResult, UiElementInput,
-};
+use observe::{observe_screen, ScreenObservationInput, UiElementInput};

@@ -56,7 +56,7 @@ struct Response {
     elapsed_index_ms: u128,
     elapsed_total_ms: u128,
     receipts: Vec<FileReceipt>,
-    index: medulla_compute::parser::resolve::IndexResult,
+    index: medulla_ingestion_types::ingestion_wire::IndexResult,
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

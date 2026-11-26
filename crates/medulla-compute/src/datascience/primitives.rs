@@ -4,14 +4,14 @@
 // These replace scipy/sklearn hot paths and are served over the Tokio
 // service protocol (no in-process Python extension).
 
-pub use medulla_result_types::compute_result::datascience::RegressionResult;
+use medulla_result_types::compute_result::datascience::RegressionResult;
 
 use medulla_numeric::cluster::{fit_simple, ClusterConfig, ClusterRefusal, Rows};
-pub use medulla_result_types::compute_result::datascience::KMeansResult;
+use medulla_result_types::compute_result::datascience::KMeansResult;
 
-pub use medulla_result_types::compute_result::datascience::PCAResult;
+use medulla_result_types::compute_result::datascience::PCAResult;
 
-pub use medulla_result_types::compute_result::datascience::DatasetStats;
+use medulla_result_types::compute_result::datascience::DatasetStats;
 
 // ── Ordinary Least Squares Regression ─────────────────────────────────
 

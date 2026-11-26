@@ -67,7 +67,8 @@
 //! at all, only a `primitive_type` wrapping its own `identifier`.
 #![cfg(feature = "ast-extended")]
 
-use medulla_compute::parser::tree_sitter::{parse_file, ParseResult};
+use medulla_compute::parser::tree_sitter::parse_file;
+use medulla_ingestion_types::ingestion_wire::ParseResult;
 
 /// The unresolved dependency targets (`depends_on_raw` edges) a parse emitted.
 fn raw_deps(r: &ParseResult) -> Vec<&str> {
