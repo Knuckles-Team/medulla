@@ -17,6 +17,212 @@
     rdfs:comment "An ordered step in a task, compatible with the shared precedes relation." ;
     rdfs:subClassOf bfo:0000001 .
 
+# MEDULLA-ORCH-VOCAB-R817.1: the knowledge-factory classes, each a BFO entity like :TaskStep.
+:KnowledgeFlag a owl:Class ;
+    rdfs:label "Knowledge Flag" ;
+    rdfs:comment "An agent's flag that one piece of knowledge is missing or wrong. Agent-asserted: never an independent outcome (MEDULLA-DECISION-ENGINE-R708)." ;
+    rdfs:subClassOf bfo:0000001 .
+
+:CurationProposal a owl:Class ;
+    rdfs:label "Curation Proposal" ;
+    rdfs:comment "The curator's proposed edit to one piece of knowledge, recorded as an evaluated revision (MEDULLA-DECISION-ENGINE-R709)." ;
+    rdfs:subClassOf bfo:0000001 .
+
+:FrictionReport a owl:Class ;
+    rdfs:label "Friction Report" ;
+    rdfs:comment "An agent's report of what it tried, expected and saw while using a skill (MEDULLA-DECISION-ENGINE-R710)." ;
+    rdfs:subClassOf bfo:0000001 .
+
+:FrictionStep a owl:Class ;
+    rdfs:label "Friction Step" ;
+    rdfs:comment "One move of a friction group through its state machine, with the actor and the evidence (MEDULLA-DECISION-ENGINE-R710)." ;
+    rdfs:subClassOf bfo:0000001 .
+
+:SkillInvocation a owl:Class ;
+    rdfs:label "Skill Invocation" ;
+    rdfs:comment "One use of a skill, with no prompt text and no free text (MEDULLA-DECISION-ENGINE-R713)." ;
+    rdfs:subClassOf bfo:0000001 .
+
+:SkillEvalCase a owl:Class ;
+    rdfs:label "Skill Eval Case" ;
+    rdfs:comment "One case of a skill evaluation suite: golden, real-prompt or author-judged (MEDULLA-DECISION-ENGINE-R711)." ;
+    rdfs:subClassOf bfo:0000001 .
+
+:Persona a owl:Class ;
+    rdfs:label "Persona" ;
+    rdfs:comment "The named set of skill revisions one role receives (MEDULLA-DECISION-ENGINE-R714)." ;
+    rdfs:subClassOf bfo:0000001 .
+
+# MEDULLA-ORCH-VOCAB-R817.2: the knowledge-factory links. Each has a declared domain and range.
+:flags a owl:ObjectProperty ;
+    rdfs:label "flags" ;
+    rdfs:comment "The knowledge node a flag names as missing or wrong." ;
+    rdfs:domain :KnowledgeFlag ;
+    rdfs:range bfo:0000001 .
+
+:knowledgeObservedIn a owl:ObjectProperty ;
+    rdfs:label "knowledgeObservedIn" ;
+    rdfs:comment "The run trace in which an agent observed the flagged knowledge. Distinct from :observedIn, whose domain is :Incident." ;
+    rdfs:domain :KnowledgeFlag ;
+    rdfs:range :RunTrace .
+
+:raisedBy a owl:ObjectProperty ;
+    rdfs:label "raisedBy" ;
+    rdfs:comment "The principal or report author that raised the flag or report." ;
+    rdfs:domain :KnowledgeFlag ;
+    rdfs:range bfo:0000001 .
+
+:knowledgeResolvedBy a owl:ObjectProperty ;
+    rdfs:label "knowledgeResolvedBy" ;
+    rdfs:comment "The human correction that resolved a flag. Distinct from :resolvedBy, whose domain is :Incident." ;
+    rdfs:domain :KnowledgeFlag ;
+    rdfs:range :Correction .
+
+:addresses a owl:ObjectProperty ;
+    rdfs:label "addresses" ;
+    rdfs:comment "A curation proposal addresses each flag it was written from." ;
+    rdfs:domain :CurationProposal ;
+    rdfs:range :KnowledgeFlag .
+
+:curationProposes a owl:ObjectProperty ;
+    rdfs:label "curationProposes" ;
+    rdfs:comment "The knowledge node a curation proposal proposes to edit. Distinct from :proposes, whose domain is :CodeChange." ;
+    rdfs:domain :CurationProposal ;
+    rdfs:range bfo:0000001 .
+
+:knowledgeFixedBy a owl:ObjectProperty ;
+    rdfs:label "knowledgeFixedBy" ;
+    rdfs:comment "The adopted curation proposal that fixed a flag. Distinct from :fixedBy, whose domain is :Defect." ;
+    rdfs:domain :KnowledgeFlag ;
+    rdfs:range :CurationProposal .
+
+:about a owl:ObjectProperty ;
+    rdfs:label "about" ;
+    rdfs:comment "The skill revision a friction report is about." ;
+    rdfs:domain :FrictionReport ;
+    rdfs:range :Skill .
+
+:scoredBy a owl:ObjectProperty ;
+    rdfs:label "scoredBy" ;
+    rdfs:comment "The score row an evaluation attached to a run trace." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range :Score .
+
+:includes a owl:ObjectProperty ;
+    rdfs:label "includes" ;
+    rdfs:comment "A persona includes a skill revision." ;
+    rdfs:domain :Persona ;
+    rdfs:range :Skill .
+
+# MEDULLA-ORCH-VOCAB-R817.3: the datatype properties the shapes constrain.
+:evidence_class a owl:DatatypeProperty ;
+    rdfs:label "evidence_class" ;
+    rdfs:comment "A property of :KnowledgeFlag (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :KnowledgeFlag ;
+    rdfs:range xsd:string .
+
+:target_ref a owl:DatatypeProperty ;
+    rdfs:label "target_ref" ;
+    rdfs:comment "A property of :KnowledgeFlag (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :KnowledgeFlag ;
+    rdfs:range xsd:string .
+
+:invocation_id a owl:DatatypeProperty ;
+    rdfs:label "invocation_id" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:string .
+
+:tenant_id a owl:DatatypeProperty ;
+    rdfs:label "tenant_id" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:string .
+
+:skill_ref a owl:DatatypeProperty ;
+    rdfs:label "skill_ref" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:string .
+
+:skill_version a owl:DatatypeProperty ;
+    rdfs:label "skill_version" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:string .
+
+:chosen_by a owl:DatatypeProperty ;
+    rdfs:label "chosen_by" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:string .
+
+:principal_pseudonym a owl:DatatypeProperty ;
+    rdfs:label "principal_pseudonym" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:string .
+
+:run_id a owl:DatatypeProperty ;
+    rdfs:label "run_id" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:string .
+
+:started_ms a owl:DatatypeProperty ;
+    rdfs:label "started_ms" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:integer .
+
+:ended_ms a owl:DatatypeProperty ;
+    rdfs:label "ended_ms" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:integer .
+
+:outcome a owl:DatatypeProperty ;
+    rdfs:label "outcome" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:string .
+
+:outcome_code a owl:DatatypeProperty ;
+    rdfs:label "outcome_code" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:string .
+
+:cost_delta_micro_usd a owl:DatatypeProperty ;
+    rdfs:label "cost_delta_micro_usd" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:integer .
+
+:tokens_in a owl:DatatypeProperty ;
+    rdfs:label "tokens_in" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:integer .
+
+:tokens_out a owl:DatatypeProperty ;
+    rdfs:label "tokens_out" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:integer .
+
+:case_kind a owl:DatatypeProperty ;
+    rdfs:label "case_kind" ;
+    rdfs:comment "How a skill eval case is judged: golden, real_prompt or author_judged (MEDULLA-DECISION-ENGINE-R711.1)." ;
+    rdfs:domain :SkillEvalCase ;
+    rdfs:range xsd:string .
+
+:case_source a owl:DatatypeProperty ;
+    rdfs:label "case_source" ;
+    rdfs:comment "Where a skill eval case came from: authored, trace, correction or review_signal (MEDULLA-DECISION-ENGINE-R711.1)." ;
+    rdfs:domain :SkillEvalCase ;
+    rdfs:range xsd:string .
+
 :AnalyticsJob a owl:Class ;
     rdfs:label "AnalyticsJob" ;
     rdfs:comment """CONCEPT:AU-ORCH.scheduling.analytics-job-mirror — mirrors one

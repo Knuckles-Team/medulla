@@ -402,3 +402,67 @@
     sh:targetSubjectsOf :canonicalGateKind ;
     sh:property [ sh:path :canonicalGateKind ;
         sh:in ( "and" "or" "xor" ) ] .
+
+# MEDULLA-ORCH-VOCAB-R817.3: one shape per knowledge-factory class.
+:KnowledgeFlagShape a sh:NodeShape ;
+    sh:targetClass :KnowledgeFlag ;
+    sh:property [ sh:path :evidence_class ; sh:datatype xsd:string ;
+        sh:minCount 1 ; sh:maxCount 1 ; sh:in ( "agent_asserted" ) ] ,
+    [ sh:path :knowledgeObservedIn ; sh:minCount 1 ; sh:maxCount 1 ] ;
+    sh:sparql [
+        sh:message "A knowledge flag names no target: it needs :flags or a topic: target_ref." ;
+        sh:select """
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
+            SELECT $this WHERE {
+                $this a :KnowledgeFlag .
+                FILTER NOT EXISTS { $this :flags ?target }
+                FILTER NOT EXISTS { $this :target_ref ?ref . FILTER(STRSTARTS(STR(?ref), "topic:")) }
+            }
+        """
+    ] .
+
+:CurationProposalShape a sh:NodeShape ;
+    sh:targetClass :CurationProposal ;
+    sh:property [ sh:path :addresses ; sh:minCount 1 ] ,
+    [ sh:path :curationProposes ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+:FrictionReportShape a sh:NodeShape ;
+    sh:targetClass :FrictionReport ;
+    sh:property [ sh:path :about ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+:FrictionStepShape a sh:NodeShape ;
+    sh:targetClass :FrictionStep ;
+    sh:property [ sh:path :raisedBy ; sh:minCount 1 ; sh:maxCount 1 ] .
+
+# A skill invocation holds no literal outside the typed record: no prompt text, no free text.
+:SkillInvocationShape a sh:NodeShape ;
+    sh:targetClass :SkillInvocation ;
+    sh:property [ sh:path :chosen_by ; sh:in ( "agent" "user" ) ] ,
+    [ sh:path :outcome ; sh:in ( "ok" "error" ) ] ;
+    sh:sparql [
+        sh:message "A skill invocation carries a literal outside the typed record." ;
+        sh:select """
+            PREFIX : <https://knuckles-team.github.io/ontology/core#>
+            PREFIX rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+            SELECT $this WHERE {
+                $this a :SkillInvocation ; ?p ?o .
+                FILTER(isLiteral(?o))
+                FILTER(?p != :invocation_id && ?p != :tenant_id && ?p != :skill_ref
+                    && ?p != :skill_version && ?p != :chosen_by && ?p != :principal_pseudonym
+                    && ?p != :run_id && ?p != :started_ms && ?p != :ended_ms && ?p != :outcome
+                    && ?p != :outcome_code && ?p != :cost_delta_micro_usd && ?p != :tokens_in
+                    && ?p != :tokens_out && ?p != rdfs:label)
+            }
+        """
+    ] .
+
+:SkillEvalCaseShape a sh:NodeShape ;
+    sh:targetClass :SkillEvalCase ;
+    sh:property [ sh:path :case_kind ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "golden" "real_prompt" "author_judged" ) ] ,
+    [ sh:path :case_source ; sh:minCount 1 ; sh:maxCount 1 ;
+        sh:in ( "authored" "trace" "correction" "review_signal" ) ] .
+
+:PersonaShape a sh:NodeShape ;
+    sh:targetClass :Persona ;
+    sh:property [ sh:path :includes ; sh:minCount 1 ] .
