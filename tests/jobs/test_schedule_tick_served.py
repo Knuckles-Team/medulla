@@ -35,6 +35,7 @@ def _wait_for(predicate, timeout_s: float):
 
 
 @pytest.mark.spec("MEDULLA-PLACEMENT-R751.753")
+# Two engines contend for the leader lease; only the leader submits, once per window.
 def test_tick_runs_once_per_window_on_leader(clean_graph):
     name = f"tick-{uuid.uuid4().hex[:8]}"
     now_ms = int(time.time() * 1000)

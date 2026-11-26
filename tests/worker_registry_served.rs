@@ -63,6 +63,8 @@ fn sched(total_workers: u32, general_floor: Option<u32>) -> SchedulerConfig {
 }
 
 // spec: MEDULLA-DURABLE-KERNEL-R075, MEDULLA-PLACEMENT-R002.600
+// Proves reserved-worker admission: a second non-reserved task is refused ADMIT_HELD_FOR_RESERVE and a
+// queued lane with no running worker is relieved.
 #[test]
 fn non_reserved_task_is_refused_when_only_reserved_capacity_remains() {
     let record = WorkerRecord {
