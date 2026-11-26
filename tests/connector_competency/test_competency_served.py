@@ -272,6 +272,34 @@ def test_cases_exist() -> None:
     assert CASES, "load_cases() returned no case"
 
 
+SPECS_DIR = Path(__file__).resolve().parents[2] / "specs"
+REQUIREMENTS = SPECS_DIR / "connector-competency" / "requirements.md"
+
+
+def _live_rows() -> set[str]:
+    """Every per-connector row id the requirements table holds that is not retired."""
+    rows: set[str] = set()
+    for line in REQUIREMENTS.read_text().splitlines():
+        found = re.match(r"^\| `(MEDULLA-CQ-CONN-R\d+\.\d+)` \| (.*)$", line)
+        if found and not found.group(2).startswith("**RETIRED"):
+            rows.add(found.group(1))
+    return rows
+
+
+@pytest.mark.spec("MEDULLA-CQ-CONN-R067.9")
+def test_every_case_binds_a_live_row_of_its_connector() -> None:
+    """The row a case's mark names (``.1`` single, ``.2`` cross) is a live row of the
+    requirements table, and each rollup holds at most one case of each kind."""
+    live = _live_rows()
+    assert live, "the requirements table holds no connector row"
+    seen: set[str] = set()
+    for case in CASES:
+        row = _row_id(case)
+        assert row in live, f"{case.id} binds {row}, which is not a live row"
+        assert row not in seen, f"{row} is bound by two cases"
+        seen.add(row)
+
+
 @pytest.mark.spec("MEDULLA-CQ-CONN-R067.9")
 @pytest.mark.parametrize("case", _params())
 def test_case(case: Case, clean_graph, tmp_path: Path) -> None:

@@ -179,29 +179,29 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T173 [P] [US1] MEDULLA-CQ-CONN-R016.1 documentdb single-source question
 - [ ] T174 [P] [US2] MEDULLA-CQ-CONN-R016.2 documentdb cross-source question
 - [ ] T175 [P] [US1] MEDULLA-CQ-CONN-R017.1 egeria single-source question
-- [ ] T176 [P] [US2] MEDULLA-CQ-CONN-R017.2 egeria cross-source question
-- [ ] T177 [P] [US1] MEDULLA-CQ-CONN-R018.1 emerald-exchange single-source question
-- [ ] T178 [P] [US2] MEDULLA-CQ-CONN-R018.2 emerald-exchange cross-source question
-- [ ] T179 [P] [US1] MEDULLA-CQ-CONN-R019.1 erpnext single-source question
-- [ ] T180 [P] [US2] MEDULLA-CQ-CONN-R019.2 erpnext cross-source question
+- [x] T176 [P] [US2] MEDULLA-CQ-CONN-R017.2 egeria cross-source question
+- [x] T177 [P] [US1] MEDULLA-CQ-CONN-R018.1 emerald-exchange single-source question
+- [x] T178 [P] [US2] MEDULLA-CQ-CONN-R018.2 emerald-exchange cross-source question
+- [x] T179 [P] [US1] MEDULLA-CQ-CONN-R019.1 erpnext single-source question
+- [x] T180 [P] [US2] MEDULLA-CQ-CONN-R019.2 erpnext cross-source question
 - [ ] T181 [P] [US1] MEDULLA-CQ-CONN-R020.1 fan-manager single-source question
 - [ ] T182 [P] [US2] MEDULLA-CQ-CONN-R020.2 fan-manager cross-source question
-- [ ] T183 [P] [US1] MEDULLA-CQ-CONN-R021.1 firefly-iii single-source question
-- [ ] T184 [P] [US2] MEDULLA-CQ-CONN-R021.2 firefly-iii cross-source question
-- [ ] T185 [P] [US1] MEDULLA-CQ-CONN-R022.1 freshrss single-source question
+- [x] T183 [P] [US1] MEDULLA-CQ-CONN-R021.1 firefly-iii single-source question
+- [x] T184 [P] [US2] MEDULLA-CQ-CONN-R021.2 firefly-iii cross-source question
+- [x] T185 [P] [US1] MEDULLA-CQ-CONN-R022.1 freshrss single-source question
 - [ ] T186 [P] [US2] MEDULLA-CQ-CONN-R022.2 freshrss cross-source question
-- [ ] T187 [P] [US1] MEDULLA-CQ-CONN-R023.1 github single-source question
-- [ ] T188 [P] [US2] MEDULLA-CQ-CONN-R023.2 github cross-source question
-- [ ] T189 [P] [US1] MEDULLA-CQ-CONN-R024.1 gitlab single-source question
-- [ ] T190 [P] [US2] MEDULLA-CQ-CONN-R024.2 gitlab cross-source question
-- [ ] T191 [P] [US1] MEDULLA-CQ-CONN-R025.1 gramps single-source question
-- [ ] T192 [P] [US2] MEDULLA-CQ-CONN-R025.2 gramps cross-source question
+- [x] T187 [P] [US1] MEDULLA-CQ-CONN-R023.1 github single-source question
+- [x] T188 [P] [US2] MEDULLA-CQ-CONN-R023.2 github cross-source question
+- [x] T189 [P] [US1] MEDULLA-CQ-CONN-R024.1 gitlab single-source question
+- [x] T190 [P] [US2] MEDULLA-CQ-CONN-R024.2 gitlab cross-source question
+- [x] T191 [P] [US1] MEDULLA-CQ-CONN-R025.1 gramps single-source question
+- [x] T192 [P] [US2] MEDULLA-CQ-CONN-R025.2 gramps cross-source question
 - [ ] T193 [P] [US1] MEDULLA-CQ-CONN-R026.1 home-assistant single-source question
-- [ ] T194 [P] [US2] MEDULLA-CQ-CONN-R026.2 home-assistant cross-source question
-- [ ] T195 [P] [US1] MEDULLA-CQ-CONN-R027.1 jellyfin single-source question
+- [x] T194 [P] [US2] MEDULLA-CQ-CONN-R026.2 home-assistant cross-source question
+- [x] T195 [P] [US1] MEDULLA-CQ-CONN-R027.1 jellyfin single-source question
 - [ ] T196 [P] [US2] MEDULLA-CQ-CONN-R027.2 jellyfin cross-source question
-- [ ] T197 [P] [US1] MEDULLA-CQ-CONN-R028.1 jena single-source question
-- [ ] T198 [P] [US2] MEDULLA-CQ-CONN-R028.2 jena cross-source question
+- [x] T197 [P] [US1] MEDULLA-CQ-CONN-R028.1 jena single-source question
+- [x] T198 [P] [US2] MEDULLA-CQ-CONN-R028.2 jena cross-source question
 - [ ] T199 [P] [US1] MEDULLA-CQ-CONN-R029.1 kafka single-source question
 - [ ] T200 [P] [US2] MEDULLA-CQ-CONN-R029.2 kafka cross-source question
 - [ ] T201 [P] [US1] MEDULLA-CQ-CONN-R030.1 keycloak single-source question
