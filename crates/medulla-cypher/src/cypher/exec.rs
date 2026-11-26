@@ -28,7 +28,7 @@ use petgraph::visit::EdgeRef;
 use serde_json::Value;
 
 // The wire DTO lives at the bottom of the DAG (medulla-types); the algorithm stays here.
-pub use medulla_protocol_types::protocol::QueryResult;
+use medulla_protocol_types::protocol::QueryResult;
 
 use super::parser;
 use super::plan::{
