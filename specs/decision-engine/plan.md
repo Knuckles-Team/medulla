@@ -293,6 +293,7 @@ Order: R829.1, R829.2, R829.3.
 - `MEDULLA-DECISION-ENGINE-R148.4` states the wire form main uses: an abstained record carrying the code.
 
 ## Knowledge factory
+### Knowledge factory
 
 Agents raise flags with `Method::KnowledgeFlag` (R708). The harness exposes the call as an always-on tool (R715, MERISTEM-HARNESS-CYCLE-R093). A human correction in the same session enters through `Method::CorrectionRecord` (R702) and links to the flag.
 
