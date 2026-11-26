@@ -18,7 +18,7 @@ EXAMPLE = (
 MANIFEST_SOURCE = (
     ROOT / "crates" / "medulla-source-types" / "src" / "pre_merge_test_module.rs"
 )
-GATE = "Knuckles-Team/pipelines/.github/workflows/required_runtime_gate.yml@main"
+GATE = "Knuckles-Team/pipelines/.github/workflows/required-runtime.yml@main"
 
 
 def _doc() -> dict:

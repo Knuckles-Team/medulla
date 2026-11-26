@@ -96,7 +96,7 @@ jobs:
     name: Required runtime
     if: github.event_name == 'pull_request'
     needs: required-runtime-manifest
-    uses: Knuckles-Team/pipelines/.github/workflows/required_runtime_gate.yml@main
+    uses: Knuckles-Team/pipelines/.github/workflows/required-runtime.yml@main
     with:
       manifest: ${{ needs.required-runtime-manifest.outputs.manifest }}
 
