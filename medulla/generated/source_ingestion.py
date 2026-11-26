@@ -749,6 +749,7 @@ class QuarantineReason(str, Enum):
     NORMALIZATION_FAILED = "normalization_failed"
     MISSING_PROVENANCE = "missing_provenance"
     MAPPING_REVISION_MISMATCH = "mapping_revision_mismatch"
+    SCHEMA_DRIFT = "schema_drift"
 
 
 class ReplayDisposition(str, Enum):
