@@ -351,3 +351,68 @@ async fn policy_evolution_refusals() {
         assert!(error.contains(&kind), "{error}");
     }
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R811.5
+#[tokio::test]
+async fn receipts_read_back_field_for_field() {
+    let h = Harness::with_isolation(ServerState::test_isolation(WRITER)).await;
+    let chain = seed_chain(&h).await;
+    let get = |record_id: &str| op("get", json!({"record_id": record_id}));
+
+    // The evaluation's first receipt names the record, its kind and the write.
+    let request = evaluation_json(
+        model_subject(),
+        &chain.trained_id,
+        Some(&chain.base_id),
+        &["trajectory:0002"],
+    );
+    let receipt = value_of(
+        "commit_policy_evaluation",
+        dispatch(
+            &h,
+            TENANT,
+            &["admin:policy-evaluation-write"],
+            op("commit_policy_evaluation", request.clone()),
+        )
+        .await,
+    );
+    assert_eq!(receipt["kind"], "policy_evaluation");
+    assert_eq!(receipt["disposition"], "written");
+    assert!(receipt["eligibility"].is_null(), "{receipt}");
+    assert!(receipt["observed_at_ms"].as_u64().is_some_and(|at| at > 0));
+    let record_id = receipt["record_id"].as_str().expect("a record id");
+    assert!(record_id.starts_with("poleval:"), "{record_id}");
+
+    // A get returns every field of the request, with its writer and time.
+    let view = value_of(
+        "get",
+        dispatch(&h, TENANT, &["policy:read"], get(record_id)).await,
+    );
+    assert_eq!(view["record_id"], record_id);
+    assert_eq!(view["record"]["kind"], "policy_evaluation");
+    assert!(view["recorded_by"].as_str().is_some_and(|by| !by.is_empty()));
+    assert!(view["recorded_at_ms"].as_u64().is_some_and(|at| at > 0));
+    let body = &view["record"]["record"];
+    for (field, expected) in request.as_object().expect("an object") {
+        assert_eq!(&body[field], expected, "evaluation field {field}");
+    }
+    assert_eq!(body["evaluator_kind"], "annotation");
+    assert_eq!(body["subject"]["kind"], "model_policy");
+    assert_eq!(body["champion_revision_ref"], json!(chain.base_id));
+
+    // Every other kind reads back under its own record id and kind.
+    for (id, kind) in [
+        (&chain.capability_id, "capability"),
+        (&chain.base_id, "model_policy_version"),
+        (&chain.capture_id, "capture"),
+        (&chain.run_id, "training_run"),
+        (&chain.trained_id, "model_policy_version"),
+    ] {
+        let view = value_of(
+            "get",
+            dispatch(&h, TENANT, &["policy:read"], get(id)).await,
+        );
+        assert_eq!(view["record_id"], json!(id));
+        assert_eq!(view["record"]["kind"], kind);
+    }
+}
