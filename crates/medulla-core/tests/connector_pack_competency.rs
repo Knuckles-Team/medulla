@@ -394,6 +394,7 @@ fn assert_registered(name: &str) {
     }
 }
 
+// proves R084.1: Which finance algorithms apply to analysis type X for instrument or position
 // spec: MEDULLA-CQ-CONN-R084.1
 #[test]
 fn finance_algorithm_selection_answers() {
@@ -406,6 +407,7 @@ fn finance_algorithm_selection_query_uses_registered_terms() {
     assert_registered("q1_finance_algorithms");
 }
 
+// proves R084.2: What are my trades and positions, and which risk analyses apply to them?
 // spec: MEDULLA-INGEST-WORKER-R003.19
 // spec: MEDULLA-CQ-CONN-R084.2
 // Answers the position question over records that carry the core provenance predicates.
@@ -420,6 +422,7 @@ fn positions_and_risk_analyses_query_uses_registered_terms() {
     assert_registered("q2_positions_risk");
 }
 
+// proves R084.3: Which connector features, tools, prompts and skills can satisfy capability C,
 // spec: MEDULLA-CQ-CONN-R084.3
 #[test]
 fn capability_to_surface_and_contract_answers() {
@@ -432,6 +435,7 @@ fn capability_to_surface_query_uses_registered_terms() {
     assert_registered("q3_capability_surface");
 }
 
+// proves R084.4: Which connector ingest contracts govern record R, with their mappings, access
 // spec: MEDULLA-CQ-CONN-R084.4
 #[test]
 fn record_governance_answers() {

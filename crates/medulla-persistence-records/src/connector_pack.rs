@@ -849,6 +849,7 @@ pub mod tests {
             .is_empty());
     }
 
+    // proves R084.7: A competency question abstains by name when its connector pack is not
     // spec: MEDULLA-CQ-CONN-R084.7
     #[test]
     fn a_required_pack_the_tenant_never_imported_is_named_missing() {

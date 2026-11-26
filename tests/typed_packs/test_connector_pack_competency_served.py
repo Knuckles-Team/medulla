@@ -387,6 +387,7 @@ async def _designate_position_tools(connector: str, earlier: str) -> None:
         await client.close()
 
 
+# proves R084: Connector-pack competency questions
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.1")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.2")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.3")
@@ -395,6 +396,7 @@ async def _designate_position_tools(connector: str, earlier: str) -> None:
 # Served ingest: the pack record carries the core provenance predicates.
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.6")
 @pytest.mark.parametrize("question", QUESTIONS)
+@pytest.mark.spec("MEDULLA-CQ-CONN-R084")
 def test_pack_questions_end_to_end(question: str) -> None:
     async def exercise() -> None:
         client = await connect()
