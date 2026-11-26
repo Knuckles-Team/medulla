@@ -24,6 +24,7 @@ from test_connector_pack_planted import _context, _pack_op
 
 from medulla import ConnectorPackEntryContent
 from medulla.client import EngineResponseError, MedullaClient
+from medulla.connector_pack import ConnectorPackClient
 from medulla.generated.connector_pack import (
     ConformanceEvidence,
     ConformanceEvidenceState,
@@ -50,13 +51,9 @@ def _tool(connector: str, name: str) -> ConnectorPackEntryContent:
 async def _read(
     client: MedullaClient, tenant: str, connector: str
 ) -> ConformanceEvidence:
-    raw = await _pack_op(
-        client,
-        "conformance_evidence",
-        {"tenant_id": tenant, "connector": connector},
-        f"evidence-read:{connector}:{uuid.uuid4().hex}",
+    return await ConnectorPackClient(client).conformance_evidence(
+        tenant_id=tenant, connector=connector
     )
-    return ConformanceEvidence.model_validate(raw)
 
 
 async def _revoke(client: MedullaClient, connector: str) -> ConformanceEvidence:

@@ -21,6 +21,8 @@ from .generated.agent_component import (
 from .generated.connector_pack import (
     CONNECTOR_PACK_SCHEMA_VERSION,
     AgentLibraryMutationContext,
+    ConformanceEvidence,
+    ConnectorPackConformanceEvidenceRequest,
     ConnectorPackImportRequest,
     ConnectorPackIndex,
     ConnectorPackStatus,
@@ -50,6 +52,7 @@ from .generated.storage import (
     send_blob_chunk_put,
     send_blob_commit,
     send_connector_pack_catalog_reconciliation_receipt,
+    send_connector_pack_conformance_evidence,
     send_connector_pack_import,
     send_connector_pack_status,
 )
@@ -454,6 +457,26 @@ class ConnectorPackClient:
         return await send_connector_pack_catalog_reconciliation_receipt(
             self._client,
             McpCatalogReconciliationReceiptRequest(tenant_id=tenant_id),
+            graph,
+        )
+
+    async def conformance_evidence(
+        self,
+        *,
+        tenant_id: str,
+        connector: str,
+        graph: str | None = None,
+    ) -> ConformanceEvidence:
+        """Read the evidence record the engine wrote at pack import (R807).
+
+        Refuses ``CONFORMANCE_EVIDENCE_ABSENT`` for an unknown, revoked or
+        other-tenant connector; the refusal does not say which.
+        """
+        return await send_connector_pack_conformance_evidence(
+            self._client,
+            ConnectorPackConformanceEvidenceRequest(
+                tenant_id=tenant_id, connector=connector
+            ),
             graph,
         )
 

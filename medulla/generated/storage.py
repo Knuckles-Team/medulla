@@ -49,6 +49,8 @@ from .concept_lineage import (
     ConceptRecord,
 )
 from .connector_pack import (
+    ConformanceEvidence,
+    ConnectorPackConformanceEvidenceRequest,
     ConnectorPackImportRequest,
     ConnectorPackOp,
     ConnectorPackStatus,
@@ -1210,6 +1212,36 @@ async def send_connector_pack_import(
         idempotency_key=idempotency_key,
     )
     return TypeAdapter(PackImportResult).validate_python(payload)
+
+
+async def send_connector_pack_conformance_evidence(
+    client: Any,
+    request: ConnectorPackConformanceEvidenceRequest,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> ConformanceEvidence:
+    """Send typed ConnectorPack.conformance_evidence (MEDULLA-TYPED-PACKS-R807).
+
+    Reads the ``ConformanceEvidence`` record the engine wrote at pack import, or
+    refuses ``CONFORMANCE_EVIDENCE_ABSENT`` when the tenant holds no current record.
+    """
+    request = ConnectorPackConformanceEvidenceRequest.model_validate(request)
+    params = {
+        "op": {
+            "op": "conformance_evidence",
+            "request": request.model_dump(
+                mode="json", exclude_unset=True, exclude_none=True
+            ),
+        },
+    }
+    payload = await client._send(
+        "ConnectorPack",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return ConformanceEvidence.model_validate(payload)
 
 
 async def send_connector_pack_attest_self_served_catalog(
