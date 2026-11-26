@@ -1256,7 +1256,7 @@ fn served_owner_store_batch_commits_and_its_actor_survives_in_the_ledger() {
         medulla_mutation_types::mutation_scope::DurabilityDomain::KvStore,
         medulla_mutation_types::mutation_scope::LogicalName::new("kv-scope-a".to_string()).unwrap(),
         medulla_mutation_types::mutation_scope::IncarnationId::new(
-            medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION,
+            medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION,
         )
         .unwrap(),
     )

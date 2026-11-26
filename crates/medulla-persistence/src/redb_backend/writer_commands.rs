@@ -598,7 +598,7 @@ macro_rules! writer_command_arms {
             // ack: a rewind or reject must observe the committed stream.
             flush(pending);
             let result = shard.graph(&graph).and_then(|handle| {
-                medulla_server_api::outbox_operator::operate(shard.mutations(), handle.as_ref(), *write)
+                medulla_transaction::operate_outbox(shard.mutations(), handle.as_ref(), *write)
             });
             let _ = done.send(result);
             false

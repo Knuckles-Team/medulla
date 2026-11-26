@@ -503,23 +503,6 @@ fn reasoning_wakeup_payload(
     rmp_serde::to_vec_named(&wakeup).map_err(|error| error.to_string())
 }
 
-/// Fixed lifecycle-generation placeholder for every `MutationScopeIdentity` this
-/// module compiles. `IncarnationId` is a new v1 concept (v2's `MutationBatch` had
-/// no equivalent field) meant to distinguish a scope's lifecycle "generations" --
-/// e.g. so a write from before a graph was deleted and recreated under the same
-/// name cannot be replayed into the new incarnation. Wiring a REAL per-scope
-/// generation counter (a candidate already exists: `read_mutation_lifecycle_head`,
-/// "Current lifecycle generation for retry fencing") would require threading an
-/// `.await`ed read through every one of `compile_methods`/`compile_opaque_method`/
-/// `compile_opaque_digest`/`compile_crossmodal`'s many callers across the crate
-/// (`kv.rs`, `dispatch.rs`, `raft/store.rs`, every `handlers/*.rs` -- files this
-/// lane does not own and the migration contract does not scope). Using a fixed,
-/// non-resource-derived constant here is a mechanical placeholder that satisfies
-/// the type (`IncarnationId::new` rejects anything resource-shaped by construction
-/// elsewhere, but does not require per-generation freshness), not a security
-/// decision -- flagged in the migration report for follow-up.
-pub use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
-
 /// Compile the universal `MutationScopeIdentity`/`VersionExpectation` pair shared
 /// by every batch this module builds.
 ///

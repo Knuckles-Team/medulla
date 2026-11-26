@@ -454,8 +454,8 @@ pub trait PersistenceBackend: Send + Sync {
     async fn read_mutation_outbox_view(
         &self,
         _graph_fname: &str,
-        _view: crate::outbox_operator::OutboxView,
-    ) -> Result<crate::outbox_operator::OutboxViewAnswer, String> {
+        _view: medulla_transaction::OutboxView,
+    ) -> Result<medulla_transaction::OutboxViewAnswer, String> {
         Err("persistence backend does not support durable outbox views".to_string())
     }
 
@@ -466,8 +466,8 @@ pub trait PersistenceBackend: Send + Sync {
     async fn write_mutation_outbox(
         &self,
         _graph_fname: &str,
-        _write: crate::outbox_operator::OutboxWrite,
-    ) -> Result<crate::outbox_operator::OutboxWriteReply, String> {
+        _write: medulla_transaction::OutboxWrite,
+    ) -> Result<medulla_transaction::OutboxWriteReply, String> {
         Err("persistence backend does not support durable outbox writes".to_string())
     }
 

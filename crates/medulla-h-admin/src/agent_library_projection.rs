@@ -274,8 +274,8 @@ pub mod worker {
     use medulla_protocol_types::change_envelope::{ChangeCursor, CursorPosition};
     use medulla_protocol_types::protocol::{Method, Request, ResultPayload};
     use medulla_server_api::authority_context::VerifiedRequestContext;
-    use medulla_server_api::outbox_operator::OutboxWrite;
     use medulla_server_api::state::ServerState;
+    use medulla_transaction::OutboxWrite;
     use medulla_transaction::{OutboxClaimBudget, OutboxClaimOutcome, OutboxRejectReason};
     use medulla_work_types::scheduler_config::{OrchestrationLimits, SchedulerConfig};
 

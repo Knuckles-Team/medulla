@@ -331,7 +331,7 @@ fn blob_scope_identity(
         tenant,
         DurabilityDomain::BlobStore,
         LogicalName::new(resource.to_string())?,
-        IncarnationId::new(medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION)?,
+        IncarnationId::new(medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION)?,
     )
 }
 

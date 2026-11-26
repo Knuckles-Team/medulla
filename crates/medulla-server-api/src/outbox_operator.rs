@@ -3,8 +3,3 @@
 //! The generic functions live in `medulla-transaction` (`outbox::views`), so every
 //! owner crate -- not only the server -- serves the same views; this module is
 //! the server's name for them.
-
-pub use medulla_transaction::{
-    consumer_standing, operate_outbox as operate, outbox_position as position,
-    read_outbox_view as read_view, OutboxClaimBudget, OutboxView, OutboxViewAnswer, OutboxWrite, OutboxWriteReply,
-};

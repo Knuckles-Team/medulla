@@ -229,7 +229,7 @@ pub fn validate_job_publication_commit(
         medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
             &prepared.target_graph,
             &prepared.target_graph,
-            medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION,
+            medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION,
         )?;
     if batch.identity != expected_scope
         || committed.record.identity != expected_scope
@@ -749,7 +749,7 @@ mod publication_receipt_tests {
             medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
                 "other-publication-tenant",
                 &prepared.target_graph,
-                medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION,
+                medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION,
             )
             .unwrap();
         let mut wrong_tenant_receipt = receipt_for(&prepared);

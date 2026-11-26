@@ -59,7 +59,7 @@ pub fn cluster_admin_scope_identity(
     medulla_mutation_types::mutation_scope::MutationScopeIdentity::fixed_graph(
         "native",
         "cluster-admin",
-        medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION,
+        medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION,
     )
 }
 

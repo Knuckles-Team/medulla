@@ -42,7 +42,7 @@ use medulla_decision_types::decision::DecisionPolicy;
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_persistence_records::agent_component::AGENT_COMPONENT_OUTBOX_TOPIC;
 use medulla_persistence_records::agent_library::AgentLibraryStore;
-use medulla_server_api::outbox_operator::OutboxWrite;
+use medulla_transaction::OutboxWrite;
 use medulla_transaction::{OutboxClaimBudget, OutboxRejectReason};
 use medulla_types::contract::{OpaqueId, TenantId};
 use tokio::sync::RwLock;

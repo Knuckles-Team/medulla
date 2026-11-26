@@ -6178,6 +6178,7 @@ dependencies = [
  "medulla-table-store",
  "medulla-tables",
  "medulla-test-ambient-auth",
+ "medulla-transaction",
  "medulla-types",
  "medulla-version",
  "medulla-work-types",

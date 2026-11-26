@@ -66,8 +66,8 @@ pub mod worker {
 
     use medulla_persistence_records::agent_library::AgentLibraryStore;
     use medulla_server_api::authority_context::VerifiedRequestContext;
-    use medulla_server_api::outbox_operator::OutboxWrite;
     use medulla_server_api::state::ServerState;
+    use medulla_transaction::OutboxWrite;
 
     pub(crate) mod native;
 

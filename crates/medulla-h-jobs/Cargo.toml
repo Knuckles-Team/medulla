@@ -64,6 +64,7 @@ medulla-server-mutation = { path = "../medulla-server-mutation" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-server-cdc = { path = "../medulla-server-cdc", optional = true }
 medulla-retrieval = { path = "../medulla-retrieval" }
+medulla-transaction = { path = "../medulla-transaction" }
 
 [features]
 security = ["medulla-isolation/security", "medulla-server-api/security"]

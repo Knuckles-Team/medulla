@@ -27,8 +27,6 @@ pub use compile::compile_opaque_method_in_scope;
 pub use compile::compile_sql_source_batch;
 #[cfg(feature = "redb")]
 pub use compile::effective_policy_digest;
-#[cfg(feature = "redb")]
-pub use compile::COMPILED_BATCH_INCARNATION;
 pub use compile::{
     authoritative_graph_version, compile_crossmodal, compile_methods, compile_methods_with_outbox,
     compile_methods_with_source_dirty, recorded_source_dirty_input, CompileBatch,

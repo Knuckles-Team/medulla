@@ -10,7 +10,8 @@ use medulla_mutation_types::mutation_scope::ScopeTenantId;
 use medulla_protocol_types::mutation_batch::MutationOperation;
 use medulla_protocol_types::mutation_batch::VersionExpectation;
 
-use super::{CompileBatch, CompiledOutbox, COMPILED_BATCH_INCARNATION};
+use super::{CompileBatch, CompiledOutbox};
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 
 /// Derive the durable scope only after the caller and reserved-name checks.
 pub(super) fn compiled_scope_identity(

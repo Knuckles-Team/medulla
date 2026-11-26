@@ -53,15 +53,15 @@ pub async fn handle_mutation_outbox(
 #[cfg(feature = "redb")]
 mod memory_events;
 #[cfg(feature = "redb")]
-use medulla_server_api::outbox_operator::position;
+use medulla_transaction::outbox_position as position;
 #[cfg(feature = "redb")]
-use medulla_server_api::outbox_operator::OutboxView;
+use medulla_transaction::OutboxView;
 #[cfg(feature = "redb")]
-use medulla_server_api::outbox_operator::OutboxViewAnswer;
+use medulla_transaction::OutboxViewAnswer;
 #[cfg(feature = "redb")]
-use medulla_server_api::outbox_operator::OutboxWrite;
+use medulla_transaction::OutboxWrite;
 #[cfg(feature = "redb")]
-use medulla_server_api::outbox_operator::OutboxWriteReply;
+use medulla_transaction::OutboxWriteReply;
 
 /// The label a failed blocking store task names.
 #[cfg(feature = "redb")]
@@ -380,7 +380,7 @@ impl Owner {
                 medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     let (mutations, kernel, owner) = store.outbox_owner();
                     let read = kernel.read_scope(owner)?;
-                    medulla_server_api::outbox_operator::read_view(mutations, &read, &view, now_ms)
+                    medulla_transaction::read_outbox_view(mutations, &read, &view, now_ms)
                 })
                 .await
             }
@@ -423,7 +423,7 @@ impl Owner {
             Owner::Jobs { store } => {
                 medulla_server_api::api::dispatch_support::blocking_task(BLOCKING_TASK, move || {
                     let (mutations, _, owner) = store.outbox_owner();
-                    medulla_server_api::outbox_operator::operate(mutations, owner, write)
+                    medulla_transaction::operate_outbox(mutations, owner, write)
                 })
                 .await
             }

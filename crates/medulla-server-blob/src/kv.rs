@@ -35,12 +35,12 @@ use tokio::sync::RwLock;
 
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
 use medulla_mutation_types::mutation_scope::MutationSurface;
+use medulla_mutation_types::mutation_scope::COMPILED_BATCH_INCARNATION;
 use medulla_protocol_types::mutation_batch::MutationBatch;
 use medulla_protocol_types::protocol::Method;
 use medulla_protocol_types::protocol::Response;
 use medulla_protocol_types::protocol::ResultPayload;
 use medulla_protocol_types::result_contract::storage as results;
-use medulla_server_api::batch_compile::COMPILED_BATCH_INCARNATION;
 use medulla_server_api::carrier::CarrierAuthority;
 use medulla_server_api::state::ServerState;
 

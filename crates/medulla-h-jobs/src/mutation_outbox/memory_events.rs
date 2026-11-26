@@ -17,7 +17,7 @@ use medulla_mutation_types::mutation_outbox::{OutboxAcked, OutboxPulled, OutboxT
 use medulla_mutation_types::mutation_scope::MutationOutboxLease;
 use medulla_server_api::api::persistence::PersistenceBackend;
 use medulla_server_api::authority_context::VerifiedRequestContext;
-use medulla_server_api::outbox_operator::OutboxClaimBudget;
+use medulla_transaction::OutboxClaimBudget;
 
 /// The format identity of a pull answer.
 const PULL_SCHEMA_VERSION: u16 = 1;

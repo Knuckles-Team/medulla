@@ -48,7 +48,7 @@ pub(super) fn reconciliation(
 
 pub(super) fn outbox_status(value: OutboxStatus) -> SemanticOutboxStatus {
     SemanticOutboxStatus {
-        standing: medulla_server_api::outbox_operator::consumer_standing(&value),
+        standing: medulla_transaction::consumer_standing(&value),
         consecutive_claims: value.consecutive_claims,
         total_claims: value.total_claims,
     }
