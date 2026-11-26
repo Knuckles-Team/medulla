@@ -4,3 +4,4 @@ pub mod stage;
 
 pub mod feedback;
 pub mod open;
+pub mod mandate;

@@ -90,6 +90,7 @@ pub fn route_feedback(
             kind: event.kind,
             source: event.source,
             seq,
+            detail: None,
         });
         if resumes {
             next.ended = None;

@@ -42,8 +42,12 @@ pub const FEEDBACK_PROPOSAL_UNKNOWN: &str = "FEEDBACK_PROPOSAL_UNKNOWN";
 /// The feedback event is blank in a required field (R019.5).
 pub const FEEDBACK_EVENT_INVALID: &str = "FEEDBACK_EVENT_INVALID";
 
+/// A resume of an ended delivery failed a fact of its mandate (R019.6).
+pub const MANDATE_REVOKED: &str = "MANDATE_REVOKED";
+
 /// Every refusal code of the delivery records.
 pub const REFUSALS: &[RefusalCode] = &[
+    RefusalCode::new(MANDATE_REVOKED),
     RefusalCode::new(FEEDBACK_SOURCE_UNKNOWN),
     RefusalCode::new(FEEDBACK_PROPOSAL_UNKNOWN),
     RefusalCode::new(FEEDBACK_EVENT_INVALID),
@@ -122,6 +126,9 @@ pub struct DeliveryInput {
     pub kind: FeedbackKind,
     pub source: InputSource,
     pub seq: u64,
+    /// What the input names, when the kind needs it (`policy-changed`: the changed fact).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub detail: Option<String>,
 }
 
 /// The one open question of a delivery (R019.7).
@@ -338,6 +345,9 @@ pub enum FeedbackKind {
     ProposalClosed,
     ProposalReopened,
     HeadPushed,
+    /// A fact of the mandate changed under a live delivery (R019.6); the input's `detail`
+    /// names the fact.
+    PolicyChanged,
 }
 
 /// One source-control feedback event as the delivery feedback route reads it (R019.5): the
@@ -467,4 +477,30 @@ pub fn decode_delivery(value: serde_json::Value) -> Result<Delivery, DeliveryRec
         }
     }
     Ok(delivery)
+}
+
+/// The facts a resume of an ended delivery is checked against (R019.6).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct MandateFacts {
+    /// The mode of the codebase now.
+    pub mode: crate::lifecycle::ProjectMode,
+    /// Whether every scope row is still open (none is verified).
+    pub rows_open: bool,
+    /// Whether the actor still holds `source:write` on the repository, as the admission
+    /// stamped on the event.
+    pub actor_can_write: bool,
+    /// The policy version now.
+    pub policy_version: String,
+}
+
+/// A refused resume.
+#[derive(Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[error("MANDATE_REVOKED: {0}")]
+pub struct MandateRevoked(pub String);
+
+impl MandateRevoked {
+    /// The stable refusal code.
+    pub fn code(&self) -> &'static str {
+        MANDATE_REVOKED
+    }
 }

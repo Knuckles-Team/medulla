@@ -57,6 +57,7 @@ fn person_input(seq: u64) -> DeliveryInput {
         kind: FeedbackKind::ReviewComment,
         source: InputSource::Person,
         seq,
+        detail: None,
     }
 }
 
