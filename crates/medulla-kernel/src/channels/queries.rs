@@ -1,4 +1,5 @@
-use super::{ChannelManager, ChannelMessage, ChannelType};
+use super::{ChannelManager, ChannelType};
+use medulla_protocol_types::messaging_wire::ChannelMessage;
 
 impl ChannelManager {
     /// Get messages from a channel.

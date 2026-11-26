@@ -30,8 +30,8 @@ const SHARD_FROM_A_NEWER_BUILD: LayoutPredecessor = LayoutPredecessor {
     file_name: "graph-0.redb",
 };
 
-fn lock(dir: &Path) -> medulla_kernel::persist_lock::PersistDirLock {
-    medulla_kernel::persist_lock::acquire(&dir.to_string_lossy()).unwrap()
+fn lock(dir: &Path) -> medulla_core::persist_lock::PersistDirLock {
+    medulla_core::persist_lock::acquire(&dir.to_string_lossy()).unwrap()
 }
 
 /// A previous-patch data directory: one graph shard and one Agent Library,

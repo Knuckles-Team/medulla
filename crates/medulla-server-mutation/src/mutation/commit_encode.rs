@@ -279,10 +279,10 @@ pub(crate) async fn publish_committed_row_delta(
 pub(super) fn mutation_snapshot_max_bytes() -> usize {
     static MAX: std::sync::OnceLock<usize> = std::sync::OnceLock::new();
     *MAX.get_or_init(|| {
-        let automatic = medulla_kernel::autosize::detect_capacity().mutation_snapshot_bytes();
+        let automatic = medulla_resource::detect_capacity().mutation_snapshot_bytes();
         if let Ok(value) = std::env::var("MEDULLA_MUTATION_SNAPSHOT_MAX_BYTES") {
             if let Ok(parsed) = value.trim().parse::<usize>() {
-                return medulla_kernel::autosize::bound_explicit(parsed, automatic);
+                return medulla_resource::bound_explicit(parsed, automatic);
             }
         }
         automatic

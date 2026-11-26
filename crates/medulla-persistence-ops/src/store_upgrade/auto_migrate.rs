@@ -20,7 +20,7 @@
 use std::ops::ControlFlow;
 use std::path::{Path, PathBuf};
 
-use medulla_kernel::persist_lock::PersistDirLock;
+use medulla_core::persist_lock::PersistDirLock;
 use medulla_storage::{classify_owner_store_format, OwnerLayout, OwnerStoreFormat};
 use serde::{Deserialize, Serialize};
 

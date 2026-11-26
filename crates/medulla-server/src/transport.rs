@@ -175,7 +175,7 @@ pub async fn run_idle_watcher(coord: Arc<ShutdownCoordinator>, idle_secs: u64) {
 /// cannot inherit the host's affinity count or a fixed floor that exceeds its
 /// effective budget. The hard ceiling remains 1024.
 fn per_connection_inflight_limit() -> usize {
-    medulla_kernel::autosize::detect_capacity().per_connection_inflight()
+    medulla_resource::detect_capacity().per_connection_inflight()
 }
 
 /// Run one dispatch under the hard deadline (CONCEPT:MEDULLA-KG.coordination.backpressure-busy-signal).

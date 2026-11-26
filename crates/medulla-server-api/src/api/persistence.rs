@@ -905,7 +905,7 @@ pub fn parse_groups(raw: Option<String>, default: u64) -> Result<u64, String> {
 /// than collapsing to one group. Under raft K (redb shards) == N (groups), so this is the
 /// ONE default both `resolve_shard_count` and [`raft_group_count`] derive from.
 pub fn default_raft_group_count() -> u64 {
-    let cpus = medulla_kernel::autosize::detect_capacity().reserved_cpus() as u64;
+    let cpus = medulla_resource::detect_capacity().reserved_cpus() as u64;
     (cpus / 2).clamp(1, medulla_store::redb_layout::MAX_SHARD_COUNT as u64)
 }
 

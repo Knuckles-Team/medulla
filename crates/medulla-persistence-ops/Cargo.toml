@@ -40,6 +40,7 @@ medulla-table-store = { path = "../medulla-table-store" }
 
 futures-util = { version = "0.3", default-features = false, optional = true }
 object_store = { version = "0.14.2", optional = true, features = ["aws", "fs"] }
+medulla-core = { path = "../medulla-core" }
 
 [features]
 cold-tier = ["medulla-persistence/cold-tier", "medulla-graph-core/cold-tier"]

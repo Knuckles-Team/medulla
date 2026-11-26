@@ -100,7 +100,7 @@ fn convert(
     let dir = data_dir
         .to_str()
         .ok_or_else(|| "the data directory path is not UTF-8".to_string())?;
-    let _lock = medulla_kernel::persist_lock::acquire(dir)?;
+    let _lock = medulla_core::persist_lock::acquire(dir)?;
     let marker = data_dir.join(ANONYMOUS_MARKER_FILE);
     let anonymous = std::fs::symlink_metadata(&marker)
         .map(|meta| meta.file_type().is_file())

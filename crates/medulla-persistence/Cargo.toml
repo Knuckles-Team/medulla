@@ -61,6 +61,7 @@ medulla-server-ops = { path = "../medulla-server-ops" }
 medulla-server-blob = { path = "../medulla-server-blob" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-resource = { path = "../medulla-resource" }
 
 [features]
 object-store = ["dep:object_store", "dep:tracing-subscriber", "medulla-storage/object-archive"]

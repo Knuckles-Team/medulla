@@ -7,5 +7,3 @@
 //! A second engine started on the same dir would checkpoint the same per-graph
 //! files and clobber the first's snapshots, so it fails the lock and refuses to
 //! start. The lock auto-releases when the holder dies.
-
-pub use medulla_core::persist_lock::{acquire, is_held, PersistDirLock};

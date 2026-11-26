@@ -159,7 +159,7 @@ pub struct CostConfig {
 /// already intersects host RAM with cgroup v1/v2 and reserves RAM headroom, so
 /// this module must not maintain a second parser.
 fn system_memory_limit_bytes() -> Option<u64> {
-    Some(medulla_kernel::autosize::detect_capacity().reserved_ram_bytes())
+    Some(medulla_resource::detect_capacity().reserved_ram_bytes())
 }
 
 impl CostConfig {
@@ -493,7 +493,7 @@ async fn collect_resource_stats_inner(
 ) -> Result<ResourceSnapshot, String> {
     let request = request.validate()?;
     let config = CostConfig::from_env()?;
-    let capacity = medulla_kernel::autosize::detect_capacity();
+    let capacity = medulla_resource::detect_capacity();
     let (configured_max_inflight, permits_available) = {
         let current = state.read().await;
         let permits = current.max_in_flight.available_permits();
@@ -502,7 +502,7 @@ async fn collect_resource_stats_inner(
             .ok()
             .and_then(|value| value.parse::<usize>().ok())
             .filter(|&value| value > 0)
-            .map(|value| medulla_kernel::autosize::bound_explicit(value, automatic_max))
+            .map(|value| medulla_resource::bound_explicit(value, automatic_max))
             .unwrap_or(automatic_max);
         (max, permits)
     };

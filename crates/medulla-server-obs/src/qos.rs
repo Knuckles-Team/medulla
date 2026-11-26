@@ -238,12 +238,12 @@ pub fn configured() -> Option<Arc<QosScheduler>> {
         if !env_truthy("MEDULLA_QOS") {
             return None;
         }
-        let automatic_capacity = medulla_kernel::autosize::detect_capacity().max_inflight();
+        let automatic_capacity = medulla_resource::detect_capacity().max_inflight();
         let capacity = std::env::var("MEDULLA_QOS_CAPACITY")
             .ok()
             .and_then(|v| v.parse::<usize>().ok())
             .filter(|&n| n > 0)
-            .map(|value| medulla_kernel::autosize::bound_explicit(value, automatic_capacity))
+            .map(|value| medulla_resource::bound_explicit(value, automatic_capacity))
             .unwrap_or(automatic_capacity);
         let mut config = QosConfig::auto(capacity);
         if let Some(q) = std::env::var("MEDULLA_QOS_PRINCIPAL_QUOTA")
@@ -251,8 +251,7 @@ pub fn configured() -> Option<Arc<QosScheduler>> {
             .and_then(|v| v.parse::<usize>().ok())
             .filter(|&n| n > 0)
         {
-            config.per_principal_quota =
-                medulla_kernel::autosize::bound_explicit(q, config.capacity);
+            config.per_principal_quota = medulla_resource::bound_explicit(q, config.capacity);
         }
         tracing::info!(
             target: "medulla::qos",

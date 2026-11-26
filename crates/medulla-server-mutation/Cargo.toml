@@ -57,6 +57,7 @@ redb = { workspace = true, optional = true }
 medulla-server-cdc = { path = "../medulla-server-cdc" }
 medulla-server-auth = { path = "../medulla-server-auth" }
 medulla-sql-lang = { path = "../medulla-sql-lang" }
+medulla-resource = { path = "../medulla-resource" }
 
 [features]
 broker = ["medulla-server-api/broker", "medulla-server-auth/broker", "medulla-server-cdc/broker", "medulla-core/broker", "medulla-graph-core/broker", "medulla-kernel/broker", "medulla-protocol-types/broker", "medulla-types/broker"]

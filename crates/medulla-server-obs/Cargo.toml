@@ -63,6 +63,7 @@ medulla-storage = { path = "../medulla-storage", optional = true }
 medulla-rdf = { path = "../medulla-rdf", optional = true }
 
 medulla-plan = { path = "../medulla-plan", optional = true }
+medulla-resource = { path = "../medulla-resource" }
 
 [features]
 blob = ["server", "redb", "medulla-server-api/blob", "medulla-server-blob/blob", "medulla-types/blob"]

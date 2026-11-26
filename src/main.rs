@@ -261,7 +261,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // inherit the host's affinity count or a two-thread floor that exceeds its
     // measured budget. The resolver already reserves CPU headroom and keeps a
     // one-thread progress floor.
-    let cores = medulla_kernel::autosize::detect_capacity().reserved_cpus();
+    let cores = medulla_resource::detect_capacity().reserved_cpus();
     let worker_threads = cores.max(1);
     let max_blocking = cores.max(1);
     let driver = medulla_server::spawn_engine_driver(move || {
@@ -1845,7 +1845,7 @@ async fn spawn_reasoning_cascade_and_ann_sweep(
 #[cfg(feature = "security")]
 async fn spawn_memory_and_lifecycle_sweeps(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
-    host_capacity: medulla_kernel::autosize::Capacity,
+    host_capacity: medulla_resource::Capacity,
     txn_ttl_secs: u64,
 ) {
     spawn_memory_sweeps(state, host_capacity).await;
@@ -1855,7 +1855,7 @@ async fn spawn_memory_and_lifecycle_sweeps(
 #[cfg(feature = "security")]
 async fn spawn_memory_sweeps(
     state: &Arc<tokio::sync::RwLock<ServerState>>,
-    host_capacity: medulla_kernel::autosize::Capacity,
+    host_capacity: medulla_resource::Capacity,
 ) {
     // ── Per-graph memory cap (CONCEPT:MEDULLA-KG.storage.nonblocking-checkpoint) — degrade, don't OOM ─────────
     // The engine keeps a bounded resident projection over the durable backend, so a graph that

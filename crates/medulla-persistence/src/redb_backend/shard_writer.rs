@@ -104,7 +104,7 @@ pub fn resolve_shard_count() -> usize {
     }
     #[cfg(not(any(test, feature = "test-support")))]
     {
-        let cpus = medulla_kernel::autosize::detect_capacity().reserved_cpus();
+        let cpus = medulla_resource::detect_capacity().reserved_cpus();
         (cpus / 2).clamp(1, 8)
     }
 }

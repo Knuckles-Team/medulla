@@ -53,7 +53,7 @@ fn rebind_stores(data_dir: &Path, options: &RebindOptions) -> Result<Vec<StoreRe
     let data_dir = existing_directory(data_dir)?;
     let copied_from = existing_directory(&options.copied_from)?;
     // The same single-writer lock the engine holds for its whole lifetime.
-    let _lease = medulla_kernel::persist_lock::acquire(&data_dir.to_string_lossy())?;
+    let _lease = medulla_core::persist_lock::acquire(&data_dir.to_string_lossy())?;
     let stores = discover(&data_dir)?;
 
     let mut reports = Vec::with_capacity(stores.len());

@@ -303,14 +303,14 @@ pub async fn prepare_tcp_tls(
 pub fn detect_capacity_and_log_startup(
     args: &ServerArgs,
     tcp_tls: bool,
-) -> medulla_kernel::autosize::Capacity {
+) -> medulla_resource::Capacity {
     info!("Starting medulla-server");
     if args.tcp_only {
         info!("  Native TCP-only transport configured");
     } else {
         info!("  UDS: private local socket configured");
     }
-    let capacity = medulla_kernel::autosize::detect_capacity();
+    let capacity = medulla_resource::detect_capacity();
     info!(
         "  Capacity: {} cpu(s), {} MiB RAM, tier {:?} (auto-sizing inflight/writer/node-cap defaults)",
         capacity.cpus,
@@ -359,9 +359,9 @@ pub fn flush_durable_state(
 /// held for the whole process lifetime by the caller.
 pub fn acquire_persist_lock(
     persist_dir: Option<&str>,
-) -> Option<medulla_kernel::persist_lock::PersistDirLock> {
+) -> Option<medulla_core::persist_lock::PersistDirLock> {
     let dir = persist_dir?;
-    let lock = medulla_kernel::persist_lock::acquire(dir).unwrap_or_else(|e| exit_with(e, 1));
+    let lock = medulla_core::persist_lock::acquire(dir).unwrap_or_else(|e| exit_with(e, 1));
     info!("Acquired the configured single-writer persistence lock");
     migrate_stores_on_open(dir, &lock);
     Some(lock)
@@ -371,7 +371,7 @@ pub fn acquire_persist_lock(
 /// lock just taken (MEDULLA-DURABLE-KERNEL-R070.1). With the switch off, nothing is
 /// migrated and `open_persistence` refuses such a store and names the command.
 #[cfg(feature = "redb")]
-fn migrate_stores_on_open(dir: &str, lock: &medulla_kernel::persist_lock::PersistDirLock) {
+fn migrate_stores_on_open(dir: &str, lock: &medulla_core::persist_lock::PersistDirLock) {
     use medulla_persistence_ops::store_upgrade as upgrade;
 
     let step = medulla_observe::startup().step("store_migration", "");
@@ -400,7 +400,7 @@ fn migrate_stores_on_open(dir: &str, lock: &medulla_kernel::persist_lock::Persis
 }
 
 #[cfg(not(feature = "redb"))]
-fn migrate_stores_on_open(_dir: &str, _lock: &medulla_kernel::persist_lock::PersistDirLock) {}
+fn migrate_stores_on_open(_dir: &str, _lock: &medulla_core::persist_lock::PersistDirLock) {}
 
 /// A positive `variable` override, bounded by `bound`. Absent, unparsable and
 /// zero values yield `None`.
@@ -409,12 +409,12 @@ fn bounded_env_override(variable: &str, bound: usize) -> Option<usize> {
         .ok()
         .and_then(|v| v.parse::<usize>().ok())
         .filter(|&n| n > 0)
-        .map(|value| medulla_kernel::autosize::bound_explicit(value, bound))
+        .map(|value| medulla_resource::bound_explicit(value, bound))
 }
 
 /// Bound an explicit `requested` value by `automatic`, warning when it clamps.
 fn clamp_to_automatic(variable: &str, requested: usize, automatic: usize) -> usize {
-    let bounded = medulla_kernel::autosize::bound_explicit(requested, automatic);
+    let bounded = medulla_resource::bound_explicit(requested, automatic);
     if bounded != requested {
         tracing::warn!(
             requested,
@@ -435,7 +435,7 @@ pub struct AdmissionLimits {
 
 /// Size the admission pools from effective CPU capacity. A positive env
 /// override can only lower each cgroup-aware default.
-pub fn admission_limits(capacity: &medulla_kernel::autosize::Capacity) -> AdmissionLimits {
+pub fn admission_limits(capacity: &medulla_resource::Capacity) -> AdmissionLimits {
     let automatic_max_in_flight = capacity.max_inflight();
     let max_in_flight = std::env::var("MEDULLA_MAX_INFLIGHT")
         .ok()
@@ -484,7 +484,7 @@ type Persistence = Option<Arc<dyn medulla_server_api::api::persistence::Persiste
 #[cfg(feature = "redb")]
 pub fn open_persistence(
     persist_dir: Option<&str>,
-    capacity: &medulla_kernel::autosize::Capacity,
+    capacity: &medulla_resource::Capacity,
 ) -> Persistence {
     let dir = persist_dir?;
     let automatic_writer_queue = capacity.writer_queue();
@@ -585,7 +585,7 @@ fn refuse_upgradable_stores(dir: &str) {
 #[cfg(not(feature = "redb"))]
 pub fn open_persistence(
     persist_dir: Option<&str>,
-    _capacity: &medulla_kernel::autosize::Capacity,
+    _capacity: &medulla_resource::Capacity,
 ) -> Persistence {
     if persist_dir.is_some() {
         exit_with(
@@ -695,7 +695,7 @@ pub struct DurableStores {
 /// that order.
 pub fn open_durable_stores(
     persist_dir: Option<&str>,
-    capacity: &medulla_kernel::autosize::Capacity,
+    capacity: &medulla_resource::Capacity,
 ) -> DurableStores {
     DurableStores {
         persistence: open_persistence(persist_dir, capacity),
@@ -1109,7 +1109,7 @@ pub fn env_or_exit<T>(
 
 /// The per-graph resident node cap: auto-sized from effective RAM; an explicit
 /// override must be positive and may only lower it.
-pub fn max_nodes_per_graph(capacity: &medulla_kernel::autosize::Capacity) -> usize {
+pub fn max_nodes_per_graph(capacity: &medulla_resource::Capacity) -> usize {
     const VARIABLE: &str = "MEDULLA_MAX_NODES_PER_GRAPH";
     let automatic = capacity.node_cap();
     env_or_exit(
