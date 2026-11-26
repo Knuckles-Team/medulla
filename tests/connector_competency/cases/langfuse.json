@@ -1,0 +1,35 @@
+{
+  "connector": "langfuse",
+  "rollup": "MEDULLA-CQ-CONN-R031",
+  "vocabulary_module": "orchestration-v1.ttl",
+  "terms": [
+    "promptVersion",
+    "tokenCost",
+    "tracePrompt",
+    "evaluationScore"
+  ],
+  "questions": [
+    {
+      "id": "langfuse.q1",
+      "kind": "single",
+      "question": "Which traces had the highest token cost and which prompt version produced them?",
+      "uql": "FOREIGN SCAN 'langfuse-agent'",
+      "sources": [
+        "langfuse-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "langfuse-agent": "mcp_tool"
+      },
+      "columns": [
+        "trace",
+        "tokenCost",
+        "promptVersion"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "langfuse-agent/single.json"
+      ]
+    }
+  ]
+}

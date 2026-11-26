@@ -1,0 +1,22 @@
+{
+  "source": "langfuse-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "trace": "trace-1",
+      "tokenCost": "tokenCost-1",
+      "promptVersion": "promptVersion-1",
+      "joinKey": "langfuse.q1-key-1",
+      "id": "langfuse-agent-langfuse.q1-1",
+      "label": "langfuse-agent 1"
+    },
+    {
+      "trace": "trace-2",
+      "tokenCost": "tokenCost-2",
+      "promptVersion": "promptVersion-2",
+      "joinKey": "langfuse.q1-key-2",
+      "id": "langfuse-agent-langfuse.q1-2",
+      "label": "langfuse-agent 2"
+    }
+  ]
+}
