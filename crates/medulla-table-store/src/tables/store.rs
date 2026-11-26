@@ -54,7 +54,16 @@ use medulla_protocol_types::mutation_batch::MutationBatchCommit;
 use medulla_protocol_types::mutation_batch::MutationBatchRecord;
 use medulla_storage::ScopeGrantVerifier;
 use medulla_transaction::Begin;
-use medulla_types::row_change::{RowChange, RowChangeSink};
+use crate::tables::matview_incremental::ViewRowChanges;
+use medulla_types::row_change::{RowChange, RowChangeSink, ViewRowChange};
+
+/// What one durable commit changed: the user-table rows, in the order its ops ran, and the rows
+/// each SQL view gained and lost (MEDULLA-INCREMENTAL-VIEWS-R010.2).
+#[derive(Default)]
+struct CommittedChanges {
+    rows: Vec<RowChange>,
+    views: Vec<ViewRowChange>,
+}
 use redb::{ReadableTable, TableDefinition};
 use serde_json::Value;
 
@@ -2289,7 +2298,7 @@ impl TableStore {
         let (commit, changes) =
             self.commit_with_changes(txn, batch, committed_at_ms, None, Some(result_msgpack))?;
         self.publish_row_changes(batch, &changes);
-        Ok((commit, changes))
+        Ok((commit, changes.rows))
     }
 
     /// Install the bound on the deferred foreign keys one transaction may touch
@@ -2315,12 +2324,21 @@ impl TableStore {
 
     /// Hand the committed changes to the installed sink. Runs only after the
     /// commit is durable; a rolled-back transaction never reaches it.
-    fn publish_row_changes(&self, batch: &MutationBatch, changes: &[RowChange]) {
-        if changes.is_empty() {
+    ///
+    /// The rows the commit's SQL views changed ride with it (MEDULLA-INCREMENTAL-VIEWS-R010.2):
+    /// they were computed inside the commit's write transaction, and reach the sink only once
+    /// that transaction is durable.
+    fn publish_row_changes(&self, batch: &MutationBatch, changes: &CommittedChanges) {
+        if changes.rows.is_empty() && changes.views.is_empty() {
             return;
         }
         if let (Some(sink), Ok((_, graph))) = (self.row_sink.get(), sql_scope_key(batch)) {
-            sink.publish(graph, changes.to_vec());
+            if !changes.rows.is_empty() {
+                sink.publish(graph, changes.rows.clone());
+            }
+            if !changes.views.is_empty() {
+                sink.publish_views(graph, changes.views.clone());
+            }
         }
     }
 
@@ -2399,7 +2417,7 @@ impl TableStore {
         committed_at_ms: u64,
         crashpoint: Option<SqlMutationCrashpoint>,
         result_override: Option<Vec<u8>>,
-    ) -> Result<(MutationBatchCommit, Vec<RowChange>), String> {
+    ) -> Result<(MutationBatchCommit, CommittedChanges), String> {
         batch.validate_write_budget()?;
         verify_batch_is_sql_catalog_only(batch)?;
         // Rejects a graph-scoped batch before anything is admitted; the kernel
@@ -2420,13 +2438,14 @@ impl TableStore {
                     }
                 };
                 mutation.commit_finished()?;
-                return Ok((commit, Vec::new()));
+                return Ok((commit, CommittedChanges::default()));
             }
             Begin::Apply { source_version } => source_version,
         };
         mutation.set_source_version(source_version);
         let mut recorded: Option<u64> = None;
         let mut row_changes: Vec<RowChange> = Vec::new();
+        let mut view_changes: Vec<ViewRowChange> = Vec::new();
         let affected = match mutation.owner_rows(|wtx| {
             let mut accum = occ::FootprintAccum::default();
             let affected = apply_mutation_txn_ops_with_crashpoints(
@@ -2452,12 +2471,15 @@ impl TableStore {
             // transaction, so a rolled-back commit leaves every view unchanged.
             let programs = matview_maintain::load_programs(wtx)?;
             if !programs.is_empty() {
-                matview_maintain::maintain_views(
+                view_changes = matview_maintain::maintain_views(
                     wtx,
                     self.index_scope(),
                     &accum.changes,
                     &programs,
-                )?;
+                )?
+                .into_iter()
+                .map(ViewRowChanges::into_view_row_change)
+                .collect::<Result<_, _>>()?;
             }
             mark_matviews_stale_in(wtx, txn)?;
             recorded = self.occ.record(accum.writes);
@@ -2488,7 +2510,15 @@ impl TableStore {
                 self.occ.retract(seq);
             }
         }
-        committed.map(|commit| (commit, row_changes))
+        committed.map(|commit| {
+            (
+                commit,
+                CommittedChanges {
+                    rows: row_changes,
+                    views: view_changes,
+                },
+            )
+        })
     }
 
     /// The commit sequence a `BEGIN` pins as its snapshot (R002.2).

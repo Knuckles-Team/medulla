@@ -340,6 +340,37 @@ pub struct ViewRowChanges {
     pub inserted: Vec<Row>,
 }
 
+impl ViewRowChanges {
+    /// The rows as the row-change sink takes them: every deleted row as a `Delete` then every
+    /// inserted row as an `Insert`, with `table` set to the view name. The key is the row
+    /// rendered cell by cell, the rendering of a table without a primary key.
+    pub fn into_view_row_change(self) -> Result<medulla_types::row_change::ViewRowChange, String> {
+        use medulla_types::row_change::{RowChange, RowChangeKind};
+        let view = self.view;
+        let image = |row: &Row| rmp_serde::to_vec_named(row).map_err(|error| error.to_string());
+        let mut changes = Vec::with_capacity(self.deleted.len() + self.inserted.len());
+        for row in &self.deleted {
+            changes.push(RowChange {
+                table: view.clone(),
+                kind: RowChangeKind::Delete,
+                key: row_key_text(&[], row),
+                before: Some(image(row)?),
+                after: None,
+            });
+        }
+        for row in &self.inserted {
+            changes.push(RowChange {
+                table: view.clone(),
+                kind: RowChangeKind::Insert,
+                key: row_key_text(&[], row),
+                before: None,
+                after: Some(image(row)?),
+            });
+        }
+        Ok(medulla_types::row_change::ViewRowChange { view, changes })
+    }
+}
+
 /// The primary key of `row` rendered as text: the `pk_columns` values joined by `,`, or every
 /// cell in column order when the table has no primary key. It is the rendering of
 /// `RowChange.key`.

@@ -151,6 +151,12 @@ impl RowChangeSink for CdcHub {
     fn publish(&self, graph: &str, changes: Vec<RowChange>) {
         self.emit_row_changes(graph, changes);
     }
+
+    fn publish_views(&self, _graph: &str, views: Vec<medulla_types::row_change::ViewRowChange>) {
+        for view in views {
+            self.emit_row_changes(&view_feed_key(&view.view), view.changes);
+        }
+    }
 }
 
 /// The CDC hub on `ServerState`. One per engine; routes by graph name.
@@ -1030,8 +1036,7 @@ fn field_num(blob: &[u8], field: &str) -> f64 {
         .unwrap_or(0.0)
 }
 
-/// The feed key of plan view `name` (MEDULLA-INCREMENTAL-VIEWS-R010.1).
-#[cfg(feature = "matview")]
+/// The feed key of view `name` (MEDULLA-INCREMENTAL-VIEWS-R010.1, R010.2).
 pub fn view_feed_key(name: &str) -> String {
     format!("view:{name}")
 }

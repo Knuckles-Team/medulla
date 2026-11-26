@@ -15,7 +15,10 @@ use redb::ReadableTable;
 use serde_json::Value;
 
 use super::{
-    decode_stored, delete_in, get_schema_in, insert_in, map_err, row_map, SqlWrite, MATVIEWS, ROWS,
+    decode_stored, delete_in, get_schema_in, insert_in, list_secondary_indexes_write, map_err,
+    rowid_from_entry_key, row_map, secondary_entry_range, validate_secondary_spec,
+    SecondaryIndexLookup, SqlWrite, MATVIEWS, MAX_SECONDARY_INDEX_CANDIDATES, ROWS,
+    SECONDARY_INDEX_ENTRIES,
 };
 use crate::tables::matview::MatViewSpec;
 use crate::tables::matview_incremental::{
@@ -212,6 +215,105 @@ fn table_rows(wtx: &SqlWrite<'_>, table: &str, schema: &TableSchema) -> Result<V
     Ok(out)
 }
 
+/// The rows of `table` whose `column` equals `key`, read through the table's secondary index on
+/// `column` (MEDULLA-INCREMENTAL-VIEWS-R013.2): one index range read plus one row read per match,
+/// never a scan of the table. A probe that matches more rows than the fan-out budget refuses
+/// `STATE_BUDGET_EXCEEDED`. `Ok(None)` when no plain secondary index serves `column` (the key is
+/// only the primary key) or the directory disagrees with the rows; the caller then reads the
+/// table.
+fn index_probe(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    table: &str,
+    schema: &TableSchema,
+    column: &str,
+    key: &Value,
+) -> Result<Option<Vec<Row>>, String> {
+    let Some(spec) = list_secondary_indexes_write(wtx, tenant_scope, table)?
+        .into_iter()
+        .find(|spec| {
+            spec.serves_plain_lookup(column) && validate_secondary_spec(spec, schema).is_ok()
+        })
+    else {
+        return Ok(None);
+    };
+    let Some(declared) = schema.column(column) else {
+        return Ok(None);
+    };
+    let value = medulla_tables::schema::Cell::coerce(key, declared.ty, true)?;
+    let lookup = SecondaryIndexLookup::Eq {
+        column: column.to_string(),
+        value,
+    };
+    let Some((low, high)) = secondary_entry_range(&spec, schema, &lookup)? else {
+        return Ok(None);
+    };
+    let fanout = join_fanout();
+    let mut rowids = Vec::new();
+    {
+        let entries = wtx.open_table(SECONDARY_INDEX_ENTRIES)?;
+        for item in entries
+            .range(low.as_str()..high.as_str())
+            .map_err(map_err)?
+        {
+            let (entry, _) = item.map_err(map_err)?;
+            let Some(rowid) = rowid_from_entry_key(entry.value()) else {
+                return Ok(None);
+            };
+            if rowids.len() >= fanout.min(MAX_SECONDARY_INDEX_CANDIDATES) {
+                return Err(format!(
+                    "STATE_BUDGET_EXCEEDED: a join probe on `{column}` matched more than {fanout} rows, above MEDULLA_VIEW_JOIN_FANOUT"
+                ));
+            }
+            rowids.push(rowid);
+        }
+    }
+    let width = schema.columns().len();
+    let rows = wtx.open_table(ROWS)?;
+    let mut matched = Vec::with_capacity(rowids.len());
+    for rowid in rowids {
+        let Some(stored) = rows.get((table, rowid)).map_err(map_err)? else {
+            // A directory entry without its row: the table is the authority.
+            return Ok(None);
+        };
+        let mut cells: Vec<medulla_tables::schema::Cell> = decode_stored(stored.value(), "row")?;
+        if cells.len() < width {
+            cells.resize(width, medulla_tables::schema::Cell::Null);
+        }
+        let row = row_map(schema, &cells);
+        if row.get(column) == Some(key) {
+            matched.push(row);
+        }
+    }
+    Ok(Some(matched))
+}
+
+/// One side of a join probed for `key` on `column`: through the secondary index when one serves
+/// the column, otherwise through `scan`, the table read once for the whole commit.
+fn probe_side(
+    wtx: &SqlWrite<'_>,
+    tenant_scope: &str,
+    side: (&str, &TableSchema),
+    column: &str,
+    key: &Value,
+    scan: &mut Option<Vec<Row>>,
+) -> Result<Vec<Row>, String> {
+    if key.is_null() {
+        return Ok(Vec::new());
+    }
+    let (table, schema) = side;
+    if let Some(rows) = index_probe(wtx, tenant_scope, table, schema, column, key)? {
+        return Ok(rows);
+    }
+    if scan.is_none() {
+        *scan = Some(table_rows(wtx, table, schema)?);
+    }
+    Ok(probe(scan.as_deref().unwrap_or_default(), column, key)?
+        .into_iter()
+        .cloned()
+        .collect())
+}
+
 /// Probes `rows` for the ones whose `column` equals `key` (never for NULL), refusing a probe
 /// that reads more than the fan-out budget.
 fn probe<'a>(rows: &'a [Row], column: &str, key: &Value) -> Result<Vec<&'a Row>, String> {
@@ -252,8 +354,9 @@ fn maintain_join(
     let (left_pk, right_pk) = (pk_names(&left_schema), pk_names(&right_schema));
     let da = deltas_of(wtx, &program.table, changes)?;
     let db = deltas_of(wtx, &join.right, changes)?;
-    let a_now = table_rows(wtx, &program.table, &left_schema)?;
-    let b_now = table_rows(wtx, &join.right, &right_schema)?;
+    // The key-only fallback scans of a side whose join key has no secondary index, read at
+    // most once per commit.
+    let (mut a_scan, mut b_scan): (Option<Vec<Row>>, Option<Vec<Row>>) = (None, None);
     let schema = get_schema_in(wtx, &program.view)?.ok_or_else(|| {
         format!("MATVIEW_STATE_CORRUPT: result table `{}` is missing", program.view)
     })?;
@@ -272,14 +375,16 @@ fn maintain_join(
     };
     for delta in &da {
         let key = delta.row.get(&join.left_key).cloned().unwrap_or(Value::Null);
-        for b in probe(&b_now, &join.right_key, &key)? {
-            emit(delta.weight, &delta.row, b)?;
+        let side = (join.right.as_str(), &right_schema);
+        for b in probe_side(wtx, tenant_scope, side, &join.right_key, &key, &mut b_scan)? {
+            emit(delta.weight, &delta.row, &b)?;
         }
     }
     for delta in &db {
         let key = delta.row.get(&join.right_key).cloned().unwrap_or(Value::Null);
-        for a in probe(&a_now, &join.left_key, &key)? {
-            emit(delta.weight, a, &delta.row)?;
+        let side = (program.table.as_str(), &left_schema);
+        for a in probe_side(wtx, tenant_scope, side, &join.left_key, &key, &mut a_scan)? {
+            emit(delta.weight, &a, &delta.row)?;
         }
     }
     for left in &da {

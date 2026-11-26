@@ -29,7 +29,23 @@ pub struct RowChange {
     pub after: Option<Vec<u8>>,
 }
 
+/// The rows one SQL view gained and lost in one durable commit (MEDULLA-INCREMENTAL-VIEWS-R010.2).
+///
+/// `changes` holds the view's result rows as [`RowChange`]s with `table` set to the view name:
+/// every old row as a `Delete`, then every new row as an `Insert`, so a grouped view reports the
+/// delete of the old group row followed by the insert of the new one. The images carry the
+/// visible columns only.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ViewRowChange {
+    pub view: String,
+    pub changes: Vec<RowChange>,
+}
+
 /// Receives the row changes of one durable commit, in commit order.
 pub trait RowChangeSink: Send + Sync + std::fmt::Debug {
     fn publish(&self, graph: &str, changes: Vec<RowChange>);
+
+    /// Receives the rows the commit's SQL views changed, after the commit is durable. Each view's
+    /// rows reach the feed `view:<name>` through the same ring as table changes.
+    fn publish_views(&self, graph: &str, views: Vec<ViewRowChange>);
 }

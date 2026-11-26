@@ -323,3 +323,162 @@ fn join_delta_equals_rejoin_for_both_sides() {
     }]);
     assert_fresh(&store, select, "sid, area, amount");
 }
+
+/// A sink that keeps every view change the commit path hands it.
+#[derive(Debug, Default)]
+struct RecordingSink {
+    views: std::sync::Mutex<Vec<(String, medulla_types::row_change::ViewRowChange)>>,
+}
+
+impl medulla_types::row_change::RowChangeSink for RecordingSink {
+    fn publish(&self, _graph: &str, _changes: Vec<medulla_types::row_change::RowChange>) {}
+
+    fn publish_views(&self, graph: &str, views: Vec<medulla_types::row_change::ViewRowChange>) {
+        let mut seen = self.views.lock().unwrap();
+        seen.extend(views.into_iter().map(|view| (graph.to_string(), view)));
+    }
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R010.2
+#[test]
+fn maintain_views_reports_view_row_changes() {
+    use medulla_types::row_change::RowChangeKind;
+    let (store, _path) = TableStore::open_temp().unwrap();
+    orders(&store);
+    let sink = std::sync::Arc::new(RecordingSink::default());
+    store.install_row_change_sink(sink.clone());
+    insert_order(&store, 1, json!("eu"), json!(5));
+    let select = "SELECT region, count(*) AS n FROM orders GROUP BY region";
+    create_view(&store, select);
+    sink.views.lock().unwrap().clear();
+
+    // A new group publishes only the insert of its row.
+    insert_order(&store, 2, json!("us"), json!(1));
+    {
+        let seen = sink.views.lock().unwrap();
+        assert_eq!(seen.len(), 1, "one view changed");
+        let (_, view) = &seen[0];
+        assert_eq!(view.view, "mv");
+        assert_eq!(view.changes.len(), 1);
+        assert_eq!(view.changes[0].kind, RowChangeKind::Insert);
+        assert!(view.changes[0].before.is_none() && view.changes[0].after.is_some());
+        assert_eq!(view.changes[0].table, "mv");
+    }
+
+    // A grown group publishes the delete of its old row, then the insert of the new one, and
+    // hidden columns never reach the feed.
+    sink.views.lock().unwrap().clear();
+    insert_order(&store, 3, json!("eu"), json!(2));
+    let seen = sink.views.lock().unwrap();
+    let kinds: Vec<_> = seen[0].1.changes.iter().map(|change| change.kind).collect();
+    assert_eq!(kinds, [RowChangeKind::Delete, RowChangeKind::Insert]);
+    let old: serde_json::Map<String, Value> =
+        rmp_serde::from_slice(seen[0].1.changes[0].before.as_ref().unwrap()).unwrap();
+    let new: serde_json::Map<String, Value> =
+        rmp_serde::from_slice(seen[0].1.changes[1].after.as_ref().unwrap()).unwrap();
+    assert_eq!((old["region"].clone(), old["n"].clone()), (json!("eu"), json!(1)));
+    assert_eq!((new["region"].clone(), new["n"].clone()), (json!("eu"), json!(2)));
+    assert!(old.keys().chain(new.keys()).all(|name| !name.starts_with("__mv_")));
+    drop(seen);
+
+    // A commit that touches no view publishes nothing.
+    sink.views.lock().unwrap().clear();
+    create_table(&store, "unrelated", vec![Column::new("id", ColumnType::BigInt, false, true)]);
+    assert!(sink.views.lock().unwrap().is_empty());
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R013.2
+#[test]
+fn join_probe_through_secondary_indexes_equals_rejoin() {
+    use medulla_tables::index::SecondaryIndexColumn;
+    let (store, _path) = TableStore::open_temp().unwrap();
+    let customers = TableSchema::new(
+        "customers",
+        vec![
+            Column::new("cid", ColumnType::BigInt, false, true),
+            Column::new("area", ColumnType::Text, true, false),
+        ],
+    );
+    let sales = TableSchema::new(
+        "sales",
+        vec![
+            Column::new("sid", ColumnType::BigInt, false, true),
+            Column::new("customer_id", ColumnType::BigInt, true, false),
+            Column::new("amount", ColumnType::BigInt, true, false),
+        ],
+    );
+    create_table(&store, "customers", customers.columns().to_vec());
+    create_table(&store, "sales", sales.columns().to_vec());
+    // Both join keys carry a secondary index, so a probe is an index range read.
+    for (schema, table, column) in [
+        (&customers, "customers", "cid"),
+        (&sales, "sales", "customer_id"),
+    ] {
+        let spec = store
+            .secondary_index_spec(
+                table,
+                &format!("{table}_{column}"),
+                vec![SecondaryIndexColumn::ascending(column)],
+                schema,
+            )
+            .unwrap();
+        assert!(store.create_secondary_index(&spec, false).unwrap());
+    }
+    let select = "SELECT s.sid, c.area, s.amount FROM sales s JOIN customers c ON s.customer_id = c.cid";
+    let program = IncrementalViewProgram {
+        view: "mv".into(),
+        table: "sales".into(),
+        join: Some(EquiJoin {
+            right: "customers".into(),
+            left_key: "customer_id".into(),
+            right_key: "cid".into(),
+        }),
+        filter: None,
+        output: ViewOutput::Rows(vec![
+            ("sid".into(), RowExpr::Column("sid".into())),
+            ("area".into(), RowExpr::Column("area".into())),
+            ("amount".into(), RowExpr::Column("amount".into())),
+        ]),
+    };
+    insert(&store, "customers", &["cid", "area"], vec![json!(1), json!("north")]);
+    insert(&store, "sales", &["sid", "customer_id", "amount"], vec![json!(10), json!(1), json!(5)]);
+    create_view_from(&store, select, program);
+    assert_fresh(&store, select, "sid, area, amount");
+    // Both sides in one transaction, a key change on the indexed column, and a delete.
+    run(&store, vec![
+        TxnOp::Insert {
+            table: "customers".into(),
+            col_order: vec!["cid".into(), "area".into()],
+            rows: vec![vec![json!(2), json!("south")], vec![json!(3), json!("east")]],
+        },
+        TxnOp::Insert {
+            table: "sales".into(),
+            col_order: vec!["sid".into(), "customer_id".into(), "amount".into()],
+            rows: vec![
+                vec![json!(11), json!(2), json!(7)],
+                vec![json!(12), json!(3), json!(9)],
+                vec![json!(13), json!(2), json!(1)],
+            ],
+        },
+    ]);
+    assert_fresh(&store, select, "sid, area, amount");
+    run(&store, vec![TxnOp::Update {
+        table: "sales".into(),
+        set: serde_json::from_value(json!({"customer_id": 3})).unwrap(),
+        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+            col: "sid".into(),
+            op: medulla_result_types::row_predicate::CmpOp::Eq,
+            value: json!(11),
+        },
+    }]);
+    assert_fresh(&store, select, "sid, area, amount");
+    run(&store, vec![TxnOp::Delete {
+        table: "customers".into(),
+        selector: medulla_result_types::row_predicate::RowPredicate::Cmp {
+            col: "cid".into(),
+            op: medulla_result_types::row_predicate::CmpOp::Eq,
+            value: json!(2),
+        },
+    }]);
+    assert_fresh(&store, select, "sid, area, amount");
+}
