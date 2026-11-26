@@ -24,7 +24,10 @@ from ontology_pack_support import connect, import_entries
 from medulla import ConnectorPackEntryContent
 from medulla.client import MedullaClient
 from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
-from medulla.generated.source_ingestion import SourceIngestionDisposition
+from medulla.generated.source_ingestion import (
+    ProfileSubmission,
+    SourceIngestionDisposition,
+)
 
 from .test_source_stream_versions_served import (
     STREAM,
@@ -326,3 +329,13 @@ async def test_instance_profile_admitted_after_checks() -> None:
         assert len(list(await client.nodes.list_by_label("Thing", 0))) == 1
     finally:
         await _close(client, graph)
+
+
+# spec: MEDULLA-INGEST-WORKER-R002.8
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R002.8")
+def test_profile_submission_model_matches_the_wire_item() -> None:
+    item = _profile_item("proposal-mirror", False)
+    model = ProfileSubmission.model_validate(item)
+    assert model.profile.datatype_properties[0].class_ == "Thing"
+    assert model.profile.object_properties[0].range_ == "Owner"
+    assert model.model_dump(by_alias=True) == item

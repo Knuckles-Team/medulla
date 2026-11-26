@@ -131,6 +131,50 @@ class SourceBatchExtensionContainers(BaseModel):
     containers: Annotated[list[SourceJson], Field(max_length=1024)]
 
 
+class ProfileClass(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    iri: str
+    instances: Annotated[int, Field(ge=0)]
+
+
+class ProfileDatatypeProperty(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    iri: str
+    class_: Annotated[str, Field(alias="class")]
+    datatype: str
+    presence: float
+
+
+class ProfileObjectProperty(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    iri: str
+    domain: str
+    range_: Annotated[str, Field(alias="range")]
+    usage: Annotated[int, Field(ge=0)]
+
+
+class InstanceProfile(BaseModel):
+    """An SDK worker's sample profile of a source (R002.8)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    classes: list[ProfileClass] = Field(default_factory=list)
+    datatype_properties: list[ProfileDatatypeProperty] = Field(default_factory=list)
+    object_properties: list[ProfileObjectProperty] = Field(default_factory=list)
+
+
+class ProfileSubmission(BaseModel):
+    """A `proposals` element that carries a profile (R002.8)."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    proposal_id: str
+    profile: InstanceProfile
+
+
 class SourceBatchExtensionProposals(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -916,6 +960,11 @@ __all__ = [
     "SourceIngestionBatch",
     "SourceIngestionDisposition",
     "SourceIngestionMode",
+    "InstanceProfile",
+    "ProfileClass",
+    "ProfileDatatypeProperty",
+    "ProfileObjectProperty",
+    "ProfileSubmission",
     "DocumentReport",
     "PaperRefusal",
     "PaperReport",
