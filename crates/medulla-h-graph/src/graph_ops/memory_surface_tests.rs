@@ -214,7 +214,7 @@ fn remember_recall_consolidate_and_export_round_trip() {
     assert_eq!(limited.records.len(), 100.min(exported.records.len()));
 }
 
-// spec: MEDULLA-DECISION-ENGINE-R154.2
+// spec: MEDULLA-DECISION-ENGINE-R154.2, MEDULLA-DECISION-ENGINE-R154.6
 #[test]
 fn recall_stays_stable_as_the_corpus_doubles() {
     // Five needle facts rank first by cosine; every other fact is orthogonal filler, so a
@@ -572,4 +572,32 @@ fn tenant_total_admission_keeps_a_durable_counter() {
     // A removal through the node route moves it too; the last removal leaves zero.
     core.remove_node("memory:tenant-a:m:1".to_string());
     assert_eq!(read_usage(&core, "tenant-a"), Some(0));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R154.4
+#[test]
+fn remember_refuses_over_tenant_capacity() {
+    let core = GraphCore::new();
+    let first = remember(record("tenant-a", "m:1", MemoryTier::Semantic, "first"), vec![]);
+    let second = remember(record("tenant-a", "m:2", MemoryTier::Semantic, "second"), vec![]);
+    store(&core, "tenant-a", &first);
+    store(&core, "tenant-a", &second);
+    let used = read_usage(&core, "tenant-a").unwrap();
+    let known = Default::default();
+
+    // A write that lifts the total above the cap is refused with the registered code.
+    let third = remember(record("tenant-a", "m:3", MemoryTier::Semantic, "third"), vec![]);
+    let refusal = admit_remember(&core, "tenant-a", &third, &known, used)
+        .err()
+        .expect("the tenant is at its cap");
+    assert!(refusal.starts_with("MEMORY_TENANT_QUOTA_EXCEEDED"), "{refusal}");
+
+    // The refusal leaves the store unchanged: no node, no counter movement.
+    assert!(core.get_node_properties("memory:tenant-a:m:3").is_none());
+    assert_eq!(read_usage(&core, "tenant-a"), Some(used));
+
+    // A second tenant, under the same cap, still writes.
+    let other = remember(record("tenant-b", "m:1", MemoryTier::Semantic, "first"), vec![]);
+    let other_len = node_blob("tenant-b", &other).unwrap().len() as u64;
+    assert!(admit_remember(&core, "tenant-b", &other, &known, used.max(other_len)).is_ok());
 }
