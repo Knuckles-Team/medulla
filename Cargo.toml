@@ -2542,6 +2542,12 @@ harness = false
 required-features = ["server"]
 
 [[bench]]
+name = "twin_capture"
+path = "benches/twin_capture.rs"
+harness = false
+required-features = ["server"]
+
+[[bench]]
 name = "definitions"
 path = "benches/definitions.rs"
 harness = false
