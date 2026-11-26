@@ -58,7 +58,8 @@ fn source() -> String {
     text
 }
 
-fn main() {
+/// Verifies MEDULLA-SCM-R013.7: one symbol edit in a 5,000-line file stays under the p99 budget.
+fn edit_one_symbol_in_5000_lines() {
     let source = source();
     assert_eq!(source.lines().count(), 5_000);
     let parsed = parse_file(&source, "big.py", SourceLanguage::Python);
@@ -107,4 +108,8 @@ fn main() {
         std::process::exit(1);
     }
     println!("  PASS (budget: p99 at most {BUDGET_P99_NS} ns)");
+}
+
+fn main() {
+    edit_one_symbol_in_5000_lines();
 }
