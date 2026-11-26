@@ -48,10 +48,10 @@ One task per leaf row of `requirements.md`, producer first within each user stor
 - [x] T041 [US4] MEDULLA-ENGINE-PARITY-R015.1 Change data capture for graph and table rows: model and behavior
 - [x] T042 [US4] MEDULLA-ENGINE-PARITY-R015.2 Change data capture for graph and table rows: wiring and refusal
 - [ ] T043 [P] [US4] MEDULLA-ENGINE-PARITY-R015.3 Change data capture for graph and table rows: hot-path proof
-- [ ] T044 [US4] MEDULLA-ENGINE-PARITY-R016.1 Archiver: copy committed ledger batch records into archive segments per scope, resuming from the manifest
+- [x] T044 [US4] MEDULLA-ENGINE-PARITY-R016.1 Archiver: copy committed ledger batch records into archive segments per scope, resuming from the manifest
 - [ ] T045 [US4] MEDULLA-ENGINE-PARITY-R016.2 Point-in-time recovery from a backup bundle and archived batches: wiring and refusal
 - [ ] T046 [P] [US4] MEDULLA-ENGINE-PARITY-R016.3 Point-in-time recovery from a backup bundle and archived batches: hot-path proof
-- [ ] T057 [US4] MEDULLA-ENGINE-PARITY-R016.4 Archive segment retention by age, keeping each scope's newest segment
+- [x] T057 [US4] MEDULLA-ENGINE-PARITY-R016.4 Archive segment retention by age, keeping each scope's newest segment
 - [ ] T047 [US5] MEDULLA-ENGINE-PARITY-R019.1 Outside PostgreSQL databases are sources only: model and behavior
 - [x] T048 [US5] MEDULLA-ENGINE-PARITY-R019.2 Outside PostgreSQL databases are sources only: wiring and refusal
 - [ ] T049 [P] [US5] MEDULLA-ENGINE-PARITY-R019.3 Outside PostgreSQL databases are sources only: hot-path proof (PROFILE `fetched=` pushdown signal, DSN fixture, test extra)
