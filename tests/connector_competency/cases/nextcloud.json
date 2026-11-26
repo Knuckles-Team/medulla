@@ -1,0 +1,35 @@
+{
+  "connector": "nextcloud",
+  "rollup": "MEDULLA-CQ-CONN-R040",
+  "vocabulary_module": "personal-v1.ttl",
+  "terms": [
+    "FileShare",
+    "sharesFile",
+    "isPublicLink",
+    "shareExpiresAt"
+  ],
+  "questions": [
+    {
+      "id": "nextcloud.q1",
+      "kind": "single",
+      "question": "Which shared folders are accessible by external links and when do those shares expire?",
+      "uql": "FOREIGN SCAN 'nextcloud-agent'",
+      "sources": [
+        "nextcloud-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "nextcloud-agent": "mcp_tool"
+      },
+      "columns": [
+        "share",
+        "folder",
+        "shareExpiresAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "nextcloud-agent/single.json"
+      ]
+    }
+  ]
+}

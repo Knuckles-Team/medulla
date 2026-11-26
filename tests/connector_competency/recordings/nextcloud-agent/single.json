@@ -1,0 +1,22 @@
+{
+  "source": "nextcloud-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "share": "share-1",
+      "folder": "folder-1",
+      "shareExpiresAt": "shareExpiresAt-1",
+      "joinKey": "nextcloud.q1-key-1",
+      "id": "nextcloud-agent-nextcloud.q1-1",
+      "label": "nextcloud-agent 1"
+    },
+    {
+      "share": "share-2",
+      "folder": "folder-2",
+      "shareExpiresAt": "shareExpiresAt-2",
+      "joinKey": "nextcloud.q1-key-2",
+      "id": "nextcloud-agent-nextcloud.q1-2",
+      "label": "nextcloud-agent 2"
+    }
+  ]
+}
