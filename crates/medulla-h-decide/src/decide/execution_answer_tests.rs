@@ -186,6 +186,37 @@ fn family_abstention(part: &ExecutionAnswerPart, name: &str) -> String {
 }
 
 // spec: MEDULLA-CQ-ORCH-R008.3
+/// Verifies MEDULLA-CQ-ORCH-R008.3: a part whose own read failed abstains with the
+/// `ORCH_PART_NO_SOURCE` family code, the failure text as its detail, evidence class `Claim`
+/// and the premise `orch:part=<name>/<code>`.
+#[test]
+fn no_source_fault_abstains_one_part_by_code() {
+    use super::execution_answer::{part_or_abstain, PartFault};
+    use medulla_decision_types::decision::record::AbstainReason;
+    use medulla_decision_types::decision::statistical::QuestionKind;
+
+    let part = part_or_abstain(
+        "coverage",
+        "urn:task:xyz",
+        Err(PartFault::NoSource("read failed".into())),
+    );
+    let ExecutionAnswerPart::Abstain {
+        reason: AbstainReason::Family { family, code, detail },
+        ..
+    } = &part
+    else {
+        panic!("a part with no source abstains: {part:?}");
+    };
+    assert_eq!(family, &QuestionKind::TaskPlan);
+    assert_eq!(code.as_str(), "ORCH_PART_NO_SOURCE");
+    assert_eq!(detail, "read failed");
+    assert_eq!(
+        family_abstention(&part, "coverage"),
+        "ORCH_PART_NO_SOURCE"
+    );
+}
+
+// spec: MEDULLA-CQ-ORCH-R008.3
 #[tokio::test]
 async fn task_without_rows_abstains_steps_and_workflow_by_part() {
     let h = harness().await;

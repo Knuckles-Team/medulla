@@ -194,7 +194,7 @@ async fn answer_for(
 
 /// Why one part has no answer (MEDULLA-CQ-ORCH-R008.3).
 #[cfg(feature = "decide")]
-enum PartFault {
+pub(super) enum PartFault {
     /// The part's source could not be read: the concept has no connected authority.
     NoSource(String),
     /// The part's query returned no row.
@@ -208,7 +208,7 @@ enum PartFault {
 /// The part's answer, or its typed abstention: `AbstainReason::Family` with one of the three
 /// `ORCH_PART_*` codes, evidence class `Claim` and the premise `orch:part=<name>/<code>`.
 #[cfg(feature = "decide")]
-fn part_or_abstain(
+pub(super) fn part_or_abstain(
     name: &str,
     task_iri: &str,
     outcome: Result<ExecutionAnswerPart, PartFault>,
