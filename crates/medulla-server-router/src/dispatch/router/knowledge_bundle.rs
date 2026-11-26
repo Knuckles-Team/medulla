@@ -15,7 +15,7 @@ use super::*;
 #[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]
 use medulla_server_auth::access::importing;
 #[cfg(all(feature = "rdf", feature = "blob", feature = "redb"))]
-use medulla_types::knowledge_bundle::{ImportRecord, ImportState};
+use medulla_types::knowledge_bundle::{ImportRecord, ImportState, IMPORT_RENEW_MS};
 
 /// Serve `Method::BundleExport`.
 pub(super) async fn serve_bundle_export(
@@ -108,8 +108,17 @@ pub(super) async fn serve_bundle_import(
         if let Err(refusal) = write_record(record.clone()).await {
             return Response::err(req.id, refusal);
         }
-        importing::mark_live(&record.import_id);
-        let outcome = importing::within_import(record.import_id.clone(), async {
+        // The importer's lease lives in the record: it is renewed every grace/3 through the engine
+        // clock while the work runs, so another node's recovery pass never deletes a live import
+        // and a crashed importer's lease lapses.
+        let renew_lease = async {
+            loop {
+                tokio::time::sleep(std::time::Duration::from_millis(IMPORT_RENEW_MS)).await;
+                let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
+                let _ = write_record(record.renewed(now_ms)).await;
+            }
+        };
+        let work = async {
             let mut created: Vec<String> = Vec::new();
             let committed =
                 commit_plan(state, req, verified, &plan, &record.import_id, &mut created).await;
@@ -142,9 +151,14 @@ pub(super) async fn serve_bundle_import(
                 let _ = write_record(record.with_state(ImportState::Aborted)).await;
             }
             committed
+        };
+        let outcome = importing::within_import(record.import_id.clone(), async {
+            tokio::select! {
+                outcome = work => outcome,
+                _ = renew_lease => Err("the import lease renewal ended".to_string()),
+            }
         })
         .await;
-        importing::mark_done(&record.import_id);
         match outcome {
             Ok(()) => {
                 match ResultPayload::of::<

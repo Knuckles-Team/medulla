@@ -6,8 +6,8 @@
 //! `ready` after the last step. A process that stopped in between leaves the record `importing`
 //! and the graphs marked: they stay hidden after a restart with no help from this pass, because
 //! the marker is loaded with the registry. This pass, run by the leader tick, finds such records
-//! and, for one older than its grace that this process is not running, deletes the graphs and
-//! records the import `aborted`. It is idempotent: a second pass finds the record `aborted` and
+//! and, for one whose lease has lapsed, deletes the graphs and
+//! records the import `aborted`. A live lease is never deleted, by any node. It is idempotent: a second pass finds the record `aborted` and
 //! does nothing. The clock is an input.
 
 use std::sync::Arc;
@@ -102,7 +102,7 @@ fn importing_records(core: &medulla_graph_core::graph::GraphCore) -> Vec<ImportR
         .collect()
 }
 
-/// Delete the graphs of every `importing` import that is stale at `now_ms` and record it
+/// Delete the graphs of every `importing` import whose lease has lapsed at `now_ms` and record it
 /// `aborted`; return how many imports were aborted. Graphs of an `importing` import stay hidden
 /// by their registry marker.
 pub async fn recover_bundle_imports(
@@ -119,10 +119,7 @@ pub async fn recover_bundle_imports(
     };
     let mut aborted = 0;
     for record in importing_records(&core) {
-        if importing::is_live(&record.import_id) {
-            continue;
-        }
-        if !record.is_stale(now_ms) {
+        if !record.lease_lapsed(now_ms) {
             continue;
         }
         let session = format!("{SERVICE}:{}", record.import_id);

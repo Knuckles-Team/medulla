@@ -12,37 +12,13 @@
 //! recovery pass wrap their graph work in [`within_import`]; no request path can set the id, so
 //! no caller can name an import it did not start. The check stays one comparison in one place.
 //!
-//! [`mark_live`] is not part of hiding. It is the importing process telling its own recovery
-//! pass that this import is still running, so a slow import is not deleted at the grace.
+//! Whether an import is still running is durable too: the import record in the control graph
+//! carries a lease the importer renews, so no process-level set exists.
 
-use std::collections::BTreeSet;
 use std::future::Future;
-use std::sync::{LazyLock, Mutex};
-
-/// Import ids this process is running right now; the recovery pass leaves them to their importer.
-static LIVE: LazyLock<Mutex<BTreeSet<String>>> = LazyLock::new(|| Mutex::new(BTreeSet::new()));
 
 tokio::task_local! {
     static IMPORT_ID: String;
-}
-
-fn live() -> std::sync::MutexGuard<'static, BTreeSet<String>> {
-    LIVE.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
-/// Record that this process is running import `import_id`.
-pub fn mark_live(import_id: &str) {
-    live().insert(import_id.to_string());
-}
-
-/// Record that this process finished import `import_id`.
-pub fn mark_done(import_id: &str) {
-    live().remove(import_id);
-}
-
-/// Whether this process is running import `import_id`.
-pub fn is_live(import_id: &str) -> bool {
-    live().contains(import_id)
 }
 
 /// Whether a graph whose registry entry carries `marker` is hidden from the work running now:
@@ -72,9 +48,5 @@ mod tests {
         assert!(hides(Some("import-a")));
         assert!(!within_import("import-a".to_string(), async { hides(Some("import-a")) }).await);
         assert!(within_import("import-b".to_string(), async { hides(Some("import-a")) }).await);
-        mark_live("id");
-        assert!(is_live("id"));
-        mark_done("id");
-        assert!(!is_live("id"));
     }
 }

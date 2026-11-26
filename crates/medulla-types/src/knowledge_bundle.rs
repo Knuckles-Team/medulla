@@ -469,9 +469,11 @@ fn read_entries(bytes: &[u8]) -> Result<Vec<(String, Vec<u8>)>, BundleError> {
 
 /// The `type` of the control-graph node that records one import (MEDULLA-DURABLE-KERNEL-R877.3).
 pub const IMPORT_NODE_TYPE: &str = "BundleImport";
-/// How long an `importing` record is left to its importer before the recovery pass deletes the
-/// graphs it names. The pass receives its clock as an input.
+/// How long an `importing` record's lease runs past its last renewal before the recovery pass
+/// deletes the graphs it names. The pass receives its clock as an input.
 pub const IMPORT_GRACE_MS: u64 = 300_000;
+/// How often the importer renews its lease: a third of the grace.
+pub const IMPORT_RENEW_MS: u64 = IMPORT_GRACE_MS / 3;
 
 /// Where one import stands. A graph an import creates is hidden from every read until the single
 /// control-graph write that sets every graph of the import to `ready`.
@@ -511,6 +513,10 @@ pub struct ImportRecord {
     pub state: ImportState,
     /// When the import began, in milliseconds.
     pub started_ms: u64,
+    /// The importer's lease: the engine-clock millisecond until which the import counts as
+    /// running. The importer renews it every `IMPORT_RENEW_MS`; recovery deletes only an
+    /// `importing` record whose lease has lapsed.
+    pub lease_until_ms: u64,
 }
 
 impl ImportRecord {
@@ -530,6 +536,15 @@ impl ImportRecord {
             graphs,
             state: ImportState::Importing,
             started_ms,
+            lease_until_ms: started_ms.saturating_add(IMPORT_GRACE_MS),
+        }
+    }
+
+    /// The same import with its lease running `IMPORT_GRACE_MS` past `now_ms`.
+    pub fn renewed(&self, now_ms: u64) -> Self {
+        Self {
+            lease_until_ms: now_ms.saturating_add(IMPORT_GRACE_MS),
+            ..self.clone()
         }
     }
 
@@ -572,10 +587,9 @@ impl ImportRecord {
     }
 
     /// Whether the recovery pass may delete this import at `now_ms`: it is still `importing`
-    /// and its grace has passed.
-    pub fn is_stale(&self, now_ms: u64) -> bool {
-        self.state == ImportState::Importing
-            && now_ms.saturating_sub(self.started_ms) >= IMPORT_GRACE_MS
+    /// and its lease has lapsed.
+    pub fn lease_lapsed(&self, now_ms: u64) -> bool {
+        self.state == ImportState::Importing && now_ms >= self.lease_until_ms
     }
 }
 
@@ -667,10 +681,13 @@ mod tests {
         assert_eq!(stored, record);
         assert_eq!(node["id"], record.node_id());
         assert_eq!(record.state, ImportState::Importing);
-        assert!(!record.is_stale(1_000 + IMPORT_GRACE_MS - 1));
-        assert!(record.is_stale(1_000 + IMPORT_GRACE_MS));
-        assert!(!record.with_state(ImportState::Ready).is_stale(u64::MAX));
-        assert!(!record.with_state(ImportState::Aborted).is_stale(u64::MAX));
+        assert!(!record.lease_lapsed(1_000 + IMPORT_GRACE_MS - 1));
+        assert!(record.lease_lapsed(1_000 + IMPORT_GRACE_MS));
+        let renewed = record.renewed(2_000);
+        assert!(!renewed.lease_lapsed(2_000 + IMPORT_GRACE_MS - 1));
+        assert!(renewed.lease_lapsed(2_000 + IMPORT_GRACE_MS));
+        assert!(!record.with_state(ImportState::Ready).lease_lapsed(u64::MAX));
+        assert!(!record.with_state(ImportState::Aborted).lease_lapsed(u64::MAX));
         let other = ImportRecord::begin("t", "cas:sha256:aa", "copy-", "k2", vec![], 1_000);
         assert_ne!(other.import_id, record.import_id);
     }

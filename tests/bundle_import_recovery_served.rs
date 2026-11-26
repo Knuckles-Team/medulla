@@ -96,9 +96,9 @@ async fn a_crashed_import_is_deleted_by_the_recovery_pass() {
     mark_durably(&backend, TARGET, &record.import_id).await;
     state.write().await.registry.set_importing(TARGET, Some(record.import_id.clone()));
 
-    // Before the grace passes nothing is deleted, and the marked graph is hidden from every read.
-    let early = STARTED_MS + IMPORT_GRACE_MS - 1;
-    assert_eq!(recover_bundle_imports(&state, early).await.expect("pass"), 0);
+    // A live lease is never deleted, and the marked graph is hidden from every read.
+    let live = record.lease_until_ms - 1;
+    assert_eq!(recover_bundle_imports(&state, live).await.expect("pass"), 0);
     assert!(state.read().await.registry.exists(TARGET));
     assert!(is_denied(&read(&state, 4, TARGET).await), "a half-written graph is hidden from every read");
     // The import's own work, under its own id, reaches the graph.
@@ -108,14 +108,23 @@ async fn a_crashed_import_is_deleted_by_the_recovery_pass() {
     let other = importing::within_import("another".to_string(), read(&state, 6, TARGET)).await;
     assert!(is_denied(&other));
 
-    // An import this process is still running is never touched, however old its record is.
-    importing::mark_live(&record.import_id);
-    assert_eq!(recover_bundle_imports(&state, early + IMPORT_GRACE_MS).await.expect("pass"), 0);
+    // The importer renews the lease on the record, so a pass past the first lease still leaves
+    // the graph alone: the lease is durable state any node reads, not a process set.
+    let renewed_at = STARTED_MS + IMPORT_GRACE_MS / 3;
+    let renewed = record.renewed(renewed_at);
+    let renewal = renewed.node_operation("importer");
+    control_core.add_node(
+        renewal["id"].as_str().unwrap().to_string(),
+        rmp_serde::to_vec_named(&renewal["properties"]).unwrap(),
+    );
+    assert_eq!(
+        recover_bundle_imports(&state, record.lease_until_ms).await.expect("pass"),
+        0
+    );
     assert!(state.read().await.registry.exists(TARGET));
-    importing::mark_done(&record.import_id);
 
-    // Once the grace passes the pass deletes the graph and records the import `aborted`.
-    let late = STARTED_MS + IMPORT_GRACE_MS;
+    // Once the renewed lease lapses the pass deletes the graph and records the import `aborted`.
+    let late = renewed.lease_until_ms;
     assert_eq!(recover_bundle_imports(&state, late).await.expect("pass"), 1);
     assert!(!state.read().await.registry.exists(TARGET));
     assert_eq!(stored_state(&state).await, Some(ImportState::Aborted));
