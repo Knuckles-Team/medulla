@@ -1275,6 +1275,52 @@ async fn session_notes_recalled_with_flags() {
     assert!(seen.notes.is_empty() && seen.hits.is_empty());
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R150.3
+#[tokio::test(flavor = "multi_thread")]
+async fn session_note_age_boundaries_follow_the_engine_clock() {
+    const DAY_MS: u64 = 86_400_000;
+    let (_dir, state) = session_note_state("memory-sync-session-note-age").await;
+    store_run_receipt(&state, "run-1", true).await;
+    let response = send(&state, 2, capture(session_note("note-aged", "run-1", 2, 5))).await;
+    assert!(response.error.is_none(), "{response:?}");
+
+    // Recall with the engine clock moved forward; no test sleeps on the wall clock.
+    let recall_after = |id: u64, offset_ms: u64, include_archived: bool| {
+        let state = &state;
+        async move {
+            let mut method = recall_notes(None, Some(5));
+            if let Method::MemoryRecall { request } = &mut method {
+                request.include_archived = include_archived;
+            }
+            let response = medulla_kernel::kernel::dispatch_support::with_engine_clock_offset(
+                offset_ms,
+                send(state, id, method),
+            )
+            .await;
+            json_of::<medulla_work_types::memory::MemoryRecallResult>(response)
+        }
+    };
+
+    // Under 7 days the note is fresh.
+    let fresh = recall_after(3, 7 * DAY_MS - 3_600_000, false).await;
+    assert!(!fresh.notes[0].stale && !fresh.notes[0].archived && fresh.notes[0].applied);
+
+    // At 8 days it is stale, still applied and still visible.
+    let stale = recall_after(4, 8 * DAY_MS, false).await;
+    assert!(stale.notes[0].stale && !stale.notes[0].archived && stale.notes[0].applied);
+
+    // Just under 14 days it is not archived; past 14 days it is archived and out of recall.
+    let almost = recall_after(5, 14 * DAY_MS - 3_600_000, false).await;
+    assert!(almost.notes[0].stale && !almost.notes[0].archived);
+    let archived = recall_after(6, 14 * DAY_MS + 3_600_000, false).await;
+    assert!(archived.notes.is_empty(), "an archived note stays out of recall");
+    assert!(!archived.hits.iter().any(|hit| hit.record.memory_id.as_str() == "note-aged"));
+
+    // The request that asks for archived notes sees it flagged and not applied; nothing is deleted.
+    let kept = recall_after(7, 14 * DAY_MS + 3_600_000, true).await;
+    assert!(kept.notes[0].archived && !kept.notes[0].applied && kept.notes[0].stale);
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R150.5
 #[tokio::test(flavor = "multi_thread")]
 async fn session_note_evidence_lists_flags() {
