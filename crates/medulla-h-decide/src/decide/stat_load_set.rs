@@ -32,6 +32,8 @@ pub(super) struct LoadSetRead {
     pub(super) agents: Vec<AgentCandidate>,
     /// The graph revision the agents were read at.
     pub(super) graph_revision: u64,
+    /// The personas of the graph and the skill revisions each includes (R714.4).
+    pub(super) personas: BTreeMap<String, Vec<String>>,
 }
 
 /// The typed question of a load-set request, or why the request is not one.
@@ -93,6 +95,9 @@ async fn read_agents(
     graph: &str,
 ) -> Result<LoadSetRead, String> {
     let core = super::topology_read::graph_core(state, graph, verified).await?;
+    let (view, _) =
+        super::stat_support::filtered_view_versioned(state, verified.agent_id(), graph).await?;
+    let personas = super::stat_skill_tier::personas_of(&view);
     let name = graph.to_string();
     tokio::task::spawn_blocking(move || {
         // The revision is read before the triples: a write between the two
@@ -132,6 +137,7 @@ async fn read_agents(
         Ok::<_, String>(LoadSetRead {
             agents,
             graph_revision,
+            personas,
         })
     })
     .await

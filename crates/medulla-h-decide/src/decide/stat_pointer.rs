@@ -200,7 +200,7 @@ pub(super) fn champion_pointer(
     };
     // A skill champion carries the canary split in force, when there is one.
     let canary = match &subject {
-        RevisionSubject::Skill { skill_ref } => {
+        RevisionSubject::Skill { skill_ref, .. } => {
             super::stat_skill_ablation::read_canary(store, tenant, skill_ref)?
         }
         _ => None,

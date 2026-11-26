@@ -246,6 +246,7 @@ pub(super) fn record_canary(
     let key = canary_key(&canary.skill_ref);
     let subject = medulla_decision_outcome_types::decision::promotion::RevisionSubject::Skill {
         skill_ref: canary.skill_ref.clone(),
+        tier: None,
     };
     let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &subject.pointer_key())?;
     let champion = state.active.as_ref().and_then(|active| active.target.clone());

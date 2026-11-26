@@ -382,6 +382,7 @@ mod served {
         match proposal.knowledge_kind {
             KnowledgeKind::Skill => RevisionSubject::Skill {
                 skill_ref: proposal.target_ref.clone(),
+                tier: None,
             },
             KnowledgeKind::Domain | KnowledgeKind::DataAccess => RevisionSubject::KnowledgeEntry {
                 entry_ref: proposal.target_ref.clone(),

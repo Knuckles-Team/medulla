@@ -59,7 +59,7 @@ mod served {
     use crate::decide::knowledge_flag::served::{edge_operation, run_trace_of};
     use crate::decide::planned_write::PlannedWrite;
     use crate::decide::stat_skill_eval::read_report;
-    use crate::decide::stat_support::{filtered_view_versioned, invalid_parameter};
+    use crate::decide::stat_support::{edges_named, filtered_view_versioned, invalid_parameter};
     use crate::decide::SharedState;
 
     const OBSERVED_IN: &str = "observed_in";
@@ -378,29 +378,6 @@ mod served {
 
     fn node_id(invocation_id: &str) -> String {
         format!("skill-invocation:{invocation_id}")
-    }
-
-    /// The `(source, target)` pairs of the view's edges named `relationship`.
-    fn edges_named(view: &GraphView, relationship: &str) -> Vec<(String, String)> {
-        let mut pairs: Vec<(String, String)> = view
-            .edge_properties
-            .iter()
-            .filter(|(_, blobs)| {
-                blobs.iter().any(|blob| {
-                    medulla_types::msgpack::decode_property_value(blob.as_slice())
-                        .ok()
-                        .and_then(|edge| {
-                            edge.get("relationship")
-                                .and_then(Value::as_str)
-                                .map(|name| name == relationship)
-                        })
-                        .unwrap_or(false)
-                })
-            })
-            .map(|((source, target), _)| (source.clone(), target.clone()))
-            .collect();
-        pairs.sort();
-        pairs
     }
 
     /// Whether a `:Score` node passed: its `passed` flag, else a normalised value at or above

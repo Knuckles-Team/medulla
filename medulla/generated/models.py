@@ -624,6 +624,9 @@ from .policy_evolution import (
     RewardEvidenceSource,
     RewardRecord,
     SafetyOutcome,
+    SkillTier,
+    TieredSkill,
+    TierReview,
     TrainingMethod,
     TrainingMethodDpo,
     TrainingMethodGrpo,
@@ -30018,6 +30021,7 @@ class LoadSetAnswer(BaseModel):
     graph_revision: Annotated[int, Field(ge=0)]
     premises: list[PremiseRef]
     skills: list[str]
+    tiered_skills: list[TieredSkill] = Field(default_factory=list)
     tools: list[str]
 
 
@@ -31165,6 +31169,8 @@ class LoadSetQuestion(BaseModel):
     job_text: str
     max_agents: Annotated[int, Field(ge=0, le=65535)] = Field(default=4)
     max_tools: Annotated[int, Field(ge=0, le=65535)] = Field(default=32)
+    persona: str | None = None
+    removed_capabilities: list[str] = Field(default_factory=list)
     required_capabilities: list[str] = Field(default_factory=list)
 
 
@@ -49145,6 +49151,9 @@ __all__ = [
     "ReturnedEvidence",
     "RewardEvidenceSource",
     "RewardRecord",
+    "SkillTier",
+    "TierReview",
+    "TieredSkill",
     "RewindTarget",
     "RewindTargetAt",
     "RewindTargetStart",

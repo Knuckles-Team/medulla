@@ -74,6 +74,7 @@ pub mod stat_decide;
 mod stat_delegation;
 #[cfg(feature = "decide")]
 mod stat_skill_ablation;
+mod stat_skill_tier;
 mod stat_skill_eval;
 #[cfg(feature = "decide")]
 mod stat_designation;

@@ -6,6 +6,8 @@
 
 use serde::{Deserialize, Serialize};
 
+use super::promotion_tier::SkillTier;
+
 /// The schema version of [`HeldOutEvidence`].
 pub const HELD_OUT_EVIDENCE_SCHEMA_VERSION: u16 = 1;
 
@@ -76,6 +78,10 @@ pub enum RevisionSubject {
     /// A skill revision written by the knowledge curation cycle (R709.3).
     Skill {
         skill_ref: String,
+        /// The tier the promotion qualifies the revision for; the pointer key ignores it
+        /// (R714.1).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        tier: Option<SkillTier>,
     },
     /// A domain or data-access entry written by the knowledge curation cycle (R709.3).
     KnowledgeEntry {
@@ -113,7 +119,7 @@ impl RevisionSubject {
             Self::RetrievalStrategy { strategy_ref } => {
                 format!("champion:retrieval_strategy:{strategy_ref}")
             }
-            Self::Skill { skill_ref } => format!("champion:skill:{skill_ref}"),
+            Self::Skill { skill_ref, .. } => format!("champion:skill:{skill_ref}"),
             Self::KnowledgeEntry { entry_ref } => format!("champion:knowledge_entry:{entry_ref}"),
         }
     }
@@ -159,7 +165,10 @@ impl RevisionSubject {
                 scorer_version: owned,
             },
             "retrieval_strategy" => Self::RetrievalStrategy { strategy_ref: owned },
-            "skill" => Self::Skill { skill_ref: owned },
+            "skill" => Self::Skill {
+                skill_ref: owned,
+                tier: None,
+            },
             "knowledge_entry" => Self::KnowledgeEntry { entry_ref: owned },
             _ => return None,
         })

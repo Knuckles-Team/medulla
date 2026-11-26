@@ -4,6 +4,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use medulla_types::refusal_code::RefusalCode;
 
+use super::promotion_tier::TieredSkill;
 use super::PremiseRef;
 
 /// The graph a load-set question reads capability classes from when it names none.
@@ -58,6 +59,14 @@ pub struct LoadSetQuestion {
     /// `job_embedding` is present.
     #[serde(default)]
     pub embedding_version: String,
+    /// The persona whose skill set the job's role receives (MEDULLA-DECISION-ENGINE-R714.4).
+    /// A persona the graph lacks refuses `PERSONA_UNKNOWN`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub persona: Option<String>,
+    /// The capabilities a tenant policy removes from this load set. A policy that names an
+    /// always-on capability refuses `ALWAYS_ON_TOOL_REMOVED` (MEDULLA-DECISION-ENGINE-R715.1).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub removed_capabilities: Vec<String>,
 }
 
 /// Equality compares the embedding bitwise, so it is a total equivalence
@@ -76,6 +85,8 @@ impl PartialEq for LoadSetQuestion {
             && self.max_agents == other.max_agents
             && self.graph == other.graph
             && self.embedding_version == other.embedding_version
+            && self.persona == other.persona
+            && self.removed_capabilities == other.removed_capabilities
     }
 }
 
@@ -96,6 +107,10 @@ pub struct AgentStart {
 pub struct LoadSetAnswer {
     pub tools: Vec<String>,
     pub skills: Vec<String>,
+    /// The always-on skills and the persona set with the tier each holds, in the order they are
+    /// loaded (MEDULLA-DECISION-ENGINE-R714.4).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub tiered_skills: Vec<TieredSkill>,
     pub agents: Vec<AgentStart>,
     pub graph_revision: u64,
     pub premises: Vec<PremiseRef>,
@@ -118,3 +133,9 @@ pub const REFUSALS: &[RefusalCode] = &[
     LOAD_SET_NO_DESIGNATED_COMPONENT,
     LOAD_SET_STALE_PACK_REVISION,
 ];
+
+/// The always-on capabilities (MEDULLA-DECISION-ENGINE-R715.1) a load set or tool subset
+/// answers beyond its ranked list, in this order, outside `max_tools`.
+pub fn always_on_capabilities() -> &'static [&'static str] {
+    &super::promotion_tier::ALWAYS_ON_CAPABILITIES
+}

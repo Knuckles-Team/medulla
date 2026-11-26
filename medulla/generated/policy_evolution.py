@@ -261,11 +261,34 @@ class RevisionSubjectRetrievalStrategy(BaseModel):
     strategy_ref: str
 
 
+class SkillTier(str, Enum):
+    DOMAIN = "domain"
+    CORE = "core"
+    ALWAYS_ON = "always_on"
+
+
+class TierReview(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approver_principal: str
+    eval_report_ref: str | None = None
+    reviewer_team: str
+    tier: SkillTier
+
+
+class TieredSkill(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    skill_ref: str
+    tier: SkillTier | None = None
+
+
 class RevisionSubjectSkill(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     kind: Literal["skill"]
     skill_ref: str
+    tier: SkillTier | None = None
 
 
 class RevisionSubjectKnowledgeEntry(BaseModel):
@@ -719,6 +742,9 @@ __all__ = [
     "RevisionSubjectKnowledgeEntry",
     "RevisionSubjectRetrievalStrategy",
     "RevisionSubjectSkill",
+    "SkillTier",
+    "TierReview",
+    "TieredSkill",
     "RewardEvidenceSource",
     "RewardRecord",
     "SafetyOutcome",

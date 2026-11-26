@@ -123,6 +123,8 @@ fn load_question(required: &[&str], max_tools: u16) -> LoadSetQuestion {
         max_agents: 4,
         graph: "__commons__".to_string(),
         embedding_version: VERSION.to_string(),
+        persona: None,
+        removed_capabilities: Vec::new(),
     }
 }
 
@@ -208,6 +210,7 @@ fn runtime_of(
         load_set: Some(LoadSetRead {
             agents,
             graph_revision: GRAPH_REVISION,
+            personas: Default::default(),
         }),
         usage_guidance: None,
     }
@@ -270,7 +273,10 @@ async fn served_decide_reaches_load_set() {
     let answer = answer_of(record);
     // Best cosine first; the skill is not a tool; the other tenant's tool,
     // which would rank first, is never read.
-    assert_eq!(answer.tools, vec!["tool-a", "tool-b", "tool-c"]);
+    assert_eq!(
+        answer.tools,
+        vec!["tool-a", "tool-b", "tool-c", "knowledge.flag", "skills.friction"]
+    );
     assert_eq!(answer.skills, vec!["skill-a"]);
     assert!(answer.agents.is_empty(), "the commons graph holds no agent");
     assert!(!answer.tools.iter().any(|tool| tool == "tool-foreign"));
@@ -281,7 +287,7 @@ async fn served_decide_reaches_load_set() {
         .unwrap();
     assert_eq!(
         answer_of(&batch.records.as_slice()[0]).tools,
-        vec!["tool-a", "tool-b"]
+        vec!["tool-a", "tool-b", "knowledge.flag", "skills.friction"]
     );
 
     // A required capability puts the best tool of that capability in the set
@@ -293,7 +299,10 @@ async fn served_decide_reaches_load_set() {
         runtime_of(index, Vec::new()),
     )
     .unwrap();
-    assert_eq!(answer_of(&sealed).tools, vec!["tool-c"]);
+    assert_eq!(
+        answer_of(&sealed).tools,
+        vec!["tool-c", "knowledge.flag", "skills.friction"]
+    );
 }
 
 // spec: MEDULLA-DECISION-ENGINE-R176.3
@@ -426,7 +435,10 @@ async fn premises_per_component() {
     )
     .unwrap();
     let answer = answer_of(&sealed);
-    assert_eq!(answer.tools, vec!["tool-a", "tool-c"]);
+    assert_eq!(
+        answer.tools,
+        vec!["tool-a", "tool-c", "knowledge.flag", "skills.friction"]
+    );
     assert_eq!(answer.skills, vec!["skill-a"]);
     assert_eq!(answer.graph_revision, GRAPH_REVISION);
     assert_eq!(answer.agents.len(), 1);
@@ -476,4 +488,115 @@ async fn premises_per_component() {
     }
     // The answer carries the same premises it was sealed with.
     assert_eq!(answer.premises.len(), premises.len());
+}
+
+/// The runtime of `runtime_of` with the personas of the graph.
+fn runtime_with_personas(
+    index: std::sync::Arc<medulla_decision_memory::memory::capability_index::CapabilityIndex>,
+    personas: &[(&str, &[&str])],
+) -> DesignationRuntime {
+    let mut runtime = runtime_of(index, Vec::new());
+    if let Some(read) = runtime.load_set.as_mut() {
+        read.personas = personas
+            .iter()
+            .map(|(id, skills)| (id.to_string(), skills.iter().map(|s| s.to_string()).collect()))
+            .collect();
+    }
+    runtime
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R714.4, MEDULLA-DECISION-ENGINE-R714.6
+#[tokio::test]
+async fn a_persona_set_follows_the_always_on_skills_with_its_tiers() {
+    use medulla_decision_types::decision::promotion_tier::SkillTier;
+    let h = Harness::new().await;
+    let pin = schema_pin(&h);
+    seed(&h, fixture_rows()).await;
+    let index = shared_capability_index(&*h.state.read().await);
+    for (skill, tier) in [
+        ("skill:greet", SkillTier::AlwaysOn),
+        ("skill:refund", SkillTier::Core),
+        ("skill:macros", SkillTier::Domain),
+    ] {
+        crate::decide::stat_skill_tier::write_tier(&h.store, TENANT, skill, tier).unwrap();
+    }
+    let personas: &[(&str, &[&str])] = &[("support", &["skill:macros", "skill:refund"])];
+    let mut question = load_question(&[], 32);
+    question.persona = Some("support".to_string());
+    let sealed = decide_with_runtime(
+        &h,
+        &load_set_request(&pin, question.clone()),
+        runtime_with_personas(index.clone(), personas),
+    )
+    .unwrap();
+    let answer = answer_of(&sealed);
+    let order: Vec<(&str, Option<SkillTier>)> = answer
+        .tiered_skills
+        .iter()
+        .map(|entry| (entry.skill_ref.as_str(), entry.tier))
+        .collect();
+    assert_eq!(
+        order,
+        [
+            ("skill:greet", Some(SkillTier::AlwaysOn)),
+            ("skill:macros", Some(SkillTier::Domain)),
+            ("skill:refund", Some(SkillTier::Core)),
+        ]
+    );
+    assert_eq!(&answer.skills[..3], ["skill:greet", "skill:macros", "skill:refund"]);
+    let facts: Vec<&str> = sealed.premises.as_slice().iter().map(|p| p.fact.as_str()).collect();
+    assert!(facts.contains(&"persona:support"), "{facts:?}");
+    assert!(facts.contains(&"tier:always_on=1/100"), "{facts:?}");
+
+    // A persona the graph lacks refuses.
+    let mut unknown = question.clone();
+    unknown.persona = Some("sales".to_string());
+    let error = decide_with_runtime(
+        &h,
+        &load_set_request(&pin, unknown),
+        runtime_with_personas(index.clone(), personas),
+    )
+    .unwrap_err();
+    assert!(error.starts_with("PERSONA_UNKNOWN:"), "{error}");
+
+    // A persona skill that holds no tier refuses.
+    let error = decide_with_runtime(
+        &h,
+        &load_set_request(&pin, question),
+        runtime_with_personas(index, &[("support", &["skill:untiered"])]),
+    )
+    .unwrap_err();
+    assert!(error.starts_with("TIER_REVIEW_MISSING:"), "{error}");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R715.2
+#[tokio::test]
+async fn the_always_on_capabilities_stay_outside_max_tools_and_a_policy_cannot_remove_them() {
+    let h = Harness::new().await;
+    let pin = schema_pin(&h);
+    seed(&h, fixture_rows()).await;
+    let index = shared_capability_index(&*h.state.read().await);
+
+    // max_tools 1: one ranked tool and both capabilities.
+    let sealed = decide_with_runtime(
+        &h,
+        &load_set_request(&pin, load_question(&[], 1)),
+        runtime_of(index.clone(), Vec::new()),
+    )
+    .unwrap();
+    assert_eq!(
+        answer_of(&sealed).tools,
+        vec!["tool-a", "knowledge.flag", "skills.friction"]
+    );
+
+    // A tenant policy that removes one of them refuses.
+    let mut removed = load_question(&[], 3);
+    removed.removed_capabilities = vec!["knowledge.flag".to_string()];
+    let error = decide_with_runtime(
+        &h,
+        &load_set_request(&pin, removed),
+        runtime_of(index, Vec::new()),
+    )
+    .unwrap_err();
+    assert!(error.starts_with("ALWAYS_ON_TOOL_REMOVED:"), "{error}");
 }

@@ -46,6 +46,8 @@ use medulla_decision_types::{
 };
 use medulla_types::contract::BoundedVec;
 
+use medulla_decision_types::decision::promotion_tier::{ALWAYS_ON_CAPABILITIES, ALWAYS_ON_TOOL_REMOVED};
+
 use super::stat_support::refusal;
 
 /// The Q32 fixed-point value for "selected" (uncalibrated full weight).
@@ -320,11 +322,58 @@ pub(super) fn solved_covering_subset(
     })
 }
 
+/// The capabilities a tenant policy removes, when the request carries any
+/// (MEDULLA-DECISION-ENGINE-R715.1).
+fn removed_capabilities(request: &DecideRequest) -> Result<Vec<String>, String> {
+    for param in request.params.iter() {
+        if param.name == "removed_capabilities" {
+            return match &param.value {
+                TypedValue::IriList(list) => Ok(list.iter().cloned().collect()),
+                _ => Err(refusal(
+                    StatisticalErrorCode::ParameterInvalid,
+                    "removed_capabilities must be an iri_list",
+                )),
+            };
+        }
+    }
+    Ok(Vec::new())
+}
+
 fn compute(request: &DecideRequest) -> Result<StatisticalOutcome, String> {
+    let removed = removed_capabilities(request)?;
+    if let Some(name) = ALWAYS_ON_CAPABILITIES
+        .iter()
+        .find(|capability| removed.iter().any(|gone| gone == *capability))
+    {
+        return Err(refusal(
+            StatisticalErrorCode::ParameterInvalid,
+            format!(
+                "{}: a tenant policy removes the always-on capability {name}",
+                ALWAYS_ON_TOOL_REMOVED.as_str()
+            ),
+        ));
+    }
     let body = request_body(request)?;
-    let chosen = solved_covering_subset(&body)
+    let mut chosen = solved_covering_subset(&body)
         .map_err(SubsetFailure::text)?
         .chosen;
+    // The always-on capabilities follow the covering subset, outside any bound on its size. Each
+    // tool of the final list counts once against the context budget, so a declared always-on
+    // capability the solve did not choose is charged here (R715.1).
+    for capability in ALWAYS_ON_CAPABILITIES {
+        if !chosen.iter().any(|tool| tool == capability) {
+            chosen.push(capability.to_string());
+        }
+    }
+    let spent: u64 = body
+        .candidates
+        .iter()
+        .filter(|candidate| chosen.iter().any(|tool| tool == &candidate.tool_id))
+        .map(|candidate| u64::from(candidate.token_cost))
+        .sum();
+    if spent > u64::from(body.context_budget_tokens) {
+        return Err(SubsetFailure::Refused(ToolSubsetRefusal::BudgetExceeded).text());
+    }
     let scores: Vec<ScoredOption> = chosen
         .into_iter()
         .map(|tool_id| ScoredOption {

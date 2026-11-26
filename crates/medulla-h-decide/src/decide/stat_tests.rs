@@ -1100,6 +1100,7 @@ mod skill_eval_tests;
 mod skill_ablation_tests;
 // MEDULLA-DECISION-ENGINE-R713.3 to R713.7: skill telemetry.
 mod skill_telemetry_tests;
+mod skill_tier_tests;
 
 // MEDULLA-DECISION-ENGINE-R029.2.2: the served context budget partition.
 mod context_budget_tests;

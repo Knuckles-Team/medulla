@@ -592,6 +592,24 @@ pub(super) fn qualified_champion(
     })
 }
 
+/// The tier a committed promotion decision qualified its revision for: the value of its
+/// `tier:target=` premise (MEDULLA-DECISION-ENGINE-R714.5). `None` for an untiered promotion.
+pub(super) fn promoted_tier(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    receipt_digest: &str,
+) -> Result<Option<medulla_decision_types::decision::promotion_tier::SkillTier>, String> {
+    let Some(bytes) = store.decision_artifact(tenant, &record_key(receipt_digest))? else {
+        return Ok(None);
+    };
+    let entry: DecisionLogEntry = decode_artifact(&bytes, "decision log entry")?;
+    Ok(super::stat_skill_tier::tier_of_premises(
+        entry.record.premises.iter().filter_map(|premise| {
+            premise.fact.strip_prefix(PREMISE_PREFIX).or(Some(premise.fact.as_str()))
+        }),
+    ))
+}
+
 /// The most revision rows a harness bundle target is searched in.
 const MAX_REVISION_ROWS: usize = 100_000;
 

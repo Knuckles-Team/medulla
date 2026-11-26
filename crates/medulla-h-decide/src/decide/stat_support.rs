@@ -301,3 +301,29 @@ pub(super) fn resolve_policy(
         statistical: resolved.statistical,
     })
 }
+
+/// The `(source, target)` pairs of the view's edges named `relationship`, sorted.
+pub(super) fn edges_named(
+    view: &medulla_graph_core::graph::GraphView,
+    relationship: &str,
+) -> Vec<(String, String)> {
+    let mut pairs: Vec<(String, String)> = view
+        .edge_properties
+        .iter()
+        .filter(|(_, blobs)| {
+            blobs.iter().any(|blob| {
+                medulla_types::msgpack::decode_property_value(blob.as_slice())
+                    .ok()
+                    .and_then(|edge| {
+                        edge.get("relationship")
+                            .and_then(serde_json::Value::as_str)
+                            .map(|name| name == relationship)
+                    })
+                    .unwrap_or(false)
+            })
+        })
+        .map(|((source, target), _)| (source.clone(), target.clone()))
+        .collect();
+    pairs.sort();
+    pairs
+}

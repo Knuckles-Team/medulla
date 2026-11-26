@@ -76,6 +76,7 @@ pub mod nl;
 pub mod playbook;
 pub mod population;
 pub mod promotion;
+pub mod promotion_tier;
 pub mod quant;
 pub mod ranking_eval;
 pub mod rapid_r083;

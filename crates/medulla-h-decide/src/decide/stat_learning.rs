@@ -639,7 +639,27 @@ impl Serving<'_> {
                 ) {
                     ensure_room(self.ctx.store, self.tenant(), &at.key)?;
                 }
-                activate(self.ctx.store, &at, &qualified)?
+                let state = activate(self.ctx.store, &at, &qualified)?;
+                // A skill champion promoted on a tiered decision holds that tier from now on
+                // (MEDULLA-DECISION-ENGINE-R714.3).
+                if let PointerRef::Champion {
+                    subject: RevisionSubject::Skill { skill_ref, .. },
+                } = pointer
+                {
+                    if let Some(tier) = super::stat_promotion::promoted_tier(
+                        self.ctx.store,
+                        self.tenant(),
+                        receipt_digest,
+                    )? {
+                        super::stat_skill_tier::write_tier(
+                            self.ctx.store,
+                            self.tenant(),
+                            skill_ref,
+                            tier,
+                        )?;
+                    }
+                }
+                state
             }
             PointerMovement::Rollback => {
                 // A champion with no earlier target has nothing to return to

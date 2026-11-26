@@ -17,6 +17,10 @@ use medulla_decision_types::decision::capability_designation::{
     DesignationWeights, EntityKind, PackOrigin, QueryVector,
     DESIGNATION_CAPABILITY_SCHEMA_UNAVAILABLE, MAX_DESIGNATIONS, Q32_ONE,
 };
+use medulla_decision_types::decision::promotion_tier::{
+    TieredSkill, ALWAYS_ON_CAPABILITIES, ALWAYS_ON_TOOL_REMOVED, PERSONA_UNKNOWN,
+    PREMISE_ALWAYS_ON, PREMISE_PERSONA, TIER_REVIEW_MISSING,
+};
 use medulla_decision_types::decision::load_set::{
     LoadSetAnswer, LoadSetQuestion, LOAD_SET_NO_DESIGNATED_COMPONENT, LOAD_SET_STALE_PACK_REVISION,
 };
@@ -247,6 +251,69 @@ fn premises_of(
     out
 }
 
+/// The always-on skills, then the persona set, each with the tier it holds, within `max_tools`
+/// (MEDULLA-DECISION-ENGINE-R714.3, R714.4). A persona the graph lacks refuses `PERSONA_UNKNOWN`;
+/// a persona skill with no tier refuses `TIER_REVIEW_MISSING`. The premises `tier:always_on=<n>/<max>`
+/// and `persona:<id>` are appended to `premises`.
+fn tiered_skills(
+    ctx: &ExecutionContext,
+    question: &LoadSetQuestion,
+    read: &crate::decide::stat_load_set::LoadSetRead,
+    premises: &mut Vec<PremiseRef>,
+) -> Result<Vec<TieredSkill>, String> {
+    use crate::decide::stat_skill_tier::{always_on_set, read_tiers};
+    let tiers = read_tiers(ctx.store, ctx.tenant_id)?;
+    let mut entries: Vec<TieredSkill> = always_on_set(&tiers)
+        .into_iter()
+        .map(|skill_ref| TieredSkill {
+            tier: tiers.get(&skill_ref).copied(),
+            skill_ref,
+        })
+        .collect();
+    let always_on = entries.len();
+    let observation = || PremiseProvenance::Observation {
+        evaluation_id: format!("graph@{}", read.graph_revision),
+    };
+    if let Some(persona) = &question.persona {
+        let included = read.personas.get(persona).ok_or_else(|| {
+            coded(PERSONA_UNKNOWN, format!("the graph holds no persona {persona}"))
+        })?;
+        for skill_ref in included {
+            let Some(tier) = tiers.get(skill_ref).copied() else {
+                return Err(coded(
+                    TIER_REVIEW_MISSING,
+                    format!("persona {persona} includes {skill_ref}, which holds no tier"),
+                ));
+            };
+            if !entries.iter().any(|entry| &entry.skill_ref == skill_ref) {
+                entries.push(TieredSkill {
+                    skill_ref: skill_ref.clone(),
+                    tier: Some(tier),
+                });
+            }
+        }
+        premises.push(PremiseRef {
+            subject: persona.clone(),
+            fact: format!("{PREMISE_PERSONA}{persona}"),
+            class: PremiseClass::Observation,
+            provenance: observation(),
+            trust_tier: None,
+        });
+    }
+    entries.truncate(usize::from(question.max_tools));
+    premises.push(PremiseRef {
+        subject: "load_set".to_string(),
+        fact: format!(
+            "{PREMISE_ALWAYS_ON}{always_on}/{}",
+            medulla_server_api::knob_config::knobs().skills_always_on_max
+        ),
+        class: PremiseClass::Observation,
+        provenance: observation(),
+        trust_tier: None,
+    });
+    Ok(entries)
+}
+
 /// Answer one load-set question (MEDULLA-DECISION-ENGINE-R176.3 to R176.5).
 pub(crate) fn load_set_outcome(
     ctx: &ExecutionContext,
@@ -275,6 +342,17 @@ pub(crate) fn load_set_outcome(
             .filter(|capability| seen.insert(capability.as_str()))
             .collect()
     };
+    // A tenant policy never removes an always-on capability (MEDULLA-DECISION-ENGINE-R715.1).
+    if let Some(removed) = question
+        .removed_capabilities
+        .iter()
+        .find(|capability| ALWAYS_ON_CAPABILITIES.contains(&capability.as_str()))
+    {
+        return Err(coded(
+            ALWAYS_ON_TOOL_REMOVED,
+            format!("a tenant policy removes the always-on capability {removed}"),
+        ));
+    }
     if question.job_text.trim().is_empty() && required.is_empty() {
         return Err(invalid_parameter(
             "a load set needs job text or a required capability",
@@ -346,7 +424,7 @@ pub(crate) fn load_set_outcome(
     if let Some(detail) = stale_pack(runtime, &tenant, &merge.tools, &packs) {
         return Err(coded(LOAD_SET_STALE_PACK_REVISION, detail));
     }
-    let premises = premises_of(
+    let mut premises = premises_of(
         question,
         &merge.tools,
         &packs,
@@ -354,7 +432,8 @@ pub(crate) fn load_set_outcome(
         read.graph_revision,
         policy,
     );
-    let scores: Vec<ScoredOption> = merge
+    let tiered = tiered_skills(ctx, question, read, &mut premises)?;
+    let mut scores: Vec<ScoredOption> = merge
         .tools
         .iter()
         .map(|tool| ScoredOption {
@@ -366,9 +445,32 @@ pub(crate) fn load_set_outcome(
             probability: None,
         })
         .collect();
+    // The always-on capabilities follow the ranked list, outside `max_tools`.
+    let mut tools: Vec<String> = merge.tools.iter().map(|tool| tool.id.clone()).collect();
+    for capability in ALWAYS_ON_CAPABILITIES {
+        if !tools.iter().any(|tool| tool == capability) {
+            tools.push(capability.to_string());
+            scores.push(ScoredOption {
+                option_id: capability.to_string(),
+                score: QuantisedValue {
+                    scale: QuantScaleTag::Q32,
+                    value: Q32_ONE,
+                },
+                probability: None,
+            });
+        }
+    }
+    let mut skills: Vec<String> = tiered.iter().map(|entry| entry.skill_ref.clone()).collect();
+    for skill in merge.skills {
+        if !skills.contains(&skill) {
+            skills.push(skill);
+        }
+    }
+    skills.truncate(knobs.max_skills.max(tiered.len()));
     let answer = LoadSetAnswer {
-        tools: merge.tools.iter().map(|tool| tool.id.clone()).collect(),
-        skills: merge.skills,
+        tools,
+        skills,
+        tiered_skills: tiered,
         agents: merge.agents,
         graph_revision: read.graph_revision,
         premises: premises.clone(),

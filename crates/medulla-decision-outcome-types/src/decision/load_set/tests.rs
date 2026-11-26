@@ -26,6 +26,7 @@ fn load_set_round_trips() {
     let answer = LoadSetAnswer {
         tools: vec!["github.list_issues".into()],
         skills: vec!["skill:issue-triage".into()],
+        tiered_skills: Vec::new(),
         agents: vec![AgentStart {
             agent_iri: "urn:agent:triager".into(),
             prompt_iri: "urn:prompt:triage".into(),
@@ -90,6 +91,8 @@ fn question(max_tools: u16, max_agents: u16) -> LoadSetQuestion {
         max_agents,
         graph: DEFAULT_LOAD_SET_GRAPH.into(),
         embedding_version: "space-1".into(),
+        persona: None,
+        removed_capabilities: Vec::new(),
     }
 }
 

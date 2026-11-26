@@ -101,8 +101,9 @@ async fn tool_subset_question_selects_the_minimal_covering_tools_within_budget()
             .iter()
             .map(|s| s.option_id.as_str())
             .collect::<Vec<_>>(),
-        vec!["broad-tool"],
-        "the single cheap tool that covers every capability is the minimal subset"
+        vec!["broad-tool", "knowledge.flag", "skills.friction"],
+        "the single cheap tool that covers every capability is the minimal subset, followed by \
+         the two always-on capabilities"
     );
 
     // resolution_kind/evidence_class are generic, computed the same way as
@@ -161,4 +162,42 @@ async fn missing_schema_tokens_abstains() {
         detail.contains("schema_tokens"),
         "refusal detail must identify the missing schema size, got {detail}"
     );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R715, MEDULLA-DECISION-ENGINE-R715.1
+#[tokio::test]
+async fn the_always_on_capabilities_follow_the_subset_and_a_policy_cannot_remove_them() {
+    let h = Harness::new().await;
+    let (schema_pin, _digest) = publish_route_schema(&h);
+    let tools = || {
+        vec![
+            tool("broad-tool", &["search", "fetch"], 30),
+            tool("knowledge.flag", &["flag"], 10),
+        ]
+    };
+    // The flag tool is declared: it counts once against the budget and is listed once.
+    let request = tool_subset_request(&schema_pin, &["search"], 100, tools());
+    let batch = decide(&h, request).await.unwrap();
+    let record = &batch.records.as_slice()[0];
+    let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
+        panic!("expected an advisory subset: {:?}", record.outcome)
+    };
+    let ids: Vec<&str> = scores.iter().map(|s| s.option_id.as_str()).collect();
+    assert_eq!(ids, ["broad-tool", "knowledge.flag", "skills.friction"]);
+
+    // A budget that holds the covering tool but not the always-on capability refuses.
+    let tight = tool_subset_request(&schema_pin, &["search"], 35, tools());
+    let refused = decide(&h, tight).await.unwrap_err();
+    assert!(refused.contains("TOOL_SUBSET_BUDGET_EXCEEDED"), "{refused}");
+
+    // A tenant policy that removes an always-on capability refuses.
+    let mut removed = tool_subset_request(&schema_pin, &["search"], 100, tools());
+    let mut params: Vec<TypedParam> = removed.params.iter().cloned().collect();
+    params.push(TypedParam {
+        name: "removed_capabilities".to_string(),
+        value: TypedValue::IriList(BoundedVec::new(vec!["skills.friction".to_string()]).unwrap()),
+    });
+    removed.params = BoundedVec::new(params).unwrap();
+    let refused = decide(&h, removed).await.unwrap_err();
+    assert!(refused.contains("ALWAYS_ON_TOOL_REMOVED"), "{refused}");
 }

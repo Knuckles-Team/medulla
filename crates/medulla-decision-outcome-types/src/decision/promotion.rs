@@ -430,6 +430,7 @@ mod tests {
             },
             RevisionSubject::Skill {
                 skill_ref: "skill:triage@3".to_owned(),
+                tier: None,
             },
             RevisionSubject::KnowledgeEntry {
                 entry_ref: "term:orders.amount".to_owned(),

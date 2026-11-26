@@ -27,6 +27,7 @@ const SKILL: &str = "skill:triage@3";
 fn subject() -> RevisionSubject {
     RevisionSubject::Skill {
         skill_ref: SKILL.to_owned(),
+        tier: None,
     }
 }
 

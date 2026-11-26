@@ -105,7 +105,11 @@ def test_job_returns_bounded_tool_skill_agent_set() -> None:
                     assert time.monotonic() < deadline, record
                 await asyncio.sleep(0.5)
 
-            tools = answer["tools"]
+            # The two always-on capabilities follow the ranked list, outside the bound
+            # (MEDULLA-DECISION-ENGINE-R715.1).
+            always_on = ["knowledge.flag", "skills.friction"]
+            assert answer["tools"][-2:] == always_on, answer["tools"]
+            tools = answer["tools"][:-2]
             assert 0 < len(tools) <= MAX_TOOLS, tools
             assert len(set(tools)) == len(tools), tools
             for tool in tools:

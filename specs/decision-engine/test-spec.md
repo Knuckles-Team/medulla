@@ -2262,16 +2262,16 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program
 - `MEDULLA-DECISION-ENGINE-R713.6`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::peers_never_named_and_small_cohort_refused` (planned, L3): proves: Peer recommendation
 - `MEDULLA-DECISION-ENGINE-R713.7`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::traces_by_eval_uses_the_edge_index` (planned, L3): proves: Traces indexed by eval
 - `MEDULLA-DECISION-ENGINE-R713.8`: `tests/decide/test_skill_telemetry_served.py::test_measures_rank_peers_and_traces` (planned, L4): proves: Hot-path proof
-- `MEDULLA-DECISION-ENGINE-R714`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::tier_and_persona_journey` (planned, L3): proves: Skills carry a tier and personas select skill sets (rollup)
+- `MEDULLA-DECISION-ENGINE-R714`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Skills carry a tier and personas select skill sets (rollup)
 - `MEDULLA-DECISION-ENGINE-R714.1`: `crates/medulla-decision-types/src/decision/promotion_tier.rs::tests::tier_types_round_trip` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R714.2`: `crates/medulla-decision-stats/src/decision/promotion_tier.rs::tests::each_tier_needs_its_review` (planned, L1): proves: Behavior
-- `MEDULLA-DECISION-ENGINE-R714.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::promotion_and_load_set_apply_tiers` (planned, L3): proves: Wiring
-- `MEDULLA-DECISION-ENGINE-R714.4`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::persona_set_marks_tiers` (planned, L3): proves: Persona sets
-- `MEDULLA-DECISION-ENGINE-R714.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::tier_refusals_and_premises` (planned, L3): proves: Refusal and evidence
-- `MEDULLA-DECISION-ENGINE-R714.6`: `tests/decide/test_skill_tier_served.py::test_tiers_and_persona_load_set` (planned, L4): proves: Hot-path proof
-- `MEDULLA-DECISION-ENGINE-R715`: `crates/medulla-h-decide/src/decide/stat_tests/always_on_tools_tests.rs::every_subset_includes_the_knowledge_tools` (planned, L3): proves: The flag tool and the friction tool are always-on engine capabilities (rollup)
-- `MEDULLA-DECISION-ENGINE-R715.1`: `crates/medulla-h-decide/src/decide/stat_tests/always_on_tools_tests.rs::subset_and_load_set_append_the_two_tools` (planned, L3): proves: Behavior
-- `MEDULLA-DECISION-ENGINE-R715.2`: `tests/decide/test_always_on_tools_served.py::test_subset_and_load_set_keep_the_two_tools` (planned, L4): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R714.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Wiring
+- `MEDULLA-DECISION-ENGINE-R714.4`: `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::a_persona_set_follows_the_always_on_skills_with_its_tiers` (planned, L3): proves: Persona sets
+- `MEDULLA-DECISION-ENGINE-R714.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_review_that_does_not_qualify_is_refused_and_a_downgrade_needs_an_approver` (planned, L3): proves: Refusal and evidence
+- `MEDULLA-DECISION-ENGINE-R714.6`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R715`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::the_always_on_capabilities_follow_the_subset_and_a_policy_cannot_remove_them` (planned, L3): proves: The flag tool and the friction tool are always-on engine capabilities (rollup)
+- `MEDULLA-DECISION-ENGINE-R715.1`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::the_always_on_capabilities_follow_the_subset_and_a_policy_cannot_remove_them` (planned, L3): proves: Behavior
+- `MEDULLA-DECISION-ENGINE-R715.2`: `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::the_always_on_capabilities_stay_outside_max_tools_and_a_policy_cannot_remove_them` (planned, L3): proves: Hot-path proof
 
 ## Foreach task steps and fitted topics (R134.111.19 to R134.111.22, R614.2.5 to R614.2.7)
 

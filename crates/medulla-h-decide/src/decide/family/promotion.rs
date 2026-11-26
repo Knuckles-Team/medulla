@@ -17,7 +17,11 @@ use medulla_decision_outcome_types::decision::promotion::{
     ChampionPointer, HeldOutEvidence, PromotionVerdict, ReceiptKind, RevisionSubject,
 };
 use medulla_decision_stats::decision::promotion::{regression_rollback, subject_gate, PromotionGate};
+use medulla_decision_stats::decision::promotion_tier::tier_gate;
 use medulla_decision_stats::decision::skill_eval::{canary_verdict, check_traffic};
+use medulla_decision_types::decision::promotion_tier::{
+    SkillTier, TierContext, TierKnobs, TierReview, PREMISE_ALWAYS_ON, PREMISE_TARGET,
+};
 use medulla_decision_types::decision::codes::{
     ABLATION_NOISE_BAND_MISSING, ABLATION_WITHIN_NOISE, CANARY_NO_CHAMPION,
     CANARY_TRAFFIC_OUT_OF_BOUNDS,
@@ -54,6 +58,7 @@ const PARAM_MODE: &str = "mode";
 const PARAM_GRAPH: &str = "graph";
 const PARAM_TRAFFIC: &str = "traffic_ppm";
 const PARAM_REGRESSION: &str = "regression_receipt";
+const PARAM_TIER_REVIEW: &str = "tier_review";
 
 /// The graph a program or policy receipt is read from, when the request names one.
 pub(in crate::decide) async fn evidence_view(
@@ -100,6 +105,8 @@ struct Ask {
     traffic: Option<u64>,
     /// A later receipt of the champion, read as the regression verdict (`canary` mode).
     regression: Option<String>,
+    /// The review receipt of the tier a skill is promoted to (R714.2).
+    tier_review: Option<TierReview>,
 }
 
 fn parse(request: &DecideRequest) -> Result<Ask, String> {
@@ -128,6 +135,10 @@ fn parse(request: &DecideRequest) -> Result<Ask, String> {
         option: only.option_id.clone(),
         traffic: unsigned_param(request, PARAM_TRAFFIC)?,
         regression: text_param(request, PARAM_REGRESSION)?.map(str::to_owned),
+        tier_review: match request.params.iter().any(|param| param.name == PARAM_TIER_REVIEW) {
+            true => Some(json_param(request, PARAM_TIER_REVIEW)?),
+            false => None,
+        },
     })
 }
 
@@ -135,7 +146,7 @@ fn premise(fact: String, receipt: &str) -> FamilyPremise {
     // The rollout premises keep their own `rollout.` namespace
     // (MEDULLA-DECISION-ENGINE-R654.5).
     // The ablation, canary and compile premises keep their own names (MEDULLA-DECISION-ENGINE-R712.5).
-    let own = ["rollout.", "ablation:", "canary:", "compile:"];
+    let own = ["rollout.", "ablation:", "canary:", "compile:", "tier:"];
     let fact = if own.iter().any(|prefix| fact.starts_with(prefix)) {
         fact
     } else {
@@ -215,6 +226,58 @@ fn evidence_facts(evidence: &HeldOutEvidence) -> Vec<String> {
     facts
 }
 
+/// Ask the tier gate whether `skill_ref` may take `tier`: the review the caller names, the
+/// latest suite report, the always-on count and the approver's membership in the graph decide.
+/// The premises it seals are `tier:target=<tier>` and `tier:always_on=<n>/<max>`.
+fn tier_verdict(
+    ctx: &ExecutionContext,
+    graph: Option<&GraphView>,
+    ask: &Ask,
+    skill_ref: &str,
+    tier: SkillTier,
+) -> Result<Result<Vec<String>, PromotionRefusal>, String> {
+    use crate::decide::stat_skill_eval::read_report;
+    use crate::decide::stat_skill_tier::{always_on_set, is_member, read_tier, read_tiers};
+    let knobs = medulla_server_api::knob_config::knobs();
+    let tiers = read_tiers(ctx.store, ctx.tenant_id)?;
+    let always_on = always_on_set(&tiers)
+        .into_iter()
+        .filter(|held| held != skill_ref)
+        .count() as u64;
+    let approver_in_team = match (&ask.tier_review, graph) {
+        (Some(review), Some(view)) => {
+            is_member(view, &review.approver_principal, &review.reviewer_team)
+        }
+        _ => false,
+    };
+    let context = TierContext {
+        current: read_tier(ctx.store, ctx.tenant_id, skill_ref)?,
+        approver_in_team,
+    };
+    let report = read_report(ctx.store, ctx.tenant_id, skill_ref)?;
+    let gate_knobs = TierKnobs {
+        always_on_max: knobs.skills_always_on_max,
+        min_cases: knobs.eval_min_cases,
+    };
+    match tier_gate(
+        tier,
+        ask.tier_review.as_ref(),
+        report.as_ref(),
+        always_on,
+        &context,
+        &gate_knobs,
+    ) {
+        Ok(()) => Ok(Ok(vec![
+            format!("{PREMISE_TARGET}{}", tier.as_str()),
+            format!("{PREMISE_ALWAYS_ON}{always_on}/{}", gate_knobs.always_on_max),
+        ])),
+        Err(code) => Ok(Err(PromotionRefusal(
+            code,
+            format!("the review does not qualify {skill_ref} for tier {}", tier.as_str()),
+        ))),
+    }
+}
+
 fn promote(
     ctx: &ExecutionContext,
     graph: Option<&GraphView>,
@@ -231,7 +294,7 @@ fn promote(
         ));
     }
     // A skill never wins on a delta inside the noise band of its identical runs.
-    if let RevisionSubject::Skill { skill_ref } = &ask.subject {
+    if let RevisionSubject::Skill { skill_ref, .. } = &ask.subject {
         if let Some(noise) = crate::decide::stat_skill_ablation::read_noise_band(
             ctx.store,
             ctx.tenant_id,
@@ -251,10 +314,23 @@ fn promote(
             }
         }
     }
+    // A tiered skill promotion also needs its review receipt (MEDULLA-DECISION-ENGINE-R714.3).
+    let mut tier_facts = Vec::new();
+    if let RevisionSubject::Skill {
+        skill_ref,
+        tier: Some(tier),
+    } = &ask.subject
+    {
+        match tier_verdict(ctx, graph, ask, skill_ref, *tier)? {
+            Ok(facts) => tier_facts = facts,
+            Err(refusal) => return Ok(abstained(QuestionKind::Promotion, &refusal)),
+        }
+    }
     // The champion active now is pinned in the record: a later move of the
     // pointer is refused if another revision has taken the seat since.
     let (_, state) = read_pointer(ctx.store, ctx.tenant_id, &ask.subject.pointer_key())?;
     let mut facts = evidence_facts(&evidence);
+    facts.extend(tier_facts);
     facts.push(format!(
         "champion_at_decision={}",
         state.target().unwrap_or("none")
@@ -373,7 +449,7 @@ fn canary(
     policy: &DecisionPolicy,
     ask: &Ask,
 ) -> Result<Executed, String> {
-    let RevisionSubject::Skill { skill_ref } = &ask.subject else {
+    let RevisionSubject::Skill { skill_ref, .. } = &ask.subject else {
         return Err(invalid("a canary promotes a skill revision"));
     };
     let refused = |code, detail: &str| {

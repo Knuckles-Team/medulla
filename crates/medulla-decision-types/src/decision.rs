@@ -88,6 +88,7 @@ pub mod process_plan;
 pub mod process_remediation;
 pub mod program;
 pub mod program_store;
+pub mod promotion_tier;
 pub mod rapid_r015;
 pub mod record;
 pub mod council;
