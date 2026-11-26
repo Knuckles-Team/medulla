@@ -88,6 +88,8 @@ pub enum RefusalSurface {
     Assemble,
     PolicyEvolution,
     DecisionCommit,
+    /// `Method::ParticipantRead` (MEDULLA-DECISION-ENGINE-R655.5).
+    ParticipantRead,
 }
 
 /// Where a refusal was raised. The caller that raises it knows the origin.

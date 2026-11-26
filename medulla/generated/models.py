@@ -40742,6 +40742,61 @@ class ScopeRef(BaseModel):
     scope_id: str
 
 
+class ParticipantQuestion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    as_of_ms: int | None = None
+    memory_scope: ScopeRef | None = None
+    observer: ObserverRef
+    question: str
+    subject: str
+
+
+class Citation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    turn_ids: list[str]
+
+
+class ParticipantAnswer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    abstained: AbstainReason | None = None
+    citations: list[Citation]
+    text: str
+
+
+class CardClaim(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claim_id: str
+    confidence_ppm: Annotated[int, Field(ge=0)]
+    recency_ppm: Annotated[int, Field(ge=0)]
+    text: str
+
+
+class ParticipantCard(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    claims: list[CardClaim]
+    computed_at_ms: int
+    digest: str
+    observer: ObserverRef
+    subject: str
+    token_estimate: Annotated[int, Field(ge=0)]
+
+
+class DerivationStatus(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    oldest_pending_age_ms: Annotated[int, Field(ge=0)]
+    pending: Annotated[int, Field(ge=0)]
+    scope_id: str
+    session_id: str
+    subject: str
+
+
 class MemoryRecallRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -47300,6 +47355,12 @@ __all__ = [
     "ModelHints",
     "MemoryScope",
     "ScopeRef",
+    "DerivationStatus",
+    "ParticipantCard",
+    "CardClaim",
+    "ParticipantAnswer",
+    "Citation",
+    "ParticipantQuestion",
     "Membership",
     "ObservationConfig",
     "Participant",
