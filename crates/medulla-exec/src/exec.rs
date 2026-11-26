@@ -259,6 +259,10 @@ pub struct PlanCtx<'a> {
     /// principal (the empty id) matches no exemption entry, so a bound policy set
     /// without a bound principal masks everything (fail closed, never a wildcard).
     pub principal: Option<crate::policy_mask::PrincipalRef<'a>>,
+    /// MEDULLA-FEDERATED-QUERY-R706.11 — where each evaluation of the shape policies is
+    /// recorded, once per request. `None` (the default) records nowhere; the served path
+    /// binds a log it appends to the audit chain.
+    pub policy_audit: Option<&'a dyn crate::policy_mask::PolicyAuditSink>,
     /// MEDULLA-FEDERATED-QUERY-R040.2.1 — how a topic backend's answer is cut
     /// before fusion (`None`: no topic fusion is bound).
     pub topic_policy: Option<topic::TopicRankingPolicy>,
@@ -584,6 +588,7 @@ impl<'a> PlanCtx<'a> {
             spatial: None,
             policies: None,
             principal: None,
+            policy_audit: None,
             topic_policy: None,
             topic_fusion: None,
             constraints: None,
@@ -727,6 +732,13 @@ impl<'a> PlanCtx<'a> {
     /// a bound policy set masks everything (fail closed).
     pub fn with_principal(mut self, principal: &'a str) -> Self {
         self.principal = Some(crate::policy_mask::PrincipalRef(principal));
+        self
+    }
+
+    /// Bind the sink that receives the record of each shape-policy evaluation
+    /// (MEDULLA-FEDERATED-QUERY-R706.11).
+    pub fn with_policy_audit(mut self, sink: &'a dyn crate::policy_mask::PolicyAuditSink) -> Self {
+        self.policy_audit = Some(sink);
         self
     }
 
@@ -884,7 +896,18 @@ pub fn mask_plan(plan: &Plan, ctx: &PlanCtx) -> (Plan, Vec<crate::policy_mask::A
             let principal = ctx
                 .principal
                 .unwrap_or(crate::policy_mask::PrincipalRef(""));
-            crate::policy_mask::apply_policies(&mut plan, set, &principal)
+            let mut applied = crate::policy_mask::apply_policies(&mut plan, set, &principal);
+            // MEDULLA-FEDERATED-QUERY-R706.8: the shape policies rewrite no plan; `EXPLAIN`
+            // lists them so a statement reports every policy its result is held to.
+            applied.extend(set.shapes.iter().map(|shape| crate::policy_mask::AppliedPolicy {
+                tag: shape.policy_id.clone(),
+                kind: crate::policy_mask::PolicyKind::Shape,
+                column: match shape.effect {
+                    crate::policy_mask::ShapeEffect::Filter => "filter".to_string(),
+                    crate::policy_mask::ShapeEffect::Refuse => "refuse".to_string(),
+                },
+            }));
+            applied
         }
         None => Vec::new(),
     };
@@ -964,12 +987,49 @@ pub fn execute(plan: &Plan, ctx: &PlanCtx) -> Result<RowSet, String> {
     let started = std::time::Instant::now();
     let rows = crate::runtime::execute_ops(&optimized.ops, ctx)?;
     let measured_us = elapsed_us(started);
+    // MEDULLA-FEDERATED-QUERY-R706.9: the shape policies rewrite the result, after the plan ran.
+    let rows = apply_result_shapes(ctx, rows)?;
     ctx.budget.check_result(rows.len())?;
     let champion_run = record_plan_run(&optimized.ops, ctx, &rows, measured_us);
     if let (Some(plan), Some(run)) = (shadow_plan, champion_run) {
         shadow_run(plan, ctx, &rows, &run, &challenger_run);
     }
     Ok(rows)
+}
+
+/// MEDULLA-FEDERATED-QUERY-R706.9 / R706.11: run the bound shape policies over the result,
+/// record the evaluation once, and refuse the whole request on a violation. No shape policy
+/// bound leaves the result as it is and records nothing.
+#[cfg(feature = "owl")]
+fn apply_result_shapes(ctx: &PlanCtx, rows: RowSet) -> Result<RowSet, String> {
+    let Some(set) = ctx.policies.filter(|set| set.has_shapes()) else {
+        return Ok(rows);
+    };
+    let evaluation = crate::policy_mask::apply_shape_policies(rows, set, ctx.view)?;
+    if let Some(sink) = ctx.policy_audit {
+        sink.record(crate::policy_mask::PolicyEvaluation {
+            policy_digest: crate::policy_mask::policy_digest(set),
+            principal: ctx.principal.map_or_else(String::new, |p| p.0.to_string()),
+            counts: evaluation.counts,
+        });
+    }
+    match evaluation.violated_policy {
+        Some(policy_id) => Err(crate::policy_mask::violation_refusal(&policy_id)),
+        None => Ok(evaluation.rows),
+    }
+}
+
+/// A build without `owl` has no SHACL engine: a bound shape policy cannot be evaluated, so the
+/// request is refused rather than answered unchecked (the load refused it already).
+#[cfg(not(feature = "owl"))]
+fn apply_result_shapes(ctx: &PlanCtx, rows: RowSet) -> Result<RowSet, String> {
+    match ctx.policies.filter(|set| set.has_shapes()) {
+        Some(_) => Err(format!(
+            "{}: this build has no SHACL engine",
+            medulla_types::contract::ServerErrorCode::PolicyShapeInvalid.as_str()
+        )),
+        None => Ok(rows),
+    }
 }
 
 /// The real challenger run: plan under the context's bound cost head, then execute.

@@ -1237,6 +1237,9 @@ pub enum PolicyKind {
     Mask,
     /// A row filter.
     RowFilter,
+    /// A shape policy (MEDULLA-FEDERATED-QUERY-R706.8); the record's `tag` is the policy id
+    /// and its `column` is the policy effect, `filter` or `refuse`.
+    Shape,
 }
 
 /// One applied policy: the `EXPLAIN` evidence record (MEDULLA-FEDERATED-QUERY-R706.5).

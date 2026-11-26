@@ -260,6 +260,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &[
             // MEDULLA-FEDERATED-QUERY-R706.4: a policy names a tag with no registered marking.
             "POLICY_TAG_UNKNOWN",
+            // MEDULLA-FEDERATED-QUERY-R706.10: a shape policy that cannot be read or evaluated,
+            // and a result node a `refuse` shape policy rejects.
+            "POLICY_SHAPE_INVALID",
+            "POLICY_VIOLATION",
             "SNAPSHOT_UNAVAILABLE",
             "CODE_MAP_STALE",
             "CODE_MAP_INVALID",
@@ -1707,6 +1711,10 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         &[
             // MEDULLA-FEDERATED-QUERY-R706.4: a policy names a tag with no registered marking.
             "POLICY_TAG_UNKNOWN",
+            // MEDULLA-FEDERATED-QUERY-R706.10: a shape policy that cannot be read or evaluated,
+            // and a result node a `refuse` shape policy rejects.
+            "POLICY_SHAPE_INVALID",
+            "POLICY_VIOLATION",
             "CYPHER_KEY_INVALID",
             "FENCE_FIELD_MISSING",
             "ONTOLOGY_REVISION_STALE",

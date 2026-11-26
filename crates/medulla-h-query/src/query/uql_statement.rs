@@ -128,7 +128,9 @@ pub(crate) async fn handle_uql(
     let _ = &policy_digest;
     #[cfg(feature = "result-cache")]
     let key = match uql_cache_key(ctx, &text, &params, &stmt_for_run, &legs, &policy_digest) {
-        Ok(key) => key,
+        // MEDULLA-FEDERATED-QUERY-R706.11: a request under shape policies is evaluated, so
+        // its record is owed; a cached answer would owe none.
+        Ok(key) => key.filter(|_| !policies.has_shapes()),
         Err(error) => return Ok(Response::err(req_id, error)),
     };
     let (snap, version) = sql_read_snapshot(
@@ -173,6 +175,9 @@ pub(crate) async fn handle_uql(
     }
     #[cfg(feature = "result-cache")]
     let started = std::time::Instant::now();
+    // MEDULLA-FEDERATED-QUERY-R706.11: the shape-policy evaluation of this request, if any.
+    let evaluations = std::sync::Arc::new(medulla_exec::policy_mask::PolicyEvaluationLog::default());
+    let evaluation_sink = std::sync::Arc::clone(&evaluations);
     let result = run_unified_off_lock_with(
         ctx.state,
         req_id,
@@ -189,6 +194,7 @@ pub(crate) async fn handle_uql(
                 .clone()
                 .with_policies(&policies)
                 .with_principal(&principal)
+                .with_policy_audit(&*evaluation_sink)
                 .with_tenant(&tenant)
                 .with_interactive(true)
                 .with_snapshot_revision(version)
@@ -253,6 +259,12 @@ pub(crate) async fn handle_uql(
             started,
         }),
     );
+    // MEDULLA-FEDERATED-QUERY-R706.11: one record per evaluation, answered or refused.
+    for evaluation in evaluations.take() {
+        if let Err(code) = scope.audit_policy_evaluation(req_id, &evaluation) {
+            return Ok(Response::err(req_id, code.as_str()));
+        }
+    }
     // MEDULLA-IDENTITY-R023.5: the read ran, so its audit outcome is owed.
     Ok(match scope.close(response.error.is_none()) {
         Ok(()) => response,

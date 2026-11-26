@@ -1060,6 +1060,10 @@ closed_error_codes! {
         PolicyRecordInvalid => "POLICY_RECORD_INVALID",
         /// A `QueryPolicy` names a tag the tenant has not registered as a `marking:<tag>` node (MEDULLA-FEDERATED-QUERY-R706.4).
         PolicyTagUnknown => "POLICY_TAG_UNKNOWN",
+        /// A shape `QueryPolicy` is too large, does not parse or cannot be evaluated (MEDULLA-FEDERATED-QUERY-R706.10).
+        PolicyShapeInvalid => "POLICY_SHAPE_INVALID",
+        /// A result node violates a `refuse` shape `QueryPolicy`; the request returns no rows (MEDULLA-FEDERATED-QUERY-R706.10).
+        PolicyViolation => "POLICY_VIOLATION",
         ClaimIllegalTransition => "CLAIM_ILLEGAL_TRANSITION",
         ClaimGuardNotMet => "CLAIM_GUARD_NOT_MET",
         ClaimNotFound => "CLAIM_NOT_FOUND",

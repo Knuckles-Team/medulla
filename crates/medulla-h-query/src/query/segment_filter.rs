@@ -170,6 +170,67 @@ impl ReadScope {
         Ok(())
     }
 
+    /// Queue the audit record of one shape-policy evaluation (MEDULLA-FEDERATED-QUERY-R706.11)
+    /// on the read-audit chain, once per evaluation and settled at once: the digest of the
+    /// policy set, the principal, and the counts of `allowed`, `filtered` and `violation`
+    /// nodes, with no node id and no node value. `AUDIT_UNAVAILABLE` when the audit queue is
+    /// full.
+    #[cfg(all(feature = "security", feature = "redb"))]
+    pub(crate) fn audit_policy_evaluation(
+        &self,
+        req_id: u64,
+        evaluation: &medulla_exec::policy_mask::PolicyEvaluation,
+    ) -> Result<(), ServerErrorCode> {
+        use sha2::{Digest, Sha256};
+
+        let Some(persistence) = self.persistence.clone() else {
+            return Ok(());
+        };
+        let counts = evaluation.counts;
+        let line = serde_json::json!({
+            "policy_digest": evaluation.policy_digest,
+            "principal": evaluation.principal,
+            "tenant": self.caller.principal.tenant,
+            "allowed": counts.allowed,
+            "filtered": counts.filtered,
+            "violation": counts.violation,
+        });
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(0, |d| d.as_nanos());
+        let event = medulla_store::redb_store::OperationAuditEvent {
+            tenant: self.caller.principal.tenant.clone(),
+            principal: self.caller.principal.id.clone(),
+            op: format!(
+                "policy_evaluation.allowed-{}.filtered-{}.violation-{}",
+                counts.allowed, counts.filtered, counts.violation
+            ),
+            surface: "read".to_owned(),
+            params_sha256: hex::encode(Sha256::digest(line.to_string().as_bytes())),
+            status: medulla_store::redb_store::audit_status::AuditStatus::settled(
+                medulla_store::redb_store::audit_machine::AuditEvent::Succeed,
+            ),
+            request_id: format!("policy-{req_id}-{nanos}"),
+            audit_class: "event".to_owned(),
+            subject_iri: None,
+            policy_iri: None,
+        };
+        let chain = medulla_store::redb_store::read_audit_chain_scope(
+            &event.tenant,
+            &medulla_kernel::persist::sanitize(&self.graph_name),
+        );
+        enqueue_append(persistence, chain, event)
+    }
+
+    #[cfg(not(all(feature = "security", feature = "redb")))]
+    pub(crate) fn audit_policy_evaluation(
+        &self,
+        _: u64,
+        _: &medulla_exec::policy_mask::PolicyEvaluation,
+    ) -> Result<(), ServerErrorCode> {
+        Ok(())
+    }
+
     #[cfg(not(all(feature = "security", feature = "redb")))]
     fn audit(&self, _: u64, _: u64, _: &ScopedView) -> Result<(), ServerErrorCode> {
         Ok(())

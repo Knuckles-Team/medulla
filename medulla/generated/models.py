@@ -34070,6 +34070,7 @@ UnifiedQueryResult = list[UnifiedQueryResultValueItem]
 class PolicyKind(str, Enum):
     MASK = "mask"
     ROW_FILTER = "row_filter"
+    SHAPE = "shape"
 
 
 class AppliedPolicy(BaseModel):

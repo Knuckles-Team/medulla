@@ -45,6 +45,43 @@ pub struct RowFilterPolicy {
     pub predicate: String,
 }
 
+/// What a shape policy does with a result node that does not conform to its shape
+/// (MEDULLA-FEDERATED-QUERY-R706.8). Closed.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShapeEffect {
+    /// The non-conforming node leaves the result.
+    Filter,
+    /// The non-conforming node refuses the whole request.
+    Refuse,
+}
+
+/// A query policy that is a SHACL shape with a closed effect (MEDULLA-FEDERATED-QUERY-R706.8).
+/// The record is a tenant `QueryPolicy` node of kind `shape`; `policy_id` is its node id.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ShapePolicy {
+    pub policy_id: String,
+    /// The shape document, Turtle, at most [`SHAPE_TURTLE_MAX_BYTES`] bytes.
+    pub shape_turtle: String,
+    pub effect: ShapeEffect,
+}
+
+/// The size ceiling of one [`ShapePolicy::shape_turtle`]: 64 KiB.
+pub const SHAPE_TURTLE_MAX_BYTES: usize = 64 * 1024;
+
+/// The verdict on one result node under the shape policies (MEDULLA-FEDERATED-QUERY-R706.8).
+/// Closed: a node conforming to every shape is `allowed`; a non-conforming node under a
+/// `filter` effect is `filtered`; a non-conforming node under a `refuse` effect is a
+/// `violation`, and one violation refuses the request.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PolicyOutcome {
+    Allowed,
+    Filtered,
+    Violation,
+}
+
 /// The tag-based policies bound to ONE query run (MEDULLA-FEDERATED-QUERY-R706.2).
 /// Loaded per tenant (MEDULLA-FEDERATED-QUERY-R706.7); `Default` is the no-policy
 /// set, so a run with no loaded policies rewrites nothing — byte-for-byte the
@@ -61,12 +98,24 @@ pub struct PolicySet {
     /// only a projection that names a tag itself is bound to its policy.
     #[serde(default)]
     pub column_tags: std::collections::BTreeMap<String, Vec<String>>,
+    /// The shape policies (MEDULLA-FEDERATED-QUERY-R706.8), in policy node-id order. They
+    /// rewrite no plan and no query text: they act on the result nodes
+    /// ([`apply_shape_policies`]). An empty list is the set as it was before shapes, and is
+    /// left out of the encoding so the digest of such a set is unchanged.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub shapes: Vec<ShapePolicy>,
 }
 
 impl PolicySet {
-    /// True when no policy is bound — the rewrite is a no-op.
+    /// True when no mask or row-filter policy is bound — the plan and query-text rewrite is a
+    /// no-op. Shape policies rewrite no plan; see [`PolicySet::has_shapes`].
     pub fn is_empty(&self) -> bool {
         self.masks.is_empty() && self.row_filters.is_empty()
+    }
+
+    /// True when at least one shape policy is bound (MEDULLA-FEDERATED-QUERY-R706.8).
+    pub fn has_shapes(&self) -> bool {
+        !self.shapes.is_empty()
     }
 
     /// The mask policy bound to `tag`, if any (one policy per tag). A projected
@@ -382,6 +431,43 @@ fn belongs_to(object: &serde_json::Value, tenant: &str) -> bool {
         .is_none_or(|owner| owner == tenant)
 }
 
+/// One `QueryPolicy` record of kind `shape` (MEDULLA-FEDERATED-QUERY-R706.8): `shape_turtle`
+/// (at most [`SHAPE_TURTLE_MAX_BYTES`]) and `effect` (`filter` or `refuse`). A shape that is
+/// too large or does not parse refuses `POLICY_SHAPE_INVALID`, and the load changes nothing
+/// (MEDULLA-FEDERATED-QUERY-R706.10); a missing or unknown field refuses `POLICY_RECORD_INVALID`.
+fn shape_policy(id: &str, object: &serde_json::Value) -> Result<ShapePolicy, PolicyLoadError> {
+    let shape_turtle = required_str(object, "shape_turtle", id)?.to_string();
+    let effect = match required_str(object, "effect", id)? {
+        "filter" => ShapeEffect::Filter,
+        "refuse" => ShapeEffect::Refuse,
+        _ => return Err(invalid(id, "effect")),
+    };
+    if shape_turtle.len() > SHAPE_TURTLE_MAX_BYTES || shapes_graph(&shape_turtle).is_err() {
+        return Err(PolicyLoadError {
+            code: medulla_types::contract::ServerErrorCode::PolicyShapeInvalid.as_str(),
+            record: id.to_string(),
+            field: "shape_turtle",
+        });
+    }
+    Ok(ShapePolicy {
+        policy_id: id.to_string(),
+        shape_turtle,
+        effect,
+    })
+}
+
+/// The shapes document as an RDF graph. A build without `owl` has no SHACL engine, so it
+/// cannot evaluate a shape and refuses one rather than run it unchecked.
+#[cfg(feature = "owl")]
+fn shapes_graph(turtle: &str) -> Result<medulla_rdf::oxrdf::Graph, String> {
+    medulla_shacl::graph_from_turtle(turtle)
+}
+
+#[cfg(not(feature = "owl"))]
+fn shapes_graph(_turtle: &str) -> Result<(), String> {
+    Err("this build has no SHACL engine".to_string())
+}
+
 /// Loads the caller's tenant policy set (MEDULLA-FEDERATED-QUERY-R706.7).
 ///
 /// `view` is the tenant graph's own snapshot (never another tenant's). Policies
@@ -423,7 +509,12 @@ pub fn load_policy_set(
             }
             continue;
         }
-        if medulla_graph_core::graph::node_carries_label(&object, QUERY_POLICY_LABEL) {
+        if medulla_graph_core::graph::node_carries_label(&object, QUERY_POLICY_LABEL)
+            && object.get("kind").and_then(serde_json::Value::as_str) == Some("shape")
+        {
+            // MEDULLA-FEDERATED-QUERY-R706.8: a shape policy binds no tag, so it names no marking.
+            set.shapes.push(shape_policy(id, &object)?);
+        } else if medulla_graph_core::graph::node_carries_label(&object, QUERY_POLICY_LABEL) {
             let tag = required_str(&object, "tag", id)?.to_string();
             policy_tags.push((id.clone(), tag.clone()));
             match required_str(&object, "kind", id)? {
@@ -474,6 +565,171 @@ pub fn load_policy_set(
         });
     }
     Ok(set)
+}
+
+/// The counts of the three outcomes over one result (MEDULLA-FEDERATED-QUERY-R706.9).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct OutcomeCounts {
+    pub allowed: u64,
+    pub filtered: u64,
+    pub violation: u64,
+}
+
+/// One evaluation of the shape policies over a result (MEDULLA-FEDERATED-QUERY-R706.11): the
+/// policy digest, the principal and the outcome counts. It holds no node value and no node
+/// id.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PolicyEvaluation {
+    pub policy_digest: String,
+    pub principal: String,
+    pub counts: OutcomeCounts,
+}
+
+/// Where one evaluation record goes (MEDULLA-FEDERATED-QUERY-R706.11). The executor calls
+/// [`PolicyAuditSink::record`] exactly once per evaluation, whether the request is answered
+/// or refused; the served path appends the record to the audit chain.
+pub trait PolicyAuditSink: Send + Sync {
+    fn record(&self, evaluation: PolicyEvaluation);
+}
+
+/// A sink that keeps the records of one request in order, for the caller to append.
+#[derive(Debug, Default)]
+pub struct PolicyEvaluationLog(std::sync::Mutex<Vec<PolicyEvaluation>>);
+
+impl PolicyEvaluationLog {
+    /// The records so far, emptying the log.
+    pub fn take(&self) -> Vec<PolicyEvaluation> {
+        self.0
+            .lock()
+            .map(|mut records| std::mem::take(&mut *records))
+            .unwrap_or_default()
+    }
+}
+
+impl PolicyAuditSink for PolicyEvaluationLog {
+    fn record(&self, evaluation: PolicyEvaluation) {
+        if let Ok(mut records) = self.0.lock() {
+            records.push(evaluation);
+        }
+    }
+}
+
+/// The result of the shape policies over one result (MEDULLA-FEDERATED-QUERY-R706.9).
+#[derive(Debug)]
+pub struct ShapeEvaluation {
+    /// The result without the `filtered` nodes, in the input order.
+    pub rows: crate::rowset::RowSet,
+    pub counts: OutcomeCounts,
+    /// The first policy (in set order) a node violated; its presence refuses the request.
+    pub violated_policy: Option<String>,
+}
+
+/// The refusal of a request a `refuse` shape policy rejected (MEDULLA-FEDERATED-QUERY-R706.10).
+/// It names the policy and never a node value.
+pub fn violation_refusal(policy_id: &str) -> String {
+    format!(
+        "{}: policy {policy_id} rejects a result node",
+        medulla_types::contract::ServerErrorCode::PolicyViolation.as_str()
+    )
+}
+
+/// The base IRI shape policies project the graph under: property-graph ids and keys become
+/// terms of the core ontology namespace, so a shape names them as `:Claim`, `:name`.
+#[cfg(feature = "owl")]
+const SHAPE_PROJECTION_BASE: &str = medulla_types::ontology_base::CORE_NAMESPACE;
+
+/// Give each result node one of the three outcomes (MEDULLA-FEDERATED-QUERY-R706.9) by
+/// validating the graph against each shape policy with `medulla_shacl::validate`. A node a
+/// shape reports is `filtered` under the `filter` effect and a `violation` under `refuse`;
+/// any other node is `allowed`. A node with several verdicts takes the worst. The rewrite
+/// reads the snapshot and changes no stored data. `Err` only when a shape cannot be
+/// evaluated (`POLICY_SHAPE_INVALID`, naming the policy).
+#[cfg(feature = "owl")]
+pub fn apply_shape_policies(
+    rows: crate::rowset::RowSet,
+    set: &PolicySet,
+    view: &medulla_graph_core::graph::GraphView,
+) -> Result<ShapeEvaluation, String> {
+    if set.shapes.is_empty() || rows.is_empty() {
+        let allowed = rows.len() as u64;
+        return Ok(ShapeEvaluation {
+            rows,
+            counts: OutcomeCounts {
+                allowed,
+                ..OutcomeCounts::default()
+            },
+            violated_policy: None,
+        });
+    }
+    let projection = medulla_rdf::sparql::Projection::from_wire(SHAPE_PROJECTION_BASE, "");
+    let triples = medulla_rdf::mapping::export_view_projected(view, &projection)
+        .map_err(|error| format!("{}: project the graph to RDF: {error}", shape_invalid_code()))?;
+    let mut data = medulla_rdf::oxrdf::Graph::new();
+    for triple in &triples {
+        data.insert(triple);
+    }
+    // The nodes each shape reports, by projected IRI.
+    let mut reported: Vec<std::collections::HashSet<String>> = Vec::new();
+    for shape in &set.shapes {
+        let invalid = |detail: &str| {
+            format!(
+                "{}: policy {} {detail}",
+                shape_invalid_code(),
+                shape.policy_id
+            )
+        };
+        let shapes = shapes_graph(&shape.shape_turtle).map_err(|_| invalid("does not parse"))?;
+        let report = medulla_shacl::validate(&shapes, &data)
+            .map_err(|_| invalid("cannot be evaluated"))?;
+        reported.push(
+            report
+                .results
+                .into_iter()
+                .map(|result| result.focus_node)
+                .collect(),
+        );
+    }
+    let mut counts = OutcomeCounts::default();
+    let mut violated_policy: Option<String> = None;
+    let mut kept: std::collections::HashSet<String> = Default::default();
+    for row in rows.rows() {
+        let iri = projection.node_iri(&row.id);
+        let mut outcome = PolicyOutcome::Allowed;
+        for (shape, nodes) in set.shapes.iter().zip(&reported) {
+            if !nodes.contains(&iri) {
+                continue;
+            }
+            match shape.effect {
+                ShapeEffect::Refuse => {
+                    outcome = PolicyOutcome::Violation;
+                    violated_policy.get_or_insert_with(|| shape.policy_id.clone());
+                }
+                ShapeEffect::Filter if outcome == PolicyOutcome::Allowed => {
+                    outcome = PolicyOutcome::Filtered;
+                }
+                ShapeEffect::Filter => {}
+            }
+        }
+        match outcome {
+            PolicyOutcome::Allowed => {
+                counts.allowed += 1;
+                kept.insert(row.id.clone());
+            }
+            PolicyOutcome::Filtered => counts.filtered += 1,
+            PolicyOutcome::Violation => counts.violation += 1,
+        }
+    }
+    let keep: std::collections::HashSet<&str> = kept.iter().map(String::as_str).collect();
+    Ok(ShapeEvaluation {
+        rows: rows.intersect_keep_order(&keep),
+        counts,
+        violated_policy,
+    })
+}
+
+#[cfg(feature = "owl")]
+fn shape_invalid_code() -> &'static str {
+    medulla_types::contract::ServerErrorCode::PolicyShapeInvalid.as_str()
 }
 
 /// The digest of a loaded policy set: lowercase SHA-256 hex over its canonical
@@ -969,5 +1225,67 @@ mod tests {
             ("marking:pii.email", serde_json::json!({"node_type": "Other", "tenant": "acme"})),
         ]);
         assert_eq!(load_policy_set("acme", &unlabelled).unwrap_err().code, "POLICY_TAG_UNKNOWN");
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R706.8
+    #[test]
+    fn shape_policy_round_trips_and_empty_set_is_identity() {
+        let shape = ShapePolicy {
+            policy_id: "policy:no-drafts".into(),
+            shape_turtle: "@prefix sh: <http://www.w3.org/ns/shacl#> .".into(),
+            effect: ShapeEffect::Refuse,
+        };
+        let json = serde_json::to_value(&shape).unwrap();
+        assert_eq!(json["effect"], "refuse");
+        assert_eq!(serde_json::from_value::<ShapePolicy>(json).unwrap(), shape);
+        for outcome in [
+            PolicyOutcome::Allowed,
+            PolicyOutcome::Filtered,
+            PolicyOutcome::Violation,
+        ] {
+            let text = serde_json::to_string(&outcome).unwrap();
+            assert_eq!(serde_json::from_str::<PolicyOutcome>(&text).unwrap(), outcome);
+        }
+
+        // A set with no shape encodes without the field, so its digest is the one it had
+        // before shapes existed; one with a shape differs.
+        let empty = PolicySet::default();
+        assert!(serde_json::to_value(&empty).unwrap().get("shapes").is_none());
+        let shaped = PolicySet {
+            shapes: vec![shape],
+            ..PolicySet::default()
+        };
+        assert!(shaped.has_shapes() && !empty.has_shapes());
+        assert_ne!(policy_digest(&shaped), policy_digest(&empty));
+        let back: PolicySet = serde_json::from_value(serde_json::to_value(&shaped).unwrap()).unwrap();
+        assert_eq!(back, shaped);
+
+        // A shape rewrites no plan: the plan stays as lowered and nothing is applied.
+        let mut plan = Plan::new(vec![Op::Project {
+            channels: vec!["email".into()],
+        }]);
+        let before = plan.clone();
+        assert!(apply_policies(&mut plan, &shaped, &PrincipalRef::from("role:analyst")).is_empty());
+        assert_eq!(plan, before);
+
+        // A shape policy loads from its record, and binds no marking.
+        let loaded = load_policy_set(
+            "acme",
+            &view_of(&[(
+                "policy:shape",
+                serde_json::json!({
+                    "node_type": "QueryPolicy", "kind": "shape", "effect": "filter",
+                    "shape_turtle": "@prefix sh: <http://www.w3.org/ns/shacl#> .",
+                }),
+            )]),
+        );
+        if cfg!(feature = "owl") {
+            let loaded = loaded.unwrap();
+            assert_eq!(loaded.shapes.len(), 1);
+            assert_eq!(loaded.shapes[0].policy_id, "policy:shape");
+            assert_eq!(loaded.shapes[0].effect, ShapeEffect::Filter);
+        } else {
+            assert_eq!(loaded.unwrap_err().code, "POLICY_SHAPE_INVALID");
+        }
     }
 }
