@@ -1,0 +1,34 @@
+{
+  "connector": "repository-manager",
+  "rollup": "MEDULLA-CQ-CONN-R052",
+  "vocabulary_module": "sdlc_lifecycle-v1.ttl",
+  "terms": [
+    "Worktree",
+    "worktreeState",
+    "tracksBranch"
+  ],
+  "questions": [
+    {
+      "id": "repository-manager.q1",
+      "kind": "single",
+      "question": "Which worktrees are stale or dangling relative to their base branch?",
+      "uql": "FOREIGN SCAN 'repository-manager'",
+      "sources": [
+        "repository-manager"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "repository-manager": "mcp_tool"
+      },
+      "columns": [
+        "worktree",
+        "state",
+        "branch"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "repository-manager/single.json"
+      ]
+    }
+  ]
+}

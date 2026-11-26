@@ -1,0 +1,22 @@
+{
+  "source": "repository-manager",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "worktree": "worktree-1",
+      "state": "state-1",
+      "branch": "branch-1",
+      "joinKey": "repository-manager.q1-key-1",
+      "id": "repository-manager-repository-manager.q1-1",
+      "label": "repository-manager 1"
+    },
+    {
+      "worktree": "worktree-2",
+      "state": "state-2",
+      "branch": "branch-2",
+      "joinKey": "repository-manager.q1-key-2",
+      "id": "repository-manager-repository-manager.q1-2",
+      "label": "repository-manager 2"
+    }
+  ]
+}
