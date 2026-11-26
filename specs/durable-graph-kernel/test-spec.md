@@ -657,8 +657,8 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R028.4.4` | `tests/adopt_workitem_authenticated_replay.rs::run_admission_replay_returns_the_original_result_and_conflicts_on_change` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-server/src/downtime.rs::budgetless_type_is_skipped_with_budget_required` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.4` | `crates/medulla-jobs/src/store.rs::downtime_job_is_never_claimed_by_an_analytics_worker` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R101.7` | `crates/medulla-h-jobs/src/jobs/downtime_worker.rs::budget_stop_and_preempt_yield` (planned) |
-| `MEDULLA-DURABLE-KERNEL-R101.7` | `crates/medulla-jobs/src/downtime.rs::preempt_requested_above_the_idle_ceiling` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R101.7` | `crates/medulla-h-jobs/src/jobs/downtime_worker.rs::budget_stop_and_preempt_yield` |
+| `MEDULLA-DURABLE-KERNEL-R101.7` | `crates/medulla-jobs/src/downtime.rs::preempt_requested_above_the_idle_ceiling` |
 | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::run_tick` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.5` | `crates/medulla-server/src/downtime.rs::selection_recorded` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R101.3` | `crates/medulla-server/src/downtime.rs::tick_enqueues_leased_jobs` (planned) |
@@ -669,7 +669,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R035.7.1` | `crates/medulla-server-blob/src/kv/declaration.rs::served_writes_to_the_slot_namespace_refuse` (existing) |
 | `MEDULLA-DURABLE-KERNEL-R035.7.2` | `crates/medulla-wire/src/pgwire/replication.rs::change_maps_to_pgoutput_messages_in_order` (existing) |
 | `MEDULLA-DURABLE-KERNEL-R035.3.1` | `crates/medulla-sql/src/sql/catalog.rs::stat_views_answer_supplied_sessions_and_refuse_writes` (existing) |
-| `MEDULLA-DURABLE-KERNEL-R035.3.2` | `crates/medulla-wire-core/src/wire/activity.rs::guard_drop_removes_the_row_and_filter_scopes_by_principal` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R035.3.2` | `crates/medulla-wire-core/src/wire/activity.rs::guard_drop_removes_the_row_and_filter_scopes_by_principal` |
 | `MEDULLA-DURABLE-KERNEL-R750.751` | `crates/medulla-work-store/src/redb_store/work_item/cancel.rs::in_flight_cancel_stamps_request_and_renew_reports_it` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R030.1.2` | `crates/medulla-work-store/src/redb_store/work_item/control_lease/host_start/tests.rs::issuer_provenance_is_stamped_and_read_back_from_redb` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R865` | `crates/medulla-work-store/src/redb_store/work_item/conversation/tests.rs::child_input_states_replay_and_refusals` (planned) |
@@ -713,7 +713,7 @@ Each entry names a test that does not exist yet. The path is the exact post-spli
 | `MEDULLA-DURABLE-KERNEL-R083.5` | `tests/kvcache_http_served.rs::over_budget_put_demotes_and_get_promotes` |
 | `MEDULLA-DURABLE-KERNEL-R083.8` | `tests/kvcache_http_served.rs::refusal_codes_map_to_507_and_422` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R083.6` | `tests/kvcache_http_served.rs::version_bump_refreshes_importance_and_central_block_outlives_peripheral` |
-| `MEDULLA-DURABLE-KERNEL-R863` | `tests/memory_sync_served.rs::sync_rewrite_requires_a_current_admit_receipt` (planned) |
+| `MEDULLA-DURABLE-KERNEL-R863` | `tests/memory_sync_served.rs::sync_rewrite_requires_a_current_admit_receipt` |
 | `MEDULLA-DURABLE-KERNEL-R043.101` | `tests/mutation_batch_sole_envelope.rs::every_store_member_replays_its_terminal_outcome_across_restart` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R862.2` | `tests/operator_command_store_upgrade_cli.rs::rebind_copied_store_then_open` (planned) |
 | `MEDULLA-DURABLE-KERNEL-R862.2` | `tests/operator_command_store_upgrade_cli.rs::rebind_without_confirm_writes_nothing` (planned) |

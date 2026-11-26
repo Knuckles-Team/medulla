@@ -59,7 +59,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [x] T053 MEDULLA-DURABLE-KERNEL-R035.2 pg_dump and pg_restore round trip over the wire
 - [ ] T054 MEDULLA-DURABLE-KERNEL-R035.3 Session and lock catalog views are served read-only (L4 test over .1 and .2)
 - [x] T299 MEDULLA-DURABLE-KERNEL-R035.3.1 `PgStatActivityRow`, `exec_sql_typed_with_tables_in_graph_sessions`, the three catalog views and `READ_ONLY_CATALOG_VIEW`
-- [ ] T300 MEDULLA-DURABLE-KERNEL-R035.3.2 `WireActivity` registry and guard, filtered rows into `run_read`, `42809` mapping, served-surface entries
+- [x] T300 MEDULLA-DURABLE-KERNEL-R035.3.2 `WireActivity` registry and guard, filtered rows into `run_read`, `42809` mapping, served-surface entries
 - [ ] T055 MEDULLA-DURABLE-KERNEL-R035.4 EXPLAIN returns the engine plan over the wire
 - [ ] T056 MEDULLA-DURABLE-KERNEL-R035.5 Query cancellation stops a running statement
 - [ ] T057 MEDULLA-DURABLE-KERNEL-R035.6 A transaction-mode pooler sees no session state across transactions
@@ -141,11 +141,11 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T131 MEDULLA-DURABLE-KERNEL-R085.1 Model: memory snapshot, cursor, sync request and outcome
 - [ ] T132 MEDULLA-DURABLE-KERNEL-R085.2 Behavior: versioned reads and stable listing
 - [x] T133 MEDULLA-DURABLE-KERNEL-R085.3 Behavior: sync decisions and compare-and-set
-- [ ] T134 MEDULLA-DURABLE-KERNEL-R085.4 Wiring: sync methods reach the durable gateway
-- [ ] T135 MEDULLA-DURABLE-KERNEL-R085.5 Refusals: authority before lookup, redaction and no effects
-- [ ] T136 MEDULLA-DURABLE-KERNEL-R085.6 Evidence: provenance and materialization acknowledgment
-- [ ] T137 MEDULLA-DURABLE-KERNEL-R085.7 Retention: conflicts and revisions survive restart and collection
-- [ ] T138 MEDULLA-DURABLE-KERNEL-R085.8 Hot-path proof: complete served memory-sync journey
+- [x] T134 MEDULLA-DURABLE-KERNEL-R085.4 Wiring: sync methods reach the durable gateway
+- [x] T135 MEDULLA-DURABLE-KERNEL-R085.5 Refusals: authority before lookup, redaction and no effects
+- [x] T136 MEDULLA-DURABLE-KERNEL-R085.6 Evidence: provenance and materialization acknowledgment
+- [x] T137 MEDULLA-DURABLE-KERNEL-R085.7 Retention: conflicts and revisions survive restart and collection
+- [x] T138 MEDULLA-DURABLE-KERNEL-R085.8 Hot-path proof: complete served memory-sync journey
 - [ ] T139 MEDULLA-DURABLE-KERNEL-R086.1 Model: durable node read outcome
 - [ ] T140 MEDULLA-DURABLE-KERNEL-R086.2 Behavior: memory-only eviction
 - [ ] T141 MEDULLA-DURABLE-KERNEL-R086.3 Behavior: cache-miss read serves durable bytes without growing RAM
@@ -184,7 +184,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T174 MEDULLA-DURABLE-KERNEL-R101.4 Optional budget pattern in `TYPES_QUERY`, typed `DowntimeTypeRefusal`, `BudgetRequired` skip; claim-isolation test for the `downtime` capability
 - [ ] T175 MEDULLA-DURABLE-KERNEL-R101.5 `DowntimeSelectionRecord` and `DowntimeSkipReason` wire types; `dw:Selection` facts with prune to 1,000 in one internal graph commit; paged `DowntimeSelections { after, limit }` read from the commons graph; `ResultUsage.cpu_ms`/`peak_memory_bytes`; delete the in-memory selection slot
 - [ ] T176 MEDULLA-DURABLE-KERNEL-R101.6 Served L4 test of idle-window run order and foreground preemption
-- [ ] T298 MEDULLA-DURABLE-KERNEL-R101.7 `DowntimeBody` seam and registry; `preempt_requested`; `downtime_worker_loop` with step budget, `downtime_budget_exhausted` stop and `JobStore::yield_running_fenced`
+- [x] T298 MEDULLA-DURABLE-KERNEL-R101.7 `DowntimeBody` seam and registry; `preempt_requested`; `downtime_worker_loop` with step budget, `downtime_budget_exhausted` stop and `JobStore::yield_running_fenced`
 - [x] T177 MEDULLA-DURABLE-KERNEL-R102.1 Served contract
 - [x] T178 MEDULLA-DURABLE-KERNEL-R102.2 Scope and authorization
 - [x] T179 MEDULLA-DURABLE-KERNEL-R102.3 Versioned compare-and-swap and bounded paginated scan
@@ -239,7 +239,7 @@ One task per active leaf row of `requirements.md`, producer first. Each task nam
 - [ ] T228 [US3] MEDULLA-DURABLE-KERNEL-R862.1 Restore stages each bundle shard, adopts it with `adopt_staged_mutation_store`, and moves graphs out of the staged copy
 - [ ] T229 [US3] MEDULLA-DURABLE-KERNEL-R862.2 Wiring: `store-upgrade rebind --copied-from --confirm` re-binds a copied data directory through `rebind_copied_store`
 - [ ] T230 [US3] MEDULLA-DURABLE-KERNEL-R862.3 Hot-path proof: a copied bundle restores and serves
-- [ ] T231 MEDULLA-DURABLE-KERNEL-R863 SyncMemorySnapshot calls the memory-change admission gate
+- [x] T231 MEDULLA-DURABLE-KERNEL-R863 SyncMemorySnapshot calls the memory-change admission gate
 - [ ] T232 [US2] MEDULLA-DURABLE-KERNEL-R028.4.3 Reserve ordered conversation turns with native run admission
 - [ ] T233 [US2] MEDULLA-DURABLE-KERNEL-R028.4.4 Prove full-result replay, exact `IDEMPOTENCY_CONFLICT` and previous-patch replay of run admission through the ledger replay
 - [ ] T234 [US2] MEDULLA-DURABLE-KERNEL-R030.1.1 Typed host-start assertions and client projection
