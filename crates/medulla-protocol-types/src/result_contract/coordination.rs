@@ -80,6 +80,8 @@ method_results! {
     IngestQueueDepth(IngestQueueDepth) => Raw<medulla_source_types::ingest_job::IngestQueueDepthReport>;
     TaskQueueClaim(TaskQueueClaim) => Raw<Option<medulla_work_types::task_queue::ClaimedTask>>;
     TaskQueueRenew(TaskQueueRenew) => Raw<medulla_work_types::task_queue::TaskRenewed>;
+    DeadLetterList(DeadLetterList) => Raw<medulla_ingestion_types::ingest_capabilities::DeadLetterListed>;
+    DeadLetterRedrive(DeadLetterRedrive) => Raw<medulla_ingestion_types::ingest_capabilities::DeadLetterRedriven>;
     TaskQueueAck(TaskQueueAck) => Raw<medulla_work_types::task_queue::TaskAcked>;
     // MEDULLA-DURABLE-KERNEL-R076.2: the policy in force, and the policy just stored.
     GetSchedulerConfig(GetSchedulerConfig) => Raw<medulla_work_types::scheduler_config::SchedulerConfig>;

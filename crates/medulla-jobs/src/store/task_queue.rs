@@ -99,6 +99,28 @@ pub enum TaskAckOutcome {
     DeadLetter { code: &'static str },
 }
 
+/// What a redrive did (MEDULLA-REPO-INGEST-R002.651.3).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct RedriveOutcome {
+    /// Tasks returned to the queue.
+    pub redriven: u32,
+}
+
+/// Why a redrive was refused.
+#[derive(Debug)]
+pub enum RedriveError {
+    /// An item id names no parked task of the tenant. Nothing changed.
+    Unknown { item_id: String },
+    /// The store failed.
+    Store(JobError),
+}
+
+impl From<JobError> for RedriveError {
+    fn from(error: JobError) -> Self {
+        RedriveError::Store(error)
+    }
+}
+
 /// Why an ack was refused.
 #[derive(Debug)]
 pub enum TaskAckError {
@@ -304,6 +326,105 @@ impl JobStore {
             }
         }
         Ok(count)
+    }
+
+    /// The parked items of `tenant`'s `queue`, ordered by `parked_at_ms` then `item_id`, at most
+    /// `limit` (MEDULLA-REPO-INGEST-R002.651.3). The parked item keeps no tenant, so the failed
+    /// task's own row names it; an item of another tenant is never listed.
+    pub fn list_dead_letters(
+        &self,
+        tenant: &str,
+        queue: &str,
+        limit: u32,
+    ) -> Result<Vec<medulla_ingestion_types::ingest_capabilities::DeadLetterItem>> {
+        let read = self.scoped_read()?;
+        let mut parked = Vec::new();
+        {
+            let table = read.open_owner_table(TASK_DEAD_LETTERS).map_err(redb_err)?;
+            for row in table.iter().map_err(redb_err)? {
+                let (_, bytes) = row.map_err(redb_err)?;
+                let item: medulla_ingestion_types::ingest_capabilities::DeadLetterItem =
+                    serde_json::from_slice(bytes.value()).map_err(codec_err)?;
+                if item.queue == queue {
+                    parked.push(item);
+                }
+            }
+        }
+        drop(read);
+        let mut own = Vec::with_capacity(parked.len());
+        for item in parked {
+            if self.get_raw(&item.item_id)?.policy.tenant == tenant {
+                own.push(item);
+            }
+        }
+        own.sort_by(|a, b| {
+            (a.parked_at_ms, a.item_id.as_str()).cmp(&(b.parked_at_ms, b.item_id.as_str()))
+        });
+        own.truncate(limit as usize);
+        Ok(own)
+    }
+
+    /// Return the parked tasks `item_ids` of `tenant` to the queue (MEDULLA-REPO-INGEST-R002.651.3).
+    ///
+    /// Every id is checked first: one that names no parked task of the tenant refuses the whole
+    /// call with nothing changed. A `Failed` job never revives (the machine keeps it terminal), so
+    /// a redrive replaces the parked job by a fresh job of the same id: same payload and policy,
+    /// `Submitted`, due now, zero attempts. The dead-letter row is deleted in the same commit.
+    pub fn redrive_dead_letters(
+        &self,
+        tenant: &str,
+        item_ids: &[String],
+        now_ms: i64,
+    ) -> std::result::Result<RedriveOutcome, RedriveError> {
+        let mut parked = Vec::with_capacity(item_ids.len());
+        for item_id in item_ids {
+            let unknown = || RedriveError::Unknown {
+                item_id: item_id.clone(),
+            };
+            let in_table = {
+                let read = self.scoped_read()?;
+                let table = read.open_owner_table(TASK_DEAD_LETTERS).map_err(redb_err)?;
+                let found = table
+                    .get(item_id.as_str())
+                    .map_err(redb_err)?
+                    .is_some();
+                found
+            };
+            if !in_table {
+                return Err(unknown());
+            }
+            let job = self.get_raw(item_id)?;
+            if job.policy.tenant != tenant || !matches!(job.state, JobState::Failed { .. }) {
+                return Err(unknown());
+            }
+            parked.push(job);
+        }
+        let mut redriven = 0u32;
+        for failed in parked {
+            let fresh = AnalyticsJob {
+                state: JobState::Submitted { checkpoint: None },
+                retry: RetryPolicy {
+                    attempts_made: 0,
+                    ..failed.retry
+                },
+                output: None,
+                last_worker_ref: String::new(),
+                updated_at_ms: now_ms,
+                ..failed
+            };
+            let expected_version = self.live_version()?;
+            let write = self.mutations.open_write(&self.owner).map_err(redb_err)?;
+            let (batch, _next_version) = write_job_transition(
+                self,
+                &write,
+                &fresh,
+                expected_version,
+                Some(JobSideRow::DeadLetterDelete(fresh.job_id.as_str())),
+            )?;
+            self.mutations.commit(write, &batch).map_err(redb_err)?;
+            redriven += 1;
+        }
+        Ok(RedriveOutcome { redriven })
     }
 
     /// Lease the next ready task that requires `tenant_capability`, through the
@@ -679,6 +800,79 @@ mod tests {
         // The failed task left the queue load.
         let load = store.task_queue_load("acme", "ingest").unwrap();
         assert_eq!((load.queued, load.running), (0, 0));
+    }
+
+    fn park(store: &JobStore, key: &str, now_ms: i64) -> String {
+        let id = submit(store, key, "ingest", now_ms);
+        store
+            .claim_task("worker-1", CAPABILITY, now_ms + 1, 60_000)
+            .unwrap()
+            .expect("a ready task");
+        store
+            .ack_task(
+                "acme",
+                &id,
+                "worker-1",
+                TaskAckOutcome::DeadLetter {
+                    code: "INGEST_RETRIES_EXHAUSTED",
+                },
+                "boom",
+                now_ms + 2,
+            )
+            .unwrap();
+        id
+    }
+
+    // spec: MEDULLA-REPO-INGEST-R002.651.3
+    #[test]
+    fn redrive_is_all_or_nothing() {
+        let dir = tempfile::tempdir().unwrap();
+        let store = open_dev_store_in_dir(dir.path()).unwrap();
+        let first = park(&store, "a", 1_000);
+        let second = park(&store, "b", 10_000);
+        let listed = store.list_dead_letters("acme", "ingest", 10).unwrap();
+        assert_eq!(
+            listed.iter().map(|item| item.item_id.as_str()).collect::<Vec<_>>(),
+            [first.as_str(), second.as_str()]
+        );
+        assert!(store.list_dead_letters("other", "ingest", 10).unwrap().is_empty());
+        assert_eq!(store.list_dead_letters("acme", "ingest", 1).unwrap().len(), 1);
+
+        // One unknown id refuses the whole call: nothing is redriven, both rows stay.
+        let before = store.live_version().unwrap();
+        let refused = store
+            .redrive_dead_letters("acme", &[first.clone(), "ghost".to_string()], 20_000)
+            .unwrap_err();
+        assert!(matches!(refused, RedriveError::Unknown { ref item_id } if item_id == "ghost"));
+        assert_eq!(store.live_version().unwrap(), before);
+        assert_eq!(store.list_dead_letters("acme", "ingest", 10).unwrap().len(), 2);
+        // A tenant that does not own the item reads it as unknown.
+        assert!(matches!(
+            store.redrive_dead_letters("other", &[first.clone()], 20_000),
+            Err(RedriveError::Unknown { .. })
+        ));
+
+        let done = store
+            .redrive_dead_letters("acme", &[first.clone()], 20_000)
+            .unwrap();
+        assert_eq!(done.redriven, 1);
+        assert_eq!(store.list_dead_letters("acme", "ingest", 10).unwrap().len(), 1);
+        let load = store.task_queue_load("acme", "ingest").unwrap();
+        assert_eq!(load.queued, 1);
+        // The task is claimable again with a fresh attempt count.
+        let claim = store
+            .claim_task("worker-2", CAPABILITY, 21_000, 60_000)
+            .unwrap()
+            .expect("the redriven task is ready");
+        assert_eq!(claim.job.job_id, first);
+        assert_eq!(claim.job.retry.attempts_made, 1);
+        // A second redrive of the same id refuses with the store unchanged.
+        let again = store.live_version().unwrap();
+        assert!(matches!(
+            store.redrive_dead_letters("acme", &[first], 22_000),
+            Err(RedriveError::Unknown { .. })
+        ));
+        assert_eq!(store.live_version().unwrap(), again);
     }
 
     // spec: MEDULLA-INGEST-WORKER-R001.9

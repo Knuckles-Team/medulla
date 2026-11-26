@@ -464,6 +464,8 @@ pub async fn try_handle(
             | Method::TaskQueueClaim { .. }
             | Method::TaskQueueAck { .. }
             | Method::TaskQueueRenew { .. }
+            | Method::DeadLetterList { .. }
+            | Method::DeadLetterRedrive { .. }
     ) {
         return Err(method);
     }
@@ -551,8 +553,76 @@ pub async fn try_handle(
                 lease_ms,
             },
         ),
+        Method::DeadLetterList { queue, limit } => dead_letter_list(&store, &call, &queue, limit),
+        Method::DeadLetterRedrive { item_ids } => dead_letter_redrive(&store, &call, &item_ids),
         other => return Err(other),
     })
+}
+
+/// A dead-letter request outside its bounds: a non-ingest queue, a limit outside 1 to 1000, an
+/// empty id list or more than 1000 ids (MEDULLA-REPO-INGEST-R002.651.3).
+fn dead_letter_invalid(req_id: u64, detail: &str) -> Response {
+    Response::err(
+        req_id,
+        format!("{}: {detail}", ServerErrorCode::DeadLetterRequestInvalid.as_str()),
+    )
+}
+
+/// Serve `DeadLetterList`: the parked tasks of one ingest queue of the verified tenant.
+pub fn dead_letter_list(
+    store: &JobStore,
+    call: &TaskQueueCall<'_>,
+    queue: &str,
+    limit: u32,
+) -> Response {
+    use medulla_ingestion_types::ingest_capabilities::MAX_DEAD_LETTER_BATCH;
+    if ingest_lane_of_queue(queue).is_none() {
+        return dead_letter_invalid(call.req_id, "the queue is not an ingest queue");
+    }
+    if limit == 0 || limit > MAX_DEAD_LETTER_BATCH {
+        return dead_letter_invalid(call.req_id, "limit must be 1 to 1000");
+    }
+    match store.list_dead_letters(call.tenant, queue, limit) {
+        Ok(items) => answer(
+            call.req_id,
+            ResultPayload::of::<contract::DeadLetterList>(
+                medulla_ingestion_types::ingest_capabilities::DeadLetterListed { items },
+            ),
+        ),
+        Err(error) => store_refusal(call.req_id, &error),
+    }
+}
+
+/// Serve `DeadLetterRedrive`: every id names a parked task of the verified tenant or the whole
+/// call refuses and nothing changes.
+pub fn dead_letter_redrive(
+    store: &JobStore,
+    call: &TaskQueueCall<'_>,
+    item_ids: &[String],
+) -> Response {
+    use medulla_ingestion_types::ingest_capabilities::MAX_DEAD_LETTER_BATCH;
+    if item_ids.is_empty() || item_ids.len() > MAX_DEAD_LETTER_BATCH as usize {
+        return dead_letter_invalid(call.req_id, "item_ids must hold 1 to 1000 ids");
+    }
+    match store.redrive_dead_letters(call.tenant, item_ids, call.now_ms) {
+        Ok(outcome) => answer(
+            call.req_id,
+            ResultPayload::of::<contract::DeadLetterRedrive>(
+                medulla_ingestion_types::ingest_capabilities::DeadLetterRedriven {
+                    redriven: outcome.redriven,
+                },
+            ),
+        ),
+        // One message for an absent id and another tenant's id: no existence oracle.
+        Err(medulla_jobs::RedriveError::Unknown { item_id }) => Response::err(
+            call.req_id,
+            format!(
+                "{}: no parked task {item_id}",
+                ServerErrorCode::DeadLetterUnknownItem.as_str()
+            ),
+        ),
+        Err(medulla_jobs::RedriveError::Store(error)) => store_refusal(call.req_id, &error),
+    }
 }
 
 #[cfg(test)]

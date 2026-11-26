@@ -156,3 +156,64 @@ def test_supersession_edge_and_unknown_fact_refusal(clean_graph):
         )
     after = (clean_graph.edges.list(), clean_graph.nodes.properties("fact:new"))
     assert after == before
+
+
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R002.651.3")
+@pytest.mark.asyncio
+async def test_dead_letter_list_and_redrive() -> None:
+    import uuid
+
+    from ingest.test_ingest_queue_served import (
+        _claim_task,
+        _client,
+        _with_retry_limits,
+    )
+    from ingest.test_ingest_queue_served import (
+        _envelope as _job_envelope,
+    )
+
+    client = await _client()
+    try:
+        current = await _with_retry_limits(client, 5)
+        try:
+            receipt = await client._send(
+                "IngestEnqueue",
+                {"envelope": _job_envelope(f"job-{uuid.uuid4().hex[:10]}")},
+            )
+            task_id = receipt["task_id"]
+            for _ in range(5):
+                await _claim_task(client, task_id, "ingest-worker-1")
+                await client._send(
+                    "TaskQueueAck",
+                    {
+                        "task_id": task_id,
+                        "worker_id": "ingest-worker-1",
+                        "outcome": "Failed",
+                        "detail": "parse failed",
+                    },
+                )
+            listed = await client._send(
+                "DeadLetterList", {"queue": "ingest", "limit": 1000}
+            )
+            [item] = [i for i in listed["items"] if i["item_id"] == task_id]
+            assert item["reason"] == "INGEST_RETRIES_EXHAUSTED"
+            assert item["attempts"] == 5
+            with pytest.raises(Exception, match="DEAD_LETTER_REQUEST_INVALID"):
+                await client._send("DeadLetterList", {"queue": "general", "limit": 10})
+            with pytest.raises(Exception, match="DEAD_LETTER_REQUEST_INVALID"):
+                await client._send("DeadLetterRedrive", {"item_ids": []})
+
+            redriven = await client._send("DeadLetterRedrive", {"item_ids": [task_id]})
+            assert redriven["redriven"] == 1
+            again = await client._send(
+                "DeadLetterList", {"queue": "ingest", "limit": 1000}
+            )
+            assert task_id not in [i["item_id"] for i in again["items"]]
+            claimed = await _claim_task(client, task_id, "ingest-worker-1")
+            assert claimed["attempt"] == 1
+            with pytest.raises(Exception, match="DEAD_LETTER_UNKNOWN_ITEM"):
+                await client._send("DeadLetterRedrive", {"item_ids": [task_id]})
+        finally:
+            await client._send("SetSchedulerConfig", {"config": current})
+    finally:
+        await client.close()

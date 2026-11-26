@@ -57,6 +57,26 @@ pub struct DeadLetterItem {
     pub payload_digest: Digest256,
 }
 
+/// The most dead-letter items one `DeadLetterList` returns, and the most ids one
+/// `DeadLetterRedrive` names (MEDULLA-REPO-INGEST-R002.651.3).
+pub const MAX_DEAD_LETTER_BATCH: u32 = 1_000;
+
+/// What `DeadLetterList` answers: the parked items of one ingest queue.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct DeadLetterListed {
+    pub items: Vec<DeadLetterItem>,
+}
+
+/// What `DeadLetterRedrive` answers: how many parked tasks returned to the queue.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct DeadLetterRedriven {
+    pub redriven: u32,
+}
+
 /// The result of replaying traces against a process model.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]

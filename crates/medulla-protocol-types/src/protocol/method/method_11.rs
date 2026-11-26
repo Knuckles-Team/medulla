@@ -869,6 +869,15 @@ $($variants)*
         #[serde(default)]
         detail: String,
     },
+    /// The parked tasks of one ingest queue (MEDULLA-REPO-INGEST-R002.651.3): at most `limit`
+    /// (1 to 1000) items, ordered by `parked_at_ms` then `item_id`. Scope `task:work`. Reads only.
+    /// Refusal: `DEAD_LETTER_REQUEST_INVALID`.
+    DeadLetterList { queue: String, limit: u32 },
+    /// Return parked ingest tasks to their queue (MEDULLA-REPO-INGEST-R002.651.3): each becomes
+    /// claimable again with zero attempts and its dead-letter row is deleted. Scope `task:work`.
+    /// Refusals: `DEAD_LETTER_REQUEST_INVALID` (empty or over 1000 ids) and
+    /// `DEAD_LETTER_UNKNOWN_ITEM` (an id names no parked task of the tenant; nothing changes).
+    DeadLetterRedrive { item_ids: Vec<String> },
     /// The scheduler policy now in force (MEDULLA-DURABLE-KERNEL-R076.2): the
     /// stored setting, or the startup knob values when none was stored. Scope
     /// `scheduler:admin`.

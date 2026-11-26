@@ -844,6 +844,8 @@ mod tests {
         #[cfg(feature = "jobs")]
         ("TaskQueueRenew", "MEDULLA-DURABLE-KERNEL-R072.1: native MutationBatch in jobs.redb, exactly like AnalyticsJob's lease renewal: one fenced lease-expiry transition"),
         #[cfg(feature = "jobs")]
+        ("DeadLetterRedrive", "MEDULLA-REPO-INGEST-R002.651.3: native MutationBatch in jobs.redb, exactly like TaskQueueAck: each parked task is replaced by a fresh queued job and its dead-letter row deleted in one fenced transition"),
+        #[cfg(feature = "jobs")]
         ("TaskQueueAck", "MEDULLA-DURABLE-KERNEL-R072: native MutationBatch in jobs.redb, exactly like AnalyticsJob's fenced worker transitions: one terminal or release transition"),
         // `Statechart` self-routes in dispatch.rs BEFORE dispatch_graph_op (see the
         // `Method::Statechart` arm there and `handlers::statechart` module docs) --

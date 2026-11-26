@@ -154,6 +154,7 @@ pub(crate) const ACCESS_RS_COVERAGE_GAP: &[(&str, &str, &str)] = &[
     ("TaskQueueClaim", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-DURABLE-KERNEL-R072), mirrors AnalyticsJob's access.rs coverage gap"),
     ("TaskQueueRenew", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-DURABLE-KERNEL-R072.1), mirrors AnalyticsJob's access.rs coverage gap"),
     ("TaskQueueAck", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-DURABLE-KERNEL-R072), mirrors AnalyticsJob's access.rs coverage gap"),
+    ("DeadLetterRedrive", "UNASSIGNED", "self-routes before dispatch_graph_op (own jobs.redb, MEDULLA-REPO-INGEST-R002.651.3), mirrors AnalyticsJob's access.rs coverage gap"),
     #[cfg(feature = "statechart")]
     ("Statechart", "UNASSIGNED", "self-routes before dispatch_graph_op (own statecharts.redb, CONCEPT:INT-P2-2), mirrors AnalyticsJob's access.rs coverage gap"),
     ("BlobBegin", "UNASSIGNED", "mutates per policy/semantics, but absent from access.rs::requires_write entirely"),

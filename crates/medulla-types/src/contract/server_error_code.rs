@@ -1125,6 +1125,9 @@ closed_error_codes! {
         /// MEDULLA-REPO-INGEST-R002.651.2: a supersession edge without its superseded mark, or the mark without its edge.
         SupersessionUnpaired => "SUPERSESSION_UNPAIRED",
         DeadLetterUnknownItem => "DEAD_LETTER_UNKNOWN_ITEM",
+        /// MEDULLA-REPO-INGEST-R002.651.3: a non-ingest queue, a `limit` outside 1 to 1000, an empty
+        /// `item_ids` or more than 1000 ids.
+        DeadLetterRequestInvalid => "DEAD_LETTER_REQUEST_INVALID",
         EnvelopeSourceMissing => "ENVELOPE_SOURCE_MISSING",
         HydrationBindingMismatch => "HYDRATION_BINDING_MISMATCH",
         SkillCapabilityUnresolved => "SKILL_CAPABILITY_UNRESOLVED",

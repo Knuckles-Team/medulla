@@ -585,7 +585,9 @@ pub async fn dispatch_compute_and_media_methods(
             method @ (Method::TaskQueueEnqueue { .. }
             | Method::TaskQueueClaim { .. }
             | Method::TaskQueueRenew { .. }
-            | Method::TaskQueueAck { .. }) => dispatch_task_queue_arm(ctx, method).await,
+            | Method::TaskQueueAck { .. }
+            | Method::DeadLetterList { .. }
+            | Method::DeadLetterRedrive { .. }) => dispatch_task_queue_arm(ctx, method).await,
             // MEDULLA-DURABLE-KERNEL-R076.2: scheduler settings live in the same store.
             #[cfg(feature = "jobs")]
             method @ (Method::GetSchedulerConfig

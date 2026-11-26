@@ -60,7 +60,7 @@ mod task_queue;
 use index_keys::{capability_index_key, tenant_index_key};
 use serde::de::DeserializeOwned;
 pub use task_queue::{
-    ClaimFamily, TaskAckError, TaskAckOutcome, TaskQueueLoad, TaskSubmit, TaskSubmitOutcome,
+    ClaimFamily, RedriveError, RedriveOutcome, TaskAckError, TaskAckOutcome, TaskQueueLoad, TaskSubmit, TaskSubmitOutcome,
     TASK_FAMILY_PREFIX,
 };
 
@@ -2880,6 +2880,8 @@ enum JobSideRow<'a> {
     Result(&'a str, &'a [u8]),
     /// The parked ingest task, keyed by task id (MEDULLA-INGEST-WORKER-R001.9).
     DeadLetter(&'a str, &'a [u8]),
+    /// Delete the parked ingest task of this id (MEDULLA-REPO-INGEST-R002.651.3).
+    DeadLetterDelete(&'a str),
 }
 
 fn write_job_transition(
@@ -2928,6 +2930,13 @@ fn write_job_transition(
                             .open_table(TASK_DEAD_LETTERS)
                             .map_err(redb_err)?
                             .insert(task_id, item_bytes)
+                            .map_err(redb_err)?;
+                    }
+                    Some(JobSideRow::DeadLetterDelete(task_id)) => {
+                        owner_write
+                            .open_table(TASK_DEAD_LETTERS)
+                            .map_err(redb_err)?
+                            .remove(task_id)
                             .map_err(redb_err)?;
                     }
                     None => {}

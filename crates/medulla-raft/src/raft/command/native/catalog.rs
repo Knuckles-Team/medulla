@@ -137,6 +137,8 @@ macro_rules! native_method_catalog {
             #[cfg(feature = "jobs")]
             record TaskQueueAck => AnalyticsJob,
             #[cfg(feature = "jobs")]
+            record DeadLetterRedrive => AnalyticsJob,
+            #[cfg(feature = "jobs")]
             record TaskQueueRenew => AnalyticsJob,
             #[cfg(feature = "sqlite-file")]
             record ImportSqliteFile => SqliteCatalog,

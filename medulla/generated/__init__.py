@@ -403,6 +403,8 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "TaskQueueEnqueue": coordination.send_task_queue_enqueue,
     "TaskQueueClaim": coordination.send_task_queue_claim,
     "TaskQueueRenew": coordination.send_task_queue_renew,
+    "DeadLetterList": coordination.send_dead_letter_list,
+    "DeadLetterRedrive": coordination.send_dead_letter_redrive,
     "TaskQueueAck": coordination.send_task_queue_ack,
     "IngestEnqueue": coordination.send_ingest_enqueue,
     "IngestQueueDepth": coordination.send_ingest_queue_depth,

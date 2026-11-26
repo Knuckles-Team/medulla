@@ -472,6 +472,9 @@ pub(super) const REASON_SCHEDULER_CONFIG: &str =
 // MEDULLA-INGEST-WORKER-R001.11: the ingest queue depth is the verified tenant's own queue load.
 pub(super) const REASON_INGEST_QUEUE_DEPTH: &str =
     "source_ingest::ingest_queue_depth reads the verified tenant's queued and running task counts and oldest enqueue time of the reserved ingest queues from the jobs seam -- queue load of the caller's own tenant, never a GraphView/core.analysis_snapshot() row read; gated by task:enqueue in allows_method";
+// MEDULLA-REPO-INGEST-R002.651.3: the dead-letter list is the verified tenant's own parked tasks.
+pub(super) const REASON_DEAD_LETTER_LIST: &str =
+    "control_plane::dispatch_task_queue_arm routes DeadLetterList to medulla_h_jobs::task_queue, which lists only the dead-letter rows whose failed task row names the verified tenant -- queue state of the caller's own tenant, never a GraphView/core.analysis_snapshot() row read; gated by task:work in allows_method";
 // MEDULLA-DURABLE-KERNEL-R101.5: the recorded downtime selections are engine-owned commons facts.
 // MEDULLA-DURABLE-KERNEL-R074.2: the worker registry is in-memory process state.
 pub(super) const REASON_WORKER_REGISTRY: &str =
@@ -774,6 +777,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("GetSchedulerConfig", REASON_SCHEDULER_CONFIG),
     // REASON_INGEST_QUEUE_DEPTH
     ("IngestQueueDepth", REASON_INGEST_QUEUE_DEPTH),
+    // REASON_DEAD_LETTER_LIST
+    ("DeadLetterList", REASON_DEAD_LETTER_LIST),
     // REASON_DOWNTIME_SELECTIONS
     ("DowntimeSelections", REASON_DOWNTIME_SELECTIONS),
     // REASON_WORKER_REGISTRY

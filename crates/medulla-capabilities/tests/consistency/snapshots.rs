@@ -190,6 +190,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "SubmitChangeset",
     // MEDULLA-SCM-R010: one changeset and its commit per imported git commit.
     "ImportGitHistory",
+    // MEDULLA-SCM-R013.4: a symbol edit lands as one source changeset.
+    "SubmitSymbolEdit",
     // MEDULLA-SCM-R007: one path grant row.
     "SetPathGrant",
     // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.
@@ -220,6 +222,8 @@ pub(crate) const ACCESS_RS_MUTATES_UNCONDITIONAL: &[&str] = &[
     "SubmitChangeset",
     // MEDULLA-SCM-R010: one changeset and its commit per imported git commit.
     "ImportGitHistory",
+    // MEDULLA-SCM-R013.4: a symbol edit lands as one source changeset.
+    "SubmitSymbolEdit",
     // MEDULLA-SCM-R007: one path grant row.
     "SetPathGrant",
     // MEDULLA-FEDERATED-QUERY-R701.3: the artifact node and its refresh records.

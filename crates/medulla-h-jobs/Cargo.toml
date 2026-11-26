@@ -56,6 +56,7 @@ medulla-mining = { path = "../medulla-mining", features = ["mining"] }
 medulla-table-store = { path = "../medulla-table-store" }
 medulla-work-types = { path = "../medulla-work-types" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-server-ops = { path = "../medulla-server-ops" }

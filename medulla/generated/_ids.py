@@ -665,6 +665,8 @@ METHOD_IDS = frozenset(
         "TaskQueueEnqueue",
         "TaskQueueClaim",
         "TaskQueueRenew",
+        "DeadLetterList",
+        "DeadLetterRedrive",
         "TaskQueueAck",
         "IngestEnqueue",
         "IngestQueueDepth",

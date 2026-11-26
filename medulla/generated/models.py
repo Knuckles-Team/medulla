@@ -16573,6 +16573,20 @@ class MethodTaskQueueRenew(BaseModel):
     params: MethodTaskQueueRenewParams
 
 
+class MethodDeadLetterList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DeadLetterList"]
+    params: MethodDeadLetterListParams
+
+
+class MethodDeadLetterRedrive(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["DeadLetterRedrive"]
+    params: MethodDeadLetterRedriveParams
+
+
 class MethodTaskQueueAck(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17264,6 +17278,8 @@ Method = Annotated[
         MethodTaskQueueEnqueue,
         MethodTaskQueueClaim,
         MethodTaskQueueRenew,
+        MethodDeadLetterList,
+        MethodDeadLetterRedrive,
         MethodTaskQueueAck,
         MethodIngestEnqueue,
         MethodIngestQueueDepth,
@@ -37583,6 +37599,44 @@ class MethodTaskQueueRenewParams(BaseModel):
     worker_id: str
 
 
+class MethodDeadLetterListParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    limit: Annotated[int, Field(ge=0)]
+    queue: str
+
+
+class MethodDeadLetterRedriveParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    item_ids: list[str]
+
+
+class DeadLetterItem(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    attempts: Annotated[int, Field(ge=0)]
+    item_id: str
+    last_error: str
+    parked_at_ms: Annotated[int, Field(ge=0)]
+    payload_digest: Digest256
+    queue: str
+    reason: str
+    schema_version: Annotated[int, Field(ge=0)] = 1
+
+
+class DeadLetterListed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    items: list[DeadLetterItem]
+
+
+class DeadLetterRedriven(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    redriven: Annotated[int, Field(ge=0)]
+
+
 class MethodTaskQueueAckParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -47665,6 +47719,13 @@ __all__ = [
     "MethodFinancePerformanceParams",
     "MethodTaskQueueEnqueue",
     "MethodTaskQueueEnqueueParams",
+    "DeadLetterItem",
+    "DeadLetterListed",
+    "DeadLetterRedriven",
+    "MethodDeadLetterList",
+    "MethodDeadLetterListParams",
+    "MethodDeadLetterRedrive",
+    "MethodDeadLetterRedriveParams",
     "MethodTaskQueueAck",
     "MethodTaskQueueAckParams",
     "MethodTaskQueueClaim",

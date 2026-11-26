@@ -1755,6 +1755,12 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "TASK_LEASE_ZERO",
         ],
     ),
+    // MEDULLA-REPO-INGEST-R002.651.3: the dead-letter refusals.
+    ("DeadLetterList", &["DEAD_LETTER_REQUEST_INVALID"]),
+    (
+        "DeadLetterRedrive",
+        &["DEAD_LETTER_REQUEST_INVALID", "DEAD_LETTER_UNKNOWN_ITEM"],
+    ),
     // MEDULLA-DURABLE-KERNEL-R076.2: a refused scheduler setting.
     ("SetSchedulerConfig", &["SCHEDULER_CONFIG_INVALID"]),
     (

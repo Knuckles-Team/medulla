@@ -99,6 +99,7 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         | Method::IngestEnqueue { .. }
         | Method::TaskQueueClaim { .. }
         | Method::TaskQueueAck { .. }
+        | Method::DeadLetterRedrive { .. }
         | Method::TaskQueueRenew { .. }
         | Method::SetSchedulerConfig { .. } => DurabilityDomain::AnalyticsJob,
         _ => return service_owner_domain(method),
@@ -837,6 +838,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::IngestEnqueue { .. }
         | Method::TaskQueueClaim { .. }
         | Method::TaskQueueAck { .. }
+        | Method::DeadLetterRedrive { .. }
+        | Method::DeadLetterList { .. }
         | Method::TaskQueueRenew { .. }
         | Method::SetSchedulerConfig { .. }
         | Method::GetSchedulerConfig
@@ -1104,6 +1107,7 @@ pub fn surface_for(method: &Method) -> Option<MutationSurface> {
             | Method::IngestEnqueue { .. }
             | Method::TaskQueueClaim { .. }
             | Method::TaskQueueAck { .. }
+            | Method::DeadLetterRedrive { .. }
             | Method::TaskQueueRenew { .. }
             | Method::SetSchedulerConfig { .. },
         ) => Some(MutationSurface::Job),
