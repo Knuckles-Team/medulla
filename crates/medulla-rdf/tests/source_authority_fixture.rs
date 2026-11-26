@@ -229,15 +229,22 @@ fn supplier_seed_passes_shape() {
 #[test]
 fn component_seed_passes_shape() {
     let fixture = seed_fixture(COMPONENT_SEED, SchemaSourceOrigin::Operator);
-    assert_eq!(fixture.rows().count(), 3);
+    assert_eq!(fixture.rows().count(), 5);
     let image = format!("{INFRA}ContainerImage");
     let vulnerability = format!("{CORE}Vulnerability");
+    let built_from = format!("{INFRA}builtFrom");
     let classes = vec![image.clone(), vulnerability.clone()];
-    let got = verdicts(&fixture, &classes, &[]);
+    let facets = vec![(image.clone(), built_from.clone())];
+    let got = verdicts(&fixture, &classes, &facets);
     // The registry says what an image is; the code host says what is wrong with it.
     assert_eq!(covered(&got, &image, None), ("dockerhub-mcp".into(), Vec::new()));
     assert_eq!(
         covered(&got, &vulnerability, None),
+        ("gitlab-mcp".into(), names(&["github-mcp"]))
+    );
+    // The source repository an image is built from: the code host, GitHub second.
+    assert_eq!(
+        covered(&got, &image, Some(&built_from)),
         ("gitlab-mcp".into(), names(&["github-mcp"]))
     );
     assert_pack_proposes_only(COMPONENT_SEED, &classes);

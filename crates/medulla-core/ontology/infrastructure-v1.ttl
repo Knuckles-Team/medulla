@@ -733,6 +733,23 @@ BFO:GenericallyDependentContinuant — an information entity.""" ;
     skos:altLabel "Container Network", "Overlay Network", "Bridge Network", "Virtual Network" ;
     rdfs:subClassOf bfo:0000004 .
 
+:SourceRepository a owl:Class ;
+    rdfs:label "Source Repository" ;
+    rdfs:comment "A source-code repository a :ContainerImage is built from (a project of a code host, resolved from the image's source label or the deployment's repository URL)." ;
+    rdfs:subClassOf bfo:0000031 .
+
+:builtFrom a owl:ObjectProperty ;
+    rdfs:label "built from" ;
+    rdfs:comment "The :SourceRepository a :ContainerImage is built from (CONCEPT:MEDULLA-CQ-XSRC-R002.6)." ;
+    rdfs:domain :ContainerImage ;
+    rdfs:range :SourceRepository .
+
+:serviceStatus a owl:DatatypeProperty ;
+    rdfs:label "service status" ;
+    rdfs:comment "The health of a :Service: one of healthy, degraded or down (the closed set is checked in infrastructure-v1.shapes.ttl)." ;
+    rdfs:domain :Service ;
+    rdfs:range xsd:string .
+
 :lastPushedAt a owl:DatatypeProperty ;
     rdfs:label "last pushed at" ;
     rdfs:comment "The most recent time a :ContainerImage was pushed to its registry (Docker Hub / Harbor / GHCR)." ;

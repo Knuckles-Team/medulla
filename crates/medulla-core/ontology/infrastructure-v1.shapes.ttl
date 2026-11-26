@@ -18,6 +18,14 @@
             sh:path :pullCount ] ;
     sh:targetClass :ContainerImage .
 
+:ServiceStatusShape a sh:NodeShape ;
+    sh:description "A service reports its health as healthy, degraded or down." ;
+    sh:name "Service Status Shape" ;
+    sh:property [ sh:in ( "healthy" "degraded" "down" ) ;
+            sh:message "serviceStatus is healthy, degraded or down." ;
+            sh:path :serviceStatus ] ;
+    sh:targetClass :Service .
+
 :HostLimitShape a sh:NodeShape ;
     sh:targetClass :HostLimit ;
     sh:property [
