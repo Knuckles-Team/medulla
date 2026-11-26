@@ -98,6 +98,7 @@ pub fn assembly_request() -> AssemblyRequest {
         patterns: Default::default(),
         prompts: Default::default(),
         step_contracts: Default::default(),
+        template_key: None,
     }
 }
 

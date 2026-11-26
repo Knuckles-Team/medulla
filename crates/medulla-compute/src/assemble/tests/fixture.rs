@@ -195,6 +195,7 @@ pub fn request(tasks: &[&str], capabilities: &[&str]) -> AssemblyRequest {
         patterns: Default::default(),
         prompts: Default::default(),
         step_contracts: Default::default(),
+        template_key: None,
     }
 }
 

@@ -554,6 +554,86 @@ async fn deployment_template_assembles_ordered_steps() {
     }
 }
 
+// spec: MEDULLA-PLACEMENT-R001.12
+/// Verifies MEDULLA-PLACEMENT-R001.12: `AgentAssemble` takes `template_key =
+/// deployment:<target>` and assembles the newest published revision of that
+/// template, the sealed record names the pinned revision and not the key, an
+/// unknown key, a key beside `templates` and an empty key refuse by code, and a
+/// key of another tenant is never read.
+#[tokio::test]
+async fn deployment_template_key_assembles_the_pinned_revision() {
+    let library = library::harness().await;
+    library::seed(&library.store, None);
+    for (nonce, tool) in (40u8..).zip(["tool-render-artifact", "tool-apply", "tool-verify"]) {
+        library::publish(
+            &library.store,
+            nonce,
+            (
+                tool,
+                medulla_agent_types::agent_component::AgentComponentKind::Tool,
+            ),
+            None,
+        );
+    }
+    let target = PlacementTarget::ALL[0]
+        .option_id()
+        .trim_start_matches("placement:")
+        .to_string();
+    let templates = medulla_persistence_records::agent_graph::tests::publish_deployment_templates(
+        &library.store,
+        library::TENANT,
+        &[target.as_str()],
+    );
+    let pinned = templates[0].clone();
+
+    // By key, the answer equals the answer for the exact pin.
+    let mut keyed = library::request(Vec::new());
+    keyed.template_key = Some(format!("deployment:{target}"));
+    let by_key = library::assemble(&library, keyed)
+        .await
+        .expect("the key resolves to its template");
+    let mut by_pin_request = library::request(Vec::new());
+    by_pin_request.templates = BoundedVec::new(vec![pinned.clone()]).unwrap();
+    let by_pin = library::assemble(&library, by_pin_request)
+        .await
+        .expect("the pin assembles");
+    let steps = |result: &medulla_decision_types::decision::AssemblyResult| -> Vec<String> {
+        result
+            .graph
+            .as_ref()
+            .expect("a solved record answers its graph")
+            .shape
+            .nodes
+            .iter()
+            .map(|node| node.node_id.clone())
+            .collect()
+    };
+    assert_eq!(steps(&by_key), ["render-artifact", "apply", "verify", "done"]);
+    assert_eq!(steps(&by_key), steps(&by_pin));
+    let recorded = &by_key.record.inputs.request;
+    assert_eq!(recorded.template_key, None, "the sealed request holds no key");
+    assert_eq!(
+        recorded.templates.as_slice(),
+        &[pinned][..],
+        "the sealed request names the pinned revision"
+    );
+
+    // Refusals leave no answer.
+    let mut unknown = library::request(Vec::new());
+    unknown.template_key = Some("deployment:missing".into());
+    let error = library::assemble(&library, unknown).await.unwrap_err();
+    assert!(error.starts_with("ASSEMBLY_INPUTS_INVALID"), "got: {error}");
+    let mut empty = library::request(Vec::new());
+    empty.template_key = Some(String::new());
+    let error = library::assemble(&library, empty).await.unwrap_err();
+    assert!(error.starts_with("ASSEMBLY_INPUTS_INVALID"), "got: {error}");
+    let mut both = library::request(Vec::new());
+    both.template_key = Some(format!("deployment:{target}"));
+    both.templates = BoundedVec::new(vec![templates[0].clone()]).unwrap();
+    let error = library::assemble(&library, both).await.unwrap_err();
+    assert!(error.starts_with("ASSEMBLY_INPUTS_INVALID"), "got: {error}");
+}
+
 // spec: MEDULLA-PLACEMENT-R001.9
 #[tokio::test]
 async fn placement_record_has_one_why_not_per_non_chosen_target() {

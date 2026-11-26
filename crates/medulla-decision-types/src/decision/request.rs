@@ -214,6 +214,15 @@ pub struct AssemblyRequest {
     /// a request without them keeps its bytes.
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub step_contracts: BoundedVec<StepContract, 64>,
+    /// The graph template to assemble, named by its published graph id
+    /// (MEDULLA-PLACEMENT-R001.12), for a caller that holds the key and not the revision pin.
+    /// The handler resolves it to the newest published revision in the verified tenant's
+    /// library, writes that exact reference into `templates` and clears this field, so the
+    /// sealed record names the revision it solved. Refused with `ASSEMBLY_INPUTS_INVALID`
+    /// when `templates` is also non-empty, when the key is empty, or when no published
+    /// revision exists. Absent when none.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub template_key: Option<String>,
 }
 
 /// The source slot that supplies one declared field of a step's input schema

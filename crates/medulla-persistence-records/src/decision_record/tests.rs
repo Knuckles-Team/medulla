@@ -155,6 +155,7 @@ fn request(tenant: &str) -> AssemblyRequest {
         patterns: Default::default(),
         prompts: Default::default(),
         step_contracts: Default::default(),
+        template_key: None,
     }
 }
 
@@ -300,6 +301,32 @@ fn a_record_from_another_tenant_is_refused() {
         )
         .expect_err("cross-tenant");
     assert!(error.starts_with("ACCESS_DENIED"), "{error}");
+}
+
+/// MEDULLA-PLACEMENT-R001.12: a template key names the newest published revision of
+/// that graph in the asking tenant, and nothing else.
+// spec: MEDULLA-PLACEMENT-R001.12
+#[test]
+fn template_key_resolves_the_newest_published_rev_in_the_tenant() {
+    let (_dir, store) = open_agent_store();
+    let published = super::super::agent_graph::tests::publish_deployment_templates(
+        &store,
+        TENANT,
+        &["compose-host"],
+    );
+    let resolved = store
+        .assembly_template_ref(TENANT, "deployment:compose-host")
+        .expect("the key resolves");
+    assert_eq!(resolved, published[0], "the key resolves to the pinned revision");
+
+    let unknown = store
+        .assembly_template_ref(TENANT, "deployment:absent")
+        .expect_err("an unpublished key refuses");
+    assert!(unknown.starts_with("ASSEMBLY_INPUTS_INVALID"), "{unknown}");
+    let foreign = store
+        .assembly_template_ref("tenant-other", "deployment:compose-host")
+        .expect_err("another tenant's template is never read");
+    assert!(foreign.starts_with("ASSEMBLY_INPUTS_INVALID"), "{foreign}");
 }
 
 /// EH-070: the published graph pins the committed record through

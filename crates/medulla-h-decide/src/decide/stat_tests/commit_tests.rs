@@ -134,6 +134,7 @@ async fn evidence_streams_are_sealed_and_read_back() {
                 patterns: Default::default(),
                 prompts: Default::default(),
                 step_contracts: Default::default(),
+                template_key: None,
             };
             req.evidence_streams = BoundedVec::new(streams).unwrap();
             let response = super::super::assemble::handle_agent_assemble(

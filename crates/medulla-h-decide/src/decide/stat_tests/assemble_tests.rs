@@ -201,6 +201,7 @@ pub(in crate::decide) fn request(required: Vec<ModelInputMediaType>) -> Assembly
         patterns: Default::default(),
         prompts: Default::default(),
         step_contracts: Default::default(),
+        template_key: None,
     }
 }
 

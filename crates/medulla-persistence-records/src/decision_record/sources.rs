@@ -55,6 +55,30 @@ pub(super) fn policy_of(entry: &AgentComponentEntry) -> Result<DecisionPolicy, S
 }
 
 impl AgentLibraryStore {
+    /// The pinned reference of the newest published revision of the graph template
+    /// `template_key` in `tenant_id` (MEDULLA-PLACEMENT-R001.12). A key with no published
+    /// revision refuses `ASSEMBLY_INPUTS_INVALID`; a retired or withdrawn revision is never
+    /// chosen, and no other tenant's template is ever read.
+    pub fn assembly_template_ref(
+        &self,
+        tenant_id: &str,
+        template_key: &str,
+    ) -> Result<AgentGraphEntryRef, String> {
+        self.graph_revisions(tenant_id, template_key)?
+            .into_iter()
+            .filter(|entry| {
+                entry.lifecycle == medulla_agent_types::agent_library::AgentLibraryLifecycle::Published
+            })
+            .max_by_key(|entry| entry.entry_revision)
+            .map(|entry| AgentGraphEntryRef::from_entry(&entry))
+            .ok_or_else(|| {
+                refuse(
+                    DecisionErrorCode::AssemblyInputsInvalid,
+                    format!("template_key '{template_key}' has no published revision"),
+                )
+            })
+    }
+
     /// A request's graph template, at exactly the revision it names.
     pub fn assembly_template(
         &self,

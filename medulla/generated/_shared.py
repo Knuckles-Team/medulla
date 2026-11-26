@@ -445,6 +445,7 @@ class AssemblyRequest(BaseModel):
     requirements: AssemblyRequirements
     solver: SolverBudget | None = None
     step_contracts: Annotated[list[StepContract], Field(max_length=64)] | None = None
+    template_key: str | None = None
     templates: BoundedVec_AgentGraphEntryRef_8 = Field(default_factory=list)
     tenant_id: str
     evidence_streams: Annotated[list[EvidenceStreamRef], Field(max_length=16)] = Field(

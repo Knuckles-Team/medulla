@@ -42,6 +42,33 @@ pub async fn handle_agent_assemble(
     }
 }
 
+/// Turn `template_key` (MEDULLA-PLACEMENT-R001.12) into the exact pinned reference of the
+/// newest published revision of that graph template in the request's tenant, so the solve and
+/// the sealed record name one revision. The key is cleared once resolved. A key beside a
+/// non-empty `templates`, or an empty key, refuses `ASSEMBLY_INPUTS_INVALID`.
+#[cfg(feature = "decide")]
+fn resolve_template_key(
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
+    request: &mut AssemblyRequest,
+) -> Result<(), String> {
+    let Some(key) = request.template_key.take() else {
+        return Ok(());
+    };
+    if key.is_empty() {
+        return Err("ASSEMBLY_INPUTS_INVALID: template_key must not be empty".to_string());
+    }
+    if !request.templates.is_empty() {
+        return Err(
+            "ASSEMBLY_INPUTS_INVALID: template_key and templates are mutually exclusive"
+                .to_string(),
+        );
+    }
+    let reference = store.assembly_template_ref(&request.tenant_id, &key)?;
+    request.templates = medulla_types::contract::BoundedVec::new(vec![reference])
+        .map_err(|message| format!("ASSEMBLY_INPUTS_INVALID: template_key: {message}"))?;
+    Ok(())
+}
+
 #[cfg(feature = "decide")]
 pub(super) async fn assemble_for(
     state: &SharedState,
@@ -77,6 +104,10 @@ pub(super) async fn assemble_for(
         Ok::<_, String>((store, policy, shields))
     })
     .await?;
+    let mut request = request;
+    telemetry::stage(Stage::Candidates, FAMILY, tenant, || {
+        resolve_template_key(&store, &mut request)
+    })?;
     let entries = telemetry::stage(Stage::Candidates, FAMILY, tenant, || {
         store.assembly_candidates(&request.tenant_id, &request.candidates)
     })?;
