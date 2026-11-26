@@ -2159,6 +2159,13 @@ name = "ingest_source_governance"
 path = "benches/ingest_source_governance.rs"
 harness = false
 
+# Change-envelope commit at 1,000 records (MEDULLA-REPO-INGEST-R002.655): nightly budget.
+[[bench]]
+name = "change_envelope_commit"
+path = "benches/change_envelope_commit.rs"
+harness = false
+required-features = ["server", "security", "redb"]
+
 # Page task overhead of a chunked drain (MEDULLA-INGEST-WORKER-R605.6): nightly budget.
 [[bench]]
 name = "ingest_drain"
