@@ -16695,6 +16695,13 @@ class MethodProcessDocumentExport(BaseModel):
     params: MethodProcessDocumentExportParams
 
 
+class MethodRunTraceExport(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["RunTraceExport"]
+    params: MethodRunTraceExportParams
+
+
 class MethodProcessModelDeploy(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17760,6 +17767,7 @@ Method = Annotated[
         MethodProcessModelImport,
         MethodProcessDocumentImport,
         MethodProcessDocumentExport,
+        MethodRunTraceExport,
         MethodProcessModelDeploy,
         MethodProcessModelExport,
         MethodArchitectureModelExport,
@@ -37635,6 +37643,12 @@ class MethodProcessDocumentExportParams(BaseModel):
     format: Literal["bpmn20", "dmn13"]
 
 
+class MethodRunTraceExportParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: dict[str, Any]
+
+
 class MethodProcessModelDeployParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -48525,6 +48539,8 @@ __all__ = [
     "MethodProcessDocumentImportParams",
     "MethodProcessDocumentExport",
     "MethodProcessDocumentExportParams",
+    "MethodRunTraceExport",
+    "MethodRunTraceExportParams",
     "MethodProcessModelDeploy",
     "MethodProcessModelDeployParams",
     "MethodProcessModelExport",

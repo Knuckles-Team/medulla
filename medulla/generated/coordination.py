@@ -3183,6 +3183,7 @@ send_process_document_import = contract_sender(
 send_process_document_export = contract_sender(
     "ProcessDocumentExport", "MethodProcessDocumentExportParams"
 )
+send_run_trace_export = contract_sender("RunTraceExport", "MethodRunTraceExportParams")
 send_process_model_deploy = contract_sender(
     "ProcessModelDeploy", "MethodProcessModelDeployParams"
 )

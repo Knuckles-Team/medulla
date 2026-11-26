@@ -98,6 +98,9 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     // MEDULLA-UNIFIED-DATA-PLANE-R701.3: `handle_standards_drift` reads the standard and
     // asset nodes of the core `read_authority.project_core` projected.
     "StandardsDrift",
+    // MEDULLA-ORCH-VOCAB-R009.100: `handle_run_trace_export` walks the run-trace nodes of the
+    // core `read_authority.project_core` projected.
+    "RunTraceExport",
     "ReadSpan",
     // MEDULLA-INGEST-WORKER-R003.3: atoms listed from the core `read_authority` projected.
     "AtomContext",

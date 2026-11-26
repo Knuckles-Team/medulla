@@ -620,6 +620,7 @@ METHOD_IDS = frozenset(
         "ProcessModelImport",
         "ProcessDocumentImport",
         "ProcessDocumentExport",
+        "RunTraceExport",
         "ProcessModelDeploy",
         "ProcessModelExport",
         "Batch",

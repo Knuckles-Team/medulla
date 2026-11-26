@@ -297,6 +297,8 @@ method_results! {
     ProcessDocumentExport(ProcessDocumentExport) => Json<medulla_types::process_exchange::ProcessDocumentExported>;
     // MEDULLA-CQ-ORCH-R703.3: the deploy answers as a sync report whose one outbound draft is the queued proposal.
     ProcessModelDeploy(ProcessModelDeploy) => Json<medulla_source_types::source_sync::SyncReport>;
+    // MEDULLA-ORCH-VOCAB-R009.100: one page of the correlated run-trace export.
+    RunTraceExport(RunTraceExport) => Json<medulla_types::run_trace_export::RunTraceExportPageV1>;
     ProcessModelExport(ProcessModelExport) => Json<medulla_types::process_import::ProcessModelExported>;
     HarnessEditCreate(HarnessEdit / "create") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;
     HarnessEditTransition(HarnessEdit / "transition") => Raw<medulla_work_types::harness_edit::HarnessEditRecord>;

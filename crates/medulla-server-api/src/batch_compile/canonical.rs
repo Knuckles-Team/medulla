@@ -620,6 +620,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ContextFacts { .. }
         // MEDULLA-UNIFIED-DATA-PLANE-R701.3: a read; every recommendation is a proposal.
         | Method::StandardsDrift { .. }
+        // MEDULLA-ORCH-VOCAB-R009.100: a read of the caller's projection; it commits nothing.
+        | Method::RunTraceExport { .. }
         | Method::ReadSpan { .. }
         | Method::AtomContext { .. }
         // MEDULLA-CQ-ORCH-R705.6: an import commits as one request-graph

@@ -1361,6 +1361,17 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PROCESS_DOC_RULE_ENTRIES_MISMATCH",
         ],
     ),
+    // MEDULLA-ORCH-VOCAB-R009.100: a declared span the walk did not reach, a span reached twice,
+    // a token or pinned revision cut from another snapshot, an invisible root run.
+    (
+        "RunTraceExport",
+        &[
+            "EXPORT_CHILD_MISSING",
+            "EXPORT_SPAN_DUPLICATE",
+            "EXPORT_CURSOR_STALE",
+            "RUN_TRACE_NOT_FOUND",
+        ],
+    ),
     // MEDULLA-CQ-ORCH-R702.10: an invisible model or workflow, a source the writer cannot write.
     (
         "ProcessDocumentExport",

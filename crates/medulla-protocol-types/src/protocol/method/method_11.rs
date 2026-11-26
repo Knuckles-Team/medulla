@@ -257,6 +257,16 @@ $($variants)*
         standard: Option<String>,
     },
 
+    // ── Run trace export (MEDULLA-ORCH-VOCAB-R009.100) ─────────────────────
+    /// One page of the records correlated to a root `:RunTrace`: the parent run, its child
+    /// agent runs, spans and tool calls, read along the declared child edges at one pinned
+    /// graph revision. `complete` is false with `EXPORT_CHILD_MISSING` when a declared span
+    /// is absent. Reads only, through the caller's graph view; a foreign tenant reads as
+    /// absent.
+    RunTraceExport {
+        request: Box<medulla_types::run_trace_export::RunTraceExportV1>,
+    },
+
     // ── Served incidents (MEDULLA-UNIFIED-DATA-PLANE-R760.3) ───────────────
     /// Record one anomaly in the caller's tenant (from the verified carrier)
     /// and correlate it into an open incident over `window_ms`.

@@ -111,6 +111,10 @@ async fn dispatch_query_family(
         Method::StandardsDrift { scope, standard } => {
             return Ok(handle_standards_drift(hctx, scope, standard))
         }
+        // MEDULLA-ORCH-VOCAB-R009.100: one page of the records correlated to a root run.
+        Method::RunTraceExport { request } => {
+            return Ok(super::run_trace_export::handle_run_trace_export(hctx, *request))
+        }
         other => other,
     };
     // MEDULLA-FEDERATED-QUERY-R702.3: one search-task synthesis over the caller's projected evidence.

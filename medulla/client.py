@@ -7993,6 +7993,48 @@ class GraphOperationsClient:
             raise RuntimeError("ProcessDocumentExport must answer with an object")
         return result
 
+    async def run_trace_export(
+        self,
+        root_run_id: str,
+        *,
+        time_range: dict[str, int] | None = None,
+        source_revision: int | None = None,
+        redaction_profile: str = "digests_only",
+        page_size: int | None = None,
+        page_token: str | None = None,
+    ) -> dict[str, Any]:
+        """Read one page of the records correlated to a root run trace
+        (MEDULLA-ORCH-VOCAB-R009.100).
+
+        The parent run, its child agent runs, spans and tool calls are read along the
+        declared child edges at one pinned graph revision. Returns ``{root_run_id,
+        source_revision, redaction_profile, records, complete, refusal,
+        missing_children, snapshot_digest, next_page_token}``; ``complete`` is false
+        with ``refusal == "EXPORT_CHILD_MISSING"`` when a declared span is absent.
+        ``redaction_profile`` is ``digests_only`` (default), ``strip_content`` or
+        ``none`` (the trace owner only). A foreign tenant's run reads as absent
+        (``RUN_TRACE_NOT_FOUND``); a stale ``page_token`` or ``source_revision`` is
+        refused ``EXPORT_CURSOR_STALE``.
+        """
+        request: dict[str, Any] = {
+            "root_run_id": root_run_id,
+            "redaction_profile": redaction_profile,
+        }
+        if time_range is not None:
+            request["time_range"] = time_range
+        if source_revision is not None:
+            request["source_revision"] = source_revision
+        if page_size is not None:
+            request["page_size"] = page_size
+        if page_token is not None:
+            request["page_token"] = page_token
+        result = await self._client._send(
+            "RunTraceExport", {"request": request}, None, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("RunTraceExport must answer with an object")
+        return result
+
     async def process_model_deploy(
         self,
         model_iri: str,

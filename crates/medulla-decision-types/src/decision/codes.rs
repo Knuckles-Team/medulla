@@ -729,6 +729,11 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "process_exchange",
             medulla_types::process_exchange::REFUSALS.to_vec(),
         ),
+        // MEDULLA-ORCH-VOCAB-R009.100: the served run-trace export refusals.
+        (
+            "run_trace_export",
+            medulla_types::run_trace_export::REFUSALS.to_vec(),
+        ),
         // MEDULLA-CQ-ORCH-R700.4: the served process compile and the import codes it keeps.
         (
             "process_compile",

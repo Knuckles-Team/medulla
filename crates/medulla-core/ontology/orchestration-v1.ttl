@@ -339,6 +339,40 @@
     rdfs:domain :RunTrace ;
     rdfs:range :RunEvent .
 
+:Span a owl:Class ;
+    rdfs:label "Span" ;
+    rdfs:comment "MEDULLA-ORCH-VOCAB-R009.100 -- one timed section of a run, exported by the harness and hung from its :RunTrace." ;
+    rdfs:seeAlso prov:Activity .
+
+:ToolCall a owl:Class ;
+    rdfs:label "ToolCall" ;
+    rdfs:comment "MEDULLA-ORCH-VOCAB-R009.100 -- one tool invocation of a run, hung from its :RunTrace." ;
+    rdfs:seeAlso prov:Activity .
+
+:hasChildRun a owl:ObjectProperty ;
+    rdfs:label "hasChildRun" ;
+    rdfs:comment "MEDULLA-ORCH-VOCAB-R009.100 -- RunTrace -[:hasChildRun]-> RunTrace: the run a parent run delegated to a child agent. A declared child edge of the correlated trace export." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range :RunTrace .
+
+:hasSpan a owl:ObjectProperty ;
+    rdfs:label "hasSpan" ;
+    rdfs:comment "MEDULLA-ORCH-VOCAB-R009.100 -- RunTrace -[:hasSpan]-> Span. A declared child edge of the correlated trace export." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range :Span .
+
+:hasToolCall a owl:ObjectProperty ;
+    rdfs:label "hasToolCall" ;
+    rdfs:comment "MEDULLA-ORCH-VOCAB-R009.100 -- RunTrace -[:hasToolCall]-> ToolCall. A declared child edge of the correlated trace export." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range :ToolCall .
+
+:declaredSpans a owl:DatatypeProperty ;
+    rdfs:label "declaredSpans" ;
+    rdfs:comment "MEDULLA-ORCH-VOCAB-R009.100 -- the span node ids a run declared it produced, as a JSON array of strings. The export is complete only when each one is present." ;
+    rdfs:domain :RunTrace ;
+    rdfs:range xsd:string .
+
 :hasMessage a owl:ObjectProperty ;
     rdfs:label "hasMessage" ;
     rdfs:comment "CONCEPT:ORCH-1.40 — Session -[:HAS_MESSAGE]-> AgentMessage durable-history edge." ;
