@@ -570,7 +570,10 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
         REASON_FOREIGN_READ_SESSION_OWNER_SCOPED,
     ),
     ("ForeignReadOpen", REASON_FOREIGN_READ_SESSION_OWNER_SCOPED),
-    ("VerifySourceQueryApproval", REASON_FOREIGN_READ_SESSION_OWNER_SCOPED),
+    (
+        "VerifySourceQueryApproval",
+        REASON_FOREIGN_READ_SESSION_OWNER_SCOPED,
+    ),
     // REASON_FOREIGN_SOURCE_OWNER_SCOPED (EH-572)
     ("QueryForeignColumns", REASON_FOREIGN_SOURCE_OWNER_SCOPED),
     ("ListForeignSources", REASON_FOREIGN_SOURCE_OWNER_SCOPED),
@@ -614,6 +617,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("Health", REASON_SERVER_LIFECYCLE),
     ("Metrics", REASON_SERVER_LIFECYCLE),
     ("Ping", REASON_SERVER_LIFECYCLE),
+    // MEDULLA-DURABLE-KERNEL-R043.100.5: answers engine config only, no tenant row.
+    ("GraphLiveLimits", REASON_SERVER_LIFECYCLE),
     ("ResourceStatsPage", REASON_SERVER_LIFECYCLE),
     // REASON_AUDIT_CHAIN_ADMIN_GATED
     ("AuditVerify", REASON_AUDIT_CHAIN_ADMIN_GATED),
@@ -788,7 +793,10 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("QueryDevelopmentLane", REASON_NATIVE_DEVELOPMENT_LANE_READ),
     // REASON_NATIVE_WORK_ITEM_TENANT_READ
     ("GetWorkItem", REASON_NATIVE_WORK_ITEM_TENANT_READ),
-    ("ListWorkItemTransitions", REASON_NATIVE_WORK_ITEM_TENANT_READ),
+    (
+        "ListWorkItemTransitions",
+        REASON_NATIVE_WORK_ITEM_TENANT_READ,
+    ),
     ("GetEffectReceipt", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("GetAdmittedRequest", REASON_NATIVE_WORK_ITEM_TENANT_READ),
     ("TraceCritique", REASON_NATIVE_WORK_ITEM_TENANT_READ),

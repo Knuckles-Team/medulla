@@ -42,14 +42,16 @@ mod served {
     use super::{UsageOp, VerifiedRequestContext};
     use crate::decide::SharedState;
     use medulla_decision_types::usage::{
-        PriceCatalog, UsageAppended, UsagePriceStored, UsageReadResult, UsageReadView,
-        UsageRecord, USAGE_SCHEMA_VERSION,
+        PriceCatalog, UsageAppended, UsagePriceStored, UsageReadResult, UsageReadView, UsageRecord,
+        USAGE_SCHEMA_VERSION,
     };
-    use medulla_persistence_records::usage_ledger::{DAY_MS, USAGE_READ_PAGE};
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_persistence_records::usage_ledger::UsageRefusal;
+    use medulla_persistence_records::usage_ledger::{DAY_MS, USAGE_READ_PAGE};
     use medulla_protocol_types::protocol::ResultPayload;
-    use medulla_protocol_types::result_contract::coordination::{UsageAppend, UsagePutPrice, UsageRead};
+    use medulla_protocol_types::result_contract::coordination::{
+        UsageAppend, UsagePutPrice, UsageRead,
+    };
 
     pub(super) async fn serve(
         state: &SharedState,
@@ -91,6 +93,7 @@ mod served {
                 to_ms,
                 model_key,
                 view,
+                group_by,
                 cursor,
             } => {
                 if from_ms > to_ms {
@@ -132,7 +135,18 @@ mod served {
                         if let Some(wanted) = wanted {
                             days.retain(|day| day.model_key == wanted);
                         }
-                        UsageReadResult::Rollup { days }
+                        let groups = match group_by {
+                            Some(group_by) => store
+                                .usage_groups(tenant, &catalog, from_ms, to_ms, group_by)
+                                .map_err(refused)?,
+                            None => Vec::new(),
+                        };
+                        let index_watermark_ms = store.usage_watermark(tenant).map_err(refused)?;
+                        UsageReadResult::Rollup {
+                            days,
+                            groups,
+                            index_watermark_ms,
+                        }
                     }
                 };
                 ResultPayload::of::<UsageRead>(result)
@@ -147,6 +161,16 @@ mod served {
                         "PARAMETER_INVALID: price entry for {:?} needs schema_version \
                          {USAGE_SCHEMA_VERSION} and a model key",
                         entry.model_key
+                    ));
+                }
+                if let Some(entry) = entries.iter().find(|e| {
+                    !e.currency.is_empty()
+                        && !(e.currency.len() == 3
+                            && e.currency.bytes().all(|b| b.is_ascii_uppercase()))
+                }) {
+                    return Err(format!(
+                        "PARAMETER_INVALID: price currency {:?} for {:?} is not an ISO 4217 code",
+                        entry.currency, entry.model_key
                     ));
                 }
                 entries.sort_by(|a, b| {

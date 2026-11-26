@@ -17743,6 +17743,12 @@ class MethodOpenGraphSnapshot(BaseModel):
     method: Literal["OpenGraphSnapshot"]
 
 
+class MethodGraphLiveLimits(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["GraphLiveLimits"]
+
+
 class MethodReadGraphChanges(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -18532,6 +18538,7 @@ Method = Annotated[
         MethodReadSpan,
         MethodAtomContext,
         MethodOpenGraphSnapshot,
+        MethodGraphLiveLimits,
         MethodReadGraphChanges,
         MethodTaskQueueEnqueue,
         MethodTaskQueueClaim,
@@ -39051,6 +39058,7 @@ class UsageOutcome(str, Enum):
 class UsageRecord(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    agent_id: str = ""
     child_id: str
     content_digest: str
     latency_ms: Annotated[int, Field(ge=0)]
@@ -39058,6 +39066,7 @@ class UsageRecord(BaseModel):
     operation: str
     outcome: UsageOutcome
     principal: str
+    project_id: str = ""
     recorded_at_ms: Annotated[int, Field(ge=0)]
     run_id: str
     schema_version: Annotated[int, Field(ge=0, le=65535)]
@@ -39071,6 +39080,7 @@ class PriceEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     cached_per_mtok_micro: Annotated[int, Field(ge=0)]
+    currency: str = ""
     in_per_mtok_micro: Annotated[int, Field(ge=0)]
     model_key: str
     out_per_mtok_micro: Annotated[int, Field(ge=0)]
@@ -39104,11 +39114,18 @@ class UsageReadView(str, Enum):
     ROLLUP = "rollup"
 
 
+class UsageGroupBy(str, Enum):
+    MODEL = "model"
+    PROJECT = "project"
+    AGENT = "agent"
+
+
 class UsageOpRead(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     cursor: str | None = None
     from_ms: Annotated[int, Field(ge=0)]
+    group_by: UsageGroupBy | None = None
     model_key: str | None = None
     op: Literal["read"]
     to_ms: Annotated[int, Field(ge=0)]
@@ -39126,9 +39143,24 @@ class DayRollup(BaseModel):
 
     calls: Annotated[int, Field(ge=0)]
     cost_micro: Annotated[int, Field(ge=0)] | None = None
+    currency: str | None = None
     day: Annotated[int, Field(ge=0)]
     errors: Annotated[int, Field(ge=0)]
     model_key: str
+    tokens_cached: Annotated[int, Field(ge=0)]
+    tokens_in: Annotated[int, Field(ge=0)]
+    tokens_out: Annotated[int, Field(ge=0)]
+
+
+class UsageGroupRollup(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    calls: Annotated[int, Field(ge=0)]
+    cost_micro: Annotated[int, Field(ge=0)] | None = None
+    currency: str | None = None
+    errors: Annotated[int, Field(ge=0)]
+    key: str
+    latency_p95_ms: Annotated[int, Field(ge=0)]
     tokens_cached: Annotated[int, Field(ge=0)]
     tokens_in: Annotated[int, Field(ge=0)]
     tokens_out: Annotated[int, Field(ge=0)]
@@ -39146,6 +39178,8 @@ class UsageReadResultRollup(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     days: list[DayRollup]
+    groups: list[UsageGroupRollup] = Field(default_factory=list)
+    index_watermark_ms: Annotated[int, Field(ge=0)] | None = None
     view: Literal["rollup"]
 
 
@@ -48075,6 +48109,7 @@ __all__ = [
     "MethodGetCurrentPlanParams",
     "MethodGetDelegationRecord",
     "MethodGetDelegationRecordParams",
+    "MethodGraphLiveLimits",
     "MethodGraphOwnershipPlan",
     "MethodGraphOwnershipPlanParams",
     "MethodGetEdgeProperties",
@@ -51191,6 +51226,8 @@ __all__ = [
     "UpgradeSubjectKind",
     "UqlFrameState",
     "UsageAppended",
+    "UsageGroupBy",
+    "UsageGroupRollup",
     "UsageOp",
     "UsageOpAppend",
     "UsageOpPutPrice",

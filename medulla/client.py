@@ -28,6 +28,7 @@ import socket
 import ssl
 import threading
 import time
+import uuid
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from pathlib import PurePosixPath, PureWindowsPath
 from typing import (
@@ -7547,6 +7548,23 @@ class GraphOperationsClient:
         )
         if not isinstance(result, dict):
             raise RuntimeError("OpenGraphSnapshot must answer with an object")
+        return result
+
+    async def graph_live_limits(self, graph: str | None = None) -> dict[str, Any]:
+        """Read the owner's live-graph latency and layout limits
+        (MEDULLA-DURABLE-KERNEL-R043.100.5).
+
+        Returns ``{profile_revision, contract_revision, workload,
+        commit_to_visible_p95_ms, frame_p95_ms, layout_settle_ms}``, read from engine
+        config. ``profile_revision`` is the ``latency_profile_revision`` every event of
+        :meth:`read_graph_changes` carries. Names no tenant or node. The caller needs
+        ``graph:read``.
+        """
+        result = await self._client._send(
+            "GraphLiveLimits", None, graph, idempotency_key=None
+        )
+        if not isinstance(result, dict):
+            raise RuntimeError("GraphLiveLimits must answer with an object")
         return result
 
     async def read_graph_changes(
@@ -18030,6 +18048,36 @@ def _validate_anonymous_peer(writer: asyncio.StreamWriter) -> None:
     raise ValueError("auth_mode='none' requires a local transport peer")
 
 
+def _validate_sandbox_admission(
+    sandbox: Mapping[str, str] | None, auth_mode: str
+) -> dict[str, str] | None:
+    """The ``{principal, tenant}`` a sandbox client sends, or ``None``.
+
+    A sandbox admission exists only under ``auth_mode="none"``
+    (MEDULLA-IDENTITY-R003.9); anywhere else it is a programming error, not a
+    request to send.
+    """
+    if sandbox is None:
+        return None
+    if auth_mode != "none":
+        raise ValueError("a sandbox admission requires auth_mode='none'")
+    if set(sandbox) != {"principal", "tenant"}:
+        raise ValueError("sandbox must hold exactly 'principal' and 'tenant'")
+    for name in ("principal", "tenant"):
+        value = sandbox[name]
+        if (
+            not isinstance(value, str)
+            or not value
+            or value != value.strip()
+            or len(value.encode("utf-8")) > 128
+            or any(ord(char) < 32 or 127 <= ord(char) <= 159 for char in value)
+        ):
+            raise ValueError(
+                f"sandbox {name} must be 1..128 UTF-8 bytes without controls"
+            )
+    return {"principal": sandbox["principal"], "tenant": sandbox["tenant"]}
+
+
 def _validate_auth_mode(
     auth_mode: str,
     auth_secret: str | None,
@@ -18104,8 +18152,10 @@ class MedullaClient:
         timeout: float | None = _DEFAULT_RPC_TIMEOUT,
         heavy_timeout: float | None = _HEAVY_RPC_TIMEOUT,
         node_id: str | None = None,
+        sandbox: Mapping[str, str] | None = None,
     ) -> None:
         _validate_auth_mode(auth_mode, auth_secret, verified_context)
+        self._sandbox = _validate_sandbox_admission(sandbox, auth_mode)
         if auth_mode == "none":
             if node_id is not None:
                 raise ValueError("auth_mode='none' cannot use verified authority")
@@ -18422,8 +18472,18 @@ class MedullaClient:
         node_id: str | None = None,
         required_socket_path: str | None = None,
         write_admission: _WriteAdmission | None = None,
+        sandbox: Mapping[str, str] | None = None,
     ) -> MedullaClient:
+        """Connect to the engine.
+
+        ``sandbox`` (``{"principal": ..., "tenant": ...}``, only with
+        ``auth_mode="none"``) asks the engine to admit that sandbox-minted
+        principal into the named tenant (MEDULLA-IDENTITY-R003.9): every request
+        resolves to that tenant's session and no other. An engine in any other auth
+        mode refuses it ``AUTH_MODE_NOT_NONE``.
+        """
         _validate_auth_mode(auth_mode, auth_secret, verified_context)
+        _validate_sandbox_admission(sandbox, auth_mode)
         if auth_mode == "none":
             _validate_anonymous_target(tcp_addr)
             if write_admission is not None or node_id is not None:
@@ -18481,6 +18541,7 @@ class MedullaClient:
             timeout=timeout,
             heavy_timeout=heavy_timeout,
             node_id=node_id,
+            sandbox=sandbox,
         )
         # Remember the endpoint so a dropped connection self-heals (KG-2.19).
         client._socket_path = resolved_socket or socket_path
@@ -18952,7 +19013,9 @@ class MedullaClient:
         return getattr(self, binder)(params, request_id=req_id, graph=target_graph)
 
     @staticmethod
-    def _anonymous_correlation(key: str) -> str:
+    def _anonymous_correlation(
+        key: str, sandbox: Mapping[str, str] | None = None
+    ) -> str:
         """Unsigned replay metadata in the legacy auth_token slot, NOT a credential.
 
         Only an explicitly anonymous server accepts this marker. It contains no
@@ -18967,8 +19030,11 @@ class MedullaClient:
             raise ValueError(
                 "anonymous idempotency key must be 1..256 UTF-8 bytes without controls"
             )
+        envelope: dict[str, Any] = {"idempotency_key": key}
+        if sandbox is not None:
+            envelope["sandbox"] = dict(sandbox)
         return "anon1." + json.dumps(
-            {"idempotency_key": key}, ensure_ascii=False, separators=(",", ":")
+            envelope, ensure_ascii=False, separators=(",", ":")
         )
 
     def _build_send_request(
@@ -18994,8 +19060,12 @@ class MedullaClient:
                 "agent_id": None,
                 "method": method,
             }
-            if idempotency_key is not None:
-                request["auth_token"] = self._anonymous_correlation(idempotency_key)
+            if idempotency_key is not None or self._sandbox is not None:
+                # A sandbox admission rides the correlation envelope, so every request
+                # of a sandbox client carries one (MEDULLA-IDENTITY-R003.9).
+                request["auth_token"] = self._anonymous_correlation(
+                    idempotency_key or f"sandbox-{uuid.uuid4().hex}", self._sandbox
+                )
             if params:
                 request["params"] = params
             _stamp_trace_id(request)

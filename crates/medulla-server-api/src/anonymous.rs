@@ -11,6 +11,68 @@ use serde::Deserialize;
 #[serde(deny_unknown_fields)]
 struct AnonymousOperation {
     idempotency_key: String,
+    #[serde(default)]
+    sandbox: Option<SandboxAdmission>,
+}
+
+/// The `{principal, tenant}` a sandbox mints for one request (MEDULLA-IDENTITY-R003.9).
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct SandboxAdmission {
+    principal: String,
+    tenant: String,
+}
+
+/// Longest sandbox principal or tenant name in UTF-8 bytes.
+pub const MAX_SANDBOX_NAME_BYTES: usize = 128;
+/// The refusal of a sandbox admission that is malformed or names a reserved identity. One
+/// fixed text for every reason, so it names no tenant and no principal and reveals nothing
+/// about which exist (MEDULLA-IDENTITY-R003.9).
+pub const SANDBOX_REFUSAL: &str = "ACCESS_DENIED: anonymous sandbox admission refused";
+/// The refusal of a sandbox admission sent to an engine that is not running with
+/// `--auth-mode none` (MEDULLA-IDENTITY-R003.9).
+pub const AUTH_MODE_NOT_NONE_REFUSAL: &str =
+    "AUTH_MODE_NOT_NONE: sandbox tenant admission needs the engine auth mode none";
+
+/// Tenants and principals the engine owns: a sandbox is never admitted as them.
+const RESERVED_SANDBOX_NAMES: [&str; 3] = ["anonymous", "local", "__commons__"];
+
+fn sandbox_name_valid(name: &str) -> bool {
+    !name.trim().is_empty()
+        && name.len() <= MAX_SANDBOX_NAME_BYTES
+        && name == name.trim()
+        && !name.chars().any(char::is_control)
+        && !RESERVED_SANDBOX_NAMES.contains(&name)
+}
+
+/// The scopes of a sandbox principal: every user-class engine scope. Service-only, approver and
+/// admin scopes are never granted, and neither is the owner's wildcard.
+fn sandbox_scopes() -> Vec<String> {
+    medulla_capabilities::scopes::SCOPES
+        .iter()
+        .filter(|entry| {
+            matches!(
+                entry.class,
+                medulla_identity_types::identity::ScopeClass::User
+            )
+        })
+        .map(|entry| entry.scope.to_string())
+        .collect()
+}
+
+/// Whether `request` carries a sandbox admission in its correlation envelope. An engine that
+/// is not in `--auth-mode none` refuses it as [`AUTH_MODE_NOT_NONE_REFUSAL`]; it never reads
+/// the tenant or principal it names.
+pub fn carries_sandbox_admission(request: &Request) -> bool {
+    let Some(raw) = request.auth_token.strip_prefix("anon1.") else {
+        return false;
+    };
+    if raw.len() > MAX_METADATA_BYTES {
+        return false;
+    }
+    serde_json::from_str::<serde_json::Value>(raw)
+        .ok()
+        .is_some_and(|value| value.get("sandbox").is_some())
 }
 
 /// Largest anonymous correlation metadata accepted after the `anon1.` prefix
@@ -53,6 +115,17 @@ pub fn request_authority(request: &Request) -> Result<VerifiedRequestContext, St
             "ACCESS_DENIED: anonymous idempotency_key must be 1..256 UTF-8 bytes without controls"
                 .into(),
         );
+    }
+    if let Some(sandbox) = operation.sandbox {
+        if !sandbox_name_valid(&sandbox.principal) || !sandbox_name_valid(&sandbox.tenant) {
+            return Err(SANDBOX_REFUSAL.into());
+        }
+        return Ok(VerifiedRequestContext::sandbox_tenant(
+            &sandbox.principal,
+            &sandbox.tenant,
+            sandbox_scopes(),
+            operation.idempotency_key,
+        ));
     }
     Ok(VerifiedRequestContext::anonymous_local(Some(
         operation.idempotency_key,
@@ -140,6 +213,84 @@ mod tests {
         identity.agent_id = Some("admin".into());
         let refusal = request_authority(&identity).unwrap_err();
         assert!(refusal.starts_with(REFUSAL_PREFIX), "{refusal}");
+    }
+    fn sandbox_token(principal: &str, tenant: &str) -> String {
+        format!(
+            "anon1.{}",
+            serde_json::json!({
+                "idempotency_key": "one-operation",
+                "sandbox": {"principal": principal, "tenant": tenant},
+            })
+        )
+    }
+    // spec: MEDULLA-IDENTITY-R003.9
+    #[test]
+    fn a_sandbox_principal_resolves_to_its_named_tenant_with_user_scopes_only() {
+        let admitted =
+            request_authority(&request(&sandbox_token("sandbox:p1", "sandbox:t1"))).unwrap();
+        assert!(admitted.is_sandbox_tenant());
+        assert!(!admitted.is_authenticated());
+        assert_eq!(admitted.principal(), "sandbox:p1");
+        assert_eq!(admitted.agent_id(), "sandbox:p1");
+        assert_eq!(admitted.tenant(), "sandbox:t1");
+        assert!(!admitted.is_loop_principal());
+        // User-class scopes only: no wildcard, no service-only or admin scope.
+        assert!(admitted.allows_action("kg:read"));
+        assert!(!admitted.allows_action("usage:write"));
+        assert!(!admitted.allows_action("kg:admin"));
+        assert!(!admitted.allows_action("anything:else"));
+        // Another request names another tenant and gets that one, never a shared session.
+        let other =
+            request_authority(&request(&sandbox_token("sandbox:p1", "sandbox:t2"))).unwrap();
+        assert_eq!(other.tenant(), "sandbox:t2");
+        // A request without a sandbox admission is still the local owner.
+        let owner = request_authority(&request("")).unwrap();
+        assert!(!owner.is_sandbox_tenant());
+        assert_eq!(owner.tenant(), "local");
+    }
+    // spec: MEDULLA-IDENTITY-R003.9
+    #[test]
+    fn a_sandbox_admission_that_is_malformed_or_reserved_is_refused_without_naming_anything() {
+        let long = "x".repeat(MAX_SANDBOX_NAME_BYTES + 1);
+        for (principal, tenant) in [
+            ("", "t"),
+            ("p", ""),
+            (" p", "t"),
+            ("p", "t\n"),
+            ("anonymous", "t"),
+            ("p", "local"),
+            ("p", "__commons__"),
+            (long.as_str(), "t"),
+        ] {
+            let refusal = request_authority(&request(&sandbox_token(principal, tenant)))
+                .expect_err("refused");
+            assert_eq!(refusal, SANDBOX_REFUSAL);
+            assert!(!refusal.contains(tenant) || tenant.is_empty());
+        }
+        // An unknown field, or a claim beside the envelope, is refused as invalid metadata.
+        let extra = "anon1.{\"idempotency_key\":\"k\",\"sandbox\":{\"principal\":\"p\",\"tenant\":\"t\",\"scopes\":[\"*\"]}}";
+        assert!(request_authority(&request(extra))
+            .unwrap_err()
+            .starts_with(REFUSAL_PREFIX));
+        // A caller identity claim beside a sandbox admission is still refused.
+        let mut claim = request(&sandbox_token("p", "t"));
+        claim.agent_id = Some("admin".into());
+        assert!(request_authority(&claim)
+            .unwrap_err()
+            .starts_with(REFUSAL_PREFIX));
+    }
+    // spec: MEDULLA-IDENTITY-R003.9
+    #[test]
+    fn carries_sandbox_admission_reads_only_the_envelope_key() {
+        assert!(carries_sandbox_admission(&request(&sandbox_token(
+            "p", "t"
+        ))));
+        assert!(!carries_sandbox_admission(&request("")));
+        assert!(!carries_sandbox_admission(&request(
+            "anon1.{\"idempotency_key\":\"k\"}"
+        )));
+        assert!(!carries_sandbox_admission(&request("eg2.credentials")));
+        assert!(!carries_sandbox_admission(&request("anon1.not json")));
     }
     // spec: MEDULLA-IDENTITY-R003.1
     #[test]

@@ -179,6 +179,7 @@ pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
         in_per_mtok_micro: 1,
         out_per_mtok_micro: 0,
         cached_per_mtok_micro: 0,
+        currency: String::new(),
     };
     let put = crate::usage::handle_usage(
         &h.state,
@@ -210,6 +211,8 @@ pub(super) async fn ledger(h: &Harness, tenant: &str, costs: &[(&str, u64)]) {
             latency_ms: 1,
             outcome: medulla_decision_types::usage::UsageOutcome::Ok,
             content_digest: "a".repeat(64),
+            project_id: String::new(),
+            agent_id: String::new(),
         })
         .collect();
     let appended = crate::usage::handle_usage(

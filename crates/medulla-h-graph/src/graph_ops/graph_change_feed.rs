@@ -19,9 +19,6 @@ use medulla_server_api::knob_config::knobs;
 use medulla_server_cdc::cdc::{CdcHub, CdcStateExt};
 use medulla_types::contract::ServerErrorCode;
 
-/// Revision of the latency accounting the events carry.
-const LATENCY_PROFILE_REVISION: u64 = 1;
-
 /// The verified caller of one feed request.
 pub(super) struct FeedCaller {
     pub(super) tenant: String,
@@ -73,11 +70,34 @@ async fn hub_of(ctx: &GraphOpsContext<'_>) -> Option<Arc<CdcHub>> {
     state.cdc_hub().cloned()
 }
 
-/// Route the two feed methods served from the graph.
+/// The live-graph limits of engine config (MEDULLA-DURABLE-KERNEL-R043.100.5). Reads
+/// the knob table only: nothing here names a tenant, a graph or a node.
+pub(super) fn live_limits() -> medulla_mutation_types::graph_change_feed::GraphLiveLimitsAnswer {
+    let knobs = knobs();
+    medulla_mutation_types::graph_change_feed::GraphLiveLimitsAnswer {
+        profile_revision: knobs.graph_live_profile_revision,
+        contract_revision: medulla_mutation_types::graph_change_feed::graph_live_contract_revision(
+        ),
+        workload: medulla_mutation_types::graph_change_feed::GRAPH_LIVE_WORKLOAD.to_string(),
+        commit_to_visible_p95_ms: knobs.graph_live_commit_to_visible_p95_ms,
+        frame_p95_ms: knobs.graph_live_frame_p95_ms,
+        layout_settle_ms: knobs.graph_live_layout_settle_ms,
+    }
+}
+
+/// Route the feed methods served from the graph.
 pub(super) async fn try_handle_graph_change_feed(
     ctx: GraphOpsContext<'_>,
     method: Method,
 ) -> ControlFlow<Response, Method> {
+    if matches!(method, Method::GraphLiveLimits) {
+        return ControlFlow::Break(Response::ok(
+            ctx.req_id,
+            ResultPayload::of::<medulla_protocol_types::result_contract::graph::GraphLiveLimits>(
+                live_limits(),
+            ),
+        ));
+    }
     if !matches!(
         method,
         Method::OpenGraphSnapshot | Method::ReadGraphChanges { .. }
@@ -348,7 +368,7 @@ pub(super) fn read_changes(
             event_ordinal: event.seq,
             committed_at_ms: event.committed_at_ms,
             visible_at_ms,
-            latency_profile_revision: LATENCY_PROFILE_REVISION,
+            latency_profile_revision: knobs().graph_live_profile_revision,
             commit_to_visible_ms: visible_at_ms.saturating_sub(event.committed_at_ms),
             change,
         });
@@ -358,4 +378,37 @@ pub(super) fn read_changes(
         events,
         next_cursor: cursor_at(caller, graph, position.incarnation, next),
     })
+}
+
+#[cfg(test)]
+mod live_limits_tests {
+    use super::*;
+
+    // spec: MEDULLA-DURABLE-KERNEL-R043.100.5
+    #[test]
+    fn live_limits_read_the_knob_table_and_are_positive() {
+        let limits = live_limits();
+        let knobs = knobs();
+        assert_eq!(limits.profile_revision, knobs.graph_live_profile_revision);
+        assert!(limits.profile_revision > 0);
+        assert_eq!(
+            limits.contract_revision,
+            format!("graph-change-feed/{GRAPH_CHANGE_FEED_SCHEMA_VERSION}")
+        );
+        assert!(!limits.workload.is_empty());
+        assert_eq!(
+            limits.commit_to_visible_p95_ms,
+            knobs.graph_live_commit_to_visible_p95_ms
+        );
+        assert!(limits.commit_to_visible_p95_ms > 0.0);
+        assert!(limits.frame_p95_ms > 0.0);
+        assert!(limits.layout_settle_ms > 0.0);
+        // The wire shape is closed: an unknown field is refused.
+        let mut value = serde_json::to_value(&limits).unwrap();
+        value["extra"] = 1.into();
+        assert!(serde_json::from_value::<
+            medulla_mutation_types::graph_change_feed::GraphLiveLimitsAnswer,
+        >(value)
+        .is_err());
+    }
 }

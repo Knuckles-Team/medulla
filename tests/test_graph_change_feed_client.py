@@ -78,3 +78,18 @@ def test_client_reads_feed_from_a_served_engine(client):
     safe = (stale.value.detail or "").split("safe_cursor=")[1].strip()
     client.nodes.add("after-clear", {"type": "Doc"})
     assert _upserted(client.graph.read_graph_changes(safe, limit=10)) == ["after-clear"]
+
+
+# spec: MEDULLA-DURABLE-KERNEL-R043.100.5
+def test_client_reads_live_limits_that_name_the_event_profile(client):
+    limits = client.graph.graph_live_limits()
+    assert limits["profile_revision"] > 0
+    assert limits["contract_revision"] and limits["workload"]
+    for name in ("commit_to_visible_p95_ms", "frame_p95_ms", "layout_settle_ms"):
+        assert limits[name] > 0
+    snapshot = client.graph.open_graph_snapshot()
+    client.nodes.add("limits-1", {"type": "Doc"})
+    page = client.graph.read_graph_changes(snapshot["high_water_cursor"], limit=10)
+    assert page["events"]
+    for event in page["events"]:
+        assert event["latency_profile_revision"] == limits["profile_revision"]

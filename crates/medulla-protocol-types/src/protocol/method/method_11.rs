@@ -695,6 +695,9 @@ $($variants)*
     /// that continues after it (`high_water_cursor`). Reads only, through the
     /// caller's graph view. See [`medulla_mutation_types::graph_change_feed`].
     OpenGraphSnapshot,
+    /// The owner's live-graph latency and layout limits, read from engine config
+    /// (MEDULLA-DURABLE-KERNEL-R043.100.5). Takes nothing and names no tenant.
+    GraphLiveLimits,
     /// One page of committed graph changes after `cursor`, at most `limit`
     /// (1 to 256) scanned events. Delivery is at-least-once under stable ids.
     /// An expired, stale or revoked cursor is refused with a typed code.

@@ -486,3 +486,92 @@ def test_oversize_authority_metadata_refuses(tmp_path):
         refused = rpc(sock, "Ping", token="anon1." + at_bound + " ")
         assert refused.get("error"), refused
         assert "ACCESS_DENIED" in str(refused.get("error")), refused
+
+
+def sandbox_token(principal, tenant, key="sandbox-op"):
+    return "anon1." + json.dumps(
+        {"idempotency_key": key, "sandbox": {"principal": principal, "tenant": tenant}},
+        separators=(",", ":"),
+    )
+
+
+@pytest.mark.spec("MEDULLA-IDENTITY-R003.9")
+def test_sandbox_principal_is_admitted_into_its_named_tenant_in_none_mode(tmp_path):
+    with server(tmp_path) as sock:
+        admitted = rpc(sock, "Ping", token=sandbox_token("sandbox:p1", "sandbox:t1"))
+        assert not admitted.get("error"), admitted
+        # A sandbox cannot be admitted as the engine's own identities or tenants.
+        for principal, tenant in [
+            ("anonymous", "sandbox:t1"),
+            ("sandbox:p1", "local"),
+            ("sandbox:p1", "__commons__"),
+            ("", "sandbox:t1"),
+        ]:
+            refused = rpc(sock, "Ping", token=sandbox_token(principal, tenant))
+            assert "ACCESS_DENIED" in str(refused.get("error")), refused
+        # An identity claim beside the envelope is still refused.
+        claimed = rpc(
+            sock,
+            "Ping",
+            token=sandbox_token("sandbox:p1", "sandbox:t1"),
+            actor="claimed-admin",
+        )
+        assert claimed.get("error"), claimed
+
+
+@pytest.mark.spec("MEDULLA-IDENTITY-R003.9")
+def test_sandbox_admission_is_refused_when_the_auth_mode_is_not_none(tmp_path):
+    secret = "synthetic-sandbox-refusal-secret"  # nosec B105
+    with server(
+        tmp_path,
+        mode="authenticated",
+        extra_args=["--auth-secret", secret],
+    ) as sock:
+        refused = rpc(sock, "Ping", token=sandbox_token("sandbox:p1", "sandbox:t1"))
+        assert "AUTH_MODE_NOT_NONE" in str(refused.get("error")), refused
+        other = rpc(sock, "Ping", token=sandbox_token("sandbox:p2", "another-tenant"))
+        # The refusal is the same text for any tenant: no existence oracle.
+        assert other.get("error") == refused.get("error"), (refused, other)
+
+
+@pytest.mark.spec("MEDULLA-IDENTITY-R003.9")
+def test_python_client_sends_a_sandbox_admission_only_in_none_mode(tmp_path):
+    import asyncio
+
+    from medulla.client import MedullaClient
+
+    async def exercise(sock):
+        client = await MedullaClient.connect(
+            auth_mode="none",
+            tcp_addr=f"{sock[0]}:{sock[1]}",
+            sandbox={"principal": "sandbox:p1", "tenant": "sandbox:t1"},
+        )
+        try:
+            request = client._build_send_request(
+                "Ping", None, req_id=1, target_graph="__commons__", idempotency_key=None
+            )
+            carrier = json.loads(request["auth_token"].removeprefix("anon1."))
+            assert carrier["sandbox"] == {
+                "principal": "sandbox:p1",
+                "tenant": "sandbox:t1",
+            }
+        finally:
+            await client.close()
+
+    with server(tmp_path) as sock:
+        asyncio.run(exercise(sock))
+    with pytest.raises(ValueError, match="requires auth_mode='none'"):
+        asyncio.run(
+            MedullaClient.connect(
+                socket_path="/nonexistent",
+                auth_secret="synthetic",  # nosec B106
+                sandbox={"principal": "p", "tenant": "t"},
+            )
+        )
+    for bad in ({"principal": "p"}, {"principal": "", "tenant": "t"}):
+        with pytest.raises(ValueError, match="sandbox"):
+            asyncio.run(
+                MedullaClient.connect(
+                    tcp_addr="127.0.0.1:1", auth_mode="none", sandbox=bad
+                )
+            )

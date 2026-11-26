@@ -40,6 +40,9 @@ pub struct VerifiedRequestContext {
 enum AuthorityOrigin {
     Verified,
     AnonymousLocal,
+    /// A sandbox-minted principal admitted into one named tenant by an engine running
+    /// with `--auth-mode none` (MEDULLA-IDENTITY-R003.9). Never caller-set.
+    SandboxTenant,
 }
 
 impl VerifiedRequestContext {
@@ -67,6 +70,43 @@ impl VerifiedRequestContext {
         );
         context.origin = AuthorityOrigin::AnonymousLocal;
         context
+    }
+
+    /// The context of a sandbox-minted principal admitted into the named `tenant`
+    /// (MEDULLA-IDENTITY-R003.9). Only the `--auth-mode none` decoder in
+    /// `anonymous.rs` calls this. The tenant is the verified tenant of every
+    /// handler, so the principal resolves to that tenant's session and no other; the
+    /// scopes are the caller's, never the owner's wildcard.
+    pub fn sandbox_tenant(
+        principal: &str,
+        tenant: &str,
+        scopes: Vec<String>,
+        idempotency_key: String,
+    ) -> Self {
+        let nonce = Nonce::minted();
+        let mut context = Self::from_verified_claims_with_nonce(
+            RequestContextClaims {
+                principal: principal.into(),
+                agent_id: principal.into(),
+                tenant: tenant.into(),
+                audience: "medulla".into(),
+                policy_version: "no-auth".into(),
+                scopes,
+                roles: vec!["sandbox-tenant-member".into()],
+                delegation: Vec::new(),
+                node: None,
+                priority: None,
+            },
+            idempotency_key,
+            Some(nonce),
+        );
+        context.origin = AuthorityOrigin::SandboxTenant;
+        context
+    }
+
+    /// Whether this context is a sandbox principal admitted into a named tenant.
+    pub fn is_sandbox_tenant(&self) -> bool {
+        self.origin == AuthorityOrigin::SandboxTenant
     }
 
     pub fn from_verified_claims(claims: RequestContextClaims, idempotency_key: String) -> Self {
@@ -137,7 +177,7 @@ impl VerifiedRequestContext {
     /// effective agent that is not the principal). A request
     /// field never decides it.
     pub fn is_loop_principal(&self) -> bool {
-        if self.origin == AuthorityOrigin::AnonymousLocal {
+        if self.origin != AuthorityOrigin::Verified {
             return false;
         }
         let claims = &self.claims;

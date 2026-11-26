@@ -23,6 +23,36 @@ pub const GRAPH_CHANGE_CURSOR: CursorFamily = CursorFamily {
     noun: "graph change feed",
 };
 
+/// The workload the live-graph limits are measured and promised for.
+pub const GRAPH_LIVE_WORKLOAD: &str = "live-graph-change-feed";
+
+/// The contract revision the live-graph limits belong to: the feed wire schema.
+pub fn graph_live_contract_revision() -> String {
+    format!("graph-change-feed/{GRAPH_CHANGE_FEED_SCHEMA_VERSION}")
+}
+
+/// The owner's live-graph latency and layout limits, read from engine config
+/// (MEDULLA-DURABLE-KERNEL-R043.100.5). `profile_revision` is the value every
+/// change-feed event carries as `latency_profile_revision`, so a consumer can
+/// tell which profile its events were measured under.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct GraphLiveLimitsAnswer {
+    /// Revision of the latency profile; at least 1.
+    pub profile_revision: u64,
+    /// The contract revision the limits belong to.
+    pub contract_revision: String,
+    /// The workload the limits hold for.
+    pub workload: String,
+    /// 95th-percentile bound from commit to first authorized read, in ms.
+    pub commit_to_visible_p95_ms: f64,
+    /// 95th-percentile bound of one frame, in ms.
+    pub frame_p95_ms: f64,
+    /// Bound on layout settling after a change, in ms.
+    pub layout_settle_ms: f64,
+}
+
 /// One consistent snapshot and the cursor that continues after it.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

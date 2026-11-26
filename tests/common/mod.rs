@@ -211,7 +211,7 @@ pub fn signed_request_with_context(
 }
 
 /// A request signed with a caller-chosen `nonce` and `idempotency_key`: a fresh envelope (new
-/// nonce) under a previous request's key is the replay MEDULLA-DURABLE-KERNEL-R043.101 proves.
+/// nonce) under a previous request's key is the replay MEDULLA-DURABLE-KERNEL-R043.100.5 proves.
 #[allow(dead_code)]
 pub fn signed_request_with_key(
     secret: &str,

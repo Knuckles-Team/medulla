@@ -547,6 +547,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "OntologyCanonicalHash": reasoning.send_ontology_canonical_hash,
     "OntologyInspect": reasoning.send_ontology_inspect,
     "OpenGraphSnapshot": graph.send_open_graph_snapshot,
+    "GraphLiveLimits": graph.send_graph_live_limits,
     "OutDegree": graph.send_out_degree,
     "OwlExplain": reasoning.send_owl_explain,
     "OwlReason": reasoning.send_owl_reason,

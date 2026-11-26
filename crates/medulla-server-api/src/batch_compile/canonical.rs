@@ -648,6 +648,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::ArchitectureView { .. }
         | Method::OpenGraphSnapshot
         | Method::ReadGraphChanges { .. }
+        | Method::GraphLiveLimits
         | Method::BranchDiff { .. }
         | Method::BranchReadAt { .. }
         | Method::ReadTree { .. }

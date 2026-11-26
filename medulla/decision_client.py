@@ -1641,11 +1641,14 @@ def usage_record(
     tokens_cached: int = 0,
     latency_ms: int = 50,
     content: str | None = None,
+    project_id: str = "",
+    agent_id: str = "",
 ) -> dict[str, Any]:
     """Build one ``UsageRecord`` for :func:`usage_append_op`.
 
     Only a SHA-256 digest of ``content`` (default: the run id) travels; the
-    engine stamps the verified principal over ``principal``.
+    engine stamps the verified principal over ``principal``. ``project_id`` and
+    ``agent_id`` are what a grouped rollup folds by (MEDULLA-DECISION-ENGINE-R801.9).
     """
     import hashlib
 
@@ -1665,6 +1668,8 @@ def usage_record(
         "latency_ms": latency_ms,
         "outcome": "error" if errored else "ok",
         "content_digest": digest,
+        "project_id": project_id,
+        "agent_id": agent_id,
     }
 
 
@@ -1995,10 +2000,16 @@ def usage_read_op(
     view: str,
     model_key: str | None = None,
     cursor: str | None = None,
+    group_by: str | None = None,
 ) -> dict[str, Any]:
     """A ``Usage`` read of the caller's tenant (scope ``usage:read``).
 
     ``view`` is ``records`` (paged by ``cursor``) or ``rollup`` (day buckets).
+    ``group_by`` (``model``, ``project`` or ``agent``, ``rollup`` only) also folds
+    the window into one row per group with its cost, the currency the cost was
+    recorded in, and the p95 latency; the rollup answer carries
+    ``index_watermark_ms``, the newest ``recorded_at_ms`` of the ledger
+    (MEDULLA-DECISION-ENGINE-R801.9).
     """
     op: dict[str, Any] = {
         "op": "read",
@@ -2010,6 +2021,8 @@ def usage_read_op(
         op["model_key"] = model_key
     if cursor is not None:
         op["cursor"] = cursor
+    if group_by is not None:
+        op["group_by"] = group_by
     return op
 
 

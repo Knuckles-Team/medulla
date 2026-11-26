@@ -9,7 +9,8 @@ use medulla_decision_outcome_types::{
 use medulla_query_types::rdf_report::LoadReport;
 use medulla_types::{
     types::CompactNodesResult, types::DecayStats, types::GraphDiff, types::GraphMetrics,
-    types::NeighborhoodResult, types::PropertyBlob, types::PruneStats, types::ScenePose, types::SubgraphResult,
+    types::NeighborhoodResult, types::PropertyBlob, types::PruneStats, types::ScenePose,
+    types::SubgraphResult,
 };
 
 method_results! {
@@ -40,6 +41,7 @@ method_results! {
     AtomContext(AtomContext) => Json<medulla_ingestion_types::knowledge_atom::AtomContextResult>;
     // MEDULLA-DURABLE-KERNEL-R043.100.2 and .3: the change feed's snapshot and page.
     OpenGraphSnapshot(OpenGraphSnapshot) => Json<medulla_mutation_types::graph_change_feed::GraphSnapshot>;
+    GraphLiveLimits(GraphLiveLimits) => Json<medulla_mutation_types::graph_change_feed::GraphLiveLimitsAnswer>;
     ReadGraphChanges(ReadGraphChanges) => Json<medulla_mutation_types::graph_change_feed::GraphChangePage>;
     CompareAndSetNodeFields(CompareAndSetNodeFields) => Bool<bool>;
     CreateSummaryNode(CreateSummaryNode) => Text<String>;

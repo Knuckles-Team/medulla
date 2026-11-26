@@ -100,7 +100,10 @@ async fn first_matching_route_stage_wins() {
     .unwrap();
     let record = &batch.records.as_slice()[0];
     assert_eq!(record.question.kind, QuestionKind::Route);
-    let StatisticalOutcome::Advisory { scores, calibrated, .. } = &record.outcome else {
+    let StatisticalOutcome::Advisory {
+        scores, calibrated, ..
+    } = &record.outcome
+    else {
         panic!("expected the fast-path choice: {:?}", record.outcome)
     };
     assert!(!calibrated);
@@ -410,6 +413,7 @@ fn seed_model_cost(h: &Harness, tenant: &str, model: &str, out_per_mtok_micro: u
         in_per_mtok_micro: 0,
         out_per_mtok_micro,
         cached_per_mtok_micro: 0,
+        currency: String::new(),
     };
     h.store.put_price(tenant, &entry).unwrap();
     let now = medulla_kernel::kernel::dispatch_support::authoritative_now_ms();
@@ -428,6 +432,8 @@ fn seed_model_cost(h: &Harness, tenant: &str, model: &str, out_per_mtok_micro: u
         latency_ms: 10,
         outcome: UsageOutcome::Ok,
         content_digest: "a".repeat(64),
+        project_id: String::new(),
+        agent_id: String::new(),
     };
     let catalog = PriceCatalog {
         aliases: std::collections::BTreeMap::new(),
@@ -708,7 +714,10 @@ async fn route_journey_covers_every_stage() {
     let record = &fast.records.as_slice()[0];
     assert_eq!(chosen_ids(record), ["spec-10"]);
     assert_eq!(record.resolution_kind, ResolutionKind::Constraint);
-    assert_eq!(route_stage_premises(record)[0].fact, "route_stage=fast_path");
+    assert_eq!(
+        route_stage_premises(record)[0].fact,
+        "route_stage=fast_path"
+    );
 
     // Stage 2, team reuse: this caller judged `spec-42` well in this context.
     let asked = journey_request(&route_schema, None, None);
@@ -727,7 +736,10 @@ async fn route_journey_covers_every_stage() {
     let record = &reused.records.as_slice()[0];
     assert_eq!(chosen_ids(record), ["spec-42"]);
     assert_eq!(record.resolution_kind, ResolutionKind::Statistical);
-    assert_eq!(route_stage_premises(record)[0].fact, "route_stage=team_reuse");
+    assert_eq!(
+        route_stage_premises(record)[0].fact,
+        "route_stage=team_reuse"
+    );
 
     // Stage 3, the learned policy: a long turn in a context with no history
     // reaches the shared ladder, which scores the 64 specialists with the

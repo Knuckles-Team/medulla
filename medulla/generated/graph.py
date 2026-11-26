@@ -2962,6 +2962,7 @@ send_architecture_view = contract_sender(
 )
 send_domain_pack = contract_sender("DomainPack", "MethodDomainPackParams")
 send_open_graph_snapshot = contract_sender("OpenGraphSnapshot", "None")
+send_graph_live_limits = contract_sender("GraphLiveLimits", "None")
 send_read_graph_changes = contract_sender(
     "ReadGraphChanges", "MethodReadGraphChangesParams"
 )
