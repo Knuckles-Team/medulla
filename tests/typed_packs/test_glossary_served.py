@@ -346,18 +346,29 @@ def test_import_scheme_bind_term_and_review_lifecycle(served) -> None:
     bound = _op(client, graph, {"op": "bind", "term": REVENUE, "asset": ASSET})
     assert bound["iri"] == REVENUE
 
-    # One served query lists the glossary terms of the graph, and the term is found by its
-    # alternative label.
-    rows = client.query.uql(f"MATCH () WHERE type = '{CATALOG}CatalogGlossaryTerm'")
-    assert rows["kind"] == "rows", rows
-    by_alt = [
-        row["id"]
-        for row in rows["rows"]
-        if "turnover"
-        in [
-            str(label).lower()
-            for label in _props(client, graph, row["id"])["alt_labels"]
-        ]
-    ]
-    assert by_alt == [REVENUE]
+    # The one catalog search path finds the term by its alternative label, by a prefix of it,
+    # and by no other word; the glossary kind is named beside the asset kinds or left out.
+    def search(text: str, kinds: list[str]) -> list[dict[str, Any]]:
+        answer = _decode(
+            client._send(
+                "CatalogRead",
+                {"op": {"op": "search", "text": text, "kinds": kinds}},
+                graph,
+            )
+        )
+        return [row for row in answer["rows"] if row["kind"] == "CatalogGlossaryTerm"]
+
+    for text in ("turnover", "Turn", "revenue"):
+        for kinds in (["CatalogGlossaryTerm"], []):
+            found = search(text, kinds)
+            assert [row["asset"] for row in found] == [REVENUE], (text, kinds)
+            assert found[0]["name"] == "Revenue"
+    assert search("margin", ["CatalogGlossaryTerm"]) == []
+    # A browse never lists terms: the glossary kind is a search kind only.
+    with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+        client._send(
+            "CatalogRead",
+            {"op": {"op": "browse", "kind": "CatalogGlossaryTerm"}},
+            graph,
+        )
     assert _props(client, graph, REVENUE)["status"] == "approved"

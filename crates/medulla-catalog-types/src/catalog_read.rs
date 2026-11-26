@@ -49,6 +49,10 @@ pub const CATALOG_ASSET_KINDS: [&str; 26] = [
     "ProviderAsset",
 ];
 
+/// The kind a glossary term answers a search under (MEDULLA-TYPED-PACKS-R801.6): the local name
+/// of `cat:CatalogGlossaryTerm`. A search may name it beside the asset kinds; a browse may not.
+pub const CATALOG_GLOSSARY_KIND: &str = "CatalogGlossaryTerm";
+
 /// One catalog read (`Method::CatalogRead`, MEDULLA-TYPED-PACKS-R108.17).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]

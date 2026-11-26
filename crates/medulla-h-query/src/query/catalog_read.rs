@@ -12,7 +12,7 @@ use std::collections::BTreeMap;
 use medulla_catalog_types::catalog_read::{
     CatalogAssetDetail, CatalogAssetRow, CatalogComment, CatalogKindCount, CatalogReadAnswer,
     CatalogReadOp, CATALOG_ASSETS_BY_KIND, CATALOG_ASSETS_SEARCH, CATALOG_ASSET_DETAIL,
-    CATALOG_ASSET_KINDS, CATALOG_ASSET_NOT_FOUND, CATALOG_INVALID_ARGUMENT,
+    CATALOG_ASSET_KINDS, CATALOG_ASSET_NOT_FOUND, CATALOG_GLOSSARY_KIND, CATALOG_INVALID_ARGUMENT,
 };
 use medulla_catalog_types::catalog_relevance::{
     CATALOG_QUERY_EMPTY, CATALOG_QUERY_TOO_LONG, CATALOG_SEARCH_MAX_QUERY_CHARS,
@@ -29,6 +29,8 @@ use super::*;
 struct Page {
     limit: u64,
     offset: u64,
+    /// Where the glossary leg of a search resumes (zero until the asset leg is exhausted).
+    glossary_offset: u64,
 }
 
 fn invalid(detail: impl std::fmt::Display) -> String {
@@ -48,14 +50,24 @@ fn page_of(limit: Option<u32>, cursor: Option<&str>) -> Result<Page, String> {
         Some(n) if (1..=max).contains(&u64::from(n)) => u64::from(n),
         Some(_) => return Err(invalid(format!("limit must be between 1 and {max}"))),
     };
-    let offset = match cursor {
-        None => 0,
-        Some(raw) => raw
-            .trim()
-            .parse::<u64>()
-            .map_err(|_| invalid("the cursor is not one a previous page returned"))?,
+    let bad_cursor = || invalid("the cursor is not one a previous page returned");
+    // A cursor is the decimal offset into the asset rows, and after them `:` and the decimal
+    // offset into the glossary rows of a search.
+    let (offset, glossary_offset) = match cursor.map(str::trim) {
+        None => (0, 0),
+        Some(raw) => match raw.split_once(':') {
+            None => (raw.parse::<u64>().map_err(|_| bad_cursor())?, 0),
+            Some((assets, glossary)) => (
+                assets.parse::<u64>().map_err(|_| bad_cursor())?,
+                glossary.parse::<u64>().map_err(|_| bad_cursor())?,
+            ),
+        },
     };
-    Ok(Page { limit, offset })
+    Ok(Page {
+        limit,
+        offset,
+        glossary_offset,
+    })
 }
 
 fn check_kind(kind: &str) -> Result<(), String> {
@@ -178,30 +190,68 @@ async fn search(
             "{CATALOG_QUERY_TOO_LONG}: the search text is over {max_chars} characters"
         ));
     }
-    for kind in &kinds {
+    // A search may name the glossary kind beside the asset kinds (MEDULLA-TYPED-PACKS-R801.6).
+    let (glossary_kinds, asset_kinds): (Vec<String>, Vec<String>) = kinds
+        .into_iter()
+        .partition(|kind| kind == CATALOG_GLOSSARY_KIND);
+    for kind in &asset_kinds {
         check_kind(kind)?;
     }
+    let all_kinds = asset_kinds.is_empty() && glossary_kinds.is_empty();
+    let want_assets = all_kinds || !asset_kinds.is_empty();
+    let want_glossary = all_kinds || !glossary_kinds.is_empty();
     let page = page_of(limit, cursor.as_deref())?;
-    let args = BTreeMap::from([
-        ("text".to_string(), json!(text)),
-        ("kinds".to_string(), json!(kinds.join(" "))),
-        ("limit".to_string(), json!(page.limit + 1)),
-        ("offset".to_string(), json!(page.offset)),
-    ]);
-    let mut rows: Vec<CatalogAssetRow> = run(ctx, CATALOG_ASSETS_SEARCH, args)
-        .await?
-        .iter()
-        .filter_map(|row| {
-            Some(CatalogAssetRow {
-                asset: cell(row, "asset")?,
-                kind: cell(row, "kind")?,
-                name: cell(row, "name"),
-                owner: None,
-                score: cell(row, "score").and_then(|score| score.parse().ok()),
+    let mut rows: Vec<CatalogAssetRow> = Vec::new();
+    let mut asset_end = page.offset;
+    let mut asset_more = false;
+    if want_assets {
+        let args = BTreeMap::from([
+            ("text".to_string(), json!(text)),
+            ("kinds".to_string(), json!(asset_kinds.join(" "))),
+            ("limit".to_string(), json!(page.limit + 1)),
+            ("offset".to_string(), json!(page.offset)),
+        ]);
+        rows = run(ctx, CATALOG_ASSETS_SEARCH, args)
+            .await?
+            .iter()
+            .filter_map(|row| {
+                Some(CatalogAssetRow {
+                    asset: cell(row, "asset")?,
+                    kind: cell(row, "kind")?,
+                    name: cell(row, "name"),
+                    owner: None,
+                    score: cell(row, "score").and_then(|score| score.parse().ok()),
+                })
             })
+            .collect();
+        asset_more = rows.len() as u64 > page.limit;
+        rows.truncate(page.limit as usize);
+        asset_end = page.offset + rows.len() as u64;
+    }
+    // The glossary rows follow the asset rows: they fill the page only once the asset leg
+    // has no row left, so one cursor resumes both legs.
+    let mut glossary_end = page.glossary_offset;
+    let mut glossary_more = false;
+    if want_glossary && !asset_more {
+        let room = (page.limit - rows.len() as u64) as usize;
+        let matches = super::catalog_glossary::matching_terms(ctx, &text);
+        let from = (page.glossary_offset as usize).min(matches.len());
+        let taken: Vec<CatalogAssetRow> = matches.iter().skip(from).take(room).cloned().collect();
+        glossary_end = (from + taken.len()) as u64;
+        glossary_more = (glossary_end as usize) < matches.len();
+        rows.extend(taken);
+    }
+    let next_cursor = if asset_more {
+        Some(if want_glossary {
+            format!("{asset_end}:{}", page.glossary_offset)
+        } else {
+            asset_end.to_string()
         })
-        .collect();
-    let next_cursor = trim_page(&mut rows, &page);
+    } else if glossary_more {
+        Some(format!("{asset_end}:{glossary_end}"))
+    } else {
+        None
+    };
     Ok(CatalogReadAnswer {
         kind_counts: Vec::new(),
         rows,

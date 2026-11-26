@@ -138,7 +138,7 @@ fn now_ms() -> u64 {
     medulla_kernel::kernel::dispatch_support::authoritative_now_ms()
 }
 
-fn reader_of(ctx: &QueryHandlerCtx<'_>) -> UnitPrincipal {
+pub(super) fn reader_of(ctx: &QueryHandlerCtx<'_>) -> UnitPrincipal {
     let mut principal = ReadCaller::from_authority(ctx.read_authority, ctx.graph_name).principal;
     principal.id = ctx.caller.to_string();
     principal

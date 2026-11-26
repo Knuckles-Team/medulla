@@ -167,6 +167,8 @@ pub mod connector_tool;
 #[cfg(feature = "query")]
 mod asset_usage;
 #[cfg(feature = "query")]
+mod catalog_glossary;
+#[cfg(feature = "query")]
 mod catalog_read;
 #[cfg(feature = "query")]
 mod catalog_search;
