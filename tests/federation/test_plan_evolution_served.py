@@ -7,11 +7,13 @@ candidate that fetches fewer rows with the same results, and completes the job. 
 over the same source then reads the kept plan: its PROFILE fragment names the kept digest.
 """
 
+# ruff: noqa: E501
 from __future__ import annotations
 
 import os
 import time
 import uuid
+from typing import Any
 
 import pytest
 from conftest import tenant_request_context
@@ -123,13 +125,13 @@ def _kept_digest(graph, name: str, seconds: int = 150) -> str:
     return ""
 
 
-def _explain(graph, name: str) -> dict[str, object]:
+def _explain(graph, name: str) -> dict[str, Any]:
     explained = graph.query.uql(f"EXPLAIN MATCH (:PeDoc) |> FOREIGN SCAN '{name}' JOIN")
     assert explained["kind"] == "explain"
     return explained
 
 
-def _explain_kept(graph, name: str) -> list[dict[str, object]]:
+def _explain_kept(graph, name: str) -> list[dict[str, Any]]:
     return _explain(graph, name).get("kept_plans", [])
 
 
@@ -241,3 +243,35 @@ def test_kept_plan_measurably_faster_and_mismatch_reverts(clean_graph, pg_source
     time.sleep(6)
     assert "kept_plan=" not in _fragment(clean_graph, unequal)
     assert _explain_kept(clean_graph, unequal) == []
+
+
+@pytest.mark.spec("MEDULLA-FEDERATED-QUERY-R091.4")
+def test_evolution_refusals(clean_graph, pg_source):
+    """A candidate whose replays differ from the baseline's is refused
+    (``PLAN_RESULT_MISMATCH``); the active plan stays the baseline."""
+    _provision_downtime(clean_graph)
+    _seed_locals(clean_graph)
+    table = f"pe_items_{uuid.uuid4().hex[:8]}"
+    pg_source.execute(f"CREATE TABLE {table} (id int primary key, name text)")
+    pg_source.execute(
+        f"INSERT INTO {table} SELECT g, 'item-' || g FROM generate_series(1, {ROWS}) g"
+    )
+    unequal = f"pe-refused-{table}"
+    clean_graph.query.register_foreign_source(
+        unequal,
+        {
+            "Sql": {
+                "dsn": pg_source.dsn,
+                "query": f"SELECT id::text AS id FROM {table} ORDER BY random() LIMIT 10",
+                "id_field": "id",
+            }
+        },
+    )
+    _observe_shape(clean_graph, unequal, joins=20, reads=30)
+    before = _explain_baseline(clean_graph, unequal)
+
+    # Give the downtime tick time to evaluate the shape; it refuses the candidate.
+    time.sleep(30)
+    assert "kept_plan=" not in _fragment(clean_graph, unequal)
+    assert _explain_kept(clean_graph, unequal) == []
+    assert _explain_baseline(clean_graph, unequal) == before

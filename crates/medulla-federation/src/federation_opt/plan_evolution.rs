@@ -897,6 +897,23 @@ mod tests {
         );
     }
 
+    // spec: MEDULLA-FEDERATED-QUERY-R091.4
+    #[test]
+    fn evolution_refusals() {
+        // Each refusal has its own registered code, and every non-refusal revert has none.
+        let codes: Vec<String> = [
+            PlanEvolutionRefusal::ResultMismatch,
+            PlanEvolutionRefusal::AuthorityExpired,
+        ]
+        .iter()
+        .map(|refusal| refusal.code().to_string())
+        .collect();
+        assert_eq!(codes, ["PLAN_RESULT_MISMATCH", "PLAN_AUTHORITY_EXPIRED"]);
+        for reason in [RevertReason::TooFewReplays, RevertReason::NoMeasuredGain] {
+            assert_eq!(reason.refusal(), None);
+        }
+    }
+
     const LIMITS: StoreLimits = StoreLimits {
         observations_per_shape: 3,
         shapes_per_tenant: 2,
