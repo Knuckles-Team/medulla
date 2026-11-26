@@ -741,6 +741,11 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
             "process_exchange",
             medulla_types::process_exchange::REFUSALS.to_vec(),
         ),
+        // MEDULLA-ORCH-VOCAB-R012.8: the policy activation refusals.
+        (
+            "policy_document",
+            medulla_types::policy_document::REFUSALS.to_vec(),
+        ),
         // MEDULLA-ORCH-VOCAB-R009.100: the served run-trace export refusals.
         (
             "run_trace_export",

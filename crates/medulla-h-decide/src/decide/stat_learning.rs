@@ -41,6 +41,8 @@ use super::stat_generation_cycle::{
 use super::stat_log::{store_once, LogReader};
 use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use medulla_persistence_records::decision_jobs::read_pointer;
+use super::policy_activation::{guard_activation, record_review};
+use medulla_decision_types::decision::held_out::RevisionSubject;
 use super::stat_promotion::{qualified_champion, record_rollouts};
 use super::stat_retrieval::record_outcome;
 use super::stat_run_credit::record_run;
@@ -596,7 +598,13 @@ impl Serving<'_> {
                 qualified_calibration(store, self.tenant(), scorer_version, target, receipt)
             }
             PointerRef::Champion { subject } => {
-                qualified_champion(store, self.tenant(), subject, target, receipt)
+                let qualified = qualified_champion(store, self.tenant(), subject, target, receipt)?;
+                // A policy scope moves only behind its recorded review, the invariant guard
+                // and the revision the review was made against (MEDULLA-ORCH-VOCAB-R012.7.3).
+                if let RevisionSubject::GovernedSet { scope_ref } = subject {
+                    guard_activation(store, self.tenant(), scope_ref, target, receipt)?;
+                }
+                Ok(qualified)
             }
         }
     }
@@ -687,6 +695,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         | LearningWrite::RecordFeedback { .. }
         | LearningWrite::RecordRollouts { .. }
         | LearningWrite::MovePointer { .. } => Vec::new(),
+        LearningWrite::RecordPolicyReview { graph, .. } => vec![graph.as_str()],
     }
 }
 
@@ -997,6 +1006,9 @@ pub(super) fn dispatch(
         LearningWrite::RecordRollouts { set } => Ok(LearningRecorded::Rollouts(Box::new(
             record_rollouts(ctx, *set)?,
         ))),
+        LearningWrite::RecordPolicyReview { review, .. } => Ok(LearningRecorded::PolicyReview(
+            Box::new(record_review(ctx, s.graph(0)?, *review)?),
+        )),
         LearningWrite::MovePointer { pointer, movement } => s.move_pointer(&pointer, &movement),
     }
 }

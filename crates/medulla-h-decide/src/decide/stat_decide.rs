@@ -800,6 +800,9 @@ pub(super) fn decide_blocking(
     trajectory_premises.extend(safety_premises);
     trajectory_premises.extend(limit_premises);
     trajectory_premises.extend(entries.premises);
+    // A decision that loads the active repository policy records its revision and its
+    // candidate-set digest (MEDULLA-ORCH-VOCAB-R012.7.4).
+    trajectory_premises.extend(super::policy_activation::policy_premises(ctx, request)?);
     let slices = telemetry::stage(Stage::Entailment, family, tenant, || {
         live_slices(ctx, request, &pinned, &candidates.views, graph_view)
     })?;

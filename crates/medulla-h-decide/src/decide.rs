@@ -105,6 +105,9 @@ pub mod stat_memory_change;
 mod stat_nl;
 #[cfg(feature = "decide")]
 mod stat_penalty;
+// MEDULLA-ORCH-VOCAB-R012.7.3: the policy review record, the activation guard and the loader.
+#[cfg(feature = "decide")]
+mod policy_activation;
 #[cfg(feature = "decide")]
 mod stat_pointer;
 mod stat_promotion;

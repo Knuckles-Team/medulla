@@ -106,6 +106,20 @@ pub(super) fn held_out_evidence(
         RevisionSubject::KnobSet { .. } | RevisionSubject::ModelPolicy { .. } => {
             policy_evidence(sources, subject, receipt_digest)
         }
+        // A policy scope resolves through its recorded review (MEDULLA-ORCH-VOCAB-R012.7.3).
+        RevisionSubject::GovernedSet { scope_ref } => {
+            match super::policy_activation::review_evidence(
+                sources.store,
+                sources.tenant,
+                sources.graph,
+                scope_ref,
+                receipt_digest,
+            )? {
+                Ok(Some(evidence)) => Ok(evidence),
+                Ok(None) => Err(unevaluated()),
+                Err(fault) => Err(EvidenceError::Refused(fault.refusal_code())),
+            }
+        }
         // The other subject kinds resolve through their own receipts (R805.10).
         _ => Err(unevaluated()),
     }

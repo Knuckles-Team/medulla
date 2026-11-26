@@ -10,7 +10,7 @@ use medulla_persistence_records::agent_fixtures::mutation_context;
 
 const FOREIGN: &str = "tenant-b";
 
-fn invariant(iri: &str, forbidden: &str) -> RuleInvariant {
+pub(super) fn invariant(iri: &str, forbidden: &str) -> RuleInvariant {
     RuleInvariant {
         invariant_iri: iri.to_string(),
         forbidden_rule_id: forbidden.to_string(),
@@ -18,7 +18,7 @@ fn invariant(iri: &str, forbidden: &str) -> RuleInvariant {
     }
 }
 
-fn publish_invariant(h: &Harness, tenant: &str, nonce: u8, invariant: &RuleInvariant) {
+pub(super) fn publish_invariant(h: &Harness, tenant: &str, nonce: u8, invariant: &RuleInvariant) {
     let mut draft = test_component_draft(tenant, &invariant.invariant_iri);
     draft.kind = AgentComponentKind::RuleInvariant;
     draft.attributes = invariant.to_attributes();

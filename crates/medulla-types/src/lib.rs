@@ -113,6 +113,8 @@ pub use modality::{
 pub mod durable_unit;
 // MEDULLA-REPO-INGEST-R002.100: independent ingest readback receipt.
 pub mod code_map;
+// MEDULLA-ORCH-VOCAB-R012.8: the policy binding and review records.
+pub mod policy_document;
 // MEDULLA-SDLC-R014.13: the spec intelligence report.
 pub mod spec_report;
 // MEDULLA-SRC-AUTH-R801: the reviewed policy source binding records.

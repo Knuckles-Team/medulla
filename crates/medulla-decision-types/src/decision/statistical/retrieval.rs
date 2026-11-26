@@ -403,6 +403,14 @@ pub enum LearningWrite {
         graph: String,
         note: Box<medulla_work_types::memory::SessionNoteBody>,
     },
+    /// Record the review receipt of a policy candidate set: checked against the candidate
+    /// nodes of `graph` and the invariant generation in force, stored once under its receipt
+    /// digest, and answered as the `ReviewApproval` evidence a `GovernedSet` promotion reads
+    /// (MEDULLA-ORCH-VOCAB-R012.8).
+    RecordPolicyReview {
+        graph: String,
+        review: Box<medulla_types::policy_document::PolicyReview>,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -425,6 +433,7 @@ impl LearningWrite {
             | Self::MonitorAdapter { .. }
             | Self::FitCalibration { .. }
             | Self::FitCatalogEncoder { .. }
+            | Self::RecordPolicyReview { .. }
             | Self::EvaluateGeneration { .. }
             | Self::RunGenerationCycle { .. }
             | Self::RefreshFreshness { .. }
@@ -468,6 +477,8 @@ pub enum LearningRecorded {
     PackageRun(Box<crate::decision::package_validation::RunHistoryEntry>),
     /// The held-out evidence of the rollout set a `RecordRollouts` write stored.
     Rollouts(Box<crate::decision::held_out::HeldOutEvidence>),
+    /// The `ReviewApproval` evidence of the policy review a `RecordPolicyReview` write stored.
+    PolicyReview(Box<crate::decision::held_out::HeldOutEvidence>),
     /// The encoder a `FitCatalogEncoder` write stored.
     CatalogEncoder(Box<crate::decision::item_recommendation::CatalogEncoderFitted>),
     /// The session note a `RecordSessionNote` write stored.

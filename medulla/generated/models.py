@@ -11963,12 +11963,63 @@ class LearningRecordedSessionNote(BaseModel):
     stored: bool
 
 
+class PolicyBinding(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    blob_digest: str
+    candidate_set_digest: str
+    commit: str
+    expected_policy_revision: str | None = None
+    invariant_generation: str
+    path: str
+    repository: str
+    review_receipt_digest: str
+
+
+class PolicyReview(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    author: str
+    binding: PolicyBinding
+    reviewer: str
+
+
+class LearningRecordedPolicyReview(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    case_count: Annotated[int, Field(ge=0)]
+    challenger_ref: str
+    challenger_score_ppm: int
+    champion_ref: str | None = None
+    champion_score_ppm: int | None = None
+    delta_ppm: int
+    evaluation_set_digest: str
+    grader_kind: GraderKind
+    independent: bool
+    measurement: MeasurementWindow | None = None
+    receipt_digest: str
+    receipt_kind: ReceiptKind
+    recorded: Literal["policy_review"]
+    review: ReviewApproval | None = None
+    schema_version: Annotated[int, Field(ge=0, le=65535)]
+    subject: RevisionSubject
+
+
+class LearningWriteRecordPolicyReview(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    review: PolicyReview
+    write: Literal["record_policy_review"]
+
+
 LearningRecorded = Annotated[
     LearningRecordedOutcome
     | LearningRecordedFitted
     | LearningRecordedGeneration
     | LearningRecordedPointer
     | LearningRecordedRollouts
+    | LearningRecordedPolicyReview
     | LearningRecordedCatalogEncoder
     | LearningRecordedSessionNote
     | LearningRecordedRun
@@ -12235,6 +12286,7 @@ LearningWrite = Annotated[
     | LearningWriteRecordRollouts
     | LearningWriteFitCalibration
     | LearningWriteFitCatalogEncoder
+    | LearningWriteRecordPolicyReview
     | LearningWriteRecordSessionNote,
     Field(discriminator="write"),
 ]
@@ -45949,6 +46001,7 @@ __all__ = [
     "LearningRecordedGeneration",
     "LearningRecordedOutcome",
     "LearningRecordedPointer",
+    "LearningRecordedPolicyReview",
     "LearningRecordedRollouts",
     "LearningRecordedRun",
     "LearningWrite",
@@ -45958,7 +46011,10 @@ __all__ = [
     "LearningWriteRecordSessionNote",
     "LearningWriteMovePointer",
     "LearningWriteRecordOutcome",
+    "LearningWriteRecordPolicyReview",
     "LearningWriteRecordRollouts",
+    "PolicyBinding",
+    "PolicyReview",
     "LeaseDemand",
     "LeasePlan",
     "LeasePriority",

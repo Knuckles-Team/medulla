@@ -1138,6 +1138,7 @@ mod council_tests;
 // MEDULLA-DECISION-ENGINE-R135.12 to R135.14: insight submission and selection, served.
 mod insight_tests;
 mod tool_relevance_tests;
+mod policy_activation_tests;
 mod promotion_tests;
 mod tool_necessity_tests;
 // MEDULLA-DECISION-ENGINE-R156.3 to R156.5: skill documents compile to programs, served.
