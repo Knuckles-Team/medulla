@@ -333,6 +333,10 @@ pub fn rank_candidates_top(
 pub struct TopicCentroid {
     pub topic: Id,
     pub centroid: Vec<f32>,
+    /// The confidence floor a fit stored with the topic (MEDULLA-DECISION-ENGINE-R614.2.6). It
+    /// replaces the fixed cut of [`classify_with_floor`] when the topic wins; `None` for a
+    /// topic no fit produced.
+    pub floor_bp: Option<u32>,
 }
 
 fn cosine(a: &[f32], b: &[f32]) -> f64 {
@@ -407,7 +411,8 @@ pub fn classify_with_floor(
     };
     let basis_points =
         ((score.max(0.0) * 10_000.0).floor() as u32).min(MAX_CONFIDENCE_BASIS_POINTS);
-    if basis_points < min_confidence_bp {
+    // A stored fit floor replaces the fixed cut for the winning topic.
+    if basis_points < topic.floor_bp.unwrap_or(min_confidence_bp) {
         return Ok(None);
     }
     Ok(Some(TopicAssignment {
@@ -416,6 +421,186 @@ pub fn classify_with_floor(
         topic: topic.topic.clone(),
         confidence: Confidence::new(basis_points)?,
     }))
+}
+
+/// The refusal of a topic with fewer than [`MIN_TOPIC_EXAMPLES`] examples.
+pub const TOPIC_EXAMPLES_TOO_FEW: &str = "TOPIC_EXAMPLES_TOO_FEW";
+/// The fewest examples one topic needs to be fitted.
+pub const MIN_TOPIC_EXAMPLES: usize = 5;
+/// The default share of each topic's examples set aside for the hold-out, in basis points.
+pub const HOLDOUT_BP_DEFAULT: u16 = 2_000;
+/// The largest hold-out share a fit accepts, in basis points.
+pub const HOLDOUT_BP_MAX: u16 = 5_000;
+/// The hold-out precision a floor must reach, in basis points.
+pub const FLOOR_TARGET_PRECISION_BP: u64 = 9_000;
+/// The seed of the split: examples order by the digest of this seed and their id.
+const FIT_SPLIT_SEED: &str = "eg/fit-topics/v1";
+
+/// One labelled example: the topic it belongs to, its vector and its id.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LabelledVector {
+    pub topic: Id,
+    pub vector: Vec<f32>,
+    pub example: Id,
+}
+
+/// One fitted topic (MEDULLA-DECISION-ENGINE-R614.2.5).
+#[derive(Clone, Debug, PartialEq)]
+pub struct FittedTopic {
+    pub topic: Id,
+    /// The mean of the topic's training vectors, scaled to unit length.
+    pub centroid: Vec<f32>,
+    /// The precision of the hold-out predictions that `classify` assigned to this topic, in basis
+    /// points (0 when none was assigned).
+    pub holdout_precision_bp: u32,
+    /// The lowest `classify` confidence that reaches 90 percent precision on the hold-out, or
+    /// 10000 when none does.
+    pub floor_bp: u32,
+    /// The examples the centroid was fitted from.
+    pub train_examples: u32,
+    /// The examples set aside, sorted.
+    pub holdout_examples: Vec<Id>,
+}
+
+/// The fit of a whole taxonomy: its topics in topic id order.
+#[derive(Clone, Debug, PartialEq)]
+pub struct FittedTopics {
+    pub holdout_bp: u16,
+    pub topics: Vec<FittedTopic>,
+}
+
+fn split_rank(example: &Id) -> String {
+    crate::sha256_hex(format!("{FIT_SPLIT_SEED}\0{example}").as_bytes())
+}
+
+fn unit_mean(vectors: &[&[f32]], dimensions: usize) -> Vec<f32> {
+    let mut sum = vec![0f64; dimensions];
+    for vector in vectors {
+        for (acc, value) in sum.iter_mut().zip(*vector) {
+            *acc += f64::from(*value);
+        }
+    }
+    let norm = sum.iter().map(|v| v * v).sum::<f64>().sqrt();
+    if norm == 0.0 {
+        return vec![0.0; dimensions];
+    }
+    sum.iter().map(|v| (v / norm) as f32).collect()
+}
+
+/// Fit topic centroids from labelled examples (MEDULLA-DECISION-ENGINE-R614.2.5). Pure and
+/// deterministic: the split depends only on the example ids, so the same examples in any order
+/// give the same fit. A seeded split sets aside `holdout_bp` of each topic (at least one example
+/// when it is positive, at least one is always left to train). The centroid of a topic is the mean
+/// of its training vectors scaled to unit length. Each hold-out example is classified against all
+/// the fitted centroids; the precision of a topic is the share of the hold-out examples assigned
+/// to it that belong to it, and its floor is the lowest confidence at which the assigned examples
+/// reach 90 percent precision (10000 when none does).
+pub fn fit_topics(
+    examples: &[LabelledVector],
+    holdout_bp: u16,
+) -> Result<FittedTopics, EnrichError> {
+    if holdout_bp > HOLDOUT_BP_MAX {
+        return Err(EnrichError::new(
+            KNOB_OUT_OF_BOUNDS,
+            format!("hold-out {holdout_bp} exceeds {HOLDOUT_BP_MAX} basis points"),
+        ));
+    }
+    let Some(first) = examples.first() else {
+        return Err(EnrichError::new(TAXONOMY_EMPTY, "no examples to fit"));
+    };
+    let dimensions = first.vector.len();
+    let mut grouped: std::collections::BTreeMap<&Id, Vec<&LabelledVector>> =
+        std::collections::BTreeMap::new();
+    for example in examples {
+        if example.vector.len() != dimensions || dimensions == 0 {
+            return Err(EnrichError::new(
+                VECTOR_DIMENSION_MISMATCH,
+                format!(
+                    "example {} has {} dimensions, the fit {dimensions}",
+                    example.example,
+                    example.vector.len()
+                ),
+            ));
+        }
+        grouped.entry(&example.topic).or_default().push(example);
+    }
+    for (topic, members) in &grouped {
+        if members.len() < MIN_TOPIC_EXAMPLES {
+            return Err(EnrichError::new(
+                TOPIC_EXAMPLES_TOO_FEW,
+                format!(
+                    "topic {topic} has {} examples, at least {MIN_TOPIC_EXAMPLES} are needed",
+                    members.len()
+                ),
+            ));
+        }
+    }
+    // The split: order each topic's examples by their seeded rank, set the first aside.
+    let mut centroids: Vec<TopicCentroid> = Vec::with_capacity(grouped.len());
+    let mut held: Vec<(&Id, Vec<&LabelledVector>, u32)> = Vec::with_capacity(grouped.len());
+    for (topic, mut members) in grouped {
+        members.sort_by_cached_key(|member| (split_rank(&member.example), member.example.clone()));
+        let want = (members.len() * usize::from(holdout_bp)).div_ceil(10_000);
+        let holdout_count = want.min(members.len() - 1);
+        let (aside, train) = members.split_at(holdout_count);
+        let vectors: Vec<&[f32]> = train.iter().map(|m| m.vector.as_slice()).collect();
+        centroids.push(TopicCentroid {
+            topic: topic.clone(),
+            centroid: unit_mean(&vectors, dimensions),
+            floor_bp: None,
+        });
+        held.push((topic, aside.to_vec(), u32::try_from(train.len()).unwrap_or(u32::MAX)));
+    }
+    // Classify every hold-out example against all centroids: (assigned topic, confidence, truth).
+    let mut predictions: Vec<(Id, u32, bool)> = Vec::new();
+    for (topic, aside, _) in &held {
+        for member in aside {
+            let assignment = classify_with_floor(&member.example, &member.vector, &centroids, 0)?
+                .expect("a floor of zero assigns every document");
+            let correct = assignment.topic == **topic;
+            predictions.push((assignment.topic, assignment.confidence.basis_points(), correct));
+        }
+    }
+    let mut topics = Vec::with_capacity(held.len());
+    for ((topic, aside, train), centroid) in held.iter().zip(&centroids) {
+        let mut mine: Vec<(u32, bool)> = predictions
+            .iter()
+            .filter(|(assigned, _, _)| assigned == *topic)
+            .map(|(_, confidence, correct)| (*confidence, *correct))
+            .collect();
+        mine.sort_by_key(|(confidence, _)| *confidence);
+        let total = mine.len() as u64;
+        let correct_all = mine.iter().filter(|(_, ok)| *ok).count() as u64;
+        let holdout_precision_bp = if total == 0 {
+            0
+        } else {
+            u32::try_from(correct_all * 10_000 / total).unwrap_or(10_000)
+        };
+        // The lowest confidence whose suffix (every prediction at or above it) reaches the target.
+        let mut floor_bp = MAX_CONFIDENCE_BASIS_POINTS;
+        let mut distinct: Vec<u32> = mine.iter().map(|(confidence, _)| *confidence).collect();
+        distinct.dedup();
+        for candidate in distinct {
+            let suffix: Vec<&(u32, bool)> =
+                mine.iter().filter(|(confidence, _)| *confidence >= candidate).collect();
+            let right = suffix.iter().filter(|(_, ok)| *ok).count() as u64;
+            if right * 10_000 >= FLOOR_TARGET_PRECISION_BP * suffix.len() as u64 {
+                floor_bp = candidate;
+                break;
+            }
+        }
+        let mut holdout_examples: Vec<Id> = aside.iter().map(|m| m.example.clone()).collect();
+        holdout_examples.sort();
+        topics.push(FittedTopic {
+            topic: (*topic).clone(),
+            centroid: centroid.centroid.clone(),
+            holdout_precision_bp,
+            floor_bp,
+            train_examples: *train,
+            holdout_examples,
+        });
+    }
+    Ok(FittedTopics { holdout_bp, topics })
 }
 
 /// A node whose properties are projected into edges.

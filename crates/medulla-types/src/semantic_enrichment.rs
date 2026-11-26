@@ -33,8 +33,30 @@ pub struct ProjectionRuleWire {
     pub relation: String,
 }
 
-/// One semantic enrichment operation.
+/// One labelled example of a topic fit (MEDULLA-DECISION-ENGINE-R614.2.6).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct LabelledVectorWire {
+    /// The topic node id the example belongs to.
+    pub topic: String,
+    /// The example's id; the hold-out split depends on it alone.
+    pub example: String,
+    pub vector: Vec<f32>,
+}
+
+/// One topic a fit wrote, with the hold-out measures stored on its node.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct FittedTopicWire {
+    pub topic: String,
+    pub holdout_precision_bp: u32,
+    pub floor_bp: u32,
+}
+
+/// One semantic enrichment operation.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum SemanticEnrichOp {
@@ -65,6 +87,17 @@ pub enum SemanticEnrichOp {
         subject: String,
         rules: Vec<ProjectionRuleWire>,
     },
+    /// Fit the topics of the taxonomy `subject` from labelled examples and store each as a
+    /// `Topic` node with its centroid, confidence floor and hold-out precision
+    /// (MEDULLA-DECISION-ENGINE-R614.2.6).
+    FitTopics {
+        schedule_record_id: String,
+        subject: String,
+        examples: Vec<LabelledVectorWire>,
+        /// Hold-out share per topic in basis points, 0 to 5000; 2000 when absent.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        holdout_bp: Option<u16>,
+    },
 }
 
 impl SemanticEnrichOp {
@@ -75,6 +108,7 @@ impl SemanticEnrichOp {
             Self::RankProposals { .. } => "rank_proposals",
             Self::Classify { .. } => "classify",
             Self::Project { .. } => "project",
+            Self::FitTopics { .. } => "fit_topics",
         }
     }
 
@@ -92,6 +126,9 @@ impl SemanticEnrichOp {
             }
             | Self::Project {
                 schedule_record_id, ..
+            }
+            | Self::FitTopics {
+                schedule_record_id, ..
             } => schedule_record_id,
         }
     }
@@ -102,7 +139,8 @@ impl SemanticEnrichOp {
             Self::Card { subject, .. }
             | Self::RankProposals { subject, .. }
             | Self::Classify { subject, .. }
-            | Self::Project { subject, .. } => subject,
+            | Self::Project { subject, .. }
+            | Self::FitTopics { subject, .. } => subject,
         }
     }
 
@@ -132,6 +170,9 @@ pub struct SemanticEnrichReceipt {
     pub confidence_bp: Option<u32>,
     /// True when a `Project` hit the batch knob and more nodes remain.
     pub more: bool,
+    /// The topics a `FitTopics` wrote, in topic id order; empty for every other op.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fitted: Vec<FittedTopicWire>,
 }
 
 #[cfg(test)]
@@ -152,6 +193,23 @@ mod tests {
         assert_eq!(
             serde_json::from_value::<SemanticEnrichOp>(wire.clone()).unwrap(),
             op
+        );
+        let fit = SemanticEnrichOp::FitTopics {
+            schedule_record_id: "rec-2".into(),
+            subject: "subjects".into(),
+            examples: vec![LabelledVectorWire {
+                topic: "topic:a".into(),
+                example: "ex:1".into(),
+                vector: vec![1.0, 0.0],
+            }],
+            holdout_bp: None,
+        };
+        assert_eq!(fit.work_id(), "semantic:fit_topics:subjects");
+        let fit_wire = serde_json::to_value(&fit).unwrap();
+        assert!(fit_wire.get("holdout_bp").is_none());
+        assert_eq!(
+            serde_json::from_value::<SemanticEnrichOp>(fit_wire).unwrap(),
+            fit
         );
         let mut extra = wire;
         extra["surprise"] = serde_json::json!(1);

@@ -317,7 +317,7 @@ def test_refusals_write_nothing(clean_graph):
         "property": "category",
         "relation": "inCategory",
     }
-    cases = [
+    cases: list[tuple[str, dict[str, Any]]] = [
         # (expected code, request)
         ("CARD_UNGROUNDED", {**card, "source_fact_ids": []}),
         ("CARD_FACT_UNKNOWN", {**card, "source_fact_ids": ["fact:missing"]}),
@@ -336,7 +336,11 @@ def test_refusals_write_nothing(clean_graph):
         ),
         (
             "ENRICHMENT_NOT_SCHEDULED",
-            {**card, "source_fact_ids": ["fact:1"], "schedule_record_id": "record:absent"},
+            {
+                **card,
+                "source_fact_ids": ["fact:1"],
+                "schedule_record_id": "record:absent",
+            },
         ),
     ]
     for code, request in cases:
@@ -449,9 +453,7 @@ def _seed_articles(clean_graph: Any, count: int) -> None:
                     "AddNode",
                     {"node_id": node_id, "properties_msgpack": msgpack.packb(props)},
                 )
-                for ordinal, (node_id, props) in enumerate(
-                    nodes[start : start + step]
-                )
+                for ordinal, (node_id, props) in enumerate(nodes[start : start + step])
             ],
         )
         results = clean_graph.changes.apply_batch([envelope])
@@ -488,3 +490,59 @@ def test_project_one_thousand_nodes_in_one_batch(clean_graph):
     assert projected["unresolved"] == 0
     assert projected["more"] is False
     assert _counts(clean_graph) == (before[0], before[1] + 1000)
+
+
+# spec: MEDULLA-DECISION-ENGINE-R614.2.7
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R614.2.7")
+def test_fit_topics_then_classify_journey(clean_graph):
+    _seed(clean_graph)
+    schema = publish(clean_graph, "enrich-schema", "feature_schema", _schema_body())
+    policy = _publish_policy(clean_graph)
+    taxonomy = "fitted-subjects"
+
+    def scheduled(op_name: str, subject: str) -> str:
+        return asyncio.run(_schedule(schema, policy, f"semantic:{op_name}:{subject}"))
+
+    # Two topics of six examples each; the held-out examples are chosen by example id.
+    def examples(topic: str, axis: int) -> list[dict[str, Any]]:
+        out = []
+        for n in range(6):
+            vector = [0.0, 0.0, 0.0, 0.0]
+            vector[axis] = 1.0
+            vector[3] = 0.05 * n
+            out.append({"topic": topic, "example": f"{topic}:ex{n}", "vector": vector})
+        return out
+
+    request = {
+        "op": "fit_topics",
+        "schedule_record_id": scheduled("fit_topics", taxonomy),
+        "subject": taxonomy,
+        "examples": examples("topic:fit-a", 0) + examples("topic:fit-b", 2),
+    }
+    # A topic with four examples refuses and writes nothing.
+    thin = {**request, "examples": request["examples"][:-2][:10]}
+    before = _counts(clean_graph)
+    with pytest.raises(EngineResponseError, match="TOPIC_EXAMPLES_TOO_FEW"):
+        _call(clean_graph, thin)
+    assert _counts(clean_graph) == before
+
+    fitted = _call(clean_graph, request)
+    assert fitted["node_ids"] == ["topic:fit-a", "topic:fit-b"]
+    floors = {row["topic"]: row["floor_bp"] for row in fitted["fitted"]}
+    assert set(floors) == {"topic:fit-a", "topic:fit-b"}
+    props = clean_graph.nodes.properties("topic:fit-a")
+    assert props["type"] == "Topic" and props["floor_bp"] == floors["topic:fit-a"]
+    assert _counts(clean_graph)[0] == before[0] + 2
+
+    # The held-out vector classifies into its topic, above the stored floor.
+    classified = _call(
+        clean_graph,
+        {
+            "op": "classify",
+            "schedule_record_id": scheduled("classify", "doc:1"),
+            "subject": "doc:1",
+            "taxonomy": taxonomy,
+        },
+    )
+    assert classified["topic"] == "topic:fit-a"
+    assert classified["confidence_bp"] >= floors["topic:fit-a"]

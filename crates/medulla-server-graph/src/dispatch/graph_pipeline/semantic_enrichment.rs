@@ -29,8 +29,9 @@ mod imp {
     use medulla_decision_types::decision::statistical::outcome::StatisticalOutcome;
     use medulla_decision_types::decision::statistical::QuestionKind;
     use medulla_enrich::semantic::{
-        classify_with_floor, project_edges, rank_candidates_top, store_card, CapabilityCard,
-        ConceptInput, EnrichmentKnobs, ProjectionNode, ProjectionRule, TopicCentroid,
+        classify_with_floor, fit_topics, project_edges, rank_candidates_top, store_card,
+        CapabilityCard, ConceptInput, EnrichmentKnobs, LabelledVector, ProjectionNode,
+        ProjectionRule, HOLDOUT_BP_DEFAULT,
     };
     use medulla_enrich::{EnrichError, Id};
     use medulla_h_ingest::repository_index::IndexWriteSet;
@@ -39,7 +40,7 @@ mod imp {
     use medulla_persistence_records::decision_jobs::{decode_artifact, record_key};
     use medulla_server_api::knob_config::knobs;
     use medulla_types::semantic_enrichment::{
-        SemanticEnrichOp, SemanticEnrichReceipt, ENRICHMENT_NOT_SCHEDULED,
+        FittedTopicWire, SemanticEnrichOp, SemanticEnrichReceipt, ENRICHMENT_NOT_SCHEDULED,
     };
 
     use super::super::*;
@@ -143,6 +144,7 @@ mod imp {
             topic: None,
             confidence_bp: None,
             more: false,
+            fitted: Vec::new(),
         }
     }
 
@@ -178,6 +180,7 @@ mod imp {
             SemanticEnrichOp::RankProposals { .. } => proposals(&ctx, &op, &mut receipt),
             SemanticEnrichOp::Classify { .. } => classify(&ctx, &op, &mut receipt).await,
             SemanticEnrichOp::Project { .. } => project(&ctx, &op, &mut receipt),
+            SemanticEnrichOp::FitTopics { .. } => fit(&ctx, &op, &mut receipt),
         };
         match write_set {
             Ok(Some(write_set)) => commit(ctx, write_set, receipt).await,
@@ -318,29 +321,21 @@ mod imp {
                 }
             }
         };
-        let mut topics = Vec::new();
-        {
+        // A topic a fit stored carries its hold-out floor, which replaces the fixed cut.
+        let topics = {
             let store = ctx.core.semantic_store.read();
-            for (topic_id, bytes) in ctx.core.get_nodes_by_label("Topic", 0) {
-                if !visible(ctx, &topic_id) {
-                    continue;
-                }
-                let Ok(value) = medulla_types::msgpack::decode_property_value(&bytes) else {
-                    continue;
-                };
-                if value.get("taxonomy").and_then(|v| v.as_str()) != Some(taxonomy.as_str()) {
-                    continue;
-                }
-                let Some(centroid) = store.get_embedding(&topic_id) else {
-                    continue;
-                };
-                topics.push(TopicCentroid {
-                    topic: id(ctx, &topic_id)?,
-                    centroid,
+            let rows = ctx
+                .core
+                .get_nodes_by_label("Topic", 0)
+                .into_iter()
+                .filter(|(topic_id, _)| visible(ctx, topic_id))
+                .filter_map(|(topic_id, bytes)| {
+                    let value = medulla_types::msgpack::decode_property_value(&bytes).ok()?;
+                    Some((topic_id, value))
                 });
-            }
-        }
-        topics.sort_by(|a, b| a.topic.cmp(&b.topic));
+            lower::stored_topics(rows, |topic_id| store.get_embedding(topic_id), taxonomy)
+                .map_err(|error| refuse(ctx, error))?
+        };
         let assignment =
             classify_with_floor(&document, &vector, &topics, knobs.topic_min_confidence_bp)
                 .map_err(|error| refuse(ctx, error))?;
@@ -352,6 +347,53 @@ mod imp {
         receipt.topic = Some(assignment.topic.as_str().to_string());
         receipt.confidence_bp = Some(assignment.confidence.basis_points());
         lower::lower_assignment(&assignment, taxonomy, embedder.name(), schedule_record_id)
+            .map_err(|error| Response::err(ctx.req_id, error))
+    }
+
+    /// Fit the topics of a taxonomy from labelled examples and lower each as a `Topic` node with
+    /// its centroid, floor and hold-out precision (MEDULLA-DECISION-ENGINE-R614.2.6). The fit is
+    /// the pure `fit_topics`; a refusal of it writes nothing.
+    fn fit(
+        ctx: &GraphOpRouting<'_>,
+        op: &SemanticEnrichOp,
+        receipt: &mut SemanticEnrichReceipt,
+    ) -> Result<Option<IndexWriteSet>, Response> {
+        let SemanticEnrichOp::FitTopics {
+            schedule_record_id,
+            subject,
+            examples,
+            holdout_bp,
+        } = op
+        else {
+            unreachable!("fit is called for a FitTopics op")
+        };
+        let labelled = examples
+            .iter()
+            .map(|example| {
+                Ok(LabelledVector {
+                    topic: id(ctx, &example.topic)?,
+                    vector: example.vector.clone(),
+                    example: id(ctx, &example.example)?,
+                })
+            })
+            .collect::<Result<Vec<_>, Response>>()?;
+        let fitted = fit_topics(&labelled, holdout_bp.unwrap_or(HOLDOUT_BP_DEFAULT))
+            .map_err(|error| refuse(ctx, error))?;
+        receipt.node_ids = fitted
+            .topics
+            .iter()
+            .map(|topic| topic.topic.as_str().to_string())
+            .collect();
+        receipt.fitted = fitted
+            .topics
+            .iter()
+            .map(|topic| FittedTopicWire {
+                topic: topic.topic.as_str().to_string(),
+                holdout_precision_bp: topic.holdout_precision_bp,
+                floor_bp: topic.floor_bp,
+            })
+            .collect();
+        lower::lower_fit(&fitted, subject, schedule_record_id)
             .map_err(|error| Response::err(ctx.req_id, error))
     }
 

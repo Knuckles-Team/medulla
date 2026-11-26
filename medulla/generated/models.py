@@ -40572,6 +40572,32 @@ class SemanticEnrichOpClassify(BaseModel):
     taxonomy: str
 
 
+class LabelledVectorWire(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    example: str
+    topic: str
+    vector: list[float]
+
+
+class FittedTopicWire(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    floor_bp: Annotated[int, Field(ge=0)]
+    holdout_precision_bp: Annotated[int, Field(ge=0)]
+    topic: str
+
+
+class SemanticEnrichOpFitTopics(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    examples: list[LabelledVectorWire]
+    holdout_bp: Annotated[int, Field(ge=0, le=65535)] | None = None
+    op: Literal["fit_topics"]
+    schedule_record_id: str
+    subject: str
+
+
 class SemanticEnrichOpProject(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -41202,7 +41228,8 @@ SemanticEnrichOp = Annotated[
     SemanticEnrichOpCard
     | SemanticEnrichOpRankProposals
     | SemanticEnrichOpClassify
-    | SemanticEnrichOpProject,
+    | SemanticEnrichOpProject
+    | SemanticEnrichOpFitTopics,
     Field(discriminator="op"),
 ]
 
@@ -50378,6 +50405,9 @@ __all__ = [
     "SemanticEnrichOp",
     "SemanticEnrichOpCard",
     "SemanticEnrichOpClassify",
+    "SemanticEnrichOpFitTopics",
+    "LabelledVectorWire",
+    "FittedTopicWire",
     "SemanticEnrichOpProject",
     "SemanticEnrichOpRankProposals",
     "ServiceMove",

@@ -5,7 +5,10 @@
 //! the same ChangeEnvelope authority as repository and Document enrichment, so
 //! a replay of an unchanged result commits nothing new.
 
-use medulla_enrich::semantic::{CardNode, EnhancementCandidate, ProjectedEdge, TopicAssignment};
+use medulla_enrich::semantic::{
+    CardNode, EnhancementCandidate, FittedTopics, ProjectedEdge, TopicAssignment, TopicCentroid,
+};
+use medulla_enrich::{EnrichError, Id};
 use medulla_protocol_types::protocol::Method;
 use medulla_types::semantic_enrichment::ConceptInputWire;
 use serde_json::{json, Value};
@@ -15,6 +18,8 @@ use super::repository_index::{EnvelopeLabels, IndexWriteSet};
 pub const CARD_TYPE: &str = "CapabilityCard";
 pub const PROPOSAL_TYPE: &str = "EnhancementProposal";
 pub const ASSIGNMENT_TYPE: &str = "TopicAssignment";
+/// The label of a stored topic node (MEDULLA-DECISION-ENGINE-R614.2.6).
+pub const TOPIC_TYPE: &str = "Topic";
 pub const HAS_CARD: &str = "hasCard";
 pub const ASSIGNED_TO: &str = "assignedTo";
 const ENVELOPE_PREFIX: &str = "semantic-enrichment:";
@@ -168,4 +173,68 @@ pub fn lower_projection(edges: &[ProjectedEdge]) -> Result<Option<IndexWriteSet>
         })
         .collect::<Result<Vec<_>, _>>()?;
     write_set(methods)
+}
+
+/// The fitted topics of one taxonomy (MEDULLA-DECISION-ENGINE-R614.2.6): one `Topic` node per
+/// topic, keyed by the topic id, so a refit of the taxonomy replaces the earlier node, with the
+/// confidence floor and hold-out precision as properties and the centroid as the node's
+/// embedding, which is where `classify` reads it. The write set is the one ingest route; no
+/// second write path exists.
+pub fn lower_fit(
+    fit: &FittedTopics,
+    taxonomy: &str,
+    schedule_record_id: &str,
+) -> Result<Option<IndexWriteSet>, String> {
+    let mut methods = Vec::with_capacity(fit.topics.len() * 2);
+    for topic in &fit.topics {
+        methods.push(node(
+            topic.topic.as_str(),
+            json!({
+                "type": TOPIC_TYPE,
+                "taxonomy": taxonomy,
+                "floor_bp": topic.floor_bp,
+                "holdout_precision_bp": topic.holdout_precision_bp,
+                "holdout_bp": fit.holdout_bp,
+                "train_examples": topic.train_examples,
+                "holdout_examples": topic.holdout_examples.len(),
+                "schedule_record_id": schedule_record_id,
+            }),
+        )?);
+        methods.push(Method::AddEmbedding {
+            node_id: topic.topic.as_str().to_string(),
+            embedding: topic.centroid.clone(),
+        });
+    }
+    write_set(methods)
+}
+
+/// The topics of `taxonomy` among stored `Topic` nodes: each node row as its decoded properties,
+/// with its centroid read by `embedding_of`. A node of another taxonomy, or without a centroid,
+/// is skipped. A `floor_bp` property, written by a fit, becomes the topic's confidence floor.
+/// The caller passes only rows the reader may see; the result is in topic id order.
+pub fn stored_topics(
+    rows: impl IntoIterator<Item = (String, Value)>,
+    embedding_of: impl Fn(&str) -> Option<Vec<f32>>,
+    taxonomy: &str,
+) -> Result<Vec<TopicCentroid>, EnrichError> {
+    let mut topics = Vec::new();
+    for (node_id, properties) in rows {
+        if properties.get("taxonomy").and_then(Value::as_str) != Some(taxonomy) {
+            continue;
+        }
+        let Some(centroid) = embedding_of(&node_id) else {
+            continue;
+        };
+        let floor_bp = properties
+            .get("floor_bp")
+            .and_then(Value::as_u64)
+            .and_then(|floor| u32::try_from(floor).ok());
+        topics.push(TopicCentroid {
+            topic: Id::new(node_id)?,
+            centroid,
+            floor_bp,
+        });
+    }
+    topics.sort_by(|a, b| a.topic.cmp(&b.topic));
+    Ok(topics)
 }

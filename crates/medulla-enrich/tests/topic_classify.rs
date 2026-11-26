@@ -12,6 +12,7 @@ fn topic(name: &str, centroid: &[f32]) -> TopicCentroid {
     TopicCentroid {
         topic: id(name),
         centroid: centroid.to_vec(),
+        floor_bp: None,
     }
 }
 
@@ -90,4 +91,26 @@ fn enrichment_knobs_refuse_values_outside_their_range() {
         EnrichmentKnobs::default(),
         EnrichmentKnobs::new(20, 3_000, 10_000).unwrap()
     );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R614.2.6
+#[test]
+fn a_stored_fit_floor_replaces_the_fixed_cut_of_its_topic() {
+    let doc = id("doc:1");
+    let mut topics = [topic("topic:a", &[1.0, 0.0]), topic("topic:b", &[0.0, 1.0])];
+    // cos([0.9, 0.1], [1, 0]) is 9938 bp: above the default cut and a stored floor of 9000.
+    assert!(classify(&doc, &[0.9, 0.1], &topics).unwrap().is_some());
+    topics[0].floor_bp = Some(9_900);
+    assert!(classify(&doc, &[0.9, 0.1], &topics).unwrap().is_some());
+    // A stored floor above the confidence drops the hit even though the default cut passes it.
+    topics[0].floor_bp = Some(9_939);
+    assert_eq!(classify(&doc, &[0.9, 0.1], &topics).unwrap(), None);
+    // A stored floor below the default cut admits what the default cut refuses.
+    topics[0].floor_bp = Some(100);
+    assert!(classify(&doc, &[0.1, 1.0], &[topics[0].clone()]).unwrap().is_none());
+    assert!(classify(&doc, &[0.2, 1.0], &[topics[0].clone()]).unwrap().is_some());
+    // The floor of the other topic does not apply to the winner.
+    topics[0].floor_bp = None;
+    topics[1].floor_bp = Some(10_000);
+    assert!(classify(&doc, &[0.9, 0.1], &topics).unwrap().is_some());
 }
