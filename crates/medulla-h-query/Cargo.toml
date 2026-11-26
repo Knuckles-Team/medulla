@@ -156,6 +156,7 @@ obs = ["dep:medulla-text", "medulla-text/tantivy", "medulla-server-api/obs", "qu
 promql = ["dep:medulla-tsdb", "medulla-tsdb/promql", "medulla-persistence/promql", "medulla-server-api/promql", "obs", "query", "redb", "server", "text", "tsdb"]
 traces = ["dep:medulla-tsdb", "medulla-tsdb/traces", "medulla-persistence/traces", "medulla-server-api/traces", "obs", "query", "redb", "server", "text", "tsdb"]
 [dev-dependencies]
+criterion = { version = "0.8", default-features = false }
 medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-support"] }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
@@ -173,3 +174,7 @@ medulla-test-ambient-auth = { path = "../medulla-test-ambient-auth" }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
 medulla-server-ops = { path = "../medulla-server-ops", features = ["test-support"] }
 tempfile = "3"
+
+[[bench]]
+name = "code_health"
+harness = false
