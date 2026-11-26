@@ -17,9 +17,9 @@ use medulla_decision_stats::decision::writeback::{
     WRITEBACK_QUEUE_TOO_LARGE, WRITEBACK_QUEUE_UNKNOWN, WRITEBACK_SELF_APPROVAL,
 };
 use medulla_decision_types::decision::statistical::writeback::{
-    GovernedChangeSet, PreflightVerdict, ProposalInput, ProposalKind, ProposalRow,
-    WritebackApproval, WritebackAudit, WritebackAuditOutcome, WritebackAuditRows, WritebackOp,
-    WritebackOutcome,
+    GovernedChangeSet, PreflightVerdict, ProposalInput, ProposalKind, ProposalRow, QueueStatus,
+    QueueView, WritebackApproval, WritebackAudit, WritebackAuditOutcome, WritebackAuditRows,
+    WritebackOp, WritebackOutcome,
 };
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact};
 use medulla_types::contract::{ResourceId, TenantId};
@@ -283,6 +283,25 @@ pub(super) fn audit_rows(
     Ok(WritebackAuditRows { rows })
 }
 
+/// Read one stored queue whole (MEDULLA-DECISION-ENGINE-R615.7). The record is
+/// keyed by the verified tenant, so a queue of another tenant reads as unknown.
+fn list(ctx: &ExecutionContext, tenant: &str, queue_id: &str) -> Result<WritebackOutcome, String> {
+    let (_, stored) = read_queue(ctx, tenant, queue_id)?;
+    Ok(WritebackOutcome::Listed {
+        queue: QueueView {
+            queue_id: queue_id.to_string(),
+            status: match stored.state {
+                QueueState::Pending => QueueStatus::Pending,
+                QueueState::Released => QueueStatus::Released,
+            },
+            queued_by: stored.queued_by.clone(),
+            proposals: stored.queue.proposals.iter().map(input_of).collect(),
+            approvals: stored.approvals.clone(),
+            fully_approved: fully_approved(&stored),
+        },
+    })
+}
+
 fn release(
     ctx: &ExecutionContext,
     reader: &LogReader,
@@ -364,6 +383,7 @@ pub(super) fn serve(
             proposal_id,
         } => approve(ctx, reader, tenant, &queue_id, &proposal_id),
         WritebackOp::Release { queue_id } => release(ctx, reader, tenant, &queue_id),
+        WritebackOp::List { queue_id } => list(ctx, tenant, &queue_id),
         computed => run(tenant, computed, knobs.writeback_queue_min_tier),
     }
 }

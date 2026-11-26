@@ -12,9 +12,8 @@ use medulla_decision_types::decision::statistical::declared::DeclaredOption;
 use medulla_decision_types::decision::{PremiseClass, ResolutionKind};
 use medulla_types::contract::Digest256;
 
-use super::super::family::feedback_loop::feedback_of;
-use super::super::stat_log::{visible_entries, LogReader};
-use medulla_persistence_records::agent_library::AgentLibraryStore;
+use super::super::family::feedback_loop::latest_continuation;
+use super::super::stat_log::LogReader;
 
 fn feedback(loop_id: &str, round: u32, findings: u32, tag: &str) -> FeedbackRecord {
     FeedbackRecord {
@@ -98,43 +97,6 @@ fn reader(tenant: &str, principal: &str) -> LogReader {
         roles: Vec::new(),
         retention: super::super::stat_retention::Retention::none(),
     }
-}
-
-/// The continuation one committed round sealed: the loop stops when its
-/// decision chose `stop`, for `NoFindings` when the round found nothing and
-/// for `RoundBound` otherwise.
-fn continuation_of(record: &StatisticalDecisionRecord) -> Option<Continuation> {
-    let feedback = feedback_of(record)?;
-    let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
-        return None;
-    };
-    let stops = scores
-        .iter()
-        .any(|score| score.option_id == "stop" && score.score.value != 0);
-    let stop = stops.then_some(if feedback.finding_count == 0 {
-        StopReason::NoFindings
-    } else {
-        StopReason::RoundBound
-    });
-    Some(Continuation {
-        loop_id: feedback.loop_id.clone(),
-        round: feedback.round,
-        stop,
-    })
-}
-
-/// The continuation of `loop_id`: the latest committed round the reader can
-/// see (MEDULLA-DECISION-ENGINE-R169.3). `None` when no round is committed.
-fn latest_continuation(
-    store: &AgentLibraryStore,
-    reader: &LogReader,
-    loop_id: &str,
-) -> Result<Option<Continuation>, String> {
-    Ok(visible_entries(store, reader)?
-        .iter()
-        .filter_map(|entry| continuation_of(&entry.record))
-        .filter(|continuation| continuation.loop_id == loop_id)
-        .max_by_key(|continuation| continuation.round))
 }
 
 fn continuation(h: &Harness, tenant: &str, principal: &str, loop_id: &str) -> Option<Continuation> {
@@ -368,4 +330,57 @@ async fn feedback_loop_stops() {
     .await
     .unwrap_err();
     assert!(error.starts_with(FEEDBACK_REPLAYED_KEY.as_str()), "{error}");
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R169.7
+#[tokio::test]
+async fn the_served_continuation_read_is_the_committers_own() {
+    use medulla_decision_types::decision::checker_feedback::ContinuationRead;
+    let h = Harness::new().await;
+    let (pin, _) = publish_route_schema(&h);
+    let read = |who: &'static str, loop_id: &'static str| {
+        let h = &h;
+        async move {
+            decode::<ContinuationRead>(
+                super::log_tests::log_op(
+                    h,
+                    who,
+                    DecisionLogOp::FeedbackContinuation {
+                        tenant_id: TENANT.to_string(),
+                        loop_id: loop_id.to_string(),
+                    },
+                )
+                .await,
+            )
+            .unwrap()
+            .continuation
+        }
+    };
+    assert_eq!(read("decider", "loop:7").await, None);
+
+    let one = decide(&h, round_request(&pin, feedback("loop:7", 1, 2, "a"), 3))
+        .await
+        .unwrap();
+    commit_round(&h, &one.records.as_slice()[0]).await;
+    assert_eq!(
+        read("decider", "loop:7").await,
+        Some(Continuation {
+            loop_id: "loop:7".into(),
+            round: 1,
+            stop: None,
+        })
+    );
+
+    let three = decide(&h, round_request(&pin, feedback("loop:7", 3, 1, "c"), 3))
+        .await
+        .unwrap();
+    commit_round(&h, &three.records.as_slice()[0]).await;
+    assert_eq!(
+        read("decider", "loop:7").await.map(|c| (c.round, c.stop)),
+        Some((3, Some(StopReason::RoundBound)))
+    );
+
+    // Another principal and an unknown loop read alike: no continuation.
+    assert_eq!(read("stranger", "loop:7").await, None);
+    assert_eq!(read("decider", "loop:unknown").await, None);
 }

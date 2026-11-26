@@ -10,8 +10,8 @@
 
 use medulla_decision_stats::decision::ladder::LadderResult;
 use medulla_decision_types::decision::checker_feedback::{
-    effective_bound, next_round, FeedbackRecord, FEEDBACK_BOUND_INVALID, FEEDBACK_REPLAYED_KEY,
-    FEEDBACK_UNGRADED_OUTPUT, KNOBS,
+    effective_bound, next_round, Continuation, FeedbackRecord, StopReason, FEEDBACK_BOUND_INVALID,
+    FEEDBACK_REPLAYED_KEY, FEEDBACK_UNGRADED_OUTPUT, KNOBS,
 };
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_decision_types::decision::numeric::{QuantScaleTag, QuantisedValue};
@@ -27,8 +27,9 @@ use medulla_graph_core::graph::GraphView;
 use medulla_types::contract::{BoundedVec, Digest256};
 
 use crate::decide::stat_executor::{Executed, ExecutionContext};
-use crate::decide::stat_log::visible_entries;
+use crate::decide::stat_log::{visible_entries, LogReader};
 use crate::decide::stat_support::invalid_parameter;
+use medulla_persistence_records::agent_library::AgentLibraryStore;
 
 use super::DecisionFamily;
 
@@ -74,6 +75,44 @@ fn bound_of(params: &[TypedParam]) -> Result<i64, String> {
                 "a feedback_loop question requires an integer {PARAM_BOUND} param"
             ))
         })
+}
+
+/// The continuation one committed round sealed: the loop stops when its
+/// decision chose `stop`, for `NoFindings` when the round found nothing and
+/// for `RoundBound` otherwise.
+fn continuation_of(record: &StatisticalDecisionRecord) -> Option<Continuation> {
+    let feedback = feedback_of(record)?;
+    let StatisticalOutcome::Advisory { scores, .. } = &record.outcome else {
+        return None;
+    };
+    let stops = scores
+        .iter()
+        .any(|score| score.option_id == STOP && score.score.value != 0);
+    let stop = stops.then_some(if feedback.finding_count == 0 {
+        StopReason::NoFindings
+    } else {
+        StopReason::RoundBound
+    });
+    Some(Continuation {
+        loop_id: feedback.loop_id.clone(),
+        round: feedback.round,
+        stop,
+    })
+}
+
+/// The continuation of `loop_id`: the latest committed round the reader can
+/// see (MEDULLA-DECISION-ENGINE-R169.7). `None` when no round is committed
+/// or visible, so an unknown loop and another principal's loop read alike.
+pub(in crate::decide) fn latest_continuation(
+    store: &AgentLibraryStore,
+    reader: &LogReader,
+    loop_id: &str,
+) -> Result<Option<Continuation>, String> {
+    Ok(visible_entries(store, reader)?
+        .iter()
+        .filter_map(|entry| continuation_of(&entry.record))
+        .filter(|continuation| continuation.loop_id == loop_id)
+        .max_by_key(|continuation| continuation.round))
 }
 
 /// The feedback record a committed record sealed, when it is a feedback round.
@@ -248,8 +287,11 @@ pub(crate) fn round_outcome(
         effective_bound(bound, knob),
     );
     let stops = continuation.stop.is_some();
-    Ok(StatisticalOutcome::advisory(BoundedVec::new(vec![scored(CONTINUE, !stops), scored(STOP, stops)])
-            .expect("two scores fit the bound"), false))
+    Ok(StatisticalOutcome::advisory(
+        BoundedVec::new(vec![scored(CONTINUE, !stops), scored(STOP, stops)])
+            .expect("two scores fit the bound"),
+        false,
+    ))
 }
 
 fn conclude(

@@ -109,6 +109,11 @@ pub enum WritebackOp {
     /// Release the queue as one governed change set once every queued proposal
     /// holds an approval. Releasing a released queue returns the same set.
     Release { queue_id: String },
+    /// Read one stored queue: its proposals in enqueue order, its approvals in
+    /// approval order and its state (MEDULLA-DECISION-ENGINE-R615.7). Writes
+    /// nothing; a queue the tenant does not hold, whoever stored it elsewhere,
+    /// refuses the same `WRITEBACK_QUEUE_UNKNOWN`.
+    List { queue_id: String },
 }
 
 /// One proposal to queue and the per-source value digests its preflight reads.
@@ -201,6 +206,38 @@ pub enum WritebackOutcome {
     Released {
         change_set: GovernedChangeSet,
     },
+    /// One stored queue as `List` reads it.
+    Listed {
+        queue: QueueView,
+    },
+}
+
+/// The lifecycle state of one stored approval queue (the machine `proposal_queue`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum QueueStatus {
+    /// Stored, waiting for approvals.
+    Pending,
+    /// Released as one governed change set.
+    Released,
+}
+
+/// One stored approval queue, read back whole (MEDULLA-DECISION-ENGINE-R615.7).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct QueueView {
+    pub queue_id: String,
+    pub status: QueueStatus,
+    /// The verified principal that queued the set.
+    pub queued_by: String,
+    /// The proposals in enqueue order.
+    pub proposals: Vec<ProposalInput>,
+    /// Every approval so far, in approval order.
+    pub approvals: Vec<WritebackApproval>,
+    /// Whether every proposal holds an approval, so a release would succeed.
+    pub fully_approved: bool,
 }
 
 /// How one release attempt ended for one proposal.

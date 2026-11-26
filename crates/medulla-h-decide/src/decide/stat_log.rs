@@ -1059,6 +1059,15 @@ fn dispatch(
             &tenant_id,
             computation,
         )?),
+        DecisionLogOp::FeedbackContinuation { loop_id, .. } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogFeedbackContinuation,
+        >(
+            medulla_decision_types::decision::checker_feedback::ContinuationRead {
+                continuation: super::family::feedback_loop::latest_continuation(
+                    ctx.store, reader, &loop_id,
+                )?,
+            },
+        ),
         DecisionLogOp::RunRecord { .. } => Err(refusal(
             StatisticalErrorCode::ParameterInvalid,
             "a run record is staged by `run_record::stage` and its graph link is committed \

@@ -5641,14 +5641,30 @@ RunRecord = Annotated[
 TraceScalar = bool | int | str
 
 
+class WritebackOpList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["list"]
+    queue_id: str
+
+
 WritebackOp = Annotated[
     WritebackOpPreflight
     | WritebackOpPropose
     | WritebackOpQueue
     | WritebackOpApprove
-    | WritebackOpRelease,
+    | WritebackOpRelease
+    | WritebackOpList,
     Field(discriminator="kind"),
 ]
+
+
+class DecisionLogOpFeedbackContinuation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    loop_id: str
+    op: Literal["feedback_continuation"]
+    tenant_id: str
 
 
 DecisionLogOp = Annotated[
@@ -5677,7 +5693,8 @@ DecisionLogOp = Annotated[
     | DecisionLogOpGenerationSpace
     | DecisionLogOpRunRecord
     | DecisionLogOpWriteback
-    | DecisionLogOpWritebackAudit,
+    | DecisionLogOpWritebackAudit
+    | DecisionLogOpFeedbackContinuation,
     Field(discriminator="op"),
 ]
 
@@ -45231,12 +45248,36 @@ class WritebackOutcomeReleased(BaseModel):
     result: Literal["released"]
 
 
+class QueueStatus(str, Enum):
+    PENDING = "pending"
+    RELEASED = "released"
+
+
+class QueueView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    approvals: list[WritebackApproval]
+    fully_approved: bool
+    proposals: list[ProposalInput]
+    queue_id: str
+    queued_by: str
+    status: QueueStatus
+
+
+class WritebackOutcomeListed(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    queue: QueueView
+    result: Literal["listed"]
+
+
 WritebackOutcome = Annotated[
     WritebackOutcomePreflight
     | WritebackOutcomeProposals
     | WritebackOutcomeQueued
     | WritebackOutcomeApproved
-    | WritebackOutcomeReleased,
+    | WritebackOutcomeReleased
+    | WritebackOutcomeListed,
     Field(discriminator="result"),
 ]
 
@@ -46782,6 +46823,25 @@ class RelationalIntent(BaseModel):
     subject: str
     relation: str
     object: str
+
+
+class StopReason(str, Enum):
+    NO_FINDINGS = "no_findings"
+    ROUND_BOUND = "round_bound"
+
+
+class Continuation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    loop_id: str
+    round: Annotated[int, Field(ge=0)]
+    stop: StopReason | None = None
+
+
+class ContinuationRead(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    continuation: Continuation | None = None
 
 
 __all__ = [
@@ -52804,6 +52864,14 @@ __all__ = [
     "SkillTelemetryOpRank",
     "SkillTelemetryOpTracesByEval",
     "TelemetryWindow",
+    "WritebackOpList",
+    "QueueStatus",
+    "QueueView",
+    "WritebackOutcomeListed",
+    "DecisionLogOpFeedbackContinuation",
+    "StopReason",
+    "Continuation",
+    "ContinuationRead",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both

@@ -571,3 +571,72 @@ async fn queuer_cannot_approve_its_own_change_set() {
     .unwrap();
     assert!(matches!(released, WritebackOutcome::Released { .. }));
 }
+
+// spec: MEDULLA-DECISION-ENGINE-R615.7
+#[tokio::test]
+async fn list_reads_a_stored_queue_whole_and_an_unknown_queue_refuses() {
+    use medulla_decision_types::decision::statistical::writeback::{QueueStatus, QueueView};
+    let h = Harness::new().await;
+    let list = || WritebackOp::List {
+        queue_id: "q:list".to_string(),
+    };
+
+    let unknown = writeback(&h, list()).await.unwrap_err();
+    assert!(unknown.starts_with("WRITEBACK_QUEUE_UNKNOWN"), "{unknown}");
+
+    writeback(
+        &h,
+        WritebackOp::Queue {
+            queue_id: "q:list".to_string(),
+            proposals: vec![
+                queued("wp:1", "ext:1", RiskTier::High),
+                queued("wp:2", "ext:2", RiskTier::High),
+            ],
+        },
+    )
+    .await
+    .unwrap();
+    let read = |outcome: WritebackOutcome| -> QueueView {
+        let WritebackOutcome::Listed { queue } = outcome else {
+            panic!("a queue listing was expected")
+        };
+        queue
+    };
+
+    let pending = read(writeback(&h, list()).await.unwrap());
+    assert_eq!(pending.queue_id, "q:list");
+    assert_eq!(pending.status, QueueStatus::Pending);
+    assert_eq!(pending.queued_by, approver_id("writer"));
+    let ids: Vec<&str> = pending.proposals.iter().map(|p| p.id.as_str()).collect();
+    assert_eq!(ids, ["wp:1", "wp:2"]);
+    assert!(pending.approvals.is_empty() && !pending.fully_approved);
+
+    for id in ["wp:1", "wp:2"] {
+        writeback_as(
+            &h,
+            "approver-1",
+            WritebackOp::Approve {
+                queue_id: "q:list".to_string(),
+                proposal_id: id.to_string(),
+            },
+        )
+        .await
+        .unwrap();
+    }
+    let approved = read(writeback(&h, list()).await.unwrap());
+    assert_eq!(approved.approvals.len(), 2);
+    assert!(approved.fully_approved && approved.status == QueueStatus::Pending);
+
+    writeback(
+        &h,
+        WritebackOp::Release {
+            queue_id: "q:list".to_string(),
+        },
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        read(writeback(&h, list()).await.unwrap()).status,
+        QueueStatus::Released
+    );
+}

@@ -548,6 +548,11 @@ pub enum DecisionLogOp {
         tenant_id: String,
         change_set_id: String,
     },
+    /// Read the latest committed continuation of one feedback loop the caller
+    /// can see (MEDULLA-DECISION-ENGINE-R169.7). Reads the record index `Get`
+    /// reads; writes nothing. A loop the caller sees no round of, whether it is
+    /// unknown or another principal's, answers an absent continuation.
+    FeedbackContinuation { tenant_id: String, loop_id: String },
     /// Store one harness adoption with its contrast and lesson
     /// (MEDULLA-DECISION-ENGINE-R803.8): the one write authority for
     /// `AdoptedHarness`, `HarnessContrast` and `HarnessLesson`.
@@ -916,6 +921,7 @@ impl DecisionLogOp {
             | Self::Verify { .. }
             | Self::GenerationSpace { .. }
             | Self::WritebackAudit { .. }
+            | Self::FeedbackContinuation { .. }
             | Self::HarnessLessons { .. }
             | Self::Pointer { .. }
             | Self::List { .. }
@@ -925,7 +931,7 @@ impl DecisionLogOp {
             Self::Writeback { computation, .. } => {
                 use super::writeback::WritebackOp as W;
                 match computation {
-                    W::Preflight { .. } | W::Propose { .. } => LogOpClass::Read,
+                    W::Preflight { .. } | W::Propose { .. } | W::List { .. } => LogOpClass::Read,
                     W::Queue { .. } | W::Release { .. } => LogOpClass::Write,
                     W::Approve { .. } => LogOpClass::Govern,
                 }
@@ -972,6 +978,7 @@ impl DecisionLogOp {
             | Self::CapabilityOutcome { tenant_id, .. }
             | Self::GenerationSpace { tenant_id, .. }
             | Self::WritebackAudit { tenant_id, .. }
+            | Self::FeedbackContinuation { tenant_id, .. }
             | Self::HarnessAdoption { tenant_id, .. }
             | Self::HarnessLessons { tenant_id, .. }
             | Self::Pointer { tenant_id, .. }

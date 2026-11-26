@@ -72,6 +72,15 @@ pub struct Continuation {
     pub stop: Option<StopReason>,
 }
 
+/// The answer of `DecisionLog` `FeedbackContinuation` (MEDULLA-DECISION-ENGINE-R169.7): the latest
+/// committed continuation of one loop, absent when the caller can see no committed round of it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ContinuationRead {
+    pub continuation: Option<Continuation>,
+}
+
 /// The round bound in force: the request's bound, never above the resolved
 /// `feedback.max_rounds` knob (MEDULLA-DECISION-ENGINE-R169.2).
 pub fn effective_bound(request_bound: u32, knob_max_rounds: u32) -> u32 {

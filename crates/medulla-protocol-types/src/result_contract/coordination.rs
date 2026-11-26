@@ -256,6 +256,7 @@ method_results! {
     DecisionLogCapabilityOutcome(DecisionLog / "capability_outcome") => Raw<medulla_decision_types::decision::capability_designation::CapabilityOutcomeApplied>;
     DecisionLogGenerationSpace(DecisionLog / "generation_space") => Raw<medulla_decision_types::decision::statistical::retrieval_generation::GenerationSpaceRead>;
     DecisionLogWritebackAudit(DecisionLog / "writeback_audit") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackAuditRows>;
+    DecisionLogFeedbackContinuation(DecisionLog / "feedback_continuation") => Raw<medulla_decision_types::decision::checker_feedback::ContinuationRead>;
     DecisionLogHarnessAdoption(DecisionLog / "harness_adoption") => Raw<medulla_decision_types::decision::statistical::log::HarnessAdoptionStored>;
     DecisionLogHarnessLessons(DecisionLog / "harness_lessons") => Raw<medulla_decision_types::decision::statistical::log::HarnessLessonsFound>;
     DecisionLogPointer(DecisionLog / "pointer") => Raw<medulla_decision_outcome_types::decision::promotion::ChampionPointer>;
