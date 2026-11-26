@@ -178,6 +178,107 @@ def load_set_request(
     )
 
 
+def promotion_request(
+    tenant_id: str,
+    question_id: str,
+    subject: Mapping[str, Any],
+    receipt_digest: str,
+    challenger: str,
+    feature_schema: Mapping[str, Any],
+    *,
+    mode: Literal["promote", "review", "canary"] = "promote",
+    graph: str | None = None,
+    tier_review: Mapping[str, Any] | None = None,
+    traffic_ppm: int | None = None,
+    regression_receipt: str | None = None,
+    policy: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """A ``promotion`` ``Decide`` request: may ``challenger`` replace the champion
+    of ``subject`` on the held-out evidence ``receipt_digest`` names.
+
+    ``subject`` is a ``RevisionSubject`` wire body (``{"kind": "skill",
+    "skill_ref": ..., "tier": "domain"}`` for a tiered skill). ``graph`` names the
+    graph the approver's team membership is read from, and ``tier_review`` is the
+    ``TierReview`` receipt of the tier a skill is promoted to. The engine reads the
+    evidence itself, so the one declared candidate is the challenger.
+    """
+    params = [
+        param("mode", "text", mode),
+        param("receipt_digest", "text", receipt_digest),
+        param("subject", "text", json.dumps(dict(subject), separators=(",", ":"))),
+    ]
+    if graph is not None:
+        params.append(param("graph", "text", graph))
+    if tier_review is not None:
+        params.append(
+            param(
+                "tier_review",
+                "text",
+                json.dumps(dict(tier_review), separators=(",", ":")),
+            )
+        )
+    if traffic_ppm is not None:
+        params.append(param("traffic_ppm", "int", traffic_ppm))
+    if regression_receipt is not None:
+        params.append(param("regression_receipt", "text", regression_receipt))
+    return decide_request(
+        tenant_id,
+        (question_id, "promotion", "ordinary"),
+        declared([DeclaredOption(challenger)]),
+        feature_schema,
+        policy=policy,
+        params=params,
+    )
+
+
+def rollout_set(
+    program_ref: str,
+    challenger_ref: str,
+    champion_ref: str | None,
+    rollouts: Iterable[Mapping[str, Any]],
+) -> dict[str, Any]:
+    """A ``RolloutSet`` wire body: paired challenger and champion rollouts.
+
+    Each rollout is ``{"seed", "task_id", "challenger_score_ppm",
+    "champion_score_ppm", "trace_ref"}``; the two scores are optional.
+    """
+    body: dict[str, Any] = {
+        "schema_version": 1,
+        "program_ref": program_ref,
+        "challenger_ref": challenger_ref,
+    }
+    if champion_ref is not None:
+        body["champion_ref"] = champion_ref
+    body["rollouts"] = [dict(rollout) for rollout in rollouts]
+    return body
+
+
+def record_rollouts_op(tenant_id: str, rollouts: Mapping[str, Any]) -> dict[str, Any]:
+    """Publish one ``RolloutSet`` (``learn`` write ``record_rollouts``); the answer
+    carries the held-out evidence, whose ``receipt_digest`` a promotion cites."""
+    return learn_op(tenant_id, "record_rollouts", set=dict(rollouts))
+
+
+def activate_champion_op(
+    tenant_id: str,
+    subject: Mapping[str, Any],
+    target: str,
+    receipt_digest: str,
+) -> dict[str, Any]:
+    """Move the champion pointer of ``subject`` to ``target`` on the committed
+    promotion record ``receipt_digest``; a tiered skill holds its tier from then on."""
+    return learn_op(
+        tenant_id,
+        "move_pointer",
+        pointer={"pointer": "champion", "subject": dict(subject)},
+        movement={
+            "movement": "activate",
+            "target": target,
+            "receipt_digest": receipt_digest,
+        },
+    )
+
+
 def usage_guidance_request(
     tenant_id: str,
     question_id: str,
@@ -2403,6 +2504,10 @@ __all__ = [
     "named_evaluator",
     "param",
     "participant_wire",
+    "promotion_request",
+    "record_rollouts_op",
+    "rollout_set",
+    "activate_champion_op",
     "ask_op",
     "card_op",
     "complete_derivation_op",

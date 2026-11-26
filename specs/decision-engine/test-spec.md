@@ -2270,7 +2270,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program
 - `MEDULLA-DECISION-ENGINE-R714.3`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Wiring
 - `MEDULLA-DECISION-ENGINE-R714.4`: `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::a_persona_set_follows_the_always_on_skills_with_its_tiers` (planned, L3): proves: Persona sets
 - `MEDULLA-DECISION-ENGINE-R714.5`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_review_that_does_not_qualify_is_refused_and_a_downgrade_needs_an_approver` (planned, L3): proves: Refusal and evidence
-- `MEDULLA-DECISION-ENGINE-R714.6`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R714.6`: `tests/decide/test_skill_tier_served.py::test_a_skill_climbs_tiers_and_the_load_set_follows` (planned, L4): proves: Hot-path proof
 - `MEDULLA-DECISION-ENGINE-R715`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::the_always_on_capabilities_follow_the_subset_and_a_policy_cannot_remove_them` (planned, L3): proves: The flag tool and the friction tool are always-on engine capabilities (rollup)
 - `MEDULLA-DECISION-ENGINE-R715.1`: `crates/medulla-h-decide/src/decide/stat_tests/tool_subset_tests.rs::the_always_on_capabilities_follow_the_subset_and_a_policy_cannot_remove_them` (planned, L3): proves: Behavior
 - `MEDULLA-DECISION-ENGINE-R715.2`: `crates/medulla-h-decide/src/decide/stat_tests/load_set_tests.rs::the_always_on_capabilities_stay_outside_max_tools_and_a_policy_cannot_remove_them` (planned, L3): proves: Hot-path proof
