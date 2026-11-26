@@ -18,7 +18,7 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T012 [US4] MEDULLA-CQ-XSRC-R004.1 Add `:usesComponent` (service to component version) and `:suppliesService`
 - [ ] T013 [US4] MEDULLA-CQ-XSRC-R004.3 Resolve a vendor in erpnext, leanix and dockerhub to one `:Supplier`
 - [x] T014 [US4] MEDULLA-CQ-XSRC-R004.4 Resolve a service in uptime, container-manager and the CMDB to one `:Service`
-- [ ] T015 [US4] MEDULLA-CQ-XSRC-R004.5 Served test: a UQL traversal crosses records of two sources only over an approved `owl:sameAs` edge (no engine change)
+- [x] T015 [US4] MEDULLA-CQ-XSRC-R004.5 Served test: a UQL traversal crosses records of two sources only over an approved `owl:sameAs` edge (no engine change)
 - [ ] T016 [US1] MEDULLA-CQ-XSRC-R005.1 Row: `select_sources` orders candidate mappings by `vg:authorityRank`
 - [ ] T017 [US1] MEDULLA-CQ-XSRC-R005.2 Query fixture: the supply-chain impact query over classes only
 - [ ] T018 [US1] MEDULLA-CQ-XSRC-R005.3 The plan is derived, not authored: planned sources equal the declared authorities
@@ -42,7 +42,7 @@ One task per leaf row of `requirements.md`, producers first: vocabulary and seed
 - [ ] T037 [US3] MEDULLA-CQ-XSRC-R008.3.4 Acceptance: open incidents and changes listed with the service and contract
 - [ ] T038 [US3] MEDULLA-CQ-XSRC-R008.4 Serve the three generalization questions as Method::CrossSourceQuestion
 - [ ] T039 [US5] MEDULLA-CQ-XSRC-R009.1 Query fixture: claims that touch the report
-- [ ] T048 [US5] MEDULLA-CQ-XSRC-R009.6 Add the `EVIDENCE EACH` stage (`Op::EvidenceForEach`): parser, op, kinds, printer, executor, Python mirror
+- [x] T048 [US5] MEDULLA-CQ-XSRC-R009.6 Add the `EVIDENCE EACH` stage (`Op::EvidenceForEach`): parser, op, kinds, printer, executor, Python mirror
 - [ ] T040 [US5] MEDULLA-CQ-XSRC-R009.2 Evidence clustering
 - [ ] T041 [US5] MEDULLA-CQ-XSRC-R009.3 Contradiction decay analysis
 - [ ] T042 [US5] MEDULLA-CQ-XSRC-R009.4 Served acceptance through arbora
