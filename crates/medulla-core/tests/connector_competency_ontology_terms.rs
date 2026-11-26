@@ -1279,15 +1279,11 @@ mod ontology_audit_process_intelligence_v1 {
         let triples = triples();
         let property = format!("{KG}flowsTo");
         assert!(has_iri(&triples, &property, RDF_TYPE, OWL_OBJECT_PROPERTY));
+        // The domain is the whole node type, so an EPC event may flow to a function.
         assert!(domain_covers(
             &triples,
             &property,
-            &format!("{KG}EpcFunction")
-        ));
-        assert!(domain_covers(
-            &triples,
-            &property,
-            &format!("{KG}EpcRuleOperator")
+            &format!("{KG}ProcessEventType")
         ));
         assert!(has_iri(
             &triples,

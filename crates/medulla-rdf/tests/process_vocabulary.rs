@@ -462,3 +462,85 @@ fn bpmn_shapes_refuse_planted_faults() {
     let anonymous = clean.replace(" ; :bpmnElementId \"gate\"", "");
     assert!(!report(&anonymous).conforms);
 }
+
+// spec: MEDULLA-ORCH-VOCAB-R014.10
+#[test]
+fn aris_pack_extends_core_epc_terms() {
+    let core_docs = [FOUNDATION, ENTERPRISE, PROCESS_INTELLIGENCE, ORCHESTRATION, BPMN];
+    let core_triples = parse_all(&core_docs);
+    let mut docs = core_docs.to_vec();
+    docs.push(ARIS_PACK);
+    let triples = parse_all(&docs);
+    let class = |name: &str| format!("{KG}{name}");
+
+    // Each leaf reaches the core term its row names.
+    let leaves: [(&str, &str); 10] = [
+        ("EpcAutomatedFunction", "EpcFunction"),
+        ("EpcHumanFunction", "EpcFunction"),
+        ("EpcDecisionFunction", "EpcFunction"),
+        ("EpcProcessInterface", "EpcFunction"),
+        ("EpcAndOperator", "EpcRuleOperator"),
+        ("EpcOrOperator", "EpcRuleOperator"),
+        ("EpcXorOperator", "EpcRuleOperator"),
+        ("EpcStartEvent", "ProcessEventType"),
+        ("EpcEndEvent", "ProcessEventType"),
+        ("EpcIntermediateEvent", "ProcessEventType"),
+    ];
+    let pack_prefix = |name: &str| {
+        triples
+            .iter()
+            .find_map(|t| {
+                named(t)
+                    .filter(|iri| iri.ends_with(name) && !iri.starts_with(KG))
+                    .map(str::to_owned)
+            })
+            .unwrap_or_else(|| panic!("the ARIS pack declares {name}"))
+    };
+    for (leaf, term) in leaves {
+        let iri = pack_prefix(leaf);
+        assert!(
+            ancestors(&triples, &iri).contains(&class(term)),
+            "{leaf} reaches core {term}"
+        );
+    }
+
+    // Core EPC terms gain no parent from the pack, and the pack declares none of them.
+    for term in ["EpcFunction", "EpcRuleOperator", "ProcessEventType", "flowsTo"] {
+        let iri = class(term);
+        assert_eq!(
+            parents(&triples, &iri),
+            parents(&core_triples, &iri),
+            "the pack re-parents core {term}"
+        );
+    }
+    for term in ["EpcFunction", "EpcRuleOperator", "flowsTo"] {
+        let iri = class(term);
+        assert!(
+            !parse_all(&[ARIS_PACK]).iter().any(|t| named(t) == Some(iri.as_str())),
+            "the pack re-declares core {term}"
+        );
+    }
+    assert!(
+        !ARIS_PACK.contains("owl:imports"),
+        "the pack never imports the core ontology"
+    );
+    for gate in ["EpcAndOperator", "EpcOrOperator", "EpcXorOperator"] {
+        let iri = pack_prefix(gate);
+        assert!(
+            triples.iter().any(|t| named(t) == Some(iri.as_str())
+                && t.predicate.as_str().ends_with("#canonicalGateKind")),
+            "{gate} carries a canonical gate kind"
+        );
+    }
+
+    // `:flowsTo` takes any node type, so an event-to-function edge infers no wrong class:
+    // the event is a ProcessEventType and no function or operator.
+    let (domain, range) = domain_and_range(&core_triples, &class("flowsTo"));
+    assert_eq!(domain, core(&["ProcessEventType"]));
+    assert_eq!(range, core(&["ProcessEventType"]));
+    let start = pack_prefix("EpcStartEvent");
+    let event_ancestors = ancestors(&triples, &start);
+    assert!(event_ancestors.contains(&class("ProcessEventType")));
+    assert!(!event_ancestors.contains(&class("EpcFunction")));
+    assert!(!event_ancestors.contains(&class("EpcRuleOperator")));
+}

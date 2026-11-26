@@ -408,9 +408,8 @@
 
 :flowsTo a owl:ObjectProperty ;
     rdfs:label "flows to" ;
-    rdfs:comment "The outgoing control-flow connection of an ARIS EPC node (function or rule operator) to the EPC node that follows it." ;
-    rdfs:domain [ a owl:Class ;
-        owl:unionOf ( :EpcFunction :EpcRuleOperator ) ] ;
+    rdfs:comment "The outgoing control-flow connection of an ARIS EPC node (function, rule operator or event) to the EPC node that follows it." ;
+    rdfs:domain :ProcessEventType ;
     rdfs:range :ProcessEventType .
 
 :hasEpcNode a owl:ObjectProperty ;
