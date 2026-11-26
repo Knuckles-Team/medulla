@@ -29,7 +29,7 @@ use super::lineage::{
     GRAPH_SHARD_BEFORE_RESERVATION_TOMBSTONE_REMOVAL, GRAPH_SHARD_BEFORE_RUN_CHECKPOINTS,
     GRAPH_SHARD_BEFORE_WRITE_LEDGER,
     KV_BEFORE_NAMESPACE_COLD, RBAC_BEFORE_DATA_PRODUCTS, RBAC_BEFORE_PROFILE_GRANTS,
-    JOBS_BEFORE_JOB_MACHINE, JOBS_BEFORE_TASK_DEAD_LETTERS, JOBS_BEFORE_TASK_QUEUE, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
+    JOBS_BEFORE_JOB_MACHINE, JOBS_BEFORE_TASK_DEAD_LETTER, JOBS_BEFORE_TASK_QUEUE, SEMANTIC_INDEX_BEFORE_PROMOTION, SQL_BEFORE_DURABLE_ANN, SQL_BEFORE_NAMED_SEQUENCES,
     SQL_BEFORE_MATVIEWS, SQL_BEFORE_SOURCE_CHECKPOINTS, SQL_BEFORE_TRIGGER_REACTIONS,
 };
 use super::agent_library_upgrade::{upgrade_jobs, JobsSource};
@@ -308,13 +308,13 @@ pub static OFFLINE_STORE_UPGRADES: &[OfflineStoreUpgrade] = &[
         upgrade_jobs
     ),
     offline_upgrade!(
-        JOBS_BEFORE_TASK_DEAD_LETTERS,
+        JOBS_BEFORE_TASK_DEAD_LETTER,
         |path, identity, integrity, options| inspect_jobs_upgrade(
             path,
             identity,
             integrity,
             options,
-            JobsSource::BeforeTaskDeadLetters
+            JobsSource::BeforeTaskDeadLetter
         ),
         upgrade_jobs
     ),

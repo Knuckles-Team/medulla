@@ -804,7 +804,7 @@ pub const JOBS_BEFORE_TASK_QUEUE: LayoutPredecessor = LayoutPredecessor {
 
 /// The Jobs owner tables before the ingest dead-letter table (MEDULLA-INGEST-WORKER-R001.9):
 /// the 15-table census with the task-queue totals and oldest-enqueue tables.
-const JOBS_TABLES_BEFORE_TASK_DEAD_LETTERS: &[&str] = &[
+const JOBS_TABLES_BEFORE_TASK_DEAD_LETTER: &[&str] = &[
     "analytics_job_records",
     "analytics_job_committed_results",
     "job_intents",
@@ -822,18 +822,18 @@ const JOBS_TABLES_BEFORE_TASK_DEAD_LETTERS: &[&str] = &[
     "analytics_job_task_queue_oldest",
 ];
 
-/// The frozen layout digest of [`JOBS_BEFORE_TASK_DEAD_LETTERS`]: the Jobs layout with the
+/// The frozen layout digest of [`JOBS_BEFORE_TASK_DEAD_LETTER`]: the Jobs layout with the
 /// task-queue tables and without `analytics_job_task_dead_letters`.
-pub const JOBS_PRE_TASK_DEAD_LETTERS_DIGEST: [u8; 32] = [
+pub const JOBS_PRE_TASK_DEAD_LETTER_DIGEST: [u8; 32] = [
     0xc4, 0x9b, 0x1c, 0x73, 0xe2, 0x1a, 0xb9, 0x0c, 0x50, 0x91, 0x53, 0xa0, 0x65, 0x31, 0xf4, 0x7c,
     0x29, 0x8b, 0x04, 0xbb, 0xc4, 0xc5, 0x1e, 0xf4, 0x45, 0xdb, 0x88, 0xbc, 0xcd, 0xf5, 0x33, 0xce,
 ];
 
 /// A Jobs owner file from before the ingest dead-letter table. The upgrade creates it empty.
-pub const JOBS_BEFORE_TASK_DEAD_LETTERS: LayoutPredecessor = LayoutPredecessor {
+pub const JOBS_BEFORE_TASK_DEAD_LETTER: LayoutPredecessor = LayoutPredecessor {
     layout: OwnerLayout::Jobs,
     label: "jobs before the ingest dead-letter table",
-    owner_tables: JOBS_TABLES_BEFORE_TASK_DEAD_LETTERS,
+    owner_tables: JOBS_TABLES_BEFORE_TASK_DEAD_LETTER,
     data_lost: "none; an explicit offline layout upgrade is required. Normal open refuses this predecessor.",
     file_name: "jobs.redb",
 };
@@ -864,7 +864,7 @@ pub fn layout_predecessors(layout: OwnerLayout) -> &'static [LayoutPredecessor] 
         OwnerLayout::Jobs => &[
             JOBS_BEFORE_JOB_MACHINE,
             JOBS_BEFORE_TASK_QUEUE,
-            JOBS_BEFORE_TASK_DEAD_LETTERS,
+            JOBS_BEFORE_TASK_DEAD_LETTER,
         ],
         OwnerLayout::LedgerOnly
         | OwnerLayout::Statechart

@@ -89,7 +89,7 @@ pub(super) enum JobsSource {
     /// Before the per-queue task totals and oldest-enqueue index (MEDULLA-INGEST-WORKER-R001.4.1).
     BeforeTaskQueue,
     /// Before the ingest dead-letter table (MEDULLA-INGEST-WORKER-R001.9).
-    BeforeTaskDeadLetters,
+    BeforeTaskDeadLetter,
 }
 
 impl JobsSource {
@@ -103,9 +103,9 @@ impl JobsSource {
                 &super::lineage::JOBS_BEFORE_TASK_QUEUE,
                 super::lineage::JOBS_PRE_TASK_QUEUE_DIGEST,
             ),
-            Self::BeforeTaskDeadLetters => (
-                &super::lineage::JOBS_BEFORE_TASK_DEAD_LETTERS,
-                super::lineage::JOBS_PRE_TASK_DEAD_LETTERS_DIGEST,
+            Self::BeforeTaskDeadLetter => (
+                &super::lineage::JOBS_BEFORE_TASK_DEAD_LETTER,
+                super::lineage::JOBS_PRE_TASK_DEAD_LETTER_DIGEST,
             ),
         }
     }

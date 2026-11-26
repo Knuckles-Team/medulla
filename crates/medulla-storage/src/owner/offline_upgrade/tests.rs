@@ -397,11 +397,11 @@ fn jobs_upgrade_creates_empty_dead_letter_table() {
     use crate::owner::registry::TASK_DEAD_LETTERS;
     use redb::{ReadableDatabase, ReadableTableMetadata};
 
-    let upgrade = registered_offline_upgrade(&JOBS_BEFORE_TASK_DEAD_LETTERS)
+    let upgrade = registered_offline_upgrade(&JOBS_BEFORE_TASK_DEAD_LETTER)
         .expect("the pre-dead-letter jobs generation has a registered upgrade");
     let directory = private_local_tempdir();
     let path = directory.path().join("jobs.redb");
-    create_predecessor_owner_file(&path, identity(), &JOBS_BEFORE_TASK_DEAD_LETTERS).unwrap();
+    create_predecessor_owner_file(&path, identity(), &JOBS_BEFORE_TASK_DEAD_LETTER).unwrap();
     assert!(StorageKernel::open_owner::<JobsOwner>(&path, identity(), None).is_err());
     let report = upgrade
         .inspect(&path, identity(), None, options(&path))
@@ -411,7 +411,7 @@ fn jobs_upgrade_creates_empty_dead_letter_table() {
     assert_eq!(report.current_layout_digest, OwnerLayout::Jobs.digest());
     assert_eq!(
         report.previous_layout_digest,
-        crate::owner::lineage::JOBS_PRE_TASK_DEAD_LETTERS_DIGEST
+        crate::owner::lineage::JOBS_PRE_TASK_DEAD_LETTER_DIGEST
     );
     let database = redb::Database::open(&path).unwrap();
     let read = database.begin_read().unwrap();

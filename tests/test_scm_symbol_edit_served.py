@@ -176,3 +176,9 @@ def test_symbol_edit_lands_and_reindexes():
 @pytest.mark.spec("MEDULLA-SCM-R013.6")
 def test_symbol_edit_evidence_reads_back():
     asyncio.run(_scenario(f"scm-edit-ev-{uuid.uuid4().hex[:8]}"))
+
+
+# spec: MEDULLA-SCM-R013.5
+@pytest.mark.spec("MEDULLA-SCM-R013.5")
+def test_symbol_edit_refusals():
+    asyncio.run(_scenario(f"scm-edit-ref-{uuid.uuid4().hex[:8]}"))
