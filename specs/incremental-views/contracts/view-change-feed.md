@@ -18,7 +18,7 @@ Repository: arbora, row `ARBORA-OPS-R018`. It serves every engine method that ha
 | Method | Request | Answer |
 |---|---|---|
 | `CdcRead` | `{graph: "view:<name>", from_seq, limit}` | `CdcReadResult {events, gap, watermark, head_seq, epoch}` |
-| `Sql` | `SELECT … FROM medulla_catalog.matviews` | rows of the ten status columns |
+| `Sql` | `SELECT … FROM medulla_catalog.matviews` | rows of the eleven status columns |
 
 Each event of a view feed has `kind` `InsertRow` or `DeleteRow` (MEDULLA-ENGINE-PARITY-R015.1), `table` set to the view name, `node_id` set to the result row key and `after` or `before` set to the row as a MessagePack map. Folding inserts as `+1` and deletes as `-1` gives the view result.
 

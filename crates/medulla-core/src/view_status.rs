@@ -74,6 +74,10 @@ pub struct ViewStatus {
     pub shadow_checks: u64,
     /// Shadow checks that disagreed.
     pub shadow_mismatches: u64,
+    /// Whether a committed change to an input is not yet reflected in the view's rows. A
+    /// maintained (incremental) view is never stale; a recompute view is stale from the commit
+    /// that changed an input until its next refresh.
+    pub stale: bool,
 }
 
 static BOARD: OnceLock<RwLock<BTreeMap<String, ViewStatus>>> = OnceLock::new();
@@ -90,6 +94,32 @@ pub fn publish(status: ViewStatus) {
 /// Remove a view's entry; an unknown name is a no-op.
 pub fn remove(name: &str) {
     board().write().remove(name);
+}
+
+/// Mark the SQL views named in `names` stale (a commit changed one of their inputs). A name not on
+/// the board, or one that is not a SQL view, is untouched.
+pub fn mark_stale(names: &[String]) {
+    if names.is_empty() {
+        return;
+    }
+    let mut board = board().write();
+    for name in names {
+        if let Some(status) = board.get_mut(name) {
+            if status.family == ViewFamily::Sql {
+                status.stale = true;
+            }
+        }
+    }
+}
+
+/// Clear the stale flag of the SQL view `name` (it was just refreshed). A name not on the board
+/// is untouched.
+pub fn mark_fresh(name: &str) {
+    if let Some(status) = board().write().get_mut(name) {
+        if status.family == ViewFamily::Sql {
+            status.stale = false;
+        }
+    }
 }
 
 /// Every published view, in name order.
@@ -113,11 +143,34 @@ mod tests {
             applied_changes,
             shadow_checks: 0,
             shadow_mismatches: 0,
+            stale: false,
         }
     }
 
     fn find(name: &str) -> Option<ViewStatus> {
         snapshot().into_iter().find(|s| s.name == name)
+    }
+
+    // spec: MEDULLA-INCREMENTAL-VIEWS-R009.7
+    #[test]
+    fn mark_stale_and_fresh_touch_only_sql_views() {
+        let sql = "view_status_stale_sql_view";
+        let plan = "view_status_stale_plan_view";
+        publish(ViewStatus {
+            family: ViewFamily::Sql,
+            ..status(sql, ViewMode::Recompute, 0)
+        });
+        publish(status(plan, ViewMode::Recompute, 0));
+        mark_stale(&[sql.to_string(), plan.to_string(), "absent_view".to_string()]);
+        assert!(find(sql).unwrap().stale);
+        assert!(
+            !find(plan).unwrap().stale,
+            "a plan view's flag is the manager's"
+        );
+        mark_fresh(sql);
+        assert!(!find(sql).unwrap().stale);
+        remove(sql);
+        remove(plan);
     }
 
     // spec: MEDULLA-INCREMENTAL-VIEWS-R005.1

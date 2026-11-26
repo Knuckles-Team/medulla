@@ -205,6 +205,7 @@ impl WireSession {
             }
         };
         self.commit_table_txn(graph, sql, txn).await?;
+        medulla_core::view_status::mark_fresh(&name);
         Ok(WireOutcome::command("REFRESH MATERIALIZED VIEW"))
     }
 
@@ -250,5 +251,8 @@ fn publish_sql_status(
         applied_changes: 0,
         shadow_checks: 0,
         shadow_mismatches: 0,
+        // A view is published as created or refreshed, so fresh; a commit that changes an input
+        // flips it through `view_status::mark_stale` once durable.
+        stale: false,
     });
 }

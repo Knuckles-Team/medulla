@@ -156,6 +156,7 @@ fn status_of(t: &Tracked) -> view_status::ViewStatus {
         applied_changes: t.applied_changes,
         shadow_checks: 0,
         shadow_mismatches: 0,
+        stale: t.stale,
     }
 }
 
@@ -625,6 +626,7 @@ impl PlanMatViewManager {
     pub fn mark_fresh(&self, name: &str) {
         if let Some(t) = self.views.lock().get_mut(name) {
             t.stale = false;
+            view_status::publish(status_of(t));
         }
     }
 
@@ -658,6 +660,8 @@ impl PlanMatViewManager {
             }
             if t.def.graph == graph && !t.stale {
                 t.stale = true;
+                // The board's `stale` column follows the flag (MEDULLA-INCREMENTAL-VIEWS-R009.7).
+                view_status::publish(status_of(t));
                 n += 1;
             }
         }

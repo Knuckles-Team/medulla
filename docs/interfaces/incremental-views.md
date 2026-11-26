@@ -105,3 +105,4 @@ A demotion keeps the view correct: it is recomputed from its source on the next 
 | `applied_changes` | changes folded into the view |
 | `shadow_checks` | shadow checks run |
 | `shadow_mismatches` | shadow checks that differed |
+| `stale` | true when a committed change to an input is not yet in the view's rows; always false for an incremental view |

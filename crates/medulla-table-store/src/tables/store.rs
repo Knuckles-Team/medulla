@@ -2446,6 +2446,7 @@ impl TableStore {
         let mut recorded: Option<u64> = None;
         let mut row_changes: Vec<RowChange> = Vec::new();
         let mut view_changes: Vec<ViewRowChange> = Vec::new();
+        let mut newly_stale: Vec<String> = Vec::new();
         let affected = match mutation.owner_rows(|wtx| {
             let mut accum = occ::FootprintAccum::default();
             let affected = apply_mutation_txn_ops_with_crashpoints(
@@ -2481,7 +2482,7 @@ impl TableStore {
                 .map(ViewRowChanges::into_view_row_change)
                 .collect::<Result<_, _>>()?;
             }
-            mark_matviews_stale_in(wtx, txn)?;
+            newly_stale = mark_matviews_stale_in(wtx, txn)?;
             recorded = self.occ.record(accum.writes);
             row_changes = std::mem::take(&mut accum.changes);
             Ok(affected)
@@ -2511,6 +2512,9 @@ impl TableStore {
             }
         }
         committed.map(|commit| {
+            // MEDULLA-INCREMENTAL-VIEWS-R009.7: the status board's `stale` column follows the
+            // catalog record, flipped only once the commit that marked it is durable.
+            medulla_core::view_status::mark_stale(&newly_stale);
             (
                 commit,
                 CommittedChanges {
@@ -4059,11 +4063,12 @@ fn put_matview_in(
 }
 
 /// Set `stale` on every materialized view that reads a table `txn` writes, in
-/// the same write transaction (MEDULLA-ENGINE-PARITY-R014.2).
-fn mark_matviews_stale_in(wtx: &SqlWrite<'_>, txn: &TableTxn) -> Result<(), String> {
+/// the same write transaction (MEDULLA-ENGINE-PARITY-R014.2). Answers the names of the views
+/// this commit newly marked, for the status board.
+fn mark_matviews_stale_in(wtx: &SqlWrite<'_>, txn: &TableTxn) -> Result<Vec<String>, String> {
     let written = super::matview::written_tables(txn);
     if written.is_empty() {
-        return Ok(());
+        return Ok(Vec::new());
     }
     let mut matviews = wtx.open_table(MATVIEWS)?;
     let mut specs: Vec<super::matview::MatViewSpec> = Vec::new();
@@ -4071,13 +4076,15 @@ fn mark_matviews_stale_in(wtx: &SqlWrite<'_>, txn: &TableTxn) -> Result<(), Stri
         let (_, value) = row.map_err(map_err)?;
         specs.push(decode_stored(value.value(), "matview")?);
     }
+    let mut marked = Vec::new();
     for spec in super::matview::mark_matviews_stale(specs, &written) {
         let bytes = rmp_serde::to_vec_named(&spec).map_err(|e| format!("encode matview: {e}"))?;
         matviews
             .insert(spec.name.as_str(), bytes.as_slice())
             .map_err(map_err)?;
+        marked.push(spec.name);
     }
-    Ok(())
+    Ok(marked)
 }
 
 /// Remove the materialized-view catalog entry `name`, or refuse

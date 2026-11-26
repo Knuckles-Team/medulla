@@ -6,7 +6,7 @@
 
 use std::sync::Arc;
 
-use arrow::array::{Int64Array, StringArray};
+use arrow::array::{BooleanArray, Int64Array, StringArray};
 use arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use arrow::record_batch::RecordBatch;
 
@@ -26,6 +26,7 @@ pub fn matviews_schema() -> SchemaRef {
         Field::new("applied_changes", DataType::Int64, false),
         Field::new("shadow_checks", DataType::Int64, false),
         Field::new("shadow_mismatches", DataType::Int64, false),
+        Field::new("stale", DataType::Boolean, false),
     ]))
 }
 
@@ -43,6 +44,7 @@ pub fn matviews_batch(rows: &[ViewStatus]) -> Result<(SchemaRef, RecordBatch), S
     let applied: Vec<i64> = rows.iter().map(|r| r.applied_changes as i64).collect();
     let checks: Vec<i64> = rows.iter().map(|r| r.shadow_checks as i64).collect();
     let mismatches: Vec<i64> = rows.iter().map(|r| r.shadow_mismatches as i64).collect();
+    let stale: Vec<bool> = rows.iter().map(|r| r.stale).collect();
     RecordBatch::try_new(
         schema.clone(),
         vec![
@@ -56,6 +58,7 @@ pub fn matviews_batch(rows: &[ViewStatus]) -> Result<(SchemaRef, RecordBatch), S
             Arc::new(Int64Array::from(applied)),
             Arc::new(Int64Array::from(checks)),
             Arc::new(Int64Array::from(mismatches)),
+            Arc::new(BooleanArray::from(stale)),
         ],
     )
     .map(|b| (schema, b))
@@ -79,6 +82,7 @@ mod tests {
             applied_changes: 3,
             shadow_checks: 1,
             shadow_mismatches: 0,
+            stale: mode == ViewMode::Recompute,
         }
     }
 
@@ -104,7 +108,8 @@ mod tests {
                 "state_bytes",
                 "applied_changes",
                 "shadow_checks",
-                "shadow_mismatches"
+                "shadow_mismatches",
+                "stale"
             ]
         );
         // identity columns are non-null; the two reason columns are nullable.
@@ -116,12 +121,18 @@ mod tests {
         }
         assert!(schema.field(4).is_nullable());
         assert!(schema.field(5).is_nullable());
-        for i in 6..10 {
+        for i in 6..11 {
             assert!(
                 !schema.field(i).is_nullable(),
                 "column {i} must be non-null"
             );
         }
         assert_eq!(batch.num_rows(), 2);
+        let stale = batch
+            .column(10)
+            .as_any()
+            .downcast_ref::<BooleanArray>()
+            .expect("stale is boolean");
+        assert!(!stale.value(0) && stale.value(1));
     }
 }

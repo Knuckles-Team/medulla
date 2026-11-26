@@ -53,6 +53,7 @@ File: `crates/medulla-core/src/view_status.rs`.
 | `applied_changes` | `u64` | Changes folded since install |
 | `shadow_checks` | `u64` | Completed checks |
 | `shadow_mismatches` | `u64` | Mismatches found |
+| `stale` | `bool` | A committed input change is not yet in the rows; always false for an incremental view |
 
 The system table `medulla_catalog.matviews` has one column per field, in this order. Text columns render enum values in lower case.
 

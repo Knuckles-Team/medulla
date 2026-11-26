@@ -67,9 +67,9 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-INCREMENTAL-VIEWS-R009.3` | Behavior: linear maintenance in the commit | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::rows_view_tracks_insert_update_delete` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R009.4` | Behavior: grouped exact aggregates | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::groups_count_sum_avg_and_empty_group_leaves` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R009.5` | Wiring: create, skip the stale flag, publish status | `tests/pgwire_roundtrip.rs::matview_incremental_read_after_commit` (planned) |
-| `MEDULLA-INCREMENTAL-VIEWS-R009.6` | SQL differential oracle | `crates/medulla-table-store/tests/matview_oracle.rs::supported_shapes_agree_after_every_commit` (planned) |
+| `MEDULLA-INCREMENTAL-VIEWS-R009.6` | SQL differential oracle | `crates/medulla-sql-tests/tests/matview_oracle.rs::supported_shapes_agree_after_every_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R009.7` | Served hot-path proof for SQL views | `tests/pgwire_roundtrip.rs::matview_incremental_read_after_commit` (planned) |
-| `MEDULLA-INCREMENTAL-VIEWS-R009.8` | Nightly budget for SQL views | `crates/medulla-table-store/benches/matview_incremental.rs::groups` (planned) |
+| `MEDULLA-INCREMENTAL-VIEWS-R009.8` | Nightly budget for SQL views | `crates/medulla-sql-tests/benches/matview_incremental.rs::groups` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R010` | View changes ride the one change feed (rollup) | `crates/medulla-server-served-tests/src/split_tests/incremental_views.rs::view_delta_feed_matches_result_difference` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R010.1` | Plan views publish their output delta | `crates/medulla-server-cdc/src/cdc.rs::tests::view_output_rows_reach_their_feed` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R010.2` | SQL views publish their output delta | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::maintain_views_reports_view_row_changes` (planned) |
@@ -87,13 +87,13 @@ Each row names its proving test. A shipped row is bound by a `// spec: <ID>` lin
 | `MEDULLA-INCREMENTAL-VIEWS-R012.1` | Model: extreme aggregates and distinct | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::distinct_and_extremes_serialize` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R012.2` | Behavior: insert updates, extreme retraction recomputes the group | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::retracting_the_minimum_recomputes_only_that_group` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R012.3` | Wiring: the compiler accepts them | `crates/medulla-sql-lang/src/sql/matview_compile.rs::tests::distinct_min_max_compile` (planned) |
-| `MEDULLA-INCREMENTAL-VIEWS-R012.4` | Oracle cases | `crates/medulla-table-store/tests/matview_oracle.rs::extremes_and_distinct_agree_after_every_commit` (planned) |
+| `MEDULLA-INCREMENTAL-VIEWS-R012.4` | Oracle cases | `crates/medulla-sql-tests/tests/matview_oracle.rs::extremes_and_distinct_agree_after_every_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R012.5` | Served proof | `tests/pgwire_roundtrip.rs::matview_min_max_distinct_after_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R013` | SQL views over a two-table inner equi-join (rollup) | `tests/pgwire_roundtrip.rs::matview_join_after_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R013.1` | Model: join program | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::join_program_round_trips` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R013.2` | Behavior: the join delta from post-commit tables | `crates/medulla-table-store/src/tables/matview_incremental.rs::tests::join_delta_equals_rejoin_for_both_sides` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R013.3` | Wiring and refusal: the compiler accepts one indexed equi-join | `crates/medulla-sql-lang/src/sql/matview_compile.rs::tests::join_compiles_only_when_both_keys_are_indexed` (planned) |
-| `MEDULLA-INCREMENTAL-VIEWS-R013.4` | Oracle case | `crates/medulla-table-store/tests/matview_oracle.rs::join_agrees_after_every_commit` (planned) |
+| `MEDULLA-INCREMENTAL-VIEWS-R013.4` | Oracle case | `crates/medulla-sql-tests/tests/matview_oracle.rs::join_agrees_after_every_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R013.5` | Served proof | `tests/pgwire_roundtrip.rs::matview_join_after_commit` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R014` | Documentation and quickstart | `tests/docs/test_incremental_views_doc.py::test_page_matches_knobs_codes_and_metrics` (planned) |
 | `MEDULLA-INCREMENTAL-VIEWS-R015` | Release gate | `crates/medulla-plan/tests/incremental_oracle_coverage.rs::every_accepted_construct_has_an_oracle_case` |
