@@ -115,6 +115,12 @@ $($variants)*
     CorrectionRecord {
         op: Box<medulla_decision_types::correction::CorrectionOp>,
     },
+    /// Knowledge flags (MEDULLA-DECISION-ENGINE-R708.3): any agent raises a flag that a skill, a
+    /// domain term or a data access source is missing or wrong; a curator resolves it. The
+    /// `KnowledgeFlag` handler is the single writer of flag state.
+    KnowledgeFlag {
+        op: Box<medulla_decision_types::knowledge_flag::KnowledgeFlagOp>,
+    },
     /// Failure-pattern mining (MEDULLA-DECISION-ENGINE-R701.3): read the failed
     /// runs of a caller graph, cluster them by signature and file one gap per
     /// recurring pattern; mark a gap addressed; read one gap. The

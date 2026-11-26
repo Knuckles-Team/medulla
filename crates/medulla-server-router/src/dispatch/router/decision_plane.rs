@@ -423,6 +423,21 @@ async fn dispatch_decision_methods(
             })
             .await
         }
+        Method::KnowledgeFlag { op } => {
+            dispatch_boxed(async {
+                match medulla_h_decide::decide::knowledge_flag::handle_knowledge_flag(
+                    state,
+                    verified_context,
+                    *op,
+                )
+                .await
+                {
+                    Ok(plan) => commit_planned_write(state, req.id, verified_context, plan).await,
+                    Err(refusal) => Response::err(req.id, refusal),
+                }
+            })
+            .await
+        }
         Method::Usage { op } => {
             dispatch_boxed(async {
                 medulla_h_decide::usage::handle_usage(state, req.id, verified_context, *op).await

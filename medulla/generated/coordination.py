@@ -3180,6 +3180,7 @@ send_correction_record = contract_sender(
     "CorrectionRecord", "MethodCorrectionRecordParams"
 )
 send_failure_ingest = contract_sender("FailureIngest", "MethodFailureIngestParams")
+send_knowledge_flag = contract_sender("KnowledgeFlag", "MethodKnowledgeFlagParams")
 send_publish_skill_package = contract_sender(
     "PublishSkillPackage", "MethodPublishSkillPackageParams"
 )

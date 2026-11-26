@@ -1438,6 +1438,79 @@ def failure_ingest_op(graph: str, since_ms: int | None = None) -> dict[str, Any]
     return op
 
 
+def knowledge_flag_raise_op(
+    graph: str,
+    knowledge_kind: str,
+    flag_kind: str,
+    target_ref: str,
+    what_observed: str,
+    run_id: str,
+    at_ms: int,
+    suggested_correction: str | None = None,
+    trace_node_id: str | None = None,
+) -> dict[str, Any]:
+    """A ``KnowledgeFlag`` raise (scope ``knowledge:flag``).
+
+    ``knowledge_kind`` is ``skill``, ``domain`` or ``data_access``; ``flag_kind`` is
+    ``missing`` or ``wrong``; ``target_ref`` is ``skill:<name>@<revision>``,
+    ``term:<iri>``, ``source:<source_id>`` or ``topic:<slug>``.
+    """
+    op: dict[str, Any] = {
+        "op": "raise",
+        "graph": graph,
+        "knowledge_kind": knowledge_kind,
+        "flag_kind": flag_kind,
+        "target_ref": target_ref,
+        "what_observed": what_observed,
+        "run_id": run_id,
+        "at_ms": at_ms,
+    }
+    if suggested_correction is not None:
+        op["suggested_correction"] = suggested_correction
+    if trace_node_id is not None:
+        op["trace_node_id"] = trace_node_id
+    return op
+
+
+def knowledge_flag_resolve_op(
+    graph: str,
+    flag_id: str,
+    resolution: str,
+    correction_id: str | None = None,
+    fixed_by: str | None = None,
+) -> dict[str, Any]:
+    """A ``KnowledgeFlag`` resolve (scope ``knowledge:curate``): ``resolution`` is
+    ``adopt`` or ``dismiss``."""
+    op: dict[str, Any] = {
+        "op": "resolve",
+        "graph": graph,
+        "flag_id": flag_id,
+        "resolution": resolution,
+    }
+    if correction_id is not None:
+        op["correction_id"] = correction_id
+    if fixed_by is not None:
+        op["fixed_by"] = fixed_by
+    return op
+
+
+def knowledge_flag_get_op(graph: str, flag_id: str) -> dict[str, Any]:
+    """A ``KnowledgeFlag`` read of one flag with the nodes it links to."""
+    return {"op": "get", "graph": graph, "flag_id": flag_id}
+
+
+def knowledge_flag_list_op(
+    graph: str, state: str | None = None, limit: int | None = None
+) -> dict[str, Any]:
+    """A ``KnowledgeFlag`` list, newest first, optionally of one ``state``."""
+    op: dict[str, Any] = {"op": "list", "graph": graph}
+    if state is not None:
+        op["state"] = state
+    if limit is not None:
+        op["limit"] = limit
+    return op
+
+
 def usage_append_op(records: Iterable[Mapping[str, Any]]) -> dict[str, Any]:
     """A ``Usage`` append of ``records`` (scope ``usage:write``)."""
     return {"op": "append", "records": [dict(record) for record in records]}
@@ -1629,6 +1702,17 @@ class DecisionClient:
         from medulla.generated.coordination import send_failure_ingest
 
         result = await send_failure_ingest(
+            self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
+        )
+        return _payload(result)
+
+    async def knowledge_flag(
+        self, op: Mapping[str, Any], *, idempotency_key: str | None = None
+    ) -> Any:
+        """Send ``KnowledgeFlag`` (raise, resolve, get or list a knowledge flag)."""
+        from medulla.generated.coordination import send_knowledge_flag
+
+        result = await send_knowledge_flag(
             self.client, {"op": dict(op)}, self.graph, idempotency_key=idempotency_key
         )
         return _payload(result)
@@ -1922,6 +2006,10 @@ __all__ = [
     "get_document_set_op",
     "get_op",
     "get_profile_op",
+    "knowledge_flag_get_op",
+    "knowledge_flag_list_op",
+    "knowledge_flag_raise_op",
+    "knowledge_flag_resolve_op",
     "learn_op",
     "list_document_sets_op",
     "list_profiles_op",

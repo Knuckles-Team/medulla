@@ -713,6 +713,8 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ("failure", crate::failure_patterns::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R702.4: the served correction refusals.
         ("correction", crate::correction::REFUSALS.to_vec()),
+        // MEDULLA-DECISION-ENGINE-R708.4: the knowledge flag refusals.
+        ("knowledge_flag", crate::knowledge_flag::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R810.4: the program optimization job refusals.
         ("program", super::program::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R142.100: the local-model certification refusals.

@@ -427,6 +427,11 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         "FailureIngest",
         &["CANDIDATE_PLAN_REFUSED", "PARAMETER_INVALID"],
     ),
+    // MEDULLA-DECISION-ENGINE-R708.3: a malformed op, an unreadable graph and the flag refusals.
+    (
+        "KnowledgeFlag",
+        &["CANDIDATE_PLAN_REFUSED", "PARAMETER_INVALID"],
+    ),
     ("GetRunWorkItem", &["RUN_ADMISSION_UNAVAILABLE"]),
     // MEDULLA-UNIFIED-DATA-PLANE-R040.4: a blocked embedding-model promotion.
     // MEDULLA-FEDERATED-QUERY-R039.2.2/R039.2.4: the chunk-encoding recipe the
@@ -2599,6 +2604,14 @@ fn add_typed_handler_errors(d: &MethodDescriptor, codes: &mut BTreeSet<&'static 
     if id == "Solve" {
         codes.extend(typed_codes(SolveErrorCode::ALL, SolveErrorCode::as_str));
     }
+    if id == "KnowledgeFlag" {
+        // MEDULLA-DECISION-ENGINE-R708.4: the flag refusal table.
+        codes.extend(
+            medulla_decision_types::knowledge_flag::REFUSALS
+                .iter()
+                .map(|code| code.as_str()),
+        );
+    }
     if id == "FeatureLedger" {
         // MEDULLA-DECISION-ENGINE-R707.4: the ledger's own refusal table (a
         // stale compare-and-set, a close by an unknown change).
@@ -2617,6 +2630,8 @@ pub const MACHINE_METHODS: &[&str] = &[
     "FeatureLedger",
     // MEDULLA-DECISION-ENGINE-R701.3: `MarkAddressed` moves the gap-topic machine.
     "FailureIngest",
+    // MEDULLA-DECISION-ENGINE-R708.3: `Resolve` and a repeat `Raise` move the flag machine.
+    "KnowledgeFlag",
     "SubmitWorkItem",
     "ClaimWorkItem",
     "CancelWorkItem",

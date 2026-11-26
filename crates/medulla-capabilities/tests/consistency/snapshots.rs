@@ -278,6 +278,8 @@ pub(crate) const ACCESS_RS_MUTATES_CONDITIONAL: &[&str] = &[
     "CorrectionRecord",
     // MEDULLA-DECISION-ENGINE-R701.3: `Get` reads; `Ingest` and `MarkAddressed` write.
     "FailureIngest",
+    // MEDULLA-DECISION-ENGINE-R708.3: `Get` and `List` read; `Raise` and `Resolve` write.
+    "KnowledgeFlag",
     "ConnectorPack",
     "DecisionEval",
     "DecisionFit",

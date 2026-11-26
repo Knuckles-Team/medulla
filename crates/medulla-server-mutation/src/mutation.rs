@@ -778,6 +778,7 @@ mod tests {
         ("Usage", "MEDULLA-DECISION-ENGINE-R801.8: native MutationBatch in agent_library.redb: one usage batch (records, day buckets, audit line) or one price entry per control-owner WTX; local-only authority"),
         ("CorrectionRecord", "MEDULLA-DECISION-ENGINE-R702.3: the handler plans one BatchUpdate of the correction node, its three effect nodes, their edges and the correction embedding that the router commits through the graph gateway under the caller's verified context; local-only authority"),
         ("FailureIngest", "MEDULLA-DECISION-ENGINE-R701.3: the handler plans one BatchUpdate of failure-gap node upserts that the router commits through the graph gateway under the caller's verified context; local-only authority"),
+        ("KnowledgeFlag", "MEDULLA-DECISION-ENGINE-R708.3: the handler plans one BatchUpdate of one flag node and its edges that the router commits through the graph gateway under the caller's verified context; local-only authority"),
         ("MutationOutbox", "owner-local outbox ledger rewind: bounded medulla-transaction transactions with a durable control cursor; local-only authority"),
         ("EdgeIndex", "tenant SQL owner maintenance writes: edge-index registration, generation parts and fenced drop, one WTX each; local-only authority"),
         ("ClaimWorkItem", "dedicated engine-native MutationBatch lease transition in mutation_batch.rs/redb_store.rs"),

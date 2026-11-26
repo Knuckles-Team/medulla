@@ -870,6 +870,8 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::CorrectionRecord { .. }
         // MEDULLA-DECISION-ENGINE-R701.3: gap nodes commit through the graph gateway.
         | Method::FailureIngest { .. }
+        // MEDULLA-DECISION-ENGINE-R708.3: flag nodes commit through the graph gateway.
+        | Method::KnowledgeFlag { .. }
         | Method::PublishSkillPackage { .. }
         | Method::Claims { .. }
         | Method::FeatureLedger { .. }

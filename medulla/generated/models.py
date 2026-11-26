@@ -16715,6 +16715,13 @@ class MethodFailureIngest(BaseModel):
     params: MethodFailureIngestParams
 
 
+class MethodKnowledgeFlag(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["KnowledgeFlag"]
+    params: MethodKnowledgeFlagParams
+
+
 class MethodPublishSkillPackage(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17833,6 +17840,7 @@ Method = Annotated[
         MethodUsage,
         MethodCorrectionRecord,
         MethodFailureIngest,
+        MethodKnowledgeFlag,
         MethodPublishSkillPackage,
         MethodFeatureLedger,
         MethodArchitectureModelImport,
@@ -38357,6 +38365,137 @@ class MethodFailureIngestParams(BaseModel):
     op: FailureOp
 
 
+class FlagKind(str, Enum):
+    MISSING = "missing"
+    WRONG = "wrong"
+
+
+class FlagResolution(str, Enum):
+    ADOPT = "adopt"
+    DISMISS = "dismiss"
+
+
+class FlagState(str, Enum):
+    OPEN = "open"
+    CURATED = "curated"
+    DISMISSED = "dismissed"
+
+
+class KnowledgeKind(str, Enum):
+    SKILL = "skill"
+    DOMAIN = "domain"
+    DATA_ACCESS = "data_access"
+
+
+class RaiseOutcome(str, Enum):
+    CREATED = "created"
+    DEDUPLICATED = "deduplicated"
+    REOPENED = "reopened"
+
+
+class KnowledgeFlagOpRaise(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    at_ms: Annotated[int, Field(ge=0)]
+    flag_kind: FlagKind
+    graph: str
+    knowledge_kind: KnowledgeKind
+    op: Literal["raise"]
+    run_id: str
+    suggested_correction: str | None = None
+    target_ref: str
+    trace_node_id: str | None = None
+    what_observed: str
+
+
+class KnowledgeFlagOpResolve(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    correction_id: str | None = None
+    fixed_by: str | None = None
+    flag_id: str
+    graph: str
+    op: Literal["resolve"]
+    resolution: FlagResolution
+
+
+class KnowledgeFlagOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    flag_id: str
+    graph: str
+    op: Literal["get"]
+
+
+class KnowledgeFlagOpList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    limit: Annotated[int, Field(ge=0)] | None = None
+    op: Literal["list"]
+    state: FlagState | None = None
+
+
+KnowledgeFlagOp = Annotated[
+    KnowledgeFlagOpRaise
+    | KnowledgeFlagOpResolve
+    | KnowledgeFlagOpGet
+    | KnowledgeFlagOpList,
+    Field(discriminator="op"),
+]
+
+
+class MethodKnowledgeFlagParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: KnowledgeFlagOp
+
+
+class KnowledgeFlag(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    flag_id: str
+    flag_kind: FlagKind
+    knowledge_kind: KnowledgeKind
+    raise_count: Annotated[int, Field(ge=0)]
+    raised_at_ms: Annotated[int, Field(ge=0)]
+    raised_by: str
+    reopened: bool
+    run_id: str
+    state: FlagState
+    suggested_correction: str | None = None
+    target_ref: str
+    tenant_id: str
+    trace_node_id: str | None = None
+    what_observed: str
+
+
+class KnowledgeFlagReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    flag: KnowledgeFlag
+    outcome: RaiseOutcome | None = None
+    receipt_id: str
+
+
+class KnowledgeFlagView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    evidence_class: str
+    fixed_by: str | None = None
+    flag: KnowledgeFlag
+    flags: str | None = None
+    observed_in: str | None = None
+    raised_by: str
+    resolved_by: str | None = None
+
+
+class KnowledgeFlagList(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    flags: list[KnowledgeFlag]
+
+
 class UsageAppended(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -49517,6 +49656,22 @@ __all__ = [
     "Wasserstein1",
     "WeightedBrier",
     "WriteConflictEvidence",
+    "FlagKind",
+    "FlagResolution",
+    "FlagState",
+    "KnowledgeFlag",
+    "KnowledgeFlagList",
+    "KnowledgeFlagOp",
+    "KnowledgeFlagOpGet",
+    "KnowledgeFlagOpList",
+    "KnowledgeFlagOpRaise",
+    "KnowledgeFlagOpResolve",
+    "KnowledgeFlagReceipt",
+    "KnowledgeFlagView",
+    "KnowledgeKind",
+    "MethodKnowledgeFlag",
+    "MethodKnowledgeFlagParams",
+    "RaiseOutcome",
 ]
 
 # The decision-commit request names a type defined here; resolve it now that both

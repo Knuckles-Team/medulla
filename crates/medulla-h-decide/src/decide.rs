@@ -19,6 +19,7 @@ pub(crate) mod execution_answer;
 mod coverage_tests;
 pub mod correction;
 pub mod failure_ingest;
+pub mod knowledge_flag;
 pub(crate) mod feature_ledger;
 pub(crate) mod guardrail;
 pub(crate) mod jobs;

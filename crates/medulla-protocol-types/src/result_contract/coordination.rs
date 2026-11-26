@@ -269,6 +269,11 @@ method_results! {
     FailureIngestRun(FailureIngest / "ingest") => Raw<medulla_decision_types::failure_patterns::FailureIngestResult>;
     FailureMarkAddressed(FailureIngest / "mark_addressed") => Raw<medulla_decision_types::failure_patterns::GapTopic>;
     FailureGet(FailureIngest / "get") => Raw<medulla_decision_types::failure_patterns::GapTopic>;
+    // MEDULLA-DECISION-ENGINE-R708.3: knowledge flag raise, resolve, get and list.
+    KnowledgeFlagRaise(KnowledgeFlag / "raise") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagReceipt>;
+    KnowledgeFlagResolve(KnowledgeFlag / "resolve") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagReceipt>;
+    KnowledgeFlagGet(KnowledgeFlag / "get") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagView>;
+    KnowledgeFlagListFlags(KnowledgeFlag / "list") => Raw<medulla_decision_types::knowledge_flag::KnowledgeFlagList>;
     // MEDULLA-DECISION-ENGINE-R801.8: the usage ledger append and price put.
     UsageAppend(Usage / "append") => Raw<medulla_decision_types::usage::UsageAppended>;
     UsagePutPrice(Usage / "put_price") => Raw<medulla_decision_types::usage::UsagePriceStored>;

@@ -186,6 +186,10 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("kg:admin", Admin, "engine"),
     entry("kg:read", User, "engine"),
     entry("kg:write", User, "engine"),
+    // MEDULLA-DECISION-ENGINE-R708.3: resolve a knowledge flag and run the curation cycle.
+    entry("knowledge:curate", User, "engine"),
+    // MEDULLA-DECISION-ENGINE-R708.3: raise a knowledge flag.
+    entry("knowledge:flag", User, "engine"),
     entry("kv:read", User, "engine"),
     entry("kv:shared:write", User, "engine"),
     entry("kv:write", User, "engine"),
