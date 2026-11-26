@@ -98,6 +98,40 @@ pub(super) async fn assemble_for(
         }
         None => (entries, None),
     };
+    // The one system-prompt slot narrows to the connector prompt that covers the required
+    // capabilities (MEDULLA-DECISION-ENGINE-R814.3); the selection is evidence of the record.
+    let (entries, prompt_selection) = {
+        use medulla_decision_types::decision::knob_families::prompt_candidate::KNOBS;
+        use medulla_decision_types::decision::knobs::KnobValue;
+        let min_match_micros = match policy.knob(&KNOBS[0]) {
+            KnobValue::DecimalMicros(micros) => micros,
+            // The knob is a decimal; a pinned policy of another shape keeps the default 1.0.
+            _ => 1_000_000,
+        };
+        let required: std::collections::BTreeSet<String> = request
+            .requirements
+            .capabilities
+            .as_slice()
+            .iter()
+            .cloned()
+            .collect();
+        // A connector whose projection failed ontology admission hides its prompts first
+        // (MEDULLA-DECISION-ENGINE-R814.4).
+        let (entries, hidden) =
+            super::prompt_candidates::exclude_failed_connectors(entries, &store, tenant);
+        let (entries, selected) = super::prompt_candidates::narrow_system_prompts(
+            entries,
+            &required,
+            min_match_micros,
+        );
+        let selection = super::prompt_candidates::prompt_selection(
+            selected.as_ref(),
+            hidden,
+            &required,
+            &entries,
+        );
+        (entries, selection)
+    };
     let templates = telemetry::stage(Stage::Constraints, FAMILY, tenant, || {
         request
             .templates
@@ -178,6 +212,7 @@ pub(super) async fn assemble_for(
     inputs.topology = topology;
     inputs.steps = steps;
     inputs.profile = profile_constraint;
+    inputs.prompt_selection = prompt_selection;
     inputs.receipt_age_limit_s = receipt_age_limit_s;
     let identity = RecordIdentity {
         tenant_id: verified.tenant().to_string(),

@@ -1,0 +1,39 @@
+{
+  "connector": "prompt-pack-a",
+  "entries": [
+    {
+      "kind": "prompt",
+      "name": "triage-system",
+      "uri": "prompt://triage-system",
+      "media_type": "application/json",
+      "annotations": {
+        "provides": [
+          "eg:capability/incident-triage"
+        ],
+        "prompt_role": "system"
+      },
+      "body": {
+        "schema_version": "1.0",
+        "task": "incident-triage",
+        "type": "prompt",
+        "source": "prompt-pack-a",
+        "instructions": {
+          "core_directive": "Triage the incident."
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "list-incidents",
+      "uri": "tool://prompt-pack-a/list-incidents",
+      "media_type": "application/json",
+      "annotations": {
+        "provides": [
+          "eg:capability/incident-triage"
+        ],
+        "read_only_hint": true
+      },
+      "body": {}
+    }
+  ]
+}

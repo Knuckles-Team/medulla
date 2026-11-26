@@ -288,6 +288,7 @@ fn inputs() -> DecisionInputs {
         profile: None,
         receipt_age_limit_s: None,
         steps: Default::default(),
+        prompt_selection: None,
     }
 }
 

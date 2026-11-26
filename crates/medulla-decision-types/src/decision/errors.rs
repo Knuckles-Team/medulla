@@ -34,6 +34,9 @@ closed_error_codes! {
         /// MEDULLA-ORCH-VOCAB-R007.1: the `:precedes` edges between the steps
         /// of a request's tasks form a cycle, so no step order exists.
         StepOrderCycle => "STEP_ORDER_CYCLE",
+        /// MEDULLA-DECISION-ENGINE-R814.4: a system prompt names no class or capability, so it
+        /// can serve no task and never be a candidate.
+        PromptUnbound => "PROMPT_UNBOUND",
         /// MEDULLA-ORCH-VOCAB-R005.100: a step contract's schema no longer matches the
         /// schema digest of the source revision it was read at.
         ShieldSchemaStale => "SHIELD_SCHEMA_STALE",

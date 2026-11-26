@@ -120,7 +120,9 @@ pub struct ConnectorRelationshipMapping {
     pub lpg_rel_type: String,
 }
 
-pub use annotations::{PackAnnotations, PackCost, PackModelFacts, PackToolMode};
+pub use annotations::{
+    PackAnnotations, PackCost, PackModelFacts, PackPromptRole, PackToolMode,
+};
 pub use catalog_authority::{
     reconcile_catalog_authority, reconcile_joined_configuration, McpCatalogAttestation,
     McpCatalogAuthorityCandidate, McpCatalogAuthorityRow, McpCatalogAuthorityStatusRequest,

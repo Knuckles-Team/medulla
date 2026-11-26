@@ -210,6 +210,8 @@ def _harness_tool_fact_fields(annotations: PackAnnotations) -> list[bytes]:
         if not 0 <= annotations.schema_tokens <= 2**32 - 1:
             raise ValueError("schema_tokens must be an unsigned 32-bit value")
         fields += [b"schema_tokens", struct.pack(">I", annotations.schema_tokens)]
+    if annotations.prompt_role is not None:
+        fields += [b"prompt_role", annotations.prompt_role.value.encode("utf-8")]
     return fields
 
 

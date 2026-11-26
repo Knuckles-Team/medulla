@@ -172,7 +172,7 @@ pub use policy::{
 };
 pub use record::{
     AbstainReason, AssemblyStep, CandidateFacts, CandidateSourceRecord, CoverageDerivation, DecisionInputs,
-    DecisionOutcome, DecisionQuestion, DecisionRecord, DerivationClass, DerivationEdge, EdgeSource,
+    PromptSelection, SelectedPromptFacts, DecisionOutcome, DecisionQuestion, DecisionRecord, DerivationClass, DerivationEdge, EdgeSource,
     Elimination, EvidenceClass, PremiseClass, PremiseProvenance, PremiseRef, ResolutionKind,
     SlotAssignment, SolverIdentity, TemplateFacts, TraceFidelity, UniquenessProof, UniquenessScope,
     Violation, WhyNot,

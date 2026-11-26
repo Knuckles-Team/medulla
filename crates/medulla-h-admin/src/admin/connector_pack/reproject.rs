@@ -114,11 +114,44 @@ pub(crate) async fn project_head(
         Ok(facts) => facts,
         Err(error) => return Err(record_projection_failure(store, &context, plan, &error)),
     };
+    if let Err(error) = check_prompts_bound(store, plan) {
+        return Err(record_projection_failure(store, &context, plan, &error));
+    }
     let committed = match commit_schema_projection(state, req_id, verified, plan, documents).await {
         Ok(committed) => committed,
         Err(error) => return Err(record_projection_failure(store, &context, plan, &error)),
     };
     finish_projection(store, context, plan, committed, facts)
+}
+
+/// A `system` prompt that names no class or capability serves no task: the head is refused
+/// `PROMPT_UNBOUND` and its connector's prompts stay out of assembly
+/// (MEDULLA-DECISION-ENGINE-R814.4). Every other prompt is unaffected.
+#[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]
+fn check_prompts_bound(
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
+    plan: &ConnectorPackProjectionPlan,
+) -> Result<(), String> {
+    use medulla_agent_types::agent_component::AgentComponentKind;
+    for member in plan
+        .surface
+        .iter()
+        .filter(|member| member.kind == PackEntryKind::Prompt)
+    {
+        let Some(entry) = store.current_component(&plan.tenant_id, &member.component_id)? else {
+            continue;
+        };
+        if entry.kind == AgentComponentKind::SystemPrompt
+            && entry.classification.is_empty()
+            && entry.declared_capabilities.is_empty()
+        {
+            return Err(format!(
+                "PROMPT_UNBOUND: system prompt `{}` names no class or capability",
+                member.component_id
+            ));
+        }
+    }
+    Ok(())
 }
 
 #[cfg(all(feature = "redb", feature = "blob", feature = "shacl"))]

@@ -112,6 +112,11 @@ pub struct PackAnnotations {
     /// The tool schema's size in tokens. Absent is unknown, never zero.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub schema_tokens: Option<u32>,
+    /// What a prompt entry is for: only a `system` prompt becomes a system-prompt
+    /// component and a candidate of agent assembly (MEDULLA-DECISION-ENGINE-R814.3).
+    /// Absent reads as a plain MCP prompt. Meaningful on prompts only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_role: Option<PackPromptRole>,
 }
 
 impl PackAnnotations {
@@ -138,6 +143,30 @@ impl PackAnnotations {
     /// A read-only hint is unproven when it is only an MCP hint.
     pub fn read_only_unproven(&self) -> bool {
         self.effective_read_only() && self.effective_declared_by() == ToolFactDeclarer::McpHint
+    }
+}
+
+/// The declared role of a packaged prompt (MEDULLA-DECISION-ENGINE-R814.3).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum PackPromptRole {
+    /// A prompt that may frame an agent as its system prompt.
+    System,
+    /// Task-specific guidance.
+    Task,
+    /// A template.
+    Template,
+}
+
+impl PackPromptRole {
+    /// The stable lowercase token the digest frames.
+    pub const fn as_str(self) -> &'static str {
+        match self {
+            Self::System => "system",
+            Self::Task => "task",
+            Self::Template => "template",
+        }
     }
 }
 

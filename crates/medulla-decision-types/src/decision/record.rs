@@ -335,6 +335,43 @@ pub struct DecisionInputs {
     /// replay reads the same steps (MEDULLA-ORCH-VOCAB-R007.1).
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub steps: BoundedVec<AssemblyStep, 64>,
+    /// The system-prompt narrowing the candidates went through before the solve
+    /// (MEDULLA-DECISION-ENGINE-R814.3 to R814.5), recorded so a replay lists the same
+    /// prompt premises; absent when no connector system prompt was in scope.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_selection: Option<PromptSelection>,
+}
+
+/// What the one system-prompt slot was narrowed to, and which prompts a failed connector
+/// hid from the scope (MEDULLA-DECISION-ENGINE-R814.4, R814.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PromptSelection {
+    /// The selected prompt, `None` when no candidate was legal and the solve decided over
+    /// the full set.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub selected: Option<SelectedPromptFacts>,
+    /// Component ids of system prompts whose connector failed ontology admission; they
+    /// were never candidates. Sorted.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub excluded: BoundedVec<String, 64>,
+}
+
+/// The chosen system prompt and why it was chosen.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SelectedPromptFacts {
+    pub prompt_component_id: String,
+    /// The connector that supplied the prompt, empty for a non-pack component.
+    pub connector: String,
+    /// The prompt's content digest without its `sha256:` prefix.
+    pub digest: String,
+    /// The required capabilities the prompt serves, sorted.
+    pub covered_capabilities: BoundedVec<String, 32>,
+    /// `match_ratio * confidence`, Q32 (`1.0` is `1 << 32`).
+    pub score_q32: i64,
 }
 
 /// The scope a uniqueness proof covers: the model the no-good re-solve

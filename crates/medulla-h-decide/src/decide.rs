@@ -33,6 +33,8 @@ pub(crate) mod statistical;
 #[cfg(feature = "decide")]
 mod candidates;
 #[cfg(feature = "decide")]
+mod prompt_candidates;
+#[cfg(feature = "decide")]
 pub mod connector_points;
 #[cfg(feature = "decide")]
 mod features;

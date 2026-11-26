@@ -3,9 +3,11 @@
 use medulla_agent_types::{
     agent_component::AgentComponentFacts, agent_component::AgentComponentKind,
     agent_component::CostFacts, agent_component::FactQuality, agent_component::ModalityFacts,
-    agent_component::PriceSource, agent_component::ToolEffect,
+    agent_component::PriceSource, agent_component::PromptMode, agent_component::ToolEffect,
 };
-use medulla_catalog_types::{connector_pack::PackEntry, connector_pack::PackEntryKind};
+use medulla_catalog_types::{
+    connector_pack::PackEntry, connector_pack::PackEntryKind, connector_pack::PackPromptRole,
+};
 use medulla_types::contract::Digest256;
 
 pub(super) fn facts(entry: &PackEntry, digest: &Digest256) -> Result<AgentComponentFacts, String> {
@@ -81,12 +83,29 @@ pub(super) fn facts(entry: &PackEntry, digest: &Digest256) -> Result<AgentCompon
                 input_capabilities: model.input_capabilities.clone(),
             }
         }
+        PackEntryKind::Prompt if is_system_prompt(entry) => AgentComponentFacts::SystemPrompt {
+            prompt_mode: PromptMode::Static,
+            token_estimate: u32::try_from(entry.body.length.div_ceil(4)).unwrap_or(u32::MAX),
+            variables: Vec::new(),
+            body_sha256: Some(entry.body.sha256.to_hex()),
+            schema_revision: Some(1),
+        },
         _ => AgentComponentFacts::Opaque,
     })
 }
 
-pub(super) fn component_kind(kind: PackEntryKind) -> AgentComponentKind {
-    kind_semantics(kind).component
+/// A prompt entry that declares the `system` role (MEDULLA-DECISION-ENGINE-R814.3).
+fn is_system_prompt(entry: &PackEntry) -> bool {
+    entry.kind == PackEntryKind::Prompt && entry.annotations.prompt_role == Some(PackPromptRole::System)
+}
+
+/// The component kind an entry becomes: a system-role prompt is a system prompt, every other
+/// prompt stays an MCP prompt (MEDULLA-DECISION-ENGINE-R814.3).
+pub(super) fn component_kind(entry: &PackEntry) -> AgentComponentKind {
+    if is_system_prompt(entry) {
+        return AgentComponentKind::SystemPrompt;
+    }
+    kind_semantics(entry.kind).component
 }
 
 pub(super) fn uri_prefix(kind: PackEntryKind) -> &'static str {

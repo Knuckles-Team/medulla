@@ -12,6 +12,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use medulla_agent_types::agent_component::{facts::ValidatedPrompt, frame_pins};
 use medulla_decision_outcome_types::decision::prompt_candidate::PromptCandidate;
 use medulla_decision_types::decision::record::outcome::AbstainReason;
+use medulla_decision_types::decision::{
+    DecisionInputs, PremiseClass, PremiseProvenance, PremiseRef,
+};
 use medulla_types::contract::Digest256;
 use serde_json::Value;
 
@@ -217,6 +220,54 @@ pub fn select_system_prompt(
         .cloned()
         .unwrap_or_default();
     Err(AbstainReason::UncoveredCapability { capability: iri })
+}
+
+/// The premises of the system-prompt narrowing a decision was taken over
+/// (MEDULLA-DECISION-ENGINE-R814.4, R814.5): for a `Solved` decision one premise per field of
+/// the chosen prompt (`prompt_component_id`, `connector`, `digest`, one `covered_capability`
+/// per required capability it serves) and `prompt_score_q32`, and for any decision one
+/// `excluded_prompt:<component_id>` premise per prompt a failed connector hid.
+pub(super) fn premises(inputs: &DecisionInputs, solved: bool) -> Vec<PremiseRef> {
+    let Some(selection) = inputs.prompt_selection.as_ref() else {
+        return Vec::new();
+    };
+    // A chosen prompt is a candidate of the record: its premises cite the publisher's
+    // definition at the revision the record read. An excluded one is not a candidate, so
+    // its premise cites the request's candidate scope.
+    let field = |component_id: &str, fact: String| PremiseRef {
+        subject: format!("prompt:{component_id}"),
+        fact,
+        class: PremiseClass::Definition,
+        provenance: match inputs
+            .candidates
+            .iter()
+            .find(|candidate| candidate.component_id == component_id)
+        {
+            Some(candidate) => PremiseProvenance::Publisher {
+                component_id: component_id.to_string(),
+                definition_digest: candidate.definition_digest.clone(),
+            },
+            None => PremiseProvenance::Request {
+                field: "candidates".to_string(),
+            },
+        },
+        trust_tier: None,
+    };
+    let mut premises = Vec::new();
+    if let Some(selected) = selection.selected.as_ref().filter(|_| solved) {
+        let id = selected.prompt_component_id.as_str();
+        premises.push(field(id, format!("prompt_component_id={id}")));
+        premises.push(field(id, format!("connector={}", selected.connector)));
+        premises.push(field(id, format!("digest={}", selected.digest)));
+        for capability in selected.covered_capabilities.iter() {
+            premises.push(field(id, format!("covered_capability={capability}")));
+        }
+        premises.push(field(id, format!("prompt_score_q32={}", selected.score_q32)));
+    }
+    for excluded in selection.excluded.iter() {
+        premises.push(field(excluded, format!("excluded_prompt:{excluded}")));
+    }
+    premises
 }
 
 #[cfg(test)]

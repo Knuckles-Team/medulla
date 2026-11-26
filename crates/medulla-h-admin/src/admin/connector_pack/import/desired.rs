@@ -260,7 +260,7 @@ impl DesiredBuilder<'_> {
             partition_capabilities(entry.annotations.requires_capabilities.as_slice());
         Ok(AgentComponentDraft {
             component_id,
-            kind: component_kind(entry.kind),
+            kind: component_kind(entry),
             version: entry
                 .annotations
                 .contract_version

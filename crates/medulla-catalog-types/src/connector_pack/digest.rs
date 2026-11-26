@@ -221,6 +221,9 @@ pub fn annotations_digest(annotations: &PackAnnotations) -> Result<Digest256, St
     if let Some(tokens) = schema_tokens.as_ref() {
         fields.extend([b"schema_tokens".as_slice(), tokens.as_slice()]);
     }
+    if let Some(role) = annotations.prompt_role {
+        fields.extend([b"prompt_role".as_slice(), role.as_str().as_bytes()]);
+    }
     Digest256::framed(ANNOTATIONS_DIGEST_DOMAIN, &fields)
 }
 

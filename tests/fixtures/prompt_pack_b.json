@@ -1,0 +1,39 @@
+{
+  "connector": "prompt-pack-b",
+  "entries": [
+    {
+      "kind": "prompt",
+      "name": "billing-system",
+      "uri": "prompt://billing-system",
+      "media_type": "application/json",
+      "annotations": {
+        "provides": [
+          "eg:capability/invoice-matching"
+        ],
+        "prompt_role": "system"
+      },
+      "body": {
+        "schema_version": "1.0",
+        "task": "invoice-matching",
+        "type": "prompt",
+        "source": "prompt-pack-b",
+        "instructions": {
+          "core_directive": "Match the invoices."
+        }
+      }
+    },
+    {
+      "kind": "tool",
+      "name": "match-invoices",
+      "uri": "tool://prompt-pack-b/match-invoices",
+      "media_type": "application/json",
+      "annotations": {
+        "provides": [
+          "eg:capability/invoice-matching"
+        ],
+        "read_only_hint": true
+      },
+      "body": {}
+    }
+  ]
+}

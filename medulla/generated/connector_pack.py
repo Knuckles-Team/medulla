@@ -349,6 +349,7 @@ class PackAnnotations(BaseModel):
     modalities_out: BoundedVec_string_64 = Field(default_factory=list)
     model: PackModelFacts | None = None
     open_world_hint: bool | None = None
+    prompt_role: PackPromptRole | None = None
     provides: BoundedVec_string_64 = Field(default_factory=list)
     read_only_hint: bool | None = None
     required_scopes: BoundedVec_string_64 = Field(default_factory=list)
@@ -585,6 +586,12 @@ PackProjectionState = Annotated[
     | PackProjectionStateFailed,
     Field(discriminator="projection"),
 ]
+
+
+class PackPromptRole(str, Enum):
+    SYSTEM = "system"
+    TASK = "task"
+    TEMPLATE = "template"
 
 
 class PackRef(BaseModel):
@@ -927,6 +934,7 @@ __all__ = [
     "PackProjectionStateFailed",
     "PackProjectionStateNone",
     "PackProjectionStatePending",
+    "PackPromptRole",
     "PackRef",
     "PackSection",
     "PackToolMode",

@@ -71,9 +71,11 @@ pub(super) fn decide(inputs: &DecisionInputs) -> Result<Decided, AssembleError> 
     super::profile::attribute(inputs, &mut decided);
     let mut added: Vec<PremiseRef> = super::profile::premise(inputs).into_iter().collect();
     added.extend(super::coding_agent::premises(inputs));
-    if matches!(decided.outcome, DecisionOutcome::Solved { .. }) {
+    let solved = matches!(decided.outcome, DecisionOutcome::Solved { .. });
+    if solved {
         added.extend(super::primitive::premises(inputs));
     }
+    added.extend(super::prompt::premises(inputs, solved));
     // `EvidenceClass` orders strongest first, so the weaker of two is the larger.
     decided.evidence_class = decided
         .evidence_class
