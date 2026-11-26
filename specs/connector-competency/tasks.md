@@ -202,29 +202,29 @@ One task per leaf row of `requirements.md`, producer first: the harness (US3) an
 - [ ] T196 [P] [US2] MEDULLA-CQ-CONN-R027.2 jellyfin cross-source question
 - [x] T197 [P] [US1] MEDULLA-CQ-CONN-R028.1 jena single-source question
 - [x] T198 [P] [US2] MEDULLA-CQ-CONN-R028.2 jena cross-source question
-- [ ] T199 [P] [US1] MEDULLA-CQ-CONN-R029.1 kafka single-source question
-- [ ] T200 [P] [US2] MEDULLA-CQ-CONN-R029.2 kafka cross-source question
+- [x] T199 [P] [US1] MEDULLA-CQ-CONN-R029.1 kafka single-source question
+- [x] T200 [P] [US2] MEDULLA-CQ-CONN-R029.2 kafka cross-source question
 - [ ] T201 [P] [US1] MEDULLA-CQ-CONN-R030.1 keycloak single-source question
-- [ ] T202 [P] [US2] MEDULLA-CQ-CONN-R030.2 keycloak cross-source question
-- [ ] T203 [P] [US1] MEDULLA-CQ-CONN-R031.1 langfuse single-source question
-- [ ] T204 [P] [US2] MEDULLA-CQ-CONN-R031.2 langfuse cross-source question
-- [ ] T205 [P] [US1] MEDULLA-CQ-CONN-R032.1 leanix single-source question
-- [ ] T206 [P] [US2] MEDULLA-CQ-CONN-R032.2 leanix cross-source question
-- [ ] T207 [P] [US1] MEDULLA-CQ-CONN-R033.1 legal-peripherals single-source question
-- [ ] T208 [P] [US2] MEDULLA-CQ-CONN-R033.2 legal-peripherals cross-source question
-- [ ] T209 [P] [US1] MEDULLA-CQ-CONN-R034.1 lgtm single-source question
-- [ ] T210 [P] [US2] MEDULLA-CQ-CONN-R034.2 lgtm cross-source question
-- [ ] T211 [P] [US1] MEDULLA-CQ-CONN-R035.1 listmonk single-source question
-- [ ] T212 [P] [US2] MEDULLA-CQ-CONN-R035.2 listmonk cross-source question
-- [ ] T213 [P] [US1] MEDULLA-CQ-CONN-R036.1 mattermost single-source question
-- [ ] T214 [P] [US2] MEDULLA-CQ-CONN-R036.2 mattermost cross-source question
-- [ ] T215 [P] [US1] MEDULLA-CQ-CONN-R037.1 mealie single-source question
-- [ ] T216 [P] [US2] MEDULLA-CQ-CONN-R037.2 mealie cross-source question
+- [x] T202 [P] [US2] MEDULLA-CQ-CONN-R030.2 keycloak cross-source question
+- [x] T203 [P] [US1] MEDULLA-CQ-CONN-R031.1 langfuse single-source question
+- [x] T204 [P] [US2] MEDULLA-CQ-CONN-R031.2 langfuse cross-source question
+- [x] T205 [P] [US1] MEDULLA-CQ-CONN-R032.1 leanix single-source question
+- [x] T206 [P] [US2] MEDULLA-CQ-CONN-R032.2 leanix cross-source question
+- [x] T207 [P] [US1] MEDULLA-CQ-CONN-R033.1 legal-peripherals single-source question
+- [x] T208 [P] [US2] MEDULLA-CQ-CONN-R033.2 legal-peripherals cross-source question
+- [x] T209 [P] [US1] MEDULLA-CQ-CONN-R034.1 lgtm single-source question
+- [x] T210 [P] [US2] MEDULLA-CQ-CONN-R034.2 lgtm cross-source question
+- [x] T211 [P] [US1] MEDULLA-CQ-CONN-R035.1 listmonk single-source question
+- [x] T212 [P] [US2] MEDULLA-CQ-CONN-R035.2 listmonk cross-source question
+- [x] T213 [P] [US1] MEDULLA-CQ-CONN-R036.1 mattermost single-source question
+- [x] T214 [P] [US2] MEDULLA-CQ-CONN-R036.2 mattermost cross-source question
+- [x] T215 [P] [US1] MEDULLA-CQ-CONN-R037.1 mealie single-source question
+- [x] T216 [P] [US2] MEDULLA-CQ-CONN-R037.2 mealie cross-source question
 - [ ] T217 [P] [US1] MEDULLA-CQ-CONN-R038.1 media-downloader single-source question
 - [ ] T218 [P] [US2] MEDULLA-CQ-CONN-R038.2 media-downloader cross-source question
 - [ ] T219 [P] [US1] MEDULLA-CQ-CONN-R039.1 microsoft single-source question
 - [ ] T220 [P] [US2] MEDULLA-CQ-CONN-R039.2 microsoft cross-source question
-- [ ] T221 [P] [US1] MEDULLA-CQ-CONN-R040.1 nextcloud single-source question
+- [x] T221 [P] [US1] MEDULLA-CQ-CONN-R040.1 nextcloud single-source question
 - [ ] T222 [P] [US2] MEDULLA-CQ-CONN-R040.2 nextcloud cross-source question
 - [ ] T223 [P] [US1] MEDULLA-CQ-CONN-R041.1 objectstore single-source question
 - [ ] T224 [P] [US2] MEDULLA-CQ-CONN-R041.2 objectstore cross-source question
