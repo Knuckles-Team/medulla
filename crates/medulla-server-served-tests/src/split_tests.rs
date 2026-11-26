@@ -57,6 +57,8 @@ mod medulla_h_ingest_action_record_tests;
 mod connector_pack_harness;
 #[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
 mod medulla_h_ingest_paper_tests;
+#[cfg(all(test, unix, feature = "redb", feature = "blob", feature = "shacl", feature = "security"))]
+mod ingest_materialize_service_level_tests;
 #[cfg(all(
     test,
     unix,

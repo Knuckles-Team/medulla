@@ -4,7 +4,10 @@
 //! `MAX_SOURCE_RECORDS`. Each record takes the per-record materialization the served
 //! `SourceIngest` runs inside `prepare`: the class label normalization and the three
 //! provenance stamps of `stamp_record`. Budget per batch: p50 under 120 ms and p99 under
-//! 300 ms. A service level, not a pull request gate. The served end-to-end proof is
+//! 300 ms. A service level, not a pull request gate. The same budget is measured over `prepare`
+//! itself, with a seeded connector pack and blob store, by the ignored nightly test
+//! `ingest_materialize_stays_within_the_batch_budget` in `medulla-server-served-tests`. The
+//! served end-to-end proof is
 //! `tests/ingest/test_materialize_served.py`.
 //!
 // spec: MEDULLA-INGEST-WORKER-R606.6
