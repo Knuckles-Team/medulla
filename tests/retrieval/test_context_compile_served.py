@@ -181,7 +181,7 @@ def test_context_refusals(start_medulla_server) -> None:
             _compile(client, graph, no_window)
         with pytest.raises(Exception, match="CONTEXT_BUDGET_MISSING"):
             _compile(client, graph, _request(tokenizer_id=""))
-        with pytest.raises(Exception, match="CONTEXT_SCOPE_FOREIGN"):
+        with pytest.raises(Exception, match="SCOPE_AGENT_UNKNOWN"):
             _compile(client, graph, _request(agent_ref="agent-x"))
         with pytest.raises(Exception, match="CONTEXT_PACKAGE_MISSING_FACT"):
             over = _request()

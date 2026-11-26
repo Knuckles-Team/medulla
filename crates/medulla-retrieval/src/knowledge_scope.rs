@@ -141,7 +141,7 @@ fn refusal(code: &'static str, detail: String) -> ScopeRefusal {
 /// The knowledge scope the agent definition node `agent_ref` declares (MEDULLA-FEDERATED-QUERY-R704.3).
 /// `Ok(None)` when the agent declares no scope or an empty one: the caller's access alone then
 /// applies. An `agent_ref` with no definition node in this view refuses `SCOPE_AGENT_UNKNOWN`,
-/// a scope naming a knowledge set that is no node of this view refuses `SCOPE_SET_FOREIGN`, and
+/// a scope naming a knowledge set that is no node of this view refuses `SCOPE_SET_UNKNOWN`, and
 /// a malformed scope refuses `INVALID_ARGUMENT` (MEDULLA-FEDERATED-QUERY-R704.4).
 pub fn agent_scope(
     core: &medulla_graph_core::graph::GraphCore,
@@ -176,15 +176,16 @@ pub fn agent_scope(
             format!("knowledgeScope of {agent_ref} is malformed: {e}"),
         )
     })?;
-    // The projected view holds only the caller's tenant: a set with no node in it is outside.
+    // The projected view holds only the caller's tenant: a set with no node in it is unknown,
+    // whether it is absent or another tenant's, with one code and one detail (no existence oracle).
     if let Some(set) = scope
         .knowledge_sets
         .iter()
         .find(|set| core.get_node_properties(set).is_none())
     {
         return Err(refusal(
-            "SCOPE_SET_FOREIGN",
-            format!("knowledge set {set} is outside the caller's tenant"),
+            "SCOPE_SET_UNKNOWN",
+            format!("knowledge set {set} is unknown"),
         ));
     }
     Ok((!scope.is_empty()).then_some(scope))

@@ -99,7 +99,19 @@ fn a_scope_refuses_an_unknown_agent_and_a_foreign_set() {
     );
     assert!(agent_scope(&core, "agent:ok").unwrap().is_some());
     assert_eq!(agent_scope(&core, "agent:missing").unwrap_err().code, "SCOPE_AGENT_UNKNOWN");
-    assert_eq!(agent_scope(&core, "agent:foreign").unwrap_err().code, "SCOPE_SET_FOREIGN");
+    assert_eq!(agent_scope(&core, "agent:foreign").unwrap_err().code, "SCOPE_SET_UNKNOWN");
+    // A foreign set and an absent one answer byte-identically but for the name asked about.
+    core.add_node(
+        "agent:absent".into(),
+        blob(&json!({"knowledgeScope": {"knowledge_sets": ["ks:nowhere"]}})),
+    );
+    let foreign = agent_scope(&core, "agent:foreign").unwrap_err();
+    let absent = agent_scope(&core, "agent:absent").unwrap_err();
+    assert_eq!(foreign.code, absent.code);
+    assert_eq!(
+        foreign.detail.replace("ks:theirs", "SET"),
+        absent.detail.replace("ks:nowhere", "SET")
+    );
 }
 
 // spec: MEDULLA-FEDERATED-QUERY-R704.5

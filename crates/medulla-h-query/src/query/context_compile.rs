@@ -630,19 +630,9 @@ pub(crate) async fn handle_context_compile(
     if let Err(refusal) = validate(&request) {
         return refusal_response(req_id, refusal);
     }
-    // An agent reference must name an agent the caller's tenant owns and can
-    // see; the projected core holds no other tenant's rows.
-    if let Some(agent) = &request.agent_ref {
-        if ctx.core.get_node_properties(agent).is_none() {
-            return refusal_response(
-                req_id,
-                refuse(
-                    "CONTEXT_SCOPE_FOREIGN",
-                    format!("agent {agent} is not in this tenant"),
-                ),
-            );
-        }
-    }
+    // The agent scope is checked once, in `run_compile`, by the same
+    // `agent_scope` read `Discover` uses (MEDULLA-FEDERATED-QUERY-R704.4): a
+    // foreign agent and a missing one both answer `SCOPE_AGENT_UNKNOWN`.
     let revision = ctx.core.version();
     if let Some(as_of) = request.as_of {
         if as_of != revision {

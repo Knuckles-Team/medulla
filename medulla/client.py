@@ -7662,7 +7662,7 @@ class GraphOperationsClient:
         its citation and proof edges; ``excluded`` names every other hit with a
         closed reason. A request without a window or tokenizer is refused
         ``CONTEXT_BUDGET_MISSING``, a non-finite score ``CONTEXT_ITEM_COST_INVALID``
-        and an agent of another tenant ``CONTEXT_SCOPE_FOREIGN``. ``budget`` adds
+        and an agent of another tenant ``SCOPE_AGENT_UNKNOWN``. ``budget`` adds
         the optional caller, money and latency ceilings.
         """
         ceilings: dict[str, Any] = dict.fromkeys(

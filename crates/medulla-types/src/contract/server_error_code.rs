@@ -1153,11 +1153,12 @@ closed_error_codes! {
         CodeAnchorUnknown => "CODE_ANCHOR_UNKNOWN",
         CodeDepthExceeded => "CODE_DEPTH_EXCEEDED",
         ContextItemCostInvalid => "CONTEXT_ITEM_COST_INVALID",
-        ContextScopeForeign => "CONTEXT_SCOPE_FOREIGN",
         /// MEDULLA-FEDERATED-QUERY-R704.4: an `agent_ref` with no definition node in the caller's view.
         ScopeAgentUnknown => "SCOPE_AGENT_UNKNOWN",
-        /// MEDULLA-FEDERATED-QUERY-R704.4: a knowledge scope names a set outside the caller's tenant.
-        ScopeSetForeign => "SCOPE_SET_FOREIGN",
+        /// MEDULLA-FEDERATED-QUERY-R704.4: a knowledge scope names a set the caller cannot see. A set of
+        /// another tenant and a set that does not exist answer this one code with one detail, so the
+        /// refusal is no existence oracle.
+        ScopeSetUnknown => "SCOPE_SET_UNKNOWN",
         CorpusLineageTooDeep => "CORPUS_LINEAGE_TOO_DEEP",
         CorpusRegexTooComplex => "CORPUS_REGEX_TOO_COMPLEX",
         CorpusScopeDenied => "CORPUS_SCOPE_DENIED",

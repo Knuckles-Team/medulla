@@ -708,7 +708,7 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "INVALID_ARGUMENT",
             // MEDULLA-FEDERATED-QUERY-R704.4: a scope that names no agent node or a foreign set.
             "SCOPE_AGENT_UNKNOWN",
-            "SCOPE_SET_FOREIGN",
+            "SCOPE_SET_UNKNOWN",
         ],
     ),
     ("MemoryExport", &["ACCESS_DENIED"]),
@@ -837,10 +837,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CONTEXT_PACKAGE_INVALID_MEASUREMENT",
             "CONTEXT_PACKAGE_MISSING_FACT",
             "CONTEXT_PACKAGE_WORK_EXHAUSTED",
-            "CONTEXT_SCOPE_FOREIGN",
             // MEDULLA-FEDERATED-QUERY-R704.4: a scope that names no agent node or a foreign set.
             "SCOPE_AGENT_UNKNOWN",
-            "SCOPE_SET_FOREIGN",
+            "SCOPE_SET_UNKNOWN",
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R081.11: a round refuses a malformed part and the

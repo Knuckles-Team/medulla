@@ -147,7 +147,7 @@ def test_scope_refusals(start_medulla_server) -> None:
         )
         with pytest.raises(Exception, match="SCOPE_AGENT_UNKNOWN"):
             _discover(cl, graph, "agent:nobody")
-        with pytest.raises(Exception, match="SCOPE_SET_FOREIGN"):
+        with pytest.raises(Exception, match="SCOPE_SET_UNKNOWN"):
             _discover(cl, graph, "agent:foreign")
         scoped = set(_discover(cl, graph, "agent:wiki"))
         assert scoped and scoped <= set(_discover(cl, graph, None))
