@@ -195,6 +195,8 @@ pub(super) const RLS_ROUTED: &[&str] = &[
     "SpecQuestion",
     // `dispatch_sdlc_methods::spec_status` reads only nodes `can_see_node` admits.
     "SpecStatus",
+    // `dispatch_sdlc_methods::lifecycle_trace` reads only nodes `can_see_node` admits.
+    "LifecycleTrace",
     // `dispatch_sdlc_methods::get_defect` reads only a node `can_see_node` admits.
     "GetDefect",
     "KnowledgeStream",

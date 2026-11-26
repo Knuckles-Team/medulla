@@ -114,3 +114,67 @@ fn spec_status_refusals() {
     assert_eq!(refused.code(), "SPEC_TREE_ABSENT");
     assert!(refused.to_string().starts_with("SPEC_TREE_ABSENT: "));
 }
+
+fn lifecycle_node(core: &GraphCore, id: &str, node_type: &str, tenant: &str) {
+    core.add_node(
+        id.into(),
+        props(json!({"type": node_type, "tenant_id": tenant})),
+    );
+}
+
+fn lifecycle_edge(core: &GraphCore, from: &str, relationship: &str, to: &str) {
+    core.add_typed_edge(
+        from.into(),
+        to.into(),
+        relationship.into(),
+        props(json!({"rule": "r-test", "rule_version": "3", "input_digests": "d1,d2"})),
+    )
+    .expect("edge adds");
+}
+
+// spec: MEDULLA-SDLC-R006.3
+#[test]
+fn trace_is_tenant_scoped() {
+    use crate::lifecycle_status::lifecycle_store_around;
+    use medulla_core::lifecycle::trace::lifecycle_trace;
+    use medulla_source_types::lifecycle::{LifecycleTraceRequest, TraceLimits};
+    let core = GraphCore::new();
+    lifecycle_node(&core, "requirement:d:R1", "Requirement", "acme");
+    lifecycle_node(&core, "symbol:s", "SYMBOL", "acme");
+    lifecycle_node(&core, "commit:c1", "Changeset", "acme");
+    lifecycle_edge(&core, "symbol:s", "implements", "requirement:d:R1");
+    lifecycle_edge(&core, "commit:c1", "changes", "symbol:s");
+    let limits = TraceLimits { max_depth: 8, node_budget: 100 };
+    let request = LifecycleTraceRequest::new("requirement:d:R1".into(), 2, vec![]).unwrap();
+    let walk = |tenant: &str| {
+        let store = lifecycle_store_around(&core, tenant, &request.anchor, 2, 100, &everything);
+        lifecycle_trace(&store, &request, limits)
+    };
+    let mine = walk("acme");
+    assert_eq!(mine.records.len(), 3);
+    assert!(mine.edges.iter().all(|e| e.rule == "r-test" && e.rule_version == 3));
+    let theirs = walk("globex");
+    assert!(theirs.records.is_empty() && theirs.edges.is_empty());
+}
+
+// spec: MEDULLA-SDLC-R006.4
+#[test]
+fn trace_refusals() {
+    use medulla_source_types::lifecycle::{
+        handle_lifecycle_trace, LifecycleKind, LifecycleTraceRequest, TraceLimits,
+    };
+    let limits = TraceLimits { max_depth: 4, node_budget: 100 };
+    let deep = LifecycleTraceRequest::new("a".into(), 5, vec![]).unwrap();
+    assert_eq!(
+        handle_lifecycle_trace(deep, limits).unwrap_err().code(),
+        "LIFECYCLE_DEPTH_INVALID"
+    );
+    assert_eq!(
+        LifecycleTraceRequest::new("a".into(), 0, vec![]).unwrap_err().code(),
+        "LIFECYCLE_DEPTH_INVALID"
+    );
+    assert_eq!(
+        LifecycleKind::parse("widget").unwrap_err().code(),
+        "LIFECYCLE_KIND_UNKNOWN"
+    );
+}

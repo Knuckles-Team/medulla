@@ -6,7 +6,7 @@ use std::sync::Arc;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::result_contract::ingestion::{
     GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
-    FileDefect as FileDefectResult, SpecStatus as SpecStatusResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
+    FileDefect as FileDefectResult, SpecStatus as SpecStatusResult, LifecycleTrace as LifecycleTraceResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
     RecordGateVerdict as RecordGateVerdictResult, RecordRelease as RecordReleaseResult,
 };
@@ -126,6 +126,9 @@ pub async fn dispatch_sdlc_methods(
                 ..target
             };
             dispatch_boxed(spec_question(state, target, question, subject)).await
+        }
+        Method::LifecycleTrace { request } => {
+            dispatch_boxed(lifecycle_trace(state, target, request)).await
         }
         Method::SpecStatus {
             repo,
@@ -292,7 +295,7 @@ async fn record_gate_verdict(
 }
 
 /// The node types a competency question reads.
-const SPEC_VIEW_TYPES: [&str; 8] = [
+const SPEC_VIEW_TYPES: [&str; 11] = [
     "Requirement",
     "SYMBOL",
     "TaskLine",
@@ -301,9 +304,12 @@ const SPEC_VIEW_TYPES: [&str; 8] = [
     "Goal",
     COMMIT_TYPE,
     "PlanSection",
+    RELEASE_TYPE,
+    DEPLOYMENT_TYPE,
+    DEFECT_TYPE,
 ];
 /// The relationships a competency question reads.
-const SPEC_VIEW_RELATIONSHIPS: [&str; 9] = [
+const SPEC_VIEW_RELATIONSHIPS: [&str; 14] = [
     "implementedByCommit",
     "verifiedBy",
     "implementedBy",
@@ -313,6 +319,11 @@ const SPEC_VIEW_RELATIONSHIPS: [&str; 9] = [
     "dependsOnRow",
     "covers",
     "targetsGoal",
+    "changes",
+    "implements",
+    "contains",
+    "deploys",
+    "affects",
 ];
 const SPEC_VIEW_EXTRA_RELATIONSHIPS: [&str; 2] = ["forRow", "governedBy"];
 
@@ -346,6 +357,108 @@ async fn spec_question(
     }
     .await;
     typed_response::<SpecQuestionResult>(target.req_id, result)
+}
+
+/// An agent library with no revisions: the engine default policy needs no stored revision.
+struct NoPolicyLibrary;
+
+impl medulla_decision_policy::policy::PolicyLibrary for NoPolicyLibrary {
+    fn policy_revisions(
+        &self,
+        _tenant_id: &str,
+        _component_id: &str,
+    ) -> Result<Vec<medulla_agent_types::agent_component::AgentComponentEntry>, String> {
+        Ok(Vec::new())
+    }
+}
+
+/// The agent library as the decision-policy seam reads it.
+struct LibraryHandle(Arc<medulla_persistence_records::agent_library::AgentLibraryStore>);
+
+impl medulla_decision_policy::policy::PolicyLibrary for LibraryHandle {
+    fn policy_revisions(
+        &self,
+        tenant_id: &str,
+        component_id: &str,
+    ) -> Result<Vec<medulla_agent_types::agent_component::AgentComponentEntry>, String> {
+        self.0
+            .component_revisions(tenant_id, component_id)
+            .map_err(|error| error.to_string())
+    }
+}
+
+/// The trace limits and the policy digest of one request (MEDULLA-SDLC-R006.7): the
+/// `lifecycle.*` knobs of the policy the request names.
+async fn trace_limits(
+    state: &Arc<RwLock<ServerState>>,
+    tenant: &str,
+    reference: &medulla_decision_types::decision::DecisionPolicyRef,
+) -> Result<(medulla_source_types::lifecycle::TraceLimits, String), String> {
+    use medulla_decision_types::decision::knobs::KnobValue;
+    use medulla_decision_types::decision::lifecycle::KNOBS;
+    let resolved = match reference {
+        medulla_decision_types::decision::DecisionPolicyRef::Default => {
+            medulla_decision_policy::policy::resolve_policy(&NoPolicyLibrary, tenant, reference)?
+        }
+        pinned => {
+            let store = medulla_persistence_records::agent_library::shared_agent_library(state)
+                .await?;
+            medulla_decision_policy::policy::resolve_policy(&LibraryHandle(store), tenant, pinned)?
+        }
+    };
+    let integer = |index: usize| match resolved.policy.knob(&KNOBS[index]) {
+        KnobValue::Integer(value) | KnobValue::DecimalMicros(value) => {
+            u64::try_from(value).unwrap_or(0)
+        }
+        KnobValue::DurationMs(value) => value,
+    };
+    let limits = medulla_source_types::lifecycle::TraceLimits {
+        max_depth: u8::try_from(integer(0)).unwrap_or(u8::MAX),
+        node_budget: usize::try_from(integer(1)).unwrap_or(usize::MAX),
+    };
+    Ok((limits, resolved.digest))
+}
+
+/// `LifecycleTrace` (MEDULLA-SDLC-R006.3 to R006.5): resolve the limits from the request's
+/// policy, check the request against them, read the lifecycle records around the anchor that
+/// the caller can see, and walk them through `lifecycle_trace`. Writes nothing.
+async fn lifecycle_trace(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    request: medulla_source_types::lifecycle::LifecycleTraceRequest,
+) -> Response {
+    let result = async {
+        let tenant = target.verified.tenant();
+        if tenant.trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        let (limits, policy_digest) = trace_limits(state, tenant, &request.policy).await?;
+        let request = medulla_source_types::lifecycle::handle_lifecycle_trace(request, limits)
+            .map_err(|e| e.to_string())?;
+        ensure_graph_resident(state, target.graph).await;
+        let (core, authority) = {
+            let current = timed_read(state).await;
+            authorized_graph_read(
+                &current,
+                target.graph,
+                target.verified,
+                &format!("GRAPH_NOT_FOUND: {}", target.graph),
+            )?
+        };
+        let store = medulla_h_ingest::lifecycle_status::lifecycle_store_around(
+            &core,
+            tenant,
+            &request.anchor,
+            request.depth,
+            limits.node_budget,
+            &|blob: &[u8], schema: bool| authority.can_see_node(blob, schema),
+        );
+        let mut answer = medulla_core::lifecycle::trace::lifecycle_trace(&store, &request, limits);
+        answer.policy_digest = policy_digest;
+        Ok(answer)
+    }
+    .await;
+    typed_response::<LifecycleTraceResult>(target.req_id, result)
 }
 
 /// `SpecStatus` (MEDULLA-SDLC-R005.3, R005.4): read the requirement rows, changesets and test

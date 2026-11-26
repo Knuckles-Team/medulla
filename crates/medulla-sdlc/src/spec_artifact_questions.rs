@@ -203,6 +203,7 @@ pub fn answer(
 ) -> Result<SpecQuestionAnswer, LifecycleRefusal> {
     let subject = require_subject(question, subject)?;
     let mut out = Collector::new(view);
+    answer_lifecycle(question, subject, view, &mut out)?;
     match question {
         SpecQuestion::UnreachableRequirements => {
             for requirement in view.of_type("Requirement") {
@@ -335,8 +336,125 @@ pub fn answer(
                 );
             }
         }
+        // The lifecycle questions are answered by `answer_lifecycle` above.
+        SpecQuestion::UnboundRequirements
+        | SpecQuestion::DeploymentOfRequirement
+        | SpecQuestion::OpenDefectsInRelease
+        | SpecQuestion::ChangesetsBetweenDeployments => {}
     }
     Ok(out.finish())
+}
+
+/// The statuses that close a defect for question `OpenDefectsInRelease`.
+const SETTLED_DEFECT_STATUSES: [&str; 3] = ["verified", "closed", "rejected"];
+
+fn require_node_type(
+    view: &SpecGraphView,
+    id: &str,
+    node_type: &str,
+) -> Result<(), LifecycleRefusal> {
+    if view.nodes.get(id).is_some_and(|n| n.node_type == node_type) {
+        Ok(())
+    } else {
+        Err(LifecycleRefusal::CompetencySubjectUnknown(id.to_owned()))
+    }
+}
+
+/// The lifecycle questions of MEDULLA-SDLC-R006.3, over the same pre-read view.
+fn answer_lifecycle(
+    question: SpecQuestion,
+    subject: Option<&str>,
+    view: &SpecGraphView,
+    out: &mut Collector<'_>,
+) -> Result<(), LifecycleRefusal> {
+    let subject = subject.unwrap_or_default();
+    match question {
+        SpecQuestion::UnboundRequirements => {
+            for requirement in view.of_type("Requirement") {
+                if view.out(requirement, "verifiedBy").next().is_none() {
+                    out.row(
+                        &[requirement],
+                        &[
+                            ("requirement", requirement),
+                            ("row", view.prop(requirement, "rowId")),
+                        ],
+                    );
+                }
+            }
+        }
+        SpecQuestion::DeploymentOfRequirement => {
+            require_node_type(view, subject, "Requirement")?;
+            let mut seen = BTreeSet::new();
+            for symbol in view.inbound(subject, "implements") {
+                for changeset in view.inbound(symbol, "changes") {
+                    for release in view.inbound(changeset, "contains") {
+                        for deployment in view.inbound(release, "deploys") {
+                            if seen.insert((deployment, release, changeset, symbol)) {
+                                out.row(
+                                    &[subject, symbol, changeset, release, deployment],
+                                    &[
+                                        ("deployment", deployment),
+                                        ("release", release),
+                                        ("changeset", changeset),
+                                        ("symbol", symbol),
+                                    ],
+                                );
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        SpecQuestion::OpenDefectsInRelease => {
+            require_node_type(view, subject, "Release")?;
+            out.read(subject);
+            let contained: BTreeSet<&str> = view.out(subject, "contains").collect();
+            let mut seen = BTreeSet::new();
+            for defect in view.of_type("Defect") {
+                if SETTLED_DEFECT_STATUSES.contains(&view.prop(defect, "status")) {
+                    continue;
+                }
+                for symbol in view.out(defect, "affects") {
+                    for changeset in view.inbound(symbol, "changes") {
+                        if contained.contains(changeset) && seen.insert((defect, symbol, changeset))
+                        {
+                            out.row(
+                                &[defect, symbol, changeset],
+                                &[
+                                    ("defect", defect),
+                                    ("symbol", symbol),
+                                    ("changeset", changeset),
+                                ],
+                            );
+                        }
+                    }
+                }
+            }
+        }
+        SpecQuestion::ChangesetsBetweenDeployments => {
+            let Some((first, second)) = subject.split_once(',') else {
+                return Err(LifecycleRefusal::ParameterInvalid(
+                    "the subject names two deployments, `<first>,<second>`".to_owned(),
+                ));
+            };
+            let (first, second) = (first.trim(), second.trim());
+            require_node_type(view, first, "Deployment")?;
+            require_node_type(view, second, "Deployment")?;
+            let contained = |deployment: &str| -> BTreeSet<&str> {
+                view.out(deployment, "deploys")
+                    .flat_map(|release| view.out(release, "contains"))
+                    .collect()
+            };
+            let other = contained(second);
+            out.read(first);
+            out.read(second);
+            for changeset in contained(first).difference(&other).copied() {
+                out.row(&[changeset], &[("changeset", changeset)]);
+            }
+        }
+        _ => {}
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -356,6 +474,73 @@ mod tests {
 
     fn edge(view: &mut SpecGraphView, from: &str, rel: &str, to: &str) {
         view.edges.insert((from.into(), rel.into(), to.into()));
+    }
+
+    // spec: MEDULLA-SDLC-R006.3
+    #[test]
+    fn lifecycle_questions_follow_the_derived_edges() {
+        let mut view = SpecGraphView::default();
+        for (id, kind, props) in [
+            ("requirement:r:A-R1", "Requirement", vec![("rowId", "A-R1")]),
+            ("requirement:r:A-R2", "Requirement", vec![("rowId", "A-R2")]),
+            ("symbol:s", "SYMBOL", vec![]),
+            ("commit:c1", "Changeset", vec![]),
+            ("commit:c2", "Changeset", vec![]),
+            ("release:r:1", "Release", vec![]),
+            ("release:r:2", "Release", vec![]),
+            ("deployment:d1", "Deployment", vec![]),
+            ("deployment:d2", "Deployment", vec![]),
+            ("defect:r/1", "Defect", vec![("status", "triaged")]),
+            ("defect:r/2", "Defect", vec![("status", "closed")]),
+            ("testfile:r:t", "TestFile", vec![]),
+        ] {
+            view.nodes.insert(id.into(), node(kind, &props));
+        }
+        for (from, rel, to) in [
+            ("requirement:r:A-R1", "verifiedBy", "testfile:r:t"),
+            ("symbol:s", "implements", "requirement:r:A-R1"),
+            ("commit:c1", "changes", "symbol:s"),
+            ("release:r:1", "contains", "commit:c1"),
+            ("release:r:2", "contains", "commit:c1"),
+            ("release:r:2", "contains", "commit:c2"),
+            ("deployment:d1", "deploys", "release:r:1"),
+            ("deployment:d2", "deploys", "release:r:2"),
+            ("defect:r/1", "affects", "symbol:s"),
+            ("defect:r/2", "affects", "symbol:s"),
+        ] {
+            edge(&mut view, from, rel, to);
+        }
+        let unbound = answer(SpecQuestion::UnboundRequirements, None, &view).unwrap();
+        assert_eq!(unbound.rows.len(), 1);
+        assert_eq!(unbound.rows[0]["row"], "A-R2");
+        let deployed = answer(
+            SpecQuestion::DeploymentOfRequirement,
+            Some("requirement:r:A-R1"),
+            &view,
+        )
+        .unwrap();
+        let deployments: Vec<&str> = deployed.rows.iter().map(|r| r["deployment"].as_str()).collect();
+        assert_eq!(deployments, ["deployment:d1", "deployment:d2"]);
+        let open = answer(SpecQuestion::OpenDefectsInRelease, Some("release:r:1"), &view).unwrap();
+        assert_eq!(open.rows.len(), 1);
+        assert_eq!(open.rows[0]["defect"], "defect:r/1");
+        let between = answer(
+            SpecQuestion::ChangesetsBetweenDeployments,
+            Some("deployment:d2,deployment:d1"),
+            &view,
+        )
+        .unwrap();
+        assert_eq!(between.rows.len(), 1);
+        assert_eq!(between.rows[0]["changeset"], "commit:c2");
+        for (question, subject) in [
+            (SpecQuestion::DeploymentOfRequirement, "requirement:r:none"),
+            (SpecQuestion::OpenDefectsInRelease, "release:r:none"),
+        ] {
+            let refused = answer(question, Some(subject), &view).unwrap_err();
+            assert_eq!(refused.code(), "COMPETENCY_SUBJECT_UNKNOWN");
+        }
+        let malformed = answer(SpecQuestion::ChangesetsBetweenDeployments, Some("one"), &view);
+        assert_eq!(malformed.unwrap_err().code(), "PARAMETER_INVALID");
     }
 
     // spec: MEDULLA-SDLC-R014.6

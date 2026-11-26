@@ -1859,6 +1859,15 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
     ),
     // MEDULLA-SDLC-R005.3 and R005.4: the served status refusals.
     (
+        "LifecycleTrace",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INVALID_ARGUMENT",
+            "LIFECYCLE_DEPTH_INVALID",
+            "LIFECYCLE_KIND_UNKNOWN",
+        ],
+    ),
+    (
         "SpecStatus",
         &[
             "TENANT_SCOPE_REQUIRED",

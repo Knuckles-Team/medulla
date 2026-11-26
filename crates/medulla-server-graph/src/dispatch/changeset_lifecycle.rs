@@ -47,19 +47,7 @@ fn kind_of(node: &Value) -> Option<LifecycleKind> {
         .get("type")
         .or_else(|| node.get("kind"))
         .and_then(Value::as_str)?;
-    match name {
-        "Requirement" => Some(LifecycleKind::Requirement),
-        "CodeSymbolRef" | "SYMBOL" => Some(LifecycleKind::CodeSymbol),
-        "TestCase" | "Test" | "TestFile" => Some(LifecycleKind::TestCase),
-        "Changeset" => Some(LifecycleKind::Changeset),
-        "GateVerdict" => Some(LifecycleKind::GateVerdict),
-        "RunTrace" => Some(LifecycleKind::RunTrace),
-        "Release" => Some(LifecycleKind::Release),
-        "Deployment" => Some(LifecycleKind::Deployment),
-        "Defect" => Some(LifecycleKind::Defect),
-        "Incident" => Some(LifecycleKind::Incident),
-        _ => None,
-    }
+    LifecycleKind::from_node_type(name)
 }
 
 /// The caller's reading of one stored node: its decoded properties, absent when the node does

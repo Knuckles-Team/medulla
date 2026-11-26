@@ -4,7 +4,10 @@
 //! derivation itself is `medulla_core::lifecycle::status::answer_spec_status`.
 
 use medulla_core::lifecycle::derive::TestBinding;
+use medulla_core::lifecycle::derive::DerivedEdge;
 use medulla_core::lifecycle::status::{SpecStatusView, StatusChangeset};
+use medulla_core::lifecycle::store::LifecycleStore;
+use medulla_source_types::lifecycle::{LifecycleEdgeKind, LifecycleKind};
 use medulla_graph_core::graph::GraphCore;
 use serde_json::Value;
 
@@ -146,4 +149,129 @@ pub fn spec_status_view(
         view.changesets.push(changeset);
     }
     view
+}
+
+fn lifecycle_edge_kind(relationship: &str) -> Option<LifecycleEdgeKind> {
+    LifecycleEdgeKind::ALL
+        .into_iter()
+        .find(|kind| kind.name() == relationship)
+}
+
+/// The lifecycle node `id` stands for, when the caller may see it and it belongs to `tenant`.
+fn lifecycle_node(
+    core: &GraphCore,
+    id: &str,
+    tenant: &str,
+    can_see: &dyn Fn(&[u8], bool) -> bool,
+) -> Option<LifecycleKind> {
+    let blob = core.get_node_properties(id)?;
+    if !can_see(&blob, core.is_schema_node(id)) {
+        return None;
+    }
+    let Ok(Value::Object(node)) = medulla_types::msgpack::decode_property_value(&blob) else {
+        return None;
+    };
+    if node
+        .get("tenant_id")
+        .and_then(Value::as_str)
+        .is_some_and(|owner| owner != tenant)
+    {
+        return None;
+    }
+    let name = node
+        .get("type")
+        .or_else(|| node.get("kind"))
+        .and_then(Value::as_str)?;
+    LifecycleKind::from_node_type(name)
+}
+
+/// The lifecycle store around `anchor` for a served `LifecycleTrace` (MEDULLA-SDLC-R006.3): the
+/// nodes and derived edges the caller can see within `depth` levels of the anchor, at most
+/// `node_budget + 1` nodes, so the walk can tell a truncated answer from a complete one. An
+/// anchor the caller cannot see, or another tenant stamped, yields an empty store, which the
+/// trace answers with no records (no existence oracle).
+pub fn lifecycle_store_around(
+    core: &GraphCore,
+    tenant: &str,
+    anchor: &str,
+    depth: u8,
+    node_budget: usize,
+    can_see: &dyn Fn(&[u8], bool) -> bool,
+) -> LifecycleStore {
+    let mut store = LifecycleStore::default();
+    let Some(kind) = lifecycle_node(core, anchor, tenant, can_see) else {
+        return store;
+    };
+    store.add_node(anchor, kind);
+    let mut seen: std::collections::BTreeSet<String> = [anchor.to_owned()].into();
+    let mut queue = std::collections::VecDeque::from([(anchor.to_owned(), 0u8)]);
+    let mut edges: Vec<DerivedEdge> = Vec::new();
+    while let Some((id, at_depth)) = queue.pop_front() {
+        let mut neighbours: Vec<(String, bool)> = core
+            .get_successors(&id)
+            .unwrap_or_default()
+            .into_iter()
+            .map(|other| (other, true))
+            .collect();
+        neighbours.extend(
+            core.get_predecessors(&id)
+                .unwrap_or_default()
+                .into_iter()
+                .map(|other| (other, false)),
+        );
+        for (other, outgoing) in neighbours {
+            let (from, to) = if outgoing {
+                (id.as_str(), other.as_str())
+            } else {
+                (other.as_str(), id.as_str())
+            };
+            let found: Vec<DerivedEdge> = core
+                .typed_edges_between(from, to)
+                .into_iter()
+                .filter_map(|(relationship, blob)| {
+                    let kind = lifecycle_edge_kind(&relationship)?;
+                    let properties = medulla_types::msgpack::decode_property_value(&blob).ok()?;
+                    let text = |key: &str| {
+                        properties
+                            .get(key)
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_owned()
+                    };
+                    Some(DerivedEdge {
+                        kind,
+                        from: from.to_owned(),
+                        to: to.to_owned(),
+                        rule: text("rule"),
+                        rule_version: text("rule_version").parse().unwrap_or(0),
+                        input_digests: text("input_digests")
+                            .split(',')
+                            .filter(|part| !part.is_empty())
+                            .map(str::to_owned)
+                            .collect(),
+                    })
+                })
+                .collect();
+            if found.is_empty() {
+                continue;
+            }
+            // A node at the depth bound adds edges among the nodes already reached, never new
+            // nodes.
+            if !seen.contains(&other) {
+                if at_depth >= depth || seen.len() > node_budget {
+                    continue;
+                }
+                let Some(kind) = lifecycle_node(core, &other, tenant, can_see) else {
+                    continue;
+                };
+                seen.insert(other.clone());
+                store.add_node(&other, kind);
+                queue.push_back((other.clone(), at_depth + 1));
+            }
+            edges.extend(found);
+        }
+    }
+    // Every endpoint was added before its edge, so the batch cannot refuse.
+    let _ = store.apply_derived(edges);
+    store
 }

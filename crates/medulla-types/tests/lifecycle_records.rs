@@ -140,7 +140,7 @@ fn trace_request_bounds() {
         LifecycleTraceRequest::new("r".into(), 0, vec![])
             .unwrap_err()
             .code(),
-        "LIFECYCLE_TRACE_DEPTH"
+        "LIFECYCLE_DEPTH_INVALID"
     );
     assert!(serde_json::from_str::<LifecycleTraceRequest>(r#"{"anchor":"r","depth":0}"#).is_err());
     let ok: LifecycleTraceRequest =

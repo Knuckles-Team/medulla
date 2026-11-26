@@ -19226,6 +19226,23 @@ class MedullaClient:
             raise TypeError("SpecQuestion returned a non-object result")
         return result
 
+    async def lifecycle_trace(
+        self, request: dict[str, Any], graph: str | None = None
+    ) -> dict[str, Any]:
+        """Walk the derived lifecycle edges from one anchor (MEDULLA-SDLC-R006.3).
+
+        ``request`` carries ``anchor`` (a node id), ``depth`` (1 up to the
+        ``lifecycle.trace_max_depth`` ceiling), optional ``kinds`` and ``policy``.
+        The answer holds ``records``, ``edges`` (each with its ``rule`` and
+        ``rule_version``), ``truncated`` and ``policy_digest``. A depth outside the
+        bounds refuses ``LIFECYCLE_DEPTH_INVALID``; an anchor of another tenant
+        answers empty.
+        """
+        result = await self._send("LifecycleTrace", {"request": request}, graph)
+        if not isinstance(result, dict):
+            raise TypeError("LifecycleTrace returned a non-object result")
+        return result
+
     async def spec_status(
         self, repo: str, rev: str, graph: str, spec_id: str | None = None
     ) -> dict[str, Any]:

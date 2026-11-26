@@ -16,6 +16,7 @@ medulla-observe = { path = "../medulla-observe" }
 medulla-version = { path = "../medulla-version" }
 medulla-h-retrieve = { path = "../medulla-h-retrieve" }
 medulla-h-sparql = { path = "../medulla-h-sparql" }
+medulla-agent-types = { path = "../medulla-agent-types" }
 medulla-capabilities = { path = "../medulla-capabilities" }
 medulla-catalog-types = { path = "../medulla-catalog-types" }
 medulla-compute = { path = "../medulla-compute" }
@@ -40,6 +41,7 @@ medulla-result-types = { path = "../medulla-result-types" }
 medulla-server-api = { path = "../medulla-server-api" }
 medulla-sdlc = { path = "../medulla-sdlc" }
 medulla-source-types = { path = "../medulla-source-types" }
+medulla-decision-policy = { path = "../medulla-decision-policy" }
 medulla-decision-types = { path = "../medulla-decision-types" }
 medulla-stream = { path = "../medulla-stream", optional = true }
 medulla-tsdb = { path = "../medulla-tsdb", optional = true }

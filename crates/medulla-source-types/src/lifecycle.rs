@@ -110,6 +110,24 @@ pub enum LifecycleKind {
 }
 
 impl LifecycleKind {
+    /// The lifecycle kind a stored node of graph `type` `node_type` stands for. The one
+    /// mapping the changeset accept and the served trace share.
+    pub fn from_node_type(node_type: &str) -> Option<Self> {
+        match node_type {
+            "Requirement" => Some(Self::Requirement),
+            "CodeSymbolRef" | "SYMBOL" => Some(Self::CodeSymbol),
+            "TestCase" | "Test" | "TestFile" => Some(Self::TestCase),
+            "Changeset" => Some(Self::Changeset),
+            "GateVerdict" => Some(Self::GateVerdict),
+            "RunTrace" => Some(Self::RunTrace),
+            "Release" => Some(Self::Release),
+            "Deployment" => Some(Self::Deployment),
+            "Defect" => Some(Self::Defect),
+            "Incident" => Some(Self::Incident),
+            _ => None,
+        }
+    }
+
     /// Parse a wire name; an unknown name carries the stable refusal code.
     pub fn parse(name: &str) -> Result<Self, LifecycleRefusal> {
         serde_json::from_value(serde_json::Value::String(name.to_owned()))
@@ -141,6 +159,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("COMPETENCY_SUBJECT_UNKNOWN"),
     RefusalCode::new("DEFECT_TRANSITION_ILLEGAL"),
     RefusalCode::new("DEFECT_UNVERIFIED"),
+    RefusalCode::new("LIFECYCLE_DEPTH_INVALID"),
     RefusalCode::new("SPEC_STATUS_REV_UNKNOWN"),
     RefusalCode::new("SPEC_TREE_ABSENT"),
 ];
@@ -150,7 +169,7 @@ pub const REFUSALS: &[RefusalCode] = &[
 pub enum LifecycleRefusal {
     #[error("LIFECYCLE_KIND_UNKNOWN: {0}")]
     KindUnknown(String),
-    #[error("LIFECYCLE_TRACE_DEPTH: depth {0} is below 1")]
+    #[error("LIFECYCLE_DEPTH_INVALID: depth {0} is outside 1 and the trace depth ceiling")]
     TraceDepth(u8),
     #[error("LIFECYCLE_EDGE_DERIVED_ONLY: {0}")]
     EdgeDerivedOnly(&'static str),
@@ -213,7 +232,7 @@ impl LifecycleRefusal {
     pub fn code(&self) -> &'static str {
         match self {
             Self::KindUnknown(_) => "LIFECYCLE_KIND_UNKNOWN",
-            Self::TraceDepth(_) => "LIFECYCLE_TRACE_DEPTH",
+            Self::TraceDepth(_) => "LIFECYCLE_DEPTH_INVALID",
             Self::EdgeDerivedOnly(_) => "LIFECYCLE_EDGE_DERIVED_ONLY",
             Self::EndpointUnknown(_) => "LIFECYCLE_ENDPOINT_UNKNOWN",
             Self::ReleaseHeadUnknown(_) => "RELEASE_HEAD_UNKNOWN",
@@ -1505,6 +1524,28 @@ pub struct LifecycleTraceAnswer {
     pub records: Vec<TraceRecord>,
     pub edges: Vec<TraceEdge>,
     pub truncated: bool,
+    /// The digest of the resolved decision policy whose knobs bounded the walk
+    /// (MEDULLA-SDLC-R006.5).
+    #[serde(default)]
+    pub policy_digest: String,
+}
+
+/// Check one trace request against the resolved limits before the walk reads the graph
+/// (MEDULLA-SDLC-R006.4): a depth above the `lifecycle.trace_max_depth` ceiling refuses
+/// `LIFECYCLE_DEPTH_INVALID`; the lower bound was checked at decode.
+pub fn handle_lifecycle_trace(
+    request: LifecycleTraceRequest,
+    limits: TraceLimits,
+) -> Result<LifecycleTraceRequest, LifecycleRefusal> {
+    if request.depth < 1 || request.depth > limits.max_depth {
+        return Err(LifecycleRefusal::TraceDepth(request.depth));
+    }
+    if request.anchor.trim().is_empty() {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a trace names its anchor".to_owned(),
+        ));
+    }
+    Ok(request)
 }
 
 /// The changeset node an accept writes as the endpoint of every derived edge of the

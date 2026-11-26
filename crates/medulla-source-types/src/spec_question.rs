@@ -23,14 +23,32 @@ pub enum SpecQuestion {
     ChangesAdvancingGoal,
     /// The next task of one phase that nothing blocks.
     NextUnblockedTask,
+    /// Requirement rows with no `verifiedBy` edge (MEDULLA-SDLC-R006.3).
+    UnboundRequirements,
+    /// The deployments a requirement reaches through the symbols that implement it, the
+    /// changesets that change them and the releases that contain those (MEDULLA-SDLC-R006.3).
+    DeploymentOfRequirement,
+    /// Open defects whose affected symbol lies in a changeset one release contains
+    /// (MEDULLA-SDLC-R006.3).
+    OpenDefectsInRelease,
+    /// The changesets one deployment's release contains and another's does not
+    /// (MEDULLA-SDLC-R006.3).
+    ChangesetsBetweenDeployments,
 }
 
 impl SpecQuestion {
-    /// Whether the question takes a subject: the phase, the goal id or the changeset id.
+    /// Whether the question takes a subject: the phase, the goal id, the changeset id, the
+    /// requirement or release node id, or `<deployment>,<deployment>` for the two deployments
+    /// compared.
     pub fn takes_subject(self) -> bool {
         matches!(
             self,
-            Self::PrinciplesAtRisk | Self::ChangesAdvancingGoal | Self::NextUnblockedTask
+            Self::PrinciplesAtRisk
+                | Self::ChangesAdvancingGoal
+                | Self::NextUnblockedTask
+                | Self::DeploymentOfRequirement
+                | Self::OpenDefectsInRelease
+                | Self::ChangesetsBetweenDeployments
         )
     }
 }

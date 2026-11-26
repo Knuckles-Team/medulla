@@ -478,6 +478,14 @@ $($variants)*
         subject: Option<String>,
         graph: String,
     },
+    /// Walk the derived lifecycle edges from one anchor record (MEDULLA-SDLC-R006.3): breadth
+    /// first to `depth`, filtered by `kinds`, bounded by the `lifecycle.trace_max_depth` and
+    /// `lifecycle.trace_node_budget` knobs of the request's policy. A depth outside 1 and the
+    /// ceiling refuses `LIFECYCLE_DEPTH_INVALID`; an anchor the caller cannot see answers no
+    /// records. Reads only.
+    LifecycleTrace {
+        request: medulla_source_types::lifecycle::LifecycleTraceRequest,
+    },
     /// Read the derived state of every requirement row of `repo` at the changeset `rev`
     /// (MEDULLA-SDLC-R005.3), from the `:Requirement`, changeset and test-binding records
     /// the caller can see in `graph`. `spec_id` keeps only the rows of that spec. A `rev` the
