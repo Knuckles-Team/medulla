@@ -2492,6 +2492,13 @@ path = "benches/harness_components.rs"
 harness = false
 required-features = ["server"]
 
+# MEDULLA-SCM-R013.7: one symbol edit in a 5,000-line file, including the re-parse (p99 at most 30 ms): nightly.
+[[bench]]
+name = "source_symbol_edit"
+path = "benches/source_symbol_edit.rs"
+harness = false
+required-features = ["server"]
+
 [[bench]]
 name = "harness_lessons"
 path = "benches/harness_lessons.rs"
