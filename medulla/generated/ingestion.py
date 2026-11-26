@@ -821,6 +821,8 @@ decode_data_prep_declaration_read = contract_decoder(
 )
 send_transcript_read = contract_sender("TranscriptRead", "MethodTranscriptReadParams")
 send_quarantine_read = contract_sender("QuarantineRead", "MethodQuarantineReadParams")
+send_ontology_slice = contract_sender("OntologySlice", "MethodOntologySliceParams")
+decode_ontology_slice = contract_decoder("OntologySlice", "OntologySlice")
 
 
 def decode_transcript_read(result: OpaqueResult) -> TranscriptReadView:

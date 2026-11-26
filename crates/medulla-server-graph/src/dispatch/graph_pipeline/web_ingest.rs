@@ -5,7 +5,9 @@
 //! lookup. Enrichment reads one RLS-visible Document, embeds off the reactor
 //! and commits its write-set through the existing ChangeEnvelope authority,
 //! exactly like a scoped `IndexRepository`. Selection reads the visible
-//! `Document` rows and answers; it writes nothing.
+//! `Document` rows and answers; it writes nothing. `OntologySlice`
+//! (MEDULLA-INGEST-WORKER-R913.1) reads the request graph's admitted ontology and answers the
+//! classes and properties one text unit needs; it reads no row and writes nothing.
 
 #[cfg(all(feature = "query", feature = "modality-serving"))]
 use super::repository_index::commit_context;
@@ -17,8 +19,52 @@ pub async fn route_web_ingest(ctx: GraphOpRouting<'_>, method: Method) -> Result
         Method::EnrichDocument { request } => Ok(enrich(ctx, *request).await),
         Method::SelectWebPages { request } => Ok(select(ctx, *request).await),
         Method::SemanticEnrich { op } => Ok(super::semantic_enrichment::serve(ctx, *op).await),
+        Method::OntologySlice { request } => Ok(slice_ontology(&ctx, &request)),
         other => Err(other),
     }
+}
+
+/// Serve `OntologySlice` over the request graph's schema sources, embedding class texts with the
+/// one text embedder the Uql path binds when the request carries the unit's embedding.
+#[cfg(all(feature = "query", feature = "decide", feature = "blob"))]
+fn slice_ontology(
+    ctx: &GraphOpRouting<'_>,
+    request: &medulla_ingestion_types::ingestion_wire::OntologySliceRequest,
+) -> Response {
+    let embedder = medulla_server_ops::api::query_txn::query_support::uql_text_embedder();
+    let embed = |text: &str| match embedder {
+        Some(embedder) => embedder.embed(text),
+        None => Err("no text embedder is bound".to_string()),
+    };
+    let bound: Option<medulla_h_ingest::ontology_slice::SliceEmbedder<'_>> = if embedder.is_some() {
+        Some(&embed)
+    } else {
+        None
+    };
+    match medulla_h_ingest::ontology_slice::slice_for_unit(
+        ctx.core.schema_sources().as_ref(),
+        request,
+        bound,
+    ) {
+        Ok(slice) => Response::ok(
+            ctx.req_id,
+            ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::OntologySlice>(
+                slice,
+            ),
+        ),
+        Err(refusal) => Response::err(ctx.req_id, refusal.message()),
+    }
+}
+
+#[cfg(not(all(feature = "query", feature = "decide", feature = "blob")))]
+fn slice_ontology(
+    ctx: &GraphOpRouting<'_>,
+    _request: &medulla_ingestion_types::ingestion_wire::OntologySliceRequest,
+) -> Response {
+    Response::err(
+        ctx.req_id,
+        "METHOD_NOT_YET_SERVED: the ontology slice requires the query, decide and blob features",
+    )
 }
 
 #[cfg(all(feature = "query", feature = "modality-serving"))]

@@ -745,6 +745,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "MEMSYNC_VERSION_MALFORMED",
         ],
     ),
+    // MEDULLA-INGEST-WORKER-R913.2: a graph with no admitted ontology refuses the slice.
+    ("OntologySlice", &["ONTOLOGY_HIERARCHY_CYCLE", "ONTOLOGY_NOT_ADMITTED"]),
     (
         "SelectWebPages",
         &[

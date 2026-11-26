@@ -281,6 +281,8 @@ pub const SCOPES: &[ScopeEntry] = &[
     entry("source:ingest", User, "engine"),
     // MEDULLA-INGEST-WORKER-R003.17.1: the stored quarantine evidence read.
     entry("source:quarantine:read", User, "engine"),
+    // MEDULLA-INGEST-WORKER-R913.3: the ontology slice read.
+    entry("source:read", User, "engine"),
     entry("source:sync", User, "engine"),
     // MEDULLA-INGEST-WORKER-R003.17.1: the stored transcript read.
     entry("source:transcript:read", User, "engine"),

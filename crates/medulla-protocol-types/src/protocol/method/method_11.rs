@@ -741,6 +741,13 @@ $($variants)*
         #[serde(default, skip_serializing_if = "Option::is_none")]
         limit: Option<u32>,
     },
+    /// MEDULLA-INGEST-WORKER-R913.1: the classes and properties of the request graph's admitted
+    /// ontology that one text unit needs, so the SDK worker's extraction prompt stays small. A
+    /// small ontology is returned whole. Scope `source:read`. Reads only. Refusals:
+    /// `INVALID_ARGUMENT`, `ONTOLOGY_NOT_ADMITTED`.
+    OntologySlice {
+        request: Box<medulla_ingestion_types::ingestion_wire::OntologySliceRequest>,
+    },
     /// MEDULLA-INGEST-WORKER-R003.17.1: read the stored evidence of one quarantined batch. Needs
     /// the stored policy action `source:quarantine:read`, held exactly, whatever the caller's
     /// tenant membership.

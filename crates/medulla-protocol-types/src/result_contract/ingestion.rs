@@ -80,6 +80,8 @@ method_results! {
     // MEDULLA-INGEST-WORKER-R003.17.1: the stored transcript page and the stored quarantine evidence.
     TranscriptRead(TranscriptRead) => Raw<medulla_source_types::source_transcript::TranscriptReadView>;
     QuarantineRead(QuarantineRead) => Raw<medulla_source_types::source_document::QuarantineReadView>;
+    // MEDULLA-INGEST-WORKER-R913.1: the ontology slice of one extraction unit.
+    OntologySlice(OntologySlice) => Raw<medulla_ingestion_types::ingestion_wire::OntologySlice>;
     // MEDULLA-UNIFIED-DATA-PLANE-R651.3/.5: what one committed cascade deleted.
     DocumentDelete(DocumentDelete) => Raw<medulla_query_types::document_ops::DocumentDeleteReceipt>;
     // EH-408 / EH-409: counts plus the id of every fact node written.

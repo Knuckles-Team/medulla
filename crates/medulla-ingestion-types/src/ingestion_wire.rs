@@ -568,6 +568,109 @@ impl DiscoverPlanRequest {
     }
 }
 
+/// Longest `unit_text` of an [`OntologySliceRequest`], in bytes (MEDULLA-INGEST-WORKER-R913.1).
+pub const ONTOLOGY_SLICE_UNIT_MAX_BYTES: usize = 65_536;
+/// Classes a slice returns when the request names no `max_classes`.
+pub const ONTOLOGY_SLICE_DEFAULT_CLASSES: u32 = 32;
+/// Most classes one slice may ask for.
+pub const ONTOLOGY_SLICE_MAX_CLASSES: u32 = 256;
+/// Most floats one `unit_embedding` may hold.
+pub const ONTOLOGY_SLICE_EMBEDDING_MAX_DIMENSIONS: usize = 8_192;
+
+fn default_slice_classes() -> u32 {
+    ONTOLOGY_SLICE_DEFAULT_CLASSES
+}
+
+/// What the SDK worker sends for one text unit of an extraction run
+/// (MEDULLA-INGEST-WORKER-R913.1): the unit, its embedding when the worker holds one, and the most
+/// classes it wants back.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OntologySliceRequest {
+    /// The text the classes are scored against: 1 to [`ONTOLOGY_SLICE_UNIT_MAX_BYTES`] bytes.
+    pub unit_text: String,
+    /// The unit's vector in the space of the engine's text embedder. Absent: lexical scoring only.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unit_embedding: Option<Vec<f32>>,
+    /// 1 to [`ONTOLOGY_SLICE_MAX_CLASSES`]; default [`ONTOLOGY_SLICE_DEFAULT_CLASSES`].
+    #[serde(default = "default_slice_classes")]
+    pub max_classes: u32,
+}
+
+impl OntologySliceRequest {
+    /// The refusal detail of an argument outside its bound (wire code `INVALID_ARGUMENT`,
+    /// MEDULLA-INGEST-WORKER-R913.2). Checked before the ontology is read.
+    pub fn validate(&self) -> Result<(), String> {
+        if self.unit_text.trim().is_empty() {
+            return Err("unit_text must not be empty".to_string());
+        }
+        if self.unit_text.len() > ONTOLOGY_SLICE_UNIT_MAX_BYTES {
+            return Err(format!(
+                "unit_text is {} bytes; the limit is {ONTOLOGY_SLICE_UNIT_MAX_BYTES}",
+                self.unit_text.len()
+            ));
+        }
+        if !(1..=ONTOLOGY_SLICE_MAX_CLASSES).contains(&self.max_classes) {
+            return Err(format!(
+                "max_classes {} is outside 1 to {ONTOLOGY_SLICE_MAX_CLASSES}",
+                self.max_classes
+            ));
+        }
+        if let Some(embedding) = &self.unit_embedding {
+            if embedding.is_empty() || embedding.len() > ONTOLOGY_SLICE_EMBEDDING_MAX_DIMENSIONS {
+                return Err(format!(
+                    "unit_embedding must hold 1 to {ONTOLOGY_SLICE_EMBEDDING_MAX_DIMENSIONS} values"
+                ));
+            }
+            if embedding.iter().any(|value| !value.is_finite()) {
+                return Err("unit_embedding must hold finite values".to_string());
+            }
+        }
+        Ok(())
+    }
+}
+
+/// One class of an [`OntologySlice`].
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SliceClass {
+    pub iri: String,
+    /// The `rdfs:label`, or the local name when the class has none.
+    pub label: String,
+    /// The `rdfs:comment`, or empty.
+    pub description: String,
+}
+
+/// One property of an [`OntologySlice`], with the classes it connects.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SliceProperty {
+    pub iri: String,
+    pub label: String,
+    /// The `rdfs:domain` classes, sorted.
+    pub domains: Vec<String>,
+    /// The `rdfs:range` classes or datatypes, sorted.
+    pub ranges: Vec<String>,
+}
+
+/// The classes and properties of the tenant ontology that one text unit needs
+/// (MEDULLA-INGEST-WORKER-R913.1).
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct OntologySlice {
+    /// At most `max_classes` classes, best match first; every class of the ontology, in IRI order,
+    /// when `bypassed`.
+    pub classes: Vec<SliceClass>,
+    /// Every property whose domain or range is a returned class or a superclass of one, in IRI order.
+    pub properties: Vec<SliceProperty>,
+    /// True when the ontology holds `max_classes` classes or fewer, so the slice is all of it.
+    pub bypassed: bool,
+}
+
 /// Branch-aware `IndexRepository` fixtures shared by medulla-compute's projection
 /// tests and the root crate's durable repository-index test (EH-280). Enabled by
 /// the `test-support` feature, because `cfg(test)` does not cross a crate boundary.

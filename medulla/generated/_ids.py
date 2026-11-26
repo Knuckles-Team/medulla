@@ -542,6 +542,7 @@ METHOD_IDS = frozenset(
         "DataPrepDeclarationRead",
         "TranscriptRead",
         "QuarantineRead",
+        "OntologySlice",
         "DataPrepDeclare",
         "DataProductRegister",
         "DistributedCompute",

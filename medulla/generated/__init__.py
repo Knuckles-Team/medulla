@@ -215,6 +215,7 @@ SEND_BY_METHOD: dict[str, Callable[..., Awaitable[Any]]] = {
     "DataPrepDeclarationRead": ingestion.send_data_prep_declaration_read,
     "TranscriptRead": ingestion.send_transcript_read,
     "QuarantineRead": ingestion.send_quarantine_read,
+    "OntologySlice": ingestion.send_ontology_slice,
     "DataPrepDeclare": ingestion.send_data_prep_declare,
     "DataProductRegister": storage.send_data_product_register,
     "DecayMemories": graph.send_decay_memories,

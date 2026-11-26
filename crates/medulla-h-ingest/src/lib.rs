@@ -45,6 +45,10 @@ pub mod meeting_transcript;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod modality;
 
+/// The ontology slice one extraction unit needs (MEDULLA-INGEST-WORKER-R913).
+#[cfg(all(feature = "blob", feature = "decide"))]
+pub mod ontology_slice;
+
 /// Moved from the facade (MEDULLA-CONTRACT-R056).
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod repository_enrichment_worker;

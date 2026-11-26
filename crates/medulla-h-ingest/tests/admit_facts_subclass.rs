@@ -1,3 +1,4 @@
+#![cfg(all(feature = "redb", feature = "blob"))]
 //! The grounding cache reads the subclass closure (MEDULLA-INGEST-WORKER-R701.9).
 
 use std::collections::{BTreeMap, BTreeSet};

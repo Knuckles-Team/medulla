@@ -430,6 +430,10 @@ pub(super) const REASON_GRAPH_SCHEMA_VOCABULARY: &str =
 // shapes; no GraphView or row is ever constructed.
 pub(super) const REASON_ONTOLOGY_SCHEMA_DOCUMENTS: &str =
     "OntologyInspect parses caller-supplied Turtle or the request graph's composed GraphSchema source documents behind validation:read (the scope ShaclValidate needs to apply the same composed shapes) -- schema documents, never a GraphView/core.analysis_snapshot() row read";
+// MEDULLA-INGEST-WORKER-R913.1: the slice reads the request graph's admitted ontology documents
+// and scores their classes against the caller's text; the graph's rows are never read.
+pub(super) const REASON_ONTOLOGY_SLICE: &str =
+    "OntologySlice scores the classes of the request graph's admitted ontology documents against the caller-supplied unit text behind source:read -- schema vocabulary, never a GraphView/core.analysis_snapshot() row read";
 // `OntologyCanonicalHash` canonicalizes and hashes the caller-supplied Turtle
 // payload alone: no graph, schema source or row is read.
 pub(super) const REASON_ONTOLOGY_CANONICAL_HASH: &str =
@@ -586,6 +590,8 @@ pub(super) const NON_ROW_SCOPED: &[(&str, &str)] = &[
     ("GraphSchemaClasses", REASON_GRAPH_SCHEMA_VOCABULARY),
     // REASON_ONTOLOGY_SCHEMA_DOCUMENTS
     ("OntologyInspect", REASON_ONTOLOGY_SCHEMA_DOCUMENTS),
+    // REASON_ONTOLOGY_SLICE
+    ("OntologySlice", REASON_ONTOLOGY_SLICE),
     ("OntologyCanonicalHash", REASON_ONTOLOGY_CANONICAL_HASH),
     // REASON_SOURCE_INGESTION_MARKER
     ("SourceIngestStatus", REASON_SOURCE_INGESTION_MARKER),

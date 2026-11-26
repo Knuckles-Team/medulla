@@ -16084,6 +16084,13 @@ class MethodDataPrepDeclarationRead(BaseModel):
     params: MethodDataPrepDeclarationReadParams
 
 
+class MethodOntologySlice(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["OntologySlice"]
+    params: MethodOntologySliceParams
+
+
 class MethodQuarantineRead(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17685,6 +17692,7 @@ Method = Annotated[
         MethodDataPrepDeclare,
         MethodTranscriptRead,
         MethodQuarantineRead,
+        MethodOntologySlice,
         MethodDocumentDelete,
         MethodFinanceAlertRaise,
         MethodFinanceFactorRecord,
@@ -34672,6 +34680,39 @@ class DataPrepDeclaration(BaseModel):
     policy_digest: Digest256
 
 
+class OntologySliceRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    max_classes: Annotated[int, Field(ge=0)] = 32
+    unit_embedding: list[float] | None = None
+    unit_text: str
+
+
+class SliceClass(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    description: str
+    iri: str
+    label: str
+
+
+class SliceProperty(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    domains: list[str]
+    iri: str
+    label: str
+    ranges: list[str]
+
+
+class OntologySlice(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    bypassed: bool
+    classes: list[SliceClass]
+    properties: list[SliceProperty]
+
+
 class DataPrepDeclarationReadRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -35771,6 +35812,12 @@ class MethodDataPrepDeclarationReadParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     request: DataPrepDeclarationReadRequest
+
+
+class MethodOntologySliceParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: OntologySliceRequest
 
 
 class MethodQuarantineReadParams(BaseModel):
@@ -45708,6 +45755,12 @@ __all__ = [
     "MethodDataPrepDeclarationReadParams",
     "MethodTranscriptRead",
     "MethodTranscriptReadParams",
+    "MethodOntologySlice",
+    "MethodOntologySliceParams",
+    "OntologySlice",
+    "OntologySliceRequest",
+    "SliceClass",
+    "SliceProperty",
     "MethodQuarantineRead",
     "MethodQuarantineReadParams",
     "MethodDataPrepDeclare",
