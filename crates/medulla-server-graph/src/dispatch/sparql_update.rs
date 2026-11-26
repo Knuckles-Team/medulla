@@ -824,6 +824,30 @@ pub async fn coordinated_sparql_http_update(
     run_coordinated_sparql_http_update(&coord, &query, default_graph).await
 }
 
+/// Write one RDF body to one graph (MEDULLA-FEDERATED-QUERY-R740.3). `query` is the JSON
+/// envelope `{media_type, mode, body}` of the `RDF_GRAPH_WRITE_EVENT`.
+///
+/// The body is parsed by the function the graph-store route calls, so both entries refuse
+/// the same bodies with the same codes before anything is planned. The resulting update
+/// text then commits through [`coordinated_sparql_http_update`]: there is no second write
+/// path, and an unauthorized caller refuses `SPARQL_UPDATE_FORBIDDEN` there.
+#[cfg(feature = "sparql-http")]
+pub async fn coordinated_rdf_graph_write(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    caller: Option<&str>,
+    verified_context: &VerifiedRequestContext,
+    graph: &str,
+    query: String,
+) -> Response {
+    let update = match medulla_server_blob::sparql_http::rdf_graph_write_event_update(&query, graph)
+    {
+        Ok(update) => update,
+        Err(refusal) => return Response::err(req_id, refusal.message()),
+    };
+    coordinated_sparql_http_update(state, req_id, caller, verified_context, graph, update).await
+}
+
 #[cfg(all(
     feature = "sparql-http",
     not(all(feature = "redb", feature = "security"))

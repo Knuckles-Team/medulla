@@ -159,6 +159,13 @@ $($variants)*
         /// node budget; `analytical` submits a durable job and answers its record.
         #[serde(default, skip_serializing_if = "medulla_query_types::wire::LatencyClass::is_interactive")]
         latency_class: medulla_query_types::wire::LatencyClass,
+        /// MEDULLA-FEDERATED-QUERY-R740.2: when set and the query is `CONSTRUCT` or
+        /// `DESCRIBE`, the result carries `graph_body`, the constructed graph serialized in this
+        /// media type. One of the six RDF media types (N-Triples, Turtle, N-Quads, TriG,
+        /// JSON-LD, RDF/XML); any other value refuses `RDF_MEDIA_TYPE_UNSUPPORTED` before
+        /// the query runs. Unset leaves the result unchanged.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        graph_media_type: Option<String>,
     },
 
     /// OBDA / R2RML VIRTUAL GRAPH query (CONCEPT:MEDULLA-KG.query.r2rml-virtual-graph /

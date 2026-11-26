@@ -28,6 +28,8 @@ pub use oxrdf;
 pub mod archimate_types;
 
 #[cfg(feature = "rdf")]
+pub mod graph_media;
+#[cfg(feature = "rdf")]
 pub mod mapping;
 
 #[cfg(feature = "rdf")]

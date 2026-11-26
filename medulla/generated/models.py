@@ -21139,6 +21139,7 @@ class MethodSparqlParams(BaseModel):
 
     base_iri: str | None = None
     explain: bool | None = None
+    graph_media_type: str | None = None
     latency_class: LatencyClass | None = None
     query: str
     requires_packs: list[str] = Field(default_factory=list)
@@ -28371,6 +28372,7 @@ class SparqlProofCoverage(str, Enum):
 class SparqlResult(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    graph_body: str | None = None
     proofs: list[SparqlRowProof]
     rows: list[list[str | None]]
     spatial: list[SparqlSpatialUse] = Field(default_factory=list)

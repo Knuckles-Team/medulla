@@ -747,7 +747,7 @@ def _check_mutation_cluster_inventory(
         )
     )
     require(
-        event_constants == {"SPARQL_HTTP_UPDATE_EVENT"},
+        event_constants == {"SPARQL_HTTP_UPDATE_EVENT", "RDF_GRAPH_WRITE_EVENT"},
         "coordinated ApplyMutation event inventory differs from the current served "
         "carriers: "
         f"observed={sorted(event_constants)}",

@@ -38,6 +38,7 @@ pub(super) async fn handle_sparql(
     proj: medulla_rdf::sparql::Projection,
     mode: SparqlProofMode,
     max_solutions: usize,
+    graph_media_type: Option<&'static str>,
     #[cfg(feature = "security")] caller: &str,
     #[cfg(feature = "security")] rls: &Arc<medulla_isolation::isolation::IsolationLayer>,
 ) -> Response {
@@ -79,7 +80,7 @@ pub(super) async fn handle_sparql(
     #[cfg(feature = "result-cache")]
     let cache_key = {
         let mut key = format!(
-            "{query}\u{0}{:?}\u{0}{}\u{0}{mode:?}",
+            "{query}\u{0}{:?}\u{0}{}\u{0}{mode:?}\u{0}{graph_media_type:?}",
             proj.base_iri, proj.camel_type
         );
         if let Some(usage) = &proj.usage {
@@ -125,7 +126,7 @@ pub(super) async fn handle_sparql(
     evaluate_sparql(
         req_id,
         (snap, pack_views),
-        (query, proj, mode, max_solutions),
+        (query, proj, mode, max_solutions, graph_media_type),
         #[cfg(feature = "result-cache")]
         core,
         #[cfg(feature = "result-cache")]
@@ -265,11 +266,12 @@ fn sparql_snapshot_uncached(
 async fn evaluate_sparql(
     req_id: u64,
     (snap, pack_views): (Arc<GraphView>, Vec<Arc<GraphView>>),
-    (query, proj, mode, max_solutions): (
+    (query, proj, mode, max_solutions, graph_media_type): (
         String,
         medulla_rdf::sparql::Projection,
         SparqlProofMode,
         usize,
+        Option<&'static str>,
     ),
     #[cfg(feature = "result-cache")] core: Arc<GraphCore>,
     #[cfg(feature = "result-cache")] hash: u128,
@@ -286,7 +288,7 @@ async fn evaluate_sparql(
             &query,
             &proj,
             mode,
-            max_solutions,
+            (max_solutions, graph_media_type),
         )
     })
     .await
@@ -327,21 +329,47 @@ fn sparql_refusal(msg: String) -> String {
     }
 }
 
+/// The graph of a `CONSTRUCT` or `DESCRIBE` outcome serialized in `media_type`; `None` for any
+/// other outcome or when no media type was asked for.
+fn graph_body_of(
+    outcome: &medulla_rdf::sparql::QueryOutcome,
+    media_type: Option<&'static str>,
+) -> Result<Option<String>, String> {
+    match (outcome, media_type) {
+        (medulla_rdf::sparql::QueryOutcome::Graph(triples), Some(media_type)) => {
+            medulla_rdf::graph_media::serialize_graph(media_type, triples).map(Some)
+        }
+        _ => Ok(None),
+    }
+}
+
 /// Evaluate `query` and project it to the wire table, with a witness proof per row
-/// when `mode` asks for one.
+/// when `mode` asks for one. A `CONSTRUCT` or `DESCRIBE` answer also carries its graph
+/// serialized in `graph_media_type` when the request named one (MEDULLA-FEDERATED-QUERY-R740.2).
 fn run_sparql(
     ds: &medulla_rdf::sparql::Dataset,
     query: &str,
     proj: &medulla_rdf::sparql::Projection,
     mode: SparqlProofMode,
-    max_solutions: usize,
+    (max_solutions, graph_media_type): (usize, Option<&'static str>),
 ) -> Result<medulla_protocol_types::protocol::SparqlResult, String> {
-    let (table, proofs) = match mode {
-        SparqlProofMode::Rows => (
-            medulla_rdf::sparql::execute(ds, query, proj, None)?.into_table(),
-            Vec::new(),
-        ),
-        SparqlProofMode::RowsWithProofs => medulla_rdf::sparql::execute_explained(ds, query, proj)?,
+    let (table, proofs, graph_body) = match mode {
+        SparqlProofMode::Rows => {
+            let outcome = medulla_rdf::sparql::execute(ds, query, proj, None)?;
+            let body = graph_body_of(&outcome, graph_media_type)?;
+            (outcome.into_table(), Vec::new(), body)
+        }
+        SparqlProofMode::RowsWithProofs => {
+            let (table, proofs) = medulla_rdf::sparql::execute_explained(ds, query, proj)?;
+            let body = match graph_media_type {
+                Some(_) => graph_body_of(
+                    &medulla_rdf::sparql::execute(ds, query, proj, None)?,
+                    graph_media_type,
+                )?,
+                None => None,
+            };
+            (table, proofs, body)
+        }
     };
     let (vars, rows) = table.to_rows();
     // MEDULLA-FEDERATED-QUERY-R731: the interactive meter is the solution count before
@@ -362,5 +390,6 @@ fn run_sparql(
         rows,
         proofs,
         spatial,
+        graph_body,
     })
 }

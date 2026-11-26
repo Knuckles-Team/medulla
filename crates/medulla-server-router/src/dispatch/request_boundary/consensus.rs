@@ -130,6 +130,21 @@ pub async fn route_consensus_before_gateway(
                 )
                 .await
             }
+            #[cfg(feature = "sparql-http")]
+            Method::ApplyMutation { event_type, query }
+                if event_type
+                    == medulla_server_api::api::dispatch_support::RDF_GRAPH_WRITE_EVENT =>
+            {
+                coordinated_rdf_graph_write(
+                    state,
+                    req.id,
+                    req.agent_id.as_deref(),
+                    verified_context,
+                    &req.graph,
+                    query,
+                )
+                .await
+            }
             _ => Response::err(req.id, "consensus fanout routing error"),
         });
     }

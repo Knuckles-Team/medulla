@@ -21,7 +21,9 @@ use medulla_server_graph::dispatch::graph_pipeline::dispatch_knowledge_stream;
 use medulla_server_graph::dispatch::graph_pipeline::dispatch_served_modality;
 use medulla_server_graph::dispatch::request_boundary::screen::decode_screen_observation;
 #[cfg(feature = "sparql-http")]
-use medulla_server_graph::dispatch::sparql_update::coordinated_sparql_http_update;
+use medulla_server_graph::dispatch::sparql_update::{
+    coordinated_rdf_graph_write, coordinated_sparql_http_update,
+};
 use medulla_server_graph::{
     dispatch::change_envelope::dispatch_change_envelopes,
     dispatch::change_envelope::multi_graph_batch_update,
@@ -132,6 +134,22 @@ async fn dispatch_sparql_http_update(
                 == medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT =>
         {
             coordinated_sparql_http_update(
+                state,
+                req.id,
+                req.agent_id.as_deref(),
+                verified_context,
+                &req.graph,
+                query,
+            )
+            .await
+        }
+        // MEDULLA-FEDERATED-QUERY-R740.3: one RDF body written to one graph arrives as an
+        // `ApplyMutation` whose event type is the RDF graph write marker; it parses with the
+        // function the graph-store route uses and commits through the same coordinator.
+        Method::ApplyMutation { event_type, query }
+            if event_type == medulla_server_api::api::dispatch_support::RDF_GRAPH_WRITE_EVENT =>
+        {
+            coordinated_rdf_graph_write(
                 state,
                 req.id,
                 req.agent_id.as_deref(),

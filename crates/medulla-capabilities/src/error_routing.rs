@@ -232,6 +232,19 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "PACK_NOT_IMPORTED",
             // MEDULLA-FEDERATED-QUERY-R731: an interactive query past its node budget.
             "QUERY_BUDGET_EXCEEDED",
+            // MEDULLA-FEDERATED-QUERY-R740.2: a `graph_media_type` outside the six.
+            "RDF_MEDIA_TYPE_UNSUPPORTED",
+        ],
+    ),
+    // MEDULLA-FEDERATED-QUERY-R740.1: the graph write of one RDF body refuses by media type,
+    // by parse, by a quad of another graph and by size.
+    (
+        "ApplyMutation",
+        &[
+            "RDF_MEDIA_TYPE_UNSUPPORTED",
+            "RDF_PARSE_FAILED",
+            "RDF_DATASET_GRAPH_MISMATCH",
+            "RDF_BODY_TOO_LARGE",
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R705.4: feedback on an unreadable document, and the

@@ -15036,6 +15036,7 @@ class RdfClient:
         explain: bool = False,
         requires_packs: list[str] | None = None,
         latency_class: str = "interactive",
+        graph_media_type: str | None = None,
     ) -> SparqlResult:
         """Run a SPARQL ``SELECT`` and return the engine's typed ``SparqlResult``
         (EH-377): ``vars``, ``rows`` aligned to them, and one witness proof per row
@@ -15043,12 +15044,21 @@ class RdfClient:
         model, so a result the contract does not declare raises
         ``ContractViolation`` instead of reaching the caller as an untyped dict.
         Arguments are those of :meth:`sparql`.
+
+        ``graph_media_type`` names one of the six RDF media types
+        (``application/n-triples``, ``text/turtle``, ``application/n-quads``,
+        ``application/trig``, ``application/ld+json``, ``application/rdf+xml``). For
+        a ``CONSTRUCT`` or ``DESCRIBE`` query the result then carries ``graph_body``,
+        the constructed graph serialized in that type; any other value refuses
+        ``RDF_MEDIA_TYPE_UNSUPPORTED`` before the query runs.
         """
         params: dict[str, Any] = {
             "query": query,
             "base_iri": base_iri,
             "type_convention": type_convention,
         }
+        if graph_media_type is not None:
+            params["graph_media_type"] = graph_media_type
         if explain:
             params["explain"] = True
         if requires_packs:

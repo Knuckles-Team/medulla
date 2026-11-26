@@ -9,7 +9,9 @@ use medulla_server_graph::dispatch::request_boundary::preflight::preflight_reque
 use medulla_server_graph::dispatch::shared::timed_read;
 use medulla_server_graph::dispatch::shared::validate_graph_create_type;
 #[cfg(all(feature = "sparql-http", feature = "raft"))]
-use medulla_server_graph::dispatch::sparql_update::coordinated_sparql_http_update;
+use medulla_server_graph::dispatch::sparql_update::{
+    coordinated_rdf_graph_write, coordinated_sparql_http_update,
+};
 
 pub mod authorization;
 #[cfg(feature = "raft")]

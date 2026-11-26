@@ -189,6 +189,7 @@ async fn execute_rdf(
                 explain: false,
                 requires_packs: Vec::new(),
                 latency_class: Default::default(),
+                graph_media_type: None,
             },
             #[cfg(feature = "security")]
             rls,

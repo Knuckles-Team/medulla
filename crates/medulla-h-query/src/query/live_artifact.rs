@@ -361,6 +361,7 @@ pub(super) async fn sparql_response(
         explain: false,
         requires_packs: Vec::new(),
         latency_class: Default::default(),
+        graph_media_type: None,
     };
     let handler_ctx = TryHandleContext {
         req_id: ctx.req_id,

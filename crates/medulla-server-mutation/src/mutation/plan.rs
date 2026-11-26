@@ -949,12 +949,21 @@ pub const LOCAL_ONLY_CLUSTER_REFUSAL: &str =
 pub const COORDINATED_APPLY_MUTATION_EVENTS: &[&str] = &[
     #[cfg(feature = "sparql-http")]
     medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT,
+    #[cfg(feature = "sparql-http")]
+    medulla_server_api::api::dispatch_support::RDF_GRAPH_WRITE_EVENT,
 ];
 
 #[cfg(feature = "sparql-http")]
 pub(crate) fn is_sparql_http_update(method: &Method) -> bool {
     matches!(method, Method::ApplyMutation { event_type, .. }
         if event_type == medulla_server_api::api::dispatch_support::SPARQL_HTTP_UPDATE_EVENT)
+}
+
+/// Whether `method` is the served graph write of one RDF body (MEDULLA-FEDERATED-QUERY-R740.3).
+#[cfg(feature = "sparql-http")]
+pub(crate) fn is_rdf_graph_write(method: &Method) -> bool {
+    matches!(method, Method::ApplyMutation { event_type, .. }
+        if event_type == medulla_server_api::api::dispatch_support::RDF_GRAPH_WRITE_EVENT)
 }
 
 pub(super) fn consensus_apply_is_authorized() -> bool {
@@ -1148,6 +1157,12 @@ fn cluster_mutation_route_consensus(method: &Method) -> Option<ClusterMutationRo
     }
     #[cfg(feature = "sparql-http")]
     if is_sparql_http_update(method) {
+        return Some(ClusterMutationRoute::ConsensusFanout);
+    }
+    // The graph write of one RDF body commits through the same update coordinator, so it
+    // fans out the same way (MEDULLA-FEDERATED-QUERY-R740.3).
+    #[cfg(feature = "sparql-http")]
+    if is_rdf_graph_write(method) {
         return Some(ClusterMutationRoute::ConsensusFanout);
     }
     if matches!(method, Method::MultiGraphBatchUpdate { .. }) {

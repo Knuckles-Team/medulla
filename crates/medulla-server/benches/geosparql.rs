@@ -155,6 +155,7 @@ impl Served {
                     explain: false,
                     requires_packs: Vec::new(),
                     latency_class: Default::default(),
+                    graph_media_type: None,
                 },
             )
             .await;

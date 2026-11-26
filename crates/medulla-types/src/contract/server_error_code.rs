@@ -287,6 +287,14 @@ closed_error_codes! {
         ProjectionReadOnly => "PROJECTION_READ_ONLY",
         /// A SPARQL update by a caller without write access to a graph it names (MEDULLA-FEDERATED-QUERY-R707.4).
         SparqlUpdateForbidden => "SPARQL_UPDATE_FORBIDDEN",
+        /// A graph write names a media type that is none of the six RDF media types (MEDULLA-FEDERATED-QUERY-R740.1).
+        RdfMediaTypeUnsupported => "RDF_MEDIA_TYPE_UNSUPPORTED",
+        /// A graph write body does not parse as its media type (MEDULLA-FEDERATED-QUERY-R740.1).
+        RdfParseFailed => "RDF_PARSE_FAILED",
+        /// A quad of a graph write names a graph other than the default graph and the target graph (MEDULLA-FEDERATED-QUERY-R740.1).
+        RdfDatasetGraphMismatch => "RDF_DATASET_GRAPH_MISMATCH",
+        /// A graph write body holds more than 1,000,000 triples (MEDULLA-FEDERATED-QUERY-R740.1).
+        RdfBodyTooLarge => "RDF_BODY_TOO_LARGE",
         // MEDULLA-DURABLE-KERNEL-R038.3: a namespace declaration refusal.
         DurabilityClassMismatch => "DURABILITY_CLASS_MISMATCH",
         DurabilityClassUnknown => "DURABILITY_CLASS_UNKNOWN",

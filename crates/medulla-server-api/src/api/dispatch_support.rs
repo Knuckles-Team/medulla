@@ -143,6 +143,12 @@ pub fn outbound_http_config() -> ureq::config::ConfigBuilder<ureq::typestate::Ag
 /// Current typed event carried by the signed `ApplyMutation` protocol method.
 pub const SPARQL_HTTP_UPDATE_EVENT: &str = "sparql_http_update_v1";
 
+/// Typed event of the signed `ApplyMutation` method that writes one graph from an RDF body
+/// in one of the six media types (MEDULLA-FEDERATED-QUERY-R740.3). Its `query` is one JSON
+/// object `{media_type, mode, body}` with `mode` `replace` or `merge`; the write commits
+/// through the SPARQL update coordinator.
+pub const RDF_GRAPH_WRITE_EVENT: &str = "rdf_graph_write";
+
 #[cfg(test)]
 mod tests {
     use super::{pseudonymous_broker_actor, validate_direct_wire_security};

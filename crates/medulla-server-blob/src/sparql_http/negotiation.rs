@@ -12,40 +12,9 @@ pub(super) const SELECT_FORMS: &[&str] = &[
     "text/tab-separated-values",
 ];
 
-/// Candidate CONSTRUCT/DESCRIBE output media types, DEFAULT (N-Triples) first.
-#[cfg(feature = "rdf-xml")]
-pub(super) const GRAPH_FORMS: &[&str] = &[
-    "application/n-triples",
-    "text/turtle",
-    "application/n-quads",
-    "application/trig",
-    "application/ld+json",
-    "application/rdf+xml",
-];
-
-#[cfg(not(feature = "rdf-xml"))]
-pub(super) const GRAPH_FORMS: &[&str] = &[
-    "application/n-triples",
-    "text/turtle",
-    "application/n-quads",
-    "application/trig",
-    "application/ld+json",
-];
-
-pub(super) fn serialize_graph(
-    ct: &str,
-    triples: &[medulla_rdf::oxrdf::Triple],
-) -> Result<String, String> {
-    match ct {
-        "text/turtle" => medulla_rdf::mapping::to_turtle(triples),
-        "application/n-quads" => medulla_rdf::mapping::to_nquads(triples, None),
-        "application/trig" => medulla_rdf::mapping::to_trig(triples, None),
-        "application/ld+json" => medulla_rdf::jsonld::to_jsonld(triples, None, None),
-        #[cfg(feature = "rdf-xml")]
-        "application/rdf+xml" => medulla_rdf::mapping::to_rdfxml(triples),
-        _ => medulla_rdf::mapping::to_ntriples(triples),
-    }
-}
+/// Candidate CONSTRUCT/DESCRIBE output media types, DEFAULT (N-Triples) first: the six RDF
+/// media types the engine reads and writes (MEDULLA-FEDERATED-QUERY-R740).
+pub use medulla_rdf::graph_media::{serialize_graph, GRAPH_MEDIA_TYPES as GRAPH_FORMS};
 
 /// Serialize a query outcome in the negotiated media type: solutions and booleans
 /// as SPARQL results, a constructed graph as RDF.

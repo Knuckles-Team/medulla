@@ -161,6 +161,7 @@ async fn try_handle_sparql(
             explain,
             requires_packs,
             latency_class,
+            graph_media_type,
         } => {
             // MEDULLA-FEDERATED-QUERY-R731: an analytical query is submitted as a durable job
             // before it reaches this handler; one that arrives here is never run unbounded.
@@ -170,6 +171,24 @@ async fn try_handle_sparql(
                     "INVALID_ARGUMENT: an analytical query is submitted as a job, not run as a read",
                 ));
             }
+            // MEDULLA-FEDERATED-QUERY-R740.2: a graph media type outside the six refuses before
+            // the query runs.
+            let graph_media_type = match graph_media_type.as_deref() {
+                None => None,
+                Some(requested) => match medulla_rdf::graph_media::graph_media_type(requested) {
+                    Some(media_type) => Some(media_type),
+                    None => {
+                        return Some(Response::err(
+                            req_id,
+                            format!(
+                                "{}: `{requested}` is not one of the six RDF media types",
+                                medulla_types::contract::ServerErrorCode::RdfMediaTypeUnsupported
+                                    .as_str()
+                            ),
+                        ))
+                    }
+                },
+            };
             // MEDULLA-CQ-CONN-R084.7: a question that names the packs it reads abstains by
             // name when the caller's tenant has not imported one, before any query runs.
             match missing_required_pack(state, read_authority, requires_packs).await {
@@ -243,6 +262,7 @@ async fn try_handle_sparql(
                                     .query_interactive_node_budget,
                             )
                             .unwrap_or(usize::MAX),
+                            graph_media_type,
                             #[cfg(feature = "security")]
                             caller,
                             #[cfg(feature = "security")]

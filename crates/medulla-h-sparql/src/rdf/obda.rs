@@ -217,6 +217,7 @@ fn sparql_virtual(
         rows,
         proofs: Vec::new(),
         spatial: Vec::new(),
+        graph_body: None,
     })
 }
 

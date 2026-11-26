@@ -1198,6 +1198,15 @@ mod tests {
             }),
             ClusterMutationRoute::ConsensusFanout,
         );
+        #[cfg(feature = "sparql-http")]
+        assert_eq!(
+            cluster_mutation_route(&Method::ApplyMutation {
+                event_type: medulla_server_api::api::dispatch_support::RDF_GRAPH_WRITE_EVENT
+                    .to_string(),
+                query: String::new(),
+            }),
+            ClusterMutationRoute::ConsensusFanout,
+        );
         assert_eq!(
             cluster_mutation_route(&Method::MultiGraphBatchUpdate {
                 batches_msgpack: Vec::new(),

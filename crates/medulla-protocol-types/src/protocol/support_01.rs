@@ -306,6 +306,10 @@ pub struct SparqlResult {
     /// otherwise.
     #[serde(default)]
     pub spatial: Vec<medulla_query_types::rdf_report::SparqlSpatialUse>,
+    /// The constructed graph serialized in the request's `graph_media_type`, for a
+    /// `CONSTRUCT` or `DESCRIBE` query that asked for one (MEDULLA-FEDERATED-QUERY-R740.2).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub graph_body: Option<String>,
 }
 
 /// Materialized result of a `Method::OwlReason` run (CONCEPT:MEDULLA-KG.ontology.incremental-materialization). Returned via

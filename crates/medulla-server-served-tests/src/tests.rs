@@ -5431,6 +5431,7 @@ ex:carol a ex:Person ; ex:name "Carol" ; ex:age "40"^^xsd:integer ; ex:knows ex:
                 explain: false,
                 requires_packs: Vec::new(),
                 latency_class: Default::default(),
+                graph_media_type: None,
             },
         ),
     )

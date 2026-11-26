@@ -44,8 +44,13 @@ mod update_plan;
 
 use graph_store::handle_graph_store;
 #[cfg(test)]
-use graph_store::{export_graph, gsp_default_graph, gsp_target, parse_rdf_body};
-use negotiation::{choose_ct, render_query_outcome, serialize_graph, GRAPH_FORMS};
+use graph_store::{export_graph, gsp_default_graph, gsp_target};
+pub use graph_store::{
+    parse_rdf_body, rdf_graph_write_event_update, rdf_graph_write_update, RdfBodyRefusal,
+    RdfWriteMode, RDF_BODY_MAX_TRIPLES,
+};
+use negotiation::{choose_ct, render_query_outcome};
+pub use negotiation::{serialize_graph, GRAPH_FORMS};
 #[cfg(test)]
 use negotiation::{negotiate, SELECT_FORMS};
 pub use update_plan::{plan_update, update_graphs, update_uses_variable_graph, PlannedGraphUpdate};
@@ -1190,18 +1195,21 @@ mod tests {
         assert_eq!(gsp_target("/rdf-graphs/", &HashMap::new()), None);
     }
 
-    /// Content-type routing of the RDF body parser (Turtle default, N-Triples when typed).
+    /// Content-type routing of the RDF body parser (exact media type; an unknown type is refused).
     #[test]
     fn gsp_parse_rdf_body_by_content_type() {
         let ttl = "@prefix ex: <http://ex/> . ex:a ex:p ex:b .";
-        assert_eq!(parse_rdf_body("text/turtle", ttl).unwrap().len(), 1);
+        assert_eq!(parse_rdf_body("text/turtle", ttl, "g").unwrap().len(), 1);
         let nt = "<http://ex/a> <http://ex/p> <http://ex/b> .";
         assert_eq!(
-            parse_rdf_body("application/n-triples", nt).unwrap().len(),
+            parse_rdf_body("application/n-triples", nt, "g").unwrap().len(),
             1
         );
-        // Unknown content-type falls back to Turtle (a superset that parses N-Triples).
-        assert_eq!(parse_rdf_body("", nt).unwrap().len(), 1);
+        // An unnamed content type is refused: the media type is exact (MEDULLA-FEDERATED-QUERY-R740.1).
+        assert_eq!(
+            parse_rdf_body("", nt, "g").unwrap_err().code(),
+            "RDF_MEDIA_TYPE_UNSUPPORTED"
+        );
     }
 
     /// PUT-then-GET round-trips a graph: parse the posted RDF, replace the core, then
@@ -1214,7 +1222,7 @@ mod tests {
         let body = "@prefix ex: <http://ex/> .
                     ex:a ex:knows ex:b .
                     ex:a ex:name \"Alice\" .";
-        let triples = parse_rdf_body("text/turtle", body).unwrap();
+        let triples = parse_rdf_body("text/turtle", body, "g").unwrap();
         // PUT = replace: clear then insert.
         core.clear();
         medulla_rdf::update::insert_triples(&core, &triples).unwrap();
@@ -1234,12 +1242,20 @@ mod tests {
     #[test]
     fn gsp_post_merges() {
         let core = GraphCore::new();
-        let seed =
-            parse_rdf_body("text/turtle", "<http://ex/a> <http://ex/p> <http://ex/b> .").unwrap();
+        let seed = parse_rdf_body(
+            "text/turtle",
+            "<http://ex/a> <http://ex/p> <http://ex/b> .",
+            "g",
+        )
+        .unwrap();
         medulla_rdf::update::insert_triples(&core, &seed).unwrap();
         // POST = merge: no clear.
-        let add =
-            parse_rdf_body("text/turtle", "<http://ex/c> <http://ex/q> <http://ex/d> .").unwrap();
+        let add = parse_rdf_body(
+            "text/turtle",
+            "<http://ex/c> <http://ex/q> <http://ex/d> .",
+            "g",
+        )
+        .unwrap();
         medulla_rdf::update::insert_triples(&core, &add).unwrap();
         let exported = export_graph(&core, "http://ex/g").unwrap();
         assert_eq!(
@@ -1253,8 +1269,12 @@ mod tests {
     #[test]
     fn gsp_delete_empties() {
         let core = GraphCore::new();
-        let t =
-            parse_rdf_body("text/turtle", "<http://ex/a> <http://ex/p> <http://ex/b> .").unwrap();
+        let t = parse_rdf_body(
+            "text/turtle",
+            "<http://ex/a> <http://ex/p> <http://ex/b> .",
+            "g",
+        )
+        .unwrap();
         medulla_rdf::update::insert_triples(&core, &t).unwrap();
         assert_eq!(export_graph(&core, "g").unwrap().len(), 1);
         core.clear();
@@ -1271,8 +1291,12 @@ mod tests {
         assert_eq!(choose_ct("text/turtle", None, GRAPH_FORMS), "text/turtle");
         assert_eq!(choose_ct("", None, GRAPH_FORMS), "application/n-triples");
         let core = GraphCore::new();
-        let t =
-            parse_rdf_body("text/turtle", "<http://ex/a> <http://ex/p> <http://ex/b> .").unwrap();
+        let t = parse_rdf_body(
+            "text/turtle",
+            "<http://ex/a> <http://ex/p> <http://ex/b> .",
+            "g",
+        )
+        .unwrap();
         medulla_rdf::update::insert_triples(&core, &t).unwrap();
         let exported = export_graph(&core, "g").unwrap();
         let ttl = medulla_rdf::mapping::to_turtle(&exported).unwrap();
