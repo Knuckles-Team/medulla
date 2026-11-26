@@ -41,7 +41,6 @@ use message_machine::{MessageEvent, MessageFacts, MessageState};
 mod producer;
 mod routing;
 
-pub use producer::*;
 pub use routing::*;
 
 // Shared by the queue/stream implementation and the advisory consumer scan.
@@ -641,7 +640,7 @@ impl ReadFrom {
     }
 }
 
-pub use medulla_protocol_types::messaging_wire::ConfirmToken;
+use medulla_protocol_types::messaging_wire::ConfirmToken;
 
 /// Ensure a stream's durable monotonic offset counter node exists (starting at 0),
 /// mirroring [`ensure_queue_seq`] (CONCEPT:MEDULLA-KG.compute.replayable-append-log). Called on declare + publish so a

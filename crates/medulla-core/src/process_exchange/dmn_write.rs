@@ -8,7 +8,8 @@ use quick_xml::escape::escape;
 use super::dmn_read::{
     DmnClause, DmnDecision, DmnDocument, DmnRequirementKind, DmnTable, DMN_MODEL_NS,
 };
-use super::{PreservedXml, ProcessExchangeError};
+use super::PreservedXml;
+use medulla_types::process_exchange::ProcessExchangeError;
 
 fn fragments<'a>(preserved: &'a [PreservedXml], owner: &'a str) -> impl Iterator<Item = &'a str> {
     preserved

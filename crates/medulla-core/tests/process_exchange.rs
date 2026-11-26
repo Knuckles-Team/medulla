@@ -2,8 +2,9 @@
 
 use medulla_core::process_exchange::bpmn_read::{parse_bpmn, BpmnLimits};
 use medulla_core::process_exchange::workflow_bpmn::workflow_to_bpmn;
-use medulla_core::process_exchange::{ProcessExchangeError, BPMN_NODE_KINDS};
+use medulla_core::process_exchange::BPMN_NODE_KINDS;
 use medulla_core::process_import::canonicalize;
+use medulla_types::process_exchange::ProcessExchangeError;
 use medulla_types::process_import::{
     LoweredFlow, LoweredProcess, LoweredStep, ProcessSourceSystem, StepKind,
 };

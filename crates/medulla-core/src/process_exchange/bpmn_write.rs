@@ -6,9 +6,9 @@ use std::fmt::Write as _;
 use quick_xml::escape::escape;
 
 use super::{
-    BpmnDocument, BpmnEventDefinition, BpmnNode, BpmnProcess, PreservedXml, ProcessExchangeError,
-    BPMN_MODEL_NS,
+    BpmnDocument, BpmnEventDefinition, BpmnNode, BpmnProcess, PreservedXml, BPMN_MODEL_NS,
 };
+use medulla_types::process_exchange::ProcessExchangeError;
 
 fn attrs(out: &mut String, pairs: &BTreeMap<String, String>) {
     for (key, value) in pairs {

@@ -18,8 +18,6 @@ pub mod dmn_write;
 pub mod workflow_bpmn;
 pub mod xml_tree;
 
-pub use medulla_types::process_exchange::ProcessExchangeError;
-
 /// `text` with the version scope of its model removed: a BPMN node id `process:<scope>:<id>`
 /// becomes `process::<id>` and a DMN node id `<scope>#<id>` becomes `#<id>`; other text is
 /// unchanged.

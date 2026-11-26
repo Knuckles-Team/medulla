@@ -9,8 +9,9 @@ use quick_xml::{NsReader, Writer};
 
 use super::{
     BpmnCollaboration, BpmnDocument, BpmnEventDefinition, BpmnLane, BpmnNode, BpmnProcess,
-    BpmnSequenceFlow, PreservedXml, ProcessExchangeError, BPMN_MODEL_NS, BPMN_NODE_KINDS,
+    BpmnSequenceFlow, PreservedXml, BPMN_MODEL_NS, BPMN_NODE_KINDS,
 };
+use medulla_types::process_exchange::ProcessExchangeError;
 
 /// Bounds of one read (`process_document_max_bytes`, `process_document_max_depth`).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

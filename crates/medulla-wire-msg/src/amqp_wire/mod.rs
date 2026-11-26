@@ -780,7 +780,9 @@ async fn pump_consumers(
 /// non-`Raw` / undecodable result fails closed and is negatively acknowledged.
 fn decode_confirmed(result: &ResultPayload) -> bool {
     if let ResultPayload::Raw(bytes) = result {
-        if let Some(ip) = decode_broker_result::<medulla_core::broker::IdempotentPublish>(bytes) {
+        if let Some(ip) =
+            decode_broker_result::<medulla_protocol_types::messaging_wire::IdempotentPublish>(bytes)
+        {
             return ip.confirmed;
         }
     }
@@ -988,7 +990,7 @@ mod tests {
     fn eg314_decode_confirmed_reads_idempotent_publish_flag() {
         let confirmed = ResultPayload::of_ref::<
             medulla_protocol_types::result_contract::messaging::PublishIdempotent,
-        >(&medulla_core::broker::IdempotentPublish {
+        >(&medulla_protocol_types::messaging_wire::IdempotentPublish {
             confirmed: true,
             duplicate: false,
             delivered: 1,
@@ -997,7 +999,7 @@ mod tests {
         assert!(decode_confirmed(&confirmed));
         let nacked = ResultPayload::of_ref::<
             medulla_protocol_types::result_contract::messaging::PublishIdempotent,
-        >(&medulla_core::broker::IdempotentPublish {
+        >(&medulla_protocol_types::messaging_wire::IdempotentPublish {
             confirmed: false,
             duplicate: false,
             delivered: 0,

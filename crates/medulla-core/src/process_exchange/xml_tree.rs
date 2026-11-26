@@ -8,7 +8,7 @@ use quick_xml::events::{BytesRef, BytesStart, Event};
 use quick_xml::name::ResolveResult;
 use quick_xml::NsReader;
 
-use super::ProcessExchangeError;
+use medulla_types::process_exchange::ProcessExchangeError;
 
 /// Bounds of one read.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

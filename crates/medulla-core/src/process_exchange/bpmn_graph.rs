@@ -8,9 +8,10 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
     BpmnDocument, BpmnEventDefinition, BpmnLane, BpmnNode, BpmnProcess, BpmnSequenceFlow,
-    PreservedXml, ProcessExchangeError, BPMN_NODE_KINDS,
+    PreservedXml, BPMN_NODE_KINDS,
 };
 use crate::architecture_exchange::graph::ExchangeMutation;
+use medulla_types::process_exchange::ProcessExchangeError;
 
 /// Property prefix of a kept source attribute of a flow node or an event definition.
 const ATTRIBUTE_PREFIX: &str = "bpmnAttribute:";

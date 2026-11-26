@@ -9,8 +9,6 @@ use std::collections::BTreeMap;
 
 use medulla_graph_core::graph::GraphCore;
 
-pub use medulla_types::archimate_exchange::ArchimateExchangeError;
-
 pub mod graph;
 pub mod read;
 pub mod write;

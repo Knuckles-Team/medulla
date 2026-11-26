@@ -7,7 +7,8 @@ use std::collections::BTreeMap;
 use serde::{Deserialize, Serialize};
 
 use super::xml_tree::{parse_tree, XmlElement, XmlLimits};
-use super::{PreservedXml, ProcessExchangeError};
+use super::PreservedXml;
+use medulla_types::process_exchange::ProcessExchangeError;
 
 /// The DMN 1.3 model namespace; the root element must be in it.
 pub const DMN_MODEL_NS: &str = "https://www.omg.org/spec/DMN/20191111/MODEL/";

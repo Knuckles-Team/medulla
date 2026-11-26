@@ -9,8 +9,9 @@ use medulla_types::process_import::{
 
 use super::{
     BpmnDocument, BpmnEventDefinition, BpmnLane, BpmnNode, BpmnProcess, BpmnSequenceFlow,
-    PreservedXml, ProcessExchangeError,
+    PreservedXml,
 };
+use medulla_types::process_exchange::ProcessExchangeError;
 
 fn gateway(gate: Option<GateKind>) -> &'static str {
     match gate.unwrap_or(GateKind::Xor) {

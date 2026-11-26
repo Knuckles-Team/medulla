@@ -10,8 +10,9 @@ use super::dmn_read::{
     DmnClause, DmnDecision, DmnDocument, DmnInputData, DmnRequirement, DmnRequirementKind,
     DmnRule, DmnTable,
 };
-use super::{PreservedXml, ProcessExchangeError};
+use super::PreservedXml;
 use crate::architecture_exchange::graph::ExchangeMutation;
+use medulla_types::process_exchange::ProcessExchangeError;
 
 fn node(label: &str, id: String, mut properties: BTreeMap<String, String>) -> ExchangeMutation {
     properties.insert("type".to_owned(), label.to_owned());

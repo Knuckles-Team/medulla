@@ -11,7 +11,7 @@ use medulla_types::archimate_exchange::{
 
 use super::ARCHIMATE_NS;
 use crate::process_exchange::xml_tree::{parse_tree, XmlElement, XmlLimits};
-use crate::process_exchange::ProcessExchangeError;
+use medulla_types::process_exchange::ProcessExchangeError;
 
 fn lift(error: ProcessExchangeError) -> ArchimateExchangeError {
     match error {
