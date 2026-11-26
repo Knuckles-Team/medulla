@@ -1,0 +1,36 @@
+{
+  "connector": "listmonk",
+  "rollup": "MEDULLA-CQ-CONN-R035",
+  "vocabulary_module": "media-v1.ttl",
+  "terms": [
+    "EmailCampaign",
+    "MailingList",
+    "Subscriber",
+    "sentCount",
+    "viewCount"
+  ],
+  "questions": [
+    {
+      "id": "listmonk.q1",
+      "kind": "single",
+      "question": "Which campaigns had an open rate below the list average, and to which lists were they sent?",
+      "uql": "FOREIGN SCAN 'listmonk-api'",
+      "sources": [
+        "listmonk-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "listmonk-api": "http_endpoint"
+      },
+      "columns": [
+        "campaign",
+        "openRate",
+        "mailingList"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "listmonk-api/single.json"
+      ]
+    }
+  ]
+}

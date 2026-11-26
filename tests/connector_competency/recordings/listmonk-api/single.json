@@ -1,0 +1,22 @@
+{
+  "source": "listmonk-api",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "campaign": "campaign-1",
+      "openRate": "openRate-1",
+      "mailingList": "mailingList-1",
+      "joinKey": "listmonk.q1-key-1",
+      "id": "listmonk-api-listmonk.q1-1",
+      "label": "listmonk-api 1"
+    },
+    {
+      "campaign": "campaign-2",
+      "openRate": "openRate-2",
+      "mailingList": "mailingList-2",
+      "joinKey": "listmonk.q1-key-2",
+      "id": "listmonk-api-listmonk.q1-2",
+      "label": "listmonk-api 2"
+    }
+  ]
+}
