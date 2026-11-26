@@ -3,10 +3,10 @@
   "rollup": "MEDULLA-CQ-CONN-R031",
   "vocabulary_module": "orchestration-v1.ttl",
   "terms": [
+    "evaluationScore",
     "promptVersion",
     "tokenCost",
-    "tracePrompt",
-    "evaluationScore"
+    "tracePrompt"
   ],
   "questions": [
     {
@@ -29,6 +29,35 @@
       "min_rows": 1,
       "recordings": [
         "langfuse-agent/single.json"
+      ]
+    },
+    {
+      "id": "langfuse.q2",
+      "kind": "cross",
+      "question": "Which prompt versions with falling evaluation scores were last changed by a merged GitHub pull request?",
+      "uql": "LET s0 = FOREIGN SCAN 'langfuse-agent'; LET s1 = FOREIGN SCAN 'data-science-mcp'; LET s2 = FOREIGN SCAN 'github-agent'; JOIN s0, s1, s2",
+      "sources": [
+        "langfuse-agent",
+        "data-science-mcp",
+        "github-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "langfuse-agent": "mcp_tool",
+        "data-science-mcp": "mcp_tool",
+        "github-agent": "mcp_tool"
+      },
+      "columns": [
+        "promptVersion",
+        "evaluationScore",
+        "pullRequest"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "langfuse-agent/cross_data-science-mcp.json",
+        "data-science-mcp/cross_langfuse-agent.json",
+        "langfuse-agent/cross_github-agent.json",
+        "github-agent/cross_langfuse-agent.json"
       ]
     }
   ]

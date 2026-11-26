@@ -1,0 +1,18 @@
+{
+  "source": "github-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "pullRequest": "pullRequest-1",
+      "joinKey": "langfuse.q2-key-1",
+      "id": "github-agent-langfuse.q2-1",
+      "label": "github-agent 1"
+    },
+    {
+      "pullRequest": "pullRequest-2",
+      "joinKey": "langfuse.q2-key-2",
+      "id": "github-agent-langfuse.q2-2",
+      "label": "github-agent 2"
+    }
+  ]
+}
