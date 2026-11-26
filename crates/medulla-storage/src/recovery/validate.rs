@@ -22,7 +22,7 @@ use medulla_protocol_types::{
 };
 use redb::{ReadTransaction, ReadableDatabase, ReadableTable, TableHandle};
 
-pub use medulla_protocol_types::storage_wire::RecoveryStoreCounts;
+use medulla_protocol_types::storage_wire::RecoveryStoreCounts;
 
 type PrivateAuthenticator<'a> = dyn Fn(&[u8], &str) -> Result<(), String> + 'a;
 

@@ -110,7 +110,7 @@ use std::collections::BTreeMap;
 use std::io::{Read as _, Write as _};
 use std::path::{Path, PathBuf};
 
-use medulla_storage::RecoveryStoreCounts;
+use medulla_protocol_types::storage_wire::RecoveryStoreCounts;
 use redb::ReadableTable;
 use sha2::{Digest, Sha256};
 

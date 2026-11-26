@@ -5,7 +5,7 @@ use medulla_persistence::backup::*;
 #[allow(unused_imports)]
 use medulla_persistence::shard_migrate;
 #[allow(unused_imports)]
-use medulla_storage::RecoveryStoreCounts;
+use medulla_protocol_types::storage_wire::RecoveryStoreCounts;
 #[allow(unused_imports)]
 use medulla_store::redb_store::shard::Shard;
 #[allow(unused_imports)]

@@ -11,7 +11,7 @@ use crate::recovery::authority::{reanchor_staged_store_authority, rewrite_store_
 use crate::recovery::evidence::{
     strict_evidence_of, strict_snapshot_read, strict_snapshot_write, StrictRecoveryEvidence,
 };
-use crate::recovery::validate::{validate_recovery_content, RecoveryStoreCounts};
+use crate::recovery::validate::validate_recovery_content;
 use crate::tables::{SCOPE_BINDINGS, STORE_ROOT, VERSIONS};
 use crate::StorageKernel;
 use medulla_mutation_types::mutation_scope::DurabilityDomain;
@@ -19,6 +19,7 @@ use medulla_mutation_types::{
     mutation_scope::IncarnationId, mutation_scope::LogicalName,
     mutation_scope::MutationScopeIdentity, mutation_scope::ScopeTenantId,
 };
+use medulla_protocol_types::storage_wire::RecoveryStoreCounts;
 use redb::{
     Database, ReadTransaction, ReadableDatabase, ReadableTable, TableHandle, WriteTransaction,
 };
