@@ -1126,6 +1126,7 @@ async fn serve(
         _ => None,
     };
     let blocking_graph = run_graph.clone();
+    let breach = breach_link(state, verified, &op).await?;
     let refresh_link = inputs.as_ref().map(|i| std::sync::Arc::clone(&i.refresh_link));
     let refresh_apply = inputs.as_ref().map(|i| std::sync::Arc::clone(&i.refresh_apply));
     let principal = verified.agent_id().to_string();
@@ -1184,6 +1185,9 @@ async fn serve(
     .map_err(|error| format!("DecisionLog task failed: {error}"))?;
     let result = match result {
         Ok(Served::Payload(payload)) => {
+            if let Some(link) = breach {
+                commit_staged_link(state, req_id, verified, link, "limit-breach").await?;
+            }
             let staged = match refresh_link {
                 Some(slot) => slot.lock().ok().and_then(|mut held| held.take()),
                 None => None,
@@ -1191,7 +1195,7 @@ async fn serve(
             let apply = refresh_apply.and_then(|slot| slot.lock().ok().and_then(|mut held| held.take()));
             match staged {
                 Some(link) => {
-                    let committed = commit_refresh_link(state, req_id, verified, link).await;
+                    let committed = commit_staged_link(state, req_id, verified, link, "freshness-refresh").await;
                     // Durable first: the in-memory swap runs only after the commit succeeded.
                     if committed.is_ok() {
                         if let Some(apply) = apply {
@@ -1223,19 +1227,20 @@ enum Served {
     RunRecord(Box<super::run_record::Staged>),
 }
 
-/// Commit the graph nodes (and their embeddings) a freshness refresh staged, through the
-/// same MutationBatch commit used for every other graph fact. The embedding writes reach the
-/// drift monitors, so the next drift refresh sees the region. With no durable backend the
-/// commit is refused.
-async fn commit_refresh_link(
+/// Commit the graph writes an op staged (`what` names them in the refusal), through the same
+/// MutationBatch commit used for every other graph fact. The embedding writes reach the drift
+/// monitors, so the next drift refresh sees the region. With no durable backend the commit is
+/// refused.
+async fn commit_staged_link(
     state: &SharedState,
     req_id: u64,
     verified: &VerifiedRequestContext,
     link: super::run_record::StagedLink,
+    what: &str,
 ) -> Result<(), String> {
     let persistence = state.read().await.persistence.clone();
     let batch_id = medulla_server_api::batch_compile::opaque_request_key(
-        "freshness-refresh",
+        what,
         &link.graph,
         req_id,
         &link.methods[0],
@@ -1259,10 +1264,105 @@ async fn commit_refresh_link(
     .map_err(|error| {
         medulla_protocol_types::error_registry::classify_refusal(
             "ENGINE_UNAVAILABLE",
-            "freshness rows not committed to the graph: ",
+            &format!("{what} rows not committed to the graph: "),
             &error,
         )
     })
+}
+
+/// The `LimitBreachObservation` nodes a committed abstention stages
+/// (MEDULLA-DECISION-ENGINE-R131.5): one node `breach:<record_id>:<rule_id>` per breach with its
+/// edge `eg:breachOf` to the signal, in the graph the record's `limit.graph` param names. A
+/// node that already exists is not written again, so a retry of the same record adds none; an
+/// absent signal node is created. `None` when the record holds no breach or names no graph.
+async fn breach_link(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    op: &DecisionLogOp,
+) -> Result<Option<super::run_record::StagedLink>, String> {
+    use medulla_decision_types::decision::statistical::TypedValue;
+    use medulla_decision_types::decision::AbstainReason;
+    use medulla_protocol_types::protocol::Method;
+    let DecisionLogOp::Commit { record, .. } = op else {
+        return Ok(None);
+    };
+    let StatisticalOutcome::Abstained { reasons } = &record.outcome else {
+        return Ok(None);
+    };
+    let Some(graph) = record.inputs.params.iter().find_map(|param| match &param.value {
+        TypedValue::Text(graph) if param.name == "limit.graph" => Some(graph.clone()),
+        _ => None,
+    }) else {
+        return Ok(None);
+    };
+    let (core, _isolation) = super::stat_support::graph_at_level(
+        state,
+        verified.agent_id(),
+        &graph,
+        StatisticalErrorCode::ParameterInvalid,
+        medulla_isolation::isolation::AccessLevel::Write,
+    )
+    .await?;
+    let encode = |value: serde_json::Value| {
+        rmp_serde::to_vec_named(&value).map_err(|error| {
+            refusal(
+                StatisticalErrorCode::ParameterInvalid,
+                format!("limit breach encoding failed: {error}"),
+            )
+        })
+    };
+    let mut methods = Vec::new();
+    let mut signals: Vec<&str> = Vec::new();
+    for reason in reasons.iter() {
+        let AbstainReason::LimitBreach {
+            rule_id,
+            observed,
+            bound,
+            signal_iri,
+        } = reason
+        else {
+            continue;
+        };
+        let node_id = format!("breach:{}:{rule_id}", record.record_id);
+        if core.get_node_properties(&node_id).is_some() {
+            continue;
+        }
+        if core.get_node_properties(signal_iri).is_none() && !signals.contains(&signal_iri.as_str())
+        {
+            signals.push(signal_iri);
+            methods.push(Method::AddNode {
+                node_id: signal_iri.clone(),
+                properties_msgpack: encode(serde_json::json!({
+                    "type": "Signal",
+                    "_owner": verified.agent_id(),
+                }))?,
+            });
+        }
+        methods.push(Method::AddNode {
+            node_id: node_id.clone(),
+            properties_msgpack: encode(serde_json::json!({
+                "type": "LimitBreachObservation",
+                "rule_id": rule_id,
+                "observed": observed,
+                "bound": bound,
+                "record_id": record.record_id,
+                "_owner": verified.agent_id(),
+            }))?,
+        });
+        methods.push(Method::AddEdge {
+            source_id: node_id,
+            target_id: signal_iri.clone(),
+            properties_msgpack: encode(serde_json::json!({
+                "relationship": "eg:breachOf",
+                "tenant": record.tenant_id,
+            }))?,
+        });
+    }
+    Ok((!methods.is_empty()).then_some(super::run_record::StagedLink {
+        graph,
+        core,
+        methods,
+    }))
 }
 
 /// Commit a staged run record's graph link (the program node and its
