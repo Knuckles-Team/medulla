@@ -85,6 +85,26 @@ impl WorkflowLifecycle {
     }
 }
 
+/// Most steps one registration may declare.
+pub const MAX_WORKFLOW_STEPS: usize = 256;
+/// Most assets one step may name.
+pub const MAX_STEP_ASSETS: usize = 64;
+
+/// One step of the registered definition, declared for the metadata catalog
+/// (MEDULLA-TYPED-PACKS-R108.6). The step names the assets that serve it, by absolute
+/// IRI: the agent versions and tools it runs. The definition body stays addressed by its
+/// digest; a step is a catalog descriptor, not a copy of the body.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct WorkflowStep {
+    /// The step id, unique within the definition.
+    pub step_id: String,
+    /// Absolute IRIs of the agent version and tool assets that serve this step.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub served_by: Vec<String>,
+}
+
 /// One served registration: the immutable identity, the scope that owns it and
 /// its lifecycle state.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,9 +116,40 @@ pub struct WorkflowRegistrationEntry {
     /// verified scope and refuses any other value.
     pub owner_scope: String,
     pub lifecycle: WorkflowLifecycle,
+    /// The steps of the definition, declared for the catalog (R108.6). Not stored on the
+    /// registration node: the catalog emitter reads them when the registration commits.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub steps: Vec<WorkflowStep>,
 }
 
 impl WorkflowRegistrationEntry {
+    /// The declared steps are bounded, named and unique; each served-by reference is
+    /// non-empty. IRI shape is checked by the catalog emitter, which owns the links.
+    pub fn validate_steps(&self) -> Result<(), String> {
+        let invalid = |detail: String| format!("INVALID_ARGUMENT: workflow steps: {detail}");
+        if self.steps.len() > MAX_WORKFLOW_STEPS {
+            return Err(invalid(format!("at most {MAX_WORKFLOW_STEPS} steps")));
+        }
+        let mut seen = std::collections::BTreeSet::new();
+        for step in &self.steps {
+            if step.step_id.trim().is_empty() {
+                return Err(invalid("a step id is empty".to_string()));
+            }
+            if !seen.insert(step.step_id.as_str()) {
+                return Err(invalid(format!("step {} is declared twice", step.step_id)));
+            }
+            if step.served_by.len() > MAX_STEP_ASSETS
+                || step.served_by.iter().any(|asset| asset.trim().is_empty())
+            {
+                return Err(invalid(format!(
+                    "step {} names at most {MAX_STEP_ASSETS} non-empty assets",
+                    step.step_id
+                )));
+            }
+        }
+        Ok(())
+    }
+
     /// The graph node id a registration of `identity` is stored under.
     pub fn node_id(identity: &WorkflowIdentity) -> String {
         format!(
@@ -138,6 +189,7 @@ impl WorkflowRegistrationEntry {
             owner_scope: text("owner_scope")?,
             lifecycle: super::workflow_machine::WORKFLOW_MACHINE
                 .state_from_stored(&text("lifecycle")?)?,
+            steps: Vec::new(),
         })
     }
 }

@@ -342,6 +342,8 @@ def test_one_query_returns_agents_business_workflows_graphs_and_connector_assets
         "version": "1.0.0",
         "content_digest": _digest("b"),
     }
+    workflow_id = f"workflow:{identity['workflow_id']}:{identity['version']}:{identity['content_digest']}"
+    workflow_node = "urn:medulla:asset:workflow:" + workflow_id.replace(":", "%3A")
     admin._send(
         "WorkflowRegistry",
         {
@@ -351,6 +353,15 @@ def test_one_query_returns_agents_business_workflows_graphs_and_connector_assets
                     "identity": identity,
                     "owner_scope": "",
                     "lifecycle": "active",
+                    "steps": [
+                        {
+                            "step_id": "list-orders",
+                            "served_by": [
+                                _node_id(agent_id, 1),
+                                "urn:medulla:r1066:tool-list-orders",
+                            ],
+                        }
+                    ],
                 },
             }
         },
@@ -406,6 +417,22 @@ def test_one_query_returns_agents_business_workflows_graphs_and_connector_assets
         assert _node_id(agent_id, 1) in all_assets
         assert any(a.startswith("urn:medulla:asset:workflow:") for a in all_assets)
         assert f"urn:medulla:asset:product:{product_id}%401.0.0" in all_assets
+
+        # One question lists the agents and tools that serve a workflow step, and the step
+        # is part of the workflow it was declared on.
+        step_rows = admin.rdf.sparql(
+            f"SELECT ?step ?served WHERE {{ ?step a <{CATALOG}WorkflowStepAsset> . "
+            f"?step <http://www.w3.org/ns/prov#used> ?served }}"
+        )
+        served = {row["served"].strip("<>") for row in step_rows}
+        assert served == {
+            _node_id(agent_id, 1),
+            "urn:medulla:r1066:tool-list-orders",
+        }
+        step_node = step_rows[0]["step"].strip("<>")
+        assert _rows(admin, step_node, "http://purl.org/dc/terms/isPartOf") == [
+            workflow_node
+        ]
         assert "urn:medulla:r1066:tool-list-orders" in all_assets
         assert "urn:medulla:r1066:resource-orders" in all_assets
 

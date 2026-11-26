@@ -24,6 +24,7 @@ fn registration(identity: WorkflowIdentity) -> WorkflowRegistrationEntry {
         identity,
         owner_scope: String::new(),
         lifecycle: WorkflowLifecycle::Active,
+        steps: Vec::new(),
     }
 }
 

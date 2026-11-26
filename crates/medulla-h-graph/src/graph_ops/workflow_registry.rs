@@ -49,6 +49,7 @@ pub(super) fn admit_registration(
     registration: &WorkflowRegistrationEntry,
 ) -> Result<Admitted, String> {
     let identity = &registration.identity;
+    registration.validate_steps()?;
     WorkflowRegistry::default()
         .register(identity.clone())
         .map_err(|error| refuse(error, "invalid workflow identity"))?;
@@ -62,6 +63,7 @@ pub(super) fn admit_registration(
         identity: identity.clone(),
         owner_scope: tenant_scope.to_string(),
         lifecycle: registration.lifecycle,
+        steps: registration.steps.clone(),
     };
     let node_id = WorkflowRegistrationEntry::node_id(identity);
     let stored = core

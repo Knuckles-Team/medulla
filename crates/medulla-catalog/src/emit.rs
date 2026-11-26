@@ -89,13 +89,14 @@ pub struct AssetLinks<'a> {
     pub changed_at_ms: Option<u64>,
 }
 
-/// One workflow run: the run id and the exact definition it ran.
+/// One workflow run: the run id and the exact definition it ran, when the run trace names one.
 #[derive(Debug, Clone, Copy)]
 pub struct WorkflowRunRecord<'a> {
     /// The run id.
     pub run_id: &'a str,
-    /// The definition identity the run executed.
-    pub definition: &'a WorkflowIdentity,
+    /// The definition identity the run executed; a run whose trace names none is still a run
+    /// asset, and carries no `prov:used` link to a definition.
+    pub definition: Option<&'a WorkflowIdentity>,
 }
 
 /// One registered graph with the ontology revision, pack contract and sources it
@@ -326,7 +327,7 @@ pub fn emit_asset(
         AssetRecord::WorkflowDefinition(entry) => {
             let identity = &entry.identity;
             let id = WorkflowRegistrationEntry::node_id(identity);
-            node(
+            let workflow = node(
                 &mut out,
                 "WorkflowDefinitionAsset",
                 "workflow",
@@ -335,6 +336,33 @@ pub fn emit_asset(
                 links,
                 Some(HOP_TRANSFORM),
             )?;
+            // MEDULLA-TYPED-PACKS-R108.6: one step asset per declared step, part of its
+            // definition, naming the asset that serves it. A step carries the definition's
+            // owner, steward and freshness, never its lineage (that belongs to the definition).
+            for step in &entry.steps {
+                let step_id = format!("{id}/{}", step.step_id);
+                let step_node = node(
+                    &mut out,
+                    "WorkflowStepAsset",
+                    "workflow-step",
+                    &step_id,
+                    &format!("{id}#{}", step.step_id),
+                    &AssetLinks {
+                        owner: links.owner,
+                        steward: links.steward,
+                        graph_revision: links.graph_revision,
+                        changed_at_ms: links.changed_at_ms,
+                        ..AssetLinks::default()
+                    },
+                    None,
+                )?;
+                out.push(iri(&step_node, DCT_IS_PART_OF, &workflow));
+                out.push(literal(&step_node, SKOS_PREF_LABEL, &step.step_id));
+                for asset in &step.served_by {
+                    require_iri("step asset", asset)?;
+                    out.push(iri(&step_node, PROV_USED, asset));
+                }
+            }
         }
         AssetRecord::WorkflowRun(run) => {
             let run_node = node(
@@ -346,11 +374,11 @@ pub fn emit_asset(
                 links,
                 Some(HOP_INGEST),
             )?;
-            let definition = asset_node(
-                "workflow",
-                &WorkflowRegistrationEntry::node_id(run.definition),
-            );
-            out.push(iri(&run_node, PROV_USED, &definition));
+            if let Some(definition) = run.definition {
+                let definition =
+                    asset_node("workflow", &WorkflowRegistrationEntry::node_id(definition));
+                out.push(iri(&run_node, PROV_USED, &definition));
+            }
         }
         AssetRecord::StoredQuery(query) => {
             let id = format!("{}:{}", query.name, query.version);
@@ -467,6 +495,94 @@ mod tests {
 
     // spec: MEDULLA-TYPED-PACKS-R108.6
     #[test]
+    fn declared_steps_emit_step_assets_that_name_what_serves_them() {
+        let links = AssetLinks {
+            owner: Some("urn:medulla:principal:alice"),
+            ..AssetLinks::default()
+        };
+        let mut definition = workflow();
+        definition.steps = vec![
+            medulla_work_types::orchestration::workflows::WorkflowStep {
+                step_id: "summarize".into(),
+                served_by: vec![
+                    "urn:medulla:asset:agent-version:agent%3A1%401".into(),
+                    "urn:medulla:r1066:tool-list-orders".into(),
+                ],
+            },
+            medulla_work_types::orchestration::workflows::WorkflowStep {
+                step_id: "publish".into(),
+                served_by: Vec::new(),
+            },
+        ];
+        let triples = emit_asset(AssetRecord::WorkflowDefinition(&definition), &links).unwrap();
+        let flow_id = WorkflowRegistrationEntry::node_id(&definition.identity);
+        let workflow = asset_node("workflow", &flow_id);
+        // The definition node stays the first subject (the evidence probe reads it).
+        assert_eq!(triples[0].subject, workflow);
+        let step = asset_node("workflow-step", &format!("{flow_id}/summarize"));
+        assert!(has(
+            &triples,
+            &step,
+            RDF_TYPE,
+            &Object::Iri(format!("{CAT}WorkflowStepAsset"))
+        ));
+        assert!(has(&triples, &step, DCT_IS_PART_OF, &Object::Iri(workflow)));
+        assert!(has(
+            &triples,
+            &step,
+            PROV_USED,
+            &Object::Iri("urn:medulla:r1066:tool-list-orders".into())
+        ));
+        assert!(has(
+            &triples,
+            &step,
+            &format!("{CAT}hasOwner"),
+            &Object::Iri("urn:medulla:principal:alice".into())
+        ));
+        let bare = asset_node("workflow-step", &format!("{flow_id}/publish"));
+        assert!(!triples
+            .iter()
+            .any(|t| t.subject == bare && t.predicate == PROV_USED));
+
+        definition.steps[1].served_by = vec!["not-an-iri".into()];
+        assert!(matches!(
+            emit_asset(AssetRecord::WorkflowDefinition(&definition), &links),
+            Err(EmitError::LinkNotIri { role: "step asset", .. })
+        ));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R108.6
+    #[test]
+    fn a_run_names_its_definition_only_when_its_trace_does() {
+        let definition = workflow();
+        let named = emit_asset(
+            AssetRecord::WorkflowRun(WorkflowRunRecord {
+                run_id: "run-1",
+                definition: Some(&definition.identity),
+            }),
+            &AssetLinks::default(),
+        )
+        .unwrap();
+        let unnamed = emit_asset(
+            AssetRecord::WorkflowRun(WorkflowRunRecord {
+                run_id: "run-2",
+                definition: None,
+            }),
+            &AssetLinks::default(),
+        )
+        .unwrap();
+        assert!(named.iter().any(|t| t.predicate == PROV_USED));
+        assert!(!unnamed.iter().any(|t| t.predicate == PROV_USED));
+        assert!(has(
+            &unnamed,
+            &asset_node("workflow-run", "run-2"),
+            RDF_TYPE,
+            &Object::Iri(format!("{CAT}WorkflowRun"))
+        ));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R108.6
+    #[test]
     fn a_registered_product_emits_one_product_node_that_names_its_source() {
         let links = AssetLinks {
             owner: Some("urn:medulla:principal:alice"),
@@ -545,6 +661,7 @@ mod tests {
             },
             owner_scope: "tenant:1".into(),
             lifecycle: WorkflowLifecycle::Active,
+            steps: Vec::new(),
         }
     }
 
@@ -642,7 +759,7 @@ mod tests {
         let run = emit_asset(
             AssetRecord::WorkflowRun(WorkflowRunRecord {
                 run_id: "run-9",
-                definition: &definition.identity,
+                definition: Some(&definition.identity),
             }),
             &links,
         )
@@ -742,7 +859,7 @@ mod tests {
         let run = emit_asset(
             AssetRecord::WorkflowRun(WorkflowRunRecord {
                 run_id: "run-9",
-                definition: &definition.identity,
+                definition: Some(&definition.identity),
             }),
             &links,
         )

@@ -36674,12 +36674,20 @@ class WorkflowLifecycle(str, Enum):
     STALE = "stale"
 
 
+class WorkflowStep(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    served_by: list[str] = Field(default_factory=list)
+    step_id: str
+
+
 class WorkflowRegistrationEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     identity: WorkflowIdentity
     lifecycle: WorkflowLifecycle
     owner_scope: str
+    steps: list[WorkflowStep] = Field(default_factory=list)
 
 
 class WorkflowRegistryOpRead(BaseModel):
@@ -48166,6 +48174,7 @@ __all__ = [
     "WorkflowRegistryOp",
     "WorkflowRegistryOpRead",
     "WorkflowRegistryOpRegister",
+    "WorkflowStep",
     "WorldTransformResult",
     "WritebackApproval",
     "WriteBackAttempt",

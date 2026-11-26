@@ -572,6 +572,38 @@ async fn dispatch_catalog_admin_methods(
             let _ = registration;
             response
         }
+        // MEDULLA-TYPED-PACKS-R108.6: a terminal commit that records a run trace is cataloged
+        // as a run asset by the one emitter, after the commit is durable. A commit without a
+        // run trace falls through to the ordinary WorkItem route untouched.
+        #[cfg(feature = "rdf")]
+        method @ Method::CommitWorkItemResult { .. }
+            if super::catalog_emit::run_traces_of(&method).is_some() =>
+        {
+            let runs = super::catalog_emit::run_traces_of(&method).unwrap_or_default();
+            let response = dispatch_boxed(dispatch_graph_op(
+                state,
+                &req.graph,
+                req.id,
+                req.agent_id.as_deref(),
+                verified_context,
+                method,
+            ))
+            .await;
+            if response.refusal_text().is_none() {
+                let emitted = super::catalog_emit::commit_runs(
+                    state,
+                    req,
+                    verified_context,
+                    &req.graph,
+                    &runs,
+                )
+                .await;
+                return ControlFlow::Break(super::catalog_emit::after_emit(
+                    response, req.id, emitted,
+                ));
+            }
+            response
+        }
         // MEDULLA-TYPED-PACKS-R108.14: a published stored-query version is cataloged by the one
         // emitter, as a descriptor and a link; the text stays on its own node.
         Method::StoredQueryPut { query } => {

@@ -20,6 +20,7 @@ fn seeded(scope: &str) -> GraphCore {
         identity: identity(),
         owner_scope: scope.into(),
         lifecycle: WorkflowLifecycle::Active,
+        steps: Vec::new(),
     };
     core.add_node(
         WorkflowRegistrationEntry::node_id(&entry.identity),
