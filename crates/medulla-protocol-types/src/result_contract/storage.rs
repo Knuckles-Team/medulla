@@ -59,6 +59,7 @@ method_results! {
     AgentLibraryRetire(AgentLibrary / "retire") => Raw<AgentLibraryWriteResult>;
     AgentLibraryStatus(AgentLibrary / "status") => Raw<Option<AgentLibraryWriteResult>>;
     AgentLibraryList(AgentLibrary / "list") => Raw<AgentLibraryPage>;
+    AgentLibraryGet(AgentLibrary / "get") => Raw<Option<medulla_agent_types::agent_library::AgentLibraryListEntry>>;
     AgentGraphCurrent(AgentGraph / "current") => Raw<Option<AgentGraphEntry>>;
     AgentGraphHistory(AgentGraph / "history") => Raw<Vec<AgentGraphEntry>>;
     AgentGraphPublish(AgentGraph / "publish") => Raw<AgentGraphCommittedResult>;

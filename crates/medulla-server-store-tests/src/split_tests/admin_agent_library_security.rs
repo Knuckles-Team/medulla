@@ -832,6 +832,7 @@ fn list_op(
 ) -> AgentLibraryOp {
     AgentLibraryOp::List {
         tenant_id: tenant_id.to_string(),
+        kind: None,
         lifecycle,
         limit,
         cursor,
@@ -999,4 +1000,122 @@ async fn signed_public_dispatch_lists_the_tenants_library_in_cursor_pages() {
         format!("{write_only:?}").contains("agent:library-read"),
         "{write_only:?}"
     );
+}
+
+// spec: MEDULLA-TYPED-PACKS-R011.2
+#[tokio::test]
+async fn signed_public_dispatch_lists_and_gets_the_tool_library_beside_the_agents() {
+    use medulla_agent_types::agent_library::{
+        AgentLibraryKind, AgentLibraryListEntry, AgentLibraryPage,
+    };
+    // Synthetic HMAC fixture, same as the list test above: it authenticates nothing outside this
+    // process and is never a live credential.
+    let secret = "agent-library-kind-dispatch-secret"; // sanitizer:ignore
+    let directory = tempfile::tempdir().unwrap();
+    let mut server_state = medulla_server::seams_install::new_state_for_test(
+        secret,
+        medulla_isolation::isolation::IsolationLayer::new(),
+    );
+    server_state.persist_dir = Some(directory.path().to_string_lossy().into_owned());
+    let state = Arc::new(RwLock::new(server_state));
+    let store = {
+        let mut guard = state.write().await;
+        guard.ensure_agent_library().unwrap()
+    };
+    let write_claims = claims("caller-a", "tenant-shared", &["agent:library-write"], "policy-test");
+    // Seeding the agent's pins publishes its tool component `tool:search` beside it.
+    let published = dispatch_library_op(
+        &state,
+        secret,
+        &write_claims,
+        701,
+        AgentLibraryOp::Publish {
+            request: Box::new(AgentLibraryPublishRequest {
+                context: forged_context(&store, "tenant-shared"),
+                entry: seeded_definition(&store, "tenant-shared"),
+            }),
+        },
+    )
+    .await;
+    assert!(published.error.is_none(), "publish failed: {published:?}");
+
+    let read_claims = claims("caller-a", "tenant-shared", &["agent:library-read"], "policy-test");
+    let get = |kind, id: &str| AgentLibraryOp::Get {
+        tenant_id: "tenant-shared".to_string(),
+        kind,
+        id: id.to_string(),
+    };
+    let head_of = |response| -> Option<AgentLibraryListEntry> {
+        medulla_server_api::test_support::decode_raw_response("Agent Library get", response)
+    };
+
+    let tool = head_of(
+        dispatch_library_op(&state, secret, &read_claims, 702, get(AgentLibraryKind::Tool, "tool:search"))
+            .await,
+    )
+    .expect("the tool is held");
+    assert_eq!((tool.kind, tool.agent_id.as_str()), (AgentLibraryKind::Tool, "tool:search"));
+    let agent = head_of(
+        dispatch_library_op(&state, secret, &read_claims, 703, get(AgentLibraryKind::Agent, "agent-a"))
+            .await,
+    )
+    .expect("the agent is held");
+    assert_eq!(agent.kind, AgentLibraryKind::Agent);
+    // A component of another kind is not a tool, and an absent id answers null.
+    for (kind, id) in [
+        (AgentLibraryKind::Tool, "prompt:a"),
+        (AgentLibraryKind::Tool, "ghost"),
+        (AgentLibraryKind::Agent, "ghost"),
+    ] {
+        let absent = head_of(
+            dispatch_library_op(&state, secret, &read_claims, 704, get(kind, id)).await,
+        );
+        assert!(absent.is_none(), "{kind:?} {id}");
+    }
+
+    // The tool listing is the component library's tool heads; the agent listing is unchanged.
+    let list_kind = |kind| AgentLibraryOp::List {
+        tenant_id: "tenant-shared".to_string(),
+        kind: Some(kind),
+        lifecycle: None,
+        limit: None,
+        cursor: None,
+    };
+    let tools: AgentLibraryPage = medulla_server_api::test_support::decode_raw_response(
+        "Agent Library list tools",
+        dispatch_library_op(&state, secret, &read_claims, 705, list_kind(AgentLibraryKind::Tool)).await,
+    );
+    assert_eq!(
+        tools.entries.iter().map(|entry| entry.agent_id.as_str()).collect::<Vec<_>>(),
+        ["tool:search"]
+    );
+    assert!(tools.entries.iter().all(|entry| entry.kind == AgentLibraryKind::Tool));
+    let agents: AgentLibraryPage = medulla_server_api::test_support::decode_raw_response(
+        "Agent Library list agents",
+        dispatch_library_op(&state, secret, &read_claims, 706, list_op("tenant-shared", None, None, None))
+            .await,
+    );
+    assert_eq!(agents.entries.len(), 1);
+    assert_eq!(agents.entries[0].kind, AgentLibraryKind::Agent);
+
+    // The engine holds no suggestions, and a tenant other than the verified one is refused.
+    let suggestion =
+        dispatch_library_op(&state, secret, &read_claims, 707, list_kind(AgentLibraryKind::Suggestion)).await;
+    assert!(
+        format!("{suggestion:?}").contains("PARAMETER_INVALID"),
+        "{suggestion:?}"
+    );
+    let foreign = dispatch_library_op(
+        &state,
+        secret,
+        &read_claims,
+        708,
+        AgentLibraryOp::Get {
+            tenant_id: "tenant-other".to_string(),
+            kind: AgentLibraryKind::Tool,
+            id: "tool:search".to_string(),
+        },
+    )
+    .await;
+    assert!(format!("{foreign:?}").contains("ACCESS_DENIED"), "{foreign:?}");
 }

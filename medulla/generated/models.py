@@ -1147,10 +1147,26 @@ class AgentLibraryOpStatus(BaseModel):
     request: AgentLibraryStatusRequest
 
 
+class AgentLibraryKind(str, Enum):
+    AGENT = "agent"
+    TOOL = "tool"
+    SUGGESTION = "suggestion"
+
+
+class AgentLibraryOpGet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    kind: AgentLibraryKind
+    operation: Literal["get"]
+    tenant_id: str
+
+
 class AgentLibraryOpList(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     cursor: str | None = None
+    kind: AgentLibraryKind | None = None
     lifecycle: AgentLibraryLifecycle | None = None
     limit: Annotated[int, Field(ge=0)] | None = None
     operation: Literal["list"]
@@ -1163,7 +1179,8 @@ AgentLibraryOp = Annotated[
     | AgentLibraryOpCurrent
     | AgentLibraryOpHistory
     | AgentLibraryOpStatus
-    | AgentLibraryOpList,
+    | AgentLibraryOpList
+    | AgentLibraryOpGet,
     Field(discriminator="operation"),
 ]
 
@@ -1172,6 +1189,7 @@ class AgentLibraryListEntry(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     agent_id: str
+    kind: AgentLibraryKind = AgentLibraryKind.AGENT
     definition_digest: str
     entry_revision: Annotated[int, Field(ge=0)]
     lifecycle: AgentLibraryLifecycle
@@ -46350,7 +46368,9 @@ __all__ = [
     "AgentLibraryEntryDraft",
     "AgentLibraryEntryRef",
     "AgentLibraryLifecycle",
+    "AgentLibraryKind",
     "AgentLibraryListEntry",
+    "AgentLibraryOpGet",
     "AgentLibraryMutationContext",
     "AgentLibraryMutationKind",
     "AgentLibraryOp",

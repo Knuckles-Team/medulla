@@ -980,6 +980,7 @@ pub async fn handle_agent_library(
         }
         medulla_agent_types::agent_library::AgentLibraryOp::List {
             tenant_id,
+            kind,
             lifecycle,
             limit,
             cursor,
@@ -988,11 +989,17 @@ pub async fn handle_agent_library(
             req_id,
             verified,
             &tenant_id,
+            kind.unwrap_or_default(),
             lifecycle,
             limit,
             cursor.as_deref(),
         )
         .into(),
+        medulla_agent_types::agent_library::AgentLibraryOp::Get {
+            tenant_id,
+            kind,
+            id,
+        } => library_get(&store, req_id, verified, &tenant_id, kind, &id).into(),
     }
 }
 
@@ -1122,22 +1129,96 @@ fn library_list(
     req_id: u64,
     verified: &medulla_server_api::authority_context::VerifiedRequestContext,
     tenant_id: &str,
+    kind: medulla_agent_types::agent_library::AgentLibraryKind,
     lifecycle: Option<medulla_agent_types::agent_library::AgentLibraryLifecycle>,
     limit: Option<u32>,
     cursor: Option<&str>,
 ) -> Response {
+    use medulla_agent_types::agent_library::{
+        unsupported_kind_refusal, AgentLibraryKind, AgentLibraryListEntry, AgentLibraryPage,
+    };
     if tenant_id != verified.tenant() {
         return Response::err(
             req_id,
             "ACCESS_DENIED: Agent Library tenant must match verified request tenant",
         );
     }
-    match store.list(tenant_id, lifecycle, limit, cursor) {
+    let page = match kind {
+        AgentLibraryKind::Agent => store.list(tenant_id, lifecycle, limit, cursor),
+        // The tool library is the component library's tool heads, paged by the one component
+        // scan (MEDULLA-TYPED-PACKS-R011.2).
+        AgentLibraryKind::Tool => store
+            .search_components(&medulla_agent_types::agent_component::AgentComponentSearchRequest {
+                tenant_id: tenant_id.to_string(),
+                task: None,
+                capabilities: Vec::new(),
+                kinds: vec![medulla_agent_types::agent_component::AgentComponentKind::Tool],
+                read_only: false,
+                limit,
+                cursor: cursor.map(str::to_string),
+            })
+            .map(|found| AgentLibraryPage {
+                entries: found
+                    .entries
+                    .iter()
+                    .filter(|entry| lifecycle.is_none_or(|wanted| entry.lifecycle == wanted))
+                    .map(AgentLibraryListEntry::of_tool)
+                    .collect(),
+                next_cursor: found.next_cursor,
+            }),
+        AgentLibraryKind::Suggestion => Err(unsupported_kind_refusal(kind)),
+    };
+    match page {
         Ok(page) => Response::ok(
             req_id,
             ResultPayload::of_ref::<
                 medulla_protocol_types::result_contract::storage::AgentLibraryList,
             >(&page),
+        ),
+        Err(error) => Response::err(req_id, error),
+    }
+}
+
+/// `AgentLibrary` op `get` (MEDULLA-TYPED-PACKS-R011.2): the head entry of one id of one kind,
+/// or null. A tenant other than the verified one refuses exactly as the other reads do.
+#[cfg(feature = "redb")]
+fn library_get(
+    store: &medulla_persistence_records::agent_library::AgentLibraryStore,
+    req_id: u64,
+    verified: &medulla_server_api::authority_context::VerifiedRequestContext,
+    tenant_id: &str,
+    kind: medulla_agent_types::agent_library::AgentLibraryKind,
+    id: &str,
+) -> Response {
+    use medulla_agent_types::agent_library::{
+        unsupported_kind_refusal, AgentLibraryKind, AgentLibraryListEntry,
+    };
+    if tenant_id != verified.tenant() {
+        return Response::err(
+            req_id,
+            "ACCESS_DENIED: Agent Library tenant must match verified request tenant",
+        );
+    }
+    let head: Result<Option<AgentLibraryListEntry>, String> = match kind {
+        AgentLibraryKind::Agent => store
+            .current(tenant_id, id)
+            .map(|entry| entry.as_ref().map(AgentLibraryListEntry::from)),
+        AgentLibraryKind::Tool => store.current_component(tenant_id, id).map(|entry| {
+            entry
+                .filter(|entry| {
+                    entry.kind == medulla_agent_types::agent_component::AgentComponentKind::Tool
+                })
+                .as_ref()
+                .map(AgentLibraryListEntry::of_tool)
+        }),
+        AgentLibraryKind::Suggestion => Err(unsupported_kind_refusal(kind)),
+    };
+    match head {
+        Ok(head) => Response::ok(
+            req_id,
+            ResultPayload::of_ref::<
+                medulla_protocol_types::result_contract::storage::AgentLibraryGet,
+            >(&head),
         ),
         Err(error) => Response::err(req_id, error),
     }

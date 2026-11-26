@@ -53,7 +53,7 @@ pub mod list;
 
 pub use crate::agent_component::ComponentDependency;
 pub use lifecycle::{refuse_withdrawn, AgentLibraryLifecycle};
-pub use list::{AgentLibraryListEntry, AgentLibraryPage};
+pub use list::{AgentLibraryKind, AgentLibraryListEntry, AgentLibraryPage};
 
 /// Whether the system prompt is fixed at publish time or resolved per run.
 ///
@@ -855,12 +855,22 @@ pub enum AgentLibraryOp {
     /// (MEDULLA-TYPED-PACKS-R011.1).
     List {
         tenant_id: String,
+        /// Which library to list; `agent` when absent (MEDULLA-TYPED-PACKS-R011.2).
+        #[serde(default)]
+        kind: Option<AgentLibraryKind>,
         #[serde(default)]
         lifecycle: Option<AgentLibraryLifecycle>,
         #[serde(default)]
         limit: Option<u32>,
         #[serde(default)]
         cursor: Option<String>,
+    },
+    /// One head entry of the verified tenant's library of `kind`, or null when the tenant holds
+    /// none with this id (MEDULLA-TYPED-PACKS-R011.2). Reads only.
+    Get {
+        tenant_id: String,
+        kind: AgentLibraryKind,
+        id: String,
     },
 }
 

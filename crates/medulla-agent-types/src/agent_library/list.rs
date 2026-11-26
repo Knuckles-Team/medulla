@@ -16,12 +16,31 @@ pub const MAX_AGENT_LIBRARY_LIST_CURSOR_BYTES: usize = 16 * 1024;
 /// Format-identity constant (RF-ADR-006) for the tenant binding inside a listing cursor.
 pub const AGENT_LIBRARY_LIST_CURSOR_DOMAIN: &[u8] = b"au-eg/agent-library-list-cursor/v1";
 
-/// One agent of a listing: its identity, the digest of its current definition, the revision
-/// that is its head and that head's lifecycle.
+/// Which library an entry belongs to (MEDULLA-TYPED-PACKS-R011.2). The engine holds agents and,
+/// in the component library beside them, tools. It holds no suggestions.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum AgentLibraryKind {
+    /// An agent definition.
+    #[default]
+    Agent,
+    /// A tool component.
+    Tool,
+    /// A suggestion. The engine holds none: a request for this kind refuses `PARAMETER_INVALID`.
+    Suggestion,
+}
+
+/// One entry of a listing: its identity, the digest of its current definition, the revision
+/// that is its head and that head's lifecycle. `agent_id` is the id of the entry in its own
+/// library: the agent id, or the component id of a tool.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub struct AgentLibraryListEntry {
+    /// The library the entry belongs to; `agent` when absent.
+    #[serde(default)]
+    pub kind: AgentLibraryKind,
     pub agent_id: String,
     pub definition_digest: String,
     pub entry_revision: u64,
@@ -31,12 +50,36 @@ pub struct AgentLibraryListEntry {
 impl From<&AgentLibraryEntry> for AgentLibraryListEntry {
     fn from(entry: &AgentLibraryEntry) -> Self {
         Self {
+            kind: AgentLibraryKind::Agent,
             agent_id: entry.agent_id.clone(),
             definition_digest: entry.definition_digest.clone(),
             entry_revision: entry.entry_revision,
             lifecycle: entry.lifecycle,
         }
     }
+}
+
+impl AgentLibraryListEntry {
+    /// The tool entry a component's head revision is.
+    pub fn of_tool(entry: &crate::agent_component::AgentComponentEntry) -> Self {
+        Self {
+            kind: AgentLibraryKind::Tool,
+            agent_id: entry.component_id.clone(),
+            definition_digest: entry.definition_digest.clone(),
+            entry_revision: entry.entry_revision,
+            lifecycle: entry.lifecycle,
+        }
+    }
+}
+
+/// The refusal of a request for a library the engine does not hold.
+pub fn unsupported_kind_refusal(kind: AgentLibraryKind) -> String {
+    let name = match kind {
+        AgentLibraryKind::Agent => "agent",
+        AgentLibraryKind::Tool => "tool",
+        AgentLibraryKind::Suggestion => "suggestion",
+    };
+    format!("PARAMETER_INVALID: the engine holds no {name} library entries")
 }
 
 /// One page of a listing, in agent id order. An object, never a bare array, so the cursor has
@@ -118,6 +161,23 @@ mod tests {
         assert!(decode_list_cursor("tenant-a", "zz")
             .unwrap_err()
             .contains("malformed"));
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R011.2
+    #[test]
+    fn a_kind_defaults_to_agent_and_a_suggestion_is_refused_by_name() {
+        assert_eq!(AgentLibraryKind::default(), AgentLibraryKind::Agent);
+        assert_eq!(
+            serde_json::to_value(AgentLibraryKind::Tool).expect("json"),
+            serde_json::json!("tool")
+        );
+        let entry: AgentLibraryListEntry = serde_json::from_value(serde_json::json!({
+            "agent_id": "a", "definition_digest": "d", "entry_revision": 1, "lifecycle": "published"
+        }))
+        .expect("an entry with no kind is an agent");
+        assert_eq!(entry.kind, AgentLibraryKind::Agent);
+        let refusal = unsupported_kind_refusal(AgentLibraryKind::Suggestion);
+        assert!(refusal.starts_with("PARAMETER_INVALID:"), "{refusal}");
     }
 
     // spec: MEDULLA-TYPED-PACKS-R011.1
