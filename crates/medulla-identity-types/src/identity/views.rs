@@ -109,15 +109,17 @@ pub struct SessionView {
     pub revoked: bool,
 }
 
-/// Length of a session handle (hex characters of the hash, re-hashed).
-const HANDLE_CHARS: usize = 12;
+/// The handle a session listing shows: the first characters of a re-hash of the session hash.
+/// It names a session for revocation and grants nothing.
+pub(crate) fn session_handle(session_hash: &str) -> String {
+    let handle = super::store::digest_hex(b"eg/identity-session-handle/v1\0", session_hash);
+    handle[..super::credentials::SESSION_HANDLE_CHARS].to_string()
+}
 
 impl SessionView {
     pub(crate) fn of(session: &SessionRecord) -> Self {
-        let handle =
-            super::store::digest_hex(b"eg/identity-session-handle/v1\0", &session.session_hash);
         Self {
-            handle: handle[..HANDLE_CHARS].to_string(),
+            handle: session_handle(&session.session_hash),
             principal_id: session.principal_id.clone(),
             created_at_ms: session.created_at_ms,
             last_seen_at_ms: session.last_seen_at_ms,
@@ -248,6 +250,16 @@ pub enum IdentityReply<C = ()> {
     WebauthnCredentials(Vec<WebauthnCredentialView>),
     /// `issue_password_reset`.
     ResetDelivery(ResetDelivery),
+    /// `list_api_keys` (MEDULLA-IDENTITY-R730).
+    ApiKeys(Vec<super::credentials::ApiKeyView>),
+    /// `read_issuer_keys`, `rotate_issuer_key` (MEDULLA-IDENTITY-R732).
+    IssuerKeys(Vec<super::credentials::IssuerKeyView>),
+    /// `list_scim_clients` (MEDULLA-IDENTITY-R733).
+    ScimClients(Vec<super::credentials::ScimClientView>),
+    /// `create_scim_client`, `get_scim_client`, `update_scim_client` (MEDULLA-IDENTITY-R733).
+    ScimClient(super::credentials::ScimClientView),
+    /// `consume_mfa_challenge` (MEDULLA-IDENTITY-R735).
+    MfaChallenge(super::credentials::MfaChallengeView),
     /// `validate_policy`: the RBAC roles and grants a policy bundle lowers to
     /// (MEDULLA-IDENTITY-R702).
     PolicyCompiled {
@@ -295,6 +307,11 @@ impl IdentityReply {
             Self::DirectoryGroups(value) => IdentityReply::DirectoryGroups(value),
             Self::WebauthnCredentials(value) => IdentityReply::WebauthnCredentials(value),
             Self::ResetDelivery(value) => IdentityReply::ResetDelivery(value),
+            Self::ApiKeys(value) => IdentityReply::ApiKeys(value),
+            Self::IssuerKeys(value) => IdentityReply::IssuerKeys(value),
+            Self::ScimClients(value) => IdentityReply::ScimClients(value),
+            Self::ScimClient(value) => IdentityReply::ScimClient(value),
+            Self::MfaChallenge(value) => IdentityReply::MfaChallenge(value),
             Self::PolicyCompiled { roles, grants } => {
                 IdentityReply::PolicyCompiled { roles, grants }
             }

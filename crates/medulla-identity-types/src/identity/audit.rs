@@ -87,6 +87,10 @@ pub enum IdentityEvent {
     /// `target` is the login.
     WireLoginGranted,
     WireLoginRevoked,
+    /// The issuer key ring got a new active key (MEDULLA-IDENTITY-R732).
+    IssuerKeyRotated,
+    /// A SCIM client credential was created, changed or deleted (MEDULLA-IDENTITY-R733).
+    ScimClientChanged,
 }
 
 /// The change of the canonical authorization digest across one identity or

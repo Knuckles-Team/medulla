@@ -1439,6 +1439,116 @@ class ApiKeyIssue(BaseModel):
     ttl_ms: Annotated[int, Field(ge=0)]
 
 
+class AdminResetIssue(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    principal_id: str
+    token: Secret
+    ttl_ms: Annotated[int, Field(ge=0)]
+
+
+class ApiKeyAdminIssue(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    key_id: str
+    principal_id: str
+    scopes: Annotated[list[str], AfterValidator(_eg_unique_items)]
+    secret: Secret
+    ttl_ms: Annotated[int, Field(ge=0)]
+
+
+class ApiKeyView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    created_at_ms: Annotated[int, Field(ge=0)]
+    expires_at_ms: Annotated[int, Field(ge=0)]
+    key_id: str
+    last_used_at_ms: Annotated[int, Field(ge=0)] | None = None
+    principal_id: str
+    revoked_at_ms: Annotated[int, Field(ge=0)] | None = None
+    scopes: Annotated[list[str], AfterValidator(_eg_unique_items)]
+
+
+class MfaChallengeKind(str, Enum):
+    ENROLLMENT = "enrollment"
+    WEBAUTHN = "webauthn"
+
+
+class MfaChallengeConsume(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: MfaChallengeKind
+    session_token: Secret
+
+
+class MfaChallengeIssue(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    challenge: str
+    kind: MfaChallengeKind
+    session_token: Secret
+
+
+class MfaChallengeView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    challenge: str
+    expires_at_ms: Annotated[int, Field(ge=0)]
+    kind: MfaChallengeKind
+
+
+class IssuerKeyRotate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    algorithm: str
+    kid: str
+    public_key_hex: str
+
+
+class IssuerKeyView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    algorithm: str
+    created_at_ms: Annotated[int, Field(ge=0)]
+    kid: str
+    public_key_hex: str
+    retired_at_ms: Annotated[int, Field(ge=0)] | None = None
+    state: str
+
+
+class ScimClientCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    client_id: str
+    label: str
+    secret: Secret
+    ttl_ms: Annotated[int, Field(ge=0)]
+
+
+class ScimClientUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    client_id: str
+    label: str | None = None
+    secret: Secret | None = None
+    ttl_ms: Annotated[int, Field(ge=0)] | None = None
+
+
+class ScimClientView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    client_id: str
+    created_at_ms: Annotated[int, Field(ge=0)]
+    expires_at_ms: Annotated[int, Field(ge=0)]
+    label: str
+
+
+class SessionHandleRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    handle: str
+
+
 class ApiKeyUse(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -8932,6 +9042,14 @@ class IdentityOpSessionLiveness(BaseModel):
     tenant: str
 
 
+class IdentityOpSessionRevokeByHandle(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["session"]
+    op: Literal["revoke_by_handle"]
+    request: SessionHandleRef
+
+
 IdentityOpSession = Annotated[
     IdentityOpSessionInspectReference
     | IdentityOpSessionRenewReference
@@ -8939,7 +9057,8 @@ IdentityOpSession = Annotated[
     | IdentityOpSessionRevoke
     | IdentityOpSessionRevokeAll
     | IdentityOpSessionList
-    | IdentityOpSessionLiveness,
+    | IdentityOpSessionLiveness
+    | IdentityOpSessionRevokeByHandle,
     Field(discriminator="op"),
 ]
 
@@ -8992,13 +9111,101 @@ class IdentityOpTokenIssuePasswordReset(BaseModel):
     request: PasswordResetIssue
 
 
+class IdentityOpTokenListApiKeys(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["list_api_keys"]
+    request: ObjectRef
+
+
+class IdentityOpTokenIssueApiKeyAdmin(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["issue_api_key_admin"]
+    request: ApiKeyAdminIssue
+
+
+class IdentityOpTokenReadIssuerKeys(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["read_issuer_keys"]
+
+
+class IdentityOpTokenRotateIssuerKey(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["rotate_issuer_key"]
+    request: IssuerKeyRotate
+
+
+class IdentityOpTokenCreateScimClient(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["create_scim_client"]
+    request: ScimClientCreate
+
+
+class IdentityOpTokenListScimClients(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["list_scim_clients"]
+
+
+class IdentityOpTokenGetScimClient(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["get_scim_client"]
+    request: ObjectRef
+
+
+class IdentityOpTokenUpdateScimClient(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["update_scim_client"]
+    request: ScimClientUpdate
+
+
+class IdentityOpTokenDeleteScimClient(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["delete_scim_client"]
+    request: ObjectRef
+
+
+class IdentityOpTokenIssueAdminReset(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["issue_admin_reset"]
+    request: AdminResetIssue
+
+
 IdentityOpToken = Annotated[
     IdentityOpTokenIssueOneTime
     | IdentityOpTokenRedeemOneTime
     | IdentityOpTokenIssueApiKey
     | IdentityOpTokenVerifyApiKey
     | IdentityOpTokenRevokeApiKey
-    | IdentityOpTokenIssuePasswordReset,
+    | IdentityOpTokenIssuePasswordReset
+    | IdentityOpTokenListApiKeys
+    | IdentityOpTokenIssueApiKeyAdmin
+    | IdentityOpTokenReadIssuerKeys
+    | IdentityOpTokenRotateIssuerKey
+    | IdentityOpTokenCreateScimClient
+    | IdentityOpTokenListScimClients
+    | IdentityOpTokenGetScimClient
+    | IdentityOpTokenUpdateScimClient
+    | IdentityOpTokenDeleteScimClient
+    | IdentityOpTokenIssueAdminReset,
     Field(discriminator="op"),
 ]
 
@@ -9075,6 +9282,22 @@ class IdentityOpMfaRemoveWebauthn(BaseModel):
     request: ObjectRef
 
 
+class IdentityOpMfaIssueChallenge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["mfa"]
+    op: Literal["issue_challenge"]
+    request: MfaChallengeIssue
+
+
+class IdentityOpMfaConsumeChallenge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["mfa"]
+    op: Literal["consume_challenge"]
+    request: MfaChallengeConsume
+
+
 IdentityOpMfa = Annotated[
     IdentityOpMfaEnrollTotp
     | IdentityOpMfaConfirmTotp
@@ -9084,7 +9307,9 @@ IdentityOpMfa = Annotated[
     | IdentityOpMfaRegisterWebauthn
     | IdentityOpMfaWebauthnCredentials
     | IdentityOpMfaVerifyWebauthn
-    | IdentityOpMfaRemoveWebauthn,
+    | IdentityOpMfaRemoveWebauthn
+    | IdentityOpMfaIssueChallenge
+    | IdentityOpMfaConsumeChallenge,
     Field(discriminator="op"),
 ]
 
@@ -9455,6 +9680,41 @@ class IdentityReplyResetDelivery(BaseModel):
     value: ResetDelivery
 
 
+class IdentityReplyApiKeys(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["api_keys"]
+    value: list[ApiKeyView]
+
+
+class IdentityReplyIssuerKeys(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["issuer_keys"]
+    value: list[IssuerKeyView]
+
+
+class IdentityReplyScimClients(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["scim_clients"]
+    value: list[ScimClientView]
+
+
+class IdentityReplyScimClient(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["scim_client"]
+    value: ScimClientView
+
+
+class IdentityReplyMfaChallenge(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: Literal["mfa_challenge"]
+    value: MfaChallengeView
+
+
 class IdentityReplyWireLoginGranted(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -9492,7 +9752,12 @@ IdentityReply = Annotated[
     | IdentityReplyWebauthnCredentials
     | IdentityReplyResetDelivery
     | IdentityReplyWireLoginGranted
-    | IdentityReplyWireLoginRevoked,
+    | IdentityReplyWireLoginRevoked
+    | IdentityReplyApiKeys
+    | IdentityReplyIssuerKeys
+    | IdentityReplyScimClients
+    | IdentityReplyScimClient
+    | IdentityReplyMfaChallenge,
     Field(discriminator="kind"),
 ]
 
@@ -32709,6 +32974,8 @@ IdentityEvent = (
     | Literal["api_key_issued"]
     | Literal["api_key_used"]
     | Literal["api_key_revoked"]
+    | Literal["issuer_key_rotated"]
+    | Literal["scim_client_changed"]
     | Literal["mfa_enrolled"]
     | Literal["mfa_verified"]
     | Literal["mfa_failed"]
@@ -42920,6 +43187,37 @@ class RelationalIntent(BaseModel):
 
 
 __all__ = [
+    "AdminResetIssue",
+    "ApiKeyAdminIssue",
+    "ApiKeyView",
+    "MfaChallengeKind",
+    "MfaChallengeConsume",
+    "MfaChallengeIssue",
+    "MfaChallengeView",
+    "IssuerKeyRotate",
+    "IssuerKeyView",
+    "ScimClientCreate",
+    "ScimClientUpdate",
+    "ScimClientView",
+    "SessionHandleRef",
+    "IdentityOpSessionRevokeByHandle",
+    "IdentityOpTokenListApiKeys",
+    "IdentityOpTokenIssueApiKeyAdmin",
+    "IdentityOpTokenReadIssuerKeys",
+    "IdentityOpTokenRotateIssuerKey",
+    "IdentityOpTokenCreateScimClient",
+    "IdentityOpTokenListScimClients",
+    "IdentityOpTokenGetScimClient",
+    "IdentityOpTokenUpdateScimClient",
+    "IdentityOpTokenDeleteScimClient",
+    "IdentityOpTokenIssueAdminReset",
+    "IdentityOpMfaIssueChallenge",
+    "IdentityOpMfaConsumeChallenge",
+    "IdentityReplyApiKeys",
+    "IdentityReplyIssuerKeys",
+    "IdentityReplyScimClients",
+    "IdentityReplyScimClient",
+    "IdentityReplyMfaChallenge",
     "AbstainReason",
     "AbstainReasonBudgetExhausted",
     "AbstainReasonIneligibleExternalAgent",

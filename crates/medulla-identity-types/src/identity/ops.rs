@@ -253,6 +253,10 @@ pub enum SessionOp {
     List {
         request: ObjectRef,
     },
+    /// Revoke one session by the handle a listing shows (MEDULLA-IDENTITY-R731).
+    RevokeByHandle {
+        request: super::credentials::SessionHandleRef,
+    },
 }
 
 /// One-time tokens and API keys.
@@ -278,6 +282,42 @@ pub enum TokenOp {
     /// A signed-out user's reset link (uniform answer, throttled).
     IssuePasswordReset {
         request: PasswordResetIssue,
+    },
+    /// The API keys of one principal, without secrets (MEDULLA-IDENTITY-R730).
+    ListApiKeys {
+        request: ObjectRef,
+    },
+    /// An administrator's direct API-key issue, with no session token (MEDULLA-IDENTITY-R730).
+    IssueApiKeyAdmin {
+        request: super::credentials::ApiKeyAdminIssue,
+    },
+    /// The issuer key ring: every key still published (MEDULLA-IDENTITY-R732).
+    ReadIssuerKeys,
+    /// Register a new active issuer key and retire the previous one (MEDULLA-IDENTITY-R732).
+    RotateIssuerKey {
+        request: super::credentials::IssuerKeyRotate,
+    },
+    /// Create one SCIM client credential (MEDULLA-IDENTITY-R733).
+    CreateScimClient {
+        request: super::credentials::ScimClientCreate,
+    },
+    /// Every SCIM client credential, without secrets (MEDULLA-IDENTITY-R733).
+    ListScimClients,
+    /// One SCIM client credential, without its secret (MEDULLA-IDENTITY-R733).
+    GetScimClient {
+        request: ObjectRef,
+    },
+    /// Change a SCIM client's label, secret or lifetime (MEDULLA-IDENTITY-R733).
+    UpdateScimClient {
+        request: super::credentials::ScimClientUpdate,
+    },
+    /// Delete one SCIM client credential (MEDULLA-IDENTITY-R733).
+    DeleteScimClient {
+        request: ObjectRef,
+    },
+    /// An administrator's one-time reset token for a principal (MEDULLA-IDENTITY-R734).
+    IssueAdminReset {
+        request: super::credentials::AdminResetIssue,
     },
 }
 
@@ -315,6 +355,15 @@ pub enum MfaOp {
     /// Remove one credential by id: its owner, or an administrator.
     RemoveWebauthn {
         request: ObjectRef,
+    },
+    /// Store one enrollment or WebAuthn challenge for the session's principal
+    /// (MEDULLA-IDENTITY-R735).
+    IssueChallenge {
+        request: super::credentials::MfaChallengeIssue,
+    },
+    /// Spend the stored challenge exactly once (MEDULLA-IDENTITY-R735).
+    ConsumeChallenge {
+        request: super::credentials::MfaChallengeConsume,
     },
 }
 
@@ -530,6 +579,9 @@ impl SessionOp {
             Self::Revoke { .. } => meta("revoke_session", true, OpAuthority::Broker),
             Self::RevokeAll { .. } => meta("revoke_user_sessions", true, OpAuthority::Admin),
             Self::List { .. } => meta("list_sessions", false, OpAuthority::Read),
+            Self::RevokeByHandle { .. } => {
+                meta("revoke_session_by_handle", true, OpAuthority::Admin)
+            }
         }
     }
 }
@@ -545,6 +597,16 @@ impl TokenOp {
             Self::IssuePasswordReset { .. } => {
                 meta("issue_password_reset", true, OpAuthority::Broker)
             }
+            Self::ListApiKeys { .. } => meta("list_api_keys", false, OpAuthority::Read),
+            Self::IssueApiKeyAdmin { .. } => meta("issue_api_key_admin", true, OpAuthority::Admin),
+            Self::ReadIssuerKeys => meta("read_issuer_keys", false, OpAuthority::Directory),
+            Self::RotateIssuerKey { .. } => meta("rotate_issuer_key", true, OpAuthority::Admin),
+            Self::CreateScimClient { .. } => meta("create_scim_client", true, OpAuthority::Admin),
+            Self::ListScimClients => meta("list_scim_clients", false, OpAuthority::Read),
+            Self::GetScimClient { .. } => meta("get_scim_client", false, OpAuthority::Read),
+            Self::UpdateScimClient { .. } => meta("update_scim_client", true, OpAuthority::Admin),
+            Self::DeleteScimClient { .. } => meta("delete_scim_client", true, OpAuthority::Admin),
+            Self::IssueAdminReset { .. } => meta("issue_admin_reset", true, OpAuthority::Admin),
         }
     }
 }
@@ -565,6 +627,10 @@ impl MfaOp {
             }
             Self::VerifyWebauthn { .. } => meta("verify_webauthn", true, OpAuthority::Broker),
             Self::RemoveWebauthn { .. } => meta("remove_webauthn", true, OpAuthority::SelfOrAdmin),
+            Self::IssueChallenge { .. } => meta("issue_mfa_challenge", true, OpAuthority::Broker),
+            Self::ConsumeChallenge { .. } => {
+                meta("consume_mfa_challenge", true, OpAuthority::Broker)
+            }
         }
     }
 }

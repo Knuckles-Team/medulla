@@ -30,6 +30,7 @@ mod access_ops;
 mod approval_keys;
 mod auth;
 mod authority;
+mod credentials;
 mod delegation;
 mod external;
 mod import;
@@ -107,6 +108,15 @@ pub struct IdentityStore {
     pub(super) one_time: BTreeMap<String, OneTimeToken>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) api_keys: BTreeMap<String, ApiKeyRecord>,
+    /// Key id → public issuer key (MEDULLA-IDENTITY-R732).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(super) issuer_keys: BTreeMap<String, super::credentials::IssuerKeyRecord>,
+    /// Client id → SCIM client credential (MEDULLA-IDENTITY-R733).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(super) scim_clients: BTreeMap<String, super::credentials::ScimClientRecord>,
+    /// `<principal>\0<kind>` → the outstanding MFA challenge (MEDULLA-IDENTITY-R735).
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(super) mfa_challenges: BTreeMap<String, super::credentials::MfaChallengeRecord>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(super) totp: BTreeMap<String, TotpRecord>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]

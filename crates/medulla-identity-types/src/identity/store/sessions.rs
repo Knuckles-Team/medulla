@@ -66,6 +66,9 @@ impl IdentityStore {
                 Ok(IdentityReply::Done { changed })
             }
             SessionOp::RevokeAll { request } => self.revoke_user(request, stamp, ctx.now_ms),
+            SessionOp::RevokeByHandle { request } => {
+                self.revoke_session_by_handle(request, stamp, ctx.now_ms)
+            }
             SessionOp::List { request } => Ok(IdentityReply::Sessions(
                 self.sessions
                     .values()

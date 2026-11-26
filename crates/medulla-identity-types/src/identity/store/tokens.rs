@@ -58,6 +58,18 @@ impl IdentityStore {
             TokenOp::IssuePasswordReset { request } => {
                 self.issue_password_reset(request, stamp, ctx.now_ms)
             }
+            TokenOp::ListApiKeys { request } => Ok(self.list_api_keys(&request.id)),
+            TokenOp::IssueApiKeyAdmin { request } => self.issue_api_key_admin(request, stamp, ctx),
+            TokenOp::ReadIssuerKeys => Ok(self.read_issuer_keys(ctx.now_ms)),
+            TokenOp::RotateIssuerKey { request } => self.rotate_issuer_key(request, stamp, ctx),
+            TokenOp::CreateScimClient { request } => self.create_scim_client(request, stamp, ctx),
+            TokenOp::ListScimClients => Ok(self.list_scim_clients()),
+            TokenOp::GetScimClient { request } => self.get_scim_client(&request.id),
+            TokenOp::UpdateScimClient { request } => self.update_scim_client(request, stamp, ctx),
+            TokenOp::DeleteScimClient { request } => {
+                self.delete_scim_client(&request.id, stamp, ctx.now_ms)
+            }
+            TokenOp::IssueAdminReset { request } => self.issue_admin_reset(request, stamp, ctx),
         }
     }
 
@@ -78,7 +90,7 @@ impl IdentityStore {
     }
 
     /// Drop spent and expired tokens; refuse when the table is still full.
-    fn prune_one_time(&mut self, now_ms: u64) -> Result<(), IdentityRefusal> {
+    pub(super) fn prune_one_time(&mut self, now_ms: u64) -> Result<(), IdentityRefusal> {
         self.one_time
             .retain(|_, token| token.used_at_ms.is_none() && token.expires_at_ms > now_ms);
         if self.one_time.len() >= MAX_ONE_TIME_TOKENS {
@@ -87,7 +99,7 @@ impl IdentityStore {
         Ok(())
     }
 
-    fn insert_one_time(&mut self, token: OneTimeToken) -> Result<(), IdentityRefusal> {
+    pub(super) fn insert_one_time(&mut self, token: OneTimeToken) -> Result<(), IdentityRefusal> {
         if self.one_time.contains_key(&token.token_hash) {
             return Err(IdentityRefusal::Collision);
         }
@@ -281,46 +293,65 @@ impl IdentityStore {
         ctx: &ApplyContext<'_>,
     ) -> Result<IdentityReply, IdentityRefusal> {
         self.admin_subject(stamp, ctx)?;
-        identifier(&request.key_id)?;
-        let lifetime_ok = (1..=MAX_API_KEY_LIFETIME_MS).contains(&request.ttl_ms);
-        if !lifetime_ok || request.scopes.is_empty() {
+        let secret_hash = stamp.token_hash(1)?.to_string();
+        self.insert_api_key(
+            &request.principal_id,
+            &request.key_id,
+            &request.scopes,
+            request.ttl_ms,
+            secret_hash,
+            stamp,
+            ctx,
+        )
+    }
+
+    /// The one API-key insert: the session-backed and the direct administrator issue both end
+    /// here, so the same validation, bounds and audit apply (MEDULLA-IDENTITY-R730).
+    #[allow(clippy::too_many_arguments)]
+    pub(super) fn insert_api_key(
+        &mut self,
+        principal_id: &str,
+        key_id: &str,
+        scopes: &BTreeSet<String>,
+        ttl_ms: u64,
+        secret_hash: String,
+        stamp: &IdentityStamp,
+        ctx: &ApplyContext<'_>,
+    ) -> Result<IdentityReply, IdentityRefusal> {
+        identifier(key_id)?;
+        let lifetime_ok = (1..=MAX_API_KEY_LIFETIME_MS).contains(&ttl_ms);
+        if !lifetime_ok || scopes.is_empty() {
             return Err(IdentityRefusal::InvalidRequest);
         }
-        if self.api_keys.contains_key(&request.key_id) {
+        if self.api_keys.contains_key(key_id) {
             return Err(IdentityRefusal::Collision);
         }
-        let owned =
-            self.api_key_scopes_allowed(&request.principal_id, &request.scopes, ctx.classifier)?;
+        let owned = self.api_key_scopes_allowed(principal_id, scopes, ctx.classifier)?;
         if !owned {
             return Err(IdentityRefusal::ClassViolation);
         }
         let live = self
             .api_keys
             .values()
-            .filter(|key| key.principal_id == request.principal_id && key.revoked_at_ms.is_none())
+            .filter(|key| key.principal_id == principal_id && key.revoked_at_ms.is_none())
             .count();
         if live >= MAX_API_KEYS_PER_USER {
             return Err(IdentityRefusal::Full);
         }
         self.api_keys.insert(
-            request.key_id.clone(),
+            key_id.to_string(),
             ApiKeyRecord {
-                key_id: request.key_id.clone(),
-                principal_id: request.principal_id.clone(),
-                secret_hash: stamp.token_hash(1)?.to_string(),
-                scopes: request.scopes.clone(),
+                key_id: key_id.to_string(),
+                principal_id: principal_id.to_string(),
+                secret_hash,
+                scopes: scopes.clone(),
                 created_at_ms: ctx.now_ms,
-                expires_at_ms: ctx.now_ms.saturating_add(request.ttl_ms),
+                expires_at_ms: ctx.now_ms.saturating_add(ttl_ms),
                 last_used_at_ms: None,
                 revoked_at_ms: None,
             },
         );
-        self.audit_event(
-            stamp,
-            ctx.now_ms,
-            IdentityEvent::ApiKeyIssued,
-            Some(&request.key_id),
-        );
+        self.audit_event(stamp, ctx.now_ms, IdentityEvent::ApiKeyIssued, Some(key_id));
         Ok(IdentityReply::Done { changed: true })
     }
 

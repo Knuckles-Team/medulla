@@ -33,6 +33,8 @@ impl IdentityStore {
             MfaOp::ConsumeRecoveryCode { .. } => Ok(IdentityReply::Authenticate(
                 self.consume_recovery(stamp, ctx.now_ms)?,
             )),
+            MfaOp::IssueChallenge { request } => self.issue_mfa_challenge(request, stamp, ctx),
+            MfaOp::ConsumeChallenge { request } => self.consume_mfa_challenge(request, stamp, ctx),
         }
     }
 

@@ -31,6 +31,7 @@ mod access;
 mod approval_key;
 mod audit;
 mod config;
+mod credentials;
 mod delegation;
 mod denials;
 mod metadata;
@@ -65,6 +66,13 @@ pub use audit::{
 pub use config::{
     AuthMode, IdentityConfig, LocalFallback, ModeTransition, RegistrationPolicy,
     DEFAULT_PASSWORD_MIN_CHARS, MAX_PASSWORD_CHARS,
+};
+pub use credentials::{
+    AdminResetIssue, ApiKeyAdminIssue, ApiKeyView, IssuerKeyRecord, IssuerKeyRotate, IssuerKeyView,
+    MfaChallengeConsume, MfaChallengeIssue, MfaChallengeKind, MfaChallengeRecord, MfaChallengeView,
+    ScimClientCreate, ScimClientRecord, ScimClientUpdate, ScimClientView, SessionHandleRef,
+    ISSUER_KEY_ALGORITHMS, ISSUER_KEY_GRACE_MS, MAX_ISSUER_KEYS, MAX_MFA_CHALLENGES,
+    MAX_SCIM_CLIENTS, MFA_CHALLENGE_TTL_MS, SESSION_HANDLE_CHARS,
 };
 pub use delegation::{
     DelegationRecord, DelegationRecordWrite, DelegationStanding, DelegationState,

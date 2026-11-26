@@ -292,6 +292,7 @@ fn derive_session(op: &mut SessionOp, stamp: &mut IdentityStamp) -> Derived {
         SessionOp::Resolve { request } | SessionOp::Revoke { request } => request,
         SessionOp::RevokeAll { .. }
         | SessionOp::List { .. }
+        | SessionOp::RevokeByHandle { .. }
         | SessionOp::InspectReference { .. }
         | SessionOp::Liveness { .. }
         | SessionOp::RenewReference { .. } => return Ok(()),
@@ -338,7 +339,29 @@ fn derive_token(op: &mut TokenOp, stamp: &mut IdentityStamp, env: &StampEnv<'_>)
         TokenOp::IssuePasswordReset { request } => {
             stamp.token_hashes = vec![take_token(&mut request.token, Floor::Issue)?];
         }
-        TokenOp::RevokeApiKey { .. } => {}
+        TokenOp::RevokeApiKey { .. }
+        | TokenOp::ListApiKeys { .. }
+        | TokenOp::ReadIssuerKeys
+        | TokenOp::RotateIssuerKey { .. }
+        | TokenOp::ListScimClients
+        | TokenOp::GetScimClient { .. }
+        | TokenOp::DeleteScimClient { .. } => {}
+        // The direct administrator ops hash the secret they carry and nothing else
+        // (MEDULLA-IDENTITY-R730, R733, R734).
+        TokenOp::IssueApiKeyAdmin { request } => {
+            stamp.token_hashes = vec![take_token(&mut request.secret, Floor::Issue)?];
+        }
+        TokenOp::CreateScimClient { request } => {
+            stamp.token_hashes = vec![take_token(&mut request.secret, Floor::Issue)?];
+        }
+        TokenOp::UpdateScimClient { request } => {
+            if let Some(secret) = request.secret.as_mut() {
+                stamp.token_hashes = vec![take_token(secret, Floor::Issue)?];
+            }
+        }
+        TokenOp::IssueAdminReset { request } => {
+            stamp.token_hashes = vec![take_token(&mut request.token, Floor::Issue)?];
+        }
     }
     Ok(())
 }
@@ -407,6 +430,14 @@ fn derive_mfa(op: &mut MfaOp, stamp: &mut IdentityStamp, env: &StampEnv<'_>) -> 
             let session = take_token(&mut request.session_token, Floor::Lookup)?;
             let code = secrets::token_hash(&request.code.take());
             stamp.token_hashes = vec![session, code];
+        }
+        // The challenge store acts for the session's principal and carries no other secret
+        // (MEDULLA-IDENTITY-R735).
+        MfaOp::IssueChallenge { request } => {
+            stamp.token_hashes = vec![take_token(&mut request.session_token, Floor::Lookup)?];
+        }
+        MfaOp::ConsumeChallenge { request } => {
+            stamp.token_hashes = vec![take_token(&mut request.session_token, Floor::Lookup)?];
         }
     }
     Ok(())

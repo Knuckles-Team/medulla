@@ -8,6 +8,7 @@ use super::*;
 mod access;
 mod approval_keys;
 mod auth;
+mod credentials;
 mod factors;
 mod modes;
 mod policy_bundle;
