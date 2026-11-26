@@ -19,7 +19,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from _landing_fixture import LandingRepo, cited_fact
+from _landing_fixture import LandingRepo, add_node, cited_fact, content_digest
 from conftest import TEST_AGENT_ID, request_context
 
 GRAPH = "__commons__"
@@ -452,6 +452,135 @@ async def test_proposal_lands_only_through_changeset_and_gates(
             )
         )
         assert [entry["id"] for entry in listed] == [proposal_id]
+    finally:
+        if repo is not None:
+            await repo.close()
+        await loop.close()
+        await person.close()
+
+
+@pytest.mark.spec("MEDULLA-SDLC-R017.7")
+@pytest.mark.asyncio
+async def test_goal_drives_typed_proposal_to_pull_request(start_medulla_server) -> None:
+    person = await _connect()
+    loop = await _connect_as(LOOP_AGENT, TEST_AGENT_ID)
+    suffix = uuid.uuid4().hex[:10]
+    graph = f"goal-journey-{suffix}"
+    repo = None
+    try:
+        repo = await LandingRepo.create(person, graph, LOOP_AGENT)
+        approval = {
+            "approver": "owner",
+            "approved_at_ms": 1_700_000_000_000,
+            "reason": "the owner promotes the project to evolving",
+        }
+        await person._send(
+            "ProjectModeSet",
+            {"request": {"project": graph, "mode": "evolving", "approval": approval}},
+            graph,
+        )
+
+        # The goal targets one row of the repository.
+        row = "DEMO-R001"
+        await add_node(
+            person, graph, f"requirement:{graph}:{row}", {"type": "Requirement"}
+        )
+        goal = _body(
+            await person._send(
+                "GoalPut",
+                {
+                    "goal": {
+                        "project": graph,
+                        "statement": "Land the demo row",
+                        "targets": [{"kind": "row", "repo": graph, "id": row}],
+                    }
+                },
+                graph,
+            )
+        )
+
+        # A task fails its gate: the verdict is sealed and a defect opens.
+        await repo.branch("loop/first")
+        first = await repo.submit(
+            loop,
+            "loop/first",
+            "src/demo.txt",
+            b"first try",
+            f"feat: first try\n\nSpec: {row}",
+        )
+        verdict = await repo.record(first, "loop/first", verdict="fail")
+        with pytest.raises(Exception, match="LANDING_GATE_BLOCKED"):
+            await repo.merge("loop/first")
+        defects = await person._send(
+            "GetNodesByLabel", {"label": "Defect", "after": None, "limit": 10}, graph
+        )
+        assert defects, "the failed gate opened a defect"
+
+        # The loop raises a split proposal from the failure, citing the sealed verdict.
+        verdict_properties = _body(
+            await person._send(
+                "GetNodeProperties", {"node_id": verdict["node_id"]}, graph
+            )
+        )
+        cited = [
+            {
+                "kind": "gate_result",
+                "record_id": verdict["node_id"],
+                "digest": content_digest(verdict_properties),
+            }
+        ]
+        raised = _body(
+            await loop._send(
+                "ProposalPut",
+                {
+                    "proposal": {
+                        "project": graph,
+                        "kind": "task_split",
+                        "target": "T001",
+                        "statement": "Split the task that failed its gate.",
+                        "evidence": cited,
+                        "origin": "unprompted",
+                    }
+                },
+                graph,
+            )
+        )
+        reviewed = _body(
+            await person._send(
+                "ProposalDecide",
+                {
+                    "request": {
+                        "id": raised["node_id"],
+                        "decision": "approve",
+                        "reviewer": "reviewer-1",
+                        "reason": "the failure is repeated",
+                    }
+                },
+                graph,
+            )
+        )
+        assert reviewed["state"] == "approved"
+
+        # The split lands as a changeset that names the proposal, through the gate.
+        message = f"feat: split the task\n\nSpec: {row}\nProposal: {raised['node_id']}"
+        receipt, merged = await repo.land(
+            loop,
+            "loop/split",
+            "specs/demo/tasks.md",
+            b"- [ ] T001a first half\n- [ ] T001b second half\n",
+            message,
+        )
+        assert merged["outcome"] == "fast_forward"
+
+        # The goal reads its progress: the landed changeset cites the targeted row.
+        progress = await person.spec_question(
+            "changes_advancing_goal", graph, goal["node_id"]
+        )
+        # spec: MEDULLA-SDLC-R017.7
+        changesets = {answer["changeset"] for answer in progress["rows"]}
+        assert any(node.endswith(receipt["changeset"]["id"]) for node in changesets), (
+            progress
+        )
     finally:
         if repo is not None:
             await repo.close()
