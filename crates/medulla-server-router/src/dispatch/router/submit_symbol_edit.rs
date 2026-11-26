@@ -15,7 +15,7 @@ pub struct SubmitSymbolEditFields {
 #[cfg(all(feature = "redb", feature = "blob"))]
 mod served {
     use super::super::read_tree::RegistryTree;
-    use super::super::submit_changeset::{handle_submit_changeset, SubmitChangesetFields};
+    use super::super::submit_changeset::{submit_changeset_with, SubmitChangesetFields};
     use super::*;
     use medulla_compute::source_symbol_edit::{ResolvedSymbol, SymbolResolver};
     use medulla_h_graph::graph_ops::branch as ops;
@@ -177,13 +177,14 @@ mod served {
         .await;
         match prepared {
             Ok(Ok(prepared)) => {
-                handle_submit_changeset(
+                submit_changeset_with(
                     state,
                     req,
                     verified,
                     SubmitChangesetFields {
                         request: Box::new(prepared.request),
                     },
+                    Some(prepared.evidence),
                 )
                 .await
             }

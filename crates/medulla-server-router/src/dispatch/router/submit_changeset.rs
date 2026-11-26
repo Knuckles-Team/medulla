@@ -137,6 +137,8 @@ mod served {
         /// The git commit an imported changeset records (MEDULLA-SCM-R010);
         /// `None` for `SubmitChangeset`.
         pub git_origin: Option<GitOrigin>,
+        /// The evidence of a served symbol edit (MEDULLA-SCM-R013.6); `None` otherwise.
+        pub symbol_edit: Option<medulla_source_types::source_symbol_edit::SymbolEditEvidence>,
     }
 
     /// Stage two of `SubmitChangeset` and of `ImportGitHistory`: extend the chain
@@ -157,6 +159,7 @@ mod served {
             agent_identity,
             created_at_ms,
             git_origin,
+            symbol_edit,
         } = input;
         let branch_ref = target.reference.clone();
         let build_batch = batch_id.to_string();
@@ -172,6 +175,7 @@ mod served {
                     merge: ops::line_merge::FILE_MERGER,
                     agent_identity: agent_identity.as_deref(),
                     git_origin,
+                    symbol_edit: symbol_edit.clone(),
                 };
                 let changeset = match accept(&chain, &request, &ctx) {
                     Ok(changeset) => changeset,
@@ -218,12 +222,24 @@ mod served {
         }
     }
 
-    /// Serve `Method::SubmitChangeset`.
+    /// Serve `Method::SubmitChangeset`. A request carries no evidence: it is server-derived.
     pub async fn handle_submit_changeset(
         state: &Arc<RwLock<ServerState>>,
         req: &DispatchHeader,
         verified: &VerifiedRequestContext,
         fields: SubmitChangesetFields,
+    ) -> Response {
+        submit_changeset_with(state, req, verified, fields, None).await
+    }
+
+    /// The one accept path: `SubmitChangeset` passes no evidence, `SubmitSymbolEdit` passes the
+    /// evidence it derived (MEDULLA-SCM-R013.6).
+    pub async fn submit_changeset_with(
+        state: &Arc<RwLock<ServerState>>,
+        req: &DispatchHeader,
+        verified: &VerifiedRequestContext,
+        fields: SubmitChangesetFields,
+        symbol_edit: Option<medulla_source_types::source_symbol_edit::SymbolEditEvidence>,
     ) -> Response {
         let request: Arc<medulla_source_types::source_changeset::SubmitChangesetRequest> =
             Arc::from(fields.request);
@@ -376,6 +392,7 @@ mod served {
                 agent_identity,
                 created_at_ms,
                 git_origin: None,
+                symbol_edit,
             },
         )
         .await;
@@ -474,6 +491,8 @@ mod served {
 
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub use served::handle_submit_changeset;
+#[cfg(all(feature = "redb", feature = "blob"))]
+pub(in crate::dispatch::router) use served::submit_changeset_with;
 #[cfg(all(feature = "redb", feature = "blob"))]
 pub(in crate::dispatch::router) use served::{append_changeset, ChangesetAppend};
 

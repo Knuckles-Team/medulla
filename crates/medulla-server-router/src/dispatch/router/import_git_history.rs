@@ -243,6 +243,7 @@ mod served {
                     agent_identity: agent_identity.clone(),
                     created_at_ms: step.created_at_ms,
                     git_origin: Some(step.origin),
+                    symbol_edit: None,
                 },
             )
             .await;

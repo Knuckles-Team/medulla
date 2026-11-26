@@ -84,6 +84,7 @@ fn main() {
         agent_identity: None,
         run_trace_id: None,
         git: None,
+        symbol_edit: None,
     };
     let before = peak_resident();
     let mut samples = Vec::with_capacity(RUNS);

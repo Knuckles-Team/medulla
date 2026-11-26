@@ -38580,6 +38580,23 @@ class SymbolEditKind(str, Enum):
     DELETE = "delete"
 
 
+class SymbolEditOpEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    kind: SymbolEditKind
+    new_span_digest: str
+    old_span_digest: str
+    symbol_id: str
+    verdict: str
+
+
+class SymbolEditEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    edit_digest: str
+    ops: list[SymbolEditOpEvidence]
+
+
 class SymbolEditOp(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38766,6 +38783,7 @@ class Changeset(BaseModel):
     parents: list[str]
     repo: str
     run_trace_id: str | None = None
+    symbol_edit: SymbolEditEvidence | None = None
     trailers: Trailers
 
 
@@ -47575,7 +47593,9 @@ __all__ = [
     "MethodSubmitSymbolEdit",
     "MethodSubmitSymbolEditParams",
     "SymbolEdit",
+    "SymbolEditEvidence",
     "SymbolEditKind",
+    "SymbolEditOpEvidence",
     "SymbolEditOp",
     "MethodBisectStepParams",
     "MethodReadBlame",

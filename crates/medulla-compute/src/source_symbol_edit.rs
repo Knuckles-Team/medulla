@@ -182,5 +182,6 @@ pub fn project_symbol_edit(
         agent_identity: None,
         run_trace_id: None,
         git: None,
+        symbol_edit: None,
     })
 }

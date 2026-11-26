@@ -304,6 +304,9 @@ pub struct AcceptContext<'a> {
     /// refusal lives in `SubmitChangesetRequest::validate`, which the import
     /// route replaces by `validate_import`.
     pub git_origin: Option<GitOrigin>,
+    /// The evidence of a served symbol edit (MEDULLA-SCM-R013.6), copied into
+    /// `Changeset.symbol_edit`; `None` for every other submission.
+    pub symbol_edit: Option<medulla_source_types::source_symbol_edit::SymbolEditEvidence>,
 }
 
 /// Three-way merge of the overlapping paths of a stale-base submission
@@ -495,6 +498,7 @@ pub fn accept(
         agent_identity: ctx.agent_identity.map(str::to_string),
         run_trace_id: request.run_trace_id.clone(),
         git: ctx.git_origin.clone(),
+        symbol_edit: ctx.symbol_edit.clone(),
     }
     .sealed())
 }
@@ -804,6 +808,7 @@ mod tests {
         merge: no_merge,
         agent_identity: None,
         git_origin: None,
+        symbol_edit: None,
     };
 
     // spec: MEDULLA-SCM-R002

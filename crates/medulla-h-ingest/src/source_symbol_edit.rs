@@ -17,7 +17,9 @@ use medulla_source_types::lifecycle::sha256_hex;
 use medulla_source_types::source_changeset::{
     PathOp, SubmitChangesetRequest, SubmittedBlobRef, SubmittedPath,
 };
-use medulla_source_types::source_symbol_edit::SymbolEdit;
+use medulla_source_types::source_symbol_edit::{
+    SymbolEdit, SymbolEditEvidence, SymbolEditKind, SymbolEditOpEvidence,
+};
 
 use crate::source_changeset::BlobIo;
 
@@ -74,6 +76,8 @@ pub struct PreparedEdit {
     pub request: SubmitChangesetRequest,
     /// The re-parse verdict of every op, in op order.
     pub verdicts: Vec<OpVerdict>,
+    /// What the accept path stores inside the changeset (MEDULLA-SCM-R013.6).
+    pub evidence: SymbolEditEvidence,
 }
 
 /// Reads old blobs through the store and holds new bytes in memory until the check passes.
@@ -134,7 +138,26 @@ pub fn prepare(
             renamed_from: None,
         });
     }
+    let evidence = SymbolEditEvidence {
+        edit_digest: edit.digest(),
+        ops: edit
+            .ops
+            .iter()
+            .map(|op| SymbolEditOpEvidence {
+                symbol_id: op.symbol_id.clone(),
+                kind: op.kind,
+                old_span_digest: op.anchor_span_digest.clone(),
+                new_span_digest: sha256_hex(match op.kind {
+                    SymbolEditKind::Delete => &[],
+                    _ => op.new_text.as_bytes(),
+                }),
+                // `verify_roundtrip` held for every op, or no changeset is built.
+                verdict: "confirmed".to_string(),
+            })
+            .collect(),
+    };
     Ok(PreparedEdit {
+        evidence,
         request: SubmitChangesetRequest {
             repo: edit.repo.clone(),
             branch: edit.branch.clone(),

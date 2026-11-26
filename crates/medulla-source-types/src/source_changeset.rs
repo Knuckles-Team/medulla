@@ -278,6 +278,10 @@ pub struct Changeset {
     /// native changeset.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub git: Option<GitOrigin>,
+    /// The evidence of the graph-native edit this changeset records (MEDULLA-SCM-R013.6);
+    /// `None` for every other changeset. Set only by the server, never by a request.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub symbol_edit: Option<crate::source_symbol_edit::SymbolEditEvidence>,
 }
 
 impl Changeset {
@@ -301,6 +305,10 @@ impl Changeset {
         // every native changeset is unchanged (MEDULLA-SCM-R010).
         if let Some(git) = &self.git {
             bytes.extend(rmp_serde::to_vec_named(git).unwrap_or_default());
+        }
+        // The symbol-edit evidence joins the hashed bytes only when present (MEDULLA-SCM-R013.6).
+        if let Some(evidence) = &self.symbol_edit {
+            bytes.extend(rmp_serde::to_vec_named(evidence).unwrap_or_default());
         }
         hex::encode(Sha256::digest(bytes))
     }

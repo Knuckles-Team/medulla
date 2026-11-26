@@ -19,6 +19,7 @@ from conftest import TEST_AGENT_ID, TEST_TENANT, request_context
 from medulla.client import MedullaClient
 
 MODE = 0o100644
+NEW42 = "def alpha():\n    return 42"
 NEW = "def alpha():\n    return 9"
 SOURCE = "def alpha():\n    return 1\n\n\ndef beta():\n    return 2\n"
 
@@ -134,6 +135,11 @@ async def _scenario(graph: str) -> None:
             idempotency_key=f"edit-ok-{stem}",
         )
         assert done["replayed"] is False and done["branch_head"] != head
+        evidence = done["changeset"]["symbol_edit"]
+        assert len(evidence["edit_digest"]) == 64
+        [op] = evidence["ops"]
+        assert op["old_span_digest"] == anchor and op["verdict"] == "confirmed"
+        assert op["new_span_digest"] == hashlib.sha256(NEW42.encode()).hexdigest()
         tree = await client._send(
             "ReadTree",
             {
@@ -158,8 +164,15 @@ async def _scenario(graph: str) -> None:
         await client.close()
 
 
-# spec: MEDULLA-SCM-R013.4 MEDULLA-SCM-R013.5
+# spec: MEDULLA-SCM-R013.4 MEDULLA-SCM-R013.5 MEDULLA-SCM-R013.6
 @pytest.mark.spec("MEDULLA-SCM-R013.4")
 @pytest.mark.spec("MEDULLA-SCM-R013.5")
+@pytest.mark.spec("MEDULLA-SCM-R013.6")
 def test_symbol_edit_lands_and_reindexes():
     asyncio.run(_scenario(f"scm-edit-{uuid.uuid4().hex[:8]}"))
+
+
+# spec: MEDULLA-SCM-R013.6
+@pytest.mark.spec("MEDULLA-SCM-R013.6")
+def test_symbol_edit_evidence_reads_back():
+    asyncio.run(_scenario(f"scm-edit-ev-{uuid.uuid4().hex[:8]}"))

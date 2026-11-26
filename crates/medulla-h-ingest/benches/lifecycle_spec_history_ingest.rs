@@ -41,6 +41,7 @@ fn changesets(count: usize, rows: usize) -> Vec<Changeset> {
             agent_identity: None,
             run_trace_id: None,
             git: None,
+            symbol_edit: None,
         })
         .collect()
 }

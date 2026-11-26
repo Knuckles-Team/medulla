@@ -794,6 +794,7 @@ mod tests {
                 merge: no_merge,
                 agent_identity: None,
                 git_origin: Some(step.origin),
+                symbol_edit: None,
             };
             let changeset = accept(&*chain, &step.request, &ctx).unwrap();
             chain.head = changeset.id.clone();

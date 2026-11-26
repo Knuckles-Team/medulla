@@ -2712,6 +2712,7 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
             agent_identity: None,
             run_trace_id: None,
             git: None,
+            symbol_edit: None,
         }
     }
 
