@@ -1,0 +1,20 @@
+{
+  "source": "postiz-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "audience": "audience-1",
+      "reach": "reach-1",
+      "joinKey": "owncast.q2-key-1",
+      "id": "postiz-agent-owncast.q2-1",
+      "label": "postiz-agent 1"
+    },
+    {
+      "audience": "audience-2",
+      "reach": "reach-2",
+      "joinKey": "owncast.q2-key-2",
+      "id": "postiz-agent-owncast.q2-2",
+      "label": "postiz-agent 2"
+    }
+  ]
+}

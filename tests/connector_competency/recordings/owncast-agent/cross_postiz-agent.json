@@ -1,0 +1,20 @@
+{
+  "source": "owncast-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "stream": "stream-1",
+      "post": "post-1",
+      "joinKey": "owncast.q2-key-1",
+      "id": "owncast-agent-owncast.q2-1",
+      "label": "owncast-agent 1"
+    },
+    {
+      "stream": "stream-2",
+      "post": "post-2",
+      "joinKey": "owncast.q2-key-2",
+      "id": "owncast-agent-owncast.q2-2",
+      "label": "owncast-agent 2"
+    }
+  ]
+}

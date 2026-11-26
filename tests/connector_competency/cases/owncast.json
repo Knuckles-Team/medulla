@@ -1,0 +1,42 @@
+{
+  "connector": "owncast",
+  "rollup": "MEDULLA-CQ-CONN-R045",
+  "vocabulary_module": "media-v1.ttl",
+  "terms": [
+    "BroadcastStream",
+    "viewerCount",
+    "SocialPost",
+    "announcesStream",
+    "EngagementMetric",
+    "engagementMetricName",
+    "engagementMetricValue"
+  ],
+  "questions": [
+    {
+      "id": "owncast.q2",
+      "kind": "cross",
+      "question": "Which Owncast broadcasts were announced through a Postiz post, and what was the audience versus the post reach?",
+      "uql": "LET s0 = FOREIGN SCAN 'owncast-agent'; LET s1 = FOREIGN SCAN 'postiz-agent'; JOIN s0, s1",
+      "sources": [
+        "owncast-agent",
+        "postiz-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "owncast-agent": "mcp_tool",
+        "postiz-agent": "mcp_tool"
+      },
+      "columns": [
+        "stream",
+        "audience",
+        "post",
+        "reach"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "owncast-agent/cross_postiz-agent.json",
+        "postiz-agent/cross_owncast-agent.json"
+      ]
+    }
+  ]
+}
