@@ -119,3 +119,75 @@ async def _scenario(graph: str) -> None:
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R811.1")
 def test_run_metrics_groups_solved_runs_and_refuses_a_foreign_tenant():
     asyncio.run(_scenario(f"run-metrics-{uuid.uuid4().hex[:8]}"))
+
+
+async def _technique_scenario(graph: str) -> None:
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+        timeout=30,
+    )
+    try:
+        await client.tenants.create(graph, "Global")
+        from medulla.generated import graph as generated_graph
+
+        # (technique, arm, config, latency_ms, score)
+        runs = [
+            ("rerank", "a", "sha256:1", 100, 0.5),
+            ("rerank", "a", "sha256:1", 300, 0.9),
+            ("rerank", "b", "sha256:1", 900, 0.1),
+            ("rerank", "a", "sha256:2", 900, 0.1),
+            ("other", "a", "sha256:1", 900, 0.1),
+        ]
+        for index, (technique, arm, config, latency, score) in enumerate(runs):
+            props: dict[str, Any] = {
+                "node_type": "RunTrace",
+                "run_trace_id": f"technique-trace-{index}",
+                "terminationReason": "final_answer",
+                "completedAtMs": 10 + index,
+                "techniqueId": technique,
+                "armId": arm,
+                "configDigest": config,
+                "latencyMs": latency,
+                "benchmarkScore": score,
+                "costUsd": 0.5,
+            }
+            await generated_graph.send_add_node(
+                client,
+                {
+                    "node_id": f"technique-run:{index}",
+                    "properties_msgpack": msgpack.packb(props),
+                },
+                graph,
+            )
+        measure = {
+            "tenant": TEST_TENANT,
+            "technique": "rerank",
+            "arm": "a",
+            "config_digest": "sha256:1",
+        }
+        mean_latency = await _metrics(client, graph, {**measure, "query": "latency"})
+        assert mean_latency["groups"] == [
+            {"key": "all", "value": 200.0, "trace_count": 2}
+        ]
+        mean_score = await _metrics(client, graph, {**measure, "query": "score"})
+        assert abs(mean_score["groups"][0]["value"] - 0.7) < 1e-9
+        cost = await _metrics(client, graph, {**measure, "query": "cost"})
+        assert cost["groups"][0]["value"] == 0.5
+        # A measure nothing matches abstains instead of answering zero.
+        nothing = await _metrics(
+            client, graph, {**measure, "arm": "zzz", "query": "latency"}
+        )
+        assert nothing["groups"] == []
+        assert nothing["abstained"] == "NO_SOLVED_RUNS"
+        with pytest.raises(Exception, match="INVALID_ARGUMENT"):
+            await _metrics(client, graph, {**measure, "technique": "", "query": "cost"})
+        await client.tenants.delete(graph)
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-ORCH-VOCAB-R811.1.1
+@pytest.mark.spec("MEDULLA-ORCH-VOCAB-R811.1.1")
+def test_run_metrics_filters_one_technique_arm_and_config():
+    asyncio.run(_technique_scenario(f"run-technique-{uuid.uuid4().hex[:8]}"))

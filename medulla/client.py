@@ -8140,21 +8140,36 @@ class GraphOperationsClient:
         *,
         group_by: str | None = None,
         window: dict[str, int] | None = None,
+        technique: str | None = None,
+        arm: str | None = None,
+        config_digest: str | None = None,
     ) -> dict[str, Any]:
-        """Cost, tokens or the solved count of the tenant's run traces
-        (MEDULLA-ORCH-VOCAB-R811.1).
+        """Cost, tokens, latency, score or the solved count of the tenant's run
+        traces (MEDULLA-ORCH-VOCAB-R811.1, R811.1.1).
 
-        ``query`` is ``cost`` or ``tokens`` (each per solved run) or ``solved``;
-        ``group_by`` is ``agent``, ``project`` or ``termination``; ``window`` is
-        ``{start_ms, end_ms}`` over the completion time. Returns ``{query, groups:
-        [{key, value, trace_count}], abstained}``; a population with no solved run
-        answers ``abstained`` with no groups, never a zero. Needs ``telemetry:read``.
+        ``query`` is ``cost`` or ``tokens`` (each per solved run), ``latency`` (mean
+        milliseconds) or ``score`` (mean benchmark score) of the solved runs that
+        report one, or ``solved``; ``group_by`` is ``agent``, ``project``,
+        ``termination``, ``technique``, ``arm`` or ``config``; ``window`` is
+        ``{start_ms, end_ms}`` over the completion time. ``technique``, ``arm`` and
+        ``config_digest`` keep only the runs of that technique, arm and
+        configuration: the three together are one technique measure. Returns
+        ``{query, groups: [{key, value, trace_count}], abstained}``; a population
+        with no solved run answers ``abstained`` with no groups, never a zero.
+        Needs ``telemetry:read``.
         """
         request: dict[str, Any] = {"tenant": tenant, "query": query}
         if group_by is not None:
             request["group_by"] = group_by
         if window is not None:
             request["window"] = window
+        for name, value in (
+            ("technique", technique),
+            ("arm", arm),
+            ("config_digest", config_digest),
+        ):
+            if value is not None:
+                request[name] = value
         result = await self._client._send(
             "RunMetrics", {"request": request}, None, idempotency_key=None
         )

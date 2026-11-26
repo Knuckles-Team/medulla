@@ -29,6 +29,11 @@ pub enum RunMetricsQuery {
     Tokens,
     /// The count of solved runs.
     Solved,
+    /// Mean wall-clock latency in milliseconds of the solved runs that report one
+    /// (`latencyMs`).
+    Latency,
+    /// Mean benchmark score of the solved runs that report one (`benchmarkScore`).
+    Score,
 }
 
 /// How the population is grouped. The set is closed; with none, one group `all`.
@@ -42,6 +47,12 @@ pub enum RunMetricsGroupBy {
     Project,
     /// By `terminationReason`.
     Termination,
+    /// By `techniqueId`.
+    Technique,
+    /// By `armId`.
+    Arm,
+    /// By `configDigest`.
+    Config,
 }
 
 /// A half-open range `[start_ms, end_ms)` over `completedAtMs`.
@@ -66,7 +77,21 @@ pub struct RunMetricsRequest {
     /// Only runs completed inside the window count; with none, every run does.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub window: Option<RunMetricsWindow>,
+    /// Only runs of this technique (`techniqueId`) count. A technique measure is
+    /// the three filters together: the technique, its arm and the digest of the
+    /// configuration the arm ran under.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub technique: Option<String>,
+    /// Only runs of this arm (`armId`) count.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub arm: Option<String>,
+    /// Only runs under this configuration digest (`configDigest`) count.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub config_digest: Option<String>,
 }
+
+/// The longest technique, arm or configuration digest a filter may name.
+pub const MAX_FILTER_BYTES: usize = 256;
 
 impl RunMetricsRequest {
     /// Refuse a request outside its bounds.
@@ -79,7 +104,29 @@ impl RunMetricsRequest {
                 return Err("INVALID_ARGUMENT: a run metrics window must not be empty".into());
             }
         }
+        for (name, value) in [
+            ("technique", &self.technique),
+            ("arm", &self.arm),
+            ("config_digest", &self.config_digest),
+        ] {
+            if let Some(value) = value {
+                if value.is_empty() || value.len() > MAX_FILTER_BYTES {
+                    return Err(format!(
+                        "INVALID_ARGUMENT: run metrics {name} is 1 to {MAX_FILTER_BYTES} bytes"
+                    ));
+                }
+            }
+        }
         Ok(())
+    }
+
+    fn admits(&self, sample: &RunSample) -> bool {
+        let matches = |wanted: &Option<String>, actual: &str| {
+            wanted.as_deref().map_or(true, |wanted| wanted == actual)
+        };
+        matches(&self.technique, &sample.technique)
+            && matches(&self.arm, &sample.arm)
+            && matches(&self.config_digest, &sample.config_digest)
     }
 }
 
@@ -117,6 +164,14 @@ pub struct RunSample {
     pub cost_usd: Option<f64>,
     /// The sum of the token counters the run reports, `None` when it reports none.
     pub tokens: Option<u64>,
+    /// The technique, arm and configuration digest the run measured, empty when unlabelled.
+    pub technique: String,
+    pub arm: String,
+    pub config_digest: String,
+    /// The run's wall-clock latency, `None` when it reports none.
+    pub latency_ms: Option<f64>,
+    /// The run's benchmark score, `None` when it reports none.
+    pub score: Option<f64>,
 }
 
 impl RunSample {
@@ -130,6 +185,9 @@ impl RunSample {
             Some(RunMetricsGroupBy::Agent) => self.agent.as_str(),
             Some(RunMetricsGroupBy::Project) => self.project.as_str(),
             Some(RunMetricsGroupBy::Termination) => self.termination.as_str(),
+            Some(RunMetricsGroupBy::Technique) => self.technique.as_str(),
+            Some(RunMetricsGroupBy::Arm) => self.arm.as_str(),
+            Some(RunMetricsGroupBy::Config) => self.config_digest.as_str(),
         };
         let key = if key.is_empty() { "unknown" } else { key };
         key.to_string()
@@ -144,6 +202,10 @@ struct Tally {
     cost_measured: u64,
     tokens: u64,
     tokens_measured: u64,
+    latency: f64,
+    latency_measured: u64,
+    score: f64,
+    score_measured: u64,
 }
 
 /// Aggregate `samples` for `request`. The one implementation: the handler only reads the nodes
@@ -155,6 +217,9 @@ pub fn aggregate(
 ) -> RunMetricsAnswer {
     let mut tallies: BTreeMap<String, Tally> = BTreeMap::new();
     for sample in samples {
+        if !request.admits(&sample) {
+            continue;
+        }
         if let Some(window) = request.window {
             match sample.completed_at_ms {
                 Some(at) if (window.start_ms..window.end_ms).contains(&at) => {}
@@ -173,6 +238,14 @@ pub fn aggregate(
             if let Some(tokens) = sample.tokens {
                 tally.tokens = tally.tokens.saturating_add(tokens);
                 tally.tokens_measured += 1;
+            }
+            if let Some(latency) = sample.latency_ms {
+                tally.latency += latency.max(0.0);
+                tally.latency_measured += 1;
+            }
+            if let Some(score) = sample.score {
+                tally.score += score;
+                tally.score_measured += 1;
             }
         }
     }
@@ -196,6 +269,10 @@ pub fn aggregate(
                 RunMetricsQuery::Tokens => {
                     (tally.tokens_measured > 0).then(|| tally.tokens as f64 / tally.solved as f64)?
                 }
+                RunMetricsQuery::Latency => (tally.latency_measured > 0)
+                    .then(|| tally.latency / tally.latency_measured as f64)?,
+                RunMetricsQuery::Score => (tally.score_measured > 0)
+                    .then(|| tally.score / tally.score_measured as f64)?,
             };
             Some(RunMetricsGroup {
                 key,
@@ -222,6 +299,7 @@ mod tests {
             completed_at_ms: Some(at),
             cost_usd: cost,
             tokens,
+            ..RunSample::default()
         }
     }
 
@@ -231,6 +309,9 @@ mod tests {
             query,
             group_by: Some(RunMetricsGroupBy::Agent),
             window: None,
+            technique: None,
+            arm: None,
+            config_digest: None,
         }
     }
 
@@ -305,8 +386,73 @@ mod tests {
         let parsed: RunMetricsRequest = serde_json::from_value(wire).unwrap();
         assert_eq!(parsed.query, RunMetricsQuery::Cost);
         assert!(serde_json::from_value::<RunMetricsRequest>(
-            serde_json::json!({"tenant": "t", "query": "latency"})
+            serde_json::json!({"tenant": "t", "query": "p99"})
         )
         .is_err());
+    }
+
+    fn measured(technique: &str, arm: &str, config: &str, latency: f64, score: f64) -> RunSample {
+        RunSample {
+            termination: "final_answer".into(),
+            technique: technique.into(),
+            arm: arm.into(),
+            config_digest: config.into(),
+            latency_ms: Some(latency),
+            score: Some(score),
+            cost_usd: Some(0.5),
+            ..RunSample::default()
+        }
+    }
+
+    // spec: MEDULLA-ORCH-VOCAB-R811.1.1
+    #[test]
+    fn a_technique_measure_is_latency_cost_and_score_of_one_technique_arm_and_config() {
+        let runs = || {
+            vec![
+                measured("rerank", "a", "sha256:1", 100.0, 0.5),
+                measured("rerank", "a", "sha256:1", 300.0, 0.9),
+                measured("rerank", "b", "sha256:1", 999.0, 0.1),
+                measured("rerank", "a", "sha256:2", 999.0, 0.1),
+                measured("other", "a", "sha256:1", 999.0, 0.1),
+            ]
+        };
+        let ask = |query| RunMetricsRequest {
+            tenant: "tenant-a".into(),
+            query,
+            group_by: None,
+            window: None,
+            technique: Some("rerank".into()),
+            arm: Some("a".into()),
+            config_digest: Some("sha256:1".into()),
+        };
+        let value = |query| {
+            let answer = aggregate(&ask(query), runs());
+            assert_eq!(answer.abstained, None);
+            (answer.groups[0].value, answer.groups[0].trace_count)
+        };
+        assert_eq!(value(RunMetricsQuery::Latency), (200.0, 2));
+        assert_eq!(value(RunMetricsQuery::Score), (0.7, 2));
+        assert_eq!(value(RunMetricsQuery::Cost), (0.5, 2));
+        // A measure nothing matches abstains, and a technique grouping splits it.
+        let mut none = ask(RunMetricsQuery::Latency);
+        none.arm = Some("zzz".into());
+        assert_eq!(
+            aggregate(&none, runs()).abstained.as_deref(),
+            Some(ABSTAIN_NO_SOLVED_RUNS)
+        );
+        let mut grouped = ask(RunMetricsQuery::Score);
+        grouped.technique = None;
+        grouped.arm = None;
+        grouped.group_by = Some(RunMetricsGroupBy::Technique);
+        let keys: Vec<_> = aggregate(&grouped, runs())
+            .groups
+            .into_iter()
+            .map(|group| group.key)
+            .collect();
+        assert_eq!(keys, ["other", "rerank"]);
+        // A filter outside its bounds is refused.
+        let mut empty = ask(RunMetricsQuery::Latency);
+        empty.technique = Some(String::new());
+        assert!(empty.validate().unwrap_err().starts_with("INVALID_ARGUMENT"));
     }
 }

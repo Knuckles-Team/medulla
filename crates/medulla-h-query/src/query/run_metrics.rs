@@ -51,6 +51,11 @@ fn sample_of(props: &Props) -> RunSample {
         completed_at_ms: number(props, "completedAtMs").map(|at| at as u64),
         cost_usd: number(props, "costUsd"),
         tokens: (!reported.is_empty()).then(|| reported.iter().map(|n| n.max(0.0) as u64).sum()),
+        technique: text(props, "techniqueId"),
+        arm: text(props, "armId"),
+        config_digest: text(props, "configDigest"),
+        latency_ms: number(props, "latencyMs"),
+        score: number(props, "benchmarkScore"),
     }
 }
 
@@ -123,6 +128,20 @@ mod tests {
         // A run that reports no counter reports no tokens, not zero.
         let bare = sample_of(&props(serde_json::json!({"node_type": "RunTrace"})));
         assert_eq!((bare.tokens, bare.cost_usd), (None, None));
+        assert_eq!((bare.latency_ms, bare.score), (None, None));
+        let labelled = sample_of(&props(serde_json::json!({
+            "node_type": "RunTrace",
+            "techniqueId": "rerank",
+            "armId": "a",
+            "configDigest": "sha256:1",
+            "latencyMs": 120,
+            "benchmarkScore": "0.75",
+        })));
+        assert_eq!(
+            (labelled.technique.as_str(), labelled.arm.as_str(), labelled.config_digest.as_str()),
+            ("rerank", "a", "sha256:1")
+        );
+        assert_eq!((labelled.latency_ms, labelled.score), (Some(120.0), Some(0.75)));
         assert!(!is_run_trace(&props(serde_json::json!({"node_type": "Span"}))));
     }
 }
