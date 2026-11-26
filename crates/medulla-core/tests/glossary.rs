@@ -2,8 +2,8 @@
 
 use medulla_catalog_types::glossary::{GlossaryTerm, GlossaryTermStatus};
 use medulla_core::glossary::{
-    bind, check_broader_acyclic, label_matches, replacement, GlossaryError, PutScheme,
-    DEFINES_ASSET,
+    bind, check_broader_acyclic, label_matches, replacement, GlossaryError, GlossaryLabelIndex,
+    PutScheme, DEFINES_ASSET,
 };
 
 const SCHEME: &str = "http://example.org/scheme/finance";
@@ -125,4 +125,42 @@ fn cycle_taken_label_and_missing_review_carry_their_codes() {
     }
     assert!(require_review("t:a", Some(&request(ChangeRequestState::Approved))).is_ok());
     assert!(require_review("t:other", Some(&request(ChangeRequestState::Approved))).is_err());
+}
+
+// spec: MEDULLA-TYPED-PACKS-R801.6
+#[test]
+fn the_label_index_answers_exactly_what_a_scan_of_label_matches_answers() {
+    let terms = vec![
+        term("Net revenue", &["Net sales", "Chiffre d'affaires net"], &[], GlossaryTermStatus::Approved),
+        term("Gross margin", &["Bruto margen"], &[], GlossaryTermStatus::Approved),
+        term("Net margin", &["Neto margen", "Net profit"], &[], GlossaryTermStatus::Draft),
+        term("Revenue growth", &[], &[], GlossaryTermStatus::Approved),
+    ];
+    let index = GlossaryLabelIndex::build(&terms);
+    for query in [
+        "net",
+        "net sales",
+        "net margin",
+        "revenue net",
+        "REV",
+        "margen",
+        "chiffre",
+        "profit net",
+        "growth rev",
+        "absent",
+        "  ",
+        "",
+    ] {
+        let scanned: Vec<usize> = terms
+            .iter()
+            .enumerate()
+            .filter(|(_, term)| label_matches(term, query))
+            .map(|(position, _)| position)
+            .collect();
+        assert_eq!(index.search(&terms, query), scanned, "query {query:?}");
+    }
+    // A query word split across two labels of one term does not match, as in the scan.
+    assert!(index.search(&terms, "sales margin").is_empty());
+    // An index used over another term list answers nothing rather than a wrong position.
+    assert!(index.search(&terms[..2], "net").is_empty());
 }

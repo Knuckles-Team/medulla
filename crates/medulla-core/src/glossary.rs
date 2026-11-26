@@ -6,7 +6,7 @@
 //! the `PutScheme` batch bound. No I/O. The served handler and the `catalog_relevance`
 //! UDF import this module and never each other.
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 use medulla_catalog_types::asset_usage::UsageKnob;
 use medulla_catalog_types::glossary::{GlossaryTerm, GlossaryTermStatus};
@@ -127,23 +127,102 @@ pub fn replacement(term: &GlossaryTerm) -> Option<&str> {
     }
 }
 
+/// The lowercase words of a label or a query: runs of alphanumeric characters.
+fn label_words(text: &str) -> Vec<String> {
+    text.split(|c: char| !c.is_alphanumeric())
+        .filter(|w| !w.is_empty())
+        .map(str::to_lowercase)
+        .collect()
+}
+
+/// A word index over the preferred and alternative labels of a term list
+/// (MEDULLA-TYPED-PACKS-R801.6). Each word of each label posts the terms that carry it, in a
+/// sorted map, so a query word's prefix is one range scan and a search verifies only the
+/// terms of the rarest query word with [`label_matches`] instead of scanning every term.
+/// Build once per term list; a search never reads a term that no query word can reach.
+#[derive(Debug, Clone, Default)]
+pub struct GlossaryLabelIndex {
+    postings: BTreeMap<String, Vec<u32>>,
+    terms: usize,
+}
+
+impl GlossaryLabelIndex {
+    /// Index `terms`. A term past `u32::MAX` is not indexed (a scheme batch is far smaller).
+    pub fn build(terms: &[GlossaryTerm]) -> Self {
+        let mut postings: BTreeMap<String, Vec<u32>> = BTreeMap::new();
+        for (position, term) in terms.iter().enumerate() {
+            let Ok(position) = u32::try_from(position) else {
+                break;
+            };
+            for label in std::iter::once(&term.pref_label).chain(term.alt_labels.iter()) {
+                for word in label_words(label) {
+                    let posted = postings.entry(word).or_default();
+                    if posted.last() != Some(&position) {
+                        posted.push(position);
+                    }
+                }
+            }
+        }
+        Self {
+            postings,
+            terms: terms.len(),
+        }
+    }
+
+    /// The postings of every indexed word that starts with `prefix`.
+    fn prefix_postings<'a>(&'a self, prefix: &str) -> impl Iterator<Item = &'a Vec<u32>> {
+        let owned = prefix.to_string();
+        self.postings
+            .range(owned.clone()..)
+            .take_while(move |(word, _)| word.starts_with(owned.as_str()))
+            .map(|(_, posted)| posted)
+    }
+
+    /// The positions in `terms` whose labels match `query` exactly as [`label_matches`] does,
+    /// in ascending order. `terms` is the list the index was built over.
+    pub fn search(&self, terms: &[GlossaryTerm], query: &str) -> Vec<usize> {
+        let wanted = label_words(query);
+        if wanted.is_empty() || terms.len() != self.terms {
+            return Vec::new();
+        }
+        // The query word that reaches the fewest postings bounds the candidates.
+        let rarest = wanted
+            .iter()
+            .min_by_key(|word| {
+                self.prefix_postings(word)
+                    .map(Vec::len)
+                    .fold(0usize, usize::saturating_add)
+            })
+            .expect("a non-empty query has a word");
+        let mut candidates: Vec<u32> = self
+            .prefix_postings(rarest)
+            .flat_map(|posted| posted.iter().copied())
+            .collect();
+        candidates.sort_unstable();
+        candidates.dedup();
+        candidates
+            .into_iter()
+            .map(|position| position as usize)
+            .filter(|position| {
+                terms
+                    .get(*position)
+                    .is_some_and(|term| label_matches(term, query))
+            })
+            .collect()
+    }
+}
+
 /// True when every word of `query` equals or starts a word of the preferred label or of an
 /// alternative label. Case is ignored; a blank query matches nothing.
 pub fn label_matches(term: &GlossaryTerm, query: &str) -> bool {
-    let words = |text: &str| -> Vec<String> {
-        text.split(|c: char| !c.is_alphanumeric())
-            .filter(|w| !w.is_empty())
-            .map(str::to_lowercase)
-            .collect()
-    };
-    let wanted = words(query);
+    let wanted = label_words(query);
     if wanted.is_empty() {
         return false;
     }
     std::iter::once(&term.pref_label)
         .chain(term.alt_labels.iter())
         .any(|label| {
-            let have = words(label);
+            let have = label_words(label);
             wanted
                 .iter()
                 .all(|w| have.iter().any(|h| h.starts_with(w.as_str())))
