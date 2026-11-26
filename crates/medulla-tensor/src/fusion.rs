@@ -18,7 +18,7 @@ use crate::tensor::{Buffer, Tensor};
 
 // Re-export the medulla-tsdb alignment surface so callers can drive the whole fusion pipeline
 // (build streams → align/window → tensor) from `medulla_tensor::fusion` alone.
-pub use medulla_tsdb::fusion::{InterpMode, StreamSpec as Stream};
+use medulla_tsdb::fusion::InterpMode;
 
 /// A fused multimodal tensor frame (CONCEPT:MEDULLA-KG.query.multi-rate-sensor-stream): a `[timesteps × channels]` `F64`
 /// `frame` tensor (`NaN` at gaps) + a same-shape `U8` `mask` tensor (`1` = valid /
