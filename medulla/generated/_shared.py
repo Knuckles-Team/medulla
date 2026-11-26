@@ -814,6 +814,7 @@ class DecisionInputs(BaseModel):
     policy: DecisionPolicy
     policy_digest: str
     profile: ProfileConstraint | None = None
+    prompt_selection: PromptSelection | None = None
     receipt_age_limit_s: Annotated[int, Field(ge=0)] | None = None
     request: AssemblyRequest
     solver: SolverIdentity
@@ -2178,6 +2179,23 @@ class ProfileConstraint(BaseModel):
     revision: Annotated[int, Field(ge=0)]
 
 
+class SelectedPromptFacts(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    connector: str
+    covered_capabilities: BoundedVec_string_32
+    digest: str
+    prompt_component_id: str
+    score_q32: int
+
+
+class PromptSelection(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    excluded: BoundedVec_string_64 = Field(default_factory=list)
+    selected: SelectedPromptFacts | None = None
+
+
 class ReasoningStrategy(str, Enum):
     CHAIN = "chain"
     TREE = "tree"
@@ -3137,6 +3155,8 @@ __all__ = [
     "PrimitiveKind",
     "PrimitiveReplacement",
     "ProfileConstraint",
+    "PromptSelection",
+    "SelectedPromptFacts",
     "ReasoningStrategy",
     "RecommendationApproval",
     "SideEffectClass",
