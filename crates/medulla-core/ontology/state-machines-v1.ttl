@@ -9662,3 +9662,147 @@
     :toState :CircuitBreakerMachine_Open ;
     :guardedBy :CircuitBreakerMachine_Guard_FailureObserved ;
     :firedBy :CircuitBreakerMachine_Event_Observe .
+
+# spec: MEDULLA-INCREMENTAL-VIEWS-R016.2
+# The Materialization machine. The Rust edge table MATERIALIZATION_MACHINE is the same table; the
+# ontology test asserts equal edge sets.
+
+:MaterializationState a owl:Class ;
+    rdfs:label "Materialization State" ;
+    rdfs:comment "A state of the Materialization machine." ;
+    rdfs:subClassOf :State .
+
+:MaterializationTerminalState a owl:Class ;
+    rdfs:label "Materialization Terminal State" ;
+    rdfs:comment "A terminal state of the Materialization machine." ;
+    rdfs:subClassOf :TerminalState, :MaterializationState .
+
+:MaterializationTransition a owl:Class ;
+    rdfs:label "Materialization Transition" ;
+    rdfs:comment "A transition of the Materialization machine." ;
+    rdfs:subClassOf :Transition .
+
+:MaterializationEvent a owl:Class ;
+    rdfs:label "Materialization Event" ;
+    rdfs:comment "A event of the Materialization machine." ;
+    rdfs:subClassOf :TransitionEvent .
+
+:MaterializationGuard a owl:Class ;
+    rdfs:label "Materialization Guard" ;
+    rdfs:comment "A guard of the Materialization machine." ;
+    rdfs:subClassOf :TransitionGuard .
+
+:MaterializationMachine a :StateMachine ;
+    rdfs:label "Materialization machine" ;
+    :initialState :MaterializationMachine_CatalogOnly ;
+    :hasState :MaterializationMachine_CatalogOnly, :MaterializationMachine_Partial, :MaterializationMachine_Complete, :MaterializationMachine_Failed .
+
+:MaterializationMachine_CatalogOnly a :MaterializationState ;
+    rdfs:label "Materialization CatalogOnly" ;
+    :storedForm "catalog_only" .
+
+:MaterializationMachine_Partial a :MaterializationState ;
+    rdfs:label "Materialization Partial" ;
+    :storedForm "partial" .
+
+:MaterializationMachine_Complete a :MaterializationState ;
+    rdfs:label "Materialization Complete" ;
+    :storedForm "complete" .
+
+:MaterializationMachine_Failed a :MaterializationState ;
+    rdfs:label "Materialization Failed" ;
+    :storedForm "failed" .
+
+:MaterializationMachine_Event_Fail a :MaterializationEvent ;
+    rdfs:label "Materialization Fail" .
+
+:MaterializationMachine_Event_AdvancePartialManifest a :MaterializationEvent ;
+    rdfs:label "Materialization AdvancePartialManifest" .
+
+:MaterializationMachine_Event_FinishMaterialization a :MaterializationEvent ;
+    rdfs:label "Materialization FinishMaterialization" .
+
+:MaterializationMachine_Guard_IndexesValid a :MaterializationGuard ;
+    rdfs:label "Materialization IndexesValid" ;
+    rdfs:comment "Guard: the rebuilt secondary indexes are valid." .
+
+:MaterializationMachine_M01 a :MaterializationTransition ;
+    rdfs:label "Materialization M01" ;
+    :edgeId "M01" ;
+    :fromState :MaterializationMachine_CatalogOnly ;
+    :toState :MaterializationMachine_Partial ;
+    :firedBy :MaterializationMachine_Event_AdvancePartialManifest .
+
+:MaterializationMachine_M02 a :MaterializationTransition ;
+    rdfs:label "Materialization M02" ;
+    :edgeId "M02" ;
+    :fromState :MaterializationMachine_Partial ;
+    :toState :MaterializationMachine_Partial ;
+    :firedBy :MaterializationMachine_Event_AdvancePartialManifest .
+
+:MaterializationMachine_M03 a :MaterializationTransition ;
+    rdfs:label "Materialization M03" ;
+    :edgeId "M03" ;
+    :fromState :MaterializationMachine_Failed ;
+    :toState :MaterializationMachine_Partial ;
+    :firedBy :MaterializationMachine_Event_AdvancePartialManifest .
+
+:MaterializationMachine_M04 a :MaterializationTransition ;
+    rdfs:label "Materialization M04" ;
+    :edgeId "M04" ;
+    :fromState :MaterializationMachine_CatalogOnly ;
+    :toState :MaterializationMachine_Complete ;
+    :guardedBy :MaterializationMachine_Guard_IndexesValid ;
+    :firedBy :MaterializationMachine_Event_FinishMaterialization .
+
+:MaterializationMachine_M05 a :MaterializationTransition ;
+    rdfs:label "Materialization M05" ;
+    :edgeId "M05" ;
+    :fromState :MaterializationMachine_Partial ;
+    :toState :MaterializationMachine_Complete ;
+    :guardedBy :MaterializationMachine_Guard_IndexesValid ;
+    :firedBy :MaterializationMachine_Event_FinishMaterialization .
+
+:MaterializationMachine_M06 a :MaterializationTransition ;
+    rdfs:label "Materialization M06" ;
+    :edgeId "M06" ;
+    :fromState :MaterializationMachine_Failed ;
+    :toState :MaterializationMachine_Complete ;
+    :guardedBy :MaterializationMachine_Guard_IndexesValid ;
+    :firedBy :MaterializationMachine_Event_FinishMaterialization .
+
+:MaterializationMachine_M07 a :MaterializationTransition ;
+    rdfs:label "Materialization M07" ;
+    :edgeId "M07" ;
+    :fromState :MaterializationMachine_CatalogOnly ;
+    :toState :MaterializationMachine_Failed ;
+    :firedBy :MaterializationMachine_Event_Fail .
+
+:MaterializationMachine_M08 a :MaterializationTransition ;
+    rdfs:label "Materialization M08" ;
+    :edgeId "M08" ;
+    :fromState :MaterializationMachine_Partial ;
+    :toState :MaterializationMachine_Failed ;
+    :firedBy :MaterializationMachine_Event_Fail .
+
+:MaterializationMachine_M09 a :MaterializationTransition ;
+    rdfs:label "Materialization M09" ;
+    :edgeId "M09" ;
+    :fromState :MaterializationMachine_Complete ;
+    :toState :MaterializationMachine_Failed ;
+    :firedBy :MaterializationMachine_Event_Fail .
+
+:MaterializationMachine_M10 a :MaterializationTransition ;
+    rdfs:label "Materialization M10" ;
+    :edgeId "M10" ;
+    :fromState :MaterializationMachine_Failed ;
+    :toState :MaterializationMachine_Failed ;
+    :firedBy :MaterializationMachine_Event_Fail .
+
+:MaterializationMachine_M11 a :MaterializationTransition ;
+    rdfs:label "Materialization M11" ;
+    :edgeId "M11" ;
+    :fromState :MaterializationMachine_Complete ;
+    :toState :MaterializationMachine_Complete ;
+    :guardedBy :MaterializationMachine_Guard_IndexesValid ;
+    :firedBy :MaterializationMachine_Event_FinishMaterialization .

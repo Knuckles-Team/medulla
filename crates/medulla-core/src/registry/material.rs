@@ -68,8 +68,7 @@ pub(super) fn advance_partial_manifest(
         .source_snapshot_version
         .or(page.source_snapshot_version);
     manifest.completeness_cursor = next_cursor;
-    manifest.phase = MaterializationPhase::Partial;
-    manifest.valid = false;
+    manifest.apply_phase(MaterializationEvent::AdvancePartialManifest, false);
 }
 
 /// Rebuild the secondary indexes against the now-complete resident image and settle the
@@ -89,12 +88,12 @@ pub(super) fn finish_materialization(
         step.failed("SECONDARY_INDEX_INVALID");
     }
     if let Ok(mut manifest) = manifest_ref.write() {
-        manifest.phase = if indexes_valid {
-            MaterializationPhase::Complete
+        let event = if indexes_valid {
+            MaterializationEvent::FinishMaterialization
         } else {
-            MaterializationPhase::Failed
+            MaterializationEvent::Fail
         };
-        manifest.valid = indexes_valid;
+        manifest.apply_phase(event, indexes_valid);
     }
 }
 

@@ -1642,3 +1642,10 @@ fn circuit_breaker_machine_matches_edge_table() {
 fn circuit_breaker_machine_classes_extend_core() {
     sm::assert_extends_core("CircuitBreaker");
 }
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R016.2
+#[test]
+fn materialization_machine_matches_edge_table() {
+    sm::assert_matches(&medulla_core::materialization_machine::MATERIALIZATION_MACHINE);
+    sm::assert_extends_core("Materialization");
+}

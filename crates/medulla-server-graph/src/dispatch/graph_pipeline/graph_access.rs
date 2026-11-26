@@ -324,7 +324,7 @@ pub fn check_materialization_valid(
     graph_name: &str,
 ) -> Result<(), Response> {
     if let Some(manifest) = registry.materialization_manifest(graph_name) {
-        if !manifest.valid {
+        if !manifest.valid() {
             let phase = match manifest.phase {
                 medulla_core::registry::MaterializationPhase::CatalogOnly => "catalog_only",
                 medulla_core::registry::MaterializationPhase::Partial => "partial",

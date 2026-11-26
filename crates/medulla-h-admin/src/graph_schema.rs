@@ -182,7 +182,7 @@ pub(crate) async fn resident_internal_graph(
     };
     if materialization_manifest
         .as_ref()
-        .is_some_and(|manifest| manifest.read().map_or(true, |manifest| !manifest.valid))
+        .is_some_and(|manifest| manifest.read().map_or(true, |manifest| !manifest.valid()))
     {
         return Err(
             "PACK_PROJECTION_GRAPH_NOT_MATERIALIZED: projection graph is incomplete".into(),

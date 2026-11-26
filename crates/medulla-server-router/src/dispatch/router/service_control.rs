@@ -84,7 +84,7 @@ async fn health_response(state: &Arc<RwLock<ServerState>>, req_id: u64) -> Respo
     ) = {
         let state = timed_read(state).await;
         let manifests = state.registry.materialization_manifests();
-        let complete = manifests.iter().filter(|manifest| manifest.valid).count();
+        let complete = manifests.iter().filter(|manifest| manifest.valid()).count();
         let partial = manifests
             .iter()
             .filter(|manifest| {

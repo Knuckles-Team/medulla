@@ -51,6 +51,7 @@ pub mod lifecycle;
 pub mod meeting_transcript;
 /// MEDULLA-BUSINESS-OPS-R001.7 — the approval request state machine.
 pub mod approval_machine;
+pub mod materialization_machine;
 /// MEDULLA-BUSINESS-OPS-R001.5 — the compliance obligation instance state machine.
 pub mod obligation_machine;
 /// CONCEPT:MEDULLA-KG.ontology.codegen-from-rust-vocabulary — deterministic ontology/SHACL-shape

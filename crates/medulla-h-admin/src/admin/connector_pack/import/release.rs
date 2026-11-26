@@ -100,7 +100,7 @@ impl GraphClassUsage {
                     && state
                         .registry
                         .materialization_handle(&name)
-                        .is_none_or(|manifest| manifest.read().is_ok_and(|m| m.valid));
+                        .is_none_or(|manifest| manifest.read().is_ok_and(|m| m.valid()));
                 UsageCandidate {
                     name,
                     core,

@@ -41,6 +41,7 @@ use dashmap::DashMap;
 use medulla_graph_core::graph::GraphCore;
 use medulla_graph_core::graph::GraphSnapshot;
 use medulla_protocol_types::protocol::GraphType;
+use crate::materialization_machine::{MaterializationEvent, MaterializationFacts};
 
 /// Metadata for a registered graph.
 ///
@@ -92,7 +93,7 @@ impl GraphHandle {
 }
 
 /// Honest materialization state exposed by lifecycle responses and health.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MaterializationPhase {
     CatalogOnly,
     Partial,
@@ -111,7 +112,6 @@ pub struct MaterializationManifest {
     pub completeness_cursor: Option<MaterializeCursor>,
     pub loaded_nodes: u64,
     pub loaded_edges: u64,
-    pub valid: bool,
 }
 
 impl MaterializationManifest {
@@ -123,7 +123,6 @@ impl MaterializationManifest {
             completeness_cursor: None,
             loaded_nodes: 0,
             loaded_edges: 0,
-            valid: false,
         }
     }
 
@@ -135,7 +134,23 @@ impl MaterializationManifest {
             completeness_cursor: None,
             loaded_nodes: 0,
             loaded_edges: 0,
-            valid: true,
+        }
+    }
+
+    /// Whether the image is complete and valid: derived from the phase, never stored beside it.
+    pub fn valid(&self) -> bool {
+        self.phase == MaterializationPhase::Complete
+    }
+
+    /// Fires `event` on the phase through the one transition function
+    /// ([`MaterializationPhase::apply`]); a refused pair changes nothing and reports `false`.
+    pub(crate) fn apply_phase(&mut self, event: MaterializationEvent, indexes_valid: bool) -> bool {
+        match self.phase.apply(event, MaterializationFacts { indexes_valid }) {
+            Ok(next) => {
+                self.phase = next;
+                true
+            }
+            Err(_) => false,
         }
     }
 
@@ -143,8 +158,7 @@ impl MaterializationManifest {
     /// `discard_cursor` also drops the completeness cursor, which a partial image whose
     /// source snapshot moved under it must do: it can no longer be continued, only restarted.
     pub fn fail(&mut self, discard_cursor: bool) {
-        self.phase = MaterializationPhase::Failed;
-        self.valid = false;
+        self.apply_phase(MaterializationEvent::Fail, false);
         if discard_cursor {
             self.completeness_cursor = None;
         }
@@ -157,7 +171,7 @@ impl MaterializationManifest {
     /// remain untouched: their next materialization must establish freshness from
     /// durable authority instead of inheriting a live-core version.
     pub fn advance_committed_version(&mut self, committed_version: u64) -> bool {
-        if committed_version == 0 || self.phase != MaterializationPhase::Complete || !self.valid {
+        if committed_version == 0 || !self.valid() {
             return false;
         }
         self.source_snapshot_version = Some(
@@ -1159,7 +1173,6 @@ impl GraphRegistry {
             completeness_cursor: cursor,
             loaded_nodes,
             loaded_edges,
-            valid: complete,
         };
     }
 
@@ -1259,7 +1272,7 @@ impl GraphRegistry {
             finish_materialization(manifest_ref, &handle.core, ticket.name());
             let valid = manifest_ref
                 .read()
-                .map(|manifest| manifest.valid)
+                .map(|manifest| manifest.valid())
                 .unwrap_or(false);
             if valid {
                 readiness_events::ready(ticket.name());
@@ -1818,7 +1831,7 @@ mod tests {
         assert!(!manifest.write().unwrap().advance_committed_version(11));
         let evicted = reg.materialization_manifest(name).unwrap();
         assert_eq!(evicted.phase, MaterializationPhase::CatalogOnly);
-        assert!(!evicted.valid);
+        assert!(!evicted.valid());
         assert_eq!(evicted.source_snapshot_version, None);
     }
 
@@ -1951,7 +1964,7 @@ mod tests {
         }
         let manifest = reg.materialization_manifest(name).expect("manifest");
         assert_eq!(manifest.phase, MaterializationPhase::Failed);
-        assert!(!manifest.valid);
+        assert!(!manifest.valid());
         assert!(manifest.completeness_cursor.is_none());
     }
 
@@ -2279,7 +2292,7 @@ mod tests {
         assert!(
             !reg.materialization_manifest("tenant:versioned")
                 .unwrap()
-                .valid
+                .valid()
         );
 
         let changed = MaterialPage {
@@ -2291,7 +2304,7 @@ mod tests {
         assert!(reg.publish_lazy_next_page(&ticket, changed).is_none());
         let manifest = reg.materialization_manifest("tenant:versioned").unwrap();
         assert_eq!(manifest.phase, MaterializationPhase::Failed);
-        assert!(!manifest.valid);
+        assert!(!manifest.valid());
         assert_eq!(reg.get("tenant:versioned").unwrap().core.node_count(), 1);
     }
 
