@@ -7,6 +7,7 @@ started by the `start_medulla_server` fixture of `tests/conftest.py`.
 from __future__ import annotations
 
 import os
+import time
 
 import pytest
 from conftest import TEST_TENANT, request_context
@@ -33,6 +34,39 @@ def _build(client: SyncMedullaClient, chunks: int = 3, doc: str = DOC) -> list[s
 def _delete(client: SyncMedullaClient, doc: str = DOC, **extra) -> dict:
     request = {"tenant": TEST_TENANT, "document_id": doc, **extra}
     return client._send("DocumentDelete", {"request": request})
+
+
+QUEUE_CLASSES = ("fast", "medium", "slow_heavy")
+STAGE_POLL_BOUND_S = 30.0
+
+
+def _stage_pending(client: SyncMedullaClient, binding_id: str) -> dict[str, int]:
+    """Each consumer's pending count for one binding, read through the served
+    `SemanticIndex` `StageStatus` op (`standing.pending` is per consumer)."""
+    pending: dict[str, int] = {}
+    for queue_class in QUEUE_CLASSES:
+        status = client._send(
+            "SemanticIndex",
+            {
+                "op": "stage_status",
+                "tenant_id": TEST_TENANT,
+                "binding_id": binding_id,
+                "consumer": "document-delete-proof",
+                "queue_class": queue_class,
+            },
+        )
+        pending[queue_class] = status["standing"]["pending"]
+    return pending
+
+
+def _await_stages_drained(client: SyncMedullaClient, binding_id: str) -> None:
+    """Poll `StageStatus` until every consumer reports pending 0, bounded by
+    30 s of monotonic time (a bound, not a sleep)."""
+    deadline = time.monotonic() + STAGE_POLL_BOUND_S
+    pending = _stage_pending(client, binding_id)
+    while any(pending.values()):
+        assert time.monotonic() < deadline, f"stages not drained: {pending}"
+        pending = _stage_pending(client, binding_id)
 
 
 def _counts(client: SyncMedullaClient) -> tuple[int, int]:
@@ -102,8 +136,19 @@ def test_deletion_record_readable(clean_graph):
 def test_delete_cascades_and_leaves_no_orphan(clean_graph):
     doc = "doc:orphan-proof"
     ids = _build(clean_graph, chunks=500, doc=doc)
+    vector = [0.25, 0.75]
+    txn_id = clean_graph.txn.begin()
+    for ordinal in range(500):
+        clean_graph.txn.add_embedding(txn_id, f"{doc}:chunk:{ordinal}", vector)
+    clean_graph.txn.commit(txn_id)
+    before = clean_graph.graph.semantic_search(vector, 10)
+    assert any(row[0].startswith(f"{doc}:chunk:") for row in before)
     receipt = _delete(clean_graph, doc=doc)
+    assert "index_pending" not in receipt
     assert receipt["nodes_deleted"] == len(ids)
     assert receipt["orphan_report"] == {"graph_rows_left": 0, "edges_left": 0}
     for node in ids:
         assert not clean_graph.nodes.has(node)
+    _await_stages_drained(clean_graph, f"binding:{doc}")
+    after = clean_graph.graph.semantic_search(vector, 10)
+    assert not [row for row in after if row[0].startswith(f"{doc}:")]
