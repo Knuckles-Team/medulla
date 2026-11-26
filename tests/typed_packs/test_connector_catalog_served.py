@@ -6,16 +6,24 @@ found by served UQL; the same batch without ``cp:digest`` is refused and the sto
 is unchanged.
 """
 
+# ruff: noqa: E501, B017
+
 from __future__ import annotations
 
+import asyncio
+import hashlib
+import json
 import os
 import pathlib
 import uuid
 
 import pytest
 from conftest import request_context
+from ontology_pack_support import connect, import_entries
 
+from medulla import ConnectorPackEntryContent
 from medulla.client import SyncMedullaClient
+from medulla.generated.connector_pack import PackAnnotations, PackEntryKind
 
 CATALOG = "https://knuckles-team.github.io/ontology/catalog#"
 CONNECTOR_PACK = "https://knuckles-team.github.io/ontology/connector-pack#"
@@ -165,7 +173,9 @@ def test_asset_carries_digest_version_revision_and_class_counts(catalog_graph):
     version = _triple(TOOL, f"{CONNECTOR_PACK}packVersion", "rec-7", literal=True)
     admin.rdf.add_triples(turtle=_batch(with_digest=True) + version)
     raw = admin._send("GetNodeProperties", {"node_id": TOOL}, graph)
-    node = msgpack.unpackb(raw, raw=False) if isinstance(raw, (bytes, bytearray)) else raw
+    node = (
+        msgpack.unpackb(raw, raw=False) if isinstance(raw, (bytes, bytearray)) else raw
+    )
     assert node[f"{CONNECTOR_PACK}digest"] == DIGEST
     assert node[f"{CONNECTOR_PACK}packVersion"] == "rec-7"
     page = admin._send(
@@ -176,3 +186,109 @@ def test_asset_carries_digest_version_revision_and_class_counts(catalog_graph):
     counts = {term["iri"]: term.get("node_count") for term in page["terms"]}
     assert counts[f"{CATALOG}ToolAsset"] == 1
     assert counts[f"{CATALOG}DataResource"] == 1
+
+
+FIXTURES = pathlib.Path(__file__).resolve().parents[1] / "fixtures" / "catalog"
+BATCH = "urn:medulla:r1066:"
+SKOS_LABEL = "http://www.w3.org/2004/02/skos/core#prefLabel"
+CORE = "https://knuckles-team.github.io/ontology/core#"
+
+
+def _pack_entry(kind: PackEntryKind, scheme: str, connector: str, name: str):
+    body = json.dumps({"name": name, "description": f"{name} of the orders pack"})
+    return ConnectorPackEntryContent(
+        kind=kind,
+        uri=f"{scheme}://{connector}/{name}",
+        name=name,
+        media_type="application/json",
+        body=body.encode(),
+        input_schema=b'{"type":"object"}' if kind is PackEntryKind.TOOL else None,
+        output_schema=b'{"type":"object"}' if kind is PackEntryKind.RESOURCE else None,
+        annotations=PackAnnotations(),
+    )
+
+
+async def _import_orders_pack(connector: str) -> dict:
+    client = await connect()
+    try:
+        return await import_entries(
+            client,
+            connector,
+            [
+                _pack_entry(PackEntryKind.TOOL, "tool", connector, "list_orders"),
+                _pack_entry(PackEntryKind.TOOL, "tool", connector, "get_order"),
+                _pack_entry(PackEntryKind.SKILL, "skill", connector, "order_triage"),
+                _pack_entry(PackEntryKind.PROMPT, "prompt", connector, "order_summary"),
+                _pack_entry(PackEntryKind.RESOURCE, "resource", connector, "orders"),
+                _pack_entry(PackEntryKind.RESOURCE, "resource", connector, "customers"),
+            ],
+        )
+    finally:
+        await client.close()
+
+
+def _values(admin, query: str, name: str) -> set[str]:
+    return {row[name].strip("<>") for row in admin.rdf.sparql(query)}
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R106.6")
+def test_catalog_search_finds_assets_with_owner_term_and_lineage(catalog_graph):
+    # spec: MEDULLA-TYPED-PACKS-R106.6
+    admin = catalog_graph
+
+    # The fixture pack imports through the served ConnectorPack.import.
+    imported = asyncio.run(_import_orders_pack(f"orders-{uuid.uuid4().hex[:10]}"))
+    assert imported["result"] == "imported", imported
+
+    # The recorded onboarding batch is the file whose digest is recorded beside it.
+    batch = (FIXTURES / "onboarding_batch.nt").read_bytes()
+    recorded = (FIXTURES / "onboarding_batch.sha256").read_text().strip()
+    assert hashlib.sha256(batch).hexdigest() == recorded
+    admin.rdf.add_triples(turtle=batch.decode())
+
+    # The one search finds the assets named for orders, each with owner, term and lineage.
+    ranked = _values(
+        admin,
+        f"PREFIX cat: <{CATALOG}>\n"
+        f"PREFIX skos: <http://www.w3.org/2004/02/skos/core#>\n"
+        "SELECT ?asset ?score WHERE {\n"
+        "  ?asset skos:prefLabel ?name .\n"
+        '  BIND(cat:relevance(?asset, "orders") AS ?score)\n'
+        "  FILTER(?score > 0)\n"
+        "}",
+        "asset",
+    )
+    found = {f"{BATCH}tool-list-orders", f"{BATCH}resource-orders"}
+    assert found <= ranked, ranked
+    for asset in found:
+        owners = _values(
+            admin,
+            f"SELECT ?o WHERE {{ ?a <{CATALOG}assignedTo> <{asset}> ; "
+            f"<{CATALOG}principal> ?o }}",
+            "o",
+        )
+        assert owners == {f"{BATCH}principal-orders-team"}
+        terms = _values(
+            admin,
+            f"SELECT ?t WHERE {{ ?t <{CORE}definesAsset> <{asset}> }}",
+            "t",
+        )
+        assert terms == {f"{BATCH}term-orders"}
+    downstream = _values(
+        admin,
+        f"SELECT ?n WHERE {{ <{BATCH}tool-list-orders> <{CATALOG}lineageTo>+ ?n }}",
+        "n",
+    )
+    assert downstream == {f"{BATCH}resource-orders"}
+
+    # A query on the parent class returns the assets of the connector subclasses.
+    assets = _values(admin, f"SELECT ?a WHERE {{ ?a a <{CATALOG}Asset> }}", "a")
+    for name in (
+        "tool-list-orders",
+        "tool-get-order",
+        "skill-order-triage",
+        "prompt-order-summary",
+        "resource-orders",
+        "resource-customers",
+    ):
+        assert f"{BATCH}{name}" in assets, name
