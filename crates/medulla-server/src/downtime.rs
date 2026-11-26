@@ -135,20 +135,10 @@ pub struct TickPlan {
     pub budget_required: Vec<String>,
 }
 
-fn lexical(binding: &Binding) -> String {
-    let raw = binding.as_str();
-    if let Some(rest) = raw.strip_prefix('"') {
-        if let Some(end) = rest.rfind('"') {
-            return rest[..end].to_string();
-        }
-    }
-    raw.trim_matches(|c| c == '<' || c == '>').to_string()
-}
-
 type Row = std::collections::HashMap<String, Binding>;
 
 fn cell(row: &Row, name: &str) -> Option<String> {
-    row.get(name).map(lexical)
+    row.get(name).and_then(Binding::str_value)
 }
 
 fn number<T: std::str::FromStr>(row: &Row, name: &str) -> Option<T> {
@@ -759,7 +749,7 @@ mod tests {
     fn row(pairs: &[(&str, &str)]) -> Row {
         pairs
             .iter()
-            .map(|(name, value)| (name.to_string(), Binding::Literal(format!("\"{value}\""))))
+            .map(|(name, value)| (name.to_string(), Binding::string(*value)))
             .collect()
     }
 
@@ -899,7 +889,7 @@ mod tests {
     #[test]
     fn rows_without_a_window_kind_or_a_number_are_not_job_types() {
         let mut bad_kind = type_row("dw:a", "plan_evolution", 1);
-        bad_kind.insert("kind".into(), Binding::Literal("\"sometimes\"".into()));
+        bad_kind.insert("kind".into(), Binding::string("sometimes"));
         let mut no_cpu = type_row("dw:b", "plan_evolution", 1);
         no_cpu.remove("cpu");
         let ok = type_row("dw:c", "plan_evolution", 1);

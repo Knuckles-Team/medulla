@@ -159,14 +159,14 @@ fn sparql_prover(ctx: &PlanCtx, query: &str, var: &str) -> Result<Prover, String
     let (table, proofs) = execute_explained(&dataset, query, &Projection::raw())?;
     let mut by_id: HashMap<String, SparqlRowProof> = HashMap::new();
     for (solution, proof) in table.solutions.iter().zip(proofs) {
-        let Some(Binding::Node(id)) = solution.get(var) else {
+        let Some(id) = solution.get(var).and_then(Binding::node_key) else {
             continue;
         };
         let replace = by_id
-            .get(id)
+            .get(&id)
             .is_none_or(|held| held.coverage != SparqlProofCoverage::Complete);
         if replace {
-            by_id.insert(id.clone(), proof);
+            by_id.insert(id, proof);
         }
     }
     Ok(Prover::Sparql(by_id))

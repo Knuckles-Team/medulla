@@ -121,7 +121,10 @@ fn count_result(out_var: &str, count: u64) -> QueryOutcome {
         Vec::new()
     } else {
         let mut row = Solution::new();
-        row.insert(out_var.to_string(), Binding::Literal(count.to_string()));
+        row.insert(
+            out_var.to_string(),
+            Binding::typed(count.to_string(), medulla_rdf::sparql::XSD_INTEGER),
+        );
         vec![row]
     };
     QueryOutcome::Solutions(SparqlResult {
@@ -200,18 +203,15 @@ fn ordered_rows_result(
         };
         let subject = NamedNode::new(subject)
             .map_err(|_| "obda: ordered source returned invalid subject IRI".to_string())?;
-        let Term::Literal(literal) = object else {
-            return Err("obda: ordered source returned nonliteral mapped object".into());
+        let Some(object) = Binding::from_term(&object) else {
+            return Err("obda: ordered source returned an unrepresentable mapped object".into());
         };
         let mut solution = Solution::new();
         solution.insert(
             subject_var.as_str().to_string(),
-            Binding::Node(subject.to_string()),
+            Binding::iri(subject.as_str()),
         );
-        solution.insert(
-            object_var.as_str().to_string(),
-            Binding::Literal(literal.value().to_string()),
-        );
+        solution.insert(object_var.as_str().to_string(), object);
         solutions.push(solution);
     }
     if solutions.len() > length {

@@ -46,7 +46,7 @@ pub(super) fn bool_result(b: bool) -> SparqlResult {
     let mut sol = HashMap::new();
     sol.insert(
         "_ask".to_string(),
-        medulla_rdf::sparql::Binding::Literal(b.to_string()),
+        medulla_rdf::sparql::Binding::boolean(b),
     );
     SparqlResult {
         vars: vec!["_ask".to_string()],

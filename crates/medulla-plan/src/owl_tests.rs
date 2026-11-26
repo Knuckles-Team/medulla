@@ -163,10 +163,7 @@ fn sparql_selected_set_then_rank_equals_separate() {
     let members: HashSet<String> = res
         .solutions
         .iter()
-        .filter_map(|s| match s.get("w") {
-            Some(medulla_rdf::sparql::Binding::Node(n)) => Some(n.clone()),
-            _ => None,
-        })
+        .filter_map(|s| s.get("w").and_then(medulla_rdf::sparql::Binding::node_key))
         .collect();
     let ranked = semantic.semantic_search(&query_vec(), 64);
     let separate: Vec<String> = ranked

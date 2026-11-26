@@ -322,7 +322,7 @@ mod obda_pushdown_tests {
                 let mut names: Vec<String> = res
                     .solutions
                     .iter()
-                    .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+                    .filter_map(|s| s.get("name").map(|b| b.display_text()))
                     .collect();
                 names.sort();
                 assert_eq!(names, vec!["Alice", "Carol"]);

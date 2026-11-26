@@ -508,7 +508,7 @@ async fn run_sparql_stored(
         .map(|cells| {
             cells
                 .into_iter()
-                .map(|cell| cell.map_or(Value::Null, Value::String))
+                .map(|cell| cell.map_or(Value::Null, |term| Value::String(term.display_text())))
                 .collect()
         })
         .collect();

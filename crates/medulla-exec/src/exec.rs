@@ -1583,17 +1583,17 @@ fn sparql_source(view: &GraphView, query: &str, var: &str) -> Result<RowSet, Str
     .into_table();
     // MEDULLA-FEDERATED-QUERY-R721.2: the RDF modality's output folds into the RowSet
     // through its `ModalityContract`; only resource bindings are rows.
-    let nodes: Vec<(&str, &medulla_rdf::sparql::Binding)> = res
+    let nodes: Vec<(String, &medulla_rdf::sparql::Binding)> = res
         .solutions
         .iter()
-        .filter_map(|sol| match sol.get(var) {
-            Some(b @ medulla_rdf::sparql::Binding::Node(n)) => Some((n.as_str(), b)),
-            _ => None,
+        .filter_map(|sol| {
+            let b = sol.get(var)?;
+            Some((b.node_key()?, b))
         })
         .collect();
     let values: Vec<(&str, &dyn medulla_modality::ModalityContract)> = nodes
         .iter()
-        .map(|(id, b)| (*id, *b as &dyn medulla_modality::ModalityContract))
+        .map(|(id, b)| (id.as_str(), *b as &dyn medulla_modality::ModalityContract))
         .collect();
     crate::modality_fold::fold_modality(RDF_STORAGE_KIND, &values).map_err(|e| e.to_string())
 }

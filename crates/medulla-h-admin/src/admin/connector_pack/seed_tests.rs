@@ -320,7 +320,12 @@ mod served {
             .rows
             .iter()
             .map(|row| {
-                let cell = |index: usize| row[index].clone().unwrap_or_default();
+                let cell = |index: usize| {
+                    row[index]
+                        .as_ref()
+                        .map(|term| term.display_text())
+                        .unwrap_or_default()
+                };
                 format!("<{}> <{}> \"{}\"", cell(0), cell(1), cell(2))
             })
             .collect::<Vec<_>>()

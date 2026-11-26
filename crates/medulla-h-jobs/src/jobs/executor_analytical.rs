@@ -124,7 +124,9 @@ fn run_analytical(
                             name.clone(),
                             row.texts
                                 .get(name)
-                                .map_or(serde_json::Value::Null, |text| serde_json::json!(text)),
+                                .map_or(serde_json::Value::Null, |term| {
+                            serde_json::json!(term.display_text())
+                        }),
                         );
                     }
                     for name in &values {
