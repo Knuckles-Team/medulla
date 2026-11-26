@@ -21,7 +21,7 @@ use medulla_result_types::{
 use serde::Deserialize;
 use serde_json::{Map, Value};
 
-pub use medulla_exec::exec::propagate::node_props;
+use medulla_exec::exec::propagate::node_props;
 
 use medulla_protocol_types::protocol::Method;
 
