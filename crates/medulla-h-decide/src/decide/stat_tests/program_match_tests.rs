@@ -406,3 +406,183 @@ async fn match_record_lists_score_threshold_and_bindings() {
     assert!(fact(record, "program.embedding_calls=0"));
     assert_eq!(record.evidence_class, EvidenceClass::Observation);
 }
+
+/// Commit the program of `run` under `signature`, answering its digest.
+async fn commit_program(f: &Fixture, run: &str, signature: &str) -> String {
+    let mut record = trace(run, RunOutcome::Succeeded, 3, "weekly");
+    record.task_signature = signature.to_string();
+    f.add_trace_node(&record, "recorder").await;
+    let source = TraceSource {
+        graph: GRAPH.to_string(),
+        node_id: format!("trace:{run}"),
+    };
+    let stored = commit_op(
+        f,
+        DecisionLogOp::RunRecord {
+            tenant_id: TENANT.to_string(),
+            record: RunRecord::CompiledProgram {
+                trace: record,
+                policy: DecisionPolicyRef::Default,
+                source,
+                reusable: false,
+                plan_binding: None,
+                preplan_receipt: None,
+                phrasings: BoundedVec::default(),
+                match_threshold_micros: None,
+            },
+        },
+    )
+    .await
+    .unwrap();
+    match stored.stored {
+        StoredRun::CompiledProgram { program, .. } => program.program_digest,
+        other => panic!("a compiled program, got {other:?}"),
+    }
+}
+
+/// Report `outcome` of `count` runs of the program `digest` of `signature`.
+async fn report_replays(
+    h: &Harness,
+    signature: &str,
+    digest: &str,
+    outcome: ReplayOutcome,
+    count: usize,
+) {
+    for index in 0..count {
+        let mut row = replay(outcome);
+        row.task_signature = signature.to_string();
+        row.run_id = format!("{signature}-{outcome:?}-{index}");
+        row.program_digest = Some(digest.to_string());
+        row.failed_step = (outcome == ReplayOutcome::Fallback).then_some(1);
+        commit(h, "decider", row).await.unwrap();
+    }
+}
+
+fn plain_lookup(h: &Harness, signature: &str) -> DecideRequest {
+    lookup_request(h, Some(signature))
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R135.17.2, MEDULLA-DECISION-ENGINE-R135.17.3
+#[tokio::test]
+async fn replay_fallbacks_demote_the_program() {
+    let f = Fixture::new().await;
+    let flaky = commit_program(&f, "run-flaky", "flaky-task").await;
+    let steady = commit_program(&f, "run-steady", "steady-task").await;
+
+    // Below the minimum count nothing is demoted, even with every replay a fallback.
+    report_replays(&f.h, "flaky-task", &flaky, ReplayOutcome::Fallback, 4).await;
+    let before = decide(&f.h, plain_lookup(&f.h, "flaky-task")).await.unwrap();
+    assert!(matches!(
+        before.records.as_slice()[0].outcome,
+        StatisticalOutcome::Advisory { .. }
+    ));
+
+    // The fifth fallback reaches the minimum count at a rate of one: the program is demoted.
+    report_replays(&f.h, "flaky-task", &flaky, ReplayOutcome::Fallback, 5).await;
+    let demoted = decide(&f.h, plain_lookup(&f.h, "flaky-task")).await.unwrap();
+    assert_eq!(abstain_codes(&demoted), ["PROGRAM_DEMOTED"]);
+    let record = &demoted.records.as_slice()[0];
+    assert!(record.premises.iter().any(|p| p.fact == "program.replays=5"));
+    assert!(record.premises.iter().any(|p| p.fact == "program.replay_fallbacks=5"));
+    assert!(
+        record
+            .premises
+            .iter()
+            .any(|p| p.fact.starts_with("knob:program.demote_min_replays=")),
+        "the knob premises are listed"
+    );
+
+    // A second program with five hits still answers, and states its counts.
+    report_replays(&f.h, "steady-task", &steady, ReplayOutcome::Hit, 5).await;
+    let steady_answer = decide(&f.h, plain_lookup(&f.h, "steady-task")).await.unwrap();
+    let record = &steady_answer.records.as_slice()[0];
+    assert!(matches!(record.outcome, StatisticalOutcome::Advisory { .. }));
+    assert!(record.premises.iter().any(|p| p.fact == "program.replays=5"));
+    assert!(record.premises.iter().any(|p| p.fact == "program.replay_fallbacks=0"));
+
+    // The rule applies to a lookup with request text too.
+    let text = decide(
+        &f.h,
+        with_text(plain_lookup(&f.h, "flaky-task"), "flaky-task", "anything at all"),
+    )
+    .await
+    .unwrap();
+    assert_eq!(abstain_codes(&text), ["PROGRAM_DEMOTED"]);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R135.16.6
+#[tokio::test]
+async fn request_text_finds_the_nearest_program_and_binds_it() {
+    let f = Fixture::new().await;
+    f.add_trace_node(&trace("run-p", RunOutcome::Succeeded, 3, "weekly"), "recorder")
+        .await;
+    commit_phrased(&f, "run-p", &["summarize the {p0} report"], Some(500_000))
+        .await
+        .unwrap();
+    let answer = |batch: &DecisionBatch| -> ProgramMatch {
+        let StatisticalOutcome::Advisory { scores, .. } = &batch.records.as_slice()[0].outcome
+        else {
+            panic!("a match, got {:?}", batch.records.as_slice()[0].outcome);
+        };
+        let body = scores.as_slice()[0]
+            .option_id
+            .strip_prefix("program_match:")
+            .expect("a program_match answer");
+        serde_json::from_str(body).unwrap()
+    };
+
+    // A paraphrase under another signature finds the nearest program by meaning and binds p0.
+    let semantic = decide(
+        &f.h,
+        with_text(lookup_request(&f.h, None), "another-task", "summarize the weekly report"),
+    )
+    .await
+    .unwrap();
+    let matched = answer(&semantic);
+    assert_eq!(matched.match_kind, MatchKind::Semantic);
+    assert_eq!(matched.task_signature, "summarize-report");
+    assert_eq!(matched.steps.len(), 3, "every tool step is bound");
+    assert!(matched.score_micros.is_some_and(|score| score >= 500_000));
+
+    // The committed signature answers exactly and binds p0 from the new text.
+    let exact = decide(
+        &f.h,
+        with_text(lookup_request(&f.h, None), "summarize-report", "summarize the monthly report"),
+    )
+    .await
+    .unwrap();
+    let matched = answer(&exact);
+    assert_eq!(matched.match_kind, MatchKind::Exact);
+    assert!(matched
+        .bindings
+        .iter()
+        .any(|binding| binding.parameter == "p0"
+            && binding.value
+                == medulla_decision_types::decision::run_governance::TraceScalar::Text(
+                    "monthly".into()
+                )));
+
+    // Text no phrasing fits leaves the slots unbound.
+    let unbound = decide(
+        &f.h,
+        with_text(lookup_request(&f.h, None), "summarize-report", "what is my report"),
+    )
+    .await
+    .unwrap();
+    assert_eq!(abstain_codes(&unbound), ["PROGRAM_SLOTS_UNBOUND"]);
+
+    // Unrelated text under another signature, against a program with a strict threshold, abstains.
+    let g = Fixture::new().await;
+    g.add_trace_node(&trace("run-q", RunOutcome::Succeeded, 3, "weekly"), "recorder")
+        .await;
+    commit_phrased(&g, "run-q", &["summarize the {p0} report"], Some(1_000_000))
+        .await
+        .unwrap();
+    let below = decide(
+        &g.h,
+        with_text(lookup_request(&g.h, None), "other", "cancel my subscription"),
+    )
+    .await
+    .unwrap();
+    assert_eq!(abstain_codes(&below), ["PROGRAM_BELOW_THRESHOLD"]);
+}

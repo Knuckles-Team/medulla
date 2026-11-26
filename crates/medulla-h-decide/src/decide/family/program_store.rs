@@ -14,6 +14,9 @@ use medulla_decision_types::decision::program_store::semantic::{
     MATCH_SCHEMA_VERSION, MAX_REQUEST_TEXT_BYTES, PARAM_PROGRAM_CANDIDATES, PARAM_PROGRAM_GRAPH,
     PARAM_REQUEST_TEXT, PHRASING_NODE_CLASS,
 };
+use medulla_decision_types::decision::program_store::replay::{
+    replay_prefix, replay_verdict, ProgramDemoted, ReplayKnobs, StoredReplay, MAX_REPLAY_ROWS,
+};
 use medulla_decision_types::decision::program_store::{
     CompiledProgram, NoProgram, ProgramKnobs,
 };
@@ -116,6 +119,45 @@ fn stored_index(
     decode_artifact(&bytes, "program match index").map(Some)
 }
 
+/// The demotion of `program` by its recent replays (MEDULLA-DECISION-ENGINE-R135.17.2): the
+/// abstention it answers when its newest replays fell back too often, else the two replay
+/// counts to state as premises. Rows are read from the caller's tenant under the task signature.
+fn demotion(
+    ctx: &ExecutionContext,
+    policy: &DecisionPolicy,
+    task_signature: &str,
+    program: &CompiledProgram,
+) -> Result<(Option<Executed>, Vec<FamilyPremise>), String> {
+    let rows: Vec<StoredReplay> = ctx
+        .store
+        .decision_artifacts_with_prefix(
+            ctx.tenant_id,
+            &replay_prefix(task_signature),
+            MAX_REPLAY_ROWS,
+        )?
+        .into_iter()
+        .map(|(_, bytes)| decode_artifact(&bytes, "program replay"))
+        .collect::<Result<_, _>>()?;
+    let verdict = replay_verdict(&rows, &program.program_digest, &ReplayKnobs::from_policy(policy));
+    let premises = vec![
+        claim(format!("program.replays={}", verdict.replays), PARAM_TASK_SIGNATURE),
+        claim(
+            format!("program.replay_fallbacks={}", verdict.fallbacks),
+            PARAM_TASK_SIGNATURE,
+        ),
+    ];
+    let abstention = verdict.demoted.then(|| {
+        abstained(
+            QuestionKind::ProgramLookup,
+            &ProgramDemoted {
+                replays: verdict.replays,
+                fallbacks: verdict.fallbacks,
+            },
+        )
+    });
+    Ok((abstention, premises))
+}
+
 /// The request-text premises of a match answer or abstention (R135.16.5): the match kind,
 /// score, threshold and where it came from, the matched node, the embedding calls, the space and
 /// one premise per binding.
@@ -172,6 +214,7 @@ fn match_claims(
 fn semantic(
     ctx: &ExecutionContext,
     request: &DecideRequest,
+    policy: &DecisionPolicy,
     task_signature: &str,
 ) -> Result<Executed, String> {
     let request_text = text_param(request, PARAM_REQUEST_TEXT)?.unwrap_or_default();
@@ -276,6 +319,12 @@ fn semantic(
             source,
         ));
     };
+    let (demoted, replay_premises) = demotion(ctx, policy, &chosen, &program)?;
+    if let Some(mut executed) = demoted {
+        executed.family_premises = match_claims("none", score, threshold, source, None, &candidates, &[]);
+        executed.family_premises.extend(replay_premises);
+        return Ok(executed);
+    }
     // A program with no index matches by exact signature only: it has no slots to bind.
     let (bindings, steps) = match index {
         None => (Vec::new(), Vec::new()),
@@ -338,6 +387,7 @@ fn semantic(
         &candidates,
         &bindings,
     ));
+    executed.family_premises.extend(replay_premises);
     Ok(executed)
 }
 
@@ -457,13 +507,13 @@ impl DecisionFamily for ProgramLookupFamily {
         &self,
         ctx: &ExecutionContext,
         request: &DecideRequest,
-        _policy: &DecisionPolicy,
+        policy: &DecisionPolicy,
         _graph_view: Option<&GraphView>,
     ) -> Option<Result<Executed, String>> {
         Some((|| {
             let task_signature = signature(request)?;
             if text_param(request, PARAM_REQUEST_TEXT)?.is_some() {
-                return semantic(ctx, request, task_signature);
+                return semantic(ctx, request, policy, task_signature);
             }
             let mut executed = match stored(ctx, task_signature)? {
                 None => abstained(
@@ -473,6 +523,19 @@ impl DecisionFamily for ProgramLookupFamily {
                     },
                 ),
                 Some(program) => {
+                    let (demoted, replay_premises) =
+                        demotion(ctx, policy, task_signature, &program)?;
+                    if let Some(mut executed) = demoted {
+                        executed.family_premises = replay_premises;
+                        executed.family_premises.insert(
+                            0,
+                            claim(
+                                format!("program.task_signature={task_signature}"),
+                                PARAM_TASK_SIGNATURE,
+                            ),
+                        );
+                        return Ok(executed);
+                    }
                     let body = serde_json::to_string(&program)
                         .map_err(|error| invalid(format!("program encoding failed: {error}")))?;
                     let mut executed = advisory(vec![format!("{ANSWER_PREFIX}{body}")])?;
@@ -514,6 +577,7 @@ impl DecisionFamily for ProgramLookupFamily {
                                 .push(claim(fact, PARAM_TASK_SIGNATURE));
                         }
                     }
+                    executed.family_premises.extend(replay_premises);
                     executed
                 }
             };

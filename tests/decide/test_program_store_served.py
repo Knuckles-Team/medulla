@@ -177,3 +177,176 @@ def test_compile_then_lookup(clean_graph):
     assert result["refused"] is not None
     assert "RUN_NOT_SUCCESSFUL" in result["refused"]
     assert _program_from(result["after"]) == program
+
+
+def _match_from(payload: dict[str, Any]) -> dict[str, Any]:
+    outcome = payload["records"][0]["outcome"]
+    assert outcome["outcome"] == "advisory", outcome
+    option_id = outcome["scores"][0]["option_id"]
+    assert option_id.startswith("program_match:")
+    return json.loads(option_id.removeprefix("program_match:"))
+
+
+def _abstain_codes(payload: dict[str, Any]) -> list[str]:
+    outcome = payload["records"][0]["outcome"]
+    assert outcome["outcome"] == "abstained", outcome
+    return [reason["code"] for reason in outcome["reasons"]]
+
+
+def _phrased_record_op(
+    trace: dict[str, Any], graph: str, node_id: str, threshold: int | None
+) -> dict[str, Any]:
+    body = _run_record_op(trace, graph, node_id)
+    body["record"]["phrasings"] = [{"text": "summarize the {p0} report"}]
+    if threshold is not None:
+        body["record"]["match_threshold_micros"] = threshold
+    return body
+
+
+def _text_lookup(
+    schema: dict[str, Any], graph: str, signature: str, text: str | None
+) -> dict[str, Any]:
+    params = [dc.param("task_signature", "text", signature)]
+    if text is not None:
+        params += [
+            dc.param("request_text", "text", text),
+            dc.param("program_graph", "text", graph),
+        ]
+    return dc.decide_request(
+        TEST_TENANT,
+        (f"q:program:{signature}:{text}", "program_lookup", "ordinary"),
+        dc.declared([dc.DeclaredOption("program")]),
+        schema,
+        params=params,
+    )
+
+
+def _replay_op(signature: str, digest: str, outcome: str, index: int) -> dict[str, Any]:
+    return {
+        "op": "run_record",
+        "tenant_id": TEST_TENANT,
+        "record": {
+            "kind": "program_replay",
+            "replay": {
+                "schema_version": 1,
+                "run_id": f"{signature}-{outcome}-{index}",
+                "task_signature": signature,
+                "decision_record_digest": "ab" * 32,
+                "outcome": outcome,
+                "program_digest": digest,
+                "failed_step": 1 if outcome == "fallback" else None,
+                "refusal_code": None,
+            },
+        },
+    }
+
+
+async def _paraphrase_journey(schema: dict[str, Any], graph: str) -> dict[str, Any]:
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    try:
+        decision = dc.DecisionClient(client=client)
+        await decision.log(
+            _phrased_record_op(
+                _trace("run-p", "succeeded", 3), graph, "trace:run-p", 500_000
+            )
+        )
+        return {
+            "semantic": await decision.decide(
+                _text_lookup(
+                    schema, graph, "another-task", "summarize the weekly report"
+                )
+            ),
+            "exact": await decision.decide(
+                _text_lookup(schema, graph, SIGNATURE, "summarize the monthly report")
+            ),
+            "unbound": await decision.decide(
+                _text_lookup(schema, graph, SIGNATURE, "what is my report")
+            ),
+        }
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-DECISION-ENGINE-R135.16.6
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R135.16.6")
+def test_paraphrase_reuses_program(clean_graph):
+    _write_trace_node(
+        clean_graph, "r135-16-6:trace", "trace:run-p", _trace("run-p", "succeeded", 3)
+    )
+    schema = publish(
+        clean_graph,
+        "r135-16-6-schema",
+        "feature_schema",
+        ds.feature_schema_body([ds.feature("n", ds.number("n"))]),
+    )
+    result = asyncio.run(_paraphrase_journey(schema, _graph_name(clean_graph)))
+
+    semantic = _match_from(result["semantic"])
+    assert semantic["match_kind"] == "semantic"
+    assert semantic["task_signature"] == SIGNATURE
+    assert len(semantic["steps"]) == 3
+    assert semantic["score_micros"] >= 500_000
+
+    exact = _match_from(result["exact"])
+    assert exact["match_kind"] == "exact"
+    assert any(
+        binding["parameter"] == "p0" and binding["value"] == "monthly"
+        for binding in exact["bindings"]
+    )
+
+    assert _abstain_codes(result["unbound"]) == ["PROGRAM_SLOTS_UNBOUND"]
+
+
+async def _demotion_journey(schema: dict[str, Any], graph: str) -> dict[str, Any]:
+    client = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(),
+    )
+    try:
+        decision = dc.DecisionClient(client=client)
+        digests = {}
+        for signature, run in (("flaky-task", "run-f"), ("steady-task", "run-s")):
+            trace = _trace(run, "succeeded", 3)
+            trace["task_signature"] = signature
+            committed = await decision.log(_run_record_op(trace, graph, f"trace:{run}"))
+            digests[signature] = committed["stored"]["program"]["program_digest"]
+        for index in range(5):
+            await decision.log(
+                _replay_op("flaky-task", digests["flaky-task"], "fallback", index)
+            )
+            await decision.log(
+                _replay_op("steady-task", digests["steady-task"], "hit", index)
+            )
+        return {
+            "flaky": await decision.decide(
+                _text_lookup(schema, graph, "flaky-task", None)
+            ),
+            "steady": await decision.decide(
+                _text_lookup(schema, graph, "steady-task", None)
+            ),
+        }
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-DECISION-ENGINE-R135.17.3
+@pytest.mark.spec("MEDULLA-DECISION-ENGINE-R135.17.3")
+def test_replay_fallbacks_demote_program(clean_graph):
+    for run, signature in (("run-f", "flaky-task"), ("run-s", "steady-task")):
+        trace = _trace(run, "succeeded", 3)
+        trace["task_signature"] = signature
+        _write_trace_node(clean_graph, f"r135-17-3:{run}", f"trace:{run}", trace)
+    schema = publish(
+        clean_graph,
+        "r135-17-3-schema",
+        "feature_schema",
+        ds.feature_schema_body([ds.feature("n", ds.number("n"))]),
+    )
+    result = asyncio.run(_demotion_journey(schema, _graph_name(clean_graph)))
+
+    assert _abstain_codes(result["flaky"]) == ["PROGRAM_DEMOTED"]
+    steady = result["steady"]["records"][0]["outcome"]
+    assert steady["outcome"] == "advisory", steady

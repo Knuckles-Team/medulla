@@ -237,6 +237,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     preplan::PREPLAN_ARTIFACTS_EMPTY,
     preplan::PREPLAN_TESTS_FAILED,
     replay::REPLAY_RECORD_INVALID,
+    replay::PROGRAM_DEMOTED,
     semantic::PHRASING_INVALID,
     semantic::PHRASING_SLOT_UNKNOWN,
     semantic::PHRASING_SLOTS_ADJACENT,
@@ -283,6 +284,9 @@ pub const KNOBS: &[KnobSpec] = &[
         max: KnobValue::Integer(64),
         safety: KnobSafety::Tunable,
     },
+    replay::REPLAY_WINDOW,
+    replay::DEMOTE_MIN_REPLAYS,
+    replay::DEMOTE_FALLBACK_RATE,
 ];
 
 /// The resolved values of the `program.*` knobs.
