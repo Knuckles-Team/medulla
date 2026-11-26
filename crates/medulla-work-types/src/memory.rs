@@ -76,6 +76,10 @@ pub const EPISODE_OVERLAP: RefusalCode = RefusalCode::new("EPISODE_OVERLAP");
 /// A second write to a sealed `episode_id` with a different digest.
 pub const EPISODE_IMMUTABLE: RefusalCode = RefusalCode::new("EPISODE_IMMUTABLE");
 
+/// A prune candidate kept by a legal hold (MEDULLA-DECISION-ENGINE-R617.4). It is reported in
+/// the prune report's `held_ids`, not answered as a request refusal.
+pub const RETENTION_LEGAL_HOLD: RefusalCode = RefusalCode::new("RETENTION_LEGAL_HOLD");
+
 /// A hard removal that left a node a live node still references
 /// (MEDULLA-DECISION-ENGINE-R651.4). It is reported by `EvictBelow` and `Maintain` in their
 /// `live_referenced` list, not answered as a request refusal.
@@ -105,6 +109,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     EPISODE_BOUNDARY_MISSING,
     EPISODE_OVERLAP,
     EPISODE_IMMUTABLE,
+    RETENTION_LEGAL_HOLD,
 ];
 
 /// `knob media.max_blob_bytes`: largest attached blob.

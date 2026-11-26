@@ -58,7 +58,7 @@ method_results! {
     MemoryRecall(MemoryRecall) => Json<medulla_work_types::memory::MemoryRecallResult>;
     MemoryExport(MemoryExport) => Json<medulla_work_types::memory::MemoryExportResult>;
     // `(pruned ids, ids a live node still references)`.
-    EvictBelow(EvictBelow) => Raw<(Vec<String>, Vec<String>)>;
+    EvictBelow(EvictBelow) => Raw<(Vec<String>, Vec<String>, Vec<String>)>;
     SummaryChildren(SummaryChildren) => Ids<Vec<String>>;
     SummariesAtLevel(SummariesAtLevel) => Ids<Vec<String>>;
     Reparent(Reparent) => Bool<bool>;
@@ -120,7 +120,7 @@ method_results! {
     #[cfg(feature = "finance")]
     FinanceOrderLimitCheck(FinanceOrderLimitCheck) => Json<medulla_finance_types::finance_order::OrderLimitCheckResult>;
     // `(decayed count, evicted ids, ids a live node still references)`.
-    Maintain(Maintain) => Raw<(usize, Vec<String>, Vec<String>)>;
+    Maintain(Maintain) => Raw<(usize, Vec<String>, Vec<String>, Vec<String>)>;
     AddSceneObject(AddSceneObject) => Text<String>;
     SetPose(SetPose) => Bool<bool>;
     WorldTransform(WorldTransform) => Json<Option<ScenePose>>;

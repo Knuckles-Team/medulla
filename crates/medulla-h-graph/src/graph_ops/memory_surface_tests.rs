@@ -512,13 +512,13 @@ fn memory_refusals() {
     core.add_node("old".into(), props(0.1));
     core.add_node("live".into(), props(9.0));
     core.add_edge("live".into(), "old".into(), rmp_serde::to_vec_named(&serde_json::json!({"relationship": "CITES"})).unwrap()).unwrap();
-    let (pruned, live_referenced) = core.evict_below(&["old".to_string()], 0.5, true);
+    let (pruned, live_referenced, _held) = core.evict_below(&["old".to_string()], 0.5, true);
     assert!(pruned.is_empty());
     assert_eq!(live_referenced, ["old"]);
     assert!(core.get_node_properties("old").is_some(), "the node stays with its edges");
     // Once the referrer is forgotten, the removal goes through.
     assert!(core.forget("live", false));
-    let (pruned, live_referenced) = core.evict_below(&["old".to_string()], 0.5, true);
+    let (pruned, live_referenced, _held) = core.evict_below(&["old".to_string()], 0.5, true);
     assert_eq!(pruned, ["old"]);
     assert!(live_referenced.is_empty());
 }
@@ -932,4 +932,81 @@ fn source_ingest_transcript_becomes_episodic_memory() {
     // Another tenant recalls none of it.
     let foreign = recall(&core, "tenant-b", 200 * MINUTE, &ask, None).unwrap();
     assert!(foreign.hits.is_empty() && foreign.episodes.is_empty());
+}
+
+// ---- MEDULLA-DECISION-ENGINE-R617.4, R617.5: legal hold and the prune report ----
+
+fn stored_record(core: &GraphCore, tenant: &str, id: &str, importance: f64, legal_hold: bool) {
+    let mut item = record(tenant, id, MemoryTier::Semantic, "a memory");
+    item.importance = importance;
+    item.legal_hold = legal_hold;
+    store(core, tenant, &remember(item, vec![]));
+}
+
+fn report_nodes(core: &GraphCore) -> Vec<serde_json::Map<String, serde_json::Value>> {
+    core.get_nodes_by_label("MemoryPruneReport", 100)
+        .into_iter()
+        .filter_map(|(_, blob)| medulla_types::msgpack::decode_property_object(&blob).ok())
+        .collect()
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R617.4
+#[test]
+fn held_memory_is_refused_and_logged() {
+    let core = GraphCore::new();
+    stored_record(&core, "tenant-a", "m:held", 0.1, true);
+    stored_record(&core, "tenant-a", "m:free", 0.1, false);
+    let ids = ["memory:tenant-a:m:held".to_string(), "memory:tenant-a:m:free".to_string()];
+    let nodes = core.node_count();
+    let (pruned, live, held) = core.evict_below(&ids, 0.5, true);
+    assert_eq!(pruned, ["memory:tenant-a:m:free"]);
+    assert!(live.is_empty());
+    assert_eq!(held, ["memory:tenant-a:m:held"]);
+    // The held record is untouched: stored, not forgotten, still recallable.
+    let found = recall(&core, "tenant-a", NOW, &recall_request(vec![], &["memory"], 100), None).unwrap();
+    assert_eq!(ids(&found.hits), ["m:held"]);
+    // The prune left one record fewer and one report more.
+    assert_eq!(core.node_count(), nodes, "one removed, one report written");
+    let reports = report_nodes(&core);
+    assert_eq!(reports.len(), 1);
+    assert_eq!(reports[0].get("held_code").and_then(|v| v.as_str()), Some("RETENTION_LEGAL_HOLD"));
+    assert!(medulla_work_types::memory::REFUSALS
+        .iter()
+        .any(|code| code.as_str() == "RETENTION_LEGAL_HOLD"));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R617.5
+#[test]
+fn prune_report_records_examined_removed_held() {
+    let core = GraphCore::new();
+    stored_record(&core, "tenant-a", "m:held", 0.1, true);
+    stored_record(&core, "tenant-a", "m:one", 0.1, false);
+    stored_record(&core, "tenant-a", "m:two", 0.2, false);
+    stored_record(&core, "tenant-a", "m:high", 0.9, false);
+    let ids: Vec<String> = ["m:held", "m:one", "m:two", "m:high"]
+        .iter()
+        .map(|id| format!("memory:tenant-a:{id}"))
+        .collect();
+    core.evict_below(&ids, 0.5, false);
+    let reports = report_nodes(&core);
+    assert_eq!(reports.len(), 1);
+    let report = &reports[0];
+    // Three candidates sit below the threshold; two were removed and one held.
+    assert_eq!(report.get("examined").and_then(|v| v.as_u64()), Some(3));
+    assert_eq!(report.get("removed").and_then(|v| v.as_u64()), Some(2));
+    assert_eq!(report.get("held").and_then(|v| v.as_u64()), Some(1));
+    assert_eq!(report.get("held_ids"), Some(&serde_json::json!(["memory:tenant-a:m:held"])));
+    let digest = report.get("report_digest").and_then(|v| v.as_str()).unwrap();
+    assert_eq!(digest.len(), 64);
+    // The report belongs to the tenant of the pruned records.
+    assert_eq!(report.get("tenant_scope").and_then(|v| v.as_str()), Some("tenant-a"));
+    // A repeat finds the two records already forgotten: only the held one is a candidate, so
+    // it reports its own prune, and a prune with no candidate reports nothing.
+    core.evict_below(&ids, 0.5, false);
+    let again = report_nodes(&core);
+    assert_eq!(again.len(), 2);
+    assert!(again.iter().any(|report| report.get("examined").and_then(|v| v.as_u64()) == Some(1)
+        && report.get("removed").and_then(|v| v.as_u64()) == Some(0)));
+    core.evict_below(&["memory:tenant-a:m:high".to_string()], 0.5, false);
+    assert_eq!(report_nodes(&core).len(), 2);
 }

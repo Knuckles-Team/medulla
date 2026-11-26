@@ -33297,11 +33297,14 @@ EvictBelowResultItem0 = list[str]
 EvictBelowResultItem1 = list[str]
 
 
+EvictBelowResultItem2 = list[str]
+
+
 EvictBelowResult = Annotated[
-    tuple[EvictBelowResultItem0, EvictBelowResultItem1],
+    tuple[EvictBelowResultItem0, EvictBelowResultItem1, EvictBelowResultItem2],
     Field(
-        min_length=2,
-        max_length=2,
+        min_length=3,
+        max_length=3,
     ),
 ]
 
@@ -33321,11 +33324,19 @@ MaintainResultItem1 = list[str]
 MaintainResultItem2 = list[str]
 
 
+MaintainResultItem3 = list[str]
+
+
 MaintainResult = Annotated[
-    tuple[MaintainResultItem0, MaintainResultItem1, MaintainResultItem2],
+    tuple[
+        MaintainResultItem0,
+        MaintainResultItem1,
+        MaintainResultItem2,
+        MaintainResultItem3,
+    ],
     Field(
-        min_length=3,
-        max_length=3,
+        min_length=4,
+        max_length=4,
     ),
 ]
 

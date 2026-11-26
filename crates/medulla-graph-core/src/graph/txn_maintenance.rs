@@ -3,6 +3,21 @@ use super::*;
 use medulla_decision_types::decision::knob_families::memory::IMPORTANCE_CAP;
 use medulla_decision_types::decision::knobs::KnobValue;
 
+/// The stable code a prune reports for a node a legal hold keeps
+/// (MEDULLA-DECISION-ENGINE-R617.4); registered in the work-types `memory` refusal table.
+pub const RETENTION_LEGAL_HOLD: &str = "RETENTION_LEGAL_HOLD";
+/// The node type of a prune report (MEDULLA-DECISION-ENGINE-R617.5).
+pub const PRUNE_REPORT_TYPE: &str = "MemoryPruneReport";
+/// The id prefix of a prune report node; the id ends in its `report_digest`.
+pub const PRUNE_REPORT_PREFIX: &str = "memory-prune-report:";
+/// The digest domain of a prune report.
+const PRUNE_REPORT_DOMAIN: &[u8] = b"eg/memory-prune-report/v1";
+
+/// What one eviction did (MEDULLA-DECISION-ENGINE-R617.4): the nodes it pruned, the nodes a live
+/// node still references (hard removal only) and the nodes a legal hold kept. Each list is
+/// sorted and deduplicated.
+pub type Evicted = (Vec<String>, Vec<String>, Vec<String>);
+
 /// One change to a memory's importance (MEDULLA-DECISION-ENGINE-R651.8).
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(super) enum ImportanceChange {
@@ -182,6 +197,11 @@ impl<'a> GraphTxn<'a> {
     /// is a no-op returning `false`. Deterministic; marking is idempotent. Runs under
     /// the held write guard.
     pub fn forget(&mut self, id: &str, delete: bool) -> bool {
+        // MEDULLA-DECISION-ENGINE-R617.4: a node under a legal hold is neither marked nor
+        // removed; it keeps every property and edge.
+        if self.is_legal_hold(id) {
+            return false;
+        }
         if delete {
             if !self.topo.node_map.contains_key(id) {
                 return false;
@@ -198,6 +218,12 @@ impl<'a> GraphTxn<'a> {
             updates.insert("forgotten".to_string(), serde_json::json!(true));
             self.merge_fields(id, &updates)
         }
+    }
+
+    /// Whether the node carries `legal_hold` true (MEDULLA-DECISION-ENGINE-R617.4).
+    pub(super) fn is_legal_hold(&self, id: &str) -> bool {
+        self.node_object(id)
+            .is_some_and(|obj| obj.get("legal_hold").and_then(|v| v.as_bool()) == Some(true))
     }
 
     /// Whether a live node has an edge to `id`. A live node exists and its `forgotten`
@@ -229,14 +255,11 @@ impl<'a> GraphTxn<'a> {
     /// the ids a live node still references (`MEMORY_LIVE_REFERENCE`, hard removal only),
     /// each sorted + deduped. Callers typically [`GraphTxn::decay_memories`] first. Runs
     /// under the held write guard.
-    pub fn evict_below(
-        &mut self,
-        ids: &[String],
-        threshold: f64,
-        delete: bool,
-    ) -> (Vec<String>, Vec<String>) {
+    pub fn evict_below(&mut self, ids: &[String], threshold: f64, delete: bool) -> Evicted {
         let mut pruned: Vec<String> = Vec::new();
         let mut live_referenced: Vec<String> = Vec::new();
+        let mut held: Vec<String> = Vec::new();
+        let mut tenant: Option<serde_json::Value> = None;
         for id in ids {
             let Some(obj) = self.node_object(id) else {
                 continue; // absent/undecodable — nothing to evict.
@@ -247,18 +270,67 @@ impl<'a> GraphTxn<'a> {
             if !Self::memory_importance(&obj).is_some_and(|importance| importance < threshold) {
                 continue;
             }
-            if self.forget(id, delete) {
+            if tenant.is_none() {
+                tenant = obj.get("tenant_scope").cloned();
+            }
+            // MEDULLA-DECISION-ENGINE-R617.4: a candidate under a legal hold is kept and reported.
+            if obj.get("legal_hold").and_then(|v| v.as_bool()) == Some(true) {
+                held.push(id.clone());
+            } else if self.forget(id, delete) {
                 pruned.push(id.clone());
             } else if delete {
                 // The one chokepoint refused: a live node still points here.
                 live_referenced.push(id.clone());
             }
         }
-        for list in [&mut pruned, &mut live_referenced] {
+        for list in [&mut pruned, &mut live_referenced, &mut held] {
             list.sort();
             list.dedup();
         }
-        (pruned, live_referenced)
+        self.write_prune_report(&pruned, &live_referenced, &held, threshold, tenant);
+        (pruned, live_referenced, held)
+    }
+
+    /// Write the evidence of one prune (MEDULLA-DECISION-ENGINE-R617.5): one `MemoryPruneReport`
+    /// node holding `examined`, `removed`, `held`, `held_ids` and `report_digest`, in the same
+    /// transaction as the prune. `report_digest` is SHA-256 over the sorted candidate ids and the
+    /// threshold, so the same prune writes the same node. A prune with no candidate writes none.
+    fn write_prune_report(
+        &mut self,
+        pruned: &[String],
+        live_referenced: &[String],
+        held: &[String],
+        threshold: f64,
+        tenant: Option<serde_json::Value>,
+    ) {
+        let mut candidates: Vec<&String> = pruned.iter().chain(live_referenced).chain(held).collect();
+        candidates.sort();
+        if candidates.is_empty() {
+            return;
+        }
+        let canonical = serde_json::json!({"candidate_ids": candidates, "threshold": threshold});
+        let body = serde_json::to_vec(&canonical).unwrap_or_default();
+        let Ok(digest) = medulla_types::contract::Digest256::framed(PRUNE_REPORT_DOMAIN, &[body.as_slice()]) else {
+            return;
+        };
+        let report_digest = digest.to_hex();
+        let mut props = serde_json::json!({
+            "type": PRUNE_REPORT_TYPE,
+            "examined": candidates.len(),
+            "removed": pruned.len(),
+            "held": held.len(),
+            "held_ids": held,
+            "report_digest": report_digest,
+        });
+        if !held.is_empty() {
+            props["held_code"] = RETENTION_LEGAL_HOLD.into();
+        }
+        if let Some(tenant) = tenant {
+            props["tenant_scope"] = tenant;
+        }
+        if let Ok(bytes) = rmp_serde::to_vec_named(&props) {
+            self.add_node(format!("{PRUNE_REPORT_PREFIX}{report_digest}"), bytes);
+        }
     }
 
     /// CONCEPT:MEDULLA-KG.maintenance.combined-maintenance-primitive — the combined maintenance primitive the AU maintenance loop
@@ -267,7 +339,7 @@ impl<'a> GraphTxn<'a> {
     /// atomic (one held write guard), deterministic + idempotent at a fixed `now_ms`.
     /// `delete` selects mark (`false`, the default, provenance-preserving) vs
     /// hard-remove (`true`) for eviction. Returns `(decayed_count, pruned_ids,
-    /// live_referenced_ids)`. Runs under the held write guard.
+    /// live_referenced_ids, held_ids)`. Runs under the held write guard.
     pub fn maintain(
         &mut self,
         ids: &[String],
@@ -275,10 +347,10 @@ impl<'a> GraphTxn<'a> {
         half_life_ms: u64,
         evict_threshold: f64,
         delete: bool,
-    ) -> (usize, Vec<String>, Vec<String>) {
+    ) -> (usize, Vec<String>, Vec<String>, Vec<String>) {
         let decayed = self.decay_memories(now_ms, half_life_ms, ids);
-        let (pruned, live_referenced) = self.evict_below(ids, evict_threshold, delete);
-        (decayed, pruned, live_referenced)
+        let (pruned, live_referenced, held) = self.evict_below(ids, evict_threshold, delete);
+        (decayed, pruned, live_referenced, held)
     }
 }
 
@@ -331,5 +403,47 @@ mod tests {
         assert_eq!(importance_of(&core), reinforce(9.0, 5.0));
         assert!(core.decay_node("m", 10 + 1000, 1000));
         assert_eq!(importance_of(&core), decay(10.0, 1000, 1000));
+    }
+
+    fn memory(core: &GraphCore, id: &str, importance: f64, legal_hold: bool) {
+        let props = serde_json::json!({
+            "importance": importance, "legal_hold": legal_hold, "tenant_scope": "tenant-a",
+        });
+        core.add_node(id.into(), rmp_serde::to_vec_named(&props).unwrap());
+    }
+
+    fn props_of(core: &GraphCore, id: &str) -> serde_json::Map<String, serde_json::Value> {
+        let blob = core.get_node_properties(id).expect("node present");
+        match decode_property_value(&blob).unwrap() {
+            serde_json::Value::Object(object) => object,
+            other => panic!("node {id} holds {other:?}"),
+        }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R617.4
+    #[test]
+    fn evict_below_skips_legal_hold() {
+        for delete in [false, true] {
+            let core = GraphCore::new();
+            memory(&core, "held", 0.1, true);
+            memory(&core, "free", 0.1, false);
+            memory(&core, "kept", 0.9, true);
+            core.add_edge("held".into(), "kept".into(), rmp_serde::to_vec_named(&serde_json::json!({"relationship": "r"})).unwrap())
+                .unwrap();
+            let ids = ["held".to_string(), "free".to_string(), "kept".to_string()];
+            let (pruned, live, held) = core.evict_below(&ids, 0.5, delete);
+            // The held node below the threshold is reported; the one above it is no candidate.
+            assert_eq!(held, ["held"], "delete={delete}");
+            assert!(live.is_empty());
+            let held_props = props_of(&core, "held");
+            assert!(held_props.get("forgotten").is_none(), "a held node is never marked");
+            assert_eq!(held_props.get("importance"), Some(&serde_json::json!(0.1)));
+            // Its edge stays, and only the free node was pruned.
+            assert_eq!(core.get_edges().len(), 1, "the held node keeps its edges");
+            assert_eq!(pruned, ["free"]);
+            // One-off forget also refuses a held node.
+            assert!(!core.forget("held", delete));
+            assert!(core.get_node_properties("held").is_some());
+        }
     }
 }

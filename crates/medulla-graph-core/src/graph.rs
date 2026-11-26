@@ -3304,7 +3304,7 @@ mod tests {
             props(serde_json::json!({"importance": 0.1})),
         );
         // Working set excludes "outside" — localized.
-        let (pruned, live) = g.evict_below(&["low".into(), "high".into()], 0.5, false);
+        let (pruned, live, _held) = g.evict_below(&["low".into(), "high".into()], 0.5, false);
         assert!(live.is_empty());
         assert_eq!(pruned, vec!["low"]);
         assert_eq!(
@@ -3327,7 +3327,7 @@ mod tests {
     fn eg222_evict_below_delete_removes_node() {
         let g = GraphCore::new();
         g.add_node("low".into(), props(serde_json::json!({"importance": 0.1})));
-        let (pruned, _) = g.evict_below(&["low".into()], 0.5, true);
+        let (pruned, _, _) = g.evict_below(&["low".into()], 0.5, true);
         assert_eq!(pruned, vec!["low"]);
         assert!(g.get_node_properties("low").is_none(), "hard-deleted");
     }
@@ -3379,7 +3379,7 @@ mod tests {
         );
         let hl = 100u64;
         let ids = vec!["fades".to_string(), "sticks".to_string()];
-        let (decayed, pruned, _) = g.maintain(&ids, 200, hl, 0.5, false);
+        let (decayed, pruned, _, _) = g.maintain(&ids, 200, hl, 0.5, false);
         assert_eq!(decayed, 2, "both decayed");
         assert_eq!(pruned, vec!["fades"]);
         assert_eq!(
