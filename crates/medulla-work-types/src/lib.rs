@@ -27,6 +27,8 @@ pub mod worker_registry;
 // the covering-set optimizer are later children.
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod memory;
+// MEDULLA-DECISION-ENGINE-R617.7 — the participant record of a session.
+pub mod participant;
 // CONCEPT:INT-P2-1 — the durable analytics-job plane's wire op (`JobOp`), gated
 // `jobs`. Lives here (not in `medulla-jobs`, which sits ABOVE medulla-core in the DAG) for the
 // SAME reason `acl::RbacAdminOp` does: `protocol::Method::AnalyticsJob` carries it

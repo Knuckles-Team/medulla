@@ -22,3 +22,21 @@
             sh:minCount 1 ;
             sh:path :platformGoalId ] ;
     sh:targetClass :PlatformGoal .
+
+# MEDULLA-DECISION-ENGINE-R617.7: a participant has one kind, and a person or an agent names
+# the node it represents.
+:ParticipantShape a sh:NodeShape ;
+    sh:description "A participant has one kind; a person or an agent names what it represents." ;
+    sh:name "Participant Shape" ;
+    sh:property [ sh:datatype xsd:string ;
+            sh:in ( "person" "agent" "object" ) ;
+            sh:maxCount 1 ;
+            sh:message "A participant must carry exactly one participantKind of person, agent or object." ;
+            sh:minCount 1 ;
+            sh:path :participantKind ] ;
+    sh:or ( [ sh:property [ sh:hasValue "object" ;
+                        sh:path :participantKind ] ]
+            [ sh:property [ sh:message "A participant of kind person or agent must carry :represents." ;
+                        sh:minCount 1 ;
+                        sh:path :represents ] ] ) ;
+    sh:targetClass :Participant .

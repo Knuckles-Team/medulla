@@ -753,6 +753,24 @@ owned (see hasBlob). CONCEPT:AU-KG.identity.asset-occurrence.""" ;
         :Document ;
     owl:equivalentClass foaf:Person .
 
+:Participant a owl:Class ;
+    rdfs:label "Participant" ;
+    rdfs:comment "Who or what takes part in a session: a person, an agent, or an object, named inside one workspace. BFO:IndependentContinuant, the parent :Person and :Agent already share. A participant of kind person or agent stands for one :Person or :Agent node through :represents; neither of those classes extends the other, because :Agent is equivalent to prov:SoftwareAgent (MEDULLA-DECISION-ENGINE-R617.7). No pack imports this class; each pack class extends it by rdfs:subClassOf." ;
+    rdfs:subClassOf bfo:0000004 .
+
+:participantKind a owl:DatatypeProperty ;
+    rdfs:label "participant kind" ;
+    rdfs:comment "Whether a participant is a person, an agent or an object: the values person, agent and object." ;
+    rdfs:domain :Participant ;
+    rdfs:range xsd:string .
+
+:represents a owl:ObjectProperty ;
+    rdfs:label "represents" ;
+    rdfs:comment "The :Person or :Agent node a participant stands for." ;
+    rdfs:domain :Participant ;
+    rdfs:range [ a owl:Class ;
+            owl:unionOf ( :Person :Agent ) ] .
+
 :Phase a owl:Class ;
     rdfs:label "Temporal Phase" ;
     rdfs:comment "A named temporal interval. BFO:TemporalRegion, aligned to time:ProperInterval." ;

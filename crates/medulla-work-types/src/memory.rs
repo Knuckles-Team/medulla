@@ -153,14 +153,16 @@ pub enum MemoryError {
     EpisodeDigestMismatch(String),
     #[error("MEMORY_RECORD_MALFORMED: {0}")]
     RecordMalformed(String),
+    #[error("PARTICIPANT_INVALID: {0}")]
+    ParticipantInvalid(String),
 }
 
-fn identifier<T: Into<String>>(value: T, field: &str) -> Result<ResourceId, MemoryError> {
+pub(crate) fn identifier<T: Into<String>>(value: T, field: &str) -> Result<ResourceId, MemoryError> {
     ResourceId::new(value)
         .map_err(|detail| MemoryError::InvalidIdentifier(format!("{field}: {detail}")))
 }
 
-fn tenant_id(value: impl Into<String>) -> Result<TenantId, MemoryError> {
+pub(crate) fn tenant_id(value: impl Into<String>) -> Result<TenantId, MemoryError> {
     TenantId::new(value)
         .map_err(|detail| MemoryError::InvalidIdentifier(format!("tenant: {detail}")))
 }
