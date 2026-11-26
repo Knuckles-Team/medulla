@@ -24,6 +24,10 @@ pub mod memory_snapshot_consumer;
 
 /// The commons reconcile sweep (MEDULLA-IDENTITY-R023.13.7).
 pub mod commons_reconcile;
+/// The boot registration of the six-hourly paper intake schedule
+/// (MEDULLA-REPO-INGEST-R006.6).
+#[cfg(feature = "jobs")]
+pub mod paper_intake_schedule;
 
 /// The downtime scheduler tick (MEDULLA-DURABLE-KERNEL-R101.3).
 #[cfg(all(feature = "jobs", feature = "sparql"))]

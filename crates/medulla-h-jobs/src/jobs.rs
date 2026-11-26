@@ -119,6 +119,7 @@ mod results_association;
 mod results_program;
 mod schedule_tick;
 mod schedules;
+pub use schedules::schedule_node_operation;
 #[cfg(feature = "program-optimization")]
 mod score_source;
 mod submit;

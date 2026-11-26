@@ -67,9 +67,10 @@ fn remember(next: Option<String>) {
 }
 
 /// The service context one call runs under; its key names the call.
-fn service_context(
+pub(crate) fn service_context(
     anonymous: bool,
     server: &medulla_server_api::server_context::ServerContext,
+    actor: &str,
     key: String,
 ) -> Result<VerifiedRequestContext, String> {
     if anonymous {
@@ -77,7 +78,7 @@ fn service_context(
     }
     let service = VerifiedRequestContext::authenticated_fixed_service_actor(
         server,
-        RECONCILE_ACTOR,
+        actor,
         &["kg:admin"],
     )?;
     Ok(VerifiedRequestContext::from_verified_claims_with_nonce(
@@ -101,6 +102,7 @@ async fn call(
     let context = service_context(
         anonymous,
         server,
+        RECONCILE_ACTOR,
         format!(
             "commons-reconcile:{graph}:{now_ms}:{}",
             CALLS.fetch_add(1, Ordering::Relaxed)

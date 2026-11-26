@@ -1204,6 +1204,18 @@ pub async fn commons_reconcile_tick(state: SharedState) {
     }
 }
 
+/// Register the paper intake schedule in the commons graph (MEDULLA-REPO-INGEST-R006.6). Writes
+/// only when the schedule is absent or its interval changed; a commons graph that is not
+/// resident yet registers on a later pass.
+#[cfg(feature = "jobs")]
+pub async fn paper_intake_register_tick(state: SharedState) {
+    match crate::paper_intake_schedule::register(&state).await {
+        Ok(true) => tracing::info!("Paper intake: schedule registered (R006.6)"),
+        Ok(false) => {}
+        Err(error) => tracing::warn!(%error, "Paper intake: registration refused; retrying"),
+    }
+}
+
 /// One downtime scheduler tick (MEDULLA-DURABLE-KERNEL-R101.3): lease and submit the
 /// downtime job types that fit the open window.
 #[cfg(all(feature = "jobs", feature = "sparql"))]

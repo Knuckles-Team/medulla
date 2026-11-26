@@ -481,6 +481,8 @@ knobs! {
     architecture_view_max_containers: u64 = "architecture_view.max_containers", U64(512), [16, 4_096], "containers", Tunable;
     /// Least property coverage an induced ontology proposal needs to be admitted (MEDULLA-INGEST-WORKER-R002.3).
     ingest_proposal_min_coverage: f64 = "ingest.proposal_min_coverage", F64(0.8), [0.5, 1.0], "ratio", Tunable;
+    /// Seconds between paper intake firings, aligned to UTC (MEDULLA-REPO-INGEST-R006.6).
+    paper_intake_interval: u64 = "paper_intake.interval", U64(21_600), [3_600, 86_400], "seconds", Tunable;
     /// Most records one drain page task holds (MEDULLA-INGEST-WORKER-R605.2).
     ingest_drain_page_records: u64 = "ingest.drain_page_records", U64(500), [1, 1_024], "records", Tunable;
     /// Most class redundancy an induced ontology proposal may carry and still be admitted (MEDULLA-INGEST-WORKER-R002.3).

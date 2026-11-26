@@ -306,9 +306,25 @@ pub struct ScheduledJob {
     pub required_capability: &'static str,
 }
 
+/// The task kind whose firing enqueues one `paper_intake` task on the ingest queue instead of
+/// submitting an analytics job (MEDULLA-REPO-INGEST-R006.6).
+pub const PAPER_INTAKE_TASK_KIND: &str = "paper_intake";
+/// The name of the boot-registered paper intake schedule.
+pub const PAPER_INTAKE_SCHEDULE: &str = "paper_intake";
+/// Refused: a firing whose `run_id` already holds a queue row.
+pub const PAPER_INTAKE_DUPLICATE_RUN: &str = "PAPER_INTAKE_DUPLICATE_RUN";
+
 /// The closed table of task kinds. A kind has exactly one job spec; a kind without an entry is
 /// refused at schedule creation.
 pub const SCHEDULE_TASK_KINDS: &[ScheduledJob] = &[
+    // A queue task, not a mining job: the mining fields are unused.
+    ScheduledJob {
+        task_kind: PAPER_INTAKE_TASK_KIND,
+        algorithm: "",
+        min_support: 0.0,
+        min_confidence: 0.0,
+        required_capability: "",
+    },
     ScheduledJob {
         task_kind: "association.refresh",
         algorithm: "fpgrowth",

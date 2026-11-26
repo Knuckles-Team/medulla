@@ -1136,6 +1136,8 @@ closed_error_codes! {
         DrainCursorStale => "DRAIN_CURSOR_STALE",
         /// MEDULLA-INGEST-WORKER-R605.5: a drain id that names no drain of the verified tenant.
         DrainUnknown => "DRAIN_UNKNOWN",
+        /// MEDULLA-REPO-INGEST-R006.6: a paper intake firing whose run id already holds a queue row.
+        PaperIntakeDuplicateRun => "PAPER_INTAKE_DUPLICATE_RUN",
         EnvelopeSourceMissing => "ENVELOPE_SOURCE_MISSING",
         HydrationBindingMismatch => "HYDRATION_BINDING_MISMATCH",
         SkillCapabilityUnresolved => "SKILL_CAPABILITY_UNRESOLVED",

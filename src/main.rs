@@ -2042,6 +2042,16 @@ fn spawn_lifecycle_sweeps(state: &Arc<tokio::sync::RwLock<ServerState>>, txn_ttl
         });
     }
 
+    // ── Paper intake schedule (MEDULLA-REPO-INGEST-R006.6) ───────────────────────────
+    // Registers the six-hourly `paper_intake` schedule in the commons graph; the pass is idempotent.
+    #[cfg(feature = "jobs")]
+    {
+        let intake_state = state.clone();
+        spawn_periodic_sweep(300, "paper_intake_register", move || {
+            server_startup::paper_intake_register_tick(intake_state.clone())
+        });
+    }
+
     // ── Downtime scheduler (MEDULLA-DURABLE-KERNEL-R101.3) ─────────────────────────
     // Every `downtime.tick_secs` seconds, lease and submit the downtime job types
     // that fit the open idle or declared window.

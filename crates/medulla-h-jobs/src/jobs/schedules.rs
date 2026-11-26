@@ -123,12 +123,18 @@ fn decode(raw: &[u8]) -> Result<ScheduleRecord, String> {
 }
 
 fn upsert_op(call: &ScheduleCall<'_>, record: &ScheduleRecord) -> Result<Value, String> {
+    schedule_node_operation(record, call.verified_context.tenant())
+}
+
+/// The `upsert_node` operation that stores `record` as a `Schedule` node of `tenant`: the one
+/// shape the schedule ops and the boot registration (MEDULLA-REPO-INGEST-R006.6) both write.
+pub fn schedule_node_operation(record: &ScheduleRecord, tenant: &str) -> Result<Value, String> {
     let body = serde_json::to_string(record).map_err(|e| e.to_string())?;
     let mut properties = Map::new();
     properties.insert("type".into(), NODE_TYPE.into());
     properties.insert("name".into(), record.name.clone().into());
     properties.insert(BODY.into(), body.into());
-    properties.insert("tenant_id".into(), call.verified_context.tenant().into());
+    properties.insert("tenant_id".into(), tenant.into());
     properties.insert("_owner".into(), record.owner.clone().into());
     Ok(json!({
         "op": "upsert_node",

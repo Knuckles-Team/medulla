@@ -550,6 +550,9 @@ async fn submit_scheduled_job(
     record: &ScheduleRecord,
     window_ms: u64,
 ) -> Result<String, String> {
+    if record.task_kind == medulla_jobs::schedule::PAPER_INTAKE_TASK_KIND {
+        return enqueue_paper_intake(state, record, window_ms).await;
+    }
     let job = job_for_task_kind(&record.task_kind).map_err(|e| e.to_string())?;
     let spec = SubmitJobSpec {
         graph: graph.to_string(),
@@ -589,6 +592,90 @@ async fn submit_scheduled_job(
     )
     .await?;
     submitted_job_id(&response).ok_or_else(|| "scheduled job submit returned no job id".to_string())
+}
+
+/// The graph that holds the platform goals.
+const COMMONS_GRAPH: &str = "__commons__";
+/// The node label of a platform goal in the commons graph.
+const PLATFORM_GOAL_LABEL: &str = "PlatformGoal";
+/// The ingest queue a paper intake task is enqueued on.
+const PAPER_INTAKE_QUEUE: &str = "ingest";
+
+/// The run id of one paper intake firing: `sha256(schedule_id + boundary)`.
+pub(crate) fn paper_intake_run_id(schedule_id: &str, boundary_ms: u64) -> String {
+    use sha2::{Digest, Sha256};
+    let mut hasher = Sha256::new();
+    hasher.update(schedule_id.as_bytes());
+    hasher.update(boundary_ms.to_string().as_bytes());
+    hex::encode(hasher.finalize())
+}
+
+/// The ids of the `:PlatformGoal` nodes of the commons graph, sorted. None when the commons graph
+/// is not resident.
+async fn platform_goal_ids(state: &Arc<RwLock<ServerState>>) -> Vec<String> {
+    let core = {
+        let current = state.read().await;
+        current
+            .registry
+            .get(COMMONS_GRAPH)
+            .map(|entry| entry.core.clone())
+    };
+    let mut ids: Vec<String> = core
+        .map(|core| {
+            core.get_nodes_by_label(PLATFORM_GOAL_LABEL, usize::MAX)
+                .into_iter()
+                .map(|(id, _)| id)
+                .collect()
+        })
+        .unwrap_or_default();
+    ids.sort();
+    ids
+}
+
+/// Enqueue the one `paper_intake` task of the window (MEDULLA-REPO-INGEST-R006.6): its payload
+/// names the run id, the cycle boundary and the platform goal ids, and its idempotency key is the
+/// run id, so a repeated firing of the same boundary writes nothing. The queue row is the only
+/// write. A repeat answers the run id and reports `PAPER_INTAKE_DUPLICATE_RUN`.
+async fn enqueue_paper_intake(
+    state: &Arc<RwLock<ServerState>>,
+    record: &ScheduleRecord,
+    window_ms: u64,
+) -> Result<String, String> {
+    let schedule_id = ScheduleRecord::node_id(&record.tenant, &record.name);
+    let run_id = paper_intake_run_id(&schedule_id, window_ms);
+    let goal_ids = platform_goal_ids(state).await;
+    let payload = serde_json::to_string(&json!({
+        "kind": medulla_jobs::schedule::PAPER_INTAKE_TASK_KIND,
+        "run_id": run_id,
+        "cycle_boundary_ms": window_ms,
+        "goal_ids": goal_ids,
+    }))
+    .map_err(|error| error.to_string())?;
+    let store = outbox_job_store(state).await?;
+    let now_ms = medulla_kernel::kernel::dispatch_support::authoritative_now_ms() as i64;
+    let spec = medulla_jobs::TaskSubmit {
+        tenant: record.tenant.clone(),
+        actor: record.owner.clone(),
+        tenant_capability: crate::task_queue::tenant_capability(&record.tenant),
+        queue: PAPER_INTAKE_QUEUE.to_string(),
+        kind: medulla_jobs::schedule::PAPER_INTAKE_TASK_KIND.to_string(),
+        payload_ref: payload,
+        idempotency_key: run_id.clone(),
+        priority: medulla_work_types::task_queue::default_priority(),
+        not_before_ms: 0,
+        job_id: Some(run_id.clone()),
+        max_attempts: Some(u32::MAX),
+    };
+    match store.submit_task(spec, now_ms).map_err(|e| e.to_string())? {
+        medulla_jobs::TaskSubmitOutcome::Enqueued(job) => Ok(job.job_id),
+        medulla_jobs::TaskSubmitOutcome::Duplicate => {
+            eprintln!(
+                "{}: run {run_id} already holds a queue row",
+                medulla_jobs::schedule::PAPER_INTAKE_DUPLICATE_RUN
+            );
+            Ok(run_id)
+        }
+    }
 }
 
 /// The work item id a submit response carries.
