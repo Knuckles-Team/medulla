@@ -31,6 +31,7 @@ fn head(revision: u64, content: &str) -> MemorySnapshotHead {
             request_id: RequestId::new("req-1").unwrap(),
         },
         retain_until_ms: None,
+        doc_kind: Default::default(),
     }
 }
 
@@ -38,6 +39,7 @@ fn submit(expected: Option<u64>, content: &str) -> SyncRequest {
     SyncRequest {
         request_id: RequestId::new("req-2").unwrap(),
         doc_id: DocId::new("notes/today.md").unwrap(),
+        doc_kind: Default::default(),
         action: SyncAction::Submit {
             expected_revision: expected,
             content: content.into(),
@@ -69,6 +71,7 @@ fn bounded_contract_round_trips_and_refuses_invalid_fields() {
         SyncRequest {
             request_id: RequestId::new("req-3").unwrap(),
             doc_id: DocId::new("notes/today.md").unwrap(),
+            doc_kind: Default::default(),
             action: SyncAction::ObserveFile {
                 observed_digest: Digest256::sha256(b"one"),
             },
@@ -77,6 +80,7 @@ fn bounded_contract_round_trips_and_refuses_invalid_fields() {
         SyncRequest {
             request_id: RequestId::new("req-4").unwrap(),
             doc_id: DocId::new("notes/today.md").unwrap(),
+            doc_kind: Default::default(),
             action: SyncAction::Resolve {
                 candidate_revision: 3,
                 expected_head_revision: 2,
@@ -90,6 +94,7 @@ fn bounded_contract_round_trips_and_refuses_invalid_fields() {
         SyncRequest {
             request_id: RequestId::new("req-5").unwrap(),
             doc_id: DocId::new("notes/today.md").unwrap(),
+            doc_kind: Default::default(),
             action: SyncAction::Acknowledge {
                 revision: 2,
                 content_digest: Digest256::sha256(b"two"),

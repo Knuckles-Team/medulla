@@ -42,6 +42,7 @@ async fn seed_head(h: &Harness) -> u64 {
         let request = SyncRequest {
             request_id: RequestId::new(format!("seed-{index}")).unwrap(),
             doc_id: DocId::new(DOC).unwrap(),
+            doc_kind: Default::default(),
             action: SyncAction::Submit {
                 expected_revision: expected,
                 content: content.into(),

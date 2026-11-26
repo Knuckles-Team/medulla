@@ -26,6 +26,7 @@ fn submit(id: &str, expected: Option<u64>, content: &str) -> SyncRequest {
     SyncRequest {
         request_id: RequestId::new(id).unwrap(),
         doc_id: DocId::new(DOC).unwrap(),
+        doc_kind: Default::default(),
         action: SyncAction::Submit {
             expected_revision: expected,
             content: content.into(),
@@ -81,6 +82,7 @@ fn a_head_the_cas_cannot_serve_reads_as_the_unavailable_standing() {
     let observe = SyncRequest {
         request_id: RequestId::new("u2").unwrap(),
         doc_id: DocId::new(DOC).unwrap(),
+        doc_kind: Default::default(),
         action: SyncAction::ObserveFile {
             observed_digest: Digest256::sha256(b"one"),
         },

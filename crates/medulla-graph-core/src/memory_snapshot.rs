@@ -117,6 +117,7 @@ pub fn read(core: &GraphCore, doc: &DocId, revision: Option<u64>) -> Option<Memo
     load_row::<RevisionRow>(core, &id).map(|row| MemorySnapshotRead {
         head: row.head,
         content: row.content,
+        search_state: None,
     })
 }
 
@@ -291,6 +292,7 @@ mod retention_tests {
                     request_id: RequestId::new(&format!("r{revision}")).unwrap(),
                 },
                 retain_until_ms: None,
+                doc_kind: Default::default(),
             },
             content,
             committed_at_ms,

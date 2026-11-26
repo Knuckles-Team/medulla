@@ -16,8 +16,8 @@ use medulla_graph_core::memory_snapshot as store;
 use medulla_graph_core::memory_snapshot::{AckRow, CandidateRow, RevisionRow, SnapshotSlot};
 use medulla_graph_core::graph::GraphCore;
 use medulla_mutation_types::memory_sync::{
-    decide, revision_node_id, Decision, DocId, ListCursor, MemorySnapshotHead, MemorySnapshotList,
-    MemorySyncError, MemorySyncRefusal, Resolution, SnapshotPlan, SnapshotProvenance,
+    decide, revision_node_id, Decision, DocId, ListCursor, MemoryDocKind, MemorySnapshotHead,
+    MemorySnapshotList, MemorySnapshotRead, MemorySyncError, SearchStateEvidence, MemorySyncRefusal, Resolution, SnapshotPlan, SnapshotProvenance,
     SnapshotRowWrite, SyncAction, SyncOutcome, SyncReceipt, SyncRequest, SyncStamp, SyncStanding,
 };
 use medulla_protocol_types::protocol::{Method, Response, ResultPayload};
@@ -25,6 +25,7 @@ use medulla_protocol_types::result_contract::graph as results;
 use medulla_server_mutation::mutation::{MutationCtx, MutationPlan};
 use medulla_server_ops::api::ingest::graph::commit_gateway;
 use medulla_types::contract::Digest256;
+use medulla_work_types::memory::{validate_search_state, MemoryError, SearchStateEnvelope};
 
 /// `limit` default and maximum of `ListMemorySnapshots`.
 const DEFAULT_LIMIT: u32 = 50;
@@ -51,13 +52,87 @@ pub(crate) fn read(req_id: u64, core: &GraphCore, doc_id: &str, revision: Option
         Ok(doc) => doc,
         Err(response) => return response,
     };
-    match store::read(core, &doc, revision) {
+    match store::read(core, &doc, revision).map(with_search_state) {
         Some(found) => payload(
             req_id,
             ResultPayload::of::<results::ReadMemorySnapshot>(found),
         ),
         None => refuse(req_id, MemorySyncRefusal::NotAvailable),
     }
+}
+
+/// Attach the derived evidence of a saved search state to its read
+/// (MEDULLA-DECISION-ENGINE-R149.5). A body that no longer parses as a search
+/// state carries no evidence; nothing is invented.
+fn with_search_state(mut read: MemorySnapshotRead) -> MemorySnapshotRead {
+    if read.head.doc_kind != MemoryDocKind::SearchState {
+        return read;
+    }
+    let Ok(envelope) = serde_json::from_str::<SearchStateEnvelope>(&read.content) else {
+        return read;
+    };
+    let hex = [
+        envelope.transcript_digest().to_hex(),
+        envelope.evidence_digest().to_hex(),
+        envelope.constraints_digest().to_hex(),
+        envelope.open_claims_digest().to_hex(),
+    ];
+    let premises = vec![
+        format!("search:run={}", envelope.search_run_id),
+        format!("search:revision={}", envelope.state_revision),
+        format!("search:transcript={}", hex[0]),
+        format!("search:evidence={}", hex[1]),
+        format!("search:constraints={}", hex[2]),
+        format!("search:open_claims={}", hex[3]),
+    ];
+    let [transcript_digest, evidence_digest, constraints_digest, open_claims_digest] = hex;
+    read.search_state = Some(SearchStateEvidence {
+        search_run_id: envelope.search_run_id,
+        state_revision: envelope.state_revision,
+        transcript_digest,
+        evidence_digest,
+        constraints_digest,
+        open_claims_digest,
+        recovered_at_ms: medulla_kernel::kernel::dispatch_support::authoritative_now_ms(),
+        premises,
+    });
+    read
+}
+
+/// Refuse a `SearchState` document whose planned revision is not a valid
+/// search state (MEDULLA-DECISION-ENGINE-R149.3, R149.4). Only an outcome that
+/// writes a new revision is checked: a conflict keeps the head and returns the
+/// R085 outcome, and every refusal here is decided before the commit, so the
+/// head is unchanged.
+pub fn check_doc_kind(
+    request: &SyncRequest,
+    outcome: &SyncOutcome,
+    plan: &SnapshotPlan,
+) -> Result<(), String> {
+    if request.doc_kind != MemoryDocKind::SearchState {
+        return Ok(());
+    }
+    let (SyncOutcome::Accepted { head } | SyncOutcome::Resolved { head }) = outcome else {
+        return Ok(());
+    };
+    let Some((_, content)) = planned_content(plan, &request.doc_id, outcome) else {
+        return Ok(());
+    };
+    let max = super::memory_surface::search_state_max_bytes();
+    if content.len() as u64 > max {
+        return Err(MemoryError::SearchStateTooLarge(format!(
+            "body is {} bytes, above knob memory.search_state_max_bytes ({max})",
+            content.len()
+        ))
+        .to_string());
+    }
+    validate_search_state(
+        content.as_bytes(),
+        head.revision,
+        head.parent_revision.unwrap_or(0),
+    )
+    .map(|_| ())
+    .map_err(|error| error.to_string())
 }
 
 /// Wall-clock seconds, the clock cursor expiry is judged on.
@@ -199,6 +274,7 @@ fn revision_writes(
             request_id: request.request_id.clone(),
         },
         retain_until_ms: None,
+        doc_kind: request.doc_kind,
     };
     let row = RevisionRow {
         label: store::REVISION_LABEL.to_string(),

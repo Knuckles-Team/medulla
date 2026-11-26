@@ -25,7 +25,9 @@ use std::collections::{BTreeMap, BTreeSet};
 use super::terminal::GraphOpsContext;
 use super::*;
 use medulla_decision_stats::decision::memory as kernel;
-use medulla_decision_types::decision::knob_families::memory::{ENTRY_MAX_BYTES, PROMOTE_MIN_SUPPORT, TENANT_MAX_BYTES};
+use medulla_decision_types::decision::knob_families::memory::{
+    ENTRY_MAX_BYTES, PROMOTE_MIN_SUPPORT, SEARCH_STATE_MAX_BYTES, TENANT_MAX_BYTES,
+};
 use medulla_decision_types::decision::knobs::{KnobSpec, KnobValue};
 use medulla_kernel::kernel::dispatch_support::authoritative_now_ms;
 use medulla_protocol_types::result_contract::graph::{
@@ -276,6 +278,11 @@ pub(super) enum Admitted {
 /// `knob memory.tenant_max_bytes` (MEDULLA-DECISION-ENGINE-R154.1).
 pub(super) fn tenant_max_bytes() -> u64 {
     u64::try_from(knob_integer(&TENANT_MAX_BYTES)).unwrap_or(u64::MAX)
+}
+
+/// `knob memory.search_state_max_bytes` (MEDULLA-DECISION-ENGINE-R149.4).
+pub(super) fn search_state_max_bytes() -> u64 {
+    u64::try_from(knob_integer(&SEARCH_STATE_MAX_BYTES)).unwrap_or(u64::MAX)
 }
 
 /// Admit one remember against the stored node and the vector index, writing nothing.

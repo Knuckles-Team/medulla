@@ -50,6 +50,17 @@ pub const TENANT_MAX_BYTES: KnobSpec = KnobSpec {
     safety: KnobSafety::Fixed,
 };
 
+/// The most bytes one saved search state may hold
+/// (MEDULLA-DECISION-ENGINE-R149.1, R149.4).
+pub const SEARCH_STATE_MAX_BYTES: KnobSpec = KnobSpec {
+    name: "memory.search_state_max_bytes",
+    unit: "bytes",
+    default: KnobValue::Integer(1_048_576),
+    min: KnobValue::Integer(65_536),
+    max: KnobValue::Integer(1_048_576),
+    safety: KnobSafety::Tunable,
+};
+
 /// The default decay half-life of the working tier.
 pub const HALF_LIFE_WORKING: KnobSpec = KnobSpec {
     name: "memory.half_life_working",
@@ -128,6 +139,7 @@ pub const KNOBS: &[KnobSpec] = &[
     PROMOTE_MIN_SUPPORT,
     ENTRY_MAX_BYTES,
     TENANT_MAX_BYTES,
+    SEARCH_STATE_MAX_BYTES,
     HALF_LIFE_WORKING,
     HALF_LIFE_EPISODIC,
     HALF_LIFE_PROCEDURAL,

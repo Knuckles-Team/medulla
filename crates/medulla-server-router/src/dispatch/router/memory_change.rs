@@ -121,7 +121,8 @@ async fn handle_sync_memory(
     use medulla_decision_types::decision::memory_benchmark::ChangeKind;
     use medulla_h_decide::decide::stat_memory_change::{require_admit_receipts, sync_candidate};
     use medulla_h_graph::graph_ops::memory_snapshot::{
-        content_change, decide_sync, exceeds_capacity, outcome_response, stamp_for, ContentChange,
+        check_doc_kind, content_change, decide_sync, exceeds_capacity, outcome_response, stamp_for,
+        ContentChange,
     };
     let DispatchCtx {
         state,
@@ -159,6 +160,9 @@ async fn handle_sync_memory(
             None => true,
         };
         let (outcome, snapshot) = decide_sync(&core, &request, &stamp, head_content_held);
+        if let Err(refusal) = check_doc_kind(&request, &outcome, &snapshot) {
+            return Response::err(req.id, refusal);
+        }
         if snapshot.writes.is_empty() {
             return outcome_response(req.id, outcome, Vec::new());
         }

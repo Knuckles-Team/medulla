@@ -35022,6 +35022,11 @@ class MeetingTranscriptRevisionReceipt(BaseModel):
     revision: Annotated[int, Field(ge=0)]
 
 
+class MemoryDocKind(str, Enum):
+    NOTE = "note"
+    SEARCH_STATE = "search_state"
+
+
 class MemorySnapshotHead(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -35033,6 +35038,7 @@ class MemorySnapshotHead(BaseModel):
     provenance: SnapshotProvenance
     retain_until_ms: Annotated[int, Field(ge=0)] | None = None
     revision: Annotated[int, Field(ge=0)]
+    doc_kind: MemoryDocKind | None = None
 
 
 class MemorySnapshotList(BaseModel):
@@ -35047,6 +35053,20 @@ class MemorySnapshotRead(BaseModel):
 
     content: str
     head: MemorySnapshotHead
+    search_state: SearchStateEvidence | None = None
+
+
+class SearchStateEvidence(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    constraints_digest: str
+    evidence_digest: str
+    open_claims_digest: str
+    premises: list[str]
+    recovered_at_ms: Annotated[int, Field(ge=0)]
+    search_run_id: str
+    state_revision: Annotated[int, Field(ge=0)]
+    transcript_digest: str
 
 
 class MethodAccessRequestDecideParams(BaseModel):
@@ -35875,6 +35895,7 @@ class SyncRequest(BaseModel):
     action: SyncAction
     admit_receipt_digests: list[str] | None = None
     doc_id: DocId
+    doc_kind: MemoryDocKind | None = None
     request_id: RequestId
 
 
@@ -43149,6 +43170,7 @@ __all__ = [
     "MediaAttachment",
     "Memento",
     "MemoryBenchmarkReceipt",
+    "MemoryDocKind",
     "MemoryExportManifest",
     "MemoryExportRequest",
     "MemoryExportResult",
@@ -46716,6 +46738,7 @@ __all__ = [
     "SemanticStageTransition",
     "SemanticVector",
     "SemanticVectorMetric",
+    "SearchStateEvidence",
     "SequenceMiningResult",
     "SequenceSource",
     "SequentialPatternRow",

@@ -247,6 +247,9 @@ pub struct MemorySnapshotHead {
     pub graph_incarnation: String,
     pub provenance: SnapshotProvenance,
     pub retain_until_ms: Option<u64>,
+    /// What the document holds, as its writer declared it.
+    #[serde(default)]
+    pub doc_kind: MemoryDocKind,
 }
 
 impl MemorySnapshotHead {
@@ -311,6 +314,18 @@ pub enum SyncAction {
     },
 }
 
+/// What a synced document holds.
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum MemoryDocKind {
+    /// A plain note: the content is opaque to the engine.
+    #[default]
+    Note,
+    /// A search run's saved state (MEDULLA-DECISION-ENGINE-R149.1).
+    SearchState,
+}
+
 /// One sync request.
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -318,6 +333,11 @@ pub enum SyncAction {
 pub struct SyncRequest {
     pub request_id: RequestId,
     pub doc_id: DocId,
+    /// What the document is. The type carries the meaning: a `SearchState`
+    /// document is validated as a search state before its revision commits
+    /// (MEDULLA-DECISION-ENGINE-R149.3).
+    #[serde(default)]
+    pub doc_kind: MemoryDocKind,
     pub action: SyncAction,
     /// The memory-change receipts that admit a submit over existing content or a
     /// resolution that writes a revision (MEDULLA-DURABLE-KERNEL-R863).
@@ -532,6 +552,30 @@ pub struct SnapshotPlan {
 pub struct MemorySnapshotRead {
     pub head: MemorySnapshotHead,
     pub content: String,
+    /// The derived evidence of a `SearchState` document
+    /// (MEDULLA-DECISION-ENGINE-R149.5).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub search_state: Option<SearchStateEvidence>,
+}
+
+/// What a read of a saved search state derives from its body: the run, the
+/// revision, the four array digests (64 lowercase hex characters each), the
+/// request clock and the evidence premises (MEDULLA-DECISION-ENGINE-R149.5).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct SearchStateEvidence {
+    pub search_run_id: String,
+    pub state_revision: u64,
+    pub transcript_digest: String,
+    pub evidence_digest: String,
+    pub constraints_digest: String,
+    pub open_claims_digest: String,
+    pub recovered_at_ms: u64,
+    /// `search:run=<id>`, `search:revision=<n>`, `search:transcript=<digest>`,
+    /// `search:evidence=<digest>`, `search:constraints=<digest>`,
+    /// `search:open_claims=<digest>`.
+    pub premises: Vec<String>,
 }
 
 /// The served `ListMemorySnapshots` result: heads in `doc_id` order.

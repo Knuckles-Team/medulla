@@ -45,6 +45,17 @@ pub const MEMORY_ENTRY_TOO_LARGE: RefusalCode = RefusalCode::new("MEMORY_ENTRY_T
 /// `knob memory.tenant_max_bytes` (MEDULLA-DECISION-ENGINE-R154.1).
 pub const MEMORY_TENANT_QUOTA_EXCEEDED: RefusalCode = RefusalCode::new("MEMORY_TENANT_QUOTA_EXCEEDED");
 
+/// A search-state body missing `search_run_id` or one of its four arrays
+/// (MEDULLA-DECISION-ENGINE-R149.4).
+pub const SEARCH_STATE_INCOMPLETE: RefusalCode = RefusalCode::new("SEARCH_STATE_INCOMPLETE");
+/// A search-state body that is not a UTF-8 JSON object, or has an empty `search_run_id`.
+pub const SEARCH_STATE_MALFORMED: RefusalCode = RefusalCode::new("SEARCH_STATE_MALFORMED");
+/// A search-state `state_revision` that differs from the snapshot revision.
+pub const SEARCH_STATE_REVISION_MISMATCH: RefusalCode =
+    RefusalCode::new("SEARCH_STATE_REVISION_MISMATCH");
+/// A search-state body above `knob memory.search_state_max_bytes`.
+pub const SEARCH_STATE_TOO_LARGE: RefusalCode = RefusalCode::new("SEARCH_STATE_TOO_LARGE");
+
 /// A hard removal that left a node a live node still references
 /// (MEDULLA-DECISION-ENGINE-R651.4). It is reported by `EvictBelow` and `Maintain` in their
 /// `live_referenced` list, not answered as a request refusal.
@@ -62,6 +73,10 @@ pub const REFUSALS: &[RefusalCode] = &[
     MEMORY_ENTRY_TOO_LARGE,
     MEMORY_TENANT_QUOTA_EXCEEDED,
     MEMORY_LIVE_REFERENCE,
+    SEARCH_STATE_INCOMPLETE,
+    SEARCH_STATE_MALFORMED,
+    SEARCH_STATE_REVISION_MISMATCH,
+    SEARCH_STATE_TOO_LARGE,
 ];
 
 /// `knob media.max_blob_bytes`: largest attached blob.
@@ -102,6 +117,8 @@ pub enum MemoryError {
     SearchStateMalformed(String),
     #[error("SEARCH_STATE_REVISION_MISMATCH: {0}")]
     SearchStateRevisionMismatch(String),
+    #[error("SEARCH_STATE_TOO_LARGE: {0}")]
+    SearchStateTooLarge(String),
     #[error("MEMORY_EPISODE_WINDOW_INVALID: {0}")]
     EpisodeWindowInvalid(String),
     #[error("MEMORY_EPISODE_DIGEST_MISMATCH: {0}")]

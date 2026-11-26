@@ -50,6 +50,7 @@ fn sync(request_id: &str, action: SyncAction) -> Method {
         request: Box::new(SyncRequest {
             request_id: RequestId::new(request_id).expect("request id"),
             doc_id: DocId::new(DOC).expect("doc id"),
+            doc_kind: Default::default(),
             action,
             admit_receipt_digests: Vec::new(),
         }),
@@ -201,6 +202,7 @@ async fn authorized_read_list_and_cursor_isolation() {
             request: Box::new(SyncRequest {
                 request_id: RequestId::new(format!("list-{doc}")).expect("request id"),
                 doc_id: DocId::new(doc).expect("doc id"),
+                doc_kind: Default::default(),
                 action: SyncAction::Submit {
                     expected_revision: None,
                     content: doc.to_string(),
@@ -269,6 +271,7 @@ async fn wire_methods_reach_durable_gateway() {
         request: Box::new(SyncRequest {
             request_id: RequestId::new("forged").expect("request id"),
             doc_id: DocId::new(DOC).expect("doc id"),
+            doc_kind: Default::default(),
             action: SyncAction::Submit {
                 expected_revision: None,
                 content: "one".to_string(),
@@ -819,4 +822,303 @@ async fn complete_memory_sync_journey() {
         .await);
     assert_eq!(listing.heads.len(), 1);
     assert_eq!(listing.heads[0].revision, 2);
+}
+
+// ---- MEDULLA-DECISION-ENGINE-R149: a saved search state over the served sync ----
+
+/// A search-state body at `state_revision` for run `run`.
+fn search_state_body(run: &str, state_revision: u64, marker: &str) -> String {
+    serde_json::json!({
+        "search_run_id": run,
+        "state_revision": state_revision,
+        "transcript": [{"turn": marker}],
+        "evidence": [{"url": "https://example.test/a", "marker": marker}],
+        "constraints": ["no paid sources"],
+        "open_claims": [{"claim": "unverified", "marker": marker}],
+    })
+    .to_string()
+}
+
+fn submit_state(request_id: &str, expected: Option<u64>, content: &str) -> Method {
+    let mut method = submit(request_id, expected, content);
+    if let Method::SyncMemorySnapshot { request, .. } = &mut method {
+        request.doc_kind = medulla_mutation_types::memory_sync::MemoryDocKind::SearchState;
+    }
+    method
+}
+
+/// Save revision `revision` of the search state of `run`, with the receipts a
+/// rewrite over an existing head needs.
+async fn save_state(
+    state: &test_support::SharedState,
+    id: u64,
+    run: &str,
+    revision: u64,
+) -> (SyncOutcome, String) {
+    let body = search_state_body(run, revision, &format!("m{revision}"));
+    let expected = revision.checked_sub(1).filter(|parent| *parent > 0);
+    let mut method = submit_state(&format!("s{revision}-{id}"), expected, &body);
+    if let Some(head) = expected {
+        method = admitted(
+            state,
+            method,
+            &body,
+            head,
+            medulla_decision_types::decision::memory_benchmark::ChangeKind::Rewrite,
+        )
+        .await;
+    }
+    (json_of(send(state, id, method).await), body)
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R149.3
+#[tokio::test(flavor = "multi_thread")]
+async fn search_state_wire_reaches_the_gateway() {
+    install_knobs();
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-search-state",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let (first, body) = save_state(&state, 2, "run-1", 1).await;
+    assert!(matches!(first, SyncOutcome::Accepted { ref head } if head.revision == 1));
+    let stored: MemorySnapshotRead = json_of(read(&state, 3, None).await);
+    assert_eq!(stored.content, body, "the stored bytes are the sent bytes");
+    assert_eq!(stored.head.revision, 1);
+    assert_eq!(
+        stored.head.doc_kind,
+        medulla_mutation_types::memory_sync::MemoryDocKind::SearchState
+    );
+
+    // Another tenant reads the document as absent and cannot overwrite it.
+    let mut foreign = common::context_for(common::TEST_AGENT);
+    foreign.tenant = "tenant-foreign".to_string();
+    let theirs = test_support::dispatch(
+        &state,
+        common::signed_request_with_context(
+            SECRET,
+            4,
+            GRAPH,
+            foreign.clone(),
+            Method::ReadMemorySnapshot {
+                doc_id: DOC.to_string(),
+                revision: None,
+            },
+        ),
+    )
+    .await;
+    assert!(theirs.error.is_some(), "a foreign tenant reads nothing: {theirs:?}");
+    let overwrite = test_support::dispatch(
+        &state,
+        common::signed_request_with_context(
+            SECRET,
+            5,
+            GRAPH,
+            foreign,
+            submit_state("s-foreign", Some(1), &search_state_body("run-1", 2, "x")),
+        ),
+    )
+    .await;
+    assert!(overwrite.error.is_some(), "{overwrite:?}");
+    assert_eq!(head_bytes(&state, 6).await, (1, body));
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R149.4
+#[tokio::test(flavor = "multi_thread")]
+async fn incomplete_state_refuses() {
+    install_knobs();
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-search-state-refusals",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let (first, body) = save_state(&state, 2, "run-2", 1).await;
+    assert!(matches!(first, SyncOutcome::Accepted { .. }));
+    let before = head_bytes(&state, 3).await;
+
+    let without = |field: &str| {
+        let mut value: serde_json::Value = serde_json::from_str(&body).unwrap();
+        value["state_revision"] = 2.into();
+        value.as_object_mut().unwrap().remove(field);
+        value.to_string()
+    };
+    let mut cases: Vec<(String, &str)> = ["search_run_id", "transcript", "evidence", "constraints", "open_claims"]
+        .iter()
+        .map(|field| (without(field), "SEARCH_STATE_INCOMPLETE"))
+        .collect();
+    cases.push(("[1,2]".to_string(), "SEARCH_STATE_MALFORMED"));
+    cases.push((
+        search_state_body("", 2, "m").to_string(),
+        "SEARCH_STATE_MALFORMED",
+    ));
+    cases.push((
+        search_state_body("run-2", 7, "m").to_string(),
+        "SEARCH_STATE_REVISION_MISMATCH",
+    ));
+    let oversized = serde_json::json!({
+        "search_run_id": "run-2",
+        "state_revision": 2,
+        "transcript": ["x".repeat(1_048_576)],
+        "evidence": [],
+        "constraints": [],
+        "open_claims": [],
+    })
+    .to_string();
+    cases.push((oversized, "SEARCH_STATE_TOO_LARGE"));
+
+    for (index, (content, code)) in cases.iter().enumerate() {
+        let method = admitted(
+            &state,
+            submit_state(&format!("bad-{index}"), Some(1), content),
+            content,
+            1,
+            medulla_decision_types::decision::memory_benchmark::ChangeKind::Rewrite,
+        )
+        .await;
+        let refused = send(&state, 10 + index as u64, method).await;
+        assert!(
+            error_of(&refused).contains(code),
+            "{index}: {code}: {refused:?}"
+        );
+        assert_eq!(head_bytes(&state, 40).await, before, "{code} leaves the head");
+    }
+
+    // A stale expected revision keeps the head and answers the R085 conflict.
+    let (second, _) = save_state(&state, 60, "run-2", 2).await;
+    assert!(matches!(second, SyncOutcome::Accepted { ref head } if head.revision == 2));
+    let stale: SyncOutcome = json_of(
+        send(
+            &state,
+            61,
+            submit_state("stale", Some(1), &search_state_body("run-2", 2, "late")),
+        )
+        .await,
+    );
+    assert!(matches!(stale, SyncOutcome::ConflictRetained { ref head, .. } if head.revision == 2));
+
+    // A foreign tenant's invalid write is refused and changes nothing.
+    let mut foreign = common::context_for(common::TEST_AGENT);
+    foreign.tenant = "tenant-foreign".to_string();
+    let cross = test_support::dispatch(
+        &state,
+        common::signed_request_with_context(
+            SECRET,
+            62,
+            GRAPH,
+            foreign,
+            submit_state("foreign-bad", Some(2), "[]"),
+        ),
+    )
+    .await;
+    assert!(cross.error.is_some(), "{cross:?}");
+    assert_eq!(head_bytes(&state, 63).await.0, 2);
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R149.5
+#[tokio::test(flavor = "multi_thread")]
+async fn state_evidence_lists_four_digests() {
+    install_knobs();
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-search-state-evidence",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    let (saved, body) = save_state(&state, 2, "run-3", 1).await;
+    assert!(matches!(saved, SyncOutcome::Accepted { .. }));
+    let read: MemorySnapshotRead = json_of(read(&state, 3, None).await);
+    let evidence = read.search_state.expect("a search state carries its evidence");
+    let value: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let digest = |field: &str| {
+        let bytes = serde_json::to_vec(&value[field]).unwrap();
+        Digest256::sha256(&bytes).to_hex()
+    };
+    assert_eq!(evidence.state_revision, 1);
+    assert_eq!(evidence.transcript_digest, digest("transcript"));
+    assert_eq!(evidence.evidence_digest, digest("evidence"));
+    assert_eq!(evidence.constraints_digest, digest("constraints"));
+    assert_eq!(evidence.open_claims_digest, digest("open_claims"));
+    assert!(evidence.recovered_at_ms > 0);
+    assert_eq!(
+        evidence.premises,
+        vec![
+            "search:run=run-3".to_string(),
+            "search:revision=1".to_string(),
+            format!("search:transcript={}", digest("transcript")),
+            format!("search:evidence={}", digest("evidence")),
+            format!("search:constraints={}", digest("constraints")),
+            format!("search:open_claims={}", digest("open_claims")),
+        ]
+    );
+
+    // A plain note carries no search-state evidence.
+    let note_doc = "notes/plain.md";
+    let mut note = submit("plain", None, "text");
+    if let Method::SyncMemorySnapshot { request, .. } = &mut note {
+        request.doc_id = DocId::new(note_doc).unwrap();
+    }
+    let _: SyncOutcome = json_of(send(&state, 4, note).await);
+    let plain: MemorySnapshotRead = json_of(
+        send(
+            &state,
+            5,
+            Method::ReadMemorySnapshot {
+                doc_id: note_doc.to_string(),
+                revision: None,
+            },
+        )
+        .await,
+    );
+    assert!(plain.search_state.is_none());
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R149.6
+#[tokio::test(flavor = "multi_thread")]
+async fn search_state_survives_context_eviction() {
+    install_knobs();
+    let (_dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        "memory-sync-search-state-eviction",
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    // Client A saves a state at revisions 1 and 2, then drops its own copy.
+    let (one, _) = save_state(&state, 2, "run-4", 1).await;
+    assert!(matches!(one, SyncOutcome::Accepted { .. }));
+    let (two, saved) = save_state(&state, 3, "run-4", 2).await;
+    assert!(matches!(two, SyncOutcome::Accepted { ref head } if head.revision == 2));
+
+    // Client B reads revision 2 and gets the bytes, the four arrays and the digests.
+    let read: MemorySnapshotRead = json_of(read(&state, 4, Some(2)).await);
+    assert_eq!(read.content, saved, "byte-identical readback");
+    let envelope: medulla_work_types::memory::SearchStateEnvelope =
+        serde_json::from_str(&read.content).unwrap();
+    assert_eq!(envelope.transcript.len(), 1);
+    assert_eq!(envelope.evidence.len(), 1);
+    assert_eq!(envelope.constraints.len(), 1);
+    assert_eq!(envelope.open_claims.len(), 1);
+    let evidence = read.search_state.expect("evidence on the read");
+    assert_eq!(evidence.transcript_digest, envelope.transcript_digest().to_hex());
+    assert_eq!(evidence.state_revision, 2);
+
+    // A stale save against revision 1 answers the conflict outcome.
+    let stale: SyncOutcome = json_of(
+        send(
+            &state,
+            5,
+            submit_state("late", Some(1), &search_state_body("run-4", 2, "late")),
+        )
+        .await,
+    );
+    assert!(matches!(stale, SyncOutcome::ConflictRetained { ref head, .. } if head.revision == 2));
 }
