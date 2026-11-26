@@ -69,7 +69,7 @@ Each row's acceptance test binds its ID where the test lands. The lines below re
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.2` — `crates/medulla-persistence/src/object_store_backend/tests.rs::client_resolves_secret_refs_from_the_environment` (existing, L1)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.3` — `tests/test_loopback_object_store.py::test_conditional_puts_and_listing` (existing, L1); `src/operator_command.rs::tests::layouts_verb_prints_every_pinned_digest` (existing, L1)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.4` — `crates/medulla-persistence/src/object_store_backend/tests.rs::open_from_env_refuses_before_the_listener` (planned, L1)
-- `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.5` — `crates/medulla-persistence/src/object_store_backend/tests.rs::restore_materializes_head_into_an_empty_local_store` (planned, L3)
+- `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.5` — `crates/medulla-persistence/tests/object_store_restore.rs::restore_materializes_head_into_an_empty_local_store` (planned, L3)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003` — `crates/medulla-persistence/src/object_store_backend/tests.rs::commit_before_ack_and_partial_publish` (planned, L3)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003.1` — `tests/test_object_storage_commits.py::test_ack_follows_head_update` (planned, L4)
 - `# spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003.2` — `tests/test_graph_copy_served.py::test_digest_mismatch_leaves_destination_empty` (planned, L4); `benches/graph_copy.rs` (planned, L6)

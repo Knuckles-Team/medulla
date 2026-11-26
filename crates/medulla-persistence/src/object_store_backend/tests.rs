@@ -860,3 +860,106 @@ async fn first_commit_bootstraps_head_and_later_commits_publish() {
     assert_eq!(refusal, CommitRefusal::PublishStale { version: 2 });
     assert_eq!(head(&store).await.version, 2);
 }
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R002.4
+// The server reads `MEDULLA_STORAGE_BACKEND` once at startup. Unset, empty or `local` opens
+// nothing; an `object_store` spec whose secret variable is unset and a spec of an unknown
+// variant each refuse with their wire code, before the listener opens. The variable is
+// process-wide, so the cases run in one test under a lock.
+#[test]
+fn open_from_env_refuses_before_the_listener() {
+    use crate::object_store_backend::{open_from_env, STORAGE_BACKEND_ENV};
+    use medulla_storage::SecretRef;
+    use std::sync::Mutex;
+
+    static ENV: Mutex<()> = Mutex::new(());
+    let _guard = ENV.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
+
+    std::env::remove_var(STORAGE_BACKEND_ENV);
+    assert!(open_from_env().unwrap().is_none(), "unset opens nothing");
+    for local in ["", "local", "  local  "] {
+        std::env::set_var(STORAGE_BACKEND_ENV, local);
+        assert!(open_from_env().unwrap().is_none(), "{local:?} opens nothing");
+    }
+
+    // The bucket variable is unset: the secret reference does not resolve.
+    std::env::set_var("R2_4_ENDPOINT", "http://127.0.0.1:9000");
+    std::env::set_var("R2_4_ROOT", "root-a");
+    std::env::remove_var("R2_4_BUCKET");
+    let spec = StorageBackendSpec::ObjectStore {
+        endpoint: Some(SecretRef("R2_4_ENDPOINT".into())),
+        bucket: Some(SecretRef("R2_4_BUCKET".into())),
+        root: Some(SecretRef("R2_4_ROOT".into())),
+        durability: Some(DurabilityClass::ObjectStoreConditionalPut),
+        layout_digest: None,
+    };
+    std::env::set_var(STORAGE_BACKEND_ENV, serde_json::to_string(&spec).unwrap());
+    let error = open_from_env().err().expect("the unset secret refuses");
+    assert!(error.starts_with("OBJECT_STORE_SECRET_UNRESOLVED:"), "{error}");
+
+    // An unknown variant is not a backend.
+    std::env::set_var(STORAGE_BACKEND_ENV, r#"{"variant":"tape"}"#);
+    let error = open_from_env().err().expect("the unknown variant refuses");
+    assert!(error.starts_with("STORAGE_BACKEND_UNKNOWN:"), "{error}");
+
+    std::env::remove_var(STORAGE_BACKEND_ENV);
+}
+
+// spec: MEDULLA-OBJECT-STORAGE-BACKEND-R003.3
+// The first commit on an empty root bootstraps version zero and publishes version 1: `HEAD`
+// names version 1, the manifest holds the snapshot and one batch segment. The second commit
+// publishes version 2. A `HEAD` that lost the fence refuses `OBJECT_PUBLISH_STALE` and the
+// commit is not acked.
+#[tokio::test]
+async fn first_commit_bootstraps_head_and_later_commits_publish() {
+    use medulla_storage::object::fetch::ObjectFetcher;
+
+    let crashy = CrashyStore::new(false, true);
+    let backend = backend(crashy.clone());
+    let fetcher = ObjectFetcher::new(crashy.clone(), ROOT);
+
+    let first = to_vec_named(&["first-rows"]).unwrap();
+    let ack = backend
+        .commit_mutation_batch(TENANT, GRAPH, &first, Some(1), &bootstrap)
+        .await
+        .unwrap();
+    assert_eq!(ack.version, 1);
+    assert_eq!(head(&crashy.inner).await.version, 1);
+    let zero = fetcher.materialize(TENANT, GRAPH, 0).await.unwrap();
+    assert!(zero.batches.is_empty(), "version zero holds the snapshot only");
+    let one = fetcher.materialize(TENANT, GRAPH, 1).await.unwrap();
+    assert_eq!(one.snapshot.bytes, zero.snapshot.bytes);
+    assert_eq!(one.batches.len(), 1);
+    assert_eq!(one.batches[0].bytes, first);
+    assert_eq!(one.graph_version, 1);
+
+    let second = to_vec_named(&["second-rows"]).unwrap();
+    let ack = backend
+        .commit_mutation_batch(TENANT, GRAPH, &second, Some(2), &bootstrap)
+        .await
+        .unwrap();
+    assert_eq!(ack.version, 2);
+    let two = fetcher.materialize(TENANT, GRAPH, 2).await.unwrap();
+    assert_eq!(two.batches.len(), 2);
+    assert_eq!(two.batches[1].bytes, second);
+
+    // A crash between the manifest and `HEAD` leaves an orphan manifest at version 3: the
+    // retry loses the create-only put and refuses stale, and `HEAD` stays at version 2.
+    let third = to_vec_named(&["third-rows"]).unwrap();
+    crashy.arm();
+    assert_eq!(
+        backend
+            .commit_mutation_batch(TENANT, GRAPH, &third, Some(3), &bootstrap)
+            .await
+            .unwrap_err()
+            .wire_code(),
+        "OBJECT_HEAD_MISSING"
+    );
+    crashy.disarm();
+    let refusal = backend
+        .commit_mutation_batch(TENANT, GRAPH, &third, Some(3), &bootstrap)
+        .await
+        .unwrap_err();
+    assert_eq!(refusal.wire_code(), "OBJECT_PUBLISH_STALE");
+    assert_eq!(head(&crashy.inner).await.version, 2);
+}
