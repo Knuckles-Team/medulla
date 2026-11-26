@@ -27,6 +27,7 @@ method_results! {
     BisectStep(BisectStep) => Json<medulla_source_types::source_bisect::BisectStepReceipt>;
     ReadBlame(ReadBlame) => Json<medulla_source_types::source_changeset::ReadBlameReceipt>;
     SubmitChangeset(SubmitChangeset) => Json<medulla_source_types::source_changeset::SubmitChangesetReceipt>;
+    SubmitSymbolEdit(SubmitSymbolEdit) => Json<medulla_source_types::source_changeset::SubmitChangesetReceipt>;
     ImportGitHistory(ImportGitHistory) => Json<medulla_source_types::source_changeset::ImportGitHistoryReceipt>;
     GitExportPack(GitExportPack) => Json<medulla_source_types::source_changeset::GitExportPackReceipt>;
     ListGraphs(ListGraphs) => Json<Vec<GraphListing>>;

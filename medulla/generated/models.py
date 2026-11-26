@@ -16458,6 +16458,13 @@ class MethodBisectStep(BaseModel):
     params: MethodBisectStepParams
 
 
+class MethodSubmitSymbolEdit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    method: Literal["SubmitSymbolEdit"]
+    params: MethodSubmitSymbolEditParams
+
+
 class MethodReadBlame(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -17216,6 +17223,7 @@ Method = Annotated[
         MethodSetPathGrant,
         MethodReadPathHistory,
         MethodBisectStep,
+        MethodSubmitSymbolEdit,
         MethodReadBlame,
         MethodReadSpan,
         MethodAtomContext,
@@ -37701,6 +37709,12 @@ class MethodBisectStepParams(BaseModel):
     request: BisectStepRequest
 
 
+class MethodSubmitSymbolEditParams(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    request: SymbolEdit
+
+
 class MethodReadBlameParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -38536,6 +38550,34 @@ class BisectStepRequest(BaseModel):
     gate_id: str
     good: str | None = None
     repo: str
+
+
+class SymbolEditKind(str, Enum):
+    REPLACE_SYMBOL = "replace_symbol"
+    REPLACE_BODY = "replace_body"
+    INSERT_BEFORE = "insert_before"
+    INSERT_AFTER = "insert_after"
+    DELETE = "delete"
+
+
+class SymbolEditOp(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    anchor_span_digest: str
+    kind: SymbolEditKind
+    new_text: str
+    symbol_id: str
+
+
+class SymbolEdit(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    base_rev: str
+    branch: str
+    message: str
+    ops: list[SymbolEditOp]
+    repo: str
+    run_trace_id: str
 
 
 class BlameRun(BaseModel):
@@ -47508,6 +47550,11 @@ __all__ = [
     "MethodPublishSkillPackage",
     "MethodPublishSkillPackageParams",
     "MethodBisectStep",
+    "MethodSubmitSymbolEdit",
+    "MethodSubmitSymbolEditParams",
+    "SymbolEdit",
+    "SymbolEditKind",
+    "SymbolEditOp",
     "MethodBisectStepParams",
     "MethodReadBlame",
     "MethodReadBlameParams",

@@ -49,7 +49,7 @@ pub struct OpVerdict {
     pub structure_hash: String,
 }
 
-fn parse_clean(path: &str, bytes: &[u8]) -> Result<ParseResult, RoundtripRefusal> {
+pub fn parse_clean(path: &str, bytes: &[u8]) -> Result<ParseResult, RoundtripRefusal> {
     let unparseable = || RoundtripRefusal::Unparseable {
         path: path.to_string(),
     };

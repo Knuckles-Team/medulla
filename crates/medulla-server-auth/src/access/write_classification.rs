@@ -516,6 +516,8 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::SubmitChangeset { .. }
                 // MEDULLA-SCM-R010: the first-parent line of a git history on a branch.
                 | Method::ImportGitHistory { .. }
+                // MEDULLA-SCM-R013.4: a symbol edit lands one source changeset.
+                | Method::SubmitSymbolEdit { .. }
                 | Method::DeleteGraph { .. }
                 | Method::ClaimNext { .. }
                 | Method::MintWorkItemClaimCapability { .. }

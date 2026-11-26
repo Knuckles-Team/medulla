@@ -69,6 +69,11 @@ pub mod source_changeset;
 #[cfg(feature = "blob")]
 pub mod source_tree;
 pub mod source_bisect;
+
+/// Projection, round-trip check and request build of a served `SubmitSymbolEdit`
+/// (MEDULLA-SCM-R013.4).
+#[cfg(feature = "blob")]
+pub mod source_symbol_edit;
 // MEDULLA-SCM-R008 — gate verdicts are sealed records.
 pub mod gate_verdict;
 /// Defect intake: a symptom lands on the defect of its signature (MEDULLA-SDLC-R003.3).

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// What an op does to its symbol.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(rename_all = "snake_case")]
 pub enum SymbolEditKind {
     ReplaceSymbol,
@@ -17,6 +18,7 @@ pub enum SymbolEditKind {
 
 /// One op against one symbol, guarded by the digest of the span it expects.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SymbolEditOp {
     pub kind: SymbolEditKind,
@@ -27,6 +29,7 @@ pub struct SymbolEditOp {
 
 /// An edit of one branch at one base revision.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct SymbolEdit {
     pub repo: String,

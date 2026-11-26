@@ -302,6 +302,14 @@ closed_error_codes! {
         // MEDULLA-TYPED-PACKS-R097.701: a mapping that names no declared target, and a class absent from the pack.
         DomainPackMappingInvalid => "DOMAIN_PACK_MAPPING_INVALID",
         DomainPackClassUnknown => "DOMAIN_PACK_CLASS_UNKNOWN",
+        // MEDULLA-SCM-R013.5: the seven refusals of a served symbol edit.
+        EditBaseStale => "EDIT_BASE_STALE",
+        EditOpsOverlap => "EDIT_OPS_OVERLAP",
+        EditUnparseable => "EDIT_UNPARSEABLE",
+        EditRoundtripMismatch => "EDIT_ROUNDTRIP_MISMATCH",
+        EditSymbolUnknown => "EDIT_SYMBOL_UNKNOWN",
+        EditNoOps => "EDIT_NO_OPS",
+        EditBlobUnreadable => "EDIT_BLOB_UNREADABLE",
         EditChainBroken => "EDIT_CHAIN_BROKEN",
         EditSealed => "EDIT_SEALED",
         EcosystemDepthOutOfRange => "ECOSYSTEM_DEPTH_OUT_OF_RANGE",

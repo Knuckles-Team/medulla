@@ -127,6 +127,16 @@ pub async fn dispatch_graph_lifecycle_methods(
             .await
         }
         // MEDULLA-SCM-R002: one source changeset on a branch.
+        // MEDULLA-SCM-R013.4: a symbol edit, projected and re-parsed before the accept path.
+        Method::SubmitSymbolEdit { request } => {
+            dispatch_boxed(super::submit_symbol_edit::handle_submit_symbol_edit(
+                state,
+                req,
+                verified_context,
+                super::submit_symbol_edit::SubmitSymbolEditFields { request },
+            ))
+            .await
+        }
         Method::SubmitChangeset { request } => {
             dispatch_boxed(super::submit_changeset::handle_submit_changeset(
                 state,

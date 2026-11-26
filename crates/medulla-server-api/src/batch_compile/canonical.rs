@@ -60,7 +60,8 @@ fn owner_domain(method: &Method) -> Option<DurabilityDomain> {
         | Method::BranchWrite { .. }
         | Method::BranchMerge { .. }
         | Method::SubmitChangeset { .. }
-        | Method::ImportGitHistory { .. } => DurabilityDomain::ControlPlane,
+        | Method::ImportGitHistory { .. }
+        | Method::SubmitSymbolEdit { .. } => DurabilityDomain::ControlPlane,
         Method::MultiGraphBatchUpdate { .. } => DurabilityDomain::MultiGraph,
         Method::Commit { .. } => DurabilityDomain::CrossModal,
         // Wire-unconditional, same reason as the `datascience`/`finance`/etc.
@@ -941,6 +942,7 @@ fn remaining_default_domain(method: &Method, surface: MutationSurface) -> Durabi
         | Method::BranchMerge { .. }
         | Method::SubmitChangeset { .. }
         | Method::ImportGitHistory { .. }
+        | Method::SubmitSymbolEdit { .. }
         | Method::DeleteGraph { .. }
         | Method::MultiGraphBatchUpdate { .. }
         | Method::Commit { .. }

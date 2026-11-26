@@ -506,6 +506,17 @@ $($variants)*
         request: Box<medulla_source_types::source_changeset::SubmitChangesetRequest>,
     },
 
+    /// Edit code by symbol (MEDULLA-SCM-R013.4): each op names a symbol and its new
+    /// text; the engine projects the edit to file bytes, re-parses to confirm the
+    /// round trip, then appends one changeset through the `SubmitChangeset` accept
+    /// path. Refusals: `EDIT_NO_OPS`, `EDIT_SYMBOL_UNKNOWN`, `EDIT_BASE_STALE`,
+    /// `EDIT_OPS_OVERLAP`, `EDIT_BLOB_UNREADABLE`, `EDIT_UNPARSEABLE`,
+    /// `EDIT_ROUNDTRIP_MISMATCH`, plus those of `SubmitChangeset`; a refusal writes
+    /// no blob and moves no head.
+    SubmitSymbolEdit {
+        request: Box<medulla_source_types::source_symbol_edit::SymbolEdit>,
+    },
+
     /// Import the first-parent line of a git history into a branch
     /// (MEDULLA-SCM-R010). The version-2 pack was uploaded first through the
     /// blob methods; the request names it by digest and names the commit

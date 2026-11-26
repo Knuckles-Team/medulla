@@ -1555,6 +1555,9 @@ send_branch_merge = contract_sender("BranchMerge", "MethodBranchMergeParams")
 send_branch_read_at = contract_sender("BranchReadAt", "MethodBranchReadAtParams")
 send_branch_write = contract_sender("BranchWrite", "MethodBranchWriteParams")
 send_set_path_grant = contract_sender("SetPathGrant", "MethodSetPathGrantParams")
+send_submit_symbol_edit = contract_sender(
+    "SubmitSymbolEdit", "MethodSubmitSymbolEditParams"
+)
 send_bisect_step = contract_sender("BisectStep", "MethodBisectStepParams")
 send_read_blame = contract_sender("ReadBlame", "MethodReadBlameParams")
 send_read_path_history = contract_sender(
