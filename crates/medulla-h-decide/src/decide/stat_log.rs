@@ -1012,6 +1012,12 @@ fn dispatch(
                 medulla_protocol_types::result_contract::coordination::DecisionLogHarnessAdoption,
             >(super::stat_harness_adoption::adopt(ctx, reader, &write)?)
         }
+        DecisionLogOp::LifecycleRecord { record, .. } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogLifecycleRecord,
+        >(super::stat_lifecycle_record::write(ctx, record)?),
+        DecisionLogOp::LifecycleRecords { query, .. } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogLifecycleRecords,
+        >(super::stat_lifecycle_record::read(ctx, &query)?),
         DecisionLogOp::HarnessLessons { query, .. } => {
             ResultPayload::of::<
                 medulla_protocol_types::result_contract::coordination::DecisionLogHarnessLessons,

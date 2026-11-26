@@ -4448,6 +4448,123 @@ class HarnessLessonsFound(BaseModel):
     lessons: list[HarnessLesson]
 
 
+class ProjectMode(str, Enum):
+    reference = "reference"
+    development = "development"
+    evolving = "evolving"
+
+
+class WouldDispatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    dispatch_decision_id: str
+    evidence_digests: list[str]
+    mode: ProjectMode
+    rows: list[str]
+    slice_root: str
+
+
+class ScenarioResult(str, Enum):
+    passed = "passed"
+    failed = "failed"
+
+
+class ScenarioRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch: str = "main"
+    commit: str
+    evidence_digests: list[str] = []
+    phase: str
+    requirement_ids: list[str] = []
+    result: ScenarioResult
+    scenario_id: str
+    schema_version: Annotated[int, Field(ge=0)] = 1
+
+
+class StoredScenarioRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    recorded_ms: Annotated[int, Field(ge=0)]
+    run: ScenarioRun
+
+
+class StoredWouldDispatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    id: str
+    recorded_ms: Annotated[int, Field(ge=0)]
+    record: WouldDispatch
+
+
+class LifecycleRecordKind(str, Enum):
+    would_dispatch = "would_dispatch"
+    scenario_run = "scenario_run"
+
+
+class LifecycleRecordWriteWouldDispatch(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record: WouldDispatch
+    record_kind: Literal["would_dispatch"]
+
+
+class LifecycleRecordWriteScenarioRun(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record: ScenarioRun
+    record_kind: Literal["scenario_run"]
+
+
+LifecycleRecordWrite = Annotated[
+    LifecycleRecordWriteWouldDispatch | LifecycleRecordWriteScenarioRun,
+    Field(discriminator="record_kind"),
+]
+
+
+class LifecycleRecordStored(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record_id: str
+    record_kind: LifecycleRecordKind
+    recorded_ms: Annotated[int, Field(ge=0)]
+    replayed: bool
+    schema_version: Annotated[int, Field(ge=0)]
+
+
+class LifecycleRecordQuery(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    branch: str | None = None
+    phase: str | None = None
+    record_kind: LifecycleRecordKind
+
+
+class LifecycleRecordsFound(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    record_kind: LifecycleRecordKind
+    scenario_runs: list[StoredScenarioRun] = []
+    would_dispatch: list[StoredWouldDispatch] = []
+
+
+class DecisionLogOpLifecycleRecord(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["lifecycle_record"]
+    record: LifecycleRecordWrite
+    tenant_id: str
+
+
+class DecisionLogOpLifecycleRecords(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["lifecycle_records"]
+    query: LifecycleRecordQuery
+    tenant_id: str
+
+
 class DecisionLogOpHarnessAdoption(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -5005,6 +5122,8 @@ DecisionLogOp = Annotated[
     | DecisionLogOpHarnessAdoption
     | DecisionLogOpHarnessLessons
     | DecisionLogOpPointer
+    | DecisionLogOpLifecycleRecord
+    | DecisionLogOpLifecycleRecords
     | DecisionLogOpList
     | DecisionLogOpProvenance
     | DecisionLogOpWhyNot
@@ -43687,6 +43806,8 @@ __all__ = [
     "DecisionLogOpHarnessLessons",
     "DecisionLogOpPointer",
     "DecisionLogOpLearn",
+    "DecisionLogOpLifecycleRecord",
+    "DecisionLogOpLifecycleRecords",
     "DecisionLogOpPromoteRule",
     "DecisionLogOpProposeRule",
     "DecisionLogOpApproveRule",
@@ -44282,6 +44403,19 @@ __all__ = [
     "HarnessLesson",
     "HarnessLessonQuery",
     "HarnessLessonsFound",
+    "LifecycleRecordKind",
+    "LifecycleRecordQuery",
+    "LifecycleRecordStored",
+    "LifecycleRecordWrite",
+    "LifecycleRecordWriteScenarioRun",
+    "LifecycleRecordWriteWouldDispatch",
+    "LifecycleRecordsFound",
+    "ProjectMode",
+    "ScenarioResult",
+    "ScenarioRun",
+    "StoredScenarioRun",
+    "StoredWouldDispatch",
+    "WouldDispatch",
     "HarnessPart_ActionSpace",
     "HarnessPart_ActionSpaceAbstained",
     "HarnessPart_ActionSpaceDecided",

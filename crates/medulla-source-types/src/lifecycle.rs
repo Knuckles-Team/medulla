@@ -163,6 +163,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("DELIVERY_SCOPE_EMPTY"),
     RefusalCode::new("SPEC_STATUS_REV_UNKNOWN"),
     RefusalCode::new("SPEC_TREE_ABSENT"),
+    RefusalCode::new("SCENARIO_RUN_INCOMPLETE"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -228,6 +229,8 @@ pub enum LifecycleRefusal {
     SpecStatusRevUnknown(String),
     #[error("SPEC_TREE_ABSENT: {0}")]
     SpecTreeAbsent(String),
+    #[error("SCENARIO_RUN_INCOMPLETE: {0}")]
+    ScenarioRunIncomplete(String),
 }
 
 impl LifecycleRefusal {
@@ -264,6 +267,7 @@ impl LifecycleRefusal {
             Self::DeliveryScopeEmpty(_) => "DELIVERY_SCOPE_EMPTY",
             Self::SpecStatusRevUnknown(_) => "SPEC_STATUS_REV_UNKNOWN",
             Self::SpecTreeAbsent(_) => "SPEC_TREE_ABSENT",
+            Self::ScenarioRunIncomplete(_) => "SCENARIO_RUN_INCOMPLETE",
         }
     }
 }
@@ -1630,6 +1634,113 @@ pub fn plan_changeset_node(
             parents: changeset.parents.join(","),
         }),
     })
+}
+
+/// Format identity of a [`ScenarioRun`] record.
+pub const SCENARIO_RUN_SCHEMA_VERSION: u16 = 1;
+
+/// The branch a [`ScenarioRun`] is on when its writer names none: the gated one.
+pub const SCENARIO_RUN_DEFAULT_BRANCH: &str = "main";
+
+/// How one scenario run ended (MEDULLA-SDLC-R013).
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(rename_all = "snake_case")]
+pub enum ScenarioResult {
+    Passed,
+    Failed,
+}
+
+fn scenario_run_schema_version() -> u16 {
+    SCENARIO_RUN_SCHEMA_VERSION
+}
+
+fn scenario_run_default_branch() -> String {
+    SCENARIO_RUN_DEFAULT_BRANCH.to_owned()
+}
+
+/// One scenario run of a delivery phase (MEDULLA-SDLC-R013). It gates the phase it names: a
+/// release bundle is complete only when the latest run of its phase on `main` passed.
+/// `branch` is the branch the commit was run on; a writer that names none runs on `main`.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct ScenarioRun {
+    #[serde(default = "scenario_run_schema_version")]
+    pub schema_version: u16,
+    pub phase: String,
+    pub scenario_id: String,
+    pub commit: String,
+    #[serde(default = "scenario_run_default_branch")]
+    pub branch: String,
+    pub result: ScenarioResult,
+    /// The requirement ids the scenario exercised.
+    #[serde(default)]
+    pub requirement_ids: Vec<String>,
+    /// The digests of the evidence the run produced.
+    #[serde(default)]
+    pub evidence_digests: Vec<String>,
+}
+
+impl ScenarioRun {
+    /// A record without a phase, a commit or a scenario id is incomplete and refuses
+    /// `SCENARIO_RUN_INCOMPLETE`; the list fields are sorted and deduplicated so one run has
+    /// one canonical form.
+    pub fn normalized(mut self) -> Result<Self, LifecycleRefusal> {
+        let blank = |text: &str| text.trim().is_empty();
+        let missing: Vec<&str> = [
+            ("phase", blank(&self.phase)),
+            ("scenario_id", blank(&self.scenario_id)),
+            ("commit", blank(&self.commit)),
+            ("branch", blank(&self.branch)),
+        ]
+        .into_iter()
+        .filter_map(|(name, absent)| absent.then_some(name))
+        .collect();
+        if !missing.is_empty() {
+            return Err(LifecycleRefusal::ScenarioRunIncomplete(format!(
+                "a scenario run names its {}",
+                missing.join(", ")
+            )));
+        }
+        if self.schema_version != SCENARIO_RUN_SCHEMA_VERSION {
+            return Err(LifecycleRefusal::ScenarioRunIncomplete(format!(
+                "schema_version {} is not {SCENARIO_RUN_SCHEMA_VERSION}",
+                self.schema_version
+            )));
+        }
+        self.requirement_ids.sort();
+        self.requirement_ids.dedup();
+        self.evidence_digests.sort();
+        self.evidence_digests.dedup();
+        Ok(self)
+    }
+
+    /// The stable record id: the digest of the phase, scenario, commit and branch, so a second
+    /// write of the same run is the same record.
+    pub fn id(&self) -> String {
+        format!(
+            "scenario-run:{}",
+            &sha256_hex(
+                format!(
+                    "{}\n{}\n{}\n{}",
+                    self.phase, self.scenario_id, self.commit, self.branch
+                )
+                .as_bytes()
+            )[..32]
+        )
+    }
+}
+
+/// A stored [`ScenarioRun`]: the record and the engine instant it was committed at. The
+/// instant orders the runs of one phase; the writer's own clock never does.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+#[serde(deny_unknown_fields)]
+pub struct StoredScenarioRun {
+    pub id: String,
+    pub run: ScenarioRun,
+    pub recorded_ms: u64,
 }
 
 #[cfg(test)]

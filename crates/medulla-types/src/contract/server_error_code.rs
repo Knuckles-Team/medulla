@@ -547,6 +547,8 @@ closed_error_codes! {
         SpecStatusRevUnknown => "SPEC_STATUS_REV_UNKNOWN",
         /// MEDULLA-SDLC-R005.4: a status request names a repository with no ingested spec tree.
         SpecTreeAbsent => "SPEC_TREE_ABSENT",
+        /// MEDULLA-SDLC-R013: a scenario run record names no phase, scenario or commit.
+        ScenarioRunIncomplete => "SCENARIO_RUN_INCOMPLETE",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",

@@ -83,6 +83,7 @@ mod stat_grounded_eval;
 #[cfg(feature = "decide")]
 mod stat_decision_reads;
 mod stat_harness_adoption;
+mod stat_lifecycle_record;
 #[cfg(feature = "decide")]
 mod stat_harness_contrast;
 #[cfg(feature = "decide")]

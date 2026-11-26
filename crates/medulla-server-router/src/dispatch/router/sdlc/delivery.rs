@@ -21,9 +21,10 @@ use medulla_source_types::delivery::{
     decode_delivery, AssignmentState, Delivery, DeliveryAnswer, DeliveryAssignment,
     DeliveryFeedbackReceipt, DeliveryListAnswer, DeliveryListEntry, DeliveryListRequest,
     DeliveryOpenAnswer, DeliveryOpenRequest, DeliveryRef, DeliveryReportWrite,
-    DeliveryRetryRequest, MandateFacts, ScmFeedbackEvent, DELIVERY_NOT_FOUND,
+    DeliveryRetryRequest, MandateFacts, ScmFeedbackEvent, WouldDispatch, DELIVERY_NOT_FOUND,
     DELIVERY_RECORD_PROPERTY, DELIVERY_SCHEMA_VERSION, DELIVERY_TYPE,
 };
+use medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordStored;
 use medulla_source_types::lifecycle::{DefectIntake, FileDefectRequest};
 use medulla_protocol_types::result_contract::ingestion::{
     DeliveryFeedback as DeliveryFeedbackResult, DeliveryList as DeliveryListResult,
@@ -35,7 +36,36 @@ use medulla_protocol_types::result_contract::ingestion::{
 const MAX_DELIVERIES_READ: usize = 100_000;
 const FEEDBACK_EVENT_TYPE: &str = "FeedbackEvent";
 const CONNECTOR_TYPE: &str = "Connector";
-const WOULD_DISPATCH_TYPE: &str = "WouldDispatchDecision";
+
+/// Commit one would-dispatch decision through `DecisionLog`, the one decision mechanism. The
+/// caller's verified context decides whether the log write is admitted.
+async fn commit_would_dispatch(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    record: WouldDispatch,
+) -> Result<LifecycleRecordStored, String> {
+    use medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordWrite;
+    use medulla_decision_types::decision::statistical::log::DecisionLogOp;
+    let response = medulla_h_decide::decide::handle_decision_log(
+        state,
+        target.req_id,
+        target.verified,
+        DecisionLogOp::LifecycleRecord {
+            tenant_id: target.verified.tenant().to_owned(),
+            record: LifecycleRecordWrite::WouldDispatch { record },
+        },
+    )
+    .await;
+    if let Some(refusal) = response.refusal_text() {
+        return Err(refusal);
+    }
+    match response.result {
+        Some(medulla_protocol_types::protocol::ResultPayload::Json(value)) => {
+            serde_json::from_value(value).map_err(|error| error.to_string())
+        }
+        _ => Err("INVALID_ARGUMENT: the decision log answered no stored record".to_string()),
+    }
+}
 
 fn require_tenant(target: &SdlcTarget<'_>) -> Result<(), String> {
     if target.verified.tenant().trim().is_empty() {
@@ -191,27 +221,13 @@ pub(super) async fn open(
                 })
             }
             DispatchOutcome::WouldDispatch(record) => {
-                let id = format!(
-                    "would_dispatch:{}",
-                    &medulla_source_types::lifecycle::sha256_hex(key.as_bytes())[..32]
-                );
-                let mut properties = Map::new();
-                properties.insert("type".into(), WOULD_DISPATCH_TYPE.into());
-                properties.insert(
-                    "record".into(),
-                    serde_json::to_string(&record).map_err(|e| e.to_string())?.into(),
-                );
-                stamp(&mut properties, &target);
-                commit(
-                    state,
-                    &target,
-                    vec![json!({"op": "upsert_node", "id": id, "properties": properties})],
-                )
-                .await?;
+                // The one decision mechanism (MEDULLA-SDLC-R019.4): the would-dispatch
+                // decision is a record of `DecisionLog`, not a node of a second log.
+                let stored = commit_would_dispatch(state, &target, record.clone()).await?;
                 Ok(DeliveryOpenAnswer {
                     delivery: None,
                     would_dispatch: Some(record),
-                    reopened: false,
+                    reopened: stored.replayed,
                 })
             }
         }

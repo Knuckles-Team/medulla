@@ -631,6 +631,7 @@ pub const DELIVERY_RECORD_PROPERTY: &str = "delivery_record";
 
 /// What an unprompted slice recorded in place of a run (R019.4).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 #[serde(deny_unknown_fields)]
 pub struct WouldDispatch {
     pub slice_root: String,

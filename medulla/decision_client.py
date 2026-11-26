@@ -831,6 +831,32 @@ def pointer_op(tenant_id: str, pointer_key: str) -> dict[str, Any]:
     return {"op": "pointer", "tenant_id": tenant_id, "pointer_key": pointer_key}
 
 
+def lifecycle_record_op(
+    tenant_id: str, record_kind: str, record: dict[str, Any]
+) -> dict[str, Any]:
+    """Commit one lifecycle record (SDLC R013, R019.4): a ``scenario_run`` of a delivery
+    phase or a ``would_dispatch`` decision. A repeat of an identical record replays."""
+    return {
+        "op": "lifecycle_record",
+        "tenant_id": tenant_id,
+        "record": {"record_kind": record_kind, "record": dict(record)},
+    }
+
+
+def lifecycle_records_op(
+    tenant_id: str,
+    record_kind: str,
+    phase: str | None = None,
+    branch: str | None = None,
+) -> dict[str, Any]:
+    """List the stored lifecycle records of one kind, newest first (SDLC R013)."""
+    return {
+        "op": "lifecycle_records",
+        "tenant_id": tenant_id,
+        "query": {"record_kind": record_kind, "phase": phase, "branch": branch},
+    }
+
+
 def list_op(
     tenant_id: str,
     *,

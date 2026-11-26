@@ -248,6 +248,8 @@ method_results! {
     DecisionLogHarnessAdoption(DecisionLog / "harness_adoption") => Raw<medulla_decision_types::decision::statistical::log::HarnessAdoptionStored>;
     DecisionLogHarnessLessons(DecisionLog / "harness_lessons") => Raw<medulla_decision_types::decision::statistical::log::HarnessLessonsFound>;
     DecisionLogPointer(DecisionLog / "pointer") => Raw<medulla_decision_outcome_types::decision::promotion::ChampionPointer>;
+    DecisionLogLifecycleRecord(DecisionLog / "lifecycle_record") => Raw<medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordStored>;
+    DecisionLogLifecycleRecords(DecisionLog / "lifecycle_records") => Raw<medulla_decision_types::decision::statistical::lifecycle_record::LifecycleRecordsFound>;
     DecisionLogList(DecisionLog / "list") => Raw<medulla_decision_types::decision::statistical::log::DecisionLogList>;
     DecisionLogProvenance(DecisionLog / "provenance") => Raw<medulla_decision_types::decision::statistical::log::DecisionProvenance>;
     DecisionLogWhyNot(DecisionLog / "why_not") => Raw<medulla_decision_types::decision::statistical::log::DecisionWhyNot>;

@@ -530,6 +530,19 @@ pub enum DecisionLogOp {
         tenant_id: String,
         pointer_key: String,
     },
+    /// Commit one lifecycle record (MEDULLA-SDLC-R013, R019.4): a `would_dispatch` decision of
+    /// the delivery loop or a `ScenarioRun` of a delivery phase. The one write authority of
+    /// both; a repeat of an identical record is a replay.
+    LifecycleRecord {
+        tenant_id: String,
+        record: super::lifecycle_record::LifecycleRecordWrite,
+    },
+    /// List the stored lifecycle records of one kind, newest first (MEDULLA-SDLC-R013).
+    /// Reads the index `LifecycleRecord` writes; commits nothing.
+    LifecycleRecords {
+        tenant_id: String,
+        query: super::lifecycle_record::LifecycleRecordQuery,
+    },
     /// List the tenant's committed records, newest first, one page at a time
     /// (MEDULLA-DECISION-ENGINE-R870.1). Reads the record index `Get` reads;
     /// writes nothing.
@@ -864,6 +877,7 @@ impl DecisionLogOp {
             | Self::HarnessLessons { .. }
             | Self::Pointer { .. }
             | Self::List { .. }
+            | Self::LifecycleRecords { .. }
             | Self::Provenance { .. }
             | Self::WhyNot { .. } => LogOpClass::Read,
             Self::Writeback { computation, .. } => {
@@ -879,7 +893,9 @@ impl DecisionLogOp {
             | Self::ProposeRule { .. }
             | Self::ApproveRule { .. }
             | Self::RevokeRule { .. } => LogOpClass::Govern,
-            Self::RunRecord { .. } | Self::HarnessAdoption { .. } => LogOpClass::Write,
+            Self::RunRecord { .. }
+            | Self::HarnessAdoption { .. }
+            | Self::LifecycleRecord { .. } => LogOpClass::Write,
         }
     }
 
@@ -915,6 +931,8 @@ impl DecisionLogOp {
             | Self::HarnessAdoption { tenant_id, .. }
             | Self::HarnessLessons { tenant_id, .. }
             | Self::Pointer { tenant_id, .. }
+            | Self::LifecycleRecord { tenant_id, .. }
+            | Self::LifecycleRecords { tenant_id, .. }
             | Self::List { tenant_id, .. }
             | Self::Provenance { tenant_id, .. }
             | Self::WhyNot { tenant_id, .. } => tenant_id,

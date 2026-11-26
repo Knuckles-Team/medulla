@@ -65,6 +65,7 @@ medulla-text = { path = "../medulla-text" }
 medulla-sql = { path = "../medulla-sql" }
 medulla-tables = { path = "../medulla-tables" }
 medulla-work-types = { path = "../medulla-work-types" }
+medulla-source-types = { path = "../medulla-source-types" }
 medulla-decision-outcome-types = { path = "../medulla-decision-outcome-types" }
 medulla-persistence-records = { path = "../medulla-persistence-records" }
 medulla-storage = { path = "../medulla-storage", optional = true }
@@ -127,7 +128,6 @@ medulla-h-decide = { path = ".", features = ["decide", "security", "nl-query", "
 medulla-shacl = { path = "../medulla-shacl" }
 medulla-h-graph = { path = "../medulla-h-graph", features = ["query", "decide"] }
 medulla-h-ingest = { path = "../medulla-h-ingest" }
-medulla-source-types = { path = "../medulla-source-types" }
 medulla-agent-types = { path = "../medulla-agent-types", features = ["test-support"] }
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-decision-types = { path = "../medulla-decision-types", features = ["test-support"] }

@@ -24,6 +24,7 @@ pub mod harness_config;
 pub mod head;
 pub mod ingestion_lane;
 pub mod keyed;
+pub mod lifecycle_record;
 pub mod log;
 pub mod nl;
 pub mod outcome;
