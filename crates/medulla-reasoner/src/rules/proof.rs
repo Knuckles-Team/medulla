@@ -9,7 +9,7 @@
 
 use std::collections::HashMap;
 
-pub use medulla_query_types::rdf_report::RuleProofNode;
+use medulla_query_types::rdf_report::RuleProofNode;
 
 /// A ground fact key: `(predicate, canonical-args)`.
 pub(super) type FactKey = (String, Vec<String>);

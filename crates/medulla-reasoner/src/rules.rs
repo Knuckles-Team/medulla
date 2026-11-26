@@ -89,7 +89,7 @@ mod proof;
 mod syntax;
 
 pub use owl_rules::builtin_rules;
-pub use proof::{RuleDerivations, RuleProofNode, ASSERTED_RULE, MAX_PROOF_DEPTH, MAX_PROOF_NODES};
+use proof::{RuleDerivations, ASSERTED_RULE, MAX_PROOF_DEPTH, MAX_PROOF_NODES};
 use syntax::{iri, is_meta_class, is_schema_pred, RDF_TYPE};
 pub use syntax::{Atom, RTerm, Rule, RuleSet};
 
@@ -166,7 +166,7 @@ pub fn reason_triples_bounded(
 }
 
 /// The default fixpoint bound: `knob reasoning.rule_max_steps`.
-pub use medulla_work_types::scheduler_config::DEFAULT_RULE_MAX_STEPS;
+use medulla_work_types::scheduler_config::DEFAULT_RULE_MAX_STEPS;
 
 /// Extract ABox ground facts from a triple stream: a `rdf:type` triple with a non-meta
 /// object becomes a unary class-membership fact `C(s)`; any other non-schema triple
@@ -240,7 +240,7 @@ impl RuleReasonRequest {
 }
 
 /// The rule-reasoning response and its facts -- the `RunRules` wire body, owned by medulla-types.
-pub use medulla_query_types::rdf_report::{RuleFact, RuleReasonResponse};
+use medulla_query_types::rdf_report::{RuleFact, RuleReasonResponse};
 
 /// Execute a [`RuleReasonRequest`]: parse the Turtle into an ontology + ABox facts,
 /// register the custom rules, run the fixpoint, and project a filtered response. This

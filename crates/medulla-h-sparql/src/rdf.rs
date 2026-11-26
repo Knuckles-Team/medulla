@@ -112,7 +112,7 @@ mod run_rules_dispatch_tests {
             Some(ResultPayload::Raw(b)) => b.clone(),
             other => panic!("expected Raw, got {other:?}"),
         };
-        let out: medulla_reasoner::rules::RuleReasonResponse =
+        let out: medulla_query_types::rdf_report::RuleReasonResponse =
             rmp_serde::from_slice(&bytes).expect("RuleReasonResponse");
         assert!(out.consistent);
         assert_eq!(out.registered_rules.len(), 1);

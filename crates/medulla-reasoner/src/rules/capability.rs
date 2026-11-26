@@ -28,9 +28,9 @@ use medulla_agent_types::{
     agent_component::ToolEffect, agent_component::ToolFactDeclarer,
 };
 
-use super::proof::RuleProofNode;
 use super::{reason_facts, Atom, RTerm, Rule, RuleSet};
 use crate::owl::Ontology;
+use medulla_query_types::rdf_report::RuleProofNode;
 
 /// Unary class of a model-profile component.
 pub const MODEL_PROFILE: &str = "eg:component/model_profile";
