@@ -316,7 +316,7 @@ fn atom(id: &str, text: &str, provenance: &str) -> KnowledgeAtom {
     }
 }
 
-// spec: MEDULLA-INGEST-WORKER-R003.21
+// spec: MEDULLA-INGEST-WORKER-R003.4
 #[test]
 fn an_atom_without_provenance_is_refused_and_no_relevant_atom_gives_an_empty_context() {
     let refused = check_atom_provenance(&atom("a1", "restart the worker", "  ")).unwrap_err();

@@ -392,6 +392,7 @@ async def _designate_position_tools(connector: str, earlier: str) -> None:
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.3")
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.4")
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.19")
+# Served ingest: the pack record carries the core provenance predicates.
 @pytest.mark.spec("MEDULLA-CQ-CONN-R084.6")
 @pytest.mark.parametrize("question", QUESTIONS)
 def test_pack_questions_end_to_end(question: str) -> None:

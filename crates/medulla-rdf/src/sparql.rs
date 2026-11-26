@@ -624,7 +624,6 @@ mod tests {
     include!("sparql/tests/filters.rs");
     include!("sparql/tests/builtins.rs");
 
-    // spec: MEDULLA-INGEST-WORKER-R003.19
     #[test]
     fn a_property_node_with_an_iri_type_projects_rdf_type_once() {
         let class = "https://knuckles-team.github.io/ontology/core#Position";

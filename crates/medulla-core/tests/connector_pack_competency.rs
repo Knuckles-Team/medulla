@@ -408,6 +408,7 @@ fn finance_algorithm_selection_query_uses_registered_terms() {
 
 // spec: MEDULLA-INGEST-WORKER-R003.19
 // spec: MEDULLA-CQ-CONN-R084.2
+// Answers the position question over records that carry the core provenance predicates.
 #[test]
 fn positions_and_applicable_risk_analyses_answer() {
     assert_answers("q2_positions_risk");

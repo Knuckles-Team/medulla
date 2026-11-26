@@ -336,6 +336,7 @@ def _sample_value(term: Term, connector: str) -> str | None:
 
 @pytest.mark.spec("MEDULLA-CQ-CONN-R089")
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.19")
+# Served ingest: each new term's record round-trips with its provenance predicates.
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.20")
 @pytest.mark.asyncio
 @pytest.mark.parametrize("term", TERMS, ids=[t.name for t in TERMS])
