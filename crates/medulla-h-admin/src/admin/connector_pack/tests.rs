@@ -47,6 +47,8 @@ mod open_metadata_sync;
 #[cfg(feature = "shacl")]
 mod outbox;
 #[cfg(all(feature = "owl", feature = "shacl"))]
+mod orphan_policy;
+#[cfg(all(feature = "owl", feature = "shacl"))]
 mod pack_source;
 mod scale;
 mod self_served_catalog;
