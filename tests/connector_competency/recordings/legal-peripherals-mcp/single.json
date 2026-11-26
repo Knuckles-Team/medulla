@@ -1,0 +1,22 @@
+{
+  "source": "legal-peripherals-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "contract": "contract-1",
+      "agreementExpiresAt": "agreementExpiresAt-1",
+      "counterparty": "counterparty-1",
+      "joinKey": "legal-peripherals.q1-key-1",
+      "id": "legal-peripherals-mcp-legal-peripherals.q1-1",
+      "label": "legal-peripherals-mcp 1"
+    },
+    {
+      "contract": "contract-2",
+      "agreementExpiresAt": "agreementExpiresAt-2",
+      "counterparty": "counterparty-2",
+      "joinKey": "legal-peripherals.q1-key-2",
+      "id": "legal-peripherals-mcp-legal-peripherals.q1-2",
+      "label": "legal-peripherals-mcp 2"
+    }
+  ]
+}

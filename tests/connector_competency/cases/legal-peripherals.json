@@ -1,0 +1,34 @@
+{
+  "connector": "legal-peripherals",
+  "rollup": "MEDULLA-CQ-CONN-R033",
+  "vocabulary_module": "core-foundation-v1.ttl",
+  "terms": [
+    "counterparty",
+    "agreementExpiresAt",
+    "hasRenewalAction"
+  ],
+  "questions": [
+    {
+      "id": "legal-peripherals.q1",
+      "kind": "single",
+      "question": "Which contracts expire within 90 days and have no renewal action recorded?",
+      "uql": "FOREIGN SCAN 'legal-peripherals-mcp'",
+      "sources": [
+        "legal-peripherals-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "legal-peripherals-mcp": "mcp_tool"
+      },
+      "columns": [
+        "contract",
+        "agreementExpiresAt",
+        "counterparty"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "legal-peripherals-mcp/single.json"
+      ]
+    }
+  ]
+}
