@@ -13,7 +13,8 @@ use medulla_decision_types::decision::record::outcome::{
     AbstainReason, DecisionRefusal, RefusalCode, RefusalOrigin,
 };
 use medulla_decision_types::decision::{
-    CandidateFacts, DecisionErrorCode, DecisionInputs, Elimination, Violation,
+    CandidateFacts, DecisionErrorCode, DecisionInputs, Elimination, PremiseClass,
+    PremiseProvenance, PremiseRef, Violation,
 };
 
 use super::AssembleError;
@@ -220,4 +221,78 @@ pub(super) fn screen_request(
         }
     }
     Ok((!screen.reasons.is_empty()).then_some(screen))
+}
+
+/// The rule a replacement satisfied, in the order [`substitutes`] checks it.
+const SUBSTITUTION_RULE: &str = "substitutes:kind=schema=capabilities>=effects<=";
+
+fn proof(candidate: &CandidateFacts, subject: String, fact: String) -> PremiseRef {
+    PremiseRef {
+        subject,
+        fact,
+        class: PremiseClass::Proof,
+        provenance: PremiseProvenance::Publisher {
+            component_id: candidate.component_id.clone(),
+            definition_digest: candidate.definition_digest.clone(),
+        },
+        trust_tier: None,
+    }
+}
+
+/// The evidence a solved assembly records for the primitives it wired
+/// (MEDULLA-DECISION-ENGINE-R036.100.4): one `primitive:<id>@<version>` premise
+/// per primitive an edge or a replacement names, with the compatibility result
+/// and both schema digests, and one premise per replacement naming the rule
+/// that allowed it. Every check passed, or the answer would be an abstention,
+/// so the result is always `compatible`. Nothing here activates a proposal: a
+/// run-trace proposal for a primitive is a draft `ProgramRevision` candidate
+/// that R805 promotes, so the composition this record names is unchanged.
+pub(super) fn premises(inputs: &DecisionInputs) -> Vec<PremiseRef> {
+    let mut named: Vec<&str> = Vec::new();
+    for edge in &inputs.request.primitive_edges {
+        named.push(&edge.producer);
+        named.push(&edge.consumer);
+    }
+    for replacement in &inputs.request.replacements {
+        named.push(&replacement.old);
+        named.push(&replacement.new);
+    }
+    named.sort_unstable();
+    named.dedup();
+    let mut out = Vec::new();
+    for id in named {
+        let Some(candidate) = inputs
+            .candidates
+            .iter()
+            .find(|candidate| candidate.component_id == id)
+        else {
+            continue;
+        };
+        let Some(contract) = &candidate.primitive else {
+            continue;
+        };
+        out.push(proof(
+            candidate,
+            format!("primitive:{}@{}", contract.primitive_id, contract.version),
+            format!(
+                "compatible;input_schema={};output_schema={}",
+                contract.input_schema_digest, contract.output_schema_digest
+            ),
+        ));
+    }
+    for replacement in &inputs.request.replacements {
+        let Some(new) = inputs
+            .candidates
+            .iter()
+            .find(|candidate| candidate.component_id == replacement.new)
+        else {
+            continue;
+        };
+        out.push(proof(
+            new,
+            format!("replacement:{}->{}", replacement.old, replacement.new),
+            format!("allowed_by={SUBSTITUTION_RULE}"),
+        ));
+    }
+    out
 }

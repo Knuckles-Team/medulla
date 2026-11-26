@@ -21,7 +21,8 @@ use medulla_decision_types::decision::primitive::{
 };
 use medulla_decision_types::decision::{
     AssemblyRequest, AssemblyRequirements, AssemblyResult, DecisionOutcome, DecisionPolicyRef,
-    LibraryCandidateScope, PrimitiveEdge, PrimitiveReplacement, ResolutionKind, Violation,
+    EvidenceClass, LibraryCandidateScope, PremiseClass, PrimitiveEdge, PrimitiveReplacement,
+    ResolutionKind, Violation,
 };
 use medulla_persistence_records::agent_component::test_component_draft;
 use medulla_persistence_records::agent_fixtures::mutation_context;
@@ -547,6 +548,70 @@ async fn primitive_refusals_abstain_with_stable_codes() {
         error.starts_with("ACCESS_DENIED"),
         "unexpected refusal {error}"
     );
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R036.100.4
+/// Verifies MEDULLA-DECISION-ENGINE-R036.100.4: a solved assembly records one proof premise per
+/// wired primitive and one per replacement, and a proposal changes no active composition.
+#[tokio::test]
+async fn primitive_premises_and_inactive_proposals() {
+    let h = harness().await;
+    seed(&h.store, None);
+    seed_primitives(&h.store);
+
+    let mut wired = request(Vec::new());
+    wired.primitive_edges = BoundedVec::new(vec![edge("p-search", "p-sink")]).unwrap();
+    wired.replacements = BoundedVec::new(vec![replacement("p-search", "r-ok")]).unwrap();
+    let result = assemble(&h, wired).await.expect("a legal wiring is decided");
+    let record = &result.record;
+    assert!(
+        matches!(record.outcome, DecisionOutcome::Solved { .. }),
+        "expected a solved assembly, got {:?}",
+        record.outcome
+    );
+    assert_eq!(record.evidence_class, EvidenceClass::Proof);
+
+    // One premise per primitive the wiring names, with both schema digests.
+    let primitives: Vec<_> = record
+        .premises
+        .iter()
+        .filter(|premise| premise.subject.starts_with("primitive:"))
+        .collect();
+    let subjects: Vec<&str> = primitives.iter().map(|p| p.subject.as_str()).collect();
+    for id in ["p-search", "p-sink", "r-ok"] {
+        assert!(
+            subjects.iter().any(|subject| subject.starts_with(&format!("primitive:{id}@"))),
+            "{id} missing from {subjects:?}"
+        );
+    }
+    let search = primitives
+        .iter()
+        .find(|p| p.subject.starts_with("primitive:p-search@"))
+        .unwrap();
+    assert!(search.fact.starts_with("compatible;"), "{}", search.fact);
+    assert!(search.fact.contains(&format!("input_schema={}", digest('a'))));
+    assert!(search.fact.contains(&format!("output_schema={}", digest('b'))));
+    assert!(primitives.iter().all(|p| p.class == PremiseClass::Proof));
+
+    // The receipt names the replacement and the rule that allowed it.
+    let replaced = record
+        .premises
+        .iter()
+        .find(|premise| premise.subject == "replacement:p-search->r-ok")
+        .expect("the replacement premise");
+    assert!(replaced.fact.starts_with("allowed_by=substitutes:"), "{}", replaced.fact);
+
+    // A proposal is not an activation: the same wiring without the replacement
+    // composes the same graph.
+    let mut plain = request(Vec::new());
+    plain.primitive_edges = BoundedVec::new(vec![edge("p-search", "p-sink")]).unwrap();
+    let unproposed = assemble(&h, plain).await.expect("the wiring alone is decided");
+    let (DecisionOutcome::Solved { graph_digest: with, .. }, DecisionOutcome::Solved { graph_digest: without, .. }) =
+        (&record.outcome, &unproposed.record.outcome)
+    else {
+        panic!("both assemblies solve");
+    };
+    assert_eq!(with, without, "a replacement proposal changes no active composition");
 }
 
 const WEB: &str = "eg:capability/retrieval/web-search";
