@@ -11,7 +11,7 @@ use super::*;
 /// Drain, lower and commit one served batch of lineage events.
 pub async fn route_lineage_ingest(
     ctx: GraphOpRouting<'_>,
-    events: Vec<medulla_h_ingest::lineage::LineageEvent>,
+    events: Vec<medulla_catalog_types::lineage::LineageEvent>,
 ) -> Response {
     use medulla_h_ingest::lineage;
     let core = ctx.core;
@@ -45,7 +45,7 @@ pub async fn route_lineage_ingest(
     }
 }
 
-fn respond(req_id: u64, receipt: medulla_h_ingest::lineage::LineageIngestReceipt) -> Response {
+fn respond(req_id: u64, receipt: medulla_catalog_types::lineage::LineageIngestReceipt) -> Response {
     Response::ok(
         req_id,
         ResultPayload::of::<medulla_protocol_types::result_contract::ingestion::LineageIngest>(
@@ -58,12 +58,12 @@ fn respond(req_id: u64, receipt: medulla_h_ingest::lineage::LineageIngestReceipt
 /// caller's own held catalog of the event's `catalog_source` (MEDULLA-UNIFIED-DATA-PLANE-R763.3).
 async fn lower(
     ctx: &GraphOpRouting<'_>,
-    events: Vec<medulla_h_ingest::lineage::LineageEvent>,
+    events: Vec<medulla_catalog_types::lineage::LineageEvent>,
     known_edge: &(dyn Fn(&str, &str) -> bool + Sync),
 ) -> Result<
     (
         medulla_h_ingest::repository_index::IndexWriteSet,
-        medulla_h_ingest::lineage::LineageIngestReceipt,
+        medulla_catalog_types::lineage::LineageIngestReceipt,
     ),
     String,
 > {
@@ -79,7 +79,7 @@ async fn lower(
     };
     if !events.iter().any(|event| event.sql_text.is_some()) {
         let none = ColumnLineageSeam {
-            derive: &|_, _, _, _| Ok(lineage::LineageResult::default()),
+            derive: &|_, _, _, _| Ok(medulla_catalog_types::lineage::LineageResult::default()),
             known_column_edge: &known_column_edge,
         };
         return lineage::handle_lineage_ingest(events, known_edge, &none);
@@ -122,7 +122,7 @@ async fn lower(
         #[cfg(feature = "federation")]
         seam.derive_column_lineage(sql, dialect, &catalog, target)
             .map_err(|error| match error {
-                lineage::LineageError::Parse(ref detail)
+                medulla_catalog_types::lineage::LineageError::Parse(ref detail)
                     if detail.starts_with("ENGINE_UNAVAILABLE") =>
                 {
                     ColumnDeriveFailure::Refused(detail.clone())

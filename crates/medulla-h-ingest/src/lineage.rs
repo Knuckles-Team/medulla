@@ -16,7 +16,7 @@ use medulla_catalog_types::lineage::{
     QuarantineReason, QuarantinedLineageEvent, COLUMN_DERIVES_FROM, COLUMN_LABEL, DATASET_LABEL,
     DERIVES_RELATIONSHIP, LINEAGE_EVENT_MALFORMED, QUARANTINED_LABEL,
 };
-pub use medulla_catalog_types::lineage::{
+use medulla_catalog_types::lineage::{
     LineageDialect, LineageError, LineageEvent, LineageIngestReceipt, LineageResult,
 };
 use medulla_protocol_types::protocol::Method;
