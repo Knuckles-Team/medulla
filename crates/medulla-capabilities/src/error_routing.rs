@@ -1813,6 +1813,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DEFECT_UNVERIFIED",
         ],
     ),
+    // MEDULLA-SDLC-R005.3 and R005.4: the served status refusals.
+    (
+        "SpecStatus",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "INVALID_ARGUMENT",
+            "SPEC_STATUS_REV_UNKNOWN",
+            "SPEC_TREE_ABSENT",
+        ],
+    ),
     (
         "GetDefect",
         &[

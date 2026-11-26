@@ -19226,6 +19226,28 @@ class MedullaClient:
             raise TypeError("SpecQuestion returned a non-object result")
         return result
 
+    async def spec_status(
+        self, repo: str, rev: str, graph: str, spec_id: str | None = None
+    ) -> dict[str, Any]:
+        """Read the derived state of every requirement row of ``repo`` at the changeset
+        ``rev`` (MEDULLA-SDLC-R005.3).
+
+        The answer holds ``repo``, ``rev`` and ``rows``; each row names its ``id``,
+        ``state`` (``SPECIFIED``, ``LANDED`` or ``VERIFIED``), ``landed_by``,
+        ``verified_by`` and ``withdrawn``. ``spec_id`` keeps only the rows of that
+        spec. A ``rev`` the repository chain does not hold refuses
+        ``SPEC_STATUS_REV_UNKNOWN``; a repository with no ingested spec tree, or one
+        of another tenant, refuses ``SPEC_TREE_ABSENT``.
+        """
+        result = await self._send(
+            "SpecStatus",
+            {"repo": repo, "rev": rev, "spec_id": spec_id, "graph": graph},
+            None,
+        )
+        if not isinstance(result, dict):
+            raise TypeError("SpecStatus returned a non-object result")
+        return result
+
     async def file_defect(self, request: dict[str, Any]) -> dict[str, Any]:
         """File one symptom against the defects of a repository (MEDULLA-SDLC-R003.3).
 

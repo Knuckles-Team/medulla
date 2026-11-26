@@ -979,15 +979,18 @@ pub fn cite_requirements(
     let (mut nodes, mut links) = (Vec::new(), Vec::new());
     for changeset in changesets {
         let source = changeset_node_id(repo, &changeset.id);
-        nodes.push(node(
-            &source,
-            serde_json::json!({
-                "type": "Changeset",
-                "repo": repo,
-                "changeset_id": changeset.id,
-                "created_at": changeset.created_at.to_string(),
-            }),
-        ));
+        let mut properties = serde_json::json!({
+            "type": "Changeset",
+            "repo": repo,
+            "changeset_id": changeset.id,
+            "created_at": changeset.created_at.to_string(),
+        });
+        // The ids a `Spec-Withdraw` trailer withdrew, comma-joined: the served `SpecStatus`
+        // replays them (MEDULLA-SDLC-R005.3).
+        if !changeset.trailers.withdraw.is_empty() {
+            properties["withdraws"] = changeset.trailers.withdraw.join(",").into();
+        }
+        nodes.push(node(&source, properties));
         for row_id in &changeset.trailers.spec_ids {
             let target = requirement_node_id(repo, row_id);
             if !known.contains(&target) {

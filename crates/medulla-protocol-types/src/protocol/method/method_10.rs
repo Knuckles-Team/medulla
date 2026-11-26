@@ -478,6 +478,18 @@ $($variants)*
         subject: Option<String>,
         graph: String,
     },
+    /// Read the derived state of every requirement row of `repo` at the changeset `rev`
+    /// (MEDULLA-SDLC-R005.3), from the `:Requirement`, changeset and test-binding records
+    /// the caller can see in `graph`. `spec_id` keeps only the rows of that spec. A `rev` the
+    /// repository chain does not hold refuses `SPEC_STATUS_REV_UNKNOWN`; a repository with no
+    /// ingested spec tree refuses `SPEC_TREE_ABSENT`. Reads only.
+    SpecStatus {
+        repo: String,
+        rev: String,
+        #[serde(default)]
+        spec_id: Option<String>,
+        graph: String,
+    },
     /// Record a reviewer's approval or rejection of one open proposal
     /// (MEDULLA-SDLC-R017.6). Refuses `PROPOSAL_NOT_FOUND` and `PROPOSAL_NOT_OPEN`.
     ProposalDecide {

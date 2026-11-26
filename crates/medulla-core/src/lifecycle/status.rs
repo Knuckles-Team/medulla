@@ -10,7 +10,8 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
-use medulla_source_types::source_changeset::Changeset;
+use medulla_source_types::lifecycle::LifecycleRefusal;
+use medulla_source_types::source_changeset::{Changeset, Trailers};
 use medulla_source_types::{
     lifecycle::SpecRowState, lifecycle::SpecState, lifecycle::SpecStatusAnswer,
     lifecycle::TaskRowState, lifecycle::TaskState, lifecycle::TaskStatusAnswer,
@@ -143,6 +144,80 @@ pub fn derive_spec_status(
         rev: rev.to_owned(),
         rows: ids.iter().map(|id| rows[id].clone()).collect(),
     }
+}
+
+/// One changeset of the default-branch chain as the graph holds it: the requirement row ids
+/// its `citesRequirement` edges name and the ids its `Spec-Withdraw` trailer withdrew.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct StatusChangeset {
+    pub id: String,
+    pub created_at: u64,
+    pub cites: Vec<String>,
+    pub withdraws: Vec<String>,
+}
+
+/// What a served `SpecStatus` read of one repository saw in the tenant-visible store
+/// (MEDULLA-SDLC-R005.3): its row ids, its default-branch changesets and its test bindings.
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
+pub struct SpecStatusView {
+    pub rows: Vec<String>,
+    pub changesets: Vec<StatusChangeset>,
+    pub bindings: Vec<TestBinding>,
+}
+
+/// Answer one `SpecStatus` request from a pre-read view (MEDULLA-SDLC-R005.3, R005.4).
+///
+/// A view with no rows is a repository with no ingested spec tree and refuses
+/// `SPEC_TREE_ABSENT`; a `rev` that no changeset of the view carries refuses
+/// `SPEC_STATUS_REV_UNKNOWN`. The chain replayed is every changeset up to and including
+/// `rev`, ordered by `created_at` then id. Every row is derived through
+/// [`derive_spec_status`] first and `spec_id` then keeps the rows named `<spec_id>-R...`,
+/// so a filtered answer reports the same state the full answer does.
+pub fn answer_spec_status(
+    repo: &str,
+    rev: &str,
+    spec_id: Option<&str>,
+    view: &SpecStatusView,
+) -> Result<SpecStatusAnswer, LifecycleRefusal> {
+    if view.rows.is_empty() {
+        return Err(LifecycleRefusal::SpecTreeAbsent(repo.to_owned()));
+    }
+    let mut ordered: Vec<&StatusChangeset> = view.changesets.iter().collect();
+    ordered.sort_by(|a, b| (a.created_at, &a.id).cmp(&(b.created_at, &b.id)));
+    let Some(at) = ordered.iter().position(|changeset| changeset.id == rev) else {
+        return Err(LifecycleRefusal::SpecStatusRevUnknown(format!(
+            "{rev} is not a changeset of {repo}"
+        )));
+    };
+    let chain: Vec<Changeset> = ordered[..=at]
+        .iter()
+        .map(|changeset| Changeset {
+            id: changeset.id.clone(),
+            repo: repo.to_owned(),
+            parents: Vec::new(),
+            author_principal: String::new(),
+            message: String::new(),
+            changed_paths: Vec::new(),
+            created_at: changeset.created_at,
+            trailers: Trailers {
+                spec_ids: changeset.cites.clone(),
+                withdraw: changeset.withdraws.clone(),
+                ..Trailers::default()
+            },
+            agent_identity: None,
+            run_trace_id: None,
+            git: None,
+        })
+        .collect();
+    let mut ids = view.rows.clone();
+    ids.sort();
+    ids.dedup();
+    let mut answer = derive_spec_status(repo, rev, &ids, &chain, &view.bindings);
+    if let Some(spec) = spec_id {
+        let prefix = format!("{spec}-R");
+        answer.rows.retain(|row| row.id.starts_with(&prefix));
+    }
+    Ok(answer)
 }
 
 /// One Task record as the parser of R014.1 reads it: the T-id (or line

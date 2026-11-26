@@ -141,6 +141,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("COMPETENCY_SUBJECT_UNKNOWN"),
     RefusalCode::new("DEFECT_TRANSITION_ILLEGAL"),
     RefusalCode::new("DEFECT_UNVERIFIED"),
+    RefusalCode::new("SPEC_STATUS_REV_UNKNOWN"),
+    RefusalCode::new("SPEC_TREE_ABSENT"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -200,6 +202,10 @@ pub enum LifecycleRefusal {
     InvalidArgument(String),
     #[error("MODE_APPROVAL_REQUIRED: {0}")]
     ModeApprovalRequired(String),
+    #[error("SPEC_STATUS_REV_UNKNOWN: {0}")]
+    SpecStatusRevUnknown(String),
+    #[error("SPEC_TREE_ABSENT: {0}")]
+    SpecTreeAbsent(String),
 }
 
 impl LifecycleRefusal {
@@ -233,6 +239,8 @@ impl LifecycleRefusal {
             Self::ParameterInvalid(_) => "PARAMETER_INVALID",
             Self::InvalidArgument(_) => "INVALID_ARGUMENT",
             Self::ModeApprovalRequired(_) => "MODE_APPROVAL_REQUIRED",
+            Self::SpecStatusRevUnknown(_) => "SPEC_STATUS_REV_UNKNOWN",
+            Self::SpecTreeAbsent(_) => "SPEC_TREE_ABSENT",
         }
     }
 }
@@ -1336,6 +1344,42 @@ pub struct SpecStatusAnswer {
     pub repo: String,
     pub rev: String,
     pub rows: Vec<SpecRowState>,
+}
+
+/// The longest `repo`, `rev` or `spec_id` a `SpecStatus` request names.
+pub const MAX_SPEC_STATUS_FIELD_BYTES: usize = 512;
+
+/// A `SpecStatus` request (MEDULLA-SDLC-R005.3): the repository, the changeset id the answer
+/// is derived at, and an optional spec id that keeps only the rows of that spec
+/// (`<spec_id>-R...`).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct SpecStatusRequest {
+    pub repo: String,
+    pub rev: String,
+    #[serde(default)]
+    pub spec_id: Option<String>,
+}
+
+/// Check one `SpecStatus` request's bounds before the handler reads the graph; the served
+/// method and every in-process caller go through this one check.
+pub fn handle_spec_status(request: SpecStatusRequest) -> Result<SpecStatusRequest, LifecycleRefusal> {
+    let blank = |value: &str| value.trim().is_empty();
+    let over = |value: &str| value.len() > MAX_SPEC_STATUS_FIELD_BYTES;
+    if blank(&request.repo) || blank(&request.rev) {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a status request names its repo and its rev".to_owned(),
+        ));
+    }
+    if over(&request.repo)
+        || over(&request.rev)
+        || request.spec_id.as_deref().is_some_and(|id| blank(id) || over(id))
+    {
+        return Err(LifecycleRefusal::InvalidArgument(
+            "a status request field is blank or over its bound".to_owned(),
+        ));
+    }
+    Ok(request)
 }
 
 /// The derived state of one task line.

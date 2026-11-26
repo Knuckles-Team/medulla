@@ -6,7 +6,7 @@ use std::sync::Arc;
 use medulla_graph_core::graph::GraphCore;
 use medulla_protocol_types::result_contract::ingestion::{
     GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
-    FileDefect as FileDefectResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
+    FileDefect as FileDefectResult, SpecStatus as SpecStatusResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
     RecordGateVerdict as RecordGateVerdictResult, RecordRelease as RecordReleaseResult,
 };
@@ -126,6 +126,18 @@ pub async fn dispatch_sdlc_methods(
                 ..target
             };
             dispatch_boxed(spec_question(state, target, question, subject)).await
+        }
+        Method::SpecStatus {
+            repo,
+            rev,
+            spec_id,
+            graph,
+        } => {
+            let target = SdlcTarget {
+                graph: &graph,
+                ..target
+            };
+            dispatch_boxed(spec_status(state, target, repo, rev, spec_id)).await
         }
         Method::FileDefect { request } => {
             dispatch_boxed(file_defect(state, target, request)).await
@@ -334,6 +346,53 @@ async fn spec_question(
     }
     .await;
     typed_response::<SpecQuestionResult>(target.req_id, result)
+}
+
+/// `SpecStatus` (MEDULLA-SDLC-R005.3, R005.4): read the requirement rows, changesets and test
+/// bindings of one repository that the caller can see, then derive each row's state through
+/// `derive_spec_status`. A refusal returns no row and writes nothing.
+async fn spec_status(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    repo: String,
+    rev: String,
+    spec_id: Option<String>,
+) -> Response {
+    let result = async {
+        let tenant = target.verified.tenant();
+        if tenant.trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        let request = medulla_source_types::lifecycle::handle_spec_status(
+            medulla_source_types::lifecycle::SpecStatusRequest { repo, rev, spec_id },
+        )
+        .map_err(|e| e.to_string())?;
+        ensure_graph_resident(state, target.graph).await;
+        let (core, authority) = {
+            let current = timed_read(state).await;
+            authorized_graph_read(
+                &current,
+                target.graph,
+                target.verified,
+                &format!("GRAPH_NOT_FOUND: {}", target.graph),
+            )?
+        };
+        let view = medulla_h_ingest::lifecycle_status::spec_status_view(
+            &core,
+            tenant,
+            &request.repo,
+            &|blob: &[u8], schema: bool| authority.can_see_node(blob, schema),
+        );
+        medulla_core::lifecycle::status::answer_spec_status(
+            &request.repo,
+            &request.rev,
+            request.spec_id.as_deref(),
+            &view,
+        )
+        .map_err(|e| e.to_string())
+    }
+    .await;
+    typed_response::<SpecStatusResult>(target.req_id, result)
 }
 
 /// The visible records of the spec artifact types and the typed edges among them.

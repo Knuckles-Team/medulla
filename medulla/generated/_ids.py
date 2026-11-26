@@ -13,6 +13,7 @@ METHOD_IDS = frozenset(
         "ProposalPut",
         "ProposalList",
         "SpecQuestion",
+        "SpecStatus",
         "LandingPolicyPut",
         "FileDefect",
         "TransitionDefect",

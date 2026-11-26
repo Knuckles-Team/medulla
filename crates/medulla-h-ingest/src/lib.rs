@@ -73,6 +73,12 @@ pub mod gate_verdict;
 /// Defect intake: a symptom lands on the defect of its signature (MEDULLA-SDLC-R003.3).
 pub mod defect_intake;
 
+/// The graph read of a served `SpecStatus` (MEDULLA-SDLC-R005.3).
+pub mod lifecycle_status;
+
+#[cfg(test)]
+mod lifecycle_tests;
+
 /// The history index written with an accepted changeset and the path-history
 /// read (MEDULLA-SCM-R005).
 #[cfg(feature = "blob")]
