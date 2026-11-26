@@ -11575,6 +11575,60 @@ class LearningRecordedCatalogEncoder(BaseModel):
     recorded: Literal["catalog_encoder"]
 
 
+class NoteView(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    applied: bool
+    archived: bool
+    conflict: bool
+    note_id: str
+    relevance_q4: Annotated[int, Field(ge=0, le=10000)]
+    revision: Annotated[int, Field(ge=0)]
+    stale: bool
+
+
+class SessionNoteBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    content: str
+    input_digest: Digest256
+    note_id: str
+    output_digest: Digest256
+    run_id: str
+    schema_version: Annotated[int, Field(ge=0)]
+    session_id: str
+    source_revision: Annotated[int, Field(ge=0)]
+    task_id: str
+    user_id: str
+
+
+class SessionNoteStored(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    note_id: str
+    record_digest: str
+    run_receipt_digest: str
+    stored: bool
+
+
+class LearningWriteRecordSessionNote(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    note: SessionNoteBody
+    write: Literal["record_session_note"]
+
+
+class LearningRecordedSessionNote(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    note_id: str
+    record_digest: str
+    recorded: Literal["session_note"]
+    run_receipt_digest: str
+    stored: bool
+
+
 LearningRecorded = Annotated[
     LearningRecordedOutcome
     | LearningRecordedFitted
@@ -11582,6 +11636,7 @@ LearningRecorded = Annotated[
     | LearningRecordedPointer
     | LearningRecordedRollouts
     | LearningRecordedCatalogEncoder
+    | LearningRecordedSessionNote
     | LearningRecordedRun
     | LearningRecordedMonitored
     | LearningRecordedCalibration
@@ -11845,7 +11900,8 @@ LearningWrite = Annotated[
     | LearningWriteRecordFeedback
     | LearningWriteRecordRollouts
     | LearningWriteFitCalibration
-    | LearningWriteFitCatalogEncoder,
+    | LearningWriteFitCatalogEncoder
+    | LearningWriteRecordSessionNote,
     Field(discriminator="write"),
 ]
 
@@ -39587,9 +39643,12 @@ class MemoryRecallRequest(BaseModel):
     as_of_ms: int | None = None
     budget: Annotated[int, Field(ge=0)]
     document_set_ids: list[str] = Field(default_factory=list)
+    include_archived: bool = False
     include_media: bool = False
     include_plan: bool = False
     keywords: list[str] = Field(default_factory=list)
+    min_relevance: float | None = None
+    current_revision: Annotated[int, Field(ge=0)] | None = None
     previous_manifest_digest: str | None = None
     prime_session: str | None = None
     query_embedding: list[float] = Field(default_factory=list)
@@ -39652,6 +39711,8 @@ class MemoryRecallResult(BaseModel):
     drift: MemoryDriftReport | None = None
     hits: list[MemoryHit]
     mementos: list[Memento] = Field(default_factory=list)
+    note_premises: list[str] = Field(default_factory=list)
+    notes: list[NoteView] = Field(default_factory=list)
     plan: ConsolidationPlan | None = None
     plan_digest: str
     tokens_used: Annotated[int, Field(ge=0)]
@@ -40914,6 +40975,7 @@ class RunCreditReceipt(BaseModel):
     premises: Annotated[list[str], Field(max_length=4)]
     receipt_digest: str
     run_id: str
+    success: bool | None = None
     steps: Annotated[list[StepCredit], Field(max_length=1024)] = Field(
         default_factory=list
     )
@@ -44775,6 +44837,7 @@ __all__ = [
     "LeafProofInfeasibleBody",
     "LearningRecorded",
     "LearningRecordedCatalogEncoder",
+    "LearningRecordedSessionNote",
     "LearningRecordedFitted",
     "LearningRecordedGeneration",
     "LearningRecordedOutcome",
@@ -44785,6 +44848,7 @@ __all__ = [
     "LearningWriteEvaluateGeneration",
     "LearningWriteFitAdapter",
     "LearningWriteFitCatalogEncoder",
+    "LearningWriteRecordSessionNote",
     "LearningWriteMovePointer",
     "LearningWriteRecordOutcome",
     "LearningWriteRecordRollouts",
@@ -46931,7 +46995,10 @@ __all__ = [
     "SemanticStageTransition",
     "SemanticVector",
     "SemanticVectorMetric",
+    "NoteView",
     "SearchStateEvidence",
+    "SessionNoteBody",
+    "SessionNoteStored",
     "SequenceMiningResult",
     "SequenceSource",
     "SequentialPatternRow",

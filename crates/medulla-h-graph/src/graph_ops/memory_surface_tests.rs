@@ -90,6 +90,9 @@ fn recall_request(embedding: Vec<f32>, keywords: &[&str], budget: u32) -> Memory
         include_media: false,
         previous_manifest_digest: None,
         document_set_ids: Vec::new(),
+        min_relevance: None,
+        include_archived: false,
+        current_revision: None,
     }
 }
 

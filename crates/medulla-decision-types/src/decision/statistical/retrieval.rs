@@ -397,6 +397,12 @@ pub enum LearningWrite {
     /// nodes of the graph `catalog_ref` names, as the caller may see them
     /// (MEDULLA-DECISION-ENGINE-R175.8).
     FitCatalogEncoder { catalog_ref: String },
+    /// Store one session note of a successful run in `graph`, recalled by
+    /// `MemoryRecall` (MEDULLA-DECISION-ENGINE-R150.3).
+    RecordSessionNote {
+        graph: String,
+        note: Box<medulla_work_types::memory::SessionNoteBody>,
+    },
     /// Move a governed pointer.
     MovePointer {
         pointer: PointerRef,
@@ -413,6 +419,7 @@ impl LearningWrite {
             | Self::RunOutcome { .. }
             | Self::RecordFeedback { .. }
             | Self::PackageRun { .. }
+            | Self::RecordSessionNote { .. }
             | Self::RecordRollouts { .. } => LogOpClass::Write,
             Self::FitAdapter { .. }
             | Self::MonitorAdapter { .. }
@@ -463,6 +470,8 @@ pub enum LearningRecorded {
     Rollouts(Box<crate::decision::held_out::HeldOutEvidence>),
     /// The encoder a `FitCatalogEncoder` write stored.
     CatalogEncoder(Box<crate::decision::item_recommendation::CatalogEncoderFitted>),
+    /// The session note a `RecordSessionNote` write stored.
+    SessionNote(Box<medulla_work_types::memory::SessionNoteStored>),
 }
 
 #[cfg(test)]

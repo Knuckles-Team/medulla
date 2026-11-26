@@ -40,8 +40,10 @@ use medulla_work_types::memory::{
     MemoryDriftReport, MemoryExportManifest, MemoryExportRequest, MemoryExportResult, MemoryHit, MemoryRecallRequest,
     MemoryRecallResult, MemoryRecord, MemoryRememberRequest, MemoryRememberResult, MemoryTier,
     MEMORY_ENTRY_TOO_LARGE, MEMORY_RECORD_SCHEMA_VERSION, MEMORY_SUPPORT_BELOW_THRESHOLD,
-    MEMORY_TENANT_QUOTA_EXCEEDED,
+    MEMORY_TENANT_QUOTA_EXCEEDED, NOTE_RELEVANCE_OUT_OF_RANGE, NOTE_UNAUTHORIZED,
 };
+use medulla_decision_stats::decision::session_note::{annotate_notes_with, NoteKnobs, StoredNote};
+use medulla_work_types::memory::{MemoryKind, NoteView, SessionNoteBody};
 use sha2::{Digest, Sha256};
 
 const TENANT_KEY: &str = "tenant_scope";
@@ -726,6 +728,166 @@ fn raise_by_derivations(
     }
 }
 
+/// The graph writes one admitted remember makes, for a caller that commits them itself
+/// (MEDULLA-DECISION-ENGINE-R150.3): the record batch, then its embedding. An identical
+/// record already stored writes nothing.
+pub fn stage_remember(
+    core: &GraphCore,
+    tenant: &str,
+    request: &MemoryRememberRequest,
+) -> Result<Vec<Method>, String> {
+    Ok(match admit_remember(core, tenant, request, &BTreeSet::new(), tenant_max_bytes())? {
+        Admitted::Write(write, embed, _) => std::iter::once(*write).chain(embed.map(|m| *m)).collect(),
+        Admitted::Embed(embed, _) => vec![*embed],
+        Admitted::Same(_) => Vec::new(),
+    })
+}
+
+/// The node id of the row that carries a session note's own fields beside its memory record.
+fn session_note_node_id(tenant: &str, note_id: &str) -> String {
+    format!("sessionnote:{}", node_id(tenant, note_id))
+}
+
+const NOTE_TYPE: &str = "SessionNote";
+
+/// Stage a session note (MEDULLA-DECISION-ENGINE-R150.3): its memory record, admitted exactly
+/// like a remember (entry size, tenant quota, one counter batch), and the sidecar row holding the
+/// note's fields. The same note again stages nothing and answers `false`. A note whose id is
+/// already held by another user refuses `NOTE_UNAUTHORIZED` with the answer of an absent note.
+pub fn stage_session_note(
+    core: &GraphCore,
+    tenant: &str,
+    owner: &str,
+    note: &SessionNoteBody,
+    embedding: Vec<f32>,
+    now_ms: i64,
+) -> Result<(Vec<Method>, bool, String), String> {
+    let sidecar = session_note_node_id(tenant, &note.note_id);
+    let digest = note.record_digest().to_hex();
+    if let Some(blob) = core.get_node_properties(&sidecar) {
+        let held = medulla_types::msgpack::decode_property_object(&blob)
+            .ok()
+            .and_then(|props| props.get("user_id")?.as_str().map(str::to_string));
+        if held.as_deref() != Some(note.user_id.as_str()) {
+            return Err(refuse(NOTE_UNAUTHORIZED.as_str(), "the note is not visible to the caller"));
+        }
+    }
+    let record = note
+        .to_record(tenant, now_ms)
+        .map_err(|error| refuse("PARAMETER_INVALID", error))?;
+    let mut methods = stage_remember(core, tenant, &MemoryRememberRequest { record, embedding })?;
+    if core.get_node_properties(&sidecar).is_none() {
+        let serde_json::Value::Object(mut props) =
+            serde_json::to_value(note).map_err(|error| refuse("PARAMETER_INVALID", error))?
+        else {
+            return Err(refuse("PARAMETER_INVALID", "a note serializes as an object"));
+        };
+        props.insert("type".into(), NOTE_TYPE.into());
+        props.insert(TENANT_KEY.into(), tenant.into());
+        props.insert("_owner".into(), owner.into());
+        props.insert("revision".into(), 1u64.into());
+        props.insert("created_ms".into(), now_ms.max(0).into());
+        props.insert("record_digest".into(), digest.clone().into());
+        methods.push(Method::AddNode {
+            node_id: sidecar,
+            properties_msgpack: rmp_serde::to_vec_named(&props)
+                .map_err(|error| refuse("PARAMETER_INVALID", error))?,
+        });
+    }
+    let stored = !methods.is_empty();
+    Ok((methods, stored, digest))
+}
+
+/// One stored note read back: its fields, the embedding it is recalled by and its digest.
+fn read_session_note(core: &GraphCore, tenant: &str, note_id: &str) -> Option<(StoredNote, String)> {
+    let mut props =
+        medulla_types::msgpack::decode_property_object(&core.get_node_properties(&session_note_node_id(tenant, note_id))?).ok()?;
+    if props.remove(TENANT_KEY)?.as_str()? != tenant {
+        return None;
+    }
+    let revision = props.remove("revision")?.as_u64()?;
+    let created_ms = props.remove("created_ms")?.as_u64()?;
+    let digest = props.remove("record_digest")?.as_str()?.to_string();
+    props.remove("type");
+    props.remove("_owner");
+    let body: SessionNoteBody = serde_json::from_value(serde_json::Value::Object(props)).ok()?;
+    let embedding = core
+        .semantic_store
+        .read()
+        .get_embedding(&node_id(tenant, note_id))
+        .unwrap_or_default();
+    Some((StoredNote { body, revision, embedding, created_ms }, digest))
+}
+
+/// Flag the session notes among `hits` (MEDULLA-DECISION-ENGINE-R150.2, R150.3): stale, archived,
+/// conflicting, applied. Every note stays visible and flagged; an archived one is dropped unless
+/// the request asks for it. Returns the flags and the evidence premises of the applied notes.
+fn annotate_recalled_notes(
+    core: &GraphCore,
+    tenant: &str,
+    now_ms: i64,
+    request: &MemoryRecallRequest,
+    hits: &mut Vec<MemoryHit>,
+    tokens_used: &mut u32,
+) -> (Vec<NoteView>, Vec<String>) {
+    let found: Vec<(StoredNote, String)> = hits
+        .iter()
+        .filter(|hit| hit.record.kind == MemoryKind::SessionNote)
+        .filter_map(|hit| read_session_note(core, tenant, hit.record.memory_id.as_str()))
+        .collect();
+    if found.is_empty() {
+        return (Vec::new(), Vec::new());
+    }
+    let mut knobs = NoteKnobs::default();
+    if let Some(min) = request.min_relevance {
+        knobs.min_relevance_q4 = (min * 10_000.0).round().clamp(0.0, 10_000.0) as u16;
+    }
+    let current = request
+        .current_revision
+        .unwrap_or_else(|| found.iter().map(|(note, _)| note.body.source_revision).max().unwrap_or(0));
+    let stored: Vec<StoredNote> = found.iter().map(|(note, _)| note.clone()).collect();
+    let views = annotate_notes_with(
+        &stored,
+        &request.query_embedding,
+        u64::try_from(now_ms).unwrap_or(0),
+        current,
+        &knobs,
+    );
+    let mut kept = Vec::new();
+    let mut premises = Vec::new();
+    for (view, (note, digest)) in views.into_iter().zip(&found) {
+        if view.archived && !request.include_archived {
+            if let Some(index) = hits.iter().position(|hit| hit.record.memory_id.as_str() == view.note_id) {
+                *tokens_used = tokens_used.saturating_sub(kernel::record_tokens(&hits.remove(index).record));
+            }
+            continue;
+        }
+        if view.applied {
+            premises.extend([
+                format!("note:id={}", view.note_id),
+                format!("note:revision={}", view.revision),
+                format!("note:digest={digest}"),
+                format!("note:run={}", note.body.run_id),
+                format!("note:relevance_q4={}", view.relevance_q4),
+                format!("note:stale={}", view.stale),
+                format!("note:conflict={}", view.conflict),
+            ]);
+        }
+        kept.push(view);
+    }
+    if !premises.is_empty() {
+        premises.extend([
+            format!("knob:memory.note_stale_after={}", knobs.stale_after_ms / 86_400_000),
+            format!("knob:memory.note_archive_after={}", knobs.archive_after_ms / 86_400_000),
+            format!(
+                "knob:memory.note_min_relevance={}",
+                KnobValue::DecimalMicros(i64::from(knobs.min_relevance_q4) * 100).render()
+            ),
+        ]);
+    }
+    (kept, premises)
+}
+
 /// Answer one recall for `tenant` as of `now_ms`.
 pub(super) fn recall(
     core: &GraphCore,
@@ -735,6 +897,12 @@ pub(super) fn recall(
     allowed: Option<&std::collections::BTreeSet<String>>,
 ) -> Result<MemoryRecallResult, String> {
     check_embedding(&request.query_embedding, "the query embedding")?;
+    if request.min_relevance.is_some_and(|min| !(0.0..=1.0).contains(&min)) {
+        return Err(refuse(
+            NOTE_RELEVANCE_OUT_OF_RANGE.as_str(),
+            "min_relevance is outside [0, 1]",
+        ));
+    }
     if request.budget == 0 {
         return Err(invalid("a recall needs a token budget above zero"));
     }
@@ -878,6 +1046,8 @@ pub(super) fn recall(
         .as_deref()
         .map(|previous| manifest_drift(core, tenant, previous))
         .transpose()?;
+    let (notes, note_premises) =
+        annotate_recalled_notes(core, tenant, now_ms, request, &mut hits, &mut tokens_used);
     Ok(MemoryRecallResult {
         hits,
         tokens_used,
@@ -885,6 +1055,8 @@ pub(super) fn recall(
         plan,
         plan_digest,
         drift,
+        notes,
+        note_premises,
     })
 }
 

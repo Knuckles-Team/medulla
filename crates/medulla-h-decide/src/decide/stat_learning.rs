@@ -80,6 +80,8 @@ pub(super) struct LearningInputs {
     drift_lease: Option<String>,
     /// The embedder a drift refresh re-embeds with; `None` for every other write.
     drift_embedder: Option<Box<dyn Reembedder>>,
+    /// The embedder a session note is recalled by; `None` for every other write.
+    note_embedder: Option<Box<dyn Reembedder>>,
     /// The materialized tenant graph a freshness refresh writes its rows into; `None` for
     /// every other write and for a logical graph that is virtual only.
     refresh_graph: Option<GraphVectors>,
@@ -522,6 +524,42 @@ impl Serving<'_> {
         Ok(LearningRecorded::DriftRefreshed(Box::new(receipt)))
     }
 
+    /// Stage one session note of a successful run (MEDULLA-DECISION-ENGINE-R150.3); the
+    /// served `DecisionLog` commits the staged rows before it answers.
+    fn record_session_note(
+        &self,
+        graph: &str,
+        note: medulla_work_types::memory::SessionNoteBody,
+    ) -> Result<LearningRecorded, String> {
+        let embedder = self
+            .inputs
+            .note_embedder
+            .as_deref()
+            .ok_or("a session note needs the note embedder")?;
+        let vectors = self.graph(0)?;
+        let (stored, methods) = super::stat_session_note::record_note(
+            self.ctx,
+            self.reader,
+            self.tenant(),
+            vectors,
+            embedder,
+            note,
+        )?;
+        if !methods.is_empty() {
+            *self
+                .inputs
+                .refresh_link
+                .lock()
+                .map_err(|_| "the staged refresh slot is poisoned".to_string())? =
+                Some(super::run_record::StagedLink {
+                    graph: graph.to_string(),
+                    core: std::sync::Arc::clone(vectors.core()),
+                    methods,
+                });
+        }
+        Ok(LearningRecorded::SessionNote(Box::new(stored)))
+    }
+
     fn evaluate(&self, request: &GenerationEvalRequest) -> Result<LearningRecorded, String> {
         let gens = Generations {
             active: self.graph(0)?,
@@ -636,6 +674,7 @@ fn graphs_of(write: &LearningWrite) -> Vec<&str> {
         // A drift refresh executes against the materialized graph it re-embeds.
         LearningWrite::RefreshDrift { logical_graph, .. } => vec![logical_graph.as_str()],
         // A catalog encoder is fitted on the embedded nodes of the catalog graph.
+        LearningWrite::RecordSessionNote { graph, .. } => vec![graph.as_str()],
         LearningWrite::FitCatalogEncoder { catalog_ref } => vec![catalog_ref.as_str()],
         LearningWrite::RefreshFreshness { .. }
         | LearningWrite::RecordOutcome { .. }
@@ -867,6 +906,12 @@ pub(super) async fn prepare(
         ))),
         _ => None,
     };
+    let note_embedder: Option<Box<dyn Reembedder>> = match write {
+        LearningWrite::RecordSessionNote { .. } => Some(Box::new(ConfiguredEmbedder(
+            medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env(),
+        ))),
+        _ => None,
+    };
     let refresh_graph = match write {
         LearningWrite::RefreshFreshness { request } => {
             super::stat_freshness::open_graph(state, verified, request).await?
@@ -879,6 +924,7 @@ pub(super) async fn prepare(
         cycle,
         drift_lease,
         drift_embedder,
+        note_embedder,
         refresh_graph,
         refresh_link: Default::default(),
         refresh_apply: Default::default(),
@@ -906,6 +952,7 @@ pub(super) fn dispatch(
         LearningWrite::MonitorAdapter { request } => s.monitor(&request),
         LearningWrite::FitCalibration { request } => s.calibrate(&request),
         LearningWrite::FitCatalogEncoder { catalog_ref } => s.fit_catalog(&catalog_ref),
+        LearningWrite::RecordSessionNote { graph, note } => s.record_session_note(&graph, *note),
         LearningWrite::EvaluateGeneration { request } => s.evaluate(&request),
         LearningWrite::RunGenerationCycle { request } => s.cycle(&request),
         LearningWrite::RefreshFreshness { request } => {

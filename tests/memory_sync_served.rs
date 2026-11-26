@@ -1122,3 +1122,198 @@ async fn search_state_survives_context_eviction() {
     );
     assert!(matches!(stale, SyncOutcome::ConflictRetained { ref head, .. } if head.revision == 2));
 }
+
+// ---- MEDULLA-DECISION-ENGINE-R150: session notes captured through Learn, recalled with flags ----
+
+const NOTE_TEXT: &str = "deploy runbook";
+
+fn session_note(id: &str, run: &str, output: u8, source_revision: u64) -> medulla_work_types::memory::SessionNoteBody {
+    medulla_work_types::memory::SessionNoteBody {
+        schema_version: 1,
+        note_id: id.to_string(),
+        run_id: run.to_string(),
+        session_id: "session-1".to_string(),
+        task_id: "task-1".to_string(),
+        user_id: "user-a".to_string(),
+        input_digest: Digest256::from_bytes([1; 32]),
+        output_digest: Digest256::from_bytes([output; 32]),
+        source_revision,
+        content: NOTE_TEXT.to_string(),
+    }
+}
+
+/// Store the receipt of a run, as `RunOutcome` would, with its recorded success.
+async fn store_run_receipt(state: &test_support::SharedState, run: &str, success: bool) {
+    use medulla_persistence_records::agent_library::AgentLibraryStateExt;
+    let store = state
+        .write()
+        .await
+        .ensure_agent_library()
+        .expect("the agent library store");
+    let receipt = medulla_decision_types::decision::statistical::run_credit::RunCreditReceipt {
+        run_id: run.to_string(),
+        decision_ids: medulla_types::contract::BoundedVec::new(Vec::new()).unwrap(),
+        outcome_digest: "ab".repeat(32),
+        positive_count: u32::from(success),
+        negative_count: u32::from(!success),
+        success,
+        steps: medulla_types::contract::BoundedVec::new(Vec::new()).unwrap(),
+        premises: medulla_types::contract::BoundedVec::new(Vec::new()).unwrap(),
+        receipt_digest: format!("receipt-{run}"),
+    };
+    store
+        .put_decision_artifacts(
+            common::TEST_TENANT,
+            &[(
+                format!("run_credit/run/{run}"),
+                medulla_persistence_records::decision_jobs::encode_artifact(&receipt).unwrap(),
+            )],
+        )
+        .expect("store the run receipt");
+}
+
+fn capture(note: medulla_work_types::memory::SessionNoteBody) -> Method {
+    Method::DecisionLog {
+        op: Box::new(medulla_decision_types::decision::statistical::log::DecisionLogOp::Learn {
+            tenant_id: common::TEST_TENANT.to_string(),
+            write: medulla_decision_types::decision::statistical::retrieval::LearningWrite::RecordSessionNote {
+                graph: GRAPH.to_string(),
+                note: Box::new(note),
+            },
+        }),
+    }
+}
+
+fn recall_notes(min_relevance: Option<f64>, current_revision: Option<u64>) -> Method {
+    let query = medulla_server_ops::api::ingest::embedder::EmbedderConfig::from_env()
+        .embed(&[NOTE_TEXT])
+        .expect("the hash embedder answers")
+        .remove(0);
+    Method::MemoryRecall {
+        request: Box::new(medulla_work_types::memory::MemoryRecallRequest {
+            query_embedding: query,
+            keywords: Vec::new(),
+            tiers: Vec::new(),
+            scope: None,
+            as_of_ms: None,
+            budget: 10_000,
+            prime_session: None,
+            include_plan: false,
+            include_media: false,
+            previous_manifest_digest: None,
+            document_set_ids: Vec::new(),
+            min_relevance,
+            include_archived: false,
+            current_revision,
+        }),
+    }
+}
+
+async fn session_note_state(label: &str) -> (tempfile::TempDir, test_support::SharedState) {
+    install_knobs();
+    let (dir, _backend, state) = test_support::durable_graph_state(
+        SECRET,
+        ENCRYPTION_KEY,
+        label,
+        common::current_isolation(),
+        GRAPH,
+    )
+    .await;
+    (dir, state)
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R150.3
+#[tokio::test(flavor = "multi_thread")]
+async fn session_notes_recalled_with_flags() {
+    let (_dir, state) = session_note_state("memory-sync-session-notes").await;
+    store_run_receipt(&state, "run-1", true).await;
+    store_run_receipt(&state, "run-2", true).await;
+    store_run_receipt(&state, "run-bad", false).await;
+
+    // Two notes of one input with different outputs conflict; a third names an older revision.
+    for (id, note) in [
+        (2, session_note("note-a", "run-1", 2, 5)),
+        (3, session_note("note-b", "run-2", 3, 5)),
+        (4, session_note("note-c", "run-1", 2, 4)),
+    ] {
+        let response = send(&state, id, capture(note)).await;
+        assert!(response.error.is_none(), "{response:?}");
+    }
+    // A failed run captures nothing.
+    let refused = send(&state, 5, capture(session_note("note-d", "run-bad", 9, 5))).await;
+    assert!(error_of(&refused).contains("NOTE_RUN_NOT_SUCCESSFUL"), "{refused:?}");
+
+    let recalled: medulla_work_types::memory::MemoryRecallResult =
+        json_of(send(&state, 6, recall_notes(None, Some(5))).await);
+    let ids: Vec<&str> = recalled.notes.iter().map(|n| n.note_id.as_str()).collect();
+    assert!(!ids.contains(&"note-d"), "the refused note was never stored");
+    let view = |id: &str| recalled.notes.iter().find(|n| n.note_id == id).expect(id);
+    // The two notes of input one with different outputs conflict and are not applied.
+    assert!(view("note-a").conflict && view("note-b").conflict);
+    assert!(!view("note-a").applied && !view("note-b").applied);
+    // The note recorded against revision 4 is stale at revision 5 and stays visible.
+    assert!(view("note-c").stale && !view("note-a").stale);
+    assert!(recalled.hits.iter().any(|hit| hit.record.memory_id.as_str() == "note-c"));
+    assert_eq!(view("note-a").relevance_q4, 10_000);
+
+    // A relevance floor outside [0, 1] refuses by name.
+    let out_of_range = send(&state, 7, recall_notes(Some(1.5), None)).await;
+    assert!(error_of(&out_of_range).contains("NOTE_RELEVANCE_OUT_OF_RANGE"), "{out_of_range:?}");
+
+    // Another tenant recalls none of these notes.
+    let mut foreign = common::context_for(common::TEST_AGENT);
+    foreign.tenant = "tenant-foreign".to_string();
+    let theirs = test_support::dispatch(
+        &state,
+        common::signed_request_with_context(SECRET, 8, GRAPH, foreign, recall_notes(None, None)),
+    )
+    .await;
+    let seen: medulla_work_types::memory::MemoryRecallResult = match theirs.error {
+        None => json_of(theirs),
+        Some(_) => return,
+    };
+    assert!(seen.notes.is_empty() && seen.hits.is_empty());
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R150.5
+#[tokio::test(flavor = "multi_thread")]
+async fn session_note_evidence_lists_flags() {
+    let (_dir, state) = session_note_state("memory-sync-session-note-evidence").await;
+    store_run_receipt(&state, "run-1", true).await;
+    store_run_receipt(&state, "run-2", true).await;
+    let mut lone = session_note("note-lone", "run-1", 2, 5);
+    lone.input_digest = Digest256::from_bytes([9; 32]);
+    let response = send(&state, 2, capture(lone)).await;
+    assert!(response.error.is_none(), "{response:?}");
+
+    let recalled: medulla_work_types::memory::MemoryRecallResult =
+        json_of(send(&state, 3, recall_notes(None, Some(5))).await);
+    let view = &recalled.notes[0];
+    assert!(view.applied && !view.stale && !view.conflict);
+    let has = |fact: String| recalled.note_premises.contains(&fact);
+    assert!(has("note:id=note-lone".to_string()));
+    assert!(has("note:revision=1".to_string()));
+    assert!(has("note:run=run-1".to_string()));
+    assert!(has("note:relevance_q4=10000".to_string()));
+    assert!(has("note:stale=false".to_string()));
+    assert!(has("note:conflict=false".to_string()));
+    assert!(recalled.note_premises.iter().any(|p| p.starts_with("note:digest=")));
+    assert!(recalled.note_premises.iter().any(|p| p.starts_with("knob:memory.note_min_relevance=")));
+
+    // A stale and a conflicting note are listed with their flags and no applied premises.
+    for (id, note) in [
+        (4, session_note("note-old", "run-1", 7, 4)),
+        (5, session_note("note-rival-1", "run-1", 6, 5)),
+        (6, session_note("note-rival-2", "run-2", 8, 5)),
+    ] {
+        let response = send(&state, id, capture(note)).await;
+        assert!(response.error.is_none(), "{response:?}");
+    }
+    let again: medulla_work_types::memory::MemoryRecallResult =
+        json_of(send(&state, 7, recall_notes(None, Some(5))).await);
+    let flags = |id: &str| again.notes.iter().find(|n| n.note_id == id).unwrap().clone();
+    assert!(flags("note-old").stale);
+    assert!(flags("note-rival-1").conflict && flags("note-rival-2").conflict);
+    assert!(!again.note_premises.contains(&"note:id=note-rival-1".to_string()));
+    assert!(again.note_premises.contains(&"note:id=note-lone".to_string()));
+}

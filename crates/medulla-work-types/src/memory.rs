@@ -56,6 +56,16 @@ pub const SEARCH_STATE_REVISION_MISMATCH: RefusalCode =
 /// A search-state body above `knob memory.search_state_max_bytes`.
 pub const SEARCH_STATE_TOO_LARGE: RefusalCode = RefusalCode::new("SEARCH_STATE_TOO_LARGE");
 
+/// A session note with an empty `user_id` (MEDULLA-DECISION-ENGINE-R150.4).
+pub const NOTE_USER_MISSING: RefusalCode = RefusalCode::new("NOTE_USER_MISSING");
+/// A recall `min_relevance` outside `[0, 1]`.
+pub const NOTE_RELEVANCE_OUT_OF_RANGE: RefusalCode =
+    RefusalCode::new("NOTE_RELEVANCE_OUT_OF_RANGE");
+/// A note the caller cannot see; the answer equals the one for an absent note.
+pub const NOTE_UNAUTHORIZED: RefusalCode = RefusalCode::new("NOTE_UNAUTHORIZED");
+/// A note whose run has no receipt or whose outcome failed.
+pub const NOTE_RUN_NOT_SUCCESSFUL: RefusalCode = RefusalCode::new("NOTE_RUN_NOT_SUCCESSFUL");
+
 /// A hard removal that left a node a live node still references
 /// (MEDULLA-DECISION-ENGINE-R651.4). It is reported by `EvictBelow` and `Maintain` in their
 /// `live_referenced` list, not answered as a request refusal.
@@ -77,6 +87,10 @@ pub const REFUSALS: &[RefusalCode] = &[
     SEARCH_STATE_MALFORMED,
     SEARCH_STATE_REVISION_MISMATCH,
     SEARCH_STATE_TOO_LARGE,
+    NOTE_USER_MISSING,
+    NOTE_RELEVANCE_OUT_OF_RANGE,
+    NOTE_UNAUTHORIZED,
+    NOTE_RUN_NOT_SUCCESSFUL,
 ];
 
 /// `knob media.max_blob_bytes`: largest attached blob.
@@ -729,6 +743,17 @@ pub struct MemoryRecallRequest {
     /// (MEDULLA-DECISION-ENGINE-R656.3); empty applies no filter.
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub document_set_ids: Vec<String>,
+    /// The relevance a session note must reach to be applied, in `[0, 1]`;
+    /// absent uses `knob memory.note_min_relevance` (MEDULLA-DECISION-ENGINE-R150.4).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub min_relevance: Option<f64>,
+    /// Also return archived session notes.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub include_archived: bool,
+    /// The source revision the caller works against; a note recorded against
+    /// another is stale. Absent uses the newest revision the recalled notes name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub current_revision: Option<u64>,
 }
 
 /// One recalled record with its relevance, Q16 fixed point in `[0, 65536]`.
@@ -759,6 +784,12 @@ pub struct MemoryRecallResult {
     /// Present only when the request carried `previous_manifest_digest`.
     #[serde(default)]
     pub drift: Option<MemoryDriftReport>,
+    /// The flags of every recalled session note (MEDULLA-DECISION-ENGINE-R150.5).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub notes: Vec<NoteView>,
+    /// The evidence premises of the applied session notes.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub note_premises: Vec<String>,
 }
 
 /// `MemoryExport`: the durable tiers of the caller's memory
@@ -912,11 +943,54 @@ impl SessionNoteBody {
         Ok(self)
     }
 
+    /// The memory record a note is recalled as: an `Episodic` record of kind
+    /// `SessionNote` whose text is the note content and whose session is the
+    /// note's session (MEDULLA-DECISION-ENGINE-R150.3).
+    pub fn to_record(&self, tenant: &str, timestamp_ms: i64) -> Result<MemoryRecord, MemoryError> {
+        Ok(MemoryRecord {
+            memory_id: identifier(self.note_id.clone(), "note_id")?,
+            tenant: tenant_id(tenant)?,
+            kind: MemoryKind::SessionNote,
+            tier: MemoryTier::Episodic,
+            text: self.content.clone(),
+            provenance_key: None,
+            session_id: Some(identifier(self.session_id.clone(), "session_id")?),
+            timestamp_ms,
+            topics: Vec::new(),
+            pattern_key: None,
+            importance: 1.0,
+            access_count: 0,
+            last_access_ms: 0,
+            last_decay_ms: 0,
+            forgotten: false,
+            legal_hold: false,
+            expires_at_ms: None,
+            support_count: 0,
+            token_estimate: u32::try_from(self.content.len().div_ceil(4).max(1)).unwrap_or(u32::MAX),
+            attachments: Vec::new(),
+            schema_version: MEMORY_RECORD_SCHEMA_VERSION,
+        })
+    }
+
     /// A note is content-addressed by its record digest.
     pub fn record_digest(&self) -> Digest256 {
         let bytes = serde_json::to_vec(self).unwrap_or_default();
         Digest256::from_bytes(Sha256::digest(bytes).into())
     }
+}
+
+/// What `RecordSessionNote` answers (MEDULLA-DECISION-ENGINE-R150.3).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct SessionNoteStored {
+    pub note_id: String,
+    /// The run receipt the note was admitted against.
+    pub run_receipt_digest: String,
+    /// The note's record digest, 64 lowercase hex characters.
+    pub record_digest: String,
+    /// `false` when the identical note was already stored.
+    pub stored: bool,
 }
 
 /// How a recalled note is flagged (MEDULLA-DECISION-ENGINE-R150.1).

@@ -51,7 +51,7 @@ fn invalid_argument(detail: impl std::fmt::Display) -> String {
     format!("INVALID_ARGUMENT: {detail}")
 }
 
-fn run_key(run_id: &str) -> String {
+pub(super) fn run_key(run_id: &str) -> String {
     format!("{RUN_PREFIX}{run_id}")
 }
 
@@ -245,6 +245,7 @@ fn credit(
         outcome_digest: outcome_digest.to_string(),
         positive_count: u32::try_from(result.positives.len()).unwrap_or(u32::MAX),
         negative_count: u32::try_from(result.negatives.len()).unwrap_or(u32::MAX),
+        success: outcome.success,
         steps: BoundedVec::new(steps).map_err(|_| "a run holds too many steps".to_string())?,
         premises: BoundedVec::new(premises).map_err(|_| "too many premises".to_string())?,
         receipt_digest: String::new(),

@@ -89,7 +89,7 @@ mod graph_change_feed;
 mod hierarchy;
 mod memory;
 mod memory_cursor;
-mod memory_surface;
+pub mod memory_surface;
 pub mod memory_snapshot;
 mod nl_correction;
 mod nodes;

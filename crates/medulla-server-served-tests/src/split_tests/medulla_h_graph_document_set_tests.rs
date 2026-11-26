@@ -100,6 +100,9 @@ mod served {
                         include_media: false,
                         previous_manifest_digest: None,
                         document_set_ids: document_set_ids.iter().map(|s| s.to_string()).collect(),
+                        min_relevance: None,
+                        include_archived: false,
+                        current_revision: None,
                     }),
                 },
             )

@@ -133,6 +133,9 @@ pub struct RunCreditReceipt {
     pub outcome_digest: String,
     pub positive_count: u32,
     pub negative_count: u32,
+    /// Whether the run succeeded, as recorded (MEDULLA-DECISION-ENGINE-R150.3).
+    #[serde(default)]
+    pub success: bool,
     #[serde(default)]
     pub steps: BoundedVec<StepCredit, MAX_RUN_STEPS_TYPE>,
     /// The evidence premises: `run:<run_id>`, `run:positives=<n>`,

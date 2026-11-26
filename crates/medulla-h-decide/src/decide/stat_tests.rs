@@ -1197,6 +1197,7 @@ mod retrieval_adoption_tests;
 #[cfg(feature = "query")]
 mod run_adjustment_tests;
 mod run_credit_tests;
+mod session_note_tests;
 
 #[cfg(feature = "query")]
 mod evaluator_tests;
