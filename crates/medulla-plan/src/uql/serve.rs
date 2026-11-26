@@ -386,6 +386,7 @@ fn explain(plan: &Plan, ctx: &PlanCtx, warnings: Vec<String>) -> Result<UqlResul
         plan_node_count: u32::try_from(optimized.ops.len()).unwrap_or(u32::MAX),
         // A linear pipeline is a chain: its last stage is the one root.
         plan_root_count: u32::from(!optimized.ops.is_empty()),
+        plan_id_count: 0,
         plan_scope_tenant: plan.scope.as_ref().map(|scope| scope.tenant.clone()),
         plan_scope_predicates: plan_scope_predicates(plan),
         // MEDULLA-FEDERATED-QUERY-R706.5: the records of the one rewrite `execute` runs.

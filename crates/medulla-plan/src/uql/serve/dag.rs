@@ -71,6 +71,7 @@ pub(super) fn explain(
         warnings,
         plan_node_count: u32::try_from(nodes.len()).unwrap_or(u32::MAX),
         plan_root_count: root_count(nodes),
+        plan_id_count: 0,
         plan_scope_tenant: None,
         plan_scope_predicates: Vec::new(),
         applied_policies: Vec::new(),

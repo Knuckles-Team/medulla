@@ -224,9 +224,13 @@ pub(crate) async fn handle_uql(
             if let medulla_query_types::wire::UqlResult::Explain {
                 plan_digest: reported_plan_digest,
                 query_digest: reported_query_digest,
+                plan_id_count,
                 ..
             } = &mut result
             {
+                // MEDULLA-FEDERATED-QUERY-R720.4: the whole program was bound and digested
+                // once, so every stage of it runs under this one plan id.
+                *plan_id_count = distinct_plan_ids(&[plan_digest]);
                 *reported_plan_digest = Some(plan_digest);
                 *reported_query_digest = Some(query_digest);
             }
@@ -586,6 +590,13 @@ mod served_tests {
             );
         }
     }
+}
+
+/// MEDULLA-FEDERATED-QUERY-R720.4: how many distinct plan ids a served program ran under.
+#[cfg(feature = "federation")]
+fn distinct_plan_ids(ids: &[medulla_types::contract::Digest256]) -> u32 {
+    let distinct: std::collections::BTreeSet<_> = ids.iter().copied().collect();
+    u32::try_from(distinct.len()).unwrap_or(u32::MAX)
 }
 
 /// MEDULLA-FEDERATED-QUERY-R722.11: every foreign execution a `Uql` request names carries

@@ -135,3 +135,34 @@ async fn five_stage_kinds_one_plan() {
     assert_eq!(plan_root_count, 1, "one program is one plan with one root");
     assert_eq!(plan_node_count as usize, stages.len());
 }
+
+// spec: MEDULLA-FEDERATED-QUERY-R720.4
+#[tokio::test]
+async fn program_runs_under_one_plan_id() {
+    let state = state();
+    add_note(&state, 1, "n1").await;
+    let program = "EXPLAIN LET g = MATCH (:Note); \
+                   LET v = MATCH (:Note) |> RANK BY ~ 'alpha' |> LIMIT 5; \
+                   LET e = MATCH (:Note) |> BELIEF AS OF @1700000000; \
+                   JOIN g, v, e |> LIMIT 10";
+    let UqlResult::Explain {
+        plan_digest,
+        plan_id_count,
+        plan_root_count,
+        ..
+    } = decode(uql(&state, 2, program).await)
+    else {
+        panic!("expected served EXPLAIN result")
+    };
+    assert!(plan_digest.is_some(), "the served EXPLAIN names its plan");
+    assert_eq!(plan_id_count, 1, "the whole program runs under one plan id");
+    assert_eq!(plan_root_count, 1);
+    // The same program again names the same plan: no second planner ran.
+    let UqlResult::Explain {
+        plan_digest: again, ..
+    } = decode(uql(&state, 3, program).await)
+    else {
+        panic!("expected served EXPLAIN result")
+    };
+    assert_eq!(plan_digest, again);
+}

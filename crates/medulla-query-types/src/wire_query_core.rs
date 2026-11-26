@@ -1519,6 +1519,12 @@ pub enum UqlResult {
         /// the plan DAG has. One program compiles to one plan with one root.
         #[serde(default)]
         plan_root_count: u32,
+        /// MEDULLA-FEDERATED-QUERY-R720.4: how many distinct plan ids the program ran under.
+        /// The authenticated server fills it from the one plan digest `handle_uql` computes
+        /// over the whole bound program, so a served program reports 1; the standalone
+        /// planner leaves it 0.
+        #[serde(default)]
+        plan_id_count: u32,
         /// MEDULLA-FEDERATED-QUERY-R078.5: the tenant the executed plan was scoped to;
         /// absent when the plan carries no scope (a standalone planner run).
         #[serde(default, skip_serializing_if = "Option::is_none")]

@@ -30764,6 +30764,7 @@ class UqlResultExplainBody(BaseModel):
     kept_plans: list[KeptPlanReport] = []
     optimized: str
     plan_digest: Digest256 | None = None
+    plan_id_count: int = 0
     plan_node_count: int = 0
     plan_root_count: int = 0
     plan_scope_predicates: list[str] = []
