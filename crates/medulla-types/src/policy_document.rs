@@ -93,6 +93,50 @@ pub struct PolicyReview {
     pub reviewer: String,
 }
 
+/// What a policy activation does to the active set of a repository.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum PolicyChange {
+    /// Activate the first set: the review replaces nothing.
+    Create,
+    /// Replace the active set: the review names the revision it replaces.
+    Update,
+    /// Withdraw the active set: the pointer returns to the revision before it.
+    Retire,
+}
+
+/// One clause of an activated set: the rule it became and the typed node it came from.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PolicyEntityRef {
+    /// The rule identity of the clause.
+    pub rule_id: String,
+    /// The digest of the clause text.
+    pub clause_digest: String,
+    /// The graph node of the candidate the clause was read into.
+    pub entity_id: String,
+}
+
+/// What one policy activation changed.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct PolicyActivated {
+    /// The governed-set scope that moved.
+    pub scope_ref: String,
+    /// What was done.
+    pub change: PolicyChange,
+    /// The revision active after the change; `None` when none is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub revision: Option<String>,
+    /// The candidate-set digest the review approved.
+    pub candidate_set_digest: String,
+    /// One reference per clause of the reviewed set.
+    pub entities: Vec<PolicyEntityRef>,
+}
+
 fn is_hex64(text: &str) -> bool {
     text.len() == 64 && text.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }

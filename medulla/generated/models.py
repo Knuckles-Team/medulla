@@ -4524,6 +4524,40 @@ class DecisionLogOpRevokeRule(BaseModel):
     version: Annotated[int, Field(ge=0)]
 
 
+class PolicyChange(str, Enum):
+    CREATE = "create"
+    UPDATE = "update"
+    RETIRE = "retire"
+
+
+class PolicyEntityRef(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    clause_digest: str
+    entity_id: str
+    rule_id: str
+
+
+class PolicyActivated(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    candidate_set_digest: str
+    change: PolicyChange
+    entities: list[PolicyEntityRef]
+    revision: str | None = None
+    scope_ref: str
+
+
+class DecisionLogOpPolicyActivation(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    change: PolicyChange
+    op: Literal["policy_activation"]
+    receipt_digest: str
+    source: str
+    tenant_id: str
+
+
 class DecisionLogOpLearn(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -5284,6 +5318,7 @@ DecisionLogOp = Annotated[
     | DecisionLogOpProposeRule
     | DecisionLogOpApproveRule
     | DecisionLogOpRevokeRule
+    | DecisionLogOpPolicyActivation
     | DecisionLogOpCapabilityOutcome
     | DecisionLogOpGenerationSpace
     | DecisionLogOpRunRecord
@@ -45109,7 +45144,11 @@ __all__ = [
     "DecisionLogOpPromoteRule",
     "DecisionLogOpProposeRule",
     "DecisionLogOpApproveRule",
+    "DecisionLogOpPolicyActivation",
     "DecisionLogOpRevokeRule",
+    "PolicyActivated",
+    "PolicyChange",
+    "PolicyEntityRef",
     "RuleLifecycle",
     "RuleVersion",
     "DecisionLogOpResolve",

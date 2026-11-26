@@ -987,6 +987,20 @@ fn dispatch(
         >(super::stat_rule_promotion::revoke(
             ctx, reader, &rule_id, version,
         )?),
+        DecisionLogOp::PolicyActivation {
+            change,
+            source,
+            receipt_digest,
+            ..
+        } => ResultPayload::of::<
+            medulla_protocol_types::result_contract::coordination::DecisionLogPolicyActivation,
+        >(super::policy_activation::activate_policy(
+            ctx,
+            reader,
+            change,
+            &source,
+            &receipt_digest,
+        )?),
         DecisionLogOp::Learn { write, .. } => {
             ResultPayload::of::<
                 medulla_protocol_types::result_contract::coordination::DecisionLogLearn,

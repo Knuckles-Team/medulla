@@ -461,6 +461,15 @@ pub enum DecisionLogOp {
         rule_id: String,
         version: u64,
     },
+    /// Activate, replace or retire the policy of one repository behind a recorded review
+    /// (MEDULLA-ORCH-VOCAB-R806). `source` is the repository and `receipt_digest` the review
+    /// receipt recorded by `learn` `record_policy_review`.
+    PolicyActivation {
+        tenant_id: String,
+        change: medulla_types::policy_document::PolicyChange,
+        source: String,
+        receipt_digest: String,
+    },
     /// A write-back operation (MEDULLA-DECISION-ENGINE-R615.2, R615.3).
     /// Preflight and proposals compute only; queue, approve and release store
     /// the approval queue, so the class follows the computation.
@@ -892,7 +901,8 @@ impl DecisionLogOp {
             Self::PromoteRule { .. }
             | Self::ProposeRule { .. }
             | Self::ApproveRule { .. }
-            | Self::RevokeRule { .. } => LogOpClass::Govern,
+            | Self::RevokeRule { .. }
+            | Self::PolicyActivation { .. } => LogOpClass::Govern,
             Self::RunRecord { .. }
             | Self::HarnessAdoption { .. }
             | Self::LifecycleRecord { .. } => LogOpClass::Write,
@@ -923,6 +933,7 @@ impl DecisionLogOp {
             | Self::ProposeRule { tenant_id, .. }
             | Self::ApproveRule { tenant_id, .. }
             | Self::RevokeRule { tenant_id, .. }
+            | Self::PolicyActivation { tenant_id, .. }
             | Self::Writeback { tenant_id, .. }
             | Self::RunRecord { tenant_id, .. }
             | Self::CapabilityOutcome { tenant_id, .. }

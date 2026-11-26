@@ -22,19 +22,24 @@ use medulla_decision_outcome_types::decision::promotion::{
     GraderKind, HeldOutEvidence, ReceiptKind, ReviewApproval, RevisionSubject,
     HELD_OUT_EVIDENCE_SCHEMA_VERSION,
 };
-use medulla_decision_types::decision::{PremiseClass, PremiseProvenance, PremiseRef};
+use medulla_decision_stats::decision::promotion::{subject_gate, PromotionGate};
+use medulla_decision_types::decision::{
+    DecisionPolicy, PremiseClass, PremiseProvenance, PremiseRef,
+};
 use medulla_persistence_records::agent_library::AgentLibraryStore;
 use medulla_persistence_records::decision_jobs::{decode_artifact, encode_artifact, read_pointer};
 use medulla_types::contract::Digest256;
 use medulla_types::policy_document::{
-    candidate_set_digest_of, policy_scope_ref, PolicyBinding, PolicyReview,
-    POLICY_CLAUSE_UNSUPPORTED, POLICY_CONTRADICTS_INVARIANT, POLICY_REVIEW_MISMATCH,
-    POLICY_REVIEW_MISSING, POLICY_REVIEW_STALE, POLICY_SCOPE_PREFIX,
+    candidate_set_digest_of, policy_scope_ref, PolicyActivated, PolicyBinding, PolicyChange,
+    PolicyEntityRef, PolicyReview, POLICY_CLAUSE_UNSUPPORTED, POLICY_CONTRADICTS_INVARIANT,
+    POLICY_REVIEW_MISMATCH, POLICY_REVIEW_MISSING, POLICY_REVIEW_STALE, POLICY_SCOPE_PREFIX,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
 use super::stat_executor::ExecutionContext;
+use super::stat_log::LogReader;
+use super::stat_pointer::{activate, rollback, PointerMove, Qualified};
 use super::stat_support::refusal;
 use super::stat_vectors::GraphVectors;
 use medulla_decision_types::decision::statistical::StatisticalErrorCode;
@@ -449,12 +454,16 @@ pub(super) fn check_activation(
             ));
         }
     }
-    let generation = invariant_generation(store, tenant).map_err(store_fault)?;
-    if generation != binding.invariant_generation {
-        return Err(Fault::new(
-            POLICY_REVIEW_STALE,
-            "the invariant generation changed after the review",
-        ));
+    // A retirement withdraws a set and is never held back by an invariant: it checks only
+    // that the active revision is the one the review was made against.
+    if target.is_some() {
+        let generation = invariant_generation(store, tenant).map_err(store_fault)?;
+        if generation != binding.invariant_generation {
+            return Err(Fault::new(
+                POLICY_REVIEW_STALE,
+                "the invariant generation changed after the review",
+            ));
+        }
     }
     let pointer = RevisionSubject::GovernedSet {
         scope_ref: binding.scope_ref(),
@@ -473,6 +482,9 @@ pub(super) fn check_activation(
                 ),
             ));
         }
+    }
+    if target.is_none() {
+        return Ok(());
     }
     let invariants: Vec<RuleInvariant> = store
         .published_rule_invariants(tenant)
@@ -521,6 +533,22 @@ pub(super) fn guard_activation(
     check_activation(store, tenant, &stored, Some(target)).map_err(|fault| fault.text())
 }
 
+/// The review a pointer move cites: the review receipt itself (a direct `policy_activation`)
+/// or the committed `promote` record that names it.
+fn review_of_event(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    event_receipt: &str,
+) -> Result<Option<StoredPolicyReview>, String> {
+    if let Some(review) = load_review(store, tenant, event_receipt)? {
+        return Ok(Some(review));
+    }
+    match super::stat_promotion::promoted_receipt(store, tenant, event_receipt)? {
+        Some(receipt) => load_review(store, tenant, &receipt),
+        None => Ok(None),
+    }
+}
+
 /// The policy in force for one repository: the revision the pointer names and the review
 /// that approved it.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -542,12 +570,8 @@ pub(super) fn active_policy(
     let (Some(active), Some(revision)) = (state.active.as_ref(), state.target()) else {
         return Ok(None);
     };
-    let record = active.receipt_digest.clone().unwrap_or_default();
-    let receipt = super::stat_promotion::promoted_receipt(store, tenant, &record)?
-        .ok_or_else(|| {
-            Fault::new(POLICY_REVIEW_MISSING, "the active policy names no review receipt").text()
-        })?;
-    let review = load_review(store, tenant, &receipt)?.ok_or_else(|| {
+    let event_receipt = active.receipt_digest.clone().unwrap_or_default();
+    let review = review_of_event(store, tenant, &event_receipt)?.ok_or_else(|| {
         Fault::new(POLICY_REVIEW_MISSING, "no recorded review holds the active receipt").text()
     })?;
     Ok(Some(ActivePolicy {
@@ -588,6 +612,94 @@ pub(super) fn policy_premises(
         premise(PREMISE_REVISION, &revision),
         premise(PREMISE_CANDIDATE_SET, &digest),
     ])
+}
+
+/// Serve one `PolicyActivation` op (MEDULLA-ORCH-VOCAB-R806): activate, replace or retire the
+/// active set of `source` behind the review `receipt_digest` names. It is the same gate and the
+/// same guard as a `Decide` `Promotion` and a champion move (`subject_gate`,
+/// [`check_activation`]), so no second activation rule exists; the one write is the
+/// compare-and-set of the pointer, and every refusal happens before it.
+pub(super) fn activate_policy(
+    ctx: &ExecutionContext,
+    reader: &LogReader,
+    change: PolicyChange,
+    source: &str,
+    receipt_digest: &str,
+) -> Result<PolicyActivated, String> {
+    let stored = load_review(ctx.store, ctx.tenant_id, receipt_digest)?.ok_or_else(|| {
+        Fault::new(POLICY_REVIEW_MISSING, "no recorded review holds that receipt").text()
+    })?;
+    let binding = &stored.review.binding;
+    let mismatch = |detail: String| Fault::new(POLICY_REVIEW_MISMATCH, detail).text();
+    if binding.repository != source {
+        return Err(mismatch(format!(
+            "the review is for {}, not {source}",
+            binding.repository
+        )));
+    }
+    let evidence = evidence_of(&stored);
+    match subject_gate(&evidence.subject, &evidence, &DecisionPolicy::engine_default()) {
+        PromotionGate::Promote => {}
+        PromotionGate::Abstain(code) => {
+            return Err(format!("{}: the review does not admit an activation", code.as_str()));
+        }
+        PromotionGate::Hold { reason } => {
+            return Err(format!("{POLICY_REVIEW_MISMATCH}: the review is held ({reason})"));
+        }
+    }
+    let scope_ref = binding.scope_ref();
+    let key = evidence.subject.pointer_key();
+    let (_, before) = read_pointer(ctx.store, ctx.tenant_id, &key)?;
+    let at = PointerMove {
+        tenant: ctx.tenant_id,
+        key,
+        principal: &reader.principal,
+        now_ms: ctx.now_ms,
+    };
+    let target = binding.target();
+    let after = match change {
+        PolicyChange::Create | PolicyChange::Update => {
+            if (change == PolicyChange::Create) == binding.expected_policy_revision.is_some() {
+                return Err(mismatch(
+                    "a create replaces nothing and an update names the revision it replaces"
+                        .to_string(),
+                ));
+            }
+            check_activation(ctx.store, ctx.tenant_id, &stored, Some(&target))
+                .map_err(|fault| fault.text())?;
+            let qualified = Qualified {
+                target: target.clone(),
+                receipt_digest: receipt_digest.to_string(),
+            };
+            activate(ctx.store, &at, &qualified)?
+        }
+        PolicyChange::Retire => {
+            if before.target() != Some(target.as_str()) {
+                return Err(mismatch(format!(
+                    "the review names {target}, the active revision is {:?}",
+                    before.target()
+                )));
+            }
+            check_activation(ctx.store, ctx.tenant_id, &stored, None)
+                .map_err(|fault| fault.text())?;
+            rollback(ctx.store, &at)?
+        }
+    };
+    Ok(PolicyActivated {
+        scope_ref,
+        change,
+        revision: after.target().map(str::to_string),
+        candidate_set_digest: binding.candidate_set_digest.clone(),
+        entities: stored
+            .rules
+            .iter()
+            .map(|rule| PolicyEntityRef {
+                rule_id: rule.rule_id.clone(),
+                clause_digest: rule.clause_digest.clone(),
+                entity_id: format!("policycandidate:{}:{}", binding.repository, rule.rule_id),
+            })
+            .collect(),
+    })
 }
 
 #[cfg(test)]

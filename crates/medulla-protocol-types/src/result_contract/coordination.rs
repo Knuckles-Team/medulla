@@ -242,6 +242,7 @@ method_results! {
     DecisionLogProposeRule(DecisionLog / "propose_rule") => Raw<medulla_agent_types::agent_guardrail::RuleVersion>;
     DecisionLogApproveRule(DecisionLog / "approve_rule") => Raw<medulla_agent_types::agent_guardrail::RuleVersion>;
     DecisionLogRevokeRule(DecisionLog / "revoke_rule") => Raw<medulla_agent_types::agent_guardrail::RuleVersion>;
+    DecisionLogPolicyActivation(DecisionLog / "policy_activation") => Raw<medulla_types::policy_document::PolicyActivated>;
     DecisionLogWriteback(DecisionLog / "writeback") => Raw<medulla_decision_types::decision::statistical::writeback::WritebackOutcome>;
     DecisionLogRunRecord(DecisionLog / "run_record") => Raw<medulla_decision_types::decision::program_store::RunRecordStored>;
     DecisionLogCapabilityOutcome(DecisionLog / "capability_outcome") => Raw<medulla_decision_types::decision::capability_designation::CapabilityOutcomeApplied>;

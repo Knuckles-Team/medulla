@@ -51,6 +51,8 @@ mod medulla_h_decide_decision_reads_tests;
 mod medulla_h_decide_harness_config_tests;
 #[cfg(all(test, feature = "decide", feature = "redb", feature = "blob"))]
 mod medulla_h_decide_policy_evolution_tests;
+#[cfg(all(test, feature = "decide", feature = "redb", feature = "security"))]
+mod medulla_h_decide_policy_activation_tests;
 #[cfg(all(test, feature = "decide", feature = "federation", feature = "redb"))]
 mod medulla_h_decide_freshness_search_port_tests;
 #[cfg(all(test, feature = "redb", feature = "blob"))]

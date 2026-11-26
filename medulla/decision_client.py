@@ -756,6 +756,20 @@ def revoke_rule_op(tenant_id: str, rule_id: str, version: int) -> dict[str, Any]
     }
 
 
+def policy_activation_op(
+    tenant_id: str, change: str, source: str, receipt_digest: str
+) -> dict[str, Any]:
+    """Activate (``create``), replace (``update``) or withdraw (``retire``) the policy
+    of the repository ``source`` behind the recorded review ``receipt_digest``."""
+    return {
+        "op": "policy_activation",
+        "tenant_id": tenant_id,
+        "change": change,
+        "source": source,
+        "receipt_digest": receipt_digest,
+    }
+
+
 def evaluate_op(tenant_id: str, evaluation: Mapping[str, Any]) -> dict[str, Any]:
     return {"op": "evaluate", "tenant_id": tenant_id, "evaluation": dict(evaluation)}
 
@@ -2046,6 +2060,7 @@ __all__ = [
     "propose_rule_op",
     "approve_rule_op",
     "revoke_rule_op",
+    "policy_activation_op",
     "set_observation_op",
     "task_plan_request",
     "verify_task_plan_receipt",
