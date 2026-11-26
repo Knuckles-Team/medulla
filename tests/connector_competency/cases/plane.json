@@ -3,12 +3,15 @@
   "rollup": "MEDULLA-CQ-CONN-R047",
   "vocabulary_module": "sdlc_lifecycle-v1.ttl",
   "terms": [
+    "PullRequest",
     "Ticket",
+    "closesTicket",
+    "cycleState",
     "inCycle",
     "inModule",
+    "proposalState",
     "ticketDueDate",
-    "ticketStatus",
-    "cycleState"
+    "ticketStatus"
   ],
   "questions": [
     {
@@ -31,6 +34,31 @@
       "min_rows": 1,
       "recordings": [
         "plane-agent/single.json"
+      ]
+    },
+    {
+      "id": "plane.q2",
+      "kind": "cross",
+      "question": "Which Plane work items link to a GitHub pull request that has merged but are not marked done?",
+      "uql": "LET s0 = FOREIGN SCAN 'plane-agent'; LET s1 = FOREIGN SCAN 'github-agent'; JOIN s0, s1",
+      "sources": [
+        "plane-agent",
+        "github-agent"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "plane-agent": "mcp_tool",
+        "github-agent": "mcp_tool"
+      },
+      "columns": [
+        "ticket",
+        "pull_request",
+        "status"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "plane-agent/cross_github-agent.json",
+        "github-agent/cross_plane-agent.json"
       ]
     }
   ]

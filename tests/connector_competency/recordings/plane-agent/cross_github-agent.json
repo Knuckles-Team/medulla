@@ -1,0 +1,20 @@
+{
+  "source": "plane-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "ticket": "ticket-1",
+      "status": "status-1",
+      "joinKey": "plane.q2-key-1",
+      "id": "plane-agent-plane.q2-1",
+      "label": "plane-agent 1"
+    },
+    {
+      "ticket": "ticket-2",
+      "status": "status-2",
+      "joinKey": "plane.q2-key-2",
+      "id": "plane-agent-plane.q2-2",
+      "label": "plane-agent 2"
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "source": "github-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "pull_request": "pull_request-1",
+      "joinKey": "plane.q2-key-1",
+      "id": "github-agent-plane.q2-1",
+      "label": "github-agent 1"
+    },
+    {
+      "pull_request": "pull_request-2",
+      "joinKey": "plane.q2-key-2",
+      "id": "github-agent-plane.q2-2",
+      "label": "github-agent 2"
+    }
+  ]
+}
