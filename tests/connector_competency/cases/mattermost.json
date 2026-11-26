@@ -1,0 +1,34 @@
+{
+  "connector": "mattermost",
+  "rollup": "MEDULLA-CQ-CONN-R036",
+  "vocabulary_module": "media-v1.ttl",
+  "terms": [
+    "MessageChannel",
+    "memberCount",
+    "lastPostAt"
+  ],
+  "questions": [
+    {
+      "id": "mattermost.q1",
+      "kind": "single",
+      "question": "Which channels have had no posts in 90 days but still have more than ten members?",
+      "uql": "FOREIGN SCAN 'mattermost-mcp'",
+      "sources": [
+        "mattermost-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "mattermost-mcp": "mcp_tool"
+      },
+      "columns": [
+        "channel",
+        "memberCount",
+        "lastPostAt"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "mattermost-mcp/single.json"
+      ]
+    }
+  ]
+}
