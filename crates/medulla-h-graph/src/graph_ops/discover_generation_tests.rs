@@ -78,6 +78,8 @@ fn concurrent_readers_see_one_generation() {
         quality_policy_ref: None,
         implicit_feedback: &[],
         allowed: None,
+        scope: None,
+        scope_digest: "",
     };
 
     let stop = AtomicBool::new(false);

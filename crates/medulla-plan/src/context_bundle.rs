@@ -371,6 +371,7 @@ pub fn compile_with(
             certificate: None,
             key,
             evidence,
+            scope_digest: String::new(),
         });
     }
 
@@ -464,6 +465,7 @@ pub fn compile_with(
         certificate: Some(solved.selection),
         key,
         evidence,
+        scope_digest: String::new(),
     })
 }
 

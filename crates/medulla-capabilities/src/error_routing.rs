@@ -701,7 +701,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
         ],
     ),
     // MEDULLA-DECISION-ENGINE-R656.3: a named document set narrows discovery.
-    ("Discover", &["DOCUMENT_SET_NOT_FOUND", "INVALID_ARGUMENT"]),
+    (
+        "Discover",
+        &[
+            "DOCUMENT_SET_NOT_FOUND",
+            "INVALID_ARGUMENT",
+            // MEDULLA-FEDERATED-QUERY-R704.4: a scope that names no agent node or a foreign set.
+            "SCOPE_AGENT_UNKNOWN",
+            "SCOPE_SET_FOREIGN",
+        ],
+    ),
     ("MemoryExport", &["ACCESS_DENIED"]),
     // MEDULLA-DURABLE-KERNEL-R085.5.
     (
@@ -829,6 +838,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "CONTEXT_PACKAGE_MISSING_FACT",
             "CONTEXT_PACKAGE_WORK_EXHAUSTED",
             "CONTEXT_SCOPE_FOREIGN",
+            // MEDULLA-FEDERATED-QUERY-R704.4: a scope that names no agent node or a foreign set.
+            "SCOPE_AGENT_UNKNOWN",
+            "SCOPE_SET_FOREIGN",
         ],
     ),
     // MEDULLA-FEDERATED-QUERY-R081.11: a round refuses a malformed part and the

@@ -5,7 +5,7 @@
 use medulla_core::source_hierarchy::{container_node_id, upsert_containers};
 use medulla_graph_core::graph::GraphCore;
 use medulla_ingestion_types::source_governance::SourceContainer;
-use medulla_retrieval::knowledge_scope::{agent_scope, ResolvedScope};
+use medulla_retrieval::knowledge_scope::{agent_scope, scope_digest, KnowledgeScope, ResolvedScope};
 use serde_json::{json, Value};
 
 fn blob(value: &Value) -> Vec<u8> {
@@ -58,7 +58,11 @@ fn an_agent_scope_narrows_by_container_subtree_and_source_kind() {
 
     let scope = agent_scope(&core, "agent:support").unwrap().expect("a scope");
     let resolved = ResolvedScope::resolve(&core, &scope);
-    let inside = resolved.node_ids(&core);
+    let inside: std::collections::BTreeSet<String> = core
+        .node_ids()
+        .into_iter()
+        .filter(|id| resolved.admits(&core, id))
+        .collect();
     assert!(inside.contains("doc-top") && inside.contains("doc-deep"));
     assert!(!inside.contains("doc-wrong-kind"));
     assert!(!inside.contains("doc-elsewhere") && !inside.contains("doc-loose"));
@@ -75,7 +79,47 @@ fn an_agent_scope_narrows_by_container_subtree_and_source_kind() {
         ["doc-deep", "doc-top"]
     );
 
-    // An agent that declares no scope, and an agent with no node, read the caller's access alone.
+    // An agent that declares no scope reads the caller's access alone.
     assert!(agent_scope(&core, "agent:open").unwrap().is_none());
-    assert!(agent_scope(&core, "agent:missing").unwrap().is_none());
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R704.4
+#[test]
+fn a_scope_refuses_an_unknown_agent_and_a_foreign_set() {
+    let core = GraphCore::new();
+    core.add_node("ks:ours".into(), blob(&json!({"type": "KnowledgeSet"})));
+    core.add_node(
+        "agent:ok".into(),
+        blob(&json!({"knowledgeScope": {"knowledge_sets": ["ks:ours"]}})),
+    );
+    core.add_node(
+        "agent:foreign".into(),
+        blob(&json!({"knowledgeScope": {"knowledge_sets": ["ks:theirs"]}})),
+    );
+    assert!(agent_scope(&core, "agent:ok").unwrap().is_some());
+    assert_eq!(agent_scope(&core, "agent:missing").unwrap_err().code, "SCOPE_AGENT_UNKNOWN");
+    assert_eq!(agent_scope(&core, "agent:foreign").unwrap_err().code, "SCOPE_SET_FOREIGN");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R704.5
+#[test]
+fn the_scope_digest_is_canonical_and_the_empty_scope_has_the_empty_record_digest() {
+    let one = KnowledgeScope {
+        agent_ref: "agent:a".into(),
+        source_kinds: vec!["slack".into(), "confluence".into(), "slack".into()],
+        ..KnowledgeScope::default()
+    };
+    let other = KnowledgeScope {
+        agent_ref: "agent:b".into(),
+        source_kinds: vec!["confluence".into(), "slack".into()],
+        ..KnowledgeScope::default()
+    };
+    // Lists are sorted and de-duplicated, and the agent is not part of the digest.
+    assert_eq!(scope_digest(Some(&one)), scope_digest(Some(&other)));
+    assert_ne!(scope_digest(Some(&one)), scope_digest(None));
+    let empty = medulla_types::retrieval::sha256_hex(
+        br#"{"container_refs":[],"knowledge_sets":[],"source_kinds":[]}"#,
+    );
+    assert_eq!(scope_digest(None), empty);
+    assert_eq!(scope_digest(Some(&KnowledgeScope::default())), empty);
 }

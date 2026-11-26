@@ -1150,6 +1150,10 @@ closed_error_codes! {
         CodeDepthExceeded => "CODE_DEPTH_EXCEEDED",
         ContextItemCostInvalid => "CONTEXT_ITEM_COST_INVALID",
         ContextScopeForeign => "CONTEXT_SCOPE_FOREIGN",
+        /// MEDULLA-FEDERATED-QUERY-R704.4: an `agent_ref` with no definition node in the caller's view.
+        ScopeAgentUnknown => "SCOPE_AGENT_UNKNOWN",
+        /// MEDULLA-FEDERATED-QUERY-R704.4: a knowledge scope names a set outside the caller's tenant.
+        ScopeSetForeign => "SCOPE_SET_FOREIGN",
         CorpusLineageTooDeep => "CORPUS_LINEAGE_TOO_DEEP",
         CorpusRegexTooComplex => "CORPUS_REGEX_TOO_COMPLEX",
         CorpusScopeDenied => "CORPUS_SCOPE_DENIED",

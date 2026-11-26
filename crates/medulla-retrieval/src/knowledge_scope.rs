@@ -76,6 +76,37 @@ pub fn scoped_top_k(
     inside
 }
 
+/// The digest of the applied scope (MEDULLA-FEDERATED-QUERY-R704.5): the SHA-256 hex of the
+/// canonical JSON of the scope with sorted, de-duplicated lists, the agent excluded so that
+/// every empty scope has the digest of the empty record. `None` is the empty scope.
+pub fn scope_digest(scope: Option<&KnowledgeScope>) -> String {
+    let sorted = |list: Option<&Vec<String>>| {
+        let mut list: Vec<String> = list.cloned().unwrap_or_default();
+        list.sort();
+        list.dedup();
+        list
+    };
+    let mut record = serde_json::Map::new();
+    record.insert(
+        "container_refs".into(),
+        sorted(scope.map(|s| &s.container_refs)).into(),
+    );
+    record.insert(
+        "knowledge_sets".into(),
+        sorted(scope.map(|s| &s.knowledge_sets)).into(),
+    );
+    record.insert(
+        "source_kinds".into(),
+        sorted(scope.map(|s| &s.source_kinds)).into(),
+    );
+    if let Some(floor) = scope.and_then(|s| s.time_floor) {
+        record.insert("time_floor".into(), floor.into());
+    }
+    // `serde_json::Map` is ordered by key, so the text is canonical.
+    let text = serde_json::Value::Object(record).to_string();
+    medulla_types::retrieval::sha256_hex(text.as_bytes())
+}
+
 /// The property of an agent definition node that holds its knowledge scope
 /// (MEDULLA-ORCH-VOCAB-R808): a JSON object, or its text.
 pub const KNOWLEDGE_SCOPE_PROPERTY: &str = "knowledgeScope";
@@ -90,16 +121,38 @@ fn node_props(
     medulla_types::msgpack::decode_property_object(&blob).ok()
 }
 
+/// Why a scope refuses (MEDULLA-FEDERATED-QUERY-R704.4): a registered code and its detail.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ScopeRefusal {
+    pub code: &'static str,
+    pub detail: String,
+}
+
+impl std::fmt::Display for ScopeRefusal {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}: {}", self.code, self.detail)
+    }
+}
+
+fn refusal(code: &'static str, detail: String) -> ScopeRefusal {
+    ScopeRefusal { code, detail }
+}
+
 /// The knowledge scope the agent definition node `agent_ref` declares (MEDULLA-FEDERATED-QUERY-R704.3).
-/// `Ok(None)` when the agent has no node in this view, declares no scope, or declares an empty
-/// one: the caller's access alone then applies. A malformed scope refuses.
+/// `Ok(None)` when the agent declares no scope or an empty one: the caller's access alone then
+/// applies. An `agent_ref` with no definition node in this view refuses `SCOPE_AGENT_UNKNOWN`,
+/// a scope naming a knowledge set that is no node of this view refuses `SCOPE_SET_FOREIGN`, and
+/// a malformed scope refuses `INVALID_ARGUMENT` (MEDULLA-FEDERATED-QUERY-R704.4).
 pub fn agent_scope(
     core: &medulla_graph_core::graph::GraphCore,
     agent_ref: &str,
-) -> Result<Option<KnowledgeScope>, String> {
+) -> Result<Option<KnowledgeScope>, ScopeRefusal> {
     use serde_json::Value;
     let Some(node) = node_props(core, agent_ref) else {
-        return Ok(None);
+        return Err(refusal(
+            "SCOPE_AGENT_UNKNOWN",
+            format!("agent {agent_ref} has no definition node"),
+        ));
     };
     let Some(raw) = node.get(KNOWLEDGE_SCOPE_PROPERTY) else {
         return Ok(None);
@@ -108,58 +161,82 @@ pub fn agent_scope(
         Value::String(text) => serde_json::from_str::<Value>(text),
         other => Ok(other.clone()),
     }
-    .map_err(|e| format!("INVALID_ARGUMENT: knowledgeScope of {agent_ref} is not JSON: {e}"))?;
+    .map_err(|e| {
+        refusal(
+            "INVALID_ARGUMENT",
+            format!("knowledgeScope of {agent_ref} is not JSON: {e}"),
+        )
+    })?;
     if let Value::Object(fields) = &mut object {
         fields.insert("agent_ref".into(), Value::String(agent_ref.to_string()));
     }
-    let scope: KnowledgeScope = serde_json::from_value(object)
-        .map_err(|e| format!("INVALID_ARGUMENT: knowledgeScope of {agent_ref} is malformed: {e}"))?;
+    let scope: KnowledgeScope = serde_json::from_value(object).map_err(|e| {
+        refusal(
+            "INVALID_ARGUMENT",
+            format!("knowledgeScope of {agent_ref} is malformed: {e}"),
+        )
+    })?;
+    // The projected view holds only the caller's tenant: a set with no node in it is outside.
+    if let Some(set) = scope
+        .knowledge_sets
+        .iter()
+        .find(|set| core.get_node_properties(set).is_none())
+    {
+        return Err(refusal(
+            "SCOPE_SET_FOREIGN",
+            format!("knowledge set {set} is outside the caller's tenant"),
+        ));
+    }
     Ok((!scope.is_empty()).then_some(scope))
 }
 
 /// A scope resolved against one graph view: its container references expanded to subtrees
-/// through the container hierarchy (MEDULLA-INGEST-WORKER-R904.2), and each record's container.
+/// through the container hierarchy (MEDULLA-INGEST-WORKER-R904.2) and held in a set built once
+/// per request, so a list of any length is tested in logarithmic time (MEDULLA-FEDERATED-QUERY-R704.6).
 pub struct ResolvedScope {
+    /// The scope without its container references, which `containers` holds.
     scope: KnowledgeScope,
-    container_of: std::collections::BTreeMap<String, String>,
+    containers: Option<std::collections::BTreeSet<String>>,
 }
 
 impl ResolvedScope {
     /// Resolve `scope` over `core`. A container reference that is not a container node stays
     /// as named; one that is expands to itself and every descendant.
     pub fn resolve(core: &medulla_graph_core::graph::GraphCore, scope: &KnowledgeScope) -> Self {
-        let mut scope = scope.clone();
-        if !scope.container_refs.is_empty() {
+        let mut rest = scope.clone();
+        let containers = (!scope.container_refs.is_empty()).then(|| {
             let mut expanded = std::collections::BTreeSet::new();
             for reference in &scope.container_refs {
-                match medulla_core::source_hierarchy::subtree(
-                    core,
-                    reference,
-                    usize::MAX,
-                ) {
+                match medulla_core::source_hierarchy::subtree(core, reference, usize::MAX) {
                     Ok(entries) => expanded.extend(entries.into_iter().map(|e| e.node_id)),
                     Err(_) => {
                         expanded.insert(reference.clone());
                     }
                 }
             }
-            scope.container_refs = expanded.into_iter().collect();
+            expanded
+        });
+        rest.container_refs.clear();
+        Self {
+            scope: rest,
+            containers,
         }
-        let mut container_of = std::collections::BTreeMap::new();
-        if !scope.container_refs.is_empty() {
-            for (source, target, blob) in core.get_edges() {
-                let relationship = medulla_types::msgpack::decode_property_object(&blob)
-                    .ok()
-                    .and_then(|p| p.get("relationship")?.as_str().map(str::to_string));
-                if relationship.as_deref() == Some(IN_CONTAINER) {
-                    container_of.entry(source).or_insert(target);
-                }
-            }
-        }
-        Self { scope, container_of }
     }
 
-    /// What the scope tests on node `id`.
+    /// The container of record `id` inside the scope, through its `inContainer` edge.
+    fn container_in_scope(
+        &self,
+        core: &medulla_graph_core::graph::GraphCore,
+        id: &str,
+    ) -> Option<String> {
+        let containers = self.containers.as_ref()?;
+        core.get_successors(id)
+            .ok()?
+            .into_iter()
+            .find(|next| containers.contains(next))
+    }
+
+    /// What the scope tests on node `id`, apart from its container.
     pub fn candidate(
         &self,
         core: &medulla_graph_core::graph::GraphCore,
@@ -176,7 +253,7 @@ impl ResolvedScope {
         ScopedCandidate {
             id: id.to_string(),
             knowledge_set: text("knowledge_set"),
-            container_ref: self.container_of.get(id).cloned(),
+            container_ref: None,
             source_kind: text("source_kind").or_else(|| text("source")).unwrap_or_default(),
             timestamp,
         }
@@ -184,21 +261,12 @@ impl ResolvedScope {
 
     /// Whether node `id` lies inside the scope.
     pub fn admits(&self, core: &medulla_graph_core::graph::GraphCore, id: &str) -> bool {
-        self.scope.contains(&self.candidate(core, id))
+        (self.containers.is_none() || self.container_in_scope(core, id).is_some())
+            && self.scope.contains(&self.candidate(core, id))
     }
 
-    /// Every node of `core` inside the scope: the prefilter of a retrieval that truncates.
-    pub fn node_ids(
-        &self,
-        core: &medulla_graph_core::graph::GraphCore,
-    ) -> std::collections::BTreeSet<String> {
-        core.node_ids()
-            .into_iter()
-            .filter(|id| self.admits(core, id))
-            .collect()
-    }
-
-    /// Keep the top `k` of `scored` inside the scope, by [`scoped_top_k`].
+    /// Keep the top `k` of `scored` inside the scope, by [`scoped_top_k`]. Only `scored` is
+    /// read: the cost is bounded by its length, never by the corpus.
     pub fn top_k(
         &self,
         core: &medulla_graph_core::graph::GraphCore,
@@ -207,6 +275,7 @@ impl ResolvedScope {
     ) -> Vec<(String, f32)> {
         let candidates = scored
             .into_iter()
+            .filter(|(id, _)| self.containers.is_none() || self.container_in_scope(core, id).is_some())
             .map(|(id, score)| (self.candidate(core, &id), f64::from(score)))
             .collect();
         scoped_top_k(&self.scope, candidates, k)

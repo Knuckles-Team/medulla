@@ -211,6 +211,11 @@ pub(super) struct DiscoverCall<'a> {
     /// The IRIs the request's document sets allow (MEDULLA-DECISION-ENGINE-R656.3);
     /// `None` applies no filter, `Some` only narrows, and an empty set returns nothing.
     pub(super) allowed: Option<&'a std::collections::BTreeSet<String>>,
+    /// The agent's knowledge scope, applied to the first `retrieval.scope_candidates` fused
+    /// candidates and never to the corpus (MEDULLA-FEDERATED-QUERY-R704.3, R704.6).
+    pub(super) scope: Option<&'a medulla_retrieval::knowledge_scope::ResolvedScope>,
+    /// The digest of the knowledge scope applied (MEDULLA-FEDERATED-QUERY-R704.5).
+    pub(super) scope_digest: &'a str,
 }
 
 #[cfg(feature = "query")]
@@ -267,7 +272,14 @@ fn discover_pass(
     let kws = normalized_keywords(call.keywords);
     let has_emb = !call.query_embedding.is_empty();
     let has_kw = !kws.is_empty();
-    let gathered = gather_candidates(core, &kws, call.query_embedding, k, call.allowed);
+    // A scoped read gathers enough candidates for the scope window, then cuts to `k` after it.
+    let scope_window = usize::try_from(knobs.retrieval_scope_candidates).unwrap_or(usize::MAX);
+    let gather_k = if call.scope.is_some() {
+        k.max(scope_window.div_ceil(DISCOVER_FANOUT))
+    } else {
+        k
+    };
+    let gathered = gather_candidates(core, &kws, call.query_embedding, gather_k, call.allowed);
     let is_deep = !deep.vectors.is_empty();
 
     // Score: the weighted blend (standard) or reciprocal-rank fusion over the arms (deep).
@@ -403,6 +415,13 @@ fn discover_pass(
             .unwrap_or(std::cmp::Ordering::Equal)
             .then_with(|| a.0.cmp(&b.0))
     });
+    // MEDULLA-FEDERATED-QUERY-R704.3: the agent's knowledge scope narrows the first
+    // `retrieval.scope_candidates` fused candidates before the cut to `k`; it only narrows
+    // what the caller may read, and a scope that leaves fewer than `k` returns what it found.
+    if let Some(scope) = call.scope {
+        ranked.truncate(scope_window);
+        ranked = scope.top_k(core, ranked, scope_window);
+    }
     // MEDULLA-FEDERATED-QUERY-R703.7: a record whose source is checked at read cannot
     // be vetted without a remote call, so `Discover` drops it and counts the drop.
     let mut unchecked_excluded = 0_u64;
@@ -495,6 +514,7 @@ fn discover_pass(
                     analysis: deep.analysis,
                     unchecked_excluded,
                 },
+                scope_digest: call.scope_digest.to_string(),
             },
         ),
     );
@@ -579,6 +599,8 @@ async fn handle_discover(
     quality_policy_ref: Option<String>,
     implicit_feedback: Vec<medulla_result_types::feedback_event::RetrievalFeedback>,
     allowed: Option<std::collections::BTreeSet<String>>,
+    scope: Option<medulla_retrieval::knowledge_scope::ResolvedScope>,
+    scope_digest: String,
 ) -> Response {
     let (tenant, adapter) = served;
     let request = medulla_ingestion_types::ingestion_wire::DiscoverPlanRequest {
@@ -626,6 +648,8 @@ async fn handle_discover(
             quality_policy_ref: quality_policy_ref.as_deref(),
             implicit_feedback: &implicit_feedback,
             allowed: allowed.as_ref(),
+            scope: scope.as_ref(),
+            scope_digest: &scope_digest,
         },
         deep,
         req_id,
@@ -744,20 +768,21 @@ async fn adapt_query_vector(_ctx: &GraphOpsContext<'_>, method: Method) -> Metho
     method
 }
 
-/// The node ids inside the knowledge scope of agent `agent_ref`, read from its definition node
-/// of the caller's projected view; `None` when the request names no agent or the agent declares
-/// no scope (MEDULLA-FEDERATED-QUERY-R704.3).
+/// The knowledge scope of agent `agent_ref`, read from its definition node of the caller's
+/// projected view, with the digest of the declared scope; no scope when the request names no
+/// agent or the agent declares none (MEDULLA-FEDERATED-QUERY-R704.3, R704.5).
 #[cfg(feature = "query")]
-fn agent_scope_ids(
+fn agent_scope_for(
     core: &GraphCore,
     agent_ref: Option<&str>,
-) -> Result<Option<std::collections::BTreeSet<String>>, String> {
-    use medulla_retrieval::knowledge_scope::{agent_scope, ResolvedScope};
-    let Some(agent) = agent_ref else {
-        return Ok(None);
+) -> Result<(Option<medulla_retrieval::knowledge_scope::ResolvedScope>, String), String> {
+    use medulla_retrieval::knowledge_scope::{agent_scope, scope_digest, ResolvedScope};
+    let scope = match agent_ref {
+        Some(agent) => agent_scope(core, agent).map_err(|refusal| refusal.to_string())?,
+        None => None,
     };
-    Ok(agent_scope(core, agent)?
-        .map(|scope| ResolvedScope::resolve(core, &scope).node_ids(core)))
+    let digest = scope_digest(scope.as_ref());
+    Ok((scope.map(|scope| ResolvedScope::resolve(core, &scope)), digest))
 }
 
 /// Handle semantic and embedding operations.
@@ -815,12 +840,8 @@ pub(super) async fn try_handle_semantic_compute(
                 };
             // The agent's knowledge scope narrows the candidates before truncation
             // (MEDULLA-FEDERATED-QUERY-R704.3): it only narrows what the caller may read.
-            let allowed = match agent_scope_ids(core, agent_ref.as_deref()) {
-                Ok(Some(scoped)) => Some(match allowed {
-                    Some(sets) => sets.intersection(&scoped).cloned().collect(),
-                    None => scoped,
-                }),
-                Ok(None) => allowed,
+            let (scope, scope_digest) = match agent_scope_for(core, agent_ref.as_deref()) {
+                Ok(resolved) => resolved,
                 Err(error) => return ControlFlow::Break(Response::err(req_id, error)),
             };
             let served = discover_served(&ctx, capability.as_deref()).await;
@@ -851,6 +872,8 @@ pub(super) async fn try_handle_semantic_compute(
                 quality_policy_ref,
                 implicit_feedback,
                 allowed,
+                scope,
+                scope_digest,
             )
             .await
         }

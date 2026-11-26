@@ -576,6 +576,14 @@ name = "feedback_boost"
 path = "benches/feedback_boost.rs"
 harness = false
 
+# ── Knowledge-scope bench (MEDULLA-FEDERATED-QUERY-R704.6) ─────────────────────────────
+# A 50-container scope over the first 1,024 fused candidates; the key `knowledge_scope_50`
+# in `thresholds.json` caps p99 at 2 ms. Nightly only.
+[[bench]]
+name = "knowledge_scope"
+path = "benches/knowledge_scope.rs"
+harness = false
+
 # ── Stored-query read bench (MEDULLA-FEDERATED-QUERY-R708.6) ──────────────────────────
 # One 10,000-row materialized read; the key `stored_query` in `thresholds.json` caps p99
 # at 3 ms. Nightly only.

@@ -14,6 +14,9 @@ pub struct DiscoverResult {
     pub verdict: RetrievalVerdict,
     #[serde(default)]
     pub plan: DiscoverPlan,
+    /// The digest of the knowledge scope the read applied (MEDULLA-FEDERATED-QUERY-R704.5).
+    #[serde(default)]
+    pub scope_digest: String,
 }
 
 #[cfg(test)]
@@ -90,6 +93,7 @@ mod discover_plan_tests {
                 }),
                 unchecked_excluded: 3,
             },
+            scope_digest: String::new(),
         };
         let bytes = rmp_serde::to_vec_named(&result).expect("encode");
         let back: DiscoverResult = rmp_serde::from_slice(&bytes).expect("decode");

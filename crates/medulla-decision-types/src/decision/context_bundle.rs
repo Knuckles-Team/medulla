@@ -287,4 +287,7 @@ pub struct ContextBundle {
     pub certificate: Option<ContextPackageSelection>,
     pub key: BundleKey,
     pub evidence: BundleEvidence,
+    /// The digest of the knowledge scope the compile applied (MEDULLA-FEDERATED-QUERY-R704.5).
+    #[serde(default)]
+    pub scope_digest: String,
 }

@@ -349,12 +349,15 @@ fn run_compile(
     let knobs = medulla_server_api::knob_config::knobs();
     let bytes_per_token = knobs.context_facts_bytes_per_token;
     let revision = core.version();
-    let scope = match request.agent_ref.as_deref() {
+    let declared = match request.agent_ref.as_deref() {
         Some(agent) => medulla_retrieval::knowledge_scope::agent_scope(core, agent)
-            .map_err(|detail| refuse("INVALID_ARGUMENT", detail))?
-            .map(|scope| medulla_retrieval::knowledge_scope::ResolvedScope::resolve(core, &scope)),
+            .map_err(|scope_refusal| refuse(scope_refusal.code, scope_refusal.detail))?,
         None => None,
     };
+    let scope_digest = medulla_retrieval::knowledge_scope::scope_digest(declared.as_ref());
+    let scope = declared
+        .as_ref()
+        .map(|scope| medulla_retrieval::knowledge_scope::ResolvedScope::resolve(core, scope));
     let arms = arm_scores(core, request, scope.as_ref())?;
 
     // One read per distinct hit.
@@ -503,6 +506,8 @@ fn run_compile(
         };
         refuse(code, refusal.detail)
     })?;
+    let mut bundle = bundle;
+    bundle.scope_digest = scope_digest;
     Ok(Compiled { bundle, cacheable })
 }
 

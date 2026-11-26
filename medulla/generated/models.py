@@ -32029,6 +32029,7 @@ class DiscoverResult(BaseModel):
             expansions=[], degraded=None, analysis=None, unchecked_excluded=0
         )
     )
+    scope_digest: str = Field(default="")
 
 
 DistAlgo = DistAlgoPageRank | Literal["ConnectedComponents"] | DistAlgoBfs
@@ -41068,6 +41069,7 @@ class ContextBundle(BaseModel):
     certificate: ContextPackageSelection | None = None
     key: BundleKey
     evidence: BundleEvidence
+    scope_digest: str = Field(default="")
 
 
 class ContextItem(BaseModel):

@@ -356,6 +356,8 @@ knobs! {
     source_coverage_max_classes: u64 = "source_coverage.max_classes", U64(64), [1, 512], "classes", Tunable;
     /// Stored queries: shortest periodic refresh a put accepts (MEDULLA-FEDERATED-QUERY-R708.11).
     stored_query_min_period_s: u64 = "stored_query.min_period_s", U64(300), [60, 86400], "seconds", Tunable;
+    /// Retrieval: the first fused candidates an agent's knowledge scope is tested on; the scope never reads the corpus (MEDULLA-FEDERATED-QUERY-R704.6).
+    retrieval_scope_candidates: u64 = "retrieval.scope_candidates", U64(1024), [64, 16384], "candidates", Tunable;
     /// Stored queries: how often the schedule tick re-lints the stored versions against the trust flags (MEDULLA-FEDERATED-QUERY-R708.9).
     stored_query_relint_period_s: u64 = "stored_query.relint_period_s", U64(3600), [60, 86400], "seconds", Tunable;
     /// Bookmark relations: most edges one read window holds; a page beyond it or an answer above it refuses `BOOKMARK_LIMIT_EXCEEDED` (MEDULLA-MEDIA-VOCAB-R001.102.3).
