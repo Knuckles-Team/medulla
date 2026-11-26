@@ -4,7 +4,12 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_ingestion_types::extracted_fact::{EvidenceSpan, ExtractedFact, GroundingResult};
 use medulla_ingestion_types::ingest_rules::{
-    ground_fact, subclass_closure, GroundingCache, IngestRefusal, MAX_HIERARCHY_STEPS,
+    draft_from_profile, ground_fact, judge_proposal, subclass_closure, GroundingCache,
+    IngestRefusal, MAX_HIERARCHY_STEPS, MAX_PROFILE_ENTRIES,
+};
+use medulla_ingestion_types::ingestion_wire::InstanceProfile;
+use medulla_ingestion_types::ontology_proposal::{
+    ProposalCheck, ProposalProvenance, ProposalState, ProposalThresholds,
 };
 
 fn fact(subject: &str, predicate: &str, object: &str) -> ExtractedFact {
@@ -101,4 +106,95 @@ fn subclass_entity_grounds_to_declared_domain_and_cycle_refuses() {
             .code(),
         "ONTOLOGY_HIERARCHY_CYCLE"
     );
+}
+
+fn profile(value: serde_json::Value) -> InstanceProfile {
+    serde_json::from_value(value).unwrap()
+}
+
+fn provenance() -> ProposalProvenance {
+    ProposalProvenance {
+        source_ref: "instance_profile".into(),
+        induced_by: "instance-profile".into(),
+    }
+}
+
+// spec: MEDULLA-INGEST-WORKER-R002.8
+/// Verifies MEDULLA-INGEST-WORKER-R002.8: a class with fewer than 2 instances and a property used
+/// fewer than 2 times do not enter the draft, a property of an excluded class stays out, the
+/// draft starts as a draft, and the checks of R002.2 decide its admission.
+#[test]
+fn instance_profile_becomes_a_draft_proposal_with_thresholds() {
+    let sampled = profile(serde_json::json!({
+        "classes": [
+            {"iri": "Person", "instances": 5},
+            {"iri": "Org", "instances": 3},
+            {"iri": "Tag", "instances": 1},
+        ],
+        "datatype_properties": [
+            {"iri": "name", "class": "Person", "datatype": "xsd:string", "presence": 1.0},
+            {"iri": "age", "class": "Person", "datatype": "xsd:integer", "presence": 0.2},
+            {"iri": "title", "class": "Org", "datatype": "xsd:string", "presence": 1.0},
+        ],
+        "object_properties": [
+            {"iri": "worksAt", "domain": "Person", "range": "Org", "usage": 4},
+            {"iri": "taggedWith", "domain": "Org", "range": "Tag", "usage": 3},
+            {"iri": "knows", "domain": "Person", "range": "Person", "usage": 1},
+        ],
+    }));
+    let (draft, observed) = draft_from_profile("p1", &sampled, provenance()).unwrap();
+    assert_eq!(draft.state, ProposalState::Draft);
+    let classes: Vec<&str> = draft.classes.iter().map(|c| c.name.as_str()).collect();
+    assert_eq!(classes, ["Org", "Person"], "Tag has one instance");
+    let kept: Vec<&str> = draft.properties.iter().map(|p| p.name.as_str()).collect();
+    assert_eq!(kept, ["name", "title", "worksAt"]);
+    let person = draft.classes.iter().find(|c| c.name == "Person").unwrap();
+    assert_eq!(
+        person.properties.iter().map(String::as_str).collect::<Vec<_>>(),
+        ["name", "worksAt"]
+    );
+    assert_eq!(observed, ["age", "knows", "name", "taggedWith", "title", "worksAt"]);
+    // Half the observed names fell below a threshold, so the checks leave it a draft.
+    let thresholds = ProposalThresholds::default();
+    assert_eq!(
+        judge_proposal(&draft, &observed, &thresholds).unwrap_err(),
+        IngestRefusal::ProposalNotAdmitted(ProposalCheck::Coverage)
+    );
+
+    // A profile whose every entry clears the thresholds drafts a proposal the checks admit.
+    let clean = profile(serde_json::json!({
+        "classes": [{"iri": "Person", "instances": 5}, {"iri": "Org", "instances": 3}],
+        "datatype_properties": [
+            {"iri": "name", "class": "Person", "datatype": "xsd:string", "presence": 1.0},
+        ],
+        "object_properties": [
+            {"iri": "worksAt", "domain": "Person", "range": "Org", "usage": 4},
+        ],
+    }));
+    let (draft, observed) = draft_from_profile("p2", &clean, provenance()).unwrap();
+    assert_eq!(draft.state, ProposalState::Draft);
+    assert_eq!(
+        judge_proposal(&draft, &observed, &thresholds).unwrap().state,
+        ProposalState::Admitted
+    );
+}
+
+// spec: MEDULLA-INGEST-WORKER-R002.9
+/// Verifies MEDULLA-INGEST-WORKER-R002.9: an oversized profile and a property that names an
+/// unlisted class refuse with their codes before any draft is built.
+#[test]
+fn a_profile_over_its_limits_refuses() {
+    let classes: Vec<serde_json::Value> = (0..=MAX_PROFILE_ENTRIES)
+        .map(|n| serde_json::json!({"iri": format!("C{n}"), "instances": 2}))
+        .collect();
+    let refusal =
+        draft_from_profile("big", &profile(serde_json::json!({"classes": classes})), provenance())
+            .unwrap_err();
+    assert_eq!(refusal.code(), "PROFILE_TOO_LARGE");
+    let dangling = profile(serde_json::json!({
+        "classes": [{"iri": "Person", "instances": 5}],
+        "object_properties": [{"iri": "worksAt", "domain": "Person", "range": "Org", "usage": 4}],
+    }));
+    let refusal = draft_from_profile("d", &dangling, provenance()).unwrap_err();
+    assert_eq!(refusal.code(), "PROFILE_DANGLING_CLASS");
 }

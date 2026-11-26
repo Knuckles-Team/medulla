@@ -499,6 +499,10 @@ closed_error_codes! {
         GoalTargetRequired => "GOAL_TARGET_REQUIRED",
         /// MEDULLA-INGEST-WORKER-R002.7: instances name a proposal that is absent, still a draft, or does not declare the class.
         ProposalNotAdmitted => "PROPOSAL_NOT_ADMITTED",
+        /// MEDULLA-INGEST-WORKER-R002.9: an instance profile of more than 10,000 entries.
+        ProfileTooLarge => "PROFILE_TOO_LARGE",
+        /// MEDULLA-INGEST-WORKER-R002.9: an instance profile property names a class the profile does not list.
+        ProfileDanglingClass => "PROFILE_DANGLING_CLASS",
         /// MEDULLA-SDLC-R017.2: a proposal names a kind outside the closed set.
         ProposalKindUnknown => "PROPOSAL_KIND_UNKNOWN",
         /// MEDULLA-SDLC-R015.2: a row with no `covers` plan section has no run context.

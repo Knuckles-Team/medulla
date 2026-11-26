@@ -1062,6 +1062,9 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "ACTION_IDEMPOTENCY_CONFLICT",
             "ACTION_RECORD_INVALID",
             "FORECAST_SAMPLE_INVALID",
+            // MEDULLA-INGEST-WORKER-R002.9: the instance profile refusals.
+            "PROFILE_DANGLING_CLASS",
+            "PROFILE_TOO_LARGE",
             // MEDULLA-INGEST-WORKER-R002.7.
             "PROPOSAL_NOT_ADMITTED",
             // MEDULLA-INGEST-WORKER-R700.4: the reader refusals, each the rule id of a

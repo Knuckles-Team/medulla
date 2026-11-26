@@ -568,6 +568,54 @@ impl DiscoverPlanRequest {
     }
 }
 
+/// One class of an [`InstanceProfile`]: its IRI and how many instances the sample held.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProfileClass {
+    pub iri: String,
+    pub instances: u64,
+}
+
+/// A datatype property of an [`InstanceProfile`]: its class, its XSD datatype and the share of the
+/// class's instances that carry it.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProfileDatatypeProperty {
+    pub iri: String,
+    pub class: String,
+    pub datatype: String,
+    /// In `[0, 1]`; a value outside it is clamped.
+    pub presence: f64,
+}
+
+/// An object property of an [`InstanceProfile`]: its domain class, its range class and how many
+/// times the sample used it.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ProfileObjectProperty {
+    pub iri: String,
+    pub domain: String,
+    pub range: String,
+    pub usage: u64,
+}
+
+/// What an SDK worker measured over sample solutions of a source (MEDULLA-INGEST-WORKER-R002.8).
+/// `draft_from_profile` turns it into a draft ontology proposal.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Default)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct InstanceProfile {
+    #[serde(default)]
+    pub classes: Vec<ProfileClass>,
+    #[serde(default)]
+    pub datatype_properties: Vec<ProfileDatatypeProperty>,
+    #[serde(default)]
+    pub object_properties: Vec<ProfileObjectProperty>,
+}
+
 /// Longest `unit_text` of an [`OntologySliceRequest`], in bytes (MEDULLA-INGEST-WORKER-R913.1).
 pub const ONTOLOGY_SLICE_UNIT_MAX_BYTES: usize = 65_536;
 /// Classes a slice returns when the request names no `max_classes`.

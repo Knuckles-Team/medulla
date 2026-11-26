@@ -8,8 +8,10 @@ use std::collections::{BTreeMap, BTreeSet, HashSet};
 
 use crate::extracted_fact::{CandidateClaim, ExtractedFact, GroundingResult};
 use crate::knowledge_atom::KnowledgeAtom;
+use crate::ingestion_wire::{InstanceProfile, ProfileDatatypeProperty, ProfileObjectProperty};
 use crate::ontology_proposal::{
-    score_proposal, OntologyProposal, ProposalCheck, ProposalState, ProposalThresholds,
+    score_proposal, OntologyProposal, ProposalCheck, ProposalProvenance, ProposalState,
+    ProposalThresholds, ProposedClass, ProposedProperty,
 };
 use crate::source_governance::{Classification, RecordGovernance, SourceContainer, SourceGroup};
 
@@ -20,6 +22,11 @@ pub const MAX_GROUP_MEMBERS: usize = 100_000;
 /// Most `rdfs:subClassOf` steps the grounding cache follows from one class
 /// (MEDULLA-INGEST-WORKER-R701.8).
 pub const MAX_HIERARCHY_STEPS: usize = 64;
+/// Fewest instances a class, and fewest uses a property, needs to enter a draft proposal
+/// (MEDULLA-INGEST-WORKER-R002.8).
+pub const MIN_PROFILE_COUNT: u64 = 2;
+/// Most entries (classes plus properties) one instance profile may hold.
+pub const MAX_PROFILE_ENTRIES: usize = 10_000;
 /// Share of a source's held records one reconcile plan may delete (percent).
 pub const MASS_DELETE_PERCENT: usize = 20;
 
@@ -51,6 +58,10 @@ pub enum IngestRefusal {
     ProposalNotAdmitted(ProposalCheck),
     #[error("ATOM_PROVENANCE_MISSING: atom {0} has no provenance key")]
     AtomProvenanceMissing(String),
+    #[error("PROFILE_TOO_LARGE: {0} entries exceed {MAX_PROFILE_ENTRIES}")]
+    ProfileTooLarge(usize),
+    #[error("PROFILE_DANGLING_CLASS: property {property} names unknown class {class}")]
+    ProfileDanglingClass { property: String, class: String },
     #[error("ONTOLOGY_HIERARCHY_CYCLE: class {0} reaches itself or nests deeper than {MAX_HIERARCHY_STEPS} steps")]
     OntologyHierarchyCycle(String),
 }
@@ -392,6 +403,102 @@ pub struct AdmissionDecision {
     pub state: ProposalState,
     /// Instances may populate against a proposal only once it is admitted.
     pub instances_allowed: bool,
+}
+
+/// Turn an instance profile into a draft ontology proposal and the property names it observed
+/// (MEDULLA-INGEST-WORKER-R002.8, R002.9). A class needs at least [`MIN_PROFILE_COUNT`]
+/// instances to enter the draft. A property needs a usage count of at least that: an object
+/// property's own `usage`, a datatype property's `presence` times its class's instances, rounded.
+/// A property whose class, domain or range did not enter the draft stays out too. Every property
+/// of the profile is an observed name, so a profile whose properties mostly fall below the
+/// thresholds scores low coverage and stays a draft under [`judge_proposal`]'s checks.
+///
+/// Refuses `PROFILE_TOO_LARGE` for more than [`MAX_PROFILE_ENTRIES`] entries and
+/// `PROFILE_DANGLING_CLASS` for a property that names a class the profile does not list.
+pub fn draft_from_profile(
+    proposal_id: &str,
+    profile: &InstanceProfile,
+    provenance: ProposalProvenance,
+) -> Result<(OntologyProposal, Vec<String>), IngestRefusal> {
+    let entries = profile.classes.len()
+        + profile.datatype_properties.len()
+        + profile.object_properties.len();
+    if entries > MAX_PROFILE_ENTRIES {
+        return Err(IngestRefusal::ProfileTooLarge(entries));
+    }
+    let mut instances: BTreeMap<&str, u64> = BTreeMap::new();
+    for class in &profile.classes {
+        let held = instances.entry(class.iri.as_str()).or_insert(0);
+        *held = (*held).max(class.instances);
+    }
+    let dangling = |property: &str, class: &str| {
+        (!instances.contains_key(class)).then(|| IngestRefusal::ProfileDanglingClass {
+            property: property.to_string(),
+            class: class.to_string(),
+        })
+    };
+    for property in &profile.datatype_properties {
+        if let Some(refusal) = dangling(&property.iri, &property.class) {
+            return Err(refusal);
+        }
+    }
+    for property in &profile.object_properties {
+        for class in [&property.domain, &property.range] {
+            if let Some(refusal) = dangling(&property.iri, class) {
+                return Err(refusal);
+            }
+        }
+    }
+    let kept = |class: &str| instances.get(class).is_some_and(|n| *n >= MIN_PROFILE_COUNT);
+    let mut classes: BTreeMap<String, BTreeSet<String>> = instances
+        .iter()
+        .filter(|(_, n)| **n >= MIN_PROFILE_COUNT)
+        .map(|(iri, _)| ((*iri).to_string(), BTreeSet::new()))
+        .collect();
+    let mut properties: Vec<ProposedProperty> = Vec::new();
+    let mut observed: BTreeSet<String> = BTreeSet::new();
+    let mut datatype: Vec<&ProfileDatatypeProperty> = profile.datatype_properties.iter().collect();
+    datatype.sort_by(|a, b| (&a.iri, &a.class).cmp(&(&b.iri, &b.class)));
+    for property in datatype {
+        observed.insert(property.iri.clone());
+        let presence = if property.presence.is_nan() {
+            0.0
+        } else {
+            property.presence.clamp(0.0, 1.0)
+        };
+        let uses = (presence * instances[property.class.as_str()] as f64).round() as u64;
+        if kept(&property.class) && uses >= MIN_PROFILE_COUNT {
+            properties.push(ProposedProperty {
+                name: property.iri.clone(),
+                domain: property.class.clone(),
+            });
+            if let Some(held) = classes.get_mut(&property.class) {
+                held.insert(property.iri.clone());
+            }
+        }
+    }
+    let mut object: Vec<&ProfileObjectProperty> = profile.object_properties.iter().collect();
+    object.sort_by(|a, b| (&a.iri, &a.domain, &a.range).cmp(&(&b.iri, &b.domain, &b.range)));
+    for property in object {
+        observed.insert(property.iri.clone());
+        if property.usage >= MIN_PROFILE_COUNT && kept(&property.domain) && kept(&property.range) {
+            properties.push(ProposedProperty {
+                name: property.iri.clone(),
+                domain: property.domain.clone(),
+            });
+            if let Some(held) = classes.get_mut(&property.domain) {
+                held.insert(property.iri.clone());
+            }
+        }
+    }
+    let classes = classes
+        .into_iter()
+        .map(|(name, properties)| ProposedClass { name, properties })
+        .collect();
+    Ok((
+        OntologyProposal::new(proposal_id, classes, properties, provenance),
+        observed.into_iter().collect(),
+    ))
 }
 
 /// Judge a proposal. A failing check refuses with `PROPOSAL_NOT_ADMITTED` and

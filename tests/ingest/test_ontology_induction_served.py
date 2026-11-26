@@ -28,11 +28,13 @@ from medulla.generated.source_ingestion import SourceIngestionDisposition
 
 from .test_source_stream_versions_served import (
     STREAM,
-    _batch as _records_batch,
     _close,
     _connector,
     _ingest_client,
     _submit,
+)
+from .test_source_stream_versions_served import (
+    _batch as _records_batch,
 )
 
 
@@ -106,12 +108,15 @@ async def test_receipt_reports_scores_and_replays() -> None:
         assert replay.disposition is SourceIngestionDisposition.REPLAYED
         assert replay.receipt_id == first.receipt_id
         again = await client.nodes.properties(first.receipt_id)
+        assert again is not None
         assert _proposals_of(again) == items
     finally:
         await _close(client, graph)
 
 
-def _proposal_declaration(connector: str, proposal_id: str) -> ConnectorPackEntryContent:
+def _proposal_declaration(
+    connector: str, proposal_id: str
+) -> ConnectorPackEntryContent:
     body = {
         "connector": connector,
         "schema_mappings": {
@@ -134,7 +139,9 @@ def _proposal_declaration(connector: str, proposal_id: str) -> ConnectorPackEntr
     )
 
 
-async def _proposal_client(connector: str, proposal_id: str) -> tuple[MedullaClient, str]:
+async def _proposal_client(
+    connector: str, proposal_id: str
+) -> tuple[MedullaClient, str]:
     admin = await connect()
     graph = f"induction-{uuid.uuid4().hex[:8]}"
     try:
@@ -167,7 +174,8 @@ async def test_draft_proposal_takes_no_instances() -> None:
 
         # A draft proposal takes no instances either.
         draft = _batch(
-            connector, [_submission(proposal_id, ["name"], ["name", "age", "city", "zip"])]
+            connector,
+            [_submission(proposal_id, ["name"], ["name", "age", "city", "zip"])],
         )
         await _submit(client, draft, "draft")
         with pytest.raises(Exception, match="PROPOSAL_NOT_ADMITTED"):
@@ -184,7 +192,8 @@ async def test_passing_proposal_admitted_failing_stays_draft() -> None:
     connector = _connector()
     suffix = uuid.uuid4().hex[:8]
     passing, failing = f"p-pass-{suffix}", f"p-fail-{suffix}"
-    # The fixture is two fixed proposals with fixed observed terms; no model call is involved.
+    # The fixture is two fixed proposals with fixed observed terms; no model call
+    # is involved.
     client, graph = await _proposal_client(connector, failing)
     try:
         batch = _batch(
@@ -197,8 +206,8 @@ async def test_passing_proposal_admitted_failing_stays_draft() -> None:
         receipt = await _submit(client, batch, "fixture")
         assert receipt.disposition is SourceIngestionDisposition.COMMITTED
 
-        # The receipt scores and states: the passing proposal is admitted, the failing one stays
-        # a draft with the coverage check named.
+        # The receipt scores and states: the passing proposal is admitted, the failing
+        # one stays a draft with the coverage check named.
         receipt_node = await client.nodes.properties(receipt.receipt_id)
         assert receipt_node is not None
         items = _proposals_of(receipt_node)
@@ -215,7 +224,105 @@ async def test_passing_proposal_admitted_failing_stays_draft() -> None:
 
         # An instance batch against the draft is refused, so no instance is written.
         with pytest.raises(Exception, match="PROPOSAL_NOT_ADMITTED"):
-            await _submit(client, _records_batch(connector, 2, None, "first"), "draft-instances")
+            await _submit(
+                client, _records_batch(connector, 2, None, "first"), "draft-instances"
+            )
         assert list(await client.nodes.list_by_label("Thing", 0)) == []
+    finally:
+        await _close(client, graph)
+
+
+def _profile_item(proposal_id: str, rare: bool) -> dict[str, Any]:
+    """An instance profile of 3 classes and 4 properties; `rare` adds two properties
+    that fall below the usage threshold, so most observed names stay undeclared."""
+    datatype = [
+        {"iri": "name", "class": "Thing", "datatype": "xsd:string", "presence": 1.0},
+        {"iri": "age", "class": "Thing", "datatype": "xsd:integer", "presence": 1.0},
+    ]
+    if rare:
+        datatype += [
+            {
+                "iri": "nick",
+                "class": "Thing",
+                "datatype": "xsd:string",
+                "presence": 0.1,
+            },
+            {
+                "iri": "alias",
+                "class": "Thing",
+                "datatype": "xsd:string",
+                "presence": 0.0,
+            },
+        ]
+    return {
+        "proposal_id": proposal_id,
+        "profile": {
+            "classes": [
+                {"iri": "Thing", "instances": 5},
+                {"iri": "Owner", "instances": 3},
+                {"iri": "Tag", "instances": 2},
+            ],
+            "datatype_properties": datatype,
+            "object_properties": [
+                {"iri": "ownedBy", "domain": "Thing", "range": "Owner", "usage": 3},
+                {"iri": "tagged", "domain": "Thing", "range": "Tag", "usage": 2},
+            ],
+        },
+    }
+
+
+def _profile_batch(connector: str, stream: str, item: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "connector": connector,
+        "kind": "proposals",
+        "mode": "delta",
+        "strict_schema": True,
+        "records": [],
+        "provider_checkpoint": {"stream": stream, "position": {"page": 1}},
+        "extension": {"proposals": [item]},
+    }
+
+
+# spec: MEDULLA-INGEST-WORKER-R002.10
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R002.10")
+@pytest.mark.asyncio
+async def test_instance_profile_admitted_after_checks() -> None:
+    connector = _connector()
+    proposal_id = f"p-{uuid.uuid4().hex[:8]}"
+    client, graph = await _proposal_client(connector, proposal_id)
+    try:
+        # The profile with undeclared rare properties drafts a proposal the checks
+        # refuse.
+        draft = await _submit(
+            client,
+            _profile_batch(connector, "profile-a", _profile_item(proposal_id, True)),
+            "draft",
+        )
+        node = await client.nodes.properties(draft.receipt_id)
+        assert node is not None
+        item = _proposals_of(node)[proposal_id]
+        assert item["state"] == "draft"
+        assert item["failing_check"] == "coverage"
+        # A draft takes no instances: the class does not query before admission.
+        records = _records_batch(connector, 1, None, "first")
+        with pytest.raises(Exception, match="PROPOSAL_NOT_ADMITTED"):
+            await _submit(client, records, "before-admission")
+        assert list(await client.nodes.list_by_label("Thing", 0)) == []
+
+        # The profile that clears the thresholds admits the same proposal.
+        admitted = await _submit(
+            client,
+            _profile_batch(connector, "profile-b", _profile_item(proposal_id, False)),
+            "admit",
+        )
+        node = await client.nodes.properties(admitted.receipt_id)
+        assert node is not None
+        assert _proposals_of(node)[proposal_id]["state"] == "admitted"
+        stored = await client.nodes.properties(f"ontology_proposal:{proposal_id}")
+        assert stored is not None and stored["state"] == "admitted"
+
+        # After admission the class queries.
+        await _submit(client, records, "after-admission")
+        assert len(list(await client.nodes.list_by_label("Thing", 0))) == 1
     finally:
         await _close(client, graph)

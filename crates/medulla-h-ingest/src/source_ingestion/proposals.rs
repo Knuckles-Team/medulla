@@ -7,9 +7,10 @@
 //! failing one is stored `Draft` with the failing check. The refusal lives in the
 //! per-item receipt, never as a batch refusal.
 
-use medulla_ingestion_types::ingest_rules::IngestRefusal;
+use medulla_ingestion_types::ingest_rules::{draft_from_profile, IngestRefusal};
+use medulla_ingestion_types::ingestion_wire::InstanceProfile;
 use medulla_ingestion_types::ontology_proposal::{
-    score_proposal, ProposalState, ProposalThresholds,
+    score_proposal, ProposalProvenance, ProposalState, ProposalThresholds,
 };
 use medulla_protocol_types::protocol::Method;
 use medulla_source_types::source_ingestion::{ProposalSubmission, SourceJson, MAX_OBSERVED_TERMS};
@@ -54,7 +55,42 @@ fn invalid(detail: impl std::fmt::Display) -> String {
     )
 }
 
-/// Decode the elements of a `proposals` extension.
+/// One element of a `proposals` extension that carries an instance profile instead of a model's
+/// proposal (MEDULLA-INGEST-WORKER-R002.8): the SDK worker names the proposal and the engine
+/// drafts it from the profile.
+#[derive(Debug, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+struct ProfileSubmission {
+    proposal_id: String,
+    profile: InstanceProfile,
+}
+
+/// The submission an instance profile drafts (MEDULLA-INGEST-WORKER-R002.8, R002.9). The draft
+/// then takes the one admission path of every submission: its observed terms are the profile's
+/// property names, and `admit_proposals` judges it with the same checks.
+fn profile_submission(value: serde_json::Value) -> Result<ProposalSubmission, String> {
+    let submission: ProfileSubmission = serde_json::from_value(value)
+        .map_err(|error| invalid(format!("profile submission: {error}")))?;
+    if submission.proposal_id.trim().is_empty() {
+        return Err(invalid("proposal_id must not be blank"));
+    }
+    let (proposal, observed_terms) = draft_from_profile(
+        &submission.proposal_id,
+        &submission.profile,
+        ProposalProvenance {
+            source_ref: "instance_profile".to_string(),
+            induced_by: "instance-profile".to_string(),
+        },
+    )
+    .map_err(|refusal| refusal.to_string())?;
+    Ok(ProposalSubmission {
+        proposal,
+        observed_terms,
+    })
+}
+
+/// Decode the elements of a `proposals` extension: a submission that carries a model's proposal,
+/// or one that carries an instance profile.
 pub fn decode_proposals(items: &[SourceJson]) -> Result<Vec<ProposalSubmission>, String> {
     if items.len() > MAX_SUBMISSIONS {
         return Err(invalid(format!(
@@ -64,7 +100,11 @@ pub fn decode_proposals(items: &[SourceJson]) -> Result<Vec<ProposalSubmission>,
     items
         .iter()
         .map(|item| {
-            let submission: ProposalSubmission = serde_json::from_value(item.value()?)
+            let value = item.value()?;
+            if value.get("profile").is_some() {
+                return profile_submission(value);
+            }
+            let submission: ProposalSubmission = serde_json::from_value(value)
                 .map_err(|error| invalid(format!("proposal submission: {error}")))?;
             if submission.observed_terms.len() > MAX_OBSERVED_TERMS {
                 return Err(invalid(format!(
