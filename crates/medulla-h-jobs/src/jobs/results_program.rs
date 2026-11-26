@@ -457,6 +457,7 @@ mod privacy_tests {
                 planned_steps: 0,
                 evaluated_candidates: 0,
             },
+            front: None,
         };
         let dataset_ref = native_opaque_ref("dataset", "program-result-input");
         let job = AnalyticsJob {

@@ -2,4 +2,7 @@
 
 pub mod front;
 
-pub use front::{FrontError, ParetoFront, PolicyCandidate};
+pub use front::{
+    reflective_front, FrontError, FrontSummary, ParetoFront, PolicyCandidate, ScoreboardRow,
+    DEFAULT_FRONT_MAX_SIZE,
+};

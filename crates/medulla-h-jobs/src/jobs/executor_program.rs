@@ -145,8 +145,12 @@ async fn run_program_kernel(
 ) -> Result<Option<medulla_program::OptimizationResult>, String> {
     let cancellation = Arc::new(AtomicBool::new(false));
     let kernel_token = cancellation.clone();
+    // The reflective front is bounded by registry knob `front.max_size`
+    // (MEDULLA-DECISION-ENGINE-R800.3); the kernel crate carries no knob.
+    let front_max_size =
+        usize::try_from(medulla_server_api::knob_config::knobs().front_max_size).unwrap_or(usize::MAX);
     let mut kernel = tokio::task::spawn_blocking(move || {
-        NativeCompiler::compile_cancellable(&request, &kernel_token)
+        NativeCompiler::compile_with_front_bound(&request, &kernel_token, front_max_size)
     });
     let began = Instant::now();
     let mut ticker = tokio::time::interval(Duration::from_millis(250));

@@ -282,11 +282,25 @@ pub struct EvaluationSummary {
     #[serde(default)]
     pub modality_scores: BTreeMap<ProgramModality, f64>,
     pub evidence_refs: Vec<OpaqueRef>,
+    /// The second objective of the reflective Pareto front
+    /// (MEDULLA-DECISION-ENGINE-R800.3): the candidate's benchmark score in
+    /// `[0, 1]`. Absent on an evaluation that takes no part in a front.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub benchmark_score: Option<f64>,
+    /// The measured cost of the evaluation in integer micro-USD, recorded as a
+    /// claim; the third front objective.
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub cost_micro_usd: u64,
+}
+
+fn is_zero(value: &u64) -> bool {
+    *value == 0
 }
 
 impl EvaluationSummary {
     fn validate(&self) -> Result<(), ProgramError> {
         if !unit_score(self.aggregate_score)
+            || self.benchmark_score.is_some_and(|score| !unit_score(score))
             || self.evidence_refs.is_empty()
             || self.evidence_refs.len() > crate::MAX_EVIDENCE_PER_EXAMPLE
             || self.evidence_refs.iter().collect::<BTreeSet<_>>().len() != self.evidence_refs.len()
@@ -544,6 +558,10 @@ pub struct OptimizationResult {
     /// (MEDULLA-DECISION-ENGINE-R810.1).
     pub stage: RevisionStage,
     pub checkpoint: OptimizationCheckpoint,
+    /// The Pareto front of the evaluated candidates of a reflective job
+    /// (MEDULLA-DECISION-ENGINE-R800.3); `None` for every other optimizer.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub front: Option<crate::optimize::FrontSummary>,
 }
 
 impl OptimizationResult {
@@ -575,6 +593,21 @@ impl NativeCompiler {
     pub fn compile_cancellable(
         request: &OptimizationRequest,
         cancellation: &AtomicBool,
+    ) -> Result<OptimizationResult, ProgramError> {
+        Self::compile_with_front_bound(
+            request,
+            cancellation,
+            crate::optimize::DEFAULT_FRONT_MAX_SIZE,
+        )
+    }
+
+    /// [`Self::compile_cancellable`] with the reflective front bounded to
+    /// `front_max_size` candidates; the executor passes the value of registry
+    /// knob `front.max_size` (this crate carries no knob dependency).
+    pub fn compile_with_front_bound(
+        request: &OptimizationRequest,
+        cancellation: &AtomicBool,
+        front_max_size: usize,
     ) -> Result<OptimizationResult, ProgramError> {
         request.validate()?;
         check_cancelled(cancellation)?;
@@ -666,7 +699,15 @@ impl NativeCompiler {
                 planned_steps,
                 evaluated_candidates,
             },
+            front: None,
         };
+        if request.optimizer == OptimizerKind::Gepa {
+            result.front = crate::optimize::reflective_front(
+                &result.candidates,
+                request.budget.seed,
+                front_max_size,
+            )?;
+        }
         result.held_out = crate::evidence::program_held_out_evidence(request, &result);
         Ok(result)
     }

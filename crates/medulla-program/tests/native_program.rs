@@ -201,6 +201,8 @@ fn request(optimizer: OptimizerKind) -> OptimizationRequest {
         },
         promotion: PromotionPolicy::default(),
         baseline: EvaluationSummary {
+            benchmark_score: None,
+            cost_micro_usd: 0,
             subject_ref: program_ref,
             aggregate_score: 0.5,
             modality_scores: ProgramModality::ALL
@@ -229,6 +231,8 @@ fn all_modalities_compile_and_require_evidence_before_promotion() {
     );
 
     request.candidate_evaluations.push(EvaluationSummary {
+        benchmark_score: None,
+        cost_micro_usd: 0,
         subject_ref: proposal.candidates[0].candidate_ref.clone(),
         aggregate_score: 0.8,
         modality_scores: ProgramModality::ALL
@@ -258,6 +262,8 @@ fn selected_candidate_carries_held_out_evidence() {
     let proposal = NativeCompiler::compile(&request).expect("compile proposal");
     assert_eq!(proposal.held_out, None, "no evaluated candidate, no evidence");
     request.candidate_evaluations.push(EvaluationSummary {
+        benchmark_score: None,
+        cost_micro_usd: 0,
         subject_ref: proposal.candidates[0].candidate_ref.clone(),
         aggregate_score: 0.8,
         modality_scores: ProgramModality::ALL
@@ -511,6 +517,8 @@ fn promotion_identity_and_model_trace_bind_to_one_revision() {
     let mut request = request(OptimizerKind::LabeledFewShot);
     let proposal = NativeCompiler::compile(&request).expect("compile proposal");
     request.candidate_evaluations.push(EvaluationSummary {
+        benchmark_score: None,
+        cost_micro_usd: 0,
         subject_ref: proposal.candidates[0].candidate_ref.clone(),
         aggregate_score: 0.8,
         modality_scores: ProgramModality::ALL
@@ -714,4 +722,71 @@ fn compile_reads_train_for_candidates_and_validation_only_for_scoring() {
 
     // A seeded run is deterministic over the same corpus.
     assert_eq!(result, NativeCompiler::compile(&request).expect("rerun"));
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R800.3: the reflective optimizer builds a
+/// Pareto front over the evaluated candidates (objective 0 `aggregate_score`,
+/// objective 1 `benchmark_score`, cost `cost_micro_usd`) and reports its digest,
+/// its scoreboard and the next parent; one seed reproduces the digest; any other
+/// optimizer reports no front.
+// spec: MEDULLA-DECISION-ENGINE-R800.3
+#[test]
+fn reflective_job_reports_front_and_next_parent() {
+    let mut request = request(OptimizerKind::Gepa);
+    request.optimizer_artifacts.push(OptimizerArtifact {
+        artifact_ref: opaque("reflection", "gepa-reflection"),
+        kind: OptimizerArtifactKind::Reflection,
+        source_ref: request.program.program_ref.clone(),
+        modalities: ProgramModality::ALL.into_iter().collect(),
+        score: 0.8,
+        evidence_refs: vec![opaque("evidence", "gepa-reflection")],
+        access_policy_ref: request.program.policy.access_policy_ref.clone(),
+    });
+    let proposal = NativeCompiler::compile(&request).expect("reflective materialization");
+    assert!(!proposal.candidates.is_empty());
+    assert!(proposal.front.is_none(), "no evaluation, no front");
+
+    // Each candidate trades accuracy against benchmark and cost, so none dominates another.
+    let count = proposal.candidates.len();
+    for (index, candidate) in proposal.candidates.iter().enumerate() {
+        let step = index as f64 / (count as f64 + 1.0);
+        request.candidate_evaluations.push(EvaluationSummary {
+            benchmark_score: Some(0.9 - step * 0.5),
+            cost_micro_usd: 1_000 + index as u64 * 500,
+            subject_ref: candidate.candidate_ref.clone(),
+            aggregate_score: 0.4 + step * 0.5,
+            modality_scores: ProgramModality::ALL
+                .into_iter()
+                .map(|modality| (modality, 0.5))
+                .collect(),
+            evidence_refs: vec![opaque("evaluation", &format!("gepa-evidence-{index}"))],
+        });
+    }
+    let evaluated = NativeCompiler::compile(&request).expect("evaluated reflective job");
+    let front = evaluated.front.as_ref().expect("a reflective job reports its front");
+    assert_eq!(front.digest.len(), 64);
+    assert!(front.digest.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)));
+    assert!(!front.scoreboard.is_empty() && front.scoreboard.len() <= count);
+    let parent = front.next_parent_ref.as_ref().expect("a non-empty front names a parent");
+    assert!(front.scoreboard.iter().any(|row| &row.candidate_ref == parent));
+
+    // One seed over one request reproduces the digest and the parent.
+    let again = NativeCompiler::compile(&request).expect("rerun");
+    assert_eq!(again.front, evaluated.front);
+
+    // A front is a reflective notion: no other optimizer reports one.
+    let mut few_shot = self::request(OptimizerKind::LabeledFewShot);
+    let draft = NativeCompiler::compile(&few_shot).expect("draft");
+    few_shot.candidate_evaluations.push(EvaluationSummary {
+        benchmark_score: Some(0.9),
+        cost_micro_usd: 10,
+        subject_ref: draft.candidates[0].candidate_ref.clone(),
+        aggregate_score: 0.8,
+        modality_scores: ProgramModality::ALL
+            .into_iter()
+            .map(|modality| (modality, 0.8))
+            .collect(),
+        evidence_refs: vec![opaque("evaluation", "few-shot-evidence")],
+    });
+    assert!(NativeCompiler::compile(&few_shot).expect("few shot").front.is_none());
 }

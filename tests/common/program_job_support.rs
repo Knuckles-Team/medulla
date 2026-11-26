@@ -155,6 +155,8 @@ pub fn program_request(label: &str, evaluations: Vec<EvaluationSummary>) -> Opti
         },
         promotion: PromotionPolicy::default(),
         baseline: EvaluationSummary {
+            benchmark_score: None,
+            cost_micro_usd: 0,
             subject_ref: program_ref,
             aggregate_score: 0.5,
             modality_scores: [(ProgramModality::Graph, 0.5)].into_iter().collect(),
@@ -173,6 +175,8 @@ pub fn program_ref() -> OpaqueRef {
 
 pub fn evaluation_of(candidate_ref: &str, score: f64) -> EvaluationSummary {
     EvaluationSummary {
+        benchmark_score: None,
+        cost_micro_usd: 0,
         subject_ref: OpaqueRef::new(candidate_ref.to_string()).expect("candidate ref"),
         aggregate_score: score,
         modality_scores: [(ProgramModality::Graph, score)].into_iter().collect(),

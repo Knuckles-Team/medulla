@@ -345,3 +345,82 @@ fn splitmix64(state: &mut u64) -> u64 {
     z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
     z ^ (z >> 31)
 }
+
+/// The bound of a reflective front when the caller supplies none: the default
+/// of registry knob `front.max_size`.
+pub const DEFAULT_FRONT_MAX_SIZE: usize = 256;
+
+/// One scoreboard row: a candidate and the accuracy it buys per micro-USD.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ScoreboardRow {
+    pub candidate_ref: String,
+    /// The first objective, `aggregate_score`.
+    pub score: f32,
+    pub cost_micro_usd: u64,
+}
+
+/// What a reflective job reports of its front (MEDULLA-DECISION-ENGINE-R800.3):
+/// the digest of the front, its scoreboard in rank order and the candidate the
+/// binary tournament picks as the next parent.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct FrontSummary {
+    /// 64 lowercase hex characters ([`ParetoFront::digest`]).
+    pub digest: String,
+    pub scoreboard: Vec<ScoreboardRow>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub next_parent_ref: Option<String>,
+}
+
+/// The front of the evaluated candidates of a reflective job: objective 0 is
+/// the evaluation's `aggregate_score`, objective 1 its `benchmark_score`
+/// (absent counts as 0) and cost its `cost_micro_usd`. Candidates without an
+/// evaluation take no part. `None` when no candidate was evaluated.
+pub fn reflective_front(
+    candidates: &[crate::ProgramCandidate],
+    seed: u64,
+    max_size: usize,
+) -> Result<Option<FrontSummary>, crate::ProgramError> {
+    use sha2::{Digest, Sha256};
+    let mut front = ParetoFront::<2>::default();
+    for candidate in candidates {
+        let Some(evaluation) = candidate.evaluation.as_ref() else {
+            continue;
+        };
+        let genes_digest = if candidate.content_digest.len() == 64 {
+            candidate.content_digest.clone()
+        } else {
+            hex::encode(Sha256::digest(candidate.content_digest.as_bytes()))
+        };
+        front
+            .insert(PolicyCandidate {
+                id: candidate.candidate_ref.as_str().to_owned(),
+                parent: None,
+                genes_digest,
+                scores: [
+                    evaluation.aggregate_score as f32,
+                    evaluation.benchmark_score.unwrap_or(0.0) as f32,
+                ],
+                cost_micro_usd: evaluation.cost_micro_usd,
+            })
+            .map_err(|_| crate::ProgramError::InvalidPromotion)?;
+    }
+    if front.candidates().is_empty() {
+        return Ok(None);
+    }
+    front.bound(max_size);
+    Ok(Some(FrontSummary {
+        digest: front.digest(),
+        scoreboard: front
+            .scoreboard()
+            .into_iter()
+            .map(|candidate| ScoreboardRow {
+                candidate_ref: candidate.id.clone(),
+                score: candidate.scores[0],
+                cost_micro_usd: candidate.cost_micro_usd,
+            })
+            .collect(),
+        next_parent_ref: front.next_parent(seed).map(|parent| parent.id.clone()),
+    }))
+}
