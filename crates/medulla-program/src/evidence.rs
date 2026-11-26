@@ -61,6 +61,55 @@ pub fn check_held_out_split(examples: &[TrainingExample]) -> Result<(), HeldOutR
     Ok(())
 }
 
+/// Why the evaluations of a reflective job cannot form a front
+/// (MEDULLA-DECISION-ENGINE-R800.4).
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FrontRefusal {
+    /// The test split holds fewer examples than `knob front.min_eval_examples`.
+    EvalTooSmall { test_examples: usize, minimum: usize },
+    /// An evaluation carries no `benchmark_score`, so it has one objective
+    /// where the front needs two.
+    ScoreLength { subject_ref: String },
+}
+
+/// The inputs a reflective (`Gepa`) job needs before it builds a front: when
+/// the request carries candidate evaluations, its test split holds at least
+/// `min_eval_examples` examples and every evaluation names both objectives. Any
+/// other optimizer, and a draft with no evaluation, build no front and are not
+/// checked. The served job applies it at submit beside [`check_held_out_split`],
+/// so a refusal stores no job and stages no result.
+pub fn check_front_inputs(
+    request: &OptimizationRequest,
+    min_eval_examples: usize,
+) -> Result<(), FrontRefusal> {
+    if request.optimizer != crate::OptimizerKind::Gepa || request.candidate_evaluations.is_empty()
+    {
+        return Ok(());
+    }
+    let test_examples = request
+        .corpus
+        .examples
+        .iter()
+        .filter(|example| example.split == ExampleSplit::Test)
+        .count();
+    if test_examples < min_eval_examples {
+        return Err(FrontRefusal::EvalTooSmall {
+            test_examples,
+            minimum: min_eval_examples,
+        });
+    }
+    if let Some(evaluation) = request
+        .candidate_evaluations
+        .iter()
+        .find(|evaluation| evaluation.benchmark_score.is_none())
+    {
+        return Err(FrontRefusal::ScoreLength {
+            subject_ref: evaluation.subject_ref.as_str().to_string(),
+        });
+    }
+    Ok(())
+}
+
 /// The evidence of `result`'s selected candidate, `None` when no candidate was
 /// selected or the selected candidate carries no evaluation.
 pub fn program_held_out_evidence(

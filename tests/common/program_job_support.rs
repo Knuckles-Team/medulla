@@ -189,8 +189,13 @@ pub fn sized_program_request(
     }
 }
 
-/// A reflective (`Gepa`) request over the fixture corpus: it names one reflection
-/// artifact, so the optimizer has something to materialize candidates from
+/// Test-split examples of a reflective request: the default of
+/// `knob front.min_eval_examples` (MEDULLA-DECISION-ENGINE-R800.4).
+pub const FRONT_TEST_EXAMPLES: usize = 30;
+
+/// A reflective (`Gepa`) request over a corpus whose test split holds
+/// [`FRONT_TEST_EXAMPLES`] examples: it names one reflection artifact, so the
+/// optimizer has something to materialize candidates from
 /// (MEDULLA-DECISION-ENGINE-R800.3).
 pub fn reflective_request(
     label: &str,
@@ -199,7 +204,7 @@ pub fn reflective_request(
     let mut request = sized_program_request(
         label,
         evaluations,
-        (TRAIN_EXAMPLES, TEST_EXAMPLES as usize),
+        (TRAIN_EXAMPLES, FRONT_TEST_EXAMPLES),
         OptimizerKind::Gepa,
     );
     request

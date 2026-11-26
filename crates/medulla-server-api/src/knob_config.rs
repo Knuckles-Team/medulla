@@ -348,6 +348,8 @@ knobs! {
     retrieval_joint_max_iters: u64 = "retrieval.joint_max_iters", U64(1000), [10, 100000], "sweeps", Tunable;
     /// Pareto front: most candidates the front keeps; the smallest crowding distance leaves first (MEDULLA-DECISION-ENGINE-R800.2).
     front_max_size: u64 = "front.max_size", U64(256), [16, 1024], "candidates", Tunable;
+    /// Pareto front: fewest test-split examples a reflective job's evaluations are admitted over (MEDULLA-DECISION-ENGINE-R800.4).
+    front_min_eval_examples: u64 = "front.min_eval_examples", U64(30), [10, 10000], "examples", Tunable;
     /// Chunk encoding: most chunks one document may take (MEDULLA-FEDERATED-QUERY-R039.2.6).
     retrieval_encode_budget_chunks: u64 = "retrieval.encode_budget_chunks", U64(4096), [1, 100_000], "chunks", Tunable;
     /// Source coverage: hops searched from the queried roots when the request names no budget (MEDULLA-SRC-AUTH-R004.6.1).

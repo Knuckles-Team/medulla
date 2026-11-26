@@ -545,7 +545,8 @@ pub(super) fn check_program_optimizer_name(request_msgpack: &[u8]) -> Result<(),
 #[cfg(feature = "program-optimization")]
 pub(super) fn check_program_request(request: &OptimizationRequest) -> Result<(), String> {
     use medulla_decision_types::decision::program::{
-        EVAL_SET_NOT_INDEPENDENT, PROGRAM_BUDGET_EXCEEDED, PROGRAM_HELDOUT_MISSING,
+        EVAL_SET_NOT_INDEPENDENT, FRONT_EVAL_TOO_SMALL, FRONT_SCORE_LENGTH,
+        PROGRAM_BUDGET_EXCEEDED, PROGRAM_HELDOUT_MISSING,
     };
     if let Some(field) = request.budget.exceeded_ceiling() {
         return Err(format!(
@@ -554,14 +555,32 @@ pub(super) fn check_program_request(request: &OptimizationRequest) -> Result<(),
         ));
     }
     match medulla_program::check_held_out_split(&request.corpus.examples) {
-        Ok(()) => Ok(()),
-        Err(medulla_program::HeldOutRefusal::Missing) => Err(format!(
+        Ok(()) => {}
+        Err(medulla_program::HeldOutRefusal::Missing) => return Err(format!(
             "{}: the corpus has no test-split example",
             PROGRAM_HELDOUT_MISSING.as_str()
         )),
-        Err(medulla_program::HeldOutRefusal::NotIndependent) => Err(format!(
+        Err(medulla_program::HeldOutRefusal::NotIndependent) => return Err(format!(
             "{}: no test-split example is graded by a kind that decides promotion",
             EVAL_SET_NOT_INDEPENDENT.as_str()
+        )),
+    }
+    // MEDULLA-DECISION-ENGINE-R800.4: a reflective job's front inputs.
+    let min_eval_examples =
+        usize::try_from(medulla_server_api::knob_config::knobs().front_min_eval_examples)
+            .unwrap_or(usize::MAX);
+    match medulla_program::check_front_inputs(request, min_eval_examples) {
+        Ok(()) => Ok(()),
+        Err(medulla_program::FrontRefusal::EvalTooSmall {
+            test_examples,
+            minimum,
+        }) => Err(format!(
+            "{}: the test split holds {test_examples} examples, fewer than the {minimum} a front needs",
+            FRONT_EVAL_TOO_SMALL.as_str()
+        )),
+        Err(medulla_program::FrontRefusal::ScoreLength { subject_ref }) => Err(format!(
+            "{}: the evaluation of `{subject_ref}` carries no benchmark score",
+            FRONT_SCORE_LENGTH.as_str()
         )),
     }
 }

@@ -25,8 +25,8 @@ mod test_support;
 use std::sync::{Arc, Mutex, OnceLock};
 
 use program_job_support::{
-    front_evaluation_of, node_properties, reflective_request, result_rows, run_program_job,
-    strings_with_prefix,
+    evaluation_of, front_evaluation_of, node_properties, refused_submit, reflective_request,
+    result_rows, run_program_job, sized_program_request, strings_with_prefix,
 };
 use serde_json::Value;
 
@@ -203,4 +203,65 @@ fn front_digest_replays_under_one_seed() {
         Some(set_digest),
         observed.revision["held_out"]["evaluation_set_digest"].as_str()
     );
+}
+
+/// A reflective job whose inputs cannot form a front is refused at submit with a
+/// stable code and stores no job: a test split under `front.min_eval_examples`
+/// is `FRONT_EVAL_TOO_SMALL`, an evaluation without a benchmark score is
+/// `FRONT_SCORE_LENGTH`, and a test split graded only by a model judge is
+/// `EVAL_SET_NOT_INDEPENDENT`.
+// spec: MEDULLA-DECISION-ENGINE-R800.4
+#[test]
+fn front_inputs_refuse_with_stable_codes() {
+    use medulla_program::{ExampleSplit, GraderKind, OptimizerKind};
+    let driver = medulla_server::spawn_engine_driver(|| {
+        let runtime = tokio::runtime::Builder::new_multi_thread()
+            .worker_threads(2)
+            .thread_stack_size(medulla_server::ENGINE_WORKER_STACK_BYTES)
+            .enable_all()
+            .build()
+            .expect("build runtime");
+        runtime.block_on(async {
+            let directory = tempfile::tempdir().expect("private persistence");
+            let state = program_job_support::redb_state(directory.path());
+            let candidate = "eg:program_candidate:00";
+            let benchmarked = |count: usize| {
+                sized_program_request(
+                    "refuse",
+                    vec![front_evaluation_of(candidate, 0.7, 0.6, 100)],
+                    (6, count),
+                    OptimizerKind::Gepa,
+                )
+            };
+
+            // Two test examples are under the 30 the front needs.
+            let small = benchmarked(2);
+            let text = refused_submit(&state, 10, &small).await;
+            assert!(text.starts_with("FRONT_EVAL_TOO_SMALL"), "{text}");
+
+            // An evaluation with no benchmark score has one objective, not two.
+            let mut unscored = benchmarked(30);
+            unscored.candidate_evaluations = vec![evaluation_of(candidate, 0.7)];
+            let text = refused_submit(&state, 20, &unscored).await;
+            assert!(text.starts_with("FRONT_SCORE_LENGTH"), "{text}");
+
+            // A model judge alone cannot decide the held-out evidence.
+            let mut judged = benchmarked(30);
+            for example in &mut judged.corpus.examples {
+                if example.split == ExampleSplit::Test {
+                    example.grader_kind = GraderKind::ModelJudge;
+                }
+            }
+            let text = refused_submit(&state, 30, &judged).await;
+            assert!(text.starts_with("EVAL_SET_NOT_INDEPENDENT"), "{text}");
+
+            // Nothing was staged by any refusal.
+            assert!(
+                program_job_support::champion_target(&state).await.is_none(),
+                "a refusal stages no revision"
+            );
+        });
+    })
+    .expect("start engine driver");
+    medulla_server::join_engine_driver(driver).expect("engine driver failed");
 }

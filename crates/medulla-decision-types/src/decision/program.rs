@@ -1,5 +1,5 @@
 //! The refusal codes of the served program optimization job
-//! (MEDULLA-DECISION-ENGINE-R810.4, R804.4, R813.4).
+//! (MEDULLA-DECISION-ENGINE-R810.4, R804.4, R813.4, R800.4).
 //!
 //! `submit_job_program_optimize` (`crates/medulla-h-jobs/src/jobs/submit.rs`)
 //! rejects an invalid request with one of these codes before a job is stored,
@@ -23,6 +23,12 @@ pub const PROGRAM_OPTIMIZER_UNKNOWN: RefusalCode = RefusalCode::new("PROGRAM_OPT
 /// A budget field is above the optimizer's ceiling.
 pub const PROGRAM_BUDGET_EXCEEDED: RefusalCode = RefusalCode::new("PROGRAM_BUDGET_EXCEEDED");
 
+/// A reflective job's test split holds fewer examples than
+/// `knob front.min_eval_examples` (MEDULLA-DECISION-ENGINE-R800.4).
+pub const FRONT_EVAL_TOO_SMALL: RefusalCode = RefusalCode::new("FRONT_EVAL_TOO_SMALL");
+/// A reflective job's evaluation carries no `benchmark_score`, so it cannot
+/// place the candidate on both objectives (MEDULLA-DECISION-ENGINE-R800.4).
+pub const FRONT_SCORE_LENGTH: RefusalCode = RefusalCode::new("FRONT_SCORE_LENGTH");
 /// A stored `:Score` names a grader kind outside the five kinds
 /// (MEDULLA-DECISION-ENGINE-R813.4).
 pub const SCORE_GRADER_UNKNOWN: RefusalCode = RefusalCode::new("SCORE_GRADER_UNKNOWN");
@@ -43,6 +49,8 @@ pub const REFUSALS: &[RefusalCode] = &[
     PROGRAM_HELDOUT_MISSING,
     PROGRAM_OPTIMIZER_UNKNOWN,
     PROGRAM_BUDGET_EXCEEDED,
+    FRONT_EVAL_TOO_SMALL,
+    FRONT_SCORE_LENGTH,
     SCORE_GRADER_UNKNOWN,
     SCORE_OUT_OF_RANGE,
     SCORE_INVALID,
