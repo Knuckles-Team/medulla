@@ -425,6 +425,12 @@ $($variants)*
         /// the union of the named sets' resolved IRIs. Empty applies no filter.
         #[serde(default, skip_serializing_if = "Vec::is_empty")]
         document_set_ids: Vec<String>,
+        /// The agent whose knowledge scope narrows the candidates before truncation
+        /// (MEDULLA-FEDERATED-QUERY-R704.3). Arbora sets it from the verified agent; the
+        /// scope is the `knowledgeScope` of the agent definition node, and an empty scope
+        /// is the caller's access alone.
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        agent_ref: Option<String>,
     },
 
     /// MEDULLA-DECISION-ENGINE-R100.100.4: find the matches of a query's n-grams

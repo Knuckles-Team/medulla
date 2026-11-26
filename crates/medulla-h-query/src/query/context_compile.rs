@@ -270,13 +270,23 @@ fn finite_score(score: f32) -> Result<f32, Refusal> {
 type ArmScores = (&'static str, Vec<(String, f32)>);
 
 /// Score ids by the lexical and semantic arms; best first, at most `top_n`.
-fn arm_scores(core: &GraphCore, request: &ContextBundleRequest) -> Result<Vec<ArmScores>, Refusal> {
+fn arm_scores(
+    core: &GraphCore,
+    request: &ContextBundleRequest,
+    scope: Option<&medulla_retrieval::knowledge_scope::ResolvedScope>,
+) -> Result<Vec<ArmScores>, Refusal> {
     let top_n = request.top_n as usize;
     let mut arms = Vec::new();
     if request.mode != ContextMode::Semantic {
         let words = query_words(&request.query_text);
         let mut scored = Vec::new();
-        for id in core.node_ids().into_iter().take(LEXICAL_SCAN_CAP) {
+        // The agent's knowledge scope narrows the scan before it is capped
+        // (MEDULLA-FEDERATED-QUERY-R704.3).
+        let in_scope = core
+            .node_ids()
+            .into_iter()
+            .filter(|id| scope.is_none_or(|scope| scope.admits(core, id)));
+        for id in in_scope.take(LEXICAL_SCAN_CAP) {
             if let Some(node) = node_text(core, &id) {
                 let score = finite_score(keyword_overlap(&words, &node))?;
                 if score > 0.0 {
@@ -287,10 +297,18 @@ fn arm_scores(core: &GraphCore, request: &ContextBundleRequest) -> Result<Vec<Ar
         arms.push(("lexical", scored));
     }
     if request.mode != ContextMode::Lexical && !request.query_embedding.is_empty() {
-        let raw = core.semantic_store.read().semantic_search(
-            &request.query_embedding,
-            top_n.saturating_mul(SEMANTIC_FANOUT),
-        );
+        let fanout = top_n.saturating_mul(SEMANTIC_FANOUT);
+        let raw = match scope {
+            Some(scope) => core.semantic_store.read().semantic_search_filtered(
+                &request.query_embedding,
+                fanout,
+                |id| scope.admits(core, id),
+            ),
+            None => core
+                .semantic_store
+                .read()
+                .semantic_search(&request.query_embedding, fanout),
+        };
         let mut scored = Vec::new();
         for (id, similarity) in raw {
             scored.push((id, finite_score(similarity)?.clamp(0.0, 1.0)));
@@ -303,7 +321,11 @@ fn arm_scores(core: &GraphCore, request: &ContextBundleRequest) -> Result<Vec<Ar
                 .unwrap_or(std::cmp::Ordering::Equal)
                 .then_with(|| a.0.cmp(&b.0))
         });
-        scored.truncate(top_n);
+        // Inside the scope, the top `n` are cut by `scoped_top_k`, never before it.
+        match scope {
+            Some(scope) => *scored = scope.top_k(core, std::mem::take(scored), top_n),
+            None => scored.truncate(top_n),
+        }
     }
     Ok(arms)
 }
@@ -327,7 +349,13 @@ fn run_compile(
     let knobs = medulla_server_api::knob_config::knobs();
     let bytes_per_token = knobs.context_facts_bytes_per_token;
     let revision = core.version();
-    let arms = arm_scores(core, request)?;
+    let scope = match request.agent_ref.as_deref() {
+        Some(agent) => medulla_retrieval::knowledge_scope::agent_scope(core, agent)
+            .map_err(|detail| refuse("INVALID_ARGUMENT", detail))?
+            .map(|scope| medulla_retrieval::knowledge_scope::ResolvedScope::resolve(core, &scope)),
+        None => None,
+    };
+    let arms = arm_scores(core, request, scope.as_ref())?;
 
     // One read per distinct hit.
     let ids: BTreeSet<String> = arms

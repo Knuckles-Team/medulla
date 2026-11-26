@@ -713,6 +713,7 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             perspectives,
             capability,
             document_set_ids,
+            agent_ref,
         } => Method::Discover {
             keywords,
             query_embedding: adapted_query(
@@ -732,6 +733,7 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
             perspectives,
             capability,
             document_set_ids,
+            agent_ref,
         },
         other => other,
     }
@@ -740,6 +742,22 @@ async fn adapt_query_vector(ctx: &GraphOpsContext<'_>, method: Method) -> Method
 #[cfg(not(feature = "decide"))]
 async fn adapt_query_vector(_ctx: &GraphOpsContext<'_>, method: Method) -> Method {
     method
+}
+
+/// The node ids inside the knowledge scope of agent `agent_ref`, read from its definition node
+/// of the caller's projected view; `None` when the request names no agent or the agent declares
+/// no scope (MEDULLA-FEDERATED-QUERY-R704.3).
+#[cfg(feature = "query")]
+fn agent_scope_ids(
+    core: &GraphCore,
+    agent_ref: Option<&str>,
+) -> Result<Option<std::collections::BTreeSet<String>>, String> {
+    use medulla_retrieval::knowledge_scope::{agent_scope, ResolvedScope};
+    let Some(agent) = agent_ref else {
+        return Ok(None);
+    };
+    Ok(agent_scope(core, agent)?
+        .map(|scope| ResolvedScope::resolve(core, &scope).node_ids(core)))
 }
 
 /// Handle semantic and embedding operations.
@@ -786,6 +804,7 @@ pub(super) async fn try_handle_semantic_compute(
             perspectives,
             capability,
             document_set_ids,
+            agent_ref,
         } => {
             let allowed =
                 match super::assistant_profile::resolve_document_sets(&ctx, &document_set_ids)
@@ -794,6 +813,16 @@ pub(super) async fn try_handle_semantic_compute(
                     Ok(allowed) => allowed,
                     Err(error) => return ControlFlow::Break(Response::err(req_id, error)),
                 };
+            // The agent's knowledge scope narrows the candidates before truncation
+            // (MEDULLA-FEDERATED-QUERY-R704.3): it only narrows what the caller may read.
+            let allowed = match agent_scope_ids(core, agent_ref.as_deref()) {
+                Ok(Some(scoped)) => Some(match allowed {
+                    Some(sets) => sets.intersection(&scoped).cloned().collect(),
+                    None => scoped,
+                }),
+                Ok(None) => allowed,
+                Err(error) => return ControlFlow::Break(Response::err(req_id, error)),
+            };
             let served = discover_served(&ctx, capability.as_deref()).await;
             let implicit_feedback = match served.0.as_deref() {
                 Some(tenant) => {

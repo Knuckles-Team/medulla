@@ -34,5 +34,6 @@ decide = ["dep:medulla-ann", "medulla-ann?/drift", "epistemic", "query"]
 ann = ["dep:medulla-ann", "medulla-core/ann", "medulla-graph-core/ann"]
 
 [dev-dependencies]
+medulla-ingestion-types = { path = "../medulla-ingestion-types" }
 medulla-exec = { path = "../medulla-exec", features = ["test-support"] }
 medulla-types = { path = "../medulla-types", features = ["test-support"] }

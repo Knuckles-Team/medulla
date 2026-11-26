@@ -7235,6 +7235,7 @@ class GraphOperationsClient:
         perspectives: int | None = None,
         capability: str | None = None,
         document_set_ids: list[str] | None = None,
+        agent_ref: str | None = None,
     ) -> dict[str, Any]:
         """One-round-trip hybrid discovery
         (CONCEPT:MEDULLA-KG.retrieval.one-round-trip-discovery).
@@ -7276,6 +7277,7 @@ class GraphOperationsClient:
                         if document_set_ids
                         else {}
                     ),
+                    **({"agent_ref": agent_ref} if agent_ref is not None else {}),
                 },
             )
         ).payload

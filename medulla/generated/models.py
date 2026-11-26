@@ -18028,6 +18028,7 @@ class DiscoverMode(str, Enum):
 class MethodDiscoverParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
+    agent_ref: str | None = None
     as_of: int | None = None
     capability: str | None = None
     document_set_ids: list[str] = Field(default_factory=list)

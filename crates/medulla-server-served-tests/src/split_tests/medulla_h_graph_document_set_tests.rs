@@ -121,6 +121,7 @@ mod served {
                     perspectives: None,
                     capability: None,
                     document_set_ids: document_set_ids.iter().map(|s| s.to_string()).collect(),
+                    agent_ref: None,
                 },
             )
             .await

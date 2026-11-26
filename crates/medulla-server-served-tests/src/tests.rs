@@ -3339,6 +3339,7 @@ async fn test_discover_blends_keyword_and_semantic() {
                 perspectives: None,
                 capability: None,
                 document_set_ids: Vec::new(),
+                agent_ref: None,
             },
         ),
     )
@@ -3378,6 +3379,7 @@ async fn test_discover_blends_keyword_and_semantic() {
                 perspectives: None,
                 capability: None,
                 document_set_ids: Vec::new(),
+                agent_ref: None,
             },
         ),
     )
@@ -3450,6 +3452,7 @@ async fn test_discover_verdict_ratio_counts_only_the_callers_graph() {
                         perspectives: None,
                         capability: None,
                 document_set_ids: Vec::new(),
+                agent_ref: None,
                     },
                 ),
             )

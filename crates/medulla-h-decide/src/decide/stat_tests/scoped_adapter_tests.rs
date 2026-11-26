@@ -748,6 +748,7 @@ async fn discovered_for(
             perspectives: None,
             capability: capability.map(str::to_string),
             document_set_ids: Vec::new(),
+                agent_ref: None,
         },
     )
     .await;
