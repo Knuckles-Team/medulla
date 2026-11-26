@@ -1774,6 +1774,319 @@ async fn matview_status_catalog_reports_mode_and_reason() {
     );
 }
 
+/// Every data row of a simple query as optional cell text.
+#[cfg(feature = "matview")]
+async fn cells(client: &tokio_postgres::Client, sql: &str) -> Vec<Vec<Option<String>>> {
+    client
+        .simple_query(sql)
+        .await
+        .unwrap_or_else(|error| panic!("{sql}: {}", error_chain(&error)))
+        .into_iter()
+        .filter_map(|message| match message {
+            tokio_postgres::SimpleQueryMessage::Row(row) => Some(
+                (0..row.len())
+                    .map(|index| row.get(index).map(str::to_string))
+                    .collect(),
+            ),
+            _ => None,
+        })
+        .collect()
+}
+
+/// The view `name` is served incrementally and reads equal to `defining` after a commit.
+#[cfg(feature = "matview")]
+async fn assert_view_fresh(client: &tokio_postgres::Client, view: &str, defining: &str) {
+    assert_eq!(
+        cells(client, &format!("SELECT * FROM {view}")).await,
+        cells(client, defining).await,
+        "{view} must equal {defining}"
+    );
+}
+
+/// Each view of `pairs` reads, ordered by `region`, equal to its defining select.
+#[cfg(feature = "matview")]
+async fn read_ordered_pairs(client: &tokio_postgres::Client, pairs: &[(String, String)]) {
+    for (view, select) in pairs {
+        assert_eq!(
+            cells(client, &format!("SELECT * FROM {view} ORDER BY region")).await,
+            cells(client, &format!("{select} ORDER BY region")).await,
+            "{view}"
+        );
+    }
+}
+
+/// The catalog row of `view` reports an incremental view.
+#[cfg(feature = "matview")]
+async fn assert_incremental(client: &tokio_postgres::Client, view: &str) {
+    let rows = cells(
+        client,
+        &format!("SELECT mode FROM medulla_catalog.matviews WHERE name = '{view}'"),
+    )
+    .await;
+    assert_eq!(rows, vec![vec![Some("incremental".to_string())]], "{view}");
+}
+
+/// A table `orders(id, region, amount)` of `rows` rows, regions cycling over four values.
+#[cfg(feature = "matview")]
+async fn seed_orders(client: &tokio_postgres::Client, table: &str, rows: i64) {
+    client
+        .simple_query(&format!(
+            "CREATE TABLE {table} (id BIGINT PRIMARY KEY, region TEXT, amount NUMERIC(12,2))"
+        ))
+        .await
+        .expect("create orders");
+    const REGIONS: [&str; 4] = ["eu", "us", "apac", "latam"];
+    let mut id = 1;
+    while id <= rows {
+        let upper = (id + 999).min(rows);
+        let values: Vec<String> = (id..=upper)
+            .map(|n| {
+                format!(
+                    "({n}, '{}', {}.{:02})",
+                    REGIONS[(n % 4) as usize],
+                    n % 97 + 1,
+                    n % 100
+                )
+            })
+            .collect();
+        client
+            .simple_query(&format!(
+                "INSERT INTO {table} (id, region, amount) VALUES {}",
+                values.join(", ")
+            ))
+            .await
+            .expect("seed orders");
+        id = upper + 1;
+    }
+}
+
+/// One mixed change over `orders`, the `n`th of a deterministic sequence: an insert, an update
+/// of the amount, a move to another region, or a delete.
+#[cfg(feature = "matview")]
+fn mixed_change(table: &str, n: i64, base: i64) -> String {
+    const REGIONS: [&str; 4] = ["eu", "us", "apac", "latam"];
+    let target = (n * 7919) % base + 1;
+    match n % 4 {
+        0 => format!(
+            "INSERT INTO {table} (id, region, amount) VALUES ({}, '{}', {}.50)",
+            base + n,
+            REGIONS[(n % 4) as usize],
+            n % 53 + 1
+        ),
+        1 => format!(
+            "UPDATE {table} SET amount = {}.25 WHERE id = {target}",
+            n % 31
+        ),
+        2 => format!(
+            "UPDATE {table} SET region = '{}' WHERE id = {target}",
+            REGIONS[((n / 4) % 4) as usize]
+        ),
+        _ => format!("DELETE FROM {table} WHERE id = {target}"),
+    }
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R009.7
+#[cfg(feature = "matview")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn matview_incremental_read_after_commit() {
+    const BASE: i64 = 100_000;
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    let table = unique_table();
+    seed_orders(&client, &table, BASE).await;
+    let view = format!("{table}_by_region");
+    let defining = format!(
+        "SELECT region, count(*), sum(amount), avg(amount) FROM {table} WHERE amount > 0 GROUP BY region"
+    );
+    client
+        .simple_query(&format!("CREATE MATERIALIZED VIEW {view} AS {defining}"))
+        .await
+        .expect("CREATE MATERIALIZED VIEW");
+    assert_incremental(&client, &view).await;
+    let ordered = format!("{defining} ORDER BY region");
+    let mut worst_commit = std::time::Duration::ZERO;
+    for n in 1..=1_000 {
+        let started = std::time::Instant::now();
+        client
+            .simple_query(&mixed_change(&table, n, BASE))
+            .await
+            .expect("mixed change");
+        worst_commit = worst_commit.max(started.elapsed());
+        assert_eq!(
+            cells(&client, &format!("SELECT * FROM {view} ORDER BY region")).await,
+            cells(&client, &ordered).await,
+            "after change {n}"
+        );
+    }
+    assert_incremental(&client, &view).await;
+    // The view read is a table read, not a recompute: it stays far below the defining select.
+    let read = std::time::Instant::now();
+    cells(&client, &format!("SELECT * FROM {view}")).await;
+    assert!(
+        read.elapsed() < std::time::Duration::from_millis(250),
+        "a view read took {:?} (worst commit {worst_commit:?})",
+        read.elapsed()
+    );
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R012.5
+#[cfg(feature = "matview")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn matview_min_max_distinct_after_commit() {
+    const BASE: i64 = 20_000;
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    let table = unique_table();
+    seed_orders(&client, &table, BASE).await;
+    let extremes = format!("{table}_extremes");
+    let regions = format!("{table}_regions");
+    let extremes_select =
+        format!("SELECT region, min(amount), max(amount) FROM {table} GROUP BY region");
+    let regions_select = format!("SELECT DISTINCT region FROM {table}");
+    for (name, select) in [(&extremes, &extremes_select), (&regions, &regions_select)] {
+        client
+            .simple_query(&format!("CREATE MATERIALIZED VIEW {name} AS {select}"))
+            .await
+            .expect("CREATE MATERIALIZED VIEW");
+        assert_incremental(&client, name).await;
+    }
+    let pairs = [
+        (extremes.clone(), extremes_select.clone()),
+        (regions.clone(), regions_select.clone()),
+    ];
+    // Delete the current minimum of the `us` region, then every row of the `latam` region one
+    // commit at a time: the extremes recompute and the distinct set shrinks.
+    let minimum = cells(
+        &client,
+        &format!("SELECT id FROM {table} WHERE region = 'us' ORDER BY amount ASC, id ASC LIMIT 1"),
+    )
+    .await[0][0]
+        .clone()
+        .expect("a minimum row");
+    client
+        .simple_query(&format!("DELETE FROM {table} WHERE id = {minimum}"))
+        .await
+        .expect("delete the minimum");
+    read_ordered_pairs(&client, &pairs).await;
+    let latam = cells(&client, &format!("SELECT id FROM {table} WHERE region = 'latam' LIMIT 25"))
+        .await;
+    for row in latam {
+        let id = row[0].clone().expect("an id");
+        client
+            .simple_query(&format!("DELETE FROM {table} WHERE id = {id}"))
+            .await
+            .expect("delete");
+        read_ordered_pairs(&client, &pairs).await;
+    }
+    client
+        .simple_query(&format!("DELETE FROM {table} WHERE region = 'latam'"))
+        .await
+        .expect("delete the region");
+    read_ordered_pairs(&client, &pairs).await;
+    assert!(
+        !cells(&client, &format!("SELECT region FROM {regions}"))
+            .await
+            .iter()
+            .any(|row| row[0].as_deref() == Some("latam")),
+        "an emptied region leaves the distinct view"
+    );
+}
+
+// spec: MEDULLA-INCREMENTAL-VIEWS-R013.5
+#[cfg(feature = "matview")]
+#[tokio::test(flavor = "multi_thread", worker_threads = 4)]
+async fn matview_join_after_commit() {
+    let state = seeded_state();
+    let addr = spawn_listener(state).await;
+    let client = connect(&addr).await;
+    let stem = unique_table();
+    let (customers, orders, view) = (
+        format!("{stem}_customers"),
+        format!("{stem}_orders"),
+        format!("{stem}_joined"),
+    );
+    client
+        .simple_query(&format!(
+            "CREATE TABLE {customers} (id BIGINT PRIMARY KEY, region TEXT)"
+        ))
+        .await
+        .expect("create customers");
+    client
+        .simple_query(&format!(
+            "CREATE TABLE {orders} (id BIGINT PRIMARY KEY, customer_id BIGINT, amount BIGINT)"
+        ))
+        .await
+        .expect("create orders");
+    for (table, column) in [(&customers, "id"), (&orders, "customer_id")] {
+        client
+            .simple_query(&format!(
+                "CREATE INDEX {table}_{column}_ix ON {table} ({column})"
+            ))
+            .await
+            .expect("create index");
+    }
+    for id in 1..=50 {
+        client
+            .simple_query(&format!(
+                "INSERT INTO {customers} (id, region) VALUES ({id}, 'r{}')",
+                id % 5
+            ))
+            .await
+            .expect("seed customer");
+    }
+    let defining = format!(
+        "SELECT o.id, c.region, o.amount FROM {orders} o JOIN {customers} c ON o.customer_id = c.id"
+    );
+    client
+        .simple_query(&format!("CREATE MATERIALIZED VIEW {view} AS {defining}"))
+        .await
+        .expect("CREATE MATERIALIZED VIEW");
+    assert_incremental(&client, &view).await;
+    let ordered = format!("{defining} ORDER BY o.id");
+    for n in 1..=500_i64 {
+        let customer = n % 60 + 1;
+        // Every fifth change touches both tables in one transaction.
+        let statements = match n % 5 {
+            0 => vec![
+                "BEGIN".to_string(),
+                format!(
+                    "INSERT INTO {customers} (id, region) VALUES ({}, 'r{}')",
+                    1_000 + n,
+                    n % 5
+                ),
+                format!(
+                    "INSERT INTO {orders} (id, customer_id, amount) VALUES ({n}, {}, {})",
+                    1_000 + n,
+                    n % 40
+                ),
+                "COMMIT".to_string(),
+            ],
+            1 | 2 => vec![format!(
+                "INSERT INTO {orders} (id, customer_id, amount) VALUES ({n}, {customer}, {})",
+                n % 40
+            )],
+            3 => vec![format!(
+                "UPDATE {orders} SET customer_id = {customer} WHERE id = {}",
+                (n * 31) % (n - 1).max(1) + 1
+            )],
+            _ => vec![format!(
+                "DELETE FROM {orders} WHERE id = {}",
+                (n * 17) % (n - 1).max(1) + 1
+            )],
+        };
+        for statement in statements {
+            client.simple_query(&statement).await.expect("change");
+        }
+        assert_eq!(
+            cells(&client, &format!("SELECT * FROM {view} ORDER BY id")).await,
+            cells(&client, &ordered).await,
+            "after change {n}"
+        );
+    }
+}
+
 /// 32 sessions each update their own row range of one table: all 32 commits
 /// succeed, none returns SQLSTATE 40001, and every row holds its own value.
 // spec: MEDULLA-ENGINE-PARITY-R004.3
