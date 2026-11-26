@@ -1,0 +1,22 @@
+{
+  "source": "paperless-ngx-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "document": "document-1",
+      "missing_correspondent": "missing_correspondent-1",
+      "missing_due_date": "missing_due_date-1",
+      "joinKey": "paperless-ngx.q1-key-1",
+      "id": "paperless-ngx-mcp-paperless-ngx.q1-1",
+      "label": "paperless-ngx-mcp 1"
+    },
+    {
+      "document": "document-2",
+      "missing_correspondent": "missing_correspondent-2",
+      "missing_due_date": "missing_due_date-2",
+      "joinKey": "paperless-ngx.q1-key-2",
+      "id": "paperless-ngx-mcp-paperless-ngx.q1-2",
+      "label": "paperless-ngx-mcp 2"
+    }
+  ]
+}

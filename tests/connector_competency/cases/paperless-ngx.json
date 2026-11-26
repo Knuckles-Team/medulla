@@ -1,0 +1,34 @@
+{
+  "connector": "paperless-ngx",
+  "rollup": "MEDULLA-CQ-CONN-R046",
+  "vocabulary_module": "personal-v1.ttl",
+  "terms": [
+    "Tag",
+    "Correspondent",
+    "dueDate"
+  ],
+  "questions": [
+    {
+      "id": "paperless-ngx.q1",
+      "kind": "single",
+      "question": "Which documents tagged as invoice have no correspondent or no due date?",
+      "uql": "FOREIGN SCAN 'paperless-ngx-mcp'",
+      "sources": [
+        "paperless-ngx-mcp"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "paperless-ngx-mcp": "mcp_tool"
+      },
+      "columns": [
+        "document",
+        "missing_correspondent",
+        "missing_due_date"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "paperless-ngx-mcp/single.json"
+      ]
+    }
+  ]
+}
