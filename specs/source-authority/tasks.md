@@ -41,7 +41,7 @@ One task per leaf row of `requirements.md`, producer first. Each task names its 
 - [ ] T034 [US4] MEDULLA-SRC-AUTH-R007.1 Add `AuthorityAudit` and `AuditEntry` types
 - [ ] T035 [US4] MEDULLA-SRC-AUTH-R007.2 Build the audit from verdicts and premises only
 - [ ] T036 [US4] MEDULLA-SRC-AUTH-R007.3 Audit lists `not_used` rows with reason (including `Proposed`)
-- [ ] T037 [US4] MEDULLA-SRC-AUTH-R007.4 Wire the audit into the report's sources_used
+- [x] T037 [US4] MEDULLA-SRC-AUTH-R007.4 Wire the audit into the report's sources_used
 - [ ] T038 [US3] MEDULLA-SRC-AUTH-R008.1 Selection reports `mode: live` for a `virtual` row and refuses a copy route for it
 - [ ] T039 [US3] MEDULLA-SRC-AUTH-R008.2 An `accelerated` row resolves through `AccelerationPolicy` and carries its reason into the audit
 - [ ] T040 [US3] MEDULLA-SRC-AUTH-R009.1 Fixture: ServiceNow rank 1 and PagerDuty rank 2 for `:Incident`
