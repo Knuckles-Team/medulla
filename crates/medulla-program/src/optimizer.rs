@@ -184,6 +184,24 @@ impl OptimizationBudget {
         Ok(())
     }
 
+    /// The name of the first field above its `MAX_*` ceiling, `None` when every
+    /// field is within it (MEDULLA-DECISION-ENGINE-R810.4).
+    pub fn exceeded_ceiling(&self) -> Option<&'static str> {
+        if self.max_candidates > MAX_CANDIDATES {
+            Some("max_candidates")
+        } else if self.max_demonstrations > MAX_DEMONSTRATIONS {
+            Some("max_demonstrations")
+        } else if self.max_model_calls > MAX_MODEL_CALLS {
+            Some("max_model_calls")
+        } else if self.max_evaluator_calls > MAX_EVALUATOR_CALLS {
+            Some("max_evaluator_calls")
+        } else if self.max_training_steps > MAX_TRAINING_STEPS {
+            Some("max_training_steps")
+        } else {
+            None
+        }
+    }
+
     /// Every count/limit field is within its `MAX_*` ceiling (and the two
     /// "must be at least 1" fields are non-zero).
     fn bounds_ok(&self) -> bool {

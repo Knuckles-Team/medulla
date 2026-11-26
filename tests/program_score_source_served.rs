@@ -251,6 +251,7 @@ fn optimize_submit_builds_its_corpus_from_stored_scores() {
                     serde_json::json!({
                         "type": "Score", "value": value, "range_min": 1.0,
                         "range_max": 5.0, "grader_kind": grader,
+                        "split": if grader == "human" { "test" } else { "train" },
                     }),
                 )
                 .await;
@@ -320,7 +321,7 @@ fn optimize_submit_refuses_client_examples_with_a_score_source() {
                 "score-a",
                 serde_json::json!({
                     "type": "Score", "value": 4.0, "range_min": 1.0,
-                    "range_max": 5.0, "grader_kind": "human",
+                    "range_max": 5.0, "grader_kind": "human", "split": "test",
                 }),
             )
             .await;

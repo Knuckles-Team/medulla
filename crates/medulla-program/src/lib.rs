@@ -18,7 +18,10 @@ mod transport;
 
 pub use commit::*;
 pub use contracts::*;
-pub use evidence::{program_held_out_evidence, HELD_OUT_SET_DIGEST_DOMAIN};
+pub use evidence::{
+    check_held_out_split, independent_case_count, program_held_out_evidence, HeldOutRefusal,
+    HELD_OUT_SET_DIGEST_DOMAIN,
+};
 pub use optimize::*;
 pub use optimizer::*;
 pub use plan::*;

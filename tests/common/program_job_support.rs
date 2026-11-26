@@ -195,6 +195,10 @@ pub fn redb_state(dir: &std::path::Path) -> crate::test_support::SharedState {
 }
 
 fn submit_request(id: u64, request: &OptimizationRequest) -> Request {
+    submit_request_bytes(id, rmp_serde::to_vec_named(request).expect("encode request"))
+}
+
+fn submit_request_bytes(id: u64, request_msgpack: Vec<u8>) -> Request {
     crate::test_support::request(
         SECRET,
         id,
@@ -216,12 +220,41 @@ fn submit_request(id: u64, request: &OptimizationRequest) -> Request {
                 required_capabilities: Vec::new(),
                 max_attempts: 1,
                 backoff_ms: 0,
-                kind: JobKind::ProgramOptimize {
-                    request_msgpack: rmp_serde::to_vec_named(request).expect("encode request"),
-                },
+                kind: JobKind::ProgramOptimize { request_msgpack },
             }),
         },
     )
+}
+
+/// Submit one program job whose request the server must refuse and return the
+/// refusal text (`<CODE>: <detail>`). A refused submit stores no job.
+pub async fn refused_submit(
+    state: &crate::test_support::SharedState,
+    id: u64,
+    request: &OptimizationRequest,
+) -> String {
+    let response =
+        Box::pin(crate::test_support::dispatch(state, submit_request(id, request))).await;
+    response
+        .refusal_text()
+        .unwrap_or_else(|| panic!("the submit must be refused: {response:?}"))
+}
+
+/// As [`refused_submit`] for a request the test encoded itself, such as one
+/// naming an optimizer the typed request cannot express.
+pub async fn refused_submit_bytes(
+    state: &crate::test_support::SharedState,
+    id: u64,
+    request_msgpack: Vec<u8>,
+) -> String {
+    let response = Box::pin(crate::test_support::dispatch(
+        state,
+        submit_request_bytes(id, request_msgpack),
+    ))
+    .await;
+    response
+        .refusal_text()
+        .unwrap_or_else(|| panic!("the submit must be refused: {response:?}"))
 }
 
 fn json_of(response: Response) -> serde_json::Value {

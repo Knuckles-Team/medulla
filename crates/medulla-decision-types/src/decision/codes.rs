@@ -678,6 +678,8 @@ pub fn module_tables() -> Vec<(&'static str, Vec<RefusalCode>)> {
         ("limits", super::limit_types::REFUSALS.to_vec()),
         ("entry_trust", super::entry_types::REFUSALS.to_vec()),
         ("failure", crate::failure_patterns::REFUSALS.to_vec()),
+        // MEDULLA-DECISION-ENGINE-R810.4: the program optimization job refusals.
+        ("program", super::program::REFUSALS.to_vec()),
         // MEDULLA-DECISION-ENGINE-R142.100: the local-model certification refusals.
         (
             "local_certification",

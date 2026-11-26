@@ -14,13 +14,51 @@ use medulla_decision_outcome_types::decision::promotion::{
 use medulla_query_types::solve_scalar::digest_text;
 use sha2::{Digest, Sha256};
 
-use crate::{ExampleSplit, OptimizationRequest, OptimizationResult};
+use crate::{ExampleSplit, OptimizationRequest, OptimizationResult, TrainingExample};
 
 /// Domain of the evaluation-set digest: the sorted test-split example refs.
 pub const HELD_OUT_SET_DIGEST_DOMAIN: &str = "eg-program.held-out-set.v1";
 
 fn ppm(score: f64) -> i64 {
     (score.clamp(0.0, 1.0) * 1_000_000.0).round() as i64
+}
+
+/// Why a corpus cannot hold out evidence for a program revision
+/// (MEDULLA-DECISION-ENGINE-R804.4, R810.4).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HeldOutRefusal {
+    /// The corpus has no test-split example.
+    Missing,
+    /// The test split is non-empty but no example's grader may decide a
+    /// promotion (`GraderKind::decides_promotion()`).
+    NotIndependent,
+}
+
+/// The test-split examples whose grader decides a promotion: the independent
+/// case count of the held-out evidence.
+pub fn independent_case_count(examples: &[TrainingExample]) -> usize {
+    examples
+        .iter()
+        .filter(|example| {
+            example.split == ExampleSplit::Test && example.grader_kind.decides_promotion()
+        })
+        .count()
+}
+
+/// The one held-out rule: a corpus needs a test split, and at least one test
+/// example must be graded by a kind that decides promotion. The served job
+/// applies it at submit, so a refusal stores no job and stages no revision.
+pub fn check_held_out_split(examples: &[TrainingExample]) -> Result<(), HeldOutRefusal> {
+    if !examples
+        .iter()
+        .any(|example| example.split == ExampleSplit::Test)
+    {
+        return Err(HeldOutRefusal::Missing);
+    }
+    if independent_case_count(examples) == 0 {
+        return Err(HeldOutRefusal::NotIndependent);
+    }
+    Ok(())
 }
 
 /// The evidence of `result`'s selected candidate, `None` when no candidate was

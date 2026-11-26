@@ -629,6 +629,9 @@ pub(super) fn submit_job_program_optimize(
     score_rows: Option<&medulla_program::corpus::StoredScoreSet>,
     required_capabilities: &mut Vec<String>,
 ) -> Result<(JobKind, String, String, serde_json::Value), Response> {
+    if let Err(error) = check_program_optimizer_name(&request_msgpack) {
+        return Err(Response::err(req_id, error));
+    }
     let Some(mut request) = decode_optimization_request(&request_msgpack) else {
         return Err(Response::err(
             req_id,
@@ -640,6 +643,9 @@ pub(super) fn submit_job_program_optimize(
         Err(error) => return Err(Response::err(req_id, error)),
     };
     if let Err(error) = fill_corpus_from_scores(&mut request, score_rows, &verified_policy) {
+        return Err(Response::err(req_id, error));
+    }
+    if let Err(error) = check_program_request(&request) {
         return Err(Response::err(req_id, error));
     }
     let request = match request.rebind_program_policy(verified_policy) {

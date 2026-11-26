@@ -503,3 +503,65 @@ pub(super) fn validate_program_result_privacy(
     }
     Ok(())
 }
+
+/// MEDULLA-DECISION-ENGINE-R810.4: the optimizer name of a raw request is one of
+/// the closed `OptimizerKind::ALL` list. A request that does not decode as a map
+/// is left to the bounded decode that follows; this check only names the one
+/// field it owns.
+#[cfg(feature = "program-optimization")]
+pub(super) fn check_program_optimizer_name(request_msgpack: &[u8]) -> Result<(), String> {
+    use medulla_decision_types::decision::program::PROGRAM_OPTIMIZER_UNKNOWN;
+    let Ok(raw) = medulla_types::msgpack::decode_bounded::<serde_json::Value>(
+        request_msgpack,
+        medulla_types::msgpack::MsgpackLimits::new(
+            super::MAX_JOB_INPUT_BYTES,
+            super::MAX_JOB_INPUT_ITEMS,
+            medulla_types::msgpack::DEFAULT_MAX_DEPTH,
+        ),
+    ) else {
+        return Ok(());
+    };
+    let Some(name) = raw.get("optimizer").and_then(serde_json::Value::as_str) else {
+        return Ok(());
+    };
+    if medulla_program::OptimizerKind::ALL
+        .iter()
+        .any(|kind| kind.as_str() == name)
+    {
+        return Ok(());
+    }
+    Err(format!(
+        "{}: `{name}` is not one of the {} optimizers",
+        PROGRAM_OPTIMIZER_UNKNOWN.as_str(),
+        medulla_program::OptimizerKind::ALL.len()
+    ))
+}
+
+/// MEDULLA-DECISION-ENGINE-R810.4, R804.4: a decoded request is refused before a
+/// job is stored when its budget is above an optimizer ceiling, its corpus has no
+/// test split, or no test example is graded by a kind that decides promotion.
+/// The corpus is the one the job will run over, so a request that names a score
+/// source is checked after the server filled it.
+#[cfg(feature = "program-optimization")]
+pub(super) fn check_program_request(request: &OptimizationRequest) -> Result<(), String> {
+    use medulla_decision_types::decision::program::{
+        EVAL_SET_NOT_INDEPENDENT, PROGRAM_BUDGET_EXCEEDED, PROGRAM_HELDOUT_MISSING,
+    };
+    if let Some(field) = request.budget.exceeded_ceiling() {
+        return Err(format!(
+            "{}: budget field `{field}` is above its ceiling",
+            PROGRAM_BUDGET_EXCEEDED.as_str()
+        ));
+    }
+    match medulla_program::check_held_out_split(&request.corpus.examples) {
+        Ok(()) => Ok(()),
+        Err(medulla_program::HeldOutRefusal::Missing) => Err(format!(
+            "{}: the corpus has no test-split example",
+            PROGRAM_HELDOUT_MISSING.as_str()
+        )),
+        Err(medulla_program::HeldOutRefusal::NotIndependent) => Err(format!(
+            "{}: no test-split example is graded by a kind that decides promotion",
+            EVAL_SET_NOT_INDEPENDENT.as_str()
+        )),
+    }
+}
