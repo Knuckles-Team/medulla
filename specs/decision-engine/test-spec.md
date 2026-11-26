@@ -565,7 +565,6 @@ The existing admin holder test retains its historical Content assertions.
 - `MEDULLA-DECISION-ENGINE-R131.1`: `crates/medulla-decision-outcome-types/src/decision/limit_guard.rs::tests::limit_types_round_trip`.
 - `MEDULLA-DECISION-ENGINE-R131.2`: `crates/medulla-decision-outcome-types/src/decision/limit_guard.rs::tests::check_returns_all_breaches`.
 - `MEDULLA-DECISION-ENGINE-R131.3`: `tests/decide/test_limit_guard_served.py::test_breach_refuses`.
-- `MEDULLA-DECISION-ENGINE-R131.4`: `crates/medulla-compute/src/assemble/tests/limit_refusal.rs::breach_abstains_with_rule_id`.
 - `MEDULLA-DECISION-ENGINE-R131.5`: `crates/medulla-compute/src/assemble/tests/limit_refusal.rs::breach_observation_links_signal`.
 - `MEDULLA-DECISION-ENGINE-R131.6`: `tests/decide/test_limit_guard_served.py::test_oversize_order_refused_and_recorded`.
 
@@ -613,7 +612,6 @@ No unrelated rebuild was substituted for the exact measured-source receipts.
 - `MEDULLA-DECISION-ENGINE-R132.2`: `crates/medulla-decision-outcome-types/src/decision/entry_trust.rs::tests::lower_tier_never_overrides_higher`.
 - `MEDULLA-DECISION-ENGINE-R132.3`: `crates/medulla-h-decide/src/decide/stat_tests/entry_trust_tests.rs::unverified_entry_cannot_override_a_verified_fact`.
 - `MEDULLA-DECISION-ENGINE-R132.4`: `crates/medulla-h-decide/src/decide/stat_tests/entry_trust_tests.rs::poisoned_only_required_fact_abstains`.
-- `MEDULLA-DECISION-ENGINE-R132.5`: `crates/medulla-compute/src/assemble/tests/entry_trust_refusal.rs::refused_entries_are_recorded`.
 - `MEDULLA-DECISION-ENGINE-R132.6`: `tests/decide/test_entry_trust_served.py::test_unverified_entry_cannot_override_verified`.
 
 ### MEDULLA-DECISION-ENGINE-R133 tests
@@ -813,7 +811,7 @@ No cases listed here have run. They describe required future acceptance, not evi
 
 - **`MEDULLA-DECISION-ENGINE-R142.100`. Source
 - MEDULLA-DECISION-ENGINE-R142.101 planned proving test. tests/decide/test_local_skill_certification_served.py::test_decision_eval_attestation_binds_au_receipt. Enter the real DecisionEval route and read back an attestation bound to the Meristem receipt and all revisions. Meristem receipt schema and Arbora R034.7-.12 consumption remain explicit holds.
-- MEDULLA-DECISION-ENGINE-R142.102 planned hot-path integration test. tests/decide/test_local_skill_certification_served.py::test_current_attestation_is_checked_before_graphos_workflow_run. Enter the evaluation/normal-invocation path. Verify refusal before effects without a current receipt, then admission with the exact receipt. Meristem and Arbora owner contracts are pending. No test result is claimed. `5df3f5a45d486aeba5765a31b6c6283637adf2bd8ce63a87938eddd28b90f082`: Run `test_local_skill_certification_served.py::test_attests_matching_atomic_evaluation`, `::test_workflow_requires_current_atomic_attestations`, and `::test_stale_input_invalidates_attestation`; Meristem and Arbora served tests remain required. Attach point and owner dependency. DecisionEval validates Meristem local-model receipt and emits a Medulla attestation. Normal Arbora invocation must validate it through R034.7-.12. Meristem receipt schema and Arbora consumption remain pending owner contracts. These are planned acceptance cases only. No served evidence is claimed.
+- MEDULLA-DECISION-ENGINE-R142.102 planned hot-path integration test. tests/decide/test_local_skill_certification_served.py::test_current_attestation_is_checked_before_graphos_workflow_run. Enter the evaluation/normal-invocation path. Verify refusal before effects without a current receipt, then admission with the exact receipt. Meristem and Arbora owner contracts are pending. No test result is claimed. `5df3f5a45d486aeba5765a31b6c6283637adf2bd8ce63a87938eddd28b90f082`: Run `tests/decide/test_local_skill_certification_served.py::test_certification_journey`, which covers attestation, workflow gating and stale-input refusal; Meristem and Arbora served tests remain required. Attach point and owner dependency. DecisionEval validates Meristem local-model receipt and emits a Medulla attestation. Normal Arbora invocation must validate it through R034.7-.12. Meristem receipt schema and Arbora consumption remain pending owner contracts. These are planned acceptance cases only. No served evidence is claimed.
 <!-- /spec-definition-patch -->
 
 
