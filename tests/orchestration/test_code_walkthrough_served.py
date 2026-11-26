@@ -8,8 +8,8 @@ from __future__ import annotations
 import hashlib
 
 import pytest
-
 from conftest import TEST_TENANT
+
 from medulla.generated.index_repository import IndexRepositoryScope
 
 _REPO = "repo-walkthrough"
@@ -68,14 +68,13 @@ def _index_into_tenant_graph(client):
             pytest.skip("engine built without the ast feature or durable persistence")
         raise
     entities = [
-        node
-        for node in result.nodes
-        if (node.properties or {}).get("source_digest")
+        node for node in result.nodes if (node.properties or {}).get("source_digest")
     ]
     assert entities, "the index lowering stamps source_digest on entity nodes"
     return entities[0]
 
 
+# proves R013.7.3: Evidence: independent readback and artifact digest
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R013.7.3")
 def test_walkthrough_trace_and_artifact_read_back(clean_graph):
     entity = _index_into_tenant_graph(clean_graph)

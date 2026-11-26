@@ -1819,6 +1819,7 @@ mod tests {
         )
     }
 
+    // proves R013.7.2: Refusal: validate the manifest on write
     // spec: MEDULLA-ORCH-VOCAB-R013.7.2
     #[test]
     fn add_run_trace_rejects_stale_walkthrough_source_or_artifact() {

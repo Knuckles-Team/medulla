@@ -1206,6 +1206,7 @@ mod tests {
         assert!(stale.starts_with("USAGE_CURSOR_STALE"), "{stale}");
     }
 
+    // proves R010.6: Evidence query for the best configuration per solved task
     // spec: MEDULLA-ORCH-VOCAB-R010.6
     #[test]
     fn config_evidence_marks_insufficient_and_keeps_unknown_price() {

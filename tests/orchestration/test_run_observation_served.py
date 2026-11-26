@@ -131,7 +131,9 @@ def test_window_to_adjustment_through_meristem_fixture(clean_graph):
     for i in range(20):
         clean_graph.nodes.add(
             f"{noisy}-w{i}",
-            _window(noisy, f"{noisy}-w{i}", now - 10_000 - i, eligible=4, errors=int(i < 5)),
+            _window(
+                noisy, f"{noisy}-w{i}", now - 10_000 - i, eligible=4, errors=int(i < 5)
+            ),
         )
         clean_graph.nodes.add(
             f"{stale}-w{i}",
@@ -154,6 +156,7 @@ def test_window_to_adjustment_through_meristem_fixture(clean_graph):
         assert code in str(record["outcome"]), record["outcome"]
 
 
+# proves R009.18.4: Evidence: before and after trace facts
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R009.18.4")
 def test_adjustment_readback_names_before_after_and_reason(clean_graph):
     """The committed adjustment record names the window it read, the before
@@ -167,7 +170,9 @@ def test_adjustment_readback_names_before_after_and_reason(clean_graph):
     for i in range(20):
         clean_graph.nodes.add(
             f"{run}-w{i}",
-            _window(run, f"{run}-w{i}", now - 10_000 - i, eligible=4, errors=int(i < 5)),
+            _window(
+                run, f"{run}-w{i}", now - 10_000 - i, eligible=4, errors=int(i < 5)
+            ),
         )
     record = _adjust(clean_graph, schema, run)
     committed = clean_graph._send("DecisionLog", {"op": dc.commit_op(record)})

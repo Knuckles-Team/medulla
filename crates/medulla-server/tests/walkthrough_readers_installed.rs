@@ -23,6 +23,7 @@ fn props(value: serde_json::Value) -> Vec<u8> {
     rmp_serde::to_vec_named(&value).expect("encode node properties")
 }
 
+// proves R013.7.5: Production walkthrough readers installed at boot
 // spec: MEDULLA-ORCH-VOCAB-R013.7.5
 #[tokio::test]
 async fn installed_readers_confirm_a_current_revision_and_refuse_another_tenant() {

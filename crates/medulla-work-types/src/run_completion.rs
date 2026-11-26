@@ -188,6 +188,7 @@ mod tests {
         }
     }
 
+    // proves R814: A committed run completion carries its per-phase timings
     // spec: MEDULLA-ORCH-VOCAB-R814
     #[test]
     fn timings_validate_and_keep_the_empty_digest() {

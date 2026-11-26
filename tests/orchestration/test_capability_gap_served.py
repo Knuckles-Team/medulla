@@ -43,6 +43,7 @@ def _gap(tag: str, revision: int, owner: str = "principal:a", **overrides: Any) 
     return props
 
 
+# proves R004.6.2: Behaviour and wiring: governed write with deduplication
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R004.6.2")
 @pytest.mark.asyncio
 async def test_dedup_conflict_and_invalid_taxonomy():

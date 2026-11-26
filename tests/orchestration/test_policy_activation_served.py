@@ -31,6 +31,7 @@ _CONSTITUTION = (
 )
 
 
+# proves R012.7.2: Wiring: synthesize on repository index
 # Verifies MEDULLA-ORCH-VOCAB-R012.7.2: indexing yields inactive candidates with spans.
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R012.7.2")
 def test_index_yields_inactive_candidates_with_spans(clean_graph) -> None:

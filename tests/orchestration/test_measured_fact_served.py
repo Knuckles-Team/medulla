@@ -19,6 +19,8 @@ from conftest import TEST_TENANT, request_context
 from test_canonical_body_served import _library_context, _skill_draft
 from test_harness_config_served import (
     PROFILE as _CONFIG_PROFILE,
+)
+from test_harness_config_served import (
     SWARM,
     TASK,
     _evidence,
@@ -70,6 +72,7 @@ async def _head(client: MedullaClient, component_id: str) -> dict[str, Any]:
     return result.payload
 
 
+# proves R011.10: Apply the evaluation result once through the ModelProfile publish
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R011.10")
 @pytest.mark.asyncio
 async def test_evaluation_result_publishes_one_profile_revision():
@@ -111,7 +114,7 @@ async def test_evaluation_result_publishes_one_profile_revision():
         assert (await _head(client, ref))["entry_revision"] == 2
 
         # A fact with no valid run reference is the engine's refusal.
-        with pytest.raises(Exception):
+        with pytest.raises(Exception):  # noqa: B017
             await record_measured_fact(
                 client, ref, "stopping_behaviour", "balanced", "", digest
             )
@@ -126,7 +129,9 @@ async def test_evaluation_result_publishes_one_profile_revision():
         await client.close()
 
 
-def _decide_config(client: Any, schema: dict[str, Any], profile: str, graph: str) -> dict:
+def _decide_config(
+    client: Any, schema: dict[str, Any], profile: str, graph: str
+) -> dict:
     return client._send("Decide", {"request": _request(schema, profile, graph)})[
         "records"
     ][0]
@@ -172,7 +177,12 @@ def test_harness_config_cites_fact_and_abstains_without(clean_graph):
     )
     profile = f"{_CONFIG_PROFILE}-{uuid.uuid4().hex[:8]}"
     _publish_model_profile(client, profile, None, "balanced")
-    schema = publish(client, f"r011-11-schema-{uuid.uuid4().hex[:8]}", "feature_schema", schema_body())
+    schema = publish(
+        client,
+        f"r011-11-schema-{uuid.uuid4().hex[:8]}",
+        "feature_schema",
+        schema_body(),
+    )
 
     # Without the fact the answer abstains with its conservative default.
     record = _decide_config(client, schema, profile, graph)

@@ -32,6 +32,7 @@ ex:d1 a eg:DmnDecision ; eg:dmnRequiresDecision ex:d2 .
 ex:d2 a eg:DmnDecision .
 "#;
 
+// proves R014.6: DMN shapes
 // spec: MEDULLA-ORCH-VOCAB-R014.6
 #[test]
 fn dmn_shapes_refuse_planted_faults() {

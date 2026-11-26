@@ -216,6 +216,7 @@ fn ok<T: DeserializeOwned>(label: &str, response: Response) -> T {
     }
 }
 
+// proves R805: Per-turn timing observations in the session usage result
 // spec: MEDULLA-ORCH-VOCAB-R805
 #[tokio::test]
 async fn timing_binds_to_committed_turn_receipts() {

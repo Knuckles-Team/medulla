@@ -37,6 +37,7 @@ fn node_kinds_are_closed_and_declared() {
     assert_eq!(SpecNodeKind::Document.class_name(), "Specification");
 }
 
+// proves R012.2: Behaviour: classify a spec file by named rule
 // spec: MEDULLA-ORCH-VOCAB-R012.2
 #[test]
 fn default_rules_classify_each_file_kind() {

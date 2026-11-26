@@ -250,6 +250,7 @@ mod tests {
         assert_ne!(render_digest("sha256:00", &four_values()), golden);
     }
 
+    // proves R800.2: Behaviour: typed rendering (pattern selection retired)
     // spec: MEDULLA-ORCH-VOCAB-R800.2
     #[test]
     fn render_fills_typed_slots_only() {
