@@ -1,0 +1,7 @@
+UQL 1;
+LET report = MATCH (:ExternalReport) |> WHERE id = $report_id |> REQUIRE NONEMPTY 'CQ_REPORT_NOT_FOUND';
+LET claims = MATCH (:Claim) |> WHERE agent_id = $agent_id |> CONFIDENCE 0.8 |> VALID AS OF 30 d;
+LET touching = FROM report |> TRAVERSE <-[:mentions]-;
+LET selected = JOIN claims, touching;
+LET clustered = FROM selected |> EVIDENCE EACH |> CLUSTER BY EMBEDDING K 3;
+FROM clustered |> LIMIT 1000
