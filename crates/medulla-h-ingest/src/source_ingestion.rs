@@ -4625,6 +4625,41 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-INGEST-WORKER-R606.2
+    #[test]
+    fn stamps_and_label_normalization() {
+        assert_eq!(normalize_label("Document"), "Document");
+        assert_eq!(normalize_label(":Document"), "Document");
+        assert_eq!(
+            normalize_label("https://knuckles-team.github.io/ontology/core#Doc-Type"),
+            "Doc_Type"
+        );
+        // NFC: `e` + combining acute composes to one char, which is then outside the alphabet.
+        assert_eq!(normalize_label("Cafe\u{301}"), "Caf_");
+        let mut properties = mapped_properties(
+            &record(),
+            "Document",
+            &BTreeMap::new(),
+            &BTreeMap::new(),
+            "connector:demo#mappings/item",
+            &"a".repeat(64),
+            false,
+        )
+        .unwrap();
+        stamp_record(
+            &mut properties,
+            &medulla_types::ingest_materialize::MaterializeStamp {
+                source_system: "demo".into(),
+                source_id: "item-1".into(),
+                ingest_time_ms: 42,
+            },
+        );
+        assert_eq!(properties.get("source_system").unwrap(), "demo");
+        assert_eq!(properties.get("source_id").unwrap(), "item-1");
+        assert_eq!(properties.get("ingest_time_ms").unwrap(), 42);
+        assert_eq!(properties.get("type").unwrap(), "Document");
+    }
+
     #[test]
     fn mapping_is_manifest_owned_and_drops_unmapped_source_fields() {
         let mapping = BTreeMap::from([("name".to_string(), "label".to_string())]);
