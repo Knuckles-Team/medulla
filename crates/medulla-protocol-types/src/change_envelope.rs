@@ -427,7 +427,10 @@ mod validation {
 
     fn validate_content_version(envelope: &ChangeEnvelope) -> Result<(), String> {
         if envelope.content_version.object_id.trim().is_empty() {
-            return Err("change content object_id must not be empty".to_string());
+            return Err(format!(
+                "{}: change content object_id must not be empty",
+                medulla_types::contract::ServerErrorCode::EnvelopeSourceMissing.as_str()
+            ));
         }
         validate_safe_text(&envelope.content_version.object_id)?;
         validate_digest(

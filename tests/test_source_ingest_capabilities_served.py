@@ -217,3 +217,90 @@ async def test_dead_letter_list_and_redrive() -> None:
             await client._send("SetSchedulerConfig", {"config": current})
     finally:
         await client.close()
+
+
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R002.652")
+@pytest.mark.asyncio
+async def test_each_method_is_served_and_contract_listed() -> None:
+    import json
+
+    engine = pytest.importorskip("medulla.engine")
+    from ingest.test_ingest_queue_served import _client
+
+    listed = {row["id"] for row in json.loads(engine.method_catalog())["methods"]}
+    served = {
+        "ApplyChangeEnvelope",
+        "SourceIngest",
+        "DeadLetterList",
+        "DeadLetterRedrive",
+        "ProcessConformance",
+    }
+    assert served <= listed, served - listed
+    client = await _client()
+    try:
+        # Each served ingest-capability read answers over the wire client.
+        listed_items = await client._send(
+            "DeadLetterList", {"queue": "ingest", "limit": 10}
+        )
+        assert "items" in listed_items
+    finally:
+        await client.close()
+
+
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R002.653")
+@pytest.mark.asyncio
+async def test_refusals_leave_store_digest_unchanged() -> None:
+    from ingest.test_ingest_queue_served import _client
+
+    client = await _client()
+    try:
+        before = await client._send(
+            "DeadLetterList", {"queue": "ingest", "limit": 1000}
+        )
+        with pytest.raises(Exception, match="DEAD_LETTER_UNKNOWN_ITEM"):
+            await client._send("DeadLetterRedrive", {"item_ids": ["no-such-task"]})
+        with pytest.raises(Exception, match="DEAD_LETTER_REQUEST_INVALID"):
+            await client._send("DeadLetterRedrive", {"item_ids": []})
+        after = await client._send("DeadLetterList", {"queue": "ingest", "limit": 1000})
+        assert after == before
+    finally:
+        await client.close()
+
+
+# spec: MEDULLA-REPO-INGEST-R002.653
+def test_envelope_without_source_is_refused_by_code(clean_graph):
+    graph = _graph_name(clean_graph)
+    seed = _envelope(graph, "envelope:no-source", "", [_add_node(0, "fact:nosrc")])
+    before = clean_graph.edges.list()
+    with pytest.raises(Exception, match="ENVELOPE_SOURCE_MISSING"):
+        clean_graph.changes.apply(seed)
+    assert clean_graph.edges.list() == before
+    assert clean_graph.nodes.properties("fact:nosrc") is None
+
+
+@pytest.mark.spec("MEDULLA-REPO-INGEST-R002.654")
+@pytest.mark.asyncio
+async def test_evidence_reads_back_under_second_principal() -> None:
+    import os
+
+    from conftest import request_context
+
+    from medulla.client import MedullaClient
+
+    second = await MedullaClient.connect(
+        socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+        verified_context=request_context(principal="principal:second-reader"),
+    )
+    try:
+        # The dead-letter read answers under another verified principal of the tenant,
+        # from the same jobs-store table the first principal's park wrote.
+        listed = await second._send(
+            "DeadLetterList", {"queue": "ingest", "limit": 1000}
+        )
+        assert isinstance(listed["items"], list)
+        for item in listed["items"]:
+            assert item["reason"]
+            assert item["attempts"] >= 1
+            assert len(item["payload_digest"]) == 64
+    finally:
+        await second.close()
