@@ -11,7 +11,8 @@
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use medulla_graph_core::graph::GraphCore;
-use medulla_retrieval::knowledge_scope::{KnowledgeScope, ResolvedScope};
+use medulla_retrieval::knowledge_scope::ResolvedScope;
+use medulla_work_types::orchestration::knowledge_scope::KnowledgeScope;
 use serde_json::{json, Value};
 use std::hint::black_box;
 

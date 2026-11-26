@@ -13,7 +13,7 @@ pub const MAX_BOOST: f64 = 0.5;
 /// The default half life: 30 days.
 pub const DEFAULT_HALF_LIFE_S: u64 = 30 * 24 * 60 * 60;
 
-pub use medulla_result_types::feedback_event::{FeedbackKind, FeedbackStamp, RetrievalFeedback};
+use medulla_result_types::feedback_event::{FeedbackKind, RetrievalFeedback};
 
 /// A document's current boost (MEDULLA-FEDERATED-QUERY-R705.1).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

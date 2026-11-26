@@ -5,7 +5,8 @@
 use medulla_core::source_hierarchy::{container_node_id, upsert_containers};
 use medulla_graph_core::graph::GraphCore;
 use medulla_ingestion_types::source_governance::SourceContainer;
-use medulla_retrieval::knowledge_scope::{agent_scope, scope_digest, KnowledgeScope, ResolvedScope};
+use medulla_retrieval::knowledge_scope::{agent_scope, scope_digest, ResolvedScope};
+use medulla_work_types::orchestration::knowledge_scope::KnowledgeScope;
 use serde_json::{json, Value};
 
 fn blob(value: &Value) -> Vec<u8> {

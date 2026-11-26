@@ -8,7 +8,7 @@
 
 // The type, its candidate record and its parser live with the agent definition vocabulary
 // (MEDULLA-ORCH-VOCAB-R808); the read side here uses them unchanged.
-pub use medulla_work_types::orchestration::knowledge_scope::{
+use medulla_work_types::orchestration::knowledge_scope::{
     parse_knowledge_scope, unknown_set, KnowledgeScope, ScopedCandidate, KNOWLEDGE_SCOPE_PROPERTY,
 };
 
