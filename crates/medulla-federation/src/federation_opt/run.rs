@@ -11,8 +11,8 @@ use super::budget::{
     RESULT_INCOMPLETE, SNAPSHOT_UNAVAILABLE, SOURCE_QUOTA_EXCEEDED, SOURCE_WRITE_FORBIDDEN,
 };
 use super::capability::{
-    in_matrix, require_in_matrix, PushdownKind,
-    FullFetch, LimitPushdown, PageRequest, Paging, RemoteRequest, SourceCapabilities, SourceRate,
+    in_matrix, require_in_matrix, FullFetch, KeyLookup, LimitPushdown, PageRequest, Paging,
+    PushdownKind, RemoteRequest, SourceCapabilities, SourceRate,
 };
 use super::http::PAGE_SIZE;
 use super::limiter;
@@ -264,7 +264,12 @@ pub(super) struct Fragment<'r, 's> {
 
 impl<'r, 's> Fragment<'r, 's> {
     pub(super) fn new(remote: &'r dyn RemoteFetch, session: &'s FederationSession) -> Self {
-        let caps = remote.capabilities();
+        let mut caps = remote.capabilities();
+        // The protocol's matrix row bounds the key lookup too: a row without `BatchedLookup`
+        // is never sent a keyed predicate, whatever its source declared (R073.2).
+        if !in_matrix(remote.protocol(), PushdownKind::BatchedLookup) {
+            caps.key_lookup = KeyLookup::Unsupported;
+        }
         Self {
             remote,
             session,
@@ -387,6 +392,10 @@ impl<'r, 's> Fragment<'r, 's> {
 
     /// A foreign∩local join over `input`: bind join or full fetch, as the cost model says.
     pub(super) fn join(&self, input: &RowSet) -> Result<Read, String> {
+        // A key-only source answers nothing without a keyed predicate its row must permit.
+        if self.caps.full_fetch == FullFetch::RequiresKeys {
+            require_in_matrix(self.remote.protocol(), PushdownKind::BatchedLookup)?;
+        }
         let started = Instant::now();
         let keys = input.ids();
         let max_bind_keys = self.session.budget().max_bind_keys;
@@ -1024,6 +1033,77 @@ mod tests {
         let read = fragment.source(Some(3)).unwrap();
         assert_eq!(read.trace.limit_pushed, None);
         assert_eq!(read.trace.kept_plan.as_deref(), Some("kept-FullFetch"));
+    }
+
+    /// A [`Keyed`] source that speaks `protocol`.
+    struct OnProtocol<'a> {
+        inner: &'a Keyed,
+        protocol: crate::federation_opt::capability::ConnectionProtocol,
+    }
+
+    impl RemoteFetch for OnProtocol<'_> {
+        fn capabilities(&self) -> SourceCapabilities {
+            self.inner.capabilities()
+        }
+        fn identity(&self) -> &Identity {
+            self.inner.identity()
+        }
+        fn protocol(&self) -> Option<crate::federation_opt::capability::ConnectionProtocol> {
+            Some(self.protocol)
+        }
+        fn key_expressible(&self, key: &str) -> bool {
+            self.inner.key_expressible(key)
+        }
+        fn fetch(&self, request: &RemoteRequest) -> Result<RowSet, String> {
+            self.inner.fetch(request)
+        }
+    }
+
+    // spec: MEDULLA-FEDERATED-QUERY-R073.2
+    #[test]
+    fn the_protocol_row_bounds_the_bind_join() {
+        use crate::federation_opt::capability::{ConnectionProtocol, PUSHDOWN_NOT_IN_MATRIX};
+        let session = FederationSession::from_env();
+        let caps = SourceCapabilities::single_full_fetch(
+            KeyLookup::Batched { max_keys: 100 },
+            LimitPushdown::Native,
+        );
+        // A SQL row carries the batched lookup: the bind join runs.
+        let inner = Keyed::new("matrix-sql", caps, true);
+        let sql = OnProtocol {
+            inner: &inner,
+            protocol: ConnectionProtocol::Sql,
+        };
+        let read = Fragment::new(&sql, &session).join(&input()).unwrap();
+        assert_eq!(read.trace.strategy, FetchStrategy::BindJoin);
+        assert!(inner.keyed_calls.load(Ordering::SeqCst) > 0);
+
+        // A stream row does not: the source declared a key lookup, the row says no, and the
+        // join falls back to one full read intersected locally.
+        let inner = Keyed::new("matrix-stream", caps, true);
+        let stream = OnProtocol {
+            inner: &inner,
+            protocol: ConnectionProtocol::EventStream,
+        };
+        let read = Fragment::new(&stream, &session).join(&input()).unwrap();
+        assert_eq!(read.trace.strategy, FetchStrategy::FullFetch);
+        assert_eq!(inner.keyed_calls.load(Ordering::SeqCst), 0);
+
+        // A key-only source on a row without the lookup is refused with the typed code.
+        let mut key_only = caps;
+        key_only.full_fetch = FullFetch::RequiresKeys;
+        let inner = Keyed::new("matrix-key-only", key_only, true);
+        let stream = OnProtocol {
+            inner: &inner,
+            protocol: ConnectionProtocol::EventStream,
+        };
+        let refused = Fragment::new(&stream, &session)
+            .join(&input())
+            .err()
+            .expect("the row forbids the keyed predicate");
+        assert!(refused.starts_with(PUSHDOWN_NOT_IN_MATRIX), "{refused}");
+        assert_eq!(inner.keyed_calls.load(Ordering::SeqCst), 0);
+        assert_eq!(inner.full_calls.load(Ordering::SeqCst), 0);
     }
 
     // spec: MEDULLA-FEDERATED-QUERY-R091.3

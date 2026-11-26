@@ -187,7 +187,9 @@ pub enum PushdownKind {
     /// A join between two leaves resolved by the identical source fingerprint, evaluated
     /// remotely instead of bound locally.
     SameSourceJoin,
-    /// A batched key lookup (`id IN (…)`); see [`KeyLookup::Batched`].
+    /// A batched key lookup (`id IN (…)`); see [`KeyLookup::Batched`]. A protocol row carries it
+    /// when the row's `Filter` is a keyed predicate the source evaluates, the SQL family and
+    /// every request/response protocol that filters; the stream, change and event rows do not.
     BatchedLookup,
     /// A temporal lower/upper bound on a stream or event source.
     TimeRange,
@@ -293,7 +295,11 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
     ProtocolPushdownRow {
         protocol: ConnectionProtocol::RestOpenApi,
         paging_or_streaming: ProtocolTransfer::PageOrCursor,
-        pushdown: &[PushdownKind::Filter, PushdownKind::LimitOrder],
+        pushdown: &[
+            PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
+            PushdownKind::LimitOrder,
+        ],
         contract_term: "http_endpoint",
     },
     ProtocolPushdownRow {
@@ -301,6 +307,7 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
         paging_or_streaming: ProtocolTransfer::ConnectionCursor,
         pushdown: &[
             PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
             PushdownKind::Projection,
             PushdownKind::LimitOrder,
         ],
@@ -309,7 +316,11 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
     ProtocolPushdownRow {
         protocol: ConnectionProtocol::Grpc,
         paging_or_streaming: ProtocolTransfer::ServerStream,
-        pushdown: &[PushdownKind::Filter, PushdownKind::LimitOrder],
+        pushdown: &[
+            PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
+            PushdownKind::LimitOrder,
+        ],
         contract_term: "operation",
     },
     ProtocolPushdownRow {
@@ -317,6 +328,7 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
         paging_or_streaming: ProtocolTransfer::SkipTopAndNextLinks,
         pushdown: &[
             PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
             PushdownKind::Projection,
             PushdownKind::LimitOrder,
             PushdownKind::Aggregate,
@@ -326,25 +338,29 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
     ProtocolPushdownRow {
         protocol: ConnectionProtocol::Soap,
         paging_or_streaming: ProtocolTransfer::DeclaredPageElements,
-        pushdown: &[PushdownKind::Filter],
+        pushdown: &[PushdownKind::Filter, PushdownKind::BatchedLookup],
         contract_term: "operation",
     },
     ProtocolPushdownRow {
         protocol: ConnectionProtocol::JsonRpc,
         paging_or_streaming: ProtocolTransfer::DeclaredPageParameters,
-        pushdown: &[PushdownKind::Filter],
+        pushdown: &[PushdownKind::Filter, PushdownKind::BatchedLookup],
         contract_term: "operation",
     },
     ProtocolPushdownRow {
         protocol: ConnectionProtocol::Mcp,
         paging_or_streaming: ProtocolTransfer::ResourceAndToolResultPages,
-        pushdown: &[PushdownKind::Filter, PushdownKind::LimitOrder],
+        pushdown: &[
+            PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
+            PushdownKind::LimitOrder,
+        ],
         contract_term: "mcp_tool",
     },
     ProtocolPushdownRow {
         protocol: ConnectionProtocol::A2a,
         paging_or_streaming: ProtocolTransfer::TaskArtifactsAndStreams,
-        pushdown: &[PushdownKind::Filter],
+        pushdown: &[PushdownKind::Filter, PushdownKind::BatchedLookup],
         contract_term: "a2a_skill",
     },
     ProtocolPushdownRow {
@@ -352,6 +368,7 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
         paging_or_streaming: ProtocolTransfer::FederatedServiceBindJoins,
         pushdown: &[
             PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
             PushdownKind::Projection,
             PushdownKind::SameSourceJoin,
             PushdownKind::LimitOrder,
@@ -363,6 +380,7 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
         paging_or_streaming: ProtocolTransfer::ResultPages,
         pushdown: &[
             PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
             PushdownKind::Projection,
             PushdownKind::SameSourceJoin,
             PushdownKind::Aggregate,
@@ -375,6 +393,7 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
         paging_or_streaming: ProtocolTransfer::CursorsAndRecordBatches,
         pushdown: &[
             PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
             PushdownKind::Projection,
             PushdownKind::SameSourceJoin,
             PushdownKind::Aggregate,
@@ -410,7 +429,11 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
     ProtocolPushdownRow {
         protocol: ConnectionProtocol::FileObject,
         paging_or_streaming: ProtocolTransfer::ListingPagesAndRangeReads,
-        pushdown: &[PushdownKind::Filter, PushdownKind::Projection],
+        pushdown: &[
+            PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
+            PushdownKind::Projection,
+        ],
         contract_term: "file",
     },
     ProtocolPushdownRow {
@@ -418,6 +441,7 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
         paging_or_streaming: ProtocolTransfer::PagedResults,
         pushdown: &[
             PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
             PushdownKind::Projection,
             PushdownKind::LimitOrder,
         ],
@@ -428,6 +452,7 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
         paging_or_streaming: ProtocolTransfer::MessageRanges,
         pushdown: &[
             PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
             PushdownKind::Projection,
             PushdownKind::TimeRange,
         ],
@@ -438,6 +463,7 @@ pub static CONNECTION_PROTOCOL_MATRIX: &[ProtocolPushdownRow] = &[
         paging_or_streaming: ProtocolTransfer::SyncTokens,
         pushdown: &[
             PushdownKind::Filter,
+            PushdownKind::BatchedLookup,
             PushdownKind::Projection,
             PushdownKind::TimeRange,
         ],
