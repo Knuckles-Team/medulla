@@ -106,6 +106,50 @@ impl RevisionSubject {
     }
 }
 
+impl RevisionSubject {
+    /// The subject a `champion:<kind>:<ref>` pointer key names: the inverse of
+    /// [`RevisionSubject::pointer_key`]. `None` for a key of no subject kind.
+    pub fn from_pointer_key(key: &str) -> Option<Self> {
+        let rest = key.strip_prefix("champion:")?;
+        let (kind, subject) = rest.split_once(':')?;
+        let owned = subject.to_owned();
+        Some(match kind {
+            "decision_head" => Self::DecisionHead { component_id: owned },
+            "program" => Self::Program { program_ref: owned },
+            "knob_set" => Self::KnobSet { policy_id: owned },
+            "model_policy" => Self::ModelPolicy { family_ref: owned },
+            "definition" => {
+                let (definition_kind, definition_ref) = subject.split_once(':')?;
+                let definition_kind = match definition_kind {
+                    "agent" => DefinitionKind::Agent,
+                    "workflow" => DefinitionKind::Workflow,
+                    "team" => DefinitionKind::Team,
+                    "harness_component" => DefinitionKind::HarnessComponent,
+                    "harness_bundle" => DefinitionKind::HarnessBundle,
+                    _ => return None,
+                };
+                Self::Definition {
+                    definition_kind,
+                    definition_ref: definition_ref.to_owned(),
+                }
+            }
+            "governed_set" => Self::GovernedSet { scope_ref: owned },
+            "measured_fact" => {
+                let (model_ref, property) = subject.rsplit_once(':')?;
+                Self::MeasuredFact {
+                    model_ref: model_ref.to_owned(),
+                    property: property.to_owned(),
+                }
+            }
+            "rerank_calibration" => Self::RerankCalibration {
+                scorer_version: owned,
+            },
+            "retrieval_strategy" => Self::RetrievalStrategy { strategy_ref: owned },
+            _ => return None,
+        })
+    }
+}
+
 /// The kind of receipt a held-out evidence record was read from.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]

@@ -247,6 +247,9 @@ pub const PROMOTION_RECEIPT_MISMATCH: RefusalCode = RefusalCode::new("PROMOTION_
 /// A champion rollback has no earlier target to return to
 /// (MEDULLA-DECISION-ENGINE-R805.4).
 pub const ROLLBACK_NO_PARENT: RefusalCode = RefusalCode::new("ROLLBACK_NO_PARENT");
+/// A champion pointer read names a key that has no active revision
+/// (MEDULLA-DECISION-ENGINE-R805.13).
+pub const POINTER_NOT_FOUND: RefusalCode = RefusalCode::new("POINTER_NOT_FOUND");
 /// The only score is a model judge's; a judge never decides promotion.
 pub const PROMOTION_JUDGE_ONLY: RefusalCode = RefusalCode::new("PROMOTION_JUDGE_ONLY");
 /// A measured fact whose run is not newer than the champion's.
@@ -268,6 +271,7 @@ pub const PROMOTION: &[RefusalCode] = &[
     PROMOTION_CAS_CONFLICT,
     PROMOTION_RECEIPT_MISMATCH,
     ROLLBACK_NO_PARENT,
+    POINTER_NOT_FOUND,
     EVAL_SET_NOT_INDEPENDENT,
     PROMOTION_EVAL_TOO_SMALL,
     PROMOTION_NO_BASELINE,

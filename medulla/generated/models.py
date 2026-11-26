@@ -4464,6 +4464,14 @@ class DecisionLogOpHarnessLessons(BaseModel):
     tenant_id: str
 
 
+class DecisionLogOpPointer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["pointer"]
+    pointer_key: str
+    tenant_id: str
+
+
 class InputsState(str, Enum):
     inline = "inline"
     compacted = "compacted"
@@ -4996,6 +5004,7 @@ DecisionLogOp = Annotated[
     | DecisionLogOpLearn
     | DecisionLogOpHarnessAdoption
     | DecisionLogOpHarnessLessons
+    | DecisionLogOpPointer
     | DecisionLogOpList
     | DecisionLogOpProvenance
     | DecisionLogOpWhyNot
@@ -10943,6 +10952,15 @@ class HeldOutEvidence(BaseModel):
     receipt_kind: ReceiptKind
     review: ReviewApproval | None = None
     schema_version: Annotated[int, Field(ge=0, le=65535)]
+    subject: RevisionSubject
+
+
+class ChampionPointer(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    parent_ref: str | None = None
+    promoted_by_decision: str
+    revision_ref: str
     subject: RevisionSubject
 
 
@@ -43073,6 +43091,7 @@ __all__ = [
     "CapabilityCoverageOutcomeCovered",
     "CapabilityCoverageRequest",
     "CapabilityCoverageResult",
+    "ChampionPointer",
     "CheckInterval",
     "CitationSupport",
     "ClaimSupport",
@@ -43630,6 +43649,7 @@ __all__ = [
     "DecisionLogOpGet",
     "DecisionLogOpHarnessAdoption",
     "DecisionLogOpHarnessLessons",
+    "DecisionLogOpPointer",
     "DecisionLogOpLearn",
     "DecisionLogOpPromoteRule",
     "DecisionLogOpProposeRule",

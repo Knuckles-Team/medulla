@@ -521,6 +521,15 @@ pub enum DecisionLogOp {
         tenant_id: String,
         query: HarnessLessonQuery,
     },
+    /// Read one champion pointer (MEDULLA-DECISION-ENGINE-R805.13): the active
+    /// revision of the subject `pointer_key` (`champion:<kind>:<ref>`) names,
+    /// its parent and the decision that promoted it. A key with no active
+    /// revision refuses `POINTER_NOT_FOUND`; the read writes nothing and
+    /// stays inside the caller's tenant.
+    Pointer {
+        tenant_id: String,
+        pointer_key: String,
+    },
     /// List the tenant's committed records, newest first, one page at a time
     /// (MEDULLA-DECISION-ENGINE-R870.1). Reads the record index `Get` reads;
     /// writes nothing.
@@ -853,6 +862,7 @@ impl DecisionLogOp {
             | Self::GenerationSpace { .. }
             | Self::WritebackAudit { .. }
             | Self::HarnessLessons { .. }
+            | Self::Pointer { .. }
             | Self::List { .. }
             | Self::Provenance { .. }
             | Self::WhyNot { .. } => LogOpClass::Read,
@@ -904,6 +914,7 @@ impl DecisionLogOp {
             | Self::WritebackAudit { tenant_id, .. }
             | Self::HarnessAdoption { tenant_id, .. }
             | Self::HarnessLessons { tenant_id, .. }
+            | Self::Pointer { tenant_id, .. }
             | Self::List { tenant_id, .. }
             | Self::Provenance { tenant_id, .. }
             | Self::WhyNot { tenant_id, .. } => tenant_id,

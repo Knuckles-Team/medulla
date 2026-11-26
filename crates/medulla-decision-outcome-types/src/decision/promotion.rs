@@ -392,6 +392,47 @@ mod tests {
         }
     }
 
+    // spec: MEDULLA-DECISION-ENGINE-R805.13
+    #[test]
+    fn pointer_key_parses_back_to_its_subject() {
+        for subject in [
+            head(),
+            RevisionSubject::Program {
+                program_ref: "eg:program:a".to_owned(),
+            },
+            RevisionSubject::KnobSet {
+                policy_id: "policy-a".to_owned(),
+            },
+            RevisionSubject::ModelPolicy {
+                family_ref: "family-a".to_owned(),
+            },
+            RevisionSubject::Definition {
+                definition_kind: DefinitionKind::HarnessBundle,
+                definition_ref: "agent:deployer:eg:taskclass/deploy".to_owned(),
+            },
+            RevisionSubject::GovernedSet {
+                scope_ref: "scope-a".to_owned(),
+            },
+            RevisionSubject::MeasuredFact {
+                model_ref: "model:x".to_owned(),
+                property: "latency".to_owned(),
+            },
+            RevisionSubject::RerankCalibration {
+                scorer_version: "v1".to_owned(),
+            },
+            RevisionSubject::RetrievalStrategy {
+                strategy_ref: "strategy-a".to_owned(),
+            },
+        ] {
+            assert_eq!(
+                RevisionSubject::from_pointer_key(&subject.pointer_key()),
+                Some(subject)
+            );
+        }
+        assert_eq!(RevisionSubject::from_pointer_key("champion:nothing:x"), None);
+        assert_eq!(RevisionSubject::from_pointer_key("pointer:x"), None);
+    }
+
     // spec: MEDULLA-DECISION-ENGINE-R805.7
     #[test]
     fn lifecycle_types_round_trip() {

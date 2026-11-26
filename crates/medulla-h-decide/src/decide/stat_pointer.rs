@@ -169,3 +169,39 @@ pub(super) fn pointer_events(
     }
     Ok(rows)
 }
+
+/// The champion `pointer_key` names (MEDULLA-DECISION-ENGINE-R805.13): the
+/// active revision, the revision it replaced and the decision that promoted
+/// it. A key that is no subject's, or whose pointer holds no active revision,
+/// refuses `POINTER_NOT_FOUND`; another tenant's pointer reads as absent.
+/// Writes nothing.
+pub(super) fn champion_pointer(
+    store: &AgentLibraryStore,
+    tenant: &str,
+    pointer_key: &str,
+) -> Result<medulla_decision_outcome_types::decision::promotion::ChampionPointer, String> {
+    use medulla_decision_outcome_types::decision::promotion::{ChampionPointer, RevisionSubject};
+    use medulla_types::contract::OpaqueId;
+    let not_found = || {
+        format!(
+            "{}: no champion is active under `{pointer_key}`",
+            medulla_decision_types::decision::codes::POINTER_NOT_FOUND.as_str()
+        )
+    };
+    let opaque = |value: &str| OpaqueId::new(value.to_owned()).map_err(|_| not_found());
+    let subject = RevisionSubject::from_pointer_key(pointer_key).ok_or_else(not_found)?;
+    let (_, state) = read_pointer(store, tenant, pointer_key)?;
+    let active = state.active.as_ref().ok_or_else(not_found)?;
+    let target = active.target.as_deref().ok_or_else(not_found)?;
+    let receipt = active.receipt_digest.as_deref().ok_or_else(not_found)?;
+    let parent_ref = match state.stack.last().and_then(|event| event.target.as_deref()) {
+        Some(parent) => Some(opaque(parent)?),
+        None => None,
+    };
+    Ok(ChampionPointer {
+        subject,
+        revision_ref: opaque(target)?,
+        parent_ref,
+        promoted_by_decision: opaque(&format!("decision:{receipt}"))?,
+    })
+}

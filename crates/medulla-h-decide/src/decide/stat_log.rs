@@ -1017,6 +1017,15 @@ fn dispatch(
                 medulla_protocol_types::result_contract::coordination::DecisionLogHarnessLessons,
             >(super::stat_harness_adoption::lessons(ctx, &query)?)
         }
+        DecisionLogOp::Pointer { pointer_key, .. } => {
+            ResultPayload::of::<
+                medulla_protocol_types::result_contract::coordination::DecisionLogPointer,
+            >(super::stat_pointer::champion_pointer(
+                ctx.store,
+                ctx.tenant_id,
+                &pointer_key,
+            )?)
+        }
         DecisionLogOp::List {
             question_kind,
             resolution_kind,

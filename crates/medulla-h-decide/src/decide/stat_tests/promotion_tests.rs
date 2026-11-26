@@ -1115,3 +1115,99 @@ async fn harness_definitions_promote_and_roll_back() {
         Err(EvidenceError::Refused(PROMOTION_UNEVALUATED))
     );
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R805.13: the `pointer` read of `DecisionLog` returns the
+/// champion a key names with its parent and the deciding record, refuses an unknown key and a
+/// key whose subject has no champion with `POINTER_NOT_FOUND`, and reads another tenant's
+/// pointer as absent. The read writes nothing.
+// spec: MEDULLA-DECISION-ENGINE-R805.13
+#[tokio::test]
+async fn pointer_read_returns_champion_and_refuses_unknown_key() {
+    use medulla_decision_outcome_types::decision::promotion::ChampionPointer;
+
+    let h = Harness::new().await;
+    let pins = pins(&h, TENANT);
+    let subject = subject();
+    let champion = PointerRef::Champion {
+        subject: subject.clone(),
+    };
+    let read = |tenant: &'static str, key: String| {
+        let h = &h;
+        async move {
+            let op = DecisionLogOp::Pointer {
+                tenant_id: tenant.to_owned(),
+                pointer_key: key,
+            };
+            let verified = VerifiedRequestContext::verified_for_test_in_tenant("decider", tenant);
+            decode::<ChampionPointer>(
+                super::super::log::handle_decision_log(&h.state, 9, &verified, op).await,
+            )
+        }
+    };
+
+    // No champion yet.
+    let before = read(TENANT, subject.pointer_key()).await.unwrap_err();
+    assert!(before.starts_with("POINTER_NOT_FOUND"), "{before}");
+
+    let mut promoted: Vec<(String, String)> = Vec::new();
+    for generation in ["one", "two"] {
+        let target = format!("revision:{generation}");
+        let set = RolloutSet {
+            challenger_ref: target.clone(),
+            ..rollout_set(150_000)
+        };
+        let digest = rollout_set_digest(&set);
+        learn(
+            &h,
+            "decider",
+            LearningWrite::RecordRollouts { set: Box::new(set) },
+        )
+        .await
+        .unwrap();
+        let record = decide(&h, promotion_request(&pins.0, &subject, &digest, &target))
+            .await
+            .unwrap()
+            .records
+            .as_slice()[0]
+            .clone();
+        commit(&h, &record).await;
+        pointer_state(&h, champion.clone(), activate(&target, &record.record_id))
+            .await
+            .unwrap();
+        promoted.push((target, record.record_id));
+    }
+
+    let events_before = super::super::stat_pointer::pointer_events(&h.store, TENANT)
+        .unwrap()
+        .len();
+    let served = read(TENANT, subject.pointer_key()).await.unwrap();
+    assert_eq!(served.subject, subject);
+    assert_eq!(served.revision_ref.as_str(), promoted[1].0);
+    assert_eq!(
+        served.parent_ref.as_ref().map(OpaqueId::as_str),
+        Some(promoted[0].0.as_str())
+    );
+    assert_eq!(
+        served.promoted_by_decision.as_str(),
+        format!("decision:{}", promoted[1].1)
+    );
+    assert_eq!(
+        super::super::stat_pointer::pointer_events(&h.store, TENANT)
+            .unwrap()
+            .len(),
+        events_before,
+        "the read writes nothing"
+    );
+
+    // An unknown key, a key of no subject and another tenant's read all refuse.
+    for key in [
+        "champion:program:absent".to_owned(),
+        "champion:nothing:x".to_owned(),
+        "not-a-pointer".to_owned(),
+    ] {
+        let refused = read(TENANT, key).await.unwrap_err();
+        assert!(refused.starts_with("POINTER_NOT_FOUND"), "{refused}");
+    }
+    let foreign = read(OTHER, subject.pointer_key()).await.unwrap_err();
+    assert!(foreign.starts_with("POINTER_NOT_FOUND"), "{foreign}");
+}

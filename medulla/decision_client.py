@@ -825,6 +825,12 @@ def harness_lessons_op(
     }
 
 
+def pointer_op(tenant_id: str, pointer_key: str) -> dict[str, Any]:
+    """Read one champion pointer (R805.13): ``pointer_key`` is
+    ``champion:<kind>:<ref>``. An unknown key refuses ``POINTER_NOT_FOUND``."""
+    return {"op": "pointer", "tenant_id": tenant_id, "pointer_key": pointer_key}
+
+
 def list_op(
     tenant_id: str,
     *,
