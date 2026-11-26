@@ -12,7 +12,9 @@ refused write changes nothing.
 
 from __future__ import annotations
 
+import hashlib
 import os
+import pathlib
 import time
 import uuid
 
@@ -319,3 +321,74 @@ def test_node_carries_source_owner_steward_revision_and_history(catalog_graph):
 def _integer(term: str) -> str:
     """The lexical value of a typed integer term as the served SPARQL returns it."""
     return term.strip('"<>').split('"')[0].split("^^")[0].strip('"')
+
+
+FIXTURES = pathlib.Path(__file__).resolve().parents[1] / "fixtures" / "catalog"
+ASSET = f"{CATALOG}Asset"
+
+
+@pytest.mark.spec("MEDULLA-TYPED-PACKS-R108.6")
+def test_one_query_returns_agents_business_workflows_graphs_and_connector_assets(
+    catalog_graph,
+):
+    """Verifies MEDULLA-TYPED-PACKS-R108.6: one query on `cat:Asset` returns every family."""
+    graph, admin = catalog_graph
+
+    # An agent publish, a workflow registration and a graph creation reach the one emitter.
+    agent_id = f"agent:catalog-journey-{uuid.uuid4().hex[:8]}"
+    _publish_agent(admin, graph, agent_id, 0, "1.0.0")
+    identity = {
+        "workflow_id": f"wf-journey-{uuid.uuid4().hex[:8]}",
+        "version": "1.0.0",
+        "content_digest": _digest("b"),
+    }
+    admin._send(
+        "WorkflowRegistry",
+        {
+            "op": {
+                "op": "register",
+                "registration": {
+                    "identity": identity,
+                    "owner_scope": "",
+                    "lifecycle": "active",
+                },
+            }
+        },
+        graph,
+    )
+    created = f"medulla-r1086-{uuid.uuid4().hex}"
+    admin.tenants.create(created, graph_type="Global")
+    try:
+        # The recorded connector onboarding batch lands through the served AddTriples.
+        batch = (FIXTURES / "onboarding_batch.nt").read_bytes()
+        assert (
+            hashlib.sha256(batch).hexdigest()
+            == (FIXTURES / "onboarding_batch.sha256").read_text().strip()
+        )
+        admin.rdf.add_triples(turtle=batch.decode())
+
+        # One query on the parent class returns every family and a connector asset.
+        rows = admin.rdf.sparql(
+            f"SELECT ?asset ?class WHERE {{ ?asset a ?class . ?asset <{SOURCE_RECORD}> ?s }}"
+        )
+        classes = {row["class"].strip("<>") for row in rows}
+        assert f"{CATALOG}AgentVersion" in classes
+        assert f"{CATALOG}WorkflowDefinitionAsset" in classes
+        all_assets = {
+            row["a"].strip("<>")
+            for row in admin.rdf.sparql(f"SELECT ?a WHERE {{ ?a a <{ASSET}> }}")
+        }
+        assert _node_id(agent_id, 1) in all_assets
+        assert any(a.startswith("urn:medulla:asset:workflow:") for a in all_assets)
+        assert "urn:medulla:r1066:tool-list-orders" in all_assets
+        assert "urn:medulla:r1066:resource-orders" in all_assets
+
+        # The graph the creator made is cataloged in that graph.
+        creator = _connect(created, None)
+        try:
+            node = f"urn:medulla:asset:graph:{created}"
+            assert _rows(creator, node, RDF_TYPE) == [f"{CATALOG}KnowledgeGraph"]
+        finally:
+            creator.close()
+    finally:
+        admin.tenants.delete(created)
