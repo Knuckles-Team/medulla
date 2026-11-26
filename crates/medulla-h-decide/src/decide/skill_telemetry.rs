@@ -37,14 +37,16 @@ mod served {
         cohort_of, measures, peer_skills, rank_skills, RankInput,
     };
     use medulla_decision_types::skill_telemetry::{
-        principal_pseudonym, ChosenBy, EvalOutcome, IngestReceipt, InvocationOutcome,
-        PeersAnswer, RankAnswer, SkillInvocation, SkillMeasures, SkillTelemetryOp, TracesAnswer,
-        Window, INGEST_BATCH_MAX, PEER_COHORT_TOO_SMALL, SCOPE_READ, SCOPE_WRITE,
+        principal_pseudonym, started_day, window_days, ChosenBy, EvalOutcome, IngestReceipt,
+        InvocationOutcome, PeersAnswer, RankAnswer, SkillInvocation, SkillMeasures,
+        SkillTelemetryOp, TracesAnswer, Window, INDEX_KEY_DAY, INDEX_KEY_PRINCIPAL,
+        INDEX_KEY_SKILL, INGEST_BATCH_MAX, PEER_COHORT_TOO_SMALL, SCOPE_READ, SCOPE_WRITE,
         SKILL_INVOCATION_CLASS, TELEMETRY_BATCH_TOO_LARGE, TELEMETRY_CLOCK_INVALID,
         TELEMETRY_CODE_INVALID, TELEMETRY_FIELD_UNKNOWN, TELEMETRY_SCOPE_REQUIRED,
         TELEMETRY_SKILL_UNKNOWN, TRACES_PAGE_MAX,
     };
-    use medulla_graph_core::graph::GraphView;
+    use medulla_decision_types::decision::statistical::StatisticalErrorCode;
+    use medulla_graph_core::graph::{GraphCore, GraphView};
     use medulla_persistence_records::agent_library::AgentLibraryStateExt;
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
@@ -56,12 +58,15 @@ mod served {
     use medulla_types::refusal_code::RefusalCode;
     use serde_json::{json, Map, Value};
 
-    use crate::decide::knowledge_flag::served::{edge_operation, run_trace_of};
+    use crate::decide::knowledge_flag::served::edge_operation;
     use crate::decide::planned_write::PlannedWrite;
     use crate::decide::stat_skill_eval::read_report;
-    use crate::decide::stat_support::{edges_named, filtered_view_versioned, invalid_parameter};
+    use crate::decide::stat_support::{
+        edges_named, filtered_view_versioned, invalid_parameter, readable_graph,
+    };
     use crate::decide::SharedState;
 
+    const RUN_TRACE: &str = "RunTrace";
     const OBSERVED_IN: &str = "observed_in";
     const SCORED_BY: &str = "scoredBy";
     const SCORES_RUN: &str = "scoresRun";
@@ -93,18 +98,28 @@ mod served {
             ));
         }
         let graph = op.graph().to_string();
-        let (view, _) = filtered_view_versioned(state, verified.agent_id(), &graph).await?;
+        // Every read goes through the invocation read index: the rows it needs are looked up by
+        // skill, principal and day, never found by scanning a snapshot of the whole graph.
+        let (core, isolation) = readable_graph(
+            state,
+            verified.agent_id(),
+            &graph,
+            StatisticalErrorCode::CandidatePlanRefused,
+        )
+        .await?;
+        let index = InvocationIndex {
+            core,
+            isolation,
+            agent: verified.agent_id().to_string(),
+        };
         let tenant = verified.tenant().to_string();
         match op {
-            SkillTelemetryOp::Ingest { events, .. } => ingest(graph, &view, verified, events),
+            SkillTelemetryOp::Ingest { events, .. } => ingest(graph, &index, verified, events),
             SkillTelemetryOp::Measures {
                 skill_ref, window, ..
             } => {
                 let store = state.write().await.ensure_agent_library()?;
-                let rows: Vec<SkillInvocation> = invocations_of(&view, &tenant)
-                    .into_iter()
-                    .filter(|row| row.skill_ref == skill_ref)
-                    .collect();
+                let rows = index.invocations(&tenant, Some(&skill_ref), None, Some(window));
                 let answer = measures_of(&store, &tenant, &skill_ref, &rows, window)?;
                 Ok(read_only(
                     graph,
@@ -119,9 +134,14 @@ mod served {
             } => {
                 let store = state.write().await.ensure_agent_library()?;
                 let mut by_skill: BTreeMap<String, Vec<SkillInvocation>> = BTreeMap::new();
-                for row in invocations_of(&view, &tenant) {
-                    if skill_refs.is_empty() || skill_refs.contains(&row.skill_ref) {
+                if skill_refs.is_empty() {
+                    for row in index.invocations(&tenant, None, None, Some(window)) {
                         by_skill.entry(row.skill_ref.clone()).or_default().push(row);
+                    }
+                } else {
+                    for skill in &skill_refs {
+                        let rows = index.invocations(&tenant, Some(skill), None, Some(window));
+                        by_skill.entry(skill.clone()).or_default().extend(rows);
                     }
                 }
                 // A skill named by the caller is ranked even with no invocation in the window.
@@ -150,9 +170,9 @@ mod served {
                     &verified.principal_persistence_id(),
                     knobs.skill_pseudonym_salt,
                 );
-                let uses: Vec<(String, String)> = invocations_of(&view, &tenant)
+                let uses: Vec<(String, String)> = index
+                    .invocations(&tenant, None, None, Some(window))
                     .into_iter()
-                    .filter(|row| window.contains(row.started_ms))
                     .map(|row| (row.principal_pseudonym, row.skill_ref))
                     .collect();
                 let cohort = cohort_of(&uses, &caller);
@@ -179,7 +199,10 @@ mod served {
                 cursor,
                 ..
             } => {
+                // Only this read needs the graph's edges, so only this read takes a snapshot.
+                let (view, _) = filtered_view_versioned(state, verified.agent_id(), &graph).await?;
                 let answer = traces_by_eval(
+                    &index,
                     &view,
                     &tenant,
                     &skill_ref,
@@ -227,6 +250,7 @@ mod served {
         put("principal_pseudonym", row.principal_pseudonym.clone().into());
         put("run_id", row.run_id.clone().into());
         put("started_ms", row.started_ms.into());
+        put(INDEX_KEY_DAY, started_day(row.started_ms).into());
         put("ended_ms", row.ended_ms.into());
         match &row.outcome {
             InvocationOutcome::Ok => put("outcome", "ok".into()),
@@ -274,21 +298,120 @@ mod served {
         })
     }
 
-    /// The invocations of `tenant` in the caller's view, in id order.
-    fn invocations_of(view: &GraphView, tenant: &str) -> Vec<SkillInvocation> {
-        let mut ids: Vec<&String> = view.node_properties.keys().collect();
-        ids.sort();
-        ids.into_iter()
-            .filter_map(|id| view.node_row_object(id))
-            .filter(|row| class_of(row) == Some(SKILL_INVOCATION_CLASS))
-            .filter_map(|row| from_row(&row))
-            .filter(|row| row.tenant_id == tenant)
-            .collect()
+    /// The read index over `SkillInvocation` rows: lookups by skill revision, principal
+    /// pseudonym and day of `started_ms`, over the graph's own property index (the three keys are
+    /// stored on every invocation row by the ingest batch, so they are maintained with it). A row
+    /// is visible only to a caller its row-level rules admit, as in a filtered view.
+    struct InvocationIndex {
+        core: std::sync::Arc<GraphCore>,
+        isolation: medulla_isolation::isolation::IsolationLayer,
+        agent: String,
+    }
+
+    impl InvocationIndex {
+        /// The ids filed under `key` = `value`. When the graph's property index has no room for
+        /// the key, the ids are found by scanning, which answers the same set.
+        fn ids_where(&self, key: &str, value: &str) -> BTreeSet<String> {
+            if let Some(ids) = self.core.nodes_by_property(key, value) {
+                return ids.into_iter().collect();
+            }
+            self.core
+                .node_ids()
+                .into_iter()
+                .filter(|id| {
+                    self.core
+                        .get_node_properties(id)
+                        .and_then(|blob| medulla_types::msgpack::decode_property_value(&blob).ok())
+                        .and_then(|row| row.get(key).cloned())
+                        .is_some_and(|stored| match stored {
+                            Value::String(text) => text == value,
+                            other => other.to_string() == value,
+                        })
+                })
+                .collect()
+        }
+
+        /// The row of `id` when the caller may see it.
+        fn visible_row(&self, id: &str) -> Option<Map<String, Value>> {
+            let blob = self.core.get_node_properties(id)?;
+            #[cfg(feature = "security")]
+            {
+                let visibility = medulla_graph_core::rls::row_visibility(&blob);
+                if !self.isolation.can_see_row(&self.agent, &visibility) {
+                    return None;
+                }
+            }
+            #[cfg(not(feature = "security"))]
+            let _ = (&self.isolation, &self.agent);
+            match medulla_types::msgpack::decode_property_value(&blob) {
+                Ok(Value::Object(row)) => Some(row),
+                _ => None,
+            }
+        }
+
+        /// Whether any node is stored under `id`, whoever may see it.
+        fn exists(&self, id: &str) -> bool {
+            self.core.get_node_properties(id).is_some()
+        }
+
+        /// The invocations of `tenant` the caller may see, in id order, narrowed by whichever of
+        /// skill revision, principal pseudonym and window are given. The lookups intersect; a
+        /// window of at most 62 days adds the day buckets it covers.
+        fn invocations(
+            &self,
+            tenant: &str,
+            skill: Option<&str>,
+            principal: Option<&str>,
+            window: Option<Window>,
+        ) -> Vec<SkillInvocation> {
+            let mut sets: Vec<BTreeSet<String>> = Vec::new();
+            if let Some(skill) = skill {
+                sets.push(self.ids_where(INDEX_KEY_SKILL, skill));
+            }
+            if let Some(principal) = principal {
+                sets.push(self.ids_where(INDEX_KEY_PRINCIPAL, principal));
+            }
+            if let Some(days) = window.and_then(window_days) {
+                let mut in_window = BTreeSet::new();
+                for day in days {
+                    in_window.extend(self.ids_where(INDEX_KEY_DAY, &day.to_string()));
+                }
+                sets.push(in_window);
+            }
+            sets.sort_by_key(BTreeSet::len);
+            let mut sets = sets.into_iter();
+            let ids = match sets.next() {
+                Some(first) => sets.fold(first, |kept, next| {
+                    kept.intersection(&next).cloned().collect()
+                }),
+                None => self.ids_where("type", SKILL_INVOCATION_CLASS),
+            };
+            ids.iter()
+                .filter_map(|id| self.visible_row(id))
+                .filter(|row| class_of(row) == Some(SKILL_INVOCATION_CLASS))
+                .filter_map(|row| from_row(&row))
+                .filter(|row| row.tenant_id == tenant)
+                .filter(|row| window.is_none_or(|window| window.contains(row.started_ms)))
+                .collect()
+        }
+
+        /// The run trace of `run_id` in `tenant` the caller may see: the first by id.
+        fn run_trace_of(&self, tenant: &str, run_id: &str) -> Option<String> {
+            self.ids_where("run_id", run_id).into_iter().find(|id| {
+                self.visible_row(id).is_some_and(|row| {
+                    let same_tenant = ["tenant", "tenant_id"]
+                        .iter()
+                        .filter_map(|key| row.get(*key).and_then(Value::as_str))
+                        .all(|owner| owner == tenant);
+                    row.get("node_type").and_then(Value::as_str) == Some(RUN_TRACE) && same_tenant
+                })
+            })
+        }
     }
 
     fn ingest(
         graph: String,
-        view: &GraphView,
+        index: &InvocationIndex,
         verified: &VerifiedRequestContext,
         events: Vec<Value>,
     ) -> Result<PlannedWrite, String> {
@@ -333,7 +456,7 @@ mod served {
                     "an invocation names its id, its run and a 64-hex principal pseudonym",
                 ));
             }
-            let skill_known = view.node_row_object(&row.skill_ref).is_some_and(|node| {
+            let skill_known = index.visible_row(&row.skill_ref).is_some_and(|node| {
                 class_of(&node) == Some("Skill")
                     && node
                         .get("tenant_id")
@@ -348,7 +471,7 @@ mod served {
             }
             row.tenant_id = tenant.to_string();
             let node = node_id(&row.invocation_id);
-            if view.node_properties.contains_key(&node) || !seen.insert(row.invocation_id.clone()) {
+            if index.exists(&node) || !seen.insert(row.invocation_id.clone()) {
                 repeated += 1;
                 continue;
             }
@@ -362,7 +485,7 @@ mod served {
         for row in &accepted {
             let node = node_id(&row.invocation_id);
             operations.push(json!({"op": "upsert_node", "id": node, "properties": to_row(row)}));
-            if let Some(trace) = run_trace_of(view, tenant, &row.run_id) {
+            if let Some(trace) = index.run_trace_of(tenant, &row.run_id) {
                 operations.push(edge_operation(&node, &trace, OBSERVED_IN, &receipt));
             }
         }
@@ -395,6 +518,7 @@ mod served {
     /// `scoredBy` edge of a trace and the `scoresRun` edge of a score both link a score to its
     /// trace; a trace with no score is `unscored`, one with a failing score is `fail`.
     fn traces_by_eval(
+        index: &InvocationIndex,
         view: &GraphView,
         tenant: &str,
         skill_ref: &str,
@@ -403,11 +527,8 @@ mod served {
         cursor: Option<&str>,
     ) -> Result<TracesAnswer, String> {
         let mut ended: BTreeMap<String, u64> = BTreeMap::new();
-        for row in invocations_of(view, tenant)
-            .into_iter()
-            .filter(|row| row.skill_ref == skill_ref)
-        {
-            if let Some(trace) = run_trace_of(view, tenant, &row.run_id) {
+        for row in index.invocations(tenant, Some(skill_ref), None, None) {
+            if let Some(trace) = index.run_trace_of(tenant, &row.run_id) {
                 let slot = ended.entry(trace).or_insert(0);
                 *slot = (*slot).max(row.ended_ms);
             }

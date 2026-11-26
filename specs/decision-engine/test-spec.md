@@ -2262,6 +2262,7 @@ Hot-path proof for `MEDULLA-DECISION-ENGINE-R135.16`: `tests/decide/test_program
 - `MEDULLA-DECISION-ENGINE-R713.6`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::peers_never_named_and_small_cohort_refused` (planned, L3): proves: Peer recommendation
 - `MEDULLA-DECISION-ENGINE-R713.7`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::traces_by_eval_uses_the_edge_index` (planned, L3): proves: Traces indexed by eval
 - `MEDULLA-DECISION-ENGINE-R713.8`: `tests/decide/test_skill_telemetry_served.py::test_measures_rank_peers_and_traces` (planned, L4): proves: Hot-path proof
+- `MEDULLA-DECISION-ENGINE-R713.8`: `crates/medulla-h-decide/src/decide/stat_tests/skill_telemetry_tests.rs::ingest_files_each_invocation_under_the_read_index_keys` (planned, L3): proves: the ingest batch files each invocation under the skill, principal and day keys the reads look up. The owning change adds it at this exact path.
 - `MEDULLA-DECISION-ENGINE-R714`: `crates/medulla-h-decide/src/decide/stat_tests/skill_tier_tests.rs::a_skill_climbs_domain_core_and_always_on` (planned, L3): proves: Skills carry a tier and personas select skill sets (rollup)
 - `MEDULLA-DECISION-ENGINE-R714.1`: `crates/medulla-decision-types/src/decision/promotion_tier.rs::tests::tier_types_round_trip` (planned, L1): proves: Model
 - `MEDULLA-DECISION-ENGINE-R714.2`: `crates/medulla-decision-stats/src/decision/promotion_tier.rs::tests::each_tier_needs_its_review` (planned, L1): proves: Behavior

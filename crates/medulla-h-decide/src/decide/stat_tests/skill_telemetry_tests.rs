@@ -182,6 +182,51 @@ async fn ingest_then_measures_round_trip() {
     assert!(refused.starts_with(TELEMETRY_SCOPE_REQUIRED.as_str()), "{refused}");
 }
 
+// spec: MEDULLA-DECISION-ENGINE-R713.8
+#[tokio::test]
+async fn ingest_files_each_invocation_under_the_read_index_keys() {
+    let h = Harness::with_isolation(ServerState::test_isolation("agent-7")).await;
+    let core = seed(&h).await;
+    let caller = who();
+    let events = vec![
+        event("i1", SKILL, "u1", 1, "run-a", false),
+        event("i2", SKILL, "u2", 1, "run-b", false),
+        event("i3", "skill:other@1", "u1", 5, "run-c", false),
+    ];
+    let write = run(&h, &caller, ingest_op(events)).await.expect("ingests");
+    commit(&core, &write);
+
+    // The three keys of the read index are stored on the rows the ingest batch wrote.
+    let by = |key: &str, value: &str| {
+        let mut ids = core.nodes_by_property(key, value).expect("the key is indexed");
+        ids.sort();
+        ids
+    };
+    assert_eq!(by("skill_ref", SKILL), ["skill-invocation:i1", "skill-invocation:i2"]);
+    assert_eq!(by("principal_pseudonym", &principal_pseudonym(TENANT, "u1", 1)).len(), 2);
+    assert_eq!(by("started_day", "1"), ["skill-invocation:i1", "skill-invocation:i2"]);
+    assert_eq!(by("started_day", "5"), ["skill-invocation:i3"]);
+
+    // A read narrowed by skill and window answers from those keys: a window of days 0 to 1 holds
+    // the two rows of the skill, a window of day 5 alone holds none of them.
+    let measures = |window: Window| {
+        let (h, caller) = (&h, reader_only());
+        async move {
+            reply::<SkillMeasures>(
+                &run(h, &caller, SkillTelemetryOp::Measures { graph: GRAPH.into(), skill_ref: SKILL.into(), window })
+                    .await
+                    .expect("reads"),
+            )
+        }
+    };
+    assert_eq!(measures(Window { start_ms: 0, end_ms: 2 * DAY }).await.invocations, 2);
+    assert_eq!(measures(Window { start_ms: 5 * DAY, end_ms: 6 * DAY }).await.invocations, 0);
+    // A window that ends inside a day still reads that day's rows it contains.
+    assert_eq!(measures(Window { start_ms: DAY, end_ms: DAY + 1 }).await.invocations, 2);
+    // A window longer than the index looks up by day reads by skill alone, with the same answer.
+    assert_eq!(measures(Window { start_ms: 0, end_ms: 400 * DAY }).await.invocations, 2);
+}
+
 // spec: MEDULLA-DECISION-ENGINE-R713.4
 #[tokio::test]
 async fn bad_event_refuses_whole_batch() {

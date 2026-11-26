@@ -13,6 +13,31 @@ use medulla_types::refusal_code::RefusalCode;
 
 /// The graph class of an invocation node (vocabulary R817).
 pub const SKILL_INVOCATION_CLASS: &str = "SkillInvocation";
+/// The stored property the read index files an invocation under by skill revision.
+pub const INDEX_KEY_SKILL: &str = "skill_ref";
+/// The stored property the read index files an invocation under by principal pseudonym.
+pub const INDEX_KEY_PRINCIPAL: &str = "principal_pseudonym";
+/// The stored property the read index files an invocation under by day of `started_ms`.
+pub const INDEX_KEY_DAY: &str = "started_day";
+/// Milliseconds in one day bucket of the read index.
+pub const INDEX_DAY_MS: u64 = 86_400_000;
+/// The most day buckets a windowed read looks up; a longer window reads by skill or principal alone.
+pub const INDEX_DAYS_MAX: u64 = 62;
+
+/// The day bucket `ms` is filed under in the read index.
+pub fn started_day(ms: u64) -> u64 {
+    ms / INDEX_DAY_MS
+}
+
+/// The day buckets a window covers, or `None` when the window is empty or longer than
+/// [`INDEX_DAYS_MAX`] days.
+pub fn window_days(window: Window) -> Option<std::ops::RangeInclusive<u64>> {
+    if window.end_ms <= window.start_ms {
+        return None;
+    }
+    let (first, last) = (started_day(window.start_ms), started_day(window.end_ms - 1));
+    (last - first < INDEX_DAYS_MAX).then_some(first..=last)
+}
 /// Most events one `Ingest` carries.
 pub const INGEST_BATCH_MAX: usize = 500;
 /// Most bytes of an error code.
@@ -400,5 +425,18 @@ mod tests {
         let measures = serde_json::to_value(SkillMeasures::default()).unwrap();
         let count = measures.as_object().unwrap().len();
         assert_eq!(count, 12);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R713.8
+    #[test]
+    fn a_window_names_its_day_buckets_and_a_long_one_names_none() {
+        let day = INDEX_DAY_MS;
+        assert_eq!(started_day(day - 1), 0);
+        assert_eq!(started_day(day), 1);
+        assert_eq!(window_days(Window { start_ms: 0, end_ms: 3 * day }), Some(0..=2));
+        assert_eq!(window_days(Window { start_ms: day / 2, end_ms: day + 1 }), Some(0..=1));
+        assert_eq!(window_days(Window { start_ms: 5, end_ms: 5 }), None);
+        assert!(window_days(Window { start_ms: 0, end_ms: INDEX_DAYS_MAX * day }).is_some());
+        assert!(window_days(Window { start_ms: 0, end_ms: (INDEX_DAYS_MAX + 1) * day }).is_none());
     }
 }

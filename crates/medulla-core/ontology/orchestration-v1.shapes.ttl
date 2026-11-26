@@ -449,7 +449,7 @@
                 FILTER(isLiteral(?o))
                 FILTER(?p != :invocation_id && ?p != :tenant_id && ?p != :skill_ref
                     && ?p != :skill_version && ?p != :chosen_by && ?p != :principal_pseudonym
-                    && ?p != :run_id && ?p != :started_ms && ?p != :ended_ms && ?p != :outcome
+                    && ?p != :run_id && ?p != :started_ms && ?p != :started_day && ?p != :ended_ms && ?p != :outcome
                     && ?p != :outcome_code && ?p != :cost_delta_micro_usd && ?p != :tokens_in
                     && ?p != :tokens_out && ?p != rdfs:label)
             }

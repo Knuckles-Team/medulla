@@ -198,6 +198,12 @@
     rdfs:domain :SkillInvocation ;
     rdfs:range xsd:integer .
 
+:started_day a owl:DatatypeProperty ;
+    rdfs:label "started_day" ;
+    rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817): the day bucket of started_ms, the read index key of MEDULLA-DECISION-ENGINE-R713.8." ;
+    rdfs:domain :SkillInvocation ;
+    rdfs:range xsd:integer .
+
 :ended_ms a owl:DatatypeProperty ;
     rdfs:label "ended_ms" ;
     rdfs:comment "A property of :SkillInvocation (MEDULLA-ORCH-VOCAB-R817)." ;
