@@ -63,8 +63,8 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T058 [P] [US5] MEDULLA-ORCH-VOCAB-R010.3 Query harness_overflow_rate
 - [ ] T059 [P] [US5] MEDULLA-ORCH-VOCAB-R010.4 Query harness_mean_peak_ratio
 - [ ] T060 [P] [US5] MEDULLA-ORCH-VOCAB-R010.5 Query harness_mechanism_counts
-- [ ] T061 [P] [US5] MEDULLA-ORCH-VOCAB-R010.6 Evidence query for the best configuration per solved task
-- [ ] T071 [US5] MEDULLA-ORCH-VOCAB-R011.10 Apply the evaluation result once through the `ModelProfile` publish
+- [x] T061 [P] [US5] MEDULLA-ORCH-VOCAB-R010.6 Evidence query for the best configuration per solved task
+- [x] T071 [US5] MEDULLA-ORCH-VOCAB-R011.10 Apply the evaluation result once through the `ModelProfile` publish
 - [ ] T072 [US5] MEDULLA-ORCH-VOCAB-R011.11 Prove the loop closes through `HarnessConfig`
 - [ ] T073 [P] [US6] MEDULLA-ORCH-VOCAB-R012.1 Model: spec node kinds
 - [ ] T074 [US6] MEDULLA-ORCH-VOCAB-R012.2 Behaviour: classify a spec file by named rule
@@ -78,7 +78,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T083 [US4] MEDULLA-ORCH-VOCAB-R013.5 Evidence: ordered steps with the writing actor
 - [ ] T084 [US4] MEDULLA-ORCH-VOCAB-R013.6 Hot-path proof: first divergence is step two
 - [ ] T085 [P] [US2] MEDULLA-ORCH-VOCAB-R004.6.1 Model: gap and enhancement nodes
-- [ ] T086 [US2] MEDULLA-ORCH-VOCAB-R004.6.2 Behaviour and wiring: governed write with deduplication
+- [x] T086 [US2] MEDULLA-ORCH-VOCAB-R004.6.2 Behaviour and wiring: governed write with deduplication
 - [ ] T087 [US2] MEDULLA-ORCH-VOCAB-R004.6.3 Query by task class with exact or descendant match
 - [ ] T088 [US6] MEDULLA-ORCH-VOCAB-R012.8 Bind active policy to reviewed repository files
 - [ ] T090 [US2] MEDULLA-ORCH-VOCAB-R005.100 Declare the nested step-input shield schema
@@ -91,7 +91,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T101 [US7] MEDULLA-ORCH-VOCAB-R750.753 Hot-path proof: twin capture and served journey
 - [ ] T102 [P] [US7] MEDULLA-ORCH-VOCAB-R751.750 Model: team, specialist, population and social records
 - [x] T106 [US7] MEDULLA-ORCH-VOCAB-R800.1 Model: prompt template and workflow pattern
-- [ ] T107 [US7] MEDULLA-ORCH-VOCAB-R800.2 Behaviour: typed rendering (pattern selection retired)
+- [x] T107 [US7] MEDULLA-ORCH-VOCAB-R800.2 Behaviour: typed rendering (pattern selection retired)
 - [ ] T108 [US7] MEDULLA-ORCH-VOCAB-R800.3 Wiring: definitions are read by assembly and revised by version
 - [ ] T109 [US7] MEDULLA-ORCH-VOCAB-R800.4 Refusal: three definition faults
 - [ ] T110 [US7] MEDULLA-ORCH-VOCAB-R800.5 Evidence: revision history and render digest
@@ -99,7 +99,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T112 [P] [US4] MEDULLA-ORCH-VOCAB-R009.18.1 Model: observation window record
 - [ ] T113 [US4] MEDULLA-ORCH-VOCAB-R009.18.2 Behaviour and refusal: ingest a window
 - [ ] T114 [US4] MEDULLA-ORCH-VOCAB-R009.18.3 Wiring: producer and consumer of windows
-- [ ] T115 [US4] MEDULLA-ORCH-VOCAB-R009.18.4 Evidence: before and after trace facts
+- [x] T115 [US4] MEDULLA-ORCH-VOCAB-R009.18.4 Evidence: before and after trace facts
 - [ ] T116 [US4] MEDULLA-ORCH-VOCAB-R009.101.1 Index a batch of harness sessions
 - [ ] T117 [US4] MEDULLA-ORCH-VOCAB-R009.101.2 Search harness sessions as a UQL view over the full manifest
 - [ ] T118 [US4] MEDULLA-ORCH-VOCAB-R009.700 Mirror durable run units as run-trace nodes: model and behaviour
@@ -110,9 +110,9 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T123 [US6] MEDULLA-ORCH-VOCAB-R012.7.4 Evidence: decisions record the active policy revision
 - [ ] T124 [US4] MEDULLA-ORCH-VOCAB-R013.7.1 Model: walkthrough manifest
 - [x] T177 [US4] MEDULLA-ORCH-VOCAB-R013.7.4 Repository-index and blob reader seams
-- [ ] T186 [US4] MEDULLA-ORCH-VOCAB-R013.7.5 Production walkthrough readers installed at boot
-- [ ] T125 [US4] MEDULLA-ORCH-VOCAB-R013.7.2 Refusal: validate the manifest on write
-- [ ] T126 [US4] MEDULLA-ORCH-VOCAB-R013.7.3 Evidence: independent readback and artifact digest
+- [x] T186 [US4] MEDULLA-ORCH-VOCAB-R013.7.5 Production walkthrough readers installed at boot
+- [x] T125 [US4] MEDULLA-ORCH-VOCAB-R013.7.2 Refusal: validate the manifest on write
+- [x] T126 [US4] MEDULLA-ORCH-VOCAB-R013.7.3 Evidence: independent readback and artifact digest
 - [ ] T128 [P] [US8] MEDULLA-ORCH-VOCAB-R801.1 Model
 - [ ] T130 [P] [US8] MEDULLA-ORCH-VOCAB-R801.3 Wiring
 - [ ] T131 [P] [US8] MEDULLA-ORCH-VOCAB-R801.4 Refusal
@@ -126,8 +126,8 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T139 [P] [US8] MEDULLA-ORCH-VOCAB-R802.5 Refusal
 - [ ] T140 [P] [US8] MEDULLA-ORCH-VOCAB-R802.6 Hot-path proof
 - [ ] T142 [P] [US5] MEDULLA-ORCH-VOCAB-R804 Tenant telemetry snapshot read method
-- [ ] T175 [US5] MEDULLA-ORCH-VOCAB-R814 A committed run completion carries its per-phase timings
-- [ ] T143 [P] [US5] MEDULLA-ORCH-VOCAB-R805 Per-turn timing observations in the session usage result
+- [x] T175 [US5] MEDULLA-ORCH-VOCAB-R814 A committed run completion carries its per-phase timings
+- [x] T143 [P] [US5] MEDULLA-ORCH-VOCAB-R805 Per-turn timing observations in the session usage result
 - [ ] T144 [P] [US5] MEDULLA-ORCH-VOCAB-R806 Policy activation method with review receipt
 - [ ] T146 [P] [US7] MEDULLA-ORCH-VOCAB-R808 AgentDefinition carries a knowledge scope
 - [ ] T148 [P] [US8] MEDULLA-ORCH-VOCAB-R810 Store run-bound visual observation records
@@ -136,7 +136,7 @@ Each task line reads `- [ ] T001 [P] [US1] <ID> description`. One task per leaf 
 - [ ] T151 [US9] MEDULLA-ORCH-VOCAB-R014.3 DMN decision classes
 - [ ] T152 [US9] MEDULLA-ORCH-VOCAB-R014.4 Process step binding properties
 - [ ] T153 [US9] MEDULLA-ORCH-VOCAB-R014.5 BPMN shapes
-- [ ] T154 [US9] MEDULLA-ORCH-VOCAB-R014.6 DMN shapes
+- [x] T154 [US9] MEDULLA-ORCH-VOCAB-R014.6 DMN shapes
 - [ ] T155 [US9] MEDULLA-ORCH-VOCAB-R014.7 Register the BPMN and DMN sources
 - [ ] T156 [US9] MEDULLA-ORCH-VOCAB-R014.8 Process vocabulary hot-path proof
 - [ ] T157 [US9] MEDULLA-ORCH-VOCAB-R014.9 Canonical step kind vocabulary
