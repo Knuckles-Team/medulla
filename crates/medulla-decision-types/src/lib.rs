@@ -39,6 +39,8 @@ pub mod loops;
 /// Generated decision ontology and shapes (MEDULLA-DECISION-ENGINE-R054.1).
 #[cfg(feature = "contract-schema")]
 pub mod ontology;
+/// Memory events and the topic table (MEDULLA-DECISION-ENGINE-R073.6).
+pub mod memory_events;
 pub mod participant_memory;
 #[allow(missing_docs)] // docs pending: moved facade module (doc-fill lane removes this)
 pub mod solve;

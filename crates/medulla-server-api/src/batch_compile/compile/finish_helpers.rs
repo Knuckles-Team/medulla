@@ -145,6 +145,58 @@ pub(super) fn trust_flag_intents(
     Ok(intents)
 }
 
+/// The memory-event intent of every `MemoryEvent` node a `BatchUpdate` writes
+/// (MEDULLA-DECISION-ENGINE-R073.6). The node is the event's own write; the intent is built here,
+/// from the very method that commits it, so the event row and the change it announces share one
+/// batch. The key is the subject id, the payload the msgpack of the event struct, and the headers
+/// carry the `tenant` and the `event_kind`. A node naming a topic outside the three is refused.
+pub(super) fn memory_event_intents(
+    methods: &[medulla_protocol_types::protocol::Method],
+) -> Result<Vec<MutationOutboxIntent>, String> {
+    use medulla_decision_types::memory_events::{MEMORY_EVENT_LABEL, MEMORY_EVENT_TOPICS};
+    let mut intents = Vec::new();
+    for method in methods {
+        let medulla_protocol_types::protocol::Method::BatchUpdate { operations_msgpack } = method
+        else {
+            continue;
+        };
+        let Ok(operations) = rmp_serde::from_slice::<Vec<serde_json::Value>>(operations_msgpack)
+        else {
+            continue;
+        };
+        for operation in operations {
+            let properties = &operation["properties"];
+            if operation["op"] != "upsert_node" || properties["type"] != MEMORY_EVENT_LABEL {
+                continue;
+            }
+            let topic = properties["topic"].as_str().unwrap_or_default();
+            if !MEMORY_EVENT_TOPICS.contains(&topic) {
+                return Err(format!("MEMORY_EVENT_TOPIC_UNKNOWN: {topic:?} is not a memory event topic"));
+            }
+            let payload: serde_json::Value =
+                serde_json::from_str(properties["json"].as_str().unwrap_or_default())
+                    .map_err(|error| format!("memory event payload is unreadable: {error}"))?;
+            intents.push(MutationOutboxIntent {
+                topic: topic.to_string(),
+                key: properties["key"].as_str().unwrap_or_default().to_string(),
+                payload: rmp_serde::to_vec_named(&payload)
+                    .map_err(|error| format!("memory event intent encoding failed: {error}"))?,
+                headers: BTreeMap::from([
+                    (
+                        "tenant".to_string(),
+                        properties["tenant_scope"].as_str().unwrap_or_default().to_string(),
+                    ),
+                    (
+                        "event_kind".to_string(),
+                        properties["event_kind"].as_str().unwrap_or_default().to_string(),
+                    ),
+                ]),
+            });
+        }
+    }
+    Ok(intents)
+}
+
 /// The `memory_snapshot_synced` intent of every `SyncMemorySnapshotStore` in
 /// `methods` that writes a row (MEDULLA-DURABLE-KERNEL-R085.4). It is built here,
 /// from the very method that commits the head and revision rows, so the rows and
@@ -246,4 +298,44 @@ pub(super) fn compiled_outbox(
         });
     }
     Ok(outbox)
+}
+
+#[cfg(test)]
+mod memory_event_tests {
+    use super::*;
+    use medulla_decision_types::claims::{ClaimState, ObserverRef, ParticipantId};
+    use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
+    use medulla_protocol_types::protocol::Method;
+
+    fn batch_of(operations: Vec<serde_json::Value>) -> Method {
+        Method::BatchUpdate { operations_msgpack: rmp_serde::to_vec_named(&operations).unwrap() }
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R073.6
+    #[test]
+    fn each_memory_change_emits_one_atomic_event() {
+        let event = MemoryEvent::ClaimChanged(ClaimChanged {
+            claim_id: "c1".into(),
+            from: ClaimState::Proposed,
+            to: ClaimState::Supported,
+            subject: ParticipantId::new("ada").unwrap(),
+            observer: ObserverRef::System,
+        });
+        let node = event.node_operation("t1", 7).unwrap();
+        let other = serde_json::json!({"op": "upsert_node", "id": "n", "properties": {"type": "Other"}});
+        // One memory event node, one intent, in the batch that writes the node.
+        let intents = memory_event_intents(&[batch_of(vec![other.clone(), node.clone()])]).unwrap();
+        assert_eq!(intents.len(), 1);
+        assert_eq!(intents[0].topic, "memory.claim.changed");
+        assert_eq!(intents[0].key, "ada");
+        assert_eq!(intents[0].headers["tenant"], "t1");
+        assert_eq!(intents[0].headers["event_kind"], "claim_changed");
+        assert_eq!(intents[0], event.outbox_intent("t1").unwrap());
+        // A batch without the node emits none.
+        assert!(memory_event_intents(&[batch_of(vec![other])]).unwrap().is_empty());
+        // A node naming another topic refuses the whole batch.
+        let mut foreign = node;
+        foreign["properties"]["topic"] = serde_json::json!("memory.other");
+        assert!(memory_event_intents(&[batch_of(vec![foreign])]).is_err());
+    }
 }

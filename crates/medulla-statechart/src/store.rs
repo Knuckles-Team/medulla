@@ -477,7 +477,7 @@ impl StatechartStore {
         };
         let blob = encode_instance(&instance)?;
         let expected_version = self.mutation_version()?;
-        let batch = instance_batch(&instance, &blob, &self.owner, expected_version)?;
+        let batch = instance_batch(&instance, &blob, &self.owner, expected_version, &[])?;
         let committed_at_ms = instance.updated_at_ms.max(0) as u64;
         self.commit_instance_blob(&instance, &blob, &batch, committed_at_ms)?;
         Ok(instance)
@@ -629,6 +629,20 @@ impl StatechartStore {
         expected_version: Option<u64>,
         now_ms: i64,
     ) -> Result<SendOutcome> {
+        self.send_event_with_outbox(instance_id, event, expected_version, now_ms, &[])
+    }
+
+    /// [`Self::send_event`] with caller-named outbox intents that commit in the same
+    /// transaction as the transition (MEDULLA-DECISION-ENGINE-R073.6). A no-op or refused event
+    /// writes no intent.
+    pub fn send_event_with_outbox(
+        &self,
+        instance_id: &str,
+        event: &EventInput,
+        expected_version: Option<u64>,
+        now_ms: i64,
+        extra_outbox: &[MutationOutboxIntent],
+    ) -> Result<SendOutcome> {
         // Read + decide first; the pure transition function does not need the write txn
         // open, and a no-op must not take a write at all.
         let instance = self.get_instance(instance_id)?;
@@ -669,7 +683,7 @@ impl StatechartStore {
         let next = transitioned_instance(&instance, &def, &outcome, now_ms)?;
         let blob = encode_instance(&next)?;
         let expected_version = self.mutation_version()?;
-        let batch = instance_batch(&next, &blob, &self.owner, expected_version)?;
+        let batch = instance_batch(&next, &blob, &self.owner, expected_version, extra_outbox)?;
         commit_transition(
             self,
             instance_id,
@@ -1139,7 +1153,7 @@ mod tests {
         // `blob`, independent of `version_expectation`, so any live version value
         // reconstructs the identical id -- `v_after_fire` is simply a genuine one
         // already in scope.
-        let batch = instance_batch(&out.instance, &blob, &store.owner, v_after_fire).unwrap();
+        let batch = instance_batch(&out.instance, &blob, &store.owner, v_after_fire, &[]).unwrap();
         let read = store.scoped_read().unwrap();
         let record = medulla_transaction::read_ledger(&read, &batch.batch_id)
             .unwrap()
@@ -1210,6 +1224,7 @@ mod tests {
             &blob,
             &store.owner,
             store.mutation_version().unwrap(),
+            &[],
         )
         .unwrap();
 

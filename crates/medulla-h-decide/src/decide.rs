@@ -241,7 +241,7 @@ pub use assemble::handle_agent_assemble;
 #[cfg(feature = "statechart")]
 pub use belief_revise::enqueue_touched;
 pub use belief_revise::handle_belief_revise;
-pub use claims::handle_claims;
+pub use claims::{handle_claims, handle_claims_planned, ClaimsServed};
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;
 pub use execution_answer::{handle_agent_execution_answer, read_contract_tools};

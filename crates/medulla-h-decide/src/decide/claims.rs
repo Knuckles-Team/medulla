@@ -18,7 +18,19 @@ use medulla_decision_types::claims::ClaimOp;
 use medulla_protocol_types::protocol::Response;
 use medulla_server_api::authority_context::VerifiedRequestContext;
 
-/// Serve one claim operation.
+/// One served claim operation and the memory events its commit announces
+/// (MEDULLA-DECISION-ENGINE-R073.6). The events are announced only after the claim store has
+/// committed: the caller writes them to the graph outbox once `response` is a success.
+pub struct ClaimsServed {
+    /// The operation's answer.
+    pub response: Response,
+    /// One `memory.claim.changed` event per committed lifecycle transition of a claim that has a
+    /// perspective; empty for every other operation and for any refusal.
+    pub events: Vec<medulla_decision_types::memory_events::MemoryEvent>,
+}
+
+/// Serve one claim operation, dropping the memory events (a caller with no graph outbox to
+/// write them to).
 pub async fn handle_claims(
     state: &SharedState,
     req_id: u64,
@@ -26,6 +38,18 @@ pub async fn handle_claims(
     verified: &VerifiedRequestContext,
     op: ClaimOp,
 ) -> Response {
+    handle_claims_planned(state, req_id, graph, verified, op).await.response
+}
+
+/// Serve one claim operation and return the memory events it committed.
+pub async fn handle_claims_planned(
+    state: &SharedState,
+    req_id: u64,
+    graph: &str,
+    verified: &VerifiedRequestContext,
+    op: ClaimOp,
+) -> ClaimsServed {
+    let refused = |error: String| ClaimsServed { response: Response::err(req_id, error), events: Vec::new() };
     #[cfg(feature = "statechart")]
     {
         let persist_dir = { state.read().await.persist_dir.clone() };
@@ -44,13 +68,13 @@ pub async fn handle_claims(
             _ => Ok(()),
         };
         if let Err(error) = checked {
-            return Response::err(req_id, error);
+            return refused(error);
         }
         let reader = match &op {
             ClaimOp::Get { claim_id: Some(_), as_observer, .. } => {
                 match reader_view(graph_view.as_ref(), verified, as_observer.as_ref()) {
                     Ok(view) => Some(view),
-                    Err(error) => return Response::err(req_id, error),
+                    Err(error) => return refused(error),
                 }
             }
             // A list is read in the view the verified principal holds, like a `Get`; the claims
@@ -58,7 +82,7 @@ pub async fn handle_claims(
             ClaimOp::ProvenClaims { .. } => {
                 match reader_view(graph_view.as_ref(), verified, None) {
                     Ok(view) => Some(view),
-                    Err(error) => return Response::err(req_id, error),
+                    Err(error) => return refused(error),
                 }
             }
             _ => None,
@@ -68,16 +92,19 @@ pub async fn handle_claims(
             verified.tenant(),
             &verified.principal_persistence_id(),
         )
-        .and_then(|claims| claims.serve(op, reader.as_ref()));
+        .and_then(|claims| {
+            let payload = claims.serve(op, reader.as_ref())?;
+            Ok((payload, claims.take_events()))
+        });
         match served {
-            Ok(payload) => Response::ok(req_id, payload),
-            Err(error) => Response::err(req_id, error),
+            Ok((payload, events)) => ClaimsServed { response: Response::ok(req_id, payload), events },
+            Err(error) => refused(error),
         }
     }
     #[cfg(not(feature = "statechart"))]
     {
         let _ = (state, graph, verified, op);
-        Response::err(req_id, "Claims requires the `statechart` feature")
+        refused("Claims requires the `statechart` feature".to_string())
     }
 }
 
@@ -165,6 +192,7 @@ pub(super) mod served {
     use medulla_store::claim_statechart::{claim_statechart_def, research_artifact_statechart_def};
     use medulla_types::contract::ServerErrorCode;
     use medulla_decision_types::claims::{ClaimPerspective, ObserverRef, ParticipantId};
+    use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
 
     /// Domain of the instance keys.
     const KEY_DOMAIN: &str = "medulla-claims/v1";
@@ -285,6 +313,8 @@ pub(super) mod served {
         tenant: String,
         actor: String,
         knobs: ClaimKnobs,
+        /// Events of the transitions this store committed, in order.
+        events: std::sync::Mutex<Vec<medulla_decision_types::memory_events::MemoryEvent>>,
     }
 
     impl ClaimStore {
@@ -308,7 +338,15 @@ pub(super) mod served {
                 tenant: tenant.to_string(),
                 actor: actor.to_string(),
                 knobs: claim_knobs(),
+                events: std::sync::Mutex::new(Vec::new()),
             })
+        }
+
+        /// The memory events of the transitions committed so far, taken once.
+        pub(in crate::decide) fn take_events(
+            &self,
+        ) -> Vec<medulla_decision_types::memory_events::MemoryEvent> {
+            std::mem::take(&mut *self.events.lock().unwrap_or_else(|poisoned| poisoned.into_inner()))
         }
 
         /// Run one operation to its typed result.
@@ -419,13 +457,25 @@ pub(super) mod served {
             instance: &MachineInstance,
             event: EventInput,
         ) -> Result<MachineInstance, String> {
+            self.send_with_outbox(instance, event, &[])
+        }
+
+        /// [`Self::send`] with outbox intents that commit in the same transaction as the event
+        /// (MEDULLA-DECISION-ENGINE-R073.6).
+        fn send_with_outbox(
+            &self,
+            instance: &MachineInstance,
+            event: EventInput,
+            outbox: &[medulla_mutation_types::mutation_scope::MutationOutboxIntent],
+        ) -> Result<MachineInstance, String> {
             let outcome = self
                 .store
-                .send_event(
+                .send_event_with_outbox(
                     &instance.instance_id,
                     &event,
                     Some(instance.version),
                     Self::now_ms() as i64,
+                    outbox,
                 )
                 .map_err(|error| match error {
                     StatechartError::VersionConflict { .. } => {
@@ -503,7 +553,26 @@ pub(super) mod served {
                     "transitions": transitions,
                 }),
             );
-            record_of(&self.send(&instance, event)?)
+            // A claim with a perspective announces its transition; the intent joins the claim
+            // store's own transaction and the event is handed to the caller for the graph outbox.
+            let changed = record.perspective.as_ref().map(|perspective| {
+                MemoryEvent::ClaimChanged(ClaimChanged {
+                    claim_id: claim_id.to_string(),
+                    from: record.state,
+                    to,
+                    subject: perspective.subject.clone(),
+                    observer: perspective.observer.clone(),
+                })
+            });
+            let intents = match &changed {
+                Some(changed) => vec![changed.outbox_intent(&self.tenant)?],
+                None => Vec::new(),
+            };
+            let advanced = record_of(&self.send_with_outbox(&instance, event, &intents)?)?;
+            if let Some(changed) = changed {
+                self.events.lock().unwrap_or_else(|poisoned| poisoned.into_inner()).push(changed);
+            }
+            Ok(advanced)
         }
 
         fn evidence_of(

@@ -25,7 +25,7 @@ use medulla_kernel::kernel::persistence::ENGINE_LEDGER_PRINCIPAL;
 mod finish_helpers;
 mod graph_source_dirty;
 use finish_helpers::{
-    compiled_outbox, compiled_scope_identity, finance_alert_intents, memory_snapshot_intents, trust_flag_intents,
+    compiled_outbox, compiled_scope_identity, finance_alert_intents, memory_event_intents, memory_snapshot_intents, trust_flag_intents,
 };
 
 /// Resolve the current graph version without treating RAM as a substitute for a
@@ -181,6 +181,8 @@ pub fn compile_methods_with_source_dirty(
     terminal_outbox.extend(finance_alert_intents(&methods)?);
     terminal_outbox.extend(memory_snapshot_intents(&methods)?);
     terminal_outbox.extend(trust_flag_intents(&methods)?);
+    // MEDULLA-DECISION-ENGINE-R073.6: a memory event node's outbox fact shares its batch.
+    terminal_outbox.extend(memory_event_intents(&methods)?);
     terminal_outbox.extend(additional_outbox);
     #[cfg(feature = "epistemic-tms")]
     let reasoning_events =

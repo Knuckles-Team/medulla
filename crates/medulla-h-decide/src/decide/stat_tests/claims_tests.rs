@@ -811,3 +811,47 @@ async fn proof_journey() {
     let other: ProvenClaimsResult = call(&h, "claim-writer", OTHER_TENANT, proven_op(None, None)).await.unwrap();
     assert!(other.claims.is_empty());
 }
+
+/// Serve one operation and return the memory events it committed.
+async fn planned(
+    h: &Harness,
+    who: &str,
+    op: ClaimOp,
+) -> crate::decide::claims::ClaimsServed {
+    let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, TENANT);
+    crate::decide::claims::handle_claims_planned(&h.state, 3, "default", &verified, op).await
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R073.6
+#[tokio::test]
+async fn a_perspective_claim_transition_announces_one_event_after_commit() {
+    use medulla_decision_types::memory_events::{ClaimChanged, MemoryEvent};
+    let h = Harness::new().await;
+    seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1")]).await;
+    let observer = ObserverRef::System;
+    let _: ClaimRecord = call(&h, "ada-principal", TENANT, perspective_propose("c-event", "ada", observer.clone())).await.unwrap();
+    let _: ClaimRecord = call(&h, "ada-principal", TENANT, evidence("c-event", "e1", Some(EvidenceChannel::Outcome), true, 900_000)).await.unwrap();
+    // A refused transition announces nothing.
+    let refused = planned(&h, "ada-principal", advance("c-event", ClaimState::Retired)).await;
+    if refused.response.refusal_text().is_some() {
+        assert!(refused.events.is_empty());
+    }
+    // The committed transition announces exactly one event naming the states and the perspective.
+    let served = planned(&h, "ada-principal", advance("c-event", ClaimState::Supported)).await;
+    assert!(served.response.refusal_text().is_none());
+    assert_eq!(
+        served.events,
+        vec![MemoryEvent::ClaimChanged(ClaimChanged {
+            claim_id: "c-event".into(),
+            from: ClaimState::Proposed,
+            to: ClaimState::Supported,
+            subject: ParticipantId::new("ada").unwrap(),
+            observer,
+        })]
+    );
+    // A claim with no perspective, and a read, announce nothing.
+    let _: ClaimRecord = writer(&h, propose("c-plain")).await.unwrap();
+    let _: ClaimRecord = writer(&h, evidence("c-plain", "p1", Some(EvidenceChannel::Outcome), true, 900_000)).await.unwrap();
+    assert!(planned(&h, "claim-writer", advance("c-plain", ClaimState::Supported)).await.events.is_empty());
+    assert!(planned(&h, "claim-writer", get_claim("c-plain")).await.events.is_empty());
+}

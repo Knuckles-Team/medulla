@@ -53,6 +53,7 @@ mod decision_plane;
 mod graph_lifecycle;
 mod identity_access;
 mod memory_change;
+mod memory_events;
 mod incident;
 mod lifecycle;
 #[cfg(feature = "security")]

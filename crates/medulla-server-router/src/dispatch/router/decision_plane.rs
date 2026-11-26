@@ -485,10 +485,10 @@ async fn dispatch_decision_methods(
         }
         Method::Claims { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_claims(
+                super::memory_events::serve_claims_and_publish(
                     state,
-                    req.id,
                     &req.graph,
+                    req.id,
                     verified_context,
                     *op,
                 )

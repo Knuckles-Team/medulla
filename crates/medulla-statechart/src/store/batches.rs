@@ -54,6 +54,7 @@ pub(super) fn instance_batch(
     encoded: &[u8],
     owner: &OwnedStoreHandle<StatechartOwner>,
     expected_version: u64,
+    extra_outbox: &[MutationOutboxIntent],
 ) -> Result<MutationBatch> {
     let digest = Digest256::sha256(encoded).to_hex();
     // RF-RULING-004: the batch actor is the principal the storage kernel
@@ -112,6 +113,9 @@ pub(super) fn instance_batch(
         }],
         created_at_ms: instance.updated_at_ms.max(0) as u64,
     };
+    // Intents the caller asks to commit with this transition (MEDULLA-DECISION-ENGINE-R073.6):
+    // they join the transition's own transaction, so they exist exactly when it committed.
+    batch.outbox.extend(extra_outbox.iter().cloned());
     batch
         .reseal_envelope(medulla_types::contract::Digest256::from_bytes([0_u8; 32]))
         .map_err(codec_err)?;
