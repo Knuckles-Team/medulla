@@ -97,6 +97,7 @@ medulla-catalog-types = { path = "../medulla-catalog-types", features = ["test-s
 medulla-compute = { path = "../medulla-compute", features = ["test-support"] }
 medulla-kernel = { path = "../medulla-kernel", features = ["test-support"] }
 medulla-persistence = { path = "../medulla-persistence", features = ["test-support"] }
+medulla-sdlc = { path = "../medulla-sdlc" }
 medulla-protocol-types = { path = "../medulla-protocol-types", features = ["test-support"] }
 medulla-raft = { path = "../medulla-raft", features = ["test-support"] }
 medulla-server-api = { path = "../medulla-server-api", features = ["test-support", "request-policy-fixture"] }
@@ -152,3 +153,8 @@ name = "r600_enrich_served"
 path = "benches/r600_enrich_served.rs"
 harness = false
 required-features = ["test-support"]
+
+[[bench]]
+name = "spec_ingest"
+path = "benches/spec_ingest.rs"
+harness = false

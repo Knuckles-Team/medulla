@@ -329,7 +329,8 @@ async fn record_gate_verdict(
 }
 
 /// The node types a competency question reads.
-const SPEC_VIEW_TYPES: [&str; 12] = [
+const SPEC_VIEW_TYPES: [&str; 13] = [
+    "PlanUnknown",
     "Requirement",
     "SYMBOL",
     "TaskLine",
@@ -377,6 +378,32 @@ async fn spec_question(
         if tenant.trim().is_empty() {
             return Err("TENANT_SCOPE_REQUIRED".to_string());
         }
+        // MEDULLA-SDLC-R016.4: the loop's tools are the tools its contracts name, read from
+        // the graph. A graph with no contract for the research task answers no row.
+        if question == medulla_source_types::spec_question::SpecQuestion::ResearchTools {
+            let tools = research_tools(state, &target).await?;
+            return Ok(medulla_source_types::spec_question::SpecQuestionAnswer {
+                rows: tools
+                    .into_iter()
+                    .map(|held| {
+                        std::collections::BTreeMap::from([
+                            ("connector".to_string(), held.connector),
+                            ("tool".to_string(), held.tool),
+                        ])
+                    })
+                    .collect(),
+                digests: Vec::new(),
+            });
+        }
+        // MEDULLA-SDLC-R016.1: the unknowns are read only for a codebase that takes proposals.
+        // The repository is the graph; a project with no mode record reads as `reference`.
+        if question == medulla_source_types::spec_question::SpecQuestion::PlanUnknowns {
+            let mode = stored_project_mode(state, &target, target.graph).await?;
+            if mode == ProjectMode::Reference {
+                return Err(LifecycleRefusal::ModeReferenceNoProposals(target.graph.to_owned())
+                    .to_string());
+            }
+        }
         ensure_graph_resident(state, target.graph).await;
         let (core, authority) = {
             let current = timed_read(state).await;
@@ -393,6 +420,28 @@ async fn spec_question(
     }
     .await;
     typed_response::<SpecQuestionResult>(target.req_id, result)
+}
+
+/// The tools the research task's contracts name in the request graph, read under the caller's
+/// view (MEDULLA-SDLC-R016.4).
+async fn research_tools(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+) -> Result<Vec<medulla_sdlc::lifecycle::research::ResearchTool>, String> {
+    let read = medulla_h_decide::decide::read_contract_tools(
+        state,
+        target.graph,
+        target.verified,
+        medulla_sdlc::lifecycle::research::RESEARCH_TASK_IRI,
+    )
+    .await?;
+    Ok(read
+        .into_iter()
+        .map(|(connector, tool)| medulla_sdlc::lifecycle::research::ResearchTool {
+            connector,
+            tool,
+        })
+        .collect())
 }
 
 /// An agent library with no revisions: the engine default policy needs no stored revision.
@@ -1080,6 +1129,11 @@ async fn proposal_put(
                 .map_err(|e| e.to_string())?;
         }
         let resolved = resolve_evidence(state, &target, &proposal).await?;
+        // MEDULLA-SDLC-R016.4: a cited source that names the research tool that read it names a
+        // tool the graph's contracts hold.
+        if medulla_sdlc::lifecycle::research::is_research_entry(&proposal) {
+            check_cited_tools(state, &target, &proposal).await?;
+        }
         let write = handle_proposal_put(proposal, &resolved).map_err(|e| e.to_string())?;
         let operations = proposal_operations(&write, &target)?;
         commit(state, &target, operations).await?;
@@ -1090,6 +1144,48 @@ async fn proposal_put(
     }
     .await;
     typed_response::<ProposalPutResult>(target.req_id, result)
+}
+
+/// Refuse `RESEARCH_TOOL_UNKNOWN` for a cited record whose `research_tool` property names a
+/// tool the research contracts of the graph do not hold. A record that names no tool is not read
+/// against the contracts.
+async fn check_cited_tools(
+    state: &Arc<RwLock<ServerState>>,
+    target: &SdlcTarget<'_>,
+    proposal: &Proposal,
+) -> Result<(), String> {
+    ensure_graph_resident(state, target.graph).await;
+    let (core, authority) = {
+        let current = timed_read(state).await;
+        authorized_graph_read(
+            &current,
+            target.graph,
+            target.verified,
+            &format!("GRAPH_NOT_FOUND: {}", target.graph),
+        )?
+    };
+    let named: BTreeSet<String> = proposal
+        .evidence
+        .iter()
+        .filter(|cited| cited.kind == medulla_source_types::lifecycle::EvidenceKind::ResearchCitation)
+        .filter_map(|cited| {
+            let blob = core.get_node_properties(&cited.record_id)?;
+            if !authority.can_see_node(&blob, core.is_schema_node(&cited.record_id)) {
+                return None;
+            }
+            let node = medulla_types::msgpack::decode_property_value(&blob).ok()?;
+            node.get("research_tool")?.as_str().map(str::to_owned)
+        })
+        .collect();
+    if named.is_empty() {
+        return Ok(());
+    }
+    let known = research_tools(state, target).await?;
+    for tool in named {
+        medulla_sdlc::lifecycle::research::check_research_tool(&known, &tool)
+            .map_err(|refusal| refusal.to_string())?;
+    }
+    Ok(())
 }
 
 /// `(record_id, content digest)` of each cited record the caller can see.

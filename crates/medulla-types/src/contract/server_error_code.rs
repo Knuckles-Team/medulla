@@ -563,6 +563,8 @@ closed_error_codes! {
         ResearchEntryUncited => "RESEARCH_ENTRY_UNCITED",
         /// MEDULLA-SDLC-R017.4: a spec, plan or task file is written by the loop without an approved proposal.
         ProposalDirectWriteRefused => "PROPOSAL_DIRECT_WRITE_REFUSED",
+        /// MEDULLA-SDLC-R016.4: a research tool no tool-use contract of the graph names.
+        ResearchToolUnknown => "RESEARCH_TOOL_UNKNOWN",
         GovernedActorUnstamped => "GOVERNED_ACTOR_UNSTAMPED",
         GovernedCollision => "GOVERNED_COLLISION",
         GovernedConflict => "GOVERNED_CONFLICT",

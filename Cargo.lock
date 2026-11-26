@@ -6097,6 +6097,7 @@ dependencies = [
  "medulla-raft",
  "medulla-rdf",
  "medulla-result-types",
+ "medulla-sdlc",
  "medulla-server",
  "medulla-server-api",
  "medulla-server-auth",
@@ -7490,6 +7491,7 @@ dependencies = [
 name = "medulla-sdlc"
 version = "0.1.0"
 dependencies = [
+ "medulla-decision-types",
  "medulla-source-types",
  "medulla-types",
  "serde_json",

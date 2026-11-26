@@ -166,6 +166,7 @@ pub const REFUSALS: &[RefusalCode] = &[
     RefusalCode::new("SCENARIO_RUN_INCOMPLETE"),
     RefusalCode::new("RESEARCH_ENTRY_UNCITED"),
     RefusalCode::new("PROPOSAL_DIRECT_WRITE_REFUSED"),
+    RefusalCode::new("RESEARCH_TOOL_UNKNOWN"),
 ];
 
 /// A typed refusal from the lifecycle records.
@@ -237,6 +238,8 @@ pub enum LifecycleRefusal {
     ResearchEntryUncited(String),
     #[error("PROPOSAL_DIRECT_WRITE_REFUSED: {0}")]
     ProposalDirectWriteRefused(String),
+    #[error("RESEARCH_TOOL_UNKNOWN: {0}")]
+    ResearchToolUnknown(String),
 }
 
 impl LifecycleRefusal {
@@ -276,6 +279,7 @@ impl LifecycleRefusal {
             Self::ScenarioRunIncomplete(_) => "SCENARIO_RUN_INCOMPLETE",
             Self::ResearchEntryUncited(_) => "RESEARCH_ENTRY_UNCITED",
             Self::ProposalDirectWriteRefused(_) => "PROPOSAL_DIRECT_WRITE_REFUSED",
+            Self::ResearchToolUnknown(_) => "RESEARCH_TOOL_UNKNOWN",
         }
     }
 }

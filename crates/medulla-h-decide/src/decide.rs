@@ -238,7 +238,7 @@ pub use belief_revise::handle_belief_revise;
 pub use claims::handle_claims;
 pub use commit::handle_decision_commit;
 pub use coverage::handle_capability_coverage;
-pub use execution_answer::handle_agent_execution_answer;
+pub use execution_answer::{handle_agent_execution_answer, read_contract_tools};
 pub use feature_ledger::handle_feature_ledger;
 pub use guardrail::handle_guardrail_entailment;
 pub use jobs::{handle_decision_eval, handle_decision_fit};

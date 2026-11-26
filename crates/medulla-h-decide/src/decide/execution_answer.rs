@@ -738,6 +738,42 @@ fn query_part(
     })
 }
 
+/// The `(connector, tool name)` pairs the tool-use contracts of `task_iri` name in `graph`, read
+/// through the caller's filtered view and sorted (MEDULLA-SDLC-R016.4). An empty list means no
+/// imported contract names the task; a read that fails is an error, never an empty list.
+#[cfg(feature = "decide")]
+pub async fn read_contract_tools(
+    state: &SharedState,
+    graph: &str,
+    verified: &VerifiedRequestContext,
+    task_iri: &str,
+) -> Result<Vec<(String, String)>, String> {
+    let (view, _) =
+        super::stat_support::filtered_view_versioned(state, verified.agent_id(), graph).await?;
+    let max_rows = usize::try_from(
+        medulla_server_api::knob_config::knobs().execution_answer_max_rows_per_part,
+    )
+    .unwrap_or(usize::MAX);
+    let mut tools: Vec<(String, String)> = contract_steps(&view, task_iri, max_rows)?
+        .into_iter()
+        .map(|step| (connector_of(&step.contract), local_name(&step.tool).to_string()))
+        .collect();
+    tools.sort();
+    tools.dedup();
+    Ok(tools)
+}
+
+/// A build without the Decide layer reads no contract.
+#[cfg(not(feature = "decide"))]
+pub async fn read_contract_tools(
+    _state: &SharedState,
+    _graph: &str,
+    _verified: &VerifiedRequestContext,
+    _task_iri: &str,
+) -> Result<Vec<(String, String)>, String> {
+    Err("research tools require the `decide` feature".to_string())
+}
+
 /// A build without the Decide layer still serves the method: it refuses by
 /// name.
 #[cfg(not(feature = "decide"))]

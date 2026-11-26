@@ -629,6 +629,77 @@ pub fn plan_section_node_id(repo: &str, file: &str, start_line: usize) -> String
     format!("plansection:{repo}:{file}#L{start_line}")
 }
 
+/// The node id of one unresolved item of a plan (MEDULLA-SDLC-R016.1).
+pub fn plan_unknown_node_id(repo: &str, file: &str, line: u32) -> String {
+    format!("planunknown:{repo}:{file}#L{line}")
+}
+
+/// One unresolved item of a Phase 0 plan section (MEDULLA-SDLC-R016.1): its 1-based file line
+/// and its text without the list marker.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct PlanUnknown {
+    pub line: u32,
+    pub text: String,
+}
+
+/// The list marker length of an item line (`- `, `* ` or `<digits>. ` after its indentation),
+/// and `None` for any other line.
+fn item_marker(line: &str) -> Option<usize> {
+    let body = line.trim_start();
+    let indent = line.len() - body.len();
+    if body.starts_with("- ") || body.starts_with("* ") {
+        return Some(indent + 2);
+    }
+    let digits = body.chars().take_while(char::is_ascii_digit).count();
+    (digits > 0 && body[digits..].starts_with(". ")).then_some(indent + digits + 2)
+}
+
+/// The unresolved items of the plan section that spans `section_start_line` to
+/// `section_end_line` (1-based, inclusive) of `text`. An item is a line outside code fences that
+/// starts, after its indentation, with `- `, `* ` or `<digits>. `; its text runs to the next
+/// item, a blank line or a heading. An item is resolved, and not returned, when its text names
+/// `research.md` (a cited entry) or it starts `- [x]` or `- [X]`.
+pub fn plan_unknowns(text: &str, section_start_line: u32, section_end_line: u32) -> Vec<PlanUnknown> {
+    let mut found: Vec<(u32, String, bool)> = Vec::new();
+    let mut open = false;
+    let mut fence = false;
+    for (index, line) in text.lines().enumerate() {
+        let number = index as u32 + 1;
+        if number < section_start_line || number > section_end_line {
+            continue;
+        }
+        if line.trim_start().starts_with("```") {
+            fence = !fence;
+            open = false;
+            continue;
+        }
+        if fence {
+            continue;
+        }
+        if let Some(marker) = item_marker(line) {
+            let body = line[marker..].trim().to_string();
+            let checked = {
+                let start = line.trim_start();
+                start.starts_with("- [x]") || start.starts_with("- [X]")
+            };
+            found.push((number, body, checked));
+            open = true;
+        } else if line.trim().is_empty() || line.trim_start().starts_with('#') {
+            open = false;
+        } else if open {
+            if let Some((_, body, _)) = found.last_mut() {
+                body.push(' ');
+                body.push_str(line.trim());
+            }
+        }
+    }
+    found
+        .into_iter()
+        .filter(|(_, body, checked)| !checked && !body.contains("research.md"))
+        .map(|(line, text, _)| PlanUnknown { line, text })
+        .collect()
+}
+
 /// Whether `file` names a plan document (`plan.md` or `<dir>/plan.md`).
 fn is_plan_file(file: &str) -> bool {
     file == "plan.md" || file.ends_with("/plan.md")
@@ -937,6 +1008,24 @@ pub fn project_plans(
             properties["phase"] = phase.into();
         }
         nodes.push(node(&id, properties));
+        // MEDULLA-SDLC-R016.1: each unresolved item of a Phase 0 section is one node in it.
+        if phase == Some("0") {
+            for unknown in plan_unknowns(text, *start as u32, end as u32) {
+                let unknown_id = plan_unknown_node_id(repo, file, unknown.line);
+                nodes.push(node(
+                    &unknown_id,
+                    serde_json::json!({
+                        "type": "PlanUnknown",
+                        "repo": repo,
+                        "file": file,
+                        "line": unknown.line.to_string(),
+                        "text": unknown.text,
+                        "section": id,
+                    }),
+                ));
+                links.push(edge(&unknown_id, &id, "inSection"));
+            }
+        }
         let covered: BTreeSet<String> = ticked(&body)
             .into_iter()
             .filter(|span| is_row_id(span))
@@ -1623,8 +1712,8 @@ fn reingest_in(
                 if matches!(
                     op["properties"]["type"].as_str(),
                     Some(
-                    "Requirement" | "SpecDocument" | "SpecSection" | "PlanSection" | "TaskLine"
-                        | "ConstitutionPrinciple"
+                    "Requirement" | "SpecDocument" | "SpecSection" | "PlanSection" | "PlanUnknown"
+                        | "TaskLine" | "ConstitutionPrinciple"
                 )
                 ) {
                     records.push(op["id"].as_str().unwrap_or_default().to_string());
@@ -2796,6 +2885,49 @@ Provider: demo DEMO-R001\nConsumer: other OTHER-R009\n\n\
         let bad = "## Phase 7: Nope\n";
         let refusal = project_plans("demo", "specs/x/plan.md", bad, &known).unwrap_err();
         assert_eq!(refusal, "PLAN_PHASE_UNKNOWN: specs/x/plan.md:1");
+    }
+
+    // spec: MEDULLA-SDLC-R016.1
+    #[test]
+    fn plan_unknowns_skip_resolved_items_and_code_fences() {
+        let plan = "# Plan\n\n## Phase 0: Research\n\
+- Which parser handles nested fences?\n  It must keep the line numbers.\n\
+* [ ] Open checkbox\n- [x] Done checkbox\n- Settled in `research.md` already\n\
+2. Numbered unknown\n```\n- inside a fence\n```\n\n  - Indented unknown\n\
+\n## Phase 1: Design\n- Not in phase zero\n";
+        let found = plan_unknowns(plan, 3, 15);
+        let lines: Vec<u32> = found.iter().map(|u| u.line).collect();
+        assert_eq!(lines, [4, 6, 9, 14]);
+        assert_eq!(
+            found[0].text,
+            "Which parser handles nested fences? It must keep the line numbers."
+        );
+        assert_eq!(found[1].text, "[ ] Open checkbox");
+        assert_eq!(found[2].text, "Numbered unknown");
+        assert_eq!(found[3].text, "Indented unknown");
+        // The span bounds the read: the Phase 1 item is outside it.
+        assert!(plan_unknowns(plan, 3, 15).iter().all(|u| u.line < 16));
+        let known = BTreeSet::new();
+        let projected = project_plans("demo", "specs/x/plan.md", plan, &known).expect("projects");
+        let unknown_ids: Vec<&str> = projected
+            .operations
+            .iter()
+            .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "PlanUnknown")
+            .map(|op| op["id"].as_str().unwrap())
+            .collect();
+        assert_eq!(
+            unknown_ids,
+            [
+                "planunknown:demo:specs/x/plan.md#L4",
+                "planunknown:demo:specs/x/plan.md#L6",
+                "planunknown:demo:specs/x/plan.md#L9",
+                "planunknown:demo:specs/x/plan.md#L14",
+            ]
+        );
+        assert_eq!(
+            edges_of(&projected, "planunknown:demo:specs/x/plan.md#L4", "inSection"),
+            ["plansection:demo:specs/x/plan.md#L3"]
+        );
     }
 
     // spec: MEDULLA-SDLC-R014.7

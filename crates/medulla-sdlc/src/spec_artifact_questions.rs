@@ -349,8 +349,35 @@ pub fn answer(
         | SpecQuestion::Contract
         | SpecQuestion::SeamRouting
         | SpecQuestion::PlanToGoalPhase => {}
+        SpecQuestion::PlanUnknowns => plan_unknowns(view, &mut out),
+        // The tools come from the contract read of `medulla-h-decide`, not from this view.
+        SpecQuestion::ResearchTools => {}
     }
     Ok(out.finish())
+}
+
+/// The unresolved Phase 0 items of the repository (MEDULLA-SDLC-R016.1): one row per
+/// `PlanUnknown` record, ordered by file and then by line number.
+fn plan_unknowns(view: &SpecGraphView, out: &mut Collector<'_>) {
+    let mut unknowns: Vec<(&str, u64, &str)> = view
+        .of_type("PlanUnknown")
+        .map(|id| {
+            let line = view.prop(id, "line").parse().unwrap_or(u64::MAX);
+            (view.prop(id, "file"), line, id)
+        })
+        .collect();
+    unknowns.sort();
+    for (file, _, id) in unknowns {
+        out.row(
+            &[id],
+            &[
+                ("unknown_id", id),
+                ("file", file),
+                ("line", view.prop(id, "line")),
+                ("text", view.prop(id, "text")),
+            ],
+        );
+    }
 }
 
 /// The statuses that close a defect for question `OpenDefectsInRelease`.

@@ -53,6 +53,12 @@ pub enum SpecQuestion {
     /// The phase of one plan section and the goals each requirement it covers targets
     /// (MEDULLA-SDLC-R014.15). The subject is the plan section node id.
     PlanToGoalPhase,
+    /// The unresolved items of the Phase 0 plan sections of one repository, ordered by file
+    /// and line (MEDULLA-SDLC-R016.1).
+    PlanUnknowns,
+    /// The tools the tool-use contracts of the research task name, one row per connector and
+    /// tool (MEDULLA-SDLC-R016.4). Read from the graph; no list lives in code.
+    ResearchTools,
 }
 
 impl SpecQuestion {

@@ -19429,7 +19429,9 @@ class MedullaClient:
         (MEDULLA-SDLC-R014.15) each take a node id as ``subject``: ``task_context``
         (the task), ``plan_section`` (the plan section), ``contract`` (the contract),
         ``seam_routing`` (the requirement) and ``plan_to_goal_phase`` (the plan
-        section). The answer holds ``rows``
+        section). ``plan_unknowns`` takes no subject: the repository is ``graph``, and
+        a reference codebase refuses ``MODE_REFERENCE_NO_PROPOSALS``. The answer holds
+        ``rows``
         and the ``digests`` of the records it read. A subject given where none is taken,
         or missing where required, refuses ``PARAMETER_INVALID``; an unknown goal or
         phase refuses ``COMPETENCY_SUBJECT_UNKNOWN``.

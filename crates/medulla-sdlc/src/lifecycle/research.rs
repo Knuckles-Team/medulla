@@ -7,18 +7,78 @@
 //! `Source: <record_id> (read at <digits>)`, the digits being the read time in epoch
 //! milliseconds. The entry lands only as a pull request through the gates (R017.4).
 
-use medulla_source_types::lifecycle::{
-    EvidenceKind, LifecycleRefusal, Proposal, ProposalKind,
+use medulla_decision_types::decision::statistical::declared::{
+    DeclaredNumber, DeclaredOption, DeclaredText,
 };
+use medulla_source_types::lifecycle::{
+    sha256_hex, EvidenceKind, LifecycleRefusal, Proposal, ProposalKind,
+};
+use medulla_types::contract::BoundedVec;
 
 /// The target prefix of a research entry.
 pub const RESEARCH_TARGET_PREFIX: &str = "research:";
 
-/// The loop's operation set, one tool name per connector kind: web search, scholarly search and
-/// the archived-web read. Each is the name the arbora registry lists; the L3 test reads the
-/// registry through `find` and fails on any name it does not hold. The loop calls no connector
-/// directly: it goes through arbora `fleet.call`.
-pub const RESEARCH_TOOLS: &[&str] = &["web_search", "search_papers", "list_snapshots"];
+/// The task the research loop's tool-use contracts name (`sc:forTask`). The loop's operation
+/// set is not a list in code: it is the tools of the `sc:ToolUseContract` individuals that name
+/// this task, which a connector pack imports into the graph (MEDULLA-SDLC-R016.4). The loop
+/// calls no connector directly: it goes through arbora `fleet.call`.
+pub const RESEARCH_TASK_IRI: &str = "urn:medulla:task:research-unknown";
+
+/// The unit cost of researching one unknown, in micro-units (`research_next` `cost`).
+pub const UNKNOWN_COST_MICRO: i64 = 250_000;
+
+/// The unit gain of researching one unknown, in micro-units (`research_next` `gain`).
+pub const UNKNOWN_GAIN_MICRO: i64 = 1_000_000;
+
+/// One tool a research contract names: the connector (the segment after `urn:scion:` of the
+/// contract) and the tool's name.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+pub struct ResearchTool {
+    pub connector: String,
+    pub tool: String,
+}
+
+/// Check that `tool` is one the research contracts of the graph name. A tool the contracts do
+/// not hold refuses `RESEARCH_TOOL_UNKNOWN`; the registry is never consulted for a name the
+/// graph does not hold.
+pub fn check_research_tool(known: &[ResearchTool], tool: &str) -> Result<(), LifecycleRefusal> {
+    if known.iter().any(|held| held.tool == tool) {
+        Ok(())
+    } else {
+        Err(LifecycleRefusal::ResearchToolUnknown(tool.to_owned()))
+    }
+}
+
+/// The frontier option of one unknown for `Decide` `ResearchNext` (R016.1): the option id is the
+/// unknown id; `cost`, `depth`, `gain` and `p_useful` are Q32 numbers (sorted by key) and the
+/// text `subtask` is the unknown id. The text of the unknown is not part of the option: it is
+/// what [`research_item_key`] hashes.
+pub fn unknown_frontier(unknown_id: &str, text: &str) -> DeclaredOption {
+    let _ = text;
+    let q32 = |micro: i64| micro << 32;
+    let numbers = vec![
+        DeclaredNumber { key: "cost".to_owned(), q32: q32(UNKNOWN_COST_MICRO) },
+        DeclaredNumber { key: "depth".to_owned(), q32: 0 },
+        DeclaredNumber { key: "gain".to_owned(), q32: q32(UNKNOWN_GAIN_MICRO) },
+        DeclaredNumber { key: "p_useful".to_owned(), q32: 1 << 32 },
+    ];
+    DeclaredOption {
+        option_id: unknown_id.to_owned(),
+        classification: BoundedVec::default(),
+        numbers: BoundedVec::new(numbers).unwrap_or_default(),
+        texts: BoundedVec::new(vec![DeclaredText {
+            key: "subtask".to_owned(),
+            text: unknown_id.to_owned(),
+        }])
+        .unwrap_or_default(),
+    }
+}
+
+/// The idempotency key of the `research_web` work item of one unknown. A re-ingest of the same
+/// unknown text submits the same key, so nothing new is submitted.
+pub fn research_item_key(unknown_id: &str, text: &str) -> String {
+    format!("research-unknown:{unknown_id}:{}", sha256_hex(text.as_bytes()))
+}
 
 /// Whether `proposal` is a research entry: an `edit_plan_section` proposal that targets
 /// `research:<unknown id>`.
@@ -127,11 +187,42 @@ mod tests {
 
     // spec: MEDULLA-SDLC-R016.4
     #[test]
-    fn the_loop_names_one_tool_per_connector_kind() {
-        assert_eq!(RESEARCH_TOOLS.len(), 3);
-        let mut sorted = RESEARCH_TOOLS.to_vec();
-        sorted.sort_unstable();
-        sorted.dedup();
-        assert_eq!(sorted.len(), 3);
+    fn the_loop_calls_only_tools_its_contracts_name() {
+        let known = vec![
+            ResearchTool { connector: "searxng".into(), tool: "web_search".into() },
+            ResearchTool { connector: "scholarx".into(), tool: "search_papers".into() },
+        ];
+        assert_eq!(check_research_tool(&known, "web_search"), Ok(()));
+        let refused = check_research_tool(&known, "list_snapshots").unwrap_err();
+        assert_eq!(refused.code(), "RESEARCH_TOOL_UNKNOWN");
+        assert_eq!(
+            check_research_tool(&[], "web_search").unwrap_err().code(),
+            "RESEARCH_TOOL_UNKNOWN"
+        );
+    }
+
+    // spec: MEDULLA-SDLC-R016.1
+    #[test]
+    fn an_unknown_is_one_frontier_option_and_one_stable_item_key() {
+        let option = unknown_frontier("planunknown:demo:plan.md#L4", "Which parser?");
+        assert_eq!(option.option_id, "planunknown:demo:plan.md#L4");
+        let numbers: Vec<(&str, i64)> =
+            option.numbers.iter().map(|n| (n.key.as_str(), n.q32)).collect();
+        assert_eq!(
+            numbers,
+            [
+                ("cost", 250_000 << 32),
+                ("depth", 0),
+                ("gain", 1_000_000 << 32),
+                ("p_useful", 1 << 32)
+            ]
+        );
+        let texts: Vec<(&str, &str)> =
+            option.texts.iter().map(|t| (t.key.as_str(), t.text.as_str())).collect();
+        assert_eq!(texts, [("subtask", "planunknown:demo:plan.md#L4")]);
+        let key = research_item_key("planunknown:demo:plan.md#L4", "Which parser?");
+        assert_eq!(key, research_item_key("planunknown:demo:plan.md#L4", "Which parser?"));
+        assert_ne!(key, research_item_key("planunknown:demo:plan.md#L4", "Which lexer?"));
+        assert!(key.starts_with("research-unknown:planunknown:demo:plan.md#L4:"));
     }
 }

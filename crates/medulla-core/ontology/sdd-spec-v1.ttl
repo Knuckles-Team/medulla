@@ -28,6 +28,11 @@ sddspec:PlanSection a owl:Class ;
     rdfs:comment "One heading-delimited section of a plan." ;
     rdfs:subClassOf :Specification .
 
+sddspec:PlanUnknown a owl:Class ;
+    rdfs:label "Plan unknown" ;
+    rdfs:comment "One unresolved item of a plan's Phase 0 section: a question still to research." ;
+    rdfs:subClassOf sddspec:PlanSection .
+
 sddspec:TaskLine a owl:Class ;
     rdfs:label "Spec task" ;
     rdfs:comment "One task line of a tasks file: T-id, parallel flag, story, row reference and ticked state." ;
@@ -105,6 +110,12 @@ sddspec:forRow a owl:ObjectProperty ;
     rdfs:comment "Links a task line to the requirement row it carries out." ;
     rdfs:domain sddspec:TaskLine ;
     rdfs:range sddspec:RequirementRow .
+
+sddspec:inSection a owl:ObjectProperty ;
+    rdfs:label "in section" ;
+    rdfs:comment "Links a plan unknown to the plan section that holds it." ;
+    rdfs:domain sddspec:PlanUnknown ;
+    rdfs:range sddspec:PlanSection .
 
 sddspec:covers a owl:ObjectProperty ;
     rdfs:label "covers" ;

@@ -1884,6 +1884,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "RESEARCH_ENTRY_UNCITED",
             // MEDULLA-SDLC-R017.4: a proposal whose target is a spec file path.
             "PROPOSAL_DIRECT_WRITE_REFUSED",
+            // MEDULLA-SDLC-R016.4: a cited source read with a tool no contract names.
+            "RESEARCH_TOOL_UNKNOWN",
         ],
     ),
     // MEDULLA-SDLC-R017.6: the proposal review list and decision.
@@ -1895,6 +1897,8 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "TENANT_SCOPE_REQUIRED",
             "PARAMETER_INVALID",
             "COMPETENCY_SUBJECT_UNKNOWN",
+            // MEDULLA-SDLC-R016.1: `plan_unknowns` on a reference codebase.
+            "MODE_REFERENCE_NO_PROPOSALS",
         ],
     ),
     (
