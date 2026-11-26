@@ -66,6 +66,9 @@ impl IdentityStore {
             TokenOp::ListScimClients => Ok(self.list_scim_clients()),
             TokenOp::GetScimClient { request } => self.get_scim_client(&request.id),
             TokenOp::UpdateScimClient { request } => self.update_scim_client(request, stamp, ctx),
+            TokenOp::VerifyScimClient { request } => {
+                self.verify_scim_client(&request.client_id, stamp, ctx.now_ms)
+            }
             TokenOp::DeleteScimClient { request } => {
                 self.delete_scim_client(&request.id, stamp, ctx.now_ms)
             }

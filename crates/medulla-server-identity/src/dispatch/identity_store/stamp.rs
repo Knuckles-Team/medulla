@@ -336,6 +336,9 @@ fn derive_token(op: &mut TokenOp, stamp: &mut IdentityStamp, env: &StampEnv<'_>)
         TokenOp::VerifyApiKey { request } => {
             stamp.token_hashes = vec![take_token(&mut request.secret, Floor::Lookup)?];
         }
+        TokenOp::VerifyScimClient { request } => {
+            stamp.token_hashes = vec![take_token(&mut request.secret, Floor::Lookup)?];
+        }
         TokenOp::IssuePasswordReset { request } => {
             stamp.token_hashes = vec![take_token(&mut request.token, Floor::Issue)?];
         }

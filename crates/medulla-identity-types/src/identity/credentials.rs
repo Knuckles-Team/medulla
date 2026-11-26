@@ -125,6 +125,15 @@ pub struct ScimClientCreate {
     pub ttl_ms: u64,
 }
 
+/// `verify_scim_client`: the client id and the secret it presents.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ScimClientUse {
+    pub client_id: String,
+    pub secret: Secret,
+}
+
 /// `update_scim_client`: each present field replaces the stored one.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]

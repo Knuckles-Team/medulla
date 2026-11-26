@@ -1534,6 +1534,13 @@ class ScimClientUpdate(BaseModel):
     ttl_ms: Annotated[int, Field(ge=0)] | None = None
 
 
+class ScimClientUse(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    client_id: str
+    secret: Secret
+
+
 class ScimClientView(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -9198,6 +9205,14 @@ class IdentityOpTokenDeleteScimClient(BaseModel):
     request: ObjectRef
 
 
+class IdentityOpTokenVerifyScimClient(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    family: Literal["token"]
+    op: Literal["verify_scim_client"]
+    request: ScimClientUse
+
+
 class IdentityOpTokenIssueAdminReset(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -9222,6 +9237,7 @@ IdentityOpToken = Annotated[
     | IdentityOpTokenGetScimClient
     | IdentityOpTokenUpdateScimClient
     | IdentityOpTokenDeleteScimClient
+    | IdentityOpTokenVerifyScimClient
     | IdentityOpTokenIssueAdminReset,
     Field(discriminator="op"),
 ]
@@ -43377,6 +43393,7 @@ __all__ = [
     "IssuerKeyView",
     "ScimClientCreate",
     "ScimClientUpdate",
+    "ScimClientUse",
     "ScimClientView",
     "SessionHandleRef",
     "IdentityOpSessionRevokeByHandle",
@@ -43389,6 +43406,7 @@ __all__ = [
     "IdentityOpTokenGetScimClient",
     "IdentityOpTokenUpdateScimClient",
     "IdentityOpTokenDeleteScimClient",
+    "IdentityOpTokenVerifyScimClient",
     "IdentityOpTokenIssueAdminReset",
     "IdentityOpMfaIssueChallenge",
     "IdentityOpMfaConsumeChallenge",

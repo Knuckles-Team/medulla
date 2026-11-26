@@ -27,6 +27,17 @@ const MAX_LABEL_CHARS: usize = 128;
 /// The longest challenge a store holds.
 const MAX_CHALLENGE_CHARS: usize = 1_024;
 
+/// Equality of two byte strings that does not stop at the first difference.
+fn constant_time_eq(left: &[u8], right: &[u8]) -> bool {
+    let mut difference = left.len() ^ right.len();
+    for index in 0..left.len().max(right.len()) {
+        let a = left.get(index).copied().unwrap_or(0);
+        let b = right.get(index).copied().unwrap_or(0);
+        difference |= usize::from(a ^ b);
+    }
+    difference == 0
+}
+
 fn is_lower_hex(value: &str) -> bool {
     !value.is_empty()
         && value
@@ -344,6 +355,35 @@ impl IdentityStore {
             Some(&request.client_id),
         );
         Ok(IdentityReply::ScimClient(view))
+    }
+
+    /// `verify_scim_client`: the presented secret's hash against the stored hash, compared in
+    /// constant time. An unknown client, a wrong secret and an expired client are one
+    /// refusal, so the answer never tells which client ids exist.
+    pub(super) fn verify_scim_client(
+        &self,
+        client_id: &str,
+        stamp: &IdentityStamp,
+        now_ms: u64,
+    ) -> Result<IdentityReply, IdentityRefusal> {
+        let presented = stamp.token_hash(0)?;
+        // An unknown client compares against a hash of no secret, so both paths do the same work.
+        let unknown = ScimClientRecord {
+            client_id: String::new(),
+            label: String::new(),
+            secret_hash: String::new(),
+            created_at_ms: 0,
+            expires_at_ms: 0,
+        };
+        let record = self.scim_clients.get(client_id);
+        let stored = record.unwrap_or(&unknown);
+        let matches = constant_time_eq(stored.secret_hash.as_bytes(), presented.as_bytes());
+        match record {
+            Some(record) if matches && now_ms < record.expires_at_ms => {
+                Ok(IdentityReply::ScimClient(scim_view(record)))
+            }
+            _ => Err(IdentityRefusal::NotFound),
+        }
     }
 
     /// `delete_scim_client`.

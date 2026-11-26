@@ -328,6 +328,97 @@ fn a_scim_client_credential_is_created_read_updated_and_deleted() {
     );
 }
 
+fn scim_verify(client_id: &str) -> IdentityOp {
+    IdentityOp::Token(TokenOp::VerifyScimClient {
+        request: ScimClientUse {
+            client_id: client_id.to_string(),
+            secret: Secret::default(),
+        },
+    })
+}
+
+// spec: MEDULLA-IDENTITY-R733
+#[test]
+fn a_scim_client_secret_verifies_and_every_failure_answers_alike() {
+    let mut store = store_in(AuthMode::Local);
+    apply_kept(
+        &mut store,
+        &scim_create("scim-1"),
+        &direct_admin(&["scim-1-secret"]),
+        NOW,
+    )
+    .unwrap();
+
+    // The right secret verifies and answers the client without any secret.
+    let IdentityReply::ScimClient(view) = apply_kept(
+        &mut store,
+        &scim_verify("scim-1"),
+        &broker_with(&["scim-1-secret"]),
+        NOW + 1,
+    )
+    .unwrap() else {
+        panic!("a verify answers the client");
+    };
+    assert_eq!(view.client_id, "scim-1");
+    assert!(!format!("{view:?}").contains("secret"));
+
+    // A wrong secret, an unknown client and an expired client are one refusal.
+    let wrong = apply_kept(
+        &mut store,
+        &scim_verify("scim-1"),
+        &broker_with(&["other-secret"]),
+        NOW + 1,
+    );
+    let unknown = apply_kept(
+        &mut store,
+        &scim_verify("scim-nope"),
+        &broker_with(&["scim-1-secret"]),
+        NOW + 1,
+    );
+    let expired = apply_kept(
+        &mut store,
+        &scim_verify("scim-1"),
+        &broker_with(&["scim-1-secret"]),
+        NOW + 60 * 60 * 1000,
+    );
+    assert_eq!(wrong, Err(IdentityRefusal::NotFound));
+    assert_eq!(unknown, wrong);
+    assert_eq!(expired, wrong);
+
+    // A rotated secret replaces the old one at once.
+    let rotate = IdentityOp::Token(TokenOp::UpdateScimClient {
+        request: ScimClientUpdate {
+            client_id: "scim-1".to_string(),
+            label: None,
+            secret: Some(Secret::default()),
+            ttl_ms: None,
+        },
+    });
+    apply_kept(
+        &mut store,
+        &rotate,
+        &direct_admin(&["scim-1-secret-2"]),
+        NOW + 2,
+    )
+    .unwrap();
+    assert_eq!(
+        apply_kept(
+            &mut store,
+            &scim_verify("scim-1"),
+            &broker_with(&["scim-1-secret"]),
+            NOW + 3
+        ),
+        Err(IdentityRefusal::NotFound)
+    );
+    assert!(apply_kept(
+        &mut store,
+        &scim_verify("scim-1"),
+        &broker_with(&["scim-1-secret-2"]),
+        NOW + 3
+    )
+    .is_ok());
+}
+
 // spec: MEDULLA-IDENTITY-R734
 #[test]
 fn an_administrator_reset_token_is_issued_directly_and_spent_once() {

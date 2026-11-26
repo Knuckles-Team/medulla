@@ -315,6 +315,11 @@ pub enum TokenOp {
     DeleteScimClient {
         request: ObjectRef,
     },
+    /// Check a SCIM client's presented secret against the stored hash. An unknown client,
+    /// a wrong secret and an expired client answer identically (MEDULLA-IDENTITY-R733).
+    VerifyScimClient {
+        request: super::credentials::ScimClientUse,
+    },
     /// An administrator's one-time reset token for a principal (MEDULLA-IDENTITY-R734).
     IssueAdminReset {
         request: super::credentials::AdminResetIssue,
@@ -606,6 +611,7 @@ impl TokenOp {
             Self::GetScimClient { .. } => meta("get_scim_client", false, OpAuthority::Read),
             Self::UpdateScimClient { .. } => meta("update_scim_client", true, OpAuthority::Admin),
             Self::DeleteScimClient { .. } => meta("delete_scim_client", true, OpAuthority::Admin),
+            Self::VerifyScimClient { .. } => meta("verify_scim_client", false, OpAuthority::Broker),
             Self::IssueAdminReset { .. } => meta("issue_admin_reset", true, OpAuthority::Admin),
         }
     }
