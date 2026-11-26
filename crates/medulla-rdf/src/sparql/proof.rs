@@ -26,7 +26,7 @@ use spargebra::Query;
 
 use super::{
     bnode_var, eval_filter, evaluate_query, match_triple_pattern, merge, parse_query, Binding, Ctx,
-    Dataset, Projection, Solution, SparqlResult,
+    Dataset, Projection, QueryEnv, Solution, SparqlResult,
 };
 
 /// Most candidate matches one row's witness search tries before giving up.
@@ -60,11 +60,13 @@ pub fn execute_explained(
     let query = parse_query(query_str)?;
     let table = evaluate_query(ds, &query, proj, None)?.into_table();
     let refusal = std::sync::OnceLock::new();
+    let env = QueryEnv::of_query(&query);
     let ctx = Ctx {
         ds,
         active: ds.default,
         proj,
         service: None,
+        env: &env,
         refusal: &refusal,
     };
     let obligations = obligations(&query);

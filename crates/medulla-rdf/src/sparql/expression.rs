@@ -244,12 +244,12 @@ pub(super) fn eval_bool_langmatches(
 
 /// `REGEX(text, pattern, flags?)`: `i` in `flags` enables case-insensitive matching.
 pub(super) fn eval_bool_regex(ctx: &Ctx, args: &[Expression], sol: &Solution) -> Option<bool> {
-    let text = expr_str(ctx, args.first()?, sol)?;
-    let pat = expr_str(ctx, args.get(1)?, sol)?;
-    let flags = args
-        .get(2)
-        .and_then(|f| expr_str(ctx, f, sol))
-        .unwrap_or_default();
+    let text = string_arg(ctx, args.first()?, sol)?;
+    let pat = string_arg(ctx, args.get(1)?, sol)?;
+    let flags = match args.get(2) {
+        Some(flags) => string_arg(ctx, flags, sol)?,
+        None => String::new(),
+    };
     let pattern = if flags.contains('i') {
         format!("(?i){pat}")
     } else {
@@ -383,11 +383,24 @@ pub(super) fn eval_str_core(
             args.first()?,
             sol,
         )?))),
+        // `IRI`/`URI` (MEDULLA-FEDERATED-QUERY-R742.1): an IRI stays as it is, an absolute
+        // string becomes that IRI, and a relative reference resolves against the query
+        // `BASE` by RFC 3986. A relative reference with no `BASE` is an error value.
         F::Iri => {
-            let iri = expr_str(ctx, args.first()?, sol)?
+            let arg = eval_term(ctx, args.first()?, sol)?;
+            if arg.is_node() {
+                return Some(arg);
+            }
+            let text = arg
+                .as_str()
                 .trim_start_matches('<')
                 .trim_end_matches('>')
                 .to_string();
+            let iri = if has_iri_scheme(&text) {
+                text
+            } else {
+                ctx.env.resolve(&text)?
+            };
             Some(Binding::Node(format!("<{iri}>")))
         }
         // No language tag is retained in a `Binding`, so LANG is the empty string (the
@@ -398,13 +411,13 @@ pub(super) fn eval_str_core(
             best_effort_datatype(&eval_term(ctx, args.first()?, sol)?)
         ))),
         F::UCase => Some(Binding::Literal(
-            expr_str(ctx, args.first()?, sol)?.to_uppercase(),
+            string_arg(ctx, args.first()?, sol)?.to_uppercase(),
         )),
         F::LCase => Some(Binding::Literal(
-            expr_str(ctx, args.first()?, sol)?.to_lowercase(),
+            string_arg(ctx, args.first()?, sol)?.to_lowercase(),
         )),
         F::StrLen => Some(Binding::Literal(fmt_num(
-            expr_str(ctx, args.first()?, sol)?.chars().count() as f64,
+            string_arg(ctx, args.first()?, sol)?.chars().count() as f64,
         ))),
         F::Concat => eval_str_concat(ctx, args, sol),
         F::SubStr => eval_str_substr(ctx, args, sol),
@@ -416,22 +429,35 @@ pub(super) fn eval_str_core(
 pub(super) fn eval_str_concat(ctx: &Ctx, args: &[Expression], sol: &Solution) -> Option<Binding> {
     let mut s = String::new();
     for a in args {
-        s.push_str(&expr_str(ctx, a, sol)?);
+        s.push_str(&string_arg(ctx, a, sol)?);
     }
     Some(Binding::Literal(s))
 }
 
-/// `SUBSTR(str, start, len?)`: SPARQL SUBSTR is 1-based; an optional length truncates.
+/// `SUBSTR(str, start, len?)`: the characters at the 1-based positions `p` with
+/// `round(start) <= p < round(start) + round(len)` (XPath `fn:substring`, which SPARQL 1.1
+/// section 17.4.3.3 follows). A start before 1 shortens the result instead of clamping it, so
+/// `SUBSTR("abcdef", 0, 3)` is `"ab"`; a missing length reads to the end.
 pub(super) fn eval_str_substr(ctx: &Ctx, args: &[Expression], sol: &Solution) -> Option<Binding> {
-    let chars: Vec<char> = expr_str(ctx, args.first()?, sol)?.chars().collect();
-    let begin = (num(ctx, args.get(1)?, sol)?.max(1.0) as usize).saturating_sub(1);
-    let slice: String = match args.get(2) {
-        Some(lenexpr) => {
-            let len = num(ctx, lenexpr, sol)?.max(0.0) as usize;
-            chars.iter().skip(begin).take(len).collect()
-        }
-        None => chars.iter().skip(begin).collect(),
+    let text = string_arg(ctx, args.first()?, sol)?;
+    let round = |value: f64| (value + 0.5).floor();
+    let start = round(num(ctx, args.get(1)?, sol)?);
+    let end = match args.get(2) {
+        Some(len) => start + round(num(ctx, len, sol)?),
+        None => f64::INFINITY,
     };
+    if start.is_nan() || end.is_nan() {
+        return Some(Binding::Literal(String::new()));
+    }
+    let slice: String = text
+        .chars()
+        .enumerate()
+        .filter(|(index, _)| {
+            let position = (*index + 1) as f64;
+            position >= start && position < end
+        })
+        .map(|(_, c)| c)
+        .collect();
     Some(Binding::Literal(slice))
 }
 
@@ -476,34 +502,15 @@ pub(super) fn eval_str_hash(
     sol: &Solution,
 ) -> Option<Binding> {
     use spargebra::algebra::Function as F;
-    match f {
-        F::Md5 => Some(Binding::Literal(hash_hex::<md5::Md5>(&expr_str(
-            ctx,
-            args.first()?,
-            sol,
-        )?))),
-        F::Sha1 => Some(Binding::Literal(hash_hex::<sha1::Sha1>(&expr_str(
-            ctx,
-            args.first()?,
-            sol,
-        )?))),
-        F::Sha256 => Some(Binding::Literal(hash_hex::<sha2::Sha256>(&expr_str(
-            ctx,
-            args.first()?,
-            sol,
-        )?))),
-        F::Sha384 => Some(Binding::Literal(hash_hex::<sha2::Sha384>(&expr_str(
-            ctx,
-            args.first()?,
-            sol,
-        )?))),
-        F::Sha512 => Some(Binding::Literal(hash_hex::<sha2::Sha512>(&expr_str(
-            ctx,
-            args.first()?,
-            sol,
-        )?))),
+    let text = string_arg(ctx, args.first()?, sol)?;
+    Some(Binding::Literal(match f {
+        F::Md5 => hash_hex::<md5::Md5>(&text),
+        F::Sha1 => hash_hex::<sha1::Sha1>(&text),
+        F::Sha256 => hash_hex::<sha2::Sha256>(&text),
+        F::Sha384 => hash_hex::<sha2::Sha384>(&text),
+        F::Sha512 => hash_hex::<sha2::Sha512>(&text),
         _ => unreachable!("eval_str_hash called with an out-of-group Function variant"),
-    }
+    }))
 }
 
 // ── Numeric built-ins (CONCEPT:MEDULLA-KG.ontology.concept-4) ───────────────────────────────
@@ -544,7 +551,7 @@ pub(super) fn eval_str_datetime(
 ) -> Option<Binding> {
     use spargebra::algebra::Function as F;
     match f {
-        F::Now => Some(Binding::Literal(now_xsd_datetime())),
+        F::Now => Some(Binding::Literal(ctx.env.now.clone())),
         F::Year => Some(Binding::Literal(fmt_num(
             parse_datetime(&expr_str(ctx, args.first()?, sol)?)?.year as f64,
         ))),
@@ -583,42 +590,46 @@ pub(super) fn eval_str_extras(
     use spargebra::algebra::Function as F;
     match f {
         F::StrBefore => {
-            let s = expr_str(ctx, args.first()?, sol)?;
-            let sep = expr_str(ctx, args.get(1)?, sol)?;
+            let s = string_arg(ctx, args.first()?, sol)?;
+            let sep = string_arg(ctx, args.get(1)?, sol)?;
             Some(Binding::Literal(match s.find(&sep) {
                 Some(i) => s[..i].to_string(),
                 None => String::new(),
             }))
         }
         F::StrAfter => {
-            let s = expr_str(ctx, args.first()?, sol)?;
-            let sep = expr_str(ctx, args.get(1)?, sol)?;
+            let s = string_arg(ctx, args.first()?, sol)?;
+            let sep = string_arg(ctx, args.get(1)?, sol)?;
             Some(Binding::Literal(match s.find(&sep) {
                 Some(i) => s[i + sep.len()..].to_string(),
                 None => String::new(),
             }))
         }
         // REPLACE(str, pattern, replacement [, flags]) — regex-backed (reuses the
-        // `regex` dep already in `sparql`); `$1` back-references pass through.
+        // `regex` dep already in `sparql`); `$1` back-references pass through. A pattern
+        // that matches the empty string is an error value (SPARQL 1.1 section 17.4.3.15).
         F::Replace => {
-            let s = expr_str(ctx, args.first()?, sol)?;
-            let pat = expr_str(ctx, args.get(1)?, sol)?;
-            let rep = expr_str(ctx, args.get(2)?, sol)?;
-            let flags = args
-                .get(3)
-                .and_then(|fl| expr_str(ctx, fl, sol))
-                .unwrap_or_default();
+            let s = string_arg(ctx, args.first()?, sol)?;
+            let pat = string_arg(ctx, args.get(1)?, sol)?;
+            let rep = string_arg(ctx, args.get(2)?, sol)?;
+            let flags = match args.get(3) {
+                Some(flags) => string_arg(ctx, flags, sol)?,
+                None => String::new(),
+            };
             let pattern = if flags.contains('i') {
                 format!("(?i){pat}")
             } else {
                 pat
             };
             let re = regex::Regex::new(&pattern).ok()?;
+            if re.is_match("") {
+                return None;
+            }
             Some(Binding::Literal(
                 re.replace_all(&s, rep.as_str()).into_owned(),
             ))
         }
-        F::EncodeForUri => Some(Binding::Literal(encode_for_uri(&expr_str(
+        F::EncodeForUri => Some(Binding::Literal(encode_for_uri(&string_arg(
             ctx,
             args.first()?,
             sol,
@@ -780,6 +791,27 @@ pub(super) fn binding_terms_equal(x: &Binding, y: &Binding) -> bool {
         (Ok(nx), Ok(ny)) => nx == ny,
         _ => xs == ys,
     }
+}
+
+/// The lexical form of a string-typed argument. An IRI or a blank node is not a string, so a
+/// string function applied to one gives an error value (`None`), which a `FILTER` treats as
+/// false (MEDULLA-FEDERATED-QUERY-R742.1).
+pub(super) fn string_arg(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<String> {
+    match eval_term(ctx, e, sol)? {
+        Binding::Literal(text) => Some(text),
+        Binding::Node(_) => None,
+    }
+}
+
+/// Whether `text` starts with an RFC 3986 scheme (`ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) ":"`),
+/// so it is an absolute IRI that needs no base.
+fn has_iri_scheme(text: &str) -> bool {
+    let Some((scheme, _)) = text.split_once(':') else {
+        return false;
+    };
+    let mut chars = scheme.chars();
+    chars.next().is_some_and(|c| c.is_ascii_alphabetic())
+        && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
 }
 
 pub(super) fn expr_str(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<String> {

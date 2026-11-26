@@ -321,10 +321,62 @@ struct Ctx<'a> {
     active: &'a GraphView,
     proj: &'a Projection,
     service: Option<&'a dyn RemoteSparql>,
+    /// The values fixed once for the whole query: the `NOW()` instant and the `BASE` that
+    /// `IRI()` resolves a relative reference against (MEDULLA-FEDERATED-QUERY-R742.1).
+    env: &'a QueryEnv<'a>,
     /// The first coded refusal a FILTER function raised (`CODE: detail`). A refusal is
     /// not a SPARQL expression error: the query ends with it instead of failing the
     /// row safe (MEDULLA-FEDERATED-QUERY-R709.4).
     refusal: &'a std::sync::OnceLock<String>,
+}
+
+/// A function from a relative IRI reference to its RFC 3986 resolution against the query `BASE`.
+type BaseResolver<'q> = Box<dyn Fn(&str) -> Option<String> + 'q>;
+
+/// The values one query evaluation fixes before it reads a row.
+///
+/// `NOW()` returns one value for the whole query, so the instant is read once here and every
+/// row sees it. `base` resolves the relative references `IRI()` is given; a query with no
+/// `BASE` has none, and a relative reference is then an error value.
+struct QueryEnv<'q> {
+    now: String,
+    base: Option<BaseResolver<'q>>,
+}
+
+impl<'q> QueryEnv<'q> {
+    /// An environment with the current instant and no base.
+    fn unbased() -> Self {
+        QueryEnv {
+            now: now_xsd_datetime(),
+            base: None,
+        }
+    }
+
+    /// An environment for `query`: the current instant and the query's `BASE`, if it has one.
+    fn of_query(query: &'q Query) -> Self {
+        let base = match query {
+            Query::Select { base_iri, .. }
+            | Query::Ask { base_iri, .. }
+            | Query::Construct { base_iri, .. }
+            | Query::Describe { base_iri, .. } => base_iri.as_ref(),
+        };
+        QueryEnv {
+            now: now_xsd_datetime(),
+            base: base.map(|base| {
+                Box::new(move |reference: &str| {
+                    base.resolve(reference)
+                        .ok()
+                        .map(|resolved| resolved.as_str().to_string())
+                }) as BaseResolver<'q>
+            }),
+        }
+    }
+
+    /// Resolve `reference` against the query `BASE`; `None` when the query has no `BASE`
+    /// or the reference does not resolve.
+    fn resolve(&self, reference: &str) -> Option<String> {
+        self.base.as_ref().and_then(|resolve| resolve(reference))
+    }
 }
 
 impl<'a> Ctx<'a> {
@@ -348,6 +400,7 @@ impl<'a> Ctx<'a> {
             active,
             proj: self.proj,
             service: self.service,
+            env: self.env,
             refusal: self.refusal,
         }
     }
@@ -469,11 +522,13 @@ fn evaluate_query(
         None => ds,
     };
     let refusal = std::sync::OnceLock::new();
+    let env = QueryEnv::of_query(query);
     let ctx = Ctx {
         ds,
         active: ds.default,
         proj,
         service,
+        env: &env,
         refusal: &refusal,
     };
     ctx.refused(evaluate_form(&ctx, query))
@@ -548,12 +603,14 @@ pub fn eval_where(
     proj: &Projection,
 ) -> Result<Vec<Solution>, String> {
     let refusal = std::sync::OnceLock::new();
+    let env = QueryEnv::unbased();
     let ctx = Ctx {
         ds,
         active: ds.default,
         proj,
         // UPDATE/DESCRIBE WHERE never spans a remote SERVICE (CONCEPT:MEDULLA-KG.query.sparql-service-federation-client).
         service: None,
+        env: &env,
         refusal: &refusal,
     };
     ctx.refused(eval_pattern(&ctx, pattern))

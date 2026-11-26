@@ -4,7 +4,7 @@
 
 use spargebra::algebra::{Expression, Function};
 
-use super::{expr_str, term_lexical, Binding, Ctx, Solution};
+use super::{string_arg, term_lexical, Binding, Ctx, Solution};
 
 /// A predicate over an evaluated term.
 type TermTest = fn(&Binding) -> bool;
@@ -50,7 +50,7 @@ pub(super) fn eval_bool_str_relation(
     sol: &Solution,
     relation: impl FnOnce(&str, &str) -> bool,
 ) -> Option<bool> {
-    let text = expr_str(ctx, args.first()?, sol)?;
-    let part = expr_str(ctx, args.get(1)?, sol)?;
+    let text = string_arg(ctx, args.first()?, sol)?;
+    let part = string_arg(ctx, args.get(1)?, sol)?;
     Some(relation(&text, &part))
 }
