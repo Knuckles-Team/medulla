@@ -18,6 +18,9 @@ kg:BusinessProfileShape a sh:NodeShape ;
     ] ;
     sh:message "A business profile is named." .
 
+# spec: MEDULLA-BUSINESS-OPS-R004
+# The ceiling and the currency are owed only by a monetary rule (gate class `money_movement`);
+# any other rule may omit both, and when it carries them each appears once.
 kg:ApprovalRuleShape a sh:NodeShape ;
     sh:targetClass kg:ApprovalRule ;
     sh:property [
@@ -25,14 +28,38 @@ kg:ApprovalRuleShape a sh:NodeShape ;
         sh:message "An ApprovalRule carries a label."
     ] ;
     sh:property [
-        sh:path kg:approvalCeilingMinor ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:integer ;
-        sh:message "An ApprovalRule carries exactly one ceiling, an integer in minor units."
+        sh:path kg:approvalCeilingMinor ; sh:maxCount 1 ; sh:datatype xsd:integer ;
+        sh:message "An ApprovalRule carries at most one ceiling, an integer in minor units."
     ] ;
     sh:property [
-        sh:path kg:approvalCurrency ; sh:minCount 1 ; sh:maxCount 1 ; sh:datatype xsd:string ;
-        sh:message "An ApprovalRule carries exactly one currency code."
+        sh:path kg:approvalCurrency ; sh:maxCount 1 ; sh:datatype xsd:string ;
+        sh:message "An ApprovalRule carries at most one currency code."
     ] ;
-    sh:message "An approval rule names its ceiling in minor units and its currency." .
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A monetary ApprovalRule carries its ceiling in minor units." ;
+        sh:prefixes kg:BusinessOpsShapesPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this kg:approvalGateClass "money_movement" .
+                OPTIONAL { $this kg:approvalCeilingMinor ?ceiling }
+                FILTER(!BOUND(?ceiling))
+            }
+        """ ;
+    ] ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A monetary ApprovalRule carries its currency code." ;
+        sh:prefixes kg:BusinessOpsShapesPrefixes ;
+        sh:select """
+            SELECT $this WHERE {
+                $this kg:approvalGateClass "money_movement" .
+                OPTIONAL { $this kg:approvalCurrency ?currency }
+                FILTER(!BOUND(?currency))
+            }
+        """ ;
+    ] ;
+    sh:message "An approval rule names its ceiling and currency when it moves money." .
 
 kg:BusinessOpsShapesPrefixes a owl:Ontology ;
     sh:declare [ sh:prefix "kg" ; sh:namespace "https://knuckles-team.github.io/ontology/core#"^^xsd:anyURI ] .

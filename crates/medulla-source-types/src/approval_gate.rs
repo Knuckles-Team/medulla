@@ -199,11 +199,20 @@ impl ApprovalRule {
             None => None,
             Some(quorum) => Some(u32::try_from(quorum).ok()?),
         };
+        let ceiling_minor = number(RULE_CEILING_MINOR).ok()?;
+        let currency = text(RULE_CURRENCY);
+        // The ceiling and the currency are owed only by a monetary rule; a monetary rule that
+        // lacks either is not a rule the engine can read, exactly as the shape refuses it.
+        if gate_class == Some(GateClass::MoneyMovement)
+            && (ceiling_minor.is_none() || currency.as_deref().is_none_or(|c| c.trim().is_empty()))
+        {
+            return None;
+        }
         Some(Self {
             id: id.to_owned(),
             action_kind,
-            ceiling_minor: number(RULE_CEILING_MINOR).ok()?,
-            currency: text(RULE_CURRENCY),
+            ceiling_minor,
+            currency,
             required_role: text(RULE_REQUIRED_ROLE).filter(|role| !role.trim().is_empty()),
             quorum,
             gate_class,
@@ -460,6 +469,7 @@ mod tests {
             ("approvalGateClass", json!("everything")),
             ("approvalQuorum", json!("two")),
             ("approvalQuorum", json!(-1)),
+            ("approvalGateClass", json!("money_movement")),
             ("approvalActionKind", json!("  ")),
             ("type", json!("Policy")),
         ] {
@@ -467,6 +477,29 @@ mod tests {
             broken[key] = bad;
             assert!(ApprovalRule::from_node("rule:1", &broken, "acme").is_none(), "{key}");
         }
+    }
+
+    // spec: MEDULLA-BUSINESS-OPS-R004
+    #[test]
+    fn a_monetary_rule_needs_its_ceiling_and_currency_and_any_other_rule_does_not() {
+        let mut node = json!({
+            "type": "ApprovalRule",
+            "approvalActionKind": "deploy.promotions.apply",
+            "approvalQuorum": 2,
+            "approvalGateClass": "production_qa",
+        });
+        let plain = ApprovalRule::from_node("rule:1", &node, "acme").expect("non-monetary rule");
+        assert_eq!((plain.ceiling_minor, plain.currency), (None, None));
+        node["approvalGateClass"] = json!("money_movement");
+        assert!(ApprovalRule::from_node("rule:1", &node, "acme").is_none(), "neither");
+        node["approvalCeilingMinor"] = json!(5_000);
+        assert!(ApprovalRule::from_node("rule:1", &node, "acme").is_none(), "no currency");
+        node["approvalCurrency"] = json!("USD");
+        let money = ApprovalRule::from_node("rule:1", &node, "acme").expect("complete rule");
+        assert_eq!(money.ceiling_minor, Some(5_000));
+        // A monetary rule left out answers unresolved, never a looser gate.
+        node.as_object_mut().expect("object").remove("approvalCurrency");
+        assert!(ApprovalRule::from_node("rule:1", &node, "acme").is_none());
     }
 
     // spec: MEDULLA-BUSINESS-OPS-R004
