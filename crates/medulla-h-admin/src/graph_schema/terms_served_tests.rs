@@ -226,7 +226,7 @@ async fn a_served_class_term_carries_its_direct_superclasses() {
 /// Verifies MEDULLA-TYPED-PACKS-R813: `GraphSchemaGet` answers one source's stored documents
 /// through the same disclosed set `GraphSchemaList` shows, refuses a key the request graph does
 /// not carry (a key of another graph included) by code, and both reads are `owl:read`.
-// spec: MEDULLA-TYPED-PACKS-R813
+// spec: MEDULLA-TYPED-PACKS-R813, MEDULLA-TYPED-PACKS-R813.1, MEDULLA-TYPED-PACKS-R813.2
 #[tokio::test]
 async fn get_serves_one_source_of_the_request_graph_and_refuses_the_rest() {
     use medulla_catalog_types::graph_schema::GraphSchemaSourceDocumentsView;

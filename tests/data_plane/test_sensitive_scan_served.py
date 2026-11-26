@@ -70,6 +70,7 @@ def _table(client: Any, graph: str) -> str:
     return table
 
 
+# spec: MEDULLA-TYPED-PACKS-R803.6
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R803")
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R803.3")
 def test_profile_job_proposes_claim_without_values(start_medulla_server) -> None:

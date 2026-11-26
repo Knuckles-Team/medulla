@@ -84,6 +84,7 @@ async def _journey(prefix: str) -> dict[str, Any]:
         await client.close()
 
 
+# spec: MEDULLA-DECISION-ENGINE-R708
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R708.6")
 def test_raise_dedup_resolve_list(clean_graph):
     # spec: MEDULLA-DECISION-ENGINE-R708.6

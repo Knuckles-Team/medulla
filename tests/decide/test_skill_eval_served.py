@@ -106,6 +106,7 @@ async def _journey(skill: str) -> dict[str, Any]:
         await client.close()
 
 
+# spec: MEDULLA-DECISION-ENGINE-R711
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R711.6")
 def test_mix_band_and_judge_calibration(clean_graph):
     # spec: MEDULLA-DECISION-ENGINE-R711.6

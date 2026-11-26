@@ -38,6 +38,7 @@ DOCUMENTS = {
 }
 
 
+# spec: MEDULLA-TYPED-PACKS-R813.3
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R813")
 def test_get_sends_the_source_key_and_decodes_the_documents() -> None:
     transport = PayloadTransport({"GraphSchemaGet": DOCUMENTS})
@@ -51,6 +52,7 @@ def test_get_sends_the_source_key_and_decodes_the_documents() -> None:
     assert view.ontology_ttl is not None and view.ontology_ttl.endswith(".\n")
 
 
+# spec: MEDULLA-TYPED-PACKS-R813.3
 @pytest.mark.spec("MEDULLA-TYPED-PACKS-R813")
 def test_get_refuses_a_missing_key_and_extra_fields_before_sending() -> None:
     transport = PayloadTransport({"GraphSchemaGet": DOCUMENTS})

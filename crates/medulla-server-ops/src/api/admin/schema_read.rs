@@ -282,7 +282,7 @@ mod get_tests {
         core
     }
 
-    // spec: MEDULLA-TYPED-PACKS-R813
+    // spec: MEDULLA-TYPED-PACKS-R813, MEDULLA-TYPED-PACKS-R813.2
     #[test]
     fn get_answers_the_stored_documents_and_the_list_projection_of_one_source() {
         let core = core_with_admin_source();
@@ -295,7 +295,7 @@ mod get_tests {
         assert!(listed.dynamic_sources.as_slice().contains(&found.source));
     }
 
-    // spec: MEDULLA-TYPED-PACKS-R813
+    // spec: MEDULLA-TYPED-PACKS-R813, MEDULLA-TYPED-PACKS-R813.2
     #[test]
     fn get_refuses_an_unattached_key_by_code() {
         let core = core_with_admin_source();

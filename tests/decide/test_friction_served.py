@@ -104,6 +104,7 @@ async def _journey(prefix: str) -> dict[str, Any]:
         await limited.close()
 
 
+# spec: MEDULLA-DECISION-ENGINE-R710
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R710.6")
 def test_group_walks_the_whole_machine(clean_graph):
     # spec: MEDULLA-DECISION-ENGINE-R710.6

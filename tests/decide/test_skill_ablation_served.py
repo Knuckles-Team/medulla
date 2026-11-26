@@ -119,6 +119,7 @@ async def _journey(prefix: str) -> dict[str, Any]:
         await client.close()
 
 
+# spec: MEDULLA-DECISION-ENGINE-R712
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R712.6")
 def test_effect_noise_canary_and_stale_compile(clean_graph):
     # spec: MEDULLA-DECISION-ENGINE-R712.6

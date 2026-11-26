@@ -148,6 +148,7 @@ async def _journey(prefix: str) -> dict[str, Any]:
         await client.close()
 
 
+# spec: MEDULLA-DECISION-ENGINE-R713
 @pytest.mark.spec("MEDULLA-DECISION-ENGINE-R713.8")
 def test_measures_rank_peers_and_traces(clean_graph):
     # spec: MEDULLA-DECISION-ENGINE-R713.8

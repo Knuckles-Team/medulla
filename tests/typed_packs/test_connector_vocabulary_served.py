@@ -487,6 +487,7 @@ def _skill_suite(skill: str, failing: int) -> dict[str, Any]:
     }
 
 
+# spec: MEDULLA-ORCH-VOCAB-R817
 @pytest.mark.spec("MEDULLA-ORCH-VOCAB-R817.4")
 @pytest.mark.asyncio
 async def test_skill_health_query_joins_flags_friction_and_eval() -> None:
