@@ -23540,6 +23540,22 @@ OutboxTarget = Annotated[
 ]
 
 
+class CorrectionLabelRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    graph: str
+    rule_id: str | None = None
+
+
+class CorrectionLabel(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    independent: Annotated[int, Field(ge=0)]
+    mean_value_micros: Annotated[int, Field(ge=0)]
+    rule_id: str
+    task_class: str
+
+
 class OutcomeAggregate(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -23548,6 +23564,9 @@ class OutcomeAggregate(BaseModel):
     rows: BoundedVec_OptionAggregate_1024
     schema_version: Annotated[int, Field(ge=0, le=65535)]
     transfer: TransferEstimate | None = None
+    correction_labels: Annotated[list[CorrectionLabel], Field(max_length=1024)] = Field(
+        default_factory=list
+    )
     skill_candidates: Annotated[list[SkillCandidateRow], Field(max_length=1024)] = (
         Field(default_factory=list)
     )
@@ -23557,6 +23576,7 @@ class OutcomeAggregateRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     attribution: SlateAttributionRequest | None = None
+    corrections: CorrectionLabelRequest | None = None
     question_id: str | None = None
     tenant_id: str
     transfer: TransferRequest | None = None
@@ -50209,6 +50229,8 @@ __all__ = [
     "Correction",
     "CorrectionEffect",
     "CorrectionInput",
+    "CorrectionLabel",
+    "CorrectionLabelRequest",
     "CorrectionNearest",
     "CorrectionOp",
     "CorrectionOpGet",

@@ -38,7 +38,7 @@ use medulla_decision_types::{
     decision::statistical::log::DecisionLogCommitted, decision::statistical::log::DecisionLogEntry,
     decision::statistical::log::DecisionLogOp,
     decision::statistical::log::DecisionOutcomeEvaluation, decision::statistical::log::EntryInputs,
-    decision::statistical::log::OutcomeAggregate,
+    decision::statistical::log::CorrectionLabel, decision::statistical::log::OutcomeAggregate,
     decision::statistical::log::OutcomeAggregateRequest,
     decision::statistical::log::RecordVisibility, decision::statistical::log::StoredEvaluation,
     decision::statistical::log::DECISION_LOG_SCHEMA_VERSION,
@@ -486,6 +486,7 @@ pub(super) fn aggregate_log(
     store: &AgentLibraryStore,
     reader: &LogReader,
     request: &OutcomeAggregateRequest,
+    correction_labels: &[CorrectionLabel],
 ) -> Result<OutcomeAggregate, String> {
     let rows = joined(
         store,
@@ -549,7 +550,41 @@ pub(super) fn aggregate_log(
         attribution,
         transfer,
         skill_candidates: skills,
+        correction_labels: BoundedVec::try_from(correction_labels.to_vec())
+            .map_err(|_| "the correction labels exceed the aggregate bound".to_string())?,
     })
+}
+
+/// The independent correction outcomes an aggregate request asks to join (MEDULLA-DECISION-ENGINE-R059):
+/// read once, through the one read of `CorrectionOp::Outcomes` (R702.8), from the named graph
+/// as the caller sees it. A request that asks for none joins none.
+async fn correction_labels_of(
+    state: &SharedState,
+    verified: &VerifiedRequestContext,
+    op: &DecisionLogOp,
+) -> Result<Vec<CorrectionLabel>, String> {
+    let DecisionLogOp::Aggregate { request } = op else {
+        return Ok(Vec::new());
+    };
+    let Some(asked) = &request.corrections else {
+        return Ok(Vec::new());
+    };
+    let (view, _) =
+        super::stat_support::filtered_view_versioned(state, verified.agent_id(), &asked.graph)
+            .await?;
+    Ok(super::correction::independent_outcomes(
+        &view,
+        verified.tenant(),
+        asked.rule_id.as_deref(),
+    )
+    .into_iter()
+    .map(|candidate| CorrectionLabel {
+        rule_id: candidate.rule_id,
+        task_class: candidate.task_class,
+        independent: candidate.independent,
+        mean_value_micros: (candidate.mean_value.clamp(0.0, 1.0) * 1_000_000.0).round() as u64,
+    })
+    .collect())
 }
 
 /// The latest `n` outcomes of `option_id` that count as labels (independent,
@@ -887,6 +922,8 @@ struct ReadGraphs<'a> {
     replay: Option<&'a medulla_graph_core::graph::GraphView>,
     /// The graph rows a commit re-reads at their versions.
     snapshots: &'a GraphSnapshots,
+    /// The correction labels an `Aggregate` joins (R059); empty when it asked for none.
+    correction_labels: &'a [CorrectionLabel],
     /// The graphs a `Provenance` read follows action links through.
     provenance: &'a [(String, std::sync::Arc<medulla_graph_core::graph::GraphCore>)],
 }
@@ -931,7 +968,12 @@ fn dispatch(
             ResultPayload::of::<DecisionLogGet>(visible_entry(ctx.store, reader, &record_id)?)
         }
         DecisionLogOp::Aggregate { request } => {
-            ResultPayload::of::<DecisionLogAggregate>(aggregate_log(ctx.store, reader, &request)?)
+            ResultPayload::of::<DecisionLogAggregate>(aggregate_log(
+                ctx.store,
+                reader,
+                &request,
+                read.correction_labels,
+            )?)
         }
         DecisionLogOp::Compact { policy, limit, .. } => ResultPayload::of::<DecisionLogCompact>(
             compact(ctx, &reader.retention, &policy, limit)?,
@@ -1195,6 +1237,7 @@ async fn serve(
     let refresh_apply = inputs.as_ref().map(|i| std::sync::Arc::clone(&i.refresh_apply));
     let principal = verified.agent_id().to_string();
     let graphs = commit_graphs(state, verified, &op).await?;
+    let correction_labels = correction_labels_of(state, verified, &op).await?;
     let provenance = match &op {
         DecisionLogOp::Provenance { record_id, .. } => {
             super::stat_decision_reads::provenance_graphs(
@@ -1240,6 +1283,7 @@ async fn serve(
                 &ReadGraphs {
                     replay: replay_graph.as_ref(),
                     snapshots: &graphs,
+                    correction_labels: &correction_labels,
                     provenance: &provenance,
                 },
             )
@@ -1592,11 +1636,12 @@ pub(super) fn fill_outcome_rates(
                 to_ms: u64::MAX,
             },
             attribution: None,
+            corrections: None,
             transfer: None,
         };
         let key = outcome_rate_key(question_id);
         let mut best: BTreeMap<String, (u64, i64)> = BTreeMap::new();
-        for row in aggregate_log(store, reader, &request)?.rows.iter() {
+        for row in aggregate_log(store, reader, &request, &[])?.rows.iter() {
             let Some(rate) = row.pooled_rate else {
                 continue;
             };

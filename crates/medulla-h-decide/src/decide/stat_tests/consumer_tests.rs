@@ -564,6 +564,7 @@ async fn an_assembly_outcome_is_credited_to_its_slate() {
             question_id: Some("assembly".to_string()),
             window: window(),
             attribution: None,
+            corrections: None,
             transfer: None,
         },
     };

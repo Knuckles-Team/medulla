@@ -445,3 +445,80 @@ async fn independent_outcomes_read_per_rule_candidate() {
     assert_eq!(one.candidates.len(), 1);
     assert!(read("tenant-other", None).await.candidates.is_empty());
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R059: the outcome aggregate joins the independent
+/// correction outcomes through the one read of R702.8, so its labels equal what
+/// `CorrectionOp::Outcomes` answers, and an aggregate that asks for none joins none.
+// spec: MEDULLA-DECISION-ENGINE-R059
+#[tokio::test]
+async fn aggregate_joins_the_independent_correction_outcomes() {
+    use medulla_decision_types::decision::statistical::log::{
+        CorrectionLabelRequest, DecisionLogOp, OutcomeAggregate, OutcomeAggregateRequest,
+    };
+    use medulla_decision_types::decision::RecordWindow;
+
+    let h = harness().await;
+    let core = core(&h).await;
+    seed_action(&core, ACTION, TENANT, PRODUCER);
+    seed_action(&core, "action:8", TENANT, PRODUCER);
+    for input in [
+        correction("c1", ACTION, "right"),
+        correction("c2", "action:8", "right"),
+        correction("c3", ACTION, "another rule"),
+    ] {
+        let write = plan(&h, &corrector(TENANT), record(input)).await.ok().expect("plans");
+        commit(&core, &write);
+    }
+    let aggregate = |corrections: Option<CorrectionLabelRequest>| {
+        let h = &h;
+        async move {
+            let verified = corrector(TENANT);
+            let response = super::super::log::handle_decision_log(
+                &h.state,
+                9,
+                &verified,
+                DecisionLogOp::Aggregate {
+                    request: OutcomeAggregateRequest {
+                        tenant_id: TENANT.to_string(),
+                        question_id: None,
+                        window: RecordWindow {
+                            from_ms: 0,
+                            to_ms: u64::MAX,
+                        },
+                        attribution: None,
+                        corrections,
+                        transfer: None,
+                    },
+                },
+            )
+            .await;
+            decode::<OutcomeAggregate>(response).expect("aggregates")
+        }
+    };
+    let none = aggregate(None).await;
+    assert!(none.correction_labels.is_empty(), "no request, no join");
+
+    let joined = aggregate(Some(CorrectionLabelRequest {
+        graph: GRAPH.to_string(),
+        rule_id: None,
+    }))
+    .await;
+    let read = plan(&h, &corrector(TENANT), CorrectionOp::Outcomes { rule_id: None })
+        .await
+        .ok()
+        .expect("reads");
+    let outcomes = reply::<CorrectionOutcomes>(&read).candidates;
+    assert_eq!(joined.correction_labels.len(), outcomes.len());
+    for (label, outcome) in joined.correction_labels.iter().zip(&outcomes) {
+        assert_eq!(label.rule_id, outcome.rule_id);
+        assert_eq!(label.task_class, outcome.task_class);
+        assert_eq!(label.independent, outcome.independent);
+        assert_eq!(label.mean_value_micros, 0);
+    }
+    let one = aggregate(Some(CorrectionLabelRequest {
+        graph: GRAPH.to_string(),
+        rule_id: Some(outcomes[0].rule_id.clone()),
+    }))
+    .await;
+    assert_eq!(one.correction_labels.len(), 1);
+}

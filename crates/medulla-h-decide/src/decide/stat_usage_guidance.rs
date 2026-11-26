@@ -377,8 +377,10 @@ fn tool_rates(
                 to_ms: u64::MAX,
             },
             attribution: None,
+            corrections: None,
             transfer: None,
         },
+        &[],
     )?;
     let mut rates: BTreeMap<String, ToolRate> = BTreeMap::new();
     for row in aggregate

@@ -603,6 +603,7 @@ pub fn log_ops() -> Vec<(
                     question_id: None,
                     window: window(),
                     attribution: None,
+                    corrections: None,
                     transfer: None,
                 },
             },

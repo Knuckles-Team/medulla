@@ -75,6 +75,7 @@ async fn split(h: &Harness, method: SlateAttributionMethod) -> Result<SlateAttri
                 method,
             }),
             transfer: None,
+            corrections: None,
         },
     };
     let aggregate: OutcomeAggregate =

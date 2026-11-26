@@ -87,6 +87,7 @@ async fn transfer(
             question_id: None,
             window: window(),
             attribution: None,
+            corrections: None,
             transfer: Some(TransferRequest {
                 skill_key: skill(),
                 declared_backbones: BoundedVec::new(
@@ -226,6 +227,7 @@ async fn skill_rows(
             question_id: None,
             window: window(),
             attribution: None,
+            corrections: None,
             transfer: None,
         },
     };

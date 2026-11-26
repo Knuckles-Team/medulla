@@ -131,6 +131,7 @@ pub(super) async fn decision_log_round_trip(h: &Harness, record: StatisticalDeci
         question_id: None,
         window: window(),
         attribution: None,
+        corrections: None,
         transfer: None,
     };
     let aggregate: OutcomeAggregate =
@@ -470,6 +471,7 @@ async fn outcome_rows(h: &Harness, question_id: Option<String>) -> OutcomeAggreg
                     question_id,
                     window: window(),
                     attribution: None,
+                    corrections: None,
                     transfer: None,
                 },
             },

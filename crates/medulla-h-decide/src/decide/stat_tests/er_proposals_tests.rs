@@ -198,6 +198,7 @@ async fn resolve_entity_uses_tenant_scoped_candidates() {
                     question_id: None,
                     window: window(),
                     attribution: None,
+                    corrections: None,
                     transfer: None,
                 },
             },

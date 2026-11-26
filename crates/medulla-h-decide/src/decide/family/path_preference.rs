@@ -85,8 +85,10 @@ fn conclude_preference(
             question_id: None,
             window,
             attribution: None,
+            corrections: None,
             transfer: None,
         },
+        &[],
     )?;
     let mut evidence = Vec::new();
     let mut recent: BTreeMap<String, Vec<bool>> = BTreeMap::new();

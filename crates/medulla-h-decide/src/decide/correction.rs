@@ -39,6 +39,9 @@ pub async fn handle_correction_record(
 }
 
 #[cfg(feature = "decide")]
+pub(in crate::decide) use served::independent_outcomes;
+
+#[cfg(feature = "decide")]
 mod served {
     use medulla_agent_types::agent_guardrail::{
         check_rule_against_invariants, GuardrailRule, RulePromotionVerdict,
@@ -47,7 +50,7 @@ mod served {
         candidate_outcomes, commit_correction, nearest_corrections, OutcomeRow,
     };
     use medulla_decision_types::correction::{
-        task_class_of, Correction, CorrectionEffect, CorrectionInput, CorrectionNearest,
+        task_class_of, CandidateOutcomes, Correction, CorrectionEffect, CorrectionInput, CorrectionNearest,
         CorrectionOp, CorrectionOutcome, CorrectionOutcomes, CorrectionRead, CorrectionRecorded, CorrectionSource,
         EvalCase, OutcomeTag, RuleCandidate, ACTION_RECORD_CLASS, CORRECTION_NOT_FOUND, CORRECTION_ROLE_REQUIRED, CORRECTOR_ROLE, KNOBS,
         OUTCOME_SELF_REPORTED,
@@ -360,12 +363,23 @@ mod served {
         rule_id: Option<&str>,
     ) -> Result<PlannedWrite, String> {
         let (view, _) = filtered_view_versioned(state, verified.agent_id(), graph).await?;
-        let candidates = candidate_outcomes(outcome_rows(&view, verified.tenant()), rule_id);
+        let candidates = independent_outcomes(&view, verified.tenant(), rule_id);
         Ok(PlannedWrite {
             graph: graph.to_string(),
             operations: Vec::new(),
             reply: ResultPayload::of::<CorrectionRecordOutcomes>(CorrectionOutcomes { candidates })?,
         })
+    }
+
+    /// The independent outcomes per rule candidate of `tenant` that `view` shows: the one read
+    /// of `CorrectionOutcome` nodes (MEDULLA-DECISION-ENGINE-R702.8). `CorrectionOp::Outcomes`
+    /// answers it, and the outcome aggregate of R059 joins it; neither reads the nodes itself.
+    pub(in crate::decide) fn independent_outcomes(
+        view: &GraphView,
+        tenant: &str,
+        rule_id: Option<&str>,
+    ) -> Vec<CandidateOutcomes> {
+        candidate_outcomes(outcome_rows(view, tenant), rule_id)
     }
 
     /// Every `CorrectionOutcome` node of `tenant` that the view shows, joined to the rule

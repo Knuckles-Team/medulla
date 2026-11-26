@@ -273,9 +273,38 @@ pub struct OutcomeAggregateRequest {
     /// Also split one slate's outcome across its components (EH-523).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub attribution: Option<SlateAttributionRequest>,
+    /// Also join the independent correction outcomes of one graph (R059, R702.8).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub corrections: Option<CorrectionLabelRequest>,
     /// Also report the robust transfer estimate of one skill (R059.1.1).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub transfer: Option<super::super::transfer::TransferRequest>,
+}
+
+/// Which correction outcomes an aggregate joins (MEDULLA-DECISION-ENGINE-R059). The labels are
+/// read by the one read of `CorrectionOp::Outcomes` (R702.8) from `graph`, as the caller sees it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CorrectionLabelRequest {
+    /// The graph holding the `CorrectionOutcome` nodes.
+    pub graph: String,
+    /// Narrow the join to one rule candidate.
+    #[serde(default)]
+    pub rule_id: Option<String>,
+}
+
+/// The independent correction outcomes of one rule candidate, as an aggregate reports them
+/// (MEDULLA-DECISION-ENGINE-R059). `mean_value_micros` is the mean outcome value in millionths.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct CorrectionLabel {
+    pub rule_id: String,
+    pub task_class: String,
+    /// Corrections tagged `independent` that yielded this candidate.
+    pub independent: u64,
+    pub mean_value_micros: u64,
 }
 
 /// One component's share of a slate's success rate.
@@ -360,6 +389,10 @@ pub struct OutcomeAggregate {
     /// Options with enough independent successes to become a skill (R059.2).
     #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
     pub skill_candidates: BoundedVec<super::super::transfer::SkillCandidateRow, 1024>,
+    /// The independent correction outcomes per rule candidate, when the request asked for them
+    /// (R059, R702.8); absent otherwise.
+    #[serde(default, skip_serializing_if = "BoundedVec::is_empty")]
+    pub correction_labels: BoundedVec<CorrectionLabel, 1024>,
 }
 
 /// The durable identity of a committed record.
