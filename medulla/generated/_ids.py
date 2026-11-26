@@ -16,6 +16,7 @@ METHOD_IDS = frozenset(
         "SpecStatus",
         "LifecycleTrace",
         "LandingPolicyPut",
+        "PutObservation",
         "FileDefect",
         "DeliveryOpen",
         "DeliveryFeedback",

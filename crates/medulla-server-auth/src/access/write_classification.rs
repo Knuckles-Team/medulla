@@ -483,6 +483,7 @@ pub fn requires_write(method: &Method) -> bool {
                 | Method::ProjectModeSet { .. }
                 | Method::ProposalPut { .. }
                 | Method::LandingPolicyPut { .. }
+                | Method::PutObservation { .. }
                 | Method::DeliveryOpen { .. }
                 | Method::DeliveryFeedback { .. }
                 | Method::DeliveryReport { .. }

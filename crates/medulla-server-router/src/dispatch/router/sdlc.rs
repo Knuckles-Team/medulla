@@ -6,9 +6,13 @@ use std::collections::BTreeSet;
 use std::sync::Arc;
 
 use medulla_graph_core::graph::GraphCore;
+use medulla_work_types::orchestration::visual_observation::{
+    ObservationRefusal, VisualObservation, VisualObservationReceipt,
+    VISUAL_OBSERVATION_NODE_TYPE, VISUAL_OBSERVATION_RECORD_PROPERTY,
+};
 use medulla_protocol_types::result_contract::ingestion::{
     GoalPut as GoalPutResult, ProjectModeSet as ProjectModeSetResult,
-    FileDefect as FileDefectResult, SpecStatus as SpecStatusResult, LifecycleTrace as LifecycleTraceResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
+    FileDefect as FileDefectResult, SpecStatus as SpecStatusResult, LifecycleTrace as LifecycleTraceResult, PutObservation as PutObservationResult, TransitionDefect as TransitionDefectResult, GetDefect as GetDefectResult, SpecQuestion as SpecQuestionResult, LandingPolicyPut as LandingPolicyPutResult, ProposalDecide as ProposalDecideResult, ProposalList as ProposalListResult,
     ProposalPut as ProposalPutResult, RecordDeployment as RecordDeploymentResult,
     RecordGateVerdict as RecordGateVerdictResult, RecordRelease as RecordReleaseResult,
 };
@@ -174,6 +178,9 @@ pub async fn dispatch_sdlc_methods(
         Method::GetDefect { request } => dispatch_boxed(get_defect(state, target, request)).await,
         Method::LandingPolicyPut { request } => {
             dispatch_boxed(landing_policy_put(state, target, request)).await
+        }
+        Method::PutObservation { observation } => {
+            dispatch_boxed(put_observation(state, target, observation)).await
         }
         other => return ControlFlow::Continue(other),
     };
@@ -822,6 +829,76 @@ async fn landing_policy_put(
     }
     .await;
     typed_response::<LandingPolicyPutResult>(target.req_id, result)
+}
+
+/// `PutObservation` (MEDULLA-ORCH-VOCAB-R810): store one run-bound visual observation. The
+/// envelope is checked against its bounds, its tenant must be the verified caller's and its run a
+/// `RunTrace` the caller's tenant holds (a foreign run and a missing one read the same). An id
+/// stored with the same record is a replay; with another content digest it refuses
+/// `OBSERVATION_CONFLICT`. The one `VisualObservation` node is written in one gateway-routed batch.
+async fn put_observation(
+    state: &Arc<RwLock<ServerState>>,
+    target: SdlcTarget<'_>,
+    observation: VisualObservation,
+) -> Response {
+    let result = async {
+        let tenant = target.verified.tenant();
+        if tenant.trim().is_empty() {
+            return Err("TENANT_SCOPE_REQUIRED".to_string());
+        }
+        observation.validate().map_err(|refusal| refusal.to_string())?;
+        if observation.tenant_id != tenant {
+            return Err(ObservationRefusal::ScopeUnknown.to_string());
+        }
+        let run = visible_node(state, &target, &observation.run_id).await?;
+        if run
+            .as_ref()
+            .and_then(|node| node.get("type"))
+            .and_then(Value::as_str)
+            != Some("RunTrace")
+        {
+            return Err(ObservationRefusal::ScopeUnknown.to_string());
+        }
+        let node_id = observation.node_id();
+        let stored: Option<VisualObservation> = visible_node(state, &target, &node_id)
+            .await?
+            .and_then(|node| {
+                serde_json::from_str(node.get(VISUAL_OBSERVATION_RECORD_PROPERTY)?.as_str()?).ok()
+            });
+        let replayed = match &stored {
+            Some(existing) if *existing == observation => true,
+            Some(existing) if existing.content_digest != observation.content_digest => {
+                return Err(ObservationRefusal::Conflict.to_string());
+            }
+            _ => false,
+        };
+        if !replayed {
+            let body = serde_json::to_string(&observation)
+                .map_err(|_| "observation encoding failed".to_string())?;
+            let mut properties = Map::new();
+            properties.insert("type".into(), VISUAL_OBSERVATION_NODE_TYPE.into());
+            properties.insert(VISUAL_OBSERVATION_RECORD_PROPERTY.into(), body.into());
+            properties.insert("run_id".into(), observation.run_id.clone().into());
+            properties.insert(
+                "observation_id".into(),
+                observation.observation_id.clone().into(),
+            );
+            properties.insert(
+                "content_digest".into(),
+                observation.content_digest.clone().into(),
+            );
+            stamp(&mut properties, &target);
+            commit(
+                state,
+                &target,
+                vec![json!({"op": "upsert_node", "id": node_id, "properties": properties})],
+            )
+            .await?;
+        }
+        Ok(VisualObservationReceipt { node_id, replayed })
+    }
+    .await;
+    typed_response::<PutObservationResult>(target.req_id, result)
 }
 
 /// The stored node `id` of the request graph, decoded, when the caller can see it and it

@@ -1889,6 +1889,16 @@ const EXACT_METHOD_ERRORS: &[(&str, &[&str])] = &[
             "DEFECT_UNVERIFIED",
         ],
     ),
+    // MEDULLA-ORCH-VOCAB-R810: the observation write refusals.
+    (
+        "PutObservation",
+        &[
+            "TENANT_SCOPE_REQUIRED",
+            "OBSERVATION_INVALID",
+            "OBSERVATION_SCOPE_UNKNOWN",
+            "OBSERVATION_CONFLICT",
+        ],
+    ),
     // MEDULLA-SDLC-R005.3 and R005.4: the served status refusals.
     // MEDULLA-SDLC-R019.14: the served delivery methods.
     (

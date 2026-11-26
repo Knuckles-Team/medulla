@@ -22,6 +22,7 @@ pub mod errors;
 pub mod improvement;
 pub mod org;
 pub mod teams;
+pub mod visual_observation;
 pub mod workflow_machine;
 pub mod workflows;
 

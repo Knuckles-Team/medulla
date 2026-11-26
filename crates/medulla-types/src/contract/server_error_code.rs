@@ -543,6 +543,12 @@ closed_error_codes! {
         DefectUnverified => "DEFECT_UNVERIFIED",
         /// MEDULLA-SDLC-R019.3: a delivery slice names no requirement row.
         DeliveryScopeEmpty => "DELIVERY_SCOPE_EMPTY",
+        /// MEDULLA-ORCH-VOCAB-R810: a visual observation envelope is empty, malformed or too large.
+        ObservationInvalid => "OBSERVATION_INVALID",
+        /// MEDULLA-ORCH-VOCAB-R810: the observation names another tenant or a run the caller does not hold.
+        ObservationScopeUnknown => "OBSERVATION_SCOPE_UNKNOWN",
+        /// MEDULLA-ORCH-VOCAB-R810: the observation id is stored with another content digest.
+        ObservationConflict => "OBSERVATION_CONFLICT",
         /// MEDULLA-SDLC-R005.4: a status request names a revision the repository chain does not hold.
         SpecStatusRevUnknown => "SPEC_STATUS_REV_UNKNOWN",
         /// MEDULLA-SDLC-R005.4: a status request names a repository with no ingested spec tree.

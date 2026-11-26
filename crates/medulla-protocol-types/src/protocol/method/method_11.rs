@@ -977,6 +977,13 @@ $($variants)*
         intent: medulla_catalog_types::schema_context::SchemaContextIntent,
     },
 
+    /// Store one run-bound visual observation (MEDULLA-ORCH-VOCAB-R810). The record names the
+    /// caller's tenant and a run the tenant holds, or the write refuses `OBSERVATION_SCOPE_UNKNOWN`;
+    /// an invalid envelope refuses `OBSERVATION_INVALID`; an id stored with another content
+    /// digest refuses `OBSERVATION_CONFLICT`. Writes one node through the graph gateway.
+    PutObservation {
+        observation: medulla_work_types::orchestration::visual_observation::VisualObservation,
+    },
     /// One semantic search over the caller's bookmarks, on one pinned index and graph snapshot
     /// (MEDULLA-MEDIA-VOCAB-R001.102.2). A read; nothing is committed.
     BookmarkSemanticSearch {

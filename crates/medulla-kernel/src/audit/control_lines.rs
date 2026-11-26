@@ -210,6 +210,11 @@ fn incident_audit_line(method: &Method) -> Option<String> {
             "PROPOSAL_PUT|{}|{:?}",
             proposal.project, proposal.kind
         )),
+        // MEDULLA-ORCH-VOCAB-R810: the line names the run and the observation, never the content ref.
+        Method::PutObservation { observation } => Some(format!(
+            "PUT_OBSERVATION|{}|{}",
+            observation.run_id, observation.observation_id
+        )),
         // MEDULLA-SCM-R008: the line names the policy, never the approval.
         Method::LandingPolicyPut { request } => Some(format!(
             "LANDING_POLICY_PUT|{}|{}",

@@ -1102,6 +1102,7 @@ fn cluster_mutation_route_admin(method: &Method) -> Option<ClusterMutationRoute>
             | Method::ProjectModeSet { .. }
             | Method::ProposalPut { .. }
             | Method::LandingPolicyPut { .. }
+            | Method::PutObservation { .. }
             | Method::DeliveryOpen { .. }
             | Method::DeliveryFeedback { .. }
             | Method::DeliveryReport { .. }

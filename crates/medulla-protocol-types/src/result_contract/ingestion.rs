@@ -141,6 +141,7 @@ method_results! {
     SpecStatus(SpecStatus) => Raw<medulla_source_types::lifecycle::SpecStatusAnswer>;
     SpecQuestion(SpecQuestion) => Raw<medulla_source_types::spec_question::SpecQuestionAnswer>;
     ProposalList(ProposalList) => Raw<Vec<medulla_source_types::lifecycle::ProposalListEntry>>;
+    PutObservation(PutObservation) => Raw<medulla_work_types::orchestration::visual_observation::VisualObservationReceipt>;
     LandingPolicyPut(LandingPolicyPut) => Raw<medulla_source_types::gate_verdict::LandingPolicyReceipt>;
     FileDefect(FileDefect) => Raw<medulla_source_types::lifecycle::FileDefectReceipt>;
     TransitionDefect(TransitionDefect) => Raw<medulla_source_types::lifecycle::TransitionDefectReceipt>;

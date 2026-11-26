@@ -19533,6 +19533,24 @@ class MedullaClient:
             raise TypeError("LandingPolicyPut returned a non-object result")
         return result
 
+    async def put_observation(self, observation: dict[str, Any]) -> dict[str, Any]:
+        """Store one run-bound visual observation (MEDULLA-ORCH-VOCAB-R810).
+
+        ``observation`` carries ``observation_id``, ``modality``,
+        ``source_operation_id``, exactly one of ``frame_id`` and ``sequence``,
+        ``captured_at``, ``content_digest`` (64 lowercase hex), ``content_ref``,
+        ``tenant_id``, ``run_id``, ``request_id`` and ``schema_revision``, plus the
+        optional ``retention`` (``retain_until_ms``) and ``invalidation``
+        (``invalidated_at_ms``, ``reason``) marks. The receipt names ``node_id`` and
+        ``replayed``. A malformed envelope refuses ``OBSERVATION_INVALID``; another
+        tenant or a run the caller does not hold refuses ``OBSERVATION_SCOPE_UNKNOWN``;
+        an id stored with another content digest refuses ``OBSERVATION_CONFLICT``.
+        """
+        result = await self._send("PutObservation", {"observation": observation}, None)
+        if not isinstance(result, dict):
+            raise TypeError("PutObservation returned a non-object result")
+        return result
+
     async def describe_contract(
         self,
         *,
