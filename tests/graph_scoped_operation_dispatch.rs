@@ -243,6 +243,7 @@ fn audit_append_method(request_id: &str, audit_class: &str, op: &str) -> Method 
         audit_class: audit_class.to_string(),
         subject_iri: None,
         policy_iri: None,
+        evidence: Default::default(),
     }
 }
 
@@ -298,6 +299,7 @@ async fn t05c_audit_append_idempotency_conflict_reports_the_declared_code() {
             audit_class: "event".to_string(),
             subject_iri: None,
             policy_iri: None,
+            evidence: Default::default(),
         },
     )
     .await;
@@ -315,6 +317,7 @@ async fn t05c_audit_append_idempotency_conflict_reports_the_declared_code() {
             audit_class: "event".to_string(),
             subject_iri: None,
             policy_iri: None,
+            evidence: Default::default(),
         },
     )
     .await;

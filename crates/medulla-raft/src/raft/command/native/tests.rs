@@ -333,6 +333,7 @@ fn native_catalog_is_complete_unique_and_has_domain_representatives() {
             audit_class: "event".to_string(),
             subject_iri: None,
             policy_iri: None,
+            evidence: Default::default(),
         },
         NativeMutationDomain::GraphState,
     );

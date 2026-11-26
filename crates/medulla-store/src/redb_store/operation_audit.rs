@@ -95,6 +95,10 @@ pub struct OperationAuditEvent {
     /// IRI of the stored bound the plan was checked against (R008.5); absent
     /// on every event that is not a scope refusal.
     pub policy_iri: Option<String>,
+    /// Caller-supplied identifiers and counts kept in the chain entry. Empty
+    /// on every event that does not carry evidence; bounded by
+    /// [`EVIDENCE_MAX_KEYS`] and [`EVIDENCE_FIELD_MAX`].
+    pub evidence: std::collections::BTreeMap<String, String>,
 }
 
 fn token(value: &str, max: usize) -> bool {
@@ -109,6 +113,35 @@ fn token(value: &str, max: usize) -> bool {
 /// absent, or 1 to 2048 bytes with no ASCII control character and no
 /// whitespace. Anything else is not a privacy-safe audit field.
 const IRI_FIELD_MAX: usize = 2048;
+
+/// The bound of the optional `evidence` map: at most this many keys.
+pub const EVIDENCE_MAX_KEYS: usize = 16;
+/// The bound of one evidence key or value, in bytes.
+pub const EVIDENCE_FIELD_MAX: usize = 256;
+
+/// Evidence is a privacy-safe map of identifiers and counts: every key a
+/// bounded token, every value bounded with no control character and none of
+/// the chain-line separators (`|`, `;`).
+fn bounded_evidence(evidence: &std::collections::BTreeMap<String, String>) -> bool {
+    evidence.len() <= EVIDENCE_MAX_KEYS
+        && evidence.iter().all(|(key, value)| {
+            token(key, EVIDENCE_FIELD_MAX)
+                && value.len() <= EVIDENCE_FIELD_MAX
+                && !value
+                    .bytes()
+                    .any(|b| b < 0x20 || b == 0x7f || b == b'|' || b == b';')
+        })
+}
+
+/// The deterministic chain rendering of the evidence map: keys in sorted
+/// order, `key=value` pairs joined by `;`.
+fn evidence_text(evidence: &std::collections::BTreeMap<String, String>) -> String {
+    evidence
+        .iter()
+        .map(|(key, value)| format!("{key}={value}"))
+        .collect::<Vec<_>>()
+        .join(";")
+}
 
 fn bounded_iri(value: &Option<String>) -> bool {
     match value {
@@ -129,6 +162,7 @@ impl OperationAuditEvent {
             || !token(&self.request_id, 128)
             || !bounded_iri(&self.subject_iri)
             || !bounded_iri(&self.policy_iri)
+            || !bounded_evidence(&self.evidence)
             || self.params_sha256.len() != 64
             || !self.params_sha256.bytes().all(|b| b.is_ascii_hexdigit())
         {
@@ -170,7 +204,7 @@ impl OperationAuditEvent {
     /// Everything an outcome must share with its reservation.
     fn context_fingerprint(&self) -> Hash {
         Sha256::digest(format!(
-            "{}\0{}\0{}\0{}\0{}\0{}\0{}\0{}\0{}",
+            "{}\0{}\0{}\0{}\0{}\0{}\0{}\0{}\0{}\0{}",
             self.tenant,
             self.principal,
             self.request_id,
@@ -180,6 +214,7 @@ impl OperationAuditEvent {
             self.audit_class,
             self.subject_iri.as_deref().unwrap_or(""),
             self.policy_iri.as_deref().unwrap_or(""),
+            evidence_text(&self.evidence),
         ))
         .into()
     }
@@ -196,8 +231,13 @@ impl OperationAuditEvent {
             .policy_iri
             .as_deref()
             .map_or_else(String::new, |iri| format!("|policy_iri={iri}"));
+        let evidence = if self.evidence.is_empty() {
+            String::new()
+        } else {
+            format!("|evidence={}", evidence_text(&self.evidence))
+        };
         format!(
-            "OP_AUDIT|v1|tenant={}|principal={}|op={}|surface={}|params_sha256={}|status={}|request_id={}|class={}{subject}{policy}{link}",
+            "OP_AUDIT|v1|tenant={}|principal={}|op={}|surface={}|params_sha256={}|status={}|request_id={}|class={}{subject}{policy}{evidence}{link}",
             self.tenant,
             self.principal,
             self.op,

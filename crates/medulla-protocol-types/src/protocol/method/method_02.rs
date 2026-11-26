@@ -346,6 +346,14 @@ $($variants)*
         /// absent on every non-scope-refusal append.
         #[serde(default, skip_serializing_if = "Option::is_none")]
         policy_iri: Option<String>,
+        /// Identifiers and counts the caller wants kept in the chain entry
+        /// (for example a screen verdict, finding classes, rule ids and the
+        /// hook decisions). At most 16 keys; each key a bounded token and
+        /// each value at most 256 bytes with no control character, `|` or
+        /// `;`. Anything else refuses `AUDIT_FIELDS_INVALID` and writes
+        /// nothing. An older request body that leaves it off still decodes.
+        #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+        evidence: std::collections::BTreeMap<String, String>,
     },
 
     /// Read one operation-audit event of the named chain and verify that

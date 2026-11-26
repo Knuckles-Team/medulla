@@ -17878,6 +17878,7 @@ class AdminClient:
         status: str,
         request_id: str,
         audit_class: str,
+        evidence: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Append a privacy-safe operation audit event under the verified carrier.
 
@@ -17894,20 +17895,23 @@ class AdminClient:
         ``outcome_seq`` is ``None`` while a reservation has no linked outcome,
         so replaying a reservation after an interruption shows whether its
         outcome is still owed.
+
+        ``evidence`` is an optional map of identifiers and counts kept in the
+        chain entry: at most 16 keys, each key a token of at most 256 bytes
+        and each value at most 256 bytes with no control character, ``|`` or
+        ``;``. A map outside those bounds is refused ``AUDIT_FIELDS_INVALID``.
         """
-        return (
-            await _gen.security.send_audit_append(
-                self._client,
-                {
-                    "op": op,
-                    "surface": surface,
-                    "params_sha256": params_sha256,
-                    "status": status,
-                    "request_id": request_id,
-                    "audit_class": audit_class,
-                },
-            )
-        ).payload
+        params: dict[str, Any] = {
+            "op": op,
+            "surface": surface,
+            "params_sha256": params_sha256,
+            "status": status,
+            "request_id": request_id,
+            "audit_class": audit_class,
+        }
+        if evidence:
+            params["evidence"] = dict(evidence)
+        return (await _gen.security.send_audit_append(self._client, params)).payload
 
     async def audit_read_event(self, seq: int, *, chain: str) -> dict[str, Any]:
         """Read one committed operation event and its chain verification result.

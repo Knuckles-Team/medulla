@@ -19000,6 +19000,7 @@ class MethodAuditAppendParams(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     audit_class: str | None = None
+    evidence: dict[str, str] = Field(default_factory=dict)
     op: str
     params_sha256: str
     policy_iri: str | None = None

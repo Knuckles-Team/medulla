@@ -569,6 +569,7 @@ async fn audit_scope_refusal(
                     .to_string(),
                 subject_iri,
                 policy_iri,
+                evidence: Default::default(),
             };
             redb.audit_append(&medulla_kernel::persist::sanitize(graph), event)
                 .await?;

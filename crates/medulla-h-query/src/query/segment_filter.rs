@@ -110,6 +110,7 @@ impl ReadScope {
             audit_class: "event".to_owned(),
             subject_iri: None,
             policy_iri: None,
+            evidence: Default::default(),
         };
         // The line goes to the tenant's read-audit chain for this graph, a scope
         // of its own: a read-audit line is never a graph mutation, so it never

@@ -438,6 +438,7 @@ fn operation_audit_reservation_outcome_replay_and_restart() {
         audit_class: "event".into(),
         subject_iri: None,
         policy_iri: None,
+        evidence: Default::default(),
     };
     let reserved = operation_audit_append(&db, &mut tail, "g", &event).unwrap();
     assert!(!reserved.replayed);

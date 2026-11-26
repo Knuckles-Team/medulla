@@ -58,6 +58,7 @@ pub fn event(request_id: &str, status: &str) -> OperationAuditEvent {
         audit_class: "event".into(),
         subject_iri: None,
         policy_iri: None,
+        evidence: Default::default(),
     }
 }
 
@@ -438,4 +439,58 @@ fn refusal_iris_are_part_of_the_reservation_outcome_equality() {
     );
     let next = store.append(&event("request-b", "reserved")).unwrap();
     assert_eq!(next.seq, 3);
+}
+
+// spec: MEDULLA-DURABLE-KERNEL-R031.3
+#[test]
+fn evidence_is_bounded_rendered_in_the_chain_line_and_part_of_the_outcome_equality() {
+    let dir = tempfile::tempdir().unwrap();
+    let mut store = Store::seeded(dir.path());
+    let mut reserved = event("request-ev", "reserved");
+    reserved.evidence.insert("rule_ids".into(), "r1,r2".into());
+    reserved.evidence.insert("redaction_count".into(), "3".into());
+    store.append(&reserved).unwrap();
+    let mut same = reserved.clone();
+    same.status = AuditStatus::Ok;
+    let closed = store.append(&same).unwrap();
+    assert_eq!(closed.outcome_seq, Some(closed.seq));
+    let line = store.line(closed.seq);
+    assert!(
+        line.contains("|evidence=redaction_count=3;rule_ids=r1,r2|"),
+        "{line}"
+    );
+
+    // A different map is a different request context: it does not close.
+    let mut other = same.clone();
+    other.evidence.insert("redaction_count".into(), "4".into());
+    assert!(store.append(&other).is_err());
+
+    // An entry without evidence carries no evidence field.
+    let plain = event("request-plain", "reserved");
+    let receipt = store.append(&plain).unwrap();
+    assert!(!store.line(receipt.seq).contains("evidence="));
+
+    // Bounds: 16 keys and 256 bytes pass; 17 keys, a 257-byte value, a bad key
+    // and a value with a separator or control character are refused.
+    let mut at_bound = event("request-bound", "ok");
+    for n in 0..16 {
+        at_bound.evidence.insert(format!("k{n}"), "v".repeat(256));
+    }
+    assert!(at_bound.validate().is_ok());
+    let invalid = "invalid privacy-safe audit event fields";
+    let mut too_many = at_bound.clone();
+    too_many.evidence.insert("k16".into(), "v".into());
+    let mut too_long = at_bound.clone();
+    too_long.evidence.insert("k0".into(), "v".repeat(257));
+    let mut bad_key = at_bound.clone();
+    bad_key.evidence.insert("bad key".into(), "v".into());
+    let mut pipe = at_bound.clone();
+    pipe.evidence.insert("k0".into(), "a|b".into());
+    let mut semicolon = at_bound.clone();
+    semicolon.evidence.insert("k0".into(), "a;b".into());
+    let mut control = at_bound.clone();
+    control.evidence.insert("k0".into(), "a\nb".into());
+    for refused in [too_many, too_long, bad_key, pipe, semicolon, control] {
+        assert_eq!(refused.validate().unwrap_err(), invalid);
+    }
 }

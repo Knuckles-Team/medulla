@@ -51,6 +51,7 @@ pub fn append_policy_evaluation(
         audit_class: "event".to_owned(),
         subject_iri: None,
         policy_iri: None,
+        evidence: Default::default(),
     };
     let chain = medulla_store::redb_store::read_audit_chain_scope(
         &event.tenant,

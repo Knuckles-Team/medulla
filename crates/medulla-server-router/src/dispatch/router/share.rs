@@ -306,6 +306,7 @@ impl ShareEvent {
                 Some(reason) => format!("{}->{};authority={reason}", self.prior, self.next),
                 None => format!("{}->{}", self.prior, self.next),
             }),
+            evidence: Default::default(),
         }
     }
 }
