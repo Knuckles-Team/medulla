@@ -8,8 +8,8 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use medulla_decision_types::claims::{
-    ArtifactSeal, ClaimState, Evidence, EvidenceChannel, ProofStanding, ProofVerdict,
-    ResearchArtifact, Stance,
+    ArtifactSeal, ClaimRecord, ClaimState, Evidence, EvidenceChannel, ObserverRef, ProofStanding,
+    ProofVerdict, ResearchArtifact, Stance,
 };
 use medulla_query_types::solve_scalar::{digest_text, DIGEST_TEXT_PREFIX};
 use medulla_types::contract::ServerErrorCode;
@@ -270,6 +270,7 @@ mod tests {
             supports,
             weight_ppm: weight,
             source_digest: format!("sha256:{id}"),
+            session_id: None,
             proof: None,
         }
     }
@@ -491,6 +492,7 @@ mod tests {
             supports: true,
             weight_ppm: 0,
             source_digest: "sha256:aa".to_string(),
+            session_id: None,
             proof: Some(medulla_decision_types::claims::ProofReceipt {
                 checker_id: "checker".to_string(),
                 toolchain_version: "1".to_string(),
@@ -543,5 +545,60 @@ mod tests {
             ]),
             ProofStanding::Proven
         );
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R652.9
+    #[test]
+    fn observer_sees_own_and_visible_system_claims_only() {
+        use medulla_decision_types::claims::{ClaimPerspective, ParticipantId};
+
+        let ada = ObserverRef::Participant(ParticipantId::new("ada").unwrap());
+        let bob = ObserverRef::Participant(ParticipantId::new("bob").unwrap());
+        let claim = |observer: ObserverRef, sessions: &[&str]| {
+            let mut record = ClaimRecord {
+                tenant_id: "t1".to_string(),
+                claim_id: "c1".to_string(),
+                perspective: Some(ClaimPerspective {
+                    subject: ParticipantId::new("ada").unwrap(),
+                    observer,
+                }),
+                state: ClaimState::Proposed,
+                log_odds_micro: 0,
+                transitions: Vec::new(),
+                evidence: Vec::new(),
+                stances: BTreeMap::new(),
+                contradiction_pairs: Vec::new(),
+                feeds: Vec::new(),
+                proof_standing: ProofStanding::Unproven,
+            };
+            for (n, session) in sessions.iter().enumerate() {
+                let mut e = evidence(&format!("e{n}"), EvidenceChannel::Outcome, true, 1);
+                e.session_id = Some((*session).to_string());
+                record.evidence.push(e);
+            }
+            record
+        };
+        let sessions = |names: &[&str]| -> BTreeSet<String> { names.iter().map(|n| n.to_string()).collect() };
+        let view = |observer: &ObserverRef, names: &[&str]| ReaderView::of(observer.clone(), sessions(names));
+
+        // Own claim: seen with its sessions visible, hidden when one is not.
+        assert!(claim_visible_to(&claim(ada.clone(), &["s1"]), &view(&ada, &["s1"])));
+        assert!(!claim_visible_to(&claim(ada.clone(), &["s1", "s2"]), &view(&ada, &["s1"])));
+        // Another participant's claim is hidden even when the sessions match.
+        assert!(!claim_visible_to(&claim(bob.clone(), &["s1"]), &view(&ada, &["s1"])));
+        // A system claim is visible to every observer, with the session rule kept.
+        assert!(claim_visible_to(&claim(ObserverRef::System, &["s1"]), &view(&ada, &["s1"])));
+        assert!(claim_visible_to(&claim(ObserverRef::System, &["s1"]), &view(&bob, &["s1"])));
+        assert!(!claim_visible_to(&claim(ObserverRef::System, &["s2"]), &view(&bob, &["s1"])));
+        // Evidence without a session never narrows a view.
+        assert!(claim_visible_to(&claim(ada.clone(), &[]), &view(&ada, &[])));
+        // The system observer sees system claims, not a participant's.
+        let system = view(&ObserverRef::System, &["s9"]);
+        assert!(claim_visible_to(&claim(ObserverRef::System, &["s9"]), &system));
+        assert!(!claim_visible_to(&claim(ada, &["s9"]), &system));
+        // A claim with no perspective keeps its present visibility.
+        let mut plain = claim(bob, &["s9"]);
+        plain.perspective = None;
+        assert!(claim_visible_to(&plain, &view(&ObserverRef::System, &[])));
     }
 }

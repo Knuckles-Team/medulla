@@ -26,6 +26,7 @@ use std::collections::BTreeSet;
 
 use super::assistant_profile::node_blob;
 use super::*;
+use medulla_decision_types::claims::ObserverRef;
 use medulla_decision_types::decision::knob_families::participant::KNOBS as PARTICIPANT_KNOBS;
 use medulla_decision_types::decision::knobs::KnobValue;
 use medulla_isolation::profile_access::read_stored;
@@ -57,7 +58,7 @@ fn refuse(code: &str, detail: impl std::fmt::Display) -> String {
 }
 
 /// The one non-disclosing envelope of an absent or unreadable participant.
-pub(super) fn participant_unavailable(id: &str) -> String {
+pub fn participant_unavailable(id: &str) -> String {
     refuse(
         "PARTICIPANT_NOT_VISIBLE",
         format!("participant {id} is not available to the caller"),
@@ -420,6 +421,98 @@ fn payload(out: Out) -> Result<ResultPayload, String> {
         Out::Scope(value) => ResultPayload::of::<ParticipantPutScope>(value),
         Out::Observation(value) => ResultPayload::of::<ParticipantSetObservation>(value),
     }
+}
+
+/// Most participant nodes one read scans.
+const PARTICIPANT_SCAN_CAP: usize = 100_000;
+
+/// Every participant `tenant_scope` stores, in node-id order. A node of another tenant never
+/// decodes under this scope, so it is never listed.
+fn stored_participants(core: &GraphCore, tenant_scope: &str) -> Vec<(String, Participant)> {
+    let mut nodes: Vec<String> = core
+        .get_nodes_by_label(PARTICIPANT_NODE_TYPE, PARTICIPANT_SCAN_CAP)
+        .into_iter()
+        .map(|(id, _)| id)
+        .collect();
+    nodes.sort();
+    nodes
+        .into_iter()
+        .filter_map(|id| {
+            read_stored::<Participant>(core, &id, PARTICIPANT_NODE_TYPE, tenant_scope)
+                .map(|participant| (id, participant))
+        })
+        .collect()
+}
+
+/// Whether `tenant_scope` stores a participant with this slug in any workspace.
+pub fn participant_exists(core: &GraphCore, tenant_scope: &str, slug: &ParticipantId) -> bool {
+    stored_participants(core, tenant_scope)
+        .iter()
+        .any(|(_, participant)| &participant.participant_id == slug)
+}
+
+/// The view a principal reads in: the observer it acts as and the sessions that observer belongs
+/// to (MEDULLA-DECISION-ENGINE-R652.9).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrincipalView {
+    pub observer: ObserverRef,
+    pub sessions: BTreeSet<String>,
+}
+
+/// The sessions of every thread that holds the participant node `iri`.
+fn sessions_of(core: &GraphCore, iri: &str) -> BTreeSet<String> {
+    core.get_predecessors(iri)
+        .unwrap_or_default()
+        .into_iter()
+        .filter(|id| id.starts_with(THREAD_NODE_PREFIX))
+        .filter_map(|id| node_properties(core, &id))
+        .filter(|props| props.get("type").and_then(serde_json::Value::as_str) == Some(THREAD_NODE_TYPE))
+        .filter_map(|props| props.get("session_id").and_then(serde_json::Value::as_str).map(str::to_string))
+        .collect()
+}
+
+/// The view `principal` reads in over the graph of `tenant_scope`. The participant is the stored
+/// one whose `acts_as` lists the principal; its sessions are the threads that hold it. Nothing a
+/// request carries widens the view: `requested` only chooses among the participants the principal
+/// acts as, and any other name, or an unnamed read by a principal acting as several, is
+/// `OBSERVER_NOT_PERMITTED`. Naming the system observer, or acting as no participant, reads as the
+/// shared system observer over no session. Participants of another tenant never bind.
+pub fn principal_view(
+    core: &GraphCore,
+    tenant_scope: &str,
+    principal: &str,
+    requested: Option<&ObserverRef>,
+) -> Result<PrincipalView, String> {
+    let not_permitted = |why: &str| refuse("OBSERVER_NOT_PERMITTED", why);
+    let acting: Vec<(String, Participant)> = stored_participants(core, tenant_scope)
+        .into_iter()
+        .filter(|(_, participant)| participant.acts_as.iter().any(|name| name == principal))
+        .collect();
+    let chosen = match requested {
+        Some(ObserverRef::System) => None,
+        Some(ObserverRef::Participant(wanted)) => Some(
+            acting
+                .iter()
+                .find(|(_, participant)| &participant.participant_id == wanted)
+                .ok_or_else(|| not_permitted(&format!("the principal does not act as {}", wanted.as_str())))?,
+        ),
+        None => match acting.as_slice() {
+            [] => None,
+            [only] => Some(only),
+            _ => {
+                return Err(not_permitted(
+                    "the principal acts as several participants; name one in as_observer",
+                ))
+            }
+        },
+    };
+    Ok(match chosen {
+        None => PrincipalView { observer: ObserverRef::System, sessions: BTreeSet::new() },
+        Some((iri, participant)) => PrincipalView {
+            observer: ObserverRef::Participant(participant.participant_id.clone()),
+            sessions: sessions_of(core, iri),
+        },
+    })
 }
 
 /// The `Route::Participant` entry: admit the operation, then commit its one write through the

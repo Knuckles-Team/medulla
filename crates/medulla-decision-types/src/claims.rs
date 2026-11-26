@@ -13,6 +13,52 @@ use serde::{Deserialize, Serialize};
 
 use medulla_types::contract::ServerErrorCode;
 use medulla_types::refusal_code::RefusalCode;
+pub use medulla_work_types::participant::ParticipantId;
+
+/// The property value of the shared observer (MEDULLA-DECISION-ENGINE-R652.9).
+pub const OBSERVER_SYSTEM: &str = "system";
+
+/// The prefix of a participant observer in the stored `observer` property.
+const OBSERVER_PARTICIPANT_PREFIX: &str = "participant:";
+
+/// Who an observation belongs to: the shared system view, or one participant.
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub enum ObserverRef {
+    /// The shared view every reader of the tenant may see.
+    System,
+    /// One participant's own view.
+    Participant(ParticipantId),
+}
+
+impl ObserverRef {
+    /// The value stored in the claim's `observer` property: `system`, or `participant:<slug>`.
+    pub fn as_property(&self) -> String {
+        match self {
+            ObserverRef::System => OBSERVER_SYSTEM.to_string(),
+            ObserverRef::Participant(id) => format!("{OBSERVER_PARTICIPANT_PREFIX}{}", id.as_str()),
+        }
+    }
+
+    /// Read a stored `observer` property back; `None` when it is neither form.
+    pub fn from_property(value: &str) -> Option<Self> {
+        if value == OBSERVER_SYSTEM {
+            return Some(ObserverRef::System);
+        }
+        let slug = value.strip_prefix(OBSERVER_PARTICIPANT_PREFIX)?;
+        ParticipantId::new(slug).ok().map(ObserverRef::Participant)
+    }
+}
+
+/// Whom a claim is about and whose view it belongs to (MEDULLA-DECISION-ENGINE-R652.9).
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct ClaimPerspective {
+    pub subject: ParticipantId,
+    pub observer: ObserverRef,
+}
 
 /// Largest evidence weight, in parts per million.
 pub const WEIGHT_PPM_MAX: u32 = 1_000_000;
@@ -242,6 +288,9 @@ pub struct Evidence {
     /// Weight in parts per million, `[0, WEIGHT_PPM_MAX]`.
     pub weight_ppm: u32,
     pub source_digest: String,
+    /// The session the evidence came from, when it came from one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub session_id: Option<String>,
     /// A machine-checked proof receipt; such evidence moves no log-odds.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub proof: Option<ProofReceipt>,
@@ -342,8 +391,13 @@ pub struct FeedGrade {
 #[serde(tag = "op", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
 pub enum ClaimOp {
-    /// Create a claim in `proposed`.
-    Propose { claim_id: String },
+    /// Create a claim in `proposed`, optionally about one participant as seen by one observer
+    /// (MEDULLA-DECISION-ENGINE-R652.9).
+    Propose {
+        claim_id: String,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        perspective: Option<ClaimPerspective>,
+    },
     /// Move a claim along one lifecycle edge.
     Advance { claim_id: String, to: ClaimState },
     /// Add one piece of evidence, with optional perspective stances and an
@@ -356,6 +410,9 @@ pub enum ClaimOp {
         supports: bool,
         weight_ppm: u32,
         source_digest: String,
+        /// The session the evidence came from (MEDULLA-DECISION-ENGINE-R652.9).
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        session_id: Option<String>,
         #[serde(default)]
         stances: BTreeMap<String, Stance>,
         #[serde(default)]
@@ -372,12 +429,19 @@ pub enum ClaimOp {
         code_specs: Vec<String>,
         exploration_edges: Vec<(String, String)>,
     },
-    /// Read one claim or one sealed artifact (exactly one id).
+    /// Read one claim or one sealed artifact (exactly one id). A claim is read in the view the
+    /// verified principal holds: the participant it acts as (`acts_as`) and the sessions that
+    /// participant belongs to. `as_observer` only chooses among the participants the principal
+    /// acts as; it never names a view the principal does not hold. A principal that acts as no
+    /// participant reads as the shared system observer over no session
+    /// (MEDULLA-DECISION-ENGINE-R652.9).
     Get {
         #[serde(default)]
         claim_id: Option<String>,
         #[serde(default)]
         artifact_id: Option<String>,
+        #[serde(default, skip_serializing_if = "Option::is_none")]
+        as_observer: Option<ObserverRef>,
     },
 }
 
@@ -416,6 +480,9 @@ pub enum ProofStanding {
 pub struct ClaimRecord {
     pub tenant_id: String,
     pub claim_id: String,
+    /// Whom the claim is about and whose view holds it; absent for a claim proposed without one.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub perspective: Option<ClaimPerspective>,
     pub state: ClaimState,
     /// Signed log-odds in micro-nats over the relevant evidence.
     pub log_odds_micro: i64,
@@ -453,6 +520,7 @@ mod tests {
             supports: true,
             weight_ppm: 750_000,
             source_digest: "sha256:aa".to_string(),
+            session_id: None,
             proof: None,
         }
     }

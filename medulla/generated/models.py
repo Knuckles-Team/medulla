@@ -34590,6 +34590,22 @@ class ClaimGetResult(BaseModel):
     claim: ClaimRecord | None = None
 
 
+class ObserverRefParticipant(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    participant: str
+
+
+ObserverRef = Literal["system"] | ObserverRefParticipant
+
+
+class ClaimPerspective(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    observer: ObserverRef
+    subject: str
+
+
 class ClaimOpAdvance(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -34613,6 +34629,7 @@ class ClaimOpGet(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     artifact_id: str | None = None
+    as_observer: ObserverRef | None = None
     claim_id: str | None = None
     op: Literal["get"]
 
@@ -34622,6 +34639,7 @@ class ClaimOpPropose(BaseModel):
 
     claim_id: str
     op: Literal["propose"]
+    perspective: ClaimPerspective | None = None
 
 
 class ProofStanding(str, Enum):
@@ -34655,6 +34673,7 @@ class ClaimOpRecordEvidence(BaseModel):
     feed: FeedItem | None = None
     op: Literal["record_evidence"]
     proof: ProofReceipt | None = None
+    session_id: str | None = None
     source_digest: str
     stances: dict[str, Stance] | None = None
     supports: bool
@@ -34669,6 +34688,7 @@ class ClaimRecord(BaseModel):
     evidence: list[Evidence]
     feeds: list[FeedGrade]
     log_odds_micro: int
+    perspective: ClaimPerspective | None = None
     proof_standing: ProofStanding = ProofStanding.UNPROVEN
     stances: dict[str, Stance]
     state: ClaimState
@@ -34994,6 +35014,7 @@ class Evidence(BaseModel):
     claim_id: str
     evidence_id: str
     proof: ProofReceipt | None = None
+    session_id: str | None = None
     source_digest: str
     supports: bool
     tenant_id: str
@@ -44555,6 +44576,8 @@ __all__ = [
     "ClaimNextResult",
     "ClaimNextResultValue",
     "ClaimOp",
+    "ClaimPerspective",
+    "ObserverRefParticipant",
     "ClaimOpAdvance",
     "ClaimOpCompileArtifact",
     "ClaimOpGet",

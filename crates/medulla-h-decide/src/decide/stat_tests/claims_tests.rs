@@ -7,8 +7,8 @@ use std::collections::BTreeMap;
 use super::*;
 use crate::decide::claims::handle_claims;
 use medulla_decision_types::claims::{
-    ClaimGetResult, ClaimOp, ClaimRecord, ClaimState, EvidenceChannel, ProofReceipt,
-    ProofVerdict, ResearchArtifact, Stance,
+    ClaimGetResult, ClaimOp, ClaimPerspective, ClaimRecord, ClaimState, EvidenceChannel,
+    ObserverRef, ParticipantId, ProofReceipt, ProofVerdict, ResearchArtifact, Stance,
 };
 
 const OTHER_TENANT: &str = "tenant-claims-other";
@@ -21,7 +21,7 @@ async fn call<T: serde::de::DeserializeOwned>(
 ) -> Result<T, String> {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant(who, tenant);
     // The refusal text is "CODE: detail"; these tests pin the typed code.
-    decode(handle_claims(&h.state, 3, &verified, op).await).map_err(|text| {
+    decode(handle_claims(&h.state, 3, "default", &verified, op).await).map_err(|text| {
         text.split_once(':')
             .map_or(text.as_str(), |(code, _)| code)
             .to_string()
@@ -35,6 +35,7 @@ async fn writer<T: serde::de::DeserializeOwned>(h: &Harness, op: ClaimOp) -> Res
 fn propose(claim_id: &str) -> ClaimOp {
     ClaimOp::Propose {
         claim_id: claim_id.to_string(),
+        perspective: None,
     }
 }
 
@@ -59,6 +60,7 @@ fn evidence(
         supports,
         weight_ppm,
         source_digest: format!("sha256:{evidence_id}"),
+        session_id: None,
         stances: BTreeMap::new(),
         feed: None,
         proof: None,
@@ -95,6 +97,7 @@ fn get_claim(claim_id: &str) -> ClaimOp {
     ClaimOp::Get {
         claim_id: Some(claim_id.to_string()),
         artifact_id: None,
+        as_observer: None,
     }
 }
 
@@ -102,6 +105,7 @@ fn get_artifact(artifact_id: &str) -> ClaimOp {
     ClaimOp::Get {
         claim_id: None,
         artifact_id: Some(artifact_id.to_string()),
+        as_observer: None,
     }
 }
 
@@ -552,4 +556,116 @@ async fn get_reports_proven_standing_from_receipt() {
     .await
     .unwrap();
     assert_eq!(read_claim(&h, failing).await.proof_standing, ProofStanding::Unproven);
+}
+
+/// Seed the request graph with the participants and threads a perspective test reads: the
+/// participant shape the participant surface stores (a `json` property under the tenant scope).
+async fn seed_participants(h: &Harness, tenant: &str, members: &[(&str, &str, &str)]) {
+    use medulla_work_types::participant::{Participant, ParticipantKind};
+    let guard = h.state.read().await;
+    let core = guard.registry.get("default").expect("request graph").core.clone();
+    for (slug, principal, session) in members {
+        let participant = Participant::new(
+            slug,
+            tenant,
+            "ws-main",
+            ParticipantKind::Person,
+            slug,
+            Some(&format!("person:{slug}")),
+            vec![(*principal).to_string()],
+        )
+        .unwrap();
+        core.add_node(
+            participant.iri(),
+            rmp_serde::to_vec_named(&serde_json::json!({
+                "type": "Participant",
+                "tenant_scope": tenant,
+                "json": serde_json::to_string(&participant).unwrap(),
+            }))
+            .unwrap(),
+        );
+        let thread = format!("transcript-thread:{session}");
+        core.add_node(
+            thread.clone(),
+            rmp_serde::to_vec_named(&serde_json::json!({
+                "type": "Transcript",
+                "connector": "ws-main",
+                "session_id": session,
+            }))
+            .unwrap(),
+        );
+        core.add_edge(
+            thread,
+            participant.iri(),
+            rmp_serde::to_vec_named(&serde_json::json!({"relationship": "hasParticipant"})).unwrap(),
+        )
+        .unwrap();
+    }
+}
+
+fn perspective_propose(claim_id: &str, subject: &str, observer: ObserverRef) -> ClaimOp {
+    ClaimOp::Propose {
+        claim_id: claim_id.to_string(),
+        perspective: Some(ClaimPerspective {
+            subject: ParticipantId::new(subject).unwrap(),
+            observer,
+        }),
+    }
+}
+
+// spec: MEDULLA-DECISION-ENGINE-R652.9
+#[tokio::test]
+async fn perspective_claims_hide_other_observers() {
+    let h = Harness::new().await;
+    seed_participants(&h, TENANT, &[("ada", "ada-principal", "s1"), ("bo", "bo-principal", "s2")]).await;
+    let ada = || ObserverRef::Participant(ParticipantId::new("ada").unwrap());
+    let bo = || ObserverRef::Participant(ParticipantId::new("bo").unwrap());
+
+    // Ada's own claim and a shared system claim, each grounded in session s1.
+    for (claim, observer) in [("c-ada", ada()), ("c-system", ObserverRef::System)] {
+        let stored: ClaimRecord =
+            call(&h, "ada-principal", TENANT, perspective_propose(claim, "ada", observer)).await.unwrap();
+        assert_eq!(stored.perspective.as_ref().unwrap().subject.as_str(), "ada");
+        let mut op = evidence(claim, &format!("{claim}-e1"), Some(EvidenceChannel::Outcome), true, 100_000);
+        if let ClaimOp::RecordEvidence { session_id, .. } = &mut op {
+            *session_id = Some("s1".to_string());
+        }
+        let _: ClaimRecord = call(&h, "ada-principal", TENANT, op).await.unwrap();
+    }
+    let read = |who: &'static str, tenant: &'static str, claim: &'static str, as_observer: Option<ObserverRef>| {
+        let h = &h;
+        async move {
+            call::<ClaimGetResult>(
+                h,
+                who,
+                tenant,
+                ClaimOp::Get { claim_id: Some(claim.to_string()), artifact_id: None, as_observer },
+            )
+            .await
+        }
+    };
+    // The observer reads its own claim and the system claim of its own session.
+    assert!(read("ada-principal", TENANT, "c-ada", None).await.unwrap().claim.is_some());
+    assert!(read("ada-principal", TENANT, "c-system", None).await.unwrap().claim.is_some());
+    // Another participant's principal sees neither: not its claim, and not its session.
+    assert_eq!(read("bo-principal", TENANT, "c-ada", None).await.unwrap_err(), "PARTICIPANT_NOT_VISIBLE");
+    assert_eq!(read("bo-principal", TENANT, "c-system", None).await.unwrap_err(), "PARTICIPANT_NOT_VISIBLE");
+    // A principal that acts as nobody reads as the system observer over no session.
+    assert_eq!(read("stranger", TENANT, "c-system", None).await.unwrap_err(), "PARTICIPANT_NOT_VISIBLE");
+    // A request cannot name a view the principal does not hold.
+    assert_eq!(
+        read("bo-principal", TENANT, "c-ada", Some(ada())).await.unwrap_err(),
+        "OBSERVER_NOT_PERMITTED"
+    );
+    assert!(read("bo-principal", TENANT, "c-ada", Some(bo())).await.is_err());
+
+    // Cross-tenant negative: another tenant neither reads the claim nor proposes a perspective
+    // over a participant it does not hold.
+    assert_eq!(read("ada-principal", OTHER_TENANT, "c-ada", None).await.unwrap_err(), "CLAIM_NOT_FOUND");
+    assert_eq!(
+        call::<ClaimRecord>(&h, "ada-principal", OTHER_TENANT, perspective_propose("x", "ada", ObserverRef::System))
+            .await
+            .unwrap_err(),
+        "PARTICIPANT_NOT_VISIBLE"
+    );
 }

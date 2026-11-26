@@ -396,7 +396,7 @@ const CLAIM_EVIDENCE_ITEMS: usize = 50;
 fn claims(rt: &Runtime, h: &Harness, op: ClaimOp) -> Response {
     let verified = VerifiedRequestContext::verified_for_test_in_tenant("bench", TENANT);
     rt.block_on(medulla_h_decide::decide::handle_claims(
-        &h.state, 1, &verified, op,
+        &h.state, 1, "default", &verified, op,
     ))
 }
 
@@ -417,6 +417,7 @@ fn bench_claims(c: &mut Criterion, rt: &Runtime, report: &mut BTreeMap<String, s
         &h,
         ClaimOp::Propose {
             claim_id: "bench-claim".to_string(),
+            perspective: None,
         },
     ));
     for index in 0..CLAIM_EVIDENCE_ITEMS {
@@ -430,8 +431,10 @@ fn bench_claims(c: &mut Criterion, rt: &Runtime, report: &mut BTreeMap<String, s
                 supports: index % 5 != 0,
                 weight_ppm: 20_000,
                 source_digest: format!("sha256:{index:064x}"),
+                session_id: None,
                 stances: BTreeMap::new(),
                 feed: None,
+                proof: None,
             },
         ));
     }
@@ -449,6 +452,7 @@ fn bench_claims(c: &mut Criterion, rt: &Runtime, report: &mut BTreeMap<String, s
             ClaimOp::Get {
                 claim_id: Some("bench-claim".to_string()),
                 artifact_id: None,
+                as_observer: None,
             },
         )));
         black_box(ok(claims(rt, &h, compile())));
@@ -458,6 +462,7 @@ fn bench_claims(c: &mut Criterion, rt: &Runtime, report: &mut BTreeMap<String, s
             ClaimOp::Get {
                 claim_id: None,
                 artifact_id: Some("bench-artifact".to_string()),
+                as_observer: None,
             },
         )));
     };
@@ -2294,8 +2299,10 @@ fn bench_belief_revision(
                 supports: item % 3 != 0,
                 weight_ppm: 50_000,
                 source_digest: format!("sha256:{claim:032x}{item:032x}"),
+                session_id: None,
                 stances: BTreeMap::new(),
                 feed: None,
+                proof: None,
             },
         );
         assert!(
@@ -2328,6 +2335,7 @@ fn bench_belief_revision(
             &h,
             ClaimOp::Propose {
                 claim_id: format!("belief-claim-{claim}"),
+                perspective: None,
             },
         );
         assert!(

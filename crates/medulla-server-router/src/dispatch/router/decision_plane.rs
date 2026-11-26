@@ -455,7 +455,14 @@ async fn dispatch_decision_methods(
         }
         Method::Claims { op } => {
             dispatch_boxed(async {
-                medulla_h_decide::decide::handle_claims(state, req.id, verified_context, *op).await
+                medulla_h_decide::decide::handle_claims(
+                    state,
+                    req.id,
+                    &req.graph,
+                    verified_context,
+                    *op,
+                )
+                .await
             })
             .await
         }

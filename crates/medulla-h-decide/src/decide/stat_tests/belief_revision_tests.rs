@@ -41,7 +41,7 @@ async fn belief_harness() -> Harness {
 }
 
 async fn claim_op<T: serde::de::DeserializeOwned>(h: &Harness, op: ClaimOp) -> Result<T, String> {
-    decode(handle_claims(&h.state, 3, &verified(TENANT), op).await)
+    decode(handle_claims(&h.state, 3, "default", &verified(TENANT), op).await)
 }
 
 async fn claim_with_evidence(h: &Harness, claim_id: &str, supports: bool, weight_ppm: u32) {
@@ -49,6 +49,7 @@ async fn claim_with_evidence(h: &Harness, claim_id: &str, supports: bool, weight
         h,
         ClaimOp::Propose {
             claim_id: claim_id.to_string(),
+            perspective: None,
         },
     )
     .await
@@ -62,6 +63,7 @@ async fn claim_with_evidence(h: &Harness, claim_id: &str, supports: bool, weight
             supports,
             weight_ppm,
             source_digest: format!("sha256:{claim_id}"),
+            session_id: None,
             stances: BTreeMap::new(),
             feed: None,
             proof: None,
@@ -113,6 +115,7 @@ async fn claim_of(h: &Harness, claim_id: &str) -> ClaimRecord {
         ClaimOp::Get {
             claim_id: Some(claim_id.into()),
             artifact_id: None,
+            as_observer: None,
         },
     )
     .await
@@ -185,6 +188,7 @@ async fn belief_refusals_leave_state_unchanged() {
             supports: false,
             weight_ppm: 1_000_000,
             source_digest: "sha256:disk-is-fast-2".to_string(),
+            session_id: None,
             stances: BTreeMap::new(),
             feed: None,
             proof: None,
@@ -197,6 +201,7 @@ async fn belief_refusals_leave_state_unchanged() {
         ClaimOp::Get {
             claim_id: Some("disk-is-fast".into()),
             artifact_id: None,
+            as_observer: None,
         },
     )
     .await
@@ -235,6 +240,7 @@ async fn belief_refusals_leave_state_unchanged() {
         ClaimOp::Get {
             claim_id: Some("disk-is-fast".into()),
             artifact_id: None,
+            as_observer: None,
         },
     )
     .await
@@ -353,6 +359,7 @@ async fn belief_pass_proposes_and_never_retracts() {
             supports: false,
             weight_ppm: 1_000_000,
             source_digest: "sha256:disk-is-fast-2".to_string(),
+            session_id: None,
             stances: BTreeMap::new(),
             feed: None,
             proof: None,
@@ -433,9 +440,11 @@ async fn belief_pass_proposes_and_never_retracts() {
         handle_claims(
             &h.state,
             3,
+            "default",
             &verified(OTHER_TENANT),
             ClaimOp::Propose {
                 claim_id: HIGHER.to_string(),
+                perspective: None,
             },
         )
         .await,

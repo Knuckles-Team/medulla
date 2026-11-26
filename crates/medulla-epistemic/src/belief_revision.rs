@@ -125,6 +125,7 @@ fn effective(item: &EvidenceInput, supports: bool, knobs: &BeliefKnobs) -> i64 {
         supports,
         weight_ppm: item.weight_ppm,
         source_digest: String::new(),
+        session_id: None,
         proof: None,
     };
     combine_evidence([&evidence], &claims).abs()

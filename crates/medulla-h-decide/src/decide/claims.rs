@@ -22,18 +22,45 @@ use medulla_server_api::authority_context::VerifiedRequestContext;
 pub async fn handle_claims(
     state: &SharedState,
     req_id: u64,
+    graph: &str,
     verified: &VerifiedRequestContext,
     op: ClaimOp,
 ) -> Response {
     #[cfg(feature = "statechart")]
     {
         let persist_dir = { state.read().await.persist_dir.clone() };
+        // A perspective names participants of the request graph; a read is judged in the view the
+        // verified principal holds there (MEDULLA-DECISION-ENGINE-R652.9).
+        let graph_view = match &op {
+            ClaimOp::Propose { perspective: Some(_), .. } | ClaimOp::Get { claim_id: Some(_), .. } => {
+                participants_of(state, graph).await
+            }
+            _ => None,
+        };
+        let checked = match (&op, graph_view.as_ref()) {
+            (ClaimOp::Propose { perspective: Some(perspective), .. }, view) => {
+                check_perspective(view, verified.tenant(), perspective)
+            }
+            _ => Ok(()),
+        };
+        if let Err(error) = checked {
+            return Response::err(req_id, error);
+        }
+        let reader = match &op {
+            ClaimOp::Get { claim_id: Some(_), as_observer, .. } => {
+                match reader_view(graph_view.as_ref(), verified, as_observer.as_ref()) {
+                    Ok(view) => Some(view),
+                    Err(error) => return Response::err(req_id, error),
+                }
+            }
+            _ => None,
+        };
         let served = served::ClaimStore::open(
             persist_dir.as_deref(),
             verified.tenant(),
             &verified.principal_persistence_id(),
         )
-        .and_then(|claims| claims.serve(op));
+        .and_then(|claims| claims.serve(op, reader.as_ref()));
         match served {
             Ok(payload) => Response::ok(req_id, payload),
             Err(error) => Response::err(req_id, error),
@@ -41,9 +68,63 @@ pub async fn handle_claims(
     }
     #[cfg(not(feature = "statechart"))]
     {
-        let _ = (state, verified, op);
+        let _ = (state, graph, verified, op);
         Response::err(req_id, "Claims requires the `statechart` feature")
     }
+}
+
+/// The core of the request graph, or `None` when the server holds no such graph (which holds no
+/// participant either).
+#[cfg(feature = "statechart")]
+async fn participants_of(
+    state: &SharedState,
+    graph: &str,
+) -> Option<std::sync::Arc<medulla_graph_core::graph::GraphCore>> {
+    state.read().await.registry.get(graph).map(|entry| entry.core.clone())
+}
+
+/// Refuse a perspective that names a participant outside the caller's tenant
+/// (`PARTICIPANT_NOT_VISIBLE`, the envelope an absent participant gets).
+#[cfg(feature = "statechart")]
+fn check_perspective(
+    core: Option<&std::sync::Arc<medulla_graph_core::graph::GraphCore>>,
+    tenant: &str,
+    perspective: &medulla_decision_types::claims::ClaimPerspective,
+) -> Result<(), String> {
+    use medulla_decision_types::claims::ObserverRef;
+    use medulla_h_graph::graph_ops::participant_surface::{participant_exists, participant_unavailable};
+    let named = std::iter::once(&perspective.subject).chain(match &perspective.observer {
+        ObserverRef::Participant(observer) => Some(observer),
+        ObserverRef::System => None,
+    });
+    for slug in named {
+        if !core.is_some_and(|core| participant_exists(core, tenant, slug)) {
+            return Err(participant_unavailable(slug.as_str()));
+        }
+    }
+    Ok(())
+}
+
+/// The view the verified principal reads claims in: the participant it acts as and the sessions
+/// that participant belongs to, read from the request graph. A principal that acts as no
+/// participant reads as the shared system observer over no session.
+#[cfg(feature = "statechart")]
+fn reader_view(
+    core: Option<&std::sync::Arc<medulla_graph_core::graph::GraphCore>>,
+    verified: &VerifiedRequestContext,
+    requested: Option<&medulla_decision_types::claims::ObserverRef>,
+) -> Result<medulla_epistemic::claims::ReaderView, String> {
+    use medulla_h_graph::graph_ops::participant_surface::principal_view;
+    let empty;
+    let core = match core {
+        Some(core) => core.as_ref(),
+        None => {
+            empty = medulla_graph_core::graph::GraphCore::new();
+            &empty
+        }
+    };
+    let view = principal_view(core, verified.tenant(), verified.agent_id(), requested)?;
+    Ok(medulla_epistemic::claims::ReaderView::of(view.observer, view.sessions))
 }
 
 #[cfg(feature = "statechart")]
@@ -59,8 +140,9 @@ pub(super) mod served {
         ResearchArtifact, Stance, WEIGHT_PPM_MAX,
     };
     use medulla_epistemic::claims::{
-        check_transition, combine_evidence, compile_artifact, contradiction_pairs,
-        feed_is_relevant, grade_feed, proof_standing, verify_seal, ClaimKnobs,
+        check_transition, claim_visible_to, combine_evidence, compile_artifact,
+        contradiction_pairs, feed_is_relevant, grade_feed, proof_standing, verify_seal, ClaimKnobs,
+        ReaderView,
     };
     use medulla_protocol_types::protocol::ResultPayload;
     use medulla_protocol_types::result_contract::coordination::{
@@ -72,6 +154,7 @@ pub(super) mod served {
     };
     use medulla_store::claim_statechart::{claim_statechart_def, research_artifact_statechart_def};
     use medulla_types::contract::ServerErrorCode;
+    use medulla_decision_types::claims::{ClaimPerspective, ObserverRef, ParticipantId};
 
     /// Domain of the instance keys.
     const KEY_DOMAIN: &str = "medulla-claims/v1";
@@ -147,6 +230,7 @@ pub(super) mod served {
         Ok(ClaimRecord {
             tenant_id: field(context, "tenant_id")?,
             claim_id: field(context, "claim_id")?,
+            perspective: perspective_of(context)?,
             state: state_of(instance)?,
             log_odds_micro: field(context, "log_odds_micro")?,
             transitions: field(context, "transitions")?,
@@ -157,6 +241,23 @@ pub(super) mod served {
             proof_standing: proof_standing(&evidence),
             evidence,
         })
+    }
+
+    /// The perspective stored as the claim's `subject` and `observer` properties; absent when the
+    /// claim was proposed without one.
+    fn perspective_of(context: &Context) -> Result<Option<ClaimPerspective>, String> {
+        let subject: Option<String> = field(context, "subject")?;
+        let observer: Option<String> = field(context, "observer")?;
+        match (subject, observer) {
+            (None, None) => Ok(None),
+            (Some(subject), Some(observer)) => Ok(Some(ClaimPerspective {
+                subject: ParticipantId::new(subject).map_err(|error| error.to_string())?,
+                observer: ObserverRef::from_property(&observer).ok_or_else(|| {
+                    format!("claim record observer {observer:?} is neither system nor a participant")
+                })?,
+            })),
+            _ => Err("claim record holds only one of subject and observer".to_string()),
+        }
     }
 
     fn payload_of<M>(body: M::Body) -> Result<ResultPayload, String>
@@ -201,10 +302,14 @@ pub(super) mod served {
         }
 
         /// Run one operation to its typed result.
-        pub(in crate::decide) fn serve(&self, op: ClaimOp) -> Result<ResultPayload, String> {
+        pub(in crate::decide) fn serve(
+            &self,
+            op: ClaimOp,
+            reader: Option<&ReaderView>,
+        ) -> Result<ResultPayload, String> {
             match op {
-                ClaimOp::Propose { claim_id } => {
-                    payload_of::<ClaimsPropose>(self.propose(&claim_id)?)
+                ClaimOp::Propose { claim_id, perspective } => {
+                    payload_of::<ClaimsPropose>(self.propose(&claim_id, perspective.as_ref())?)
                 }
                 ClaimOp::Advance { claim_id, to } => {
                     payload_of::<ClaimsAdvance>(self.advance(&claim_id, to)?)
@@ -216,6 +321,7 @@ pub(super) mod served {
                     supports,
                     weight_ppm,
                     source_digest,
+                    session_id,
                     stances,
                     feed,
                     proof,
@@ -227,6 +333,7 @@ pub(super) mod served {
                         supports,
                         weight_ppm,
                         source_digest,
+                        session_id,
                         proof,
                     )?;
                     payload_of::<ClaimsRecordEvidence>(
@@ -246,12 +353,9 @@ pub(super) mod served {
                     &code_specs,
                     &exploration_edges,
                 )?),
-                ClaimOp::Get {
-                    claim_id,
-                    artifact_id,
-                } => {
-                    payload_of::<ClaimsGet>(self.get(claim_id.as_deref(), artifact_id.as_deref())?)
-                }
+                ClaimOp::Get { claim_id, artifact_id, as_observer: _ } => payload_of::<ClaimsGet>(
+                    self.get(claim_id.as_deref(), artifact_id.as_deref(), reader)?,
+                ),
             }
         }
 
@@ -322,7 +426,11 @@ pub(super) mod served {
             Ok(outcome.instance)
         }
 
-        fn propose(&self, claim_id: &str) -> Result<ClaimRecord, String> {
+        fn propose(
+            &self,
+            claim_id: &str,
+            perspective: Option<&ClaimPerspective>,
+        ) -> Result<ClaimRecord, String> {
             if claim_id.is_empty() {
                 return Err(invalid("claim_id is empty"));
             }
@@ -336,6 +444,8 @@ pub(super) mod served {
                 serde_json::json!({
                     "tenant_id": self.tenant,
                     "claim_id": claim_id,
+                    "subject": perspective.map(|p| p.subject.as_str()),
+                    "observer": perspective.map(|p| p.observer.as_property()),
                     "transitions": [],
                     "evidence": [],
                     "log_odds_micro": 0,
@@ -391,6 +501,7 @@ pub(super) mod served {
             supports: bool,
             weight_ppm: u32,
             source_digest: String,
+            session_id: Option<String>,
             proof: Option<medulla_decision_types::claims::ProofReceipt>,
         ) -> Result<Evidence, String> {
             let Some(channel) = channel else {
@@ -413,6 +524,7 @@ pub(super) mod served {
                 supports,
                 weight_ppm,
                 source_digest,
+                session_id,
                 proof: proof.map(medulla_decision_types::claims::ProofReceipt::normalised),
             };
             // A proof receipt is checked before any state changes: a refusal
@@ -555,12 +667,21 @@ pub(super) mod served {
             &self,
             claim_id: Option<&str>,
             artifact_id: Option<&str>,
+            reader: Option<&ReaderView>,
         ) -> Result<ClaimGetResult, String> {
             match (claim_id, artifact_id) {
-                (Some(claim_id), None) => Ok(ClaimGetResult {
-                    claim: Some(record_of(&self.require("claim", claim_id)?)?),
-                    artifact: None,
-                }),
+                (Some(claim_id), None) => {
+                    let record = record_of(&self.require("claim", claim_id)?)?;
+                    let view = reader.ok_or_else(|| invalid("a claim read needs a reader view"))?;
+                    // A claim the reader's view excludes reads like an absent participant; another
+                    // tenant's claim never reaches here (instance ids derive from the tenant).
+                    if !claim_visible_to(&record, view) {
+                        return Err(format!(
+                            "PARTICIPANT_NOT_VISIBLE: claim {claim_id} is outside the reader's view"
+                        ));
+                    }
+                    Ok(ClaimGetResult { claim: Some(record), artifact: None })
+                }
                 (None, Some(artifact_id)) => {
                     let artifact = artifact_of(&self.require("artifact", artifact_id)?)?;
                     verify_seal(&artifact).map_err(|code| refuse(code, artifact_id))?;

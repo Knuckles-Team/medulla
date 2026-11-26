@@ -1085,9 +1085,25 @@ def feature_ledger_get_op(feature_ids: Sequence[str] = ()) -> dict[str, Any]:
     return {"op": "get", "feature_ids": list(feature_ids)}
 
 
-def claim_propose_op(claim_id: str) -> dict[str, Any]:
-    """Create a claim in ``proposed``."""
-    return {"op": "propose", "claim_id": claim_id}
+def observer_wire(participant_id: str | None = None) -> str | dict[str, str]:
+    """An ``ObserverRef``: ``"system"``, or one participant's own view."""
+    if participant_id is None:
+        return "system"
+    return {"participant": participant_id}
+
+
+def claim_propose_op(
+    claim_id: str,
+    *,
+    subject: str | None = None,
+    observer: str | dict[str, str] = "system",
+) -> dict[str, Any]:
+    """Create a claim in ``proposed``; with a ``subject`` it is about that
+    participant as seen by ``observer`` (R652.9)."""
+    op: dict[str, Any] = {"op": "propose", "claim_id": claim_id}
+    if subject is not None:
+        op["perspective"] = {"subject": subject, "observer": observer}
+    return op
 
 
 def claim_advance_op(claim_id: str, to: str) -> dict[str, Any]:
@@ -1106,6 +1122,7 @@ def claim_evidence_op(
     stances: Mapping[str, str] | None = None,
     feed: Mapping[str, Any] | None = None,
     proof: Mapping[str, Any] | None = None,
+    session_id: str | None = None,
 ) -> dict[str, Any]:
     """Record one piece of evidence; ``stances`` maps perspective to stance.
 
@@ -1125,6 +1142,8 @@ def claim_evidence_op(
     }
     if proof is not None:
         op["proof"] = dict(proof)
+    if session_id is not None:
+        op["session_id"] = session_id
     return op
 
 
@@ -1148,10 +1167,18 @@ def claim_compile_op(
 
 
 def claim_get_op(
-    *, claim_id: str | None = None, artifact_id: str | None = None
+    *,
+    claim_id: str | None = None,
+    artifact_id: str | None = None,
+    as_observer: str | dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Read one claim or one sealed artifact (exactly one id)."""
-    return {"op": "get", "claim_id": claim_id, "artifact_id": artifact_id}
+    """Read one claim or one sealed artifact (exactly one id). A claim is read in
+    the view the verified principal holds; ``as_observer`` only chooses among the
+    participants it acts as."""
+    op: dict[str, Any] = {"op": "get", "claim_id": claim_id, "artifact_id": artifact_id}
+    if as_observer is not None:
+        op["as_observer"] = as_observer
+    return op
 
 
 def profile_share(role: str, action: str, effect: str = "Allow") -> dict[str, Any]:
@@ -1869,6 +1896,7 @@ __all__ = [
     "DecisionClient",
     "DeclaredOption",
     "add_member_op",
+    "observer_wire",
     "aggregate_op",
     "assistant_profile_wire",
     "belief_revise_request",
