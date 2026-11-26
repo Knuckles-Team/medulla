@@ -78,6 +78,7 @@ pub(crate) fn kind(spec: &ForeignSourceSpec) -> Option<&'static str> {
         ForeignSourceSpec::Api { .. } => Some("api"),
         ForeignSourceSpec::Mcp { .. } => Some("mcp"),
         ForeignSourceSpec::A2a { .. } => Some("a2a"),
+        ForeignSourceSpec::EventStream { .. } => Some("event-stream"),
         ForeignSourceSpec::GraphQl { .. } => Some("graphql"),
         ForeignSourceSpec::BrainGuarded { .. } => Some("brain-guarded"),
         ForeignSourceSpec::Metastore { .. } => Some("metastore"),

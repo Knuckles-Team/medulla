@@ -7698,6 +7698,22 @@ class ForeignSourceSpecCypherBody(BaseModel):
     score_field: str | None = None
 
 
+class ForeignSourceSpecEventStream(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    EventStream: ForeignSourceSpecEventStreamBody
+
+
+class ForeignSourceSpecEventStreamBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    capabilities: ForeignOperationCapabilities | None = None
+    from_ms: Annotated[int, Field(ge=0)] | None = None
+    server: str
+    to_ms: Annotated[int, Field(ge=0)] | None = None
+    tool: str
+
+
 class ForeignSourceSpecGraphQl(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -32820,6 +32836,7 @@ ForeignSourceSpec = (
     | ForeignSourceSpecMetastore
     | ForeignSourceSpecWarehouse
     | ForeignSourceSpecClickHouse
+    | ForeignSourceSpecEventStream
 )
 
 FuseClock = FuseClockUniform | FuseClockTumbling
@@ -44692,6 +44709,8 @@ __all__ = [
     "ForeignSourceSpecBrainGuardedBody",
     "ForeignSourceSpecCypher",
     "ForeignSourceSpecCypherBody",
+    "ForeignSourceSpecEventStream",
+    "ForeignSourceSpecEventStreamBody",
     "ForeignSourceSpecGraphQl",
     "ForeignSourceSpecGraphQlBody",
     "ForeignSourceSpecHttpJson",

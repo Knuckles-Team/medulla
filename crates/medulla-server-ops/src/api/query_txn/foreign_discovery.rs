@@ -198,6 +198,7 @@ pub fn category_of(spec: &ForeignSourceSpec) -> SourceCategory {
         ForeignSourceSpec::HttpJson { .. }
         | ForeignSourceSpec::Api { .. }
         | ForeignSourceSpec::A2a { .. }
+        | ForeignSourceSpec::EventStream { .. }
         | ForeignSourceSpec::GraphQl { .. }
         | ForeignSourceSpec::Named { .. } => SourceCategory::DocumentStore,
     }

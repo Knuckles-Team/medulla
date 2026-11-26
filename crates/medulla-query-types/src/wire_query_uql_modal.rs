@@ -258,6 +258,7 @@ pub(super) fn foreign_scan(source: &ForeignSourceSpec, join: bool) -> Printed {
         | ForeignSourceSpec::Api { .. }
         | ForeignSourceSpec::Mcp { .. }
         | ForeignSourceSpec::A2a { .. }
+        | ForeignSourceSpec::EventStream { .. }
         | ForeignSourceSpec::GraphQl { .. }
         | ForeignSourceSpec::SqliteFile { .. }
         | ForeignSourceSpec::Metastore { .. }

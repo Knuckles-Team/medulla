@@ -695,7 +695,7 @@ Each row below names the test that proves it as `path::name`. State `exists` mea
 | MEDULLA-FEDERATED-QUERY-R081.5 | `tests/retrieval_round_served.rs::sufficiency_premise_lists_all_six_fields` | exists |
 | MEDULLA-FEDERATED-QUERY-R081.6 | `tests/retrieval/test_sufficiency_served.py::test_insufficient_returns_boost_k` | planned |
 | MEDULLA-FEDERATED-QUERY-R081.7.1 | `crates/medulla-result-types/src/retrieval_verdict.rs::selection_contract_round_trips_and_refuses_invalid_inputs` | exists |
-| MEDULLA-FEDERATED-QUERY-R073.2 | `tests/query/test_virtual_mapping_pushdown_served.py::test_stream_pushes_time_range_only` | planned |
+| MEDULLA-FEDERATED-QUERY-R073.2 | `tests/federation/test_stream_pushdown_served.py::test_stream_pushes_time_range_only` | planned |
 | MEDULLA-FEDERATED-QUERY-R078.2 | `tests/plan_scope_tenant.rs::only_own_rows_return` | planned |
 | MEDULLA-FEDERATED-QUERY-R079.6 | `tests/lake_manifest_interoperability.rs::external_reader_loads_v2_manifests` | exists |
 | MEDULLA-FEDERATED-QUERY-R081.3 | `tests/retrieval_round_served.rs::served_round_returns_verdict_beside_rows` | planned |

@@ -1231,6 +1231,7 @@ fn validate_search_capability(spec: &ForeignSourceSpec) -> Result<(), String> {
         ForeignSourceSpec::Api { capabilities, .. }
         | ForeignSourceSpec::Mcp { capabilities, .. }
         | ForeignSourceSpec::A2a { capabilities, .. }
+        | ForeignSourceSpec::EventStream { capabilities, .. }
         | ForeignSourceSpec::GraphQl { capabilities, .. } => capabilities,
         _ => return Ok(()),
     };

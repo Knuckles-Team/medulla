@@ -229,6 +229,7 @@ pub fn source_for(spec: &ForeignSourceSpec) -> Box<dyn ForeignSource + '_> {
         | ForeignSourceSpec::Api { .. }
         | ForeignSourceSpec::Mcp { .. }
         | ForeignSourceSpec::A2a { .. }
+        | ForeignSourceSpec::EventStream { .. }
         | ForeignSourceSpec::GraphQl { .. }
         | ForeignSourceSpec::Metastore { .. }
         | ForeignSourceSpec::BrainGuarded { .. } => Box::new(Oq2Unbound {

@@ -209,12 +209,17 @@ class WebGateway:
         }
     )
     raw_uncleared: set[str] = field(default_factory=lambda: {"raw-doc-2"})
+    # Event-stream tool calls (MEDULLA-FEDERATED-QUERY-R073.2): each call as posted.
+    stream_calls: list[dict] = field(default_factory=list)
 
     @property
     def row_calls(self) -> int:
         return len(self.calls)
 
 
+STREAM_SERVER = "events-mcp"
+STREAM_TOOL = "read_events"
+STREAM_EVENTS = ["ev-1", "ev-2", "ev-3"]
 RAW_SERVER = "docs-mcp"
 RAW_IDS = ["raw-doc-1", "raw-doc-2", "raw-doc-3"]
 
@@ -266,6 +271,8 @@ def web_gateway() -> Iterator[WebGateway]:
                         if known
                         else ["query", "k", "offset"]
                         if searchable
+                        else ["from_ms", "to_ms"]
+                        if body.get("server") == STREAM_SERVER
                         else None
                     )
                 }
@@ -281,6 +288,15 @@ def web_gateway() -> Iterator[WebGateway]:
                 }
             elif op == "web_capability":
                 reply = {"capability": RECORDED["capability"] if known else None}
+            elif op == "rows" and body["request"]["server"] == STREAM_SERVER:
+                request = body["request"]
+                gateway.stream_calls.append(request)
+                reply = {
+                    "source_label": request["source_label"],
+                    "rows": [{"id": event, "score": None} for event in STREAM_EVENTS],
+                    "truncated": False,
+                    "missing_source": None,
+                }
             elif op == "raw":
                 request = body["request"]
                 gateway.raw_calls.append(request)

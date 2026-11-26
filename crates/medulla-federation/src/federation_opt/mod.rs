@@ -39,6 +39,7 @@ mod raw;
 mod run;
 mod search;
 mod session;
+mod stream;
 mod snapshot;
 mod sql;
 mod stats;

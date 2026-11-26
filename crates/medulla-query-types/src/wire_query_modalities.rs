@@ -484,6 +484,23 @@ pub enum ForeignSourceSpec {
         #[serde(default)]
         capabilities: ForeignOperationCapabilities,
     },
+    /// An event-stream source (MEDULLA-FEDERATED-QUERY-R073.2): the registered stream tool
+    /// `tool` of the MCP server `server` returns the events of a time range. The protocol's
+    /// matrix row permits a time range and nothing else, so the planner pushes the window
+    /// `[from_ms, to_ms)` (unix milliseconds, each end optional) and never a key lookup, a
+    /// limit or a filter; the rest is the local residual. Never carries a credential.
+    EventStream {
+        server: String,
+        tool: String,
+        /// Inclusive start of the event time to read; unbounded when absent.
+        #[serde(default)]
+        from_ms: Option<u64>,
+        /// Exclusive end of the event time to read; unbounded when absent.
+        #[serde(default)]
+        to_ms: Option<u64>,
+        #[serde(default)]
+        capabilities: ForeignOperationCapabilities,
+    },
     /// An operation-bound GraphQL source (CONCEPT:MEDULLA-KG.query.query-federation, FQR-11).
     /// `endpoint` names the registered GraphQL endpoint; `operation` the named query
     /// a mapped entity's discovered operation runs.

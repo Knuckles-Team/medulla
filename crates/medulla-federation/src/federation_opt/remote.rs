@@ -99,6 +99,7 @@ impl Identity {
             ForeignSourceSpec::Api { .. } => "api",
             ForeignSourceSpec::Mcp { .. } => "mcp",
             ForeignSourceSpec::A2a { .. } => "a2a",
+            ForeignSourceSpec::EventStream { .. } => "event-stream",
             ForeignSourceSpec::GraphQl { .. } => "graphql",
         };
         Self::labelled(kind, name, fp)
@@ -350,6 +351,21 @@ fn from_spec<'a>(
             super::mcp::McpRemote::new(
                 (server, tool),
                 (capabilities.key_filter_pushdown, capabilities.search),
+                super::mcp::registered_port(),
+                identity,
+            )
+            .with_quota(quota),
+        ),
+        ForeignSourceSpec::EventStream {
+            server,
+            tool,
+            from_ms,
+            to_ms,
+            ..
+        } => Box::new(
+            super::stream::StreamRemote::new(
+                (server, tool),
+                (*from_ms, *to_ms),
                 super::mcp::registered_port(),
                 identity,
             )
