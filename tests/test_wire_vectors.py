@@ -315,3 +315,26 @@ def test_every_served_method_has_a_vector(rust_vectors: dict[str, Any]) -> None:
         if method not in request_tags:
             failures.append(f"{method}: not a request tag of models.Method")
     assert not failures, "\n".join(failures)
+
+
+@pytest.mark.spec("MEDULLA-CONTRACT-R001.1")
+def test_manifest_lists_every_exported_type() -> None:
+    # spec: MEDULLA-CONTRACT-R001.1
+    from typing import get_args, get_type_hints
+
+    from medulla.generated import _ids
+
+    variants = get_args(get_args(models.Method)[0])
+    declared = sorted(get_args(get_type_hints(cls)["method"])[0] for cls in variants)
+    assert declared, "models.Method has no variants"
+    # The manifest names exactly the request tags of the variants: no digest, no extras.
+    assert set(_manifest.MANIFEST) == {"contract_revision", "exported_types"}
+    assert _manifest.MANIFEST["exported_types"] == tuple(declared)
+    assert len(set(declared)) == len(declared), "a request tag is declared twice"
+    assert set(declared) <= _ids.METHOD_IDS, "a tag the contract does not publish"
+    assert isinstance(_manifest.MANIFEST["contract_revision"], str)
+    assert _manifest.MANIFEST["contract_revision"]
+    # Every id a consumer rehydrates resolves to its model: a variant class per tag.
+    classes = {name for name in dir(models) if name.startswith("Method")}
+    for tag in declared:
+        assert f"Method{tag}" in classes, f"{tag} has no models.Method{tag}"

@@ -21,8 +21,11 @@ def exported_type_ids() -> tuple[str, ...]:
 
     The tag is read from the variant's raw class annotation, not its model
     fields: the variants defer their schema build, and touching ``model_fields``
-    mid-import would build them before the module finishes loading.
+    mid-import would build them before the module finishes loading. Under
+    ``from __future__ import annotations`` the annotation is the source text
+    ``Literal['Tag']``, so the tag is read from that text.
     """
+    import re
     from typing import get_args
 
     from . import models
@@ -30,8 +33,17 @@ def exported_type_ids() -> tuple[str, ...]:
     union = get_args(models.Method)[0]
     tags = []
     for cls in get_args(union):
-        args = get_args(cls.__annotations__.get("method"))
-        tags.append(args[0] if args else str(cls.__annotations__.get("method")))
+        annotation = cls.__annotations__.get("method")
+        if isinstance(annotation, str):
+            found = re.fullmatch(
+                r"Literal\[\s*['\"]([^'\"]+)['\"]\s*\]", annotation.strip()
+            )
+            if found is None:
+                raise TypeError(f"{cls.__name__}.method is not a single literal tag")
+            tags.append(found.group(1))
+        else:
+            (tag,) = get_args(annotation)
+            tags.append(tag)
     return tuple(sorted(tags))
 
 
