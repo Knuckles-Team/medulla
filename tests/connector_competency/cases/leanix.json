@@ -3,9 +3,9 @@
   "rollup": "MEDULLA-CQ-CONN-R032",
   "vocabulary_module": "enterprise-v1.ttl",
   "terms": [
+    "activeUserCount",
     "factSheetType",
-    "lifecyclePhase",
-    "activeUserCount"
+    "lifecyclePhase"
   ],
   "questions": [
     {
@@ -28,6 +28,35 @@
       "min_rows": 1,
       "recordings": [
         "leanix-agent/single.json"
+      ]
+    },
+    {
+      "id": "leanix.q2",
+      "kind": "cross",
+      "question": "Which end-of-life LeanIX applications still have an active ServiceNow CI and open incidents?",
+      "uql": "LET s0 = FOREIGN SCAN 'leanix-agent'; LET s1 = FOREIGN SCAN 'archimate-mcp'; LET s2 = FOREIGN SCAN 'servicenow-api'; JOIN s0, s1, s2",
+      "sources": [
+        "leanix-agent",
+        "archimate-mcp",
+        "servicenow-api"
+      ],
+      "optional_sources": [],
+      "source_kinds": {
+        "leanix-agent": "mcp_tool",
+        "archimate-mcp": "mcp_tool",
+        "servicenow-api": "http_endpoint"
+      },
+      "columns": [
+        "application",
+        "configurationItem",
+        "incident"
+      ],
+      "min_rows": 1,
+      "recordings": [
+        "leanix-agent/cross_leanix.json",
+        "archimate-mcp/cross_leanix.json",
+        "leanix-agent/cross_leanix.json",
+        "servicenow-api/cross_leanix.json"
       ]
     }
   ]

@@ -1,0 +1,18 @@
+{
+  "source": "archimate-mcp",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "configurationItem": "configurationItem-1",
+      "joinKey": "leanix.q2-key-1",
+      "id": "archimate-mcp-leanix.q2-1",
+      "label": "archimate-mcp 1"
+    },
+    {
+      "configurationItem": "configurationItem-2",
+      "joinKey": "leanix.q2-key-2",
+      "id": "archimate-mcp-leanix.q2-2",
+      "label": "archimate-mcp 2"
+    }
+  ]
+}

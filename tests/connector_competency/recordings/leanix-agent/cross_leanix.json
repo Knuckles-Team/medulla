@@ -1,0 +1,18 @@
+{
+  "source": "leanix-agent",
+  "as_of": "2026-11-26T00:00:00Z",
+  "items": [
+    {
+      "application": "application-1",
+      "joinKey": "leanix.q2-key-1",
+      "id": "leanix-agent-leanix.q2-1",
+      "label": "leanix-agent 1"
+    },
+    {
+      "application": "application-2",
+      "joinKey": "leanix.q2-key-2",
+      "id": "leanix-agent-leanix.q2-2",
+      "label": "leanix-agent 2"
+    }
+  ]
+}
