@@ -18,6 +18,33 @@ use medulla_persistence_records::connector_pack::descriptor::{
 use medulla_rdf::oxrdf::{NamedOrBlankNode, Triple};
 use medulla_types::contract::TenantId;
 
+/// The `cp:Capability` nodes among `triples`, keyed by their rendered subject.
+///
+/// One pass over the triples. The projection now carries every triple the pack
+/// ontologies declare, so deciding "is this subject a capability" by rescanning all
+/// triples per subject (as `is_typed` does) was quadratic in the pack size.
+fn capability_subjects(triples: &[Triple]) -> BTreeMap<String, NamedOrBlankNode> {
+    let class = format!("{CP}Capability");
+    triples
+        .iter()
+        .inspect(|_| {
+            #[cfg(test)]
+            SUBJECT_SCAN_VISITS.with(|visits| visits.set(visits.get() + 1));
+        })
+        .filter(|t| {
+            t.predicate.as_str() == RDF_TYPE
+                && matches!(&t.object, Term::NamedNode(n) if n.as_str() == class)
+        })
+        .map(|t| (t.subject.to_string(), t.subject.clone()))
+        .collect()
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Triples visited by [`capability_subjects`] on this thread (complexity pin).
+    static SUBJECT_SCAN_VISITS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
 /// Replace every declared `cp:Capability` node of `individuals` (and the ports
 /// it consumes) by the canonical triples of its validated descriptor. Every
 /// other individual passes through. Descriptors come back in capability-id
@@ -26,12 +53,7 @@ pub(super) fn persist_descriptors(
     tenant: &str,
     individuals: Vec<Triple>,
 ) -> Result<Vec<Triple>, String> {
-    let subjects: BTreeMap<String, NamedOrBlankNode> = individuals
-        .iter()
-        .map(|t| &t.subject)
-        .filter(|s| is_typed(&individuals, s, "Capability"))
-        .map(|s| (s.to_string(), s.clone()))
-        .collect();
+    let subjects = capability_subjects(&individuals);
     if subjects.is_empty() {
         return Ok(individuals);
     }
@@ -193,5 +215,34 @@ mod tests {
         }
         // A complete descriptor is not refused.
         assert!(persist_descriptors("tenant-a", declared(&[])).is_ok());
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R650.2.1
+    #[test]
+    fn capability_subject_discovery_is_one_pass_over_the_pack_triples() {
+        let ty = NamedNode::new_unchecked(RDF_TYPE);
+        let mut triples = declared(&[]);
+        for i in 0..5_000 {
+            let subject = NamedNode::new_unchecked(format!("urn:pack:class/{i}"));
+            triples.push(Triple::new(
+                subject.clone(),
+                ty.clone(),
+                Term::from(NamedNode::new_unchecked("http://www.w3.org/2002/07/owl#Class")),
+            ));
+            triples.push(Triple::new(
+                subject,
+                NamedNode::new_unchecked("http://www.w3.org/2000/01/rdf-schema#label"),
+                Term::from(Literal::new_simple_literal("c")),
+            ));
+        }
+        SUBJECT_SCAN_VISITS.with(|visits| visits.set(0));
+        let out = persist_descriptors("tenant-a", triples.clone()).unwrap();
+        let visits = SUBJECT_SCAN_VISITS.with(|visits| visits.get());
+        assert_eq!(
+            visits,
+            triples.len(),
+            "capability discovery must visit each triple once, not once per subject"
+        );
+        assert!(out.len() >= 10_000, "every non-capability triple passes through");
     }
 }
