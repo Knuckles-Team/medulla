@@ -16,7 +16,7 @@
 
 use std::collections::{HashMap, VecDeque};
 use std::panic::Location;
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -156,7 +156,7 @@ struct Live {
 }
 
 struct Inner {
-    capacity: usize,
+    capacity: AtomicUsize,
     next_id: AtomicU64,
     dropped: AtomicU64,
     live: Mutex<Live>,
@@ -173,12 +173,18 @@ impl TaskRegistry {
     pub fn new(capacity: usize) -> Self {
         Self {
             inner: Arc::new(Inner {
-                capacity,
+                capacity: AtomicUsize::new(capacity),
                 next_id: AtomicU64::new(1),
                 dropped: AtomicU64::new(0),
                 live: Mutex::new(Live::default()),
             }),
         }
+    }
+
+    /// Set the live-entry capacity (`observe.task_registry_capacity`, read once at start). Rows
+    /// already listed stay listed when the capacity is lowered below their count.
+    pub fn set_capacity(&self, capacity: usize) {
+        self.inner.capacity.store(capacity, Ordering::Relaxed);
     }
 
     /// Jobs this registry could not list since it was built.
@@ -218,7 +224,9 @@ impl TaskRegistry {
 
     fn list(&self, name: String, cell: &Cell) -> bool {
         let mut live = self.inner.live.lock();
-        if live.by_name.len() >= self.inner.capacity || live.by_name.contains_key(&name) {
+        if live.by_name.len() >= self.inner.capacity.load(Ordering::Relaxed)
+            || live.by_name.contains_key(&name)
+        {
             drop(live);
             self.inner.dropped.fetch_add(1, Ordering::Relaxed);
             tracing::warn!(

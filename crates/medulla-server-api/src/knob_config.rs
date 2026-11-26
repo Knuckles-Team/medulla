@@ -457,6 +457,24 @@ knobs! {
     observe_worker_spin_busy_ratio: f64 = "observe.worker_spin_busy_ratio", F64(0.9), [0.5, 1.0], "ratio", Tunable;
     /// A lock held this long logs at WARN with its holder (MEDULLA-OBSERVE-R006.4).
     observe_lock_hold_warn_ms: u64 = "observe.lock_hold_warn_ms", U64(5_000), [100, 600_000], "ms", Tunable;
+    /// A Running or Progressing task whose last progress is older than this is marked stalled by the watchdog (MEDULLA-OBSERVE-R005.2).
+    observe_task_stall_after_ms: u64 = "observe.task_stall_after_ms", U64(60_000), [100, 3_600_000], "ms", Tunable;
+    /// Time between two scans of the live tasks by the stall watchdog (MEDULLA-OBSERVE-R005.2).
+    observe_stall_check_interval_ms: u64 = "observe.stall_check_interval_ms", U64(5_000), [50, 60_000], "ms", Tunable;
+    /// Longest the `Health` call and the `/readyz` probe wait for the server state before they answer degraded (MEDULLA-OBSERVE-R007.3).
+    observe_health_deadline_ms: u64 = "observe.health_deadline_ms", U64(2_000), [100, 30_000], "ms", Tunable;
+    /// Transition events the ring keeps; the oldest leave first (MEDULLA-OBSERVE-R004.4).
+    observe_event_ring_capacity: u64 = "observe.event_ring_capacity", U64(4_096), [256, 65_536], "events", Tunable;
+    /// Live entries the task registry lists; a job that does not fit still runs unlisted (MEDULLA-OBSERVE-R003.1).
+    observe_task_registry_capacity: u64 = "observe.task_registry_capacity", U64(4_096), [64, 65_536], "tasks", Tunable;
+    /// Equal cursors in a row after which a progress guard fails its loop with NO_PROGRESS (MEDULLA-OBSERVE-R005.1).
+    observe_progress_idle_limit: u64 = "observe.progress_idle_limit", U64(2), [1, 100], "iterations", Tunable;
+    /// Boot reports kept in the control store (MEDULLA-OBSERVE-R008.2).
+    observe_startup_reports_kept: u64 = "observe.startup_reports_kept", U64(8), [1, 64], "reports", Tunable;
+    /// Sampling rate of the stack profiler (MEDULLA-OBSERVE-R010.1).
+    observe_profile_hz: u64 = "observe.profile_hz", U64(99), [10, 1_000], "Hz", Tunable;
+    /// Longest one profile call may sample; fixed (MEDULLA-OBSERVE-R010.1).
+    observe_profile_max_seconds: u64 = "observe.profile_max_seconds", U64(60), [60, 60], "s", Fixed;
     /// Memory search-state size cap.
     memory_search_state_max_bytes: u64 = "memory.search_state_max_bytes", U64(1_048_576), [65_536, 1_048_576], "bytes", Tunable;
     /// Turns after which a pending derivation range is due at once (MEDULLA-DECISION-ENGINE-R651.11).
@@ -1243,6 +1261,16 @@ pub fn install(config: KnobConfig) {
     // The observability registries sit below this crate and cannot read the knobs.
     medulla_observe::runtime_sampler().set_spin_busy_ratio(config.observe_worker_spin_busy_ratio);
     medulla_observe::locks().set_hold_warn_ms(config.observe_lock_hold_warn_ms);
+    medulla_observe::settings::set_task_stall_after_ms(config.observe_task_stall_after_ms);
+    medulla_observe::settings::set_stall_check_interval_ms(config.observe_stall_check_interval_ms);
+    medulla_observe::settings::set_health_deadline_ms(config.observe_health_deadline_ms);
+    medulla_observe::settings::set_startup_reports_kept(config.observe_startup_reports_kept);
+    medulla_observe::settings::set_profile_hz(config.observe_profile_hz);
+    medulla_observe::events().set_capacity(config.observe_event_ring_capacity as usize);
+    medulla_observe::global().set_capacity(config.observe_task_registry_capacity as usize);
+    medulla_observe::progress::set_progress_idle_limit(
+        u32::try_from(config.observe_progress_idle_limit).unwrap_or(u32::MAX),
+    );
     if INSTALLED.set(config).is_ok() {
         // The graph cores read the retention bound at write time and cannot see this
         // crate, so the resolved value is handed to them once, here.
@@ -1339,6 +1367,60 @@ pub fn scheduler_config_from(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // spec: MEDULLA-OBSERVE-R011
+    #[test]
+    fn observe_knobs_have_defaults_bounds_and_units() {
+        // name, default, minimum, maximum, unit, class: the rows of data-model.md.
+        let expect: [(&str, KnobValue, KnobValue, KnobValue, &str, KnobClass); 11] = [
+            ("observe.task_stall_after_ms", KnobValue::U64(60_000), KnobValue::U64(100), KnobValue::U64(3_600_000), "ms", KnobClass::Tunable),
+            ("observe.stall_check_interval_ms", KnobValue::U64(5_000), KnobValue::U64(50), KnobValue::U64(60_000), "ms", KnobClass::Tunable),
+            ("observe.health_deadline_ms", KnobValue::U64(2_000), KnobValue::U64(100), KnobValue::U64(30_000), "ms", KnobClass::Tunable),
+            ("observe.event_ring_capacity", KnobValue::U64(4_096), KnobValue::U64(256), KnobValue::U64(65_536), "events", KnobClass::Tunable),
+            ("observe.task_registry_capacity", KnobValue::U64(4_096), KnobValue::U64(64), KnobValue::U64(65_536), "tasks", KnobClass::Tunable),
+            ("observe.progress_idle_limit", KnobValue::U64(2), KnobValue::U64(1), KnobValue::U64(100), "iterations", KnobClass::Tunable),
+            ("observe.worker_spin_busy_ratio", KnobValue::F64(0.9), KnobValue::F64(0.5), KnobValue::F64(1.0), "ratio", KnobClass::Tunable),
+            ("observe.lock_hold_warn_ms", KnobValue::U64(5_000), KnobValue::U64(100), KnobValue::U64(600_000), "ms", KnobClass::Tunable),
+            ("observe.startup_reports_kept", KnobValue::U64(8), KnobValue::U64(1), KnobValue::U64(64), "reports", KnobClass::Tunable),
+            ("observe.profile_hz", KnobValue::U64(99), KnobValue::U64(10), KnobValue::U64(1_000), "Hz", KnobClass::Tunable),
+            ("observe.profile_max_seconds", KnobValue::U64(60), KnobValue::U64(60), KnobValue::U64(60), "s", KnobClass::Fixed),
+        ];
+        for (name, default, min, max, unit, class) in expect {
+            let spec = KNOB_TABLE
+                .iter()
+                .find(|spec| spec.name == name)
+                .unwrap_or_else(|| panic!("{name} is not a row of the knob table"));
+            assert_eq!(spec.default, default, "{name} default");
+            assert_eq!(spec.min, min, "{name} minimum");
+            assert_eq!(spec.max, max, "{name} maximum");
+            assert_eq!(spec.unit, unit, "{name} unit");
+            assert_eq!(spec.class, class, "{name} class");
+        }
+        // Every row of the observe group is one the data model lists.
+        let observe_rows = KNOB_TABLE
+            .iter()
+            .filter(|spec| spec.name.starts_with("observe."))
+            .count();
+        assert_eq!(observe_rows, expect.len());
+        // The defaults of the registries match the knob defaults, so a registry that never
+        // saw the server's knobs runs as documented.
+        assert_eq!(
+            medulla_observe::settings::DEFAULT_TASK_STALL_AFTER_MS,
+            60_000
+        );
+        assert_eq!(medulla_observe::settings::DEFAULT_HEALTH_DEADLINE_MS, 2_000);
+        assert_eq!(
+            medulla_observe::events::DEFAULT_EVENT_RING_CAPACITY,
+            4_096
+        );
+        // A bound is enforced: a value below the minimum is refused with the knob's name.
+        let refused = resolve_all(
+            &[("observe.event_ring_capacity".to_string(), "255".to_string())],
+            &|_| None,
+        )
+        .expect_err("a value under the minimum is refused");
+        assert_eq!(refused.knob, "observe.event_ring_capacity");
+    }
 
     // spec: MEDULLA-DURABLE-KERNEL-R085.7
     #[test]
