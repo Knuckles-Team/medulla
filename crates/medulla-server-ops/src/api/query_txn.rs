@@ -214,6 +214,19 @@ pub trait TxnApi: Send + Sync {
     fn spawn_shadow_checks(&self, state: Arc<RwLock<ServerState>>) -> Result<(), String> {
         Err("this seam method is not built into the installed implementation".to_string())
     }
+
+    /// Run the due shadow checks of incremental plan views once, in the caller's task, and
+    /// answer the names of the views this run demoted to recompute
+    /// (MEDULLA-INCREMENTAL-VIEWS-R008.4). The same tick the spawned task runs, without its
+    /// timer, so a served test drives it directly.
+    #[cfg(feature = "matview")]
+    #[allow(unused_variables)]
+    async fn run_shadow_tick(
+        &self,
+        state: &Arc<RwLock<ServerState>>,
+    ) -> Result<Vec<String>, String> {
+        Err("this seam method is not built into the installed implementation".to_string())
+    }
 }
 
 /// Wire protocol behaviour reachable from crates below `medulla-wire`.

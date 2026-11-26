@@ -816,11 +816,6 @@ async fn corrupted_state_is_caught_and_demoted() {
         plan: doc_plan(),
     };
     send(&state, 2, define).await;
-    medulla_server_ops::api::query_txn::txn_seam(&state)
-        .await
-        .expect("the txn seam is installed")
-        .spawn_shadow_checks(state.clone())
-        .expect("the shadow checks start");
 
     let write = |i: usize| Method::AddNode {
         node_id: format!("d{i}"),
@@ -837,11 +832,14 @@ async fn corrupted_state_is_caught_and_demoted() {
         send(&state, 10 + i as u64, write(i)).await;
     }
 
-    let deadline = tokio::time::Instant::now() + Duration::from_secs(2);
-    while manager().mode(VIEW) != Some(Mode::Recompute) && tokio::time::Instant::now() < deadline
-    {
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
+    // The due check runs once, driven directly through the seam: no timer, no polling.
+    let demoted = medulla_server_ops::api::query_txn::txn_seam(&state)
+        .await
+        .expect("the txn seam is installed")
+        .run_shadow_tick(&state)
+        .await
+        .expect("the shadow tick runs");
+    assert_eq!(demoted, vec![VIEW.to_string()], "the tick demoted exactly the corrupted view");
     assert_eq!(manager().mode(VIEW), Some(Mode::Recompute));
     assert_eq!(
         manager().fallback_reason(VIEW).as_deref(),

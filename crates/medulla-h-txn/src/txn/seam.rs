@@ -125,4 +125,18 @@ impl medulla_server_ops::api::query_txn::TxnApi for TxnSeam {
         crate::matview_shadow::spawn_shadow_checks(state);
         Ok(())
     }
+
+    #[cfg(feature = "matview")]
+    async fn run_shadow_tick(
+        &self,
+        state: &Arc<RwLock<ServerState>>,
+    ) -> Result<Vec<String>, String> {
+        let outcomes =
+            crate::matview_shadow::run_tick(state, crate::matview_shadow::CHECK_DEADLINE).await;
+        Ok(outcomes
+            .into_iter()
+            .filter(|(_, outcome)| *outcome == crate::matview_shadow::ShadowOutcome::Mismatch)
+            .map(|(name, _)| name)
+            .collect())
+    }
 }

@@ -1322,7 +1322,8 @@ async fn changed_or_revoked_approval_refuses() {
 
     // An expired lease refuses SOURCE_QUERY_APPROVAL_EXPIRED.
     let short = issue_source_query(&served, &source, "r085-verify:issue-short", 1_000).await;
-    tokio::time::sleep(std::time::Duration::from_millis(1_200)).await;
+    // Move the engine clock past the lease's expiry; no wall-clock wait.
+    let _later = medulla_server_api::test_support::ClockAdvanceGuard::advance(1_200);
     let error = refused(
         "expired",
         verify_source_query(&served, &source, "r085-verify:expired", source_query_check(&short))
