@@ -615,6 +615,7 @@ METHOD_IDS = frozenset(
         "WorkflowRegistry",
         "AssistantProfile",
         "Participant",
+        "ParticipantRead",
         "WorldTransform",
         "ApproveEntityLink",
         "ArchitectureModelExport",

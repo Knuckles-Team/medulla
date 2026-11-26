@@ -115,6 +115,7 @@ class RefusalSurface(str, Enum):
     ASSEMBLE = "assemble"
     POLICY_EVOLUTION = "policy_evolution"
     DECISION_COMMIT = "decision_commit"
+    PARTICIPANT_READ = "participant_read"
 
 
 RefusalCode = Annotated[str, Field(pattern="^[A-Z][A-Z0-9_]*$")]
