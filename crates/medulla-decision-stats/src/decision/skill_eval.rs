@@ -7,8 +7,10 @@
 
 use std::collections::BTreeSet;
 
+use medulla_decision_types::correction::{CorrectionSource, EvalCase};
+use medulla_decision_types::knowledge_flag::target_form;
 use medulla_decision_types::skill_eval::{
-    EnvironmentAttestation, EvalCaseKind, JudgeCalibration, SkillEvalCase, SuiteBand,
+    EnvironmentAttestation, EvalCaseKind, EvalCaseSource, JudgeCalibration, SkillEvalCase, SuiteBand,
     TrajectoryStep, EVAL_CASE_INVALID, EVAL_RUN_NOT_CLEAN_ROOM, JUDGE_MIN_ANNOTATED,
     JUDGE_NOT_CALIBRATED,
 };
@@ -145,6 +147,36 @@ pub fn check_judge(
     }
 }
 
+/// The `SkillEvalCase` a correction of a skill yields (MEDULLA-DECISION-ENGINE-R702.7): the
+/// `EvalCase` effect of the correction becomes a golden case, with source `Correction` for a human
+/// correction and `ReviewSignal` for a review comment or rejection. A correction whose target is
+/// not `skill:<name>@<revision>` yields none. Only digests are carried, never text.
+pub fn case_from_correction(
+    target: &str,
+    source: CorrectionSource,
+    eval_case: &EvalCase,
+) -> Option<SkillEvalCase> {
+    match target_form(target) {
+        Some(("skill:", _)) => {}
+        _ => return None,
+    }
+    Some(SkillEvalCase {
+        case_id: format!("skill-{}", eval_case.case_id),
+        skill_ref: target.to_string(),
+        kind: EvalCaseKind::Golden,
+        input_digest: eval_case.input_digest.clone(),
+        expected_digest: Some(eval_case.expected_digest.clone()),
+        tool_mocks: Vec::new(),
+        expected_trajectory: Vec::new(),
+        source: match source {
+            CorrectionSource::Human => EvalCaseSource::Correction,
+            CorrectionSource::ReviewComment | CorrectionSource::ReviewRejection => {
+                EvalCaseSource::ReviewSignal
+            }
+        },
+    })
+}
+
 /// A result of a run that read the host is not stored.
 pub fn check_clean_room(attestation: &EnvironmentAttestation) -> Result<(), EvalRefusal> {
     if attestation.host_paths_read > 0 {
@@ -252,6 +284,27 @@ mod tests {
         assert_eq!(pass_band(950_000, 20, &KNOBS), SuiteBand::Saturated);
         assert_eq!(pass_band(500_000, 20, &KNOBS), SuiteBand::TooLow);
         assert_eq!(pass_band(800_000, 19, &KNOBS), SuiteBand::TooLow);
+    }
+
+    // spec: MEDULLA-DECISION-ENGINE-R702.7
+    #[test]
+    fn corrections_of_skills_yield_cases_by_source() {
+        let effect = EvalCase {
+            case_id: "case:r1".into(),
+            input_digest: "in".into(),
+            expected_digest: "out".into(),
+        };
+        let human = case_from_correction("skill:triage@3", CorrectionSource::Human, &effect)
+            .expect("a skill target yields a case");
+        assert_eq!(human.source, EvalCaseSource::Correction);
+        assert_eq!(human.kind, EvalCaseKind::Golden);
+        assert_eq!(human.expected_digest.as_deref(), Some("out"));
+        let review =
+            case_from_correction("skill:triage@3", CorrectionSource::ReviewRejection, &effect)
+                .expect("a review yields a case");
+        assert_eq!(review.source, EvalCaseSource::ReviewSignal);
+        assert!(check_case(&human, &BTreeSet::new()).is_ok());
+        assert!(case_from_correction("answer:9", CorrectionSource::Human, &effect).is_none());
     }
 
     // spec: MEDULLA-DECISION-ENGINE-R711.4

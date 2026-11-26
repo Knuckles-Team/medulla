@@ -299,3 +299,42 @@ async fn review_sources_yield_eval_cases_with_digests_only() {
     assert_eq!(read.correction, digests);
     assert_eq!(read.correction.source, CorrectionSource::ReviewComment);
 }
+
+/// Verifies MEDULLA-DECISION-ENGINE-R702.7 and R711.3: a correction of a skill feeds one
+/// `SkillEvalCase` carrying digests only, with source `Correction` for a human and `ReviewSignal`
+/// for a review source; a correction of anything else feeds none.
+// spec: MEDULLA-DECISION-ENGINE-R702.7
+#[tokio::test]
+async fn skill_corrections_feed_skill_eval_cases() {
+    let h = harness().await;
+    let human = correction("f1", "skill:triage@3", "ask for the order id first");
+    let write = plan(&h, &corrector(TENANT), record(human)).await.ok().expect("plans");
+    let cases: Vec<&Value> = write
+        .operations
+        .iter()
+        .filter(|op| op["op"] == "upsert_node" && op["properties"]["type"] == "SkillEvalCase")
+        .collect();
+    assert_eq!(cases.len(), 1);
+    assert_eq!(cases[0]["properties"]["source"], "correction");
+    assert_eq!(cases[0]["properties"]["skill_ref"], "skill:triage@3");
+    assert_eq!(cases[0]["properties"]["kind"], "golden");
+    // Digests only: no property holds the corrected text.
+    assert!(!cases[0].to_string().contains("ask for the order id first"));
+    assert!(write.operations.iter().any(|op| {
+        op["op"] == "upsert_edge" && op["properties"]["relationship"] == "yields_skill_case"
+    }));
+
+    let mut rejection = correction("f2", "skill:triage@3", "better");
+    rejection.source = CorrectionSource::ReviewRejection;
+    let write = plan(&h, &corrector(TENANT), record(rejection)).await.ok().expect("plans");
+    let case = write
+        .operations
+        .iter()
+        .find(|op| op["properties"]["type"] == "SkillEvalCase")
+        .expect("a case");
+    assert_eq!(case["properties"]["source"], "review_signal");
+
+    let other = correction("f3", "answer:9", "better");
+    let write = plan(&h, &corrector(TENANT), record(other)).await.ok().expect("plans");
+    assert!(write.operations.iter().all(|op| op["properties"]["type"] != "SkillEvalCase"));
+}

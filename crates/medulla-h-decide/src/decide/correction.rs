@@ -181,6 +181,33 @@ mod served {
                 "properties": {RELATIONSHIP: edge.relationship},
             }));
         }
+        // A correction of a skill feeds the skill's evaluation suite (R702.7, R711.3): the
+        // `EvalCase` effect becomes one `SkillEvalCase` node linked from the correction.
+        if let Some(case) = medulla_decision_stats::decision::skill_eval::case_from_correction(
+            &correction.target,
+            correction.source,
+            &commit.effect.eval_case,
+        ) {
+            let mut properties = Map::new();
+            properties.insert(TYPE.into(), "SkillEvalCase".into());
+            properties.insert("_owner".into(), verified.agent_id().into());
+            properties.insert(TENANT.into(), verified.tenant().into());
+            properties.insert("receipt_id".into(), commit.effect.receipt_id.clone().into());
+            if let Ok(Value::Object(fields)) = serde_json::to_value(&case) {
+                properties.extend(fields);
+            }
+            operations.push(json!({
+                "op": "upsert_node",
+                "id": case.case_id,
+                "properties": properties,
+            }));
+            operations.push(json!({
+                "op": "upsert_edge",
+                "source": commit.nodes[0].id,
+                "target": case.case_id,
+                "properties": {RELATIONSHIP: "yields_skill_case"},
+            }));
+        }
         operations.push(json!({
             "op": "add_embedding",
             "id": commit.nodes[0].id,
