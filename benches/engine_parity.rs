@@ -35,6 +35,11 @@
 //!   within 15 minutes (the budget of a 10 GiB store). Needs the `object-store-bench`
 //!   feature beside `full`.
 //!
+//! * `external_join` (R019.3): 1,000,000 engine rows joined with a 10,000-row outside
+//!   PostgreSQL table through `FOREIGN SCAN ... JOIN` with a filter that selects 100 outside
+//!   rows, p99 <= 400 ms. The outside database is the one named by `MEDULLA_TEST_POSTGRES_DSN`;
+//!   an unset variable fails the bench (never a skip).
+//!
 //! `scripts/engine_parity_bench_gate.py` reads the records and the stored
 //! baseline `benches/baselines/engine_parity.json` (R005.2).
 //!
@@ -47,6 +52,7 @@
 // spec: MEDULLA-ENGINE-PARITY-R010.3
 // spec: MEDULLA-ENGINE-PARITY-R013.3
 // spec: MEDULLA-ENGINE-PARITY-R016.3
+// spec: MEDULLA-ENGINE-PARITY-R019.3
 //!
 //! Run: cargo bench --features full,object-store-bench --bench engine_parity
 
@@ -121,6 +127,11 @@ const NEXTVAL_P99_BUDGET_NS: u128 = 2_000;
 const PITR_BATCHES: u64 = 100_000;
 const PITR_TARGET: u64 = 50_000;
 const PITR_RESTORE_BUDGET: Duration = Duration::from_secs(15 * 60);
+const EXTERNAL_JOIN_ENGINE_ROWS: usize = 1_000_000;
+const EXTERNAL_JOIN_OUTSIDE_ROWS: usize = 10_000;
+const EXTERNAL_JOIN_SELECTED_ROWS: usize = 100;
+const EXTERNAL_JOIN_SAMPLES: usize = 30;
+const EXTERNAL_JOIN_P99_BUDGET_US: u64 = 400_000;
 const MATVIEW_ROWS: usize = 1_000_000;
 const MATVIEW_READ_SAMPLES: usize = 5_000;
 const MATVIEW_REFRESH_BUDGET: Duration = Duration::from_secs(2);
@@ -1152,6 +1163,109 @@ fn pitr_restore_drill(rt: &tokio::runtime::Runtime) -> Record {
     }
 }
 
+/// R019.3: join 1,000,000 engine rows with the 10,000-row outside table `ext(id, k)` whose
+/// filter column `k` selects exactly 100 rows, through the registered `Sql` source and the
+/// UQL `FOREIGN SCAN ... JOIN` path, p99 <= 400 ms. Every sample checks the 100 joined ids.
+fn external_join(rt: &tokio::runtime::Runtime) -> Record {
+    use medulla_exec::exec::PlanCtx;
+    use medulla_federation::federation::ForeignSourceRegistry;
+    use medulla_federation::federation_opt::FederatedExec;
+    use medulla_graph_core::graph::GraphCore;
+    use medulla_plan::uql::serve::run_statement;
+    use medulla_query_types::wire::{ForeignSourceSpec, UqlResult};
+    use medulla_semantic_index::semantic::SemanticStore;
+    use medulla_uql::{parse_statement, Params};
+
+    let dsn = std::env::var("MEDULLA_TEST_POSTGRES_DSN").expect(
+        "MEDULLA_TEST_POSTGRES_DSN names the outside PostgreSQL database of the external_join bench",
+    );
+    rt.block_on(async {
+        let (client, connection) = tokio_postgres::connect(&dsn, tokio_postgres::NoTls)
+            .await
+            .expect("connect to the outside database");
+        let driver = tokio::spawn(connection);
+        client
+            .batch_execute(
+                "DROP TABLE IF EXISTS ext; CREATE TABLE ext (id text PRIMARY KEY, k text NOT NULL)",
+            )
+            .await
+            .expect("create the outside table");
+        for first in (0..EXTERNAL_JOIN_OUTSIDE_ROWS).step_by(1_000) {
+            let values: Vec<String> = (first..first + 1_000)
+                .map(|i| {
+                    let key = if i < EXTERNAL_JOIN_SELECTED_ROWS { "hit" } else { "miss" };
+                    format!("('row:{i}', '{key}')")
+                })
+                .collect();
+            client
+                .batch_execute(&format!("INSERT INTO ext (id, k) VALUES {}", values.join(", ")))
+                .await
+                .expect("seed the outside table");
+        }
+        drop(client);
+        let _ = driver.await;
+    });
+
+    let core = GraphCore::new();
+    let blob = rmp_serde::to_vec_named(&json!({ "type": "Row" })).expect("node blob");
+    for index in 0..EXTERNAL_JOIN_ENGINE_ROWS {
+        core.add_node(format!("row:{index}"), blob.clone());
+    }
+    let view = core.analysis_snapshot();
+    let semantic = SemanticStore::new();
+    let mut registry = ForeignSourceRegistry::new();
+    registry.register_spec(
+        "ext_join_source",
+        ForeignSourceSpec::Sql {
+            dsn,
+            query: "SELECT id, k FROM ext".into(),
+            id_field: "id".into(),
+            score_field: Some("k".into()),
+            columns: Vec::new(),
+        },
+    );
+    let federated = FederatedExec::with_registry(&registry);
+    let ctx = PlanCtx::new(&view, &semantic).with_foreign_executor(&federated);
+    let source = "MATCH (:Row) |> FOREIGN SCAN 'ext_join_source' JOIN |> WHERE k = 'hit' |> RETURN id";
+    let statement = parse_statement(source, &Params::new()).expect("the joined read parses");
+
+    let mut samples = Vec::with_capacity(EXTERNAL_JOIN_SAMPLES);
+    let started = Instant::now();
+    for _ in 0..EXTERNAL_JOIN_SAMPLES {
+        let begun = Instant::now();
+        let result = run_statement(&statement, &ctx).expect("the joined read runs");
+        samples.push(begun.elapsed());
+        let UqlResult::Rows { rows, .. } = result else {
+            panic!("the joined read returns rows");
+        };
+        let mut ids: Vec<String> = rows.into_iter().map(|row| row.id).collect();
+        ids.sort();
+        let mut expected: Vec<String> = (0..EXTERNAL_JOIN_SELECTED_ROWS)
+            .map(|i| format!("row:{i}"))
+            .collect();
+        expected.sort();
+        assert_eq!(ids, expected, "the join returns the selected outside rows");
+    }
+    let wall = started.elapsed();
+    samples.sort();
+    let record = Record {
+        workload: "external_join",
+        parameters: format!(
+            "engine_rows={EXTERNAL_JOIN_ENGINE_ROWS};outside_rows={EXTERNAL_JOIN_OUTSIDE_ROWS};selected={EXTERNAL_JOIN_SELECTED_ROWS}"
+        ),
+        p50_us: percentile(&samples, 50),
+        p99_us: percentile(&samples, 99),
+        throughput: EXTERNAL_JOIN_SAMPLES as f64 / wall.as_secs_f64(),
+    };
+    assert!(
+        record.p99_us <= EXTERNAL_JOIN_P99_BUDGET_US,
+        "external_join p99 {} us over the {} us budget",
+        record.p99_us,
+        EXTERNAL_JOIN_P99_BUDGET_US
+    );
+    record
+}
+
 /// Run W1 to W5 and the OCC and login budget groups; print one record per workload.
 fn emit_workload_records() {
     let rt = tokio::runtime::Builder::new_multi_thread()
@@ -1179,6 +1293,7 @@ fn emit_workload_records() {
     emit(&sequence_nextval());
     emit(&matview_refresh());
     emit(&pitr_restore_drill(&rt));
+    emit(&external_join(&rt));
 }
 
 fn main() {

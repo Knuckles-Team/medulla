@@ -58,7 +58,7 @@ Proof levels follow the integration proof standard of `specs/decision-engine/tes
 | `MEDULLA-ENGINE-PARITY-R016.4` | `crates/medulla-transaction/src/tests/archive_pass.rs::retention_expires_old_segments_and_keeps_the_newest` | planned |
 | `MEDULLA-ENGINE-PARITY-R019.1` | `crates/medulla-storage/tests/provider.rs::provider_set_is_closed`; `tests/test_external_source_boundary.py::test_engine_data_never_syncs_out` | planned |
 | `MEDULLA-ENGINE-PARITY-R019.2` | `tests/test_external_source_boundary.py::test_engine_data_never_syncs_out`; `crates/medulla-storage/src/backend_spec.rs::outside_database_endpoint_schemes_refuse_by_name` | existing |
-| `MEDULLA-ENGINE-PARITY-R019.3` | `tests/test_external_source_boundary.py::test_federated_join_pushes_down`; bench group `engine_parity/external_join` | planned |
+| `MEDULLA-ENGINE-PARITY-R019.3` | `tests/test_external_source_boundary.py::test_federated_join_pushes_down`; bench group `engine_parity/external_join` | existing |
 | `MEDULLA-ENGINE-PARITY-R020.1` | `crates/medulla-types/tests/engine_capabilities.rs::report_round_trips` | existing |
 | `MEDULLA-ENGINE-PARITY-R020.2` | `tests/test_engine_capabilities_served.py::test_report_matches_features`; `crates/medulla-wire/src/pgwire/mod.rs::tests::startup_parameters_come_from_the_capability_report` | planned |
 
