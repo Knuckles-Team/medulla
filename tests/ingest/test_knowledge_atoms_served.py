@@ -8,11 +8,14 @@ atoms that answer a query and names the provenance key of each.
 
 from __future__ import annotations
 
+import os
 import re
 import uuid
 
 import pytest
+from conftest import tenant_request_context
 
+from medulla.client import EngineResponseError, MedullaClient
 from medulla.generated.source_ingestion import SourceIngestionDisposition
 
 from .test_lsh_dedup_served import SOURCE_RECORD_ID, _document_client, _text
@@ -26,6 +29,7 @@ TEXT = (
 
 
 @pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.3")
+@pytest.mark.spec("MEDULLA-INGEST-WORKER-R003.6")
 @pytest.mark.asyncio
 async def test_ingest_then_context_cites_provenance() -> None:
     connector = _connector()
@@ -65,6 +69,20 @@ async def test_ingest_then_context_cites_provenance() -> None:
         assert (await client.graph.atom_context("zebra"))["atoms"] == []
         with pytest.raises(Exception, match="PARAMETER_INVALID"):
             await client.graph.atom_context("   ")
+
+        # Another tenant reading the same graph selects no atom: refused or empty.
+        foreign = await MedullaClient.connect(
+            socket_path=os.environ["GRAPH_SERVICE_SOCKET"],
+            verified_context=tenant_request_context("tenant:foreign"),
+            graph_name=graph,
+        )
+        try:
+            seen = await foreign.graph.atom_context("worker restart", 2000)
+            assert seen["atoms"] == []
+        except EngineResponseError:
+            pass  # a refused cross-tenant read also sees nothing
+        finally:
+            await foreign.close()
     finally:
         await _close(client, graph)
 
@@ -81,8 +99,16 @@ async def test_counts_in_receipt_and_context() -> None:
         batch = _batch(connector, 2, None, "unused")
         base = batch["records"][0]
         batch["records"] = [
-            {**base, "record_id": "base", "payload": {"id": 1, "text": _text("w", "end")}},
-            {**base, "record_id": "near", "payload": {"id": 2, "text": _text("w", "tail")}},
+            {
+                **base,
+                "record_id": "base",
+                "payload": {"id": 1, "text": _text("w", "end")},
+            },
+            {
+                **base,
+                "record_id": "near",
+                "payload": {"id": 2, "text": _text("w", "tail")},
+            },
         ]
         receipt = await _submit(client, batch, f"counts-{uuid.uuid4().hex[:6]}")
         assert receipt.disposition is SourceIngestionDisposition.COMMITTED
