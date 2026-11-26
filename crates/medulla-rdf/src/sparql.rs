@@ -37,8 +37,9 @@ use spargebra::algebra::{
 use spargebra::term::{GroundTerm, NamedNodePattern, TermPattern, TriplePattern, Variable};
 use spargebra::{Query, SparqlParser};
 
-use crate::mapping::{cell_lexical, RDF_MULTI_VALUE_KEY};
+use crate::mapping::RDF_MULTI_VALUE_KEY;
 
+mod term;
 mod graph_result;
 use self::graph_result::*;
 mod algebra;
@@ -73,23 +74,12 @@ pub use service::{RemoteSparql, ServiceBudget, SERVICE_BUDGET_EXCEEDED};
 /// One solution: variable name → bound term (in our node-id / literal lexical form).
 pub type Solution = HashMap<String, Binding>;
 
-/// A bound value: a graph-node id (`<iri>` / `_:b`) or a literal lexical value.
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub enum Binding {
-    Node(String),
-    Literal(String),
-}
-
-impl Binding {
-    pub fn as_str(&self) -> &str {
-        match self {
-            Binding::Node(s) | Binding::Literal(s) => s,
-        }
-    }
-    pub fn is_node(&self) -> bool {
-        matches!(self, Binding::Node(_))
-    }
-}
+/// A bound value: an RDF term (MEDULLA-FEDERATED-QUERY-R742.3).
+pub use self::term::{
+    ebv, fmt_num, literal_compare, term_compare, term_equal, ArithOp, Binding, Literal, Numeric,
+    RDF_LANG_STRING, XSD, XSD_BOOLEAN, XSD_DATETIME, XSD_DECIMAL, XSD_DOUBLE, XSD_FLOAT,
+    XSD_INTEGER, XSD_STRING,
+};
 
 /// LPG→RDF projection vocabulary (CONCEPT:MEDULLA-KG.ontology.lpg-rdf-projection-vocabulary). Controls how the live property
 /// graph is projected into RDF terms during SPARQL evaluation. The engine stays
@@ -234,19 +224,13 @@ pub struct SparqlResult {
 }
 
 impl SparqlResult {
-    /// Project to a wire-friendly row table: `vars` columns, each row a
-    /// `Vec<Option<String>>` aligned to `vars` (None = unbound). Lets the protocol
-    /// return a flat `{columns, rows}` shape matching `Sql`/`Cypher`.
-    pub fn to_rows(&self) -> (Vec<String>, Vec<Vec<Option<String>>>) {
+    /// Project to a row table: `vars` columns, each row a `Vec<Option<Binding>>` aligned to
+    /// `vars` (`None` = unbound). The protocol layer maps each term to its wire form.
+    pub fn to_rows(&self) -> (Vec<String>, Vec<Vec<Option<Binding>>>) {
         let rows = self
             .solutions
             .iter()
-            .map(|s| {
-                self.vars
-                    .iter()
-                    .map(|v| s.get(v).map(|b| b.as_str().to_string()))
-                    .collect()
-            })
+            .map(|s| self.vars.iter().map(|v| s.get(v).cloned()).collect())
             .collect();
         (self.vars.clone(), rows)
     }
@@ -425,7 +409,7 @@ impl QueryOutcome {
             QueryOutcome::Solutions(result) => result,
             QueryOutcome::Boolean(value) => {
                 let mut solution = Solution::new();
-                solution.insert("ask".to_string(), Binding::Literal(value.to_string()));
+                solution.insert("ask".to_string(), Binding::boolean(value));
                 SparqlResult {
                     vars: vec!["ask".to_string()],
                     solutions: vec![solution],
@@ -440,21 +424,21 @@ impl QueryOutcome {
                 ];
                 let solutions = triples
                     .iter()
-                    .map(|triple| {
+                    .filter_map(|triple| {
                         let mut solution = Solution::new();
                         solution.insert(
                             "subject".to_string(),
-                            Binding::Node(triple.subject.to_string()),
+                            Binding::from_subject(&triple.subject),
                         );
                         solution.insert(
                             "predicate".to_string(),
-                            Binding::Node(triple.predicate.to_string()),
+                            Binding::iri(triple.predicate.as_str()),
                         );
                         solution.insert(
                             "object".to_string(),
-                            Binding::Literal(triple.object.to_string()),
+                            Binding::from_term(&triple.object)?,
                         );
-                        solution
+                        Some(solution)
                     })
                     .collect();
                 SparqlResult { vars, solutions }

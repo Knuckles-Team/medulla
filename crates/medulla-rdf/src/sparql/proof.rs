@@ -226,7 +226,10 @@ fn ground(pattern: &TriplePattern, binding: &Solution) -> Option<SparqlWitnessTr
     let (subject, _) = term(&pattern.subject, binding)?;
     let predicate = match &pattern.predicate {
         NamedNodePattern::NamedNode(node) => node.as_str().to_string(),
-        NamedNodePattern::Variable(var) => binding.get(var.as_str())?.as_str().to_string(),
+        NamedNodePattern::Variable(var) => match binding.get(var.as_str())? {
+            Binding::Iri(iri) => iri.clone(),
+            _ => return None,
+        },
     };
     let (object, object_kind) = term(&pattern.object, binding)?;
     Some(SparqlWitnessTriple {
@@ -255,11 +258,13 @@ fn term(pattern: &TermPattern, binding: &Solution) -> Option<(String, SparqlObje
 }
 
 fn bound(value: &Binding) -> Option<(String, SparqlObjectKind)> {
-    let kind = match value {
-        Binding::Node(_) => SparqlObjectKind::Resource,
-        Binding::Literal(_) => SparqlObjectKind::Literal,
-    };
-    Some((value.as_str().to_string(), kind))
+    match value {
+        Binding::Iri(_) | Binding::Blank(_) => {
+            Some((value.to_ntriples(), SparqlObjectKind::Resource))
+        }
+        Binding::Literal(literal) => Some((literal.lexical.clone(), SparqlObjectKind::Literal)),
+        Binding::Triple(_) => None,
+    }
 }
 
 #[cfg(test)]

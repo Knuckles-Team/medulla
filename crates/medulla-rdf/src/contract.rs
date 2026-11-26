@@ -30,7 +30,7 @@ impl ModalityContract for Binding {
 
 impl ConformanceTestable for Binding {
     fn conformance_sample() -> Self {
-        Binding::Node("<urn:a>".to_string())
+        Binding::iri("urn:a")
     }
 }
 

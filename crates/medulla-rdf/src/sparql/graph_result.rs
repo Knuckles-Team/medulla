@@ -25,9 +25,8 @@ pub(super) fn construct_graph(
 }
 
 /// Resolve ONE template triple pattern against a solution to a concrete RDF triple.
-/// A constant literal keeps its datatype/lang (it is the oxrdf `Literal` verbatim); a
-/// variable-bound term carries only its lexical value (the `Binding` model is lexical),
-/// so a bound literal becomes a simple literal — the documented projection limitation.
+/// A bound term keeps its datatype and language tag; a slot that is unbound, or bound to a
+/// term its position cannot hold (a literal subject, a non-IRI predicate), yields no triple.
 #[cfg(feature = "rdf")]
 pub(super) fn instantiate_triple(tp: &TriplePattern, sol: &Solution) -> Option<oxrdf::Triple> {
     use oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
@@ -35,20 +34,25 @@ pub(super) fn instantiate_triple(tp: &TriplePattern, sol: &Solution) -> Option<o
     let subject: NamedOrBlankNode = match &tp.subject {
         TermPattern::NamedNode(n) => NamedOrBlankNode::NamedNode(n.clone()),
         TermPattern::BlankNode(b) => NamedOrBlankNode::BlankNode(b.clone()),
-        TermPattern::Variable(v) => node_str_to_subject(sol.get(v.as_str())?.as_str())?,
+        TermPattern::Variable(v) => match sol.get(v.as_str())?.to_oxrdf_term()? {
+            Term::NamedNode(n) => NamedOrBlankNode::NamedNode(n),
+            Term::BlankNode(b) => NamedOrBlankNode::BlankNode(b),
+            _ => return None,
+        },
         _ => return None,
     };
     let predicate: NamedNode = match &tp.predicate {
         NamedNodePattern::NamedNode(n) => n.clone(),
-        NamedNodePattern::Variable(v) => {
-            NamedNode::new(strip_iri(sol.get(v.as_str())?.as_str())).ok()?
-        }
+        NamedNodePattern::Variable(v) => match sol.get(v.as_str())? {
+            Binding::Iri(iri) => NamedNode::new(iri.as_str()).ok()?,
+            _ => return None,
+        },
     };
     let object: Term = match &tp.object {
         TermPattern::NamedNode(n) => Term::NamedNode(n.clone()),
         TermPattern::BlankNode(b) => Term::BlankNode(b.clone()),
         TermPattern::Literal(l) => Term::Literal(l.clone()),
-        TermPattern::Variable(v) => binding_to_term(sol.get(v.as_str())?),
+        TermPattern::Variable(v) => sol.get(v.as_str())?.to_oxrdf_term()?,
         #[allow(unreachable_patterns)]
         _ => return None,
     };
@@ -69,11 +73,11 @@ pub(super) fn describe_resources(
     // described resource in subject or object position.
     let mut seen = std::collections::HashSet::new();
     let mut out = Vec::new();
-    for (s, p, o, o_is_node) in all_triples_terms(ctx) {
-        if !describes(&resources, &s, &o, o_is_node) {
+    for (s, p, o) in all_triples_terms(ctx) {
+        if !describes(&resources, &s, &o) {
             continue;
         }
-        if let Some(t) = build_triple(&s, &p, &o, o_is_node) {
+        if let Some(t) = build_triple(&s, &p, &o) {
             if seen.insert(t.to_string()) {
                 out.push(t);
             }
@@ -82,10 +86,9 @@ pub(super) fn describe_resources(
     out
 }
 
-/// The resource set: every binding across the projected vars whose value is a resource
-/// term (`<iri>` / `_:b`). A `DESCRIBE <iri>` constant arrives as an `Extend`-bound
-/// LITERAL lexically equal to `<iri>`, while a `DESCRIBE ?x` arrives as a `Node`
-/// binding — both are captured by the term-form check.
+/// The resource set: the node keys of every IRI or blank-node binding across the projected
+/// vars. A `DESCRIBE <iri>` constant arrives as an `Extend`-bound IRI, and a `DESCRIBE ?x`
+/// as the IRI or blank node the variable holds.
 #[cfg(feature = "rdf")]
 pub(super) fn describe_resource_set(
     vars: &[String],
@@ -94,32 +97,29 @@ pub(super) fn describe_resource_set(
     let mut resources: std::collections::HashSet<String> = std::collections::HashSet::new();
     for sol in solutions {
         for v in vars {
-            let Some(b) = sol.get(v) else { continue };
-            let s = b.as_str();
-            if s.starts_with('<') || s.starts_with("_:") {
-                resources.insert(s.to_string());
+            if let Some(b) = sol.get(v) {
+                resources.extend(b.node_keys());
             }
         }
     }
     resources
 }
 
-/// Whether a triple (in projected term-string form) touches a described resource in
+/// Whether a triple (subject node key, object term) touches a described resource in
 /// subject or object position.
 #[cfg(feature = "rdf")]
 pub(super) fn describes(
     resources: &std::collections::HashSet<String>,
     s: &str,
-    o: &str,
-    o_is_node: bool,
+    o: &Binding,
 ) -> bool {
-    resources.contains(s) || (o_is_node && resources.contains(o))
+    resources.contains(s) || o.node_keys().iter().any(|key| resources.contains(key))
 }
 
-/// Enumerate the active graph as `(subject, predicate, object, object_is_node)` projected
-/// term strings — the same projection the `?s ?p ?o` BGP scan produces.
+/// Enumerate the active graph as `(subject node key, predicate, object term)` — the same
+/// projection the `?s ?p ?o` BGP scan produces.
 #[cfg(feature = "rdf")]
-pub(super) fn all_triples_terms(ctx: &Ctx) -> Vec<(String, String, String, bool)> {
+pub(super) fn all_triples_terms(ctx: &Ctx) -> Vec<(String, String, Binding)> {
     let view = ctx.active;
     let proj = ctx.proj;
     let mut out = Vec::new();
@@ -134,7 +134,7 @@ pub(super) fn all_triples_terms(ctx: &Ctx) -> Vec<(String, String, String, bool)
 pub(super) fn push_edge_triples_terms(
     view: &GraphView,
     proj: &Projection,
-    out: &mut Vec<(String, String, String, bool)>,
+    out: &mut Vec<(String, String, Binding)>,
 ) {
     for ((s, o), blobs) in &view.edge_properties {
         for blob in blobs {
@@ -144,7 +144,11 @@ pub(super) fn push_edge_triples_terms(
             let Some(rel) = v.get("relationship").and_then(|x| x.as_str()) else {
                 continue;
             };
-            out.push((proj.node_iri(s), proj.pred_iri(rel), proj.node_iri(o), true));
+            out.push((
+                proj.node_iri(s),
+                proj.pred_iri(rel),
+                Binding::from_node_key(&proj.node_iri(o)),
+            ));
         }
     }
 }
@@ -155,7 +159,7 @@ pub(super) fn push_edge_triples_terms(
 pub(super) fn push_node_triples_terms(
     view: &GraphView,
     proj: &Projection,
-    out: &mut Vec<(String, String, String, bool)>,
+    out: &mut Vec<(String, String, Binding)>,
 ) {
     for (id, blob) in &view.node_properties {
         let Ok(v) = medulla_types::msgpack::decode_property_value(blob.as_slice()) else {
@@ -169,72 +173,31 @@ pub(super) fn push_node_triples_terms(
             .and_then(|x| x.as_str())
         {
             if let Some(type_obj) = proj.node_type_iri(id, ty) {
-                out.push((subj_iri.clone(), RDF_TYPE_IRI.to_string(), type_obj, true));
+                out.push((
+                    subj_iri.clone(),
+                    RDF_TYPE_IRI.to_string(),
+                    Binding::from_node_key(&type_obj),
+                ));
             }
         }
         for (k, cell) in literal_cells(obj) {
-            if let Some(lit_val) = cell_lexical(cell) {
-                out.push((subj_iri.clone(), proj.pred_iri(k), lit_val, false));
+            if let Some(lit_val) = Binding::from_cell(cell) {
+                out.push((subj_iri.clone(), proj.pred_iri(k), lit_val));
             }
         }
     }
 }
 
-/// Parse a projected node-id string (`<iri>` / `_:b`) to an RDF subject; `None` else.
+/// An RDF triple from a subject node key, a bare predicate IRI and an object term; `None`
+/// when a position cannot hold its term.
 #[cfg(feature = "rdf")]
-pub(super) fn node_str_to_subject(id: &str) -> Option<oxrdf::NamedOrBlankNode> {
-    use oxrdf::{BlankNode, NamedNode, NamedOrBlankNode};
-    if let Some(iri) = id.strip_prefix('<').and_then(|s| s.strip_suffix('>')) {
-        Some(NamedOrBlankNode::NamedNode(NamedNode::new(iri).ok()?))
-    } else if let Some(b) = id.strip_prefix("_:") {
-        Some(NamedOrBlankNode::BlankNode(BlankNode::new(b).ok()?))
-    } else {
-        None
-    }
-}
-
-/// Strip surrounding `<…>` from a node-iri term string for `NamedNode::new`.
-#[cfg(feature = "rdf")]
-pub(super) fn strip_iri(s: &str) -> &str {
-    s.strip_prefix('<')
-        .and_then(|x| x.strip_suffix('>'))
-        .unwrap_or(s)
-}
-
-/// A solution binding → an RDF object term. A node binding parses as a resource (or a
-/// simple literal if it is not a term form); a literal binding is a simple literal.
-#[cfg(feature = "rdf")]
-pub(super) fn binding_to_term(b: &Binding) -> oxrdf::Term {
-    use oxrdf::{Literal, Term};
-    match b {
-        Binding::Node(id) => match node_str_to_subject(id) {
-            Some(oxrdf::NamedOrBlankNode::NamedNode(n)) => Term::NamedNode(n),
-            Some(oxrdf::NamedOrBlankNode::BlankNode(bn)) => Term::BlankNode(bn),
-            _ => Term::Literal(Literal::new_simple_literal(b.as_str())),
-        },
-        Binding::Literal(v) => Term::Literal(Literal::new_simple_literal(v)),
-    }
-}
-
-/// Build an RDF triple from projected term strings (`object_is_node` distinguishes a
-/// resource object from a literal object).
-#[cfg(feature = "rdf")]
-pub(super) fn build_triple(
-    s: &str,
-    p: &str,
-    o: &str,
-    object_is_node: bool,
-) -> Option<oxrdf::Triple> {
-    use oxrdf::{Literal, NamedNode, Term, Triple};
-    let subj = node_str_to_subject(s)?;
-    let pred = NamedNode::new(strip_iri(p)).ok()?;
-    let obj = if object_is_node {
-        match node_str_to_subject(o)? {
-            oxrdf::NamedOrBlankNode::NamedNode(n) => Term::NamedNode(n),
-            oxrdf::NamedOrBlankNode::BlankNode(b) => Term::BlankNode(b),
-        }
-    } else {
-        Term::Literal(Literal::new_simple_literal(o))
+pub(super) fn build_triple(s: &str, p: &str, o: &Binding) -> Option<oxrdf::Triple> {
+    use oxrdf::{NamedNode, NamedOrBlankNode, Term, Triple};
+    let subj = match Binding::from_node_key(s).to_oxrdf_term()? {
+        Term::NamedNode(n) => NamedOrBlankNode::NamedNode(n),
+        Term::BlankNode(b) => NamedOrBlankNode::BlankNode(b),
+        _ => return None,
     };
-    Some(Triple::new(subj, pred, obj))
+    let pred = NamedNode::new(p.trim_start_matches('<').trim_end_matches('>')).ok()?;
+    Some(Triple::new(subj, pred, o.to_oxrdf_term()?))
 }

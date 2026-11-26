@@ -175,7 +175,7 @@ fn eg261_hasgeometry_aswkt_sfwithin_full_query() {
     let feats: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("f").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("f").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(
         feats,
@@ -221,7 +221,7 @@ fn eg155_sparql_filter_rcc8ntpp_full_query() {
     let parts: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("part").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("part").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(
         parts,

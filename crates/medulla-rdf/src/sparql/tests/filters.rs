@@ -13,7 +13,7 @@ fn filtered_names(view: &GraphView, filter: &str) -> Vec<String> {
     let mut names: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("name").map(|b| b.display_text().to_string()))
         .collect();
     names.sort();
     names
@@ -143,7 +143,7 @@ fn minus_set_difference() {
     let names: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("name").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(names, vec!["Bob"], "got {res:?}");
 }
@@ -170,8 +170,8 @@ ex:alice ex:knows ex:bob ; ex:likes ex:carol .
         .iter()
         .map(|s| {
             (
-                s.get("s").unwrap().as_str().to_string(),
-                s.get("o").unwrap().as_str().to_string(),
+                s.get("s").unwrap().display_text().to_string(),
+                s.get("o").unwrap().display_text().to_string(),
             )
         })
         .collect();
@@ -194,7 +194,7 @@ fn ordered_names(view: &GraphView, clause: &str) -> Vec<String> {
         .unwrap()
         .solutions
         .iter()
-        .map(|s| s.get("name").unwrap().as_str().to_string())
+        .map(|s| s.get("name").unwrap().display_text().to_string())
         .collect()
 }
 
@@ -245,7 +245,7 @@ fn values_join_restricts() {
     let mut names: Vec<String> = res
         .solutions
         .iter()
-        .map(|s| s.get("name").unwrap().as_str().to_string())
+        .map(|s| s.get("name").unwrap().display_text().to_string())
         .collect();
     names.sort();
     assert_eq!(names, vec!["Alice", "Carol"], "VALUES restricts to ?p set");
@@ -265,7 +265,7 @@ fn filter_exists_and_not_exists() {
             .unwrap()
             .solutions
             .iter()
-            .map(|s| s.get("name").unwrap().as_str().to_string())
+            .map(|s| s.get("name").unwrap().display_text().to_string())
             .collect();
         v.sort();
         v
@@ -304,7 +304,7 @@ fn ordered_col(view: &GraphView, q: &str, col: &str) -> Vec<String> {
         .iter()
         .map(|s| {
             s.get(col)
-                .map(|b| b.as_str().to_string())
+                .map(|b| b.display_text().to_string())
                 .unwrap_or_default()
         })
         .collect()
@@ -317,9 +317,9 @@ fn ordered_col(view: &GraphView, q: &str, col: &str) -> Vec<String> {
 fn order_by_term_type_precedence_eg135() {
     use std::cmp::Ordering;
     let unbound: Option<Binding> = None;
-    let blank = Some(Binding::Node("_:b1".to_string()));
-    let iri = Some(Binding::Node("<http://ex/x>".to_string()));
-    let lit = Some(Binding::Literal("Alice".to_string()));
+    let blank = Some(Binding::blank("b1"));
+    let iri = Some(Binding::iri("http://ex/x"));
+    let lit = Some(Binding::string("Alice"));
     // Cross-kind precedence (each strictly less than the next kind).
     assert_eq!(cmp_binding(&unbound, &blank), Ordering::Less);
     assert_eq!(cmp_binding(&blank, &iri), Ordering::Less);
@@ -327,16 +327,16 @@ fn order_by_term_type_precedence_eg135() {
     assert_eq!(cmp_binding(&unbound, &lit), Ordering::Less);
     assert_eq!(cmp_binding(&lit, &unbound), Ordering::Greater);
     // Within literals: NUMERIC compare (not lexical — "9" must sort before "10").
-    let nine = Some(Binding::Literal("9".to_string()));
-    let ten = Some(Binding::Literal("10".to_string()));
+    let nine = Some(Binding::integer(9));
+    let ten = Some(Binding::integer(10));
     assert_eq!(cmp_binding(&nine, &ten), Ordering::Less);
     // Within literals: xsd:dateTime ISO-8601 lexicals sort chronologically.
-    let early = Some(Binding::Literal("2020-01-01T00:00:00".to_string()));
-    let late = Some(Binding::Literal("2021-06-15T12:00:00".to_string()));
+    let early = Some(Binding::typed("2020-01-01T00:00:00", XSD_DATETIME));
+    let late = Some(Binding::typed("2021-06-15T12:00:00", XSD_DATETIME));
     assert_eq!(cmp_binding(&early, &late), Ordering::Less);
     // Same-kind nodes order by term id, IRIs among themselves.
-    let iri_a = Some(Binding::Node("<http://ex/a>".to_string()));
-    let iri_b = Some(Binding::Node("<http://ex/b>".to_string()));
+    let iri_a = Some(Binding::iri("http://ex/a"));
+    let iri_b = Some(Binding::iri("http://ex/b"));
     assert_eq!(cmp_binding(&iri_a, &iri_b), Ordering::Less);
 }
 
@@ -384,8 +384,8 @@ fn values_join_extends_eg135() {
         .iter()
         .map(|s| {
             (
-                s.get("name").unwrap().as_str().to_string(),
-                s.get("tier").unwrap().as_str().to_string(),
+                s.get("name").unwrap().display_text().to_string(),
+                s.get("tier").unwrap().display_text().to_string(),
             )
         })
         .collect();
@@ -418,7 +418,7 @@ fn minus_vs_not_exists_distinction_eg135() {
             .unwrap()
             .solutions
             .iter()
-            .map(|s| s.get("name").unwrap().as_str().to_string())
+            .map(|s| s.get("name").unwrap().display_text().to_string())
             .collect();
         v.sort();
         v
@@ -479,7 +479,7 @@ fn from_scopes_default_graph() {
         let mut v: Vec<String> = r
             .solutions
             .iter()
-            .map(|s| s.get("s").unwrap().as_str().to_string())
+            .map(|s| s.get("s").unwrap().display_text().to_string())
             .collect();
         v.sort();
         v
@@ -498,7 +498,7 @@ fn from_scopes_default_graph() {
         };
         r.solutions
             .iter()
-            .map(|s| s.get("s").unwrap().as_str().to_string())
+            .map(|s| s.get("s").unwrap().display_text().to_string())
             .collect::<Vec<_>>()
     };
     assert_eq!(
@@ -527,8 +527,8 @@ fn service_joins_local_bgp() {
     let view = loaded_view();
     let ds = Dataset::new(&view, Vec::new());
     let mut row = Solution::new();
-    row.insert("name".to_string(), Binding::Literal("Alice".to_string()));
-    row.insert("score".to_string(), Binding::Literal("100".to_string()));
+    row.insert("name".to_string(), Binding::string("Alice"));
+    row.insert("score".to_string(), Binding::string("100"));
     let svc = MockService(Ok(SparqlResult {
         vars: vec!["name".to_string(), "score".to_string()],
         solutions: vec![row],
@@ -546,8 +546,8 @@ fn service_joins_local_bgp() {
     };
     // Only Alice has a remote score → the join keeps exactly one solution.
     assert_eq!(r.solutions.len(), 1, "got {:?}", r.solutions);
-    assert_eq!(r.solutions[0].get("name").unwrap().as_str(), "Alice");
-    assert_eq!(r.solutions[0].get("score").unwrap().as_str(), "100");
+    assert_eq!(r.solutions[0].get("name").unwrap().display_text(), "Alice");
+    assert_eq!(r.solutions[0].get("score").unwrap().display_text(), "100");
 }
 
 /// (b) SILENT swallows a remote error to ONE empty solution → the local side passes

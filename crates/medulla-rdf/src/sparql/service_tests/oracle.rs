@@ -153,16 +153,10 @@ fn matched(pattern: &TriplePattern, triple: &Triple, mut row: Row) -> Option<Row
     .then_some(row)
 }
 
-/// What the HTTP client keeps of a term: its kind, and for a literal its lexical form —
-/// no language tag, no datatype.
+/// What the HTTP client keeps of a term: the term itself, with its datatype and language
+/// tag (MEDULLA-FEDERATED-QUERY-R742.3). A term it cannot represent has no binding.
 fn erased(term: &Term) -> Option<Binding> {
-    match term {
-        Term::NamedNode(node) => Some(Binding::Node(format!("<{}>", node.as_str()))),
-        Term::BlankNode(node) => Some(Binding::Node(format!("_:{}", node.as_str()))),
-        Term::Literal(literal) => Some(Binding::Literal(literal.value().to_string())),
-        #[cfg(feature = "sparql-star")]
-        Term::Triple(_) => None,
-    }
+    Binding::from_term(term)
 }
 
 struct TermEndpoint {

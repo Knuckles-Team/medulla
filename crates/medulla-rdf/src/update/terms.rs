@@ -208,35 +208,37 @@ fn resolve_graph_pattern(g: &GraphNamePattern, sol: &Solution) -> Option<Option<
     match g {
         GraphNamePattern::DefaultGraph => Some(None),
         GraphNamePattern::NamedNode(n) => Some(Some(n.as_str().to_string())),
-        GraphNamePattern::Variable(v) => sol
-            .get(v.as_str())
-            .map(|b| Some(strip_iri(b.as_str()).to_string())),
+        GraphNamePattern::Variable(v) => match sol.get(v.as_str())? {
+            Binding::Iri(iri) => Some(Some(iri.clone())),
+            _ => None,
+        },
     }
 }
 
 fn pred_from_pattern(p: &NamedNodePattern, sol: &Solution) -> Option<String> {
     match p {
         NamedNodePattern::NamedNode(n) => Some(n.as_str().to_string()),
-        NamedNodePattern::Variable(v) => Some(strip_iri(sol.get(v.as_str())?.as_str()).to_string()),
+        NamedNodePattern::Variable(v) => match sol.get(v.as_str())? {
+            Binding::Iri(iri) => Some(iri.clone()),
+            _ => None,
+        },
     }
 }
 
 fn binding_node_id(b: &Binding) -> Option<String> {
     match b {
-        Binding::Node(id) => Some(id.clone()),
-        Binding::Literal(_) => None,
+        Binding::Iri(_) | Binding::Blank(_) => b.node_key(),
+        Binding::Literal(_) | Binding::Triple(_) => None,
     }
 }
 
 fn binding_to_obj(b: &Binding) -> Option<ObjTerm> {
     match b {
-        Binding::Node(id) => Some(ObjTerm::Resource(id.clone())),
-        Binding::Literal(v) => Some(ObjTerm::Literal(Literal::new_simple_literal(v))),
+        Binding::Iri(_) | Binding::Blank(_) => Some(ObjTerm::Resource(b.node_key()?)),
+        Binding::Literal(_) => match b.to_oxrdf_term()? {
+            Term::Literal(l) => Some(ObjTerm::Literal(l)),
+            _ => None,
+        },
+        Binding::Triple(_) => None,
     }
-}
-
-fn strip_iri(s: &str) -> &str {
-    s.strip_prefix('<')
-        .and_then(|x| x.strip_suffix('>'))
-        .unwrap_or(s)
 }

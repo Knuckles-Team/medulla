@@ -180,8 +180,8 @@ pub(super) fn eval_pattern_extend(
     Ok(rows
         .into_iter()
         .map(|mut s| {
-            if let Some(val) = expr_str(ctx, expression, &s) {
-                s.insert(variable.as_str().to_string(), Binding::Literal(val));
+            if let Some(val) = eval_term(ctx, expression, &s) {
+                s.insert(variable.as_str().to_string(), val);
             }
             s
         })
@@ -215,7 +215,7 @@ pub(super) fn eval_pattern_graph_var(
 ) -> Result<Vec<Solution>, String> {
     let mut out = Vec::new();
     for (gname, gview) in &ctx.ds.named {
-        let binding = Binding::Node(format!("<{gname}>"));
+        let binding = Binding::iri(gname.as_str());
         for mut s in eval_pattern(&ctx.with_active(gview), inner)? {
             match s.get(v.as_str()) {
                 Some(existing) if *existing != binding => continue,
@@ -322,19 +322,19 @@ pub(super) fn sort_solutions(ctx: &Ctx, sols: &mut [Solution], order: &[OrderExp
 pub(super) fn order_rank(b: &Option<Binding>) -> u8 {
     match b {
         None => 0,
-        Some(Binding::Node(s)) if s.starts_with("_:") => 1,
-        Some(Binding::Node(_)) => 2, // an `<iri>` node
+        Some(Binding::Blank(_)) => 1,
+        Some(Binding::Iri(_)) => 2,
         Some(Binding::Literal(_)) => 3,
+        Some(Binding::Triple(_)) => 4,
     }
 }
 
 /// Compare two (possibly unbound) `ORDER BY` values under the full SPARQL term ordering
 /// (CONCEPT:MEDULLA-KG.ontology.completing-medulla-order-by, completing the MEDULLA-125 ORDER BY arm). Terms first order by KIND
 /// ([`order_rank`]: unbound < blank node < IRI < literal); only within the SAME kind do
-/// values compare — blank/IRI lexically by term id, and literals by a typed comparison:
-/// numerically when both lexical forms parse as numbers, else lexically (xsd:dateTime /
-/// xsd:date ISO-8601 lexicals already sort chronologically under a lexical compare for a
-/// shared timezone, and plain strings compare by code point).
+/// values compare: blank nodes and IRIs by their text, and literals by value when their
+/// kinds are comparable (numbers numerically, strings by code point, booleans, dateTime)
+/// and otherwise by datatype, then lexical form, then language tag.
 pub(super) fn cmp_binding(a: &Option<Binding>, b: &Option<Binding>) -> std::cmp::Ordering {
     use std::cmp::Ordering;
     // Cross-kind: the type precedence decides it outright.
@@ -343,21 +343,11 @@ pub(super) fn cmp_binding(a: &Option<Binding>, b: &Option<Binding>) -> std::cmp:
         return ra.cmp(&rb);
     }
     match (a, b) {
-        // Same rank ⇒ both unbound, both nodes, or both literals.
-        (None, None) => Ordering::Equal,
-        (Some(x), Some(y)) => {
-            let (xs, ys) = (x.as_str(), y.as_str());
-            // Typed value compare only applies to literals; nodes (same kind) order by id.
-            if matches!((x, y), (Binding::Literal(_), Binding::Literal(_))) {
-                match (xs.parse::<f64>(), ys.parse::<f64>()) {
-                    (Ok(nx), Ok(ny)) => nx.partial_cmp(&ny).unwrap_or(Ordering::Equal),
-                    _ => xs.cmp(ys),
-                }
-            } else {
-                xs.cmp(ys)
-            }
-        }
-        // Unreachable: differing ranks were handled above.
+        (Some(Binding::Literal(x)), Some(Binding::Literal(y))) => literal_compare(x, y)
+            .unwrap_or_else(|| {
+                (&x.datatype, &x.lexical, &x.language).cmp(&(&y.datatype, &y.lexical, &y.language))
+            }),
+        (Some(x), Some(y)) => x.to_ntriples().cmp(&y.to_ntriples()),
         _ => Ordering::Equal,
     }
 }
@@ -383,14 +373,30 @@ pub(super) fn values_solutions(
         .collect()
 }
 
-/// A `VALUES` ground term → a solution binding (CONCEPT:MEDULLA-KG.ontology.order-by-values-exists): an IRI becomes a `Node`
-/// (`<iri>`), a literal its lexical `Literal` value (matching how the BGP matcher binds).
+/// A `VALUES` ground term → a solution binding (CONCEPT:MEDULLA-KG.ontology.order-by-values-exists): an IRI becomes an
+/// `Iri`, a literal keeps its datatype and language tag, and a quoted triple its three terms.
 pub(super) fn ground_term_binding(gt: &GroundTerm) -> Binding {
     match gt {
-        GroundTerm::NamedNode(n) => Binding::Node(format!("<{}>", n.as_str())),
-        GroundTerm::Literal(l) => Binding::Literal(l.value().to_string()),
-        #[allow(unreachable_patterns)]
-        _ => Binding::Literal(String::new()),
+        GroundTerm::NamedNode(n) => Binding::iri(n.as_str()),
+        GroundTerm::Literal(l) => Binding::from_query_literal(l),
+        #[cfg(feature = "sparql-star")]
+        GroundTerm::Triple(t) => Binding::Triple(Box::new([
+            ground_subject_binding(&t.subject),
+            Binding::iri(t.predicate.as_str()),
+            ground_term_binding(&t.object),
+        ])),
+    }
+}
+
+#[cfg(feature = "sparql-star")]
+fn ground_subject_binding(subject: &spargebra::term::GroundSubject) -> Binding {
+    match subject {
+        spargebra::term::GroundSubject::NamedNode(n) => Binding::iri(n.as_str()),
+        spargebra::term::GroundSubject::Triple(t) => Binding::Triple(Box::new([
+            ground_subject_binding(&t.subject),
+            Binding::iri(t.predicate.as_str()),
+            ground_term_binding(&t.object),
+        ])),
     }
 }
 
@@ -413,7 +419,7 @@ pub(super) fn minus_compatible(l: &Solution, r: &Solution) -> bool {
 pub(super) fn canonical_solution(s: &Solution) -> String {
     let mut kv: Vec<_> = s
         .iter()
-        .map(|(k, v)| (k.clone(), v.as_str().to_string()))
+        .map(|(k, v)| (k.clone(), v.to_ntriples()))
         .collect();
     kv.sort();
     format!("{kv:?}")

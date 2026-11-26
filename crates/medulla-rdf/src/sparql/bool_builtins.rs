@@ -4,7 +4,7 @@
 
 use spargebra::algebra::{Expression, Function};
 
-use super::{string_arg, term_lexical, Binding, Ctx, Solution};
+use super::{string_arg, Binding, Ctx, Solution};
 
 /// A predicate over an evaluated term.
 type TermTest = fn(&Binding) -> bool;
@@ -27,19 +27,19 @@ pub(super) fn term_type_test(f: &Function) -> Option<TermTest> {
 }
 
 fn binding_is_numeric(b: &Binding) -> bool {
-    term_lexical(b).parse::<f64>().is_ok()
+    b.numeric().is_some()
 }
 
 fn binding_is_iri(b: &Binding) -> bool {
-    matches!(b, Binding::Node(s) if s.starts_with('<'))
+    b.is_iri()
 }
 
 fn binding_is_blank(b: &Binding) -> bool {
-    matches!(b, Binding::Node(s) if s.starts_with("_:"))
+    b.is_blank()
 }
 
 fn binding_is_literal(b: &Binding) -> bool {
-    matches!(b, Binding::Literal(_))
+    b.is_literal()
 }
 
 /// `CONTAINS`/`STRSTARTS`/`STRENDS`: evaluate both operands to strings and apply

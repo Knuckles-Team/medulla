@@ -22,7 +22,7 @@ fn sample(modality: PlanModality) -> Box<dyn ModalityContract> {
             row_id: 1,
             cells: Vec::new(),
         }),
-        PlanModality::Rdf => Box::new(medulla_rdf::sparql::Binding::Node("<urn:a>".to_string())),
+        PlanModality::Rdf => Box::new(medulla_rdf::sparql::Binding::iri("urn:a")),
         PlanModality::TimeSeries => Box::new(medulla_tsdb::store::SeriesMeta {
             n_fields: 1,
             bucket_ns: 3_600_000_000_000,

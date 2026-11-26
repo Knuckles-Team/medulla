@@ -73,7 +73,7 @@ fn bgp_two_patterns_plus_filter() {
     let mut names: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("name").map(|b| b.display_text().to_string()))
         .collect();
     names.sort();
     // alice (30, knows bob) and carol (40, knows alice) qualify; bob (25) is
@@ -101,8 +101,8 @@ fn optional_left_join() {
         .iter()
         .map(|s| {
             (
-                s.get("name").unwrap().as_str().to_string(),
-                s.get("other").map(|b| b.as_str().to_string()),
+                s.get("name").unwrap().display_text().to_string(),
+                s.get("other").map(|b| b.display_text().to_string()),
             )
         })
         .collect();
@@ -132,7 +132,7 @@ fn union_merges_branches() {
     let mut names: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("name").map(|b| b.display_text().to_string()))
         .collect();
     names.sort();
     names.dedup();
@@ -154,7 +154,7 @@ fn sequence_property_path() {
     let names: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("n").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("n").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(names, vec!["Alice"], "got {names:?}");
 }
@@ -187,7 +187,7 @@ fn to_rows_projects_unbound_as_none() {
 /// Pull the single aggregate cell from a 1-row, 1-projected-var result.
 fn agg_cell(res: &SparqlResult, var: &str) -> String {
     assert_eq!(res.solutions.len(), 1, "expected ONE group, got {res:?}");
-    res.solutions[0].get(var).unwrap().as_str().to_string()
+    res.solutions[0].get(var).unwrap().display_text().to_string()
 }
 
 /// COUNT(*) over a BGP — the whole result is one group.
@@ -236,7 +236,7 @@ fn aggregate_group_by_count() {
     // one group (ex:Person), count 3.
     assert_eq!(res.solutions.len(), 1, "one group");
     assert_eq!(
-        res.solutions[0].get("n").unwrap().as_str(),
+        res.solutions[0].get("n").unwrap().display_text(),
         "3",
         "got {res:?}"
     );
@@ -257,7 +257,7 @@ fn property_path_one_or_more() {
     let mut who: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("who").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("who").map(|b| b.display_text().to_string()))
         .collect();
     who.sort();
     assert_eq!(
@@ -284,7 +284,7 @@ fn property_path_inverse() {
     let who: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("who").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("who").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(
         who,
@@ -308,7 +308,7 @@ fn property_path_alternative() {
     let who: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("who").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("who").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(
         who,
@@ -381,7 +381,7 @@ fn projection_rdf_type_by_class() {
     let subs: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("s").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("s").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(
         subs,
@@ -400,7 +400,7 @@ fn projection_rdf_type_by_class() {
     let subs2: Vec<String> = res2
         .solutions
         .iter()
-        .filter_map(|s| s.get("s").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("s").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(subs2, vec![format!("<{KG_NS}bob>")], "got {subs2:?}");
 }
@@ -420,7 +420,7 @@ fn projection_by_property_literal() {
     let subs: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("s").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("s").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(subs, vec![format!("<{KG_NS}alice>")], "got {subs:?}");
 }
@@ -439,7 +439,7 @@ fn projection_edge() {
     let objs: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("o").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("o").map(|b| b.display_text().to_string()))
         .collect();
     assert_eq!(objs, vec![format!("<{KG_NS}bob>")], "got {objs:?}");
 }
@@ -457,9 +457,9 @@ fn projection_full_triple_set_matches_au_convention() {
         .iter()
         .map(|sol| {
             (
-                sol.get("s").unwrap().as_str().to_string(),
-                sol.get("p").unwrap().as_str().to_string(),
-                sol.get("o").unwrap().as_str().to_string(),
+                sol.get("s").unwrap().display_text().to_string(),
+                sol.get("p").unwrap().display_text().to_string(),
+                sol.get("o").unwrap().display_text().to_string(),
             )
         })
         .collect();
@@ -510,7 +510,7 @@ fn identity_projection_unchanged() {
     let preds: std::collections::HashSet<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("p").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("p").map(|b| b.display_text().to_string()))
         .collect();
     assert!(
         preds.contains("knows"),
@@ -708,7 +708,7 @@ fn sub_select_restricts_to_projected_vars() {
     let mut names: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("name").map(|b| b.display_text().to_string()))
         .collect();
     names.sort();
     // alice (knows bob) and carol (knows alice) have an ex:knows; the join keys on
@@ -731,7 +731,7 @@ fn sub_select_count_star() {
     .unwrap();
     assert_eq!(res.solutions.len(), 1, "one aggregate row");
     assert_eq!(
-        res.solutions[0].get("n").unwrap().as_str(),
+        res.solutions[0].get("n").unwrap().display_text(),
         "3",
         "got {res:?}"
     );
@@ -751,7 +751,7 @@ fn sub_select_top_level_unchanged() {
     let mut names: Vec<String> = res
         .solutions
         .iter()
-        .filter_map(|s| s.get("name").map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get("name").map(|b| b.display_text().to_string()))
         .collect();
     names.sort();
     assert_eq!(names, vec!["Alice", "Bob", "Carol"], "got {res:?}");

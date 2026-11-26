@@ -22,7 +22,7 @@ pub(super) fn eval_group(
             .iter()
             .map(|v| {
                 row.get(v.as_str())
-                    .map(|b| b.as_str().to_string())
+                    .map(Binding::to_ntriples)
                     .unwrap_or_default()
             })
             .collect::<Vec<_>>()
@@ -43,20 +43,22 @@ pub(super) fn eval_group(
         }
         // Compute each aggregate over the group's members.
         for (out_var, agg) in aggregates {
-            let value = compute_aggregate(ctx, agg, &members);
-            sol.insert(out_var.as_str().to_string(), Binding::Literal(value));
+            if let Some(value) = compute_aggregate(ctx, agg, &members) {
+                sol.insert(out_var.as_str().to_string(), value);
+            }
         }
         out.push(sol);
     }
     out
 }
 
-/// Compute ONE aggregate over a group's member solutions, returning its lexical value.
+/// Compute ONE aggregate over a group's member solutions, returning its typed term. An
+/// aggregate with no value (`MIN` of nothing, an unsupported custom aggregate) is unbound.
 pub(super) fn compute_aggregate(
     ctx: &Ctx,
     agg: &AggregateExpression,
     members: &[Solution],
-) -> String {
+) -> Option<Binding> {
     match agg {
         // COUNT(*) — count solutions (DISTINCT counts distinct whole solutions).
         AggregateExpression::CountSolutions { distinct } => {
@@ -69,51 +71,60 @@ pub(super) fn compute_aggregate(
             } else {
                 members.len()
             };
-            n.to_string()
+            Some(Binding::integer(n as i64))
         }
         AggregateExpression::FunctionCall {
             name,
             expr,
             distinct,
         } => {
-            // The per-row values of the aggregated expression (skipping unbound rows).
-            let mut vals: Vec<String> = members
+            // The per-row terms of the aggregated expression (skipping unbound rows).
+            let mut vals: Vec<Binding> = members
                 .iter()
-                .filter_map(|s| expr_str(ctx, expr, s))
+                .filter_map(|s| eval_term(ctx, expr, s))
                 .collect();
             if *distinct {
                 let mut seen = std::collections::HashSet::new();
-                vals.retain(|v| seen.insert(v.clone()));
+                vals.retain(|v| seen.insert(v.to_ntriples()));
             }
             agg_over(name, &vals)
         }
     }
 }
 
-/// Apply an aggregate function to the already-collected per-row lexical values.
-pub(super) fn agg_over(func: &AggregateFunction, vals: &[String]) -> String {
-    let nums: Vec<f64> = vals.iter().filter_map(|v| v.parse::<f64>().ok()).collect();
+/// Apply an aggregate function to the already-collected per-row terms.
+pub(super) fn agg_over(func: &AggregateFunction, vals: &[Binding]) -> Option<Binding> {
+    let nums: Vec<Numeric> = vals.iter().filter_map(Binding::numeric).collect();
     match func {
-        AggregateFunction::Count => vals.len().to_string(),
-        AggregateFunction::Sum => fmt_num(nums.iter().sum::<f64>()),
-        AggregateFunction::Avg => agg_avg(&nums),
-        AggregateFunction::Min => agg_extreme(vals, &nums, Extreme::Min),
-        AggregateFunction::Max => agg_extreme(vals, &nums, Extreme::Max),
+        AggregateFunction::Count => Some(Binding::integer(vals.len() as i64)),
+        AggregateFunction::Sum => Some(agg_sum(&nums).into_binding()),
+        AggregateFunction::Avg => Some(agg_avg(&nums).into_binding()),
+        AggregateFunction::Min => agg_extreme(vals, Extreme::Min),
+        AggregateFunction::Max => agg_extreme(vals, Extreme::Max),
         AggregateFunction::GroupConcat { separator } => {
-            vals.join(separator.as_deref().unwrap_or(" "))
+            let texts: Vec<String> = vals.iter().filter_map(Binding::str_value).collect();
+            Some(Binding::string(texts.join(separator.as_deref().unwrap_or(" "))))
         }
-        AggregateFunction::Sample => vals.first().cloned().unwrap_or_default(),
-        AggregateFunction::Custom(_) => String::new(),
+        AggregateFunction::Sample => vals.first().cloned(),
+        AggregateFunction::Custom(_) => None,
     }
 }
 
-/// AVG over the numeric-parseable values; `0` when none parsed.
-pub(super) fn agg_avg(nums: &[f64]) -> String {
+/// SUM over the numeric values under type promotion; `0` (an integer) when there are none.
+pub(super) fn agg_sum(nums: &[Numeric]) -> Numeric {
+    nums.iter().fold(Numeric::Integer(0), |acc, n| {
+        acc.arith(ArithOp::Add, *n).unwrap_or(acc)
+    })
+}
+
+/// AVG over the numeric values: the sum divided by the count; `0` when there are none.
+pub(super) fn agg_avg(nums: &[Numeric]) -> Numeric {
     if nums.is_empty() {
-        "0".to_string()
-    } else {
-        fmt_num(nums.iter().sum::<f64>() / nums.len() as f64)
+        return Numeric::Integer(0);
     }
+    agg_sum(nums)
+        .arith(ArithOp::Div, Numeric::Integer(nums.len() as i64))
+        .unwrap_or(Numeric::Integer(0))
 }
 
 /// Which end of the ordering a MIN/MAX aggregate takes.
@@ -123,31 +134,16 @@ pub(super) enum Extreme {
     Max,
 }
 
-/// MIN/MAX: the numeric extreme when any value parsed as a number, else the lexical
-/// extreme of the raw values. `f64::min`/`f64::max` keep SPARQL's NaN-skipping fold.
-pub(super) fn agg_extreme(vals: &[String], nums: &[f64], end: Extreme) -> String {
-    if nums.is_empty() {
-        match end {
-            Extreme::Min => vals.iter().min(),
-            Extreme::Max => vals.iter().max(),
-        }
+/// MIN/MAX under the SPARQL term ordering (the one `ORDER BY` uses).
+pub(super) fn agg_extreme(vals: &[Binding], end: Extreme) -> Option<Binding> {
+    vals.iter()
         .cloned()
-        .unwrap_or_default()
-    } else {
-        let (seed, fold): (f64, fn(f64, f64) -> f64) = match end {
-            Extreme::Min => (f64::INFINITY, f64::min),
-            Extreme::Max => (f64::NEG_INFINITY, f64::max),
-        };
-        fmt_num(nums.iter().copied().fold(seed, fold))
-    }
-}
-
-/// Format an f64 aggregate result without a trailing `.0` for integral values, so a
-/// `SUM`/`COUNT` of integers reads as an integer (matching the stored lexical form).
-pub(super) fn fmt_num(n: f64) -> String {
-    if n.fract() == 0.0 {
-        format!("{}", n as i64)
-    } else {
-        format!("{n}")
-    }
+        .reduce(|best, next| {
+            let order = cmp_binding(&Some(next.clone()), &Some(best.clone()));
+            match (end, order) {
+                (Extreme::Min, std::cmp::Ordering::Less)
+                | (Extreme::Max, std::cmp::Ordering::Greater) => next,
+                _ => best,
+            }
+        })
 }

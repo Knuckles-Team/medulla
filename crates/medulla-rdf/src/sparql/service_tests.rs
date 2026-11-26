@@ -444,7 +444,7 @@ fn service_values_rows_deduplicate_and_reject_blank_nodes() {
             let mut row = Solution::new();
             row.insert(
                 "name".into(),
-                Binding::Node(format!("<http://example.org/{index}>")),
+                Binding::iri(format!("http://example.org/{index}")),
             );
             row
         })
@@ -458,10 +458,10 @@ fn service_values_rows_deduplicate_and_reject_blank_nodes() {
     let duplicated = [rows[0].clone(), rows[0].clone()];
     assert_eq!(service_values_rows(&duplicated, &keys).unwrap().len(), 1);
     let mut blank = Solution::new();
-    blank.insert("name".into(), Binding::Node("_:local".into()));
+    blank.insert("name".into(), Binding::blank("local"));
     assert!(service_values_rows(&[blank], &keys).is_none());
     let mut typed_unknown = Solution::new();
-    typed_unknown.insert("name".into(), Binding::Literal("42".into()));
+    typed_unknown.insert("name".into(), Binding::string("42"));
     assert!(service_values_rows(&[typed_unknown], &keys).is_none());
 }
 

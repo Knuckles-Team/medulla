@@ -341,7 +341,7 @@ pub(super) fn match_triple_pattern_literals(
 ) {
     let proj = ctx.proj;
     for (k, cell) in literal_cells(obj) {
-        let Some(lit_val) = cell_lexical(cell) else {
+        let Some(lit_val) = Binding::from_cell(cell) else {
             continue;
         };
         let mut sol = Solution::new();
@@ -393,12 +393,12 @@ pub(super) fn bnode_var(b: &spargebra::term::BlankNode) -> String {
 pub(super) fn bind_subject(pat: &TermPattern, node_id: &str, sol: &mut Solution) -> bool {
     match pat {
         TermPattern::Variable(v) => {
-            sol.insert(v.as_str().to_string(), Binding::Node(node_id.to_string()));
+            sol.insert(v.as_str().to_string(), Binding::from_node_key(node_id));
             true
         }
         TermPattern::NamedNode(n) => format!("<{}>", n.as_str()) == node_id,
         TermPattern::BlankNode(b) => {
-            sol.insert(bnode_var(b), Binding::Node(node_id.to_string()));
+            sol.insert(bnode_var(b), Binding::from_node_key(node_id));
             true
         }
         _ => false,
@@ -412,7 +412,7 @@ pub(super) fn bind_predicate_iri(
 ) -> bool {
     match pat {
         NamedNodePattern::Variable(v) => {
-            sol.insert(v.as_str().to_string(), Binding::Node(pred_iri.to_string()));
+            sol.insert(v.as_str().to_string(), Binding::iri(pred_iri));
             true
         }
         NamedNodePattern::NamedNode(n) => n.as_str() == pred_iri,
@@ -422,12 +422,12 @@ pub(super) fn bind_predicate_iri(
 pub(super) fn bind_object_node(pat: &TermPattern, node_id: &str, sol: &mut Solution) -> bool {
     match pat {
         TermPattern::Variable(v) => {
-            sol.insert(v.as_str().to_string(), Binding::Node(node_id.to_string()));
+            sol.insert(v.as_str().to_string(), Binding::from_node_key(node_id));
             true
         }
         TermPattern::NamedNode(n) => format!("<{}>", n.as_str()) == node_id,
         TermPattern::BlankNode(b) => {
-            sol.insert(bnode_var(b), Binding::Node(node_id.to_string()));
+            sol.insert(bnode_var(b), Binding::from_node_key(node_id));
             true
         }
         TermPattern::Literal(_) => false, // a literal pattern can't match a resource
@@ -439,16 +439,13 @@ pub(super) fn bind_object_node(pat: &TermPattern, node_id: &str, sol: &mut Solut
     }
 }
 
-pub(super) fn bind_object_literal(pat: &TermPattern, lit_val: &str, sol: &mut Solution) -> bool {
+pub(super) fn bind_object_literal(pat: &TermPattern, lit: &Binding, sol: &mut Solution) -> bool {
     match pat {
         TermPattern::Variable(v) => {
-            sol.insert(
-                v.as_str().to_string(),
-                Binding::Literal(lit_val.to_string()),
-            );
+            sol.insert(v.as_str().to_string(), lit.clone());
             true
         }
-        TermPattern::Literal(l) => l.value() == lit_val,
+        TermPattern::Literal(l) => Binding::from_query_literal(l) == *lit,
         _ => false, // a resource pattern can't match a literal
     }
 }

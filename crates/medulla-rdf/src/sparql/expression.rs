@@ -38,7 +38,7 @@ pub(super) fn eval_expr_bool(ctx: &Ctx, expr: &Expression, sol: &Solution) -> Op
         // substitution-and-nonempty semantics of EXISTS.
         Expression::Exists(pattern) => eval_expr_bool_exists(ctx, pattern, sol),
         // Effective boolean value of any other value-producing expression.
-        _ => eval_term(ctx, expr, sol).map(|b| ebv(&b)),
+        _ => eval_term(ctx, expr, sol).and_then(|b| ebv(&b)),
     }
 }
 
@@ -47,11 +47,11 @@ pub(super) fn eval_expr_bool(ctx: &Ctx, expr: &Expression, sol: &Solution) -> Op
 pub(super) fn eval_expr_bool_compare(ctx: &Ctx, expr: &Expression, sol: &Solution) -> Option<bool> {
     match expr {
         Expression::Equal(a, b) => Some(terms_equal(ctx, a, b, sol)),
-        Expression::SameTerm(a, b) => Some(expr_str(ctx, a, sol)? == expr_str(ctx, b, sol)?),
-        Expression::Greater(a, b) => Some(num(ctx, a, sol)? > num(ctx, b, sol)?),
-        Expression::GreaterOrEqual(a, b) => Some(num(ctx, a, sol)? >= num(ctx, b, sol)?),
-        Expression::Less(a, b) => Some(num(ctx, a, sol)? < num(ctx, b, sol)?),
-        Expression::LessOrEqual(a, b) => Some(num(ctx, a, sol)? <= num(ctx, b, sol)?),
+        Expression::SameTerm(a, b) => Some(eval_term(ctx, a, sol)? == eval_term(ctx, b, sol)?),
+        Expression::Greater(a, b) => Some(compare_terms(ctx, a, b, sol)?.is_gt()),
+        Expression::GreaterOrEqual(a, b) => Some(compare_terms(ctx, a, b, sol)?.is_ge()),
+        Expression::Less(a, b) => Some(compare_terms(ctx, a, b, sol)?.is_lt()),
+        Expression::LessOrEqual(a, b) => Some(compare_terms(ctx, a, b, sol)?.is_le()),
         _ => unreachable!("eval_expr_bool_compare called with a non-comparison Expression variant"),
     }
 }
@@ -76,7 +76,7 @@ pub(super) fn eval_expr_bool_in(
     let lhs = eval_term(ctx, a, sol)?;
     Some(list.iter().any(|e| {
         eval_term(ctx, e, sol)
-            .map(|rhs| binding_terms_equal(&lhs, &rhs))
+            .map(|rhs| term_equal(&lhs, &rhs))
             .unwrap_or(false)
     }))
 }
@@ -113,8 +113,8 @@ pub(super) fn eval_expr_bool_exists(
 pub(super) fn eval_term(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<Binding> {
     match e {
         Expression::Variable(v) => sol.get(v.as_str()).cloned(),
-        Expression::Literal(l) => Some(Binding::Literal(l.value().to_string())),
-        Expression::NamedNode(n) => Some(Binding::Node(format!("<{}>", n.as_str()))),
+        Expression::Literal(l) => Some(Binding::from_query_literal(l)),
+        Expression::NamedNode(n) => Some(Binding::iri(n.as_str())),
         Expression::Add(..)
         | Expression::Subtract(..)
         | Expression::Multiply(..)
@@ -141,28 +141,23 @@ pub(super) fn eval_term(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<Bin
     }
 }
 
-/// The arithmetic arms of [`eval_term`]: `+`, `-`, `*`, `/`, unary `+`/`-`. `/` by
-/// zero is `None` (undefined), not a panic or an infinity literal.
+/// The arithmetic arms of [`eval_term`]: `+`, `-`, `*`, `/`, unary `+`/`-`. The result type
+/// follows the numeric tower; `/` by zero is `None` (undefined), not a panic or an infinity.
 pub(super) fn eval_term_arith(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<Binding> {
+    let binary = |a: &Expression, b: &Expression, op: ArithOp| {
+        let (x, y) = (num_value(ctx, a, sol)?, num_value(ctx, b, sol)?);
+        Some(x.arith(op, y)?.into_binding())
+    };
     match e {
-        Expression::Add(a, b) => Some(Binding::Literal(fmt_num(
-            num(ctx, a, sol)? + num(ctx, b, sol)?,
-        ))),
-        Expression::Subtract(a, b) => Some(Binding::Literal(fmt_num(
-            num(ctx, a, sol)? - num(ctx, b, sol)?,
-        ))),
-        Expression::Multiply(a, b) => Some(Binding::Literal(fmt_num(
-            num(ctx, a, sol)? * num(ctx, b, sol)?,
-        ))),
-        Expression::Divide(a, b) => {
-            let d = num(ctx, b, sol)?;
-            if d == 0.0 {
-                return None;
-            }
-            Some(Binding::Literal(fmt_num(num(ctx, a, sol)? / d)))
+        Expression::Add(a, b) => binary(a, b, ArithOp::Add),
+        Expression::Subtract(a, b) => binary(a, b, ArithOp::Sub),
+        Expression::Multiply(a, b) => binary(a, b, ArithOp::Mul),
+        Expression::Divide(a, b) => binary(a, b, ArithOp::Div),
+        Expression::UnaryPlus(a) => Some(num_value(ctx, a, sol)?.into_binding()),
+        Expression::UnaryMinus(a) => {
+            let n = num_value(ctx, a, sol)?;
+            Some(n.with_value(-n.as_f64()).into_binding())
         }
-        Expression::UnaryPlus(a) => Some(Binding::Literal(fmt_num(num(ctx, a, sol)?))),
-        Expression::UnaryMinus(a) => Some(Binding::Literal(fmt_num(-num(ctx, a, sol)?))),
         _ => unreachable!("eval_term_arith called with a non-arithmetic Expression variant"),
     }
 }
@@ -184,14 +179,7 @@ pub(super) fn eval_term_if(
 
 /// The boolean-valued-expression arm of [`eval_term`]: render as an xsd:boolean lexical.
 pub(super) fn eval_term_bool_literal(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<Binding> {
-    Some(Binding::Literal(
-        if eval_expr_bool(ctx, e, sol)? {
-            "true"
-        } else {
-            "false"
-        }
-        .to_string(),
-    ))
+    Some(Binding::boolean(eval_expr_bool(ctx, e, sol)?))
 }
 
 /// Boolean SPARQL built-ins (CONCEPT:MEDULLA-KG.ontology.rich-filter): `REGEX`, `CONTAINS`/`STRSTARTS`/`STRENDS`,
@@ -237,8 +225,8 @@ pub(super) fn eval_bool_langmatches(
     args: &[Expression],
     sol: &Solution,
 ) -> Option<bool> {
-    let tag = expr_str(ctx, args.first()?, sol)?.to_lowercase();
-    let range = expr_str(ctx, args.get(1)?, sol)?.to_lowercase();
+    let tag = string_arg(ctx, args.first()?, sol)?.to_lowercase();
+    let range = string_arg(ctx, args.get(1)?, sol)?.to_lowercase();
     Some((range == "*" && !tag.is_empty()) || tag == range || tag.starts_with(&format!("{range}-")))
 }
 
@@ -333,8 +321,7 @@ pub(super) fn eval_str_function(
             eval_str_extras(ctx, f, args, sol)
         }
         // RDF-star / SPARQL-star term accessors (CONCEPT:MEDULLA-KG.ontology.concept-5): a quoted triple is a
-        // first-class term encoded as the canonical `<< s p o >>` string in a
-        // `Binding::Node`; TRIPLE constructs it and SUBJECT/PREDICATE/OBJECT project its
+        // first-class `Binding::Triple` term; TRIPLE constructs it and SUBJECT/PREDICATE/OBJECT project its
         // components.
         #[cfg(feature = "sparql-star")]
         F::Triple | F::Subject | F::Predicate | F::Object | F::IsTriple => {
@@ -378,60 +365,80 @@ pub(super) fn eval_str_core(
 ) -> Option<Binding> {
     use spargebra::algebra::Function as F;
     match f {
-        F::Str => Some(Binding::Literal(term_lexical(&eval_term(
-            ctx,
-            args.first()?,
-            sol,
-        )?))),
+        F::Str => Some(Binding::string(eval_term(ctx, args.first()?, sol)?.str_value()?)),
         // `IRI`/`URI` (MEDULLA-FEDERATED-QUERY-R742.1): an IRI stays as it is, an absolute
         // string becomes that IRI, and a relative reference resolves against the query
         // `BASE` by RFC 3986. A relative reference with no `BASE` is an error value.
         F::Iri => {
             let arg = eval_term(ctx, args.first()?, sol)?;
-            if arg.is_node() {
+            if arg.is_iri() {
                 return Some(arg);
             }
-            let text = arg
-                .as_str()
-                .trim_start_matches('<')
-                .trim_end_matches('>')
-                .to_string();
+            let text = arg.string_value()?.to_string();
             let iri = if has_iri_scheme(&text) {
                 text
             } else {
                 ctx.env.resolve(&text)?
             };
-            Some(Binding::Node(format!("<{iri}>")))
+            Some(Binding::iri(iri))
         }
-        // No language tag is retained in a `Binding`, so LANG is the empty string (the
-        // correct value for a plain/typed literal).
-        F::Lang => Some(Binding::Literal(String::new())),
-        F::Datatype => Some(Binding::Node(format!(
-            "<{}>",
-            best_effort_datatype(&eval_term(ctx, args.first()?, sol)?)
-        ))),
-        F::UCase => Some(Binding::Literal(
-            string_arg(ctx, args.first()?, sol)?.to_uppercase(),
+        // `LANG` is the language tag of a literal, and the empty string for any other
+        // literal (SPARQL 1.1 section 17.4.2.6); a non-literal is an error value.
+        F::Lang => {
+            let arg = eval_term(ctx, args.first()?, sol)?;
+            let literal = arg.as_literal()?;
+            Some(Binding::string(literal.language.clone().unwrap_or_default()))
+        }
+        // `DATATYPE` is the datatype IRI of a literal: `xsd:string` for a plain one and
+        // `rdf:langString` for a language-tagged one (section 17.4.2.7).
+        F::Datatype => {
+            let arg = eval_term(ctx, args.first()?, sol)?;
+            Some(Binding::iri(arg.as_literal()?.datatype.clone()))
+        }
+        F::UCase => {
+            let arg = eval_term(ctx, args.first()?, sol)?;
+            Some(same_kind(&arg, arg.string_value()?.to_uppercase()))
+        }
+        F::LCase => {
+            let arg = eval_term(ctx, args.first()?, sol)?;
+            Some(same_kind(&arg, arg.string_value()?.to_lowercase()))
+        }
+        F::StrLen => Some(Binding::integer(
+            string_arg(ctx, args.first()?, sol)?.chars().count() as i64,
         )),
-        F::LCase => Some(Binding::Literal(
-            string_arg(ctx, args.first()?, sol)?.to_lowercase(),
-        )),
-        F::StrLen => Some(Binding::Literal(fmt_num(
-            string_arg(ctx, args.first()?, sol)?.chars().count() as f64,
-        ))),
         F::Concat => eval_str_concat(ctx, args, sol),
         F::SubStr => eval_str_substr(ctx, args, sol),
         _ => unreachable!("eval_str_core called with an out-of-group Function variant"),
     }
 }
 
-/// `CONCAT(...)`: string-concatenate every argument.
+/// A string result of the same kind as `arg`: language-tagged when `arg` is, else plain.
+pub(super) fn same_kind(arg: &Binding, text: String) -> Binding {
+    match arg.as_literal().and_then(|l| l.language.as_deref()) {
+        Some(tag) => Binding::lang(text, tag),
+        None => Binding::string(text),
+    }
+}
+
+/// `CONCAT(...)`: string-concatenate every argument. The result carries a language tag only
+/// when every argument carries that same tag.
 pub(super) fn eval_str_concat(ctx: &Ctx, args: &[Expression], sol: &Solution) -> Option<Binding> {
     let mut s = String::new();
+    let mut tags: Vec<Option<String>> = Vec::new();
     for a in args {
-        s.push_str(&string_arg(ctx, a, sol)?);
+        let term = eval_term(ctx, a, sol)?;
+        s.push_str(term.string_value()?);
+        tags.push(term.as_literal()?.language.clone());
     }
-    Some(Binding::Literal(s))
+    let shared = tags
+        .first()
+        .cloned()
+        .flatten()
+        .filter(|tag| tags.iter().all(|t| t.as_deref() == Some(tag.as_str())));
+    Some(match shared {
+        Some(tag) => Binding::lang(s, &tag),
+        None => Binding::string(s),
+    })
 }
 
 /// `SUBSTR(str, start, len?)`: the characters at the 1-based positions `p` with
@@ -439,7 +446,8 @@ pub(super) fn eval_str_concat(ctx: &Ctx, args: &[Expression], sol: &Solution) ->
 /// section 17.4.3.3 follows). A start before 1 shortens the result instead of clamping it, so
 /// `SUBSTR("abcdef", 0, 3)` is `"ab"`; a missing length reads to the end.
 pub(super) fn eval_str_substr(ctx: &Ctx, args: &[Expression], sol: &Solution) -> Option<Binding> {
-    let text = string_arg(ctx, args.first()?, sol)?;
+    let source = eval_term(ctx, args.first()?, sol)?;
+    let text = source.string_value()?.to_string();
     let round = |value: f64| (value + 0.5).floor();
     let start = round(num(ctx, args.get(1)?, sol)?);
     let end = match args.get(2) {
@@ -447,7 +455,7 @@ pub(super) fn eval_str_substr(ctx: &Ctx, args: &[Expression], sol: &Solution) ->
         None => f64::INFINITY,
     };
     if start.is_nan() || end.is_nan() {
-        return Some(Binding::Literal(String::new()));
+        return Some(same_kind(&source, String::new()));
     }
     let slice: String = text
         .chars()
@@ -458,7 +466,7 @@ pub(super) fn eval_str_substr(ctx: &Ctx, args: &[Expression], sol: &Solution) ->
         })
         .map(|(_, c)| c)
         .collect();
-    Some(Binding::Literal(slice))
+    Some(same_kind(&source, slice))
 }
 
 // ── Term constructors (CONCEPT:MEDULLA-KG.ontology.concept-4) ────────────────────────────────
@@ -466,9 +474,10 @@ pub(super) fn eval_str_substr(ctx: &Ctx, args: &[Expression], sol: &Solution) ->
 /// arg-less form is NON-DETERMINISTIC (see `next_rand_u64`) and must stay out of any
 /// cached/deterministic evaluation path.
 ///
-/// STRDT(lexical, datatype) / STRLANG(lexical, lang): a `Binding` carries only the
-/// lexical form (as DATATYPE/LANG already infer best-effort), so the value round-trips
-/// while the datatype/lang ride along implicitly.
+/// STRDT(lexical, datatype) is the literal with that datatype, and STRLANG(lexical, tag) the
+/// literal with that tag (SPARQL 1.1 sections 17.4.2.8 and 17.4.2.9). The lexical form must
+/// be a simple literal, the datatype an IRI and the tag a non-empty string, else the result
+/// is an error value.
 ///
 /// UUID() → a fresh urn:uuid: IRI; STRUUID() → its lexical form. NON-DETERMINISTIC.
 pub(super) fn eval_str_term_ctors(
@@ -481,15 +490,43 @@ pub(super) fn eval_str_term_ctors(
     match f {
         F::BNode => {
             let label = match args.first() {
-                Some(a) => sanitize_bnode_label(&expr_str(ctx, a, sol)?),
+                Some(a) => sanitize_bnode_label(&string_arg(ctx, a, sol)?),
                 None => format!("b{:x}", fresh_id()),
             };
-            Some(Binding::Node(format!("_:{label}")))
+            Some(Binding::blank(label))
         }
-        F::StrDt | F::StrLang => Some(Binding::Literal(expr_str(ctx, args.first()?, sol)?)),
-        F::Uuid => Some(Binding::Node(format!("<urn:uuid:{}>", fresh_uuid()))),
-        F::StrUuid => Some(Binding::Literal(fresh_uuid())),
+        F::StrDt => {
+            let lexical = simple_literal_arg(ctx, args.first()?, sol)?;
+            match eval_term(ctx, args.get(1)?, sol)? {
+                Binding::Iri(datatype) if datatype != RDF_LANG_STRING => {
+                    Some(Binding::typed(lexical, datatype))
+                }
+                _ => None,
+            }
+        }
+        F::StrLang => {
+            let lexical = simple_literal_arg(ctx, args.first()?, sol)?;
+            let tag = string_arg(ctx, args.get(1)?, sol)?;
+            if tag.is_empty() || !tag.split('-').all(|part| {
+                !part.is_empty() && part.chars().all(|c| c.is_ascii_alphanumeric())
+            }) {
+                return None;
+            }
+            Some(Binding::lang(lexical, &tag))
+        }
+        F::Uuid => Some(Binding::iri(format!("urn:uuid:{}", fresh_uuid()))),
+        F::StrUuid => Some(Binding::string(fresh_uuid())),
         _ => unreachable!("eval_str_term_ctors called with an out-of-group Function variant"),
+    }
+}
+
+/// The lexical form of a simple (`xsd:string`, untagged) literal argument.
+pub(super) fn simple_literal_arg(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<String> {
+    match eval_term(ctx, e, sol)? {
+        Binding::Literal(l) if l.datatype == XSD_STRING && l.language.is_none() => {
+            Some(l.lexical)
+        }
+        _ => None,
     }
 }
 
@@ -503,7 +540,7 @@ pub(super) fn eval_str_hash(
 ) -> Option<Binding> {
     use spargebra::algebra::Function as F;
     let text = string_arg(ctx, args.first()?, sol)?;
-    Some(Binding::Literal(match f {
+    Some(Binding::string(match f {
         F::Md5 => hash_hex::<md5::Md5>(&text),
         F::Sha1 => hash_hex::<sha1::Sha1>(&text),
         F::Sha256 => hash_hex::<sha2::Sha256>(&text),
@@ -514,8 +551,8 @@ pub(super) fn eval_str_hash(
 }
 
 // ── Numeric built-ins (CONCEPT:MEDULLA-KG.ontology.concept-4) ───────────────────────────────
-/// SPARQL ROUND is half-towards-positive-infinity (ROUND(-2.5)=-2, ROUND(2.5)=3).
-/// RAND() → xsd:double in [0,1). NON-DETERMINISTIC.
+/// SPARQL ROUND is half-towards-positive-infinity (ROUND(-2.5)=-2, ROUND(2.5)=3). The result
+/// keeps the numeric type of the argument. RAND() → xsd:double in [0,1). NON-DETERMINISTIC.
 pub(super) fn eval_str_numeric(
     ctx: &Ctx,
     f: &Function,
@@ -523,22 +560,19 @@ pub(super) fn eval_str_numeric(
     sol: &Solution,
 ) -> Option<Binding> {
     use spargebra::algebra::Function as F;
-    match f {
-        F::Abs => Some(Binding::Literal(fmt_num(
-            num(ctx, args.first()?, sol)?.abs(),
-        ))),
-        F::Ceil => Some(Binding::Literal(fmt_num(
-            num(ctx, args.first()?, sol)?.ceil(),
-        ))),
-        F::Floor => Some(Binding::Literal(fmt_num(
-            num(ctx, args.first()?, sol)?.floor(),
-        ))),
-        F::Round => Some(Binding::Literal(fmt_num(
-            (num(ctx, args.first()?, sol)? + 0.5).floor(),
-        ))),
-        F::Rand => Some(Binding::Literal(fmt_num(rand_f64()))),
-        _ => unreachable!("eval_str_numeric called with an out-of-group Function variant"),
+    if matches!(f, F::Rand) {
+        return Some(Binding::double(rand_f64()));
     }
+    let n = num_value(ctx, args.first()?, sol)?;
+    let v = n.as_f64();
+    let out = match f {
+        F::Abs => v.abs(),
+        F::Ceil => v.ceil(),
+        F::Floor => v.floor(),
+        F::Round => (v + 0.5).floor(),
+        _ => unreachable!("eval_str_numeric called with an out-of-group Function variant"),
+    };
+    Some(n.with_value(out).into_binding())
 }
 
 // ── Date-time built-ins (CONCEPT:MEDULLA-KG.ontology.concept-4) ─────────────────────────────
@@ -550,34 +584,24 @@ pub(super) fn eval_str_datetime(
     sol: &Solution,
 ) -> Option<Binding> {
     use spargebra::algebra::Function as F;
-    match f {
-        F::Now => Some(Binding::Literal(ctx.env.now.clone())),
-        F::Year => Some(Binding::Literal(fmt_num(
-            parse_datetime(&expr_str(ctx, args.first()?, sol)?)?.year as f64,
-        ))),
-        F::Month => Some(Binding::Literal(fmt_num(
-            parse_datetime(&expr_str(ctx, args.first()?, sol)?)?.month as f64,
-        ))),
-        F::Day => Some(Binding::Literal(fmt_num(
-            parse_datetime(&expr_str(ctx, args.first()?, sol)?)?.day as f64,
-        ))),
-        F::Hours => Some(Binding::Literal(fmt_num(
-            parse_datetime(&expr_str(ctx, args.first()?, sol)?)?.hour as f64,
-        ))),
-        F::Minutes => Some(Binding::Literal(fmt_num(
-            parse_datetime(&expr_str(ctx, args.first()?, sol)?)?.minute as f64,
-        ))),
-        F::Seconds => Some(Binding::Literal(fmt_num(
-            parse_datetime(&expr_str(ctx, args.first()?, sol)?)?.second,
-        ))),
-        F::Tz => Some(Binding::Literal(
-            parse_datetime(&expr_str(ctx, args.first()?, sol)?)?.tz,
-        )),
-        F::Timezone => Some(Binding::Literal(tz_to_duration(
-            &parse_datetime(&expr_str(ctx, args.first()?, sol)?)?.tz,
-        ))),
-        _ => unreachable!("eval_str_datetime called with an out-of-group Function variant"),
+    if matches!(f, F::Now) {
+        return Some(Binding::typed(ctx.env.now.clone(), XSD_DATETIME));
     }
+    let parts = parse_datetime(&expr_str(ctx, args.first()?, sol)?)?;
+    Some(match f {
+        F::Year => Binding::integer(parts.year),
+        F::Month => Binding::integer(i64::from(parts.month)),
+        F::Day => Binding::integer(i64::from(parts.day)),
+        F::Hours => Binding::integer(i64::from(parts.hour)),
+        F::Minutes => Binding::integer(i64::from(parts.minute)),
+        F::Seconds => Binding::decimal(parts.second),
+        F::Tz => Binding::string(parts.tz),
+        F::Timezone => Binding::typed(
+            tz_to_duration(&parts.tz),
+            "http://www.w3.org/2001/XMLSchema#dayTimeDuration",
+        ),
+        _ => unreachable!("eval_str_datetime called with an out-of-group Function variant"),
+    })
 }
 
 // ── String extras (CONCEPT:MEDULLA-KG.ontology.concept-4) ───────────────────────────────────
@@ -590,26 +614,29 @@ pub(super) fn eval_str_extras(
     use spargebra::algebra::Function as F;
     match f {
         F::StrBefore => {
-            let s = string_arg(ctx, args.first()?, sol)?;
+            let source = eval_term(ctx, args.first()?, sol)?;
+            let s = source.string_value()?;
             let sep = string_arg(ctx, args.get(1)?, sol)?;
-            Some(Binding::Literal(match s.find(&sep) {
-                Some(i) => s[..i].to_string(),
-                None => String::new(),
-            }))
+            Some(match s.find(&sep) {
+                Some(i) => same_kind(&source, s[..i].to_string()),
+                None => Binding::string(String::new()),
+            })
         }
         F::StrAfter => {
-            let s = string_arg(ctx, args.first()?, sol)?;
+            let source = eval_term(ctx, args.first()?, sol)?;
+            let s = source.string_value()?;
             let sep = string_arg(ctx, args.get(1)?, sol)?;
-            Some(Binding::Literal(match s.find(&sep) {
-                Some(i) => s[i + sep.len()..].to_string(),
-                None => String::new(),
-            }))
+            Some(match s.find(&sep) {
+                Some(i) => same_kind(&source, s[i + sep.len()..].to_string()),
+                None => Binding::string(String::new()),
+            })
         }
         // REPLACE(str, pattern, replacement [, flags]) — regex-backed (reuses the
         // `regex` dep already in `sparql`); `$1` back-references pass through. A pattern
         // that matches the empty string is an error value (SPARQL 1.1 section 17.4.3.15).
         F::Replace => {
-            let s = string_arg(ctx, args.first()?, sol)?;
+            let source = eval_term(ctx, args.first()?, sol)?;
+            let s = source.string_value()?.to_string();
             let pat = string_arg(ctx, args.get(1)?, sol)?;
             let rep = string_arg(ctx, args.get(2)?, sol)?;
             let flags = match args.get(3) {
@@ -625,11 +652,9 @@ pub(super) fn eval_str_extras(
             if re.is_match("") {
                 return None;
             }
-            Some(Binding::Literal(
-                re.replace_all(&s, rep.as_str()).into_owned(),
-            ))
+            Some(same_kind(&source, re.replace_all(&s, rep.as_str()).into_owned()))
         }
-        F::EncodeForUri => Some(Binding::Literal(encode_for_uri(&string_arg(
+        F::EncodeForUri => Some(Binding::string(encode_for_uri(&string_arg(
             ctx,
             args.first()?,
             sol,
@@ -652,39 +677,29 @@ pub(super) fn eval_str_rdfstar(
             let s = eval_term(ctx, args.first()?, sol)?;
             let p = eval_term(ctx, args.get(1)?, sol)?;
             let o = eval_term(ctx, args.get(2)?, sol)?;
-            Some(Binding::Node(encode_quoted(&s, &p, &o)))
+            Some(Binding::Triple(Box::new([s, p, o])))
         }
         F::Subject => quoted_component(&eval_term(ctx, args.first()?, sol)?, 0),
         F::Predicate => quoted_component(&eval_term(ctx, args.first()?, sol)?, 1),
         F::Object => quoted_component(&eval_term(ctx, args.first()?, sol)?, 2),
-        F::IsTriple => Some(Binding::Literal(bool_str(eval_bool_function(
-            ctx, f, args, sol,
-        )?))),
+        F::IsTriple => Some(Binding::boolean(eval_bool_function(ctx, f, args, sol)?)),
         _ => unreachable!("eval_str_rdfstar called with an out-of-group Function variant"),
     }
 }
 
-/// Boolean built-ins composed in a string context → "true"/"false".
+/// Boolean built-ins composed in a value context → an `xsd:boolean` literal.
 pub(super) fn eval_str_bool_literal(
     ctx: &Ctx,
     f: &Function,
     args: &[Expression],
     sol: &Solution,
 ) -> Option<Binding> {
-    Some(Binding::Literal(bool_str(eval_bool_function(
-        ctx, f, args, sol,
-    )?)))
+    Some(Binding::boolean(eval_bool_function(ctx, f, args, sol)?))
 }
 
-/// `"true"`/`"false"` lexical rendering of a bool — the shared tail of every boolean
-/// built-in composed in a string (value) context.
-pub(super) fn bool_str(b: bool) -> String {
-    if b { "true" } else { "false" }.to_string()
-}
-
-/// GeoSPARQL value functions (CONCEPT:MEDULLA-KG.ontology.concept-10): `geof:distance(a,b,units)` → a numeric
-/// literal; `geof:buffer(g,radius,units)` → a WKT lexical (a wktLiteral). A boolean
-/// `geof:sf*` used in a value context renders as "true"/"false".
+/// GeoSPARQL value functions (CONCEPT:MEDULLA-KG.ontology.concept-10): `geof:distance(a,b,units)` → an
+/// `xsd:double`; `geof:buffer(g,radius,units)` → a `geo:wktLiteral`. A boolean `geof:sf*`
+/// used in a value context is an `xsd:boolean`.
 #[cfg(feature = "geosparql")]
 pub(super) fn eval_str_geof(
     ctx: &Ctx,
@@ -697,13 +712,19 @@ pub(super) fn eval_str_geof(
     match local {
         "distance" => eval_str_geof_distance(ctx, args, sol),
         "buffer" => eval_str_geof_buffer(ctx, args, sol),
-        "envelope" => Some(Binding::Literal(crate::geosparql::eval_envelope(
-            &expr_str(ctx, args.first()?, sol)?,
-        )?)),
-        _ => Some(Binding::Literal(bool_str(eval_bool_function(
-            ctx, f, args, sol,
-        )?))),
+        "envelope" => Some(wkt_literal(crate::geosparql::eval_envelope(&expr_str(
+            ctx,
+            args.first()?,
+            sol,
+        )?)?)),
+        _ => Some(Binding::boolean(eval_bool_function(ctx, f, args, sol)?)),
     }
+}
+
+/// A WKT geometry as a `geo:wktLiteral`.
+#[cfg(feature = "geosparql")]
+pub(super) fn wkt_literal(wkt: String) -> Binding {
+    Binding::typed(wkt, "http://www.opengis.net/ont/geosparql#wktLiteral")
 }
 
 #[cfg(feature = "geosparql")]
@@ -718,9 +739,9 @@ pub(super) fn eval_str_geof_distance(
         .get(2)
         .and_then(|u| expr_str(ctx, u, sol))
         .unwrap_or_default();
-    Some(Binding::Literal(fmt_num(crate::geosparql::eval_distance(
+    Some(Binding::double(crate::geosparql::eval_distance(
         &a, &b, &units,
-    )?)))
+    )?))
 }
 
 #[cfg(feature = "geosparql")]
@@ -735,72 +756,35 @@ pub(super) fn eval_str_geof_buffer(
         .get(2)
         .and_then(|u| expr_str(ctx, u, sol))
         .unwrap_or_default();
-    Some(Binding::Literal(crate::geosparql::eval_buffer(
-        &g, radius, &units,
-    )?))
+    Some(wkt_literal(crate::geosparql::eval_buffer(&g, radius, &units)?))
 }
 
-/// Lexical value of a term: an IRI loses its angle brackets (`STR()` / comparison).
-pub(super) fn term_lexical(b: &Binding) -> String {
-    match b {
-        Binding::Node(s) => s.trim_start_matches('<').trim_end_matches('>').to_string(),
-        Binding::Literal(s) => s.clone(),
-    }
-}
-
-/// Best-effort xsd datatype IRI for `DATATYPE()` — bindings drop the original datatype,
-/// so we infer numeric vs string from the lexical form (datatype-aware where feasible).
-pub(super) fn best_effort_datatype(b: &Binding) -> &'static str {
-    match b {
-        Binding::Node(_) => "http://www.w3.org/2001/XMLSchema#anyURI",
-        Binding::Literal(s) => {
-            if s.parse::<i64>().is_ok() {
-                "http://www.w3.org/2001/XMLSchema#integer"
-            } else if s.parse::<f64>().is_ok() {
-                "http://www.w3.org/2001/XMLSchema#decimal"
-            } else {
-                "http://www.w3.org/2001/XMLSchema#string"
-            }
-        }
-    }
-}
-
-/// Effective boolean value (EBV) of a term for a bare expression in FILTER position.
-pub(super) fn ebv(b: &Binding) -> bool {
-    match b {
-        Binding::Literal(s) => match s.parse::<f64>() {
-            Ok(n) => n != 0.0,
-            Err(_) => !s.is_empty() && !s.eq_ignore_ascii_case("false"),
-        },
-        Binding::Node(s) => !s.is_empty(),
-    }
-}
-
-/// Datatype-aware `=` (CONCEPT:MEDULLA-KG.ontology.rich-filter): numeric comparison when both sides parse as
-/// numbers, else lexical-term equality.
+/// Datatype-aware `=` (CONCEPT:MEDULLA-KG.ontology.rich-filter): numerics compare by value, every other pair of
+/// bound terms by term identity.
 pub(super) fn terms_equal(ctx: &Ctx, a: &Expression, b: &Expression, sol: &Solution) -> bool {
     match (eval_term(ctx, a, sol), eval_term(ctx, b, sol)) {
-        (Some(x), Some(y)) => binding_terms_equal(&x, &y),
+        (Some(x), Some(y)) => term_equal(&x, &y),
         _ => false,
     }
 }
 
-pub(super) fn binding_terms_equal(x: &Binding, y: &Binding) -> bool {
-    let (xs, ys) = (term_lexical(x), term_lexical(y));
-    match (xs.parse::<f64>(), ys.parse::<f64>()) {
-        (Ok(nx), Ok(ny)) => nx == ny,
-        _ => xs == ys,
-    }
+/// The ordering of two expressions' values; `None` (an error value) when either is unbound
+/// or the two are not comparable.
+pub(super) fn compare_terms(
+    ctx: &Ctx,
+    a: &Expression,
+    b: &Expression,
+    sol: &Solution,
+) -> Option<std::cmp::Ordering> {
+    term_compare(&eval_term(ctx, a, sol)?, &eval_term(ctx, b, sol)?)
 }
 
-/// The lexical form of a string-typed argument. An IRI or a blank node is not a string, so a
-/// string function applied to one gives an error value (`None`), which a `FILTER` treats as
-/// false (MEDULLA-FEDERATED-QUERY-R742.1).
+/// The lexical form of a string-like argument (a simple or language-tagged literal). An IRI,
+/// a blank node or a typed non-string literal is not a string, so a string function applied
+/// to one gives an error value (`None`), which a `FILTER` treats as false
+/// (MEDULLA-FEDERATED-QUERY-R742.1).
 pub(super) fn string_arg(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<String> {
-    match eval_term(ctx, e, sol)? {
-        Binding::Literal(text) => Some(text),
-        Binding::Node(_) => None,
-    }
+    eval_term(ctx, e, sol)?.string_value().map(str::to_string)
 }
 
 /// Whether `text` starts with an RFC 3986 scheme (`ALPHA *( ALPHA / DIGIT / "+" / "-" / "." ) ":"`),
@@ -814,10 +798,17 @@ fn has_iri_scheme(text: &str) -> bool {
         && chars.all(|c| c.is_ascii_alphanumeric() || matches!(c, '+' | '-' | '.'))
 }
 
+/// The lexical form of a literal argument of any datatype (a dateTime, a WKT literal, a
+/// string); an IRI or blank node has none.
 pub(super) fn expr_str(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<String> {
-    eval_term(ctx, e, sol).map(|b| b.as_str().to_string())
+    eval_term(ctx, e, sol)?.as_literal().map(|l| l.lexical.clone())
+}
+
+/// The numeric value of an expression, kept in its numeric type.
+pub(super) fn num_value(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<Numeric> {
+    eval_term(ctx, e, sol)?.numeric()
 }
 
 pub(super) fn num(ctx: &Ctx, e: &Expression, sol: &Solution) -> Option<f64> {
-    expr_str(ctx, e, sol)?.parse::<f64>().ok()
+    num_value(ctx, e, sol).map(Numeric::as_f64)
 }

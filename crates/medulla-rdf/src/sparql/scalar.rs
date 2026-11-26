@@ -223,51 +223,21 @@ pub(super) fn civil_from_days(z: i64) -> (i64, u32, u32) {
     (if m <= 2 { y + 1 } else { y }, m, d)
 }
 
-// ── MEDULLA-130 helpers: RDF-star quoted-triple term (string-encoded first-class term) ──
+// ── MEDULLA-130 helpers: RDF-star quoted-triple term ──
 
-/// Render a `Binding` as a term inside a quoted triple: nodes keep their `<iri>`/`_:b`
-/// form; literals are quoted (`"lit"`).
-#[cfg(feature = "sparql-star")]
-pub(super) fn render_star_term(b: &Binding) -> String {
-    match b {
-        Binding::Node(s) => s.clone(),
-        Binding::Literal(s) => format!("{s:?}"),
-    }
-}
-
-/// Encode a quoted triple from its three component bindings as `<< s p o >>`.
-#[cfg(feature = "sparql-star")]
-pub(super) fn encode_quoted(s: &Binding, p: &Binding, o: &Binding) -> String {
-    format!(
-        "<< {} {} {} >>",
-        render_star_term(s),
-        render_star_term(p),
-        render_star_term(o)
-    )
-}
-
-/// Whether a binding is a quoted-triple term (`<< … >>`).
+/// Whether a binding is a quoted-triple term.
 #[cfg(feature = "sparql-star")]
 pub(super) fn is_quoted(b: &Binding) -> bool {
-    matches!(b, Binding::Node(s) if s.starts_with("<<") && s.ends_with(">>"))
+    b.is_triple()
 }
 
 /// Project component `idx` (0=subject, 1=predicate, 2=object) of a quoted-triple term.
-/// Components are whitespace-delimited canonical terms (IRIs/bnodes/simple literals);
-/// space-bearing or nested-quoted components are a documented follow-up.
 #[cfg(feature = "sparql-star")]
 pub(super) fn quoted_component(b: &Binding, idx: usize) -> Option<Binding> {
-    if !is_quoted(b) {
-        return None;
+    match b {
+        Binding::Triple(parts) => parts.get(idx).cloned(),
+        _ => None,
     }
-    let Binding::Node(s) = b else { return None };
-    let inner = s.strip_prefix("<<")?.strip_suffix(">>")?.trim();
-    let tok = inner.split_whitespace().nth(idx)?;
-    Some(if tok.starts_with('<') || tok.starts_with("_:") {
-        Binding::Node(tok.to_string())
-    } else {
-        Binding::Literal(tok.trim_matches('"').to_string())
-    })
 }
 
 #[cfg(test)]
@@ -288,14 +258,13 @@ pub(super) fn view_of_turtle(ttl: &str) -> GraphView {
 
 /// The `GraphView` key of the node a bound asset term names.
 fn catalog_node_key<'a>(ctx: &'a Ctx, asset: &Binding) -> Option<String> {
-    let raw = asset.as_str();
-    let bare = raw
-        .strip_prefix('<')
-        .and_then(|r| r.strip_suffix('>'))
-        .unwrap_or(raw);
-    [raw, bare]
+    let bare = match asset {
+        Binding::Iri(iri) => iri.clone(),
+        _ => return None,
+    };
+    asset
+        .node_keys()
         .into_iter()
-        .map(str::to_string)
         .chain(ctx.proj.base_iri.as_ref().and_then(|base| {
             bare.strip_prefix(base.as_str()).map(str::to_string)
         }))
@@ -392,7 +361,7 @@ pub(super) fn eval_catalog_function(
     if iri == cr::CAT_RANK_COMPONENTS_IRI {
         let c = cr::rank_components(&doc, &text);
         let multiplier = cr::trust_multiplier(&doc.flags);
-        return Some(Binding::Literal(
+        return Some(Binding::string(
             serde_json::json!({
                 "text": c.text, "vector": c.vector, "usage": c.usage,
                 "described_asset": cr::described_asset_component(&doc, &text),
@@ -401,5 +370,5 @@ pub(super) fn eval_catalog_function(
             .to_string(),
         ));
     }
-    Some(Binding::Literal(fmt_num(cr::relevance(&doc, &text))))
+    Some(Binding::double(cr::relevance(&doc, &text)))
 }

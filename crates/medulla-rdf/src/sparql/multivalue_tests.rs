@@ -29,7 +29,7 @@ fn column(query: &str, var: &str) -> Vec<String> {
     let mut out: Vec<String> = table
         .solutions
         .iter()
-        .filter_map(|s| s.get(var).map(|b| b.as_str().to_string()))
+        .filter_map(|s| s.get(var).map(|b| b.display_text().to_string()))
         .collect();
     out.sort();
     out

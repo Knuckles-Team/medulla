@@ -2,17 +2,18 @@
 //! its W3C vector, and a wrong-typed argument gives an error value.
 //!
 //! An error value leaves the `BIND` variable unbound, so a vector whose answer is an error is
-//! asserted as `None`. The engine's term model carries the lexical form of a literal, so the
-//! `LANG`, `DATATYPE`, `STRDT` and `STRLANG` vectors assert the lexical value and the plain
-//! literal answers only.
+//! asserted as `None`. A solution binds an RDF term (R742.3), so `typed_terms_match_the_w3c_vectors`
+//! asserts the datatype and language tag of `LANG`, `DATATYPE`, `STRLANG` and `STRDT` in full;
+//! the other vectors compare the one-line rendering of the term (`display_text`).
 // spec: MEDULLA-FEDERATED-QUERY-R742.1
+// spec: MEDULLA-FEDERATED-QUERY-R742.3
 #![cfg(feature = "sparql")]
 
 use medulla_graph_core::graph::GraphCore;
-use medulla_rdf::sparql::{execute, Dataset, Projection, QueryOutcome};
+use medulla_rdf::sparql::{execute, Binding, Dataset, Projection, QueryOutcome};
 
-/// Run `query` over an empty graph and return its solution rows as `var -> lexical` maps.
-fn rows(query: &str) -> Vec<std::collections::BTreeMap<String, String>> {
+/// Run `query` over an empty graph and return its solution rows as `var -> term` maps.
+fn term_rows(query: &str) -> Vec<std::collections::BTreeMap<String, Binding>> {
     let view = GraphCore::new().analysis_snapshot();
     let ds = Dataset::new(&view, Vec::new());
     let outcome = execute(&ds, query, &Projection::raw(), None)
@@ -26,10 +27,29 @@ fn rows(query: &str) -> Vec<std::collections::BTreeMap<String, String>> {
         .map(|solution| {
             solution
                 .iter()
-                .map(|(var, binding)| (var.clone(), binding.as_str().to_string()))
+                .map(|(var, binding)| (var.clone(), binding.clone()))
                 .collect()
         })
         .collect()
+}
+
+/// The same rows with each term rendered as its one-line text.
+fn rows(query: &str) -> Vec<std::collections::BTreeMap<String, String>> {
+    term_rows(query)
+        .into_iter()
+        .map(|row| {
+            row.into_iter()
+                .map(|(var, term)| (var, term.display_text()))
+                .collect()
+        })
+        .collect()
+}
+
+/// The term of `BIND(expr AS ?x)`; `None` when `expr` is an error value.
+fn term(expr: &str) -> Option<Binding> {
+    let found = term_rows(&format!("SELECT ?x WHERE {{ BIND({expr} AS ?x) }}"));
+    assert_eq!(found.len(), 1, "{expr}: one row");
+    found[0].get("x").cloned()
 }
 
 /// The value of `BIND(expr AS ?x)` under `prefix`; `None` when `expr` is an error value.
@@ -81,7 +101,8 @@ fn every_builtin_matches_its_w3c_vector() {
     assert_eq!(scalar(r#"IRI("b")"#), None, "a relative reference with no BASE");
 
     // Constructors: BNODE, STRDT, STRLANG, UUID, STRUUID.
-    assert_eq!(text(r#"STR(BNODE("tag"))"#), "_:tag");
+    assert_eq!(term(r#"BNODE("tag")"#), Some(Binding::blank("tag")));
+    assert_eq!(scalar(r#"STR(BNODE("tag"))"#), None, "STR of a blank node");
     assert_eq!(text("isBlank(BNODE())"), "true");
     assert_eq!(text(&format!(r#"STRDT("42", <{XSD}integer>)"#)), "42");
     assert_eq!(text(r#"STRLANG("chat", "fr")"#), "chat");
@@ -218,4 +239,87 @@ fn now_is_one_value_for_the_whole_query_and_uuids_are_fresh_per_row() {
     uuids.sort();
     uuids.dedup();
     assert_eq!(uuids.len(), 5, "STRUUID() is fresh per row");
+}
+
+// spec: MEDULLA-FEDERATED-QUERY-R742.3
+#[test]
+fn typed_terms_match_the_w3c_vectors() {
+    const RDF_LANG: &str = "http://www.w3.org/1999/02/22-rdf-syntax-ns#langString";
+    let xsd = |local: &str| format!("{XSD}{local}");
+
+    // LANG: the tag of a tagged literal, the empty string for any other literal.
+    assert_eq!(term(r#"LANG("chat"@fr)"#), Some(Binding::string("fr")));
+    assert_eq!(term(r#"LANG("chat"@EN-gb)"#), Some(Binding::string("en-gb")));
+    assert_eq!(term(r#"LANG("abc")"#), Some(Binding::string("")));
+    assert_eq!(term("LANG(42)"), Some(Binding::string("")));
+    assert_eq!(term("LANG(<http://ex/a>)"), None, "LANG of an IRI");
+    assert_eq!(term(r#"LANGMATCHES(LANG("chat"@fr), "FR")"#), Some(Binding::boolean(true)));
+
+    // DATATYPE: the datatype IRI of every kind of literal.
+    assert_eq!(term(r#"DATATYPE("abc")"#), Some(Binding::iri(xsd("string"))));
+    assert_eq!(term(r#"DATATYPE("abc"@en)"#), Some(Binding::iri(RDF_LANG)));
+    assert_eq!(term("DATATYPE(42)"), Some(Binding::iri(xsd("integer"))));
+    assert_eq!(term("DATATYPE(4.5)"), Some(Binding::iri(xsd("decimal"))));
+    assert_eq!(term("DATATYPE(4.5e0)"), Some(Binding::iri(xsd("double"))));
+    assert_eq!(term("DATATYPE(true)"), Some(Binding::iri(xsd("boolean"))));
+    assert_eq!(
+        term(&format!(r#"DATATYPE("2011-01-10"^^<{}>)"#, xsd("date"))),
+        Some(Binding::iri(xsd("date")))
+    );
+    assert_eq!(term("DATATYPE(<http://ex/a>)"), None, "DATATYPE of an IRI");
+
+    // STRLANG: a language-tagged literal; the tag is read back by LANG.
+    assert_eq!(term(r#"STRLANG("chat", "fr")"#), Some(Binding::lang("chat", "fr")));
+    assert_eq!(term(r#"LANG(STRLANG("chat", "FR"))"#), Some(Binding::string("fr")));
+    assert_eq!(
+        term(r#"DATATYPE(STRLANG("chat", "fr"))"#),
+        Some(Binding::iri(RDF_LANG))
+    );
+    assert_eq!(term(r#"STRLANG("chat", "")"#), None, "an empty tag");
+    assert_eq!(term(r#"STRLANG("chat"@en, "fr")"#), None, "a tagged lexical form");
+    assert_eq!(term(r#"STRLANG(42, "fr")"#), None, "a non-string lexical form");
+
+    // STRDT: a typed literal; the datatype is read back by DATATYPE and drives isNumeric.
+    assert_eq!(
+        term(&format!(r#"STRDT("42", <{}>)"#, xsd("integer"))),
+        Some(Binding::typed("42", xsd("integer")))
+    );
+    assert_eq!(
+        term(&format!(r#"DATATYPE(STRDT("42", <{}>))"#, xsd("integer"))),
+        Some(Binding::iri(xsd("integer")))
+    );
+    assert_eq!(
+        term(&format!(r#"isNumeric(STRDT("42", <{}>))"#, xsd("integer"))),
+        Some(Binding::boolean(true))
+    );
+    assert_eq!(
+        term(&format!(r#"isNumeric(STRDT("42", <{}>))"#, xsd("string"))),
+        Some(Binding::boolean(false))
+    );
+    assert_eq!(term(r#"STRDT("42", "integer")"#), None, "a datatype that is not an IRI");
+    assert_eq!(term(&format!(r#"STRDT(42, <{}>)"#, xsd("integer"))), None);
+    assert_eq!(
+        term(&format!(r#"STRDT("x", <{RDF_LANG}>)"#)),
+        None,
+        "rdf:langString needs a tag"
+    );
+
+    // STR of a typed term, and the arithmetic result types.
+    assert_eq!(term(r#"STR("chat"@fr)"#), Some(Binding::string("chat")));
+    assert_eq!(term("1 + 2"), Some(Binding::typed("3", xsd("integer"))));
+    assert_eq!(term("1 + 2.5"), Some(Binding::typed("3.5", xsd("decimal"))));
+    assert_eq!(term("4 / 2"), Some(Binding::typed("2", xsd("decimal"))));
+    assert_eq!(term("1e0 + 2"), Some(Binding::typed("3", xsd("double"))));
+
+    // A string builtin keeps the language tag and refuses an IRI or a non-string literal.
+    assert_eq!(term(r#"UCASE("chat"@fr)"#), Some(Binding::lang("CHAT", "fr")));
+    assert_eq!(term("UCASE(<http://ex/a>)"), None);
+    assert_eq!(term("UCASE(42)"), None);
+
+    // Equality: numerics by value, every other pair by term; sameTerm is identity.
+    assert_eq!(term("1 = 1.0"), Some(Binding::boolean(true)));
+    assert_eq!(term(r#""a"@en = "a"@fr"#), Some(Binding::boolean(false)));
+    assert_eq!(term(r#"sameTerm("a"@en, "a"@en)"#), Some(Binding::boolean(true)));
+    assert_eq!(term(r#"sameTerm("1", 1)"#), Some(Binding::boolean(false)));
+    assert_eq!(term(r#""urn:x" = <urn:x>"#), Some(Binding::boolean(false)));
 }

@@ -386,10 +386,9 @@ pub(super) fn eval_limited(
     eval_pattern(ctx, inner)
 }
 
-/// Convert only losslessly representable keys. The evaluator stores literal
-/// lexical values without datatype/language metadata, so sending them as plain
-/// literals would make typed/lang-tagged remote matches disappear. Blank nodes
-/// cannot be sent as VALUES ground terms either. Both use full fetch.
+/// Convert only losslessly representable keys: an IRI is sent as a VALUES ground term.
+/// A blank node cannot be sent as a VALUES ground term, and a join key that is a literal
+/// keeps the full fetch, because the endpoint compares literals by its own datatype rules.
 pub(super) fn service_values_rows(
     local: &[Solution],
     keys: &[String],
@@ -400,11 +399,8 @@ pub(super) fn service_values_rows(
         let terms: Vec<_> = keys
             .iter()
             .map(|key| match row.get(key)? {
-                Binding::Node(node) => {
-                    let iri = node.strip_prefix('<')?.strip_suffix('>')?;
-                    Some(GroundTerm::NamedNode(NamedNode::new(iri).ok()?))
-                }
-                Binding::Literal(_) => None,
+                Binding::Iri(iri) => Some(GroundTerm::NamedNode(NamedNode::new(iri.as_str()).ok()?)),
+                Binding::Blank(_) | Binding::Literal(_) | Binding::Triple(_) => None,
             })
             .collect::<Option<_>>()?;
         let signature: Vec<String> = terms.iter().map(ToString::to_string).collect();
@@ -452,9 +448,8 @@ pub(super) fn build_service_query(inner: &GraphPattern) -> String {
 /// evaluates what is left of them after the client boundary ([`RemoteSparql::select`]
 /// returns [`Binding`]s):
 ///
-///  * an IRI arrives as `Binding::Node("<iri>")`, a blank node as `Binding::Node("_:id")`;
-///  * a literal arrives as `Binding::Literal(lexical form)` — its language tag and its
-///    datatype are gone;
+///  * an IRI arrives as `Binding::Iri`, a blank node as `Binding::Blank`;
+///  * a literal arrives as `Binding::Literal` with its datatype and language tag;
 ///  * a term the client cannot represent (a quoted triple) arrives as no binding at all.
 ///
 /// On top of that the local operators are lexical: `=` and `IN` strip the angle brackets
