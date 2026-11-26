@@ -1287,6 +1287,10 @@ pub struct WireSession {
     /// [`WireSession::bind_mapping`]; while set, every write statement is refused
     /// (MEDULLA-UNIFIED-DATA-PLANE-R026.4.2).
     bound_mapping: parking_lot::Mutex<Option<String>>,
+    /// The native SQL protocol this connection logged in with (`pgwire`, `mysql-wire`,
+    /// `mssql-wire`), latched by [`WireSession::bind_authenticated_sql_actor`]. It is what
+    /// [`WireSession::dispatch_method`] needs to rebuild the login's verified context.
+    native_protocol: parking_lot::Mutex<Option<String>>,
     /// The authenticated actor (engine `agent_id`) for this connection
     /// (CONCEPT:MEDULLA-KG.query.concept-13). `None` means no authenticated wire identity
     /// has been mapped. Latched only from a verified request or the server-owned
@@ -1500,6 +1504,7 @@ impl WireSession {
             startup_graph: parking_lot::Mutex::new(default_graph),
             startup_resolved: Default::default(),
             bound_mapping: Default::default(),
+            native_protocol: Default::default(),
             actor: Default::default(),
             authority: Default::default(),
             attempt_nonce: Default::default(),
@@ -1698,6 +1703,7 @@ impl WireSession {
             message,
         })?;
         self.bind_authority(authority, context.agent_id())?;
+        *self.native_protocol.lock() = Some(protocol.to_string());
         // A native SQL login has no signed request nonce. Clear a nonce left by
         // an earlier signed request on a reused session before any SQL batch is
         // compiled, so the next native operation cannot inherit another request's
@@ -1781,6 +1787,127 @@ impl WireSession {
         let mut bytes = [0_u8; 16];
         bytes.copy_from_slice(&digest[..16]);
         Ok(uuid::Uuid::from_bytes(bytes))
+    }
+
+    /// Dispatch one engine method as this connection's verified principal, through the same
+    /// router chokepoint every other request enters (MEDULLA-DURABLE-KERNEL-R035.7.2).
+    ///
+    /// The verified context is rebuilt from the login that bound the session's carrier, and its
+    /// carrier must be the one the session holds, so the method is authorized, row-scoped and
+    /// audited exactly as a signed request from the same principal. There is no session-only
+    /// shortcut: a refusal is the router's own refusal, returned as the response.
+    pub async fn dispatch_method(
+        &self,
+        method: medulla_protocol_types::protocol::Method,
+    ) -> WireResult<medulla_protocol_types::protocol::Response> {
+        let (context, actor) = self.login_context().await?;
+        let request = medulla_protocol_types::protocol::Request {
+            id: 0,
+            graph: self.current_graph(),
+            auth_token: String::new(),
+            agent_id: Some(actor),
+            method,
+            trace_id: None,
+        };
+        Ok(medulla_server_api::api::reentry::dispatch_verified_request(
+            &self.state,
+            request,
+            context,
+        )
+        .await)
+    }
+
+    /// Dispatch one engine method as the fixed engine service `service` holding `scopes`, through
+    /// the same router chokepoint, on behalf of this verified connection
+    /// (MEDULLA-DURABLE-KERNEL-R035.7.2). The connection must already carry a verified
+    /// authority; every call gets a fresh idempotency key and attempt nonce, so two writes never
+    /// replay one another. The service identity authorizes only the scopes named here.
+    pub async fn dispatch_service_method(
+        &self,
+        service: &str,
+        scopes: &[&str],
+        method: medulla_protocol_types::protocol::Method,
+    ) -> WireResult<medulla_protocol_types::protocol::Response> {
+        self.carrier_authority()?;
+        let server = self.state.read().await.context.clone();
+        let fixed =
+            medulla_server_api::authority_context::VerifiedRequestContext::authenticated_fixed_service_actor(
+                &server, service, scopes,
+            )
+            .map_err(|message| WireError {
+                code: "28000".to_string(),
+                message,
+            })?;
+        let context =
+            medulla_server_api::authority_context::VerifiedRequestContext::from_verified_claims_with_nonce(
+                fixed.claims().clone(),
+                format!("{service}:{}", uuid::Uuid::new_v4()),
+                Some(medulla_types::contract::Nonce::minted()),
+            );
+        let request = medulla_protocol_types::protocol::Request {
+            id: 0,
+            graph: self.current_graph(),
+            auth_token: String::new(),
+            agent_id: Some(context.agent_id().to_string()),
+            method,
+            trace_id: None,
+        };
+        Ok(medulla_server_api::api::reentry::dispatch_verified_request(
+            &self.state,
+            request,
+            context,
+        )
+        .await)
+    }
+
+    /// Whether the verified login holds `scope` exactly or through a wildcard of its domain.
+    /// The coarse `kg:read` / `kg:write` aggregates never stand in for it.
+    pub async fn holds_scope(&self, scope: &str) -> WireResult<bool> {
+        Ok(self.login_context().await?.0.allows_action(scope))
+    }
+
+    /// The verified context of the login that bound this session, and its actor. The carrier
+    /// derived from it must equal the one the session holds; a session never dispatches under
+    /// an authority other than its own.
+    async fn login_context(
+        &self,
+    ) -> WireResult<(
+        medulla_server_api::authority_context::VerifiedRequestContext,
+        String,
+    )> {
+        let bound = self.carrier_authority()?;
+        let actor = self.verified_actor()?;
+        let protocol = self
+            .native_protocol
+            .lock()
+            .clone()
+            .ok_or_else(|| WireError {
+                code: "28000".to_string(),
+                message: "a native SQL login is required".to_string(),
+            })?;
+        let (secret, server) = {
+            let state = self.state.read().await;
+            (state.auth_secret.clone(), state.context.clone())
+        };
+        let context =
+            medulla_server_api::authority_context::VerifiedRequestContext::authenticated_sql_wire_actor(
+                &server, &secret, &protocol, &actor,
+            )
+            .map_err(|message| WireError {
+                code: "28000".to_string(),
+                message,
+            })?;
+        let derived = CarrierAuthority::from_verified(&context).map_err(|message| WireError {
+            code: "28000".to_string(),
+            message,
+        })?;
+        if !Self::same_stable_authority(&bound, &derived) {
+            return Err(WireError {
+                code: "28000".to_string(),
+                message: "verified authority cannot change within a connection".to_string(),
+            });
+        }
+        Ok((context, actor))
     }
 
     pub fn carrier_authority(&self) -> WireResult<CarrierAuthority> {

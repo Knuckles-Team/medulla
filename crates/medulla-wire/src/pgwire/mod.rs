@@ -86,6 +86,7 @@ mod auth;
 mod cancel;
 mod message_loop;
 mod plan_cache;
+mod replication;
 
 pub use plan_cache::plan_cache_hits;
 pub use auth::{derive_pg_password, password_verifier, PgWireAuthMode, PGWIRE_AUTH_ENV};
@@ -2071,6 +2072,12 @@ impl EngineBackendFactory {
             connections,
             logins,
         }
+    }
+}
+
+impl message_loop::ReplicationHost for Arc<EngineBackendFactory> {
+    fn replication_backend(&self) -> Arc<EngineBackend> {
+        self.backend.clone()
     }
 }
 

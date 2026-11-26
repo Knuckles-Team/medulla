@@ -12,6 +12,15 @@ use serde::{Deserialize, Serialize};
 /// The reserved key-value namespace that holds one row per replication slot.
 pub const REPLICATION_SLOT_NAMESPACE: &str = "__pg_replication_slots__";
 
+/// The fixed engine service the replication connection writes slot rows as. Its verified agent id
+/// is [`REPLICATION_SLOT_AGENT`]; the KV dispatch admits a write to
+/// [`REPLICATION_SLOT_NAMESPACE`] from that agent alone.
+pub const REPLICATION_SLOT_SERVICE: &str = "replication-slots";
+
+/// The agent id of the fixed service identity of [`REPLICATION_SLOT_SERVICE`]
+/// (`service:<service>`, the shape of every fixed engine service actor).
+pub const REPLICATION_SLOT_AGENT: &str = "service:replication-slots";
+
 /// The refusal text prefix of a slot name outside `[a-z0-9_]{1,63}`.
 pub const REPLICATION_SLOT_NAME_INVALID: &str = "REPLICATION_SLOT_NAME_INVALID";
 

@@ -178,8 +178,9 @@ fn names_shared(method: &Method) -> bool {
 
 /// A served write that names a reserved namespace is refused before any effect: the
 /// replication slot rows (MEDULLA-DURABLE-KERNEL-R035.7.1) are written only by the
-/// replication connection, through the dispatch seam.
-pub(super) fn refuse_reserved_namespace(method: &Method) -> Result<(), String> {
+/// replication connection, through the dispatch seam, as the fixed engine service
+/// `agent_id` (MEDULLA-DURABLE-KERNEL-R035.7.2). Any other caller is refused.
+pub(super) fn refuse_reserved_namespace(method: &Method, agent_id: &str) -> Result<(), String> {
     let namespace = match method {
         Method::KvPut { namespace, .. }
         | Method::KvDelete { namespace, .. }
@@ -187,7 +188,9 @@ pub(super) fn refuse_reserved_namespace(method: &Method) -> Result<(), String> {
         | Method::KvDeclareNamespace { namespace, .. } => namespace,
         _ => return Ok(()),
     };
-    if namespace == medulla_mutation_types::pg_replication::REPLICATION_SLOT_NAMESPACE {
+    if namespace == medulla_mutation_types::pg_replication::REPLICATION_SLOT_NAMESPACE
+        && agent_id != medulla_mutation_types::pg_replication::REPLICATION_SLOT_AGENT
+    {
         return Err(format!(
             "{}: the namespace {namespace} is reserved",
             medulla_types::contract::EngineErrorCode::InvalidArgument.as_str()
@@ -202,7 +205,7 @@ pub fn handle(call: &KvCall<'_>, method: Method) -> Response {
         shared: names_shared(&method),
         ..*call
     };
-    if let Err(refusal) = refuse_reserved_namespace(&method) {
+    if let Err(refusal) = refuse_reserved_namespace(&method, call.authority.agent_id()) {
         return Response::err(call.req_id, refusal);
     }
     let original = method.clone();

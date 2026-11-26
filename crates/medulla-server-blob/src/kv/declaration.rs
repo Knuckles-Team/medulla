@@ -234,22 +234,42 @@ mod reserved_namespace_tests {
                 shared: false,
             },
         ] {
-            let refusal = refuse_reserved_namespace(&method).unwrap_err();
+            let refusal = refuse_reserved_namespace(&method, "agent-a").unwrap_err();
             assert!(refusal.starts_with("INVALID_ARGUMENT"), "{refusal}");
         }
         // Any other namespace is served, and a read of the reserved name is harmless.
-        assert!(refuse_reserved_namespace(&Method::KvPut {
-            namespace: "orders".to_string(),
-            key: "a".to_string(),
-            value: Vec::new(),
-            shared: false,
-        })
+        assert!(refuse_reserved_namespace(
+            &Method::KvPut {
+                namespace: "orders".to_string(),
+                key: "a".to_string(),
+                value: Vec::new(),
+                shared: false,
+            },
+            "agent-a"
+        )
         .is_ok());
-        assert!(refuse_reserved_namespace(&Method::KvGet {
+        assert!(refuse_reserved_namespace(
+            &Method::KvGet {
+                namespace: namespace.clone(),
+                key: "a".to_string(),
+                shared: false,
+            },
+            "agent-a"
+        )
+        .is_ok());
+        // The replication connection's fixed service identity alone may write the namespace.
+        let write = Method::KvCas {
             namespace,
-            key: "a".to_string(),
-            shared: false,
-        })
+            key: "tenant-a/slot".to_string(),
+            expected_version: 0,
+            new: Some(b"row".to_vec()),
+            shared: true,
+        };
+        assert!(refuse_reserved_namespace(
+            &write,
+            medulla_mutation_types::pg_replication::REPLICATION_SLOT_AGENT
+        )
         .is_ok());
+        assert!(refuse_reserved_namespace(&write, "service:other").is_err());
     }
 }

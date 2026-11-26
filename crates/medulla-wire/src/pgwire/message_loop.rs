@@ -8,6 +8,12 @@
 //! `InvalidMessageType` for a tag it does not know, and the stock loop ends the
 //! connection on any decode error without an `ErrorResponse`.
 //!
+//! A connection whose startup parameter is `replication=database` is handed to
+//! [`super::replication::serve_walsender`] the moment login completes
+//! (MEDULLA-DURABLE-KERNEL-R035.7.2): the walsender alone speaks copy-both, on the raw
+//! transport, so the pgwire codec and its refusal of the `CopyBoth` tag stay exactly as they are
+//! for every ordinary connection.
+//!
 //! The decoder leaves the unknown frame in the read buffer. The loop drops exactly
 //! that frame (its declared length), rebuilds the framed stream so the decoder starts
 //! clean on whatever follows, and answers per connection state.
@@ -43,6 +49,70 @@ fn unsupported_message(tag: u8) -> Option<&'static str> {
 }
 
 type Connection<S> = Framed<MaybeTls, PgWireMessageServerCodec<S>>;
+
+/// What a connection factory gives the loop when a connection turns out to be a replication
+/// connection: the backend whose session the walsender dispatches through.
+pub(super) trait ReplicationHost {
+    fn replication_backend(&self) -> std::sync::Arc<super::EngineBackend>;
+}
+
+/// The startup parameter that opens a replication connection.
+const REPLICATION_PARAMETER: &str = "replication";
+
+/// What a connection asked for through its `replication` startup parameter.
+#[derive(Debug, PartialEq, Eq)]
+enum ReplicationRequest {
+    /// An ordinary connection.
+    None,
+    /// `replication=database`: a logical replication connection.
+    Logical,
+    /// Any other value, such as physical replication, which the engine does not serve.
+    Unsupported(String),
+}
+
+fn replication_request<C: ClientInfo>(client: &C) -> ReplicationRequest {
+    match client.metadata().get(REPLICATION_PARAMETER) {
+        None => ReplicationRequest::None,
+        Some(value) if value.eq_ignore_ascii_case("database") => ReplicationRequest::Logical,
+        Some(value) => ReplicationRequest::Unsupported(value.clone()),
+    }
+}
+
+/// Refuse a replication request the engine does not serve and end the connection.
+async fn refuse_replication<S>(socket: Connection<S>, value: &str) -> io::Result<()> {
+    use tokio::io::AsyncWriteExt;
+    let mut parts = socket.into_parts();
+    let refusal = super::replication::error_response(
+        "0A000",
+        &format!("FEATURE_NOT_SUPPORTED: replication={value} is not supported; use replication=database"),
+    );
+    parts.io.write_all(&refusal).await?;
+    parts.io.flush().await
+}
+
+/// Hand a logged-in replication connection to the walsender. The session is bound from the
+/// startup parameters first, so the login's verified authority is the one the walsender
+/// dispatches under.
+async fn hand_off_walsender<S>(
+    socket: Connection<S>,
+    backend: std::sync::Arc<super::EngineBackend>,
+) -> io::Result<()> {
+    use tokio::io::AsyncWriteExt;
+    if let Err(error) = backend.bind_startup_from_client(&socket).await {
+        let mut parts = socket.into_parts();
+        let refusal = super::replication::error_response("28000", &error.to_string());
+        parts.io.write_all(&refusal).await?;
+        return parts.io.flush().await;
+    }
+    let session = backend.session.clone();
+    let mut parts = socket.into_parts();
+    // Anything the codec had queued but not flushed goes out first.
+    if !parts.write_buf.is_empty() {
+        parts.io.write_all(&parts.write_buf).await?;
+        parts.io.flush().await?;
+    }
+    super::replication::serve_walsender(parts.io, parts.read_buf.to_vec(), session).await
+}
 
 /// A fresh framed stream over the same transport, codec and buffered bytes. A decode
 /// error leaves the framed stream in a terminal state; this is how the loop resumes.
@@ -129,7 +199,7 @@ pub(super) async fn serve_connection<H>(
     startup_timeout: Duration,
 ) -> io::Result<()>
 where
-    H: PgWireServerHandlers,
+    H: PgWireServerHandlers + ReplicationHost,
 {
     let startup = tokio::time::sleep(startup_timeout);
     tokio::pin!(startup);
@@ -185,6 +255,17 @@ where
                 {
                     error_handler.on_error(&socket, &mut error);
                     process_error(&mut socket, error, is_extended_query).await?;
+                } else if matches!(socket.state(), PgWireConnectionState::ReadyForQuery) {
+                    match replication_request(&socket) {
+                        ReplicationRequest::None => {}
+                        ReplicationRequest::Logical => {
+                            return hand_off_walsender(socket, handlers.replication_backend())
+                                .await;
+                        }
+                        ReplicationRequest::Unsupported(value) => {
+                            return refuse_replication(socket, &value).await;
+                        }
+                    }
                 }
             }
             Some(Err(PgWireError::InvalidMessageType(tag)))

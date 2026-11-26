@@ -171,6 +171,7 @@ pub const SERVED_FUNCTIONS: &[&str] = &[
 pub const SERVED_OPERATIONAL_SURFACES: &[PgOperationalSurface] = &[
     PgOperationalSurface::PgDump,
     PgOperationalSurface::PgRestore,
+    PgOperationalSurface::Replication,
     PgOperationalSurface::PgStatViews,
     PgOperationalSurface::PgLocks,
     PgOperationalSurface::Explain,
