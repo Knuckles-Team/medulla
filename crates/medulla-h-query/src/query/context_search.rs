@@ -41,6 +41,14 @@ impl medulla_decision_policy::policy::PolicyLibrary for PolicyLibraryHandle<'_> 
     ) -> Result<Vec<AgentComponentEntry>, String> {
         self.0.component_revisions(tenant_id, component_id)
     }
+
+    fn champion_policy_target(
+        &self,
+        tenant_id: &str,
+        policy_id: &str,
+    ) -> Result<Option<String>, String> {
+        self.0.champion_policy_target(tenant_id, policy_id)
+    }
 }
 
 /// The policy the request names: the engine default, or a pinned published policy

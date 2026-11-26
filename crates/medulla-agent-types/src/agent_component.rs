@@ -356,8 +356,9 @@ pub struct ComponentDependency {
     pub definition_digest: String,
 }
 
-/// Which policy decides a request that names one: the engine default, or a
-/// published `DecisionPolicy` component pinned by revision digest.
+/// Which policy decides a request that names one: the engine default, a
+/// published `DecisionPolicy` component pinned by revision digest, or the
+/// champion of one policy id, read at serve time (MEDULLA-DECISION-ENGINE-R179.3).
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "policy", rename_all = "snake_case", deny_unknown_fields)]
 #[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
@@ -366,6 +367,9 @@ pub enum DecisionPolicyRef {
     Default,
     /// A published `DecisionPolicy` component, pinned by revision digest.
     Pinned { component: ComponentDependency },
+    /// The revision the `champion:knob_set:<policy_id>` pointer names at serve
+    /// time; the engine default while no revision has been promoted.
+    Champion { policy_id: String },
 }
 
 /// Where a component was ingested FROM.

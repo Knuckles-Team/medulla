@@ -520,6 +520,9 @@ fn resolve_policy(
         DecisionPolicyRef::Pinned { component } => {
             store.pinned_decision_policy(&request.tenant_id, component)
         }
+        DecisionPolicyRef::Champion { policy_id } => {
+            store.champion_decision_policy(&request.tenant_id, policy_id)
+        }
     }
 }
 

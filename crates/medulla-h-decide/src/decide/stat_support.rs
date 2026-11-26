@@ -274,6 +274,14 @@ impl<'a> medulla_decision_policy::policy::PolicyLibrary for PolicyLibraryHandle<
             .component_revisions(tenant_id, component_id)
             .map_err(|error| error.to_string())
     }
+
+    fn champion_policy_target(
+        &self,
+        tenant_id: &str,
+        policy_id: &str,
+    ) -> Result<Option<String>, String> {
+        self.0.champion_policy_target(tenant_id, policy_id)
+    }
 }
 
 /// Resolve `reference` for `tenant_id` through the decision-policy seam.

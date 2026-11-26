@@ -39,6 +39,14 @@ pub trait PolicyLibrary {
         tenant_id: &str,
         component_id: &str,
     ) -> Result<Vec<AgentComponentEntry>, String>;
+
+    /// The content digest the `champion:knob_set:<policy_id>` pointer names
+    /// now, or `None` while nothing is promoted (R179.3).
+    fn champion_policy_target(
+        &self,
+        tenant_id: &str,
+        policy_id: &str,
+    ) -> Result<Option<String>, String>;
 }
 
 /// One pin mismatch, rendered with the statistical surface's stable code.
@@ -99,6 +107,26 @@ pub fn resolve_policy(
                 })?;
             policy_from_attributes(&entry.attributes, &entry.content_digest)
                 .map_err(|code| format!("{code}: pinned decision policy"))?
+        }
+        DecisionPolicyRef::Champion { policy_id } => {
+            match store.champion_policy_target(tenant_id, policy_id)? {
+                None => DecisionPolicy::engine_default(),
+                Some(target) => {
+                    let entry = store
+                        .policy_revisions(tenant_id, policy_id)?
+                        .into_iter()
+                        .rev()
+                        .find(|entry| entry.content_digest == target)
+                        .filter(|entry| entry.kind == AgentComponentKind::DecisionPolicy)
+                        .ok_or_else(|| {
+                            StatisticalErrorCode::ComponentPinMismatch.refusal(format!(
+                                "{policy_id} has no revision at the champion pointer"
+                            ))
+                        })?;
+                    policy_from_attributes(&entry.attributes, &entry.content_digest)
+                        .map_err(|code| format!("{code}: champion decision policy"))?
+                }
+            }
         }
     };
     let statistical = policy

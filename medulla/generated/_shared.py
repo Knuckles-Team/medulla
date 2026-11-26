@@ -868,6 +868,13 @@ class DecisionPolicy(BaseModel):
     )
 
 
+class DecisionPolicyRefChampion(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    policy: Literal["champion"]
+    policy_id: str
+
+
 class DecisionPolicyRefDefault(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -882,7 +889,7 @@ class DecisionPolicyRefPinned(BaseModel):
 
 
 DecisionPolicyRef = Annotated[
-    DecisionPolicyRefDefault | DecisionPolicyRefPinned,
+    DecisionPolicyRefChampion | DecisionPolicyRefDefault | DecisionPolicyRefPinned,
     Field(discriminator="policy"),
 ]
 
@@ -2610,6 +2617,7 @@ DecisionOutcomeAbstained.model_rebuild()
 
 DecisionPolicy.model_rebuild()
 
+DecisionPolicyRefChampion.model_rebuild()
 DecisionPolicyRefDefault.model_rebuild()
 
 DecisionPolicyRefPinned.model_rebuild()
@@ -2943,6 +2951,7 @@ __all__ = [
     "DecisionOutcomeSolved",
     "DecisionPolicy",
     "DecisionPolicyRef",
+    "DecisionPolicyRefChampion",
     "DecisionPolicyRefDefault",
     "DecisionPolicyRefPinned",
     "DecisionQuestion",

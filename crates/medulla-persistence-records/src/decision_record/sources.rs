@@ -10,6 +10,7 @@ use medulla_agent_types::{
     agent_component::ComponentDependency,
 };
 use medulla_decision_types::decision::policy::policy_from_attributes;
+use medulla_decision_types::decision::statistical::retrieval_pointer::PointerState;
 use medulla_decision_types::{
     decision::DecisionErrorCode, decision::DecisionPolicy, decision::DecisionRecord,
     decision::TemplateFacts,
@@ -19,6 +20,7 @@ use super::super::agent_component::ComponentLayer;
 use super::super::agent_graph::GraphLayer;
 use super::super::agent_library::AgentLibraryStore;
 use super::super::agent_revision::decode_revision;
+use super::super::decision_jobs::decode_artifact;
 use super::refuse;
 
 type Write<'a> = medulla_transaction::AdmittedMutation<'a, medulla_storage::AgentLibraryOwner>;
@@ -91,6 +93,45 @@ impl AgentLibraryStore {
                 refuse(
                     DecisionErrorCode::PolicyBodyUnavailable,
                     format!("policy '{}' has no such revision", pin.component_id),
+                )
+            })?;
+        policy_of(&entry)
+    }
+
+    /// The content digest the `champion:knob_set:<policy_id>` pointer names
+    /// now, or `None` while nothing has been promoted
+    /// (MEDULLA-DECISION-ENGINE-R179.3).
+    pub fn champion_policy_target(
+        &self,
+        tenant_id: &str,
+        policy_id: &str,
+    ) -> Result<Option<String>, String> {
+        let key = format!("pointer:champion:knob_set:{policy_id}");
+        let Some(bytes) = self.decision_artifact(tenant_id, &key)? else {
+            return Ok(None);
+        };
+        let state: PointerState = decode_artifact(&bytes, "pointer state")?;
+        Ok(state.target().map(str::to_owned))
+    }
+
+    /// The verified body of the policy revision the champion pointer of
+    /// `policy_id` names; the engine default while nothing is promoted.
+    pub fn champion_decision_policy(
+        &self,
+        tenant_id: &str,
+        policy_id: &str,
+    ) -> Result<DecisionPolicy, String> {
+        let Some(target) = self.champion_policy_target(tenant_id, policy_id)? else {
+            return Ok(DecisionPolicy::engine_default());
+        };
+        let entry = self
+            .component_revisions(tenant_id, policy_id)?
+            .into_iter()
+            .find(|entry| entry.content_digest == target)
+            .ok_or_else(|| {
+                refuse(
+                    DecisionErrorCode::PolicyBodyUnavailable,
+                    format!("the champion of policy '{policy_id}' has no such revision"),
                 )
             })?;
         policy_of(&entry)

@@ -204,3 +204,87 @@ async fn record_lists_every_knob_read() {
     assert!(facts.contains(&"knob:drift.shift_threshold=0.400000"));
     assert!(facts.contains(&"knob:drift.vocabulary_growth_points=5"));
 }
+
+/// The `drift.shift_threshold` knob premise a decision's record lists.
+fn shift_threshold_fact(batch: &DecisionBatch) -> String {
+    batch.records.as_slice()[0]
+        .premises
+        .iter()
+        .find(|p| p.fact.starts_with("knob:drift.shift_threshold="))
+        .map(|p| p.fact.clone())
+        .expect("the record lists the drift knob it read")
+}
+
+/// Verifies MEDULLA-DECISION-ENGINE-R179.3: a knob-set revision is a challenger
+/// candidate; one compare-and-set on the champion pointer promotes it and one
+/// more rolls it back, and the served decision follows the pointer.
+// spec: MEDULLA-DECISION-ENGINE-R179.3
+#[tokio::test]
+async fn a_promoted_knob_revision_changes_the_served_decision_and_rolls_back() {
+    use super::super::stat_pointer::{activate, rollback, PointerMove, Qualified};
+    let h = Harness::new().await;
+    let schema_pin = h
+        .publish_test_component(
+            "schema-champion",
+            AgentComponentKind::FeatureSchema,
+            "champion features",
+            Some(&schema()),
+            None,
+        )
+        .unwrap();
+    let policy_id = "policy-champion";
+    let base = medulla_decision_types::decision::DecisionPolicy::engine_default();
+    let first = h.publish_policy(policy_id, &base);
+    let mut revised = base.clone();
+    revised.knobs.insert(
+        KnobName::new("drift.shift_threshold"),
+        KnobValue::DecimalMicros(400_000),
+    );
+    let second = h.publish_policy(policy_id, &revised);
+    assert_eq!(first.component_id, second.component_id);
+    let digest_of = |policy: &medulla_decision_types::decision::DecisionPolicy| {
+        medulla_decision_types::decision::digest::policy_digest(policy)
+    };
+    let serve = || async {
+        decide(
+            &h,
+            request(
+                &schema_pin,
+                None,
+                DecisionPolicyRef::Champion {
+                    policy_id: policy_id.to_string(),
+                },
+                QuestionSafety::Ordinary,
+            ),
+        )
+        .await
+        .unwrap()
+    };
+    let at = |now_ms: u64| PointerMove {
+        tenant: TENANT,
+        key: format!("champion:knob_set:{policy_id}"),
+        principal: "operator",
+        now_ms,
+    };
+    let qualified = |policy: &medulla_decision_types::decision::DecisionPolicy| Qualified {
+        target: digest_of(policy),
+        receipt_digest: "sha256:receipt".to_string(),
+    };
+
+    // Nothing is promoted: the engine default serves.
+    let before = shift_threshold_fact(&serve().await);
+    assert_ne!(before, "knob:drift.shift_threshold=0.400000");
+
+    // Promote the first revision, then the challenger.
+    activate(&h.store, &at(1), &qualified(&base)).unwrap();
+    assert_eq!(shift_threshold_fact(&serve().await), before);
+    activate(&h.store, &at(2), &qualified(&revised)).unwrap();
+    assert_eq!(
+        shift_threshold_fact(&serve().await),
+        "knob:drift.shift_threshold=0.400000"
+    );
+
+    // Rollback is one pointer move back to the prior revision.
+    rollback(&h.store, &at(3)).unwrap();
+    assert_eq!(shift_threshold_fact(&serve().await), before);
+}

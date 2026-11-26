@@ -395,6 +395,14 @@ impl medulla_decision_policy::policy::PolicyLibrary for NoPolicyLibrary {
     ) -> Result<Vec<medulla_agent_types::agent_component::AgentComponentEntry>, String> {
         Ok(Vec::new())
     }
+
+    fn champion_policy_target(
+        &self,
+        _tenant_id: &str,
+        _policy_id: &str,
+    ) -> Result<Option<String>, String> {
+        Ok(None)
+    }
 }
 
 /// The agent library as the decision-policy seam reads it.
@@ -409,6 +417,14 @@ impl medulla_decision_policy::policy::PolicyLibrary for LibraryHandle {
         self.0
             .component_revisions(tenant_id, component_id)
             .map_err(|error| error.to_string())
+    }
+
+    fn champion_policy_target(
+        &self,
+        tenant_id: &str,
+        policy_id: &str,
+    ) -> Result<Option<String>, String> {
+        self.0.champion_policy_target(tenant_id, policy_id)
     }
 }
 

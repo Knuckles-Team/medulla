@@ -93,7 +93,7 @@ pub fn candidate_from(version: &EntityVersion) -> Result<ConflictCandidate, Stri
 /// The digest of the pinned policy; `None` for the engine default.
 fn policy_digest(policy: &DecisionPolicyRef) -> Option<String> {
     match policy {
-        DecisionPolicyRef::Default => None,
+        DecisionPolicyRef::Default | DecisionPolicyRef::Champion { .. } => None,
         DecisionPolicyRef::Pinned { component } => Some(component.definition_digest.clone()),
     }
 }

@@ -367,7 +367,7 @@ pub const DECISION_COMPONENT_ID_PREFIX: &str = "decision:";
 /// Extract the policy component a request pins, if any.
 pub fn pinned_policy_component(policy: &DecisionPolicyRef) -> Option<&ComponentDependency> {
     match policy {
-        DecisionPolicyRef::Default => None,
+        DecisionPolicyRef::Default | DecisionPolicyRef::Champion { .. } => None,
         DecisionPolicyRef::Pinned { component } => Some(component),
     }
 }
