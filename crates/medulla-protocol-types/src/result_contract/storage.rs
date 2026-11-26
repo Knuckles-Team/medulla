@@ -31,7 +31,7 @@ use medulla_catalog_types::connector_pack::ConnectorPackStatus as ConnectorPackS
 use medulla_catalog_types::skill_admission::SkillAdmission;
 use medulla_catalog_types::{
     connector_pack::ConnectorPackBindingResult, connector_pack::ConnectorPackSourceApprovalResult,
-    connector_pack::McpCatalogSnapshotBinding, connector_pack::PackBodyReconcileReport,
+    connector_pack::McpCatalogReconciliationReceipt, connector_pack::McpCatalogSnapshotBinding, connector_pack::PackBodyReconcileReport,
     connector_pack::PackImportReceipt, connector_pack::PackImportResult,
     connector_pack::PackRetireResult,
 };
@@ -147,6 +147,7 @@ method_results! {
     ConnectorPackReconcileCatalog(ConnectorPack / "reconcile_catalog") => Raw<McpCatalogSnapshotBinding>;
     ConnectorPackAttestSelfServedCatalog(ConnectorPack / "attest_self_served_catalog") => Raw<McpCatalogSnapshotBinding>;
     ConnectorPackCatalogAuthorityStatus(ConnectorPack / "catalog_authority_status") => Raw<Option<McpCatalogSnapshotBinding>>;
+    ConnectorPackCatalogReconciliationReceipt(ConnectorPack / "catalog_reconciliation_receipt") => Raw<Option<McpCatalogReconciliationReceipt>>;
     ConnectorPackCatalogOwnerPrincipal(ConnectorPack / "catalog_owner_principal") => Raw<String>;
     ConnectorPackCatalogBindingStatus(ConnectorPack / "catalog_binding_status") => Raw<Option<McpCatalogSnapshotBinding>>;
     ConnectorPackCatalogRequestOwnerPrincipal(ConnectorPack / "catalog_request_owner_principal") => Raw<String>;

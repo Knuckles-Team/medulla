@@ -159,6 +159,13 @@ class ConnectorPackOpCatalogRequestOwnerPrincipal(BaseModel):
     request: McpCatalogAuthorityStatusRequest
 
 
+class ConnectorPackOpCatalogReconciliationReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    op: Literal["catalog_reconciliation_receipt"]
+    request: McpCatalogReconciliationReceiptRequest
+
+
 class ConnectorPackOpConformanceEvidence(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
@@ -188,6 +195,7 @@ ConnectorPackOp = Annotated[
     | ConnectorPackOpCatalogOwnerPrincipal
     | ConnectorPackOpCatalogBindingStatus
     | ConnectorPackOpCatalogRequestOwnerPrincipal
+    | ConnectorPackOpCatalogReconciliationReceipt
     | ConnectorPackOpConformanceEvidence
     | ConnectorPackOpRevokeConformanceEvidence,
     Field(discriminator="op"),
@@ -300,6 +308,22 @@ class McpCatalogAuthorityStatusRequest(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
 
     server_name: str
+    tenant_id: str
+
+
+class McpCatalogReconciliationReceiptRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    tenant_id: str
+
+
+class McpCatalogReconciliationReceipt(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True, defer_build=True)
+
+    acknowledged_families: list[str]
+    catalog_generation: Annotated[int, Field(ge=0)]
+    issued_at_ms: Annotated[int, Field(ge=0)]
+    snapshot_digest: Digest256
     tenant_id: str
 
 
@@ -780,6 +804,8 @@ ConnectorPackOpCatalogBindingStatus.model_rebuild()
 
 ConnectorPackOpCatalogRequestOwnerPrincipal.model_rebuild()
 
+ConnectorPackOpCatalogReconciliationReceipt.model_rebuild()
+
 ConnectorPackOpConformanceEvidence.model_rebuild()
 
 ConnectorPackOpRevokeConformanceEvidence.model_rebuild()
@@ -807,6 +833,10 @@ ConnectorPackUnbindRequest.model_rebuild()
 DeclaredCost.model_rebuild()
 
 McpCatalogAuthorityStatusRequest.model_rebuild()
+
+McpCatalogReconciliationReceiptRequest.model_rebuild()
+
+McpCatalogReconciliationReceipt.model_rebuild()
 
 McpCatalogReconcileRequest.model_rebuild()
 
@@ -875,6 +905,7 @@ __all__ = [
     "ConnectorPackOpCatalogAuthorityStatus",
     "ConnectorPackOpCatalogBindingStatus",
     "ConnectorPackOpCatalogOwnerPrincipal",
+    "ConnectorPackOpCatalogReconciliationReceipt",
     "ConnectorPackOpCatalogRequestOwnerPrincipal",
     "ConnectorPackOpConformanceEvidence",
     "ConnectorPackOpRevokeConformanceEvidence",
@@ -901,6 +932,8 @@ __all__ = [
     "Digest256",
     "McpCatalogAuthorityStatusRequest",
     "McpCatalogReconcileRequest",
+    "McpCatalogReconciliationReceipt",
+    "McpCatalogReconciliationReceiptRequest",
     "McpCatalogSnapshotBinding",
     "McpSelfServedCatalogAttestRequest",
     "MeasuredFact_ShellProficiency",

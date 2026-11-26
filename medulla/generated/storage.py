@@ -54,6 +54,8 @@ from .connector_pack import (
     ConnectorPackStatus,
     ConnectorPackStatusRequest,
     McpCatalogAuthorityStatusRequest,
+    McpCatalogReconciliationReceipt,
+    McpCatalogReconciliationReceiptRequest,
     McpCatalogSnapshotBinding,
     McpSelfServedCatalogAttestRequest,
     PackImportResult,
@@ -1266,6 +1268,36 @@ async def send_connector_pack_catalog_authority_status(
         idempotency_key=idempotency_key,
     )
     return TypeAdapter(McpCatalogSnapshotBinding | None).validate_python(payload)
+
+
+async def send_connector_pack_catalog_reconciliation_receipt(
+    client: Any,
+    request: McpCatalogReconciliationReceiptRequest,
+    graph: str | None = None,
+    *,
+    idempotency_key: str | None = None,
+) -> McpCatalogReconciliationReceipt | None:
+    """Send typed ConnectorPack.catalog_reconciliation_receipt.
+
+    Routed through the existing ConnectorPack method; a foreign or absent
+    tenant answers None.
+    """
+    request = McpCatalogReconciliationReceiptRequest.model_validate(request)
+    params = {
+        "op": {
+            "op": "catalog_reconciliation_receipt",
+            "request": request.model_dump(
+                mode="json", exclude_unset=True, exclude_none=True
+            ),
+        },
+    }
+    payload = await client._send(
+        "ConnectorPack",
+        params,
+        graph,
+        idempotency_key=idempotency_key,
+    )
+    return TypeAdapter(McpCatalogReconciliationReceipt | None).validate_python(payload)
 
 
 class WriteBackRequest(BaseModel):

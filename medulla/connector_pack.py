@@ -25,6 +25,8 @@ from .generated.connector_pack import (
     ConnectorPackIndex,
     ConnectorPackStatus,
     ConnectorPackStatusRequest,
+    McpCatalogReconciliationReceipt,
+    McpCatalogReconciliationReceiptRequest,
     McpCatalogSnapshotBinding,
     PackAnnotations,
     PackArchiveRef,
@@ -47,6 +49,7 @@ from .generated.storage import (
     send_blob_begin,
     send_blob_chunk_put,
     send_blob_commit,
+    send_connector_pack_catalog_reconciliation_receipt,
     send_connector_pack_import,
     send_connector_pack_status,
 )
@@ -438,6 +441,19 @@ class ConnectorPackClient:
         return await send_connector_pack_status(
             self._client,
             ConnectorPackStatusRequest(tenant_id=tenant_id, connector=connector),
+            graph,
+        )
+
+    async def catalog_reconciliation_receipt(
+        self,
+        *,
+        tenant_id: str,
+        graph: str | None = None,
+    ) -> McpCatalogReconciliationReceipt | None:
+        """The tenant-wide catalog reconciliation receipt, or None."""
+        return await send_connector_pack_catalog_reconciliation_receipt(
+            self._client,
+            McpCatalogReconciliationReceiptRequest(tenant_id=tenant_id),
             graph,
         )
 

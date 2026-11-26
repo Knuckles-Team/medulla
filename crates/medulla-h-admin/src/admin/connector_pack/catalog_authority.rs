@@ -194,6 +194,59 @@ catalog_read_handler!(
     serve_status, AttesterStatus
 );
 
+/// Read the tenant-wide reconciliation receipt. The caller needs the
+/// pack-control read grant; a tenant other than the verified one answers
+/// exactly as a tenant with no reconcile does: no receipt.
+pub(super) async fn serve_reconciliation_receipt(
+    state: &Arc<RwLock<ServerState>>,
+    req_id: u64,
+    verified: &VerifiedRequestContext,
+    request: medulla_catalog_types::connector_pack::McpCatalogReconciliationReceiptRequest,
+) -> Response {
+    #[cfg(not(feature = "redb"))]
+    {
+        unavailable_catalog_response(req_id, state, verified, request)
+    }
+    #[cfg(feature = "redb")]
+    {
+        if !verified.allows_action("agent:pack-control") {
+            return Response::err(
+                req_id,
+                "ACCESS_DENIED: connector pack catalog read is unavailable",
+            );
+        }
+        let tenant = verified.tenant().to_string();
+        let receipt_wire = |receipt: &Option<
+            medulla_catalog_types::connector_pack::McpCatalogReconciliationReceipt,
+        >| {
+            Response::ok(
+                req_id,
+                medulla_protocol_types::protocol::ResultPayload::of_ref::<
+                    medulla_protocol_types::result_contract::storage::ConnectorPackCatalogReconciliationReceipt,
+                >(receipt),
+            )
+        };
+        if request.tenant_id != tenant {
+            return receipt_wire(&None);
+        }
+        let store = match medulla_persistence_records::agent_library::shared_agent_library(state)
+            .await
+        {
+            Ok(store) => store,
+            Err(error) => return Response::err(req_id, error),
+        };
+        let receipt = medulla_server_api::api::dispatch_support::blocking_task(
+            "connector pack catalog reconciliation receipt",
+            move || store.mcp_tenant_reconciliation_receipt(&tenant),
+        )
+        .await;
+        match receipt {
+            Ok(receipt) => receipt_wire(&receipt),
+            Err(error) => Response::err(req_id, error),
+        }
+    }
+}
+
 pub(super) async fn serve(
     state: &Arc<RwLock<ServerState>>,
     req_id: u64,

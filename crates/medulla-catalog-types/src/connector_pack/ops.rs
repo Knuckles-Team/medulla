@@ -1,6 +1,6 @@
 //! The `Method::ConnectorPack` operation set.
 //!
-//! Five reads (`status`, `catalog_authority_status`, `catalog_owner_principal`,
+//! Six reads (`status`, `catalog_authority_status`, `catalog_reconciliation_receipt`, `catalog_owner_principal`,
 //! `catalog_binding_status`, `catalog_request_owner_principal`), one bulk import, one
 //! admitted source-approval operation, and administrative operations, including
 //! the two catalog-authority writes
@@ -12,7 +12,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::catalog_authority::{McpCatalogAuthorityStatusRequest, McpCatalogReconcileRequest};
+use super::catalog_authority::{
+    McpCatalogAuthorityStatusRequest, McpCatalogReconcileRequest,
+    McpCatalogReconciliationReceiptRequest,
+};
 use super::index::ConnectorPackIndex;
 use super::self_served_catalog::McpSelfServedCatalogAttestRequest;
 use medulla_agent_types::agent_library::AgentLibraryMutationContext;
@@ -195,6 +198,12 @@ pub enum ConnectorPackOp {
     CatalogRequestOwnerPrincipal {
         request: McpCatalogAuthorityStatusRequest,
     },
+    /// Read the tenant-wide catalog reconciliation receipt: one answer over
+    /// every scoped catalog row of the tenant, or none when no reconcile was
+    /// accepted. A foreign or absent tenant answers none (no existence oracle).
+    CatalogReconciliationReceipt {
+        request: McpCatalogReconciliationReceiptRequest,
+    },
     /// Read the connector's current conformance evidence, or refuse
     /// `CONFORMANCE_EVIDENCE_ABSENT` (MEDULLA-TYPED-PACKS-R807). Arbora's
     /// `require_current_evidence` is the caller; the import writes the record.
@@ -217,6 +226,7 @@ impl ConnectorPackOp {
                 | Self::CatalogOwnerPrincipal { .. }
                 | Self::CatalogBindingStatus { .. }
                 | Self::CatalogRequestOwnerPrincipal { .. }
+                | Self::CatalogReconciliationReceipt { .. }
                 | Self::ConformanceEvidence { .. }
         )
     }
@@ -246,6 +256,7 @@ impl ConnectorPackOp {
             Self::CatalogOwnerPrincipal { .. } => "agent:pack-control",
             Self::CatalogBindingStatus { .. } => "agent:pack-control",
             Self::CatalogRequestOwnerPrincipal { .. } => "agent:pack-control",
+            Self::CatalogReconciliationReceipt { .. } => "agent:pack-control",
         }
     }
 
@@ -267,6 +278,7 @@ impl ConnectorPackOp {
             Self::CatalogOwnerPrincipal { request } => &request.tenant_id,
             Self::CatalogBindingStatus { request } => &request.tenant_id,
             Self::CatalogRequestOwnerPrincipal { request } => &request.tenant_id,
+            Self::CatalogReconciliationReceipt { request } => &request.tenant_id,
             Self::ConformanceEvidence { request } => &request.tenant_id,
             Self::RevokeConformanceEvidence { request } => &request.context.tenant_id,
         }
@@ -290,6 +302,7 @@ impl ConnectorPackOp {
             Self::CatalogOwnerPrincipal { .. } => None,
             Self::CatalogBindingStatus { .. } => None,
             Self::CatalogRequestOwnerPrincipal { .. } => None,
+            Self::CatalogReconciliationReceipt { .. } => None,
             Self::ConformanceEvidence { request } => Some(&request.connector),
             Self::RevokeConformanceEvidence { request } => Some(&request.connector),
         }
@@ -314,7 +327,7 @@ mod tests {
 
     /// The committed operation descriptors: wire tag, whether it commits
     /// durable state, and the authorization action it needs.
-    const DESCRIPTORS: [(&str, bool, &str); 16] = [
+    const DESCRIPTORS: [(&str, bool, &str); 17] = [
         ("approve_source", true, "agent:pack-control"),
         ("attest_self_served_catalog", true, "admin:connector-pack"),
         ("bind", true, "admin:connector-pack"),
@@ -325,6 +338,7 @@ mod tests {
         ),
         ("catalog_binding_status", false, "agent:pack-control"),
         ("catalog_owner_principal", false, "agent:pack-control"),
+        ("catalog_reconciliation_receipt", false, "agent:pack-control"),
         (
             "catalog_request_owner_principal",
             false,

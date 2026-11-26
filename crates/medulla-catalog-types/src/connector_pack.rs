@@ -126,7 +126,9 @@ pub use annotations::{
 pub use catalog_authority::{
     reconcile_catalog_authority, reconcile_joined_configuration, McpCatalogAttestation,
     McpCatalogAuthorityCandidate, McpCatalogAuthorityRow, McpCatalogAuthorityStatusRequest,
-    McpCatalogReconcileRequest, McpJoinedConfigurationRow,
+    McpCatalogReconcileRequest, McpCatalogReconciliationReceipt,
+    McpCatalogReconciliationReceiptRequest, McpJoinedConfigurationRow, CATALOG_FAMILIES,
+    tenant_reconciliation_receipt,
 };
 pub use ids::{
     connector_instance_iri, escape_pack_name, seed_receipt_iri, seed_revision_iri, pack_component_id, validate_connector,

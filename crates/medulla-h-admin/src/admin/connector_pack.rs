@@ -91,6 +91,9 @@ pub async fn handle_connector_pack(
         ConnectorPackOp::CatalogRequestOwnerPrincipal { request } => {
             catalog_authority::serve_request_owner_principal(state, req_id, verified, request).await
         }
+        ConnectorPackOp::CatalogReconciliationReceipt { request } => {
+            catalog_authority::serve_reconciliation_receipt(state, req_id, verified, request).await
+        }
         ConnectorPackOp::ConformanceEvidence { request } => {
             conformance::serve_read(state, req_id, verified, request).await
         }

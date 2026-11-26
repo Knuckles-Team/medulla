@@ -12,7 +12,8 @@ use medulla_agent_types::{
 use medulla_catalog_types::{
     connector_pack::catalog_authority::joined_configuration_digest,
     connector_pack::reconcile_catalog_authority, connector_pack::reconcile_joined_configuration,
-    connector_pack::McpCatalogAttestation, connector_pack::McpCatalogAuthorityCandidate,
+    connector_pack::tenant_reconciliation_receipt, connector_pack::McpCatalogAttestation,
+    connector_pack::McpCatalogReconciliationReceipt, connector_pack::McpCatalogAuthorityCandidate,
     connector_pack::McpCatalogAuthorityRow, connector_pack::McpCatalogSnapshotBinding,
     connector_pack::McpJoinedConfigurationRow,
 };
@@ -217,6 +218,36 @@ impl AgentLibraryStore {
             .transpose()
     }
 
+    /// The tenant-wide reconciliation receipt over one committed owner
+    /// snapshot: every scoped row of `tenant_id`, folded. `None` when no
+    /// reconcile was accepted; the caller has already pinned `tenant_id` to
+    /// the verified tenant, so an absent and a foreign tenant read alike.
+    pub fn mcp_tenant_reconciliation_receipt(
+        &self,
+        tenant_id: &str,
+    ) -> Result<Option<McpCatalogReconciliationReceipt>, String> {
+        if tenant_id.is_empty() {
+            return Err("invalid tenant catalog receipt read".into());
+        }
+        let read = self.read()?;
+        let table = read.open_owner_table(medulla_storage::MCP_CATALOG_SCOPES)?;
+        let mut rows = Vec::new();
+        for entry in table
+            .range((tenant_id, "", "")..)
+            .map_err(|error| error.to_string())?
+        {
+            let (key, value) = entry.map_err(|error| error.to_string())?;
+            if key.value().0 != tenant_id {
+                break;
+            }
+            rows.push(super::undecodable::decode_stored::<McpCatalogAuthorityRow>(
+                value.value(),
+                "MCP scoped catalog",
+            )?);
+        }
+        tenant_reconciliation_receipt(tenant_id, &rows)
+    }
+
     /// Read a validated self-served authority row, the authority an import of
     /// that row's connector must honour. Mounted rows answer `None`.
     pub fn mcp_self_served_catalog_row(
@@ -298,7 +329,13 @@ impl AgentLibraryStore {
             outbox: Vec::new(),
         };
         self.commit_pack_write(&context, identity, effects, |write, _staged| {
-            write_catalog_rows(write, &context.tenant_id, &component_id, &candidate)
+            write_catalog_rows(
+                write,
+                &context.tenant_id,
+                &component_id,
+                &candidate,
+                context.created_at_ms,
+            )
         })
     }
 }
@@ -309,6 +346,7 @@ fn write_catalog_rows(
     tenant_id: &str,
     component_id: &str,
     candidate: &McpCatalogAuthorityCandidate,
+    issued_at_ms: u64,
 ) -> Result<McpCatalogSnapshotBinding, String> {
     let scope_hex = candidate.authorization_scope_digest.to_hex();
     verify_component_source(write, tenant_id, component_id, candidate)?;
@@ -347,7 +385,9 @@ fn write_catalog_rows(
             .transpose()?;
         previous
     };
-    let scoped = reconcile_catalog_authority(previous_scope.as_ref(), &configuration, candidate)?;
+    let mut scoped =
+        reconcile_catalog_authority(previous_scope.as_ref(), &configuration, candidate)?;
+    scoped.issued_at_ms = issued_at_ms;
     let config_bytes = medulla_storage::encode_bounded(&configuration, "MCP joined configuration")?;
     let scope_bytes = medulla_storage::encode_bounded(&scoped, "MCP scoped catalog")?;
     write

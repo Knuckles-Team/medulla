@@ -5,7 +5,8 @@ use crate::connector_pack::{
     ConnectorPackIndex, ConnectorPackOp, ConnectorPackReconcileRequest,
     ConnectorPackReprojectRequest, ConnectorPackRetireRequest, ConnectorPackRevokeEvidenceRequest,
     ConnectorPackSourceApprovalRequest, ConnectorPackStatusRequest, ConnectorPackUnbindRequest,
-    McpCatalogAuthorityStatusRequest, McpCatalogReconcileRequest, McpCatalogSnapshotBinding,
+    McpCatalogAuthorityStatusRequest, McpCatalogReconcileRequest,
+    McpCatalogReconciliationReceiptRequest, McpCatalogSnapshotBinding,
     McpSelfServedCatalogAttestRequest, PackAnnotations, PackArchiveRef, PackCost, PackDisposition,
     PackEntry, PackEntryKind, PackHeadRef, PackModelFacts, PackProducer, PackRef, PackSection,
     PackToolMode, PackViolationCode, PackWarningCode, CONNECTOR_PACK_SCHEMA_VERSION,
@@ -301,6 +302,14 @@ pub fn ops() -> Vec<(&'static str, ConnectorPackOp)> {
                 request: McpCatalogAuthorityStatusRequest {
                     tenant_id: "tenant-a".to_string(),
                     server_name: "connector-a".to_string(),
+                },
+            },
+        ),
+        (
+            "ConnectorPack.catalog_reconciliation_receipt",
+            ConnectorPackOp::CatalogReconciliationReceipt {
+                request: McpCatalogReconciliationReceiptRequest {
+                    tenant_id: "tenant-a".to_string(),
                 },
             },
         ),

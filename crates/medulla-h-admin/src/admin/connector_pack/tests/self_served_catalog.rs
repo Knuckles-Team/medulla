@@ -4,7 +4,8 @@
 
 use medulla_catalog_types::{
     connector_pack::ConnectorPackIndex, connector_pack::ConnectorPackOp,
-    connector_pack::McpCatalogAuthorityStatusRequest, connector_pack::McpCatalogSnapshotBinding,
+    connector_pack::McpCatalogAuthorityStatusRequest, connector_pack::McpCatalogReconciliationReceipt,
+    connector_pack::McpCatalogReconciliationReceiptRequest, connector_pack::McpCatalogSnapshotBinding,
     connector_pack::McpSelfServedCatalogAttestRequest, connector_pack::PackImportResult,
     connector_pack::PackViolationCode,
 };
@@ -289,6 +290,64 @@ async fn attestation_is_refused_outside_its_tenant_grants_and_registration() {
     // Nothing was bound by any refusal.
     assert_eq!(
         binding_status(&served, "binding-status:refusals").await,
+        None
+    );
+}
+
+async fn tenant_receipt(
+    served: &Served,
+    key: &str,
+    tenant: &str,
+) -> Option<McpCatalogReconciliationReceipt> {
+    ok(
+        "CatalogReconciliationReceipt",
+        served
+            .pack(
+                key,
+                ConnectorPackOp::CatalogReconciliationReceipt {
+                    request: McpCatalogReconciliationReceiptRequest {
+                        tenant_id: tenant.to_string(),
+                    },
+                },
+            )
+            .await,
+    )
+}
+
+// spec: MEDULLA-TYPED-PACKS-R814.1
+#[tokio::test]
+async fn the_tenant_receipt_follows_accepted_reconciles_and_never_reveals_another_tenant() {
+    let served = Served::new();
+    let _env = served.with_graph_persistence().await;
+    let pack = ready(&served).await;
+    assert_eq!(tenant_receipt(&served, "receipt:none", TENANT).await, None);
+
+    let seen = observe(&served, "observe:receipt", &pack).await;
+    let binding = attest(&served, "attest:receipt", &seen).await;
+    let receipt = tenant_receipt(&served, "receipt:one", TENANT)
+        .await
+        .expect("an accepted reconcile issues a receipt");
+    assert_eq!(receipt.tenant_id, TENANT);
+    assert_eq!(receipt.catalog_generation, binding.catalog_generation);
+    assert!(receipt.issued_at_ms > 0, "the engine clock stamps the receipt");
+    assert_eq!(
+        receipt.acknowledged_families,
+        ["tools", "prompts", "resources", "resource_templates"]
+    );
+
+    // A changed catalog advances the generation and the digest.
+    let mut again = observe(&served, "observe:receipt2", &pack).await;
+    again.expected_catalog_generation = Some(binding.catalog_generation);
+    again.four_family_digest = Digest256::from_bytes([6; 32]);
+    attest(&served, "attest:receipt2", &again).await;
+    let next = tenant_receipt(&served, "receipt:two", TENANT).await.unwrap();
+    assert_eq!(next.catalog_generation, receipt.catalog_generation + 1);
+    assert_ne!(next.snapshot_digest, receipt.snapshot_digest);
+    assert!(next.issued_at_ms >= receipt.issued_at_ms);
+
+    // A foreign tenant answers exactly like a tenant that never reconciled.
+    assert_eq!(
+        tenant_receipt(&served, "receipt:foreign", "tenant-other").await,
         None
     );
 }

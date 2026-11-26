@@ -92,6 +92,10 @@ pub struct McpCatalogAuthorityRow {
     pub registration_config_digest: Digest256,
     pub configuration_digest: Digest256,
     pub binding: McpCatalogSnapshotBinding,
+    /// Engine-clock time of the last accepted reconcile of this row; `0` on a
+    /// row written before the field existed (it then names no receipt time).
+    #[serde(default)]
+    pub issued_at_ms: u64,
     #[serde(
         default,
         skip_serializing_if = "McpCatalogAttestation::is_mounted_child"
@@ -151,6 +155,72 @@ pub struct McpCatalogReconcileRequest {
 pub struct McpCatalogAuthorityStatusRequest {
     pub tenant_id: String,
     pub server_name: String,
+}
+
+/// The four catalog families one reconcile acknowledges, in wire order.
+pub const CATALOG_FAMILIES: [&str; 4] = ["tools", "prompts", "resources", "resource_templates"];
+
+const TENANT_RECEIPT_DOMAIN: &[u8] = b"eg/mcp-tenant-catalog-receipt/v1";
+
+/// Read the tenant-wide reconciliation receipt (ARBORA-DEPLOY-POLICY-R006).
+/// Foreign and absent tenants answer identically: no receipt.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct McpCatalogReconciliationReceiptRequest {
+    pub tenant_id: String,
+}
+
+/// One tenant-wide answer over every scoped catalog row of the tenant.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+#[cfg_attr(feature = "contract-schema", derive(schemars::JsonSchema))]
+pub struct McpCatalogReconciliationReceipt {
+    pub tenant_id: String,
+    /// Sum of the per-row catalog generations: it rises on every accepted
+    /// reconcile that changed a snapshot and never falls.
+    pub catalog_generation: u64,
+    /// Digest of the whole served catalog: every row's snapshot digest, in
+    /// (server, scope) order.
+    pub snapshot_digest: Digest256,
+    pub acknowledged_families: Vec<String>,
+    /// Engine clock of the last accepted reconcile.
+    pub issued_at_ms: u64,
+}
+
+/// Fold a tenant's rows into its receipt, or `None` when no reconcile was
+/// accepted (no rows, or only rows that predate the receipt clock).
+pub fn tenant_reconciliation_receipt(
+    tenant_id: &str,
+    rows: &[McpCatalogAuthorityRow],
+) -> Result<Option<McpCatalogReconciliationReceipt>, String> {
+    let mut rows: Vec<&McpCatalogAuthorityRow> =
+        rows.iter().filter(|row| row.tenant_id == tenant_id).collect();
+    let issued_at_ms = rows.iter().map(|row| row.issued_at_ms).max().unwrap_or(0);
+    if rows.is_empty() || issued_at_ms == 0 {
+        return Ok(None);
+    }
+    rows.sort_by(|a, b| {
+        (&a.server_name, a.binding.authorization_scope_digest.to_hex())
+            .cmp(&(&b.server_name, b.binding.authorization_scope_digest.to_hex()))
+    });
+    let mut generation = 0u64;
+    let mut parts: Vec<&[u8]> = vec![tenant_id.as_bytes()];
+    for row in &rows {
+        generation = generation
+            .checked_add(row.binding.catalog_generation)
+            .ok_or("catalog generation overflow")?;
+        parts.push(row.server_name.as_bytes());
+        parts.push(row.binding.authorization_scope_digest.as_bytes());
+        parts.push(row.binding.snapshot_digest.as_bytes());
+    }
+    Ok(Some(McpCatalogReconciliationReceipt {
+        tenant_id: tenant_id.to_string(),
+        catalog_generation: generation,
+        snapshot_digest: Digest256::framed(TENANT_RECEIPT_DOMAIN, &parts)?,
+        acknowledged_families: CATALOG_FAMILIES.iter().map(|f| (*f).to_string()).collect(),
+        issued_at_ms,
+    }))
 }
 
 /// Shared deterministic catalog candidate for reducer and persistence tests.
@@ -356,6 +426,8 @@ pub fn reconcile_catalog_authority(
             child_connection_generation: candidate.child_connection_generation,
             authorization_scope_digest: candidate.authorization_scope_digest,
         },
+        // The reducer is pure: the owner transaction stamps the engine clock.
+        issued_at_ms: prior.map_or(0, |row| row.issued_at_ms),
         attestation: candidate.attestation.clone(),
     })
 }
@@ -695,5 +767,38 @@ mod tests {
         let mut corrupt = first;
         corrupt.binding.configuration_revision = 0;
         assert!(reconcile_for_test(Some(&corrupt), &next).is_err());
+    }
+
+    // spec: MEDULLA-TYPED-PACKS-R814.1
+    #[test]
+    fn tenant_receipt_folds_every_row_and_names_the_last_accepted_reconcile() {
+        let mut first = reconcile_for_test(None, &candidate()).unwrap();
+        first.issued_at_ms = 1_000;
+        let mut other = first.clone();
+        other.server_name = "child-b".into();
+        other.binding.snapshot_digest = Digest256::from_bytes([8; 32]);
+        other.binding.catalog_generation = 2;
+        other.issued_at_ms = 2_500;
+        let receipt = tenant_reconciliation_receipt("tenant-a", &[first.clone(), other.clone()])
+            .unwrap()
+            .expect("two accepted reconciles");
+        assert_eq!(receipt.catalog_generation, 3);
+        assert_eq!(receipt.issued_at_ms, 2_500);
+        assert_eq!(receipt.acknowledged_families, CATALOG_FAMILIES);
+        // Order of the stored rows does not move the digest.
+        let reversed = tenant_reconciliation_receipt("tenant-a", &[other, first.clone()])
+            .unwrap()
+            .unwrap();
+        assert_eq!(reversed.snapshot_digest, receipt.snapshot_digest);
+        // A foreign tenant and a tenant with no rows both answer none.
+        assert!(tenant_reconciliation_receipt("tenant-b", &[first.clone()])
+            .unwrap()
+            .is_none());
+        assert!(tenant_reconciliation_receipt("tenant-a", &[]).unwrap().is_none());
+        // A row that predates the receipt clock names no time, so no receipt.
+        first.issued_at_ms = 0;
+        assert!(tenant_reconciliation_receipt("tenant-a", &[first])
+            .unwrap()
+            .is_none());
     }
 }
